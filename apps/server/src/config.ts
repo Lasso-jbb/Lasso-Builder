@@ -47,6 +47,8 @@ const schema = z.object({
     .default("true")
     .transform((v) => v !== "false" && v !== "0"),
   LASSO_STARTUP_PROBE_QUERY: z.string().default("lasso"),
+  /** Lasso-ID, som opstartsproben tester virksomheds- og regnskabsendpoints med (fx en stor virksomhed med regnskaber). */
+  LASSO_STARTUP_PROBE_ID: z.string().default(""),
 });
 
 export type Config = z.infer<typeof schema> & { publicBaseUrl: string };

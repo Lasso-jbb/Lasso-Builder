@@ -165,6 +165,7 @@ export function adaptCompany(lassoId: string, raw: Json): CompanyVM {
 export function adaptPeople(raw: Json): PersonRowVM[] {
   const sources: [Json[], string][] = [
     [arr(raw, "stakeholders"), "Deltager"],
+    [arr(raw, "otherParticipants"), "Deltager"],
     [[pick(raw, "management.ceo")].filter((x) => x !== undefined), "Direktør"],
     [arr(raw, "management.members"), "Direktion"],
     [[pick(raw, "board.chairman")].filter((x) => x !== undefined), "Bestyrelsesformand"],

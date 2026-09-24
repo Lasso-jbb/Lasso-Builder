@@ -179,13 +179,17 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
   try {
     const raw = await client.search({ query: config.LASSO_STARTUP_PROBE_QUERY, type: "all", pageSize: 3 });
     log("search OK, shape", describeShape(raw, 5));
-    const first = adaptSearch(raw, config.LASSO_COMPANY_ID_PREFIX).rows[0];
+    const found = adaptSearch(raw, config.LASSO_COMPANY_ID_PREFIX).rows[0];
+    const first = config.LASSO_STARTUP_PROBE_ID.trim()
+      ? { lassoId: toLassoId(config.LASSO_STARTUP_PROBE_ID, config.LASSO_COMPANY_ID_PREFIX) }
+      : found;
     if (!first) return log("search", "ingen virksomheder at teste videre med");
     log("tester med", first.lassoId);
     for (const [name, fn] of [
       ["search extended=true", () => client.search({ query: config.LASSO_STARTUP_PROBE_QUERY, type: "all", pageSize: 1, extended: true })],
       ["company", () => client.company(first.lassoId)],
       ["reports", () => client.reports(first.lassoId)],
+      ["valuations", () => client.valuations(first.lassoId)],
       ["websites", () => client.websites(first.lassoId)],
     ] as const) {
       try {
@@ -196,11 +200,14 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
     }
     // Røgtest af de rigtige flows (samme kode som MCP-tools), kun resumé i loggen.
     if (provider.kind === "live") {
+      const t1 = Date.now();
       const company = await resolveSpec(companyTemplate(first.lassoId), provider);
+      log(`show_company tid`, `${Date.now() - t1} ms`);
       log("show_company-resumé", summarizeView(companyTemplate(first.lassoId), company).split("\n"));
       const listSpec = listTemplate(searchQuerySchema.parse({ query: config.LASSO_STARTUP_PROBE_QUERY, limit: 5 }));
+      const t0 = Date.now();
       const list = await resolveSpec(listSpec, provider);
-      log("search_companies-resumé", summarizeView(listSpec, list).split("\n"));
+      log(`search_companies-resumé (${Date.now() - t0} ms)`, summarizeView(listSpec, list).split("\n"));
     }
   } catch (err) {
     log("search FEJL", `${errorMessage(err)}${err instanceof LassoApiError ? ` (HTTP ${err.status})` : ""}`);
