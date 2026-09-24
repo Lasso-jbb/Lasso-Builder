@@ -25,10 +25,15 @@ export function normalizeSpec(spec: ViewSpec, companyPrefix: string): ViewSpec {
 export function errorMessage(err: unknown): string {
   if (err instanceof NotFoundError) return err.message;
   if (err instanceof LassoApiError) {
-    if (err.status === 401 || err.status === 403) return "Ingen adgang til data (tjek Lasso-credentials)";
-    if (err.status === 404) return "Ikke fundet hos Lasso";
+    // Lassos fejlsvar: { errorMessage, httpStatusCode, errorCode }
+    const detail =
+      err.body && typeof err.body === "object" && typeof (err.body as { errorMessage?: unknown }).errorMessage === "string"
+        ? `: ${(err.body as { errorMessage: string }).errorMessage}`
+        : "";
+    if (err.status === 401 || err.status === 403) return `Ingen adgang til data${detail || " (tjek Lasso-nøglen)"}`;
+    if (err.status === 404) return `Ikke fundet hos Lasso${detail}`;
     if (err.status === 429) return "Lasso API: for mange kald, prøv igen om lidt";
-    return `Lasso API-fejl (${err.status})`;
+    return `Lasso API-fejl (${err.status})${detail}`;
   }
   if (err instanceof Error && err.name === "TimeoutError") return "Lasso API svarede ikke i tide";
   if (err instanceof TypeError && /fetch failed/i.test(err.message)) return "Kunne ikke nå Lasso API";
