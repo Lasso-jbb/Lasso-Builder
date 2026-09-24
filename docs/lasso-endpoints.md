@@ -23,6 +23,21 @@ Fejlsvar har formen `{ "errorMessage": string, "httpStatusCode": number, "errorC
 | Observationer     | GET    | `/modules/observations/{lassoId}`               |
 | Ejerstruktur      | GET    | Se dokumentation: https://docs.lassox.com/module-apis/ownergraph/ |
 
+### Bekræftede svarformer (24.09.2026)
+
+- `GET /{lassoId}`: `{ lassoId, cvr, name, status, lifeTime: { from, to }, address: { address1, postalCode,
+  postalDistrict, municipality: { name, code } }, form: { shortDescription }, industry: { text, code },
+  employees: { count, fullTimeEquivalentCount, interval }, accounting: { accountant }, management: { ceo, members },
+  board: { chairman, members, alternates }, ownership: { owners: [{ name, lassoId, type, ownership: { from, to },
+  voteRights: { from, to } }] }, otherParticipants, stakeholders, … }`. Ejerandele er brøker (0.25–0.3332 = 25–33,32 %).
+- `GET /{lassoId}/reports/advanced`: liste af regnskaber `{ lassoId, period: { from, to }, reportYear, publicationTime,
+  data: { company?, group? } }`. `company`/`group` har `facts: { incomeStatement, statementOfFinancialPosition, … }`,
+  hvor hver sektion er et XBRL-træ: `{ facts: { [begreb]: node }, abstract, label }` og bladene er
+  `{ value, unit, xbrlType, balance, label, source }`. Begreberne er camelCase (`revenue`, `grossProfit`, `profitLoss`,
+  `equity`, `averageNumberOfEmployees`). Gamle regnskaber (før XBRL) har tomme `facts`.
+- `GET /data/websites/{lassoId}`: `{ cvr, urls: [{ url, verifiedAt }] }`.
+- `GET /modules/valuations/{lassoId}`: `[]` for de testede virksomheder; formen er endnu ukendt.
+
 ## Søgning
 
 ```

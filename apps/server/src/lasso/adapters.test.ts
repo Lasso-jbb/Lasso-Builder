@@ -156,6 +156,7 @@ test("adaptFinancials læser XBRL-træet i reports/advanced (selskab før koncer
         group: { facts: { incomeStatement: node(null, { Revenue: node(5000), AverageNumberOfEmployees: node(12) }) } },
       },
     },
+    { lassoId: "CVR-1-1", period: { from: "2005-01-01", to: "2005-12-31" }, reportYear: 2005, data: { company: null, group: null } },
   ]);
   assert.deepEqual(vm.years, [{ year: 2024, periodEnd: "2024-12-31", revenue: 1000, grossProfit: 400, profit: 90, equity: 700, employees: 12 }]);
 });

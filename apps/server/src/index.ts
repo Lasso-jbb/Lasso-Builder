@@ -9,7 +9,7 @@ import { hasLassoCredentials, isSet, loadConfig, type Config } from "./config.js
 import { createProvider, type DataProvider } from "./data/index.js";
 import { errorMessage, normalizeSpec, resolveSpec } from "./data/resolve.js";
 import { summarizeView } from "./data/summary.js";
-import { adaptFinancials, adaptSearch, at } from "./lasso/adapters.js";
+import { adaptSearch, at } from "./lasso/adapters.js";
 import { describeShape, LassoApiError, LassoClient, probeAuthVariants, type Query } from "./lasso/client.js";
 import { createMcpServer } from "./mcp/server.js";
 import { createViewStore, SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "./views/store.js";
@@ -170,21 +170,36 @@ export function createApp({ config, client, provider, store }: AppDeps) {
 }
 
 /**
- * Logger strukturen (kun feltnavne og typer, ingen værdier) af Lassos svar ved
- * opstart. Så kan adapters rettes til de rigtige feltnavne ud fra loggen.
+ * Opstartstjek mod Lassos API. Normalt kun status og røgtest af show_company og
+ * search_companies. Med LOG_LEVEL=debug logges også svarenes form og et råt
+ * udsnit af det nyeste regnskab (offentlige data, aldrig nøgler).
  */
 async function probeLasso(config: Config, client: LassoClient, provider: DataProvider) {
   if (!config.LASSO_STARTUP_PROBE || !hasLassoCredentials(config)) return;
+  const verbose = config.LOG_LEVEL === "debug";
   const log = (label: string, v: unknown) => console.log(`[lasso-probe] ${label}: ${JSON.stringify(v)}`);
   try {
     const raw = await client.search({ query: config.LASSO_STARTUP_PROBE_QUERY, type: "all", pageSize: 3 });
-    log("search OK, shape", describeShape(raw, 5));
-    const found = adaptSearch(raw, config.LASSO_COMPANY_ID_PREFIX).rows[0];
+    const found = adaptSearch(raw, config.LASSO_COMPANY_ID_PREFIX);
+    log("search OK", verbose ? describeShape(raw, 5) : `${found.total ?? found.rows.length} virksomheder`);
     const first = config.LASSO_STARTUP_PROBE_ID.trim()
       ? { lassoId: toLassoId(config.LASSO_STARTUP_PROBE_ID, config.LASSO_COMPANY_ID_PREFIX) }
-      : found;
+      : found.rows[0];
     if (!first) return log("search", "ingen virksomheder at teste videre med");
     log("tester med", first.lassoId);
+
+    // Røgtest af de rigtige flows (samme kode som MCP-tools) med kold cache, kun resumé i loggen.
+    if (provider.kind === "live") {
+      const t1 = Date.now();
+      const company = await resolveSpec(companyTemplate(first.lassoId), provider);
+      log(`show_company-resumé (${Date.now() - t1} ms)`, summarizeView(companyTemplate(first.lassoId), company).split("\n"));
+      const listSpec = listTemplate(searchQuerySchema.parse({ query: config.LASSO_STARTUP_PROBE_QUERY, limit: 5 }));
+      const t0 = Date.now();
+      const list = await resolveSpec(listSpec, provider);
+      log(`search_companies-resumé (${Date.now() - t0} ms)`, summarizeView(listSpec, list).split("\n"));
+    }
+    if (!verbose) return;
+
     for (const [name, fn] of [
       ["search extended=true", () => client.search({ query: config.LASSO_STARTUP_PROBE_QUERY, type: "all", pageSize: 1, extended: true })],
       ["company", () => client.company(first.lassoId)],
@@ -198,36 +213,20 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
         log(`${name} FEJL`, errorMessage(err));
       }
     }
-    // Regnskabernes XBRL-træ: oversigt pr. år og et råt udsnit af det nyeste regnskab,
-    // så adaptFinancials kan rettes til de rigtige felter. Offentlige regnskabstal, ingen nøgler.
     try {
       const reports = await client.reports(first.lassoId);
       if (Array.isArray(reports) && reports.length) {
         const sections = (r: unknown, scope: string) => Object.keys((at(r, `data.${scope}.facts`) as object | undefined) ?? {});
         log(
           "reports oversigt",
-          reports.map((r) => ({ year: at(r, "reportYear"), to: at(r, "period.to"), company: sections(r, "company"), group: sections(r, "group") })),
+          reports.map((r) => ({ year: at(r, "reportYear"), company: sections(r, "company"), group: sections(r, "group") })),
         );
         const newest = [...reports].sort((a, b) => Number(at(b, "reportYear") ?? 0) - Number(at(a, "reportYear") ?? 0))[0];
-        for (const path of ["data.company.facts.incomeStatement", "data.company.facts.statementOfFinancialPosition", "data.group.facts.incomeStatement"]) {
-          const node = at(newest, path);
-          if (node !== undefined) console.log(`[lasso-probe] ${path} (${String(at(newest, "reportYear"))}) udsnit: ${JSON.stringify(node).slice(0, 3000)}`);
-        }
-        log("adaptFinancials", adaptFinancials(first.lassoId, reports).years.slice(-3));
+        const node = at(newest, "data.company.facts.incomeStatement") ?? at(newest, "data.group.facts.incomeStatement");
+        if (node !== undefined) console.log(`[lasso-probe] incomeStatement (${String(at(newest, "reportYear"))}) udsnit: ${JSON.stringify(node).slice(0, 3000)}`);
       }
     } catch (err) {
       log("reports-udsnit FEJL", errorMessage(err));
-    }
-    // Røgtest af de rigtige flows (samme kode som MCP-tools), kun resumé i loggen.
-    if (provider.kind === "live") {
-      const t1 = Date.now();
-      const company = await resolveSpec(companyTemplate(first.lassoId), provider);
-      log(`show_company tid`, `${Date.now() - t1} ms`);
-      log("show_company-resumé", summarizeView(companyTemplate(first.lassoId), company).split("\n"));
-      const listSpec = listTemplate(searchQuerySchema.parse({ query: config.LASSO_STARTUP_PROBE_QUERY, limit: 5 }));
-      const t0 = Date.now();
-      const list = await resolveSpec(listSpec, provider);
-      log(`search_companies-resumé (${Date.now() - t0} ms)`, summarizeView(listSpec, list).split("\n"));
     }
   } catch (err) {
     log("search FEJL", `${errorMessage(err)}${err instanceof LassoApiError ? ` (HTTP ${err.status})` : ""}`);

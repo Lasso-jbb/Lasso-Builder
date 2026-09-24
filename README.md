@@ -79,7 +79,7 @@ Se `.env.example`. På Railway er `DATABASE_URL` en reference til Postgres-servi
 
 ## Kendte forbehold
 
-- Lassos API bruger en API-nøgle i headeren `lasso-api-key` (bekræftet mod api.lassox.com). Søgesvarets form er bekræftet. Oversættelsen af virksomheds- og regnskabssvar (`apps/server/src/lasso/adapters.ts`) rettes løbende efter strukturen, serveren logger ved opstart (`[lasso-probe]`).
+- Lassos API bruger en API-nøgle i headeren `lasso-api-key` (bekræftet mod api.lassox.com). Søge-, virksomheds- og regnskabssvarenes form er bekræftet (se `docs/lasso-endpoints.md`). Ved opstart røgtester serveren `show_company` og `search_companies` mod Lasso og logger resuméet (`[lasso-probe]`); med `LOG_LEVEL=debug` logges også svarenes form.
 - Søgning med kriterier er "klodset bagved": fritekstsøgning hos Lasso, derefter filtrering og sortering i serveren. Kan API'et filtrere serverside, flyttes det dertil.
 - Login er en hardcodet demobruger i `apps/server/src/auth/user.ts`. Lasso ID (OAuth 2.1 + PKCE) kobles på dér.
 - Delte links kan ses af alle med linket. Synlighed gemmes, men håndhæves først med rigtigt login.

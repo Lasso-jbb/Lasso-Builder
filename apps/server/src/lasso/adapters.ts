@@ -11,11 +11,11 @@ import type {
 /**
  * Oversætter Lassos rå API-svar til vores datamodeller.
  *
- * VIGTIGT: Feltnavnene her er et kvalificeret gæt, fordi API-dokumentationen
- * ikke var tilgængelig, da koden blev skrevet. Hver funktion prøver flere
- * kandidat-navne. Når de rigtige svar kendes (se opstartsloggen
- * "[lasso-probe]" eller /api/debug/lasso/...), rettes kandidaterne her. Resten
- * af systemet behøver ikke ændres.
+ * Søgning, virksomhed og regnskab er bekræftet mod api.lassox.com (24.09.2026);
+ * de bekræftede felter står først i hver kandidatliste. De øvrige navne er
+ * reserve for varianter, der ikke er set endnu. Formerne kan ses med
+ * LOG_LEVEL=debug (opstartsloggen "[lasso-probe]") eller /api/debug/lasso/...
+ * Resten af systemet kender kun datamodellerne og behøver ikke ændres.
  */
 
 type Json = unknown;
@@ -282,7 +282,8 @@ export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
     });
   }
   const byYear = new Map<number, FinancialYear>();
-  for (const y of years) {
+  // Ældre år uden XBRL-data (fx 1995–2013 for Novo Nordisk) har ingen tal og udelades.
+  for (const y of years.filter(hasFigures)) {
     const prev = byYear.get(y.year);
     // Samme år kan komme flere gange (fx rettet regnskab); behold udfyldte værdier.
     byYear.set(y.year, prev ? mergeYear(prev, y) : y);
@@ -292,6 +293,10 @@ export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
     currency: str(raw, "currency", "0.currency") ?? "DKK",
     years: [...byYear.values()].sort((a, b) => a.year - b.year),
   };
+}
+
+function hasFigures(y: FinancialYear): boolean {
+  return [y.revenue, y.grossProfit, y.profit, y.equity, y.employees].some((v) => v !== null && v !== undefined);
 }
 
 function mergeYear(a: FinancialYear, b: FinancialYear): FinancialYear {
