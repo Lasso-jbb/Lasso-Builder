@@ -1,0 +1,32 @@
+{
+  "name": "@lasso/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Tyndt serverlag: MCP-server (Streamable HTTP), Lasso-datalag, gemte visninger og delte sider.",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "tsx watch --env-file-if-exists=../../.env src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --import tsx --test 'src/**/*.test.ts'"
+  },
+  "dependencies": {
+    "@lasso/spec": "*",
+    "@modelcontextprotocol/client": "^2.0.0",
+    "@modelcontextprotocol/express": "^2.0.1",
+    "@modelcontextprotocol/ext-apps": "^2.0.1",
+    "@modelcontextprotocol/node": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "pg": "^8.16.0",
+    "zod": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.0",
+    "@types/pg": "^8.15.0",
+    "esbuild": "^0.25.0"
+  }
+}
