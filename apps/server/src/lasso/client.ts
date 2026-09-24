@@ -44,6 +44,7 @@ interface CacheEntry {
 export class LassoClient {
   private readonly baseUrl: string;
   private readonly headers: Record<string, string>;
+  private readonly authQuery: Record<string, string>;
   private readonly timeoutMs: number;
   private readonly ttlMs: number;
   private readonly cache = new Map<string, CacheEntry>();
@@ -52,11 +53,12 @@ export class LassoClient {
     this.baseUrl = config.LASSO_API_BASE_URL.replace(/\/+$/, "");
     this.timeoutMs = config.LASSO_API_TIMEOUT_MS;
     this.ttlMs = config.LASSO_CACHE_TTL_SECONDS * 1000;
-    this.headers = { Accept: "application/json", ...authHeaders(config) };
+    this.authQuery = authQuery(config);
+    this.headers = { Accept: "application/json", ...(Object.keys(this.authQuery).length ? {} : authHeaders(config)) };
   }
 
   get hasCredentials(): boolean {
-    return Object.keys(this.headers).length > 1;
+    return Object.keys(this.headers).length > 1 || Object.keys(this.authQuery).length > 0;
   }
 
   /** GET mod en sti under base-URL'en. Svar caches kort (LASSO_CACHE_TTL_SECONDS). */
@@ -66,6 +68,7 @@ export class LassoClient {
       if (value !== undefined) url.searchParams.set(key, String(value));
     }
     const key = url.toString();
+    for (const [k, v] of Object.entries(this.authQuery)) url.searchParams.set(k, v);
     const now = Date.now();
     const hit = this.cache.get(key);
     if (hit && hit.expires > now) return hit.value as Promise<T>;
@@ -90,7 +93,7 @@ export class LassoClient {
         body = text;
       }
     }
-    if (!res.ok) throw new LassoApiError(res.status, body, url.toString());
+    if (!res.ok) throw new LassoApiError(res.status, body, redact(url));
     return body;
   }
 
@@ -144,7 +147,21 @@ function enc(segment: string): string {
   return encodeURIComponent(segment);
 }
 
-function authHeaders(config: Config): Record<string, string> {
+/** Fjerner auth-parametre fra en URL, før den logges eller vises. */
+function redact(url: URL): string {
+  const u = new URL(url.toString());
+  for (const k of [...u.searchParams.keys()]) if (/key|code|token|secret|password/i.test(k)) u.searchParams.set(k, "***");
+  return u.toString();
+}
+
+function authQuery(config: Config): Record<string, string> {
+  if (isSet(config.LASSO_API_TOKEN) && config.LASSO_API_TOKEN_QUERY.trim()) {
+    return { [config.LASSO_API_TOKEN_QUERY.trim()]: config.LASSO_API_TOKEN.trim() };
+  }
+  return {};
+}
+
+export function authHeaders(config: Config): Record<string, string> {
   if (isSet(config.LASSO_API_TOKEN)) {
     const header = config.LASSO_API_TOKEN_HEADER.trim() || "Authorization";
     const token = config.LASSO_API_TOKEN.trim();
@@ -175,4 +192,46 @@ export function describeShape(value: unknown, depth = 3): unknown {
     return out;
   }
   return typeof value;
+}
+
+/**
+ * Afprøver de mest almindelige login-former mod ét endpoint og returnerer kun
+ * HTTP-status pr. variant (aldrig værdier). Bruges ved opstart, når det
+ * konfigurerede login giver 401/403, så man kan se i loggen, hvad Lasso forventer.
+ */
+export async function probeAuthVariants(config: Config, path: string, query: Query): Promise<Record<string, number | string>> {
+  const base = config.LASSO_API_BASE_URL.replace(/\/+$/, "");
+  const user = config.LASSO_API_USERNAME.trim();
+  const pass = config.LASSO_API_PASSWORD.trim();
+  const token = isSet(config.LASSO_API_TOKEN) ? config.LASSO_API_TOKEN.trim() : "";
+  const secrets: [string, string][] = [];
+  if (isSet(pass)) secrets.push(["password", pass]);
+  if (token) secrets.push(["token", token]);
+  if (isSet(user)) secrets.push(["username", user]);
+
+  const variants: { name: string; headers?: Record<string, string>; query?: Record<string, string> }[] = [];
+  if (isSet(user) && isSet(pass)) variants.push({ name: "basic(username:password)", headers: { Authorization: `Basic ${Buffer.from(`${user}:${pass}`).toString("base64")}` } });
+  for (const [label, secret] of secrets) {
+    variants.push({ name: `bearer(${label})`, headers: { Authorization: `Bearer ${secret}` } });
+    variants.push({ name: `header x-api-key(${label})`, headers: { "x-api-key": secret } });
+    variants.push({ name: `header Ocp-Apim-Subscription-Key(${label})`, headers: { "Ocp-Apim-Subscription-Key": secret } });
+    variants.push({ name: `header lasso-api-key(${label})`, headers: { "lasso-api-key": secret } });
+    variants.push({ name: `query apikey(${label})`, query: { apikey: secret } });
+    variants.push({ name: `query code(${label})`, query: { code: secret } });
+  }
+
+  const out: Record<string, number | string> = {};
+  for (const v of variants) {
+    const url = new URL(path.replace(/^\/+/, ""), `${base}/`);
+    for (const [k, val] of Object.entries(query)) if (val !== undefined) url.searchParams.set(k, String(val));
+    for (const [k, val] of Object.entries(v.query ?? {})) url.searchParams.set(k, val);
+    try {
+      const res = await fetch(url, { headers: { Accept: "application/json", ...(v.headers ?? {}) }, signal: AbortSignal.timeout(10_000) });
+      out[v.name] = res.status;
+      await res.body?.cancel().catch(() => {});
+    } catch (err) {
+      out[v.name] = err instanceof Error ? err.name : "fejl";
+    }
+  }
+  return out;
 }

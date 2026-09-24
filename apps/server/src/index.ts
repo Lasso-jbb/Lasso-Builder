@@ -9,7 +9,7 @@ import { hasLassoCredentials, isSet, loadConfig, type Config } from "./config.js
 import { createProvider, type DataProvider } from "./data/index.js";
 import { errorMessage, normalizeSpec, resolveSpec } from "./data/resolve.js";
 import { adaptSearch } from "./lasso/adapters.js";
-import { describeShape, LassoApiError, LassoClient, type Query } from "./lasso/client.js";
+import { describeShape, LassoApiError, LassoClient, probeAuthVariants, type Query } from "./lasso/client.js";
 import { createMcpServer } from "./mcp/server.js";
 import { createViewStore, SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "./views/store.js";
 import { injectBoot, loadViewHtml } from "./web/page.js";
@@ -193,6 +193,11 @@ async function probeLasso(config: Config, client: LassoClient) {
     }
   } catch (err) {
     log("search FEJL", `${errorMessage(err)}${err instanceof LassoApiError ? ` (HTTP ${err.status})` : ""}`);
+    if (err instanceof LassoApiError && (err.status === 401 || err.status === 403)) {
+      const q = config.LASSO_STARTUP_PROBE_QUERY;
+      log("login-varianter mod /data/cvr/search (kun HTTP-status)", await probeAuthVariants(config, "data/cvr/search", { query: q, pageSize: 1, type: "all", page: 1 }));
+      log("401-svarets indhold", typeof err.body === "string" ? err.body.slice(0, 300) : describeShape(err.body, 3));
+    }
   }
 }
 

@@ -34,6 +34,8 @@ const schema = z.object({
   /** Header til token. "Authorization" sender "<scheme> <token>"; andre headere sender token rent. */
   LASSO_API_TOKEN_HEADER: z.string().default("Authorization"),
   LASSO_API_AUTH_SCHEME: z.string().default("Bearer"),
+  /** Sæt til et parameternavn (fx "apikey" eller "code") for at sende token som query-parameter i stedet for header. */
+  LASSO_API_TOKEN_QUERY: z.string().default(""),
   LASSO_API_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
   LASSO_CACHE_TTL_SECONDS: z.coerce.number().int().min(0).default(300),
   LASSO_COMPANY_ID_PREFIX: z.string().default("CVR-1-"),
