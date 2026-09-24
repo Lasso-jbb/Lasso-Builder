@@ -29,10 +29,10 @@ const schema = z.object({
   LASSO_API_BASE_URL: z.string().default("https://api.lassox.com"),
   LASSO_API_USERNAME: z.string().default(""),
   LASSO_API_PASSWORD: z.string().default(""),
-  /** Alternativ til brugernavn/password: en API-nøgle/token. */
+  /** Lassos API-nøgle. Sendes i headeren LASSO_API_TOKEN_HEADER (Lasso bruger "lasso-api-key"). */
   LASSO_API_TOKEN: z.string().default(""),
   /** Header til token. "Authorization" sender "<scheme> <token>"; andre headere sender token rent. */
-  LASSO_API_TOKEN_HEADER: z.string().default("Authorization"),
+  LASSO_API_TOKEN_HEADER: z.string().default("lasso-api-key"),
   LASSO_API_AUTH_SCHEME: z.string().default("Bearer"),
   /** Sæt til et parameternavn (fx "apikey" eller "code") for at sende token som query-parameter i stedet for header. */
   LASSO_API_TOKEN_QUERY: z.string().default(""),
