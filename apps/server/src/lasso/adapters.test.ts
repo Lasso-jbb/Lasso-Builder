@@ -115,3 +115,47 @@ test("regionFromZip", () => {
   assert.equal(regionFromZip(9000), "Nordjylland");
   assert.equal(regionFromZip(4000), "Sjælland");
 });
+
+test("adaptOwnership viser Lassos brøk-intervaller som procent og stemmeandel", () => {
+  const o = adaptOwnership("CVR-1-24256790", {
+    ownership: {
+      owners: [
+        { ownership: { from: 0.25, to: 0.3332 }, voteRights: { from: 0.6667, to: 0.8999 }, name: "Holding A/S", type: "Company", lassoId: "CVR-1-1" },
+        { ownership: { from: 1, to: 1 }, voteRights: { from: 1, to: 1 }, name: "Moder ApS", type: "Company", lassoId: "CVR-1-2" },
+      ],
+    },
+  });
+  assert.equal(o.owners[0]!.share, "25–33,32 % (stemmer 66,67–89,99 %)");
+  assert.equal(o.owners[1]!.share, "100 %");
+});
+
+test("adaptPeople udelader revisorer fra otherParticipants og læser employees.count", () => {
+  const raw = {
+    ...REAL_COMPANY,
+    employees: { count: 21000, fullTimeEquivalentCount: 20500, interval: "1000-999999", type: "month", month: 8, year: 2026 },
+    otherParticipants: [{ name: "Revisionsfirma P/S", type: "Company", role: { mainType: "REVISION", type: "Bæredygtighedsrevision" } }],
+  };
+  assert.deepEqual(adaptPeople(raw).map((p) => p.name), ["Anne Test"]);
+  assert.equal(adaptCompany("CVR-1-11111111", raw).employees, 21000);
+});
+
+test("adaptFinancials læser XBRL-træet i reports/advanced (selskab før koncern)", () => {
+  const node = (value: number | null, facts: Record<string, unknown> = {}) => ({ value, facts, abstract: value === null, label: "", section: "", source: "" });
+  const vm = adaptFinancials("CVR-1-1", [
+    {
+      lassoId: "CVR-1-1",
+      period: { from: "2024-01-01", to: "2024-12-31" },
+      reportYear: 2024,
+      data: {
+        company: {
+          facts: {
+            incomeStatement: node(null, { "fsa:Revenue": node(1000), "fsa:GrossProfitLoss": node(400), "fsa:ProfitLoss": node(90) }),
+            statementOfFinancialPosition: node(null, { EquityAndLiabilities: node(null, { Equity: node(700) }) }),
+          },
+        },
+        group: { facts: { incomeStatement: node(null, { Revenue: node(5000), AverageNumberOfEmployees: node(12) }) } },
+      },
+    },
+  ]);
+  assert.deepEqual(vm.years, [{ year: 2024, periodEnd: "2024-12-31", revenue: 1000, grossProfit: 400, profit: 90, equity: 700, employees: 12 }]);
+});

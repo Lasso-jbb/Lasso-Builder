@@ -9,7 +9,7 @@ import { hasLassoCredentials, isSet, loadConfig, type Config } from "./config.js
 import { createProvider, type DataProvider } from "./data/index.js";
 import { errorMessage, normalizeSpec, resolveSpec } from "./data/resolve.js";
 import { summarizeView } from "./data/summary.js";
-import { adaptSearch } from "./lasso/adapters.js";
+import { adaptFinancials, adaptSearch, at } from "./lasso/adapters.js";
 import { describeShape, LassoApiError, LassoClient, probeAuthVariants, type Query } from "./lasso/client.js";
 import { createMcpServer } from "./mcp/server.js";
 import { createViewStore, SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "./views/store.js";
@@ -197,6 +197,26 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
       } catch (err) {
         log(`${name} FEJL`, errorMessage(err));
       }
+    }
+    // Regnskabernes XBRL-træ: oversigt pr. år og et råt udsnit af det nyeste regnskab,
+    // så adaptFinancials kan rettes til de rigtige felter. Offentlige regnskabstal, ingen nøgler.
+    try {
+      const reports = await client.reports(first.lassoId);
+      if (Array.isArray(reports) && reports.length) {
+        const sections = (r: unknown, scope: string) => Object.keys((at(r, `data.${scope}.facts`) as object | undefined) ?? {});
+        log(
+          "reports oversigt",
+          reports.map((r) => ({ year: at(r, "reportYear"), to: at(r, "period.to"), company: sections(r, "company"), group: sections(r, "group") })),
+        );
+        const newest = [...reports].sort((a, b) => Number(at(b, "reportYear") ?? 0) - Number(at(a, "reportYear") ?? 0))[0];
+        for (const path of ["data.company.facts.incomeStatement", "data.company.facts.statementOfFinancialPosition", "data.group.facts.incomeStatement"]) {
+          const node = at(newest, path);
+          if (node !== undefined) console.log(`[lasso-probe] ${path} (${String(at(newest, "reportYear"))}) udsnit: ${JSON.stringify(node).slice(0, 3000)}`);
+        }
+        log("adaptFinancials", adaptFinancials(first.lassoId, reports).years.slice(-3));
+      }
+    } catch (err) {
+      log("reports-udsnit FEJL", errorMessage(err));
     }
     // Røgtest af de rigtige flows (samme kode som MCP-tools), kun resumé i loggen.
     if (provider.kind === "live") {

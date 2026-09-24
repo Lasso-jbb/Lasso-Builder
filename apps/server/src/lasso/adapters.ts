@@ -25,7 +25,7 @@ function isObj(v: Json): v is Record<string, Json> {
 }
 
 /** Case-insensitivt opslag af en sti som "address.city". */
-function at(obj: Json, path: string): Json {
+export function at(obj: Json, path: string): Json {
   let cur: Json = obj;
   for (const part of path.split(".")) {
     if (!isObj(cur)) return undefined;
@@ -150,7 +150,7 @@ export function adaptCompany(lassoId: string, raw: Json): CompanyVM {
     industryText: str(raw, "industryText", "industry.text", "industry.name", "industry", "mainIndustry.text", "mainIndustry.name", "primaryIndustry.text", "branchetekst"),
     address: address(raw),
     founded: dateStr(raw, "lifeTime.from", "creationDate", "founded", "foundedDate", "startDate", "established"),
-    employees: num(raw, "employees.amount", "employees.employees", "employees.intervalLow", "employees", "numberOfEmployees", "employeeCount"),
+    employees: num(raw, "employees.count", "employees.amount", "employees.employees", "employees.intervalLow", "employees", "numberOfEmployees", "employeeCount"),
     website: str(raw, "website", "homepage", "web", "url"),
     email: str(raw, "email", "emailAddress"),
     phone: str(raw, "phone", "phoneNumber", "telephone", "telefon"),
@@ -190,7 +190,7 @@ export function adaptPeople(raw: Json): PersonRowVM[] {
     }
   }
   return dedupe(
-    rows.filter((r) => !/ejer|owner|revisor|auditor|accountant|legal_owner|real_owner/i.test(r.role)),
+    rows.filter((r) => !/ejer|owner|revis|auditor|accountant|legal_owner|real_owner/i.test(r.role)),
     (r) => `${r.name}|${r.role}|${r.from ?? ""}`,
   );
 }
@@ -199,6 +199,23 @@ export function adaptPeople(raw: Json): PersonRowVM[] {
 function prettyRole(role: string): string {
   const t = role.replace(/_/g, " ").trim().toLowerCase();
   return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+const percentFormat = new Intl.NumberFormat("da-DK", { maximumFractionDigits: 2 });
+
+/**
+ * Ejerandel som tekst. Lasso giver intervaller som brøker: { from: 0.25, to: 0.3332 } -> "25–33,32 %".
+ * Enkeltværdier og procenttal (over 1) håndteres også.
+ */
+function shareText(v: Json): string | undefined {
+  if (typeof v === "string") return v.trim() || undefined;
+  const lo = typeof v === "number" ? v : isObj(v) ? num(v, "from", "min", "value") : undefined;
+  if (lo === undefined) return undefined;
+  const hi = isObj(v) ? num(v, "to", "max") : undefined;
+  const scale = (hi ?? lo) <= 1 ? 100 : 1;
+  const a = percentFormat.format(lo * scale);
+  if (hi === undefined || hi === lo) return `${a} %`;
+  return `${a}–${percentFormat.format(hi * scale)} %`;
 }
 
 export function adaptOwnership(lassoId: string, raw: Json): OwnershipVM {
@@ -210,19 +227,14 @@ export function adaptOwnership(lassoId: string, raw: Json): OwnershipVM {
     .map((o) => {
       const name = str(o, "name", "owner.name", "participant.name", "navn");
       if (!name) return null;
-      const shareRaw = pick(o, "ownership", "share", "ownershipShare", "percentage", "ownershipPercentage", "ejerandel");
-      const shareNum = typeof shareRaw === "number" ? shareRaw : isObj(shareRaw) ? num(shareRaw, "value", "min", "from") : undefined;
-      const shareText =
-        typeof shareRaw === "string"
-          ? shareRaw
-          : isObj(shareRaw) && num(shareRaw, "min", "from") !== undefined && num(shareRaw, "max", "to") !== undefined
-            ? `${num(shareRaw, "min", "from")}-${num(shareRaw, "max", "to")} %`
-            : str(o, "shareText", "ownershipInterval", "interval", "shareInterval");
+      const share = shareText(pick(o, "ownership", "share", "ownershipShare", "percentage", "ownershipPercentage", "ejerandel"))
+        ?? str(o, "shareText", "ownershipInterval", "interval", "shareInterval");
+      const votes = shareText(pick(o, "voteRights", "votingRights", "stemmeandel"));
       const type = str(o, "type", "kind", "entityType") ?? "";
       const owner: OwnerVM = {
         name,
         lassoId: str(o, "lassoId", "id", "owner.lassoId"),
-        share: shareText ?? (shareNum !== undefined ? `${shareNum <= 1 ? Math.round(shareNum * 1000) / 10 : shareNum} %` : undefined),
+        share: share && votes && votes !== share ? `${share} (stemmer ${votes})` : share ?? (votes ? `stemmer ${votes}` : undefined),
         kind: /company|virksomhed|cvr-1/i.test(type + (str(o, "lassoId", "id") ?? "")) ? "company" : "person",
       };
       return owner;
@@ -240,32 +252,86 @@ export function adaptOwnership(lassoId: string, raw: Json): OwnershipVM {
   };
 }
 
+/**
+ * Bekræftet form (GET /{lassoId}/reports/advanced, 24.09.2026):
+ * [{ lassoId, period: { from, to }, reportYear, publicationTime,
+ *    data: { company?: { reportType, facts: { incomeStatement, statementOfFinancialPosition, … } }, group?: { … } } }]
+ * Hver sektion er et XBRL-præsentationstræ: { facts: { [begreb]: node }, xbrlType, abstract, label, section, source }.
+ * Selskabets egne tal bruges først; koncerntal kun hvor selskabets mangler.
+ */
 export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
   const reports = items(raw);
   const years: FinancialYear[] = [];
   for (const r of reports) {
-    const periodEnd = dateStr(r, "periodEnd", "period.end", "endDate", "end", "reportingPeriod.end", "to");
-    const year = num(r, "year", "fiscalYear", "financialYear", "aar") ?? (periodEnd ? Number(periodEnd.slice(0, 4)) : undefined);
+    const periodEnd = dateStr(r, "period.to", "periodEnd", "period.end", "endDate", "end", "reportingPeriod.end", "to");
+    const year = num(r, "reportYear", "year", "fiscalYear", "financialYear", "aar") ?? (periodEnd ? Number(periodEnd.slice(0, 4)) : undefined);
     if (!year || !Number.isFinite(year)) continue;
-    const src = pick(r, "figures", "keyFigures", "values", "data", "financials", "incomeStatement") ?? r;
-    const f = (...keys: string[]) => num(src, ...keys) ?? num(r, ...keys) ?? null;
+    const facts = new Map<string, number>();
+    for (const scope of ["data.company.facts", "data.group.facts"]) collectFacts(at(r, scope), periodEnd, facts);
+    const src = pick(r, "figures", "keyFigures", "values", "financials", "incomeStatement") ?? r;
+    const f = (concepts: string[], ...keys: string[]) =>
+      concepts.map((c) => facts.get(c)).find((v) => v !== undefined) ?? num(src, ...keys) ?? num(r, ...keys) ?? null;
     years.push({
       year,
       periodEnd,
-      revenue: f("revenue", "netRevenue", "turnover", "netTurnover", "omsaetning", "nettoomsaetning"),
-      grossProfit: f("grossProfit", "grossResult", "grossProfitLoss", "bruttofortjeneste", "bruttoresultat"),
-      profit: f("profit", "netResult", "profitLoss", "netIncome", "result", "aaretsResultat", "profitForTheYear"),
-      equity: f("equity", "totalEquity", "egenkapital"),
-      employees: f("employees", "numberOfEmployees", "averageNumberOfEmployees", "antalAnsatte"),
+      revenue: f(["revenue", "revenues", "revenuefromcontractswithcustomers", "nettoomsaetning"], "revenue", "netRevenue", "turnover", "netTurnover", "omsaetning"),
+      grossProfit: f(["grossprofitloss", "grossprofit", "grossresult"], "grossProfit", "grossResult", "grossProfitLoss", "bruttofortjeneste"),
+      profit: f(["profitloss", "profitlossfortheyear", "netincome"], "profit", "netResult", "profitLoss", "netIncome", "aaretsResultat"),
+      equity: f(["equity", "totalequity", "equityattributabletoownersofparent"], "equity", "totalEquity", "egenkapital"),
+      employees: f(["averagenumberofemployees", "numberofemployees"], "employees", "numberOfEmployees", "averageNumberOfEmployees", "antalAnsatte"),
     });
   }
   const byYear = new Map<number, FinancialYear>();
-  for (const y of years) byYear.set(y.year, { ...byYear.get(y.year), ...y });
+  for (const y of years) {
+    const prev = byYear.get(y.year);
+    // Samme år kan komme flere gange (fx rettet regnskab); behold udfyldte værdier.
+    byYear.set(y.year, prev ? mergeYear(prev, y) : y);
+  }
   return {
     lassoId,
     currency: str(raw, "currency", "0.currency") ?? "DKK",
     years: [...byYear.values()].sort((a, b) => a.year - b.year),
   };
+}
+
+function mergeYear(a: FinancialYear, b: FinancialYear): FinancialYear {
+  const out: FinancialYear = { ...a };
+  for (const k of ["revenue", "grossProfit", "profit", "equity", "employees"] as const) out[k] = a[k] ?? b[k] ?? null;
+  return out;
+}
+
+const SECTION_ORDER = ["incomeStatement", "statementOfFinancialPosition", "statementOfComprehensiveIncome", "statementOfChangesInEquity"];
+
+/** Går et XBRL-træ igennem og samler begreb -> tal for regnskabsperioden. Første fund vinder. */
+function collectFacts(root: Json, periodEnd: string | undefined, out: Map<string, number>, depth = 0): void {
+  if (!isObj(root) || depth > 12) return;
+  const entries = Object.entries(root);
+  if (depth === 0) entries.sort(([a], [b]) => rank(a) - rank(b));
+  for (const [key, node] of entries) {
+    if (!isObj(node)) continue;
+    const concept = key.replace(/^.*[:_#]/, "").toLowerCase();
+    const value = factValue(node, periodEnd);
+    if (value !== undefined && !out.has(concept)) out.set(concept, value);
+    if (isObj(node.facts)) collectFacts(node.facts, periodEnd, out, depth + 1);
+    else if (Array.isArray(node.children)) for (const c of node.children) collectFacts(c, periodEnd, out, depth + 1);
+  }
+}
+
+function rank(section: string): number {
+  const i = SECTION_ORDER.indexOf(section);
+  return i === -1 ? SECTION_ORDER.length : i;
+}
+
+function factValue(node: Record<string, Json>, periodEnd: string | undefined): number | undefined {
+  const list = Array.isArray(node.values) ? node.values : Array.isArray(node.facts) ? node.facts : undefined;
+  if (list) {
+    const plain = list.filter((v) => !isObj(v) || !pick(v, "dimensions", "dimension", "members"));
+    const pool = plain.length ? plain : list;
+    const match = periodEnd ? pool.find((v) => dateStr(v, "period.to", "period.instant", "instant", "endDate", "to", "period.end") === periodEnd) : undefined;
+    const hit = match ?? pool[0];
+    return typeof hit === "number" ? hit : num(hit, "value", "amount", "numericValue");
+  }
+  return num(node, "value", "amount", "numericValue", "currentValue", "current");
 }
 
 /**
