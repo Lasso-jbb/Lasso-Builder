@@ -182,11 +182,13 @@ async function probeLasso(config: Config, client: LassoClient) {
     if (!first) return log("search", "ingen virksomheder at teste videre med");
     log("tester med", first.lassoId);
     for (const [name, fn] of [
+      ["search extended=true", () => client.search({ query: config.LASSO_STARTUP_PROBE_QUERY, type: "all", pageSize: 1, extended: true })],
       ["company", () => client.company(first.lassoId)],
       ["reports", () => client.reports(first.lassoId)],
+      ["websites", () => client.websites(first.lassoId)],
     ] as const) {
       try {
-        log(`${name} OK, shape`, describeShape(await fn(), 5));
+        log(`${name} OK, shape`, describeShape(await fn(), 6));
       } catch (err) {
         log(`${name} FEJL`, errorMessage(err));
       }

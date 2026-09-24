@@ -24,7 +24,7 @@ export class LiveProvider implements DataProvider {
     const wantsFinancials = needsFinancials(q);
     const pageSize = wantsFinancials || q.criteria.length > 0 ? Math.max(50, q.limit) : q.limit;
 
-    const raw = await this.client.search({ query: q.query, type: "company", pageSize, companyStatus });
+    const raw = await this.client.search({ query: q.query, type: "all", pageSize, companyStatus });
     const { total, rows } = adaptSearch(raw, this.config.LASSO_COMPANY_ID_PREFIX);
 
     // Berig med regnskabstal, så kriterier, sortering og sparklines virker.

@@ -220,8 +220,15 @@ export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
   };
 }
 
+/**
+ * Bekræftet form (api.lassox.com/data/cvr/search, 24.09.2026):
+ * { companies: { results: [{ lassoId, name, status, entityType, address1, postalCode, city, country, score, … }],
+ *                resultsFound, resultsReturned, page, pageSize, totalPages, hasNextPage, continuationToken, suggestion },
+ *   people: { results: [...] , … } }
+ */
 export function adaptSearch(raw: Json, companyPrefix: string): { total?: number; rows: CompanyRowVM[] } {
-  const list = items(raw);
+  const container = isObj(raw) && isObj(at(raw, "companies")) ? at(raw, "companies") : raw;
+  const list = items(container);
   const rows: CompanyRowVM[] = [];
   for (const it of list) {
     const lassoId = str(it, "lassoId", "id", "entityId");
@@ -233,6 +240,8 @@ export function adaptSearch(raw: Json, companyPrefix: string): { total?: number;
     if (!type && !lassoId.startsWith(companyPrefix) && /^CVR-/i.test(lassoId)) continue;
     const status = str(it, "status", "companyStatus", "state");
     const a = address(it);
+    const street = str(it, "address1");
+    if (street && a) a.street = street;
     rows.push({
       lassoId,
       cvr: str(it, "cvr", "cvrNumber", "vat"),
@@ -248,7 +257,7 @@ export function adaptSearch(raw: Json, companyPrefix: string): { total?: number;
       profit: num(it, "profit", "netResult", "profitLoss") ?? null,
     });
   }
-  return { total: num(raw, "total", "totalCount", "count", "hits.total", "numberOfResults"), rows };
+  return { total: num(container, "resultsFound", "total", "totalCount", "count", "hits.total", "numberOfResults"), rows };
 }
 
 function dedupe<T>(list: T[], key: (t: T) => string): T[] {

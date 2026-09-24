@@ -38,3 +38,22 @@ test("statusKind", () => {
   assert.equal(statusKind("Under konkurs"), "warning");
   assert.equal(statusKind("Ophørt"), "inactive");
 });
+
+test("adaptSearch læser Lassos rigtige søgesvar (companies.results)", () => {
+  const { rows, total } = adaptSearch(
+    {
+      companies: {
+        results: [{ lassoId: "CVR-1-11111111", name: "Lasso X A/S", status: "Normal", entityType: "Company", address1: "Vej 1", postalCode: 1000, city: "København K", country: "DK", score: 1 }],
+        resultsFound: 42,
+        resultsReturned: 1,
+      },
+      people: { results: [{ lassoId: "CVR-4-1", name: "Person", entityType: "Person" }] },
+    },
+    "CVR-1-",
+  );
+  assert.equal(total, 42);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0]!.name, "Lasso X A/S");
+  assert.equal(rows[0]!.city, "København K");
+  assert.equal(rows[0]!.statusKind, "active");
+});
