@@ -31,14 +31,20 @@ export class LiveProvider implements DataProvider {
     const enrich = async (list: typeof rows) =>
       mapLimit(list, 6, async (row) => {
         try {
-          const f = await this.financials(row.lassoId);
+          const [f, co] = await Promise.all([
+            this.financials(row.lassoId).catch(() => ({ lassoId: row.lassoId, currency: "DKK", years: [] })),
+            this.company(row.lassoId).catch(() => null),
+          ]);
           const last = f.years.at(-1);
           return {
             ...row,
+            cvr: row.cvr ?? co?.cvr,
+            industryText: row.industryText ?? co?.industryText,
+            region: row.region ?? co?.address?.region,
             revenue: row.revenue ?? last?.revenue ?? null,
             grossProfit: row.grossProfit ?? last?.grossProfit ?? null,
             profit: row.profit ?? last?.profit ?? null,
-            employees: row.employees ?? last?.employees ?? null,
+            employees: row.employees ?? co?.employees ?? last?.employees ?? null,
             trend: f.years.slice(-5).map((y) => y.grossProfit ?? y.revenue ?? 0),
           };
         } catch {

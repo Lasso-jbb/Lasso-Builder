@@ -3,11 +3,12 @@ import { createMcpExpressApp } from "@modelcontextprotocol/express";
 import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
 import cors from "cors";
 import type { NextFunction, Request, Response } from "express";
-import { companyTemplate, parseViewSpec, toLassoId } from "@lasso/spec";
+import { companyTemplate, listTemplate, parseViewSpec, searchQuerySchema, toLassoId } from "@lasso/spec";
 import { getCurrentUser } from "./auth/user.js";
 import { hasLassoCredentials, isSet, loadConfig, type Config } from "./config.js";
 import { createProvider, type DataProvider } from "./data/index.js";
 import { errorMessage, normalizeSpec, resolveSpec } from "./data/resolve.js";
+import { summarizeView } from "./data/summary.js";
 import { adaptSearch } from "./lasso/adapters.js";
 import { describeShape, LassoApiError, LassoClient, probeAuthVariants, type Query } from "./lasso/client.js";
 import { createMcpServer } from "./mcp/server.js";
@@ -172,7 +173,7 @@ export function createApp({ config, client, provider, store }: AppDeps) {
  * Logger strukturen (kun feltnavne og typer, ingen værdier) af Lassos svar ved
  * opstart. Så kan adapters rettes til de rigtige feltnavne ud fra loggen.
  */
-async function probeLasso(config: Config, client: LassoClient) {
+async function probeLasso(config: Config, client: LassoClient, provider: DataProvider) {
   if (!config.LASSO_STARTUP_PROBE || !hasLassoCredentials(config)) return;
   const log = (label: string, v: unknown) => console.log(`[lasso-probe] ${label}: ${JSON.stringify(v)}`);
   try {
@@ -192,6 +193,14 @@ async function probeLasso(config: Config, client: LassoClient) {
       } catch (err) {
         log(`${name} FEJL`, errorMessage(err));
       }
+    }
+    // Røgtest af de rigtige flows (samme kode som MCP-tools), kun resumé i loggen.
+    if (provider.kind === "live") {
+      const company = await resolveSpec(companyTemplate(first.lassoId), provider);
+      log("show_company-resumé", summarizeView(companyTemplate(first.lassoId), company).split("\n"));
+      const listSpec = listTemplate(searchQuerySchema.parse({ query: config.LASSO_STARTUP_PROBE_QUERY, limit: 5 }));
+      const list = await resolveSpec(listSpec, provider);
+      log("search_companies-resumé", summarizeView(listSpec, list).split("\n"));
     }
   } catch (err) {
     log("search FEJL", `${errorMessage(err)}${err instanceof LassoApiError ? ` (HTTP ${err.status})` : ""}`);
@@ -229,7 +238,7 @@ async function main() {
     console.log(
       `[lasso-mcp] v${VERSION} ${config.APP_ENV} på port ${config.PORT} | data: ${provider.kind} | lasso-credentials: ${hasLassoCredentials(config) ? "ja" : "nej"} | db: ${store.kind} | mcp-nøgle: ${isSet(config.MCP_ACCESS_KEY) ? "ja" : "nej"} | ${config.publicBaseUrl}/mcp`,
     );
-    void probeLasso(config, client);
+    void probeLasso(config, client, provider).catch((err) => console.error("[lasso-probe] fejl:", errorMessage(err)));
   });
 
   const shutdown = () => {

@@ -92,6 +92,27 @@ function dateStr(obj: Json, ...paths: string[]): string | undefined {
   return m ? m[1] : s;
 }
 
+/**
+ * Region ud fra postnummer. Tilnærmelse (postnumre følger ikke regionsgrænser
+ * helt), men søgesvaret har kun postnummer og by. Rettes til kommunekode, når
+ * den er tilgængelig.
+ */
+export function regionFromZip(zip: string | number | undefined): string | undefined {
+  const n = typeof zip === "number" ? zip : Number(String(zip ?? "").trim());
+  if (!Number.isFinite(n) || n < 1000 || n > 9999) return undefined;
+  if (n < 3800) return "Hovedstaden";
+  if (n < 5000) return "Sjælland";
+  if (n < 6900) return "Syddanmark";
+  if (n < 7000) return "Midtjylland";
+  if (n < 7330) return "Syddanmark";
+  if (n < 7700) return "Midtjylland";
+  if (n < 7800) return "Nordjylland";
+  if (n < 7900) return "Midtjylland";
+  if (n < 8000) return "Nordjylland";
+  if (n < 9000) return "Midtjylland";
+  return "Nordjylland";
+}
+
 export function statusKind(status: string | undefined): CompanyVM["statusKind"] {
   if (!status) return undefined;
   const s = status.toLowerCase();
@@ -106,12 +127,13 @@ function address(raw: Json): CompanyVM["address"] {
   const street =
     str(a, "street", "streetAddress", "addressLine", "line1", "vejnavn") ??
     ([str(a, "streetName", "roadName"), str(a, "houseNumber", "streetNumber", "number")].filter(Boolean).join(" ") || undefined);
+  const zip = str(a, "postalCode", "zipcode", "zipCode", "zip", "postcode", "postnummer");
   return {
-    street,
-    zip: str(a, "zipcode", "zipCode", "zip", "postalCode", "postcode", "postnummer"),
-    city: str(a, "city", "cityName", "postalDistrict", "postnummernavn", "by"),
-    municipality: str(a, "municipality", "municipalityName", "kommune", "kommunenavn"),
-    region: str(a, "region", "regionName"),
+    street: str(a, "address1") ?? street,
+    zip,
+    city: str(a, "postalDistrict", "city", "cityName", "postnummernavn", "by"),
+    municipality: str(a, "municipality.name", "municipality", "municipalityName", "kommune", "kommunenavn"),
+    region: str(a, "region", "regionName") ?? regionFromZip(zip),
   };
 }
 
@@ -123,53 +145,78 @@ export function adaptCompany(lassoId: string, raw: Json): CompanyVM {
     name: str(raw, "name", "companyName", "legalName", "navn", "names.0") ?? lassoId,
     status,
     statusKind: statusKind(status),
-    form: str(raw, "companyForm", "companyType", "legalForm", "form", "virksomhedsform", "type"),
+    form: str(raw, "form.shortDescription", "form.longDescription", "companyForm", "companyType", "legalForm", "form", "virksomhedsform"),
     industryCode: str(raw, "industryCode", "industry.code", "mainIndustry.code", "primaryIndustry.code", "branchekode"),
     industryText: str(raw, "industryText", "industry.text", "industry.name", "industry", "mainIndustry.text", "mainIndustry.name", "primaryIndustry.text", "branchetekst"),
     address: address(raw),
-    founded: dateStr(raw, "founded", "foundedDate", "startDate", "established", "stiftelsesdato", "lifecycle.start"),
-    employees: num(raw, "employees", "numberOfEmployees", "employeeCount", "employment.employees", "antalAnsatte", "latestEmployment.employees"),
+    founded: dateStr(raw, "lifeTime.from", "creationDate", "founded", "foundedDate", "startDate", "established"),
+    employees: num(raw, "employees.amount", "employees.employees", "employees.intervalLow", "employees", "numberOfEmployees", "employeeCount"),
     website: str(raw, "website", "homepage", "web", "url"),
     email: str(raw, "email", "emailAddress"),
     phone: str(raw, "phone", "phoneNumber", "telephone", "telefon"),
   };
 }
 
+/**
+ * Bekræftet form (GET /{lassoId}): stakeholders[] { name, type, lassoId, role: { mainType, type, originalType }, from },
+ * management { ceo, members[] }, board { chairman, members[], alternates[] }, founders[].
+ * Indholdet af management/board kendes kun som tomme felter endnu; de læses med samme feltnavne som stakeholders.
+ */
 export function adaptPeople(raw: Json): PersonRowVM[] {
-  const list = [
-    ...arr(raw, "participants", "relations", "management", "roles", "persons", "deltagere"),
-    ...arr(raw, "board", "boardMembers"),
-    ...arr(raw, "executives", "directors", "direktion"),
+  const sources: [Json[], string][] = [
+    [arr(raw, "stakeholders"), "Deltager"],
+    [[pick(raw, "management.ceo")].filter((x) => x !== undefined), "Direktør"],
+    [arr(raw, "management.members"), "Direktion"],
+    [[pick(raw, "board.chairman")].filter((x) => x !== undefined), "Bestyrelsesformand"],
+    [arr(raw, "board.members"), "Bestyrelsesmedlem"],
+    [arr(raw, "board.alternates"), "Suppleant"],
+    // Fallback til andre navngivninger
+    [arr(raw, "participants", "relations", "roles", "persons", "deltagere"), "Deltager"],
   ];
   const rows: PersonRowVM[] = [];
-  for (const p of list) {
-    const name = str(p, "name", "participant.name", "person.name", "navn");
-    if (!name) continue;
-    const roleRaw = pick(p, "role", "roles", "title", "type", "function", "rolle");
-    const roleList = Array.isArray(roleRaw) ? roleRaw : [roleRaw ?? p];
-    for (const r of roleList) {
+  for (const [list, fallbackRole] of sources) {
+    for (const p of list) {
+      const name = typeof p === "string" ? p : str(p, "name", "participant.name", "person.name", "navn");
+      if (!name) continue;
+      const role = str(p, "role.type", "role.originalType", "role.mainType", "role", "title", "function", "rolle") ?? fallbackRole;
       rows.push({
         name,
-        lassoId: str(p, "lassoId", "id", "participant.lassoId", "person.lassoId"),
-        role: (typeof r === "string" ? r : str(r, "role", "name", "title", "type", "text")) ?? "Deltager",
-        from: dateStr(r, "from", "start", "startDate", "validFrom", "fra") ?? dateStr(p, "from", "start", "startDate", "validFrom"),
-        to: dateStr(r, "to", "end", "endDate", "validTo", "til") ?? dateStr(p, "to", "end", "endDate", "validTo"),
+        lassoId: str(p, "lassoId", "id"),
+        role: prettyRole(role),
+        from: dateStr(p, "from", "role.from", "start", "startDate", "validFrom"),
+        to: dateStr(p, "to", "role.to", "end", "endDate", "validTo"),
       });
     }
   }
-  return rows.filter((r) => !/ejer|owner|revisor|auditor/i.test(r.role));
+  return dedupe(
+    rows.filter((r) => !/ejer|owner|revisor|auditor|accountant|legal_owner|real_owner/i.test(r.role)),
+    (r) => `${r.name}|${r.role}|${r.from ?? ""}`,
+  );
+}
+
+/** "BOARD_MEMBER" / "direktion" -> "Board member" / "Direktion" */
+function prettyRole(role: string): string {
+  const t = role.replace(/_/g, " ").trim().toLowerCase();
+  return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
 export function adaptOwnership(lassoId: string, raw: Json): OwnershipVM {
-  const ownersRaw = arr(raw, "owners", "legalOwners", "ownership", "ownerships", "shareholders", "ejere");
+  // Bekræftet: ownership.owners[] { ownership, voteRights, name, type, lassoId, unitNumber }
+  const ownersRaw = arr(raw, "ownership.owners", "owners", "legalOwners", "ownerships", "shareholders", "ejere");
   const participants = arr(raw, "participants", "relations", "roles");
   const fromParticipants = participants.filter((p) => /ejer|owner/i.test(JSON.stringify(pick(p, "role", "roles", "type") ?? "")));
   const owners: OwnerVM[] = [...ownersRaw, ...fromParticipants]
     .map((o) => {
       const name = str(o, "name", "owner.name", "participant.name", "navn");
       if (!name) return null;
-      const shareNum = num(o, "share", "ownershipShare", "percentage", "ownershipPercentage", "ejerandel");
-      const shareText = str(o, "shareText", "ownershipInterval", "interval", "shareInterval");
+      const shareRaw = pick(o, "ownership", "share", "ownershipShare", "percentage", "ownershipPercentage", "ejerandel");
+      const shareNum = typeof shareRaw === "number" ? shareRaw : isObj(shareRaw) ? num(shareRaw, "value", "min", "from") : undefined;
+      const shareText =
+        typeof shareRaw === "string"
+          ? shareRaw
+          : isObj(shareRaw) && num(shareRaw, "min", "from") !== undefined && num(shareRaw, "max", "to") !== undefined
+            ? `${num(shareRaw, "min", "from")}-${num(shareRaw, "max", "to")} %`
+            : str(o, "shareText", "ownershipInterval", "interval", "shareInterval");
       const type = str(o, "type", "kind", "entityType") ?? "";
       const owner: OwnerVM = {
         name,
@@ -181,7 +228,7 @@ export function adaptOwnership(lassoId: string, raw: Json): OwnershipVM {
     })
     .filter((o): o is OwnerVM => o !== null);
 
-  const auditorRaw = pick(raw, "auditor", "auditors.0", "revisor", "accountant");
+  const auditorRaw = pick(raw, "accounting.accountant", "auditor", "auditors.0", "revisor", "accountant");
   const auditorName = auditorRaw === undefined ? undefined : typeof auditorRaw === "string" ? auditorRaw : str(auditorRaw, "name", "navn");
   return {
     lassoId,

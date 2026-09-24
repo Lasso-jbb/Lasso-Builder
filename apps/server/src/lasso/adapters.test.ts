@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { adaptCompany, adaptFinancials, adaptSearch, statusKind } from "./adapters.js";
+import { adaptCompany, adaptFinancials, adaptOwnership, adaptPeople, adaptSearch, regionFromZip, statusKind } from "./adapters.js";
 
 test("adaptCompany tåler forskellige feltnavne", () => {
   const vm = adaptCompany("CVR-1-11111111", {
@@ -56,4 +56,62 @@ test("adaptSearch læser Lassos rigtige søgesvar (companies.results)", () => {
   assert.equal(rows[0]!.name, "Lasso X A/S");
   assert.equal(rows[0]!.city, "København K");
   assert.equal(rows[0]!.statusKind, "active");
+});
+
+// Struktur bekræftet mod api.lassox.com/{lassoId} 24.09.2026 (værdier opdigtede).
+const REAL_COMPANY = {
+  lassoId: "CVR-1-11111111",
+  cvr: 11111111,
+  name: "Test ApS",
+  status: "Normal",
+  lifeTime: { from: "2022-11-01T00:00:00", to: null },
+  email: "info@test.dk",
+  creationDate: "2022-11-01T00:00:00",
+  address: { address1: "Testvej 1", postalCode: 8000, postalDistrict: "Aarhus C", cityName: null, municipality: { name: "Aarhus", code: 751 }, countryCode: "DK" },
+  form: { code: 80, shortDescription: "ApS", longDescription: "Anpartsselskab" },
+  industry: { text: "Computerprogrammering", code: "620100" },
+  employees: null,
+  accounting: { accountant: null, optedOut: true },
+  stakeholders: [
+    { name: "Anne Test", type: "Person", lassoId: "CVR-3-1", role: { mainType: "DIREKTION", type: "direktør", originalType: "DIREKTØR" }, from: "2022-11-01T00:00:00" },
+    { name: "Holding ApS", type: "Company", lassoId: "CVR-1-22222222", role: { mainType: "EJER", type: "legal ejer", originalType: "EJER" }, from: "2022-11-01T00:00:00" },
+  ],
+  management: { ceo: null, members: [] },
+  board: { chairman: null, members: [], alternates: [] },
+  ownership: { hasOwnersUnderFivePercent: false, owners: [{ ownership: null, voteRights: null, name: "Holding ApS", type: "Company", lassoId: "CVR-1-22222222", unitNumber: 1 }] },
+};
+
+test("adaptCompany læser Lassos rigtige virksomhedssvar", () => {
+  const vm = adaptCompany("CVR-1-11111111", REAL_COMPANY);
+  assert.equal(vm.cvr, "11111111");
+  assert.equal(vm.form, "ApS");
+  assert.equal(vm.industryText, "Computerprogrammering");
+  assert.equal(vm.industryCode, "620100");
+  assert.equal(vm.address?.street, "Testvej 1");
+  assert.equal(vm.address?.city, "Aarhus C");
+  assert.equal(vm.address?.municipality, "Aarhus");
+  assert.equal(vm.address?.region, "Midtjylland");
+  assert.equal(vm.founded, "2022-11-01");
+});
+
+test("adaptPeople tager stakeholders og udelader ejere", () => {
+  const people = adaptPeople(REAL_COMPANY);
+  assert.deepEqual(people.map((p) => [p.name, p.role]), [["Anne Test", "Direktør"]]);
+  assert.equal(people[0]!.from, "2022-11-01");
+});
+
+test("adaptOwnership læser ownership.owners", () => {
+  const o = adaptOwnership("CVR-1-11111111", REAL_COMPANY);
+  assert.equal(o.owners.length, 1);
+  assert.equal(o.owners[0]!.name, "Holding ApS");
+  assert.equal(o.owners[0]!.kind, "company");
+});
+
+test("regionFromZip", () => {
+  assert.equal(regionFromZip(2100), "Hovedstaden");
+  assert.equal(regionFromZip(8600), "Midtjylland");
+  assert.equal(regionFromZip(7400), "Midtjylland");
+  assert.equal(regionFromZip(7100), "Syddanmark");
+  assert.equal(regionFromZip(9000), "Nordjylland");
+  assert.equal(regionFromZip(4000), "Sjælland");
 });
