@@ -5,15 +5,23 @@ const intFormat = new Intl.NumberFormat("da-DK", { maximumFractionDigits: 0 });
 const oneDecimal = new Intl.NumberFormat("da-DK", { maximumFractionDigits: 1 });
 const fixedOneDecimal = new Intl.NumberFormat("da-DK", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
+/** Katalog 09: manglende værdi vises som "—" (i text-faint). */
+export const MISSING = "—";
+
+/** Katalog 09: negative tal med ægte minus (U+2212), aldrig bindestreg eller parentes. */
+function minus(s: string): string {
+  return s.replace(/^-/, "\u2212").replace(/^\u002D/, "\u2212");
+}
+
 /** 12500000 -> "12,5 mio. kr." ; 950000 -> "950 t. kr." */
 export function formatAmount(value: number | null | undefined, unit = "kr."): string {
-  if (value === null || value === undefined || Number.isNaN(value)) return "–";
+  if (value === null || value === undefined || Number.isNaN(value)) return MISSING;
   const abs = Math.abs(value);
   const suffix = unit ? ` ${unit}` : "";
-  if (abs >= 1_000_000_000) return `${oneDecimal.format(value / 1_000_000_000)} mia.${suffix}`;
-  if (abs >= 1_000_000) return `${oneDecimal.format(value / 1_000_000)} mio.${suffix}`;
-  if (abs >= 10_000) return `${intFormat.format(Math.round(value / 1_000))} t.${suffix}`;
-  return `${intFormat.format(value)}${suffix}`;
+  if (abs >= 1_000_000_000) return minus(`${oneDecimal.format(value / 1_000_000_000)} mia.${suffix}`);
+  if (abs >= 1_000_000) return minus(`${oneDecimal.format(value / 1_000_000)} mio.${suffix}`);
+  if (abs >= 10_000) return minus(`${intFormat.format(Math.round(value / 1_000))} t.${suffix}`);
+  return minus(`${intFormat.format(value)}${suffix}`);
 }
 
 export interface AmountScale {
@@ -33,23 +41,23 @@ export function amountScale(values: readonly number[], unit = "kr."): AmountScal
 
 export function formatScaled(value: number, scale: AmountScale): string {
   // Fast én decimal i mio./mia., så søjlerne står ens: "177,0" ved siden af "140,8".
-  return (scale.divisor >= 1_000_000 ? fixedOneDecimal : intFormat).format(value / scale.divisor);
+  return minus((scale.divisor >= 1_000_000 ? fixedOneDecimal : intFormat).format(value / scale.divisor));
 }
 
 export function formatNumber(value: number | null | undefined): string {
-  if (value === null || value === undefined || Number.isNaN(value)) return "–";
-  return intFormat.format(value);
+  if (value === null || value === undefined || Number.isNaN(value)) return MISSING;
+  return minus(intFormat.format(value));
 }
 
 export function formatPercent(value: number | null | undefined, withSign = true): string {
-  if (value === null || value === undefined || !Number.isFinite(value)) return "–";
+  if (value === null || value === undefined || !Number.isFinite(value)) return MISSING;
   const sign = withSign && value > 0 ? "+" : "";
-  return `${sign}${oneDecimal.format(value)} %`;
+  return `${sign}${minus(fixedOneDecimal.format(value))} %`;
 }
 
 /** "2021-03-01" -> "01.03.2021" (dansk dd.mm.åååå). */
 export function formatDate(value: string | null | undefined): string {
-  if (!value) return "–";
+  if (!value) return MISSING;
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
   if (m) return `${m[3]}.${m[2]}.${m[1]}`;
   const d = new Date(value);

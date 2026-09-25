@@ -55,7 +55,7 @@ test("tekstkortet har samme bredde på alle linjer og alle sektioner", () => {
     assert.ok(card.includes(part), `mangler "${part}":\n${card}`);
   }
   // Negativt resultat får pil ned; fratrådte personer er ikke med.
-  assert.match(card, /Resultat\s+-2 mia\.\s+▼ underskud/);
+  assert.match(card, /Resultat\s+−2 mia\.\s+▼ underskud/);
   assert.ok(!card.includes("Dan Tidligere"));
 });
 
