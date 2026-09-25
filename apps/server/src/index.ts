@@ -262,6 +262,24 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
         log(`search/lassoid OrderBy=${fieldName ?? "(ingen)"} (${Date.now() - t1} ms)`, summary);
       } catch (err) {
         log("søgning FEJL", `${errorMessage(err)}${err instanceof LassoApiError ? ` (HTTP ${err.status}) ${JSON.stringify(err.body).slice(0, 500)}` : ""}`);
+        // Hvilken sti, metode og nøgle svarer søgemiljøet på?
+        const variants: [string, "GET" | "POST", string, unknown?][] = [
+          ["POST apps/search/prompt", "POST", "apps/search/prompt", { Prompt: prompt }],
+          ["POST apps/search/prompt (prompt)", "POST", "apps/search/prompt", { prompt }],
+          ["POST apps/search/lassoid tom", "POST", "apps/search/lassoid", { filters: [] }],
+          ["POST apps/search", "POST", "apps/search", { Prompt: prompt }],
+          ["POST search/prompt", "POST", "search/prompt", { Prompt: prompt }],
+          ["POST api/apps/search/prompt", "POST", "api/apps/search/prompt", { Prompt: prompt }],
+          ["POST apps/search/ai", "POST", "apps/search/ai", { Prompt: prompt }],
+          ["GET swagger", "GET", "swagger/index.html"],
+          ["GET swagger v1", "GET", "swagger/v1/swagger.json"],
+          ["GET /", "GET", ""],
+          ["GET CVR-1-24256790", "GET", "CVR-1-24256790"],
+        ];
+        for (const [label, method, path, body] of variants) {
+          const r = await client.trySearchRequest(method, path, body);
+          log(`dev3 ${label}`, `${r.status} ${r.body.replace(/\s+/g, " ").slice(0, 200)}`);
+        }
       }
     }
     if (!verbose) return;

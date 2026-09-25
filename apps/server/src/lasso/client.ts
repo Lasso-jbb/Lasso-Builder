@@ -71,6 +71,11 @@ export class LassoClient {
       : this;
   }
 
+  /** Fejlfinding mod søgemiljøet (dev3) med søgenøglen. */
+  trySearchRequest(method: "GET" | "POST", path: string, body?: unknown) {
+    return this.searchClient.tryRequest(method, path, body);
+  }
+
   /** Om søgningen har sin egen nøgle (og dermed kører mod LASSO_SEARCH_API_BASE_URL). */
   get hasSearchCredentials(): boolean {
     return this.searchClient !== this;
