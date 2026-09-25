@@ -1,6 +1,27 @@
-import { formatCriterion, searchKey, type CompanyRowVM, type Criterion, type FinancialsVM, type SearchQuery, type SearchResultVM } from "@lasso/spec";
+import {
+  formatCriterion,
+  searchKey,
+  type CompanyRowVM,
+  type Criterion,
+  type FinancialsVM,
+  type LivestockVM,
+  type PropertiesVM,
+  type ProductionUnitsVM,
+  type SearchQuery,
+  type SearchResultVM,
+} from "@lasso/spec";
 import type { Config } from "../config.js";
-import { adaptCompany, adaptFinancials, adaptOwnership, adaptPeople, adaptSearch } from "../lasso/adapters.js";
+import {
+  adaptCompany,
+  adaptFinancials,
+  adaptOwnership,
+  adaptPeople,
+  adaptProductionUnits,
+  adaptProperties,
+  adaptSearch,
+  ejfBbrRefs,
+  mergeBbr,
+} from "../lasso/adapters.js";
 import type { LassoClient } from "../lasso/client.js";
 import { criteriaToFilters, filtersToCriteria, SERVER_SORT, type LassoFilter } from "../lasso/searchFilters.js";
 import { applyCriteria, needsFinancials, sortRows } from "./criteria-eval.js";
@@ -164,5 +185,41 @@ export class LiveProvider implements DataProvider {
 
   async ownership(lassoId: string) {
     return adaptOwnership(lassoId, await this.client.company(lassoId));
+  }
+
+  /** Katalog 20. Genbruger CVR-svaret; UBEKRÆFTET om det indeholder produktionsenheder (docs/lasso-endpoints.md). */
+  async productionUnits(lassoId: string): Promise<ProductionUnitsVM> {
+    return adaptProductionUnits(lassoId, await this.client.company(lassoId));
+  }
+
+  /**
+   * Katalog 20. Ejerfortegnelsen (`ejf`) giver ejendommene; BBR beriger med
+   * bygninger og arealer, når vi kan udlede et property-/kommunenummer.
+   * Begge svarformer er UBEKRÆFTEDE (docs/lasso-endpoints.md).
+   */
+  async properties(lassoId: string): Promise<PropertiesVM> {
+    const raw = await this.client.ejf(lassoId);
+    const base = adaptProperties(lassoId, raw);
+    const refs = ejfBbrRefs(raw);
+    const pairs = base.properties.map((property, i) => [property, refs[i]] as const);
+    const properties = await mapLimit(pairs, 3, async ([property, ref]) => {
+      if (!ref?.propertyNumber || !ref.municipality) return property;
+      try {
+        const bbr = await this.client.bbrSummary(ref.propertyNumber, ref.municipality);
+        return mergeBbr(property, bbr);
+      } catch {
+        return property;
+      }
+    });
+    return { lassoId, properties };
+  }
+
+  /**
+   * Katalog 20. CHR-endpointet er UBEKRÆFTET og ikke fundet i docs.lassox.com
+   * under dette arbejde (se docs/lasso-endpoints.md). Der kaldes derfor intet
+   * endpoint her; komponenten viser sin tom-tilstand med en forklarende årsag.
+   */
+  async livestock(lassoId: string): Promise<LivestockVM> {
+    return { lassoId, herds: [], events: [] };
   }
 }

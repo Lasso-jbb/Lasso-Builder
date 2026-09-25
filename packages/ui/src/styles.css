@@ -479,3 +479,81 @@
 .lasso-table th.lasso-compare__company { text-transform: none; letter-spacing: 0; }
 .lasso-table td.lasso-up { color: var(--lasso-positive); }
 .lasso-table td.lasso-down { color: var(--lasso-negative); }
+
+/* ---------- 20 P-enheder, ejendomme og CHR ---------- */
+
+/* Produktionsenheder: koral overline UNDER P-nummeret (tekst, ingen pille, regel 1/2). */
+.lasso-units__pnr { display: block; }
+.lasso-units__main { display: block; font-size: var(--lasso-fs-label); font-weight: 600; letter-spacing: var(--lasso-ls-label); text-transform: uppercase; color: var(--lasso-accent-text); }
+.lasso-table--units th:nth-child(1), .lasso-table--units td:nth-child(1) { width: 130px; }
+.lasso-table--units th:nth-child(3), .lasso-table--units td:nth-child(3) { width: 220px; }
+.lasso-table--units th:nth-child(4), .lasso-table--units td:nth-child(4) { width: 90px; }
+.lasso-table--units th:nth-child(5), .lasso-table--units td:nth-child(5) { width: 120px; }
+.lasso-table--units th:nth-child(6), .lasso-table--units td:nth-child(6) { width: 110px; }
+
+/* Ejendomme, BBR: ejendomskort (genbruger kort-mønstret fra 13) + bygningstabel + arealfordeling. */
+.lasso-properties { display: flex; flex-direction: column; gap: var(--lasso-space-6); }
+.lasso-property { display: flex; align-items: flex-start; gap: var(--lasso-space-5); }
+.lasso-property__card { flex: none; width: 360px; min-width: 0; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); overflow: hidden; }
+.lasso-property__side { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: var(--lasso-space-4); }
+.lasso-property-map { position: relative; height: 140px; background: var(--lasso-surface-muted); }
+.lasso-property-map--empty { display: grid; place-items: center; text-align: center; padding: var(--lasso-space-4); border-bottom: 1px solid var(--lasso-border); }
+.lasso-property-map__svg { display: block; width: 100%; height: 100%; }
+.lasso-property-map__bg { fill: var(--lasso-surface-muted); }
+.lasso-property-map__grid { stroke: var(--lasso-surface); stroke-width: 8; }
+.lasso-property-map__plot { fill: var(--lasso-surface); stroke: var(--lasso-chart-axis); }
+.lasso-property-map__plot--selected { fill: var(--lasso-map-fill); stroke: var(--lasso-accent); stroke-width: 1.5; }
+.lasso-property-map__label { position: absolute; top: 12px; left: 12px; height: 22px; padding: 0 8px; display: inline-flex; align-items: center; border-radius: var(--lasso-radius-menu); background: var(--lasso-surface); color: var(--lasso-text); font-size: var(--lasso-fs-label); font-weight: 600; }
+.lasso-property__head { display: flex; flex-direction: column; gap: 2px; padding: var(--lasso-space-4) var(--lasso-space-4) var(--lasso-space-3); }
+.lasso-property__address { font-size: 15px; line-height: 18px; font-weight: 600; color: var(--lasso-text); }
+.lasso-property__kv { display: flex; flex-direction: column; padding: 0 var(--lasso-space-4) var(--lasso-space-4); }
+.lasso-kv-row { display: flex; align-items: center; justify-content: space-between; gap: var(--lasso-space-3); height: 34px; border-top: 1px solid var(--lasso-divider-subtle); font-size: var(--lasso-fs-sm); color: var(--lasso-text); }
+.lasso-kv-row > span:first-child { color: var(--lasso-text-3); }
+.lasso-property__link { color: var(--lasso-accent-text); }
+.lasso-property__strong { color: var(--lasso-text); font-weight: 500; }
+.lasso-table--buildings th:nth-child(1), .lasso-table--buildings td:nth-child(1) { width: 70px; }
+.lasso-table--buildings th:nth-child(3), .lasso-table--buildings td:nth-child(3) { width: 80px; }
+.lasso-table--buildings th:nth-child(4), .lasso-table--buildings td:nth-child(4) { width: 90px; }
+.lasso-table--buildings th:nth-child(5), .lasso-table--buildings td:nth-child(5) { width: 110px; }
+.lasso-table--buildings th:nth-child(6), .lasso-table--buildings td:nth-child(6) { width: 90px; }
+.lasso-table__total td { background: var(--lasso-surface-2); }
+.lasso-arealfordeling { display: flex; flex-direction: column; gap: var(--lasso-space-2); }
+.lasso-arealfordeling__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--lasso-space-3); }
+.lasso-arealfordeling__title { font-size: var(--lasso-fs-sm); font-weight: 600; color: var(--lasso-text); }
+.lasso-arealfordeling__bar { display: flex; gap: 2px; height: 16px; border-radius: 4px; overflow: hidden; flex-shrink: 0; }
+.lasso-arealfordeling__seg { display: block; }
+.lasso-arealfordeling__legend { display: flex; flex-wrap: wrap; gap: 6px var(--lasso-space-5); }
+.lasso-arealfordeling__item { display: inline-flex; align-items: center; gap: 6px; font-size: var(--lasso-fs-sm); color: var(--lasso-text-3); }
+.lasso-arealfordeling__dot { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+/* Grafserier: fast rækkefølge, aldrig lagkage (regel 01, 09). */
+.lasso-chart-tone-1 { background: var(--lasso-chart-1); }
+.lasso-chart-tone-2 { background: var(--lasso-chart-2); }
+.lasso-chart-tone-3 { background: var(--lasso-chart-3); }
+.lasso-chart-tone-4 { background: var(--lasso-chart-4); }
+.lasso-chart-tone-5 { background: var(--lasso-chart-5); }
+
+/* CHR: besætninger pr. type (venstre) og veterinære hændelser som tidslinje (højre, mønster fra 12). */
+.lasso-livestock { display: flex; align-items: flex-start; gap: var(--lasso-space-5); }
+.lasso-livestock__herds { flex: none; width: 540px; min-width: 0; display: flex; flex-direction: column; gap: var(--lasso-space-2); }
+.lasso-livestock__events { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: var(--lasso-space-2); }
+.lasso-livestock__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--lasso-space-3); }
+.lasso-livestock__title { font-size: var(--lasso-fs-lg); line-height: 24px; font-weight: 600; color: var(--lasso-text); }
+.lasso-table--herds td { height: 48px; border-bottom: 1px solid var(--lasso-divider-subtle); }
+.lasso-table--herds tbody tr:last-child td { border-bottom: 0; }
+.lasso-livestock__icon-cell { width: 32px; }
+.lasso-livestock__icon { color: var(--lasso-text-2); }
+.lasso-livestock__health { color: var(--lasso-positive); font-weight: 500; }
+.lasso-livestock__timeline { list-style: none; margin: 0; padding: 0; }
+.lasso-livestock__event { display: flex; gap: var(--lasso-space-3); padding: 10px 0; border-bottom: 1px solid var(--lasso-divider-subtle); }
+.lasso-livestock__event:last-child { border-bottom: 0; }
+.lasso-livestock__event-body { flex: 1; min-width: 0; }
+.lasso-livestock__dot { flex: none; width: 8px; height: 8px; margin-top: 5px; border-radius: 4px; background: var(--lasso-faint); }
+.lasso-livestock__event--active .lasso-livestock__dot { background: var(--lasso-warning); }
+
+@container lasso (max-width: 560px) {
+  .lasso-property { flex-direction: column; }
+  .lasso-property__card { width: 100%; }
+  .lasso-livestock { flex-direction: column; }
+  .lasso-livestock__herds { width: 100%; }
+  .lasso-table--herds td:first-child { display: none; } /* ikonet fylder for meget i den smalle kortvisning */
+}

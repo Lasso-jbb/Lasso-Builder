@@ -4,6 +4,9 @@ import { FollowUps } from "./components/FollowUps.js";
 import { CompanyHead } from "./components/CompanyHead.js";
 import { CompanyTable } from "./components/CompanyTable.js";
 import { CompareTable } from "./components/CompareTable.js";
+import { ProductionUnits } from "./components/ProductionUnits.js";
+import { Properties } from "./components/Properties.js";
+import { Livestock } from "./components/Livestock.js";
 import { FilterPanel } from "./components/FilterPanel.js";
 import { BarChart } from "./components/BarChart.js";
 import { KeyFigureCards } from "./components/KeyFigureCards.js";
@@ -21,7 +24,19 @@ function formatStamp(iso: string | undefined): string {
 }
 
 function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewProps, act: (a: ViewAction) => void, key: number) {
-  const empty: Dataset = ds ?? { source: "live", generatedAt: "", companies: {}, financials: {}, people: {}, ownership: {}, searches: {}, errors: {} };
+  const empty: Dataset = ds ?? {
+    source: "live",
+    generatedAt: "",
+    companies: {},
+    financials: {},
+    people: {},
+    ownership: {},
+    searches: {},
+    productionUnits: {},
+    properties: {},
+    livestock: {},
+    errors: {},
+  };
   const err = (k: string) => empty.errors[k];
   switch (c.type) {
     case "LassoCompanyHead":
@@ -40,6 +55,12 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     }
     case "LassoCompareTable":
       return <CompareTable key={key} companies={c.companies} metrics={c.metrics} title={c.title} dataset={empty} onAction={act} canDrillDown={Boolean(props.host.drillDown)} />;
+    case "LassoProductionUnits":
+      return <ProductionUnits key={key} units={empty.productionUnits[c.company]} error={err(`productionUnits:${c.company}`)} />;
+    case "LassoProperties":
+      return <Properties key={key} properties={empty.properties[c.company]} title={c.title} error={err(`properties:${c.company}`)} />;
+    case "LassoLivestock":
+      return <Livestock key={key} livestock={empty.livestock[c.company]} error={err(`livestock:${c.company}`)} />;
     case "LassoFollowUps":
       return <FollowUps key={key} prompts={c.prompts} onAction={act} enabled={Boolean(props.host.prompt)} />;
   }

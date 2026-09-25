@@ -4,8 +4,11 @@ import type {
   Criterion,
   DataSourceKind,
   FinancialsVM,
+  LivestockVM,
   OwnershipVM,
   PersonRowVM,
+  PropertiesVM,
+  ProductionUnitsVM,
   SearchQuery,
   SearchResultVM,
 } from "@lasso/spec";
@@ -26,6 +29,12 @@ export interface DataProvider {
   financials(lassoId: string): Promise<FinancialsVM>;
   people(lassoId: string): Promise<PersonRowVM[]>;
   ownership(lassoId: string): Promise<OwnershipVM>;
+  /** Katalog 20: produktionsenheder (P-numre). */
+  productionUnits(lassoId: string): Promise<ProductionUnitsVM>;
+  /** Katalog 20: ejendomme og BBR. */
+  properties(lassoId: string): Promise<PropertiesVM>;
+  /** Katalog 20: CHR (kun landbrug). */
+  livestock(lassoId: string): Promise<LivestockVM>;
 }
 
 export class NotFoundError extends Error {

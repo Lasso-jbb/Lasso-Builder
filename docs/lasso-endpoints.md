@@ -113,3 +113,36 @@ GET /data/bbr/property/summary?propertynumber={ejendomsnummer}&municipality={kom
 ```
 
 Eksempel: `propertynumber=79972&municipality=157`.
+
+## Ubekræftet (katalog 20: P-enheder, ejendomme/BBR, CHR)
+
+Ingen af de tre nedenstående er slået op mod api.lassox.com eller docs.lassox.com
+under dette arbejde (netadgang til docs.lassox.com var ikke tilgængelig i denne
+session). Alle adaptere er skrevet defensivt (`at()`/`str()`/`num()`, ingen
+feltnavn kastes en fejl, hvis de mangler), så et forkert gæt giver "Ikke
+oplyst"/tom-tilstand i UI'en frem for en fejl. Næste session med adgang til
+docs.lassox.com bør bekræfte eller rette disse, og fjerne denne note, når de er
+bekræftet.
+
+- **Produktionsenheder**: ingen ny endpoint tilføjet. `LiveProvider.productionUnits`
+  genbruger `GET /{lassoId}` og leder i svaret efter `mainUnit`/`productionUnit`/
+  `hovedenhed` (hovedenheden) og `productionUnits`/`produktionsenheder`/`units`/
+  `secondaryUnits`/`establishments` (øvrige enheder), se `adaptProductionUnits` i
+  `apps/server/src/lasso/adapters.ts`. Ingen bekræftet testvirksomhed med flere
+  P-numre er set; hvis feltet ikke findes i det rigtige svar, bliver listen tom
+  og komponenten viser sin tom-tilstand.
+- **Ejendomme, BBR**: `LiveProvider.properties` kalder den allerede bekræftede
+  `GET /data/ejf/{lassoId}/ownerships/current` (ejerfortegnelsen) og leder efter
+  `property`/`ejendom` pr. post med `matrikelNumber`, `bfeNumber`,
+  `propertyNumber`/`municipalityCode` osv. (`adaptProperties`, `ejfBbrRefs` i
+  `adapters.ts`). Findes `propertyNumber` og `municipalityCode`, kaldes den
+  allerede bekræftede BBR-endpoint (`bbrSummary`) for bygninger og arealer
+  (`mergeBbr`). Feltnavnene i begge svar (ejf og BBR-summary) er UBEKRÆFTEDE
+  gæt; ejf's overordnede form er slet ikke set endnu.
+- **CHR (husdyr)**: intet endpoint fundet. `LassoClient.chr(lassoId)` peger
+  gættet på `GET /modules/chr/{lassoId}` (samme mønster som `modules/valuations`
+  og `modules/observations`), men `LiveProvider.livestock` kalder den IKKE — den
+  returnerer altid en tom `LivestockVM` (ingen besætninger, ingen hændelser), så
+  `LassoLivestock` viser sin tom-tilstand for alle rigtige virksomheder, indtil
+  endpointet er bekræftet og koblet på i `adaptLivestock`. `DemoProvider` giver
+  fuldt eksempel (landbrugsvirksomheden "Eksempel Landbrug I/S", CVR 99000013).

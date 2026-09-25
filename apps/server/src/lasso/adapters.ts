@@ -1,11 +1,19 @@
 import type {
+  BuildingVM,
   CompanyRowVM,
   CompanyVM,
   FinancialYear,
   FinancialsVM,
+  LivestockHerdVM,
+  LivestockVM,
   OwnerVM,
   OwnershipVM,
   PersonRowVM,
+  ProductionUnitVM,
+  ProductionUnitsVM,
+  PropertiesVM,
+  PropertyVM,
+  VetEventVM,
 } from "@lasso/spec";
 
 /**
@@ -391,6 +399,161 @@ export function adaptSearch(raw: Json, companyPrefix: string): { total?: number;
     });
   }
   return { total: num(container, "resultsFound", "total", "totalCount", "count", "hits.total", "numberOfResults"), rows };
+}
+
+/**
+ * Katalog 20, produktionsenheder. UBEKRÆFTET: ingen testvirksomhed med flere
+ * P-numre er set endnu, så feltnavnene er et kvalificeret gæt ud fra CVR's
+ * almindelige navngivning (`productionUnits`/`produktionsenheder`). Findes
+ * feltet ikke i svaret fra GET /{lassoId}, bliver listen tom, og komponenten
+ * viser sin tom-tilstand i stedet for at fejle. Se docs/lasso-endpoints.md.
+ */
+export function adaptProductionUnits(lassoId: string, raw: Json): ProductionUnitsVM {
+  const list = arr(raw, "productionUnits", "produktionsenheder", "units", "secondaryUnits", "establishments");
+  const main = pick(raw, "mainUnit", "productionUnit", "hovedenhed", "primaryUnit");
+  const candidates: Json[] = [...(main !== undefined ? [main] : []), ...list];
+  const units: ProductionUnitVM[] = candidates
+    .map((u): ProductionUnitVM | null => {
+      const pNumber = str(u, "pNumber", "productionUnitNumber", "unitNumber", "pnr", "number");
+      if (!pNumber) return null;
+      const status = str(u, "status", "unitStatus", "companyStatus", "virksomhedsstatus");
+      const endedRaw = dateStr(u, "endDate", "to", "lifeTime.to", "ophoersdato", "validTo");
+      return {
+        pNumber,
+        name: str(u, "name", "unitName", "navn"),
+        address: address(u),
+        isMain: Boolean(pick(u, "main", "isMain", "hovedenhed")) || u === main,
+        industryCode: str(u, "industryCode", "industry.code", "branchekode"),
+        industryText: str(u, "industryText", "industry.text", "industry.name", "branchetekst"),
+        employees: num(u, "employees.count", "employees", "numberOfEmployees", "antalAnsatte") ?? null,
+        status,
+        statusKind: statusKind(status),
+        endedYear: endedRaw ? Number(endedRaw.slice(0, 4)) : undefined,
+        created: dateStr(u, "startDate", "from", "lifeTime.from", "oprettelsesdato", "validFrom"),
+      };
+    })
+    .filter((u): u is ProductionUnitVM => u !== null);
+  // Hovedenheden først (katalog 20), derefter i den rækkefølge, Lasso leverer dem.
+  const sorted = [...dedupe(units, (u) => u.pNumber ?? "")].sort((a, b) => (b.isMain ? 1 : 0) - (a.isMain ? 1 : 0));
+  return { lassoId, units: sorted };
+}
+
+/**
+ * Katalog 20, ejendomme/BBR. `ejfRaw` er svaret fra ejerfortegnelsen
+ * (`/data/ejf/{lassoId}/ownerships/current`); formen er UBEKRÆFTET, så alle
+ * felter læses defensivt. `ejfBbrRefs` finder property-/kommunenummeret, som
+ * skal slås op mod BBR (`bbrSummary`); `mergeBbr` fylder bygninger og arealer
+ * ind, når det svar er hentet. Se docs/lasso-endpoints.md.
+ */
+export function adaptProperties(lassoId: string, ejfRaw: Json): PropertiesVM {
+  const list = items(ejfRaw);
+  const properties: PropertyVM[] = list.map((p) => {
+    const prop = pick(p, "property", "ejendom", "ejendomme") ?? p;
+    const matrikelNr = str(prop, "matrikelNumber", "matrikelnummer", "landRegistryNumber", "matrikel.number");
+    const matrikelDistrict = str(prop, "matrikelDistrict", "landRegistryDistrict", "matrikel.district", "ejerlav");
+    const matrikel = matrikelNr ? [matrikelNr, matrikelDistrict].filter(Boolean).join(", ") : str(prop, "matrikel", "matrikelText");
+    const ownershipFrom = dateStr(p, "acquisition.date", "from", "tinglystDato", "registrationDate", "acquiredDate");
+    const ownershipKind = str(p, "ownershipType", "type", "ejerforhold") ?? "Ejer";
+    return {
+      address: address(prop),
+      matrikel,
+      bfeNumber: str(prop, "bfeNumber", "bfeNummer", "bfe"),
+      propertyType: str(prop, "propertyType", "ejendomstype", "benyttelse", "usageText"),
+      ownership: ownershipFrom ? `${ownershipKind}, tinglyst ${ownershipFrom.slice(0, 4)}` : ownershipKind,
+      landAreaM2: num(prop, "landArea", "grundareal", "areal.grund") ?? null,
+      builtAreaM2: null,
+      publicValuation: valuationFrom(prop),
+      encumbrances: num(p, "encumbrances", "haeftelser", "encumbranceCount"),
+      buildings: [],
+      hasGeometry: false,
+    } satisfies PropertyVM;
+  });
+  return { lassoId, properties };
+}
+
+function valuationFrom(obj: Json): PropertyVM["publicValuation"] {
+  const amount = num(obj, "publicValuation.amount", "offentligVurdering.beloeb", "publicValuation.value", "publicValuation");
+  if (amount === undefined) return undefined;
+  return { amount, year: num(obj, "publicValuation.year", "offentligVurdering.aar") };
+}
+
+/** Property-/kommunenummer til BBR-opslag, i samme rækkefølge som `adaptProperties`. UBEKRÆFTET. */
+export interface BbrRef {
+  propertyNumber?: string;
+  municipality?: string;
+}
+
+export function ejfBbrRefs(ejfRaw: Json): BbrRef[] {
+  return items(ejfRaw).map((p) => {
+    const prop = pick(p, "property", "ejendom", "ejendomme") ?? p;
+    return {
+      propertyNumber: str(prop, "propertyNumber", "ejendomsnummer", "propertyNo"),
+      municipality: str(prop, "municipalityCode", "kommunekode", "municipality.code"),
+    };
+  });
+}
+
+/** Fylder bygninger og arealer fra et BBR-svar (`bbrSummary`) ind i en ejendom. UBEKRÆFTET form. */
+export function mergeBbr(property: PropertyVM, bbrRaw: Json): PropertyVM {
+  const buildingsRaw = arr(bbrRaw, "buildings", "bygninger");
+  const buildings: BuildingVM[] = buildingsRaw.map(
+    (b): BuildingVM => ({
+      number: num(b, "buildingNumber", "bygningsnummer", "number"),
+      usage: str(b, "usageText", "anvendelse", "usage", "buildingUse"),
+      builtYear: num(b, "builtYear", "opfoerelsesaar", "constructionYear"),
+      floors: num(b, "floors", "etager", "numberOfFloors"),
+      areaM2: num(b, "totalArea", "samletAreal", "area") ?? null,
+      units: num(b, "unitCount", "enheder", "numberOfUnits") ?? null,
+    }),
+  );
+  return {
+    ...property,
+    hasGeometry: Boolean(pick(bbrRaw, "geometry", "polygon", "matrikelGeometry")),
+    landAreaM2: property.landAreaM2 ?? num(bbrRaw, "landArea", "grundareal") ?? null,
+    builtAreaM2: num(bbrRaw, "builtUpArea", "bebyggetAreal", "totalBuiltArea") ?? property.builtAreaM2 ?? null,
+    publicValuation: property.publicValuation ?? valuationFrom(bbrRaw),
+    buildings: buildings.length ? buildings : property.buildings,
+  };
+}
+
+/**
+ * Katalog 20, CHR. Endpointet er UBEKRÆFTET og ikke fundet i docs.lassox.com
+ * under dette arbejde; feltnavnene er et gæt ud fra CHR's danske terminologi.
+ * `LiveProvider` kalder ikke noget endpoint for dette og returnerer altid en
+ * tom liste med en begrundelse, indtil endpointet er bekræftet. Se
+ * docs/lasso-endpoints.md.
+ */
+export function adaptLivestock(lassoId: string, raw: Json): LivestockVM {
+  const herdsRaw = arr(raw, "herds", "besaetninger", "stocks", "herd");
+  const herds: LivestockHerdVM[] = herdsRaw.map((h): LivestockHerdVM => {
+    const count = num(h, "count", "antal", "capacity", "numberOfAnimals");
+    return {
+      species: str(h, "species", "dyreart", "animalType"),
+      category: str(h, "category", "underart", "subType", "type"),
+      count: count ?? null,
+      unit: str(h, "unit", "enhed") ?? (num(h, "capacity") !== undefined ? "stipladser" : "dyr"),
+    };
+  });
+  const eventsRaw = arr(raw, "events", "haendelser", "veterinaryEvents", "vetEvents");
+  const events: VetEventVM[] = eventsRaw.map((e): VetEventVM => {
+    const kind = str(e, "severity", "status", "type", "kind") ?? "";
+    return {
+      title: str(e, "title", "titel", "type"),
+      detail: str(e, "detail", "beskrivelse", "species", "dyreart"),
+      date: dateStr(e, "date", "dato", "from"),
+      dateTo: dateStr(e, "to", "dateTo"),
+      severity: /restrik|aktiv|active/i.test(kind) ? "active" : "neutral",
+    };
+  });
+  return {
+    lassoId,
+    chrNumber: str(raw, "chrNumber", "chrNummer", "chr"),
+    ownerName: str(raw, "ownerName", "ejer", "holderName"),
+    updated: dateStr(raw, "updatedAt", "opdateret"),
+    herds,
+    healthStatus: str(raw, "healthStatus", "sundhedsstatus"),
+    events,
+  };
 }
 
 function dedupe<T>(list: T[], key: (t: T) => string): T[] {

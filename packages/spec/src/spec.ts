@@ -129,6 +129,22 @@ export const comparisonSchema = z.object({
   title: z.string().max(80).optional(),
 });
 
+export const productionUnitsSchema = z.object({
+  type: z.literal("LassoProductionUnits"),
+  company: companyRef,
+});
+
+export const propertiesSchema = z.object({
+  type: z.literal("LassoProperties"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
+});
+
+export const livestockSchema = z.object({
+  type: z.literal("LassoLivestock"),
+  company: companyRef,
+});
+
 export const actionsSchema = z.object({
   type: z.literal("LassoFollowUps"),
   prompts: z
@@ -150,6 +166,9 @@ export const componentSchema = z.discriminatedUnion("type", [
   ownershipSchema,
   tableSchema,
   comparisonSchema,
+  productionUnitsSchema,
+  propertiesSchema,
+  livestockSchema,
   actionsSchema,
 ]);
 export type ViewComponent = z.infer<typeof componentSchema>;

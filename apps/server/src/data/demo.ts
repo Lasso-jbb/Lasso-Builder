@@ -3,8 +3,11 @@ import {
   type CompanyRowVM,
   type CompanyVM,
   type FinancialsVM,
+  type LivestockVM,
   type OwnershipVM,
   type PersonRowVM,
+  type PropertiesVM,
+  type ProductionUnitsVM,
   type SearchQuery,
   type SearchResultVM,
 } from "@lasso/spec";
@@ -56,6 +59,9 @@ const RAW: Omit<DemoCompany, "lassoId" | "statusKind">[] = [
     people: [P("Uffe Prøve", "Direktør", "2012-08-01")], owners: [{ name: "Uffe Prøve", share: "100 %", kind: "person" }], auditor: "Eksempel Revision Nord ApS" },
   { cvr: "99000012", name: "Eksempel Ejendomme ApS", status: "Aktiv", form: "ApS", industryCode: "682040", industryText: "Udlejning af erhvervsejendomme", address: { street: "Murervej 5", zip: "8700", city: "Horsens", municipality: "Horsens", region: "Midtjylland" }, founded: "2013-10-01", employees: 3, base: 7_500_000, growth: 0.06,
     people: [P("Vera Eksempel", "Direktør", "2013-10-01"), P("Bo Eksempel", "Bestyrelsesmedlem", "2013-10-01")], owners: [{ name: "Eksempel Holding ApS", share: "100 %", kind: "company", lassoId: "CVR-1-99000010" }], auditor: "Eksempel Revision Midt ApS" },
+  // Katalog 20: eneste demovirksomhed med et CHR-nummer, så LassoLivestock har eksempeldata (LiveProvider har intet bekræftet CHR-endpoint).
+  { cvr: "99000013", name: "Eksempel Landbrug I/S", status: "Aktiv", form: "I/S", industryCode: "014700", industryText: "Avl af fjerkræ og svin", address: { street: "Gårdvej 3", zip: "7830", city: "Vinderup", municipality: "Holstebro", region: "Midtjylland" }, founded: "1985-01-01", employees: 5, base: 4_200_000, growth: 0.02,
+    people: [P("William Prøve", "Direktør", "1985-01-01")], owners: [{ name: "William Prøve", share: "100 %", kind: "person" }], auditor: "Eksempel Revision Nord ApS" },
 ];
 
 function statusKindOf(s: string | undefined): CompanyVM["statusKind"] {
@@ -119,8 +125,75 @@ function strip(c: DemoCompany): CompanyVM {
 
 function get(lassoId: string): DemoCompany {
   const c = BY_ID.get(lassoId);
-  if (!c) throw new NotFoundError(`Virksomheden ${lassoId} (demodata har kun CVR 99000001-99000012)`);
+  if (!c) throw new NotFoundError(`Virksomheden ${lassoId} (demodata har kun CVR 99000001-99000013)`);
   return c;
+}
+
+/** Katalog 20: Produktionsenheder ud over hovedenheden. Kun sat for virksomheder, hvor eksemplet skal vise flere P-numre. */
+const PRODUCTION_UNITS: Record<string, ProductionUnitsVM["units"]> = {
+  "CVR-1-99000001": [
+    { pNumber: "1000000020", name: "Eksempel Byg A/S", address: { street: "Prøvevej 1", zip: "8600", city: "Silkeborg", municipality: "Silkeborg", region: "Midtjylland" }, isMain: true, industryCode: "412000", industryText: "Opførelse af bygninger", employees: 64, status: "Aktiv", statusKind: "active", created: "1998-04-01" },
+    { pNumber: "1000000021", name: "Eksempel Byg, Aarhus (eksempel)", address: { street: "Eksempelvej 12", zip: "8000", city: "Aarhus C", municipality: "Aarhus", region: "Midtjylland" }, industryCode: "412000", industryText: "Opførelse af bygninger", employees: 8, status: "Aktiv", statusKind: "active", created: "2015-03-01" },
+    { pNumber: "1000000022", name: "Eksempel Byg, Lager (eksempel)", address: { street: "Eksempelvej 4", zip: "8600", city: "Silkeborg", municipality: "Silkeborg", region: "Midtjylland" }, industryCode: "521000", industryText: "Oplagring", employees: null, status: "Ophørt", statusKind: "inactive", endedYear: 2023, created: "2010-01-01" },
+  ],
+};
+
+/** Katalog 20: Ejendomme/BBR. Kun sat for ejendomsselskabet, så eksemplet har bygninger at vise. */
+const PROPERTIES: Record<string, PropertiesVM["properties"]> = {
+  "CVR-1-99000012": [
+    {
+      address: { street: "Murervej 5", zip: "8700", city: "Horsens", municipality: "Horsens", region: "Midtjylland" },
+      matrikel: "Matr. 7b, Horsens Markjorder",
+      bfeNumber: "100000123",
+      propertyType: "Erhvervsejendom",
+      ownership: "Ejer, tinglyst 2015",
+      landAreaM2: 3200,
+      builtAreaM2: 1450,
+      publicValuation: { amount: 18_500_000, year: 2024 },
+      encumbrances: 1,
+      hasGeometry: false,
+      buildings: [
+        { number: 1, usage: "Kontor og administration", builtYear: 2001, floors: 2, areaM2: 900, units: 4 },
+        { number: 2, usage: "Lager og produktion", builtYear: 2001, floors: 1, areaM2: 550, units: 1 },
+      ],
+    },
+  ],
+};
+
+/** Katalog 20: CHR. Kun landbrugsvirksomheden har et CHR-nummer, som kataloget kræver for at vise blokken. */
+const LIVESTOCK: Record<string, LivestockVM> = {
+  "CVR-1-99000013": {
+    lassoId: "CVR-1-99000013",
+    chrNumber: "100001",
+    ownerName: "Eksempel Landbrug I/S",
+    updated: "2026-09-01",
+    herds: [
+      { species: "Svin", category: "slagtesvin", count: 4200, unit: "stipladser" },
+      { species: "Svin", category: "søer", count: 380, unit: "dyr" },
+      { species: "Kvæg", category: "malkekøer", count: 160, unit: "dyr" },
+    ],
+    healthStatus: "SPF",
+    events: [
+      { title: "Restriktion: flytteforbud ophævet", detail: "Svin", date: "2026-03-14", dateTo: "2026-04-02", severity: "active" },
+      { title: "Velfærdskontrol: ingen anmærkninger", detail: "Kvæg", date: "2025-11-21", severity: "neutral" },
+      { title: "Ny besætning registreret", detail: "Svin, søer", date: "2025-06-05", severity: "neutral" },
+    ],
+  },
+};
+
+function defaultUnit(c: DemoCompany): ProductionUnitsVM["units"][number] {
+  return {
+    pNumber: `10${c.cvr}`,
+    name: c.name,
+    address: c.address,
+    isMain: true,
+    industryCode: c.industryCode,
+    industryText: c.industryText,
+    employees: c.employees ?? null,
+    status: c.status,
+    statusKind: c.statusKind,
+    created: c.founded,
+  };
 }
 
 export class DemoProvider implements DataProvider {
@@ -170,5 +243,20 @@ export class DemoProvider implements DataProvider {
       owners: c.owners,
       auditor: c.auditor === "Ingen" ? undefined : { name: c.auditor, lassoId: auditor?.lassoId, from: "2019-01-01" },
     };
+  }
+
+  async productionUnits(lassoId: string): Promise<ProductionUnitsVM> {
+    const c = get(lassoId);
+    return { lassoId, units: PRODUCTION_UNITS[lassoId] ?? [defaultUnit(c)] };
+  }
+
+  async properties(lassoId: string): Promise<PropertiesVM> {
+    get(lassoId); // kaster NotFoundError for ukendte demo-CVR-numre
+    return { lassoId, properties: PROPERTIES[lassoId] ?? [] };
+  }
+
+  async livestock(lassoId: string): Promise<LivestockVM> {
+    get(lassoId);
+    return LIVESTOCK[lassoId] ?? { lassoId, herds: [], events: [] };
   }
 }
