@@ -256,6 +256,31 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
         log(`${name} FEJL`, errorMessage(err));
       }
     }
+    // Lassos AI-søgning: prompt -> filtre -> lassoId'er. Former logges, så adaptere kan skrives.
+    for (const prompt of ["Revisorer i Region Midtjylland med mindst 10 ansatte", "De 10 største byggefirmaer i Aarhus efter omsætning"]) {
+      try {
+        const t0 = Date.now();
+        const raw = await client.searchPrompt(prompt);
+        console.log(`[lasso-probe] search/prompt "${prompt}" (${Date.now() - t0} ms) shape: ${JSON.stringify(describeShape(raw, 6))}`);
+        console.log(`[lasso-probe] search/prompt rå: ${JSON.stringify(raw).slice(0, 3000)}`);
+        const filters = Array.isArray(raw) ? raw : (at(raw, "filters") ?? at(raw, "Filters") ?? raw);
+        const firstFilter = Array.isArray(filters) ? filters[0] : undefined;
+        const fieldName = String(at(firstFilter, "FieldName") ?? at(firstFilter, "fieldName") ?? "") || undefined;
+        for (const orderBy of [fieldName, undefined]) {
+          try {
+            const t1 = Date.now();
+            const ids = await client.searchByFilters(filters, orderBy);
+            console.log(`[lasso-probe] search/lassoid OrderBy=${orderBy ?? "(ingen)"} (${Date.now() - t1} ms) shape: ${JSON.stringify(describeShape(ids, 5))}`);
+            console.log(`[lasso-probe] search/lassoid rå: ${JSON.stringify(ids).slice(0, 1500)}`);
+            break;
+          } catch (err) {
+            log(`search/lassoid OrderBy=${orderBy ?? "(ingen)"} FEJL`, `${errorMessage(err)}${err instanceof LassoApiError ? ` (HTTP ${err.status}) ${JSON.stringify(err.body).slice(0, 500)}` : ""}`);
+          }
+        }
+      } catch (err) {
+        log(`search/prompt FEJL`, `${errorMessage(err)}${err instanceof LassoApiError ? ` (HTTP ${err.status}) ${JSON.stringify(err.body).slice(0, 500)}` : ""}`);
+      }
+    }
     try {
       const reports = await client.reports(first.lassoId);
       if (Array.isArray(reports) && reports.length) {

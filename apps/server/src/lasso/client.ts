@@ -82,8 +82,25 @@ export class LassoClient {
     return value as Promise<T>;
   }
 
-  private async fetchJson(url: URL): Promise<unknown> {
-    const res = await fetch(url, { headers: this.headers, signal: AbortSignal.timeout(this.timeoutMs) });
+  /** POST med JSON-body. Caches som GET, med body som del af nøglen. */
+  async post<T = unknown>(path: string, body: unknown): Promise<T> {
+    const url = new URL(path.replace(/^\/+/, ""), `${this.baseUrl}/`);
+    const json = JSON.stringify(body);
+    const key = `POST ${url} ${json}`;
+    for (const [k, v] of Object.entries(this.authQuery)) url.searchParams.set(k, v);
+    const now = Date.now();
+    const hit = this.cache.get(key);
+    if (hit && hit.expires > now) return hit.value as Promise<T>;
+    const value = this.fetchJson(url, { method: "POST", body: json, headers: { ...this.headers, "Content-Type": "application/json" } });
+    if (this.ttlMs > 0) {
+      this.cache.set(key, { expires: now + this.ttlMs, value });
+      value.catch(() => this.cache.delete(key));
+    }
+    return value as Promise<T>;
+  }
+
+  private async fetchJson(url: URL, init: RequestInit = {}): Promise<unknown> {
+    const res = await fetch(url, { headers: this.headers, ...init, signal: AbortSignal.timeout(this.timeoutMs) });
     const text = await res.text();
     let body: unknown = null;
     if (text) {
@@ -112,6 +129,16 @@ export class LassoClient {
       personStatus: p.personStatus ?? "all",
       companyStatus: p.companyStatus ?? "active",
     });
+  }
+
+  /** Lassos AI-søgning: fritekst -> liste af filtre (POST /apps/search/prompt). */
+  searchPrompt(prompt: string) {
+    return this.post("apps/search/prompt", { Prompt: prompt });
+  }
+
+  /** Virksomheder, der matcher filtrene fra searchPrompt (POST /apps/search/lassoid). */
+  searchByFilters(filters: unknown, orderBy?: string) {
+    return this.post("apps/search/lassoid", { filters, ...(orderBy ? { OrderBy: orderBy } : {}) });
   }
 
   company(lassoId: string) {
