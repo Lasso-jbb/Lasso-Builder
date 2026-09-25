@@ -67,7 +67,9 @@ Afprøvet mod api.lassox.com 25.09.2026:
 - `/apps/search/lassoid` virker. Svar: `{ results: ["CVR-1-10000009", …], page, pageSize, totalPages, resultsFound, resultsReturned }`.
   Med tomme filtre: alle 2.194.337 virksomheder, 100.000 pr. side (tager et par sekunder).
 - Filtre i et ukendt format ignoreres uden fejl, og det samme gør et ukendt `OrderBy`. `filters` skal være en liste (et objekt giver 500).
-- `/apps/search/prompt` giver 404 på api.lassox.com, uanset sti og metode. Filterformatet kendes derfor ikke endnu.
+- `/apps/search/prompt` giver 404 på api.lassox.com, uanset sti og metode. Den ligger på **dev3.api.lassox.com** og kræver
+  en anden nøgle. Begge søge-endpoints kaldes derfor mod `LASSO_SEARCH_API_BASE_URL` (standard `https://dev3.api.lassox.com`)
+  med `LASSO_SEARCH_API_TOKEN` i samme header. Når nøglen er sat, logger opstarten svarets form (`[lasso-probe] search/prompt`).
 - Parameteren til sidestørrelse er ukendt.
 
 ## Kontaktpersoner

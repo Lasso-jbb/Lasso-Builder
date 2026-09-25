@@ -41,6 +41,11 @@ const schema = z.object({
   /** Sæt til et parameternavn (fx "apikey" eller "code") for at sende token som query-parameter i stedet for header. */
   LASSO_API_TOKEN_QUERY: z.string().default(""),
   LASSO_API_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
+  /** Lassos søgning (/apps/search/prompt og /apps/search/lassoid) ligger på et andet miljø med egen nøgle. */
+  LASSO_SEARCH_API_BASE_URL: z.string().default("https://dev3.api.lassox.com"),
+  LASSO_SEARCH_API_TOKEN: z.string().default(""),
+  /** Tom = samme header som LASSO_API_TOKEN_HEADER. */
+  LASSO_SEARCH_API_TOKEN_HEADER: z.string().default(""),
   LASSO_CACHE_TTL_SECONDS: z.coerce.number().int().min(0).default(300),
   LASSO_COMPANY_ID_PREFIX: z.string().default("CVR-1-"),
   /** auto = live når der er credentials, ellers demodata. */

@@ -241,6 +241,29 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
         console.log(`[lasso-probe] dataset search_companies: ${JSON.stringify({ spec: listSpec, dataset: list })}`);
       }
     }
+    // Lassos søgning (dev3 med egen nøgle): prompt -> filtre -> lassoId'er. Kører, når nøglen er sat,
+    // og logger formen, så søgningen kan kobles på search_companies.
+    if (client.hasSearchCredentials) {
+      const prompt = "Revisorer i Region Midtjylland med mindst 10 ansatte";
+      try {
+        const t0 = Date.now();
+        const raw = await client.searchPrompt(prompt);
+        log(`search/prompt "${prompt}" (${Date.now() - t0} ms), form`, describeShape(raw, 6));
+        console.log(`[lasso-probe] search/prompt rå: ${JSON.stringify(raw).slice(0, 3000)}`);
+        const filters = Array.isArray(raw) ? raw : (at(raw, "filters") ?? raw);
+        const firstFilter = Array.isArray(filters) ? filters[0] : undefined;
+        const fieldName = String(at(firstFilter, "FieldName") ?? "") || undefined;
+        const t1 = Date.now();
+        const ids = await client.searchByFilters(filters, fieldName);
+        const summary =
+          typeof ids === "object" && ids !== null && !Array.isArray(ids)
+            ? Object.fromEntries(Object.entries(ids).map(([k, v]) => [k, Array.isArray(v) ? [`${v.length} stk.`, ...v.slice(0, 5)] : v]))
+            : describeShape(ids, 2);
+        log(`search/lassoid OrderBy=${fieldName ?? "(ingen)"} (${Date.now() - t1} ms)`, summary);
+      } catch (err) {
+        log("søgning FEJL", `${errorMessage(err)}${err instanceof LassoApiError ? ` (HTTP ${err.status}) ${JSON.stringify(err.body).slice(0, 500)}` : ""}`);
+      }
+    }
     if (!verbose) return;
 
     for (const [name, fn] of [
@@ -254,31 +277,6 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
         log(`${name} OK, shape`, describeShape(await fn(), 6));
       } catch (err) {
         log(`${name} FEJL`, errorMessage(err));
-      }
-    }
-    // Lassos AI-søgning: prompt -> filtre -> lassoId'er. Former logges, så adaptere kan skrives.
-    for (const prompt of ["Revisorer i Region Midtjylland med mindst 10 ansatte"]) {
-      try {
-        const t0 = Date.now();
-        const raw = await client.searchPrompt(prompt);
-        console.log(`[lasso-probe] search/prompt "${prompt}" (${Date.now() - t0} ms) shape: ${JSON.stringify(describeShape(raw, 6))}`);
-        console.log(`[lasso-probe] search/prompt rå: ${JSON.stringify(raw).slice(0, 3000)}`);
-        const filters = Array.isArray(raw) ? raw : (at(raw, "filters") ?? at(raw, "Filters") ?? raw);
-        const firstFilter = Array.isArray(filters) ? filters[0] : undefined;
-        const fieldName = String(at(firstFilter, "FieldName") ?? at(firstFilter, "fieldName") ?? "") || undefined;
-        for (const orderBy of [fieldName, undefined]) {
-          try {
-            const t1 = Date.now();
-            const ids = await client.searchByFilters(filters, orderBy);
-            console.log(`[lasso-probe] search/lassoid OrderBy=${orderBy ?? "(ingen)"} (${Date.now() - t1} ms) shape: ${JSON.stringify(describeShape(ids, 5))}`);
-            console.log(`[lasso-probe] search/lassoid rå: ${JSON.stringify(ids).slice(0, 1500)}`);
-            break;
-          } catch (err) {
-            log(`search/lassoid OrderBy=${orderBy ?? "(ingen)"} FEJL`, `${errorMessage(err)}${err instanceof LassoApiError ? ` (HTTP ${err.status}) ${JSON.stringify(err.body).slice(0, 500)}` : ""}`);
-          }
-        }
-      } catch (err) {
-        log(`search/prompt FEJL`, `${errorMessage(err)}${err instanceof LassoApiError ? ` (HTTP ${err.status}) ${JSON.stringify(err.body).slice(0, 500)}` : ""}`);
       }
     }
     try {
@@ -335,7 +333,7 @@ async function main() {
   const app = createApp({ config, client, provider, store });
   const server = app.listen(config.PORT, "0.0.0.0", () => {
     console.log(
-      `[lasso-mcp] v${VERSION} ${config.APP_ENV} på port ${config.PORT} | data: ${provider.kind} | lasso-credentials: ${hasLassoCredentials(config) ? "ja" : "nej"} | db: ${store.kind} | mcp-nøgle: ${isSet(config.MCP_ACCESS_KEY) ? "ja" : "nej"} | ${config.publicBaseUrl}/mcp`,
+      `[lasso-mcp] v${VERSION} ${config.APP_ENV} på port ${config.PORT} | data: ${provider.kind} | lasso-credentials: ${hasLassoCredentials(config) ? "ja" : "nej"} | søgning: ${client.hasSearchCredentials ? config.LASSO_SEARCH_API_BASE_URL : "ingen nøgle"} | db: ${store.kind} | mcp-nøgle: ${isSet(config.MCP_ACCESS_KEY) ? "ja" : "nej"} | ${config.publicBaseUrl}/mcp`,
     );
     void probeLasso(config, client, provider).catch((err) => console.error("[lasso-probe] fejl:", errorMessage(err)));
   });

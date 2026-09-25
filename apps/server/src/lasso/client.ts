@@ -48,6 +48,8 @@ export class LassoClient {
   private readonly timeoutMs: number;
   private readonly ttlMs: number;
   private readonly cache = new Map<string, CacheEntry>();
+  /** Klient til søge-endpoints, når de ligger på et andet miljø med egen nøgle (LASSO_SEARCH_API_*). */
+  private readonly searchClient: LassoClient;
 
   constructor(config: Config) {
     this.baseUrl = config.LASSO_API_BASE_URL.replace(/\/+$/, "");
@@ -55,6 +57,23 @@ export class LassoClient {
     this.ttlMs = config.LASSO_CACHE_TTL_SECONDS * 1000;
     this.authQuery = authQuery(config);
     this.headers = { Accept: "application/json", ...(Object.keys(this.authQuery).length ? {} : authHeaders(config)) };
+    this.searchClient = isSet(config.LASSO_SEARCH_API_TOKEN)
+      ? new LassoClient({
+          ...config,
+          LASSO_API_BASE_URL: config.LASSO_SEARCH_API_BASE_URL,
+          LASSO_API_TOKEN: config.LASSO_SEARCH_API_TOKEN,
+          LASSO_API_TOKEN_HEADER: config.LASSO_SEARCH_API_TOKEN_HEADER.trim() || config.LASSO_API_TOKEN_HEADER,
+          LASSO_API_TOKEN_QUERY: "",
+          LASSO_API_USERNAME: "",
+          LASSO_API_PASSWORD: "",
+          LASSO_SEARCH_API_TOKEN: "",
+        })
+      : this;
+  }
+
+  /** Om søgningen har sin egen nøgle (og dermed kører mod LASSO_SEARCH_API_BASE_URL). */
+  get hasSearchCredentials(): boolean {
+    return this.searchClient !== this;
   }
 
   get hasCredentials(): boolean {
@@ -150,12 +169,12 @@ export class LassoClient {
 
   /** Lassos AI-søgning: fritekst -> liste af filtre (POST /apps/search/prompt). */
   searchPrompt(prompt: string) {
-    return this.post("apps/search/prompt", { Prompt: prompt });
+    return this.searchClient.post("apps/search/prompt", { Prompt: prompt });
   }
 
   /** Virksomheder, der matcher filtrene fra searchPrompt (POST /apps/search/lassoid). */
   searchByFilters(filters: unknown, orderBy?: string) {
-    return this.post("apps/search/lassoid", { filters, ...(orderBy ? { OrderBy: orderBy } : {}) });
+    return this.searchClient.post("apps/search/lassoid", { filters, ...(orderBy ? { OrderBy: orderBy } : {}) });
   }
 
   company(lassoId: string) {
