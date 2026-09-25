@@ -1,0 +1,30 @@
+{
+  "name": "lasso-builder",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Lasso MCP: Lassos data som MCP-server med visninger i Lassos designsprog (MCP Apps).",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/spec",
+    "packages/ui",
+    "apps/view",
+    "apps/server"
+  ],
+  "scripts": {
+    "build": "npm run build -w @lasso/view && npm run build -w @lasso/server",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "dev": "npm run dev -w @lasso/server",
+    "dev:view": "npm run dev -w @lasso/view",
+    "start": "node apps/server/dist/index.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.3"
+  }
+}
