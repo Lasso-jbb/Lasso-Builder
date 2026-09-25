@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { CompanyRowVM } from "@lasso/spec";
-import { isCompanyRef, normalizeCompanyName, pickCompany } from "./lookup.js";
+import { findCompany, isCompanyRef, normalizeCompanyName, pickCompany } from "./lookup.js";
+import type { DataProvider } from "./provider.js";
 
 const row = (name: string, cvr: string, statusKind: CompanyRowVM["statusKind"] = "active"): CompanyRowVM => ({ lassoId: `CVR-1-${cvr}`, cvr, name, statusKind });
 
@@ -36,4 +37,20 @@ test("isCompanyRef skelner CVR og Lasso-ID fra navne", () => {
   assert.ok(isCompanyRef("CVR-1-24256790"));
   assert.ok(!isCompanyRef("Novo Nordisk"));
   assert.ok(!isCompanyRef("3F"));
+});
+
+test("findCompany søger også med selskabsform, når Lasso ikke har selskabet i toppen", async () => {
+  const calls: string[] = [];
+  const provider = {
+    async findCompanies(name: string) {
+      calls.push(name);
+      return name === "Novo Nordisk A/S"
+        ? [row("NOVO NORDISK A/S", "24256790"), row("NOVO NORDISK FONDEN", "10582989")]
+        : [row("Novo Nordisk Akademikerforening", "40539050"), row("NOVO NORDISK FONDEN", "10582989")];
+    },
+  } as unknown as DataProvider;
+  const found = (await findCompany(provider, "Novo Nordisk"))!;
+  assert.equal(found.pick.cvr, "24256790");
+  assert.deepEqual(calls, ["Novo Nordisk", "Novo Nordisk A/S"]);
+  assert.deepEqual(found.alternatives.map((r) => r.cvr), ["40539050", "10582989"]);
 });

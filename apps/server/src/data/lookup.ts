@@ -1,4 +1,5 @@
 import type { CompanyRowVM } from "@lasso/spec";
+import type { DataProvider } from "./provider.js";
 
 /**
  * Finder den virksomhed, brugeren mener, ud fra et navn. Lassos søgning sorterer
@@ -35,6 +36,25 @@ export function pickCompany(query: string, rows: readonly CompanyRowVM[]): Compa
     .map((row, index) => ({ row, index, s: score(query, row), inactive: row.statusKind === "inactive" ? 1 : 0 }))
     .sort((a, b) => b.s - a.s || a.inactive - b.inactive || a.index - b.index);
   return { pick: ranked[0]!.row, alternatives: ranked.slice(1, 5).map((r) => r.row) };
+}
+
+/**
+ * Slår et navn op og vælger bedste match. Lasso rangerer ikke altid selskabet selv
+ * højt: "Novo Nordisk" gav 20 foreninger m.m. uden Novo Nordisk A/S (25.09.2026).
+ * Uden præcist match søges der derfor også på navnet med selskabsform.
+ */
+export async function findCompany(provider: DataProvider, name: string): Promise<CompanyPick | null> {
+  const wanted = normalizeCompanyName(name);
+  let rows = await provider.findCompanies(name, 20);
+  if (!rows.some((r) => normalizeCompanyName(r.name) === wanted) && !LEGAL_FORMS.test(name.toLowerCase().trim())) {
+    const seen = new Set(rows.map((r) => r.lassoId));
+    for (const form of ["A/S", "ApS"]) {
+      const extra = await provider.findCompanies(`${name} ${form}`, 5);
+      rows = [...rows, ...extra.filter((r) => !seen.has(r.lassoId) && seen.add(r.lassoId))];
+      if (rows.some((r) => normalizeCompanyName(r.name) === wanted)) break;
+    }
+  }
+  return pickCompany(name, rows);
 }
 
 /** CVR-nummer eller Lasso-ID (i modsætning til et navn). */

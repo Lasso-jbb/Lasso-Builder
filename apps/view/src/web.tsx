@@ -20,15 +20,25 @@ function downloadCsv(filename: string, csv: string) {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
+/** Følger værtens tema: data-theme på <html>, når en indlejrende side sætter det, ellers systemets indstilling. */
 function usePrefersDark(): boolean {
-  const q = typeof window !== "undefined" ? window.matchMedia?.("(prefers-color-scheme: dark)") : undefined;
-  const [dark, setDark] = useState(Boolean(q?.matches));
+  const read = () => {
+    const forced = document.documentElement.getAttribute("data-theme");
+    if (forced === "dark" || forced === "light") return forced === "dark";
+    return Boolean(window.matchMedia?.("(prefers-color-scheme: dark)").matches);
+  };
+  const [dark, setDark] = useState(read);
   useEffect(() => {
-    if (!q) return;
-    const on = (e: MediaQueryListEvent) => setDark(e.matches);
-    q.addEventListener("change", on);
-    return () => q.removeEventListener("change", on);
-  }, [q]);
+    const update = () => setDark(read());
+    const q = window.matchMedia?.("(prefers-color-scheme: dark)");
+    q?.addEventListener("change", update);
+    const observer = new MutationObserver(update);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => {
+      q?.removeEventListener("change", update);
+      observer.disconnect();
+    };
+  }, []);
   return dark;
 }
 

@@ -8,7 +8,7 @@ import { getCurrentUser } from "./auth/user.js";
 import { hasLassoCredentials, isSet, loadConfig, type Config } from "./config.js";
 import { createProvider, type DataProvider } from "./data/index.js";
 import { errorMessage, normalizeSpec, resolveSpec } from "./data/resolve.js";
-import { pickCompany } from "./data/lookup.js";
+import { findCompany } from "./data/lookup.js";
 import { summarizeView } from "./data/summary.js";
 import { adaptSearch, at } from "./lasso/adapters.js";
 import { describeShape, LassoApiError, LassoClient, probeAuthVariants, type Query } from "./lasso/client.js";
@@ -191,7 +191,7 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
 
     // Røgtest af de rigtige flows (samme kode som MCP-tools) med kold cache, kun resumé i loggen.
     if (provider.kind === "live") {
-      const lookup = pickCompany(config.LASSO_STARTUP_PROBE_QUERY, await provider.findCompanies(config.LASSO_STARTUP_PROBE_QUERY, 20));
+      const lookup = await findCompany(provider, config.LASSO_STARTUP_PROBE_QUERY);
       log(`navneopslag "${config.LASSO_STARTUP_PROBE_QUERY}"`, lookup ? [lookup.pick, ...lookup.alternatives].map((r) => `${r.name} (${r.cvr ?? r.lassoId})`) : "intet match");
       const t1 = Date.now();
       const company = await resolveSpec(companyTemplate(first.lassoId), provider);

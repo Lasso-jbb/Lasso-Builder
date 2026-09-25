@@ -281,7 +281,7 @@ export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
     years.push({
       year,
       periodEnd,
-      revenue: f(["revenue", "revenues", "revenuefromcontractswithcustomers", "nettoomsaetning"], "revenue", "netRevenue", "turnover", "netTurnover", "omsaetning"),
+      revenue: f(["revenue", "revenues", "netsales", "revenuefromcontractswithcustomers", "nettoomsaetning"], "revenue", "netRevenue", "turnover", "netTurnover", "omsaetning"),
       grossProfit: f(["grossprofitloss", "grossprofit", "grossresult"], "grossProfit", "grossResult", "grossProfitLoss", "bruttofortjeneste"),
       profit: f(["profitloss", "profitlossfortheyear", "netincome"], "profit", "netResult", "profitLoss", "netIncome", "aaretsResultat"),
       equity: f(["equity", "totalequity", "equityattributabletoownersofparent"], "equity", "totalEquity", "egenkapital"),

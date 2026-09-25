@@ -20,7 +20,7 @@ import {
 } from "@lasso/spec";
 import type { CurrentUser } from "../auth/user.js";
 import type { Config } from "../config.js";
-import { isCompanyRef, pickCompany, type CompanyPick } from "../data/lookup.js";
+import { findCompany, isCompanyRef, type CompanyPick } from "../data/lookup.js";
 import type { DataProvider } from "../data/provider.js";
 import { errorMessage, normalizeSpec, resolveSpec } from "../data/resolve.js";
 import { summarizeView } from "../data/summary.js";
@@ -132,7 +132,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
       if (!isCompanyRef(company)) {
         let found: CompanyPick | null;
         try {
-          found = pickCompany(company, await provider.findCompanies(company, 20));
+          found = await findCompany(provider, company);
         } catch (err) {
           return toolError(`Kunne ikke slå "${company}" op: ${errorMessage(err)}.`);
         }
