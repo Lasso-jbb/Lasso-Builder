@@ -1,11 +1,11 @@
 import {
   amountScale,
+  chartSeries,
   formatAmount,
   formatCriterion,
   formatDate,
   formatNumber,
   formatScaled,
-  METRIC_FIELD,
   METRIC_LABELS,
   percentChange,
   searchKey,
@@ -57,14 +57,7 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
       }
       if (f && c.type === "LassoFinancialChart") {
         // Hele rækken, så modellen kan kommentere udviklingen (og værter uden grafik kan vise den).
-        const series = (m: typeof c.metric) =>
-          f.years.slice(-c.years).flatMap((y) => {
-            const v = y[METRIC_FIELD[m]];
-            return typeof v === "number" ? [{ year: y.year, value: v }] : [];
-          });
-        let metric = c.metric;
-        let points = series(metric);
-        if (points.length === 0 && metric === "omsaetning") points = series((metric = "bruttofortjeneste"));
+        const { metric, points } = chartSeries(f, c.metric, c.years);
         if (points.length) {
           const scale = metric === "ansatte" ? null : amountScale(points.map((p) => p.value));
           const unit = scale ? ` (${scale.label})` : "";

@@ -89,3 +89,20 @@ test("lange selskabsnavne forkortes og deles ved efterled", () => {
   assert.ok(card.includes("             REVISIONSPARTNER-"), card);
   assert.ok(card.includes("             SELSKAB "), card);
 });
+
+test("uden omsætning i de seneste år viser kortet bruttofortjeneste, og linjerne holder bredden", () => {
+  const ds = dataset();
+  ds.financials[ID]!.years = [2018, 2019, 2024, 2025].map((year, i) => ({
+    year,
+    revenue: i < 2 ? 3_900_000 + i * 2_900_000 : null,
+    grossProfit: [5e6, 7e6, 17.5e6, 18.8e6][i]!,
+    profit: [1e5, 2e5, 113_000, -201_000][i]!,
+    equity: 3.2e6,
+    employees: 19,
+  }));
+  const card = textCard(companyTemplate(ID, { chartMetric: "omsaetning", years: 10 }), ds)!;
+  for (const l of card.split("\n")) assert.equal([...l].length, 38, `linjen "${l}" har forkert bredde`);
+  assert.ok(card.includes("BRUTTOFORTJENESTE, MIO. KR."), card);
+  assert.ok(card.includes("2025 ████████████████████"), card);
+  assert.match(card, /Bruttofortj\.\s+18,8 mio\./);
+});

@@ -224,6 +224,12 @@ function shareText(v: Json): string | undefined {
   return `${a}–${percentFormat.format(hi * scale)} %`;
 }
 
+/** Nedre grænse af en ejerandel som tal: "25–33,32 %" -> 25; ukendt -> -1. */
+function shareFloor(share: string | undefined): number {
+  const m = /(\d+(?:,\d+)?)/.exec(share ?? "");
+  return m ? Number(m[1]!.replace(",", ".")) : -1;
+}
+
 export function adaptOwnership(lassoId: string, raw: Json): OwnershipVM {
   // Bekræftet: ownership.owners[] { ownership, voteRights, name, type, lassoId, unitNumber }
   const ownersRaw = arr(raw, "ownership.owners", "owners", "legalOwners", "ownerships", "shareholders", "ejere");
@@ -252,7 +258,8 @@ export function adaptOwnership(lassoId: string, raw: Json): OwnershipVM {
   const auditorName = auditorRaw === undefined ? undefined : typeof auditorRaw === "string" ? auditorRaw : str(auditorRaw, "name", "navn");
   return {
     lassoId,
-    owners: dedupe(owners, (o) => `${o.name}|${o.share ?? ""}`),
+    // Største ejere først; Lasso leverer dem i vilkårlig rækkefølge.
+    owners: dedupe(owners, (o) => `${o.name}|${o.share ?? ""}`).sort((a, b) => shareFloor(b.share) - shareFloor(a.share)),
     auditor: auditorName
       ? { name: auditorName, lassoId: str(auditorRaw, "lassoId", "id"), from: dateStr(auditorRaw, "from", "start", "startDate") }
       : undefined,

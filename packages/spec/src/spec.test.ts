@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   amountScale,
+  chartSeries,
   companyTemplate,
   formatScaled,
   formatAmount,
@@ -82,4 +83,12 @@ test("amountScale giver én enhed for en række beløb", () => {
   assert.equal(formatScaled(176_954_000_000, scale), "177,0");
   assert.equal(amountScale([41_100_000, 400_000]).label, "mio. kr.");
   assert.equal(formatScaled(950_000, amountScale([950_000])), "950");
+});
+
+test("chartSeries viser bruttofortjeneste, når omsætningen stopper før seneste regnskab", () => {
+  const y = (year: number, revenue: number | null, grossProfit: number) => ({ year, revenue, grossProfit, profit: null, equity: null, employees: null });
+  const f = { lassoId: "x", currency: "DKK", years: [y(2018, 3.9e6, 5e6), y(2019, 6.8e6, 7e6), y(2025, null, 18.8e6)] };
+  assert.equal(chartSeries(f, "omsaetning", 10).metric, "bruttofortjeneste");
+  const full = { ...f, years: [y(2024, 290e9, 245e9), y(2025, 309e9, 250e9)] };
+  assert.deepEqual(chartSeries(full, "omsaetning", 10), { metric: "omsaetning", points: [{ year: 2024, value: 290e9 }, { year: 2025, value: 309e9 }] });
 });

@@ -125,10 +125,11 @@ test("adaptOwnership viser Lassos brøk-intervaller som procent og stemmeandel",
       ],
     },
   });
-  assert.equal(o.owners[0]!.share, "25–33,32 %");
-  assert.equal(o.owners[0]!.votes, "66,67–89,99 %");
-  assert.equal(o.owners[1]!.share, "100 %");
-  assert.equal(o.owners[1]!.votes, undefined);
+  // Sorteret med største ejer først.
+  assert.equal(o.owners[0]!.share, "100 %");
+  assert.equal(o.owners[0]!.votes, undefined);
+  assert.equal(o.owners[1]!.share, "25–33,32 %");
+  assert.equal(o.owners[1]!.votes, "66,67–89,99 %");
 });
 
 test("adaptPeople udelader revisorer fra otherParticipants og læser employees.count", () => {
@@ -167,4 +168,17 @@ test("adaptCompany skriver CVR's versal-kommuner pænt", () => {
   const vm = adaptCompany("CVR-1-1", { name: "X", address: { postalCode: 2800, postalDistrict: "Kongens Lyngby", municipality: { name: "LYNGBY-TAARBÆK", code: 173 } } });
   assert.equal(vm.address?.municipality, "Lyngby-Taarbæk");
   assert.equal(adaptCompany("CVR-1-1", { name: "X", address: { municipality: { name: "GLADSAXE" } } }).address?.municipality, "Gladsaxe");
+});
+
+test("adaptOwnership sorterer største ejer først", () => {
+  const o = adaptOwnership("CVR-1-1", {
+    ownership: {
+      owners: [
+        { ownership: { from: 0.05, to: 0.1 }, name: "Lille ApS", type: "Company" },
+        { ownership: { from: 0.25, to: 0.3332 }, name: "Stor A/S", type: "Company" },
+        { ownership: { from: 0.15, to: 0.1999 }, name: "Mellem ApS", type: "Company" },
+      ],
+    },
+  });
+  assert.deepEqual(o.owners.map((x) => x.name), ["Stor A/S", "Mellem ApS", "Lille ApS"]);
 });

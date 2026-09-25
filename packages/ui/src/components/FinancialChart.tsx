@@ -1,4 +1,4 @@
-import { amountScale, formatNumber, formatScaled, METRIC_FIELD, METRIC_LABELS, type FinancialsVM, type Metric } from "@lasso/spec";
+import { amountScale, chartSeries, formatNumber, formatScaled, METRIC_LABELS, type FinancialsVM, type Metric } from "@lasso/spec";
 import { Card, StateBox, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
 
@@ -8,18 +8,7 @@ export function FinancialChart({ financials, metric, years, error }: { financial
   if (!financials) {
     return <Card title={title}>{error ? <StateBox kind={stateForError(error)} message={error} /> : <StateBox kind="loading" />}</Card>;
   }
-  const pointsFor = (m: Metric) =>
-    financials.years
-      .slice(-years)
-      .map((y) => ({ year: y.year, value: y[METRIC_FIELD[m]] as number | null | undefined }))
-      .filter((p): p is { year: number; value: number } => typeof p.value === "number");
-  let shown = metric;
-  let points = pointsFor(shown);
-  // Mindre selskaber oplyser ikke omsætning; så vises bruttofortjenesten i stedet for en tom graf.
-  if (points.length === 0 && shown === "omsaetning") {
-    shown = "bruttofortjeneste";
-    points = pointsFor(shown);
-  }
+  const { metric: shown, points } = chartSeries(financials, metric, years);
   if (points.length === 0) return <Card title={title}><StateBox kind="empty" message="Ingen tal for dette nøgletal." /></Card>;
 
   // Én enhed for hele grafen (i titlen), så søjlerne kun bærer tal: "117,1 … 250,3" i mia. kr.

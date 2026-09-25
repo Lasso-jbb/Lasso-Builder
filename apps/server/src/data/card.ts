@@ -1,5 +1,6 @@
 import {
   amountScale,
+  chartSeries,
   formatAmount,
   formatDate,
   formatNumber,
@@ -99,14 +100,7 @@ function delta(from: number | null | undefined, to: number | null | undefined): 
 }
 
 function chart(card: Card, f: FinancialsVM, wanted: Metric, years: number) {
-  const series = (m: Metric) =>
-    f.years.slice(-years).flatMap((y) => {
-      const v = y[METRIC_FIELD[m]];
-      return typeof v === "number" ? [{ year: y.year, value: v }] : [];
-    });
-  let metric = wanted;
-  let points = series(metric);
-  if (points.length === 0 && metric === "omsaetning") points = series((metric = "bruttofortjeneste"));
+  const { metric, points } = chartSeries(f, wanted, years);
   if (points.length === 0) return;
   const scale = metric === "ansatte" ? null : amountScale(points.map((p) => p.value));
   card.section(`${METRIC_LABELS[metric]}${scale ? `, ${scale.label}` : ""}`);
@@ -175,7 +169,7 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     for (const m of metrics) {
       const v = last[METRIC_FIELD[m]];
       if (typeof v !== "number") continue;
-      const label = m === "resultat" ? "Resultat" : METRIC_LABELS[m];
+      const label = { omsaetning: "Omsætning", bruttofortjeneste: "Bruttofortj.", resultat: "Resultat", egenkapital: "Egenkapital", ansatte: "Ansatte" }[m];
       card.raw(`${pad(label, 12)}${padStart(short(v, m), 10)}  ${delta(prev?.[METRIC_FIELD[m]] as number | null | undefined, v)}`);
     }
   }
