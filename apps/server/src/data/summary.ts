@@ -2,6 +2,7 @@ import {
   amountScale,
   formatAmount,
   formatCriterion,
+  formatDate,
   formatNumber,
   formatScaled,
   METRIC_FIELD,
@@ -27,6 +28,21 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
       if (co) {
         const where = [co.address?.city, co.industryText].filter(Boolean).join(", ");
         lines.push(`${co.name} (CVR ${co.cvr ?? "?"}, Lasso-ID ${co.lassoId}): ${co.status ?? "ukendt status"}${where ? `, ${where}` : ""}.`);
+        // Stamoplysninger, så modellen kan svare på dem (og værter uden grafik kan vise dem).
+        const a = co.address;
+        const facts = [
+          co.form && `form ${co.form}`,
+          (a?.street || a?.zip) && `adresse ${[a?.street, [a?.zip, a?.city].filter(Boolean).join(" ")].filter(Boolean).join(", ")}`,
+          a?.municipality && `kommune ${a.municipality}`,
+          a?.region && `region ${a.region}`,
+          co.industryText && `branche ${co.industryText}${co.industryCode ? ` (${co.industryCode})` : ""}`,
+          co.founded && `stiftet ${formatDate(co.founded)}`,
+          co.employees != null && `${formatNumber(co.employees)} ansatte i CVR`,
+          co.phone && `tlf. ${co.phone}`,
+          co.email && `e-mail ${co.email}`,
+          co.website && `web ${co.website}`,
+        ].filter(Boolean);
+        if (facts.length) lines.push(`Stamoplysninger: ${facts.join("; ")}.`);
       }
     }
     if (c.type === "LassoKeyFigures" || c.type === "LassoFinancialChart") {
