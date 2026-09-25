@@ -72,8 +72,8 @@ export class LassoClient {
   }
 
   /** Fejlfinding mod søgemiljøet (dev3) med søgenøglen. */
-  trySearchRequest(method: "GET" | "POST", path: string, body?: unknown) {
-    return this.searchClient.tryRequest(method, path, body);
+  trySearchRequest(method: "GET" | "POST", path: string, body?: unknown, maxChars?: number) {
+    return this.searchClient.tryRequest(method, path, body, maxChars);
   }
 
   /** Om søgningen har sin egen nøgle (og dermed kører mod LASSO_SEARCH_API_BASE_URL). */
@@ -124,7 +124,7 @@ export class LassoClient {
   }
 
   /** Fejlfinding: kalder uden cache og uden at kaste, og giver status og starten af svaret. */
-  async tryRequest(method: "GET" | "POST", path: string, body?: unknown): Promise<{ status: number; body: string }> {
+  async tryRequest(method: "GET" | "POST", path: string, body?: unknown, maxChars = 300): Promise<{ status: number; body: string }> {
     const url = new URL(path.replace(/^\/+/, ""), `${this.baseUrl}/`);
     for (const [k, v] of Object.entries(this.authQuery)) url.searchParams.set(k, v);
     try {
@@ -134,7 +134,7 @@ export class LassoClient {
         body: body === undefined ? undefined : JSON.stringify(body),
         signal: AbortSignal.timeout(this.timeoutMs),
       });
-      return { status: res.status, body: (await res.text()).slice(0, 300) };
+      return { status: res.status, body: (await res.text()).slice(0, maxChars) };
     } catch (err) {
       return { status: 0, body: err instanceof Error ? err.message : String(err) };
     }

@@ -280,6 +280,24 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
           const r = await client.trySearchRequest(method, path, body);
           log(`dev3 ${label}`, `${r.status} ${r.body.replace(/\s+/g, " ").slice(0, 200)}`);
         }
+        // dev3's forside er Lassos dokumentation: find siderne om søgning i sitemap'et og log det relevante.
+        for (const path of ["sitemap.xml", "api/sitemap.xml"]) {
+          const map = await client.trySearchRequest("GET", path, undefined, 200_000);
+          if (map.status !== 200) {
+            log(`dev3 ${path}`, map.status);
+            continue;
+          }
+          const urls = [...map.body.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]!);
+          const hits = urls.filter((u) => /search|prompt|lassoid|filter/i.test(u));
+          log(`dev3 ${path}`, { sider: urls.length, søgesider: hits.slice(0, 20) });
+          for (const url of hits.slice(0, 4)) {
+            const page = await client.trySearchRequest("GET", new URL(url).pathname, undefined, 400_000);
+            const text = page.body.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, " ").replace(/<[^>]+>/g, " ").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&").replace(/\s+/g, " ");
+            const at = text.search(/prompt|lassoid|filters/i);
+            console.log(`[lasso-probe] dev3-dok ${url} (${page.status}): ${text.slice(Math.max(0, at - 300), at + 2700)}`);
+          }
+          break;
+        }
       }
     }
     if (!verbose) return;
