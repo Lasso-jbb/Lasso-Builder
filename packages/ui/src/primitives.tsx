@@ -79,6 +79,9 @@ export function Sparkline({ values }: { values: readonly number[] }) {
 
 export function Delta({ from, to }: { from?: number | null; to?: number | null }) {
   const pct = percentChange([from, to]);
+  if (pct === null && typeof from === "number" && typeof to === "number" && from !== 0 && Math.sign(from) !== Math.sign(to)) {
+    return <span className={to < 0 ? "lasso-down" : "lasso-up"}>{to < 0 ? "▼ til underskud" : "▲ til overskud"}</span>;
+  }
   if (pct === null) return null;
   return (
     <span className={pct < 0 ? "lasso-down" : "lasso-up"}>

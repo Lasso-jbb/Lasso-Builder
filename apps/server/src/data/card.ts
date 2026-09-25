@@ -5,6 +5,7 @@ import {
   formatDate,
   formatNumber,
   formatScaled,
+  percentChange,
   METRIC_FIELD,
   METRIC_LABELS,
   searchKey,
@@ -94,7 +95,8 @@ const short = (v: number | null | undefined, metric: Metric) =>
 
 function delta(from: number | null | undefined, to: number | null | undefined): string {
   if (typeof from !== "number" || typeof to !== "number" || from === 0) return "";
-  const pct = ((to - from) / Math.abs(from)) * 100;
+  const pct = percentChange([from, to]);
+  if (pct === null) return to < 0 ? "▼ underskud" : "▲ overskud";
   const text = new Intl.NumberFormat("da-DK", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Math.abs(pct));
   return `${pct >= 0 ? "▲" : "▼"} ${padStart(text, 4)} %`;
 }
@@ -170,7 +172,7 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
       const v = last[METRIC_FIELD[m]];
       if (typeof v !== "number") continue;
       const label = { omsaetning: "Omsætning", bruttofortjeneste: "Bruttofortj.", resultat: "Resultat", egenkapital: "Egenkapital", ansatte: "Ansatte" }[m];
-      card.raw(`${pad(label, 12)}${padStart(short(v, m), 10)}  ${delta(prev?.[METRIC_FIELD[m]] as number | null | undefined, v)}`);
+      card.raw(`${pad(label, 12)}${padStart(short(v, m), 10)} ${delta(prev?.[METRIC_FIELD[m]] as number | null | undefined, v)}`);
     }
   }
   for (const c of spec.components) {

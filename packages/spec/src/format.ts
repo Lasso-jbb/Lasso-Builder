@@ -70,7 +70,8 @@ export function percentChange(series: readonly (number | null | undefined)[]): n
   if (values.length < 2) return null;
   const first = values[0]!;
   const last = values[values.length - 1]!;
-  if (first === 0) return null;
+  // Fra overskud til underskud (eller omvendt) er en procentændring meningsløs.
+  if (first === 0 || Math.sign(first) * Math.sign(last) < 0) return null;
   return ((last - first) / Math.abs(first)) * 100;
 }
 

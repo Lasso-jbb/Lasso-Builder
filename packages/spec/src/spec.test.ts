@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   amountScale,
+  percentChange,
   chartSeries,
   companyTemplate,
   formatScaled,
@@ -91,4 +92,10 @@ test("chartSeries viser bruttofortjeneste, når omsætningen stopper før senest
   assert.equal(chartSeries(f, "omsaetning", 10).metric, "bruttofortjeneste");
   const full = { ...f, years: [y(2024, 290e9, 245e9), y(2025, 309e9, 250e9)] };
   assert.deepEqual(chartSeries(full, "omsaetning", 10), { metric: "omsaetning", points: [{ year: 2024, value: 290e9 }, { year: 2025, value: 309e9 }] });
+});
+
+test("percentChange giver ingen procent ved skift mellem overskud og underskud", () => {
+  assert.equal(percentChange([113_000, -201_000]), null);
+  assert.equal(percentChange([-100, 50]), null);
+  assert.equal(Math.round(percentChange([100, 150])!), 50);
 });
