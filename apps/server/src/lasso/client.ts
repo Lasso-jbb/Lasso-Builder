@@ -63,6 +63,7 @@ export class LassoClient {
           LASSO_API_BASE_URL: config.LASSO_SEARCH_API_BASE_URL,
           LASSO_API_TOKEN: config.LASSO_SEARCH_API_TOKEN,
           LASSO_API_TOKEN_HEADER: config.LASSO_SEARCH_API_TOKEN_HEADER.trim() || config.LASSO_API_TOKEN_HEADER,
+          LASSO_API_TIMEOUT_MS: config.LASSO_SEARCH_API_TIMEOUT_MS,
           LASSO_API_TOKEN_QUERY: "",
           LASSO_API_USERNAME: "",
           LASSO_API_PASSWORD: "",

@@ -46,6 +46,8 @@ const schema = z.object({
   LASSO_SEARCH_API_TOKEN: z.string().default(""),
   /** Tom = samme header som LASSO_API_TOKEN_HEADER. */
   LASSO_SEARCH_API_TOKEN_HEADER: z.string().default(""),
+  /** Prompt-søgningen fortolker teksten med en sprogmodel og er langsommere end resten af API'et. */
+  LASSO_SEARCH_API_TIMEOUT_MS: z.coerce.number().int().positive().default(60000),
   LASSO_CACHE_TTL_SECONDS: z.coerce.number().int().min(0).default(300),
   LASSO_COMPANY_ID_PREFIX: z.string().default("CVR-1-"),
   /** auto = live når der er credentials, ellers demodata. */

@@ -245,23 +245,32 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
     // og logger formen, så søgningen kan kobles på search_companies.
     if (client.hasSearchCredentials) {
       const prompt = "Revisorer i Region Midtjylland med mindst 10 ansatte";
+      const fail = (step: string, err: unknown, ms: number) =>
+        log(`${step} FEJL efter ${ms} ms`, `${errorMessage(err)}${err instanceof LassoApiError ? ` (HTTP ${err.status}) ${JSON.stringify(err.body).slice(0, 500)}` : ""}`);
+      const t0 = Date.now();
+      let raw: unknown;
       try {
-        const t0 = Date.now();
-        const raw = await client.searchPrompt(prompt);
-        log(`search/prompt "${prompt}" (${Date.now() - t0} ms), form`, describeShape(raw, 6));
-        console.log(`[lasso-probe] search/prompt rå: ${JSON.stringify(raw).slice(0, 3000)}`);
+        raw = await client.searchPrompt(prompt);
+        log(`search/query/prompt "${prompt}" (${Date.now() - t0} ms), form`, describeShape(raw, 6));
+        console.log(`[lasso-probe] search/query/prompt rå: ${JSON.stringify(raw).slice(0, 3000)}`);
+      } catch (err) {
+        fail("search/query/prompt", err, Date.now() - t0);
+      }
+      if (raw !== undefined) {
         const filters = Array.isArray(raw) ? raw : (at(raw, "filters") ?? raw);
         const firstFilter = Array.isArray(filters) ? filters[0] : undefined;
         const fieldName = String(at(firstFilter, "FieldName") ?? "") || undefined;
         const t1 = Date.now();
-        const ids = await client.searchByFilters(filters, fieldName);
-        const summary =
-          typeof ids === "object" && ids !== null && !Array.isArray(ids)
-            ? Object.fromEntries(Object.entries(ids).map(([k, v]) => [k, Array.isArray(v) ? [`${v.length} stk.`, ...v.slice(0, 5)] : v]))
-            : describeShape(ids, 2);
-        log(`search/lassoid OrderBy=${fieldName ?? "(ingen)"} (${Date.now() - t1} ms)`, summary);
-      } catch (err) {
-        log("søgning FEJL", `${errorMessage(err)}${err instanceof LassoApiError ? ` (HTTP ${err.status}) ${JSON.stringify(err.body).slice(0, 500)}` : ""}`);
+        try {
+          const ids = await client.searchByFilters(filters, fieldName);
+          const summary =
+            typeof ids === "object" && ids !== null && !Array.isArray(ids)
+              ? Object.fromEntries(Object.entries(ids).map(([k, v]) => [k, Array.isArray(v) ? [`${v.length} stk.`, ...v.slice(0, 5)] : v]))
+              : describeShape(ids, 2);
+          log(`search/lassoid OrderBy=${fieldName ?? "(ingen)"} (${Date.now() - t1} ms)`, summary);
+        } catch (err) {
+          fail("search/lassoid", err, Date.now() - t1);
+        }
       }
     }
     if (!verbose) return;
