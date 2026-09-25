@@ -7,6 +7,7 @@ import { companyTemplate, listTemplate, parseViewSpec, searchQuerySchema, toLass
 import { getCurrentUser } from "./auth/user.js";
 import { hasLassoCredentials, isSet, loadConfig, type Config } from "./config.js";
 import { createProvider, type DataProvider } from "./data/index.js";
+import { mapLimit } from "./data/provider.js";
 import { errorMessage, normalizeSpec, resolveSpec } from "./data/resolve.js";
 import { findCompany } from "./data/lookup.js";
 import { summarizeView } from "./data/summary.js";
@@ -274,6 +275,55 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
       }
     }
     if (!verbose) return;
+
+    // Engangskortlægning af Lassos søgning (LOG_LEVEL=debug): filterformat pr. felt, sorteringsfelter og sidestørrelse.
+    if (client.hasSearchCredentials) {
+      const compact = (filters: unknown) =>
+        JSON.stringify(filters, (k, v) => (v === null || (Array.isArray(v) && v.length === 0 && k !== "values") ? undefined : v));
+      const prompts = [
+        "Virksomheder i Region Nordjylland",
+        "Virksomheder i Region Hovedstaden",
+        "Virksomheder i Region Sjælland",
+        "Virksomheder i Region Syddanmark",
+        "Virksomheder i Aarhus Kommune eller Odense Kommune med omsætning over 10 mio. kr.",
+        "Anpartsselskaber i postnummer 8000 stiftet efter 1. januar 2020",
+        "Aktive selskaber med bruttofortjeneste mellem 5 og 20 mio. kr. og egenkapital over 1 mio. kr.",
+        "Virksomheder under konkurs med negativt årets resultat",
+        "Tømrere med mellem 5 og 50 ansatte sorteret efter omsætning",
+      ];
+      await mapLimit(prompts, 3, async (p) => {
+        const t = Date.now();
+        try {
+          const f = await client.searchPrompt(p);
+          console.log(`[lasso-kort] prompt "${p}" (${Date.now() - t} ms): ${compact(f)}`);
+        } catch (err) {
+          console.log(`[lasso-kort] prompt "${p}" FEJL: ${errorMessage(err)}`);
+        }
+      });
+      const filters = await client.searchPrompt("Revisorer i Region Midtjylland med mindst 10 ansatte").catch(() => []);
+      const candidates = [
+        "", "employees", "Employees", "BasicInfo.employees", "BasicInfo.Employees", "revenue", "Revenue", "grossprofit", "grossProfit",
+        "GrossProfit", "profit", "equity", "name", "Name", "BasicInfo.name", "Financials.GrossProfit", "Financials.Revenue",
+        "financials.grossprofit", "employees desc", "-employees", "employees DESC",
+      ];
+      for (const orderBy of candidates) {
+        const r = await client.trySearchRequest("POST", "apps/search/lassoid", { filters, ...(orderBy ? { OrderBy: orderBy } : {}) }, 400);
+        console.log(`[lasso-kort] OrderBy "${orderBy}": ${r.status} ${r.body.replace(/\s+/g, " ").slice(0, 260)}`);
+      }
+      for (const [label, extra] of [
+        ["pageSize", { pageSize: 20 }], ["PageSize", { PageSize: 20 }], ["take", { take: 20 }], ["size", { size: 20 }], ["limit", { limit: 20 }], ["page 2", { page: 2 }],
+      ] as const) {
+        const r = await client.trySearchRequest("POST", "apps/search/lassoid", { filters, ...extra }, 200_000);
+        let info = r.body.slice(0, 200);
+        try {
+          const j = JSON.parse(r.body) as { results?: unknown[] } & Record<string, unknown>;
+          info = JSON.stringify({ ...j, results: `${j.results?.length ?? 0} stk.: ${(j.results ?? []).slice(0, 3).join(", ")}` });
+        } catch {
+          /* ikke JSON */
+        }
+        console.log(`[lasso-kort] side ${label}: ${r.status} ${info}`);
+      }
+    }
 
     for (const [name, fn] of [
       ["search extended=true", () => client.search({ query: config.LASSO_STARTUP_PROBE_QUERY, type: "all", pageSize: 1, extended: true })],
