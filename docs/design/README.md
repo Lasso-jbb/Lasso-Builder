@@ -70,8 +70,25 @@ Logikken bruger altid nøglerne. De danske tekster er kun labels (`packages/spec
 
 Rettelse i forhold til filterdokumentet: beløbsfelter (04) brugte "Mere end / Mindre end / Mellem". De bruger nu samme labels som talfelter, så "er større end" altid betyder `>` og "er mindst" altid betyder `≥`.
 
+## Præsentationslaget indtil del 2
+
+Del 2 (nøgletal, grafer, lister, tabel) er ikke designet endnu. Komponenterne er derfor bygget på reglerne ovenfor, gennemgået 25.09.2026:
+
+| Element | Regel fra del 1 |
+|---|---|
+| Virksomhedsnavn, totaltal i nøgletal | 18/600 |
+| Faktalabels, korttitler, tabeloverskrifter, år i grafer, "Ny" | 11/600 versaler, sporing 0,06em |
+| Navne i lister og tabeller, faktaværdier | 14/400 |
+| Roller, datoer, ejerandele, enheder, tal over søjler | 13/400 (tal over søjler 13/500) |
+| Knapper | 38 px, 8 px radius, 13/600 |
+| Status ("Normal", "Ophørt") | Neutralt tag: 30 px, 6 px radius, 13 px, `#F1F1F3` |
+| Udvikling (▲ 6,4 %) | Pil i neutral tekst. Ingen grøn, og rød er forbeholdt det, der ikke kan fortrydes |
+| Søjler | `#E4E4E7`, seneste år `#3F444B`, negative `#C9CDD3` |
+| Kort | 1 px `#E6E7EB`, 10 px radius, 18 px luft, ingen skygge (skygge kun på popovers) |
+
+Kun størrelserne 11, 13, 14 og 18 px bruges.
+
 ## Endnu ikke dækket
 
-- Præsentationslaget (nøgletal, grafer, tabel, tidslinje m.m.) afventer del 2 af designet. Komponenterne bruger indtil da de samme tokens.
-- Farver for positiv/negativ udvikling er ikke fastlagt. Midlertidigt grøn/rød, selvom rød ellers er reserveret.
+- Del 2 kan ændre ovenstående; så rettes det her og i `styles.css`.
 - Mørk tilstand er afledt af tokens og ikke designet.

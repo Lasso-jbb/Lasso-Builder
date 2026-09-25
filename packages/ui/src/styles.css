@@ -29,23 +29,17 @@
   --lasso-tooltip: #16181d;
 
   --lasso-danger: #d92d20;          /* kun det, der ikke kan fortrydes */
-  --lasso-positive: #1f7a4d;
-  --lasso-positive-soft: #e7f5ee;
-  --lasso-negative: #b42318;
-  --lasso-negative-soft: #fdecea;
-  --lasso-warning: #93580b;
-  --lasso-warning-soft: #fdf3e1;
   --lasso-neutral-soft: #f1f1f3;
 
   --lasso-chart-bar: #e4e4e7;
   --lasso-chart-bar-strong: #3f444b;
-  --lasso-chart-bar-neg: #f3b8b1;
+  --lasso-chart-bar-neg: #c9cdd3;
 
   --lasso-radius-sm: 6px;           /* tags */
   --lasso-radius: 8px;              /* felter, knapper, chips */
   --lasso-radius-lg: 10px;          /* kort, popovers */
   --lasso-radius-pill: 999px;
-  --lasso-shadow: 0 1px 2px rgb(16 18 24 / 0.04);
+  --lasso-shadow: none;            /* styleguiden: kun popovers har skygge */
   --lasso-shadow-pop: 0 14px 34px rgb(16 18 24 / 0.14);
   --lasso-focus-ring: 0 0 0 3px var(--lasso-accent-soft);
 
@@ -65,7 +59,6 @@
   --lasso-fs-sm: 13px;      /* brødtekst, tags, chips, knapper */
   --lasso-fs: 14px;         /* feltnavne (600), operatorer (500), værdier (400) */
   --lasso-fs-lg: 18px;      /* overskrifter og totaltal (600) */
-  --lasso-fs-xl: 22px;
 }
 
 .lasso-root[data-theme="dark"] {
@@ -91,16 +84,10 @@
   --lasso-disabled: #4a4f57;
   --lasso-skeleton: #262a30;
   --lasso-tooltip: #f2f3f5;
-  --lasso-positive: #5cc28c;
-  --lasso-positive-soft: #16301f;
-  --lasso-negative: #f28b82;
-  --lasso-negative-soft: #3a1c19;
-  --lasso-warning: #e6b45a;
-  --lasso-warning-soft: #33280f;
   --lasso-neutral-soft: #2a2d33;
   --lasso-chart-bar: #363a41;
   --lasso-chart-bar-strong: #d3d6db;
-  --lasso-chart-bar-neg: #6b2c26;
+  --lasso-chart-bar-neg: #4a4f57;
 }
 
 .lasso-root {
@@ -142,7 +129,7 @@
 .lasso-notice { font-size: var(--lasso-fs-sm); color: var(--lasso-text-3); background: var(--lasso-surface-2); border-left: 3px solid var(--lasso-border-strong); padding: 10px 14px; }
 
 /* ---------- Knapper og badges ---------- */
-.lasso-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: var(--lasso-btn-h); padding: 0 14px; border-radius: var(--lasso-radius); border: 1px solid var(--lasso-border-strong); background: var(--lasso-surface); color: var(--lasso-text-2); font-size: var(--lasso-fs-sm); font-weight: 500; cursor: pointer; white-space: nowrap; }
+.lasso-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: var(--lasso-btn-h); padding: 0 14px; border-radius: var(--lasso-radius); border: 1px solid var(--lasso-border-strong); background: var(--lasso-surface); color: var(--lasso-text-2); font-size: var(--lasso-fs-sm); font-weight: 600; cursor: pointer; white-space: nowrap; }
 .lasso-btn:hover { background: var(--lasso-surface-2); border-color: var(--lasso-icon); }
 .lasso-btn:focus-visible, .lasso-chip__remove:focus-visible, .lasso-link:focus-visible { outline: none; box-shadow: var(--lasso-focus-ring); border-color: var(--lasso-accent-border); }
 .lasso-btn:disabled { opacity: 0.5; cursor: default; }
@@ -152,23 +139,20 @@
 .lasso-btn--ghost:hover { background: var(--lasso-surface-2); border-color: transparent; }
 .lasso-btn--prompt { color: var(--lasso-text-2); background: var(--lasso-surface); }
 .lasso-btn--prompt:hover { background: var(--lasso-accent-soft); border-color: var(--lasso-accent-border); color: var(--lasso-accent-text); }
-.lasso-badge { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border-radius: var(--lasso-radius-sm); font-size: 12px; font-weight: 500; background: var(--lasso-neutral-soft); color: var(--lasso-text-3); white-space: nowrap; }
-.lasso-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.8; }
-.lasso-badge--active { background: var(--lasso-positive-soft); color: var(--lasso-positive); }
-.lasso-badge--warning { background: var(--lasso-warning-soft); color: var(--lasso-warning); }
-.lasso-badge--inactive { background: var(--lasso-neutral-soft); color: var(--lasso-muted); }
-.lasso-badge--demo { background: var(--lasso-neutral-soft); color: var(--lasso-text-3); }
-.lasso-badge--plain::before { display: none; }
+/* Status og mærker er neutrale tags (styleguiden: tag 30 px, 6 px radius, 13 px, #F1F1F3). Ingen grøn/rød. */
+.lasso-badge { display: inline-flex; align-items: center; height: var(--lasso-tag-h); padding: 0 10px; border-radius: var(--lasso-radius-sm); font-size: var(--lasso-fs-sm); font-weight: 400; background: var(--lasso-tag); color: var(--lasso-text); white-space: nowrap; }
+.lasso-badge--inactive { color: var(--lasso-muted); }
+.lasso-badge--demo { color: var(--lasso-text-3); }
 
 /* ---------- Kort ---------- */
-.lasso-card { background: var(--lasso-surface); border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); padding: var(--lasso-space-4) 18px; box-shadow: var(--lasso-shadow); min-width: 0; }
+.lasso-card { background: var(--lasso-surface); border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); padding: 18px; box-shadow: var(--lasso-shadow); min-width: 0; }
 .lasso-card__title { margin: 0 0 var(--lasso-space-3); font-size: var(--lasso-fs-label); line-height: 16px; font-weight: 600; color: var(--lasso-text-4); text-transform: uppercase; letter-spacing: 0.06em; }
 .lasso-muted { color: var(--lasso-muted); }
 .lasso-small { font-size: var(--lasso-fs-sm); }
 
 /* ---------- Virksomhedsheader ---------- */
 .lasso-company { display: flex; flex-direction: column; gap: var(--lasso-space-2); }
-.lasso-company__name { margin: 0; font-size: var(--lasso-fs-xl); line-height: 28px; font-weight: 600; letter-spacing: -0.02em; }
+.lasso-company__name { margin: 0; font-size: var(--lasso-fs-lg); line-height: 24px; font-weight: 600; letter-spacing: -0.01em; }
 .lasso-company__row { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; color: var(--lasso-text-3); font-size: var(--lasso-fs-sm); }
 .lasso-company__facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--lasso-space-2) var(--lasso-space-4); margin-top: var(--lasso-space-2); }
 .lasso-fact__label { font-size: var(--lasso-fs-label); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--lasso-muted); margin-bottom: 2px; }
@@ -180,17 +164,17 @@
 .lasso-kpi__label { font-size: var(--lasso-fs-label); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--lasso-muted); }
 .lasso-kpi__value { font-size: var(--lasso-fs-lg); line-height: 24px; font-weight: 600; letter-spacing: -0.01em; margin-top: 6px; }
 .lasso-kpi__delta { font-size: var(--lasso-fs-sm); font-weight: 500; margin-top: 4px; }
-.lasso-kpi__year { font-size: 12px; font-weight: 400; color: var(--lasso-muted); }
-.lasso-up { color: var(--lasso-positive); }
-.lasso-down { color: var(--lasso-negative); }
+.lasso-kpi__year { font-size: var(--lasso-fs-sm); font-weight: 400; color: var(--lasso-muted); }
+/* Udvikling vises med pil i neutral tekst: rød er forbeholdt det, der ikke kan fortrydes, og grøn findes ikke i paletten. */
+.lasso-up, .lasso-down { color: var(--lasso-text-2); }
 
 /* ---------- Graf ---------- */
 .lasso-chart svg { display: block; overflow: visible; max-width: 100%; }
 .lasso-chart__bar { fill: var(--lasso-chart-bar); }
 .lasso-chart__bar--last { fill: var(--lasso-chart-bar-strong); }
 .lasso-chart__bar--neg { fill: var(--lasso-chart-bar-neg); }
-.lasso-chart__label { fill: var(--lasso-muted); font-size: 12px; font-family: var(--lasso-font); }
-.lasso-chart__value { fill: var(--lasso-text-2); font-size: 12px; font-weight: 500; font-family: var(--lasso-font); }
+.lasso-chart__label { fill: var(--lasso-muted); font-size: var(--lasso-fs-label); font-weight: 600; letter-spacing: 0.06em; font-family: var(--lasso-font); }
+.lasso-chart__value { fill: var(--lasso-text-2); font-size: var(--lasso-fs-sm); font-weight: 500; font-family: var(--lasso-font); }
 .lasso-chart__axis { stroke: var(--lasso-border-strong); stroke-width: 1; }
 
 /* ---------- Lister ---------- */
@@ -198,17 +182,17 @@
 .lasso-list__item { display: flex; align-items: center; gap: var(--lasso-space-3); padding: 10px 0; border-top: 1px solid var(--lasso-border); }
 .lasso-list__item:first-child { border-top: 0; padding-top: 0; }
 .lasso-list__main { flex: 1; min-width: 0; }
-.lasso-list__name { font-weight: 500; overflow-wrap: break-word; }
+.lasso-list__name { font-weight: 400; color: var(--lasso-text); overflow-wrap: break-word; }
 .lasso-list__sub { font-size: var(--lasso-fs-sm); color: var(--lasso-text-3); }
 .lasso-list__side { text-align: right; font-size: var(--lasso-fs-sm); color: var(--lasso-muted); white-space: nowrap; }
-.lasso-list__side-sub { font-size: var(--lasso-fs-label); color: var(--lasso-muted); }
+.lasso-list__side-sub { font-size: var(--lasso-fs-sm); color: var(--lasso-muted); }
 .lasso-list__more { margin: var(--lasso-space-2) 0 0 30px; }
 .lasso-list__item--ended .lasso-list__name, .lasso-list__item--ended .lasso-list__sub { color: var(--lasso-muted); }
 .lasso-avatar { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--lasso-tag); color: var(--lasso-text-3); display: grid; place-items: center; font-size: 11px; font-weight: 600; }
 .lasso-avatar--company { border-radius: 8px; }
-.lasso-link { background: none; border: 0; padding: 0; cursor: pointer; font-weight: 500; text-align: left; color: var(--lasso-text); border-radius: 4px; }
+.lasso-link { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; font-weight: 400; text-align: left; color: var(--lasso-text); border-radius: var(--lasso-radius-sm); }
 .lasso-link:hover { color: var(--lasso-accent-text); text-decoration: underline; }
-.lasso-new { font-size: var(--lasso-fs-label); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--lasso-text-3); background: var(--lasso-tag); border-radius: 4px; padding: 1px 6px; margin-left: 8px; vertical-align: 1px; }
+.lasso-new { font-size: var(--lasso-fs-label); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--lasso-text-3); background: var(--lasso-tag); border-radius: var(--lasso-radius-sm); padding: 1px 6px; margin-left: 8px; vertical-align: 1px; }
 
 /* ---------- Tabel ---------- */
 .lasso-table-wrap { overflow-x: auto; margin: 0 calc(var(--lasso-space-4) * -1); padding: 0 var(--lasso-space-4); }
@@ -223,7 +207,7 @@
 .lasso-table td { height: 44px; padding: 6px 8px; border-bottom: 1px solid var(--lasso-border); vertical-align: middle; color: var(--lasso-text-2); }
 .lasso-table tbody tr[data-clickable="true"] { cursor: pointer; }
 .lasso-table tbody tr[data-clickable="true"]:hover { background: var(--lasso-surface-2); }
-.lasso-table__name { font-weight: 500; color: var(--lasso-text); }
+.lasso-table__name { font-weight: 400; color: var(--lasso-text); }
 .lasso-trend { display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end; }
 .lasso-trend__pct { display: none; font-weight: 500; }
 .lasso-spark { width: 72px; height: 22px; }
@@ -269,7 +253,6 @@
   .lasso-frame { padding: var(--lasso-space-3); }
   .lasso-content--grid-2 { grid-template-columns: minmax(0, 1fr); }
   .lasso-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .lasso-kpi__value { font-size: 16px; }
   .lasso-company__name { font-size: var(--lasso-fs-lg); line-height: 24px; }
   .lasso-actionbar .lasso-btn__label--optional { display: none; }
 
