@@ -93,6 +93,18 @@ POST /apps/search/lassoid  { "filters": [ … ], "OrderBy": "employees", "limit"
   Firmanavne giver også 500 i prompten; dem søger vi med `/data/cvr/search`.
 - Filtre i et ukendt format ignoreres uden fejl.
 
+## Ubekræftet
+
+- **Samlet gæld** (`FinancialYear.liabilities`, brugt af `LassoStackedBarChart` og `LassoShareBars`, katalog 13):
+  regnskabsformen bekræfter kun `revenue`, `grossProfit`, `profitLoss`, `equity` og
+  `averageNumberOfEmployees` (se ovenfor). For gæld er der endnu ikke set et regnskab med
+  et ikke-tomt gældsbegreb, så adapteren (`apps/server/src/lasso/adapters.ts`, `adaptFinancials`)
+  forsøger, i rækkefølge: ét samlet begreb (`liabilities`, `liabilitiesAndProvisions`,
+  `totalLiabilities`), ellers kort- og langfristet gæld lagt sammen
+  (`currentLiabilities`/`shortTermLiabilities` + `nonCurrentLiabilities`/`longTermLiabilities`).
+  Findes ingen af delene, er `liabilities` `undefined`, og de to komponenter viser deres
+  tomme tilstand. Bekræft mod et rigtigt regnskab med disse begreber, når adgang er der.
+
 ## Kontaktpersoner
 
 ```

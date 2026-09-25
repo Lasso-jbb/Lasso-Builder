@@ -15,8 +15,9 @@ type Need = "company" | "financials" | "people" | "ownership";
 export function normalizeSpec(spec: ViewSpec, companyPrefix: string): ViewSpec {
   const fix = (ref: string) => toLassoId(ref, companyPrefix);
   const components = spec.components.map((c): ViewComponent => {
+    if (c.type === "LassoLineChart") return { ...c, company: fix(c.company), benchmark: c.benchmark ? fix(c.benchmark) : undefined };
     if ("company" in c) return { ...c, company: fix(c.company) };
-    if (c.type === "LassoCompareTable") return { ...c, companies: c.companies.map(fix) };
+    if (c.type === "LassoCompareTable" || c.type === "LassoRanking") return { ...c, companies: c.companies.map(fix) };
     return c;
   });
   return { ...spec, components };
@@ -61,7 +62,18 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
         break;
       case "LassoKeyFigureCards":
       case "LassoBarChart":
+      case "LassoGroupedBarChart":
+      case "LassoStackedBarChart":
+      case "LassoWaterfallChart":
+      case "LassoShareBars":
         want(c.company, "financials");
+        break;
+      case "LassoLineChart":
+        want(c.company, "financials");
+        if (c.benchmark) want(c.benchmark, "company", "financials");
+        break;
+      case "LassoRanking":
+        c.companies.forEach((id) => want(id, "company", "financials"));
         break;
       case "LassoPersonList":
         want(c.company, "people");

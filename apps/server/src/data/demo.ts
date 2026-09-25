@@ -79,14 +79,17 @@ function financialsFor(c: DemoCompany): FinancialsVM {
     years: YEARS.map((year, i) => {
       const wobble = 1 + (((seed * (i + 3)) % 7) - 3) / 100;
       const gross = Math.round(c.base * Math.pow(1 + c.growth, i) * wobble);
+      const equity = Math.round(gross * (0.4 + i * 0.05));
       return {
         year,
         periodEnd: `${year}-12-31`,
         revenue: Math.round(gross * 2.6),
         grossProfit: gross,
         profit: Math.round(gross * (0.08 + (seed % 5) / 100) * (c.growth < 0 ? -0.5 : 1)),
-        equity: Math.round(gross * (0.4 + i * 0.05)),
+        equity,
         employees: Math.max(0, Math.round((c.employees ?? 0) * (1 - (YEARS.length - 1 - i) * c.growth * 0.5))),
+        // Opdigtet gæld: plausibel i forhold til egenkapitalen, deterministisk "støj" som resten.
+        liabilities: Math.round(equity * (0.8 + ((seed * (i + 5)) % 9) / 20)),
       };
     }),
   };

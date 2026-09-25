@@ -6,6 +6,12 @@ import { CompanyTable } from "./components/CompanyTable.js";
 import { CompareTable } from "./components/CompareTable.js";
 import { FilterPanel } from "./components/FilterPanel.js";
 import { BarChart } from "./components/BarChart.js";
+import { GroupedBarChart } from "./components/GroupedBarChart.js";
+import { StackedBarChart } from "./components/StackedBarChart.js";
+import { LineChart } from "./components/LineChart.js";
+import { WaterfallChart } from "./components/WaterfallChart.js";
+import { ShareBars } from "./components/ShareBars.js";
+import { Ranking } from "./components/Ranking.js";
 import { KeyFigureCards } from "./components/KeyFigureCards.js";
 import { OwnerList } from "./components/OwnerList.js";
 import { PersonList } from "./components/PersonList.js";
@@ -30,6 +36,36 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return <KeyFigureCards key={key} financials={empty.financials[c.company]} metrics={c.metrics} error={err(`financials:${c.company}`)} />;
     case "LassoBarChart":
       return <BarChart key={key} financials={empty.financials[c.company]} metric={c.metric} years={c.years} error={err(`financials:${c.company}`)} />;
+    case "LassoGroupedBarChart":
+      return <GroupedBarChart key={key} financials={empty.financials[c.company]} metrics={c.metrics} years={c.years} error={err(`financials:${c.company}`)} />;
+    case "LassoStackedBarChart":
+      return <StackedBarChart key={key} financials={empty.financials[c.company]} years={c.years} error={err(`financials:${c.company}`)} />;
+    case "LassoLineChart":
+      return (
+        <LineChart
+          key={key}
+          financials={empty.financials[c.company]}
+          metric={c.metric}
+          years={c.years}
+          error={err(`financials:${c.company}`)}
+          benchmarkFinancials={c.benchmark ? empty.financials[c.benchmark] : undefined}
+          benchmarkName={c.benchmark ? empty.companies[c.benchmark]?.name : undefined}
+          benchmarkError={c.benchmark ? err(`financials:${c.benchmark}`) : undefined}
+        />
+      );
+    case "LassoWaterfallChart":
+      return <WaterfallChart key={key} financials={empty.financials[c.company]} error={err(`financials:${c.company}`)} />;
+    case "LassoShareBars":
+      return <ShareBars key={key} financials={empty.financials[c.company]} error={err(`financials:${c.company}`)} />;
+    case "LassoRanking":
+      return (
+        <Ranking
+          key={key}
+          rows={c.companies.map((id) => ({ lassoId: id, company: empty.companies[id], financials: empty.financials[id], error: err(`financials:${id}`) }))}
+          metric={c.metric}
+          title={c.title}
+        />
+      );
     case "LassoPersonList":
       return <PersonList key={key} people={empty.people[c.company]} show={c.show} title={c.title} error={err(`people:${c.company}`)} />;
     case "LassoOwnerList":

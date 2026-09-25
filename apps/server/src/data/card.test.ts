@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { companyTemplate, emptyDataset, listTemplate, searchKey, searchQuerySchema, type Dataset } from "@lasso/spec";
+import { companyTemplate, emptyDataset, listTemplate, parseViewSpec, searchKey, searchQuerySchema, type Dataset } from "@lasso/spec";
 import { textCard } from "./card.js";
 
 // Opdigtede tal i samme form som Lassos rigtige svar.
@@ -31,6 +31,7 @@ function dataset(): Dataset {
       profit: [83e9, 101e9, -2e9][i]!,
       equity: [106e9, 143e9, 194e9][i]!,
       employees: [51046, 69480, 76343][i]!,
+      liabilities: [140e9, 155e9, 168e9][i]!,
     })),
   };
   ds.people[ID] = [
@@ -81,6 +82,30 @@ test("tekstkort for en søgeliste", () => {
   assert.ok(card.includes("722 virksomheder, viser 2"));
   assert.ok(card.includes("Aarhus C, 12,5 mio."));
   assert.ok(card.includes("NAVN, BY, OMSÆTNING"));
+});
+
+test("tekstkortet viser de nye graftyper (13): stablede søjler, vandfald og fordeling", () => {
+  const spec = parseViewSpec({
+    title: "Datavisualisering",
+    kind: "company",
+    components: [
+      { type: "LassoCompanyHead", company: ID },
+      { type: "LassoGroupedBarChart", company: ID, metrics: ["omsaetning", "resultat"] },
+      { type: "LassoStackedBarChart", company: ID },
+      { type: "LassoWaterfallChart", company: ID },
+      { type: "LassoShareBars", company: ID },
+    ],
+  });
+  const card = textCard(spec, dataset())!;
+  for (const l of card.split("\n")) assert.equal([...l].length, 38, `linjen "${l}" har forkert bredde`);
+  assert.ok(card.includes("OMSÆTNING, MIA. KR."));
+  assert.ok(card.includes("RESULTAT, MIA. KR."));
+  assert.ok(card.includes("BALANCE, EGENKAPITAL"));
+  assert.ok(card.includes("FRA OMSÆTNING TIL RESULTAT 2025"));
+  assert.ok(card.includes("Resultat     −2 mia."));
+  assert.ok(card.includes("FORDELING AF BALANCEN 2025"));
+  assert.ok(card.includes("Egenkapital"));
+  assert.ok(!card.includes("·"), "ingen midterprik nogen steder");
 });
 
 test("lange selskabsnavne forkortes og deles ved efterled", () => {

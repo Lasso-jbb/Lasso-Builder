@@ -479,3 +479,79 @@
 .lasso-table th.lasso-compare__company { text-transform: none; letter-spacing: 0; }
 .lasso-table td.lasso-up { color: var(--lasso-positive); }
 .lasso-table td.lasso-down { color: var(--lasso-negative); }
+
+/* ---------- 13 Datavisualisering: grupperede/stablede søjler, linje, vandfald, fordeling, rangliste ---------- */
+
+/* Legende: farveprik/-firkant + ord, aldrig kun farve (regel 7). Delt af grupperede søjler, stablede søjler og linjegraf. */
+.lasso-chart__legend { display: flex; flex-wrap: wrap; gap: var(--lasso-space-4); margin-bottom: var(--lasso-space-3); font-size: var(--lasso-fs-sm); color: var(--lasso-text-2); }
+.lasso-chart__legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.lasso-chart__swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.lasso-chart__swatch--s1 { background: var(--lasso-chart-1); }
+.lasso-chart__swatch--s2 { background: var(--lasso-chart-2); }
+.lasso-chart__swatch--s3 { background: var(--lasso-chart-3); }
+.lasso-chart__swatch--s5 { background: var(--lasso-chart-5); }
+.lasso-chart__legend-item--dashed .lasso-chart__swatch { background: none; border-top: 2px dashed var(--lasso-chart-5); border-radius: 0; height: 0; }
+
+/* Grupperede søjler (ACE-0): fast rækkefølge, serie 2 aldrig uden serie 1. */
+.lasso-chart__bar--s1 { fill: var(--lasso-chart-1); }
+.lasso-chart__bar--s2 { fill: var(--lasso-chart-2); }
+.lasso-chart__bar--s3 { fill: var(--lasso-chart-3); }
+
+/* Stablede søjler (ADW-0): egenkapital koral, gæld dyb blå. */
+.lasso-chart__seg-label { fill: var(--lasso-on-accent); font-size: var(--lasso-fs-sm); font-weight: 500; font-family: var(--lasso-font); pointer-events: none; }
+
+/* Linjegraf med benchmark (AF3-0): linje 2,5 px koral, 8 % områdefyld, benchmark 2 px stiplet neutral. */
+.lasso-chart__area { fill: var(--lasso-chart-1); opacity: 0.08; stroke: none; }
+.lasso-chart__line { fill: none; stroke: var(--lasso-chart-1); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.lasso-chart__line--bench { stroke: var(--lasso-chart-5); stroke-width: 2; stroke-dasharray: 5 4; }
+.lasso-chart__dot { fill: var(--lasso-surface); stroke: var(--lasso-chart-1); stroke-width: 2; }
+.lasso-chart__dot--last { fill: var(--lasso-chart-1); }
+.lasso-chart__dot--bench { fill: var(--lasso-surface); stroke: var(--lasso-chart-5); stroke-width: 2; }
+
+/* Vandfald (AGI-0): start/slut fulde søjler, mellemposter svæver i lys blå, negativt resultat er en tom søjle med rød kant. */
+.lasso-chart__bar--wf-start { fill: var(--lasso-chart-1); }
+.lasso-chart__bar--wf-end { fill: var(--lasso-chart-1); }
+.lasso-chart__bar--wf-float { fill: var(--lasso-chart-3); }
+.lasso-chart__bar--wf-end-neg { fill: none; stroke: var(--lasso-danger); stroke-width: 2; }
+.lasso-chart__connector { stroke: var(--lasso-chart-axis); stroke-width: 1; stroke-dasharray: 2 3; }
+
+/* Fordeling (AHT-0): andelsbjælker for egenkapital/gæld, maks få segmenter, farve + tal (regel 7). */
+.lasso-sharebar-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--lasso-space-3); }
+.lasso-sharebar { display: grid; grid-template-columns: 10px auto 1fr auto auto; align-items: center; gap: var(--lasso-space-2); }
+.lasso-sharebar__label { font-size: var(--lasso-fs-sm); color: var(--lasso-text-2); white-space: nowrap; }
+.lasso-sharebar__track { position: relative; height: 8px; border-radius: 4px; background: var(--lasso-divider-subtle); overflow: hidden; }
+.lasso-sharebar__fill { position: absolute; inset: 0 auto 0 0; height: 100%; border-radius: 4px; }
+.lasso-sharebar__fill--s1 { background: var(--lasso-chart-1); }
+.lasso-sharebar__fill--s2 { background: var(--lasso-chart-2); }
+.lasso-sharebar__value { font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-text); white-space: nowrap; text-align: right; }
+.lasso-sharebar__pct { font-size: var(--lasso-fs-sm); font-weight: 600; color: var(--lasso-text); white-space: nowrap; text-align: right; min-width: 52px; }
+
+/* Rangliste (BFK-0): navn i fast kolonne, bjælke, virksomheden selv i koral, andre i neutral (chart-5). */
+.lasso-ranking-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.lasso-ranking__row { display: grid; grid-template-columns: 20px 170px 1fr auto; align-items: center; gap: var(--lasso-space-3); min-height: 40px; padding: 6px 0; border-bottom: 1px solid var(--lasso-border); }
+.lasso-ranking__row:last-child { border-bottom: 0; }
+.lasso-ranking__rank { font-size: var(--lasso-fs-sm); color: var(--lasso-muted); text-align: right; }
+.lasso-ranking__name { font-size: var(--lasso-fs-sm); color: var(--lasso-text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lasso-ranking__row--origin .lasso-ranking__name { color: var(--lasso-text); font-weight: 600; }
+.lasso-ranking__track { position: relative; height: 18px; border-radius: 3px; background: var(--lasso-surface-muted); overflow: hidden; }
+.lasso-ranking__fill { position: absolute; inset: 0 auto 0 0; height: 100%; border-radius: 3px; background: var(--lasso-chart-5); }
+.lasso-ranking__fill--origin { background: var(--lasso-chart-1); }
+.lasso-ranking__value { font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-text); white-space: nowrap; text-align: right; min-width: 64px; }
+.lasso-ranking__row--median { color: var(--lasso-muted); }
+.lasso-ranking__row--median .lasso-ranking__name { color: var(--lasso-muted); font-weight: 400; }
+.lasso-ranking__row--median .lasso-ranking__track { background: none; }
+.lasso-ranking__row--median .lasso-ranking__track::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 2px dashed var(--lasso-chart-axis); }
+
+@container lasso (max-width: 560px) {
+  .lasso-ranking__row { grid-template-columns: 16px 1fr auto; grid-template-areas: "rank name value" "rank track track"; row-gap: 4px; }
+  .lasso-ranking__rank { grid-area: rank; }
+  .lasso-ranking__name { grid-area: name; white-space: normal; }
+  .lasso-ranking__value { grid-area: value; }
+  .lasso-ranking__track { grid-area: track; }
+  .lasso-sharebar { grid-template-columns: 10px 1fr auto; grid-template-areas: "dot label label" "dot track pct"; row-gap: 4px; }
+  .lasso-sharebar__label { grid-area: label; }
+  .lasso-sharebar__track { grid-area: track; }
+  .lasso-sharebar__pct { grid-area: pct; }
+  .lasso-sharebar__value { display: none; }
+  .lasso-sharebar > .lasso-chart__swatch { grid-area: dot; }
+}

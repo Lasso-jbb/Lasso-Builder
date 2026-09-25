@@ -161,13 +161,61 @@ test("adaptFinancials læser XBRL-træet i reports/advanced (selskab før koncer
     },
     { lassoId: "CVR-1-1", period: { from: "2005-01-01", to: "2005-12-31" }, reportYear: 2005, data: { company: null, group: null } },
   ]);
-  assert.deepEqual(vm.years, [{ year: 2024, periodEnd: "2024-12-31", revenue: 1000, grossProfit: 400, profit: 90, equity: 700, employees: 12 }]);
+  assert.deepEqual(vm.years, [{ year: 2024, periodEnd: "2024-12-31", revenue: 1000, grossProfit: 400, profit: 90, equity: 700, employees: 12, liabilities: null }]);
 });
 
 test("adaptCompany skriver CVR's versal-kommuner pænt", () => {
   const vm = adaptCompany("CVR-1-1", { name: "X", address: { postalCode: 2800, postalDistrict: "Kongens Lyngby", municipality: { name: "LYNGBY-TAARBÆK", code: 173 } } });
   assert.equal(vm.address?.municipality, "Lyngby-Taarbæk");
   assert.equal(adaptCompany("CVR-1-1", { name: "X", address: { municipality: { name: "GLADSAXE" } } }).address?.municipality, "Gladsaxe");
+});
+
+test("adaptFinancials læser gæld: ét samlet begreb vinder over kort+langfristet", () => {
+  const node = (value: number | null, facts: Record<string, unknown> = {}) => ({ value, facts, abstract: value === null, label: "", section: "", source: "" });
+  const vm = adaptFinancials("CVR-1-1", [
+    {
+      reportYear: 2024,
+      period: { to: "2024-12-31" },
+      data: {
+        company: {
+          facts: {
+            statementOfFinancialPosition: node(null, {
+              Liabilities: node(900),
+              CurrentLiabilities: node(500),
+              NonCurrentLiabilities: node(300),
+            }),
+          },
+        },
+      },
+    },
+  ]);
+  assert.equal(vm.years[0]!.liabilities, 900);
+});
+
+test("adaptFinancials lægger kort- og langfristet gæld sammen, når der ikke er ét samlet begreb", () => {
+  const node = (value: number | null, facts: Record<string, unknown> = {}) => ({ value, facts, abstract: value === null, label: "", section: "", source: "" });
+  const vm = adaptFinancials("CVR-1-1", [
+    {
+      reportYear: 2024,
+      period: { to: "2024-12-31" },
+      data: {
+        company: {
+          facts: {
+            statementOfFinancialPosition: node(null, {
+              CurrentLiabilities: node(500),
+              NonCurrentLiabilities: node(300),
+            }),
+          },
+        },
+      },
+    },
+  ]);
+  assert.equal(vm.years[0]!.liabilities, 800);
+});
+
+test("adaptFinancials giver null for gæld, når intet gældsbegreb er oplyst", () => {
+  const vm = adaptFinancials("CVR-1-1", [{ reportYear: 2024, period: { to: "2024-12-31" }, figures: { grossProfit: 100 } }]);
+  assert.equal(vm.years[0]!.liabilities, null);
 });
 
 test("adaptOwnership sorterer største ejer først", () => {

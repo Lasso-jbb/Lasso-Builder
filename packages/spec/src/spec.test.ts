@@ -77,6 +77,35 @@ test("parseViewSpec afviser ukendte komponenter", () => {
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "Ukendt" }] }));
 });
 
+test("parseViewSpec accepterer de nye graftyper i katalog 13 med deres standardværdier", () => {
+  const spec = parseViewSpec({
+    title: "Datavisualisering",
+    components: [
+      { type: "LassoGroupedBarChart", company: "CVR-1-12345678" },
+      { type: "LassoStackedBarChart", company: "CVR-1-12345678" },
+      { type: "LassoLineChart", company: "CVR-1-12345678" },
+      { type: "LassoLineChart", company: "CVR-1-12345678", benchmark: "CVR-1-99999999" },
+      { type: "LassoWaterfallChart", company: "CVR-1-12345678" },
+      { type: "LassoShareBars", company: "CVR-1-12345678" },
+      { type: "LassoRanking", companies: ["CVR-1-12345678", "CVR-1-87654321"] },
+    ],
+  });
+  const [grouped, stacked, line, lineWithBench, waterfall, shareBars, ranking] = spec.components;
+  assert.deepEqual(grouped, { type: "LassoGroupedBarChart", company: "CVR-1-12345678", metrics: ["omsaetning", "resultat"], years: 5 });
+  assert.deepEqual(stacked, { type: "LassoStackedBarChart", company: "CVR-1-12345678", years: 5 });
+  assert.deepEqual(line, { type: "LassoLineChart", company: "CVR-1-12345678", metric: "bruttofortjeneste", years: 5 });
+  assert.deepEqual(lineWithBench, { type: "LassoLineChart", company: "CVR-1-12345678", metric: "bruttofortjeneste", years: 5, benchmark: "CVR-1-99999999" });
+  assert.deepEqual(waterfall, { type: "LassoWaterfallChart", company: "CVR-1-12345678" });
+  assert.deepEqual(shareBars, { type: "LassoShareBars", company: "CVR-1-12345678" });
+  assert.deepEqual(ranking, { type: "LassoRanking", companies: ["CVR-1-12345678", "CVR-1-87654321"], metric: "bruttofortjeneste" });
+});
+
+test("LassoGroupedBarChart kræver 2–3 nøgletal og LassoRanking mindst 2 virksomheder", () => {
+  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoGroupedBarChart", company: "CVR-1-1", metrics: ["ansatte"] }] }));
+  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoGroupedBarChart", company: "CVR-1-1", metrics: ["ansatte", "resultat", "omsaetning", "egenkapital"] }] }));
+  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoRanking", companies: ["CVR-1-1"] }] }));
+});
+
 test("amountScale giver én enhed for en række beløb", () => {
   const scale = amountScale([117_142_000_000, 250_276_000_000]);
   assert.equal(scale.label, "mia. kr.");
