@@ -210,6 +210,8 @@ export function createApp({ config, client, provider, store }: AppDeps) {
  * search_companies. Med LOG_LEVEL=debug logges også svarenes form og et råt
  * udsnit af det nyeste regnskab (offentlige data, aldrig nøgler).
  */
+const isObjectLike = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+
 async function probeLasso(config: Config, client: LassoClient, provider: DataProvider) {
   if (!config.LASSO_STARTUP_PROBE || !hasLassoCredentials(config)) return;
   const verbose = config.LOG_LEVEL === "debug";
@@ -256,27 +258,32 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
         log(`${name} FEJL`, errorMessage(err));
       }
     }
-    // Hvilken sti og metode svarer AI-søgningen på? (POST /apps/search/prompt gav 404.)
+    // /apps/search/lassoid virker med { filters: [] }. Fejlbeskeder fra bevidst forkerte filtre
+    // skal afsløre filterformatet, indtil /apps/search/prompt (404) er tilgængelig.
     {
-      const prompt = "Revisorer i Region Midtjylland med mindst 10 ansatte";
-      const variants: [string, "GET" | "POST", string, unknown?][] = [
-        ["POST apps/search/prompt", "POST", "apps/search/prompt", { Prompt: prompt }],
-        ["POST apps/search/prompt/", "POST", "apps/search/prompt/", { Prompt: prompt }],
-        ["POST apps/search/Prompt", "POST", "apps/search/Prompt", { Prompt: prompt }],
-        ["GET apps/search/prompt?prompt=", "GET", `apps/search/prompt?prompt=${encodeURIComponent(prompt)}`],
-        ["POST apps/search/lassoid (tom)", "POST", "apps/search/lassoid", { filters: [] }],
-        ["POST apps/search", "POST", "apps/search", { Prompt: prompt }],
-        ["GET apps/search", "GET", "apps/search"],
-        ["POST app/search/prompt", "POST", "app/search/prompt", { Prompt: prompt }],
-        ["POST search/prompt", "POST", "search/prompt", { Prompt: prompt }],
-        ["POST api/apps/search/prompt", "POST", "api/apps/search/prompt", { Prompt: prompt }],
-        ["POST modules/search/prompt", "POST", "modules/search/prompt", { Prompt: prompt }],
-        ["POST data/search/prompt", "POST", "data/search/prompt", { Prompt: prompt }],
-        ["GET apps/contacts (kendt sti)", "GET", `apps/contacts/${first.lassoId}/data?contacts=true`],
+      const empty = await client.tryRequest("POST", "apps/search/lassoid", { filters: [] });
+      try {
+        const parsed = JSON.parse(empty.body.length < 300 ? empty.body : "{}") as unknown;
+        log("lassoid tom, form", describeShape(parsed, 2));
+      } catch {
+        /* afkortet svar */
+      }
+      const full = await client.searchByFilters([]).catch((err: unknown) => ({ fejl: errorMessage(err) }));
+      log("lassoid tom, nøgler og antal", isObjectLike(full) ? Object.fromEntries(Object.entries(full).map(([k, v]) => [k, Array.isArray(v) ? `array(${v.length})` : v])) : typeof full);
+      const tries: [string, unknown][] = [
+        ["filters [{}]", { filters: [{}] }],
+        ["FieldName alene", { filters: [{ FieldName: "Kommune" }] }],
+        ["FieldName+Value", { filters: [{ FieldName: "Kommune", Value: "Aarhus" }] }],
+        ["FieldName+Values", { filters: [{ FieldName: "Kommune", Values: ["Aarhus"] }] }],
+        ["filters som objekt", { filters: { FieldName: "Kommune" } }],
+        ["OrderBy ukendt", { filters: [], OrderBy: "findesikke" }],
+        ["OrderBy navn", { filters: [], OrderBy: "Name" }],
+        ["body tom", {}],
+        ["apps/search tom", null],
       ];
-      for (const [label, method, path, body] of variants) {
-        const r = await client.tryRequest(method, path, body);
-        log(`søgevariant ${label}`, `${r.status} ${r.body.replace(/\s+/g, " ").slice(0, 200)}`);
+      for (const [label, body] of tries) {
+        const r = body === null ? await client.tryRequest("POST", "apps/search", {}) : await client.tryRequest("POST", "apps/search/lassoid", body);
+        log(`lassoid-forsøg ${label}`, `${r.status} ${r.body.replace(/\s+/g, " ").slice(0, 300)}`);
       }
     }
     // Lassos AI-søgning: prompt -> filtre -> lassoId'er. Former logges, så adaptere kan skrives.
