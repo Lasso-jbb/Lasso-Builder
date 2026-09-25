@@ -65,6 +65,11 @@ export class LiveProvider implements DataProvider {
     };
   }
 
+  async findCompanies(name: string, limit: number) {
+    const raw = await this.client.search({ query: name, type: "all", pageSize: limit, companyStatus: "all" });
+    return adaptSearch(raw, this.config.LASSO_COMPANY_ID_PREFIX).rows;
+  }
+
   async company(lassoId: string) {
     return adaptCompany(lassoId, await this.client.company(lassoId));
   }

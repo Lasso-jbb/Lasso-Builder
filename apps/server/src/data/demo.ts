@@ -145,6 +145,11 @@ export class DemoProvider implements DataProvider {
     };
   }
 
+  async findCompanies(name: string, limit: number) {
+    const words = name.toLowerCase().split(/\s+/).filter(Boolean);
+    return COMPANIES.filter((c) => words.every((w) => c.name.toLowerCase().includes(w))).map(toRow).slice(0, limit);
+  }
+
   async company(lassoId: string) {
     return strip(get(lassoId));
   }

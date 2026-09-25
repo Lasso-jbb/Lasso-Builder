@@ -121,6 +121,24 @@ test("show_company tager et rent CVR-nummer og giver låst skabelon", async () =
   assert.ok(ds.financials["CVR-1-99000001"]!.years.length >= 5);
 });
 
+test("show_company tager et navn og siger, hvad den valgte", async () => {
+  const res = await client.callTool({
+    name: "show_company",
+    arguments: { company: "Eksempel Byg", sections: ["header", "noegletal", "graf"], chart_metric: "omsaetning", years: 10 },
+  });
+  assert.ok(!res.isError, JSON.stringify(res.content));
+  const spec = (res.structuredContent as { spec: ViewSpec }).spec;
+  assert.equal(spec.title, "Eksempel Byg A/S");
+  assert.deepEqual(spec.components.map((c) => c.type), ["LassoCompanyHeader", "LassoKeyFigures", "LassoFinancialChart"]);
+  const text = (res.content as { type: string; text: string }[]).map((c) => c.text).join("\n");
+  assert.match(text, /Fundet ud fra navnet "Eksempel Byg": Eksempel Byg A\/S \(99000001\)/);
+});
+
+test("show_company giver en brugbar fejl for ukendt navn", async () => {
+  const res = await client.callTool({ name: "show_company", arguments: { company: "Findes Ikke Nogen Steder" } });
+  assert.equal(res.isError, true);
+});
+
 test("show_company giver en brugbar fejl for ukendt virksomhed", async () => {
   const res = await client.callTool({ name: "show_company", arguments: { company: "12345678" } });
   assert.equal(res.isError, true);

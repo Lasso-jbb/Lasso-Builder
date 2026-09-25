@@ -8,6 +8,7 @@ import { getCurrentUser } from "./auth/user.js";
 import { hasLassoCredentials, isSet, loadConfig, type Config } from "./config.js";
 import { createProvider, type DataProvider } from "./data/index.js";
 import { errorMessage, normalizeSpec, resolveSpec } from "./data/resolve.js";
+import { pickCompany } from "./data/lookup.js";
 import { summarizeView } from "./data/summary.js";
 import { adaptSearch, at } from "./lasso/adapters.js";
 import { describeShape, LassoApiError, LassoClient, probeAuthVariants, type Query } from "./lasso/client.js";
@@ -190,6 +191,8 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
 
     // Røgtest af de rigtige flows (samme kode som MCP-tools) med kold cache, kun resumé i loggen.
     if (provider.kind === "live") {
+      const lookup = pickCompany(config.LASSO_STARTUP_PROBE_QUERY, await provider.findCompanies(config.LASSO_STARTUP_PROBE_QUERY, 20));
+      log(`navneopslag "${config.LASSO_STARTUP_PROBE_QUERY}"`, lookup ? [lookup.pick, ...lookup.alternatives].map((r) => `${r.name} (${r.cvr ?? r.lassoId})`) : "intet match");
       const t1 = Date.now();
       const company = await resolveSpec(companyTemplate(first.lassoId), provider);
       log(`show_company-resumé (${Date.now() - t1} ms)`, summarizeView(companyTemplate(first.lassoId), company).split("\n"));
@@ -226,9 +229,14 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
           "reports oversigt",
           reports.map((r) => ({ year: at(r, "reportYear"), company: sections(r, "company"), group: sections(r, "group") })),
         );
-        const newest = [...reports].sort((a, b) => Number(at(b, "reportYear") ?? 0) - Number(at(a, "reportYear") ?? 0))[0];
-        const node = at(newest, "data.company.facts.incomeStatement") ?? at(newest, "data.group.facts.incomeStatement");
-        if (node !== undefined) console.log(`[lasso-probe] incomeStatement (${String(at(newest, "reportYear"))}) udsnit: ${JSON.stringify(node).slice(0, 3000)}`);
+        // Nyeste og ældste regnskab med XBRL-data (begreberne skifter mellem taksonomier).
+        const withFacts = [...reports]
+          .filter((r) => sections(r, "company").length || sections(r, "group").length)
+          .sort((a, b) => Number(at(b, "reportYear") ?? 0) - Number(at(a, "reportYear") ?? 0));
+        for (const r of new Set([withFacts[0], withFacts.at(-1)])) {
+          const node = at(r, "data.company.facts.incomeStatement") ?? at(r, "data.group.facts.incomeStatement");
+          if (node !== undefined) console.log(`[lasso-probe] incomeStatement (${String(at(r, "reportYear"))}) udsnit: ${JSON.stringify(node).slice(0, 3000)}`);
+        }
       }
     } catch (err) {
       log("reports-udsnit FEJL", errorMessage(err));

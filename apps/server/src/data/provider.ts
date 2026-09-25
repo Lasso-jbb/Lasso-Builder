@@ -1,4 +1,5 @@
 import type {
+  CompanyRowVM,
   CompanyVM,
   DataSourceKind,
   FinancialsVM,
@@ -16,6 +17,8 @@ import type {
 export interface DataProvider {
   readonly kind: DataSourceKind;
   search(query: SearchQuery): Promise<SearchResultVM>;
+  /** Hurtigt navneopslag uden regnskabsberigelse (til show_company med et navn). */
+  findCompanies(name: string, limit: number): Promise<CompanyRowVM[]>;
   company(lassoId: string): Promise<CompanyVM>;
   financials(lassoId: string): Promise<FinancialsVM>;
   people(lassoId: string): Promise<PersonRowVM[]>;

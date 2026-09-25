@@ -20,6 +20,7 @@ import {
 } from "@lasso/spec";
 import type { CurrentUser } from "../auth/user.js";
 import type { Config } from "../config.js";
+import { isCompanyRef, pickCompany, type CompanyPick } from "../data/lookup.js";
 import type { DataProvider } from "../data/provider.js";
 import { errorMessage, normalizeSpec, resolveSpec } from "../data/resolve.js";
 import { summarizeView } from "../data/summary.js";
@@ -38,7 +39,8 @@ export interface McpContext {
 const INSTRUCTIONS = `Lasso giver adgang til data om danske virksomheder (CVR): stamdata, regnskaber, nøgletal, ledelse, bestyrelse, ejere og revisor, samt søgning med kriterier (målgrupper).
 
 Sådan bruges værktøjerne:
-- Én bestemt virksomhed: show_company (CVR-nummer eller Lasso-ID). Kender du kun navnet, så find den først med search_companies.
+- Én bestemt virksomhed: show_company med CVR-nummer, Lasso-ID eller navn. Et navn slår serveren selv op; brug ikke search_companies først.
+- Økonomi og regnskab ("hvordan går det økonomisk for Novo?"): show_company med sections ["header","noegletal","graf"], chart_metric "omsaetning" og years 10. Kommentér udviklingen i 2–3 sætninger; tallene står i visningen.
 - Lister og målgrupper ("alle revisorer i Region Midt over 10 mio."): search_companies med kriterier.
 - Sammenligninger og oversigter, der ikke passer i de to: render_view med en spec fra komponentkataloget.
 - "Giv mig en URL", "del", "gem": save_view.
@@ -114,9 +116,9 @@ export function createMcpServer(ctx: McpContext): McpServer {
     {
       title: "Vis virksomhed",
       description:
-        "Vis én dansk virksomhed som Lassos faste virksomhedskort: header → nøgletal → regnskabsgraf → ledelse → ejerskab/revisor → opfølgningsknapper. Brug når brugeren spørger til en bestemt virksomhed, dens regnskab, økonomi, ledelse, bestyrelse, direktør, ejere eller revisor. Tager CVR-nummer eller Lasso-ID; kender du kun navnet, så brug search_companies først. Variation styres med sections, chart_metric og years.",
+        "Vis én dansk virksomhed som Lassos faste virksomhedskort: header → nøgletal → regnskabsgraf → ledelse → ejerskab/revisor → opfølgningsknapper. Brug når brugeren spørger til en bestemt virksomhed, dens regnskab, økonomi, ledelse, bestyrelse, direktør, ejere eller revisor. Tager CVR-nummer, Lasso-ID eller navn (fx \"Novo Nordisk\"); ved navn vælger serveren det bedste match og nævner alternativerne. Spørgsmål om økonomi: sections [header, noegletal, graf], chart_metric omsaetning, years 10. Spørgsmål om ledelse: sections [header, ledelse].",
       inputSchema: z.object({
-        company: z.string().min(1).describe("8-cifret CVR-nummer eller Lasso-ID (fx CVR-1-12345678)."),
+        company: z.string().min(1).describe("8-cifret CVR-nummer, Lasso-ID (fx CVR-1-12345678) eller virksomhedens navn."),
         sections: z.array(z.enum(COMPANY_SECTIONS)).optional().describe("Vis kun disse sektioner. Header er altid med. Standard: alle."),
         chart_metric: z.enum(METRICS).optional().describe("Nøgletal i grafen. Standard: bruttofortjeneste."),
         years: z.number().int().min(2).max(10).optional().describe("Antal år i grafen. Standard: 5."),
@@ -125,16 +127,31 @@ export function createMcpServer(ctx: McpContext): McpServer {
       _meta: ui,
     },
     async ({ company, sections, chart_metric, years }): Promise<CallToolResult> => {
-      const lassoId = toLassoId(company, prefix);
+      let lassoId = toLassoId(company, prefix);
+      let note: string | undefined;
+      if (!isCompanyRef(company)) {
+        let found: CompanyPick | null;
+        try {
+          found = pickCompany(company, await provider.findCompanies(company, 20));
+        } catch (err) {
+          return toolError(`Kunne ikke slå "${company}" op: ${errorMessage(err)}.`);
+        }
+        if (!found) return toolError(`Fandt ingen virksomhed, der hedder "${company}". Prøv et andet navn eller CVR-nummeret.`);
+        lassoId = found.pick.lassoId;
+        const alt = found.alternatives.map((r) => `${r.name} (${r.cvr ?? r.lassoId})`).join("; ");
+        note = `Fundet ud fra navnet "${company}": ${found.pick.name} (${found.pick.cvr ?? found.pick.lassoId}).${alt ? ` Andre match: ${alt}. Mente brugeren en af dem, så kald show_company igen med dens CVR-nummer.` : ""}`;
+      }
       let name: string | undefined;
       try {
         name = (await provider.company(lassoId)).name;
       } catch (err) {
-        return toolError(`Kunne ikke hente ${company}: ${errorMessage(err)}. Tjek CVR-nummeret eller søg på navnet med search_companies.`);
+        return toolError(`Kunne ikke hente ${company}: ${errorMessage(err)}. Tjek CVR-nummeret eller navnet.`);
       }
       const spec = companyTemplate(lassoId, { sections, chartMetric: chart_metric, years, name });
       const ds = await resolveSpec(spec, provider);
-      return viewResult(spec, ds);
+      const result = viewResult(spec, ds);
+      if (note) result.content.unshift({ type: "text", text: note });
+      return result;
     },
   );
 

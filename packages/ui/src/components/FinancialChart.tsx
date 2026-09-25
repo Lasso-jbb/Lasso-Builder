@@ -9,17 +9,24 @@ export function FinancialChart({ financials, metric, years, error }: { financial
   if (!financials) {
     return <Card title={title}>{error ? <StateBox kind={stateForError(error)} message={error} /> : <StateBox kind="loading" />}</Card>;
   }
-  const field = METRIC_FIELD[metric];
-  const points = financials.years
-    .slice(-years)
-    .map((y) => ({ year: y.year, value: y[field] as number | null | undefined }))
-    .filter((p): p is { year: number; value: number } => typeof p.value === "number");
+  const pointsFor = (m: Metric) =>
+    financials.years
+      .slice(-years)
+      .map((y) => ({ year: y.year, value: y[METRIC_FIELD[m]] as number | null | undefined }))
+      .filter((p): p is { year: number; value: number } => typeof p.value === "number");
+  let shown = metric;
+  let points = pointsFor(shown);
+  // Mindre selskaber oplyser ikke omsætning; så vises bruttofortjenesten i stedet for en tom graf.
+  if (points.length === 0 && shown === "omsaetning") {
+    shown = "bruttofortjeneste";
+    points = pointsFor(shown);
+  }
   if (points.length === 0) return <Card title={title}><StateBox kind="empty" message="Ingen tal for dette nøgletal." /></Card>;
 
   // Én enhed for hele grafen (i titlen), så søjlerne kun bærer tal: "117,1 … 250,3" i mia. kr.
-  const scale = metric === "ansatte" ? null : amountScale(points.map((p) => p.value));
+  const scale = shown === "ansatte" ? null : amountScale(points.map((p) => p.value));
   const label = (v: number) => (scale ? formatScaled(v, scale) : formatNumber(v));
-  const chartTitle = `${METRIC_LABELS[metric]}${scale ? ` · ${scale.label}` : ""} · ${points.length} år`;
+  const chartTitle = `${METRIC_LABELS[shown]}${scale ? ` · ${scale.label}` : ""} · ${points.length} år`;
 
   const H = W < 420 ? 170 : 210;
   const max = Math.max(0, ...points.map((p) => p.value));
@@ -36,7 +43,7 @@ export function FinancialChart({ financials, metric, years, error }: { financial
   return (
     <Card title={chartTitle} className="lasso-chart">
       <div ref={ref}>
-        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${METRIC_LABELS[metric]} pr. år`}>
+        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${METRIC_LABELS[shown]} pr. år`}>
           {points.map((p, i) => {
             const h = (Math.abs(p.value) / span) * plotH;
             const x = i * slot + (slot - barW) / 2;
