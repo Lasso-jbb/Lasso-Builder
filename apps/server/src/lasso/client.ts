@@ -179,8 +179,8 @@ export class LassoClient {
   }
 
   /** Virksomheder, der matcher filtrene fra searchPrompt (POST /apps/search/lassoid). */
-  searchByFilters(filters: unknown, orderBy?: string) {
-    return this.searchClient.post("apps/search/lassoid", { filters, ...(orderBy ? { OrderBy: orderBy } : {}) });
+  searchByFilters(filters: unknown, orderBy?: string, extra: Record<string, unknown> = {}) {
+    return this.searchClient.post("apps/search/lassoid", { filters, ...(orderBy ? { OrderBy: orderBy } : {}), ...extra });
   }
 
   company(lassoId: string) {

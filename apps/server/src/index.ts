@@ -281,15 +281,11 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
       const compact = (filters: unknown) =>
         JSON.stringify(filters, (k, v) => (v === null || (Array.isArray(v) && v.length === 0 && k !== "values") ? undefined : v));
       const prompts = [
-        "Virksomheder i Region Nordjylland",
-        "Virksomheder i Region Hovedstaden",
-        "Virksomheder i Region Sjælland",
-        "Virksomheder i Region Syddanmark",
-        "Virksomheder i Aarhus Kommune eller Odense Kommune med omsætning over 10 mio. kr.",
-        "Anpartsselskaber i postnummer 8000 stiftet efter 1. januar 2020",
-        "Aktive selskaber med bruttofortjeneste mellem 5 og 20 mio. kr. og egenkapital over 1 mio. kr.",
-        "Virksomheder under konkurs med negativt årets resultat",
-        "Tømrere med mellem 5 og 50 ansatte sorteret efter omsætning",
+        "Aktieselskaber", "Iværksætterselskaber", "Interessentskaber", "Kommanditselskaber", "Partnerselskaber",
+        "Enkeltmandsvirksomheder", "Fonde", "Foreninger", "Ophørte virksomheder", "Virksomheder under frivillig likvidation",
+        "Virksomheder under tvangsopløsning", "Virksomheder med nettoomsætning over 100 mio. kr.",
+        "Virksomheder uden for Region Hovedstaden", "Virksomheder stiftet før 1990", "Virksomheder stiftet mellem 2010 og 2015",
+        "Byggevirksomheder (branchegruppe 41, 42 og 43)", "Virksomheder med navnet Lasso", "Virksomheder med under 5 ansatte",
       ];
       await mapLimit(prompts, 3, async (p) => {
         const t = Date.now();
@@ -302,26 +298,28 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
       });
       const filters = await client.searchPrompt("Revisorer i Region Midtjylland med mindst 10 ansatte").catch(() => []);
       const candidates = [
-        "", "employees", "Employees", "BasicInfo.employees", "BasicInfo.Employees", "revenue", "Revenue", "grossprofit", "grossProfit",
-        "GrossProfit", "profit", "equity", "name", "Name", "BasicInfo.name", "Financials.GrossProfit", "Financials.Revenue",
-        "financials.grossprofit", "employees desc", "-employees", "employees DESC",
+        "Financial.Reports[0].GrossProfitLoss.Value", "Financial.Reports[0].ProfitLoss.Value", "Financial.Reports[0].Equity.Value",
+        "Financial.Reports[0].Revenue.Value", "BasicInfo.CreationDate", "BasicInfo.PostalCode", "industrycode",
       ];
       for (const orderBy of candidates) {
-        const r = await client.trySearchRequest("POST", "apps/search/lassoid", { filters, ...(orderBy ? { OrderBy: orderBy } : {}) }, 400);
-        console.log(`[lasso-kort] OrderBy "${orderBy}": ${r.status} ${r.body.replace(/\s+/g, " ").slice(0, 260)}`);
+        const r = await client.trySearchRequest("POST", "apps/search/lassoid", { filters, OrderBy: orderBy, limit: 3 }, 400);
+        console.log(`[lasso-kort] OrderBy "${orderBy}": ${r.status} ${r.body.replace(/\s+/g, " ").slice(0, 200)}`);
       }
+      // Retning: de tre første efter ansatte, med og uden mulige retningsparametre, og deres antal ansatte.
       for (const [label, extra] of [
-        ["pageSize", { pageSize: 20 }], ["PageSize", { PageSize: 20 }], ["take", { take: 20 }], ["size", { size: 20 }], ["limit", { limit: 20 }], ["page 2", { page: 2 }],
+        ["standard", {}], ["OrderDirection desc", { OrderDirection: "desc" }], ["Descending true", { Descending: true }],
+        ["OrderByDescending true", { OrderByDescending: true }], ["SortOrder desc", { SortOrder: "desc" }], ["Ascending false", { Ascending: false }],
       ] as const) {
-        const r = await client.trySearchRequest("POST", "apps/search/lassoid", { filters, ...extra }, 200_000);
-        let info = r.body.slice(0, 200);
         try {
-          const j = JSON.parse(r.body) as { results?: unknown[] } & Record<string, unknown>;
-          info = JSON.stringify({ ...j, results: `${j.results?.length ?? 0} stk.: ${(j.results ?? []).slice(0, 3).join(", ")}` });
-        } catch {
-          /* ikke JSON */
+          const r = (await client.searchByFilters(filters, "employees", { limit: 3, ...extra })) as { results?: string[] };
+          const firms = await Promise.all((r.results ?? []).map(async (id) => {
+            const c = await provider.company(id).catch(() => null);
+            return `${c?.name ?? id} (${c?.employees ?? "?"})`;
+          }));
+          console.log(`[lasso-kort] retning ${label}: ${firms.join("; ")}`);
+        } catch (err) {
+          console.log(`[lasso-kort] retning ${label} FEJL: ${errorMessage(err)}`);
         }
-        console.log(`[lasso-kort] side ${label}: ${r.status} ${info}`);
       }
     }
 
