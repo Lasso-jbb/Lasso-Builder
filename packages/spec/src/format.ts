@@ -3,6 +3,7 @@ import { FIELD_BY_KEY, type FieldDef } from "./fields.js";
 
 const intFormat = new Intl.NumberFormat("da-DK", { maximumFractionDigits: 0 });
 const oneDecimal = new Intl.NumberFormat("da-DK", { maximumFractionDigits: 1 });
+const fixedOneDecimal = new Intl.NumberFormat("da-DK", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 /** 12500000 -> "12,5 mio. kr." ; 950000 -> "950 t. kr." */
 export function formatAmount(value: number | null | undefined, unit = "kr."): string {
@@ -31,7 +32,8 @@ export function amountScale(values: readonly number[], unit = "kr."): AmountScal
 }
 
 export function formatScaled(value: number, scale: AmountScale): string {
-  return (scale.divisor >= 1_000_000 ? oneDecimal : intFormat).format(value / scale.divisor);
+  // Fast én decimal i mio./mia., så søjlerne står ens: "177,0" ved siden af "140,8".
+  return (scale.divisor >= 1_000_000 ? fixedOneDecimal : intFormat).format(value / scale.divisor);
 }
 
 export function formatNumber(value: number | null | undefined): string {
