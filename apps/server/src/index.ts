@@ -256,6 +256,29 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
         log(`${name} FEJL`, errorMessage(err));
       }
     }
+    // Hvilken sti og metode svarer AI-søgningen på? (POST /apps/search/prompt gav 404.)
+    {
+      const prompt = "Revisorer i Region Midtjylland med mindst 10 ansatte";
+      const variants: [string, "GET" | "POST", string, unknown?][] = [
+        ["POST apps/search/prompt", "POST", "apps/search/prompt", { Prompt: prompt }],
+        ["POST apps/search/prompt/", "POST", "apps/search/prompt/", { Prompt: prompt }],
+        ["POST apps/search/Prompt", "POST", "apps/search/Prompt", { Prompt: prompt }],
+        ["GET apps/search/prompt?prompt=", "GET", `apps/search/prompt?prompt=${encodeURIComponent(prompt)}`],
+        ["POST apps/search/lassoid (tom)", "POST", "apps/search/lassoid", { filters: [] }],
+        ["POST apps/search", "POST", "apps/search", { Prompt: prompt }],
+        ["GET apps/search", "GET", "apps/search"],
+        ["POST app/search/prompt", "POST", "app/search/prompt", { Prompt: prompt }],
+        ["POST search/prompt", "POST", "search/prompt", { Prompt: prompt }],
+        ["POST api/apps/search/prompt", "POST", "api/apps/search/prompt", { Prompt: prompt }],
+        ["POST modules/search/prompt", "POST", "modules/search/prompt", { Prompt: prompt }],
+        ["POST data/search/prompt", "POST", "data/search/prompt", { Prompt: prompt }],
+        ["GET apps/contacts (kendt sti)", "GET", `apps/contacts/${first.lassoId}/data?contacts=true`],
+      ];
+      for (const [label, method, path, body] of variants) {
+        const r = await client.tryRequest(method, path, body);
+        log(`søgevariant ${label}`, `${r.status} ${r.body.replace(/\s+/g, " ").slice(0, 200)}`);
+      }
+    }
     // Lassos AI-søgning: prompt -> filtre -> lassoId'er. Former logges, så adaptere kan skrives.
     for (const prompt of ["Revisorer i Region Midtjylland med mindst 10 ansatte", "De 10 største byggefirmaer i Aarhus efter omsætning"]) {
       try {

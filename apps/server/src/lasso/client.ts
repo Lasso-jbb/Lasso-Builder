@@ -99,6 +99,23 @@ export class LassoClient {
     return value as Promise<T>;
   }
 
+  /** Fejlfinding: kalder uden cache og uden at kaste, og giver status og starten af svaret. */
+  async tryRequest(method: "GET" | "POST", path: string, body?: unknown): Promise<{ status: number; body: string }> {
+    const url = new URL(path.replace(/^\/+/, ""), `${this.baseUrl}/`);
+    for (const [k, v] of Object.entries(this.authQuery)) url.searchParams.set(k, v);
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { ...this.headers, ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
+        body: body === undefined ? undefined : JSON.stringify(body),
+        signal: AbortSignal.timeout(this.timeoutMs),
+      });
+      return { status: res.status, body: (await res.text()).slice(0, 300) };
+    } catch (err) {
+      return { status: 0, body: err instanceof Error ? err.message : String(err) };
+    }
+  }
+
   private async fetchJson(url: URL, init: RequestInit = {}): Promise<unknown> {
     const res = await fetch(url, { headers: this.headers, ...init, signal: AbortSignal.timeout(this.timeoutMs) });
     const text = await res.text();
