@@ -29,3 +29,6 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# Lokale værktøjer
+.claude/routing-log.json
