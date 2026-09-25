@@ -33,18 +33,18 @@ export function companyTemplate(lassoId: string, options: CompanyTemplateOptions
   const add = (s: CompanySection, c: ViewComponent) => {
     if (sections.has(s)) components.push(c);
   };
-  add("header", { type: "LassoCompanyHeader", company: lassoId });
-  add("noegletal", { type: "LassoKeyFigures", company: lassoId });
+  add("header", { type: "LassoCompanyHead", company: lassoId });
+  add("noegletal", { type: "LassoKeyFigureCards", company: lassoId });
   add("graf", {
-    type: "LassoFinancialChart",
+    type: "LassoBarChart",
     company: lassoId,
     metric: options.chartMetric ?? "bruttofortjeneste",
     years: options.years ?? 5,
   });
-  add("ledelse", { type: "LassoPeopleList", company: lassoId, show: "all" });
-  add("ejerskab", { type: "LassoOwnership", company: lassoId });
+  add("ledelse", { type: "LassoPersonList", company: lassoId, show: "all" });
+  add("ejerskab", { type: "LassoOwnerList", company: lassoId });
   add("handlinger", {
-    type: "LassoActions",
+    type: "LassoFollowUps",
     prompts: [
       { label: "Nye i ledelsen?", prompt: `Hvem er kommet ind i ledelsen og bestyrelsen i ${options.name ?? lassoId} de seneste to år?` },
       { label: "Sammenlign med konkurrenter", prompt: `Sammenlign ${options.name ?? lassoId} med de nærmeste konkurrenter på bruttofortjeneste og ansatte.` },
@@ -69,7 +69,7 @@ export function listTemplate(search: SearchQuery, options: { title?: string; col
     criteria: search.criteria,
     components: [
       {
-        type: "LassoTable",
+        type: "LassoCompanyTable",
         source: "search",
         search,
         columns: options.columns?.length ? [...options.columns] : [...DEFAULT_TABLE_COLUMNS],

@@ -7,8 +7,8 @@ function esc(v: string | number | null | undefined): string {
 
 /** CSV (semikolon, dansk Excel) af den første tabel i visningen. Rå tal, ikke formaterede. */
 export function specToCsv(spec: ViewSpec, ds: Dataset): string | null {
-  const table = spec.components.find((c) => c.type === "LassoTable");
-  if (!table || table.type !== "LassoTable") return null;
+  const table = spec.components.find((c) => c.type === "LassoCompanyTable");
+  if (!table || table.type !== "LassoCompanyTable") return null;
   const result = ds.searches[searchKey(table.search)];
   if (!result) return null;
   const cols = (table.columns?.length ? table.columns : DEFAULT_TABLE_COLUMNS).filter((c) => c !== "udvikling");

@@ -85,37 +85,37 @@ export const searchQuerySchema = z
 export type SearchQuery = z.infer<typeof searchQuerySchema>;
 
 export const companyHeaderSchema = z.object({
-  type: z.literal("LassoCompanyHeader"),
+  type: z.literal("LassoCompanyHead"),
   company: companyRef,
 });
 
 export const keyFiguresSchema = z.object({
-  type: z.literal("LassoKeyFigures"),
+  type: z.literal("LassoKeyFigureCards"),
   company: companyRef,
   metrics: z.array(metric).min(1).max(6).optional().describe("Standard: omsætning/bruttofortjeneste, resultat, egenkapital, ansatte."),
 });
 
 export const financialChartSchema = z.object({
-  type: z.literal("LassoFinancialChart"),
+  type: z.literal("LassoBarChart"),
   company: companyRef,
   metric: metric.default("bruttofortjeneste"),
   years: z.number().int().min(2).max(10).default(5),
 });
 
 export const peopleListSchema = z.object({
-  type: z.literal("LassoPeopleList"),
+  type: z.literal("LassoPersonList"),
   company: companyRef,
   show: z.enum(["current", "all"]).default("current").describe("'all' tager fratrådte med, så man kan se udskiftning."),
   title: z.string().max(80).optional(),
 });
 
 export const ownershipSchema = z.object({
-  type: z.literal("LassoOwnership"),
+  type: z.literal("LassoOwnerList"),
   company: companyRef,
 });
 
 export const tableSchema = z.object({
-  type: z.literal("LassoTable"),
+  type: z.literal("LassoCompanyTable"),
   source: z.literal("search"),
   search: searchQuerySchema,
   columns: z.array(z.enum(TABLE_COLUMNS)).min(1).max(8).optional(),
@@ -123,14 +123,14 @@ export const tableSchema = z.object({
 });
 
 export const comparisonSchema = z.object({
-  type: z.literal("LassoComparison"),
+  type: z.literal("LassoCompareTable"),
   companies: z.array(companyRef).min(2).max(6),
   metrics: z.array(metric).min(1).max(5).default(["omsaetning", "bruttofortjeneste", "resultat", "ansatte"]),
   title: z.string().max(80).optional(),
 });
 
 export const actionsSchema = z.object({
-  type: z.literal("LassoActions"),
+  type: z.literal("LassoFollowUps"),
   prompts: z
     .array(
       z.object({
@@ -158,7 +158,8 @@ export type ComponentType = ViewComponent["type"];
 export const LAYOUTS = ["stack", "grid-2"] as const;
 
 export const viewSpecSchema = z.object({
-  version: z.literal(1).default(1),
+  /** v2: komponentsættet bygget fra Paper-kataloget. v1-visninger (gamle komponentnavne) afvises. */
+  version: z.literal(2).default(2),
   kind: z.enum(["company", "list", "custom"]).default("custom"),
   title: z.string().min(1).max(120),
   subtitle: z.string().max(200).optional(),

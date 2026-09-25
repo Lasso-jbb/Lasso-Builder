@@ -143,8 +143,8 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     card.row("Web", co.website);
   }
 
-  const people = types.has("LassoPeopleList") ? (ds.people[lassoId] ?? []).filter((p) => !p.to) : [];
-  const owners = types.has("LassoOwnership") ? ds.ownership[lassoId] : undefined;
+  const people = types.has("LassoPersonList") ? (ds.people[lassoId] ?? []).filter((p) => !p.to) : [];
+  const owners = types.has("LassoOwnerList") ? ds.ownership[lassoId] : undefined;
   if (people.length || owners) {
     card.section(owners ? "Ledelse og ejere" : "Ledelse");
     const ceo = people.find((p) => /direktør/i.test(p.role));
@@ -165,7 +165,7 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
   const f = ds.financials[lassoId];
   const last = f?.years.at(-1);
   const prev = f?.years.at(-2);
-  if (f && last && types.has("LassoKeyFigures")) {
+  if (f && last && types.has("LassoKeyFigureCards")) {
     card.section(`Regnskab ${last.year}${prev ? ` · ændring fra ${prev.year}` : ""}`);
     const metrics: Metric[] = [last.revenue != null ? "omsaetning" : "bruttofortjeneste", "resultat", "egenkapital", "ansatte"];
     for (const m of metrics) {
@@ -176,7 +176,7 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     }
   }
   for (const c of spec.components) {
-    if (c.type === "LassoFinancialChart" && c.company === lassoId && f) chart(card, f, c.metric, c.years);
+    if (c.type === "LassoBarChart" && c.company === lassoId && f) chart(card, f, c.metric, c.years);
   }
   return card.empty ? null : card.toString();
 }
@@ -186,8 +186,8 @@ const ROW_FIELD = { omsaetning: "revenue", bruttofortjeneste: "grossProfit", res
 type RowMetric = keyof typeof ROW_FIELD;
 
 function listCard(spec: ViewSpec, ds: Dataset): string | null {
-  const table = spec.components.find((c) => c.type === "LassoTable");
-  if (!table || table.type !== "LassoTable") return null;
+  const table = spec.components.find((c) => c.type === "LassoCompanyTable");
+  if (!table || table.type !== "LassoCompanyTable") return null;
   const result = ds.searches[searchKey(table.search)];
   if (!result) return null;
   const card = new Card();

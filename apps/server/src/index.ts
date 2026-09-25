@@ -3,7 +3,7 @@ import { createMcpExpressApp } from "@modelcontextprotocol/express";
 import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
 import cors from "cors";
 import type { NextFunction, Request, Response } from "express";
-import { companyTemplate, listTemplate, parseViewSpec, searchQuerySchema, toLassoId } from "@lasso/spec";
+import { companyTemplate, listTemplate, parseViewSpec, searchQuerySchema, toLassoId, viewSpecSchema } from "@lasso/spec";
 import { getCurrentUser } from "./auth/user.js";
 import { hasLassoCredentials, isSet, loadConfig, type Config } from "./config.js";
 import { createProvider, type DataProvider } from "./data/index.js";
@@ -138,7 +138,13 @@ export function createApp({ config, client, provider, store }: AppDeps) {
       res.status(404).type("html").send(injectBoot(html, { mode: "web", error: "Visningen findes ikke eller er slettet." }, "Ikke fundet"));
       return;
     }
-    const dataset = await resolveSpec(view.spec, provider);
+    // Visninger fra før komponentsættet blev bygget om efter Paper-kataloget (spec v1) kan ikke vises.
+    const parsed = viewSpecSchema.safeParse(view.spec);
+    if (!parsed.success || (view.spec as { version?: number }).version !== 2) {
+      res.status(410).type("html").send(injectBoot(html, { mode: "web", error: "Visningen er lavet med en ældre version af Lasso og kan ikke vises længere. Bed Claude om at lave den igen, og gem den på ny." }, view.name ?? "Ældre visning"));
+      return;
+    }
+    const dataset = await resolveSpec(parsed.data, provider);
     const url = `${config.publicBaseUrl}/v/${view.org}/${view.slug}`;
     res
       .type("html")

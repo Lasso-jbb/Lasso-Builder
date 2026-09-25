@@ -7,7 +7,7 @@ import { DataState, stateForError } from "../primitives.js";
  * som én linje adskilt med komma. Konkurs/likvidation: status i mørk rød.
  * Ophørt: navnet i text-secondary.
  */
-export function CompanyHeader({ company, error }: { company?: CompanyVM; error?: string }) {
+export function CompanyHead({ company, error }: { company?: CompanyVM; error?: string }) {
   if (!company) {
     if (!error) return <div className="lasso-span-full"><DataState state="loading" lines={2} height={92} /></div>;
     return (

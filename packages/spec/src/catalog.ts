@@ -16,49 +16,49 @@ export interface CatalogEntry {
 
 export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
   {
-    type: "LassoCompanyHeader",
+    type: "LassoCompanyHead",
     title: "Virksomhedsheader",
     description: "Navn, CVR, status, form, branche og adresse for én virksomhed. Står øverst, når en visning handler om én virksomhed.",
     props: "company",
   },
   {
-    type: "LassoKeyFigures",
+    type: "LassoKeyFigureCards",
     title: "Nøgletal",
     description: "3–6 nøgletalskort fra seneste regnskab med ændring i forhold til året før.",
     props: `company, metrics? (${METRICS.join(" | ")})`,
   },
   {
-    type: "LassoFinancialChart",
+    type: "LassoBarChart",
     title: "Regnskabsgraf",
     description: "Søjlegraf for ét nøgletal over flere år.",
     props: `company, metric (${METRICS.join(" | ")}), years (2–10, standard 5)`,
   },
   {
-    type: "LassoPeopleList",
+    type: "LassoPersonList",
     title: "Ledelse",
     description: "Direktion og bestyrelse med rolle og tiltrådt/fratrådt. show='all' viser også fratrådte.",
     props: "company, show? (current | all), title?",
   },
   {
-    type: "LassoOwnership",
+    type: "LassoOwnerList",
     title: "Ejerskab og revisor",
     description: "Legale ejere med ejerandel samt revisor.",
     props: "company",
   },
   {
-    type: "LassoTable",
+    type: "LassoCompanyTable",
     title: "Virksomhedstabel",
     description: "Resultatliste fra en søgning med kriterier. Brugeren kan sortere, fjerne kriterier og klikke sig ind på en virksomhed uden en ny model-tur.",
     props: `source='search', search { query, criteria[], sort?, limit? }, columns? (${TABLE_COLUMNS.join(" | ")}), title?`,
   },
   {
-    type: "LassoComparison",
+    type: "LassoCompareTable",
     title: "Sammenligning",
     description: "Sammenligner 2–6 virksomheder side om side på udvalgte nøgletal.",
     props: `companies[], metrics? (${METRICS.join(" | ")}), title?`,
   },
   {
-    type: "LassoActions",
+    type: "LassoFollowUps",
     title: "Opfølgningsknapper",
     description: "1–4 knapper, der sender et opfølgende spørgsmål til dig (modellen) som brugerens næste besked. Brug til analysespørgsmål som 'Hvem er nye i bestyrelsen?'.",
     props: "prompts[] { label, prompt }",

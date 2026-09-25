@@ -16,7 +16,7 @@ function splitUnit(text: string): [string, string] {
  * Tal, enhed og udvikling fra året før. Sparkline til højre ved ≥ 3 år.
  * Mangler tallet: "Ikke oplyst" med årsagen under, aldrig "0".
  */
-export function KeyFigures({ financials, metrics, error }: { financials?: FinancialsVM; metrics?: readonly Metric[]; error?: string }) {
+export function KeyFigureCards({ financials, metrics, error }: { financials?: FinancialsVM; metrics?: readonly Metric[]; error?: string }) {
   if (!financials) {
     return (
       <div className="lasso-span-full">

@@ -10,7 +10,7 @@ const BEST_IS_HIGHEST: ReadonlySet<Metric> = new Set(["omsaetning", "bruttofortj
  * Udgangsvirksomheden (første) har 3 px koral topkant. Enheden står i rækkenavnet.
  * Bedste værdi pr. række fremhæves kun med vægt 600. Manglende data: "Ikke oplyst".
  */
-export function Comparison({
+export function CompareTable({
   companies,
   metrics,
   title,

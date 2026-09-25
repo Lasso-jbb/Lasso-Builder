@@ -16,7 +16,7 @@ export function normalizeSpec(spec: ViewSpec, companyPrefix: string): ViewSpec {
   const fix = (ref: string) => toLassoId(ref, companyPrefix);
   const components = spec.components.map((c): ViewComponent => {
     if ("company" in c) return { ...c, company: fix(c.company) };
-    if (c.type === "LassoComparison") return { ...c, companies: c.companies.map(fix) };
+    if (c.type === "LassoCompareTable") return { ...c, companies: c.companies.map(fix) };
     return c;
   });
   return { ...spec, components };
@@ -52,30 +52,30 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
     n.forEach((x) => s.add(x));
     needs.set(id, s);
   };
-  const searches: Extract<ViewComponent, { type: "LassoTable" }>["search"][] = [];
+  const searches: Extract<ViewComponent, { type: "LassoCompanyTable" }>["search"][] = [];
 
   for (const c of spec.components) {
     switch (c.type) {
-      case "LassoCompanyHeader":
+      case "LassoCompanyHead":
         want(c.company, "company");
         break;
-      case "LassoKeyFigures":
-      case "LassoFinancialChart":
+      case "LassoKeyFigureCards":
+      case "LassoBarChart":
         want(c.company, "financials");
         break;
-      case "LassoPeopleList":
+      case "LassoPersonList":
         want(c.company, "people");
         break;
-      case "LassoOwnership":
+      case "LassoOwnerList":
         want(c.company, "ownership");
         break;
-      case "LassoComparison":
+      case "LassoCompareTable":
         c.companies.forEach((id) => want(id, "company", "financials"));
         break;
-      case "LassoTable":
+      case "LassoCompanyTable":
         searches.push(c.search);
         break;
-      case "LassoActions":
+      case "LassoFollowUps":
         break;
     }
   }

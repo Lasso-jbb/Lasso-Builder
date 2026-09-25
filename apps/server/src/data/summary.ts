@@ -23,7 +23,7 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
   if (ds.source === "demo") lines.push("OBS: Demodata (opdigtede virksomheder), ikke rigtige Lasso-data.");
 
   for (const c of spec.components) {
-    if (c.type === "LassoCompanyHeader") {
+    if (c.type === "LassoCompanyHead") {
       const co = ds.companies[c.company];
       if (co) {
         const where = [co.address?.city, co.industryText].filter(Boolean).join(", ");
@@ -45,17 +45,17 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
         if (facts.length) lines.push(`Stamoplysninger: ${facts.join("; ")}.`);
       }
     }
-    if (c.type === "LassoKeyFigures" || c.type === "LassoFinancialChart") {
+    if (c.type === "LassoKeyFigureCards" || c.type === "LassoBarChart") {
       const f = ds.financials[c.company];
       const last = f?.years.at(-1);
       const prev = f?.years.at(-2);
-      if (last && c.type === "LassoKeyFigures") {
+      if (last && c.type === "LassoKeyFigureCards") {
         const chg = percentChange([prev?.grossProfit, last.grossProfit]);
         lines.push(
           `Regnskab ${last.year}: ${last.revenue !== null && last.revenue !== undefined ? `omsætning ${formatAmount(last.revenue)}, ` : ""}bruttofortjeneste ${formatAmount(last.grossProfit)}${chg !== null ? ` (${chg > 0 ? "+" : ""}${Math.round(chg)} % fra ${prev?.year})` : ""}, resultat ${formatAmount(last.profit)}, egenkapital ${formatAmount(last.equity)}, ${formatNumber(last.employees)} ansatte.`,
         );
       }
-      if (f && c.type === "LassoFinancialChart") {
+      if (f && c.type === "LassoBarChart") {
         // Hele rækken, så modellen kan kommentere udviklingen (og værter uden grafik kan vise den).
         const { metric, points } = chartSeries(f, c.metric, c.years);
         if (points.length) {
@@ -67,17 +67,17 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
         }
       }
     }
-    if (c.type === "LassoPeopleList") {
+    if (c.type === "LassoPersonList") {
       const people = ds.people[c.company] ?? [];
       const current = people.filter((p) => !p.to).slice(0, 6);
       if (current.length) lines.push(`Ledelse: ${current.map((p) => `${p.name} (${p.role})`).join(", ")}.`);
     }
-    if (c.type === "LassoOwnership") {
+    if (c.type === "LassoOwnerList") {
       const o = ds.ownership[c.company];
       if (o?.owners.length) lines.push(`Ejere: ${o.owners.slice(0, 4).map((x) => `${x.name}${x.share ? ` ${x.share}` : ""}${x.votes ? ` (stemmer ${x.votes})` : ""}`).join(", ")}.`);
       if (o?.auditor) lines.push(`Revisor: ${o.auditor.name}.`);
     }
-    if (c.type === "LassoTable") {
+    if (c.type === "LassoCompanyTable") {
       const r = ds.searches[searchKey(c.search)];
       if (r) {
         const top = r.rows.slice(0, 5).map((x) => `${x.name}${x.city ? ` (${x.city})` : ""} [${x.lassoId}]`);
@@ -87,7 +87,7 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
         if (r.unsupportedCriteria?.length) lines.push(`Kunne ikke anvendes endnu: ${r.unsupportedCriteria.join("; ")}.`);
       }
     }
-    if (c.type === "LassoComparison") {
+    if (c.type === "LassoCompareTable") {
       const names = c.companies.map((id) => ds.companies[id]?.name ?? id);
       lines.push(`Sammenligner: ${names.join(", ")}.`);
     }
