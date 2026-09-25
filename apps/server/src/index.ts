@@ -197,6 +197,11 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
       const t0 = Date.now();
       const list = await resolveSpec(listSpec, provider);
       log(`search_companies-resumé (${Date.now() - t0} ms)`, summarizeView(listSpec, list).split("\n"));
+      // Hele datasættet (offentlige CVR- og regnskabsdata), så visningen kan gengives lokalt med rigtige data.
+      if (verbose) {
+        console.log(`[lasso-probe] dataset show_company: ${JSON.stringify({ spec: companyTemplate(first.lassoId), dataset: company })}`);
+        console.log(`[lasso-probe] dataset search_companies: ${JSON.stringify({ spec: listSpec, dataset: list })}`);
+      }
     }
     if (!verbose) return;
 
