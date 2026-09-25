@@ -167,9 +167,9 @@ export class LassoClient {
     });
   }
 
-  /** Lassos AI-søgning: fritekst -> liste af filtre (POST /apps/search/prompt). */
+  /** Lassos AI-søgning: fritekst -> liste af filtre (POST /apps/search/query/prompt). */
   searchPrompt(prompt: string) {
-    return this.searchClient.post("apps/search/prompt", { Prompt: prompt });
+    return this.searchClient.post("apps/search/query/prompt", { Prompt: prompt });
   }
 
   /** Virksomheder, der matcher filtrene fra searchPrompt (POST /apps/search/lassoid). */

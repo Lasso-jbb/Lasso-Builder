@@ -24,7 +24,7 @@ test("søgningen går til dev3 med sin egen nøgle, resten til api.lassox.com", 
   await client.searchPrompt("revisorer i Aarhus");
   await client.searchByFilters([{ FieldName: "x" }], "x");
   await client.company("CVR-1-11111111");
-  assert.equal(log.calls[0]!.url, "https://dev3.api.lassox.com/apps/search/prompt");
+  assert.equal(log.calls[0]!.url, "https://dev3.api.lassox.com/apps/search/query/prompt");
   assert.equal(log.calls[0]!.headers["lasso-api-key"], "søge-nøgle");
   assert.deepEqual(JSON.parse(log.calls[0]!.body!), { Prompt: "revisorer i Aarhus" });
   assert.equal(log.calls[1]!.url, "https://dev3.api.lassox.com/apps/search/lassoid");
@@ -38,5 +38,5 @@ test("uden søgenøgle bruges hovedklienten", async () => {
   const client = new LassoClient(loadConfig({ LASSO_API_TOKEN: "hoved-nøgle", LASSO_SEARCH_API_TOKEN: "CHANGE_ME", LASSO_CACHE_TTL_SECONDS: "0" }));
   assert.equal(client.hasSearchCredentials, false);
   await client.searchPrompt("x");
-  assert.equal(log.calls[0]!.url, "https://api.lassox.com/apps/search/prompt");
+  assert.equal(log.calls[0]!.url, "https://api.lassox.com/apps/search/query/prompt");
 });

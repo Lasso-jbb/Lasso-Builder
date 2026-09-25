@@ -58,7 +58,7 @@ bekræftes mod dokumentationen.
 ## Søgning med filtre (Lasso-søgning)
 
 ```
-POST /apps/search/prompt     { "Prompt": "revisorer i Region Midt med over 10 ansatte" }  -> liste af filtre
+POST /apps/search/query/prompt  { "Prompt": "revisorer i Region Midt med over 10 ansatte" }  -> liste af filtre
 POST /apps/search/lassoid    { "filters": [ …filtrene fra prompt… ], "OrderBy": "<FieldName>" }
 ```
 
