@@ -21,7 +21,7 @@ Fejlsvar har formen `{ "errorMessage": string, "httpStatusCode": number, "errorC
 | Websites          | GET    | `/data/websites/{lassoId}`                      |
 | Valuations        | GET    | `/modules/valuations/{lassoId}`                 |
 | Observationer     | GET    | `/modules/observations/{lassoId}`               |
-| Ejerstruktur      | GET    | Se dokumentation: https://docs.lassox.com/module-apis/ownergraph/ |
+| Ejergraf          | POST   | `/modules/relations/graph` (se "Ubekræftet" nedenfor)            |
 
 ### Bekræftede svarformer (24.09.2026)
 
@@ -113,3 +113,42 @@ GET /data/bbr/property/summary?propertynumber={ejendomsnummer}&municipality={kom
 ```
 
 Eksempel: `propertynumber=79972&municipality=157`.
+
+## Ubekræftet
+
+### Ejergraf: `POST /modules/relations/graph` (ejerdiagrammet, katalog 14)
+
+Klient: `LassoClient.relationsGraph`, adapter: `adaptOwnershipGraph` i `apps/server/src/lasso/adapters.ts`.
+Svarformen er IKKE bekræftet: der var ingen API-nøgle under udviklingen, og docs.lassox.com
+(module-apis/ownergraph) kunne ikke hentes (26.09.2026). Adapteren er derfor bygget defensivt.
+
+Body (fra kendt brug):
+
+```
+{ "ids": ["CVR-1-12345678"], "relationTypes": ["ownership"], "enrichments": ["companyinfo"],
+  "ingoingDepth": 2, "outgoingDepth": 1, "onDate": "2026-09-25" }      (onDate udelades for i dag)
+```
+
+Antaget svar (alle felter valgfrie, navne slås op uden hensyn til store/små bogstaver):
+
+- Beholder: selve svaret, `graph` eller `data`.
+- Noder: `nodes` | `entities` | `vertices` | `participants` | `items`, som liste eller som map `{ [lassoId]: node }`.
+  Pr. node: `lassoId` | `id`, `name`, `type` | `entityType` (indeholder "person" for personer; ellers selskab;
+  `CVR-3-`/`CVR-4-`-id'er uden type regnes som personer). Berigelsen `companyinfo` læses direkte på noden eller
+  under `companyInfo` | `enrichments.companyinfo` | `data` | `entity` | `properties`: `cvr`, `form.shortDescription`,
+  `status`, `country`/`countryCode`, `registrationNumber`, `equity`.
+- Kanter: `edges` | `relations` | `links` | `relationships` | `ownerships` (eller svaret er selv en liste).
+  Retning ejer -> ejet: `from` | `source` | `owner` | `parent` -> `to` | `target` | `owned` | `company` | `child`,
+  som id eller indlejret objekt (`{ lassoId, name, type }`). Relationer med en type, der ikke handler om ejerskab
+  (`relationType`/`type`), springes over.
+- Andel: `ownership` | `share` | `ownershipShare` | `percentage` | `interval` på kanten eller under `properties`,
+  som brøk-interval `{ from: 0.25, to: 0.3332 }` (samme form som `GET /{lassoId}`), tal (brøk eller procent) eller
+  tekst "25–33,32 %". Stemmer: `voteRights` | `votingRights`. Datoer: `validFrom`/`since`/`startDate` og
+  `validTo`/`until`/`endDate` (et ejerskab med slutdato vises som historisk).
+
+Normaliseret til `OwnershipGraphVM` (`packages/spec/src/models.ts`): `nodes { id, name, kind person|company, cvr?, form?,
+status?, country?, registrationNo?, equity?, root? }`, `edges { from, to, share? [min, max] i procent, votes?, classes?,
+since?, until? }`. Svarer endpointet 400/404/405/501, falder `LiveProvider` tilbage til de direkte ejere fra
+`GET /{lassoId}` (ét lag, med en note i visningen). `/api/debug/lasso/...` kan kun GET; formen tjekkes med
+`client.tryRequest("POST", "modules/relations/graph", body)`, når der er en nøgle, og adapteren rettes til.
+

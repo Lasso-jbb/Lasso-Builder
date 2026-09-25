@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { adaptCompany, adaptFinancials, adaptOwnership, adaptPeople, adaptSearch, regionFromZip, statusKind } from "./adapters.js";
+import { adaptCompany, adaptFinancials, adaptOwnership, adaptOwnershipGraph, adaptPeople, adaptSearch, graphFromOwnership, regionFromZip, shareRange, statusKind } from "./adapters.js";
 
 test("adaptCompany tåler forskellige feltnavne", () => {
   const vm = adaptCompany("CVR-1-11111111", {
@@ -181,4 +181,78 @@ test("adaptOwnership sorterer største ejer først", () => {
     },
   });
   assert.deepEqual(o.owners.map((x) => x.name), ["Stor A/S", "Mellem ApS", "Lille ApS"]);
+});
+
+test("shareRange læser brøker, procenttal og tekst", () => {
+  assert.deepEqual(shareRange({ from: 0.25, to: 0.3332 }), [25, 33.32]);
+  assert.deepEqual(shareRange(0.5), [50, 50]);
+  assert.deepEqual(shareRange(100), [100, 100]);
+  assert.deepEqual(shareRange("20–24,99 %"), [20, 24.99]);
+  assert.deepEqual(shareRange({ min: 5, max: 9.99 }), [5, 9.99]);
+  assert.equal(shareRange(null), undefined);
+});
+
+const OPTS = { ingoingDepth: 2, outgoingDepth: 1 };
+
+test("adaptOwnershipGraph: noder og kanter med from/to og brøk-intervaller", () => {
+  const g = adaptOwnershipGraph("CVR-1-1", {
+    nodes: [
+      { lassoId: "CVR-1-1", name: "Fokus A/S", type: "company", companyInfo: { cvr: "00000001", form: { shortDescription: "A/S" }, status: "NORMAL" } },
+      { lassoId: "CVR-1-2", name: "Holding ApS", entityType: "Company" },
+      { lassoId: "CVR-3-9", name: "Anne Eksempel", type: "Person" },
+      { id: "X-NO-1", name: "Nordic AS", country: "NO", registrationNumber: "999 000 002" },
+    ],
+    edges: [
+      { from: "CVR-1-2", to: "CVR-1-1", relationType: "ownership", ownership: { from: 0.6667, to: 0.8999 }, voteRights: { from: 0.6667, to: 0.8999 } },
+      { from: "CVR-3-9", to: "CVR-1-2", ownership: { from: 1, to: 1 }, validFrom: "2012-05-14T00:00:00" },
+      { from: "CVR-1-1", to: "X-NO-1", ownership: 0.5 },
+      { from: "CVR-3-9", to: "CVR-1-1", relationType: "management" },
+    ],
+  }, OPTS);
+  assert.equal(g.rootId, "CVR-1-1");
+  const root = g.nodes.find((n) => n.id === "CVR-1-1")!;
+  assert.equal(root.root, true);
+  assert.equal(root.cvr, "00000001");
+  assert.equal(root.form, "A/S");
+  assert.equal(g.nodes.find((n) => n.id === "CVR-3-9")!.kind, "person");
+  const no = g.nodes.find((n) => n.id === "X-NO-1")!;
+  assert.equal(no.country, "NO");
+  assert.equal(no.registrationNo, "999 000 002");
+  assert.equal(g.edges.length, 3, "ledelsesrelationen springes over");
+  assert.deepEqual(g.edges[0]!.share, [66.67, 89.99]);
+  assert.equal(g.edges[0]!.votes, undefined, "stemmer kun når de afviger");
+  assert.equal(g.edges[1]!.since, "2012-05-14");
+  assert.deepEqual(g.edges[2]!.share, [50, 50]);
+});
+
+test("adaptOwnershipGraph: relationsliste med indlejrede ejer/ejet-objekter og entiteter som map", () => {
+  const g = adaptOwnershipGraph("CVR-1-1", {
+    graph: {
+      entities: { "CVR-1-1": { name: "Fokus A/S" }, "CVR-1-5": { name: "Ejer ApS", type: "company" } },
+      relations: [
+        { owner: { lassoId: "CVR-1-5", name: "Ejer ApS" }, owned: { lassoId: "CVR-1-1" }, properties: { share: "25–33,32 %", votingRights: "33,33–49,99 %" } },
+        { source: { id: "CVR-3-7", name: "Bo Prøve", type: "person" }, target: "CVR-1-5", properties: { ownership: { from: 1, to: 1 }, validTo: "2023-06-30" } },
+      ],
+    },
+  }, OPTS);
+  assert.equal(g.nodes.find((n) => n.id === "CVR-1-5")!.name, "Ejer ApS");
+  assert.equal(g.nodes.find((n) => n.id === "CVR-3-7")!.kind, "person");
+  assert.deepEqual(g.edges[0]!.share, [25, 33.32]);
+  assert.deepEqual(g.edges[0]!.votes, [33.33, 49.99]);
+  assert.equal(g.edges[1]!.until, "2023-06-30");
+});
+
+test("adaptOwnershipGraph: tomt svar giver en graf med kun roden", () => {
+  const g = adaptOwnershipGraph("CVR-1-1", {}, OPTS);
+  assert.equal(g.nodes.length, 1);
+  assert.equal(g.edges.length, 0);
+  assert.equal(adaptOwnershipGraph("CVR-1-1", [], OPTS).nodes.length, 1);
+});
+
+test("graphFromOwnership bygger ét lag ejere som reserve", () => {
+  const g = graphFromOwnership("CVR-1-1", "Fokus A/S", { lassoId: "CVR-1-1", owners: [{ name: "Holding", lassoId: "CVR-1-2", share: "50–66,66 %", kind: "company" }, { name: "Anne", share: "10–14,99 %", kind: "person" }] }, OPTS);
+  assert.equal(g.nodes.length, 3);
+  assert.deepEqual(g.edges.map((e) => e.share), [[50, 66.66], [10, 14.99]]);
+  assert.equal(g.outgoingDepth, 0);
+  assert.ok(g.note);
 });

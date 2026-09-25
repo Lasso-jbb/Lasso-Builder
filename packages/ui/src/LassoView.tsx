@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { searchKey, type Dataset, type ViewComponent } from "@lasso/spec";
+import { ownershipGraphKey, searchKey, type Dataset, type ViewComponent } from "@lasso/spec";
 import { FollowUps } from "./components/FollowUps.js";
 import { CompanyHead } from "./components/CompanyHead.js";
 import { CompanyTable } from "./components/CompanyTable.js";
@@ -8,6 +8,7 @@ import { FilterPanel } from "./components/FilterPanel.js";
 import { BarChart } from "./components/BarChart.js";
 import { KeyFigureCards } from "./components/KeyFigureCards.js";
 import { OwnerList } from "./components/OwnerList.js";
+import { OwnershipDiagram } from "./components/OwnershipDiagram.js";
 import { PersonList } from "./components/PersonList.js";
 import { specToCsv } from "./csv.js";
 import { Badge, Skeleton } from "./primitives.js";
@@ -21,7 +22,7 @@ function formatStamp(iso: string | undefined): string {
 }
 
 function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewProps, act: (a: ViewAction) => void, key: number) {
-  const empty: Dataset = ds ?? { source: "live", generatedAt: "", companies: {}, financials: {}, people: {}, ownership: {}, searches: {}, errors: {} };
+  const empty: Dataset = ds ?? { source: "live", generatedAt: "", companies: {}, financials: {}, people: {}, ownership: {}, searches: {}, ownershipGraphs: {}, errors: {} };
   const err = (k: string) => empty.errors[k];
   switch (c.type) {
     case "LassoCompanyHead":
@@ -34,6 +35,10 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return <PersonList key={key} people={empty.people[c.company]} show={c.show} title={c.title} error={err(`people:${c.company}`)} />;
     case "LassoOwnerList":
       return <OwnerList key={key} ownership={empty.ownership[c.company]} error={err(`ownership:${c.company}`)} onOpen={props.host.drillDown ? act : undefined} />;
+    case "LassoOwnershipDiagram": {
+      const k = ownershipGraphKey(c);
+      return <OwnershipDiagram key={key} graph={empty.ownershipGraphs?.[k]} error={err(`graph:${k}`)} title={c.title} onAction={act} canDrillDown={Boolean(props.host.drillDown)} canPrompt={Boolean(props.host.prompt)} canFullscreen={Boolean(props.host.fullscreen)} />;
+    }
     case "LassoCompanyTable": {
       const k = searchKey(c.search);
       return <CompanyTable key={key} result={empty.searches[k]} columns={c.columns} title={c.title} error={err(`search:${k}`)} onAction={act} canDrillDown={Boolean(props.host.drillDown)} />;

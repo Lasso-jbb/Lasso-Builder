@@ -4,6 +4,7 @@ import type {
   Criterion,
   DataSourceKind,
   FinancialsVM,
+  OwnershipGraphVM,
   OwnershipVM,
   PersonRowVM,
   SearchQuery,
@@ -26,6 +27,14 @@ export interface DataProvider {
   financials(lassoId: string): Promise<FinancialsVM>;
   people(lassoId: string): Promise<PersonRowVM[]>;
   ownership(lassoId: string): Promise<OwnershipVM>;
+  /** Ejergrafen i flere lag omkring én virksomhed (katalog 14). */
+  ownershipGraph(lassoId: string, opts: OwnershipGraphOptions): Promise<OwnershipGraphVM>;
+}
+
+export interface OwnershipGraphOptions {
+  ingoingDepth: number;
+  outgoingDepth: number;
+  onDate?: string;
 }
 
 export class NotFoundError extends Error {

@@ -46,6 +46,12 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     props: "company",
   },
   {
+    type: "LassoOwnershipDiagram",
+    title: "Ejerdiagram",
+    description: "Koncernstruktur i flere lag: ejere over, datterselskaber under, virksomheden fremhævet i midten. Vælg den til 'hvem ejer X', 'koncernen bag', 'datterselskaber' og 'hvem ejer i sidste ende'.",
+    props: "company, ingoingDepth? (lag op, standard 2), outgoingDepth? (lag ned, standard 1), onDate? (ÅÅÅÅ-MM-DD), title?",
+  },
+  {
     type: "LassoCompanyTable",
     title: "Virksomhedstabel",
     description: "Resultatliste fra en søgning med kriterier. Brugeren kan sortere, fjerne kriterier og klikke sig ind på en virksomhed uden en ny model-tur.",

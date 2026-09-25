@@ -5,6 +5,8 @@ import {
   formatDate,
   formatNumber,
   formatScaled,
+  formatShare,
+  ownershipGraphKey,
   percentChange,
   METRIC_FIELD,
   METRIC_LABELS,
@@ -12,6 +14,7 @@ import {
   type Dataset,
   type FinancialsVM,
   type Metric,
+  type OwnershipGraphVM,
   type ViewSpec,
 } from "@lasso/spec";
 
@@ -121,6 +124,55 @@ function chart(card: Card, f: FinancialsVM, wanted: Metric, years: number) {
   }
 }
 
+/**
+ * Ejerstruktur som indrykket liste (samme form som mobilvisningen i 26c): ejere opad og
+ * datterselskaber nedad, højst 4 pr. niveau og 3 niveauer. Cirkulært ejerskab markeres.
+ */
+function ownershipTreeCard(card: Card, g: OwnershipGraphVM) {
+  const names = new Map(g.nodes.map((n) => [n.id, n.name]));
+  const ref = g.onDate ?? new Date().toISOString().slice(0, 10);
+  // Ophørte ejerskaber er ikke en del af strukturen på datoen.
+  const edges = g.edges.filter((e) => !e.until || e.until.slice(0, 10) > ref);
+  if (card.empty) card.text(names.get(g.rootId) ?? g.rootId);
+  const seen = new Set([g.rootId]);
+  // En enhed, der både ejer og ejes af roden (cirkulært), står på den side, hvor andelen er størst.
+  const share = (from: string, to: string) => edges.find((e) => e.from === from && e.to === to)?.share?.[1];
+  const both = (id: string) => share(id, g.rootId) !== undefined && share(g.rootId, id) !== undefined;
+  const belowRoot = (id: string) => both(id) && (share(g.rootId, id) ?? 0) > (share(id, g.rootId) ?? 0);
+  const branch = (title: string, upward: boolean, depth: number) => {
+    if (depth <= 0) return;
+    const onSide = (e: { from: string; to: string }) => (upward ? !belowRoot(e.from) : !both(e.to) || belowRoot(e.to));
+    const first = edges.filter((e) => (upward ? e.to : e.from) === g.rootId && onSide(e));
+    if (!first.length) return;
+    card.section(title);
+    const walk = (id: string, level: number) => {
+      const list = edges
+        .filter((e) => (upward ? e.to : e.from) === id && (level > 0 || onSide(e)))
+        .sort((a, b) => (b.share?.[1] ?? -1) - (a.share?.[1] ?? -1) || (names.get(upward ? a.from : a.to) ?? "").localeCompare(names.get(upward ? b.from : b.to) ?? "", "da"));
+      list.slice(0, 4).forEach((e) => {
+        const other = upward ? e.from : e.to;
+        const indent = "  ".repeat(level);
+        const repeat = seen.has(other);
+        const pct = e.share ? formatShare(e.share) : "";
+        const label = `${names.get(other) ?? other}${repeat || (level === 0 && both(other)) ? " (cirkulært)" : ""}`;
+        const width = W - indent.length - len(pct) - 1;
+        wrap(label, width).forEach((l, i, all) => card.raw(`${indent}${pad(l, width)} ${i === all.length - 1 ? pct : ""}`.trimEnd()));
+        if (repeat) return;
+        seen.add(other);
+        if (level + 1 < Math.min(depth, 3)) walk(other, level + 1);
+      });
+      if (list.length > 4) card.raw(`${"  ".repeat(level)}og ${list.length - 4} flere`);
+    };
+    walk(g.rootId, 0);
+  };
+  branch("Ejere", true, g.ingoingDepth);
+  branch("Datterselskaber", false, g.outgoingDepth);
+  if (edges.length === 0) {
+    card.section("Ejerstruktur");
+    card.text("Ingen registrerede ejere eller datterselskaber.");
+  }
+}
+
 function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | null {
   const card = new Card();
   const types = new Set(spec.components.filter((c) => "company" in c && c.company === lassoId).map((c) => c.type));
@@ -177,6 +229,10 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
   }
   for (const c of spec.components) {
     if (c.type === "LassoBarChart" && c.company === lassoId && f) chart(card, f, c.metric, c.years);
+    if (c.type === "LassoOwnershipDiagram" && c.company === lassoId) {
+      const g = ds.ownershipGraphs[ownershipGraphKey(c)];
+      if (g) ownershipTreeCard(card, g);
+    }
   }
   return card.empty ? null : card.toString();
 }

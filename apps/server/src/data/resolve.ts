@@ -1,5 +1,6 @@
 import {
   emptyDataset,
+  ownershipGraphKey,
   searchKey,
   toLassoId,
   type Dataset,
@@ -53,6 +54,7 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
     needs.set(id, s);
   };
   const searches: Extract<ViewComponent, { type: "LassoCompanyTable" }>["search"][] = [];
+  const graphs: Extract<ViewComponent, { type: "LassoOwnershipDiagram" }>[] = [];
 
   for (const c of spec.components) {
     switch (c.type) {
@@ -74,6 +76,9 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
         break;
       case "LassoCompanyTable":
         searches.push(c.search);
+        break;
+      case "LassoOwnershipDiagram":
+        graphs.push(c);
         break;
       case "LassoFollowUps":
         break;
@@ -97,6 +102,16 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
   for (const s of searches) {
     const key = searchKey(s);
     run(`search:${key}`, async () => void (ds.searches[key] = await provider.search(s)));
+  }
+
+  const graphKeys = new Set<string>();
+  for (const g of graphs) {
+    const key = ownershipGraphKey(g);
+    if (graphKeys.has(key)) continue;
+    graphKeys.add(key);
+    run(`graph:${key}`, async () => {
+      ds.ownershipGraphs[key] = await provider.ownershipGraph(g.company, { ingoingDepth: g.ingoingDepth, outgoingDepth: g.outgoingDepth, onDate: g.onDate });
+    });
   }
 
   await Promise.all(jobs);

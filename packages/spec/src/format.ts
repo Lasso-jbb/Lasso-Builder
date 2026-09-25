@@ -110,3 +110,17 @@ export function formatCriterion(c: Criterion): string {
   }
   return `${label} ${operatorLabel(c.operator, field?.type)} ${formatCriterionValue(field, c.value)}`;
 }
+
+const shareFormat = new Intl.NumberFormat("da-DK", { maximumFractionDigits: 2 });
+
+/**
+ * Ejerandel som CVR-interval (katalog 11 og 14): [20, 24.99] -> "20–24,99 %", [100, 100] -> "100 %".
+ * Tallene er procent (0–100), ikke brøker.
+ */
+export function formatShare(range: readonly [number, number] | null | undefined): string {
+  if (!range) return MISSING;
+  const [lo, hi] = range;
+  if (!Number.isFinite(lo) || !Number.isFinite(hi)) return MISSING;
+  const a = shareFormat.format(lo);
+  return Math.abs(hi - lo) < 0.005 ? `${a} %` : `${a}–${shareFormat.format(hi)} %`;
+}

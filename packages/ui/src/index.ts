@@ -4,6 +4,8 @@ export { KeyFigureCards } from "./components/KeyFigureCards.js";
 export { BarChart } from "./components/BarChart.js";
 export { PersonList } from "./components/PersonList.js";
 export { OwnerList } from "./components/OwnerList.js";
+export { OwnershipDiagram } from "./components/OwnershipDiagram.js";
+export { layoutOwnership, ownershipTree, indirectShare } from "./ownershipLayout.js";
 export { CompanyTable } from "./components/CompanyTable.js";
 export { CompareTable } from "./components/CompareTable.js";
 export { FollowUps } from "./components/FollowUps.js";

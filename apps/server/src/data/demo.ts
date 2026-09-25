@@ -9,7 +9,8 @@ import {
   type SearchResultVM,
 } from "@lasso/spec";
 import { applyCriteria, sortRows } from "./criteria-eval.js";
-import { NotFoundError, type DataProvider } from "./provider.js";
+import { demoOwnershipGraph } from "./demoGraph.js";
+import { NotFoundError, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
 
 /**
  * Opdigtede demodata, så UI og MCP-flow kan bygges og testes uden adgang til
@@ -170,5 +171,13 @@ export class DemoProvider implements DataProvider {
       owners: c.owners,
       auditor: c.auditor === "Ingen" ? undefined : { name: c.auditor, lassoId: auditor?.lassoId, from: "2019-01-01" },
     };
+  }
+
+  async ownershipGraph(lassoId: string, opts: OwnershipGraphOptions) {
+    get(lassoId);
+    return demoOwnershipGraph(lassoId, opts, (id) => {
+      const c = BY_ID.get(id);
+      return c ? strip(c) : undefined;
+    });
   }
 }
