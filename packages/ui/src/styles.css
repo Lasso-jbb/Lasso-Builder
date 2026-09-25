@@ -22,7 +22,8 @@
   --lasso-text-2: #3f444b;
   --lasso-text-3: #5b6068;
   --lasso-text-4: #6b7280;
-  --lasso-muted: #8a9099;
+  --lasso-muted: #6b7280;           /* sekundær tekst: #8A9099 var for svag på mobil (kontrast 3,3:1) */
+  --lasso-placeholder: #8a9099;     /* placeholders og hjælpetekst i felter */
   --lasso-icon: #9aa0a8;
   --lasso-disabled: #c9cdd3;
   --lasso-skeleton: #eeeff2;
@@ -30,10 +31,15 @@
 
   --lasso-danger: #d92d20;          /* kun det, der ikke kan fortrydes */
   --lasso-neutral-soft: #f1f1f3;
+  --lasso-positive: #1f7a4d;
+  --lasso-positive-soft: #e7f5ee;
+  --lasso-negative: #b42318;
+  --lasso-warning: #93580b;
+  --lasso-warning-soft: #fdf3e1;
 
-  --lasso-chart-bar: #e4e4e7;
-  --lasso-chart-bar-strong: #3f444b;
-  --lasso-chart-bar-neg: #c9cdd3;
+  --lasso-chart-bar: #ffcfb6;       /* tidligere år: koral blød kant */
+  --lasso-chart-bar-strong: #ff6b35; /* seneste år: koral */
+  --lasso-chart-bar-neg: #f4b7b0;
 
   --lasso-radius-sm: 6px;           /* tags */
   --lasso-radius: 8px;              /* felter, knapper, chips */
@@ -79,15 +85,21 @@
   --lasso-text-2: #d3d6db;
   --lasso-text-3: #b3b8bf;
   --lasso-text-4: #9aa0a8;
-  --lasso-muted: #8a9099;
+  --lasso-muted: #a1a7b0;
+  --lasso-placeholder: #7d838c;
   --lasso-icon: #7d838c;
   --lasso-disabled: #4a4f57;
   --lasso-skeleton: #262a30;
   --lasso-tooltip: #f2f3f5;
   --lasso-neutral-soft: #2a2d33;
-  --lasso-chart-bar: #363a41;
-  --lasso-chart-bar-strong: #d3d6db;
-  --lasso-chart-bar-neg: #4a4f57;
+  --lasso-positive: #5cc28c;
+  --lasso-positive-soft: #16301f;
+  --lasso-negative: #f28b82;
+  --lasso-warning: #e6b45a;
+  --lasso-warning-soft: #33280f;
+  --lasso-chart-bar: #7a3b1f;
+  --lasso-chart-bar-strong: #ff7a4a;
+  --lasso-chart-bar-neg: #6b2c26;
 }
 
 .lasso-root {
@@ -139,8 +151,12 @@
 .lasso-btn--ghost:hover { background: var(--lasso-surface-2); border-color: transparent; }
 .lasso-btn--prompt { color: var(--lasso-text-2); background: var(--lasso-surface); }
 .lasso-btn--prompt:hover { background: var(--lasso-accent-soft); border-color: var(--lasso-accent-border); color: var(--lasso-accent-text); }
-/* Status og mærker er neutrale tags (styleguiden: tag 30 px, 6 px radius, 13 px, #F1F1F3). Ingen grøn/rød. */
+/* Status og mærker: tag-mål fra styleguiden (30 px, 6 px radius, 13 px). Aktiv er grøn, konkurs/opløsning ravgul. */
 .lasso-badge { display: inline-flex; align-items: center; height: var(--lasso-tag-h); padding: 0 10px; border-radius: var(--lasso-radius-sm); font-size: var(--lasso-fs-sm); font-weight: 400; background: var(--lasso-tag); color: var(--lasso-text); white-space: nowrap; }
+.lasso-badge--active, .lasso-badge--warning { gap: 6px; font-weight: 500; }
+.lasso-badge--active::before, .lasso-badge--warning::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.lasso-badge--active { background: var(--lasso-positive-soft); color: var(--lasso-positive); }
+.lasso-badge--warning { background: var(--lasso-warning-soft); color: var(--lasso-warning); }
 .lasso-badge--inactive { color: var(--lasso-muted); }
 .lasso-badge--demo { color: var(--lasso-text-3); }
 
@@ -165,8 +181,9 @@
 .lasso-kpi__value { font-size: var(--lasso-fs-lg); line-height: 24px; font-weight: 600; letter-spacing: -0.01em; margin-top: 6px; }
 .lasso-kpi__delta { font-size: var(--lasso-fs-sm); font-weight: 500; margin-top: 4px; }
 .lasso-kpi__year { font-size: var(--lasso-fs-sm); font-weight: 400; color: var(--lasso-muted); }
-/* Udvikling vises med pil i neutral tekst: rød er forbeholdt det, der ikke kan fortrydes, og grøn findes ikke i paletten. */
-.lasso-up, .lasso-down { color: var(--lasso-text-2); }
+/* Udvikling: grøn op, rød ned (brugerens ønske; afviger fra "rød kun til det, der ikke kan fortrydes"). */
+.lasso-up { color: var(--lasso-positive); }
+.lasso-down { color: var(--lasso-negative); }
 
 /* ---------- Graf ---------- */
 .lasso-chart svg { display: block; overflow: visible; max-width: 100%; }
@@ -188,11 +205,11 @@
 .lasso-list__side-sub { font-size: var(--lasso-fs-sm); color: var(--lasso-muted); }
 .lasso-list__more { margin: var(--lasso-space-2) 0 0 30px; }
 .lasso-list__item--ended .lasso-list__name, .lasso-list__item--ended .lasso-list__sub { color: var(--lasso-muted); }
-.lasso-avatar { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--lasso-tag); color: var(--lasso-text-3); display: grid; place-items: center; font-size: 11px; font-weight: 600; }
-.lasso-avatar--company { border-radius: 8px; }
+.lasso-avatar { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--lasso-accent-soft); color: var(--lasso-accent-text); display: grid; place-items: center; font-size: 11px; font-weight: 600; }
+.lasso-avatar--company { border-radius: 8px; background: var(--lasso-tag); color: var(--lasso-text-2); }
 .lasso-link { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; font-weight: 400; text-align: left; color: var(--lasso-text); border-radius: var(--lasso-radius-sm); }
 .lasso-link:hover { color: var(--lasso-accent-text); text-decoration: underline; }
-.lasso-new { font-size: var(--lasso-fs-label); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--lasso-text-3); background: var(--lasso-tag); border-radius: var(--lasso-radius-sm); padding: 1px 6px; margin-left: 8px; vertical-align: 1px; }
+.lasso-new { font-size: var(--lasso-fs-label); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--lasso-accent-text); background: var(--lasso-accent-soft); border-radius: var(--lasso-radius-sm); padding: 1px 6px; margin-left: 8px; vertical-align: 1px; }
 
 /* ---------- Tabel ---------- */
 .lasso-table-wrap { overflow-x: auto; margin: 0 calc(var(--lasso-space-4) * -1); padding: 0 var(--lasso-space-4); }
@@ -228,7 +245,7 @@
 .lasso-field { display: grid; gap: 8px; }
 .lasso-field label, .lasso-field__name { font-size: var(--lasso-fs); font-weight: 600; color: var(--lasso-text); }
 .lasso-input, .lasso-select { height: var(--lasso-field-h); padding: 0 13px; border-radius: var(--lasso-radius); border: 1px solid var(--lasso-border-strong); background: var(--lasso-surface); color: var(--lasso-text); font: inherit; font-size: var(--lasso-fs); width: 100%; min-width: 0; }
-.lasso-input::placeholder { color: var(--lasso-muted); }
+.lasso-input::placeholder { color: var(--lasso-placeholder); }
 .lasso-select { font-weight: 500; appearance: none; padding-right: 34px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24'%3E%3Cpath d='M6 9.5l6 6 6-6' fill='none' stroke='%239AA0A8' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 11px center; cursor: pointer; }
 .lasso-input:focus, .lasso-select:focus { outline: none; border-color: var(--lasso-accent-border); box-shadow: var(--lasso-focus-ring); }
 .lasso-input--invalid { border-color: var(--lasso-accent-border); box-shadow: var(--lasso-focus-ring); }
@@ -301,8 +318,8 @@
 .lasso-tagfield { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: var(--lasso-field-h); padding: 6px 11px 6px 8px; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius); background: var(--lasso-surface); min-width: 0; }
 .lasso-tagfield:focus-within { border-color: var(--lasso-accent-border); box-shadow: var(--lasso-focus-ring); }
 .lasso-tagfield__input, .lasso-tagfield__select { flex: 1 1 120px; min-width: 80px; border: 0; outline: none; background: transparent; font: inherit; font-size: var(--lasso-fs); color: var(--lasso-text); height: 30px; }
-.lasso-tagfield__input::placeholder { color: var(--lasso-muted); }
-.lasso-tagfield__select { color: var(--lasso-muted); cursor: pointer; appearance: none; }
+.lasso-tagfield__input::placeholder { color: var(--lasso-placeholder); }
+.lasso-tagfield__select { color: var(--lasso-placeholder); cursor: pointer; appearance: none; }
 .lasso-filter-add .lasso-select--add { width: min(440px, 100%); color: var(--lasso-text-3); font-weight: 400; }
 .lasso-filters__footer { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding-top: var(--lasso-space-3); border-top: 1px solid var(--lasso-border); }
 .lasso-filters__effect { flex: 1; font-size: var(--lasso-fs-sm); color: var(--lasso-accent-text); }

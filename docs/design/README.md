@@ -81,12 +81,16 @@ Del 2 (nøgletal, grafer, lister, tabel) er ikke designet endnu. Komponenterne e
 | Navne i lister og tabeller, faktaværdier | 14/400 |
 | Roller, datoer, ejerandele, enheder, tal over søjler | 13/400 (tal over søjler 13/500) |
 | Knapper | 38 px, 8 px radius, 13/600 |
-| Status ("Normal", "Ophørt") | Neutralt tag: 30 px, 6 px radius, 13 px, `#F1F1F3` |
-| Udvikling (▲ 6,4 %) | Pil i neutral tekst. Ingen grøn, og rød er forbeholdt det, der ikke kan fortrydes |
-| Søjler | `#E4E4E7`, seneste år `#3F444B`, negative `#C9CDD3` |
+| Status ("Normal", "Ophørt") | Tag-mål: 30 px, 6 px radius, 13 px. Aktiv grøn (`#1F7A4D` på `#E7F5EE`), konkurs/opløsning ravgul (`#93580B` på `#FDF3E1`), ophørt grå |
+| Udvikling (▲ 6,4 %) | Grøn `#1F7A4D` op, rød `#B42318` ned |
+| Søjler | Koral blød `#FFCFB6`, seneste år koral `#FF6B35`, negative `#F4B7B0` |
+| Personer og "Ny" | Koral blød flade `#FFF2EB` med koral tekst `#B2450F`. Selskaber neutrale |
+| Sekundær tekst (datoer, år, labels) | `#6B7280`. `#8A9099` kun til placeholders i felter |
 | Kort | 1 px `#E6E7EB`, 10 px radius, 18 px luft, ingen skygge (skygge kun på popovers) |
 
 Kun størrelserne 11, 13, 14 og 18 px bruges.
+
+Afvigelser fra del 1, besluttet af Jakob 25.09.2026 efter test på mobil: visningerne var svære at læse i gråt. Data må derfor have farve (koral søjler, grøn/rød udvikling, farvet status), selvom del 1 siger "koral aldrig som dekoration" og "rød kun til det, der ikke kan fortrydes". Sekundær tekst er gjort mørkere, fordi `#8A9099` kun har kontrast 3,3:1 mod hvid.
 
 ## Endnu ikke dækket
 
