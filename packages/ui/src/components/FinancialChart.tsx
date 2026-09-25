@@ -39,6 +39,7 @@ export function FinancialChart({ financials, metric, years, error }: { financial
   const zeroY = top + (max / span) * plotH;
   const slot = W / points.length;
   const barW = Math.min(56, slot * 0.6);
+  // Smalle søjler (fx 10 år på mobil) får kun tal på første og sidste, så tallene ikke løber sammen.
 
   return (
     <Card title={chartTitle} className="lasso-chart">
@@ -53,9 +54,11 @@ export function FinancialChart({ financials, metric, years, error }: { financial
             return (
               <g key={p.year}>
                 <rect className={cls} x={x} y={y} width={barW} height={Math.max(h, 1)} rx="4" />
-                <text className="lasso-chart__value" x={x + barW / 2} y={p.value >= 0 ? y - 6 : y + h + 13} textAnchor="middle">
-                  {label(p.value)}
-                </text>
+                {slot >= 46 || i === 0 || isLast ? (
+                  <text className="lasso-chart__value" x={x + barW / 2} y={p.value >= 0 ? y - 6 : y + h + 13} textAnchor="middle">
+                    {label(p.value)}
+                  </text>
+                ) : null}
                 <text className="lasso-chart__label" x={x + barW / 2} y={H - 5} textAnchor="middle">
                   {p.year}
                 </text>
