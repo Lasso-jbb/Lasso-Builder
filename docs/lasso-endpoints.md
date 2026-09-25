@@ -57,24 +57,41 @@ bekræftes mod dokumentationen.
 
 ## Søgning med filtre (Lasso-søgning)
 
+Ligger på **dev3.api.lassox.com** med egen nøgle (`LASSO_SEARCH_API_BASE_URL`, `LASSO_SEARCH_API_TOKEN`, samme header).
+Kortlagt 25.09.2026. Oversættelsen til og fra filterpanelets kriterier: `apps/server/src/lasso/searchFilters.ts`.
+
 ```
-POST /apps/search/query/prompt  { "Prompt": "revisorer i Region Midt med over 10 ansatte" }  -> liste af filtre
-POST /apps/search/lassoid    { "filters": [ …filtrene fra prompt… ], "OrderBy": "<FieldName>" }
+POST /apps/search/query/prompt  { "Prompt": "Revisorer i Region Midtjylland med mindst 10 ansatte" }   (4–20 s)
+-> [ { "filterName": "basic-industry", "fieldName": "industrycode", "operator": "Equal", "values": ["692000"] },
+     { "filterName": "geography-region", "fieldName": "BasicInfo.region", "operator": "Equal", "values": ["4"] },
+     { "filterName": "basic-employees-value", "fieldName": "employees", "operator": "GreaterThan", "values": ["9"] },
+     { "filterName": "ContactConfiguration", "fieldName": "ContactRoles", "operator": "ContactConfiguration", "values": [], "config": {…} } ]
+
+POST /apps/search/lassoid  { "filters": [ … ], "OrderBy": "employees", "limit": 20 }
+-> { "results": ["CVR-1-…", …], "page", "pageSize", "totalPages", "resultsFound", "resultsReturned" }
 ```
 
-Afprøvet mod api.lassox.com 25.09.2026:
+| Felt | filterName / fieldName | Værdier |
+|---|---|---|
+| Region | geography-region / `BasicInfo.region` | 1 Hovedstaden, 2 Sjælland, 3 Syddanmark, 4 Midtjylland, 5 Nordjylland |
+| Kommune | geography-municipality / `BasicInfo.municipalityCode` | Kommunekode, fx 751 Aarhus, 461 Odense |
+| Postnummer | geography-postal-code / `BasicInfo.PostalCode` | "8000" |
+| Branche | basic-industry / `industrycode` | 6-cifret DB07. Grupper udfoldes til alle koder (+ `fieldNames` med bibrancher) |
+| Virksomhedsform | basic-company-type / `BasicInfo.formCode` | A/S 60, ApS 80, IVS 81, I/S 30, K/S 40, P/S 70, enkeltmand 10, fond 90/100, forening 110/115/130/140/150/152 |
+| Status | basic-company-status / `BasicInfo.CompanyStatus` | Aktiv, Ophørt, UNDERKONKURS, UNDERFRIVILLIGLIKVIDATION, UNDERTVANGSOPLØSNING |
+| Ansatte | basic-employees-value / `employees` | tal |
+| Bruttofortjeneste | economy-gross-profit-value / `Financial.Reports[0].GrossProfitLoss.Value` | kroner |
+| Årets resultat | economy-net-profit-value / `Financial.Reports[0].ProfitLoss.Value` | kroner |
+| Egenkapital | economy-equity-value / `Financial.Reports[0].Equity.Value` | kroner |
+| Stiftet | basic-creation-date / `BasicInfo.CreationDate` | ÅÅÅÅ-MM-DD |
 
-- `/apps/search/lassoid` virker. Svar: `{ results: ["CVR-1-10000009", …], page, pageSize, totalPages, resultsFound, resultsReturned }`.
-  Med tomme filtre: alle 2.194.337 virksomheder, 100.000 pr. side (tager et par sekunder).
-- Filtre i et ukendt format ignoreres uden fejl, og det samme gør et ukendt `OrderBy`. `filters` skal være en liste (et objekt giver 500).
-- `/apps/search/prompt` giver 404 på api.lassox.com, uanset sti og metode. Den ligger på **dev3.api.lassox.com** og kræver
-  en anden nøgle. Begge søge-endpoints kaldes derfor mod `LASSO_SEARCH_API_BASE_URL` (standard `https://dev3.api.lassox.com`)
-  med `LASSO_SEARCH_API_TOKEN` i samme header. Når nøglen er sat, logger opstarten svarets form (`[lasso-probe] search/prompt`).
-- 25.09.2026 med dev3-nøglen: `/apps/search/lassoid` og `/{lassoId}` svarer 200 på dev3, men `/apps/search/prompt` giver
-  stadig 404 (også `search/prompt`, `api/apps/search/prompt`, GET og `prompt` med lille p). `POST /apps/search` giver 500.
-  dev3's forside er dokumentationssitet, uden sitemap eller søgeindeks.
-- Felterne i filtrene og `OrderBy` er kolonner i Lassos BigQuery.
-- Parameteren til sidestørrelse er ukendt.
+- Operatorer: `Equal` (flere værdier = en af), `NotEqual`, `GreaterThan`, `LessThan`, `Between`, `Before`, `After`. Kun strenge sammenligninger.
+- `OrderBy`: `employees`, `BasicInfo.name`, `BasicInfo.CreationDate`, `BasicInfo.PostalCode`. Altid stigende; ingen retningsparameter fundet.
+  Økonomiske felter giver 500, ukendte felter 400 ("Cannot order by …, as the field does not exist").
+- `limit` begrænser antallet (sætter også `resultsFound` til limit). Uden limit: op til 20.000 pr. side med filtre, 100.000 uden.
+- Ingen filter for omsætning (prompten "nettoomsætning over 100 mio." giver 500 og "omsætning" oversættes til bruttofortjeneste).
+  Firmanavne giver også 500 i prompten; dem søger vi med `/data/cvr/search`.
+- Filtre i et ukendt format ignoreres uden fejl.
 
 ## Kontaktpersoner
 

@@ -7,7 +7,6 @@ import { companyTemplate, listTemplate, parseViewSpec, searchQuerySchema, toLass
 import { getCurrentUser } from "./auth/user.js";
 import { hasLassoCredentials, isSet, loadConfig, type Config } from "./config.js";
 import { createProvider, type DataProvider } from "./data/index.js";
-import { mapLimit } from "./data/provider.js";
 import { errorMessage, normalizeSpec, resolveSpec } from "./data/resolve.js";
 import { findCompany } from "./data/lookup.js";
 import { summarizeView } from "./data/summary.js";
@@ -275,53 +274,6 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
       }
     }
     if (!verbose) return;
-
-    // Engangskortlægning af Lassos søgning (LOG_LEVEL=debug): filterformat pr. felt, sorteringsfelter og sidestørrelse.
-    if (client.hasSearchCredentials) {
-      const compact = (filters: unknown) =>
-        JSON.stringify(filters, (k, v) => (v === null || (Array.isArray(v) && v.length === 0 && k !== "values") ? undefined : v));
-      const prompts = [
-        "Aktieselskaber", "Iværksætterselskaber", "Interessentskaber", "Kommanditselskaber", "Partnerselskaber",
-        "Enkeltmandsvirksomheder", "Fonde", "Foreninger", "Ophørte virksomheder", "Virksomheder under frivillig likvidation",
-        "Virksomheder under tvangsopløsning", "Virksomheder med nettoomsætning over 100 mio. kr.",
-        "Virksomheder uden for Region Hovedstaden", "Virksomheder stiftet før 1990", "Virksomheder stiftet mellem 2010 og 2015",
-        "Byggevirksomheder (branchegruppe 41, 42 og 43)", "Virksomheder med navnet Lasso", "Virksomheder med under 5 ansatte",
-      ];
-      await mapLimit(prompts, 3, async (p) => {
-        const t = Date.now();
-        try {
-          const f = await client.searchPrompt(p);
-          console.log(`[lasso-kort] prompt "${p}" (${Date.now() - t} ms): ${compact(f)}`);
-        } catch (err) {
-          console.log(`[lasso-kort] prompt "${p}" FEJL: ${errorMessage(err)}`);
-        }
-      });
-      const filters = await client.searchPrompt("Revisorer i Region Midtjylland med mindst 10 ansatte").catch(() => []);
-      const candidates = [
-        "Financial.Reports[0].GrossProfitLoss.Value", "Financial.Reports[0].ProfitLoss.Value", "Financial.Reports[0].Equity.Value",
-        "Financial.Reports[0].Revenue.Value", "BasicInfo.CreationDate", "BasicInfo.PostalCode", "industrycode",
-      ];
-      for (const orderBy of candidates) {
-        const r = await client.trySearchRequest("POST", "apps/search/lassoid", { filters, OrderBy: orderBy, limit: 3 }, 400);
-        console.log(`[lasso-kort] OrderBy "${orderBy}": ${r.status} ${r.body.replace(/\s+/g, " ").slice(0, 200)}`);
-      }
-      // Retning: de tre første efter ansatte, med og uden mulige retningsparametre, og deres antal ansatte.
-      for (const [label, extra] of [
-        ["standard", {}], ["OrderDirection desc", { OrderDirection: "desc" }], ["Descending true", { Descending: true }],
-        ["OrderByDescending true", { OrderByDescending: true }], ["SortOrder desc", { SortOrder: "desc" }], ["Ascending false", { Ascending: false }],
-      ] as const) {
-        try {
-          const r = (await client.searchByFilters(filters, "employees", { limit: 3, ...extra })) as { results?: string[] };
-          const firms = await Promise.all((r.results ?? []).map(async (id) => {
-            const c = await provider.company(id).catch(() => null);
-            return `${c?.name ?? id} (${c?.employees ?? "?"})`;
-          }));
-          console.log(`[lasso-kort] retning ${label}: ${firms.join("; ")}`);
-        } catch (err) {
-          console.log(`[lasso-kort] retning ${label} FEJL: ${errorMessage(err)}`);
-        }
-      }
-    }
 
     for (const [name, fn] of [
       ["search extended=true", () => client.search({ query: config.LASSO_STARTUP_PROBE_QUERY, type: "all", pageSize: 1, extended: true })],

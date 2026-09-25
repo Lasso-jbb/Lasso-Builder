@@ -94,6 +94,10 @@ export interface SearchResultVM {
   rows: CompanyRowVM[];
   /** Kriterier, der ikke kunne anvendes på datakilden endnu. Vises som advarsel. */
   unsupportedCriteria?: string[];
+  /** Lassos filtersøgning i hele CVR eller navnesøgning med filtrering bagefter. */
+  source?: "lasso-search" | "name-search";
+  /** Forbehold til modellen, fx at en sortering kun er anvendt på de første rækker. */
+  note?: string;
 }
 
 export type DataSourceKind = "live" | "demo";

@@ -8,6 +8,7 @@ import {
   cvrFromLassoId,
   DATASET_META_KEY,
   fieldsAsText,
+  formatCriterion,
   listTemplate,
   METRICS,
   OPERATORS_TEXT,
@@ -44,7 +45,7 @@ const INSTRUCTIONS = `Lasso giver adgang til data om danske virksomheder (CVR): 
 Sådan bruges værktøjerne:
 - Én bestemt virksomhed: show_company med CVR-nummer, Lasso-ID eller navn. Et navn slår serveren selv op; brug ikke search_companies først.
 - Økonomi og regnskab ("hvordan går det økonomisk for Novo?"): show_company med sections ["header","noegletal","graf"], chart_metric "omsaetning" og years 10. Kommentér udviklingen i 2–3 sætninger; tallene står i visningen.
-- Lister og målgrupper ("alle revisorer i Region Midt over 10 mio."): search_companies med kriterier.
+- Lister og målgrupper ("alle revisorer i Region Midt med mindst 10 ansatte"): search_companies med brugerens formulering som query. Lasso fortolker den til filtre i hele CVR og viser dem i filterpanelet. Tilføj kun criteria for det, teksten ikke siger, og sort for "top N"/"største".
 - Sammenligninger og oversigter, der ikke passer i de to: render_view med en spec fra komponentkataloget.
 - "Giv mig en URL", "del", "gem": save_view.
 
@@ -82,6 +83,8 @@ function viewResult(spec: ViewSpec, ds: Dataset, extra: { note?: string; link?: 
   };
 }
 
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
 function toolError(message: string): CallToolResult {
   return { isError: true, content: [{ type: "text", text: message }] };
 }
@@ -109,7 +112,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     "search_companies",
     {
       title: "Søg virksomheder",
-      description: `Søg i danske virksomheder (CVR) med fritekst og kriterier, og vis resultatet som en Lasso-tabel med et udfyldt filterpanel, så brugeren kan se og rette, hvad du forstod. Brug til målgrupper, lister og "top N"-spørgsmål, fx "revisorer i Region Midt med over 10 ansatte" eller "top 20 byggefirmaer efter omsætning". Tegn altid med det samme.\n\nFelter:\n${fieldsAsText()}\n${OPERATORS_TEXT}`,
+      description: `Søg i danske virksomheder (CVR) og vis resultatet som en Lasso-tabel med et udfyldt filterpanel, så brugeren kan se og rette filtrene. Brug til målgrupper, lister og "top N"-spørgsmål. Send brugerens formulering som query, fx "revisorer i Region Midtjylland med mindst 10 ansatte": Lasso fortolker den til filtre og søger i hele CVR. Et virksomhedsnavn i query søges som navn. Brug criteria til præciseringer og sort til "største"/"top N". Tegn altid med det samme.\n\nFelter:\n${fieldsAsText()}\n${OPERATORS_TEXT}`,
       inputSchema: searchQuerySchema.extend({
         title: z.string().max(120).optional().describe("Overskrift på listen, fx 'Revisionskunder · Region Midt'."),
         columns: z.array(z.enum(TABLE_COLUMNS)).min(1).max(8).optional().describe("Kolonner. Standard: navn, by, branche, ansatte, bruttofortjeneste, udvikling."),
@@ -120,9 +123,19 @@ export function createMcpServer(ctx: McpContext): McpServer {
     async ({ title, columns, ...search }): Promise<CallToolResult> => {
       const invalid = criteriaError(search.criteria);
       if (invalid) return invalid;
-      const spec = listTemplate(search, { title, columns });
+      // Lasso fortolker friteksten til filtre, som vises i filterpanelet. Et navn kan ikke fortolkes
+      // og søges som navn. Kriterier, modellen selv har sat, vinder over Lassos for samme felt.
+      let note: string | undefined;
+      const text = search.query.trim();
+      const interpreted = text && provider.interpret ? await provider.interpret(text) : null;
+      if (interpreted) {
+        const given = new Set(search.criteria.map((c) => c.field));
+        search = { ...search, query: "", criteria: [...search.criteria, ...interpreted.criteria.filter((c) => !given.has(c.field))] };
+        note = `Lasso fortolkede "${text}" som: ${interpreted.criteria.map(formatCriterion).join("; ")}.${interpreted.unknown.length ? ` Ikke vist i filterpanelet: ${interpreted.unknown.join("; ")}.` : ""}`;
+      }
+      const spec = listTemplate(search, { title: title ?? (interpreted ? capitalize(text) : undefined), columns });
       const ds = await resolveSpec(spec, provider);
-      return viewResult(spec, ds);
+      return viewResult(spec, ds, { note });
     },
   );
 

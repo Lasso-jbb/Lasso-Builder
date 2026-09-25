@@ -1,6 +1,7 @@
 import type {
   CompanyRowVM,
   CompanyVM,
+  Criterion,
   DataSourceKind,
   FinancialsVM,
   OwnershipVM,
@@ -17,6 +18,8 @@ import type {
 export interface DataProvider {
   readonly kind: DataSourceKind;
   search(query: SearchQuery): Promise<SearchResultVM>;
+  /** Lassos fortolkning af fritekst som kriterier (prompt-søgningen). null, hvis den ikke kan fortolkes. */
+  interpret?(text: string): Promise<{ criteria: Criterion[]; unknown: string[] } | null>;
   /** Hurtigt navneopslag uden regnskabsberigelse (til show_company med et navn). */
   findCompanies(name: string, limit: number): Promise<CompanyRowVM[]>;
   company(lassoId: string): Promise<CompanyVM>;

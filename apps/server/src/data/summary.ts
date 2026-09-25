@@ -81,7 +81,8 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
       const r = ds.searches[searchKey(c.search)];
       if (r) {
         const top = r.rows.slice(0, 5).map((x) => `${x.name}${x.city ? ` (${x.city})` : ""} [${x.lassoId}]`);
-        lines.push(`Søgning gav ${r.total ?? r.rows.length} virksomheder; viser ${r.rows.length}. Først: ${top.join("; ") || "ingen"}.`);
+        lines.push(`Søgning gav ${r.total ?? r.rows.length} virksomheder${r.source === "lasso-search" ? " (Lassos søgning i hele CVR)" : ""}; viser ${r.rows.length}. Først: ${top.join("; ") || "ingen"}.`);
+        if (r.note) lines.push(r.note);
         if (c.search.criteria.length) lines.push(`Kriterier: ${c.search.criteria.map(formatCriterion).join("; ")}.`);
         if (r.unsupportedCriteria?.length) lines.push(`Kunne ikke anvendes endnu: ${r.unsupportedCriteria.join("; ")}.`);
       }
