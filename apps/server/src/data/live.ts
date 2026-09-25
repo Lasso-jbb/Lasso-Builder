@@ -1,6 +1,6 @@
 import { formatCriterion, searchKey, type CompanyRowVM, type Criterion, type FinancialsVM, type SearchQuery, type SearchResultVM } from "@lasso/spec";
 import type { Config } from "../config.js";
-import { adaptCompany, adaptFinancials, adaptOwnership, adaptPeople, adaptSearch } from "../lasso/adapters.js";
+import { adaptBeneficialOwnership, adaptCompany, adaptFinancials, adaptNews, adaptOwnership, adaptPeople, adaptSearch, adaptTextSections, adaptTimeline } from "../lasso/adapters.js";
 import type { LassoClient } from "../lasso/client.js";
 import { criteriaToFilters, filtersToCriteria, SERVER_SORT, type LassoFilter } from "../lasso/searchFilters.js";
 import { applyCriteria, needsFinancials, sortRows } from "./criteria-eval.js";
@@ -164,5 +164,22 @@ export class LiveProvider implements DataProvider {
 
   async ownership(lassoId: string) {
     return adaptOwnership(lassoId, await this.client.company(lassoId));
+  }
+
+  async beneficialOwnership(lassoId: string) {
+    return adaptBeneficialOwnership(lassoId, await this.client.ownersBeneficial(lassoId));
+  }
+
+  async textSections(lassoId: string) {
+    return adaptTextSections(lassoId, await this.client.company(lassoId));
+  }
+
+  async timeline(lassoId: string) {
+    const [co, financials] = await Promise.all([this.client.company(lassoId), this.financials(lassoId)]);
+    return adaptTimeline(lassoId, co, adaptPeople(co), financials.years);
+  }
+
+  async news(lassoId: string, limit: number) {
+    return adaptNews(lassoId, await this.client.news(lassoId), limit);
   }
 }

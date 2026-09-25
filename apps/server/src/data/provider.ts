@@ -1,13 +1,17 @@
 import type {
+  BeneficialOwnershipVM,
   CompanyRowVM,
   CompanyVM,
   Criterion,
   DataSourceKind,
   FinancialsVM,
+  NewsVM,
   OwnershipVM,
   PersonRowVM,
   SearchQuery,
   SearchResultVM,
+  TextSectionsVM,
+  TimelineVM,
 } from "@lasso/spec";
 
 /**
@@ -26,6 +30,10 @@ export interface DataProvider {
   financials(lassoId: string): Promise<FinancialsVM>;
   people(lassoId: string): Promise<PersonRowVM[]>;
   ownership(lassoId: string): Promise<OwnershipVM>;
+  beneficialOwnership(lassoId: string): Promise<BeneficialOwnershipVM>;
+  textSections(lassoId: string): Promise<TextSectionsVM>;
+  timeline(lassoId: string): Promise<TimelineVM>;
+  news(lassoId: string, limit: number): Promise<NewsVM>;
 }
 
 export class NotFoundError extends Error {

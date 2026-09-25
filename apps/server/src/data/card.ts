@@ -143,8 +143,8 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     card.row("Web", co.website);
   }
 
-  const people = types.has("LassoPersonList") ? (ds.people[lassoId] ?? []).filter((p) => !p.to) : [];
-  const owners = types.has("LassoOwnerList") ? ds.ownership[lassoId] : undefined;
+  const people = types.has("LassoPersonList") || types.has("LassoRelations") ? (ds.people[lassoId] ?? []).filter((p) => !p.to) : [];
+  const owners = types.has("LassoOwnerList") || types.has("LassoRelations") ? ds.ownership[lassoId] : undefined;
   if (people.length || owners) {
     card.section(owners ? "Ledelse og ejere" : "Ledelse");
     const ceo = people.find((p) => /direktør/i.test(p.role));
@@ -178,7 +178,63 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
   for (const c of spec.components) {
     if (c.type === "LassoBarChart" && c.company === lassoId && f) chart(card, f, c.metric, c.years);
   }
+
+  if (types.has("LassoBeneficialOwners")) {
+    const b = ds.beneficialOwnership[lassoId];
+    if (b) {
+      card.section("Reelle ejere");
+      if (b.owners.length === 0 && !b.gaps?.length) card.text("Ingen registreret reel ejer");
+      for (const o of b.owners.slice(0, 3)) {
+        card.row("Ejer", o.name);
+        card.row("", o.share ? `Reelt ${o.share}` : undefined);
+      }
+      for (const g of b.gaps ?? []) card.text(`Ingen reel ejer for ${g.share ?? "en del"}`);
+    }
+  }
+
+  if (types.has("LassoTextSections")) {
+    const t = ds.textSections[lassoId];
+    if (t?.sections.length) {
+      for (const s of t.sections) {
+        card.section(s.heading);
+        card.text(s.body);
+      }
+    }
+  }
+
+  if (types.has("LassoTimeline")) {
+    const tl = ds.timeline[lassoId];
+    if (tl?.events.length) {
+      card.section("Historik");
+      for (const e of tl.events.slice(0, 6)) {
+        card.text(e.title);
+        card.text(`${formatDate(e.date)}, ${e.category}`);
+      }
+    }
+  }
+
+  if (types.has("LassoNews")) {
+    const n = ds.news[lassoId];
+    if (n?.items.length) {
+      card.section("Nyheder");
+      for (const item of n.items.slice(0, 3)) {
+        card.text(item.headline);
+        card.text(item.source);
+      }
+    }
+  }
+
   return card.empty ? null : card.toString();
+}
+
+function summaryCard(spec: ViewSpec): string | null {
+  const s = spec.components.find((c) => c.type === "LassoSummary");
+  if (!s || s.type !== "LassoSummary") return null;
+  const card = new Card();
+  card.section(s.title ?? "Resumé");
+  card.text(s.text);
+  card.text(`Kilde: ${s.source}${s.updated ? `, opdateret ${formatDate(s.updated)}` : ""}`);
+  return card.toString();
 }
 
 /** Nøgletal, en søgerække har (egenkapital hentes ikke til lister). */
@@ -211,6 +267,7 @@ export function textCard(spec: ViewSpec, ds: Dataset): string | null {
   const cards = [
     ...(companies.length === 1 ? [companyCard(spec, ds, companies[0]!)] : []),
     listCard(spec, ds),
+    summaryCard(spec),
   ].filter((c): c is string => Boolean(c));
   return cards.length ? cards.join("\n") : null;
 }

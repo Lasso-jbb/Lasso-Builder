@@ -63,6 +63,42 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     description: "1–4 knapper, der sender et opfølgende spørgsmål til dig (modellen) som brugerens næste besked. Brug til analysespørgsmål som 'Hvem er nye i bestyrelsen?'.",
     props: "prompts[] { label, prompt }",
   },
+  {
+    type: "LassoRelations",
+    title: "Rolleliste, kompakt",
+    description: "Kompakt overblik til en skinne eller smal kolonne: direktion, bestyrelse (formand i parentes) og de tre største legale ejere. Brug i stedet for LassoPersonList/LassoOwnerList, når pladsen er smal.",
+    props: "company, title?",
+  },
+  {
+    type: "LassoBeneficialOwners",
+    title: "Reelle ejere",
+    description: "Personerne bag virksomheden med deres indirekte ejerandel og ejerkæden gennem mellemliggende selskaber. Vis kun, når spørgsmålet handler om, hvem der reelt ejer virksomheden, ikke de legale ejere (brug LassoOwnerList til dem).",
+    props: "company",
+  },
+  {
+    type: "LassoTextSections",
+    title: "Tekstsektioner",
+    description: "Branche, formål og tegningsregler fra CVR-stamdata som korte tekstafsnit.",
+    props: "company, title?",
+  },
+  {
+    type: "LassoSummary",
+    title: "Resumé",
+    description: "Et resumé skrevet af dig (modellen) ud fra virksomhedens tal og fakta, vist som en almindelig sektion med kildelinje. Du skriver selv teksten i 'text'; komponenten henter ikke data.",
+    props: "text, title?, source?, updated?",
+  },
+  {
+    type: "LassoTimeline",
+    title: "Tidslinje",
+    description: "Historik over tid: stiftelse, ledelsesskift og offentliggjorte regnskaber, nyeste øverst.",
+    props: "company, title?",
+  },
+  {
+    type: "LassoNews",
+    title: "Nyheder",
+    description: "Nyheder og omtale af virksomheden med kilde, tidspunkt og uddrag.",
+    props: "company, limit? (1–10, standard 5)",
+  },
 ];
 
 export function catalogAsText(): string {

@@ -77,6 +77,23 @@ test("parseViewSpec afviser ukendte komponenter", () => {
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "Ukendt" }] }));
 });
 
+test("parseViewSpec accepterer de nye Paper-komponenter", () => {
+  const spec = parseViewSpec({
+    title: "Test",
+    components: [
+      { type: "LassoRelations", company: "CVR-1-1" },
+      { type: "LassoBeneficialOwners", company: "CVR-1-1" },
+      { type: "LassoTextSections", company: "CVR-1-1" },
+      { type: "LassoSummary", text: "Et resumé." },
+      { type: "LassoTimeline", company: "CVR-1-1" },
+      { type: "LassoNews", company: "CVR-1-1" },
+    ],
+  });
+  assert.equal(spec.components.length, 6);
+  const summary = spec.components.find((c) => c.type === "LassoSummary");
+  assert.equal(summary && summary.type === "LassoSummary" ? summary.source : undefined, "Lasso");
+});
+
 test("amountScale giver én enhed for en række beløb", () => {
   const scale = amountScale([117_142_000_000, 250_276_000_000]);
   assert.equal(scale.label, "mia. kr.");

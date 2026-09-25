@@ -199,6 +199,14 @@ export class LassoClient {
   observations(lassoId: string) {
     return this.get(`modules/observations/${enc(lassoId)}`);
   }
+  /** Ubekræftet form; se docs/lasso-endpoints.md under "Ubekræftet". */
+  ownersBeneficial(lassoId: string) {
+    return this.get(`${enc(lassoId)}/owners/beneficial`);
+  }
+  /** Nyheder (docs.lassox.com/data-apis/paqle/). */
+  news(lassoId: string, cToken?: string) {
+    return this.get(`data/paqle/${enc(lassoId)}/news`, { cToken });
+  }
   contacts(lassoId: string, p: ContactParams = { contacts: true }) {
     return this.get(`apps/contacts/${enc(lassoId)}/data`, { ...p });
   }

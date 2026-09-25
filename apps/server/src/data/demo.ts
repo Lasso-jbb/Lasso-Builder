@@ -1,12 +1,17 @@
 import {
+  formatAmount,
   searchKey,
+  type BeneficialOwnershipVM,
   type CompanyRowVM,
   type CompanyVM,
   type FinancialsVM,
+  type NewsVM,
   type OwnershipVM,
   type PersonRowVM,
   type SearchQuery,
   type SearchResultVM,
+  type TextSectionsVM,
+  type TimelineVM,
 } from "@lasso/spec";
 import { applyCriteria, sortRows } from "./criteria-eval.js";
 import { NotFoundError, type DataProvider } from "./provider.js";
@@ -57,6 +62,70 @@ const RAW: Omit<DemoCompany, "lassoId" | "statusKind">[] = [
   { cvr: "99000012", name: "Eksempel Ejendomme ApS", status: "Aktiv", form: "ApS", industryCode: "682040", industryText: "Udlejning af erhvervsejendomme", address: { street: "Murervej 5", zip: "8700", city: "Horsens", municipality: "Horsens", region: "Midtjylland" }, founded: "2013-10-01", employees: 3, base: 7_500_000, growth: 0.06,
     people: [P("Vera Eksempel", "Direktør", "2013-10-01"), P("Bo Eksempel", "Bestyrelsesmedlem", "2013-10-01")], owners: [{ name: "Eksempel Holding ApS", share: "100 %", kind: "company", lassoId: "CVR-1-99000010" }], auditor: "Eksempel Revision Midt ApS" },
 ];
+
+/** Reelle ejere til demo: genbruger historien fra ownership (Eksempel Holding ApS -> Bo Eksempel). */
+function beneficialOwnersFor(c: DemoCompany): BeneficialOwnershipVM {
+  if (c.status === "Ophørt") {
+    return { lassoId: c.lassoId, owners: [], gaps: [{ share: "50–66,66 %", reason: "CVR har ikke registreret en reel ejer for denne andel (eksempel)." }] };
+  }
+  const owners = c.owners.flatMap((o) => {
+    if (o.kind === "company") {
+      const holder = COMPANIES.find((x) => x.lassoId === o.lassoId);
+      const person = holder?.owners.find((p) => p.kind === "person");
+      if (!person) return [];
+      return [{ name: person.name, lassoId: person.lassoId, chain: `via ${o.name}, ${o.share ?? "100 %"}`, share: o.share }];
+    }
+    return [{ name: o.name, lassoId: o.lassoId, share: o.share }];
+  });
+  return { lassoId: c.lassoId, owners };
+}
+
+function textSectionsFor(c: DemoCompany): TextSectionsVM {
+  return {
+    lassoId: c.lassoId,
+    title: "Virksomhedsprofil",
+    sections: [
+      { heading: "Branche", body: c.industryText ?? "Ikke oplyst", note: c.industryCode ? `NACE ${c.industryCode}` : undefined },
+      {
+        heading: "Formål",
+        body: `Selskabets formål er at drive virksomhed inden for ${(c.industryText ?? "sin branche").toLowerCase()} og hermed beslægtet virksomhed (eksempeltekst).`,
+      },
+      { heading: "Tegningsregler", body: "Selskabet tegnes af en direktør alene eller af den samlede bestyrelse (eksempeltekst)." },
+    ],
+  };
+}
+
+function timelineFor(c: DemoCompany): TimelineVM {
+  const events: TimelineVM["events"] = [];
+  if (c.founded) events.push({ date: c.founded, title: "Virksomheden stiftet", detail: c.name, category: "Stamdata" });
+  for (const p of c.people) {
+    if (p.from) events.push({ date: p.from, title: `${p.name} er indtrådt`, detail: p.role, category: "Ledelse" });
+    if (p.to) events.push({ date: p.to, title: `${p.name} er fratrådt`, detail: p.role, category: "Ledelse" });
+  }
+  for (const y of financialsFor(c).years) {
+    const bits = [y.grossProfit != null ? `Bruttofortjeneste ${formatAmount(y.grossProfit)}` : null, y.profit != null ? `resultat ${formatAmount(y.profit)}` : null].filter(
+      (x): x is string => Boolean(x),
+    );
+    events.push({ date: `${y.year}-04-15`, title: `Årsrapport ${y.year} offentliggjort`, detail: bits.join(", ") || undefined, category: "Regnskab" });
+  }
+  events.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  return { lassoId: c.lassoId, events };
+}
+
+function newsFor(c: DemoCompany, limit: number): NewsVM {
+  const lastYear = YEARS.at(-1);
+  const items: NewsVM["items"] = [
+    { source: "Lasso News", time: `${lastYear}-04-15`, headline: `Ny årsrapport fra ${c.name} (eksempel)`, excerpt: `Skrevet ud fra regnskabet for ${lastYear}.` },
+    {
+      source: "Prøve Medier",
+      time: `${lastYear}-02-02`,
+      headline: `${c.name} i vækst (eksempel)`,
+      excerpt: `Eksempelartikel om udviklingen i ${(c.industryText ?? "branchen").toLowerCase()}.`,
+    },
+    { source: "Eksempel Erhverv", time: "2024-11-10", headline: `${c.name} nævnt i oversigt (eksempel)`, excerpt: "Nævnt i en artikel om branchen, ikke hovedhistorie.", language: "engelsk" },
+  ].slice(0, limit);
+  return { lassoId: c.lassoId, items };
+}
 
 function statusKindOf(s: string | undefined): CompanyVM["statusKind"] {
   if (!s) return undefined;
@@ -170,5 +239,21 @@ export class DemoProvider implements DataProvider {
       owners: c.owners,
       auditor: c.auditor === "Ingen" ? undefined : { name: c.auditor, lassoId: auditor?.lassoId, from: "2019-01-01" },
     };
+  }
+
+  async beneficialOwnership(lassoId: string) {
+    return beneficialOwnersFor(get(lassoId));
+  }
+
+  async textSections(lassoId: string) {
+    return textSectionsFor(get(lassoId));
+  }
+
+  async timeline(lassoId: string) {
+    return timelineFor(get(lassoId));
+  }
+
+  async news(lassoId: string, limit: number) {
+    return newsFor(get(lassoId), limit);
   }
 }

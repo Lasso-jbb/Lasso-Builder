@@ -33,6 +33,8 @@ export interface CompanyVM {
 export interface FinancialYear {
   year: number;
   periodEnd?: string;
+  /** Hvornår regnskabet blev offentliggjort (bruges i tidslinjen). Ikke altid oplyst. */
+  publicationTime?: string;
   revenue?: number | null;
   grossProfit?: number | null;
   profit?: number | null;
@@ -69,6 +71,76 @@ export interface OwnershipVM {
   lassoId: string;
   owners: OwnerVM[];
   auditor?: { name: string; lassoId?: string; from?: string };
+}
+
+/** Reelle ejere (katalog 11, "Reelle ejere"). Endpoint ubekræftet, se docs/lasso-endpoints.md. */
+export interface BeneficialOwnerVM {
+  name: string;
+  lassoId?: string;
+  /** Kæden fra virksomheden til personen, fx "via JEBEMA Holding ApS, 100 %" eller "via 2 led, Eggert Holding ApS". Ingen kæde, hvis ejerskabet er direkte. */
+  chain?: string;
+  /** Den beregnede indirekte andel, fx "20–24,99 %". */
+  share?: string;
+}
+
+/** Et led i ejerkæden, som CVR ikke kan følge til en reel person (fx et fondsejet led). */
+export interface BeneficialOwnerGapVM {
+  /** Den udækkede andel, fx "25–33 %". */
+  share?: string;
+  reason?: string;
+}
+
+export interface BeneficialOwnershipVM {
+  lassoId: string;
+  owners: BeneficialOwnerVM[];
+  gaps?: BeneficialOwnerGapVM[];
+}
+
+/** Tekstsektioner fra CVR-stamdata (katalog 12, "Tekstsektioner"). Felter ud over branche er ubekræftede. */
+export interface TextSectionItem {
+  heading: string;
+  body: string;
+  /** Ekstra linje under brødteksten i muted, fx "NACE 631000". */
+  note?: string;
+}
+
+export interface TextSectionsVM {
+  lassoId: string;
+  title?: string;
+  sections: TextSectionItem[];
+}
+
+/** Begivenhed i virksomhedens historik (katalog 12, "Tidslinje"). */
+export interface TimelineEventVM {
+  date: string;
+  title: string;
+  detail?: string;
+  /** Sat sammen med "to" ved en ændring, der vises som "fra → til". */
+  from?: string;
+  to?: string;
+  category: string;
+}
+
+export interface TimelineVM {
+  lassoId: string;
+  events: TimelineEventVM[];
+}
+
+/** Én nyhed (katalog 12, "Nyheder"). Kilde: docs.lassox.com/data-apis/paqle/. */
+export interface NewsItemVM {
+  source: string;
+  url?: string;
+  /** ISO-tidsstempel; komponenten viser relativ tid under 7 dage, ellers dato. */
+  time?: string;
+  headline: string;
+  excerpt?: string;
+  /** Sprogkode eller -navn, når artiklen ikke er dansk, fx "engelsk". */
+  language?: string;
+}
+
+export interface NewsVM {
+  lassoId: string;
+  items: NewsItemVM[];
 }
 
 export interface CompanyRowVM {
@@ -110,6 +182,10 @@ export interface Dataset {
   financials: Record<string, FinancialsVM>;
   people: Record<string, PersonRowVM[]>;
   ownership: Record<string, OwnershipVM>;
+  beneficialOwnership: Record<string, BeneficialOwnershipVM>;
+  textSections: Record<string, TextSectionsVM>;
+  timeline: Record<string, TimelineVM>;
+  news: Record<string, NewsVM>;
   searches: Record<string, SearchResultVM>;
   /** Fejl pr. nøgle, fx "company:CVR-1-12345678" -> "Ingen adgang". */
   errors: Record<string, string>;
@@ -123,6 +199,10 @@ export function emptyDataset(source: DataSourceKind): Dataset {
     financials: {},
     people: {},
     ownership: {},
+    beneficialOwnership: {},
+    textSections: {},
+    timeline: {},
+    news: {},
     searches: {},
     errors: {},
   };
