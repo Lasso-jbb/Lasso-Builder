@@ -8,6 +8,7 @@ export { CompanyTable } from "./components/CompanyTable.js";
 export { Comparison } from "./components/Comparison.js";
 export { Actions } from "./components/Actions.js";
 export { FilterPanel, parseAmount, parseDate } from "./components/FilterPanel.js";
-export { StateBox, Skeleton, Sparkline, Badge, StatusBadge } from "./primitives.js";
+export { StateBox, Skeleton, Sparkline, Badge, StatusBadge, DataState, Missing, SourceLine, Section } from "./primitives.js";
+export type { DataStateKind, DataStateProps } from "./primitives.js";
 export { specToCsv } from "./csv.js";
 export type { ActionResult, HostCapabilities, LassoViewProps, ViewAction, Visibility } from "./types.js";

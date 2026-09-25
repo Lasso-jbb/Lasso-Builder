@@ -24,7 +24,7 @@ test("toLassoId normaliserer CVR-numre", () => {
 test("formatAmount bruger danske enheder", () => {
   assert.equal(formatAmount(12_500_000), "12,5 mio. kr.");
   assert.equal(formatAmount(950_000), "950 t. kr.");
-  assert.equal(formatAmount(null), "–");
+  assert.equal(formatAmount(null), "—");
 });
 
 test("formatCriterion bruger én fælles operatorliste og skelner gt og gte", () => {

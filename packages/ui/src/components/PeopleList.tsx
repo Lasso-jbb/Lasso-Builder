@@ -1,47 +1,77 @@
 import { useState } from "react";
 import { formatDate, type PersonRowVM } from "@lasso/spec";
-import { Card, StateBox, initials, stateForError } from "../primitives.js";
+import { DataState, Section, stateForError } from "../primitives.js";
 
-const TWO_YEARS_MS = 2 * 365 * 24 * 3600 * 1000;
-/** Store bestyrelser (fx 18 personer) foldes sammen efter de første. */
+/** Store bestyrelser (fx 18 personer) foldes sammen efter de første (regel 9). */
 const COLLAPSED_ROWS = 8;
 
+/** "Bestyrelsesformand" -> rolle "Bestyrelse" + "(formand)" som tekst i parentes. */
+function splitChair(role: string): { role: string; chair: boolean } {
+  if (/formand/i.test(role) && !/næstformand/i.test(role)) return { role: role.replace(/sformand|formand/i, "").trim() || "Bestyrelse", chair: true };
+  return { role, chair: false };
+}
+
+/**
+ * Personliste, udfoldet (katalog 11). Navn 14/500 står alene, rolle 13 grå under,
+ * periode i fast kolonne til højre. Fratrådte kun under "Alle", dæmpet med ordet
+ * "fratrådt" i rolleteksten. Formand som tekst i parentes. Ingen initial-cirkler.
+ */
 export function PeopleList({ people, show, title, error }: { people?: PersonRowVM[]; show: "current" | "all"; title?: string; error?: string }) {
-  const heading = title ?? "Ledelse og bestyrelse";
+  const heading = title ?? "Ledelse";
+  const [mode, setMode] = useState<"current" | "all">(show);
   const [expanded, setExpanded] = useState(false);
-  if (!people) return <Card title={heading}>{error ? <StateBox kind={stateForError(error)} message={error} /> : <StateBox kind="loading" />}</Card>;
-  const rows = (show === "all" ? people : people.filter((p) => !p.to)).slice().sort((a, b) => Number(Boolean(a.to)) - Number(Boolean(b.to)));
-  if (rows.length === 0) return <Card title={heading}><StateBox kind="empty" message="Ingen registrerede personer." /></Card>;
-  const now = Date.now();
+  if (!people) {
+    return (
+      <Section title={heading} span="half">
+        {error ? <DataState state={stateForError(error) === "noaccess" ? "empty" : "error"} reason={error} /> : <DataState state="loading" lines={4} height={240} />}
+      </Section>
+    );
+  }
+  const hasEnded = people.some((p) => p.to);
+  const rows = (mode === "all" ? people : people.filter((p) => !p.to)).slice().sort((a, b) => Number(Boolean(a.to)) - Number(Boolean(b.to)));
+  const toggle = hasEnded ? (
+    <div className="lasso-segment" role="tablist" aria-label="Vis personer">
+      {(["current", "all"] as const).map((m) => (
+        <button key={m} type="button" role="tab" aria-selected={mode === m} className={`lasso-segment__item ${mode === m ? "is-on" : ""}`} onClick={() => setMode(m)}>
+          {m === "current" ? "Nuværende" : "Alle"}
+        </button>
+      ))}
+    </div>
+  ) : null;
+  if (rows.length === 0) {
+    return (
+      <Section title={heading} action={toggle} span="half">
+        <DataState state="empty" reason="Der er ingen registrerede personer i ledelsen." />
+      </Section>
+    );
+  }
   const foldable = rows.length > COLLAPSED_ROWS + 2;
   const visible = foldable && !expanded ? rows.slice(0, COLLAPSED_ROWS) : rows;
   return (
-    <Card title={heading}>
-      <ul className="lasso-list">
+    <Section title={heading} action={toggle} span="half">
+      <ul className="lasso-rows">
         {visible.map((p, i) => {
-          const isNew = !p.to && p.from !== undefined && now - new Date(p.from).getTime() < TWO_YEARS_MS;
+          const { role, chair } = splitChair(p.role);
+          const period = p.to ? `${p.from ? p.from.slice(0, 4) : ""} – ${p.to.slice(0, 4)}`.trim() : p.from ? `siden ${formatDate(p.from)}` : "";
           return (
-            <li key={`${p.name}-${p.role}-${i}`} className={`lasso-list__item ${p.to ? "lasso-list__item--ended" : ""}`}>
-              <span className="lasso-avatar" aria-hidden="true">{initials(p.name)}</span>
-              <div className="lasso-list__main">
-                <div className="lasso-list__name">
+            <li key={`${p.name}-${p.role}-${i}`} className={`lasso-row ${p.to ? "lasso-row--ended" : ""}`}>
+              <div className="lasso-row__main">
+                <div className="lasso-row__name">
                   {p.name}
-                  {isNew ? <span className="lasso-new">Ny</span> : null}
+                  {chair ? <span className="lasso-row__note">(formand)</span> : null}
                 </div>
-                <div className="lasso-list__sub">{p.role}</div>
+                <div className="lasso-row__sub">{p.to ? `${role}, fratrådt` : role}</div>
               </div>
-              <div className="lasso-list__side">
-                {p.to ? `Fratrådt ${formatDate(p.to)}` : p.from ? `Tiltrådt ${formatDate(p.from)}` : ""}
-              </div>
+              <div className="lasso-row__side">{period}</div>
             </li>
           );
         })}
       </ul>
       {foldable ? (
-        <button type="button" className="lasso-btn lasso-btn--ghost lasso-btn--sm lasso-list__more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-          {expanded ? "Vis færre" : `Vis alle ${rows.length}`}
+        <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+          {expanded ? "Vis færre" : `Se alle ${rows.length}`}
         </button>
       ) : null}
-    </Card>
+    </Section>
   );
 }

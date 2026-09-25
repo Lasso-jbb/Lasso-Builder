@@ -96,12 +96,12 @@ export function LassoView(props: LassoViewProps) {
         {spec.criteria.length > 0 || (host.refine && spec.kind === "list") ? (
           <FilterPanel criteria={spec.criteria} editable={Boolean(host.refine)} onApply={(criteria) => act({ kind: "set-criteria", criteria })} />
         ) : null}
-        {unsupported.length > 0 ? <div className="lasso-notice">Kunne ikke anvendes endnu: {unsupported.join(" · ")}</div> : null}
+        {unsupported.length > 0 ? <div className="lasso-notice">Kunne ikke anvendes endnu: {unsupported.join(", ")}</div> : null}
 
         {loading && !dataset ? (
-          <div className="lasso-card"><Skeleton lines={4} /></div>
+          <Skeleton lines={4} height={240} />
         ) : (
-          <main className={`lasso-content lasso-content--${spec.layout}`}>
+          <main className={`lasso-content lasso-content--grid-4 lasso-content--${spec.layout}`}>
             {spec.components.map((c, i) => renderComponent(c, dataset, props, act, i))}
           </main>
         )}
@@ -130,19 +130,9 @@ export function LassoView(props: LassoViewProps) {
         ) : null}
 
         <footer className="lasso-actionbar">
-          {host.save ? (
-            <button className="lasso-btn lasso-btn--primary" onClick={() => setSaving(true)} disabled={saving}>
-              {shareUrl ? "Gem igen" : "Gem"}
-            </button>
-          ) : null}
-          {shareUrl ? (
-            <button className="lasso-btn" onClick={() => void copy(shareUrl)}>
-              Del link
-            </button>
-          ) : null}
-          {host.export && csv ? (
-            <button className="lasso-btn" onClick={() => act({ kind: "export", filename: `${spec.title.replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase()}.csv`, csv })}>
-              Eksportér<span className="lasso-btn__label--optional"> CSV</span>
+          {host.fullscreen ? (
+            <button className="lasso-btn lasso-btn--ghost" onClick={() => act({ kind: "fullscreen" })} aria-label="Fuld skærm">
+              ⤢<span className="lasso-btn__label--optional"> Fuld skærm</span>
             </button>
           ) : null}
           {host.refresh ? (
@@ -152,9 +142,20 @@ export function LassoView(props: LassoViewProps) {
           ) : null}
           <span className="lasso-actionbar__spacer" />
           {notice ? <span className="lasso-small lasso-muted" role="status">{notice}</span> : null}
-          {host.fullscreen ? (
-            <button className="lasso-btn lasso-btn--ghost" onClick={() => act({ kind: "fullscreen" })} aria-label="Fuld skærm">
-              ⤢<span className="lasso-btn__label--optional"> Fuld skærm</span>
+          {host.export && csv ? (
+            <button className="lasso-btn" onClick={() => act({ kind: "export", filename: `${spec.title.replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase()}.csv`, csv })}>
+              Eksportér<span className="lasso-btn__label--optional"> CSV</span>
+            </button>
+          ) : null}
+          {shareUrl ? (
+            <button className="lasso-btn" onClick={() => void copy(shareUrl)}>
+              Del link
+            </button>
+          ) : null}
+          {/* Én primær knap pr. område, yderst til højre (katalog 01) */}
+          {host.save ? (
+            <button className="lasso-btn lasso-btn--primary" onClick={() => setSaving(true)} disabled={saving}>
+              {shareUrl ? "Gem igen" : "Gem"}
             </button>
           ) : null}
         </footer>

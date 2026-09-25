@@ -1,98 +1,62 @@
-# Lassos designsprog (fra Paper)
+# Lassos designkatalog
 
-Kilde: [Filterfelter i Paper](https://app.paper.design/file/01M394PD9M8HG31MG333AX2NHM/p-1-0/YL-0), eksporteret 24. sep. 2026.
-Værdierne her er implementeret som CSS-variabler i `packages/ui/src/styles.css`. Ret dem dér, ikke i komponenterne.
+Facit er Paper-filen **"Lasso Portal - Designguide"** (id `01M1GZGSTYBM43XSSD4JHQ0ADG`), siden **Designkatalog**, 41 artboards. Er der modstrid mellem kataloget og koden, vinder kataloget. Alt tidligere design er udgået.
 
-## Tokens
+Tokens står i `packages/ui/src/styles.css`. Komponenterne bruger kun CSS-variablerne derfra.
 
-| Token | Værdi | Bruges til |
+## Faste regler (01, guide 23)
+
+1. Status er ren tekst i vægt 500. Ingen piller, prikker eller farvede flader.
+2. Ingen dekorative piller eller badges. Tællere står aldrig på faner.
+3. Hvid flade overalt. Opdel med tynde linjer og luft, aldrig hvide kort på grå baggrund.
+4. Ingen farvede bannerbokse. AI-analyser er almindelige sektioner med kildelinje og intet "Skrevet af AI"-mærke.
+5. Navne står alene: ingen initial-cirkler eller ikonkasser.
+6. Ingen midterprik nogen steder. Brug komma.
+7. Ikon + ord ved enhver farvekodning, aldrig kun farve.
+8. Kildelinje én gang pr. sektion: "Kilde: Navn, opdateret DD.MM.ÅÅÅÅ" (`SourceLine`).
+9. Flere værdier end formen kan vise: vis 3 + "Se N …".
+10. Risikoskala 0 (lav) til 100 (høj). Fire trin: 0 neutral, 25 info, 50 mulig vigtig, 100 vigtig.
+
+## Fem tilstande
+
+Alle elementer har **fyldt**, **henter** (skelet i samme højde), **tom** (siger hvorfor, stiplet ramme, aldrig "0"), **ikke oplyst** ("Ikke oplyst" eller "—" i text-faint) og **fejl** (kun teknisk fejl, med "Prøv igen"). Brug `DataState` fra `packages/ui/src/primitives.tsx`.
+
+## Talformat (09)
+
+- Beløb: `842 t. kr.`, `18,8 mio. kr.`, `2,4 mia. kr.`
+- Tal `1.243.501`, procent med én decimal og mellemrum: `17,3 %`
+- Negative tal med ægte minus `−201`, aldrig parentes
+- Udvikling ▲/▼ + procent; skifter fortegnet, vises kun pilen
+- Dato `15.04.2026`
+
+Alt dette ligger i `packages/spec/src/format.ts`.
+
+## Grid og rækkefølge (06, guide 23)
+
+4-kolonne-grid i midten, kun bredderne ¼, ½, ¾ og fuld. Nøgletalskort deler fuld bredde (3–5), grafer er mindst ½, tabeller altid fuld bredde. Flere grafer på hver sin fane, aldrig stablet på et overblik.
+
+Virksomhedsside: hoved, risiko (kun ved 50+), nøgletal, én graf ved siden af nøgle-værdi-listen, personer og ejere, historik og nyheder.
+
+## Datatype → element (guide 23, trin 4)
+
+| Datatype | Element | Artboard |
 |---|---|---|
-| Skrift | Poppins (400/500/600), system-ui som fallback | Alt |
-| Tekst primær | `#16181D` | Feltnavne, værdier, overskrifter |
-| Tekst sekundær | `#3F444B` / `#5B6068` / `#6B7280` | Brødtekst, knaptekst, enheder |
-| Tekst dæmpet | `#8A9099` | Hjælpetekst, placeholders, ikoner |
-| Ikon dæmpet | `#9AA0A8` / `#A8AEB6` / `#C9CDD3` | Chevrons, deaktiverede datoer |
-| Kant felt | `#E4E4E7` | Input, dropdown, chip, knap |
-| Kant skillelinje | `#E6E7EB` | Sektioner, tabelrækker |
-| Tag-flade | `#F1F1F3` (hover `#E8E9EC`) | Tags i felter |
-| Koral stærk | `#FF6B35` | Primærknap, kontakt, valgt chip med antal |
-| Koral tekst | `#B2450F` | Flueben, kryds ved hover, effekttekst, numre |
-| Koral blød flade | `#FFF2EB` | Valgt chip, valgt listepunkt, fokusring |
-| Koral blød kant | `#FFCFB6` | Valgt chip, felt i målgruppen, fokus |
-| Rød | `#D92D20` | Kun påkrævet-stjerne og det, der ikke kan fortrydes |
-| Tooltip | `#16181D` på hvid tekst | Info-ikon |
-| Skelet | `#EEEFF2`, 14 px høj, 7 px radius, svag puls | Indlæsning |
+| Identitet | Virksomhedshoved, personhoved | 08, 16 |
+| Ét tal med udvikling | Nøgletalskort 3–5 på række | 09 |
+| Mange felter, én enhed | Nøgle-værdi-liste med årsvælger | 09 |
+| Fuldt regnskab | Resultatopgørelse med subtotaler + analyse | 19 |
+| Udvikling over år | Søjlegraf, sparkline i tabeller | 13 |
+| 2–3 serier / benchmark | Grupperede søjler, linje + område | 13 |
+| Dele af en helhed | Stablede søjler, donut + andelsbjælker | 13, 20 |
+| Fra A til B | Vandfald | 13 |
+| Placering blandt lignende | Rangliste, sammenligning i kolonner | 13, 22 |
+| Score 0–100 | Scoremåler, score over tid | 10, 13, 18 |
+| Risiko | Alvorsskala + observationsliste | 17 |
+| Personer og roller | Rolleliste, tidsbånd, netværk | 11, 16 |
+| Ejerskab | Ejerliste med interval-bjælke, ejerdiagram | 11, 14 |
+| Mange virksomheder | Tabel med værktøjslinje og paginering | 15 |
+| Begivenheder over tid | Tidslinje, ændringsfeed | 12, 21 |
 
-## Mål
+## Responsivt (26–26h)
 
-| Element | Mål |
-|---|---|
-| Felt (input, dropdown) | 44 px høj, 8 px radius, 13–14 px vandret padding |
-| Tag i felt | 30 px høj, 6 px radius, 13 px tekst, gråt kryds |
-| Chip (valg) | 38 px høj, 8 px radius, 13 px tekst |
-| Knap | 38 px høj, 8 px radius, 13/600 |
-| Listepunkt i dropdown | 42 px høj |
-| Popover | 10 px radius, skygge `0 14px 34px #10121824` |
-| Fokusring | kant `#FFCFB6` + `0 0 0 3px #FFF2EB` |
-
-## Typografi
-
-18/600 overskrifter og totaltal · 14/600 feltnavne · 14/500 operatorer · 14/400 værdier og lister · 13 brødtekst, tags, chips og knapper · 11/600 versal-labels.
-
-## Regler, der styrer komponenterne
-
-- Operatoren står først og bestemmer resten af rækken. "er mellem" folder et andet felt ud.
-- Koral markerer valg og uafsluttede handlinger, aldrig dekoration.
-- Rød er forbeholdt det, der ikke kan fortrydes.
-- Under seks faste værdier: chips. Ellers søgbar liste.
-- Tag i et felt er neutralt med kryds. Krydset er gråt i hvile og koralt ved hover.
-- Sammenklappet felt viser værdien som rolig grå tekst: "Normal / aktiv, Ophørt og 3 flere".
-- Intet er i målgruppen, før man trykker "Tilføj til målgruppen" / "Opdater målgruppe".
-- Et felt med værdi har "Ryd" yderst til højre. Der er intet kryds på rækken.
-- Datoer skrives dansk: dd.mm.åååå.
-
-## Operatorer: én fælles liste
-
-Logikken bruger altid nøglerne. De danske tekster er kun labels (`packages/spec/src/criteria.ts`).
-
-| Nøgle | Label | Bemærkning |
-|---|---|---|
-| `eq` | er lig med | Dato: "præcis den" |
-| `neq` | er ikke | |
-| `gt` | er større end | Strengt `>` |
-| `gte` | er mindst | `≥` |
-| `lt` | er mindre end | Strengt `<` |
-| `lte` | er højst | `≤` |
-| `between` | er mellem | Inklusiv i begge ender |
-| `in` / `not_in` | er en af / er ikke en af | |
-| `contains` / `starts_with` | indeholder / begynder med | |
-| `before` / `after` | før den / efter den | |
-
-Rettelse i forhold til filterdokumentet: beløbsfelter (04) brugte "Mere end / Mindre end / Mellem". De bruger nu samme labels som talfelter, så "er større end" altid betyder `>` og "er mindst" altid betyder `≥`.
-
-## Præsentationslaget indtil del 2
-
-Del 2 (nøgletal, grafer, lister, tabel) er ikke designet endnu. Komponenterne er derfor bygget på reglerne ovenfor, gennemgået 25.09.2026:
-
-| Element | Regel fra del 1 |
-|---|---|
-| Virksomhedsnavn, totaltal i nøgletal | 18/600 |
-| Faktalabels, korttitler, tabeloverskrifter, år i grafer, "Ny" | 11/600 versaler, sporing 0,06em |
-| Navne i lister og tabeller, faktaværdier | 14/400 |
-| Roller, datoer, ejerandele, enheder, tal over søjler | 13/400 (tal over søjler 13/500) |
-| Knapper | 38 px, 8 px radius, 13/600 |
-| Status ("Normal", "Ophørt") | Tag-mål: 30 px, 6 px radius, 13 px. Aktiv grøn (`#1F7A4D` på `#E7F5EE`), konkurs/opløsning ravgul (`#93580B` på `#FDF3E1`), ophørt grå |
-| Udvikling (▲ 6,4 %) | Grøn `#1F7A4D` op, rød `#B42318` ned |
-| Søjler | Koral blød `#FFCFB6`, seneste år koral `#FF6B35`, negative `#F4B7B0` |
-| Personer og "Ny" | Koral blød flade `#FFF2EB` med koral tekst `#B2450F`. Selskaber neutrale |
-| Sekundær tekst (datoer, år, labels) | `#6B7280`. `#8A9099` kun til placeholders i felter |
-| Kort | 1 px `#E6E7EB`, 10 px radius, 18 px luft, ingen skygge (skygge kun på popovers) |
-
-Kun størrelserne 11, 13, 14 og 18 px bruges.
-
-Afvigelser fra del 1, besluttet af Jakob 25.09.2026 efter test på mobil: visningerne var svære at læse i gråt. Data må derfor have farve (koral søjler, grøn/rød udvikling, farvet status), selvom del 1 siger "koral aldrig som dekoration" og "rød kun til det, der ikke kan fortrydes". Sekundær tekst er gjort mørkere, fordi `#8A9099` kun har kontrast 3,3:1 mod hvid.
-
-## Endnu ikke dækket
-
-- Del 2 kan ændre ovenstående; så rettes det her og i `styles.css`.
-- Mørk tilstand er afledt af tokens og ikke designet.
+1440 → 1200 (panel under midten) → 960 (skinnen skjules) → 768 (to kolonner, maks 6 tabelkolonner) → 390 (én kolonne). På mobil bliver tabeller til kortlister og ejerdiagrammet til en liste, rækker er mindst 44 px, grafer viser maks 5 punkter. Kun brudpunkter, ingen separate mobiludgaver.
