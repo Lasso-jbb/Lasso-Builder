@@ -77,6 +77,17 @@ test("parseViewSpec afviser ukendte komponenter", () => {
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "Ukendt" }] }));
 });
 
+test("parseViewSpec accepterer LassoRiskObservations og LassoAuditorIndependence", () => {
+  const spec = parseViewSpec({
+    title: "Test",
+    components: [
+      { type: "LassoRiskObservations", company: "CVR-1-12345678" },
+      { type: "LassoAuditorIndependence", company: "CVR-1-12345678", title: "Uafhængighed" },
+    ],
+  });
+  assert.deepEqual(spec.components.map((c) => c.type), ["LassoRiskObservations", "LassoAuditorIndependence"]);
+});
+
 test("amountScale giver én enhed for en række beløb", () => {
   const scale = amountScale([117_142_000_000, 250_276_000_000]);
   assert.equal(scale.label, "mia. kr.");

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { MISSING, formatDate, formatPercent, percentChange, type CompanyVM } from "@lasso/spec";
+import { MISSING, formatDate, formatPercent, percentChange, type CompanyVM, type Severity } from "@lasso/spec";
 
 export function Card({ title, children, className = "" }: { title?: ReactNode; children: ReactNode; className?: string }) {
   return (
@@ -176,6 +176,42 @@ export function Delta({ from, to }: { from?: number | null; to?: number | null }
     <span className={pct < 0 ? "lasso-down" : "lasso-up"}>
       {pct < 0 ? "▼" : "▲"} {formatPercent(Math.abs(pct), false)}
     </span>
+  );
+}
+
+/** Alvorsordet, ren tekst (katalog 17, guide 23 regel 10). "assessment" bruger de tre trin fra katalog 22. */
+export function severityWord(severity: Severity, variant: "observation" | "assessment" = "observation"): string {
+  if (variant === "assessment") return severity === 100 ? "Konflikt" : severity === 50 ? "Vurdér" : "Neutral";
+  return severity === 100 ? "Vigtig" : severity === 50 ? "Mulig vigtig" : severity === 25 ? "Info" : "Neutral";
+}
+
+/**
+ * Alvorsikon (katalog 17): grå prik for neutral, ellers et omridsikon i info/gul/rød.
+ * Farven forstærker kun; ordet ved siden af (severityWord) bærer betydningen (regel 7).
+ */
+export function SeverityIcon({ severity }: { severity: Severity }) {
+  if (severity === 0) return <span className="lasso-sev-dot" aria-hidden="true" />;
+  if (severity === 25) {
+    return (
+      <svg className="lasso-sev-icon lasso-sev-icon--25" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 11v6M12 7.5v.5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+      </svg>
+    );
+  }
+  if (severity === 50) {
+    return (
+      <svg className="lasso-sev-icon lasso-sev-icon--50" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 8v5M12 16.5v.5" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+        <path d="M10.3 3.9L2.6 17.5A2 2 0 004.3 20.5h15.4a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  return (
+    <svg className="lasso-sev-icon lasso-sev-icon--100" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 7v6M12 16.5v.5" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+      <path d="M12 2l10 18H2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    </svg>
   );
 }
 

@@ -88,6 +88,54 @@ export interface CompanyRowVM {
   trend?: number[];
 }
 
+/** Alvorsskala (katalog 17, guide 23 regel 10): 0 neutral, 25 info, 50 mulig vigtig, 100 vigtig. */
+export type Severity = 0 | 25 | 50 | 100;
+
+export interface ObservationRowVM {
+  id: string;
+  severity: Severity;
+  title: string;
+  detail?: string;
+  /** Fx "CVR", "Regnskab 2025" eller "Ledelse". */
+  source?: string;
+  date?: string;
+}
+
+export interface ObservationsVM {
+  lassoId: string;
+  observations: ObservationRowVM[];
+  /** Hvornår Lasso sidst gennemgik virksomheden (også når listen er tom, katalog 17). */
+  checkedAt?: string;
+  /** Datakilder til kildelinjen, fx ["CVR", "regnskab", "ledelse"]. */
+  sources?: string[];
+}
+
+/** Samme alvorsskala som observationer, men kun tre trin bruges her (katalog 22): 0, 50, 100. */
+export type RelationAssessment = 0 | 50 | 100;
+
+export interface AuditorRelationVM {
+  id: string;
+  assessment: RelationAssessment;
+  /** Personens eller selskabets navn. Står alene, ingen initial-cirkel (regel 5). */
+  name: string;
+  /** Rolle/tilknytning under navnet, fx "Partner, AAEN & CO.". */
+  role?: string;
+  relation: string;
+  /** Selskabet relationen går igennem. */
+  via?: string;
+  from?: string;
+  to?: string;
+}
+
+export interface AuditorIndependenceVM {
+  lassoId: string;
+  auditorName?: string;
+  checkedAt?: string;
+  relations: AuditorRelationVM[];
+  /** Sat når data mangler eller er ufuldstændige (ny datamodel, ingen bekræftet kilde endnu). */
+  unavailableReason?: string;
+}
+
 export interface SearchResultVM {
   key: string;
   total?: number;
@@ -111,6 +159,8 @@ export interface Dataset {
   people: Record<string, PersonRowVM[]>;
   ownership: Record<string, OwnershipVM>;
   searches: Record<string, SearchResultVM>;
+  observations: Record<string, ObservationsVM>;
+  auditorIndependence: Record<string, AuditorIndependenceVM>;
   /** Fejl pr. nøgle, fx "company:CVR-1-12345678" -> "Ingen adgang". */
   errors: Record<string, string>;
 }
@@ -124,6 +174,8 @@ export function emptyDataset(source: DataSourceKind): Dataset {
     people: {},
     ownership: {},
     searches: {},
+    observations: {},
+    auditorIndependence: {},
     errors: {},
   };
 }

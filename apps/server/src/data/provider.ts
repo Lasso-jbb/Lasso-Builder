@@ -1,9 +1,11 @@
 import type {
+  AuditorIndependenceVM,
   CompanyRowVM,
   CompanyVM,
   Criterion,
   DataSourceKind,
   FinancialsVM,
+  ObservationsVM,
   OwnershipVM,
   PersonRowVM,
   SearchQuery,
@@ -26,6 +28,8 @@ export interface DataProvider {
   financials(lassoId: string): Promise<FinancialsVM>;
   people(lassoId: string): Promise<PersonRowVM[]>;
   ownership(lassoId: string): Promise<OwnershipVM>;
+  observations(lassoId: string): Promise<ObservationsVM>;
+  auditorIndependence(lassoId: string): Promise<AuditorIndependenceVM>;
 }
 
 export class NotFoundError extends Error {

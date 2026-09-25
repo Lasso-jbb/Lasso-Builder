@@ -9,6 +9,8 @@ import { BarChart } from "./components/BarChart.js";
 import { KeyFigureCards } from "./components/KeyFigureCards.js";
 import { OwnerList } from "./components/OwnerList.js";
 import { PersonList } from "./components/PersonList.js";
+import { RiskObservations } from "./components/RiskObservations.js";
+import { AuditorIndependence } from "./components/AuditorIndependence.js";
 import { specToCsv } from "./csv.js";
 import { Badge, Skeleton } from "./primitives.js";
 import { SaveDialog } from "./SaveDialog.js";
@@ -21,7 +23,7 @@ function formatStamp(iso: string | undefined): string {
 }
 
 function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewProps, act: (a: ViewAction) => void, key: number) {
-  const empty: Dataset = ds ?? { source: "live", generatedAt: "", companies: {}, financials: {}, people: {}, ownership: {}, searches: {}, errors: {} };
+  const empty: Dataset = ds ?? { source: "live", generatedAt: "", companies: {}, financials: {}, people: {}, ownership: {}, searches: {}, observations: {}, auditorIndependence: {}, errors: {} };
   const err = (k: string) => empty.errors[k];
   switch (c.type) {
     case "LassoCompanyHead":
@@ -40,6 +42,10 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     }
     case "LassoCompareTable":
       return <CompareTable key={key} companies={c.companies} metrics={c.metrics} title={c.title} dataset={empty} onAction={act} canDrillDown={Boolean(props.host.drillDown)} />;
+    case "LassoRiskObservations":
+      return <RiskObservations key={key} data={empty.observations[c.company]} error={err(`observations:${c.company}`)} title={c.title} />;
+    case "LassoAuditorIndependence":
+      return <AuditorIndependence key={key} data={empty.auditorIndependence[c.company]} error={err(`auditorIndependence:${c.company}`)} title={c.title} />;
     case "LassoFollowUps":
       return <FollowUps key={key} prompts={c.prompts} onAction={act} enabled={Boolean(props.host.prompt)} />;
   }

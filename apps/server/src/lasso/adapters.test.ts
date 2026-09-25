@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { adaptCompany, adaptFinancials, adaptOwnership, adaptPeople, adaptSearch, regionFromZip, statusKind } from "./adapters.js";
+import { adaptCompany, adaptFinancials, adaptObservations, adaptOwnership, adaptPeople, adaptSearch, regionFromZip, statusKind } from "./adapters.js";
 
 test("adaptCompany tåler forskellige feltnavne", () => {
   const vm = adaptCompany("CVR-1-11111111", {
@@ -181,4 +181,31 @@ test("adaptOwnership sorterer største ejer først", () => {
     },
   });
   assert.deepEqual(o.owners.map((x) => x.name), ["Stor A/S", "Mellem ApS", "Lille ApS"]);
+});
+
+test("adaptObservations læser et rent array med numerisk og tekstlig alvor", () => {
+  const vm = adaptObservations("CVR-1-1", [
+    { id: "a", title: "Negativ egenkapital to år i træk", detail: "Egenkapitalen er negativ.", severity: 95, source: "Regnskab", date: "2026-04-15" },
+    { headline: "Revisor fravalgt", score: "medium", occurredAt: "2026-02-02" },
+    { text: "Nyt bestyrelsesmedlem", level: "low" },
+  ]);
+  assert.equal(vm.lassoId, "CVR-1-1");
+  assert.deepEqual(
+    vm.observations.map((o) => o.severity),
+    [100, 50, 25],
+  );
+  assert.equal(vm.observations[0]!.title, "Negativ egenkapital to år i træk");
+  assert.equal(vm.observations[0]!.date, "2026-04-15");
+});
+
+test("adaptObservations pakker et svar ind i {observations:[...]} og springer poster uden titel over", () => {
+  const vm = adaptObservations("CVR-1-2", { observations: [{ message: "Adresse ændret" }, { foo: "ingen titel her" }], checkedAt: "2026-09-25T10:00:00Z" });
+  assert.equal(vm.observations.length, 1);
+  assert.equal(vm.observations[0]!.severity, 0);
+  assert.equal(vm.checkedAt, "2026-09-25");
+});
+
+test("adaptObservations giver 0 observationer ved en helt ukendt form, i stedet for at kaste", () => {
+  const vm = adaptObservations("CVR-1-3", { unknownField: 42 });
+  assert.deepEqual(vm.observations, []);
 });

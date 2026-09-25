@@ -9,7 +9,7 @@ import {
 import { LassoApiError } from "../lasso/client.js";
 import { NotFoundError, type DataProvider } from "./provider.js";
 
-type Need = "company" | "financials" | "people" | "ownership";
+type Need = "company" | "financials" | "people" | "ownership" | "observations" | "auditorIndependence";
 
 /** Normaliserer alle virksomhedsreferencer i specen til Lasso-ID'er. */
 export function normalizeSpec(spec: ViewSpec, companyPrefix: string): ViewSpec {
@@ -69,6 +69,12 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
       case "LassoOwnerList":
         want(c.company, "ownership");
         break;
+      case "LassoRiskObservations":
+        want(c.company, "observations");
+        break;
+      case "LassoAuditorIndependence":
+        want(c.company, "auditorIndependence");
+        break;
       case "LassoCompareTable":
         c.companies.forEach((id) => want(id, "company", "financials"));
         break;
@@ -93,6 +99,8 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
     if (set.has("financials")) run(`financials:${id}`, async () => void (ds.financials[id] = await provider.financials(id)));
     if (set.has("people")) run(`people:${id}`, async () => void (ds.people[id] = await provider.people(id)));
     if (set.has("ownership")) run(`ownership:${id}`, async () => void (ds.ownership[id] = await provider.ownership(id)));
+    if (set.has("observations")) run(`observations:${id}`, async () => void (ds.observations[id] = await provider.observations(id)));
+    if (set.has("auditorIndependence")) run(`auditorIndependence:${id}`, async () => void (ds.auditorIndependence[id] = await provider.auditorIndependence(id)));
   }
   for (const s of searches) {
     const key = searchKey(s);

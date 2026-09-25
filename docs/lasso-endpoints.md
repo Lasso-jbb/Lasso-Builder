@@ -38,6 +38,32 @@ Fejlsvar har formen `{ "errorMessage": string, "httpStatusCode": number, "errorC
 - `GET /data/websites/{lassoId}`: `{ cvr, urls: [{ url, verifiedAt }] }`.
 - `GET /modules/valuations/{lassoId}`: `[]` for de testede virksomheder; formen er endnu ukendt.
 
+## Ubekræftet
+
+Ingen API-nøgle var tilgængelig ved dette arbejde, og docs.lassox.com har (pr. 26.09.2026)
+ingen offentlig side for `/modules/observations`; `module-apis/generalinfo` beskriver kun,
+at moduler findes, og henviser til feedback@lassox.com for udokumenterede moduler.
+
+- `GET /modules/observations/{lassoId}` (bruges af `LassoRiskObservations`, katalog 17):
+  formen er ANTAGET som et array (evt. pakket i `{ observations | items | results: [...] }`)
+  af objekter med et titelfelt (`title`/`headline`/`summary`/`text`/`message`/`name`/`description`),
+  et alvorsfelt (`severity`/`score`/`riskScore`/`level`/`importance`/`category`, enten et tal
+  0–100 eller en tekst som "high"/"vigtig"/"info"), et valgfrit beskrivelsesfelt og et datofelt
+  (`date`/`observedAt`/`createdAt`/`eventDate`/`occurredAt`/`reportedAt`). Adapteren
+  (`adaptObservations` i `apps/server/src/lasso/adapters.ts`) er skrevet defensivt: ukendte
+  feltnavne giver blot 0 observationer i stedet for en fejl. Bekræft med en rigtig nøgle,
+  og ret feltlisten i adapteren, hvis den rigtige form afviger.
+- Revisoruafhængighed (`LassoAuditorIndependence`, katalog 22) har INGEN bekræftet, dedikeret
+  kilde. `LiveProvider.auditorIndependence` bygger derfor kun på bekræftede data: revisoren fra
+  `accounting.accountant` (se `GET /{lassoId}` ovenfor), kundens egen ledelse/bestyrelse og
+  ejerkreds, og — hvis revisors eget Lasso-ID kendes — et opslag på revisionshusets egne
+  personer (samme `GET /{lassoId}`-endpoint kaldt med revisors ID). En relation vises kun ved
+  et navnesammenfald mellem de to. Det dækker IKKE relationer via andre selskaber, historiske
+  tilknytninger eller partnerskabsniveau; det ville kræve Lassos ejer-/relationsgraf
+  (`POST /modules/relations/graph`, se ovenfor), som denne komponent endnu ikke kalder, fordi
+  dens svarform heller ikke er bekræftet. `unavailableReason` i `AuditorIndependenceVM`
+  beskriver altid denne begrænsning til brugeren.
+
 ## Søgning
 
 ```

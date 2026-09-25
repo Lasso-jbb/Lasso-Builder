@@ -178,6 +178,33 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
   for (const c of spec.components) {
     if (c.type === "LassoBarChart" && c.company === lassoId && f) chart(card, f, c.metric, c.years);
   }
+
+  const observations = types.has("LassoRiskObservations") ? ds.observations[lassoId] : undefined;
+  if (observations) {
+    card.section("Risikoobservationer");
+    if (observations.observations.length === 0) {
+      card.text("Ingen observationer fundet");
+    } else {
+      const sorted = [...observations.observations].sort((a, b) => b.severity - a.severity);
+      const word = (s: number) => (s === 100 ? "Vigtig" : s === 50 ? "Mulig vigtig" : s === 25 ? "Info" : "Neutral");
+      for (const o of sorted.slice(0, 3)) card.text(`${word(o.severity)}: ${o.title}`);
+      if (sorted.length > 3) card.text(`Se ${sorted.length - 3} flere`);
+    }
+  }
+
+  const auditorIndependence = types.has("LassoAuditorIndependence") ? ds.auditorIndependence[lassoId] : undefined;
+  if (auditorIndependence) {
+    card.section("Revisoruafhængighed");
+    if (auditorIndependence.relations.length === 0) {
+      card.text(auditorIndependence.unavailableReason ?? "Ingen kendte relationer");
+    } else {
+      const sorted = [...auditorIndependence.relations].sort((a, b) => b.assessment - a.assessment);
+      const word = (s: number) => (s === 100 ? "Konflikt" : s === 50 ? "Vurdér" : "Neutral");
+      for (const r of sorted.slice(0, 3)) card.text(`${word(r.assessment)}: ${r.name}, ${r.relation}`);
+      if (sorted.length > 3) card.text(`Se ${sorted.length - 3} flere`);
+    }
+  }
+
   return card.empty ? null : card.toString();
 }
 
