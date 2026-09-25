@@ -101,6 +101,6 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
 
   const errors = Object.entries(ds.errors);
   if (errors.length) lines.push(`Fejl: ${errors.slice(0, 3).map(([k, v]) => `${k.split(":")[0]}: ${v}`).join("; ")}.`);
-  lines.push("Brugeren ser visningen grafisk. Gentag ikke tallene som tabel; svar kort og henvis til visningen.");
+  lines.push("Lasso-visningen vises grafisk for brugeren i apps, der understøtter det: svar kort og gentag ikke tallene som tabel. Kan brugerens app ikke vise den, så vis tekstkortet (hvis der er et) uændret i en kodeblok.");
   return lines.join("\n");
 }

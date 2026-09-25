@@ -138,6 +138,7 @@ test("show_company tager et navn og siger, hvad den valgte", async () => {
   assert.match(summary, /Regnskab \d{4}:/);
   assert.match(summary, /Stamoplysninger: form A\/S; adresse Prøvevej 1, 8600 Silkeborg; kommune Silkeborg/);
   assert.match(summary, /Omsætning \d{4}–\d{4} \(mio\. kr\.\): \d{4} [\d,]+/);
+  assert.match((res.structuredContent as { card: string }).card, /STAMOPLYSNINGER/);
 });
 
 test("show_company giver en brugbar fejl for ukendt navn", async () => {

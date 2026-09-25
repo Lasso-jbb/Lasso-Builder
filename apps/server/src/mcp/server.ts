@@ -23,6 +23,7 @@ import type { Config } from "../config.js";
 import { findCompany, isCompanyRef, type CompanyPick } from "../data/lookup.js";
 import type { DataProvider } from "../data/provider.js";
 import { errorMessage, normalizeSpec, resolveSpec } from "../data/resolve.js";
+import { textCard } from "../data/card.js";
 import { summarizeView } from "../data/summary.js";
 import { SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "../views/store.js";
 import { loadViewHtml } from "../web/page.js";
@@ -47,6 +48,7 @@ Sådan bruges værktøjerne:
 
 Regler:
 - Tegn altid grafisk med det samme. Spørg aldrig "vil du se det grafisk?".
+- Kan din app ikke vise Lasso-visningen (fx Claude Code, en terminal eller en app uden interaktive visninger), så vis tekstkortet fra værktøjssvaret uændret i en kodeblok. Vises visningen, så gentag ikke kortet.
 - Skriv aldrig HTML/CSS. Du sender en spec; Lassos kode henter data og tegner.
 - Brugeren ser visningen. Svar kort i tekst og gentag ikke tallene som tabel.
 - Beløb angives i hele kroner (10 mio. = 10000000).
@@ -64,9 +66,13 @@ ${OPERATORS_TEXT}`;
  */
 function viewResult(spec: ViewSpec, ds: Dataset, note?: string): CallToolResult {
   const summary = [note, summarizeView(spec, ds)].filter(Boolean).join("\n");
+  const card = textCard(spec, ds);
   return {
-    content: [{ type: "text", text: summary }],
-    structuredContent: { spec, source: ds.source, summary },
+    content: [
+      { type: "text", text: summary },
+      ...(card ? [{ type: "text" as const, text: `Tekstkort (kun til apps, der ikke kan vise Lasso-visningen):\n${card}` }] : []),
+    ],
+    structuredContent: { spec, source: ds.source, summary, ...(card ? { card } : {}) },
     _meta: { [DATASET_META_KEY]: ds },
   };
 }
