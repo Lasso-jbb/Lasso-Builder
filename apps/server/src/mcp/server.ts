@@ -58,10 +58,15 @@ Søgefelter:
 ${fieldsAsText()}
 ${OPERATORS_TEXT}`;
 
-function viewResult(spec: ViewSpec, ds: Dataset, extra: Record<string, unknown> = {}): CallToolResult {
+/**
+ * Resuméet står både som tekst og i structuredContent: nogle værter (fx Claude Code)
+ * giver kun modellen structuredContent, og så skal tallene at kommentere stå der.
+ */
+function viewResult(spec: ViewSpec, ds: Dataset, note?: string): CallToolResult {
+  const summary = [note, summarizeView(spec, ds)].filter(Boolean).join("\n");
   return {
-    content: [{ type: "text", text: summarizeView(spec, ds) }],
-    structuredContent: { spec, source: ds.source, ...extra },
+    content: [{ type: "text", text: summary }],
+    structuredContent: { spec, source: ds.source, summary },
     _meta: { [DATASET_META_KEY]: ds },
   };
 }
@@ -149,9 +154,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
       }
       const spec = companyTemplate(lassoId, { sections, chartMetric: chart_metric, years, name });
       const ds = await resolveSpec(spec, provider);
-      const result = viewResult(spec, ds);
-      if (note) result.content.unshift({ type: "text", text: note });
-      return result;
+      return viewResult(spec, ds, note);
     },
   );
 

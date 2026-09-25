@@ -132,6 +132,10 @@ test("show_company tager et navn og siger, hvad den valgte", async () => {
   assert.deepEqual(spec.components.map((c) => c.type), ["LassoCompanyHeader", "LassoKeyFigures", "LassoFinancialChart"]);
   const text = (res.content as { type: string; text: string }[]).map((c) => c.text).join("\n");
   assert.match(text, /Fundet ud fra navnet "Eksempel Byg": Eksempel Byg A\/S \(99000001\)/);
+  // Værter, der kun giver modellen structuredContent, skal også se resuméet.
+  const summary = (res.structuredContent as { summary: string }).summary;
+  assert.match(summary, /Fundet ud fra navnet/);
+  assert.match(summary, /Regnskab \d{4}:/);
 });
 
 test("show_company giver en brugbar fejl for ukendt navn", async () => {
