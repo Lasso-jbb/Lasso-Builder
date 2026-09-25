@@ -10,6 +10,41 @@ export function Card({ title, children, className = "" }: { title?: ReactNode; c
   );
 }
 
+/**
+ * Sektion (regel 3): ingen kortramme, kun overskrift 18/600, undertitel i muted,
+ * og luft. Handling (fx "Se alle") står til højre for overskriften.
+ */
+export function Section({
+  title,
+  subtitle,
+  action,
+  children,
+  className = "",
+  span = "full",
+}: {
+  title?: ReactNode;
+  subtitle?: ReactNode;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  span?: "quarter" | "half" | "three-quarters" | "full";
+}) {
+  return (
+    <section className={`lasso-section lasso-span-${span} ${className}`}>
+      {title || action ? (
+        <div className="lasso-section__head">
+          <div className="lasso-section__titles">
+            {title ? <h3 className="lasso-section__title">{title}</h3> : null}
+            {subtitle ? <p className="lasso-section__subtitle">{subtitle}</p> : null}
+          </div>
+          {action ? <div className="lasso-section__action">{action}</div> : null}
+        </div>
+      ) : null}
+      {children}
+    </section>
+  );
+}
+
 /** Regel 1: status er ren tekst i vægt 500 — ingen pille, prik eller farvet flade. */
 export function StatusBadge({ status, kind }: { status?: string; kind?: CompanyVM["statusKind"] }) {
   if (!status) return null;
@@ -101,7 +136,7 @@ export function Skeleton({ lines = 3, height }: { lines?: number; height?: numbe
   );
 }
 
-export function Sparkline({ values }: { values: readonly number[] }) {
+export function Sparkline({ values, tone = "neutral", bare = false }: { values: readonly number[]; tone?: "neutral" | "accent"; bare?: boolean }) {
   const pct = percentChange(values);
   if (values.length < 2) return <Missing />;
   const w = 72;
@@ -112,9 +147,16 @@ export function Sparkline({ values }: { values: readonly number[] }) {
   const pts = values.map((v, i) => [(i / (values.length - 1)) * (w - 4) + 2, h - 3 - ((v - min) / span) * (h - 6)] as const);
   const d = pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
   const last = pts[pts.length - 1]!;
+  const svg = (
+    <svg className={`lasso-spark lasso-spark--${tone}`} viewBox={`0 0 ${w} ${h}`} aria-hidden="true">
+      <path d={d} />
+      <circle cx={last[0]} cy={last[1]} r="2.2" />
+    </svg>
+  );
+  if (bare) return svg;
   return (
     <span className="lasso-trend" title={pct !== null ? `${formatPercent(pct)} over perioden` : undefined}>
-      <svg className="lasso-spark" viewBox={`0 0 ${w} ${h}`} aria-hidden="true">
+      <svg className={`lasso-spark lasso-spark--${tone}`} viewBox={`0 0 ${w} ${h}`} aria-hidden="true">
         <path d={d} />
         <circle cx={last[0]} cy={last[1]} r="2.2" />
       </svg>
@@ -126,8 +168,8 @@ export function Sparkline({ values }: { values: readonly number[] }) {
 export function Delta({ from, to }: { from?: number | null; to?: number | null }) {
   const pct = percentChange([from, to]);
   if (pct === null && typeof from === "number" && typeof to === "number" && from !== 0 && Math.sign(from) !== Math.sign(to)) {
-    // Katalog 09: skifter fortegnet, vises kun pilen.
-    return <span className={to < 0 ? "lasso-down" : "lasso-up"} aria-label={to < 0 ? "Til underskud" : "Til overskud"}>{to < 0 ? "▼" : "▲"}</span>;
+    // Katalog 09: skifter fortegnet, vises pil + ord (regel 7: aldrig kun farve).
+    return <span className={to < 0 ? "lasso-down" : "lasso-up"}>{to < 0 ? "▼ underskud" : "▲ overskud"}</span>;
   }
   if (pct === null) return null;
   return (

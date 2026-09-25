@@ -1,37 +1,41 @@
 import { formatDate, formatNumber, type CompanyVM } from "@lasso/spec";
-import { Card, StateBox, StatusBadge, stateForError } from "../primitives.js";
+import { DataState, stateForError } from "../primitives.js";
 
+/**
+ * Virksomhedshoved (katalog 08). Ingen kortramme, kun linjen under.
+ * Navn 28/600, status som ren tekst 14/500 lige efter navnet, nøglefakta
+ * som én linje adskilt med komma. Konkurs/likvidation: status i mørk rød.
+ * Ophørt: navnet i text-secondary.
+ */
 export function CompanyHeader({ company, error }: { company?: CompanyVM; error?: string }) {
-  if (!company) return error ? <StateBox kind={stateForError(error)} message={error} /> : <StateBox kind="loading" />;
-  const a = company.address;
-  const addressLine = [a?.street, [a?.zip, a?.city].filter(Boolean).join(" ")].filter(Boolean).join(", ");
-  return (
-    <Card className="lasso-span-2">
-      <div className="lasso-company">
-        <h2 className="lasso-company__name">{company.name}</h2>
-        <div className="lasso-company__row">
-          <StatusBadge status={company.status} kind={company.statusKind} />
-          {company.cvr ? <span>CVR {company.cvr}</span> : null}
-          {company.form ? <span>{company.form}</span> : null}
-          {addressLine ? <span>{addressLine}</span> : null}
-        </div>
-        <div className="lasso-company__facts">
-          <Fact label="Branche" value={company.industryText ? `${company.industryText}${company.industryCode ? ` (${company.industryCode})` : ""}` : undefined} />
-          <Fact label="Stiftet" value={company.founded ? formatDate(company.founded) : undefined} />
-          <Fact label="Ansatte (CVR)" value={company.employees !== undefined ? formatNumber(company.employees) : undefined} />
-          <Fact label="Kommune" value={a?.municipality ?? a?.region} />
-          {company.website ? <Fact label="Website" value={company.website} /> : null}
-        </div>
+  if (!company) {
+    if (!error) return <div className="lasso-span-full"><DataState state="loading" lines={2} height={92} /></div>;
+    return (
+      <div className="lasso-span-full">
+        <DataState state={stateForError(error) === "noaccess" ? "empty" : "error"} reason={error} />
       </div>
-    </Card>
-  );
-}
+    );
+  }
 
-function Fact({ label, value }: { label: string; value?: string }) {
+  const a = company.address;
+  const facts = [
+    company.cvr ? `CVR ${company.cvr}` : null,
+    company.form,
+    company.founded ? `stiftet ${formatDate(company.founded)}` : null,
+    a?.street,
+    [a?.zip, a?.city].filter(Boolean).join(" ") || null,
+    company.employees !== undefined ? `${formatNumber(company.employees)} ansatte` : null,
+    company.industryText,
+  ].filter((f): f is string => Boolean(f));
+
+  const kind = company.statusKind ?? "active";
   return (
-    <div>
-      <div className="lasso-fact__label">{label}</div>
-      <div className="lasso-fact__value">{value ?? "–"}</div>
-    </div>
+    <header className={`lasso-company lasso-span-full lasso-company--${kind}`}>
+      <div className="lasso-company__title">
+        <h2 className="lasso-company__name">{company.name}</h2>
+        {company.status ? <span className={`lasso-company__status lasso-company__status--${kind}`}>{company.status}</span> : null}
+      </div>
+      {facts.length > 0 ? <p className="lasso-company__facts">{facts.join(", ")}</p> : null}
+    </header>
   );
 }
