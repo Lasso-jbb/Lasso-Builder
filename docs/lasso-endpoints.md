@@ -55,6 +55,21 @@ GET /data/cvr/search
 Bemærk: `lookupWeb`-parameteren var afkortet i den oprindelige note og skal
 bekræftes mod dokumentationen.
 
+## Søgning med filtre (Lasso-søgning)
+
+```
+POST /apps/search/prompt     { "Prompt": "revisorer i Region Midt med over 10 ansatte" }  -> liste af filtre
+POST /apps/search/lassoid    { "filters": [ …filtrene fra prompt… ], "OrderBy": "<FieldName>" }
+```
+
+Afprøvet mod api.lassox.com 25.09.2026:
+
+- `/apps/search/lassoid` virker. Svar: `{ results: ["CVR-1-10000009", …], page, pageSize, totalPages, resultsFound, resultsReturned }`.
+  Med tomme filtre: alle 2.194.337 virksomheder, 100.000 pr. side (tager et par sekunder).
+- Filtre i et ukendt format ignoreres uden fejl, og det samme gør et ukendt `OrderBy`. `filters` skal være en liste (et objekt giver 500).
+- `/apps/search/prompt` giver 404 på api.lassox.com, uanset sti og metode. Filterformatet kendes derfor ikke endnu.
+- Parameteren til sidestørrelse er ukendt.
+
 ## Kontaktpersoner
 
 ```
