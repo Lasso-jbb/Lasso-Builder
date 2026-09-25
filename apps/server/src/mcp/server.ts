@@ -5,6 +5,7 @@ import {
   catalogAsText,
   companyTemplate,
   COMPANY_SECTIONS,
+  cvrFromLassoId,
   DATASET_META_KEY,
   fieldsAsText,
   listTemplate,
@@ -26,6 +27,7 @@ import { errorMessage, normalizeSpec, resolveSpec } from "../data/resolve.js";
 import { textCard } from "../data/card.js";
 import { summarizeView } from "../data/summary.js";
 import { SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "../views/store.js";
+import { companyLink } from "../web/links.js";
 import { loadViewHtml } from "../web/page.js";
 
 export const VIEW_URI = "ui://lasso/view.html";
@@ -48,7 +50,8 @@ Sådan bruges værktøjerne:
 
 Regler:
 - Tegn altid grafisk med det samme. Spørg aldrig "vil du se det grafisk?".
-- Kan din app ikke vise Lasso-visningen (fx Claude Code, en terminal eller en app uden interaktive visninger), så vis tekstkortet fra værktøjssvaret uændret i en kodeblok. Vises visningen, så gentag ikke kortet.
+- Spørger brugeren om en virksomhed (show_company): vis tekstkortet fra værktøjssvaret uændret i en kodeblok, og skriv lige under kodeblokken linket til den interaktive Lasso-visning som et klikbart link, fx [Åbn LASSO X A/S i Lasso](url). Kommentér derefter kort i 1–3 sætninger.
+- Andre visninger: kan din app ikke vise Lasso-visningen (fx Claude Code eller en terminal), så vis tekstkortet uændret i en kodeblok.
 - Skriv aldrig HTML/CSS. Du sender en spec; Lassos kode henter data og tegner.
 - Brugeren ser visningen. Svar kort i tekst og gentag ikke tallene som tabel.
 - Beløb angives i hele kroner (10 mio. = 10000000).
@@ -64,15 +67,17 @@ ${OPERATORS_TEXT}`;
  * Resuméet står både som tekst og i structuredContent: nogle værter (fx Claude Code)
  * giver kun modellen structuredContent, og så skal tallene at kommentere stå der.
  */
-function viewResult(spec: ViewSpec, ds: Dataset, note?: string): CallToolResult {
-  const summary = [note, summarizeView(spec, ds)].filter(Boolean).join("\n");
+function viewResult(spec: ViewSpec, ds: Dataset, extra: { note?: string; link?: string } = {}): CallToolResult {
+  const summary = [extra.note, summarizeView(spec, ds), extra.link && `Interaktiv Lasso-visning (link til brugeren): ${extra.link}`]
+    .filter(Boolean)
+    .join("\n");
   const card = textCard(spec, ds);
   return {
     content: [
       { type: "text", text: summary },
-      ...(card ? [{ type: "text" as const, text: `Tekstkort (kun til apps, der ikke kan vise Lasso-visningen):\n${card}` }] : []),
+      ...(card ? [{ type: "text" as const, text: `Tekstkort:\n${card}` }] : []),
     ],
-    structuredContent: { spec, source: ds.source, summary, ...(card ? { card } : {}) },
+    structuredContent: { spec, source: ds.source, summary, ...(card ? { card } : {}), ...(extra.link ? { link: extra.link } : {}) },
     _meta: { [DATASET_META_KEY]: ds },
   };
 }
@@ -160,7 +165,9 @@ export function createMcpServer(ctx: McpContext): McpServer {
       }
       const spec = companyTemplate(lassoId, { sections, chartMetric: chart_metric, years, name });
       const ds = await resolveSpec(spec, provider);
-      return viewResult(spec, ds, note);
+      const cvr = cvrFromLassoId(lassoId);
+      const link = cvr ? companyLink(config, { cvr, metric: chart_metric ?? "bruttofortjeneste", years: years ?? 5 }) : undefined;
+      return viewResult(spec, ds, { note, link });
     },
   );
 

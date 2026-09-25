@@ -141,6 +141,22 @@ test("show_company tager et navn og siger, hvad den valgte", async () => {
   assert.match((res.structuredContent as { card: string }).card, /STAMOPLYSNINGER/);
 });
 
+test("show_company giver et signeret link til en interaktiv side med friske data", async () => {
+  const res = await client.callTool({ name: "show_company", arguments: { company: "99000001", chart_metric: "omsaetning", years: 10 } });
+  const link = (res.structuredContent as { link: string }).link;
+  assert.match(link, /\/k\/99000001\?m=omsaetning&y=10&e=\w+&s=[\w-]{22}$/);
+  assert.match((res.content as { text: string }[])[0]!.text, /Interaktiv Lasso-visning \(link til brugeren\): http/);
+  const page = await fetch(link);
+  assert.equal(page.status, 200);
+  const html = await page.text();
+  assert.match(html, /<title>Eksempel Byg A\/S · Lasso<\/title>/);
+  const boot = /window\.__LASSO_BOOT__=(.*?);<\/script>/s.exec(html)![1]!;
+  assert.match(boot, /"LassoFinancialChart"/);
+  assert.doesNotMatch(boot, /"LassoActions"/);
+  const forged = await fetch(link.replace("/k/99000001", "/k/99000002"));
+  assert.equal(forged.status, 403);
+});
+
 test("show_company giver en brugbar fejl for ukendt navn", async () => {
   const res = await client.callTool({ name: "show_company", arguments: { company: "Findes Ikke Nogen Steder" } });
   assert.equal(res.isError, true);

@@ -94,6 +94,6 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
 
   const errors = Object.entries(ds.errors);
   if (errors.length) lines.push(`Fejl: ${errors.slice(0, 3).map(([k, v]) => `${k.split(":")[0]}: ${v}`).join("; ")}.`);
-  lines.push("Lasso-visningen vises grafisk for brugeren i apps, der understøtter det: svar kort og gentag ikke tallene som tabel. Kan brugerens app ikke vise den, så vis tekstkortet (hvis der er et) uændret i en kodeblok.");
+  lines.push("Vis tekstkortet uændret i en kodeblok (ved en virksomhed altid, ellers når appen ikke kan vise Lasso-visningen) med linket til den interaktive visning under det, hvis der er et. Svar kort og gentag ikke tallene som tabel.");
   return lines.join("\n");
 }

@@ -14,6 +14,7 @@ import { adaptSearch, at } from "./lasso/adapters.js";
 import { describeShape, LassoApiError, LassoClient, probeAuthVariants, type Query } from "./lasso/client.js";
 import { createMcpServer } from "./mcp/server.js";
 import { createViewStore, SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "./views/store.js";
+import { verifyCompanyLink } from "./web/links.js";
 import { injectBoot, loadViewHtml } from "./web/page.js";
 
 const VERSION = "0.1.0";
@@ -143,6 +144,40 @@ export function createApp({ config, client, provider, store }: AppDeps) {
       .type("html")
       .set("Cache-Control", "no-store")
       .send(injectBoot(html, { mode: "web", spec: view.spec, dataset, url, name: view.name, version: view.version, updatedAt: view.updatedAt }, view.name ?? view.spec.title));
+  });
+
+  // --- Interaktiv virksomhedsvisning fra et signeret link (se web/links.ts) ----
+  app.get("/k/:cvr", async (req, res) => {
+    const html = await loadViewHtml();
+    const fail = (status: number, message: string) =>
+      void res.status(status).type("html").set("X-Robots-Tag", "noindex").send(injectBoot(html, { mode: "web", error: message }, "Lasso"));
+    const check = verifyCompanyLink(config, String(req.params.cvr), req.query as Record<string, unknown>);
+    if (!check.ok) {
+      return fail(
+        check.reason === "expired" ? 410 : 403,
+        check.reason === "expired" ? "Linket er udløbet. Spørg Claude om virksomheden igen for at få et nyt link." : "Linket er ugyldigt. Brug linket fra Claude, som det er.",
+      );
+    }
+    const lassoId = toLassoId(check.link.cvr, config.LASSO_COMPANY_ID_PREFIX);
+    let name: string;
+    try {
+      name = (await provider.company(lassoId)).name;
+    } catch (err) {
+      return fail(404, `Virksomheden kunne ikke hentes: ${errorMessage(err)}`);
+    }
+    // Hele profilen uden opfølgningsknapper (de sender spørgsmål til Claude og virker kun i chatten).
+    const spec = companyTemplate(lassoId, {
+      name,
+      chartMetric: check.link.metric,
+      years: check.link.years,
+      sections: ["header", "noegletal", "graf", "ledelse", "ejerskab"],
+    });
+    const dataset = await resolveSpec(spec, provider);
+    res
+      .type("html")
+      .set("Cache-Control", "no-store")
+      .set("X-Robots-Tag", "noindex")
+      .send(injectBoot(html, { mode: "web", spec, dataset, url: `${config.publicBaseUrl}${req.originalUrl}`, name }, name));
   });
 
   // --- Fejlfinding (kræver ADMIN_API_KEY) ------------------------------------

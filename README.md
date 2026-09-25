@@ -33,6 +33,7 @@ Modellen skriver aldrig HTML. Den sender en JSON-spec, og Lassos kode henter dat
 |---|---|
 | `/mcp` | MCP-endpoint. Kræver `MCP_ACCESS_KEY` som `?key=`, `/mcp/<key>`, `x-api-key` eller Bearer. |
 | `/v/:org/:slug` | Delt side med friske data. |
+| `/k/:cvr` | Interaktiv virksomhedsvisning fra et signeret link, som `show_company` giver. Friske data ved hver visning; udløber efter `LINK_TTL_DAYS` (30). Signeres med `LINK_SECRET`. |
 | `GET /api/views/:org/:slug` | Gemt spec som JSON. |
 | `POST /api/views` | Gem via API. Kræver `ADMIN_API_KEY`. |
 | `/api/debug/lasso/<sti>` | Rå svar fra Lassos API til tilpasning af adapters. Kræver `ADMIN_API_KEY`. `?shape=true` viser kun struktur. |

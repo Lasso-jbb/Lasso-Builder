@@ -20,6 +20,10 @@ const schema = z.object({
   MCP_ACCESS_KEY: z.string().default(""),
   /** Beskytter /api/views (skriv) og /api/debug. */
   ADMIN_API_KEY: z.string().default(""),
+  /** Signerer links til interaktive visninger (/k/<cvr>). Tom: afledes af MCP_ACCESS_KEY. */
+  LINK_SECRET: z.string().default(""),
+  /** Så mange dage virker et link fra Claude. */
+  LINK_TTL_DAYS: z.coerce.number().int().min(1).max(365).default(30),
 
   /** Hardcoded demobruger, indtil Lasso ID kobles på (se src/auth/user.ts). */
   DEMO_USER_ID: z.string().default("demo"),
