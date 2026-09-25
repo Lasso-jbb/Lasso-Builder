@@ -149,7 +149,7 @@ test("show_company giver et signeret link til en interaktiv side med friske data
   const page = await fetch(link);
   assert.equal(page.status, 200);
   const html = await page.text();
-  assert.match(html, /<title>Eksempel Byg A\/S · Lasso<\/title>/);
+  assert.match(html, /<title>Eksempel Byg A\/S, Lasso<\/title>/);
   const boot = /window\.__LASSO_BOOT__=(.*?);<\/script>/s.exec(html)![1]!;
   assert.match(boot, /"LassoBarChart"/);
   assert.doesNotMatch(boot, /"LassoFollowUps"/);

@@ -127,7 +127,7 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
   const co = ds.companies[lassoId];
   if (co) {
     card.text(co.name);
-    card.text(["●", co.status, co.form, co.address?.city].filter(Boolean).join(" · ").replace("● · ", "● "));
+    card.text([co.status, co.form, co.address?.city].filter(Boolean).join(", "));
     card.section("Stamoplysninger");
     const a = co.address;
     card.row("CVR", co.cvr);
@@ -166,7 +166,7 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
   const last = f?.years.at(-1);
   const prev = f?.years.at(-2);
   if (f && last && types.has("LassoKeyFigureCards")) {
-    card.section(`Regnskab ${last.year}${prev ? ` · ændring fra ${prev.year}` : ""}`);
+    card.section(`Regnskab ${last.year}${prev ? `, ændring fra ${prev.year}` : ""}`);
     const metrics: Metric[] = [last.revenue != null ? "omsaetning" : "bruttofortjeneste", "resultat", "egenkapital", "ansatte"];
     for (const m of metrics) {
       const v = last[METRIC_FIELD[m]];
@@ -192,15 +192,15 @@ function listCard(spec: ViewSpec, ds: Dataset): string | null {
   if (!result) return null;
   const card = new Card();
   card.text(spec.title);
-  card.text(`${formatNumber(result.total ?? result.rows.length)} virksomheder · viser ${result.rows.length}`);
+  card.text(`${formatNumber(result.total ?? result.rows.length)} virksomheder, viser ${result.rows.length}`);
   const sortField = table.search.sort?.field;
   const metric: RowMetric = sortField && sortField in ROW_FIELD ? (sortField as RowMetric) : "bruttofortjeneste";
-  card.section(`Navn · by · ${METRIC_LABELS[metric].toLowerCase()}`);
+  card.section(`Navn, by, ${METRIC_LABELS[metric].toLowerCase()}`);
   result.rows.slice(0, 20).forEach((r, i) => {
     const n = `${i + 1}.`;
     wrap(r.name, W - 4).forEach((l, j) => card.raw(`${pad(j === 0 ? n : "", 3)} ${l}`));
     const v = r[ROW_FIELD[metric]];
-    card.raw(`    ${[r.city, typeof v === "number" ? short(v, metric) : null].filter(Boolean).join(" · ")}`);
+    card.raw(`    ${[r.city, typeof v === "number" ? short(v, metric) : null].filter(Boolean).join(", ")}`);
   });
   return card.toString();
 }

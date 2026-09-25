@@ -81,6 +81,6 @@ export function listTemplate(search: SearchQuery, options: { title?: string; col
 function defaultListTitle(query: string, criteria: readonly Criterion[]): string {
   const q = query.trim();
   if (q) return `Søgning: ${q}`;
-  if (criteria.length > 0) return criteria.slice(0, 2).map(formatCriterion).join(" · ");
+  if (criteria.length > 0) return criteria.slice(0, 2).map(formatCriterion).join(", ");
   return "Virksomheder";
 }

@@ -51,7 +51,7 @@ test("tekstkortet har samme bredde på alle linjer og alle sektioner", () => {
   const card = textCard(companyTemplate(ID, { chartMetric: "omsaetning", years: 10 }), dataset())!;
   const lines = card.split("\n");
   for (const l of lines) assert.equal([...l].length, 38, `linjen "${l}" har forkert bredde`);
-  for (const part of ["TESTFIRMA A/S", "● Normal · A/S · Bagsværd", "STAMOPLYSNINGER", "CVR          11111111", "2880 Bagsværd", "präparater".replace("ä", "æ"), "28.11.1931", "27.279 (CVR)", "44 44 88 88", "Adm. dir.    Anne Direktør", "Formand      Bo Formand", "Bestyrelse   2 inkl. formand", "66,67–89,99 % stemmer", "REGNSKAB 2025 · ÆNDRING FRA 2024", "▲  6,6 %", "OMSÆTNING, MIA. KR.", "2025 ████████████████████   309,0"]) {
+  for (const part of ["TESTFIRMA A/S", "Normal, A/S, Bagsværd", "STAMOPLYSNINGER", "CVR          11111111", "2880 Bagsværd", "präparater".replace("ä", "æ"), "28.11.1931", "27.279 (CVR)", "44 44 88 88", "Adm. dir.    Anne Direktør", "Formand      Bo Formand", "Bestyrelse   2 inkl. formand", "66,67–89,99 % stemmer", "REGNSKAB 2025, ÆNDRING FRA 2024", "▲  6,6 %", "OMSÆTNING, MIA. KR.", "2025 ████████████████████   309,0"]) {
     assert.ok(card.includes(part), `mangler "${part}":\n${card}`);
   }
   // Negativt resultat får pil ned; fratrådte personer er ikke med.
@@ -78,9 +78,9 @@ test("tekstkort for en søgeliste", () => {
   };
   const card = textCard(listTemplate(search, { title: "Søgning: test" }), ds)!;
   for (const l of card.split("\n")) assert.equal([...l].length, 38);
-  assert.ok(card.includes("722 virksomheder · viser 2"));
-  assert.ok(card.includes("Aarhus C · 12,5 mio."));
-  assert.ok(card.includes("NAVN · BY · OMSÆTNING"));
+  assert.ok(card.includes("722 virksomheder, viser 2"));
+  assert.ok(card.includes("Aarhus C, 12,5 mio."));
+  assert.ok(card.includes("NAVN, BY, OMSÆTNING"));
 });
 
 test("lange selskabsnavne forkortes og deles ved efterled", () => {
