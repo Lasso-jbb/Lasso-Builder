@@ -18,7 +18,7 @@ export function CompanyHeader({ company, error }: { company?: CompanyVM; error?:
         <div className="lasso-company__facts">
           <Fact label="Branche" value={company.industryText ? `${company.industryText}${company.industryCode ? ` (${company.industryCode})` : ""}` : undefined} />
           <Fact label="Stiftet" value={company.founded ? formatDate(company.founded) : undefined} />
-          <Fact label="Ansatte" value={company.employees !== undefined ? formatNumber(company.employees) : undefined} />
+          <Fact label="Ansatte (CVR)" value={company.employees !== undefined ? formatNumber(company.employees) : undefined} />
           <Fact label="Kommune" value={a?.municipality ?? a?.region} />
           {company.website ? <Fact label="Website" value={company.website} /> : null}
         </div>

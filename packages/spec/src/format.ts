@@ -15,6 +15,25 @@ export function formatAmount(value: number | null | undefined, unit = "kr."): st
   return `${intFormat.format(value)}${suffix}`;
 }
 
+export interface AmountScale {
+  divisor: number;
+  /** Fx "mia. kr." */
+  label: string;
+}
+
+/** Fælles enhed for en række beløb, fx søjlerne i en graf: 117,1 og 250,3 i "mia. kr.". */
+export function amountScale(values: readonly number[], unit = "kr."): AmountScale {
+  const max = Math.max(0, ...values.map((v) => Math.abs(v)));
+  if (max >= 1_000_000_000) return { divisor: 1_000_000_000, label: `mia. ${unit}` };
+  if (max >= 1_000_000) return { divisor: 1_000_000, label: `mio. ${unit}` };
+  if (max >= 10_000) return { divisor: 1_000, label: `t. ${unit}` };
+  return { divisor: 1, label: unit };
+}
+
+export function formatScaled(value: number, scale: AmountScale): string {
+  return (scale.divisor >= 1_000_000 ? oneDecimal : intFormat).format(value / scale.divisor);
+}
+
 export function formatNumber(value: number | null | undefined): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "–";
   return intFormat.format(value);

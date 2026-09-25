@@ -198,9 +198,11 @@
 .lasso-list__item { display: flex; align-items: center; gap: var(--lasso-space-3); padding: 10px 0; border-top: 1px solid var(--lasso-border); }
 .lasso-list__item:first-child { border-top: 0; padding-top: 0; }
 .lasso-list__main { flex: 1; min-width: 0; }
-.lasso-list__name { font-weight: 500; overflow-wrap: anywhere; }
+.lasso-list__name { font-weight: 500; overflow-wrap: break-word; }
 .lasso-list__sub { font-size: var(--lasso-fs-sm); color: var(--lasso-text-3); }
 .lasso-list__side { text-align: right; font-size: var(--lasso-fs-sm); color: var(--lasso-muted); white-space: nowrap; }
+.lasso-list__side-sub { font-size: var(--lasso-fs-label); color: var(--lasso-muted); }
+.lasso-list__more { margin: var(--lasso-space-2) 0 0 30px; }
 .lasso-list__item--ended .lasso-list__name, .lasso-list__item--ended .lasso-list__sub { color: var(--lasso-muted); }
 .lasso-avatar { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--lasso-tag); color: var(--lasso-text-3); display: grid; place-items: center; font-size: 11px; font-weight: 600; }
 .lasso-avatar--company { border-radius: 8px; }
@@ -212,7 +214,8 @@
 .lasso-table-wrap { overflow-x: auto; margin: 0 calc(var(--lasso-space-4) * -1); padding: 0 var(--lasso-space-4); }
 .lasso-table { width: 100%; border-collapse: collapse; font-size: var(--lasso-fs); }
 .lasso-table th { text-align: left; font-size: var(--lasso-fs-label); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--lasso-muted); padding: 8px 8px; border-bottom: 1px solid var(--lasso-border); white-space: nowrap; }
-.lasso-cell--wrap { overflow-wrap: anywhere; min-width: 90px; }
+.lasso-cell--wrap { overflow-wrap: break-word; hyphens: auto; min-width: 90px; }
+.lasso-cell--nowrap { white-space: nowrap; }
 .lasso-cell--name { min-width: 120px; }
 .lasso-table th.lasso-num, .lasso-table td.lasso-num { text-align: right; }
 .lasso-table th button { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; font-weight: 600; letter-spacing: inherit; text-transform: inherit; color: inherit; display: inline-flex; gap: 4px; align-items: center; }
@@ -276,7 +279,9 @@
   .lasso-table--fold, .lasso-table--fold tbody { display: block; }
   .lasso-table--fold tr { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 10px 0; border-bottom: 1px solid var(--lasso-border); }
   .lasso-table--fold td { display: flex; justify-content: space-between; gap: 8px; padding: 0; height: auto; border: 0; grid-column: 1 / -1; font-size: var(--lasso-fs-sm); }
-  .lasso-table--fold td::before { content: attr(data-label); color: var(--lasso-muted); }
+  .lasso-table--fold td { text-align: right; }
+  .lasso-table--fold td::before { content: attr(data-label); color: var(--lasso-muted); flex: none; text-align: left; }
+  .lasso-table--fold td.lasso-cell--wrap { min-width: 0; }
   .lasso-table--fold td.lasso-cell--name { grid-column: 1; }
   .lasso-table--fold td.lasso-cell--name::before, .lasso-table--fold td.lasso-cell--trend::before { display: none; }
   .lasso-table--fold td.lasso-cell--trend { grid-column: 2; grid-row: 1; justify-content: flex-end; }
@@ -284,7 +289,11 @@
   /* Sparklines bliver til procentændring */
   .lasso-spark { display: none; }
   .lasso-trend__pct { display: inline; }
-  .lasso-list__side { white-space: normal; }
+  /* Lister: sidekolonnen (dato, ejerandel) lægger sig under navnet, så navnet får hele bredden */
+  .lasso-list__item { flex-wrap: wrap; row-gap: 2px; }
+  .lasso-list__side { flex-basis: 100%; padding-left: 42px; text-align: left; white-space: normal; }
+  .lasso-list__side-sub { display: inline; margin-left: 4px; }
+  .lasso-list__side-sub::before { content: "· "; }
 }
 
 /* ---------- Filterpanel (Filterfelter 01–24) ---------- */

@@ -122,6 +122,12 @@ export function statusKind(status: string | undefined): CompanyVM["statusKind"] 
   return undefined;
 }
 
+/** CVR skriver kommuner med versaler: "GLADSAXE" -> "Gladsaxe", "LYNGBY-TAARBÆK" -> "Lyngby-Taarbæk". */
+function titleCase(s: string | undefined): string | undefined {
+  if (!s || s !== s.toUpperCase()) return s;
+  return s.toLowerCase().replace(/(^|[\s-])(\p{L})/gu, (_, sep: string, ch: string) => sep + ch.toUpperCase());
+}
+
 function address(raw: Json): CompanyVM["address"] {
   const a = pick(raw, "address", "addresses.0", "location", "beliggenhedsadresse", "mainAddress") ?? raw;
   const street =
@@ -132,7 +138,7 @@ function address(raw: Json): CompanyVM["address"] {
     street: str(a, "address1") ?? street,
     zip,
     city: str(a, "postalDistrict", "city", "cityName", "postnummernavn", "by"),
-    municipality: str(a, "municipality.name", "municipality", "municipalityName", "kommune", "kommunenavn"),
+    municipality: titleCase(str(a, "municipality.name", "municipality", "municipalityName", "kommune", "kommunenavn")),
     region: str(a, "region", "regionName") ?? regionFromZip(zip),
   };
 }
@@ -234,7 +240,8 @@ export function adaptOwnership(lassoId: string, raw: Json): OwnershipVM {
       const owner: OwnerVM = {
         name,
         lassoId: str(o, "lassoId", "id", "owner.lassoId"),
-        share: share && votes && votes !== share ? `${share} (stemmer ${votes})` : share ?? (votes ? `stemmer ${votes}` : undefined),
+        share: share ?? votes,
+        votes: share && votes && votes !== share ? votes : undefined,
         kind: /company|virksomhed|cvr-1/i.test(type + (str(o, "lassoId", "id") ?? "")) ? "company" : "person",
       };
       return owner;

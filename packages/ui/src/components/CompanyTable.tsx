@@ -133,7 +133,7 @@ export function CompanyTable({
                   <td
                     key={c}
                     data-label={TABLE_COLUMN_LABELS[c]}
-                    className={[NUMERIC.has(c) ? "lasso-num" : "", c === "navn" ? "lasso-cell--name" : "", c === "udvikling" ? "lasso-cell--trend" : "", c === "branche" ? "lasso-cell--wrap" : ""].join(" ").trim() || undefined}
+                    className={[NUMERIC.has(c) ? "lasso-num" : "", c === "navn" ? "lasso-cell--name" : "", c === "udvikling" ? "lasso-cell--trend" : "", c === "branche" ? "lasso-cell--wrap" : "", c === "by" ? "lasso-cell--nowrap" : ""].join(" ").trim() || undefined}
                   >
                     {c === "navn" ? (
                       <span className="lasso-table__name">{r.name}</span>

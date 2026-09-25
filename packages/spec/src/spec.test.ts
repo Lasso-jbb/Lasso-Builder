@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  amountScale,
   companyTemplate,
+  formatScaled,
   formatAmount,
   formatCriterion,
   listTemplate,
@@ -71,4 +73,12 @@ test("listTemplate lægger kriterier i rammen og tabellen", () => {
 
 test("parseViewSpec afviser ukendte komponenter", () => {
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "Ukendt" }] }));
+});
+
+test("amountScale giver én enhed for en række beløb", () => {
+  const scale = amountScale([117_142_000_000, 250_276_000_000]);
+  assert.equal(scale.label, "mia. kr.");
+  assert.equal(formatScaled(250_276_000_000, scale), "250,3");
+  assert.equal(amountScale([41_100_000, 400_000]).label, "mio. kr.");
+  assert.equal(formatScaled(950_000, amountScale([950_000])), "950");
 });

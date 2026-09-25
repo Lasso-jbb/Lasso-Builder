@@ -1,7 +1,7 @@
-import { METRIC_LABELS, type FinancialsVM, type Metric } from "@lasso/spec";
+import { amountScale, formatNumber, formatScaled, METRIC_LABELS, type FinancialsVM, type Metric } from "@lasso/spec";
 import { Card, StateBox, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
-import { formatMetric, METRIC_FIELD } from "./KeyFigures.js";
+import { METRIC_FIELD } from "./KeyFigures.js";
 
 export function FinancialChart({ financials, metric, years, error }: { financials?: FinancialsVM; metric: Metric; years: number; error?: string }) {
   const title = `${METRIC_LABELS[metric]} · ${years} år`;
@@ -16,6 +16,11 @@ export function FinancialChart({ financials, metric, years, error }: { financial
     .filter((p): p is { year: number; value: number } => typeof p.value === "number");
   if (points.length === 0) return <Card title={title}><StateBox kind="empty" message="Ingen tal for dette nøgletal." /></Card>;
 
+  // Én enhed for hele grafen (i titlen), så søjlerne kun bærer tal: "117,1 … 250,3" i mia. kr.
+  const scale = metric === "ansatte" ? null : amountScale(points.map((p) => p.value));
+  const label = (v: number) => (scale ? formatScaled(v, scale) : formatNumber(v));
+  const chartTitle = `${METRIC_LABELS[metric]}${scale ? ` · ${scale.label}` : ""} · ${points.length} år`;
+
   const H = W < 420 ? 170 : 210;
   const max = Math.max(0, ...points.map((p) => p.value));
   const min = Math.min(0, ...points.map((p) => p.value));
@@ -27,10 +32,9 @@ export function FinancialChart({ financials, metric, years, error }: { financial
   const zeroY = top + (max / span) * plotH;
   const slot = W / points.length;
   const barW = Math.min(56, slot * 0.6);
-  const compact = slot < 70;
 
   return (
-    <Card title={title} className="lasso-chart">
+    <Card title={chartTitle} className="lasso-chart">
       <div ref={ref}>
         <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${METRIC_LABELS[metric]} pr. år`}>
           {points.map((p, i) => {
@@ -39,12 +43,11 @@ export function FinancialChart({ financials, metric, years, error }: { financial
             const y = p.value >= 0 ? zeroY - h : zeroY;
             const isLast = i === points.length - 1;
             const cls = p.value < 0 ? "lasso-chart__bar lasso-chart__bar--neg" : isLast ? "lasso-chart__bar lasso-chart__bar--last" : "lasso-chart__bar";
-            const label = formatMetric(metric, p.value).replace(" kr.", "").replace(" mio.", compact ? "m" : " mio.").replace(" mia.", compact ? "mia" : " mia.");
             return (
               <g key={p.year}>
                 <rect className={cls} x={x} y={y} width={barW} height={Math.max(h, 1)} rx="4" />
                 <text className="lasso-chart__value" x={x + barW / 2} y={p.value >= 0 ? y - 6 : y + h + 13} textAnchor="middle">
-                  {label}
+                  {label(p.value)}
                 </text>
                 <text className="lasso-chart__label" x={x + barW / 2} y={H - 5} textAnchor="middle">
                   {p.year}

@@ -125,8 +125,10 @@ test("adaptOwnership viser Lassos brøk-intervaller som procent og stemmeandel",
       ],
     },
   });
-  assert.equal(o.owners[0]!.share, "25–33,32 % (stemmer 66,67–89,99 %)");
+  assert.equal(o.owners[0]!.share, "25–33,32 %");
+  assert.equal(o.owners[0]!.votes, "66,67–89,99 %");
   assert.equal(o.owners[1]!.share, "100 %");
+  assert.equal(o.owners[1]!.votes, undefined);
 });
 
 test("adaptPeople udelader revisorer fra otherParticipants og læser employees.count", () => {
@@ -159,4 +161,10 @@ test("adaptFinancials læser XBRL-træet i reports/advanced (selskab før koncer
     { lassoId: "CVR-1-1", period: { from: "2005-01-01", to: "2005-12-31" }, reportYear: 2005, data: { company: null, group: null } },
   ]);
   assert.deepEqual(vm.years, [{ year: 2024, periodEnd: "2024-12-31", revenue: 1000, grossProfit: 400, profit: 90, equity: 700, employees: 12 }]);
+});
+
+test("adaptCompany skriver CVR's versal-kommuner pænt", () => {
+  const vm = adaptCompany("CVR-1-1", { name: "X", address: { postalCode: 2800, postalDistrict: "Kongens Lyngby", municipality: { name: "LYNGBY-TAARBÆK", code: 173 } } });
+  assert.equal(vm.address?.municipality, "Lyngby-Taarbæk");
+  assert.equal(adaptCompany("CVR-1-1", { name: "X", address: { municipality: { name: "GLADSAXE" } } }).address?.municipality, "Gladsaxe");
 });

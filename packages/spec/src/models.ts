@@ -58,8 +58,10 @@ export interface PersonRowVM {
 export interface OwnerVM {
   name: string;
   lassoId?: string;
-  /** Fx "50-66,66 %" eller "100 %". */
+  /** Kapitalandel, fx "50–66,66 %" eller "100 %". */
   share?: string;
+  /** Stemmeandel, når den afviger fra kapitalandelen. */
+  votes?: string;
   kind?: "person" | "company";
 }
 

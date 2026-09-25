@@ -43,7 +43,7 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
     }
     if (c.type === "LassoOwnership") {
       const o = ds.ownership[c.company];
-      if (o?.owners.length) lines.push(`Ejere: ${o.owners.slice(0, 4).map((x) => `${x.name}${x.share ? ` ${x.share}` : ""}`).join(", ")}.`);
+      if (o?.owners.length) lines.push(`Ejere: ${o.owners.slice(0, 4).map((x) => `${x.name}${x.share ? ` ${x.share}` : ""}${x.votes ? ` (stemmer ${x.votes})` : ""}`).join(", ")}.`);
       if (o?.auditor) lines.push(`Revisor: ${o.auditor.name}.`);
     }
     if (c.type === "LassoTable") {

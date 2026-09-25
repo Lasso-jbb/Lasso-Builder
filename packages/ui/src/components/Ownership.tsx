@@ -21,7 +21,10 @@ export function Ownership({ ownership, error, onOpen }: { ownership?: OwnershipV
                 <div className="lasso-list__name">{click ? <button className="lasso-link" onClick={click}>{o.name}</button> : o.name}</div>
                 <div className="lasso-list__sub">{o.kind === "company" ? "Selskab" : "Person"} · legal ejer</div>
               </div>
-              <div className="lasso-list__side">{o.share ?? ""}</div>
+              <div className="lasso-list__side">
+                {o.share ?? ""}
+                {o.votes ? <div className="lasso-list__side-sub">stemmer {o.votes}</div> : null}
+              </div>
             </li>
           );
         })}
