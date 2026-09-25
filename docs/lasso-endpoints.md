@@ -70,6 +70,10 @@ Afprøvet mod api.lassox.com 25.09.2026:
 - `/apps/search/prompt` giver 404 på api.lassox.com, uanset sti og metode. Den ligger på **dev3.api.lassox.com** og kræver
   en anden nøgle. Begge søge-endpoints kaldes derfor mod `LASSO_SEARCH_API_BASE_URL` (standard `https://dev3.api.lassox.com`)
   med `LASSO_SEARCH_API_TOKEN` i samme header. Når nøglen er sat, logger opstarten svarets form (`[lasso-probe] search/prompt`).
+- 25.09.2026 med dev3-nøglen: `/apps/search/lassoid` og `/{lassoId}` svarer 200 på dev3, men `/apps/search/prompt` giver
+  stadig 404 (også `search/prompt`, `api/apps/search/prompt`, GET og `prompt` med lille p). `POST /apps/search` giver 500.
+  dev3's forside er dokumentationssitet, uden sitemap eller søgeindeks.
+- Felterne i filtrene og `OrderBy` er kolonner i Lassos BigQuery.
 - Parameteren til sidestørrelse er ukendt.
 
 ## Kontaktpersoner

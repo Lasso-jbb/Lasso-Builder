@@ -262,45 +262,6 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
         log(`search/lassoid OrderBy=${fieldName ?? "(ingen)"} (${Date.now() - t1} ms)`, summary);
       } catch (err) {
         log("søgning FEJL", `${errorMessage(err)}${err instanceof LassoApiError ? ` (HTTP ${err.status}) ${JSON.stringify(err.body).slice(0, 500)}` : ""}`);
-        // Hvilken sti, metode og nøgle svarer søgemiljøet på?
-        const variants: [string, "GET" | "POST", string, unknown?][] = [
-          ["POST apps/search/prompt", "POST", "apps/search/prompt", { Prompt: prompt }],
-          ["POST apps/search/prompt (prompt)", "POST", "apps/search/prompt", { prompt }],
-          ["POST apps/search/lassoid tom", "POST", "apps/search/lassoid", { filters: [] }],
-          ["POST apps/search", "POST", "apps/search", { Prompt: prompt }],
-          ["POST search/prompt", "POST", "search/prompt", { Prompt: prompt }],
-          ["POST api/apps/search/prompt", "POST", "api/apps/search/prompt", { Prompt: prompt }],
-          ["POST apps/search/ai", "POST", "apps/search/ai", { Prompt: prompt }],
-          ["GET swagger", "GET", "swagger/index.html"],
-          ["GET swagger v1", "GET", "swagger/v1/swagger.json"],
-          ["GET /", "GET", ""],
-          ["GET CVR-1-24256790", "GET", "CVR-1-24256790"],
-        ];
-        for (const [label, method, path, body] of variants) {
-          const r = await client.trySearchRequest(method, path, body);
-          log(`dev3 ${label}`, `${r.status} ${r.body.replace(/\s+/g, " ").slice(0, 200)}`);
-        }
-        // dev3's forside er Lassos dokumentation (MkDocs). Søgeindekset har al tekst: log det om søgning.
-        for (const path of ["search/search_index.json", "api/search/search_index.json"]) {
-          const res = await client.trySearchRequest("GET", path, undefined, 5_000_000);
-          if (res.status !== 200) {
-            log(`dev3 ${path}`, res.status);
-            continue;
-          }
-          try {
-            const index = JSON.parse(res.body) as { docs?: { location: string; title: string; text: string }[] };
-            const docs = index.docs ?? [];
-            const hits = docs.filter((d) => /apps\/search|prompt|lassoid/i.test(`${d.location} ${d.title} ${d.text}`));
-            log(`dev3 ${path}`, { sider: docs.length, søgesider: hits.slice(0, 30).map((d) => `${d.location} | ${d.title}`) });
-            for (const d of hits.slice(0, 8)) {
-              const text = d.text.replace(/<[^>]+>/g, " ").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&").replace(/\s+/g, " ");
-              console.log(`[lasso-probe] dev3-dok ${d.location} | ${d.title}: ${text.slice(0, 2500)}`);
-            }
-          } catch (e) {
-            log(`dev3 ${path} kunne ikke læses`, errorMessage(e));
-          }
-          break;
-        }
       }
     }
     if (!verbose) return;
