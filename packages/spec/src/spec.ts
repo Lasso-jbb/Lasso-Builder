@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { criterionSchema } from "./criteria.js";
+import type { FinancialYear } from "./models.js";
 
 /**
  * Den deklarative visnings-spec. Modellen skriver aldrig HTML/CSS; den sender
@@ -16,6 +17,15 @@ export const METRIC_LABELS: Record<Metric, string> = {
   resultat: "Årets resultat",
   egenkapital: "Egenkapital",
   ansatte: "Ansatte",
+};
+
+/** Hvilket felt i et regnskabsår et nøgletal læses fra. */
+export const METRIC_FIELD: Record<Metric, keyof FinancialYear> = {
+  omsaetning: "revenue",
+  bruttofortjeneste: "grossProfit",
+  resultat: "profit",
+  egenkapital: "equity",
+  ansatte: "employees",
 };
 
 export const TABLE_COLUMNS = [

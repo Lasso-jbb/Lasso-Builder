@@ -1,7 +1,6 @@
-import { amountScale, formatNumber, formatScaled, METRIC_LABELS, type FinancialsVM, type Metric } from "@lasso/spec";
+import { amountScale, formatNumber, formatScaled, METRIC_FIELD, METRIC_LABELS, type FinancialsVM, type Metric } from "@lasso/spec";
 import { Card, StateBox, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
-import { METRIC_FIELD } from "./KeyFigures.js";
 
 export function FinancialChart({ financials, metric, years, error }: { financials?: FinancialsVM; metric: Metric; years: number; error?: string }) {
   const title = `${METRIC_LABELS[metric]} · ${years} år`;

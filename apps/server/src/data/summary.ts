@@ -1,7 +1,11 @@
 import {
+  amountScale,
   formatAmount,
   formatCriterion,
   formatNumber,
+  formatScaled,
+  METRIC_FIELD,
+  METRIC_LABELS,
   percentChange,
   searchKey,
   type Dataset,
@@ -34,6 +38,24 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
         lines.push(
           `Regnskab ${last.year}: ${last.revenue !== null && last.revenue !== undefined ? `omsætning ${formatAmount(last.revenue)}, ` : ""}bruttofortjeneste ${formatAmount(last.grossProfit)}${chg !== null ? ` (${chg > 0 ? "+" : ""}${Math.round(chg)} % fra ${prev?.year})` : ""}, resultat ${formatAmount(last.profit)}, egenkapital ${formatAmount(last.equity)}, ${formatNumber(last.employees)} ansatte.`,
         );
+      }
+      if (f && c.type === "LassoFinancialChart") {
+        // Hele rækken, så modellen kan kommentere udviklingen (og værter uden grafik kan vise den).
+        const series = (m: typeof c.metric) =>
+          f.years.slice(-c.years).flatMap((y) => {
+            const v = y[METRIC_FIELD[m]];
+            return typeof v === "number" ? [{ year: y.year, value: v }] : [];
+          });
+        let metric = c.metric;
+        let points = series(metric);
+        if (points.length === 0 && metric === "omsaetning") points = series((metric = "bruttofortjeneste"));
+        if (points.length) {
+          const scale = metric === "ansatte" ? null : amountScale(points.map((p) => p.value));
+          const unit = scale ? ` (${scale.label})` : "";
+          lines.push(
+            `${METRIC_LABELS[metric]} ${points[0]!.year}–${points.at(-1)!.year}${unit}: ${points.map((p) => `${p.year} ${scale ? formatScaled(p.value, scale) : formatNumber(p.value)}`).join(", ")}.`,
+          );
+        }
       }
     }
     if (c.type === "LassoPeopleList") {

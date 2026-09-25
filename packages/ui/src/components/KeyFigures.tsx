@@ -1,13 +1,5 @@
-import { formatAmount, formatNumber, METRIC_LABELS, type FinancialsVM, type FinancialYear, type Metric } from "@lasso/spec";
+import { formatAmount, formatNumber, METRIC_FIELD, METRIC_LABELS, type FinancialsVM, type Metric } from "@lasso/spec";
 import { Delta, StateBox, stateForError } from "../primitives.js";
-
-export const METRIC_FIELD: Record<Metric, keyof FinancialYear> = {
-  omsaetning: "revenue",
-  bruttofortjeneste: "grossProfit",
-  resultat: "profit",
-  egenkapital: "equity",
-  ansatte: "employees",
-};
 
 export function formatMetric(metric: Metric, value: number | null | undefined): string {
   return metric === "ansatte" ? formatNumber(value) : formatAmount(value);

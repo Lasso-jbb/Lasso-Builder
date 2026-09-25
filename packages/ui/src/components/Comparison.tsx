@@ -1,7 +1,8 @@
 import { METRIC_LABELS, type Dataset, type Metric } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { Card, StateBox } from "../primitives.js";
-import { formatMetric, METRIC_FIELD } from "./KeyFigures.js";
+import { METRIC_FIELD } from "@lasso/spec";
+import { formatMetric } from "./KeyFigures.js";
 
 export function Comparison({
   companies,
