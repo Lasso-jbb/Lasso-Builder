@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { searchKey, type Dataset, type ViewComponent } from "@lasso/spec";
-import { Actions } from "./components/Actions.js";
-import { CompanyHeader } from "./components/CompanyHeader.js";
+import { FollowUps } from "./components/FollowUps.js";
+import { CompanyHead } from "./components/CompanyHead.js";
 import { CompanyTable } from "./components/CompanyTable.js";
-import { Comparison } from "./components/Comparison.js";
+import { CompareTable } from "./components/CompareTable.js";
 import { FilterPanel } from "./components/FilterPanel.js";
-import { FinancialChart } from "./components/FinancialChart.js";
-import { KeyFigures } from "./components/KeyFigures.js";
-import { Ownership } from "./components/Ownership.js";
-import { PeopleList } from "./components/PeopleList.js";
+import { BarChart } from "./components/BarChart.js";
+import { KeyFigureCards } from "./components/KeyFigureCards.js";
+import { OwnerList } from "./components/OwnerList.js";
+import { PersonList } from "./components/PersonList.js";
 import { specToCsv } from "./csv.js";
 import { Badge, Skeleton } from "./primitives.js";
 import { SaveDialog } from "./SaveDialog.js";
@@ -24,24 +24,24 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
   const empty: Dataset = ds ?? { source: "live", generatedAt: "", companies: {}, financials: {}, people: {}, ownership: {}, searches: {}, errors: {} };
   const err = (k: string) => empty.errors[k];
   switch (c.type) {
-    case "LassoCompanyHeader":
-      return <CompanyHeader key={key} company={empty.companies[c.company]} error={err(`company:${c.company}`)} />;
-    case "LassoKeyFigures":
-      return <KeyFigures key={key} financials={empty.financials[c.company]} metrics={c.metrics} error={err(`financials:${c.company}`)} />;
-    case "LassoFinancialChart":
-      return <FinancialChart key={key} financials={empty.financials[c.company]} metric={c.metric} years={c.years} error={err(`financials:${c.company}`)} />;
-    case "LassoPeopleList":
-      return <PeopleList key={key} people={empty.people[c.company]} show={c.show} title={c.title} error={err(`people:${c.company}`)} />;
-    case "LassoOwnership":
-      return <Ownership key={key} ownership={empty.ownership[c.company]} error={err(`ownership:${c.company}`)} onOpen={props.host.drillDown ? act : undefined} />;
-    case "LassoTable": {
+    case "LassoCompanyHead":
+      return <CompanyHead key={key} company={empty.companies[c.company]} error={err(`company:${c.company}`)} />;
+    case "LassoKeyFigureCards":
+      return <KeyFigureCards key={key} financials={empty.financials[c.company]} metrics={c.metrics} error={err(`financials:${c.company}`)} />;
+    case "LassoBarChart":
+      return <BarChart key={key} financials={empty.financials[c.company]} metric={c.metric} years={c.years} error={err(`financials:${c.company}`)} />;
+    case "LassoPersonList":
+      return <PersonList key={key} people={empty.people[c.company]} show={c.show} title={c.title} error={err(`people:${c.company}`)} />;
+    case "LassoOwnerList":
+      return <OwnerList key={key} ownership={empty.ownership[c.company]} error={err(`ownership:${c.company}`)} onOpen={props.host.drillDown ? act : undefined} />;
+    case "LassoCompanyTable": {
       const k = searchKey(c.search);
       return <CompanyTable key={key} result={empty.searches[k]} columns={c.columns} title={c.title} error={err(`search:${k}`)} onAction={act} canDrillDown={Boolean(props.host.drillDown)} />;
     }
-    case "LassoComparison":
-      return <Comparison key={key} companies={c.companies} metrics={c.metrics} title={c.title} dataset={empty} onAction={act} canDrillDown={Boolean(props.host.drillDown)} />;
-    case "LassoActions":
-      return <Actions key={key} prompts={c.prompts} onAction={act} enabled={Boolean(props.host.prompt)} />;
+    case "LassoCompareTable":
+      return <CompareTable key={key} companies={c.companies} metrics={c.metrics} title={c.title} dataset={empty} onAction={act} canDrillDown={Boolean(props.host.drillDown)} />;
+    case "LassoFollowUps":
+      return <FollowUps key={key} prompts={c.prompts} onAction={act} enabled={Boolean(props.host.prompt)} />;
   }
 }
 

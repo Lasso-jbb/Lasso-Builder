@@ -189,7 +189,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     "render_view",
     {
       title: "Vis oversigt",
-      description: `Fri komposition til sammenligninger, oversigter og analyser, der ikke passer i show_company eller search_companies. Send en JSON-spec; Lassos kode henter data og tegner i Lassos design. Skriv aldrig HTML/CSS. Brug 2–6 komponenter.\n\nKomponentkatalog:\n${catalogAsText()}\n\nEksempel: {"title":"Byg vs. Transport","layout":"grid-2","components":[{"type":"LassoComparison","companies":["12345678","87654321"]},{"type":"LassoFinancialChart","company":"12345678","metric":"omsaetning","years":5}]}`,
+      description: `Fri komposition til sammenligninger, oversigter og analyser, der ikke passer i show_company eller search_companies. Send en JSON-spec; Lassos kode henter data og tegner i Lassos design. Skriv aldrig HTML/CSS. Brug 2–6 komponenter.\n\nKomponentkatalog:\n${catalogAsText()}\n\nEksempel: {"title":"Byg vs. Transport","layout":"grid-2","components":[{"type":"LassoCompareTable","companies":["12345678","87654321"]},{"type":"LassoBarChart","company":"12345678","metric":"omsaetning","years":5}]}`,
       inputSchema: viewSpecSchema.omit({ version: true, kind: true }),
       annotations: { title: "Vis oversigt", ...readOnly },
       _meta: ui,
@@ -197,7 +197,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     async (input): Promise<CallToolResult> => {
       const spec = normalizeSpec(viewSpecSchema.parse({ ...input, kind: "custom" }), prefix);
       for (const c of spec.components) {
-        if (c.type === "LassoTable") {
+        if (c.type === "LassoCompanyTable") {
           const invalid = criteriaError(c.search.criteria);
           if (invalid) return invalid;
         }

@@ -16,7 +16,7 @@ function splitChair(role: string): { role: string; chair: boolean } {
  * periode i fast kolonne til højre. Fratrådte kun under "Alle", dæmpet med ordet
  * "fratrådt" i rolleteksten. Formand som tekst i parentes. Ingen initial-cirkler.
  */
-export function PeopleList({ people, show, title, error }: { people?: PersonRowVM[]; show: "current" | "all"; title?: string; error?: string }) {
+export function PersonList({ people, show, title, error }: { people?: PersonRowVM[]; show: "current" | "all"; title?: string; error?: string }) {
   const heading = title ?? "Ledelse";
   const [mode, setMode] = useState<"current" | "all">(show);
   const [expanded, setExpanded] = useState(false);

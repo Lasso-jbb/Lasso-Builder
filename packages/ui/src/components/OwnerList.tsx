@@ -15,7 +15,7 @@ export function parseShare(share: string | undefined): [number, number] | null {
  * fuld koral = sikker minimumsandel, lys koral = intervallets spænd.
  * Navnet står alene uden ikonkasse eller initialer. Revisor som sidste linje.
  */
-export function Ownership({ ownership, error, onOpen }: { ownership?: OwnershipVM; error?: string; onOpen?: (a: ViewAction) => void }) {
+export function OwnerList({ ownership, error, onOpen }: { ownership?: OwnershipVM; error?: string; onOpen?: (a: ViewAction) => void }) {
   const title = "Ejere";
   if (!ownership) {
     return (

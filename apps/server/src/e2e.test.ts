@@ -114,7 +114,7 @@ test("show_company tager et rent CVR-nummer og giver låst skabelon", async () =
   assert.equal(spec.title, "Eksempel Byg A/S");
   assert.deepEqual(
     spec.components.map((c) => c.type),
-    ["LassoCompanyHeader", "LassoKeyFigures", "LassoFinancialChart", "LassoPeopleList", "LassoOwnership", "LassoActions"],
+    ["LassoCompanyHead", "LassoKeyFigureCards", "LassoBarChart", "LassoPersonList", "LassoOwnerList", "LassoFollowUps"],
   );
   const ds = (res._meta as Record<string, Dataset>)[DATASET_META_KEY]!;
   assert.equal(ds.companies["CVR-1-99000001"]?.name, "Eksempel Byg A/S");
@@ -129,7 +129,7 @@ test("show_company tager et navn og siger, hvad den valgte", async () => {
   assert.ok(!res.isError, JSON.stringify(res.content));
   const spec = (res.structuredContent as { spec: ViewSpec }).spec;
   assert.equal(spec.title, "Eksempel Byg A/S");
-  assert.deepEqual(spec.components.map((c) => c.type), ["LassoCompanyHeader", "LassoKeyFigures", "LassoFinancialChart"]);
+  assert.deepEqual(spec.components.map((c) => c.type), ["LassoCompanyHead", "LassoKeyFigureCards", "LassoBarChart"]);
   const text = (res.content as { type: string; text: string }[]).map((c) => c.text).join("\n");
   assert.match(text, /Fundet ud fra navnet "Eksempel Byg": Eksempel Byg A\/S \(99000001\)/);
   // Værter, der kun giver modellen structuredContent, skal også se resuméet.
@@ -151,8 +151,8 @@ test("show_company giver et signeret link til en interaktiv side med friske data
   const html = await page.text();
   assert.match(html, /<title>Eksempel Byg A\/S · Lasso<\/title>/);
   const boot = /window\.__LASSO_BOOT__=(.*?);<\/script>/s.exec(html)![1]!;
-  assert.match(boot, /"LassoFinancialChart"/);
-  assert.doesNotMatch(boot, /"LassoActions"/);
+  assert.match(boot, /"LassoBarChart"/);
+  assert.doesNotMatch(boot, /"LassoFollowUps"/);
   const forged = await fetch(link.replace("/k/99000001", "/k/99000002"));
   assert.equal(forged.status, 403);
 });
@@ -174,8 +174,8 @@ test("render_view tegner fri komposition", async () => {
       title: "Byg vs. Transport",
       layout: "grid-2",
       components: [
-        { type: "LassoComparison", companies: ["99000001", "99000004"] },
-        { type: "LassoFinancialChart", company: "99000001", metric: "omsaetning", years: 5 },
+        { type: "LassoCompareTable", companies: ["99000001", "99000004"] },
+        { type: "LassoBarChart", company: "99000001", metric: "omsaetning", years: 5 },
       ],
     },
   });
@@ -219,7 +219,7 @@ test("/api/views POST kræver admin-nøgle", async () => {
   const ok = await fetch(`${base}/api/views`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-api-key": ADMIN },
-    body: JSON.stringify({ spec: { title: "API-test", components: [{ type: "LassoCompanyHeader", company: "99000003" }] } }),
+    body: JSON.stringify({ spec: { title: "API-test", components: [{ type: "LassoCompanyHead", company: "99000003" }] } }),
   });
   assert.equal(ok.status, 201);
 });

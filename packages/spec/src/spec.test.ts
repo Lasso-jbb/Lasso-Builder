@@ -54,15 +54,15 @@ test("validateCriteria fanger forkerte felter, operatorer og værdier", () => {
 test("companyTemplate har låst rækkefølge og respekterer sections", () => {
   const full = companyTemplate("CVR-1-12345678");
   assert.deepEqual(full.components.map((c) => c.type), [
-    "LassoCompanyHeader",
-    "LassoKeyFigures",
-    "LassoFinancialChart",
-    "LassoPeopleList",
-    "LassoOwnership",
-    "LassoActions",
+    "LassoCompanyHead",
+    "LassoKeyFigureCards",
+    "LassoBarChart",
+    "LassoPersonList",
+    "LassoOwnerList",
+    "LassoFollowUps",
   ]);
   const small = companyTemplate("CVR-1-12345678", { sections: ["graf", "noegletal"] });
-  assert.deepEqual(small.components.map((c) => c.type), ["LassoCompanyHeader", "LassoKeyFigures", "LassoFinancialChart"]);
+  assert.deepEqual(small.components.map((c) => c.type), ["LassoCompanyHead", "LassoKeyFigureCards", "LassoBarChart"]);
 });
 
 test("listTemplate lægger kriterier i rammen og tabellen", () => {
@@ -70,7 +70,7 @@ test("listTemplate lægger kriterier i rammen og tabellen", () => {
   const spec = listTemplate(search);
   assert.equal(spec.kind, "list");
   assert.equal(spec.criteria.length, 1);
-  assert.equal(spec.components[0]!.type, "LassoTable");
+  assert.equal(spec.components[0]!.type, "LassoCompanyTable");
 });
 
 test("parseViewSpec afviser ukendte komponenter", () => {

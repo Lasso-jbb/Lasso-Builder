@@ -113,7 +113,7 @@ export function McpView() {
           const spec: ViewSpec = {
             ...current.spec,
             criteria,
-            components: current.spec.components.map((c) => (c.type === "LassoTable" ? { ...c, search: { ...c.search, criteria } } : c)),
+            components: current.spec.components.map((c) => (c.type === "LassoCompanyTable" ? { ...c, search: { ...c.search, criteria } } : c)),
           };
           setLoading(true);
           replaceTop({ spec, dataset: current.dataset, url: undefined });

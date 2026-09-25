@@ -21,7 +21,7 @@ export function niceTicks(min: number, max: number, count = 4): number[] {
  * værdien over hver søjle, y-akse med hjælpelinjer. Enhed og periode i undertitlen.
  * Mobil: maks 5 punkter ad gangen (26b).
  */
-export function FinancialChart({ financials, metric, years, error }: { financials?: FinancialsVM; metric: Metric; years: number; error?: string }) {
+export function BarChart({ financials, metric, years, error }: { financials?: FinancialsVM; metric: Metric; years: number; error?: string }) {
   const [ref, W] = useWidth<HTMLDivElement>();
   const H = 240;
   if (!financials) {
