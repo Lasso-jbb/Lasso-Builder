@@ -1,0 +1,4 @@
+html, body { margin: 0; padding: 0; background: transparent; }
+body { min-height: 0; }
+#root { min-height: 0; }
+.boot { font-family: Poppins, system-ui, sans-serif; padding: 16px; color: #8c837b; font-size: 13px; }
