@@ -129,6 +129,31 @@ export const comparisonSchema = z.object({
   title: z.string().max(80).optional(),
 });
 
+export const keyValueListSchema = z.object({
+  type: z.literal("LassoKeyValueList"),
+  company: companyRef,
+  variant: z
+    .enum(["company", "financials"])
+    .default("company")
+    .describe("'company': stamdata og revisor. 'financials': regnskabstal med årsvælger, tal højrestillet."),
+  title: z.string().max(80).optional(),
+});
+
+export const multiYearTableSchema = z.object({
+  type: z.literal("LassoMultiYearTable"),
+  company: companyRef,
+  metrics: z.array(metric).min(1).max(6).optional().describe("Standard: bruttofortjeneste/omsætning, resultat, egenkapital, ansatte."),
+  years: z.number().int().min(2).max(10).default(5),
+  title: z.string().max(80).optional(),
+});
+
+/** Ingen live datakilde endnu (se resolve.ts og LiveProvider.score); demodata i DemoProvider, "ikke oplyst" i live. */
+export const scoreGaugeSchema = z.object({
+  type: z.literal("LassoScoreGauge"),
+  company: companyRef,
+  title: z.string().max(80).optional().describe("Standard: 'Score'."),
+});
+
 export const actionsSchema = z.object({
   type: z.literal("LassoFollowUps"),
   prompts: z
@@ -150,6 +175,9 @@ export const componentSchema = z.discriminatedUnion("type", [
   ownershipSchema,
   tableSchema,
   comparisonSchema,
+  keyValueListSchema,
+  multiYearTableSchema,
+  scoreGaugeSchema,
   actionsSchema,
 ]);
 export type ViewComponent = z.infer<typeof componentSchema>;

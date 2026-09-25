@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { companyTemplate, emptyDataset, listTemplate, searchKey, searchQuerySchema, type Dataset } from "@lasso/spec";
+import { companyTemplate, emptyDataset, listTemplate, parseViewSpec, searchKey, searchQuerySchema, type Dataset } from "@lasso/spec";
 import { textCard } from "./card.js";
 
 // Opdigtede tal i samme form som Lassos rigtige svar.
@@ -63,6 +63,16 @@ test("tekstkortet viser kun de valgte sektioner", () => {
   const card = textCard(companyTemplate(ID, { sections: ["header", "noegletal", "graf"] }), dataset())!;
   assert.ok(!card.includes("LEDELSE"));
   assert.ok(card.includes("BRUTTOFORTJENESTE, MIA. KR."));
+});
+
+test("tekstkortet viser scoren fra LassoScoreGauge, eller 'Ikke oplyst' uden score (katalog 10)", () => {
+  const spec = parseViewSpec({ title: "x", components: [{ type: "LassoScoreGauge", company: ID }] });
+  const ds = dataset();
+  ds.scores[ID] = { lassoId: ID, score: 52, source: "Eksempeldata" };
+  assert.match(textCard(spec, ds)!, /SCORE[\s\S]*52 af 100/);
+
+  ds.scores[ID] = { lassoId: ID, score: null };
+  assert.match(textCard(spec, ds)!, /Ikke oplyst/);
 });
 
 test("tekstkort for en søgeliste", () => {

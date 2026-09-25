@@ -278,6 +278,8 @@ export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
   const years: FinancialYear[] = [];
   for (const r of reports) {
     const periodEnd = dateStr(r, "period.to", "periodEnd", "period.end", "endDate", "end", "reportingPeriod.end", "to");
+    const periodStart = dateStr(r, "period.from", "periodStart", "period.start", "startDate", "reportingPeriod.start", "from");
+    const published = dateStr(r, "publicationTime", "published", "publishedAt", "reportPublished");
     const year = num(r, "reportYear", "year", "fiscalYear", "financialYear", "aar") ?? (periodEnd ? Number(periodEnd.slice(0, 4)) : undefined);
     if (!year || !Number.isFinite(year)) continue;
     const facts = new Map<string, number>();
@@ -287,7 +289,9 @@ export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
       concepts.map((c) => facts.get(c)).find((v) => v !== undefined) ?? num(src, ...keys) ?? num(r, ...keys) ?? null;
     years.push({
       year,
+      periodStart,
       periodEnd,
+      published,
       revenue: f(["revenue", "revenues", "netsales", "revenuefromcontractswithcustomers", "nettoomsaetning"], "revenue", "netRevenue", "turnover", "netTurnover", "omsaetning"),
       grossProfit: f(["grossprofitloss", "grossprofit", "grossresult"], "grossProfit", "grossResult", "grossProfitLoss", "bruttofortjeneste"),
       profit: f(["profitloss", "profitlossfortheyear", "netincome"], "profit", "netResult", "profitLoss", "netIncome", "aaretsResultat"),

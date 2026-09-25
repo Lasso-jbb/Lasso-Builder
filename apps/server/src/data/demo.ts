@@ -5,6 +5,7 @@ import {
   type FinancialsVM,
   type OwnershipVM,
   type PersonRowVM,
+  type ScoreVM,
   type SearchQuery,
   type SearchResultVM,
 } from "@lasso/spec";
@@ -81,7 +82,9 @@ function financialsFor(c: DemoCompany): FinancialsVM {
       const gross = Math.round(c.base * Math.pow(1 + c.growth, i) * wobble);
       return {
         year,
+        periodStart: `${year}-01-01`,
         periodEnd: `${year}-12-31`,
+        published: `${year + 1}-04-${String(10 + (seed % 15)).padStart(2, "0")}`,
         revenue: Math.round(gross * 2.6),
         grossProfit: gross,
         profit: Math.round(gross * (0.08 + (seed % 5) / 100) * (c.growth < 0 ? -0.5 : 1)),
@@ -170,5 +173,14 @@ export class DemoProvider implements DataProvider {
       owners: c.owners,
       auditor: c.auditor === "Ingen" ? undefined : { name: c.auditor, lassoId: auditor?.lassoId, from: "2019-01-01" },
     };
+  }
+
+  /** Katalog 10: eksempelscore, da der endnu ikke findes en live datakilde. */
+  async score(lassoId: string): Promise<ScoreVM> {
+    const c = get(lassoId);
+    const seed = Number(c.cvr!.slice(-2));
+    if (c.status !== "Aktiv") return { lassoId, score: null };
+    const score = Math.max(5, Math.min(95, 22 + ((seed * 13) % 70)));
+    return { lassoId, score, source: "Eksempeldata", updated: "2026-09-12" };
   }
 }

@@ -1,4 +1,4 @@
-import { formatCriterion, searchKey, type CompanyRowVM, type Criterion, type FinancialsVM, type SearchQuery, type SearchResultVM } from "@lasso/spec";
+import { formatCriterion, searchKey, type CompanyRowVM, type Criterion, type FinancialsVM, type ScoreVM, type SearchQuery, type SearchResultVM } from "@lasso/spec";
 import type { Config } from "../config.js";
 import { adaptCompany, adaptFinancials, adaptOwnership, adaptPeople, adaptSearch } from "../lasso/adapters.js";
 import type { LassoClient } from "../lasso/client.js";
@@ -164,5 +164,10 @@ export class LiveProvider implements DataProvider {
 
   async ownership(lassoId: string) {
     return adaptOwnership(lassoId, await this.client.company(lassoId));
+  }
+
+  /** Katalog 10: der er endnu ingen bekræftet Lasso-kilde til en 0–100 score. "Ikke oplyst", ikke en fejl. */
+  async score(lassoId: string): Promise<ScoreVM> {
+    return { lassoId, score: null };
   }
 }

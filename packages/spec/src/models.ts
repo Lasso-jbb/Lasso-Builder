@@ -32,7 +32,10 @@ export interface CompanyVM {
 
 export interface FinancialYear {
   year: number;
+  periodStart?: string;
   periodEnd?: string;
+  /** Dato regnskabet blev offentliggjort (Lassos "publicationTime"). */
+  published?: string;
   revenue?: number | null;
   grossProfit?: number | null;
   profit?: number | null;
@@ -102,6 +105,17 @@ export interface SearchResultVM {
 
 export type DataSourceKind = "live" | "demo";
 
+/**
+ * Score 0 (lav risiko) til 100 (høj risiko), katalog 10. Der er endnu ingen
+ * live datakilde; `score: null` betyder "ikke oplyst" (se LiveProvider.score).
+ */
+export interface ScoreVM {
+  lassoId: string;
+  score: number | null;
+  source?: string;
+  updated?: string;
+}
+
 /** Alt det data, én visning skal bruge, slået op på nøgle. */
 export interface Dataset {
   source: DataSourceKind;
@@ -111,6 +125,7 @@ export interface Dataset {
   people: Record<string, PersonRowVM[]>;
   ownership: Record<string, OwnershipVM>;
   searches: Record<string, SearchResultVM>;
+  scores: Record<string, ScoreVM>;
   /** Fejl pr. nøgle, fx "company:CVR-1-12345678" -> "Ingen adgang". */
   errors: Record<string, string>;
 }
@@ -124,6 +139,7 @@ export function emptyDataset(source: DataSourceKind): Dataset {
     people: {},
     ownership: {},
     searches: {},
+    scores: {},
     errors: {},
   };
 }
