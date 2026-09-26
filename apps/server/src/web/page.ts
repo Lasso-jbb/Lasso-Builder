@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -16,6 +17,17 @@ const CANDIDATES = [
 ].filter((p): p is string => Boolean(p));
 
 let cached: string | null = null;
+
+/**
+ * Kort hash af den byggede render-app. Indgår i visningens ui://-adresse, så Claude og
+ * ChatGPT henter den nye app efter hver deploy i stedet for at bruge en gemt, gammel
+ * version (som ikke kender nye komponenter og derfor tegner tomme felter).
+ */
+export function viewVersion(): string {
+  const file = CANDIDATES.find((p) => existsSync(p));
+  if (!file) return "dev";
+  return createHash("sha256").update(readFileSync(file)).digest("hex").slice(0, 10);
+}
 
 export async function loadViewHtml(): Promise<string> {
   if (cached && process.env.NODE_ENV === "production") return cached;

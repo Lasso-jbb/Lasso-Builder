@@ -37,9 +37,10 @@ import { summarizeView } from "../data/summary.js";
 import { SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "../views/store.js";
 import { companyLink, personLink } from "../web/links.js";
 import { findPerson } from "../data/personLookup.js";
-import { loadViewHtml } from "../web/page.js";
+import { loadViewHtml, viewVersion } from "../web/page.js";
 
-export const VIEW_URI = "ui://lasso/view.html";
+/** Adressen skifter med app-versionen, så værten aldrig viser en gemt, forældet render-app. */
+export const VIEW_URI = `ui://lasso/view-${viewVersion()}.html`;
 
 export interface McpContext {
   config: Config;

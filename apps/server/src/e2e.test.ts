@@ -65,10 +65,12 @@ test("tools og UI-ressource er registreret", async () => {
   const names = tools.map((t) => t.name).sort();
   assert.deepEqual(names, ["render_view", "resolve_view", "save_view", "search_companies", "show_company", "show_person"]);
   const show = tools.find((t) => t.name === "show_company")!;
-  assert.equal((show._meta as { ui?: { resourceUri?: string } }).ui?.resourceUri, "ui://lasso/view.html");
+  const uri = (show._meta as { ui?: { resourceUri?: string } }).ui?.resourceUri ?? "";
+  // Adressen bærer app-versionen, så værten ikke genbruger en gemt, forældet render-app.
+  assert.match(uri, /^ui:\/\/lasso\/view-[0-9a-f]{10}\.html$/);
   const resolveTool = tools.find((t) => t.name === "resolve_view")!;
   assert.deepEqual((resolveTool._meta as { ui?: { visibility?: string[] } }).ui?.visibility, ["app"]);
-  const res = await client.readResource({ uri: "ui://lasso/view.html" });
+  const res = await client.readResource({ uri });
   const content = res.contents[0] as { mimeType?: string; text?: string };
   assert.equal(content.mimeType, "text/html;profile=mcp-app");
   assert.ok(content.text && content.text.length > 1000, "view.html skal være bygget");
