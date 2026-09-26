@@ -52,7 +52,7 @@ const INSTRUCTIONS = `Lasso giver adgang til data om danske virksomheder (CVR): 
 
 Sådan bruges værktøjerne:
 - Én bestemt virksomhed: show_company med CVR-nummer, Lasso-ID eller navn. Et navn slår serveren selv op; brug ikke search_companies først.
-- Økonomi og regnskab ("hvordan går det økonomisk for Novo?"): show_company med focus "oekonomi". Ejere: focus "ejerskab". Ledelse: focus "ledelse". Risiko: focus "risiko". Historik og nyheder: focus "historik". Serveren tilpasser selv skærmbilledet til virksomhedens data. Kommentér kort i 2–3 sætninger; tallene står i visningen.
+- Økonomi og regnskab ("hvordan går det økonomisk for Novo?"): show_company med focus "oekonomi". Ejere: focus "ejerskab". Ledelse: focus "ledelse". Risiko: focus "risiko". Historik og nyheder: focus "historik". Fuldt regnskab (resultatopgørelse, balance, pengestrøm): focus "regnskab". Telefon, e-mail, adresse og kontaktpersoner: focus "kontakt". Serveren tilpasser selv skærmbilledet til virksomhedens data. Kommentér kort i 2–3 sætninger; tallene står i visningen.
 - Én bestemt person ("hvem er Mette Holm", "hvor sidder X i bestyrelser", "har X været med i konkurser"): show_person med navn eller person-ID (CVR-3-…). Serveren viser roller over tid, netværk og konkurser blandt personens selskaber.
 - Lister og målgrupper ("alle revisorer i Region Midt med mindst 10 ansatte"): search_companies med brugerens formulering som query. Lasso fortolker den til filtre i hele CVR og viser dem i filterpanelet. Tilføj kun criteria for det, teksten ikke siger, og sort for "top N"/"største".
 - Sammenligninger og oversigter, der ikke passer i de to: render_view med en spec fra komponentkataloget.
@@ -156,12 +156,12 @@ export function createMcpServer(ctx: McpContext): McpServer {
     {
       title: "Vis virksomhed",
       description:
-        "Vis én dansk virksomhed som ét skærmbillede, der tilpasser sig virksomhedens data. Du angiver kun hensigten med focus; serveren henter data og vælger selv formen (fx graf ved mange regnskabsår, alle tal ved få, ejerdiagram ved en koncern, ingen nyhedssektion når der ingen nyheder er) og lægger det i kolonner som Lassos portal. Kald det kun én gang pr. svar, og kald ikke render_view bagefter. Brug til alle spørgsmål om én bestemt virksomhed. focus: 'overblik' (standard, 'fortæl om X'), 'oekonomi' (regnskab, omsætning, resultat, 'hvordan går det'), 'ejerskab' (ejere, reelle ejere, koncern), 'ledelse' (direktion, bestyrelse, udskiftning), 'risiko' (røde flag, kan vi handle med dem), 'historik' (hvad er der sket, nyheder). Tager CVR-nummer, Lasso-ID eller navn; ved navn vælger serveren det bedste match og nævner alternativerne. Brug kun render_view, når brugeren beder om noget, focus ikke dækker (fx sammenligning af flere virksomheder).",
+        "Vis én dansk virksomhed som ét skærmbillede, der tilpasser sig virksomhedens data. Du angiver kun hensigten med focus; serveren henter data og vælger selv formen (fx graf ved mange regnskabsår, alle tal ved få, ejerdiagram ved en koncern, ingen nyhedssektion når der ingen nyheder er) og lægger det i kolonner som Lassos portal. Kald det kun én gang pr. svar, og kald ikke render_view bagefter. Brug til alle spørgsmål om én bestemt virksomhed. focus: 'overblik' (standard, 'fortæl om X'), 'oekonomi' (regnskab, omsætning, resultat, 'hvordan går det'), 'ejerskab' (ejere, reelle ejere, koncern), 'ledelse' (direktion, bestyrelse, udskiftning), 'risiko' (røde flag, kan vi handle med dem), 'historik' (hvad er der sket, nyheder), 'regnskab' (resultatopgørelse, balance, pengestrøm, alle linjer), 'kontakt' (telefon, e-mail, web, adresse, kontaktpersoner). Tager CVR-nummer, Lasso-ID eller navn; ved navn vælger serveren det bedste match og nævner alternativerne. Brug kun render_view, når brugeren beder om noget, focus ikke dækker (fx sammenligning af flere virksomheder).",
       inputSchema: z.object({
         company: z.string().min(1).describe("8-cifret CVR-nummer, Lasso-ID (fx CVR-1-12345678) eller virksomhedens navn."),
         focus: z.enum(FOCUSES).optional().describe("Hvad brugeren vil vide. Standard: overblik."),
         sections: z.array(z.enum(COMPANY_SECTIONS)).optional().describe("Forældet: fast skabelon. Brug focus i stedet."),
-        chart_metric: z.enum(METRICS).optional().describe("Nøgletal i grafen. Standard: bruttofortjeneste."),
+        chart_metric: z.enum(METRICS).optional().describe("Nøgletal i grafen, kun hvis brugeren nævner et bestemt. Standard: omsætning, hvis den er oplyst, ellers bruttofortjeneste."),
         years: z.number().int().min(2).max(10).optional().describe("Antal år i grafer og tabeller. Standard: 5, ved økonomi 10."),
       }),
       annotations: { title: "Vis virksomhed", ...readOnly },
@@ -248,7 +248,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     "render_view",
     {
       title: "Vis oversigt",
-      description: `Fri komposition til sammenligninger, oversigter og analyser, der ikke passer i show_company eller search_companies. Send en JSON-spec; Lassos kode henter data og tegner i Lassos design. Skriv aldrig HTML/CSS. Brug 2–8 komponenter i ét dashboard. Kald render_view én gang pr. svar.\n\n${COMPOSITION_RULES}\n\nKomponentkatalog (hver linje: Brug til / Brug ikke når / Kræver / Eksempel):\n${catalogAsText()}\n\nEksempel (ét dashboard): {"title":"Byg vs. Transport","components":[{"type":"LassoCompareTable","companies":["12345678","87654321"]},{"type":"LassoLineChart","company":"12345678","metric":"omsaetning","years":5,"benchmark":"87654321"},{"type":"LassoRanking","companies":["12345678","87654321"],"metric":"omsaetning"}]}`,
+      description: `Fri komposition til sammenligninger, oversigter og analyser, der ikke passer i show_company eller search_companies. Send en JSON-spec; Lassos kode henter data og tegner i Lassos design. Skriv aldrig HTML/CSS. Brug 1–12 komponenter i ét dashboard. Kald render_view én gang pr. svar.\n\n${COMPOSITION_RULES}\n\nKomponentkatalog (hver linje: Brug til / Brug ikke når / Kræver / Eksempel):\n${catalogAsText()}\n\nEksempel (ét dashboard): {"title":"Byg vs. Transport","components":[{"type":"LassoCompareTable","companies":["12345678","87654321"]},{"type":"LassoLineChart","company":"12345678","metric":"omsaetning","years":5,"benchmark":"87654321"}]}`,
       inputSchema: viewSpecSchema.omit({ version: true, kind: true }),
       annotations: { title: "Vis oversigt", ...readOnly },
       _meta: ui,
