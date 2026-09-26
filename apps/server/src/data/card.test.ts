@@ -308,7 +308,7 @@ test("tekstkortet viser resultatopgørelsen og balancen (katalog 19) med '→' m
   assert.ok(card.includes("RESULTATOPGØRELSE 2024/2025"), card);
   assert.match(card, /EBITDA\s+115 mia\. → 113 mia\./);
   assert.ok(card.includes("BALANCE 2024/2025"), card);
-  assert.match(card, /Aktiver i alt\s+298 mia\. → 362 mia\./);
+  assert.match(card, /Aktiver i alt[\s│]+298 mia\. → 362 mia\./);
 });
 
 test("tekstkortet viser den præcise tekst 'Pengestrømsopgørelse er ikke indberettet.' når der ikke er pengestrømsdata (katalog 19)", () => {
@@ -343,7 +343,7 @@ test("tekstkortet viser pengestrømmen, når data findes (katalog 19)", () => {
   const card = textCard(spec, ds)!;
   assert.ok(card.includes("PENGESTRØM 2025"), card);
   assert.match(card, /Fra drift\s+90 mia\./);
-  assert.match(card, /Likvider ultimo\s+50 mia\./);
+  assert.match(card, /Likvider ultimo[\s│]+50 mia\./);
 });
 
 test("personkortet (katalog 16) har samme bredde på alle linjer og ingen midterprik", () => {

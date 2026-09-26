@@ -82,7 +82,10 @@ class Card {
   }
   row(label: string, value: string | undefined) {
     if (!value) return;
-    wrap(value, VALUE).forEach((v, i) => this.lines.push(`│ ${pad(`${pad(i === 0 ? label : "", LABEL)} ${v}`, W)} │`));
+    // En etiket, der er længere end kolonnen, står på sin egen linje, så kortet aldrig bliver bredere.
+    const long = [...label].length > LABEL;
+    if (long) this.lines.push(`│ ${pad(label, W)} │`);
+    wrap(value, VALUE).forEach((v, i) => this.lines.push(`│ ${pad(`${pad(i === 0 && !long ? label : "", LABEL)} ${v}`, W)} │`));
   }
   raw(s: string) {
     this.lines.push(`│ ${pad(s, W)} │`);
@@ -262,7 +265,7 @@ function incomeStatementText(card: Card, s: FinancialStatementsVM, years: number
       { label: "Finansielle", values: shown.map((y) => y.financialItemsNet) },
       { label: "Før skat", values: shown.map((y) => y.profitBeforeTax) },
       { label: "Skat", values: shown.map((y) => y.tax) },
-      { label: "Årets resultat", values: shown.map((y) => y.profit) },
+      { label: "Resultat", values: shown.map((y) => y.profit) },
     ],
     shown.map((y) => y.year),
   );
