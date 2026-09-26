@@ -207,10 +207,11 @@ export class LassoClient {
   valuations(lassoId: string) {
     return this.get(`modules/valuations/${enc(lassoId)}`);
   }
+  /** Risikoobservationer. Metode og sti bekræftet af Lasso 26.09.2026 (POST); svarformen er endnu ubekræftet. */
   observations(lassoId: string) {
-    return this.get(`modules/observations/${enc(lassoId)}`);
+    return this.post(`modules/observations/${enc(lassoId)}`, {});
   }
-  /** Ubekræftet form; se docs/lasso-endpoints.md under "Ubekræftet". */
+  /** Reelle ejere. Sti bekræftet af Lasso 26.09.2026; svarformen er endnu ubekræftet. */
   ownersBeneficial(lassoId: string) {
     return this.get(`${enc(lassoId)}/owners/beneficial`);
   }
@@ -233,8 +234,9 @@ export class LassoClient {
   contacts(lassoId: string, p: ContactParams = { contacts: true }) {
     return this.get(`apps/contacts/${enc(lassoId)}/data`, { ...p });
   }
-  bbrSummary(propertyNumber: string | number, municipality: string | number) {
-    return this.get("data/bbr/property/summary", { propertynumber: propertyNumber, municipality });
+  /** BBR-opsummering for én ejendom ud fra BFE-nummeret. Sti og parameter bekræftet af Lasso 26.09.2026. */
+  bbrSummary(bfeNumber: string | number) {
+    return this.get("data/bbr/property/summary", { bfeNumber });
   }
   /**
    * Katalog 20, CHR. UBEKRÆFTET: intet CHR-endpoint er fundet i docs.lassox.com

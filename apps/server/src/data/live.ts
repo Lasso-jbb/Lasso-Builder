@@ -287,9 +287,9 @@ export class LiveProvider implements DataProvider {
     const refs = ejfBbrRefs(raw);
     const pairs = base.properties.map((property, i) => [property, refs[i]] as const);
     const properties = await mapLimit(pairs, 3, async ([property, ref]) => {
-      if (!ref?.propertyNumber || !ref.municipality) return property;
+      if (!ref?.bfeNumber) return property;
       try {
-        const bbr = await this.client.bbrSummary(ref.propertyNumber, ref.municipality);
+        const bbr = await this.client.bbrSummary(ref.bfeNumber);
         return mergeBbr(property, bbr);
       } catch {
         return property;

@@ -263,3 +263,16 @@ since?, until? }`. Svarer endpointet 400/404/405/501, falder `LiveProvider` tilb
 `GET /{lassoId}` (ét lag, med en note i visningen). `/api/debug/lasso/...` kan kun GET; formen tjekkes med
 `client.tryRequest("POST", "modules/relations/graph", body)`, når der er en nøgle, og adapteren rettes til.
 
+## Bekræftet af Lasso 26.09.2026 (metode og sti; svarformerne er endnu ikke set)
+
+| Formål | Metode | Endpoint | Bruges af |
+|---|---|---|---|
+| Ejergraf | POST | `/modules/relations/graph` med `{ ids, relationTypes: ["ownership"], enrichments: ["companyinfo"], ingoingDepth, outgoingDepth, onDate? }` | `LassoOwnershipDiagram` (14) |
+| Reelle ejere | GET | `/{lassoId}/owners/beneficial` | `LassoBeneficialOwners` (11) |
+| Risikoobservationer | **POST** | `/modules/observations/{lassoId}` (klienten sender en tom body `{}`) | `LassoRiskObservations` (17) |
+| BBR for én ejendom | GET | `/data/bbr/property/summary?bfeNumber=12345` | `LassoProperties` (20). BFE-nummeret læses fra ejerfortegnelsen (`ejfBbrRefs`). |
+| P-enheder, ændringer | GET | `/data/cvr/place/delta?since=2021-02-01&max=2021-02-02&pageSize=50` | Ikke brugt endnu, se nedenfor |
+
+**P-enheder:** `place/delta` er en ændringsliste over P-enheder i et tidsrum, ikke et opslag pr. virksomhed. Den egner sig til overvågning (21), men ikke til at vise én virksomheds P-enheder. `LassoProductionUnits` læser derfor stadig P-enhederne fra CVR-svaret `GET /{lassoId}` (ubekræftede feltnavne, se "Ubekræftet"). Findes der et opslag pr. virksomhed eller pr. P-nummer, skal det bruges i stedet.
+
+Når der er en API-nøgle, skal svarformerne tjekkes. POST-endpoints kan ikke tjekkes via `/api/debug/lasso/...` (kun GET), så brug `client.tryRequest("POST", …)`.

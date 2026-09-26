@@ -95,7 +95,7 @@ test("adaptProperties og mergeBbr samler ejendom og bygninger (UBEKRÆFTET form)
   assert.equal(base.properties[0]!.ownership, "Ejer, tinglyst 2019");
 
   const refs = ejfBbrRefs(ejf);
-  assert.deepEqual(refs, [{ propertyNumber: "79972", municipality: "751" }]);
+  assert.deepEqual(refs, [{ bfeNumber: "123" }]);
 
   const merged = mergeBbr(base.properties[0]!, {
     buildings: [{ buildingNumber: 1, usageText: "Kontor", builtYear: 1998, floors: 3, totalArea: 1860, unitCount: 6 }],

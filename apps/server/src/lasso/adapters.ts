@@ -689,16 +689,15 @@ function valuationFrom(obj: Json): PropertyVM["publicValuation"] {
 
 /** Property-/kommunenummer til BBR-opslag, i samme rækkefølge som `adaptProperties`. UBEKRÆFTET. */
 export interface BbrRef {
-  propertyNumber?: string;
-  municipality?: string;
+  /** BFE-nummer, som BBR-opslaget bruger (data/bbr/property/summary?bfeNumber=…). */
+  bfeNumber?: string;
 }
 
 export function ejfBbrRefs(ejfRaw: Json): BbrRef[] {
   return items(ejfRaw).map((p) => {
     const prop = pick(p, "property", "ejendom", "ejendomme") ?? p;
     return {
-      propertyNumber: str(prop, "propertyNumber", "ejendomsnummer", "propertyNo"),
-      municipality: str(prop, "municipalityCode", "kommunekode", "municipality.code"),
+      bfeNumber: str(prop, "bfeNumber", "bfe", "bfeNummer", "BFEnummer", "samletFastEjendom.bfeNumber") ?? str(p, "bfeNumber", "bfe"),
     };
   });
 }
