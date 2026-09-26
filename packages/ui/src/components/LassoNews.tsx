@@ -88,8 +88,9 @@ function NewsRow({ item, mention }: { item: NewsItemVM; mention?: string }) {
  * neutralt globus-ikon, aldrig et bogstav). Relativ tid under 7 dage, ellers
  * dato. Virksomheden fremhæves i uddraget med fed skrift, aldrig koral.
  */
-export function LassoNews({ news, companyName, error }: { news?: NewsVM; companyName?: string; error?: string }) {
+export function LassoNews({ news, companyName, limit, error }: { news?: NewsVM; companyName?: string; limit?: number; error?: string }) {
   const title = "Nyheder";
+  const [expanded, setExpanded] = useState(false);
   if (!news) {
     return (
       <Section title={title} span="half">
@@ -104,13 +105,21 @@ export function LassoNews({ news, companyName, error }: { news?: NewsVM; company
       </Section>
     );
   }
+  // Specens limit gælder (overblik: 3); resten bag "Se alle N" (regel 9).
+  const max = limit ?? 5;
+  const items = expanded ? news.items : news.items.slice(0, max);
   return (
     <Section title={title} span="half">
       <div className="lasso-news">
-        {news.items.map((n, i) => (
+        {items.map((n, i) => (
           <NewsRow key={i} item={n} mention={companyName} />
         ))}
       </div>
+      {news.items.length > max ? (
+        <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+          {expanded ? "Vis færre" : `Se alle ${news.items.length} nyheder`}
+        </button>
+      ) : null}
     </Section>
   );
 }

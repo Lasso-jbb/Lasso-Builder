@@ -172,8 +172,9 @@ export function createApp({ config, client, provider, store }: AppDeps) {
       return fail(404, `Virksomheden kunne ikke hentes: ${errorMessage(err)}`);
     }
     // Samme komponist som i chatten: hent data, og lad formen følge virksomhedens data.
-    const dataset = await resolveSpec(composeProbe(lassoId, "overblik"), provider);
-    const spec = composeCompany(lassoId, dataset, { focus: "overblik", years: check.link.years, chartMetric: check.link.metric, name, followUps: false });
+    const focus = check.link.focus ?? "overblik";
+    const dataset = await resolveSpec(composeProbe(lassoId, focus), provider);
+    const spec = composeCompany(lassoId, dataset, { focus, years: check.link.years, chartMetric: check.link.metric, name, followUps: false });
     res
       .type("html")
       .set("Cache-Control", "no-store")
@@ -196,7 +197,7 @@ export function createApp({ config, client, provider, store }: AppDeps) {
     const dataset = await resolveSpec(composePersonProbe(check.lassoId), provider);
     const person = dataset.persons[check.lassoId];
     if (!person) return fail(404, `Personen kunne ikke hentes: ${dataset.errors[`person:${check.lassoId}`] ?? "ukendt fejl"}`);
-    const spec = composePerson(check.lassoId, dataset, { name: person.name });
+    const spec = composePerson(check.lassoId, dataset, { name: person.name, followUps: false });
     res
       .type("html")
       .set("Cache-Control", "no-store")

@@ -22,7 +22,8 @@ test("pickCompany foretrækker præcist navn frem for Lassos rækkefølge", () =
   ];
   const found = pickCompany("Novo Nordisk", rows)!;
   assert.equal(found.pick.cvr, "24256790");
-  assert.deepEqual(found.alternatives.map((r) => r.cvr), ["10582989", "40220771", "38180045"]);
+  // Blandt alternativerne står selskabet (A/S) før fonden og foreningen.
+  assert.deepEqual(found.alternatives.map((r) => r.cvr), ["38180045", "10582989", "40220771"]);
 });
 
 test("pickCompany tager aktive før ophørte og ellers Lassos rækkefølge", () => {
@@ -53,4 +54,47 @@ test("findCompany søger også med selskabsform, når Lasso ikke har selskabet i
   assert.equal(found.pick.cvr, "24256790");
   assert.deepEqual(calls, ["Novo Nordisk", "Novo Nordisk A/S"]);
   assert.deepEqual(found.alternatives.map((r) => r.cvr), ["40539050", "10582989"]);
+});
+
+test("pickCompany: selskab med selskabsform vinder over forening med præcis samme navn (Danske Bank)", () => {
+  // Rækkefølgen fra Lasso 26.09.2026: foreningen "Danske Bank" (Odense, 3 ansatte) først.
+  const rows = [
+    { ...row("Danske Bank", "23569914"), employees: 3 },
+    { ...row("DANSKE BANK A/S", "61126228"), employees: 21000 },
+    { ...row("Danske Bank Pensionistforening", "11111111"), employees: 0 },
+  ];
+  const found = pickCompany("Danske Bank", rows)!;
+  assert.equal(found.pick.cvr, "61126228");
+  assert.equal(found.alternatives[0]!.cvr, "23569914");
+});
+
+test("pickCompany: ved samme navn og form vinder flest ansatte, derefter bruttofortjeneste", () => {
+  const a = pickCompany("Hansen Byg", [
+    { ...row("Hansen Byg ApS", "11111111"), employees: 2 },
+    { ...row("HANSEN BYG A/S", "22222222"), employees: 40 },
+  ])!;
+  assert.equal(a.pick.cvr, "22222222");
+  const b = pickCompany("Hansen Byg", [
+    { ...row("Hansen Byg ApS", "11111111"), grossProfit: 1_000_000 },
+    { ...row("HANSEN BYG A/S", "22222222"), grossProfit: 9_000_000 },
+  ])!;
+  assert.equal(b.pick.cvr, "22222222");
+});
+
+test("pickCompany: konkursramte og ophørte kommer efter aktive", () => {
+  const found = pickCompany("Tiga", [row("TIGA ApS", "10048702", "warning"), row("Tiga A/S", "33333333")])!;
+  assert.equal(found.pick.cvr, "33333333");
+});
+
+test("findCompany søger med selskabsform, når det præcise navn kun er en forening", async () => {
+  const calls: string[] = [];
+  const provider = {
+    async findCompanies(name: string) {
+      calls.push(name);
+      return name === "Danske Bank A/S" ? [{ ...row("DANSKE BANK A/S", "61126228"), employees: 21000 }] : [{ ...row("Danske Bank", "23569914"), employees: 3 }];
+    },
+  } as unknown as DataProvider;
+  const found = (await findCompany(provider, "Danske Bank"))!;
+  assert.equal(found.pick.cvr, "61126228");
+  assert.deepEqual(calls, ["Danske Bank", "Danske Bank A/S"]);
 });

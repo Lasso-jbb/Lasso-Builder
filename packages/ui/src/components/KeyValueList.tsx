@@ -8,13 +8,25 @@ function dayMonth(value: string | undefined): string | undefined {
   return m ? `${m[2]}.${m[1]}` : undefined;
 }
 
+/**
+ * CVR's ansattetal (danske ansatte) og regnskabets (ofte koncernen) kan afvige meget;
+ * begge vises med kilde, så forskellen ikke ligner en fejl: "64 (CVR), 62 i regnskab 2024".
+ */
+function employeesText(company: CompanyVM, lastYear: FinancialsVM["years"][number] | undefined): string | undefined {
+  const cvr = company.employees != null ? `${formatNumber(company.employees)} (CVR)` : undefined;
+  const fromReport = lastYear && typeof lastYear.employees === "number" ? lastYear.employees : null;
+  if (fromReport === null || fromReport === company.employees) return cvr;
+  const report = `${formatNumber(fromReport)} i regnskab ${lastYear!.year}`;
+  return cvr ? `${cvr}, ${report}` : report;
+}
+
 interface Row {
   label: string;
   value?: string;
   danger?: boolean;
 }
 
-function companyRows(company: CompanyVM, ownership: OwnershipVM | undefined, lastYear: FinancialsVM["years"][number] | undefined): Row[] {
+function companyRows(company: CompanyVM, ownership: OwnershipVM | undefined, lastYear: FinancialsVM["years"][number] | undefined, hideContact: boolean): Row[] {
   const a = company.address;
   const rows: Row[] = [{ label: "Revisor", value: ownership?.auditor?.name }];
   // "hvis tilgængeligt": rækken udelades helt, når skiftedatoen ikke er kendt (i stedet for en fast "—"-række).
@@ -25,12 +37,17 @@ function companyRows(company: CompanyVM, ownership: OwnershipVM | undefined, las
     { label: "Stiftet", value: company.founded ? formatDate(company.founded) : undefined },
     { label: "Virksomhedsform", value: company.form },
     { label: "Branche", value: company.industryText ? `${company.industryText}${company.industryCode ? ` (${company.industryCode})` : ""}` : undefined },
-    { label: "Ansatte", value: company.employees != null ? `${formatNumber(company.employees)} (CVR)` : undefined },
-    { label: "Adresse", value: [a?.street, [a?.zip, a?.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || undefined },
-    { label: "Telefon", value: company.phone },
-    { label: "E-mail", value: company.email },
-    { label: "Web", value: company.website },
+    { label: "Ansatte", value: employeesText(company, lastYear) },
   );
+  // Står kontaktblokken på samme side, gentages adresse, telefon, e-mail og web ikke her.
+  if (!hideContact) {
+    rows.push(
+      { label: "Adresse", value: [a?.street, [a?.zip, a?.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || undefined },
+      { label: "Telefon", value: company.phone },
+      { label: "E-mail", value: company.email },
+      { label: "Web", value: company.website },
+    );
+  }
   return rows;
 }
 
@@ -48,7 +65,9 @@ function financialsRows(year: FinancialsVM["years"][number], currency?: string):
     },
   ];
   for (const m of FINANCIALS_ROW_METRICS) {
-    const v = year[METRIC_FIELD[m]] as number | null | undefined;
+    let v = year[METRIC_FIELD[m]] as number | null | undefined;
+    // Gæld i alt = balancesum − egenkapital, når den ikke er oplyst direkte.
+    if (m === "gaeld" && v == null && typeof year.assetsTotal === "number" && typeof year.equity === "number") v = year.assetsTotal - year.equity;
     rows.push({ label: METRIC_LABELS[m], value: v != null ? formatMetricValue(m, v, cur) : undefined, danger: typeof v === "number" && v < 0 });
   }
   return rows;
@@ -67,6 +86,7 @@ export function KeyValueList({
   variant,
   title,
   error,
+  hideContact = false,
 }: {
   company?: CompanyVM;
   ownership?: OwnershipVM;
@@ -74,6 +94,8 @@ export function KeyValueList({
   variant: "company" | "financials";
   title?: string;
   error?: string;
+  /** Skjul adresse/telefon/e-mail/web, når LassoContact står på samme side. */
+  hideContact?: boolean;
 }) {
   const heading = title ?? (variant === "financials" ? "Regnskab" : "Virksomhedsoplysninger");
   const ready = variant === "financials" ? Boolean(financials) : Boolean(company);
@@ -130,7 +152,7 @@ export function KeyValueList({
     );
   }
 
-  const rows = companyRows(company!, ownership, financials?.years.at(-1));
+  const rows = companyRows(company!, ownership, financials?.years.at(-1), hideContact);
   return (
     <Section title={heading} span="half">
       <div className="lasso-kv-list">

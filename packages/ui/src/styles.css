@@ -516,6 +516,7 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-kv-list--financials .lasso-kv-row__label { flex: 1; width: auto; }
 .lasso-kv-list--financials .lasso-kv-row__value { flex: none; text-align: right; font-weight: 500; }
 .lasso-kv-years { max-width: 100%; overflow-x: auto; }
+.lasso-section__action:has(> .lasso-kv-years) { min-width: 0; flex-shrink: 1; }
 @container lasso (max-width: 560px) {
   .lasso-kv-row { flex-wrap: wrap; row-gap: 2px; min-height: var(--lasso-touch-h); }
   .lasso-kv-row__label { width: 100%; }
@@ -539,6 +540,12 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-myt__zero { stroke: var(--lasso-chart-axis); stroke-dasharray: 2 2; }
 @container lasso (max-width: 768px) {
   .lasso-myt__delta, .lasso-myt__trend { display: none; }
+}
+@container lasso (max-width: 560px) {
+  .lasso-myt { min-width: 0; }
+  .lasso-table-wrap:has(> .lasso-myt) { padding: 0; overflow: hidden; }
+  .lasso-myt__unit, .lasso-myt__label { flex-basis: 120px; min-width: 120px; }
+  .lasso-myt__year { width: 72px; }
 }
 
 /* ---------- 19 Regnskabsdetaljer: resultatopgørelse, balance, pengestrøm ---------- */
@@ -1012,6 +1019,8 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-columns--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .lasso-columns--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .lasso-column { min-width: 0; display: flex; flex-direction: column; }
+/* Kolonnerne direkte under hovedet: hovedets bundlinje er nok, ellers står der en dobbelt linje (review P1-8) */
+.lasso-cell:has(> .lasso-company) + .lasso-columns, .lasso-cell:has(> .lasso-personhead) + .lasso-columns { border-top: 0; }
 .lasso-column + .lasso-column { border-left: 1px solid var(--lasso-border); }
 .lasso-column__item { padding: var(--lasso-space-6) var(--lasso-space-6); }
 .lasso-column__item + .lasso-column__item { border-top: 1px solid var(--lasso-border); }
@@ -1025,9 +1034,11 @@ button.lasso-relations__name:hover { text-decoration: underline; }
   .lasso-columns--3 .lasso-column:nth-child(3) .lasso-column__item { padding-left: 0; }
 }
 @container lasso (max-width: 560px) {
-  .lasso-columns--2, .lasso-columns--3 { grid-template-columns: minmax(0, 1fr); }
-  .lasso-column + .lasso-column { border-left: 0; border-top: 1px solid var(--lasso-border); }
-  .lasso-column__item { padding: var(--lasso-space-5) 0; }
+  /* Mobil: kolonnerne opløses, og sektionerne stables efter vigtighed (--lasso-mobile-order), ikke kolonne for kolonne */
+  .lasso-columns--2, .lasso-columns--3 { display: flex; flex-direction: column; align-items: stretch; border-top: 0; }
+  .lasso-column { display: contents; }
+  .lasso-column__item, .lasso-column + .lasso-column .lasso-column__item { min-width: 0; order: var(--lasso-mobile-order, 30); padding: var(--lasso-space-5) 0; border-left: 0; border-top: 1px solid var(--lasso-border); }
+  .lasso-column__item + .lasso-column__item { border-top: 1px solid var(--lasso-border); }
 }
 
 /* Nøgle-værdi i en smal kolonne: nøglen tager 45 % i stedet for fast 190 px, så værdien ikke skæres af */
