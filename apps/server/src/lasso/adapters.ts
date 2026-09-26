@@ -5,6 +5,9 @@ import type {
   BuildingVM,
   CompanyRowVM,
   CompanyVM,
+  ContactPersonVM,
+  ContactPersonsVM,
+  ContactVM,
   FinancialYear,
   FinancialsVM,
   NewsVM,
@@ -181,6 +184,84 @@ export function adaptCompany(lassoId: string, raw: Json): CompanyVM {
     website: str(raw, "website", "homepage", "web", "url"),
     email: str(raw, "email", "emailAddress"),
     phone: str(raw, "phone", "phoneNumber", "telephone", "telefon"),
+  };
+}
+
+/** Ét element fra en telefon-/e-mail-liste: enten en ren streng eller et objekt med et værdifelt. */
+function contactValue(entry: Json, ...paths: string[]): string | undefined {
+  if (typeof entry === "string") return entry.trim() || undefined;
+  return str(entry, ...paths);
+}
+
+/**
+ * Fylder `CompanyVM.phone/email/website`, når CVR-svaret (`GET /{lassoId}`) ikke selv har dem,
+ * fra de to kontaktendpoints (se docs/lasso-endpoints.md, "Kontaktpersoner" og websites ovenfor):
+ * `GET /data/websites/{lassoId}` (bekræftet: `{ cvr, urls: [{ url, verifiedAt }] }`) og
+ * `GET /apps/contacts/{lassoId}/data?emails=true&phonenumbers=true&links=true` (UBEKRÆFTET
+ * svarform; læst defensivt som en liste af telefonnumre/e-mails, enten rene strenge eller
+ * objekter med et værdifelt). Bruges af `LiveProvider.company`, så `LassoCompanyHead` og
+ * `LassoKeyValueList` (variant "company") ikke viser "—", når værdien findes ét af stederne.
+ */
+export function fillContactInfo(co: CompanyVM, websitesRaw: Json | undefined, contactsRaw: Json | undefined): CompanyVM {
+  if (co.phone && co.email && co.website) return co;
+  const websiteUrls = arr(websitesRaw, "urls");
+  const phones = arr(contactsRaw, "phonenumbers", "phoneNumbers", "phones");
+  const emails = arr(contactsRaw, "emails");
+  return {
+    ...co,
+    phone: co.phone ?? contactValue(phones[0], "number", "value", "phone", "phoneNumber"),
+    email: co.email ?? contactValue(emails[0], "email", "value", "address"),
+    website: co.website ?? str(websiteUrls[0], "url") ?? str(websitesRaw, "url"),
+  };
+}
+
+/**
+ * Kontaktblok (katalog 08, "Kontaktblok"): samme kilder som `fillContactInfo`, men altid
+ * hentet (uafhængigt af `LassoCompanyHead`/`LassoKeyValueList`) og med en kildelinje, så
+ * `LassoContact` kan stå alene. "CVR" når CVR-svaret selv havde telefon eller e-mail,
+ * ellers "Virksomhedens hjemmeside" når kontaktendpointet gav noget.
+ */
+export function adaptContact(lassoId: string, companyRaw: Json, websitesRaw: Json | undefined, contactsRaw: Json | undefined): ContactVM {
+  const co = adaptCompany(lassoId, companyRaw);
+  const filled = fillContactInfo(co, websitesRaw, contactsRaw);
+  const hasAny = Boolean(filled.phone || filled.email || filled.website);
+  const source = !hasAny ? undefined : co.phone || co.email ? "CVR" : "Virksomhedens hjemmeside";
+  return {
+    lassoId,
+    phone: filled.phone,
+    email: filled.email,
+    website: filled.website,
+    address: filled.address,
+    source,
+    updated: hasAny ? new Date().toISOString().slice(0, 10) : undefined,
+  };
+}
+
+/**
+ * Kontaktpersoner (katalog 08). Svarformen for `GET /apps/contacts/{lassoId}/data?contacts=true`
+ * er UBEKRÆFTET (se docs/lasso-endpoints.md, "Kontaktpersoner"); antaget som en liste (evt.
+ * pakket i `{ contacts | people | persons: [...] }`) af objekter med navn, rolle/titel og
+ * valgfri telefon/e-mail. Personer uden navn springes over.
+ */
+export function adaptContactPersons(lassoId: string, raw: Json): ContactPersonsVM {
+  const list = arr(raw, "contacts", "people", "persons").length ? arr(raw, "contacts", "people", "persons") : items(raw);
+  const people: ContactPersonVM[] = list
+    .map((p): ContactPersonVM | null => {
+      const name = str(p, "name", "fullName", "navn");
+      if (!name) return null;
+      return {
+        name,
+        role: str(p, "role", "title", "jobTitle", "position", "department", "rolle"),
+        phone: str(p, "phone", "phoneNumber", "telephone", "telefon"),
+        email: str(p, "email", "emailAddress"),
+      };
+    })
+    .filter((p): p is ContactPersonVM => p !== null);
+  return {
+    lassoId,
+    people,
+    source: people.length ? "Virksomhedens hjemmeside" : undefined,
+    updated: people.length ? new Date().toISOString().slice(0, 10) : undefined,
   };
 }
 

@@ -4,6 +4,8 @@ import {
   type AuditorIndependenceVM,
   type AuditorRelationVM,
   type CompanyRowVM,
+  type ContactPersonsVM,
+  type ContactVM,
   type Criterion,
   type FinancialsVM,
   type LivestockVM,
@@ -17,6 +19,8 @@ import type { Config } from "../config.js";
 import {
   adaptBeneficialOwnership,
   adaptCompany,
+  adaptContact,
+  adaptContactPersons,
   adaptFinancials,
   adaptNews,
   adaptObservations,
@@ -28,6 +32,7 @@ import {
   adaptTextSections,
   adaptTimeline,
   ejfBbrRefs,
+  fillContactInfo,
   mergeBbr,
   adaptOwnershipGraph,
   graphFromOwnership,
@@ -39,6 +44,15 @@ import { mapLimit, type DataProvider, type OwnershipGraphOptions } from "./provi
 
 /** Så mange virksomheder hentes, når noget skal filtreres eller sorteres her (omsætning, bruttofortjeneste). */
 const LOCAL_POOL = 60;
+
+/** Kalder en (evt. defekt eller manglende) klientmetode og giver undefined ved enhver fejl, også en synkron. */
+async function safe<T>(fn: () => Promise<T>): Promise<T | undefined> {
+  try {
+    return await fn();
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * Går direkte på Lassos rigtige API. Med søgenøgle (LASSO_SEARCH_API_TOKEN) filtrerer
@@ -182,7 +196,30 @@ export class LiveProvider implements DataProvider {
   }
 
   async company(lassoId: string) {
-    return adaptCompany(lassoId, await this.client.company(lassoId));
+    const co = adaptCompany(lassoId, await this.client.company(lassoId));
+    // Kontaktendpoints er hverken hurtige eller bekræftede; kald dem kun, når CVR-svaret
+    // selv mangler telefon/e-mail/web (se fillContactInfo og docs/lasso-endpoints.md).
+    if (co.phone && co.email && co.website) return co;
+    const [websites, contacts] = await Promise.all([
+      safe(() => this.client.websites(lassoId)),
+      safe(() => this.client.contacts(lassoId, { emails: true, phonenumbers: true, links: true })),
+    ]);
+    return fillContactInfo(co, websites, contacts);
+  }
+
+  /** Katalog 08: kontaktblok. Samme kilder som company(), men altid hentet og med kildelinje. */
+  async contact(lassoId: string): Promise<ContactVM> {
+    const [companyRaw, websites, contacts] = await Promise.all([
+      this.client.company(lassoId),
+      safe(() => this.client.websites(lassoId)),
+      safe(() => this.client.contacts(lassoId, { emails: true, phonenumbers: true, links: true })),
+    ]);
+    return adaptContact(lassoId, companyRaw, websites, contacts);
+  }
+
+  /** Katalog 08: kontaktpersoner. Svarformen er ubekræftet, se docs/lasso-endpoints.md. */
+  async contactPersons(lassoId: string): Promise<ContactPersonsVM> {
+    return adaptContactPersons(lassoId, await this.client.contacts(lassoId, { contacts: true }));
   }
 
   async financials(lassoId: string): Promise<FinancialsVM> {

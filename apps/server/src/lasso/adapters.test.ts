@@ -3,6 +3,9 @@ import { test } from "node:test";
 import {
   adaptBeneficialOwnership,
   adaptCompany,
+  adaptContact,
+  adaptContactPersons,
+  fillContactInfo,
   adaptFinancials,
   adaptNews,
   adaptOwnership,
@@ -467,4 +470,57 @@ test("graphFromOwnership bygger ét lag ejere som reserve", () => {
   assert.deepEqual(g.edges.map((e) => e.share), [[50, 66.66], [10, 14.99]]);
   assert.equal(g.outgoingDepth, 0);
   assert.ok(g.note);
+});
+
+test("fillContactInfo lader CVR-svarets felter stå, når de allerede findes", () => {
+  const co = adaptCompany("CVR-1-1", { name: "X", phone: "12345678", email: "x@x.dk", website: "https://x.dk" });
+  const filled = fillContactInfo(co, { urls: [{ url: "https://andet.dk" }] }, { emails: ["andet@x.dk"] });
+  assert.equal(filled.phone, "12345678");
+  assert.equal(filled.email, "x@x.dk");
+  assert.equal(filled.website, "https://x.dk");
+});
+
+test("fillContactInfo henter fra websites()/contacts(), når CVR-svaret ikke selv har felterne", () => {
+  const co = adaptCompany("CVR-1-1", { name: "X" });
+  const filled = fillContactInfo(
+    co,
+    { urls: [{ url: "https://eksempel.dk", verifiedAt: "2026-01-01" }] },
+    { phonenumbers: ["70200000"], emails: [{ email: "kontakt@eksempel.dk" }] },
+  );
+  assert.equal(filled.phone, "70200000");
+  assert.equal(filled.email, "kontakt@eksempel.dk");
+  assert.equal(filled.website, "https://eksempel.dk");
+});
+
+test("adaptContact sætter kilden til CVR eller virksomhedens hjemmeside, og lader kontakt være tom uden data", () => {
+  const withCvrPhone = adaptContact("CVR-1-1", { name: "X", phone: "12345678" }, undefined, undefined);
+  assert.equal(withCvrPhone.source, "CVR");
+  assert.equal(withCvrPhone.phone, "12345678");
+
+  const fromWebsite = adaptContact("CVR-1-1", { name: "X" }, { urls: [{ url: "https://eksempel.dk" }] }, undefined);
+  assert.equal(fromWebsite.source, "Virksomhedens hjemmeside");
+  assert.equal(fromWebsite.website, "https://eksempel.dk");
+
+  const empty = adaptContact("CVR-1-1", { name: "X" }, undefined, undefined);
+  assert.equal(empty.source, undefined);
+  assert.equal(empty.phone, undefined);
+});
+
+test("adaptContactPersons læser navn, rolle, telefon og e-mail, og udelader personer uden navn", () => {
+  const people = adaptContactPersons("CVR-1-1", {
+    contacts: [
+      { name: "Anne Eksempel", role: "Direktør", phone: "12345678", email: "anne@eksempel.dk" },
+      { title: "Uden navn" },
+      { navn: "Bo Eksempel", jobTitle: "Salgschef" },
+    ],
+  });
+  assert.deepEqual(people.people.map((p) => [p.name, p.role, p.phone, p.email]), [
+    ["Anne Eksempel", "Direktør", "12345678", "anne@eksempel.dk"],
+    ["Bo Eksempel", "Salgschef", undefined, undefined],
+  ]);
+  assert.equal(people.source, "Virksomhedens hjemmeside");
+
+  const none = adaptContactPersons("CVR-1-1", []);
+  assert.deepEqual(none.people, []);
+  assert.equal(none.source, undefined);
 });

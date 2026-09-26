@@ -4,6 +4,9 @@ import {
   type BeneficialOwnershipVM,
   type CompanyRowVM,
   type CompanyVM,
+  type ContactPersonVM,
+  type ContactPersonsVM,
+  type ContactVM,
   type FinancialsVM,
   type NewsVM,
   type AuditorIndependenceVM,
@@ -44,6 +47,7 @@ const P = (name: string, role: string, from: string, to?: string): PersonRowVM =
 
 const RAW: Omit<DemoCompany, "lassoId" | "statusKind">[] = [
   { cvr: "99000001", name: "Eksempel Byg A/S", status: "Aktiv", form: "A/S", industryCode: "412000", industryText: "Opførelse af bygninger", address: { street: "Prøvevej 1", zip: "8600", city: "Silkeborg", municipality: "Silkeborg", region: "Midtjylland" }, founded: "1998-04-01", employees: 64, base: 38_000_000, growth: 0.07,
+    phone: "86123456", email: "kontakt@eksempelbyg.dk", website: "https://eksempelbyg.dk",
     people: [P("Anne Eksempel", "Direktør", "2015-01-01"), P("Bo Eksempel", "Bestyrelsesformand", "2012-05-01"), P("Carla Prøve", "Bestyrelsesmedlem", "2024-03-15"), P("Dan Prøve", "Bestyrelsesmedlem", "2016-06-01", "2024-03-15")],
     owners: [{ name: "Eksempel Holding ApS", share: "66,67-89,99 %", kind: "company", lassoId: "CVR-1-99000010" }, { name: "Anne Eksempel", share: "10-14,99 %", kind: "person" }], auditor: "Eksempel Revision Midt ApS" },
   { cvr: "99000002", name: "Eksempel Revision Midt ApS", status: "Aktiv", form: "ApS", industryCode: "692000", industryText: "Revision og bogføring", address: { street: "Tællegade 12", zip: "8000", city: "Aarhus C", municipality: "Aarhus", region: "Midtjylland" }, founded: "2006-09-01", employees: 22, base: 14_500_000, growth: 0.05,
@@ -341,6 +345,28 @@ const LIVESTOCK: Record<string, LivestockVM> = {
   },
 };
 
+/** Katalog 08: kontaktpersoner. Kun sat for det første eksempel, med nok rækker til at vise "Se N flere". */
+const CONTACT_PERSONS: Record<string, ContactPersonVM[]> = {
+  "CVR-1-99000001": [
+    { name: "Anne Eksempel", role: "Direktør", phone: "86123456", email: "anne@eksempelbyg.dk" },
+    { name: "Bo Eksempel", role: "Bestyrelsesformand", phone: "86123457" },
+    { name: "Carla Prøve", role: "Bestyrelsesmedlem", email: "carla@eksempelbyg.dk" },
+    { name: "Dan Prøve", role: "Salgschef" },
+    { name: "Eva Prøve", role: "Økonomichef", phone: "86123458", email: "eva@eksempelbyg.dk" },
+    { name: "Frank Eksempel", role: "Projektleder", phone: "86123459", email: "frank@eksempelbyg.dk" },
+  ],
+};
+
+function contactFor(c: DemoCompany): ContactVM {
+  const hasAny = Boolean(c.phone || c.email || c.website);
+  return { lassoId: c.lassoId, phone: c.phone, email: c.email, website: c.website, address: c.address, source: hasAny ? "CVR" : undefined, updated: hasAny ? "2026-09-20" : undefined };
+}
+
+function contactPersonsFor(c: DemoCompany): ContactPersonsVM {
+  const people = CONTACT_PERSONS[c.lassoId] ?? [];
+  return { lassoId: c.lassoId, people, source: people.length ? "Eksempeldata" : undefined, updated: people.length ? "2026-09-20" : undefined };
+}
+
 function defaultUnit(c: DemoCompany): ProductionUnitsVM["units"][number] {
   return {
     pNumber: `10${c.cvr}`,
@@ -385,6 +411,14 @@ export class DemoProvider implements DataProvider {
 
   async company(lassoId: string) {
     return strip(get(lassoId));
+  }
+
+  async contact(lassoId: string): Promise<ContactVM> {
+    return contactFor(get(lassoId));
+  }
+
+  async contactPersons(lassoId: string): Promise<ContactPersonsVM> {
+    return contactPersonsFor(get(lassoId));
   }
 
   async financials(lassoId: string) {

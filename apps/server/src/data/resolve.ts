@@ -19,6 +19,8 @@ type Need = string;
  */
 const FETCHERS: Record<string, (ds: Dataset, p: DataProvider, id: string) => Promise<void>> = {
   company: async (ds, p, id) => void (ds.companies[id] = await p.company(id)),
+  contact: async (ds, p, id) => void (ds.contact[id] = await p.contact(id)),
+  contactPersons: async (ds, p, id) => void (ds.contactPersons[id] = await p.contactPersons(id)),
   financials: async (ds, p, id) => void (ds.financials[id] = await p.financials(id)),
   people: async (ds, p, id) => void (ds.people[id] = await p.people(id)),
   ownership: async (ds, p, id) => void (ds.ownership[id] = await p.ownership(id)),
@@ -146,6 +148,12 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
       case "LassoKeyValueList":
         if (c.variant === "financials") want(c.company, "financials");
         else want(c.company, "company", "ownership", "financials");
+        break;
+      case "LassoContact":
+        want(c.company, "contact");
+        break;
+      case "LassoContactPersons":
+        want(c.company, "contactPersons");
         break;
       case "LassoMultiYearTable":
         want(c.company, "financials");

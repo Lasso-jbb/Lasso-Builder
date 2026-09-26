@@ -45,6 +45,20 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     props: "company, variant? (company | financials), title?",
   },
   {
+    type: "LassoContact",
+    title: "Kontaktblok",
+    description:
+      "Brug til: telefon, e-mail, web og adresse som klikbare kontaktoplysninger – 'hvad er telefonnummeret på X', 'hvordan kontakter jeg X'. Brug ikke når: spørgsmålet gælder stamdata som stiftet/form/revisor (LassoKeyValueList variant 'company', som også har disse felter i en fælles liste), eller navngivne kontaktpersoner (LassoContactPersons). Kræver: company; kontaktdata er ikke bekræftet for alle virksomheder, og komponenten viser sin tomme tilstand, når intet er oplyst. Eksempel: 'Hvad er telefonnummer og adresse på Lasso X?'",
+    props: "company, title?",
+  },
+  {
+    type: "LassoContactPersons",
+    title: "Kontaktpersoner",
+    description:
+      "Brug til: navngivne kontaktpersoner med rolle/afdeling og telefon/e-mail hver – 'hvem kan jeg kontakte hos X', 'giv mig kontaktpersoner'. Brug ikke når: spørgsmålet gælder ledelse/bestyrelse i CVR-forstand (LassoPersonList) eller virksomhedens egne overordnede kontaktoplysninger (LassoContact). Kræver: company; svarformen er ubekræftet, og listen kan være tom for rigtige virksomheder. Eksempel: 'Hvem er kontaktpersonerne hos Lasso X?'",
+    props: "company, title?",
+  },
+  {
     type: "LassoTextSections",
     title: "Tekstsektioner",
     description:

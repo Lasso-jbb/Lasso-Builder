@@ -3,6 +3,8 @@ import type {
   AuditorIndependenceVM,
   CompanyRowVM,
   CompanyVM,
+  ContactPersonsVM,
+  ContactVM,
   Criterion,
   DataSourceKind,
   FinancialsVM,
@@ -34,6 +36,10 @@ export interface DataProvider {
   /** Hurtigt navneopslag uden regnskabsberigelse (til show_company med et navn). */
   findCompanies(name: string, limit: number): Promise<CompanyRowVM[]>;
   company(lassoId: string): Promise<CompanyVM>;
+  /** Katalog 08: kontaktblok (telefon/e-mail/web/adresse, med kildelinje). */
+  contact(lassoId: string): Promise<ContactVM>;
+  /** Katalog 08: kontaktpersoner. */
+  contactPersons(lassoId: string): Promise<ContactPersonsVM>;
   financials(lassoId: string): Promise<FinancialsVM>;
   people(lassoId: string): Promise<PersonRowVM[]>;
   ownership(lassoId: string): Promise<OwnershipVM>;

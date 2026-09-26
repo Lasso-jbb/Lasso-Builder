@@ -82,6 +82,18 @@ test("width er valgfri på alle komponenter, og stack giver altid fuld bredde", 
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoRelations", company: "CVR-1-1", width: "third" }] }));
 });
 
+test("LassoContact og LassoContactPersons parses med standardbredde half", () => {
+  const spec = parseViewSpec({
+    title: "Kontakt",
+    components: [
+      { type: "LassoContact", company: "CVR-1-12345678" },
+      { type: "LassoContactPersons", company: "CVR-1-12345678", title: "Kontaktpersoner" },
+    ],
+  });
+  assert.deepEqual(spec.components.map((c) => c.type), ["LassoContact", "LassoContactPersons"]);
+  assert.deepEqual(spec.components.map((c) => widthOf(c, spec.layout)), ["half", "half"]);
+});
+
 test("listTemplate lægger kriterier i rammen og tabellen", () => {
   const search = searchQuerySchema.parse({ query: "revision", criteria: [{ field: "region", operator: "eq", value: "Midtjylland" }] });
   const spec = listTemplate(search);

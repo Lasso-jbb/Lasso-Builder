@@ -174,6 +174,25 @@ GET /apps/contacts/{lassoId}/data?contacts=true
 
 ## Ubekræftet
 
+Antagelser gjort til `LassoContact` og `LassoContactPersons` (katalog 08, node 9SX-0/I6B-0):
+
+- `GET /apps/contacts/{lassoId}/data?emails=true&phonenumbers=true&links=true`: svarformen er IKKE
+  bekræftet ud over det, opskriften nævner. Antaget som `{ phonenumbers: [...], emails: [...], links: [...] }`,
+  hvor hvert element enten er en ren streng eller et objekt med et værdifelt (`number`/`value`/`phone`
+  for telefon, `email`/`value`/`address` for e-mail). Adapteren (`fillContactInfo`/`adaptContact` i
+  `apps/server/src/lasso/adapters.ts`) læser kun det første element af hver liste og er skrevet
+  defensivt: en anden form giver blot ingen ekstra kontaktoplysning, ikke en fejl.
+- `GET /apps/contacts/{lassoId}/data?contacts=true` (kontaktpersoner): svarformen er IKKE bekræftet.
+  Antaget som en liste (evt. pakket i `{ contacts | people | persons: [...] }`) af objekter med
+  `name`/`fullName`/`navn`, `role`/`title`/`jobTitle`/`position`/`department`/`rolle`,
+  `phone`/`phoneNumber`/`telephone`/`telefon` og `email`/`emailAddress` (`adaptContactPersons`).
+  Personer uden navn springes over; en anden form giver en tom liste.
+- `LiveProvider.company` kalder kun `websites()`/`contacts()`, når CVR-svaret (`GET /{lassoId}`)
+  ikke selv har telefon, e-mail og web (se `fillContactInfo`), så `LassoCompanyHead` og
+  `LassoKeyValueList` (variant "company") ikke viser "—" unødigt. `LassoContact` henter altid
+  begge kilder, uafhængigt af de øvrige komponenter, og sætter kildelinjen til "CVR", når
+  CVR-svaret selv havde telefon eller e-mail, ellers "Virksomhedens hjemmeside".
+
 Antagelser gjort til `LassoKeyValueList` (katalog 09) og `LassoScoreGauge` (katalog 10):
 
 - `accounting.accountant.from` (revisorens tiltrædelsesdato, brugt som "Seneste revisorskift"): feltet er ikke i den

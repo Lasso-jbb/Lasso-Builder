@@ -251,6 +251,20 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     card.row("Telefon", co.phone?.replace(/^(\d{2})(\d{2})(\d{2})(\d{2})$/, "$1 $2 $3 $4"));
     card.row("E-mail", co.email);
     card.row("Web", co.website);
+  } else if (types.has("LassoContact")) {
+    // LassoContact kan bruges alene, uden LassoCompanyHead/LassoKeyValueList; company() er
+    // da ikke hentet, så kontaktblokkens egne data (ds.contact) bruges i stedet.
+    const contact = ds.contact[lassoId];
+    if (contact) {
+      card.text(spec.title);
+      card.section("Kontakt");
+      const a = contact.address;
+      card.row("Adresse", a?.street);
+      card.row(a?.street ? "" : "Adresse", [a?.zip, a?.city].filter(Boolean).join(" ") || undefined);
+      card.row("Telefon", contact.phone?.replace(/^(\d{2})(\d{2})(\d{2})(\d{2})$/, "$1 $2 $3 $4"));
+      card.row("E-mail", contact.email);
+      card.row("Web", contact.website);
+    }
   }
 
   const people = types.has("LassoPersonList") || types.has("LassoRelations") ? (ds.people[lassoId] ?? []).filter((p) => !p.to) : [];
@@ -313,6 +327,22 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
         card.row("", o.share ? `Reelt ${o.share}` : undefined);
       }
       for (const g of b.gaps ?? []) card.text(`Ingen reel ejer for ${g.share ?? "en del"}`);
+    }
+  }
+
+  if (types.has("LassoContactPersons")) {
+    const cp = ds.contactPersons[lassoId];
+    if (cp) {
+      card.section("Kontaktpersoner");
+      if (cp.people.length === 0) {
+        card.text("Ingen kontaktpersoner fundet");
+      } else {
+        for (const p of cp.people.slice(0, 3)) {
+          card.row(p.role ?? "Kontakt", p.name);
+          card.row("", [p.phone, p.email].filter(Boolean).join(", ") || undefined);
+        }
+        if (cp.people.length > 3) card.row("", `og ${cp.people.length - 3} flere`);
+      }
     }
   }
 

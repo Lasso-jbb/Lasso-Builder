@@ -30,6 +30,37 @@ export interface CompanyVM {
   phone?: string;
 }
 
+/**
+ * Kontaktoplysninger (katalog 08, "Kontaktblok"). Samme felter som CompanyVM's
+ * telefon/e-mail/web/adresse, men med en kildelinje, fordi værdierne her kan
+ * stamme fra virksomhedens hjemmeside (websites()/contacts()) og ikke kun CVR.
+ */
+export interface ContactVM {
+  lassoId: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  address?: Address;
+  /** Fx "CVR" eller "Virksomhedens hjemmeside". */
+  source?: string;
+  updated?: string;
+}
+
+/** Katalog 08, én kontaktperson (rolle/afdeling, telefon og/eller e-mail). */
+export interface ContactPersonVM {
+  name: string;
+  role?: string;
+  phone?: string;
+  email?: string;
+}
+
+export interface ContactPersonsVM {
+  lassoId: string;
+  people: ContactPersonVM[];
+  source?: string;
+  updated?: string;
+}
+
 export interface FinancialYear {
   year: number;
   periodStart?: string;
@@ -392,6 +423,9 @@ export interface Dataset {
   generatedAt: string;
   companies: Record<string, CompanyVM>;
   financials: Record<string, FinancialsVM>;
+  /** Katalog 08: kontaktblok og kontaktpersoner. */
+  contact: Record<string, ContactVM>;
+  contactPersons: Record<string, ContactPersonsVM>;
   people: Record<string, PersonRowVM[]>;
   ownership: Record<string, OwnershipVM>;
   beneficialOwnership: Record<string, BeneficialOwnershipVM>;
@@ -418,6 +452,8 @@ export function emptyDataset(source: DataSourceKind): Dataset {
     generatedAt: new Date().toISOString(),
     companies: {},
     financials: {},
+    contact: {},
+    contactPersons: {},
     people: {},
     ownership: {},
     beneficialOwnership: {},

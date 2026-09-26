@@ -220,3 +220,34 @@ test("tekstkort for ejerdiagrammet: ejere og datterselskaber som indrykket liste
   for (const part of ["EJERE", "66,67–89,99 %", "  Anne Ejer", "DATTERSELSKABER", "Datter ApS"]) assert.ok(card.includes(part), `mangler "${part}":\n${card}`);
   assert.ok(!card.includes("·"));
 });
+
+test("tekstkortet viser kontaktblokken (LassoContact) alene, uden LassoCompanyHead", () => {
+  const spec = parseViewSpec({ title: "Kontakt", components: [{ type: "LassoContact", company: ID }] });
+  const ds = emptyDataset("live");
+  ds.contact[ID] = { lassoId: ID, phone: "44448888", email: "kontakt@testfirma.dk", website: "https://testfirma.dk", address: { street: "Testvej 1", zip: "2880", city: "Bagsværd" }, source: "CVR" };
+  const card = textCard(spec, ds)!;
+  for (const l of card.split("\n")) assert.equal([...l].length, 38, `linjen "${l}" har forkert bredde`);
+  for (const part of ["KONTAKT", "Testvej 1", "2880 Bagsværd", "44 44 88 88", "kontakt@testfirma.dk", "testfirma.dk"]) {
+    assert.ok(card.includes(part), `mangler "${part}":\n${card}`);
+  }
+});
+
+test("tekstkortet viser kontaktpersoner (LassoContactPersons), eller 'Ingen kontaktpersoner fundet' når listen er tom", () => {
+  const spec = parseViewSpec({ title: "Kontaktpersoner", components: [{ type: "LassoContactPersons", company: ID }] });
+  const ds = emptyDataset("live");
+  ds.contactPersons[ID] = {
+    lassoId: ID,
+    people: [
+      { name: "Anne Eksempel", role: "Direktør", phone: "44448888" },
+      { name: "Bo Eksempel", role: "Salgschef", email: "bo@testfirma.dk" },
+    ],
+  };
+  const withPeople = textCard(spec, ds)!;
+  for (const l of withPeople.split("\n")) assert.equal([...l].length, 38);
+  assert.ok(withPeople.includes("KONTAKTPERSONER"));
+  assert.match(withPeople, /Direktør\s+Anne Eksempel/);
+
+  ds.contactPersons[ID] = { lassoId: ID, people: [] };
+  const empty = textCard(spec, ds)!;
+  assert.ok(empty.includes("Ingen kontaktpersoner fundet"));
+});

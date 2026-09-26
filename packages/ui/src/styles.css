@@ -237,6 +237,23 @@
 .lasso-fact__value { font-weight: 400; overflow-wrap: anywhere; }
 .lasso-span-full { grid-column: 1 / -1; }
 
+/* ---------- 08 Kontakt (node 9SX-0): ikon + værdi, klikbar, ingen skillelinjer, kun luft ---------- */
+.lasso-contact { display: flex; flex-direction: column; gap: var(--lasso-space-3); }
+.lasso-contact__row { display: flex; align-items: flex-start; gap: var(--lasso-space-3); }
+.lasso-contact__icon { flex: none; margin-top: 1px; color: var(--lasso-icon); }
+.lasso-contact__value { color: var(--lasso-text-2); font-size: var(--lasso-fs); line-height: 20px; overflow-wrap: anywhere; }
+.lasso-contact__value--multiline { display: flex; flex-direction: column; }
+a.lasso-contact__value--link { color: var(--lasso-text-2); text-decoration: none; }
+a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decoration: underline; }
+
+/* ---------- 08 Kontaktpersoner (node I6B-0): navn/rolle + telefon-/mailikon til højre ---------- */
+.lasso-contactpersons__rows { border-top: 0; }
+.lasso-contactpersons__row { min-height: 44px; border-bottom: 0; }
+.lasso-contactpersons__actions { flex: none; display: flex; gap: var(--lasso-space-2); }
+.lasso-contactpersons__action { display: inline-flex; color: var(--lasso-icon); }
+.lasso-contactpersons__action:hover { color: var(--lasso-accent-text); }
+.lasso-contactpersons__icon--muted { color: var(--lasso-faint); }
+
 /* ---------- Nøgletalskort (09): én ramme, lodrette skillelinjer ---------- */
 .lasso-kpis { display: grid; grid-template-columns: repeat(var(--lasso-kpi-count, 4), minmax(0, 1fr)); border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); }
 .lasso-kpi { padding: 22px 24px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }

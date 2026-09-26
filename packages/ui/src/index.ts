@@ -18,6 +18,8 @@ export { layoutOwnership, ownershipTree, indirectShare } from "./ownershipLayout
 export { CompanyTable } from "./components/CompanyTable.js";
 export { CompareTable } from "./components/CompareTable.js";
 export { KeyValueList } from "./components/KeyValueList.js";
+export { LassoContact } from "./components/LassoContact.js";
+export { LassoContactPersons } from "./components/LassoContactPersons.js";
 export { MultiYearTable } from "./components/MultiYearTable.js";
 export { ScoreGauge } from "./components/ScoreGauge.js";
 export { RiskObservations } from "./components/RiskObservations.js";

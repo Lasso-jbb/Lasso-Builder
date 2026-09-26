@@ -227,6 +227,18 @@ export const keyValueListSchema = z.object({
   title: z.string().max(80).optional(),
 });
 
+export const contactSchema = z.object({
+  type: z.literal("LassoContact"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
+}).describe("Kontaktblok: telefon, e-mail, web og adresse, klikbare.");
+
+export const contactPersonsSchema = z.object({
+  type: z.literal("LassoContactPersons"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
+}).describe("Kontaktpersoner med rolle, telefon og e-mail.");
+
 export const multiYearTableSchema = z.object({
   type: z.literal("LassoMultiYearTable"),
   company: companyRef,
@@ -319,6 +331,8 @@ export const componentSchema = z.discriminatedUnion("type", [
   w(tableSchema),
   w(comparisonSchema),
   w(keyValueListSchema),
+  w(contactSchema),
+  w(contactPersonsSchema),
   w(multiYearTableSchema),
   w(scoreGaugeSchema),
   w(riskObservationsSchema),
@@ -382,6 +396,8 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoCompanyTable: "full",
   LassoCompareTable: "full",
   LassoKeyValueList: "half",
+  LassoContact: "half",
+  LassoContactPersons: "half",
   LassoMultiYearTable: "full",
   LassoScoreGauge: "quarter",
   LassoRiskObservations: "full",
