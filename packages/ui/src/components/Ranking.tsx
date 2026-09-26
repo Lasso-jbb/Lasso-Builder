@@ -1,4 +1,4 @@
-import { amountScale, formatNumber, formatScaled, METRIC_FIELD, METRIC_LABELS, type CompanyVM, type FinancialsVM, type Metric } from "@lasso/spec";
+import { amountScale, formatNumber, formatPercent, formatScaled, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, type CompanyVM, type FinancialsVM, type Metric } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
 
 export interface RankingRow {
@@ -25,7 +25,7 @@ export function Ranking({ rows, metric, title }: { rows: RankingRow[]; metric: M
       </Section>
     );
   }
-  const isCount = metric === "ansatte";
+  const kind = METRIC_KIND[metric];
   const entries = rows
     .map((r) => {
       const v = r.financials?.years.at(-1)?.[METRIC_FIELD[metric]];
@@ -43,8 +43,8 @@ export function Ranking({ rows, metric, title }: { rows: RankingRow[]; metric: M
   }
 
   const values = entries.map((e) => e.value);
-  const scale = isCount ? null : amountScale(values);
-  const label = (v: number) => (scale ? formatScaled(v, scale) : formatNumber(v));
+  const scale = kind === "amount" ? amountScale(values) : null;
+  const label = (v: number) => (kind === "percent" ? formatPercent(v, false) : scale ? formatScaled(v, scale) : formatNumber(v));
   const maxAbs = Math.max(...values.map((v) => Math.abs(v)), 1);
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);

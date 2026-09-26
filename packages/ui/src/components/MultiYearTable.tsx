@@ -1,4 +1,4 @@
-import { amountScale, formatNumber, formatPercent, formatScaled, METRIC_FIELD, METRIC_LABELS, percentChange, type FinancialsVM, type Metric } from "@lasso/spec";
+import { amountScale, formatNumber, formatPercent, formatScaled, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, percentChange, type FinancialsVM, type Metric } from "@lasso/spec";
 import { DataState, Missing, Section, stateForError } from "../primitives.js";
 
 const DEFAULT_METRICS: Metric[] = ["bruttofortjeneste", "resultat", "egenkapital", "ansatte"];
@@ -59,11 +59,13 @@ export function MultiYearTable({ financials, metrics, years, title, error }: { f
   const span = Math.max(2, Math.min(10, years ?? 5));
   const shown = all.slice(-span);
   const chosen: Metric[] = (metrics?.length ? [...metrics] : shown.at(-1)?.revenue != null ? ["omsaetning", ...DEFAULT_METRICS] : DEFAULT_METRICS).slice(0, 6) as Metric[];
-  const amountMetrics = chosen.filter((m) => m !== "ansatte");
+  const amountMetrics = chosen.filter((m) => METRIC_KIND[m] === "amount");
   const scale = amountMetrics.length ? amountScale(shown.flatMap((y) => amountMetrics.map((m) => (y[METRIC_FIELD[m]] as number | null) ?? 0))) : null;
   const fmt = (m: Metric, v: number | null | undefined) => {
     if (v == null) return null;
-    return m === "ansatte" ? formatNumber(v) : scale ? formatScaled(v, scale) : formatNumber(v);
+    const kind = METRIC_KIND[m];
+    if (kind === "percent") return formatPercent(v, false);
+    return kind === "amount" && scale ? formatScaled(v, scale) : formatNumber(v);
   };
 
   return (

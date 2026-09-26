@@ -9,6 +9,8 @@ export type Visibility = "private" | "org" | "link";
 export type ViewAction =
   | { kind: "prompt"; prompt: string }
   | { kind: "open-company"; lassoId: string; name?: string }
+  /** Katalog 16: åbn personsiden for en person (Lasso-ID "CVR-3-…"). */
+  | { kind: "open-person"; lassoId: string; name?: string }
   | { kind: "set-criteria"; criteria: Criterion[] }
   | { kind: "refresh" }
   | { kind: "save"; name: string; slug?: string; visibility: Visibility }

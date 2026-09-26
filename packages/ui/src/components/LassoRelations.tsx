@@ -1,4 +1,4 @@
-import type { OwnershipVM, PersonRowVM } from "@lasso/spec";
+import { isPersonId, type OwnershipVM, type PersonRowVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 
@@ -10,11 +10,18 @@ function splitChair(role: string): { role: string; chair: boolean } {
   return { role, chair: false };
 }
 
-/** Navn som koral link, når vi kan åbne det (kun virksomheder har en profil at åbne til); ellers ren koral tekst. */
+/** Navn som koral link, når vi kan åbne det (virksomheder og personer har en profil at åbne til); ellers ren koral tekst. */
 function Name({ name, lassoId, onOpen }: { name: string; lassoId?: string; onOpen?: (a: ViewAction) => void }) {
   if (onOpen && lassoId?.startsWith("CVR-1-")) {
     return (
       <button type="button" className="lasso-link lasso-relations__name" onClick={() => onOpen({ kind: "open-company", lassoId, name })}>
+        {name}
+      </button>
+    );
+  }
+  if (onOpen && isPersonId(lassoId)) {
+    return (
+      <button type="button" className="lasso-link lasso-relations__name" onClick={() => onOpen({ kind: "open-person", lassoId, name })}>
         {name}
       </button>
     );

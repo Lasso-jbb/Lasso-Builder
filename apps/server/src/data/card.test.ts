@@ -220,3 +220,163 @@ test("tekstkort for ejerdiagrammet: ejere og datterselskaber som indrykket liste
   for (const part of ["EJERE", "66,67–89,99 %", "  Anne Ejer", "DATTERSELSKABER", "Datter ApS"]) assert.ok(card.includes(part), `mangler "${part}":\n${card}`);
   assert.ok(!card.includes("·"));
 });
+
+test("tekstkortet viser kontaktblokken (LassoContact) alene, uden LassoCompanyHead", () => {
+  const spec = parseViewSpec({ title: "Kontakt", components: [{ type: "LassoContact", company: ID }] });
+  const ds = emptyDataset("live");
+  ds.contact[ID] = { lassoId: ID, phone: "44448888", email: "kontakt@testfirma.dk", website: "https://testfirma.dk", address: { street: "Testvej 1", zip: "2880", city: "Bagsværd" }, source: "CVR" };
+  const card = textCard(spec, ds)!;
+  for (const l of card.split("\n")) assert.equal([...l].length, 38, `linjen "${l}" har forkert bredde`);
+  for (const part of ["KONTAKT", "Testvej 1", "2880 Bagsværd", "44 44 88 88", "kontakt@testfirma.dk", "testfirma.dk"]) {
+    assert.ok(card.includes(part), `mangler "${part}":\n${card}`);
+  }
+});
+
+test("tekstkortet viser kontaktpersoner (LassoContactPersons), eller 'Ingen kontaktpersoner fundet' når listen er tom", () => {
+  const spec = parseViewSpec({ title: "Kontaktpersoner", components: [{ type: "LassoContactPersons", company: ID }] });
+  const ds = emptyDataset("live");
+  ds.contactPersons[ID] = {
+    lassoId: ID,
+    people: [
+      { name: "Anne Eksempel", role: "Direktør", phone: "44448888" },
+      { name: "Bo Eksempel", role: "Salgschef", email: "bo@testfirma.dk" },
+    ],
+  };
+  const withPeople = textCard(spec, ds)!;
+  for (const l of withPeople.split("\n")) assert.equal([...l].length, 38);
+  assert.ok(withPeople.includes("KONTAKTPERSONER"));
+  assert.match(withPeople, /Direktør\s+Anne Eksempel/);
+
+  ds.contactPersons[ID] = { lassoId: ID, people: [] };
+  const empty = textCard(spec, ds)!;
+  assert.ok(empty.includes("Ingen kontaktpersoner fundet"));
+});
+
+function financialStatementsDataset(): Dataset {
+  const ds = dataset();
+  ds.financialStatements[ID] = {
+    lassoId: ID,
+    currency: "DKK",
+    incomeStatement: [2024, 2025].map((year, i) => ({
+      year,
+      periodStart: `${year}-01-01`,
+      periodEnd: `${year}-12-31`,
+      revenue: [290e9, 309e9][i]!,
+      grossProfit: [245e9, 250e9][i]!,
+      staffCosts: [-90e9, -95e9][i]!,
+      otherOperatingCosts: [-40e9, -42e9][i]!,
+      ebitda: [115e9, 113e9][i]!,
+      depreciation: [-10e9, -11e9][i]!,
+      financialItemsNet: [1e9, 0.5e9][i]!,
+      profitBeforeTax: [106e9, -2.5e9][i]!,
+      tax: [-23e9, 0.5e9][i]!,
+      profit: [101e9, -2e9][i]!,
+    })),
+    balanceSheet: [2024, 2025].map((year, i) => ({
+      year,
+      periodEnd: `${year}-12-31`,
+      intangibleAssets: null,
+      tangibleAssets: null,
+      fixedAssetsTotal: [120e9, 130e9][i]!,
+      tradeReceivables: null,
+      otherReceivables: null,
+      cash: null,
+      currentAssetsTotal: [178e9, 232e9][i]!,
+      assetsTotal: [298e9, 362e9][i]!,
+      shareCapital: null,
+      retainedEarnings: null,
+      equityTotal: [143e9, 194e9][i]!,
+      longTermLiabilities: null,
+      shortTermLiabilities: null,
+      liabilitiesTotal: [155e9, 168e9][i]!,
+      liabilitiesAndEquityTotal: [298e9, 362e9][i]!,
+    })),
+    cashFlow: [],
+  };
+  return ds;
+}
+
+test("tekstkortet viser resultatopgørelsen og balancen (katalog 19) med '→' mellem årene", () => {
+  const spec = parseViewSpec({
+    title: "Regnskab",
+    components: [
+      { type: "LassoIncomeStatement", company: ID },
+      { type: "LassoBalanceSheet", company: ID },
+    ],
+  });
+  const card = textCard(spec, financialStatementsDataset())!;
+  assert.ok(card.includes("RESULTATOPGØRELSE 2024/2025"), card);
+  assert.match(card, /EBITDA\s+115 mia\. → 113 mia\./);
+  assert.ok(card.includes("BALANCE 2024/2025"), card);
+  assert.match(card, /Aktiver i alt\s+298 mia\. → 362 mia\./);
+});
+
+test("tekstkortet viser den præcise tekst 'Pengestrømsopgørelse er ikke indberettet.' når der ikke er pengestrømsdata (katalog 19)", () => {
+  const spec = parseViewSpec({ title: "Regnskab", components: [{ type: "LassoCashFlow", company: ID }] });
+  const card = textCard(spec, financialStatementsDataset())!;
+  // Kortet ombryder lange linjer til kortets faste bredde; sammenlign uden linjeskift/kanter.
+  const plain = card.replace(/[│┌┐└┘├┤─\n]/g, " ").replace(/\s+/g, " ");
+  assert.ok(plain.includes("Pengestrømsopgørelse er ikke indberettet."), card);
+});
+
+test("tekstkortet viser pengestrømmen, når data findes (katalog 19)", () => {
+  const spec = parseViewSpec({ title: "Regnskab", components: [{ type: "LassoCashFlow", company: ID }] });
+  const ds = financialStatementsDataset();
+  ds.financialStatements[ID]!.cashFlow = [
+    {
+      year: 2025,
+      periodEnd: "2025-12-31",
+      profit: -2e9,
+      depreciation: -11e9,
+      workingCapitalChange: null,
+      operatingCashFlow: 90e9,
+      intangibleInvestments: null,
+      investingCashFlow: -30e9,
+      capitalIncrease: null,
+      loanChange: null,
+      financingCashFlow: -20e9,
+      netCashFlow: 40e9,
+      cashBeginning: 10e9,
+      cashEnding: 50e9,
+    },
+  ];
+  const card = textCard(spec, ds)!;
+  assert.ok(card.includes("PENGESTRØM 2025"), card);
+  assert.match(card, /Fra drift\s+90 mia\./);
+  assert.match(card, /Likvider ultimo\s+50 mia\./);
+});
+
+test("personkortet (katalog 16) har samme bredde på alle linjer og ingen midterprik", () => {
+  const id = "CVR-3-4000000001";
+  const ds = emptyDataset("live");
+  ds.persons[id] = {
+    lassoId: id,
+    name: "Mette Holm Eksempel",
+    city: "København",
+    roles: [
+      { companyId: "CVR-1-11111111", companyName: "Data Eksempel A/S", kind: "direction", role: "Adm. direktør", from: "2012-05-14", active: true },
+      { companyId: "CVR-1-33333333", companyName: "Cloud Eksempel A/S", kind: "board", role: "Bestyrelsesmedlem", from: "2014-01-01", to: "2018-06-01", active: false, companyStatus: "Under konkurs", companyStatusKind: "warning", companyEnded: "2026-02-01" },
+    ],
+  };
+  ds.personNetworks[id] = { lassoId: id, people: [{ name: "Søren Krogh Eksempel", companies: [{ companyName: "Data Eksempel A/S" }], overlapYears: 14, active: true }] };
+  const spec = parseViewSpec({
+    kind: "person",
+    title: "Mette",
+    layout: "columns",
+    components: [
+      { type: "LassoPersonHead", person: id },
+      { type: "LassoPersonRoles", person: id },
+      { type: "LassoPersonNetwork", person: id, column: 1 },
+      { type: "LassoPersonRisk", person: id, column: 2 },
+    ],
+  });
+  const card = textCard(spec, ds)!;
+  const widths = new Set(card.split("\n").map((l) => [...l].length));
+  assert.equal(widths.size, 1, card);
+  assert.ok(!card.includes("·"));
+  assert.match(card, /Mette Holm Eksempel/);
+  assert.match(card, /1 aktiv rolle i 1 selskab, 1/);
+  assert.match(card, /Adm\. direktør, siden 2012/);
+  assert.match(card, /Søren Krogh Eksempel\s+14 år/);
+  assert.match(card, /Konkurser\s+1, Info/);
+});

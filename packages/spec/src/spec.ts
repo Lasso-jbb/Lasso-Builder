@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { criterionSchema } from "./criteria.js";
+import { formatAmount, formatNumber, formatPercent } from "./format.js";
 import type { FinancialYear } from "./models.js";
 
 /**
@@ -8,7 +9,19 @@ import type { FinancialYear } from "./models.js";
  * data), så et delt link altid viser friske tal.
  */
 
-export const METRICS = ["omsaetning", "bruttofortjeneste", "resultat", "egenkapital", "ansatte"] as const;
+export const METRICS = [
+  "omsaetning",
+  "bruttofortjeneste",
+  "resultat",
+  "egenkapital",
+  "ansatte",
+  "ebitda",
+  "balancesum",
+  "gaeld",
+  "soliditetsgrad",
+  "overskudsgrad",
+  "likviditetsgrad",
+] as const;
 export type Metric = (typeof METRICS)[number];
 
 export const METRIC_LABELS: Record<Metric, string> = {
@@ -17,6 +30,12 @@ export const METRIC_LABELS: Record<Metric, string> = {
   resultat: "Årets resultat",
   egenkapital: "Egenkapital",
   ansatte: "Ansatte",
+  ebitda: "EBITDA",
+  balancesum: "Balancesum",
+  gaeld: "Gæld i alt",
+  soliditetsgrad: "Soliditetsgrad",
+  overskudsgrad: "Overskudsgrad",
+  likviditetsgrad: "Likviditetsgrad",
 };
 
 /** Hvilket felt i et regnskabsår et nøgletal læses fra. */
@@ -26,7 +45,37 @@ export const METRIC_FIELD: Record<Metric, keyof FinancialYear> = {
   resultat: "profit",
   egenkapital: "equity",
   ansatte: "employees",
+  ebitda: "ebitda",
+  balancesum: "assetsTotal",
+  gaeld: "liabilities",
+  soliditetsgrad: "soliditetsgrad",
+  overskudsgrad: "overskudsgrad",
+  likviditetsgrad: "likviditetsgrad",
 };
+
+/** Hvordan et nøgletal formateres og skaleres: beløb (kr., fælles skala), antal (rent tal) eller procent/ratio. */
+export type MetricKind = "amount" | "count" | "percent";
+export const METRIC_KIND: Record<Metric, MetricKind> = {
+  omsaetning: "amount",
+  bruttofortjeneste: "amount",
+  resultat: "amount",
+  egenkapital: "amount",
+  ansatte: "count",
+  ebitda: "amount",
+  balancesum: "amount",
+  gaeld: "amount",
+  soliditetsgrad: "percent",
+  overskudsgrad: "percent",
+  likviditetsgrad: "percent",
+};
+
+/** Nøgletallets værdi som tekst, uden fælles skala (til enkeltværdier; en serie bruger amountScale/formatScaled i stedet). */
+export function formatMetricValue(m: Metric, v: number | null | undefined): string {
+  const kind = METRIC_KIND[m];
+  if (kind === "count") return formatNumber(v);
+  if (kind === "percent") return formatPercent(v, false);
+  return formatAmount(v);
+}
 
 export const TABLE_COLUMNS = [
   "navn",
@@ -227,6 +276,18 @@ export const keyValueListSchema = z.object({
   title: z.string().max(80).optional(),
 });
 
+export const contactSchema = z.object({
+  type: z.literal("LassoContact"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
+}).describe("Kontaktblok: telefon, e-mail, web og adresse, klikbare.");
+
+export const contactPersonsSchema = z.object({
+  type: z.literal("LassoContactPersons"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
+}).describe("Kontaktpersoner med rolle, telefon og e-mail.");
+
 export const multiYearTableSchema = z.object({
   type: z.literal("LassoMultiYearTable"),
   company: companyRef,
@@ -234,6 +295,27 @@ export const multiYearTableSchema = z.object({
   years: z.number().int().min(2).max(10).default(5),
   title: z.string().max(80).optional(),
 });
+
+export const incomeStatementSchema = z.object({
+  type: z.literal("LassoIncomeStatement"),
+  company: companyRef,
+  years: z.number().int().min(2).max(3).default(2).describe("Antal år side om side, standard 2 (maks 3)."),
+  title: z.string().max(80).optional(),
+}).describe("Hele resultatopgørelsen med subtotaler (EBITDA, resultat før skat, årets resultat), 2–3 år side om side med udvikling.");
+
+export const balanceSheetSchema = z.object({
+  type: z.literal("LassoBalanceSheet"),
+  company: companyRef,
+  years: z.number().int().min(2).max(3).default(2).describe("Antal år side om side, standard 2 (maks 3)."),
+  title: z.string().max(80).optional(),
+}).describe("Hele balancen (aktiver og passiver) med subtotaler og balancesum, 2–3 år side om side.");
+
+export const cashFlowSchema = z.object({
+  type: z.literal("LassoCashFlow"),
+  company: companyRef,
+  years: z.number().int().min(2).max(3).default(2).describe("Antal år side om side, standard 2 (maks 3)."),
+  title: z.string().max(80).optional(),
+}).describe("Pengestrømsopgørelsen (drift, investering, finansiering), 2–3 år side om side. Tom tilstand, når selskabet ikke aflægger den (klasse B).");
 
 /** Ingen live datakilde endnu (se resolve.ts og LiveProvider.score); demodata i DemoProvider, "ikke oplyst" i live. */
 export const scoreGaugeSchema = z.object({
@@ -268,6 +350,35 @@ export const auditorIndependenceSchema = z.object({
 export const livestockSchema = z.object({
   type: z.literal("LassoLivestock"),
   company: companyRef,
+});
+
+/* Personsiden (katalog 16). */
+const personRef = z
+  .string()
+  .min(1)
+  .describe("Lasso-ID for en person, fx 'CVR-3-4000000001' (personer har ikke CVR-nummer).");
+
+export const personHeadSchema = z.object({
+  type: z.literal("LassoPersonHead"),
+  person: personRef,
+});
+
+export const personRolesSchema = z.object({
+  type: z.literal("LassoPersonRoles"),
+  person: personRef,
+  title: z.string().max(80).optional(),
+});
+
+export const personNetworkSchema = z.object({
+  type: z.literal("LassoPersonNetwork"),
+  person: personRef,
+  title: z.string().max(80).optional(),
+});
+
+export const personRiskSchema = z.object({
+  type: z.literal("LassoPersonRisk"),
+  person: personRef,
+  title: z.string().max(80).optional(),
 });
 
 export const actionsSchema = z.object({
@@ -319,7 +430,12 @@ export const componentSchema = z.discriminatedUnion("type", [
   w(tableSchema),
   w(comparisonSchema),
   w(keyValueListSchema),
+  w(contactSchema),
+  w(contactPersonsSchema),
   w(multiYearTableSchema),
+  w(incomeStatementSchema),
+  w(balanceSheetSchema),
+  w(cashFlowSchema),
   w(scoreGaugeSchema),
   w(riskObservationsSchema),
   w(auditorIndependenceSchema),
@@ -333,6 +449,10 @@ export const componentSchema = z.discriminatedUnion("type", [
   w(summarySchema),
   w(timelineSchema),
   w(newsSchema),
+  w(personHeadSchema),
+  w(personRolesSchema),
+  w(personNetworkSchema),
+  w(personRiskSchema),
 ]);
 export type ViewComponent = z.infer<typeof componentSchema>;
 export type ComponentType = ViewComponent["type"];
@@ -347,7 +467,7 @@ export const LAYOUTS = ["dashboard", "stack", "grid-2", "columns"] as const;
 export const viewSpecSchema = z.object({
   /** v2: komponentsættet bygget fra Paper-kataloget. v1-visninger (gamle komponentnavne) afvises. */
   version: z.literal(2).default(2),
-  kind: z.enum(["company", "list", "custom"]).default("custom"),
+  kind: z.enum(["company", "person", "list", "custom"]).default("custom"),
   title: z.string().min(1).max(120),
   subtitle: z.string().max(200).optional(),
   layout: z.enum(LAYOUTS).default("dashboard").describe("'dashboard' (standard) = ét samlet overblik i 4-kolonne-grid med hver komponents bredde. 'stack' = alt i fuld bredde under hinanden."),
@@ -382,7 +502,12 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoCompanyTable: "full",
   LassoCompareTable: "full",
   LassoKeyValueList: "half",
+  LassoContact: "half",
+  LassoContactPersons: "half",
   LassoMultiYearTable: "full",
+  LassoIncomeStatement: "full",
+  LassoBalanceSheet: "full",
+  LassoCashFlow: "full",
   LassoScoreGauge: "quarter",
   LassoRiskObservations: "full",
   LassoAuditorIndependence: "full",
@@ -396,6 +521,10 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoSummary: "full",
   LassoTimeline: "half",
   LassoNews: "half",
+  LassoPersonHead: "full",
+  LassoPersonRoles: "full",
+  LassoPersonNetwork: "half",
+  LassoPersonRisk: "half",
 };
 
 /** Den bredde, en komponent får i visningen. 'stack' giver altid fuld bredde. */

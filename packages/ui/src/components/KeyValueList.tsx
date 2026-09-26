@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { formatAmount, formatDate, formatNumber, METRIC_FIELD, METRIC_LABELS, type CompanyVM, type FinancialsVM, type Metric, type OwnershipVM } from "@lasso/spec";
+import { formatAmount, formatDate, formatMetricValue, formatNumber, METRIC_FIELD, METRIC_LABELS, type CompanyVM, type FinancialsVM, type Metric, type OwnershipVM } from "@lasso/spec";
 import { DataState, Missing, Section, stateForError } from "../primitives.js";
 
 /** "2025-01-01" -> "01.01" (dag.måned, uden år, katalog 09: "01.01 – 31.12"). */
@@ -34,7 +34,7 @@ function companyRows(company: CompanyVM, ownership: OwnershipVM | undefined, las
   return rows;
 }
 
-const FINANCIALS_ROW_METRICS: Metric[] = ["resultat", "egenkapital", "ansatte"];
+const FINANCIALS_ROW_METRICS: Metric[] = ["resultat", "egenkapital", "ansatte", "ebitda", "soliditetsgrad", "overskudsgrad", "likviditetsgrad", "balancesum", "gaeld"];
 
 function financialsRows(year: FinancialsVM["years"][number]): Row[] {
   const period = dayMonth(year.periodStart) && dayMonth(year.periodEnd) ? `${dayMonth(year.periodStart)} – ${dayMonth(year.periodEnd)}` : undefined;
@@ -48,7 +48,7 @@ function financialsRows(year: FinancialsVM["years"][number]): Row[] {
   ];
   for (const m of FINANCIALS_ROW_METRICS) {
     const v = year[METRIC_FIELD[m]] as number | null | undefined;
-    rows.push({ label: METRIC_LABELS[m], value: v != null ? (m === "ansatte" ? formatNumber(v) : formatAmount(v)) : undefined, danger: typeof v === "number" && v < 0 });
+    rows.push({ label: METRIC_LABELS[m], value: v != null ? formatMetricValue(m, v) : undefined, danger: typeof v === "number" && v < 0 });
   }
   return rows;
 }

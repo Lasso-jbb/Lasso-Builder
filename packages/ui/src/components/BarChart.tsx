@@ -1,4 +1,4 @@
-import { amountScale, chartSeries, formatNumber, formatScaled, METRIC_LABELS, type FinancialsVM, type Metric } from "@lasso/spec";
+import { amountScale, chartSeries, formatNumber, formatPercent, formatScaled, METRIC_KIND, METRIC_LABELS, type FinancialsVM, type Metric } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
 import { niceTicks } from "../charts.js";
@@ -31,8 +31,9 @@ export function BarChart({ financials, metric, years, error }: { financials?: Fi
   }
   const points = W > 0 && W < 420 ? all.slice(-5) : all;
 
-  const scale = shown === "ansatte" ? null : amountScale(points.map((p) => p.value));
-  const label = (v: number) => (scale ? formatScaled(v, scale) : formatNumber(v));
+  const kind = METRIC_KIND[shown];
+  const scale = kind === "amount" ? amountScale(points.map((p) => p.value)) : null;
+  const label = (v: number) => (kind === "percent" ? formatPercent(v, false) : scale ? formatScaled(v, scale) : formatNumber(v));
   const first = points[0]!.year;
   const last = points.at(-1)!.year;
   const subtitle = `${scale ? `${scale.label}, ` : ""}${first === last ? first : `${first}–${last}`}`;

@@ -130,6 +130,25 @@ POST /apps/search/lassoid  { "filters": [ … ], "OrderBy": "employees", "limit"
   (`currentLiabilities`/`shortTermLiabilities` + `nonCurrentLiabilities`/`longTermLiabilities`).
   Findes ingen af delene, er `liabilities` `undefined`, og de to komponenter viser deres
   tomme tilstand. Bekræft mod et rigtigt regnskab med disse begreber, når adgang er der.
+- **Fuldt regnskab** (`FinancialStatementsVM`, brugt af `LassoIncomeStatement`, `LassoBalanceSheet`
+  og `LassoCashFlow`, katalog 19): samme bekræftede endpoint (`GET /{lassoId}/reports/advanced`),
+  genbrugt af `LiveProvider.financialStatements` (klientens cache undgår et dobbeltkald til
+  `financials`). Hovedtallene (omsætning/bruttofortjeneste, resultat, egenkapital, balancesum
+  som egenkapital+gæld) er de samme bekræftede/afledte tal som `FinancialYear`. Alle øvrige
+  linjeposter (`staffCosts`, `otherOperatingCosts`, `ebitda`, `depreciation`, `financialItemsNet`,
+  `profitBeforeTax`, `tax`; balancens `intangibleAssets`, `tangibleAssets`, `fixedAssetsTotal`,
+  `tradeReceivables`, `otherReceivables`, `cash`, `currentAssetsTotal`, `shareCapital`,
+  `retainedEarnings`, `longTermLiabilities`, `shortTermLiabilities`; hele pengestrømsopgørelsen)
+  er UBEKRÆFTEDE XBRL-begreb-gæt i `adaptFinancialStatements` (`apps/server/src/lasso/adapters.ts`).
+  De forsøger flere kendte XBRL-navne (fx `EmployeeBenefitsExpense`, `DepreciationAmortisationAndImpairment…`,
+  `ProfitLossFromOrdinaryActivitiesBeforeTax`, `CashFlowsFromUsedInOperatingActivities`) og falder
+  til `null` ("—" i UI'en), når begrebet ikke findes, i stedet for at fejle. EBITDA og balancesum
+  har en regnet reserve, når intet direkte begreb findes (bruttofortjeneste − personale − andre
+  drift; egenkapital + gæld). Pengestrømsopgørelsen medtages kun, når mindst ét
+  pengestrøms-specifikt begreb er fundet (klasse B skal ikke aflægge den); ellers viser
+  `LassoCashFlow` "Pengestrømsopgørelse er ikke indberettet." Bekræft alle disse feltnavne mod
+  rigtige regnskaber, når adgang er der.
+
 ## Nyheder
 
 ```
@@ -173,6 +192,25 @@ GET /apps/contacts/{lassoId}/data?contacts=true
 ```
 
 ## Ubekræftet
+
+Antagelser gjort til `LassoContact` og `LassoContactPersons` (katalog 08, node 9SX-0/I6B-0):
+
+- `GET /apps/contacts/{lassoId}/data?emails=true&phonenumbers=true&links=true`: svarformen er IKKE
+  bekræftet ud over det, opskriften nævner. Antaget som `{ phonenumbers: [...], emails: [...], links: [...] }`,
+  hvor hvert element enten er en ren streng eller et objekt med et værdifelt (`number`/`value`/`phone`
+  for telefon, `email`/`value`/`address` for e-mail). Adapteren (`fillContactInfo`/`adaptContact` i
+  `apps/server/src/lasso/adapters.ts`) læser kun det første element af hver liste og er skrevet
+  defensivt: en anden form giver blot ingen ekstra kontaktoplysning, ikke en fejl.
+- `GET /apps/contacts/{lassoId}/data?contacts=true` (kontaktpersoner): svarformen er IKKE bekræftet.
+  Antaget som en liste (evt. pakket i `{ contacts | people | persons: [...] }`) af objekter med
+  `name`/`fullName`/`navn`, `role`/`title`/`jobTitle`/`position`/`department`/`rolle`,
+  `phone`/`phoneNumber`/`telephone`/`telefon` og `email`/`emailAddress` (`adaptContactPersons`).
+  Personer uden navn springes over; en anden form giver en tom liste.
+- `LiveProvider.company` kalder kun `websites()`/`contacts()`, når CVR-svaret (`GET /{lassoId}`)
+  ikke selv har telefon, e-mail og web (se `fillContactInfo`), så `LassoCompanyHead` og
+  `LassoKeyValueList` (variant "company") ikke viser "—" unødigt. `LassoContact` henter altid
+  begge kilder, uafhængigt af de øvrige komponenter, og sætter kildelinjen til "CVR", når
+  CVR-svaret selv havde telefon eller e-mail, ellers "Virksomhedens hjemmeside".
 
 Antagelser gjort til `LassoKeyValueList` (katalog 09) og `LassoScoreGauge` (katalog 10):
 
@@ -276,3 +314,40 @@ since?, until? }`. Svarer endpointet 400/404/405/501, falder `LiveProvider` tilb
 **P-enheder:** `place/delta` er en ændringsliste over P-enheder i et tidsrum, ikke et opslag pr. virksomhed. Den egner sig til overvågning (21), men ikke til at vise én virksomheds P-enheder. `LassoProductionUnits` læser derfor stadig P-enhederne fra CVR-svaret `GET /{lassoId}` (ubekræftede feltnavne, se "Ubekræftet"). Findes der et opslag pr. virksomhed eller pr. P-nummer, skal det bruges i stedet.
 
 Når der er en API-nøgle, skal svarformerne tjekkes. POST-endpoints kan ikke tjekkes via `/api/debug/lasso/...` (kun GET), så brug `client.tryRequest("POST", …)`.
+
+## Ubekræftet: personer (katalog 16, personsiden)
+
+Læst i docs.lassox.com med WebFetch 26.09.2026 (`api/people/people` og `api/people/cvrnetwork`), IKKE afprøvet mod en
+rigtig nøgle. Klient: `LassoClient.person`, `.personHistory`, `.personNetwork`; adaptere i
+`apps/server/src/lasso/personAdapters.ts` (alle felter læses defensivt med `at()`/`str()`; ukendte former giver tomme lister).
+
+| Formål | Metode | Endpoint | Bruges af |
+|---|---|---|---|
+| Person, nuværende roller | GET | `/{lassoId}` med et person-ID (`CVR-3-…`) | `LassoPersonHead`, `LassoPersonRoles`, `LassoPersonRisk` |
+| Person, historik (fra–til) | GET | `/{lassoId}/history` | samme; fejler den, vises kun de nuværende roller |
+| Netværk | GET | `/modules/network/{lassoId}` | `LassoPersonNetwork` |
+| Navneopslag | GET | `/data/cvr/search?type=person&personStatus=all` | `show_person` med et navn |
+
+Antagne svarformer:
+
+- `GET /{lassoId}` (person): `{ lassoId, unitNumber, name, type: "PERSON", address: { secret, value: { address1, postalCode,
+  postalDistrict, municipality: { name, code } } }, management, board, founder, owner, trueOwner, stakeholder, otherRoles,
+  lastUpdated }`. Hver rollegruppe antages at være en LISTE af selskaber (dokumentationen viser kun ét element pr. gruppe;
+  adapteren tager også ét objekt eller et objekt med lister). Et selskab: `{ lassoId, cvr, name, status, form: { code,
+  shortDescription }, lifeTime: { from, to }, type: "VIRKSOMHED", role: { mainType, type, originalType, attributes } }`;
+  ejere har desuden `ownership: { from, to }` (brøk) og `voterights`. Hemmelig adresse (`address.secret`) giver ingen by.
+- `GET /{lassoId}/history`: samme grupper, men hvert element er pakket: `{ value: { …selskab… }, from, to, current }`.
+  `from`/`to` på indpakningen er rollens periode; `lifeTime.to` på selskabet bruges som dato for ophør/konkurs
+  (markøren i tidsbåndet). Historik og nuværende flettes: historikken vinder, nuværende roller den mangler lægges til.
+- Rolletype udledes af gruppen, `role.mainType`/`originalType` og rolleteksten (`roleKind` i `packages/spec/src/person.ts`):
+  DIREKTION -> direktion, BESTYRELSE -> bestyrelse, REGISTER/EJER og `trueOwner` -> ejer (sidstnævnte som "Reel ejer").
+- Selskabsstatus: `NORMAL` vises som "Aktiv"; tekster med "konkurs" tælles som konkurs og "tvangs" som tvangsopløsning
+  (`personRisk`). Der er ingen dato for, hvornår et selskab kom UNDER konkurs; kun `lifeTime.to`, når det er ophørt.
+- `GET /modules/network/{lassoId}`: `[{ name, unitNo, companyRelation: [{ companyName, cvr, status, currentRoles: [],
+  overlaps: [{ from, to, theirRoles: [], ownRoles: [] }] }] }]`. Personens Lasso-ID antages at være `CVR-3-{unitNo}` og
+  selskabets `CVR-1-{cvr}`. Overlap i år = summen af `overlaps` (til i dag, når `to` er null). En relation regnes for aktiv,
+  når `currentRoles` ikke er tom, eller et overlap ikke har `to`.
+- Søgning: personerne antages at ligge under `people.results[]` med `lassoId` (`CVR-3-…`) og `name`, samme form som
+  `companies.results[]`.
+
+Ikke dækket (findes i designet, artboard 16, men har ingen kendt kilde): PEP, stråmandsindikator og sanktionslister.

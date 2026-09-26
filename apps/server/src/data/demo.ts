@@ -4,7 +4,11 @@ import {
   type BeneficialOwnershipVM,
   type CompanyRowVM,
   type CompanyVM,
+  type ContactPersonVM,
+  type ContactPersonsVM,
+  type ContactVM,
   type FinancialsVM,
+  type FinancialStatementsVM,
   type NewsVM,
   type AuditorIndependenceVM,
   type AuditorRelationVM,
@@ -23,6 +27,7 @@ import {
 } from "@lasso/spec";
 import { applyCriteria, sortRows } from "./criteria-eval.js";
 import { demoOwnershipGraph } from "./demoGraph.js";
+import { demoFindPersons, demoPerson, demoPersonIds, demoPersonNetwork } from "./demoPeople.js";
 import { NotFoundError, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
 
 /**
@@ -44,6 +49,7 @@ const P = (name: string, role: string, from: string, to?: string): PersonRowVM =
 
 const RAW: Omit<DemoCompany, "lassoId" | "statusKind">[] = [
   { cvr: "99000001", name: "Eksempel Byg A/S", status: "Aktiv", form: "A/S", industryCode: "412000", industryText: "Opførelse af bygninger", address: { street: "Prøvevej 1", zip: "8600", city: "Silkeborg", municipality: "Silkeborg", region: "Midtjylland" }, founded: "1998-04-01", employees: 64, base: 38_000_000, growth: 0.07,
+    phone: "86123456", email: "kontakt@eksempelbyg.dk", website: "https://eksempelbyg.dk",
     people: [P("Anne Eksempel", "Direktør", "2015-01-01"), P("Bo Eksempel", "Bestyrelsesformand", "2012-05-01"), P("Carla Prøve", "Bestyrelsesmedlem", "2024-03-15"), P("Dan Prøve", "Bestyrelsesmedlem", "2016-06-01", "2024-03-15")],
     owners: [{ name: "Eksempel Holding ApS", share: "66,67-89,99 %", kind: "company", lassoId: "CVR-1-99000010" }, { name: "Anne Eksempel", share: "10-14,99 %", kind: "person" }], auditor: "Eksempel Revision Midt ApS" },
   { cvr: "99000002", name: "Eksempel Revision Midt ApS", status: "Aktiv", form: "ApS", industryCode: "692000", industryText: "Revision og bogføring", address: { street: "Tællegade 12", zip: "8000", city: "Aarhus C", municipality: "Aarhus", region: "Midtjylland" }, founded: "2006-09-01", employees: 22, base: 14_500_000, growth: 0.05,
@@ -67,7 +73,7 @@ const RAW: Omit<DemoCompany, "lassoId" | "statusKind">[] = [
   { cvr: "99000010", name: "Eksempel Holding ApS", status: "Aktiv", form: "ApS", industryCode: "642020", industryText: "Ikke-finansielle holdingselskaber", address: { street: "Prøvevej 1", zip: "8600", city: "Silkeborg", municipality: "Silkeborg", region: "Midtjylland" }, founded: "2005-01-01", employees: 1, base: 3_000_000, growth: 0.1,
     people: [P("Bo Eksempel", "Direktør", "2005-01-01")], owners: [{ name: "Bo Eksempel", share: "100 %", kind: "person" }], auditor: "Eksempel Revision Midt ApS" },
   { cvr: "99000011", name: "Eksempel Energi A/S", status: "Under konkurs", form: "A/S", industryCode: "351100", industryText: "Produktion af elektricitet", address: { street: "Vindvej 9", zip: "6700", city: "Esbjerg", municipality: "Esbjerg", region: "Syddanmark" }, founded: "2012-08-01", employees: 8, base: 9_000_000, growth: -0.18,
-    people: [P("Uffe Prøve", "Direktør", "2012-08-01")], owners: [{ name: "Uffe Prøve", share: "100 %", kind: "person" }], auditor: "Eksempel Revision Nord ApS" },
+    people: [P("Uffe Prøve", "Direktør", "2012-08-01"), P("Bo Eksempel", "Bestyrelsesmedlem", "2014-03-01", "2018-06-30")], owners: [{ name: "Uffe Prøve", share: "100 %", kind: "person" }], auditor: "Eksempel Revision Nord ApS" },
   { cvr: "99000012", name: "Eksempel Ejendomme ApS", status: "Aktiv", form: "ApS", industryCode: "682040", industryText: "Udlejning af erhvervsejendomme", address: { street: "Murervej 5", zip: "8700", city: "Horsens", municipality: "Horsens", region: "Midtjylland" }, founded: "2013-10-01", employees: 3, base: 7_500_000, growth: 0.06,
     people: [P("Vera Eksempel", "Direktør", "2013-10-01"), P("Bo Eksempel", "Bestyrelsesmedlem", "2013-10-01")], owners: [{ name: "Eksempel Holding ApS", share: "100 %", kind: "company", lassoId: "CVR-1-99000010" }], auditor: "Eksempel Revision Midt ApS" },
   // Katalog 20: eneste demovirksomhed med et CHR-nummer, så LassoLivestock har eksempeldata (LiveProvider har intet bekræftet CHR-endpoint).
@@ -148,6 +154,8 @@ function statusKindOf(s: string | undefined): CompanyVM["statusKind"] {
 
 const COMPANIES: DemoCompany[] = RAW.map((c) => ({ ...c, lassoId: `CVR-1-${c.cvr}`, statusKind: statusKindOf(c.status) }));
 const BY_ID = new Map(COMPANIES.map((c) => [c.lassoId, c]));
+/** Katalog 16: personerne får Lasso-ID'er, så de kan åbnes fra lister og relationer. */
+const PERSON_IDS = demoPersonIds(COMPANIES);
 
 const YEARS = [2020, 2021, 2022, 2023, 2024, 2025];
 
@@ -174,8 +182,134 @@ function financialsFor(c: DemoCompany): FinancialsVM {
         // Opdigtet gæld: plausibel i forhold til egenkapitalen, deterministisk "støj" som resten.
         liabilities: Math.round(equity * (0.8 + ((seed * (i + 5)) % 9) / 20)),
       };
+    }).map((y) => {
+      // Afledte nøgletal, beregnet som i adaptFinancials (samme formler som live).
+      const assetsTotal = (y.equity ?? 0) + (y.liabilities ?? 0);
+      const pct = (a: number | null | undefined, b: number | null | undefined) => (typeof a === "number" && typeof b === "number" && b !== 0 ? Math.round((a / b) * 1000) / 10 : null);
+      return {
+        ...y,
+        assetsTotal,
+        ebitda: Math.round((y.grossProfit ?? 0) * (1 - 0.62 - 0.045)),
+        soliditetsgrad: pct(y.equity, assetsTotal),
+        overskudsgrad: pct(y.profit, y.revenue ?? y.grossProfit),
+        likviditetsgrad: null,
+      };
     }),
   };
+}
+
+/**
+ * Katalog 19, "Regnskabsdetaljer": fuldt eksempelregnskab afledt af `financialsFor`, så
+ * hovedtallene (bruttofortjeneste, resultat, egenkapital, balancesum) er identiske med dem,
+ * andre komponenter (LassoKeyFigureCards, LassoMultiYearTable) allerede viser for samme
+ * virksomhed. Underposterne er opdigtede, men deterministiske og indbyrdes konsistente
+ * (bruttofortjeneste - personale - andre drift = EBITDA osv.), som i den rigtige tabel.
+ * Én demovirksomhed (Eksempel Café I/S) har bevidst ingen pengestrømsopgørelse, så
+ * LassoCashFlows tomme tilstand ("ikke indberettet") kan ses.
+ */
+function financialStatementsFor(c: DemoCompany): FinancialStatementsVM {
+  const f = financialsFor(c);
+  const seed = Number(c.cvr!.slice(-2));
+  const hasCashFlow = c.cvr !== "99000009";
+  const incomeStatement: FinancialStatementsVM["incomeStatement"] = [];
+  const balanceSheet: FinancialStatementsVM["balanceSheet"] = [];
+  const cashFlow: FinancialStatementsVM["cashFlow"] = [];
+  let cashCursor = Math.round((f.years[0]?.liabilities ?? 2_000_000) * 0.18);
+  f.years.forEach((y) => {
+    const gp = y.grossProfit ?? 0;
+    const staffCosts = -Math.round(gp * 0.62);
+    const otherOperatingCosts = -Math.round(gp * 0.045);
+    const ebitda = gp + staffCosts + otherOperatingCosts;
+    const depreciation = -Math.round(Math.abs(ebitda) * 0.3 + 150 + (seed % 7) * 20);
+    const profit = y.profit ?? 0;
+    const tax = profit >= 0 ? -Math.round(profit * 0.22) : Math.round(-profit * 0.29);
+    const profitBeforeTax = profit - tax;
+    const financialItemsNet = profitBeforeTax - (ebitda + depreciation);
+    incomeStatement.push({
+      year: y.year,
+      periodStart: y.periodStart,
+      periodEnd: y.periodEnd,
+      revenue: y.revenue,
+      grossProfit: gp,
+      staffCosts,
+      otherOperatingCosts,
+      ebitda,
+      depreciation,
+      financialItemsNet,
+      profitBeforeTax,
+      tax,
+      profit,
+    });
+
+    const equityTotal = y.equity ?? 0;
+    const liabilitiesTotal = y.liabilities ?? 0;
+    const assetsTotal = equityTotal + liabilitiesTotal;
+    const longTermLiabilities = Math.round(liabilitiesTotal * 0.45);
+    const shortTermLiabilities = liabilitiesTotal - longTermLiabilities;
+    const fixedAssetsTotal = Math.round(assetsTotal * 0.36);
+    const intangibleAssets = Math.round(fixedAssetsTotal * 0.65);
+    const tangibleAssets = fixedAssetsTotal - intangibleAssets;
+    const currentAssetsTotal = assetsTotal - fixedAssetsTotal;
+    const shareCapital = Math.min(equityTotal, Math.round(assetsTotal * 0.06) || 1000);
+    const retainedEarnings = equityTotal - shareCapital;
+
+    let cash: number;
+    if (hasCashFlow) {
+      const workingCapitalChange = -Math.round(Math.abs(otherOperatingCosts) * 0.5 + (seed % 5) * 40);
+      const operatingCashFlow = profit + Math.abs(depreciation) + workingCapitalChange;
+      const intangibleInvestments = -Math.round(intangibleAssets * 0.2 + 100);
+      const investingCashFlow = intangibleInvestments;
+      const capitalIncrease = y.year === f.years.at(-1)!.year ? Math.round(shareCapital * 0.02) : 0;
+      const loanChange = Math.round(longTermLiabilities * 0.05);
+      const financingCashFlow = capitalIncrease + loanChange;
+      const netCashFlow = operatingCashFlow + investingCashFlow + financingCashFlow;
+      const cashBeginning = cashCursor;
+      const cashEnding = cashBeginning + netCashFlow;
+      cashCursor = cashEnding;
+      cash = cashEnding;
+      cashFlow.push({
+        year: y.year,
+        periodEnd: y.periodEnd,
+        profit,
+        depreciation: Math.abs(depreciation),
+        workingCapitalChange,
+        operatingCashFlow,
+        intangibleInvestments,
+        investingCashFlow,
+        capitalIncrease,
+        loanChange,
+        financingCashFlow,
+        netCashFlow,
+        cashBeginning,
+        cashEnding,
+      });
+    } else {
+      cash = Math.round(currentAssetsTotal * 0.28);
+    }
+    const tradeReceivables = Math.max(0, Math.round((currentAssetsTotal - cash) * 0.6));
+    const otherReceivables = Math.max(0, currentAssetsTotal - cash - tradeReceivables);
+
+    balanceSheet.push({
+      year: y.year,
+      periodEnd: y.periodEnd,
+      intangibleAssets,
+      tangibleAssets,
+      fixedAssetsTotal,
+      tradeReceivables,
+      otherReceivables,
+      cash,
+      currentAssetsTotal,
+      assetsTotal,
+      shareCapital,
+      retainedEarnings,
+      equityTotal,
+      longTermLiabilities,
+      shortTermLiabilities,
+      liabilitiesTotal,
+      liabilitiesAndEquityTotal: assetsTotal,
+    });
+  });
+  return { lassoId: c.lassoId, currency: "DKK", incomeStatement, balanceSheet, cashFlow };
 }
 
 function toRow(c: DemoCompany): CompanyRowVM {
@@ -341,6 +475,28 @@ const LIVESTOCK: Record<string, LivestockVM> = {
   },
 };
 
+/** Katalog 08: kontaktpersoner. Kun sat for det første eksempel, med nok rækker til at vise "Se N flere". */
+const CONTACT_PERSONS: Record<string, ContactPersonVM[]> = {
+  "CVR-1-99000001": [
+    { name: "Anne Eksempel", role: "Direktør", phone: "86123456", email: "anne@eksempelbyg.dk" },
+    { name: "Bo Eksempel", role: "Bestyrelsesformand", phone: "86123457" },
+    { name: "Carla Prøve", role: "Bestyrelsesmedlem", email: "carla@eksempelbyg.dk" },
+    { name: "Dan Prøve", role: "Salgschef" },
+    { name: "Eva Prøve", role: "Økonomichef", phone: "86123458", email: "eva@eksempelbyg.dk" },
+    { name: "Frank Eksempel", role: "Projektleder", phone: "86123459", email: "frank@eksempelbyg.dk" },
+  ],
+};
+
+function contactFor(c: DemoCompany): ContactVM {
+  const hasAny = Boolean(c.phone || c.email || c.website);
+  return { lassoId: c.lassoId, phone: c.phone, email: c.email, website: c.website, address: c.address, source: hasAny ? "CVR" : undefined, updated: hasAny ? "2026-09-20" : undefined };
+}
+
+function contactPersonsFor(c: DemoCompany): ContactPersonsVM {
+  const people = CONTACT_PERSONS[c.lassoId] ?? [];
+  return { lassoId: c.lassoId, people, source: people.length ? "Eksempeldata" : undefined, updated: people.length ? "2026-09-20" : undefined };
+}
+
 function defaultUnit(c: DemoCompany): ProductionUnitsVM["units"][number] {
   return {
     pNumber: `10${c.cvr}`,
@@ -387,12 +543,24 @@ export class DemoProvider implements DataProvider {
     return strip(get(lassoId));
   }
 
+  async contact(lassoId: string): Promise<ContactVM> {
+    return contactFor(get(lassoId));
+  }
+
+  async contactPersons(lassoId: string): Promise<ContactPersonsVM> {
+    return contactPersonsFor(get(lassoId));
+  }
+
   async financials(lassoId: string) {
     return financialsFor(get(lassoId));
   }
 
+  async financialStatements(lassoId: string) {
+    return financialStatementsFor(get(lassoId));
+  }
+
   async people(lassoId: string) {
-    return get(lassoId).people;
+    return get(lassoId).people.map((p) => ({ ...p, lassoId: p.lassoId ?? PERSON_IDS.get(p.name) }));
   }
 
   async ownership(lassoId: string): Promise<OwnershipVM> {
@@ -400,7 +568,7 @@ export class DemoProvider implements DataProvider {
     const auditor = COMPANIES.find((x) => x.name === c.auditor);
     return {
       lassoId,
-      owners: c.owners,
+      owners: c.owners.map((o) => (o.kind === "person" && !o.lassoId ? { ...o, lassoId: PERSON_IDS.get(o.name) } : o)),
       auditor: c.auditor === "Ingen" ? undefined : { name: c.auditor, lassoId: auditor?.lassoId, from: "2019-01-01" },
     };
   }
@@ -460,5 +628,17 @@ export class DemoProvider implements DataProvider {
       const c = BY_ID.get(id);
       return c ? strip(c) : undefined;
     });
+  }
+
+  async person(lassoId: string) {
+    return demoPerson(COMPANIES, lassoId);
+  }
+
+  async personNetwork(lassoId: string) {
+    return demoPersonNetwork(COMPANIES, lassoId);
+  }
+
+  async findPersons(name: string, limit: number) {
+    return demoFindPersons(COMPANIES, name, limit);
   }
 }

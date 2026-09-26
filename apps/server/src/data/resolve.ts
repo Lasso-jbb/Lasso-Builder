@@ -19,7 +19,10 @@ type Need = string;
  */
 const FETCHERS: Record<string, (ds: Dataset, p: DataProvider, id: string) => Promise<void>> = {
   company: async (ds, p, id) => void (ds.companies[id] = await p.company(id)),
+  contact: async (ds, p, id) => void (ds.contact[id] = await p.contact(id)),
+  contactPersons: async (ds, p, id) => void (ds.contactPersons[id] = await p.contactPersons(id)),
   financials: async (ds, p, id) => void (ds.financials[id] = await p.financials(id)),
+  financialStatements: async (ds, p, id) => void (ds.financialStatements[id] = await p.financialStatements(id)),
   people: async (ds, p, id) => void (ds.people[id] = await p.people(id)),
   ownership: async (ds, p, id) => void (ds.ownership[id] = await p.ownership(id)),
   score: async (ds, p, id) => void (ds.scores[id] = await p.score(id)),
@@ -31,6 +34,8 @@ const FETCHERS: Record<string, (ds: Dataset, p: DataProvider, id: string) => Pro
   productionUnits: async (ds, p, id) => void (ds.productionUnits[id] = await p.productionUnits(id)),
   properties: async (ds, p, id) => void (ds.properties[id] = await p.properties(id)),
   livestock: async (ds, p, id) => void (ds.livestock[id] = await p.livestock(id)),
+  person: async (ds, p, id) => void (ds.persons[id] = await p.person(id)),
+  personNetwork: async (ds, p, id) => void (ds.personNetworks[id] = await p.personNetwork(id)),
 };
 
 /** Normaliserer alle virksomhedsreferencer i specen til Lasso-ID'er. */
@@ -147,8 +152,19 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
         if (c.variant === "financials") want(c.company, "financials");
         else want(c.company, "company", "ownership", "financials");
         break;
+      case "LassoContact":
+        want(c.company, "contact");
+        break;
+      case "LassoContactPersons":
+        want(c.company, "contactPersons");
+        break;
       case "LassoMultiYearTable":
         want(c.company, "financials");
+        break;
+      case "LassoIncomeStatement":
+      case "LassoBalanceSheet":
+      case "LassoCashFlow":
+        want(c.company, "financialStatements");
         break;
       case "LassoScoreGauge":
         want(c.company, "score");
@@ -157,6 +173,14 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
         graphs.push(c);
         break;
       case "LassoFollowUps":
+        break;
+      case "LassoPersonHead":
+      case "LassoPersonRoles":
+      case "LassoPersonRisk":
+        want(c.person, "person");
+        break;
+      case "LassoPersonNetwork":
+        want(c.person, "personNetwork");
         break;
     }
   }

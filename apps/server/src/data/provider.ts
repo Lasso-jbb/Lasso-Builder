@@ -3,14 +3,20 @@ import type {
   AuditorIndependenceVM,
   CompanyRowVM,
   CompanyVM,
+  ContactPersonsVM,
+  ContactVM,
   Criterion,
   DataSourceKind,
   FinancialsVM,
+  FinancialStatementsVM,
   NewsVM,
   ObservationsVM,
   OwnershipGraphVM,
   OwnershipVM,
   PersonRowVM,
+  PersonNetworkVM,
+  PersonSearchRowVM,
+  PersonVM,
   ScoreVM,
   LivestockVM,
   PropertiesVM,
@@ -34,7 +40,13 @@ export interface DataProvider {
   /** Hurtigt navneopslag uden regnskabsberigelse (til show_company med et navn). */
   findCompanies(name: string, limit: number): Promise<CompanyRowVM[]>;
   company(lassoId: string): Promise<CompanyVM>;
+  /** Katalog 08: kontaktblok (telefon/e-mail/web/adresse, med kildelinje). */
+  contact(lassoId: string): Promise<ContactVM>;
+  /** Katalog 08: kontaktpersoner. */
+  contactPersons(lassoId: string): Promise<ContactPersonsVM>;
   financials(lassoId: string): Promise<FinancialsVM>;
+  /** Katalog 19: fuldt regnskab (resultatopgørelse, balance, pengestrøm). Samme kilde som `financials`. */
+  financialStatements(lassoId: string): Promise<FinancialStatementsVM>;
   people(lassoId: string): Promise<PersonRowVM[]>;
   ownership(lassoId: string): Promise<OwnershipVM>;
   /** Katalog 10: 0–100 risikoscore. Ingen live datakilde endnu (se LiveProvider); score: null = "ikke oplyst". */
@@ -53,6 +65,12 @@ export interface DataProvider {
   livestock(lassoId: string): Promise<LivestockVM>;
   /** Ejergrafen i flere lag omkring én virksomhed (katalog 14). */
   ownershipGraph(lassoId: string, opts: OwnershipGraphOptions): Promise<OwnershipGraphVM>;
+  /** Katalog 16: én person (Lasso-ID "CVR-3-…") med roller i alle selskaber. */
+  person(lassoId: string): Promise<PersonVM>;
+  /** Katalog 16: personer med fælles selskaber. */
+  personNetwork(lassoId: string): Promise<PersonNetworkVM>;
+  /** Navneopslag på personer (til show_person med et navn). */
+  findPersons(name: string, limit: number): Promise<PersonSearchRowVM[]>;
 }
 
 export interface OwnershipGraphOptions {

@@ -9,11 +9,16 @@ import {
   formatShare,
   ownershipGraphKey,
   percentChange,
+  personCompanies,
+  personCounts,
+  personRisk,
   METRIC_FIELD,
+  METRIC_KIND,
   METRIC_LABELS,
   searchKey,
   type Dataset,
   type FinancialsVM,
+  type FinancialStatementsVM,
   type Metric,
   type OwnershipGraphVM,
   type ViewSpec,
@@ -94,8 +99,12 @@ class Card {
   }
 }
 
-const short = (v: number | null | undefined, metric: Metric) =>
-  metric === "ansatte" ? formatNumber(v) : formatAmount(v).replace(" kr.", "");
+const short = (v: number | null | undefined, metric: Metric) => {
+  const kind = METRIC_KIND[metric];
+  if (kind === "count") return formatNumber(v);
+  if (kind === "percent") return formatPercent(v, false);
+  return formatAmount(v).replace(" kr.", "");
+};
 
 function delta(from: number | null | undefined, to: number | null | undefined): string {
   if (typeof from !== "number" || typeof to !== "number" || from === 0) return "";
@@ -108,7 +117,8 @@ function delta(from: number | null | undefined, to: number | null | undefined): 
 function chart(card: Card, f: FinancialsVM, wanted: Metric, years: number) {
   const { metric, points } = chartSeries(f, wanted, years);
   if (points.length === 0) return;
-  const scale = metric === "ansatte" ? null : amountScale(points.map((p) => p.value));
+  const kind = METRIC_KIND[metric];
+  const scale = kind === "amount" ? amountScale(points.map((p) => p.value)) : null;
   card.section(`${METRIC_LABELS[metric]}${scale ? `, ${scale.label}` : ""}`);
   const max = Math.max(...points.map((p) => Math.abs(p.value))) || 1;
   for (const p of points) {
@@ -120,7 +130,7 @@ function chart(card: Card, f: FinancialsVM, wanted: Metric, years: number) {
       rest = 0;
     }
     const bar = (p.value < 0 ? "▒" : "█").repeat(full) + (p.value < 0 ? "" : EIGHTHS[rest]);
-    const value = scale ? formatScaled(p.value, scale) : formatNumber(p.value);
+    const value = kind === "percent" ? formatPercent(p.value, false) : scale ? formatScaled(p.value, scale) : formatNumber(p.value);
     card.raw(`${p.year} ${pad(bar || "▏", 20)} ${padStart(value, 7)}`);
   }
 }
@@ -227,6 +237,76 @@ function ownershipTreeCard(card: Card, g: OwnershipGraphVM) {
   }
 }
 
+/** Katalog 19: hele resultatopgørelsen, balancen og pengestrømmen som rækker i tekstkortet. */
+function statementRows(card: Card, label: string, rows: { label: string; values: readonly (number | null | undefined)[] }[], yearsShown: readonly number[]) {
+  card.section(`${label} ${yearsShown.join("/")}`);
+  for (const r of rows) {
+    const parts = r.values.map((v) => (v == null ? "—" : amt(v)));
+    card.row(r.label, parts.join(" → "));
+  }
+}
+
+function incomeStatementText(card: Card, s: FinancialStatementsVM, years: number) {
+  const shown = s.incomeStatement.slice(-Math.max(2, Math.min(3, years)));
+  if (!shown.length) return;
+  const revenueTop = shown.some((y) => y.revenue != null);
+  statementRows(
+    card,
+    "Resultatopgørelse",
+    [
+      { label: revenueTop ? "Omsætning" : "Bruttofortj.", values: shown.map((y) => (revenueTop ? y.revenue : y.grossProfit)) },
+      { label: "Personale", values: shown.map((y) => y.staffCosts) },
+      { label: "Andre drift", values: shown.map((y) => y.otherOperatingCosts) },
+      { label: "EBITDA", values: shown.map((y) => y.ebitda) },
+      { label: "Af-/nedskr.", values: shown.map((y) => y.depreciation) },
+      { label: "Finansielle", values: shown.map((y) => y.financialItemsNet) },
+      { label: "Før skat", values: shown.map((y) => y.profitBeforeTax) },
+      { label: "Skat", values: shown.map((y) => y.tax) },
+      { label: "Årets resultat", values: shown.map((y) => y.profit) },
+    ],
+    shown.map((y) => y.year),
+  );
+}
+
+function balanceSheetText(card: Card, s: FinancialStatementsVM, years: number) {
+  const shown = s.balanceSheet.slice(-Math.max(2, Math.min(3, years)));
+  if (!shown.length) return;
+  statementRows(
+    card,
+    "Balance",
+    [
+      { label: "Anlægsakt. i alt", values: shown.map((y) => y.fixedAssetsTotal) },
+      { label: "Omsætn.akt. i alt", values: shown.map((y) => y.currentAssetsTotal) },
+      { label: "Aktiver i alt", values: shown.map((y) => y.assetsTotal) },
+      { label: "Egenkapital", values: shown.map((y) => y.equityTotal) },
+      { label: "Gæld i alt", values: shown.map((y) => y.liabilitiesTotal) },
+      { label: "Passiver i alt", values: shown.map((y) => y.liabilitiesAndEquityTotal) },
+    ],
+    shown.map((y) => y.year),
+  );
+}
+
+function cashFlowText(card: Card, s: FinancialStatementsVM, years: number) {
+  if (!s.cashFlow.length) {
+    card.section("Pengestrømsopgørelse");
+    card.text("Pengestrømsopgørelse er ikke indberettet.");
+    return;
+  }
+  const shown = s.cashFlow.slice(-Math.max(2, Math.min(3, years)));
+  statementRows(
+    card,
+    "Pengestrøm",
+    [
+      { label: "Fra drift", values: shown.map((y) => y.operatingCashFlow) },
+      { label: "Fra investering", values: shown.map((y) => y.investingCashFlow) },
+      { label: "Fra finansiering", values: shown.map((y) => y.financingCashFlow) },
+      { label: "Årets pengestrøm", values: shown.map((y) => y.netCashFlow) },
+      { label: "Likvider ultimo", values: shown.map((y) => y.cashEnding) },
+    ],
+    shown.map((y) => y.year),
+  );
+}
+
 function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | null {
   const card = new Card();
   const types = new Set(spec.components.filter((c) => "company" in c && c.company === lassoId).map((c) => c.type));
@@ -251,6 +331,20 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     card.row("Telefon", co.phone?.replace(/^(\d{2})(\d{2})(\d{2})(\d{2})$/, "$1 $2 $3 $4"));
     card.row("E-mail", co.email);
     card.row("Web", co.website);
+  } else if (types.has("LassoContact")) {
+    // LassoContact kan bruges alene, uden LassoCompanyHead/LassoKeyValueList; company() er
+    // da ikke hentet, så kontaktblokkens egne data (ds.contact) bruges i stedet.
+    const contact = ds.contact[lassoId];
+    if (contact) {
+      card.text(spec.title);
+      card.section("Kontakt");
+      const a = contact.address;
+      card.row("Adresse", a?.street);
+      card.row(a?.street ? "" : "Adresse", [a?.zip, a?.city].filter(Boolean).join(" ") || undefined);
+      card.row("Telefon", contact.phone?.replace(/^(\d{2})(\d{2})(\d{2})(\d{2})$/, "$1 $2 $3 $4"));
+      card.row("E-mail", contact.email);
+      card.row("Web", contact.website);
+    }
   }
 
   const people = types.has("LassoPersonList") || types.has("LassoRelations") ? (ds.people[lassoId] ?? []).filter((p) => !p.to) : [];
@@ -281,7 +375,20 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     for (const m of metrics) {
       const v = last[METRIC_FIELD[m]];
       if (typeof v !== "number") continue;
-      const label = { omsaetning: "Omsætning", bruttofortjeneste: "Bruttofortj.", resultat: "Resultat", egenkapital: "Egenkapital", ansatte: "Ansatte" }[m];
+      const SHORT_LABEL: Record<Metric, string> = {
+        omsaetning: "Omsætning",
+        bruttofortjeneste: "Bruttofortj.",
+        resultat: "Resultat",
+        egenkapital: "Egenkapital",
+        ansatte: "Ansatte",
+        ebitda: "EBITDA",
+        balancesum: "Balancesum",
+        gaeld: "Gæld",
+        soliditetsgrad: "Soliditet",
+        overskudsgrad: "Overskudsgr.",
+        likviditetsgrad: "Likviditet",
+      };
+      const label = SHORT_LABEL[m];
       card.raw(`${pad(label, 12)}${padStart(short(v, m), 10)} ${delta(prev?.[METRIC_FIELD[m]] as number | null | undefined, v)}`);
     }
   }
@@ -292,6 +399,10 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     if (f && c.type === "LassoStackedBarChart" && c.company === lassoId) stackedText(card, f, c.years);
     if (f && c.type === "LassoWaterfallChart" && c.company === lassoId) waterfallText(card, f);
     if (f && c.type === "LassoShareBars" && c.company === lassoId) shareBarsText(card, f);
+    const stmt = ds.financialStatements[lassoId];
+    if (stmt && c.type === "LassoIncomeStatement" && c.company === lassoId) incomeStatementText(card, stmt, c.years);
+    if (stmt && c.type === "LassoBalanceSheet" && c.company === lassoId) balanceSheetText(card, stmt, c.years);
+    if (stmt && c.type === "LassoCashFlow" && c.company === lassoId) cashFlowText(card, stmt, c.years);
     if (c.type === "LassoOwnershipDiagram" && c.company === lassoId) {
       const g = ds.ownershipGraphs[ownershipGraphKey(c)];
       if (g) ownershipTreeCard(card, g);
@@ -313,6 +424,22 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
         card.row("", o.share ? `Reelt ${o.share}` : undefined);
       }
       for (const g of b.gaps ?? []) card.text(`Ingen reel ejer for ${g.share ?? "en del"}`);
+    }
+  }
+
+  if (types.has("LassoContactPersons")) {
+    const cp = ds.contactPersons[lassoId];
+    if (cp) {
+      card.section("Kontaktpersoner");
+      if (cp.people.length === 0) {
+        card.text("Ingen kontaktpersoner fundet");
+      } else {
+        for (const p of cp.people.slice(0, 3)) {
+          card.row(p.role ?? "Kontakt", p.name);
+          card.row("", [p.phone, p.email].filter(Boolean).join(", ") || undefined);
+        }
+        if (cp.people.length > 3) card.row("", `og ${cp.people.length - 3} flere`);
+      }
     }
   }
 
@@ -406,6 +533,55 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
   return card.empty ? null : card.toString();
 }
 
+/** Katalog 16: personsiden som tekst. Hoved, roller pr. selskab, netværk og risiko. */
+function personCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | null {
+  const types = new Set(spec.components.filter((c) => "person" in c && c.person === lassoId).map((c) => c.type));
+  const p = ds.persons[lassoId];
+  const card = new Card();
+  const year = (d?: string) => (d ? d.slice(0, 4) : "");
+  if (p) {
+    const n = personCounts(p);
+    card.text(p.name);
+    card.text(["Person", p.city].filter(Boolean).join(", "));
+    const pl = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`;
+    card.text(`${pl(n.activeRoles, "aktiv rolle", "aktive roller")} i ${pl(n.activeCompanies, "selskab", "selskaber")}${n.endedRoles ? `, ${pl(n.endedRoles, "ophørt", "ophørte")}` : ""}`);
+  }
+  if (p && types.has("LassoPersonRoles")) {
+    const companies = personCompanies(p);
+    card.section("Roller");
+    for (const c of companies.slice(0, 6)) {
+      const ended = c.companyStatusKind === "warning" || c.companyStatusKind === "inactive";
+      card.text(`${c.companyName}${ended ? ` (${(c.companyStatus ?? "ophørt").toLowerCase()})` : ""}`);
+      for (const r of c.roles.slice(0, 2)) {
+        const what = `${r.role}${r.share ? ` ${r.share}` : ""}`;
+        const when = r.active ? (r.from ? `siden ${year(r.from)}` : "") : [year(r.from), year(r.to)].filter(Boolean).join("–");
+        for (const l of wrap([what, when].filter(Boolean).join(", "), W - 2)) card.raw(`  ${l}`);
+      }
+    }
+    if (companies.length > 6) card.text(`og ${companies.length - 6} flere selskaber`);
+  }
+  const net = types.has("LassoPersonNetwork") ? ds.personNetworks[lassoId] : undefined;
+  if (net?.people.length) {
+    card.section("Sidder sammen med");
+    for (const x of net.people.slice(0, 5)) {
+      const yrs = x.overlapYears < 1 ? "<1 år" : `${x.overlapYears} år`;
+      wrap(x.name, W - 8).forEach((l, i, all) => card.raw(`${pad(l, W - 7)}${i === all.length - 1 ? padStart(yrs, 7) : ""}`));
+    }
+    if (net.people.length > 5) card.text(`og ${net.people.length - 5} flere`);
+  }
+  if (p && types.has("LassoPersonRisk")) {
+    const risk = personRisk(p);
+    card.section("Risiko");
+    const word = (cases: typeof risk.bankruptcies) => (cases.length === 0 ? "Ingen" : cases.some((c) => c.involved) ? "Mulig vigtig" : "Info");
+    card.row("Konkurser", `${risk.bankruptcies.length}, ${word(risk.bankruptcies)}`);
+    card.row("Tvangsopl.", `${risk.dissolutions.length}, ${word(risk.dissolutions)}`);
+    for (const c of [...risk.bankruptcies, ...risk.dissolutions].slice(0, 3)) {
+      card.text(`${c.companyName}, ${c.status.toLowerCase()}${c.date ? ` ${year(c.date)}` : ""}${c.personLeft ? `, fratrådt ${year(c.personLeft)}` : ""}`);
+    }
+  }
+  return card.empty ? null : card.toString();
+}
+
 function summaryCard(spec: ViewSpec): string | null {
   const s = spec.components.find((c) => c.type === "LassoSummary");
   if (!s || s.type !== "LassoSummary") return null;
@@ -443,8 +619,10 @@ function listCard(spec: ViewSpec, ds: Dataset): string | null {
 /** Tekstkort for visningen, eller null når den ikke har noget, der kan vises som tekst. */
 export function textCard(spec: ViewSpec, ds: Dataset): string | null {
   const companies = [...new Set(spec.components.flatMap((c) => ("company" in c ? [c.company] : [])))];
+  const persons = [...new Set(spec.components.flatMap((c) => ("person" in c ? [c.person] : [])))];
   const cards = [
     ...(companies.length === 1 ? [companyCard(spec, ds, companies[0]!)] : []),
+    ...(persons.length === 1 ? [personCard(spec, ds, persons[0]!)] : []),
     listCard(spec, ds),
     summaryCard(spec),
   ].filter((c): c is string => Boolean(c));

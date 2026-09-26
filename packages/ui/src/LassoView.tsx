@@ -18,7 +18,12 @@ import { ShareBars } from "./components/ShareBars.js";
 import { Ranking } from "./components/Ranking.js";
 import { KeyFigureCards } from "./components/KeyFigureCards.js";
 import { KeyValueList } from "./components/KeyValueList.js";
+import { LassoContact } from "./components/LassoContact.js";
+import { LassoContactPersons } from "./components/LassoContactPersons.js";
 import { MultiYearTable } from "./components/MultiYearTable.js";
+import { LassoIncomeStatement } from "./components/IncomeStatement.js";
+import { LassoBalanceSheet } from "./components/BalanceSheet.js";
+import { LassoCashFlow } from "./components/CashFlow.js";
 import { OwnerList } from "./components/OwnerList.js";
 import { OwnershipDiagram } from "./components/OwnershipDiagram.js";
 import { PersonList } from "./components/PersonList.js";
@@ -29,6 +34,10 @@ import { LassoTextSections } from "./components/LassoTextSections.js";
 import { LassoSummary } from "./components/LassoSummary.js";
 import { LassoTimeline } from "./components/LassoTimeline.js";
 import { LassoNews } from "./components/LassoNews.js";
+import { PersonHead } from "./components/PersonHead.js";
+import { PersonRoles } from "./components/PersonRoles.js";
+import { PersonNetwork } from "./components/PersonNetwork.js";
+import { PersonRisk } from "./components/PersonRisk.js";
 import { RiskObservations } from "./components/RiskObservations.js";
 import { AuditorIndependence } from "./components/AuditorIndependence.js";
 import { specToCsv } from "./csv.js";
@@ -83,7 +92,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
         />
       );
     case "LassoPersonList":
-      return <PersonList key={key} people={empty.people[c.company]} show={c.show} title={c.title} error={err(`people:${c.company}`)} />;
+      return <PersonList key={key} people={empty.people[c.company]} show={c.show} title={c.title} error={err(`people:${c.company}`)} onOpen={props.host.drillDown ? act : undefined} />;
     case "LassoOwnerList":
       return <OwnerList key={key} ownership={empty.ownership[c.company]} error={err(`ownership:${c.company}`)} onOpen={props.host.drillDown ? act : undefined} />;
     case "LassoOwnershipDiagram": {
@@ -108,8 +117,18 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           error={c.variant === "financials" ? err(`financials:${c.company}`) : err(`company:${c.company}`)}
         />
       );
+    case "LassoContact":
+      return <LassoContact key={key} contact={empty.contact[c.company]} title={c.title} error={err(`contact:${c.company}`)} />;
+    case "LassoContactPersons":
+      return <LassoContactPersons key={key} data={empty.contactPersons[c.company]} title={c.title} error={err(`contactPersons:${c.company}`)} />;
     case "LassoMultiYearTable":
       return <MultiYearTable key={key} financials={empty.financials[c.company]} metrics={c.metrics} years={c.years} title={c.title} error={err(`financials:${c.company}`)} />;
+    case "LassoIncomeStatement":
+      return <LassoIncomeStatement key={key} statements={empty.financialStatements[c.company]} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} />;
+    case "LassoBalanceSheet":
+      return <LassoBalanceSheet key={key} statements={empty.financialStatements[c.company]} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} />;
+    case "LassoCashFlow":
+      return <LassoCashFlow key={key} statements={empty.financialStatements[c.company]} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} />;
     case "LassoScoreGauge":
       return <ScoreGauge key={key} score={empty.scores[c.company]} title={c.title} error={err(`score:${c.company}`)} />;
     case "LassoRiskObservations":
@@ -153,6 +172,14 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return <LassoTimeline key={key} timeline={empty.timeline[c.company]} title={c.title} error={err(`timeline:${c.company}`)} />;
     case "LassoNews":
       return <LassoNews key={key} news={empty.news[c.company]} companyName={empty.companies[c.company]?.name} error={err(`news:${c.company}`)} />;
+    case "LassoPersonHead":
+      return <PersonHead key={key} person={empty.persons[c.person]} error={err(`person:${c.person}`)} />;
+    case "LassoPersonRoles":
+      return <PersonRoles key={key} person={empty.persons[c.person]} title={c.title} error={err(`person:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} />;
+    case "LassoPersonNetwork":
+      return <PersonNetwork key={key} network={empty.personNetworks[c.person]} title={c.title} error={err(`personNetwork:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} />;
+    case "LassoPersonRisk":
+      return <PersonRisk key={key} person={empty.persons[c.person]} title={c.title} error={err(`person:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} />;
   }
 }
 
@@ -218,8 +245,8 @@ export function LassoView(props: LassoViewProps) {
             <LassoMark className="lasso-logo" />
           )}
           <div className="lasso-frame__titles">
-            {spec.kind === "company" ? (
-              <div className="lasso-frame__eyebrow">Virksomhedsprofil</div>
+            {spec.kind === "company" || spec.kind === "person" ? (
+              <div className="lasso-frame__eyebrow">{spec.kind === "person" ? "Personprofil" : "Virksomhedsprofil"}</div>
             ) : (
               <h1 className="lasso-frame__title">{spec.title}</h1>
             )}

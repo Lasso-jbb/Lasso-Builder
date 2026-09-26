@@ -16,60 +16,69 @@ export interface CatalogEntry {
 
 /**
  * Kompositionsregler fra designguidens trin 23. Står over kataloget i tool-
- * beskrivelserne, så modellen vælger antal og rækkefølge før den vælger komponent.
+ * beskrivelserne, så modellen vælger værktøj, antal og rækkefølge før den vælger komponent.
  */
 export const COMPOSITION_RULES = `Komposition (guide 23):
-- Én virksomhed: brug show_company med focus (overblik, oekonomi, ejerskab, ledelse, risiko, historik). Serveren henter data og vælger selv formen efter virksomhedens data. Byg IKKE selv en virksomhedsside med render_view; brug kun render_view til flere virksomheder, eller når brugeren beder om bestemte elementer, som focus ikke dækker.
-- ÉN visning pr. svar. Kald højst ét af show_company, search_companies og render_view pr. brugerbesked, og kun én gang. Skal der mere med end show_company kan vise, så byg HELE svaret som én render_view-spec i stedet for at kalde flere værktøjer.
-- Visningen er ét dashboard (layout 'dashboard', standard): 4 kolonner, hver komponent i sin bredde (width: quarter ¼, half ½, three-quarters ¾, full). Udelad width for standardbredden. Nøgletal, tabeller og hoved står i fuld bredde; to halve (fx graf + LassoKeyValueList, LassoPersonList + LassoOwnerList) står side om side, så læg dem efter hinanden. Efterlad aldrig en halv alene i en række: giv den width 'full' eller en makker. En ¼ (fx LassoRelations) står ved siden af en ¾.
-- Virksomhedsside i denne rækkefølge: LassoCompanyHead; LassoRiskObservations kun hvis en observation er ≥50; LassoKeyFigureCards; ÉN graf ved siden af LassoKeyValueList (layout 'grid-2'); personer og ejere (LassoPersonList + LassoOwnerList, eller LassoRelations i smal kolonne); LassoTimeline og LassoNews.
-- Højst én graf pr. overblik. Flere grafer stables aldrig; vælg den ene, spørgsmålet peger på.
-- Bredt spørgsmål ("fortæl om X", "hvordan går det for X") → overblik med de centrale komponenter i rækkefølgen ovenfor.
-- Snævert spørgsmål ("hvor mange ansatte har X", "hvem er revisor") → ét lille element (LassoKeyFigureCards med ét metric, LassoKeyValueList eller den ene liste), ikke et overblik.
-- Flere virksomheder → LassoCompareTable (2–6 navngivne, flere nøgletal) eller LassoRanking (2–10 navngivne, ét nøgletal); mange fundet med kriterier → LassoCompanyTable. Aldrig én enkeltvisning pr. virksomhed.`;
+- Én virksomhed: brug show_company med focus. Serveren henter data og bygger selv siden efter virksomhedens data. Byg IKKE selv en virksomhedsside med render_view. Routing efter spørgsmål: bredt ("fortæl om X") → overblik; økonomi, omsætning, resultat, nøgletal, soliditetsgrad, "hvordan går det" → oekonomi; fuldt regnskab, resultatopgørelse, balance, pengestrøm, "alle posterne" → regnskab; ejere, reelle ejere, koncern → ejerskab; direktion, bestyrelse, udskiftning → ledelse; røde flag, "kan vi handle med dem", revisors uafhængighed → risiko; "hvad er der sket", nyheder → historik; kontaktoplysninger, telefon, e-mail, web, kontaktpersoner → kontakt. Snævre stamdataspørgsmål ("hvem er revisor", "hvornår stiftet", "hvor mange ansatte") → overblik.
+- Én person ("hvem er X", "hvor sidder X i bestyrelser", "har X været i konkurser") → show_person. Byg ikke personsider med render_view.
+- Flere virksomheder → render_view: LassoCompareTable (2–6 navngivne, flere nøgletal), LassoRanking (2–10 navngivne, ét nøgletal) eller LassoLineChart (2 virksomheder, ét nøgletal over tid); mange fundet med kriterier → search_companies eller LassoCompanyTable. Aldrig én enkeltvisning pr. virksomhed.
+- render_view til én virksomhed kun, når brugeren beder om elementer, ingen focus dækker (fx LassoStackedBarChart, LassoProductionUnits, LassoProperties, en egen vurdering i LassoSummary), eller om en kombination på tværs af focus (fx ejere + revisor, resultatopgørelse + ejere). Læg da ALT i én spec: LassoCompanyHead først, dernæst det bestilte, og LassoSummary som sidste sektion.
+- ÉN visning pr. svar: kald højst ét af show_company, show_person, search_companies og render_view pr. brugerbesked, og kun én gang. Aldrig show_company og render_view efter hinanden.
+- render_view er ét dashboard (layout 'dashboard', standard): 4 kolonner, hver komponent i sin bredde (width: quarter ¼, half ½, three-quarters ¾, full). Udelad width for standardbredden. Hoved, nøgletal, tabeller og fulde regnskaber står i fuld bredde; to halve (fx graf + LassoKeyValueList, LassoPersonList + LassoOwnerList) står side om side, så læg dem efter hinanden. Efterlad aldrig en halv alene i en række: giv den width 'full' eller en makker. En ¼ (fx LassoRelations) står ved siden af en ¾.
+- Højst én graf pr. visning. Flere grafer stables aldrig; vælg den ene, spørgsmålet peger på (1 nøgletal → LassoBarChart, 2–3 → LassoGroupedBarChart, 4+ eller "tabel" → LassoMultiYearTable).`;
+
+/** Kort note pr. komponent: hvilken show_company-focus viser den allerede. */
+const F = (focus: string) => `Dækkes af show_company focus ${focus}; byg kun selv i render_view sammen med andet.`;
 
 export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
   // (c) Virksomhedsfakta -------------------------------------------------------
   {
     type: "LassoCompanyHead",
     title: "Virksomhedshoved",
-    description:
-      "Brug til: identitet for én virksomhed (navn, CVR, status, form, branche, adresse); står altid øverst, når visningen handler om én virksomhed. Brug ikke når: kun ét stamdatafelt skal vises (LassoKeyValueList variant 'company') eller visningen handler om flere virksomheder (LassoCompareTable/LassoCompanyTable). Kræver: company; stamdata findes for alle CVR-virksomheder. Eksempel: 'Hvad er CVR-nummer og adresse på Lasso X?'",
+    description: `Brug til: identitet for én virksomhed (navn, CVR, status, form, branche, adresse) øverst i enhver visning om én virksomhed. Brug ikke når: kun ét stamdatafelt skal vises (LassoKeyValueList variant 'company') eller det gælder flere virksomheder (LassoCompareTable/LassoCompanyTable). Kræver: company; findes for alle CVR-virksomheder. ${F("overblik (og alle andre focus)")} Eksempel: øverst i en render_view-spec om én virksomhed.`,
     props: "company",
   },
   {
     type: "LassoKeyValueList",
     title: "Nøgle-værdi-liste",
-    description:
-      "Brug til: mange felter med én værdi hver. variant 'company': revisor, regnskabsperiode, stiftet, form, branche, kontakt – til stamdataspørgsmål ('hvornår er X stiftet', 'hvem er revisor', 'hvilken virksomhedsform'). variant 'financials': ALLE regnskabstal for ét valgt år med årsvælger – til 'vis regnskabet for 2024'. Brug ikke når: tallet skal have ændring mod året før (LassoKeyFigureCards), flere år skal ses ved siden af hinanden (LassoMultiYearTable), eller det gælder formål/tegningsregler som løbende tekst (LassoTextSections). Kræver: company, variant?; manglende felter udelades eller står som 'Ikke oplyst'. Eksempel: 'Hvornår er Lasso X stiftet, og hvornår slutter regnskabsåret?'",
+    description: `Brug til: variant 'company' (standard): revisor, seneste revisorskift, regnskabsperiode, stiftet, virksomhedsform, branche, ansatte, adresse, telefon, e-mail, web som én liste – stamdataspørgsmål ('hvem er revisor', 'hvornår stiftet', 'hvilken form'). variant 'financials': de 11 nøgletal (omsætning/bruttofortjeneste, resultat, egenkapital, ansatte, EBITDA, soliditetsgrad, overskudsgrad, likviditetsgrad, balancesum, gæld) plus regnskabsperiode og udgivelsesdato for ÉT år, med årsvælger for de seneste 5 år. Brug ikke når: tallet skal have ændring mod året før (LassoKeyFigureCards), flere år side om side (LassoMultiYearTable), alle regnskabslinjer (LassoIncomeStatement/LassoBalanceSheet), eller det gælder formål/tegningsregler (LassoTextSections). Kræver: company, variant?; manglende felter står som '—'. ${F("overblik, risiko og kontakt (company) samt oekonomi (financials)")} Eksempel: 'Hvem er revisor for Lasso X?' → variant 'company' (eller show_company focus overblik).`,
     props: "company, variant? (company | financials), title?",
+  },
+  {
+    type: "LassoContact",
+    title: "Kontaktblok",
+    description: `Brug til: telefon, e-mail, web og adresse som klikbare kontaktoplysninger – 'telefonnummer på X', 'hvordan kontakter jeg X'. Brug ikke når: det gælder stamdata som stiftet/form/revisor (LassoKeyValueList variant 'company', som også har kontaktfelterne), eller navngivne personer (LassoContactPersons). Kræver: company; kilden er CVR eller virksomhedens hjemmeside, og komponenten viser tom tilstand, når intet er oplyst. ${F("kontakt (og overblik)")} Eksempel: 'Hvad er telefonnummer og e-mail på Lasso X?' → show_company focus kontakt.`,
+    props: "company, title?",
+  },
+  {
+    type: "LassoContactPersons",
+    title: "Kontaktpersoner",
+    description: `Brug til: navngivne kontaktpersoner fra virksomhedens hjemmeside med rolle/afdeling, telefon og e-mail – 'hvem kan jeg kontakte hos X', 'kontaktpersoner'. Brug ikke når: det gælder direktion/bestyrelse i CVR (LassoPersonList) eller virksomhedens hovednumre (LassoContact). Kræver: company; listen er tom, når hjemmesiden er ukendt eller ingen personer er fundet. ${F("kontakt")} Eksempel: 'Hvem er kontaktpersonerne hos Lasso X?' → show_company focus kontakt.`,
+    props: "company, title?",
   },
   {
     type: "LassoTextSections",
     title: "Tekstsektioner",
-    description:
-      "Brug til: CVR-tekster som korte afsnit: branchebeskrivelse, formål (formålsparagraffen) og tegningsregler. Vælg ved 'hvad laver X', 'formål', 'tegningsregel', 'hvem kan tegne selskabet'. Brug ikke når: feltet er en kort værdi som stiftet, form eller revisor (LassoKeyValueList variant 'company'), eller du selv skal skrive en vurdering (LassoSummary). Kræver: company; manglende tekster udelades. Eksempel: 'Hvad er formålet med selskabet X, og hvem kan tegne det?'",
+    description: `Brug til: CVR-tekster som korte afsnit: branchebeskrivelse, formål og tegningsregler – 'hvad laver X', 'formål', 'hvem kan tegne selskabet'. Brug ikke når: feltet er en kort værdi som stiftet/form/revisor (LassoKeyValueList variant 'company'), eller du selv skriver en vurdering (LassoSummary). Kræver: company; manglende tekster udelades. ${F("overblik")} Eksempel: 'Hvad er formålet med selskabet X, og hvem kan tegne det?'`,
     props: "company, title?",
   },
   {
     type: "LassoSummary",
     title: "Resumé",
     description:
-      "Brug til: din egen analyse eller vurdering i prosa, vist som almindelig sektion med kildelinje – 'vurdér', 'opsummér', 'hvad synes du om'. Du skriver hele teksten i 'text' ud fra data, du allerede har fået; komponenten henter intet. Brug ikke når: teksten findes i CVR (LassoTextSections), eller spørgsmålet kan besvares med tal alene (LassoKeyFigureCards). Kræver: text (1–4000 tegn), title?, source?, updated?. Eksempel: 'Giv mig en kort vurdering af X's økonomi' (sammen med LassoKeyFigureCards).",
+      "Brug til: din egen analyse eller vurdering i prosa med kildelinje – 'vurdér', 'opsummér', 'hvad synes du'. Indgår altid som sidste komponent i en render_view-spec sammen med de datakomponenter, vurderingen bygger på (fx LassoCompanyHead + LassoKeyFigureCards + LassoSummary); aldrig som eneste komponent og aldrig som et ekstra kald efter show_company. Du skriver hele 'text' ud fra tal, du allerede kender; komponenten henter intet. Brug ikke når: teksten findes i CVR (LassoTextSections), eller tal alene svarer (LassoKeyFigureCards). Kræver: text (1–4000 tegn), title?, source?, updated?. Dækkes ikke af show_company. Eksempel: 'Giv mig en kort vurdering af X's økonomi' → render_view med LassoCompanyHead, LassoKeyFigureCards, LassoBarChart + LassoKeyValueList, LassoSummary.",
     props: "text, title?, source?, updated?",
   },
   {
     type: "LassoTimeline",
     title: "Tidslinje",
-    description:
-      "Brug til: begivenheder over tid – stiftelse, ledelsesskift og offentliggjorte regnskaber, nyeste øverst. Vælg ved 'historik', 'hvad er der sket', 'hvornår skiftede de direktør'. Brug ikke når: det gælder tal over år (LassoBarChart), de nuværende personer (LassoPersonList) eller ekstern omtale i medier (LassoNews). Kræver: company; bygges af CVR- og regnskabsdata og er derfor sjældent tom. Eksempel: 'Hvad er der sket hos X gennem årene?'",
+    description: `Brug til: begivenheder over tid – stiftelse, ledelsesskift og offentliggjorte regnskaber, nyeste øverst – 'historik', 'hvad er der sket', 'hvornår skiftede de direktør'. Brug ikke når: det gælder tal over år (LassoBarChart), de nuværende personer (LassoPersonList) eller medieomtale (LassoNews). Kræver: company; bygges af CVR- og regnskabsdata og er sjældent tom. ${F("historik (og overblik, ledelse, risiko)")} Eksempel: 'Hvad er der sket hos X gennem årene?' → show_company focus historik.`,
     props: "company, title?",
   },
   {
     type: "LassoNews",
     title: "Nyheder",
-    description:
-      "Brug til: ekstern omtale – nyhedsartikler om virksomheden med kilde, tidspunkt og uddrag. Vælg ved 'nyheder', 'omtale', 'i medierne', 'seneste nyt'. Brug ikke når: det gælder registrerede ændringer i CVR (LassoTimeline) eller Lassos egne risikosignaler (LassoRiskObservations). Kræver: company, limit? (standard 5); ingen artikler giver tom tilstand. Eksempel: 'Har X været i nyhederne på det seneste?'",
+    description: `Brug til: medieomtale – nyhedsartikler om virksomheden med kilde, tidspunkt og uddrag – 'nyheder', 'omtale', 'seneste nyt'. Brug ikke når: det gælder registrerede ændringer i CVR (LassoTimeline) eller Lassos risikosignaler (LassoRiskObservations). Kræver: company, limit? (standard 5); ingen artikler giver tom tilstand. ${F("historik (og overblik)")} Eksempel: 'Har X været i nyhederne?' → show_company focus historik.`,
     props: "company, limit? (1–10, standard 5)",
   },
 
@@ -77,94 +86,101 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
   {
     type: "LassoKeyFigureCards",
     title: "Nøgletalskort",
-    description:
-      "Brug til: 1–6 tal fra seneste regnskab, hvert med ændring mod året før ('ét tal med udvikling') – det hurtige økonomiske snapshot, eller ét enkelt tal med metrics på ét element. Brug ikke når: udviklingen over flere år efterspørges (LassoBarChart som graf, LassoMultiYearTable som tal), hele regnskabet for ét år (LassoKeyValueList variant 'financials'), eller stamdata uden tal (LassoKeyValueList variant 'company'). Kræver: company, metrics? (standard 4 kort); uden regnskab står kortene som 'Ikke oplyst'. Eksempel: 'Hvor mange ansatte har Danfoss?' → metrics ['ansatte'].",
+    description: `Brug til: 1–6 nøgletal fra seneste regnskab, hvert med ændring mod året før – det hurtige økonomiske snapshot, eller ét enkelt tal ('hvor mange ansatte', 'hvad er soliditetsgraden') med ét metric. Brug ikke når: udvikling over flere år (LassoBarChart som graf, LassoMultiYearTable som tal), alle nøgletal for ét år med årsvælger (LassoKeyValueList variant 'financials'), eller stamdata uden tal (LassoKeyValueList variant 'company'). Kræver: company, metrics? (standard 4 kort); uden regnskab står kortene som 'Ikke oplyst'. ${F("oekonomi (og overblik)")} Eksempel: 'Hvor mange ansatte har Danfoss?' → show_company focus overblik, eller metrics ['ansatte'] i en render_view-spec.`,
     props: `company, metrics? (1–6 af ${METRICS.join(" | ")})`,
   },
   {
     type: "LassoBarChart",
     title: "Søjlegraf, ét nøgletal",
-    description:
-      "Brug til: udviklingen i ÉT nøgletal over 2–10 år som søjler ('udvikling over år'). Brug ikke når: 2–3 nøgletal skal ses i samme graf (LassoGroupedBarChart), én anden virksomhed skal med som benchmark (LassoLineChart), tallene ønskes aflæst som tabel eller 4+ nøgletal (LassoMultiYearTable), kun seneste år (LassoKeyFigureCards), eller egenkapital mod gæld (LassoStackedBarChart). Kræver: company, metric, years (standard 5); år uden regnskab udelades. Eksempel: 'Hvordan har omsætningen udviklet sig hos Carlsberg de sidste 10 år?'",
+    description: `Brug til: udviklingen i ÉT nøgletal over 2–10 år som søjler. Brug ikke når: 2–3 nøgletal i samme graf (LassoGroupedBarChart), en anden virksomhed som benchmark (LassoLineChart), tabel eller 4+ nøgletal (LassoMultiYearTable), kun seneste år (LassoKeyFigureCards), eller egenkapital mod gæld (LassoStackedBarChart). Kræver: company, metric, years (standard 5); år uden regnskab udelades. ${F("oekonomi (og overblik)")} Eksempel: 'Hvordan har omsætningen udviklet sig hos Carlsberg de sidste 10 år?' → show_company focus oekonomi (chart_metric 'omsaetning', years 10).`,
     props: `company, metric (${METRICS.join(" | ")}), years (2–10, standard 5)`,
   },
   {
     type: "LassoGroupedBarChart",
     title: "Grupperede søjler, 2–3 nøgletal",
-    description:
-      "Brug til: 2–3 nøgletal side om side pr. år for én virksomhed, når spørgsmålet nævner flere nøgletal sammen ('omsætning og resultat over tid'). Brug ikke når: kun ét nøgletal (LassoBarChart), 4+ nøgletal eller tallene skal aflæses præcist (LassoMultiYearTable), to virksomheder (LassoLineChart med benchmark), eller delene udgør en helhed som egenkapital + gæld (LassoStackedBarChart). Kræver: company, metrics (2–3), years. Eksempel: 'Vis omsætning og resultat for Vestas over de seneste 5 år.'",
+    description: `Brug til: 2–3 nøgletal side om side pr. år for én virksomhed ('omsætning og resultat over tid'). Brug ikke når: ét nøgletal (LassoBarChart), 4+ nøgletal eller præcise tal (LassoMultiYearTable), to virksomheder (LassoLineChart), eller egenkapital + gæld som helhed (LassoStackedBarChart). Kræver: company, metrics (2–3), years. ${F("oekonomi")} Eksempel: 'Vis omsætning og resultat for Vestas de seneste 5 år.' → show_company focus oekonomi.`,
     props: `company, metrics (2–3 af ${METRICS.join(" | ")}), years (2–10, standard 5)`,
   },
   {
     type: "LassoLineChart",
     title: "Linjegraf med benchmark",
     description:
-      "Brug til: ét nøgletal som linje over år for én virksomhed med ÉN benchmark-virksomhed som stiplet linje – dvs. præcis to virksomheder, ét nøgletal, over tid. Brug ikke når: kun én virksomhed uden benchmark (LassoBarChart), 3+ virksomheder (LassoCompareTable for flere nøgletal, LassoRanking for ét nøgletal i seneste år), eller flere nøgletal for én virksomhed (LassoGroupedBarChart). Kræver: company, metric, years, benchmark. Eksempel: 'Sammenlign omsætningsudviklingen for Netto og Rema 1000 over 5 år.'",
+      "Brug til: ét nøgletal som linje over år for én virksomhed med ÉN benchmark-virksomhed som stiplet linje – præcis to virksomheder, ét nøgletal, over tid. Brug ikke når: én virksomhed uden benchmark (LassoBarChart), 3+ virksomheder (LassoCompareTable for flere nøgletal, LassoRanking for ét), eller flere nøgletal for én virksomhed (LassoGroupedBarChart). Kræver: company, metric, years, benchmark. Dækkes ikke af show_company. Eksempel: 'Sammenlign omsætningsudviklingen for Netto og Rema 1000 over 5 år.'",
     props: `company, metric (${METRICS.join(" | ")}), years (2–10, standard 5), benchmark? (virksomhed)`,
   },
   {
     type: "LassoStackedBarChart",
     title: "Stablede søjler, balance pr. år",
     description:
-      "Brug til: egenkapital og gæld som dele af balancen pr. år ('dele af en helhed' over tid). Brug ikke når: kun seneste år (LassoShareBars), udvikling i ét nøgletal (LassoBarChart, fx metric 'egenkapital'), eller frit valgte nøgletal ved siden af hinanden (LassoGroupedBarChart). Kræver: company, years; gæld er endnu ikke bekræftet i live-regnskaber, så komponenten kan vise tom tilstand for rigtige virksomheder – er kun egenkapitalen relevant, så vælg LassoBarChart. Eksempel: 'Hvordan har forholdet mellem egenkapital og gæld udviklet sig hos X?'",
+      "Brug til: egenkapital og gæld som dele af balancen pr. år over 2–10 år. Brug ikke når: kun seneste år (LassoShareBars), udvikling i ét nøgletal (LassoBarChart med metric 'egenkapital', 'gaeld' eller 'soliditetsgrad'), eller frit valgte nøgletal (LassoGroupedBarChart). Kræver: company, years; mangler gæld i regnskaberne, vises tom tilstand. Dækkes ikke af show_company. Eksempel: 'Hvordan har forholdet mellem egenkapital og gæld udviklet sig hos X?'",
     props: "company, years (2–10, standard 5)",
   },
   {
     type: "LassoShareBars",
     title: "Andelsbjælker, balance seneste år",
-    description:
-      "Brug til: egenkapital og gæld som andele i procent af balancen for seneste regnskabsår – ét år, dele af en helhed. Brug ikke når: flere år (LassoStackedBarChart), eller egenkapitalen som tal med ændring (LassoKeyFigureCards metrics ['egenkapital']). Kræver: company; gæld er ubekræftet i live-data og kan give tom tilstand. Eksempel: 'Hvor stor en del af balancen er egenkapital hos X i dag?'",
+    description: `Brug til: egenkapital og gæld som andele i procent af balancen for seneste regnskabsår. Brug ikke når: flere år (LassoStackedBarChart), eller soliditetsgraden som tal med ændring (LassoKeyFigureCards metrics ['soliditetsgrad']). Kræver: company; mangler gæld i regnskabet, vises tom tilstand. ${F("oekonomi")} Eksempel: 'Hvor stor en del af balancen er egenkapital hos X?' → show_company focus oekonomi.`,
     props: "company",
   },
   {
     type: "LassoWaterfallChart",
     title: "Vandfald, omsætning til resultat",
-    description:
-      "Brug til: 'fra A til B' – hvordan omsætning/bruttofortjeneste bliver til årets resultat i seneste regnskabsår. Brug ikke når: udvikling over år (LassoBarChart), enkelte tal med ændring (LassoKeyFigureCards), eller alle regnskabslinjer som tal (LassoKeyValueList variant 'financials'). Kræver: company; mangler resultat i seneste regnskab, vises tom tilstand. Eksempel: 'Hvor bliver pengene af mellem omsætning og resultat hos X?'",
+    description: `Brug til: hvordan omsætning/bruttofortjeneste bliver til årets resultat i seneste regnskabsår. Brug ikke når: udvikling over år (LassoBarChart), enkelte tal med ændring (LassoKeyFigureCards), eller alle linjer i resultatopgørelsen (LassoIncomeStatement). Kræver: company; mangler resultat i seneste regnskab, vises tom tilstand. ${F("oekonomi")} Eksempel: 'Hvor bliver pengene af mellem omsætning og resultat hos X?' → show_company focus oekonomi.`,
     props: "company",
   },
   {
     type: "LassoMultiYearTable",
     title: "Flerårstabel",
-    description:
-      "Brug til: nøgletal × år som TAL i en tabel med ændring og tendens pr. række – når brugeren vil aflæse præcise tal for 1–6 nøgletal over 2–10 år, eller når 4+ nøgletal skal ses over tid (for mange til en graf). Brug ikke når: ét nøgletal som udvikling (LassoBarChart), 2–3 nøgletal som graf (LassoGroupedBarChart), eller kun ét år (LassoKeyValueList variant 'financials'). Kræver: company, metrics?, years. Eksempel: 'Giv mig omsætning, bruttofortjeneste, resultat og egenkapital for X for hvert af de sidste 5 år i en tabel.'",
+    description: `Brug til: nøgletal × år som TAL med ændring og tendens pr. række – præcise tal for 1–6 nøgletal over 2–10 år, eller 4+ nøgletal over tid. Brug ikke når: ét nøgletal som graf (LassoBarChart), 2–3 nøgletal som graf (LassoGroupedBarChart), kun ét år (LassoKeyValueList variant 'financials'), eller alle regnskabslinjer (LassoIncomeStatement). Kræver: company, metrics?, years. ${F("oekonomi")} Eksempel: 'Giv mig omsætning, bruttofortjeneste, resultat og egenkapital for X for hvert af de sidste 5 år i en tabel.'`,
     props: `company, metrics? (1–6 af ${METRICS.join(" | ")}), years (2–10, standard 5), title?`,
+  },
+  {
+    type: "LassoIncomeStatement",
+    title: "Resultatopgørelse, fuld",
+    description: `Brug til: HELE resultatopgørelsen med alle linjer og subtotaler (omsætning/bruttofortjeneste, personaleomkostninger, andre driftsomkostninger, EBITDA, af- og nedskrivninger, finansielle poster, resultat før skat, skat, årets resultat), 2–3 år side om side – 'resultatopgørelsen', 'hele regnskabet', 'alle posterne'. Brug ikke når: kun nøgletal (LassoKeyFigureCards, LassoMultiYearTable) eller balancen (LassoBalanceSheet). Kræver: company, years? (2–3, standard 2); linjer, regnskabet ikke indeholder, står som '—'. ${F("regnskab")} Eksempel: 'Vis hele resultatopgørelsen for X.' → show_company focus regnskab.`,
+    props: "company, years? (2–3, standard 2), title?",
+  },
+  {
+    type: "LassoBalanceSheet",
+    title: "Balance, fuld",
+    description: `Brug til: HELE balancen (aktiver og passiver) med linjer og subtotaler (anlægs- og omsætningsaktiver, balancesum, egenkapital, lang- og kortfristet gæld), 2–3 år side om side – 'balancen', 'aktiver og passiver'. Brug ikke når: kun egenkapital/gæld som andele (LassoShareBars/LassoStackedBarChart) eller ét nøgletal (LassoKeyFigureCards). Kræver: company, years? (2–3, standard 2); linjer, regnskabet ikke indeholder, står som '—'. ${F("regnskab")} Eksempel: 'Vis balancen for X for de sidste to år.' → show_company focus regnskab.`,
+    props: "company, years? (2–3, standard 2), title?",
+  },
+  {
+    type: "LassoCashFlow",
+    title: "Pengestrømsopgørelse",
+    description: `Brug til: pengestrøm fra drift, investering og finansiering til årets pengestrøm og likvider ultimo, 2–3 år side om side – 'pengestrøm', 'cash flow'. Brug ikke når: det gælder resultat (LassoIncomeStatement) eller balance (LassoBalanceSheet). Kræver: company, years? (2–3, standard 2); selskaber i regnskabsklasse B aflægger den ikke, og komponenten viser da 'Pengestrømsopgørelse er ikke indberettet'. ${F("regnskab")} Eksempel: 'Hvordan er pengestrømmen hos X?' → show_company focus regnskab.`,
+    props: "company, years? (2–3, standard 2), title?",
   },
 
   // (b) Personer og ejere ------------------------------------------------------
   {
     type: "LassoPersonList",
     title: "Ledelse og bestyrelse",
-    description:
-      "Brug til: personer og roller – direktion og bestyrelse med rolle og tiltrådt/fratrådt; show 'all' ved 'udskiftning', 'tidligere direktør', 'hvem er gået'. Brug ikke når: spørgsmålet gælder ejere (LassoOwnerList/LassoBeneficialOwners), pladsen er en smal kolonne med både personer og ejere (LassoRelations), eller det gælder datoer for skift som historik (LassoTimeline). Kræver: company, show? (standard 'current'). Eksempel: 'Hvem sidder i bestyrelsen hos Novo Nordisk?'",
+    description: `Brug til: direktion og bestyrelse med rolle og tiltrådt/fratrådt; show 'all' ved 'udskiftning', 'tidligere direktør'. Brug ikke når: det gælder ejere (LassoOwnerList/LassoBeneficialOwners), en smal kolonne med både personer og ejere (LassoRelations), eller én bestemt person (show_person). Kræver: company, show? (standard 'current'). ${F("ledelse (og risiko)")} Eksempel: 'Hvem sidder i bestyrelsen hos Novo Nordisk?' → show_company focus ledelse.`,
     props: "company, show? (current | all), title?",
   },
   {
     type: "LassoOwnerList",
-    title: "Legale ejere og revisor",
-    description:
-      "Brug til: 'hvem ejer X' – de legale (direkte) ejere med ejerandel-interval, samt revisor. Standardvalget for ejerspørgsmål. Brug ikke når: spørgsmålet siger 'reelle ejere', 'i sidste ende' eller 'personerne bag' gennem mellemled (LassoBeneficialOwners), eller 'koncern', 'moderselskab', 'datterselskaber', 'ejerstruktur' i flere lag (LassoOwnershipDiagram). Kræver: company; ejerandele fra CVR vises som intervaller. Eksempel: 'Hvem ejer Lasso X, og hvem er revisor?'",
+    title: "Legale ejere",
+    description: `Brug til: 'hvem ejer X' – de legale (direkte) ejere med ejerandel som interval; standardvalget for ejerspørgsmål. Brug ikke når: 'reelle ejere', 'i sidste ende', 'personerne bag' (LassoBeneficialOwners), 'koncern', 'moderselskab', 'datterselskaber', 'ejerstruktur' (LassoOwnershipDiagram), eller 'hvem er revisor' (LassoKeyValueList variant 'company'). Kræver: company; ejerandele fra CVR vises som intervaller. ${F("ejerskab (og ledelse)")} Eksempel: 'Hvem ejer Lasso X?' → show_company focus ejerskab.`,
     props: "company",
   },
   {
     type: "LassoBeneficialOwners",
     title: "Reelle ejere",
-    description:
-      "Brug til: reelle ejere – de fysiske personer, der i sidste ende ejer virksomheden, med samlet indirekte andel og ejerkæden gennem mellemliggende selskaber. Vælg kun, når spørgsmålet indeholder 'reelle ejere', 'i sidste ende', 'personerne bag' eller 'gennem holdingselskaber'. Brug ikke når: direkte/legale ejere (LassoOwnerList) eller hele koncernstrukturen som diagram med datterselskaber (LassoOwnershipDiagram). Kræver: company; Lassos svarform er endnu ubekræftet, så rækker kan stå som 'Ikke oplyst'. Eksempel: 'Hvem er de reelle ejere bag Lasso X?'",
+    description: `Brug til: de fysiske personer, der i sidste ende ejer virksomheden, med samlet indirekte andel og ejerkæden gennem mellemliggende selskaber – kun ved 'reelle ejere', 'i sidste ende', 'personerne bag', 'gennem holdingselskaber'. Brug ikke når: direkte ejere (LassoOwnerList) eller koncernstruktur som diagram (LassoOwnershipDiagram). Kræver: company; ingen registrerede reelle ejere giver tom tilstand. ${F("ejerskab")} Eksempel: 'Hvem er de reelle ejere bag Lasso X?' → show_company focus ejerskab.`,
     props: "company",
   },
   {
     type: "LassoOwnershipDiagram",
     title: "Ejerdiagram, koncern",
-    description:
-      "Brug til: koncernstruktur i flere lag som diagram: ejere over, datterselskaber under, virksomheden i midten. Vælg ved 'koncernen bag', 'moderselskab', 'datterselskaber', 'ejerstruktur', 'hvordan hænger selskaberne sammen'. Brug ikke når: kun én liste af direkte ejere med andele (LassoOwnerList), eller kun personerne i sidste ende med deres andel (LassoBeneficialOwners). Kræver: company, ingoingDepth? (lag op, standard 2), outgoingDepth? (lag ned, standard 1); svarer ejergrafen ikke, vises ét lag direkte ejere med en note. Eksempel: 'Hvordan ser koncernstrukturen ud omkring X, og hvilke datterselskaber har den?'",
+    description: `Brug til: koncernstruktur i flere lag som diagram: ejere over, datterselskaber under – 'koncernen bag', 'moderselskab', 'datterselskaber', 'ejerstruktur', 'hvordan hænger selskaberne sammen'. Brug ikke når: én liste af direkte ejere (LassoOwnerList) eller personerne i sidste ende (LassoBeneficialOwners). Kræver: company, ingoingDepth? (lag op, standard 2), outgoingDepth? (lag ned, standard 1), onDate?. ${F("ejerskab (vises, når der er selskabsejere)")} Eksempel: 'Hvilke datterselskaber har X, og hvem er moderselskabet?' → show_company focus ejerskab.`,
     props: "company, ingoingDepth? (lag op, standard 2), outgoingDepth? (lag ned, standard 1), onDate? (ÅÅÅÅ-MM-DD), title?",
   },
   {
     type: "LassoRelations",
     title: "Rolleliste, kompakt",
-    description:
-      "Brug til: direktion, bestyrelse (formand i parentes) og de tre største legale ejere i ÉT kompakt element – kun i en smal kolonne (grid-2 ved siden af en større komponent) på et bredt overblik. Den erstatter LassoPersonList OG LassoOwnerList sammen, ikke den ene. Brug ikke når: spørgsmålet specifikt gælder ledelsen (LassoPersonList), ejerne (LassoOwnerList), eller listen står i fuld bredde. Kræver: company. Eksempel: 'Fortæl om X' i grid-2, hvor personer og ejere skal fylde ¼–½ bredde.",
+    description: `Brug til: direktion, bestyrelse (formand i parentes) og de tre største legale ejere i ÉT kompakt element til en smal kolonne (¼ ved siden af en ¾) i et bredt overblik. Erstatter LassoPersonList OG LassoOwnerList sammen. Brug ikke når: spørgsmålet gælder ledelsen (LassoPersonList) eller ejerne (LassoOwnerList), eller listen står i fuld bredde. Kræver: company. ${F("overblik")} Eksempel: smal kolonne i en render_view-spec, der i øvrigt handler om andet.`,
     props: "company, title?",
   },
 
@@ -173,21 +189,21 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     type: "LassoCompareTable",
     title: "Sammenligning, navngivne virksomheder",
     description:
-      "Brug til: 2–6 NAVNGIVNE virksomheder side om side på 1–5 nøgletal fra seneste år – 'sammenlign A og B', 'A vs. B på omsætning og ansatte'. Brug ikke når: kun ét nøgletal og rækkefølgen er pointen (LassoRanking), udvikling over år for to virksomheder (LassoLineChart med benchmark), eller virksomhederne først skal findes med kriterier (LassoCompanyTable). Kræver: companies[] (2–6), metrics? (standard 4). Eksempel: 'Sammenlign Lasso X, Risika og Bisnode på omsætning, resultat og ansatte.'",
+      "Brug til: 2–6 NAVNGIVNE virksomheder side om side på 1–5 nøgletal fra seneste år – 'sammenlign A og B', 'A vs. B på omsætning og ansatte'. Brug ikke når: ét nøgletal og rækkefølgen er pointen (LassoRanking), udvikling over år for to virksomheder (LassoLineChart), eller virksomhederne først skal findes med kriterier (search_companies/LassoCompanyTable). Kræver: companies[] (2–6), metrics? (standard 4). Dækkes ikke af show_company. Eksempel: 'Sammenlign Lasso X, Risika og Bisnode på omsætning, resultat og ansatte.'",
     props: `companies[] (2–6), metrics? (1–5 af ${METRICS.join(" | ")}), title?`,
   },
   {
     type: "LassoRanking",
     title: "Rangliste, ét nøgletal",
     description:
-      "Brug til: placering blandt lignende – 2–10 navngivne virksomheder på ÉT nøgletal (seneste år) som vandrette søjler, den første fremhævet ('hvor ligger X i forhold til …'). Brug ikke når: flere nøgletal pr. virksomhed (LassoCompareTable), udvikling over tid (LassoLineChart med benchmark), eller listen skal findes med kriterier som 'de største i branchen' (LassoCompanyTable med sort). Kræver: companies[] (2–10, alle kendte på forhånd), metric. Eksempel: 'Hvor ligger Lasso X på ansatte i forhold til Bisnode, Experian og Risika?'",
+      "Brug til: 2–10 navngivne virksomheder på ÉT nøgletal (seneste år) som vandrette søjler, den første fremhævet – 'hvor ligger X i forhold til …'. Brug ikke når: flere nøgletal pr. virksomhed (LassoCompareTable), udvikling over tid (LassoLineChart), eller listen skal findes med kriterier ('de største i branchen' → search_companies/LassoCompanyTable med sort). Kræver: companies[] (2–10, kendte på forhånd), metric. Dækkes ikke af show_company. Eksempel: 'Hvor ligger Lasso X på ansatte i forhold til Bisnode, Experian og Risika?'",
     props: `companies[] (2–10, første fremhæves), metric (${METRICS.join(" | ")}), title?`,
   },
   {
     type: "LassoCompanyTable",
     title: "Virksomhedstabel, søgning",
     description:
-      "Brug til: mange virksomheder fundet med kriterier – målgrupper, 'alle X i Y', 'top N efter Z' (sort). Brugeren kan sortere, fjerne kriterier og klikke ind på en virksomhed uden en ny model-tur. Brug ikke når: du allerede kender 2–6 navngivne virksomheder, der skal sammenlignes på flere nøgletal (LassoCompareTable), eller 2–10 navngivne på ét nøgletal (LassoRanking). Kræver: source 'search', search { query, criteria[], sort?, limit? }, columns?; ingen match giver tom tilstand med kriterierne synlige. Eksempel: 'Vis de 20 største revisionsfirmaer i Aarhus efter ansatte.'",
+      "Brug til: mange virksomheder fundet med kriterier – målgrupper, 'alle X i Y', 'top N efter Z' (sort) – som del af en render_view-spec med andet; står søgningen alene, så brug search_companies. Brugeren kan sortere, fjerne kriterier og klikke ind på en virksomhed. Brug ikke når: du kender 2–6 navngivne virksomheder til sammenligning (LassoCompareTable) eller 2–10 navngivne på ét nøgletal (LassoRanking). Kræver: source 'search', search { query, criteria[], sort?, limit? }, columns?; ingen match giver tom tilstand med kriterierne synlige. Eksempel: 'Vis de 20 største revisionsfirmaer i Aarhus efter ansatte.' → search_companies.",
     props: `source='search', search { query, criteria[], sort?, limit? }, columns? (${TABLE_COLUMNS.join(" | ")}), title?`,
   },
 
@@ -195,22 +211,20 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
   {
     type: "LassoRiskObservations",
     title: "Risikoobservationer",
-    description:
-      "Brug til: risiko – Lassos observationer om virksomheden (negativ egenkapital, revisorskifte, ledelsesændringer, tvangsopløsning m.m.) sorteret efter alvor 0–100. Vælg ved 'risiko', 'røde flag', 'noget at være opmærksom på', 'kreditvurdering', 'kan vi handle med dem'. På en virksomhedsside kun med, når en observation er ≥50. Brug ikke når: spørgsmålet specifikt gælder revisorens uafhængighed (LassoAuditorIndependence), eller en samlet talscore ønskes (LassoScoreGauge har ingen live data – brug denne i stedet). Kræver: company; ingen observationer giver tom tilstand; Lassos svarform er endnu ubekræftet. Eksempel: 'Er der risikosignaler hos X?'",
+    description: `Brug til: Lassos observationer om virksomheden (negativ egenkapital, revisorskifte, ledelsesændringer, tvangsopløsning m.m.) sorteret efter alvor 0–100 – 'risiko', 'røde flag', 'kreditvurdering', 'kan vi handle med dem'. Brug ikke når: det specifikt gælder revisorens uafhængighed (LassoAuditorIndependence), eller en talscore ønskes (LassoScoreGauge har ingen live data; brug denne). Kræver: company; ingen observationer giver tom tilstand. ${F("risiko (og på alle sider, når en observation er ≥50)")} Eksempel: 'Er der risikosignaler hos X?' → show_company focus risiko.`,
     props: "company, title?",
   },
   {
     type: "LassoAuditorIndependence",
     title: "Revisoruafhængighed",
-    description:
-      "Brug til: relationer mellem revisionshuset og kundens ledelse/ejere, vurderet pr. relation på alvorsskalaen. Vælg kun, når spørgsmålet nævner revisor SAMMEN MED uafhængighed, habilitet eller relationer. Brug ikke når: brugeren blot vil vide, hvem revisor er (LassoOwnerList eller LassoKeyValueList variant 'company'), eller spørger bredt om risiko (LassoRiskObservations). Kræver: company; live-data dækker kun navnesammenfald mellem revisionshusets og kundens personer, og komponenten skriver selv den begrænsning. Eksempel: 'Er revisor for X uafhængig af ledelsen?'",
+    description: `Brug til: relationer mellem revisionshuset og kundens ledelse/ejere, vurderet pr. relation – kun når spørgsmålet nævner revisor SAMMEN MED uafhængighed, habilitet eller relationer. Brug ikke når: brugeren blot vil vide, hvem revisor er (LassoKeyValueList variant 'company'), eller spørger bredt om risiko (LassoRiskObservations). Kræver: company; dækker kun navnesammenfald mellem revisionshusets og kundens personer, og komponenten skriver selv den begrænsning. ${F("risiko")} Eksempel: 'Er revisor for X uafhængig af ledelsen?' → show_company focus risiko.`,
     props: "company, title?",
   },
   {
     type: "LassoScoreGauge",
     title: "Scoremåler (kun demo)",
     description:
-      "Brug til: KUN demovisninger. Der findes ingen live datakilde for en 0–100 score; for rigtige virksomheder viser måleren altid 'Ikke oplyst'. Vælg den aldrig til en kunde, der spørger om risiko, score eller kreditvurdering – vælg LassoRiskObservations. Kræver: company. Eksempel: intet kundespørgsmål fører hertil.",
+      "Brug til: KUN demovisninger. Der er ingen live datakilde for en 0–100 score; for rigtige virksomheder viser måleren 'Ikke oplyst'. Vælg den aldrig til en kunde, der spørger om risiko, score eller kreditvurdering (LassoRiskObservations eller show_company focus risiko). Kræver: company. Eksempel: intet kundespørgsmål fører hertil.",
     props: "company, title?",
   },
 
@@ -219,22 +233,52 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     type: "LassoProductionUnits",
     title: "Produktionsenheder, P-numre",
     description:
-      "Brug til: P-numre/produktionsenheder – filialer, afdelinger, butikker og adresser ud over hovedadressen, med ansatte og status pr. enhed; hovedenheden står først. Vælg ved 'afdelinger', 'filialer', 'P-nummer', 'hvor har de adresser'. Brug ikke når: kun hovedadressen (LassoCompanyHead), ejendomme/bygninger (LassoProperties), eller datterselskaber med egne CVR-numre (LassoOwnershipDiagram). Kræver: company; feltnavnene i CVR-svaret er ubekræftede, så listen kan være tom for rigtige virksomheder. Eksempel: 'Hvor mange afdelinger har X, og hvor ligger de?'",
+      "Brug til: P-numre – filialer, afdelinger, butikker og adresser ud over hovedadressen, med ansatte og status pr. enhed – 'afdelinger', 'filialer', 'P-nummer'. Brug ikke når: kun hovedadressen (LassoCompanyHead), ejendomme/bygninger (LassoProperties), eller datterselskaber med egne CVR-numre (LassoOwnershipDiagram). Kræver: company; kilden er CVR-svaret, og listen kan være tom for virksomheder med kun hovedenheden. Dækkes ikke af show_company. Eksempel: 'Hvor mange afdelinger har X, og hvor ligger de?'",
     props: "company",
   },
   {
     type: "LassoProperties",
     title: "Ejendomme, BBR",
     description:
-      "Brug til: ejendomme, virksomheden ejer, med BBR-bygninger (anvendelse, opført, etager, areal) og arealfordeling. Vælg ved 'ejendomme', 'bygninger', 'BBR', 'matrikel', 'fast ejendom'. Brug ikke når: det gælder adresser for afdelinger (LassoProductionUnits) eller virksomhedens egen adresse (LassoCompanyHead). Kræver: company; kilden (ejerfortegnelsen + BBR) er ubekræftet i form, så tom tilstand er sandsynlig for rigtige virksomheder – sig det til brugeren. Eksempel: 'Hvilke ejendomme ejer X, og hvor store er bygningerne?'",
+      "Brug til: ejendomme, virksomheden ejer (ejerfortegnelsen), med BBR-bygninger (anvendelse, opført, etager, areal) og arealfordeling – 'ejendomme', 'bygninger', 'BBR', 'matrikel'. Brug ikke når: adresser for afdelinger (LassoProductionUnits) eller virksomhedens egen adresse (LassoCompanyHead). Kræver: company; ejer virksomheden ingen ejendomme, vises tom tilstand. Dækkes ikke af show_company. Eksempel: 'Hvilke ejendomme ejer X, og hvor store er bygningerne?'",
     props: "company, title?",
   },
   {
     type: "LassoLivestock",
     title: "CHR, husdyr (ingen live data)",
     description:
-      "Brug til: CHR-besætninger pr. dyretype og veterinære hændelser – kun landbrug med CHR-nummer. Ingen live datakilde endnu: for rigtige virksomheder er komponenten altid tom. Vælg den ikke til kunder, medmindre de udtrykkeligt spørger til CHR/husdyr, og sig så, at data ikke er tilsluttet. Brug ikke når: det gælder ansatte eller økonomi i et landbrug (LassoKeyFigureCards). Kræver: company. Eksempel: 'Hvor mange svin har landbruget X?' (viser tom tilstand live).",
+      "Brug til: CHR-besætninger pr. dyretype og veterinære hændelser – kun landbrug. Ingen live datakilde endnu: for rigtige virksomheder er komponenten altid tom. Vælg den kun, når kunden udtrykkeligt spørger til CHR/husdyr, og sig, at data ikke er tilsluttet. Brug ikke når: det gælder ansatte eller økonomi i et landbrug (LassoKeyFigureCards). Kræver: company. Eksempel: 'Hvor mange svin har landbruget X?' (tom tilstand live).",
     props: "company",
+  },
+
+  // (16) Personside ----------------------------------------------------------------
+  {
+    type: "LassoPersonHead",
+    title: "Personhoved",
+    description:
+      "Brug til: identitet for én person (navn, by, antal aktive og ophørte roller) øverst på en personside. Brug ikke når: det gælder en virksomheds ledelse (LassoPersonList). Kræver: person (Lasso-ID 'CVR-3-…'). Dækkes af show_person, som bygger hele personsiden; brug den. Eksempel: 'Hvem er Mette Holm?' → show_person.",
+    props: "person",
+  },
+  {
+    type: "LassoPersonRoles",
+    title: "Roller over tid",
+    description:
+      "Brug til: en persons roller i selskaber som tidsbånd fra–til, aktive først – 'hvor sidder X i bestyrelsen', 'hvilke selskaber er X direktør i'. Brug ikke når: det gælder ét selskabs ledelse (LassoPersonList) eller personens medspillere (LassoPersonNetwork). Kræver: person. Dækkes af show_person. Eksempel: 'Hvilke bestyrelser sidder X i?' → show_person.",
+    props: "person, title?",
+  },
+  {
+    type: "LassoPersonNetwork",
+    title: "Personnetværk",
+    description:
+      "Brug til: hvem personen sidder sammen med i selskaber, sorteret efter år i fælles selskaber – 'hvem arbejder X sammen med', 'X's netværk'. Brug ikke når: det gælder personens egne roller (LassoPersonRoles) eller konkurser (LassoPersonRisk). Kræver: person. Dækkes af show_person. Eksempel: 'Hvem er X i bestyrelse med?' → show_person.",
+    props: "person, title?",
+  },
+  {
+    type: "LassoPersonRisk",
+    title: "Personrisiko",
+    description:
+      "Brug til: konkurser og tvangsopløsninger blandt selskaber, personen har eller har haft roller i – 'har X været involveret i konkurser'. Brug ikke når: det gælder en virksomheds risiko (LassoRiskObservations). Kræver: person; ingen roller giver tom tilstand. Dækkes af show_person. Eksempel: 'Har X været med i konkurser?' → show_person.",
+    props: "person, title?",
   },
 
   // Interaktion ----------------------------------------------------------------
@@ -242,7 +286,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     type: "LassoFollowUps",
     title: "Opfølgningsknapper",
     description:
-      "Brug til: 1–4 knapper nederst i et overblik, som sender et opfølgende spørgsmål til dig (modellen) som brugerens næste besked, når der er oplagte næste analyser. Brug ikke når: spørgsmålet var snævert og er besvaret med ét element. Kræver: prompts[] { label, prompt }; henter ingen data. Eksempel: efter 'fortæl om X': 'Hvem er nye i bestyrelsen?', 'Sammenlign med konkurrenter'.",
+      "Brug til: 1–4 knapper nederst i en render_view-visning, som sender et opfølgende spørgsmål til dig som brugerens næste besked, når der er oplagte næste analyser. Brug ikke når: spørgsmålet var snævert og besvaret med ét element, eller visningen kommer fra show_company (kan ikke tilføjes der). Kræver: prompts[] { label, prompt }; henter ingen data. Eksempel: efter en sammenligning: 'Vis udviklingen over 10 år', 'Tilføj Experian'.",
     props: "prompts[] { label, prompt }",
   },
 ];
