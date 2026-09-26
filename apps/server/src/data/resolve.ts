@@ -9,7 +9,8 @@ import {
 import { LassoApiError } from "../lasso/client.js";
 import { NotFoundError, type DataProvider } from "./provider.js";
 
-type Need = "company" | "financials" | "people" | "ownership" | "score";
+/** Hvilke data en virksomhed skal have hentet, fx "company", "financials", "timeline". Nøglen matcher metoden i DataProvider. */
+type Need = string;
 
 /** Normaliserer alle virksomhedsreferencer i specen til Lasso-ID'er. */
 export function normalizeSpec(spec: ViewSpec, companyPrefix: string): ViewSpec {
@@ -54,6 +55,7 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
     needs.set(id, s);
   };
   const searches: Extract<ViewComponent, { type: "LassoCompanyTable" }>["search"][] = [];
+  const newsWanted = new Map<string, number>();
 
   for (const c of spec.components) {
     switch (c.type) {
@@ -80,6 +82,23 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
         break;
       case "LassoOwnerList":
         want(c.company, "ownership");
+        break;
+      case "LassoRelations":
+        want(c.company, "people", "ownership");
+        break;
+      case "LassoBeneficialOwners":
+        want(c.company, "beneficialOwnership");
+        break;
+      case "LassoTextSections":
+        want(c.company, "textSections");
+        break;
+      case "LassoTimeline":
+        want(c.company, "timeline");
+        break;
+      case "LassoNews":
+        newsWanted.set(c.company, Math.max(newsWanted.get(c.company) ?? 0, c.limit));
+        break;
+      case "LassoSummary":
         break;
       case "LassoCompareTable":
         c.companies.forEach((id) => want(id, "company", "financials"));
@@ -116,6 +135,12 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
     if (set.has("people")) run(`people:${id}`, async () => void (ds.people[id] = await provider.people(id)));
     if (set.has("ownership")) run(`ownership:${id}`, async () => void (ds.ownership[id] = await provider.ownership(id)));
     if (set.has("score")) run(`score:${id}`, async () => void (ds.scores[id] = await provider.score(id)));
+    if (set.has("beneficialOwnership")) run(`beneficialOwnership:${id}`, async () => void (ds.beneficialOwnership[id] = await provider.beneficialOwnership(id)));
+    if (set.has("textSections")) run(`textSections:${id}`, async () => void (ds.textSections[id] = await provider.textSections(id)));
+    if (set.has("timeline")) run(`timeline:${id}`, async () => void (ds.timeline[id] = await provider.timeline(id)));
+  }
+  for (const [id, limit] of newsWanted) {
+    run(`news:${id}`, async () => void (ds.news[id] = await provider.news(id, limit)));
   }
   for (const s of searches) {
     const key = searchKey(s);

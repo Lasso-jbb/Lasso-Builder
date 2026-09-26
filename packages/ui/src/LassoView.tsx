@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { searchKey, type Dataset, type ViewComponent } from "@lasso/spec";
+import { emptyDataset, searchKey, type Dataset, type ViewComponent } from "@lasso/spec";
 import { FollowUps } from "./components/FollowUps.js";
 import { CompanyHead } from "./components/CompanyHead.js";
 import { CompanyTable } from "./components/CompanyTable.js";
@@ -18,6 +18,12 @@ import { MultiYearTable } from "./components/MultiYearTable.js";
 import { OwnerList } from "./components/OwnerList.js";
 import { PersonList } from "./components/PersonList.js";
 import { ScoreGauge } from "./components/ScoreGauge.js";
+import { LassoRelations } from "./components/LassoRelations.js";
+import { LassoBeneficialOwners } from "./components/LassoBeneficialOwners.js";
+import { LassoTextSections } from "./components/LassoTextSections.js";
+import { LassoSummary } from "./components/LassoSummary.js";
+import { LassoTimeline } from "./components/LassoTimeline.js";
+import { LassoNews } from "./components/LassoNews.js";
 import { specToCsv } from "./csv.js";
 import { Badge, Skeleton } from "./primitives.js";
 import { SaveDialog } from "./SaveDialog.js";
@@ -30,7 +36,7 @@ function formatStamp(iso: string | undefined): string {
 }
 
 function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewProps, act: (a: ViewAction) => void, key: number) {
-  const empty: Dataset = ds ?? { source: "live", generatedAt: "", companies: {}, financials: {}, people: {}, ownership: {}, searches: {}, scores: {}, errors: {} };
+  const empty: Dataset = ds ?? emptyDataset("live");
   const err = (k: string) => empty.errors[k];
   switch (c.type) {
     case "LassoCompanyHead":
@@ -97,6 +103,35 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return <ScoreGauge key={key} score={empty.scores[c.company]} title={c.title} error={err(`score:${c.company}`)} />;
     case "LassoFollowUps":
       return <FollowUps key={key} prompts={c.prompts} onAction={act} enabled={Boolean(props.host.prompt)} />;
+    case "LassoRelations":
+      return (
+        <LassoRelations
+          key={key}
+          people={empty.people[c.company]}
+          ownership={empty.ownership[c.company]}
+          title={c.title}
+          peopleError={err(`people:${c.company}`)}
+          ownershipError={err(`ownership:${c.company}`)}
+          onOpen={props.host.drillDown ? act : undefined}
+        />
+      );
+    case "LassoBeneficialOwners":
+      return (
+        <LassoBeneficialOwners
+          key={key}
+          ownership={empty.beneficialOwnership[c.company]}
+          error={err(`beneficialOwnership:${c.company}`)}
+          onOpen={props.host.drillDown ? act : undefined}
+        />
+      );
+    case "LassoTextSections":
+      return <LassoTextSections key={key} sections={empty.textSections[c.company]} title={c.title} error={err(`textSections:${c.company}`)} />;
+    case "LassoSummary":
+      return <LassoSummary key={key} text={c.text} title={c.title} source={c.source} updated={c.updated} />;
+    case "LassoTimeline":
+      return <LassoTimeline key={key} timeline={empty.timeline[c.company]} title={c.title} error={err(`timeline:${c.company}`)} />;
+    case "LassoNews":
+      return <LassoNews key={key} news={empty.news[c.company]} companyName={empty.companies[c.company]?.name} error={err(`news:${c.company}`)} />;
   }
 }
 

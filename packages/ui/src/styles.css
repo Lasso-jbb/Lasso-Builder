@@ -619,3 +619,61 @@
   .lasso-sharebar__value { display: none; }
   .lasso-sharebar > .lasso-chart__swatch { grid-area: dot; }
 }
+
+/* ---------- Rolleliste, kompakt (11, node A3I-0): navne i koral tekst ---------- */
+.lasso-relations { display: flex; flex-direction: column; gap: var(--lasso-space-4); }
+.lasso-relations__group { display: flex; flex-direction: column; gap: 6px; }
+.lasso-relations__label { font-size: var(--lasso-fs-sm); font-weight: 600; color: var(--lasso-text); }
+.lasso-relations__name { font-size: var(--lasso-fs); line-height: 20px; color: var(--lasso-accent-text); }
+.lasso-relations__more { font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-text-3); }
+button.lasso-relations__name:hover { text-decoration: underline; }
+
+/* ---------- Reelle ejere (11, node B33-0) ---------- */
+/* Genbruger .lasso-rows/.lasso-row fra ejerlisten (samme rækkemønster). */
+
+/* ---------- Tekstsektioner (12, node A83-0) ---------- */
+.lasso-textsections { display: flex; flex-direction: column; gap: var(--lasso-space-4); }
+.lasso-textsection { display: flex; flex-direction: column; gap: 4px; }
+.lasso-textsection__heading { font-size: var(--lasso-fs-sm); font-weight: 600; color: var(--lasso-text); }
+.lasso-textsection__body { margin: 0; font-size: var(--lasso-fs); line-height: 21px; color: var(--lasso-text-2); overflow-wrap: anywhere; }
+.lasso-textsection__note { font-size: var(--lasso-fs-sm); color: var(--lasso-muted); }
+
+/* ---------- Resumé (12, node A8H-0): foldet med hvid toning ---------- */
+.lasso-summary { position: relative; overflow: hidden; }
+.lasso-summary__body { margin: 0; font-size: 15px; line-height: 25px; color: var(--lasso-text-2); overflow-wrap: anywhere; }
+.lasso-summary--folded { max-height: 128px; }
+.lasso-summary--folded::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 64px;
+  background: linear-gradient(180deg, transparent 0%, var(--lasso-surface) 90%);
+}
+
+/* ---------- Tidslinje (12, node A8Z-0) ---------- */
+.lasso-timeline { display: flex; flex-direction: column; }
+.lasso-timeline__year { font-size: var(--lasso-fs-label); font-weight: 600; letter-spacing: var(--lasso-ls-label); text-transform: uppercase; color: var(--lasso-muted); padding: var(--lasso-space-3) 0 var(--lasso-space-2); }
+.lasso-timeline__row { display: flex; gap: 14px; }
+.lasso-timeline__rail { flex: none; width: 12px; display: flex; flex-direction: column; align-items: center; }
+.lasso-timeline__dot { flex: none; width: 8px; height: 8px; margin-top: 5px; border-radius: 999px; border: 2px solid var(--lasso-faint); background: var(--lasso-surface); }
+.lasso-timeline__dot--latest { width: 10px; height: 10px; margin-top: 4px; border-color: var(--lasso-accent-border); background: var(--lasso-accent); }
+.lasso-timeline__line { flex: 1; width: 1.5px; margin-top: 4px; background: var(--lasso-border); }
+.lasso-timeline__body { flex: 1; min-width: 0; padding-bottom: 18px; }
+.lasso-timeline__title { font-size: var(--lasso-fs); line-height: 18px; font-weight: 500; color: var(--lasso-text); }
+.lasso-timeline__change { display: flex; align-items: center; gap: 8px; font-size: var(--lasso-fs-sm); color: var(--lasso-muted); margin-top: 3px; }
+.lasso-timeline__from { text-decoration: line-through; }
+.lasso-timeline__to { color: var(--lasso-text); font-weight: 500; }
+.lasso-timeline__meta { font-size: 12px; line-height: 16px; color: var(--lasso-muted); margin-top: 3px; }
+.lasso-select--sm { height: 32px; padding: 0 30px 0 11px; font-size: var(--lasso-fs-sm); width: auto; }
+
+/* ---------- Nyheder (12, node AAG-0): kildemærke = favicon, ingen tone-mærker ---------- */
+.lasso-news { display: flex; flex-direction: column; }
+.lasso-news__row { display: block; padding: 14px 0; border-top: 1px solid var(--lasso-border); color: inherit; text-decoration: none; }
+.lasso-news__row:first-child { border-top: 0; padding-top: 0; }
+.lasso-news__row:is(a):hover .lasso-news__headline { color: var(--lasso-accent-text); text-decoration: underline; }
+.lasso-news__head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; color: var(--lasso-muted); }
+.lasso-news__mark { display: inline-flex; align-items: center; gap: 8px; color: var(--lasso-icon); }
+.lasso-news__mark img { border-radius: 3px; display: block; }
+.lasso-news__source { font-size: 12px; font-weight: 600; color: var(--lasso-text); }
+.lasso-news__time { font-size: 12px; color: var(--lasso-muted); }
+.lasso-news__headline { font-size: 15px; line-height: 20px; font-weight: 600; color: var(--lasso-text); }
+@container lasso (max-width: 560px) {
+  .lasso-timeline__meta { overflow-wrap: anywhere; }
+}

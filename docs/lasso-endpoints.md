@@ -104,6 +104,34 @@ POST /apps/search/lassoid  { "filters": [ … ], "OrderBy": "employees", "limit"
   (`currentLiabilities`/`shortTermLiabilities` + `nonCurrentLiabilities`/`longTermLiabilities`).
   Findes ingen af delene, er `liabilities` `undefined`, og de to komponenter viser deres
   tomme tilstand. Bekræft mod et rigtigt regnskab med disse begreber, når adgang er der.
+## Nyheder
+
+```
+GET /data/paqle/{lassoId}/news?cToken=…
+```
+
+Kilde: https://docs.lassox.com/data-apis/paqle/ (læst med WebFetch 26.09.2026, ikke afprøvet mod en rigtig nøgle). Svaret er en
+pakket liste, ikke et array: `{ news: [ { headline, content, url, time, storyId, type: "Paqle", provider, providerData:
+{ sourceName, published, headline: [{ text, highlight }], extract: [{ text, highlight }] }, uniqueId } ], continuationToken }`.
+`cToken` sat til `continuationToken` fra forrige svar giver næste side (op til 100 pr. side). Adapteren (`adaptNews`) læser
+`headline`, `content`, `url`, `time`, `provider(Data.sourceName)` og falder tilbage til andre feltnavne, hvis formen afviger.
+
+## Reelle ejere (beneficial owners) — Ubekræftet
+
+Opskriften angiver endpointet `GET /{lassoId}/owners/beneficial`, som IKKE er bekræftet mod en rigtig nøgle. Lassos egen
+dokumentation (https://docs.lassox.com/module-apis/ultimateowner/, læst med WebFetch 26.09.2026) beskriver i stedet en
+funktion "Ultimate Owners" på `GET /modules/ultimateowners/{lassoId}`, der returnerer en liste af reelle ejere med:
+
+- `name`, `identifier`, `type` ("PERSON" eller "VIRKSOMHED")
+- `totalOwnerPercentageMin`/`totalOwnerPercentageMax` og tilsvarende for stemmer, som samlet indirekte andel i procent
+  (ikke brøk, modsat `ownership.owners` i det almindelige virksomhedssvar)
+- `paths[]`: én eller flere kæder af mellemliggende selskaber med deres direkte ejerandel
+- et element med `type: "UNKNOWN"`, når CVR ikke kan følge hele ejerskabet til en person
+
+Klienten kalder den sti, opskriften angiver (`{lassoId}/owners/beneficial`), men adapteren (`adaptBeneficialOwnership` i
+`apps/server/src/lasso/adapters.ts`) er bygget defensivt ud fra denne dokumenterede form: alle felter læses med `at()`/`pick()`
+og en lang liste af kandidatnavne, og komponenten viser "Ikke oplyst"/tom tilstand, hvis noget mangler. Kæde-teksten
+("via X ApS, 100 %" / "via 2 led, X ApS") er et bedste bud ud fra `paths[0]` og bør efterses, når et rigtigt svar er set.
 
 ## Kontaktpersoner
 

@@ -1,11 +1,18 @@
 import type {
+  BeneficialOwnerGapVM,
+  BeneficialOwnershipVM,
+  BeneficialOwnerVM,
   CompanyRowVM,
   CompanyVM,
   FinancialYear,
   FinancialsVM,
+  NewsVM,
   OwnerVM,
   OwnershipVM,
   PersonRowVM,
+  TextSectionsVM,
+  TimelineEventVM,
+  TimelineVM,
 } from "@lasso/spec";
 
 /**
@@ -287,11 +294,13 @@ export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
     const src = pick(r, "figures", "keyFigures", "values", "financials", "incomeStatement") ?? r;
     const f = (concepts: string[], ...keys: string[]) =>
       concepts.map((c) => facts.get(c)).find((v) => v !== undefined) ?? num(src, ...keys) ?? num(r, ...keys) ?? null;
+    const publicationTime = dateStr(r, "publicationTime", "publicationDate", "published");
     years.push({
       year,
       periodStart,
       periodEnd,
       published,
+      ...(publicationTime ? { publicationTime } : {}),
       revenue: f(["revenue", "revenues", "netsales", "revenuefromcontractswithcustomers", "nettoomsaetning"], "revenue", "netRevenue", "turnover", "netTurnover", "omsaetning"),
       grossProfit: f(["grossprofitloss", "grossprofit", "grossresult"], "grossProfit", "grossResult", "grossProfitLoss", "bruttofortjeneste"),
       profit: f(["profitloss", "profitlossfortheyear", "netincome"], "profit", "netResult", "profitLoss", "netIncome", "aaretsResultat"),
@@ -406,6 +415,138 @@ export function adaptSearch(raw: Json, companyPrefix: string): { total?: number;
     });
   }
   return { total: num(container, "resultsFound", "total", "totalCount", "count", "hits.total", "numberOfResults"), rows };
+}
+
+/**
+ * Tekstsektioner fra CVR-stamdata (katalog 12). Branche er bekræftet (samme
+ * felter som adaptCompany); formål og tegningsregler er UBEKRÆFTEDE feltnavne
+ * (se docs/lasso-endpoints.md under "Ubekræftet") og udelades stille, hvis de
+ * ikke findes i svaret.
+ */
+export function adaptTextSections(lassoId: string, raw: Json): TextSectionsVM {
+  const sections: TextSectionsVM["sections"] = [];
+  const industryText = str(raw, "industry.text", "industryText", "industry.name", "mainIndustry.text");
+  const industryCode = str(raw, "industry.code", "industryCode", "mainIndustry.code");
+  if (industryText) sections.push({ heading: "Branche", body: industryText, note: industryCode ? `NACE ${industryCode}` : undefined });
+  const purpose = str(raw, "purpose", "purposeText", "companyPurpose", "objectClause", "formaal", "formål");
+  if (purpose) sections.push({ heading: "Formål", body: purpose });
+  const signing = str(raw, "signingRule", "signingRules", "powerToBind", "bindingRule", "tegningsregel", "tegningsregler");
+  if (signing) sections.push({ heading: "Tegningsregler", body: signing });
+  return { lassoId, title: "Virksomhedsprofil", sections };
+}
+
+/**
+ * Historik (katalog 12, "Tidslinje"). Sat sammen af data, vi allerede henter
+ * andre steder fra (ingen egen endpoint): stiftelse fra virksomhedsopslaget,
+ * ledelsesskift fra stakeholders/board/management, og offentliggjorte
+ * regnskaber fra reports/advanced. Andre begivenhedstyper (navneskift,
+ * adresseskift, kapitalændring) kræver kilder, vi ikke har bekræftet endnu,
+ * og udelades derfor i den rigtige tidslinje (se demo.ts for eksempler).
+ */
+export function adaptTimeline(lassoId: string, companyRaw: Json, people: readonly PersonRowVM[], years: readonly FinancialYear[]): TimelineVM {
+  const events: TimelineEventVM[] = [];
+  const founded = dateStr(companyRaw, "lifeTime.from", "creationDate", "founded", "foundedDate");
+  const name = str(companyRaw, "name", "companyName", "navn");
+  if (founded) events.push({ date: founded, title: "Virksomheden stiftet", detail: name, category: "Stamdata" });
+  for (const p of people) {
+    if (p.from) events.push({ date: p.from, title: `${p.name} er indtrådt`, detail: p.role, category: "Ledelse" });
+    if (p.to) events.push({ date: p.to, title: `${p.name} er fratrådt`, detail: p.role, category: "Ledelse" });
+  }
+  for (const y of years) {
+    const date = y.publicationTime ?? y.periodEnd;
+    if (!date) continue;
+    const parts = [
+      y.grossProfit != null ? `Bruttofortjeneste ${formatAmountShort(y.grossProfit)}` : null,
+      y.profit != null ? `resultat ${formatAmountShort(y.profit)}` : null,
+    ].filter((x): x is string => Boolean(x));
+    events.push({ date, title: `Årsrapport ${y.year} offentliggjort`, detail: parts.join(", ") || undefined, category: "Regnskab" });
+  }
+  events.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  return { lassoId, events };
+}
+
+/** Kort beløbstekst uden "kr.", til tidslinjens detaljelinje (samme regler som card.ts). */
+function formatAmountShort(v: number): string {
+  const abs = Math.abs(v);
+  if (abs >= 1_000_000_000) return `${(v / 1_000_000_000).toFixed(1).replace(".", ",")} mia. kr.`;
+  if (abs >= 1_000_000) return `${(v / 1_000_000).toFixed(1).replace(".", ",")} mio. kr.`;
+  if (abs >= 10_000) return `${Math.round(v / 1_000)} t. kr.`;
+  return `${Math.round(v)} kr.`;
+}
+
+/**
+ * Reelle ejere (katalog 11, "Reelle ejere"). Endpoint og svarform er
+ * UBEKRÆFTEDE (se docs/lasso-endpoints.md under "Ubekræftet"). Antagelsen er
+ * baseret på Lassos dokumenterede "ultimate owners"-funktion: en liste af
+ * ejere med navn, identifikator, en samlet andel som interval
+ * (totalOwnerPercentageMin/Max) og en eller flere kæder ("paths") af
+ * mellemliggende selskaber. Et "UNKNOWN"-element markerer andel, CVR ikke
+ * kan følge til en person.
+ */
+export function adaptBeneficialOwnership(lassoId: string, raw: Json): BeneficialOwnershipVM {
+  const list = items(raw);
+  const owners: BeneficialOwnerVM[] = [];
+  const gaps: BeneficialOwnerGapVM[] = [];
+  for (const entry of list) {
+    const type = str(entry, "type", "kind") ?? "";
+    const name = str(entry, "name");
+    const lo = num(entry, "totalOwnerPercentageMin", "ownerPercentageMin", "share.from", "ownership.from");
+    const hi = num(entry, "totalOwnerPercentageMax", "ownerPercentageMax", "share.to", "ownership.to");
+    const share = rangeText(lo, hi);
+    if (/unknown|ukendt/i.test(type) || !name) {
+      if (share) gaps.push({ share, reason: "CVR har ikke registreret en reel ejer for denne andel." });
+      continue;
+    }
+    owners.push({ name, lassoId: str(entry, "identifier", "lassoId", "id"), chain: beneficialChain(entry), share });
+  }
+  owners.sort((a, b) => shareFloor(b.share) - shareFloor(a.share));
+  return { lassoId, owners, gaps: gaps.length ? gaps : undefined };
+}
+
+/** "25 til 33.32" (allerede i procent, ikke brøk) -> "25–33,32 %". */
+function rangeText(lo: number | undefined, hi: number | undefined): string | undefined {
+  if (lo === undefined) return undefined;
+  const a = percentFormat.format(lo);
+  if (hi === undefined || hi === lo) return `${a} %`;
+  return `${a}–${percentFormat.format(hi)} %`;
+}
+
+/** Bygger "via X ApS, 100 %" (ét led) eller "via N led, X ApS" (flere led) ud fra første kæde i "paths". */
+function beneficialChain(entry: Json): string | undefined {
+  const paths = arr(entry, "paths", "chains");
+  const path = paths[0];
+  if (!path) return undefined;
+  const steps = arr(path, "ownership", "companies", "chain", "intermediateCompanies", "steps");
+  const first = steps[0];
+  const firstName = first ? str(first, "name") : undefined;
+  if (!firstName) return undefined;
+  const firstShare = first ? rangeText(num(first, "percentageMin", "share.from"), num(first, "percentageMax", "share.to")) ?? str(first, "percentage") : undefined;
+  if (steps.length > 1) return `via ${steps.length} led, ${firstName}`;
+  return firstShare ? `via ${firstName}, ${firstShare}` : `via ${firstName}`;
+}
+
+/**
+ * Nyheder (katalog 12, "Nyheder"). Bekræftet mod docs.lassox.com/data-apis/paqle/:
+ * { news: [{ headline, content, url, time, provider, providerData: { sourceName, published } }], continuationToken }.
+ */
+export function adaptNews(lassoId: string, raw: Json, limit: number): NewsVM {
+  const list = arr(raw, "news").length ? arr(raw, "news") : items(raw);
+  const newsItems = list
+    .map((n) => {
+      const headline = str(n, "headline", "providerData.headline");
+      if (!headline) return null;
+      return {
+        source: str(n, "providerData.sourceName", "provider", "source") ?? "Ukendt kilde",
+        url: str(n, "url", "link"),
+        time: dateStr(n, "time", "providerData.published", "publishedAt"),
+        headline,
+        excerpt: str(n, "content", "excerpt", "providerData.extract"),
+        language: str(n, "language", "lang"),
+      };
+    })
+    .filter((n): n is NonNullable<typeof n> => n !== null)
+    .slice(0, limit);
+  return { lassoId, items: newsItems };
 }
 
 function dedupe<T>(list: T[], key: (t: T) => string): T[] {

@@ -125,6 +125,48 @@ test("lange selskabsnavne forkortes og deles ved efterled", () => {
   assert.ok(card.includes("             SELSKAB "), card);
 });
 
+test("tekstkortet viser reelle ejere, tekstsektioner, historik og nyheder, når de er en del af specen", () => {
+  const ds = dataset();
+  ds.beneficialOwnership[ID] = { lassoId: ID, owners: [{ name: "Anne Eksempel", chain: "via Holding A/S, 100 %", share: "25–33,32 %" }] };
+  ds.textSections[ID] = { lassoId: ID, sections: [{ heading: "Branche", body: "Fremstilling af farmaceutiske præparater", note: "NACE 212000" }] };
+  ds.timeline[ID] = { lassoId: ID, events: [{ date: "2026-04-15", title: "Årsrapport 2025 offentliggjort", category: "Regnskab" }] };
+  ds.news[ID] = { lassoId: ID, items: [{ source: "Børsen", headline: "Testfirma i vækst", time: "2026-04-15" }] };
+  const spec = {
+    version: 2 as const,
+    kind: "company" as const,
+    title: "Test",
+    layout: "stack" as const,
+    criteria: [],
+    components: [
+      { type: "LassoBeneficialOwners" as const, company: ID },
+      { type: "LassoTextSections" as const, company: ID },
+      { type: "LassoTimeline" as const, company: ID },
+      { type: "LassoNews" as const, company: ID },
+    ],
+  };
+  const card = textCard(parseViewSpec(spec), ds)!;
+  for (const l of card.split("\n")) assert.equal([...l].length, 38, `linjen "${l}" har forkert bredde`);
+  for (const part of ["REELLE EJERE", "HISTORIK", "Årsrapport 2025 offentliggjort", "NYHEDER", "Testfirma i vækst"]) {
+    assert.ok(card.includes(part), `mangler "${part}":\n${card}`);
+  }
+  assert.match(card, /Ejer\s+Anne Eksempel/);
+});
+
+test("resumeet skrives som en sektion med kildelinje, uden AI-mærke", () => {
+  const spec = {
+    version: 2 as const,
+    kind: "custom" as const,
+    title: "Test",
+    layout: "stack" as const,
+    criteria: [],
+    components: [{ type: "LassoSummary" as const, text: "Firmaet vokser pænt.", source: "Lasso" }],
+  };
+  const card = textCard(parseViewSpec(spec), emptyDataset("demo"))!;
+  assert.ok(card.includes("Firmaet vokser pænt."));
+  assert.ok(card.includes("Kilde: Lasso"));
+  assert.ok(!/skrevet af ai/i.test(card));
+});
+
 test("uden omsætning i de seneste år viser kortet bruttofortjeneste, og linjerne holder bredden", () => {
   const ds = dataset();
   ds.financials[ID]!.years = [2018, 2019, 2024, 2025].map((year, i) => ({

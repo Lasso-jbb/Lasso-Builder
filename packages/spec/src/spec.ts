@@ -152,6 +152,43 @@ export const ownershipSchema = z.object({
   company: companyRef,
 });
 
+export const relationsSchema = z.object({
+  type: z.literal("LassoRelations"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
+});
+
+export const beneficialOwnersSchema = z.object({
+  type: z.literal("LassoBeneficialOwners"),
+  company: companyRef,
+});
+
+export const textSectionsSchema = z.object({
+  type: z.literal("LassoTextSections"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
+});
+
+export const summarySchema = z.object({
+  type: z.literal("LassoSummary"),
+  title: z.string().max(80).optional(),
+  text: z.string().min(1).max(4000).describe("Resumeteksten, skrevet af modellen ud fra kendte tal og fakta. Ingen 'Skrevet af AI'-mærke vises."),
+  source: z.string().max(80).default("Lasso").describe("Kildetekst i kildelinjen, fx 'Lasso' eller modellens navn."),
+  updated: z.string().max(40).optional().describe("Dato for resumeet (ÅÅÅÅ-MM-DD). Standard: i dag."),
+});
+
+export const timelineSchema = z.object({
+  type: z.literal("LassoTimeline"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
+});
+
+export const newsSchema = z.object({
+  type: z.literal("LassoNews"),
+  company: companyRef,
+  limit: z.number().int().min(1).max(10).default(5),
+});
+
 export const tableSchema = z.object({
   type: z.literal("LassoCompanyTable"),
   source: z.literal("search"),
@@ -223,6 +260,12 @@ export const componentSchema = z.discriminatedUnion("type", [
   multiYearTableSchema,
   scoreGaugeSchema,
   actionsSchema,
+  relationsSchema,
+  beneficialOwnersSchema,
+  textSectionsSchema,
+  summarySchema,
+  timelineSchema,
+  newsSchema,
 ]);
 export type ViewComponent = z.infer<typeof componentSchema>;
 export type ComponentType = ViewComponent["type"];

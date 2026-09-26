@@ -1,6 +1,18 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { adaptCompany, adaptFinancials, adaptOwnership, adaptPeople, adaptSearch, regionFromZip, statusKind } from "./adapters.js";
+import {
+  adaptBeneficialOwnership,
+  adaptCompany,
+  adaptFinancials,
+  adaptNews,
+  adaptOwnership,
+  adaptPeople,
+  adaptSearch,
+  adaptTextSections,
+  adaptTimeline,
+  regionFromZip,
+  statusKind,
+} from "./adapters.js";
 
 test("adaptCompany tåler forskellige feltnavne", () => {
   const vm = adaptCompany("CVR-1-11111111", {
@@ -227,6 +239,53 @@ test("adaptFinancials lægger kort- og langfristet gæld sammen, når der ikke e
 test("adaptFinancials giver null for gæld, når intet gældsbegreb er oplyst", () => {
   const vm = adaptFinancials("CVR-1-1", [{ reportYear: 2024, period: { to: "2024-12-31" }, figures: { grossProfit: 100 } }]);
   assert.equal(vm.years[0]!.liabilities, null);
+});
+
+test("adaptTextSections læser branche og udelader ubekræftede felter, når de mangler", () => {
+  const t = adaptTextSections("CVR-1-1", { industry: { text: "Revision", code: "692000" } });
+  assert.deepEqual(t.sections, [{ heading: "Branche", body: "Revision", note: "NACE 692000" }]);
+});
+
+test("adaptTextSections tager formål og tegningsregler med, når de findes", () => {
+  const t = adaptTextSections("CVR-1-1", { industry: { text: "Revision", code: "692000" }, purpose: "At drive revision.", signingRule: "Direktøren alene." });
+  assert.deepEqual(
+    t.sections.map((s) => s.heading),
+    ["Branche", "Formål", "Tegningsregler"],
+  );
+});
+
+test("adaptTimeline samler stiftelse, ledelsesskift og regnskaber, nyeste øverst", () => {
+  const people = [{ name: "Anne Test", role: "Direktør", from: "2022-11-01" }];
+  const years = [{ year: 2024, periodEnd: "2024-12-31", publicationTime: "2025-04-15", revenue: 1000, grossProfit: 400, profit: 90, equity: 700, employees: 12 }];
+  const tl = adaptTimeline("CVR-1-1", { lifeTime: { from: "2020-01-01" } }, people, years);
+  assert.deepEqual(
+    tl.events.map((e) => e.category),
+    ["Regnskab", "Ledelse", "Stamdata"],
+  );
+  assert.equal(tl.events[0]!.date, "2025-04-15");
+});
+
+test("adaptBeneficialOwnership læser navn, andel og UNKNOWN som et hul", () => {
+  const o = adaptBeneficialOwnership("CVR-1-1", [
+    { name: "Anne Eksempel", identifier: "CVR-3-1", totalOwnerPercentageMin: 20, totalOwnerPercentageMax: 24.99 },
+    { type: "UNKNOWN", totalOwnerPercentageMin: 25, totalOwnerPercentageMax: 33 },
+  ]);
+  assert.equal(o.owners.length, 1);
+  assert.equal(o.owners[0]!.name, "Anne Eksempel");
+  assert.equal(o.owners[0]!.share, "20–24,99 %");
+  assert.equal(o.gaps?.[0]?.share, "25–33 %");
+});
+
+test("adaptNews læser Lassos paqle-svar og begrænser til limit", () => {
+  const n = adaptNews("CVR-1-1", {
+    news: [
+      { headline: "Test A", url: "https://x.dk/a", time: "2026-04-15T10:00:00Z", provider: "Lasso News", content: "Uddrag A" },
+      { headline: "Test B", providerData: { sourceName: "Børsen", published: "2026-04-10" }, content: "Uddrag B" },
+    ],
+  }, 1);
+  assert.equal(n.items.length, 1);
+  assert.equal(n.items[0]!.headline, "Test A");
+  assert.equal(n.items[0]!.source, "Lasso News");
 });
 
 test("adaptOwnership sorterer største ejer først", () => {

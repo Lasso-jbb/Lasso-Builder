@@ -1,14 +1,18 @@
 import type {
+  BeneficialOwnershipVM,
   CompanyRowVM,
   CompanyVM,
   Criterion,
   DataSourceKind,
   FinancialsVM,
+  NewsVM,
   OwnershipVM,
   PersonRowVM,
   ScoreVM,
   SearchQuery,
   SearchResultVM,
+  TextSectionsVM,
+  TimelineVM,
 } from "@lasso/spec";
 
 /**
@@ -29,6 +33,10 @@ export interface DataProvider {
   ownership(lassoId: string): Promise<OwnershipVM>;
   /** Katalog 10: 0–100 risikoscore. Ingen live datakilde endnu (se LiveProvider); score: null = "ikke oplyst". */
   score(lassoId: string): Promise<ScoreVM>;
+  beneficialOwnership(lassoId: string): Promise<BeneficialOwnershipVM>;
+  textSections(lassoId: string): Promise<TextSectionsVM>;
+  timeline(lassoId: string): Promise<TimelineVM>;
+  news(lassoId: string, limit: number): Promise<NewsVM>;
 }
 
 export class NotFoundError extends Error {
