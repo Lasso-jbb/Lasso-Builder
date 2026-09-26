@@ -406,8 +406,8 @@ export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
     const assetsTotal = f(["assets", "totalassets", "assetstotal"], "assets", "totalAssets") ?? (typeof equity === "number" && typeof liabilities === "number" ? equity + liabilities : null);
     // EBITDA: det direkte begreb, ellers driftsresultat (EBIT) lagt til af- og nedskrivninger.
     // Driftsresultatet alene er IKKE EBITDA (det er efter afskrivninger), så uden afskrivninger vises "—".
-    const ebit = f(["profitlossfromordinaryoperatingactivities", "operatingprofitloss"], "operatingProfit");
-    const dep = ["depreciationamortisationandimpairmentlossesofintangibleassetsandtangibleassetsandpropertyplantandequipment", "depreciationamortisationexpense", "depreciation"].map((c) => facts.get(c)).find((v) => v !== undefined) ?? null;
+    const ebit = f(["profitlossfromordinaryoperatingactivities", "profitlossfromoperatingactivities", "operatingprofitloss"], "operatingProfit");
+    const dep = ["depreciationamortisationexpenseandimpairmentlossesofpropertyplantandequipmentandintangibleassetsrecognisedinprofitorloss", "depreciationamortisationandimpairmentlossesofintangibleassetsandtangibleassetsandpropertyplantandequipment", "depreciationandamortisationexpense", "depreciationamortisationexpense", "adjustmentsfordepreciationandamortisationexpense", "depreciation"].map((c) => facts.get(c)).find((v) => v !== undefined) ?? null;
     const ebitda = f(["ebitda"], "ebitda") ?? (typeof ebit === "number" && typeof dep === "number" ? ebit + Math.abs(dep) : null);
     const currentAssets = f(["currentassets"], "currentAssets");
     const currentLiabilities = facts.get("currentliabilities") ?? facts.get("shorttermliabilities") ?? facts.get("shorttermliabilitiesother") ?? null;
@@ -473,7 +473,7 @@ function sumLiabilities(facts: Map<string, number>): number | undefined {
 const SECTION_ORDER = ["incomeStatement", "statementOfFinancialPosition", "statementOfComprehensiveIncome", "statementOfChangesInEquity"];
 
 /** Går et XBRL-træ igennem og samler begreb -> tal for regnskabsperioden. Første fund vinder. */
-function collectFacts(root: Json, periodEnd: string | undefined, out: Map<string, number>, depth = 0): void {
+function collectFacts(root: Json, periodEnd: string | undefined, out: Map<string, number>, depth = 0, balances?: Map<string, string>): void {
   if (!isObj(root) || depth > 12) return;
   const entries = Object.entries(root);
   if (depth === 0) entries.sort(([a], [b]) => rank(a) - rank(b));
@@ -481,9 +481,13 @@ function collectFacts(root: Json, periodEnd: string | undefined, out: Map<string
     if (!isObj(node)) continue;
     const concept = key.replace(/^.*[:_#]/, "").toLowerCase();
     const value = factValue(node, periodEnd);
-    if (value !== undefined && !out.has(concept)) out.set(concept, value);
-    if (isObj(node.facts)) collectFacts(node.facts, periodEnd, out, depth + 1);
-    else if (Array.isArray(node.children)) for (const c of node.children) collectFacts(c, periodEnd, out, depth + 1);
+    if (value !== undefined && !out.has(concept)) {
+      out.set(concept, value);
+      const bal = typeof node.balance === "string" ? node.balance : undefined;
+      if (bal && balances) balances.set(concept, bal);
+    }
+    if (isObj(node.facts)) collectFacts(node.facts, periodEnd, out, depth + 1, balances);
+    else if (Array.isArray(node.children)) for (const c of node.children) collectFacts(c, periodEnd, out, depth + 1, balances);
   }
 }
 
@@ -524,29 +528,63 @@ export function adaptFinancialStatements(lassoId: string, raw: Json): FinancialS
     const year = num(r, "reportYear", "year", "fiscalYear", "financialYear", "aar") ?? (periodEnd ? Number(periodEnd.slice(0, 4)) : undefined);
     if (!year || !Number.isFinite(year)) continue;
     const facts = new Map<string, number>();
-    for (const scope of ["data.company.facts", "data.group.facts"]) collectFacts(at(r, scope), periodEnd, facts);
+    const balances = new Map<string, string>();
+    for (const scope of ["data.company.facts", "data.group.facts"]) collectFacts(at(r, scope), periodEnd, facts, 0, balances);
     const g = (...concepts: string[]): number | null => concepts.map((c) => facts.get(c)).find((v) => v !== undefined) ?? null;
+    // Resultatopgørelsen i visningen har fortegn: omkostninger negative, indtægter positive.
+    // XBRL angiver beløbet positivt og retningen i "balance" (debit = omkostning), så fortegnet
+    // sættes derfra. Mangler "balance", antages en omkostningspost at være en omkostning.
+    const signed = (expense: boolean, ...concepts: string[]): number | null => {
+      const c = concepts.find((x) => facts.has(x));
+      if (c === undefined) return null;
+      const v = facts.get(c)!;
+      const bal = balances.get(c);
+      if (bal === "debit") return -v;
+      if (bal === "credit") return v;
+      return expense ? -Math.abs(v) : v;
+    };
+    const sum = (...vals: (number | null)[]): number | null => (vals.some((v) => typeof v === "number") ? vals.reduce<number>((a, v) => a + (v ?? 0), 0) : null);
 
+    // Begreberne dækker både den danske taksonomi (ÅRL, fsa:) og IFRS/ESEF (børsnoterede).
     const revenue = g("revenue", "revenues", "netsales", "revenuefromcontractswithcustomers", "nettoomsaetning");
     const grossProfit = g("grossprofitloss", "grossprofit", "grossresult");
-    const staffCosts = g("employeebenefitsexpense", "staffcosts", "wagesandsalaries", "personnelexpenses");
-    const otherOperatingCosts = g("otherexternalexpenses", "otheroperatingexpenses", "othergainslosses");
-    const depreciation = g("depreciationamortisationandimpairmentlossesofintangibleassetsandtangibleassetsandpropertyplantandequipment", "depreciationamortisationexpense", "depreciation");
-    const financialItemsNet = g("financialincomeandexpenses", "netfinancials", "financialitemsnet") ?? sumSigned(g("financialincome", "otherfinancialincome"), g("financialexpenses", "otherfinancialexpenses"));
-    const profitBeforeTax = g("profitlossfromordinaryactivitiesbeforetax", "profitbeforetax");
-    const tax = g("taxexpenseonordinaryactivities", "incometaxexpense", "tax");
-    const profit = g("profitloss", "profitlossfortheyear", "netincome");
+    const staffCosts = signed(true, "employeebenefitsexpense", "staffcosts", "wagesandsalaries", "personnelexpenses");
+    // Artsopdelt (ÅRL): andre eksterne omkostninger. Funktionsopdelt (IFRS): salg, forskning og administration samlet.
+    const otherOperatingCosts =
+      signed(true, "otherexternalexpenses", "otheroperatingexpenses") ??
+      sum(
+        signed(true, "sellingexpenseanddistributioncosts", "salescostanddistributionscosts", "distributioncosts", "sellingexpense"),
+        signed(true, "researchanddevelopmentexpense"),
+        signed(true, "administrativeexpense", "administrativeexpenses"),
+        signed(false, "otheroperatingincomeexpense"),
+      );
+    const depreciation = signed(
+      true,
+      "depreciationamortisationexpenseandimpairmentlossesofpropertyplantandequipmentandintangibleassetsrecognisedinprofitorloss",
+      "depreciationamortisationandimpairmentlossesofintangibleassetsandtangibleassetsandpropertyplantandequipment",
+      "depreciationandamortisationexpense",
+      "depreciationamortisationexpense",
+      "adjustmentsfordepreciationandamortisationexpense",
+      "depreciation",
+    );
+    const financialItemsNet =
+      g("financialincomeandexpenses", "netfinancials", "financialitemsnet", "financeincomecost") ??
+      sum(signed(false, "otherfinanceincome", "financeincome", "financialincome", "otherfinancialincome"), signed(true, "otherfinanceexpenses", "financecosts", "financialexpenses", "otherfinancialexpenses"));
+    const profitBeforeTax = signed(false, "profitlossfromordinaryactivitiesbeforetax", "profitlossbeforetax", "profitbeforetax");
+    const tax = signed(true, "taxexpenseonordinaryactivities", "taxexpense", "incometaxexpensecontinuingoperations", "incometaxexpense", "tax");
+    const profit = signed(false, "profitloss", "profitlossfortheyear", "netincome");
     // EBITDA: det direkte begreb, ellers EBIT + af- og nedskrivninger, ellers bruttofortjeneste − personale − andre driftsomkostninger.
     const ebitda =
       g("ebitda") ??
       (() => {
-        const ebit = g("profitlossfromordinaryoperatingactivities", "operatingprofitloss");
+        const ebit = g("profitlossfromordinaryoperatingactivities", "profitlossfromoperatingactivities", "operatingprofitloss");
         return typeof ebit === "number" && typeof depreciation === "number" ? ebit + Math.abs(depreciation) : null;
       })() ??
       (typeof grossProfit === "number" && typeof staffCosts === "number" && typeof otherOperatingCosts === "number" ? grossProfit + staffCosts + otherOperatingCosts : null);
     incomeStatement.push({ year, periodStart, periodEnd, revenue, grossProfit, staffCosts, otherOperatingCosts, ebitda, depreciation, financialItemsNet, profitBeforeTax, tax, profit });
 
     const equityTotal = g("equity", "totalequity", "equityattributabletoownersofparent");
+    // IFRS: kortfristet og langfristet gæld hedder current/noncurrent liabilities.
     const longTermLiabilities = g("noncurrentliabilities", "longtermliabilitiesotherthanprovisions", "longtermliabilities");
     const shortTermLiabilities = g("currentliabilities", "shorttermliabilitiesotherthanprovisions", "shorttermliabilities");
     const liabilitiesTotal = g("liabilities", "liabilitiesandprovisions", "totalliabilities") ?? sumSigned(longTermLiabilities, shortTermLiabilities);
@@ -554,15 +592,15 @@ export function adaptFinancialStatements(lassoId: string, raw: Json): FinancialS
     balanceSheet.push({
       year,
       periodEnd,
-      intangibleAssets: g("intangibleassets"),
+      intangibleAssets: g("intangibleassets", "intangibleassetsotherthangoodwill", "intangibleassetsandgoodwill"),
       tangibleAssets: g("propertyplantandequipment", "tangibleassets"),
       fixedAssetsTotal: g("fixedassets", "noncurrentassets"),
-      tradeReceivables: g("tradereceivables", "shorttermreceivablesfromsales"),
-      otherReceivables: g("othershorttermreceivables", "prepayments"),
+      tradeReceivables: g("shorttermtradereceivables", "tradereceivables", "tradeandothercurrentreceivables", "currenttradereceivables", "shorttermreceivablesfromsales"),
+      otherReceivables: g("othershorttermreceivables", "othercurrentreceivables", "prepayments"),
       cash: g("cashandcashequivalents", "cash"),
       currentAssetsTotal: g("currentassets"),
       assetsTotal,
-      shareCapital: g("contributedcapital", "sharecapital"),
+      shareCapital: g("contributedcapital", "issuedcapital", "sharecapital"),
       retainedEarnings: g("retainedearnings"),
       equityTotal,
       longTermLiabilities,
@@ -573,7 +611,9 @@ export function adaptFinancialStatements(lassoId: string, raw: Json): FinancialS
 
     const workingCapitalChange = g("increasedecreaseinworkingcapital", "changeinworkingcapital");
     const operatingCashFlow = g("cashflowsfromusedinoperatingactivities");
-    const intangibleInvestments = g("purchaseofintangibleassets");
+    const intangible = g("purchaseofintangibleassets", "purchaseofintangibleassetsclassifiedasinvestingactivities");
+    // Køb er en udbetaling: altid negativ i visningen, uanset hvordan beløbet er indberettet.
+    const intangibleInvestments = typeof intangible === "number" ? -Math.abs(intangible) : null;
     const investingCashFlow = g("cashflowsfromusedininvestingactivities");
     const capitalIncrease = g("proceedsfromissuingshares", "increasedecreaseinsharecapital");
     const loanChange = g("proceedsfromrepaymentsofborrowings");

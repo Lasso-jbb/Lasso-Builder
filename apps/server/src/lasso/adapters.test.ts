@@ -617,3 +617,48 @@ test("adaptContactPersons læser navn, rolle, telefon og e-mail, og udelader per
   assert.deepEqual(none.people, []);
   assert.equal(none.source, undefined);
 });
+
+test("adaptFinancialStatements læser IFRS/ESEF (børsnoteret, funktionsopdelt) med fortegn fra debit/credit", () => {
+  // Uddrag af det rigtige svar for NOVO NORDISK A/S 2025 (startup-probe på staging).
+  const n = (value: number, balance: "debit" | "credit") => ({ value, unit: "DKK", xbrlType: "xbrli:monetaryItemType", balance });
+  const vm = adaptFinancialStatements("CVR-1-24256790", [
+    {
+      reportYear: 2025,
+      period: { from: "2025-01-01", to: "2025-12-31" },
+      data: {
+        company: {
+          facts: {
+            incomeStatement: {
+              facts: {
+                revenue: n(309064000000, "credit"),
+                costOfSales: n(58788000000, "debit"),
+                grossProfit: n(250276000000, "credit"),
+                sellingExpenseAndDistributionCosts: n(64310000000, "debit"),
+                researchAndDevelopmentExpense: n(52039000000, "debit"),
+                administrativeExpense: n(5969000000, "debit"),
+                otherOperatingIncomeExpense: n(-300000000, "credit"),
+                profitLossFromOperatingActivities: n(127658000000, "credit"),
+                financeIncome: n(9660000000, "credit"),
+                financeCosts: n(6778000000, "debit"),
+                profitLossBeforeTax: n(130540000000, "credit"),
+                incomeTaxExpenseContinuingOperations: n(28106000000, "debit"),
+                profitLoss: n(102434000000, "credit"),
+              },
+            },
+          },
+        },
+      },
+    },
+  ]);
+  const y = vm.incomeStatement[0]!;
+  assert.equal(y.revenue, 309064000000);
+  assert.equal(y.grossProfit, 250276000000);
+  // Salg + forskning + administration + andre driftsposter = bruttofortjeneste − driftsresultat.
+  assert.equal(y.otherOperatingCosts, -(64310000000 + 52039000000 + 5969000000 + 300000000));
+  assert.equal(y.financialItemsNet, 9660000000 - 6778000000);
+  assert.equal(y.profitBeforeTax, 130540000000);
+  assert.equal(y.tax, -28106000000);
+  assert.equal(y.profit, 102434000000);
+  // Ingen afskrivninger i svaret: EBITDA kan ikke beregnes og må ikke gættes som driftsresultatet.
+  assert.equal(y.ebitda, null);
+});
