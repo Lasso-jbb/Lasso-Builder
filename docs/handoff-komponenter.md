@@ -142,7 +142,7 @@ På mobil:
 
 - Kreditvurdering (18)
 - Personsidens risikoblok og netværk (16). Tidsbåndet kan bygges med `history/participants`.
-- P-enheder, BBR og CHR (20)
+- P-enheder pr. virksomhed og CHR (20). BBR har nu en datakilde.
 - Overvågning (21). `companies/delta` findes, men overvågning er udenfor nu.
 
 ## 4a. Nye endpoints: vurdering og placering
@@ -167,19 +167,25 @@ Svarformerne er ikke bekræftet endnu. Hvert endpoint skal kaldes én gang mod L
 | `GET /{lassoId}/reports?metadataOnly=true` | Årsvælger og liste over regnskabspubliceringer uden at hente hele regnskabet | 19, 28 | **Brug.** Billig måde at bygge periodevælgeren på. |
 | `GET /{lassoId}/reports/latest/pdf` | Link "Åbn årsrapport (PDF)" i kildelinjen for regnskabet | 19 | **Brug via en proxy på serveren.** API-nøglen må aldrig sendes til browseren. |
 | `GET /{lassoId}/reports`, `/reports/latest` | Ældre regnskabsformat | – | **Brug ikke.** `reports/advanced` dækker det. |
+| `POST /modules/observations/{lassoId}` | Risikoobservationer med alvorsskala og sammenfatning øverst på siden ved 50+ | 17 | **Brug.** Kaldes med POST, ikke GET som `docs/lasso-endpoints.md` siger i dag. Dokumentationen skal rettes. |
+| `GET /data/bbr/property/summary?bfeNumber=` | Ejendomskort og ejendomsliste | 20 | **Brug.** Kræver BFE-numre, som vi forventer at hente fra ejerfortegnelsen (`/data/ejf/{lassoId}/ownerships/current`). Det skal bekræftes i testen. Hent højst 10 ejendomme pr. visning, og vis 3 + "Se N …". |
+| `GET /data/cvr/place/delta?since=&max=` | Ændrede P-enheder i en periode | 21 | **Ikke til P-enhedslisten.** Det er et ændringsfeed og ikke et opslag pr. virksomhed. Listen over en virksomheds P-enheder (20) kræver et andet endpoint, eller at `/{lassoId}` allerede har dem. Det skal tjekkes. |
 | `GET /data/cvr/companies/delta?since=&max=` | Ændringer i CVR i en periode | 21 | **Ikke nu.** Hører til overvågning, som er udenfor. Relevant, hvis MCP'en senere skal kunne svare på "hvad er ændret siden …". |
 
 **Effekt på planen:**
 
 - Ejerdiagrammet har nu en datakilde og er ikke længere blokeret.
+- Risiko (17) og ejendomme (20, BBR) har nu datakilder.
 - Nyheder (12) og rolledelen af personsiden (16) kan flyttes ind i trin 3.
-- Tilkobling af de nye endpoints tager ca. **6–10 timer ekstra Claude-tid**, primært Sonnet 5:
+- Tilkobling af de nye endpoints tager ca. **8–13 timer ekstra Claude-tid**, primært Sonnet 5:
   - relations/graph: 2–3 t
   - ejere (legal/beneficial/historik): 1–2 t
   - deltagere med historik: 1–2 t
   - nyheder: 1–2 t
   - livenumber: 0,5–1 t
   - metadata og PDF-proxy: 0,5–1 t
+  - observations: 0,5–1 t
+  - BBR via BFE-numre fra ejerfortegnelsen: 1–2 t
 
 ## 5. Opskrift på én komponent
 
@@ -199,11 +205,11 @@ Eksisterende spec-format og komponentnavne ændres ikke uden en migrering, så g
 | **0. Gør designet læsbart** | Eksportér alle 41 artboards som PNG til `docs/design/artboards/`. Træk tokens ud. Erstat `docs/design/README.md` helt med det nye katalog. | ~1 t |
 | **1. Nyt designgrundlag** | Omskriv `styles.css` med de nye tokens (bevar variabelnavne, hvor det kan lade sig gøre). Omskriv `primitives.tsx` (knap, chip, tag, kildelinje). Ny fælles `DataState` til de fem tilstande. | 2–3 t |
 | **2. De 8 komponenter i nyt design** | CompanyHeader (08), KeyFigures (09), FinancialChart (13), PeopleList + Ownership (11), CompanyTable (15), Comparison (22) og FilterPanel (02–04, 07). Opdatér tekstkortet for hver. | 4–6 t |
-| **3. Nye komponenter** | `LassoFinancialStatement` (19, data findes i XBRL) · `LassoMultiYearTable` + `LassoGauge` (10) · flere graftyper i en fælles `LassoChart` (grupperet, linje + område, stablet, donut, vandfald, rangliste) (13) · `LassoRiskObservations` (17, kobl `/modules/observations` på) · `LassoOwnershipDiagram` (14, 14B, data fra `relations/graph`, layout-algoritme i lag med foldede kæder og cirkulært ejerskab) · `LassoNews` (12, paqle) · reelle ejere og roller over tid (11, 16) · tilkobling af de nye endpoints fra afsnit 4a (6–10 t) | 14–24 t |
+| **3. Nye komponenter** | `LassoFinancialStatement` (19, data findes i XBRL) · `LassoMultiYearTable` + `LassoGauge` (10) · flere graftyper i en fælles `LassoChart` (grupperet, linje + område, stablet, donut, vandfald, rangliste) (13) · `LassoRiskObservations` (17, kobl `/modules/observations` på) · `LassoOwnershipDiagram` (14, 14B, data fra `relations/graph`, layout-algoritme i lag med foldede kæder og cirkulært ejerskab) · `LassoNews` (12, paqle) · reelle ejere og roller over tid (11, 16) · tilkobling af de nye endpoints fra afsnit 4a (8–13 t) | 16–27 t |
 | **4. Guidens regler i MCP'en** | `templates.ts` følger rækkefølgen fra guiden. Spec-validering fanger brud på bredderegler og stablede grafer. `layout` udvides til 4-kolonne-grid (¼, ½, ¾, fuld). Tool-beskrivelser i `mcp/server.ts` opdateres, og gamle komponentnavne fjernes. | 2–3 t |
 | **5. Responsivt** | Brudpunkterne fra 26 via `useWidth.ts`. Kortlister på mobil. | 2–3 t |
 | **6. Visuel test** | Playwright renderer hver komponent med `data/demo.ts` i 1440, 768 og 390 px, side om side med artboardet. Ret til det matcher. `npm run typecheck` og `npm test` skal være grønne. | 3–5 t |
-| **I alt** | | **~31–48 t** |
+| **I alt** | | **~33–51 t** |
 
 **Rækkefølge:** trin 0–2 skal laves først og i rækkefølge, fordi de fastlægger mønsteret. Trin 3 kan derefter køre parallelt, fordi komponenterne ikke rører hinanden. Trin 4–6 afslutter.
 
@@ -214,32 +220,37 @@ Eksisterende spec-format og komponentnavne ændres ikke uden en migrering, så g
 | Model | Opgaver | Timer |
 |---|---|---|
 | **Opus 5.5** | Trin 0–2, trin 4, ejerdiagram og gennemsyn af hver PR | 15–23 t |
-| **Sonnet 5** | Trin 3 (undtagen ejerdiagram) inkl. de nye endpoints, responsivt og rettelser efter visuel test. Flere agenter parallelt. | 14–22 t |
+| **Sonnet 5** | Trin 3 (undtagen ejerdiagram) inkl. de nye endpoints, responsivt og rettelser efter visuel test. Flere agenter parallelt. | 16–25 t |
 | **Haiku 4.5** | Eksport af artboards, screenshot-kørsler og tests af tekstkort | 1,5–2,5 t |
 | **Fable 5.1** | Kun reserve, hvis ejerdiagrammet går i stå. Den overtager Opus-timer og kommer ikke oveni. | 0–3 t |
 
 **Kalendertid:**
 
 1. Opus alene i ca. 7–10 t (trin 0–2).
-2. Parallelt i ca. 6–10 t: Sonnet-agenter bygger nye komponenter, mens Opus laver ejerdiagrammet.
+2. Parallelt i ca. 7–11 t: Sonnet-agenter bygger nye komponenter, mens Opus laver ejerdiagrammet.
 3. Afslutning i ca. 5–6 t.
 
-Samlet ca. 18–26 t (ca. 31–48 t arbejdstid i alt), før menneskelige gennemsyn kommer oveni. Det er gennemsynene, der bestemmer den reelle kalendertid.
+Samlet ca. 19–27 t (ca. 33–51 t arbejdstid i alt), før menneskelige gennemsyn kommer oveni. Det er gennemsynene, der bestemmer den reelle kalendertid.
 
 **Største usikkerheder:**
 
 - Ejerdiagrammet (4–8 t).
 - Svarformerne fra de nye endpoints er ikke bekræftet.
-- Data til kredit, BBR/CHR og personrisiko mangler stadig. Hver datatype tager 1–3 t, når der er endpoints.
+- Data til kredit, P-enheder, CHR, branchetal og personrisiko mangler stadig. Hver datatype tager 1–3 t, når der er endpoints.
 
 ## 8. Åbne spørgsmål, der skal afklares
 
 1. Body-format for `POST /modules/news` (Lasso News).
 2. Dækker den nuværende API-nøgle alle de nye endpoints (paqle, livenumber, relations)?
-3. Kilde til kreditvurdering: Creditsafe eller `/modules/valuations`, som i dag svarer tomt.
-4. Endpoints til P-enheder, BBR, CHR og personrisiko (PEP, konkurser).
-5. Skal portalens elementer (navigation, dialoger, A4-eksport) med senere?
-6. Må gamle komponentnavne omdøbes? Hvis ja, skal gemte visninger migreres.
+3. Kreditvurdering og scoremåler (10, 18): Creditsafe eller `/modules/valuations`, som i dag svarer tomt.
+4. P-enheder pr. virksomhed (20). `place/delta` er kun et ændringsfeed.
+5. Branchetal til rangliste, branchemedian og nøgletalsmåler mod branche (10, 13, 22).
+6. Personer (16): opslag på en person (Lasso-ID for personer) samt PEP, stråmandsindikatorer og konkurser.
+7. Kontaktpersoner (02b "Persona", 08).
+8. CHR (20) og værdilister/enumerations (28).
+9. Hvilke `relationTypes` findes der ud over `ownership`? Fx ledelse eller revisor, som kan bruges til personnetværk (16) og revisoruafhængighed (22).
+10. Skal portalens elementer (navigation, dialoger, A4-eksport) med senere?
+11. Må gamle komponentnavne omdøbes? Hvis ja, skal gemte visninger migreres.
 
 ## 9. Sådan hjælper du bedst
 
