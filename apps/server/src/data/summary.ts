@@ -10,6 +10,9 @@ import {
   METRIC_LABELS,
   ownershipGraphKey,
   percentChange,
+  personCompanies,
+  personCounts,
+  personRisk,
   searchKey,
   type Dataset,
   type ViewSpec,
@@ -89,6 +92,32 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
         const subs = current.filter((e) => e.from === g.rootId).map((e) => `${name(e.to)}${e.share ? ` ${formatShare(e.share)}` : ""}`);
         lines.push(`Ejerdiagram for ${name(g.rootId)}: ${g.nodes.length} enheder i ${g.ingoingDepth} lag op og ${g.outgoingDepth} ned.${owners.length ? ` Direkte ejere: ${owners.slice(0, 5).join(", ")}.` : " Ingen registrerede ejere."}${subs.length ? ` Direkte datterselskaber: ${subs.length}.` : ""}`);
         if (g.note) lines.push(g.note);
+      }
+    }
+    if (c.type === "LassoPersonHead") {
+      const p = ds.persons[c.person];
+      if (p) {
+        const n = personCounts(p);
+        lines.push(`Person: ${p.name} (Lasso-ID ${p.lassoId})${p.city ? `, ${p.city}` : ""}: ${n.activeRoles} aktive roller i ${n.activeCompanies} selskaber, ${n.endedRoles} ophørte${n.firstYear ? `, første registrering ${n.firstYear}` : ""}.`);
+      }
+    }
+    if (c.type === "LassoPersonRoles") {
+      const p = ds.persons[c.person];
+      if (p) {
+        const list = personCompanies(p).slice(0, 8).map((x) => `${x.companyName} [${x.companyId ?? "?"}]: ${x.roles.map((r) => `${r.role}${r.share ? ` ${r.share}` : ""}${r.active ? "" : " (fratrådt)"}`).join(", ")}`);
+        if (list.length) lines.push(`Roller: ${list.join("; ")}.`);
+      }
+    }
+    if (c.type === "LassoPersonNetwork") {
+      const net = ds.personNetworks[c.person];
+      if (net?.people.length) lines.push(`Netværk: ${net.people.slice(0, 5).map((x) => `${x.name} (${x.overlapYears} år, ${x.companies.length} fælles selskaber${x.active ? "" : ", afsluttet"})`).join(", ")}.`);
+    }
+    if (c.type === "LassoPersonRisk") {
+      const p = ds.persons[c.person];
+      if (p) {
+        const r = personRisk(p);
+        const cases = [...r.bankruptcies, ...r.dissolutions].map((x) => `${x.companyName} ${x.status.toLowerCase()}${x.personLeft ? `, personen fratrådt ${x.personLeft.slice(0, 4)}` : ", personen har stadig en rolle"}`);
+        lines.push(`Risiko: ${r.bankruptcies.length} konkurser og ${r.dissolutions.length} tvangsopløsninger blandt personens selskaber${cases.length ? ` (${cases.join("; ")})` : ""}.`);
       }
     }
     if (c.type === "LassoCompanyTable") {

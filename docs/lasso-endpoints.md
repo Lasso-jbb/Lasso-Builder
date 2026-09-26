@@ -276,3 +276,40 @@ since?, until? }`. Svarer endpointet 400/404/405/501, falder `LiveProvider` tilb
 **P-enheder:** `place/delta` er en ændringsliste over P-enheder i et tidsrum, ikke et opslag pr. virksomhed. Den egner sig til overvågning (21), men ikke til at vise én virksomheds P-enheder. `LassoProductionUnits` læser derfor stadig P-enhederne fra CVR-svaret `GET /{lassoId}` (ubekræftede feltnavne, se "Ubekræftet"). Findes der et opslag pr. virksomhed eller pr. P-nummer, skal det bruges i stedet.
 
 Når der er en API-nøgle, skal svarformerne tjekkes. POST-endpoints kan ikke tjekkes via `/api/debug/lasso/...` (kun GET), så brug `client.tryRequest("POST", …)`.
+
+## Ubekræftet: personer (katalog 16, personsiden)
+
+Læst i docs.lassox.com med WebFetch 26.09.2026 (`api/people/people` og `api/people/cvrnetwork`), IKKE afprøvet mod en
+rigtig nøgle. Klient: `LassoClient.person`, `.personHistory`, `.personNetwork`; adaptere i
+`apps/server/src/lasso/personAdapters.ts` (alle felter læses defensivt med `at()`/`str()`; ukendte former giver tomme lister).
+
+| Formål | Metode | Endpoint | Bruges af |
+|---|---|---|---|
+| Person, nuværende roller | GET | `/{lassoId}` med et person-ID (`CVR-3-…`) | `LassoPersonHead`, `LassoPersonRoles`, `LassoPersonRisk` |
+| Person, historik (fra–til) | GET | `/{lassoId}/history` | samme; fejler den, vises kun de nuværende roller |
+| Netværk | GET | `/modules/network/{lassoId}` | `LassoPersonNetwork` |
+| Navneopslag | GET | `/data/cvr/search?type=person&personStatus=all` | `show_person` med et navn |
+
+Antagne svarformer:
+
+- `GET /{lassoId}` (person): `{ lassoId, unitNumber, name, type: "PERSON", address: { secret, value: { address1, postalCode,
+  postalDistrict, municipality: { name, code } } }, management, board, founder, owner, trueOwner, stakeholder, otherRoles,
+  lastUpdated }`. Hver rollegruppe antages at være en LISTE af selskaber (dokumentationen viser kun ét element pr. gruppe;
+  adapteren tager også ét objekt eller et objekt med lister). Et selskab: `{ lassoId, cvr, name, status, form: { code,
+  shortDescription }, lifeTime: { from, to }, type: "VIRKSOMHED", role: { mainType, type, originalType, attributes } }`;
+  ejere har desuden `ownership: { from, to }` (brøk) og `voterights`. Hemmelig adresse (`address.secret`) giver ingen by.
+- `GET /{lassoId}/history`: samme grupper, men hvert element er pakket: `{ value: { …selskab… }, from, to, current }`.
+  `from`/`to` på indpakningen er rollens periode; `lifeTime.to` på selskabet bruges som dato for ophør/konkurs
+  (markøren i tidsbåndet). Historik og nuværende flettes: historikken vinder, nuværende roller den mangler lægges til.
+- Rolletype udledes af gruppen, `role.mainType`/`originalType` og rolleteksten (`roleKind` i `packages/spec/src/person.ts`):
+  DIREKTION -> direktion, BESTYRELSE -> bestyrelse, REGISTER/EJER og `trueOwner` -> ejer (sidstnævnte som "Reel ejer").
+- Selskabsstatus: `NORMAL` vises som "Aktiv"; tekster med "konkurs" tælles som konkurs og "tvangs" som tvangsopløsning
+  (`personRisk`). Der er ingen dato for, hvornår et selskab kom UNDER konkurs; kun `lifeTime.to`, når det er ophørt.
+- `GET /modules/network/{lassoId}`: `[{ name, unitNo, companyRelation: [{ companyName, cvr, status, currentRoles: [],
+  overlaps: [{ from, to, theirRoles: [], ownRoles: [] }] }] }]`. Personens Lasso-ID antages at være `CVR-3-{unitNo}` og
+  selskabets `CVR-1-{cvr}`. Overlap i år = summen af `overlaps` (til i dag, når `to` er null). En relation regnes for aktiv,
+  når `currentRoles` ikke er tom, eller et overlap ikke har `to`.
+- Søgning: personerne antages at ligge under `people.results[]` med `lassoId` (`CVR-3-…`) og `name`, samme form som
+  `companies.results[]`.
+
+Ikke dækket (findes i designet, artboard 16, men har ingen kendt kilde): PEP, stråmandsindikator og sanktionslister.

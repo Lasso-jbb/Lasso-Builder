@@ -189,6 +189,18 @@ export class LassoClient {
     return this.searchClient.post("apps/search/lassoid", { filters, ...(orderBy ? { OrderBy: orderBy } : {}), ...extra });
   }
 
+  /** Person (katalog 16): samme endpoint som virksomheder, med et "CVR-3-…"-ID. Svarformen er ubekræftet. */
+  person(lassoId: string) {
+    return this.get(enc(lassoId));
+  }
+  /** Personens roller med fra–til (docs.lassox.com/api/people/people). Ubekræftet. */
+  personHistory(lassoId: string) {
+    return this.get(`${enc(lassoId)}/history`);
+  }
+  /** Personens netværk: personer med fælles selskaber (docs.lassox.com/api/people/cvrnetwork). Ubekræftet. */
+  personNetwork(lassoId: string) {
+    return this.get(`modules/network/${enc(lassoId)}`);
+  }
   company(lassoId: string) {
     return this.get(enc(lassoId));
   }

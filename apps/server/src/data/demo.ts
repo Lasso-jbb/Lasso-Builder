@@ -23,6 +23,7 @@ import {
 } from "@lasso/spec";
 import { applyCriteria, sortRows } from "./criteria-eval.js";
 import { demoOwnershipGraph } from "./demoGraph.js";
+import { demoFindPersons, demoPerson, demoPersonIds, demoPersonNetwork } from "./demoPeople.js";
 import { NotFoundError, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
 
 /**
@@ -67,7 +68,7 @@ const RAW: Omit<DemoCompany, "lassoId" | "statusKind">[] = [
   { cvr: "99000010", name: "Eksempel Holding ApS", status: "Aktiv", form: "ApS", industryCode: "642020", industryText: "Ikke-finansielle holdingselskaber", address: { street: "Prøvevej 1", zip: "8600", city: "Silkeborg", municipality: "Silkeborg", region: "Midtjylland" }, founded: "2005-01-01", employees: 1, base: 3_000_000, growth: 0.1,
     people: [P("Bo Eksempel", "Direktør", "2005-01-01")], owners: [{ name: "Bo Eksempel", share: "100 %", kind: "person" }], auditor: "Eksempel Revision Midt ApS" },
   { cvr: "99000011", name: "Eksempel Energi A/S", status: "Under konkurs", form: "A/S", industryCode: "351100", industryText: "Produktion af elektricitet", address: { street: "Vindvej 9", zip: "6700", city: "Esbjerg", municipality: "Esbjerg", region: "Syddanmark" }, founded: "2012-08-01", employees: 8, base: 9_000_000, growth: -0.18,
-    people: [P("Uffe Prøve", "Direktør", "2012-08-01")], owners: [{ name: "Uffe Prøve", share: "100 %", kind: "person" }], auditor: "Eksempel Revision Nord ApS" },
+    people: [P("Uffe Prøve", "Direktør", "2012-08-01"), P("Bo Eksempel", "Bestyrelsesmedlem", "2014-03-01", "2018-06-30")], owners: [{ name: "Uffe Prøve", share: "100 %", kind: "person" }], auditor: "Eksempel Revision Nord ApS" },
   { cvr: "99000012", name: "Eksempel Ejendomme ApS", status: "Aktiv", form: "ApS", industryCode: "682040", industryText: "Udlejning af erhvervsejendomme", address: { street: "Murervej 5", zip: "8700", city: "Horsens", municipality: "Horsens", region: "Midtjylland" }, founded: "2013-10-01", employees: 3, base: 7_500_000, growth: 0.06,
     people: [P("Vera Eksempel", "Direktør", "2013-10-01"), P("Bo Eksempel", "Bestyrelsesmedlem", "2013-10-01")], owners: [{ name: "Eksempel Holding ApS", share: "100 %", kind: "company", lassoId: "CVR-1-99000010" }], auditor: "Eksempel Revision Midt ApS" },
   // Katalog 20: eneste demovirksomhed med et CHR-nummer, så LassoLivestock har eksempeldata (LiveProvider har intet bekræftet CHR-endpoint).
@@ -148,6 +149,8 @@ function statusKindOf(s: string | undefined): CompanyVM["statusKind"] {
 
 const COMPANIES: DemoCompany[] = RAW.map((c) => ({ ...c, lassoId: `CVR-1-${c.cvr}`, statusKind: statusKindOf(c.status) }));
 const BY_ID = new Map(COMPANIES.map((c) => [c.lassoId, c]));
+/** Katalog 16: personerne får Lasso-ID'er, så de kan åbnes fra lister og relationer. */
+const PERSON_IDS = demoPersonIds(COMPANIES);
 
 const YEARS = [2020, 2021, 2022, 2023, 2024, 2025];
 
@@ -392,7 +395,7 @@ export class DemoProvider implements DataProvider {
   }
 
   async people(lassoId: string) {
-    return get(lassoId).people;
+    return get(lassoId).people.map((p) => ({ ...p, lassoId: p.lassoId ?? PERSON_IDS.get(p.name) }));
   }
 
   async ownership(lassoId: string): Promise<OwnershipVM> {
@@ -400,7 +403,7 @@ export class DemoProvider implements DataProvider {
     const auditor = COMPANIES.find((x) => x.name === c.auditor);
     return {
       lassoId,
-      owners: c.owners,
+      owners: c.owners.map((o) => (o.kind === "person" && !o.lassoId ? { ...o, lassoId: PERSON_IDS.get(o.name) } : o)),
       auditor: c.auditor === "Ingen" ? undefined : { name: c.auditor, lassoId: auditor?.lassoId, from: "2019-01-01" },
     };
   }
@@ -460,5 +463,17 @@ export class DemoProvider implements DataProvider {
       const c = BY_ID.get(id);
       return c ? strip(c) : undefined;
     });
+  }
+
+  async person(lassoId: string) {
+    return demoPerson(COMPANIES, lassoId);
+  }
+
+  async personNetwork(lassoId: string) {
+    return demoPersonNetwork(COMPANIES, lassoId);
+  }
+
+  async findPersons(name: string, limit: number) {
+    return demoFindPersons(COMPANIES, name, limit);
   }
 }

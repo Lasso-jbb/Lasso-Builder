@@ -3,7 +3,7 @@ import { createMcpExpressApp } from "@modelcontextprotocol/express";
 import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
 import cors from "cors";
 import type { NextFunction, Request, Response } from "express";
-import { companyTemplate, composeCompany, composeProbe, listTemplate, parseViewSpec, searchQuerySchema, toLassoId, viewSpecSchema } from "@lasso/spec";
+import { companyTemplate, composeCompany, composeProbe, composePerson, composePersonProbe, listTemplate, parseViewSpec, searchQuerySchema, toLassoId, viewSpecSchema } from "@lasso/spec";
 import { getCurrentUser } from "./auth/user.js";
 import { hasLassoCredentials, isSet, loadConfig, type Config } from "./config.js";
 import { createProvider, type DataProvider } from "./data/index.js";
@@ -14,7 +14,7 @@ import { adaptSearch, at } from "./lasso/adapters.js";
 import { describeShape, LassoApiError, LassoClient, probeAuthVariants, type Query } from "./lasso/client.js";
 import { createMcpServer } from "./mcp/server.js";
 import { createViewStore, SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "./views/store.js";
-import { verifyCompanyLink } from "./web/links.js";
+import { verifyCompanyLink, verifyPersonLink } from "./web/links.js";
 import { injectBoot, loadViewHtml } from "./web/page.js";
 
 const VERSION = "0.1.0";
@@ -179,6 +179,29 @@ export function createApp({ config, client, provider, store }: AppDeps) {
       .set("Cache-Control", "no-store")
       .set("X-Robots-Tag", "noindex")
       .send(injectBoot(html, { mode: "web", spec, dataset, url: `${config.publicBaseUrl}${req.originalUrl}`, name }, name));
+  });
+
+  // --- Interaktiv personside fra et signeret link (katalog 16, se web/links.ts) ----
+  app.get("/p/:id", async (req, res) => {
+    const html = await loadViewHtml();
+    const fail = (status: number, message: string) =>
+      void res.status(status).type("html").set("X-Robots-Tag", "noindex").send(injectBoot(html, { mode: "web", error: message }, "Lasso"));
+    const check = verifyPersonLink(config, String(req.params.id), req.query as Record<string, unknown>);
+    if (!check.ok) {
+      return fail(
+        check.reason === "expired" ? 410 : 403,
+        check.reason === "expired" ? "Linket er udløbet. Spørg Claude om personen igen for at få et nyt link." : "Linket er ugyldigt. Brug linket fra Claude, som det er.",
+      );
+    }
+    const dataset = await resolveSpec(composePersonProbe(check.lassoId), provider);
+    const person = dataset.persons[check.lassoId];
+    if (!person) return fail(404, `Personen kunne ikke hentes: ${dataset.errors[`person:${check.lassoId}`] ?? "ukendt fejl"}`);
+    const spec = composePerson(check.lassoId, dataset, { name: person.name });
+    res
+      .type("html")
+      .set("Cache-Control", "no-store")
+      .set("X-Robots-Tag", "noindex")
+      .send(injectBoot(html, { mode: "web", spec, dataset, url: `${config.publicBaseUrl}${req.originalUrl}`, name: person.name }, person.name));
   });
 
   // --- Fejlfinding (kræver ADMIN_API_KEY) ------------------------------------

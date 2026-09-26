@@ -3,6 +3,7 @@
  * former, og UI-pakken kender kun dem. Derfor kan UI'en bygges og testes uden
  * at kende Lassos API, og serverlaget kan skiftes (fx ved flytning til Azure).
  */
+import type { PersonNetworkVM, PersonVM } from "./person.js";
 
 export interface Address {
   street?: string;
@@ -408,6 +409,9 @@ export interface Dataset {
   livestock: Record<string, LivestockVM>;
   /** Ejerdiagrammer pr. ownershipGraphKey. */
   ownershipGraphs: Record<string, OwnershipGraphVM>;
+  /** Katalog 16: personer (Lasso-ID "CVR-3-…") og deres netværk. */
+  persons: Record<string, PersonVM>;
+  personNetworks: Record<string, PersonNetworkVM>;
   /** Fejl pr. nøgle, fx "company:CVR-1-12345678" -> "Ingen adgang". */
   errors: Record<string, string>;
 }
@@ -432,6 +436,8 @@ export function emptyDataset(source: DataSourceKind): Dataset {
     properties: {},
     livestock: {},
     ownershipGraphs: {},
+    persons: {},
+    personNetworks: {},
     errors: {},
   };
 }

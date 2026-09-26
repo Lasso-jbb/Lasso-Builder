@@ -8,3 +8,5 @@ export * from "./catalog.js";
 export * from "./templates.js";
 export * from "./series.js";
 export * from "./compose.js";
+export * from "./person.js";
+export * from "./composePerson.js";

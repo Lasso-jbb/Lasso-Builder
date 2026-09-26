@@ -9,6 +9,9 @@ import {
   formatShare,
   ownershipGraphKey,
   percentChange,
+  personCompanies,
+  personCounts,
+  personRisk,
   METRIC_FIELD,
   METRIC_LABELS,
   searchKey,
@@ -406,6 +409,55 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
   return card.empty ? null : card.toString();
 }
 
+/** Katalog 16: personsiden som tekst. Hoved, roller pr. selskab, netværk og risiko. */
+function personCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | null {
+  const types = new Set(spec.components.filter((c) => "person" in c && c.person === lassoId).map((c) => c.type));
+  const p = ds.persons[lassoId];
+  const card = new Card();
+  const year = (d?: string) => (d ? d.slice(0, 4) : "");
+  if (p) {
+    const n = personCounts(p);
+    card.text(p.name);
+    card.text(["Person", p.city].filter(Boolean).join(", "));
+    const pl = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`;
+    card.text(`${pl(n.activeRoles, "aktiv rolle", "aktive roller")} i ${pl(n.activeCompanies, "selskab", "selskaber")}${n.endedRoles ? `, ${pl(n.endedRoles, "ophørt", "ophørte")}` : ""}`);
+  }
+  if (p && types.has("LassoPersonRoles")) {
+    const companies = personCompanies(p);
+    card.section("Roller");
+    for (const c of companies.slice(0, 6)) {
+      const ended = c.companyStatusKind === "warning" || c.companyStatusKind === "inactive";
+      card.text(`${c.companyName}${ended ? ` (${(c.companyStatus ?? "ophørt").toLowerCase()})` : ""}`);
+      for (const r of c.roles.slice(0, 2)) {
+        const what = `${r.role}${r.share ? ` ${r.share}` : ""}`;
+        const when = r.active ? (r.from ? `siden ${year(r.from)}` : "") : [year(r.from), year(r.to)].filter(Boolean).join("–");
+        for (const l of wrap([what, when].filter(Boolean).join(", "), W - 2)) card.raw(`  ${l}`);
+      }
+    }
+    if (companies.length > 6) card.text(`og ${companies.length - 6} flere selskaber`);
+  }
+  const net = types.has("LassoPersonNetwork") ? ds.personNetworks[lassoId] : undefined;
+  if (net?.people.length) {
+    card.section("Sidder sammen med");
+    for (const x of net.people.slice(0, 5)) {
+      const yrs = x.overlapYears < 1 ? "<1 år" : `${x.overlapYears} år`;
+      wrap(x.name, W - 8).forEach((l, i, all) => card.raw(`${pad(l, W - 7)}${i === all.length - 1 ? padStart(yrs, 7) : ""}`));
+    }
+    if (net.people.length > 5) card.text(`og ${net.people.length - 5} flere`);
+  }
+  if (p && types.has("LassoPersonRisk")) {
+    const risk = personRisk(p);
+    card.section("Risiko");
+    const word = (cases: typeof risk.bankruptcies) => (cases.length === 0 ? "Ingen" : cases.some((c) => c.involved) ? "Mulig vigtig" : "Info");
+    card.row("Konkurser", `${risk.bankruptcies.length}, ${word(risk.bankruptcies)}`);
+    card.row("Tvangsopl.", `${risk.dissolutions.length}, ${word(risk.dissolutions)}`);
+    for (const c of [...risk.bankruptcies, ...risk.dissolutions].slice(0, 3)) {
+      card.text(`${c.companyName}, ${c.status.toLowerCase()}${c.date ? ` ${year(c.date)}` : ""}${c.personLeft ? `, fratrådt ${year(c.personLeft)}` : ""}`);
+    }
+  }
+  return card.empty ? null : card.toString();
+}
+
 function summaryCard(spec: ViewSpec): string | null {
   const s = spec.components.find((c) => c.type === "LassoSummary");
   if (!s || s.type !== "LassoSummary") return null;
@@ -443,8 +495,10 @@ function listCard(spec: ViewSpec, ds: Dataset): string | null {
 /** Tekstkort for visningen, eller null når den ikke har noget, der kan vises som tekst. */
 export function textCard(spec: ViewSpec, ds: Dataset): string | null {
   const companies = [...new Set(spec.components.flatMap((c) => ("company" in c ? [c.company] : [])))];
+  const persons = [...new Set(spec.components.flatMap((c) => ("person" in c ? [c.person] : [])))];
   const cards = [
     ...(companies.length === 1 ? [companyCard(spec, ds, companies[0]!)] : []),
+    ...(persons.length === 1 ? [personCard(spec, ds, persons[0]!)] : []),
     listCard(spec, ds),
     summaryCard(spec),
   ].filter((c): c is string => Boolean(c));

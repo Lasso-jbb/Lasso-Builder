@@ -270,6 +270,35 @@ export const livestockSchema = z.object({
   company: companyRef,
 });
 
+/* Personsiden (katalog 16). */
+const personRef = z
+  .string()
+  .min(1)
+  .describe("Lasso-ID for en person, fx 'CVR-3-4000000001' (personer har ikke CVR-nummer).");
+
+export const personHeadSchema = z.object({
+  type: z.literal("LassoPersonHead"),
+  person: personRef,
+});
+
+export const personRolesSchema = z.object({
+  type: z.literal("LassoPersonRoles"),
+  person: personRef,
+  title: z.string().max(80).optional(),
+});
+
+export const personNetworkSchema = z.object({
+  type: z.literal("LassoPersonNetwork"),
+  person: personRef,
+  title: z.string().max(80).optional(),
+});
+
+export const personRiskSchema = z.object({
+  type: z.literal("LassoPersonRisk"),
+  person: personRef,
+  title: z.string().max(80).optional(),
+});
+
 export const actionsSchema = z.object({
   type: z.literal("LassoFollowUps"),
   prompts: z
@@ -333,6 +362,10 @@ export const componentSchema = z.discriminatedUnion("type", [
   w(summarySchema),
   w(timelineSchema),
   w(newsSchema),
+  w(personHeadSchema),
+  w(personRolesSchema),
+  w(personNetworkSchema),
+  w(personRiskSchema),
 ]);
 export type ViewComponent = z.infer<typeof componentSchema>;
 export type ComponentType = ViewComponent["type"];
@@ -347,7 +380,7 @@ export const LAYOUTS = ["dashboard", "stack", "grid-2", "columns"] as const;
 export const viewSpecSchema = z.object({
   /** v2: komponentsættet bygget fra Paper-kataloget. v1-visninger (gamle komponentnavne) afvises. */
   version: z.literal(2).default(2),
-  kind: z.enum(["company", "list", "custom"]).default("custom"),
+  kind: z.enum(["company", "person", "list", "custom"]).default("custom"),
   title: z.string().min(1).max(120),
   subtitle: z.string().max(200).optional(),
   layout: z.enum(LAYOUTS).default("dashboard").describe("'dashboard' (standard) = ét samlet overblik i 4-kolonne-grid med hver komponents bredde. 'stack' = alt i fuld bredde under hinanden."),
@@ -396,6 +429,10 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoSummary: "full",
   LassoTimeline: "half",
   LassoNews: "half",
+  LassoPersonHead: "full",
+  LassoPersonRoles: "full",
+  LassoPersonNetwork: "half",
+  LassoPersonRisk: "half",
 };
 
 /** Den bredde, en komponent får i visningen. 'stack' giver altid fuld bredde. */
