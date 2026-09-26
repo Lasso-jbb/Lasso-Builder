@@ -64,14 +64,14 @@ test("composePerson: hoved og roller i fuld bredde, netværk | risiko i to kolon
   const spec = composePerson(ID, ds);
   assert.equal(spec.layout, "columns");
   assert.equal(spec.title, "Mette Holm Eksempel");
-  assert.deepEqual(spec.components.map((c) => `${c.type}${c.column ? `@${c.column}` : ""}`), ["LassoPersonHead", "LassoPersonRoles", "LassoPersonNetwork@1", "LassoPersonRisk@2"]);
+  assert.deepEqual(spec.components.map((c) => `${c.type}${c.column ? `@${c.column}` : ""}`), ["LassoPersonHead", "LassoPersonRoles", "LassoPersonNetwork@1", "LassoPersonRisk@2", "LassoFollowUps"]);
 });
 
 test("composePerson: uden netværk står risiko alene i fuld bredde; alvorlig risiko rykker op", () => {
   const ds = emptyDataset("demo");
   ds.persons[ID] = { ...person, roles: [{ ...person.roles[3]!, to: undefined, active: true }] };
   const spec = composePerson(ID, ds);
-  assert.deepEqual(spec.components.map((c) => `${c.type}${c.column ? `@${c.column}` : ""}`), ["LassoPersonHead", "LassoPersonRisk", "LassoPersonRoles"]);
+  assert.deepEqual(spec.components.map((c) => `${c.type}${c.column ? `@${c.column}` : ""}`), ["LassoPersonHead", "LassoPersonRisk", "LassoPersonRoles", "LassoFollowUps"]);
 });
 
 test("composePerson uden persondata viser kun hovedet (som viser fejlen)", () => {

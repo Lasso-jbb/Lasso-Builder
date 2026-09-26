@@ -1,4 +1,6 @@
 import type { Dataset, FinancialYear } from "./models.js";
+import { mergedObservations } from "./riskSignals.js";
+import { mainMetric } from "./series.js";
 import { METRIC_FIELD, viewSpecSchema, type Metric, type ViewComponent, type ViewSpec } from "./spec.js";
 
 /**
@@ -111,10 +113,21 @@ function yearsWith(years: readonly FinancialYear[], m: Metric): FinancialYear[] 
   return years.filter((y) => typeof y[METRIC_FIELD[m]] === "number");
 }
 
-/** Det nøgletal, grafen skal vise: omsætning hvis den er oplyst, ellers bruttofortjeneste. */
-function mainMetric(years: readonly FinancialYear[], wanted?: Metric): Metric {
-  if (wanted) return wanted;
-  return yearsWith(years, "omsaetning").length >= 2 ? "omsaetning" : "bruttofortjeneste";
+/** Nøgletal med et tal i seneste regnskab; tomme udelades, så "Ikke oplyst" aldrig står først. */
+function presentNow(years: readonly FinancialYear[], metrics: readonly Metric[]): Metric[] {
+  const last = years.at(-1);
+  const unique = metrics.filter((m, i, a) => a.indexOf(m) === i);
+  const present = unique.filter((m) => typeof last?.[METRIC_FIELD[m]] === "number");
+  return present.length > 0 ? present : unique;
+}
+
+/** Kort virksomhedsnavn til opfølgningsknapper: "NOVO NORDISK A/S" -> "Novo Nordisk". */
+export function shortCompanyName(name: string): string {
+  const stripped = name.replace(/\s+(A\/S|ApS|I\/S|P\/S|K\/S|IVS|A\.M\.B\.A\.?|AMBA|F\.M\.B\.A\.?|SMBA|Aktieselskab|Anpartsselskab|Komplementaranpartsselskab)\.?$/i, "").trim() || name;
+  const letters = stripped.replace(/[^\p{L}]/gu, "");
+  const shouting = letters.length > 3 && letters === letters.toUpperCase();
+  const pretty = shouting ? stripped.toLowerCase().replace(/(^|[\s\-/&.(])(\p{L})/gu, (_, a: string, b: string) => a + b.toUpperCase()) : stripped;
+  return pretty.length > 40 ? `${pretty.slice(0, 38).trim()}…` : pretty;
 }
 
 export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOptions = {}): ViewSpec {
@@ -138,7 +151,10 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
   const metric = mainMetric(fin, options.chartMetric);
   const nYears = yearsWith(fin, metric).length;
   const hasProfit = yearsWith(fin, "resultat").length >= 3;
-  const seriousRisk = obs.some((o) => o.severity >= 50);
+  // Lassos observationer plus egne signaler (status, egenkapital, underskud ...): et konkursbo
+  // får altid risikoboksen, også når Lassos observationer er tomme.
+  const risk = mergedObservations(id, ds);
+  const seriousRisk = risk.observations.some((o) => o.severity >= 50) || obs.some((o) => o.severity >= 50);
 
   const top: ViewComponent[] = [{ type: "LassoCompanyHead", company: id }];
   const cols: ViewComponent[][] = [[], [], []];
@@ -148,11 +164,8 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
   // Risiko står øverst, men kun når den er alvorlig, eller når brugeren spørger til risiko (guide 23).
   if (seriousRisk || focus === "risiko") top.push({ type: "LassoRiskObservations", company: id });
   if (fin.length > 0 && focus !== "kontakt") {
-    const metrics: Metric[] =
-      focus === "oekonomi"
-        ? [metric, "bruttofortjeneste", "resultat", "egenkapital", "ansatte"].filter((m, i, a) => a.indexOf(m) === i).slice(0, 5) as Metric[]
-        : [metric, "resultat", "egenkapital", "ansatte"].filter((m, i, a) => a.indexOf(m) === i) as Metric[];
-    top.push({ type: "LassoKeyFigureCards", company: id, metrics });
+    const wanted: Metric[] = focus === "oekonomi" ? [metric, "bruttofortjeneste", "resultat", "egenkapital", "ansatte"] : [metric, "resultat", "egenkapital", "ansatte"];
+    top.push({ type: "LassoKeyFigureCards", company: id, metrics: presentNow(fin, wanted).slice(0, 5) });
   }
 
   // Regnskabet får den form, antallet af år tillader: graf ved 3+ år, ellers alle tal for året.
@@ -175,9 +188,13 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
       const f = finance();
       if (f) put(1, f);
       // Vandfaldet viser vejen fra top til bund for seneste år; andelsbjælkerne balancens sammensætning.
-      if (fin.length > 0) put(1, { type: "LassoWaterfallChart", company: id });
+      // Kun med omsætning i seneste regnskab: ellers er der kun "bruttofortjeneste -> øvrige poster ->
+      // resultat", som hverken passer til titlen "Fra omsætning til resultat" eller siger noget nyt.
+      if (typeof fin.at(-1)?.revenue === "number" && typeof fin.at(-1)?.grossProfit === "number") put(1, { type: "LassoWaterfallChart", company: id });
       if (fin.length > 0) put(2, { type: "LassoKeyValueList", company: id, variant: "financials", title: "Regnskab" });
-      if (typeof fin.at(-1)?.equity === "number") put(2, { type: "LassoShareBars", company: id });
+      // Fordelingen kræver egenkapital og enten gæld eller balancesum (gæld = balancesum − egenkapital).
+      const lastYear = fin.at(-1);
+      if (typeof lastYear?.equity === "number" && (typeof lastYear.liabilities === "number" || typeof lastYear.assetsTotal === "number")) put(2, { type: "LassoShareBars", company: id });
       if (nYears >= 4) bottom.push({ type: "LassoMultiYearTable", company: id, years: Math.min(years, 10) });
       break;
     }
@@ -192,6 +209,9 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
       columns = 2;
       put(1, { type: "LassoContact", company: id });
       if (contactPeople.length > 0) put(1, { type: "LassoContactPersons", company: id });
+      // Uden kontaktpersoner fra hjemmesiden er direktion og bestyrelse fra CVR de bedste indgange.
+      else if (people.some((p) => !p.to)) put(1, { type: "LassoPersonList", company: id, show: "current", title: "Ledelse (CVR)" });
+      // Kontaktfelterne står i kontaktblokken; listen viser resten (uden dubletter, se KeyValueList).
       put(2, { type: "LassoKeyValueList", company: id, variant: "company", title: "Virksomhedsoplysninger" });
       break;
     }
@@ -199,7 +219,8 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
       columns = 2;
       ownershipBlock(1);
       if (beneficial.length > 0 || ds.beneficialOwnership[id]?.gaps?.length) put(2, { type: "LassoBeneficialOwners", company: id });
-      else if (people.length > 0) put(2, { type: "LassoRelations", company: id });
+      // Ikke LassoRelations her: den gentager de legale ejere fra ejerlisten ved siden af.
+      else if (people.some((p) => !p.to)) put(2, { type: "LassoPersonList", company: id, show: "current", title: "Ledelse" });
       if (owners.some((o) => o.kind === "company")) bottom.push({ type: "LassoOwnershipDiagram", company: id, ingoingDepth: 3, outgoingDepth: 2 });
       break;
     }
@@ -247,7 +268,7 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
   const followUps = FOLLOW_UPS[focus]
     .filter((f) => f.needs === undefined || f.needs({ fin: fin.length, owners: owners.length, people: people.length, statements: !!statements }))
     .slice(0, 3)
-    .map((f) => ({ label: f.label, prompt: f.prompt.replace("{navn}", options.name ?? lassoId) }));
+    .map((f) => ({ label: f.label, prompt: f.prompt.replace("{navn}", shortCompanyName(options.name ?? ds.companies[id]?.name ?? lassoId)) }));
   if (options.followUps !== false && followUps.length > 0) bottom.push({ type: "LassoFollowUps", prompts: followUps });
 
   // Tomme kolonner rykkes sammen, så kolonne 1..n altid er fyldt.

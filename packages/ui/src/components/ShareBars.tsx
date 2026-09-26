@@ -15,16 +15,24 @@ export function ShareBars({ financials, error }: { financials?: FinancialsVM; er
       </Section>
     );
   }
-  const yr = [...financials.years].reverse().find((y) => typeof y.equity === "number" && typeof y.liabilities === "number");
+  // Gæld afledes af balancesum − egenkapital, når den ikke er oplyst direkte (klasse B).
+  const debt = (y: FinancialsVM["years"][number]) =>
+    typeof y.liabilities === "number" ? y.liabilities : typeof y.assetsTotal === "number" && typeof y.equity === "number" ? y.assetsTotal - y.equity : null;
+  const yr = [...financials.years].reverse().find((y) => typeof y.equity === "number" && debt(y) !== null);
   if (!yr) {
+    const hasEquity = financials.years.some((y) => typeof y.equity === "number");
     return (
       <Section title={title} span="half" className="lasso-sharebars">
-        <DataState state="empty" reason="Virksomheden har ikke oplyst egenkapital og gæld i sine regnskaber." height={140} />
+        <DataState
+          state="empty"
+          reason={hasEquity ? "Regnskaberne oplyser egenkapital, men hverken gæld eller balancesum, så fordelingen kan ikke beregnes." : "Virksomheden har ikke oplyst egenkapital i sine regnskaber."}
+          height={140}
+        />
       </Section>
     );
   }
   const equity = yr.equity as number;
-  const liabilities = yr.liabilities as number;
+  const liabilities = debt(yr) as number;
   const total = equity + liabilities;
   if (total <= 0) {
     return (

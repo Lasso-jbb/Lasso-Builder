@@ -24,7 +24,9 @@ import {
   toLassoId,
   validateCriteria,
   viewSpecSchema,
+  mainMetric,
   type Dataset,
+  type ViewComponent,
   type ViewSpec,
 } from "@lasso/spec";
 import type { CurrentUser } from "../auth/user.js";
@@ -49,32 +51,27 @@ export interface McpContext {
   user: CurrentUser;
 }
 
-const INSTRUCTIONS = `Lasso giver adgang til data om danske virksomheder (CVR): stamdata, regnskaber, nøgletal, ledelse, bestyrelse, ejere og revisor, samt søgning med kriterier (målgrupper).
+/**
+ * Serverinstruktionerne står i hver samtale, så de holdes korte: routing og regler. Komponent-
+ * kataloget og kompositionsreglerne står KUN i render_view's beskrivelse og søgefelterne KUN i
+ * search_companies' (review P1-6: før stod begge dele to gange, ~9k tokens ekstra pr. tur).
+ */
+const INSTRUCTIONS = `Lasso giver adgang til data om danske virksomheder og personer (CVR): stamdata, regnskaber, nøgletal, ledelse, bestyrelse, ejere, revisor, risiko, historik og kontakt, samt søgning med kriterier (målgrupper).
 
-Sådan bruges værktøjerne:
-- Én bestemt virksomhed: show_company med CVR-nummer, Lasso-ID eller navn. Et navn slår serveren selv op; brug ikke search_companies først.
-- Økonomi og regnskab ("hvordan går det økonomisk for Novo?"): show_company med focus "oekonomi". Ejere: focus "ejerskab". Ledelse: focus "ledelse". Risiko: focus "risiko". Historik og nyheder: focus "historik". Fuldt regnskab (resultatopgørelse, balance, pengestrøm): focus "regnskab". Telefon, e-mail, adresse og kontaktpersoner: focus "kontakt". Serveren tilpasser selv skærmbilledet til virksomhedens data. Kommentér kort i 2–3 sætninger; tallene står i visningen.
-- Én bestemt person ("hvem er Mette Holm", "hvor sidder X i bestyrelser", "har X været med i konkurser"): show_person med navn eller person-ID (CVR-3-…). Serveren viser roller over tid, netværk og konkurser blandt personens selskaber.
-- Lister og målgrupper ("alle revisorer i Region Midt med mindst 10 ansatte"): search_companies med brugerens formulering som query. Lasso fortolker den til filtre i hele CVR og viser dem i filterpanelet. Tilføj kun criteria for det, teksten ikke siger, og sort for "top N"/"største".
-- Sammenligninger og oversigter, der ikke passer i de to: render_view med en spec fra komponentkataloget.
+Vælg værktøj:
+- Én virksomhed: show_company med CVR-nummer, Lasso-ID eller navn (serveren slår navnet op; brug ikke search_companies først). Vælg focus efter spørgsmålet: 'overblik' (standard, "fortæl om X", snævre stamdataspørgsmål som revisor, stiftet, ansatte), 'oekonomi' (omsætning, resultat, nøgletal, "hvordan går det"), 'regnskab' (resultatopgørelse, balance, pengestrøm), 'ejerskab' (ejere, reelle ejere, koncern), 'ledelse' (direktion, bestyrelse, udskiftning), 'risiko' (røde flag, "kan vi handle med dem"), 'historik' (hvad er der sket, nyheder), 'kontakt' (telefon, e-mail, web, kontaktpersoner). Serveren vælger selv formen efter virksomhedens data.
+- Én person ("hvem er X", "hvor sidder X i bestyrelser", "har X været i konkurser"): show_person med navn eller person-ID (CVR-3-…).
+- Lister og målgrupper ("revisorer i Region Midt med mindst 10 ansatte"): search_companies med brugerens formulering som query.
+- Flere navngivne virksomheder (sammenligning, rangering) eller elementer, ingen focus dækker: render_view med en spec fra kataloget i dens beskrivelse. Navne må bruges i stedet for CVR-numre.
 - "Giv mig en URL", "del", "gem": save_view.
 
 Regler:
-- Én visning pr. svar: kald højst ét visningsværktøj (show_company, search_companies eller render_view) pr. brugerbesked. Kræver spørgsmålet mere end show_company viser, så brug render_view med alle komponenter i én spec — ikke show_company og render_view efter hinanden.
-- Tegn altid grafisk med det samme. Spørg aldrig "vil du se det grafisk?".
-- Kan din app vise den interaktive Lasso-visning: vis kun den, og skriv aldrig tekstkortet i et svar. Kan appen ikke tegne den (fx Claude Code eller en terminal), så vis tekstkortet fra værktøjssvaret uændret i en kodeblok, og skriv lige under kodeblokken linket til den interaktive Lasso-visning som et klikbart link, fx [Åbn LASSO X A/S i Lasso](url). Kommentér derefter kort i 1–3 sætninger.
-- Skriv aldrig HTML/CSS. Du sender en spec; Lassos kode henter data og tegner.
-- Brugeren ser visningen. Svar kort i tekst og gentag ikke tallene som tabel.
-- Beløb angives i hele kroner (10 mio. = 10000000).
-
-${COMPOSITION_RULES}
-
-Komponentkatalog (hver linje: Brug til / Brug ikke når / Kræver / Eksempel):
-${catalogAsText()}
-
-Søgefelter:
-${fieldsAsText()}
-${OPERATORS_TEXT}`;
+- Én visning pr. svar: kald højst ét af show_company, show_person, search_companies og render_view pr. brugerbesked, og kun én gang. Aldrig show_company og render_view efter hinanden.
+- Tegn altid med det samme. Spørg aldrig "vil du se det grafisk?".
+- Kan din app vise den interaktive Lasso-visning: vis kun den, og skriv aldrig tekstkortet. Kan den ikke (fx Claude Code eller en terminal): vis tekstkortet fra værktøjssvaret uændret i en kodeblok med linket til den interaktive visning som klikbart link lige under, fx [Åbn LASSO X A/S i Lasso](url).
+- Brugeren ser visningen. Svar kort (1–3 sætninger) med det vigtigste, og gentag ikke tallene som tabel. Skriv aldrig HTML/CSS.
+- Nævner svaret andre match ved navneopslag, og er det uklart hvem brugeren mente, så spørg.
+- Beløb angives i hele kroner (10 mio. = 10000000).`;
 
 /**
  * Resuméet står både som tekst og i structuredContent: nogle værter (fx Claude Code)
@@ -93,6 +90,47 @@ function viewResult(spec: ViewSpec, ds: Dataset, extra: { note?: string; link?: 
     structuredContent: { spec, source: ds.source, summary, ...(card ? { card } : {}), ...(extra.link ? { link: extra.link } : {}) },
     _meta: { [DATASET_META_KEY]: ds },
   };
+}
+
+/**
+ * Slår virksomhedsnavne i en render_view-spec op (company, companies[], benchmark) med samme
+ * navneopslag som show_company. CVR-numre og Lasso-ID'er røres ikke. Valget står i noten.
+ */
+export async function lookupCompanyNames(spec: ViewSpec, provider: DataProvider): Promise<{ spec: ViewSpec; note?: string }> {
+  const refs = new Set<string>();
+  const collect = (ref: string | undefined) => {
+    if (ref && !isCompanyRef(ref)) refs.add(ref);
+  };
+  for (const c of spec.components) {
+    if ("company" in c && typeof c.company === "string") collect(c.company);
+    if ("companies" in c && Array.isArray(c.companies)) c.companies.forEach((x: string) => collect(x));
+    if (c.type === "LassoLineChart") collect(c.benchmark);
+  }
+  if (refs.size === 0) return { spec };
+  const found = new Map<string, string>();
+  const notes: string[] = [];
+  await Promise.all(
+    [...refs].map(async (ref) => {
+      try {
+        const hit = await findCompany(provider, ref);
+        if (!hit) return void notes.push(`Fandt ingen virksomhed, der hedder "${ref}".`);
+        found.set(ref, hit.pick.lassoId);
+        const alt = hit.alternatives.slice(0, 2).map((r) => `${r.name} (${r.cvr ?? r.lassoId})`).join("; ");
+        notes.push(`"${ref}" = ${hit.pick.name} (${hit.pick.cvr ?? hit.pick.lassoId})${alt ? `; andre match: ${alt}` : ""}.`);
+      } catch (err) {
+        notes.push(`Kunne ikke slå "${ref}" op: ${errorMessage(err)}.`);
+      }
+    }),
+  );
+  const fix = (ref: string) => found.get(ref) ?? ref;
+  const components = spec.components.map((c) => {
+    let out = c as ViewComponent & { company?: string; companies?: string[]; benchmark?: string };
+    if (typeof out.company === "string") out = { ...out, company: fix(out.company) };
+    if (Array.isArray(out.companies)) out = { ...out, companies: out.companies.map(fix) };
+    if (typeof out.benchmark === "string") out = { ...out, benchmark: fix(out.benchmark) };
+    return out as ViewComponent;
+  });
+  return { spec: { ...spec, components }, note: `Navneopslag: ${notes.join(" ")}` };
 }
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -201,7 +239,10 @@ export function createMcpServer(ctx: McpContext): McpServer {
         spec = composeCompany(lassoId, ds, { focus, years, chartMetric: chart_metric, name });
       }
       const cvr = cvrFromLassoId(lassoId);
-      const link = cvr ? companyLink(config, { cvr, metric: chart_metric ?? "bruttofortjeneste", years: years ?? 5 }) : undefined;
+      // Linket åbner samme visning (focus) med samme hovednøgletal som i chatten (review P2-7).
+      const link = cvr
+        ? companyLink(config, { cvr, metric: chart_metric ?? mainMetric(ds.financials[lassoId]?.years ?? []), years: years ?? (focus === "oekonomi" ? 10 : 5), focus: sections?.length ? undefined : focus })
+        : undefined;
       return viewResult(spec, ds, { note, link });
     },
   );
@@ -249,13 +290,15 @@ export function createMcpServer(ctx: McpContext): McpServer {
     "render_view",
     {
       title: "Vis oversigt",
-      description: `Fri komposition til sammenligninger, oversigter og analyser, der ikke passer i show_company eller search_companies. Send en JSON-spec; Lassos kode henter data og tegner i Lassos design. Skriv aldrig HTML/CSS. Brug 1–12 komponenter i ét dashboard. Kald render_view én gang pr. svar.\n\n${COMPOSITION_RULES}\n\nKomponentkatalog (hver linje: Brug til / Brug ikke når / Kræver / Eksempel):\n${catalogAsText()}\n\nEksempel (ét dashboard): {"title":"Byg vs. Transport","components":[{"type":"LassoCompareTable","companies":["12345678","87654321"]},{"type":"LassoLineChart","company":"12345678","metric":"omsaetning","years":5,"benchmark":"87654321"}]}`,
+      description: `Fri komposition til sammenligninger, oversigter og analyser, der ikke passer i show_company eller search_companies. Send en JSON-spec; Lassos kode henter data og tegner i Lassos design. Virksomheder angives med CVR-nummer, Lasso-ID eller navn (navne slås op, og valget står i svaret). Skriv aldrig HTML/CSS. Brug 1–12 komponenter i ét dashboard. Kald render_view én gang pr. svar.\n\n${COMPOSITION_RULES}\n\nKomponentkatalog (hver linje: Brug til / Brug ikke når / Kræver / Eksempel):\n${catalogAsText()}\n\nEksempel (ét dashboard): {"title":"Byg vs. Transport","components":[{"type":"LassoCompareTable","companies":["12345678","87654321"]},{"type":"LassoLineChart","company":"12345678","metric":"omsaetning","years":5,"benchmark":"87654321"}]}`,
       inputSchema: viewSpecSchema.omit({ version: true, kind: true }),
       annotations: { title: "Vis oversigt", ...readOnly },
       _meta: ui,
     },
     async (input): Promise<CallToolResult> => {
-      const spec = normalizeSpec(viewSpecSchema.parse({ ...input, kind: "custom" }), prefix);
+      // Navne ("Risika") slås op som i show_company, så modellen ikke skal søge først (review P1-7).
+      const named = await lookupCompanyNames(viewSpecSchema.parse({ ...input, kind: "custom" }), provider);
+      const spec = normalizeSpec(named.spec, prefix);
       for (const c of spec.components) {
         if (c.type === "LassoCompanyTable") {
           const invalid = criteriaError(c.search.criteria);
@@ -265,7 +308,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
       const invalid = criteriaError(spec.criteria);
       if (invalid) return invalid;
       const ds = await resolveSpec(spec, provider);
-      return viewResult(spec, ds);
+      return viewResult(spec, ds, { note: named.note });
     },
   );
 
@@ -277,7 +320,8 @@ export function createMcpServer(ctx: McpContext): McpServer {
       description:
         "Gem en visning og få et link, der kan deles. Specen gemmes, ikke data, så linket altid viser friske tal. Gemmer man igen på samme adresse, opdateres den, og tidligere versioner bevares. Brug når brugeren beder om en URL, et link, at dele eller gemme. Send den spec, der blev vist (structuredContent.spec fra forrige tool-resultat).",
       inputSchema: z.object({
-        spec: viewSpecSchema,
+        // Løst skema i beskrivelsen (hele viewSpec-skemaet er ~30.000 tegn); specen valideres nedenfor.
+        spec: z.record(z.string(), z.unknown()).describe("structuredContent.spec fra det værktøjssvar, der viste visningen, uændret."),
         name: z.string().min(1).max(120).optional().describe("Pænt navn, fx 'Revisionskunder Midt'."),
         slug: z
           .string()
@@ -289,7 +333,10 @@ export function createMcpServer(ctx: McpContext): McpServer {
       annotations: { title: "Gem visning", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
       _meta: { ui: { visibility: ["model", "app"] } },
     },
-    async ({ spec, name, slug, visibility }): Promise<CallToolResult> => {
+    async ({ spec: rawSpec, name, slug, visibility }): Promise<CallToolResult> => {
+      const parsed = viewSpecSchema.safeParse(rawSpec);
+      if (!parsed.success) return toolError(`Specen er ugyldig: ${parsed.error.issues.slice(0, 3).map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}. Send structuredContent.spec fra forrige svar uændret.`);
+      const spec = parsed.data;
       const wanted = slug ? slugify(slug) : undefined;
       if (wanted !== undefined && !SLUG_PATTERN.test(wanted)) {
         return toolError("Adressen må kun indeholde a-z, 0-9 og bindestreg (2-64 tegn).");
@@ -322,12 +369,14 @@ export function createMcpServer(ctx: McpContext): McpServer {
     {
       title: "Hent data til visning",
       description: "Intern: henter data til en visnings-spec. Kaldes af Lasso-appen, ikke af modellen.",
-      inputSchema: z.object({ spec: viewSpecSchema }),
+      inputSchema: z.object({ spec: z.record(z.string(), z.unknown()) }),
       annotations: { title: "Hent data til visning", ...readOnly },
       _meta: { ui: { resourceUri: VIEW_URI, visibility: ["app"] } },
     },
-    async ({ spec }): Promise<CallToolResult> => {
-      const normalized = normalizeSpec(spec, prefix);
+    async ({ spec: rawSpec }): Promise<CallToolResult> => {
+      const parsed = viewSpecSchema.safeParse(rawSpec);
+      if (!parsed.success) return toolError("Ugyldig spec.");
+      const normalized = normalizeSpec(parsed.data, prefix);
       const ds = await resolveSpec(normalized, provider);
       return {
         content: [{ type: "text", text: "ok" }],

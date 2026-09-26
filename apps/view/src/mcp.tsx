@@ -3,7 +3,7 @@ import type { App, McpUiHostContext } from "@modelcontextprotocol/ext-apps";
 import { useApp } from "@modelcontextprotocol/ext-apps/react";
 import type { CallToolResult } from "@modelcontextprotocol/client";
 import { LassoView, LassoMark, type ActionResult, type ViewAction } from "@lasso/ui";
-import { companyTemplate, composePerson, composePersonProbe, DATASET_META_KEY, formatCriterion, type Dataset, type ViewSpec } from "@lasso/spec";
+import { composeCompany, composePerson, composeProbe, composePersonProbe, DATASET_META_KEY, formatCriterion, type Dataset, type ViewSpec } from "@lasso/spec";
 
 interface Screen {
   spec: ViewSpec;
@@ -93,12 +93,14 @@ export function McpView() {
           return r.isError ? { ok: false, error: "Værten afviste beskeden" } : { ok: true };
         }
         case "open-company": {
-          const spec = companyTemplate(a.lassoId, { name: a.name });
-          setStack((st) => [...st, { spec, dataset: null }]);
+          // Samme cockpit som show_company og /k/: hent data først, og lad komponisten vælge form.
+          const probe = composeProbe(a.lassoId, "overblik");
+          setStack((st) => [...st, { spec: { ...probe, title: a.name ?? a.lassoId }, dataset: null }]);
           setLoading(true);
-          const screen = await resolve(app, spec);
-          replaceTop(screen);
-          const name = screen.dataset?.companies[a.lassoId]?.name ?? a.name ?? a.lassoId;
+          const fetched = await resolve(app, probe);
+          const ds = fetched.dataset!;
+          const name = ds.companies[a.lassoId]?.name ?? a.name ?? a.lassoId;
+          replaceTop({ spec: composeCompany(a.lassoId, ds, { focus: "overblik", name }), dataset: ds });
           void app
             .updateModelContext({ content: [{ type: "text", text: `Brugeren kigger nu på ${name} (${a.lassoId}) i Lasso-visningen.` }] })
             .catch(() => {});

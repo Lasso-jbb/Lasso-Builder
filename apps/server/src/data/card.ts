@@ -1,4 +1,5 @@
 import {
+  mergedObservations,
   amountScale,
   chartSeries,
   formatAmount,
@@ -479,13 +480,14 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
   }
 
 
-  const observations = types.has("LassoRiskObservations") ? ds.observations[lassoId] : undefined;
-  if (observations) {
+  // Lassos observationer plus egne signaler (status, egenkapital ...): aldrig "intet" for et konkursbo.
+  if (types.has("LassoRiskObservations")) {
+    const risk = mergedObservations(lassoId, ds);
     card.section("Risikoobservationer");
-    if (observations.observations.length === 0) {
-      card.text("Ingen observationer fundet");
+    if (risk.observations.length === 0) {
+      card.text(risk.lasso?.checkedAt ? "Lasso fandt intet at bemærke" : "Ingen observationer fundet");
     } else {
-      const sorted = [...observations.observations].sort((a, b) => b.severity - a.severity);
+      const sorted = risk.observations;
       const word = (s: number) => (s === 100 ? "Vigtig" : s === 50 ? "Mulig vigtig" : s === 25 ? "Info" : "Neutral");
       for (const o of sorted.slice(0, 3)) card.text(`${word(o.severity)}: ${o.title}`);
       if (sorted.length > 3) card.text(`Se ${sorted.length - 3} flere`);

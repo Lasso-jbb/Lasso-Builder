@@ -24,7 +24,7 @@ export function CompanyHead({ company, error }: { company?: CompanyVM; error?: s
     company.founded ? `stiftet ${formatDate(company.founded)}` : null,
     a?.street,
     [a?.zip, a?.city].filter(Boolean).join(" ") || null,
-    company.employees !== undefined ? `${formatNumber(company.employees)} ansatte` : null,
+    company.employees !== undefined ? `${formatNumber(company.employees)} ansatte (CVR)` : null,
     company.industryText,
   ].filter((f): f is string => Boolean(f));
 

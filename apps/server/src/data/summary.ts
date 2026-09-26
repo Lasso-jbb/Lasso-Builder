@@ -8,6 +8,7 @@ import {
   formatPercent,
   formatScaled,
   formatShare,
+  mergedObservations,
   METRIC_KIND,
   METRIC_LABELS,
   ownershipGraphKey,
@@ -57,10 +58,17 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
       const last = f?.years.at(-1);
       const prev = f?.years.at(-2);
       if (last && c.type === "LassoKeyFigureCards") {
+        // Kun oplyste tal; omsætning 0 er i praksis "ikke oplyst" for små selskaber (review P2-6).
         const chg = percentChange([prev?.grossProfit, last.grossProfit]);
-        lines.push(
-          `Regnskab ${last.year}: ${last.revenue !== null && last.revenue !== undefined ? `omsætning ${formatAmount(last.revenue)}, ` : ""}bruttofortjeneste ${formatAmount(last.grossProfit)}${chg !== null ? ` (${chg > 0 ? "+" : ""}${Math.round(chg)} % fra ${prev?.year})` : ""}, resultat ${formatAmount(last.profit)}, egenkapital ${formatAmount(last.equity)}, ${formatNumber(last.employees)} ansatte.`,
-        );
+        const parts = [
+          typeof last.revenue === "number" && last.revenue !== 0 && `omsætning ${formatAmount(last.revenue)}`,
+          typeof last.grossProfit === "number" && `bruttofortjeneste ${formatAmount(last.grossProfit)}${chg !== null ? ` (${chg > 0 ? "+" : ""}${Math.round(chg)} % fra ${prev?.year})` : ""}`,
+          typeof last.profit === "number" && `resultat ${formatAmount(last.profit)}`,
+          typeof last.equity === "number" && `egenkapital ${formatAmount(last.equity)}`,
+          typeof last.soliditetsgrad === "number" && `soliditetsgrad ${formatPercent(last.soliditetsgrad, false)}`,
+          typeof last.employees === "number" && `${formatNumber(last.employees)} ansatte i regnskabet`,
+        ].filter(Boolean);
+        if (parts.length) lines.push(`Regnskab ${last.year}: ${parts.join(", ")}.`);
       }
       if (f && c.type === "LassoBarChart") {
         // Hele rækken, så modellen kan kommentere udviklingen (og værter uden grafik kan vise den).
@@ -74,6 +82,15 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
             `${METRIC_LABELS[metric]} ${points[0]!.year}–${points.at(-1)!.year}${unit}: ${points.map((p) => `${p.year} ${val(p.value)}`).join(", ")}.`,
           );
         }
+      }
+    }
+    if (c.type === "LassoRiskObservations") {
+      // Lassos observationer plus egne signaler (status, egenkapital, underskud ...), vigtigste først.
+      const risk = mergedObservations(c.company, ds);
+      if (risk.observations.length) {
+        lines.push(`Risiko: ${risk.observations.slice(0, 5).map((o) => `${o.title} (${o.severity})`).join("; ")}.`);
+      } else {
+        lines.push(risk.lasso?.checkedAt ? "Risiko: Lasso har gennemgået virksomheden og fandt intet at bemærke." : "Risiko: ingen observationer fra Lasso og ingen signaler i status, regnskab og ledelse.");
       }
     }
     if (c.type === "LassoPersonList") {
@@ -160,6 +177,7 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
 
   const errors = Object.entries(ds.errors);
   if (errors.length) lines.push(`Fejl: ${errors.slice(0, 3).map(([k, v]) => `${k.split(":")[0]}: ${v}`).join("; ")}.`);
-  lines.push("Vis tekstkortet uændret i en kodeblok (ved en virksomhed altid, ellers når appen ikke kan vise Lasso-visningen) med linket til den interaktive visning under det, hvis der er et. Svar kort og gentag ikke tallene som tabel.");
+  // Hvornår tekstkortet vises, står ét sted: serverinstruktionerne (review P1-6).
+  lines.push("Tekstkortet er kun til værter uden Lasso-visning (se instruktionerne). Svar kort og gentag ikke tallene som tabel.");
   return lines.join("\n");
 }

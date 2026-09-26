@@ -1,4 +1,4 @@
-import { formatNumber, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, type FinancialsVM, type Metric } from "@lasso/spec";
+import { effectiveMetric, formatNumber, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, type FinancialsVM, type Metric } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
 import { CHART_AXIS_W, CHART_BOTTOM, CHART_H, CHART_TOP, clampMobilePoints, labelFor, makeYScale, niceTicks, yearRange } from "../charts.js";
@@ -22,7 +22,8 @@ export function GroupedBarChart({
   error?: string;
 }) {
   const [ref, W] = useWidth<HTMLDivElement>();
-  const title = metrics.map((m) => METRIC_LABELS[m]).join(" og ");
+  const titleMetrics = (financials ? metrics.map((m) => effectiveMetric(financials.years, m)) : metrics).filter((m, i, a) => a.indexOf(m) === i);
+  const title = titleMetrics.map((m) => METRIC_LABELS[m]).join(" og ");
   if (!financials) {
     return (
       <Section title={title} span="half" className="lasso-chart">
@@ -30,7 +31,10 @@ export function GroupedBarChart({
       </Section>
     );
   }
-  const shownMetrics = W > 0 && W < 420 ? metrics.slice(0, 2) : metrics;
+  // Omsætning uden tal i seneste regnskab falder tilbage til bruttofortjeneste (som BarChart),
+  // så grafen altid når frem til de nyeste år i stedet for at stoppe, hvor omsætningen gjorde.
+  const effective = metrics.map((m) => effectiveMetric(financials.years, m)).filter((m, i, a) => a.indexOf(m) === i);
+  const shownMetrics = W > 0 && W < 420 ? effective.slice(0, 2) : effective;
   const rows = financials.years
     .slice(-years)
     .map((y) => ({ year: y.year, values: shownMetrics.map((m) => y[METRIC_FIELD[m]]) }))

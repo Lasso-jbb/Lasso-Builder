@@ -1,5 +1,6 @@
 import type { Dataset } from "./models.js";
 import { personCompanies, personRisk } from "./person.js";
+import { shortCompanyName } from "./compose.js";
 import { viewSpecSchema, type ViewComponent, type ViewSpec } from "./spec.js";
 
 /**
@@ -27,6 +28,8 @@ export function composePersonProbe(lassoId: string): ViewSpec {
 
 export interface ComposePersonOptions {
   name?: string;
+  /** Opfølgningsknapper sender en besked til modellen; slå fra på websiden uden chat. */
+  followUps?: boolean;
 }
 
 export function composePerson(lassoId: string, ds: Dataset, options: ComposePersonOptions = {}): ViewSpec {
@@ -61,7 +64,18 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
   if (side.length === 2) side.forEach((c, i) => components.push({ ...c, column: i + 1 } as ViewComponent));
   else components.push(...side);
 
-  const companies = personCompanies(person).length;
+  // Næste naturlige spørgsmål (review P2-5): personens vigtigste aktive selskab, netværk og konkurser.
+  const list = personCompanies(person);
+  const first = person.name.split(/\s+/)[0] ?? person.name;
+  const main = list.find((c) => c.active) ?? list[0];
+  const prompts = [
+    main && { label: `Vis ${shortCompanyName(main.companyName)}`, prompt: `Fortæl om ${shortCompanyName(main.companyName)}${main.companyId ? ` (${main.companyId})` : ""}.` },
+    network.length > 0 && { label: "Netværk", prompt: `Hvem sidder ${person.name} sammen med i selskaber?` },
+    hasRoles && { label: "Konkurser", prompt: `Har ${first} været med i selskaber, der gik konkurs, og hvad skete der?` },
+  ].filter((x): x is { label: string; prompt: string } => !!x);
+  if (options.followUps !== false && prompts.length > 0) components.push({ type: "LassoFollowUps", prompts: prompts.slice(0, 3) });
+
+  const companies = list.length;
   return viewSpecSchema.parse({
     kind: "person",
     title: options.name ?? person.name,
