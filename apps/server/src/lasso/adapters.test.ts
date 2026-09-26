@@ -7,6 +7,7 @@ import {
   adaptContactPersons,
   fillContactInfo,
   adaptFinancials,
+  adaptFinancialStatements,
   adaptNews,
   adaptOwnership,
   adaptPeople,
@@ -244,7 +245,23 @@ test("adaptFinancials læser XBRL-træet i reports/advanced (selskab før koncer
     { lassoId: "CVR-1-1", period: { from: "2005-01-01", to: "2005-12-31" }, reportYear: 2005, data: { company: null, group: null } },
   ]);
   assert.deepEqual(vm.years, [
-    { year: 2024, periodStart: "2024-01-01", periodEnd: "2024-12-31", published: undefined, revenue: 1000, grossProfit: 400, profit: 90, equity: 700, employees: 12, liabilities: null },
+    {
+      year: 2024,
+      periodStart: "2024-01-01",
+      periodEnd: "2024-12-31",
+      published: undefined,
+      revenue: 1000,
+      grossProfit: 400,
+      profit: 90,
+      equity: 700,
+      employees: 12,
+      liabilities: null,
+      assetsTotal: null,
+      ebitda: null,
+      soliditetsgrad: null,
+      overskudsgrad: 9,
+      likviditetsgrad: null,
+    },
   ]);
 });
 
@@ -309,6 +326,82 @@ test("adaptFinancials lægger kort- og langfristet gæld sammen, når der ikke e
 test("adaptFinancials giver null for gæld, når intet gældsbegreb er oplyst", () => {
   const vm = adaptFinancials("CVR-1-1", [{ reportYear: 2024, period: { to: "2024-12-31" }, figures: { grossProfit: 100 } }]);
   assert.equal(vm.years[0]!.liabilities, null);
+});
+
+test("adaptFinancialStatements læser resultatopgørelse og balance fra XBRL-træet (katalog 19)", () => {
+  const node = (value: number | null, facts: Record<string, unknown> = {}) => ({ value, facts, abstract: value === null, label: "", section: "", source: "" });
+  const vm = adaptFinancialStatements("CVR-1-1", [
+    {
+      reportYear: 2024,
+      period: { from: "2024-01-01", to: "2024-12-31" },
+      data: {
+        company: {
+          facts: {
+            incomeStatement: node(null, {
+              "fsa:Revenue": node(1000),
+              "fsa:GrossProfitLoss": node(400),
+              "fsa:EmployeeBenefitsExpense": node(-150),
+              "fsa:OtherExternalExpenses": node(-100),
+              "fsa:ProfitLossFromOrdinaryActivitiesBeforeTax": node(120),
+              "fsa:TaxExpenseOnOrdinaryActivities": node(-30),
+              "fsa:ProfitLoss": node(90),
+            }),
+            statementOfFinancialPosition: node(null, {
+              "fsa:Equity": node(700),
+              "fsa:Liabilities": node(300),
+              "fsa:CurrentAssets": node(600),
+            }),
+          },
+        },
+      },
+    },
+  ]);
+  assert.equal(vm.incomeStatement.length, 1);
+  const y = vm.incomeStatement[0]!;
+  assert.equal(y.year, 2024);
+  assert.equal(y.revenue, 1000);
+  assert.equal(y.grossProfit, 400);
+  assert.equal(y.staffCosts, -150);
+  assert.equal(y.otherOperatingCosts, -100);
+  // Intet direkte EBITDA-begreb: udregnes som bruttofortjeneste + personale + andre drift.
+  assert.equal(y.ebitda, 400 - 150 - 100);
+  assert.equal(y.profitBeforeTax, 120);
+  assert.equal(y.tax, -30);
+  assert.equal(y.profit, 90);
+
+  assert.equal(vm.balanceSheet.length, 1);
+  const b = vm.balanceSheet[0]!;
+  assert.equal(b.equityTotal, 700);
+  assert.equal(b.liabilitiesTotal, 300);
+  // Intet direkte samlet aktiv-begreb: udregnes som egenkapital + gæld.
+  assert.equal(b.assetsTotal, 1000);
+  assert.equal(b.liabilitiesAndEquityTotal, 1000);
+
+  // Ingen pengestrømsbegreber i svaret: opgørelsen er tom (klasse B).
+  assert.deepEqual(vm.cashFlow, []);
+});
+
+test("adaptFinancialStatements medtager pengestrøm, når mindst ét begreb er fundet", () => {
+  const node = (value: number | null, facts: Record<string, unknown> = {}) => ({ value, facts, abstract: value === null, label: "", section: "", source: "" });
+  const vm = adaptFinancialStatements("CVR-1-1", [
+    {
+      reportYear: 2024,
+      period: { to: "2024-12-31" },
+      data: {
+        company: {
+          facts: {
+            statementOfCashFlows: node(null, {
+              "fsa:CashFlowsFromUsedInOperatingActivities": node(200),
+              "fsa:CashAndCashEquivalentsAtEndOfPeriod": node(50),
+            }),
+          },
+        },
+      },
+    },
+  ]);
+  assert.equal(vm.cashFlow.length, 1);
+  assert.equal(vm.cashFlow[0]!.operatingCashFlow, 200);
+  assert.equal(vm.cashFlow[0]!.cashEnding, 50);
 });
 
 test("adaptTextSections læser branche og udelader ubekræftede felter, når de mangler", () => {

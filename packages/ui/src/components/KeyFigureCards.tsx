@@ -1,8 +1,8 @@
-import { formatAmount, formatNumber, METRIC_FIELD, METRIC_LABELS, type FinancialsVM, type Metric } from "@lasso/spec";
+import { formatMetricValue, METRIC_FIELD, METRIC_LABELS, type FinancialsVM, type Metric } from "@lasso/spec";
 import { DataState, Delta, Sparkline, stateForError } from "../primitives.js";
 
 export function formatMetric(metric: Metric, value: number | null | undefined): string {
-  return metric === "ansatte" ? formatNumber(value) : formatAmount(value);
+  return formatMetricValue(metric, value);
 }
 
 /** "18,8 mio. kr." -> ["18,8", "mio. kr."]; "19" -> ["19", ""]. Enheden står mindre efter tallet (09). */

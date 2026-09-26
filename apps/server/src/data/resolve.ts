@@ -22,6 +22,7 @@ const FETCHERS: Record<string, (ds: Dataset, p: DataProvider, id: string) => Pro
   contact: async (ds, p, id) => void (ds.contact[id] = await p.contact(id)),
   contactPersons: async (ds, p, id) => void (ds.contactPersons[id] = await p.contactPersons(id)),
   financials: async (ds, p, id) => void (ds.financials[id] = await p.financials(id)),
+  financialStatements: async (ds, p, id) => void (ds.financialStatements[id] = await p.financialStatements(id)),
   people: async (ds, p, id) => void (ds.people[id] = await p.people(id)),
   ownership: async (ds, p, id) => void (ds.ownership[id] = await p.ownership(id)),
   score: async (ds, p, id) => void (ds.scores[id] = await p.score(id)),
@@ -157,6 +158,11 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
         break;
       case "LassoMultiYearTable":
         want(c.company, "financials");
+        break;
+      case "LassoIncomeStatement":
+      case "LassoBalanceSheet":
+      case "LassoCashFlow":
+        want(c.company, "financialStatements");
         break;
       case "LassoScoreGauge":
         want(c.company, "score");

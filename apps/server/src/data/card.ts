@@ -10,10 +10,12 @@ import {
   ownershipGraphKey,
   percentChange,
   METRIC_FIELD,
+  METRIC_KIND,
   METRIC_LABELS,
   searchKey,
   type Dataset,
   type FinancialsVM,
+  type FinancialStatementsVM,
   type Metric,
   type OwnershipGraphVM,
   type ViewSpec,
@@ -94,8 +96,12 @@ class Card {
   }
 }
 
-const short = (v: number | null | undefined, metric: Metric) =>
-  metric === "ansatte" ? formatNumber(v) : formatAmount(v).replace(" kr.", "");
+const short = (v: number | null | undefined, metric: Metric) => {
+  const kind = METRIC_KIND[metric];
+  if (kind === "count") return formatNumber(v);
+  if (kind === "percent") return formatPercent(v, false);
+  return formatAmount(v).replace(" kr.", "");
+};
 
 function delta(from: number | null | undefined, to: number | null | undefined): string {
   if (typeof from !== "number" || typeof to !== "number" || from === 0) return "";
@@ -108,7 +114,8 @@ function delta(from: number | null | undefined, to: number | null | undefined): 
 function chart(card: Card, f: FinancialsVM, wanted: Metric, years: number) {
   const { metric, points } = chartSeries(f, wanted, years);
   if (points.length === 0) return;
-  const scale = metric === "ansatte" ? null : amountScale(points.map((p) => p.value));
+  const kind = METRIC_KIND[metric];
+  const scale = kind === "amount" ? amountScale(points.map((p) => p.value)) : null;
   card.section(`${METRIC_LABELS[metric]}${scale ? `, ${scale.label}` : ""}`);
   const max = Math.max(...points.map((p) => Math.abs(p.value))) || 1;
   for (const p of points) {
@@ -120,7 +127,7 @@ function chart(card: Card, f: FinancialsVM, wanted: Metric, years: number) {
       rest = 0;
     }
     const bar = (p.value < 0 ? "▒" : "█").repeat(full) + (p.value < 0 ? "" : EIGHTHS[rest]);
-    const value = scale ? formatScaled(p.value, scale) : formatNumber(p.value);
+    const value = kind === "percent" ? formatPercent(p.value, false) : scale ? formatScaled(p.value, scale) : formatNumber(p.value);
     card.raw(`${p.year} ${pad(bar || "▏", 20)} ${padStart(value, 7)}`);
   }
 }
@@ -227,6 +234,76 @@ function ownershipTreeCard(card: Card, g: OwnershipGraphVM) {
   }
 }
 
+/** Katalog 19: hele resultatopgørelsen, balancen og pengestrømmen som rækker i tekstkortet. */
+function statementRows(card: Card, label: string, rows: { label: string; values: readonly (number | null | undefined)[] }[], yearsShown: readonly number[]) {
+  card.section(`${label} ${yearsShown.join("/")}`);
+  for (const r of rows) {
+    const parts = r.values.map((v) => (v == null ? "—" : amt(v)));
+    card.row(r.label, parts.join(" → "));
+  }
+}
+
+function incomeStatementText(card: Card, s: FinancialStatementsVM, years: number) {
+  const shown = s.incomeStatement.slice(-Math.max(2, Math.min(3, years)));
+  if (!shown.length) return;
+  const revenueTop = shown.some((y) => y.revenue != null);
+  statementRows(
+    card,
+    "Resultatopgørelse",
+    [
+      { label: revenueTop ? "Omsætning" : "Bruttofortj.", values: shown.map((y) => (revenueTop ? y.revenue : y.grossProfit)) },
+      { label: "Personale", values: shown.map((y) => y.staffCosts) },
+      { label: "Andre drift", values: shown.map((y) => y.otherOperatingCosts) },
+      { label: "EBITDA", values: shown.map((y) => y.ebitda) },
+      { label: "Af-/nedskr.", values: shown.map((y) => y.depreciation) },
+      { label: "Finansielle", values: shown.map((y) => y.financialItemsNet) },
+      { label: "Før skat", values: shown.map((y) => y.profitBeforeTax) },
+      { label: "Skat", values: shown.map((y) => y.tax) },
+      { label: "Årets resultat", values: shown.map((y) => y.profit) },
+    ],
+    shown.map((y) => y.year),
+  );
+}
+
+function balanceSheetText(card: Card, s: FinancialStatementsVM, years: number) {
+  const shown = s.balanceSheet.slice(-Math.max(2, Math.min(3, years)));
+  if (!shown.length) return;
+  statementRows(
+    card,
+    "Balance",
+    [
+      { label: "Anlægsakt. i alt", values: shown.map((y) => y.fixedAssetsTotal) },
+      { label: "Omsætn.akt. i alt", values: shown.map((y) => y.currentAssetsTotal) },
+      { label: "Aktiver i alt", values: shown.map((y) => y.assetsTotal) },
+      { label: "Egenkapital", values: shown.map((y) => y.equityTotal) },
+      { label: "Gæld i alt", values: shown.map((y) => y.liabilitiesTotal) },
+      { label: "Passiver i alt", values: shown.map((y) => y.liabilitiesAndEquityTotal) },
+    ],
+    shown.map((y) => y.year),
+  );
+}
+
+function cashFlowText(card: Card, s: FinancialStatementsVM, years: number) {
+  if (!s.cashFlow.length) {
+    card.section("Pengestrømsopgørelse");
+    card.text("Pengestrømsopgørelse er ikke indberettet.");
+    return;
+  }
+  const shown = s.cashFlow.slice(-Math.max(2, Math.min(3, years)));
+  statementRows(
+    card,
+    "Pengestrøm",
+    [
+      { label: "Fra drift", values: shown.map((y) => y.operatingCashFlow) },
+      { label: "Fra investering", values: shown.map((y) => y.investingCashFlow) },
+      { label: "Fra finansiering", values: shown.map((y) => y.financingCashFlow) },
+      { label: "Årets pengestrøm", values: shown.map((y) => y.netCashFlow) },
+      { label: "Likvider ultimo", values: shown.map((y) => y.cashEnding) },
+    ],
+    shown.map((y) => y.year),
+  );
+}
+
 function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | null {
   const card = new Card();
   const types = new Set(spec.components.filter((c) => "company" in c && c.company === lassoId).map((c) => c.type));
@@ -295,7 +372,20 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     for (const m of metrics) {
       const v = last[METRIC_FIELD[m]];
       if (typeof v !== "number") continue;
-      const label = { omsaetning: "Omsætning", bruttofortjeneste: "Bruttofortj.", resultat: "Resultat", egenkapital: "Egenkapital", ansatte: "Ansatte" }[m];
+      const SHORT_LABEL: Record<Metric, string> = {
+        omsaetning: "Omsætning",
+        bruttofortjeneste: "Bruttofortj.",
+        resultat: "Resultat",
+        egenkapital: "Egenkapital",
+        ansatte: "Ansatte",
+        ebitda: "EBITDA",
+        balancesum: "Balancesum",
+        gaeld: "Gæld",
+        soliditetsgrad: "Soliditet",
+        overskudsgrad: "Overskudsgr.",
+        likviditetsgrad: "Likviditet",
+      };
+      const label = SHORT_LABEL[m];
       card.raw(`${pad(label, 12)}${padStart(short(v, m), 10)} ${delta(prev?.[METRIC_FIELD[m]] as number | null | undefined, v)}`);
     }
   }
@@ -306,6 +396,10 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     if (f && c.type === "LassoStackedBarChart" && c.company === lassoId) stackedText(card, f, c.years);
     if (f && c.type === "LassoWaterfallChart" && c.company === lassoId) waterfallText(card, f);
     if (f && c.type === "LassoShareBars" && c.company === lassoId) shareBarsText(card, f);
+    const stmt = ds.financialStatements[lassoId];
+    if (stmt && c.type === "LassoIncomeStatement" && c.company === lassoId) incomeStatementText(card, stmt, c.years);
+    if (stmt && c.type === "LassoBalanceSheet" && c.company === lassoId) balanceSheetText(card, stmt, c.years);
+    if (stmt && c.type === "LassoCashFlow" && c.company === lassoId) cashFlowText(card, stmt, c.years);
     if (c.type === "LassoOwnershipDiagram" && c.company === lassoId) {
       const g = ds.ownershipGraphs[ownershipGraphKey(c)];
       if (g) ownershipTreeCard(card, g);

@@ -10,7 +10,12 @@ import {
   formatScaled,
   formatAmount,
   formatCriterion,
+  formatMetricValue,
   listTemplate,
+  METRIC_FIELD,
+  METRIC_KIND,
+  METRIC_LABELS,
+  METRICS,
   parseViewSpec,
   searchQuerySchema,
   toLassoId,
@@ -214,6 +219,48 @@ test("LassoOwnershipDiagram har standarddybde 2 op og 1 ned og en stabil nøgle"
   assert.equal(ownershipGraphKey(c), "CVR-1-12345678|2|1|");
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoOwnershipDiagram", company: "CVR-1-1", onDate: "25.09.2026" }] }));
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoOwnershipDiagram", company: "CVR-1-1", ingoingDepth: 11 }] }));
+});
+
+test("parseViewSpec accepterer katalog 19 (LassoIncomeStatement, LassoBalanceSheet, LassoCashFlow) med standardværdier", () => {
+  const spec = parseViewSpec({
+    title: "Regnskab",
+    components: [
+      { type: "LassoIncomeStatement", company: "CVR-1-12345678" },
+      { type: "LassoBalanceSheet", company: "CVR-1-12345678", years: 3 },
+      { type: "LassoCashFlow", company: "CVR-1-12345678", title: "Pengestrøm" },
+    ],
+  });
+  const [income, balance, cashFlow] = spec.components;
+  assert.deepEqual(income, { type: "LassoIncomeStatement", company: "CVR-1-12345678", years: 2 });
+  assert.deepEqual(balance, { type: "LassoBalanceSheet", company: "CVR-1-12345678", years: 3 });
+  assert.deepEqual(cashFlow, { type: "LassoCashFlow", company: "CVR-1-12345678", years: 2, title: "Pengestrøm" });
+  assert.deepEqual(spec.components.map((c) => widthOf(c, spec.layout)), ["full", "full", "full"]);
+  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoIncomeStatement", company: "CVR-1-1", years: 4 }] }));
+  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoBalanceSheet", company: "CVR-1-1", years: 1 }] }));
+});
+
+test("de nye nøgletal (katalog 19) er i METRICS med label, felt og formatterings-art", () => {
+  const nye = ["ebitda", "balancesum", "gaeld", "soliditetsgrad", "overskudsgrad", "likviditetsgrad"] as const;
+  for (const m of nye) {
+    assert.ok(METRICS.includes(m), `${m} skal stå i METRICS`);
+    assert.ok(METRIC_LABELS[m], `${m} skal have et label`);
+    assert.ok(METRIC_FIELD[m], `${m} skal pege på et felt`);
+  }
+  assert.equal(METRIC_KIND.ebitda, "amount");
+  assert.equal(METRIC_KIND.balancesum, "amount");
+  assert.equal(METRIC_KIND.gaeld, "amount");
+  assert.equal(METRIC_KIND.soliditetsgrad, "percent");
+  assert.equal(METRIC_KIND.overskudsgrad, "percent");
+  assert.equal(METRIC_KIND.likviditetsgrad, "percent");
+  assert.equal(METRIC_KIND.ansatte, "count");
+});
+
+test("formatMetricValue formaterer efter METRIC_KIND (beløb, antal, procent) og viser — når værdien mangler", () => {
+  assert.equal(formatMetricValue("resultat", 12_500_000), "12,5 mio. kr.");
+  assert.equal(formatMetricValue("ansatte", 42), "42");
+  assert.equal(formatMetricValue("soliditetsgrad", 34.5), "34,5 %");
+  assert.equal(formatMetricValue("ebitda", null), "—");
+  assert.equal(formatMetricValue("likviditetsgrad", undefined), "—");
 });
 
 test("formatShare skriver CVR-intervaller", () => {

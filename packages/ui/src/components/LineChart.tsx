@@ -1,4 +1,4 @@
-import { chartSeries, formatNumber, METRIC_FIELD, METRIC_LABELS, type FinancialsVM, type Metric } from "@lasso/spec";
+import { chartSeries, formatNumber, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, type FinancialsVM, type Metric } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
 import { CHART_AXIS_W, CHART_BOTTOM, CHART_H, CHART_TOP, clampMobilePoints, labelFor, makeYScale, niceTicks, yearRange } from "../charts.js";
@@ -51,9 +51,8 @@ export function LineChart({
   }
   const hasBenchmark = points.some((p) => benchByYear.has(p.year));
 
-  const isCount = shown === "ansatte";
   const allValues = [...points.map((p) => p.value), ...(hasBenchmark ? points.filter((p) => benchByYear.has(p.year)).map((p) => benchByYear.get(p.year)!) : [])];
-  const { scale, label } = labelFor(allValues, isCount);
+  const { scale, label } = labelFor(allValues, METRIC_KIND[shown]);
   const values = points.map((p) => (scale ? p.value / scale.divisor : p.value));
   const benchValues = points.map((p) => {
     const v = benchByYear.get(p.year);

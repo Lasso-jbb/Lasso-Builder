@@ -21,6 +21,9 @@ import { KeyValueList } from "./components/KeyValueList.js";
 import { LassoContact } from "./components/LassoContact.js";
 import { LassoContactPersons } from "./components/LassoContactPersons.js";
 import { MultiYearTable } from "./components/MultiYearTable.js";
+import { LassoIncomeStatement } from "./components/IncomeStatement.js";
+import { LassoBalanceSheet } from "./components/BalanceSheet.js";
+import { LassoCashFlow } from "./components/CashFlow.js";
 import { OwnerList } from "./components/OwnerList.js";
 import { OwnershipDiagram } from "./components/OwnershipDiagram.js";
 import { PersonList } from "./components/PersonList.js";
@@ -116,6 +119,12 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return <LassoContactPersons key={key} data={empty.contactPersons[c.company]} title={c.title} error={err(`contactPersons:${c.company}`)} />;
     case "LassoMultiYearTable":
       return <MultiYearTable key={key} financials={empty.financials[c.company]} metrics={c.metrics} years={c.years} title={c.title} error={err(`financials:${c.company}`)} />;
+    case "LassoIncomeStatement":
+      return <LassoIncomeStatement key={key} statements={empty.financialStatements[c.company]} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} />;
+    case "LassoBalanceSheet":
+      return <LassoBalanceSheet key={key} statements={empty.financialStatements[c.company]} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} />;
+    case "LassoCashFlow":
+      return <LassoCashFlow key={key} statements={empty.financialStatements[c.company]} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} />;
     case "LassoScoreGauge":
       return <ScoreGauge key={key} score={empty.scores[c.company]} title={c.title} error={err(`score:${c.company}`)} />;
     case "LassoRiskObservations":
