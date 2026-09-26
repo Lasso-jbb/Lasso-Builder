@@ -5,6 +5,7 @@ import {
   catalogAsText,
   companyTemplate,
   COMPANY_SECTIONS,
+  COMPOSITION_RULES,
   cvrFromLassoId,
   DATASET_META_KEY,
   fieldsAsText,
@@ -57,7 +58,9 @@ Regler:
 - Brugeren ser visningen. Svar kort i tekst og gentag ikke tallene som tabel.
 - Beløb angives i hele kroner (10 mio. = 10000000).
 
-Komponentkatalog:
+${COMPOSITION_RULES}
+
+Komponentkatalog (hver linje: Brug til / Brug ikke når / Kræver / Eksempel):
 ${catalogAsText()}
 
 Søgefelter:
@@ -189,7 +192,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     "render_view",
     {
       title: "Vis oversigt",
-      description: `Fri komposition til sammenligninger, oversigter og analyser, der ikke passer i show_company eller search_companies. Send en JSON-spec; Lassos kode henter data og tegner i Lassos design. Skriv aldrig HTML/CSS. Brug 2–6 komponenter.\n\nKomponentkatalog:\n${catalogAsText()}\n\nEksempel: {"title":"Byg vs. Transport","layout":"grid-2","components":[{"type":"LassoCompareTable","companies":["12345678","87654321"]},{"type":"LassoBarChart","company":"12345678","metric":"omsaetning","years":5}]}`,
+      description: `Fri komposition til sammenligninger, oversigter og analyser, der ikke passer i show_company eller search_companies. Send en JSON-spec; Lassos kode henter data og tegner i Lassos design. Skriv aldrig HTML/CSS. Brug 2–6 komponenter.\n\n${COMPOSITION_RULES}\n\nKomponentkatalog (hver linje: Brug til / Brug ikke når / Kræver / Eksempel):\n${catalogAsText()}\n\nEksempel: {"title":"Byg vs. Transport","layout":"grid-2","components":[{"type":"LassoCompareTable","companies":["12345678","87654321"]},{"type":"LassoBarChart","company":"12345678","metric":"omsaetning","years":5}]}`,
       inputSchema: viewSpecSchema.omit({ version: true, kind: true }),
       annotations: { title: "Vis oversigt", ...readOnly },
       _meta: ui,
