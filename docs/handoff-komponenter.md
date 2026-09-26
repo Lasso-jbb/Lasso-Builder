@@ -142,7 +142,7 @@ På mobil:
 
 - Kreditvurdering (18)
 - Personsidens risikoblok og netværk (16). Tidsbåndet kan bygges med `history/participants`.
-- P-enheder pr. virksomhed og CHR (20). BBR har nu en datakilde.
+- P-enheder, BBR og CHR (20). BBR og P-enhedslisten har nu datakilder; CHR mangler stadig.
 - Overvågning (21). `companies/delta` findes, men overvågning er udenfor nu.
 
 ## 4a. Nye endpoints: vurdering og placering
@@ -169,13 +169,14 @@ Svarformerne er ikke bekræftet endnu. Hvert endpoint skal kaldes én gang mod L
 | `GET /{lassoId}/reports`, `/reports/latest` | Ældre regnskabsformat | – | **Brug ikke.** `reports/advanced` dækker det. |
 | `POST /modules/observations/{lassoId}` | Risikoobservationer med alvorsskala og sammenfatning øverst på siden ved 50+ | 17 | **Brug.** Kaldes med POST, ikke GET som `docs/lasso-endpoints.md` siger i dag. Dokumentationen skal rettes. |
 | `GET /data/bbr/property/summary?bfeNumber=` | Ejendomskort og ejendomsliste | 20 | **Brug.** Kræver BFE-numre, som vi forventer at hente fra ejerfortegnelsen (`/data/ejf/{lassoId}/ownerships/current`). Det skal bekræftes i testen. Hent højst 10 ejendomme pr. visning, og vis 3 + "Se N …". |
-| `GET /data/cvr/place/delta?since=&max=` | Ændrede P-enheder i en periode | 21 | **Ikke til P-enhedslisten.** Det er et ændringsfeed og ikke et opslag pr. virksomhed. Listen over en virksomheds P-enheder (20) kræver et andet endpoint, eller at `/{lassoId}` allerede har dem. Det skal tjekkes. |
+| `GET /data/cvr/place` | P-enhedsliste for en virksomhed (navn, adresse, branche, ansatte pr. enhed) | 20 | **Brug.** Løser P-enhedslisten. Skal testes, om den tager `lassoId` som parameter eller path-segment; det bekræftes i endpoint-testen. |
+| `GET /data/cvr/place/delta?since=&max=` | Ændrede P-enheder i en periode | 21 | **Ikke til P-enhedslisten**, kun til overvågning. Er nu ikke længere den eneste kandidat: `place` dækker selve listen (20). |
 | `GET /data/cvr/companies/delta?since=&max=` | Ændringer i CVR i en periode | 21 | **Ikke nu.** Hører til overvågning, som er udenfor. Relevant, hvis MCP'en senere skal kunne svare på "hvad er ændret siden …". |
 
 **Effekt på planen:**
 
 - Ejerdiagrammet har nu en datakilde og er ikke længere blokeret.
-- Risiko (17) og ejendomme (20, BBR) har nu datakilder.
+- Risiko (17), ejendomme (20, BBR) og P-enhedslisten (20) har nu datakilder.
 - Nyheder (12) og rolledelen af personsiden (16) kan flyttes ind i trin 3.
 - Tilkobling af de nye endpoints tager ca. **8–13 timer ekstra Claude-tid**, primært Sonnet 5:
   - relations/graph: 2–3 t
@@ -236,21 +237,20 @@ Samlet ca. 19–27 t (ca. 33–51 t arbejdstid i alt), før menneskelige gennems
 
 - Ejerdiagrammet (4–8 t).
 - Svarformerne fra de nye endpoints er ikke bekræftet.
-- Data til kredit, P-enheder, CHR, branchetal og personrisiko mangler stadig. Hver datatype tager 1–3 t, når der er endpoints.
+- Data til kredit, CHR, branchetal og personrisiko mangler stadig. Hver datatype tager 1–3 t, når der er endpoints.
 
 ## 8. Åbne spørgsmål, der skal afklares
 
 1. Body-format for `POST /modules/news` (Lasso News).
 2. Dækker den nuværende API-nøgle alle de nye endpoints (paqle, livenumber, relations)?
 3. Kreditvurdering og scoremåler (10, 18): Creditsafe eller `/modules/valuations`, som i dag svarer tomt.
-4. P-enheder pr. virksomhed (20). `place/delta` er kun et ændringsfeed.
-5. Branchetal til rangliste, branchemedian og nøgletalsmåler mod branche (10, 13, 22).
-6. Personer (16): opslag på en person (Lasso-ID for personer) samt PEP, stråmandsindikatorer og konkurser.
-7. Kontaktpersoner (02b "Persona", 08).
-8. CHR (20) og værdilister/enumerations (28).
-9. Hvilke `relationTypes` findes der ud over `ownership`? Fx ledelse eller revisor, som kan bruges til personnetværk (16) og revisoruafhængighed (22).
-10. Skal portalens elementer (navigation, dialoger, A4-eksport) med senere?
-11. Må gamle komponentnavne omdøbes? Hvis ja, skal gemte visninger migreres.
+4. Branchetal til rangliste, branchemedian og nøgletalsmåler mod branche (10, 13, 22).
+5. Personer (16): opslag på en person (Lasso-ID for personer) samt PEP, stråmandsindikatorer og konkurser.
+6. Kontaktpersoner (02b "Persona", 08).
+7. CHR (20) og værdilister/enumerations (28).
+8. Hvilke `relationTypes` findes der ud over `ownership`? Fx ledelse eller revisor, som kan bruges til personnetværk (16) og revisoruafhængighed (22).
+9. Skal portalens elementer (navigation, dialoger, A4-eksport) med senere?
+10. Må gamle komponentnavne omdøbes? Hvis ja, skal gemte visninger migreres.
 
 ## 9. Sådan hjælper du bedst
 
