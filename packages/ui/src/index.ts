@@ -1,4 +1,5 @@
 export { LassoView } from "./LassoView.js";
+export { LassoMark } from "./LassoMark.js";
 export { CompanyHead } from "./components/CompanyHead.js";
 export { KeyFigureCards } from "./components/KeyFigureCards.js";
 export { BarChart } from "./components/BarChart.js";

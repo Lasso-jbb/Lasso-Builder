@@ -181,7 +181,8 @@
 /* ---------- Ramme ---------- */
 .lasso-frame { display: flex; flex-direction: column; gap: var(--lasso-space-3); padding: var(--lasso-space-4); }
 .lasso-frame__header { display: flex; align-items: flex-start; gap: var(--lasso-space-3); }
-.lasso-logo { flex: none; width: 28px; height: 28px; border-radius: 8px; background: var(--lasso-text); color: var(--lasso-bg); display: grid; place-items: center; font-weight: 600; font-size: 14px; }
+/* Ikon alene (01B, "hvor pladsen er under 100 px"): ink på hvid, ingen flise bagved (fundament, regel 20). */
+.lasso-logo { flex: none; width: 24px; height: 20px; color: var(--lasso-text); margin-top: 2px; }
 .lasso-frame__titles { flex: 1; min-width: 0; }
 .lasso-frame__title { margin: 0; font-size: var(--lasso-fs-lg); line-height: 24px; font-weight: 600; letter-spacing: -0.01em; overflow-wrap: anywhere; }
 .lasso-frame__meta { margin-top: 2px; font-size: var(--lasso-fs-sm); color: var(--lasso-muted); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
