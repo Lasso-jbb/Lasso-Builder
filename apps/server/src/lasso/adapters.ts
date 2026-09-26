@@ -404,8 +404,11 @@ export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
     const liabilities = f(["liabilities", "liabilitiesandprovisions", "totalliabilities"], "liabilities", "totalLiabilities") ?? sumLiabilities(facts) ?? null;
     // Ubekræftet: balancesum har intet fast XBRL-begreb set endnu; afledt af egenkapital + gæld (regnskabsligningen), når begge er kendt.
     const assetsTotal = f(["assets", "totalassets", "assetstotal"], "assets", "totalAssets") ?? (typeof equity === "number" && typeof liabilities === "number" ? equity + liabilities : null);
-    // Ubekræftet: intet fast EBITDA-begreb; forsøges direkte, ellers udelades (vises "—").
-    const ebitda = f(["ebitda", "profitlossfromordinaryoperatingactivities", "operatingprofitloss"], "ebitda") ?? null;
+    // EBITDA: det direkte begreb, ellers driftsresultat (EBIT) lagt til af- og nedskrivninger.
+    // Driftsresultatet alene er IKKE EBITDA (det er efter afskrivninger), så uden afskrivninger vises "—".
+    const ebit = f(["profitlossfromordinaryoperatingactivities", "operatingprofitloss"], "operatingProfit");
+    const dep = ["depreciationamortisationandimpairmentlossesofintangibleassetsandtangibleassetsandpropertyplantandequipment", "depreciationamortisationexpense", "depreciation"].map((c) => facts.get(c)).find((v) => v !== undefined) ?? null;
+    const ebitda = f(["ebitda"], "ebitda") ?? (typeof ebit === "number" && typeof dep === "number" ? ebit + Math.abs(dep) : null);
     const currentAssets = f(["currentassets"], "currentAssets");
     const currentLiabilities = facts.get("currentliabilities") ?? facts.get("shorttermliabilities") ?? facts.get("shorttermliabilitiesother") ?? null;
     years.push({
@@ -533,9 +536,13 @@ export function adaptFinancialStatements(lassoId: string, raw: Json): FinancialS
     const profitBeforeTax = g("profitlossfromordinaryactivitiesbeforetax", "profitbeforetax");
     const tax = g("taxexpenseonordinaryactivities", "incometaxexpense", "tax");
     const profit = g("profitloss", "profitlossfortheyear", "netincome");
-    // Ubekræftet: intet fast EBITDA-begreb, forsøges direkte, ellers "bruttofortjeneste - personale - andre drift".
+    // EBITDA: det direkte begreb, ellers EBIT + af- og nedskrivninger, ellers bruttofortjeneste − personale − andre driftsomkostninger.
     const ebitda =
-      g("ebitda", "profitlossfromordinaryoperatingactivities", "operatingprofitloss") ??
+      g("ebitda") ??
+      (() => {
+        const ebit = g("profitlossfromordinaryoperatingactivities", "operatingprofitloss");
+        return typeof ebit === "number" && typeof depreciation === "number" ? ebit + Math.abs(depreciation) : null;
+      })() ??
       (typeof grossProfit === "number" && typeof staffCosts === "number" && typeof otherOperatingCosts === "number" ? grossProfit + staffCosts + otherOperatingCosts : null);
     incomeStatement.push({ year, periodStart, periodEnd, revenue, grossProfit, staffCosts, otherOperatingCosts, ebitda, depreciation, financialItemsNet, profitBeforeTax, tax, profit });
 

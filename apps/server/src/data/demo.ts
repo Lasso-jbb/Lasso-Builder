@@ -182,6 +182,18 @@ function financialsFor(c: DemoCompany): FinancialsVM {
         // Opdigtet gæld: plausibel i forhold til egenkapitalen, deterministisk "støj" som resten.
         liabilities: Math.round(equity * (0.8 + ((seed * (i + 5)) % 9) / 20)),
       };
+    }).map((y) => {
+      // Afledte nøgletal, beregnet som i adaptFinancials (samme formler som live).
+      const assetsTotal = (y.equity ?? 0) + (y.liabilities ?? 0);
+      const pct = (a: number | null | undefined, b: number | null | undefined) => (typeof a === "number" && typeof b === "number" && b !== 0 ? Math.round((a / b) * 1000) / 10 : null);
+      return {
+        ...y,
+        assetsTotal,
+        ebitda: Math.round((y.grossProfit ?? 0) * (1 - 0.62 - 0.045)),
+        soliditetsgrad: pct(y.equity, assetsTotal),
+        overskudsgrad: pct(y.profit, y.revenue ?? y.grossProfit),
+        likviditetsgrad: null,
+      };
     }),
   };
 }

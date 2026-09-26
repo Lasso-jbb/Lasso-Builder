@@ -173,7 +173,7 @@ export function createApp({ config, client, provider, store }: AppDeps) {
     }
     // Samme komponist som i chatten: hent data, og lad formen følge virksomhedens data.
     const dataset = await resolveSpec(composeProbe(lassoId, "overblik"), provider);
-    const spec = composeCompany(lassoId, dataset, { focus: "overblik", years: check.link.years, chartMetric: check.link.metric, name });
+    const spec = composeCompany(lassoId, dataset, { focus: "overblik", years: check.link.years, chartMetric: check.link.metric, name, followUps: false });
     res
       .type("html")
       .set("Cache-Control", "no-store")

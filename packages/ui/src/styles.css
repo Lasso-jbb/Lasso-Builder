@@ -563,8 +563,10 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
   .lasso-stmt__year:not(.lasso-stmt__year--last) { display: none; }
 }
 @container lasso (max-width: 560px) {
-  .lasso-stmt__label { min-width: 140px; }
-  .lasso-stmt__year { width: 84px; }
+  .lasso-stmt { min-width: 0; }
+  .lasso-stmt__label { flex: 1 1 0; min-width: 0; white-space: normal; padding-right: 8px; }
+  .lasso-stmt__year { width: 76px; }
+  .lasso-stmt__delta { width: 68px; }
 }
 
 /* ---------- 10 Scoremåler ---------- */

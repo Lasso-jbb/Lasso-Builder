@@ -31,6 +31,8 @@ export interface ComposeOptions {
   /** Nøgletal til grafen, hvis brugeren har bedt om et bestemt. */
   chartMetric?: Metric;
   name?: string;
+  /** Opfølgningsknapper sender en besked til modellen; slå fra på websiden uden chat. */
+  followUps?: boolean;
 }
 
 /**
@@ -46,12 +48,12 @@ export function composeProbe(lassoId: string, focus: Focus = "overblik"): ViewSp
     { type: "LassoOwnerList", company: c },
     { type: "LassoRiskObservations", company: c },
   ];
-  if (focus === "overblik" || focus === "historik" || focus === "ledelse") components.push({ type: "LassoTimeline", company: c });
+  if (focus === "overblik" || focus === "historik" || focus === "ledelse" || focus === "risiko") components.push({ type: "LassoTimeline", company: c });
   if (focus === "overblik" || focus === "historik") components.push({ type: "LassoNews", company: c, limit: 5 });
   if (focus === "overblik") components.push({ type: "LassoTextSections", company: c });
   if (focus === "overblik" || focus === "kontakt") components.push({ type: "LassoContact", company: c });
   if (focus === "kontakt") components.push({ type: "LassoContactPersons", company: c });
-  if (focus === "regnskab") components.push({ type: "LassoIncomeStatement", company: c });
+  if (focus === "regnskab") components.push({ type: "LassoIncomeStatement", company: c, years: 3 });
   if (focus === "risiko") components.push({ type: "LassoAuditorIndependence", company: c });
   if (focus === "ejerskab") {
     components.push({ type: "LassoBeneficialOwners", company: c });
@@ -145,7 +147,7 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
 
   // Risiko står øverst, men kun når den er alvorlig, eller når brugeren spørger til risiko (guide 23).
   if (seriousRisk || focus === "risiko") top.push({ type: "LassoRiskObservations", company: id });
-  if (fin.length > 0) {
+  if (fin.length > 0 && focus !== "kontakt") {
     const metrics: Metric[] =
       focus === "oekonomi"
         ? [metric, "bruttofortjeneste", "resultat", "egenkapital", "ansatte"].filter((m, i, a) => a.indexOf(m) === i).slice(0, 5) as Metric[]
@@ -180,10 +182,9 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
       break;
     }
     case "regnskab": {
-      // Fuldt regnskab: resultatopgørelse og balance side om side, pengestrøm under, når den findes.
-      columns = 2;
-      put(1, { type: "LassoIncomeStatement", company: id, years: 3 });
-      put(2, { type: "LassoBalanceSheet", company: id, years: 3 });
+      // Fuldt regnskab: tabeller står altid i fuld bredde (guide 23), stablet i regnskabets rækkefølge.
+      bottom.push({ type: "LassoIncomeStatement", company: id, years: 3 });
+      bottom.push({ type: "LassoBalanceSheet", company: id, years: 3 });
       if (statements?.cashFlow?.length) bottom.push({ type: "LassoCashFlow", company: id, years: 3 });
       break;
     }
@@ -247,7 +248,7 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
     .filter((f) => f.needs === undefined || f.needs({ fin: fin.length, owners: owners.length, people: people.length, statements: !!statements }))
     .slice(0, 3)
     .map((f) => ({ label: f.label, prompt: f.prompt.replace("{navn}", options.name ?? lassoId) }));
-  if (followUps.length > 0) bottom.push({ type: "LassoFollowUps", prompts: followUps });
+  if (options.followUps !== false && followUps.length > 0) bottom.push({ type: "LassoFollowUps", prompts: followUps });
 
   // Tomme kolonner rykkes sammen, så kolonne 1..n altid er fyldt.
   const filled = cols.filter((c) => c.length > 0);
