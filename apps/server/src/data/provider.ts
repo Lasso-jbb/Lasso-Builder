@@ -11,6 +11,9 @@ import type {
   OwnershipVM,
   PersonRowVM,
   ScoreVM,
+  LivestockVM,
+  PropertiesVM,
+  ProductionUnitsVM,
   SearchQuery,
   SearchResultVM,
   TextSectionsVM,
@@ -41,6 +44,12 @@ export interface DataProvider {
   news(lassoId: string, limit: number): Promise<NewsVM>;
   observations(lassoId: string): Promise<ObservationsVM>;
   auditorIndependence(lassoId: string): Promise<AuditorIndependenceVM>;
+  /** Katalog 20: produktionsenheder (P-numre). */
+  productionUnits(lassoId: string): Promise<ProductionUnitsVM>;
+  /** Katalog 20: ejendomme og BBR. */
+  properties(lassoId: string): Promise<PropertiesVM>;
+  /** Katalog 20: CHR (kun landbrug). */
+  livestock(lassoId: string): Promise<LivestockVM>;
 }
 
 export class NotFoundError extends Error {

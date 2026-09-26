@@ -4,6 +4,9 @@ import { FollowUps } from "./components/FollowUps.js";
 import { CompanyHead } from "./components/CompanyHead.js";
 import { CompanyTable } from "./components/CompanyTable.js";
 import { CompareTable } from "./components/CompareTable.js";
+import { ProductionUnits } from "./components/ProductionUnits.js";
+import { Properties } from "./components/Properties.js";
+import { Livestock } from "./components/Livestock.js";
 import { FilterPanel } from "./components/FilterPanel.js";
 import { BarChart } from "./components/BarChart.js";
 import { GroupedBarChart } from "./components/GroupedBarChart.js";
@@ -107,6 +110,12 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return <RiskObservations key={key} data={empty.observations[c.company]} error={err(`observations:${c.company}`)} title={c.title} />;
     case "LassoAuditorIndependence":
       return <AuditorIndependence key={key} data={empty.auditorIndependence[c.company]} error={err(`auditorIndependence:${c.company}`)} title={c.title} />;
+    case "LassoProductionUnits":
+      return <ProductionUnits key={key} units={empty.productionUnits[c.company]} error={err(`productionUnits:${c.company}`)} />;
+    case "LassoProperties":
+      return <Properties key={key} properties={empty.properties[c.company]} title={c.title} error={err(`properties:${c.company}`)} />;
+    case "LassoLivestock":
+      return <Livestock key={key} livestock={empty.livestock[c.company]} error={err(`livestock:${c.company}`)} />;
     case "LassoFollowUps":
       return <FollowUps key={key} prompts={c.prompts} onAction={act} enabled={Boolean(props.host.prompt)} />;
     case "LassoRelations":

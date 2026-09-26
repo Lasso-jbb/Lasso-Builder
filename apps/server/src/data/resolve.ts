@@ -5,6 +5,26 @@ import { NotFoundError, type DataProvider } from "./provider.js";
 /** Hvilke data en virksomhed skal have hentet, fx "company", "financials", "timeline". Nøglen matcher metoden i DataProvider. */
 type Need = string;
 
+/**
+ * Én linje pr. datatype: hvad der hentes, og hvor i Dataset det lægges.
+ * Fejlnøglen er "<need>:<lassoId>", som komponenterne slår op på.
+ */
+const FETCHERS: Record<string, (ds: Dataset, p: DataProvider, id: string) => Promise<void>> = {
+  company: async (ds, p, id) => void (ds.companies[id] = await p.company(id)),
+  financials: async (ds, p, id) => void (ds.financials[id] = await p.financials(id)),
+  people: async (ds, p, id) => void (ds.people[id] = await p.people(id)),
+  ownership: async (ds, p, id) => void (ds.ownership[id] = await p.ownership(id)),
+  score: async (ds, p, id) => void (ds.scores[id] = await p.score(id)),
+  beneficialOwnership: async (ds, p, id) => void (ds.beneficialOwnership[id] = await p.beneficialOwnership(id)),
+  textSections: async (ds, p, id) => void (ds.textSections[id] = await p.textSections(id)),
+  timeline: async (ds, p, id) => void (ds.timeline[id] = await p.timeline(id)),
+  observations: async (ds, p, id) => void (ds.observations[id] = await p.observations(id)),
+  auditorIndependence: async (ds, p, id) => void (ds.auditorIndependence[id] = await p.auditorIndependence(id)),
+  productionUnits: async (ds, p, id) => void (ds.productionUnits[id] = await p.productionUnits(id)),
+  properties: async (ds, p, id) => void (ds.properties[id] = await p.properties(id)),
+  livestock: async (ds, p, id) => void (ds.livestock[id] = await p.livestock(id)),
+};
+
 /** Normaliserer alle virksomhedsreferencer i specen til Lasso-ID'er. */
 export function normalizeSpec(spec: ViewSpec, companyPrefix: string): ViewSpec {
   const fix = (ref: string) => toLassoId(ref, companyPrefix);
@@ -99,6 +119,15 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
       case "LassoAuditorIndependence":
         want(c.company, "auditorIndependence");
         break;
+      case "LassoProductionUnits":
+        want(c.company, "productionUnits");
+        break;
+      case "LassoProperties":
+        want(c.company, "properties");
+        break;
+      case "LassoLivestock":
+        want(c.company, "livestock");
+        break;
       case "LassoCompareTable":
         c.companies.forEach((id) => want(id, "company", "financials"));
         break;
@@ -129,16 +158,10 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
     );
 
   for (const [id, set] of needs) {
-    if (set.has("company")) run(`company:${id}`, async () => void (ds.companies[id] = await provider.company(id)));
-    if (set.has("financials")) run(`financials:${id}`, async () => void (ds.financials[id] = await provider.financials(id)));
-    if (set.has("people")) run(`people:${id}`, async () => void (ds.people[id] = await provider.people(id)));
-    if (set.has("ownership")) run(`ownership:${id}`, async () => void (ds.ownership[id] = await provider.ownership(id)));
-    if (set.has("score")) run(`score:${id}`, async () => void (ds.scores[id] = await provider.score(id)));
-    if (set.has("beneficialOwnership")) run(`beneficialOwnership:${id}`, async () => void (ds.beneficialOwnership[id] = await provider.beneficialOwnership(id)));
-    if (set.has("textSections")) run(`textSections:${id}`, async () => void (ds.textSections[id] = await provider.textSections(id)));
-    if (set.has("timeline")) run(`timeline:${id}`, async () => void (ds.timeline[id] = await provider.timeline(id)));
-    if (set.has("observations")) run(`observations:${id}`, async () => void (ds.observations[id] = await provider.observations(id)));
-    if (set.has("auditorIndependence")) run(`auditorIndependence:${id}`, async () => void (ds.auditorIndependence[id] = await provider.auditorIndependence(id)));
+    for (const need of set) {
+      const fetch = FETCHERS[need];
+      if (fetch) run(`${need}:${id}`, async () => fetch(ds, provider, id));
+    }
   }
   for (const [id, limit] of newsWanted) {
     run(`news:${id}`, async () => void (ds.news[id] = await provider.news(id, limit)));

@@ -235,10 +235,26 @@ export const riskObservationsSchema = z.object({
   title: z.string().max(80).optional(),
 });
 
+export const productionUnitsSchema = z.object({
+  type: z.literal("LassoProductionUnits"),
+  company: companyRef,
+});
+
+export const propertiesSchema = z.object({
+  type: z.literal("LassoProperties"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
+});
+
 export const auditorIndependenceSchema = z.object({
   type: z.literal("LassoAuditorIndependence"),
   company: companyRef,
   title: z.string().max(80).optional(),
+});
+
+export const livestockSchema = z.object({
+  type: z.literal("LassoLivestock"),
+  company: companyRef,
 });
 
 export const actionsSchema = z.object({
@@ -273,6 +289,9 @@ export const componentSchema = z.discriminatedUnion("type", [
   scoreGaugeSchema,
   riskObservationsSchema,
   auditorIndependenceSchema,
+  productionUnitsSchema,
+  propertiesSchema,
+  livestockSchema,
   actionsSchema,
   relationsSchema,
   beneficialOwnersSchema,

@@ -213,6 +213,15 @@ export class LassoClient {
   bbrSummary(propertyNumber: string | number, municipality: string | number) {
     return this.get("data/bbr/property/summary", { propertynumber: propertyNumber, municipality });
   }
+  /**
+   * Katalog 20, CHR. UBEKRÆFTET: intet CHR-endpoint er fundet i docs.lassox.com
+   * under dette arbejde. Stien er et gæt (samme mønster som de øvrige
+   * `modules/*`-endpoints) og kaldes ikke fra `LiveProvider`, før den er
+   * bekræftet. Se docs/lasso-endpoints.md, afsnittet "Ubekræftet".
+   */
+  chr(lassoId: string) {
+    return this.get(`modules/chr/${enc(lassoId)}`);
+  }
 }
 
 function enc(segment: string): string {

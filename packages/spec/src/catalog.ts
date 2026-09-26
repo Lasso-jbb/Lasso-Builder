@@ -124,6 +124,24 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     props: "company, title?",
   },
   {
+    type: "LassoProductionUnits",
+    title: "Produktionsenheder",
+    description: "P-numre, navn, adresse, branche, ansatte og status for virksomhedens produktionsenheder. Hovedenheden står altid først. Brug ved spørgsmål om filialer, afdelinger eller P-numre.",
+    props: "company",
+  },
+  {
+    type: "LassoProperties",
+    title: "Ejendomme, BBR",
+    description: "Ejendomme virksomheden ejer eller lejer: ejendomskort, bygninger med anvendelse/opført/etager/areal og arealfordeling. Brug ved spørgsmål om ejendomme, bygninger eller BBR.",
+    props: "company, title?",
+  },
+  {
+    type: "LassoLivestock",
+    title: "CHR, husdyr",
+    description: "Besætninger pr. dyretype og veterinære hændelser fra CHR. Vis kun, når virksomheden er et landbrug med et CHR-nummer.",
+    props: "company",
+  },
+  {
     type: "LassoFollowUps",
     title: "Opfølgningsknapper",
     description: "1–4 knapper, der sender et opfølgende spørgsmål til dig (modellen) som brugerens næste besked. Brug til analysespørgsmål som 'Hvem er nye i bestyrelsen?'.",

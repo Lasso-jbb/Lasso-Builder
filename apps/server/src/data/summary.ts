@@ -91,6 +91,24 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
       const names = c.companies.map((id) => ds.companies[id]?.name ?? id);
       lines.push(`Sammenligner: ${names.join(", ")}.`);
     }
+    if (c.type === "LassoProductionUnits") {
+      const pu = ds.productionUnits[c.company];
+      if (pu?.units.length) {
+        const active = pu.units.filter((u) => u.statusKind !== "inactive").length;
+        lines.push(`Produktionsenheder: ${pu.units.length} i alt, ${active} aktive.`);
+      }
+    }
+    if (c.type === "LassoProperties") {
+      const pr = ds.properties[c.company];
+      if (pr?.properties.length) {
+        const buildings = pr.properties.reduce((sum, p) => sum + p.buildings.length, 0);
+        lines.push(`Ejendomme: ${pr.properties.length}, i alt ${buildings} bygninger.`);
+      }
+    }
+    if (c.type === "LassoLivestock") {
+      const lv = ds.livestock[c.company];
+      if (lv?.chrNumber) lines.push(`CHR ${lv.chrNumber}: ${lv.herds.length} besætninger${lv.healthStatus ? `, sundhedsstatus ${lv.healthStatus}` : ""}.`);
+    }
   }
 
   const errors = Object.entries(ds.errors);

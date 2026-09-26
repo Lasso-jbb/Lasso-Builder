@@ -13,6 +13,11 @@ import {
   regionFromZip,
   statusKind,
   adaptObservations,
+  adaptLivestock,
+  adaptProductionUnits,
+  adaptProperties,
+  ejfBbrRefs,
+  mergeBbr,
 } from "./adapters.js";
 
 test("adaptCompany tåler forskellige feltnavne", () => {
@@ -50,6 +55,64 @@ test("adaptSearch springer personer over", () => {
 test("statusKind", () => {
   assert.equal(statusKind("Under konkurs"), "warning");
   assert.equal(statusKind("Ophørt"), "inactive");
+});
+
+test("adaptProductionUnits finder hovedenheden og sorterer den først (katalog 20, UBEKRÆFTET form)", () => {
+  const vm = adaptProductionUnits("CVR-1-1", {
+    mainUnit: { pNumber: "1000000020", name: "Firma A/S", status: "Normal" },
+    productionUnits: [
+      { pNumber: "1000000021", name: "Filial", employees: { count: 4 }, status: "Normal" },
+      { pNumber: "1000000022", name: "Lager", status: "Ophørt", validTo: "2024-06-01" },
+    ],
+  });
+  assert.equal(vm.units.length, 3);
+  assert.equal(vm.units[0]!.pNumber, "1000000020");
+  assert.equal(vm.units[0]!.isMain, true);
+  assert.equal(vm.units[1]!.employees, 4);
+  assert.equal(vm.units[2]!.endedYear, 2024);
+  assert.equal(vm.units[2]!.statusKind, "inactive");
+});
+
+test("adaptProductionUnits tåler et svar uden produktionsenheder", () => {
+  const vm = adaptProductionUnits("CVR-1-1", { name: "Firma A/S" });
+  assert.deepEqual(vm.units, []);
+});
+
+test("adaptProperties og mergeBbr samler ejendom og bygninger (UBEKRÆFTET form)", () => {
+  const ejf = [
+    {
+      property: { address1: "Vej 1", postalCode: "8000", city: "Aarhus C", bfeNumber: "123", propertyNumber: "79972", municipalityCode: "751" },
+      ownershipType: "Ejer",
+      from: "2019-06-01",
+    },
+  ];
+  const base = adaptProperties("CVR-1-1", ejf);
+  assert.equal(base.properties.length, 1);
+  assert.equal(base.properties[0]!.bfeNumber, "123");
+  assert.equal(base.properties[0]!.ownership, "Ejer, tinglyst 2019");
+
+  const refs = ejfBbrRefs(ejf);
+  assert.deepEqual(refs, [{ propertyNumber: "79972", municipality: "751" }]);
+
+  const merged = mergeBbr(base.properties[0]!, {
+    buildings: [{ buildingNumber: 1, usageText: "Kontor", builtYear: 1998, floors: 3, totalArea: 1860, unitCount: 6 }],
+    builtUpArea: 1860,
+  });
+  assert.equal(merged.buildings.length, 1);
+  assert.equal(merged.buildings[0]!.areaM2, 1860);
+  assert.equal(merged.builtAreaM2, 1860);
+});
+
+test("adaptLivestock læser besætninger og hændelser (UBEKRÆFTET endpoint)", () => {
+  const vm = adaptLivestock("CVR-1-1", {
+    chrNumber: "100001",
+    herds: [{ species: "Svin", category: "slagtesvin", capacity: 4200 }],
+    events: [{ title: "Restriktion", type: "restriktion", date: "2026-03-14" }],
+  });
+  assert.equal(vm.chrNumber, "100001");
+  assert.equal(vm.herds[0]!.count, 4200);
+  assert.equal(vm.herds[0]!.unit, "stipladser");
+  assert.equal(vm.events[0]!.severity, "active");
 });
 
 test("adaptSearch læser Lassos rigtige søgesvar (companies.results)", () => {

@@ -319,6 +319,34 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     }
   }
 
+
+  const units = types.has("LassoProductionUnits") ? ds.productionUnits[lassoId] : undefined;
+  if (units?.units.length) {
+    card.section("Produktionsenheder");
+    for (const u of units.units.slice(0, 5)) {
+      card.row(u.pNumber ?? "P-nr.", [u.name, u.isMain ? "hovedenhed" : undefined].filter(Boolean).join(", "));
+    }
+    if (units.units.length > 5) card.row("", `og ${units.units.length - 5} flere`);
+  }
+
+  const properties = types.has("LassoProperties") ? ds.properties[lassoId] : undefined;
+  if (properties?.properties.length) {
+    card.section("Ejendomme, BBR");
+    for (const p of properties.properties.slice(0, 3)) {
+      const addr = p.address ? [p.address.street, p.address.city].filter(Boolean).join(", ") : p.matrikel;
+      card.row("Ejendom", addr);
+      card.row("", p.buildings.length ? `${p.buildings.length} bygninger` : undefined);
+    }
+  }
+
+  const livestock = types.has("LassoLivestock") ? ds.livestock[lassoId] : undefined;
+  if (livestock?.chrNumber && livestock.herds.length) {
+    card.section(`CHR ${livestock.chrNumber}`);
+    for (const h of livestock.herds.slice(0, 5)) {
+      card.row([h.species, h.category].filter(Boolean).join(", "), h.count != null ? `${formatNumber(h.count)} ${h.unit ?? ""}`.trim() : undefined);
+    }
+  }
+
   return card.empty ? null : card.toString();
 }
 

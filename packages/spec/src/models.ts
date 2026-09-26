@@ -152,6 +152,95 @@ export interface NewsVM {
   items: NewsItemVM[];
 }
 
+/** Katalog 20: én produktionsenhed (P-nummer). */
+export interface ProductionUnitVM {
+  pNumber?: string;
+  name?: string;
+  address?: Address;
+  /** Hovedenheden markeres med koral overline og står altid først. */
+  isMain?: boolean;
+  industryCode?: string;
+  industryText?: string;
+  /** Fra CVR's kvartalstal; "Ikke oplyst" når ukendt. */
+  employees?: number | null;
+  status?: string;
+  statusKind?: CompanyVM["statusKind"];
+  /** Ophørsår, når enheden er ophørt (vises i status: "Ophørt 2024"). */
+  endedYear?: number;
+  created?: string;
+}
+
+export interface ProductionUnitsVM {
+  lassoId: string;
+  units: ProductionUnitVM[];
+}
+
+/** Katalog 20: én bygning i BBR-bygningstabellen. */
+export interface BuildingVM {
+  number?: number;
+  usage?: string;
+  builtYear?: number;
+  floors?: number;
+  areaM2?: number | null;
+  /** Antal enheder i bygningen; "—" når ikke relevant (fx garage). */
+  units?: number | null;
+}
+
+/** Katalog 20: én ejendom (matrikel) med BBR-bygninger og arealfordeling. */
+export interface PropertyVM {
+  address?: Address;
+  /** "Matr. 123a, Eksempel By". */
+  matrikel?: string;
+  bfeNumber?: string;
+  propertyType?: string;
+  /** "Ejer, tinglyst 2019" / "Lejer". */
+  ownership?: string;
+  landAreaM2?: number | null;
+  builtAreaM2?: number | null;
+  publicValuation?: { amount: number; year?: number };
+  /** Antal hæftelser (tinglysning); undefined når ukendt. */
+  encumbrances?: number;
+  buildings: BuildingVM[];
+  /** Sat, når vi har en reel matrikelgeometri at tegne; ellers vises kortet med tom-tilstand. */
+  hasGeometry?: boolean;
+}
+
+export interface PropertiesVM {
+  lassoId: string;
+  properties: PropertyVM[];
+}
+
+/** Katalog 20: én besætning/dyretype (CHR). */
+export interface LivestockHerdVM {
+  species?: string;
+  /** "slagtesvin", "søer", "malkekøer" osv. */
+  category?: string;
+  count?: number | null;
+  unit?: string;
+}
+
+/** Katalog 20: én veterinær hændelse på tidslinjen. */
+export interface VetEventVM {
+  title?: string;
+  detail?: string;
+  date?: string;
+  dateTo?: string;
+  /** gul = aktiv/nylig restriktion, neutral = orientering. */
+  severity?: "active" | "neutral";
+}
+
+export interface LivestockVM {
+  lassoId: string;
+  /** CHR-nummer. Sektionen vises kun, når dette er sat. */
+  chrNumber?: string;
+  ownerName?: string;
+  updated?: string;
+  herds: LivestockHerdVM[];
+  /** "SPF" m.fl., vist som ren tekst. */
+  healthStatus?: string;
+  events: VetEventVM[];
+}
+
 export interface CompanyRowVM {
   lassoId: string;
   cvr?: string;
@@ -258,6 +347,10 @@ export interface Dataset {
   scores: Record<string, ScoreVM>;
   observations: Record<string, ObservationsVM>;
   auditorIndependence: Record<string, AuditorIndependenceVM>;
+  /** Katalog 20: produktionsenheder, ejendomme/BBR og CHR, slået op pr. Lasso-ID. */
+  productionUnits: Record<string, ProductionUnitsVM>;
+  properties: Record<string, PropertiesVM>;
+  livestock: Record<string, LivestockVM>;
   /** Fejl pr. nøgle, fx "company:CVR-1-12345678" -> "Ingen adgang". */
   errors: Record<string, string>;
 }
@@ -278,6 +371,9 @@ export function emptyDataset(source: DataSourceKind): Dataset {
     scores: {},
     observations: {},
     auditorIndependence: {},
+    productionUnits: {},
+    properties: {},
+    livestock: {},
     errors: {},
   };
 }
