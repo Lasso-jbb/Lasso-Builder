@@ -41,6 +41,12 @@ export interface FinancialYear {
   profit?: number | null;
   equity?: number | null;
   employees?: number | null;
+  /**
+   * Samlet gæld (passiver minus egenkapital). Ubekræftet mod Lassos API
+   * (se docs/lasso-endpoints.md, "Ubekræftet"); bruges til stablede søjler
+   * og fordelingen egenkapital/gæld i katalog 13.
+   */
+  liabilities?: number | null;
 }
 
 export interface FinancialsVM {

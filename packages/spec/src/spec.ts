@@ -102,6 +102,44 @@ export const financialChartSchema = z.object({
   years: z.number().int().min(2).max(10).default(5),
 });
 
+export const groupedBarChartSchema = z.object({
+  type: z.literal("LassoGroupedBarChart"),
+  company: companyRef,
+  metrics: z.array(metric).min(2).max(3).default(["omsaetning", "resultat"]).describe("2–3 nøgletal side om side pr. år."),
+  years: z.number().int().min(2).max(10).default(5),
+});
+
+export const stackedBarChartSchema = z.object({
+  type: z.literal("LassoStackedBarChart"),
+  company: companyRef,
+  years: z.number().int().min(2).max(10).default(5),
+}).describe("Egenkapital og gæld som dele af balancen, pr. år.");
+
+export const lineChartSchema = z.object({
+  type: z.literal("LassoLineChart"),
+  company: companyRef,
+  metric: metric.default("bruttofortjeneste"),
+  years: z.number().int().min(2).max(10).default(5),
+  benchmark: companyRef.optional().describe("Valgfri sammenligningsvirksomhed, vist som stiplet benchmark-linje (chart-5)."),
+});
+
+export const waterfallChartSchema = z.object({
+  type: z.literal("LassoWaterfallChart"),
+  company: companyRef,
+}).describe("Fra omsætning/bruttofortjeneste til årets resultat for seneste regnskabsår.");
+
+export const shareBarsSchema = z.object({
+  type: z.literal("LassoShareBars"),
+  company: companyRef,
+}).describe("Egenkapital og gæld som andele af balancen for seneste regnskabsår.");
+
+export const rankingSchema = z.object({
+  type: z.literal("LassoRanking"),
+  companies: z.array(companyRef).min(2).max(10).describe("Første virksomhed er den, der fremhæves i koral."),
+  metric: metric.default("bruttofortjeneste"),
+  title: z.string().max(80).optional(),
+});
+
 export const peopleListSchema = z.object({
   type: z.literal("LassoPersonList"),
   company: companyRef,
@@ -171,6 +209,12 @@ export const componentSchema = z.discriminatedUnion("type", [
   companyHeaderSchema,
   keyFiguresSchema,
   financialChartSchema,
+  groupedBarChartSchema,
+  stackedBarChartSchema,
+  lineChartSchema,
+  waterfallChartSchema,
+  shareBarsSchema,
+  rankingSchema,
   peopleListSchema,
   ownershipSchema,
   tableSchema,

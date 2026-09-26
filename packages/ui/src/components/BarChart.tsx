@@ -1,19 +1,9 @@
 import { amountScale, chartSeries, formatNumber, formatScaled, METRIC_LABELS, type FinancialsVM, type Metric } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
+import { niceTicks } from "../charts.js";
 
-/** Pæne tal til y-aksen: 0, 5, 10, 15, 20. */
-export function niceTicks(min: number, max: number, count = 4): number[] {
-  const span = max - min || 1;
-  const raw = span / count;
-  const mag = 10 ** Math.floor(Math.log10(raw));
-  const step = [1, 2, 2.5, 5, 10].map((f) => f * mag).find((s) => s >= raw) ?? raw;
-  const lo = Math.floor(min / step) * step;
-  const hi = Math.ceil(max / step) * step;
-  const ticks: number[] = [];
-  for (let v = lo; v <= hi + step / 2; v += step) ticks.push(Math.round(v / step) * step);
-  return ticks;
-}
+export { niceTicks };
 
 /**
  * Søjlegraf, ét nøgletal over 2–10 år (katalog 13, række 0).

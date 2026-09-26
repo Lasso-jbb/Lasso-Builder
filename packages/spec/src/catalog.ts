@@ -34,6 +34,42 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     props: `company, metric (${METRICS.join(" | ")}), years (2–10, standard 5)`,
   },
   {
+    type: "LassoGroupedBarChart",
+    title: "Grupperede søjler",
+    description: "2–3 nøgletal side om side pr. år, til at sammenligne udviklingen i flere størrelser samtidig.",
+    props: `company, metrics? (2–3 af ${METRICS.join(" | ")}), years (2–10, standard 5)`,
+  },
+  {
+    type: "LassoStackedBarChart",
+    title: "Stablede søjler",
+    description: "Egenkapital og gæld som dele af balancen, pr. år.",
+    props: "company, years (2–10, standard 5)",
+  },
+  {
+    type: "LassoLineChart",
+    title: "Linjegraf med benchmark",
+    description: "Ét nøgletal som linje med områdefyld over flere år, med en valgfri sammenligningsvirksomhed som stiplet benchmark-linje.",
+    props: `company, metric (${METRICS.join(" | ")}), years (2–10, standard 5), benchmark? (virksomhed)`,
+  },
+  {
+    type: "LassoWaterfallChart",
+    title: "Vandfald",
+    description: "Fra omsætning/bruttofortjeneste til årets resultat for seneste regnskabsår.",
+    props: "company",
+  },
+  {
+    type: "LassoShareBars",
+    title: "Fordeling",
+    description: "Egenkapital og gæld som andele af balancen for seneste regnskabsår.",
+    props: "company",
+  },
+  {
+    type: "LassoRanking",
+    title: "Rangliste",
+    description: "Vandrette søjler: virksomheden fremhævet i koral blandt lignende virksomheder på ét nøgletal.",
+    props: `companies[] (2–10, første fremhæves), metric (${METRICS.join(" | ")}), title?`,
+  },
+  {
     type: "LassoPersonList",
     title: "Ledelse",
     description: "Direktion og bestyrelse med rolle og tiltrådt/fratrådt. show='all' viser også fratrådte.",

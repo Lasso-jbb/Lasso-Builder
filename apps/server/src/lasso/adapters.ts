@@ -297,6 +297,9 @@ export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
       profit: f(["profitloss", "profitlossfortheyear", "netincome"], "profit", "netResult", "profitLoss", "netIncome", "aaretsResultat"),
       equity: f(["equity", "totalequity", "equityattributabletoownersofparent"], "equity", "totalEquity", "egenkapital"),
       employees: f(["averagenumberofemployees", "numberofemployees"], "employees", "numberOfEmployees", "averageNumberOfEmployees", "antalAnsatte"),
+      // Ubekræftet (se docs/lasso-endpoints.md "Ubekræftet"): samlet gæld, forsøgt som
+      // ét XBRL-begreb først, ellers kort- og langfristet gæld lagt sammen.
+      liabilities: f(["liabilities", "liabilitiesandprovisions", "totalliabilities"], "liabilities", "totalLiabilities") ?? sumLiabilities(facts) ?? null,
     });
   }
   const byYear = new Map<number, FinancialYear>();
@@ -314,13 +317,21 @@ export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
 }
 
 function hasFigures(y: FinancialYear): boolean {
-  return [y.revenue, y.grossProfit, y.profit, y.equity, y.employees].some((v) => v !== null && v !== undefined);
+  return [y.revenue, y.grossProfit, y.profit, y.equity, y.employees, y.liabilities].some((v) => v !== null && v !== undefined);
 }
 
 function mergeYear(a: FinancialYear, b: FinancialYear): FinancialYear {
   const out: FinancialYear = { ...a };
-  for (const k of ["revenue", "grossProfit", "profit", "equity", "employees"] as const) out[k] = a[k] ?? b[k] ?? null;
+  for (const k of ["revenue", "grossProfit", "profit", "equity", "employees", "liabilities"] as const) out[k] = a[k] ?? b[k] ?? null;
   return out;
+}
+
+/** Kort- og langfristet gæld lagt sammen, når der ikke er ét samlet gældsbegreb (ubekræftet). */
+function sumLiabilities(facts: Map<string, number>): number | undefined {
+  const shortTerm = facts.get("currentliabilities") ?? facts.get("shorttermliabilities") ?? facts.get("shorttermliabilitiesother");
+  const longTerm = facts.get("noncurrentliabilities") ?? facts.get("longtermliabilities") ?? facts.get("longtermliabilitiesother");
+  if (shortTerm === undefined && longTerm === undefined) return undefined;
+  return (shortTerm ?? 0) + (longTerm ?? 0);
 }
 
 const SECTION_ORDER = ["incomeStatement", "statementOfFinancialPosition", "statementOfComprehensiveIncome", "statementOfChangesInEquity"];

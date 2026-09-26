@@ -4,6 +4,7 @@ import {
   formatAmount,
   formatDate,
   formatNumber,
+  formatPercent,
   formatScaled,
   percentChange,
   METRIC_FIELD,
@@ -121,6 +122,59 @@ function chart(card: Card, f: FinancialsVM, wanted: Metric, years: number) {
   }
 }
 
+const amt = (v: number | null | undefined) => formatAmount(v).replace(" kr.", "");
+
+/**
+ * Samme trin som `LassoWaterfallChart` (packages/ui/src/components/WaterfallChart.tsx),
+ * med forkortede etiketter, så de kan stå i kortets faste labelbredde (12 tegn).
+ */
+function waterfallSteps(revenue: number | null | undefined, grossProfit: number | null | undefined, profit: number | null | undefined) {
+  const steps: { label: string; value: number }[] = [];
+  let cursor: number | null = null;
+  if (typeof revenue === "number") {
+    steps.push({ label: "Omsætning", value: revenue });
+    cursor = revenue;
+  }
+  if (typeof grossProfit === "number") {
+    if (cursor === null) steps.push({ label: "Bruttofortj.", value: grossProfit });
+    else steps.push({ label: "Vareforbrug", value: grossProfit - cursor });
+    cursor = grossProfit;
+  }
+  if (typeof profit === "number" && cursor !== null) {
+    steps.push({ label: "Øvrige post.", value: profit - cursor });
+    steps.push({ label: "Resultat", value: profit });
+  }
+  return steps;
+}
+
+function stackedText(card: Card, f: FinancialsVM, years: number) {
+  const rows = f.years.slice(-years).filter((y) => typeof y.equity === "number" && typeof y.liabilities === "number");
+  if (!rows.length) return;
+  card.section("Balance, egenkapital / gæld");
+  for (const y of rows) card.row(String(y.year), `${amt(y.equity)} / ${amt(y.liabilities)}`);
+}
+
+function waterfallText(card: Card, f: FinancialsVM) {
+  const yr = f.years.at(-1);
+  if (!yr) return;
+  const steps = waterfallSteps(yr.revenue, yr.grossProfit, yr.profit);
+  if (steps.length < 2) return;
+  card.section(`Fra omsætning til resultat ${yr.year}`);
+  for (const s of steps) card.row(s.label, amt(s.value));
+}
+
+function shareBarsText(card: Card, f: FinancialsVM) {
+  const yr = [...f.years].reverse().find((y) => typeof y.equity === "number" && typeof y.liabilities === "number");
+  if (!yr) return;
+  const equity = yr.equity as number;
+  const liabilities = yr.liabilities as number;
+  const total = equity + liabilities;
+  if (total <= 0) return;
+  card.section(`Fordeling af balancen ${yr.year}`);
+  card.row("Egenkapital", `${amt(equity)}, ${formatPercent((equity / total) * 100, false)}`);
+  card.row("Gæld", `${amt(liabilities)}, ${formatPercent((liabilities / total) * 100, false)}`);
+}
+
 function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | null {
   const card = new Card();
   const types = new Set(spec.components.filter((c) => "company" in c && c.company === lassoId).map((c) => c.type));
@@ -180,7 +234,12 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     }
   }
   for (const c of spec.components) {
-    if (c.type === "LassoBarChart" && c.company === lassoId && f) chart(card, f, c.metric, c.years);
+    if (!f) continue;
+    if ((c.type === "LassoBarChart" || c.type === "LassoLineChart") && c.company === lassoId) chart(card, f, c.metric, c.years);
+    if (c.type === "LassoGroupedBarChart" && c.company === lassoId) for (const m of c.metrics) chart(card, f, m, c.years);
+    if (c.type === "LassoStackedBarChart" && c.company === lassoId) stackedText(card, f, c.years);
+    if (c.type === "LassoWaterfallChart" && c.company === lassoId) waterfallText(card, f);
+    if (c.type === "LassoShareBars" && c.company === lassoId) shareBarsText(card, f);
   }
   const score = types.has("LassoScoreGauge") ? ds.scores[lassoId] : undefined;
   if (score) {
