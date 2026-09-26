@@ -241,6 +241,61 @@ export interface LivestockVM {
   events: VetEventVM[];
 }
 
+/** En enhed i ejergrafen (katalog 14). Personer tegnes som piller, selskaber som kasser. */
+export interface OwnershipNodeVM {
+  /** Lasso-ID, fx "CVR-1-12345678". */
+  id: string;
+  name: string;
+  kind: "person" | "company";
+  cvr?: string;
+  /** Kort virksomhedsform, fx "ApS". */
+  form?: string;
+  status?: string;
+  statusKind?: CompanyVM["statusKind"];
+  /** ISO-landekode for udenlandske enheder, fx "NO". Mangler for danske. */
+  country?: string;
+  /** Udenlandsk registreringsnummer (org.nr., HRB …), vises i stedet for CVR. */
+  registrationNo?: string;
+  /** Egenkapital i seneste regnskab, hvis grafen er beriget med den. */
+  equity?: number | null;
+  /** Den virksomhed, diagrammet er åbnet fra. Kun én. */
+  root?: boolean;
+}
+
+/** Ejerskab fra `from` (ejer) til `to` (den ejede). Andele i procent 0–100 som CVR-interval. */
+export interface OwnershipEdgeVM {
+  from: string;
+  to: string;
+  share?: [number, number];
+  /** Stemmeandel, kun når den afviger fra kapitalandelen. */
+  votes?: [number, number];
+  /** Aktieklasser, fx "A, B", præcis som CVR leverer dem. */
+  classes?: string;
+  since?: string;
+  /** Slutdato for et ophørt ejerskab. */
+  until?: string;
+}
+
+export interface OwnershipGraphVM {
+  rootId: string;
+  nodes: OwnershipNodeVM[];
+  edges: OwnershipEdgeVM[];
+  /** Dybden, der er hentet (lag op og ned). */
+  ingoingDepth: number;
+  outgoingDepth: number;
+  /** Øjebliksbilledets dato (ÅÅÅÅ-MM-DD). Mangler = i dag. */
+  onDate?: string;
+  /** Tidspunkt for opslaget, til "Sidst tjekket". */
+  fetchedAt?: string;
+  /** Forbehold, fx at kun direkte ejere kunne hentes. */
+  note?: string;
+}
+
+/** Stabil nøgle for et ejerdiagram, så UI og server finder samme graf. */
+export function ownershipGraphKey(g: { company: string; ingoingDepth: number; outgoingDepth: number; onDate?: string }): string {
+  return `${g.company}|${g.ingoingDepth}|${g.outgoingDepth}|${g.onDate ?? ""}`;
+}
+
 export interface CompanyRowVM {
   lassoId: string;
   cvr?: string;
@@ -351,6 +406,8 @@ export interface Dataset {
   productionUnits: Record<string, ProductionUnitsVM>;
   properties: Record<string, PropertiesVM>;
   livestock: Record<string, LivestockVM>;
+  /** Ejerdiagrammer pr. ownershipGraphKey. */
+  ownershipGraphs: Record<string, OwnershipGraphVM>;
   /** Fejl pr. nøgle, fx "company:CVR-1-12345678" -> "Ingen adgang". */
   errors: Record<string, string>;
 }
@@ -374,6 +431,7 @@ export function emptyDataset(source: DataSourceKind): Dataset {
     productionUnits: {},
     properties: {},
     livestock: {},
+    ownershipGraphs: {},
     errors: {},
   };
 }

@@ -8,6 +8,7 @@ import type {
   FinancialsVM,
   NewsVM,
   ObservationsVM,
+  OwnershipGraphVM,
   OwnershipVM,
   PersonRowVM,
   ScoreVM,
@@ -50,6 +51,14 @@ export interface DataProvider {
   properties(lassoId: string): Promise<PropertiesVM>;
   /** Katalog 20: CHR (kun landbrug). */
   livestock(lassoId: string): Promise<LivestockVM>;
+  /** Ejergrafen i flere lag omkring én virksomhed (katalog 14). */
+  ownershipGraph(lassoId: string, opts: OwnershipGraphOptions): Promise<OwnershipGraphVM>;
+}
+
+export interface OwnershipGraphOptions {
+  ingoingDepth: number;
+  outgoingDepth: number;
+  onDate?: string;
 }
 
 export class NotFoundError extends Error {

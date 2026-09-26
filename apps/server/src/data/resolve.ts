@@ -1,4 +1,12 @@
-import { emptyDataset, searchKey, toLassoId, type Dataset, type ViewComponent, type ViewSpec } from "@lasso/spec";
+import {
+  emptyDataset,
+  searchKey,
+  toLassoId,
+  type Dataset,
+  type ViewComponent,
+  type ViewSpec,
+  ownershipGraphKey,
+} from "@lasso/spec";
 import { LassoApiError } from "../lasso/client.js";
 import { NotFoundError, type DataProvider } from "./provider.js";
 
@@ -69,6 +77,7 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
   };
   const searches: Extract<ViewComponent, { type: "LassoCompanyTable" }>["search"][] = [];
   const newsWanted = new Map<string, number>();
+  const graphs: Extract<ViewComponent, { type: "LassoOwnershipDiagram" }>[] = [];
 
   for (const c of spec.components) {
     switch (c.type) {
@@ -144,6 +153,9 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
       case "LassoScoreGauge":
         want(c.company, "score");
         break;
+      case "LassoOwnershipDiagram":
+        graphs.push(c);
+        break;
       case "LassoFollowUps":
         break;
     }
@@ -169,6 +181,16 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
   for (const s of searches) {
     const key = searchKey(s);
     run(`search:${key}`, async () => void (ds.searches[key] = await provider.search(s)));
+  }
+
+  const graphKeys = new Set<string>();
+  for (const g of graphs) {
+    const key = ownershipGraphKey(g);
+    if (graphKeys.has(key)) continue;
+    graphKeys.add(key);
+    run(`graph:${key}`, async () => {
+      ds.ownershipGraphs[key] = await provider.ownershipGraph(g.company, { ingoingDepth: g.ingoingDepth, outgoingDepth: g.outgoingDepth, onDate: g.onDate });
+    });
   }
 
   await Promise.all(jobs);

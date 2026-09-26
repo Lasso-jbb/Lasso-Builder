@@ -25,6 +25,17 @@ export interface SearchParams {
   companyStatus?: string;
 }
 
+/** Body til POST /modules/relations/graph (ejergrafen). */
+export interface RelationsGraphParams {
+  ids: string[];
+  relationTypes?: string[];
+  enrichments?: string[];
+  ingoingDepth: number;
+  outgoingDepth: number;
+  /** ÅÅÅÅ-MM-DD; udelades for i dag. */
+  onDate?: string;
+}
+
 export interface ContactParams {
   contacts?: boolean;
   emails?: boolean;
@@ -206,6 +217,18 @@ export class LassoClient {
   /** Nyheder (docs.lassox.com/data-apis/paqle/). */
   news(lassoId: string, cToken?: string) {
     return this.get(`data/paqle/${enc(lassoId)}/news`, { cToken });
+  }
+
+  /** Ejergrafen i flere lag (POST /modules/relations/graph). Svarformen er ubekræftet, se docs/lasso-endpoints.md. */
+  relationsGraph(p: RelationsGraphParams) {
+    return this.post("modules/relations/graph", {
+      ids: p.ids,
+      relationTypes: p.relationTypes ?? ["ownership"],
+      enrichments: p.enrichments ?? ["companyinfo"],
+      ingoingDepth: p.ingoingDepth,
+      outgoingDepth: p.outgoingDepth,
+      ...(p.onDate ? { onDate: p.onDate } : {}),
+    });
   }
   contacts(lassoId: string, p: ContactParams = { contacts: true }) {
     return this.get(`apps/contacts/${enc(lassoId)}/data`, { ...p });

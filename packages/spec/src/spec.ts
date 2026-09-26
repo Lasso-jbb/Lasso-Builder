@@ -189,6 +189,19 @@ export const newsSchema = z.object({
   limit: z.number().int().min(1).max(10).default(5),
 });
 
+export const ownershipDiagramSchema = z.object({
+  type: z.literal("LassoOwnershipDiagram"),
+  company: companyRef,
+  ingoingDepth: z.number().int().min(0).max(10).default(2).describe("Lag op (ejere). Standard 2."),
+  outgoingDepth: z.number().int().min(0).max(10).default(1).describe("Lag ned (datterselskaber). Standard 1."),
+  onDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .describe("Øjebliksbillede pr. dato (ÅÅÅÅ-MM-DD). Udelades for i dag."),
+  title: z.string().max(80).optional(),
+});
+
 export const tableSchema = z.object({
   type: z.literal("LassoCompanyTable"),
   source: z.literal("search"),
@@ -282,6 +295,7 @@ export const componentSchema = z.discriminatedUnion("type", [
   rankingSchema,
   peopleListSchema,
   ownershipSchema,
+  ownershipDiagramSchema,
   tableSchema,
   comparisonSchema,
   keyValueListSchema,

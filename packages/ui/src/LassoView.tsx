@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { emptyDataset, searchKey, type Dataset, type ViewComponent } from "@lasso/spec";
+import { emptyDataset, searchKey, type Dataset, type ViewComponent, ownershipGraphKey } from "@lasso/spec";
 import { FollowUps } from "./components/FollowUps.js";
 import { CompanyHead } from "./components/CompanyHead.js";
 import { CompanyTable } from "./components/CompanyTable.js";
@@ -19,6 +19,7 @@ import { KeyFigureCards } from "./components/KeyFigureCards.js";
 import { KeyValueList } from "./components/KeyValueList.js";
 import { MultiYearTable } from "./components/MultiYearTable.js";
 import { OwnerList } from "./components/OwnerList.js";
+import { OwnershipDiagram } from "./components/OwnershipDiagram.js";
 import { PersonList } from "./components/PersonList.js";
 import { ScoreGauge } from "./components/ScoreGauge.js";
 import { LassoRelations } from "./components/LassoRelations.js";
@@ -84,6 +85,10 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return <PersonList key={key} people={empty.people[c.company]} show={c.show} title={c.title} error={err(`people:${c.company}`)} />;
     case "LassoOwnerList":
       return <OwnerList key={key} ownership={empty.ownership[c.company]} error={err(`ownership:${c.company}`)} onOpen={props.host.drillDown ? act : undefined} />;
+    case "LassoOwnershipDiagram": {
+      const k = ownershipGraphKey(c);
+      return <OwnershipDiagram key={key} graph={empty.ownershipGraphs?.[k]} error={err(`graph:${k}`)} title={c.title} onAction={act} canDrillDown={Boolean(props.host.drillDown)} canPrompt={Boolean(props.host.prompt)} canFullscreen={Boolean(props.host.fullscreen)} />;
+    }
     case "LassoCompanyTable": {
       const k = searchKey(c.search);
       return <CompanyTable key={key} result={empty.searches[k]} columns={c.columns} title={c.title} error={err(`search:${k}`)} onAction={act} canDrillDown={Boolean(props.host.drillDown)} />;

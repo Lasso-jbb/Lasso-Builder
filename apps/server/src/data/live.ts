@@ -29,11 +29,13 @@ import {
   adaptTimeline,
   ejfBbrRefs,
   mergeBbr,
+  adaptOwnershipGraph,
+  graphFromOwnership,
 } from "../lasso/adapters.js";
-import type { LassoClient } from "../lasso/client.js";
+import { LassoApiError, type LassoClient } from "../lasso/client.js";
 import { criteriaToFilters, filtersToCriteria, SERVER_SORT, type LassoFilter } from "../lasso/searchFilters.js";
 import { applyCriteria, needsFinancials, sortRows } from "./criteria-eval.js";
-import { mapLimit, type DataProvider } from "./provider.js";
+import { mapLimit, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
 
 /** Så mange virksomheder hentes, når noget skal filtreres eller sorteres her (omsætning, bruttofortjeneste). */
 const LOCAL_POOL = 60;
@@ -303,5 +305,17 @@ export class LiveProvider implements DataProvider {
    */
   async livestock(lassoId: string): Promise<LivestockVM> {
     return { lassoId, herds: [], events: [] };
+  }
+
+  async ownershipGraph(lassoId: string, opts: OwnershipGraphOptions) {
+    try {
+      const raw = await this.client.relationsGraph({ ids: [lassoId], ingoingDepth: opts.ingoingDepth, outgoingDepth: opts.outgoingDepth, onDate: opts.onDate });
+      return adaptOwnershipGraph(lassoId, raw, opts);
+    } catch (err) {
+      // Findes endpointet ikke (eller afviser det formen), vises i det mindste de direkte ejere.
+      if (!(err instanceof LassoApiError) || ![400, 404, 405, 501].includes(err.status)) throw err;
+      const raw = await this.client.company(lassoId);
+      return graphFromOwnership(lassoId, adaptCompany(lassoId, raw).name, adaptOwnership(lassoId, raw), opts);
+    }
   }
 }

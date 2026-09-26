@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { companyTemplate, emptyDataset, listTemplate, parseViewSpec, searchKey, searchQuerySchema, type Dataset } from "@lasso/spec";
+import {
+  companyTemplate,
+  emptyDataset,
+  listTemplate,
+  parseViewSpec,
+  searchKey,
+  searchQuerySchema,
+  type Dataset,
+  ownershipGraphKey,
+} from "@lasso/spec";
 import { textCard } from "./card.js";
 
 // Opdigtede tal i samme form som Lassos rigtige svar.
@@ -182,4 +191,32 @@ test("uden omsætning i de seneste år viser kortet bruttofortjeneste, og linjer
   assert.ok(card.includes("BRUTTOFORTJENESTE, MIO. KR."), card);
   assert.ok(card.includes("2025 ████████████████████"), card);
   assert.match(card, /Bruttofortj\.\s+18,8 mio\./);
+});
+
+test("tekstkort for ejerdiagrammet: ejere og datterselskaber som indrykket liste", () => {
+  const spec = parseViewSpec({ title: "Ejere", components: [{ type: "LassoOwnershipDiagram", company: ID }] });
+  const c = spec.components[0]!;
+  if (c.type !== "LassoOwnershipDiagram") throw new Error("forkert type");
+  const ds = emptyDataset("live");
+  ds.ownershipGraphs[ownershipGraphKey(c)] = {
+    rootId: ID,
+    ingoingDepth: 2,
+    outgoingDepth: 1,
+    nodes: [
+      { id: ID, name: "TESTFIRMA A/S", kind: "company", root: true },
+      { id: "CVR-1-2", name: "Et meget langt holdingselskabsnavn ApS", kind: "company" },
+      { id: "CVR-3-3", name: "Anne Ejer", kind: "person" },
+      { id: "CVR-1-4", name: "Datter ApS", kind: "company" },
+    ],
+    edges: [
+      { from: "CVR-1-2", to: ID, share: [66.67, 89.99] },
+      { from: "CVR-3-3", to: "CVR-1-2", share: [100, 100] },
+      { from: ID, to: "CVR-1-4", share: [100, 100] },
+      { from: "CVR-1-4", to: ID, share: [5, 9.99] },
+    ],
+  };
+  const card = textCard(spec, ds)!;
+  for (const l of card.split("\n")) assert.equal([...l].length, 38, `linjen "${l}" har forkert bredde`);
+  for (const part of ["EJERE", "66,67–89,99 %", "  Anne Ejer", "DATTERSELSKABER", "Datter ApS"]) assert.ok(card.includes(part), `mangler "${part}":\n${card}`);
+  assert.ok(!card.includes("·"));
 });

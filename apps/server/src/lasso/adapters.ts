@@ -9,6 +9,9 @@ import type {
   FinancialsVM,
   NewsVM,
   OwnerVM,
+  OwnershipEdgeVM,
+  OwnershipGraphVM,
+  OwnershipNodeVM,
   OwnershipVM,
   PersonRowVM,
   TextSectionsVM,
@@ -771,4 +774,144 @@ function dedupe<T>(list: T[], key: (t: T) => string): T[] {
     seen.add(k);
     return true;
   });
+}
+
+/* ---------- Ejergraf (katalog 14): POST /modules/relations/graph, UBEKRÆFTET form ---------- */
+
+/**
+ * Ejerandel som interval i procent: { from: 0.25, to: 0.3332 } -> [25, 33.32]; 0.5 -> [50, 50];
+ * "25–33,32 %" -> [25, 33.32]; 100 -> [100, 100]. Brøker (≤ 1) ganges med 100.
+ */
+export function shareRange(v: Json): [number, number] | undefined {
+  if (v === undefined || v === null || v === "") return undefined;
+  if (typeof v === "string") {
+    const nums = v.match(/\d+(?:[.,]\d+)?/g)?.map((n) => Number(n.replace(",", ".")));
+    if (!nums?.length) return undefined;
+    const lo = nums[0]!;
+    const hi = nums[1] ?? lo;
+    const scale = /%/.test(v) || hi > 1 ? 1 : 100;
+    return [round2(lo * scale), round2(hi * scale)];
+  }
+  const lo = typeof v === "number" ? v : isObj(v) ? num(v, "from", "min", "lower", "low", "value", "share") : undefined;
+  if (lo === undefined) return undefined;
+  const hi = isObj(v) ? (num(v, "to", "max", "upper", "high") ?? lo) : lo;
+  const scale = hi <= 1 ? 100 : 1;
+  return [round2(lo * scale), round2(hi * scale)];
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+/** Endepunkt i en relation: et id eller et indlejret objekt. */
+function endpoint(rel: Json, keys: string[]): { id?: string; obj?: Json } {
+  for (const k of keys) {
+    const v = at(rel, k);
+    if (typeof v === "string" && v.trim()) return { id: v.trim() };
+    if (typeof v === "number") return { id: String(v) };
+    if (isObj(v)) {
+      const id = str(v, "lassoId", "id", "entityId", "key");
+      if (id) return { id, obj: v };
+    }
+  }
+  return {};
+}
+
+function nodeFrom(raw: Json, id: string): OwnershipNodeVM {
+  // Berigelsen "companyinfo" kan ligge direkte på noden eller under et felt.
+  const info = pick(raw, "companyInfo", "companyinfo", "enrichments.companyinfo", "enrichments.companyInfo", "data", "entity", "properties") ?? raw;
+  const get = (...p: string[]) => str(info, ...p) ?? str(raw, ...p);
+  const type = (get("type", "entityType", "kind", "nodeType", "entity.type") ?? "").toLowerCase();
+  const country = get("country", "countryCode", "address.country", "address.countryCode");
+  const isPerson = /person|individual|human/.test(type) || (!/company|virksomhed|organi|business|legal/.test(type) && /^CVR-(3|4)-/i.test(id));
+  const status = get("status", "companyStatus", "lifecycle.status", "state");
+  const cc = country && country.length <= 3 && !/^(dk|dnk|danmark|denmark)$/i.test(country) ? country.toUpperCase().slice(0, 2) : undefined;
+  return {
+    id,
+    name: get("name", "companyName", "legalName", "displayName", "navn") ?? id,
+    kind: isPerson ? "person" : "company",
+    cvr: get("cvr", "cvrNumber", "vat", "vatNumber") ?? (/^CVR-1-(\d{8})$/i.exec(id)?.[1]),
+    form: get("form.shortDescription", "companyForm", "legalForm", "form"),
+    status,
+    statusKind: statusKind(status),
+    country: cc,
+    registrationNo: cc ? get("registrationNumber", "foreignId", "orgNumber", "organisationNumber") : undefined,
+    equity: num(info, "equity", "financials.equity", "keyFigures.equity") ?? null,
+  };
+}
+
+/**
+ * Normaliserer ejergrafen til noder og kanter. Formen er ikke bekræftet (ingen API-nøgle
+ * ved udviklingen); adapteren tåler derfor:
+ *  - { nodes|entities|vertices: [...] | { [id]: node }, edges|relations|links|relationships: [...] }
+ *  - en liste af relationer med indlejrede ejer/ejet-objekter,
+ *  - kanter med { from|source|owner|parent, to|target|owned|child|company } som id eller objekt,
+ *  - andele som brøk-interval { from, to }, tal eller tekst ("25–33,32 %"), under ownership|share|…
+ * Kanten går altid fra ejer til ejet. Relationer af anden type end ejerskab springes over.
+ */
+export function adaptOwnershipGraph(
+  rootId: string,
+  raw: Json,
+  opts: { ingoingDepth: number; outgoingDepth: number; onDate?: string },
+): OwnershipGraphVM {
+  const container = isObj(raw) && isObj(at(raw, "graph")) ? at(raw, "graph") : isObj(raw) && isObj(at(raw, "data")) && !Array.isArray(at(raw, "data")) ? at(raw, "data") : raw;
+  const nodes = new Map<string, OwnershipNodeVM>();
+  const nodeSource = pick(container, "nodes", "entities", "vertices", "participants", "items");
+  const nodeList: [string | undefined, Json][] = Array.isArray(nodeSource)
+    ? nodeSource.map((n) => [undefined, n])
+    : isObj(nodeSource)
+      ? Object.entries(nodeSource)
+      : [];
+  for (const [key, n] of nodeList) {
+    const id = str(n, "lassoId", "id", "entityId", "key") ?? key;
+    if (!id) continue;
+    nodes.set(id, nodeFrom(n, id));
+  }
+
+  const relList = Array.isArray(container) ? container : arr(container, "edges", "relations", "links", "relationships", "ownerships", "results");
+  const edges: OwnershipEdgeVM[] = [];
+  for (const r of relList) {
+    const type = (str(r, "relationType", "type", "kind", "relation") ?? "ownership").toLowerCase();
+    if (type && !/owner|ejer|share|legal/.test(type)) continue;
+    const from = endpoint(r, ["from", "source", "sourceId", "fromId", "owner", "ownerId", "parent", "parentId", "start"]);
+    const to = endpoint(r, ["to", "target", "targetId", "toId", "owned", "ownedId", "company", "companyId", "child", "childId", "end"]);
+    if (!from.id || !to.id) continue;
+    for (const ep of [from, to]) if (!nodes.has(ep.id!)) nodes.set(ep.id!, nodeFrom(ep.obj ?? {}, ep.id!));
+    const props = pick(r, "properties", "attributes", "data") ?? r;
+    const share = shareRange(pick(props, "ownership", "share", "ownershipShare", "ownershipPercentage", "capital", "interval", "percentage") ?? pick(r, "ownership", "share"));
+    const votes = shareRange(pick(props, "voteRights", "votingRights", "votes", "voting") ?? pick(r, "voteRights", "votingRights"));
+    edges.push({
+      from: from.id,
+      to: to.id,
+      share: share ?? votes,
+      votes: share && votes && (share[0] !== votes[0] || share[1] !== votes[1]) ? votes : undefined,
+      classes: str(props, "shareClasses", "classes", "shareClass"),
+      since: dateStr(props, "validFrom", "from.date", "since", "startDate", "period.from", "lifeTime.from") ?? dateStr(r, "validFrom", "startDate"),
+      until: dateStr(props, "validTo", "until", "endDate", "period.to", "lifeTime.to") ?? dateStr(r, "validTo", "endDate"),
+    });
+  }
+  // Roden findes altid, også når grafen er tom.
+  if (!nodes.has(rootId)) nodes.set(rootId, nodeFrom({}, rootId));
+  nodes.get(rootId)!.root = true;
+  return {
+    rootId,
+    nodes: [...nodes.values()],
+    edges,
+    ingoingDepth: opts.ingoingDepth,
+    outgoingDepth: opts.outgoingDepth,
+    onDate: opts.onDate,
+    fetchedAt: new Date().toISOString(),
+  };
+}
+
+/** Reserve, når ejergrafen ikke kan hentes: direkte ejere fra virksomhedsopslaget (ét lag op). */
+export function graphFromOwnership(rootId: string, rootName: string, o: OwnershipVM, opts: { ingoingDepth: number; outgoingDepth: number; onDate?: string }): OwnershipGraphVM {
+  const nodes: OwnershipNodeVM[] = [{ id: rootId, name: rootName, kind: "company", root: true, cvr: /^CVR-1-(\d{8})$/i.exec(rootId)?.[1] }];
+  const edges: OwnershipEdgeVM[] = [];
+  o.owners.forEach((w, i) => {
+    const id = w.lassoId ?? `owner:${i}:${w.name}`;
+    if (!nodes.some((n) => n.id === id)) nodes.push({ id, name: w.name, kind: w.kind ?? "person" });
+    edges.push({ from: id, to: rootId, share: shareRange(w.share), votes: w.votes ? shareRange(w.votes) : undefined });
+  });
+  return { rootId, nodes, edges, ingoingDepth: Math.min(1, opts.ingoingDepth), outgoingDepth: 0, onDate: opts.onDate, fetchedAt: new Date().toISOString(), note: "Kun direkte ejere; ejergrafen kunne ikke hentes." };
 }

@@ -6,7 +6,9 @@ import {
   formatDate,
   formatNumber,
   formatScaled,
+  formatShare,
   METRIC_LABELS,
+  ownershipGraphKey,
   percentChange,
   searchKey,
   type Dataset,
@@ -76,6 +78,18 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
       const o = ds.ownership[c.company];
       if (o?.owners.length) lines.push(`Ejere: ${o.owners.slice(0, 4).map((x) => `${x.name}${x.share ? ` ${x.share}` : ""}${x.votes ? ` (stemmer ${x.votes})` : ""}`).join(", ")}.`);
       if (o?.auditor) lines.push(`Revisor: ${o.auditor.name}.`);
+    }
+    if (c.type === "LassoOwnershipDiagram") {
+      const g = ds.ownershipGraphs[ownershipGraphKey(c)];
+      if (g) {
+        const name = (id: string) => g.nodes.find((n) => n.id === id)?.name ?? id;
+        const ref = g.onDate ?? new Date().toISOString().slice(0, 10);
+        const current = g.edges.filter((e) => !e.until || e.until.slice(0, 10) > ref);
+        const owners = current.filter((e) => e.to === g.rootId).map((e) => `${name(e.from)}${e.share ? ` ${formatShare(e.share)}` : ""}`);
+        const subs = current.filter((e) => e.from === g.rootId).map((e) => `${name(e.to)}${e.share ? ` ${formatShare(e.share)}` : ""}`);
+        lines.push(`Ejerdiagram for ${name(g.rootId)}: ${g.nodes.length} enheder i ${g.ingoingDepth} lag op og ${g.outgoingDepth} ned.${owners.length ? ` Direkte ejere: ${owners.slice(0, 5).join(", ")}.` : " Ingen registrerede ejere."}${subs.length ? ` Direkte datterselskaber: ${subs.length}.` : ""}`);
+        if (g.note) lines.push(g.note);
+      }
     }
     if (c.type === "LassoCompanyTable") {
       const r = ds.searches[searchKey(c.search)];

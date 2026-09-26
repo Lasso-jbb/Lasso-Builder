@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   amountScale,
+  formatShare,
+  ownershipGraphKey,
   percentChange,
   chartSeries,
   companyTemplate,
@@ -173,4 +175,23 @@ test("percentChange giver ingen procent ved skift mellem overskud og underskud",
   assert.equal(percentChange([113_000, -201_000]), null);
   assert.equal(percentChange([-100, 50]), null);
   assert.equal(Math.round(percentChange([100, 150])!), 50);
+});
+
+test("LassoOwnershipDiagram har standarddybde 2 op og 1 ned og en stabil nøgle", () => {
+  const spec = parseViewSpec({ title: "Ejere", components: [{ type: "LassoOwnershipDiagram", company: "CVR-1-12345678" }] });
+  const c = spec.components[0]!;
+  assert.equal(c.type, "LassoOwnershipDiagram");
+  if (c.type !== "LassoOwnershipDiagram") return;
+  assert.equal(c.ingoingDepth, 2);
+  assert.equal(c.outgoingDepth, 1);
+  assert.equal(ownershipGraphKey(c), "CVR-1-12345678|2|1|");
+  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoOwnershipDiagram", company: "CVR-1-1", onDate: "25.09.2026" }] }));
+  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoOwnershipDiagram", company: "CVR-1-1", ingoingDepth: 11 }] }));
+});
+
+test("formatShare skriver CVR-intervaller", () => {
+  assert.equal(formatShare([20, 24.99]), "20–24,99 %");
+  assert.equal(formatShare([100, 100]), "100 %");
+  assert.equal(formatShare([66.67, 89.99]), "66,67–89,99 %");
+  assert.equal(formatShare(undefined), "—");
 });

@@ -12,6 +12,8 @@ export type { RankingRow } from "./components/Ranking.js";
 export * from "./charts.js";
 export { PersonList } from "./components/PersonList.js";
 export { OwnerList } from "./components/OwnerList.js";
+export { OwnershipDiagram } from "./components/OwnershipDiagram.js";
+export { layoutOwnership, ownershipTree, indirectShare } from "./ownershipLayout.js";
 export { CompanyTable } from "./components/CompanyTable.js";
 export { CompareTable } from "./components/CompareTable.js";
 export { KeyValueList } from "./components/KeyValueList.js";
