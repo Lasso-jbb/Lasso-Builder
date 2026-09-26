@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { emptyDataset, searchKey, widthOf, type Dataset, type ViewComponent, ownershipGraphKey } from "@lasso/spec";
 import { FollowUps } from "./components/FollowUps.js";
+import { LassoMark } from "./LassoMark.js";
 import { CompanyHead } from "./components/CompanyHead.js";
 import { CompanyTable } from "./components/CompanyTable.js";
 import { CompareTable } from "./components/CompareTable.js";
@@ -187,7 +188,7 @@ export function LassoView(props: LassoViewProps) {
               ←
             </button>
           ) : (
-            <div className="lasso-logo" aria-label="Lasso">L</div>
+            <LassoMark className="lasso-logo" />
           )}
           <div className="lasso-frame__titles">
             {spec.kind === "company" ? (

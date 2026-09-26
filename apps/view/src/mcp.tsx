@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { App, McpUiHostContext } from "@modelcontextprotocol/ext-apps";
 import { useApp } from "@modelcontextprotocol/ext-apps/react";
 import type { CallToolResult } from "@modelcontextprotocol/client";
-import { LassoView, type ActionResult, type ViewAction } from "@lasso/ui";
+import { LassoView, LassoMark, type ActionResult, type ViewAction } from "@lasso/ui";
 import { companyTemplate, DATASET_META_KEY, formatCriterion, type Dataset, type ViewSpec } from "@lasso/spec";
 
 interface Screen {
@@ -190,7 +190,7 @@ export function McpView() {
       <div className="lasso-root" data-theme={theme} style={style}>
         <div className="lasso-frame">
           <div className="lasso-frame__header">
-            <div className="lasso-logo">L</div>
+            <LassoMark className="lasso-logo" />
             <div className="lasso-frame__titles">
               <h1 className="lasso-frame__title">{pendingTitle ?? "Lasso"}</h1>
               <div className="lasso-frame__meta">Henter data…</div>
