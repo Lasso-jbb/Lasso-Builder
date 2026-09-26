@@ -13,6 +13,9 @@ import type {
   TextSectionsVM,
   TimelineEventVM,
   TimelineVM,
+  ObservationRowVM,
+  ObservationsVM,
+  Severity,
 } from "@lasso/spec";
 
 /**
@@ -547,6 +550,54 @@ export function adaptNews(lassoId: string, raw: Json, limit: number): NewsVM {
     .filter((n): n is NonNullable<typeof n> => n !== null)
     .slice(0, limit);
   return { lassoId, items: newsItems };
+}
+
+/**
+ * Svarformen for GET /modules/observations/{lassoId} er UBEKRÆFTET (ingen
+ * API-nøgle i denne omgang; se docs/lasso-endpoints.md under "Ubekræftet" for
+ * den antagne form). Adapteren er derfor defensiv: den prøver mange
+ * feltnavne, accepterer et rent array eller et svar pakket i {observations|items|results:[...]},
+ * og falder tilbage til "0 observationer" frem for at kaste, hvis formen ikke matcher.
+ */
+function normalizeSeverity(v: Json): Severity {
+  const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" && !Number.isNaN(Number(v)) ? Number(v) : undefined;
+  if (typeof n === "number" && Number.isFinite(n)) {
+    if (n >= 90) return 100;
+    if (n >= 40) return 50;
+    if (n >= 10) return 25;
+    return 0;
+  }
+  const s = typeof v === "string" ? v.toLowerCase() : "";
+  if (/high|vigtig|critical|important|konflikt|alert/.test(s)) return 100;
+  if (/medium|mulig|warning|moderat/.test(s)) return 50;
+  if (/low|info|minor|notice/.test(s)) return 25;
+  return 0;
+}
+
+export function adaptObservations(lassoId: string, raw: Json): ObservationsVM {
+  // items() kender ikke "observations" som pakke-nøgle, så den prøves først.
+  const list = Array.isArray(raw) ? raw : arr(raw, "observations", "results", "items", "hits", "data", "records", "value");
+  const observations: ObservationRowVM[] = [];
+  let i = 0;
+  for (const o of list) {
+    const title = str(o, "title", "headline", "summary", "text", "message", "name", "description");
+    if (!title) continue;
+    const description = str(o, "detail", "description", "explanation", "body", "text");
+    observations.push({
+      id: str(o, "id", "observationId", "uuid") ?? `${lassoId}-${i++}`,
+      severity: normalizeSeverity(pick(o, "severity", "score", "riskScore", "level", "importance", "category")),
+      title,
+      detail: description && description !== title ? description : undefined,
+      source: str(o, "source", "category", "origin", "basedOn", "module"),
+      date: dateStr(o, "date", "observedAt", "createdAt", "eventDate", "occurredAt", "reportedAt"),
+    });
+  }
+  return {
+    lassoId,
+    observations,
+    checkedAt: dateStr(raw, "checkedAt", "generatedAt", "lastChecked", "updatedAt", "meta.checkedAt", "meta.generatedAt"),
+    sources: undefined,
+  };
 }
 
 function dedupe<T>(list: T[], key: (t: T) => string): T[] {

@@ -1,6 +1,28 @@
-import { formatCriterion, searchKey, type CompanyRowVM, type Criterion, type FinancialsVM, type ScoreVM, type SearchQuery, type SearchResultVM } from "@lasso/spec";
+import {
+  formatCriterion,
+  searchKey,
+  type CompanyRowVM,
+  type Criterion,
+  type FinancialsVM,
+  type ScoreVM,
+  type SearchQuery,
+  type SearchResultVM,
+  type AuditorIndependenceVM,
+  type AuditorRelationVM,
+} from "@lasso/spec";
 import type { Config } from "../config.js";
-import { adaptBeneficialOwnership, adaptCompany, adaptFinancials, adaptNews, adaptOwnership, adaptPeople, adaptSearch, adaptTextSections, adaptTimeline } from "../lasso/adapters.js";
+import {
+  adaptBeneficialOwnership,
+  adaptCompany,
+  adaptFinancials,
+  adaptNews,
+  adaptOwnership,
+  adaptPeople,
+  adaptSearch,
+  adaptTextSections,
+  adaptTimeline,
+  adaptObservations,
+} from "../lasso/adapters.js";
 import type { LassoClient } from "../lasso/client.js";
 import { criteriaToFilters, filtersToCriteria, SERVER_SORT, type LassoFilter } from "../lasso/searchFilters.js";
 import { applyCriteria, needsFinancials, sortRows } from "./criteria-eval.js";
@@ -186,5 +208,57 @@ export class LiveProvider implements DataProvider {
 
   async news(lassoId: string, limit: number) {
     return adaptNews(lassoId, await this.client.news(lassoId), limit);
+  }
+
+  /** Formen for /modules/observations er ubekræftet; se docs/lasso-endpoints.md. */
+  async observations(lassoId: string) {
+    return adaptObservations(lassoId, await this.client.observations(lassoId));
+  }
+
+  /**
+   * Revisoruafhængighed har ingen bekræftet, dedikeret kilde endnu. Vi bygger, hvad
+   * de bekræftede data tillader: revisor fra CVR (accounting.accountant), kundens
+   * egen ledelse/bestyrelse og ejerkreds, og – hvis revisors eget Lasso-ID kendes –
+   * revisionshusets egne ansatte/ledelse. En relation vises kun ved et navnesammenfald
+   * mellem de to. Det dækker IKKE relationer via andre selskaber, historiske
+   * tilknytninger eller partnerskabsniveau; det kræver Lassos ejer-/relationsgraf
+   * (POST /modules/relations/graph), som denne komponent endnu ikke kalder.
+   */
+  async auditorIndependence(lassoId: string): Promise<AuditorIndependenceVM> {
+    const [ownership, people] = await Promise.all([this.ownership(lassoId), this.people(lassoId)]);
+    const auditor = ownership.auditor;
+    const checkedAt = new Date().toISOString().slice(0, 10);
+    if (!auditor) {
+      return { lassoId, checkedAt, relations: [], unavailableReason: "Virksomheden har ikke en registreret revisor i CVR." };
+    }
+    let auditorPeople: Awaited<ReturnType<LiveProvider["people"]>> = [];
+    if (auditor.lassoId) {
+      try {
+        auditorPeople = await this.people(auditor.lassoId);
+      } catch {
+        // Revisors Lasso-ID er ikke nødvendigvis en virksomhed, vi har adgang til; fortsæt uden.
+      }
+    }
+    const clientNames = new Set([...people.map((p) => p.name), ...ownership.owners.map((o) => o.name)].map((n) => n.toLowerCase()));
+    const relations: AuditorRelationVM[] = auditorPeople
+      .filter((p) => clientNames.has(p.name.toLowerCase()))
+      .map((p, i) => ({
+        id: `${lassoId}-${i}`,
+        assessment: 50,
+        name: p.name,
+        role: `${p.role}, ${auditor.name}`,
+        relation: "Personen indgår i kundens ledelse eller ejerkreds og er samtidig tilknyttet revisionshuset",
+        via: undefined,
+        from: p.from,
+        to: p.to,
+      }));
+    return {
+      lassoId,
+      auditorName: auditor.name,
+      checkedAt,
+      relations,
+      unavailableReason:
+        "Kun direkte navnesammenfald mellem kundens ledelse/ejere og revisionshusets egne ansatte er tjekket. Relationer via andre selskaber eller på partnerskabsniveau kræver Lassos relationsgraf, som endnu ikke er koblet til.",
+    };
   }
 }

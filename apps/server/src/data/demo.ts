@@ -6,6 +6,10 @@ import {
   type CompanyVM,
   type FinancialsVM,
   type NewsVM,
+  type AuditorIndependenceVM,
+  type AuditorRelationVM,
+  type ObservationRowVM,
+  type ObservationsVM,
   type OwnershipVM,
   type PersonRowVM,
   type ScoreVM,
@@ -192,6 +196,86 @@ function strip(c: DemoCompany): CompanyVM {
   return vm;
 }
 
+/** Eksempeldata til risikoobservationer (katalog 17). Afledt af de øvrige demofelter, så det følger med, hvis de ændres. */
+function observationsFor(c: DemoCompany, f: FinancialsVM): ObservationsVM {
+  // Én virksomhed viser bevidst den tomme, positive tilstand ("intet fundet").
+  if (c.cvr === "99000012") {
+    return { lassoId: c.lassoId, observations: [], checkedAt: "2026-09-25", sources: ["CVR", "regnskab", "ledelse"] };
+  }
+  const rows: ObservationRowVM[] = [];
+  const last = f.years.at(-1);
+  const prev = f.years.at(-2);
+  if (/konkurs/i.test(c.status ?? "")) {
+    rows.push({ id: "konkurs", severity: 100, title: "Virksomheden er under konkurs", detail: "Selskabet er registreret under konkursbehandling i CVR.", source: "CVR", date: last?.periodEnd });
+  } else if (typeof last?.profit === "number" && typeof prev?.profit === "number" && last.profit < 0 && prev.profit < 0) {
+    rows.push({
+      id: "underskud",
+      severity: 100,
+      title: "Underskud to regnskabsår i træk",
+      detail: `Årets resultat var ${formatAmount(prev.profit)} i ${prev.year} og ${formatAmount(last.profit)} i ${last.year}.`,
+      source: "Regnskab",
+      date: last.periodEnd,
+    });
+  } else if (c.growth < 0) {
+    rows.push({ id: "fald", severity: 50, title: "Faldende bruttofortjeneste flere år i træk", detail: "Bruttofortjenesten er faldet i de seneste regnskabsår.", source: "Regnskab", date: last?.periodEnd });
+  }
+  if (c.auditor === "Ingen") {
+    rows.push({ id: "revisor-fravalgt", severity: 50, title: "Revisor fravalgt", detail: "Selskabet har ikke registreret en revisor.", source: "CVR" });
+  }
+  const ended = c.people.find((p) => p.to);
+  if (ended) rows.push({ id: "afgang", severity: 25, title: `${ended.name} er fratrådt som ${ended.role.toLowerCase()}`, source: "Ledelse", date: ended.to });
+  const newest = [...c.people].filter((p) => !p.to).sort((a, b) => (b.from ?? "").localeCompare(a.from ?? ""))[0];
+  if (newest) rows.push({ id: "tiltraadt", severity: 0, title: `Nyt medlem i ledelsen: ${newest.name}`, source: "Ledelse", date: newest.from });
+  return { lassoId: c.lassoId, observations: rows, checkedAt: "2026-09-25", sources: ["CVR", "regnskab", "ledelse"] };
+}
+
+/** Eksempeldata til revisoruafhængighed (katalog 22). Kun den første demovirksomhed har relationer, så begge tilstande ses. */
+function auditorIndependenceFor(c: DemoCompany): AuditorIndependenceVM {
+  if (c.auditor === "Ingen") {
+    return { lassoId: c.lassoId, checkedAt: "2026-09-25", relations: [], unavailableReason: "Virksomheden har ingen registreret revisor i demodata." };
+  }
+  const relations: AuditorRelationVM[] =
+    c.lassoId === "CVR-1-99000001"
+      ? [
+          {
+            id: "r1",
+            assessment: 50,
+            name: "Peter Revisor Eksempel",
+            role: "Partner, Eksempel Revision Midt ApS",
+            relation: "Bestyrelsesmedlem i et selskab hvor kundens ejer også sidder",
+            via: "Eksempel Invest ApS",
+            from: "2022-01-01",
+          },
+          {
+            id: "r2",
+            assessment: 0,
+            name: "Eksempel Revision Midt ApS",
+            role: "Revisionshus",
+            relation: "Revisor for kundens ejer Eksempel Holding ApS",
+            via: "Samme revisionshus",
+            from: "2019-01-01",
+          },
+          {
+            id: "r3",
+            assessment: 0,
+            name: "Lene Kontrol Eksempel",
+            role: "Tidl. ansat, Eksempel Revision Midt ApS",
+            relation: "Tidligere direktør i kundens datterselskab, ophørt for flere år siden",
+            via: "Eksempel Data ApS",
+            from: "2015-01-01",
+            to: "2020-01-01",
+          },
+        ]
+      : [];
+  return {
+    lassoId: c.lassoId,
+    auditorName: c.auditor,
+    checkedAt: "2026-09-25",
+    relations,
+    unavailableReason: relations.length ? undefined : "Der er ikke fundet kendte relationer mellem revisor, kunden og personer i demodata.",
+  };
+}
+
 function get(lassoId: string): DemoCompany {
   const c = BY_ID.get(lassoId);
   if (!c) throw new NotFoundError(`Virksomheden ${lassoId} (demodata har kun CVR 99000001-99000012)`);
@@ -270,5 +354,14 @@ export class DemoProvider implements DataProvider {
 
   async news(lassoId: string, limit: number) {
     return newsFor(get(lassoId), limit);
+  }
+
+  async observations(lassoId: string): Promise<ObservationsVM> {
+    const c = get(lassoId);
+    return observationsFor(c, financialsFor(c));
+  }
+
+  async auditorIndependence(lassoId: string): Promise<AuditorIndependenceVM> {
+    return auditorIndependenceFor(get(lassoId));
   }
 }

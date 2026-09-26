@@ -24,6 +24,8 @@ import { LassoTextSections } from "./components/LassoTextSections.js";
 import { LassoSummary } from "./components/LassoSummary.js";
 import { LassoTimeline } from "./components/LassoTimeline.js";
 import { LassoNews } from "./components/LassoNews.js";
+import { RiskObservations } from "./components/RiskObservations.js";
+import { AuditorIndependence } from "./components/AuditorIndependence.js";
 import { specToCsv } from "./csv.js";
 import { Badge, Skeleton } from "./primitives.js";
 import { SaveDialog } from "./SaveDialog.js";
@@ -101,6 +103,10 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return <MultiYearTable key={key} financials={empty.financials[c.company]} metrics={c.metrics} years={c.years} title={c.title} error={err(`financials:${c.company}`)} />;
     case "LassoScoreGauge":
       return <ScoreGauge key={key} score={empty.scores[c.company]} title={c.title} error={err(`score:${c.company}`)} />;
+    case "LassoRiskObservations":
+      return <RiskObservations key={key} data={empty.observations[c.company]} error={err(`observations:${c.company}`)} title={c.title} />;
+    case "LassoAuditorIndependence":
+      return <AuditorIndependence key={key} data={empty.auditorIndependence[c.company]} error={err(`auditorIndependence:${c.company}`)} title={c.title} />;
     case "LassoFollowUps":
       return <FollowUps key={key} prompts={c.prompts} onAction={act} enabled={Boolean(props.host.prompt)} />;
     case "LassoRelations":

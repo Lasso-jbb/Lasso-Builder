@@ -112,6 +112,18 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     props: "company, title?",
   },
   {
+    type: "LassoRiskObservations",
+    title: "Risikoobservationer",
+    description: "Lassos observationer om en virksomhed (fx negativ egenkapital, revisorskifte, ledelsesændringer), sorteret efter alvor på skalaen 0–100.",
+    props: "company, title?",
+  },
+  {
+    type: "LassoAuditorIndependence",
+    title: "Revisoruafhængighed",
+    description: "Sammenfatning og relationstabel mellem revisionshus, kunden og personer, med en vurdering pr. relation på alvorsskalaen.",
+    props: "company, title?",
+  },
+  {
     type: "LassoFollowUps",
     title: "Opfølgningsknapper",
     description: "1–4 knapper, der sender et opfølgende spørgsmål til dig (modellen) som brugerens næste besked. Brug til analysespørgsmål som 'Hvem er nye i bestyrelsen?'.",

@@ -229,6 +229,18 @@ export const scoreGaugeSchema = z.object({
   title: z.string().max(80).optional().describe("Standard: 'Score'."),
 });
 
+export const riskObservationsSchema = z.object({
+  type: z.literal("LassoRiskObservations"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
+});
+
+export const auditorIndependenceSchema = z.object({
+  type: z.literal("LassoAuditorIndependence"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
+});
+
 export const actionsSchema = z.object({
   type: z.literal("LassoFollowUps"),
   prompts: z
@@ -259,6 +271,8 @@ export const componentSchema = z.discriminatedUnion("type", [
   keyValueListSchema,
   multiYearTableSchema,
   scoreGaugeSchema,
+  riskObservationsSchema,
+  auditorIndependenceSchema,
   actionsSchema,
   relationsSchema,
   beneficialOwnersSchema,

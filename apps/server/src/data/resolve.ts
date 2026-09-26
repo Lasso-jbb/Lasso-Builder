@@ -1,11 +1,4 @@
-import {
-  emptyDataset,
-  searchKey,
-  toLassoId,
-  type Dataset,
-  type ViewComponent,
-  type ViewSpec,
-} from "@lasso/spec";
+import { emptyDataset, searchKey, toLassoId, type Dataset, type ViewComponent, type ViewSpec } from "@lasso/spec";
 import { LassoApiError } from "../lasso/client.js";
 import { NotFoundError, type DataProvider } from "./provider.js";
 
@@ -100,6 +93,12 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
         break;
       case "LassoSummary":
         break;
+      case "LassoRiskObservations":
+        want(c.company, "observations");
+        break;
+      case "LassoAuditorIndependence":
+        want(c.company, "auditorIndependence");
+        break;
       case "LassoCompareTable":
         c.companies.forEach((id) => want(id, "company", "financials"));
         break;
@@ -138,6 +137,8 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
     if (set.has("beneficialOwnership")) run(`beneficialOwnership:${id}`, async () => void (ds.beneficialOwnership[id] = await provider.beneficialOwnership(id)));
     if (set.has("textSections")) run(`textSections:${id}`, async () => void (ds.textSections[id] = await provider.textSections(id)));
     if (set.has("timeline")) run(`timeline:${id}`, async () => void (ds.timeline[id] = await provider.timeline(id)));
+    if (set.has("observations")) run(`observations:${id}`, async () => void (ds.observations[id] = await provider.observations(id)));
+    if (set.has("auditorIndependence")) run(`auditorIndependence:${id}`, async () => void (ds.auditorIndependence[id] = await provider.auditorIndependence(id)));
   }
   for (const [id, limit] of newsWanted) {
     run(`news:${id}`, async () => void (ds.news[id] = await provider.news(id, limit)));
