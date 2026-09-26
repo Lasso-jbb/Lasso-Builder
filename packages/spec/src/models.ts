@@ -58,6 +58,8 @@ export interface ContactPersonVM {
 export interface ContactPersonsVM {
   lassoId: string;
   people: ContactPersonVM[];
+  /** Forklaring til tom-tilstanden, fx når virksomheden ingen brugbar hjemmeside har. */
+  emptyReason?: string;
   source?: string;
   updated?: string;
 }
@@ -87,8 +89,15 @@ export interface FinancialYear {
   ebitda?: number | null;
   /** Egenkapital i procent af balancesum (nøgletal "soliditetsgrad"). Beregnet, ikke et XBRL-begreb. */
   soliditetsgrad?: number | null;
-  /** Årets resultat i procent af omsætning (eller bruttofortjeneste, når omsætning ikke er oplyst). Beregnet. */
+  /**
+   * Overskudsgrad: resultat af primær drift (EBIT) i procent af nettoomsætningen (ÅRL-nøgletal).
+   * Beregnet; null ("—"), når omsætning eller EBIT ikke er oplyst (typisk klasse B).
+   */
   overskudsgrad?: number | null;
+  /** Hvilket regnskab tallene er fra: "Koncern" (når koncernregnskab findes) eller "Selskab". Aldrig blandet. */
+  scope?: "Koncern" | "Selskab";
+  /** ISO 4217-valuta for årets beløb (fx "EUR"), når regnskabet oplyser den. */
+  currency?: string;
   /** Omsætningsaktiver i procent af kortfristet gæld (nøgletal "likviditetsgrad"). Beregnet. */
   likviditetsgrad?: number | null;
 }
@@ -425,6 +434,8 @@ export interface CompanyRowVM {
   revenue?: number | null;
   grossProfit?: number | null;
   profit?: number | null;
+  /** ISO-valuta for omsætning/bruttofortjeneste/resultat, når den ikke er DKK (fx "EUR"). */
+  currency?: string;
   /** Bruttofortjeneste over tid, ældste først, til sparklines. */
   trend?: number[];
 }

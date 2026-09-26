@@ -36,10 +36,10 @@ export interface ChartLabel {
 }
 
 /** Fælles enhed og labelfunktion for et sæt værdier: "count" (fx ansatte) har ingen enhed, "percent" er et nøgletal som procent/ratio. */
-export function labelFor(values: readonly number[], kind: MetricKind): ChartLabel {
+export function labelFor(values: readonly number[], kind: MetricKind, unit = "kr."): ChartLabel {
   if (kind === "count") return { scale: null, label: (v) => formatNumber(v) };
   if (kind === "percent") return { scale: null, label: (v) => formatPercent(v, false) };
-  const scale = amountScale(values);
+  const scale = amountScale(values, unit);
   return { scale, label: (v) => formatScaled(v, scale) };
 }
 

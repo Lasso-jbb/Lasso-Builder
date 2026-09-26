@@ -1,4 +1,4 @@
-import { amountScale, formatNumber, formatScaled, type FinancialsVM } from "@lasso/spec";
+import { amountScale, currencyUnit, formatNumber, formatScaled, type FinancialsVM } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
 import { CHART_AXIS_W, CHART_BOTTOM, CHART_H, CHART_TOP, clampMobilePoints, makeYScale, niceTicks, yearRange } from "../charts.js";
@@ -33,7 +33,7 @@ export function StackedBarChart({ financials, years, error }: { financials?: Fin
   }
 
   const totals = points.map((p) => p.equity + p.liabilities);
-  const scale = amountScale([...points.map((p) => p.equity), ...points.map((p) => p.liabilities)]);
+  const scale = amountScale([...points.map((p) => p.equity), ...points.map((p) => p.liabilities)], currencyUnit(financials.currency));
   const label = (v: number) => formatScaled(v, scale);
   const first = points[0]!.year;
   const last = points.at(-1)!.year;

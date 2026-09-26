@@ -35,6 +35,7 @@ import type {
   PropertyVM,
   VetEventVM,
 } from "@lasso/spec";
+import { currencyUnit } from "@lasso/spec";
 
 /**
  * Oversætter Lassos rå API-svar til vores datamodeller.
@@ -141,11 +142,18 @@ export function regionFromZip(zip: string | number | undefined): string | undefi
   return "Nordjylland";
 }
 
+/**
+ * CVR-status -> badge. Afsluttede forløb ("Opløst efter konkurs", "Opløst efter frivillig
+ * likvidation", "Ophørt", "Slettet") er inaktive og testes FØRST, fordi de også indeholder
+ * ord som "konkurs" og "likvidation". Igangværende forløb ("Under konkurs", "Under frivillig
+ * likvidation", "Under tvangsopløsning", "Tvangsopløst", "Under reassumering") er advarsler.
+ */
 export function statusKind(status: string | undefined): CompanyVM["statusKind"] {
   if (!status) return undefined;
-  const s = status.toLowerCase();
-  if (/konkurs|likvid|tvangs|bankrupt|liquidat|under/.test(s)) return "warning";
-  if (/ophør|opløst|ceased|dissolved|inactive|slettet/.test(s)) return "inactive";
+  const s = status.toLowerCase().trim();
+  if (/^(opløst|ophør|slettet|lukket|ceased|dissolved|inactive|closed)/.test(s)) return "inactive";
+  if (/konkurs|likvid|tvangs|rekonstruktion|reassum|bankrupt|liquidat|insolv|under /.test(s)) return "warning";
+  if (/opløst|ophør|ceased|dissolved|slettet/.test(s)) return "inactive";
   if (/aktiv|normal|active/.test(s)) return "active";
   return undefined;
 }
@@ -330,6 +338,60 @@ export function shareText(v: Json): string | undefined {
   return `${a}–${percentFormat.format(hi * scale)} %`;
 }
 
+/**
+ * Juridisk enhed ud fra navnet: selskabsform (A/S, ApS, Inc, Ltd, GmbH …) eller ord som fond,
+ * bank, pension, holding, kommune. Bruges, når Lasso ikke oplyser typen, fordi udenlandske
+ * selskaber og fonde (fx "BlackRock, Inc") har deltager-ID'er (CVR-3-…) ligesom personer.
+ */
+export function looksLikeOrganisation(name: string | undefined): boolean {
+  if (!name) return false;
+  return /(?:^|[\s,.(&])(inc|incorporated|ltd|limited|llc|llp|lp|plc|corp|corporation|company|co|gmbh|ag|se|ab|as|asa|oy|oyj|sa|s\.a|sas|sarl|srl|spa|s\.p\.a|bv|b\.v|nv|n\.v|a\/s|aps|ivs|p\/s|i\/s|k\/s|amba|a\.m\.b\.a|fmba|smba|holding|holdings|group|gruppen|fund|funds|fond|fonden|foundation|stiftung|stichting|trust|bank|banken|pension|pensionskasse|kapital|capital|invest|investment|investments|management|partners|kommune|region|staten|ministeriet|forening|foreningen|selskab|selskabet|universitet|university|institut|institute)(?=$|[\s,.)&])/i.test(name.trim());
+}
+
+/**
+ * Person eller selskab for en deltager (ejer, graf-node). Oplyser Lasso typen, gælder den: kun
+ * "PERSON" (og lignende) er en person, alt andet (Company, fond, udenlandsk enhed) er et selskab.
+ * Uden type: CVR-1-… er et dansk selskab; CVR-3-…/CVR-4-… er en deltager, som er en person,
+ * medmindre navnet ligner en juridisk enhed (fx "BlackRock, Inc").
+ */
+export function participantKind(type: string | undefined, id: string | undefined, name: string | undefined): "person" | "company" {
+  const t = (type ?? "").trim().toLowerCase();
+  if (t) return /person|individual|natural|human/.test(t) ? "person" : "company";
+  if (id && /^CVR-1-/i.test(id)) return "company";
+  if (name && name !== id && looksLikeOrganisation(name)) return "company";
+  if (id && /^CVR-[34]-/i.test(id)) return "person";
+  return looksLikeOrganisation(name) ? "company" : "person";
+}
+
+/**
+ * Navn og type på deltagere (ejere, ledelse, andre deltagere) i et CVR-opslag (GET /{lassoId}),
+ * nøglet på Lasso-ID. Bruges til at give navneløse personnoder i ejergrafen et navn.
+ */
+export function participantNames(raw: Json): Map<string, { name: string; type?: string }> {
+  const out = new Map<string, { name: string; type?: string }>();
+  const lists = [arr(raw, "ownership.owners", "owners"), arr(raw, "stakeholders"), arr(raw, "otherParticipants"), arr(raw, "management.members"), arr(raw, "board.members"), arr(raw, "board.alternates")];
+  for (const p of [pick(raw, "management.ceo"), pick(raw, "board.chairman"), ...lists.flat()]) {
+    const id = str(p, "lassoId", "id");
+    const name = str(p, "name", "participant.name", "person.name");
+    if (!id || !name || out.has(id)) continue;
+    out.set(id, { name, type: str(p, "type", "entityType", "kind") });
+  }
+  return out;
+}
+
+/** Giver navneløse noder (navn = ID) i ejergrafen navn og korrekt type ud fra opslag. */
+export function applyGraphNames(g: OwnershipGraphVM, names: ReadonlyMap<string, { name: string; type?: string }>): OwnershipGraphVM {
+  return {
+    ...g,
+    nodes: g.nodes.map((n) => {
+      const hit = names.get(n.id);
+      if (!hit || (n.name !== n.id && !hit.type)) return n;
+      const name = n.name === n.id ? hit.name : n.name;
+      return { ...n, name, kind: n.root ? n.kind : participantKind(hit.type, n.id, name) };
+    }),
+  };
+}
+
 /** Nedre grænse af en ejerandel som tal: "25–33,32 %" -> 25; ukendt -> -1. */
 function shareFloor(share: string | undefined): number {
   const m = /(\d+(?:,\d+)?)/.exec(share ?? "");
@@ -348,13 +410,14 @@ export function adaptOwnership(lassoId: string, raw: Json): OwnershipVM {
       const share = shareText(pick(o, "ownership", "share", "ownershipShare", "percentage", "ownershipPercentage", "ejerandel"))
         ?? str(o, "shareText", "ownershipInterval", "interval", "shareInterval");
       const votes = shareText(pick(o, "voteRights", "votingRights", "stemmeandel"));
-      const type = str(o, "type", "kind", "entityType") ?? "";
+      const type = str(o, "type", "kind", "entityType");
+      const id = str(o, "lassoId", "id", "owner.lassoId");
       const owner: OwnerVM = {
         name,
-        lassoId: str(o, "lassoId", "id", "owner.lassoId"),
+        lassoId: id,
         share: share ?? votes,
         votes: share && votes && votes !== share ? votes : undefined,
-        kind: /company|virksomhed|cvr-1/i.test(type + (str(o, "lassoId", "id") ?? "")) ? "company" : "person",
+        kind: participantKind(type, id, name),
       };
       return owner;
     })
@@ -373,11 +436,101 @@ export function adaptOwnership(lassoId: string, raw: Json): OwnershipVM {
 }
 
 /**
+ * XBRL-begreber (små bogstaver, uden præfiks) fælles for `adaptFinancials` og
+ * `adaptFinancialStatements`, så nøgletal og regnskabstabel aldrig er uenige.
+ * Dækker både den danske taksonomi (ÅRL, fsa:) og IFRS/ESEF (børsnoterede).
+ */
+export const CONCEPTS = {
+  revenue: ["revenue", "revenues", "netsales", "revenuefromcontractswithcustomers", "nettoomsaetning"],
+  grossProfit: ["grossprofitloss", "grossprofit", "grossresult"],
+  profit: ["profitloss", "profitlossfortheyear", "netincome"],
+  equity: ["equity", "totalequity", "equityattributabletoownersofparent"],
+  employees: ["averagenumberofemployees", "numberofemployees"],
+  /** Resultat af primær drift (EBIT). */
+  ebit: ["profitlossfromordinaryoperatingactivities", "profitlossfromoperatingactivities", "operatingprofitloss"],
+  /** Ét samlet gældsbegreb (IFRS "Liabilities" indeholder hensatte forpligtelser). */
+  liabilitiesTotal: ["liabilities", "liabilitiesandprovisions", "totalliabilities"],
+  /** ÅRL: gæld uden hensatte forpligtelser; lægges sammen med `provisions`. */
+  liabilitiesOtherThanProvisions: ["liabilitiesotherthanprovisions"],
+  provisions: ["provisions", "provisionstotal"],
+  shortTermLiabilities: ["currentliabilities", "shorttermliabilitiesotherthanprovisions", "shorttermliabilities", "shorttermliabilitiesother"],
+  longTermLiabilities: ["noncurrentliabilities", "longtermliabilitiesotherthanprovisions", "longtermliabilities", "longtermliabilitiesother"],
+  currentAssets: ["currentassets"],
+  assets: ["assets", "totalassets", "assetstotal"],
+  depreciation: [
+    "depreciationamortisationexpenseandimpairmentlossesofpropertyplantandequipmentandintangibleassetsrecognisedinprofitorloss",
+    "depreciationamortisationandimpairmentlossesofintangibleassetsandtangibleassetsandpropertyplantandequipment",
+    "depreciationandamortisationexpense",
+    "depreciationamortisationexpense",
+    "adjustmentsfordepreciationandamortisationexpense",
+    "depreciation",
+  ],
+} as const;
+
+/** Begreber, der afgør om et scope (selskab/koncern) har et egentligt regnskab. */
+const MAIN_CONCEPTS = [...CONCEPTS.revenue, ...CONCEPTS.grossProfit, ...CONCEPTS.profit, ...CONCEPTS.equity, ...CONCEPTS.assets, ...CONCEPTS.liabilitiesTotal];
+
+/** Tallene fra ÉN rapport, fra ét scope (koncern eller selskab), med valuta. */
+interface ReportFacts {
+  facts: Map<string, number>;
+  balances: Map<string, string>;
+  scope?: "Koncern" | "Selskab";
+  currency?: string;
+}
+
+/**
+ * Samler tal for regnskabsperioden fra ét scope pr. rapport, så selskabs- og koncerntal
+ * aldrig blandes i samme år. Koncernen vælges, når den har et egentligt regnskab (mindst to
+ * hovedbegreber), ellers selskabet. Valutaen er den hyppigste ISO 4217-kode i bladenes `unit`.
+ */
+function reportFacts(r: Json, periodEnd: string | undefined): ReportFacts {
+  const read = (path: string): ReportFacts & { main: number } => {
+    const facts = new Map<string, number>();
+    const balances = new Map<string, string>();
+    const units = new Map<string, number>();
+    collectFacts(at(r, path), periodEnd, facts, 0, balances, units);
+    const currency = [...units.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+    return { facts, balances, currency, main: MAIN_CONCEPTS.filter((c) => facts.has(c)).length };
+  };
+  const group = read("data.group.facts");
+  const company = read("data.company.facts");
+  const chosen = group.main >= 2 || (group.facts.size > 0 && company.facts.size === 0) ? { ...group, scope: "Koncern" as const } : { ...company, scope: company.facts.size ? ("Selskab" as const) : undefined };
+  return { facts: chosen.facts, balances: chosen.balances, scope: chosen.scope, currency: chosen.currency ?? currencyCode(pick(r, "currency", "unit", "data.currency")) };
+}
+
+/** Første begreb i listen, der har et tal. */
+function firstFact(facts: Map<string, number>, concepts: readonly string[]): number | undefined {
+  for (const c of concepts) {
+    const v = facts.get(c);
+    if (v !== undefined) return v;
+  }
+  return undefined;
+}
+
+/**
+ * Samlet gæld: ét samlet begreb, ellers (ÅRL) gæld uden hensatte + hensatte forpligtelser,
+ * ellers kort- og langfristet gæld (+ hensatte) lagt sammen. undefined, når intet er oplyst.
+ */
+function totalLiabilities(facts: Map<string, number>): number | undefined {
+  const direct = firstFact(facts, CONCEPTS.liabilitiesTotal);
+  if (direct !== undefined) return direct;
+  const provisions = firstFact(facts, CONCEPTS.provisions);
+  const otherThanProvisions = firstFact(facts, CONCEPTS.liabilitiesOtherThanProvisions);
+  if (otherThanProvisions !== undefined) return otherThanProvisions + (provisions ?? 0);
+  const shortTerm = firstFact(facts, CONCEPTS.shortTermLiabilities);
+  const longTerm = firstFact(facts, CONCEPTS.longTermLiabilities);
+  if (shortTerm === undefined && longTerm === undefined) return undefined;
+  return (shortTerm ?? 0) + (longTerm ?? 0) + (provisions ?? 0);
+}
+
+/**
  * Bekræftet form (GET /{lassoId}/reports/advanced, 24.09.2026):
  * [{ lassoId, period: { from, to }, reportYear, publicationTime,
  *    data: { company?: { reportType, facts: { incomeStatement, statementOfFinancialPosition, … } }, group?: { … } } }]
- * Hver sektion er et XBRL-præsentationstræ: { facts: { [begreb]: node }, xbrlType, abstract, label, section, source }.
- * Selskabets egne tal bruges først; koncerntal kun hvor selskabets mangler.
+ * Hver sektion er et XBRL-præsentationstræ: { facts: { [begreb]: node }, xbrlType, abstract, label, section, source },
+ * og bladene er { value, unit, balance, … }.
+ * Pr. rapport bruges ÉT scope: koncernen, når den har et regnskab, ellers selskabet (se `reportFacts`).
+ * Valutaen læses fra bladenes `unit` (fx "iso4217:EUR"); DKK, når den ikke er oplyst.
  */
 export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
   const reports = items(raw);
@@ -388,35 +541,34 @@ export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
     const published = dateStr(r, "publicationTime", "published", "publishedAt", "reportPublished");
     const year = num(r, "reportYear", "year", "fiscalYear", "financialYear", "aar") ?? (periodEnd ? Number(periodEnd.slice(0, 4)) : undefined);
     if (!year || !Number.isFinite(year)) continue;
-    const facts = new Map<string, number>();
-    for (const scope of ["data.company.facts", "data.group.facts"]) collectFacts(at(r, scope), periodEnd, facts);
+    const { facts, scope, currency } = reportFacts(r, periodEnd);
     const src = pick(r, "figures", "keyFigures", "values", "financials", "incomeStatement") ?? r;
-    const f = (concepts: string[], ...keys: string[]) =>
-      concepts.map((c) => facts.get(c)).find((v) => v !== undefined) ?? num(src, ...keys) ?? num(r, ...keys) ?? null;
+    const f = (concepts: readonly string[], ...keys: string[]) => firstFact(facts, concepts) ?? num(src, ...keys) ?? num(r, ...keys) ?? null;
     const publicationTime = dateStr(r, "publicationTime", "publicationDate", "published");
-    const revenue = f(["revenue", "revenues", "netsales", "revenuefromcontractswithcustomers", "nettoomsaetning"], "revenue", "netRevenue", "turnover", "netTurnover", "omsaetning");
-    const grossProfit = f(["grossprofitloss", "grossprofit", "grossresult"], "grossProfit", "grossResult", "grossProfitLoss", "bruttofortjeneste");
-    const profit = f(["profitloss", "profitlossfortheyear", "netincome"], "profit", "netResult", "profitLoss", "netIncome", "aaretsResultat");
-    const equity = f(["equity", "totalequity", "equityattributabletoownersofparent"], "equity", "totalEquity", "egenkapital");
-    const employees = f(["averagenumberofemployees", "numberofemployees"], "employees", "numberOfEmployees", "averageNumberOfEmployees", "antalAnsatte");
-    // Ubekræftet (se docs/lasso-endpoints.md "Ubekræftet"): samlet gæld, forsøgt som
-    // ét XBRL-begreb først, ellers kort- og langfristet gæld lagt sammen.
-    const liabilities = f(["liabilities", "liabilitiesandprovisions", "totalliabilities"], "liabilities", "totalLiabilities") ?? sumLiabilities(facts) ?? null;
-    // Ubekræftet: balancesum har intet fast XBRL-begreb set endnu; afledt af egenkapital + gæld (regnskabsligningen), når begge er kendt.
-    const assetsTotal = f(["assets", "totalassets", "assetstotal"], "assets", "totalAssets") ?? (typeof equity === "number" && typeof liabilities === "number" ? equity + liabilities : null);
+    const revenue = f(CONCEPTS.revenue, "revenue", "netRevenue", "turnover", "netTurnover", "omsaetning");
+    const grossProfit = f(CONCEPTS.grossProfit, "grossProfit", "grossResult", "grossProfitLoss", "bruttofortjeneste");
+    const profit = f(CONCEPTS.profit, "profit", "netResult", "profitLoss", "netIncome", "aaretsResultat");
+    const equity = f(CONCEPTS.equity, "equity", "totalEquity", "egenkapital");
+    const employees = f(CONCEPTS.employees, "employees", "numberOfEmployees", "averageNumberOfEmployees", "antalAnsatte");
+    // Samlet gæld: ét begreb, ellers ÅRL (gæld uden hensatte + hensatte), ellers kort + langfristet.
+    const liabilities = totalLiabilities(facts) ?? num(src, "liabilities", "totalLiabilities") ?? num(r, "liabilities", "totalLiabilities") ?? null;
+    // Balancesum: det direkte begreb, ellers egenkapital + gæld (regnskabsligningen).
+    const assetsTotal = f(CONCEPTS.assets, "assets", "totalAssets") ?? (typeof equity === "number" && typeof liabilities === "number" ? equity + liabilities : null);
     // EBITDA: det direkte begreb, ellers driftsresultat (EBIT) lagt til af- og nedskrivninger.
     // Driftsresultatet alene er IKKE EBITDA (det er efter afskrivninger), så uden afskrivninger vises "—".
-    const ebit = f(["profitlossfromordinaryoperatingactivities", "profitlossfromoperatingactivities", "operatingprofitloss"], "operatingProfit");
-    const dep = ["depreciationamortisationexpenseandimpairmentlossesofpropertyplantandequipmentandintangibleassetsrecognisedinprofitorloss", "depreciationamortisationandimpairmentlossesofintangibleassetsandtangibleassetsandpropertyplantandequipment", "depreciationandamortisationexpense", "depreciationamortisationexpense", "adjustmentsfordepreciationandamortisationexpense", "depreciation"].map((c) => facts.get(c)).find((v) => v !== undefined) ?? null;
+    const ebit = f(CONCEPTS.ebit, "operatingProfit", "ebit");
+    const dep = firstFact(facts, CONCEPTS.depreciation) ?? null;
     const ebitda = f(["ebitda"], "ebitda") ?? (typeof ebit === "number" && typeof dep === "number" ? ebit + Math.abs(dep) : null);
-    const currentAssets = f(["currentassets"], "currentAssets");
-    const currentLiabilities = facts.get("currentliabilities") ?? facts.get("shorttermliabilities") ?? facts.get("shorttermliabilitiesother") ?? null;
+    const currentAssets = f(CONCEPTS.currentAssets, "currentAssets");
+    const currentLiabilities = firstFact(facts, CONCEPTS.shortTermLiabilities) ?? null;
     years.push({
       year,
       periodStart,
       periodEnd,
       published,
       ...(publicationTime ? { publicationTime } : {}),
+      ...(scope ? { scope } : {}),
+      ...(currency ? { currency } : {}),
       revenue,
       grossProfit,
       profit,
@@ -426,7 +578,9 @@ export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
       assetsTotal,
       ebitda,
       soliditetsgrad: ratio(equity, assetsTotal),
-      overskudsgrad: ratio(profit, revenue ?? grossProfit),
+      // Overskudsgrad = resultat af primær drift (EBIT) i procent af nettoomsætningen (ÅRL-nøgletal).
+      // Uden omsætning (klasse B) er nøgletallet ikke defineret og vises som "—".
+      overskudsgrad: ratio(ebit, revenue),
       likviditetsgrad: ratio(currentAssets, currentLiabilities),
     });
   }
@@ -437,10 +591,11 @@ export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
     // Samme år kan komme flere gange (fx rettet regnskab); behold udfyldte værdier.
     byYear.set(y.year, prev ? mergeYear(prev, y) : y);
   }
+  const sorted = [...byYear.values()].sort((a, b) => a.year - b.year);
   return {
     lassoId,
-    currency: str(raw, "currency", "0.currency") ?? "DKK",
-    years: [...byYear.values()].sort((a, b) => a.year - b.year),
+    currency: [...sorted].reverse().find((y) => y.currency)?.currency ?? currencyCode(pick(raw, "currency", "0.currency")) ?? "DKK",
+    years: sorted,
   };
 }
 
@@ -462,32 +617,63 @@ function mergeYear(a: FinancialYear, b: FinancialYear): FinancialYear {
   return out;
 }
 
-/** Kort- og langfristet gæld lagt sammen, når der ikke er ét samlet gældsbegreb (ubekræftet). */
-function sumLiabilities(facts: Map<string, number>): number | undefined {
-  const shortTerm = facts.get("currentliabilities") ?? facts.get("shorttermliabilities") ?? facts.get("shorttermliabilitiesother");
-  const longTerm = facts.get("noncurrentliabilities") ?? facts.get("longtermliabilities") ?? facts.get("longtermliabilitiesother");
-  if (shortTerm === undefined && longTerm === undefined) return undefined;
-  return (shortTerm ?? 0) + (longTerm ?? 0);
+let isoCurrencies: Set<string> | undefined;
+
+/**
+ * ISO 4217-kode ud fra et XBRL-`unit`: "iso4217:EUR", "ISO4217_USD", "EUR", { measure: "iso4217:EUR" }.
+ * undefined for ikke-monetære enheder ("pure", "shares", "xbrli:pure", antal ansatte).
+ */
+export function currencyCode(unit: Json): string | undefined {
+  let s: string | undefined;
+  if (typeof unit === "string") s = unit;
+  else if (isObj(unit)) s = str(unit, "measure", "measures.0", "code", "id", "name", "unitId", "value");
+  if (!s) return undefined;
+  const m = /(?:^|[:_\s/-])([A-Za-z]{3})$/.exec(s.trim()) ?? /^([A-Za-z]{3})$/.exec(s.trim());
+  if (!m) return undefined;
+  const code = m[1]!.toUpperCase();
+  if (!isoCurrencies) {
+    try {
+      isoCurrencies = new Set((Intl as unknown as { supportedValuesOf(k: string): string[] }).supportedValuesOf("currency"));
+    } catch {
+      isoCurrencies = new Set(["DKK", "EUR", "USD", "SEK", "NOK", "GBP", "CHF", "JPY", "CNY", "ISK", "PLN"]);
+    }
+  }
+  return isoCurrencies.has(code) ? code : undefined;
 }
 
 const SECTION_ORDER = ["incomeStatement", "statementOfFinancialPosition", "statementOfComprehensiveIncome", "statementOfChangesInEquity"];
 
-/** Går et XBRL-træ igennem og samler begreb -> tal for regnskabsperioden. Første fund vinder. */
-function collectFacts(root: Json, periodEnd: string | undefined, out: Map<string, number>, depth = 0, balances?: Map<string, string>): void {
+/**
+ * Går et XBRL-træ igennem og samler begreb -> tal for regnskabsperioden. Første fund vinder.
+ * Tal fra en anden periode (fx sammenligningstal for året før) springes over, så de ikke
+ * skygger for årets tal længere nede i træet. `units` tæller valutakoderne i bladene.
+ */
+function collectFacts(
+  root: Json,
+  periodEnd: string | undefined,
+  out: Map<string, number>,
+  depth = 0,
+  balances?: Map<string, string>,
+  units?: Map<string, number>,
+): void {
   if (!isObj(root) || depth > 12) return;
   const entries = Object.entries(root);
   if (depth === 0) entries.sort(([a], [b]) => rank(a) - rank(b));
   for (const [key, node] of entries) {
     if (!isObj(node)) continue;
     const concept = key.replace(/^.*[:_#]/, "").toLowerCase();
-    const value = factValue(node, periodEnd);
-    if (value !== undefined && !out.has(concept)) {
-      out.set(concept, value);
-      const bal = typeof node.balance === "string" ? node.balance : undefined;
-      if (bal && balances) balances.set(concept, bal);
+    const fact = factValue(node, periodEnd);
+    if (fact !== undefined) {
+      const code = currencyCode(fact.unit);
+      if (code && units) units.set(code, (units.get(code) ?? 0) + 1);
+      if (!out.has(concept)) {
+        out.set(concept, fact.value);
+        const bal = typeof node.balance === "string" ? node.balance : undefined;
+        if (bal && balances) balances.set(concept, bal);
+      }
     }
-    if (isObj(node.facts)) collectFacts(node.facts, periodEnd, out, depth + 1, balances);
-    else if (Array.isArray(node.children)) for (const c of node.children) collectFacts(c, periodEnd, out, depth + 1, balances);
+    if (isObj(node.facts)) collectFacts(node.facts, periodEnd, out, depth + 1, balances, units);
+    else if (Array.isArray(node.children)) for (const c of node.children) collectFacts(c, periodEnd, out, depth + 1, balances, units);
   }
 }
 
@@ -496,16 +682,35 @@ function rank(section: string): number {
   return i === -1 ? SECTION_ORDER.length : i;
 }
 
-function factValue(node: Record<string, Json>, periodEnd: string | undefined): number | undefined {
+/** Slutdato (eller instant) for et tal, hvis bladet oplyser sin periode. */
+function periodOf(v: Json): string | undefined {
+  return dateStr(v, "period.to", "period.instant", "period.end", "period.endDate", "instant", "endDate", "context.period.to", "context.period.instant");
+}
+
+/**
+ * Tallet for regnskabsperioden i et blad. Et blad kan have ét tal (`value`) eller en liste
+ * (`values`/`facts`) med perioder, fx årets tal og sammenligningstal. Kun tal, hvis periode
+ * matcher rapportens `period.to`, bruges; har ingen af de daterede tal den rigtige periode,
+ * gives undefined frem for et tilfældigt (forrige års) tal.
+ */
+function factValue(node: Record<string, Json>, periodEnd: string | undefined): { value: number; unit?: Json } | undefined {
   const list = Array.isArray(node.values) ? node.values : Array.isArray(node.facts) ? node.facts : undefined;
   if (list) {
     const plain = list.filter((v) => !isObj(v) || !pick(v, "dimensions", "dimension", "members"));
     const pool = plain.length ? plain : list;
-    const match = periodEnd ? pool.find((v) => dateStr(v, "period.to", "period.instant", "instant", "endDate", "to", "period.end") === periodEnd) : undefined;
-    const hit = match ?? pool[0];
-    return typeof hit === "number" ? hit : num(hit, "value", "amount", "numericValue");
+    let hit: Json;
+    if (periodEnd) {
+      hit = pool.find((v) => periodOf(v) === periodEnd);
+      if (hit === undefined) hit = pool.find((v) => periodOf(v) === undefined);
+    } else hit = pool[0];
+    if (hit === undefined) return undefined;
+    const value = typeof hit === "number" ? hit : num(hit, "value", "amount", "numericValue");
+    return value === undefined ? undefined : { value, unit: isObj(hit) ? (pick(hit, "unit", "unitRef") ?? pick(node, "unit", "unitRef")) : pick(node, "unit", "unitRef") };
   }
-  return num(node, "value", "amount", "numericValue", "currentValue", "current");
+  const own = periodOf(node);
+  if (periodEnd && own !== undefined && own !== periodEnd) return undefined;
+  const value = num(node, "value", "amount", "numericValue", "currentValue", "current");
+  return value === undefined ? undefined : { value, unit: pick(node, "unit", "unitRef") };
 }
 
 /**
@@ -522,15 +727,16 @@ export function adaptFinancialStatements(lassoId: string, raw: Json): FinancialS
   const incomeStatement: IncomeStatementYear[] = [];
   const balanceSheet: BalanceSheetYear[] = [];
   const cashFlow: CashFlowYear[] = [];
+  const currencies: { year: number; currency: string }[] = [];
   for (const r of reports) {
     const periodEnd = dateStr(r, "period.to", "periodEnd", "period.end", "endDate", "end", "reportingPeriod.end", "to");
     const periodStart = dateStr(r, "period.from", "periodStart", "period.start", "startDate", "reportingPeriod.start", "from");
     const year = num(r, "reportYear", "year", "fiscalYear", "financialYear", "aar") ?? (periodEnd ? Number(periodEnd.slice(0, 4)) : undefined);
     if (!year || !Number.isFinite(year)) continue;
-    const facts = new Map<string, number>();
-    const balances = new Map<string, string>();
-    for (const scope of ["data.company.facts", "data.group.facts"]) collectFacts(at(r, scope), periodEnd, facts, 0, balances);
-    const g = (...concepts: string[]): number | null => concepts.map((c) => facts.get(c)).find((v) => v !== undefined) ?? null;
+    // Samme scope (koncern eller selskab) og valuta som adaptFinancials, så de to aldrig er uenige.
+    const { facts, balances, currency } = reportFacts(r, periodEnd);
+    if (currency) currencies.push({ year, currency });
+    const g = (...concepts: string[]): number | null => firstFact(facts, concepts) ?? null;
     // Resultatopgørelsen i visningen har fortegn: omkostninger negative, indtægter positive.
     // XBRL angiver beløbet positivt og retningen i "balance" (debit = omkostning), så fortegnet
     // sættes derfra. Mangler "balance", antages en omkostningspost at være en omkostning.
@@ -546,8 +752,8 @@ export function adaptFinancialStatements(lassoId: string, raw: Json): FinancialS
     const sum = (...vals: (number | null)[]): number | null => (vals.some((v) => typeof v === "number") ? vals.reduce<number>((a, v) => a + (v ?? 0), 0) : null);
 
     // Begreberne dækker både den danske taksonomi (ÅRL, fsa:) og IFRS/ESEF (børsnoterede).
-    const revenue = g("revenue", "revenues", "netsales", "revenuefromcontractswithcustomers", "nettoomsaetning");
-    const grossProfit = g("grossprofitloss", "grossprofit", "grossresult");
+    const revenue = g(...CONCEPTS.revenue);
+    const grossProfit = g(...CONCEPTS.grossProfit);
     const staffCosts = signed(true, "employeebenefitsexpense", "staffcosts", "wagesandsalaries", "personnelexpenses");
     // Artsopdelt (ÅRL): andre eksterne omkostninger. Funktionsopdelt (IFRS): salg, forskning og administration samlet.
     const otherOperatingCosts =
@@ -558,37 +764,29 @@ export function adaptFinancialStatements(lassoId: string, raw: Json): FinancialS
         signed(true, "administrativeexpense", "administrativeexpenses"),
         signed(false, "otheroperatingincomeexpense"),
       );
-    const depreciation = signed(
-      true,
-      "depreciationamortisationexpenseandimpairmentlossesofpropertyplantandequipmentandintangibleassetsrecognisedinprofitorloss",
-      "depreciationamortisationandimpairmentlossesofintangibleassetsandtangibleassetsandpropertyplantandequipment",
-      "depreciationandamortisationexpense",
-      "depreciationamortisationexpense",
-      "adjustmentsfordepreciationandamortisationexpense",
-      "depreciation",
-    );
+    const depreciation = signed(true, ...CONCEPTS.depreciation);
     const financialItemsNet =
       g("financialincomeandexpenses", "netfinancials", "financialitemsnet", "financeincomecost") ??
       sum(signed(false, "otherfinanceincome", "financeincome", "financialincome", "otherfinancialincome"), signed(true, "otherfinanceexpenses", "financecosts", "financialexpenses", "otherfinancialexpenses"));
     const profitBeforeTax = signed(false, "profitlossfromordinaryactivitiesbeforetax", "profitlossbeforetax", "profitbeforetax");
     const tax = signed(true, "taxexpenseonordinaryactivities", "taxexpense", "incometaxexpensecontinuingoperations", "incometaxexpense", "tax");
-    const profit = signed(false, "profitloss", "profitlossfortheyear", "netincome");
+    const profit = signed(false, ...CONCEPTS.profit);
     // EBITDA: det direkte begreb, ellers EBIT + af- og nedskrivninger, ellers bruttofortjeneste − personale − andre driftsomkostninger.
     const ebitda =
       g("ebitda") ??
       (() => {
-        const ebit = g("profitlossfromordinaryoperatingactivities", "profitlossfromoperatingactivities", "operatingprofitloss");
+        const ebit = g(...CONCEPTS.ebit);
         return typeof ebit === "number" && typeof depreciation === "number" ? ebit + Math.abs(depreciation) : null;
       })() ??
       (typeof grossProfit === "number" && typeof staffCosts === "number" && typeof otherOperatingCosts === "number" ? grossProfit + staffCosts + otherOperatingCosts : null);
     incomeStatement.push({ year, periodStart, periodEnd, revenue, grossProfit, staffCosts, otherOperatingCosts, ebitda, depreciation, financialItemsNet, profitBeforeTax, tax, profit });
 
-    const equityTotal = g("equity", "totalequity", "equityattributabletoownersofparent");
-    // IFRS: kortfristet og langfristet gæld hedder current/noncurrent liabilities.
-    const longTermLiabilities = g("noncurrentliabilities", "longtermliabilitiesotherthanprovisions", "longtermliabilities");
-    const shortTermLiabilities = g("currentliabilities", "shorttermliabilitiesotherthanprovisions", "shorttermliabilities");
-    const liabilitiesTotal = g("liabilities", "liabilitiesandprovisions", "totalliabilities") ?? sumSigned(longTermLiabilities, shortTermLiabilities);
-    const assetsTotal = g("assets", "totalassets", "assetstotal") ?? (typeof equityTotal === "number" && typeof liabilitiesTotal === "number" ? equityTotal + liabilitiesTotal : null);
+    const equityTotal = g(...CONCEPTS.equity);
+    // IFRS: current/noncurrent liabilities; ÅRL: …OtherThanProvisions (hensatte står for sig).
+    const longTermLiabilities = g(...CONCEPTS.longTermLiabilities);
+    const shortTermLiabilities = g(...CONCEPTS.shortTermLiabilities);
+    const liabilitiesTotal = totalLiabilities(facts) ?? null;
+    const assetsTotal = g(...CONCEPTS.assets) ?? (typeof equityTotal === "number" && typeof liabilitiesTotal === "number" ? equityTotal + liabilitiesTotal : null);
     balanceSheet.push({
       year,
       periodEnd,
@@ -598,7 +796,7 @@ export function adaptFinancialStatements(lassoId: string, raw: Json): FinancialS
       tradeReceivables: g("shorttermtradereceivables", "tradereceivables", "tradeandothercurrentreceivables", "currenttradereceivables", "shorttermreceivablesfromsales"),
       otherReceivables: g("othershorttermreceivables", "othercurrentreceivables", "prepayments"),
       cash: g("cashandcashequivalents", "cash"),
-      currentAssetsTotal: g("currentassets"),
+      currentAssetsTotal: g(...CONCEPTS.currentAssets),
       assetsTotal,
       shareCapital: g("contributedcapital", "issuedcapital", "sharecapital"),
       retainedEarnings: g("retainedearnings"),
@@ -661,17 +859,11 @@ export function adaptFinancialStatements(lassoId: string, raw: Json): FinancialS
   };
   return {
     lassoId,
-    currency: str(raw, "currency", "0.currency") ?? "DKK",
+    currency: currencies.sort((a, b) => a.year - b.year).at(-1)?.currency ?? currencyCode(pick(raw, "currency", "0.currency")) ?? "DKK",
     incomeStatement: dedupeByYear(incomeStatement),
     balanceSheet: dedupeByYear(balanceSheet),
     cashFlow: dedupeByYear(cashFlow),
   };
-}
-
-/** Lægger to (muligvis manglende) beløb sammen; "—" (null), når begge mangler. */
-function sumSigned(a: number | null | undefined, b: number | null | undefined): number | null {
-  if (typeof a !== "number" && typeof b !== "number") return null;
-  return (a ?? 0) + (b ?? 0);
 }
 
 /**
@@ -753,8 +945,8 @@ export function adaptTimeline(lassoId: string, companyRaw: Json, people: readonl
     const date = y.publicationTime ?? y.periodEnd;
     if (!date) continue;
     const parts = [
-      y.grossProfit != null ? `Bruttofortjeneste ${formatAmountShort(y.grossProfit)}` : null,
-      y.profit != null ? `resultat ${formatAmountShort(y.profit)}` : null,
+      y.grossProfit != null ? `Bruttofortjeneste ${formatAmountShort(y.grossProfit, y.currency)}` : null,
+      y.profit != null ? `resultat ${formatAmountShort(y.profit, y.currency)}` : null,
     ].filter((x): x is string => Boolean(x));
     events.push({ date, title: `Årsrapport ${y.year} offentliggjort`, detail: parts.join(", ") || undefined, category: "Regnskab" });
   }
@@ -762,13 +954,14 @@ export function adaptTimeline(lassoId: string, companyRaw: Json, people: readonl
   return { lassoId, events };
 }
 
-/** Kort beløbstekst uden "kr.", til tidslinjens detaljelinje (samme regler som card.ts). */
-function formatAmountShort(v: number): string {
+/** Kort beløbstekst til tidslinjens detaljelinje (samme regler som card.ts), i regnskabets valuta. */
+function formatAmountShort(v: number, currency?: string): string {
+  const unit = currencyUnit(currency);
   const abs = Math.abs(v);
-  if (abs >= 1_000_000_000) return `${(v / 1_000_000_000).toFixed(1).replace(".", ",")} mia. kr.`;
-  if (abs >= 1_000_000) return `${(v / 1_000_000).toFixed(1).replace(".", ",")} mio. kr.`;
-  if (abs >= 10_000) return `${Math.round(v / 1_000)} t. kr.`;
-  return `${Math.round(v)} kr.`;
+  if (abs >= 1_000_000_000) return `${(v / 1_000_000_000).toFixed(1).replace(".", ",")} mia. ${unit}`;
+  if (abs >= 1_000_000) return `${(v / 1_000_000).toFixed(1).replace(".", ",")} mio. ${unit}`;
+  if (abs >= 10_000) return `${Math.round(v / 1_000)} t. ${unit}`;
+  return `${Math.round(v)} ${unit}`;
 }
 
 /**
@@ -1105,13 +1298,15 @@ function nodeFrom(raw: Json, id: string): OwnershipNodeVM {
   const get = (...p: string[]) => str(info, ...p) ?? str(raw, ...p);
   const type = (get("type", "entityType", "kind", "nodeType", "entity.type") ?? "").toLowerCase();
   const country = get("country", "countryCode", "address.country", "address.countryCode");
-  const isPerson = /person|individual|human/.test(type) || (!/company|virksomhed|organi|business|legal/.test(type) && /^CVR-(3|4)-/i.test(id));
+  // Personnoder har navnet under andre nøgler end selskaber (fx fullName/personName/person.name).
+  const name = get("name", "companyName", "legalName", "displayName", "fullName", "personName", "person.name", "participant.name", "names.0", "navn");
+  const kind = participantKind(type || undefined, id, name);
   const status = get("status", "companyStatus", "lifecycle.status", "state");
   const cc = country && country.length <= 3 && !/^(dk|dnk|danmark|denmark)$/i.test(country) ? country.toUpperCase().slice(0, 2) : undefined;
   return {
     id,
-    name: get("name", "companyName", "legalName", "displayName", "navn") ?? id,
-    kind: isPerson ? "person" : "company",
+    name: name ?? id,
+    kind,
     cvr: get("cvr", "cvrNumber", "vat", "vatNumber") ?? (/^CVR-1-(\d{8})$/i.exec(id)?.[1]),
     form: get("form.shortDescription", "companyForm", "legalForm", "form"),
     status,

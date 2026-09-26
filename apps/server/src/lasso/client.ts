@@ -48,6 +48,29 @@ interface CacheEntry {
   value: Promise<unknown>;
 }
 
+/** Hvor længe et mislykket kald huskes (negativ cache), så samme fejl/timeout ikke rammes igen med det samme. */
+export const NEGATIVE_TTL_MS = 90_000;
+
+/**
+ * Timeout for kontaktendpoints, der scraper virksomhedens hjemmeside (websites/contacts).
+ * De ligger aldrig på den kritiske vej for resten af visningen, så de må hellere give op end vente.
+ */
+export const SCRAPE_TIMEOUT_MS = 8_000;
+
+/**
+ * Om en fejl må huskes kortvarigt: timeout og 4xx (undtagen 408/429) giver samme svar ved et
+ * nyt forsøg lige efter. 5xx, 429 og netværksfejl kan være forbigående og prøves igen straks.
+ */
+export function isCacheableFailure(err: unknown): boolean {
+  if (err instanceof LassoApiError) return err.status >= 400 && err.status < 500 && err.status !== 408 && err.status !== 429;
+  return err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
+}
+
+export interface RequestOptions {
+  /** Egen timeout for dette kald (ms); ellers LASSO_API_TIMEOUT_MS. */
+  timeoutMs?: number;
+}
+
 /**
  * Tynd klient over Lassos API. Returnerer rå JSON; oversættelsen til vores
  * datamodeller sker i adapters.ts. Endpoints: docs/lasso-endpoints.md.
@@ -57,6 +80,8 @@ export class LassoClient {
   private readonly headers: Record<string, string>;
   private readonly authQuery: Record<string, string>;
   private readonly timeoutMs: number;
+  /** Timeout for de scrapende kontaktendpoints: SCRAPE_TIMEOUT_MS, dog aldrig længere end den globale. */
+  readonly scrapeTimeoutMs: number;
   private readonly ttlMs: number;
   private readonly cache = new Map<string, CacheEntry>();
   /** Klient til søge-endpoints, når de ligger på et andet miljø med egen nøgle (LASSO_SEARCH_API_*). */
@@ -65,6 +90,7 @@ export class LassoClient {
   constructor(config: Config) {
     this.baseUrl = config.LASSO_API_BASE_URL.replace(/\/+$/, "");
     this.timeoutMs = config.LASSO_API_TIMEOUT_MS;
+    this.scrapeTimeoutMs = Math.min(this.timeoutMs, SCRAPE_TIMEOUT_MS);
     this.ttlMs = config.LASSO_CACHE_TTL_SECONDS * 1000;
     this.authQuery = authQuery(config);
     this.headers = { Accept: "application/json", ...(Object.keys(this.authQuery).length ? {} : authHeaders(config)) };
@@ -93,7 +119,7 @@ export class LassoClient {
   }
 
   /** GET mod en sti under base-URL'en. Svar caches kort (LASSO_CACHE_TTL_SECONDS). */
-  async get<T = unknown>(path: string, query: Query = {}): Promise<T> {
+  async get<T = unknown>(path: string, query: Query = {}, opts: RequestOptions = {}): Promise<T> {
     const url = new URL(path.replace(/^\/+/, ""), `${this.baseUrl}/`);
     for (const [key, value] of Object.entries(query)) {
       if (value !== undefined) url.searchParams.set(key, String(value));
@@ -104,12 +130,8 @@ export class LassoClient {
     const hit = this.cache.get(key);
     if (hit && hit.expires > now) return hit.value as Promise<T>;
 
-    const value = this.fetchJson(url);
-    if (this.ttlMs > 0) {
-      this.cache.set(key, { expires: now + this.ttlMs, value });
-      value.catch(() => this.cache.delete(key));
-      if (this.cache.size > 2000) this.prune(now);
-    }
+    const value = this.fetchJson(url, {}, opts.timeoutMs);
+    this.remember(key, value, now);
     return value as Promise<T>;
   }
 
@@ -123,10 +145,7 @@ export class LassoClient {
     const hit = this.cache.get(key);
     if (hit && hit.expires > now) return hit.value as Promise<T>;
     const value = this.fetchJson(url, { method: "POST", body: json, headers: { ...this.headers, "Content-Type": "application/json" } });
-    if (this.ttlMs > 0) {
-      this.cache.set(key, { expires: now + this.ttlMs, value });
-      value.catch(() => this.cache.delete(key));
-    }
+    this.remember(key, value, now);
     return value as Promise<T>;
   }
 
@@ -147,8 +166,24 @@ export class LassoClient {
     }
   }
 
-  private async fetchJson(url: URL, init: RequestInit = {}): Promise<unknown> {
-    const res = await fetch(url, { headers: this.headers, ...init, signal: AbortSignal.timeout(this.timeoutMs) });
+  /**
+   * Gemmer et kald i cachen (også mens det kører, så samtidige kald deler det). Lykkes det,
+   * gælder LASSO_CACHE_TTL_SECONDS. Fejler det med en fejl, der vil gentage sig (timeout, 4xx),
+   * huskes fejlen i NEGATIVE_TTL_MS; andre fejl fjernes straks, så næste kald prøver igen.
+   */
+  private remember(key: string, value: Promise<unknown>, now: number) {
+    if (this.ttlMs <= 0) return;
+    this.cache.set(key, { expires: now + this.ttlMs, value });
+    value.catch((err: unknown) => {
+      if (this.cache.get(key)?.value !== value) return;
+      if (isCacheableFailure(err)) this.cache.set(key, { expires: Date.now() + Math.min(NEGATIVE_TTL_MS, this.ttlMs), value });
+      else this.cache.delete(key);
+    });
+    if (this.cache.size > 2000) this.prune(now);
+  }
+
+  private async fetchJson(url: URL, init: RequestInit = {}, timeoutMs = this.timeoutMs): Promise<unknown> {
+    const res = await fetch(url, { headers: this.headers, ...init, signal: AbortSignal.timeout(timeoutMs) });
     const text = await res.text();
     let body: unknown = null;
     if (text) {
@@ -213,8 +248,9 @@ export class LassoClient {
   ejf(lassoId: string) {
     return this.get(`data/ejf/${enc(lassoId)}/ownerships/current`);
   }
+  /** Virksomhedens hjemmesider. Kort timeout: bruges kun til kontaktblokken, aldrig på den kritiske vej. */
   websites(lassoId: string) {
-    return this.get(`data/websites/${enc(lassoId)}`);
+    return this.get(`data/websites/${enc(lassoId)}`, {}, { timeoutMs: this.scrapeTimeoutMs });
   }
   valuations(lassoId: string) {
     return this.get(`modules/valuations/${enc(lassoId)}`);
@@ -243,8 +279,9 @@ export class LassoClient {
       ...(p.onDate ? { onDate: p.onDate } : {}),
     });
   }
+  /** Kontaktdata scrapet fra hjemmesiden (langsomt, 10+ s). Kort timeout, så resten af visningen ikke venter. */
   contacts(lassoId: string, p: ContactParams = { contacts: true }) {
-    return this.get(`apps/contacts/${enc(lassoId)}/data`, { ...p });
+    return this.get(`apps/contacts/${enc(lassoId)}/data`, { ...p }, { timeoutMs: this.scrapeTimeoutMs });
   }
   /** BBR-opsummering for én ejendom ud fra BFE-nummeret. Sti og parameter bekræftet af Lasso 26.09.2026. */
   bbrSummary(bfeNumber: string | number) {

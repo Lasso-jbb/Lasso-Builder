@@ -1,4 +1,4 @@
-import { amountScale, formatScaled, type FinancialsVM } from "@lasso/spec";
+import { amountScale, currencyUnit, formatScaled, type FinancialsVM } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
 import { CHART_AXIS_W, CHART_BOTTOM, CHART_H, CHART_TOP, makeYScale, niceTicks } from "../charts.js";
@@ -68,7 +68,7 @@ export function WaterfallChart({ financials, error }: { financials?: FinancialsV
     );
   }
 
-  const scale = amountScale(steps.map((s) => s.value));
+  const scale = amountScale(steps.map((s) => s.value), currencyUnit(financials.currency));
   const label = (v: number) => formatScaled(v, scale);
   const subtitle = `${scale.label}, ${yr!.year}`;
 

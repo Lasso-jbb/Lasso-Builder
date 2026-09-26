@@ -183,23 +183,17 @@ export function createMcpServer(ctx: McpContext): McpServer {
         const alt = found.alternatives.map((r) => `${r.name} (${r.cvr ?? r.lassoId})`).join("; ");
         note = `Fundet ud fra navnet "${company}": ${found.pick.name} (${found.pick.cvr ?? found.pick.lassoId}).${alt ? ` Andre match: ${alt}. Mente brugeren en af dem, så kald show_company igen med dens CVR-nummer.` : ""}`;
       }
-      let name: string | undefined;
-      try {
-        name = (await provider.company(lassoId)).name;
-      } catch (err) {
-        return toolError(`Kunne ikke hente ${company}: ${errorMessage(err)}. Tjek CVR-nummeret eller navnet.`);
+      // Ét samlet hent: navnet tages fra datasættet (begge specs har LassoCompanyHead og henter
+      // derfor virksomheden), så CVR-opslaget ikke laves to gange efter hinanden.
+      const ds: Dataset = await resolveSpec(sections?.length ? companyTemplate(lassoId, { sections, chartMetric: chart_metric, years }) : composeProbe(lassoId, focus), provider);
+      const name = ds.companies[lassoId]?.name;
+      if (!name) {
+        return toolError(`Kunne ikke hente ${company}: ${ds.errors[`company:${lassoId}`] ?? "ukendt fejl"}. Tjek CVR-nummeret eller navnet.`);
       }
-      let spec: ViewSpec;
-      let ds: Dataset;
-      if (sections?.length) {
-        // Ældre kald med faste sektioner.
-        spec = companyTemplate(lassoId, { sections, chartMetric: chart_metric, years, name });
-        ds = await resolveSpec(spec, provider);
-      } else {
-        // Hent først de data, hensigten kan bruge; komponér derefter ud fra datas form.
-        ds = await resolveSpec(composeProbe(lassoId, focus), provider);
-        spec = composeCompany(lassoId, ds, { focus, years, chartMetric: chart_metric, name });
-      }
+      // Ældre kald med faste sektioner får skabelonen; ellers komponeres ud fra datas form.
+      const spec: ViewSpec = sections?.length
+        ? companyTemplate(lassoId, { sections, chartMetric: chart_metric, years, name })
+        : composeCompany(lassoId, ds, { focus, years, chartMetric: chart_metric, name });
       const cvr = cvrFromLassoId(lassoId);
       const link = cvr ? companyLink(config, { cvr, metric: chart_metric ?? "bruttofortjeneste", years: years ?? 5 }) : undefined;
       return viewResult(spec, ds, { note, link });

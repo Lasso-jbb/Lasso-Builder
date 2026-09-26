@@ -25,6 +25,11 @@ import {
   adaptOwnershipGraph,
   graphFromOwnership,
   shareRange,
+  currencyCode,
+  participantKind,
+  looksLikeOrganisation,
+  participantNames,
+  applyGraphNames,
 } from "./adapters.js";
 
 test("adaptCompany tåler forskellige feltnavne", () => {
@@ -225,7 +230,7 @@ test("adaptPeople udelader revisorer fra otherParticipants og læser employees.c
   assert.equal(adaptCompany("CVR-1-11111111", raw).employees, 21000);
 });
 
-test("adaptFinancials læser XBRL-træet i reports/advanced (selskab før koncern)", () => {
+test("adaptFinancials bruger ét scope pr. rapport: koncernen, når den har et regnskab (aldrig blandet)", () => {
   const node = (value: number | null, facts: Record<string, unknown> = {}) => ({ value, facts, abstract: value === null, label: "", section: "", source: "" });
   const vm = adaptFinancials("CVR-1-1", [
     {
@@ -235,11 +240,16 @@ test("adaptFinancials læser XBRL-træet i reports/advanced (selskab før koncer
       data: {
         company: {
           facts: {
-            incomeStatement: node(null, { "fsa:Revenue": node(1000), "fsa:GrossProfitLoss": node(400), "fsa:ProfitLoss": node(90) }),
+            incomeStatement: node(null, { "fsa:Revenue": node(1000), "fsa:GrossProfitLoss": node(400), "fsa:ProfitLoss": node(90), "fsa:AverageNumberOfEmployees": node(3) }),
             statementOfFinancialPosition: node(null, { EquityAndLiabilities: node(null, { Equity: node(700) }) }),
           },
         },
-        group: { facts: { incomeStatement: node(null, { Revenue: node(5000), AverageNumberOfEmployees: node(12) }) } },
+        group: {
+          facts: {
+            incomeStatement: node(null, { Revenue: node(5000), ProfitLossFromOrdinaryOperatingActivities: node(600), ProfitLoss: node(450), AverageNumberOfEmployees: node(12) }),
+            statementOfFinancialPosition: node(null, { Equity: node(2000) }),
+          },
+        },
       },
     },
     { lassoId: "CVR-1-1", period: { from: "2005-01-01", to: "2005-12-31" }, reportYear: 2005, data: { company: null, group: null } },
@@ -250,19 +260,39 @@ test("adaptFinancials læser XBRL-træet i reports/advanced (selskab før koncer
       periodStart: "2024-01-01",
       periodEnd: "2024-12-31",
       published: undefined,
-      revenue: 1000,
-      grossProfit: 400,
-      profit: 90,
-      equity: 700,
+      scope: "Koncern",
+      revenue: 5000,
+      // Selskabets bruttofortjeneste må ikke blandes ind i koncernens år.
+      grossProfit: null,
+      profit: 450,
+      equity: 2000,
       employees: 12,
       liabilities: null,
       assetsTotal: null,
       ebitda: null,
       soliditetsgrad: null,
-      overskudsgrad: 9,
+      overskudsgrad: 12,
       likviditetsgrad: null,
     },
   ]);
+});
+
+test("adaptFinancials bruger selskabets tal, når koncernen kun har enkelte tal", () => {
+  const node = (value: number | null, facts: Record<string, unknown> = {}) => ({ value, facts });
+  const vm = adaptFinancials("CVR-1-1", [
+    {
+      period: { to: "2024-12-31" },
+      reportYear: 2024,
+      data: {
+        company: { facts: { incomeStatement: node(null, { Revenue: node(1000), GrossProfitLoss: node(400), ProfitLoss: node(90) }) } },
+        group: { facts: { incomeStatement: node(null, { AverageNumberOfEmployees: node(12) }) } },
+      },
+    },
+  ]);
+  const y = vm.years[0]!;
+  assert.equal(y.scope, "Selskab");
+  assert.equal(y.revenue, 1000);
+  assert.equal(y.employees, null, "koncernens ansatte blandes ikke ind i selskabets år");
 });
 
 test("adaptFinancials læser period.from og publicationTime (LassoKeyValueList/LassoMultiYearTable, katalog 09-10)", () => {
@@ -661,4 +691,265 @@ test("adaptFinancialStatements læser IFRS/ESEF (børsnoteret, funktionsopdelt) 
   assert.equal(y.profit, 102434000000);
   // Ingen afskrivninger i svaret: EBITDA kan ikke beregnes og må ikke gættes som driftsresultatet.
   assert.equal(y.ebitda, null);
+});
+
+/* ---------- Rettelser efter review 26.09.2026 ---------- */
+
+test("statusKind: afsluttede forløb er inaktive, igangværende er advarsler (alle CVR-statusser)", () => {
+  const cases: [string, ReturnType<typeof statusKind>][] = [
+    ["Normal", "active"],
+    ["Aktiv", "active"],
+    ["NORMAL", "active"],
+    ["Ophørt", "inactive"],
+    ["Opløst", "inactive"],
+    ["Opløst efter frivillig likvidation", "inactive"],
+    ["Opløst efter konkurs", "inactive"],
+    ["Opløst efter fusion", "inactive"],
+    ["Opløst efter spaltning", "inactive"],
+    ["Opløst efter tvangsopløsning", "inactive"],
+    ["Slettet", "inactive"],
+    ["Under konkurs", "warning"],
+    ["Under frivillig likvidation", "warning"],
+    ["Under tvangsopløsning", "warning"],
+    ["Tvangsopløst", "warning"],
+    ["Under reassumering", "warning"],
+    ["Under rekonstruktion", "warning"],
+  ];
+  for (const [status, kind] of cases) assert.equal(statusKind(status), kind, status);
+  assert.equal(statusKind(undefined), undefined);
+});
+
+/** XBRL-blad som i reports/advanced: { value, unit, balance, … }. */
+const leaf = (value: number | null, unit?: string, extra: Record<string, unknown> = {}) => ({ value, unit, xbrlType: "monetaryItemType", ...extra });
+const tree = (facts: Record<string, unknown>) => ({ value: null, facts, abstract: true });
+
+/** Vestas-lignende rapport i EUR (IFRS, koncern). */
+const VESTAS_2025 = {
+  lassoId: "CVR-1-10403782",
+  period: { from: "2025-01-01", to: "2025-12-31" },
+  reportYear: 2025,
+  data: {
+    group: {
+      facts: {
+        incomeStatement: tree({
+          "ifrs-full:Revenue": leaf(18_822_000_000, "iso4217:EUR"),
+          "ifrs-full:ProfitLossFromOperatingActivities": leaf(1_200_000_000, "iso4217:EUR"),
+          "ifrs-full:ProfitLoss": leaf(800_000_000, "iso4217:EUR"),
+          "ifrs-full:AverageNumberOfEmployees": leaf(35_000, "xbrli:pure"),
+        }),
+        statementOfFinancialPosition: tree({
+          "ifrs-full:Assets": leaf(22_000_000_000, "iso4217:EUR"),
+          "ifrs-full:Equity": leaf(4_000_000_000, "iso4217:EUR"),
+          "ifrs-full:Liabilities": leaf(18_000_000_000, "iso4217:EUR"),
+        }),
+      },
+    },
+  },
+};
+
+test("adaptFinancials læser valutaen fra XBRL unit (Vestas i EUR), ikke altid DKK", () => {
+  const vm = adaptFinancials("CVR-1-10403782", [VESTAS_2025]);
+  assert.equal(vm.currency, "EUR");
+  assert.equal(vm.years[0]!.currency, "EUR");
+  assert.equal(vm.years[0]!.revenue, 18_822_000_000);
+  assert.equal(vm.years[0]!.employees, 35_000);
+  const st = adaptFinancialStatements("CVR-1-10403782", [VESTAS_2025]);
+  assert.equal(st.currency, "EUR");
+});
+
+test("adaptFinancials: Mærsk-lignende USD-regnskab og unit som objekt eller ren kode", () => {
+  const maersk = (unit: unknown) => [
+    { period: { to: "2025-12-31" }, reportYear: 2025, data: { group: { facts: { incomeStatement: tree({ Revenue: { value: 53_988_000_000, unit }, ProfitLoss: { value: 3_000_000_000, unit }, Equity: { value: 55e9, unit } }) } } } },
+  ];
+  assert.equal(adaptFinancials("CVR-1-22756214", maersk("iso4217:USD")).currency, "USD");
+  assert.equal(adaptFinancials("CVR-1-22756214", maersk({ measure: "iso4217:USD" })).currency, "USD");
+  assert.equal(adaptFinancials("CVR-1-22756214", maersk("USD")).currency, "USD");
+  // Uden unit: DKK som hidtil.
+  assert.equal(adaptFinancials("CVR-1-1", maersk(undefined)).currency, "DKK");
+});
+
+test("adaptFinancials tager valutaen fra det nyeste regnskab, når selskabet har skiftet", () => {
+  const rep = (year: number, unit: string) => ({ period: { to: `${year}-12-31` }, reportYear: year, data: { company: { facts: { incomeStatement: tree({ GrossProfitLoss: leaf(100, unit), ProfitLoss: leaf(10, unit) }) } } } });
+  const vm = adaptFinancials("CVR-1-1", [rep(2025, "iso4217:EUR"), rep(2024, "iso4217:DKK")]);
+  assert.equal(vm.currency, "EUR");
+  assert.deepEqual(vm.years.map((y) => y.currency), ["DKK", "EUR"]);
+});
+
+test("currencyCode genkender ISO 4217 og afviser ikke-monetære enheder", () => {
+  assert.equal(currencyCode("iso4217:EUR"), "EUR");
+  assert.equal(currencyCode("ISO4217_usd"), "USD");
+  assert.equal(currencyCode("DKK"), "DKK");
+  assert.equal(currencyCode({ measure: "iso4217:SEK" }), "SEK");
+  assert.equal(currencyCode("xbrli:pure"), undefined);
+  assert.equal(currencyCode("xbrli:shares"), undefined);
+  assert.equal(currencyCode("ANT"), undefined);
+  assert.equal(currencyCode(undefined), undefined);
+});
+
+test("adaptTimeline skriver beløb i regnskabets valuta", () => {
+  const tl = adaptTimeline("CVR-1-1", {}, [], [{ year: 2025, periodEnd: "2025-12-31", grossProfit: 18_822_000_000, profit: 800_000_000, currency: "EUR" }]);
+  assert.equal(tl.events[0]!.detail, "Bruttofortjeneste 18,8 mia. EUR, resultat 800,0 mio. EUR");
+});
+
+/** Arne Elkjær-lignende ÅRL klasse C (tal fra live 2024): gæld uden hensatte, som CVR/ÅRL tagger den. */
+const ARL_2024 = {
+  period: { from: "2024-01-01", to: "2024-12-31" },
+  reportYear: 2024,
+  data: {
+    company: {
+      facts: {
+        incomeStatement: tree({
+          "fsa:Revenue": leaf(60_000_000, "iso4217:DKK"),
+          "fsa:GrossProfitLoss": leaf(24_992_309, "iso4217:DKK"),
+          "fsa:ProfitLossFromOrdinaryOperatingActivities": leaf(1_800_000, "iso4217:DKK"),
+          "fsa:ProfitLoss": leaf(1_027_633, "iso4217:DKK"),
+        }),
+        statementOfFinancialPosition: tree({
+          "fsa:CurrentAssets": leaf(15_278_985, "iso4217:DKK"),
+          "fsa:Equity": leaf(5_000_000, "iso4217:DKK"),
+          "fsa:Provisions": leaf(200_000, "iso4217:DKK"),
+          "fsa:LiabilitiesOtherThanProvisions": tree({
+            "fsa:LongtermLiabilitiesOtherThanProvisions": leaf(3_024_007, "iso4217:DKK"),
+            "fsa:ShorttermLiabilitiesOtherThanProvisions": leaf(9_716_227, "iso4217:DKK"),
+          }),
+        }),
+      },
+    },
+  },
+};
+
+test("adaptFinancials: ÅRL-gæld (…OtherThanProvisions) giver gæld og likviditetsgrad, ikke '—'", () => {
+  const y = adaptFinancials("CVR-1-1", [ARL_2024]).years[0]!;
+  // Ingen samlet gæld tagget: kort + lang + hensatte.
+  assert.equal(y.liabilities, 9_716_227 + 3_024_007 + 200_000);
+  assert.equal(y.likviditetsgrad, 157.3);
+  assert.equal(y.assetsTotal, 5_000_000 + 12_940_234);
+  // Samme tal i regnskabstabellen.
+  const b = adaptFinancialStatements("CVR-1-1", [ARL_2024]).balanceSheet[0]!;
+  assert.equal(b.shortTermLiabilities, 9_716_227);
+  assert.equal(b.longTermLiabilities, 3_024_007);
+  assert.equal(b.liabilitiesTotal, y.liabilities);
+  assert.equal(b.currentAssetsTotal, 15_278_985);
+});
+
+test("adaptFinancials: samlet ÅRL-gæld uden hensatte + hensatte, når det samlede begreb er tagget", () => {
+  const r = { period: { to: "2024-12-31" }, reportYear: 2024, data: { company: { facts: { statementOfFinancialPosition: tree({ Equity: leaf(100), LiabilitiesOtherThanProvisions: leaf(400), Provisions: leaf(50), ShorttermLiabilitiesOtherThanProvisions: leaf(300) }) } } } };
+  const y = adaptFinancials("CVR-1-1", [r]).years[0]!;
+  assert.equal(y.liabilities, 450);
+  assert.equal(adaptFinancialStatements("CVR-1-1", [r]).balanceSheet[0]!.liabilitiesTotal, 450);
+});
+
+test("overskudsgrad = resultat af primær drift (EBIT) / omsætning; '—' uden omsætning", () => {
+  const y = adaptFinancials("CVR-1-1", [ARL_2024]).years[0]!;
+  assert.equal(y.overskudsgrad, 3); // 1,8 mio. / 60 mio.
+  const klasseB = { period: { to: "2023-12-31" }, reportYear: 2023, data: { company: { facts: { incomeStatement: tree({ GrossProfitLoss: leaf(24_992_309), ProfitLossFromOrdinaryOperatingActivities: leaf(1_500_000), ProfitLoss: leaf(1_027_633) }) } } } };
+  assert.equal(adaptFinancials("CVR-1-1", [klasseB]).years[0]!.overskudsgrad, null, "ikke årets resultat / bruttofortjeneste");
+  const utenEbit = { period: { to: "2023-12-31" }, reportYear: 2023, data: { company: { facts: { incomeStatement: tree({ Revenue: leaf(1000), ProfitLoss: leaf(90) }) } } } };
+  assert.equal(adaptFinancials("CVR-1-1", [utenEbit]).years[0]!.overskudsgrad, null);
+});
+
+test("adaptFinancials vælger årets tal og ikke sammenligningstal fra året før (Novo 2022/2023)", () => {
+  // Sammenligningstallet (2022) står først i træet; det må ikke skygge for 2023-tallet.
+  const withPeriods = {
+    period: { from: "2023-01-01", to: "2023-12-31" },
+    reportYear: 2023,
+    data: {
+      group: {
+        facts: {
+          incomeStatement: tree({
+            Revenue: leaf(232_261_000_000, "iso4217:DKK", { period: { from: "2023-01-01", to: "2023-12-31" } }),
+            ProfitLoss: leaf(83_683_000_000, "iso4217:DKK"),
+          }),
+          notes: tree({
+            "ifrs-full:AverageNumberOfEmployees": { value: 51_046, period: { from: "2022-01-01", to: "2022-12-31" } },
+            employeesNote: tree({ "ifrs-full:AverageNumberOfEmployees": { value: 59_000, period: { from: "2023-01-01", to: "2023-12-31" } } }),
+          }),
+        },
+      },
+    },
+  };
+  assert.equal(adaptFinancials("CVR-1-24256790", [withPeriods]).years[0]!.employees, 59_000);
+
+  // Liste af værdier med perioder: den med rapportens period.to vælges.
+  const withValues = {
+    period: { to: "2023-12-31" },
+    reportYear: 2023,
+    data: { group: { facts: { incomeStatement: tree({ Revenue: leaf(1), ProfitLoss: leaf(1), AverageNumberOfEmployees: { values: [{ value: 51_046, period: { to: "2022-12-31" } }, { value: 59_000, period: { to: "2023-12-31" } }] } }) } } },
+  };
+  assert.equal(adaptFinancials("CVR-1-24256790", [withValues]).years[0]!.employees, 59_000);
+
+  // Kun forrige års tal findes: hellere "—" end forrige års tal.
+  const onlyPrior = {
+    period: { to: "2023-12-31" },
+    reportYear: 2023,
+    data: { group: { facts: { incomeStatement: tree({ Revenue: leaf(1), ProfitLoss: leaf(1), AverageNumberOfEmployees: { values: [{ value: 51_046, period: { to: "2022-12-31" } }] } }) } } },
+  };
+  assert.equal(adaptFinancials("CVR-1-24256790", [onlyPrior]).years[0]!.employees, null);
+});
+
+test("adaptOwnership: udenlandske selskaber og fonde (BlackRock, CVR-3-…) er ikke personer", () => {
+  const o = adaptOwnership("CVR-1-61126228", {
+    ownership: {
+      owners: [
+        { name: "BlackRock, Inc", lassoId: "CVR-3-4010801698", ownership: { from: 0.05, to: 0.0999 } },
+        { name: "A.P. Møller Holding A/S", lassoId: "CVR-1-25679288", type: "Company", ownership: { from: 0.2, to: 0.2499 } },
+        { name: "Anne Test", lassoId: "CVR-3-4000000001", ownership: { from: 0.05, to: 0.0999 } },
+        { name: "Norges Bank", lassoId: "CVR-3-4000000002", type: "ForeignCompany", ownership: { from: 0.05, to: 0.0999 } },
+        { name: "Ole Hansen", lassoId: "CVR-3-4000000003", type: "PERSON", ownership: { from: 0.05, to: 0.0999 } },
+      ],
+    },
+  });
+  const kind = Object.fromEntries(o.owners.map((w) => [w.name, w.kind]));
+  assert.equal(kind["BlackRock, Inc"], "company");
+  assert.equal(kind["A.P. Møller Holding A/S"], "company");
+  assert.equal(kind["Anne Test"], "person");
+  assert.equal(kind["Norges Bank"], "company");
+  assert.equal(kind["Ole Hansen"], "person");
+});
+
+test("participantKind og looksLikeOrganisation", () => {
+  assert.equal(participantKind("PERSON", "CVR-3-1", "Kirk Kristiansen"), "person");
+  assert.equal(participantKind("Company", "CVR-3-1", "Noget"), "company");
+  assert.equal(participantKind(undefined, "CVR-1-12345678", "X"), "company");
+  assert.equal(participantKind(undefined, "CVR-3-4000543165", "Kjeld Kirk Kristiansen"), "person");
+  assert.equal(participantKind(undefined, "CVR-3-4010801698", "The Vanguard Group, Inc."), "company");
+  for (const n of ["BlackRock, Inc", "KIRKBI A/S", "Novo Holdings A/S", "Norges Bank", "Capital Group Companies", "ATP Pension", "Stichting Pensioenfonds", "Allianz SE", "Fidelity Management & Research Company LLC"]) {
+    assert.equal(looksLikeOrganisation(n), true, n);
+  }
+  for (const n of ["Thomas Kirk Kristiansen", "Anne Marie Sweeney", "Søren Thorup Sørensen", "Lars Rebien Sørensen"]) assert.equal(looksLikeOrganisation(n), false, n);
+});
+
+test("ejergrafen: personnoder får navn fra nodens egne navnefelter og fra opslag", () => {
+  const g = adaptOwnershipGraph(
+    "CVR-1-54562519",
+    {
+      nodes: [
+        { id: "CVR-1-54562519", name: "LEGO A/S", type: "Company" },
+        { id: "CVR-3-4000550457", fullName: "Thomas Kirk Kristiansen" },
+        { id: "CVR-3-4000543165" },
+        { id: "CVR-3-4010801698" },
+      ],
+      edges: [
+        { from: "CVR-3-4000550457", to: "CVR-1-54562519", ownership: { from: 0.1, to: 0.1 } },
+        { from: "CVR-3-4000543165", to: "CVR-1-54562519", ownership: { from: 0.1, to: 0.1 } },
+        { from: "CVR-3-4010801698", to: "CVR-1-54562519", ownership: { from: 0.05, to: 0.05 } },
+      ],
+    },
+    { ingoingDepth: 2, outgoingDepth: 1 },
+  );
+  assert.equal(g.nodes.find((n) => n.id === "CVR-3-4000550457")!.name, "Thomas Kirk Kristiansen");
+  assert.equal(g.nodes.find((n) => n.id === "CVR-3-4000543165")!.name, "CVR-3-4000543165");
+  const names = participantNames({
+    ownership: { owners: [{ name: "Kjeld Kirk Kristiansen", lassoId: "CVR-3-4000543165", type: "Person" }, { name: "BlackRock, Inc", lassoId: "CVR-3-4010801698" }] },
+    stakeholders: [{ name: "Niels B. Christiansen", lassoId: "CVR-3-4003923508" }],
+  });
+  const named = applyGraphNames(g, names);
+  const kjeld = named.nodes.find((n) => n.id === "CVR-3-4000543165")!;
+  assert.equal(kjeld.name, "Kjeld Kirk Kristiansen");
+  assert.equal(kjeld.kind, "person");
+  const br = named.nodes.find((n) => n.id === "CVR-3-4010801698")!;
+  assert.equal(br.name, "BlackRock, Inc");
+  assert.equal(br.kind, "company");
+  // Invariant: ingen navngivet node har navn = ID, når opslaget kender den.
+  assert.ok(named.nodes.every((n) => n.name !== n.id));
 });

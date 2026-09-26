@@ -1,4 +1,4 @@
-import { amountScale, formatPercent, formatScaled, type FinancialsVM } from "@lasso/spec";
+import { amountScale, currencyUnit, formatPercent, formatScaled, type FinancialsVM } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
 
 /**
@@ -33,7 +33,7 @@ export function ShareBars({ financials, error }: { financials?: FinancialsVM; er
       </Section>
     );
   }
-  const scale = amountScale([equity, liabilities]);
+  const scale = amountScale([equity, liabilities], currencyUnit(financials.currency));
   const rows = [
     { key: "equity", label: "Egenkapital", value: equity, cls: "lasso-chart__swatch--s1" },
     { key: "liabilities", label: "Gæld", value: liabilities, cls: "lasso-chart__swatch--s2" },

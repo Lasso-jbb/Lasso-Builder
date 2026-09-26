@@ -1,8 +1,8 @@
 import { formatMetricValue, METRIC_FIELD, METRIC_LABELS, type FinancialsVM, type Metric } from "@lasso/spec";
 import { DataState, Delta, Sparkline, stateForError } from "../primitives.js";
 
-export function formatMetric(metric: Metric, value: number | null | undefined): string {
-  return formatMetricValue(metric, value);
+export function formatMetric(metric: Metric, value: number | null | undefined, currency?: string): string {
+  return formatMetricValue(metric, value, currency);
 }
 
 /** "18,8 mio. kr." -> ["18,8", "mio. kr."]; "19" -> ["19", ""]. Enheden står mindre efter tallet (09). */
@@ -53,7 +53,7 @@ export function KeyFigureCards({ financials, metrics, error }: { financials?: Fi
             </div>
           );
         }
-        const [num, unit] = splitUnit(formatMetric(m, value));
+        const [num, unit] = splitUnit(formatMetric(m, value, last.currency ?? financials.currency));
         return (
           <div className="lasso-kpi" key={m}>
             <div className="lasso-kpi__label">{METRIC_LABELS[m]}</div>

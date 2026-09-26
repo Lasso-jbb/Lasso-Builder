@@ -1,5 +1,7 @@
 import {
   amountScale,
+  currencyUnit,
+  isForeignCurrency,
   chartSeries,
   formatAmount,
   formatCriterion,
@@ -58,8 +60,11 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
       const prev = f?.years.at(-2);
       if (last && c.type === "LassoKeyFigureCards") {
         const chg = percentChange([prev?.grossProfit, last.grossProfit]);
+        const cur = last.currency ?? f?.currency;
+        const money = (v: number | null | undefined) => formatAmount(v, currencyUnit(cur));
+        const note = [last.scope === "Koncern" ? "koncerntal" : null, isForeignCurrency(cur) ? `beløb i ${currencyUnit(cur)}, ikke kroner` : null].filter(Boolean).join("; ");
         lines.push(
-          `Regnskab ${last.year}: ${last.revenue !== null && last.revenue !== undefined ? `omsætning ${formatAmount(last.revenue)}, ` : ""}bruttofortjeneste ${formatAmount(last.grossProfit)}${chg !== null ? ` (${chg > 0 ? "+" : ""}${Math.round(chg)} % fra ${prev?.year})` : ""}, resultat ${formatAmount(last.profit)}, egenkapital ${formatAmount(last.equity)}, ${formatNumber(last.employees)} ansatte.`,
+          `Regnskab ${last.year}${note ? ` (${note})` : ""}: ${last.revenue !== null && last.revenue !== undefined ? `omsætning ${money(last.revenue)}, ` : ""}bruttofortjeneste ${money(last.grossProfit)}${chg !== null ? ` (${chg > 0 ? "+" : ""}${Math.round(chg)} % fra ${prev?.year})` : ""}, resultat ${money(last.profit)}, egenkapital ${money(last.equity)}, ${formatNumber(last.employees)} ansatte.`,
         );
       }
       if (f && c.type === "LassoBarChart") {
@@ -67,7 +72,7 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
         const { metric, points } = chartSeries(f, c.metric, c.years);
         if (points.length) {
           const kind = METRIC_KIND[metric];
-          const scale = kind === "amount" ? amountScale(points.map((p) => p.value)) : null;
+          const scale = kind === "amount" ? amountScale(points.map((p) => p.value), currencyUnit(f.currency)) : null;
           const unit = scale ? ` (${scale.label})` : "";
           const val = (v: number) => (kind === "percent" ? formatPercent(v, false) : scale ? formatScaled(v, scale) : formatNumber(v));
           lines.push(

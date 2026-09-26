@@ -1,4 +1,4 @@
-import { amountScale, formatNumber, formatPercent, formatScaled, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, type CompanyVM, type FinancialsVM, type Metric } from "@lasso/spec";
+import { amountScale, currencyUnit, formatAmount, formatNumber, formatPercent, formatScaled, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, type CompanyVM, type FinancialsVM, type Metric } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
 
 export interface RankingRow {
@@ -29,9 +29,10 @@ export function Ranking({ rows, metric, title }: { rows: RankingRow[]; metric: M
   const entries = rows
     .map((r) => {
       const v = r.financials?.years.at(-1)?.[METRIC_FIELD[metric]];
-      return { lassoId: r.lassoId, name: r.company?.name ?? r.lassoId, value: typeof v === "number" ? v : null };
+      const unit = currencyUnit(r.financials?.years.at(-1)?.currency ?? r.financials?.currency);
+      return { lassoId: r.lassoId, name: r.company?.name ?? r.lassoId, value: typeof v === "number" ? v : null, unit };
     })
-    .filter((r): r is { lassoId: string; name: string; value: number } => r.value !== null)
+    .filter((r): r is { lassoId: string; name: string; value: number; unit: string } => r.value !== null)
     .sort((a, b) => b.value - a.value);
 
   if (entries.length < 2) {
@@ -43,13 +44,16 @@ export function Ranking({ rows, metric, title }: { rows: RankingRow[]; metric: M
   }
 
   const values = entries.map((e) => e.value);
-  const scale = kind === "amount" ? amountScale(values) : null;
-  const label = (v: number) => (kind === "percent" ? formatPercent(v, false) : scale ? formatScaled(v, scale) : formatNumber(v));
+  // Beløb i forskellige valutaer kan ikke rangeres mod hinanden; hvert tal vises så med sin egen valuta.
+  const units = new Set(entries.map((e) => e.unit));
+  const mixed = kind === "amount" && units.size > 1;
+  const scale = kind === "amount" && !mixed ? amountScale(values, [...units][0] ?? "kr.") : null;
+  const label = (v: number, unit?: string) => (kind === "percent" ? formatPercent(v, false) : scale ? formatScaled(v, scale) : mixed ? formatAmount(v, unit ?? "") : formatNumber(v));
   const maxAbs = Math.max(...values.map((v) => Math.abs(v)), 1);
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
   const median = sorted.length % 2 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
-  const subtitle = `${scale ? `${scale.label}, ` : ""}top ${entries.length}`;
+  const subtitle = `${scale ? `${scale.label}, ` : ""}${mixed ? "forskellige valutaer, ikke direkte sammenlignelige, " : ""}top ${entries.length}`;
 
   return (
     <Section title={heading} subtitle={subtitle} span="half" className="lasso-ranking">
@@ -64,16 +68,18 @@ export function Ranking({ rows, metric, title }: { rows: RankingRow[]; metric: M
               <span className="lasso-ranking__track">
                 <span className={`lasso-ranking__fill ${isOrigin ? "lasso-ranking__fill--origin" : ""}`} style={{ width: `${pct}%` }} />
               </span>
-              <span className="lasso-ranking__value">{label(e.value)}</span>
+              <span className="lasso-ranking__value">{label(e.value, e.unit)}</span>
             </li>
           );
         })}
-        <li className="lasso-ranking__row lasso-ranking__row--median">
-          <span className="lasso-ranking__rank" aria-hidden="true" />
-          <span className="lasso-ranking__name">Median</span>
-          <span className="lasso-ranking__track" aria-hidden="true" />
-          <span className="lasso-ranking__value">{label(median)}</span>
-        </li>
+        {mixed ? null : (
+          <li className="lasso-ranking__row lasso-ranking__row--median">
+            <span className="lasso-ranking__rank" aria-hidden="true" />
+            <span className="lasso-ranking__name">Median</span>
+            <span className="lasso-ranking__track" aria-hidden="true" />
+            <span className="lasso-ranking__value">{label(median)}</span>
+          </li>
+        )}
       </ol>
     </Section>
   );

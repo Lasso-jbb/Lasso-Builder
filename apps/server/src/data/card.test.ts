@@ -380,3 +380,29 @@ test("personkortet (katalog 16) har samme bredde på alle linjer og ingen midter
   assert.match(card, /Søren Krogh Eksempel\s+14 år/);
   assert.match(card, /Konkurser\s+1, Info/);
 });
+
+test("tekstkort og resumé viser EUR/USD-regnskaber i deres valuta, ikke som kroner (Vestas/Mærsk)", async () => {
+  const { summarizeView } = await import("./summary.js");
+  const ds = dataset();
+  ds.financials[ID] = {
+    ...ds.financials[ID]!,
+    currency: "EUR",
+    years: ds.financials[ID]!.years.map((y) => ({ ...y, revenue: 18_822_000_000, currency: "EUR", scope: "Koncern" as const })),
+  };
+  const spec = companyTemplate(ID, { chartMetric: "omsaetning", years: 3 });
+  const card = textCard(spec, ds)!;
+  for (const l of card.split("\n")) assert.equal([...l].length, 38, `linjen "${l}" har forkert bredde`);
+  assert.ok(card.includes("OMSÆTNING, MIA. EUR"), card);
+  assert.ok(/BELØB I EUR/.test(card), card);
+  assert.ok(!/mia\. kr\./i.test(card), card);
+  const summary = summarizeView(spec, ds);
+  assert.match(summary, /omsætning 18,8 mia\. EUR/);
+  assert.match(summary, /koncerntal; beløb i EUR, ikke kroner/);
+  assert.ok(!summary.includes("mia. kr."), summary);
+});
+
+test("tekstkortet for DKK er uændret (ingen valutakode)", () => {
+  const card = textCard(companyTemplate(ID, { chartMetric: "omsaetning", years: 3 }), dataset())!;
+  assert.ok(card.includes("OMSÆTNING, MIA. KR."));
+  assert.ok(!card.includes("DKK"));
+});

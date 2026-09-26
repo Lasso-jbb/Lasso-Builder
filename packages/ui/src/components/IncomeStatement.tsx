@@ -47,5 +47,5 @@ export function LassoIncomeStatement({ statements, years, title, error }: { stat
     { key: "profit", label: "Årets resultat", values: shown.map((y) => y.profit), kind: "bottom" },
   ];
 
-  return <StatementTable title={heading} unit="t. kr." years={yearsShown} sections={[{ rows }]} prefix="lasso-income" />;
+  return <StatementTable title={heading} unit="t. kr." years={yearsShown} currency={statements.currency} sections={[{ rows }]} prefix="lasso-income" />;
 }

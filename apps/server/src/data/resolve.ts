@@ -218,6 +218,12 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
   }
 
   await Promise.all(jobs);
+  // Virksomhedsopslaget bruger kun CVR (hurtigt). Har visningen også hentet kontaktblokken
+  // (hjemmesidens telefon/e-mail/web), udfyldes de felter, CVR mangler, derfra.
+  for (const [id, co] of Object.entries(ds.companies)) {
+    const c = ds.contact[id];
+    if (c && !(co.phone && co.email && co.website)) ds.companies[id] = { ...co, phone: co.phone ?? c.phone, email: co.email ?? c.email, website: co.website ?? c.website };
+  }
   ds.generatedAt = new Date().toISOString();
   return ds;
 }

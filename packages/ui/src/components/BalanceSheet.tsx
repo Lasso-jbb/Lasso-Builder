@@ -47,5 +47,5 @@ export function LassoBalanceSheet({ statements, years, title, error }: { stateme
     { heading: "PASSIVER", rows: liabilities },
   ];
 
-  return <StatementTable title={heading} unit="t. kr., 31.12" years={yearsShown} sections={sections} prefix="lasso-balance" />;
+  return <StatementTable title={heading} unit="t. kr., 31.12" years={yearsShown} currency={statements.currency} sections={sections} prefix="lasso-balance" />;
 }

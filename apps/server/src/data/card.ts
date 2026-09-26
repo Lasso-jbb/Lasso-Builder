@@ -1,6 +1,8 @@
 import {
   amountScale,
   chartSeries,
+  currencyUnit,
+  isForeignCurrency,
   formatAmount,
   formatDate,
   formatNumber,
@@ -102,11 +104,12 @@ class Card {
   }
 }
 
-const short = (v: number | null | undefined, metric: Metric) => {
+/** Beløb uden "kr." (kortets beløb er kroner), men med valutakoden ved fx EUR/USD, så de aldrig læses som kroner. */
+const short = (v: number | null | undefined, metric: Metric, currency?: string) => {
   const kind = METRIC_KIND[metric];
   if (kind === "count") return formatNumber(v);
   if (kind === "percent") return formatPercent(v, false);
-  return formatAmount(v).replace(" kr.", "");
+  return formatAmount(v, currencyUnit(currency)).replace(" kr.", "");
 };
 
 function delta(from: number | null | undefined, to: number | null | undefined): string {
@@ -121,7 +124,7 @@ function chart(card: Card, f: FinancialsVM, wanted: Metric, years: number) {
   const { metric, points } = chartSeries(f, wanted, years);
   if (points.length === 0) return;
   const kind = METRIC_KIND[metric];
-  const scale = kind === "amount" ? amountScale(points.map((p) => p.value)) : null;
+  const scale = kind === "amount" ? amountScale(points.map((p) => p.value), currencyUnit(f.currency)) : null;
   card.section(`${METRIC_LABELS[metric]}${scale ? `, ${scale.label}` : ""}`);
   const max = Math.max(...points.map((p) => Math.abs(p.value))) || 1;
   for (const p of points) {
@@ -138,7 +141,7 @@ function chart(card: Card, f: FinancialsVM, wanted: Metric, years: number) {
   }
 }
 
-const amt = (v: number | null | undefined) => formatAmount(v).replace(" kr.", "");
+const amt = (v: number | null | undefined, currency?: string) => formatAmount(v, currencyUnit(currency)).replace(" kr.", "");
 
 /**
  * Samme trin som `LassoWaterfallChart` (packages/ui/src/components/WaterfallChart.tsx),
@@ -167,7 +170,7 @@ function stackedText(card: Card, f: FinancialsVM, years: number) {
   const rows = f.years.slice(-years).filter((y) => typeof y.equity === "number" && typeof y.liabilities === "number");
   if (!rows.length) return;
   card.section("Balance, egenkapital / gæld");
-  for (const y of rows) card.row(String(y.year), `${amt(y.equity)} / ${amt(y.liabilities)}`);
+  for (const y of rows) card.row(String(y.year), `${amt(y.equity, f.currency)} / ${amt(y.liabilities, f.currency)}`);
 }
 
 function waterfallText(card: Card, f: FinancialsVM) {
@@ -176,7 +179,7 @@ function waterfallText(card: Card, f: FinancialsVM) {
   const steps = waterfallSteps(yr.revenue, yr.grossProfit, yr.profit);
   if (steps.length < 2) return;
   card.section(`Fra omsætning til resultat ${yr.year}`);
-  for (const s of steps) card.row(s.label, amt(s.value));
+  for (const s of steps) card.row(s.label, amt(s.value, f.currency));
 }
 
 function shareBarsText(card: Card, f: FinancialsVM) {
@@ -187,8 +190,8 @@ function shareBarsText(card: Card, f: FinancialsVM) {
   const total = equity + liabilities;
   if (total <= 0) return;
   card.section(`Fordeling af balancen ${yr.year}`);
-  card.row("Egenkapital", `${amt(equity)}, ${formatPercent((equity / total) * 100, false)}`);
-  card.row("Gæld", `${amt(liabilities)}, ${formatPercent((liabilities / total) * 100, false)}`);
+  card.row("Egenkapital", `${amt(equity, f.currency)}, ${formatPercent((equity / total) * 100, false)}`);
+  card.row("Gæld", `${amt(liabilities, f.currency)}, ${formatPercent((liabilities / total) * 100, false)}`);
 }
 
 /**
@@ -241,10 +244,10 @@ function ownershipTreeCard(card: Card, g: OwnershipGraphVM) {
 }
 
 /** Katalog 19: hele resultatopgørelsen, balancen og pengestrømmen som rækker i tekstkortet. */
-function statementRows(card: Card, label: string, rows: { label: string; values: readonly (number | null | undefined)[] }[], yearsShown: readonly number[]) {
-  card.section(`${label} ${yearsShown.join("/")}`);
+function statementRows(card: Card, label: string, rows: { label: string; values: readonly (number | null | undefined)[] }[], yearsShown: readonly number[], currency?: string) {
+  card.section(`${label} ${yearsShown.join("/")}${isForeignCurrency(currency) ? `, ${currencyUnit(currency)}` : ""}`);
   for (const r of rows) {
-    const parts = r.values.map((v) => (v == null ? "—" : amt(v)));
+    const parts = r.values.map((v) => (v == null ? "—" : amt(v, currency)));
     card.row(r.label, parts.join(" → "));
   }
 }
@@ -268,6 +271,7 @@ function incomeStatementText(card: Card, s: FinancialStatementsVM, years: number
       { label: "Resultat", values: shown.map((y) => y.profit) },
     ],
     shown.map((y) => y.year),
+    s.currency,
   );
 }
 
@@ -286,6 +290,7 @@ function balanceSheetText(card: Card, s: FinancialStatementsVM, years: number) {
       { label: "Passiver i alt", values: shown.map((y) => y.liabilitiesAndEquityTotal) },
     ],
     shown.map((y) => y.year),
+    s.currency,
   );
 }
 
@@ -307,6 +312,7 @@ function cashFlowText(card: Card, s: FinancialStatementsVM, years: number) {
       { label: "Likvider ultimo", values: shown.map((y) => y.cashEnding) },
     ],
     shown.map((y) => y.year),
+    s.currency,
   );
 }
 
@@ -373,7 +379,9 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
   const last = f?.years.at(-1);
   const prev = f?.years.at(-2);
   if (f && last && types.has("LassoKeyFigureCards")) {
-    card.section(`Regnskab ${last.year}${prev ? `, ændring fra ${prev.year}` : ""}`);
+    const cur = last.currency ?? f.currency;
+    // Valuta og koncern står i overskriften, så rækkerne holder kortets bredde.
+    card.section(`Regnskab ${last.year}${last.scope === "Koncern" ? " (koncern)" : ""}${prev ? `, ændring fra ${prev.year}` : ""}${isForeignCurrency(cur) ? `, beløb i ${currencyUnit(cur)}` : ""}`);
     const metrics: Metric[] = [last.revenue != null ? "omsaetning" : "bruttofortjeneste", "resultat", "egenkapital", "ansatte"];
     for (const m of metrics) {
       const v = last[METRIC_FIELD[m]];
@@ -614,7 +622,7 @@ function listCard(spec: ViewSpec, ds: Dataset): string | null {
     const n = `${i + 1}.`;
     wrap(r.name, W - 4).forEach((l, j) => card.raw(`${pad(j === 0 ? n : "", 3)} ${l}`));
     const v = r[ROW_FIELD[metric]];
-    card.raw(`    ${[r.city, typeof v === "number" ? short(v, metric) : null].filter(Boolean).join(", ")}`);
+    card.raw(`    ${[r.city, typeof v === "number" ? short(v, metric, r.currency) : null].filter(Boolean).join(", ")}`);
   });
   return card.toString();
 }

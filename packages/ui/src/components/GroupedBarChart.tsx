@@ -1,4 +1,4 @@
-import { formatNumber, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, type FinancialsVM, type Metric } from "@lasso/spec";
+import { currencyUnit, formatNumber, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, type FinancialsVM, type Metric } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
 import { CHART_AXIS_W, CHART_BOTTOM, CHART_H, CHART_TOP, clampMobilePoints, labelFor, makeYScale, niceTicks, yearRange } from "../charts.js";
@@ -46,7 +46,7 @@ export function GroupedBarChart({
 
   const kind = METRIC_KIND[shownMetrics[0]!];
   const all = points.flatMap((p) => p.values);
-  const { scale, label } = labelFor(all, kind);
+  const { scale, label } = labelFor(all, kind, currencyUnit(financials.currency));
   const values = points.map((p) => p.values.map((v) => (scale ? v / scale.divisor : v)));
   const first = points[0]!.year;
   const last = points.at(-1)!.year;

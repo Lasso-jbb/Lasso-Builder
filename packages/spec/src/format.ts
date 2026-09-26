@@ -13,7 +13,24 @@ function minus(s: string): string {
   return s.replace(/^-/, "\u2212").replace(/^\u002D/, "\u2212");
 }
 
-/** 12500000 -> "12,5 mio. kr." ; 950000 -> "950 t. kr." */
+/**
+ * Enheden for et beløb i en given valuta: DKK (eller ukendt) -> "kr.", ellers ISO-koden
+ * ("EUR", "USD"), så fx Vestas vises som "18,8 mia. EUR" og aldrig som kroner.
+ */
+export function currencyUnit(currency?: string | null): string {
+  const c = (currency ?? "").trim().toUpperCase();
+  return !c || c === "DKK" || c === "KR." || c === "KR" ? "kr." : c;
+}
+
+/** Om et regnskab er i en anden valuta end kroner. */
+export function isForeignCurrency(currency?: string | null): boolean {
+  return currencyUnit(currency) !== "kr.";
+}
+
+/**
+ * 12500000 -> "12,5 mio. kr." ; 950000 -> "950 t. kr.". `unit` er enheden efter tallet;
+ * brug `currencyUnit(financials.currency)` for regnskabstal ("mio. EUR").
+ */
 export function formatAmount(value: number | null | undefined, unit = "kr."): string {
   if (value === null || value === undefined || Number.isNaN(value)) return MISSING;
   const abs = Math.abs(value);

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { criterionSchema } from "./criteria.js";
-import { formatAmount, formatNumber, formatPercent } from "./format.js";
+import { currencyUnit, formatAmount, formatNumber, formatPercent } from "./format.js";
 import type { FinancialYear } from "./models.js";
 
 /**
@@ -70,11 +70,11 @@ export const METRIC_KIND: Record<Metric, MetricKind> = {
 };
 
 /** Nøgletallets værdi som tekst, uden fælles skala (til enkeltværdier; en serie bruger amountScale/formatScaled i stedet). */
-export function formatMetricValue(m: Metric, v: number | null | undefined): string {
+export function formatMetricValue(m: Metric, v: number | null | undefined, currency?: string): string {
   const kind = METRIC_KIND[m];
   if (kind === "count") return formatNumber(v);
   if (kind === "percent") return formatPercent(v, false);
-  return formatAmount(v);
+  return formatAmount(v, currencyUnit(currency));
 }
 
 export const TABLE_COLUMNS = [

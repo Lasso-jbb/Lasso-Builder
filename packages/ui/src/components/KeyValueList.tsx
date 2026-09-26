@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { formatAmount, formatDate, formatMetricValue, formatNumber, METRIC_FIELD, METRIC_LABELS, type CompanyVM, type FinancialsVM, type Metric, type OwnershipVM } from "@lasso/spec";
+import { currencyUnit, formatAmount, formatDate, formatMetricValue, formatNumber, METRIC_FIELD, METRIC_LABELS, type CompanyVM, type FinancialsVM, type Metric, type OwnershipVM } from "@lasso/spec";
 import { DataState, Missing, Section, stateForError } from "../primitives.js";
 
 /** "2025-01-01" -> "01.01" (dag.måned, uden år, katalog 09: "01.01 – 31.12"). */
@@ -36,19 +36,20 @@ function companyRows(company: CompanyVM, ownership: OwnershipVM | undefined, las
 
 const FINANCIALS_ROW_METRICS: Metric[] = ["resultat", "egenkapital", "ansatte", "ebitda", "soliditetsgrad", "overskudsgrad", "likviditetsgrad", "balancesum", "gaeld"];
 
-function financialsRows(year: FinancialsVM["years"][number]): Row[] {
+function financialsRows(year: FinancialsVM["years"][number], currency?: string): Row[] {
+  const cur = year.currency ?? currency;
   const period = dayMonth(year.periodStart) && dayMonth(year.periodEnd) ? `${dayMonth(year.periodStart)} – ${dayMonth(year.periodEnd)}` : undefined;
   const rows: Row[] = [
     { label: "Regnskabsperiode", value: period },
     { label: "Regnskab udgivet", value: year.published ? formatDate(year.published) : undefined },
     {
       label: year.revenue != null ? "Omsætning" : "Bruttofortjeneste",
-      value: (year.revenue != null ? year.revenue : year.grossProfit) != null ? formatAmount(year.revenue != null ? year.revenue : year.grossProfit) : undefined,
+      value: (year.revenue != null ? year.revenue : year.grossProfit) != null ? formatAmount(year.revenue != null ? year.revenue : year.grossProfit, currencyUnit(cur)) : undefined,
     },
   ];
   for (const m of FINANCIALS_ROW_METRICS) {
     const v = year[METRIC_FIELD[m]] as number | null | undefined;
-    rows.push({ label: METRIC_LABELS[m], value: v != null ? formatMetricValue(m, v) : undefined, danger: typeof v === "number" && v < 0 });
+    rows.push({ label: METRIC_LABELS[m], value: v != null ? formatMetricValue(m, v, cur) : undefined, danger: typeof v === "number" && v < 0 });
   }
   return rows;
 }
@@ -98,7 +99,7 @@ export function KeyValueList({
     }
     const options = years.slice(-5).reverse();
     const selected = years.find((y) => y.year === year) ?? last;
-    const rows = financialsRows(selected);
+    const rows = financialsRows(selected, financials!.currency);
     return (
       <Section
         title={heading}

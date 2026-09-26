@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import {
+  currencyUnit,
   DEFAULT_TABLE_COLUMNS,
   formatAmount,
   formatNumber,
@@ -56,11 +57,11 @@ export function cellText(r: CompanyRowVM, c: TableColumn): string {
     case "ansatte":
       return formatNumber(r.employees);
     case "omsaetning":
-      return formatAmount(r.revenue);
+      return formatAmount(r.revenue, currencyUnit(r.currency));
     case "bruttofortjeneste":
-      return formatAmount(r.grossProfit);
+      return formatAmount(r.grossProfit, currencyUnit(r.currency));
     case "resultat":
-      return formatAmount(r.profit);
+      return formatAmount(r.profit, currencyUnit(r.currency));
     case "udvikling":
       return "";
   }
