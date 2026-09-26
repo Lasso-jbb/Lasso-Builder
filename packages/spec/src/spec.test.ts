@@ -210,3 +210,54 @@ test("formatShare skriver CVR-intervaller", () => {
   assert.equal(formatShare([66.67, 89.99]), "66,67–89,99 %");
   assert.equal(formatShare(undefined), "—");
 });
+
+test("komponisten vælger form efter datas form, ikke efter en fast skabelon", async () => {
+  const { composeCompany, emptyDataset } = await import("./index.js");
+  const id = "CVR-1-12345678";
+  const base = () => {
+    const ds = emptyDataset("demo");
+    ds.companies[id] = { lassoId: id, name: "Test A/S" };
+    ds.people[id] = [{ name: "Anne", role: "Direktør" }];
+    ds.ownership[id] = { lassoId: id, owners: [{ name: "Holding ApS", kind: "company", share: "100 %" }] };
+    return ds;
+  };
+  const year = (y: number) => ({ year: y, revenue: 100 + y, grossProfit: 50, profit: 10, equity: 30, employees: 5 });
+
+  // Mange regnskabsår: graf. Ét år: alle tal for året i stedet.
+  const many = base();
+  many.financials[id] = { lassoId: id, currency: "DKK", years: [2021, 2022, 2023, 2024, 2025].map(year) };
+  const one = base();
+  one.financials[id] = { lassoId: id, currency: "DKK", years: [year(2025)] };
+  const mSpec = composeCompany(id, many);
+  const oSpec = composeCompany(id, one);
+  assert.ok(mSpec.components.some((c) => c.type === "LassoBarChart"));
+  assert.ok(!oSpec.components.some((c) => c.type === "LassoBarChart"));
+  assert.ok(oSpec.components.some((c) => c.type === "LassoKeyValueList" && c.variant === "financials"));
+
+  // Ingen regnskaber: ingen nøgletal og ingen graf.
+  const none = composeCompany(id, base());
+  assert.ok(!none.components.some((c) => c.type === "LassoKeyFigureCards"));
+
+  // Nyheder kun når der er nogen.
+  const withNews = base();
+  withNews.news[id] = { lassoId: id, items: [{ source: "Avis", headline: "Nyt" }] };
+  assert.ok(composeCompany(id, withNews).components.some((c) => c.type === "LassoNews"));
+  assert.ok(!composeCompany(id, base()).components.some((c) => c.type === "LassoNews"));
+
+  // Ejerskab: en koncern (selskab som ejer) giver ejerdiagram; kun personer gør ikke.
+  assert.ok(composeCompany(id, base(), { focus: "ejerskab" }).components.some((c) => c.type === "LassoOwnershipDiagram"));
+  const persons = base();
+  persons.ownership[id] = { lassoId: id, owners: [{ name: "Bo", kind: "person", share: "100 %" }] };
+  assert.ok(!composeCompany(id, persons, { focus: "ejerskab" }).components.some((c) => c.type === "LassoOwnershipDiagram"));
+
+  // Alvorlig risiko står øverst, også uden risikofokus.
+  const risky = base();
+  risky.observations[id] = { lassoId: id, observations: [{ id: "1", severity: 100, title: "Negativ egenkapital" }] };
+  assert.equal(composeCompany(id, risky).components[1]!.type, "LassoRiskObservations");
+
+  // Kolonnerne er fyldt fra 1 uden huller.
+  for (const spec of [mSpec, oSpec, none]) {
+    const cols = [...new Set(spec.components.map((c) => c.column).filter(Boolean))].sort();
+    assert.deepEqual(cols, cols.map((_, i) => i + 1));
+  }
+});

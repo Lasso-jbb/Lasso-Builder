@@ -107,18 +107,23 @@ test("search_companies afviser ugyldige kriterier med forklaring", async () => {
   assert.match((res.content as { text: string }[])[0]!.text, /Operator 'gt' passer ikke/);
 });
 
-test("show_company tager et rent CVR-nummer og giver låst skabelon", async () => {
+test("show_company komponerer ét skærmbillede ud fra data og hensigt", async () => {
   const res = await client.callTool({ name: "show_company", arguments: { company: "99000001" } });
   assert.ok(!res.isError, JSON.stringify(res.content));
   const spec = (res.structuredContent as { spec: ViewSpec }).spec;
   assert.equal(spec.title, "Eksempel Byg A/S");
-  assert.deepEqual(
-    spec.components.map((c) => c.type),
-    ["LassoCompanyHead", "LassoKeyFigureCards", "LassoBarChart", "LassoKeyValueList", "LassoPersonList", "LassoOwnerList", "LassoFollowUps"],
-  );
+  assert.equal(spec.layout, "columns");
+  assert.equal(spec.components[0]!.type, "LassoCompanyHead");
+  assert.ok(spec.components.some((c) => c.type === "LassoKeyFigureCards"));
+  assert.ok(spec.components.some((c) => c.column), "overblikket har kolonner");
   const ds = (res._meta as Record<string, Dataset>)[DATASET_META_KEY]!;
   assert.equal(ds.companies["CVR-1-99000001"]?.name, "Eksempel Byg A/S");
   assert.ok(ds.financials["CVR-1-99000001"]!.years.length >= 5);
+
+  const eco = await client.callTool({ name: "show_company", arguments: { company: "99000001", focus: "oekonomi" } });
+  const ecoSpec = (eco.structuredContent as { spec: ViewSpec }).spec;
+  assert.ok(ecoSpec.components.some((c) => c.type === "LassoGroupedBarChart" || c.type === "LassoBarChart"), "mange år giver en graf");
+  assert.ok(ecoSpec.components.some((c) => c.type === "LassoMultiYearTable"), "4+ år giver flerårstabel");
 });
 
 test("show_company tager et navn og siger, hvad den valgte", async () => {

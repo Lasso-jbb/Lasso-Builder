@@ -960,3 +960,31 @@ button.lasso-relations__name:hover { text-decoration: underline; }
   .lasso-content--dashboard, .lasso-content--grid-2 { grid-template-columns: minmax(0, 1fr); row-gap: var(--lasso-space-7); }
   .lasso-cell { grid-column: 1 / -1; }
 }
+
+/* ---------- Kolonner (portalens virksomhedsside, guide 23): hver kolonne stabler sine sektioner ---------- */
+.lasso-content--columns { grid-template-columns: minmax(0, 1fr); row-gap: var(--lasso-space-7); }
+.lasso-columns { display: grid; gap: 0; align-items: start; border-top: 1px solid var(--lasso-border); }
+.lasso-columns--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.lasso-columns--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.lasso-column { min-width: 0; display: flex; flex-direction: column; }
+.lasso-column + .lasso-column { border-left: 1px solid var(--lasso-border); }
+.lasso-column__item { padding: var(--lasso-space-6) var(--lasso-space-6); }
+.lasso-column__item + .lasso-column__item { border-top: 1px solid var(--lasso-border); }
+.lasso-column:first-child .lasso-column__item { padding-left: 0; }
+.lasso-column:last-child .lasso-column__item { padding-right: 0; }
+/* Komponenter i en kolonne fylder kolonnen; deres egne spans gælder ikke her */
+.lasso-column__item > * { grid-column: auto; width: 100%; }
+@container lasso (max-width: 960px) {
+  .lasso-columns--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lasso-columns--3 .lasso-column:nth-child(3) { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--lasso-border); }
+  .lasso-columns--3 .lasso-column:nth-child(3) .lasso-column__item { padding-left: 0; }
+}
+@container lasso (max-width: 560px) {
+  .lasso-columns--2, .lasso-columns--3 { grid-template-columns: minmax(0, 1fr); }
+  .lasso-column + .lasso-column { border-left: 0; border-top: 1px solid var(--lasso-border); }
+  .lasso-column__item { padding: var(--lasso-space-5) 0; }
+}
+
+/* Nøgle-værdi i en smal kolonne: nøglen tager 45 % i stedet for fast 190 px, så værdien ikke skæres af */
+.lasso-column .lasso-kv-row__label { width: 45%; }
+.lasso-column .lasso-kv-row__value { white-space: normal; overflow-wrap: anywhere; }
