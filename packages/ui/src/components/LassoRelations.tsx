@@ -102,10 +102,6 @@ export function LassoRelations({
           {owners.length > MAX_OWNERS ? <div className="lasso-relations__more">og {owners.length - MAX_OWNERS} flere</div> : null}
         </div>
       ) : null}
-      <div className="lasso-relations__group">
-        <div className="lasso-relations__label">Reelle ejere</div>
-        <DataState state="empty" reason="Vis Reelle ejere-modulet for denne oplysning." />
-      </div>
     </Section>
   );
 }

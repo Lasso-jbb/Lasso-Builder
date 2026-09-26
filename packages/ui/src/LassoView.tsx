@@ -156,6 +156,33 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
   }
 }
 
+type Indexed = { c: ViewComponent; i: number };
+type Band = { kind: "full"; item: Indexed } | { kind: "columns"; columns: Indexed[][] };
+
+/**
+ * Layout 'columns' (portalens virksomhedsside): komponenter uden kolonne står i fuld bredde;
+ * sammenhængende komponenter med kolonne samles i ét bånd, hvor hver kolonne stabler sine
+ * sektioner. Så efterlader en kort sektion aldrig et hul ved siden af en lang.
+ */
+function columnBands(components: readonly ViewComponent[]): Band[] {
+  const bands: Band[] = [];
+  components.forEach((c, i) => {
+    const col = c.column;
+    if (!col) {
+      bands.push({ kind: "full", item: { c, i } });
+      return;
+    }
+    let band = bands.at(-1);
+    if (!band || band.kind !== "columns") {
+      band = { kind: "columns", columns: [] };
+      bands.push(band);
+    }
+    while (band.columns.length < col) band.columns.push([]);
+    band.columns[col - 1]!.push({ c, i });
+  });
+  return bands;
+}
+
 /**
  * Den faste ramme om alle visninger: header (logo, navn, datatidspunkt) ->
  * kriterie-chips -> indhold -> handlingsbjælke. Ens uanset indhold.
@@ -213,11 +240,31 @@ export function LassoView(props: LassoViewProps) {
           <Skeleton lines={4} height={240} />
         ) : (
           <main className={`lasso-content lasso-content--grid-4 lasso-content--${spec.layout}`}>
-            {spec.components.map((c, i) => (
-              <div key={i} className={`lasso-cell lasso-cell--${widthOf(c, spec.layout)}`}>
-                {renderComponent(c, dataset, props, act, i)}
-              </div>
-            ))}
+            {spec.layout === "columns"
+              ? columnBands(spec.components).map((band, b) =>
+                  band.kind === "full" ? (
+                    <div key={`b${b}`} className="lasso-cell lasso-cell--full">
+                      {renderComponent(band.item.c, dataset, props, act, band.item.i)}
+                    </div>
+                  ) : (
+                    <div key={`b${b}`} className={`lasso-cell lasso-cell--full lasso-columns lasso-columns--${spec.columns ?? 3}`}>
+                      {band.columns.map((col, k) => (
+                        <div key={k} className="lasso-column">
+                          {col.map(({ c, i }) => (
+                            <div key={i} className="lasso-column__item">
+                              {renderComponent(c, dataset, props, act, i)}
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  ),
+                )
+              : spec.components.map((c, i) => (
+                  <div key={i} className={`lasso-cell lasso-cell--${widthOf(c, spec.layout)}`}>
+                    {renderComponent(c, dataset, props, act, i)}
+                  </div>
+                ))}
           </main>
         )}
 

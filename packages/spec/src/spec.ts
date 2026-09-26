@@ -291,6 +291,13 @@ export const WIDTHS = ["quarter", "half", "three-quarters", "full"] as const;
 export type Width = (typeof WIDTHS)[number];
 const widthShape = {
   width: z.enum(WIDTHS).optional().describe("Bredde i dashboardet: quarter (¼), half (½), three-quarters (¾) eller full. Udelad for standardbredden."),
+  column: z
+    .number()
+    .int()
+    .min(1)
+    .max(3)
+    .optional()
+    .describe("Kun layout 'columns': hvilken kolonne komponenten stables i. Udeladt = fuld bredde over eller under kolonnerne."),
 };
 function w<S extends z.ZodRawShape>(schema: z.ZodObject<S>) {
   return schema.extend(widthShape);
@@ -335,7 +342,7 @@ export type ComponentType = ViewComponent["type"];
  * læses som ét overblik. 'stack': alt i fuld bredde under hinanden. 'grid-2' er det gamle navn
  * for dashboard og behandles ens.
  */
-export const LAYOUTS = ["dashboard", "stack", "grid-2"] as const;
+export const LAYOUTS = ["dashboard", "stack", "grid-2", "columns"] as const;
 
 export const viewSpecSchema = z.object({
   /** v2: komponentsættet bygget fra Paper-kataloget. v1-visninger (gamle komponentnavne) afvises. */
@@ -345,6 +352,7 @@ export const viewSpecSchema = z.object({
   subtitle: z.string().max(200).optional(),
   layout: z.enum(LAYOUTS).default("dashboard").describe("'dashboard' (standard) = ét samlet overblik i 4-kolonne-grid med hver komponents bredde. 'stack' = alt i fuld bredde under hinanden."),
   criteria: z.array(criterionSchema).max(20).default([]).describe("Vises som chips i rammen under titlen."),
+  columns: z.number().int().min(2).max(3).optional().describe("Kun layout 'columns': antal kolonner på desktop (2 eller 3). Serverens komponist sætter det."),
   components: z.array(componentSchema).min(1).max(12),
 });
 export type ViewSpec = z.infer<typeof viewSpecSchema>;

@@ -3,7 +3,7 @@ import { createMcpExpressApp } from "@modelcontextprotocol/express";
 import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
 import cors from "cors";
 import type { NextFunction, Request, Response } from "express";
-import { companyTemplate, listTemplate, parseViewSpec, searchQuerySchema, toLassoId, viewSpecSchema } from "@lasso/spec";
+import { companyTemplate, composeCompany, composeProbe, listTemplate, parseViewSpec, searchQuerySchema, toLassoId, viewSpecSchema } from "@lasso/spec";
 import { getCurrentUser } from "./auth/user.js";
 import { hasLassoCredentials, isSet, loadConfig, type Config } from "./config.js";
 import { createProvider, type DataProvider } from "./data/index.js";
@@ -171,14 +171,9 @@ export function createApp({ config, client, provider, store }: AppDeps) {
     } catch (err) {
       return fail(404, `Virksomheden kunne ikke hentes: ${errorMessage(err)}`);
     }
-    // Hele profilen uden opfølgningsknapper (de sender spørgsmål til Claude og virker kun i chatten).
-    const spec = companyTemplate(lassoId, {
-      name,
-      chartMetric: check.link.metric,
-      years: check.link.years,
-      sections: ["header", "noegletal", "graf", "ledelse", "ejerskab"],
-    });
-    const dataset = await resolveSpec(spec, provider);
+    // Samme komponist som i chatten: hent data, og lad formen følge virksomhedens data.
+    const dataset = await resolveSpec(composeProbe(lassoId, "overblik"), provider);
+    const spec = composeCompany(lassoId, dataset, { focus: "overblik", years: check.link.years, chartMetric: check.link.metric, name });
     res
       .type("html")
       .set("Cache-Control", "no-store")

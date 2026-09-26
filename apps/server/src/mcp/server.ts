@@ -4,6 +4,9 @@ import { z } from "zod";
 import {
   catalogAsText,
   companyTemplate,
+  composeCompany,
+  composeProbe,
+  FOCUSES,
   COMPANY_SECTIONS,
   COMPOSITION_RULES,
   cvrFromLassoId,
@@ -45,7 +48,7 @@ const INSTRUCTIONS = `Lasso giver adgang til data om danske virksomheder (CVR): 
 
 Sådan bruges værktøjerne:
 - Én bestemt virksomhed: show_company med CVR-nummer, Lasso-ID eller navn. Et navn slår serveren selv op; brug ikke search_companies først.
-- Økonomi og regnskab ("hvordan går det økonomisk for Novo?"): show_company med sections ["header","noegletal","graf"], chart_metric "omsaetning" og years 10. Kommentér udviklingen i 2–3 sætninger; tallene står i visningen.
+- Økonomi og regnskab ("hvordan går det økonomisk for Novo?"): show_company med focus "oekonomi". Ejere: focus "ejerskab". Ledelse: focus "ledelse". Risiko: focus "risiko". Historik og nyheder: focus "historik". Serveren tilpasser selv skærmbilledet til virksomhedens data. Kommentér kort i 2–3 sætninger; tallene står i visningen.
 - Lister og målgrupper ("alle revisorer i Region Midt med mindst 10 ansatte"): search_companies med brugerens formulering som query. Lasso fortolker den til filtre i hele CVR og viser dem i filterpanelet. Tilføj kun criteria for det, teksten ikke siger, og sort for "top N"/"største".
 - Sammenligninger og oversigter, der ikke passer i de to: render_view med en spec fra komponentkataloget.
 - "Giv mig en URL", "del", "gem": save_view.
@@ -148,17 +151,18 @@ export function createMcpServer(ctx: McpContext): McpServer {
     {
       title: "Vis virksomhed",
       description:
-        "Vis én dansk virksomhed som Lassos faste cockpit: hoved → nøgletal → regnskabsgraf ved siden af stamdata → ledelse ved siden af ejere → opfølgningsknapper, samlet i ét dashboard. Kald det kun én gang pr. svar, og kald ikke render_view bagefter; kræver spørgsmålet andre komponenter, så brug render_view alene. Brug når brugeren spørger til en bestemt virksomhed, dens regnskab, økonomi, ledelse, bestyrelse, direktør, ejere eller revisor. Tager CVR-nummer, Lasso-ID eller navn (fx \"Novo Nordisk\"); ved navn vælger serveren det bedste match og nævner alternativerne. Spørgsmål om økonomi: sections [header, noegletal, graf], chart_metric omsaetning, years 10. Spørgsmål om ledelse: sections [header, ledelse].",
+        "Vis én dansk virksomhed som ét skærmbillede, der tilpasser sig virksomhedens data. Du angiver kun hensigten med focus; serveren henter data og vælger selv formen (fx graf ved mange regnskabsår, alle tal ved få, ejerdiagram ved en koncern, ingen nyhedssektion når der ingen nyheder er) og lægger det i kolonner som Lassos portal. Kald det kun én gang pr. svar, og kald ikke render_view bagefter. Brug til alle spørgsmål om én bestemt virksomhed. focus: 'overblik' (standard, 'fortæl om X'), 'oekonomi' (regnskab, omsætning, resultat, 'hvordan går det'), 'ejerskab' (ejere, reelle ejere, koncern), 'ledelse' (direktion, bestyrelse, udskiftning), 'risiko' (røde flag, kan vi handle med dem), 'historik' (hvad er der sket, nyheder). Tager CVR-nummer, Lasso-ID eller navn; ved navn vælger serveren det bedste match og nævner alternativerne. Brug kun render_view, når brugeren beder om noget, focus ikke dækker (fx sammenligning af flere virksomheder).",
       inputSchema: z.object({
         company: z.string().min(1).describe("8-cifret CVR-nummer, Lasso-ID (fx CVR-1-12345678) eller virksomhedens navn."),
-        sections: z.array(z.enum(COMPANY_SECTIONS)).optional().describe("Vis kun disse sektioner. Header er altid med. Standard: alle."),
+        focus: z.enum(FOCUSES).optional().describe("Hvad brugeren vil vide. Standard: overblik."),
+        sections: z.array(z.enum(COMPANY_SECTIONS)).optional().describe("Forældet: fast skabelon. Brug focus i stedet."),
         chart_metric: z.enum(METRICS).optional().describe("Nøgletal i grafen. Standard: bruttofortjeneste."),
-        years: z.number().int().min(2).max(10).optional().describe("Antal år i grafen. Standard: 5."),
+        years: z.number().int().min(2).max(10).optional().describe("Antal år i grafer og tabeller. Standard: 5, ved økonomi 10."),
       }),
       annotations: { title: "Vis virksomhed", ...readOnly },
       _meta: ui,
     },
-    async ({ company, sections, chart_metric, years }): Promise<CallToolResult> => {
+    async ({ company, focus, sections, chart_metric, years }): Promise<CallToolResult> => {
       let lassoId = toLassoId(company, prefix);
       let note: string | undefined;
       if (!isCompanyRef(company)) {
@@ -179,8 +183,17 @@ export function createMcpServer(ctx: McpContext): McpServer {
       } catch (err) {
         return toolError(`Kunne ikke hente ${company}: ${errorMessage(err)}. Tjek CVR-nummeret eller navnet.`);
       }
-      const spec = companyTemplate(lassoId, { sections, chartMetric: chart_metric, years, name });
-      const ds = await resolveSpec(spec, provider);
+      let spec: ViewSpec;
+      let ds: Dataset;
+      if (sections?.length) {
+        // Ældre kald med faste sektioner.
+        spec = companyTemplate(lassoId, { sections, chartMetric: chart_metric, years, name });
+        ds = await resolveSpec(spec, provider);
+      } else {
+        // Hent først de data, hensigten kan bruge; komponér derefter ud fra datas form.
+        ds = await resolveSpec(composeProbe(lassoId, focus), provider);
+        spec = composeCompany(lassoId, ds, { focus, years, chartMetric: chart_metric, name });
+      }
       const cvr = cvrFromLassoId(lassoId);
       const link = cvr ? companyLink(config, { cvr, metric: chart_metric ?? "bruttofortjeneste", years: years ?? 5 }) : undefined;
       return viewResult(spec, ds, { note, link });
