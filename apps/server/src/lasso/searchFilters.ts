@@ -31,11 +31,23 @@ const FORM_CODES: Record<string, string[]> = {
   Forening: ["110", "115", "130", "140", "150", "152"],
 };
 
+// "Normal" (selskaber) og "Aktiv" (enkeltmandsvirksomheder mv.) betyder begge aktiv hos Lasso,
+// se apps/server/src/lasso/adapters.ts' statusKind. Standardsøgningen skal matche begge.
 const STATUS_VALUES: Record<string, string[]> = {
-  aktiv: ["Aktiv"],
+  aktiv: ["Aktiv", "Normal"],
   ophørt: ["Ophørt"],
   "under konkurs": ["UNDERKONKURS"],
   "under likvidation": ["UNDERFRIVILLIGLIKVIDATION", "UNDERTVANGSOPLØSNING"],
+};
+
+/** Standardfilteret, når brugeren ikke selv har nævnt status: kun aktive virksomheder (se P1-5). */
+export const DEFAULT_ACTIVE_STATUS_FILTER: LassoFilter = {
+  filterName: "basic-company-status",
+  fieldName: "BasicInfo.CompanyStatus",
+  fieldNames: null,
+  fallbackFields: null,
+  operator: "Equal",
+  values: [...STATUS_VALUES.aktiv!],
 };
 
 type Kind = "code" | "integer" | "amount" | "date";
@@ -100,7 +112,10 @@ const FIELDS: Record<string, FieldMap> = {
   stiftet: { filterName: "basic-creation-date", fieldName: "BasicInfo.CreationDate", kind: "date" },
 };
 
-const FIELD_BY_LASSO = new Map(Object.entries(FIELDS).map(([key, f]) => [f.fieldName.toLowerCase(), key]));
+// Slår op på filterName (fx "basic-industry"), ikke fieldName: Lassos prompt-søgning har set flere
+// forskellige stavemåder/cases af fieldName for samme filterName (fx "industrycode" vs.
+// "BasicInfo.IndustryCode", "BasicInfo.region" vs. "BasicInfo.Region") - filterName er stabilt.
+const FIELD_BY_FILTERNAME = new Map(Object.entries(FIELDS).map(([key, f]) => [f.filterName.toLowerCase(), key]));
 
 const num = (v: unknown) => (typeof v === "number" ? v : Number(String(v).replace(/\s/g, "").replace(",", ".")));
 const isDate = (v: unknown) => /^\d{4}-\d{2}-\d{2}$/.test(String(v));
@@ -151,11 +166,10 @@ function toFilter(c: Criterion): LassoFilter | null {
       }
       const n = num(c.value);
       if (!Number.isFinite(n)) return null;
-      // Lasso har kun strenge sammenligninger; hele tal og kroner flyttes én enhed ("mindst 10" = "større end 9").
-      if (c.operator === "gt") return { ...base, operator: "GreaterThan", values: [String(n)] };
-      if (c.operator === "gte") return { ...base, operator: "GreaterThan", values: [String(n - 1)] };
-      if (c.operator === "lt") return { ...base, operator: "LessThan", values: [String(n)] };
-      return { ...base, operator: "LessThan", values: [String(n + 1)] };
+      // Lasso understøtter GreaterEqual/LessEqual direkte (bekræftet af search/query/prompt-svar,
+      // fx "mindst 10 ansatte" -> GreaterEqual 10), så "mindst"/"højst" oversættes 1:1 uden enhedsskift.
+      const operator = { gt: "GreaterThan", gte: "GreaterEqual", lt: "LessThan", lte: "LessEqual" }[c.operator]!;
+      return { ...base, operator, values: [String(n)] };
     }
     case "between": {
       const [a, b] = list(c.value);
@@ -193,7 +207,7 @@ export function filtersToCriteria(filters: readonly LassoFilter[]): { criteria: 
   const unknown: string[] = [];
   for (const f of filters) {
     if (f.operator === "ContactConfiguration" || f.filterName === "ContactConfiguration") continue;
-    const key = FIELD_BY_LASSO.get(String(f.fieldName).toLowerCase());
+    const key = FIELD_BY_FILTERNAME.get(String(f.filterName).toLowerCase());
     const map = key ? FIELDS[key] : undefined;
     if (!key || !map) {
       unknown.push(`${f.filterName} ${f.operator} ${f.values.join(", ")}`);
@@ -209,16 +223,28 @@ export function filtersToCriteria(filters: readonly LassoFilter[]): { criteria: 
     const add = (operator: Operator, value: Criterion["value"]) => criteria.push({ field: key, operator, value });
     switch (f.operator) {
       case "Equal":
+      case "In":
         add(values.length === 1 ? "eq" : "in", values.length === 1 ? values[0]! : values);
         break;
       case "NotEqual":
+      case "NotIn":
         add(values.length === 1 ? "neq" : "not_in", values.length === 1 ? values[0]! : values);
         break;
       case "GreaterThan":
+      case "Greater":
         add("gt", values[0]!);
         break;
+      case "GreaterEqual":
+      case "GreaterThanOrEqual":
+        add("gte", values[0]!);
+        break;
       case "LessThan":
+      case "Less":
         add("lt", values[0]!);
+        break;
+      case "LessEqual":
+      case "LessThanOrEqual":
+        add("lte", values[0]!);
         break;
       case "Between":
         add("between", [values[0]!, values[1] ?? values[0]!]);

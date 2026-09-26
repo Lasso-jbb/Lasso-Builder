@@ -10,3 +10,4 @@ export * from "./series.js";
 export * from "./compose.js";
 export * from "./person.js";
 export * from "./composePerson.js";
+export * from "./riskSignals.js";

@@ -10,6 +10,7 @@ import {
   type FinancialsVM,
   type FinancialStatementsVM,
   type LivestockVM,
+  type OwnershipGraphVM,
   type ProductionUnitsVM,
   type PropertiesVM,
   type ScoreVM,
@@ -33,17 +34,40 @@ import {
   adaptSearch,
   adaptTextSections,
   adaptTimeline,
+  arr,
   ejfBbrRefs,
-  fillContactInfo,
+  str,
   mergeBbr,
   adaptOwnershipGraph,
+  applyGraphNames,
   graphFromOwnership,
+  participantNames,
 } from "../lasso/adapters.js";
 import { LassoApiError, type LassoClient } from "../lasso/client.js";
 import { adaptPerson, adaptPersonNetwork, adaptPersonSearch } from "../lasso/personAdapters.js";
-import { criteriaToFilters, filtersToCriteria, SERVER_SORT, type LassoFilter } from "../lasso/searchFilters.js";
+import { criteriaToFilters, DEFAULT_ACTIVE_STATUS_FILTER, filtersToCriteria, SERVER_SORT, type LassoFilter } from "../lasso/searchFilters.js";
 import { applyCriteria, needsFinancials, sortRows } from "./criteria-eval.js";
 import { mapLimit, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
+
+/** Så længe venter kontaktblokken på hjemmesidens telefon/e-mail, før den vises uden. */
+export const CONTACT_BUDGET_MS = 2_500;
+
+/** Venter højst `ms` på et løfte; derefter undefined (løftet kører videre og fylder klientens cache). */
+async function withinBudget<T>(p: Promise<T | undefined>, ms: number): Promise<T | undefined> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const budget = new Promise<undefined>((resolve) => {
+    timer = setTimeout(() => resolve(undefined), ms);
+  });
+  try {
+    return await Promise.race([p, budget]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Markør for "virksomheden har ingen brugbar hjemmeside" fra kontaktendpointet. */
+const NO_WEBSITE = Symbol("no-website");
+const NO_WEBSITE_REASON = "Virksomheden har ingen hjemmeside, Lasso kan hente kontaktpersoner fra.";
 
 /** Så mange virksomheder hentes, når noget skal filtreres eller sorteres her (omsætning, bruttofortjeneste). */
 const LOCAL_POOL = 60;
@@ -80,8 +104,12 @@ export class LiveProvider implements DataProvider {
 
   /** Lassos filtersøgning (POST /apps/search/lassoid) over alle virksomheder. */
   private async searchWithFilters(q: SearchQuery, filters: LassoFilter[], rest: Criterion[]): Promise<SearchResultVM> {
+    // Ophørte/opløste selskaber kommer ellers med, uden at brugeren bad om dem (P1-5): udelad dem som
+    // standard, medmindre brugeren selv har nævnt et statuskriterie (uanset om Lasso kunne oversætte det).
+    const hasStatus = q.criteria.some((c) => c.field === "status") || rest.some((c) => c.field === "status");
+    const effectiveFilters = hasStatus ? filters : [...filters, DEFAULT_ACTIVE_STATUS_FILTER];
     const serverSort = q.sort ? SERVER_SORT[q.sort.field] : undefined;
-    const raw = (await this.client.searchByFilters(filters, serverSort)) as { results?: unknown[]; resultsFound?: number; totalPages?: number };
+    const raw = (await this.client.searchByFilters(effectiveFilters, serverSort)) as { results?: unknown[]; resultsFound?: number; totalPages?: number };
     let ids = (raw.results ?? []).filter((id): id is string => typeof id === "string");
     const total = typeof raw.resultsFound === "number" ? raw.resultsFound : ids.length;
     // Lasso sorterer altid stigende. Faldende kan vendes, når hele resultatet er på én side.
@@ -96,24 +124,27 @@ export class LiveProvider implements DataProvider {
     const filtered = applyCriteria(rows, rest);
     const shown = sortRows(filtered.rows, localSort).slice(0, q.limit);
     const partial = localWork && pool.length < ids.length;
+    const notes = [
+      !hasStatus ? "Kun aktive virksomheder er vist (ophørte, opløste og under konkurs/likvidation er udeladt); nævn status som kriterie for at få dem med." : undefined,
+      partial ? `Lasso fandt ${total} virksomheder. ${[...rest.map(formatCriterion), localSort ? "sorteringen" : ""].filter(Boolean).join(", ")} er anvendt på de første ${pool.length}.` : undefined,
+    ].filter((n): n is string => Boolean(n));
     return {
       key: searchKey(q),
       total: rest.length > 0 ? filtered.rows.length : total,
       rows: shown,
       unsupportedCriteria: filtered.unsupported.length ? filtered.unsupported : undefined,
       source: "lasso-search",
-      note: partial
-        ? `Lasso fandt ${total} virksomheder. ${[...rest.map(formatCriterion), localSort ? "sorteringen" : ""].filter(Boolean).join(", ")} er anvendt på de første ${pool.length}.`
-        : undefined,
+      note: notes.length ? notes.join(" ") : undefined,
     };
   }
 
-  /** Én søgerække ud fra virksomhed og regnskab. */
+  /** Én søgerække ud fra virksomhed og regnskab (kun CVR-stamdata; rækker skal ikke bruge kontaktoplysninger). */
   private async row(lassoId: string): Promise<CompanyRowVM> {
     const [co, f] = await Promise.all([
       this.company(lassoId).catch(() => null),
       this.financials(lassoId).catch(() => ({ lassoId, currency: "DKK", years: [] }) as FinancialsVM),
     ]);
+    const currency = f.years.at(-1)?.currency ?? f.currency;
     const last = f.years.at(-1);
     return {
       lassoId,
@@ -128,6 +159,7 @@ export class LiveProvider implements DataProvider {
       revenue: last?.revenue ?? null,
       grossProfit: last?.grossProfit ?? null,
       profit: last?.profit ?? null,
+      ...(currency && currency !== "DKK" ? { currency } : {}),
       trend: f.years.slice(-5).map((y) => y.grossProfit ?? y.revenue ?? 0),
     };
   }
@@ -163,8 +195,10 @@ export class LiveProvider implements DataProvider {
             this.company(row.lassoId).catch(() => null),
           ]);
           const last = f.years.at(-1);
+          const currency = last?.currency ?? f.currency;
           return {
             ...row,
+            ...(currency && currency !== "DKK" ? { currency } : {}),
             cvr: row.cvr ?? co?.cvr,
             industryText: row.industryText ?? co?.industryText,
             region: row.region ?? co?.address?.region,
@@ -198,31 +232,51 @@ export class LiveProvider implements DataProvider {
     return adaptSearch(raw, this.config.LASSO_COMPANY_ID_PREFIX).rows;
   }
 
+  /**
+   * Stamdata fra CVR (GET /{lassoId}) og intet andet, så virksomhedsopslaget er hurtigt (0,2–2 s).
+   * Kontaktendpoints (websites/contacts) scraper hjemmesiden og tager 10+ s; de kaldes kun fra
+   * contact()/contactPersons(), og resolveSpec fylder telefon/e-mail/web ind derfra, når
+   * visningen alligevel henter kontaktblokken.
+   */
   async company(lassoId: string) {
-    const co = adaptCompany(lassoId, await this.client.company(lassoId));
-    // Kontaktendpoints er hverken hurtige eller bekræftede; kald dem kun, når CVR-svaret
-    // selv mangler telefon/e-mail/web (se fillContactInfo og docs/lasso-endpoints.md).
-    if (co.phone && co.email && co.website) return co;
-    const [websites, contacts] = await Promise.all([
-      safe(() => this.client.websites(lassoId)),
-      safe(() => this.client.contacts(lassoId, { emails: true, phonenumbers: true, links: true })),
-    ]);
-    return fillContactInfo(co, websites, contacts);
+    return adaptCompany(lassoId, await this.client.company(lassoId));
   }
 
-  /** Katalog 08: kontaktblok. Samme kilder som company(), men altid hentet og med kildelinje. */
+  /**
+   * Katalog 08: kontaktblok. CVR først; hjemmesidens kontaktdata kun, når CVR mangler noget.
+   * Den scrapende telefon/e-mail-opslag får højst CONTACT_BUDGET_MS: er den ikke færdig, vises
+   * CVR og hjemmeside nu, og kaldet kører færdigt i baggrunden og ligger i cachen til næste gang.
+   */
   async contact(lassoId: string): Promise<ContactVM> {
-    const [companyRaw, websites, contacts] = await Promise.all([
-      this.client.company(lassoId),
+    const companyRaw = await this.client.company(lassoId);
+    const co = adaptCompany(lassoId, companyRaw);
+    if (co.phone && co.email && co.website) return adaptContact(lassoId, companyRaw, undefined, undefined);
+    const [websites, contacts] = await Promise.all([
       safe(() => this.client.websites(lassoId)),
-      safe(() => this.client.contacts(lassoId, { emails: true, phonenumbers: true, links: true })),
+      withinBudget(safe(() => this.client.contacts(lassoId, { emails: true, phonenumbers: true, links: true })), CONTACT_BUDGET_MS),
     ]);
     return adaptContact(lassoId, companyRaw, websites, contacts);
   }
 
-  /** Katalog 08: kontaktpersoner. Svarformen er ubekræftet, se docs/lasso-endpoints.md. */
+  /**
+   * Katalog 08: kontaktpersoner fra virksomhedens hjemmeside. Svarformen er ubekræftet, se
+   * docs/lasso-endpoints.md. Har virksomheden ingen brugbar hjemmeside (Lasso svarer 400
+   * "None of company's webpages were valid" eller 404), er det en tom tilstand, ikke en fejl.
+   */
   async contactPersons(lassoId: string): Promise<ContactPersonsVM> {
-    return adaptContactPersons(lassoId, await this.client.contacts(lassoId, { contacts: true }));
+    const [raw, websites] = await Promise.all([
+      this.client.contacts(lassoId, { contacts: true }).catch((err: unknown) => {
+        if (err instanceof LassoApiError && (err.status === 400 || err.status === 404)) return NO_WEBSITE;
+        throw err;
+      }),
+      safe(() => this.client.websites(lassoId)),
+    ]);
+    if (raw === NO_WEBSITE) return { lassoId, people: [], emptyReason: NO_WEBSITE_REASON };
+    const vm = adaptContactPersons(lassoId, raw);
+    if (vm.people.length === 0 && websites !== undefined && arr(websites, "urls").length === 0 && !str(websites, "url")) {
+      return { ...vm, emptyReason: NO_WEBSITE_REASON };
+    }
+    return vm;
   }
 
   async financials(lassoId: string): Promise<FinancialsVM> {
@@ -355,13 +409,38 @@ export class LiveProvider implements DataProvider {
   async ownershipGraph(lassoId: string, opts: OwnershipGraphOptions) {
     try {
       const raw = await this.client.relationsGraph({ ids: [lassoId], ingoingDepth: opts.ingoingDepth, outgoingDepth: opts.outgoingDepth, onDate: opts.onDate });
-      return adaptOwnershipGraph(lassoId, raw, opts);
+      return await this.nameGraphNodes(adaptOwnershipGraph(lassoId, raw, opts));
     } catch (err) {
       // Findes endpointet ikke (eller afviser det formen), vises i det mindste de direkte ejere.
       if (!(err instanceof LassoApiError) || ![400, 404, 405, 501].includes(err.status)) throw err;
       const raw = await this.client.company(lassoId);
       return graphFromOwnership(lassoId, adaptCompany(lassoId, raw).name, adaptOwnership(lassoId, raw), opts);
     }
+  }
+
+  /**
+   * Ejergrafens "companyinfo"-berigelse giver kun selskaber navn; personer og udenlandske
+   * enheder kommer som "CVR-3-…". Navn og type slås op i CVR-opslaget for de selskaber, de
+   * ejer (ejerlisten har navn og type; ofte allerede i cachen), og ellers på deltagerens
+   * eget ID. Højst 12 opslag af hver slags, 4 ad gangen; et fejlet opslag efterlader ID'et.
+   */
+  private async nameGraphNodes(g: OwnershipGraphVM): Promise<OwnershipGraphVM> {
+    const nameless = new Set(g.nodes.filter((n) => n.name === n.id && !n.root).map((n) => n.id));
+    if (nameless.size === 0) return g;
+    const names = new Map<string, { name: string; type?: string }>();
+    const owned = [...new Set(g.edges.filter((e) => nameless.has(e.from)).map((e) => e.to))].slice(0, 12);
+    await mapLimit(owned, 4, async (id) => {
+      const raw = await safe(() => this.client.company(id));
+      if (raw === undefined) return;
+      for (const [pid, hit] of participantNames(raw)) if (nameless.has(pid) && !names.has(pid)) names.set(pid, hit);
+    });
+    const rest = [...nameless].filter((id) => !names.has(id)).slice(0, 12);
+    await mapLimit(rest, 4, async (id) => {
+      const raw = await safe(() => this.client.person(id));
+      const name = raw === undefined ? undefined : str(raw, "name", "fullName", "names.0");
+      if (name) names.set(id, { name, type: str(raw, "type", "entityType") });
+    });
+    return applyGraphNames(g, names);
   }
 
   /**

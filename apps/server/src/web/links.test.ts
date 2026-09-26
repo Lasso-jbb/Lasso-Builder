@@ -26,3 +26,15 @@ test("linket udløber efter LINK_TTL_DAYS", () => {
   assert.equal(verifyCompanyLink(config, "34580820", q, NOW + 29 * 86_400_000).ok, true);
   assert.deepEqual(verifyCompanyLink(config, "34580820", q, NOW + 31 * 86_400_000), { ok: false, reason: "expired" });
 });
+
+test("linket bærer visningens focus, og focus er signeret", () => {
+  const url = companyLink(config, { cvr: "34580820", metric: "bruttofortjeneste", years: 10, focus: "oekonomi" }, NOW);
+  const q = query(url);
+  assert.equal(q.f, "oekonomi");
+  assert.deepEqual(verifyCompanyLink(config, "34580820", q, NOW), { ok: true, link: { cvr: "34580820", metric: "bruttofortjeneste", years: 10, focus: "oekonomi" } });
+  // Et andet focus med samme signatur afvises; et ukendt focus også.
+  assert.deepEqual(verifyCompanyLink(config, "34580820", { ...q, f: "ejerskab" }, NOW), { ok: false, reason: "invalid" });
+  assert.deepEqual(verifyCompanyLink(config, "34580820", { ...q, f: "hemmeligt" }, NOW), { ok: false, reason: "invalid" });
+  // Overblik er standard og står ikke i linket.
+  assert.equal(query(companyLink(config, { cvr: "34580820", metric: "omsaetning", years: 5, focus: "overblik" }, NOW)).f, undefined);
+});

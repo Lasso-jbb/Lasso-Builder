@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   amountScale,
+  currencyUnit,
+  isForeignCurrency,
   formatShare,
   ownershipGraphKey,
   percentChange,
@@ -319,4 +321,18 @@ test("komponisten vælger form efter datas form, ikke efter en fast skabelon", a
     const cols = [...new Set(spec.components.map((c) => c.column).filter(Boolean))].sort();
     assert.deepEqual(cols, cols.map((_, i) => i + 1));
   }
+});
+
+test("valuta: DKK giver stadig 'kr.', EUR/USD giver koden (bagudkompatibelt)", () => {
+  assert.equal(currencyUnit(undefined), "kr.");
+  assert.equal(currencyUnit("DKK"), "kr.");
+  assert.equal(currencyUnit("eur"), "EUR");
+  assert.equal(isForeignCurrency("DKK"), false);
+  assert.equal(isForeignCurrency("USD"), true);
+  assert.equal(formatAmount(18_822_000_000), "18,8 mia. kr.");
+  assert.equal(formatAmount(18_822_000_000, currencyUnit("EUR")), "18,8 mia. EUR");
+  assert.equal(formatMetricValue("omsaetning", 53_988_000_000, "USD"), "54 mia. USD");
+  assert.equal(formatMetricValue("omsaetning", 12_500_000), "12,5 mio. kr.");
+  assert.equal(formatMetricValue("ansatte", 42, "EUR"), "42");
+  assert.equal(amountScale([117e9, 250e9], currencyUnit("EUR")).label, "mia. EUR");
 });

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { formatDate, type ObservationRowVM, type ObservationsVM, type Severity } from "@lasso/spec";
+import { extraSignals, formatDate, type ObservationRowVM, type ObservationsVM, type RiskSignals, type Severity } from "@lasso/spec";
 import { DataState, Section, SeverityIcon, SourceLine, severityWord, stateForError } from "../primitives.js";
 
 /** Alvorsskalaen som fast legende (katalog 17: 0 neutral, 25 info, 50 mulig vigtig, 100 vigtig). */
@@ -28,13 +28,21 @@ function summarize(rows: readonly ObservationRowVM[]): string {
  * Risikoobservationer (katalog 17): alvorsskala øverst, så en sammenfatning og
  * observationerne sorteret efter alvor. Kun den vigtigste alvorsgrad (100) får en
  * svagt tonet baggrund ("Maks én farveflade pr. skærm i hvile", guide 23).
- * Tom tilstand er positiv information ("intet fundet"), ikke en fejl.
+ * Tom tilstand er positiv information ("intet fundet"), ikke en fejl, men den må kun
+ * påstå det, der faktisk er tjekket: "Lasso har gennemgået ..." kræver Lassos gennemgang
+ * (checkedAt). Egne signaler afledt af status, regnskab og ledelse (`derived`) lægges til,
+ * så et konkursbo aldrig får grønt lys, når Lassos observationer er tomme (review P0-3).
  */
-export function RiskObservations({ data, error, title }: { data?: ObservationsVM; error?: string; title?: string }) {
+const CHECKED_WORDS: Record<string, string> = { status: "status", regnskab: "regnskab", revisor: "revisor", ledelse: "ledelse" };
+
+export function RiskObservations({ data, derived, error, title }: { data?: ObservationsVM; derived?: RiskSignals; error?: string; title?: string }) {
   const heading = title ?? "Risikoobservationer";
   const [expanded, setExpanded] = useState(false);
 
-  if (!data) {
+  const own = data?.observations ?? [];
+  const extra = extraSignals(own, derived?.signals ?? []);
+
+  if (!data && extra.length === 0) {
     return (
       <Section title={heading} span="full">
         {error ? <DataState state={stateForError(error) === "noaccess" ? "empty" : "error"} reason={error} /> : <DataState state="loading" lines={6} height={320} />}
@@ -42,10 +50,14 @@ export function RiskObservations({ data, error, title }: { data?: ObservationsVM
     );
   }
 
-  const rows = [...data.observations].sort((a, b) => b.severity - a.severity);
+  const rows = [...own, ...extra].sort((a, b) => b.severity - a.severity);
 
   if (rows.length === 0) {
-    const reason = `Lasso har gennemgået virksomheden og fandt intet at bemærke.${data.checkedAt ? ` Tjekket ${formatDate(data.checkedAt)}.` : ""}`;
+    const checked = (derived?.checked ?? []).map((c) => CHECKED_WORDS[c] ?? c);
+    const ours = checked.length ? ` ${checked.length > 1 ? `${checked.slice(0, -1).join(", ")} og ${checked.at(-1)}` : checked[0]} giver ingen risikosignaler.` : "";
+    const reason = data?.checkedAt
+      ? `Lasso har gennemgået virksomheden og fandt intet at bemærke. Tjekket ${formatDate(data.checkedAt)}.`
+      : `Lasso har ingen observationer om virksomheden.${ours ? ours.replace(/^ (\p{L})/u, (_m, a: string) => ` ${a.toUpperCase()}`) : ""}`;
     return (
       <Section title={heading} span="full">
         <DataState state="empty" reason={reason} />
@@ -99,7 +111,8 @@ export function RiskObservations({ data, error, title }: { data?: ObservationsVM
           {expanded ? "Vis færre" : `Se alle ${rows.length}`}
         </button>
       ) : null}
-      {data.checkedAt ? <SourceLine source={data.sources?.join(", ") ?? "Lasso"} updated={data.checkedAt} /> : null}
+      {extra.length > 0 ? <p className="lasso-row__sub">Afledt af CVR-status, regnskab og ledelse, hvor Lasso ingen observation har.</p> : null}
+      {data?.checkedAt ? <SourceLine source={data.sources?.join(", ") ?? "Lasso"} updated={data.checkedAt} /> : null}
     </Section>
   );
 }

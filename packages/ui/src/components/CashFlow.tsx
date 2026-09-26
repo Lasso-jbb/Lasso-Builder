@@ -49,5 +49,5 @@ export function LassoCashFlow({
     { key: "cashEnding", label: "Likvider ultimo", values: shown.map((y) => y.cashEnding), flag: mismatch },
   ];
 
-  return <StatementTable title={heading} unit="t. kr." years={yearsShown} sections={[{ rows }]} prefix="lasso-cashflow" />;
+  return <StatementTable title={heading} unit="t. kr." years={yearsShown} currency={statements.currency} sections={[{ rows }]} prefix="lasso-cashflow" />;
 }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { emptyDataset, searchKey, widthOf, type Dataset, type ViewComponent, ownershipGraphKey } from "@lasso/spec";
+import { emptyDataset, riskSignals, searchKey, widthOf, type Dataset, type ViewComponent, ownershipGraphKey } from "@lasso/spec";
 import { FollowUps } from "./components/FollowUps.js";
 import { LassoMark } from "./LassoMark.js";
 import { CompanyHead } from "./components/CompanyHead.js";
@@ -115,6 +115,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           variant={c.variant}
           title={c.title}
           error={c.variant === "financials" ? err(`financials:${c.company}`) : err(`company:${c.company}`)}
+          hideContact={props.spec.components.some((x) => x.type === "LassoContact" && x.company === c.company)}
         />
       );
     case "LassoContact":
@@ -132,7 +133,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoScoreGauge":
       return <ScoreGauge key={key} score={empty.scores[c.company]} title={c.title} error={err(`score:${c.company}`)} />;
     case "LassoRiskObservations":
-      return <RiskObservations key={key} data={empty.observations[c.company]} error={err(`observations:${c.company}`)} title={c.title} />;
+      return <RiskObservations key={key} data={empty.observations[c.company]} derived={ds ? riskSignals(c.company, empty) : undefined} error={err(`observations:${c.company}`)} title={c.title} />;
     case "LassoAuditorIndependence":
       return <AuditorIndependence key={key} data={empty.auditorIndependence[c.company]} error={err(`auditorIndependence:${c.company}`)} title={c.title} />;
     case "LassoProductionUnits":
@@ -171,7 +172,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoTimeline":
       return <LassoTimeline key={key} timeline={empty.timeline[c.company]} title={c.title} error={err(`timeline:${c.company}`)} />;
     case "LassoNews":
-      return <LassoNews key={key} news={empty.news[c.company]} companyName={empty.companies[c.company]?.name} error={err(`news:${c.company}`)} />;
+      return <LassoNews key={key} news={empty.news[c.company]} limit={c.limit} companyName={empty.companies[c.company]?.name} error={err(`news:${c.company}`)} />;
     case "LassoPersonHead":
       return <PersonHead key={key} person={empty.persons[c.person]} error={err(`person:${c.person}`)} />;
     case "LassoPersonRoles":
@@ -181,6 +182,33 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoPersonRisk":
       return <PersonRisk key={key} person={empty.persons[c.person]} title={c.title} error={err(`person:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} />;
   }
+}
+
+/**
+ * Rækkefølge, når kolonnerne stables på mobil (review P2-3): tal og graf før oplysninger,
+ * relationer, historik og nyheder, i stedet for kolonne 1 (lange navnelister) først.
+ */
+const MOBILE_ORDER: Partial<Record<ViewComponent["type"], number>> = {
+  LassoBarChart: 10,
+  LassoGroupedBarChart: 10,
+  LassoLineChart: 10,
+  LassoWaterfallChart: 12,
+  LassoContact: 15,
+  LassoContactPersons: 16,
+  LassoKeyValueList: 20,
+  LassoShareBars: 22,
+  LassoTextSections: 25,
+  LassoPersonList: 30,
+  LassoOwnerList: 31,
+  LassoRelations: 32,
+  LassoBeneficialOwners: 33,
+  LassoPersonNetwork: 34,
+  LassoPersonRisk: 35,
+  LassoTimeline: 40,
+  LassoNews: 50,
+};
+function mobileOrder(c: ViewComponent): number {
+  return MOBILE_ORDER[c.type] ?? 30;
 }
 
 type Indexed = { c: ViewComponent; i: number };
@@ -278,7 +306,7 @@ export function LassoView(props: LassoViewProps) {
                       {band.columns.map((col, k) => (
                         <div key={k} className="lasso-column">
                           {col.map(({ c, i }) => (
-                            <div key={i} className="lasso-column__item">
+                            <div key={i} className="lasso-column__item" style={{ ["--lasso-mobile-order" as string]: mobileOrder(c) }}>
                               {renderComponent(c, dataset, props, act, i)}
                             </div>
                           ))}

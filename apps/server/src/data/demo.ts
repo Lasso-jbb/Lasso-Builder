@@ -191,7 +191,8 @@ function financialsFor(c: DemoCompany): FinancialsVM {
         assetsTotal,
         ebitda: Math.round((y.grossProfit ?? 0) * (1 - 0.62 - 0.045)),
         soliditetsgrad: pct(y.equity, assetsTotal),
-        overskudsgrad: pct(y.profit, y.revenue ?? y.grossProfit),
+        // Overskudsgrad = EBIT / omsætning; EBIT her = EBITDA minus opdigtede afskrivninger (3 % af bruttofortjenesten).
+        overskudsgrad: pct(Math.round((y.grossProfit ?? 0) * (1 - 0.62 - 0.045 - 0.03)), y.revenue),
         likviditetsgrad: null,
       };
     }),

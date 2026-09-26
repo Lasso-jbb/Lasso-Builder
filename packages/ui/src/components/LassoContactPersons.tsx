@@ -69,7 +69,7 @@ export function LassoContactPersons({ data, title, error }: { data?: ContactPers
   if (data.people.length === 0) {
     return (
       <Section title={heading} span="half">
-        <DataState state="empty" reason="Der er ikke fundet kontaktpersoner for virksomheden." />
+        <DataState state="empty" reason={data.emptyReason ?? "Der er ikke fundet kontaktpersoner for virksomheden."} />
       </Section>
     );
   }

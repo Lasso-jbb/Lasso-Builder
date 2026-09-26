@@ -1,4 +1,4 @@
-import { amountScale, formatPercent, formatScaled, percentChange } from "@lasso/spec";
+import { amountScale, currencyUnit, formatPercent, formatScaled, percentChange } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
 
 /**
@@ -54,6 +54,7 @@ export function StatementTable({
   error,
   loading,
   emptyReason,
+  currency,
 }: {
   title?: string;
   unit: string;
@@ -64,6 +65,8 @@ export function StatementTable({
   error?: string;
   loading?: boolean;
   emptyReason?: string;
+  /** ISO-valuta for beløbene (FinancialStatementsVM.currency); DKK vises som "kr.". */
+  currency?: string;
 }) {
   if (loading) {
     return (
@@ -87,7 +90,7 @@ export function StatementTable({
     );
   }
   const allValues = sections.flatMap((s) => s.rows.flatMap((r) => r.values.filter((v): v is number => typeof v === "number")));
-  const scale = allValues.length ? amountScale(allValues) : null;
+  const scale = allValues.length ? amountScale(allValues, currencyUnit(currency)) : null;
   const fmt = (v: number | null | undefined) => {
     if (v == null) return null;
     return scale ? formatScaled(v, scale) : formatScaled(v, { divisor: 1, label: unit });

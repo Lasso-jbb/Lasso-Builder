@@ -65,10 +65,12 @@ test("tools og UI-ressource er registreret", async () => {
   const names = tools.map((t) => t.name).sort();
   assert.deepEqual(names, ["render_view", "resolve_view", "save_view", "search_companies", "show_company", "show_person"]);
   const show = tools.find((t) => t.name === "show_company")!;
-  assert.equal((show._meta as { ui?: { resourceUri?: string } }).ui?.resourceUri, "ui://lasso/view.html");
+  const uri = (show._meta as { ui?: { resourceUri?: string } }).ui?.resourceUri ?? "";
+  // Adressen bærer app-versionen, så værten ikke genbruger en gemt, forældet render-app.
+  assert.match(uri, /^ui:\/\/lasso\/view-[0-9a-f]{10}\.html$/);
   const resolveTool = tools.find((t) => t.name === "resolve_view")!;
   assert.deepEqual((resolveTool._meta as { ui?: { visibility?: string[] } }).ui?.visibility, ["app"]);
-  const res = await client.readResource({ uri: "ui://lasso/view.html" });
+  const res = await client.readResource({ uri });
   const content = res.contents[0] as { mimeType?: string; text?: string };
   assert.equal(content.mimeType, "text/html;profile=mcp-app");
   assert.ok(content.text && content.text.length > 1000, "view.html skal være bygget");
@@ -177,7 +179,7 @@ test("show_person (katalog 16) finder en person på navn og komponerer personsid
   assert.equal(res.isError, undefined);
   const sc = res.structuredContent as { spec: ViewSpec; card: string; link: string; summary: string };
   assert.equal(sc.spec.kind, "person");
-  assert.deepEqual(sc.spec.components.map((c) => c.type), ["LassoPersonHead", "LassoPersonRoles", "LassoPersonNetwork", "LassoPersonRisk"]);
+  assert.deepEqual(sc.spec.components.map((c) => c.type), ["LassoPersonHead", "LassoPersonRoles", "LassoPersonNetwork", "LassoPersonRisk", "LassoFollowUps"]);
   assert.match(sc.summary, /Fundet ud fra navnet "Bo Eksempel"/);
   assert.match(sc.summary, /1 konkurser og 0 tvangsopløsninger/);
   assert.match(sc.card, /SIDDER SAMMEN MED/);
@@ -212,6 +214,40 @@ test("render_view tegner fri komposition", async () => {
   assert.ok(!res.isError, JSON.stringify(res.content));
   const ds = (res._meta as Record<string, Dataset>)[DATASET_META_KEY]!;
   assert.ok(ds.companies["CVR-1-99000004"]);
+});
+
+test("render_view slår virksomhedsnavne op som show_company (review P1-7)", async () => {
+  const res = await client.callTool({
+    name: "render_view",
+    arguments: { title: "Byg vs. Revision", components: [{ type: "LassoCompareTable", companies: ["Eksempel Byg", "99000002"] }] },
+  });
+  assert.ok(!res.isError, JSON.stringify(res.content));
+  const sc = res.structuredContent as { spec: ViewSpec };
+  const table = sc.spec.components[0] as { companies: string[] };
+  assert.deepEqual(table.companies, ["CVR-1-99000001", "CVR-1-99000002"]);
+  assert.match((res.content as { text: string }[])[0]!.text, /"Eksempel Byg" = Eksempel Byg A\/S \(99000001\)/);
+});
+
+test("delelinket fra en økonomi-visning åbner økonomi-visningen (review P2-7)", async () => {
+  const res = await client.callTool({ name: "show_company", arguments: { company: "99000001", focus: "oekonomi" } });
+  const link = (res.structuredContent as { link: string }).link;
+  assert.match(link, /&f=oekonomi/);
+  const html = await (await fetch(link)).text();
+  const boot = /window\.__LASSO_BOOT__=(.*?);<\/script>/s.exec(html)![1]!;
+  assert.match(boot, /"subtitle":"Økonomi"/);
+});
+
+test("instruktionerne er korte og uden dubletter af katalog og søgefelter (review P1-6)", async () => {
+  const instr = client.getInstructions() ?? "";
+  assert.ok(instr.length < 5000, `instruktioner: ${instr.length} tegn`);
+  assert.doesNotMatch(instr, /grid-2/);
+  assert.match(instr, /show_person/);
+  for (const f of ["overblik", "oekonomi", "regnskab", "ejerskab", "ledelse", "risiko", "historik", "kontakt"]) assert.match(instr, new RegExp(`'${f}'`));
+  assert.doesNotMatch(instr, /Komponentkatalog/);
+  const { tools } = await client.listTools();
+  const summary = (await client.callTool({ name: "show_company", arguments: { company: "99000001" } })).content as { text: string }[];
+  assert.doesNotMatch(summary[0]!.text, /ved en virksomhed altid/);
+  assert.ok(tools.find((t) => t.name === "render_view")!.description!.includes("Komponentkatalog"));
 });
 
 test("save_view gemmer, opdaterer samme adresse og viser siden med friske data", async () => {

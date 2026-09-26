@@ -1,5 +1,19 @@
-import { amountScale, formatNumber, formatPercent, formatScaled, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, percentChange, type FinancialsVM, type Metric } from "@lasso/spec";
+import { amountScale, currencyUnit, formatNumber, formatPercent, formatScaled, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, percentChange, type FinancialsVM, type Metric } from "@lasso/spec";
 import { DataState, Missing, Section, stateForError } from "../primitives.js";
+import { useWidth } from "../useWidth.js";
+
+/**
+ * Hvor mange årskolonner bredden kan bære uden vandret scroll (review P1-2): etiket +
+ * år (+ ændring og tendens over 768 px). Mål fra styles.css (.lasso-myt__*). De nyeste
+ * år beholdes altid; de ældste falder fra.
+ */
+export function yearsThatFit(width: number): number {
+  const mobile = width <= 560;
+  const label = mobile ? 120 : 160;
+  const year = mobile ? 72 : 96;
+  const extras = width > 768 ? 80 + 96 : 0;
+  return Math.max(2, Math.floor((width - label - extras) / year));
+}
 
 const DEFAULT_METRICS: Metric[] = ["bruttofortjeneste", "resultat", "egenkapital", "ansatte"];
 
@@ -36,11 +50,12 @@ function changeText(prev: number | undefined, last: number | undefined): { text:
 /**
  * Flerårstabel (katalog 10): nøgletal × år, tendens til højre. Enhed står én
  * gang i tabelhovedet (fælles skala for beløbsrækkerne; ansatte er et rent
- * antal). Seneste år fremhævet (600). Mobil: tendens/ændring skjules, resten
- * ruller vandret (26c).
+ * antal). Seneste år fremhævet (600). Viser de seneste år, bredden kan bære, så
+ * det nyeste år altid er synligt uden scroll. Mobil: tendens/ændring skjules (26c).
  */
 export function MultiYearTable({ financials, metrics, years, title, error }: { financials?: FinancialsVM; metrics?: readonly Metric[]; years?: number; title?: string; error?: string }) {
   const heading = title ?? "Flerårstabel";
+  const [ref, W] = useWidth<HTMLDivElement>(1048);
   if (!financials) {
     return (
       <Section title={heading} span="full">
@@ -56,11 +71,11 @@ export function MultiYearTable({ financials, metrics, years, title, error }: { f
       </Section>
     );
   }
-  const span = Math.max(2, Math.min(10, years ?? 5));
+  const span = Math.max(2, Math.min(10, years ?? 5, yearsThatFit(W)));
   const shown = all.slice(-span);
   const chosen: Metric[] = (metrics?.length ? [...metrics] : shown.at(-1)?.revenue != null ? ["omsaetning", ...DEFAULT_METRICS] : DEFAULT_METRICS).slice(0, 6) as Metric[];
   const amountMetrics = chosen.filter((m) => METRIC_KIND[m] === "amount");
-  const scale = amountMetrics.length ? amountScale(shown.flatMap((y) => amountMetrics.map((m) => (y[METRIC_FIELD[m]] as number | null) ?? 0))) : null;
+  const scale = amountMetrics.length ? amountScale(shown.flatMap((y) => amountMetrics.map((m) => (y[METRIC_FIELD[m]] as number | null) ?? 0)), currencyUnit(financials.currency)) : null;
   const fmt = (m: Metric, v: number | null | undefined) => {
     if (v == null) return null;
     const kind = METRIC_KIND[m];
@@ -70,7 +85,7 @@ export function MultiYearTable({ financials, metrics, years, title, error }: { f
 
   return (
     <Section title={heading} span="full">
-      <div className="lasso-table-wrap">
+      <div className="lasso-table-wrap" ref={ref}>
         <div className="lasso-myt">
           <div className="lasso-myt__head">
             <div className="lasso-myt__unit">{scale ? scale.label.toUpperCase() : ""}</div>
