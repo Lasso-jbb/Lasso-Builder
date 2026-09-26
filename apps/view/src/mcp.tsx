@@ -3,7 +3,7 @@ import type { App, McpUiHostContext } from "@modelcontextprotocol/ext-apps";
 import { useApp } from "@modelcontextprotocol/ext-apps/react";
 import type { CallToolResult } from "@modelcontextprotocol/client";
 import { LassoView, LassoMark, type ActionResult, type ViewAction } from "@lasso/ui";
-import { companyTemplate, DATASET_META_KEY, formatCriterion, type Dataset, type ViewSpec } from "@lasso/spec";
+import { companyTemplate, composePerson, composePersonProbe, DATASET_META_KEY, formatCriterion, type Dataset, type ViewSpec } from "@lasso/spec";
 
 interface Screen {
   spec: ViewSpec;
@@ -66,8 +66,8 @@ export function McpView() {
     onAppCreated: (a) => {
       appRef.current = a;
       a.ontoolinput = (p) => {
-        const args = (p.arguments ?? {}) as { title?: string; company?: string; query?: string };
-        setPendingTitle(args.title ?? args.company ?? (args.query ? `Søgning: ${args.query}` : "Henter…"));
+        const args = (p.arguments ?? {}) as { title?: string; company?: string; person?: string; query?: string };
+        setPendingTitle(args.title ?? args.company ?? args.person ?? (args.query ? `Søgning: ${args.query}` : "Henter…"));
       };
       a.ontoolresult = (r) => void showResult(r as CallToolResult);
       a.ontoolcancelled = () => setPendingTitle(null);
@@ -101,6 +101,20 @@ export function McpView() {
           const name = screen.dataset?.companies[a.lassoId]?.name ?? a.name ?? a.lassoId;
           void app
             .updateModelContext({ content: [{ type: "text", text: `Brugeren kigger nu på ${name} (${a.lassoId}) i Lasso-visningen.` }] })
+            .catch(() => {});
+          return { ok: true };
+        }
+        case "open-person": {
+          // Katalog 16: hent persondata, og lad komponisten vælge form, som show_person gør.
+          const probe = composePersonProbe(a.lassoId);
+          setStack((st) => [...st, { spec: { ...probe, title: a.name ?? a.lassoId }, dataset: null }]);
+          setLoading(true);
+          const fetched = await resolve(app, probe);
+          const ds = fetched.dataset!;
+          const name = ds.persons[a.lassoId]?.name ?? a.name ?? a.lassoId;
+          replaceTop({ spec: composePerson(a.lassoId, ds, { name }), dataset: ds });
+          void app
+            .updateModelContext({ content: [{ type: "text", text: `Brugeren kigger nu på personen ${name} (${a.lassoId}) i Lasso-visningen.` }] })
             .catch(() => {});
           return { ok: true };
         }

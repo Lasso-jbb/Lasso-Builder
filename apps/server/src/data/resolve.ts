@@ -34,6 +34,8 @@ const FETCHERS: Record<string, (ds: Dataset, p: DataProvider, id: string) => Pro
   productionUnits: async (ds, p, id) => void (ds.productionUnits[id] = await p.productionUnits(id)),
   properties: async (ds, p, id) => void (ds.properties[id] = await p.properties(id)),
   livestock: async (ds, p, id) => void (ds.livestock[id] = await p.livestock(id)),
+  person: async (ds, p, id) => void (ds.persons[id] = await p.person(id)),
+  personNetwork: async (ds, p, id) => void (ds.personNetworks[id] = await p.personNetwork(id)),
 };
 
 /** Normaliserer alle virksomhedsreferencer i specen til Lasso-ID'er. */
@@ -171,6 +173,14 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
         graphs.push(c);
         break;
       case "LassoFollowUps":
+        break;
+      case "LassoPersonHead":
+      case "LassoPersonRoles":
+      case "LassoPersonRisk":
+        want(c.person, "person");
+        break;
+      case "LassoPersonNetwork":
+        want(c.person, "personNetwork");
         break;
     }
   }

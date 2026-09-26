@@ -345,3 +345,38 @@ test("tekstkortet viser pengestrømmen, når data findes (katalog 19)", () => {
   assert.match(card, /Fra drift\s+90 mia\./);
   assert.match(card, /Likvider ultimo\s+50 mia\./);
 });
+
+test("personkortet (katalog 16) har samme bredde på alle linjer og ingen midterprik", () => {
+  const id = "CVR-3-4000000001";
+  const ds = emptyDataset("live");
+  ds.persons[id] = {
+    lassoId: id,
+    name: "Mette Holm Eksempel",
+    city: "København",
+    roles: [
+      { companyId: "CVR-1-11111111", companyName: "Data Eksempel A/S", kind: "direction", role: "Adm. direktør", from: "2012-05-14", active: true },
+      { companyId: "CVR-1-33333333", companyName: "Cloud Eksempel A/S", kind: "board", role: "Bestyrelsesmedlem", from: "2014-01-01", to: "2018-06-01", active: false, companyStatus: "Under konkurs", companyStatusKind: "warning", companyEnded: "2026-02-01" },
+    ],
+  };
+  ds.personNetworks[id] = { lassoId: id, people: [{ name: "Søren Krogh Eksempel", companies: [{ companyName: "Data Eksempel A/S" }], overlapYears: 14, active: true }] };
+  const spec = parseViewSpec({
+    kind: "person",
+    title: "Mette",
+    layout: "columns",
+    components: [
+      { type: "LassoPersonHead", person: id },
+      { type: "LassoPersonRoles", person: id },
+      { type: "LassoPersonNetwork", person: id, column: 1 },
+      { type: "LassoPersonRisk", person: id, column: 2 },
+    ],
+  });
+  const card = textCard(spec, ds)!;
+  const widths = new Set(card.split("\n").map((l) => [...l].length));
+  assert.equal(widths.size, 1, card);
+  assert.ok(!card.includes("·"));
+  assert.match(card, /Mette Holm Eksempel/);
+  assert.match(card, /1 aktiv rolle i 1 selskab, 1/);
+  assert.match(card, /Adm\. direktør, siden 2012/);
+  assert.match(card, /Søren Krogh Eksempel\s+14 år/);
+  assert.match(card, /Konkurser\s+1, Info/);
+});

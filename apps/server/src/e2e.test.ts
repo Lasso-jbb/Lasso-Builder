@@ -63,7 +63,7 @@ test("health svarer", async () => {
 test("tools og UI-ressource er registreret", async () => {
   const { tools } = await client.listTools();
   const names = tools.map((t) => t.name).sort();
-  assert.deepEqual(names, ["render_view", "resolve_view", "save_view", "search_companies", "show_company"]);
+  assert.deepEqual(names, ["render_view", "resolve_view", "save_view", "search_companies", "show_company", "show_person"]);
   const show = tools.find((t) => t.name === "show_company")!;
   assert.equal((show._meta as { ui?: { resourceUri?: string } }).ui?.resourceUri, "ui://lasso/view.html");
   const resolveTool = tools.find((t) => t.name === "resolve_view")!;
@@ -170,6 +170,31 @@ test("show_company giver en brugbar fejl for ukendt navn", async () => {
 test("show_company giver en brugbar fejl for ukendt virksomhed", async () => {
   const res = await client.callTool({ name: "show_company", arguments: { company: "12345678" } });
   assert.equal(res.isError, true);
+});
+
+test("show_person (katalog 16) finder en person på navn og komponerer personsiden", async () => {
+  const res = await client.callTool({ name: "show_person", arguments: { person: "Bo Eksempel" } });
+  assert.equal(res.isError, undefined);
+  const sc = res.structuredContent as { spec: ViewSpec; card: string; link: string; summary: string };
+  assert.equal(sc.spec.kind, "person");
+  assert.deepEqual(sc.spec.components.map((c) => c.type), ["LassoPersonHead", "LassoPersonRoles", "LassoPersonNetwork", "LassoPersonRisk"]);
+  assert.match(sc.summary, /Fundet ud fra navnet "Bo Eksempel"/);
+  assert.match(sc.summary, /1 konkurser og 0 tvangsopløsninger/);
+  assert.match(sc.card, /SIDDER SAMMEN MED/);
+  assert.match(sc.link, /\/p\/CVR-3-\d+\?e=\w+&s=[\w-]{22}$/);
+  const page = await fetch(sc.link);
+  assert.equal(page.status, 200);
+  assert.match(await page.text(), /"LassoPersonRoles"/);
+  const forged = await fetch(sc.link.replace(/CVR-3-(\d+)/, (_, n: string) => `CVR-3-${Number(n) + 1}`));
+  assert.equal(forged.status, 403);
+});
+
+test("show_person afviser CVR-numre og ukendte navne med en brugbar fejl", async () => {
+  const cvr = await client.callTool({ name: "show_person", arguments: { person: "99000001" } });
+  assert.equal(cvr.isError, true);
+  assert.match((cvr.content as { text: string }[])[0]!.text, /show_company/);
+  const none = await client.callTool({ name: "show_person", arguments: { person: "Findes Ikke Nogen" } });
+  assert.equal(none.isError, true);
 });
 
 test("render_view tegner fri komposition", async () => {

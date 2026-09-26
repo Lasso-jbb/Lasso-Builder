@@ -40,6 +40,7 @@ import {
   graphFromOwnership,
 } from "../lasso/adapters.js";
 import { LassoApiError, type LassoClient } from "../lasso/client.js";
+import { adaptPerson, adaptPersonNetwork, adaptPersonSearch } from "../lasso/personAdapters.js";
 import { criteriaToFilters, filtersToCriteria, SERVER_SORT, type LassoFilter } from "../lasso/searchFilters.js";
 import { applyCriteria, needsFinancials, sortRows } from "./criteria-eval.js";
 import { mapLimit, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
@@ -361,5 +362,23 @@ export class LiveProvider implements DataProvider {
       const raw = await this.client.company(lassoId);
       return graphFromOwnership(lassoId, adaptCompany(lassoId, raw).name, adaptOwnership(lassoId, raw), opts);
     }
+  }
+
+  /**
+   * Katalog 16. Nuværende roller fra GET /{lassoId}, fra–til fra /{lassoId}/history.
+   * Svarformerne er ubekræftede (docs/lasso-endpoints.md); fejler historikken, vises de nuværende roller.
+   */
+  async person(lassoId: string) {
+    const [current, history] = await Promise.all([this.client.person(lassoId), this.client.personHistory(lassoId).catch(() => undefined)]);
+    return adaptPerson(lassoId, current, history);
+  }
+
+  async personNetwork(lassoId: string) {
+    return adaptPersonNetwork(lassoId, await this.client.personNetwork(lassoId));
+  }
+
+  async findPersons(name: string, limit: number) {
+    const raw = await this.client.search({ query: name, type: "person", pageSize: limit, personStatus: "all", companyStatus: "all" });
+    return adaptPersonSearch(raw).slice(0, limit);
   }
 }

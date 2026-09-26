@@ -1031,3 +1031,85 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 /* Nøgle-værdi i en smal kolonne: nøglen tager 45 % i stedet for fast 190 px, så værdien ikke skæres af */
 .lasso-column .lasso-kv-row__label { width: 45%; }
 .lasso-column .lasso-kv-row__value { white-space: normal; overflow-wrap: anywhere; }
+
+/* ---------- 16 Personside (node BN9-0; mobil 26d EOD-0) ---------- */
+/* Personhoved: samme form som virksomhedshovedet (08); "Person" som ren tekst i stedet for status. */
+.lasso-personhead { display: flex; flex-direction: column; gap: 6px; padding-bottom: var(--lasso-space-5); border-bottom: 1px solid var(--lasso-border); }
+.lasso-personhead__title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.lasso-personhead__name { margin: 0; font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: var(--lasso-tracking-tight); color: var(--lasso-text); overflow-wrap: anywhere; }
+.lasso-personhead__kind { font-size: var(--lasso-fs-sm); line-height: 18px; font-weight: 500; color: var(--lasso-text-2); }
+.lasso-personhead__facts { margin: 0; font-size: var(--lasso-fs); line-height: 20px; color: var(--lasso-text-2); }
+.lasso-personhead .lasso-source { margin-top: 2px; }
+
+/* Roller over tid: én række pr. selskab, bånd 6 px med 11 px tekst over båndet. */
+.lasso-personroles__legend { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.lasso-personroles__key { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; line-height: 16px; color: var(--lasso-text-3); }
+.lasso-personroles__swatch { display: inline-block; width: 12px; height: 8px; border-radius: 2px; flex: none; }
+.lasso-personroles__swatch--direction, .lasso-personroles__band--direction { background: var(--lasso-chart-1); }
+.lasso-personroles__swatch--board, .lasso-personroles__band--board { background: var(--lasso-chart-2); }
+.lasso-personroles__swatch--owner, .lasso-personroles__band--owner { background: var(--lasso-chart-3); }
+.lasso-personroles__swatch--other, .lasso-personroles__band--other, .lasso-personroles__band--founder { background: var(--lasso-chart-5); }
+.lasso-personroles__swatch--ended, .lasso-personroles__band--ended { background: var(--lasso-surface-muted); border: 1px dashed var(--lasso-faint); }
+.lasso-personroles__axis { display: grid; grid-template-columns: 240px minmax(0, 1fr); column-gap: var(--lasso-space-4); height: 20px; }
+.lasso-personroles__ticks { position: relative; border-bottom: 1px solid var(--lasso-chart-axis); }
+.lasso-personroles__tick { position: absolute; top: 0; font-size: 11px; line-height: 14px; font-weight: 500; color: var(--lasso-muted); white-space: nowrap; }
+.lasso-personroles__tick--now { color: var(--lasso-text); }
+.lasso-personroles__rows { list-style: none; margin: 0; padding: 0; }
+.lasso-personroles__row { display: grid; grid-template-columns: 240px minmax(0, 1fr); column-gap: var(--lasso-space-4); align-items: center; min-height: 56px; padding: 8px 0; border-bottom: 1px solid var(--lasso-divider-subtle); }
+.lasso-personroles__label { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
+.lasso-personroles__company { font-size: var(--lasso-fs); line-height: 18px; color: var(--lasso-text); overflow-wrap: anywhere; }
+.lasso-personroles__row.is-ended .lasso-personroles__company { color: var(--lasso-text-3); }
+.lasso-personroles__sub { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+.lasso-personroles__track { position: relative; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lasso-personroles__lane { position: relative; height: 22px; }
+.lasso-personroles__bandlabel { position: absolute; top: 0; font-size: 11px; line-height: 14px; font-weight: 500; color: var(--lasso-text-2); white-space: nowrap; }
+.lasso-personroles__band { position: absolute; top: 15px; height: 6px; border-radius: 3px; box-sizing: border-box; }
+.lasso-personroles__marker { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--lasso-danger); }
+.lasso-personroles .lasso-source { margin-top: var(--lasso-space-3); }
+@container lasso (max-width: 560px) {
+  .lasso-personhead__name { font-size: var(--lasso-fs-xl); line-height: 32px; }
+  .lasso-personroles__axis { grid-template-columns: minmax(0, 1fr); }
+  .lasso-personroles__spacer { display: none; }
+  .lasso-personroles__tick.is-minor { display: none; }
+  .lasso-personroles__row { grid-template-columns: minmax(0, 1fr); row-gap: 6px; padding: 12px 0; }
+}
+
+/* Netværk: "Sidder sammen med". År som stort tal til højre, afsluttede dæmpet. */
+.lasso-personnet__rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--lasso-border); }
+.lasso-personnet__row { display: flex; align-items: flex-start; gap: var(--lasso-space-4); padding: 14px 0; border-bottom: 1px solid var(--lasso-border); }
+.lasso-personnet__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.lasso-personnet__head { font-size: var(--lasso-fs); line-height: 20px; }
+.lasso-personnet__name { font-size: var(--lasso-fs); line-height: 20px; font-weight: 500; color: var(--lasso-text); }
+.lasso-personnet__meta { font-size: var(--lasso-fs-sm); color: var(--lasso-muted); }
+.lasso-personnet__companies { display: flex; flex-wrap: wrap; gap: 2px 16px; font-size: var(--lasso-fs-sm); line-height: 18px; }
+.lasso-personnet__rel { display: inline-flex; flex-wrap: wrap; gap: 0 6px; }
+.lasso-personnet__company { font-size: var(--lasso-fs-sm); color: var(--lasso-text-2); }
+.lasso-personnet__company.is-bankrupt { color: var(--lasso-bankrupt); }
+.lasso-personnet__detail { color: var(--lasso-muted); }
+.lasso-personnet__side { flex: none; min-width: 64px; text-align: right; }
+.lasso-personnet__years { font-size: var(--lasso-fs-lg); line-height: 24px; font-weight: 600; color: var(--lasso-text); white-space: nowrap; }
+.lasso-personnet__unit { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+.lasso-personnet__row.is-ended .lasso-personnet__name,
+.lasso-personnet__row.is-ended .lasso-personnet__years { color: var(--lasso-text-3); font-weight: 400; }
+.lasso-personnet__row.is-ended .lasso-personnet__company:not(.is-bankrupt) { color: var(--lasso-text-3); }
+
+/* Personrisiko: rækker adskilt med linjer, ingen tonede fliser. Ordet bærer alvoren (regel 7). */
+.lasso-personrisk__items { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--lasso-border); }
+.lasso-personrisk__item { display: flex; align-items: flex-start; gap: var(--lasso-space-3); padding: 14px 0; border-bottom: 1px solid var(--lasso-border); }
+.lasso-personrisk__icon { flex: none; width: 16px; padding-top: 3px; display: inline-flex; justify-content: center; }
+.lasso-personrisk__check { color: var(--lasso-positive); display: block; }
+.lasso-personrisk__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lasso-personrisk__title { font-size: var(--lasso-fs); line-height: 20px; font-weight: 600; color: var(--lasso-text); }
+.lasso-personrisk__desc { font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-3); }
+.lasso-personrisk__cases { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-3); }
+.lasso-personrisk__company { font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-bankrupt); }
+.lasso-personrisk__word { flex: none; font-size: var(--lasso-fs-sm); line-height: 20px; font-weight: 500; white-space: nowrap; }
+.lasso-personrisk__word--none { color: var(--lasso-positive); }
+.lasso-personrisk__word--25 { color: var(--lasso-chart-2); }
+.lasso-personrisk__word--50 { color: var(--lasso-warning); }
+.lasso-personroles .lasso-section__head { flex-wrap: wrap; row-gap: var(--lasso-space-2); }
+@container lasso (max-width: 560px) {
+  .lasso-personroles .lasso-section__action { flex-basis: 100%; }
+}
+/* PersonList: navnet som link til personsiden (16) beholder rækkens vægt. */
+.lasso-row__open { font-weight: inherit; color: inherit; }

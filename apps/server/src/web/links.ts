@@ -50,3 +50,31 @@ export function verifyCompanyLink(config: Config, cvr: string, query: Record<str
   if (exp * 1000 < now) return { ok: false, reason: "expired" };
   return { ok: true, link };
 }
+
+/**
+ * Katalog 16: signeret link til personsiden, /p/<lassoId>?e=…&s=… (samme nøgle og udløb som /k/).
+ */
+const personPayload = (lassoId: string, exp: number) => `p1.${lassoId}.${exp}`;
+
+export function personLink(config: Config, lassoId: string, now = Date.now()): string {
+  const exp = Math.floor(now / 1000) + config.LINK_TTL_DAYS * 86_400;
+  const query = new URLSearchParams({ e: exp.toString(36) });
+  const key = secret(config);
+  if (key) query.set("s", sign(key, personPayload(lassoId, exp)));
+  return `${config.publicBaseUrl}/p/${encodeURIComponent(lassoId)}?${query}`;
+}
+
+export type PersonLinkCheck = { ok: true; lassoId: string } | { ok: false; reason: "invalid" | "expired" };
+
+export function verifyPersonLink(config: Config, lassoId: string, query: Record<string, unknown>, now = Date.now()): PersonLinkCheck {
+  const exp = parseInt(String(query.e ?? ""), 36);
+  if (!/^CVR-[34]-\d{1,12}$/.test(lassoId) || !Number.isFinite(exp)) return { ok: false, reason: "invalid" };
+  const key = secret(config);
+  if (key) {
+    const expected = Buffer.from(sign(key, personPayload(lassoId, exp)));
+    const given = Buffer.from(String(query.s ?? ""));
+    if (given.length !== expected.length || !timingSafeEqual(given, expected)) return { ok: false, reason: "invalid" };
+  }
+  if (exp * 1000 < now) return { ok: false, reason: "expired" };
+  return { ok: true, lassoId };
+}

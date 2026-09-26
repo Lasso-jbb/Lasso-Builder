@@ -6,6 +6,9 @@ import {
   companyTemplate,
   composeCompany,
   composeProbe,
+  composePerson,
+  composePersonProbe,
+  isPersonId,
   FOCUSES,
   COMPANY_SECTIONS,
   COMPOSITION_RULES,
@@ -32,7 +35,8 @@ import { errorMessage, normalizeSpec, resolveSpec } from "../data/resolve.js";
 import { textCard } from "../data/card.js";
 import { summarizeView } from "../data/summary.js";
 import { SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "../views/store.js";
-import { companyLink } from "../web/links.js";
+import { companyLink, personLink } from "../web/links.js";
+import { findPerson } from "../data/personLookup.js";
 import { loadViewHtml } from "../web/page.js";
 
 export const VIEW_URI = "ui://lasso/view.html";
@@ -49,6 +53,7 @@ const INSTRUCTIONS = `Lasso giver adgang til data om danske virksomheder (CVR): 
 Sådan bruges værktøjerne:
 - Én bestemt virksomhed: show_company med CVR-nummer, Lasso-ID eller navn. Et navn slår serveren selv op; brug ikke search_companies først.
 - Økonomi og regnskab ("hvordan går det økonomisk for Novo?"): show_company med focus "oekonomi". Ejere: focus "ejerskab". Ledelse: focus "ledelse". Risiko: focus "risiko". Historik og nyheder: focus "historik". Serveren tilpasser selv skærmbilledet til virksomhedens data. Kommentér kort i 2–3 sætninger; tallene står i visningen.
+- Én bestemt person ("hvem er Mette Holm", "hvor sidder X i bestyrelser", "har X været med i konkurser"): show_person med navn eller person-ID (CVR-3-…). Serveren viser roller over tid, netværk og konkurser blandt personens selskaber.
 - Lister og målgrupper ("alle revisorer i Region Midt med mindst 10 ansatte"): search_companies med brugerens formulering som query. Lasso fortolker den til filtre i hele CVR og viser dem i filterpanelet. Tilføj kun criteria for det, teksten ikke siger, og sort for "top N"/"største".
 - Sammenligninger og oversigter, der ikke passer i de to: render_view med en spec fra komponentkataloget.
 - "Giv mig en URL", "del", "gem": save_view.
@@ -197,6 +202,44 @@ export function createMcpServer(ctx: McpContext): McpServer {
       const cvr = cvrFromLassoId(lassoId);
       const link = cvr ? companyLink(config, { cvr, metric: chart_metric ?? "bruttofortjeneste", years: years ?? 5 }) : undefined;
       return viewResult(spec, ds, { note, link });
+    },
+  );
+
+  registerAppTool(
+    server,
+    "show_person",
+    {
+      title: "Vis person",
+      description:
+        "Vis én person fra CVR som ét skærmbillede (katalog 16): personhoved med antal aktive og ophørte roller, roller i selskaber som tidsbånd fra–til, netværk (hvem personen sidder sammen med i selskaber) og risiko (konkurser og tvangsopløsninger blandt personens selskaber). Serveren henter data og vælger selv formen. Tager navn eller personens Lasso-ID (CVR-3-…); ved navn vælger serveren det bedste match og nævner alternativerne. Personer har ikke CVR-nummer; brug show_company til virksomheder. Kald det kun én gang pr. svar.",
+      inputSchema: z.object({
+        person: z.string().min(1).describe("Personens navn (fx 'Mette Holm') eller Lasso-ID (fx 'CVR-3-4000000001')."),
+      }),
+      annotations: { title: "Vis person", ...readOnly },
+      _meta: ui,
+    },
+    async ({ person }): Promise<CallToolResult> => {
+      const ref = person.trim();
+      let lassoId = ref;
+      let note: string | undefined;
+      if (!isPersonId(ref)) {
+        if (isCompanyRef(ref)) return toolError(`"${ref}" er et CVR-nummer eller virksomheds-ID. Brug show_company til virksomheder.`);
+        let found;
+        try {
+          found = await findPerson(provider, ref);
+        } catch (err) {
+          return toolError(`Kunne ikke slå "${ref}" op: ${errorMessage(err)}.`);
+        }
+        if (!found) return toolError(`Fandt ingen person, der hedder "${ref}". Prøv med fulde navn.`);
+        lassoId = found.pick.lassoId;
+        const alt = found.alternatives.map((r) => `${r.name}${r.city ? `, ${r.city}` : ""} (${r.lassoId})`).join("; ");
+        note = `Fundet ud fra navnet "${ref}": ${found.pick.name}${found.pick.city ? `, ${found.pick.city}` : ""} (${found.pick.lassoId}).${alt ? ` Andre match: ${alt}. Mente brugeren en af dem, så kald show_person igen med dens ID.` : ""}`;
+      }
+      const ds = await resolveSpec(composePersonProbe(lassoId), provider);
+      const p = ds.persons[lassoId];
+      if (!p) return toolError(`Kunne ikke hente personen ${lassoId}: ${ds.errors[`person:${lassoId}`] ?? "ukendt fejl"}.`);
+      const spec = composePerson(lassoId, ds, { name: p.name });
+      return viewResult(spec, ds, { note, link: personLink(config, lassoId) });
     },
   );
 

@@ -272,6 +272,32 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     props: "company",
   },
 
+  // (16) Personside, foreløbige tekster ------------------------------------------
+  {
+    type: "LassoPersonHead",
+    title: "Personhoved",
+    description: "Brug til: identitet for én person (navn, by, antal aktive og ophørte roller); står øverst på en personside. Brug helst show_person, som bygger hele personsiden. Kræver: person (Lasso-ID 'CVR-3-…').",
+    props: "person",
+  },
+  {
+    type: "LassoPersonRoles",
+    title: "Roller over tid",
+    description: "Brug til: en persons roller i selskaber som tidsbånd fra–til, aktive først ('hvor sidder X i bestyrelsen', 'hvilke selskaber er X direktør i'). Kræver: person.",
+    props: "person, title?",
+  },
+  {
+    type: "LassoPersonNetwork",
+    title: "Personnetværk",
+    description: "Brug til: hvem personen sidder sammen med i selskaber, sorteret efter år i fælles selskaber ('hvem arbejder X sammen med'). Kræver: person.",
+    props: "person, title?",
+  },
+  {
+    type: "LassoPersonRisk",
+    title: "Personrisiko",
+    description: "Brug til: konkurser og tvangsopløsninger blandt selskaber, personen har eller har haft en rolle i ('har X været involveret i konkurser'). Kræver: person.",
+    props: "person, title?",
+  },
+
   // Interaktion ----------------------------------------------------------------
   {
     type: "LassoFollowUps",

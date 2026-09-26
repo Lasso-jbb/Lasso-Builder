@@ -14,6 +14,9 @@ import type {
   OwnershipGraphVM,
   OwnershipVM,
   PersonRowVM,
+  PersonNetworkVM,
+  PersonSearchRowVM,
+  PersonVM,
   ScoreVM,
   LivestockVM,
   PropertiesVM,
@@ -62,6 +65,12 @@ export interface DataProvider {
   livestock(lassoId: string): Promise<LivestockVM>;
   /** Ejergrafen i flere lag omkring én virksomhed (katalog 14). */
   ownershipGraph(lassoId: string, opts: OwnershipGraphOptions): Promise<OwnershipGraphVM>;
+  /** Katalog 16: én person (Lasso-ID "CVR-3-…") med roller i alle selskaber. */
+  person(lassoId: string): Promise<PersonVM>;
+  /** Katalog 16: personer med fælles selskaber. */
+  personNetwork(lassoId: string): Promise<PersonNetworkVM>;
+  /** Navneopslag på personer (til show_person med et navn). */
+  findPersons(name: string, limit: number): Promise<PersonSearchRowVM[]>;
 }
 
 export interface OwnershipGraphOptions {

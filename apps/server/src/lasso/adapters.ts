@@ -46,9 +46,9 @@ import type {
  * Resten af systemet kender kun datamodellerne og behøver ikke ændres.
  */
 
-type Json = unknown;
+export type Json = unknown;
 
-function isObj(v: Json): v is Record<string, Json> {
+export function isObj(v: Json): v is Record<string, Json> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
@@ -68,7 +68,7 @@ export function at(obj: Json, path: string): Json {
   return cur;
 }
 
-function pick(obj: Json, ...paths: string[]): Json {
+export function pick(obj: Json, ...paths: string[]): Json {
   for (const p of paths) {
     const v = at(obj, p);
     if (v !== undefined && v !== null && v !== "") return v;
@@ -76,7 +76,7 @@ function pick(obj: Json, ...paths: string[]): Json {
   return undefined;
 }
 
-function str(obj: Json, ...paths: string[]): string | undefined {
+export function str(obj: Json, ...paths: string[]): string | undefined {
   const v = pick(obj, ...paths);
   if (typeof v === "string") return v.trim() || undefined;
   if (typeof v === "number") return String(v);
@@ -87,7 +87,7 @@ function str(obj: Json, ...paths: string[]): string | undefined {
   return undefined;
 }
 
-function num(obj: Json, ...paths: string[]): number | undefined {
+export function num(obj: Json, ...paths: string[]): number | undefined {
   const v = pick(obj, ...paths);
   if (typeof v === "number" && Number.isFinite(v)) return v;
   if (typeof v === "string") {
@@ -98,7 +98,7 @@ function num(obj: Json, ...paths: string[]): number | undefined {
   return undefined;
 }
 
-function arr(obj: Json, ...paths: string[]): Json[] {
+export function arr(obj: Json, ...paths: string[]): Json[] {
   if (Array.isArray(obj) && paths.length === 0) return obj;
   for (const p of paths) {
     const v = at(obj, p);
@@ -108,12 +108,12 @@ function arr(obj: Json, ...paths: string[]): Json[] {
 }
 
 /** Finder listen af elementer i et svar, uanset om det er et array eller pakket ind. */
-function items(raw: Json): Json[] {
+export function items(raw: Json): Json[] {
   if (Array.isArray(raw)) return raw;
   return arr(raw, "results", "items", "hits", "data", "companies", "entities", "records", "reports", "value");
 }
 
-function dateStr(obj: Json, ...paths: string[]): string | undefined {
+export function dateStr(obj: Json, ...paths: string[]): string | undefined {
   const s = str(obj, ...paths);
   if (!s) return undefined;
   const m = /^(\d{4}-\d{2}-\d{2})/.exec(s);
@@ -151,7 +151,7 @@ export function statusKind(status: string | undefined): CompanyVM["statusKind"] 
 }
 
 /** CVR skriver kommuner med versaler: "GLADSAXE" -> "Gladsaxe", "LYNGBY-TAARBÆK" -> "Lyngby-Taarbæk". */
-function titleCase(s: string | undefined): string | undefined {
+export function titleCase(s: string | undefined): string | undefined {
   if (!s || s !== s.toUpperCase()) return s;
   return s.toLowerCase().replace(/(^|[\s-])(\p{L})/gu, (_, sep: string, ch: string) => sep + ch.toUpperCase());
 }
@@ -319,7 +319,7 @@ const percentFormat = new Intl.NumberFormat("da-DK", { maximumFractionDigits: 2 
  * Ejerandel som tekst. Lasso giver intervaller som brøker: { from: 0.25, to: 0.3332 } -> "25–33,32 %".
  * Enkeltværdier og procenttal (over 1) håndteres også.
  */
-function shareText(v: Json): string | undefined {
+export function shareText(v: Json): string | undefined {
   if (typeof v === "string") return v.trim() || undefined;
   const lo = typeof v === "number" ? v : isObj(v) ? num(v, "from", "min", "value") : undefined;
   if (lo === undefined) return undefined;

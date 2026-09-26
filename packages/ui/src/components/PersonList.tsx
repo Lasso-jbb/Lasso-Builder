@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { formatDate, type PersonRowVM } from "@lasso/spec";
+import { formatDate, isPersonId, type PersonRowVM } from "@lasso/spec";
+import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 
 /** Store bestyrelser (fx 18 personer) foldes sammen efter de første (regel 9). */
@@ -16,7 +17,7 @@ function splitChair(role: string): { role: string; chair: boolean } {
  * periode i fast kolonne til højre. Fratrådte kun under "Alle", dæmpet med ordet
  * "fratrådt" i rolleteksten. Formand som tekst i parentes. Ingen initial-cirkler.
  */
-export function PersonList({ people, show, title, error }: { people?: PersonRowVM[]; show: "current" | "all"; title?: string; error?: string }) {
+export function PersonList({ people, show, title, error, onOpen }: { people?: PersonRowVM[]; show: "current" | "all"; title?: string; error?: string; onOpen?: (a: ViewAction) => void }) {
   const heading = title ?? "Ledelse";
   const [mode, setMode] = useState<"current" | "all">(show);
   const [expanded, setExpanded] = useState(false);
@@ -57,7 +58,13 @@ export function PersonList({ people, show, title, error }: { people?: PersonRowV
             <li key={`${p.name}-${p.role}-${i}`} className={`lasso-row ${p.to ? "lasso-row--ended" : ""}`}>
               <div className="lasso-row__main">
                 <div className="lasso-row__name">
-                  {p.name}
+                  {onOpen && isPersonId(p.lassoId) ? (
+                    <button type="button" className="lasso-link lasso-row__open" onClick={() => onOpen({ kind: "open-person", lassoId: p.lassoId!, name: p.name })}>
+                      {p.name}
+                    </button>
+                  ) : (
+                    p.name
+                  )}
                   {chair ? <span className="lasso-row__note">(formand)</span> : null}
                 </div>
                 <div className="lasso-row__sub">{p.to ? `${role}, fratrådt` : role}</div>
