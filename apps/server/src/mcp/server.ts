@@ -5,6 +5,7 @@ import {
   catalogAsText,
   companyTemplate,
   COMPANY_SECTIONS,
+  COMPOSITION_RULES,
   cvrFromLassoId,
   DATASET_META_KEY,
   fieldsAsText,
@@ -50,6 +51,7 @@ Sådan bruges værktøjerne:
 - "Giv mig en URL", "del", "gem": save_view.
 
 Regler:
+- Én visning pr. svar: kald højst ét visningsværktøj (show_company, search_companies eller render_view) pr. brugerbesked. Kræver spørgsmålet mere end show_company viser, så brug render_view med alle komponenter i én spec — ikke show_company og render_view efter hinanden.
 - Tegn altid grafisk med det samme. Spørg aldrig "vil du se det grafisk?".
 - Spørger brugeren om en virksomhed (show_company): vis tekstkortet fra værktøjssvaret uændret i en kodeblok, og skriv lige under kodeblokken linket til den interaktive Lasso-visning som et klikbart link, fx [Åbn LASSO X A/S i Lasso](url). Kommentér derefter kort i 1–3 sætninger.
 - Andre visninger: kan din app ikke vise Lasso-visningen (fx Claude Code eller en terminal), så vis tekstkortet uændret i en kodeblok.
@@ -57,7 +59,9 @@ Regler:
 - Brugeren ser visningen. Svar kort i tekst og gentag ikke tallene som tabel.
 - Beløb angives i hele kroner (10 mio. = 10000000).
 
-Komponentkatalog:
+${COMPOSITION_RULES}
+
+Komponentkatalog (hver linje: Brug til / Brug ikke når / Kræver / Eksempel):
 ${catalogAsText()}
 
 Søgefelter:
@@ -114,7 +118,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
       title: "Søg virksomheder",
       description: `Søg i danske virksomheder (CVR) og vis resultatet som en Lasso-tabel med et udfyldt filterpanel, så brugeren kan se og rette filtrene. Brug til målgrupper, lister og "top N"-spørgsmål. Send brugerens formulering som query, fx "revisorer i Region Midtjylland med mindst 10 ansatte": Lasso fortolker den til filtre og søger i hele CVR. Et virksomhedsnavn i query søges som navn. Brug criteria til præciseringer og sort til "største"/"top N". Tegn altid med det samme.\n\nFelter:\n${fieldsAsText()}\n${OPERATORS_TEXT}`,
       inputSchema: searchQuerySchema.extend({
-        title: z.string().max(120).optional().describe("Overskrift på listen, fx 'Revisionskunder · Region Midt'."),
+        title: z.string().max(120).optional().describe("Overskrift på listen, fx 'Revisionskunder, Region Midt'."),
         columns: z.array(z.enum(TABLE_COLUMNS)).min(1).max(8).optional().describe("Kolonner. Standard: navn, by, branche, ansatte, bruttofortjeneste, udvikling."),
       }),
       annotations: { title: "Søg virksomheder", ...readOnly },
@@ -145,7 +149,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     {
       title: "Vis virksomhed",
       description:
-        "Vis én dansk virksomhed som Lassos faste virksomhedskort: header → nøgletal → regnskabsgraf → ledelse → ejerskab/revisor → opfølgningsknapper. Brug når brugeren spørger til en bestemt virksomhed, dens regnskab, økonomi, ledelse, bestyrelse, direktør, ejere eller revisor. Tager CVR-nummer, Lasso-ID eller navn (fx \"Novo Nordisk\"); ved navn vælger serveren det bedste match og nævner alternativerne. Spørgsmål om økonomi: sections [header, noegletal, graf], chart_metric omsaetning, years 10. Spørgsmål om ledelse: sections [header, ledelse].",
+        "Vis én dansk virksomhed som Lassos faste cockpit: hoved → nøgletal → regnskabsgraf ved siden af stamdata → ledelse ved siden af ejere → opfølgningsknapper, samlet i ét dashboard. Kald det kun én gang pr. svar, og kald ikke render_view bagefter; kræver spørgsmålet andre komponenter, så brug render_view alene. Brug når brugeren spørger til en bestemt virksomhed, dens regnskab, økonomi, ledelse, bestyrelse, direktør, ejere eller revisor. Tager CVR-nummer, Lasso-ID eller navn (fx \"Novo Nordisk\"); ved navn vælger serveren det bedste match og nævner alternativerne. Spørgsmål om økonomi: sections [header, noegletal, graf], chart_metric omsaetning, years 10. Spørgsmål om ledelse: sections [header, ledelse].",
       inputSchema: z.object({
         company: z.string().min(1).describe("8-cifret CVR-nummer, Lasso-ID (fx CVR-1-12345678) eller virksomhedens navn."),
         sections: z.array(z.enum(COMPANY_SECTIONS)).optional().describe("Vis kun disse sektioner. Header er altid med. Standard: alle."),
@@ -189,7 +193,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     "render_view",
     {
       title: "Vis oversigt",
-      description: `Fri komposition til sammenligninger, oversigter og analyser, der ikke passer i show_company eller search_companies. Send en JSON-spec; Lassos kode henter data og tegner i Lassos design. Skriv aldrig HTML/CSS. Brug 2–6 komponenter.\n\nKomponentkatalog:\n${catalogAsText()}\n\nEksempel: {"title":"Byg vs. Transport","layout":"grid-2","components":[{"type":"LassoCompareTable","companies":["12345678","87654321"]},{"type":"LassoBarChart","company":"12345678","metric":"omsaetning","years":5}]}`,
+      description: `Fri komposition til sammenligninger, oversigter og analyser, der ikke passer i show_company eller search_companies. Send en JSON-spec; Lassos kode henter data og tegner i Lassos design. Skriv aldrig HTML/CSS. Brug 2–8 komponenter i ét dashboard. Kald render_view én gang pr. svar.\n\n${COMPOSITION_RULES}\n\nKomponentkatalog (hver linje: Brug til / Brug ikke når / Kræver / Eksempel):\n${catalogAsText()}\n\nEksempel (ét dashboard): {"title":"Byg vs. Transport","components":[{"type":"LassoCompareTable","companies":["12345678","87654321"]},{"type":"LassoLineChart","company":"12345678","metric":"omsaetning","years":5,"benchmark":"87654321"},{"type":"LassoRanking","companies":["12345678","87654321"],"metric":"omsaetning"}]}`,
       inputSchema: viewSpecSchema.omit({ version: true, kind: true }),
       annotations: { title: "Vis oversigt", ...readOnly },
       _meta: ui,

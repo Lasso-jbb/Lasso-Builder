@@ -31,6 +31,6 @@ export async function loadViewHtml(): Promise<string> {
 export function injectBoot(html: string, boot: unknown, title: string): string {
   const json = JSON.stringify(boot).replace(/</g, "\\u003c").replaceAll(String.fromCharCode(0x2028), "\\u2028").replaceAll(String.fromCharCode(0x2029), "\\u2029");
   const safeTitle = title.replace(/[<>&"]/g, (ch) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[ch]!);
-  const withTitle = html.replace(/<title>[^<]*<\/title>/, `<title>${safeTitle} · Lasso</title>`);
+  const withTitle = html.replace(/<title>[^<]*<\/title>/, `<title>${safeTitle}, Lasso</title>`);
   return withTitle.replace("</head>", `<script>window.__LASSO_BOOT__=${json};</script></head>`);
 }

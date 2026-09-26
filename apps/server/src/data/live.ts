@@ -1,10 +1,41 @@
-import { formatCriterion, searchKey, type CompanyRowVM, type Criterion, type FinancialsVM, type SearchQuery, type SearchResultVM } from "@lasso/spec";
+import {
+  formatCriterion,
+  searchKey,
+  type AuditorIndependenceVM,
+  type AuditorRelationVM,
+  type CompanyRowVM,
+  type Criterion,
+  type FinancialsVM,
+  type LivestockVM,
+  type ProductionUnitsVM,
+  type PropertiesVM,
+  type ScoreVM,
+  type SearchQuery,
+  type SearchResultVM,
+} from "@lasso/spec";
 import type { Config } from "../config.js";
-import { adaptCompany, adaptFinancials, adaptOwnership, adaptPeople, adaptSearch } from "../lasso/adapters.js";
-import type { LassoClient } from "../lasso/client.js";
+import {
+  adaptBeneficialOwnership,
+  adaptCompany,
+  adaptFinancials,
+  adaptNews,
+  adaptObservations,
+  adaptOwnership,
+  adaptPeople,
+  adaptProductionUnits,
+  adaptProperties,
+  adaptSearch,
+  adaptTextSections,
+  adaptTimeline,
+  ejfBbrRefs,
+  mergeBbr,
+  adaptOwnershipGraph,
+  graphFromOwnership,
+} from "../lasso/adapters.js";
+import { LassoApiError, type LassoClient } from "../lasso/client.js";
 import { criteriaToFilters, filtersToCriteria, SERVER_SORT, type LassoFilter } from "../lasso/searchFilters.js";
 import { applyCriteria, needsFinancials, sortRows } from "./criteria-eval.js";
-import { mapLimit, type DataProvider } from "./provider.js";
+import { mapLimit, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
 
 /** Så mange virksomheder hentes, når noget skal filtreres eller sorteres her (omsætning, bruttofortjeneste). */
 const LOCAL_POOL = 60;
@@ -164,5 +195,127 @@ export class LiveProvider implements DataProvider {
 
   async ownership(lassoId: string) {
     return adaptOwnership(lassoId, await this.client.company(lassoId));
+  }
+
+  /** Katalog 10: der er endnu ingen bekræftet Lasso-kilde til en 0–100 score. "Ikke oplyst", ikke en fejl. */
+  async score(lassoId: string): Promise<ScoreVM> {
+    return { lassoId, score: null };
+  }
+
+  async beneficialOwnership(lassoId: string) {
+    return adaptBeneficialOwnership(lassoId, await this.client.ownersBeneficial(lassoId));
+  }
+
+  async textSections(lassoId: string) {
+    return adaptTextSections(lassoId, await this.client.company(lassoId));
+  }
+
+  async timeline(lassoId: string) {
+    const [co, financials] = await Promise.all([this.client.company(lassoId), this.financials(lassoId)]);
+    return adaptTimeline(lassoId, co, adaptPeople(co), financials.years);
+  }
+
+  async news(lassoId: string, limit: number) {
+    return adaptNews(lassoId, await this.client.news(lassoId), limit);
+  }
+
+  /** Formen for /modules/observations er ubekræftet; se docs/lasso-endpoints.md. */
+  async observations(lassoId: string) {
+    return adaptObservations(lassoId, await this.client.observations(lassoId));
+  }
+
+  /**
+   * Revisoruafhængighed har ingen bekræftet, dedikeret kilde endnu. Vi bygger, hvad
+   * de bekræftede data tillader: revisor fra CVR (accounting.accountant), kundens
+   * egen ledelse/bestyrelse og ejerkreds, og – hvis revisors eget Lasso-ID kendes –
+   * revisionshusets egne ansatte/ledelse. En relation vises kun ved et navnesammenfald
+   * mellem de to. Det dækker IKKE relationer via andre selskaber, historiske
+   * tilknytninger eller partnerskabsniveau; det kræver Lassos ejer-/relationsgraf
+   * (POST /modules/relations/graph), som denne komponent endnu ikke kalder.
+   */
+  async auditorIndependence(lassoId: string): Promise<AuditorIndependenceVM> {
+    const [ownership, people] = await Promise.all([this.ownership(lassoId), this.people(lassoId)]);
+    const auditor = ownership.auditor;
+    const checkedAt = new Date().toISOString().slice(0, 10);
+    if (!auditor) {
+      return { lassoId, checkedAt, relations: [], unavailableReason: "Virksomheden har ikke en registreret revisor i CVR." };
+    }
+    let auditorPeople: Awaited<ReturnType<LiveProvider["people"]>> = [];
+    if (auditor.lassoId) {
+      try {
+        auditorPeople = await this.people(auditor.lassoId);
+      } catch {
+        // Revisors Lasso-ID er ikke nødvendigvis en virksomhed, vi har adgang til; fortsæt uden.
+      }
+    }
+    const clientNames = new Set([...people.map((p) => p.name), ...ownership.owners.map((o) => o.name)].map((n) => n.toLowerCase()));
+    const relations: AuditorRelationVM[] = auditorPeople
+      .filter((p) => clientNames.has(p.name.toLowerCase()))
+      .map((p, i) => ({
+        id: `${lassoId}-${i}`,
+        assessment: 50,
+        name: p.name,
+        role: `${p.role}, ${auditor.name}`,
+        relation: "Personen indgår i kundens ledelse eller ejerkreds og er samtidig tilknyttet revisionshuset",
+        via: undefined,
+        from: p.from,
+        to: p.to,
+      }));
+    return {
+      lassoId,
+      auditorName: auditor.name,
+      checkedAt,
+      relations,
+      unavailableReason:
+        "Kun direkte navnesammenfald mellem kundens ledelse/ejere og revisionshusets egne ansatte er tjekket. Relationer via andre selskaber eller på partnerskabsniveau kræver Lassos relationsgraf, som endnu ikke er koblet til.",
+    };
+  }
+
+  /** Katalog 20. Genbruger CVR-svaret; UBEKRÆFTET om det indeholder produktionsenheder (docs/lasso-endpoints.md). */
+  async productionUnits(lassoId: string): Promise<ProductionUnitsVM> {
+    return adaptProductionUnits(lassoId, await this.client.company(lassoId));
+  }
+
+  /**
+   * Katalog 20. Ejerfortegnelsen (`ejf`) giver ejendommene; BBR beriger med
+   * bygninger og arealer, når vi kan udlede et property-/kommunenummer.
+   * Begge svarformer er UBEKRÆFTEDE (docs/lasso-endpoints.md).
+   */
+  async properties(lassoId: string): Promise<PropertiesVM> {
+    const raw = await this.client.ejf(lassoId);
+    const base = adaptProperties(lassoId, raw);
+    const refs = ejfBbrRefs(raw);
+    const pairs = base.properties.map((property, i) => [property, refs[i]] as const);
+    const properties = await mapLimit(pairs, 3, async ([property, ref]) => {
+      if (!ref?.bfeNumber) return property;
+      try {
+        const bbr = await this.client.bbrSummary(ref.bfeNumber);
+        return mergeBbr(property, bbr);
+      } catch {
+        return property;
+      }
+    });
+    return { lassoId, properties };
+  }
+
+  /**
+   * Katalog 20. CHR-endpointet er UBEKRÆFTET og ikke fundet i docs.lassox.com
+   * under dette arbejde (se docs/lasso-endpoints.md). Der kaldes derfor intet
+   * endpoint her; komponenten viser sin tom-tilstand med en forklarende årsag.
+   */
+  async livestock(lassoId: string): Promise<LivestockVM> {
+    return { lassoId, herds: [], events: [] };
+  }
+
+  async ownershipGraph(lassoId: string, opts: OwnershipGraphOptions) {
+    try {
+      const raw = await this.client.relationsGraph({ ids: [lassoId], ingoingDepth: opts.ingoingDepth, outgoingDepth: opts.outgoingDepth, onDate: opts.onDate });
+      return adaptOwnershipGraph(lassoId, raw, opts);
+    } catch (err) {
+      // Findes endpointet ikke (eller afviser det formen), vises i det mindste de direkte ejere.
+      if (!(err instanceof LassoApiError) || ![400, 404, 405, 501].includes(err.status)) throw err;
+      const raw = await this.client.company(lassoId);
+      return graphFromOwnership(lassoId, adaptCompany(lassoId, raw).name, adaptOwnership(lassoId, raw), opts);
+    }
   }
 }

@@ -21,7 +21,7 @@ Fejlsvar har formen `{ "errorMessage": string, "httpStatusCode": number, "errorC
 | Websites          | GET    | `/data/websites/{lassoId}`                      |
 | Valuations        | GET    | `/modules/valuations/{lassoId}`                 |
 | Observationer     | GET    | `/modules/observations/{lassoId}`               |
-| Ejerstruktur      | GET    | Se dokumentation: https://docs.lassox.com/module-apis/ownergraph/ |
+| Ejergraf          | POST   | `/modules/relations/graph` (se "Ubekræftet" nedenfor)            |
 
 ### Bekræftede svarformer (24.09.2026)
 
@@ -37,6 +37,32 @@ Fejlsvar har formen `{ "errorMessage": string, "httpStatusCode": number, "errorC
   `equity`, `averageNumberOfEmployees`). Gamle regnskaber (før XBRL) har tomme `facts`.
 - `GET /data/websites/{lassoId}`: `{ cvr, urls: [{ url, verifiedAt }] }`.
 - `GET /modules/valuations/{lassoId}`: `[]` for de testede virksomheder; formen er endnu ukendt.
+
+## Ubekræftet
+
+Ingen API-nøgle var tilgængelig ved dette arbejde, og docs.lassox.com har (pr. 26.09.2026)
+ingen offentlig side for `/modules/observations`; `module-apis/generalinfo` beskriver kun,
+at moduler findes, og henviser til feedback@lassox.com for udokumenterede moduler.
+
+- `GET /modules/observations/{lassoId}` (bruges af `LassoRiskObservations`, katalog 17):
+  formen er ANTAGET som et array (evt. pakket i `{ observations | items | results: [...] }`)
+  af objekter med et titelfelt (`title`/`headline`/`summary`/`text`/`message`/`name`/`description`),
+  et alvorsfelt (`severity`/`score`/`riskScore`/`level`/`importance`/`category`, enten et tal
+  0–100 eller en tekst som "high"/"vigtig"/"info"), et valgfrit beskrivelsesfelt og et datofelt
+  (`date`/`observedAt`/`createdAt`/`eventDate`/`occurredAt`/`reportedAt`). Adapteren
+  (`adaptObservations` i `apps/server/src/lasso/adapters.ts`) er skrevet defensivt: ukendte
+  feltnavne giver blot 0 observationer i stedet for en fejl. Bekræft med en rigtig nøgle,
+  og ret feltlisten i adapteren, hvis den rigtige form afviger.
+- Revisoruafhængighed (`LassoAuditorIndependence`, katalog 22) har INGEN bekræftet, dedikeret
+  kilde. `LiveProvider.auditorIndependence` bygger derfor kun på bekræftede data: revisoren fra
+  `accounting.accountant` (se `GET /{lassoId}` ovenfor), kundens egen ledelse/bestyrelse og
+  ejerkreds, og — hvis revisors eget Lasso-ID kendes — et opslag på revisionshusets egne
+  personer (samme `GET /{lassoId}`-endpoint kaldt med revisors ID). En relation vises kun ved
+  et navnesammenfald mellem de to. Det dækker IKKE relationer via andre selskaber, historiske
+  tilknytninger eller partnerskabsniveau; det ville kræve Lassos ejer-/relationsgraf
+  (`POST /modules/relations/graph`, se ovenfor), som denne komponent endnu ikke kalder, fordi
+  dens svarform heller ikke er bekræftet. `unavailableReason` i `AuditorIndependenceVM`
+  beskriver altid denne begrænsning til brugeren.
 
 ## Søgning
 
@@ -93,6 +119,46 @@ POST /apps/search/lassoid  { "filters": [ … ], "OrderBy": "employees", "limit"
   Firmanavne giver også 500 i prompten; dem søger vi med `/data/cvr/search`.
 - Filtre i et ukendt format ignoreres uden fejl.
 
+## Ubekræftet
+
+- **Samlet gæld** (`FinancialYear.liabilities`, brugt af `LassoStackedBarChart` og `LassoShareBars`, katalog 13):
+  regnskabsformen bekræfter kun `revenue`, `grossProfit`, `profitLoss`, `equity` og
+  `averageNumberOfEmployees` (se ovenfor). For gæld er der endnu ikke set et regnskab med
+  et ikke-tomt gældsbegreb, så adapteren (`apps/server/src/lasso/adapters.ts`, `adaptFinancials`)
+  forsøger, i rækkefølge: ét samlet begreb (`liabilities`, `liabilitiesAndProvisions`,
+  `totalLiabilities`), ellers kort- og langfristet gæld lagt sammen
+  (`currentLiabilities`/`shortTermLiabilities` + `nonCurrentLiabilities`/`longTermLiabilities`).
+  Findes ingen af delene, er `liabilities` `undefined`, og de to komponenter viser deres
+  tomme tilstand. Bekræft mod et rigtigt regnskab med disse begreber, når adgang er der.
+## Nyheder
+
+```
+GET /data/paqle/{lassoId}/news?cToken=…
+```
+
+Kilde: https://docs.lassox.com/data-apis/paqle/ (læst med WebFetch 26.09.2026, ikke afprøvet mod en rigtig nøgle). Svaret er en
+pakket liste, ikke et array: `{ news: [ { headline, content, url, time, storyId, type: "Paqle", provider, providerData:
+{ sourceName, published, headline: [{ text, highlight }], extract: [{ text, highlight }] }, uniqueId } ], continuationToken }`.
+`cToken` sat til `continuationToken` fra forrige svar giver næste side (op til 100 pr. side). Adapteren (`adaptNews`) læser
+`headline`, `content`, `url`, `time`, `provider(Data.sourceName)` og falder tilbage til andre feltnavne, hvis formen afviger.
+
+## Reelle ejere (beneficial owners) — Ubekræftet
+
+Opskriften angiver endpointet `GET /{lassoId}/owners/beneficial`, som IKKE er bekræftet mod en rigtig nøgle. Lassos egen
+dokumentation (https://docs.lassox.com/module-apis/ultimateowner/, læst med WebFetch 26.09.2026) beskriver i stedet en
+funktion "Ultimate Owners" på `GET /modules/ultimateowners/{lassoId}`, der returnerer en liste af reelle ejere med:
+
+- `name`, `identifier`, `type` ("PERSON" eller "VIRKSOMHED")
+- `totalOwnerPercentageMin`/`totalOwnerPercentageMax` og tilsvarende for stemmer, som samlet indirekte andel i procent
+  (ikke brøk, modsat `ownership.owners` i det almindelige virksomhedssvar)
+- `paths[]`: én eller flere kæder af mellemliggende selskaber med deres direkte ejerandel
+- et element med `type: "UNKNOWN"`, når CVR ikke kan følge hele ejerskabet til en person
+
+Klienten kalder den sti, opskriften angiver (`{lassoId}/owners/beneficial`), men adapteren (`adaptBeneficialOwnership` i
+`apps/server/src/lasso/adapters.ts`) er bygget defensivt ud fra denne dokumenterede form: alle felter læses med `at()`/`pick()`
+og en lang liste af kandidatnavne, og komponenten viser "Ikke oplyst"/tom tilstand, hvis noget mangler. Kæde-teksten
+("via X ApS, 100 %" / "via 2 led, X ApS") er et bedste bud ud fra `paths[0]` og bør efterses, når et rigtigt svar er set.
+
 ## Kontaktpersoner
 
 ```
@@ -106,6 +172,19 @@ Kun kontaktpersoner:
 GET /apps/contacts/{lassoId}/data?contacts=true
 ```
 
+## Ubekræftet
+
+Antagelser gjort til `LassoKeyValueList` (katalog 09) og `LassoScoreGauge` (katalog 10):
+
+- `accounting.accountant.from` (revisorens tiltrædelsesdato, brugt som "Seneste revisorskift"): feltet er ikke i den
+  bekræftede form af `GET /{lassoId}` ovenfor. Antagelsen fandtes allerede i `adaptOwnership` (`OwnershipVM.auditor.from`);
+  `LassoKeyValueList` genbruger den og udelader rækken helt, når feltet mangler, i stedet for at vise "—".
+- Der findes ingen bekræftet Lasso-kilde til en 0–100 risiko-/kreditscore (katalog 10, "Scoremåler"). `LiveProvider.score`
+  returnerer altid `{ score: null }` ("ikke oplyst"); `DemoProvider.score` giver eksempeldata. Skiftes til en rigtig
+  kilde (fx et Creditsafe-modul), når en sådan bekræftes.
+- `period.from` og `publicationTime` i `GET /{lassoId}/reports/advanced` er derimod bekræftede felter (se ovenfor) og
+  bruges direkte til "Regnskabsperiode" og "Regnskab udgivet".
+
 ## BBR
 
 ```
@@ -113,3 +192,87 @@ GET /data/bbr/property/summary?propertynumber={ejendomsnummer}&municipality={kom
 ```
 
 Eksempel: `propertynumber=79972&municipality=157`.
+
+## Ubekræftet (katalog 20: P-enheder, ejendomme/BBR, CHR)
+
+Ingen af de tre nedenstående er slået op mod api.lassox.com eller docs.lassox.com
+under dette arbejde (netadgang til docs.lassox.com var ikke tilgængelig i denne
+session). Alle adaptere er skrevet defensivt (`at()`/`str()`/`num()`, ingen
+feltnavn kastes en fejl, hvis de mangler), så et forkert gæt giver "Ikke
+oplyst"/tom-tilstand i UI'en frem for en fejl. Næste session med adgang til
+docs.lassox.com bør bekræfte eller rette disse, og fjerne denne note, når de er
+bekræftet.
+
+- **Produktionsenheder**: ingen ny endpoint tilføjet. `LiveProvider.productionUnits`
+  genbruger `GET /{lassoId}` og leder i svaret efter `mainUnit`/`productionUnit`/
+  `hovedenhed` (hovedenheden) og `productionUnits`/`produktionsenheder`/`units`/
+  `secondaryUnits`/`establishments` (øvrige enheder), se `adaptProductionUnits` i
+  `apps/server/src/lasso/adapters.ts`. Ingen bekræftet testvirksomhed med flere
+  P-numre er set; hvis feltet ikke findes i det rigtige svar, bliver listen tom
+  og komponenten viser sin tom-tilstand.
+- **Ejendomme, BBR**: `LiveProvider.properties` kalder den allerede bekræftede
+  `GET /data/ejf/{lassoId}/ownerships/current` (ejerfortegnelsen) og leder efter
+  `property`/`ejendom` pr. post med `matrikelNumber`, `bfeNumber`,
+  `propertyNumber`/`municipalityCode` osv. (`adaptProperties`, `ejfBbrRefs` i
+  `adapters.ts`). Findes `propertyNumber` og `municipalityCode`, kaldes den
+  allerede bekræftede BBR-endpoint (`bbrSummary`) for bygninger og arealer
+  (`mergeBbr`). Feltnavnene i begge svar (ejf og BBR-summary) er UBEKRÆFTEDE
+  gæt; ejf's overordnede form er slet ikke set endnu.
+- **CHR (husdyr)**: intet endpoint fundet. `LassoClient.chr(lassoId)` peger
+  gættet på `GET /modules/chr/{lassoId}` (samme mønster som `modules/valuations`
+  og `modules/observations`), men `LiveProvider.livestock` kalder den IKKE — den
+  returnerer altid en tom `LivestockVM` (ingen besætninger, ingen hændelser), så
+  `LassoLivestock` viser sin tom-tilstand for alle rigtige virksomheder, indtil
+  endpointet er bekræftet og koblet på i `adaptLivestock`. `DemoProvider` giver
+  fuldt eksempel (landbrugsvirksomheden "Eksempel Landbrug I/S", CVR 99000013).
+## Ubekræftet
+
+### Ejergraf: `POST /modules/relations/graph` (ejerdiagrammet, katalog 14)
+
+Klient: `LassoClient.relationsGraph`, adapter: `adaptOwnershipGraph` i `apps/server/src/lasso/adapters.ts`.
+Svarformen er IKKE bekræftet: der var ingen API-nøgle under udviklingen, og docs.lassox.com
+(module-apis/ownergraph) kunne ikke hentes (26.09.2026). Adapteren er derfor bygget defensivt.
+
+Body (fra kendt brug):
+
+```
+{ "ids": ["CVR-1-12345678"], "relationTypes": ["ownership"], "enrichments": ["companyinfo"],
+  "ingoingDepth": 2, "outgoingDepth": 1, "onDate": "2026-09-25" }      (onDate udelades for i dag)
+```
+
+Antaget svar (alle felter valgfrie, navne slås op uden hensyn til store/små bogstaver):
+
+- Beholder: selve svaret, `graph` eller `data`.
+- Noder: `nodes` | `entities` | `vertices` | `participants` | `items`, som liste eller som map `{ [lassoId]: node }`.
+  Pr. node: `lassoId` | `id`, `name`, `type` | `entityType` (indeholder "person" for personer; ellers selskab;
+  `CVR-3-`/`CVR-4-`-id'er uden type regnes som personer). Berigelsen `companyinfo` læses direkte på noden eller
+  under `companyInfo` | `enrichments.companyinfo` | `data` | `entity` | `properties`: `cvr`, `form.shortDescription`,
+  `status`, `country`/`countryCode`, `registrationNumber`, `equity`.
+- Kanter: `edges` | `relations` | `links` | `relationships` | `ownerships` (eller svaret er selv en liste).
+  Retning ejer -> ejet: `from` | `source` | `owner` | `parent` -> `to` | `target` | `owned` | `company` | `child`,
+  som id eller indlejret objekt (`{ lassoId, name, type }`). Relationer med en type, der ikke handler om ejerskab
+  (`relationType`/`type`), springes over.
+- Andel: `ownership` | `share` | `ownershipShare` | `percentage` | `interval` på kanten eller under `properties`,
+  som brøk-interval `{ from: 0.25, to: 0.3332 }` (samme form som `GET /{lassoId}`), tal (brøk eller procent) eller
+  tekst "25–33,32 %". Stemmer: `voteRights` | `votingRights`. Datoer: `validFrom`/`since`/`startDate` og
+  `validTo`/`until`/`endDate` (et ejerskab med slutdato vises som historisk).
+
+Normaliseret til `OwnershipGraphVM` (`packages/spec/src/models.ts`): `nodes { id, name, kind person|company, cvr?, form?,
+status?, country?, registrationNo?, equity?, root? }`, `edges { from, to, share? [min, max] i procent, votes?, classes?,
+since?, until? }`. Svarer endpointet 400/404/405/501, falder `LiveProvider` tilbage til de direkte ejere fra
+`GET /{lassoId}` (ét lag, med en note i visningen). `/api/debug/lasso/...` kan kun GET; formen tjekkes med
+`client.tryRequest("POST", "modules/relations/graph", body)`, når der er en nøgle, og adapteren rettes til.
+
+## Bekræftet af Lasso 26.09.2026 (metode og sti; svarformerne er endnu ikke set)
+
+| Formål | Metode | Endpoint | Bruges af |
+|---|---|---|---|
+| Ejergraf | POST | `/modules/relations/graph` med `{ ids, relationTypes: ["ownership"], enrichments: ["companyinfo"], ingoingDepth, outgoingDepth, onDate? }` | `LassoOwnershipDiagram` (14) |
+| Reelle ejere | GET | `/{lassoId}/owners/beneficial` | `LassoBeneficialOwners` (11) |
+| Risikoobservationer | **POST** | `/modules/observations/{lassoId}` (klienten sender en tom body `{}`) | `LassoRiskObservations` (17) |
+| BBR for én ejendom | GET | `/data/bbr/property/summary?bfeNumber=12345` | `LassoProperties` (20). BFE-nummeret læses fra ejerfortegnelsen (`ejfBbrRefs`). |
+| P-enheder, ændringer | GET | `/data/cvr/place/delta?since=2021-02-01&max=2021-02-02&pageSize=50` | Ikke brugt endnu, se nedenfor |
+
+**P-enheder:** `place/delta` er en ændringsliste over P-enheder i et tidsrum, ikke et opslag pr. virksomhed. Den egner sig til overvågning (21), men ikke til at vise én virksomheds P-enheder. `LassoProductionUnits` læser derfor stadig P-enhederne fra CVR-svaret `GET /{lassoId}` (ubekræftede feltnavne, se "Ubekræftet"). Findes der et opslag pr. virksomhed eller pr. P-nummer, skal det bruges i stedet.
+
+Når der er en API-nøgle, skal svarformerne tjekkes. POST-endpoints kan ikke tjekkes via `/api/debug/lasso/...` (kun GET), så brug `client.tryRequest("POST", …)`.

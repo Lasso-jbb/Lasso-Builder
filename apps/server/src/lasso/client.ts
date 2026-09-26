@@ -25,6 +25,17 @@ export interface SearchParams {
   companyStatus?: string;
 }
 
+/** Body til POST /modules/relations/graph (ejergrafen). */
+export interface RelationsGraphParams {
+  ids: string[];
+  relationTypes?: string[];
+  enrichments?: string[];
+  ingoingDepth: number;
+  outgoingDepth: number;
+  /** ÅÅÅÅ-MM-DD; udelades for i dag. */
+  onDate?: string;
+}
+
 export interface ContactParams {
   contacts?: boolean;
   emails?: boolean;
@@ -196,14 +207,45 @@ export class LassoClient {
   valuations(lassoId: string) {
     return this.get(`modules/valuations/${enc(lassoId)}`);
   }
+  /** Risikoobservationer. Metode og sti bekræftet af Lasso 26.09.2026 (POST); svarformen er endnu ubekræftet. */
   observations(lassoId: string) {
-    return this.get(`modules/observations/${enc(lassoId)}`);
+    return this.post(`modules/observations/${enc(lassoId)}`, {});
+  }
+  /** Reelle ejere. Sti bekræftet af Lasso 26.09.2026; svarformen er endnu ubekræftet. */
+  ownersBeneficial(lassoId: string) {
+    return this.get(`${enc(lassoId)}/owners/beneficial`);
+  }
+  /** Nyheder (docs.lassox.com/data-apis/paqle/). */
+  news(lassoId: string, cToken?: string) {
+    return this.get(`data/paqle/${enc(lassoId)}/news`, { cToken });
+  }
+
+  /** Ejergrafen i flere lag (POST /modules/relations/graph). Svarformen er ubekræftet, se docs/lasso-endpoints.md. */
+  relationsGraph(p: RelationsGraphParams) {
+    return this.post("modules/relations/graph", {
+      ids: p.ids,
+      relationTypes: p.relationTypes ?? ["ownership"],
+      enrichments: p.enrichments ?? ["companyinfo"],
+      ingoingDepth: p.ingoingDepth,
+      outgoingDepth: p.outgoingDepth,
+      ...(p.onDate ? { onDate: p.onDate } : {}),
+    });
   }
   contacts(lassoId: string, p: ContactParams = { contacts: true }) {
     return this.get(`apps/contacts/${enc(lassoId)}/data`, { ...p });
   }
-  bbrSummary(propertyNumber: string | number, municipality: string | number) {
-    return this.get("data/bbr/property/summary", { propertynumber: propertyNumber, municipality });
+  /** BBR-opsummering for én ejendom ud fra BFE-nummeret. Sti og parameter bekræftet af Lasso 26.09.2026. */
+  bbrSummary(bfeNumber: string | number) {
+    return this.get("data/bbr/property/summary", { bfeNumber });
+  }
+  /**
+   * Katalog 20, CHR. UBEKRÆFTET: intet CHR-endpoint er fundet i docs.lassox.com
+   * under dette arbejde. Stien er et gæt (samme mønster som de øvrige
+   * `modules/*`-endpoints) og kaldes ikke fra `LiveProvider`, før den er
+   * bekræftet. Se docs/lasso-endpoints.md, afsnittet "Ubekræftet".
+   */
+  chr(lassoId: string) {
+    return this.get(`modules/chr/${enc(lassoId)}`);
   }
 }
 

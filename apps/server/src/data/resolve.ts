@@ -5,18 +5,41 @@ import {
   type Dataset,
   type ViewComponent,
   type ViewSpec,
+  ownershipGraphKey,
 } from "@lasso/spec";
 import { LassoApiError } from "../lasso/client.js";
 import { NotFoundError, type DataProvider } from "./provider.js";
 
-type Need = "company" | "financials" | "people" | "ownership";
+/** Hvilke data en virksomhed skal have hentet, fx "company", "financials", "timeline". Nøglen matcher metoden i DataProvider. */
+type Need = string;
+
+/**
+ * Én linje pr. datatype: hvad der hentes, og hvor i Dataset det lægges.
+ * Fejlnøglen er "<need>:<lassoId>", som komponenterne slår op på.
+ */
+const FETCHERS: Record<string, (ds: Dataset, p: DataProvider, id: string) => Promise<void>> = {
+  company: async (ds, p, id) => void (ds.companies[id] = await p.company(id)),
+  financials: async (ds, p, id) => void (ds.financials[id] = await p.financials(id)),
+  people: async (ds, p, id) => void (ds.people[id] = await p.people(id)),
+  ownership: async (ds, p, id) => void (ds.ownership[id] = await p.ownership(id)),
+  score: async (ds, p, id) => void (ds.scores[id] = await p.score(id)),
+  beneficialOwnership: async (ds, p, id) => void (ds.beneficialOwnership[id] = await p.beneficialOwnership(id)),
+  textSections: async (ds, p, id) => void (ds.textSections[id] = await p.textSections(id)),
+  timeline: async (ds, p, id) => void (ds.timeline[id] = await p.timeline(id)),
+  observations: async (ds, p, id) => void (ds.observations[id] = await p.observations(id)),
+  auditorIndependence: async (ds, p, id) => void (ds.auditorIndependence[id] = await p.auditorIndependence(id)),
+  productionUnits: async (ds, p, id) => void (ds.productionUnits[id] = await p.productionUnits(id)),
+  properties: async (ds, p, id) => void (ds.properties[id] = await p.properties(id)),
+  livestock: async (ds, p, id) => void (ds.livestock[id] = await p.livestock(id)),
+};
 
 /** Normaliserer alle virksomhedsreferencer i specen til Lasso-ID'er. */
 export function normalizeSpec(spec: ViewSpec, companyPrefix: string): ViewSpec {
   const fix = (ref: string) => toLassoId(ref, companyPrefix);
   const components = spec.components.map((c): ViewComponent => {
+    if (c.type === "LassoLineChart") return { ...c, company: fix(c.company), benchmark: c.benchmark ? fix(c.benchmark) : undefined };
     if ("company" in c) return { ...c, company: fix(c.company) };
-    if (c.type === "LassoCompareTable") return { ...c, companies: c.companies.map(fix) };
+    if (c.type === "LassoCompareTable" || c.type === "LassoRanking") return { ...c, companies: c.companies.map(fix) };
     return c;
   });
   return { ...spec, components };
@@ -53,6 +76,8 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
     needs.set(id, s);
   };
   const searches: Extract<ViewComponent, { type: "LassoCompanyTable" }>["search"][] = [];
+  const newsWanted = new Map<string, number>();
+  const graphs: Extract<ViewComponent, { type: "LassoOwnershipDiagram" }>[] = [];
 
   for (const c of spec.components) {
     switch (c.type) {
@@ -61,7 +86,18 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
         break;
       case "LassoKeyFigureCards":
       case "LassoBarChart":
+      case "LassoGroupedBarChart":
+      case "LassoStackedBarChart":
+      case "LassoWaterfallChart":
+      case "LassoShareBars":
         want(c.company, "financials");
+        break;
+      case "LassoLineChart":
+        want(c.company, "financials");
+        if (c.benchmark) want(c.benchmark, "company", "financials");
+        break;
+      case "LassoRanking":
+        c.companies.forEach((id) => want(id, "company", "financials"));
         break;
       case "LassoPersonList":
         want(c.company, "people");
@@ -69,11 +105,56 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
       case "LassoOwnerList":
         want(c.company, "ownership");
         break;
+      case "LassoRelations":
+        want(c.company, "people", "ownership");
+        break;
+      case "LassoBeneficialOwners":
+        want(c.company, "beneficialOwnership");
+        break;
+      case "LassoTextSections":
+        want(c.company, "textSections");
+        break;
+      case "LassoTimeline":
+        want(c.company, "timeline");
+        break;
+      case "LassoNews":
+        newsWanted.set(c.company, Math.max(newsWanted.get(c.company) ?? 0, c.limit));
+        break;
+      case "LassoSummary":
+        break;
+      case "LassoRiskObservations":
+        want(c.company, "observations");
+        break;
+      case "LassoAuditorIndependence":
+        want(c.company, "auditorIndependence");
+        break;
+      case "LassoProductionUnits":
+        want(c.company, "productionUnits");
+        break;
+      case "LassoProperties":
+        want(c.company, "properties");
+        break;
+      case "LassoLivestock":
+        want(c.company, "livestock");
+        break;
       case "LassoCompareTable":
         c.companies.forEach((id) => want(id, "company", "financials"));
         break;
       case "LassoCompanyTable":
         searches.push(c.search);
+        break;
+      case "LassoKeyValueList":
+        if (c.variant === "financials") want(c.company, "financials");
+        else want(c.company, "company", "ownership", "financials");
+        break;
+      case "LassoMultiYearTable":
+        want(c.company, "financials");
+        break;
+      case "LassoScoreGauge":
+        want(c.company, "score");
+        break;
+      case "LassoOwnershipDiagram":
+        graphs.push(c);
         break;
       case "LassoFollowUps":
         break;
@@ -89,14 +170,27 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
     );
 
   for (const [id, set] of needs) {
-    if (set.has("company")) run(`company:${id}`, async () => void (ds.companies[id] = await provider.company(id)));
-    if (set.has("financials")) run(`financials:${id}`, async () => void (ds.financials[id] = await provider.financials(id)));
-    if (set.has("people")) run(`people:${id}`, async () => void (ds.people[id] = await provider.people(id)));
-    if (set.has("ownership")) run(`ownership:${id}`, async () => void (ds.ownership[id] = await provider.ownership(id)));
+    for (const need of set) {
+      const fetch = FETCHERS[need];
+      if (fetch) run(`${need}:${id}`, async () => fetch(ds, provider, id));
+    }
+  }
+  for (const [id, limit] of newsWanted) {
+    run(`news:${id}`, async () => void (ds.news[id] = await provider.news(id, limit)));
   }
   for (const s of searches) {
     const key = searchKey(s);
     run(`search:${key}`, async () => void (ds.searches[key] = await provider.search(s)));
+  }
+
+  const graphKeys = new Set<string>();
+  for (const g of graphs) {
+    const key = ownershipGraphKey(g);
+    if (graphKeys.has(key)) continue;
+    graphKeys.add(key);
+    run(`graph:${key}`, async () => {
+      ds.ownershipGraphs[key] = await provider.ownershipGraph(g.company, { ingoingDepth: g.ingoingDepth, outgoingDepth: g.outgoingDepth, onDate: g.onDate });
+    });
   }
 
   await Promise.all(jobs);

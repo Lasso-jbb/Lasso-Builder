@@ -1,13 +1,24 @@
 import type {
+  BeneficialOwnershipVM,
+  AuditorIndependenceVM,
   CompanyRowVM,
   CompanyVM,
   Criterion,
   DataSourceKind,
   FinancialsVM,
+  NewsVM,
+  ObservationsVM,
+  OwnershipGraphVM,
   OwnershipVM,
   PersonRowVM,
+  ScoreVM,
+  LivestockVM,
+  PropertiesVM,
+  ProductionUnitsVM,
   SearchQuery,
   SearchResultVM,
+  TextSectionsVM,
+  TimelineVM,
 } from "@lasso/spec";
 
 /**
@@ -26,6 +37,28 @@ export interface DataProvider {
   financials(lassoId: string): Promise<FinancialsVM>;
   people(lassoId: string): Promise<PersonRowVM[]>;
   ownership(lassoId: string): Promise<OwnershipVM>;
+  /** Katalog 10: 0–100 risikoscore. Ingen live datakilde endnu (se LiveProvider); score: null = "ikke oplyst". */
+  score(lassoId: string): Promise<ScoreVM>;
+  beneficialOwnership(lassoId: string): Promise<BeneficialOwnershipVM>;
+  textSections(lassoId: string): Promise<TextSectionsVM>;
+  timeline(lassoId: string): Promise<TimelineVM>;
+  news(lassoId: string, limit: number): Promise<NewsVM>;
+  observations(lassoId: string): Promise<ObservationsVM>;
+  auditorIndependence(lassoId: string): Promise<AuditorIndependenceVM>;
+  /** Katalog 20: produktionsenheder (P-numre). */
+  productionUnits(lassoId: string): Promise<ProductionUnitsVM>;
+  /** Katalog 20: ejendomme og BBR. */
+  properties(lassoId: string): Promise<PropertiesVM>;
+  /** Katalog 20: CHR (kun landbrug). */
+  livestock(lassoId: string): Promise<LivestockVM>;
+  /** Ejergrafen i flere lag omkring én virksomhed (katalog 14). */
+  ownershipGraph(lassoId: string, opts: OwnershipGraphOptions): Promise<OwnershipGraphVM>;
+}
+
+export interface OwnershipGraphOptions {
+  ingoingDepth: number;
+  outgoingDepth: number;
+  onDate?: string;
 }
 
 export class NotFoundError extends Error {

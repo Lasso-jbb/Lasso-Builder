@@ -114,7 +114,7 @@ test("show_company tager et rent CVR-nummer og giver låst skabelon", async () =
   assert.equal(spec.title, "Eksempel Byg A/S");
   assert.deepEqual(
     spec.components.map((c) => c.type),
-    ["LassoCompanyHead", "LassoKeyFigureCards", "LassoBarChart", "LassoPersonList", "LassoOwnerList", "LassoFollowUps"],
+    ["LassoCompanyHead", "LassoKeyFigureCards", "LassoBarChart", "LassoKeyValueList", "LassoPersonList", "LassoOwnerList", "LassoFollowUps"],
   );
   const ds = (res._meta as Record<string, Dataset>)[DATASET_META_KEY]!;
   assert.equal(ds.companies["CVR-1-99000001"]?.name, "Eksempel Byg A/S");
@@ -149,7 +149,7 @@ test("show_company giver et signeret link til en interaktiv side med friske data
   const page = await fetch(link);
   assert.equal(page.status, 200);
   const html = await page.text();
-  assert.match(html, /<title>Eksempel Byg A\/S · Lasso<\/title>/);
+  assert.match(html, /<title>Eksempel Byg A\/S, Lasso<\/title>/);
   const boot = /window\.__LASSO_BOOT__=(.*?);<\/script>/s.exec(html)![1]!;
   assert.match(boot, /"LassoBarChart"/);
   assert.doesNotMatch(boot, /"LassoFollowUps"/);

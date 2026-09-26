@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   amountScale,
+  formatShare,
+  ownershipGraphKey,
   percentChange,
   chartSeries,
   companyTemplate,
@@ -13,6 +15,7 @@ import {
   searchQuerySchema,
   toLassoId,
   validateCriteria,
+  widthOf,
 } from "./index.js";
 
 test("toLassoId normaliserer CVR-numre", () => {
@@ -51,18 +54,32 @@ test("validateCriteria fanger forkerte felter, operatorer og værdier", () => {
   assert.deepEqual(issues.map((i) => i.index), [0, 1, 2, 3]);
 });
 
-test("companyTemplate har låst rækkefølge og respekterer sections", () => {
+test("companyTemplate er ét cockpit i guidens rækkefølge og respekterer sections", () => {
   const full = companyTemplate("CVR-1-12345678");
+  assert.equal(full.layout, "dashboard");
   assert.deepEqual(full.components.map((c) => c.type), [
     "LassoCompanyHead",
     "LassoKeyFigureCards",
     "LassoBarChart",
+    "LassoKeyValueList",
     "LassoPersonList",
     "LassoOwnerList",
     "LassoFollowUps",
   ]);
+  // Graf og stamdata står side om side, ledelse og ejere ligeså.
+  assert.deepEqual(full.components.map((c) => widthOf(c, full.layout)), ["full", "full", "half", "half", "half", "half", "full"]);
   const small = companyTemplate("CVR-1-12345678", { sections: ["graf", "noegletal"] });
   assert.deepEqual(small.components.map((c) => c.type), ["LassoCompanyHead", "LassoKeyFigureCards", "LassoBarChart"]);
+  // Uden stamdata står grafen ikke alene i en halv række.
+  assert.equal(widthOf(small.components[2]!, small.layout), "full");
+});
+
+test("width er valgfri på alle komponenter, og stack giver altid fuld bredde", () => {
+  const spec = parseViewSpec({ title: "x", components: [{ type: "LassoRelations", company: "CVR-1-1", width: "quarter" }, { type: "LassoTimeline", company: "CVR-1-1", width: "three-quarters" }] });
+  assert.equal(spec.layout, "dashboard");
+  assert.deepEqual(spec.components.map((c) => widthOf(c, spec.layout)), ["quarter", "three-quarters"]);
+  assert.deepEqual(spec.components.map((c) => widthOf(c, "stack")), ["full", "full"]);
+  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoRelations", company: "CVR-1-1", width: "third" }] }));
 });
 
 test("listTemplate lægger kriterier i rammen og tabellen", () => {
@@ -75,6 +92,81 @@ test("listTemplate lægger kriterier i rammen og tabellen", () => {
 
 test("parseViewSpec afviser ukendte komponenter", () => {
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "Ukendt" }] }));
+});
+
+test("LassoKeyValueList, LassoMultiYearTable og LassoScoreGauge parses med standardværdier (katalog 09-10)", () => {
+  const spec = parseViewSpec({
+    title: "x",
+    components: [
+      { type: "LassoKeyValueList", company: "CVR-1-12345678" },
+      { type: "LassoKeyValueList", company: "CVR-1-12345678", variant: "financials" },
+      { type: "LassoMultiYearTable", company: "CVR-1-12345678" },
+      { type: "LassoScoreGauge", company: "CVR-1-12345678" },
+    ],
+  });
+  const [kv1, kv2, myt, gauge] = spec.components;
+  assert.equal(kv1!.type, "LassoKeyValueList");
+  assert.equal((kv1 as { variant: string }).variant, "company");
+  assert.equal((kv2 as { variant: string }).variant, "financials");
+  assert.equal((myt as { years: number }).years, 5);
+  assert.equal(gauge!.type, "LassoScoreGauge");
+});
+
+test("parseViewSpec accepterer de nye graftyper i katalog 13 med deres standardværdier", () => {
+  const spec = parseViewSpec({
+    title: "Datavisualisering",
+    components: [
+      { type: "LassoGroupedBarChart", company: "CVR-1-12345678" },
+      { type: "LassoStackedBarChart", company: "CVR-1-12345678" },
+      { type: "LassoLineChart", company: "CVR-1-12345678" },
+      { type: "LassoLineChart", company: "CVR-1-12345678", benchmark: "CVR-1-99999999" },
+      { type: "LassoWaterfallChart", company: "CVR-1-12345678" },
+      { type: "LassoShareBars", company: "CVR-1-12345678" },
+      { type: "LassoRanking", companies: ["CVR-1-12345678", "CVR-1-87654321"] },
+    ],
+  });
+  const [grouped, stacked, line, lineWithBench, waterfall, shareBars, ranking] = spec.components;
+  assert.deepEqual(grouped, { type: "LassoGroupedBarChart", company: "CVR-1-12345678", metrics: ["omsaetning", "resultat"], years: 5 });
+  assert.deepEqual(stacked, { type: "LassoStackedBarChart", company: "CVR-1-12345678", years: 5 });
+  assert.deepEqual(line, { type: "LassoLineChart", company: "CVR-1-12345678", metric: "bruttofortjeneste", years: 5 });
+  assert.deepEqual(lineWithBench, { type: "LassoLineChart", company: "CVR-1-12345678", metric: "bruttofortjeneste", years: 5, benchmark: "CVR-1-99999999" });
+  assert.deepEqual(waterfall, { type: "LassoWaterfallChart", company: "CVR-1-12345678" });
+  assert.deepEqual(shareBars, { type: "LassoShareBars", company: "CVR-1-12345678" });
+  assert.deepEqual(ranking, { type: "LassoRanking", companies: ["CVR-1-12345678", "CVR-1-87654321"], metric: "bruttofortjeneste" });
+});
+
+test("LassoGroupedBarChart kræver 2–3 nøgletal og LassoRanking mindst 2 virksomheder", () => {
+  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoGroupedBarChart", company: "CVR-1-1", metrics: ["ansatte"] }] }));
+  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoGroupedBarChart", company: "CVR-1-1", metrics: ["ansatte", "resultat", "omsaetning", "egenkapital"] }] }));
+  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoRanking", companies: ["CVR-1-1"] }] }));
+});
+
+test("parseViewSpec accepterer de nye Paper-komponenter", () => {
+  const spec = parseViewSpec({
+    title: "Test",
+    components: [
+      { type: "LassoRelations", company: "CVR-1-1" },
+      { type: "LassoBeneficialOwners", company: "CVR-1-1" },
+      { type: "LassoTextSections", company: "CVR-1-1" },
+      { type: "LassoSummary", text: "Et resumé." },
+      { type: "LassoTimeline", company: "CVR-1-1" },
+      { type: "LassoNews", company: "CVR-1-1" },
+    ],
+  });
+  assert.equal(spec.components.length, 6);
+  const summary = spec.components.find((c) => c.type === "LassoSummary");
+  assert.equal(summary && summary.type === "LassoSummary" ? summary.source : undefined, "Lasso");
+});
+
+test("parseViewSpec accepterer LassoRiskObservations og LassoAuditorIndependence", () => {
+  const spec = parseViewSpec({
+    title: "Test",
+    components: [
+      { type: "LassoRiskObservations", company: "CVR-1-12345678" },
+      { type: "LassoAuditorIndependence", company: "CVR-1-12345678", title: "Uafhængighed" },
+    ],
+  });
+  assert.deepEqual(spec.components.map((c) => c.type), ["LassoRiskObservations", "LassoAuditorIndependence"]);
 });
 
 test("amountScale giver én enhed for en række beløb", () => {
@@ -98,4 +190,23 @@ test("percentChange giver ingen procent ved skift mellem overskud og underskud",
   assert.equal(percentChange([113_000, -201_000]), null);
   assert.equal(percentChange([-100, 50]), null);
   assert.equal(Math.round(percentChange([100, 150])!), 50);
+});
+
+test("LassoOwnershipDiagram har standarddybde 2 op og 1 ned og en stabil nøgle", () => {
+  const spec = parseViewSpec({ title: "Ejere", components: [{ type: "LassoOwnershipDiagram", company: "CVR-1-12345678" }] });
+  const c = spec.components[0]!;
+  assert.equal(c.type, "LassoOwnershipDiagram");
+  if (c.type !== "LassoOwnershipDiagram") return;
+  assert.equal(c.ingoingDepth, 2);
+  assert.equal(c.outgoingDepth, 1);
+  assert.equal(ownershipGraphKey(c), "CVR-1-12345678|2|1|");
+  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoOwnershipDiagram", company: "CVR-1-1", onDate: "25.09.2026" }] }));
+  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoOwnershipDiagram", company: "CVR-1-1", ingoingDepth: 11 }] }));
+});
+
+test("formatShare skriver CVR-intervaller", () => {
+  assert.equal(formatShare([20, 24.99]), "20–24,99 %");
+  assert.equal(formatShare([100, 100]), "100 %");
+  assert.equal(formatShare([66.67, 89.99]), "66,67–89,99 %");
+  assert.equal(formatShare(undefined), "—");
 });

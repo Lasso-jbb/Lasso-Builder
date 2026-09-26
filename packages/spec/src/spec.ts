@@ -102,6 +102,44 @@ export const financialChartSchema = z.object({
   years: z.number().int().min(2).max(10).default(5),
 });
 
+export const groupedBarChartSchema = z.object({
+  type: z.literal("LassoGroupedBarChart"),
+  company: companyRef,
+  metrics: z.array(metric).min(2).max(3).default(["omsaetning", "resultat"]).describe("2–3 nøgletal side om side pr. år."),
+  years: z.number().int().min(2).max(10).default(5),
+});
+
+export const stackedBarChartSchema = z.object({
+  type: z.literal("LassoStackedBarChart"),
+  company: companyRef,
+  years: z.number().int().min(2).max(10).default(5),
+}).describe("Egenkapital og gæld som dele af balancen, pr. år.");
+
+export const lineChartSchema = z.object({
+  type: z.literal("LassoLineChart"),
+  company: companyRef,
+  metric: metric.default("bruttofortjeneste"),
+  years: z.number().int().min(2).max(10).default(5),
+  benchmark: companyRef.optional().describe("Valgfri sammenligningsvirksomhed, vist som stiplet benchmark-linje (chart-5)."),
+});
+
+export const waterfallChartSchema = z.object({
+  type: z.literal("LassoWaterfallChart"),
+  company: companyRef,
+}).describe("Fra omsætning/bruttofortjeneste til årets resultat for seneste regnskabsår.");
+
+export const shareBarsSchema = z.object({
+  type: z.literal("LassoShareBars"),
+  company: companyRef,
+}).describe("Egenkapital og gæld som andele af balancen for seneste regnskabsår.");
+
+export const rankingSchema = z.object({
+  type: z.literal("LassoRanking"),
+  companies: z.array(companyRef).min(2).max(10).describe("Første virksomhed er den, der fremhæves i koral."),
+  metric: metric.default("bruttofortjeneste"),
+  title: z.string().max(80).optional(),
+});
+
 export const peopleListSchema = z.object({
   type: z.literal("LassoPersonList"),
   company: companyRef,
@@ -112,6 +150,56 @@ export const peopleListSchema = z.object({
 export const ownershipSchema = z.object({
   type: z.literal("LassoOwnerList"),
   company: companyRef,
+});
+
+export const relationsSchema = z.object({
+  type: z.literal("LassoRelations"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
+});
+
+export const beneficialOwnersSchema = z.object({
+  type: z.literal("LassoBeneficialOwners"),
+  company: companyRef,
+});
+
+export const textSectionsSchema = z.object({
+  type: z.literal("LassoTextSections"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
+});
+
+export const summarySchema = z.object({
+  type: z.literal("LassoSummary"),
+  title: z.string().max(80).optional(),
+  text: z.string().min(1).max(4000).describe("Resumeteksten, skrevet af modellen ud fra kendte tal og fakta. Ingen 'Skrevet af AI'-mærke vises."),
+  source: z.string().max(80).default("Lasso").describe("Kildetekst i kildelinjen, fx 'Lasso' eller modellens navn."),
+  updated: z.string().max(40).optional().describe("Dato for resumeet (ÅÅÅÅ-MM-DD). Standard: i dag."),
+});
+
+export const timelineSchema = z.object({
+  type: z.literal("LassoTimeline"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
+});
+
+export const newsSchema = z.object({
+  type: z.literal("LassoNews"),
+  company: companyRef,
+  limit: z.number().int().min(1).max(10).default(5),
+});
+
+export const ownershipDiagramSchema = z.object({
+  type: z.literal("LassoOwnershipDiagram"),
+  company: companyRef,
+  ingoingDepth: z.number().int().min(0).max(10).default(2).describe("Lag op (ejere). Standard 2."),
+  outgoingDepth: z.number().int().min(0).max(10).default(1).describe("Lag ned (datterselskaber). Standard 1."),
+  onDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .describe("Øjebliksbillede pr. dato (ÅÅÅÅ-MM-DD). Udelades for i dag."),
+  title: z.string().max(80).optional(),
 });
 
 export const tableSchema = z.object({
@@ -129,6 +217,59 @@ export const comparisonSchema = z.object({
   title: z.string().max(80).optional(),
 });
 
+export const keyValueListSchema = z.object({
+  type: z.literal("LassoKeyValueList"),
+  company: companyRef,
+  variant: z
+    .enum(["company", "financials"])
+    .default("company")
+    .describe("'company': stamdata og revisor. 'financials': regnskabstal med årsvælger, tal højrestillet."),
+  title: z.string().max(80).optional(),
+});
+
+export const multiYearTableSchema = z.object({
+  type: z.literal("LassoMultiYearTable"),
+  company: companyRef,
+  metrics: z.array(metric).min(1).max(6).optional().describe("Standard: bruttofortjeneste/omsætning, resultat, egenkapital, ansatte."),
+  years: z.number().int().min(2).max(10).default(5),
+  title: z.string().max(80).optional(),
+});
+
+/** Ingen live datakilde endnu (se resolve.ts og LiveProvider.score); demodata i DemoProvider, "ikke oplyst" i live. */
+export const scoreGaugeSchema = z.object({
+  type: z.literal("LassoScoreGauge"),
+  company: companyRef,
+  title: z.string().max(80).optional().describe("Standard: 'Score'."),
+});
+
+export const riskObservationsSchema = z.object({
+  type: z.literal("LassoRiskObservations"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
+});
+
+export const productionUnitsSchema = z.object({
+  type: z.literal("LassoProductionUnits"),
+  company: companyRef,
+});
+
+export const propertiesSchema = z.object({
+  type: z.literal("LassoProperties"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
+});
+
+export const auditorIndependenceSchema = z.object({
+  type: z.literal("LassoAuditorIndependence"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
+});
+
+export const livestockSchema = z.object({
+  type: z.literal("LassoLivestock"),
+  company: companyRef,
+});
+
 export const actionsSchema = z.object({
   type: z.literal("LassoFollowUps"),
   prompts: z
@@ -142,20 +283,59 @@ export const actionsSchema = z.object({
     .max(4),
 });
 
+/**
+ * Bredde i 4-kolonne-grid'et (guide 23: kun ¼, ½, ¾ og fuld). Udeladt = komponentens
+ * standardbredde (DEFAULT_WIDTH). På tablet og mobil lægger elementerne sig under hinanden.
+ */
+export const WIDTHS = ["quarter", "half", "three-quarters", "full"] as const;
+export type Width = (typeof WIDTHS)[number];
+const widthShape = {
+  width: z.enum(WIDTHS).optional().describe("Bredde i dashboardet: quarter (¼), half (½), three-quarters (¾) eller full. Udelad for standardbredden."),
+};
+function w<S extends z.ZodRawShape>(schema: z.ZodObject<S>) {
+  return schema.extend(widthShape);
+}
+
 export const componentSchema = z.discriminatedUnion("type", [
-  companyHeaderSchema,
-  keyFiguresSchema,
-  financialChartSchema,
-  peopleListSchema,
-  ownershipSchema,
-  tableSchema,
-  comparisonSchema,
-  actionsSchema,
+  w(companyHeaderSchema),
+  w(keyFiguresSchema),
+  w(financialChartSchema),
+  w(groupedBarChartSchema),
+  w(stackedBarChartSchema),
+  w(lineChartSchema),
+  w(waterfallChartSchema),
+  w(shareBarsSchema),
+  w(rankingSchema),
+  w(peopleListSchema),
+  w(ownershipSchema),
+  w(ownershipDiagramSchema),
+  w(tableSchema),
+  w(comparisonSchema),
+  w(keyValueListSchema),
+  w(multiYearTableSchema),
+  w(scoreGaugeSchema),
+  w(riskObservationsSchema),
+  w(auditorIndependenceSchema),
+  w(productionUnitsSchema),
+  w(propertiesSchema),
+  w(livestockSchema),
+  w(actionsSchema),
+  w(relationsSchema),
+  w(beneficialOwnersSchema),
+  w(textSectionsSchema),
+  w(summarySchema),
+  w(timelineSchema),
+  w(newsSchema),
 ]);
 export type ViewComponent = z.infer<typeof componentSchema>;
 export type ComponentType = ViewComponent["type"];
 
-export const LAYOUTS = ["stack", "grid-2"] as const;
+/**
+ * 'dashboard' (standard): 4-kolonne-grid, hvor hver komponent står i sin bredde, så visningen
+ * læses som ét overblik. 'stack': alt i fuld bredde under hinanden. 'grid-2' er det gamle navn
+ * for dashboard og behandles ens.
+ */
+export const LAYOUTS = ["dashboard", "stack", "grid-2"] as const;
 
 export const viewSpecSchema = z.object({
   /** v2: komponentsættet bygget fra Paper-kataloget. v1-visninger (gamle komponentnavne) afvises. */
@@ -163,7 +343,7 @@ export const viewSpecSchema = z.object({
   kind: z.enum(["company", "list", "custom"]).default("custom"),
   title: z.string().min(1).max(120),
   subtitle: z.string().max(200).optional(),
-  layout: z.enum(LAYOUTS).default("stack").describe("'stack' = én kolonne. 'grid-2' = to kolonner på desktop, én på mobil."),
+  layout: z.enum(LAYOUTS).default("dashboard").describe("'dashboard' (standard) = ét samlet overblik i 4-kolonne-grid med hver komponents bredde. 'stack' = alt i fuld bredde under hinanden."),
   criteria: z.array(criterionSchema).max(20).default([]).describe("Vises som chips i rammen under titlen."),
   components: z.array(componentSchema).min(1).max(12),
 });
@@ -172,4 +352,46 @@ export type ViewSpecInput = z.input<typeof viewSpecSchema>;
 
 export function parseViewSpec(input: unknown): ViewSpec {
   return viewSpecSchema.parse(input);
+}
+
+/**
+ * Standardbredde pr. komponent (guide 23): nøgletal, tabeller og hoveder i fuld bredde,
+ * grafer mindst ½, lister og tekst ½, smalle overblik ¼.
+ */
+export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
+  LassoCompanyHead: "full",
+  LassoKeyFigureCards: "full",
+  LassoBarChart: "half",
+  LassoGroupedBarChart: "half",
+  LassoStackedBarChart: "half",
+  LassoLineChart: "half",
+  LassoWaterfallChart: "half",
+  LassoShareBars: "half",
+  LassoRanking: "half",
+  LassoPersonList: "half",
+  LassoOwnerList: "half",
+  LassoOwnershipDiagram: "full",
+  LassoCompanyTable: "full",
+  LassoCompareTable: "full",
+  LassoKeyValueList: "half",
+  LassoMultiYearTable: "full",
+  LassoScoreGauge: "quarter",
+  LassoRiskObservations: "full",
+  LassoAuditorIndependence: "full",
+  LassoProductionUnits: "full",
+  LassoProperties: "full",
+  LassoLivestock: "half",
+  LassoFollowUps: "full",
+  LassoRelations: "quarter",
+  LassoBeneficialOwners: "half",
+  LassoTextSections: "half",
+  LassoSummary: "full",
+  LassoTimeline: "half",
+  LassoNews: "half",
+};
+
+/** Den bredde, en komponent får i visningen. 'stack' giver altid fuld bredde. */
+export function widthOf(c: ViewComponent, layout: ViewSpec["layout"]): Width {
+  if (layout === "stack") return "full";
+  return c.width ?? DEFAULT_WIDTH[c.type];
 }

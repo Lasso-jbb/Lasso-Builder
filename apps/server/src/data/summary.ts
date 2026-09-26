@@ -6,7 +6,9 @@ import {
   formatDate,
   formatNumber,
   formatScaled,
+  formatShare,
   METRIC_LABELS,
+  ownershipGraphKey,
   percentChange,
   searchKey,
   type Dataset,
@@ -77,6 +79,18 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
       if (o?.owners.length) lines.push(`Ejere: ${o.owners.slice(0, 4).map((x) => `${x.name}${x.share ? ` ${x.share}` : ""}${x.votes ? ` (stemmer ${x.votes})` : ""}`).join(", ")}.`);
       if (o?.auditor) lines.push(`Revisor: ${o.auditor.name}.`);
     }
+    if (c.type === "LassoOwnershipDiagram") {
+      const g = ds.ownershipGraphs[ownershipGraphKey(c)];
+      if (g) {
+        const name = (id: string) => g.nodes.find((n) => n.id === id)?.name ?? id;
+        const ref = g.onDate ?? new Date().toISOString().slice(0, 10);
+        const current = g.edges.filter((e) => !e.until || e.until.slice(0, 10) > ref);
+        const owners = current.filter((e) => e.to === g.rootId).map((e) => `${name(e.from)}${e.share ? ` ${formatShare(e.share)}` : ""}`);
+        const subs = current.filter((e) => e.from === g.rootId).map((e) => `${name(e.to)}${e.share ? ` ${formatShare(e.share)}` : ""}`);
+        lines.push(`Ejerdiagram for ${name(g.rootId)}: ${g.nodes.length} enheder i ${g.ingoingDepth} lag op og ${g.outgoingDepth} ned.${owners.length ? ` Direkte ejere: ${owners.slice(0, 5).join(", ")}.` : " Ingen registrerede ejere."}${subs.length ? ` Direkte datterselskaber: ${subs.length}.` : ""}`);
+        if (g.note) lines.push(g.note);
+      }
+    }
     if (c.type === "LassoCompanyTable") {
       const r = ds.searches[searchKey(c.search)];
       if (r) {
@@ -90,6 +104,24 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
     if (c.type === "LassoCompareTable") {
       const names = c.companies.map((id) => ds.companies[id]?.name ?? id);
       lines.push(`Sammenligner: ${names.join(", ")}.`);
+    }
+    if (c.type === "LassoProductionUnits") {
+      const pu = ds.productionUnits[c.company];
+      if (pu?.units.length) {
+        const active = pu.units.filter((u) => u.statusKind !== "inactive").length;
+        lines.push(`Produktionsenheder: ${pu.units.length} i alt, ${active} aktive.`);
+      }
+    }
+    if (c.type === "LassoProperties") {
+      const pr = ds.properties[c.company];
+      if (pr?.properties.length) {
+        const buildings = pr.properties.reduce((sum, p) => sum + p.buildings.length, 0);
+        lines.push(`Ejendomme: ${pr.properties.length}, i alt ${buildings} bygninger.`);
+      }
+    }
+    if (c.type === "LassoLivestock") {
+      const lv = ds.livestock[c.company];
+      if (lv?.chrNumber) lines.push(`CHR ${lv.chrNumber}: ${lv.herds.length} besætninger${lv.healthStatus ? `, sundhedsstatus ${lv.healthStatus}` : ""}.`);
     }
   }
 

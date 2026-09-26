@@ -1,11 +1,32 @@
 import type {
+  BeneficialOwnerGapVM,
+  BeneficialOwnershipVM,
+  BeneficialOwnerVM,
+  BuildingVM,
   CompanyRowVM,
   CompanyVM,
   FinancialYear,
   FinancialsVM,
+  NewsVM,
   OwnerVM,
+  OwnershipEdgeVM,
+  OwnershipGraphVM,
+  OwnershipNodeVM,
   OwnershipVM,
   PersonRowVM,
+  TextSectionsVM,
+  TimelineEventVM,
+  TimelineVM,
+  ObservationRowVM,
+  ObservationsVM,
+  Severity,
+  LivestockHerdVM,
+  LivestockVM,
+  ProductionUnitVM,
+  ProductionUnitsVM,
+  PropertiesVM,
+  PropertyVM,
+  VetEventVM,
 } from "@lasso/spec";
 
 /**
@@ -278,6 +299,8 @@ export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
   const years: FinancialYear[] = [];
   for (const r of reports) {
     const periodEnd = dateStr(r, "period.to", "periodEnd", "period.end", "endDate", "end", "reportingPeriod.end", "to");
+    const periodStart = dateStr(r, "period.from", "periodStart", "period.start", "startDate", "reportingPeriod.start", "from");
+    const published = dateStr(r, "publicationTime", "published", "publishedAt", "reportPublished");
     const year = num(r, "reportYear", "year", "fiscalYear", "financialYear", "aar") ?? (periodEnd ? Number(periodEnd.slice(0, 4)) : undefined);
     if (!year || !Number.isFinite(year)) continue;
     const facts = new Map<string, number>();
@@ -285,14 +308,21 @@ export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
     const src = pick(r, "figures", "keyFigures", "values", "financials", "incomeStatement") ?? r;
     const f = (concepts: string[], ...keys: string[]) =>
       concepts.map((c) => facts.get(c)).find((v) => v !== undefined) ?? num(src, ...keys) ?? num(r, ...keys) ?? null;
+    const publicationTime = dateStr(r, "publicationTime", "publicationDate", "published");
     years.push({
       year,
+      periodStart,
       periodEnd,
+      published,
+      ...(publicationTime ? { publicationTime } : {}),
       revenue: f(["revenue", "revenues", "netsales", "revenuefromcontractswithcustomers", "nettoomsaetning"], "revenue", "netRevenue", "turnover", "netTurnover", "omsaetning"),
       grossProfit: f(["grossprofitloss", "grossprofit", "grossresult"], "grossProfit", "grossResult", "grossProfitLoss", "bruttofortjeneste"),
       profit: f(["profitloss", "profitlossfortheyear", "netincome"], "profit", "netResult", "profitLoss", "netIncome", "aaretsResultat"),
       equity: f(["equity", "totalequity", "equityattributabletoownersofparent"], "equity", "totalEquity", "egenkapital"),
       employees: f(["averagenumberofemployees", "numberofemployees"], "employees", "numberOfEmployees", "averageNumberOfEmployees", "antalAnsatte"),
+      // Ubekræftet (se docs/lasso-endpoints.md "Ubekræftet"): samlet gæld, forsøgt som
+      // ét XBRL-begreb først, ellers kort- og langfristet gæld lagt sammen.
+      liabilities: f(["liabilities", "liabilitiesandprovisions", "totalliabilities"], "liabilities", "totalLiabilities") ?? sumLiabilities(facts) ?? null,
     });
   }
   const byYear = new Map<number, FinancialYear>();
@@ -310,13 +340,21 @@ export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
 }
 
 function hasFigures(y: FinancialYear): boolean {
-  return [y.revenue, y.grossProfit, y.profit, y.equity, y.employees].some((v) => v !== null && v !== undefined);
+  return [y.revenue, y.grossProfit, y.profit, y.equity, y.employees, y.liabilities].some((v) => v !== null && v !== undefined);
 }
 
 function mergeYear(a: FinancialYear, b: FinancialYear): FinancialYear {
   const out: FinancialYear = { ...a };
-  for (const k of ["revenue", "grossProfit", "profit", "equity", "employees"] as const) out[k] = a[k] ?? b[k] ?? null;
+  for (const k of ["revenue", "grossProfit", "profit", "equity", "employees", "liabilities"] as const) out[k] = a[k] ?? b[k] ?? null;
   return out;
+}
+
+/** Kort- og langfristet gæld lagt sammen, når der ikke er ét samlet gældsbegreb (ubekræftet). */
+function sumLiabilities(facts: Map<string, number>): number | undefined {
+  const shortTerm = facts.get("currentliabilities") ?? facts.get("shorttermliabilities") ?? facts.get("shorttermliabilitiesother");
+  const longTerm = facts.get("noncurrentliabilities") ?? facts.get("longtermliabilities") ?? facts.get("longtermliabilitiesother");
+  if (shortTerm === undefined && longTerm === undefined) return undefined;
+  return (shortTerm ?? 0) + (longTerm ?? 0);
 }
 
 const SECTION_ORDER = ["incomeStatement", "statementOfFinancialPosition", "statementOfComprehensiveIncome", "statementOfChangesInEquity"];
@@ -393,6 +431,340 @@ export function adaptSearch(raw: Json, companyPrefix: string): { total?: number;
   return { total: num(container, "resultsFound", "total", "totalCount", "count", "hits.total", "numberOfResults"), rows };
 }
 
+/**
+ * Tekstsektioner fra CVR-stamdata (katalog 12). Branche er bekræftet (samme
+ * felter som adaptCompany); formål og tegningsregler er UBEKRÆFTEDE feltnavne
+ * (se docs/lasso-endpoints.md under "Ubekræftet") og udelades stille, hvis de
+ * ikke findes i svaret.
+ */
+export function adaptTextSections(lassoId: string, raw: Json): TextSectionsVM {
+  const sections: TextSectionsVM["sections"] = [];
+  const industryText = str(raw, "industry.text", "industryText", "industry.name", "mainIndustry.text");
+  const industryCode = str(raw, "industry.code", "industryCode", "mainIndustry.code");
+  if (industryText) sections.push({ heading: "Branche", body: industryText, note: industryCode ? `NACE ${industryCode}` : undefined });
+  const purpose = str(raw, "purpose", "purposeText", "companyPurpose", "objectClause", "formaal", "formål");
+  if (purpose) sections.push({ heading: "Formål", body: purpose });
+  const signing = str(raw, "signingRule", "signingRules", "powerToBind", "bindingRule", "tegningsregel", "tegningsregler");
+  if (signing) sections.push({ heading: "Tegningsregler", body: signing });
+  return { lassoId, title: "Virksomhedsprofil", sections };
+}
+
+/**
+ * Historik (katalog 12, "Tidslinje"). Sat sammen af data, vi allerede henter
+ * andre steder fra (ingen egen endpoint): stiftelse fra virksomhedsopslaget,
+ * ledelsesskift fra stakeholders/board/management, og offentliggjorte
+ * regnskaber fra reports/advanced. Andre begivenhedstyper (navneskift,
+ * adresseskift, kapitalændring) kræver kilder, vi ikke har bekræftet endnu,
+ * og udelades derfor i den rigtige tidslinje (se demo.ts for eksempler).
+ */
+export function adaptTimeline(lassoId: string, companyRaw: Json, people: readonly PersonRowVM[], years: readonly FinancialYear[]): TimelineVM {
+  const events: TimelineEventVM[] = [];
+  const founded = dateStr(companyRaw, "lifeTime.from", "creationDate", "founded", "foundedDate");
+  const name = str(companyRaw, "name", "companyName", "navn");
+  if (founded) events.push({ date: founded, title: "Virksomheden stiftet", detail: name, category: "Stamdata" });
+  for (const p of people) {
+    if (p.from) events.push({ date: p.from, title: `${p.name} er indtrådt`, detail: p.role, category: "Ledelse" });
+    if (p.to) events.push({ date: p.to, title: `${p.name} er fratrådt`, detail: p.role, category: "Ledelse" });
+  }
+  for (const y of years) {
+    const date = y.publicationTime ?? y.periodEnd;
+    if (!date) continue;
+    const parts = [
+      y.grossProfit != null ? `Bruttofortjeneste ${formatAmountShort(y.grossProfit)}` : null,
+      y.profit != null ? `resultat ${formatAmountShort(y.profit)}` : null,
+    ].filter((x): x is string => Boolean(x));
+    events.push({ date, title: `Årsrapport ${y.year} offentliggjort`, detail: parts.join(", ") || undefined, category: "Regnskab" });
+  }
+  events.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  return { lassoId, events };
+}
+
+/** Kort beløbstekst uden "kr.", til tidslinjens detaljelinje (samme regler som card.ts). */
+function formatAmountShort(v: number): string {
+  const abs = Math.abs(v);
+  if (abs >= 1_000_000_000) return `${(v / 1_000_000_000).toFixed(1).replace(".", ",")} mia. kr.`;
+  if (abs >= 1_000_000) return `${(v / 1_000_000).toFixed(1).replace(".", ",")} mio. kr.`;
+  if (abs >= 10_000) return `${Math.round(v / 1_000)} t. kr.`;
+  return `${Math.round(v)} kr.`;
+}
+
+/**
+ * Reelle ejere (katalog 11, "Reelle ejere"). Endpoint og svarform er
+ * UBEKRÆFTEDE (se docs/lasso-endpoints.md under "Ubekræftet"). Antagelsen er
+ * baseret på Lassos dokumenterede "ultimate owners"-funktion: en liste af
+ * ejere med navn, identifikator, en samlet andel som interval
+ * (totalOwnerPercentageMin/Max) og en eller flere kæder ("paths") af
+ * mellemliggende selskaber. Et "UNKNOWN"-element markerer andel, CVR ikke
+ * kan følge til en person.
+ */
+export function adaptBeneficialOwnership(lassoId: string, raw: Json): BeneficialOwnershipVM {
+  const list = items(raw);
+  const owners: BeneficialOwnerVM[] = [];
+  const gaps: BeneficialOwnerGapVM[] = [];
+  for (const entry of list) {
+    const type = str(entry, "type", "kind") ?? "";
+    const name = str(entry, "name");
+    const lo = num(entry, "totalOwnerPercentageMin", "ownerPercentageMin", "share.from", "ownership.from");
+    const hi = num(entry, "totalOwnerPercentageMax", "ownerPercentageMax", "share.to", "ownership.to");
+    const share = rangeText(lo, hi);
+    if (/unknown|ukendt/i.test(type) || !name) {
+      if (share) gaps.push({ share, reason: "CVR har ikke registreret en reel ejer for denne andel." });
+      continue;
+    }
+    owners.push({ name, lassoId: str(entry, "identifier", "lassoId", "id"), chain: beneficialChain(entry), share });
+  }
+  owners.sort((a, b) => shareFloor(b.share) - shareFloor(a.share));
+  return { lassoId, owners, gaps: gaps.length ? gaps : undefined };
+}
+
+/** "25 til 33.32" (allerede i procent, ikke brøk) -> "25–33,32 %". */
+function rangeText(lo: number | undefined, hi: number | undefined): string | undefined {
+  if (lo === undefined) return undefined;
+  const a = percentFormat.format(lo);
+  if (hi === undefined || hi === lo) return `${a} %`;
+  return `${a}–${percentFormat.format(hi)} %`;
+}
+
+/** Bygger "via X ApS, 100 %" (ét led) eller "via N led, X ApS" (flere led) ud fra første kæde i "paths". */
+function beneficialChain(entry: Json): string | undefined {
+  const paths = arr(entry, "paths", "chains");
+  const path = paths[0];
+  if (!path) return undefined;
+  const steps = arr(path, "ownership", "companies", "chain", "intermediateCompanies", "steps");
+  const first = steps[0];
+  const firstName = first ? str(first, "name") : undefined;
+  if (!firstName) return undefined;
+  const firstShare = first ? rangeText(num(first, "percentageMin", "share.from"), num(first, "percentageMax", "share.to")) ?? str(first, "percentage") : undefined;
+  if (steps.length > 1) return `via ${steps.length} led, ${firstName}`;
+  return firstShare ? `via ${firstName}, ${firstShare}` : `via ${firstName}`;
+}
+
+/**
+ * Nyheder (katalog 12, "Nyheder"). Bekræftet mod docs.lassox.com/data-apis/paqle/:
+ * { news: [{ headline, content, url, time, provider, providerData: { sourceName, published } }], continuationToken }.
+ */
+export function adaptNews(lassoId: string, raw: Json, limit: number): NewsVM {
+  const list = arr(raw, "news").length ? arr(raw, "news") : items(raw);
+  const newsItems = list
+    .map((n) => {
+      const headline = str(n, "headline", "providerData.headline");
+      if (!headline) return null;
+      return {
+        source: str(n, "providerData.sourceName", "provider", "source") ?? "Ukendt kilde",
+        url: str(n, "url", "link"),
+        time: dateStr(n, "time", "providerData.published", "publishedAt"),
+        headline,
+        excerpt: str(n, "content", "excerpt", "providerData.extract"),
+        language: str(n, "language", "lang"),
+      };
+    })
+    .filter((n): n is NonNullable<typeof n> => n !== null)
+    .slice(0, limit);
+  return { lassoId, items: newsItems };
+}
+
+/**
+ * Svarformen for GET /modules/observations/{lassoId} er UBEKRÆFTET (ingen
+ * API-nøgle i denne omgang; se docs/lasso-endpoints.md under "Ubekræftet" for
+ * den antagne form). Adapteren er derfor defensiv: den prøver mange
+ * feltnavne, accepterer et rent array eller et svar pakket i {observations|items|results:[...]},
+ * og falder tilbage til "0 observationer" frem for at kaste, hvis formen ikke matcher.
+ */
+function normalizeSeverity(v: Json): Severity {
+  const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" && !Number.isNaN(Number(v)) ? Number(v) : undefined;
+  if (typeof n === "number" && Number.isFinite(n)) {
+    if (n >= 90) return 100;
+    if (n >= 40) return 50;
+    if (n >= 10) return 25;
+    return 0;
+  }
+  const s = typeof v === "string" ? v.toLowerCase() : "";
+  if (/high|vigtig|critical|important|konflikt|alert/.test(s)) return 100;
+  if (/medium|mulig|warning|moderat/.test(s)) return 50;
+  if (/low|info|minor|notice/.test(s)) return 25;
+  return 0;
+}
+
+export function adaptObservations(lassoId: string, raw: Json): ObservationsVM {
+  // items() kender ikke "observations" som pakke-nøgle, så den prøves først.
+  const list = Array.isArray(raw) ? raw : arr(raw, "observations", "results", "items", "hits", "data", "records", "value");
+  const observations: ObservationRowVM[] = [];
+  let i = 0;
+  for (const o of list) {
+    const title = str(o, "title", "headline", "summary", "text", "message", "name", "description");
+    if (!title) continue;
+    const description = str(o, "detail", "description", "explanation", "body", "text");
+    observations.push({
+      id: str(o, "id", "observationId", "uuid") ?? `${lassoId}-${i++}`,
+      severity: normalizeSeverity(pick(o, "severity", "score", "riskScore", "level", "importance", "category")),
+      title,
+      detail: description && description !== title ? description : undefined,
+      source: str(o, "source", "category", "origin", "basedOn", "module"),
+      date: dateStr(o, "date", "observedAt", "createdAt", "eventDate", "occurredAt", "reportedAt"),
+    });
+  }
+  return {
+    lassoId,
+    observations,
+    checkedAt: dateStr(raw, "checkedAt", "generatedAt", "lastChecked", "updatedAt", "meta.checkedAt", "meta.generatedAt"),
+    sources: undefined,
+  };
+}
+
+/**
+ * Katalog 20, produktionsenheder. UBEKRÆFTET: ingen testvirksomhed med flere
+ * P-numre er set endnu, så feltnavnene er et kvalificeret gæt ud fra CVR's
+ * almindelige navngivning (`productionUnits`/`produktionsenheder`). Findes
+ * feltet ikke i svaret fra GET /{lassoId}, bliver listen tom, og komponenten
+ * viser sin tom-tilstand i stedet for at fejle. Se docs/lasso-endpoints.md.
+ */
+export function adaptProductionUnits(lassoId: string, raw: Json): ProductionUnitsVM {
+  const list = arr(raw, "productionUnits", "produktionsenheder", "units", "secondaryUnits", "establishments");
+  const main = pick(raw, "mainUnit", "productionUnit", "hovedenhed", "primaryUnit");
+  const candidates: Json[] = [...(main !== undefined ? [main] : []), ...list];
+  const units: ProductionUnitVM[] = candidates
+    .map((u): ProductionUnitVM | null => {
+      const pNumber = str(u, "pNumber", "productionUnitNumber", "unitNumber", "pnr", "number");
+      if (!pNumber) return null;
+      const status = str(u, "status", "unitStatus", "companyStatus", "virksomhedsstatus");
+      const endedRaw = dateStr(u, "endDate", "to", "lifeTime.to", "ophoersdato", "validTo");
+      return {
+        pNumber,
+        name: str(u, "name", "unitName", "navn"),
+        address: address(u),
+        isMain: Boolean(pick(u, "main", "isMain", "hovedenhed")) || u === main,
+        industryCode: str(u, "industryCode", "industry.code", "branchekode"),
+        industryText: str(u, "industryText", "industry.text", "industry.name", "branchetekst"),
+        employees: num(u, "employees.count", "employees", "numberOfEmployees", "antalAnsatte") ?? null,
+        status,
+        statusKind: statusKind(status),
+        endedYear: endedRaw ? Number(endedRaw.slice(0, 4)) : undefined,
+        created: dateStr(u, "startDate", "from", "lifeTime.from", "oprettelsesdato", "validFrom"),
+      };
+    })
+    .filter((u): u is ProductionUnitVM => u !== null);
+  // Hovedenheden først (katalog 20), derefter i den rækkefølge, Lasso leverer dem.
+  const sorted = [...dedupe(units, (u) => u.pNumber ?? "")].sort((a, b) => (b.isMain ? 1 : 0) - (a.isMain ? 1 : 0));
+  return { lassoId, units: sorted };
+}
+
+/**
+ * Katalog 20, ejendomme/BBR. `ejfRaw` er svaret fra ejerfortegnelsen
+ * (`/data/ejf/{lassoId}/ownerships/current`); formen er UBEKRÆFTET, så alle
+ * felter læses defensivt. `ejfBbrRefs` finder property-/kommunenummeret, som
+ * skal slås op mod BBR (`bbrSummary`); `mergeBbr` fylder bygninger og arealer
+ * ind, når det svar er hentet. Se docs/lasso-endpoints.md.
+ */
+export function adaptProperties(lassoId: string, ejfRaw: Json): PropertiesVM {
+  const list = items(ejfRaw);
+  const properties: PropertyVM[] = list.map((p) => {
+    const prop = pick(p, "property", "ejendom", "ejendomme") ?? p;
+    const matrikelNr = str(prop, "matrikelNumber", "matrikelnummer", "landRegistryNumber", "matrikel.number");
+    const matrikelDistrict = str(prop, "matrikelDistrict", "landRegistryDistrict", "matrikel.district", "ejerlav");
+    const matrikel = matrikelNr ? [matrikelNr, matrikelDistrict].filter(Boolean).join(", ") : str(prop, "matrikel", "matrikelText");
+    const ownershipFrom = dateStr(p, "acquisition.date", "from", "tinglystDato", "registrationDate", "acquiredDate");
+    const ownershipKind = str(p, "ownershipType", "type", "ejerforhold") ?? "Ejer";
+    return {
+      address: address(prop),
+      matrikel,
+      bfeNumber: str(prop, "bfeNumber", "bfeNummer", "bfe"),
+      propertyType: str(prop, "propertyType", "ejendomstype", "benyttelse", "usageText"),
+      ownership: ownershipFrom ? `${ownershipKind}, tinglyst ${ownershipFrom.slice(0, 4)}` : ownershipKind,
+      landAreaM2: num(prop, "landArea", "grundareal", "areal.grund") ?? null,
+      builtAreaM2: null,
+      publicValuation: valuationFrom(prop),
+      encumbrances: num(p, "encumbrances", "haeftelser", "encumbranceCount"),
+      buildings: [],
+      hasGeometry: false,
+    } satisfies PropertyVM;
+  });
+  return { lassoId, properties };
+}
+
+function valuationFrom(obj: Json): PropertyVM["publicValuation"] {
+  const amount = num(obj, "publicValuation.amount", "offentligVurdering.beloeb", "publicValuation.value", "publicValuation");
+  if (amount === undefined) return undefined;
+  return { amount, year: num(obj, "publicValuation.year", "offentligVurdering.aar") };
+}
+
+/** Property-/kommunenummer til BBR-opslag, i samme rækkefølge som `adaptProperties`. UBEKRÆFTET. */
+export interface BbrRef {
+  /** BFE-nummer, som BBR-opslaget bruger (data/bbr/property/summary?bfeNumber=…). */
+  bfeNumber?: string;
+}
+
+export function ejfBbrRefs(ejfRaw: Json): BbrRef[] {
+  return items(ejfRaw).map((p) => {
+    const prop = pick(p, "property", "ejendom", "ejendomme") ?? p;
+    return {
+      bfeNumber: str(prop, "bfeNumber", "bfe", "bfeNummer", "BFEnummer", "samletFastEjendom.bfeNumber") ?? str(p, "bfeNumber", "bfe"),
+    };
+  });
+}
+
+/** Fylder bygninger og arealer fra et BBR-svar (`bbrSummary`) ind i en ejendom. UBEKRÆFTET form. */
+export function mergeBbr(property: PropertyVM, bbrRaw: Json): PropertyVM {
+  const buildingsRaw = arr(bbrRaw, "buildings", "bygninger");
+  const buildings: BuildingVM[] = buildingsRaw.map(
+    (b): BuildingVM => ({
+      number: num(b, "buildingNumber", "bygningsnummer", "number"),
+      usage: str(b, "usageText", "anvendelse", "usage", "buildingUse"),
+      builtYear: num(b, "builtYear", "opfoerelsesaar", "constructionYear"),
+      floors: num(b, "floors", "etager", "numberOfFloors"),
+      areaM2: num(b, "totalArea", "samletAreal", "area") ?? null,
+      units: num(b, "unitCount", "enheder", "numberOfUnits") ?? null,
+    }),
+  );
+  return {
+    ...property,
+    hasGeometry: Boolean(pick(bbrRaw, "geometry", "polygon", "matrikelGeometry")),
+    landAreaM2: property.landAreaM2 ?? num(bbrRaw, "landArea", "grundareal") ?? null,
+    builtAreaM2: num(bbrRaw, "builtUpArea", "bebyggetAreal", "totalBuiltArea") ?? property.builtAreaM2 ?? null,
+    publicValuation: property.publicValuation ?? valuationFrom(bbrRaw),
+    buildings: buildings.length ? buildings : property.buildings,
+  };
+}
+
+/**
+ * Katalog 20, CHR. Endpointet er UBEKRÆFTET og ikke fundet i docs.lassox.com
+ * under dette arbejde; feltnavnene er et gæt ud fra CHR's danske terminologi.
+ * `LiveProvider` kalder ikke noget endpoint for dette og returnerer altid en
+ * tom liste med en begrundelse, indtil endpointet er bekræftet. Se
+ * docs/lasso-endpoints.md.
+ */
+export function adaptLivestock(lassoId: string, raw: Json): LivestockVM {
+  const herdsRaw = arr(raw, "herds", "besaetninger", "stocks", "herd");
+  const herds: LivestockHerdVM[] = herdsRaw.map((h): LivestockHerdVM => {
+    const count = num(h, "count", "antal", "capacity", "numberOfAnimals");
+    return {
+      species: str(h, "species", "dyreart", "animalType"),
+      category: str(h, "category", "underart", "subType", "type"),
+      count: count ?? null,
+      unit: str(h, "unit", "enhed") ?? (num(h, "capacity") !== undefined ? "stipladser" : "dyr"),
+    };
+  });
+  const eventsRaw = arr(raw, "events", "haendelser", "veterinaryEvents", "vetEvents");
+  const events: VetEventVM[] = eventsRaw.map((e): VetEventVM => {
+    const kind = str(e, "severity", "status", "type", "kind") ?? "";
+    return {
+      title: str(e, "title", "titel", "type"),
+      detail: str(e, "detail", "beskrivelse", "species", "dyreart"),
+      date: dateStr(e, "date", "dato", "from"),
+      dateTo: dateStr(e, "to", "dateTo"),
+      severity: /restrik|aktiv|active/i.test(kind) ? "active" : "neutral",
+    };
+  });
+  return {
+    lassoId,
+    chrNumber: str(raw, "chrNumber", "chrNummer", "chr"),
+    ownerName: str(raw, "ownerName", "ejer", "holderName"),
+    updated: dateStr(raw, "updatedAt", "opdateret"),
+    herds,
+    healthStatus: str(raw, "healthStatus", "sundhedsstatus"),
+    events,
+  };
+}
+
 function dedupe<T>(list: T[], key: (t: T) => string): T[] {
   const seen = new Set<string>();
   return list.filter((x) => {
@@ -401,4 +773,144 @@ function dedupe<T>(list: T[], key: (t: T) => string): T[] {
     seen.add(k);
     return true;
   });
+}
+
+/* ---------- Ejergraf (katalog 14): POST /modules/relations/graph, UBEKRÆFTET form ---------- */
+
+/**
+ * Ejerandel som interval i procent: { from: 0.25, to: 0.3332 } -> [25, 33.32]; 0.5 -> [50, 50];
+ * "25–33,32 %" -> [25, 33.32]; 100 -> [100, 100]. Brøker (≤ 1) ganges med 100.
+ */
+export function shareRange(v: Json): [number, number] | undefined {
+  if (v === undefined || v === null || v === "") return undefined;
+  if (typeof v === "string") {
+    const nums = v.match(/\d+(?:[.,]\d+)?/g)?.map((n) => Number(n.replace(",", ".")));
+    if (!nums?.length) return undefined;
+    const lo = nums[0]!;
+    const hi = nums[1] ?? lo;
+    const scale = /%/.test(v) || hi > 1 ? 1 : 100;
+    return [round2(lo * scale), round2(hi * scale)];
+  }
+  const lo = typeof v === "number" ? v : isObj(v) ? num(v, "from", "min", "lower", "low", "value", "share") : undefined;
+  if (lo === undefined) return undefined;
+  const hi = isObj(v) ? (num(v, "to", "max", "upper", "high") ?? lo) : lo;
+  const scale = hi <= 1 ? 100 : 1;
+  return [round2(lo * scale), round2(hi * scale)];
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+/** Endepunkt i en relation: et id eller et indlejret objekt. */
+function endpoint(rel: Json, keys: string[]): { id?: string; obj?: Json } {
+  for (const k of keys) {
+    const v = at(rel, k);
+    if (typeof v === "string" && v.trim()) return { id: v.trim() };
+    if (typeof v === "number") return { id: String(v) };
+    if (isObj(v)) {
+      const id = str(v, "lassoId", "id", "entityId", "key");
+      if (id) return { id, obj: v };
+    }
+  }
+  return {};
+}
+
+function nodeFrom(raw: Json, id: string): OwnershipNodeVM {
+  // Berigelsen "companyinfo" kan ligge direkte på noden eller under et felt.
+  const info = pick(raw, "companyInfo", "companyinfo", "enrichments.companyinfo", "enrichments.companyInfo", "data", "entity", "properties") ?? raw;
+  const get = (...p: string[]) => str(info, ...p) ?? str(raw, ...p);
+  const type = (get("type", "entityType", "kind", "nodeType", "entity.type") ?? "").toLowerCase();
+  const country = get("country", "countryCode", "address.country", "address.countryCode");
+  const isPerson = /person|individual|human/.test(type) || (!/company|virksomhed|organi|business|legal/.test(type) && /^CVR-(3|4)-/i.test(id));
+  const status = get("status", "companyStatus", "lifecycle.status", "state");
+  const cc = country && country.length <= 3 && !/^(dk|dnk|danmark|denmark)$/i.test(country) ? country.toUpperCase().slice(0, 2) : undefined;
+  return {
+    id,
+    name: get("name", "companyName", "legalName", "displayName", "navn") ?? id,
+    kind: isPerson ? "person" : "company",
+    cvr: get("cvr", "cvrNumber", "vat", "vatNumber") ?? (/^CVR-1-(\d{8})$/i.exec(id)?.[1]),
+    form: get("form.shortDescription", "companyForm", "legalForm", "form"),
+    status,
+    statusKind: statusKind(status),
+    country: cc,
+    registrationNo: cc ? get("registrationNumber", "foreignId", "orgNumber", "organisationNumber") : undefined,
+    equity: num(info, "equity", "financials.equity", "keyFigures.equity") ?? null,
+  };
+}
+
+/**
+ * Normaliserer ejergrafen til noder og kanter. Formen er ikke bekræftet (ingen API-nøgle
+ * ved udviklingen); adapteren tåler derfor:
+ *  - { nodes|entities|vertices: [...] | { [id]: node }, edges|relations|links|relationships: [...] }
+ *  - en liste af relationer med indlejrede ejer/ejet-objekter,
+ *  - kanter med { from|source|owner|parent, to|target|owned|child|company } som id eller objekt,
+ *  - andele som brøk-interval { from, to }, tal eller tekst ("25–33,32 %"), under ownership|share|…
+ * Kanten går altid fra ejer til ejet. Relationer af anden type end ejerskab springes over.
+ */
+export function adaptOwnershipGraph(
+  rootId: string,
+  raw: Json,
+  opts: { ingoingDepth: number; outgoingDepth: number; onDate?: string },
+): OwnershipGraphVM {
+  const container = isObj(raw) && isObj(at(raw, "graph")) ? at(raw, "graph") : isObj(raw) && isObj(at(raw, "data")) && !Array.isArray(at(raw, "data")) ? at(raw, "data") : raw;
+  const nodes = new Map<string, OwnershipNodeVM>();
+  const nodeSource = pick(container, "nodes", "entities", "vertices", "participants", "items");
+  const nodeList: [string | undefined, Json][] = Array.isArray(nodeSource)
+    ? nodeSource.map((n) => [undefined, n])
+    : isObj(nodeSource)
+      ? Object.entries(nodeSource)
+      : [];
+  for (const [key, n] of nodeList) {
+    const id = str(n, "lassoId", "id", "entityId", "key") ?? key;
+    if (!id) continue;
+    nodes.set(id, nodeFrom(n, id));
+  }
+
+  const relList = Array.isArray(container) ? container : arr(container, "edges", "relations", "links", "relationships", "ownerships", "results");
+  const edges: OwnershipEdgeVM[] = [];
+  for (const r of relList) {
+    const type = (str(r, "relationType", "type", "kind", "relation") ?? "ownership").toLowerCase();
+    if (type && !/owner|ejer|share|legal/.test(type)) continue;
+    const from = endpoint(r, ["from", "source", "sourceId", "fromId", "owner", "ownerId", "parent", "parentId", "start"]);
+    const to = endpoint(r, ["to", "target", "targetId", "toId", "owned", "ownedId", "company", "companyId", "child", "childId", "end"]);
+    if (!from.id || !to.id) continue;
+    for (const ep of [from, to]) if (!nodes.has(ep.id!)) nodes.set(ep.id!, nodeFrom(ep.obj ?? {}, ep.id!));
+    const props = pick(r, "properties", "attributes", "data") ?? r;
+    const share = shareRange(pick(props, "ownership", "share", "ownershipShare", "ownershipPercentage", "capital", "interval", "percentage") ?? pick(r, "ownership", "share"));
+    const votes = shareRange(pick(props, "voteRights", "votingRights", "votes", "voting") ?? pick(r, "voteRights", "votingRights"));
+    edges.push({
+      from: from.id,
+      to: to.id,
+      share: share ?? votes,
+      votes: share && votes && (share[0] !== votes[0] || share[1] !== votes[1]) ? votes : undefined,
+      classes: str(props, "shareClasses", "classes", "shareClass"),
+      since: dateStr(props, "validFrom", "from.date", "since", "startDate", "period.from", "lifeTime.from") ?? dateStr(r, "validFrom", "startDate"),
+      until: dateStr(props, "validTo", "until", "endDate", "period.to", "lifeTime.to") ?? dateStr(r, "validTo", "endDate"),
+    });
+  }
+  // Roden findes altid, også når grafen er tom.
+  if (!nodes.has(rootId)) nodes.set(rootId, nodeFrom({}, rootId));
+  nodes.get(rootId)!.root = true;
+  return {
+    rootId,
+    nodes: [...nodes.values()],
+    edges,
+    ingoingDepth: opts.ingoingDepth,
+    outgoingDepth: opts.outgoingDepth,
+    onDate: opts.onDate,
+    fetchedAt: new Date().toISOString(),
+  };
+}
+
+/** Reserve, når ejergrafen ikke kan hentes: direkte ejere fra virksomhedsopslaget (ét lag op). */
+export function graphFromOwnership(rootId: string, rootName: string, o: OwnershipVM, opts: { ingoingDepth: number; outgoingDepth: number; onDate?: string }): OwnershipGraphVM {
+  const nodes: OwnershipNodeVM[] = [{ id: rootId, name: rootName, kind: "company", root: true, cvr: /^CVR-1-(\d{8})$/i.exec(rootId)?.[1] }];
+  const edges: OwnershipEdgeVM[] = [];
+  o.owners.forEach((w, i) => {
+    const id = w.lassoId ?? `owner:${i}:${w.name}`;
+    if (!nodes.some((n) => n.id === id)) nodes.push({ id, name: w.name, kind: w.kind ?? "person" });
+    edges.push({ from: id, to: rootId, share: shareRange(w.share), votes: w.votes ? shareRange(w.votes) : undefined });
+  });
+  return { rootId, nodes, edges, ingoingDepth: Math.min(1, opts.ingoingDepth), outgoingDepth: 0, onDate: opts.onDate, fetchedAt: new Date().toISOString(), note: "Kun direkte ejere; ejergrafen kunne ikke hentes." };
 }
