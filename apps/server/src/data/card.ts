@@ -136,6 +136,10 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     card.row("Kommune", a?.municipality);
     card.row("Region", a?.region);
     card.row("Branche", co.industryText ? `${co.industryText}${co.industryCode ? ` (${co.industryCode})` : ""}` : undefined);
+    if (types.has("LassoKeyValueList")) {
+      const auditorFrom = ds.ownership[lassoId]?.auditor?.from;
+      if (auditorFrom) card.row("Revisorskift", formatDate(auditorFrom));
+    }
     card.row("Stiftet", co.founded ? formatDate(co.founded) : undefined);
     card.row("Ansatte", co.employees != null ? `${formatNumber(co.employees)} (CVR)` : undefined);
     card.row("Telefon", co.phone?.replace(/^(\d{2})(\d{2})(\d{2})(\d{2})$/, "$1 $2 $3 $4"));
@@ -177,6 +181,11 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
   }
   for (const c of spec.components) {
     if (c.type === "LassoBarChart" && c.company === lassoId && f) chart(card, f, c.metric, c.years);
+  }
+  const score = types.has("LassoScoreGauge") ? ds.scores[lassoId] : undefined;
+  if (score) {
+    card.section("Score");
+    card.raw(score.score != null ? `${padStart(String(Math.round(score.score)), 3)} af 100` : "Ikke oplyst");
   }
   return card.empty ? null : card.toString();
 }

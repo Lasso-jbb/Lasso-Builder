@@ -77,6 +77,24 @@ test("parseViewSpec afviser ukendte komponenter", () => {
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "Ukendt" }] }));
 });
 
+test("LassoKeyValueList, LassoMultiYearTable og LassoScoreGauge parses med standardværdier (katalog 09-10)", () => {
+  const spec = parseViewSpec({
+    title: "x",
+    components: [
+      { type: "LassoKeyValueList", company: "CVR-1-12345678" },
+      { type: "LassoKeyValueList", company: "CVR-1-12345678", variant: "financials" },
+      { type: "LassoMultiYearTable", company: "CVR-1-12345678" },
+      { type: "LassoScoreGauge", company: "CVR-1-12345678" },
+    ],
+  });
+  const [kv1, kv2, myt, gauge] = spec.components;
+  assert.equal(kv1!.type, "LassoKeyValueList");
+  assert.equal((kv1 as { variant: string }).variant, "company");
+  assert.equal((kv2 as { variant: string }).variant, "financials");
+  assert.equal((myt as { years: number }).years, 5);
+  assert.equal(gauge!.type, "LassoScoreGauge");
+});
+
 test("amountScale giver én enhed for en række beløb", () => {
   const scale = amountScale([117_142_000_000, 250_276_000_000]);
   assert.equal(scale.label, "mia. kr.");

@@ -54,6 +54,11 @@
   --lasso-warning: #b86e00;
   --lasso-warning-soft: #fff4e0;
 
+  /* Scoremåler (10): risikobånd 0–100, altid med tal og ord (regel 7), aldrig kun farve */
+  --lasso-gauge-low: #a9d8ba;
+  --lasso-gauge-mid: #f7d59a;
+  --lasso-gauge-high: #f3b4ae;
+
   /* Grafserier: fast rækkefølge, serie 2 aldrig uden serie 1 */
   --lasso-chart-1: #ff6b35;
   --lasso-chart-2: #2f5d8a;
@@ -151,6 +156,9 @@
   --lasso-chart-bar: #7a3b1f;
   --lasso-chart-bar-strong: #ff7a4a;
   --lasso-chart-bar-neg: #6b2c26;
+  --lasso-gauge-low: #2f5d43;
+  --lasso-gauge-mid: #6b5730;
+  --lasso-gauge-high: #6b3330;
 }
 
 .lasso-root {
@@ -479,3 +487,59 @@
 .lasso-table th.lasso-compare__company { text-transform: none; letter-spacing: 0; }
 .lasso-table td.lasso-up { color: var(--lasso-positive); }
 .lasso-table td.lasso-down { color: var(--lasso-negative); }
+
+/* ---------- 09 Nøgle-værdi-liste ---------- */
+.lasso-kv-list { display: flex; flex-direction: column; border-top: 1px solid var(--lasso-border); }
+.lasso-kv-row { display: flex; align-items: center; gap: var(--lasso-space-4); min-height: 38px; border-bottom: 1px solid var(--lasso-divider-subtle); }
+.lasso-kv-row:last-child { border-bottom: 0; }
+.lasso-kv-row__label { flex: none; width: 190px; color: var(--lasso-text-3); font-size: var(--lasso-fs-sm); line-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lasso-kv-row__value { flex: 1; min-width: 0; color: var(--lasso-text); font-size: var(--lasso-fs); line-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* "med årsvælger": tal højrestillet 14/500 (katalog 09) */
+.lasso-kv-list--financials .lasso-kv-row__label { flex: 1; width: auto; }
+.lasso-kv-list--financials .lasso-kv-row__value { flex: none; text-align: right; font-weight: 500; }
+.lasso-kv-years { max-width: 100%; overflow-x: auto; }
+@container lasso (max-width: 560px) {
+  .lasso-kv-row { flex-wrap: wrap; row-gap: 2px; min-height: var(--lasso-touch-h); }
+  .lasso-kv-row__label { width: 100%; }
+  .lasso-kv-list--financials .lasso-kv-row__label { width: 100%; }
+  .lasso-kv-list--financials .lasso-kv-row__value { flex-basis: 100%; text-align: left; }
+}
+
+/* ---------- 10 Flerårstabel ---------- */
+.lasso-myt { display: flex; flex-direction: column; min-width: max-content; }
+.lasso-myt__head, .lasso-myt__row { display: flex; align-items: center; }
+.lasso-myt__head { height: 36px; border-bottom: 1px solid var(--lasso-border); }
+.lasso-myt__row { height: 44px; border-bottom: 1px solid var(--lasso-divider-subtle); }
+.lasso-myt__row:last-child { border-bottom: 0; }
+.lasso-myt__unit { flex: 1 1 220px; min-width: 160px; font-size: var(--lasso-fs-label); font-weight: 600; letter-spacing: var(--lasso-ls-label); color: var(--lasso-muted); }
+.lasso-myt__label { flex: 1 1 220px; min-width: 160px; font-size: var(--lasso-fs); font-weight: 500; color: var(--lasso-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lasso-myt__year { flex: none; width: 96px; text-align: right; font-size: var(--lasso-fs); color: var(--lasso-text-2); }
+.lasso-myt__year--head { font-size: 12px; font-weight: 600; color: var(--lasso-muted); }
+.lasso-myt__year--last { font-weight: 600; color: var(--lasso-text); }
+.lasso-myt__delta { flex: none; width: 80px; text-align: right; font-size: var(--lasso-fs-sm); font-weight: 500; white-space: nowrap; }
+.lasso-myt__trend { flex: none; width: 96px; padding-left: 20px; }
+.lasso-myt__zero { stroke: var(--lasso-chart-axis); stroke-dasharray: 2 2; }
+@container lasso (max-width: 768px) {
+  .lasso-myt__delta, .lasso-myt__trend { display: none; }
+}
+
+/* ---------- 10 Scoremåler ---------- */
+.lasso-gauge { display: flex; flex-direction: column; gap: 6px; }
+.lasso-gauge__value { display: flex; align-items: baseline; gap: 10px; padding-top: 8px; flex-wrap: wrap; }
+.lasso-gauge__number { font-size: 40px; line-height: 44px; font-weight: 600; letter-spacing: -0.03em; color: var(--lasso-text); }
+.lasso-gauge__of { font-size: var(--lasso-fs); color: var(--lasso-muted); }
+.lasso-gauge__label { font-size: 12px; font-weight: 500; margin-left: 6px; }
+.lasso-gauge__label--0 { color: var(--lasso-positive); }
+.lasso-gauge__label--1 { color: var(--lasso-warning); }
+.lasso-gauge__label--2 { color: var(--lasso-negative); }
+.lasso-gauge__bar { position: relative; height: 18px; }
+.lasso-gauge__track { display: flex; gap: 2px; height: 6px; position: absolute; left: 0; right: 0; top: 6px; }
+.lasso-gauge__seg { display: block; flex-shrink: 0; }
+.lasso-gauge__seg--0 { background: var(--lasso-gauge-low); border-radius: 3px 0 0 3px; }
+.lasso-gauge__seg--1 { background: var(--lasso-gauge-mid); }
+.lasso-gauge__seg--2 { background: var(--lasso-gauge-high); border-radius: 0 3px 3px 0; }
+.lasso-gauge__pointer { position: absolute; top: 0; height: 18px; width: 3px; border-radius: 2px; background: var(--lasso-text); box-shadow: 0 0 0 2px var(--lasso-surface); }
+.lasso-gauge__scale { display: flex; justify-content: space-between; font-size: 11px; color: var(--lasso-muted); }
+@container lasso (max-width: 560px) {
+  .lasso-gauge__number { font-size: 36px; line-height: 40px; }
+}

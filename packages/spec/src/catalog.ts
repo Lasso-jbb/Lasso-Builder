@@ -58,6 +58,24 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     props: `companies[], metrics? (${METRICS.join(" | ")}), title?`,
   },
   {
+    type: "LassoKeyValueList",
+    title: "Nøgle-værdi-liste",
+    description: "Mange felter med én værdi hver. variant='company': revisor, regnskabsperiode, stiftet, form, branche og kontakt. variant='financials': regnskabstal for et valgt år med årsvælger, tal højrestillet.",
+    props: "company, variant? (company | financials), title?",
+  },
+  {
+    type: "LassoMultiYearTable",
+    title: "Flerårstabel",
+    description: "Sammenligner nøgletal på tværs af flere år i en tabel, med ændring og tendens pr. række. Brug frem for søjlegrafen, når flere nøgletal skal ses samtidig.",
+    props: `company, metrics? (${METRICS.join(" | ")}), years (2–10, standard 5), title?`,
+  },
+  {
+    type: "LassoScoreGauge",
+    title: "Scoremåler",
+    description: "Viser en score 0–100 som måler (0 lav risiko, 100 høj risiko). Der er endnu ingen live datakilde for scoren; brug kun i demovisninger, indtil en kilde er tilsluttet.",
+    props: "company, title?",
+  },
+  {
     type: "LassoFollowUps",
     title: "Opfølgningsknapper",
     description: "1–4 knapper, der sender et opfølgende spørgsmål til dig (modellen) som brugerens næste besked. Brug til analysespørgsmål som 'Hvem er nye i bestyrelsen?'.",

@@ -9,7 +9,7 @@ import {
 import { LassoApiError } from "../lasso/client.js";
 import { NotFoundError, type DataProvider } from "./provider.js";
 
-type Need = "company" | "financials" | "people" | "ownership";
+type Need = "company" | "financials" | "people" | "ownership" | "score";
 
 /** Normaliserer alle virksomhedsreferencer i specen til Lasso-ID'er. */
 export function normalizeSpec(spec: ViewSpec, companyPrefix: string): ViewSpec {
@@ -75,6 +75,16 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
       case "LassoCompanyTable":
         searches.push(c.search);
         break;
+      case "LassoKeyValueList":
+        if (c.variant === "financials") want(c.company, "financials");
+        else want(c.company, "company", "ownership", "financials");
+        break;
+      case "LassoMultiYearTable":
+        want(c.company, "financials");
+        break;
+      case "LassoScoreGauge":
+        want(c.company, "score");
+        break;
       case "LassoFollowUps":
         break;
     }
@@ -93,6 +103,7 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
     if (set.has("financials")) run(`financials:${id}`, async () => void (ds.financials[id] = await provider.financials(id)));
     if (set.has("people")) run(`people:${id}`, async () => void (ds.people[id] = await provider.people(id)));
     if (set.has("ownership")) run(`ownership:${id}`, async () => void (ds.ownership[id] = await provider.ownership(id)));
+    if (set.has("score")) run(`score:${id}`, async () => void (ds.scores[id] = await provider.score(id)));
   }
   for (const s of searches) {
     const key = searchKey(s);

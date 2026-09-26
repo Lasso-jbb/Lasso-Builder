@@ -106,6 +106,19 @@ Kun kontaktpersoner:
 GET /apps/contacts/{lassoId}/data?contacts=true
 ```
 
+## Ubekræftet
+
+Antagelser gjort til `LassoKeyValueList` (katalog 09) og `LassoScoreGauge` (katalog 10):
+
+- `accounting.accountant.from` (revisorens tiltrædelsesdato, brugt som "Seneste revisorskift"): feltet er ikke i den
+  bekræftede form af `GET /{lassoId}` ovenfor. Antagelsen fandtes allerede i `adaptOwnership` (`OwnershipVM.auditor.from`);
+  `LassoKeyValueList` genbruger den og udelader rækken helt, når feltet mangler, i stedet for at vise "—".
+- Der findes ingen bekræftet Lasso-kilde til en 0–100 risiko-/kreditscore (katalog 10, "Scoremåler"). `LiveProvider.score`
+  returnerer altid `{ score: null }` ("ikke oplyst"); `DemoProvider.score` giver eksempeldata. Skiftes til en rigtig
+  kilde (fx et Creditsafe-modul), når en sådan bekræftes.
+- `period.from` og `publicationTime` i `GET /{lassoId}/reports/advanced` er derimod bekræftede felter (se ovenfor) og
+  bruges direkte til "Regnskabsperiode" og "Regnskab udgivet".
+
 ## BBR
 
 ```
