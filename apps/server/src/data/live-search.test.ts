@@ -52,9 +52,30 @@ test("kriterier søges hos Lasso, og faldende sortering vendes", async () => {
     orderBy: "employees",
     filters: [
       { filterName: "geography-region", fieldName: "BasicInfo.region", fieldNames: null, fallbackFields: null, operator: "Equal", values: ["4"] },
-      { filterName: "basic-employees-value", fieldName: "employees", fieldNames: null, fallbackFields: null, operator: "GreaterThan", values: ["9"] },
+      { filterName: "basic-employees-value", fieldName: "employees", fieldNames: null, fallbackFields: null, operator: "GreaterEqual", values: ["10"] },
+      // Standardfilter: ingen statuskriterie givet, så kun aktive virksomheder søges (P1-5).
+      { filterName: "basic-company-status", fieldName: "BasicInfo.CompanyStatus", fieldNames: null, fallbackFields: null, operator: "Equal", values: ["Aktiv", "Normal"] },
     ],
   });
+  assert.match(r.note ?? "", /Kun aktive virksomheder/);
+});
+
+test("et statuskriterie fra brugeren fortrænger standardfilteret", async () => {
+  const calls: unknown[] = [];
+  const provider = new LiveProvider(fakeClient(calls), loadConfig({}));
+  const q = searchQuerySchema.parse({
+    criteria: [
+      { field: "region", operator: "eq", value: "Midtjylland" },
+      { field: "status", operator: "eq", value: "ophørt" },
+    ],
+  });
+  const r = await provider.search(q);
+  const filters = (calls[0] as { filters: { filterName: string }[] }).filters;
+  assert.deepEqual(
+    filters.map((f) => f.filterName),
+    ["geography-region", "basic-company-status"],
+  );
+  assert.doesNotMatch(r.note ?? "", /Kun aktive virksomheder/);
 });
 
 test("det, Lasso ikke kan filtrere på, anvendes lokalt", async () => {

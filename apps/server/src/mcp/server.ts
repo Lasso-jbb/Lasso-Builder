@@ -143,7 +143,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
       if (interpreted) {
         const given = new Set(search.criteria.map((c) => c.field));
         search = { ...search, query: "", criteria: [...search.criteria, ...interpreted.criteria.filter((c) => !given.has(c.field))] };
-        note = `Lasso fortolkede "${text}" som: ${interpreted.criteria.map(formatCriterion).join("; ")}.${interpreted.unknown.length ? ` Ikke vist i filterpanelet: ${interpreted.unknown.join("; ")}.` : ""}`;
+        note = `Lasso fortolkede "${text}" som: ${interpreted.criteria.map(formatCriterion).join("; ")}.${interpreted.unknown.length ? ` Kunne ikke oversættes og indgår derfor IKKE i søgningen (nævn det for brugeren): ${interpreted.unknown.join("; ")}.` : ""}`;
       }
       const spec = listTemplate(search, { title: title ?? (interpreted ? capitalize(text) : undefined), columns });
       const ds = await resolveSpec(spec, provider);

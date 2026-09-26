@@ -45,7 +45,7 @@ import {
 } from "../lasso/adapters.js";
 import { LassoApiError, type LassoClient } from "../lasso/client.js";
 import { adaptPerson, adaptPersonNetwork, adaptPersonSearch } from "../lasso/personAdapters.js";
-import { criteriaToFilters, filtersToCriteria, SERVER_SORT, type LassoFilter } from "../lasso/searchFilters.js";
+import { criteriaToFilters, DEFAULT_ACTIVE_STATUS_FILTER, filtersToCriteria, SERVER_SORT, type LassoFilter } from "../lasso/searchFilters.js";
 import { applyCriteria, needsFinancials, sortRows } from "./criteria-eval.js";
 import { mapLimit, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
 
@@ -104,8 +104,12 @@ export class LiveProvider implements DataProvider {
 
   /** Lassos filtersøgning (POST /apps/search/lassoid) over alle virksomheder. */
   private async searchWithFilters(q: SearchQuery, filters: LassoFilter[], rest: Criterion[]): Promise<SearchResultVM> {
+    // Ophørte/opløste selskaber kommer ellers med, uden at brugeren bad om dem (P1-5): udelad dem som
+    // standard, medmindre brugeren selv har nævnt et statuskriterie (uanset om Lasso kunne oversætte det).
+    const hasStatus = q.criteria.some((c) => c.field === "status") || rest.some((c) => c.field === "status");
+    const effectiveFilters = hasStatus ? filters : [...filters, DEFAULT_ACTIVE_STATUS_FILTER];
     const serverSort = q.sort ? SERVER_SORT[q.sort.field] : undefined;
-    const raw = (await this.client.searchByFilters(filters, serverSort)) as { results?: unknown[]; resultsFound?: number; totalPages?: number };
+    const raw = (await this.client.searchByFilters(effectiveFilters, serverSort)) as { results?: unknown[]; resultsFound?: number; totalPages?: number };
     let ids = (raw.results ?? []).filter((id): id is string => typeof id === "string");
     const total = typeof raw.resultsFound === "number" ? raw.resultsFound : ids.length;
     // Lasso sorterer altid stigende. Faldende kan vendes, når hele resultatet er på én side.
@@ -120,15 +124,17 @@ export class LiveProvider implements DataProvider {
     const filtered = applyCriteria(rows, rest);
     const shown = sortRows(filtered.rows, localSort).slice(0, q.limit);
     const partial = localWork && pool.length < ids.length;
+    const notes = [
+      !hasStatus ? "Kun aktive virksomheder er vist (ophørte, opløste og under konkurs/likvidation er udeladt); nævn status som kriterie for at få dem med." : undefined,
+      partial ? `Lasso fandt ${total} virksomheder. ${[...rest.map(formatCriterion), localSort ? "sorteringen" : ""].filter(Boolean).join(", ")} er anvendt på de første ${pool.length}.` : undefined,
+    ].filter((n): n is string => Boolean(n));
     return {
       key: searchKey(q),
       total: rest.length > 0 ? filtered.rows.length : total,
       rows: shown,
       unsupportedCriteria: filtered.unsupported.length ? filtered.unsupported : undefined,
       source: "lasso-search",
-      note: partial
-        ? `Lasso fandt ${total} virksomheder. ${[...rest.map(formatCriterion), localSort ? "sorteringen" : ""].filter(Boolean).join(", ")} er anvendt på de første ${pool.length}.`
-        : undefined,
+      note: notes.length ? notes.join(" ") : undefined,
     };
   }
 

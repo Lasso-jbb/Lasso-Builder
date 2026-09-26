@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { criteriaToFilters, filtersToCriteria, type LassoFilter } from "./searchFilters.js";
+import { criteriaToFilters, DEFAULT_ACTIVE_STATUS_FILTER, filtersToCriteria, type LassoFilter } from "./searchFilters.js";
 
 const strip = (fs: LassoFilter[]) => fs.map(({ fieldName, operator, values }) => ({ fieldName, operator, values }));
 
@@ -20,7 +20,7 @@ test("kriterier bliver til Lasso-filtre i det kortlagte format", () => {
   ]);
   assert.deepEqual(strip(filters), [
     { fieldName: "BasicInfo.region", operator: "Equal", values: ["4"] },
-    { fieldName: "employees", operator: "GreaterThan", values: ["9"] },
+    { fieldName: "employees", operator: "GreaterEqual", values: ["10"] },
     { fieldName: "industrycode", operator: "Equal", values: ["692000", "433200"] },
     { fieldName: "BasicInfo.municipalityCode", operator: "Equal", values: ["751", "461"] },
     { fieldName: "BasicInfo.formCode", operator: "Equal", values: ["90", "100"] },
@@ -48,6 +48,50 @@ test("Lassos svar fra prompt-søgningen bliver til kriterier i filterpanelet", (
     { field: "ansatte", operator: "gt", value: 9 },
   ]);
   assert.deepEqual(unknown, []);
+});
+
+test("Lassos rå prompt-filtre for 'revisorer i Region Midtjylland med mindst 10 ansatte' (26.09.2026, P0-1)", () => {
+  // Den faktiske raw-liste fra POST /apps/search/query/prompt, bekræftet mod live 26.09.2026.
+  // fieldName har en anden case/form end det kortlagte format (BasicInfo.IndustryCode/Region i
+  // stedet for industrycode/BasicInfo.region), og GreaterEqual bruges direkte i stedet for
+  // GreaterThan én mindre - filtersToCriteria skal stadig finde alle tre kriterier via filterName.
+  const raw: LassoFilter[] = [
+    {
+      filterName: "basic-industry",
+      fieldName: "BasicInfo.IndustryCode",
+      fieldNames: ["BasicInfo.AlternateIndustryCodes[0]", "BasicInfo.AlternateIndustryCodes[1]", "BasicInfo.AlternateIndustryCodes[2]"],
+      operator: "Equal",
+      values: ["692000"],
+    },
+    { filterName: "geography-region", fieldName: "BasicInfo.Region", operator: "Equal", values: ["4"] },
+    { filterName: "basic-employees-value", fieldName: "employees", operator: "GreaterEqual", values: ["10"] },
+  ];
+  const { criteria, unknown } = filtersToCriteria(raw);
+  assert.deepEqual(criteria, [
+    { field: "branchekode", operator: "eq", value: "692000" },
+    { field: "region", operator: "eq", value: "Midtjylland" },
+    { field: "ansatte", operator: "gte", value: 10 },
+  ]);
+  assert.deepEqual(unknown, []);
+
+  // Kriterierne skal kunne genskabes til filtre, som reelt gav 83 resultater hos Lasso (probeLasso),
+  // plus standard-statusfilteret (P1-5), når de sendes videre til selve søgningen.
+  const { filters, rest } = criteriaToFilters(criteria);
+  assert.deepEqual(rest, []);
+  assert.deepEqual(strip(filters), [
+    { fieldName: "industrycode", operator: "Equal", values: ["692000"] },
+    { fieldName: "BasicInfo.region", operator: "Equal", values: ["4"] },
+    { fieldName: "employees", operator: "GreaterEqual", values: ["10"] },
+  ]);
+  assert.deepEqual(
+    filters.map((f) => f.filterName),
+    ["basic-industry", "geography-region", "basic-employees-value"],
+  );
+  assert.deepEqual(strip([...filters, DEFAULT_ACTIVE_STATUS_FILTER]).at(-1), {
+    fieldName: "BasicInfo.CompanyStatus",
+    operator: "Equal",
+    values: ["Aktiv", "Normal"],
+  });
 });
 
 test("flere værdier, datoer, status og ukendte felter", () => {
