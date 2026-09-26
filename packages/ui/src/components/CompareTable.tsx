@@ -1,9 +1,9 @@
-import { amountScale, formatNumber, formatPercent, formatScaled, METRIC_FIELD, METRIC_LABELS, percentChange, type Dataset, type Metric } from "@lasso/spec";
+import { amountScale, formatNumber, formatPercent, formatScaled, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, percentChange, type Dataset, type Metric } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section } from "../primitives.js";
 
-/** "Bedst" er kun entydigt for beløb; aldrig for ansatte (katalog 22). */
-const BEST_IS_HIGHEST: ReadonlySet<Metric> = new Set(["omsaetning", "bruttofortjeneste", "resultat", "egenkapital"]);
+/** "Bedst" er kun entydigt for beløb (og ratio-nøgletal, hvor højere er bedre); aldrig for ansatte, gæld eller balancesum (katalog 22). */
+const BEST_IS_HIGHEST: ReadonlySet<Metric> = new Set(["omsaetning", "bruttofortjeneste", "resultat", "egenkapital", "ebitda", "soliditetsgrad", "overskudsgrad", "likviditetsgrad"]);
 
 /**
  * Sammenligning, 2–6 virksomheder i kolonner, nøgletal i rækker (katalog 22).
@@ -48,7 +48,7 @@ export function CompareTable({
     );
   }
   const year = cols.map((c) => c.last?.year).find((y) => y !== undefined);
-  const firstAmount = metrics.find((m) => m !== "ansatte");
+  const firstAmount = metrics.find((m) => METRIC_KIND[m] === "amount");
 
   return (
     <Section title={heading} span="full">
@@ -78,7 +78,8 @@ export function CompareTable({
               {metrics.map((m) => {
                 const values = cols.map((c) => (c.last?.[METRIC_FIELD[m]] as number | null | undefined) ?? null);
                 const present = values.filter((v): v is number => v !== null);
-                const scale = m === "ansatte" ? null : amountScale(present);
+                const kind = METRIC_KIND[m];
+                const scale = kind === "amount" ? amountScale(present) : null;
                 const best = BEST_IS_HIGHEST.has(m) && present.length > 1 ? Math.max(...present) : null;
                 return (
                   <tr key={m}>
@@ -88,7 +89,7 @@ export function CompareTable({
                     </th>
                     {values.map((v, i) => (
                       <td key={cols[i]!.id} className={`lasso-num ${v !== null && v === best ? "lasso-best" : ""} ${v !== null && v < 0 && m === "resultat" ? "lasso-down" : ""}`}>
-                        {v === null ? <span className="lasso-notreported">Ikke oplyst</span> : scale ? formatScaled(v, scale) : formatNumber(v)}
+                        {v === null ? <span className="lasso-notreported">Ikke oplyst</span> : kind === "percent" ? formatPercent(v, false) : scale ? formatScaled(v, scale) : formatNumber(v)}
                       </td>
                     ))}
                   </tr>

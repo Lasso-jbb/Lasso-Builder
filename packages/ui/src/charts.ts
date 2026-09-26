@@ -1,4 +1,4 @@
-import { amountScale, formatNumber, formatScaled, type AmountScale } from "@lasso/spec";
+import { amountScale, formatNumber, formatPercent, formatScaled, type AmountScale, type MetricKind } from "@lasso/spec";
 
 /**
  * Fælles SVG-hjælpere til graferne i katalog 13. Ren SVG, intet chartbibliotek
@@ -35,9 +35,10 @@ export interface ChartLabel {
   label: (v: number) => string;
 }
 
-/** Fælles enhed og labelfunktion for et sæt værdier; "ansatte" har ingen enhed. */
-export function labelFor(values: readonly number[], isCount: boolean): ChartLabel {
-  if (isCount) return { scale: null, label: (v) => formatNumber(v) };
+/** Fælles enhed og labelfunktion for et sæt værdier: "count" (fx ansatte) har ingen enhed, "percent" er et nøgletal som procent/ratio. */
+export function labelFor(values: readonly number[], kind: MetricKind): ChartLabel {
+  if (kind === "count") return { scale: null, label: (v) => formatNumber(v) };
+  if (kind === "percent") return { scale: null, label: (v) => formatPercent(v, false) };
   const scale = amountScale(values);
   return { scale, label: (v) => formatScaled(v, scale) };
 }

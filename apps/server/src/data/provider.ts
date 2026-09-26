@@ -6,6 +6,7 @@ import type {
   Criterion,
   DataSourceKind,
   FinancialsVM,
+  FinancialStatementsVM,
   NewsVM,
   ObservationsVM,
   OwnershipGraphVM,
@@ -35,6 +36,8 @@ export interface DataProvider {
   findCompanies(name: string, limit: number): Promise<CompanyRowVM[]>;
   company(lassoId: string): Promise<CompanyVM>;
   financials(lassoId: string): Promise<FinancialsVM>;
+  /** Katalog 19: fuldt regnskab (resultatopgørelse, balance, pengestrøm). Samme kilde som `financials`. */
+  financialStatements(lassoId: string): Promise<FinancialStatementsVM>;
   people(lassoId: string): Promise<PersonRowVM[]>;
   ownership(lassoId: string): Promise<OwnershipVM>;
   /** Katalog 10: 0–100 risikoscore. Ingen live datakilde endnu (se LiveProvider); score: null = "ikke oplyst". */

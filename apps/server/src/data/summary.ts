@@ -5,8 +5,10 @@ import {
   formatCriterion,
   formatDate,
   formatNumber,
+  formatPercent,
   formatScaled,
   formatShare,
+  METRIC_KIND,
   METRIC_LABELS,
   ownershipGraphKey,
   percentChange,
@@ -61,10 +63,12 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
         // Hele rækken, så modellen kan kommentere udviklingen (og værter uden grafik kan vise den).
         const { metric, points } = chartSeries(f, c.metric, c.years);
         if (points.length) {
-          const scale = metric === "ansatte" ? null : amountScale(points.map((p) => p.value));
+          const kind = METRIC_KIND[metric];
+          const scale = kind === "amount" ? amountScale(points.map((p) => p.value)) : null;
           const unit = scale ? ` (${scale.label})` : "";
+          const val = (v: number) => (kind === "percent" ? formatPercent(v, false) : scale ? formatScaled(v, scale) : formatNumber(v));
           lines.push(
-            `${METRIC_LABELS[metric]} ${points[0]!.year}–${points.at(-1)!.year}${unit}: ${points.map((p) => `${p.year} ${scale ? formatScaled(p.value, scale) : formatNumber(p.value)}`).join(", ")}.`,
+            `${METRIC_LABELS[metric]} ${points[0]!.year}–${points.at(-1)!.year}${unit}: ${points.map((p) => `${p.year} ${val(p.value)}`).join(", ")}.`,
           );
         }
       }

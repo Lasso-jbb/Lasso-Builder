@@ -6,6 +6,7 @@ import {
   type CompanyRowVM,
   type Criterion,
   type FinancialsVM,
+  type FinancialStatementsVM,
   type LivestockVM,
   type ProductionUnitsVM,
   type PropertiesVM,
@@ -18,6 +19,7 @@ import {
   adaptBeneficialOwnership,
   adaptCompany,
   adaptFinancials,
+  adaptFinancialStatements,
   adaptNews,
   adaptObservations,
   adaptOwnership,
@@ -187,6 +189,11 @@ export class LiveProvider implements DataProvider {
 
   async financials(lassoId: string): Promise<FinancialsVM> {
     return adaptFinancials(lassoId, await this.client.reports(lassoId));
+  }
+
+  /** Katalog 19: samme endpoint som `financials` (klienten cacher svaret, så det ikke hentes to gange). */
+  async financialStatements(lassoId: string): Promise<FinancialStatementsVM> {
+    return adaptFinancialStatements(lassoId, await this.client.reports(lassoId));
   }
 
   async people(lassoId: string) {

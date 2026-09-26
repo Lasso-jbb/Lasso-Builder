@@ -130,6 +130,25 @@ POST /apps/search/lassoid  { "filters": [ … ], "OrderBy": "employees", "limit"
   (`currentLiabilities`/`shortTermLiabilities` + `nonCurrentLiabilities`/`longTermLiabilities`).
   Findes ingen af delene, er `liabilities` `undefined`, og de to komponenter viser deres
   tomme tilstand. Bekræft mod et rigtigt regnskab med disse begreber, når adgang er der.
+- **Fuldt regnskab** (`FinancialStatementsVM`, brugt af `LassoIncomeStatement`, `LassoBalanceSheet`
+  og `LassoCashFlow`, katalog 19): samme bekræftede endpoint (`GET /{lassoId}/reports/advanced`),
+  genbrugt af `LiveProvider.financialStatements` (klientens cache undgår et dobbeltkald til
+  `financials`). Hovedtallene (omsætning/bruttofortjeneste, resultat, egenkapital, balancesum
+  som egenkapital+gæld) er de samme bekræftede/afledte tal som `FinancialYear`. Alle øvrige
+  linjeposter (`staffCosts`, `otherOperatingCosts`, `ebitda`, `depreciation`, `financialItemsNet`,
+  `profitBeforeTax`, `tax`; balancens `intangibleAssets`, `tangibleAssets`, `fixedAssetsTotal`,
+  `tradeReceivables`, `otherReceivables`, `cash`, `currentAssetsTotal`, `shareCapital`,
+  `retainedEarnings`, `longTermLiabilities`, `shortTermLiabilities`; hele pengestrømsopgørelsen)
+  er UBEKRÆFTEDE XBRL-begreb-gæt i `adaptFinancialStatements` (`apps/server/src/lasso/adapters.ts`).
+  De forsøger flere kendte XBRL-navne (fx `EmployeeBenefitsExpense`, `DepreciationAmortisationAndImpairment…`,
+  `ProfitLossFromOrdinaryActivitiesBeforeTax`, `CashFlowsFromUsedInOperatingActivities`) og falder
+  til `null` ("—" i UI'en), når begrebet ikke findes, i stedet for at fejle. EBITDA og balancesum
+  har en regnet reserve, når intet direkte begreb findes (bruttofortjeneste − personale − andre
+  drift; egenkapital + gæld). Pengestrømsopgørelsen medtages kun, når mindst ét
+  pengestrøms-specifikt begreb er fundet (klasse B skal ikke aflægge den); ellers viser
+  `LassoCashFlow` "Pengestrømsopgørelse er ikke indberettet." Bekræft alle disse feltnavne mod
+  rigtige regnskaber, når adgang er der.
+
 ## Nyheder
 
 ```

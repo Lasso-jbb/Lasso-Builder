@@ -130,6 +130,27 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       "Brug til: nøgletal × år som TAL i en tabel med ændring og tendens pr. række – når brugeren vil aflæse præcise tal for 1–6 nøgletal over 2–10 år, eller når 4+ nøgletal skal ses over tid (for mange til en graf). Brug ikke når: ét nøgletal som udvikling (LassoBarChart), 2–3 nøgletal som graf (LassoGroupedBarChart), eller kun ét år (LassoKeyValueList variant 'financials'). Kræver: company, metrics?, years. Eksempel: 'Giv mig omsætning, bruttofortjeneste, resultat og egenkapital for X for hvert af de sidste 5 år i en tabel.'",
     props: `company, metrics? (1–6 af ${METRICS.join(" | ")}), years (2–10, standard 5), title?`,
   },
+  {
+    type: "LassoIncomeStatement",
+    title: "Resultatopgørelse, fuld",
+    description:
+      "Brug til: HELE resultatopgørelsen med alle linjer og subtotaler (personaleomkostninger, andre driftsomkostninger, EBITDA, af- og nedskrivninger, finansielle poster, resultat før skat, skat, årets resultat), 2–3 år side om side. Vælg ved 'hele regnskabet', 'resultatopgørelsen', 'vis alle posterne'. Brug ikke når: kun nøgletallene skal ses (LassoKeyFigureCards, LassoMultiYearTable). Kræver: company, years? (2–3, standard 2); underposter ud over hovedtallene er ubekræftede og kan stå som 'Ikke oplyst'. Eksempel: 'Vis hele resultatopgørelsen for X for de sidste to år.'",
+    props: "company, years? (2–3, standard 2), title?",
+  },
+  {
+    type: "LassoBalanceSheet",
+    title: "Balance, fuld",
+    description:
+      "Brug til: HELE balancen (aktiver og passiver) med alle linjer og subtotaler (anlægsaktiver, omsætningsaktiver, balancesum, egenkapital, gæld), 2–3 år side om side. Vælg ved 'balancen', 'aktiver og passiver', 'hele regnskabet'. Brug ikke når: kun egenkapital/gæld som andele (LassoShareBars/LassoStackedBarChart) eller ét nøgletal (LassoKeyFigureCards). Kræver: company, years? (2–3, standard 2); underposter ud over egenkapital/balancesum er ubekræftede. Eksempel: 'Vis balancen for X for de sidste to år.'",
+    props: "company, years? (2–3, standard 2), title?",
+  },
+  {
+    type: "LassoCashFlow",
+    title: "Pengestrømsopgørelse",
+    description:
+      "Brug til: pengestrøm fra drift, investering og finansiering frem til årets pengestrøm og likvider ultimo, 2–3 år side om side. Vælg ved 'pengestrøm', 'cash flow', 'hvor bliver likviditeten af'. Brug ikke når: det gælder resultat (LassoIncomeStatement) eller balance (LassoBalanceSheet). Kræver: company, years? (2–3, standard 2); selskaber i regnskabsklasse B skal ikke aflægge opgørelsen, og komponenten viser da 'Pengestrømsopgørelse er ikke indberettet'. Eksempel: 'Hvordan har pengestrømmen udviklet sig hos X?'",
+    props: "company, years? (2–3, standard 2), title?",
+  },
 
   // (b) Personer og ejere ------------------------------------------------------
   {

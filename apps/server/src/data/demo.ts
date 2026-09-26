@@ -5,6 +5,7 @@ import {
   type CompanyRowVM,
   type CompanyVM,
   type FinancialsVM,
+  type FinancialStatementsVM,
   type NewsVM,
   type AuditorIndependenceVM,
   type AuditorRelationVM,
@@ -176,6 +177,120 @@ function financialsFor(c: DemoCompany): FinancialsVM {
       };
     }),
   };
+}
+
+/**
+ * Katalog 19, "Regnskabsdetaljer": fuldt eksempelregnskab afledt af `financialsFor`, så
+ * hovedtallene (bruttofortjeneste, resultat, egenkapital, balancesum) er identiske med dem,
+ * andre komponenter (LassoKeyFigureCards, LassoMultiYearTable) allerede viser for samme
+ * virksomhed. Underposterne er opdigtede, men deterministiske og indbyrdes konsistente
+ * (bruttofortjeneste - personale - andre drift = EBITDA osv.), som i den rigtige tabel.
+ * Én demovirksomhed (Eksempel Café I/S) har bevidst ingen pengestrømsopgørelse, så
+ * LassoCashFlows tomme tilstand ("ikke indberettet") kan ses.
+ */
+function financialStatementsFor(c: DemoCompany): FinancialStatementsVM {
+  const f = financialsFor(c);
+  const seed = Number(c.cvr!.slice(-2));
+  const hasCashFlow = c.cvr !== "99000009";
+  const incomeStatement: FinancialStatementsVM["incomeStatement"] = [];
+  const balanceSheet: FinancialStatementsVM["balanceSheet"] = [];
+  const cashFlow: FinancialStatementsVM["cashFlow"] = [];
+  let cashCursor = Math.round((f.years[0]?.liabilities ?? 2_000_000) * 0.18);
+  f.years.forEach((y) => {
+    const gp = y.grossProfit ?? 0;
+    const staffCosts = -Math.round(gp * 0.62);
+    const otherOperatingCosts = -Math.round(gp * 0.045);
+    const ebitda = gp + staffCosts + otherOperatingCosts;
+    const depreciation = -Math.round(Math.abs(ebitda) * 0.3 + 150 + (seed % 7) * 20);
+    const profit = y.profit ?? 0;
+    const tax = profit >= 0 ? -Math.round(profit * 0.22) : Math.round(-profit * 0.29);
+    const profitBeforeTax = profit - tax;
+    const financialItemsNet = profitBeforeTax - (ebitda + depreciation);
+    incomeStatement.push({
+      year: y.year,
+      periodStart: y.periodStart,
+      periodEnd: y.periodEnd,
+      revenue: y.revenue,
+      grossProfit: gp,
+      staffCosts,
+      otherOperatingCosts,
+      ebitda,
+      depreciation,
+      financialItemsNet,
+      profitBeforeTax,
+      tax,
+      profit,
+    });
+
+    const equityTotal = y.equity ?? 0;
+    const liabilitiesTotal = y.liabilities ?? 0;
+    const assetsTotal = equityTotal + liabilitiesTotal;
+    const longTermLiabilities = Math.round(liabilitiesTotal * 0.45);
+    const shortTermLiabilities = liabilitiesTotal - longTermLiabilities;
+    const fixedAssetsTotal = Math.round(assetsTotal * 0.36);
+    const intangibleAssets = Math.round(fixedAssetsTotal * 0.65);
+    const tangibleAssets = fixedAssetsTotal - intangibleAssets;
+    const currentAssetsTotal = assetsTotal - fixedAssetsTotal;
+    const shareCapital = Math.min(equityTotal, Math.round(assetsTotal * 0.06) || 1000);
+    const retainedEarnings = equityTotal - shareCapital;
+
+    let cash: number;
+    if (hasCashFlow) {
+      const workingCapitalChange = -Math.round(Math.abs(otherOperatingCosts) * 0.5 + (seed % 5) * 40);
+      const operatingCashFlow = profit + Math.abs(depreciation) + workingCapitalChange;
+      const intangibleInvestments = -Math.round(intangibleAssets * 0.2 + 100);
+      const investingCashFlow = intangibleInvestments;
+      const capitalIncrease = y.year === f.years.at(-1)!.year ? Math.round(shareCapital * 0.02) : 0;
+      const loanChange = Math.round(longTermLiabilities * 0.05);
+      const financingCashFlow = capitalIncrease + loanChange;
+      const netCashFlow = operatingCashFlow + investingCashFlow + financingCashFlow;
+      const cashBeginning = cashCursor;
+      const cashEnding = cashBeginning + netCashFlow;
+      cashCursor = cashEnding;
+      cash = cashEnding;
+      cashFlow.push({
+        year: y.year,
+        periodEnd: y.periodEnd,
+        profit,
+        depreciation: Math.abs(depreciation),
+        workingCapitalChange,
+        operatingCashFlow,
+        intangibleInvestments,
+        investingCashFlow,
+        capitalIncrease,
+        loanChange,
+        financingCashFlow,
+        netCashFlow,
+        cashBeginning,
+        cashEnding,
+      });
+    } else {
+      cash = Math.round(currentAssetsTotal * 0.28);
+    }
+    const tradeReceivables = Math.max(0, Math.round((currentAssetsTotal - cash) * 0.6));
+    const otherReceivables = Math.max(0, currentAssetsTotal - cash - tradeReceivables);
+
+    balanceSheet.push({
+      year: y.year,
+      periodEnd: y.periodEnd,
+      intangibleAssets,
+      tangibleAssets,
+      fixedAssetsTotal,
+      tradeReceivables,
+      otherReceivables,
+      cash,
+      currentAssetsTotal,
+      assetsTotal,
+      shareCapital,
+      retainedEarnings,
+      equityTotal,
+      longTermLiabilities,
+      shortTermLiabilities,
+      liabilitiesTotal,
+      liabilitiesAndEquityTotal: assetsTotal,
+    });
+  });
+  return { lassoId: c.lassoId, currency: "DKK", incomeStatement, balanceSheet, cashFlow };
 }
 
 function toRow(c: DemoCompany): CompanyRowVM {
@@ -389,6 +504,10 @@ export class DemoProvider implements DataProvider {
 
   async financials(lassoId: string) {
     return financialsFor(get(lassoId));
+  }
+
+  async financialStatements(lassoId: string) {
+    return financialStatementsFor(get(lassoId));
   }
 
   async people(lassoId: string) {

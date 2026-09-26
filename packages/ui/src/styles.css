@@ -524,6 +524,32 @@
   .lasso-myt__delta, .lasso-myt__trend { display: none; }
 }
 
+/* ---------- 19 Regnskabsdetaljer: resultatopgørelse, balance, pengestrøm ---------- */
+.lasso-stmt { display: flex; flex-direction: column; min-width: max-content; }
+.lasso-stmt__row { display: flex; align-items: center; min-height: 40px; }
+.lasso-stmt__row--head { height: 36px; border-bottom: 1px solid var(--lasso-border); }
+.lasso-stmt__row--line { border-bottom: 1px solid var(--lasso-divider-subtle); }
+.lasso-stmt__row--subtotal { background: var(--lasso-surface-2); font-weight: 600; border-bottom: 1px solid var(--lasso-divider-subtle); }
+.lasso-stmt__row--bottom { font-weight: 700; border-top: 1px solid var(--lasso-text); border-bottom: 0; height: 44px; }
+.lasso-stmt__group { padding: 8px 0 4px; font-size: var(--lasso-fs-label); font-weight: 600; letter-spacing: var(--lasso-ls-label); text-transform: uppercase; color: var(--lasso-accent-text); }
+.lasso-stmt__label { flex: 1 1 260px; min-width: 200px; font-size: var(--lasso-fs); color: var(--lasso-text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lasso-stmt__row--head .lasso-stmt__label { font-size: var(--lasso-fs-label); font-weight: 600; letter-spacing: var(--lasso-ls-label); color: var(--lasso-muted); text-transform: uppercase; }
+.lasso-stmt__row--subtotal .lasso-stmt__label, .lasso-stmt__row--bottom .lasso-stmt__label { color: var(--lasso-text); }
+.lasso-stmt__row--line .lasso-stmt__label { padding-left: 16px; font-size: var(--lasso-fs-sm); color: var(--lasso-text-3); }
+.lasso-stmt__year { flex: none; width: 110px; text-align: right; font-size: var(--lasso-fs); color: var(--lasso-text-2); display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.lasso-stmt__row--head .lasso-stmt__year { font-size: 12px; font-weight: 600; color: var(--lasso-muted); }
+.lasso-stmt__year--last { font-weight: 600; color: var(--lasso-text); }
+.lasso-stmt__row--line .lasso-stmt__year { font-size: var(--lasso-fs-sm); }
+.lasso-stmt__delta { flex: none; width: 90px; text-align: right; font-size: var(--lasso-fs-sm); font-weight: 500; white-space: nowrap; }
+.lasso-stmt__flag { display: inline-flex; color: var(--lasso-warning); cursor: help; }
+@container lasso (max-width: 768px) {
+  .lasso-stmt__year:not(.lasso-stmt__year--last) { display: none; }
+}
+@container lasso (max-width: 560px) {
+  .lasso-stmt__label { min-width: 140px; }
+  .lasso-stmt__year { width: 84px; }
+}
+
 /* ---------- 10 Scoremåler ---------- */
 .lasso-gauge { display: flex; flex-direction: column; gap: 6px; }
 .lasso-gauge__value { display: flex; align-items: baseline; gap: 10px; padding-top: 8px; flex-wrap: wrap; }

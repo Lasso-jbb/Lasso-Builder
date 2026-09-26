@@ -49,6 +49,16 @@ export interface FinancialYear {
    * og fordelingen egenkapital/gæld i katalog 13.
    */
   liabilities?: number | null;
+  /** Aktiver/passiver i alt (balancesum). Ubekræftet; afledt af egenkapital + gæld, når begge er kendt (se docs/lasso-endpoints.md). */
+  assetsTotal?: number | null;
+  /** Resultat af primær drift før af- og nedskrivninger. Ubekræftet XBRL-begreb (se docs/lasso-endpoints.md). */
+  ebitda?: number | null;
+  /** Egenkapital i procent af balancesum (nøgletal "soliditetsgrad"). Beregnet, ikke et XBRL-begreb. */
+  soliditetsgrad?: number | null;
+  /** Årets resultat i procent af omsætning (eller bruttofortjeneste, når omsætning ikke er oplyst). Beregnet. */
+  overskudsgrad?: number | null;
+  /** Omsætningsaktiver i procent af kortfristet gæld (nøgletal "likviditetsgrad"). Beregnet. */
+  likviditetsgrad?: number | null;
 }
 
 export interface FinancialsVM {
@@ -56,6 +66,80 @@ export interface FinancialsVM {
   currency: string;
   /** Sorteret stigende efter år. */
   years: FinancialYear[];
+}
+
+/**
+ * Fuldt regnskab for ét år (katalog 19, "Regnskabsdetaljer"): resultatopgørelse,
+ * balance og pengestrøm med alle underposter. Hovedtallene (bruttofortjeneste/
+ * omsætning, resultat, egenkapital, balancesum) er de samme bekræftede/afledte
+ * tal som i `FinancialYear`; underposterne (personaleomkostninger, andre
+ * driftsomkostninger, af- og nedskrivninger, finansielle poster, skat, og hele
+ * balancens linjer ud over egenkapital/balancesum) er UBEKRÆFTEDE XBRL-begreber
+ * (se docs/lasso-endpoints.md) og kan mangle ("—") for rigtige virksomheder.
+ */
+export interface IncomeStatementYear {
+  year: number;
+  periodStart?: string;
+  periodEnd?: string;
+  revenue?: number | null;
+  grossProfit?: number | null;
+  staffCosts?: number | null;
+  otherOperatingCosts?: number | null;
+  ebitda?: number | null;
+  depreciation?: number | null;
+  financialItemsNet?: number | null;
+  profitBeforeTax?: number | null;
+  tax?: number | null;
+  profit?: number | null;
+}
+
+export interface BalanceSheetYear {
+  year: number;
+  periodEnd?: string;
+  intangibleAssets?: number | null;
+  tangibleAssets?: number | null;
+  fixedAssetsTotal?: number | null;
+  tradeReceivables?: number | null;
+  otherReceivables?: number | null;
+  cash?: number | null;
+  currentAssetsTotal?: number | null;
+  assetsTotal?: number | null;
+  shareCapital?: number | null;
+  retainedEarnings?: number | null;
+  equityTotal?: number | null;
+  longTermLiabilities?: number | null;
+  shortTermLiabilities?: number | null;
+  liabilitiesTotal?: number | null;
+  /** Passiver i alt; identisk med `assetsTotal`, når begge er kendt (balancen går op). */
+  liabilitiesAndEquityTotal?: number | null;
+}
+
+/** Kun til stede for regnskabsklasse C/D; klasse B skal ikke aflægge pengestrømsopgørelse. */
+export interface CashFlowYear {
+  year: number;
+  periodEnd?: string;
+  profit?: number | null;
+  depreciation?: number | null;
+  workingCapitalChange?: number | null;
+  operatingCashFlow?: number | null;
+  intangibleInvestments?: number | null;
+  investingCashFlow?: number | null;
+  capitalIncrease?: number | null;
+  loanChange?: number | null;
+  financingCashFlow?: number | null;
+  netCashFlow?: number | null;
+  cashBeginning?: number | null;
+  cashEnding?: number | null;
+}
+
+export interface FinancialStatementsVM {
+  lassoId: string;
+  currency: string;
+  /** Sorteret stigende efter år, samme år som `FinancialsVM.years`. */
+  incomeStatement: IncomeStatementYear[];
+  balanceSheet: BalanceSheetYear[];
+  /** Tom, når selskabet ikke aflægger pengestrømsopgørelse (klasse B) eller regnskabet ikke oplyser den. */
+  cashFlow: CashFlowYear[];
 }
 
 export interface PersonRowVM {
@@ -392,6 +476,8 @@ export interface Dataset {
   generatedAt: string;
   companies: Record<string, CompanyVM>;
   financials: Record<string, FinancialsVM>;
+  /** Katalog 19: fuldt regnskab (resultatopgørelse, balance, pengestrøm), slået op pr. Lasso-ID. */
+  financialStatements: Record<string, FinancialStatementsVM>;
   people: Record<string, PersonRowVM[]>;
   ownership: Record<string, OwnershipVM>;
   beneficialOwnership: Record<string, BeneficialOwnershipVM>;
@@ -418,6 +504,7 @@ export function emptyDataset(source: DataSourceKind): Dataset {
     generatedAt: new Date().toISOString(),
     companies: {},
     financials: {},
+    financialStatements: {},
     people: {},
     ownership: {},
     beneficialOwnership: {},
