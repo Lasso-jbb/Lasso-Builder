@@ -750,8 +750,8 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-property__head { display: flex; flex-direction: column; gap: 2px; padding: var(--lasso-space-4) var(--lasso-space-4) var(--lasso-space-3); }
 .lasso-property__address { font-size: 15px; line-height: 18px; font-weight: 600; color: var(--lasso-text); }
 .lasso-property__kv { display: flex; flex-direction: column; padding: 0 var(--lasso-space-4) var(--lasso-space-4); }
-.lasso-kv-row { display: flex; align-items: center; justify-content: space-between; gap: var(--lasso-space-3); height: 34px; border-top: 1px solid var(--lasso-divider-subtle); font-size: var(--lasso-fs-sm); color: var(--lasso-text); }
-.lasso-kv-row > span:first-child { color: var(--lasso-text-3); }
+.lasso-property__row { display: flex; align-items: center; justify-content: space-between; gap: var(--lasso-space-3); height: 34px; border-top: 1px solid var(--lasso-divider-subtle); font-size: var(--lasso-fs-sm); color: var(--lasso-text); }
+.lasso-property__row > span:first-child { color: var(--lasso-text-3); }
 .lasso-property__link { color: var(--lasso-accent-text); }
 .lasso-property__strong { color: var(--lasso-text); font-weight: 500; }
 .lasso-table--buildings th:nth-child(1), .lasso-table--buildings td:nth-child(1) { width: 70px; }
@@ -942,3 +942,20 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-odlist__group { padding: 12px 12px 6px; border-top: 1px solid var(--lasso-divider-subtle); font-size: var(--lasso-fs-label); line-height: 14px; font-weight: 600; letter-spacing: var(--lasso-ls-label); text-transform: uppercase; color: var(--lasso-muted); }
 .lasso-odlist__more { flex: 1 1 0; display: flex; align-items: center; justify-content: space-between; min-height: 32px; padding: 0; border: 0; background: none; font: inherit; color: var(--lasso-muted); cursor: pointer; text-align: left; }
 .lasso-odlist__more svg { fill: none; stroke: var(--lasso-placeholder); stroke-width: 1.5; }
+
+/* ---------- Dashboard (guide 23): hvert element står i sin celle i 4-kolonne-grid'et ---------- */
+.lasso-content--dashboard, .lasso-content--grid-2 { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: var(--lasso-space-7); row-gap: var(--lasso-space-10); align-items: start; }
+.lasso-cell { min-width: 0; }
+.lasso-cell--quarter { grid-column: span 1; }
+.lasso-cell--half { grid-column: span 2; }
+.lasso-cell--three-quarters { grid-column: span 3; }
+.lasso-cell--full { grid-column: 1 / -1; }
+.lasso-cell > * { grid-column: auto; }
+@container lasso (max-width: 960px) {
+  .lasso-content--dashboard, .lasso-content--grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lasso-cell--half, .lasso-cell--three-quarters { grid-column: 1 / -1; }
+}
+@container lasso (max-width: 560px) {
+  .lasso-content--dashboard, .lasso-content--grid-2 { grid-template-columns: minmax(0, 1fr); row-gap: var(--lasso-space-7); }
+  .lasso-cell { grid-column: 1 / -1; }
+}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { emptyDataset, searchKey, type Dataset, type ViewComponent, ownershipGraphKey } from "@lasso/spec";
+import { emptyDataset, searchKey, widthOf, type Dataset, type ViewComponent, ownershipGraphKey } from "@lasso/spec";
 import { FollowUps } from "./components/FollowUps.js";
 import { CompanyHead } from "./components/CompanyHead.js";
 import { CompanyTable } from "./components/CompanyTable.js";
@@ -212,7 +212,11 @@ export function LassoView(props: LassoViewProps) {
           <Skeleton lines={4} height={240} />
         ) : (
           <main className={`lasso-content lasso-content--grid-4 lasso-content--${spec.layout}`}>
-            {spec.components.map((c, i) => renderComponent(c, dataset, props, act, i))}
+            {spec.components.map((c, i) => (
+              <div key={i} className={`lasso-cell lasso-cell--${widthOf(c, spec.layout)}`}>
+                {renderComponent(c, dataset, props, act, i)}
+              </div>
+            ))}
           </main>
         )}
 

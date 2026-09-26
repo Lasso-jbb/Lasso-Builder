@@ -114,7 +114,7 @@ test("show_company tager et rent CVR-nummer og giver låst skabelon", async () =
   assert.equal(spec.title, "Eksempel Byg A/S");
   assert.deepEqual(
     spec.components.map((c) => c.type),
-    ["LassoCompanyHead", "LassoKeyFigureCards", "LassoBarChart", "LassoPersonList", "LassoOwnerList", "LassoFollowUps"],
+    ["LassoCompanyHead", "LassoKeyFigureCards", "LassoBarChart", "LassoKeyValueList", "LassoPersonList", "LassoOwnerList", "LassoFollowUps"],
   );
   const ds = (res._meta as Record<string, Dataset>)[DATASET_META_KEY]!;
   assert.equal(ds.companies["CVR-1-99000001"]?.name, "Eksempel Byg A/S");

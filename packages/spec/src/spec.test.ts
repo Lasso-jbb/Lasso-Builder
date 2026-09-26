@@ -15,6 +15,7 @@ import {
   searchQuerySchema,
   toLassoId,
   validateCriteria,
+  widthOf,
 } from "./index.js";
 
 test("toLassoId normaliserer CVR-numre", () => {
@@ -53,18 +54,32 @@ test("validateCriteria fanger forkerte felter, operatorer og værdier", () => {
   assert.deepEqual(issues.map((i) => i.index), [0, 1, 2, 3]);
 });
 
-test("companyTemplate har låst rækkefølge og respekterer sections", () => {
+test("companyTemplate er ét cockpit i guidens rækkefølge og respekterer sections", () => {
   const full = companyTemplate("CVR-1-12345678");
+  assert.equal(full.layout, "dashboard");
   assert.deepEqual(full.components.map((c) => c.type), [
     "LassoCompanyHead",
     "LassoKeyFigureCards",
     "LassoBarChart",
+    "LassoKeyValueList",
     "LassoPersonList",
     "LassoOwnerList",
     "LassoFollowUps",
   ]);
+  // Graf og stamdata står side om side, ledelse og ejere ligeså.
+  assert.deepEqual(full.components.map((c) => widthOf(c, full.layout)), ["full", "full", "half", "half", "half", "half", "full"]);
   const small = companyTemplate("CVR-1-12345678", { sections: ["graf", "noegletal"] });
   assert.deepEqual(small.components.map((c) => c.type), ["LassoCompanyHead", "LassoKeyFigureCards", "LassoBarChart"]);
+  // Uden stamdata står grafen ikke alene i en halv række.
+  assert.equal(widthOf(small.components[2]!, small.layout), "full");
+});
+
+test("width er valgfri på alle komponenter, og stack giver altid fuld bredde", () => {
+  const spec = parseViewSpec({ title: "x", components: [{ type: "LassoRelations", company: "CVR-1-1", width: "quarter" }, { type: "LassoTimeline", company: "CVR-1-1", width: "three-quarters" }] });
+  assert.equal(spec.layout, "dashboard");
+  assert.deepEqual(spec.components.map((c) => widthOf(c, spec.layout)), ["quarter", "three-quarters"]);
+  assert.deepEqual(spec.components.map((c) => widthOf(c, "stack")), ["full", "full"]);
+  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoRelations", company: "CVR-1-1", width: "third" }] }));
 });
 
 test("listTemplate lægger kriterier i rammen og tabellen", () => {

@@ -283,41 +283,59 @@ export const actionsSchema = z.object({
     .max(4),
 });
 
+/**
+ * Bredde i 4-kolonne-grid'et (guide 23: kun ¼, ½, ¾ og fuld). Udeladt = komponentens
+ * standardbredde (DEFAULT_WIDTH). På tablet og mobil lægger elementerne sig under hinanden.
+ */
+export const WIDTHS = ["quarter", "half", "three-quarters", "full"] as const;
+export type Width = (typeof WIDTHS)[number];
+const widthShape = {
+  width: z.enum(WIDTHS).optional().describe("Bredde i dashboardet: quarter (¼), half (½), three-quarters (¾) eller full. Udelad for standardbredden."),
+};
+function w<S extends z.ZodRawShape>(schema: z.ZodObject<S>) {
+  return schema.extend(widthShape);
+}
+
 export const componentSchema = z.discriminatedUnion("type", [
-  companyHeaderSchema,
-  keyFiguresSchema,
-  financialChartSchema,
-  groupedBarChartSchema,
-  stackedBarChartSchema,
-  lineChartSchema,
-  waterfallChartSchema,
-  shareBarsSchema,
-  rankingSchema,
-  peopleListSchema,
-  ownershipSchema,
-  ownershipDiagramSchema,
-  tableSchema,
-  comparisonSchema,
-  keyValueListSchema,
-  multiYearTableSchema,
-  scoreGaugeSchema,
-  riskObservationsSchema,
-  auditorIndependenceSchema,
-  productionUnitsSchema,
-  propertiesSchema,
-  livestockSchema,
-  actionsSchema,
-  relationsSchema,
-  beneficialOwnersSchema,
-  textSectionsSchema,
-  summarySchema,
-  timelineSchema,
-  newsSchema,
+  w(companyHeaderSchema),
+  w(keyFiguresSchema),
+  w(financialChartSchema),
+  w(groupedBarChartSchema),
+  w(stackedBarChartSchema),
+  w(lineChartSchema),
+  w(waterfallChartSchema),
+  w(shareBarsSchema),
+  w(rankingSchema),
+  w(peopleListSchema),
+  w(ownershipSchema),
+  w(ownershipDiagramSchema),
+  w(tableSchema),
+  w(comparisonSchema),
+  w(keyValueListSchema),
+  w(multiYearTableSchema),
+  w(scoreGaugeSchema),
+  w(riskObservationsSchema),
+  w(auditorIndependenceSchema),
+  w(productionUnitsSchema),
+  w(propertiesSchema),
+  w(livestockSchema),
+  w(actionsSchema),
+  w(relationsSchema),
+  w(beneficialOwnersSchema),
+  w(textSectionsSchema),
+  w(summarySchema),
+  w(timelineSchema),
+  w(newsSchema),
 ]);
 export type ViewComponent = z.infer<typeof componentSchema>;
 export type ComponentType = ViewComponent["type"];
 
-export const LAYOUTS = ["stack", "grid-2"] as const;
+/**
+ * 'dashboard' (standard): 4-kolonne-grid, hvor hver komponent står i sin bredde, så visningen
+ * læses som ét overblik. 'stack': alt i fuld bredde under hinanden. 'grid-2' er det gamle navn
+ * for dashboard og behandles ens.
+ */
+export const LAYOUTS = ["dashboard", "stack", "grid-2"] as const;
 
 export const viewSpecSchema = z.object({
   /** v2: komponentsættet bygget fra Paper-kataloget. v1-visninger (gamle komponentnavne) afvises. */
@@ -325,7 +343,7 @@ export const viewSpecSchema = z.object({
   kind: z.enum(["company", "list", "custom"]).default("custom"),
   title: z.string().min(1).max(120),
   subtitle: z.string().max(200).optional(),
-  layout: z.enum(LAYOUTS).default("stack").describe("'stack' = én kolonne. 'grid-2' = to kolonner på desktop, én på mobil."),
+  layout: z.enum(LAYOUTS).default("dashboard").describe("'dashboard' (standard) = ét samlet overblik i 4-kolonne-grid med hver komponents bredde. 'stack' = alt i fuld bredde under hinanden."),
   criteria: z.array(criterionSchema).max(20).default([]).describe("Vises som chips i rammen under titlen."),
   components: z.array(componentSchema).min(1).max(12),
 });
@@ -334,4 +352,46 @@ export type ViewSpecInput = z.input<typeof viewSpecSchema>;
 
 export function parseViewSpec(input: unknown): ViewSpec {
   return viewSpecSchema.parse(input);
+}
+
+/**
+ * Standardbredde pr. komponent (guide 23): nøgletal, tabeller og hoveder i fuld bredde,
+ * grafer mindst ½, lister og tekst ½, smalle overblik ¼.
+ */
+export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
+  LassoCompanyHead: "full",
+  LassoKeyFigureCards: "full",
+  LassoBarChart: "half",
+  LassoGroupedBarChart: "half",
+  LassoStackedBarChart: "half",
+  LassoLineChart: "half",
+  LassoWaterfallChart: "half",
+  LassoShareBars: "half",
+  LassoRanking: "half",
+  LassoPersonList: "half",
+  LassoOwnerList: "half",
+  LassoOwnershipDiagram: "full",
+  LassoCompanyTable: "full",
+  LassoCompareTable: "full",
+  LassoKeyValueList: "half",
+  LassoMultiYearTable: "full",
+  LassoScoreGauge: "quarter",
+  LassoRiskObservations: "full",
+  LassoAuditorIndependence: "full",
+  LassoProductionUnits: "full",
+  LassoProperties: "full",
+  LassoLivestock: "half",
+  LassoFollowUps: "full",
+  LassoRelations: "quarter",
+  LassoBeneficialOwners: "half",
+  LassoTextSections: "half",
+  LassoSummary: "full",
+  LassoTimeline: "half",
+  LassoNews: "half",
+};
+
+/** Den bredde, en komponent får i visningen. 'stack' giver altid fuld bredde. */
+export function widthOf(c: ViewComponent, layout: ViewSpec["layout"]): Width {
+  if (layout === "stack") return "full";
+  return c.width ?? DEFAULT_WIDTH[c.type];
 }

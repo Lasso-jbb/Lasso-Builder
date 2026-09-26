@@ -19,6 +19,8 @@ export interface CatalogEntry {
  * beskrivelserne, så modellen vælger antal og rækkefølge før den vælger komponent.
  */
 export const COMPOSITION_RULES = `Komposition (guide 23):
+- ÉN visning pr. svar. Kald højst ét af show_company, search_companies og render_view pr. brugerbesked, og kun én gang. Skal der mere med end show_company kan vise, så byg HELE svaret som én render_view-spec i stedet for at kalde flere værktøjer.
+- Visningen er ét dashboard (layout 'dashboard', standard): 4 kolonner, hver komponent i sin bredde (width: quarter ¼, half ½, three-quarters ¾, full). Udelad width for standardbredden. Nøgletal, tabeller og hoved står i fuld bredde; to halve (fx graf + LassoKeyValueList, LassoPersonList + LassoOwnerList) står side om side, så læg dem efter hinanden. Efterlad aldrig en halv alene i en række: giv den width 'full' eller en makker. En ¼ (fx LassoRelations) står ved siden af en ¾.
 - Virksomhedsside i denne rækkefølge: LassoCompanyHead; LassoRiskObservations kun hvis en observation er ≥50; LassoKeyFigureCards; ÉN graf ved siden af LassoKeyValueList (layout 'grid-2'); personer og ejere (LassoPersonList + LassoOwnerList, eller LassoRelations i smal kolonne); LassoTimeline og LassoNews.
 - Højst én graf pr. overblik. Flere grafer stables aldrig; vælg den ene, spørgsmålet peger på.
 - Bredt spørgsmål ("fortæl om X", "hvordan går det for X") → overblik med de centrale komponenter i rækkefølgen ovenfor.

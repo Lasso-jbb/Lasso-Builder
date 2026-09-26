@@ -56,19 +56,19 @@ function PropertyBlock({ property }: { property: PropertyVM }) {
           </div>
         </div>
         <div className="lasso-property__kv">
-          <div className="lasso-kv-row">
+          <div className="lasso-property__row">
             <span>Ejerforhold</span>
             <span>{property.ownership ?? <Missing />}</span>
           </div>
-          <div className="lasso-kv-row">
+          <div className="lasso-property__row">
             <span>Grundareal</span>
             <span>{property.landAreaM2 != null ? `${formatNumber(property.landAreaM2)} m²` : <Missing />}</span>
           </div>
-          <div className="lasso-kv-row">
+          <div className="lasso-property__row">
             <span>Bebygget areal</span>
             <span>{property.builtAreaM2 != null ? `${formatNumber(property.builtAreaM2)} m²` : <Missing />}</span>
           </div>
-          <div className="lasso-kv-row">
+          <div className="lasso-property__row">
             <span>Offentlig vurdering</span>
             <span>
               {property.publicValuation
@@ -76,7 +76,7 @@ function PropertyBlock({ property }: { property: PropertyVM }) {
                 : <Missing />}
             </span>
           </div>
-          <div className="lasso-kv-row">
+          <div className="lasso-property__row">
             <span>Hæftelser</span>
             <span className={property.encumbrances ? "lasso-property__link" : undefined}>
               {property.encumbrances == null ? <Missing /> : property.encumbrances > 0 ? `${property.encumbrances}, se tinglysning` : "Ingen"}
