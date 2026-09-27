@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import {
   changeFeedKey,
+  companyFactOptions,
   emptyDataset,
+  entityRefOf,
   FOCUS_LABELS,
   isPersonId,
+  sameAddress,
   savedPagesKey,
   searchKey,
   widthOf,
@@ -11,6 +14,7 @@ import {
   type Focus,
   type ViewComponent,
   type ViewSpec,
+  type Width,
   ownershipGraphKey,
 } from "@lasso/spec";
 import { FollowUps } from "./components/FollowUps.js";
@@ -51,6 +55,7 @@ import { PersonHead } from "./components/PersonHead.js";
 import { PersonRoles } from "./components/PersonRoles.js";
 import { PersonNetwork } from "./components/PersonNetwork.js";
 import { PersonRisk } from "./components/PersonRisk.js";
+import { PersonFacts } from "./components/PersonFacts.js";
 import { CreditRating } from "./components/CreditRating.js";
 import { AuditorIndependence } from "./components/AuditorIndependence.js";
 import { ChangeFeed } from "./components/ChangeFeed.js";
@@ -123,7 +128,9 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     }
     case "LassoCompareTable":
       return <CompareTable key={key} companies={c.companies} metrics={c.metrics} title={c.title} dataset={empty} onAction={act} canDrillDown={Boolean(props.host.drillDown)} />;
-    case "LassoKeyValueList":
+    case "LassoKeyValueList": {
+      // Det, hovedet, kontaktblokken og ejerlisten viser på samme side, gentages ikke (companyFacts).
+      const page = companyFactOptions(props.spec.components, c.company);
       return (
         <KeyValueList
           key={key}
@@ -133,11 +140,21 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           variant={c.variant}
           title={c.title}
           error={c.variant === "financials" ? err(`financials:${c.company}`) : err(`company:${c.company}`)}
-          hideContact={props.spec.components.some((x) => x.type === "LassoContact" && x.company === c.company)}
+          hideContact={page.hideContact}
+          hideIdentity={page.hideIdentity}
+          hideAuditor={page.hideAuditor}
+          exclude={c.exclude}
+          onOpen={props.host.drillDown ? act : undefined}
         />
       );
-    case "LassoContact":
-      return <LassoContact key={key} contact={empty.contact[c.company]} title={c.title} error={err(`contact:${c.company}`)} />;
+    }
+    case "LassoContact": {
+      // Adressen står i hovedet; kontaktblokken viser den kun, når den er en anden (fx fra hjemmesiden).
+      const contact = empty.contact[c.company];
+      const headOnPage = props.spec.components.some((x) => x.type === "LassoCompanyHead" && x.company === c.company);
+      const omitAddress = headOnPage && sameAddress(contact?.address, empty.companies[c.company]?.address);
+      return <LassoContact key={key} contact={contact} title={c.title} error={err(`contact:${c.company}`)} omitAddress={omitAddress} />;
+    }
     case "LassoContactPersons":
       return <LassoContactPersons key={key} data={empty.contactPersons[c.company]} title={c.title} error={err(`contactPersons:${c.company}`)} />;
     case "LassoMultiYearTable":
@@ -187,13 +204,41 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
         />
       );
     case "LassoTextSections":
-      return <LassoTextSections key={key} sections={empty.textSections[c.company]} title={c.title} error={err(`textSections:${c.company}`)} />;
+      return <LassoTextSections key={key} sections={empty.textSections[c.company]} title={c.title} variant={c.variant} error={err(`textSections:${c.company}`)} onOpen={props.host.drillDown ? act : undefined} />;
     case "LassoSummary":
       return <LassoSummary key={key} text={c.text} title={c.title} source={c.source} updated={c.updated} />;
-    case "LassoTimeline":
-      return <LassoTimeline key={key} timeline={empty.timeline[c.company]} title={c.title} error={err(`timeline:${c.company}`)} />;
-    case "LassoNews":
-      return <LassoNews key={key} news={empty.news[c.company]} limit={c.limit} companyName={empty.companies[c.company]?.name} error={err(`news:${c.company}`)} />;
+    case "LassoTimeline": {
+      // Virksomhed eller person (katalog 16: personens historik med selskabsnavne, der kan åbnes).
+      const k = entityRefOf(c);
+      return (
+        <LassoTimeline
+          key={key}
+          timeline={empty.timeline[k]}
+          title={c.title}
+          limit={c.limit}
+          error={err(`timeline:${k}`)}
+          onOpen={props.host.drillDown ? act : undefined}
+          emptyReason={c.person ? "Der er ingen registrerede rolleskift for personen i CVR." : undefined}
+        />
+      );
+    }
+    case "LassoNews": {
+      // Virksomhed eller person: sidens egen entitet står i fed i nyhederne og linker ikke til sig selv.
+      const k = entityRefOf(c);
+      const mention = c.person ? empty.persons[c.person]?.name : empty.companies[k]?.name;
+      return (
+        <LassoNews
+          key={key}
+          news={empty.news[k]}
+          limit={c.limit}
+          companyName={mention}
+          companyId={k}
+          error={err(`news:${k}`)}
+          onOpen={props.host.drillDown ? act : undefined}
+          emptyReason={c.person ? "Ingen nyheder om personen." : undefined}
+        />
+      );
+    }
     case "LassoPersonHead":
       return <PersonHead key={key} person={empty.persons[c.person]} error={err(`person:${c.person}`)} />;
     case "LassoPersonRoles":
@@ -202,6 +247,8 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return <PersonNetwork key={key} network={empty.personNetworks[c.person]} title={c.title} error={err(`personNetwork:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} />;
     case "LassoPersonRisk":
       return <PersonRisk key={key} person={empty.persons[c.person]} title={c.title} error={err(`person:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} />;
+    case "LassoPersonFacts":
+      return <PersonFacts key={key} person={empty.persons[c.person]} title={c.title} error={err(`person:${c.person}`)} />;
     case "LassoChangeFeed": {
       const k = changeFeedKey(c);
       return <ChangeFeed key={key} feed={empty.changeFeeds[k]} title={c.title} types={c.types} error={err(`changeFeed:${k}`)} onOpen={props.host.drillDown ? act : undefined} />;
@@ -244,6 +291,7 @@ const MOBILE_ORDER: Partial<Record<ViewComponent["type"], number>> = {
   LassoOwnerList: 31,
   LassoRelations: 32,
   LassoBeneficialOwners: 33,
+  LassoPersonFacts: 32,
   LassoPersonNetwork: 34,
   LassoPersonRisk: 35,
   LassoTimeline: 40,
@@ -253,31 +301,48 @@ function mobileOrder(c: ViewComponent): number {
   return MOBILE_ORDER[c.type] ?? 30;
 }
 
-type Indexed = { c: ViewComponent; i: number };
-type Band = { kind: "full"; item: Indexed } | { kind: "columns"; columns: Indexed[][] };
+export type Indexed = { c: ViewComponent; i: number };
+export type Band = { kind: "full"; item: Indexed } | { kind: "columns"; columns: Indexed[][] };
 
 /**
  * Layout 'columns' (portalens virksomhedsside): komponenter uden kolonne står i fuld bredde;
  * sammenhængende komponenter med kolonne samles i ét bånd, hvor hver kolonne stabler sine
- * sektioner. Så efterlader en kort sektion aldrig et hul ved siden af en lang.
+ * sektioner. Så efterlader en kort sektion aldrig et hul ved siden af en lang. Et lavere
+ * kolonnenummer end forrige komponents starter et nyt bånd (personsiden: roller | stamoplysninger,
+ * derunder netværk | risiko); komponisterne lægger ellers kolonnerne i stigende orden.
  */
-function columnBands(components: readonly ViewComponent[]): Band[] {
+export function columnBands(components: readonly ViewComponent[]): Band[] {
   const bands: Band[] = [];
+  let lastCol = 0;
   components.forEach((c, i) => {
     const col = c.column;
     if (!col) {
       bands.push({ kind: "full", item: { c, i } });
+      lastCol = 0;
       return;
     }
     let band = bands.at(-1);
-    if (!band || band.kind !== "columns") {
+    if (!band || band.kind !== "columns" || col < lastCol) {
       band = { kind: "columns", columns: [] };
       bands.push(band);
     }
+    lastCol = col;
     while (band.columns.length < col) band.columns.push([]);
     band.columns[col - 1]!.push({ c, i });
   });
   return bands;
+}
+
+const WIDTH_FR: Record<Width, number> = { quarter: 1, half: 2, "three-quarters": 3, full: 4 };
+
+/**
+ * Kolonnernes forhold i et bånd ud fra bredden på første sektion i hver kolonne (fx ¾ + ¼ giver
+ * 3fr 1fr). Mangler en bredde, eller er alle ens, deles båndet ligeligt som hidtil (undefined).
+ */
+export function bandTemplate(columns: readonly Indexed[][]): string | undefined {
+  const widths = columns.map((col) => col[0]?.c.width);
+  if (widths.length < 2 || widths.some((w) => !w) || widths.every((w) => w === widths[0])) return undefined;
+  return widths.map((w) => `minmax(0, ${WIDTH_FR[w!]}fr)`).join(" ");
 }
 
 type SaveTarget = Extract<ViewAction, { kind: "save-page" }>;
@@ -455,7 +520,11 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
                       {renderComponent(band.item.c, dataset, props, act, band.item.i)}
                     </div>
                   ) : (
-                    <div key={`b${b}`} className={`lasso-cell lasso-cell--full lasso-columns lasso-columns--${spec.columns ?? 3}`}>
+                    <div
+                      key={`b${b}`}
+                      className={`lasso-cell lasso-cell--full lasso-columns lasso-columns--${spec.columns ?? 3}${bandTemplate(band.columns) ? " lasso-columns--ratio" : ""}`}
+                      style={bandTemplate(band.columns) ? { ["--lasso-columns-template" as string]: bandTemplate(band.columns) } : undefined}
+                    >
                       {band.columns.map((col, k) => (
                         <div key={k} className="lasso-column">
                           {col.map(({ c, i }) => (

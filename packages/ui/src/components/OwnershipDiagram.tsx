@@ -159,6 +159,8 @@ export function OwnershipDiagram({ graph, error, title, onAction, canDrillDown, 
 
   const root = graph.nodes.find((n) => n.id === graph.rootId);
   const rootName = root?.name ?? graph.rootId;
+  // Personsiden (katalog 16): roden er en person (pille); pilene går til de selskaber, personen ejer.
+  const personRoot = root?.kind === "person";
   const open = (n: OwnershipNodeVM | undefined) =>
     onAction && canDrillDown && n && n.kind === "company" && n.id.startsWith("CVR-1-") ? () => onAction({ kind: "open-company", lassoId: n.id, name: n.name }) : undefined;
   const source = <SourceLine source="CVR via Lasso" updated={graph.fetchedAt} />;
@@ -168,7 +170,7 @@ export function OwnershipDiagram({ graph, error, title, onAction, canDrillDown, 
     return (
       <Section title={heading} className="lasso-odiagram">
         <div ref={ref}>
-          <OwnershipList graph={graph} depthUp={up} depthDown={down} open={open} />
+          <OwnershipList graph={graph} depthUp={up} depthDown={down} open={open} personRoot={personRoot} />
           {canFullscreen && onAction && layout && layout.nodes.length > 1 ? (
             <button type="button" className="lasso-btn lasso-odiagram__full" onClick={() => onAction({ kind: "fullscreen" })}>
               <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
@@ -266,19 +268,22 @@ export function OwnershipDiagram({ graph, error, title, onAction, canDrillDown, 
 
   const toolbar = (
     <div className="lasso-odiagram__toolbar" role="toolbar" aria-label="Ejerdiagram">
-      <div className="lasso-odiagram__seg" role="radiogroup" aria-label="Retning">
-        {(
-          [
-            ["both", "Begge veje"],
-            ["up", "Kun ejere"],
-            ["down", "Kun datterselskaber"],
-          ] as const
-        ).map(([k, label]) => (
-          <button key={k} type="button" role="radio" aria-checked={direction === k} className={direction === k ? "is-on" : ""} onClick={() => setDirection(k)} disabled={noData}>
-            {label}
-          </button>
-        ))}
-      </div>
+      {/* En person har ingen ejere, så retningsvalget giver kun mening for et selskab. */}
+      {personRoot ? null : (
+        <div className="lasso-odiagram__seg" role="radiogroup" aria-label="Retning">
+          {(
+            [
+              ["both", "Begge veje"],
+              ["up", "Kun ejere"],
+              ["down", "Kun datterselskaber"],
+            ] as const
+          ).map(([k, label]) => (
+            <button key={k} type="button" role="radio" aria-checked={direction === k} className={direction === k ? "is-on" : ""} onClick={() => setDirection(k)} disabled={noData}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
       <span className="lasso-odiagram__chip lasso-odiagram__chip--static">
         <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
           <rect x="3" y="5" width="18" height="16" rx="2" />
@@ -369,9 +374,10 @@ export function OwnershipDiagram({ graph, error, title, onAction, canDrillDown, 
         <div className="lasso-odiagram__empty" style={{ top: p.y + (layout.nodes[0]!.y + layout.nodes[0]!.h) * z + 20 }}>
           {graph.edges.length === 0 ? (
             <>
-              <p className="lasso-odiagram__empty-title">Ingen registrerede ejere eller datterselskaber</p>
+              <p className="lasso-odiagram__empty-title">{personRoot ? "Ingen registrerede ejerskaber" : "Ingen registrerede ejere eller datterselskaber"}</p>
               <p className="lasso-odiagram__empty-text">
-                {rootName} har ingen legale ejere over 5 % i CVR og ejer ikke andre selskaber. Sidst tjekket {formatDate(graph.fetchedAt ?? new Date().toISOString())}.
+                {personRoot ? `${rootName} ejer ingen selskaber i CVR (legale ejerandele over 5 %).` : `${rootName} har ingen legale ejere over 5 % i CVR og ejer ikke andre selskaber.`} Sidst tjekket{" "}
+                {formatDate(graph.fetchedAt ?? new Date().toISOString())}.
               </p>
             </>
           ) : (
@@ -382,7 +388,7 @@ export function OwnershipDiagram({ graph, error, title, onAction, canDrillDown, 
           )}
         </div>
       ) : null}
-      {!empty && canvasW >= 720 ? <Legend /> : null}
+      {!empty && canvasW >= 720 ? <Legend personRoot={personRoot} /> : null}
       <div className="lasso-odiagram__zoom" role="group" aria-label="Zoom">
         <button type="button" aria-label="Zoom ind" onClick={() => setZoomStep(1)} disabled={z >= 2}>
           +
@@ -414,6 +420,7 @@ export function OwnershipDiagram({ graph, error, title, onAction, canDrillDown, 
               node={selectedNode}
               graph={graph}
               rootName={rootName}
+              personRoot={personRoot}
               onClose={() => setSelected(null)}
               open={open(selectedNode.entity)}
               fromHere={
@@ -549,11 +556,11 @@ function EdgeLabel({ e, dim }: { e: LayoutEdge; dim: boolean }) {
   );
 }
 
-function Legend() {
+function Legend({ personRoot = false }: { personRoot?: boolean }) {
   return (
     <div className="lasso-odiagram__legend" aria-label="Signaturforklaring">
       <div className="lasso-odiagram__legend-row">
-        <span><i className="lg-box lg-box--root" />Fokusvirksomhed</span>
+        {personRoot ? <span><i className="lg-box lg-box--root lg-box--person" />Fokusperson</span> : <span><i className="lg-box lg-box--root" />Fokusvirksomhed</span>}
         <span><i className="lg-box" />Virksomhed</span>
         <span><i className="lg-box lg-box--person" />Person</span>
         <span><i className="lg-box lg-box--ceased" />Ophørt</span>
@@ -571,24 +578,44 @@ function Legend() {
 
 /* ---------- Detaljepanel ---------- */
 
-function DetailPanel({ node, graph, rootName, onClose, open, fromHere }: { node: LayoutNode; graph: OwnershipGraphVM; rootName: string; onClose: () => void; open?: () => void; fromHere?: () => void }) {
+function DetailPanel({
+  node,
+  graph,
+  rootName,
+  personRoot = false,
+  onClose,
+  open,
+  fromHere,
+}: {
+  node: LayoutNode;
+  graph: OwnershipGraphVM;
+  rootName: string;
+  /** Roden er en person (personsiden): selskaberne under er personens ejerskaber, ikke datterselskaber. */
+  personRoot?: boolean;
+  onClose: () => void;
+  open?: () => void;
+  fromHere?: () => void;
+}) {
   const n = node.entity!;
   const rootId = graph.rootId;
   const shortRoot = rootName.replace(/\s+(A\/S|ApS|I\/S|K\/S|P\/S|IVS|AS|AB|GmbH)$/i, "");
   const direct: OwnershipEdgeVM | undefined = node.layer < 0 ? graph.edges.find((e) => e.from === n.id && e.to === rootId) : graph.edges.find((e) => e.from === rootId && e.to === n.id);
   const indirect = node.layer < 0 ? indirectShare(graph, n.id, rootId) : node.layer > 0 ? indirectShare(graph, rootId, n.id) : null;
-  const role = node.root ? "Valgt, fokus" : node.layer < 0 ? "Valgt, ejer" : "Valgt, datterselskab";
+  const role = node.root ? "Valgt, fokus" : node.layer < 0 ? "Valgt, ejer" : personRoot ? "Valgt, ejet selskab" : "Valgt, datterselskab";
   const sub = n.kind === "person" ? "Person" : [n.cvr ? `CVR ${n.cvr}` : n.registrationNo ? `Reg.nr. ${n.registrationNo}` : undefined, n.form, n.status].filter(Boolean).join(", ");
 
   const rows: [string, string, boolean?][] = [];
-  if (node.root) {
+  if (node.root && personRoot) {
+    rows.push(["Ejer direkte", String(graph.edges.filter((e) => e.from === rootId && !e.until).length)]);
+  } else if (node.root) {
     rows.push(["Direkte ejere", String(graph.edges.filter((e) => e.to === rootId).length)]);
     rows.push(["Direkte datterselskaber", String(graph.edges.filter((e) => e.from === rootId).length)]);
   } else {
     const share = direct?.share ?? indirect ?? undefined;
     rows.push([node.layer < 0 ? `Ejerandel i ${shortRoot}` : `${shortRoot} ejer`, share ? formatShare(share) : "Ikke oplyst", !share]);
     if (direct?.votes || direct?.share) rows.push(["Stemmeandel", formatShare(direct.votes ?? direct.share)]);
-    rows.push(["Type", node.layer < 0 ? (direct ? "Legal ejer, direkte" : "Legal ejer, indirekte") : direct ? "Datterselskab, direkte" : "Datterselskab, indirekte"]);
+    const below = personRoot ? (direct ? "Ejet direkte" : "Ejet indirekte, via et selskab") : direct ? "Datterselskab, direkte" : "Datterselskab, indirekte";
+    rows.push(["Type", node.layer < 0 ? (direct ? "Legal ejer, direkte" : "Legal ejer, indirekte") : below]);
     if (direct?.since) rows.push(["Registreret siden", formatDate(direct.since)]);
     if (direct?.until) rows.push(["Ophørt", formatDate(direct.until)]);
   }
@@ -668,7 +695,7 @@ function DetailPanel({ node, graph, rootName, onClose, open, fromHere }: { node:
           ) : null}
           {direct.since ? (
             <div className="lasso-odiagram__hist">
-              <span>Registreret som {node.layer < 0 ? "ejer" : "datterselskab"}</span>
+              <span>{node.layer < 0 ? "Registreret som ejer" : personRoot ? "Ejerskab registreret" : "Registreret som datterselskab"}</span>
               <span>{formatDate(direct.since)}</span>
             </div>
           ) : null}
@@ -697,7 +724,19 @@ function DetailPanel({ node, graph, rootName, onClose, open, fromHere }: { node:
 
 const LIST_SHOW = 3;
 
-function OwnershipList({ graph, depthUp, depthDown, open }: { graph: OwnershipGraphVM; depthUp: number; depthDown: number; open: (n: OwnershipNodeVM | undefined) => (() => void) | undefined }) {
+function OwnershipList({
+  graph,
+  depthUp,
+  depthDown,
+  open,
+  personRoot = false,
+}: {
+  graph: OwnershipGraphVM;
+  depthUp: number;
+  depthDown: number;
+  open: (n: OwnershipNodeVM | undefined) => (() => void) | undefined;
+  personRoot?: boolean;
+}) {
   const [openRows, setOpenRows] = useState<ReadonlySet<string>>(new Set());
   const tree = useMemo(() => ownershipTree(graph, { depthUp, depthDown }), [graph, depthUp, depthDown]);
   const root = graph.nodes.find((n) => n.id === graph.rootId);
@@ -733,7 +772,8 @@ function OwnershipList({ graph, depthUp, depthDown, open }: { graph: OwnershipGr
           <span className="lasso-odlist__share">{it.share ? formatShare(it.share) : <span className="lasso-notreported">Ikke oplyst</span>}</span>
         </li>,
       );
-      if (it.children.length) out.push(...rows(it.children, level + 1, key, "ejere"));
+      // Under en ejer står dens ejere; under et selskab nedad dets datterselskaber.
+      if (it.children.length) out.push(...rows(it.children, level + 1, key, noun === "ejere" ? "ejere" : "datterselskaber"));
     }
     if (shown.length < items.length) {
       out.push(
@@ -762,9 +802,14 @@ function OwnershipList({ graph, depthUp, depthDown, open }: { graph: OwnershipGr
         {both && tree.owners.length ? <li className="lasso-odlist__group">Ejere</li> : null}
         {rows(tree.owners, 1, "o", "ejere")}
         {both && tree.subsidiaries.length ? <li className="lasso-odlist__group">Datterselskaber</li> : null}
-        {rows(tree.subsidiaries, 1, "s", "datterselskaber")}
+        {rows(tree.subsidiaries, 1, "s", personRoot ? "selskaber" : "datterselskaber")}
       </ul>
-      {emptyAll ? <DataState state="empty" reason={`${root?.name ?? "Selskabet"} har ingen legale ejere over 5 % i CVR og ejer ikke andre selskaber.`} /> : null}
+      {emptyAll ? (
+        <DataState
+          state="empty"
+          reason={personRoot ? `${root?.name ?? "Personen"} ejer ingen selskaber i CVR (legale ejerandele over 5 %).` : `${root?.name ?? "Selskabet"} har ingen legale ejere over 5 % i CVR og ejer ikke andre selskaber.`}
+        />
+      ) : null}
     </>
   );
 }

@@ -44,6 +44,7 @@ export { PersonHead } from "./components/PersonHead.js";
 export { PersonRoles } from "./components/PersonRoles.js";
 export { PersonNetwork } from "./components/PersonNetwork.js";
 export { PersonRisk } from "./components/PersonRisk.js";
+export { PersonFacts } from "./components/PersonFacts.js";
 export { ChangeFeed, dayHeading, clockText } from "./components/ChangeFeed.js";
 export { SavedPages, SAVED_PAGES_EMPTY } from "./components/SavedPages.js";
 export type { SavedPagesProps } from "./components/SavedPages.js";

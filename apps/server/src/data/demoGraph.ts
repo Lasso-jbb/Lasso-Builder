@@ -1,4 +1,4 @@
-import type { CompanyVM, OwnershipEdgeVM, OwnershipGraphVM, OwnershipNodeVM } from "@lasso/spec";
+import type { CompanyVM, OwnershipEdgeVM, OwnershipGraphVM, OwnershipNodeVM, PersonVM } from "@lasso/spec";
 import type { OwnershipGraphOptions } from "./provider.js";
 
 /**
@@ -86,15 +86,73 @@ const EDGES: OwnershipEdgeVM[] = [
   e(P("99100011"), C("99000011"), 100),
 ];
 
+const EXTRA_BY_ID = new Map(EXTRA.map((n) => [n.id, n]));
+
+/** En knude i demokoncernen: en demovirksomhed (lookup) eller en af de ekstra enheder. */
+function demoNode(id: string, lookup: (id: string) => CompanyVM | undefined): OwnershipNodeVM | undefined {
+  const c = lookup(id);
+  if (c) return { id, name: c.name, kind: "company", cvr: c.cvr, form: c.form, status: c.status, statusKind: c.statusKind };
+  const x = EXTRA_BY_ID.get(id);
+  return x ? { ...x } : undefined;
+}
+
+/** "66,67–89,99 %" -> [66.67, 89.99]; "100 %" -> [100, 100]. */
+function shareRangeOf(share: string | undefined): [number, number] | undefined {
+  const nums = (share ?? "").match(/\d+(?:,\d+)?/g)?.map((n) => Number(n.replace(",", ".")));
+  if (!nums?.length) return undefined;
+  return [nums[0]!, nums[1] ?? nums[0]!];
+}
+
+/**
+ * Personsidens ejerdiagram i demo (katalog 16): personen er roden (pille), med kanter til de
+ * selskaber, personen ejer (demopersonens ejerroller, med ejerandel og periode), og derunder
+ * selskabernes datterselskaber fra demokoncernen, så dybt som outgoingDepth rækker. Reelt
+ * ejerskab ("Reel ejer") er ikke en kant i ejergrafen og tegnes ikke.
+ */
+export function demoPersonOwnershipGraph(person: PersonVM, opts: OwnershipGraphOptions, lookup: (id: string) => CompanyVM | undefined): OwnershipGraphVM {
+  const ref = opts.onDate ?? new Date().toISOString().slice(0, 10);
+  const nodes = new Map<string, OwnershipNodeVM>([[person.lassoId, { id: person.lassoId, name: person.name, kind: "person", root: true }]]);
+  const edges: OwnershipEdgeVM[] = [];
+  let frontier: string[] = [];
+  if (opts.outgoingDepth >= 1) {
+    for (const r of person.roles) {
+      if (r.kind !== "owner" || /reel/i.test(r.role) || !r.companyId || (r.from && r.from > ref)) continue;
+      const n = demoNode(r.companyId, lookup) ?? { id: r.companyId, name: r.companyName, kind: "company" as const, cvr: r.cvr, form: r.companyForm, status: r.companyStatus, statusKind: r.companyStatusKind };
+      nodes.set(n.id, n);
+      edges.push({ from: person.lassoId, to: r.companyId, share: shareRangeOf(r.share), since: r.from, ...(r.to ? { until: r.to } : {}) });
+      frontier.push(r.companyId);
+    }
+  }
+  // Lag 2 og ned: de ejede selskabers datterselskaber (kun selskab -> selskab).
+  const current = EDGES.filter((x) => (!x.since || x.since <= ref) && !x.from.startsWith("CVR-3-"));
+  for (let d = 1; d < opts.outgoingDepth && frontier.length; d++) {
+    const next: string[] = [];
+    for (const id of frontier) {
+      for (const x of current.filter((e) => e.from === id)) {
+        if (!edges.some((e) => e.from === x.from && e.to === x.to)) edges.push({ ...x });
+        if (nodes.has(x.to)) continue;
+        const n = demoNode(x.to, lookup);
+        if (!n) continue;
+        nodes.set(x.to, n);
+        next.push(x.to);
+      }
+    }
+    frontier = next;
+  }
+  return {
+    rootId: person.lassoId,
+    nodes: [...nodes.values()],
+    edges: edges.filter((e) => nodes.has(e.from) && nodes.has(e.to)),
+    ingoingDepth: 0,
+    outgoingDepth: opts.outgoingDepth,
+    onDate: opts.onDate,
+    fetchedAt: new Date().toISOString(),
+  };
+}
+
 /** Udsnit af demokoncernen omkring én virksomhed, som ejergrafen ville levere det. */
 export function demoOwnershipGraph(rootId: string, opts: OwnershipGraphOptions, lookup: (id: string) => CompanyVM | undefined): OwnershipGraphVM {
-  const extra = new Map(EXTRA.map((n) => [n.id, n]));
-  const node = (id: string): OwnershipNodeVM | undefined => {
-    const c = lookup(id);
-    if (c) return { id, name: c.name, kind: "company", cvr: c.cvr, form: c.form, status: c.status, statusKind: c.statusKind };
-    const x = extra.get(id);
-    return x ? { ...x } : undefined;
-  };
+  const node = (id: string) => demoNode(id, lookup);
   const ref = opts.onDate ?? new Date().toISOString().slice(0, 10);
   // Et øjebliksbillede pr. dato: ejerskaber, der først starter senere, er ikke med.
   const edges = EDGES.filter((x) => !x.since || x.since <= ref);

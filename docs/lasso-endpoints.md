@@ -228,6 +228,17 @@ antagelsen, `personAdapters.ts` allerede gjorde.
 | Person, historik | GET | `/{lassoId}/history` | samme; fejler den, vises kun de nuværende roller |
 | Netværk | GET | `/modules/network/{lassoId}` | `LassoPersonNetwork` |
 | Navneopslag | GET | `/data/cvr/search?type=person&personStatus=all` | `show_person` med et navn |
+| Nyheder om personen | POST | `/modules/news` med `[personens Lasso-ID]` | `LassoNews` med `person` (Paqle spørges ikke for personer) |
+| Personens ejerskaber | POST | `/modules/relations/graph` med `ids: [personens Lasso-ID]`, `ingoingDepth: 0` | `LassoOwnershipDiagram` med `person`; afvises person-ID'et (400/404/405/501), bruges ejerrollerne (ét lag) |
+
+Personsidens øvrige sektioner kræver ingen nye kald: stamoplysningerne (`LassoPersonFacts`) læser
+`address.value.postalCode`/`postalDistrict`/`municipality.name`/`countryCode` (aldrig `address1`),
+`address.secret` (-> "Adressebeskyttet") og `unitNumber` fra `GET /{lassoId}` og afleder resten af
+rollerne; historikken (`LassoTimeline` med `person`) afledes af rollernes fra–til og selskabernes
+konkurs/tvangsopløsning (`personTimeline` i `packages/spec/src/person.ts`). "År sammen" i netværket
+er den længste sammenhængende periode på tværs af de fælles selskaber (`longestPeriodYears`), ikke
+summen af overlappene. **Ubekræftet mod API'et:** at `/modules/news` og `/modules/relations/graph`
+tager person-ID'er (kun virksomheds-ID'er er afprøvet), og adressefelterne for personer.
 
 Antagne svarformer (uændrede siden 26.09.2026): `GET /{lassoId}` (person) har rollegrupper
 (`management`, `board`, `founder`, `owner`, `trueOwner`, `stakeholder`, `otherRoles`) som lister af

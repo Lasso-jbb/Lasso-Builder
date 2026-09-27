@@ -182,10 +182,31 @@ test("show_person (katalog 16) finder en person på navn og komponerer personsid
   assert.equal(res.isError, undefined);
   const sc = res.structuredContent as { spec: ViewSpec; card: string; link: string; summary: string };
   assert.equal(sc.spec.kind, "person");
-  assert.deepEqual(sc.spec.components.map((c) => c.type), ["LassoPersonHead", "LassoPersonRoles", "LassoPersonNetwork", "LassoPersonRisk", "LassoFollowUps"]);
+  assert.deepEqual(
+    sc.spec.components.map((c) => `${c.type}${c.column ? `@${c.column}` : ""}${c.width ? `/${c.width}` : ""}`),
+    [
+      "LassoPersonHead",
+      "LassoPersonRoles@1/three-quarters",
+      "LassoPersonFacts@2/quarter",
+      "LassoPersonNetwork@1",
+      "LassoPersonRisk@2",
+      "LassoTimeline@1",
+      "LassoNews@2",
+      "LassoOwnershipDiagram",
+      "LassoFollowUps",
+    ],
+  );
   assert.match(sc.summary, /Fundet ud fra navnet "Bo Eksempel"/);
   assert.match(sc.summary, /1 konkurser og 0 tvangsopløsninger/);
+  assert.match(sc.summary, /Stamoplysninger: bopæl 8600 Silkeborg, Silkeborg Kommune; ejer 1 selskab; første registrering 2005/);
+  assert.match(sc.summary, /Historik \(seneste 3 af \d+\): 02\.02\.2026 Eksempel Energi A\/S kom under konkurs/);
+  assert.match(sc.summary, /Nyheder om personen/);
+  assert.match(sc.summary, /Ejerskab: ejer direkte Eksempel Holding ApS 100 %/);
+  // "År sammen" er den længste sammenhængende periode, ikke summen over selskaber.
+  assert.match(sc.summary, /Vera Eksempel \(13 år, 1 fælles selskaber\)/);
   assert.match(sc.card, /SIDDER SAMMEN MED/);
+  for (const section of ["STAMOPLYSNINGER", "HISTORIK", "NYHEDER", "EJERSKAB"]) assert.match(sc.card, new RegExp(section));
+  assert.doesNotMatch(sc.card, /Prøvevej/, "aldrig gade og husnummer for en person");
   assert.match(sc.link, /\/p\/CVR-3-\d+\?e=\w+&s=[\w-]{22}$/);
   const page = await fetch(sc.link);
   assert.equal(page.status, 200);

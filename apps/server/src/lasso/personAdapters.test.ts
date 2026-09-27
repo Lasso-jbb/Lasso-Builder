@@ -59,10 +59,26 @@ test("adaptPerson læser nuværende roller og fra–til fra historikken", () => 
 });
 
 test("adaptPerson tåler ukendte former og hemmelig adresse", () => {
-  const p = adaptPerson("CVR-3-1", { name: "X Prøve", address: { secret: true, value: { postalDistrict: "Aarhus" } }, board: "noget" });
+  const p = adaptPerson("CVR-3-1", { name: "X Prøve", address: { secret: true, value: { postalDistrict: "Aarhus", postalCode: 8000, municipality: { name: "AARHUS" } } }, board: "noget" });
   assert.equal(p.city, undefined);
+  assert.equal(p.zip, undefined);
+  assert.equal(p.municipality, undefined);
+  assert.equal(p.addressProtected, true);
   assert.deepEqual(p.roles, []);
   assert.equal(adaptPerson("CVR-3-1", null).name, "CVR-3-1");
+  assert.equal(adaptPerson("CVR-3-1", null).addressProtected, undefined);
+});
+
+test("adaptPerson: stamoplysninger (postnummer, enhedsnummer, land) men aldrig gadenavn", () => {
+  const p = adaptPerson("CVR-3-4000000001", current, history);
+  assert.equal(p.zip, "1709");
+  assert.equal(p.unitNumber, "4000000001");
+  assert.equal(p.country, undefined);
+  assert.equal(p.addressProtected, undefined);
+  assert.ok(!JSON.stringify(p).includes("Prøvevej"));
+  const abroad = adaptPerson("CVR-3-2", { name: "Y Prøve", address: { secret: false, value: { postalDistrict: "Malmö", countryCode: "SE" } } });
+  assert.equal(abroad.country, "Sverige");
+  assert.equal(adaptPerson("CVR-3-3", { name: "Z", address: { value: { countryCode: "DK" } } }).country, undefined);
 });
 
 test("adaptPersonNetwork beregner overlap og sorterer efter år", () => {
@@ -81,6 +97,25 @@ test("adaptPersonNetwork beregner overlap og sorterer efter år", () => {
   assert.equal(mogens!.until, "2013-06-17");
   assert.equal(mogens!.companies[0]!.role, "administrerende direktør");
   assert.deepEqual(adaptPersonNetwork("x", { unexpected: true }).people, []);
+});
+
+test("adaptPersonNetwork: år sammen er den længste sammenhængende periode, ikke summen", () => {
+  const rel = (cvr: number, from: string, to: string | null) => ({ companyName: `Selskab ${cvr} ApS`, cvr, status: "NORMAL", currentRoles: to ? [] : ["Direktør"], overlaps: [{ from, to, theirRoles: ["Direktør"] }] });
+  const raw = [
+    // 13 fælles selskaber i samme ti år: 10 år sammen, ikke 130.
+    { name: "Mange Selskaber", unitNo: 4000000020, companyRelation: Array.from({ length: 13 }, (_, i) => rel(20000000 + i, "2010-01-01", "2020-01-01")) },
+    // Et hul imellem bryder perioden: 2000–2005 og 2010–2012 giver 5 år.
+    { name: "Med Hul", unitNo: 4000000021, companyRelation: [rel(30000001, "2000-01-01", "2005-01-01"), rel(30000002, "2010-01-01", "2012-01-01")] },
+    // Rolle i ét selskab slutter 31.12, en ny i et andet begynder 01.01: én periode på 8 år.
+    { name: "Tilstødende", unitNo: 4000000022, companyRelation: [rel(40000001, "2000-01-01", "2004-12-31"), rel(40000002, "2005-01-01", "2008-01-01")] },
+    // Åben periode regnes til i dag.
+    { name: "Stadig Sammen", unitNo: 4000000023, companyRelation: [rel(50000001, "2019-01-01", "2021-01-01"), rel(50000002, "2020-06-01", null)] },
+  ];
+  const n = adaptPersonNetwork("CVR-3-4000000001", raw, "2026-01-01");
+  const years = Object.fromEntries(n.people.map((p) => [p.name, p.overlapYears]));
+  assert.deepEqual(years, { "Mange Selskaber": 10, "Med Hul": 5, "Tilstødende": 8, "Stadig Sammen": 7 });
+  // Sorteret efter år sammen, flest først.
+  assert.deepEqual(n.people.map((p) => p.name), ["Mange Selskaber", "Tilstødende", "Stadig Sammen", "Med Hul"]);
 });
 
 test("adaptPersonSearch tager kun personer", () => {

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { currencyUnit, formatAmount, formatDate, formatMetricValue, formatNumber, METRIC_FIELD, METRIC_LABELS, type CompanyVM, type FinancialsVM, type Metric, type OwnershipVM } from "@lasso/spec";
+import { companyFacts, currencyUnit, formatAmount, formatDate, formatMetricValue, isPersonId, METRIC_FIELD, METRIC_LABELS, type CompanyVM, type FinancialsVM, type Metric, type OwnershipVM } from "@lasso/spec";
+import type { ViewAction } from "../types.js";
 import { DataState, Missing, Section, stateForError } from "../primitives.js";
 import { Tabs } from "./Tabs.js";
 
@@ -9,69 +10,70 @@ function dayMonth(value: string | undefined): string | undefined {
   return m ? `${m[2]}.${m[1]}` : undefined;
 }
 
-/**
- * CVR's ansattetal (danske ansatte) og regnskabets (ofte koncernen) kan afvige meget;
- * begge vises med kilde, så forskellen ikke ligner en fejl: "64 (CVR), 62 i regnskab 2024".
- */
-function employeesText(company: CompanyVM, lastYear: FinancialsVM["years"][number] | undefined): string | undefined {
-  const cvr = company.employees != null ? `${formatNumber(company.employees)} (CVR)` : undefined;
-  const fromReport = lastYear && typeof lastYear.employees === "number" ? lastYear.employees : null;
-  if (fromReport === null || fromReport === company.employees) return cvr;
-  const report = `${formatNumber(fromReport)} i regnskab ${lastYear!.year}`;
-  return cvr ? `${cvr}, ${report}` : report;
-}
-
 interface Row {
   label: string;
   value?: string;
   danger?: boolean;
+  /** Entitetens Lasso-ID (revisoren), så navnet kan åbnes i værter med drill-down. */
+  lassoId?: string;
 }
 
-function companyRows(company: CompanyVM, ownership: OwnershipVM | undefined, lastYear: FinancialsVM["years"][number] | undefined, hideContact: boolean): Row[] {
-  const a = company.address;
-  const rows: Row[] = [{ label: "Revisor", value: ownership?.auditor?.name }];
-  // "hvis tilgængeligt": rækken udelades helt, når skiftedatoen ikke er kendt (i stedet for en fast "—"-række).
-  if (ownership?.auditor?.from) rows.push({ label: "Seneste revisorskift", value: formatDate(ownership.auditor.from) });
-  const period = lastYear && dayMonth(lastYear.periodStart) && dayMonth(lastYear.periodEnd) ? `${dayMonth(lastYear.periodStart)} – ${dayMonth(lastYear.periodEnd)}` : undefined;
-  rows.push(
-    { label: "Regnskabsperiode", value: period },
-    { label: "Stiftet", value: company.founded ? formatDate(company.founded) : undefined },
-    { label: "Virksomhedsform", value: company.form },
-    { label: "Branche", value: company.industryText ? `${company.industryText}${company.industryCode ? ` (${company.industryCode})` : ""}` : undefined },
-    { label: "Ansatte", value: employeesText(company, lastYear) },
-  );
-  // Står kontaktblokken på samme side, gentages adresse, telefon, e-mail og web ikke her.
-  if (!hideContact) {
-    rows.push(
-      { label: "Adresse", value: [a?.street, [a?.zip, a?.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || undefined },
-      { label: "Telefon", value: company.phone },
-      { label: "E-mail", value: company.email },
-      { label: "Web", value: company.website },
-    );
-  }
-  return rows;
+/**
+ * Rækkerne for variant "company" kommer fra companyFacts (@lasso/spec), så komponisten tæller
+ * det samme, når den udelader en liste under 2 rækker. Står hovedet, kontaktblokken eller
+ * ejerlisten på siden, gentages deres oplysninger ikke her.
+ */
+function companyRows(
+  company: CompanyVM,
+  ownership: OwnershipVM | undefined,
+  lastYear: FinancialsVM["years"][number] | undefined,
+  hide: { identity: boolean; contact: boolean; auditor: boolean },
+): Row[] {
+  return companyFacts(company, ownership, lastYear, { hideIdentity: hide.identity, hideContact: hide.contact, hideAuditor: hide.auditor });
 }
 
 const FINANCIALS_ROW_METRICS: Metric[] = ["resultat", "egenkapital", "ansatte", "ebitda", "soliditetsgrad", "overskudsgrad", "likviditetsgrad", "balancesum", "gaeld"];
 
-function financialsRows(year: FinancialsVM["years"][number], currency?: string): Row[] {
+function financialsRows(year: FinancialsVM["years"][number], currency?: string, exclude: readonly Metric[] = []): Row[] {
   const cur = year.currency ?? currency;
   const period = dayMonth(year.periodStart) && dayMonth(year.periodEnd) ? `${dayMonth(year.periodStart)} – ${dayMonth(year.periodEnd)}` : undefined;
   const rows: Row[] = [
     { label: "Regnskabsperiode", value: period },
     { label: "Regnskab udgivet", value: year.published ? formatDate(year.published) : undefined },
-    {
-      label: year.revenue != null ? "Omsætning" : "Bruttofortjeneste",
-      value: (year.revenue != null ? year.revenue : year.grossProfit) != null ? formatAmount(year.revenue != null ? year.revenue : year.grossProfit, currencyUnit(cur)) : undefined,
-    },
   ];
+  // Omsætning, ellers bruttofortjeneste; udeladt, når nøgletalskortene på siden allerede viser den.
+  const main: Metric = year.revenue != null ? "omsaetning" : "bruttofortjeneste";
+  if (!exclude.includes(main)) {
+    const v = year.revenue != null ? year.revenue : year.grossProfit;
+    rows.push({ label: METRIC_LABELS[main], value: v != null ? formatAmount(v, currencyUnit(cur)) : undefined });
+  }
   for (const m of FINANCIALS_ROW_METRICS) {
+    if (exclude.includes(m)) continue;
     let v = year[METRIC_FIELD[m]] as number | null | undefined;
     // Gæld i alt = balancesum − egenkapital, når den ikke er oplyst direkte.
     if (m === "gaeld" && v == null && typeof year.assetsTotal === "number" && typeof year.equity === "number") v = year.assetsTotal - year.equity;
     rows.push({ label: METRIC_LABELS[m], value: v != null ? formatMetricValue(m, v, cur) : undefined, danger: typeof v === "number" && v < 0 });
   }
   return rows;
+}
+
+/** Værdien som link (lasso-link), når den har et Lasso-ID og værten kan åbne det; ellers ren tekst. */
+function Value({ value, lassoId, onOpen }: { value: string; lassoId?: string; onOpen?: (a: ViewAction) => void }) {
+  if (onOpen && lassoId?.startsWith("CVR-1-")) {
+    return (
+      <button type="button" className="lasso-link" onClick={() => onOpen({ kind: "open-company", lassoId, name: value })}>
+        {value}
+      </button>
+    );
+  }
+  if (onOpen && isPersonId(lassoId)) {
+    return (
+      <button type="button" className="lasso-link" onClick={() => onOpen({ kind: "open-person", lassoId, name: value })}>
+        {value}
+      </button>
+    );
+  }
+  return <>{value}</>;
 }
 
 /**
@@ -88,6 +90,10 @@ export function KeyValueList({
   title,
   error,
   hideContact = false,
+  onOpen,
+  hideIdentity = false,
+  hideAuditor = false,
+  exclude,
 }: {
   company?: CompanyVM;
   ownership?: OwnershipVM;
@@ -97,6 +103,14 @@ export function KeyValueList({
   error?: string;
   /** Skjul adresse/telefon/e-mail/web, når LassoContact står på samme side. */
   hideContact?: boolean;
+  /** Værten kan åbne virksomheder og personer (drill-down): revisoren bliver et link. */
+  onOpen?: (a: ViewAction) => void;
+  /** Skjul stiftet, form, branche, ansatte og adresse, når LassoCompanyHead står på samme side. */
+  hideIdentity?: boolean;
+  /** Skjul revisor og revisorskift, når LassoOwnerList (med revisor) står på samme side. */
+  hideAuditor?: boolean;
+  /** Variant "financials": nøgletal, der allerede står på siden (nøgletalskortene). */
+  exclude?: readonly Metric[];
 }) {
   const heading = title ?? (variant === "financials" ? "Regnskab" : "Virksomhedsoplysninger");
   const ready = variant === "financials" ? Boolean(financials) : Boolean(company);
@@ -122,7 +136,7 @@ export function KeyValueList({
     }
     const options = years.slice(-5).reverse();
     const selected = years.find((y) => y.year === year) ?? last;
-    const rows = financialsRows(selected, financials!.currency);
+    const rows = financialsRows(selected, financials!.currency, exclude);
     return (
       <Section
         title={heading}
@@ -148,7 +162,14 @@ export function KeyValueList({
     );
   }
 
-  const rows = companyRows(company!, ownership, financials?.years.at(-1), hideContact);
+  const rows = companyRows(company!, ownership, financials?.years.at(-1), { identity: hideIdentity, contact: hideContact, auditor: hideAuditor });
+  if (rows.length === 0) {
+    return (
+      <Section title={heading} span="half">
+        <DataState state="empty" reason="CVR har ikke oplyst flere oplysninger om virksomheden end dem øverst på siden." />
+      </Section>
+    );
+  }
   return (
     <Section title={heading} span="half">
       <div className="lasso-kv-list">
@@ -156,7 +177,7 @@ export function KeyValueList({
           <div className="lasso-kv-row" key={r.label}>
             <div className="lasso-kv-row__label">{r.label}</div>
             <div className="lasso-kv-row__value" title={r.value}>
-              {r.value ?? <Missing />}
+              {r.value ? <Value value={r.value} lassoId={r.lassoId} onOpen={onOpen} /> : <Missing />}
             </div>
           </div>
         ))}

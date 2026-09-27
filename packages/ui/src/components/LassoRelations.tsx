@@ -62,9 +62,12 @@ export function LassoRelations({
   const current = people.filter((p) => !p.to);
   const direction = current.filter((p) => /direkt/i.test(p.role));
   const board = current.filter((p) => /bestyrelse/i.test(p.role) && !/suppleant/i.test(p.role));
+  // Uden direktion og bestyrelse (fx en enkeltmandsvirksomheds fuldt ansvarlige deltager) står rollerne, som CVR har dem.
+  const others = direction.length === 0 && board.length === 0 ? current : [];
+  const othersLabel = others.length > 0 && others.every((p) => p.role === others[0]!.role) ? others[0]!.role : "Ledelse";
   const owners = ownership.owners;
 
-  if (direction.length === 0 && board.length === 0 && owners.length === 0) {
+  if (direction.length === 0 && board.length === 0 && others.length === 0 && owners.length === 0) {
     return (
       <Section title={heading} span="quarter">
         <DataState state="empty" reason="Der er ingen registrerede relationer i CVR." />
@@ -96,6 +99,17 @@ export function LassoRelations({
               </div>
             );
           })}
+        </div>
+      ) : null}
+      {others.length > 0 ? (
+        <div className="lasso-relations__group">
+          <div className="lasso-relations__label">{othersLabel}</div>
+          {others.map((p, i) => (
+            <div key={`${p.name}-${i}`}>
+              <Name name={p.name} lassoId={p.lassoId} onOpen={onOpen} />
+              {othersLabel === "Ledelse" ? <span className="lasso-row__note">({p.role.toLowerCase()})</span> : null}
+            </div>
+          ))}
         </div>
       ) : null}
       {owners.length > 0 ? (

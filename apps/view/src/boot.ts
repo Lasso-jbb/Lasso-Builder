@@ -13,6 +13,11 @@ export interface WebBoot {
   url?: string;
   name?: string | null;
   error?: string;
+  /**
+   * Signerede /e/-links pr. Lasso-ID for de virksomheder og personer, siden viser (ledelse, ejere,
+   * revisor, navne i nyheder …). Med links kan navnene på den delte side åbnes (drill-down).
+   */
+  links?: Record<string, string>;
 }
 
 /** Brugeren i portalen, samme form som serverens CurrentUser. */

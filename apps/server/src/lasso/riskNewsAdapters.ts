@@ -1,6 +1,6 @@
 import type { NewsItemVM, NewsVM, ObservationRowVM, ObservationsVM, Severity } from "@lasso/spec";
 import { arr, at, dateStr, isObj, items, num, pick, str, type Json } from "./adapters.js";
-import { plainTextFromMarkup, stripHtml } from "./newsMarkup.js";
+import { plainTextFromMarkup, segmentsFromMarkup, stripHtml } from "./newsMarkup.js";
 
 /**
  * Risiko- og nyhedsadaptere, bekræftet mod api.lassox.com 27.09.2026 (Novo Nordisk,
@@ -167,23 +167,30 @@ function lassoNewsSourceLabel(provider: string | undefined): string {
  * være null), url, storyId, imageId, uniqueId, lassoIds[] }. headline/content/tagLine
  * indeholder entitets-markup "{Navn|LassoId}" (newsMarkup.ts), også midt i HTML-lister
  * (fx "<ul><li>{Navn|LassoId}</li></ul>"); content strippes for HTML til ren tekst — UI'en
- * sætter aldrig innerHTML.
+ * sætter aldrig innerHTML. `headline`/`excerpt` er ren tekst; `headlineSegments`/`extractSegments`
+ * er samme tekst som segmenter, hvor navnene beholder deres Lasso-ID (links i UI'en), og sættes
+ * kun, når teksten faktisk har navne med Lasso-ID.
  */
 export function adaptLassoNews(raw: Json): NewsItemVM[] {
   const list = Array.isArray(raw) ? raw : items(raw);
   const out: NewsItemVM[] = [];
   for (const n of list) {
-    const headline = plainTextFromMarkup(str(n, "headline"));
+    const headlineRaw = str(n, "headline");
+    const headline = plainTextFromMarkup(headlineRaw);
     if (!headline) continue;
-    const tagLine = plainTextFromMarkup(str(n, "tagLine"));
-    const content = plainTextFromMarkup(stripHtml(str(n, "content")));
+    const tagLineRaw = str(n, "tagLine");
+    const contentRaw = stripHtml(str(n, "content"));
+    // Uddraget er tagLine (kort resumé), ellers hele content; segmenterne følger samme kilde.
+    const excerptRaw = plainTextFromMarkup(tagLineRaw) ? tagLineRaw : contentRaw;
     out.push({
       source: lassoNewsSourceLabel(str(n, "provider")),
       url: str(n, "url", "link"),
       time: dateStr(n, "time", "promotedUntil"),
       headline,
-      excerpt: tagLine ?? content,
+      excerpt: plainTextFromMarkup(excerptRaw),
       typeLabel: newsTypeLabel(str(n, "type")),
+      headlineSegments: segmentsFromMarkup(headlineRaw),
+      extractSegments: segmentsFromMarkup(excerptRaw),
     });
   }
   return out;

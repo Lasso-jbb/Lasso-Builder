@@ -256,9 +256,23 @@ export interface BeneficialOwnershipVM {
 }
 
 /** Tekstsektioner fra CVR-stamdata (katalog 12, "Tekstsektioner"). Felter ud over branche er ubekræftede. */
+/**
+ * Et stykke tekst, evt. med en navngiven entitet (Lassos "{Navn|LassoId}"-markup): `lassoId`
+ * sat = navnet kan åbnes som virksomhed (CVR-1-) eller person (CVR-3-) i værter med drill-down.
+ * `highlight` = virksomhedens eget navn i fed (Paqle). Bruges i nyheder og tekstsektioner.
+ */
+export interface TextSegment {
+  text: string;
+  lassoId?: string;
+  highlight?: boolean;
+}
+
 export interface TextSectionItem {
   heading: string;
+  /** Ren tekst uden markup (navnene beholdes). */
   body: string;
+  /** Samme tekst opdelt i segmenter med entiteter, når kilden har markup (regnskabsanalysen). */
+  segments?: TextSegment[];
   /** Ekstra linje under brødteksten i muted, fx "NACE 631000". */
   note?: string;
 }
@@ -278,6 +292,11 @@ export interface TimelineEventVM {
   from?: string;
   to?: string;
   category: string;
+  /**
+   * Samme titel opdelt i segmenter, når den nævner en entitet (personens historik: selskabsnavnet
+   * med Lasso-ID, så det kan åbnes i værter med drill-down). `title` er altid den rene tekst.
+   */
+  titleSegments?: TextSegment[];
 }
 
 export interface TimelineVM {
@@ -305,8 +324,8 @@ export interface NewsItemVM {
    * virksomhedens navn (regel 17: navn i fed, ikke koral). Bruges i stedet for en gættet
    * tekstsøgning, når de findes.
    */
-  headlineSegments?: { text: string; highlight?: boolean }[];
-  extractSegments?: { text: string; highlight?: boolean }[];
+  headlineSegments?: TextSegment[];
+  extractSegments?: TextSegment[];
 }
 
 export interface NewsVM {
@@ -473,9 +492,20 @@ export interface OwnershipGraphVM {
   note?: string;
 }
 
-/** Stabil nøgle for et ejerdiagram, så UI og server finder samme graf. */
-export function ownershipGraphKey(g: { company: string; ingoingDepth: number; outgoingDepth: number; onDate?: string }): string {
-  return `${g.company}|${g.ingoingDepth}|${g.outgoingDepth}|${g.onDate ?? ""}`;
+/**
+ * Stabil nøgle for et ejerdiagram, så UI og server finder samme graf. Roden er en virksomhed
+ * (`company`) eller en person (`person`, personsidens ejerskaber); nøglen har samme form.
+ */
+export function ownershipGraphKey(g: { company?: string; person?: string; ingoingDepth: number; outgoingDepth: number; onDate?: string }): string {
+  return `${g.company ?? g.person ?? ""}|${g.ingoingDepth}|${g.outgoingDepth}|${g.onDate ?? ""}`;
+}
+
+/**
+ * Den entitet, en tidslinje, nyhedsliste eller et ejerdiagram handler om: virksomheden eller
+ * personen (præcis én af dem er sat, se spec.ts). Nøglen i Dataset (timeline, news) og fejlnøglen.
+ */
+export function entityRefOf(c: { company?: string; person?: string }): string {
+  return c.company ?? c.person ?? "";
 }
 
 export interface CompanyRowVM {

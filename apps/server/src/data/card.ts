@@ -18,12 +18,14 @@ import {
   percentChange,
   personCompanies,
   personCounts,
+  personFacts,
   personRisk,
   savedPagesKey,
   METRIC_FIELD,
   METRIC_KIND,
   METRIC_LABELS,
   searchKey,
+  textSectionsFor,
   type Dataset,
   type FinancialsVM,
   type FinancialStatementsVM,
@@ -472,13 +474,12 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     }
   }
 
-  if (types.has("LassoTextSections")) {
-    const t = ds.textSections[lassoId];
-    if (t?.sections.length) {
-      for (const s of t.sections) {
-        card.section(s.heading);
-        card.text(s.body);
-      }
+  // Samme afsnit som visningen: profilen uden branche (den står under stamoplysninger), analysen for sig.
+  for (const c of spec.components) {
+    if (c.type !== "LassoTextSections" || c.company !== lassoId) continue;
+    for (const s of textSectionsFor(ds.textSections[lassoId]?.sections ?? [], c.variant)) {
+      card.section(s.heading);
+      card.text(s.body);
     }
   }
 
@@ -557,7 +558,10 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
   return card.empty ? null : card.toString();
 }
 
-/** Katalog 16: personsiden som tekst. Hoved, roller pr. selskab, netværk og risiko. */
+/**
+ * Katalog 16: personsiden som tekst. Hoved, roller pr. selskab, stamoplysninger, netværk, risiko,
+ * historik og nyheder (de seneste 3) og ejerskab (de selskaber, personen ejer, fra ejerdiagrammet).
+ */
 function personCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | null {
   const types = new Set(spec.components.filter((c) => "person" in c && c.person === lassoId).map((c) => c.type));
   const p = ds.persons[lassoId];
@@ -584,6 +588,21 @@ function personCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | null
     }
     if (companies.length > 6) card.text(`og ${companies.length - 6} flere selskaber`);
   }
+  if (p && types.has("LassoPersonFacts")) {
+    const f = personFacts(p);
+    const pl = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`;
+    card.section("Stamoplysninger");
+    // Kun postnummer og by, som på siden; aldrig gade og husnummer.
+    card.row("Bopæl", p.addressProtected ? "Adressebeskyttet" : [[p.zip, p.city].filter(Boolean).join(" "), p.country].filter(Boolean).join(", ") || "Ikke oplyst");
+    // Som på siden: kommunen kun, når den ikke blot gentager byen.
+    if (!p.addressProtected && !(p.municipality && p.city?.toLowerCase().startsWith(p.municipality.toLowerCase()))) card.row("Kommune", p.municipality);
+    card.row("Enhedsnummer", p.unitNumber ?? /^CVR-3-(\d+)$/i.exec(p.lassoId)?.[1]);
+    card.row("Aktive", f.activeRoles ? `${pl(f.activeRoles, "rolle", "roller")} i ${pl(f.activeCompanies, "selskab", "selskaber")}` : "Ingen roller");
+    card.row("Ophørte", f.endedRoles ? pl(f.endedRoles, "rolle", "roller") : "Ingen");
+    card.row("Ejer af", f.ownedCompanies ? pl(f.ownedCompanies, "selskab", "selskaber") : "Ingen");
+    card.row("Første reg.", f.firstRegistered ? year(f.firstRegistered) : undefined);
+    card.row("Seneste ænd.", f.latestChange ? formatDate(f.latestChange) : undefined);
+  }
   const net = types.has("LassoPersonNetwork") ? ds.personNetworks[lassoId] : undefined;
   if (net?.people.length) {
     card.section("Sidder sammen med");
@@ -602,6 +621,39 @@ function personCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | null
     for (const c of [...risk.bankruptcies, ...risk.dissolutions].slice(0, 3)) {
       card.text(`${c.companyName}, ${c.status.toLowerCase()}${c.date ? ` ${year(c.date)}` : ""}${c.personLeft ? `, fratrådt ${year(c.personLeft)}` : ""}`);
     }
+  }
+  // Historik og nyheder: de seneste 3 (regel 9), resten som "og N flere".
+  const events = types.has("LassoTimeline") ? ds.timeline[lassoId]?.events : undefined;
+  if (events?.length) {
+    card.section("Historik");
+    for (const e of events.slice(0, 3)) {
+      card.text(formatDate(e.date));
+      for (const l of wrap(e.title, W - 2)) card.raw(`  ${l}`);
+    }
+    if (events.length > 3) card.text(`og ${events.length - 3} flere begivenheder`);
+  }
+  const news = types.has("LassoNews") ? ds.news[lassoId]?.items : undefined;
+  if (news?.length) {
+    card.section("Nyheder");
+    for (const n of news.slice(0, 3)) {
+      card.text([n.source, n.time ? formatDate(n.time) : null].filter(Boolean).join(", "));
+      for (const l of wrap(n.headline, W - 2)) card.raw(`  ${l}`);
+    }
+    if (news.length > 3) card.text(`og ${news.length - 3} flere nyheder`);
+  }
+  const diagram = spec.components.find((c) => c.type === "LassoOwnershipDiagram" && c.person === lassoId);
+  const graph = diagram?.type === "LassoOwnershipDiagram" ? ds.ownershipGraphs[ownershipGraphKey(diagram)] : undefined;
+  if (graph) {
+    const owned = graph.edges.filter((e) => e.from === lassoId && !e.until);
+    card.section("Ejerskab");
+    if (owned.length === 0) card.text("Ejer ingen selskaber i CVR");
+    for (const e of owned.slice(0, 5)) {
+      card.text(graph.nodes.find((n) => n.id === e.to)?.name ?? e.to);
+      card.raw(`  Ejerandel ${e.share ? formatShare(e.share) : "ikke oplyst"}`);
+    }
+    if (owned.length > 5) card.text(`og ${owned.length - 5} flere selskaber`);
+    const below = graph.edges.filter((e) => e.from !== lassoId && !e.until).length;
+    if (below) card.text(`De ejede selskaber ejer ${below} ${below === 1 ? "selskab" : "selskaber"} mere`);
   }
   return card.empty ? null : card.toString();
 }
@@ -713,8 +765,9 @@ function savedPagesCard(spec: ViewSpec, ds: Dataset): string | null {
 
 /** Tekstkort for visningen, eller null når den ikke har noget, der kan vises som tekst. */
 export function textCard(spec: ViewSpec, ds: Dataset): string | null {
-  const companies = [...new Set(spec.components.flatMap((c) => ("company" in c ? [c.company] : [])))];
-  const persons = [...new Set(spec.components.flatMap((c) => ("person" in c ? [c.person] : [])))];
+  // Tidslinje, nyheder og ejerdiagram har enten company eller person.
+  const companies = [...new Set(spec.components.flatMap((c) => ("company" in c && typeof c.company === "string" ? [c.company] : [])))];
+  const persons = [...new Set(spec.components.flatMap((c) => ("person" in c && typeof c.person === "string" ? [c.person] : [])))];
   const cards = [
     ...(companies.length === 1 ? [companyCard(spec, ds, companies[0]!)] : []),
     ...(persons.length === 1 ? [personCard(spec, ds, persons[0]!)] : []),

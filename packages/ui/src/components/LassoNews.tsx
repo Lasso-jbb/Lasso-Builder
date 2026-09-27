@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { formatDate, type NewsItemVM, type NewsVM } from "@lasso/spec";
+import { useState, type ReactNode } from "react";
+import { formatDate, isPersonId, type NewsItemVM, type NewsVM, type TextSegment } from "@lasso/spec";
+import type { ViewAction } from "../types.js";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
 
 /** "2026-04-15" -> "for 3 dage siden" under 7 dage gammel, ellers "15.04.2026". */
@@ -37,17 +38,85 @@ function Excerpt({ text, mention }: { text: string; mention?: string }) {
   );
 }
 
+/** Hvad et segment kan åbne: virksomhed (CVR-1-…) eller person (CVR-3-…); ellers intet. */
+function openAction(s: TextSegment): ViewAction | null {
+  if (!s.lassoId) return null;
+  if (s.lassoId.startsWith("CVR-1-")) return { kind: "open-company", lassoId: s.lassoId, name: s.text };
+  if (isPersonId(s.lassoId)) return { kind: "open-person", lassoId: s.lassoId, name: s.text };
+  return null;
+}
+
+interface SegmentOpts {
+  /** Siden, nyheden står på: dens eget navn står i fed i stedet for som link til sig selv (regel 17). */
+  selfId?: string;
+  onOpen?: (a: ViewAction) => void;
+}
+
+/** Et segment, der kan åbnes her: har et Lasso-ID, er ikke siden selv, og værten har drill-down. */
+function linkOf(s: TextSegment, { selfId, onOpen }: SegmentOpts): ViewAction | null {
+  if (!onOpen || (selfId && s.lassoId === selfId)) return null;
+  return openAction(s);
+}
+
+/** Et segment som ren tekst: fed, når det er virksomhedens eget navn (Paqles highlight eller siden selv). */
+function plainSegment(s: TextSegment, key: number, selfId?: string): ReactNode {
+  return s.highlight || (selfId && s.lassoId === selfId) ? <strong key={key}>{s.text}</strong> : <span key={key}>{s.text}</span>;
+}
+
+/** Et navn med Lasso-ID som lasso-link, der åbner virksomheden eller personen i værten. */
+function EntityLink({ segment, action, onOpen }: { segment: TextSegment; action: ViewAction; onOpen: (a: ViewAction) => void }) {
+  return (
+    <button type="button" className="lasso-link lasso-news__entity" onClick={() => onOpen(action)}>
+      {segment.text}
+    </button>
+  );
+}
+
 /**
- * Paqles egne tekstsegmenter (`headlineSegments`/`extractSegments`): firmanavnet er allerede
- * udpeget af Lasso (`highlight:true`), så det bruges i stedet for et gæt på tekstsøgning
- * (regel 17: navn i fed, aldrig koral eller farvet baggrund).
+ * Tekstsegmenter (`headlineSegments`/`extractSegments`): Paqle udpeger firmanavnet (`highlight`),
+ * og Lasso News' "{Navn|LassoId}"-markup giver navne med Lasso-ID, som bliver links, når værten kan
+ * åbne dem (regel 17: navn i fed, aldrig koral eller farvet baggrund).
  */
-function Segments({ segments }: { segments: { text: string; highlight?: boolean }[] }) {
+function Segments({ segments, ...opts }: { segments: TextSegment[] } & SegmentOpts) {
   return (
     <>
-      {segments.map((s, i) => (s.highlight ? <strong key={i}>{s.text}</strong> : <span key={i}>{s.text}</span>))}
+      {segments.map((s, i) => {
+        const action = linkOf(s, opts);
+        return action ? <EntityLink key={i} segment={s} action={action} onOpen={opts.onOpen!} /> : plainSegment(s, i, opts.selfId);
+      })}
     </>
   );
+}
+
+/**
+ * Overskriften som link til artiklen. Et <a> må ikke indeholde knapper, så navne, der kan åbnes,
+ * bryder linket: tekststykkerne før og efter er hver sit <a> til artiklen, navnet er en knap.
+ */
+function Headline({ item, ...opts }: { item: NewsItemVM } & SegmentOpts) {
+  const segments: TextSegment[] = item.headlineSegments ?? [{ text: item.headline }];
+  if (!item.url) return <Segments segments={segments} {...opts} />;
+  const parts: ReactNode[] = [];
+  let run: ReactNode[] = [];
+  const flush = () => {
+    if (!run.length) return;
+    parts.push(
+      <a key={`a${parts.length}`} href={item.url} target="_blank" rel="noreferrer">
+        {run}
+      </a>,
+    );
+    run = [];
+  };
+  segments.forEach((s, i) => {
+    const action = linkOf(s, opts);
+    if (!action) {
+      run.push(plainSegment(s, i, opts.selfId));
+      return;
+    }
+    flush();
+    parts.push(<EntityLink key={i} segment={s} action={action} onOpen={opts.onOpen!} />);
+  });
+  flush();
+  return <>{parts}</>;
 }
 
 function SourceMark({ source, url }: { source: string; url?: string }) {
@@ -68,42 +137,58 @@ function SourceMark({ source, url }: { source: string; url?: string }) {
   );
 }
 
-function NewsRow({ item, mention }: { item: NewsItemVM; mention?: string }) {
+function NewsRow({ item, mention, ...opts }: { item: NewsItemVM; mention?: string } & SegmentOpts) {
   // Typeetiket og tidspunkt er ren tekst, komma-adskilt (regel 6: ingen midterprikker).
   const meta = [item.typeLabel, relativeOrDate(item.time), item.language].filter(Boolean).join(", ");
-  const body = (
-    <>
+  // Rækken er ikke selv et link (links og knapper må ikke ligge i hinanden): overskriften linker til
+  // artiklen, og navne med Lasso-ID i overskrift og uddrag åbner virksomheden eller personen.
+  return (
+    <article className="lasso-news__row">
       <div className="lasso-news__head">
         <SourceMark source={item.source} url={item.url} />
         <span className="lasso-news__time">{meta}</span>
       </div>
-      <div className="lasso-news__headline">{item.headlineSegments ? <Segments segments={item.headlineSegments} /> : item.headline}</div>
+      <div className="lasso-news__headline">
+        <Headline item={item} {...opts} />
+      </div>
       {item.excerpt ? (
         // Lasso News' content kan have linjeskift fra en HTML-liste (<li>); white-space: pre-line
         // viser dem, uden at gå via en stylesheet-ændring (uddraget er ellers almindelig løbetekst).
         <div className="lasso-row__sub" style={{ whiteSpace: "pre-line" }}>
-          {item.extractSegments ? <Segments segments={item.extractSegments} /> : <Excerpt text={item.excerpt} mention={mention} />}
+          {item.extractSegments ? <Segments segments={item.extractSegments} {...opts} /> : <Excerpt text={item.excerpt} mention={mention} />}
         </div>
       ) : null}
-    </>
+    </article>
   );
-  if (item.url) {
-    return (
-      <a className="lasso-news__row" href={item.url} target="_blank" rel="noreferrer">
-        {body}
-      </a>
-    );
-  }
-  return <div className="lasso-news__row">{body}</div>;
 }
 
 /**
  * Nyheder (katalog 12, "Nyheder"). To kilder, Lasso News og Paqle, flettet og sorteret efter tid
  * (apps/server/src/data/live.ts). Kildemærke = kildens eget favicon (fallback: neutralt
  * globus-ikon, aldrig et bogstav). Relativ tid under 7 dage, ellers dato. Virksomheden
- * fremhæves i overskrift og uddrag med fed skrift, aldrig koral (regel 17).
+ * fremhæves i overskrift og uddrag med fed skrift, aldrig koral (regel 17). Overskriften linker til
+ * artiklen; andre virksomheder og personer i teksten åbnes i værten, når den har drill-down.
  */
-export function LassoNews({ news, companyName, limit, error }: { news?: NewsVM; companyName?: string; limit?: number; error?: string }) {
+export function LassoNews({
+  news,
+  companyName,
+  companyId,
+  limit,
+  error,
+  onOpen,
+  emptyReason,
+}: {
+  news?: NewsVM;
+  companyName?: string;
+  /** Virksomheden, siden handler om: dens navn i nyhederne står i fed og linker ikke til sig selv. */
+  companyId?: string;
+  limit?: number;
+  error?: string;
+  /** Værten kan åbne virksomheder og personer (drill-down): navne med Lasso-ID bliver links. */
+  onOpen?: (a: ViewAction) => void;
+  /** Tom tilstand for andre entiteter end virksomheder, fx "Ingen nyheder om personen." */
+  emptyReason?: string;
+}) {
   const title = "Nyheder";
   const [expanded, setExpanded] = useState(false);
   if (!news) {
@@ -116,7 +201,7 @@ export function LassoNews({ news, companyName, limit, error }: { news?: NewsVM; 
   if (news.items.length === 0) {
     return (
       <Section title={title} span="half">
-        <DataState state="empty" reason="Der er ikke fundet nyheder om virksomheden." />
+        <DataState state="empty" reason={emptyReason ?? "Der er ikke fundet nyheder om virksomheden."} />
       </Section>
     );
   }
@@ -127,7 +212,7 @@ export function LassoNews({ news, companyName, limit, error }: { news?: NewsVM; 
     <Section title={title} span="half">
       <div className="lasso-news">
         {items.map((n, i) => (
-          <NewsRow key={i} item={n} mention={companyName} />
+          <NewsRow key={i} item={n} mention={companyName} selfId={companyId} onOpen={onOpen} />
         ))}
       </div>
       {news.items.length > max ? (

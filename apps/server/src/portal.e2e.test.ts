@@ -242,6 +242,16 @@ test("person: som show_person, med signeret link til personsiden; 404/400 ved fe
   const lassoId = /\/e\/(CVR-3-\d+)\?/.exec(body.link ?? "")?.[1];
   assert.ok(lassoId, body.link);
   assert.ok(body.dataset.persons[lassoId!]);
+  // Personsidens nye sektioner: stamoplysninger, historik og nyheder nøglet på person-ID'et, og
+  // ejerdiagrammet med personen som rod (pille) og en kant til det ejede selskab.
+  const types = body.spec.components.map((c) => c.type);
+  for (const t of ["LassoPersonFacts", "LassoTimeline", "LassoNews", "LassoOwnershipDiagram"]) assert.ok(types.includes(t as never), t);
+  assert.match(body.dataset.timeline[lassoId!]!.events[0]!.title, /kom under konkurs/);
+  assert.ok(body.dataset.news[lassoId!]!.items.length > 0);
+  const graph = body.dataset.ownershipGraphs[`${lassoId}|0|2|`]!;
+  assert.equal(graph.nodes.find((n) => n.root)?.kind, "person");
+  assert.ok(graph.edges.some((e) => e.from === lassoId && e.to === "CVR-1-99000010"));
+  assert.deepEqual(body.dataset.errors, {});
   assert.deepEqual(verifyEntityLink(config, lassoId!, query(body.link!)), { ok: true, lassoId });
   assert.equal((await fetch(local(body.link!))).status, 200);
 

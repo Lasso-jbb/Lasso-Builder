@@ -2,6 +2,7 @@ import { z } from "zod";
 import { criterionSchema } from "./criteria.js";
 import { currencyUnit, formatAmount, formatNumber, formatPercent } from "./format.js";
 import { CHANGE_TYPES, type FinancialYear } from "./models.js";
+import { TEXT_SECTIONS_VARIANTS } from "./textSections.js";
 
 /**
  * Den deklarative visnings-spec. Modellen skriver aldrig HTML/CSS; den sender
@@ -115,6 +116,23 @@ const companyRef = z
   .min(1)
   .describe("Lasso-ID (fx 'CVR-1-12345678') eller et 8-cifret CVR-nummer.");
 
+/* Personsiden (katalog 16). */
+const personRef = z
+  .string()
+  .min(1)
+  .describe("Lasso-ID for en person, fx 'CVR-3-4000000001' (personer har ikke CVR-nummer).");
+
+/**
+ * Tidslinje, nyheder og ejerdiagram findes både for en virksomhed og en person: præcis én af
+ * `company` og `person` skal være sat. Refinementet følger med gennem `.extend()` (zod 4).
+ */
+const companyOrPerson = {
+  company: companyRef.optional().describe("Virksomheden: Lasso-ID (fx 'CVR-1-12345678') eller et 8-cifret CVR-nummer. Udelades, når komponenten gælder en person."),
+  person: personRef.optional().describe("Personen: Lasso-ID 'CVR-3-…'. Udelades, når komponenten gælder en virksomhed."),
+};
+const exactlyOneEntity = (c: { company?: string; person?: string }) => Boolean(c.company) !== Boolean(c.person);
+const EXACTLY_ONE_ENTITY = { message: "Angiv præcis én af 'company' (virksomhed) og 'person' (Lasso-ID 'CVR-3-…').", path: ["company"] };
+
 const metric = z.enum(METRICS);
 
 export const searchQuerySchema = z
@@ -215,6 +233,10 @@ export const beneficialOwnersSchema = z.object({
 export const textSectionsSchema = z.object({
   type: z.literal("LassoTextSections"),
   company: companyRef,
+  variant: z
+    .enum(TEXT_SECTIONS_VARIANTS)
+    .default("profil")
+    .describe("'profil' (standard): formål og tegningsregler fra CVR plus regnskabsanalysens konklusion, resultat og likviditet. 'analyse': hele regnskabsanalysen (alle afsnit), foldet efter konklusionen."),
   title: z.string().max(80).optional(),
 });
 
@@ -226,30 +248,36 @@ export const summarySchema = z.object({
   updated: z.string().max(40).optional().describe("Dato for resumeet (ÅÅÅÅ-MM-DD). Standard: i dag."),
 });
 
-export const timelineSchema = z.object({
-  type: z.literal("LassoTimeline"),
-  company: companyRef,
-  title: z.string().max(80).optional(),
-});
+export const timelineSchema = z
+  .object({
+    type: z.literal("LassoTimeline"),
+    ...companyOrPerson,
+    title: z.string().max(80).optional(),
+    limit: z.number().int().min(1).max(20).optional().describe("Antal begivenheder før 'Se alle N begivenheder'. Standard 5; overblikket viser 3 (regel 9)."),
+  })
+  .refine(exactlyOneEntity, EXACTLY_ONE_ENTITY)
+  .describe("Virksomhed: stiftelse, ledelsesskift og regnskaber. Person: indtrådt/udtrådt som X i selskaber og selskabernes konkurser/tvangsopløsninger.");
 
-export const newsSchema = z.object({
-  type: z.literal("LassoNews"),
-  company: companyRef,
-  limit: z.number().int().min(1).max(10).default(5),
-});
+export const newsSchema = z
+  .object({
+    type: z.literal("LassoNews"),
+    ...companyOrPerson,
+    limit: z.number().int().min(1).max(10).default(5),
+  })
+  .refine(exactlyOneEntity, EXACTLY_ONE_ENTITY);
 
 export const ownershipDiagramSchema = z.object({
   type: z.literal("LassoOwnershipDiagram"),
-  company: companyRef,
-  ingoingDepth: z.number().int().min(0).max(10).default(2).describe("Lag op (ejere). Standard 2."),
-  outgoingDepth: z.number().int().min(0).max(10).default(1).describe("Lag ned (datterselskaber). Standard 1."),
+  ...companyOrPerson,
+  ingoingDepth: z.number().int().min(0).max(10).default(2).describe("Lag op (ejere). Standard 2. For en person: 0 (personer har ingen ejere)."),
+  outgoingDepth: z.number().int().min(0).max(10).default(1).describe("Lag ned (datterselskaber). Standard 1. For en person: de selskaber, personen ejer (1), og deres datterselskaber (2)."),
   onDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional()
     .describe("Øjebliksbillede pr. dato (ÅÅÅÅ-MM-DD). Udelades for i dag."),
   title: z.string().max(80).optional(),
-});
+}).refine(exactlyOneEntity, EXACTLY_ONE_ENTITY);
 
 export const tableSchema = z.object({
   type: z.literal("LassoCompanyTable"),
@@ -274,6 +302,11 @@ export const keyValueListSchema = z.object({
     .default("company")
     .describe("'company': stamdata og revisor. 'financials': regnskabstal med årsvælger, tal højrestillet."),
   title: z.string().max(80).optional(),
+  exclude: z
+    .array(metric)
+    .max(METRICS.length)
+    .optional()
+    .describe("Kun variant 'financials': nøgletal, der allerede står på siden (fx i LassoKeyFigureCards), og som listen derfor udelader."),
 });
 
 export const contactSchema = z.object({
@@ -362,12 +395,7 @@ export const livestockSchema = z.object({
   company: companyRef,
 });
 
-/* Personsiden (katalog 16). */
-const personRef = z
-  .string()
-  .min(1)
-  .describe("Lasso-ID for en person, fx 'CVR-3-4000000001' (personer har ikke CVR-nummer).");
-
+/* Personsiden (katalog 16); personRef står øverst, fordi tidslinje, nyheder og ejerdiagram også bruger den. */
 export const personHeadSchema = z.object({
   type: z.literal("LassoPersonHead"),
   person: personRef,
@@ -390,6 +418,14 @@ export const personRiskSchema = z.object({
   person: personRef,
   title: z.string().max(80).optional(),
 });
+
+export const personFactsSchema = z
+  .object({
+    type: z.literal("LassoPersonFacts"),
+    person: personRef,
+    title: z.string().max(80).optional().describe("Standard: 'Stamoplysninger'."),
+  })
+  .describe("Stamoplysninger om personen som nøgle-værdi (¼): bopæl (postnummer og by, aldrig gade), kommune, enhedsnummer, roller, ejerskaber, første registrering og seneste ændring.");
 
 /** Katalog 21: ændringsfeed på tværs af de overvågede virksomheder. Live-endpoint ubekræftet (docs/lasso-endpoints.md). */
 export const changeFeedSchema = z
@@ -439,7 +475,9 @@ const widthShape = {
     .min(1)
     .max(3)
     .optional()
-    .describe("Kun layout 'columns': hvilken kolonne komponenten stables i. Udeladt = fuld bredde over eller under kolonnerne."),
+    .describe(
+      "Kun layout 'columns': hvilken kolonne komponenten stables i. Udeladt = fuld bredde over eller under kolonnerne. Et lavere kolonnenummer end forrige komponents starter et nyt bånd af kolonner; står width på båndets komponenter, bestemmer den kolonnernes forhold (fx ¾ + ¼).",
+    ),
 };
 function w<S extends z.ZodRawShape>(schema: z.ZodObject<S>) {
   return schema.extend(widthShape);
@@ -485,6 +523,7 @@ export const componentSchema = z.discriminatedUnion("type", [
   w(personRolesSchema),
   w(personNetworkSchema),
   w(personRiskSchema),
+  w(personFactsSchema),
   w(changeFeedSchema),
   w(savedPagesSchema),
 ]);
@@ -560,6 +599,7 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoPersonRoles: "full",
   LassoPersonNetwork: "half",
   LassoPersonRisk: "half",
+  LassoPersonFacts: "quarter",
   LassoChangeFeed: "full",
   LassoSavedPages: "full",
 };

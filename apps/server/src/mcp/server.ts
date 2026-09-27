@@ -151,7 +151,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     {
       title: "Vis person",
       description:
-        "Vis én person fra CVR som ét skærmbillede (katalog 16): personhoved med antal aktive og ophørte roller, roller i selskaber som tidsbånd fra–til, netværk (hvem personen sidder sammen med i selskaber) og risiko (konkurser og tvangsopløsninger blandt personens selskaber). Serveren henter data og vælger selv formen. Tager navn eller personens Lasso-ID (CVR-3-…); ved navn vælger serveren det bedste match og nævner alternativerne. Personer har ikke CVR-nummer; brug show_company til virksomheder. Kald det kun én gang pr. svar.",
+        "Vis én person fra CVR som ét skærmbillede (katalog 16): personhoved med antal aktive og ophørte roller, roller i selskaber som tidsbånd fra–til, stamoplysninger (bopæl som postnummer og by eller 'Adressebeskyttet', kommune, enhedsnummer, ejerskaber, første registrering, seneste ændring), netværk (hvem personen sidder sammen med i selskaber; år sammen = længste sammenhængende periode), risiko (konkurser og tvangsopløsninger blandt personens selskaber), historik (indtrådt/udtrådt som X i selskaber og selskabernes konkurser), nyheder om personen (Lasso News) og, når personen ejer selskaber, et ejerdiagram med personen øverst. Tomme sektioner udelades. Serveren henter data og vælger selv formen. Tager navn eller personens Lasso-ID (CVR-3-…); ved navn vælger serveren det bedste match og nævner alternativerne. Personer har ikke CVR-nummer; brug show_company til virksomheder. Kald det kun én gang pr. svar.",
       inputSchema: z.object({
         person: z.string().min(1).describe("Personens navn (fx 'Mette Holm') eller Lasso-ID (fx 'CVR-3-4000000001')."),
       }),

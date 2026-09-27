@@ -22,6 +22,7 @@ import {
   cvrFromLassoId,
   CREDIT_PENDING_REASON,
   CREDIT_SOURCE,
+  isPersonId,
 } from "@lasso/spec";
 import type { Config } from "../config.js";
 import {
@@ -55,7 +56,7 @@ import {
 import { describeShape, LassoApiError, type LassoClient } from "../lasso/client.js";
 import { adaptOwnershipLegal } from "../lasso/ownershipAdapters.js";
 import { adaptLassoNews, mergeNews } from "../lasso/riskNewsAdapters.js";
-import { adaptPerson, adaptPersonNetwork, adaptPersonSearch } from "../lasso/personAdapters.js";
+import { adaptPerson, adaptPersonNetwork, adaptPersonSearch, graphFromPersonRoles } from "../lasso/personAdapters.js";
 import { adaptChrLivestock, adaptLiveNumber, adaptReportAnalysisSections, buildProductionUnits } from "../lasso/unitAdapters.js";
 import { loadCreditRating } from "../lasso/creditAdapters.js";
 import { criteriaToFilters, DEFAULT_ACTIVE_STATUS_FILTER, filtersToCriteria, SERVER_SORT, type LassoFilter } from "../lasso/searchFilters.js";
@@ -384,9 +385,12 @@ export class LiveProvider implements DataProvider {
    * docs/endpoints-risiko-nyheder.md. Flettet efter tid (nyeste først) og skåret til `limit`.
    */
   async news(lassoId: string, limit: number) {
+    // Katalog 16: Lasso News tager alle Lasso-ID'er, også personers. Paqle er mediemonitorering af
+    // virksomheder (fremhæver virksomhedens navn) og spørges ikke for en person.
+    const person = isPersonId(lassoId);
     const [lassoItems, paqleItems] = await Promise.all([
       safe(() => this.client.lassoNews([lassoId], { limit })).then((raw) => (raw === undefined ? [] : adaptLassoNews(raw))),
-      safe(() => this.client.news(lassoId)).then((raw) => (raw === undefined ? [] : adaptNews(lassoId, raw, Number.MAX_SAFE_INTEGER).items)),
+      person ? Promise.resolve([]) : safe(() => this.client.news(lassoId)).then((raw) => (raw === undefined ? [] : adaptNews(lassoId, raw, Number.MAX_SAFE_INTEGER).items)),
     ]);
     return mergeNews(
       lassoId,
@@ -549,6 +553,7 @@ export class LiveProvider implements DataProvider {
   }
 
   async ownershipGraph(lassoId: string, opts: OwnershipGraphOptions) {
+    if (isPersonId(lassoId)) return this.personOwnershipGraph(lassoId, opts);
     try {
       const raw = await this.client.relationsGraph({ ids: [lassoId], ingoingDepth: opts.ingoingDepth, outgoingDepth: opts.outgoingDepth, onDate: opts.onDate });
       return await this.nameGraphNodes(adaptOwnershipGraph(lassoId, raw, opts));
@@ -558,6 +563,35 @@ export class LiveProvider implements DataProvider {
       const raw = await this.client.company(lassoId);
       return graphFromOwnership(lassoId, adaptCompany(lassoId, raw).name, adaptOwnership(lassoId, raw), opts);
     }
+  }
+
+  /**
+   * Katalog 16: personens ejerskaber som ejergraf med personen som rod (POST /modules/relations/graph
+   * med personens ID og ingoingDepth 0). Grafen navngiver ikke roden, så navnet kommer fra
+   * personopslaget (samme cachede kald som personhovedet). Afviser endpointet et person-ID
+   * (400/404/405/501), vises de direkte ejerskaber fra personens ejerroller (ét lag, med en note).
+   * UBEKRÆFTET mod API'et for person-ID'er (kun virksomheds-ID'er er afprøvet).
+   */
+  private async personOwnershipGraph(lassoId: string, opts: OwnershipGraphOptions): Promise<OwnershipGraphVM> {
+    const depth = { ingoingDepth: 0, outgoingDepth: opts.outgoingDepth, ...(opts.onDate ? { onDate: opts.onDate } : {}) };
+    const personP = this.person(lassoId).catch(() => undefined);
+    let graph: OwnershipGraphVM;
+    try {
+      const raw = await this.client.relationsGraph({ ids: [lassoId], ...depth });
+      graph = await this.nameGraphNodes(adaptOwnershipGraph(lassoId, raw, depth));
+    } catch (err) {
+      if (!(err instanceof LassoApiError) || ![400, 404, 405, 501].includes(err.status)) throw err;
+      const person = await personP;
+      if (!person) throw err;
+      return graphFromPersonRoles(person, depth);
+    }
+    const person = await personP;
+    return {
+      ...graph,
+      // En person har ingen ejere i dette diagram; roden er altid en person (pille) med personens navn.
+      edges: graph.edges.filter((e) => e.to !== lassoId),
+      nodes: graph.nodes.map((n) => (n.id === lassoId ? { ...n, kind: "person" as const, name: person?.name ?? n.name, root: true } : n)),
+    };
   }
 
   /**

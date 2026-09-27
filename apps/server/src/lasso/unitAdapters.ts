@@ -2,6 +2,7 @@ import type { Address, ContactVM, LivestockHerdVM, LivestockVM, ProductionUnitVM
 import { mapLimit } from "../data/provider.js";
 import { adaptCompany, arr, at, dateStr, isObj, num, pick, statusKind, str, address, type Json } from "./adapters.js";
 import { htmlToText } from "./htmlText.js";
+import { textWithEntities } from "./newsMarkup.js";
 
 /**
  * Adaptere for de fire nye datakilder (katalog 20 + 08 + 12/19): produktionsenheder med
@@ -331,6 +332,11 @@ const REPORT_ANALYSIS_SOURCE = "Kilde: Lasso regnskabsanalyse";
  * tilbage til `text` som én samlet sektion. HTML'et konverteres til ren tekst med `htmlToText`.
  * Tomt/ukendt svar giver en tom liste (sektionerne udelades da helt — katalogregel 4/5: ingen
  * AI-mærke, ingen bannerboks, blot almindelige sektioner med kildelinje).
+ *
+ * Hver sektion starter i kilden med sin egen overskrift ("<b>Revisoroplysninger</b><br>…"), som
+ * fjernes, så brødteksten starter med den første sætning (overskriften står allerede over den).
+ * Teksten kan indeholde Lassos "{Navn|LassoId}"-markup (fx revisoren): `body` er ren tekst med
+ * navnene, og `segments` bærer navnenes Lasso-ID'er, så de kan vises som links.
  */
 export function adaptReportAnalysisSections(raw: Json): TextSectionItem[] {
   const sectionsRaw = pick(raw, "sections");
@@ -339,15 +345,62 @@ export function adaptReportAnalysisSections(raw: Json): TextSectionItem[] {
     for (const [key, title] of REPORT_ANALYSIS_SECTIONS) {
       const html = str(sectionsRaw, key);
       if (!html) continue;
-      const body = htmlToText(html);
-      if (!body) continue;
-      items.push({ heading: title, body, note: REPORT_ANALYSIS_SOURCE });
+      const item = analysisItem(title, stripSectionTitle(html, key, title));
+      if (item) items.push(item);
     }
     if (items.length) return items;
   }
   const html = typeof raw === "string" ? raw : str(raw, "text", "analysis", "html", "content", "result", "summary");
   if (!html) return [];
-  const body = htmlToText(html);
-  if (!body) return [];
-  return [{ heading: "Regnskabsanalyse", body, note: REPORT_ANALYSIS_SOURCE }];
+  const item = analysisItem("Regnskabsanalyse", html);
+  return item ? [item] : [];
+}
+
+/** HTML -> ren tekst uden markup (+ segmenter med Lasso-ID'er, når teksten har navne med ID). */
+function analysisItem(heading: string, html: string): TextSectionItem | null {
+  const { text, segments } = textWithEntities(htmlToText(html));
+  if (!text) return null;
+  return { heading, body: text, ...(segments ? { segments } : {}), note: REPORT_ANALYSIS_SOURCE };
+}
+
+/** Bogstaver og cifre i små bogstaver: "Balance og kapitalforhold:" -> "balanceogkapitalforhold". */
+function titleKey(s: string): string {
+  return s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+}
+
+/**
+ * Er teksten sektionens egen overskrift? Lassos titel ("Konklusion", "Revisoroplysninger"), feltets
+ * nøgle ("balanceogkapitalforhold") eller vores danske overskrift, helt eller som dens start/slutning
+ * ("Regnskabsanalyse: konklusion" slutter med "konklusion").
+ */
+function isSectionTitle(text: string, key: string, title: string): boolean {
+  const t = titleKey(text);
+  const ours = titleKey(title);
+  if (!t) return false;
+  return t === key || t === ours || (t.length >= 5 && (ours.startsWith(t) || ours.endsWith(t)));
+}
+
+/**
+ * Fjerner sektionens overskrift fra starten af HTML'et, også når den står flere gange: et
+ * indledende "<b>Titel</b>" (evt. med kolon og linjeskift efter), eller titlen som ren tekst på sin
+ * egen linje eller efterfulgt af kolon. En fed indledning, der ikke er sektionens titel (fx et emne
+ * under "Spørgsmål til overvejelse"), beholdes, og det samme gør en sætning, der blot starter med
+ * samme ord som titlen ("Resultatet er steget …").
+ */
+function stripSectionTitle(html: string, key: string, title: string): string {
+  let rest = html;
+  for (let i = 0; i < 3; i++) {
+    const bold = /^\s*(?:<p[^>]*>\s*)?<(b|strong|h\d)[^>]*>([\s\S]*?)<\/\1\s*>\s*:?\s*(?:<br\s*\/?>\s*)*/i.exec(rest);
+    if (bold && isSectionTitle(htmlToText(bold[2]), key, title)) {
+      rest = rest.slice(bold[0].length);
+      continue;
+    }
+    const plain = /^\s*([^<\n:]{1,80}?)\s*(?::\s*|(?:<br\s*\/?>|\n)\s*)+/i.exec(rest);
+    if (plain && isSectionTitle(plain[1]!, key, title)) {
+      rest = rest.slice(plain[0].length);
+      continue;
+    }
+    break;
+  }
+  return rest;
 }

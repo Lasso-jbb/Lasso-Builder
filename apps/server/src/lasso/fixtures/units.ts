@@ -94,6 +94,28 @@ export const REPORT_ANALYSIS_RESPONSE: Json = {
 };
 
 /**
+ * POST /modules/reportanalysis/{lassoId} i den bekræftede form (27.09.2026), med det, der er set i
+ * de rigtige svar: hver sektion starter med sin egen titel i fed ("<b>Titel</b><br>…"), titlen kan
+ * stå to gange, og teksten har Lassos "{Navn|LassoId}"-markup (revisoren). Navne og tal er
+ * opdigtede; Crowes CVR-nummer er det rigtige.
+ */
+export const REPORT_ANALYSIS_WITH_ENTITIES: Json = {
+  lassoId: "CVR-1-99000001",
+  sections: {
+    konklusion: "<b>Konklusion</b><br>Virksomheden har en sund og stabil udvikling.",
+    resultat: "<b>Resultat</b><br>Resultatet er steget 8 % i forhold til året før.",
+    likviditet: "",
+    balanceogkapitalforhold:
+      "<b>Balance og kapitalforhold</b><br><b>Balance og kapitalforhold</b><br>Virksomhedens samlede aktiver er steget til 120 mio. kr.<br><br>Egenkapitalen udgør 45 %.",
+    branchestatistik: "",
+    revisoroplysninger:
+      "<b>Revisoroplysninger</b><br>En autoriseret revisor fra {Crowe Statsautoriseret Revisionsinteressentskab|CVR-1-33256876} har revideret årsrapporten. Underskrevet af {Peter Revisor Eksempel|CVR-3-4000000099}.",
+    sprgsml: "<b>Strategilægning og budgetjustering</b><br>Overvej følgende: <br>- Bør investeringsplanen revideres?",
+  },
+  text: "<b>Konklusion</b><br>Virksomheden har en sund og stabil udvikling.",
+};
+
+/**
  * GET /data/CHR/livestock/{cvr}?onlyCurrent=true, BEKRÆFTET MOD API 27.09.2026: rent array af
  * ejendomme. Ét element (samme CHR-nummer, tre besætningsrækker): en virksomhedsejet ("Svin",
  * med "i alt"-total), en privatejet ("Heste", ejerens navn må ikke lækkes) og en uden ejer

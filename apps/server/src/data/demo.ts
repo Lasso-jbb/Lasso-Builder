@@ -30,13 +30,15 @@ import {
   type SearchQuery,
   type SearchResultVM,
   type TextSectionsVM,
+  type TextSegment,
   type TimelineVM,
   hasReportingDuty,
+  isPersonId,
 } from "@lasso/spec";
 import { CREDIT_NONE_REASON } from "../lasso/creditAdapters.js";
 import { applyCriteria, sortRows } from "./criteria-eval.js";
-import { demoOwnershipGraph } from "./demoGraph.js";
-import { demoFindPersons, demoPerson, demoPersonIds, demoPersonNetwork } from "./demoPeople.js";
+import { demoOwnershipGraph, demoPersonOwnershipGraph } from "./demoGraph.js";
+import { demoFindPersons, demoPerson, demoPersonIds, demoPersonNetwork, demoPersonNews } from "./demoPeople.js";
 import { NotFoundError, type ChangeFeedOptions, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
 
 /**
@@ -111,6 +113,51 @@ function beneficialOwnersFor(c: DemoCompany): BeneficialOwnershipVM {
   return { lassoId: c.lassoId, owners };
 }
 
+/** Tekst med navne: strenge er almindelig tekst, [navn, Lasso-ID] et navn, der kan åbnes. */
+function analysisSection(heading: string, ...parts: (string | [string, string | undefined])[]): TextSectionsVM["sections"][number] {
+  const segments = parts.map((p) => (typeof p === "string" ? { text: p } : { text: p[0], lassoId: p[1] }));
+  return { heading, body: segments.map((x) => x.text).join(""), segments, note: "Kilde: Lasso regnskabsanalyse" };
+}
+
+function analysisFor(c: DemoCompany): TextSectionsVM["sections"] {
+  const auditor = COMPANIES.find((x) => x.name === c.auditor);
+  const ceo = c.people.find((p) => /direktør/i.test(p.role) && !p.to);
+  return [
+    analysisSection(
+      "Regnskabsanalyse: konklusion",
+      `${c.name} har haft en støt stigende bruttofortjeneste de seneste fem år og et positivt resultat i alle år. Egenkapitalen er vokset hvert år, og soliditetsgraden ligger over branchens gennemsnit. Samlet set er der tale om en sund og stabil udvikling uden tegn på likviditetspres (eksempeltekst).`,
+    ),
+    analysisSection(
+      "Resultat",
+      "Årets resultat er steget med godt 8 % i forhold til sidste år, drevet af flere store projekter og en bedre udnyttelse af de faste omkostninger. Overskudsgraden er forbedret for tredje år i træk, mens personaleomkostningerne er steget mindre end bruttofortjenesten (eksempeltekst).",
+    ),
+    analysisSection(
+      "Likviditet",
+      "Likviditeten er tilfredsstillende. Pengestrømmen fra driften dækker årets investeringer, og de likvide beholdninger er øget. Den kortfristede gæld er dækket af omsætningsaktiverne med god margin (eksempeltekst).",
+    ),
+    analysisSection(
+      "Balance og kapitalforhold",
+      "Balancesummen er steget i takt med aktiviteten. Egenkapitalen udgør over halvdelen af balancen, og selskabet har ingen væsentlig langfristet gæld. Der er ikke udloddet udbytte i året, så overskuddet er lagt til egenkapitalen (eksempeltekst).",
+    ),
+    analysisSection(
+      "Branchestatistik",
+      "Sammenlignet med andre virksomheder i branchen har selskabet en højere soliditetsgrad og en overskudsgrad på niveau med de bedste 25 %. Væksten i bruttofortjeneste er over branchens median (eksempeltekst).",
+    ),
+    analysisSection(
+      "Revisoroplysninger",
+      "Årsrapporten er revideret af ",
+      auditor ? [auditor.name, auditor.lassoId] : c.auditor,
+      " uden forbehold eller supplerende oplysninger. Revisor har været den samme i de seneste regnskabsår (eksempeltekst).",
+    ),
+    analysisSection(
+      "Spørgsmål til overvejelse",
+      "• Hvor afhængig er virksomheden af de største kunder?\n• Hvordan påvirker renteniveauet efterspørgslen i de kommende år?\n• Hvem overtager efter ",
+      ceo ? [ceo.name, PERSON_IDS.get(ceo.name)] : "den nuværende direktør",
+      ", hvis direktøren fratræder? (eksempeltekst)",
+    ),
+  ];
+}
+
 function textSectionsFor(c: DemoCompany): TextSectionsVM {
   const sections: TextSectionsVM["sections"] = [
     { heading: "Branche", body: c.industryText ?? "Ikke oplyst", note: c.industryCode ? `NACE ${c.industryCode}` : undefined },
@@ -120,18 +167,9 @@ function textSectionsFor(c: DemoCompany): TextSectionsVM {
     },
     { heading: "Tegningsregler", body: "Selskabet tegnes af en direktør alene eller af den samlede bestyrelse (eksempeltekst)." },
   ];
-  // Katalog 12/19: eksempel på regnskabsanalysen (POST /modules/reportanalysis), kun for ét eksempel.
-  if (c.lassoId === "CVR-1-99000001") {
-    sections.push({
-      heading: "Regnskabsanalyse",
-      body:
-        `${c.name} har haft en støt stigende omsætning de seneste år, drevet af flere store byggeprojekter.\n\n` +
-        "• Bruttofortjenesten er steget 12 % det seneste år\n" +
-        "• Soliditetsgraden er forbedret og ligger nu over branchens gennemsnit\n\n" +
-        "Konklusion: sund og stabil udvikling (eksempeltekst).",
-      note: "Kilde: Lasso regnskabsanalyse",
-    });
-  }
+  // Katalog 12/19: eksempel på regnskabsanalysen (POST /modules/reportanalysis) i samme form som
+  // live-svaret: ét afsnit pr. felt, med navne som segmenter med Lasso-ID. Kun for to eksempler.
+  if (c.lassoId === "CVR-1-99000001" || c.lassoId === "CVR-1-99000010") sections.push(...analysisFor(c));
   return { lassoId: c.lassoId, title: "Virksomhedsprofil", sections };
 }
 
@@ -154,8 +192,26 @@ function timelineFor(c: DemoCompany): TimelineVM {
 
 function newsFor(c: DemoCompany, limit: number): NewsVM {
   const lastYear = YEARS.at(-1);
+  // Som Lasso News: navne med Lasso-ID ("{Navn|LassoId}"-markup) som segmenter, så nyhedernes links
+  // kan ses i demoen. Virksomheden selv, direktøren og revisoren.
+  const director = c.people.find((p) => !p.to && /direkt/i.test(p.role));
+  const directorId = director ? PERSON_IDS.get(director.name) : undefined;
+  const auditor = COMPANIES.find((x) => x.name === c.auditor);
+  const extract: TextSegment[] = [{ text: `Regnskabet for ${lastYear} er godkendt` }];
+  if (director && directorId) extract.push({ text: " af direktør " }, { text: director.name, lassoId: directorId });
+  if (auditor) extract.push({ text: " og revideret af " }, { text: auditor.name, lassoId: auditor.lassoId });
+  extract.push({ text: " (eksempel)." });
   const items: NewsVM["items"] = [
-    { source: "Lasso News", time: `${lastYear}-04-15`, headline: `Ny årsrapport fra ${c.name} (eksempel)`, excerpt: `Skrevet ud fra regnskabet for ${lastYear}.` },
+    {
+      source: "Lasso News",
+      url: `https://example.com/nyheder/${c.cvr}-aarsrapport`,
+      time: `${lastYear}-04-15`,
+      typeLabel: "Nyt regnskab",
+      headline: `Ny årsrapport fra ${c.name} (eksempel)`,
+      headlineSegments: [{ text: "Ny årsrapport fra " }, { text: c.name, lassoId: c.lassoId }, { text: " (eksempel)" }],
+      excerpt: extract.map((s) => s.text).join(""),
+      extractSegments: extract.some((s) => s.lassoId) ? extract : undefined,
+    },
     {
       source: "Prøve Medier",
       time: `${lastYear}-02-02`,
@@ -716,6 +772,8 @@ export class DemoProvider implements DataProvider {
   }
 
   async news(lassoId: string, limit: number) {
+    // Katalog 16: nyheder om en person (Lasso News tager både virksomheds- og person-ID'er).
+    if (isPersonId(lassoId)) return demoPersonNews(COMPANIES, lassoId, limit);
     return newsFor(get(lassoId), limit);
   }
 
@@ -749,11 +807,14 @@ export class DemoProvider implements DataProvider {
   }
 
   async ownershipGraph(lassoId: string, opts: OwnershipGraphOptions) {
-    get(lassoId);
-    return demoOwnershipGraph(lassoId, opts, (id) => {
+    const lookup = (id: string) => {
       const c = BY_ID.get(id);
       return c ? strip(c) : undefined;
-    });
+    };
+    // Katalog 16: personsidens ejerskaber med personen som rod.
+    if (isPersonId(lassoId)) return demoPersonOwnershipGraph(demoPerson(COMPANIES, lassoId), opts, lookup);
+    get(lassoId);
+    return demoOwnershipGraph(lassoId, opts, lookup);
   }
 
   async person(lassoId: string) {

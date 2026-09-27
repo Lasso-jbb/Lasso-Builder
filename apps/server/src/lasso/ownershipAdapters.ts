@@ -1,5 +1,5 @@
 import type { BeneficialOwnerGapVM, BeneficialOwnershipVM, BeneficialOwnerVM, OwnershipGraphVM, OwnershipVM, OwnerVM } from "@lasso/spec";
-import { at, isObj, num, participantKind, percentFormat, pick, shareFloor, shareText, str, type Json } from "./adapters.js";
+import { at, isObj, num, participantKind, participantLassoId, percentFormat, pick, shareFloor, shareText, str, type Json } from "./adapters.js";
 
 /**
  * Oversætter de ejerskabssvar, Lassos egen dokumentation (docs/endpoints-ejerskab.md, "## Ownership")
@@ -40,7 +40,7 @@ export function adaptBeneficialOwnershipDocumented(lassoId: string, raw: Json): 
     const throughRole = at(o, "throughRole") === true;
     owners.push({
       name,
-      lassoId: str(o, "lassoId", "id"),
+      lassoId: participantLassoId(o),
       share: preciseShareText(num(o, "ownership")),
       chain: throughRole ? "Via en rolle (fx ledelse), ikke et direkte kapitalejerskab" : undefined,
     });
@@ -131,7 +131,8 @@ export function adaptOwnershipLegal(lassoId: string, raw: Json): OwnershipVM | u
     const share = shareText(pick(o, "ownership"));
     const votes = shareText(pick(o, "voteRights"));
     const type = str(o, "type");
-    const id = str(o, "lassoId", "id");
+    // Dokumenteret: lassoId|cvr|unitNumber; cvr -> CVR-1-…, unitNumber (person) -> CVR-3-… (participantLassoId).
+    const id = participantLassoId(o);
     owners.push({
       name,
       lassoId: id,

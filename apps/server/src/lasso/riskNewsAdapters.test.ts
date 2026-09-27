@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { adaptNews, adaptObservations } from "./adapters.js";
 import { LASSO_NEWS_FIXTURE, OBSERVATIONS_FIXTURE, PAQLE_NEWS_FIXTURE } from "./fixtures/riskNews.js";
-import { parseEntityMarkup, plainTextFromMarkup, stripHtml } from "./newsMarkup.js";
+import { parseEntityMarkup, plainTextFromMarkup, segmentsFromMarkup, stripHtml, textWithEntities } from "./newsMarkup.js";
 import { adaptLassoNews, canonicalLassoId, mergeNews, newsTypeLabel } from "./riskNewsAdapters.js";
 
 /* ---------------------------------------------------------------------------------------
@@ -157,6 +157,59 @@ test("adaptLassoNews falder tilbage til content (linjeskift bevaret), når tagLi
     },
   ]);
   assert.equal(items[0]!.excerpt, "Nye medlemmer:\nBritt Meelby Jensen\nHenrik Poulsen");
+});
+
+test("adaptLassoNews giver overskrift og uddrag som segmenter, hvor navnene beholder deres Lasso-ID", () => {
+  const [first] = adaptLassoNews(LASSO_NEWS_FIXTURE);
+  assert.deepEqual(first!.headlineSegments, [
+    { text: "Et medlem udtræder af bestyrelsen for " },
+    { text: "NOVO NORDISK A/S", lassoId: "CVR-1-24256790" },
+  ]);
+  assert.deepEqual(first!.extractSegments, [{ text: "Bestyrelsesændring hos " }, { text: "NOVO NORDISK A/S", lassoId: "CVR-1-24256790" }]);
+  // Den rene tekst er uændret, og segmenterne er præcis samme tekst.
+  assert.equal(first!.headlineSegments!.map((s) => s.text).join(""), first!.headline);
+  assert.equal(first!.extractSegments!.map((s) => s.text).join(""), first!.excerpt);
+});
+
+test("adaptLassoNews: uddragets segmenter følger content (personer, linjeskift fra <li>), når tagLine mangler", () => {
+  const [item] = adaptLassoNews([{ ...(LASSO_NEWS_FIXTURE as object[])[0], tagLine: null }]);
+  assert.equal(item!.excerpt, "Tanja Villumsen har siddet i bestyrelsen siden 2021, men udtræder nu. I bestyrelsen sidder nu\nBritt Meelby Jensen\nHenrik Poulsen");
+  assert.deepEqual(item!.extractSegments, [
+    { text: "Tanja Villumsen", lassoId: "CVR-3-4007574142" },
+    { text: " har siddet i bestyrelsen siden 2021, men udtræder nu. I bestyrelsen sidder nu\n" },
+    { text: "Britt Meelby Jensen", lassoId: "CVR-3-4003830981" },
+    { text: "\n" },
+    { text: "Henrik Poulsen", lassoId: "CVR-3-4001112223" },
+  ]);
+  assert.equal(item!.extractSegments!.map((s) => s.text).join(""), item!.excerpt);
+});
+
+test("adaptLassoNews: tekst uden navne med Lasso-ID giver ingen segmenter (den rene tekst er nok)", () => {
+  const [item] = adaptLassoNews([{ headline: "Markedet i dag", tagLine: "Kort nyt {uden id}", url: "https://lasso.dk/y" }]);
+  assert.equal(item!.headlineSegments, undefined);
+  assert.equal(item!.extractSegments, undefined);
+  assert.equal(item!.excerpt, "Kort nyt uden id");
+});
+
+test("segmentsFromMarkup normaliserer mellemrum og linjeskift som plainTextFromMarkup", () => {
+  const text = "  Ny  direktør:\n\n {Anne  Test|CVR-3-1}  \n   og {Holding ApS|CVR-1-22222222} ";
+  const segments = segmentsFromMarkup(text)!;
+  assert.equal(segments.map((s) => s.text).join(""), plainTextFromMarkup(text));
+  assert.deepEqual(segments, [
+    { text: "Ny direktør:\n" },
+    { text: "Anne Test", lassoId: "CVR-3-1" },
+    { text: "\nog " },
+    { text: "Holding ApS", lassoId: "CVR-1-22222222" },
+  ]);
+  assert.equal(segmentsFromMarkup("Ingen navne"), undefined);
+  assert.equal(segmentsFromMarkup(undefined), undefined);
+});
+
+test("textWithEntities bevarer afsnit og giver segmenter, der sat sammen er teksten", () => {
+  const { text, segments } = textWithEntities("Revideret af {Crowe|CVR-1-33256876}.\n\nAndet  afsnit.");
+  assert.equal(text, "Revideret af Crowe.\n\nAndet afsnit.");
+  assert.deepEqual(segments, [{ text: "Revideret af " }, { text: "Crowe", lassoId: "CVR-1-33256876" }, { text: ".\n\nAndet afsnit." }]);
+  assert.deepEqual(textWithEntities("Ingen markup.\n\nTo afsnit."), { text: "Ingen markup.\n\nTo afsnit." });
 });
 
 test("newsTypeLabel oversætter Lassos nyhedstyper til dansk, ukendte typer giver undefined", () => {

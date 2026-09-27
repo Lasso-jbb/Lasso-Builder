@@ -54,6 +54,57 @@ export function plainTextFromMarkup(text: string | undefined): string | undefine
 }
 
 /**
+ * Samme tekst som `plainTextFromMarkup`, men som segmenter, hvor navnene beholder deres Lasso-ID
+ * (til links i UI'en). Mellemrum og linjeskift normaliseres på samme måde (på markup-teksten, før
+ * den splittes), så segmenternes tekst sat sammen er `plainTextFromMarkup(text)`. Giver
+ * `undefined`, når ingen brik har et Lasso-ID (så er den rene tekst nok).
+ */
+export function segmentsFromMarkup(text: string | undefined): MarkupSegment[] | undefined {
+  if (!text) return undefined;
+  const normalized = text
+    .replace(/[^\S\n]+/g, " ")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .join("\n");
+  const segments: MarkupSegment[] = [];
+  for (const seg of parseEntityMarkup(normalized)) {
+    if (!seg.text) continue;
+    const prev = segments.at(-1);
+    // To almindelige stykker i træk (fx omkring et tomt navn) slås sammen til ét.
+    if (prev && !prev.lassoId && !seg.lassoId) prev.text += seg.text;
+    else segments.push(seg.lassoId ? { text: seg.text, lassoId: seg.lassoId } : { text: seg.text });
+  }
+  return segments.some((x) => x.lassoId) ? segments : undefined;
+}
+
+/**
+ * Længere tekst med afsnit (regnskabsanalysen efter `htmlToText`): ren tekst uden markup, hvor
+ * afsnittene (tom linje) bevares, og samme tekst som segmenter, når der er navne med Lasso-ID.
+ * Hvert afsnit normaliseres som `plainTextFromMarkup`/`segmentsFromMarkup`, så segmenternes tekst
+ * sat sammen er præcis `text`.
+ */
+export function textWithEntities(source: string | undefined): { text: string; segments?: MarkupSegment[] } {
+  const paragraphs = (source ?? "")
+    .split(/\n[^\S\n]*\n/)
+    .map((p) => ({ plain: plainTextFromMarkup(p), segments: segmentsFromMarkup(p) }))
+    .filter((p): p is { plain: string; segments: MarkupSegment[] | undefined } => Boolean(p.plain));
+  const text = paragraphs.map((p) => p.plain).join("\n\n");
+  if (!paragraphs.some((p) => p.segments)) return { text };
+  const segments: MarkupSegment[] = [];
+  const push = (s: MarkupSegment) => {
+    const prev = segments.at(-1);
+    if (prev && !prev.lassoId && !s.lassoId) prev.text += s.text;
+    else segments.push({ ...s });
+  };
+  paragraphs.forEach((p, i) => {
+    if (i > 0) push({ text: "\n\n" });
+    for (const s of p.segments ?? [{ text: p.plain }]) push(s);
+  });
+  return { text, segments };
+}
+
+/**
  * HTML til ren tekst: <br>/<li> bliver linjeskift, resten af tags fjernes, og de mest almindelige
  * HTML-entiteter afkodes. Tomme linjer droppes. Bruges kun til content-feltet fra Lasso News.
  */

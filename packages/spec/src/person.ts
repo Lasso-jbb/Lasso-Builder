@@ -1,4 +1,4 @@
-import type { CompanyVM } from "./models.js";
+import type { CompanyVM, TextSegment, TimelineEventVM, TimelineVM } from "./models.js";
 
 /**
  * Personsiden (katalog 16). Én person på tværs af alle selskaber: hoved, roller over tid,
@@ -33,6 +33,14 @@ export interface PersonVM {
   name: string;
   city?: string;
   municipality?: string;
+  /** Postnummer til bopælen. Gade og husnummer gemmes aldrig (se LassoPersonFacts). */
+  zip?: string;
+  /** Land, når bopælen ikke er i Danmark (fx "Sverige"). Udeladt for danske adresser. */
+  country?: string;
+  /** Adressebeskyttet i CVR: by, postnummer og kommune er da udeladt. */
+  addressProtected?: boolean;
+  /** CVR's enhedsnummer for personen (personer har ikke CVR-nummer). */
+  unitNumber?: string;
   roles: PersonRoleVM[];
   /** Hvornår Lasso sidst opdaterede personen (kildelinjen). */
   updated?: string;
@@ -53,7 +61,11 @@ export interface PersonNetworkRowVM {
   lassoId?: string;
   name: string;
   companies: PersonNetworkCompanyVM[];
-  /** Samlet tid i fælles selskaber, i hele år. */
+  /**
+   * Længste sammenhængende periode, de to har siddet sammen i mindst ét selskab, i hele år
+   * (longestPeriodYears). Perioder i flere selskaber, der overlapper eller støder op til
+   * hinanden, er én periode; et hul imellem bryder den. Aldrig summen på tværs af selskaber.
+   */
   overlapYears: number;
   since?: string;
   until?: string;
@@ -192,4 +204,143 @@ export function personRisk(p: PersonVM): PersonRiskVM {
     (bankrupt ? out.bankruptcies : out.dissolutions).push(item);
   }
   return out;
+}
+
+/* ---------- Perioder: "år sammen" er den længste sammenhængende periode ---------- */
+
+const DAY_MS = 86_400_000;
+const YEAR_MS = 365.25 * DAY_MS;
+const isoDay = (t: number) => new Date(t).toISOString().slice(0, 10);
+const todayIso = () => new Date().toISOString().slice(0, 10);
+
+export interface PeriodInput {
+  from?: string;
+  /** Udeladt = stadig i gang (regnes til i dag). */
+  to?: string;
+}
+
+export interface MergedPeriod {
+  from: string;
+  /** Slutdato; i dag, når perioden stadig er i gang. */
+  to: string;
+  /** Mindst én af de sammenlagte perioder er stadig i gang. */
+  open: boolean;
+  /** Længden i dage. */
+  days: number;
+}
+
+/**
+ * Lægger perioder sammen, der overlapper eller støder op til hinanden (højst én dags
+ * mellemrum, fx en rolle, der slutter 31.12, og en ny, der begynder 01.01). Et større hul
+ * giver to perioder. Perioder uden startdato kan ikke placeres og springes over; `to`
+ * udeladt = i dag. Resultatet står i tidsorden.
+ */
+export function mergePeriods(periods: readonly PeriodInput[], today = todayIso()): MergedPeriod[] {
+  const now = Date.parse(today);
+  const list = periods
+    .map((p) => ({ from: p.from ? Date.parse(p.from) : Number.NaN, to: p.to ? Date.parse(p.to) : now, open: !p.to }))
+    .filter((p) => Number.isFinite(p.from) && Number.isFinite(p.to) && p.to >= p.from)
+    .sort((a, b) => a.from - b.from || a.to - b.to);
+  const merged: { from: number; to: number; open: boolean }[] = [];
+  for (const p of list) {
+    const last = merged.at(-1);
+    if (last && p.from <= last.to + DAY_MS) {
+      last.to = Math.max(last.to, p.to);
+      last.open ||= p.open;
+    } else merged.push({ ...p });
+  }
+  return merged.map((m) => ({ from: isoDay(m.from), to: isoDay(m.to), open: m.open, days: Math.round((m.to - m.from) / DAY_MS) }));
+}
+
+/** Den længste sammenhængende periode (se mergePeriods), eller undefined uden perioder. */
+export function longestPeriod(periods: readonly PeriodInput[], today?: string): MergedPeriod | undefined {
+  let best: MergedPeriod | undefined;
+  for (const m of mergePeriods(periods, today)) if (!best || m.days > best.days) best = m;
+  return best;
+}
+
+/** "År sammen": den længste sammenhængende periode i hele år (afrundet); 0 uden perioder. */
+export function longestPeriodYears(periods: readonly PeriodInput[], today?: string): number {
+  const best = longestPeriod(periods, today);
+  return best ? Math.round((best.days * DAY_MS) / YEAR_MS) : 0;
+}
+
+/* ---------- Stamoplysninger (LassoPersonFacts) ---------- */
+
+export interface PersonFacts extends PersonCounts {
+  /** Selskaber, personen ejer nu (legalt eller reelt ejerskab, hvert selskab én gang). */
+  ownedCompanies: number;
+  /** Den tidligste registrerede rolles startdato. */
+  firstRegistered?: string;
+  /** Seneste rolleskift: den nyeste dato, personen indtrådte eller udtrådte. */
+  latestChange?: string;
+}
+
+export function personFacts(p: PersonVM, today = todayIso()): PersonFacts {
+  const froms = p.roles.map((r) => r.from).filter((d): d is string => Boolean(d)).sort();
+  // En slutdato i fremtiden (varslet fratræden) er ikke sket endnu.
+  const changes = p.roles
+    .flatMap((r) => [r.from, r.to])
+    .filter((d): d is string => typeof d === "string" && d.slice(0, 10) <= today)
+    .sort();
+  const owned = new Set(p.roles.filter((r) => r.active && r.kind === "owner").map((r) => r.companyId ?? r.companyName.toLowerCase()));
+  return { ...personCounts(p), ownedCompanies: owned.size, firstRegistered: froms[0], latestChange: changes.at(-1) };
+}
+
+/* ---------- Historik (LassoTimeline med en person) ---------- */
+
+/** Rolletekst midt i en sætning: "Adm. direktør" -> "adm. direktør"; forkortelser som "CEO" røres ikke. */
+function roleInSentence(role: string): string {
+  return /\b[A-ZÆØÅ]{2,}\b/.test(role) ? role : role.toLowerCase();
+}
+
+const ROLE_CATEGORY: Record<PersonRoleKind, string> = {
+  direction: "Ledelse",
+  board: "Ledelse",
+  owner: "Ejerskab",
+  founder: "Andre roller",
+  other: "Andre roller",
+};
+
+function companySegments(before: string, c: { companyName: string; companyId?: string }, after = ""): TextSegment[] {
+  const segments: TextSegment[] = [];
+  if (before) segments.push({ text: before });
+  segments.push(c.companyId ? { text: c.companyName, lassoId: c.companyId } : { text: c.companyName });
+  if (after) segments.push({ text: after });
+  return segments;
+}
+
+/**
+ * Personens historik ud fra rollerne: indtrådt og udtrådt som X i et selskab (ejere: blev
+ * ejer af / ophørt som ejer af), plus konkurser og tvangsopløsninger blandt selskaberne
+ * (samme sager som personRisk). Selskabsnavnet står som segment med Lasso-ID, så det kan
+ * åbnes. Nyeste først; begivenheder uden dato eller med en dato i fremtiden udelades.
+ */
+export function personTimeline(p: PersonVM, today = todayIso()): TimelineVM {
+  const events: TimelineEventVM[] = [];
+  const push = (date: string | undefined, segments: TextSegment[], category: string, detail?: string) => {
+    if (!date || date.slice(0, 10) > today) return;
+    events.push({ date: date.slice(0, 10), title: segments.map((s) => s.text).join(""), titleSegments: segments, category, ...(detail ? { detail } : {}) });
+  };
+  for (const r of p.roles) {
+    const role = roleInSentence(r.role);
+    const category = ROLE_CATEGORY[r.kind];
+    if (r.kind === "owner") {
+      push(r.from, companySegments(`Blev ${role} af `, r), category, r.share ? `Ejerandel ${r.share}` : undefined);
+      push(r.to, companySegments(`Ophørt som ${role} af `, r), category);
+    } else if (r.kind === "founder") {
+      push(r.from, companySegments("Stiftede ", r), category);
+    } else {
+      push(r.from, companySegments(`Indtrådt som ${role} i `, r), category);
+      push(r.to, companySegments(`Udtrådt som ${role} i `, r), category);
+    }
+  }
+  const risk = personRisk(p);
+  const status = (c: PersonRiskCaseVM, what: string) =>
+    push(c.date, companySegments("", c, ` ${what}`), "Status", c.personLeft ? `Personen var udtrådt i ${c.personLeft.slice(0, 4)}` : "Personen havde stadig en rolle i selskabet");
+  for (const c of risk.bankruptcies) status(c, /under konkurs/i.test(c.status) ? "kom under konkurs" : "gik konkurs");
+  for (const c of risk.dissolutions) status(c, "blev tvangsopløst");
+  // Nyeste først; samme dag står statusændringen øverst.
+  events.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : Number(b.category === "Status") - Number(a.category === "Status")));
+  return { lassoId: p.lassoId, events };
 }
