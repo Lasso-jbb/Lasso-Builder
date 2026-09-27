@@ -31,6 +31,7 @@ import {
   type SearchResultVM,
   type TextSectionsVM,
   type TimelineVM,
+  hasReportingDuty,
 } from "@lasso/spec";
 import { CREDIT_NONE_REASON } from "../lasso/creditAdapters.js";
 import { applyCriteria, sortRows } from "./criteria-eval.js";
@@ -46,6 +47,7 @@ import { NotFoundError, type ChangeFeedOptions, type DataProvider, type Ownershi
  */
 
 interface DemoCompany extends CompanyVM {
+  /** Bruttofortjeneste i første demoår; 0 = ingen regnskaber (personligt ejet virksomhed uden regnskabspligt). */
   base: number;
   growth: number;
   people: PersonRowVM[];
@@ -87,6 +89,9 @@ const RAW: Omit<DemoCompany, "lassoId" | "statusKind">[] = [
   // Katalog 20: eneste demovirksomhed med et CHR-nummer, så LassoLivestock har eksempeldata (LiveProvider har intet bekræftet CHR-endpoint).
   { cvr: "99000013", name: "Eksempel Landbrug I/S", status: "Aktiv", form: "I/S", industryCode: "014700", industryText: "Avl af fjerkræ og svin", address: { street: "Gårdvej 3", zip: "7830", city: "Vinderup", municipality: "Holstebro", region: "Midtjylland" }, founded: "1985-01-01", employees: 5, base: 4_200_000, growth: 0.02,
     people: [P("William Prøve", "Direktør", "1985-01-01")], owners: [{ name: "William Prøve", share: "100 %", kind: "person" }], auditor: "Eksempel Revision Nord ApS" },
+  // Enkeltmandsvirksomhed uden regnskabspligt (som Lassos egen ENK): viser regnskabets tomme tilstand.
+  { cvr: "99000014", name: "Eksempel Konsulent", status: "Aktiv", form: "ENK", industryCode: "622000", industryText: "Computerkonsulentbistand og forvaltning af computerfaciliteter", address: { street: "c/o Mia Eksempel, Prøveparken 16", zip: "9381", city: "Sulsted", municipality: "Aalborg", region: "Nordjylland" }, founded: "2023-01-30", base: 0, growth: 0,
+    people: [P("Mia Eksempel", "Fuldt ansvarlig deltager", "2023-01-30")], owners: [], auditor: "Ingen" },
 ];
 
 /** Reelle ejere til demo: genbruger historien fra ownership (Eksempel Holding ApS -> Bo Eksempel). */
@@ -177,6 +182,8 @@ const PERSON_IDS = demoPersonIds(COMPANIES);
 const YEARS = [2020, 2021, 2022, 2023, 2024, 2025];
 
 function financialsFor(c: DemoCompany): FinancialsVM {
+  // Ingen regnskaber: personligt ejede virksomheder (ENK, PMV) indsender ikke årsregnskab.
+  if (c.base <= 0) return { lassoId: c.lassoId, currency: "DKK", years: [] };
   // Deterministisk "støj", så graferne ikke er helt glatte.
   const seed = Number(c.cvr!.slice(-2));
   return {
@@ -332,7 +339,8 @@ function financialStatementsFor(c: DemoCompany): FinancialStatementsVM {
 
 function toRow(c: DemoCompany): CompanyRowVM {
   const f = financialsFor(c);
-  const last = f.years.at(-1)!;
+  // Uden regnskaber (enkeltmandsvirksomhed) er tallene "ikke oplyst", ikke en fejl.
+  const last = f.years.at(-1);
   return {
     lassoId: c.lassoId,
     cvr: c.cvr,
@@ -343,9 +351,9 @@ function toRow(c: DemoCompany): CompanyRowVM {
     status: c.status,
     statusKind: c.statusKind,
     employees: c.employees ?? null,
-    revenue: last.revenue,
-    grossProfit: last.grossProfit,
-    profit: last.profit,
+    revenue: last?.revenue ?? null,
+    grossProfit: last?.grossProfit ?? null,
+    profit: last?.profit ?? null,
     trend: f.years.slice(-5).map((y) => y.grossProfit ?? 0),
   };
 }
@@ -378,7 +386,8 @@ function observationsFor(c: DemoCompany, f: FinancialsVM): ObservationsVM {
   } else if (c.growth < 0) {
     rows.push({ id: "fald", severity: 50, title: "Faldende bruttofortjeneste flere år i træk", detail: "Bruttofortjenesten er faldet i de seneste regnskabsår.", source: "Regnskab", date: last?.periodEnd });
   }
-  if (c.auditor === "Ingen") {
+  // Personligt ejede virksomheder har hverken regnskabs- eller revisionspligt: ingen revisor er ikke et fund der.
+  if (c.auditor === "Ingen" && hasReportingDuty(c.form)) {
     rows.push({ id: "revisor-fravalgt", severity: 50, title: "Revisor fravalgt", detail: "Selskabet har ikke registreret en revisor.", source: "CVR" });
   }
   const ended = c.people.find((p) => p.to);

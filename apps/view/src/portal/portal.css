@@ -1,0 +1,19 @@
+/*
+ * Portalen (docs/portal.md): rammen fra katalog 06 over hele vinduet. Kun tokens fra
+ * @lasso/ui/styles.css. Klasserne findes kun i portal-tilstand, så MCP-appen og den delte side
+ * ikke påvirkes.
+ */
+.lasso-root.lasso-portal { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; background: var(--lasso-chrome); }
+.lasso-root.lasso-portal--login { background: var(--lasso-surface); }
+
+/* Søgefeltet står i modulværktøjslinjen; formularen giver Enter og role=search */
+.lasso-portal-search { flex: none; margin: 0; }
+
+/* Tom, henter og fejl står med samme luft som visningerne */
+.lasso-portal-body { padding: var(--lasso-space-5); }
+.lasso-portal .lasso-page .lasso-frame { padding: var(--lasso-space-5); }
+
+@container lasso (max-width: 560px) {
+  .lasso-portal-body { padding: var(--lasso-space-4); }
+  .lasso-portal .lasso-page .lasso-frame { padding: var(--lasso-space-4); }
+}

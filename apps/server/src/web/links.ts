@@ -16,6 +16,11 @@ export interface CompanyLink {
   focus?: Focus;
 }
 
+/** Hemmeligheden bag alle signaturer (links og portal-sessioner). Tom lokalt uden nøgler. */
+export function linkSecret(config: Config): string {
+  return secret(config);
+}
+
 function secret(config: Config): string {
   if (isSet(config.LINK_SECRET)) return config.LINK_SECRET;
   // Uden egen nøgle afledes den af MCP-nøglen (eller brugernøglerne); lokalt uden nøgler er links usignerede.

@@ -125,5 +125,5 @@ test("indholdsfortegnelsen peger på de rigtige sider", () => {
   const html = render(dataset({ score: 52 }));
   assert.match(html, /Nøgletal og udvikling<\/span><span class="lasso-a4-toc__page">2/);
   assert.match(html, /Regnskab 2021–2025<\/span><span class="lasso-a4-toc__page">3/);
-  assert.match(html, /Kreditvurdering og risiko<\/span><span class="lasso-a4-toc__page">4/);
+  assert.match(html, /Kreditvurdering<\/span><span class="lasso-a4-toc__page">4/);
 });

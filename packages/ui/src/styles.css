@@ -207,6 +207,9 @@
 .lasso-btn:disabled { opacity: 0.5; cursor: default; }
 .lasso-btn--primary { background: var(--lasso-accent); border-color: var(--lasso-accent); color: var(--lasso-on-accent); font-weight: 600; }
 .lasso-btn--primary:hover { background: var(--lasso-accent-hover); border-color: var(--lasso-accent-hover); }
+/* ".lasso-root" foran, så den hvide tekst vinder over ".lasso-root button { color: inherit }" (fx "Log ind", "Gem visning" og Dialogens primære) */
+.lasso-root .lasso-btn--primary, .lasso-root .lasso-btn--primary:hover { color: var(--lasso-on-accent); }
+.lasso-root .lasso-btn--ink, .lasso-root .lasso-btn--ink:hover { color: var(--lasso-bg); }
 .lasso-btn--ghost { border-color: transparent; background: transparent; color: var(--lasso-text-3); padding: 0 12px; }
 .lasso-btn--ghost:hover { background: var(--lasso-surface-2); border-color: transparent; }
 .lasso-btn--prompt { color: var(--lasso-text-2); background: var(--lasso-surface); }
@@ -1685,6 +1688,10 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 .lasso-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 56px; flex: none; padding: 0 24px; border-bottom: 1px solid var(--lasso-border); }
 .lasso-toolbar__actions { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .lasso-toolbar__controls { flex: none; display: flex; align-items: center; gap: 8px; }
+/* Felt før den primære handling (portalens søgning): feltet fylder linjen, knappen står lige efter */
+.lasso-toolbar--field .lasso-toolbar__actions { flex: 1; }
+.lasso-toolbar__field { flex: 1; min-width: 0; max-width: 640px; }
+.lasso-toolbar__field .lasso-input { height: var(--lasso-btn-h); }
 /* Kroppen: lige brede kolonner adskilt af 1 px linjer, padding 40/24, sektioner med overskrift 22/600 */
 .lasso-page-columns { display: grid; flex: 1; align-items: stretch; min-height: 0; }
 .lasso-page-columns--1 { grid-template-columns: minmax(0, 1fr); }
@@ -1710,7 +1717,8 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 .lasso-sheet__row { display: flex; align-items: center; width: 100%; min-height: var(--lasso-touch-h); padding: 0 12px; border: 0; border-radius: var(--lasso-radius); background: none; cursor: pointer; color: var(--lasso-text); font-size: 15px; line-height: 20px; font-weight: 400; text-align: left; }
 .lasso-sheet__row.is-on { background: var(--lasso-accent-soft); color: var(--lasso-accent-text); font-weight: 500; }
 .lasso-sheet__row:disabled { color: var(--lasso-disabled); cursor: default; }
-.lasso-bottomnav { grid-template-columns: repeat(4, minmax(0, 1fr)); height: 56px; background: var(--lasso-surface); border-top: 1px solid var(--lasso-border); }
+/* Lige brede punkter: fire som standard, færre når værten udelader et (portalen har ingen overvågning endnu) */
+.lasso-bottomnav { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); height: 56px; background: var(--lasso-surface); border-top: 1px solid var(--lasso-border); }
 .lasso-bottomnav__item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 0; padding: 0; border: 0; background: none; cursor: pointer; color: var(--lasso-text-3); }
 .lasso-bottomnav__item.is-on { color: var(--lasso-accent); }
 .lasso-bottomnav__icon { display: inline-flex; }
@@ -1732,6 +1740,8 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
   .lasso-rail__head-label, .lasso-rail__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .lasso-rail__item { justify-content: center; gap: 0; width: 44px; height: 44px; padding: 0; }
   .lasso-rail__footer { width: 100%; height: 46px; }
+  /* En fod uden ikon ("Se alle gemte") har intet at vise i den smalle ikonskinne; værktøjet står i Værktøjer */
+  .lasso-rail__footer--plain { display: none; }
   .lasso-page-columns--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lasso-page-columns--3 > .lasso-page-column:nth-child(3) { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--lasso-border); }
 }
@@ -1750,6 +1760,22 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
   .lasso-page-column, .lasso-page-columns--3 > .lasso-page-column:nth-child(3) { gap: 28px; padding: 24px 16px; border-left: 0; border-top: 1px solid var(--lasso-border); }
   .lasso-page-column:first-child { border-top: 0; }
   .lasso-bottomnav { display: grid; flex: none; position: sticky; bottom: 0; z-index: 2; }
+}
+
+/* ---------- Portalens login (docs/portal.md): kort på hvid flade med én tynd ramme (regel 3) ---------- */
+.lasso-login { display: flex; flex: 1; align-items: center; justify-content: center; min-height: 100%; padding: var(--lasso-space-10) var(--lasso-space-4); background: var(--lasso-surface); }
+.lasso-login__card { display: flex; flex-direction: column; gap: var(--lasso-space-5); width: 100%; max-width: 400px; margin: 0; padding: var(--lasso-space-10) var(--lasso-space-7); border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); }
+.lasso-login__wordmark { display: block; width: 72px; height: 21px; color: var(--lasso-text-3); }
+.lasso-login__title { margin: 0; font-size: var(--lasso-fs-xl); line-height: 32px; font-weight: 600; letter-spacing: var(--lasso-tracking-tight); color: var(--lasso-text); }
+.lasso-login__notice { margin: 0; font-size: var(--lasso-fs); line-height: 20px; font-weight: 500; color: var(--lasso-text-2); }
+.lasso-login__fields { display: grid; gap: var(--lasso-space-4); }
+.lasso-login__actions { display: grid; gap: var(--lasso-space-2); }
+.lasso-login__submit { width: 100%; height: var(--lasso-btn-h-lg); font-size: var(--lasso-fs); }
+.lasso-login__error { margin: 0; }
+.lasso-login__help { margin: 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-muted); }
+@container lasso (max-width: 560px) {
+  .lasso-login { align-items: flex-start; padding: var(--lasso-space-6) var(--lasso-space-4); }
+  .lasso-login__card { padding: var(--lasso-space-6) var(--lasso-space-5); }
 }
 
 /* ---------- 30 Layoutmønstre 8 og 9: kortgitter og harmonika (node J48-0) ---------- */

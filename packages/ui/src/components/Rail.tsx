@@ -9,7 +9,8 @@ import { ShellIcon } from "./ShellIcons.js";
  *
  * Gruppeoverskrift = overline 11/600 med koral pil, der folder gruppen. Rækker er 40 px med
  * 15 px ikon og navn 14. En gemt liste har et 20 px bogstav-ikon i tynd kant (icon: "letter").
- * Gruppens fod ("Opret ny liste") står nederst adskilt af en tynd linje.
+ * Gruppens fod ("Opret ny liste", plus-ikon) står nederst adskilt af en tynd linje; en fod uden ikon
+ * (fx "Se alle gemte") får icon: "none".
  *
  * Tablet (560–1199): skinnen bliver 64 px med 44 px ikoner; navnet står som tooltip (title).
  * Mobil (< 560): skinnen skjules, og bundnavigationen i AppShell tager over (26a).
@@ -29,8 +30,11 @@ export interface RailGroup {
   label: string;
   collapsed?: boolean;
   items: readonly RailItem[];
-  /** Nederste række adskilt af en tynd linje, fx "Opret ny liste". */
-  footer?: { label: string; onSelect?: () => void };
+  /**
+   * Nederste række adskilt af en tynd linje, fx "Opret ny liste" (plus-ikon, standard). "none" til en
+   * fod, der ikke opretter noget, fx portalens "Se alle gemte"; den skjules i den smalle ikonskinne.
+   */
+  footer?: { label: string; icon?: "plus" | "none"; onSelect?: () => void };
 }
 
 export interface RailProps {
@@ -92,10 +96,19 @@ export function Rail({ groups, activeItem, onToggleGroup, onLogo, className = ""
                   })}
                 </ul>
                 {g.footer ? (
-                  <button type="button" className="lasso-rail__item lasso-rail__footer" title={g.footer.label} onClick={g.footer.onSelect}>
-                    <span className="lasso-rail__icon">
-                      <ShellIcon name="plus" />
-                    </span>
+                  <button
+                    type="button"
+                    className={`lasso-rail__item lasso-rail__footer ${g.footer.icon === "none" ? "lasso-rail__footer--plain" : ""}`}
+                    title={g.footer.label}
+                    onClick={g.footer.onSelect}
+                  >
+                    {g.footer.icon === "none" ? (
+                      <span className="lasso-rail__icon lasso-rail__icon--empty" aria-hidden="true" />
+                    ) : (
+                      <span className="lasso-rail__icon">
+                        <ShellIcon name="plus" />
+                      </span>
+                    )}
                     <span className="lasso-rail__label">{g.footer.label}</span>
                   </button>
                 ) : null}

@@ -1,7 +1,9 @@
 # Risiko- og nyhedsendpoints
 
-Denne fil dækker de to endpoints, `LassoRiskObservations` (katalog 17) og `LassoNews`
-(katalog 12) bruger. Formerne herunder er **bekræftet mod API 27.09.2026**: staging kørte de
+Denne fil dækker de to endpoints, `LassoNews` (katalog 12) og risikoobservationerne bruger.
+Risikoobservationerne er fjernet fra alle visninger 27.09.2026 (komponenten `LassoRiskObservations`
+komponeres, hentes og vises ikke længere); adapteren, klientkaldet og fixtures bliver, så de kan
+tages i brug igen. Formerne herunder er **bekræftet mod API 27.09.2026**: staging kørte de
 rigtige kald mod api.lassox.com for Novo Nordisk (CVR-1-24256790), og de bekræftede svar er
 lagt ind som fixtures (`apps/server/src/lasso/fixtures/riskNews.ts`) og dækket af tests
 (`apps/server/src/lasso/riskNewsAdapters.test.ts`, `apps/server/src/data/live-company.test.ts`).

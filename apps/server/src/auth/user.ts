@@ -91,11 +91,20 @@ export function demoUser(config: Config): CurrentUser {
  * fra requesten, slå brugeren op, og returnér id og organisation. Alt andet går gennem CurrentUser.
  */
 export function getCurrentUser(req: Request | undefined, config: Config): CurrentUser {
-  const key = req ? providedKey(req) : "";
-  if (key) {
-    for (const u of userKeys(config)) {
-      if (safeEqual(key, u.key)) return { id: u.id, name: u.name, org: u.org, isDemo: false };
-    }
+  return userForKey(config, req ? providedKey(req) : "") ?? demoUser(config);
+}
+
+/**
+ * Brugeren bag en nøgle: en brugernøgle giver sin bruger, den fælles MCP_ACCESS_KEY giver
+ * demobrugeren, og en ukendt nøgle giver null. Tidskonstant sammenligning i alle grene.
+ */
+export function userForKey(config: Config, key: string): CurrentUser | null {
+  if (!key) return null;
+  let found: CurrentUser | null = null;
+  for (const u of userKeys(config)) {
+    if (safeEqual(key, u.key)) found = { id: u.id, name: u.name, org: u.org, isDemo: false };
   }
-  return demoUser(config);
+  if (found) return found;
+  if (isSet(config.MCP_ACCESS_KEY) && safeEqual(key, config.MCP_ACCESS_KEY)) return demoUser(config);
+  return null;
 }

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  composeCompany,
   changeFeedKey,
   companyTemplate,
   emptyDataset,
@@ -441,4 +442,20 @@ test("ændringsfeedet (katalog 21) som tekstkort: samme bredde, ingen midterprik
   // Tom tilstand siger hvorfor
   ds.changeFeeds[changeFeedKey(c)] = { listName: "Kunder", days: 7, total: 0, entries: [], emptyReason: "Ingen ændringer i \"Kunder\" de seneste 7 dage." };
   assert.match(textCard(spec, ds)!, /Ingen ændringer i "Kunder"/);
+});
+
+test("tekstkort for regnskab uden regnskab: forklaringen én gang, og ledelsen med sine roller, når der hverken er direktør eller bestyrelse", () => {
+  const ds = dataset();
+  ds.companies[ID] = { ...ds.companies[ID]!, form: "ENK", founded: "2023-01-30" };
+  ds.people[ID] = [{ name: "Christian Sander Kjær", role: "Fuldt ansvarlig deltager", from: "2023-01-30" }];
+  ds.financials[ID] = { lassoId: ID, currency: "DKK", years: [] };
+  ds.financialStatements[ID] = { lassoId: ID, currency: "DKK", incomeStatement: [], balanceSheet: [], cashFlow: [] };
+  const spec = composeCompany(ID, ds, { focus: "regnskab" });
+  const card = textCard(spec, ds)!;
+  assert.match(card, /REGNSKAB\s*│\n│ Enkeltmandsvirksomheder og/);
+  assert.equal((card.match(/skal ikke indsende/g) ?? []).length, 1);
+  // Ikke en tom "LEDELSE"-overskrift: rollen står som den er (regel 9).
+  assert.match(card, /LEDELSE[\s│]*\n│ Fuldt ansvarlig deltager/);
+  assert.match(card, /Christian Sander Kjær/);
+  for (const l of card.split("\n")) assert.equal([...l].length, 38, `linjen "${l}" har forkert bredde`);
 });

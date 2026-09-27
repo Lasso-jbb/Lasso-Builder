@@ -1,5 +1,6 @@
 import {
-  mergedObservations,
+  hasNoStatements,
+  noStatementsReason,
   amountScale,
   changeFeedKey,
   CHANGE_TYPE_LABELS,
@@ -372,6 +373,11 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     card.row(/administrerende/i.test(ceo?.role ?? "") ? "Adm. dir." : "Direktør", ceo?.name);
     card.row("Formand", chair?.name);
     if (board.length > 1) card.row("Bestyrelse", `${board.length} inkl. formand`);
+    // Ingen direktion eller bestyrelse (fx en enkeltmandsvirksomhed med en fuldt ansvarlig deltager): rollerne som de er, regel 9.
+    if (!ceo && !chair && board.length === 0) {
+      for (const p of people.slice(0, 3)) card.row(p.role, p.name);
+      if (people.length > 3) card.row("", `Se ${people.length - 3} flere`);
+    }
     for (const o of owners?.owners.slice(0, 3) ?? []) {
       card.row("Ejer", o.name);
       card.row("", o.share ? `${o.share}${o.votes ? " kapital" : ""}` : undefined);
@@ -417,7 +423,13 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     if (f && c.type === "LassoWaterfallChart" && c.company === lassoId) waterfallText(card, f);
     if (f && c.type === "LassoShareBars" && c.company === lassoId) shareBarsText(card, f);
     const stmt = ds.financialStatements[lassoId];
-    if (stmt && c.type === "LassoIncomeStatement" && c.company === lassoId) incomeStatementText(card, stmt, c.years);
+    if (stmt && c.type === "LassoIncomeStatement" && c.company === lassoId) {
+      // Intet offentliggjort regnskab: tekstkortet siger hvorfor, som visningen (én gang, ikke pr. tabel).
+      if (hasNoStatements(stmt)) {
+        card.section(c.title ?? "Regnskab");
+        card.text(noStatementsReason(ds.companies[lassoId]));
+      } else incomeStatementText(card, stmt, c.years);
+    }
     if (stmt && c.type === "LassoBalanceSheet" && c.company === lassoId) balanceSheetText(card, stmt, c.years);
     if (stmt && c.type === "LassoCashFlow" && c.company === lassoId) cashFlowText(card, stmt, c.years);
     if (c.type === "LassoOwnershipDiagram" && c.company === lassoId) {
@@ -492,20 +504,6 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     }
   }
 
-
-  // Lassos observationer plus egne signaler (status, egenkapital ...): aldrig "intet" for et konkursbo.
-  if (types.has("LassoRiskObservations")) {
-    const risk = mergedObservations(lassoId, ds);
-    card.section("Risikoobservationer");
-    if (risk.observations.length === 0) {
-      card.text(risk.lasso?.checkedAt ? "Lasso fandt intet at bemærke" : "Ingen observationer fundet");
-    } else {
-      const sorted = risk.observations;
-      const word = (s: number) => (s === 100 ? "Vigtig" : s === 50 ? "Mulig vigtig" : s === 25 ? "Info" : "Neutral");
-      for (const o of sorted.slice(0, 3)) card.text(`${word(o.severity)}: ${o.title}`);
-      if (sorted.length > 3) card.text(`Se ${sorted.length - 3} flere`);
-    }
-  }
 
   // Katalog 17: Creditsafe på én linje, egen skala A–E (blandes aldrig med scoren eller observationerne).
   const credit = types.has("LassoCreditRating") ? ds.creditRatings?.[lassoId] : undefined;

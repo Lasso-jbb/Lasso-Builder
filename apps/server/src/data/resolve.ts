@@ -165,7 +165,7 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
       case "LassoSummary":
         break;
       case "LassoRiskObservations":
-        want(c.company, "observations");
+        // Fjernet fra visningerne 27.09.2026: observationerne hentes ikke, komponenten vises ikke.
         break;
       case "LassoCreditRating":
         want(c.company, "creditRating");

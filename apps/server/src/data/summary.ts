@@ -11,7 +11,6 @@ import {
   formatPercent,
   formatScaled,
   formatShare,
-  mergedObservations,
   METRIC_KIND,
   METRIC_LABELS,
   ownershipGraphKey,
@@ -89,15 +88,6 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
             `${METRIC_LABELS[metric]} ${points[0]!.year}–${points.at(-1)!.year}${unit}: ${points.map((p) => `${p.year} ${val(p.value)}`).join(", ")}.`,
           );
         }
-      }
-    }
-    if (c.type === "LassoRiskObservations") {
-      // Lassos observationer plus egne signaler (status, egenkapital, underskud ...), vigtigste først.
-      const risk = mergedObservations(c.company, ds);
-      if (risk.observations.length) {
-        lines.push(`Risiko: ${risk.observations.slice(0, 5).map((o) => `${o.title} (${o.severity})`).join("; ")}.`);
-      } else {
-        lines.push(risk.lasso?.checkedAt ? "Risiko: Lasso har gennemgået virksomheden og fandt intet at bemærke." : "Risiko: ingen observationer fra Lasso og ingen signaler i status, regnskab og ledelse.");
       }
     }
     if (c.type === "LassoCreditRating") {

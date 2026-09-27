@@ -21,6 +21,7 @@ import {
   type Metric,
 } from "@lasso/spec";
 import { getCurrentUser, isValidMcpKey, mcpKeyRequired, providedKey } from "./auth/user.js";
+import { createLoginLimiter, loginWithKey, portalUser, requirePortal, sessionCookie, signSession } from "./auth/session.js";
 import { createPool } from "./db.js";
 import { entitySnapshot, savedPageVM } from "./pages/resolveExtras.js";
 import { createSavedPageStore, pageKindOf, SavedPageError, validateSavedPage, type SavedPageStore } from "./pages/store.js";
@@ -35,6 +36,7 @@ import { createMcpServer } from "./mcp/server.js";
 import { createViewStore, SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "./views/store.js";
 import { entityLink, isEntityId, sendToLassoLink, verifyCompanyLink, verifyEntityLink, verifyPersonLink, verifySendToLassoLink } from "./web/links.js";
 import { injectBoot, loadViewHtml } from "./web/page.js";
+import { portalApi, portalErrorHandler } from "./web/portalApi.js";
 
 const VERSION = "0.1.0";
 
@@ -110,14 +112,48 @@ export function createApp({ config, client, provider, store, pages }: AppDeps) {
   const app = createMcpExpressApp({ host: "0.0.0.0", jsonLimit: "1mb" });
   app.disable("x-powered-by");
 
-  app.get("/", (_req, res) => {
+  // Roden er portalen (docs/portal.md); den gamle JSON-info ligger under /api/info.
+  app.get("/", (_req, res) => void res.redirect(302, "/portal"));
+  app.get("/api/info", (_req, res) => {
     res.json({
       name: "lasso-mcp",
       version: VERSION,
       env: config.APP_ENV,
       mcp: `${config.publicBaseUrl}/mcp`,
+      portal: `${config.publicBaseUrl}/portal`,
       health: `${config.publicBaseUrl}/health`,
     });
+  });
+
+  // --- Portal: login og session (docs/portal.md). Selve portal-API'et står længere nede. ----
+  const loginLimiter = createLoginLimiter();
+  app.post("/api/portal/login", (req, res) => {
+    const ip = req.ip ?? req.socket.remoteAddress ?? "?";
+    if (!loginLimiter.allow(ip)) return void res.status(429).json({ error: "For mange loginforsøg. Prøv igen om et kvarter." });
+    const body = (req.body ?? {}) as { user?: unknown; key?: unknown };
+    const user = typeof body.user === "string" && typeof body.key === "string" ? loginWithKey(config, body.user, body.key) : null;
+    if (!user) return void res.status(401).json({ error: "Forkert bruger eller adgangsnøgle." });
+    res.setHeader("Set-Cookie", sessionCookie(config, signSession(config, user)));
+    res.json({ user });
+  });
+  app.post("/api/portal/logout", (_req, res) => {
+    res.setHeader("Set-Cookie", sessionCookie(config, null));
+    res.json({ ok: true });
+  });
+  app.get("/api/portal/me", (req, res) => {
+    const user = portalUser(req, config);
+    if (!user) return void res.status(401).json({ error: "Ikke logget ind" });
+    res.json({ user });
+  });
+
+  // Portalens side: render-appen med boot { mode: "portal" }. Uden session viser appen login.
+  app.get("/portal", async (req, res) => {
+    const html = await loadViewHtml();
+    const user = portalUser(req, config);
+    res
+      .type("html")
+      .set("Cache-Control", "no-store")
+      .send(injectBoot(html, { mode: "portal", user, loginRequired: mcpKeyRequired(config), baseUrl: config.publicBaseUrl }, "Portal"));
   });
 
   app.get("/health", async (_req, res) => {
@@ -158,6 +194,11 @@ export function createApp({ config, client, provider, store, pages }: AppDeps) {
   app.use("/mcp", cors({ exposedHeaders: ["Mcp-Session-Id"] }));
   app.all("/mcp", requireMcpKey(config), handleMcp);
   app.all("/mcp/:key", requireMcpKey(config), handleMcp);
+
+  // --- Portal-API (docs/portal.md): samme use-cases som MCP-tools, kræver session ----------
+  // Login, logout og me står øverst og kræver ikke session; alt andet under /api/portal gør.
+  app.use("/api/portal", requirePortal(config), portalApi({ config, provider, store, pages }));
+  app.use("/api/portal", portalErrorHandler);
 
   // --- Gemte visninger -------------------------------------------------------
   app.get("/api/views/:org/:slug", async (req, res) => {

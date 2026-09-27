@@ -1,15 +1,6 @@
 import { useEffect, useState } from "react";
 import { LassoView, type ActionResult, type ViewAction } from "@lasso/ui";
-import type { Dataset, ViewSpec } from "@lasso/spec";
-
-export interface Boot {
-  mode: "web";
-  spec?: ViewSpec;
-  dataset?: Dataset;
-  url?: string;
-  name?: string | null;
-  error?: string;
-}
+import type { WebBoot as Boot } from "./boot.js";
 
 function downloadCsv(filename: string, csv: string) {
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });

@@ -4,7 +4,6 @@ import {
   emptyDataset,
   FOCUS_LABELS,
   isPersonId,
-  riskSignals,
   savedPagesKey,
   searchKey,
   widthOf,
@@ -52,7 +51,6 @@ import { PersonHead } from "./components/PersonHead.js";
 import { PersonRoles } from "./components/PersonRoles.js";
 import { PersonNetwork } from "./components/PersonNetwork.js";
 import { PersonRisk } from "./components/PersonRisk.js";
-import { RiskObservations } from "./components/RiskObservations.js";
 import { CreditRating } from "./components/CreditRating.js";
 import { AuditorIndependence } from "./components/AuditorIndependence.js";
 import { ChangeFeed } from "./components/ChangeFeed.js";
@@ -145,15 +143,16 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoMultiYearTable":
       return <MultiYearTable key={key} financials={empty.financials[c.company]} metrics={c.metrics} years={c.years} title={c.title} error={err(`financials:${c.company}`)} />;
     case "LassoIncomeStatement":
-      return <LassoIncomeStatement key={key} statements={empty.financialStatements[c.company]} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} />;
+      return <LassoIncomeStatement key={key} statements={empty.financialStatements[c.company]} company={empty.companies[c.company]} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} />;
     case "LassoBalanceSheet":
-      return <LassoBalanceSheet key={key} statements={empty.financialStatements[c.company]} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} />;
+      return <LassoBalanceSheet key={key} statements={empty.financialStatements[c.company]} company={empty.companies[c.company]} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} />;
     case "LassoCashFlow":
       return <LassoCashFlow key={key} statements={empty.financialStatements[c.company]} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} />;
     case "LassoScoreGauge":
       return <ScoreGauge key={key} score={empty.scores[c.company]} title={c.title} error={err(`score:${c.company}`)} />;
     case "LassoRiskObservations":
-      return <RiskObservations key={key} data={empty.observations[c.company]} derived={ds ? riskSignals(c.company, empty) : undefined} error={err(`observations:${c.company}`)} title={c.title} />;
+      // Fjernet fra visningerne 27.09.2026; ældre gemte visninger med komponenten viser den ikke.
+      return null;
     case "LassoCreditRating":
       return <CreditRating key={key} rating={empty.creditRatings?.[c.company]} title={c.title} error={err(`creditRating:${c.company}`)} onAction={act} />;
     case "LassoAuditorIndependence":

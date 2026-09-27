@@ -1,4 +1,4 @@
-import type { FinancialStatementsVM } from "@lasso/spec";
+import { noStatementsReason, type CompanyVM, type FinancialStatementsVM } from "@lasso/spec";
 import { StatementTable, type StatementRow } from "./statementTable.js";
 
 /** Kvalitetsflag: en underpost, der ændrer sig mere end 10× fra året før (katalog 19-note). */
@@ -16,12 +16,12 @@ function bigJumpFlag(prev: number | null | undefined, last: number | null | unde
  * (personaleomkostninger, andre driftsomkostninger, af- og nedskrivninger, finansielle poster, skat)
  * er ubekræftede XBRL-begreber og kan stå som "Ikke oplyst".
  */
-export function LassoIncomeStatement({ statements, years, title, error }: { statements?: FinancialStatementsVM; years: number; title?: string; error?: string }) {
+export function LassoIncomeStatement({ statements, company, years, title, error }: { statements?: FinancialStatementsVM; company?: CompanyVM; years: number; title?: string; error?: string }) {
   const heading = title ?? "Resultatopgørelse";
   if (!statements) return <StatementTable title={heading} unit="t. kr." years={[]} sections={[]} prefix="lasso-income" error={error} loading={!error} />;
   const all = statements.incomeStatement;
   if (all.length === 0) {
-    return <StatementTable title={heading} unit="t. kr." years={[]} sections={[]} prefix="lasso-income" emptyReason="Virksomheden har ikke offentliggjort regnskaber endnu." />;
+    return <StatementTable title={heading} unit="t. kr." years={[]} sections={[]} prefix="lasso-income" emptyReason={noStatementsReason(company)} />;
   }
   const span = Math.max(2, Math.min(3, years));
   const shown = all.slice(-span);
