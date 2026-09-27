@@ -31,7 +31,9 @@ generelle grænse på 500/min). Klienten sender body
 ("CompanyInsight" er portalens Firmaindsigt-modul; andre body-felter fra dokumentationen,
 `observationTypes` og `includeDataForTypes`, bruges ikke endnu).
 
-**Bekræftet svar (27.09.2026, Novo Nordisk, 22 direkte observationer, 11,8 s svartid):**
+**Bekræftet svar (27.09.2026, Novo Nordisk, 22 direkte observationer, 11,8 s svartid).** Værdierne
+nedenfor er fixturens eksempelværdier; API'et svarede faktisk `"version": "2024.02.28.1"` og
+`"score": 5` for Novo Nordisk (skalaen for `score` er stadig uoplyst):
 
 ```json
 {
@@ -100,11 +102,11 @@ observationstyper (title/type/entitet/beskrivelse) står i `lasso-api-reference.
   (`LASSO_CACHE_TTL_SECONDS`) og negative cache (4xx undtagen 429) gælder som for alle andre kald.
 
 **Svartid:** 11,8 s målt for Novo Nordisk (et stort selskab med mange observationer og relaterede
-entiteter). `LiveProvider.observations` venter derfor højst `OBSERVATIONS_BUDGET_MS` (9 s, se
+entiteter). `LiveProvider.observations` venter derfor højst `OBSERVATIONS_BUDGET_MS` (14 s, se
 `apps/server/src/data/live.ts`) — samme `withinBudget`-mønster som kontaktopslagets
 `CONTACT_BUDGET_MS` — før den fejler (som en `TimeoutError`, "Prøv igen" i UI'en) i stedet for at
 lade HELE virksomhedsvisningen vente på observationerne. Det oprindelige kald fortsætter i
-baggrunden og ligger klar i klientens cache til næste forsøg. **Verificér:** om 9 s er det
+baggrunden og ligger klar i klientens cache til næste forsøg. **Verificér:** om 14 s er det
 rigtige afvejningspunkt — er de fleste selskaber hurtigere end Novo Nordisk, eller rammer flere
 selskaber jævnligt budgettet? Justér `OBSERVATIONS_BUDGET_MS`, hvis rigtig trafik viser noget
 andet.

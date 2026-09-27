@@ -57,6 +57,7 @@ Virksomhedsside: hoved, risiko (kun ved 50+), nøgletal, én graf ved siden af n
 | Ejerskab | Ejerliste med interval-bjælke, ejerdiagram | 11, 14 |
 | Mange virksomheder | Tabel med værktøjslinje og paginering | 15 |
 | Begivenheder over tid | Tidslinje, ændringsfeed | 12, 21 |
+| Gemte sider | Liste med åbn og fjern (samme rækkemønster som personlisten) | 11 |
 
 ## Responsivt (26–26h)
 

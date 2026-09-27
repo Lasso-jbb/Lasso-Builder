@@ -46,6 +46,15 @@ Modellen skriver aldrig HTML. Den sender en JSON-spec, og Lassos kode henter dat
 | `/api/debug/lasso/<sti>` | Rå svar fra Lassos API til tilpasning af adapters. Kræver `ADMIN_API_KEY`. `?shape=true` viser kun struktur. |
 | `/health` | Status, datakilde, database. |
 
+### Data fra Lasso
+
+Ud over CVR-stamdata, regnskaber og søgning henter serveren i dag: legale ejere og ejergraf
+(katalog 11, 14), risikoobservationer (Firmaindsigt) og nyheder fra Lasso News + Paqle (katalog
+12, 17), produktionsenheder via P-numre (`CVR-2-…`), CHR-husdyrdata, verificerede telefonnumre
+(live number) og en tekstlig regnskabsanalyse (katalog 08, 19, 20), samt kreditvurdering fra
+Creditsafe (`LassoCreditRating`, katalog 17). Gemte sider vises med komponenten `LassoSavedPages`.
+Status pr. endpoint (bekræftet/dokumenteret/tilkøb) står i `docs/lasso-endpoints.md`.
+
 ## Kom i gang lokalt
 
 ```bash
@@ -87,7 +96,8 @@ Se `.env.example`. På Railway er `DATABASE_URL` en reference til Postgres-servi
 
 ## Kendte forbehold
 
-- Lassos API bruger en API-nøgle i headeren `lasso-api-key` (bekræftet mod api.lassox.com). Søge-, virksomheds- og regnskabssvarenes form er bekræftet (se `docs/lasso-endpoints.md`). Ved opstart røgtester serveren `show_company` og `search_companies` mod Lasso og logger resuméet (`[lasso-probe]`); med `LOG_LEVEL=debug` logges også svarenes form.
+- Lassos API bruger en API-nøgle i headeren `lasso-api-key` (bekræftet mod api.lassox.com). Søge-, virksomheds-, regnskabs-, ejerskabs-, risiko-, nyheds- og enhedssvarenes form er bekræftet (se `docs/lasso-endpoints.md`); Creditsafe, reelle ejere og live number kræver tilkøb, som ikke alle nøgler har. Ved opstart røgtester serveren `show_company` og `search_companies` mod Lasso og logger resuméet (`[lasso-probe]`); med `LOG_LEVEL=debug` logges også svarenes form.
 - Søgning med kriterier er "klodset bagved": fritekstsøgning hos Lasso, derefter filtrering og sortering i serveren. Kan API'et filtrere serverside, flyttes det dertil.
-- Login er en hardcodet demobruger i `apps/server/src/auth/user.ts`. Lasso ID (OAuth 2.1 + PKCE) kobles på dér.
-- Delte links kan ses af alle med linket. Synlighed gemmes, men håndhæves først med rigtigt login.
+- Login er en hardcodet demobruger, medmindre `MCP_USER_KEYS` binder nøglen til en bruger (`docs/gem-lag.md`); Lasso ID (OAuth 2.1 + PKCE) kobles på i samme funktion (`apps/server/src/auth/user.ts`).
+- Delte links (`/v/`, `/k/`, `/e/`) kan ses af alle med linket; entitetssider under `/e/` er signerede og udløber efter `LINK_TTL_DAYS`, medmindre `ENTITY_PAGES_PUBLIC=true`. Synlighed på gemte visninger håndhæves først med rigtigt login.
+- Creditsafe koster en kredit pr. opslag (Lasso cacher 24 timer pr. organisation); kun `focus: "risiko"` henter den. Observationer og regnskabsanalyse har egne tidsbudgetter (`OBSERVATIONS_BUDGET_MS`, `TEXT_SECTIONS_BUDGET_MS`), så et langsomt Lasso-kald fejler pænt uden at hele virksomhedsvisningen venter.

@@ -93,3 +93,33 @@ på ejerens API-nøgle for alle på nettet. Med signatur udløber links efter `L
 - Overvågning/notifikationer af gemte sider (Monitoring-API'et; senere udvidelse).
 - Synkronisering med portalens "Gemt"-knap (kræver Lists-adapteren ovenfor).
 - Login med Lasso ID.
+
+## Status 27.09.2026
+
+**Bygget:** de tre tools (`save_page`, `list_saved_pages`, `remove_saved_page`), rute-laget
+(`GET /e/:lassoId`, `POST /api/send-to-lasso`, `POST /api/send-to-lasso/link`,
+`GET /send-to-lasso`), Gem/Gemt-knappen i hovedet (katalog 01, regel 21) og listekomponenten
+`LassoSavedPages` (`packages/ui/src/components/SavedPages.tsx`), som viser gemte sider i samme
+rækkemønster som personlisten, med filter Alle/Virksomheder/Personer og "Fjern".
+
+**Verificeret:** enhedstests for lager, ruter og komponent (`apps/server/src/pages/store.test.ts`,
+`apps/server/src/pages/resolveExtras.test.ts`, `apps/server/src/web/entityLinks.test.ts`,
+`apps/server/src/pages.e2e.test.ts`, `apps/server/src/e2e.test.ts`,
+`packages/ui/src/savedpages.test.ts`). Staging-migreringen af `saved_pages`-tabellen
+(`MIGRATION` i `apps/server/src/pages/store.ts`, kørt af `pages.migrate()` ved opstart) kørte uden
+fejl på staging (serveren logger `[db] migreret` ved et senere forsøg, hvis databasen ikke er klar
+med det samme). MCP-nøglen er sat, og staging kører på live Lasso-data.
+
+**Driftsnoter:**
+
+1. `GET /send-to-lasso` gemmer siden ved et almindeligt GET-kald (til knappen i en e-mail eller et
+   CRM). Det betyder, at mail-scannere, der åbner links på forhånd for at tjekke dem (fx Microsoft
+   Safe Links), kan udløse en gemning, før brugeren selv har klikket. Det er ufarligt: gemningen er
+   et upsert på `(org, user_id, lasso_id)` (primærnøglen i `saved_pages`), så en scanner-udløst
+   gemning bare rykker siden øverst uden at skabe en dublet, og siden gemmes uanset kun på den
+   bruger, linket er signeret til.
+2. `POST /api/send-to-lasso` svarer **503**, hvis hverken `SEND_TO_LASSO_KEY` eller `ADMIN_API_KEY`
+   er sat, UDEN for lokal udvikling (`APP_ENV=development`). Lokalt lukkes ruten ikke op uden
+   nøgle, så den kan testes uden en hemmelighed; på staging/produktion er en nøgle et krav, fordi
+   ruten skriver til en vilkårlig brugers liste ud fra `userId` i body'en (`sendKey`-middleware,
+   `apps/server/src/index.ts`).
