@@ -259,7 +259,7 @@ export class LassoClient {
   observations(lassoId: string) {
     return this.post(`modules/observations/${enc(lassoId)}`, {});
   }
-  /** Reelle ejere. Sti bekræftet af Lasso 26.09.2026; svarformen er endnu ubekræftet. */
+  /** Reelle ejere. Sti og svarform er dokumenteret af Lasso (docs/endpoints-ejerskab.md); se `adaptBeneficialOwnershipDocumented` i ownershipAdapters.ts. */
   ownersBeneficial(lassoId: string) {
     return this.get(`${enc(lassoId)}/owners/beneficial`);
   }
@@ -278,6 +278,14 @@ export class LassoClient {
       outgoingDepth: p.outgoingDepth,
       ...(p.onDate ? { onDate: p.onDate } : {}),
     });
+  }
+  /**
+   * Legale ejere. Sti og svarform bekræftet mod Lassos dokumentation (docs/endpoints-ejerskab.md):
+   * `{ hasOwnersUnderFivePercent, owners: [{ ownership: {from,to}, voteRights: {from,to}, … }] }`.
+   * Historik: `{lassoId}/history/owners/legal` (endnu ikke koblet på).
+   */
+  ownersLegal(lassoId: string) {
+    return this.get(`${enc(lassoId)}/owners/legal`);
   }
   /** Kontaktdata scrapet fra hjemmesiden (langsomt, 10+ s). Kort timeout, så resten af visningen ikke venter. */
   contacts(lassoId: string, p: ContactParams = { contacts: true }) {
