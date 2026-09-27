@@ -31,7 +31,7 @@ import { createProvider, type DataProvider } from "./data/index.js";
 import { datasetEntityIds, errorMessage, normalizeSpec, resolveSpec } from "./data/resolve.js";
 import { findCompany } from "./data/lookup.js";
 import { summarizeView } from "./data/summary.js";
-import { adaptSearch, at, participantFieldNames } from "./lasso/adapters.js";
+import { adaptPeople, adaptSearch, at, participantFieldNames } from "./lasso/adapters.js";
 import { describeShape, LassoApiError, LassoClient, probeAuthVariants, type Query } from "./lasso/client.js";
 import { createMcpServer } from "./mcp/server.js";
 import { createViewStore, SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "./views/store.js";
@@ -572,7 +572,12 @@ export async function probeEndpointShapes(client: LassoClient, lassoId: string, 
   // Feltnavnene (kun nøgler, aldrig værdier) på første medlem af ledelse, bestyrelse og stakeholders
   // i company-full, så det kan ses, hvor personernes Lasso-ID står (adaptPeople/participantLassoId).
   try {
-    log("felter company-full deltagere", participantFieldNames(await client.company(lassoId)));
+    const companyRaw = await client.company(lassoId);
+    log("felter company-full deltagere", participantFieldNames(companyRaw));
+    // Hvor mange ledelsesrækker ender med et Lasso-ID (= link i visningerne). Kun tal, ingen navne.
+    const people = adaptPeople(companyRaw);
+    const withId = people.filter((x) => x.lassoId !== undefined && isEntityId(x.lassoId)).length;
+    log("ledelse med Lasso-ID", `${withId} af ${people.length}`);
   } catch (err) {
     log("felter company-full deltagere FEJL", err instanceof LassoApiError ? `HTTP ${err.status}` : errorMessage(err));
   }
