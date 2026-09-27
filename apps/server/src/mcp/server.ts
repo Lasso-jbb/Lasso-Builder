@@ -27,19 +27,21 @@ import {
   viewSpecSchema,
   mainMetric,
   type Dataset,
+  type SavedPageKind,
   type ViewComponent,
   type ViewSpec,
 } from "@lasso/spec";
 import type { CurrentUser } from "../auth/user.js";
 import type { Config } from "../config.js";
-import { findCompany, isCompanyRef, type CompanyPick } from "../data/lookup.js";
+import { findCompany, isCompanyRef, normalizeCompanyName, type CompanyPick } from "../data/lookup.js";
 import type { DataProvider } from "../data/provider.js";
 import { errorMessage, normalizeSpec, resolveSpec } from "../data/resolve.js";
 import { textCard } from "../data/card.js";
 import { summarizeView } from "../data/summary.js";
-import type { SavedPageStore } from "../pages/store.js";
+import { entitySnapshot, pagesExtras, savedFocus } from "../pages/resolveExtras.js";
+import { pageKindOf, SavedPageError, type SavedPageRecord, type SavedPageStore } from "../pages/store.js";
 import { SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "../views/store.js";
-import { companyLink, personLink } from "../web/links.js";
+import { companyLink, entityLink, personLink } from "../web/links.js";
 import { findPerson } from "../data/personLookup.js";
 import { loadViewHtml, viewVersion } from "../web/page.js";
 
@@ -67,7 +69,8 @@ Vælg værktøj:
 - Én person ("hvem er X", "hvor sidder X i bestyrelser", "har X været i konkurser"): show_person med navn eller person-ID (CVR-3-…).
 - Lister og målgrupper ("revisorer i Region Midt med mindst 10 ansatte"): search_companies med brugerens formulering som query.
 - Flere navngivne virksomheder (sammenligning, rangering) eller elementer, ingen focus dækker: render_view med en spec fra kataloget i dens beskrivelse. Navne må bruges i stedet for CVR-numre.
-- "Giv mig en URL", "del", "gem": save_view.
+- "Gem virksomheden/personen", "husk", "bogmærk", "sæt på min liste": save_page. "Mine gemte", "hvad har jeg gemt", "min liste": list_saved_pages. "Fjern fra listen": remove_saved_page. save_view er kun til et delbart link til en visning.
+- "Giv mig en URL", "del": save_view.
 
 Regler:
 - Én visning pr. svar: kald højst ét af show_company, show_person, search_companies og render_view pr. brugerbesked, og kun én gang. Aldrig show_company og render_view efter hinanden.
@@ -143,6 +146,40 @@ function toolError(message: string): CallToolResult {
   return { isError: true, content: [{ type: "text", text: message }] };
 }
 
+/** "1 gemt side" / "3 gemte sider". */
+const savedCount = (n: number) => (n === 1 ? "1 gemt side" : `${n} gemte sider`);
+
+/** "LASSO X A/S (CVR 34580820)" eller "Bo Eksempel (CVR-3-4000000001)". */
+const pageLabel = (p: Pick<SavedPageRecord, "name" | "cvr" | "lassoId">) => `${p.name} (${p.cvr ? `CVR ${p.cvr}` : p.lassoId})`;
+
+/**
+ * Et Lasso-ID eller CVR-nummer som entitets-ID (CVR-1-… virksomhed, CVR-3-/CVR-4-… person).
+ * null = referencen er et navn; { error } = den ligner et ID, men er ikke en virksomhed eller person.
+ */
+function entityRef(ref: string, prefix: string): { lassoId: string; kind: SavedPageKind } | { error: string } | null {
+  if (isPersonId(ref)) {
+    const lassoId = ref.toUpperCase();
+    const kind = pageKindOf(lassoId);
+    return kind ? { lassoId, kind } : { error: `"${ref}" er ikke et gyldigt person-ID (CVR-3-…).` };
+  }
+  if (!isCompanyRef(ref)) return null;
+  const lassoId = toLassoId(ref, prefix).toUpperCase();
+  const kind = pageKindOf(lassoId);
+  return kind ? { lassoId, kind } : { error: `"${ref}" er ikke et CVR-nummer eller Lasso-ID for en virksomhed (CVR-1-…) eller person (CVR-3-…).` };
+}
+
+/** Gemte sider, hvis navn matcher: præcist (uden forskel på store/små bogstaver), ellers uden selskabsform, ellers som del af navnet. */
+function matchSavedByName(pages: readonly SavedPageRecord[], name: string): SavedPageRecord[] {
+  const lower = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
+  const wanted = lower(name);
+  const exact = pages.filter((p) => lower(p.name) === wanted);
+  if (exact.length) return exact;
+  const bare = normalizeCompanyName(name);
+  const withoutForm = bare ? pages.filter((p) => normalizeCompanyName(p.name) === bare) : [];
+  if (withoutForm.length) return withoutForm;
+  return wanted ? pages.filter((p) => lower(p.name).includes(wanted)) : [];
+}
+
 function criteriaError(criteria: Parameters<typeof validateCriteria>[0]): CallToolResult | null {
   const issues = validateCriteria(criteria);
   if (issues.length === 0) return null;
@@ -150,7 +187,9 @@ function criteriaError(criteria: Parameters<typeof validateCriteria>[0]): CallTo
 }
 
 export function createMcpServer(ctx: McpContext): McpServer {
-  const { config, provider, store, user } = ctx;
+  const { config, provider, store, pages, user } = ctx;
+  // Gem-laget: brugerens gemte sider og Gem/Gemt-tilstanden i visningerne.
+  const extras = pagesExtras(pages, user, config);
   const prefix = config.LASSO_COMPANY_ID_PREFIX;
 
   const server = new McpServer(
@@ -227,7 +266,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
       }
       // Ét samlet hent: navnet tages fra datasættet (begge specs har LassoCompanyHead og henter
       // derfor virksomheden), så CVR-opslaget ikke laves to gange efter hinanden.
-      const ds: Dataset = await resolveSpec(sections?.length ? companyTemplate(lassoId, { sections, chartMetric: chart_metric, years }) : composeProbe(lassoId, focus), provider);
+      const ds: Dataset = await resolveSpec(sections?.length ? companyTemplate(lassoId, { sections, chartMetric: chart_metric, years }) : composeProbe(lassoId, focus), provider, extras);
       const name = ds.companies[lassoId]?.name;
       if (!name) {
         return toolError(`Kunne ikke hente ${company}: ${ds.errors[`company:${lassoId}`] ?? "ukendt fejl"}. Tjek CVR-nummeret eller navnet.`);
@@ -275,7 +314,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
         const alt = found.alternatives.map((r) => `${r.name}${r.city ? `, ${r.city}` : ""} (${r.lassoId})`).join("; ");
         note = `Fundet ud fra navnet "${ref}": ${found.pick.name}${found.pick.city ? `, ${found.pick.city}` : ""} (${found.pick.lassoId}).${alt ? ` Andre match: ${alt}. Mente brugeren en af dem, så kald show_person igen med dens ID.` : ""}`;
       }
-      const ds = await resolveSpec(composePersonProbe(lassoId), provider);
+      const ds = await resolveSpec(composePersonProbe(lassoId), provider, extras);
       const p = ds.persons[lassoId];
       if (!p) return toolError(`Kunne ikke hente personen ${lassoId}: ${ds.errors[`person:${lassoId}`] ?? "ukendt fejl"}.`);
       const spec = composePerson(lassoId, ds, { name: p.name });
@@ -307,7 +346,7 @@ ${LAYOUT_RULES}\n\nKomponentkatalog (hver linje: Brug til / Brug ikke når / Kr�
       }
       const invalid = criteriaError(spec.criteria);
       if (invalid) return invalid;
-      const ds = await resolveSpec(spec, provider);
+      const ds = await resolveSpec(spec, provider, extras);
       return viewResult(spec, ds, { note: named.note });
     },
   );
@@ -318,7 +357,7 @@ ${LAYOUT_RULES}\n\nKomponentkatalog (hver linje: Brug til / Brug ikke når / Kr�
     {
       title: "Gem visning",
       description:
-        "Gem en visning og få et link, der kan deles. Specen gemmes, ikke data, så linket altid viser friske tal. Gemmer man igen på samme adresse, opdateres den, og tidligere versioner bevares. Brug når brugeren beder om en URL, et link, at dele eller gemme. Send den spec, der blev vist (structuredContent.spec fra forrige tool-resultat).",
+        "Gem en visning og få et link, der kan deles. Specen gemmes, ikke data, så linket altid viser friske tal. Gemmer man igen på samme adresse, opdateres den, og tidligere versioner bevares. Brug når brugeren beder om en URL, et link eller at dele visningen; vil brugeren gemme en virksomhed eller person på sin liste, er det save_page. Send den spec, der blev vist (structuredContent.spec fra forrige tool-resultat).",
       inputSchema: z.object({
         // Løst skema i beskrivelsen (hele viewSpec-skemaet er ~30.000 tegn); specen valideres nedenfor.
         spec: z.record(z.string(), z.unknown()).describe("structuredContent.spec fra det værktøjssvar, der viste visningen, uændret."),
@@ -362,6 +401,151 @@ ${LAYOUT_RULES}\n\nKomponentkatalog (hver linje: Brug til / Brug ikke når / Kr�
     },
   );
 
+  // --- Gem-laget (docs/gem-lag.md): brugerens personlige liste af gemte virksomheder og personer ---
+  const writeAnnotations = { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false };
+  const modelAndApp = { ui: { visibility: ["model", "app"] } };
+  const totalSaved = async () => (await pages.list(user.org, user.id, { limit: 1 })).total;
+
+  registerAppTool(
+    server,
+    "save_page",
+    {
+      title: "Gem side",
+      description:
+        "Gem én virksomhed eller person på brugerens egen liste over gemte sider (bogmærke), så den kan findes igen med list_saved_pages og åbnes med friske data. Brug når brugeren siger 'gem virksomheden/personen', 'husk', 'bogmærk' eller 'sæt på min liste'. Tager CVR-nummer, Lasso-ID (CVR-1-… / CVR-3-…) eller navn; ved navn slås virksomheden op (kind 'person' slår en person op). Gemmes siden igen, flyttes den øverst. Brug save_view i stedet, når brugeren vil have et delbart link til en visning.",
+      inputSchema: z.object({
+        page: z.string().min(1).describe("Lasso-ID (CVR-1-… eller CVR-3-…), 8-cifret CVR-nummer eller navn."),
+        kind: z.enum(["company", "person"]).optional().describe("Kun ved navn: 'person' slår en person op. Standard: virksomhed. Ved ID/CVR afledes det af ID'et."),
+        focus: z.enum(FOCUSES).optional().describe("Den fokusvisning, siden blev vist med (fx 'oekonomi'), så linket åbner samme visning. Standard: overblik."),
+        note: z.string().max(500).optional().describe("Brugerens egen note til siden, højst 500 tegn."),
+      }),
+      annotations: { title: "Gem side", ...writeAnnotations },
+      _meta: modelAndApp,
+    },
+    async ({ page, kind, focus, note }): Promise<CallToolResult> => {
+      const ref = page.trim();
+      let target = entityRef(ref, prefix);
+      let found: string | undefined;
+      if (target && "error" in target) return toolError(target.error);
+      if (!target) {
+        // Et navn: person, hvis kind siger det; ellers virksomhed (som show_person/show_company).
+        try {
+          if (kind === "person") {
+            const hit = await findPerson(provider, ref);
+            if (!hit) return toolError(`Fandt ingen person, der hedder "${ref}". Prøv med fulde navn eller person-ID'et (CVR-3-…).`);
+            target = { lassoId: hit.pick.lassoId, kind: "person" };
+            const alt = hit.alternatives.map((r) => `${r.name}${r.city ? `, ${r.city}` : ""} (${r.lassoId})`).join("; ");
+            found = `Fundet ud fra navnet "${ref}": ${hit.pick.name} (${hit.pick.lassoId}).${alt ? ` Andre match: ${alt}.` : ""}`;
+          } else {
+            const hit = await findCompany(provider, ref);
+            if (!hit) return toolError(`Fandt ingen virksomhed, der hedder "${ref}". Prøv et andet navn eller CVR-nummeret, eller angiv kind 'person' for en person.`);
+            target = { lassoId: hit.pick.lassoId, kind: "company" };
+            const alt = hit.alternatives.map((r) => `${r.name} (${r.cvr ?? r.lassoId})`).join("; ");
+            found = `Fundet ud fra navnet "${ref}": ${hit.pick.name} (${hit.pick.cvr ?? hit.pick.lassoId}).${alt ? ` Andre match: ${alt}.` : ""}`;
+          }
+        } catch (err) {
+          return toolError(`Kunne ikke slå "${ref}" op: ${errorMessage(err)}.`);
+        }
+        if (found?.includes("Andre match")) found += " Mente brugeren en anden, så fjern den med remove_saved_page og gem den rigtige med ID'et.";
+      }
+      const { lassoId } = target;
+      let snapshot: Awaited<ReturnType<typeof entitySnapshot>>;
+      try {
+        snapshot = await entitySnapshot(provider, lassoId);
+      } catch (err) {
+        if (err instanceof SavedPageError) return toolError(err.message);
+        return toolError(`Kunne ikke hente ${ref}: ${errorMessage(err)}. Tjek CVR-nummeret, ID'et eller navnet.`);
+      }
+      let saved: Awaited<ReturnType<SavedPageStore["save"]>>;
+      try {
+        saved = await pages.save({ org: user.org, userId: user.id, lassoId, kind: snapshot.kind, name: snapshot.name, cvr: snapshot.cvr, focus, note, origin: "manual" });
+      } catch (err) {
+        if (err instanceof SavedPageError) return toolError(err.message);
+        throw err;
+      }
+      const { page: rec, created } = saved;
+      const total = await totalSaved();
+      const url = entityLink(config, rec.lassoId, { focus: savedFocus(rec.focus) });
+      const text = `${created ? "Gemt" : "Allerede gemt, flyttet øverst"}: ${pageLabel(rec)}. Du har nu ${savedCount(total)}.`;
+      return {
+        content: [{ type: "text", text: [text, found].filter(Boolean).join("\n") }],
+        structuredContent: { lassoId: rec.lassoId, kind: rec.kind, name: rec.name, ...(rec.cvr ? { cvr: rec.cvr } : {}), savedAt: rec.savedAt, created, total, url },
+      };
+    },
+  );
+
+  registerAppTool(
+    server,
+    "remove_saved_page",
+    {
+      title: "Fjern gemt side",
+      description:
+        "Fjern én virksomhed eller person fra brugerens liste over gemte sider. Brug når brugeren siger 'fjern fra listen' eller 'glem X'. Tager Lasso-ID, CVR-nummer eller navn; et navn matches kun mod brugerens egne gemte sider.",
+      inputSchema: z.object({
+        page: z.string().min(1).describe("Lasso-ID (CVR-1-… eller CVR-3-…), 8-cifret CVR-nummer eller navnet på en gemt side."),
+      }),
+      annotations: { title: "Fjern gemt side", ...writeAnnotations, destructiveHint: true },
+      _meta: modelAndApp,
+    },
+    async ({ page }): Promise<CallToolResult> => {
+      const ref = page.trim();
+      const target = entityRef(ref, prefix);
+      if (target && "error" in target) return toolError(target.error);
+      let lassoId: string;
+      let label: string;
+      if (target) {
+        lassoId = target.lassoId;
+        const existing = await pages.get(user.org, user.id, lassoId);
+        label = existing?.name ?? lassoId;
+      } else {
+        // Navn: kun brugerens egne gemte sider, ingen opslag hos Lasso.
+        const { pages: mine } = await pages.list(user.org, user.id, { limit: 100 });
+        const hits = matchSavedByName(mine, ref);
+        if (hits.length === 0) return toolError(`Der er ingen gemt side, der hedder "${ref}". Brug list_saved_pages for at se listen, eller angiv CVR-nummeret eller ID'et.`);
+        if (hits.length > 1) {
+          const listed = `${hits.slice(0, 10).map(pageLabel).join("; ")}${hits.length > 10 ? ` og ${hits.length - 10} flere` : ""}`;
+          return toolError(`Flere gemte sider passer på "${ref}": ${listed}. Angiv CVR-nummeret eller ID'et på den, der skal fjernes.`);
+        }
+        lassoId = hits[0]!.lassoId;
+        label = hits[0]!.name;
+      }
+      const removed = await pages.remove(user.org, user.id, lassoId);
+      const total = await totalSaved();
+      return {
+        content: [{ type: "text", text: removed ? `Fjernet: ${label}. Du har nu ${savedCount(total)}.` : `${label} var ikke på listen.` }],
+        structuredContent: { lassoId, removed, total },
+      };
+    },
+  );
+
+  registerAppTool(
+    server,
+    "list_saved_pages",
+    {
+      title: "Mine gemte sider",
+      description:
+        "Vis brugerens gemte virksomheder og personer (nyeste først) som en Lasso-liste, hvor hver side kan åbnes med friske data eller fjernes. Brug når brugeren spørger 'mine gemte', 'hvad har jeg gemt' eller 'min liste'. kind: 'company' (kun virksomheder), 'person' (kun personer) eller 'all' (standard).",
+      inputSchema: z.object({
+        kind: z.enum(["company", "person", "all"]).optional().describe("Kun virksomheder, kun personer eller begge. Standard: all."),
+        limit: z.number().int().min(1).max(100).optional().describe("Højst så mange sider, nyeste først. Standard: 20."),
+      }),
+      annotations: { title: "Mine gemte sider", ...readOnly },
+      _meta: ui,
+    },
+    async ({ kind = "all", limit = 20 }): Promise<CallToolResult> => {
+      const spec = viewSpecSchema.parse({
+        version: 2,
+        kind: "custom",
+        title: kind === "company" ? "Mine gemte virksomheder" : kind === "person" ? "Mine gemte personer" : "Mine gemte sider",
+        layout: "stack",
+        criteria: [],
+        components: [{ type: "LassoSavedPages", kind, limit }],
+      });
+      const ds = await resolveSpec(spec, provider, extras);
+      return viewResult(spec, ds);
+    },
+  );
+
   // Kun for appen: henter data til en spec (drill-down, fjern kriterie, opdatér) uden en model-tur.
   registerAppTool(
     server,
@@ -377,7 +561,7 @@ ${LAYOUT_RULES}\n\nKomponentkatalog (hver linje: Brug til / Brug ikke når / Kr�
       const parsed = viewSpecSchema.safeParse(rawSpec);
       if (!parsed.success) return toolError("Ugyldig spec.");
       const normalized = normalizeSpec(parsed.data, prefix);
-      const ds = await resolveSpec(normalized, provider);
+      const ds = await resolveSpec(normalized, provider, extras);
       return {
         content: [{ type: "text", text: "ok" }],
         structuredContent: { spec: normalized, dataset: ds },

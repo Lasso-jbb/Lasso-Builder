@@ -66,7 +66,7 @@ test("health svarer", async () => {
 test("tools og UI-ressource er registreret", async () => {
   const { tools } = await client.listTools();
   const names = tools.map((t) => t.name).sort();
-  assert.deepEqual(names, ["render_view", "resolve_view", "save_view", "search_companies", "show_company", "show_person"]);
+  assert.deepEqual(names, ["list_saved_pages", "remove_saved_page", "render_view", "resolve_view", "save_page", "save_view", "search_companies", "show_company", "show_person"]);
   const show = tools.find((t) => t.name === "show_company")!;
   const uri = (show._meta as { ui?: { resourceUri?: string } }).ui?.resourceUri ?? "";
   // Adressen bærer app-versionen, så værten ikke genbruger en gemt, forældet render-app.

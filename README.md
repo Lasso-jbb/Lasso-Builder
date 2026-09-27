@@ -25,15 +25,22 @@ Modellen skriver aldrig HTML. Den sender en JSON-spec, og Lassos kode henter dat
 | `show_company` | Fast virksomhedsskabelon: header, nøgletal, graf, ledelse, ejerskab/revisor, opfølgning. |
 | `render_view` | Fri komposition til sammenligninger og oversigter. |
 | `save_view` | Gemmer specen og giver et link. Samme adresse opdateres, versioner bevares. |
+| `save_page` | Gemmer én virksomhed eller person (CVR, Lasso-ID eller navn) på brugerens egen liste, med valgfri note og focus. Gemmes den igen, flyttes den øverst. |
+| `list_saved_pages` | Viser brugerens gemte sider (nyeste først) som Lasso-visning med åbn og fjern; tekstkortet har et signeret link pr. side. |
+| `remove_saved_page` | Fjerner en side fra listen (Lasso-ID, CVR eller navnet på en gemt side). |
 | `resolve_view` | Kun for appen: henter data ved drill-down, filterændring og opdatering. |
 
 ### Ruter
 
 | Rute | |
 |---|---|
-| `/mcp` | MCP-endpoint. Kræver `MCP_ACCESS_KEY` som `?key=`, `/mcp/<key>`, `x-api-key` eller Bearer. |
+| `/mcp` | MCP-endpoint. Kræver `MCP_ACCESS_KEY` (eller en brugernøgle fra `MCP_USER_KEYS`) som `?key=`, `/mcp/<key>`, `x-api-key` eller Bearer. |
 | `/v/:org/:slug` | Delt side med friske data. |
 | `/k/:cvr` | Interaktiv virksomhedsvisning fra et signeret link, som `show_company` giver. Friske data ved hver visning; udløber efter `LINK_TTL_DAYS` (30). Signeres med `LINK_SECRET`. |
+| `/e/:lassoId` | Hostet side for én virksomhed (`CVR-1-…`) eller person (`CVR-3-…`) fra et signeret link, som gemte sider og send-til-Lasso giver. Komponeret som i chatten, friske data; samme nøgle og udløb som `/k/`. Med `ENTITY_PAGES_PUBLIC=true` virker den også uden signatur. |
+| `POST /api/send-to-lasso` | Server-til-server (portal, CRM, e-mail-tjeneste): `{ lassoId \| cvr, userId, org?, focus?, note? }` gemmer siden på brugerens liste og svarer med linket til `/e/`. Kræver `SEND_TO_LASSO_KEY` (ellers `ADMIN_API_KEY`). |
+| `POST /api/send-to-lasso/link` | Samme nøgle og body (uden note): giver et signeret `/send-to-lasso`-link til en knap i en e-mail eller et CRM. Gemmer intet. |
+| `GET /send-to-lasso` | Signeret link: gemmer siden på brugerens liste og sender videre (302) til `/e/`. |
 | `GET /api/views/:org/:slug` | Gemt spec som JSON. |
 | `POST /api/views` | Gem via API. Kræver `ADMIN_API_KEY`. |
 | `/api/debug/lasso/<sti>` | Rå svar fra Lassos API til tilpasning af adapters. Kræver `ADMIN_API_KEY`. `?shape=true` viser kun struktur. |

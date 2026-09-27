@@ -1,9 +1,12 @@
 import {
   changeFeedKey,
   emptyDataset,
+  savedPagesKey,
   searchKey,
   toLassoId,
   type Dataset,
+  type SavedPageKind,
+  type SavedPagesVM,
   type ViewComponent,
   type ViewSpec,
   ownershipGraphKey,
@@ -39,6 +42,35 @@ const FETCHERS: Record<string, (ds: Dataset, p: DataProvider, id: string) => Pro
   personNetwork: async (ds, p, id) => void (ds.personNetworks[id] = await p.personNetwork(id)),
 };
 
+/**
+ * Data, der ikke kommer fra Lasso, men fra serverens egne lagre og kræver en bruger (gem-laget,
+ * docs/gem-lag.md). Offentlige sider uden bruger (/k/, /p/, /e/, /v/) sender ingen extras.
+ */
+export interface ResolveExtras {
+  /** Gem-laget: henter brugerens gemte sider til LassoSavedPages. */
+  savedPages?: (opts: { kind: SavedPageKind | "all"; limit: number }) => Promise<SavedPagesVM>;
+  /** Gem-laget: hvilke af visningens virksomheds-/person-ID'er der er gemt (til Gem/Gemt-knappen). */
+  savedIds?: (lassoIds: readonly string[]) => Promise<string[]>;
+}
+
+/**
+ * Fejlteksten for LassoSavedPages uden bruger (fx en delt side). Ordet "adgang" gør, at UI'en viser
+ * den som tom tilstand og ikke som en rød fejl (stateForError i packages/ui).
+ */
+export const SAVED_PAGES_NO_USER = "Gemte sider kræver adgang som bruger og vises ikke på en delt side.";
+
+/** Visningens virksomheds- og person-ID'er (company, companies[], benchmark, person), uden dubletter. */
+export function entityIdsOf(spec: ViewSpec): string[] {
+  const ids = new Set<string>();
+  for (const c of spec.components) {
+    const x = c as { company?: unknown; companies?: unknown; benchmark?: unknown; person?: unknown };
+    for (const v of [x.company, x.benchmark, x.person, ...(Array.isArray(x.companies) ? x.companies : [])]) {
+      if (typeof v === "string" && v) ids.add(v);
+    }
+  }
+  return [...ids];
+}
+
 /** Normaliserer alle virksomhedsreferencer i specen til Lasso-ID'er. */
 export function normalizeSpec(spec: ViewSpec, companyPrefix: string): ViewSpec {
   const fix = (ref: string) => toLassoId(ref, companyPrefix);
@@ -72,8 +104,9 @@ export function errorMessage(err: unknown): string {
 /**
  * Henter præcis de data, en spec skal bruge, parallelt og uden dubletter.
  * Data går uden om modellen: det returneres til UI'en, ikke i modellens tekst.
+ * `extras` giver brugerbundne data (gemte sider); uden dem får LassoSavedPages en tom tilstand.
  */
-export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promise<Dataset> {
+export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras: ResolveExtras = {}): Promise<Dataset> {
   const ds = emptyDataset(provider.kind);
   const needs = new Map<string, Set<Need>>();
   const want = (id: string, ...n: Need[]) => {
@@ -85,6 +118,7 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
   const newsWanted = new Map<string, number>();
   const graphs: Extract<ViewComponent, { type: "LassoOwnershipDiagram" }>[] = [];
   const feeds: Extract<ViewComponent, { type: "LassoChangeFeed" }>[] = [];
+  const savedLists: Extract<ViewComponent, { type: "LassoSavedPages" }>[] = [];
 
   for (const c of spec.components) {
     switch (c.type) {
@@ -187,6 +221,9 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
       case "LassoChangeFeed":
         feeds.push(c);
         break;
+      case "LassoSavedPages":
+        savedLists.push(c);
+        break;
     }
   }
 
@@ -231,7 +268,32 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
     run(`changeFeed:${key}`, async () => void (ds.changeFeeds[key] = await provider.changeFeed({ list: f.list, days: f.days, types: f.types })));
   }
 
+  // Gem-laget: én liste pr. (slags, antal); nøglen er savedPagesKey, fejlnøglen "savedPages:<key>".
+  const savedKeys = new Set<string>();
+  for (const l of savedLists) {
+    const key = savedPagesKey(l);
+    if (savedKeys.has(key)) continue;
+    savedKeys.add(key);
+    const load = extras.savedPages;
+    if (!load) {
+      ds.errors[`savedPages:${key}`] = SAVED_PAGES_NO_USER;
+      continue;
+    }
+    run(`savedPages:${key}`, async () => void (ds.savedPages[key] = await load({ kind: l.kind, limit: l.limit })));
+  }
+
+  // Gem/Gemt-knappen: hvilke af visningens ID'er brugeren har gemt. Hentes sideløbende med data
+  // (ID'erne står i specen); en fejl her vælter aldrig visningen, så feltet udelades bare.
+  const loadSavedIds = extras.savedIds;
+  const savedIds = loadSavedIds
+    ? Promise.resolve(entityIdsOf(spec))
+        .then((ids) => loadSavedIds(ids))
+        .catch(() => undefined)
+    : undefined;
+
   await Promise.all(jobs);
+  const saved = await savedIds;
+  if (saved) ds.savedIds = saved;
   // Virksomhedsopslaget bruger kun CVR (hurtigt). Har visningen også hentet kontaktblokken
   // (hjemmesidens telefon/e-mail/web), udfyldes de felter, CVR mangler, derfra.
   for (const [id, co] of Object.entries(ds.companies)) {
