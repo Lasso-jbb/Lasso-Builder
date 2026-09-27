@@ -9,6 +9,7 @@ import {
   composeProbe,
   composePerson,
   composePersonProbe,
+  cvrFromLassoId,
   FOCUSES,
   listTemplate,
   mainMetric,
@@ -441,6 +442,11 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
         }
       }
     }
+    // Svarformer for de endpoints, adapterne er skrevet efter Lassos dokumentation uden en nøgle
+    // (docs/endpoints-*.md): ét kald pr. endpoint mod testvirksomheden, kun struktur og et kort
+    // udsnit af første element i loggen (offentlige CVR-data, aldrig nøgler). Creditsafe udelades,
+    // fordi et opslag koster en kredit. Tilkøb (Paqle, live number, CHR) logges som deres HTTP-status.
+    await probeEndpointShapes(client, first.lassoId, log);
     if (!verbose) return;
 
     for (const [name, fn] of [
@@ -482,6 +488,54 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
       const q = config.LASSO_STARTUP_PROBE_QUERY;
       log("login-varianter mod /data/cvr/search (kun HTTP-status)", await probeAuthVariants(config, "data/cvr/search", { query: q, pageSize: 1, type: "all", page: 1 }));
       log("401-svarets indhold", typeof err.body === "string" ? err.body.slice(0, 300) : describeShape(err.body, 3));
+    }
+  }
+}
+
+/** Kort udsnit af første element i en liste (eller af objektet), så brøk/procent og feltnavne kan ses. */
+function firstSlice(raw: unknown, ...paths: string[]): string {
+  let node: unknown = raw;
+  for (const path of paths) {
+    const next = at(node as Parameters<typeof at>[0], path);
+    if (next !== undefined) {
+      node = next;
+      break;
+    }
+  }
+  const item = Array.isArray(node) ? node[0] : node;
+  return JSON.stringify(item ?? null).slice(0, 700);
+}
+
+/**
+ * Logger form og et udsnit af svaret fra de endpoints, adapterne bygger på (opstartsprobe).
+ * Fejl logges som status, fx "403 (tilkøb?)", og stopper aldrig opstarten.
+ */
+export async function probeEndpointShapes(client: LassoClient, lassoId: string, log: (label: string, v: unknown) => void): Promise<void> {
+  const cvr = cvrFromLassoId(lassoId) ?? "";
+  const calls: [string, () => Promise<unknown>, string[]][] = [
+    ["owners/legal", () => client.get(`${encodeURIComponent(lassoId)}/owners/legal`), ["owners"]],
+    ["owners/beneficial", () => client.get(`${encodeURIComponent(lassoId)}/owners/beneficial`), ["owners"]],
+    [
+      "relations/graph",
+      () => client.post("modules/relations/graph", { ids: [lassoId], relationTypes: ["ownership"], enrichments: ["companyinfo", "personinfo"], ingoingDepth: 1, outgoingDepth: 1 }),
+      ["relations"],
+    ],
+    ["observations (CompanyInsight)", () => client.post(`modules/observations/${encodeURIComponent(lassoId)}`, { observationTags: ["CompanyInsight"] }), ["observations"]],
+    ["modules/news", () => client.post("modules/news?limit=2&orderBy=publishtime", [lassoId]), []],
+    ["productionUnits (company-full)", async () => at((await client.company(lassoId)) as Parameters<typeof at>[0], "productionUnits"), []],
+    ["paqle/news", () => client.get(`data/paqle/${encodeURIComponent(lassoId)}/news`), ["news"]],
+    ["livenumber", () => client.get(`data/livenumber/${encodeURIComponent(lassoId)}`), ["numbers"]],
+    ["CHR/livestock", () => client.get(`data/CHR/livestock/${cvr}`, { onlyCurrent: "true" }), []],
+  ];
+  for (const [name, fn, paths] of calls) {
+    const t0 = Date.now();
+    try {
+      const raw = await fn();
+      log(`form ${name} (${Date.now() - t0} ms)`, describeShape(raw, 5));
+      log(`udsnit ${name}`, firstSlice(raw, ...paths));
+    } catch (err) {
+      const status = err instanceof LassoApiError ? `HTTP ${err.status}${err.status === 401 || err.status === 403 ? " (tilkøb eller ingen adgang)" : ""}` : errorMessage(err);
+      log(`form ${name} FEJL (${Date.now() - t0} ms)`, status);
     }
   }
 }
