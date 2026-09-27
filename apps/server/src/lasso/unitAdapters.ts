@@ -138,20 +138,108 @@ export async function buildProductionUnits(
 /* ---------- CHR (katalog 20) ---------- */
 
 /**
- * Nøgler, som en liste af besætninger/ejendomme kan ligge under. Docs.lassox.com angav ingen
- * eksempel-response for `GET /data/CHR/livestock/{cvr}`; det er derfor uverificerede gæt.
+ * Nøgler, som en liste af besætninger/ejendomme kan ligge under i de tidligere, uverificerede
+ * gæt. Beholdt som reserve, hvis svaret en dag ikke længere matcher den bekræftede form nedenfor.
  */
 const CHR_LIST_KEYS = ["herds", "livestock", "besaetninger", "properties", "results"] as const;
 
 export const CHR_UNVERIFIED_REASON = "CHR-svarets struktur er ikke verificeret endnu";
 
+/** Genkender den bekræftede form: et array af ejendomme, hvor mindst ét element har `property` eller `livestockList.livestock`. */
+function isConfirmedChrShape(raw: Json): raw is Json[] {
+  return Array.isArray(raw) && raw.some((el) => isObj(el) && (Array.isArray(at(el, "livestockList.livestock")) || isObj(at(el, "property"))));
+}
+
+/** "Orevej 5, 3660 Stenløse (Egedal)" ud fra ét ejendomsobjekt (`property`). */
+function propertyAddressText(property: Json): string | undefined {
+  const street = str(property, "address");
+  const zip = str(property, "postalCode");
+  const city = str(property, "postalDistrict");
+  const municipality = str(property, "municipality");
+  const line = [street, [zip, city].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+  if (!line) return undefined;
+  return municipality ? `${line} (${municipality})` : line;
+}
+
 /**
- * CHR-husdyrdata (katalog 20). UBEKRÆFTET svarform (se docs/endpoints-enheder-kontakt-analyse.md):
- * leder efter en liste under `herds|livestock|besaetninger|properties|results` (eller et rent
- * array), og i hvert element efter dyreart, antal, CHR-nummer og hændelser. Genkendes ingen af
- * disse nøgler, gives en tom VM med `unavailableReason` i stedet for et (muligvis forkert) gæt.
+ * Antal dyr for én besætningsrække: værdien af det `livestockSize`-element, hvis tekst ender på
+ * "i alt" (fx "Svin i alt"), ellers summen af alle elementernes værdier.
+ */
+function livestockCount(sizeList: Json[]): number | undefined {
+  if (sizeList.length === 0) return undefined;
+  const totalEntry = sizeList.find((s) => (str(s, "text") ?? "").trim().toLowerCase().endsWith("i alt"));
+  if (totalEntry) return num(totalEntry, "value");
+  return sizeList.reduce<number>((sum, s) => sum + (num(s, "value") ?? 0), 0);
+}
+
+/**
+ * Ejer/brugers navn, KUN når det er en virksomhed (`cvrNumber` sat). Privatpersoners navn og
+ * adresse (ingen CVR-nummer) må aldrig ende i `LivestockVM` og læses derfor slet ikke herfra.
+ */
+function companyOwnerName(owner: Json): string | undefined {
+  if (!isObj(owner)) return undefined;
+  const cvr = pick(owner, "cvrNumber");
+  if (cvr === undefined || cvr === null || cvr === "") return undefined;
+  return str(owner, "name");
+}
+
+/**
+ * CHR-husdyrdata (katalog 20), BEKRÆFTET MOD API 27.09.2026: `GET /data/CHR/livestock/{cvr}
+ * ?onlyCurrent=true` svarer med et rent array af ejendomme. Hver ejendom har sit eget
+ * `chrNumber`, en `property` (adresse/kommune) og `livestockList.livestock[]` — én række pr.
+ * dyretype/anvendelse. Flere ejendomme (flere array-elementer) flades ud til én liste af rækker;
+ * hver række får sit eget `chrNumber`/`propertyAddress`, så de kan skelnes i UI'en. Persondata:
+ * ejer/bruger vises kun, når det er en virksomhed (se `companyOwnerName`) — privatpersoners navn
+ * og adresse fra `owner`/`user` læses ikke.
+ */
+function adaptChrLivestockConfirmed(lassoId: string, properties: Json[]): LivestockVM {
+  const herds: LivestockHerdVM[] = [];
+  const events: VetEventVM[] = [];
+  let chrNumber: string | undefined;
+  let ownerName: string | undefined;
+  let updated: string | undefined;
+  const bumpUpdated = (d: string | undefined) => {
+    if (d && (!updated || d > updated)) updated = d;
+  };
+
+  for (const property of properties) {
+    const propertyChr = str(property, "chrNumber");
+    chrNumber = chrNumber ?? propertyChr;
+    const propertyAddress = propertyAddressText(pick(property, "property") ?? {});
+    bumpUpdated(dateStr(property, "property.lastUpdated"));
+
+    for (const item of arr(property, "livestockList.livestock")) {
+      bumpUpdated(dateStr(item, "livestockSizeLastUpdated"));
+      if (!ownerName) ownerName = companyOwnerName(pick(item, "owner")) ?? companyOwnerName(pick(item, "user"));
+      herds.push({
+        species: str(item, "animalType"),
+        category: str(item, "usageType", "tradeType"),
+        count: livestockCount(arr(item, "livestockSize")) ?? null,
+        unit: "dyr",
+        chrNumber: str(item, "chrNumber") ?? propertyChr,
+        propertyAddress,
+      });
+    }
+
+    const problems = str(property, "veterinaryEventList.problems");
+    if (problems) events.push({ title: "Bemærkning", detail: problems });
+    for (const e of arr(property, "veterinaryEventList.events")) {
+      events.push({ title: str(e, "type", "name"), detail: str(e, "description"), date: dateStr(e, "date", "time") });
+    }
+  }
+  return { lassoId, chrNumber, ownerName, updated, herds, events };
+}
+
+/**
+ * CHR-husdyrdata (katalog 20): den bekræftede form (`adaptChrLivestockConfirmed`) forsøges
+ * FØRST. Matcher svaret den ikke, forsøges de tidligere, uverificerede gæt (pakket liste under
+ * `herds|livestock|besaetninger|properties|results`, eller et rent array med andre feltnavne),
+ * som reserve. Genkendes intet af det, gives en tom VM med `unavailableReason` i stedet for et
+ * (muligvis forkert) gæt.
  */
 export function adaptChrLivestock(lassoId: string, raw: Json): LivestockVM {
+  if (isConfirmedChrShape(raw)) return adaptChrLivestockConfirmed(lassoId, raw);
+
   const known = Array.isArray(raw) || (isObj(raw) && CHR_LIST_KEYS.some((k) => Array.isArray(at(raw, k))));
   if (!known) {
     return { lassoId, herds: [], events: [], unavailableReason: CHR_UNVERIFIED_REASON };
@@ -217,15 +305,49 @@ export function adaptLiveNumber(raw: Json): Pick<ContactVM, "verifiedNumbers" | 
 /* ---------- Regnskabsanalyse (katalog 12/19) ---------- */
 
 /**
- * Bygger tekstsektionen "Regnskabsanalyse" ud fra svaret fra `POST /modules/reportanalysis/{lassoId}`.
- * Docs beskriver et rent HTML-svar; hvis Lasso i stedet pakker det i JSON, forsøges almindelige
- * feltnavne. undefined ved tomt/ukendt svar (sektionen udelades da helt, katalogregel 4/5: ingen
- * AI-mærke, ingen bannerboks — dette er en almindelig tekstsektion med kildelinje).
+ * Rækkefølge og danske overskrifter for `sections`-feltets nøgler, BEKRÆFTET MOD API 27.09.2026
+ * (`POST /modules/reportanalysis/{lassoId}`). "sprgsml" (spørgsmål til overvejelse) står sidst.
+ * `latestReport`/`previousReport` (standardnøgletal med `possibleError`-flag) bruges ikke endnu,
+ * se docs/endpoints-enheder-kontakt-analyse.md.
  */
-export function adaptReportAnalysisSection(raw: Json): TextSectionItem | undefined {
+const REPORT_ANALYSIS_SECTIONS: readonly [key: string, title: string][] = [
+  ["konklusion", "Regnskabsanalyse: konklusion"],
+  ["resultat", "Resultat"],
+  ["likviditet", "Likviditet"],
+  ["balanceogkapitalforhold", "Balance og kapitalforhold"],
+  ["branchestatistik", "Branchestatistik"],
+  ["revisoroplysninger", "Revisoroplysninger"],
+  ["sprgsml", "Spørgsmål til overvejelse"],
+];
+
+const REPORT_ANALYSIS_SOURCE = "Kilde: Lasso regnskabsanalyse";
+
+/**
+ * Bygger tekstsektionerne fra svaret fra `POST /modules/reportanalysis/{lassoId}`, BEKRÆFTET MOD
+ * API 27.09.2026: `{ lassoId, sections: { konklusion, resultat, likviditet,
+ * balanceogkapitalforhold, branchestatistik, revisoroplysninger, sprgsml }, text, latestReport,
+ * previousReport }`. Findes `sections` med mindst ét ikke-tomt felt, giver hver én
+ * `TextSectionItem` i den bekræftede rækkefølge (tomme felter udelades); ellers falder den
+ * tilbage til `text` som én samlet sektion. HTML'et konverteres til ren tekst med `htmlToText`.
+ * Tomt/ukendt svar giver en tom liste (sektionerne udelades da helt — katalogregel 4/5: ingen
+ * AI-mærke, ingen bannerboks, blot almindelige sektioner med kildelinje).
+ */
+export function adaptReportAnalysisSections(raw: Json): TextSectionItem[] {
+  const sectionsRaw = pick(raw, "sections");
+  if (isObj(sectionsRaw)) {
+    const items: TextSectionItem[] = [];
+    for (const [key, title] of REPORT_ANALYSIS_SECTIONS) {
+      const html = str(sectionsRaw, key);
+      if (!html) continue;
+      const body = htmlToText(html);
+      if (!body) continue;
+      items.push({ heading: title, body, note: REPORT_ANALYSIS_SOURCE });
+    }
+    if (items.length) return items;
+  }
   const html = typeof raw === "string" ? raw : str(raw, "text", "analysis", "html", "content", "result", "summary");
-  if (!html) return undefined;
+  if (!html) return [];
   const body = htmlToText(html);
-  if (!body) return undefined;
-  return { heading: "Regnskabsanalyse", body, note: "Kilde: Lasso regnskabsanalyse" };
+  if (!body) return [];
+  return [{ heading: "Regnskabsanalyse", body, note: REPORT_ANALYSIS_SOURCE }];
 }

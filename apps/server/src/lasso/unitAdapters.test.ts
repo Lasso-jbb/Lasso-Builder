@@ -2,17 +2,19 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Json } from "./adapters.js";
 import {
+  CHR_CONFIRMED_RESPONSE,
   CHR_GUESS_ARRAY,
   CHR_GUESS_HERDS,
   CHR_UNKNOWN_SHAPE,
   COMPANY_FULL_WITH_UNITS,
   LIVE_NUMBER_RESPONSE,
   REPORT_ANALYSIS_HTML,
+  REPORT_ANALYSIS_RESPONSE,
   UNIT_BRANCH,
   UNIT_MAIN,
 } from "./fixtures/units.js";
 import { htmlToText } from "./htmlText.js";
-import { adaptChrLivestock, adaptLiveNumber, adaptProductionUnitDetail, adaptReportAnalysisSection, buildProductionUnits, productionUnitRefs } from "./unitAdapters.js";
+import { adaptChrLivestock, adaptLiveNumber, adaptProductionUnitDetail, adaptReportAnalysisSections, buildProductionUnits, productionUnitRefs } from "./unitAdapters.js";
 
 /* ---------- Produktionsenheder (katalog 20) ---------- */
 
@@ -151,17 +153,30 @@ test("htmlToText tåler tomt eller manglende input", () => {
   assert.equal(htmlToText(""), "");
 });
 
-test("adaptReportAnalysisSection bygger en tekstsektion med kildelinje, ingen AI-mærke", () => {
-  const section = adaptReportAnalysisSection(REPORT_ANALYSIS_HTML);
-  assert.equal(section?.heading, "Regnskabsanalyse");
-  assert.equal(section?.note, "Kilde: Lasso regnskabsanalyse");
-  assert.ok(section?.body.includes("Konklusion: sund udvikling."));
+test("adaptReportAnalysisSections bygger sektioner i den bekræftede rækkefølge, med danske titler og kildelinje, og udelader tomme felter", () => {
+  const sections = adaptReportAnalysisSections(REPORT_ANALYSIS_RESPONSE);
+  assert.deepEqual(
+    sections.map((s) => s.heading),
+    ["Regnskabsanalyse: konklusion", "Resultat", "Likviditet", "Balance og kapitalforhold", "Branchestatistik", "Spørgsmål til overvejelse"],
+  );
+  for (const s of sections) assert.equal(s.note, "Kilde: Lasso regnskabsanalyse");
+  assert.ok(sections[0]!.body.includes("Virksomheden har en sund og stabil udvikling."));
+  assert.ok(sections.at(-1)!.body.includes("- Bør investeringsplanen revideres?"));
+  assert.ok(sections.at(-1)!.body.includes("- Er likviditetsberedskabet tilstrækkeligt?"));
 });
 
-test("adaptReportAnalysisSection giver undefined for et tomt eller ukendt svar", () => {
-  assert.equal(adaptReportAnalysisSection(""), undefined);
-  assert.equal(adaptReportAnalysisSection({}), undefined);
-  assert.equal(adaptReportAnalysisSection(null), undefined);
+test("adaptReportAnalysisSections falder tilbage til svarets 'text' som én sektion, når 'sections' mangler", () => {
+  const sections = adaptReportAnalysisSections(REPORT_ANALYSIS_HTML);
+  assert.equal(sections.length, 1);
+  assert.equal(sections[0]!.heading, "Regnskabsanalyse");
+  assert.equal(sections[0]!.note, "Kilde: Lasso regnskabsanalyse");
+  assert.ok(sections[0]!.body.includes("Konklusion: sund udvikling."));
+});
+
+test("adaptReportAnalysisSections giver en tom liste for et tomt eller ukendt svar", () => {
+  assert.deepEqual(adaptReportAnalysisSections(""), []);
+  assert.deepEqual(adaptReportAnalysisSections({}), []);
+  assert.deepEqual(adaptReportAnalysisSections(null), []);
 });
 
 /* ---------- CHR (katalog 20), UBEKRÆFTET svarform ---------- */
@@ -196,4 +211,60 @@ test("adaptChrLivestock giver en tom VM med unavailableReason for en ukendt svar
   assert.deepEqual(vm.herds, []);
   assert.deepEqual(vm.events, []);
   assert.equal(vm.unavailableReason, "CHR-svarets struktur er ikke verificeret endnu");
+});
+
+/* ---------- CHR (katalog 20), BEKRÆFTET MOD API 27.09.2026 ---------- */
+
+test("adaptChrLivestock læser den bekræftede form: én række pr. livestockList.livestock, antal fra elementet der ender på 'i alt'", () => {
+  const vm = adaptChrLivestock("CVR-1-1", CHR_CONFIRMED_RESPONSE);
+  assert.equal(vm.chrNumber, "10033");
+  assert.equal(vm.herds.length, 3);
+  assert.equal(vm.herds[0]!.species, "Svin");
+  assert.equal(vm.herds[0]!.category, "Kirurgiske/medicinske forsøg");
+  assert.equal(vm.herds[0]!.count, 85);
+  assert.equal(vm.herds[1]!.species, "Heste");
+  assert.equal(vm.herds[1]!.category, "Kød, generelt");
+  assert.equal(vm.herds[1]!.count, 2);
+  assert.equal(vm.herds[2]!.species, "Høns af æglægningstype");
+  assert.equal(vm.herds[2]!.count, 10);
+  assert.equal(vm.unavailableReason, undefined);
+});
+
+test("adaptChrLivestock summerer livestockSize-værdierne, når intet element ender på 'i alt'", () => {
+  const raw: Json = [
+    {
+      chrNumber: 99,
+      property: { address: "Testvej 1", postalCode: 8000, postalDistrict: "Aarhus C", municipality: "Aarhus" },
+      livestockList: { livestock: [{ animalType: "Test", livestockSize: [{ text: "Gruppe A", value: 3 }, { text: "Gruppe B", value: 4 }] }] },
+    },
+  ];
+  const vm = adaptChrLivestock("CVR-1-1", raw);
+  assert.equal(vm.herds[0]!.count, 7);
+});
+
+test("adaptChrLivestock sætter CHR-nummer og ejendommens adresse pr. besætningsrække", () => {
+  const vm = adaptChrLivestock("CVR-1-1", CHR_CONFIRMED_RESPONSE);
+  for (const h of vm.herds) {
+    assert.equal(h.chrNumber, "10033");
+    assert.equal(h.propertyAddress, "Orevej 5, 3660 Stenløse (Egedal)");
+  }
+});
+
+test("adaptChrLivestock viser kun ejer/bruger for virksomheder (cvrNumber sat); privatpersoners navn og adresse lækkes aldrig", () => {
+  const vm = adaptChrLivestock("CVR-1-1", CHR_CONFIRMED_RESPONSE);
+  assert.equal(vm.ownerName, "NOVO NORDISK A/S");
+  const serialized = JSON.stringify(vm);
+  assert.ok(!serialized.includes("Anders Andersen"), "privatpersonens navn må ikke ende i VM'en");
+});
+
+test("adaptChrLivestock læser opdateringsdatoen som den seneste af property.lastUpdated og livestockSizeLastUpdated", () => {
+  const vm = adaptChrLivestock("CVR-1-1", CHR_CONFIRMED_RESPONSE);
+  assert.equal(vm.updated, "2025-11-06");
+});
+
+test("adaptChrLivestock læser 'problems' som en hændelseslinje, når veterinaryEventList.events er null", () => {
+  const vm = adaptChrLivestock("CVR-1-1", CHR_CONFIRMED_RESPONSE);
+  assert.equal(vm.events.length, 1);
+  assert.equal(vm.events[0]!.title, "Bemærkning");
+  assert.equal(vm.events[0]!.detail, "Ingen kendte aktuelle problemer");
 });
