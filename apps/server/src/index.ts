@@ -493,7 +493,7 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
 }
 
 /** Kort udsnit af første element i en liste (eller af objektet), så brøk/procent og feltnavne kan ses. */
-function firstSlice(raw: unknown, ...paths: string[]): string {
+function firstSlice(raw: unknown, maxChars: number, ...paths: string[]): string {
   let node: unknown = raw;
   for (const path of paths) {
     const next = at(node as Parameters<typeof at>[0], path);
@@ -503,7 +503,15 @@ function firstSlice(raw: unknown, ...paths: string[]): string {
     }
   }
   const item = Array.isArray(node) ? node[0] : node;
-  return JSON.stringify(item ?? null).slice(0, 700);
+  return JSON.stringify(item ?? null).slice(0, maxChars);
+}
+
+/** Top-niveauets skalarfelter (fx observations' score og version), uden listerne. */
+function scalarsOf(raw: unknown): string {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return JSON.stringify(raw ?? null).slice(0, 200);
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) if (v === null || typeof v !== "object") out[k] = v;
+  return JSON.stringify(out).slice(0, 400);
 }
 
 /**
@@ -512,27 +520,37 @@ function firstSlice(raw: unknown, ...paths: string[]): string {
  */
 export async function probeEndpointShapes(client: LassoClient, lassoId: string, log: (label: string, v: unknown) => void): Promise<void> {
   const cvr = cvrFromLassoId(lassoId) ?? "";
-  const calls: [string, () => Promise<unknown>, string[]][] = [
-    ["owners/legal", () => client.get(`${encodeURIComponent(lassoId)}/owners/legal`), ["owners"]],
-    ["owners/beneficial", () => client.get(`${encodeURIComponent(lassoId)}/owners/beneficial`), ["owners"]],
+  // [navn, kald, stier til første element, maks tegn i udsnittet]
+  const calls: [string, () => Promise<unknown>, string[], number][] = [
+    ["owners/legal", () => client.get(`${encodeURIComponent(lassoId)}/owners/legal`), ["owners"], 700],
+    ["owners/beneficial", () => client.get(`${encodeURIComponent(lassoId)}/owners/beneficial`), ["owners"], 700],
     [
       "relations/graph",
       () => client.post("modules/relations/graph", { ids: [lassoId], relationTypes: ["ownership"], enrichments: ["companyinfo", "personinfo"], ingoingDepth: 1, outgoingDepth: 1 }),
       ["relations"],
+      700,
     ],
-    ["observations (CompanyInsight)", () => client.post(`modules/observations/${encodeURIComponent(lassoId)}`, { observationTags: ["CompanyInsight"] }), ["observations"]],
-    ["modules/news", () => client.post("modules/news?limit=2&orderBy=publishtime", [lassoId]), []],
-    ["productionUnits (company-full)", async () => at((await client.company(lassoId)) as Parameters<typeof at>[0], "productionUnits"), []],
-    ["paqle/news", () => client.get(`data/paqle/${encodeURIComponent(lassoId)}/news`), ["news"]],
-    ["livenumber", () => client.get(`data/livenumber/${encodeURIComponent(lassoId)}`), ["numbers"]],
-    ["CHR/livestock", () => client.get(`data/CHR/livestock/${cvr}`, { onlyCurrent: "true" }), []],
+    ["relations/graph entity", () => client.post("modules/relations/graph", { ids: [lassoId], relationTypes: ["ownership"], enrichments: ["companyinfo", "personinfo"], ingoingDepth: 1, outgoingDepth: 1 }), ["entities"], 900],
+    ["observations (CompanyInsight)", () => client.post(`modules/observations/${encodeURIComponent(lassoId)}`, { observationTags: ["CompanyInsight"] }), ["observations"], 700],
+    ["modules/news", () => client.post("modules/news?limit=2&orderBy=publishtime", [lassoId]), [], 700],
+    ["productionUnit (CVR-2)", async () => {
+      const units = at((await client.company(lassoId)) as Parameters<typeof at>[0], "productionUnits");
+      const first = Array.isArray(units) ? units[0] : undefined;
+      const id = first && typeof first === "object" ? (first as { lassoId?: string }).lassoId : undefined;
+      return id ? client.get(encodeURIComponent(id)) : undefined;
+    }, [], 900],
+    ["paqle/news", () => client.get(`data/paqle/${encodeURIComponent(lassoId)}/news`), ["news"], 700],
+    ["livenumber", () => client.get(`data/livenumber/${encodeURIComponent(lassoId)}`), ["numbers"], 700],
+    ["CHR/livestock", () => client.get(`data/CHR/livestock/${cvr}`, { onlyCurrent: "true" }), [], 3500],
+    ["reportanalysis", () => client.post(`modules/reportanalysis/${encodeURIComponent(lassoId)}`, {}, { timeoutMs: 30_000 }), [], 600],
   ];
-  for (const [name, fn, paths] of calls) {
+  for (const [name, fn, paths, maxChars] of calls) {
     const t0 = Date.now();
     try {
       const raw = await fn();
       log(`form ${name} (${Date.now() - t0} ms)`, describeShape(raw, 5));
-      log(`udsnit ${name}`, firstSlice(raw, ...paths));
+      if (raw && typeof raw === "object" && !Array.isArray(raw)) log(`felter ${name}`, scalarsOf(raw));
+      log(`udsnit ${name}`, firstSlice(raw, maxChars, ...paths));
     } catch (err) {
       const status = err instanceof LassoApiError ? `HTTP ${err.status}${err.status === 401 || err.status === 403 ? " (tilkøb eller ingen adgang)" : ""}` : errorMessage(err);
       log(`form ${name} FEJL (${Date.now() - t0} ms)`, status);
