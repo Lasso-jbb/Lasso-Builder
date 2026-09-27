@@ -1,5 +1,6 @@
 import { OPERATORS, type Criterion } from "./criteria.js";
 import { FIELDS, FIELD_BY_KEY, OPERATORS_BY_TYPE } from "./fields.js";
+import { CHANGE_TYPES } from "./models.js";
 import { METRICS, TABLE_COLUMNS, type ComponentType } from "./spec.js";
 
 /**
@@ -26,6 +27,16 @@ export const COMPOSITION_RULES = `Komposition (guide 23):
 - ÉN visning pr. svar: kald højst ét af show_company, show_person, search_companies og render_view pr. brugerbesked, og kun én gang. Aldrig show_company og render_view efter hinanden.
 - render_view er ét dashboard (layout 'dashboard', standard): 4 kolonner, hver komponent i sin bredde (width: quarter ¼, half ½, three-quarters ¾, full). Udelad width for standardbredden. Hoved, nøgletal, tabeller og fulde regnskaber står i fuld bredde; to halve (fx graf + LassoKeyValueList, LassoPersonList + LassoOwnerList) står side om side, så læg dem efter hinanden. Efterlad aldrig en halv alene i en række: giv den width 'full' eller en makker. En ¼ (fx LassoRelations) står ved siden af en ¾.
 - Højst én graf pr. visning. Flere grafer stables aldrig; vælg den ene, spørgsmålet peger på (1 nøgletal → LassoBarChart, 2–3 → LassoGroupedBarChart, 4+ eller "tabel" → LassoMultiYearTable).`;
+
+/**
+ * Layoutmodeller fra Paper 30 "Fra spørgsmål til skærm" (node J48-0). Vælg først svarniveau, så
+ * mønster, så elementer. Bredden (chat, mobil, portal) ændrer kun foldningen, aldrig elementerne
+ * eller deres rækkefølge. Står efter COMPOSITION_RULES i tool-beskrivelserne.
+ */
+export const LAYOUT_RULES = `Layout (Paper 30): vælg først svarniveau, så mønster, så elementer.
+Svarniveauer: A Element = ét spørgsmål, ét element (fx "hvad er omsætningen" → LassoKeyFigureCards med ét metric; "hvem er revisor" → LassoKeyValueList), aldrig to A-svar under hinanden. B Sektion = ét emne, 2–4 elementer i ét mønster; standardsvaret i chatten ("hvordan går det" → mønster 1; "hvem ejer" → mønster 2; "kan vi handle med" → mønster 7; "hvad er der sket" → mønster 6). C Side = det hele ("fortæl om X", "hvem er Y", "sammenlign", målgrupper) → show_company/show_person/search_companies, som bygger hele siden med moduler. Vælg det laveste niveau, der svarer fuldt; svaret vokser via links, aldrig omvendt. Hvert svar starter med identiteten (LassoCompanyHead/LassoPersonHead) og slutter med kildelinje.
+Mønstre på 4-kolonne-griddet: 1 Overblik = nøgletalskort fuld, graf ½ + nøgle-værdi-liste ½, lister to og to. 2 Fokus = ét stort element ¾ + fakta ¼ (ejerdiagram + ejerliste, scoremåler + forklaring; LassoRelations er ¼-elementet). 3 Ligeværdige = ½ + ½ med samme vægt (LassoPersonList + LassoOwnerList, LassoIncomeStatement + LassoBalanceSheet i hver sin fane). 4 Liste først = tabel i fuld bredde (LassoCompanyTable) med detaljer ved klik. 5 Sammenligning = én kolonne pr. virksomhed (LassoCompareTable, LassoRanking). 6 Tidslinje = kronologisk strøm (LassoTimeline, LassoNews) med filtre over. 7 Fortælling = analyse ¾ (LassoSummary) + 3 tal ¼ (LassoKeyFigureCards) + risikoskala fuld (LassoRiskObservations). 8 Kortgitter = artikler i to kolonner (LassoNews). 9 Harmonika = mange lange sektioner i ét modul. Et modul må kombinere to mønstre over hinanden (graf fuld + tabel fuld), aldrig blande dem i én række.
+Foldning: ¾+¼ bliver fuld+fuld under 1200; ½+½ holder til 768 og stabler under; nøgletalskort bliver 2×2 under 768; tabeller bliver kortlister under 768; grafer viser maks 5 punkter. Chatten bruger tablet-reglerne (640–900 px); kun Claude på mobil bruger mobilreglerne. Variationen ligger i valget af mønster og elementer, ikke i nye former: samme spørgsmål giver samme mønster hver gang.`;
 
 /** Kort note pr. komponent: hvilken show_company-focus viser den allerede. */
 const F = (focus: string) => `Dækkes af show_company focus ${focus}; byg kun selv i render_view sammen med andet.`;
@@ -279,6 +290,15 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     description:
       "Brug til: konkurser og tvangsopløsninger blandt selskaber, personen har eller har haft roller i – 'har X været involveret i konkurser'. Brug ikke når: det gælder en virksomheds risiko (LassoRiskObservations). Kræver: person; ingen roller giver tom tilstand. Dækkes af show_person. Eksempel: 'Har X været med i konkurser?' → show_person.",
     props: "person, title?",
+  },
+
+  // (21) Overvågning ---------------------------------------------------------------
+  {
+    type: "LassoChangeFeed",
+    title: "Ændringsfeed, overvågede virksomheder",
+    description:
+      "Brug til: hvad der er sket i de virksomheder, brugeren overvåger – ændringer på tværs af en overvågningsliste grupperet pr. dag med filter på type (regnskab, ledelse, ejerskab, status, stamdata, kredit) – 'hvad er der sket i mine kunder', 'ændringer i min overvågning', 'nyt i listen Kunder'. Brug ikke når: det gælder én virksomheds egen historik (LassoTimeline), nyheder i medierne (LassoNews) eller risikosignaler (LassoRiskObservations). Kræver: list? (listens navn, fx 'Kunder'), days? (standard 7, 1–90), types? (delmængde af ændringstyper); ingen ændringer i perioden giver tom tilstand, og uden overvågningsliste forklarer komponenten hvorfor. Dækkes ikke af show_company. Eksempel: 'Hvad er der sket i mine overvågede kunder den seneste uge?' → render_view med LassoChangeFeed { list: 'Kunder', days: 7 }.",
+    props: `list?, days? (1–90, standard 7), types? (delmængde af ${CHANGE_TYPES.join(" | ")}), title?`,
   },
 
   // Interaktion ----------------------------------------------------------------

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { currencyUnit, formatAmount, formatDate, formatMetricValue, formatNumber, METRIC_FIELD, METRIC_LABELS, type CompanyVM, type FinancialsVM, type Metric, type OwnershipVM } from "@lasso/spec";
 import { DataState, Missing, Section, stateForError } from "../primitives.js";
+import { Tabs } from "./Tabs.js";
 
 /** "2025-01-01" -> "01.01" (dag.måned, uden år, katalog 09: "01.01 – 31.12"). */
 function dayMonth(value: string | undefined): string | undefined {
@@ -127,14 +128,9 @@ export function KeyValueList({
         title={heading}
         action={
           options.length > 1 ? (
-            <div className="lasso-kv-years" role="tablist" aria-label="Vælg regnskabsår">
-              <div className="lasso-segment">
-                {options.map((y) => (
-                  <button key={y.year} type="button" role="tab" aria-selected={selected.year === y.year} className={`lasso-segment__item ${selected.year === y.year ? "is-on" : ""}`} onClick={() => setYear(y.year)}>
-                    {y.year}
-                  </button>
-                ))}
-              </div>
+            // Årsvælger = niveau 3-faner (29). Over 3 år på mobil bliver den en dropdown (29, mobil).
+            <div className="lasso-kv-years">
+              <Tabs level={3} ariaLabel="Vælg regnskabsår" items={options.map((y) => ({ id: String(y.year), label: String(y.year) }))} value={String(selected.year)} onChange={(id) => setYear(Number(id))} />
             </div>
           ) : undefined
         }

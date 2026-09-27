@@ -351,3 +351,39 @@ Antagne svarformer:
   `companies.results[]`.
 
 Ikke dækket (findes i designet, artboard 16, men har ingen kendt kilde): PEP, stråmandsindikator og sanktionslister.
+
+## Ubekræftet: overvågningsfeed (katalog 21)
+
+Læst i docs.lassox.com med WebFetch 27.09.2026 (`api/platform/monitoring` og `api/companies/company-updates`), IKKE
+afprøvet mod en rigtig nøgle. Lasso har ikke et endpoint, der giver "ændringer i mine overvågede virksomheder" som ét
+feed; `LiveProvider.changeFeed` sætter det sammen af tre kald. Klient: `LassoClient.monitoringJobs`, `.monitoringItems`,
+`.companyUpdates`; adaptere `adaptMonitoringJobs`, `adaptMonitoringItems`, `adaptChangeFeed` i
+`apps/server/src/lasso/adapters.ts` (alle felter læses defensivt med `at()`/`str()`; ukendte former giver tomme lister).
+
+| Formål | Metode | Endpoint | Bruges af |
+|---|---|---|---|
+| Overvågningsjobs (lister) | GET | `/apps/monitoring/jobs` | `LassoChangeFeed`: finder jobbet med `name` = specens `list` (ellers det første) |
+| Virksomheder i ét job | GET | `/apps/monitoring/jobs/{JobId}/items?take=500&continuationToken=` | samme; sider gennem `continuationToken` (højst 20 sider) |
+| Ændrede virksomheder med historik | GET | `/data/cvr/companies/delta/history?since=&max=&pageSize=100&cToken=` | samme; kun de overvågede ID'er tages med |
+
+Antagne svarformer:
+
+- `GET /apps/monitoring/jobs`: en liste (eller `{ jobs | results | items: [...] }`) af `{ jobId | id, name }`.
+  Svarer endpointet 400/404/405/501, regnes det som "ingen overvågning" (tom tilstand med forklaring, ikke fejl).
+- `GET /apps/monitoring/jobs/{JobId}/items`: `{ items | results: [{ lassoId } | "CVR-1-…"], continuationToken }`.
+- `GET /data/cvr/companies/delta/history`: den dokumenterede side `{ results, continuationToken, hasNextPage, totalPages,
+  page, pageSize, resultsFound, resultsReturned }`. Formen af hvert element i `results` er IKKE dokumenteret; adapteren
+  antager `{ lassoId, name, lastUpdated | updateTime, changes | history | updates: [{ type | kind | field, from | oldValue,
+  to | newValue, date | time, description, unread }] }`. Mangler `changes`, regnes elementet for én stamdata-ændring på
+  `lastUpdated`. Ændringstypen udledes af `type`/`field` med `changeTypeOf` (status/konkurs → status, report/regnskab →
+  regnskab, owner/ejer → ejerskab, management/board/direktion → ledelse, credit/score → kredit, alt andet → stamdata).
+  Ulæst kræver et sandt `unread`/`isNew` eller `read: false`; ellers regnes ændringen for læst (Lasso har ingen kendt
+  læst-markering pr. bruger). Mange små ændringer af samme type samme dag foldes til én række (`foldChangeEntries` i
+  `packages/spec/src/models.ts`, kun stamdata og kredit, fra 3 ændringer).
+- Perioden (`days`, standard 7) sættes som `since` = nu minus `days` dage; `useLastLoad`/`maxDaysSinceUpdate` bruges ikke.
+
+Ikke dækket (findes i designet, artboard 21, men har ingen kendt kilde): notifikationspanelet (kredit, eksport, konto)
+og indstillinger pr. virksomhed (hvilke ændringstyper der giver besked, frekvens). `NotificationPanel` og
+`MonitorSettings` i `packages/ui` er rene UI-komponenter med props, som portalen fylder; de kalder ingen endpoints.
+Monitoring-API'et kan tilføje/fjerne virksomheder (`POST/DELETE /apps/monitoring/jobs/thirdparty/{Provider}/items`),
+men det er ikke koblet til "Overvåg"/"Stop overvågning" endnu.

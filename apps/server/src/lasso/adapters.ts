@@ -4,6 +4,9 @@ import type {
   BeneficialOwnerVM,
   BuildingVM,
   BalanceSheetYear,
+  ChangeEntryVM,
+  ChangeFeedVM,
+  ChangeType,
   CashFlowYear,
   CompanyRowVM,
   CompanyVM,
@@ -35,7 +38,7 @@ import type {
   PropertyVM,
   VetEventVM,
 } from "@lasso/spec";
-import { currencyUnit } from "@lasso/spec";
+import { currencyUnit, foldChangeEntries, formatAmount, formatDate } from "@lasso/spec";
 
 /**
  * Oversætter Lassos rå API-svar til vores datamodeller.
@@ -1391,4 +1394,118 @@ export function graphFromOwnership(rootId: string, rootName: string, o: Ownershi
     edges.push({ from: id, to: rootId, share: shareRange(w.share), votes: w.votes ? shareRange(w.votes) : undefined });
   });
   return { rootId, nodes, edges, ingoingDepth: Math.min(1, opts.ingoingDepth), outgoingDepth: 0, onDate: opts.onDate, fetchedAt: new Date().toISOString(), note: "Kun direkte ejere; ejergrafen kunne ikke hentes." };
+}
+
+/* ---------- Katalog 21: overvågningsfeed, UBEKRÆFTET form (docs/lasso-endpoints.md) ---------- */
+
+/** Ét overvågningsjob (liste) fra GET /apps/monitoring/jobs. Kun id og navn bruges. */
+export interface MonitoringJob {
+  id: string;
+  name: string | undefined;
+}
+
+export function adaptMonitoringJobs(raw: Json): MonitoringJob[] {
+  const list = Array.isArray(raw) ? raw : arr(raw, "jobs", "results", "items", "data", "value");
+  return list
+    .map((j) => {
+      const id = str(j, "jobId", "id", "key");
+      if (!id) return null;
+      return { id, name: str(j, "name", "title", "listName", "description") };
+    })
+    .filter((j): j is MonitoringJob => j !== null);
+}
+
+/** Lasso-ID'er for virksomhederne i et overvågningsjob (GET /apps/monitoring/jobs/{JobId}/items). */
+export function adaptMonitoringItems(raw: Json): { ids: string[]; continuationToken?: string } {
+  const list = Array.isArray(raw) ? raw : arr(raw, "items", "results", "companies", "data", "value");
+  const ids = list
+    .map((i) => (typeof i === "string" ? i : str(i, "lassoId", "id", "companyId", "company.lassoId")))
+    .filter((id): id is string => Boolean(id));
+  return { ids, continuationToken: str(raw, "continuationToken", "cToken") };
+}
+
+/**
+ * Oversætter Lassos ændringstyper/feltnavne til katalogets seks typer. Ukendte typer
+ * regnes som stamdata, så en ændring aldrig forsvinder stille.
+ */
+export function changeTypeOf(kind: string | undefined, field: string | undefined): ChangeType {
+  const s = `${kind ?? ""} ${field ?? ""}`.toLowerCase();
+  if (/status|konkurs|likvid|opløs|ophør|bankrupt|dissol/.test(s)) return "status";
+  if (/regnskab|report|financial|årsrapport|annual/.test(s)) return "regnskab";
+  if (/ejer|owner|kapital|share/.test(s)) return "ejerskab";
+  if (/ledelse|direkt|bestyr|management|board|director|deltager|participant|people/.test(s)) return "ledelse";
+  if (/kredit|credit|score|rating|risiko|risk/.test(s)) return "kredit";
+  return "stamdata";
+}
+
+/** Læsbar tekst for en feltændring, når Lasso ikke selv leverer en beskrivelse. */
+function changeText(type: ChangeType, field: string | undefined, from: string | undefined, to: string | undefined): string {
+  const f = field ? field.replace(/[_.]/g, " ").toLowerCase() : undefined;
+  const label = f ? `${f[0]!.toUpperCase()}${f.slice(1)}` : undefined;
+  if (type === "status") return "Status ændret";
+  if (type === "regnskab") return `Nyt regnskab offentliggjort${to ? `, ${to}` : ""}`;
+  if (from && to) return `${label ?? "Felt"} ændret fra ${from} til ${to}`;
+  if (to) return `${label ?? "Felt"}: ${to}`;
+  return label ? `${label} opdateret` : "Stamdata opdateret";
+}
+
+function valueText(v: Json): string | undefined {
+  if (v === undefined || v === null || v === "") return undefined;
+  if (typeof v === "number") return Number.isInteger(v) && Math.abs(v) >= 100_000 ? formatAmount(v) : String(v);
+  if (typeof v === "string") return /^\d{4}-\d{2}-\d{2}/.test(v) ? formatDate(v) : v;
+  if (isObj(v)) return str(v, "name", "text", "value", "title", "shortDescription");
+  return undefined;
+}
+
+/**
+ * Ændringsfeedet (katalog 21) ud fra GET /data/cvr/companies/delta/history. Antaget form pr. element:
+ * `{ lassoId, name, lastUpdated | updateTime, changes | history: [{ type | kind | field, from | oldValue,
+ * to | newValue, date | time, description, unread }] }`. Mangler `changes`, regnes hele elementet for én
+ * ændring af typen "stamdata" på `lastUpdated`. Kun virksomheder i `monitored` (når sat) tages med, og kun
+ * typerne i `types` (når sat). Ulæst kræver et sandt `unread`/`isNew` eller `read: false`; ellers læst.
+ * Ændringer ældre end `days` udelades, og små ændringer foldes (foldChangeEntries).
+ */
+export function adaptChangeFeed(raw: Json, opts: { listName?: string; days: number; types?: readonly ChangeType[]; monitored?: ReadonlySet<string>; now?: Date }): ChangeFeedVM {
+  const now = opts.now ?? new Date();
+  const sinceMs = now.getTime() - opts.days * 86_400_000;
+  const list = Array.isArray(raw) ? raw : items(raw);
+  const entries: ChangeEntryVM[] = [];
+  for (const c of list) {
+    const lassoId = str(c, "lassoId", "id", "company.lassoId");
+    if (opts.monitored && (!lassoId || !opts.monitored.has(lassoId))) continue;
+    const companyName = str(c, "name", "companyName", "company.name") ?? lassoId ?? "Ukendt virksomhed";
+    const changes = arr(c, "changes", "history", "updates", "events", "diffs");
+    const rawEntries: Json[] = changes.length ? changes : [{}];
+    for (const ch of rawEntries) {
+      const kind = str(ch, "type", "kind", "category", "changeType");
+      const field = str(ch, "field", "property", "path", "key");
+      const type = changeTypeOf(kind, field);
+      if (opts.types && !opts.types.includes(type)) continue;
+      const atRaw = str(ch, "date", "time", "at", "timestamp", "changedAt", "occurredAt") ?? str(c, "lastUpdated", "updateTime", "updatedAt", "modified", "date");
+      if (!atRaw) continue;
+      const at = new Date(atRaw);
+      if (Number.isNaN(at.getTime()) || at.getTime() < sinceMs) continue;
+      const from = valueText(pick(ch, "from", "oldValue", "old", "previous", "before"));
+      const to = valueText(pick(ch, "to", "newValue", "new", "current", "after"));
+      const unread = pick(ch, "unread", "isNew") === true || pick(ch, "read", "seen") === false || pick(c, "unread", "isNew") === true;
+      entries.push({
+        lassoId,
+        companyName,
+        type,
+        text: str(ch, "description", "text", "summary", "title", "message") ?? changeText(type, field, from, to),
+        ...(type === "status" && (from || to) ? { from, to } : {}),
+        at: at.toISOString(),
+        source: str(ch, "source", "origin", "provider") ?? (type === "kredit" ? "Kredit" : "CVR"),
+        read: !unread,
+      });
+    }
+  }
+  return {
+    listName: opts.listName,
+    days: opts.days,
+    entries: foldChangeEntries(entries),
+    total: entries.length,
+    source: "Lasso",
+    updated: now.toISOString().slice(0, 10),
+  };
 }
