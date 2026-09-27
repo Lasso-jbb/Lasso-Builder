@@ -52,7 +52,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
   {
     type: "LassoKeyValueList",
     title: "Nøgle-værdi-liste",
-    description: `Brug til: variant 'company' (standard): revisor, seneste revisorskift, regnskabsperiode, branchekode, kommune og region, telefon, e-mail, web som én liste – stamdataspørgsmål ('hvem er revisor', 'hvilken kommune'). Det, LassoCompanyHead (CVR, form, stiftet, adresse, ansatte, branche), LassoContact og LassoOwnerList (revisor) viser på samme side, gentages ikke. variant 'financials': de 11 nøgletal (omsætning/bruttofortjeneste, resultat, egenkapital, ansatte, EBITDA, soliditetsgrad, overskudsgrad, likviditetsgrad, balancesum, gæld) plus regnskabsperiode og udgivelsesdato for ÉT år, med årsvælger for de seneste 5 år; exclude udelader nøgletal, der allerede står i LassoKeyFigureCards på siden. Brug ikke når: tallet skal have ændring mod året før (LassoKeyFigureCards), flere år side om side (LassoMultiYearTable), alle regnskabslinjer (LassoIncomeStatement/LassoBalanceSheet), eller det gælder formål/tegningsregler (LassoTextSections). Kræver: company, variant?, exclude?; manglende felter udelades (revisor og regnskabstal står som '—'). ${F("overblik, risiko og kontakt (company) samt oekonomi (financials)")} Eksempel: 'Hvem er revisor for Lasso X?' → variant 'company' (eller show_company focus overblik).`,
+    description: `Brug til: variant 'company' (standard): revisor, seneste revisorskift, regnskabsperiode, branchekode, kommune og region, telefon, e-mail, web som én liste – stamdataspørgsmål ('hvem er revisor', 'hvilken kommune'). Det, LassoCompanyHead (CVR, form, stiftet, adresse, ansatte, branche), LassoContact og LassoOwnerList (revisor) viser på samme side, gentages ikke. variant 'financials': de 11 nøgletal (omsætning/bruttofortjeneste, resultat, egenkapital, ansatte, EBITDA, soliditetsgrad, overskudsgrad, likviditetsgrad, balancesum, gæld) plus regnskabsperiode og udgivelsesdato for ÉT år, med årsvælger for de seneste 5 år; exclude udelader nøgletal, der allerede står i LassoKeyFigureCards på siden. Brug ikke når: tallet skal have ændring mod året før (LassoKeyFigureCards), flere år side om side (LassoMultiYearTable), alle regnskabslinjer (LassoIncomeStatement/LassoBalanceSheet), eller det gælder formål/tegningsregler (LassoTextSections). Kræver: company, variant?, exclude?; manglende felter udelades (revisor og regnskabstal står som '—'). ${F("overblik (company) og oekonomi (financials)")} Eksempel: 'Hvem er revisor for Lasso X?' → variant 'company' (eller show_company focus overblik).`,
     props: "company, variant? (company | financials), title?, exclude? (kun financials)",
   },
   {
@@ -83,13 +83,13 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
   {
     type: "LassoTimeline",
     title: "Tidslinje",
-    description: `Brug til: begivenheder over tid – stiftelse, ledelsesskift og offentliggjorte regnskaber, nyeste øverst – 'historik', 'hvad er der sket', 'hvornår skiftede de direktør'. Med person i stedet for company: personens historik (indtrådt/udtrådt som X i et selskab, blev/ophørt som ejer, og selskabernes konkurser og tvangsopløsninger). Brug ikke når: det gælder tal over år (LassoBarChart), de nuværende personer (LassoPersonList) eller medieomtale (LassoNews). Kræver: company ELLER person (præcis én); bygges af CVR- og regnskabsdata og er sjældent tom. ${F("historik (og overblik, ledelse, risiko)")} Personens historik dækkes af show_person. Eksempel: 'Hvad er der sket hos X gennem årene?' → show_company focus historik.`,
+    description: `Brug til: begivenheder over tid – stiftelse, ledelsesskift og offentliggjorte regnskaber, nyeste øverst – 'historik', 'hvad er der sket', 'hvornår skiftede de direktør'. Med person i stedet for company: personens historik (indtrådt/udtrådt som X i et selskab, blev/ophørt som ejer, og selskabernes konkurser og tvangsopløsninger). Brug ikke når: det gælder tal over år (LassoBarChart), de nuværende personer (LassoPersonList) eller medieomtale (LassoNews). Kræver: company ELLER person (præcis én); bygges af CVR- og regnskabsdata og er sjældent tom. ${F("historik (og som smagsprøve på overblik)")} Personens historik dækkes af show_person. Eksempel: 'Hvad er der sket hos X gennem årene?' → show_company focus historik.`,
     props: "company | person, title?, limit?, filter? ('risiko', kun person)",
   },
   {
     type: "LassoNews",
     title: "Nyheder",
-    description: `Brug til: medieomtale – nyhedsartikler om virksomheden (eller med person: om personen, fra Lasso News) med kilde, tidspunkt og uddrag – 'nyheder', 'omtale', 'seneste nyt'. Brug ikke når: det gælder registrerede ændringer i CVR (LassoTimeline). Kræver: company ELLER person (præcis én), limit? (standard 5); ingen artikler giver tom tilstand. ${F("historik (og overblik)")} Personens nyheder dækkes af show_person. Eksempel: 'Har X været i nyhederne?' → show_company focus historik.`,
+    description: `Brug til: medieomtale – nyhedsartikler om virksomheden (eller med person: om personen, fra Lasso News) med kilde, tidspunkt og uddrag – 'nyheder', 'omtale', 'seneste nyt'. Brug ikke når: det gælder registrerede ændringer i CVR (LassoTimeline). Kræver: company ELLER person (præcis én), limit? (standard 5); ingen artikler giver tom tilstand. ${F("historik (og som smagsprøve på overblik)")} Personens nyheder dækkes af show_person. Eksempel: 'Har X været i nyhederne?' → show_company focus historik.`,
     props: "company | person, limit? (1–10, standard 5)",
   },
 
@@ -167,13 +167,13 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
   {
     type: "LassoPersonList",
     title: "Ledelse og bestyrelse",
-    description: `Brug til: direktion og bestyrelse med rolle og tiltrådt/fratrådt; show 'all' ved 'udskiftning', 'tidligere direktør'. Brug ikke når: det gælder ejere (LassoOwnerList/LassoBeneficialOwners), en smal kolonne med både personer og ejere (LassoRelations), eller én bestemt person (show_person). Kræver: company, show? (standard 'current'). ${F("ledelse (og risiko)")} Eksempel: 'Hvem sidder i bestyrelsen hos Novo Nordisk?' → show_company focus ledelse.`,
+    description: `Brug til: direktion og bestyrelse med rolle og tiltrådt/fratrådt; show 'all' ved 'udskiftning', 'tidligere direktør'. Brug ikke når: det gælder ejere (LassoOwnerList/LassoBeneficialOwners), en smal kolonne med både personer og ejere (LassoRelations), eller én bestemt person (show_person). Kræver: company, show? (standard 'current'). ${F("ledelse")} Eksempel: 'Hvem sidder i bestyrelsen hos Novo Nordisk?' → show_company focus ledelse.`,
     props: "company, show? (current | all), title?",
   },
   {
     type: "LassoOwnerList",
     title: "Legale ejere",
-    description: `Brug til: 'hvem ejer X' – de legale (direkte) ejere med ejerandel som interval; standardvalget for ejerspørgsmål. Brug ikke når: 'reelle ejere', 'i sidste ende', 'personerne bag' (LassoBeneficialOwners), 'koncern', 'moderselskab', 'datterselskaber', 'ejerstruktur' (LassoOwnershipDiagram), eller 'hvem er revisor' (LassoKeyValueList variant 'company'). Kræver: company; ejerandele fra CVR vises som intervaller. ${F("ejerskab (og ledelse)")} Eksempel: 'Hvem ejer Lasso X?' → show_company focus ejerskab.`,
+    description: `Brug til: 'hvem ejer X' – de legale (direkte) ejere med ejerandel som interval; standardvalget for ejerspørgsmål. Brug ikke når: 'reelle ejere', 'i sidste ende', 'personerne bag' (LassoBeneficialOwners), 'koncern', 'moderselskab', 'datterselskaber', 'ejerstruktur' (LassoOwnershipDiagram), eller 'hvem er revisor' (LassoKeyValueList variant 'company'). Kræver: company; ejerandele fra CVR vises som intervaller. ${F("ejerskab")} Eksempel: 'Hvem ejer Lasso X?' → show_company focus ejerskab.`,
     props: "company",
   },
   {

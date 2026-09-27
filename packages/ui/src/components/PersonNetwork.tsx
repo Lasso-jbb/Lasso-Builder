@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { isPersonId, type PersonNetworkCompanyVM, type PersonNetworkVM } from "@lasso/spec";
-import type { ViewAction } from "../types.js";
+import type { MoreInTab, ViewAction } from "../types.js";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
 
 const COLLAPSED = 3;
@@ -23,6 +23,7 @@ export function PersonNetwork({
   limit = COLLAPSED,
   error,
   onOpen,
+  moreIn,
 }: {
   network?: PersonNetworkVM;
   title?: string;
@@ -30,6 +31,8 @@ export function PersonNetwork({
   limit?: number;
   error?: string;
   onOpen?: (a: ViewAction) => void;
+  /** Smagsprøve på overblikket: "Se alle N personer i Netværk" åbner fanen i stedet for at folde ud. */
+  moreIn?: MoreInTab;
 }) {
   const heading = title ?? "Sidder sammen med";
   const [expanded, setExpanded] = useState(false);
@@ -99,9 +102,15 @@ export function PersonNetwork({
         })}
       </ul>
       {network.people.length > limit ? (
-        <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-          {expanded ? "Vis færre" : `Se alle ${network.people.length}`}
-        </button>
+        moreIn ? (
+          <button type="button" className="lasso-link lasso-more" onClick={moreIn.open}>
+            {`Se alle ${network.people.length} personer i ${moreIn.tab}`}
+          </button>
+        ) : (
+          <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+            {expanded ? "Vis færre" : `Se alle ${network.people.length}`}
+          </button>
+        )
       ) : null}
       <SourceLine source="CVR via Lasso" />
     </Section>

@@ -11,6 +11,11 @@ export type ViewAction =
   | { kind: "open-company"; lassoId: string; name?: string }
   /** Katalog 16: åbn personsiden for en person (Lasso-ID "CVR-3-…"). */
   | { kind: "open-person"; lassoId: string; name?: string }
+  /**
+   * Åbn en anden fane (fokus) på samme virksomheds- eller personside, fx "historik" fra overblikkets
+   * "Se alle 12 begivenheder i Historik" (specens `more`). Kun når værten har `openFocus`.
+   */
+  | { kind: "open-focus"; focus: string }
   | { kind: "set-criteria"; criteria: Criterion[] }
   | { kind: "refresh" }
   | { kind: "save"; name: string; slug?: string; visibility: Visibility }
@@ -24,7 +29,16 @@ export type ViewAction =
   | { kind: "fullscreen" }
   | { kind: "back" };
 
-export type ActionResult = { ok: true; url?: string; message?: string } | { ok: false; error: string };
+/**
+ * En smagsprøves "Se alle … i <fane>" (specens `more`, når værten har `openFocus`): fanens navn,
+ * fx "Historik", og handlingen, der åbner den. Uden den folder "Se alle" ud på stedet.
+ */
+export interface MoreInTab {
+  tab: string;
+  open: () => void;
+}
+
+export type ActionResult ={ ok: true; url?: string; message?: string } | { ok: false; error: string };
 
 /** Hvad værten kan. Knapper uden kapabilitet skjules. */
 export interface HostCapabilities {
@@ -38,6 +52,11 @@ export interface HostCapabilities {
   back?: boolean;
   refresh?: boolean;
   export?: boolean;
+  /**
+   * Værten kan skifte fane på siden (open-focus): overblikkets smagsprøver ("Se alle … i Historik")
+   * åbner fanen. Uden den folder "Se alle" ud på stedet.
+   */
+  openFocus?: boolean;
 }
 
 export interface LassoViewProps {

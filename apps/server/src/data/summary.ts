@@ -103,6 +103,20 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
       const r = ds.creditRatings?.[c.company];
       if (r) lines.push(`Kreditvurdering (Creditsafe): ${creditRatingText(r)}.`);
     }
+    if (c.type === "LassoAuditorIndependence") {
+      // Risiko viser kun kreditvurderingen og revisoruafhængigheden: begge skal med i resuméet.
+      const a = ds.auditorIndependence[c.company];
+      if (a) {
+        const word = (s: number) => (s === 100 ? "konflikt" : s === 50 ? "vurdér" : "neutral");
+        const sorted = [...a.relations].sort((x, y) => y.assessment - x.assessment);
+        const who = a.auditorName ? ` (revisor ${a.auditorName})` : "";
+        lines.push(
+          sorted.length
+            ? `Revisoruafhængighed${who}: ${sorted.length} ${sorted.length === 1 ? "relation" : "relationer"}; ${sorted.slice(0, 3).map((r) => `${word(r.assessment)}: ${r.name}, ${r.relation}`).join("; ")}${sorted.length > 3 ? `; og ${sorted.length - 3} flere` : ""}.`
+            : `Revisoruafhængighed${who}: ${(a.unavailableReason ?? "ingen kendte relationer mellem revisor, kunden og personer").replace(/\.$/, "")}.`,
+        );
+      }
+    }
     if (c.type === "LassoPersonList") {
       const people = ds.people[c.company] ?? [];
       const current = people.filter((p) => !p.to).slice(0, 6);
@@ -149,7 +163,7 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
         const list = personCompanies(p).slice(0, 8).map((x) => `${x.companyName} [${x.companyId ?? "?"}]: ${x.roles.map((r) => `${r.role}${r.share ? ` ${r.share}` : ""}${r.active ? "" : " (fratrådt)"}`).join(", ")}`);
         if (list.length) lines.push(`Roller: ${list.join("; ")}.`);
       } else if (p && show !== "all") {
-        // Rollelisterne (overblik: aktive; ejerskab: ejede selskaber; risiko: øvrige ophørte).
+        // Rollelisterne (overblik: aktive eller ophørte; ejerskab: ejede selskaber).
         const rows = personRoleRows(p, show, { except: c.except });
         const label = c.title ?? { current: "Aktive roller", ended: "Ophørte roller", owner: "Ejerskaber" }[show];
         const list = rows.slice(0, 8).map((r) => `${r.companyName} [${r.companyId ?? "?"}]: ${r.text}${r.period ? `, ${r.period}` : ""}${r.companyStatus ? ` (selskabet ${r.companyStatus.toLowerCase()})` : ""}`);

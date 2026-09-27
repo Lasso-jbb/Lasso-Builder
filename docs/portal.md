@@ -57,7 +57,9 @@ Fejl: `400 { error }` ved ugyldigt input, `404 { error }` når virksomheden/pers
   udeladt (ingen overvågning endnu), konto = navn + "Log ud".
 - En virksomhedsfane har `ModuleBar` med de otte fokus (Overblik … Kontakt) og handlingerne
   Gem/Gemt (accent), Del link og Eksportér; kroppen er `LassoView` med host `{ savePage, save,
-  refine, drillDown, refresh, export, back: false }` og handlinger via fetch mod API'et.
+  refine, drillDown, refresh, export, back: false, openFocus }` og handlinger via fetch mod API'et.
+  `open-focus` (overblikkets "Se alle … i Historik") skifter fanens fokus som et klik i modulbjælken
+  (`focusRoute` i `routes.ts`).
 - En personfane har på samme måde `ModuleBar` med de seks personfokus (Overblik, Roller, Netværk,
   Ejerskab, Risiko, Historik) og samme handlinger. Gem gemmer siden med det viste fokus.
 - Hash-routing, så tilbage/frem og genindlæsning virker: `#/search?q=…`, `#/company/CVR-1-…?focus=`,
@@ -70,26 +72,58 @@ Fejl: `400 { error }` ved ugyldigt input, `404 { error }` når virksomheden/pers
 Serveren bygger virksomhedssiden efter data; modellen vælger kun fokus. Ingen oplysning står
 1:1 to gange på samme side. Samme oplysning i en anden sammenhæng er tilladt (se nederst).
 
-| Fokus | Fuld bredde øverst | Kolonner | Fuld bredde nederst |
-|---|---|---|---|
-| overblik | Hoved, nøgletal (4 kort) | 1: Relationer. 2: Virksomhedsprofil (formål, tegningsregler, analysens konklusion, resultat og likviditet). 3: Kontakt, Virksomhedsoplysninger, graf (under 3 år: Regnskab-listen uden kortenes tal). Nyheder (3) og Historik (3 + "Se alle") i den kolonne, der vejer mindst | Opfølgning |
-| oekonomi | Hoved, nøgletal (5 kort) | 1: graf (hovednøgletal + resultat), vandfald. 2: Regnskab (årsvælger, uden kortenes nøgletal), fordeling af balancen | Regnskabsanalyse (hele, foldet efter konklusionen), flerårstabel (4+ år), opfølgning |
-| regnskab | Hoved | – | Resultatopgørelse, balance, pengestrømsopgørelse, opfølgning |
-| regnskab uden regnskab | Hoved, "Regnskab" (tom tilstand, der siger hvorfor) | Virksomhedsoplysninger (mindst 2 rækker), Ledelse, ellers Ejere (højst to) | Opfølgning |
-| ejerskab | Hoved | 1: Ejere (med revisor). 2: Reelle ejere, ellers Ledelse | Ejerstruktur (når et selskab ejer), opfølgning |
-| ledelse | Hoved | 1: Ledelse (alle). 2: Historik (3+ begivenheder). Ejere (med revisor) i den kolonne, der vejer mindst | Opfølgning |
-| risiko | Hoved | 1: Virksomhedsoplysninger, Ledelse (alle). 2: Kreditvurdering, Historik (uden historik: Ejere) | Revisoruafhængighed, opfølgning |
-| historik | Hoved | 1: Historik (5 + "Se alle"). 2: Nyheder (5), uden nyheder graf eller Regnskab-listen | Opfølgning |
-| kontakt | Hoved | 1: Kontakt. 2: Kontaktpersoner, ellers Ledelse (CVR). 3: Virksomhedsoplysninger | Opfølgning |
+**Hvert modul ejer sit indhold.** En elementtype står på præcis ét fokus. Kun overblikket må vise
+en kort smagsprøve af et andet fokus' element, og så med "Se alle … i <fane>", der åbner fanen
+(specens `more`). Et fokus låner aldrig et andet fokus' element som fyld: har det kun lidt data, er
+siden kort, og et element, der står alene, får fuld bredde (ingen tom halvdel ved siden af). Den
+tomme tilstand står, hvor den er svaret på fanens spørgsmål (ingen ejere, ingen ledelse, ingen
+begivenheder, ingen kontaktoplysninger, ingen kreditvurdering).
+
+| Fokus | Fuld bredde øverst | Kolonner | Fuld bredde nederst | Henter (`composeProbe`) |
+|---|---|---|---|---|
+| overblik | Hoved, nøgletal (4 kort) | 1: Relationer. 2: Virksomhedsprofil (formål, tegningsregler, analysens konklusion, resultat og likviditet). 3: Kontakt, Virksomhedsoplysninger, graf (under 3 år: Regnskab-listen uden kortenes tal). Nyheder (3 + "Se alle N nyheder i Historik") og Historik (3 + "Se alle N begivenheder i Historik") i den kolonne, der vejer mindst | Opfølgning | stamdata, regnskabstal, ledelse, ejere, historik, nyheder (5), tekstsektioner, kontakt |
+| oekonomi | Hoved, nøgletal (5 kort) | 1: graf (hovednøgletal + resultat), vandfald. 2: Regnskab (årsvælger, uden kortenes nøgletal), fordeling af balancen | Regnskabsanalyse (hele, foldet efter konklusionen), flerårstabel (4+ år), opfølgning | stamdata, regnskabstal, tekstsektioner |
+| regnskab | Hoved | – | Resultatopgørelse, balance, pengestrømsopgørelse, opfølgning | stamdata, fulde regnskaber |
+| regnskab uden regnskab | Hoved, "Regnskab" (tom tilstand, der siger hvorfor) | – | Opfølgning | stamdata, fulde regnskaber |
+| ejerskab | Hoved | Med reelle ejere: 1: Ejere (med revisor). 2: Reelle ejere | Uden reelle ejere: Ejere (fuld, også som tom tilstand). Ejerstruktur (når et selskab ejer), opfølgning | stamdata, ejere, reelle ejere, ejergraf (3 op, 2 ned) |
+| ledelse | Hoved | – | Ledelse (alle, også fratrådte; fuld, også som tom tilstand), opfølgning | stamdata, ledelse |
+| risiko | Hoved | Med begge: 1: Kreditvurdering. 2: Revisoruafhængighed | Kun den ene: den i fuld bredde. Ingen af dem: Kreditvurderingens egen tilstand (låst, ikke beregnet, fejl). Opfølgning | stamdata, Creditsafe, revisoruafhængighed |
+| historik | Hoved | Med nyheder: 1: Historik (5 + "Se alle N begivenheder", folder ud på stedet). 2: Nyheder (5) | Uden nyheder: Historik (fuld, også som tom tilstand). Opfølgning | stamdata, historik, nyheder (5) |
+| kontakt | Hoved | Med kontaktpersoner: 1: Kontakt. 2: Kontaktpersoner | Uden kontaktpersoner: Kontakt (fuld, også som tom tilstand). Opfølgning | stamdata, kontakt, kontaktpersoner |
+
+Hvor elementtyperne bor: Relationer, Virksomhedsprofil og Virksomhedsoplysninger på overblik;
+grafer, Regnskab-listen, fordeling af balancen, Regnskabsanalyse og flerårstabel på oekonomi;
+resultatopgørelse, balance og pengestrøm på regnskab; Ejere, Reelle ejere og Ejerstruktur på
+ejerskab; Ledelse på ledelse; Kreditvurdering og Revisoruafhængighed på risiko; Historik og
+Nyheder på historik; Kontakt og Kontaktpersoner på kontakt. Overblikkets smagsprøver: Relationer
+(ledelse og ejere, kompakt), Kontakt, grafen og Nyheder/Historik (3, med "Se alle … i Historik").
+
+**Smagsprøvens "Se alle … i <fane>"** (`more` på `LassoTimeline`/`LassoNews` = `"historik"`, på
+personens `LassoPersonRoles` = `"roller"` og `LassoPersonNetwork` = `"netvaerk"`; standard
+`"expand"`). Har værten `openFocus`, affyrer knappen `{ kind: "open-focus", focus }`; ellers folder
+"Se alle" ud på stedet som før. Værterne:
+
+- **Portalen**: `openFocus: true`; skifter fanens fokus (ny adresse `#/company/…?focus=historik`,
+  nye data), præcis som et klik på modulfanen.
+- **MCP-appen** (Claude/ChatGPT): `openFocus`, når værten tager imod beskeder (`ui/message`);
+  sender "Vis historik for <navn>" (personer: "Vis netværk for …", "Vis roller for …"), så modellen
+  viser fanen med `show_company`/`show_person`. Uden beskeder folder "Se alle" ud på stedet.
+- **Delte sider** (`/k/`, `/p/`, `/e/`, `/v/`): serveren lægger `focusLinks` i boot'en, ét signeret
+  `/e/`-link pr. fane, smagsprøverne peger på, til sidens egen virksomhed eller person (signaturen
+  dækker fokus, så siden ikke selv kan ændre `f=`). Med links er `openFocus` slået til.
+
+Opfølgningerne (kun i chatten) peger stadig på de andre fokus. Data, fokus ikke har hentet (fx
+ejerne på ledelse), tæller som "måske": opfølgningen vises, og fanen svarer selv; hentet og tomt
+skjuler den.
 
 Regler, der gælder på alle fokus:
 
 - **Hovedet ejer identiteten**: CVR, form, stiftet, adresse, ansatte (CVR) og branche. Den
   viser `LassoCompanyHead`, og intet andet element gentager dem.
-- **Virksomhedsoplysninger** (`LassoKeyValueList` variant company, rækker fra `companyFacts`):
-  revisor, seneste revisorskift, regnskabsperiode, branchekode, kommune, region, og telefon,
-  e-mail og web kun uden kontaktblok på siden. Revisoren udelades, når ejerlisten (som viser
-  revisor og skiftedato) står på siden. Under 2 rækker med værdi udelades listen helt.
+- **Virksomhedsoplysninger** (`LassoKeyValueList` variant company, rækker fra `companyFacts`, kun på
+  overblik): revisor, seneste revisorskift, regnskabsperiode, branchekode, kommune, region, og
+  telefon, e-mail og web kun uden kontaktblok på siden. Revisoren udelades, når ejerlisten (som
+  viser revisor og skiftedato) står på siden. Under 2 rækker med værdi udelades listen helt.
 - **Kontakt**: adressen kun, når den afviger fra hovedets; et CVR-nummer, der også er
   verificeret (live number), står én gang med verificeringen; én kildelinje.
 - **Nøgletalskortene** kun på overblik og oekonomi. Regnskab-listen på samme side udelader
@@ -119,7 +153,7 @@ konklusionen og linket); kontakt 1,4 pr. række + 2 pr. verificeret nummer; nøg
 
 Faste pladser lægges først. Derefter lægger `placeByWeight` de flytbare sektioner én ad gangen i
 den kolonne, der vejer mindst indtil nu (ved lige vægt den første): på overblik nyheder og så
-historik, på ledelse ejerne. Et holdingselskab med lang profil, 3 nyheder og 8 begivenheder
+historik (de andre fokus har højst to elementer side om side). Et holdingselskab med lang profil, 3 nyheder og 8 begivenheder
 giver 41,5 / 41,9 / 35,0; med de gamle faste pladser (nyheder i kolonne 1, historik med 5
 begivenheder under profilen) ville det være 23,5 / 67,4 / 35,0.
 
@@ -131,13 +165,19 @@ form efter data. Hovedet (`LassoPersonHead`) står på alle fokus. To halve stå
 bånd; en halv, der står alene, får fuld bredde. Tomme sektioner udelades, undtagen hvor den tomme
 tilstand er svaret på fanens spørgsmål.
 
+Samme regel som på virksomhedssiden: **hvert modul ejer sit indhold**. Rollerne bor på roller,
+netværket på netvaerk, ejerskaberne på ejerskab, sagerne på risiko og historik og nyheder på
+historik. Overblikket viser smagsprøver, hvis "Se alle" åbner fanen: "Se alle N selskaber i
+Roller" (N = alle personens selskaber, som fanen viser; knappen står, når fanen har flere, end
+listen viser), "Se alle N personer i Netværk" og "Se alle N begivenheder i Historik".
+
 | Fokus | Elementer (bredde) | Henter |
 |---|---|---|
-| overblik | Aktive roller som kort liste, 5 + "Se alle N selskaber" (¾) + Stamoplysninger (¼); uden aktive roller de ophørte. Derefter Netværk (3 + "Se alle N"), Risiko, Historik (3 + "Se alle N") og Ejerskab (ejerdiagrammet, kun når de selskaber, personen ejer, selv ejer selskaber) to og to (½ + ½) efter vægt; alvorlig risiko (personen var med, da det skete) i fuld bredde lige under hovedet. Ingen nyheder | person, netværk, ejerdiagram (0 op, 2 ned) |
+| overblik | Aktive roller som kort liste, 5 + "Se alle N selskaber i Roller" (¾) + Stamoplysninger (¼); uden aktive roller de ophørte. Derefter Netværk (3 + "Se alle N personer i Netværk"), Risiko, Historik (3 + "Se alle N begivenheder i Historik") og Ejerskab (ejerdiagrammet, kun når de selskaber, personen ejer, selv ejer selskaber) to og to (½ + ½) efter vægt; alvorlig risiko (personen var med, da det skete) i fuld bredde lige under hovedet. Ingen nyheder. Uden `openFocus` folder "Se alle" ud på stedet | person, netværk, ejerdiagram (0 op, 2 ned) |
 | roller | Alle roller som tidsbånd, 8 + "Se alle N selskaber" (¾) + Stamoplysninger (¼) | person |
 | netvaerk | Netværket, 8 + "Se alle N" (fuld), også som tom tilstand | person, netværk |
 | ejerskab | Ejerskaber: de ejede selskaber med andel og siden-dato (fuld; tom: "Personen ejer ikke selskaber i CVR."), Ejerstruktur (diagram, 0 op, 2 ned, fuld; når de ejede selskaber selv ejer selskaber, eller som fejltilstand, når grafen ikke kunne hentes) | person, ejerdiagram |
-| risiko | Risiko med alle sager (fuld). Med sager: Forløb i selskaberne (historikken afgrænset til selskaberne med konkurs/tvangsopløsning) + Øvrige ophørte roller (uden de samme selskaber), ½ + ½. Uden sager kun "Ingen" med flueben | person |
+| risiko | Risiko med alle sager (fuld). Med sager: Forløb i selskaberne (historikken afgrænset til selskaberne med konkurs/tvangsopløsning, fuld). Ingen liste over øvrige ophørte roller (de står på roller). Uden sager kun "Ingen" med flueben | person, historik (afledt af personen) |
 | historik | Historik, 5 + "Se alle N" (½) + Nyheder om personen, 5 (½); uden nyheder historikken i fuld bredde | person, nyheder |
 
 Opfølgning (kun i chatten) peger på de andre personfokus: Roller, Netværk, Ejerskab, Risiko og
@@ -151,7 +191,7 @@ Ingen 1:1-gentagelser:
   byen), enhedsnummer og seneste ændring, når hovedet står på siden (`personFactOptions`).
 - **Rollefanen** har ingen liste over ophørte roller: tidsbåndene viser dem (stiplede).
 - **Risiko**: forløbet er ikke kun statushændelserne (de ville gentage sagerne 1:1), men også
-  personens ind- og udtræden i de samme selskaber; de øvrige ophørte roller udelader dem.
+  personens ind- og udtræden i de samme selskaber. De øvrige ophørte roller hører til roller.
 - **Ejerdiagrammet** viser to lag ned og står kun, når de ejede selskaber selv ejer selskaber: ét
   lag ville kun gentage "ejer X %" fra rollelisten (overblik) og ejerskaberne (ejerskab) 1:1. Som
   på virksomhedssiden, hvor diagrammet kun står, når et selskab ejer.

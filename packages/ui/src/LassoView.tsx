@@ -70,7 +70,7 @@ import { specToCsv } from "./csv.js";
 import { Badge, Skeleton } from "./primitives.js";
 import { SaveDialog } from "./SaveDialog.js";
 import { ToastProvider, Toasts, useHasToastProvider, useToast, type ToastOptions } from "./components/Toast.js";
-import type { ActionResult, LassoViewProps, ViewAction } from "./types.js";
+import type { ActionResult, LassoViewProps, MoreInTab, ViewAction } from "./types.js";
 
 function formatStamp(iso: string | undefined): string {
   if (!iso) return "";
@@ -78,9 +78,20 @@ function formatStamp(iso: string | undefined): string {
   return `Data hentet ${d.toLocaleDateString("da-DK", { day: "numeric", month: "short", year: "numeric" })} kl. ${d.toLocaleTimeString("da-DK", { hour: "2-digit", minute: "2-digit" })}`;
 }
 
+/**
+ * Smagsprøvens "Se alle … i <fane>" (specens `more`): åbner fanen via værten (open-focus), når den
+ * kan skifte fane. Ellers (eller med 'expand') undefined, og "Se alle" folder ud på stedet.
+ */
+export function moreInTab(more: string | undefined, spec: ViewSpec, host: LassoViewProps["host"], act: (a: ViewAction) => void): MoreInTab | undefined {
+  if (!more || more === "expand" || !host.openFocus) return undefined;
+  const tab = spec.kind === "person" ? PERSON_FOCUS_LABELS[more as PersonFocus] : FOCUS_LABELS[more as Focus];
+  return tab ? { tab, open: () => act({ kind: "open-focus", focus: more }) } : undefined;
+}
+
 function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewProps, act: (a: ViewAction) => void, key: number) {
   const empty: Dataset = ds ?? emptyDataset("live");
   const err = (k: string) => empty.errors[k];
+  const moreIn = (more: string | undefined) => moreInTab(more, props.spec, props.host, act);
   switch (c.type) {
     case "LassoCompanyHead":
       return <CompanyHead key={key} company={empty.companies[c.company]} error={err(`company:${c.company}`)} />;
@@ -224,6 +235,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           timeline={risk && all ? (person ? riskTimeline(all, person) : undefined) : all}
           title={c.title}
           limit={c.limit}
+          moreIn={moreIn(c.more)}
           error={err(`timeline:${k}`) ?? (risk && c.person ? err(`person:${c.person}`) : undefined)}
           onOpen={props.host.drillDown ? act : undefined}
           emptyReason={
@@ -241,6 +253,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           key={key}
           news={empty.news[k]}
           limit={c.limit}
+          moreIn={moreIn(c.more)}
           companyName={mention}
           companyId={k}
           error={err(`news:${k}`)}
@@ -259,13 +272,24 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           title={c.title}
           show={c.show}
           limit={c.limit}
+          moreIn={moreIn(c.more)}
           except={c.except}
           error={err(`person:${c.person}`)}
           onOpen={props.host.drillDown ? act : undefined}
         />
       );
     case "LassoPersonNetwork":
-      return <PersonNetwork key={key} network={empty.personNetworks[c.person]} title={c.title} limit={c.limit} error={err(`personNetwork:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} />;
+      return (
+        <PersonNetwork
+          key={key}
+          network={empty.personNetworks[c.person]}
+          title={c.title}
+          limit={c.limit}
+          moreIn={moreIn(c.more)}
+          error={err(`personNetwork:${c.person}`)}
+          onOpen={props.host.drillDown ? act : undefined}
+        />
+      );
     case "LassoPersonRisk":
       return <PersonRisk key={key} person={empty.persons[c.person]} title={c.title} error={err(`person:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} />;
     case "LassoPersonFacts":

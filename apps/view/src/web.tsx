@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { LassoView, ToastProvider, Toasts, useToast, type ActionResult, type ViewAction } from "@lasso/ui";
 import type { WebBoot as Boot } from "./boot.js";
-import { hasLinks, openFromLinks } from "./sharedLinks.js";
+import { hasLinks, openFocusFromLinks, openFromLinks } from "./sharedLinks.js";
 
 function downloadCsv(filename: string, csv: string) {
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -80,6 +80,14 @@ function SharedView({ boot, dark }: { boot: Boot & { spec: NonNullable<Boot["spe
         if (!res.ok) toast.show({ text: res.error, tone: "error" });
         return res;
       }
+      case "open-focus": {
+        // Overblikkets "Se alle … i Historik": samme side med fanen, via serverens signerede link.
+        const res = openFocusFromLinks(boot.focusLinks, a, (url) => {
+          location.href = url;
+        });
+        if (!res.ok) toast.show({ text: res.error, tone: "error" });
+        return res;
+      }
       case "refresh":
         location.reload();
         return;
@@ -108,7 +116,7 @@ function SharedView({ boot, dark }: { boot: Boot & { spec: NonNullable<Boot["spe
         dataset={boot.dataset ?? null}
         url={boot.url}
         theme={dark ? "dark" : "light"}
-        host={{ refresh: true, export: true, drillDown: hasLinks(boot.links) }}
+        host={{ refresh: true, export: true, drillDown: hasLinks(boot.links), openFocus: hasLinks(boot.focusLinks) }}
         onAction={onAction}
       />
     </div>

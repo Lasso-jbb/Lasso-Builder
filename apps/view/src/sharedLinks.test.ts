@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { hasLinks, NO_LINK, openFromLinks } from "./sharedLinks.js";
+import { hasLinks, NO_LINK, openFocusFromLinks, openFromLinks } from "./sharedLinks.js";
 
 const LINKS = {
   "CVR-1-99000010": "http://x/e/CVR-1-99000010?e=abc&s=sig1",
@@ -30,4 +30,17 @@ test("openFromLinks: et ID uden link giver en fejl og navigerer ikke", () => {
   assert.equal(NO_LINK, "Ingen adgang til den side");
   assert.equal(navigated, false);
   assert.equal(openFromLinks(undefined, { kind: "open-company", lassoId: "CVR-1-99000010" }, () => {}).ok, false);
+});
+
+test("openFocusFromLinks: 'Se alle … i Historik' går til serverens signerede link med fokus; uden link en fejl", () => {
+  const focusLinks = { historik: "http://x/e/CVR-1-99000001?e=abc&f=historik&s=sig3" };
+  const visited: string[] = [];
+  assert.deepEqual(openFocusFromLinks(focusLinks, { kind: "open-focus", focus: "historik" }, (url) => void visited.push(url)), { ok: true, url: focusLinks.historik });
+  assert.deepEqual(visited, [focusLinks.historik]);
+  assert.deepEqual(openFocusFromLinks(focusLinks, { kind: "open-focus", focus: "ledelse" }, (url) => void visited.push(url)), { ok: false, error: NO_LINK });
+  assert.deepEqual(openFocusFromLinks(undefined, { kind: "open-focus", focus: "historik" }, (url) => void visited.push(url)), { ok: false, error: NO_LINK });
+  assert.equal(visited.length, 1);
+  // Den delte side slår kun fanelinket til, når serveren har lagt links i boot'en.
+  assert.equal(hasLinks(focusLinks), true);
+  assert.equal(hasLinks(undefined), false);
 });

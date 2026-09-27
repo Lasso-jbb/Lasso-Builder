@@ -4,6 +4,7 @@ import { useApp } from "@modelcontextprotocol/ext-apps/react";
 import type { CallToolResult } from "@modelcontextprotocol/client";
 import { LassoView, LassoMark, type ActionResult, type ViewAction } from "@lasso/ui";
 import { composeCompany, composePerson, composeProbe, composePersonProbe, DATASET_META_KEY, formatCriterion, type Dataset, type ViewSpec } from "@lasso/spec";
+import { focusPrompt } from "./focusPrompt.js";
 
 interface Screen {
   spec: ViewSpec;
@@ -113,6 +114,14 @@ export function McpView() {
       switch (a.kind) {
         case "prompt": {
           const r = await app.sendMessage({ role: "user", content: [{ type: "text", text: a.prompt }] });
+          return r.isError ? { ok: false, error: "Værten afviste beskeden" } : { ok: true };
+        }
+        case "open-focus": {
+          // Overblikkets "Se alle … i Historik": en besked til chatten ("Vis historik for X"), så
+          // modellen viser fanen med show_company/show_person og kan svare på den.
+          const text = current ? focusPrompt(current.spec, current.dataset, a.focus) : null;
+          if (!text) return { ok: false, error: "Fanen findes ikke på denne side." };
+          const r = await app.sendMessage({ role: "user", content: [{ type: "text", text }] });
           return r.isError ? { ok: false, error: "Værten afviste beskeden" } : { ok: true };
         }
         case "open-company": {
@@ -280,6 +289,9 @@ export function McpView() {
   }
 
   const canFullscreen = ctx?.availableDisplayModes?.includes("fullscreen") ?? false;
+  // Smagsprøvernes "Se alle … i Historik" sender en besked til chatten; kan værten ikke modtage
+  // beskeder (ui/message), folder "Se alle" ud på stedet som før.
+  const canMessage = Boolean(app?.getHostCapabilities()?.message);
   return (
     <div style={style}>
       <LassoView
@@ -300,6 +312,7 @@ export function McpView() {
           refresh: true,
           export: true,
           fullscreen: canFullscreen,
+          openFocus: canMessage,
         }}
         onAction={onAction}
       />

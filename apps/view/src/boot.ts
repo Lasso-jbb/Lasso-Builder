@@ -18,6 +18,11 @@ export interface WebBoot {
    * revisor, navne i nyheder …). Med links kan navnene på den delte side åbnes (drill-down).
    */
   links?: Record<string, string>;
+  /**
+   * Signerede /e/-links pr. fokus til sidens egen virksomhed eller person, for de faner, sidens
+   * smagsprøver peger på (specens `more`, fx "historik"). Med dem åbner "Se alle … i Historik" fanen.
+   */
+  focusLinks?: Record<string, string>;
 }
 
 /** Brugeren i portalen, samme form som serverens CurrentUser. */

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { formatDate, isPersonId, type TextSegment, type TimelineVM } from "@lasso/spec";
-import type { ViewAction } from "../types.js";
+import type { MoreInTab, ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 
 const ALL = "Alle typer";
@@ -47,6 +47,7 @@ export function LassoTimeline({
   onOpen,
   emptyReason,
   limit = 5,
+  moreIn,
 }: {
   timeline?: TimelineVM;
   title?: string;
@@ -56,6 +57,8 @@ export function LassoTimeline({
   emptyReason?: string;
   /** Begivenheder før "Se alle N begivenheder" (regel 9); overblikket viser 3. */
   limit?: number;
+  /** Smagsprøve på overblikket: "Se alle N begivenheder i Historik" åbner fanen i stedet for at folde ud. */
+  moreIn?: MoreInTab;
 }) {
   const heading = title ?? "Historik";
   const categories = useMemo(() => [...new Set((timeline?.events ?? []).map((e) => e.category))], [timeline]);
@@ -126,9 +129,15 @@ export function LassoTimeline({
         })}
       </div>
       {matching.length > limit ? (
-        <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-          {expanded ? "Vis færre" : `Se alle ${matching.length} begivenheder`}
-        </button>
+        moreIn ? (
+          <button type="button" className="lasso-link lasso-more" onClick={moreIn.open}>
+            {`Se alle ${matching.length} begivenheder i ${moreIn.tab}`}
+          </button>
+        ) : (
+          <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+            {expanded ? "Vis færre" : `Se alle ${matching.length} begivenheder`}
+          </button>
+        )
       ) : null}
     </Section>
   );

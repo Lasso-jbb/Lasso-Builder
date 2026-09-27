@@ -18,7 +18,7 @@ import type { PortalUser } from "../boot.js";
 import { errorText, isUnauthorized, LOGGED_OUT, PortalApiError, type PortalApi, type ViewResult } from "./api.js";
 import { entityOf, isSaved, savedPagesOf, withSaved, type Entity } from "./data.js";
 import { EntityPage, FOCUS_MODULES, PERSON_MODULES, SavedPage, SearchPage, type TabData } from "./pages.js";
-import { dataKey, formatRoute, isFocus, portalRoute, sameRoute, type PortalRoute } from "./routes.js";
+import { dataKey, focusRoute, formatRoute, isFocus, portalRoute, sameRoute, type PortalRoute } from "./routes.js";
 import {
   activate,
   activeTab,
@@ -357,6 +357,13 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true }: PortalShel
         case "open-person":
           openEntity({ kind: "person", id: a.lassoId, focus: "overblik" }, a.name);
           return { ok: true };
+        case "open-focus": {
+          // Overblikkets "Se alle … i Historik": samme fane, andet fokus, som et klik i modulbjælken.
+          const next = focusRoute(tab.route, a.focus);
+          if (!next) return { ok: false, error: "Fanen findes ikke på denne side." };
+          setRoute(tab, next);
+          return { ok: true };
+        }
         case "set-criteria": {
           if (!result) return;
           const criteria = a.criteria;

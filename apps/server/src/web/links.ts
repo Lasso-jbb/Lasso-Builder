@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { FOCUSES, isFocusFor, isPersonFocus, METRICS, type Focus, type Metric, type PageFocus, type PersonFocus } from "@lasso/spec";
+import { FOCUSES, isFocusFor, isPersonFocus, METRICS, type Focus, type Metric, type PageFocus, type PersonFocus, type ViewSpec } from "@lasso/spec";
 import { isSet, type Config } from "../config.js";
 
 /**
@@ -149,6 +149,23 @@ export function verifyEntityLink(config: Config, lassoId: string, query: Record<
   }
   if (exp * 1000 < now) return { ok: false, reason: "expired" };
   return { ok: true, lassoId, ...(focus ? { focus } : {}) };
+}
+
+/**
+ * De delte siders "Se alle … i Historik" (smagsprøvernes `more` i specen): et signeret /e/-link pr.
+ * fane til sidens egen virksomhed eller person (første company/person i specen, som hovedet), så
+ * siden kan åbne fanen uden chat. Samme entitet som siden, så linket giver ikke adgang til mere.
+ * Kun for virksomheds- og personsider; undefined, når ingen smagsprøve peger på en fane.
+ */
+export function focusLinks(config: Config, spec: ViewSpec, now = Date.now()): Record<string, string> | undefined {
+  if (spec.kind !== "company" && spec.kind !== "person") return undefined;
+  const key = spec.kind;
+  const id = spec.components.map((c) => (key in c ? (c as Record<string, unknown>)[key] : undefined)).find((v): v is string => typeof v === "string" && isEntityId(v));
+  if (!id) return undefined;
+  const tabs = new Set<string>();
+  for (const c of spec.components) if ("more" in c && c.more && c.more !== "expand") tabs.add(c.more);
+  const entries = [...tabs].filter((f) => focusFitsEntity(id, f)).map((f) => [f, entityLink(config, id, { focus: f as PageFocus }, now)] as const);
+  return entries.length ? Object.fromEntries(entries) : undefined;
 }
 
 /** Bruger-id og org i et link: samme tegnsæt som i MCP_USER_KEYS og saved_pages. */

@@ -40,7 +40,7 @@ import { adaptPeople, adaptSearch, at, participantFieldNames } from "./lasso/ada
 import { describeShape, LassoApiError, LassoClient, probeAuthVariants, type Query } from "./lasso/client.js";
 import { createMcpServer } from "./mcp/server.js";
 import { createViewStore, SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "./views/store.js";
-import { entityLink, isEntityId, sendToLassoLink, verifyCompanyLink, verifyEntityLink, verifyPersonLink, verifySendToLassoLink } from "./web/links.js";
+import { entityLink, focusLinks, isEntityId, sendToLassoLink, verifyCompanyLink, verifyEntityLink, verifyPersonLink, verifySendToLassoLink } from "./web/links.js";
 import { injectBoot, loadViewHtml } from "./web/page.js";
 import { portalApi, portalErrorHandler } from "./web/portalApi.js";
 
@@ -263,7 +263,13 @@ export function createApp({ config, client, provider, store, pages }: AppDeps) {
     res
       .type("html")
       .set("Cache-Control", "no-store")
-      .send(injectBoot(html, { mode: "web", spec: view.spec, dataset, url, name: view.name, version: view.version, updatedAt: view.updatedAt, links: pageLinks(dataset) }, view.name ?? view.spec.title));
+      .send(
+        injectBoot(
+          html,
+          { mode: "web", spec: view.spec, dataset, url, name: view.name, version: view.version, updatedAt: view.updatedAt, links: pageLinks(dataset), focusLinks: focusLinks(config, parsed.data) },
+          view.name ?? view.spec.title,
+        ),
+      );
   });
 
   // --- Hostede sider for én virksomhed eller person (signerede links, se web/links.ts) ----
@@ -294,7 +300,7 @@ export function createApp({ config, client, provider, store, pages }: AppDeps) {
     const dataset = await resolveSpec(composeProbe(lassoId, opts.focus), provider);
     const metric = opts.metric ?? mainMetric(dataset.financials[lassoId]?.years ?? []);
     const spec = composeCompany(lassoId, dataset, { focus: opts.focus, years: opts.years, chartMetric: metric, name, followUps: false });
-    sendPage(req, res, html, { spec, dataset, name, links: pageLinks(dataset) }, name);
+    sendPage(req, res, html, { spec, dataset, name, links: pageLinks(dataset), focusLinks: focusLinks(config, spec) }, name);
   }
 
   /** Personsiden (katalog 16) med personfokus (standard overblik). */
@@ -303,7 +309,7 @@ export function createApp({ config, client, provider, store, pages }: AppDeps) {
     const person = dataset.persons[lassoId];
     if (!person) return failPage(res, html, 404, `Personen kunne ikke hentes: ${dataset.errors[`person:${lassoId}`] ?? "ukendt fejl"}`);
     const spec = composePerson(lassoId, dataset, { focus, name: person.name, followUps: false });
-    sendPage(req, res, html, { spec, dataset, name: person.name, links: pageLinks(dataset) }, person.name);
+    sendPage(req, res, html, { spec, dataset, name: person.name, links: pageLinks(dataset), focusLinks: focusLinks(config, spec) }, person.name);
   }
 
   app.get("/k/:cvr", async (req, res) => {

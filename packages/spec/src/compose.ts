@@ -19,6 +19,11 @@ import { isAnalysisSection, textSectionsFor } from "./textSections.js";
  * identiteten, nøgletalskortene står kun på overblik og oekonomi, og lister udelader det, et
  * andet element på siden allerede viser. Samme oplysning i en anden sammenhæng (ejere som liste
  * og diagram, et årsresultat i historikken og i tabellerne) er tilladt.
+ *
+ * Hvert modul ejer sit indhold: en elementtype står på præcis ét fokus. Kun overblikket må vise en
+ * kort smagsprøve (Relationer, Nyheder 3, Historik 3) med "Se alle … i <fane>", der åbner fanen.
+ * Et fokus låner aldrig et andet fokus' element som fyld; har det kun lidt data, er siden kort,
+ * og et element, der står alene, får fuld bredde.
  */
 export const FOCUSES = ["overblik", "oekonomi", "regnskab", "ejerskab", "ledelse", "risiko", "historik", "kontakt"] as const;
 export type Focus = (typeof FOCUSES)[number];
@@ -51,72 +56,112 @@ export interface ComposeOptions {
  */
 export function composeProbe(lassoId: string, focus: Focus = "overblik"): ViewSpec {
   const c = lassoId;
-  const components: ViewComponent[] = [
-    { type: "LassoCompanyHead", company: c },
-    { type: "LassoKeyFigureCards", company: c },
-    { type: "LassoPersonList", company: c, show: "all" },
-    { type: "LassoOwnerList", company: c },
-  ];
-  if (focus === "overblik" || focus === "historik" || focus === "ledelse" || focus === "risiko") components.push({ type: "LassoTimeline", company: c });
-  if (focus === "overblik" || focus === "historik") components.push({ type: "LassoNews", company: c, limit: 5 });
-  // Overblik viser profilen (CVR og analysens korte afsnit), oekonomi hele regnskabsanalysen.
-  if (focus === "overblik" || focus === "oekonomi") components.push({ type: "LassoTextSections", company: c, variant: "profil" });
-  if (focus === "overblik" || focus === "kontakt") components.push({ type: "LassoContact", company: c });
-  if (focus === "kontakt") components.push({ type: "LassoContactPersons", company: c });
-  if (focus === "regnskab") components.push({ type: "LassoIncomeStatement", company: c, years: 3 });
-  if (focus === "risiko") components.push({ type: "LassoAuditorIndependence", company: c });
-  // Creditsafe kun på risiko: et opslag kan koste en kredit og tage 5–45 s, så overblikket henter det aldrig.
-  if (focus === "risiko") components.push({ type: "LassoCreditRating", company: c });
-  if (focus === "ejerskab") {
-    components.push({ type: "LassoBeneficialOwners", company: c });
-    components.push({ type: "LassoOwnershipDiagram", company: c, ingoingDepth: 3, outgoingDepth: 2 });
+  // Hovedet på alle fokus; ellers kun det, fokus selv viser (hvert modul ejer sit indhold).
+  const components: ViewComponent[] = [{ type: "LassoCompanyHead", company: c }];
+  const add = (...x: ViewComponent[]) => void components.push(...x);
+  switch (focus) {
+    case "overblik":
+      // Kort, relationer (ledelse og ejere), oplysninger (revisoren fra ejerlisten), graf, profil,
+      // kontakt og smagsprøverne på nyheder og historik.
+      add(
+        { type: "LassoKeyFigureCards", company: c },
+        { type: "LassoPersonList", company: c, show: "all" },
+        { type: "LassoOwnerList", company: c },
+        { type: "LassoTimeline", company: c },
+        { type: "LassoNews", company: c, limit: 5 },
+        { type: "LassoTextSections", company: c, variant: "profil" },
+        { type: "LassoContact", company: c },
+      );
+      break;
+    case "oekonomi":
+      // Kort, grafer, regnskabsliste og flerårstabel bygger på regnskabstallene; hele regnskabsanalysen.
+      add({ type: "LassoKeyFigureCards", company: c }, { type: "LassoTextSections", company: c, variant: "analyse" });
+      break;
+    case "regnskab":
+      add({ type: "LassoIncomeStatement", company: c, years: 3 });
+      break;
+    case "ejerskab":
+      add(
+        { type: "LassoOwnerList", company: c },
+        { type: "LassoBeneficialOwners", company: c },
+        { type: "LassoOwnershipDiagram", company: c, ingoingDepth: 3, outgoingDepth: 2 },
+      );
+      break;
+    case "ledelse":
+      add({ type: "LassoPersonList", company: c, show: "all" });
+      break;
+    case "risiko":
+      // Creditsafe kun på risiko: et opslag kan koste en kredit og tage 5–45 s, så overblikket henter det aldrig.
+      add({ type: "LassoCreditRating", company: c }, { type: "LassoAuditorIndependence", company: c });
+      break;
+    case "historik":
+      add({ type: "LassoTimeline", company: c }, { type: "LassoNews", company: c, limit: 5 });
+      break;
+    case "kontakt":
+      add({ type: "LassoContact", company: c }, { type: "LassoContactPersons", company: c });
+      break;
   }
   return viewSpecSchema.parse({ kind: "company", title: lassoId, layout: "stack", components });
+}
+
+/**
+ * Hvad komponisten ved om virksomheden til opfølgningerne. `undefined` = ikke hentet på dette fokus
+ * (composeProbe henter kun det, fokus viser); så vises opfølgningen, og fanen, den peger på, svarer selv.
+ */
+interface FollowUpData {
+  fin?: number;
+  owners?: number;
+  people?: number;
+  /** Har virksomheden et offentliggjort regnskab (kun kendt på regnskab). */
+  statements?: boolean;
 }
 
 interface FollowUpRule {
   label: string;
   prompt: string;
-  needs?: (d: { fin: number; owners: number; people: number; statements: boolean }) => boolean;
+  needs?: (d: FollowUpData) => boolean;
 }
+
+/** Hentet og tom = nej; ikke hentet = ja (fanen, opfølgningen peger på, viser selv en tom tilstand). */
+const some = (n: number | undefined) => n === undefined || n > 0;
 
 /** Næste naturlige spørgsmål pr. focus: peger videre til de andre fokusvisninger. */
 const FOLLOW_UPS: Record<Focus, FollowUpRule[]> = {
   overblik: [
-    { label: "Økonomien", prompt: "Hvordan går det økonomisk for {navn}?", needs: (d) => d.fin > 0 },
-    { label: "Ejere", prompt: "Hvem ejer {navn}?", needs: (d) => d.owners > 0 },
+    { label: "Økonomien", prompt: "Hvordan går det økonomisk for {navn}?", needs: (d) => some(d.fin) },
+    { label: "Ejere", prompt: "Hvem ejer {navn}?", needs: (d) => some(d.owners) },
     { label: "Risiko", prompt: "Er der røde flag ved {navn}?" },
   ],
   oekonomi: [
     { label: "Fuldt regnskab", prompt: "Vis resultatopgørelse og balance for {navn}." },
     { label: "Risiko", prompt: "Er der røde flag ved {navn}?" },
-    { label: "Ejere", prompt: "Hvem ejer {navn}?", needs: (d) => d.owners > 0 },
+    { label: "Ejere", prompt: "Hvem ejer {navn}?", needs: (d) => some(d.owners) },
   ],
   regnskab: [
-    { label: "Udvikling over år", prompt: "Hvordan har økonomien i {navn} udviklet sig over årene?", needs: (d) => d.fin > 0 },
+    { label: "Udvikling over år", prompt: "Hvordan har økonomien i {navn} udviklet sig over årene?", needs: (d) => d.statements !== false && some(d.fin) },
     { label: "Risiko", prompt: "Er der røde flag ved {navn}?" },
     { label: "Kreditvurdering", prompt: "Hvad er kreditvurderingen for {navn}?" },
-    { label: "Ledelse", prompt: "Hvem sidder i ledelsen af {navn}?", needs: (d) => d.people > 0 },
+    { label: "Ledelse", prompt: "Hvem sidder i ledelsen af {navn}?", needs: (d) => some(d.people) },
   ],
   ejerskab: [
-    { label: "Ledelse", prompt: "Hvem sidder i ledelsen af {navn}?", needs: (d) => d.people > 0 },
-    { label: "Økonomien", prompt: "Hvordan går det økonomisk for {navn}?", needs: (d) => d.fin > 0 },
+    { label: "Ledelse", prompt: "Hvem sidder i ledelsen af {navn}?", needs: (d) => some(d.people) },
+    { label: "Økonomien", prompt: "Hvordan går det økonomisk for {navn}?", needs: (d) => some(d.fin) },
   ],
   ledelse: [
-    { label: "Ejere", prompt: "Hvem ejer {navn}?", needs: (d) => d.owners > 0 },
+    { label: "Ejere", prompt: "Hvem ejer {navn}?", needs: (d) => some(d.owners) },
     { label: "Historik", prompt: "Hvad er der sket i {navn} for nylig?" },
   ],
   risiko: [
-    { label: "Økonomien", prompt: "Hvordan går det økonomisk for {navn}?", needs: (d) => d.fin > 0 },
-    { label: "Ejere", prompt: "Hvem ejer {navn}?", needs: (d) => d.owners > 0 },
+    { label: "Økonomien", prompt: "Hvordan går det økonomisk for {navn}?", needs: (d) => some(d.fin) },
+    { label: "Ejere", prompt: "Hvem ejer {navn}?", needs: (d) => some(d.owners) },
   ],
   historik: [
     { label: "Overblik", prompt: "Giv mig et overblik over {navn}." },
-    { label: "Ledelse", prompt: "Hvem sidder i ledelsen af {navn}?", needs: (d) => d.people > 0 },
+    { label: "Ledelse", prompt: "Hvem sidder i ledelsen af {navn}?", needs: (d) => some(d.people) },
   ],
   kontakt: [
     { label: "Overblik", prompt: "Giv mig et overblik over {navn}." },
-    { label: "Ledelse", prompt: "Hvem sidder i ledelsen af {navn}?", needs: (d) => d.people > 0 },
+    { label: "Ledelse", prompt: "Hvem sidder i ledelsen af {navn}?", needs: (d) => some(d.people) },
   ],
 };
 
@@ -244,7 +289,6 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
   const fin = ds.financials[id]?.years ?? [];
   const people = ds.people[id] ?? [];
   const owners = ds.ownership[id]?.owners ?? [];
-  const hasOwnerBlock = owners.length > 0 || Boolean(ds.ownership[id]?.auditor);
   const events = ds.timeline[id]?.events ?? [];
   const news = ds.news[id]?.items ?? [];
   const texts = ds.textSections[id]?.sections ?? [];
@@ -264,6 +308,12 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
   const cols: ViewComponent[][] = [[], [], []];
   const bottom: ViewComponent[] = [];
   const put = (col: 1 | 2 | 3, c: ViewComponent) => cols[col - 1]!.push({ ...c, column: col } as ViewComponent);
+  // Et fokus' egne elementer: to side om side (½ + ½); står et alene, får det fuld bredde, så der
+  // aldrig er en tom halvdel ved siden af (og fanen låner ikke et andet fokus' element som fyld).
+  const halves = (...items: ViewComponent[]) => {
+    if (items.length >= 2) items.forEach((c, i) => put((i + 1) as 1 | 2 | 3, c));
+    else bottom.push(...items);
+  };
 
   // Nøgletalskortene kun på overblik og oekonomi. På regnskab står tallene i tabellerne, og på de
   // øvrige fokus er de ikke svaret på spørgsmålet (og gentog sig på hver fane).
@@ -290,18 +340,13 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
     return null;
   };
 
-  // "Virksomhedsoplysninger" viser kun det, hovedet (og kontaktblok/ejerliste på samme side) ikke
-  // viser, og udelades under 2 rækker. Uden stamdata står fejlen allerede i hovedet.
-  const companyList = (page: { contact: boolean; owners: boolean }): ViewComponent | null => {
+  // "Virksomhedsoplysninger" (kun på overblik) viser kun det, hovedet og kontaktblokken ikke viser,
+  // og udelades under 2 rækker. Uden stamdata står fejlen allerede i hovedet.
+  const companyList = (page: { contact: boolean }): ViewComponent | null => {
     const co = ds.companies[id];
     if (!co) return null;
-    const rows = companyFacts(co, ds.ownership[id], fin.at(-1), { hideIdentity: true, hideContact: page.contact, hideAuditor: page.owners });
+    const rows = companyFacts(co, ds.ownership[id], fin.at(-1), { hideIdentity: true, hideContact: page.contact, hideAuditor: false });
     return rows.filter((r) => r.value).length >= 2 ? { type: "LassoKeyValueList", company: id, variant: "company", title: "Virksomhedsoplysninger" } : null;
-  };
-
-  // Ejere: få ejere som liste, en koncern med selskaber som ejere også som diagram.
-  const ownershipBlock = (col: 1 | 2 | 3) => {
-    if (hasOwnerBlock) put(col, { type: "LassoOwnerList", company: id });
   };
 
   let columns: 2 | 3 = 3;
@@ -328,16 +373,9 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
       if (hasNoStatements(statements)) {
         // Intet offentliggjort regnskab (fx en enkeltmandsvirksomhed uden regnskabspligt): én tom
         // tilstand, der siger hvorfor, på nøgletallenes plads, ikke to tomme tabeller med samme tekst.
-        // Oplysninger, ledelse og ejere ved siden af hinanden (højst to), så siden stadig er en side.
+        // Intet andet: oplysninger, ledelse og ejere hører til andre faner og står ikke her som fyld.
         columns = 2;
         top.push({ type: "LassoIncomeStatement", company: id, years: 3, title: "Regnskab" });
-        const lead = people.some((p) => !p.to);
-        const list = companyList({ contact: false, owners: !lead && hasOwnerBlock });
-        const slots: (1 | 2)[] = [1, 2];
-        if (list) put(slots.shift()!, list);
-        if (lead) put(slots.shift()!, { type: "LassoPersonList", company: id, show: "current", title: "Ledelse" });
-        const slot = slots.shift();
-        if (slot) ownershipBlock(slot);
         break;
       }
       // Fuldt regnskab: tabeller står altid i fuld bredde (guide 23), stablet i regnskabets rækkefølge.
@@ -347,58 +385,50 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
       break;
     }
     case "kontakt": {
-      // Tre korte blokke side om side (kontakt | personer | oplysninger), ikke to over for én.
-      put(1, { type: "LassoContact", company: id });
-      if (contactPeople.length > 0) put(2, { type: "LassoContactPersons", company: id });
-      // Uden kontaktpersoner fra hjemmesiden er direktion og bestyrelse fra CVR de bedste indgange.
-      else if (people.some((p) => !p.to)) put(2, { type: "LassoPersonList", company: id, show: "current", title: "Ledelse (CVR)" });
-      // Kontaktfelterne står i kontaktblokken og identiteten i hovedet; listen viser resten.
-      const list = companyList({ contact: true, owners: false });
-      if (list) put(3, list);
-      if (cols.filter((c) => c.length > 0).length < 3) columns = 2;
+      // Kontaktblokken (også som tom tilstand: det er svaret) og kontaktpersonerne fra hjemmesiden
+      // ved siden af; uden kontaktpersoner står kontakten alene i fuld bredde. Ledelsen og
+      // oplysningerne hører til ledelse og overblik.
+      columns = 2;
+      const contactBlock: ViewComponent = { type: "LassoContact", company: id };
+      halves(contactBlock, ...(contactPeople.length > 0 ? [{ type: "LassoContactPersons", company: id } as ViewComponent] : []));
       break;
     }
     case "ejerskab": {
+      // Ejerlisten (med revisor) står altid, også som tom tilstand: den er svaret på "hvem ejer".
+      // Reelle ejere ved siden af, når de er registreret; ellers ejerne alene i fuld bredde.
+      // Ikke LassoRelations eller ledelsen her: de hører til overblik og ledelse.
       columns = 2;
-      ownershipBlock(1);
-      if (beneficial.length > 0 || ds.beneficialOwnership[id]?.gaps?.length) put(2, { type: "LassoBeneficialOwners", company: id });
-      // Ikke LassoRelations her: den gentager de legale ejere fra ejerlisten ved siden af.
-      else if (people.some((p) => !p.to)) put(2, { type: "LassoPersonList", company: id, show: "current", title: "Ledelse" });
+      const ownerList: ViewComponent = { type: "LassoOwnerList", company: id };
+      const hasBeneficial = beneficial.length > 0 || Boolean(ds.beneficialOwnership[id]?.gaps?.length);
+      halves(ownerList, ...(hasBeneficial ? [{ type: "LassoBeneficialOwners", company: id } as ViewComponent] : []));
       if (owners.some((o) => o.kind === "company")) bottom.push({ type: "LassoOwnershipDiagram", company: id, ingoingDepth: 3, outgoingDepth: 2 });
       break;
     }
     case "ledelse": {
+      // Hele ledelsen (også de fratrådte) i fuld bredde, også som tom tilstand. Historik og ejere
+      // står på deres egne faner.
       columns = 2;
-      if (people.length > 0) put(1, { type: "LassoPersonList", company: id, show: "all" });
-      if (events.length >= 3) put(2, { type: "LassoTimeline", company: id });
-      // Ejerne (med revisor) i den kolonne, der vejer mindst, så en kort ledelse ikke står over for historik og ejere.
-      const flexible: ViewComponent[] = hasOwnerBlock ? [{ type: "LassoOwnerList", company: id }] : [];
-      const page = [...top, ...cols.flat(), ...flexible];
-      placeByWeight(cols.slice(0, 2), flexible, (c) => componentWeight(c, ds, page));
+      bottom.push({ type: "LassoPersonList", company: id, show: "all" });
       break;
     }
     case "risiko": {
+      // Kreditvurderingen og revisoruafhængigheden side om side; står en alene, fuld bredde. Uden
+      // nogen af dem viser kreditvurderingen sin egen tilstand (låst, ikke beregnet, fejl), så siden
+      // aldrig er tom. Oplysninger, ledelse, historik og ejere hører til de andre faner.
       columns = 2;
-      // Kreditvurderingen (½) øverst i kolonne 2 ved siden af oplysningerne.
-      if (hasCredit) put(2, { type: "LassoCreditRating", company: id });
-      // Uden historik står ejerne (med revisor) i kolonne 2, ikke relationerne, som gentager ledelsen fra listen.
-      const ownerFallback = events.length < 3 && hasOwnerBlock;
-      const list = companyList({ contact: false, owners: ownerFallback });
-      if (list) put(1, list);
-      if (people.length > 0) put(1, { type: "LassoPersonList", company: id, show: "all" });
-      if (events.length >= 3) put(2, { type: "LassoTimeline", company: id });
-      else if (ownerFallback) ownershipBlock(2);
-      if (auditor) bottom.push({ type: "LassoAuditorIndependence", company: id });
+      const credit: ViewComponent = { type: "LassoCreditRating", company: id };
+      const independence: ViewComponent = { type: "LassoAuditorIndependence", company: id };
+      if (auditor) halves(...(hasCredit ? [credit, independence] : [independence]));
+      else halves(credit);
       break;
     }
     case "historik": {
+      // Hele historikken (5 + "Se alle", folder ud på stedet) | nyhederne (5); uden nyheder står
+      // historikken alene i fuld bredde. Ingen graf eller regnskabsliste som fyld.
       columns = 2;
-      if (events.length > 0) put(1, { type: "LassoTimeline", company: id });
-      if (news.length > 0) put(2, { type: "LassoNews", company: id, limit: 5 });
-      else if (fin.length > 0) {
-        const f = finance();
-        if (f) put(2, f);
-      }
+      const timeline: ViewComponent = { type: "LassoTimeline", company: id };
+      const hasNews = news.length > 0 || Boolean(ds.errors[`news:${id}`]);
+      halves(timeline, ...(hasNews ? [{ type: "LassoNews", company: id, limit: 5 } as ViewComponent] : []));
       break;
     }
     default: {
@@ -406,15 +436,16 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
       if (people.length > 0 || owners.length > 0) put(1, { type: "LassoRelations", company: id });
       if (textSectionsFor(texts, "profil").length > 0) put(2, { type: "LassoTextSections", company: id, variant: "profil", title: "Virksomhedsprofil" });
       if (hasContact) put(3, { type: "LassoContact", company: id });
-      const list = companyList({ contact: hasContact, owners: false });
+      const list = companyList({ contact: hasContact });
       if (list) put(3, list);
       const f = finance();
       if (f) put(3, f);
       // Nyheder og historik har ingen fast plads: hver lægges i den kolonne, der vejer mindst indtil nu.
+      // Begge er smagsprøver på fanen Historik: "Se alle … i Historik" åbner den (more).
       const flexible: ViewComponent[] = [];
-      if (news.length > 0) flexible.push({ type: "LassoNews", company: id, limit: 3 });
+      if (news.length > 0) flexible.push({ type: "LassoNews", company: id, limit: 3, more: "historik" });
       // Historikken viser 3 begivenheder + "Se alle N" (regel 9); hele forløbet står på historik.
-      if (events.length >= 3) flexible.push({ type: "LassoTimeline", company: id, limit: 3 });
+      if (events.length >= 3) flexible.push({ type: "LassoTimeline", company: id, limit: 3, more: "historik" });
       const page = [...top, ...cols.flat(), ...flexible];
       placeByWeight(cols, flexible, (c) => componentWeight(c, ds, page));
       // En tom kolonne må ikke efterlade et hul: gå ned på 2 kolonner.
@@ -422,8 +453,14 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
     }
   }
 
+  const known: FollowUpData = {
+    fin: ds.financials[id] ? fin.length : undefined,
+    owners: ds.ownership[id] ? owners.length : undefined,
+    people: ds.people[id] ? people.length : undefined,
+    statements: statements ? !hasNoStatements(statements) : undefined,
+  };
   const followUps = FOLLOW_UPS[focus]
-    .filter((f) => f.needs === undefined || f.needs({ fin: fin.length, owners: owners.length, people: people.length, statements: !!statements }))
+    .filter((f) => f.needs === undefined || f.needs(known))
     .slice(0, 3)
     .map((f) => ({ label: f.label, prompt: f.prompt.replace("{navn}", shortCompanyName(options.name ?? ds.companies[id]?.name ?? lassoId)) }));
   if (options.followUps !== false && followUps.length > 0) bottom.push({ type: "LassoFollowUps", prompts: followUps });

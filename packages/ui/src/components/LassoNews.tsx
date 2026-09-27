@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { formatDate, isPersonId, type NewsItemVM, type NewsVM, type TextSegment } from "@lasso/spec";
-import type { ViewAction } from "../types.js";
+import type { MoreInTab, ViewAction } from "../types.js";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
 
 /** "2026-04-15" -> "for 3 dage siden" under 7 dage gammel, ellers "15.04.2026". */
@@ -177,6 +177,7 @@ export function LassoNews({
   error,
   onOpen,
   emptyReason,
+  moreIn,
 }: {
   news?: NewsVM;
   companyName?: string;
@@ -188,6 +189,8 @@ export function LassoNews({
   onOpen?: (a: ViewAction) => void;
   /** Tom tilstand for andre entiteter end virksomheder, fx "Ingen nyheder om personen." */
   emptyReason?: string;
+  /** Smagsprøve på overblikket: "Se alle N nyheder i Historik" åbner fanen i stedet for at folde ud. */
+  moreIn?: MoreInTab;
 }) {
   const title = "Nyheder";
   const [expanded, setExpanded] = useState(false);
@@ -216,9 +219,15 @@ export function LassoNews({
         ))}
       </div>
       {news.items.length > max ? (
-        <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-          {expanded ? "Vis færre" : `Se alle ${news.items.length} nyheder`}
-        </button>
+        moreIn ? (
+          <button type="button" className="lasso-link lasso-more" onClick={moreIn.open}>
+            {`Se alle ${news.items.length} nyheder i ${moreIn.tab}`}
+          </button>
+        ) : (
+          <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+            {expanded ? "Vis færre" : `Se alle ${news.items.length} nyheder`}
+          </button>
+        )
       ) : null}
       {news.sources?.length ? <SourceLine source={news.sources.join(" og ")} updated={news.updatedAt} /> : null}
     </Section>

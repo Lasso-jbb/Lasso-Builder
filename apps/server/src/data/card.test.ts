@@ -443,10 +443,11 @@ test("personkortet følger fokus: kun det, siden viser, i sidens rækkefølge og
   same(risk);
   assert.match(risk, /FORLØB I SELSKABERNE/);
   assert.match(risk, /Cloud Eksempel A\/S kom under/);
-  assert.match(risk, /ØVRIGE OPHØRTE ROLLER/);
-  assert.match(risk, /Andet Eksempel ApS/);
+  // De øvrige ophørte roller hører til fanen Roller (tidsbåndene), ikke risiko.
+  assert.doesNotMatch(risk, /ØVRIGE OPHØRTE ROLLER|Andet Eksempel ApS/);
   assert.doesNotMatch(risk, /Indtrådt som adm\. direktør i Data Eksempel/, "forløbet har kun konkursselskabet");
   assert.doesNotMatch(risk, /STAMOPLYSNINGER|NYHEDER|SIDDER SAMMEN MED/);
+  assert.match(card("roller"), /Andet Eksempel ApS/);
 
   const owner = card("ejerskab");
   same(owner);
@@ -525,20 +526,43 @@ test("ændringsfeedet (katalog 21) som tekstkort: samme bredde, ingen midterprik
   assert.match(textCard(spec, ds)!, /Ingen ændringer i "Kunder"/);
 });
 
-test("tekstkort for regnskab uden regnskab: forklaringen én gang, og ledelsen med sine roller, når der hverken er direktør eller bestyrelse", () => {
+test("tekstkort for regnskab uden regnskab: forklaringen én gang og ingen ledelse (den står på ledelse, med sine roller, når der hverken er direktør eller bestyrelse)", () => {
   const ds = dataset();
   ds.companies[ID] = { ...ds.companies[ID]!, form: "ENK", founded: "2023-01-30" };
   ds.people[ID] = [{ name: "Christian Sander Kjær", role: "Fuldt ansvarlig deltager", from: "2023-01-30" }];
   ds.financials[ID] = { lassoId: ID, currency: "DKK", years: [] };
   ds.financialStatements[ID] = { lassoId: ID, currency: "DKK", incomeStatement: [], balanceSheet: [], cashFlow: [] };
-  const spec = composeCompany(ID, ds, { focus: "regnskab" });
-  const card = textCard(spec, ds)!;
+  const card = textCard(composeCompany(ID, ds, { focus: "regnskab" }), ds)!;
   assert.match(card, /REGNSKAB\s*│\n│ Enkeltmandsvirksomheder og/);
   assert.equal((card.match(/skal ikke indsende/g) ?? []).length, 1);
-  // Ikke en tom "LEDELSE"-overskrift: rollen står som den er (regel 9).
-  assert.match(card, /LEDELSE[\s│]*\n│ Fuldt ansvarlig deltager/);
-  assert.match(card, /Christian Sander Kjær/);
+  assert.doesNotMatch(card, /LEDELSE|Christian Sander Kjær/);
   for (const l of card.split("\n")) assert.equal([...l].length, 38, `linjen "${l}" har forkert bredde`);
+  // Ikke en tom "LEDELSE"-overskrift på ledelse: rollen står som den er (regel 9).
+  const lead = textCard(composeCompany(ID, ds, { focus: "ledelse" }), ds)!;
+  assert.match(lead, /LEDELSE[\s│]*\n│ Fuldt ansvarlig deltager/);
+  assert.match(lead, /Christian Sander Kjær/);
+  for (const l of lead.split("\n")) assert.equal([...l].length, 38, `linjen "${l}" har forkert bredde`);
+});
+
+test("resuméet på risiko har kreditvurderingen og revisoruafhængigheden, ikke ledelse, ejere eller historik", async () => {
+  const { summarizeView } = await import("./summary.js");
+  const ds = dataset();
+  ds.creditRatings[ID] = { lassoId: ID, state: "ok", source: "Creditsafe via Lasso", current: { internationalScore: "B", creditMax: 250_000, creditCurrency: "DKK", localScore: 62 } };
+  ds.auditorIndependence[ID] = {
+    lassoId: ID,
+    auditorName: "Revisor ApS",
+    relations: [
+      { id: "r1", assessment: 50, name: "Bo Eksempel", relation: "Tidligere ansat hos revisor" },
+      { id: "r2", assessment: 100, name: "Anne Eksempel", relation: "Bestyrelsesmedlem hos revisor" },
+    ],
+  };
+  const summary = summarizeView(composeCompany(ID, ds, { focus: "risiko" }), ds);
+  assert.match(summary, /Kreditvurdering \(Creditsafe\): /);
+  assert.match(summary, /Revisoruafhængighed \(revisor Revisor ApS\): 2 relationer; konflikt: Anne Eksempel, Bestyrelsesmedlem hos revisor; vurdér: Bo Eksempel/);
+  assert.doesNotMatch(summary, /^(Ledelse|Ejere|Revisor): /m);
+  // Uden kendte relationer siger resuméet det (og hvorfor, når kilden mangler).
+  ds.auditorIndependence[ID] = { lassoId: ID, relations: [], unavailableReason: "Kilden er ikke bekræftet endnu." };
+  assert.match(summarizeView(composeCompany(ID, ds, { focus: "risiko" }), ds), /Revisoruafhængighed: Kilden er ikke bekræftet endnu\.$/m);
 });
 
 test("resuméet til modellen har regnskabslinjen én gang, også på regnskab, hvor nøgletalskortene ikke står", async () => {

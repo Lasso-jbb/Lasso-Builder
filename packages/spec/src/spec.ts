@@ -123,6 +123,16 @@ export type PersonRolesShow = (typeof PERSON_ROLES_SHOW)[number];
 /** Personens tidslinje afgrænset til selskaberne med konkurs eller tvangsopløsning (fokus risiko). */
 export const TIMELINE_FILTERS = ["risiko"] as const;
 
+/**
+ * "Se alle" på en smagsprøve (overblikket): 'expand' (standard) folder listen ud på stedet; et
+ * fokusnavn åbner i stedet den fane, der ejer elementet ("Se alle 12 begivenheder i Historik"),
+ * når værten kan skifte fane (open-focus). Uden den kapabilitet folder listen ud som før.
+ */
+export const MORE_HISTORIK = ["expand", "historik"] as const;
+export const MORE_ROLLER = ["expand", "roller"] as const;
+export const MORE_NETVAERK = ["expand", "netvaerk"] as const;
+const moreDescription = (tab: string) => `'expand' (standard): 'Se alle N' folder ud på stedet. '${tab}': knappen åbner fanen ${tab} (kun på overblikket, som en smagsprøve).`;
+
 const personRef = z
   .string()
   .min(1)
@@ -264,6 +274,7 @@ export const timelineSchema = z
       .enum(TIMELINE_FILTERS)
       .optional()
       .describe("Kun med person: 'risiko' viser kun forløbet i de selskaber, der er gået konkurs eller tvangsopløst (roller ind og ud og selskabets status)."),
+    more: z.enum(MORE_HISTORIK).optional().describe(moreDescription("historik")),
   })
   .refine(exactlyOneEntity, EXACTLY_ONE_ENTITY)
   .describe("Virksomhed: stiftelse, ledelsesskift og regnskaber. Person: indtrådt/udtrådt som X i selskaber og selskabernes konkurser/tvangsopløsninger.");
@@ -273,6 +284,7 @@ export const newsSchema = z
     type: z.literal("LassoNews"),
     ...companyOrPerson,
     limit: z.number().int().min(1).max(10).default(5),
+    more: z.enum(MORE_HISTORIK).optional().describe(moreDescription("historik")),
   })
   .refine(exactlyOneEntity, EXACTLY_ONE_ENTITY);
 
@@ -425,6 +437,7 @@ export const personRolesSchema = z.object({
     .enum(TIMELINE_FILTERS)
     .optional()
     .describe("Kun show 'ended': 'risiko' udelader selskaber, der er gået konkurs eller tvangsopløst (de står i risikoens forløb)."),
+  more: z.enum(MORE_ROLLER).optional().describe(moreDescription("roller")),
   title: z.string().max(80).optional(),
 });
 
@@ -432,6 +445,7 @@ export const personNetworkSchema = z.object({
   type: z.literal("LassoPersonNetwork"),
   person: personRef,
   limit: z.number().int().min(1).max(50).optional().describe("Antal personer før 'Se alle N'. Standard 3 (regel 9)."),
+  more: z.enum(MORE_NETVAERK).optional().describe(moreDescription("netvaerk")),
   title: z.string().max(80).optional(),
 });
 

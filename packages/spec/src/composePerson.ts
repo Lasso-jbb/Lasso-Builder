@@ -16,8 +16,12 @@ import { viewSpecSchema, type ViewComponent, type ViewSpec } from "./spec.js";
  * Ingen 1:1-gentagelser på samme side (docs/portal.md, "Personfokus og elementer"): hovedet ejer
  * antallet af roller, ejerskaber og første registrering, så stamoplysningerne udelader dem
  * (personFactOptions); tidsbåndene viser de ophørte roller, så rollefanen har ingen ophørt-liste
- * ved siden af; risikoens forløb viser selskabernes roller og status, så listen over ophørte
- * roller dér udelader de samme selskaber.
+ * ved siden af.
+ *
+ * Hvert modul ejer sit indhold (som på virksomhedssiden): rollerne står på roller, netværket på
+ * netvaerk, historikken på historik. Overblikket viser smagsprøver med "Se alle … i <fane>", der
+ * åbner fanen (more); de øvrige fokus låner ikke hinandens elementer (risiko har ingen liste over
+ * ophørte roller; den hører til roller).
  */
 export const PERSON_FOCUSES = ["overblik", "roller", "netvaerk", "ejerskab", "risiko", "historik"] as const;
 export type PersonFocus = (typeof PERSON_FOCUSES)[number];
@@ -280,13 +284,9 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
       // Alle sager med detaljer; uden sager kun den positive tomme tilstand.
       components.push({ type: "LassoPersonRisk", person: id });
       if (cases.length === 0) break;
-      const halves: ViewComponent[] = [];
-      // Forløbet i de berørte selskaber (ind, ud og status), ikke kun statushændelserne, som sagerne allerede viser.
-      halves.push({ type: "LassoTimeline", person: id, filter: "risiko", title: "Forløb i selskaberne" });
-      if (personRoleRows(person, "ended", { except: "risiko" }).length > 0) {
-        halves.push({ type: "LassoPersonRoles", person: id, show: "ended", except: "risiko", title: "Øvrige ophørte roller" });
-      }
-      pair(halves);
+      // Forløbet i de berørte selskaber (ind, ud og status), ikke kun statushændelserne, som sagerne
+      // allerede viser, i fuld bredde. De øvrige ophørte roller står på roller (tidsbåndene).
+      components.push({ type: "LassoTimeline", person: id, filter: "risiko", title: "Forløb i selskaberne" });
       break;
     }
     case "historik": {
@@ -305,19 +305,20 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
       // De aktive roller som kort liste (¾) + stamoplysninger (¼); uden aktive roller de ophørte.
       const current = personRoleRows(person, "current").length > 0;
       const ended = personRoleRows(person, "ended").length > 0;
+      // Smagsprøverne på fanerne: "Se alle … i Roller/Netværk/Historik" åbner fanen (more).
       withFacts(
         current
-          ? { type: "LassoPersonRoles", person: id, show: "current", limit: OVERVIEW_ROLES }
+          ? { type: "LassoPersonRoles", person: id, show: "current", limit: OVERVIEW_ROLES, more: "roller" }
           : ended
-            ? { type: "LassoPersonRoles", person: id, show: "ended", limit: OVERVIEW_ROLES }
+            ? { type: "LassoPersonRoles", person: id, show: "ended", limit: OVERVIEW_ROLES, more: "roller" }
             : null,
       );
       // Netværk, risiko, historik og ejerskab to og to; ingen nyheder på overblikket (de står på historik).
       const halves: ViewComponent[] = [];
-      if (network.length > 0) halves.push({ type: "LassoPersonNetwork", person: id, limit: OVERVIEW_NETWORK });
+      if (network.length > 0) halves.push({ type: "LassoPersonNetwork", person: id, limit: OVERVIEW_NETWORK, more: "netvaerk" });
       // Risiko står altid, når personen har roller: "ingen konkurser" er også et svar.
       if (hasRoles && !serious) halves.push({ type: "LassoPersonRisk", person: id });
-      if (events.length > 0) halves.push({ type: "LassoTimeline", person: id, limit: OVERVIEW_EVENTS });
+      if (events.length > 0) halves.push({ type: "LassoTimeline", person: id, limit: OVERVIEW_EVENTS, more: "historik" });
       const d = diagram({ title: "Ejerskab", showError: false });
       if (d) halves.push(d);
       pair(halves);

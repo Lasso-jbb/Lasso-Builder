@@ -116,10 +116,10 @@ function fullDataset() {
   return ds;
 }
 
-/** Personsidens komponenter med de egenskaber, der afgør formen (show, limit, filter, except). */
+/** Personsidens komponenter med de egenskaber, der afgør formen (show, limit, filter, except, more). */
 const shape = (c: ViewComponent) => {
-  const x = c as { show?: string; limit?: number; filter?: string; except?: string };
-  const props = [x.show, x.except && `-${x.except}`, x.filter && `~${x.filter}`, x.limit && `#${x.limit}`].filter(Boolean).join(",");
+  const x = c as { show?: string; limit?: number; filter?: string; except?: string; more?: string };
+  const props = [x.show, x.except && `-${x.except}`, x.filter && `~${x.filter}`, x.limit && `#${x.limit}`, x.more && `>${x.more}`].filter(Boolean).join(",");
   return `${placement(c)}${props ? `[${props}]` : ""}`;
 };
 
@@ -140,14 +140,14 @@ test("composePerson overblik: aktive roller (liste) ¾ + stamoplysninger ¼; net
   assert.equal(spec.subtitle, "Roller i 3 selskaber");
   assert.deepEqual(spec.components.map(shape), [
     "LassoPersonHead",
-    "LassoPersonRoles@1/three-quarters[current,#5]",
+    "LassoPersonRoles@1/three-quarters[current,#5,>roller]",
     "LassoPersonFacts@2/quarter",
     // Netværket (1 person) og det lille ejerskab står sammen, risiko og historik (3 + "Se alle") sammen,
     // fordi det giver de mest lige bånd (netværk | risiko ville stå over for historik | ejerskab).
-    "LassoPersonNetwork@1[#3]",
+    "LassoPersonNetwork@1[#3,>netvaerk]",
     "LassoOwnershipDiagram@2",
     "LassoPersonRisk@1",
-    "LassoTimeline@2[#3]",
+    "LassoTimeline@2[#3,>historik]",
     "LassoFollowUps",
   ]);
   assertNoDuplicates(spec.components);
@@ -165,10 +165,10 @@ test("composePerson overblik: tomme sektioner udelades; en halv til overs står 
   ds.personNetworks[ID] = { lassoId: ID, people: [] };
   assert.deepEqual(composePerson(ID, ds, { followUps: false }).components.map(shape), [
     "LassoPersonHead",
-    "LassoPersonRoles@1/three-quarters[current,#5]",
+    "LassoPersonRoles@1/three-quarters[current,#5,>roller]",
     "LassoPersonFacts@2/quarter",
     "LassoPersonRisk@1",
-    "LassoTimeline@2[#3]",
+    "LassoTimeline@2[#3,>historik]",
   ]);
   // Et ophørt ejerskab alene giver intet diagram, og et ejet selskab, der ikke selv ejer noget,
   // heller ikke: diagrammet ville kun gentage "ejer 100 %" fra rollelisten 1:1.
@@ -185,10 +185,10 @@ test("composePerson overblik: tomme sektioner udelades; en halv til overs står 
   // (3 + "Se alle") alene i fuld bredde.
   ds.personNetworks[ID] = { lassoId: ID, people: Array.from({ length: 3 }, (_, i) => ({ name: `P${i}`, companies: [], overlapYears: 1, active: true })) };
   const three = composePerson(ID, ds, { followUps: false }).components.map(shape);
-  assert.deepEqual(three.slice(3), ["LassoPersonNetwork@1[#3]", "LassoPersonRisk@2", "LassoTimeline[#3]"]);
+  assert.deepEqual(three.slice(3), ["LassoPersonNetwork@1[#3,>netvaerk]", "LassoPersonRisk@2", "LassoTimeline[#3,>historik]"]);
   // Kun ophørte roller: listen over de ophørte står i stedet for de aktive.
   ds.persons[ID] = { ...person, roles: [person.roles[3]!] };
-  assert.equal(shape(composePerson(ID, ds).components[1]!), "LassoPersonRoles@1/three-quarters[ended,#5]");
+  assert.equal(shape(composePerson(ID, ds).components[1]!), "LassoPersonRoles@1/three-quarters[ended,#5,>roller]");
   // Ingen roller (og intet netværk): stamoplysningerne alene i fuld bredde, ingen risiko.
   ds.persons[ID] = { ...person, roles: [] };
   ds.personNetworks[ID] = { lassoId: ID, people: [] };
@@ -201,7 +201,7 @@ test("composePerson overblik: alvorlig risiko (personen var med) rykker op under
   ds.persons[ID] = { ...person, roles: [...person.roles.slice(0, 3), { ...person.roles[3]!, to: undefined, active: true }] };
   ds.timeline[ID] = personTimeline(ds.persons[ID]!, "2026-09-27");
   const spec = composePerson(ID, ds, { followUps: false });
-  assert.deepEqual(spec.components.map(shape).slice(0, 4), ["LassoPersonHead", "LassoPersonRisk", "LassoPersonRoles@1/three-quarters[current,#5]", "LassoPersonFacts@2/quarter"]);
+  assert.deepEqual(spec.components.map(shape).slice(0, 4), ["LassoPersonHead", "LassoPersonRisk", "LassoPersonRoles@1/three-quarters[current,#5,>roller]", "LassoPersonFacts@2/quarter"]);
   assert.equal(spec.components.filter((c) => c.type === "LassoPersonRisk").length, 1);
 });
 
@@ -239,15 +239,16 @@ test("composePerson ejerskab: de ejede selskaber som liste og ejerstrukturen i f
   assert.deepEqual(composePerson(ID, ds, { focus: "ejerskab", followUps: false }).components.map(shape), ["LassoPersonHead", "LassoPersonRoles[owner]"]);
 });
 
-test("composePerson risiko: alle sager i fuld bredde, forløbet i selskaberne | øvrige ophørte roller; uden sager kun den positive tomme tilstand", () => {
+test("composePerson risiko: alle sager og forløbet i selskaberne i fuld bredde, ingen ophørte roller (de står på roller); uden sager kun den positive tomme tilstand", () => {
   const ds = fullDataset();
   // Mette har kun én ophørt rolle, i konkursselskabet: forløbet alene i fuld bredde.
   assert.deepEqual(composePerson(ID, ds, { focus: "risiko", followUps: false }).components.map(shape), ["LassoPersonHead", "LassoPersonRisk", "LassoTimeline[~risiko]"]);
-  // En ophørt rolle i et andet selskab: den står ved siden af forløbet.
+  // En ophørt rolle i et andet selskab: den hører til fanen Roller (tidsbåndene), ikke risiko.
   const other = { companyId: "CVR-1-44444444", companyName: "Andet Eksempel ApS", kind: "direction" as const, role: "Direktør", from: "2010-01-01", to: "2013-01-01", active: false };
   ds.persons[ID] = { ...person, roles: [...person.roles, other] };
   const spec = composePerson(ID, ds, { focus: "risiko", followUps: false });
-  assert.deepEqual(spec.components.map(shape), ["LassoPersonHead", "LassoPersonRisk", "LassoTimeline@1[~risiko]", "LassoPersonRoles@2[ended,-risiko]"]);
+  assert.deepEqual(spec.components.map(shape), ["LassoPersonHead", "LassoPersonRisk", "LassoTimeline[~risiko]"]);
+  assert.ok(!spec.components.some((c) => c.type === "LassoPersonRoles"));
   assertNoDuplicates(spec.components);
   // Ingen konkurser eller tvangsopløsninger: kun "Ingen" med flueben, intet andet end hovedet.
   ds.persons[ID] = { ...person, roles: person.roles.slice(0, 3) };

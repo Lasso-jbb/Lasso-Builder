@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { personCompanies, personRoleRows, type PersonCompanyVM, type PersonRoleRowVM, type PersonRoleVM, type PersonRolesShow, type PersonVM } from "@lasso/spec";
-import type { ViewAction } from "../types.js";
+import type { MoreInTab, ViewAction } from "../types.js";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
 
 /** Regel 9: tre selskaber i tidsbåndene og fem i listerne, resten under "Se alle N" (limit kan ændre det). */
@@ -83,6 +83,7 @@ function PersonRoleList({
   except,
   heading,
   onOpen,
+  moreIn,
 }: {
   person: PersonVM;
   show: Exclude<PersonRolesShow, "all">;
@@ -90,6 +91,7 @@ function PersonRoleList({
   except?: "risiko";
   heading: string;
   onOpen?: (a: ViewAction) => void;
+  moreIn?: MoreInTab;
 }) {
   const [expanded, setExpanded] = useState(false);
   const rows = personRoleRows(person, show, { except });
@@ -101,6 +103,9 @@ function PersonRoleList({
     );
   }
   const visible = expanded ? rows : rows.slice(0, limit);
+  // Som smagsprøve peger knappen på fanen Roller, der viser alle personens selskaber (også de
+  // ophørte ved siden af de aktive), så den står, når fanen har flere, end listen viser her.
+  const total = moreIn ? personCompanies(person).length : 0;
   return (
     <Section title={heading} className="lasso-personrolelist">
       <ul className="lasso-rows">
@@ -125,7 +130,9 @@ function PersonRoleList({
           </li>
         ))}
       </ul>
-      {rows.length > limit ? (
+      {moreIn ? (
+        total > visible.length ? <MoreInButton count={total} moreIn={moreIn} /> : null
+      ) : rows.length > limit ? (
         <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
           {expanded ? "Vis færre" : `Se alle ${rows.length} selskaber`}
         </button>
@@ -150,6 +157,7 @@ export function PersonRoles({
   except,
   error,
   onOpen,
+  moreIn,
 }: {
   person?: PersonVM;
   title?: string;
@@ -158,6 +166,8 @@ export function PersonRoles({
   except?: "risiko";
   error?: string;
   onOpen?: (a: ViewAction) => void;
+  /** Smagsprøve på overblikket: "Se alle N selskaber i Roller" åbner fanen i stedet for at folde ud. */
+  moreIn?: MoreInTab;
 }) {
   const heading = title ?? (show === "all" ? "Roller over tid" : LIST_TITLE[show]);
   const [expanded, setExpanded] = useState(false);
@@ -168,7 +178,7 @@ export function PersonRoles({
       </Section>
     );
   }
-  if (show !== "all") return <PersonRoleList person={person} show={show} limit={limit ?? LIST_COLLAPSED} except={except} heading={heading} onOpen={onOpen} />;
+  if (show !== "all") return <PersonRoleList person={person} show={show} limit={limit ?? LIST_COLLAPSED} except={except} heading={heading} onOpen={onOpen} moreIn={moreIn} />;
   const collapsed = limit ?? COLLAPSED;
   const companies = personCompanies(person);
   if (companies.length === 0) {
@@ -280,11 +290,24 @@ export function PersonRoles({
         })}
       </ul>
       {companies.length > collapsed ? (
-        <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-          {expanded ? "Vis færre" : `Se alle ${companies.length} selskaber`}
-        </button>
+        moreIn ? (
+          <MoreInButton count={companies.length} moreIn={moreIn} />
+        ) : (
+          <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+            {expanded ? "Vis færre" : `Se alle ${companies.length} selskaber`}
+          </button>
+        )
       ) : null}
       <SourceLine source="CVR via Lasso" updated={person.updated} />
     </Section>
+  );
+}
+
+/** "Se alle N selskaber i Roller": åbner fanen, der viser alle personens selskaber (smagsprøve). */
+function MoreInButton({ count, moreIn }: { count: number; moreIn: MoreInTab }) {
+  return (
+    <button type="button" className="lasso-link lasso-more" onClick={moreIn.open}>
+      {`Se alle ${count} selskaber i ${moreIn.tab}`}
+    </button>
   );
 }
