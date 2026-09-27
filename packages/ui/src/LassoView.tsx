@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { emptyDataset, riskSignals, searchKey, widthOf, type Dataset, type ViewComponent, ownershipGraphKey } from "@lasso/spec";
+import { changeFeedKey, emptyDataset, riskSignals, searchKey, widthOf, type Dataset, type ViewComponent, ownershipGraphKey } from "@lasso/spec";
 import { FollowUps } from "./components/FollowUps.js";
 import { LassoMark } from "./LassoMark.js";
 import { CompanyHead } from "./components/CompanyHead.js";
@@ -40,6 +40,7 @@ import { PersonNetwork } from "./components/PersonNetwork.js";
 import { PersonRisk } from "./components/PersonRisk.js";
 import { RiskObservations } from "./components/RiskObservations.js";
 import { AuditorIndependence } from "./components/AuditorIndependence.js";
+import { ChangeFeed } from "./components/ChangeFeed.js";
 import { specToCsv } from "./csv.js";
 import { Badge, Skeleton } from "./primitives.js";
 import { SaveDialog } from "./SaveDialog.js";
@@ -181,6 +182,10 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return <PersonNetwork key={key} network={empty.personNetworks[c.person]} title={c.title} error={err(`personNetwork:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} />;
     case "LassoPersonRisk":
       return <PersonRisk key={key} person={empty.persons[c.person]} title={c.title} error={err(`person:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} />;
+    case "LassoChangeFeed": {
+      const k = changeFeedKey(c);
+      return <ChangeFeed key={key} feed={empty.changeFeeds[k]} title={c.title} types={c.types} error={err(`changeFeed:${k}`)} onOpen={props.host.drillDown ? act : undefined} />;
+    }
   }
 }
 

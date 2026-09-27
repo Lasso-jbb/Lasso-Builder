@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  changeFeedKey,
   companyTemplate,
   emptyDataset,
   listTemplate,
@@ -405,4 +406,39 @@ test("tekstkortet for DKK er uændret (ingen valutakode)", () => {
   const card = textCard(companyTemplate(ID, { chartMetric: "omsaetning", years: 3 }), dataset())!;
   assert.ok(card.includes("OMSÆTNING, MIA. KR."));
   assert.ok(!card.includes("DKK"));
+});
+
+test("ændringsfeedet (katalog 21) som tekstkort: samme bredde, ingen midterprik, status som fra -> til, 3 + Se N flere", () => {
+  const spec = parseViewSpec({ title: "Overvågning", components: [{ type: "LassoChangeFeed", list: "Kunder" }] });
+  const c = spec.components[0]!;
+  if (c.type !== "LassoChangeFeed") throw new Error("forkert type");
+  const ds = emptyDataset("demo");
+  ds.changeFeeds[changeFeedKey(c)] = {
+    listName: "Kunder",
+    days: 7,
+    total: 9,
+    source: "Eksempeldata",
+    entries: [
+      { lassoId: "CVR-1-1", companyName: "Cloud Eksempel A/S", type: "status", text: "Status ændret", from: "Aktiv", to: "Under konkurs", at: "2026-09-25T09:14:00", source: "CVR", read: false },
+      { lassoId: "CVR-1-2", companyName: "Nordisk Prøve A/S", type: "regnskab", text: "Årsrapport 2025 offentliggjort, bruttofortjeneste 96,4 mio. kr. (+12,1 %)", at: "2026-09-25T07:02:00", source: "CVR", read: false },
+      { companyName: "Eksempel Byg A/S", type: "stamdata", text: "Antal ansatte opdateret for 3. kvartal", at: "2026-09-24T06:00:00", source: "CVR", read: true, count: 5, companies: ["a", "b", "c", "d", "e"] },
+      { lassoId: "CVR-1-3", companyName: "Prøve ApS", type: "ledelse", text: "Nyt bestyrelsesmedlem", at: "2026-09-23T14:40:00", source: "CVR", read: true },
+    ],
+  };
+  const card = textCard(spec, ds)!;
+  const widths = new Set(card.split("\n").map((l) => [...l].length));
+  assert.equal(widths.size, 1, card);
+  assert.ok(!card.includes("·"));
+  assert.match(card, /ÆNDRINGER I "KUNDER" \(9\)/);
+  assert.match(card, /25\.09\.2026/);
+  assert.match(card, /Cloud Eksempel A\/S, status/);
+  assert.match(card, /Aktiv -> Under konkurs, ulæst/);
+  assert.match(card, /CVR, kl\. 09\.14/);
+  assert.match(card, /5 virksomheder, stamdata/);
+  assert.match(card, /Se 1 flere/);
+  assert.ok(!card.includes("Prøve ApS"), "kun 3 rækker vises");
+
+  // Tom tilstand siger hvorfor
+  ds.changeFeeds[changeFeedKey(c)] = { listName: "Kunder", days: 7, total: 0, entries: [], emptyReason: "Ingen ændringer i \"Kunder\" de seneste 7 dage." };
+  assert.match(textCard(spec, ds)!, /Ingen ændringer i "Kunder"/);
 });

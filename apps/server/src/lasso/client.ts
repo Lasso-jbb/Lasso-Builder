@@ -296,6 +296,25 @@ export class LassoClient {
   chr(lassoId: string) {
     return this.get(`modules/chr/${enc(lassoId)}`);
   }
+
+  /* ---------- Katalog 21, overvågning. UBEKRÆFTET, se docs/lasso-endpoints.md "Ubekræftet: overvågningsfeed" ---------- */
+
+  /** Brugerens overvågningsjobs (lister). docs.lassox.com/api/platform/monitoring: GET /apps/monitoring/jobs. */
+  monitoringJobs() {
+    return this.get("apps/monitoring/jobs");
+  }
+  /** Virksomhederne i ét overvågningsjob. GET /apps/monitoring/jobs/{JobId}/items?take=&continuationToken=. */
+  monitoringItems(jobId: string, take = 500, continuationToken?: string) {
+    return this.get(`apps/monitoring/jobs/${enc(jobId)}/items`, { take, continuationToken });
+  }
+  /**
+   * Ændrede virksomheder i et tidsrum med historik (docs.lassox.com/api/companies/company-updates:
+   * GET /data/cvr/companies/delta/history?since=&max=&pageSize=&cToken=). Svaret er en side
+   * { results, continuationToken, hasNextPage, ... }; formen af hvert element er ubekræftet.
+   */
+  companyUpdates(p: { since: string; max?: string; pageSize?: number; cToken?: string }) {
+    return this.get("data/cvr/companies/delta/history", { since: p.since, max: p.max, pageSize: p.pageSize ?? 100, cToken: p.cToken });
+  }
 }
 
 function enc(segment: string): string {

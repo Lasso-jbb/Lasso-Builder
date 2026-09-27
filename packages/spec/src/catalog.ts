@@ -1,5 +1,6 @@
 import { OPERATORS, type Criterion } from "./criteria.js";
 import { FIELDS, FIELD_BY_KEY, OPERATORS_BY_TYPE } from "./fields.js";
+import { CHANGE_TYPES } from "./models.js";
 import { METRICS, TABLE_COLUMNS, type ComponentType } from "./spec.js";
 
 /**
@@ -279,6 +280,15 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     description:
       "Brug til: konkurser og tvangsopløsninger blandt selskaber, personen har eller har haft roller i – 'har X været involveret i konkurser'. Brug ikke når: det gælder en virksomheds risiko (LassoRiskObservations). Kræver: person; ingen roller giver tom tilstand. Dækkes af show_person. Eksempel: 'Har X været med i konkurser?' → show_person.",
     props: "person, title?",
+  },
+
+  // (21) Overvågning ---------------------------------------------------------------
+  {
+    type: "LassoChangeFeed",
+    title: "Ændringsfeed, overvågede virksomheder",
+    description:
+      "Brug til: hvad der er sket i de virksomheder, brugeren overvåger – ændringer på tværs af en overvågningsliste grupperet pr. dag med filter på type (regnskab, ledelse, ejerskab, status, stamdata, kredit) – 'hvad er der sket i mine kunder', 'ændringer i min overvågning', 'nyt i listen Kunder'. Brug ikke når: det gælder én virksomheds egen historik (LassoTimeline), nyheder i medierne (LassoNews) eller risikosignaler (LassoRiskObservations). Kræver: list? (listens navn, fx 'Kunder'), days? (standard 7, 1–90), types? (delmængde af ændringstyper); ingen ændringer i perioden giver tom tilstand, og uden overvågningsliste forklarer komponenten hvorfor. Dækkes ikke af show_company. Eksempel: 'Hvad er der sket i mine overvågede kunder den seneste uge?' → render_view med LassoChangeFeed { list: 'Kunder', days: 7 }.",
+    props: `list?, days? (1–90, standard 7), types? (delmængde af ${CHANGE_TYPES.join(" | ")}), title?`,
   },
 
   // Interaktion ----------------------------------------------------------------

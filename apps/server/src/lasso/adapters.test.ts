@@ -30,6 +30,10 @@ import {
   looksLikeOrganisation,
   participantNames,
   applyGraphNames,
+  adaptChangeFeed,
+  adaptMonitoringItems,
+  adaptMonitoringJobs,
+  changeTypeOf,
 } from "./adapters.js";
 
 test("adaptCompany tåler forskellige feltnavne", () => {
@@ -952,4 +956,81 @@ test("ejergrafen: personnoder får navn fra nodens egne navnefelter og fra opsla
   assert.equal(br.kind, "company");
   // Invariant: ingen navngivet node har navn = ID, når opslaget kender den.
   assert.ok(named.nodes.every((n) => n.name !== n.id));
+});
+
+test("overvågning (katalog 21): jobs og items læses defensivt", () => {
+  assert.deepEqual(adaptMonitoringJobs({ jobs: [{ jobId: "j1", name: "Kunder" }, { id: "j2" }, { name: "uden id" }] }), [
+    { id: "j1", name: "Kunder" },
+    { id: "j2", name: undefined },
+  ]);
+  assert.deepEqual(adaptMonitoringJobs([{ JobId: "x", Name: "Leverandører" }]), [{ id: "x", name: "Leverandører" }]);
+  assert.deepEqual(adaptMonitoringJobs(null), []);
+  const items = adaptMonitoringItems({ items: ["CVR-1-1", { lassoId: "CVR-1-2" }, { company: { lassoId: "CVR-1-3" } }, {}], continuationToken: "t2" });
+  assert.deepEqual(items.ids, ["CVR-1-1", "CVR-1-2", "CVR-1-3"]);
+  assert.equal(items.continuationToken, "t2");
+  assert.deepEqual(adaptMonitoringItems("nonsens"), { ids: [], continuationToken: undefined });
+});
+
+test("changeTypeOf oversætter Lassos typer/felter til katalogets seks typer, ukendt = stamdata", () => {
+  assert.equal(changeTypeOf("CompanyStatus", undefined), "status");
+  assert.equal(changeTypeOf(undefined, "annualReport"), "regnskab");
+  assert.equal(changeTypeOf("Ownership", undefined), "ejerskab");
+  assert.equal(changeTypeOf(undefined, "management.director"), "ledelse");
+  assert.equal(changeTypeOf("creditScore", undefined), "kredit");
+  assert.equal(changeTypeOf(undefined, "address"), "stamdata");
+  assert.equal(changeTypeOf(undefined, undefined), "stamdata");
+});
+
+test("adaptChangeFeed: delta-liste -> feed, kun overvågede, kun i perioden, status som fra -> til, små ændringer foldet", () => {
+  const now = new Date("2026-09-25T12:00:00Z");
+  const raw = {
+    results: [
+      {
+        lassoId: "CVR-1-1",
+        name: "Cloud Eksempel A/S",
+        lastUpdated: "2026-09-25T09:14:00Z",
+        changes: [
+          { type: "status", from: "Aktiv", to: "Under konkurs", date: "2026-09-25T09:14:00Z", unread: true },
+          { field: "annualReport", newValue: 96_400_000, time: "2026-09-25T07:02:00Z", description: "Årsrapport 2025 offentliggjort" },
+        ],
+      },
+      { lassoId: "CVR-1-2", name: "Prøve ApS", lastUpdated: "2026-09-24T06:00:00Z", changes: [{ field: "employees", oldValue: 10, newValue: 12, date: "2026-09-24T06:00:00Z" }] },
+      { lassoId: "CVR-1-3", name: "Prøve 2 ApS", lastUpdated: "2026-09-24T06:00:00Z", changes: [{ field: "employees", oldValue: 4, newValue: 5, date: "2026-09-24T06:00:00Z", description: "Antal ansatte opdateret" }] },
+      { lassoId: "CVR-1-4", name: "Prøve 3 ApS", lastUpdated: "2026-09-24T06:00:00Z", changes: [{ field: "employees", date: "2026-09-24T06:00:00Z", description: "Antal ansatte opdateret" }] },
+      { lassoId: "CVR-1-5", name: "Prøve 4 ApS", lastUpdated: "2026-09-24T06:00:00Z", changes: [{ field: "employees", date: "2026-09-24T06:00:00Z", description: "Antal ansatte opdateret" }] },
+      // Ikke overvåget: udelades
+      { lassoId: "CVR-1-9", name: "Fremmed A/S", lastUpdated: "2026-09-25T08:00:00Z" },
+      // Uden changes: én stamdata-ændring på lastUpdated. For gammel: udelades
+      { lassoId: "CVR-1-6", name: "Gammel ApS", lastUpdated: "2026-09-01T08:00:00Z" },
+      { lassoId: "CVR-1-7", name: "Nylig ApS", updateTime: "2026-09-23T15:30:00Z" },
+    ],
+  };
+  const monitored = new Set(["CVR-1-1", "CVR-1-2", "CVR-1-3", "CVR-1-4", "CVR-1-5", "CVR-1-6", "CVR-1-7"]);
+  const feed = adaptChangeFeed(raw, { listName: "Kunder", days: 7, monitored, now });
+  assert.equal(feed.listName, "Kunder");
+  assert.equal(feed.days, 7);
+  assert.equal(feed.total, 7, "7 ændringer i perioden hos overvågede (2 + 1 + 1 + 1 + 1 + 1)");
+  assert.ok(feed.entries.every((e) => e.companyName !== "Fremmed A/S" && e.companyName !== "Gammel ApS"));
+  const status = feed.entries[0]!;
+  assert.equal(status.type, "status");
+  assert.equal(status.from, "Aktiv");
+  assert.equal(status.to, "Under konkurs");
+  assert.equal(status.read, false);
+  const report = feed.entries[1]!;
+  assert.equal(report.type, "regnskab");
+  assert.equal(report.text, "Årsrapport 2025 offentliggjort");
+  assert.equal(report.read, true);
+  assert.equal(report.source, "CVR");
+  // Tre "Antal ansatte opdateret" samme dag er foldet til én række; "Employees ændret fra 10 til 12" står for sig
+  const folded = feed.entries.find((e) => (e.count ?? 1) > 1)!;
+  assert.equal(folded.count, 3);
+  assert.deepEqual(folded.companies, ["Prøve 2 ApS", "Prøve 3 ApS", "Prøve 4 ApS"]);
+  assert.ok(feed.entries.some((e) => e.text === "Employees ændret fra 10 til 12"));
+  assert.ok(feed.entries.some((e) => e.companyName === "Nylig ApS" && e.type === "stamdata" && e.text === "Stamdata opdateret"));
+  // Typefilter og tom form
+  assert.deepEqual(adaptChangeFeed(raw, { days: 7, types: ["status"], monitored, now }).entries.map((e) => e.type), ["status"]);
+  assert.equal(adaptChangeFeed({ results: [] }, { days: 7, now }).entries.length, 0);
+  assert.equal(adaptChangeFeed(undefined, { days: 7, now }).total, 0);
+  // Uden monitored-sæt tages alt med
+  assert.ok(adaptChangeFeed(raw, { days: 7, now }).entries.some((e) => e.companyName === "Fremmed A/S"));
 });

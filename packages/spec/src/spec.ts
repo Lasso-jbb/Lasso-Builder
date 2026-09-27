@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { criterionSchema } from "./criteria.js";
 import { currencyUnit, formatAmount, formatNumber, formatPercent } from "./format.js";
-import type { FinancialYear } from "./models.js";
+import { CHANGE_TYPES, type FinancialYear } from "./models.js";
 
 /**
  * Den deklarative visnings-spec. Modellen skriver aldrig HTML/CSS; den sender
@@ -381,6 +381,17 @@ export const personRiskSchema = z.object({
   title: z.string().max(80).optional(),
 });
 
+/** Katalog 21: ændringsfeed på tværs af de overvågede virksomheder. Live-endpoint ubekræftet (docs/lasso-endpoints.md). */
+export const changeFeedSchema = z
+  .object({
+    type: z.literal("LassoChangeFeed"),
+    list: z.string().max(80).optional().describe("Navnet på overvågningslisten, fx 'Kunder'. Udeladt = alle overvågede virksomheder."),
+    days: z.number().int().min(1).max(90).default(7).describe("Antal dage tilbage, standard 7 (1–90)."),
+    types: z.array(z.enum(CHANGE_TYPES)).min(1).optional().describe("Delmængde af ændringstyper; udeladt = alle."),
+    title: z.string().max(80).optional(),
+  })
+  .describe("Ændringer i de overvågede virksomheder, grupperet pr. dag, med filter på ændringstype.");
+
 export const actionsSchema = z.object({
   type: z.literal("LassoFollowUps"),
   prompts: z
@@ -453,6 +464,7 @@ export const componentSchema = z.discriminatedUnion("type", [
   w(personRolesSchema),
   w(personNetworkSchema),
   w(personRiskSchema),
+  w(changeFeedSchema),
 ]);
 export type ViewComponent = z.infer<typeof componentSchema>;
 export type ComponentType = ViewComponent["type"];
@@ -525,6 +537,7 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoPersonRoles: "full",
   LassoPersonNetwork: "half",
   LassoPersonRisk: "half",
+  LassoChangeFeed: "full",
 };
 
 /** Den bredde, en komponent får i visningen. 'stack' giver altid fuld bredde. */

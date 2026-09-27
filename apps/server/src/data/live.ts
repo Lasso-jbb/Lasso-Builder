@@ -2,6 +2,7 @@ import {
   formatCriterion,
   searchKey,
   type AuditorIndependenceVM,
+  type ChangeFeedVM,
   type AuditorRelationVM,
   type CompanyRowVM,
   type ContactPersonsVM,
@@ -20,6 +21,9 @@ import {
 import type { Config } from "../config.js";
 import {
   adaptBeneficialOwnership,
+  adaptChangeFeed,
+  adaptMonitoringItems,
+  adaptMonitoringJobs,
   adaptCompany,
   adaptContact,
   adaptContactPersons,
@@ -47,7 +51,7 @@ import { LassoApiError, type LassoClient } from "../lasso/client.js";
 import { adaptPerson, adaptPersonNetwork, adaptPersonSearch } from "../lasso/personAdapters.js";
 import { criteriaToFilters, DEFAULT_ACTIVE_STATUS_FILTER, filtersToCriteria, SERVER_SORT, type LassoFilter } from "../lasso/searchFilters.js";
 import { applyCriteria, needsFinancials, sortRows } from "./criteria-eval.js";
-import { mapLimit, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
+import { mapLimit, type ChangeFeedOptions, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
 
 /** Så længe venter kontaktblokken på hjemmesidens telefon/e-mail, før den vises uden. */
 export const CONTACT_BUDGET_MS = 2_500;
@@ -459,5 +463,45 @@ export class LiveProvider implements DataProvider {
   async findPersons(name: string, limit: number) {
     const raw = await this.client.search({ query: name, type: "person", pageSize: limit, personStatus: "all", companyStatus: "all" });
     return adaptPersonSearch(raw).slice(0, limit);
+  }
+
+  /**
+   * Katalog 21. UBEKRÆFTET (docs/lasso-endpoints.md, "Ubekræftet: overvågningsfeed"): overvågningsjobbet
+   * (listen) findes med GET /apps/monitoring/jobs, dets virksomheder med /jobs/{id}/items, og ændringerne
+   * hentes fra delta-listen GET /data/cvr/companies/delta/history for perioden og filtreres til de
+   * overvågede. Findes ingen overvågningsliste, er det en tom tilstand med forklaring, ikke en fejl.
+   */
+  async changeFeed(opts: ChangeFeedOptions): Promise<ChangeFeedVM> {
+    const days = Math.max(1, Math.min(90, opts.days));
+    const jobs = adaptMonitoringJobs(await this.client.monitoringJobs().catch((err: unknown) => {
+      if (err instanceof LassoApiError && [400, 404, 405, 501].includes(err.status)) return [];
+      throw err;
+    }));
+    const wanted = opts.list?.trim().toLowerCase();
+    const job = wanted ? jobs.find((j) => (j.name ?? "").trim().toLowerCase() === wanted) : jobs[0];
+    if (!job) {
+      const reason = wanted ? `Der er ingen overvågningsliste med navnet "${opts.list}".` : "Der overvåges ingen virksomheder endnu.";
+      return { listName: opts.list, days, entries: [], total: 0, emptyReason: reason };
+    }
+    const monitored = new Set<string>();
+    let token: string | undefined;
+    for (let page = 0; page < 20; page++) {
+      const items = adaptMonitoringItems(await this.client.monitoringItems(job.id, 500, token));
+      items.ids.forEach((id) => monitored.add(id));
+      token = items.continuationToken;
+      if (!token || items.ids.length === 0) break;
+    }
+    const now = new Date();
+    const since = new Date(now.getTime() - days * 86_400_000).toISOString();
+    const results: unknown[] = [];
+    let cToken: string | undefined;
+    for (let page = 0; page < 20; page++) {
+      const raw = (await this.client.companyUpdates({ since, pageSize: 100, cToken })) as { results?: unknown[]; continuationToken?: string; hasNextPage?: boolean };
+      results.push(...(raw.results ?? []));
+      cToken = raw.continuationToken;
+      if (!raw.hasNextPage || !cToken) break;
+    }
+    const feed = adaptChangeFeed(results, { listName: job.name ?? opts.list, days, types: opts.types, monitored, now });
+    return feed.entries.length ? feed : { ...feed, emptyReason: `Ingen ændringer i "${feed.listName ?? "overvågningen"}" de seneste ${days} dage.` };
   }
 }

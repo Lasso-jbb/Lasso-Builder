@@ -1171,3 +1171,123 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 }
 /* PersonList: navnet som link til personsiden (16) beholder rækkens vægt. */
 .lasso-row__open { font-weight: inherit; color: inherit; }
+
+/* ---------- 21 Overvågning og notifikationer (node CA3-0) ---------- */
+/* Ændringsfeed (CA9-0): overskrift 18/600 + periodevælger 32 px; filter-chips 30 px pille, 12 px; valgt = ink-kant + 600 (ingen mørkt fyld). */
+.lasso-feed-section .lasso-section__head { align-items: center; margin-bottom: var(--lasso-space-3); }
+.lasso-feed__filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: var(--lasso-space-2); }
+.lasso-feed__chip { display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border-radius: var(--lasso-radius-pill); border: 1px solid var(--lasso-border); background: var(--lasso-surface); color: var(--lasso-text-2); font-size: 12px; line-height: 16px; font-weight: 400; cursor: pointer; white-space: nowrap; }
+.lasso-feed__chip:hover { border-color: var(--lasso-icon); color: var(--lasso-text); }
+.lasso-feed__chip.is-on { border-color: var(--lasso-text); color: var(--lasso-text); font-weight: 600; }
+.lasso-feed__chip:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
+.lasso-feed { display: flex; flex-direction: column; }
+/* Dagsoverskrift som overlinje 11/600, versaler */
+.lasso-feed__day { padding: 8px 0 6px; font-size: var(--lasso-fs-label); line-height: 14px; font-weight: 600; letter-spacing: var(--lasso-ls-label); text-transform: uppercase; color: var(--lasso-muted); }
+.lasso-feed__group + .lasso-feed__group .lasso-feed__day { padding-top: 16px; }
+.lasso-feed__rows { list-style: none; margin: 0; padding: 0; }
+/* Række: 3 px venstrekant (gennemsigtig, koral ved ulæst), 12 px luft, divider-subtle under */
+.lasso-feed__row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 12px 12px 14px; border-left: 3px solid transparent; border-bottom: 1px solid var(--lasso-divider-subtle); border-radius: var(--lasso-radius); }
+.lasso-feed__row--unread { border-left-color: var(--lasso-accent); }
+/* Første ulæste får koral-soft flade, så man ser hvor man slap */
+.lasso-feed__row--first { background: var(--lasso-accent-soft); border-bottom-color: transparent; }
+.lasso-feed__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.lasso-feed__head { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; }
+.lasso-feed__name { font-size: var(--lasso-fs); line-height: 18px; font-weight: 500; color: var(--lasso-text); overflow-wrap: anywhere; }
+button.lasso-feed__name { font-weight: 500; }
+/* Ændringstype som ren tekst 12/500 i muted; kun Status i mørk rød (regel 1 og 7: ordet bærer betydningen) */
+.lasso-feed__type { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--lasso-muted); }
+.lasso-feed__type--status { color: var(--lasso-bankrupt); }
+.lasso-feed__text { font-size: var(--lasso-fs-sm); line-height: 16px; color: var(--lasso-text-2); overflow-wrap: anywhere; }
+/* Koral tekstknapper skrives med element-selektor, så de vinder over ".lasso-root button { color: inherit }" */
+button.lasso-feed__more { font-size: var(--lasso-fs-sm); color: var(--lasso-accent-text); font-weight: 500; }
+.lasso-feed-section button.lasso-more { color: var(--lasso-accent-text); }
+.lasso-feed__companies { font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-3); }
+/* Statusændring som i tidslinjen (12): fra gennemstreget, pil, til i mørk rød 500 */
+.lasso-feed__change { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: var(--lasso-fs-sm); line-height: 16px; font-weight: 500; color: var(--lasso-text-2); }
+.lasso-feed__change > [aria-hidden] { color: var(--lasso-placeholder); }
+.lasso-feed__from { text-decoration: line-through; }
+.lasso-feed__to { color: var(--lasso-bankrupt); }
+.lasso-feed__meta { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+/* Ulæst-prik 8 px koral til højre; læste rækker holder pladsen, så teksten flugter */
+.lasso-feed__dot, .lasso-feed__dotspace { flex: none; width: 8px; height: 8px; margin-top: 6px; border-radius: 4px; }
+.lasso-feed__dot { background: var(--lasso-accent); }
+
+/* Notifikationspanel (CB0-0): 380 px, radius 14, svæver (skygge), hoved 52 px, faner niveau 2, rækker 12/16 px luft, bund 44 px */
+.lasso-notif { display: flex; flex-direction: column; width: 380px; max-width: 100%; background: var(--lasso-surface); border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-xl); box-shadow: var(--lasso-shadow-pop); overflow: hidden; font-family: var(--lasso-font); color: var(--lasso-text); }
+.lasso-notif__head { display: flex; align-items: center; justify-content: space-between; gap: var(--lasso-space-2); height: 52px; padding: 0 16px; border-bottom: 1px solid var(--lasso-border); flex: none; }
+.lasso-notif__title { margin: 0; font-size: 15px; line-height: 18px; font-weight: 600; color: var(--lasso-text); }
+.lasso-notif__headactions { display: flex; align-items: center; gap: 14px; }
+button.lasso-notif__close { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--lasso-text-3); }
+button.lasso-notif__markall { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--lasso-accent-text); white-space: nowrap; }
+.lasso-notif__tabs { padding: 0 16px; border-bottom: 1px solid var(--lasso-border); flex: none; }
+.lasso-notif__tabs .lasso-tabs--l2 { gap: 16px; height: 40px; border-bottom: 0; }
+.lasso-notif__tabs .lasso-tabs--l2 .lasso-tab { height: 40px; }
+.lasso-notif__body { flex: 1; min-height: 0; overflow-y: auto; }
+.lasso-notif__state { padding: 16px; }
+.lasso-notif__list { list-style: none; margin: 0; padding: 0; }
+.lasso-notif__row { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--lasso-divider-subtle); }
+.lasso-notif__row:last-child { border-bottom: 0; }
+/* Ulæst: koral prik + panelflade (surface-2), aldrig farvet banner */
+.lasso-notif__row--unread { background: var(--lasso-surface-2); }
+.lasso-notif__dot, .lasso-notif__dotspace { flex: none; width: 8px; height: 8px; margin-top: 6px; border-radius: 4px; }
+.lasso-notif__dot { background: var(--lasso-accent); }
+.lasso-notif__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lasso-notif__text { font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-3); overflow-wrap: anywhere; }
+.lasso-notif__row--unread .lasso-notif__text { color: var(--lasso-text); }
+button.lasso-notif__text { font-weight: 400; }
+.lasso-notif__meta { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+a.lasso-notif__action, button.lasso-notif__action { flex: none; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--lasso-accent-text); text-decoration: none; padding: 0; border: 0; background: none; cursor: pointer; font-family: inherit; }
+.lasso-notif__action:hover { text-decoration: underline; }
+button.lasso-notif__all { flex: none; display: flex; align-items: center; justify-content: center; width: 100%; height: 44px; border-top: 1px solid var(--lasso-border); font-size: var(--lasso-fs-sm); line-height: 16px; font-weight: 500; color: var(--lasso-accent-text); text-align: center; }
+
+/* Klokken i topbjælken (CDW-0): 32 px flade, 18 px ikon; badge 16 px koral (tal) eller rød ("!"), 2 px hvid kant. Den eneste badge i kataloget. */
+.lasso-bell { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: var(--lasso-radius); background: transparent; color: var(--lasso-text-2); cursor: pointer; }
+.lasso-bell--unread { color: var(--lasso-text); }
+.lasso-bell:hover { background: var(--lasso-surface-muted); }
+.lasso-bell:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: -1px; }
+.lasso-bell__badge { position: absolute; top: 4px; right: 4px; display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; border: 2px solid var(--lasso-surface); background: var(--lasso-accent); color: var(--lasso-on-accent); font-size: 10px; line-height: 12px; font-weight: 700; }
+.lasso-bell__badge--important { background: var(--lasso-danger); color: var(--lasso-surface); }
+
+/* Indstillinger pr. virksomhed (CEG-0): ramme radius 10, hoved 56 px, "Overvåger"-knap 36 px i koral-soft, rækker 44 px med toggle 36×20 */
+.lasso-monitor { border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); overflow: hidden; font-family: var(--lasso-font); color: var(--lasso-text); }
+.lasso-monitor__state { padding: 16px; }
+.lasso-monitor__head { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 10px 16px; }
+.lasso-monitor--on .lasso-monitor__head { border-bottom: 1px solid var(--lasso-border); }
+.lasso-monitor__btn { flex: none; display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 13px; border-radius: var(--lasso-radius); border: 1px solid var(--lasso-border-strong); background: var(--lasso-surface); color: var(--lasso-text-2); font-size: var(--lasso-fs-sm); line-height: 16px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+.lasso-monitor__btn:hover { border-color: var(--lasso-icon); }
+.lasso-monitor__btn.is-on { background: var(--lasso-accent-soft); border-color: var(--lasso-accent-border); color: var(--lasso-accent-text); cursor: default; }
+.lasso-monitor__btn:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
+.lasso-monitor__titles { flex: 1 1 160px; min-width: 0; }
+.lasso-monitor__title { font-size: var(--lasso-fs); line-height: 18px; font-weight: 600; color: var(--lasso-text); overflow-wrap: anywhere; }
+.lasso-monitor__sub { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+/* "Stop overvågning" er en tekstknap i text-secondary, aldrig rød */
+button.lasso-monitor__stop { flex: none; font-size: var(--lasso-fs-sm); line-height: 16px; font-weight: 500; color: var(--lasso-text-3); white-space: nowrap; }
+button.lasso-monitor__stop:hover { color: var(--lasso-text); }
+.lasso-monitor__rows { list-style: none; margin: 0; padding: 0; }
+.lasso-monitor__row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 44px; padding: 0 16px; border-bottom: 1px solid var(--lasso-divider-subtle); }
+.lasso-monitor__row:last-child { border-bottom: 0; }
+.lasso-monitor__label { font-size: var(--lasso-fs-sm); line-height: 16px; color: var(--lasso-text-2); }
+.lasso-toggle { position: relative; flex: none; width: 36px; height: 20px; padding: 0; border: 0; border-radius: 10px; background: var(--lasso-border); cursor: pointer; transition: background 120ms; }
+.lasso-toggle.is-on { background: var(--lasso-accent); }
+.lasso-toggle:disabled { cursor: default; opacity: 0.6; }
+.lasso-toggle:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: 1px; }
+.lasso-toggle__knob { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 8px; background: var(--lasso-surface); transition: left 120ms; }
+.lasso-toggle.is-on .lasso-toggle__knob { left: 18px; }
+
+/* Mobil (26a): chips ruller vandret med fade, rækker mindst 44 px, panelet fylder skærmen, periodevælger under overskriften */
+@container lasso (max-width: 560px) {
+  .lasso-feed__filters { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; margin-right: calc(-1 * var(--lasso-space-3)); padding-right: var(--lasso-space-3); mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent); -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent); }
+  .lasso-feed__filters::-webkit-scrollbar { display: none; }
+  .lasso-feed__chip { flex: none; }
+  .lasso-feed__row { min-height: var(--lasso-touch-h); padding-right: 8px; }
+  .lasso-feed-section .lasso-section__head { flex-wrap: wrap; }
+  .lasso-feed-section .lasso-section__action { flex-basis: 100%; }
+  .lasso-feed-section .lasso-select--sm { width: 100%; height: var(--lasso-touch-h); }
+  /* Panelet fylder skærmen (26a: dialoger bliver bundark/fuld skærm); værten lukker det med onClose */
+  .lasso-notif { position: fixed; inset: 0; z-index: 30; width: auto; max-width: none; height: 100dvh; border-radius: 0; border: 0; box-shadow: none; }
+  .lasso-notif__row { min-height: var(--lasso-touch-h); }
+  button.lasso-notif__all { height: 48px; }
+  .lasso-monitor__head { flex-wrap: wrap; }
+  button.lasso-monitor__stop { flex: 0 0 100%; text-align: left; }
+  .lasso-monitor__row { min-height: 48px; }
+}
