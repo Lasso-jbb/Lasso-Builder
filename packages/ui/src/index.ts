@@ -51,6 +51,18 @@ export type { MonitorType, MonitorSettingsProps, MonitorBellProps } from "./comp
 export { FilterPanel, parseAmount, parseDate } from "./components/FilterPanel.js";
 export { Tabs, TabPanel, tabId, panelId } from "./components/Tabs.js";
 export type { TabItem, TabLevel, TabsProps, TabPanelProps } from "./components/Tabs.js";
+export { AppShell, Columns, Column } from "./components/AppShell.js";
+export type { AppShellProps, AppShellMobile, MobileNavItem, MobileAction } from "./components/AppShell.js";
+export { Rail } from "./components/Rail.js";
+export type { RailProps, RailGroup, RailItem } from "./components/Rail.js";
+export { TabStrip } from "./components/TabStrip.js";
+export type { TabStripProps, StripTab } from "./components/TabStrip.js";
+export { ModuleBar } from "./components/ModuleBar.js";
+export type { ModuleBarProps, ModuleAction } from "./components/ModuleBar.js";
+export { ModuleToolbar } from "./components/ModuleToolbar.js";
+export type { ModuleToolbarProps, ToolbarAction } from "./components/ModuleToolbar.js";
+export { ShellIcon } from "./components/ShellIcons.js";
+export type { ShellIconName } from "./components/ShellIcons.js";
 export { StateBox, Skeleton, Sparkline, Badge, StatusBadge, DataState, Missing, SourceLine, Section, SeverityIcon, severityWord } from "./primitives.js";
 export type { DataStateKind, DataStateProps } from "./primitives.js";
 export { specToCsv } from "./csv.js";

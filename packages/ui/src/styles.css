@@ -1441,3 +1441,142 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
   .lasso-a4-page { break-after: page; page-break-after: always; box-shadow: none; border: 0; }
   .lasso-a4-page:last-child { break-after: auto; page-break-after: auto; }
 }
+
+/* ---------- 06 Navigation og sideskabelon (node 9I4-0) ---------- */
+/* Hele siden på chrome-grå: skinne 236 til venstre, fanebjælke 56 øverst, siden som hvid flade med rundt hjørne øverst til venstre */
+.lasso-shell { display: grid; grid-template-columns: var(--lasso-rail-w) minmax(0, 1fr); grid-template-rows: 56px minmax(0, 1fr); flex: 1; min-height: 100%; background: var(--lasso-chrome); color: var(--lasso-text); }
+.lasso-shell > .lasso-rail { grid-column: 1; grid-row: 1 / 3; }
+.lasso-shell > .lasso-strip { grid-column: 2; grid-row: 1; }
+.lasso-shell > .lasso-page { grid-column: 2; grid-row: 2; }
+.lasso-mobilebar, .lasso-bottomnav { display: none; }
+/* Skinnen: navnelogo øverst i 56 px, derunder hvide grupper (radius 10, let skygge), 12 px luft i siderne */
+.lasso-rail { display: flex; flex-direction: column; gap: 16px; padding: 0 12px 24px; min-width: 0; }
+.lasso-rail__logo { display: flex; align-items: center; height: 56px; padding: 0 10px; flex: none; }
+.lasso-rail__logo-btn { display: inline-flex; padding: 0; border: 0; background: none; cursor: pointer; color: inherit; }
+.lasso-rail__wordmark { display: block; width: 62px; height: 18px; color: var(--lasso-text); }
+.lasso-rail__group { background: var(--lasso-surface); border-radius: var(--lasso-radius-lg); box-shadow: 0 1px 2px rgb(16 18 24 / 0.06); padding: 4px 4px 6px; min-width: 0; }
+.lasso-rail__group.is-collapsed { padding-bottom: 4px; }
+.lasso-rail__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; height: 40px; padding: 0 12px; border: 0; border-radius: var(--lasso-radius); background: none; cursor: pointer; color: var(--lasso-muted); font-size: var(--lasso-fs-label); line-height: 14px; font-weight: 600; letter-spacing: var(--lasso-ls-label); text-transform: uppercase; text-align: left; }
+.lasso-rail__head:hover { color: var(--lasso-text); }
+.lasso-rail__head:focus-visible, .lasso-rail__item:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: -1px; }
+.lasso-rail__chevron { flex: none; color: var(--lasso-accent); }
+.lasso-rail__list { list-style: none; margin: 0; padding: 0; }
+/* Rækker 40 px: 15 px ikon + navn 14. Aktiv = koral tekst på koral lys, aldrig mørkt fyld */
+.lasso-rail__item { display: flex; align-items: center; gap: 10px; width: 100%; height: 40px; padding: 0 12px; border: 0; border-radius: var(--lasso-radius); background: none; cursor: pointer; color: var(--lasso-text); font-size: var(--lasso-fs); line-height: 18px; font-weight: 400; text-align: left; white-space: nowrap; }
+.lasso-rail__item:hover { background: var(--lasso-surface-muted); }
+.lasso-rail__item.is-on { background: var(--lasso-accent-soft); color: var(--lasso-accent-text); font-weight: 500; }
+.lasso-rail__icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; color: var(--lasso-text-3); }
+.lasso-rail__item.is-on .lasso-rail__icon { color: var(--lasso-accent); }
+/* Gemt liste: 20 px bogstav-ikon i tynd kant, 11/600 */
+.lasso-rail__letter { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius-sm); font-size: var(--lasso-fs-label); line-height: 1; font-weight: 600; color: var(--lasso-text-2); background: var(--lasso-surface); }
+.lasso-rail__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.lasso-rail__footer { margin-top: 6px; border-top: 1px solid var(--lasso-border); border-radius: 0 0 var(--lasso-radius) var(--lasso-radius); height: 46px; }
+/* Fanebjælken 56 px på grå: faner fra skinnens kant, værktøjer yderst til højre */
+.lasso-strip { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; height: 56px; min-width: 0; padding-right: 12px; }
+.lasso-strip__tabs { display: flex; align-items: flex-end; gap: 0; min-width: 0; height: 56px; overflow-x: auto; scrollbar-width: none; }
+.lasso-strip__tabs::-webkit-scrollbar { display: none; }
+.lasso-strip__tab { flex: none; display: inline-flex; align-items: center; height: 44px; padding: 0 8px 0 16px; border-radius: var(--lasso-radius-lg) var(--lasso-radius-lg) 0 0; color: var(--lasso-text-2); }
+.lasso-strip__tab.is-on { background: var(--lasso-surface); color: var(--lasso-text); }
+.lasso-strip__tab:not(.is-on):hover { background: rgb(255 255 255 / 0.5); }
+.lasso-strip__select { display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0; border: 0; background: none; cursor: pointer; color: inherit; font-size: var(--lasso-fs); line-height: 18px; font-weight: 500; white-space: nowrap; }
+.lasso-strip__icon { display: inline-flex; color: var(--lasso-text-3); }
+.lasso-strip__tab.is-on .lasso-strip__icon { color: var(--lasso-text); }
+.lasso-strip__label { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.lasso-strip__close { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-left: 8px; padding: 0; border: 0; border-radius: var(--lasso-radius-sm); background: none; cursor: pointer; color: var(--lasso-text-3); }
+.lasso-strip__tab:not(.is-on) .lasso-strip__close { visibility: hidden; }
+.lasso-strip__tab:not(.is-on):hover .lasso-strip__close { visibility: visible; }
+.lasso-strip__close:hover { background: var(--lasso-surface-muted); color: var(--lasso-text); }
+.lasso-strip__add { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; margin: 0 0 6px 8px; padding: 0; border: 0; border-radius: var(--lasso-radius); background: none; cursor: pointer; color: var(--lasso-text-3); }
+.lasso-strip__add:hover { background: rgb(255 255 255 / 0.7); color: var(--lasso-text); }
+.lasso-strip__tools { flex: none; display: flex; align-items: center; gap: 6px; height: 56px; }
+.lasso-strip__tool { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: var(--lasso-radius); background: none; cursor: pointer; color: var(--lasso-text-2); }
+.lasso-strip__tool:hover, .lasso-strip .lasso-bell:hover { background: rgb(255 255 255 / 0.7); }
+.lasso-strip .lasso-bell__badge { border-color: var(--lasso-chrome); }
+.lasso-strip__select:focus-visible, .lasso-strip__close:focus-visible, .lasso-strip__add:focus-visible, .lasso-strip__tool:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: -1px; }
+/* Siden: hvid flade med radius 10 kun øverst til venstre */
+.lasso-page { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--lasso-surface); border-top-left-radius: var(--lasso-radius-lg); overflow: hidden; }
+/* Modulbjælken 56 px: Tabs niveau 1 strakt til 56, sidens handlinger til højre adskilt af 1 px lodrette linjer */
+.lasso-modulebar { display: flex; align-items: stretch; justify-content: space-between; gap: 16px; height: 56px; flex: none; padding-left: 24px; border-bottom: 1px solid var(--lasso-border); }
+.lasso-modulebar__tabs { flex: 1; min-width: 0; align-self: stretch; }
+.lasso-modulebar .lasso-tabs--l1 { height: 56px; border-bottom: 0; gap: 28px; }
+.lasso-modulebar .lasso-tabs--l1 .lasso-tab { height: 56px; margin-bottom: 0; }
+.lasso-modulebar .lasso-tab--more { width: 66px; }
+.lasso-modulebar__actions { flex: none; display: flex; align-items: stretch; }
+.lasso-modulebar__action { display: inline-flex; align-items: center; gap: 8px; padding: 0 22px; border: 0; border-left: 1px solid var(--lasso-border); background: none; cursor: pointer; color: var(--lasso-text-2); font-size: var(--lasso-fs); line-height: 18px; font-weight: 500; white-space: nowrap; }
+.lasso-modulebar__action:hover { background: var(--lasso-surface-2); color: var(--lasso-text); }
+.lasso-modulebar__action:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: -1px; }
+.lasso-modulebar__action--accent { color: var(--lasso-accent-text); }
+.lasso-modulebar__action--accent:hover { color: var(--lasso-accent-text); }
+.lasso-modulebar__action--accent .lasso-modulebar__action-icon { color: var(--lasso-accent); }
+.lasso-modulebar__action-icon { display: inline-flex; }
+.lasso-modulebar__caret { color: var(--lasso-text-3); margin-left: -2px; }
+/* Modulværktøjslinjen 56 px (30): primær som sekundær knap til venstre, visningsvalg til højre, tynd linje under */
+.lasso-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 56px; flex: none; padding: 0 24px; border-bottom: 1px solid var(--lasso-border); }
+.lasso-toolbar__actions { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.lasso-toolbar__controls { flex: none; display: flex; align-items: center; gap: 8px; }
+/* Kroppen: lige brede kolonner adskilt af 1 px linjer, padding 40/24, sektioner med overskrift 22/600 */
+.lasso-page-columns { display: grid; flex: 1; align-items: stretch; min-height: 0; }
+.lasso-page-columns--1 { grid-template-columns: minmax(0, 1fr); }
+.lasso-page-columns--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.lasso-page-columns--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.lasso-page-column { display: flex; flex-direction: column; gap: 40px; min-width: 0; padding: 40px 24px; }
+.lasso-page-column + .lasso-page-column { border-left: 1px solid var(--lasso-border); }
+.lasso-page-column .lasso-section__title { font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: var(--lasso-tracking-tight); }
+.lasso-page-column .lasso-section__head { margin-bottom: 20px; }
+/* Mobil topbjælke, sektionsark og bundnavigation (26a): skjult på desktop */
+.lasso-mobilebar { align-items: center; gap: 8px; height: 52px; padding: 0 8px; background: var(--lasso-surface); border-bottom: 1px solid var(--lasso-border); }
+.lasso-mobilebar__btn { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: var(--lasso-radius); background: none; cursor: pointer; color: var(--lasso-text); }
+.lasso-mobilebar__btn--empty { width: 8px; }
+.lasso-mobilebar__titles { flex: 1; min-width: 0; }
+.lasso-mobilebar__title { font-size: var(--lasso-fs); line-height: 18px; font-weight: 600; color: var(--lasso-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lasso-mobilebar__subtitle { font-size: 11px; line-height: 14px; color: var(--lasso-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lasso-mobilebar__tools { flex: none; display: flex; align-items: center; gap: 0; }
+.lasso-sheet-backdrop { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; justify-content: flex-end; background: rgb(22 24 29 / 0.45); }
+.lasso-sheet { display: flex; flex-direction: column; max-height: 80%; padding: 8px 16px 72px; background: var(--lasso-surface); border-radius: var(--lasso-radius-xl) var(--lasso-radius-xl) 0 0; overflow: auto; }
+.lasso-sheet__grip { align-self: center; width: 36px; height: 4px; margin-bottom: 14px; border-radius: 2px; background: var(--lasso-border-strong); }
+.lasso-sheet__overline { padding: 0 12px; margin-bottom: 8px; font-size: var(--lasso-fs-label); line-height: 14px; font-weight: 600; letter-spacing: var(--lasso-ls-label); text-transform: uppercase; color: var(--lasso-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lasso-sheet__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.lasso-sheet__row { display: flex; align-items: center; width: 100%; min-height: var(--lasso-touch-h); padding: 0 12px; border: 0; border-radius: var(--lasso-radius); background: none; cursor: pointer; color: var(--lasso-text); font-size: 15px; line-height: 20px; font-weight: 400; text-align: left; }
+.lasso-sheet__row.is-on { background: var(--lasso-accent-soft); color: var(--lasso-accent-text); font-weight: 500; }
+.lasso-sheet__row:disabled { color: var(--lasso-disabled); cursor: default; }
+.lasso-bottomnav { grid-template-columns: repeat(4, minmax(0, 1fr)); height: 56px; background: var(--lasso-surface); border-top: 1px solid var(--lasso-border); }
+.lasso-bottomnav__item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 0; padding: 0; border: 0; background: none; cursor: pointer; color: var(--lasso-text-3); }
+.lasso-bottomnav__item.is-on { color: var(--lasso-accent); }
+.lasso-bottomnav__icon { display: inline-flex; }
+.lasso-bottomnav__label { font-size: 11px; line-height: 14px; font-weight: 500; white-space: nowrap; }
+.lasso-bottomnav__item.is-on .lasso-bottomnav__label { color: var(--lasso-accent-text); }
+/* Tablet (560–1199): skinnen 64 px med 44 px ikoner og navn som tooltip; modulbjælken viser maks 5 + Flere (ModuleBar måler selv) */
+@container lasso (max-width: 1199px) {
+  .lasso-shell { grid-template-columns: 64px minmax(0, 1fr); }
+  .lasso-modulebar .lasso-tabs--l1 { gap: 20px; }
+  /* Handlinger med ikon bliver 48 px ikonknapper med navnet som tooltip (som 26a's hoved); uden ikon står navnet */
+  .lasso-modulebar__action { padding: 0 14px; }
+  .lasso-modulebar__action:has(.lasso-modulebar__action-icon) { width: 48px; padding: 0; justify-content: center; }
+  .lasso-modulebar__action:has(.lasso-modulebar__action-icon) > span:not(.lasso-modulebar__action-icon), .lasso-modulebar__action:has(.lasso-modulebar__action-icon) > .lasso-modulebar__caret { display: none; }
+  .lasso-rail { padding: 0 8px 16px; gap: 12px; }
+  .lasso-rail__logo { justify-content: center; padding: 0; }
+  .lasso-rail__wordmark { width: 40px; height: 12px; }
+  .lasso-rail__group { padding: 2px; }
+  .lasso-rail__head { justify-content: center; height: 32px; padding: 0; }
+  .lasso-rail__head-label, .lasso-rail__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .lasso-rail__item { justify-content: center; gap: 0; width: 44px; height: 44px; padding: 0; }
+  .lasso-rail__footer { width: 100%; height: 46px; }
+  .lasso-page-columns--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lasso-page-columns--3 > .lasso-page-column:nth-child(3) { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--lasso-border); }
+}
+/* Mobil (< 560): skinne og fanebjælke væk; topbjælke 52 + krop i én kolonne + bundnavigation 56 */
+@container lasso (max-width: 560px) {
+  .lasso-shell { display: flex; flex-direction: column; background: var(--lasso-surface); }
+  .lasso-shell > .lasso-rail, .lasso-shell > .lasso-strip { display: none; }
+  .lasso-mobilebar { display: flex; flex: none; position: sticky; top: 0; z-index: 2; }
+  .lasso-page { flex: 1; border-radius: 0; }
+  /* Modulerne ligger i "Sektioner"-arket bag burgeren, så modulbjælken skjules; sidens handlinger ligger bag "…" */
+  .lasso-modulebar { padding-left: 16px; }
+  .lasso-shell--sections .lasso-modulebar { display: none; }
+  .lasso-modulebar__actions { display: none; }
+  .lasso-toolbar { padding: 0 16px; }
+  .lasso-page-columns, .lasso-page-columns--2, .lasso-page-columns--3 { grid-template-columns: minmax(0, 1fr); }
+  .lasso-page-column, .lasso-page-columns--3 > .lasso-page-column:nth-child(3) { gap: 28px; padding: 24px 16px; border-left: 0; border-top: 1px solid var(--lasso-border); }
+  .lasso-page-column:first-child { border-top: 0; }
+  .lasso-bottomnav { display: grid; flex: none; position: sticky; bottom: 0; z-index: 2; }
+}
