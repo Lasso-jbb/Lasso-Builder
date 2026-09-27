@@ -39,6 +39,7 @@ import type {
   VetEventVM,
 } from "@lasso/spec";
 import { currencyUnit, foldChangeEntries, formatAmount, formatDate } from "@lasso/spec";
+import { adaptBeneficialOwnershipDocumented, markUnknownOwnershipNodes } from "./ownershipAdapters.js";
 
 /**
  * Oversætter Lassos rå API-svar til vores datamodeller.
@@ -324,7 +325,7 @@ function prettyRole(role: string): string {
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
-const percentFormat = new Intl.NumberFormat("da-DK", { maximumFractionDigits: 2 });
+export const percentFormat = new Intl.NumberFormat("da-DK", { maximumFractionDigits: 2 });
 
 /**
  * Ejerandel som tekst. Lasso giver intervaller som brøker: { from: 0.25, to: 0.3332 } -> "25–33,32 %".
@@ -396,7 +397,7 @@ export function applyGraphNames(g: OwnershipGraphVM, names: ReadonlyMap<string, 
 }
 
 /** Nedre grænse af en ejerandel som tal: "25–33,32 %" -> 25; ukendt -> -1. */
-function shareFloor(share: string | undefined): number {
+export function shareFloor(share: string | undefined): number {
   const m = /(\d+(?:,\d+)?)/.exec(share ?? "");
   return m ? Number(m[1]!.replace(",", ".")) : -1;
 }
@@ -975,8 +976,17 @@ function formatAmountShort(v: number, currency?: string): string {
  * (totalOwnerPercentageMin/Max) og en eller flere kæder ("paths") af
  * mellemliggende selskaber. Et "UNKNOWN"-element markerer andel, CVR ikke
  * kan følge til en person.
+ *
+ * Lassos egen dokumentation (docs/endpoints-ejerskab.md) er siden læst og beskriver en anden,
+ * bekræftet form (`{ couldNotIdentify, exemptionStatus, fallbackDescription, fallbackType,
+ * owners: [...] }` med PRÆCISE andele 0–1); den prøves derfor FØRST
+ * (`adaptBeneficialOwnershipDocumented` i ownershipAdapters.ts). Kun når raw slet ikke ligner den
+ * dokumenterede form (intet owners-array), falder vi tilbage til gættet nedenfor, så intet der
+ * virkede før i dag går i stykker.
  */
 export function adaptBeneficialOwnership(lassoId: string, raw: Json): BeneficialOwnershipVM {
+  const documented = adaptBeneficialOwnershipDocumented(lassoId, raw);
+  if (documented) return documented;
   const list = items(raw);
   const owners: BeneficialOwnerVM[] = [];
   const gaps: BeneficialOwnerGapVM[] = [];
@@ -1271,7 +1281,12 @@ export function shareRange(v: Json): [number, number] | undefined {
     return [round2(lo * scale), round2(hi * scale)];
   }
   const lo = typeof v === "number" ? v : isObj(v) ? num(v, "from", "min", "lower", "low", "value", "share") : undefined;
-  if (lo === undefined) return undefined;
+  if (lo === undefined) {
+    // Dokumenteret ejergraf-form (docs/endpoints-ejerskab.md): { label: "5-9,99%", from, to }.
+    // Mangler from/to (kun label), læses procentteksten i stedet.
+    const label = isObj(v) ? str(v, "label") : undefined;
+    return label ? shareRange(label) : undefined;
+  }
   const hi = isObj(v) ? (num(v, "to", "max", "upper", "high") ?? lo) : lo;
   const scale = hi <= 1 ? 100 : 1;
   return [round2(lo * scale), round2(hi * scale)];
@@ -1311,7 +1326,8 @@ function nodeFrom(raw: Json, id: string): OwnershipNodeVM {
     name: name ?? id,
     kind,
     cvr: get("cvr", "cvrNumber", "vat", "vatNumber") ?? (/^CVR-1-(\d{8})$/i.exec(id)?.[1]),
-    form: get("form.shortDescription", "companyForm", "legalForm", "form"),
+    // "companyType" er det dokumenterede feltnavn (docs/endpoints-ejerskab.md); de øvrige er reserve.
+    form: get("companyType", "form.shortDescription", "companyForm", "legalForm", "form"),
     status,
     statusKind: statusKind(status),
     country: cc,
@@ -1336,7 +1352,8 @@ export function adaptOwnershipGraph(
 ): OwnershipGraphVM {
   const container = isObj(raw) && isObj(at(raw, "graph")) ? at(raw, "graph") : isObj(raw) && isObj(at(raw, "data")) && !Array.isArray(at(raw, "data")) ? at(raw, "data") : raw;
   const nodes = new Map<string, OwnershipNodeVM>();
-  const nodeSource = pick(container, "nodes", "entities", "vertices", "participants", "items");
+  // "entities" er det dokumenterede feltnavn (docs/endpoints-ejerskab.md: POST /modules/relations/graph); de øvrige er reserve.
+  const nodeSource = pick(container, "entities", "nodes", "vertices", "participants", "items");
   const nodeList: [string | undefined, Json][] = Array.isArray(nodeSource)
     ? nodeSource.map((n) => [undefined, n])
     : isObj(nodeSource)
@@ -1348,7 +1365,8 @@ export function adaptOwnershipGraph(
     nodes.set(id, nodeFrom(n, id));
   }
 
-  const relList = Array.isArray(container) ? container : arr(container, "edges", "relations", "links", "relationships", "ownerships", "results");
+  // "relations" er det dokumenterede feltnavn; de øvrige er reserve.
+  const relList = Array.isArray(container) ? container : arr(container, "relations", "edges", "links", "relationships", "ownerships", "results");
   const edges: OwnershipEdgeVM[] = [];
   for (const r of relList) {
     const type = (str(r, "relationType", "type", "kind", "relation") ?? "ownership").toLowerCase();
@@ -1358,8 +1376,9 @@ export function adaptOwnershipGraph(
     if (!from.id || !to.id) continue;
     for (const ep of [from, to]) if (!nodes.has(ep.id!)) nodes.set(ep.id!, nodeFrom(ep.obj ?? {}, ep.id!));
     const props = pick(r, "properties", "attributes", "data") ?? r;
-    const share = shareRange(pick(props, "ownership", "share", "ownershipShare", "ownershipPercentage", "capital", "interval", "percentage") ?? pick(r, "ownership", "share"));
-    const votes = shareRange(pick(props, "voteRights", "votingRights", "votes", "voting") ?? pick(r, "voteRights", "votingRights"));
+    // "ownershipPercentage"/"votingrightsPercentage" er de dokumenterede feltnavne; de øvrige er reserve.
+    const share = shareRange(pick(props, "ownershipPercentage", "ownership", "share", "ownershipShare", "capital", "interval", "percentage") ?? pick(r, "ownership", "share"));
+    const votes = shareRange(pick(props, "votingrightsPercentage", "voteRights", "votingRights", "votes", "voting") ?? pick(r, "voteRights", "votingRights"));
     edges.push({
       from: from.id,
       to: to.id,
@@ -1373,7 +1392,8 @@ export function adaptOwnershipGraph(
   // Roden findes altid, også når grafen er tom.
   if (!nodes.has(rootId)) nodes.set(rootId, nodeFrom({}, rootId));
   nodes.get(rootId)!.root = true;
-  return {
+  // "{lassoId}_UNKNOWN"-knuder (docs/endpoints-ejerskab.md, unknownOwnership) får navn og flag.
+  return markUnknownOwnershipNodes({
     rootId,
     nodes: [...nodes.values()],
     edges,
@@ -1381,7 +1401,7 @@ export function adaptOwnershipGraph(
     outgoingDepth: opts.outgoingDepth,
     onDate: opts.onDate,
     fetchedAt: new Date().toISOString(),
-  };
+  });
 }
 
 /** Reserve, når ejergrafen ikke kan hentes: direkte ejere fra virksomhedsopslaget (ét lag op). */

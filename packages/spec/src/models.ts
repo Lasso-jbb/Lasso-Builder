@@ -205,6 +205,11 @@ export interface OwnershipVM {
   lassoId: string;
   owners: OwnerVM[];
   auditor?: { name: string; lassoId?: string; from?: string };
+  /**
+   * GET /{lassoId}/owners/legal: der findes ejere under 5 %, som CVR ikke registrerer enkeltvis
+   * (kun ejere over 5 % listes ved navn). Kun sat, når det dokumenterede endpoint er brugt.
+   */
+  hasOwnersUnderFivePercent?: boolean;
 }
 
 /** Reelle ejere (katalog 11, "Reelle ejere"). Endpoint ubekræftet, se docs/lasso-endpoints.md. */
@@ -385,6 +390,8 @@ export interface OwnershipNodeVM {
   equity?: number | null;
   /** Den virksomhed, diagrammet er åbnet fra. Kun én. */
   root?: boolean;
+  /** Syntetisk knude for lovligt uregistreret ejerskab under 5 % ("{lassoId}_UNKNOWN" i ejergrafen). */
+  unknown?: boolean;
 }
 
 /** Ejerskab fra `from` (ejer) til `to` (den ejede). Andele i procent 0–100 som CVR-interval. */

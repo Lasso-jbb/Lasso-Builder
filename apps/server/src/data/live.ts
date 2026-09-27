@@ -12,6 +12,7 @@ import {
   type FinancialStatementsVM,
   type LivestockVM,
   type OwnershipGraphVM,
+  type OwnershipVM,
   type ProductionUnitsVM,
   type PropertiesVM,
   type ScoreVM,
@@ -48,6 +49,7 @@ import {
   participantNames,
 } from "../lasso/adapters.js";
 import { LassoApiError, type LassoClient } from "../lasso/client.js";
+import { adaptOwnershipLegal } from "../lasso/ownershipAdapters.js";
 import { adaptPerson, adaptPersonNetwork, adaptPersonSearch } from "../lasso/personAdapters.js";
 import { criteriaToFilters, DEFAULT_ACTIVE_STATUS_FILTER, filtersToCriteria, SERVER_SORT, type LassoFilter } from "../lasso/searchFilters.js";
 import { applyCriteria, needsFinancials, sortRows } from "./criteria-eval.js";
@@ -296,8 +298,22 @@ export class LiveProvider implements DataProvider {
     return adaptPeople(await this.client.company(lassoId));
   }
 
-  async ownership(lassoId: string) {
-    return adaptOwnership(lassoId, await this.client.company(lassoId));
+  /**
+   * Legale ejere (katalog 11/09): foretrækker det dokumenterede endpoint GET /{lassoId}/owners/legal
+   * (docs/endpoints-ejerskab.md), som også giver `hasOwnersUnderFivePercent`. Svarer det med en
+   * 4xx-fejl (eller en anden form, som `adaptOwnershipLegal` ikke kan læse), falder vi tilbage til
+   * ejerne i company-full (som i dag). Revisoren er ikke en del af /owners/legal, så den hentes
+   * altid fra company-full, som klientens cache deler med resten af virksomhedsopslaget.
+   */
+  async ownership(lassoId: string): Promise<OwnershipVM> {
+    const companyRaw = this.client.company(lassoId);
+    try {
+      const legal = adaptOwnershipLegal(lassoId, await this.client.ownersLegal(lassoId));
+      if (legal) return { ...legal, auditor: adaptOwnership(lassoId, await companyRaw).auditor };
+    } catch (err) {
+      if (!(err instanceof LassoApiError) || err.status < 400 || err.status >= 500) throw err;
+    }
+    return adaptOwnership(lassoId, await companyRaw);
   }
 
   /** Katalog 10: der er endnu ingen bekræftet Lasso-kilde til en 0–100 score. "Ikke oplyst", ikke en fejl. */
