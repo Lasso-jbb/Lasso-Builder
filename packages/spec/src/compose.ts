@@ -169,7 +169,8 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
   const put = (col: 1 | 2 | 3, c: ViewComponent) => cols[col - 1]!.push({ ...c, column: col } as ViewComponent);
 
   // Risiko står øverst, men kun når den er alvorlig, eller når brugeren spørger til risiko (guide 23).
-  if (seriousRisk || focus === "risiko") top.push({ type: "LassoRiskObservations", company: id });
+  // Uden for risiko er boksen kompakt: fundene og "Se alle", så den ikke skubber svaret ned.
+  if (seriousRisk || focus === "risiko") top.push({ type: "LassoRiskObservations", company: id, ...(focus === "risiko" ? {} : { compact: true }) });
   if (fin.length > 0 && focus !== "kontakt") {
     const wanted: Metric[] = focus === "oekonomi" ? [metric, "bruttofortjeneste", "resultat", "egenkapital", "ansatte"] : [metric, "resultat", "egenkapital", "ansatte"];
     top.push({ type: "LassoKeyFigureCards", company: id, metrics: presentNow(fin, wanted).slice(0, 5) });

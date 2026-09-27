@@ -328,6 +328,8 @@ export const riskObservationsSchema = z.object({
   type: z.literal("LassoRiskObservations"),
   company: companyRef,
   title: z.string().max(80).optional(),
+  /** Uden for focus risiko: kun fundene (højst 3) og "Se alle", ingen alvorsskala, ingen relaterede udfoldet. */
+  compact: z.boolean().optional(),
 });
 
 /** Katalog 17: kreditvurdering fra Creditsafe (A–E + lokal score). Egen skala; blandes aldrig med 0–100 eller 0/25/50/100. */

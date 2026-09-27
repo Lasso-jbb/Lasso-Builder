@@ -153,7 +153,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoScoreGauge":
       return <ScoreGauge key={key} score={empty.scores[c.company]} title={c.title} error={err(`score:${c.company}`)} />;
     case "LassoRiskObservations":
-      return <RiskObservations key={key} data={empty.observations[c.company]} derived={ds ? riskSignals(c.company, empty) : undefined} error={err(`observations:${c.company}`)} title={c.title} />;
+      return <RiskObservations key={key} data={empty.observations[c.company]} derived={ds ? riskSignals(c.company, empty) : undefined} error={err(`observations:${c.company}`)} title={c.title} compact={c.compact} />;
     case "LassoCreditRating":
       return <CreditRating key={key} rating={empty.creditRatings?.[c.company]} title={c.title} error={err(`creditRating:${c.company}`)} onAction={act} />;
     case "LassoAuditorIndependence":

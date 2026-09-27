@@ -219,3 +219,16 @@ test("overblik viser ikke kreditvurderingen, heller ikke når den findes i datas
   assert.equal(serious.components.find((c) => c.type === "LassoCreditRating")?.column, 2);
   assert.ok(!composeCompany(id, company("Under konkurs"), { focus: "overblik" }).components.some((c) => c.type === "LassoCreditRating"));
 });
+
+test("risikoboksen er kompakt uden for focus risiko og fuld på risiko", () => {
+  const ds = company();
+  ds.observations[id] = { lassoId: id, observations: [{ id: "o1", title: "Ukendte ejere", severity: 50 }] };
+  for (const focus of ["overblik", "oekonomi", "regnskab", "ejerskab", "ledelse", "historik", "kontakt"] as const) {
+    const box = composeCompany(id, ds, { focus }).components.find((c) => c.type === "LassoRiskObservations");
+    assert.ok(box && box.type === "LassoRiskObservations", focus);
+    assert.equal(box.compact, true, focus);
+  }
+  const risk = composeCompany(id, ds, { focus: "risiko" }).components.find((c) => c.type === "LassoRiskObservations");
+  assert.ok(risk && risk.type === "LassoRiskObservations");
+  assert.equal(risk.compact, undefined);
+});
