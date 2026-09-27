@@ -4,6 +4,7 @@ import {
   changeFeedKey,
   CHANGE_TYPE_LABELS,
   chartSeries,
+  creditRatingText,
   currencyUnit,
   isForeignCurrency,
   formatAmount,
@@ -502,6 +503,14 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
       for (const o of sorted.slice(0, 3)) card.text(`${word(o.severity)}: ${o.title}`);
       if (sorted.length > 3) card.text(`Se ${sorted.length - 3} flere`);
     }
+  }
+
+  // Katalog 17: Creditsafe på én linje, egen skala A–E (blandes aldrig med scoren eller observationerne).
+  const credit = types.has("LassoCreditRating") ? ds.creditRatings?.[lassoId] : undefined;
+  if (credit) {
+    card.section("Kreditvurdering (Creditsafe)");
+    const line = creditRatingText(credit);
+    card.text(line.charAt(0).toUpperCase() + line.slice(1));
   }
 
   const auditorIndependence = types.has("LassoAuditorIndependence") ? ds.auditorIndependence[lassoId] : undefined;

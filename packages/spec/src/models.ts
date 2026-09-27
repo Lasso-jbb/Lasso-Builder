@@ -513,6 +513,48 @@ export interface ScoreVM {
   updated?: string;
 }
 
+/* ---------- Katalog 17: kreditvurdering fra Creditsafe (egen skala A–E, blandes aldrig med 0–100) ---------- */
+
+/** Creditsafes internationale score: A (meget lav risiko) til E (meget høj risiko). */
+export const CREDIT_SCORES = ["A", "B", "C", "D", "E"] as const;
+export type CreditScore = (typeof CREDIT_SCORES)[number];
+
+/** Én vurdering fra Creditsafe (GET /data/creditsafe/rating/{cvr}, felterne `current` og `previous`). */
+export interface CreditAssessment {
+  creditMax?: number | null;
+  /** ISO-valuta for kreditmaksimum, fx "DKK". */
+  creditCurrency?: string;
+  internationalScore?: CreditScore;
+  /** Creditsafes egen tekst til bogstavet, fx "Low". */
+  internationalDescription?: string;
+  localScore?: number | null;
+  /** Creditsafes tekst til den lokale score, fx "Low Risk". */
+  localDescription?: string;
+}
+
+/**
+ * Kreditvurdering fra Creditsafe via Lasso. Kræver Creditsafe-tilføjelsen til Lasso-abonnementet;
+ * uden den er tilstanden "locked". Modellen beder aldrig om en ny beregning (skipCache), fordi det
+ * koster en kredit; se docs/endpoints-creditsafe.md.
+ */
+export interface CreditRatingVM {
+  lassoId: string;
+  cvr?: string;
+  /** Ingen adgang (tilkøb), ikke beregnet endnu, eller fejl. */
+  state: "ok" | "locked" | "unavailable" | "error";
+  reason?: string;
+  current?: CreditAssessment;
+  previous?: CreditAssessment;
+  /** Dato for seneste ændring af vurderingen (ÅÅÅÅ-MM-DD). */
+  latestChange?: string;
+  /** Link til Creditsafes kreditrapport som PDF (kun http/https). */
+  pdfUrl?: string;
+  source: string;
+  updated?: string;
+  /** Cache hos Lasso: 24 timer pr. organisation; ny beregning koster en kredit og tager 5–45 s. */
+  cachedUntil?: string;
+}
+
 /* ---------- Katalog 21: overvågning og notifikationer ---------- */
 
 /** Ændringstyper i overvågningsfeedet, i den rækkefølge typefilteret og indstillingerne viser dem. */
@@ -619,6 +661,8 @@ export interface Dataset {
   searches: Record<string, SearchResultVM>;
   scores: Record<string, ScoreVM>;
   observations: Record<string, ObservationsVM>;
+  /** Katalog 17: kreditvurdering fra Creditsafe pr. Lasso-ID. */
+  creditRatings: Record<string, CreditRatingVM>;
   auditorIndependence: Record<string, AuditorIndependenceVM>;
   /** Katalog 20: produktionsenheder, ejendomme/BBR og CHR, slået op pr. Lasso-ID. */
   productionUnits: Record<string, ProductionUnitsVM>;
@@ -653,6 +697,7 @@ export function emptyDataset(source: DataSourceKind): Dataset {
     searches: {},
     scores: {},
     observations: {},
+    creditRatings: {},
     auditorIndependence: {},
     productionUnits: {},
     properties: {},

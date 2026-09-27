@@ -330,6 +330,13 @@ export const riskObservationsSchema = z.object({
   title: z.string().max(80).optional(),
 });
 
+/** Katalog 17: kreditvurdering fra Creditsafe (A–E + lokal score). Egen skala; blandes aldrig med 0–100 eller 0/25/50/100. */
+export const creditRatingSchema = z.object({
+  type: z.literal("LassoCreditRating"),
+  company: companyRef,
+  title: z.string().max(80).optional().describe("Standard: 'Kreditvurdering'."),
+});
+
 export const productionUnitsSchema = z.object({
   type: z.literal("LassoProductionUnits"),
   company: companyRef,
@@ -449,6 +456,7 @@ export const componentSchema = z.discriminatedUnion("type", [
   w(cashFlowSchema),
   w(scoreGaugeSchema),
   w(riskObservationsSchema),
+  w(creditRatingSchema),
   w(auditorIndependenceSchema),
   w(productionUnitsSchema),
   w(propertiesSchema),
@@ -522,6 +530,7 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoCashFlow: "full",
   LassoScoreGauge: "quarter",
   LassoRiskObservations: "full",
+  LassoCreditRating: "half",
   LassoAuditorIndependence: "full",
   LassoProductionUnits: "full",
   LassoProperties: "full",

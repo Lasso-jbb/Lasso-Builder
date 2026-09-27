@@ -49,6 +49,7 @@ import {
 } from "../lasso/adapters.js";
 import { LassoApiError, type LassoClient } from "../lasso/client.js";
 import { adaptPerson, adaptPersonNetwork, adaptPersonSearch } from "../lasso/personAdapters.js";
+import { loadCreditRating } from "../lasso/creditAdapters.js";
 import { criteriaToFilters, DEFAULT_ACTIVE_STATUS_FILTER, filtersToCriteria, SERVER_SORT, type LassoFilter } from "../lasso/searchFilters.js";
 import { applyCriteria, needsFinancials, sortRows } from "./criteria-eval.js";
 import { mapLimit, type ChangeFeedOptions, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
@@ -325,6 +326,14 @@ export class LiveProvider implements DataProvider {
   /** Formen for /modules/observations er ubekræftet; se docs/lasso-endpoints.md. */
   async observations(lassoId: string) {
     return adaptObservations(lassoId, await this.client.observations(lassoId));
+  }
+
+  /**
+   * Katalog 17: Creditsafe via Lasso (docs/endpoints-creditsafe.md). Aldrig skipCache: Lassos 24-timers cache og
+   * klientens egen cache bruges altid. 401/403 = låst, 404/tomt = ikke beregnet, timeout = beregner stadig.
+   */
+  async creditRating(lassoId: string) {
+    return loadCreditRating(lassoId, (cvr) => this.client.creditsafeRating(cvr));
   }
 
   /**

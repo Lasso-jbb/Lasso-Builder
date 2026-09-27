@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { composeCompany, shortCompanyName } from "./compose.js";
+import { composeCompany, composeProbe, shortCompanyName } from "./compose.js";
 import { composePerson } from "./composePerson.js";
 import { emptyDataset, type Dataset, type FinancialYear } from "./models.js";
 import { mergedObservations, riskSignals } from "./riskSignals.js";
 import { effectiveMetric, mainMetric } from "./series.js";
+import { widthOf } from "./spec.js";
 
 const id = "CVR-1-12345678";
 const NOW = new Date("2026-09-26T12:00:00Z");
@@ -169,4 +170,52 @@ test("personsiden har opfølgninger (review P2-5)", () => {
   assert.ok(f && f.type === "LassoFollowUps");
   assert.ok(f.prompts.some((p) => /Mette/.test(p.prompt)));
   assert.equal(composePerson(pid, ds, { followUps: false }).components.some((c) => c.type === "LassoFollowUps"), false);
+});
+
+/** Creditsafe-vurdering til komponisten (katalog 17). */
+function withCredit(ds: Dataset, state: "ok" | "locked" = "ok"): Dataset {
+  ds.creditRatings[id] =
+    state === "ok"
+      ? { lassoId: id, state, source: "Creditsafe via Lasso", current: { internationalScore: "B", creditMax: 250_000, creditCurrency: "DKK", localScore: 62 }, previous: { internationalScore: "C" } }
+      : { lassoId: id, state, reason: "Kræver Creditsafe-tilføjelse til Lasso-abonnementet", source: "Creditsafe via Lasso" };
+  return ds;
+}
+
+test("Creditsafe hentes kun til focus risiko: overblik og de andre fokus koster aldrig en kredit", () => {
+  assert.ok(composeProbe(id, "risiko").components.some((c) => c.type === "LassoCreditRating"));
+  for (const focus of ["overblik", "oekonomi", "regnskab", "ejerskab", "ledelse", "historik", "kontakt"] as const) {
+    assert.ok(!composeProbe(id, focus).components.some((c) => c.type === "LassoCreditRating"), focus);
+  }
+});
+
+test("risiko viser kreditvurderingen (½) øverst i kolonne 2 ved siden af oplysningerne, også låst", () => {
+  for (const state of ["ok", "locked"] as const) {
+    const spec = composeCompany(id, withCredit(company(), state), { focus: "risiko" });
+    const credit = spec.components.find((c) => c.type === "LassoCreditRating");
+    assert.ok(credit, state);
+    assert.equal(credit.column, 2);
+    assert.equal(widthOf(credit, spec.layout), "half");
+    // Risikoboksen står stadig øverst i fuld bredde; Creditsafe er et eget element, aldrig en del af måleren.
+    assert.equal(spec.components[1]!.type, "LassoRiskObservations");
+    assert.ok(!spec.components.some((c) => c.type === "LassoScoreGauge"));
+    const col2 = spec.components.filter((c) => c.column === 2);
+    assert.equal(col2[0]!.type, "LassoCreditRating");
+  }
+  // En hentningsfejl vises også (fejltilstand med "Prøv igen"), men uden data eller fejl står den ikke.
+  const failed = company();
+  failed.errors[`creditRating:${id}`] = "Lasso API svarede ikke i tide";
+  assert.ok(composeCompany(id, failed, { focus: "risiko" }).components.some((c) => c.type === "LassoCreditRating"));
+  assert.ok(!composeCompany(id, company(), { focus: "risiko" }).components.some((c) => c.type === "LassoCreditRating"));
+});
+
+test("overblik viser ikke kreditvurderingen, heller ikke når den findes i datasættet", () => {
+  const spec = composeCompany(id, withCredit(company()), { focus: "overblik" });
+  assert.ok(!spec.components.some((c) => c.type === "LassoCreditRating"));
+  for (const focus of ["oekonomi", "ejerskab", "ledelse", "historik", "kontakt"] as const) {
+    assert.ok(!composeCompany(id, withCredit(company()), { focus }).components.some((c) => c.type === "LassoCreditRating"), focus);
+  }
+  // Undtagelse: et alvorligt risikosignal OG en allerede hentet vurdering (overblikket henter den aldrig selv).
+  const serious = composeCompany(id, withCredit(company("Under konkurs")), { focus: "overblik" });
+  assert.equal(serious.components.find((c) => c.type === "LassoCreditRating")?.column, 2);
+  assert.ok(!composeCompany(id, company("Under konkurs"), { focus: "overblik" }).components.some((c) => c.type === "LassoCreditRating"));
 });

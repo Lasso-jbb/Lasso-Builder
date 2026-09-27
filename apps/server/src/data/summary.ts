@@ -3,6 +3,7 @@ import {
   currencyUnit,
   isForeignCurrency,
   chartSeries,
+  creditRatingText,
   formatAmount,
   formatCriterion,
   formatDate,
@@ -97,6 +98,11 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
       } else {
         lines.push(risk.lasso?.checkedAt ? "Risiko: Lasso har gennemgået virksomheden og fandt intet at bemærke." : "Risiko: ingen observationer fra Lasso og ingen signaler i status, regnskab og ledelse.");
       }
+    }
+    if (c.type === "LassoCreditRating") {
+      // Creditsafes skala A–E; nævnes aldrig sammen med Lassos 0–100-score.
+      const r = ds.creditRatings?.[c.company];
+      if (r) lines.push(`Kreditvurdering (Creditsafe): ${creditRatingText(r)}.`);
     }
     if (c.type === "LassoPersonList") {
       const people = ds.people[c.company] ?? [];
