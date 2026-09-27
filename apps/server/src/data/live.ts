@@ -11,6 +11,7 @@ import {
   type FinancialsVM,
   type FinancialStatementsVM,
   type LivestockVM,
+  type ObservationsVM,
   type OwnershipGraphVM,
   type OwnershipVM,
   type ProductionUnitsVM,
@@ -53,6 +54,7 @@ import {
 } from "../lasso/adapters.js";
 import { describeShape, LassoApiError, type LassoClient } from "../lasso/client.js";
 import { adaptOwnershipLegal } from "../lasso/ownershipAdapters.js";
+import { adaptLassoNews, mergeNews } from "../lasso/riskNewsAdapters.js";
 import { adaptPerson, adaptPersonNetwork, adaptPersonSearch } from "../lasso/personAdapters.js";
 import { adaptChrLivestock, adaptLiveNumber, adaptReportAnalysisSection, buildProductionUnits } from "../lasso/unitAdapters.js";
 import { loadCreditRating } from "../lasso/creditAdapters.js";
@@ -68,6 +70,14 @@ export const TEXT_SECTIONS_BUDGET_MS = 8_000;
 
 /** Så længe venter kreditvurderingen på Creditsafe (5–45 s ved live beregning), før "beregner stadig" vises. */
 export const CREDIT_BUDGET_MS = 12_000;
+
+/**
+ * Så længe venter en visning på risikoobservationer, før resten hellere må vises uden. Målt
+ * svartid for det største selskab (Novo Nordisk, 27.09.2026): 11,8 s, så budgettet ligger over
+ * det. Over budgettet giver en fejl (med "Prøv igen"), i stedet for at hele siden venter; kaldet
+ * kører videre i baggrunden og ligger klar i klientens cache til næste forsøg (som CONTACT_BUDGET_MS).
+ */
+export const OBSERVATIONS_BUDGET_MS = 14_000;
 
 /** Venter højst `ms` på et løfte; derefter undefined (løftet kører videre og fylder klientens cache). */
 async function withinBudget<T>(p: Promise<T | undefined>, ms: number): Promise<T | undefined> {
@@ -366,13 +376,58 @@ export class LiveProvider implements DataProvider {
     return adaptTimeline(lassoId, co, adaptPeople(co), financials.years);
   }
 
+  /**
+   * Katalog 12: nyheder. Lasso News (POST /modules/news) hentes altid; Paqle (GET
+   * /data/paqle/{lassoId}/news) kun når kontoen har adgang til Paqle-tilføjelsen. Fejler den ene
+   * kilde (manglende adgang, 4xx/5xx, timeout), vises blot det, den anden kilde leverede — se
+   * docs/endpoints-risiko-nyheder.md. Flettet efter tid (nyeste først) og skåret til `limit`.
+   */
   async news(lassoId: string, limit: number) {
-    return adaptNews(lassoId, await this.client.news(lassoId), limit);
+    const [lassoItems, paqleItems] = await Promise.all([
+      safe(() => this.client.lassoNews([lassoId], { limit })).then((raw) => (raw === undefined ? [] : adaptLassoNews(raw))),
+      safe(() => this.client.news(lassoId)).then((raw) => (raw === undefined ? [] : adaptNews(lassoId, raw, Number.MAX_SAFE_INTEGER).items)),
+    ]);
+    return mergeNews(
+      lassoId,
+      [
+        { items: lassoItems, label: "Lasso News" },
+        { items: paqleItems, label: "Paqle" },
+      ],
+      limit,
+    );
   }
 
-  /** Formen for /modules/observations er ubekræftet; se docs/lasso-endpoints.md. */
-  async observations(lassoId: string) {
-    return adaptObservations(lassoId, await this.client.observations(lassoId));
+  /**
+   * Katalog 17: risikoobservationer (Firmaindsigt). Svarformen er bekræftet mod api.lassox.com
+   * 27.09.2026 (docs/endpoints-risiko-nyheder.md). Kaldet kan tage flere sekunder for store
+   * selskaber (11,8 s målt for Novo Nordisk); et budget forhindrer, at hele visningen venter så
+   * længe — kaldet kører videre i baggrunden og ligger klar i klientens cache til næste forsøg,
+   * og RiskObservations.tsx viser sin fejltilstand med "Prøv igen" i stedet. Indirekte
+   * observationer under `relatedObservations` (personer OG selskaber) navngives bedst muligt
+   * ud fra entitetens eget CVR-opslag.
+   */
+  async observations(lassoId: string, budgetMs = OBSERVATIONS_BUDGET_MS) {
+    const raw = await withinBudget(this.client.observations(lassoId), budgetMs);
+    if (raw === undefined) {
+      const err = new Error(`Observationer svarede ikke inden for ${Math.round(budgetMs / 1000)} s`);
+      err.name = "TimeoutError";
+      throw err;
+    }
+    const vm = adaptObservations(lassoId, raw);
+    return this.withRelatedNames(vm);
+  }
+
+  /** Bedste forsøg på at navngive de personer og selskaber, `related` (relatedObservations) peger på. */
+  private async withRelatedNames(vm: ObservationsVM): Promise<ObservationsVM> {
+    if (!vm.related?.length) return vm;
+    const toName = vm.related.slice(0, 12);
+    const named = await mapLimit(toName, 4, async (entity) => {
+      const raw = await safe(() => this.client.company(entity.lassoId));
+      const name = raw === undefined ? undefined : str(raw, "name", "fullName", "names.0");
+      return name ? { ...entity, name } : entity;
+    });
+    const byId = new Map(named.map((p) => [p.lassoId, p] as const));
+    return { ...vm, related: vm.related.map((p) => byId.get(p.lassoId) ?? p) };
   }
 
   /**

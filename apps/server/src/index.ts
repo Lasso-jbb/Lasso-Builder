@@ -542,7 +542,7 @@ export async function probeEndpointShapes(client: LassoClient, lassoId: string, 
     ["paqle/news", () => client.get(`data/paqle/${encodeURIComponent(lassoId)}/news`), ["news"], 700],
     ["livenumber", () => client.get(`data/livenumber/${encodeURIComponent(lassoId)}`), ["numbers"], 700],
     ["CHR/livestock", () => client.get(`data/CHR/livestock/${cvr}`, { onlyCurrent: "true" }), [], 3500],
-    ["reportanalysis", () => client.post(`modules/reportanalysis/${encodeURIComponent(lassoId)}`, {}, { timeoutMs: 30_000 }), [], 600],
+    ["reportanalysis", () => client.post(`modules/reportanalysis/${encodeURIComponent(lassoId)}`, {}, {}, { timeoutMs: 30_000 }), [], 600],
   ];
   for (const [name, fn, paths, maxChars] of calls) {
     const t0 = Date.now();

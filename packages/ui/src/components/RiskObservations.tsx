@@ -13,15 +13,42 @@ const SCALE: { severity: Severity; desc: string }[] = [
 /** Store lister foldes sammen efter de første (regel 9). */
 const COLLAPSED_ROWS = 6;
 
+/** "Ikke tilgængelig"-rækker er ikke et risikofund og tælles ikke med i sammenfatningen. */
 function summarize(rows: readonly ObservationRowVM[]): string {
-  const important = rows.filter((r) => r.severity === 100).length;
-  const possible = rows.filter((r) => r.severity === 50).length;
-  const info = rows.filter((r) => r.severity === 25 || r.severity === 0).length;
+  const counted = rows.filter((r) => !r.notAvailable);
+  const important = counted.filter((r) => r.severity === 100).length;
+  const possible = counted.filter((r) => r.severity === 50).length;
+  const info = counted.filter((r) => r.severity === 25 || r.severity === 0).length;
   const parts: string[] = [];
   if (important) parts.push(`${important} vigtig${important === 1 ? "" : "e"}`);
   if (possible) parts.push(`${possible} mulige`);
   if (info) parts.push(`${info} til orientering`);
   return parts.join(", ");
+}
+
+/**
+ * Én observationsrække, brugt både til virksomhedens egne observationer og til "Vedrører"
+ * (relatedObservations pr. person eller selskab). `notAvailable` (Lasso kunne ikke beregne
+ * observationen) vises som ren tekst i muted, uden badge eller farve (guide 23 regel 1 og 7).
+ */
+function ObservationRow({ o }: { o: ObservationRowVM }) {
+  return (
+    <li className={`lasso-observation ${!o.notAvailable && o.severity === 100 ? "lasso-observation--important" : ""}`}>
+      <span className="lasso-sev-icon-wrap">{o.notAvailable ? <span className="lasso-sev-dot" aria-hidden="true" /> : <SeverityIcon severity={o.severity} />}</span>
+      <div className="lasso-row__main">
+        <div className="lasso-observation__head">
+          {o.notAvailable ? (
+            <span className="lasso-observation__tag">Ikke tilgængelig</span>
+          ) : (
+            <span className={`lasso-observation__tag lasso-sev-text--${o.severity}`}>{o.severity === 0 ? "—" : severityWord(o.severity)}</span>
+          )}
+          <span className="lasso-observation__title">{o.title}</span>
+        </div>
+        {o.detail ? <div className="lasso-row__sub">{o.detail}</div> : null}
+        {o.source || o.date ? <div className="lasso-observation__meta">{[o.source, o.date ? formatDate(o.date) : null].filter(Boolean).join(", ")}</div> : null}
+      </div>
+    </li>
+  );
 }
 
 /**
@@ -51,8 +78,9 @@ export function RiskObservations({ data, derived, error, title }: { data?: Obser
   }
 
   const rows = [...own, ...extra].sort((a, b) => b.severity - a.severity);
+  const related = data?.related ?? [];
 
-  if (rows.length === 0) {
+  if (rows.length === 0 && related.length === 0) {
     const checked = (derived?.checked ?? []).map((c) => CHECKED_WORDS[c] ?? c);
     const ours = checked.length ? ` ${checked.length > 1 ? `${checked.slice(0, -1).join(", ")} og ${checked.at(-1)}` : checked[0]} giver ingen risikosignaler.` : "";
     const reason = data?.checkedAt
@@ -85,33 +113,41 @@ export function RiskObservations({ data, derived, error, title }: { data?: Obser
         ))}
       </ul>
 
-      <p className="lasso-observations__summary">{summarize(rows)}</p>
-
-      <ul className="lasso-rows lasso-observations__list">
-        {visible.map((o) => (
-          <li key={o.id} className={`lasso-observation ${o.severity === 100 ? "lasso-observation--important" : ""}`}>
-            <span className="lasso-sev-icon-wrap">
-              <SeverityIcon severity={o.severity} />
-            </span>
-            <div className="lasso-row__main">
-              <div className="lasso-observation__head">
-                <span className={`lasso-observation__tag lasso-sev-text--${o.severity}`}>{o.severity === 0 ? "—" : severityWord(o.severity)}</span>
-                <span className="lasso-observation__title">{o.title}</span>
-              </div>
-              {o.detail ? <div className="lasso-row__sub">{o.detail}</div> : null}
-              {o.source || o.date ? (
-                <div className="lasso-observation__meta">{[o.source, o.date ? formatDate(o.date) : null].filter(Boolean).join(", ")}</div>
-              ) : null}
-            </div>
-          </li>
-        ))}
-      </ul>
-      {foldable ? (
-        <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-          {expanded ? "Vis færre" : `Se alle ${rows.length}`}
-        </button>
+      {rows.length > 0 ? (
+        <>
+          <p className="lasso-observations__summary">{summarize(rows)}</p>
+          <ul className="lasso-rows lasso-observations__list">
+            {visible.map((o) => (
+              <ObservationRow key={o.id} o={o} />
+            ))}
+          </ul>
+          {foldable ? (
+            <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+              {expanded ? "Vis færre" : `Se alle ${rows.length}`}
+            </button>
+          ) : null}
+          {extra.length > 0 ? <p className="lasso-row__sub">Afledt af CVR-status, regnskab og ledelse, hvor Lasso ingen observation har.</p> : null}
+        </>
       ) : null}
-      {extra.length > 0 ? <p className="lasso-row__sub">Afledt af CVR-status, regnskab og ledelse, hvor Lasso ingen observation har.</p> : null}
+
+      {related.length > 0 ? (
+        <div className="lasso-observations__related">
+          <p className="lasso-section__subtitle">Vedrører</p>
+          {related.map((person) => (
+            <div key={person.lassoId}>
+              <p className="lasso-row__sub">
+                <strong>{person.name ?? person.lassoId}</strong>
+              </p>
+              <ul className="lasso-rows lasso-observations__list">
+                {person.rows.map((o) => (
+                  <ObservationRow key={o.id} o={o} />
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       {data?.checkedAt ? <SourceLine source={data.sources?.join(", ") ?? "Lasso"} updated={data.checkedAt} /> : null}
     </Section>
   );

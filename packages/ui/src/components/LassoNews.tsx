@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { formatDate, type NewsItemVM, type NewsVM } from "@lasso/spec";
-import { DataState, Section, stateForError } from "../primitives.js";
+import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
 
 /** "2026-04-15" -> "for 3 dage siden" under 7 dage gammel, ellers "15.04.2026". */
 function relativeOrDate(iso: string | undefined): string {
@@ -37,6 +37,19 @@ function Excerpt({ text, mention }: { text: string; mention?: string }) {
   );
 }
 
+/**
+ * Paqles egne tekstsegmenter (`headlineSegments`/`extractSegments`): firmanavnet er allerede
+ * udpeget af Lasso (`highlight:true`), så det bruges i stedet for et gæt på tekstsøgning
+ * (regel 17: navn i fed, aldrig koral eller farvet baggrund).
+ */
+function Segments({ segments }: { segments: { text: string; highlight?: boolean }[] }) {
+  return (
+    <>
+      {segments.map((s, i) => (s.highlight ? <strong key={i}>{s.text}</strong> : <span key={i}>{s.text}</span>))}
+    </>
+  );
+}
+
 function SourceMark({ source, url }: { source: string; url?: string }) {
   const [broken, setBroken] = useState(false);
   const src = broken ? null : favicon(url);
@@ -56,19 +69,20 @@ function SourceMark({ source, url }: { source: string; url?: string }) {
 }
 
 function NewsRow({ item, mention }: { item: NewsItemVM; mention?: string }) {
+  // Typeetiket og tidspunkt er ren tekst, komma-adskilt (regel 6: ingen midterprikker).
+  const meta = [item.typeLabel, relativeOrDate(item.time), item.language].filter(Boolean).join(", ");
   const body = (
     <>
       <div className="lasso-news__head">
         <SourceMark source={item.source} url={item.url} />
-        <span className="lasso-news__time">
-          {relativeOrDate(item.time)}
-          {item.language ? `, ${item.language}` : ""}
-        </span>
+        <span className="lasso-news__time">{meta}</span>
       </div>
-      <div className="lasso-news__headline">{item.headline}</div>
+      <div className="lasso-news__headline">{item.headlineSegments ? <Segments segments={item.headlineSegments} /> : item.headline}</div>
       {item.excerpt ? (
-        <div className="lasso-row__sub">
-          <Excerpt text={item.excerpt} mention={mention} />
+        // Lasso News' content kan have linjeskift fra en HTML-liste (<li>); white-space: pre-line
+        // viser dem, uden at gå via en stylesheet-ændring (uddraget er ellers almindelig løbetekst).
+        <div className="lasso-row__sub" style={{ whiteSpace: "pre-line" }}>
+          {item.extractSegments ? <Segments segments={item.extractSegments} /> : <Excerpt text={item.excerpt} mention={mention} />}
         </div>
       ) : null}
     </>
@@ -84,9 +98,10 @@ function NewsRow({ item, mention }: { item: NewsItemVM; mention?: string }) {
 }
 
 /**
- * Nyheder (katalog 12, "Nyheder"). Kildemærke = kildens eget favicon (fallback:
- * neutralt globus-ikon, aldrig et bogstav). Relativ tid under 7 dage, ellers
- * dato. Virksomheden fremhæves i uddraget med fed skrift, aldrig koral.
+ * Nyheder (katalog 12, "Nyheder"). To kilder, Lasso News og Paqle, flettet og sorteret efter tid
+ * (apps/server/src/data/live.ts). Kildemærke = kildens eget favicon (fallback: neutralt
+ * globus-ikon, aldrig et bogstav). Relativ tid under 7 dage, ellers dato. Virksomheden
+ * fremhæves i overskrift og uddrag med fed skrift, aldrig koral (regel 17).
  */
 export function LassoNews({ news, companyName, limit, error }: { news?: NewsVM; companyName?: string; limit?: number; error?: string }) {
   const title = "Nyheder";
@@ -120,6 +135,7 @@ export function LassoNews({ news, companyName, limit, error }: { news?: NewsVM; 
           {expanded ? "Vis færre" : `Se alle ${news.items.length} nyheder`}
         </button>
       ) : null}
+      {news.sources?.length ? <SourceLine source={news.sources.join(" og ")} updated={news.updatedAt} /> : null}
     </Section>
   );
 }
