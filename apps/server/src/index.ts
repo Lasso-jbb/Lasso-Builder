@@ -17,6 +17,7 @@ import {
   searchQuerySchema,
   toLassoId,
   viewSpecSchema,
+  type Dataset,
   type Focus,
   type Metric,
 } from "@lasso/spec";
@@ -27,10 +28,10 @@ import { entitySnapshot, savedPageVM } from "./pages/resolveExtras.js";
 import { createSavedPageStore, pageKindOf, SavedPageError, validateSavedPage, type SavedPageStore } from "./pages/store.js";
 import { hasLassoCredentials, isSet, loadConfig, type Config } from "./config.js";
 import { createProvider, type DataProvider } from "./data/index.js";
-import { errorMessage, normalizeSpec, resolveSpec } from "./data/resolve.js";
+import { datasetEntityIds, errorMessage, normalizeSpec, resolveSpec } from "./data/resolve.js";
 import { findCompany } from "./data/lookup.js";
 import { summarizeView } from "./data/summary.js";
-import { adaptSearch, at } from "./lasso/adapters.js";
+import { adaptSearch, at, participantFieldNames } from "./lasso/adapters.js";
 import { describeShape, LassoApiError, LassoClient, probeAuthVariants, type Query } from "./lasso/client.js";
 import { createMcpServer } from "./mcp/server.js";
 import { createViewStore, SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "./views/store.js";
@@ -228,6 +229,13 @@ export function createApp({ config, client, provider, store, pages }: AppDeps) {
     }
   });
 
+  /**
+   * Links på de delte sider: et signeret /e/-link pr. virksomhed og person i datasættet (navnene
+   * på siden), så den delte side kan åbne dem uden chat. Kun ID'er, siden selv viser, får et link,
+   * så signaturen stadig afgør, hvilke opslag et link giver adgang til.
+   */
+  const pageLinks = (dataset: Dataset): Record<string, string> => Object.fromEntries(datasetEntityIds(dataset).map((id) => [id, entityLink(config, id)]));
+
   // --- Delt side: specen hentes, data hentes friskt, render-appen tegner -----
   app.get("/v/:org/:slug", async (req, res) => {
     const view = await store.get(req.params.org, req.params.slug);
@@ -247,7 +255,7 @@ export function createApp({ config, client, provider, store, pages }: AppDeps) {
     res
       .type("html")
       .set("Cache-Control", "no-store")
-      .send(injectBoot(html, { mode: "web", spec: view.spec, dataset, url, name: view.name, version: view.version, updatedAt: view.updatedAt }, view.name ?? view.spec.title));
+      .send(injectBoot(html, { mode: "web", spec: view.spec, dataset, url, name: view.name, version: view.version, updatedAt: view.updatedAt, links: pageLinks(dataset) }, view.name ?? view.spec.title));
   });
 
   // --- Hostede sider for én virksomhed eller person (signerede links, se web/links.ts) ----
@@ -278,7 +286,7 @@ export function createApp({ config, client, provider, store, pages }: AppDeps) {
     const dataset = await resolveSpec(composeProbe(lassoId, opts.focus), provider);
     const metric = opts.metric ?? mainMetric(dataset.financials[lassoId]?.years ?? []);
     const spec = composeCompany(lassoId, dataset, { focus: opts.focus, years: opts.years, chartMetric: metric, name, followUps: false });
-    sendPage(req, res, html, { spec, dataset, name }, name);
+    sendPage(req, res, html, { spec, dataset, name, links: pageLinks(dataset) }, name);
   }
 
   /** Personsiden (katalog 16). */
@@ -287,7 +295,7 @@ export function createApp({ config, client, provider, store, pages }: AppDeps) {
     const person = dataset.persons[lassoId];
     if (!person) return failPage(res, html, 404, `Personen kunne ikke hentes: ${dataset.errors[`person:${lassoId}`] ?? "ukendt fejl"}`);
     const spec = composePerson(lassoId, dataset, { name: person.name, followUps: false });
-    sendPage(req, res, html, { spec, dataset, name: person.name }, person.name);
+    sendPage(req, res, html, { spec, dataset, name: person.name, links: pageLinks(dataset) }, person.name);
   }
 
   app.get("/k/:cvr", async (req, res) => {
@@ -561,6 +569,13 @@ function scalarsOf(raw: unknown): string {
  */
 export async function probeEndpointShapes(client: LassoClient, lassoId: string, log: (label: string, v: unknown) => void): Promise<void> {
   const cvr = cvrFromLassoId(lassoId) ?? "";
+  // Feltnavnene (kun nøgler, aldrig værdier) på første medlem af ledelse, bestyrelse og stakeholders
+  // i company-full, så det kan ses, hvor personernes Lasso-ID står (adaptPeople/participantLassoId).
+  try {
+    log("felter company-full deltagere", participantFieldNames(await client.company(lassoId)));
+  } catch (err) {
+    log("felter company-full deltagere FEJL", err instanceof LassoApiError ? `HTTP ${err.status}` : errorMessage(err));
+  }
   // [navn, kald, stier til første element, maks tegn i udsnittet]
   const calls: [string, () => Promise<unknown>, string[], number][] = [
     ["owners/legal", () => client.get(`${encodeURIComponent(lassoId)}/owners/legal`), ["owners"], 700],

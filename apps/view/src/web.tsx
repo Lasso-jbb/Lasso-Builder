@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { LassoView, type ActionResult, type ViewAction } from "@lasso/ui";
+import { LassoView, ToastProvider, Toasts, useToast, type ActionResult, type ViewAction } from "@lasso/ui";
 import type { WebBoot as Boot } from "./boot.js";
+import { hasLinks, openFromLinks } from "./sharedLinks.js";
 
 function downloadCsv(filename: string, csv: string) {
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -40,7 +41,8 @@ export function WebView({ boot }: { boot: Boot }) {
     document.body.style.background = dark ? "#141619" : "#ffffff";
   }, [dark]);
 
-  if (!boot.spec) {
+  const spec = boot.spec;
+  if (!spec) {
     return (
       <div className="lasso-root" data-theme={dark ? "dark" : "light"} style={{ minHeight: "100vh" }}>
         <div className="lasso-frame">
@@ -53,8 +55,31 @@ export function WebView({ boot }: { boot: Boot }) {
     );
   }
 
+  // Beskeder (07), fx når et navn ikke kan åbnes; LassoView bruger samme provider til sine egne.
+  // Stakken tegnes i laget med sidens tema, så dens anker står i en lasso-root (uden egen boks).
+  return (
+    <ToastProvider container={false}>
+      <SharedView boot={{ ...boot, spec }} dark={dark} />
+      <div className="lasso-root" data-theme={dark ? "dark" : "light"} style={{ display: "contents" }}>
+        <Toasts />
+      </div>
+    </ToastProvider>
+  );
+}
+
+function SharedView({ boot, dark }: { boot: Boot & { spec: NonNullable<Boot["spec"]> }; dark: boolean }) {
+  const toast = useToast();
   const onAction = async (a: ViewAction): Promise<ActionResult | void> => {
     switch (a.kind) {
+      case "open-company":
+      case "open-person": {
+        // Navne på siden åbner deres egen side via det signerede link, serveren har lagt i boot'en.
+        const res = openFromLinks(boot.links, a, (url) => {
+          location.href = url;
+        });
+        if (!res.ok) toast.show({ text: res.error, tone: "error" });
+        return res;
+      }
       case "refresh":
         location.reload();
         return;
@@ -83,7 +108,7 @@ export function WebView({ boot }: { boot: Boot }) {
         dataset={boot.dataset ?? null}
         url={boot.url}
         theme={dark ? "dark" : "light"}
-        host={{ refresh: true, export: true }}
+        host={{ refresh: true, export: true, drillDown: hasLinks(boot.links) }}
         onAction={onAction}
       />
     </div>

@@ -10,6 +10,7 @@ import {
   LIVE_NUMBER_RESPONSE,
   REPORT_ANALYSIS_HTML,
   REPORT_ANALYSIS_RESPONSE,
+  REPORT_ANALYSIS_WITH_ENTITIES,
   UNIT_BRANCH,
   UNIT_MAIN,
 } from "./fixtures/units.js";
@@ -171,6 +172,41 @@ test("adaptReportAnalysisSections falder tilbage til svarets 'text' som én sekt
   assert.equal(sections[0]!.heading, "Regnskabsanalyse");
   assert.equal(sections[0]!.note, "Kilde: Lasso regnskabsanalyse");
   assert.ok(sections[0]!.body.includes("Konklusion: sund udvikling."));
+});
+
+test("adaptReportAnalysisSections fjerner sektionens egen titel fra brødteksten, også når den står to gange", () => {
+  const sections = adaptReportAnalysisSections(REPORT_ANALYSIS_WITH_ENTITIES);
+  const body = (h: string) => sections.find((s) => s.heading === h)?.body;
+  assert.equal(body("Regnskabsanalyse: konklusion"), "Virksomheden har en sund og stabil udvikling.");
+  assert.equal(body("Resultat"), "Resultatet er steget 8 % i forhold til året før.", "en sætning, der starter med samme ord, beholdes");
+  assert.equal(body("Balance og kapitalforhold"), "Virksomhedens samlede aktiver er steget til 120 mio. kr.\n\nEgenkapitalen udgør 45 %.", "afsnit bevares");
+  assert.ok(body("Revisoroplysninger")!.startsWith("En autoriseret revisor fra "));
+  // En fed indledning, der ikke er sektionens titel, er indhold og beholdes.
+  assert.equal(body("Spørgsmål til overvejelse"), "Strategilægning og budgetjustering\nOvervej følgende:\n- Bør investeringsplanen revideres?");
+  // Den ældre fixture (én titel pr. sektion) giver også brødtekst uden titel.
+  for (const s of adaptReportAnalysisSections(REPORT_ANALYSIS_RESPONSE).slice(0, 5)) {
+    assert.ok(!/^(Konklusion|Resultat|Likviditet|Balance og kapitalforhold|Branchestatistik)\b/.test(s.body), s.body);
+  }
+});
+
+test("adaptReportAnalysisSections: ingen rå {Navn|LassoId}-markup i body, navnene som segmenter med Lasso-ID", () => {
+  const sections = adaptReportAnalysisSections(REPORT_ANALYSIS_WITH_ENTITIES);
+  const auditor = sections.find((s) => s.heading === "Revisoroplysninger")!;
+  assert.equal(
+    auditor.body,
+    "En autoriseret revisor fra Crowe Statsautoriseret Revisionsinteressentskab har revideret årsrapporten. Underskrevet af Peter Revisor Eksempel.",
+  );
+  assert.ok(!/[{}|]/.test(auditor.body));
+  assert.deepEqual(auditor.segments, [
+    { text: "En autoriseret revisor fra " },
+    { text: "Crowe Statsautoriseret Revisionsinteressentskab", lassoId: "CVR-1-33256876" },
+    { text: " har revideret årsrapporten. Underskrevet af " },
+    { text: "Peter Revisor Eksempel", lassoId: "CVR-3-4000000099" },
+    { text: "." },
+  ]);
+  assert.equal(auditor.segments!.map((s) => s.text).join(""), auditor.body, "segmenterne er præcis brødteksten");
+  // Sektioner uden navne med Lasso-ID har ingen segmenter.
+  assert.equal(sections.find((s) => s.heading === "Resultat")!.segments, undefined);
 });
 
 test("adaptReportAnalysisSections giver en tom liste for et tomt eller ukendt svar", () => {

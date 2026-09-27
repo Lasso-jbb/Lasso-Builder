@@ -12,6 +12,7 @@ import {
   ownershipGraphKey,
 } from "@lasso/spec";
 import { LassoApiError } from "../lasso/client.js";
+import { isEntityId } from "../web/links.js";
 import { NotFoundError, type DataProvider } from "./provider.js";
 
 /** Hvilke data en virksomhed skal have hentet, fx "company", "financials", "timeline". Nøglen matcher metoden i DataProvider. */
@@ -69,6 +70,37 @@ export function entityIdsOf(spec: ViewSpec): string[] {
       if (typeof v === "string" && v) ids.add(v);
     }
   }
+  return [...ids];
+}
+
+/**
+ * Alle virksomheds- og person-ID'er i et datasæt (CVR-1-<8 cifre>, CVR-3-/CVR-4-…), dvs. alle navne,
+ * siden kan vise som links: personer i ledelsen, ejere, revisor, reelle ejere, ejergrafens noder,
+ * personers roller og netværk, søgeresultater, ændringsfeeds og navnene i nyheder og tekstsektioner
+ * (segmenter med lassoId). Læser hele datasættet generisk (strengværdier og nøgler), så nye felter
+ * med ID'er kommer med af sig selv; fejlteksterne springes over. Bruges til de delte siders links.
+ */
+export function datasetEntityIds(ds: Dataset): string[] {
+  const ids = new Set<string>();
+  const visit = (v: unknown, depth: number): void => {
+    if (depth > 12) return;
+    if (typeof v === "string") {
+      if (isEntityId(v)) ids.add(v);
+      return;
+    }
+    if (Array.isArray(v)) {
+      for (const x of v) visit(x, depth + 1);
+      return;
+    }
+    if (v && typeof v === "object") {
+      for (const [k, x] of Object.entries(v)) {
+        if (depth === 0 && (k === "errors" || k === "savedPages" || k === "savedIds")) continue;
+        if (isEntityId(k)) ids.add(k);
+        visit(x, depth + 1);
+      }
+    }
+  };
+  visit(ds, 0);
   return [...ids];
 }
 

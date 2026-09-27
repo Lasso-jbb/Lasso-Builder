@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { currencyUnit, formatAmount, formatDate, formatMetricValue, formatNumber, METRIC_FIELD, METRIC_LABELS, type CompanyVM, type FinancialsVM, type Metric, type OwnershipVM } from "@lasso/spec";
+import { currencyUnit, formatAmount, formatDate, formatMetricValue, formatNumber, isPersonId, METRIC_FIELD, METRIC_LABELS, type CompanyVM, type FinancialsVM, type Metric, type OwnershipVM } from "@lasso/spec";
+import type { ViewAction } from "../types.js";
 import { DataState, Missing, Section, stateForError } from "../primitives.js";
 import { Tabs } from "./Tabs.js";
 
@@ -25,11 +26,13 @@ interface Row {
   label: string;
   value?: string;
   danger?: boolean;
+  /** Værdien kan åbnes (fx revisoren): virksomhed CVR-1-… eller person CVR-3-…. */
+  lassoId?: string;
 }
 
 function companyRows(company: CompanyVM, ownership: OwnershipVM | undefined, lastYear: FinancialsVM["years"][number] | undefined, hideContact: boolean): Row[] {
   const a = company.address;
-  const rows: Row[] = [{ label: "Revisor", value: ownership?.auditor?.name }];
+  const rows: Row[] = [{ label: "Revisor", value: ownership?.auditor?.name, lassoId: ownership?.auditor?.lassoId }];
   // "hvis tilgængeligt": rækken udelades helt, når skiftedatoen ikke er kendt (i stedet for en fast "—"-række).
   if (ownership?.auditor?.from) rows.push({ label: "Seneste revisorskift", value: formatDate(ownership.auditor.from) });
   const period = lastYear && dayMonth(lastYear.periodStart) && dayMonth(lastYear.periodEnd) ? `${dayMonth(lastYear.periodStart)} – ${dayMonth(lastYear.periodEnd)}` : undefined;
@@ -74,6 +77,25 @@ function financialsRows(year: FinancialsVM["years"][number], currency?: string):
   return rows;
 }
 
+/** Værdien som link (lasso-link), når den har et Lasso-ID og værten kan åbne det; ellers ren tekst. */
+function Value({ value, lassoId, onOpen }: { value: string; lassoId?: string; onOpen?: (a: ViewAction) => void }) {
+  if (onOpen && lassoId?.startsWith("CVR-1-")) {
+    return (
+      <button type="button" className="lasso-link" onClick={() => onOpen({ kind: "open-company", lassoId, name: value })}>
+        {value}
+      </button>
+    );
+  }
+  if (onOpen && isPersonId(lassoId)) {
+    return (
+      <button type="button" className="lasso-link" onClick={() => onOpen({ kind: "open-person", lassoId, name: value })}>
+        {value}
+      </button>
+    );
+  }
+  return <>{value}</>;
+}
+
 /**
  * Nøgle-værdi-liste (katalog 09). To varianter: "company" (stamdata, venstrestillet
  * værdi) og "financials" (regnskabstal med årsvælger, tal højrestillet, seneste
@@ -88,6 +110,7 @@ export function KeyValueList({
   title,
   error,
   hideContact = false,
+  onOpen,
 }: {
   company?: CompanyVM;
   ownership?: OwnershipVM;
@@ -97,6 +120,8 @@ export function KeyValueList({
   error?: string;
   /** Skjul adresse/telefon/e-mail/web, når LassoContact står på samme side. */
   hideContact?: boolean;
+  /** Værten kan åbne virksomheder og personer (drill-down): revisoren bliver et link. */
+  onOpen?: (a: ViewAction) => void;
 }) {
   const heading = title ?? (variant === "financials" ? "Regnskab" : "Virksomhedsoplysninger");
   const ready = variant === "financials" ? Boolean(financials) : Boolean(company);
@@ -156,7 +181,7 @@ export function KeyValueList({
           <div className="lasso-kv-row" key={r.label}>
             <div className="lasso-kv-row__label">{r.label}</div>
             <div className="lasso-kv-row__value" title={r.value}>
-              {r.value ?? <Missing />}
+              {r.value ? <Value value={r.value} lassoId={r.lassoId} onOpen={onOpen} /> : <Missing />}
             </div>
           </div>
         ))}

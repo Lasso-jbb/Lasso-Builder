@@ -30,6 +30,7 @@ import {
   type SearchQuery,
   type SearchResultVM,
   type TextSectionsVM,
+  type TextSegment,
   type TimelineVM,
   hasReportingDuty,
 } from "@lasso/spec";
@@ -154,8 +155,26 @@ function timelineFor(c: DemoCompany): TimelineVM {
 
 function newsFor(c: DemoCompany, limit: number): NewsVM {
   const lastYear = YEARS.at(-1);
+  // Som Lasso News: navne med Lasso-ID ("{Navn|LassoId}"-markup) som segmenter, så nyhedernes links
+  // kan ses i demoen. Virksomheden selv, direktøren og revisoren.
+  const director = c.people.find((p) => !p.to && /direkt/i.test(p.role));
+  const directorId = director ? PERSON_IDS.get(director.name) : undefined;
+  const auditor = COMPANIES.find((x) => x.name === c.auditor);
+  const extract: TextSegment[] = [{ text: `Regnskabet for ${lastYear} er godkendt` }];
+  if (director && directorId) extract.push({ text: " af direktør " }, { text: director.name, lassoId: directorId });
+  if (auditor) extract.push({ text: " og revideret af " }, { text: auditor.name, lassoId: auditor.lassoId });
+  extract.push({ text: " (eksempel)." });
   const items: NewsVM["items"] = [
-    { source: "Lasso News", time: `${lastYear}-04-15`, headline: `Ny årsrapport fra ${c.name} (eksempel)`, excerpt: `Skrevet ud fra regnskabet for ${lastYear}.` },
+    {
+      source: "Lasso News",
+      url: `https://example.com/nyheder/${c.cvr}-aarsrapport`,
+      time: `${lastYear}-04-15`,
+      typeLabel: "Nyt regnskab",
+      headline: `Ny årsrapport fra ${c.name} (eksempel)`,
+      headlineSegments: [{ text: "Ny årsrapport fra " }, { text: c.name, lassoId: c.lassoId }, { text: " (eksempel)" }],
+      excerpt: extract.map((s) => s.text).join(""),
+      extractSegments: extract.some((s) => s.lassoId) ? extract : undefined,
+    },
     {
       source: "Prøve Medier",
       time: `${lastYear}-02-02`,

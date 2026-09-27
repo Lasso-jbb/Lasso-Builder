@@ -278,10 +278,74 @@ export function adaptContactPersons(lassoId: string, raw: Json): ContactPersonsV
   };
 }
 
+/** Et Lasso-ID som "CVR-3-4009546580" (kilde-delen i store bogstaver); alt andet giver undefined. */
+export function asLassoId(v: string | undefined): string | undefined {
+  const s = v?.trim();
+  return s && /^cvr-\d-\d+$/i.test(s) ? s.toUpperCase() : undefined;
+}
+
+/**
+ * Felter, hvor en deltager (person, ejer, revisor) kan bære sit Lasso-ID direkte. Kun `lassoId` er
+ * bekræftet (stakeholders, ownership.owners, owners/legal); de øvrige er reserve for ledelsens og
+ * bestyrelsens medlemmer, hvis form endnu ikke er set (opstartsloggen "felter company-full deltagere").
+ */
+const PARTICIPANT_ID_PATHS = ["lassoId", "id", "participant.lassoId", "person.lassoId", "entity.lassoId", "relatedLassoId", "participant.id", "person.id", "entity.id"];
+
+/**
+ * Lasso-ID for en deltager i et CVR-svar, i denne rækkefølge:
+ * 1. et felt, der allerede er et Lasso-ID (PARTICIPANT_ID_PATHS og `extraPaths`),
+ * 2. `cvr` (dansk selskab, 8 cifre) -> "CVR-1-<cvr>",
+ * 3. `unitNumber` (CVR-enhedsnummer) -> "CVR-3-<unitNumber>". Bekræftet for personer i owners/legal
+ *    (`lassoId: "CVR-3-4009546580", unitNumber: 4009546580`). Springes over, når typen siger
+ *    virksomhed (et dansk selskab har sit CVR-1-ID, ikke et deltager-ID); med `unitNumber: "person"`
+ *    kræves det, at typen siger person (revisoren er typisk et revisionsfirma),
+ * 4. ellers det rå `lassoId`/`id` som hidtil, også når det ikke ligner et Lasso-ID.
+ */
+export function participantLassoId(p: Json, opts: { extraPaths?: readonly string[]; unitNumber?: "participant" | "person" } = {}): string | undefined {
+  if (!isObj(p)) return undefined;
+  const paths = [...PARTICIPANT_ID_PATHS, ...(opts.extraPaths ?? [])];
+  for (const path of paths) {
+    const id = asLassoId(str(p, path));
+    if (id) return id;
+  }
+  const cvr = str(p, "cvr", "participant.cvr", "entity.cvr", "cvrNumber");
+  if (cvr && /^\d{8}$/.test(cvr)) return `CVR-1-${cvr}`;
+  const unit = str(p, "unitNumber", "participant.unitNumber", "person.unitNumber", "entity.unitNumber");
+  if (unit && /^\d{1,12}$/.test(unit)) {
+    const type = str(p, "type", "entityType", "kind", "participant.type", "person.type");
+    const kind = type ? participantKind(type, undefined, undefined) : undefined;
+    if (opts.unitNumber === "person" ? kind === "person" : kind !== "company") return `CVR-3-${unit}`;
+  }
+  return str(p, "lassoId", "id", ...(opts.extraPaths ?? []));
+}
+
+/** Deltagerlisterne i company-full (GET /{lassoId}), som `adaptPeople` læser. */
+const PARTICIPANT_LISTS = ["management.ceo", "management.members", "board.chairman", "board.members", "board.alternates", "stakeholders", "otherParticipants"] as const;
+
+/**
+ * Feltnavnene (kun nøgler, aldrig værdier) på første element i hver deltagerliste i company-full,
+ * til opstartsloggen: {"management.members[0]": ["name", "role.type", "unitNumber"], …}. Et
+ * indlejret objekt giver "sti.nøgle"; en tom liste giver "tom", et manglende felt "mangler".
+ */
+export function participantFieldNames(raw: Json): Record<string, string[] | "tom" | "mangler"> {
+  const keysOf = (v: Json): string[] =>
+    isObj(v) ? Object.entries(v).flatMap(([k, x]) => (isObj(x) ? [k, ...Object.keys(x).map((n) => `${k}.${n}`)] : [k])) : [typeof v];
+  const out: Record<string, string[] | "tom" | "mangler"> = {};
+  for (const path of PARTICIPANT_LISTS) {
+    const v = at(raw, path);
+    if (Array.isArray(v)) out[`${path}[0]`] = v.length ? keysOf(v[0]) : "tom";
+    else out[path] = v === undefined || v === null ? "mangler" : keysOf(v);
+  }
+  return out;
+}
+
 /**
  * Bekræftet form (GET /{lassoId}): stakeholders[] { name, type, lassoId, role: { mainType, type, originalType }, from },
  * management { ceo, members[] }, board { chairman, members[], alternates[] }, founders[].
  * Indholdet af management/board kendes kun som tomme felter endnu; de læses med samme feltnavne som stakeholders.
+ * Lasso-ID'et læses robust (participantLassoId: lassoId, participant/person/entity.lassoId, cvr,
+ * unitNumber), og en række uden ID får ID'et fra en anden række eller ejer med samme navn, når
+ * navnet kun hører til ét ID. Uden ID står navnet som ren tekst uden link.
  */
 export function adaptPeople(raw: Json): PersonRowVM[] {
   const sources: [Json[], string][] = [
@@ -303,15 +367,29 @@ export function adaptPeople(raw: Json): PersonRowVM[] {
       const role = str(p, "role.type", "role.originalType", "role.mainType", "role", "title", "function", "rolle") ?? fallbackRole;
       rows.push({
         name,
-        lassoId: str(p, "lassoId", "id"),
+        lassoId: participantLassoId(p),
         role: prettyRole(role),
         from: dateStr(p, "from", "role.from", "start", "startDate", "validFrom"),
         to: dateStr(p, "to", "role.to", "end", "endDate", "validTo"),
       });
     }
   }
+  // Samme navn andetsteds i svaret (en anden rolle eller en ejer) med præcis ét Lasso-ID.
+  const idsByName = new Map<string, Set<string>>();
+  const note = (name: string | undefined, id: string | undefined) => {
+    if (!name || !asLassoId(id)) return;
+    const key = name.trim().toLowerCase();
+    idsByName.set(key, (idsByName.get(key) ?? new Set()).add(id!));
+  };
+  rows.forEach((r) => note(r.name, r.lassoId));
+  for (const o of arr(raw, "ownership.owners", "owners")) note(str(o, "name"), participantLassoId(o));
+  const filled = rows.map((r) => {
+    if (asLassoId(r.lassoId)) return r;
+    const ids = idsByName.get(r.name.trim().toLowerCase());
+    return ids?.size === 1 ? { ...r, lassoId: [...ids][0] } : r;
+  });
   return dedupe(
-    rows.filter((r) => !/ejer|owner|revis|auditor|accountant|legal_owner|real_owner/i.test(r.role)),
+    filled.filter((r) => !/ejer|owner|revis|auditor|accountant|legal_owner|real_owner/i.test(r.role)),
     (r) => `${r.name}|${r.role}|${r.from ?? ""}`,
   );
 }
@@ -372,7 +450,7 @@ export function participantNames(raw: Json): Map<string, { name: string; type?: 
   const out = new Map<string, { name: string; type?: string }>();
   const lists = [arr(raw, "ownership.owners", "owners"), arr(raw, "stakeholders"), arr(raw, "otherParticipants"), arr(raw, "management.members"), arr(raw, "board.members"), arr(raw, "board.alternates")];
   for (const p of [pick(raw, "management.ceo"), pick(raw, "board.chairman"), ...lists.flat()]) {
-    const id = str(p, "lassoId", "id");
+    const id = participantLassoId(p);
     const name = str(p, "name", "participant.name", "person.name");
     if (!id || !name || out.has(id)) continue;
     out.set(id, { name, type: str(p, "type", "entityType", "kind") });
@@ -412,7 +490,7 @@ export function adaptOwnership(lassoId: string, raw: Json): OwnershipVM {
         ?? str(o, "shareText", "ownershipInterval", "interval", "shareInterval");
       const votes = shareText(pick(o, "voteRights", "votingRights", "stemmeandel"));
       const type = str(o, "type", "kind", "entityType");
-      const id = str(o, "lassoId", "id", "owner.lassoId");
+      const id = participantLassoId(o, { extraPaths: ["owner.lassoId"] });
       const owner: OwnerVM = {
         name,
         lassoId: id,
@@ -426,12 +504,14 @@ export function adaptOwnership(lassoId: string, raw: Json): OwnershipVM {
 
   const auditorRaw = pick(raw, "accounting.accountant", "auditor", "auditors.0", "revisor", "accountant");
   const auditorName = auditorRaw === undefined ? undefined : typeof auditorRaw === "string" ? auditorRaw : str(auditorRaw, "name", "navn");
+  // Revisoren er typisk et revisionsfirma (cvr -> CVR-1-…); unitNumber bruges kun, når typen siger person.
+  const auditorId = participantLassoId(auditorRaw, { unitNumber: "person" });
   return {
     lassoId,
     // Største ejere først; Lasso leverer dem i vilkårlig rækkefølge.
     owners: dedupe(owners, (o) => `${o.name}|${o.share ?? ""}`).sort((a, b) => shareFloor(b.share) - shareFloor(a.share)),
     auditor: auditorName
-      ? { name: auditorName, lassoId: str(auditorRaw, "lassoId", "id"), from: dateStr(auditorRaw, "from", "start", "startDate") }
+      ? { name: auditorName, lassoId: auditorId, from: dateStr(auditorRaw, "from", "start", "startDate") }
       : undefined,
   };
 }

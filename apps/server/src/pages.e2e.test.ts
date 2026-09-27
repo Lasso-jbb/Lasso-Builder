@@ -19,7 +19,7 @@ const { LassoClient } = await import("./lasso/client.js");
 const { DemoProvider } = await import("./data/demo.js");
 const { createViewStore } = await import("./views/store.js");
 const { createSavedPageStore } = await import("./pages/store.js");
-const { entityLink, sendToLassoLink, verifySendToLassoLink } = await import("./web/links.js");
+const { companyLink, entityLink, sendToLassoLink, verifyEntityLink, verifySendToLassoLink } = await import("./web/links.js");
 
 const run = Math.random().toString(36).slice(2, 8);
 const KEY = "test-mcp-key";
@@ -268,6 +268,34 @@ test("/e/<lassoId> viser virksomheds- og personsider fra gyldige links, ellers 4
   assert.match(await expired.text(), /Linket er udløbet/);
   const missing = await fetch(entityLink(config, "CVR-1-12345678"));
   assert.equal(missing.status, 404);
+});
+
+test("delte sider (/k/, /e/) har signerede /e/-links til virksomheder og personer på siden", async () => {
+  const k = await fetch(companyLink(config, { cvr: "99000001", metric: "bruttofortjeneste", years: 5 }));
+  assert.equal(k.status, 200);
+  const kBoot = JSON.parse(boot(await k.text())) as { links?: Record<string, string>; dataset: Dataset };
+  const links = kBoot.links!;
+  assert.ok(links && Object.keys(links).length > 0, "boot har et links-map");
+  // En person fra ledelsen og en virksomhed (ejeren og revisoren) fra demodatasættet.
+  const person = kBoot.dataset.people["CVR-1-99000001"]!.find((p) => p.lassoId)!;
+  for (const id of [person.lassoId!, "CVR-1-99000010", "CVR-1-99000002"]) {
+    const url = links[id];
+    assert.ok(url, `link til ${id}`);
+    const u = new URL(url);
+    assert.equal(u.pathname, `/e/${id}`);
+    assert.ok(u.searchParams.get("s"), "signeret");
+    assert.deepEqual(verifyEntityLink(config, id, query(url)), { ok: true, lassoId: id });
+  }
+  // Kun ID'er fra siden: en virksomhed, siden ikke viser, har intet link.
+  assert.equal(links["CVR-1-99000013"], undefined);
+  // Linket virker: personens side åbner, og den har selv links (fx til virksomheden).
+  const personPage = await fetch(links[person.lassoId!]!);
+  assert.equal(personPage.status, 200);
+  const pBoot = JSON.parse(boot(await personPage.text())) as { links?: Record<string, string> };
+  assert.ok(pBoot.links?.["CVR-1-99000001"], "personsiden linker tilbage til virksomheden");
+
+  const e = await fetch(entityLink(config, "CVR-1-99000001"));
+  assert.ok((JSON.parse(boot(await e.text())) as { links?: Record<string, string> }).links?.[person.lassoId!]);
 });
 
 test("remove_saved_page fjerner med ID og navn, og siger til ved ukendte", async () => {

@@ -134,6 +134,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           title={c.title}
           error={c.variant === "financials" ? err(`financials:${c.company}`) : err(`company:${c.company}`)}
           hideContact={props.spec.components.some((x) => x.type === "LassoContact" && x.company === c.company)}
+          onOpen={props.host.drillDown ? act : undefined}
         />
       );
     case "LassoContact":
@@ -193,7 +194,17 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoTimeline":
       return <LassoTimeline key={key} timeline={empty.timeline[c.company]} title={c.title} error={err(`timeline:${c.company}`)} />;
     case "LassoNews":
-      return <LassoNews key={key} news={empty.news[c.company]} limit={c.limit} companyName={empty.companies[c.company]?.name} error={err(`news:${c.company}`)} />;
+      return (
+        <LassoNews
+          key={key}
+          news={empty.news[c.company]}
+          limit={c.limit}
+          companyName={empty.companies[c.company]?.name}
+          companyId={c.company}
+          error={err(`news:${c.company}`)}
+          onOpen={props.host.drillDown ? act : undefined}
+        />
+      );
     case "LassoPersonHead":
       return <PersonHead key={key} person={empty.persons[c.person]} error={err(`person:${c.person}`)} />;
     case "LassoPersonRoles":

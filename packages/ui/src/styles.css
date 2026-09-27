@@ -768,7 +768,13 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-news { display: flex; flex-direction: column; }
 .lasso-news__row { display: block; padding: 14px 0; border-top: 1px solid var(--lasso-border); color: inherit; text-decoration: none; }
 .lasso-news__row:first-child { border-top: 0; padding-top: 0; }
-.lasso-news__row:is(a):hover .lasso-news__headline { color: var(--lasso-accent-text); text-decoration: underline; }
+/* Overskriften er selv linket til artiklen (rækken er en article, så navne i teksten kan være knapper). */
+.lasso-news__headline a { color: inherit; text-decoration: none; }
+.lasso-news__headline a:hover { color: var(--lasso-accent-text); text-decoration: underline; }
+/* Navne med Lasso-ID (lasso-link): samme vægt og linjehøjde som teksten omkring, farve og understregning ved hover. */
+.lasso-news__entity { font-weight: inherit; line-height: inherit; }
+/* I det grå uddrag står navnene i tekstfarve, så de kan ses som links (koral først ved hover). */
+.lasso-row__sub .lasso-news__entity:not(:hover) { color: var(--lasso-text); }
 .lasso-news__head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; color: var(--lasso-muted); }
 .lasso-news__mark { display: inline-flex; align-items: center; gap: 8px; color: var(--lasso-icon); }
 .lasso-news__mark img { border-radius: 3px; display: block; }
