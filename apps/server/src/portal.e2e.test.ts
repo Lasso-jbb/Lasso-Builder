@@ -20,7 +20,7 @@ const { LassoClient } = await import("./lasso/client.js");
 const { DemoProvider } = await import("./data/demo.js");
 const { createViewStore } = await import("./views/store.js");
 const { createSavedPageStore } = await import("./pages/store.js");
-const { verifyEntityLink, verifyPersonLink } = await import("./web/links.js");
+const { verifyEntityLink } = await import("./web/links.js");
 
 const run = Math.random().toString(36).slice(2, 8);
 const KEY = "test-mcp-key";
@@ -239,10 +239,10 @@ test("person: som show_person, med signeret link til personsiden; 404/400 ved fe
   assert.equal(body.spec.kind, "person");
   assert.equal(body.spec.components[0]!.type, "LassoPersonHead");
   assert.match(body.note ?? "", /Fundet ud fra navnet "Bo Eksempel"/);
-  const lassoId = /\/p\/(CVR-3-\d+)\?/.exec(body.link ?? "")?.[1];
+  const lassoId = /\/e\/(CVR-3-\d+)\?/.exec(body.link ?? "")?.[1];
   assert.ok(lassoId, body.link);
   assert.ok(body.dataset.persons[lassoId!]);
-  assert.deepEqual(verifyPersonLink(config, lassoId!, query(body.link!)), { ok: true, lassoId });
+  assert.deepEqual(verifyEntityLink(config, lassoId!, query(body.link!)), { ok: true, lassoId });
   assert.equal((await fetch(local(body.link!))).status, 200);
 
   const byId = await json<ViewBody>(await api(`/person/${lassoId}`));
