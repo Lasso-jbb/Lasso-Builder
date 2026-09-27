@@ -135,9 +135,12 @@ export class LassoClient {
     return value as Promise<T>;
   }
 
-  /** POST med JSON-body. Caches som GET, med body som del af nøglen. */
-  async post<T = unknown>(path: string, body: unknown): Promise<T> {
+  /** POST med JSON-body og evt. query-parametre. Caches som GET, med body som del af nøglen. */
+  async post<T = unknown>(path: string, body: unknown, query: Query = {}): Promise<T> {
     const url = new URL(path.replace(/^\/+/, ""), `${this.baseUrl}/`);
+    for (const [k, v] of Object.entries(query)) {
+      if (v !== undefined) url.searchParams.set(k, String(v));
+    }
     const json = JSON.stringify(body);
     const key = `POST ${url} ${json}`;
     for (const [k, v] of Object.entries(this.authQuery)) url.searchParams.set(k, v);
@@ -255,17 +258,35 @@ export class LassoClient {
   valuations(lassoId: string) {
     return this.get(`modules/valuations/${enc(lassoId)}`);
   }
-  /** Risikoobservationer. Metode og sti bekræftet af Lasso 26.09.2026 (POST); svarformen er endnu ubekræftet. */
+  /**
+   * Risikoobservationer (Firmaindsigt). Body og svarform bekræftet mod Lassos officielle
+   * dokumentation (docs/endpoints-risiko-nyheder.md). Strammere rate-grænse: 120 kald/min.
+   */
   observations(lassoId: string) {
-    return this.post(`modules/observations/${enc(lassoId)}`, {});
+    return this.post(`modules/observations/${enc(lassoId)}`, { observationTags: ["CompanyInsight"] });
   }
   /** Reelle ejere. Sti bekræftet af Lasso 26.09.2026; svarformen er endnu ubekræftet. */
   ownersBeneficial(lassoId: string) {
     return this.get(`${enc(lassoId)}/owners/beneficial`);
   }
-  /** Nyheder (docs.lassox.com/data-apis/paqle/). */
+  /** Paqle: mediemonitorering (docs.lassox.com/data-apis/paqle/). Kræver Paqle-tilføjelse til abonnementet. */
   news(lassoId: string, cToken?: string) {
     return this.get(`data/paqle/${enc(lassoId)}/news`, { cToken });
+  }
+  /**
+   * Lasso News: robotgenererede og redaktionelle nyheder om en eller flere virksomheder/personer
+   * (docs/endpoints-risiko-nyheder.md). Body er en liste af Lasso Id'er; `orderBy` sættes til
+   * "publishtime" (kronologisk), så den kan flettes med Paqle efter tid.
+   */
+  lassoNews(lassoIds: string[], opts: { limit?: number; page?: number; from?: string; to?: string; types?: string } = {}) {
+    return this.post("modules/news", lassoIds, {
+      limit: opts.limit ?? 30,
+      page: opts.page ?? 1,
+      orderBy: "publishtime",
+      from: opts.from,
+      to: opts.to,
+      types: opts.types,
+    });
   }
 
   /** Ejergrafen i flere lag (POST /modules/relations/graph). Svarformen er ubekræftet, se docs/lasso-endpoints.md. */

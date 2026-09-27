@@ -260,7 +260,10 @@ export interface TimelineVM {
   events: TimelineEventVM[];
 }
 
-/** Én nyhed (katalog 12, "Nyheder"). Kilde: docs.lassox.com/data-apis/paqle/. */
+/**
+ * Én nyhed (katalog 12, "Nyheder"). To kilder: Lasso News (POST /modules/news) og Paqle
+ * (GET /data/paqle/{lassoId}/news), se docs/endpoints-risiko-nyheder.md.
+ */
 export interface NewsItemVM {
   source: string;
   url?: string;
@@ -270,11 +273,24 @@ export interface NewsItemVM {
   excerpt?: string;
   /** Sprogkode eller -navn, når artiklen ikke er dansk, fx "engelsk". */
   language?: string;
+  /** Dansk etiket for Lasso News' nyhedstype, fx "Nyt regnskab" eller "Bestyrelsesændring". */
+  typeLabel?: string;
+  /**
+   * Paqles tekstsegmenter for overskrift/uddrag, med `highlight:true` på det stykke, der er
+   * virksomhedens navn (regel 17: navn i fed, ikke koral). Bruges i stedet for en gættet
+   * tekstsøgning, når de findes.
+   */
+  headlineSegments?: { text: string; highlight?: boolean }[];
+  extractSegments?: { text: string; highlight?: boolean }[];
 }
 
 export interface NewsVM {
   lassoId: string;
   items: NewsItemVM[];
+  /** Hvilke af de to kilder (Lasso News, Paqle) der faktisk bidrog, til sektionens kildelinje. */
+  sources?: string[];
+  /** Nyeste posts tidsstempel på tværs af kilder, til kildelinjens "opdateret …". */
+  updatedAt?: string;
 }
 
 /** Katalog 20: én produktionsenhed (P-nummer). */
@@ -451,6 +467,10 @@ export interface ObservationRowVM {
   /** Fx "CVR", "Regnskab 2025" eller "Ledelse". */
   source?: string;
   date?: string;
+  /** Observationstypen fra Lasso, fx "DirectBankruptcies" (docs/endpoints-risiko-nyheder.md). */
+  type?: string;
+  /** Lasso kunne ikke beregne observationen (fx manglende data); vises som ren tekst, ingen badge. */
+  notAvailable?: boolean;
 }
 
 export interface ObservationsVM {
@@ -460,6 +480,12 @@ export interface ObservationsVM {
   checkedAt?: string;
   /** Datakilder til kildelinjen, fx ["CVR", "regnskab", "ledelse"]. */
   sources?: string[];
+  /**
+   * Indirekte observationer (fx konkursrelationer), der egentlig måler en tilknyttet person,
+   * grupperet pr. person (relatedObservations i det dokumenterede svar). Navnet slås op af
+   * LiveProvider, hvor det kan findes; ellers vises personens Lasso-ID.
+   */
+  related?: { lassoId: string; name?: string; rows: ObservationRowVM[] }[];
 }
 
 /** Samme alvorsskala som observationer, men kun tre trin bruges her (katalog 22): 0, 50, 100. */

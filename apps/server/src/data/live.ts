@@ -11,6 +11,7 @@ import {
   type FinancialsVM,
   type FinancialStatementsVM,
   type LivestockVM,
+  type ObservationsVM,
   type OwnershipGraphVM,
   type ProductionUnitsVM,
   type PropertiesVM,
@@ -48,6 +49,7 @@ import {
   participantNames,
 } from "../lasso/adapters.js";
 import { LassoApiError, type LassoClient } from "../lasso/client.js";
+import { adaptLassoNews, mergeNews } from "../lasso/riskNewsAdapters.js";
 import { adaptPerson, adaptPersonNetwork, adaptPersonSearch } from "../lasso/personAdapters.js";
 import { criteriaToFilters, DEFAULT_ACTIVE_STATUS_FILTER, filtersToCriteria, SERVER_SORT, type LassoFilter } from "../lasso/searchFilters.js";
 import { applyCriteria, needsFinancials, sortRows } from "./criteria-eval.js";
@@ -318,13 +320,48 @@ export class LiveProvider implements DataProvider {
     return adaptTimeline(lassoId, co, adaptPeople(co), financials.years);
   }
 
+  /**
+   * Katalog 12: nyheder. Lasso News (POST /modules/news) hentes altid; Paqle (GET
+   * /data/paqle/{lassoId}/news) kun når kontoen har adgang til Paqle-tilføjelsen. Fejler den ene
+   * kilde (manglende adgang, 4xx/5xx, timeout), vises blot det, den anden kilde leverede — se
+   * docs/endpoints-risiko-nyheder.md. Flettet efter tid (nyeste først) og skåret til `limit`.
+   */
   async news(lassoId: string, limit: number) {
-    return adaptNews(lassoId, await this.client.news(lassoId), limit);
+    const [lassoItems, paqleItems] = await Promise.all([
+      safe(() => this.client.lassoNews([lassoId], { limit })).then((raw) => (raw === undefined ? [] : adaptLassoNews(raw))),
+      safe(() => this.client.news(lassoId)).then((raw) => (raw === undefined ? [] : adaptNews(lassoId, raw, Number.MAX_SAFE_INTEGER).items)),
+    ]);
+    return mergeNews(
+      lassoId,
+      [
+        { items: lassoItems, label: "Lasso News" },
+        { items: paqleItems, label: "Paqle" },
+      ],
+      limit,
+    );
   }
 
-  /** Formen for /modules/observations er ubekræftet; se docs/lasso-endpoints.md. */
+  /**
+   * Katalog 17: risikoobservationer (Firmaindsigt). Svarformen er bekræftet mod Lassos officielle
+   * dokumentation (docs/endpoints-risiko-nyheder.md). Indirekte observationer under
+   * `relatedObservations` navngives bedst muligt ud fra personens eget CVR-opslag.
+   */
   async observations(lassoId: string) {
-    return adaptObservations(lassoId, await this.client.observations(lassoId));
+    const vm = adaptObservations(lassoId, await this.client.observations(lassoId));
+    return this.withRelatedNames(vm);
+  }
+
+  /** Bedste forsøg på at navngive de personer, `related` (relatedObservations) peger på. */
+  private async withRelatedNames(vm: ObservationsVM): Promise<ObservationsVM> {
+    if (!vm.related?.length) return vm;
+    const toName = vm.related.slice(0, 12);
+    const named = await mapLimit(toName, 4, async (person) => {
+      const raw = await safe(() => this.client.person(person.lassoId));
+      const name = raw === undefined ? undefined : str(raw, "name", "fullName", "names.0");
+      return name ? { ...person, name } : person;
+    });
+    const byId = new Map(named.map((p) => [p.lassoId, p] as const));
+    return { ...vm, related: vm.related.map((p) => byId.get(p.lassoId) ?? p) };
   }
 
   /**
