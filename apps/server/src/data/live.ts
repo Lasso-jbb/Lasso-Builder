@@ -49,7 +49,7 @@ import {
 } from "../lasso/adapters.js";
 import { describeShape, LassoApiError, type LassoClient } from "../lasso/client.js";
 import { adaptPerson, adaptPersonNetwork, adaptPersonSearch } from "../lasso/personAdapters.js";
-import { adaptChrLivestock, adaptLiveNumber, adaptReportAnalysisSection, buildProductionUnits } from "../lasso/unitAdapters.js";
+import { adaptChrLivestock, adaptLiveNumber, adaptReportAnalysisSections, buildProductionUnits } from "../lasso/unitAdapters.js";
 import { criteriaToFilters, DEFAULT_ACTIVE_STATUS_FILTER, filtersToCriteria, SERVER_SORT, type LassoFilter } from "../lasso/searchFilters.js";
 import { applyCriteria, needsFinancials, sortRows } from "./criteria-eval.js";
 import { mapLimit, type ChangeFeedOptions, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
@@ -324,17 +324,18 @@ export class LiveProvider implements DataProvider {
   }
 
   /**
-   * Katalog 12/19: branche/formål/tegningsregler (CVR) plus regnskabsanalysen som en ekstra
-   * sektion, når den svarer inden for TEXT_SECTIONS_BUDGET_MS. Langsomt, tomt eller fejlende
-   * svar (401/403/404 m.fl.) udelader blot sektionen (`safe`/`withinBudget`), aldrig en fejl.
+   * Katalog 12/19: branche/formål/tegningsregler (CVR) plus regnskabsanalysens sektioner
+   * (konklusion, resultat, likviditet m.fl., én pr. felt i `sections`), når svaret kommer inden
+   * for TEXT_SECTIONS_BUDGET_MS. Langsomt, tomt eller fejlende svar (401/403/404 m.fl.) udelader
+   * blot sektionerne (`safe`/`withinBudget`), aldrig en fejl.
    */
   async textSections(lassoId: string) {
     const [base, analysisRaw] = await Promise.all([
       this.client.company(lassoId).then((raw) => adaptTextSections(lassoId, raw)),
       withinBudget(safe(() => this.client.reportAnalysis(lassoId)), TEXT_SECTIONS_BUDGET_MS),
     ]);
-    const analysis = analysisRaw === undefined ? undefined : adaptReportAnalysisSection(analysisRaw);
-    return analysis ? { ...base, sections: [...base.sections, analysis] } : base;
+    const analysisSections = analysisRaw === undefined ? [] : adaptReportAnalysisSections(analysisRaw);
+    return analysisSections.length ? { ...base, sections: [...base.sections, ...analysisSections] } : base;
   }
 
   async timeline(lassoId: string) {

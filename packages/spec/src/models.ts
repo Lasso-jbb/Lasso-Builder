@@ -364,6 +364,13 @@ export interface LivestockHerdVM {
   category?: string;
   count?: number | null;
   unit?: string;
+  /**
+   * CHR-nummer for den ejendom, denne besætning hører til. Kan afvige fra
+   * `LivestockVM.chrNumber` (virksomhedens første ejendom), når virksomheden har flere.
+   */
+  chrNumber?: string;
+  /** Ejendommens adresse og kommune, fx "Orevej 5, 3660 Stenløse (Egedal)". */
+  propertyAddress?: string;
 }
 
 /** Katalog 20: én veterinær hændelse på tidslinjen. */

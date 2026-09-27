@@ -46,36 +46,74 @@ prøver `count`, så `fullTimeEquivalentCount`, i den rækkefølge.
 
 ## CHR — Centrale Husdyrbrugsregister (katalog 20)
 
-**Bekræftet** (Other → "CHR"): `GET /data/CHR/livestock/{cvr}?onlyCurrent=true` — CVR-nummeret
-(IKKE Lasso-ID'et) sendes i stien. Kræver **Ejendomme-modulet** i Lasso-abonnementet.
-`onlyCurrent=false` inkluderer historiske besætningsdata (bruges ikke her).
+**Bekræftet mod API 27.09.2026** (Other → "CHR", verificeret mod staging):
+`GET /data/CHR/livestock/{cvr}?onlyCurrent=true` — CVR-nummeret (IKKE Lasso-ID'et) sendes i
+stien. Kræver **Ejendomme-modulet** i Lasso-abonnementet. `onlyCurrent=false` inkluderer
+historiske besætningsdata (bruges ikke her).
 
-**UBEKRÆFTET:** Lassos dokumentationsside angav ingen eksempel-response for dette endpoint.
-Feltstrukturen for besætnings-/hændelsesdata kendes derfor ikke.
+**Svarformen, bekræftet mod API 27.09.2026:** et RENT ARRAY af ejendomme (`property`). Ét
+CVR kan have flere ejendomme (flere array-elementer). Hvert element:
+
+```
+{ chrNumber, property: { address, city, postalCode, postalDistrict, municipalityNumber,
+  municipality, startDate, lastUpdated }, veterinaryAndFoodAdministration: {…},
+  stableCoordinates: { x, y },
+  livestockList: { livestock: [ { chrNumber, livestockNumber, animalTypeCode, animalType,
+    usageTypeCode, usageType, tradeType, tradabilityCode, tradability,
+    livestockSize: [ { text, value } ], livestockSizeLastUpdated,
+    owner: { cvrNumber, name, address, city, postalCode, postalDistrict, municipalityNumber,
+      municipality, country, addressProtected, commerciallyProtected },
+    user: { …samme form som owner… },
+    startDate, endDate, lastUpdated, veterinarianInfo: { idSpecified, name, … } } ],
+    livestockCount },
+  veterinaryEventList: { events, problems } }
+```
+
+`livestockSize` er en liste af delantal (fx "Søer, gylte og orner", "Smågrise mellem 7 og 30
+kg"), hvor ét element typisk har en tekst, der ender på "i alt" (fx "Svin i alt"), med
+totalen. `veterinaryEventList.events` var `null` i det bekræftede eksempel; formen af et
+ikke-tomt element er derfor stadig et gæt (`type | name`, `date | time`, `description`).
+`owner`/`user` kan være en privatperson (`cvrNumber: null`) — deres navn og adresse må
+ALDRIG læses ind i `LivestockVM` (se nedenfor).
 
 **Hvad `LiveProvider.livestock` gør** (`adaptChrLivestock` i `unitAdapters.ts`):
 
 1. Henter virksomhedens CVR-nummer (`company()`), springer over uden det (`herds: []`).
 2. Kalder `client.chrLivestock(cvr)`. 401/403/404 giver en tom, forklaret tilstand:
    "Kræver Ejendomme-modulet i Lasso-abonnementet" (`unavailableReason`), ikke en fejl.
-3. Svaret genkendes, hvis det enten er et rent array, eller et objekt med en liste under
-   `herds | livestock | besaetninger | properties | results`. Genkendes formen ikke,
-   gives en tom `LivestockVM` med `unavailableReason: "CHR-svarets struktur er ikke
-   verificeret endnu"` i stedet for et (muligvis forkert) gæt.
-4. I hvert element i listen ledes der efter dyreart (`species | animalType | dyreart |
-   type`), antal (`count | number | antal | animals`), CHR-nummer (`chrNumber | chrId |
-   chr`, top-level eller pr. element) og hændelser (`events | veterinaryEvents |
-   haendelser`, hver med `type | name`, `date | time`, `description`).
-5. Svarets form logges én gang pr. kørende server på debug-niveau
+3. **Den bekræftede form forsøges FØRST** (`isConfirmedChrShape` + `adaptChrLivestockConfirmed`):
+   genkendes ved at mindst ét array-element har `property` eller `livestockList.livestock`.
+   Hvert element i `livestockList.livestock` bliver én besætningsrække:
+   - dyreart = `animalType`, anvendelse = `usageType` (ellers `tradeType`).
+   - antal = værdien af det `livestockSize`-element, hvis tekst ender på "i alt", ellers
+     summen af alle elementernes værdier (`livestockCount`).
+   - CHR-nummer og ejendommens adresse/kommune (`propertyAddressText`, fx "Orevej 5, 3660
+     Stenløse (Egedal)") sættes pr. række (`LivestockHerdVM.chrNumber`/`.propertyAddress`,
+     nye felter), så flere ejendomme kan skelnes. `LivestockVM.chrNumber` (top-level) er
+     den første ejendoms CHR-nummer.
+   - `LivestockVM.updated` er den seneste af alle `livestockSizeLastUpdated` og
+     `property.lastUpdated`-datoer.
+   - `LivestockVM.ownerName` er navnet på den FØRSTE ejer/bruger, der er en **virksomhed**
+     (`owner.cvrNumber`/`user.cvrNumber` sat) — `owner` foretrækkes frem for `user`.
+     Privatpersoners navn og adresse (intet `cvrNumber`) læses aldrig, uanset felt.
+   - `veterinaryEventList.problems` (en tekst) bliver én hændelse ("Bemærkning");
+     `veterinaryEventList.events` (defensivt, da et ikke-tomt eksempel ikke er set) læses
+     som en liste med `type|name`, `date|time`, `description`.
+4. Matcher svaret ikke den bekræftede form, forsøges de tidligere, uverificerede gæt som
+   reserve: enten et rent array, eller et objekt med en liste under
+   `herds | livestock | besaetninger | properties | results`, med dyreart
+   (`species|animalType|dyreart|type`), antal (`count|number|antal|animals`), CHR-nummer
+   (`chrNumber|chrId|chr`) og hændelser (`events|veterinaryEvents|haendelser`).
+5. Genkendes intet af det, gives en tom `LivestockVM` med `unavailableReason: "CHR-svarets
+   struktur er ikke verificeret endnu"` i stedet for et (muligvis forkert) gæt.
+6. Svarets form logges én gang pr. kørende server på debug-niveau
    (`LOG_LEVEL=debug`, `console.debug("[lasso-chr] svarform …")` via `describeShape`),
    så næste session kan rette adapteren uden at logge værdier.
 
-**At verificere:** hele svarformen. Når en rigtig nøgle med Ejendomme-modulet er
-tilgængelig, bør `GET /data/CHR/livestock/{cvr}?onlyCurrent=true` afprøves mod en
-landbrugsvirksomhed, formen logges (se punkt 5), og `adaptChrLivestock` rettes til —
-herunder om `category`/underart (fx "slagtesvin" vs. "søer", som `LivestockHerdVM`
-allerede har plads til) findes i det rigtige svar; den nuværende, uverificerede
-udgave læser kun én "dyreart"-værdi pr. element.
+**At verificere:** formen af et ikke-tomt `veterinaryEventList.events`-element (kun `null`
+er set); om flere ejendomme pr. CVR forekommer i praksis (kun ét element er set i
+eksemplet); om `category`-underarten (fx "slagtesvin" vs. "søer", som `LivestockHerdVM`
+har plads til) findes andre steder end `usageType`/`tradeType`.
 
 ## Live number (Contact information, katalog 08)
 
@@ -113,38 +151,58 @@ livenumber-tilføjelsen slået til.
 
 **Bekræftet:** `POST /modules/reportanalysis/{lassoid}` (tom body `{}`) — en tekstlig
 AI/redaktionel analyse baseret på op til 5 års regnskabsdata og de seneste to regnskaber.
-Teksten indeholder simple HTML-tags (`<br/>`, `<ul>`/`<li>` m.fl.), som skal renderes/
-konverteres. Dette er kilden til "Erhvervsresumé"/"Se regnskabsanalyse" i portalens UI.
 Kan tage længere end almindelige kald; klienten bruger derfor en egen, længere timeout
 (`REPORT_ANALYSIS_TIMEOUT_MS = 30_000` i `client.ts`, `post()` tager nu valgfrie
 `RequestOptions`).
 
-**UBEKRÆFTET:** om svaret er rent HTML (tekst/streng) eller pakket i JSON (fx
-`{ "text": "<p>…</p>" }`). `adaptReportAnalysisSection` (`unitAdapters.ts`) håndterer
-begge dele: er svaret en streng, bruges den direkte; er det et objekt, forsøges
-feltnavnene `text`, `analysis`, `html`, `content`, `result`, `summary`.
+**Svarformen, bekræftet mod API 27.09.2026:**
 
-**Hvad `LiveProvider.textSections` gør:**
+```
+{ "lassoId": "CVR-1-…",
+  "sections": { "konklusion", "resultat", "likviditet", "balanceogkapitalforhold",
+    "branchestatistik", "revisoroplysninger", "sprgsml" },   // hvert felt: HTML-streng
+  "text": "…hele analysen som én HTML-streng…",
+  "latestReport": { …nøgletal som {unit,value,sources,possibleError,error}… },
+  "previousReport": { … } }
+```
+
+Teksten i hvert `sections`-felt og i `text` indeholder simple HTML-tags (`<b>`, `<br>` set i
+det bekræftede svar), som skal renderes/konverteres. Dette er kilden til
+"Erhvervsresumé"/"Se regnskabsanalyse" i portalens UI. `latestReport`/`previousReport`
+indeholder standardnøgletal i samme form som `GET /{lassoId}/reports` (`{unit, value,
+sources, possibleError, error}`, se `docs/lasso-endpoints.md`) — **bruges IKKE endnu**;
+en senere mulighed er en visning, der viser `possibleError`-flaget (designkatalogets regel 8:
+ved `possibleError`/`error` bør den linkede rapport tjekkes).
+
+**Hvad `LiveProvider.textSections` gør** (`adaptReportAnalysisSections` i `unitAdapters.ts`):
 
 1. Kalder `client.reportAnalysis(lassoId)` parallelt med det almindelige CVR-opslag,
    pakket i `safe()` og `withinBudget(…, TEXT_SECTIONS_BUDGET_MS = 8_000)` — samme
    mønster som kontaktblokkens `CONTACT_BUDGET_MS`. Svarer analysen ikke inden for
-   budgettet, fejler den, eller er den tom/401/403/404, udelades sektionen helt
+   budgettet, fejler den, eller er den tom/401/403/404, udelades sektionerne helt
    (ingen fejlvisning, ingen tom sektion).
-2. HTML'et konverteres til ren tekst med `htmlToText` (ny fil,
+2. Findes `sections`, bygges én `TextSectionItem` pr. felt, i denne bekræftede rækkefølge
+   og med disse danske overskrifter (tomme felter, som `revisoroplysninger` ofte er,
+   udelades): `konklusion` → "Regnskabsanalyse: konklusion", `resultat` → "Resultat",
+   `likviditet` → "Likviditet", `balanceogkapitalforhold` → "Balance og kapitalforhold",
+   `branchestatistik` → "Branchestatistik", `revisoroplysninger` → "Revisoroplysninger",
+   `sprgsml` → "Spørgsmål til overvejelse" (sidst).
+3. Er `sections` slet ikke til stede (eller giver ingen brugbare sektioner), falder den
+   tilbage til `text` som ÉN sektion med overskriften "Regnskabsanalyse".
+4. Hver sektions HTML konverteres til ren tekst med `htmlToText` (ny fil,
    `apps/server/src/lasso/htmlText.ts`): `<br>`, `</p>` og `</li>` bliver til
-   linjeskift, `<li>` får et foranstillet "• ", alle andre tags fjernes, `<script>`/
-   `<style>`-indhold fjernes helt, og standardentiteterne (`&amp; &lt; &gt; &quot;
-   &#39; &nbsp;`) afkodes.
-3. Resultatet tilføjes som en almindelig `TextSectionItem` med overskriften
-   "Regnskabsanalyse" og `note: "Kilde: Lasso regnskabsanalyse"` — ingen bannerboks,
-   intet "Skrevet af AI"-mærke (designkatalogets regel 4: AI-analyser er almindelige
-   sektioner med kildelinje).
+   linjeskift (en linje der starter med "- " i kildeteksten, fx "<br>- spørgsmål",
+   bevares som sin egen linje med "- "), `<li>` får desuden et foranstillet "• ", alle
+   andre tags fjernes, `<script>`/`<style>`-indhold fjernes helt, og standardentiteterne
+   (`&amp; &lt; &gt; &quot; &#39; &nbsp;`) afkodes.
+5. Hver sektion får `note: "Kilde: Lasso regnskabsanalyse"` — ingen bannerboks, intet
+   "Skrevet af AI"-mærke (designkatalogets regel 4: AI-analyser er almindelige sektioner
+   med kildelinje).
 
-**At verificere:** den nøjagtige indpakning af svaret (rent HTML vs. JSON-felt) og om
-der findes flere HTML-tags end `<br/>`, `<p>`, `<ul>`, `<li>`, `<b>` (fx overskrifter,
-tabeller) — `htmlToText` fjerner ukendte tags uden linjeskift, hvilket kan slå tekst
-sammen, den ikke bør.
+**At verificere:** om der findes flere HTML-tags i de rigtige sektioner end `<b>`/`<br>`
+(fx `<p>`, `<ul>`/`<li>`, overskrifter, tabeller) — `htmlToText` fjerner ukendte tags uden
+linjeskift, hvilket kan slå tekst sammen, den ikke bør. Om `sections` altid er til stede
+(fallback til `text` er derfor stadig ikke afprøvet mod et rigtigt svar uden `sections`).
 
 ## Klientmetoder (nye)
 
