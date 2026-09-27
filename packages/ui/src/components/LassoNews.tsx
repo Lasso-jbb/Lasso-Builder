@@ -79,7 +79,9 @@ function NewsRow({ item, mention }: { item: NewsItemVM; mention?: string }) {
       </div>
       <div className="lasso-news__headline">{item.headlineSegments ? <Segments segments={item.headlineSegments} /> : item.headline}</div>
       {item.excerpt ? (
-        <div className="lasso-row__sub">
+        // Lasso News' content kan have linjeskift fra en HTML-liste (<li>); white-space: pre-line
+        // viser dem, uden at gå via en stylesheet-ændring (uddraget er ellers almindelig løbetekst).
+        <div className="lasso-row__sub" style={{ whiteSpace: "pre-line" }}>
           {item.extractSegments ? <Segments segments={item.extractSegments} /> : <Excerpt text={item.excerpt} mention={mention} />}
         </div>
       ) : null}

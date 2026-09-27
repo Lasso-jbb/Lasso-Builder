@@ -58,6 +58,14 @@ import { mapLimit, type ChangeFeedOptions, type DataProvider, type OwnershipGrap
 /** Så længe venter kontaktblokken på hjemmesidens telefon/e-mail, før den vises uden. */
 export const CONTACT_BUDGET_MS = 2_500;
 
+/**
+ * Så længe venter en visning på risikoobservationer, før resten hellere må vises uden. Målt
+ * svartid for et stort selskab (Novo Nordisk, 27.09.2026): 11,8 s — over budgettet giver en
+ * fejl (med "Prøv igen"), i stedet for at hele siden venter; kaldet kører videre i baggrunden og
+ * ligger klar i klientens cache til næste forsøg (samme mønster som CONTACT_BUDGET_MS).
+ */
+export const OBSERVATIONS_BUDGET_MS = 9_000;
+
 /** Venter højst `ms` på et løfte; derefter undefined (løftet kører videre og fylder klientens cache). */
 async function withinBudget<T>(p: Promise<T | undefined>, ms: number): Promise<T | undefined> {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -342,23 +350,33 @@ export class LiveProvider implements DataProvider {
   }
 
   /**
-   * Katalog 17: risikoobservationer (Firmaindsigt). Svarformen er bekræftet mod Lassos officielle
-   * dokumentation (docs/endpoints-risiko-nyheder.md). Indirekte observationer under
-   * `relatedObservations` navngives bedst muligt ud fra personens eget CVR-opslag.
+   * Katalog 17: risikoobservationer (Firmaindsigt). Svarformen er bekræftet mod api.lassox.com
+   * 27.09.2026 (docs/endpoints-risiko-nyheder.md). Kaldet kan tage flere sekunder for store
+   * selskaber (11,8 s målt for Novo Nordisk); et budget forhindrer, at hele visningen venter så
+   * længe — kaldet kører videre i baggrunden og ligger klar i klientens cache til næste forsøg,
+   * og RiskObservations.tsx viser sin fejltilstand med "Prøv igen" i stedet. Indirekte
+   * observationer under `relatedObservations` (personer OG selskaber) navngives bedst muligt
+   * ud fra entitetens eget CVR-opslag.
    */
   async observations(lassoId: string) {
-    const vm = adaptObservations(lassoId, await this.client.observations(lassoId));
+    const raw = await withinBudget(this.client.observations(lassoId), OBSERVATIONS_BUDGET_MS);
+    if (raw === undefined) {
+      const err = new Error(`Observationer svarede ikke inden for ${OBSERVATIONS_BUDGET_MS / 1000} s`);
+      err.name = "TimeoutError";
+      throw err;
+    }
+    const vm = adaptObservations(lassoId, raw);
     return this.withRelatedNames(vm);
   }
 
-  /** Bedste forsøg på at navngive de personer, `related` (relatedObservations) peger på. */
+  /** Bedste forsøg på at navngive de personer og selskaber, `related` (relatedObservations) peger på. */
   private async withRelatedNames(vm: ObservationsVM): Promise<ObservationsVM> {
     if (!vm.related?.length) return vm;
     const toName = vm.related.slice(0, 12);
-    const named = await mapLimit(toName, 4, async (person) => {
-      const raw = await safe(() => this.client.person(person.lassoId));
+    const named = await mapLimit(toName, 4, async (entity) => {
+      const raw = await safe(() => this.client.company(entity.lassoId));
       const name = raw === undefined ? undefined : str(raw, "name", "fullName", "names.0");
-      return name ? { ...person, name } : person;
+      return name ? { ...entity, name } : entity;
     });
     const byId = new Map(named.map((p) => [p.lassoId, p] as const));
     return { ...vm, related: vm.related.map((p) => byId.get(p.lassoId) ?? p) };

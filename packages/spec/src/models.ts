@@ -481,11 +481,16 @@ export interface ObservationsVM {
   /** Datakilder til kildelinjen, fx ["CVR", "regnskab", "ledelse"]. */
   sources?: string[];
   /**
-   * Indirekte observationer (fx konkursrelationer), der egentlig måler en tilknyttet person,
-   * grupperet pr. person (relatedObservations i det dokumenterede svar). Navnet slås op af
-   * LiveProvider, hvor det kan findes; ellers vises personens Lasso-ID.
+   * Indirekte observationer (fx konkursrelationer), der egentlig måler en tilknyttet person
+   * eller et tilknyttet selskab, grupperet pr. entitet (relatedObservations i det bekræftede
+   * svar — nøglerne kan være både personer og selskaber). Navnet slås op af LiveProvider, hvor
+   * det kan findes; ellers vises entitetens Lasso-ID.
    */
   related?: { lassoId: string; name?: string; rows: ObservationRowVM[] }[];
+  /** Svarets versionsstempel (bekræftet felt 27.09.2026, ubrugt indtil videre). */
+  version?: string;
+  /** En samlet score i det bekræftede svar (27.09.2026); skalaen er ikke dokumenteret endnu, vises ikke i UI'en. */
+  score?: number;
 }
 
 /** Samme alvorsskala som observationer, men kun tre trin bruges her (katalog 22): 0, 50, 100. */

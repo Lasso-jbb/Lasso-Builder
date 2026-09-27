@@ -1,24 +1,37 @@
 import type { NewsItemVM, NewsVM, ObservationRowVM, ObservationsVM, Severity } from "@lasso/spec";
-import { arr, at, dateStr, isObj, items, pick, str, type Json } from "./adapters.js";
+import { arr, at, dateStr, isObj, items, num, pick, str, type Json } from "./adapters.js";
 import { plainTextFromMarkup, stripHtml } from "./newsMarkup.js";
 
 /**
- * Risiko- og nyhedsadaptere, skrevet ud fra Lassos officielle dokumentation af de svarformer,
- * disse to moduler faktisk bruger (docs/endpoints-risiko-nyheder.md). De ældre, gættede
- * feltnavne (fra dengang formerne var ubekræftede) er bevaret som fallback EFTER de
- * dokumenterede felter, så et svar i en anden form stadig giver noget frem for at kaste.
+ * Risiko- og nyhedsadaptere, bekræftet mod api.lassox.com 27.09.2026 (Novo Nordisk,
+ * CVR-1-24256790, se docs/endpoints-risiko-nyheder.md). De ældre, gættede feltnavne (fra
+ * dengang formerne var ubekræftede) er bevaret som fallback EFTER de dokumenterede felter, så
+ * et svar i en anden form stadig giver noget frem for at kaste.
  */
 
 /* ------------------------------------------------------------------------------------------
  * Observationer (katalog 17). POST /modules/observations/{lassoId}, body
  * { observationTags: ["CompanyInsight"] } (portalens Firmaindsigt-modul). 120 kald/min.
  *
- * Dokumenteret svar:
- * { relatedLassoId, relatedCompanyName,
+ * Bekræftet svar (27.09.2026):
+ * { version, relatedLassoId, relatedCompanyName, relatedPersonName, score, percentages,
+ *   relatedName,
  *   observations: [{ title, type, tags[], shortDescription, description, outcome: 0|25|50|100,
  *                     notAvailable, errors, relatedLassoId, data? }],
- *   relatedObservations: { "<personLassoId>": [ ...samme form... ] } }
+ *   relatedObservations: { "<lassoid, SMÅ bogstaver>": [ ...samme form... ] } }
+ * `relatedObservations` er IKKE kun personer: nøglerne kan lige så vel være selskaber
+ * (cvr-1-…) som personer (cvr-3-…), og de er i små bogstaver. `canonicalLassoId` normaliserer
+ * dem til den kanoniske form (CVR-N-…), som resten af koden bruger.
  * ------------------------------------------------------------------------------------------ */
+
+/**
+ * Normaliserer et Lasso-ID's kilde-del til store bogstaver ("cvr-1-24257630" -> "CVR-1-…").
+ * `relatedObservations`-nøglerne kommer i små bogstaver; VM'en skal altid bære kanonisk form.
+ */
+export function canonicalLassoId(id: string): string {
+  const m = /^([a-z]+)(-.*)$/i.exec(id);
+  return m ? `${m[1]!.toUpperCase()}${m[2]}` : id;
+}
 
 /** `outcome` er allerede 0/25/50/100 og 1:1 med vores Severity-skala (0 grøn, 25/50 gul, 100 rød). */
 function outcomeSeverity(v: Json): Severity | undefined {
@@ -88,15 +101,16 @@ function parseObservationList(raw: Json, idPrefix: string): ObservationRowVM[] {
 export function adaptObservations(lassoId: string, raw: Json): ObservationsVM {
   const observations = parseObservationList(raw, lassoId);
 
-  // Indirekte observationer (fx DirectBankruptcies) måler egentlig en tilknyttet person og
-  // gengives derfor separat, keyed på personens Lasso Id. Navnet kendes ikke her (adapteren
-  // har kun det rå svar) og fyldes evt. ind af LiveProvider (apps/server/src/data/live.ts).
+  // Indirekte observationer (fx DirectBankruptcies) måler egentlig en tilknyttet person eller
+  // et tilknyttet selskab og gengives derfor separat, keyed på entitetens Lasso Id (i små
+  // bogstaver i det rå svar). Navnet kendes ikke her (adapteren har kun det rå svar) og fyldes
+  // evt. ind af LiveProvider (apps/server/src/data/live.ts).
   const relatedRaw = pick(raw, "relatedObservations");
   const related: NonNullable<ObservationsVM["related"]> = [];
   if (isObj(relatedRaw)) {
-    for (const [personLassoId, personRaw] of Object.entries(relatedRaw)) {
-      const rows = parseObservationList(personRaw, personLassoId);
-      if (rows.length) related.push({ lassoId: personLassoId, rows });
+    for (const [rawId, personRaw] of Object.entries(relatedRaw)) {
+      const rows = parseObservationList(personRaw, rawId);
+      if (rows.length) related.push({ lassoId: canonicalLassoId(rawId), rows });
     }
   }
 
@@ -106,6 +120,8 @@ export function adaptObservations(lassoId: string, raw: Json): ObservationsVM {
     related: related.length ? related : undefined,
     checkedAt: dateStr(raw, "checkedAt", "generatedAt", "lastChecked", "updatedAt", "meta.checkedAt", "meta.generatedAt"),
     sources: undefined,
+    version: str(raw, "version"),
+    score: num(raw, "score"),
   };
 }
 
@@ -146,10 +162,12 @@ function lassoNewsSourceLabel(provider: string | undefined): string {
 }
 
 /**
- * Lasso News (POST /modules/news). Dokumenteret svar: array af { headline, content (HTML),
- * tagLine, time, promotedUntil, type, provider, url, lassoIds[] }. headline/content/tagLine
- * indeholder entitets-markup "{Navn|LassoId}" (newsMarkup.ts); content strippes for HTML til
- * ren tekst — UI'en sætter aldrig innerHTML.
+ * Lasso News (POST /modules/news). Bekræftet svar (27.09.2026, Novo Nordisk): rent array af
+ * { headline, content (HTML), tagLine, time, promotedUntil, type, provider, providerData (kan
+ * være null), url, storyId, imageId, uniqueId, lassoIds[] }. headline/content/tagLine
+ * indeholder entitets-markup "{Navn|LassoId}" (newsMarkup.ts), også midt i HTML-lister
+ * (fx "<ul><li>{Navn|LassoId}</li></ul>"); content strippes for HTML til ren tekst — UI'en
+ * sætter aldrig innerHTML.
  */
 export function adaptLassoNews(raw: Json): NewsItemVM[] {
   const list = Array.isArray(raw) ? raw : items(raw);
@@ -196,11 +214,12 @@ function plainFromSegments(segments: { text: string }[] | undefined): string | u
 }
 
 /**
- * Paqle (GET /data/paqle/{lassoId}/news): { news: [...], continuationToken }. `providerData`
- * har `sourceName` (kilden), `published` og `headline`/`extract` som lister af tekstsegmenter
- * med `highlight:true/false`, der fremhæver firmanavnet. Ét storyId/clusterHash er ÉN nyhed
- * (kataloget forbyder at samle flere kilder til "+N kilder"), så hvert element i `news` bliver
- * netop én NewsItemVM.
+ * Paqle (GET /data/paqle/{lassoId}/news). Bekræftet svar (27.09.2026): { news: [...],
+ * continuationToken }. `tagLine`/`imageId` kan være `null`. `providerData` har `sourceName`
+ * (kilden, fx "sundhedstinget.dk"), `published` og `headline`/`extract` som lister af
+ * tekstsegmenter med `highlight:true/false`, der fremhæver firmanavnet. Ét storyId/clusterHash
+ * er ÉN nyhed (kataloget forbyder at samle flere kilder til "+N kilder"), så hvert element i
+ * `news` bliver netop én NewsItemVM.
  */
 export function adaptNews(lassoId: string, raw: Json, limit: number): NewsVM {
   const list = arr(raw, "news").length ? arr(raw, "news") : items(raw);

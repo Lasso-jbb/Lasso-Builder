@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { composeProbe } from "@lasso/spec";
 import { loadConfig } from "../config.js";
 import { LassoApiError, type LassoClient } from "../lasso/client.js";
-import { CONTACT_BUDGET_MS, LiveProvider } from "./live.js";
+import { CONTACT_BUDGET_MS, LiveProvider, OBSERVATIONS_BUDGET_MS } from "./live.js";
 import { resolveSpec } from "./resolve.js";
 
 /** Falsk klient, der logger kald og kan gøre kontaktendpoints langsomme. */
@@ -143,4 +143,47 @@ test("contact(): langsom telefon/e-mail-scraping venter højst CONTACT_BUDGET_MS
   assert.ok(elapsed < CONTACT_BUDGET_MS + 800, `ventede ${elapsed} ms`);
   assert.equal(c.website, "https://lassox.com");
   assert.equal(c.phone, undefined);
+});
+
+test("observations(): venter højst OBSERVATIONS_BUDGET_MS på et langsomt kald og fejler (TimeoutError) i stedet for at blokere hele visningen", async () => {
+  const client = {
+    observations: () => new Promise(() => {}), // svarer aldrig inden for testens levetid
+  } as unknown as LassoClient;
+  const started = Date.now();
+  let err: Error | undefined;
+  try {
+    await new LiveProvider(client, loadConfig({})).observations("CVR-1-24256790");
+  } catch (e) {
+    err = e as Error;
+  }
+  const elapsed = Date.now() - started;
+  assert.equal(err?.name, "TimeoutError");
+  assert.ok(elapsed < OBSERVATIONS_BUDGET_MS + 1_000, `ventede ${elapsed} ms`);
+});
+
+test("observations(): related-entiteter (personer OG selskaber) navngives case-insensitivt via company(), med kanonisk ID", async () => {
+  const calls: string[] = [];
+  const client = {
+    async observations() {
+      return {
+        observations: [],
+        relatedObservations: {
+          "cvr-3-4000002550": [{ title: "Konkursrelationer", type: "DirectBankruptciesPerson", outcome: 100 }],
+          "cvr-1-24257630": [{ title: "Virksomhedsstatus", type: "CompanyStatus", outcome: 100 }],
+        },
+      };
+    },
+    async company(id: string) {
+      calls.push(id);
+      if (id === "CVR-3-4000002550") return { name: "Kjeld Kirk Kristiansen" };
+      if (id === "CVR-1-24257630") return { name: "Et Konkursramt ApS" };
+      return {};
+    },
+  } as unknown as LassoClient;
+  const vm = await new LiveProvider(client, loadConfig({})).observations("CVR-1-24256790");
+  const byId = new Map(vm.related!.map((r) => [r.lassoId, r]));
+  assert.equal(byId.get("CVR-3-4000002550")!.name, "Kjeld Kirk Kristiansen");
+  assert.equal(byId.get("CVR-1-24257630")!.name, "Et Konkursramt ApS");
+  // company() slås op med den kanoniske (store bogstaver) form, ikke det rå ID fra relatedObservations.
+  assert.deepEqual(calls.sort(), ["CVR-1-24257630", "CVR-3-4000002550"]);
 });

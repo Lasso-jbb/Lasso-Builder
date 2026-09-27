@@ -35,13 +35,22 @@ export function parseEntityMarkup(text: string): MarkupSegment[] {
   return segments;
 }
 
-/** Ren tekst uden markup (navnene beholdes, klammerne og Lasso Id'erne fjernes). */
+/**
+ * Ren tekst uden markup (navnene beholdes, klammerne og Lasso Id'erne fjernes). Vandret
+ * mellemrum (mellemrum/tab) collapses, men linjeskift bevares — `stripHtml` lægger dem ind for
+ * <br>/<li>, og de skal ikke gå tabt igen her (fx en liste af nye bestyrelsesmedlemmer).
+ */
 export function plainTextFromMarkup(text: string | undefined): string | undefined {
   if (!text) return undefined;
   const plain = parseEntityMarkup(text)
     .map((s) => s.text)
     .join("");
-  return plain.replace(/\s+/g, " ").trim() || undefined;
+  const lines = plain
+    .replace(/[^\S\n]+/g, " ")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  return lines.join("\n") || undefined;
 }
 
 /**

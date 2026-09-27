@@ -27,8 +27,8 @@ function summarize(rows: readonly ObservationRowVM[]): string {
 }
 
 /**
- * Én observationsrække, brugt både til virksomhedens egne observationer og til "Vedrører
- * personer" (relatedObservations pr. person). `notAvailable` (Lasso kunne ikke beregne
+ * Én observationsrække, brugt både til virksomhedens egne observationer og til "Vedrører"
+ * (relatedObservations pr. person eller selskab). `notAvailable` (Lasso kunne ikke beregne
  * observationen) vises som ren tekst i muted, uden badge eller farve (guide 23 regel 1 og 7).
  */
 function ObservationRow({ o }: { o: ObservationRowVM }) {
@@ -132,7 +132,7 @@ export function RiskObservations({ data, derived, error, title }: { data?: Obser
 
       {related.length > 0 ? (
         <div className="lasso-observations__related">
-          <p className="lasso-section__subtitle">Vedrører personer</p>
+          <p className="lasso-section__subtitle">Vedrører</p>
           {related.map((person) => (
             <div key={person.lassoId}>
               <p className="lasso-row__sub">
