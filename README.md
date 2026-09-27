@@ -45,6 +45,8 @@ Modellen skriver aldrig HTML. Den sender en JSON-spec, og Lassos kode henter dat
 | `POST /api/views` | Gem via API. Kræver `ADMIN_API_KEY`. |
 | `/api/debug/lasso/<sti>` | Rå svar fra Lassos API til tilpasning af adapters. Kræver `ADMIN_API_KEY`. `?shape=true` viser kun struktur. |
 | `/health` | Status, datakilde, database. |
+| `/portal` | Portalen i browseren (login med bruger-id + adgangsnøgle, skinne, faner, søgning, virksomheds- og personsider, gemte sider). Roden `/` sender hertil. Se `docs/portal.md`. |
+| `/api/portal/*` | Portalens API bag session-cookie og CSRF-header; samme use-cases som MCP-tools. |
 
 ### Data fra Lasso
 
@@ -72,6 +74,12 @@ Test med MCP Inspector:
 npx @modelcontextprotocol/inspector
 # Transport: Streamable HTTP, URL: http://localhost:3000/mcp
 ```
+
+## Log ind i portalen
+
+Åbn `https://<domæne>/portal`. Bruger-id `demo` + `MCP_ACCESS_KEY` logger demobrugeren ind; med
+`MCP_USER_KEYS` (`nøgle:bruger-id:Navn:org;…`) får hver kollega sit eget login og sin egen liste af
+gemte sider. Uden nøgler (lokalt) er portalen åben. Se `docs/portal.md`.
 
 ## Tilføj i Claude
 
