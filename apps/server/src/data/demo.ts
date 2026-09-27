@@ -102,18 +102,27 @@ function beneficialOwnersFor(c: DemoCompany): BeneficialOwnershipVM {
 }
 
 function textSectionsFor(c: DemoCompany): TextSectionsVM {
-  return {
-    lassoId: c.lassoId,
-    title: "Virksomhedsprofil",
-    sections: [
-      { heading: "Branche", body: c.industryText ?? "Ikke oplyst", note: c.industryCode ? `NACE ${c.industryCode}` : undefined },
-      {
-        heading: "Formål",
-        body: `Selskabets formål er at drive virksomhed inden for ${(c.industryText ?? "sin branche").toLowerCase()} og hermed beslægtet virksomhed (eksempeltekst).`,
-      },
-      { heading: "Tegningsregler", body: "Selskabet tegnes af en direktør alene eller af den samlede bestyrelse (eksempeltekst)." },
-    ],
-  };
+  const sections: TextSectionsVM["sections"] = [
+    { heading: "Branche", body: c.industryText ?? "Ikke oplyst", note: c.industryCode ? `NACE ${c.industryCode}` : undefined },
+    {
+      heading: "Formål",
+      body: `Selskabets formål er at drive virksomhed inden for ${(c.industryText ?? "sin branche").toLowerCase()} og hermed beslægtet virksomhed (eksempeltekst).`,
+    },
+    { heading: "Tegningsregler", body: "Selskabet tegnes af en direktør alene eller af den samlede bestyrelse (eksempeltekst)." },
+  ];
+  // Katalog 12/19: eksempel på regnskabsanalysen (POST /modules/reportanalysis), kun for ét eksempel.
+  if (c.lassoId === "CVR-1-99000001") {
+    sections.push({
+      heading: "Regnskabsanalyse",
+      body:
+        `${c.name} har haft en støt stigende omsætning de seneste år, drevet af flere store byggeprojekter.\n\n` +
+        "• Bruttofortjenesten er steget 12 % det seneste år\n" +
+        "• Soliditetsgraden er forbedret og ligger nu over branchens gennemsnit\n\n" +
+        "Konklusion: sund og stabil udvikling (eksempeltekst).",
+      note: "Kilde: Lasso regnskabsanalyse",
+    });
+  }
+  return { lassoId: c.lassoId, title: "Virksomhedsprofil", sections };
 }
 
 function timelineFor(c: DemoCompany): TimelineVM {
@@ -529,9 +538,31 @@ function changeFeedFor(opts: ChangeFeedOptions): ChangeFeedVM {
   return { listName: DEMO_LIST, days, entries: foldChangeEntries(inPeriod), total: inPeriod.length, source: "Eksempeldata", updated: new Date().toISOString().slice(0, 10) };
 }
 
+/** Katalog 08: eksempel på Lassos "live number" (kræver egen tilføjelse), kun for ét eksempel. */
+const VERIFIED_NUMBERS: Record<string, { verifiedNumbers: NonNullable<ContactVM["verifiedNumbers"]>; isRobinson: boolean; verifiedAt: string }> = {
+  "CVR-1-99000001": {
+    verifiedNumbers: [
+      { phoneNumber: "86123456", score: 91, explanation: "Bekræftet fra flere kilder (eksempel)", callable: true, sources: ["CVR", "Website"] },
+      { phoneNumber: "20304050", score: 62, explanation: "Fundet på hjemmesiden (eksempel)", callable: true, sources: ["Website"] },
+    ],
+    isRobinson: true,
+    verifiedAt: "2026-09-20",
+  },
+};
+
 function contactFor(c: DemoCompany): ContactVM {
   const hasAny = Boolean(c.phone || c.email || c.website);
-  return { lassoId: c.lassoId, phone: c.phone, email: c.email, website: c.website, address: c.address, source: hasAny ? "CVR" : undefined, updated: hasAny ? "2026-09-20" : undefined };
+  const verified = VERIFIED_NUMBERS[c.lassoId];
+  return {
+    lassoId: c.lassoId,
+    phone: c.phone,
+    email: c.email,
+    website: c.website,
+    address: c.address,
+    source: hasAny ? "CVR" : undefined,
+    updated: hasAny ? "2026-09-20" : undefined,
+    ...(verified ? { verifiedNumbers: verified.verifiedNumbers, isRobinson: verified.isRobinson, verifiedAt: verified.verifiedAt } : {}),
+  };
 }
 
 function contactPersonsFor(c: DemoCompany): ContactPersonsVM {

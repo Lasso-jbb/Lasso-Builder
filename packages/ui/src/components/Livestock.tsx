@@ -23,9 +23,10 @@ function HerdIcon({ species }: { species?: string }) {
 /**
  * CHR (katalog 20): besætninger pr. dyretype + veterinære hændelser.
  * Vises kun for landbrug med et CHR-nummer; modellen/værten inkluderer kun
- * komponenten, når det er tilfældet, og det tomme udfald her er reelt
- * "ingen data", ikke en fejl (`LiveProvider` har intet bekræftet CHR-endpoint,
- * se docs/lasso-endpoints.md).
+ * komponenten, når det er tilfældet. Tom tilstand dækker tre situationer, alle uden
+ * fejl: ingen besætninger, intet Ejendomme-modul i abonnementet, eller et CHR-svar
+ * i en endnu uverificeret form (`livestock.unavailableReason`, se
+ * docs/endpoints-enheder-kontakt-analyse.md).
  */
 export function Livestock({ livestock, error }: { livestock?: LivestockVM; error?: string }) {
   const title = "Besætninger, CHR";
@@ -39,7 +40,10 @@ export function Livestock({ livestock, error }: { livestock?: LivestockVM; error
   if (!livestock.chrNumber || livestock.herds.length === 0) {
     return (
       <Section title={title} span="full">
-        <DataState state="empty" reason="Virksomheden har intet CHR-nummer, eller der er ingen registrerede besætninger." />
+        <DataState
+          state="empty"
+          reason={livestock.unavailableReason ?? "Virksomheden har intet CHR-nummer, eller der er ingen registrerede besætninger."}
+        />
       </Section>
     );
   }

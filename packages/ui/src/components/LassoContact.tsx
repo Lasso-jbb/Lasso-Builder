@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { ContactVM } from "@lasso/spec";
+import { formatDate, type ContactVM } from "@lasso/spec";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
 
 /** Rene omridsikoner, samme streg som SeverityIcon (primitives.tsx): kun form, ingen farve. */
@@ -71,6 +71,10 @@ function Row({ icon, href, children }: { icon: ReactNode; href?: string; childre
  * Kontaktblok (katalog 08, node 9SX-0): ikon + værdi, klikbar (tel:/mailto:/https), ingen
  * skillelinjer mellem rækkerne, kun luft. Adresse (ikke klikbar), telefon, e-mail, web, i den
  * rækkefølge. Tom tilstand, når intet er oplyst.
+ *
+ * Live number (kræver egen tilføjelse, udelades stille uden adgang): op til 3 verificerede
+ * numre efter de almindelige rækker, mærket "Telefon (verificeret DD.MM.ÅÅÅÅ)" i ren tekst,
+ * en Robinsonliste-linje i muted, og sin egen kildelinje.
  */
 export function LassoContact({ contact, title, error }: { contact?: ContactVM; title?: string; error?: string }) {
   const heading = title ?? "Kontakt";
@@ -86,7 +90,8 @@ export function LassoContact({ contact, title, error }: { contact?: ContactVM; t
   const addressLine1 = a?.street;
   const addressLine2 = [a?.zip, a?.city].filter(Boolean).join(" ") || undefined;
   const hasAddress = Boolean(addressLine1 || addressLine2);
-  const hasAny = hasAddress || contact.phone || contact.email || contact.website;
+  const hasVerified = Boolean(contact.verifiedNumbers?.length);
+  const hasAny = hasAddress || contact.phone || contact.email || contact.website || hasVerified;
 
   if (!hasAny) {
     return (
@@ -123,8 +128,18 @@ export function LassoContact({ contact, title, error }: { contact?: ContactVM; t
             {prettyUrl(contact.website)}
           </Row>
         ) : null}
+        {contact.verifiedNumbers?.map((n, i) => (
+          <Row key={`verified-${i}`} icon={<PhoneIcon />} href={n.callable ? `tel:${n.phoneNumber.replace(/\s+/g, "")}` : undefined}>
+            {prettyPhone(n.phoneNumber)}
+            <span className="lasso-small lasso-muted"> — Telefon (verificeret {formatDate(contact.verifiedAt)})</span>
+          </Row>
+        ))}
       </div>
+      {contact.isRobinson ? (
+        <p className="lasso-small lasso-muted">Tilmeldt Robinsonlisten, må ikke kontaktes med markedsføring</p>
+      ) : null}
       {contact.source ? <SourceLine source={contact.source} updated={contact.updated} /> : null}
+      {hasVerified ? <SourceLine source="Lasso live number" updated={contact.verifiedAt} /> : null}
     </Section>
   );
 }
