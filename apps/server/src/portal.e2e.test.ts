@@ -436,3 +436,29 @@ test("en uventet serverfejl giver 500 som JSON uden detaljer", async () => {
     console.error = log;
   }
 });
+
+test("PORTAL_PUBLIC=true: /portal og /api/portal/* er åbne uden login som demobrugeren", async () => {
+  const openConfig = loadConfig({ ...process.env, MCP_ACCESS_KEY: KEY, LINK_SECRET: "portal-test-hemmelighed", LASSO_DATA_SOURCE: "demo", DATABASE_URL: "", PUBLIC_BASE_URL: PUBLIC, PORTAL_PUBLIC: "true" });
+  const openStore = createViewStore("");
+  const openPages = createSavedPageStore("");
+  const openApp = createApp({ config: openConfig, client: new LassoClient(openConfig), provider: new DemoProvider(), store: openStore, pages: openPages });
+  const srv = openApp.listen(0);
+  await new Promise((r) => srv.once("listening", r));
+  const openBase = `http://127.0.0.1:${(srv.address() as AddressInfo).port}`;
+  try {
+    const page = await fetch(`${openBase}/portal`);
+    const b = boot(await page.text()) as { loginRequired: boolean; user: { id: string; isDemo: boolean } | null };
+    assert.equal(b.loginRequired, false);
+    assert.equal(b.user?.isDemo, true);
+    const me = await fetch(`${openBase}/api/portal/me`);
+    assert.equal(me.status, 200);
+    assert.equal(((await me.json()) as { user: { isDemo: boolean } }).user.isDemo, true);
+    // Opslag uden cookie virker; ændrende kald kræver stadig CSRF-headeren.
+    const search = await fetch(`${openBase}/api/portal/search?query=Eksempel&limit=2`);
+    assert.equal(search.status, 200);
+    const noCsrf = await fetch(`${openBase}/api/portal/pages`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ lassoId: "CVR-1-99000001" }) });
+    assert.equal(noCsrf.status, 403);
+  } finally {
+    await new Promise((r) => srv.close(r));
+  }
+});

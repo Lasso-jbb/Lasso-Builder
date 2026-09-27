@@ -80,6 +80,10 @@ npx @modelcontextprotocol/inspector
 `MCP_USER_KEYS` (`nøgle:bruger-id:Navn:org;…`) får hver kollega sit eget login og sin egen liste af
 gemte sider. Uden nøgler (lokalt) er portalen åben. Se `docs/portal.md`.
 
+`PORTAL_PUBLIC=true` åbner portalen uden login: alle besøgende er demobrugeren og deler dens liste
+af gemte sider, kontomenuen er skjult, og `/mcp` er stadig beskyttet af nøglen. Et personligt login
+gælder fortsat, hvis cookien er der, men login-siden vises ikke.
+
 ## Tilføj i Claude
 
 Indstillinger → Connectors → Tilføj brugerdefineret connector, med URL'en:

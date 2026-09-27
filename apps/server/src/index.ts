@@ -22,7 +22,7 @@ import {
   type Metric,
 } from "@lasso/spec";
 import { getCurrentUser, isValidMcpKey, mcpKeyRequired, providedKey } from "./auth/user.js";
-import { createLoginLimiter, loginWithKey, portalUser, requirePortal, sessionCookie, signSession } from "./auth/session.js";
+import { createLoginLimiter, loginWithKey, portalLoginRequired, portalUser, requirePortal, sessionCookie, signSession } from "./auth/session.js";
 import { createPool } from "./db.js";
 import { entitySnapshot, savedPageVM } from "./pages/resolveExtras.js";
 import { createSavedPageStore, pageKindOf, SavedPageError, validateSavedPage, type SavedPageStore } from "./pages/store.js";
@@ -154,7 +154,7 @@ export function createApp({ config, client, provider, store, pages }: AppDeps) {
     res
       .type("html")
       .set("Cache-Control", "no-store")
-      .send(injectBoot(html, { mode: "portal", user, loginRequired: mcpKeyRequired(config), baseUrl: config.publicBaseUrl }, "Portal"));
+      .send(injectBoot(html, { mode: "portal", user, loginRequired: portalLoginRequired(config), baseUrl: config.publicBaseUrl }, "Portal"));
   });
 
   app.get("/health", async (_req, res) => {
@@ -647,7 +647,7 @@ async function main() {
   const app = createApp({ config, client, provider, store, pages });
   const server = app.listen(config.PORT, "0.0.0.0", () => {
     console.log(
-      `[lasso-mcp] v${VERSION} ${config.APP_ENV} på port ${config.PORT} | data: ${provider.kind} | lasso-credentials: ${hasLassoCredentials(config) ? "ja" : "nej"} | søgning: ${client.hasSearchCredentials ? config.LASSO_SEARCH_API_BASE_URL : "ingen nøgle"} | db: ${store.kind} | mcp-nøgle: ${mcpKeyRequired(config) ? "ja" : "nej"} | ${config.publicBaseUrl}/mcp`,
+      `[lasso-mcp] v${VERSION} ${config.APP_ENV} på port ${config.PORT} | data: ${provider.kind} | lasso-credentials: ${hasLassoCredentials(config) ? "ja" : "nej"} | søgning: ${client.hasSearchCredentials ? config.LASSO_SEARCH_API_BASE_URL : "ingen nøgle"} | db: ${store.kind} | mcp-nøgle: ${mcpKeyRequired(config) ? "ja" : "nej"} | portal: ${portalLoginRequired(config) ? "login" : "åben"} | ${config.publicBaseUrl}/mcp`,
     );
     void probeLasso(config, client, provider).catch((err) => console.error("[lasso-probe] fejl:", errorMessage(err)));
   });

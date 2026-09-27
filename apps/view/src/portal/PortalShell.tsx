@@ -91,6 +91,8 @@ export interface PortalShellProps {
   baseUrl: string;
   /** Efter "Log ud": appen viser login-siden (eller demobrugeren lokalt). */
   onLoggedOut: () => void;
+  /** Åben portal uden login (PORTAL_PUBLIC eller ingen nøgler): ingen kontomenu og intet "Log ud". */
+  canLogout?: boolean;
 }
 
 /** Beskeder (07) hører til rammen: logges brugeren ud, forsvinder de med den. */
@@ -102,7 +104,7 @@ export function PortalShell(props: PortalShellProps) {
   );
 }
 
-function Shell({ user, api, baseUrl, onLoggedOut }: PortalShellProps) {
+function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true }: PortalShellProps) {
   const toast = useToast();
   const [tabs, setTabs] = useState<TabsState>(() => initialTabs(window.location.hash, readTabs(), newId));
   const [data, setData] = useState<Record<string, TabData>>({});
@@ -503,7 +505,7 @@ function Shell({ user, api, baseUrl, onLoggedOut }: PortalShellProps) {
     nav: [
       { id: "soeg", label: "Søg", icon: <ShellIcon name="search" size={20} />, active: route.kind === "search", onSelect: openSearch },
       { id: "lister", label: "Lister", icon: <ShellIcon name="list" size={20} />, active: route.kind === "saved", onSelect: openSaved },
-      { id: "konto", label: "Konto", icon: <ShellIcon name="user" size={20} />, active: accountOpen, onSelect: () => setAccountOpen(true) },
+      ...(canLogout ? [{ id: "konto", label: "Konto", icon: <ShellIcon name="user" size={20} />, active: accountOpen, onSelect: () => setAccountOpen(true) }] : []),
     ],
   };
 
@@ -571,7 +573,7 @@ function Shell({ user, api, baseUrl, onLoggedOut }: PortalShellProps) {
           onSelect: (id) => setTabs((s) => activate(s, id)),
           onClose: tabs.tabs.length > 1 ? close : undefined,
           onAdd: () => setTabs((s) => newSearch(s, newId)),
-          account,
+          account: canLogout ? account : undefined,
         }}
         mobile={mobile}
       >

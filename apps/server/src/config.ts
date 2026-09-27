@@ -38,6 +38,11 @@ const schema = z.object({
     .string()
     .default("false")
     .transform((v) => v === "true" || v === "1"),
+  /** true = portalen (/portal og /api/portal/*) er åben uden login: besøgende er demobrugeren. */
+  PORTAL_PUBLIC: z
+    .string()
+    .default("false")
+    .transform((v) => v === "true" || v === "1"),
 
   /** Hardcoded demobruger, indtil Lasso ID kobles på (se src/auth/user.ts). */
   DEMO_USER_ID: z.string().default("demo"),

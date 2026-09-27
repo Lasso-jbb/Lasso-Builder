@@ -7,6 +7,11 @@ portal.lassox.com bruges i dag. Den bor på `/portal` (roden `/` sender videre),
 
 ## Login og session (apps/server/src/auth/session.ts)
 
+- **Åben portal:** `PORTAL_PUBLIC=true` gør `/portal` og `/api/portal/*` tilgængelige uden login;
+  besøgende uden session er demobrugeren (`portalUser`), `loginRequired` i boot er `false`, og
+  appen skjuler kontomenuen og "Log ud". CSRF-headeren kræves stadig på ændrende kald, og `/mcp`
+  er stadig beskyttet af nøglen. Lokalt uden nøgler er portalen åben på samme måde.
+
 - Login = **bruger-id + adgangsnøgle**, samme nøgler som MCP-connectoren: `MCP_ACCESS_KEY` logger
   demobrugeren ind (bruger-id = `DEMO_USER_ID`, standard `demo`), `MCP_USER_KEYS` logger hver sin
   bruger ind. Lasso ID/OAuth kobles på i `loginWithKey`/`getCurrentUser` senere.
