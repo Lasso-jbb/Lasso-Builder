@@ -311,7 +311,8 @@ export class LiveProvider implements DataProvider {
       const legal = adaptOwnershipLegal(lassoId, await this.client.ownersLegal(lassoId));
       if (legal) return { ...legal, auditor: adaptOwnership(lassoId, await companyRaw).auditor };
     } catch (err) {
-      if (!(err instanceof LassoApiError) || err.status < 400 || err.status >= 500) throw err;
+      // Ejerne i company-full er den sikre reserve, uanset om /owners/legal svarer 4xx, 5xx eller slet ikke.
+      if (!(err instanceof LassoApiError) || err.status >= 500) console.warn(`[lasso] owners/legal fejlede for ${lassoId}: ${err instanceof Error ? err.message : String(err)}`);
     }
     return adaptOwnership(lassoId, await companyRaw);
   }
