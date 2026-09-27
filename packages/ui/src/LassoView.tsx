@@ -40,6 +40,7 @@ import { PersonNetwork } from "./components/PersonNetwork.js";
 import { PersonRisk } from "./components/PersonRisk.js";
 import { RiskObservations } from "./components/RiskObservations.js";
 import { AuditorIndependence } from "./components/AuditorIndependence.js";
+import { ReportA4 } from "./components/ReportA4.js";
 import { specToCsv } from "./csv.js";
 import { Badge, Skeleton } from "./primitives.js";
 import { SaveDialog } from "./SaveDialog.js";
@@ -255,6 +256,11 @@ export function LassoView(props: LassoViewProps) {
   const csv = dataset ? specToCsv(spec, dataset) : null;
   const shareUrl = savedUrl ?? url;
 
+  // Katalog 27: "Eksportér PDF" på en virksomhedsside viser A4-rapporten i en overlay med "Print" og "Luk".
+  const [reportOpen, setReportOpen] = useState(false);
+  const reportCompany = spec.kind === "company" ? spec.components.map((c) => ("company" in c && typeof c.company === "string" ? c.company : undefined)).find(Boolean) : undefined;
+  const canReport = Boolean(host.export && dataset && reportCompany && dataset.companies[reportCompany]);
+
   const copy = async (link: string) => {
     const res = await onAction({ kind: "copy-link", url: link });
     setNotice(res && !res.ok ? res.error : "Link kopieret");
@@ -364,6 +370,11 @@ export function LassoView(props: LassoViewProps) {
               Eksportér<span className="lasso-btn__label--optional"> CSV</span>
             </button>
           ) : null}
+          {canReport ? (
+            <button className="lasso-btn" onClick={() => setReportOpen(true)}>
+              Eksportér<span className="lasso-btn__label--optional"> PDF</span>
+            </button>
+          ) : null}
           {shareUrl ? (
             <button className="lasso-btn" onClick={() => void copy(shareUrl)}>
               Del link
@@ -376,6 +387,21 @@ export function LassoView(props: LassoViewProps) {
             </button>
           ) : null}
         </footer>
+
+        {reportOpen && dataset && reportCompany ? (
+          <div className="lasso-a4-overlay" role="dialog" aria-label="Virksomhedsrapport">
+            <div className="lasso-a4-toolbar">
+              <span className="lasso-a4-toolbar__title">Virksomhedsrapport, {dataset.companies[reportCompany]?.name}</span>
+              <button className="lasso-btn lasso-btn--primary" onClick={() => window.print()}>
+                Print
+              </button>
+              <button className="lasso-btn" onClick={() => setReportOpen(false)}>
+                Luk
+              </button>
+            </div>
+            <ReportA4 company={reportCompany} dataset={dataset} />
+          </div>
+        ) : null}
       </div>
     </div>
   );
