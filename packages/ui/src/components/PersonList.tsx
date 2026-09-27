@@ -2,6 +2,7 @@ import { useState } from "react";
 import { formatDate, isPersonId, type PersonRowVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
+import { Tabs } from "./Tabs.js";
 
 /** Store bestyrelser (fx 18 personer) foldes sammen efter de første (regel 9). */
 const COLLAPSED_ROWS = 8;
@@ -30,14 +31,18 @@ export function PersonList({ people, show, title, error, onOpen }: { people?: Pe
   }
   const hasEnded = people.some((p) => p.to);
   const rows = (mode === "all" ? people : people.filter((p) => !p.to)).slice().sort((a, b) => Number(Boolean(a.to)) - Number(Boolean(b.to)));
+  // Niveau 3-faner (29): skifter kun elementets egen visning.
   const toggle = hasEnded ? (
-    <div className="lasso-segment" role="tablist" aria-label="Vis personer">
-      {(["current", "all"] as const).map((m) => (
-        <button key={m} type="button" role="tab" aria-selected={mode === m} className={`lasso-segment__item ${mode === m ? "is-on" : ""}`} onClick={() => setMode(m)}>
-          {m === "current" ? "Nuværende" : "Alle"}
-        </button>
-      ))}
-    </div>
+    <Tabs
+      level={3}
+      ariaLabel="Vis personer"
+      items={[
+        { id: "current", label: "Nuværende" },
+        { id: "all", label: "Alle" },
+      ]}
+      value={mode}
+      onChange={(id) => setMode(id as "current" | "all")}
+    />
   ) : null;
   if (rows.length === 0) {
     return (

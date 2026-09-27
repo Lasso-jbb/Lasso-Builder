@@ -42,6 +42,8 @@ export { PersonRoles } from "./components/PersonRoles.js";
 export { PersonNetwork } from "./components/PersonNetwork.js";
 export { PersonRisk } from "./components/PersonRisk.js";
 export { FilterPanel, parseAmount, parseDate } from "./components/FilterPanel.js";
+export { Tabs, TabPanel, tabId, panelId } from "./components/Tabs.js";
+export type { TabItem, TabLevel, TabsProps, TabPanelProps } from "./components/Tabs.js";
 export { StateBox, Skeleton, Sparkline, Badge, StatusBadge, DataState, Missing, SourceLine, Section, SeverityIcon, severityWord } from "./primitives.js";
 export type { DataStateKind, DataStateProps } from "./primitives.js";
 export { specToCsv } from "./csv.js";
