@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Request } from "express";
 import { loadConfig } from "../config.js";
-import { createLoginLimiter, loginWithKey, parseCookies, portalUser, SESSION_COOKIE, sessionCookie, signSession, verifySession } from "./session.js";
+import { createLoginLimiter, loginWithKey, parseCookies, portalLoginRequired, portalUser, SESSION_COOKIE, sessionCookie, signSession, verifySession } from "./session.js";
 
 const config = loadConfig({ MCP_ACCESS_KEY: "shared-key-1", MCP_USER_KEYS: "userkey-jbb:jbb:Jakob:lasso", LINK_SECRET: "hemmelig", PUBLIC_BASE_URL: "https://lasso.test" });
 const jbb = { id: "jbb", name: "Jakob", org: "lasso", isDemo: false };
@@ -59,4 +59,15 @@ test("login-bremsen tillader max forsøg pr. vindue", () => {
   assert.equal(limiter.allow("2.2.2.2"), true);
   t = 1500;
   assert.equal(limiter.allow("1.1.1.1"), true);
+});
+
+test("PORTAL_PUBLIC: portalen er åben; uden cookie er man demobrugeren, med cookie sin egen bruger", () => {
+  const open = loadConfig({ MCP_ACCESS_KEY: "shared-key-1", MCP_USER_KEYS: "userkey-jbb:jbb:Jakob:lasso", LINK_SECRET: "hemmelig", PUBLIC_BASE_URL: "https://lasso.test", PORTAL_PUBLIC: "true" });
+  assert.equal(portalLoginRequired(open), false);
+  assert.equal(portalLoginRequired(config), true);
+  assert.equal(portalUser(req(undefined), open)?.isDemo, true);
+  const token = signSession(open, { id: "jbb", name: "Jakob", org: "lasso", isDemo: false }, Date.parse("2026-09-27T10:00:00Z"));
+  assert.equal(portalUser(req(`${SESSION_COOKIE}=${encodeURIComponent(token)}`), open)?.id, "jbb");
+  // En ugyldig cookie giver demobrugeren, ikke 401.
+  assert.equal(portalUser(req(`${SESSION_COOKIE}=forkert`), open)?.isDemo, true);
 });

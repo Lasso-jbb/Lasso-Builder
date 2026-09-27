@@ -11,6 +11,8 @@ import {
   fieldsAsText,
   METRICS,
   OPERATORS_TEXT,
+  PAGE_FOCUSES,
+  PERSON_FOCUSES,
   searchQuerySchema,
   TABLE_COLUMNS,
   viewSpecSchema,
@@ -55,7 +57,7 @@ const INSTRUCTIONS = `Lasso giver adgang til data om danske virksomheder og pers
 
 Vælg værktøj:
 - Én virksomhed: show_company med CVR-nummer, Lasso-ID eller navn (serveren slår navnet op; brug ikke search_companies først). Vælg focus efter spørgsmålet: 'overblik' (standard, "fortæl om X", snævre stamdataspørgsmål som revisor, stiftet, ansatte), 'oekonomi' (omsætning, resultat, nøgletal, "hvordan går det"), 'regnskab' (resultatopgørelse, balance, pengestrøm), 'ejerskab' (ejere, reelle ejere, koncern), 'ledelse' (direktion, bestyrelse, udskiftning), 'risiko' (røde flag, kreditvurdering, "kan vi handle med dem"), 'historik' (hvad er der sket, nyheder), 'kontakt' (telefon, e-mail, web, kontaktpersoner). Serveren vælger selv formen efter virksomhedens data.
-- Én person ("hvem er X", "hvor sidder X i bestyrelser", "har X været i konkurser"): show_person med navn eller person-ID (CVR-3-…).
+- Én person: show_person med navn eller person-ID (CVR-3-…). Vælg focus efter spørgsmålet: 'overblik' (standard, "hvem er X"), 'roller' (hvor sidder X i bestyrelser/direktioner, roller over tid), 'netvaerk' (hvem sidder X sammen med), 'ejerskab' (hvilke selskaber ejer X), 'risiko' (har X været med i konkurser eller tvangsopløsninger), 'historik' (hvad er der sket, rolleskift, nyheder om X).
 - Lister og målgrupper ("revisorer i Region Midt med mindst 10 ansatte"): search_companies med brugerens formulering som query.
 - Flere navngivne virksomheder (sammenligning, rangering) eller elementer, ingen focus dækker: render_view med en spec fra kataloget i dens beskrivelse. Navne må bruges i stedet for CVR-numre.
 - "Gem virksomheden/personen", "husk", "bogmærk", "sæt på min liste": save_page. "Mine gemte", "hvad har jeg gemt", "min liste": list_saved_pages. "Fjern fra listen": remove_saved_page. save_view er kun til et delbart link til en visning.
@@ -151,9 +153,10 @@ export function createMcpServer(ctx: McpContext): McpServer {
     {
       title: "Vis person",
       description:
-        "Vis én person fra CVR som ét skærmbillede (katalog 16): personhoved med antal aktive og ophørte roller, roller i selskaber som tidsbånd fra–til, stamoplysninger (bopæl som postnummer og by eller 'Adressebeskyttet', kommune, enhedsnummer, ejerskaber, første registrering, seneste ændring), netværk (hvem personen sidder sammen med i selskaber; år sammen = længste sammenhængende periode), risiko (konkurser og tvangsopløsninger blandt personens selskaber), historik (indtrådt/udtrådt som X i selskaber og selskabernes konkurser), nyheder om personen (Lasso News) og, når personen ejer selskaber, et ejerdiagram med personen øverst. Tomme sektioner udelades. Serveren henter data og vælger selv formen. Tager navn eller personens Lasso-ID (CVR-3-…); ved navn vælger serveren det bedste match og nævner alternativerne. Personer har ikke CVR-nummer; brug show_company til virksomheder. Kald det kun én gang pr. svar.",
+        "Vis én person fra CVR som ét skærmbillede (katalog 16), der tilpasser sig personens data. Du angiver kun hensigten med focus; serveren henter kun det, fokus viser, og vælger selv formen (tomme sektioner udelades). Personhovedet (by, antal aktive og ophørte roller, ejerskaber, konkurser blandt selskaberne) står på alle fokus. focus: 'overblik' (standard, 'hvem er X': de aktive roller som liste, stamoplysninger, netværk (top 3), risiko, seneste historik og de ejede selskaber), 'roller' ('hvor sidder X i bestyrelser', 'hvilke selskaber er X direktør i': alle roller som tidsbånd fra–til og stamoplysninger), 'netvaerk' ('hvem sidder X sammen med': hele netværket; år sammen = længste sammenhængende periode), 'ejerskab' ('hvilke selskaber ejer X': ejede selskaber med ejerandel og siden-dato og ejerdiagram med personen øverst), 'risiko' ('har X været i konkurser': alle konkurser og tvangsopløsninger blandt personens selskaber, forløbet i de selskaber og øvrige ophørte roller), 'historik' ('hvad er der sket', nyheder: rolleskift og selskabernes konkurser, nyheder om personen fra Lasso News). Tager navn eller personens Lasso-ID (CVR-3-…); ved navn vælger serveren det bedste match og nævner alternativerne. Personer har ikke CVR-nummer; brug show_company til virksomheder. Kald det kun én gang pr. svar.",
       inputSchema: z.object({
         person: z.string().min(1).describe("Personens navn (fx 'Mette Holm') eller Lasso-ID (fx 'CVR-3-4000000001')."),
+        focus: z.enum(PERSON_FOCUSES).optional().describe("Hvad brugeren vil vide om personen. Standard: overblik."),
       }),
       annotations: { title: "Vis person", ...readOnly },
       _meta: ui,
@@ -230,7 +233,10 @@ ${LAYOUT_RULES}\n\nKomponentkatalog (hver linje: Brug til / Brug ikke når / Kr�
       inputSchema: z.object({
         page: z.string().min(1).describe("Lasso-ID (CVR-1-… eller CVR-3-…), 8-cifret CVR-nummer eller navn."),
         kind: z.enum(["company", "person"]).optional().describe("Kun ved navn: 'person' slår en person op. Standard: virksomhed. Ved ID/CVR afledes det af ID'et."),
-        focus: z.enum(FOCUSES).optional().describe("Den fokusvisning, siden blev vist med (fx 'oekonomi'), så linket åbner samme visning. Standard: overblik."),
+        focus: z
+          .enum(PAGE_FOCUSES)
+          .optional()
+          .describe("Den fokusvisning, siden blev vist med (fx 'oekonomi' for en virksomhed, 'risiko' for en person), så linket åbner samme visning. Standard: overblik."),
         note: z.string().max(500).optional().describe("Brugerens egen note til siden, højst 500 tegn."),
       }),
       annotations: { title: "Gem side", ...writeAnnotations },

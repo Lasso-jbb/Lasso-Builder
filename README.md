@@ -23,6 +23,7 @@ Modellen skriver aldrig HTML. Den sender en JSON-spec, og Lassos kode henter dat
 |---|---|
 | `search_companies` | Målgrupper og lister med kriterier. Vises som tabel med redigerbart filterpanel. |
 | `show_company` | Fast virksomhedsskabelon: header, nøgletal, graf, ledelse, ejerskab/revisor, opfølgning. |
+| `show_person` | Én person fra CVR (navn eller `CVR-3-…`) med `focus`: `overblik` (standard: aktive roller, stamoplysninger, netværk, risiko, seneste historik, ejede selskaber), `roller` (alle roller som tidsbånd), `netvaerk` (hvem personen sidder sammen med), `ejerskab` (ejede selskaber med andel og ejerdiagram), `risiko` (konkurser og tvangsopløsninger med forløbet), `historik` (rolleskift og nyheder). Serveren henter kun det, fokus viser; linket (`/p/`) åbner samme fokus. |
 | `render_view` | Fri komposition til sammenligninger og oversigter. |
 | `save_view` | Gemmer specen og giver et link. Samme adresse opdateres, versioner bevares. |
 | `save_page` | Gemmer én virksomhed eller person (CVR, Lasso-ID eller navn) på brugerens egen liste, med valgfri note og focus. Gemmes den igen, flyttes den øverst. |
@@ -37,7 +38,8 @@ Modellen skriver aldrig HTML. Den sender en JSON-spec, og Lassos kode henter dat
 | `/mcp` | MCP-endpoint. Kræver `MCP_ACCESS_KEY` (eller en brugernøgle fra `MCP_USER_KEYS`) som `?key=`, `/mcp/<key>`, `x-api-key` eller Bearer. |
 | `/v/:org/:slug` | Delt side med friske data. |
 | `/k/:cvr` | Interaktiv virksomhedsvisning fra et signeret link, som `show_company` giver. Friske data ved hver visning; udløber efter `LINK_TTL_DAYS` (30). Signeres med `LINK_SECRET`. |
-| `/e/:lassoId` | Hostet side for én virksomhed (`CVR-1-…`) eller person (`CVR-3-…`) fra et signeret link, som gemte sider og send-til-Lasso giver. Komponeret som i chatten, friske data; samme nøgle og udløb som `/k/`. Med `ENTITY_PAGES_PUBLIC=true` virker den også uden signatur. |
+| `/p/:id` | Personside fra et signeret link, som `show_person` giver, med samme personfokus (`f=`, udeladt for overblik). Samme nøgle og udløb som `/k/`. |
+| `/e/:lassoId` | Hostet side for én virksomhed (`CVR-1-…`) eller person (`CVR-3-…`) fra et signeret link, som gemte sider og send-til-Lasso giver, med virksomheds- eller personfokus (`f=`). Komponeret som i chatten, friske data; samme nøgle og udløb som `/k/`. Med `ENTITY_PAGES_PUBLIC=true` virker den også uden signatur. |
 | `POST /api/send-to-lasso` | Server-til-server (portal, CRM, e-mail-tjeneste): `{ lassoId \| cvr, userId, org?, focus?, note? }` gemmer siden på brugerens liste og svarer med linket til `/e/`. Kræver `SEND_TO_LASSO_KEY` (ellers `ADMIN_API_KEY`). |
 | `POST /api/send-to-lasso/link` | Samme nøgle og body (uden note): giver et signeret `/send-to-lasso`-link til en knap i en e-mail eller et CRM. Gemmer intet. |
 | `GET /send-to-lasso` | Signeret link: gemmer siden på brugerens liste og sender videre (302) til `/e/`. |
@@ -79,6 +81,10 @@ npx @modelcontextprotocol/inspector
 Åbn `https://<domæne>/portal`. Bruger-id `demo` + `MCP_ACCESS_KEY` logger demobrugeren ind; med
 `MCP_USER_KEYS` (`nøgle:bruger-id:Navn:org;…`) får hver kollega sit eget login og sin egen liste af
 gemte sider. Uden nøgler (lokalt) er portalen åben. Se `docs/portal.md`.
+
+`PORTAL_PUBLIC=true` åbner portalen uden login: alle besøgende er demobrugeren og deler dens liste
+af gemte sider, kontomenuen er skjult, og `/mcp` er stadig beskyttet af nøglen. Et personligt login
+gælder fortsat, hvis cookien er der, men login-siden vises ikke.
 
 ## Tilføj i Claude
 

@@ -17,7 +17,20 @@ function period(c: PersonNetworkCompanyVM): string {
  * periode efter komma. Afsluttede relationer er dæmpede. Selskaber under konkurs skrives i
  * mørk rød OG med ordet (regel 7). Navne står alene, uden initial-cirkler.
  */
-export function PersonNetwork({ network, title, error, onOpen }: { network?: PersonNetworkVM; title?: string; error?: string; onOpen?: (a: ViewAction) => void }) {
+export function PersonNetwork({
+  network,
+  title,
+  limit = COLLAPSED,
+  error,
+  onOpen,
+}: {
+  network?: PersonNetworkVM;
+  title?: string;
+  /** Personer før "Se alle N" (regel 9): 3 på overblikket, flere på fanen Netværk. */
+  limit?: number;
+  error?: string;
+  onOpen?: (a: ViewAction) => void;
+}) {
   const heading = title ?? "Sidder sammen med";
   const [expanded, setExpanded] = useState(false);
   if (!network) {
@@ -34,7 +47,7 @@ export function PersonNetwork({ network, title, error, onOpen }: { network?: Per
       </Section>
     );
   }
-  const rows = expanded ? network.people : network.people.slice(0, COLLAPSED);
+  const rows = expanded ? network.people : network.people.slice(0, limit);
   return (
     <Section title={heading} span="half" className="lasso-personnet">
       <ul className="lasso-personnet__rows">
@@ -85,7 +98,7 @@ export function PersonNetwork({ network, title, error, onOpen }: { network?: Per
           );
         })}
       </ul>
-      {network.people.length > COLLAPSED ? (
+      {network.people.length > limit ? (
         <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
           {expanded ? "Vis færre" : `Se alle ${network.people.length}`}
         </button>

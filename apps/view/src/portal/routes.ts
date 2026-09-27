@@ -1,11 +1,12 @@
-import { FOCUSES, type Focus } from "@lasso/spec";
+import { FOCUSES, isPersonFocus, type Focus, type PersonFocus } from "@lasso/spec";
 
 /**
  * Portalens hash-ruter (docs/portal.md), så tilbage/frem og genindlæsning virker:
  *
  *   #/search?q=…                 søgning (tom = ny søgning)
  *   #/company/CVR-1-…?focus=…    virksomhed med et af de otte fokus (standard overblik)
- *   #/person/CVR-3-…             person
+ *   #/person/CVR-3-…?focus=…     person med et af de seks personfokus (standard overblik, som
+ *                                udelades i adressen, så ældre links er de samme)
  *   #/saved                      gemte sider
  *
  * Alt andet (også en tom hash) er en ny søgning. Rent modul uden DOM, så det kan testes i node.
@@ -14,7 +15,7 @@ export type PortalRoute =
   | { kind: "search"; q: string }
   | { kind: "saved" }
   | { kind: "company"; id: string; focus: Focus }
-  | { kind: "person"; id: string };
+  | { kind: "person"; id: string; focus: PersonFocus };
 
 export function isFocus(value: string | null | undefined): value is Focus {
   return typeof value === "string" && (FOCUSES as readonly string[]).includes(value);
@@ -46,9 +47,11 @@ export function portalRoute(hash: string): PortalRoute {
       const focus = params.get("focus");
       return { kind: "company", id, focus: isFocus(focus) ? focus : "overblik" };
     }
-    case "person":
+    case "person": {
       if (!id) break;
-      return { kind: "person", id };
+      const focus = params.get("focus");
+      return { kind: "person", id, focus: isPersonFocus(focus) ? focus : "overblik" };
+    }
   }
   return { kind: "search", q: "" };
 }
@@ -63,7 +66,7 @@ export function formatRoute(route: PortalRoute): string {
     case "company":
       return `#/company/${encodeURIComponent(route.id)}?focus=${route.focus}`;
     case "person":
-      return `#/person/${encodeURIComponent(route.id)}`;
+      return `#/person/${encodeURIComponent(route.id)}${route.focus && route.focus !== "overblik" ? `?focus=${route.focus}` : ""}`;
   }
 }
 

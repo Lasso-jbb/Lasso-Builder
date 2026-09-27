@@ -1,4 +1,5 @@
 import type { CompanyVM, TextSegment, TimelineEventVM, TimelineVM } from "./models.js";
+import type { PersonRolesShow, ViewComponent } from "./spec.js";
 
 /**
  * Personsiden (katalog 16). Én person på tværs af alle selskaber: hoved, roller over tid,
@@ -206,6 +207,87 @@ export function personRisk(p: PersonVM): PersonRiskVM {
   return out;
 }
 
+/** Nøglerne (som i personCompanies) for de selskaber, der er gået konkurs eller tvangsopløst. */
+function riskKeys(p: PersonVM): Set<string> {
+  const r = personRisk(p);
+  return new Set([...r.bankruptcies, ...r.dissolutions].map((c) => c.companyId ?? c.companyName.toLowerCase()));
+}
+
+/**
+ * Fokus risiko: personens historik afgrænset til selskaberne med konkurs eller tvangsopløsning,
+ * dvs. hvornår personen kom ind og ud, og hvornår det skete (LassoTimeline filter 'risiko').
+ * Kun statushændelserne alene ville gentage risikoens sager 1:1; forløbet sætter dem i sammenhæng.
+ */
+export function riskTimeline(t: TimelineVM, p: PersonVM): TimelineVM {
+  const keys = riskKeys(p);
+  const hit = (s: TextSegment) => (s.lassoId ? keys.has(s.lassoId) : keys.has(s.text.toLowerCase()));
+  return { ...t, events: t.events.filter((e) => e.titleSegments?.some(hit)) };
+}
+
+/* ---------- Rollelister (LassoPersonRoles show current, ended og owner) ---------- */
+
+export interface PersonRoleRowVM {
+  key: string;
+  companyId?: string;
+  companyName: string;
+  /** Selskabets status, kun når det er ophørt, under konkurs o.l. (vises med ord i rødt). */
+  companyStatus?: string;
+  companyEnded?: string;
+  /** Rækkens roller (kun dem, listen handler om). */
+  roles: PersonRoleVM[];
+  /** Rollerne som tekst, fx "Direktør, ejer 100 %" eller "Direktør 2010–2015, bestyrelsesmedlem 2012–2018". */
+  text: string;
+  /** "siden 2005", "2014–2018" eller "til 2018". */
+  period: string;
+}
+
+const yearOf = (d?: string) => (d ? d.slice(0, 4) : "");
+const span = (r: PersonRoleVM) => [yearOf(r.from), yearOf(r.to)].filter(Boolean).join("–");
+const roleText = (r: PersonRoleVM) => `${r.role}${r.share ? ` ${r.share}` : ""}`;
+/** "Direktør" + "Ejer 100 %" -> "Direktør, ejer 100 %" (forkortelser som "CEO" røres ikke). */
+function joinRoles(texts: string[]): string {
+  return texts.map((t, i) => (i === 0 ? t : roleInSentence(t))).join(", ");
+}
+
+/**
+ * Rækkerne i personens rollelister, én pr. selskab: 'current' (de aktive roller), 'owner' (de
+ * selskaber, personen ejer nu, legalt eller reelt) og 'ended' (de ophørte roller, senest ophørte
+ * først). `except: "risiko"` udelader selskaber med konkurs eller tvangsopløsning (fokus risiko,
+ * hvor de står i forløbet ved siden af).
+ */
+export function personRoleRows(p: PersonVM, show: Exclude<PersonRolesShow, "all">, opts: { except?: "risiko" } = {}): PersonRoleRowVM[] {
+  const skip = opts.except === "risiko" ? riskKeys(p) : new Set<string>();
+  const rows: PersonRoleRowVM[] = [];
+  for (const c of personCompanies(p)) {
+    if (skip.has(c.key)) continue;
+    const roles =
+      show === "ended"
+        ? c.roles.filter((r) => !r.active).sort((a, b) => (b.to ?? "").localeCompare(a.to ?? ""))
+        : c.roles.filter((r) => r.active && (show === "current" || r.kind === "owner"));
+    if (roles.length === 0) continue;
+    const status = c.companyStatusKind === "warning" || c.companyStatusKind === "inactive" ? (c.companyStatus ?? "Ophørt") : undefined;
+    let text: string;
+    let period: string;
+    if (show === "ended") {
+      const spans = new Set(roles.map(span));
+      text = spans.size <= 1 ? joinRoles(roles.map(roleText)) : joinRoles(roles.map((r) => `${roleText(r)} ${span(r)}`.trim()));
+      const last = roles.map((r) => r.to).filter((t): t is string => Boolean(t)).sort().at(-1);
+      period = spans.size <= 1 ? [...spans][0] ?? "" : last ? `til ${yearOf(last)}` : "";
+    } else {
+      text = joinRoles(roles.map(roleText));
+      const first = roles.map((r) => r.from).filter((f): f is string => Boolean(f)).sort()[0];
+      period = first ? `siden ${yearOf(first)}` : "";
+    }
+    rows.push({ key: c.key, companyId: c.companyId, companyName: c.companyName, ...(status ? { companyStatus: status } : {}), ...(c.companyEnded ? { companyEnded: c.companyEnded } : {}), roles, text, period });
+  }
+  // Ophørte: senest ophørte først (selskaber uden slutdato til sidst).
+  if (show === "ended") {
+    const lastTo = (r: PersonRoleRowVM) => r.roles.map((x) => x.to ?? "").sort().at(-1) ?? "";
+    rows.sort((a, b) => lastTo(b).localeCompare(lastTo(a)));
+  }
+  return rows;
+}
+
 /* ---------- Perioder: "år sammen" er den længste sammenhængende periode ---------- */
 
 const DAY_MS = 86_400_000;
@@ -274,6 +356,15 @@ export interface PersonFacts extends PersonCounts {
   firstRegistered?: string;
   /** Seneste rolleskift: den nyeste dato, personen indtrådte eller udtrådte. */
   latestChange?: string;
+}
+
+/**
+ * Hvad personhovedet på samme side allerede viser (antal aktive og ophørte roller, ejerskaber og
+ * første registrering); stamoplysningerne gentager det ikke 1:1 (samme regel i komponisten, i
+ * LassoView og i tekstkortet).
+ */
+export function personFactOptions(page: readonly ViewComponent[], person: string): { hideCounts: boolean } {
+  return { hideCounts: page.some((c) => c.type === "LassoPersonHead" && c.person === person) };
 }
 
 export function personFacts(p: PersonVM, today = todayIso()): PersonFacts {

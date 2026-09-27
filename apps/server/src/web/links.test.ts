@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { loadConfig } from "../config.js";
-import { companyLink, verifyCompanyLink } from "./links.js";
+import { companyLink, personLink, verifyCompanyLink, verifyPersonLink } from "./links.js";
 
 const config = loadConfig({ MCP_ACCESS_KEY: "k", LINK_SECRET: "hemmelig", PUBLIC_BASE_URL: "https://lasso.test" });
 const query = (url: string) => Object.fromEntries(new URL(url).searchParams);
@@ -37,4 +37,20 @@ test("linket bærer visningens focus, og focus er signeret", () => {
   assert.deepEqual(verifyCompanyLink(config, "34580820", { ...q, f: "hemmeligt" }, NOW), { ok: false, reason: "invalid" });
   // Overblik er standard og står ikke i linket.
   assert.equal(query(companyLink(config, { cvr: "34580820", metric: "omsaetning", years: 5, focus: "overblik" }, NOW)).f, undefined);
+});
+
+test("personlinket /p/ bærer personfokus, og fokus er signeret; overblik står ikke i linket", () => {
+  const url = personLink(config, "CVR-3-4000000002", "risiko", NOW);
+  assert.match(url, /^https:\/\/lasso\.test\/p\/CVR-3-4000000002\?e=\w+&f=risiko&s=[\w-]{22}$/);
+  const q = query(url);
+  assert.deepEqual(verifyPersonLink(config, "CVR-3-4000000002", q, NOW), { ok: true, lassoId: "CVR-3-4000000002", focus: "risiko" });
+  // Et andet personfokus med samme signatur afvises, et virksomhedsfokus og et ukendt også.
+  assert.deepEqual(verifyPersonLink(config, "CVR-3-4000000002", { ...q, f: "netvaerk" }, NOW), { ok: false, reason: "invalid" });
+  assert.deepEqual(verifyPersonLink(config, "CVR-3-4000000002", { ...q, f: "oekonomi" }, NOW), { ok: false, reason: "invalid" });
+  // Uden f: overblik, og samme signatur som links fra før personfokus.
+  const plain = personLink(config, "CVR-3-4000000002", "overblik", NOW);
+  assert.equal(query(plain).f, undefined);
+  assert.deepEqual(verifyPersonLink(config, "CVR-3-4000000002", query(plain), NOW), { ok: true, lassoId: "CVR-3-4000000002" });
+  assert.deepEqual(verifyPersonLink(config, "CVR-3-4000000002", { ...query(plain), f: "risiko" }, NOW), { ok: false, reason: "invalid" });
+  assert.equal(personLink(config, "CVR-3-4000000002", undefined, NOW), plain);
 });

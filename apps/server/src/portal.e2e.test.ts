@@ -242,12 +242,13 @@ test("person: som show_person, med signeret link til personsiden; 404/400 ved fe
   const lassoId = /\/e\/(CVR-3-\d+)\?/.exec(body.link ?? "")?.[1];
   assert.ok(lassoId, body.link);
   assert.ok(body.dataset.persons[lassoId!]);
-  // Personsidens nye sektioner: stamoplysninger, historik og nyheder nøglet på person-ID'et, og
-  // ejerdiagrammet med personen som rod (pille) og en kant til det ejede selskab.
+  // Overblikket: stamoplysninger og historik nøglet på person-ID'et, og ejerdiagrammet med personen
+  // som rod (pille) og en kant til det ejede selskab. Nyhederne hentes kun på fokus historik.
   const types = body.spec.components.map((c) => c.type);
-  for (const t of ["LassoPersonFacts", "LassoTimeline", "LassoNews", "LassoOwnershipDiagram"]) assert.ok(types.includes(t as never), t);
+  for (const t of ["LassoPersonFacts", "LassoTimeline", "LassoOwnershipDiagram"]) assert.ok(types.includes(t as never), t);
+  assert.ok(!types.includes("LassoNews"));
+  assert.deepEqual(body.dataset.news, {});
   assert.match(body.dataset.timeline[lassoId!]!.events[0]!.title, /kom under konkurs/);
-  assert.ok(body.dataset.news[lassoId!]!.items.length > 0);
   const graph = body.dataset.ownershipGraphs[`${lassoId}|0|2|`]!;
   assert.equal(graph.nodes.find((n) => n.root)?.kind, "person");
   assert.ok(graph.edges.some((e) => e.from === lassoId && e.to === "CVR-1-99000010"));
@@ -261,6 +262,33 @@ test("person: som show_person, med signeret link til personsiden; 404/400 ved fe
 
   assert.match((await json<{ error: string }>(await api(`/person/${encodeURIComponent("Findes Ikke Nogen")}`), 404)).error, /Fandt ingen person/);
   assert.match((await json<{ error: string }>(await api("/person/99000001"), 400)).error, /er et CVR-nummer/);
+});
+
+test("person ?focus=: hvert personfokus som show_person, link med samme fokus; 400 ved ukendt fokus", async () => {
+  const risk = await json<ViewBody>(await api("/person/CVR-3-4000000002?focus=risiko"));
+  assert.equal(risk.spec.subtitle, "Risiko");
+  assert.deepEqual(risk.spec.components.map((c) => c.type), ["LassoPersonHead", "LassoPersonRisk", "LassoTimeline", "LassoFollowUps"]);
+  const tl = risk.spec.components.find((c) => c.type === "LassoTimeline");
+  assert.equal(tl?.type === "LassoTimeline" && tl.filter, "risiko");
+  // Kun det, fokus viser, er hentet.
+  assert.deepEqual(risk.dataset.news, {});
+  assert.deepEqual(risk.dataset.ownershipGraphs, {});
+  assert.deepEqual(risk.dataset.personNetworks, {});
+  assert.match(risk.link ?? "", /\/e\/CVR-3-4000000002\?e=\w+&f=risiko&s=/);
+  assert.deepEqual(verifyEntityLink(config, "CVR-3-4000000002", query(risk.link!)), { ok: true, lassoId: "CVR-3-4000000002", focus: "risiko" });
+  const page = await fetch(local(risk.link!));
+  assert.equal(page.status, 200);
+  assert.match(await page.text(), /"filter":"risiko"/);
+
+  const owner = await json<ViewBody>(await api("/person/CVR-3-4000000002?focus=ejerskab"));
+  assert.deepEqual(owner.spec.components.map((c) => c.type), ["LassoPersonHead", "LassoPersonRoles", "LassoOwnershipDiagram", "LassoFollowUps"]);
+  const roles = await json<ViewBody>(await api("/person/CVR-3-4000000002?focus=roller"));
+  assert.deepEqual(Object.keys(roles.dataset.personNetworks), []);
+  assert.equal(roles.spec.subtitle, "Roller");
+  // Overblik står ikke i linket (samme link som før personfokus).
+  assert.equal(query((await json<ViewBody>(await api("/person/CVR-3-4000000002?focus=overblik"))).link!).f, undefined);
+
+  assert.match((await json<{ error: string }>(await api("/person/CVR-3-4000000002?focus=oekonomi"), 400)).error, /focus skal være en af: overblik, roller, netvaerk, ejerskab, risiko, historik/);
 });
 
 test("resolve: som resolve_view (drill-down), 400 ved ugyldig spec", async () => {
@@ -294,10 +322,18 @@ test("pages: gem, list, savedIds i company-svaret og fjern, delt med MCP-tools",
 
   const again = await json<Json>(await api("/pages", { method: "POST", body: { page: "CVR-1-99000001" } }));
   assert.equal(again.created, false);
-  const person = await json<Json>(await api("/pages", { method: "POST", body: { page: "Bo Eksempel", kind: "person" } }));
+  const person = await json<Json>(await api("/pages", { method: "POST", body: { page: "Bo Eksempel", kind: "person", focus: "netvaerk" } }));
   assert.equal(person.kind, "person");
   assert.equal(person.cvr, undefined);
   assert.equal(person.total, 2);
+  // Personfokus gemmes og står i linket; et virksomhedsfokus på en person gemmes ikke.
+  assert.deepEqual(verifyEntityLink(config, person.lassoId as string, query(person.url as string)), { ok: true, lassoId: person.lassoId, focus: "netvaerk" });
+  const personPage = await fetch(local(person.url as string));
+  assert.equal(personPage.status, 200);
+  assert.match(await personPage.text(), /"subtitle":"Netværk"/);
+  const wrongFocus = await json<Json>(await api("/pages", { method: "POST", body: { page: "Anne Eksempel", kind: "person", focus: "oekonomi" } }));
+  assert.equal(query(wrongFocus.url as string).f, undefined);
+  await api(`/pages/${wrongFocus.lassoId as string}`, { method: "DELETE" });
 
   const list = await json<ViewBody>(await api("/pages"));
   assert.deepEqual(list.spec.components, [{ type: "LassoSavedPages", kind: "all", limit: 20 }]);
@@ -434,5 +470,31 @@ test("en uventet serverfejl giver 500 som JSON uden detaljer", async () => {
     });
   } finally {
     console.error = log;
+  }
+});
+
+test("PORTAL_PUBLIC=true: /portal og /api/portal/* er åbne uden login som demobrugeren", async () => {
+  const openConfig = loadConfig({ ...process.env, MCP_ACCESS_KEY: KEY, LINK_SECRET: "portal-test-hemmelighed", LASSO_DATA_SOURCE: "demo", DATABASE_URL: "", PUBLIC_BASE_URL: PUBLIC, PORTAL_PUBLIC: "true" });
+  const openStore = createViewStore("");
+  const openPages = createSavedPageStore("");
+  const openApp = createApp({ config: openConfig, client: new LassoClient(openConfig), provider: new DemoProvider(), store: openStore, pages: openPages });
+  const srv = openApp.listen(0);
+  await new Promise((r) => srv.once("listening", r));
+  const openBase = `http://127.0.0.1:${(srv.address() as AddressInfo).port}`;
+  try {
+    const page = await fetch(`${openBase}/portal`);
+    const b = boot(await page.text()) as { loginRequired: boolean; user: { id: string; isDemo: boolean } | null };
+    assert.equal(b.loginRequired, false);
+    assert.equal(b.user?.isDemo, true);
+    const me = await fetch(`${openBase}/api/portal/me`);
+    assert.equal(me.status, 200);
+    assert.equal(((await me.json()) as { user: { isDemo: boolean } }).user.isDemo, true);
+    // Opslag uden cookie virker; ændrende kald kræver stadig CSRF-headeren.
+    const search = await fetch(`${openBase}/api/portal/search?query=Eksempel&limit=2`);
+    assert.equal(search.status, 200);
+    const noCsrf = await fetch(`${openBase}/api/portal/pages`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ lassoId: "CVR-1-99000001" }) });
+    assert.equal(noCsrf.status, 403);
+  } finally {
+    await new Promise((r) => srv.close(r));
   }
 });

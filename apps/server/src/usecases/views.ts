@@ -16,6 +16,7 @@ import {
   type Dataset,
   type Focus,
   type Metric,
+  type PersonFocus,
   type SearchQuery,
   type TableColumn,
   type ViewComponent,
@@ -175,12 +176,19 @@ export async function showCompany(ctx: UseCaseCtx, input: ShowCompanyInput): Pro
 export interface PersonView extends ViewData {
   /** Personens Lasso-ID (CVR-3-…). */
   lassoId: string;
-  /** Signeret link til personsiden /p/. */
+  /** Signeret link til personsiden /p/ med samme fokus. */
   link: string;
 }
 
-/** Én person fra CVR som ét skærmbillede (katalog 16). Tager navn eller person-ID. */
-export async function showPerson(ctx: UseCaseCtx, input: { person: string }): Promise<PersonView | UseCaseError> {
+export interface ShowPersonInput {
+  /** Navn eller person-ID (CVR-3-…). */
+  person: string;
+  /** Personfokus (overblik, roller, netvaerk, ejerskab, risiko, historik). Standard: overblik. */
+  focus?: PersonFocus;
+}
+
+/** Én person fra CVR som ét skærmbillede (katalog 16), komponeret ud fra hensigt (focus) og personens data. Tager navn eller person-ID. */
+export async function showPerson(ctx: UseCaseCtx, input: ShowPersonInput): Promise<PersonView | UseCaseError> {
   const { config, provider } = ctx;
   const ref = input.person.trim();
   let lassoId = ref;
@@ -198,11 +206,14 @@ export async function showPerson(ctx: UseCaseCtx, input: { person: string }): Pr
     const alt = found.alternatives.map((r) => `${r.name}${r.city ? `, ${r.city}` : ""} (${r.lassoId})`).join("; ");
     note = `Fundet ud fra navnet "${ref}": ${found.pick.name}${found.pick.city ? `, ${found.pick.city}` : ""} (${found.pick.lassoId}).${alt ? ` Andre match: ${alt}. Mente brugeren en af dem, så kald show_person igen med dens ID.` : ""}`;
   }
-  const dataset = await resolveSpec(composePersonProbe(lassoId), provider, extrasOf(ctx));
+  const focus = input.focus ?? "overblik";
+  // Kun det, fokus viser, hentes (fx nyheder kun på historik, ejerdiagrammet kun på overblik og ejerskab).
+  const dataset = await resolveSpec(composePersonProbe(lassoId, focus), provider, extrasOf(ctx));
   const p = dataset.persons[lassoId];
   if (!p) return fail(404, `Kunne ikke hente personen ${lassoId}: ${dataset.errors[`person:${lassoId}`] ?? "ukendt fejl"}.`);
-  const spec = composePerson(lassoId, dataset, { name: p.name });
-  return { spec, dataset, ...(note ? { note } : {}), lassoId, link: personLink(config, lassoId) };
+  const spec = composePerson(lassoId, dataset, { focus, name: p.name });
+  // Linket åbner samme fokus som i chatten.
+  return { spec, dataset, ...(note ? { note } : {}), lassoId, link: personLink(config, lassoId, focus) };
 }
 
 /* --- render_view -------------------------------------------------------------------------- */

@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { FOCUSES, METRICS, type Focus, type Metric } from "@lasso/spec";
+import { FOCUSES, isFocusFor, isPersonFocus, METRICS, type Focus, type Metric, type PageFocus, type PersonFocus } from "@lasso/spec";
 import { isSet, type Config } from "../config.js";
 
 /**
@@ -63,33 +63,38 @@ export function verifyCompanyLink(config: Config, cvr: string, query: Record<str
 }
 
 /**
- * Katalog 16: signeret link til personsiden, /p/<lassoId>?e=…&s=… (samme nøgle og udløb som /k/).
+ * Katalog 16: signeret link til personsiden, /p/<lassoId>?f=…&e=…&s=… (samme nøgle og udløb som /k/).
+ * f = personfokus (fx "risiko"), udeladt for overblik; det indgår i signaturen, og links uden f
+ * fra før personfokus havde samme signatur som nu.
  */
-const personPayload = (lassoId: string, exp: number) => `p1.${lassoId}.${exp}`;
+const personPayload = (lassoId: string, exp: number, focus?: PersonFocus) => `p1.${lassoId}.${exp}${focus && focus !== "overblik" ? `.${focus}` : ""}`;
 
-export function personLink(config: Config, lassoId: string, now = Date.now()): string {
+export function personLink(config: Config, lassoId: string, focus?: PersonFocus, now = Date.now()): string {
   const exp = Math.floor(now / 1000) + config.LINK_TTL_DAYS * 86_400;
+  const f = focus && focus !== "overblik" ? focus : undefined;
   const query = new URLSearchParams({ e: exp.toString(36) });
+  if (f) query.set("f", f);
   const key = secret(config);
-  if (key) query.set("s", sign(key, personPayload(lassoId, exp)));
+  if (key) query.set("s", sign(key, personPayload(lassoId, exp, f)));
   return `${config.publicBaseUrl}/p/${encodeURIComponent(lassoId)}?${query}`;
 }
 
-export type PersonLinkCheck = { ok: true; lassoId: string } | { ok: false; reason: "invalid" | "expired" };
+export type PersonLinkCheck = { ok: true; lassoId: string; focus?: PersonFocus } | { ok: false; reason: "invalid" | "expired" };
 
 export function verifyPersonLink(config: Config, lassoId: string, query: Record<string, unknown>, now = Date.now()): PersonLinkCheck {
   const exp = parseInt(String(query.e ?? ""), 36);
-  const focus = query.f === undefined ? undefined : String(query.f);
-  if (focus !== undefined && !(FOCUSES as readonly string[]).includes(focus)) return { ok: false, reason: "invalid" };
+  const focusRaw = query.f === undefined ? undefined : String(query.f);
+  if (focusRaw !== undefined && !isPersonFocus(focusRaw)) return { ok: false, reason: "invalid" };
+  const focus = focusRaw && focusRaw !== "overblik" ? (focusRaw as PersonFocus) : undefined;
   if (!/^CVR-[34]-\d{1,12}$/.test(lassoId) || !Number.isFinite(exp)) return { ok: false, reason: "invalid" };
   const key = secret(config);
   if (key) {
-    const expected = Buffer.from(sign(key, personPayload(lassoId, exp)));
+    const expected = Buffer.from(sign(key, personPayload(lassoId, exp, focus)));
     const given = Buffer.from(String(query.s ?? ""));
     if (given.length !== expected.length || !timingSafeEqual(given, expected)) return { ok: false, reason: "invalid" };
   }
   if (exp * 1000 < now) return { ok: false, reason: "expired" };
-  return { ok: true, lassoId };
+  return { ok: true, lassoId, ...(focus ? { focus } : {}) };
 }
 
 /* ---------------------------------------------------------------------------------------
@@ -102,14 +107,20 @@ export function isEntityId(id: string): boolean {
   return ENTITY_ID.test(id);
 }
 
-const entityPayload = (lassoId: string, focus: Focus | undefined, exp: number) => `e1.${lassoId}.${focus && focus !== "overblik" ? focus : ""}.${exp}`;
+/** Et fokus, der passer til entiteten: virksomhedsfokus for CVR-1-…, personfokus for CVR-3-/CVR-4-…. */
+export function focusFitsEntity(lassoId: string, focus: string): focus is PageFocus {
+  return isFocusFor(/^CVR-1-/.test(lassoId) ? "company" : "person", focus);
+}
+
+const entityPayload = (lassoId: string, focus: PageFocus | undefined, exp: number) => `e1.${lassoId}.${focus && focus !== "overblik" ? focus : ""}.${exp}`;
 
 /**
- * /e/<lassoId>?f=…&e=…&s=…: den hostede side for én virksomhed eller person, komponeret som i chatten,
+ * /e/<lassoId>?f=…&e=…&s=…: den hostede side for én virksomhed eller person, komponeret som i chatten
+ * med samme fokus (virksomhedsfokus for en virksomhed, personfokus for en person),
  * med friske data ved hver visning. Samme nøgle og udløb (LINK_TTL_DAYS) som /k/ og /p/. Med
  * ENTITY_PAGES_PUBLIC=true er signaturen valgfri (ellers er siden et gratis opslag på servernøglen).
  */
-export function entityLink(config: Config, lassoId: string, opts: { focus?: Focus } = {}, now = Date.now()): string {
+export function entityLink(config: Config, lassoId: string, opts: { focus?: PageFocus } = {}, now = Date.now()): string {
   const exp = Math.floor(now / 1000) + config.LINK_TTL_DAYS * 86_400;
   const focus = opts.focus && opts.focus !== "overblik" ? opts.focus : undefined;
   const query = new URLSearchParams({ e: exp.toString(36) });
@@ -119,13 +130,13 @@ export function entityLink(config: Config, lassoId: string, opts: { focus?: Focu
   return `${config.publicBaseUrl}/e/${encodeURIComponent(lassoId)}?${query}`;
 }
 
-export type EntityLinkCheck = { ok: true; lassoId: string; focus?: Focus } | { ok: false; reason: "invalid" | "expired" };
+export type EntityLinkCheck = { ok: true; lassoId: string; focus?: PageFocus } | { ok: false; reason: "invalid" | "expired" };
 
 export function verifyEntityLink(config: Config, lassoId: string, query: Record<string, unknown>, now = Date.now()): EntityLinkCheck {
   if (!isEntityId(lassoId)) return { ok: false, reason: "invalid" };
   const focusRaw = query.f === undefined ? undefined : String(query.f);
-  if (focusRaw !== undefined && !(FOCUSES as readonly string[]).includes(focusRaw)) return { ok: false, reason: "invalid" };
-  const focus = focusRaw && focusRaw !== "overblik" ? (focusRaw as Focus) : undefined;
+  if (focusRaw !== undefined && !focusFitsEntity(lassoId, focusRaw)) return { ok: false, reason: "invalid" };
+  const focus = focusRaw && focusRaw !== "overblik" ? (focusRaw as PageFocus) : undefined;
   // Offentlige sider: et link uden udløb og signatur er gyldigt; et link MED signatur tjekkes stadig.
   if (config.ENTITY_PAGES_PUBLIC && query.e === undefined && query.s === undefined) return { ok: true, lassoId, ...(focus ? { focus } : {}) };
   const exp = parseInt(String(query.e ?? ""), 36);
@@ -147,7 +158,7 @@ export interface SendToLassoLink {
   lassoId: string;
   userId: string;
   org: string;
-  focus?: Focus;
+  focus?: PageFocus;
 }
 
 const sendPayload = (l: SendToLassoLink, exp: number) => `s1.${l.lassoId}.${l.userId}.${l.org}.${l.focus && l.focus !== "overblik" ? l.focus : ""}.${exp}`;
@@ -175,10 +186,10 @@ export function verifySendToLassoLink(config: Config, query: Record<string, unkn
   const org = String(query.o ?? "");
   const focusRaw = query.f === undefined ? undefined : String(query.f);
   if (!isEntityId(lassoId) || !ID_PART.test(userId) || !ID_PART.test(org)) return { ok: false, reason: "invalid" };
-  if (focusRaw !== undefined && !(FOCUSES as readonly string[]).includes(focusRaw)) return { ok: false, reason: "invalid" };
+  if (focusRaw !== undefined && !focusFitsEntity(lassoId, focusRaw)) return { ok: false, reason: "invalid" };
   const exp = parseInt(String(query.e ?? ""), 36);
   if (!Number.isFinite(exp)) return { ok: false, reason: "invalid" };
-  const link: SendToLassoLink = { lassoId, userId, org, ...(focusRaw && focusRaw !== "overblik" ? { focus: focusRaw as Focus } : {}) };
+  const link: SendToLassoLink = { lassoId, userId, org, ...(focusRaw && focusRaw !== "overblik" ? { focus: focusRaw as PageFocus } : {}) };
   const key = secret(config);
   if (key) {
     const expected = Buffer.from(sign(key, sendPayload(link, exp)));

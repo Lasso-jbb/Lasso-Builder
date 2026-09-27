@@ -18,8 +18,11 @@ import {
   percentChange,
   personCompanies,
   personCounts,
+  personFactOptions,
   personFacts,
   personRisk,
+  personRoleRows,
+  riskTimeline,
   savedPagesKey,
   METRIC_FIELD,
   METRIC_KIND,
@@ -559,101 +562,156 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
 }
 
 /**
- * Katalog 16: personsiden som tekst. Hoved, roller pr. selskab, stamoplysninger, netværk, risiko,
- * historik og nyheder (de seneste 3) og ejerskab (de selskaber, personen ejer, fra ejerdiagrammet).
+ * Katalog 16: personsiden som tekst, i sidens rækkefølge og kun det, fokus viser (som companyCard
+ * følger de komponenter, composeCompany har valgt): hoved, rollelister og tidsbånd, stamoplysninger
+ * (uden hovedets tal), netværk, risiko, historik (evt. kun forløbet i konkursselskaberne), nyheder og
+ * ejerskab (de selskaber, personen ejer, fra ejerdiagrammet). Lister viser det antal, siden viser,
+ * resten som "og N flere".
  */
 function personCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | null {
-  const types = new Set(spec.components.filter((c) => "person" in c && c.person === lassoId).map((c) => c.type));
   const p = ds.persons[lassoId];
   const card = new Card();
   const year = (d?: string) => (d ? d.slice(0, 4) : "");
-  if (p) {
-    const n = personCounts(p);
-    card.text(p.name);
-    card.text(["Person", p.city].filter(Boolean).join(", "));
-    const pl = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`;
-    card.text(`${pl(n.activeRoles, "aktiv rolle", "aktive roller")} i ${pl(n.activeCompanies, "selskab", "selskaber")}${n.endedRoles ? `, ${pl(n.endedRoles, "ophørt", "ophørte")}` : ""}`);
-  }
-  if (p && types.has("LassoPersonRoles")) {
-    const companies = personCompanies(p);
-    card.section("Roller");
-    for (const c of companies.slice(0, 6)) {
-      const ended = c.companyStatusKind === "warning" || c.companyStatusKind === "inactive";
-      card.text(`${c.companyName}${ended ? ` (${(c.companyStatus ?? "ophørt").toLowerCase()})` : ""}`);
-      for (const r of c.roles.slice(0, 2)) {
-        const what = `${r.role}${r.share ? ` ${r.share}` : ""}`;
-        const when = r.active ? (r.from ? `siden ${year(r.from)}` : "") : [year(r.from), year(r.to)].filter(Boolean).join("–");
-        for (const l of wrap([what, when].filter(Boolean).join(", "), W - 2)) card.raw(`  ${l}`);
+  const pl = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`;
+  const mine = spec.components.filter((c) => "person" in c && c.person === lassoId);
+  const ownerList = mine.some((c) => c.type === "LassoPersonRoles" && c.show === "owner");
+  for (const c of mine) {
+    switch (c.type) {
+      case "LassoPersonHead": {
+        if (!p) break;
+        const n = personCounts(p);
+        card.text(p.name);
+        card.text(["Person", p.city].filter(Boolean).join(", "));
+        card.text(`${pl(n.activeRoles, "aktiv rolle", "aktive roller")} i ${pl(n.activeCompanies, "selskab", "selskaber")}${n.endedRoles ? `, ${pl(n.endedRoles, "ophørt", "ophørte")}` : ""}`);
+        break;
+      }
+      case "LassoPersonRoles": {
+        if (!p) break;
+        const show = c.show ?? "all";
+        if (show === "all") {
+          const companies = personCompanies(p);
+          const limit = c.limit ?? 3;
+          card.section(c.title ?? "Roller");
+          if (companies.length === 0) card.text("Ingen registrerede roller i selskaber");
+          for (const x of companies.slice(0, limit)) {
+            const ended = x.companyStatusKind === "warning" || x.companyStatusKind === "inactive";
+            card.text(`${x.companyName}${ended ? ` (${(x.companyStatus ?? "ophørt").toLowerCase()})` : ""}`);
+            for (const r of x.roles.slice(0, 2)) {
+              const what = `${r.role}${r.share ? ` ${r.share}` : ""}`;
+              const when = r.active ? (r.from ? `siden ${year(r.from)}` : "") : [year(r.from), year(r.to)].filter(Boolean).join("–");
+              for (const l of wrap([what, when].filter(Boolean).join(", "), W - 2)) card.raw(`  ${l}`);
+            }
+          }
+          if (companies.length > limit) card.text(`og ${companies.length - limit} flere selskaber`);
+          break;
+        }
+        const rows = personRoleRows(p, show, { except: c.except });
+        const limit = c.limit ?? 5;
+        card.section(c.title ?? { current: "Aktive roller", ended: "Ophørte roller", owner: "Ejerskaber" }[show]);
+        if (rows.length === 0) card.text({ current: "Ingen aktive roller i selskaber", ended: "Ingen ophørte roller", owner: "Ejer ingen selskaber i CVR" }[show]);
+        for (const r of rows.slice(0, limit)) {
+          card.text(`${r.companyName}${r.companyStatus ? ` (${r.companyStatus.toLowerCase()}${r.companyEnded ? ` ${year(r.companyEnded)}` : ""})` : ""}`);
+          for (const l of wrap([r.text, r.period].filter(Boolean).join(", "), W - 2)) card.raw(`  ${l}`);
+        }
+        if (rows.length > limit) card.text(`og ${rows.length - limit} flere selskaber`);
+        break;
+      }
+      case "LassoPersonFacts": {
+        if (!p) break;
+        const f = personFacts(p);
+        // Som på siden: hovedets tal (roller, ejerskaber, første registrering) gentages ikke.
+        const { hideCounts } = personFactOptions(spec.components, lassoId);
+        card.section("Stamoplysninger");
+        // Kun postnummer og by, som på siden; aldrig gade og husnummer.
+        card.row("Bopæl", p.addressProtected ? "Adressebeskyttet" : [[p.zip, p.city].filter(Boolean).join(" "), p.country].filter(Boolean).join(", ") || "Ikke oplyst");
+        // Som på siden: kommunen kun, når den ikke blot gentager byen.
+        if (!p.addressProtected && !(p.municipality && p.city?.toLowerCase().startsWith(p.municipality.toLowerCase()))) card.row("Kommune", p.municipality);
+        card.row("Enhedsnummer", p.unitNumber ?? /^CVR-3-(\d+)$/i.exec(p.lassoId)?.[1]);
+        if (!hideCounts) {
+          card.row("Aktive", f.activeRoles ? `${pl(f.activeRoles, "rolle", "roller")} i ${pl(f.activeCompanies, "selskab", "selskaber")}` : "Ingen roller");
+          card.row("Ophørte", f.endedRoles ? pl(f.endedRoles, "rolle", "roller") : "Ingen");
+          card.row("Ejer af", f.ownedCompanies ? pl(f.ownedCompanies, "selskab", "selskaber") : "Ingen");
+          card.row("Første reg.", f.firstRegistered ? year(f.firstRegistered) : undefined);
+        }
+        card.row("Seneste ænd.", f.latestChange ? formatDate(f.latestChange) : undefined);
+        break;
+      }
+      case "LassoPersonNetwork": {
+        const net = ds.personNetworks[lassoId];
+        if (!net) break;
+        const limit = c.limit ?? 3;
+        card.section(c.title ?? "Sidder sammen med");
+        if (net.people.length === 0) card.text("Sidder ikke sammen med andre i registrerede selskaber");
+        for (const x of net.people.slice(0, limit)) {
+          const yrs = x.overlapYears < 1 ? "<1 år" : `${x.overlapYears} år`;
+          wrap(x.name, W - 8).forEach((l, i, all) => card.raw(`${pad(l, W - 7)}${i === all.length - 1 ? padStart(yrs, 7) : ""}`));
+        }
+        if (net.people.length > limit) card.text(`og ${net.people.length - limit} flere`);
+        break;
+      }
+      case "LassoPersonRisk": {
+        if (!p) break;
+        const risk = personRisk(p);
+        card.section(c.title ?? "Risiko");
+        const word = (cases: typeof risk.bankruptcies) => (cases.length === 0 ? "Ingen" : cases.some((x) => x.involved) ? "Mulig vigtig" : "Info");
+        card.row("Konkurser", `${risk.bankruptcies.length}, ${word(risk.bankruptcies)}`);
+        card.row("Tvangsopl.", `${risk.dissolutions.length}, ${word(risk.dissolutions)}`);
+        for (const x of [...risk.bankruptcies, ...risk.dissolutions]) {
+          card.text(`${x.companyName}, ${x.status.toLowerCase()}${x.date ? ` ${year(x.date)}` : ""}${x.personLeft ? `, fratrådt ${year(x.personLeft)}` : ""}`);
+        }
+        break;
+      }
+      case "LassoTimeline": {
+        const all = ds.timeline[lassoId];
+        const events = (c.filter === "risiko" && all && p ? riskTimeline(all, p) : all)?.events;
+        if (!events?.length) break;
+        // Som på siden: de seneste `limit` (overblikket 3, ellers 5), resten som "og N flere".
+        const limit = c.limit ?? 5;
+        card.section(c.title ?? "Historik");
+        for (const e of events.slice(0, limit)) {
+          card.text(formatDate(e.date));
+          for (const l of wrap(e.title, W - 2)) card.raw(`  ${l}`);
+        }
+        if (events.length > limit) card.text(`og ${events.length - limit} flere begivenheder`);
+        break;
+      }
+      case "LassoNews": {
+        const news = ds.news[lassoId]?.items;
+        if (!news?.length) break;
+        card.section("Nyheder");
+        for (const n of news.slice(0, c.limit)) {
+          card.text([n.source, n.time ? formatDate(n.time) : null].filter(Boolean).join(", "));
+          for (const l of wrap(n.headline, W - 2)) card.raw(`  ${l}`);
+        }
+        if (news.length > c.limit) card.text(`og ${news.length - c.limit} flere nyheder`);
+        break;
+      }
+      case "LassoOwnershipDiagram": {
+        const graph = ds.ownershipGraphs[ownershipGraphKey(c)];
+        if (!graph) break;
+        const owned = graph.edges.filter((e) => e.from === lassoId && !e.until);
+        card.section(c.title ?? "Ejerstruktur");
+        // Står ejerskaberne (med andel) allerede som liste på siden, viser diagrammet kun strukturen under dem.
+        if (!ownerList) {
+          if (owned.length === 0) card.text("Ejer ingen selskaber i CVR");
+          for (const e of owned.slice(0, 5)) {
+            card.text(graph.nodes.find((n) => n.id === e.to)?.name ?? e.to);
+            card.raw(`  Ejerandel ${e.share ? formatShare(e.share) : "ikke oplyst"}`);
+          }
+          if (owned.length > 5) card.text(`og ${owned.length - 5} flere selskaber`);
+        }
+        const below = graph.edges.filter((e) => e.from !== lassoId && !e.until);
+        if (below.length && ownerList) {
+          card.text(`Under de ejede selskaber (${below.length}):`);
+          for (const e of below.slice(0, 5)) {
+            for (const l of wrap(`${graph.nodes.find((n) => n.id === e.to)?.name ?? e.to}${e.share ? `, ${formatShare(e.share)}` : ""}`, W - 2)) card.raw(`  ${l}`);
+          }
+          if (below.length > 5) card.text(`og ${below.length - 5} flere selskaber`);
+        } else if (below.length) card.text(`De ejede selskaber ejer ${below.length} ${below.length === 1 ? "selskab" : "selskaber"} mere`);
+        else if (ownerList) card.text("De ejede selskaber ejer ingen andre selskaber");
+        break;
       }
     }
-    if (companies.length > 6) card.text(`og ${companies.length - 6} flere selskaber`);
-  }
-  if (p && types.has("LassoPersonFacts")) {
-    const f = personFacts(p);
-    const pl = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`;
-    card.section("Stamoplysninger");
-    // Kun postnummer og by, som på siden; aldrig gade og husnummer.
-    card.row("Bopæl", p.addressProtected ? "Adressebeskyttet" : [[p.zip, p.city].filter(Boolean).join(" "), p.country].filter(Boolean).join(", ") || "Ikke oplyst");
-    // Som på siden: kommunen kun, når den ikke blot gentager byen.
-    if (!p.addressProtected && !(p.municipality && p.city?.toLowerCase().startsWith(p.municipality.toLowerCase()))) card.row("Kommune", p.municipality);
-    card.row("Enhedsnummer", p.unitNumber ?? /^CVR-3-(\d+)$/i.exec(p.lassoId)?.[1]);
-    card.row("Aktive", f.activeRoles ? `${pl(f.activeRoles, "rolle", "roller")} i ${pl(f.activeCompanies, "selskab", "selskaber")}` : "Ingen roller");
-    card.row("Ophørte", f.endedRoles ? pl(f.endedRoles, "rolle", "roller") : "Ingen");
-    card.row("Ejer af", f.ownedCompanies ? pl(f.ownedCompanies, "selskab", "selskaber") : "Ingen");
-    card.row("Første reg.", f.firstRegistered ? year(f.firstRegistered) : undefined);
-    card.row("Seneste ænd.", f.latestChange ? formatDate(f.latestChange) : undefined);
-  }
-  const net = types.has("LassoPersonNetwork") ? ds.personNetworks[lassoId] : undefined;
-  if (net?.people.length) {
-    card.section("Sidder sammen med");
-    for (const x of net.people.slice(0, 5)) {
-      const yrs = x.overlapYears < 1 ? "<1 år" : `${x.overlapYears} år`;
-      wrap(x.name, W - 8).forEach((l, i, all) => card.raw(`${pad(l, W - 7)}${i === all.length - 1 ? padStart(yrs, 7) : ""}`));
-    }
-    if (net.people.length > 5) card.text(`og ${net.people.length - 5} flere`);
-  }
-  if (p && types.has("LassoPersonRisk")) {
-    const risk = personRisk(p);
-    card.section("Risiko");
-    const word = (cases: typeof risk.bankruptcies) => (cases.length === 0 ? "Ingen" : cases.some((c) => c.involved) ? "Mulig vigtig" : "Info");
-    card.row("Konkurser", `${risk.bankruptcies.length}, ${word(risk.bankruptcies)}`);
-    card.row("Tvangsopl.", `${risk.dissolutions.length}, ${word(risk.dissolutions)}`);
-    for (const c of [...risk.bankruptcies, ...risk.dissolutions].slice(0, 3)) {
-      card.text(`${c.companyName}, ${c.status.toLowerCase()}${c.date ? ` ${year(c.date)}` : ""}${c.personLeft ? `, fratrådt ${year(c.personLeft)}` : ""}`);
-    }
-  }
-  // Historik og nyheder: de seneste 3 (regel 9), resten som "og N flere".
-  const events = types.has("LassoTimeline") ? ds.timeline[lassoId]?.events : undefined;
-  if (events?.length) {
-    card.section("Historik");
-    for (const e of events.slice(0, 3)) {
-      card.text(formatDate(e.date));
-      for (const l of wrap(e.title, W - 2)) card.raw(`  ${l}`);
-    }
-    if (events.length > 3) card.text(`og ${events.length - 3} flere begivenheder`);
-  }
-  const news = types.has("LassoNews") ? ds.news[lassoId]?.items : undefined;
-  if (news?.length) {
-    card.section("Nyheder");
-    for (const n of news.slice(0, 3)) {
-      card.text([n.source, n.time ? formatDate(n.time) : null].filter(Boolean).join(", "));
-      for (const l of wrap(n.headline, W - 2)) card.raw(`  ${l}`);
-    }
-    if (news.length > 3) card.text(`og ${news.length - 3} flere nyheder`);
-  }
-  const diagram = spec.components.find((c) => c.type === "LassoOwnershipDiagram" && c.person === lassoId);
-  const graph = diagram?.type === "LassoOwnershipDiagram" ? ds.ownershipGraphs[ownershipGraphKey(diagram)] : undefined;
-  if (graph) {
-    const owned = graph.edges.filter((e) => e.from === lassoId && !e.until);
-    card.section("Ejerskab");
-    if (owned.length === 0) card.text("Ejer ingen selskaber i CVR");
-    for (const e of owned.slice(0, 5)) {
-      card.text(graph.nodes.find((n) => n.id === e.to)?.name ?? e.to);
-      card.raw(`  Ejerandel ${e.share ? formatShare(e.share) : "ikke oplyst"}`);
-    }
-    if (owned.length > 5) card.text(`og ${owned.length - 5} flere selskaber`);
-    const below = graph.edges.filter((e) => e.from !== lassoId && !e.until).length;
-    if (below) card.text(`De ejede selskaber ejer ${below} ${below === 1 ? "selskab" : "selskaber"} mere`);
   }
   return card.empty ? null : card.toString();
 }

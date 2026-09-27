@@ -2,7 +2,7 @@
 // med den aktuelle komponist og render-app, så rigtige data kan sammenlignes før/efter.
 // Brug: npx tsx apps/server/src/dev/replay-preview.ts <svar.json> <ud.html>
 import { readFileSync, writeFileSync } from "node:fs";
-import { composeCompany, composePerson, DATASET_META_KEY, type Dataset, type Focus, type ViewSpec } from "@lasso/spec";
+import { composeCompany, composePerson, DATASET_META_KEY, PERSON_FOCUS_LABELS, type Dataset, type Focus, type PersonFocus, type ViewSpec } from "@lasso/spec";
 import { injectBoot, loadViewHtml } from "../web/page.js";
 
 const [input, out] = process.argv.slice(2);
@@ -17,7 +17,8 @@ if (old.kind === "company" && head?.company) {
   const labels: Record<string, Focus> = { Økonomi: "oekonomi", Regnskab: "regnskab", Ejerskab: "ejerskab", Ledelse: "ledelse", Risiko: "risiko", Historik: "historik", Kontakt: "kontakt" };
   spec = composeCompany(head.company, dataset, { focus: labels[old.subtitle ?? ""] ?? "overblik", name: dataset.companies[head.company]?.name });
 } else if (old.kind === "person" && head?.person) {
-  spec = composePerson(head.person, dataset, { name: dataset.persons[head.person]?.name });
+  const focus = (Object.entries(PERSON_FOCUS_LABELS) as [PersonFocus, string][]).find(([, label]) => label === old.subtitle)?.[0] ?? "overblik";
+  spec = composePerson(head.person, dataset, { focus, name: dataset.persons[head.person]?.name });
 }
 writeFileSync(out, injectBoot(await loadViewHtml(), { mode: "web", spec, dataset }, spec.title));
 console.log(spec.components.map((c) => `${c.type.replace("Lasso", "")}${c.column ? `@${c.column}` : ""}`).join(" "));

@@ -1,4 +1,4 @@
-import { cvrFromLassoId, FOCUSES, type Focus, type SavedPageKind, type SavedPageVM } from "@lasso/spec";
+import { cvrFromLassoId, isFocusFor, type PageFocus, type SavedPageKind, type SavedPageVM } from "@lasso/spec";
 import type { CurrentUser } from "../auth/user.js";
 import type { Config } from "../config.js";
 import { NotFoundError, type DataProvider } from "../data/provider.js";
@@ -12,9 +12,12 @@ import { pageKindOf, SavedPageError, type SavedPageRecord, type SavedPageStore }
  * bruger sender disse extras til resolveSpec; offentlige sider (/k/, /p/, /e/, /v/) gør ikke.
  */
 
-/** Gemt focus som Focus, hvis det er et kendt; ellers ingen (så linket altid kan verificeres). */
-export function savedFocus(focus: string | undefined): Focus | undefined {
-  return focus && (FOCUSES as readonly string[]).includes(focus) ? (focus as Focus) : undefined;
+/**
+ * Gemt focus, hvis det er et kendt fokus for sidens slags (virksomhedsfokus for en virksomhed,
+ * personfokus for en person); ellers ingen, så linket altid kan verificeres.
+ */
+export function savedFocus(kind: SavedPageKind, focus: string | undefined): PageFocus | undefined {
+  return focus && isFocusFor(kind, focus) ? focus : undefined;
 }
 
 /** Lagerets post som visningsmodel, med signeret link til /e/<lassoId> (samme focus, som den blev gemt med). */
@@ -28,7 +31,7 @@ export function savedPageVM(config: Config, p: SavedPageRecord): SavedPageVM {
     ...(p.note ? { note: p.note } : {}),
     origin: p.origin,
     savedAt: p.savedAt,
-    url: entityLink(config, p.lassoId, { focus: savedFocus(p.focus) }),
+    url: entityLink(config, p.lassoId, { focus: savedFocus(p.kind, p.focus) }),
   };
 }
 

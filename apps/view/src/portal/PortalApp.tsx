@@ -68,6 +68,7 @@ export function PortalApp({ boot }: { boot: PortalBoot }) {
       user={user}
       api={api}
       baseUrl={boot.baseUrl}
+      canLogout={boot.loginRequired}
       onLoggedOut={() => {
         setError(null);
         setNotice(null);

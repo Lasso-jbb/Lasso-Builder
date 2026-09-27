@@ -4,6 +4,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { composePerson, emptyDataset, ownershipGraphKey, parseViewSpec, PERSON_GRAPH_DEPTH, personTimeline, type Dataset, type PersonVM, type ViewSpec } from "@lasso/spec";
 import { PersonFacts } from "./components/PersonFacts.js";
+import { PersonNetwork } from "./components/PersonNetwork.js";
+import { PersonRoles } from "./components/PersonRoles.js";
 import { bandTemplate, columnBands, LassoView } from "./LassoView.js";
 import type { HostCapabilities } from "./types.js";
 
@@ -101,7 +103,8 @@ test("columnBands: et lavere kolonnenummer starter et nyt bånd, og bredderne gi
   const bands = columnBands(spec.components);
   assert.deepEqual(
     bands.map((b) => (b.kind === "full" ? b.item.c.type : b.columns.map((col) => col.map((x) => x.c.type).join("+")).join(" | "))),
-    ["LassoPersonHead", "LassoPersonRoles | LassoPersonFacts", "LassoPersonNetwork | LassoPersonRisk", "LassoTimeline | LassoNews", "LassoOwnershipDiagram"],
+    // Overblikket: roller | stamoplysninger, derefter de halve to og to efter vægt (de mest lige bånd).
+    ["LassoPersonHead", "LassoPersonRoles | LassoPersonFacts", "LassoPersonNetwork | LassoOwnershipDiagram", "LassoPersonRisk | LassoTimeline"],
   );
   const [, rolesBand, netBand] = bands;
   assert.equal(rolesBand?.kind === "columns" && bandTemplate(rolesBand.columns), "minmax(0, 3fr) minmax(0, 1fr)");
@@ -122,23 +125,60 @@ test("columnBands: et lavere kolonnenummer starter et nyt bånd, og bredderne gi
   assert.deepEqual(columnBands(company.components).map((b) => b.kind), ["full", "columns"]);
 });
 
-test("personsiden: roller ¾ + stamoplysninger ¼ i ét bånd, historik med selskaber, der kan åbnes, nyheder og ejerdiagram", () => {
+test("personsiden, overblik: aktive roller som liste ¾ + stamoplysninger ¼ (uden hovedets tal), historik (3) og ejerdiagram, ingen nyheder", () => {
   const spec = composePerson(ID, dataset(), { followUps: false });
   const html = render(spec, dataset(), { drillDown: true });
   assert.match(html, /lasso-columns--ratio" style="--lasso-columns-template:minmax\(0, 3fr\) minmax\(0, 1fr\)"/);
-  // Historik: nyeste først (konkursen), selskabsnavnet som knap.
-  assert.match(html, /Historik/);
+  // Aktive roller: én række pr. selskab med rollerne under og "siden" til højre; navnet kan åbnes.
+  assert.match(html, /class="lasso-section__title">Aktive roller</);
+  assert.match(html, /<button type="button" class="lasso-link lasso-row__open">Eksempel Holding ApS<\/button><\/div><div class="lasso-row__sub">Direktør, ejer 100 %<\/div><\/div><div class="lasso-row__side">siden 2005</);
+  assert.doesNotMatch(html, /Eksempel Energi A\/S<\/button><\/div><div class="lasso-row__sub">/, "ophørte roller står ikke på listen over aktive");
+  // Stamoplysningerne gentager ikke hovedets tal (roller, ejerskaber, første registrering).
+  assert.match(html, /Stamoplysninger/);
+  assert.match(html, /Enhedsnummer/);
+  assert.doesNotMatch(html, /lasso-kv-row__label">Aktive roller|lasso-kv-row__label">Ejer af|lasso-kv-row__label">Første registrering/);
+  assert.match(html, /første registrering 2005/, "hovedet viser den");
+  // Historik: nyeste først (konkursen), selskabsnavnet som knap, 3 + "Se alle".
   assert.match(html, /<button type="button" class="lasso-link lasso-timeline__entity">Eksempel Energi A\/S<\/button><span> kom under konkurs<\/span>/);
-  assert.match(html, /Udtrådt som bestyrelsesmedlem i /);
-  // Nyheder om personen.
-  assert.match(html, /Nyheder/);
-  assert.match(html, /Carla Prøve indtræder i bestyrelsen/);
+  assert.match(html, /Se alle 6 begivenheder/);
+  // Ingen nyheder på overblikket.
+  assert.doesNotMatch(html, /Carla Prøve indtræder i bestyrelsen/);
   // Ejerdiagram med personen som rod: "Fokusperson", ingen retningsvalg (en person har ingen ejere).
   assert.match(html, /Ejerskab/);
   assert.match(html, /Fokusperson/);
   assert.doesNotMatch(html, /Kun ejere/);
   assert.match(html, /aria-label="Eksempel Holding ApS, CVR 99000010/);
   assert.match(html, /100 %/);
+});
+
+test("personsiden, historik: historik (5) og nyheder om personen side om side", () => {
+  const spec = composePerson(ID, dataset(), { focus: "historik", followUps: false });
+  const html = render(spec, dataset(), { drillDown: true });
+  assert.match(html, /Udtrådt som bestyrelsesmedlem i /);
+  assert.match(html, /Se alle 6 begivenheder/);
+  assert.match(html, /Nyheder/);
+  assert.match(html, /Carla Prøve indtræder i bestyrelsen/);
+  assert.doesNotMatch(html, /Stamoplysninger|Aktive roller|Fokusperson/);
+});
+
+test("personsiden, risiko: alle sager og forløbet i konkursselskabet; ingen andre selskaber i forløbet", () => {
+  const spec = composePerson(ID, dataset(), { focus: "risiko", followUps: false });
+  const html = render(spec, dataset(), { drillDown: true });
+  assert.match(html, /class="lasso-section__title">Risiko</);
+  assert.match(html, /class="lasso-section__title">Forløb i selskaberne</);
+  assert.match(html, /Indtrådt som bestyrelsesmedlem i /);
+  assert.doesNotMatch(html, /Eksempel Holding ApS|Eksempel Byg A\/S/, "kun selskabet med konkurs");
+  // Bo har ingen andre ophørte roller: ingen ophørt-liste ved siden af.
+  assert.doesNotMatch(html, /Øvrige ophørte roller/);
+});
+
+test("personsiden, ejerskab: de ejede selskaber med andel og siden-dato, og ejerstrukturen", () => {
+  const spec = composePerson(ID, dataset(), { focus: "ejerskab", followUps: false });
+  const html = render(spec, dataset(), {});
+  assert.match(html, /class="lasso-section__title">Ejerskaber</);
+  assert.match(html, /class="lasso-row__name">Eksempel Holding ApS<\/div><div class="lasso-row__sub">Ejer 100 %<\/div><\/div><div class="lasso-row__side">siden 2005</);
+  assert.match(html, /Ejerstruktur/);
+  assert.doesNotMatch(html, /Bestyrelsesformand/, "kun ejerskaber, ikke ledelsesroller");
 });
 
 test("personsiden uden drill-down: selskabsnavnene i historikken er almindelig tekst", () => {
@@ -164,4 +204,73 @@ test("nyheder og historik om en person har egne tomme tilstande", () => {
   assert.match(html, /Ingen nyheder om personen\./);
   assert.match(html, /Der er ingen registrerede rolleskift for personen i CVR\./);
   assert.doesNotMatch(html, /om virksomheden/);
+});
+
+/* ---------- LassoPersonRoles show/limit, LassoPersonNetwork limit, LassoTimeline filter ---------- */
+
+const roles = (props: Partial<Parameters<typeof PersonRoles>[0]>) => renderToStaticMarkup(createElement(PersonRoles, { person: bo, ...props }));
+
+test("PersonRoles show 'current': de aktive roller pr. selskab, limit + 'Se alle N selskaber', kildelinje", () => {
+  const html = roles({ show: "current" });
+  assert.match(html, /class="lasso-section__title">Aktive roller</);
+  assert.equal((html.match(/<li class="lasso-row"/g) ?? []).length, 2);
+  assert.match(html, /Eksempel Byg A\/S<\/div><div class="lasso-row__sub">Bestyrelsesformand<\/div><\/div><div class="lasso-row__side">siden 2012</);
+  assert.doesNotMatch(html, /Eksempel Energi/);
+  assert.doesNotMatch(html, /Se alle/);
+  assert.match(html, /Kilde: CVR via Lasso, opdateret 12\.09\.2026/);
+  // limit 1: én række + "Se alle 2 selskaber".
+  const one = roles({ show: "current", limit: 1 });
+  assert.equal((one.match(/<li class="lasso-row"/g) ?? []).length, 1);
+  assert.match(one, /aria-expanded="false"[^>]*>Se alle 2 selskaber</);
+  // Ingen tidsbånd i listeformen.
+  assert.doesNotMatch(html, /lasso-personroles__band/);
+});
+
+test("PersonRoles show 'ended' og 'owner': ophørte med status i rødt med ord, ejede med andel; tomme tilstande siger hvorfor", () => {
+  const ended = roles({ show: "ended" });
+  assert.match(ended, /class="lasso-section__title">Ophørte roller</);
+  assert.match(ended, /<span class="lasso-status--warning">Under konkurs 2026, <\/span>bestyrelsesmedlem<\/div><\/div><div class="lasso-row__side">2014–2018</);
+  assert.doesNotMatch(ended, /Eksempel Holding ApS/);
+  assert.match(roles({ show: "ended", except: "risiko" }), /Personen har ingen andre ophørte roller i CVR\./);
+  const owner = roles({ show: "owner" });
+  assert.match(owner, /class="lasso-section__title">Ejerskaber</);
+  assert.match(owner, /Eksempel Holding ApS<\/div><div class="lasso-row__sub">Ejer 100 %</);
+  assert.doesNotMatch(owner, /Direktør/);
+  const none = { ...bo, roles: bo.roles.filter((r) => r.kind !== "owner") };
+  assert.match(roles({ show: "owner", person: none }), /Personen ejer ikke selskaber i CVR\./);
+  assert.match(roles({ show: "current", person: { ...bo, roles: [bo.roles[3]!] } }), /Personen har ingen aktive roller i selskaber i CVR\./);
+  assert.match(roles({ show: "owner", person: undefined }), /aria-busy="true"/);
+});
+
+test("PersonRoles show 'all' (tidsbånd): limit bestemmer, hvor mange selskaber der står før 'Se alle N'", () => {
+  // Bo har tre selskaber: standard (3) viser alle, limit 2 folder det sidste.
+  assert.equal((roles({}).match(/<li class="lasso-personroles__row/g) ?? []).length, 3);
+  assert.doesNotMatch(roles({}), /Se alle/);
+  const two = roles({ limit: 2 });
+  assert.equal((two.match(/<li class="lasso-personroles__row/g) ?? []).length, 2);
+  assert.match(two, /aria-expanded="false"[^>]*>Se alle 3 selskaber</);
+});
+
+test("PersonNetwork limit: 3 som standard, flere på fanen Netværk", () => {
+  const people = Array.from({ length: 10 }, (_, i) => ({ name: `Person ${i} Eksempel`, companies: [{ companyName: "Eksempel Byg A/S" }], overlapYears: 10 - i, active: true }));
+  const net = (limit?: number) => renderToStaticMarkup(createElement(PersonNetwork, { network: { lassoId: ID, people }, limit }));
+  assert.equal((net().match(/<li class="lasso-personnet__row/g) ?? []).length, 3);
+  assert.match(net(), /Se alle 10/);
+  assert.equal((net(8).match(/<li class="lasso-personnet__row/g) ?? []).length, 8);
+  assert.match(net(8), /Se alle 10/);
+});
+
+test("LassoView: tidslinjen med filter 'risiko' viser kun forløbet i selskaberne med konkurs", () => {
+  const spec = parseViewSpec({ kind: "person", title: "Bo", components: [{ type: "LassoTimeline", person: ID, filter: "risiko", title: "Forløb i selskaberne" }] });
+  const html = render(spec, dataset());
+  assert.match(html, /Forløb i selskaberne/);
+  assert.match(html, /kom under konkurs/);
+  assert.match(html, /Udtrådt som bestyrelsesmedlem i /);
+  assert.doesNotMatch(html, /Eksempel Holding ApS|Eksempel Byg A\/S/);
+  // Uden sager: den tomme tilstand siger hvorfor.
+  const ds = dataset();
+  ds.persons[ID] = { ...bo, roles: bo.roles.slice(0, 3) };
+  assert.match(render(spec, ds), /Ingen registrerede rolleskift i selskaberne med konkurs eller tvangsopløsning\./);
+  // Spec'en afviser et ukendt filter.
+  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoTimeline", person: ID, filter: "alt" }] }));
 });

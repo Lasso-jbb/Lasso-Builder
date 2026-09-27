@@ -12,7 +12,7 @@ import {
   type TabItem,
   type ViewAction,
 } from "@lasso/ui";
-import { FOCUSES, FOCUS_LABELS, type Focus } from "@lasso/spec";
+import { FOCUSES, FOCUS_LABELS, isPersonFocus, PERSON_FOCUSES, PERSON_FOCUS_LABELS, type Focus, type PersonFocus } from "@lasso/spec";
 import type { ViewResult } from "./api.js";
 import { entityHost } from "./data.js";
 import { dataKey, isFocus, type PortalRoute } from "./routes.js";
@@ -36,7 +36,8 @@ type SearchRoute = Extract<PortalRoute, { kind: "search" }>;
 type EntityRoute = Extract<PortalRoute, { kind: "company" | "person" }>;
 
 export const FOCUS_MODULES: readonly TabItem[] = FOCUSES.map((f) => ({ id: f, label: FOCUS_LABELS[f] }));
-const PERSON_MODULES: readonly TabItem[] = [{ id: "profil", label: "Profil" }];
+/** Personsidens fokus (Overblik, Roller, Netværk, Ejerskab, Risiko, Historik), som virksomhedens. */
+export const PERSON_MODULES: readonly TabItem[] = PERSON_FOCUSES.map((f) => ({ id: f, label: PERSON_FOCUS_LABELS[f] }));
 
 export const SEARCH_EMPTY = "Søg på navn, CVR-nummer eller en beskrivelse, fx 'revisorer i Aarhus med mindst 10 ansatte'.";
 
@@ -155,7 +156,7 @@ export function SearchPage({
   );
 }
 
-/* ---------- Virksomhed (#/company/…?focus=) og person (#/person/…) ---------- */
+/* ---------- Virksomhed (#/company/…?focus=) og person (#/person/…?focus=) ---------- */
 
 export function EntityPage({
   tab,
@@ -181,7 +182,8 @@ export function EntityPage({
   saved: boolean;
   /** Handlingerne vises, når siden er hentet og vi kender dens Lasso-ID. */
   canAct: boolean;
-  onFocus: (focus: Focus) => void;
+  /** Virksomhedsfokus på en virksomhedsside, personfokus på en personside. */
+  onFocus: (focus: Focus | PersonFocus) => void;
   onToggleSaved: () => void;
   onShare: () => void;
   onRetry: () => void;
@@ -190,7 +192,8 @@ export function EntityPage({
   const state = viewState(route, data);
   const company = route.kind === "company";
   const panel = `portal-${tab.id}`;
-  const value = company ? route.focus : "profil";
+  const value = route.focus;
+  const label = company ? FOCUS_LABELS[route.focus] : PERSON_FOCUS_LABELS[route.focus];
   const actions: ModuleAction[] = canAct
     ? [
         { id: "gem", label: saved ? "Gemt" : "Gem", icon: <ShellIcon name="bookmark" filled={saved} />, tone: saved ? "accent" : undefined, onSelect: onToggleSaved },
@@ -205,10 +208,10 @@ export function EntityPage({
         modules={company ? FOCUS_MODULES : PERSON_MODULES}
         value={value}
         onChange={(id) => {
-          if (isFocus(id)) onFocus(id);
+          if (company ? isFocus(id) : isPersonFocus(id)) onFocus(id as Focus | PersonFocus);
         }}
         actions={actions}
-        ariaLabel={company ? "Fokus" : "Moduler"}
+        ariaLabel="Fokus"
       />
       <TabPanel
         id={panel}
@@ -216,7 +219,7 @@ export function EntityPage({
         loading={state === "loading"}
         loadingHeight={320}
         loadingLines={5}
-        loadingLabel={company ? FOCUS_LABELS[route.focus] : "Profil"}
+        loadingLabel={label}
         className={waiting ? "lasso-portal-body" : ""}
       >
         {state === "error" ? (

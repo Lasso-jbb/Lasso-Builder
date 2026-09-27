@@ -1,6 +1,6 @@
 import { Router, type NextFunction, type Request, type Response } from "express";
 import { z } from "zod";
-import { FOCUSES, METRICS, searchQuerySchema } from "@lasso/spec";
+import { FOCUSES, METRICS, PAGE_FOCUSES, PERSON_FOCUSES, searchQuerySchema } from "@lasso/spec";
 import type { CurrentUser } from "../auth/user.js";
 import type { Config } from "../config.js";
 import type { DataProvider } from "../data/provider.js";
@@ -53,6 +53,10 @@ const companyParams = z.object({
   metric: z.enum(METRICS, { error: oneOf("metric", METRICS) }).optional(),
 });
 
+const personParams = z.object({
+  focus: z.enum(PERSON_FOCUSES, { error: oneOf("focus", PERSON_FOCUSES) }).optional(),
+});
+
 const PAGE_LIST_KINDS = ["company", "person", "all"] as const;
 const listPagesParams = z.object({
   kind: z.enum(PAGE_LIST_KINDS, { error: oneOf("kind", PAGE_LIST_KINDS) }).optional(),
@@ -65,7 +69,8 @@ const savePageBody = z.object(
   {
     page: z.string({ error: "Angiv page: Lasso-ID, CVR-nummer eller navn." }).trim().min(1, "Angiv page: Lasso-ID, CVR-nummer eller navn."),
     kind: z.enum(PAGE_KINDS, { error: oneOf("kind", PAGE_KINDS) }).optional(),
-    focus: z.enum(FOCUSES, { error: oneOf("focus", FOCUSES) }).optional(),
+    // Virksomheds- eller personfokus; et fokus, der ikke passer til siden, gemmes ikke (savePage).
+    focus: z.enum(PAGE_FOCUSES, { error: oneOf("focus", PAGE_FOCUSES) }).optional(),
     note: text("note", 500).optional(),
   },
   { error: BODY_ERROR },
@@ -122,11 +127,13 @@ export function portalApi({ config, provider, store, pages }: PortalApiDeps): Ro
     res.json({ spec: r.spec, dataset: r.dataset, ...(r.note ? { note: r.note } : {}), link: entityLink(config, r.lassoId, { focus: params.focus }) });
   });
 
-  // Som show_person. link = den signerede /e/-side, samme form som for virksomheder i portalen.
+  // Som show_person. link = den signerede /e/-side med samme focus, samme form som for virksomheder i portalen.
   router.get("/person/:ref", async (req, res) => {
-    const r = await showPerson(ctx(res), { person: String(req.params.ref) });
+    const params = parseOr400(personParams, req.query, res);
+    if (!params) return;
+    const r = await showPerson(ctx(res), { person: String(req.params.ref), focus: params.focus });
     if ("error" in r) return sendError(res, r);
-    res.json({ spec: r.spec, dataset: r.dataset, ...(r.note ? { note: r.note } : {}), link: entityLink(config, r.lassoId) });
+    res.json({ spec: r.spec, dataset: r.dataset, ...(r.note ? { note: r.note } : {}), link: entityLink(config, r.lassoId, { focus: params.focus }) });
   });
 
   // Som resolve_view: drill-down, filterændring og opdatér.

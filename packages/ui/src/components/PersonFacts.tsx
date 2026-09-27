@@ -20,21 +20,28 @@ function residence(p: PersonVM): string | undefined {
   return [place, p.country].filter(Boolean).join(", ") || undefined;
 }
 
-export function personFactRows(p: PersonVM): Row[] {
+/**
+ * Rækkerne i stamoplysningerne. `hideCounts`: personhovedet står på samme side og viser allerede
+ * antallet af aktive og ophørte roller, ejerskaber og første registrering; de gentages ikke 1:1
+ * (personFactOptions). Bopæl (med postnummer), kommune, enhedsnummer og seneste ændring står altid.
+ */
+export function personFactRows(p: PersonVM, { hideCounts = false }: { hideCounts?: boolean } = {}): Row[] {
   const f = personFacts(p);
   const rows: Row[] = [{ label: "Bopæl", value: residence(p) }];
   // Beskyttet adresse: kommunen udelades også; "Adressebeskyttet" siger hvorfor. Kommunen står
   // heller ikke, når den blot gentager byen ("8600 Silkeborg", Silkeborg Kommune).
   const sameAsCity = Boolean(p.municipality && p.city?.toLowerCase().startsWith(p.municipality.toLowerCase()));
   if (!p.addressProtected && !sameAsCity) rows.push({ label: "Kommune", value: p.municipality });
-  rows.push(
-    { label: "Enhedsnummer", value: unitNumberOf(p) },
-    { label: "Aktive roller", value: f.activeRoles ? `${f.activeRoles} i ${plural(f.activeCompanies, "selskab", "selskaber")}` : "Ingen" },
-    { label: "Ophørte roller", value: f.endedRoles ? String(f.endedRoles) : "Ingen" },
-    { label: "Ejer af", value: f.ownedCompanies ? plural(f.ownedCompanies, "selskab", "selskaber") : "Ingen" },
-    { label: "Første registrering", value: f.firstRegistered?.slice(0, 4) },
-    { label: "Seneste ændring", value: f.latestChange ? formatDate(f.latestChange) : undefined },
-  );
+  rows.push({ label: "Enhedsnummer", value: unitNumberOf(p) });
+  if (!hideCounts) {
+    rows.push(
+      { label: "Aktive roller", value: f.activeRoles ? `${f.activeRoles} i ${plural(f.activeCompanies, "selskab", "selskaber")}` : "Ingen" },
+      { label: "Ophørte roller", value: f.endedRoles ? String(f.endedRoles) : "Ingen" },
+      { label: "Ejer af", value: f.ownedCompanies ? plural(f.ownedCompanies, "selskab", "selskaber") : "Ingen" },
+      { label: "Første registrering", value: f.firstRegistered?.slice(0, 4) },
+    );
+  }
+  rows.push({ label: "Seneste ændring", value: f.latestChange ? formatDate(f.latestChange) : undefined });
   return rows;
 }
 
@@ -44,7 +51,7 @@ export function personFactRows(p: PersonVM): Row[] {
  * postnummer og by, som i personhovedet (aldrig fuld privatadresse); en adressebeskyttet person
  * får ordet "Adressebeskyttet". Roller, ejerskaber og datoer er afledt af rollerne i CVR.
  */
-export function PersonFacts({ person, title, error }: { person?: PersonVM; title?: string; error?: string }) {
+export function PersonFacts({ person, title, hideCounts, error }: { person?: PersonVM; title?: string; hideCounts?: boolean; error?: string }) {
   const heading = title ?? "Stamoplysninger";
   if (!person) {
     return (
@@ -64,7 +71,7 @@ export function PersonFacts({ person, title, error }: { person?: PersonVM; title
   return (
     <Section title={heading} span="quarter" className="lasso-personfacts">
       <div className="lasso-kv-list">
-        {personFactRows(person).map((r) => (
+        {personFactRows(person, { hideCounts }).map((r) => (
           // Et langt ord (fx "Adressebeskyttet") står under nøglen i en smal kolonne i stedet for at blive delt midt i ordet.
           <div className={`lasso-kv-row${r.value && !/\s/.test(r.value) && r.value.length > 12 ? " lasso-kv-row--long" : ""}`} key={r.label}>
             <div className="lasso-kv-row__label">{r.label}</div>

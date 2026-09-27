@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { personCompanies, type PersonCompanyVM, type PersonRoleVM, type PersonVM } from "@lasso/spec";
+import { personCompanies, personRoleRows, type PersonCompanyVM, type PersonRoleRowVM, type PersonRoleVM, type PersonRolesShow, type PersonVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
 
-/** Regel 9: tre selskaber, resten under "Se alle N". */
+/** Regel 9: tre selskaber i tidsbåndene og fem i listerne, resten under "Se alle N" (limit kan ændre det). */
 const COLLAPSED = 3;
+const LIST_COLLAPSED = 5;
+
+const LIST_TITLE: Record<Exclude<PersonRolesShow, "all">, string> = { current: "Aktive roller", ended: "Ophørte roller", owner: "Ejerskaber" };
 const DAY = 86_400_000;
 
 const year = (d?: string) => (d ? d.slice(0, 4) : "");
@@ -50,14 +53,113 @@ function CompanyName({ c, onOpen }: { c: PersonCompanyVM; onOpen?: (a: ViewActio
   return <span className="lasso-personroles__company">{c.companyName}</span>;
 }
 
+function RowCompany({ row, onOpen }: { row: PersonRoleRowVM; onOpen?: (a: ViewAction) => void }) {
+  if (onOpen && row.companyId?.startsWith("CVR-1-")) {
+    return (
+      <button type="button" className="lasso-link lasso-row__open" onClick={() => onOpen({ kind: "open-company", lassoId: row.companyId!, name: row.companyName })}>
+        {row.companyName}
+      </button>
+    );
+  }
+  return <>{row.companyName}</>;
+}
+
+const LIST_EMPTY: Record<Exclude<PersonRolesShow, "all">, string> = {
+  current: "Personen har ingen aktive roller i selskaber i CVR.",
+  ended: "Personen har ingen ophørte roller i CVR.",
+  owner: "Personen ejer ikke selskaber i CVR.",
+};
+
+/**
+ * Rollerne som kort liste (katalog 11-rækker): én række pr. selskab med navnet (link), rollerne
+ * under og perioden i fast kolonne til højre. 'current' = de aktive roller, 'owner' = de selskaber,
+ * personen ejer nu (andel og siden-dato), 'ended' = de ophørte, senest ophørte først. Et selskab
+ * under konkurs eller ophørt har status med ord i rødt (regel 7). Fem rækker + "Se alle N selskaber".
+ */
+function PersonRoleList({
+  person,
+  show,
+  limit,
+  except,
+  heading,
+  onOpen,
+}: {
+  person: PersonVM;
+  show: Exclude<PersonRolesShow, "all">;
+  limit: number;
+  except?: "risiko";
+  heading: string;
+  onOpen?: (a: ViewAction) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const rows = personRoleRows(person, show, { except });
+  if (rows.length === 0) {
+    return (
+      <Section title={heading}>
+        <DataState state="empty" reason={except === "risiko" && show === "ended" ? "Personen har ingen andre ophørte roller i CVR." : LIST_EMPTY[show]} />
+      </Section>
+    );
+  }
+  const visible = expanded ? rows : rows.slice(0, limit);
+  return (
+    <Section title={heading} className="lasso-personrolelist">
+      <ul className="lasso-rows">
+        {visible.map((r) => (
+          <li key={r.key} className="lasso-row">
+            <div className="lasso-row__main">
+              <div className="lasso-row__name">
+                <RowCompany row={r} onOpen={onOpen} />
+              </div>
+              <div className="lasso-row__sub">
+                {r.companyStatus ? (
+                  <span className="lasso-status--warning">
+                    {r.companyStatus}
+                    {r.companyEnded ? ` ${year(r.companyEnded)}` : ""}
+                    {", "}
+                  </span>
+                ) : null}
+                {r.companyStatus ? r.text.charAt(0).toLowerCase() + r.text.slice(1) : r.text}
+              </div>
+            </div>
+            {r.period ? <div className="lasso-row__side">{r.period}</div> : null}
+          </li>
+        ))}
+      </ul>
+      {rows.length > limit ? (
+        <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+          {expanded ? "Vis færre" : `Se alle ${rows.length} selskaber`}
+        </button>
+      ) : null}
+      <SourceLine source="CVR via Lasso" updated={person.updated} />
+    </Section>
+  );
+}
+
 /**
  * Roller over tid (katalog 16). Én række pr. selskab med højst to tidsbånd (ledelse øverst,
  * ejerskab nederst). Båndet er 6 px, og rolle og startdato står som 11 px tekst OVER båndet.
  * Fratrådte roller er stiplede omrids; konkurs eller ophør er en smal rød markør på tidspunktet.
- * Aksen ender altid i dag. Aktive selskaber først, tre rækker + "Se alle N".
+ * Aksen ender altid i dag. Aktive selskaber først, tre rækker + "Se alle N" (limit ændrer tallet).
+ * Med `show` 'current', 'ended' eller 'owner' er rollerne i stedet en kort liste (PersonRoleList).
  */
-export function PersonRoles({ person, title, error, onOpen }: { person?: PersonVM; title?: string; error?: string; onOpen?: (a: ViewAction) => void }) {
-  const heading = title ?? "Roller over tid";
+export function PersonRoles({
+  person,
+  title,
+  show = "all",
+  limit,
+  except,
+  error,
+  onOpen,
+}: {
+  person?: PersonVM;
+  title?: string;
+  show?: PersonRolesShow;
+  limit?: number;
+  except?: "risiko";
+  error?: string;
+  onOpen?: (a: ViewAction) => void;
+}) {
+  const heading = title ?? (show === "all" ? "Roller over tid" : LIST_TITLE[show]);
   const [expanded, setExpanded] = useState(false);
   if (!person) {
     return (
@@ -66,6 +168,8 @@ export function PersonRoles({ person, title, error, onOpen }: { person?: PersonV
       </Section>
     );
   }
+  if (show !== "all") return <PersonRoleList person={person} show={show} limit={limit ?? LIST_COLLAPSED} except={except} heading={heading} onOpen={onOpen} />;
+  const collapsed = limit ?? COLLAPSED;
   const companies = personCompanies(person);
   if (companies.length === 0) {
     return (
@@ -97,7 +201,7 @@ export function PersonRoles({ person, title, error, onOpen }: { person?: PersonV
     ["other", "Anden rolle"],
   ];
   const hasEnded = person.roles.some((r) => !r.active);
-  const visible = expanded ? companies : companies.slice(0, COLLAPSED);
+  const visible = expanded ? companies : companies.slice(0, collapsed);
 
   const legendNode = (
     <div className="lasso-personroles__legend" aria-hidden="true">
@@ -175,7 +279,7 @@ export function PersonRoles({ person, title, error, onOpen }: { person?: PersonV
           );
         })}
       </ul>
-      {companies.length > COLLAPSED ? (
+      {companies.length > collapsed ? (
         <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
           {expanded ? "Vis færre" : `Se alle ${companies.length} selskaber`}
         </button>

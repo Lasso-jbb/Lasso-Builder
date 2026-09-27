@@ -7,6 +7,11 @@ portal.lassox.com bruges i dag. Den bor på `/portal` (roden `/` sender videre),
 
 ## Login og session (apps/server/src/auth/session.ts)
 
+- **Åben portal:** `PORTAL_PUBLIC=true` gør `/portal` og `/api/portal/*` tilgængelige uden login;
+  besøgende uden session er demobrugeren (`portalUser`), `loginRequired` i boot er `false`, og
+  appen skjuler kontomenuen og "Log ud". CSRF-headeren kræves stadig på ændrende kald, og `/mcp`
+  er stadig beskyttet af nøglen. Lokalt uden nøgler er portalen åben på samme måde.
+
 - Login = **bruger-id + adgangsnøgle**, samme nøgler som MCP-connectoren: `MCP_ACCESS_KEY` logger
   demobrugeren ind (bruger-id = `DEMO_USER_ID`, standard `demo`), `MCP_USER_KEYS` logger hver sin
   bruger ind. Lasso ID/OAuth kobles på i `loginWithKey`/`getCurrentUser` senere.
@@ -32,10 +37,10 @@ med det i Claude: `{ spec, dataset, note? }` som `structuredContent.spec` + `_me
 |---|---|---|
 | `GET /api/portal/search?query=&limit=&title=` | Som `search_companies` (Lassos fortolkning af friteksten, kriterier som chips) | `{ spec, dataset, note? }` |
 | `GET /api/portal/company/:ref?focus=&years=&metric=` | Som `show_company` (navn, CVR eller Lasso-ID; `focus` = overblik, oekonomi, regnskab, ejerskab, ledelse, risiko, historik, kontakt) | `{ spec, dataset, note?, link }` (link = signeret `/e/`-side) |
-| `GET /api/portal/person/:ref` | Som `show_person` | `{ spec, dataset, note?, link }` |
+| `GET /api/portal/person/:ref?focus=` | Som `show_person` (navn eller person-ID; `focus` = overblik, roller, netvaerk, ejerskab, risiko, historik) | `{ spec, dataset, note?, link }` (link = signeret `/e/`-side med samme fokus) |
 | `POST /api/portal/resolve` `{ spec }` | Som `resolve_view` (drill-down, filterændring, opdatér) | `{ spec, dataset }` |
 | `GET /api/portal/pages?kind=company\|person\|all&limit=` | Som `list_saved_pages` | `{ spec, dataset }` |
-| `POST /api/portal/pages` `{ page, kind?, focus?, note? }` | Som `save_page` | `{ lassoId, kind, name, cvr?, savedAt, created, total, url }` |
+| `POST /api/portal/pages` `{ page, kind?, focus?, note? }` | Som `save_page` (`focus` er et virksomhedsfokus for en virksomhed og et personfokus for en person; et fokus, der ikke passer til siden, gemmes ikke) | `{ lassoId, kind, name, cvr?, savedAt, created, total, url }` |
 | `DELETE /api/portal/pages/:lassoId` | Som `remove_saved_page` | `{ lassoId, removed, total }` |
 | `POST /api/portal/views` `{ spec, name?, slug?, visibility? }` | Som `save_view` | `{ url, org, slug, version, name, visibility }` |
 
@@ -53,9 +58,12 @@ Fejl: `400 { error }` ved ugyldigt input, `404 { error }` når virksomheden/pers
 - En virksomhedsfane har `ModuleBar` med de otte fokus (Overblik … Kontakt) og handlingerne
   Gem/Gemt (accent), Del link og Eksportér; kroppen er `LassoView` med host `{ savePage, save,
   refine, drillDown, refresh, export, back: false }` og handlinger via fetch mod API'et.
+- En personfane har på samme måde `ModuleBar` med de seks personfokus (Overblik, Roller, Netværk,
+  Ejerskab, Risiko, Historik) og samme handlinger. Gem gemmer siden med det viste fokus.
 - Hash-routing, så tilbage/frem og genindlæsning virker: `#/search?q=…`, `#/company/CVR-1-…?focus=`,
-  `#/person/CVR-3-…`, `#/saved`.
-- Mobil: `AppShell`s mobile-props (titel, sektioner = fokus, bundnavigation Søg, Lister, Konto).
+  `#/person/CVR-3-…?focus=` (overblik udelades i adressen, så ældre links er de samme), `#/saved`.
+- Mobil: `AppShell`s mobile-props (titel, sektioner = fokus for virksomheder og personer,
+  bundnavigation Søg, Lister, Konto).
 
 ## Fokus og elementer (packages/spec/src/compose.ts)
 
@@ -114,6 +122,49 @@ den kolonne, der vejer mindst indtil nu (ved lige vægt den første): på overbl
 historik, på ledelse ejerne. Et holdingselskab med lang profil, 3 nyheder og 8 begivenheder
 giver 41,5 / 41,9 / 35,0; med de gamle faste pladser (nyheder i kolonne 1, historik med 5
 begivenheder under profilen) ville det være 23,5 / 67,4 / 35,0.
+
+## Personfokus og elementer (packages/spec/src/composePerson.ts)
+
+Personsiden bygges på samme måde: modellen (`show_person` med `focus`) eller portalens faner vælger
+fokus, `composePersonProbe(lassoId, focus)` henter kun det, fokus viser, og `composePerson` vælger
+form efter data. Hovedet (`LassoPersonHead`) står på alle fokus. To halve står side om side i ét
+bånd; en halv, der står alene, får fuld bredde. Tomme sektioner udelades, undtagen hvor den tomme
+tilstand er svaret på fanens spørgsmål.
+
+| Fokus | Elementer (bredde) | Henter |
+|---|---|---|
+| overblik | Aktive roller som kort liste, 5 + "Se alle N selskaber" (¾) + Stamoplysninger (¼); uden aktive roller de ophørte. Derefter Netværk (3 + "Se alle N"), Risiko, Historik (3 + "Se alle N") og Ejerskab (ejerdiagrammet, kun når de selskaber, personen ejer, selv ejer selskaber) to og to (½ + ½) efter vægt; alvorlig risiko (personen var med, da det skete) i fuld bredde lige under hovedet. Ingen nyheder | person, netværk, ejerdiagram (0 op, 2 ned) |
+| roller | Alle roller som tidsbånd, 8 + "Se alle N selskaber" (¾) + Stamoplysninger (¼) | person |
+| netvaerk | Netværket, 8 + "Se alle N" (fuld), også som tom tilstand | person, netværk |
+| ejerskab | Ejerskaber: de ejede selskaber med andel og siden-dato (fuld; tom: "Personen ejer ikke selskaber i CVR."), Ejerstruktur (diagram, 0 op, 2 ned, fuld; når de ejede selskaber selv ejer selskaber, eller som fejltilstand, når grafen ikke kunne hentes) | person, ejerdiagram |
+| risiko | Risiko med alle sager (fuld). Med sager: Forløb i selskaberne (historikken afgrænset til selskaberne med konkurs/tvangsopløsning) + Øvrige ophørte roller (uden de samme selskaber), ½ + ½. Uden sager kun "Ingen" med flueben | person |
+| historik | Historik, 5 + "Se alle N" (½) + Nyheder om personen, 5 (½); uden nyheder historikken i fuld bredde | person, nyheder |
+
+Opfølgning (kun i chatten) peger på de andre personfokus: Roller, Netværk, Ejerskab, Risiko og
+Historik, med spørgsmål, `show_person` kan svare på ("Hvem sidder X sammen med i selskaber?").
+Undertitlen er fokusnavnet (på overblik "Roller i N selskaber"); gem-knappen gemmer fokus ud fra den.
+
+Ingen 1:1-gentagelser:
+
+- **Hovedet ejer tallene**: antal aktive og ophørte roller, ejerskaber og første registrering.
+  Stamoplysningerne viser derfor kun bopæl (postnummer og by), kommune (når den ikke gentager
+  byen), enhedsnummer og seneste ændring, når hovedet står på siden (`personFactOptions`).
+- **Rollefanen** har ingen liste over ophørte roller: tidsbåndene viser dem (stiplede).
+- **Risiko**: forløbet er ikke kun statushændelserne (de ville gentage sagerne 1:1), men også
+  personens ind- og udtræden i de samme selskaber; de øvrige ophørte roller udelader dem.
+- **Ejerdiagrammet** viser to lag ned og står kun, når de ejede selskaber selv ejer selskaber: ét
+  lag ville kun gentage "ejer X %" fra rollelisten (overblik) og ejerskaberne (ejerskab) 1:1. Som
+  på virksomhedssiden, hvor diagrammet kun står, når et selskab ejer.
+
+Tilladt, fordi sammenhængen er en anden: en konkurs i historikken og i risikoen; et ejet selskab i
+rollelisten, i ejerskaberne og i diagrammet; en rolle i rollelisten og som rolleskift i historikken.
+
+Balancen: `personComponentWeight` anslår højden som `componentWeight` (titel 3; rolleliste 2,5 pr.
+række; tidsbånd 2,4 pr. selskab; stamoplysninger 1,6 pr. række; netværk 3 pr. person; risiko 5,8 +
+0,8 pr. sag; ejerdiagram i en halv kolonne 1,8 pr. række i den indrykkede liste). `pairByWeight`
+vælger blandt de mulige par den parring, der giver de mest lige bånd (ved under 2 linjers forskel
+den foretrukne rækkefølge). Bo Eksempel (demo) ved 1280 px: aktive roller 299 px | stamoplysninger
+251 px, netværk 365 | risiko 299, historik 412 | ejerskab 385.
 
 ## Ikke i denne runde
 

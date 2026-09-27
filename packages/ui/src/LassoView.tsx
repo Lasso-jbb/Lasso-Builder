@@ -6,12 +6,16 @@ import {
   entityRefOf,
   FOCUS_LABELS,
   isPersonId,
+  PERSON_FOCUS_LABELS,
+  personFactOptions,
+  riskTimeline,
   sameAddress,
   savedPagesKey,
   searchKey,
   widthOf,
   type Dataset,
   type Focus,
+  type PersonFocus,
   type ViewComponent,
   type ViewSpec,
   type Width,
@@ -209,16 +213,22 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return <LassoSummary key={key} text={c.text} title={c.title} source={c.source} updated={c.updated} />;
     case "LassoTimeline": {
       // Virksomhed eller person (katalog 16: personens historik med selskabsnavne, der kan åbnes).
+      // filter 'risiko' (personens fokus risiko): kun forløbet i selskaberne med konkurs/tvangsopløsning.
       const k = entityRefOf(c);
+      const all = empty.timeline[k];
+      const person = c.person ? empty.persons[c.person] : undefined;
+      const risk = c.filter === "risiko" && Boolean(c.person);
       return (
         <LassoTimeline
           key={key}
-          timeline={empty.timeline[k]}
+          timeline={risk && all ? (person ? riskTimeline(all, person) : undefined) : all}
           title={c.title}
           limit={c.limit}
-          error={err(`timeline:${k}`)}
+          error={err(`timeline:${k}`) ?? (risk && c.person ? err(`person:${c.person}`) : undefined)}
           onOpen={props.host.drillDown ? act : undefined}
-          emptyReason={c.person ? "Der er ingen registrerede rolleskift for personen i CVR." : undefined}
+          emptyReason={
+            risk ? "Ingen registrerede rolleskift i selskaberne med konkurs eller tvangsopløsning." : c.person ? "Der er ingen registrerede rolleskift for personen i CVR." : undefined
+          }
         />
       );
     }
@@ -242,13 +252,25 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoPersonHead":
       return <PersonHead key={key} person={empty.persons[c.person]} error={err(`person:${c.person}`)} />;
     case "LassoPersonRoles":
-      return <PersonRoles key={key} person={empty.persons[c.person]} title={c.title} error={err(`person:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} />;
+      return (
+        <PersonRoles
+          key={key}
+          person={empty.persons[c.person]}
+          title={c.title}
+          show={c.show}
+          limit={c.limit}
+          except={c.except}
+          error={err(`person:${c.person}`)}
+          onOpen={props.host.drillDown ? act : undefined}
+        />
+      );
     case "LassoPersonNetwork":
-      return <PersonNetwork key={key} network={empty.personNetworks[c.person]} title={c.title} error={err(`personNetwork:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} />;
+      return <PersonNetwork key={key} network={empty.personNetworks[c.person]} title={c.title} limit={c.limit} error={err(`personNetwork:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} />;
     case "LassoPersonRisk":
       return <PersonRisk key={key} person={empty.persons[c.person]} title={c.title} error={err(`person:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} />;
     case "LassoPersonFacts":
-      return <PersonFacts key={key} person={empty.persons[c.person]} title={c.title} error={err(`person:${c.person}`)} />;
+      // Det, personhovedet på samme side viser (antal roller, ejerskaber, første registrering), gentages ikke.
+      return <PersonFacts key={key} person={empty.persons[c.person]} title={c.title} hideCounts={personFactOptions(props.spec.components, c.person).hideCounts} error={err(`person:${c.person}`)} />;
     case "LassoChangeFeed": {
       const k = changeFeedKey(c);
       return <ChangeFeed key={key} feed={empty.changeFeeds[k]} title={c.title} types={c.types} error={err(`changeFeed:${k}`)} onOpen={props.host.drillDown ? act : undefined} />;
@@ -363,7 +385,9 @@ export function saveTarget(spec: ViewSpec, ds: Dataset | null): SaveTarget | nul
   if (spec.kind === "person") {
     const id = spec.components.map((c) => ("person" in c && typeof c.person === "string" ? c.person : undefined)).find(Boolean);
     if (!isPersonId(id)) return null;
-    return { kind: "save-page", lassoId: id, pageKind: "person", name: ds?.persons[id]?.name ?? spec.title };
+    // composePerson sætter subtitle = PERSON_FOCUS_LABELS[focus] uden for overblik.
+    const focus = (Object.entries(PERSON_FOCUS_LABELS) as [PersonFocus, string][]).find(([f, label]) => f !== "overblik" && label === spec.subtitle)?.[0];
+    return { kind: "save-page", lassoId: id, pageKind: "person", name: ds?.persons[id]?.name ?? spec.title, ...(focus ? { focus } : {}) };
   }
   return null;
 }

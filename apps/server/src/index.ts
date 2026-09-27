@@ -11,6 +11,8 @@ import {
   composePersonProbe,
   cvrFromLassoId,
   FOCUSES,
+  isFocusFor,
+  isPersonFocus,
   listTemplate,
   mainMetric,
   parseViewSpec,
@@ -18,11 +20,14 @@ import {
   toLassoId,
   viewSpecSchema,
   type Dataset,
+  PERSON_FOCUSES,
   type Focus,
   type Metric,
+  type PageFocus,
+  type PersonFocus,
 } from "@lasso/spec";
 import { getCurrentUser, isValidMcpKey, mcpKeyRequired, providedKey } from "./auth/user.js";
-import { createLoginLimiter, loginWithKey, portalUser, requirePortal, sessionCookie, signSession } from "./auth/session.js";
+import { createLoginLimiter, loginWithKey, portalLoginRequired, portalUser, requirePortal, sessionCookie, signSession } from "./auth/session.js";
 import { createPool } from "./db.js";
 import { entitySnapshot, savedPageVM } from "./pages/resolveExtras.js";
 import { createSavedPageStore, pageKindOf, SavedPageError, validateSavedPage, type SavedPageStore } from "./pages/store.js";
@@ -70,7 +75,7 @@ export function sendToLassoKey(config: Config): string {
   return isSet(config.SEND_TO_LASSO_KEY) ? config.SEND_TO_LASSO_KEY : config.ADMIN_API_KEY;
 }
 
-type SendRequest = { lassoId: string; userId: string; org: string; focus?: Focus; note?: string };
+type SendRequest = { lassoId: string; userId: string; org: string; focus?: PageFocus; note?: string };
 
 /**
  * Body til send-til-Lasso: { lassoId | cvr, userId, org?, focus?, note? }. Bruger og org
@@ -86,13 +91,16 @@ function parseSendRequest(body: unknown, config: Config, withNote: boolean): Sen
   if (b.org !== undefined && typeof b.org !== "string") return { error: "org skal være tekst." };
   const userId = b.userId.trim();
   const org = typeof b.org === "string" && b.org.trim() ? b.org.trim() : config.DEMO_ORG;
-  if (b.focus !== undefined && (typeof b.focus !== "string" || !(FOCUSES as readonly string[]).includes(b.focus))) return { error: `focus skal være en af: ${FOCUSES.join(", ")}.` };
-  const focus = b.focus as Focus | undefined;
+  // Virksomhedsfokus for en virksomhed, personfokus for en person.
+  const kind = pageKindOf(lassoId)!;
+  const allowed: readonly string[] = kind === "person" ? PERSON_FOCUSES : FOCUSES;
+  if (b.focus !== undefined && (typeof b.focus !== "string" || !isFocusFor(kind, b.focus))) return { error: `focus skal være en af: ${allowed.join(", ")}.` };
+  const focus = b.focus as PageFocus | undefined;
   if (withNote && b.note !== undefined && (typeof b.note !== "string" || b.note.length > 500)) return { error: "note skal være tekst på højst 500 tegn." };
   const note = withNote && typeof b.note === "string" ? b.note : undefined;
   try {
     // Navnet er ikke hentet endnu; kun bruger, org og ID tjekkes her.
-    validateSavedPage({ org, userId, lassoId, kind: pageKindOf(lassoId)!, name: lassoId, origin: "send" });
+    validateSavedPage({ org, userId, lassoId, kind, name: lassoId, origin: "send" });
   } catch (err) {
     if (err instanceof SavedPageError) return { error: err.message };
     throw err;
@@ -154,7 +162,7 @@ export function createApp({ config, client, provider, store, pages }: AppDeps) {
     res
       .type("html")
       .set("Cache-Control", "no-store")
-      .send(injectBoot(html, { mode: "portal", user, loginRequired: mcpKeyRequired(config), baseUrl: config.publicBaseUrl }, "Portal"));
+      .send(injectBoot(html, { mode: "portal", user, loginRequired: portalLoginRequired(config), baseUrl: config.publicBaseUrl }, "Portal"));
   });
 
   app.get("/health", async (_req, res) => {
@@ -289,12 +297,12 @@ export function createApp({ config, client, provider, store, pages }: AppDeps) {
     sendPage(req, res, html, { spec, dataset, name, links: pageLinks(dataset) }, name);
   }
 
-  /** Personsiden (katalog 16). */
-  async function renderPersonPage(req: Request, res: Response, html: string, lassoId: string) {
-    const dataset = await resolveSpec(composePersonProbe(lassoId), provider);
+  /** Personsiden (katalog 16) med personfokus (standard overblik). */
+  async function renderPersonPage(req: Request, res: Response, html: string, lassoId: string, focus: PersonFocus = "overblik") {
+    const dataset = await resolveSpec(composePersonProbe(lassoId, focus), provider);
     const person = dataset.persons[lassoId];
     if (!person) return failPage(res, html, 404, `Personen kunne ikke hentes: ${dataset.errors[`person:${lassoId}`] ?? "ukendt fejl"}`);
-    const spec = composePerson(lassoId, dataset, { name: person.name, followUps: false });
+    const spec = composePerson(lassoId, dataset, { focus, name: person.name, followUps: false });
     sendPage(req, res, html, { spec, dataset, name: person.name, links: pageLinks(dataset) }, person.name);
   }
 
@@ -316,7 +324,7 @@ export function createApp({ config, client, provider, store, pages }: AppDeps) {
       const f = linkFailure(check.reason, ASK_AGAIN("personen"));
       return failPage(res, html, f.status, f.message);
     }
-    await renderPersonPage(req, res, html, check.lassoId);
+    await renderPersonPage(req, res, html, check.lassoId, check.focus);
   });
 
   // Gem-laget: én side pr. entitet (virksomhed CVR-1-…, person CVR-3-/CVR-4-…), fra gemte sider og send-til-Lasso.
@@ -327,11 +335,12 @@ export function createApp({ config, client, provider, store, pages }: AppDeps) {
       const f = linkFailure(check.reason, FROM_LIST);
       return failPage(res, html, f.status, f.message);
     }
+    // verifyEntityLink har tjekket, at fokus passer til entiteten (virksomheds- eller personfokus).
     if (pageKindOf(check.lassoId) === "company") {
-      const focus = check.focus ?? "overblik";
+      const focus = (check.focus ?? "overblik") as Focus;
       return renderCompanyPage(req, res, html, check.lassoId, { focus, years: focus === "oekonomi" ? 10 : 5 });
     }
-    await renderPersonPage(req, res, html, check.lassoId);
+    await renderPersonPage(req, res, html, check.lassoId, isPersonFocus(check.focus) ? check.focus : "overblik");
   });
 
   // --- Send til Lasso (docs/gem-lag.md, "Indgange udefra") ---------------------
@@ -647,7 +656,7 @@ async function main() {
   const app = createApp({ config, client, provider, store, pages });
   const server = app.listen(config.PORT, "0.0.0.0", () => {
     console.log(
-      `[lasso-mcp] v${VERSION} ${config.APP_ENV} på port ${config.PORT} | data: ${provider.kind} | lasso-credentials: ${hasLassoCredentials(config) ? "ja" : "nej"} | søgning: ${client.hasSearchCredentials ? config.LASSO_SEARCH_API_BASE_URL : "ingen nøgle"} | db: ${store.kind} | mcp-nøgle: ${mcpKeyRequired(config) ? "ja" : "nej"} | ${config.publicBaseUrl}/mcp`,
+      `[lasso-mcp] v${VERSION} ${config.APP_ENV} på port ${config.PORT} | data: ${provider.kind} | lasso-credentials: ${hasLassoCredentials(config) ? "ja" : "nej"} | søgning: ${client.hasSearchCredentials ? config.LASSO_SEARCH_API_BASE_URL : "ingen nøgle"} | db: ${store.kind} | mcp-nøgle: ${mcpKeyRequired(config) ? "ja" : "nej"} | portal: ${portalLoginRequired(config) ? "login" : "åben"} | ${config.publicBaseUrl}/mcp`,
     );
     void probeLasso(config, client, provider).catch((err) => console.error("[lasso-probe] fejl:", errorMessage(err)));
   });

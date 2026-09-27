@@ -82,8 +82,16 @@ export function sessionCookie(config: Config, token: string | null): string {
  * alle demobrugeren, så portalen kan bruges uden login, ligesom /mcp er åben.
  */
 export function portalUser(req: Request, config: Config): SessionUser | null {
-  if (!mcpKeyRequired(config)) return demoUser(config);
-  return verifySession(config, parseCookies(req.header("cookie"))[SESSION_COOKIE]);
+  const session = verifySession(config, parseCookies(req.header("cookie"))[SESSION_COOKIE]);
+  // Åben portal (PORTAL_PUBLIC, eller ingen MCP-nøgle lokalt): en besøgende uden session er
+  // demobrugeren; et personligt login (MCP_USER_KEYS) gælder stadig, hvis cookien er der.
+  if (!portalLoginRequired(config)) return session ?? demoUser(config);
+  return session;
+}
+
+/** Login kræves, når /mcp er beskyttet af en nøgle, og portalen ikke er sat åben med PORTAL_PUBLIC. */
+export function portalLoginRequired(config: Config): boolean {
+  return mcpKeyRequired(config) && !config.PORTAL_PUBLIC;
 }
 
 /**
