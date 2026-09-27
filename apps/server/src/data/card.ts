@@ -374,6 +374,11 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     card.row(/administrerende/i.test(ceo?.role ?? "") ? "Adm. dir." : "Direktør", ceo?.name);
     card.row("Formand", chair?.name);
     if (board.length > 1) card.row("Bestyrelse", `${board.length} inkl. formand`);
+    // Ingen direktion eller bestyrelse (fx en enkeltmandsvirksomhed med en fuldt ansvarlig deltager): rollerne som de er, regel 9.
+    if (!ceo && !chair && board.length === 0) {
+      for (const p of people.slice(0, 3)) card.row(p.role, p.name);
+      if (people.length > 3) card.row("", `Se ${people.length - 3} flere`);
+    }
     for (const o of owners?.owners.slice(0, 3) ?? []) {
       card.row("Ejer", o.name);
       card.row("", o.share ? `${o.share}${o.votes ? " kapital" : ""}` : undefined);
