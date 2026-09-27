@@ -3,59 +3,48 @@ import { McpServer, type CallToolResult } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import {
   catalogAsText,
-  companyTemplate,
-  composeCompany,
-  composeProbe,
-  composePerson,
-  composePersonProbe,
-  isPersonId,
   FOCUSES,
   COMPANY_SECTIONS,
   COMPOSITION_RULES,
   LAYOUT_RULES,
-  cvrFromLassoId,
   DATASET_META_KEY,
   fieldsAsText,
-  formatCriterion,
-  listTemplate,
   METRICS,
   OPERATORS_TEXT,
   searchQuerySchema,
   TABLE_COLUMNS,
-  toLassoId,
-  validateCriteria,
   viewSpecSchema,
-  mainMetric,
   type Dataset,
-  type SavedPageKind,
-  type ViewComponent,
   type ViewSpec,
 } from "@lasso/spec";
-import type { CurrentUser } from "../auth/user.js";
-import type { Config } from "../config.js";
-import { findCompany, isCompanyRef, normalizeCompanyName, type CompanyPick } from "../data/lookup.js";
-import type { DataProvider } from "../data/provider.js";
-import { errorMessage, normalizeSpec, resolveSpec } from "../data/resolve.js";
 import { textCard } from "../data/card.js";
 import { summarizeView } from "../data/summary.js";
-import { entitySnapshot, pagesExtras, savedFocus } from "../pages/resolveExtras.js";
-import { pageKindOf, SavedPageError, type SavedPageRecord, type SavedPageStore } from "../pages/store.js";
-import { SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "../views/store.js";
-import { companyLink, entityLink, personLink } from "../web/links.js";
-import { findPerson } from "../data/personLookup.js";
+import { VISIBILITIES } from "../views/store.js";
 import { loadViewHtml, viewVersion } from "../web/page.js";
+import {
+  listSavedPages,
+  removeSavedPage,
+  renderView,
+  resolveView,
+  savePage,
+  saveView,
+  searchCompanies,
+  showCompany,
+  showPerson,
+  type UseCaseCtx,
+} from "../usecases/index.js";
+
+/** Navneopslaget i render_view bor nu i use-casene; eksporteres fortsat herfra. */
+export { lookupCompanyNames } from "../usecases/index.js";
 
 /** Adressen skifter med app-versionen, så værten aldrig viser en gemt, forældet render-app. */
 export const VIEW_URI = `ui://lasso/view-${viewVersion()}.html`;
 
-export interface McpContext {
-  config: Config;
-  provider: DataProvider;
-  store: ViewStore;
-  /** Gem-laget: brugerens gemte sider (docs/gem-lag.md). */
-  pages: SavedPageStore;
-  user: CurrentUser;
-}
+/**
+ * Serverens kontekst pr. MCP-request: samme som use-casenes (usecases/), som tool-handlerne kalder.
+ * Handlerne validerer input (zod-skemaerne nedenfor) og pakker use-casens svar i CallToolResult.
+ */
+export type McpContext = UseCaseCtx;
 
 /**
  * Serverinstruktionerne står i hver samtale, så de holdes korte: routing og regler. Komponent-
@@ -99,99 +88,11 @@ function viewResult(spec: ViewSpec, ds: Dataset, extra: { note?: string; link?: 
   };
 }
 
-/**
- * Slår virksomhedsnavne i en render_view-spec op (company, companies[], benchmark) med samme
- * navneopslag som show_company. CVR-numre og Lasso-ID'er røres ikke. Valget står i noten.
- */
-export async function lookupCompanyNames(spec: ViewSpec, provider: DataProvider): Promise<{ spec: ViewSpec; note?: string }> {
-  const refs = new Set<string>();
-  const collect = (ref: string | undefined) => {
-    if (ref && !isCompanyRef(ref)) refs.add(ref);
-  };
-  for (const c of spec.components) {
-    if ("company" in c && typeof c.company === "string") collect(c.company);
-    if ("companies" in c && Array.isArray(c.companies)) c.companies.forEach((x: string) => collect(x));
-    if (c.type === "LassoLineChart") collect(c.benchmark);
-  }
-  if (refs.size === 0) return { spec };
-  const found = new Map<string, string>();
-  const notes: string[] = [];
-  await Promise.all(
-    [...refs].map(async (ref) => {
-      try {
-        const hit = await findCompany(provider, ref);
-        if (!hit) return void notes.push(`Fandt ingen virksomhed, der hedder "${ref}".`);
-        found.set(ref, hit.pick.lassoId);
-        const alt = hit.alternatives.slice(0, 2).map((r) => `${r.name} (${r.cvr ?? r.lassoId})`).join("; ");
-        notes.push(`"${ref}" = ${hit.pick.name} (${hit.pick.cvr ?? hit.pick.lassoId})${alt ? `; andre match: ${alt}` : ""}.`);
-      } catch (err) {
-        notes.push(`Kunne ikke slå "${ref}" op: ${errorMessage(err)}.`);
-      }
-    }),
-  );
-  const fix = (ref: string) => found.get(ref) ?? ref;
-  const components = spec.components.map((c) => {
-    let out = c as ViewComponent & { company?: string; companies?: string[]; benchmark?: string };
-    if (typeof out.company === "string") out = { ...out, company: fix(out.company) };
-    if (Array.isArray(out.companies)) out = { ...out, companies: out.companies.map(fix) };
-    if (typeof out.benchmark === "string") out = { ...out, benchmark: fix(out.benchmark) };
-    return out as ViewComponent;
-  });
-  return { spec: { ...spec, components }, note: `Navneopslag: ${notes.join(" ")}` };
-}
-
-const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-
 function toolError(message: string): CallToolResult {
   return { isError: true, content: [{ type: "text", text: message }] };
 }
 
-/** "1 gemt side" / "3 gemte sider". */
-const savedCount = (n: number) => (n === 1 ? "1 gemt side" : `${n} gemte sider`);
-
-/** "LASSO X A/S (CVR 34580820)" eller "Bo Eksempel (CVR-3-4000000001)". */
-const pageLabel = (p: Pick<SavedPageRecord, "name" | "cvr" | "lassoId">) => `${p.name} (${p.cvr ? `CVR ${p.cvr}` : p.lassoId})`;
-
-/**
- * Et Lasso-ID eller CVR-nummer som entitets-ID (CVR-1-… virksomhed, CVR-3-/CVR-4-… person).
- * null = referencen er et navn; { error } = den ligner et ID, men er ikke en virksomhed eller person.
- */
-function entityRef(ref: string, prefix: string): { lassoId: string; kind: SavedPageKind } | { error: string } | null {
-  if (isPersonId(ref)) {
-    const lassoId = ref.toUpperCase();
-    const kind = pageKindOf(lassoId);
-    return kind ? { lassoId, kind } : { error: `"${ref}" er ikke et gyldigt person-ID (CVR-3-…).` };
-  }
-  if (!isCompanyRef(ref)) return null;
-  const lassoId = toLassoId(ref, prefix).toUpperCase();
-  const kind = pageKindOf(lassoId);
-  return kind ? { lassoId, kind } : { error: `"${ref}" er ikke et CVR-nummer eller Lasso-ID for en virksomhed (CVR-1-…) eller person (CVR-3-…).` };
-}
-
-/** Gemte sider, hvis navn matcher: præcist (uden forskel på store/små bogstaver), ellers uden selskabsform, ellers som del af navnet. */
-function matchSavedByName(pages: readonly SavedPageRecord[], name: string): SavedPageRecord[] {
-  const lower = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
-  const wanted = lower(name);
-  const exact = pages.filter((p) => lower(p.name) === wanted);
-  if (exact.length) return exact;
-  const bare = normalizeCompanyName(name);
-  const withoutForm = bare ? pages.filter((p) => normalizeCompanyName(p.name) === bare) : [];
-  if (withoutForm.length) return withoutForm;
-  return wanted ? pages.filter((p) => lower(p.name).includes(wanted)) : [];
-}
-
-function criteriaError(criteria: Parameters<typeof validateCriteria>[0]): CallToolResult | null {
-  const issues = validateCriteria(criteria);
-  if (issues.length === 0) return null;
-  return toolError(`Ret kriterierne og prøv igen:\n${issues.map((i) => `- kriterie ${i.index + 1}: ${i.message}`).join("\n")}`);
-}
-
 export function createMcpServer(ctx: McpContext): McpServer {
-  const { config, provider, store, pages, user } = ctx;
-  // Gem-laget: brugerens gemte sider og Gem/Gemt-tilstanden i visningerne.
-  const extras = pagesExtras(pages, user, config);
-  const prefix = config.LASSO_COMPANY_ID_PREFIX;
-
   const server = new McpServer(
     { name: "lasso", title: "Lasso", version: "0.1.0" },
     { instructions: INSTRUCTIONS },
@@ -213,22 +114,10 @@ export function createMcpServer(ctx: McpContext): McpServer {
       annotations: { title: "Søg virksomheder", ...readOnly },
       _meta: ui,
     },
-    async ({ title, columns, ...search }): Promise<CallToolResult> => {
-      const invalid = criteriaError(search.criteria);
-      if (invalid) return invalid;
-      // Lasso fortolker friteksten til filtre, som vises i filterpanelet. Et navn kan ikke fortolkes
-      // og søges som navn. Kriterier, modellen selv har sat, vinder over Lassos for samme felt.
-      let note: string | undefined;
-      const text = search.query.trim();
-      const interpreted = text && provider.interpret ? await provider.interpret(text) : null;
-      if (interpreted) {
-        const given = new Set(search.criteria.map((c) => c.field));
-        search = { ...search, query: "", criteria: [...search.criteria, ...interpreted.criteria.filter((c) => !given.has(c.field))] };
-        note = `Lasso fortolkede "${text}" som: ${interpreted.criteria.map(formatCriterion).join("; ")}.${interpreted.unknown.length ? ` Kunne ikke oversættes og indgår derfor IKKE i søgningen (nævn det for brugeren): ${interpreted.unknown.join("; ")}.` : ""}`;
-      }
-      const spec = listTemplate(search, { title: title ?? (interpreted ? capitalize(text) : undefined), columns });
-      const ds = await resolveSpec(spec, provider);
-      return viewResult(spec, ds, { note });
+    async (input): Promise<CallToolResult> => {
+      const r = await searchCompanies(ctx, input);
+      if ("error" in r) return toolError(r.error);
+      return viewResult(r.spec, r.dataset, { note: r.note });
     },
   );
 
@@ -249,38 +138,10 @@ export function createMcpServer(ctx: McpContext): McpServer {
       annotations: { title: "Vis virksomhed", ...readOnly },
       _meta: ui,
     },
-    async ({ company, focus, sections, chart_metric, years }): Promise<CallToolResult> => {
-      let lassoId = toLassoId(company, prefix);
-      let note: string | undefined;
-      if (!isCompanyRef(company)) {
-        let found: CompanyPick | null;
-        try {
-          found = await findCompany(provider, company);
-        } catch (err) {
-          return toolError(`Kunne ikke slå "${company}" op: ${errorMessage(err)}.`);
-        }
-        if (!found) return toolError(`Fandt ingen virksomhed, der hedder "${company}". Prøv et andet navn eller CVR-nummeret.`);
-        lassoId = found.pick.lassoId;
-        const alt = found.alternatives.map((r) => `${r.name} (${r.cvr ?? r.lassoId})`).join("; ");
-        note = `Fundet ud fra navnet "${company}": ${found.pick.name} (${found.pick.cvr ?? found.pick.lassoId}).${alt ? ` Andre match: ${alt}. Mente brugeren en af dem, så kald show_company igen med dens CVR-nummer.` : ""}`;
-      }
-      // Ét samlet hent: navnet tages fra datasættet (begge specs har LassoCompanyHead og henter
-      // derfor virksomheden), så CVR-opslaget ikke laves to gange efter hinanden.
-      const ds: Dataset = await resolveSpec(sections?.length ? companyTemplate(lassoId, { sections, chartMetric: chart_metric, years }) : composeProbe(lassoId, focus), provider, extras);
-      const name = ds.companies[lassoId]?.name;
-      if (!name) {
-        return toolError(`Kunne ikke hente ${company}: ${ds.errors[`company:${lassoId}`] ?? "ukendt fejl"}. Tjek CVR-nummeret eller navnet.`);
-      }
-      // Ældre kald med faste sektioner får skabelonen; ellers komponeres ud fra datas form.
-      const spec: ViewSpec = sections?.length
-        ? companyTemplate(lassoId, { sections, chartMetric: chart_metric, years, name })
-        : composeCompany(lassoId, ds, { focus, years, chartMetric: chart_metric, name });
-      const cvr = cvrFromLassoId(lassoId);
-      // Linket åbner samme visning (focus) med samme hovednøgletal som i chatten (review P2-7).
-      const link = cvr
-        ? companyLink(config, { cvr, metric: chart_metric ?? mainMetric(ds.financials[lassoId]?.years ?? []), years: years ?? (focus === "oekonomi" ? 10 : 5), focus: sections?.length ? undefined : focus })
-        : undefined;
-      return viewResult(spec, ds, { note, link });
+    async (input): Promise<CallToolResult> => {
+      const r = await showCompany(ctx, input);
+      if ("error" in r) return toolError(r.error);
+      return viewResult(r.spec, r.dataset, { note: r.note, link: r.link });
     },
   );
 
@@ -297,28 +158,10 @@ export function createMcpServer(ctx: McpContext): McpServer {
       annotations: { title: "Vis person", ...readOnly },
       _meta: ui,
     },
-    async ({ person }): Promise<CallToolResult> => {
-      const ref = person.trim();
-      let lassoId = ref;
-      let note: string | undefined;
-      if (!isPersonId(ref)) {
-        if (isCompanyRef(ref)) return toolError(`"${ref}" er et CVR-nummer eller virksomheds-ID. Brug show_company til virksomheder.`);
-        let found;
-        try {
-          found = await findPerson(provider, ref);
-        } catch (err) {
-          return toolError(`Kunne ikke slå "${ref}" op: ${errorMessage(err)}.`);
-        }
-        if (!found) return toolError(`Fandt ingen person, der hedder "${ref}". Prøv med fulde navn.`);
-        lassoId = found.pick.lassoId;
-        const alt = found.alternatives.map((r) => `${r.name}${r.city ? `, ${r.city}` : ""} (${r.lassoId})`).join("; ");
-        note = `Fundet ud fra navnet "${ref}": ${found.pick.name}${found.pick.city ? `, ${found.pick.city}` : ""} (${found.pick.lassoId}).${alt ? ` Andre match: ${alt}. Mente brugeren en af dem, så kald show_person igen med dens ID.` : ""}`;
-      }
-      const ds = await resolveSpec(composePersonProbe(lassoId), provider, extras);
-      const p = ds.persons[lassoId];
-      if (!p) return toolError(`Kunne ikke hente personen ${lassoId}: ${ds.errors[`person:${lassoId}`] ?? "ukendt fejl"}.`);
-      const spec = composePerson(lassoId, ds, { name: p.name });
-      return viewResult(spec, ds, { note, link: personLink(config, lassoId) });
+    async (input): Promise<CallToolResult> => {
+      const r = await showPerson(ctx, input);
+      if ("error" in r) return toolError(r.error);
+      return viewResult(r.spec, r.dataset, { note: r.note, link: r.link });
     },
   );
 
@@ -336,18 +179,9 @@ ${LAYOUT_RULES}\n\nKomponentkatalog (hver linje: Brug til / Brug ikke når / Kr�
     },
     async (input): Promise<CallToolResult> => {
       // Navne ("Risika") slås op som i show_company, så modellen ikke skal søge først (review P1-7).
-      const named = await lookupCompanyNames(viewSpecSchema.parse({ ...input, kind: "custom" }), provider);
-      const spec = normalizeSpec(named.spec, prefix);
-      for (const c of spec.components) {
-        if (c.type === "LassoCompanyTable") {
-          const invalid = criteriaError(c.search.criteria);
-          if (invalid) return invalid;
-        }
-      }
-      const invalid = criteriaError(spec.criteria);
-      if (invalid) return invalid;
-      const ds = await resolveSpec(spec, provider, extras);
-      return viewResult(spec, ds, { note: named.note });
+      const r = await renderView(ctx, input);
+      if ("error" in r) return toolError(r.error);
+      return viewResult(r.spec, r.dataset, { note: r.note });
     },
   );
 
@@ -372,39 +206,19 @@ ${LAYOUT_RULES}\n\nKomponentkatalog (hver linje: Brug til / Brug ikke når / Kr�
       annotations: { title: "Gem visning", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
       _meta: { ui: { visibility: ["model", "app"] } },
     },
-    async ({ spec: rawSpec, name, slug, visibility }): Promise<CallToolResult> => {
-      const parsed = viewSpecSchema.safeParse(rawSpec);
-      if (!parsed.success) return toolError(`Specen er ugyldig: ${parsed.error.issues.slice(0, 3).map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}. Send structuredContent.spec fra forrige svar uændret.`);
-      const spec = parsed.data;
-      const wanted = slug ? slugify(slug) : undefined;
-      if (wanted !== undefined && !SLUG_PATTERN.test(wanted)) {
-        return toolError("Adressen må kun indeholde a-z, 0-9 og bindestreg (2-64 tegn).");
-      }
-      try {
-        const saved = await store.save({
-          org: user.org,
-          slug: wanted,
-          name,
-          spec: normalizeSpec(spec, prefix),
-          visibility,
-          owner: user.id,
-        });
-        const url = `${config.publicBaseUrl}/v/${saved.org}/${saved.slug}`;
-        return {
-          content: [{ type: "text", text: `Gemt som version ${saved.version}: ${url}` }],
-          structuredContent: { url, org: saved.org, slug: saved.slug, version: saved.version, name: saved.name, visibility: saved.visibility },
-        };
-      } catch (err) {
-        if (err instanceof ViewConflictError) return toolError(`${err.message}. Vælg en anden adresse.`);
-        throw err;
-      }
+    async (input): Promise<CallToolResult> => {
+      const r = await saveView(ctx, input);
+      if ("error" in r) return toolError(r.error);
+      return {
+        content: [{ type: "text", text: `Gemt som version ${r.version}: ${r.url}` }],
+        structuredContent: { ...r },
+      };
     },
   );
 
   // --- Gem-laget (docs/gem-lag.md): brugerens personlige liste af gemte virksomheder og personer ---
   const writeAnnotations = { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false };
   const modelAndApp = { ui: { visibility: ["model", "app"] } };
-  const totalSaved = async () => (await pages.list(user.org, user.id, { limit: 1 })).total;
 
   registerAppTool(
     server,
@@ -422,54 +236,13 @@ ${LAYOUT_RULES}\n\nKomponentkatalog (hver linje: Brug til / Brug ikke når / Kr�
       annotations: { title: "Gem side", ...writeAnnotations },
       _meta: modelAndApp,
     },
-    async ({ page, kind, focus, note }): Promise<CallToolResult> => {
-      const ref = page.trim();
-      let target = entityRef(ref, prefix);
-      let found: string | undefined;
-      if (target && "error" in target) return toolError(target.error);
-      if (!target) {
-        // Et navn: person, hvis kind siger det; ellers virksomhed (som show_person/show_company).
-        try {
-          if (kind === "person") {
-            const hit = await findPerson(provider, ref);
-            if (!hit) return toolError(`Fandt ingen person, der hedder "${ref}". Prøv med fulde navn eller person-ID'et (CVR-3-…).`);
-            target = { lassoId: hit.pick.lassoId, kind: "person" };
-            const alt = hit.alternatives.map((r) => `${r.name}${r.city ? `, ${r.city}` : ""} (${r.lassoId})`).join("; ");
-            found = `Fundet ud fra navnet "${ref}": ${hit.pick.name} (${hit.pick.lassoId}).${alt ? ` Andre match: ${alt}.` : ""}`;
-          } else {
-            const hit = await findCompany(provider, ref);
-            if (!hit) return toolError(`Fandt ingen virksomhed, der hedder "${ref}". Prøv et andet navn eller CVR-nummeret, eller angiv kind 'person' for en person.`);
-            target = { lassoId: hit.pick.lassoId, kind: "company" };
-            const alt = hit.alternatives.map((r) => `${r.name} (${r.cvr ?? r.lassoId})`).join("; ");
-            found = `Fundet ud fra navnet "${ref}": ${hit.pick.name} (${hit.pick.cvr ?? hit.pick.lassoId}).${alt ? ` Andre match: ${alt}.` : ""}`;
-          }
-        } catch (err) {
-          return toolError(`Kunne ikke slå "${ref}" op: ${errorMessage(err)}.`);
-        }
-        if (found?.includes("Andre match")) found += " Mente brugeren en anden, så fjern den med remove_saved_page og gem den rigtige med ID'et.";
-      }
-      const { lassoId } = target;
-      let snapshot: Awaited<ReturnType<typeof entitySnapshot>>;
-      try {
-        snapshot = await entitySnapshot(provider, lassoId);
-      } catch (err) {
-        if (err instanceof SavedPageError) return toolError(err.message);
-        return toolError(`Kunne ikke hente ${ref}: ${errorMessage(err)}. Tjek CVR-nummeret, ID'et eller navnet.`);
-      }
-      let saved: Awaited<ReturnType<SavedPageStore["save"]>>;
-      try {
-        saved = await pages.save({ org: user.org, userId: user.id, lassoId, kind: snapshot.kind, name: snapshot.name, cvr: snapshot.cvr, focus, note, origin: "manual" });
-      } catch (err) {
-        if (err instanceof SavedPageError) return toolError(err.message);
-        throw err;
-      }
-      const { page: rec, created } = saved;
-      const total = await totalSaved();
-      const url = entityLink(config, rec.lassoId, { focus: savedFocus(rec.focus) });
-      const text = `${created ? "Gemt" : "Allerede gemt, flyttet øverst"}: ${pageLabel(rec)}. Du har nu ${savedCount(total)}.`;
+    async (input): Promise<CallToolResult> => {
+      const r = await savePage(ctx, input);
+      if ("error" in r) return toolError(r.error);
+      const { message, lookupNote, ...saved } = r;
       return {
-        content: [{ type: "text", text: [text, found].filter(Boolean).join("\n") }],
-        structuredContent: { lassoId: rec.lassoId, kind: rec.kind, name: rec.name, ...(rec.cvr ? { cvr: rec.cvr } : {}), savedAt: rec.savedAt, created, total, url },
+        content: [{ type: "text", text: [message, lookupNote].filter(Boolean).join("\n") }],
+        structuredContent: { ...saved },
       };
     },
   );
@@ -487,33 +260,13 @@ ${LAYOUT_RULES}\n\nKomponentkatalog (hver linje: Brug til / Brug ikke når / Kr�
       annotations: { title: "Fjern gemt side", ...writeAnnotations, destructiveHint: true },
       _meta: modelAndApp,
     },
-    async ({ page }): Promise<CallToolResult> => {
-      const ref = page.trim();
-      const target = entityRef(ref, prefix);
-      if (target && "error" in target) return toolError(target.error);
-      let lassoId: string;
-      let label: string;
-      if (target) {
-        lassoId = target.lassoId;
-        const existing = await pages.get(user.org, user.id, lassoId);
-        label = existing?.name ?? lassoId;
-      } else {
-        // Navn: kun brugerens egne gemte sider, ingen opslag hos Lasso.
-        const { pages: mine } = await pages.list(user.org, user.id, { limit: 100 });
-        const hits = matchSavedByName(mine, ref);
-        if (hits.length === 0) return toolError(`Der er ingen gemt side, der hedder "${ref}". Brug list_saved_pages for at se listen, eller angiv CVR-nummeret eller ID'et.`);
-        if (hits.length > 1) {
-          const listed = `${hits.slice(0, 10).map(pageLabel).join("; ")}${hits.length > 10 ? ` og ${hits.length - 10} flere` : ""}`;
-          return toolError(`Flere gemte sider passer på "${ref}": ${listed}. Angiv CVR-nummeret eller ID'et på den, der skal fjernes.`);
-        }
-        lassoId = hits[0]!.lassoId;
-        label = hits[0]!.name;
-      }
-      const removed = await pages.remove(user.org, user.id, lassoId);
-      const total = await totalSaved();
+    async (input): Promise<CallToolResult> => {
+      const r = await removeSavedPage(ctx, input);
+      if ("error" in r) return toolError(r.error);
+      const { message, ...result } = r;
       return {
-        content: [{ type: "text", text: removed ? `Fjernet: ${label}. Du har nu ${savedCount(total)}.` : `${label} var ikke på listen.` }],
-        structuredContent: { lassoId, removed, total },
+        content: [{ type: "text", text: message }],
+        structuredContent: { ...result },
       };
     },
   );
@@ -532,17 +285,9 @@ ${LAYOUT_RULES}\n\nKomponentkatalog (hver linje: Brug til / Brug ikke når / Kr�
       annotations: { title: "Mine gemte sider", ...readOnly },
       _meta: ui,
     },
-    async ({ kind = "all", limit = 20 }): Promise<CallToolResult> => {
-      const spec = viewSpecSchema.parse({
-        version: 2,
-        kind: "custom",
-        title: kind === "company" ? "Mine gemte virksomheder" : kind === "person" ? "Mine gemte personer" : "Mine gemte sider",
-        layout: "stack",
-        criteria: [],
-        components: [{ type: "LassoSavedPages", kind, limit }],
-      });
-      const ds = await resolveSpec(spec, provider, extras);
-      return viewResult(spec, ds);
+    async (input): Promise<CallToolResult> => {
+      const { spec, dataset } = await listSavedPages(ctx, input);
+      return viewResult(spec, dataset);
     },
   );
 
@@ -558,13 +303,11 @@ ${LAYOUT_RULES}\n\nKomponentkatalog (hver linje: Brug til / Brug ikke når / Kr�
       _meta: { ui: { resourceUri: VIEW_URI, visibility: ["app"] } },
     },
     async ({ spec: rawSpec }): Promise<CallToolResult> => {
-      const parsed = viewSpecSchema.safeParse(rawSpec);
-      if (!parsed.success) return toolError("Ugyldig spec.");
-      const normalized = normalizeSpec(parsed.data, prefix);
-      const ds = await resolveSpec(normalized, provider, extras);
+      const r = await resolveView(ctx, rawSpec);
+      if ("error" in r) return toolError(r.error);
       return {
         content: [{ type: "text", text: "ok" }],
-        structuredContent: { spec: normalized, dataset: ds },
+        structuredContent: { spec: r.spec, dataset: r.dataset },
       };
     },
   );

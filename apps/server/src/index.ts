@@ -21,7 +21,7 @@ import {
   type Metric,
 } from "@lasso/spec";
 import { getCurrentUser, isValidMcpKey, mcpKeyRequired, providedKey } from "./auth/user.js";
-import { createLoginLimiter, loginWithKey, portalUser, sessionCookie, signSession } from "./auth/session.js";
+import { createLoginLimiter, loginWithKey, portalUser, requirePortal, sessionCookie, signSession } from "./auth/session.js";
 import { createPool } from "./db.js";
 import { entitySnapshot, savedPageVM } from "./pages/resolveExtras.js";
 import { createSavedPageStore, pageKindOf, SavedPageError, validateSavedPage, type SavedPageStore } from "./pages/store.js";
@@ -36,6 +36,7 @@ import { createMcpServer } from "./mcp/server.js";
 import { createViewStore, SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "./views/store.js";
 import { entityLink, isEntityId, sendToLassoLink, verifyCompanyLink, verifyEntityLink, verifyPersonLink, verifySendToLassoLink } from "./web/links.js";
 import { injectBoot, loadViewHtml } from "./web/page.js";
+import { portalApi, portalErrorHandler } from "./web/portalApi.js";
 
 const VERSION = "0.1.0";
 
@@ -193,6 +194,11 @@ export function createApp({ config, client, provider, store, pages }: AppDeps) {
   app.use("/mcp", cors({ exposedHeaders: ["Mcp-Session-Id"] }));
   app.all("/mcp", requireMcpKey(config), handleMcp);
   app.all("/mcp/:key", requireMcpKey(config), handleMcp);
+
+  // --- Portal-API (docs/portal.md): samme use-cases som MCP-tools, kræver session ----------
+  // Login, logout og me står øverst og kræver ikke session; alt andet under /api/portal gør.
+  app.use("/api/portal", requirePortal(config), portalApi({ config, provider, store, pages }));
+  app.use("/api/portal", portalErrorHandler);
 
   // --- Gemte visninger -------------------------------------------------------
   app.get("/api/views/:org/:slug", async (req, res) => {
