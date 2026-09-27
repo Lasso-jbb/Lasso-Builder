@@ -1698,3 +1698,25 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
   .lasso-page-column:first-child { border-top: 0; }
   .lasso-bottomnav { display: grid; flex: none; position: sticky; bottom: 0; z-index: 2; }
 }
+
+/* ---------- 30 Layoutmønstre 8 og 9: kortgitter og harmonika (node J48-0) ---------- */
+/* Kortgitter: to kolonner, højde efter indhold, luft og tynde linjer, aldrig skygge. Én kolonne på mobil. */
+.lasso-cardgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--lasso-space-5); align-items: start; }
+.lasso-cardgrid > * { min-width: 0; padding-bottom: var(--lasso-space-4); border-bottom: 1px solid var(--lasso-divider-subtle); }
+@container lasso (max-width: 560px) {
+  .lasso-cardgrid { grid-template-columns: minmax(0, 1fr); gap: var(--lasso-space-3); }
+}
+/* Harmonika: 48 px rækker, navn 14/600 til venstre, meta i muted, pil til højre; åben række får ingen fyld */
+.lasso-accordion { display: flex; flex-direction: column; border-top: 1px solid var(--lasso-border); }
+.lasso-accordion__item { border-bottom: 1px solid var(--lasso-border); }
+.lasso-accordion__head { margin: 0; font: inherit; }
+.lasso-accordion__button { display: flex; align-items: center; gap: var(--lasso-space-3); width: 100%; min-height: 48px; padding: 0; border: 0; background: transparent; text-align: left; cursor: pointer; font-size: var(--lasso-fs); font-weight: 600; color: var(--lasso-text); }
+.lasso-accordion__button:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: -1px; border-radius: var(--lasso-radius-sm); }
+.lasso-accordion__title { flex: 1; min-width: 0; }
+.lasso-accordion__meta { flex: none; font-size: var(--lasso-fs-sm); font-weight: 400; color: var(--lasso-muted); }
+.lasso-accordion__chevron { flex: none; color: var(--lasso-placeholder); transition: transform 120ms ease; }
+.lasso-accordion__item.is-open .lasso-accordion__chevron { transform: rotate(180deg); }
+.lasso-accordion__panel { padding: 0 0 var(--lasso-space-5); }
+@container lasso (max-width: 560px) {
+  .lasso-accordion__button { min-height: var(--lasso-touch-h); }
+}

@@ -75,3 +75,5 @@ export { StateBox, Skeleton, Sparkline, Badge, StatusBadge, DataState, Missing, 
 export type { DataStateKind, DataStateProps } from "./primitives.js";
 export { specToCsv } from "./csv.js";
 export type { ActionResult, HostCapabilities, LassoViewProps, ViewAction, Visibility } from "./types.js";
+export { CardGrid, Accordion } from "./components/Layout.js";
+export type { AccordionItem, AccordionProps } from "./components/Layout.js";

@@ -124,11 +124,13 @@ På mobil:
 - Responsivt
 - Guidens regler
 
-**Ikke med nu:**
-- Portalens navigation og fanebjælke
-- Dialoger og menuer ud over det, filterpanelet bruger
-- Overvågningsfeed (21)
-- A4-eksport (27)
+**Bygget senere (feat/faner, se docs/design/README.md, afsnittet "Faner, layout, navigation, dialoger, overvågning og eksport"):**
+- Fanebjælke i tre niveauer (29): `Tabs`, `TabPanel`
+- Layoutmodeller (30): `LAYOUT_RULES` i kataloget, `CardGrid`, `Accordion`
+- Portalens navigation og sideskabelon (06, 26a): `AppShell`, `Rail`, `TabStrip`, `ModuleBar`, `ModuleToolbar`, `Columns`
+- Dialoger, menuer og beskeder (07): `Dialog`, `Menu`, `Picker`, `ToastProvider`/`useToast`, `Tooltip`
+- Overvågningsfeed (21): `LassoChangeFeed`, `NotificationPanel`, `MonitorSettings`, `MonitorBell`
+- A4-eksport (27): `ReportA4` og "Eksportér PDF" i handlingsbjælken
 
 **Venter på data (bygges, når der er endpoints):**
 - Kreditvurdering (18)
