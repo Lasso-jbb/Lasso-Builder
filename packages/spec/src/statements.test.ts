@@ -10,7 +10,15 @@ const NOW = new Date("2026-09-27T12:00:00Z");
 /** Lassos egen enkeltmandsvirksomhed: stiftet 2023, intet regnskab, én "mulig vigtig" observation om netop det. */
 function enk(): Dataset {
   const ds = emptyDataset("live");
-  ds.companies[id] = { lassoId: id, name: "Lasso", status: "Aktiv", form: "ENK", founded: "2023-01-30" };
+  ds.companies[id] = {
+    lassoId: id,
+    name: "Lasso",
+    status: "Aktiv",
+    form: "ENK",
+    founded: "2023-01-30",
+    industryCode: "622000",
+    address: { street: "Prøveparken 16", zip: "9381", city: "Sulsted", municipality: "Aalborg", region: "Nordjylland" },
+  };
   ds.people[id] = [{ name: "Christian", role: "Fuldt ansvarlig deltager", from: "2023-01-30" }];
   ds.financials[id] = { lassoId: id, currency: "DKK", years: [] };
   ds.financialStatements[id] = { lassoId: id, currency: "DKK", incomeStatement: [], balanceSheet: [], cashFlow: [] };
@@ -39,6 +47,17 @@ test("regnskab uden offentliggjort regnskab: én tom tilstand på nøgletallenes
   const follow = spec.components.find((c) => c.type === "LassoFollowUps");
   assert.ok(follow && follow.type === "LassoFollowUps");
   assert.deepEqual(follow.prompts.map((p) => p.label), ["Risiko", "Kreditvurdering", "Ledelse"]);
+});
+
+test("regnskab uden offentliggjort regnskab og uden oplysninger ud over hovedet: ledelse og ejere side om side", () => {
+  const ds = enk();
+  // Kun branchekoden er ny i forhold til hovedet: listen med én række udelades.
+  ds.companies[id]!.address = { street: "Prøveparken 16", zip: "9381", city: "Sulsted" };
+  ds.ownership[id] = { lassoId: id, owners: [{ name: "Christian", kind: "person", share: "100 %" }] };
+  const spec = composeCompany(id, ds, { focus: "regnskab" });
+  assert.ok(!spec.components.some((c) => c.type === "LassoKeyValueList"));
+  assert.equal(spec.components.find((c) => c.type === "LassoPersonList")?.column, 1);
+  assert.equal(spec.components.find((c) => c.type === "LassoOwnerList")?.column, 2);
 });
 
 test("regnskab uden ledelse: ejere (eller revisor) i kolonne 2", () => {

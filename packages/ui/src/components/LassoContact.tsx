@@ -67,16 +67,36 @@ function Row({ icon, href, children }: { icon: ReactNode; href?: string; childre
   );
 }
 
+/** Kun cifrene, så "86 12 34 56" og "+45 86123456" er samme nummer. */
+function digits(v: string): string {
+  const d = v.replace(/\D/g, "");
+  return d.length === 10 && d.startsWith("45") ? d.slice(2) : d;
+}
+
 /**
  * Kontaktblok (katalog 08, node 9SX-0): ikon + værdi, klikbar (tel:/mailto:/https), ingen
  * skillelinjer mellem rækkerne, kun luft. Adresse (ikke klikbar), telefon, e-mail, web, i den
- * rækkefølge. Tom tilstand, når intet er oplyst.
+ * rækkefølge. Tom tilstand, når intet er oplyst. Står hovedet med samme adresse på siden,
+ * udelades adressen (`omitAddress`), så den ikke står to gange.
  *
  * Live number (kræver egen tilføjelse, udelades stille uden adgang): op til 3 verificerede
- * numre efter de almindelige rækker, mærket "Telefon (verificeret DD.MM.ÅÅÅÅ)" i ren tekst,
- * en Robinsonliste-linje i muted, og sin egen kildelinje.
+ * numre efter de almindelige rækker, mærket "Telefon (verificeret DD.MM.ÅÅÅÅ)" i ren tekst;
+ * er CVR-nummeret selv verificeret, står mærket på det i stedet for en række mere. En
+ * Robinsonliste-linje i muted og én kildelinje for begge kilder (regel 8).
  */
-export function LassoContact({ contact, title, error }: { contact?: ContactVM; title?: string; error?: string }) {
+
+export function LassoContact({
+  contact,
+  title,
+  error,
+  omitAddress = false,
+}: {
+  contact?: ContactVM;
+  title?: string;
+  error?: string;
+  /** Adressen står allerede i hovedet på samme side (samme vej og postnummer). */
+  omitAddress?: boolean;
+}) {
   const heading = title ?? "Kontakt";
   if (!contact) {
     return (
@@ -86,20 +106,26 @@ export function LassoContact({ contact, title, error }: { contact?: ContactVM; t
     );
   }
 
-  const a = contact.address;
+  const a = omitAddress ? undefined : contact.address;
   const addressLine1 = a?.street;
   const addressLine2 = [a?.zip, a?.city].filter(Boolean).join(" ") || undefined;
   const hasAddress = Boolean(addressLine1 || addressLine2);
   const hasVerified = Boolean(contact.verifiedNumbers?.length);
+  // Er CVR-nummeret også verificeret, står det én gang med verificeringen, ikke to gange.
+  const phoneVerified = contact.phone ? contact.verifiedNumbers?.some((n) => digits(n.phoneNumber) === digits(contact.phone!)) : false;
+  const otherVerified = (contact.verifiedNumbers ?? []).filter((n) => !contact.phone || digits(n.phoneNumber) !== digits(contact.phone));
   const hasAny = hasAddress || contact.phone || contact.email || contact.website || hasVerified;
 
   if (!hasAny) {
     return (
       <Section title={heading} span="half">
-        <DataState state="empty" reason="Der er ikke oplyst kontaktoplysninger for virksomheden." />
+        <DataState state="empty" reason={omitAddress ? "Der er ikke oplyst telefon, e-mail eller hjemmeside for virksomheden." : "Der er ikke oplyst kontaktoplysninger for virksomheden."} />
       </Section>
     );
   }
+  // Regel 8: én kildelinje pr. sektion, også når live number har leveret numre.
+  const sources = [contact.source, hasVerified ? "Lasso live number" : undefined].filter((x): x is string => Boolean(x));
+  const sameDate = !hasVerified || !contact.source || !contact.updated || !contact.verifiedAt || contact.updated === contact.verifiedAt;
 
   return (
     <Section title={heading} span="half">
@@ -116,6 +142,7 @@ export function LassoContact({ contact, title, error }: { contact?: ContactVM; t
         {contact.phone ? (
           <Row icon={<PhoneIcon />} href={`tel:${contact.phone.replace(/\s+/g, "")}`}>
             {prettyPhone(contact.phone)}
+            {phoneVerified ? <span className="lasso-small lasso-muted"> — Telefon (verificeret {formatDate(contact.verifiedAt)})</span> : null}
           </Row>
         ) : null}
         {contact.email ? (
@@ -128,7 +155,7 @@ export function LassoContact({ contact, title, error }: { contact?: ContactVM; t
             {prettyUrl(contact.website)}
           </Row>
         ) : null}
-        {contact.verifiedNumbers?.map((n, i) => (
+        {otherVerified.map((n, i) => (
           <Row key={`verified-${i}`} icon={<PhoneIcon />} href={n.callable ? `tel:${n.phoneNumber.replace(/\s+/g, "")}` : undefined}>
             {prettyPhone(n.phoneNumber)}
             <span className="lasso-small lasso-muted"> — Telefon (verificeret {formatDate(contact.verifiedAt)})</span>
@@ -138,8 +165,14 @@ export function LassoContact({ contact, title, error }: { contact?: ContactVM; t
       {contact.isRobinson ? (
         <p className="lasso-small lasso-muted">Tilmeldt Robinsonlisten, må ikke kontaktes med markedsføring</p>
       ) : null}
-      {contact.source ? <SourceLine source={contact.source} updated={contact.updated} /> : null}
-      {hasVerified ? <SourceLine source="Lasso live number" updated={contact.verifiedAt} /> : null}
+      {sources.length === 0 ? null : sameDate ? (
+        <SourceLine source={sources.join(" og ")} updated={contact.updated ?? contact.verifiedAt} />
+      ) : (
+        <p className="lasso-source">
+          Kilde: {contact.source}
+          {contact.updated ? `, opdateret ${formatDate(contact.updated)}` : ""}; Lasso live number, opdateret {formatDate(contact.verifiedAt)}
+        </p>
+      )}
     </Section>
   );
 }

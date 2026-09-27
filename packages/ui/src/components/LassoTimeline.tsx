@@ -46,6 +46,7 @@ export function LassoTimeline({
   error,
   onOpen,
   emptyReason,
+  limit = 5,
 }: {
   timeline?: TimelineVM;
   title?: string;
@@ -53,6 +54,8 @@ export function LassoTimeline({
   onOpen?: (a: ViewAction) => void;
   /** Tom tilstand; standard er virksomhedens tekst. */
   emptyReason?: string;
+  /** Begivenheder før "Se alle N begivenheder" (regel 9); overblikket viser 3. */
+  limit?: number;
 }) {
   const heading = title ?? "Historik";
   const categories = useMemo(() => [...new Set((timeline?.events ?? []).map((e) => e.category))], [timeline]);
@@ -66,8 +69,8 @@ export function LassoTimeline({
     );
   }
   const matching = filter === ALL ? timeline.events : timeline.events.filter((e) => e.category === filter);
-  // Regel 9: i et overblik vises de seneste 5; resten bag "Se alle N".
-  const events = expanded ? matching : matching.slice(0, 5);
+  // Regel 9: de seneste `limit` (5, på overblikket 3); resten bag "Se alle N".
+  const events = expanded ? matching : matching.slice(0, limit);
   const picker =
     categories.length > 1 ? (
       <select className="lasso-select lasso-select--sm" value={filter} onChange={(e) => setFilter(e.target.value)} aria-label="Vis type">
@@ -122,7 +125,7 @@ export function LassoTimeline({
           );
         })}
       </div>
-      {matching.length > 5 ? (
+      {matching.length > limit ? (
         <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
           {expanded ? "Vis færre" : `Se alle ${matching.length} begivenheder`}
         </button>

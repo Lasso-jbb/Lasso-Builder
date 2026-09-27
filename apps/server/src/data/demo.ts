@@ -113,6 +113,51 @@ function beneficialOwnersFor(c: DemoCompany): BeneficialOwnershipVM {
   return { lassoId: c.lassoId, owners };
 }
 
+/** Tekst med navne: strenge er almindelig tekst, [navn, Lasso-ID] et navn, der kan åbnes. */
+function analysisSection(heading: string, ...parts: (string | [string, string | undefined])[]): TextSectionsVM["sections"][number] {
+  const segments = parts.map((p) => (typeof p === "string" ? { text: p } : { text: p[0], lassoId: p[1] }));
+  return { heading, body: segments.map((x) => x.text).join(""), segments, note: "Kilde: Lasso regnskabsanalyse" };
+}
+
+function analysisFor(c: DemoCompany): TextSectionsVM["sections"] {
+  const auditor = COMPANIES.find((x) => x.name === c.auditor);
+  const ceo = c.people.find((p) => /direktør/i.test(p.role) && !p.to);
+  return [
+    analysisSection(
+      "Regnskabsanalyse: konklusion",
+      `${c.name} har haft en støt stigende bruttofortjeneste de seneste fem år og et positivt resultat i alle år. Egenkapitalen er vokset hvert år, og soliditetsgraden ligger over branchens gennemsnit. Samlet set er der tale om en sund og stabil udvikling uden tegn på likviditetspres (eksempeltekst).`,
+    ),
+    analysisSection(
+      "Resultat",
+      "Årets resultat er steget med godt 8 % i forhold til sidste år, drevet af flere store projekter og en bedre udnyttelse af de faste omkostninger. Overskudsgraden er forbedret for tredje år i træk, mens personaleomkostningerne er steget mindre end bruttofortjenesten (eksempeltekst).",
+    ),
+    analysisSection(
+      "Likviditet",
+      "Likviditeten er tilfredsstillende. Pengestrømmen fra driften dækker årets investeringer, og de likvide beholdninger er øget. Den kortfristede gæld er dækket af omsætningsaktiverne med god margin (eksempeltekst).",
+    ),
+    analysisSection(
+      "Balance og kapitalforhold",
+      "Balancesummen er steget i takt med aktiviteten. Egenkapitalen udgør over halvdelen af balancen, og selskabet har ingen væsentlig langfristet gæld. Der er ikke udloddet udbytte i året, så overskuddet er lagt til egenkapitalen (eksempeltekst).",
+    ),
+    analysisSection(
+      "Branchestatistik",
+      "Sammenlignet med andre virksomheder i branchen har selskabet en højere soliditetsgrad og en overskudsgrad på niveau med de bedste 25 %. Væksten i bruttofortjeneste er over branchens median (eksempeltekst).",
+    ),
+    analysisSection(
+      "Revisoroplysninger",
+      "Årsrapporten er revideret af ",
+      auditor ? [auditor.name, auditor.lassoId] : c.auditor,
+      " uden forbehold eller supplerende oplysninger. Revisor har været den samme i de seneste regnskabsår (eksempeltekst).",
+    ),
+    analysisSection(
+      "Spørgsmål til overvejelse",
+      "• Hvor afhængig er virksomheden af de største kunder?\n• Hvordan påvirker renteniveauet efterspørgslen i de kommende år?\n• Hvem overtager efter ",
+      ceo ? [ceo.name, PERSON_IDS.get(ceo.name)] : "den nuværende direktør",
+      ", hvis direktøren fratræder? (eksempeltekst)",
+    ),
+  ];
+}
+
 function textSectionsFor(c: DemoCompany): TextSectionsVM {
   const sections: TextSectionsVM["sections"] = [
     { heading: "Branche", body: c.industryText ?? "Ikke oplyst", note: c.industryCode ? `NACE ${c.industryCode}` : undefined },
@@ -122,18 +167,9 @@ function textSectionsFor(c: DemoCompany): TextSectionsVM {
     },
     { heading: "Tegningsregler", body: "Selskabet tegnes af en direktør alene eller af den samlede bestyrelse (eksempeltekst)." },
   ];
-  // Katalog 12/19: eksempel på regnskabsanalysen (POST /modules/reportanalysis), kun for ét eksempel.
-  if (c.lassoId === "CVR-1-99000001") {
-    sections.push({
-      heading: "Regnskabsanalyse",
-      body:
-        `${c.name} har haft en støt stigende omsætning de seneste år, drevet af flere store byggeprojekter.\n\n` +
-        "• Bruttofortjenesten er steget 12 % det seneste år\n" +
-        "• Soliditetsgraden er forbedret og ligger nu over branchens gennemsnit\n\n" +
-        "Konklusion: sund og stabil udvikling (eksempeltekst).",
-      note: "Kilde: Lasso regnskabsanalyse",
-    });
-  }
+  // Katalog 12/19: eksempel på regnskabsanalysen (POST /modules/reportanalysis) i samme form som
+  // live-svaret: ét afsnit pr. felt, med navne som segmenter med Lasso-ID. Kun for to eksempler.
+  if (c.lassoId === "CVR-1-99000001" || c.lassoId === "CVR-1-99000010") sections.push(...analysisFor(c));
   return { lassoId: c.lassoId, title: "Virksomhedsprofil", sections };
 }
 

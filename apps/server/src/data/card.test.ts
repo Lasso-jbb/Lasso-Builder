@@ -459,3 +459,33 @@ test("tekstkort for regnskab uden regnskab: forklaringen én gang, og ledelsen m
   assert.match(card, /Christian Sander Kjær/);
   for (const l of card.split("\n")) assert.equal([...l].length, 38, `linjen "${l}" har forkert bredde`);
 });
+
+test("resuméet til modellen har regnskabslinjen én gang, også på regnskab, hvor nøgletalskortene ikke står", async () => {
+  const { summarizeView } = await import("./summary.js");
+  const ds = dataset();
+  ds.financialStatements[ID] = { lassoId: ID, currency: "DKK", incomeStatement: [{ year: 2025, revenue: 1_000_000, profit: 100_000 }], balanceSheet: [{ year: 2025, assetsTotal: 500_000 }], cashFlow: [] };
+  for (const focus of ["overblik", "oekonomi", "regnskab"] as const) {
+    const summary = summarizeView(composeCompany(ID, ds, { focus }), ds);
+    assert.equal((summary.match(/Regnskab \d{4}/g) ?? []).length, 1, `${focus}:\n${summary}`);
+  }
+});
+
+test("tekstkortet viser samme tekstafsnit som visningen: profilen uden branche og de sene analyseafsnit, analysen for sig", () => {
+  const ds = dataset();
+  const analysis = ["Regnskabsanalyse: konklusion", "Resultat", "Likviditet", "Balance og kapitalforhold", "Branchestatistik"];
+  ds.textSections[ID] = {
+    lassoId: ID,
+    sections: [
+      { heading: "Branche", body: "Fremstilling af farmaceutiske præparater", note: "NACE 212000" },
+      { heading: "Formål", body: "At drive virksomhed." },
+      ...analysis.map((heading) => ({ heading, body: `Tekst om ${heading.toLowerCase()}.`, note: "Kilde: Lasso regnskabsanalyse" })),
+    ],
+  };
+  const card = (variant: "profil" | "analyse") =>
+    textCard(parseViewSpec({ version: 2, kind: "company", title: "Test", layout: "stack", criteria: [], components: [{ type: "LassoTextSections", company: ID, variant }] }), ds)!;
+  const profil = card("profil");
+  for (const part of ["FORMÅL", "REGNSKABSANALYSE: KONKLUSION", "RESULTAT", "LIKVIDITET"]) assert.ok(profil.includes(part), `mangler "${part}":\n${profil}`);
+  for (const part of ["Fremstilling af farmaceutiske", "BALANCE OG KAPITALFORHOLD", "BRANCHESTATISTIK"]) assert.ok(!profil.includes(part), `"${part}" hører ikke til profilen:\n${profil}`);
+  const analyse = card("analyse");
+  assert.ok(analyse.includes("BRANCHESTATISTIK") && !analyse.includes("FORMÅL"), analyse);
+});

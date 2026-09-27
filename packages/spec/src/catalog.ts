@@ -52,8 +52,8 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
   {
     type: "LassoKeyValueList",
     title: "Nøgle-værdi-liste",
-    description: `Brug til: variant 'company' (standard): revisor, seneste revisorskift, regnskabsperiode, stiftet, virksomhedsform, branche, ansatte, adresse, telefon, e-mail, web som én liste – stamdataspørgsmål ('hvem er revisor', 'hvornår stiftet', 'hvilken form'). variant 'financials': de 11 nøgletal (omsætning/bruttofortjeneste, resultat, egenkapital, ansatte, EBITDA, soliditetsgrad, overskudsgrad, likviditetsgrad, balancesum, gæld) plus regnskabsperiode og udgivelsesdato for ÉT år, med årsvælger for de seneste 5 år. Brug ikke når: tallet skal have ændring mod året før (LassoKeyFigureCards), flere år side om side (LassoMultiYearTable), alle regnskabslinjer (LassoIncomeStatement/LassoBalanceSheet), eller det gælder formål/tegningsregler (LassoTextSections). Kræver: company, variant?; manglende felter står som '—'. ${F("overblik, risiko og kontakt (company) samt oekonomi (financials)")} Eksempel: 'Hvem er revisor for Lasso X?' → variant 'company' (eller show_company focus overblik).`,
-    props: "company, variant? (company | financials), title?",
+    description: `Brug til: variant 'company' (standard): revisor, seneste revisorskift, regnskabsperiode, branchekode, kommune og region, telefon, e-mail, web som én liste – stamdataspørgsmål ('hvem er revisor', 'hvilken kommune'). Det, LassoCompanyHead (CVR, form, stiftet, adresse, ansatte, branche), LassoContact og LassoOwnerList (revisor) viser på samme side, gentages ikke. variant 'financials': de 11 nøgletal (omsætning/bruttofortjeneste, resultat, egenkapital, ansatte, EBITDA, soliditetsgrad, overskudsgrad, likviditetsgrad, balancesum, gæld) plus regnskabsperiode og udgivelsesdato for ÉT år, med årsvælger for de seneste 5 år; exclude udelader nøgletal, der allerede står i LassoKeyFigureCards på siden. Brug ikke når: tallet skal have ændring mod året før (LassoKeyFigureCards), flere år side om side (LassoMultiYearTable), alle regnskabslinjer (LassoIncomeStatement/LassoBalanceSheet), eller det gælder formål/tegningsregler (LassoTextSections). Kræver: company, variant?, exclude?; manglende felter udelades (revisor og regnskabstal står som '—'). ${F("overblik, risiko og kontakt (company) samt oekonomi (financials)")} Eksempel: 'Hvem er revisor for Lasso X?' → variant 'company' (eller show_company focus overblik).`,
+    props: "company, variant? (company | financials), title?, exclude? (kun financials)",
   },
   {
     type: "LassoContact",
@@ -70,8 +70,8 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
   {
     type: "LassoTextSections",
     title: "Tekstsektioner",
-    description: `Brug til: CVR-tekster som korte afsnit: branchebeskrivelse, formål og tegningsregler – 'hvad laver X', 'formål', 'hvem kan tegne selskabet'. Brug ikke når: feltet er en kort værdi som stiftet/form/revisor (LassoKeyValueList variant 'company'), eller du selv skriver en vurdering (LassoSummary). Kræver: company; manglende tekster udelades. ${F("overblik")} Eksempel: 'Hvad er formålet med selskabet X, og hvem kan tegne det?'`,
-    props: "company, title?",
+    description: `Brug til: variant 'profil' (standard): formål og tegningsregler fra CVR plus regnskabsanalysens konklusion, resultat og likviditet som korte afsnit – 'hvad laver X', 'formål', 'hvem kan tegne selskabet'. variant 'analyse': hele Lassos regnskabsanalyse (konklusion, resultat, likviditet, balance og kapitalforhold, branchestatistik, revisoroplysninger, spørgsmål til overvejelse), foldet efter konklusionen. Branchen står i LassoCompanyHead og vises ikke her. Brug ikke når: feltet er en kort værdi som stiftet/form/revisor (LassoKeyValueList variant 'company'), eller du selv skriver en vurdering (LassoSummary). Kræver: company, variant?; manglende tekster udelades. ${F("overblik (profil) og oekonomi (analyse)")} Eksempel: 'Hvad er formålet med selskabet X, og hvem kan tegne det?'`,
+    props: "company, variant? (profil | analyse), title?",
   },
   {
     type: "LassoSummary",

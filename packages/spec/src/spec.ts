@@ -2,6 +2,7 @@ import { z } from "zod";
 import { criterionSchema } from "./criteria.js";
 import { currencyUnit, formatAmount, formatNumber, formatPercent } from "./format.js";
 import { CHANGE_TYPES, type FinancialYear } from "./models.js";
+import { TEXT_SECTIONS_VARIANTS } from "./textSections.js";
 
 /**
  * Den deklarative visnings-spec. Modellen skriver aldrig HTML/CSS; den sender
@@ -232,6 +233,10 @@ export const beneficialOwnersSchema = z.object({
 export const textSectionsSchema = z.object({
   type: z.literal("LassoTextSections"),
   company: companyRef,
+  variant: z
+    .enum(TEXT_SECTIONS_VARIANTS)
+    .default("profil")
+    .describe("'profil' (standard): formål og tegningsregler fra CVR plus regnskabsanalysens konklusion, resultat og likviditet. 'analyse': hele regnskabsanalysen (alle afsnit), foldet efter konklusionen."),
   title: z.string().max(80).optional(),
 });
 
@@ -248,6 +253,7 @@ export const timelineSchema = z
     type: z.literal("LassoTimeline"),
     ...companyOrPerson,
     title: z.string().max(80).optional(),
+    limit: z.number().int().min(1).max(20).optional().describe("Antal begivenheder før 'Se alle N begivenheder'. Standard 5; overblikket viser 3 (regel 9)."),
   })
   .refine(exactlyOneEntity, EXACTLY_ONE_ENTITY)
   .describe("Virksomhed: stiftelse, ledelsesskift og regnskaber. Person: indtrådt/udtrådt som X i selskaber og selskabernes konkurser/tvangsopløsninger.");
@@ -296,6 +302,11 @@ export const keyValueListSchema = z.object({
     .default("company")
     .describe("'company': stamdata og revisor. 'financials': regnskabstal med årsvælger, tal højrestillet."),
   title: z.string().max(80).optional(),
+  exclude: z
+    .array(metric)
+    .max(METRICS.length)
+    .optional()
+    .describe("Kun variant 'financials': nøgletal, der allerede står på siden (fx i LassoKeyFigureCards), og som listen derfor udelader."),
 });
 
 export const contactSchema = z.object({

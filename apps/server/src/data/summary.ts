@@ -30,9 +30,14 @@ import {
  * til opfølgende spørgsmål. Hold den kort: rådata i samtalen er det, der kan
  * vælte økonomien.
  */
+/** Elementer, der viser seneste regnskabsårs nøgletal; det første på siden giver resuméets regnskabslinje. */
+const SUMMARY_FIGURES: ReadonlySet<ViewSpec["components"][number]["type"]> = new Set(["LassoKeyFigureCards", "LassoIncomeStatement", "LassoBalanceSheet", "LassoMultiYearTable"]);
+
 export function summarizeView(spec: ViewSpec, ds: Dataset): string {
   const lines: string[] = [];
   if (ds.source === "demo") lines.push("OBS: Demodata (opdigtede virksomheder), ikke rigtige Lasso-data.");
+  // Seneste regnskabsår én gang: fra nøgletalskortene, eller fra tabellerne på regnskab, hvor kortene ikke står.
+  const figures = spec.components.find((x) => SUMMARY_FIGURES.has(x.type));
 
   for (const c of spec.components) {
     if (c.type === "LassoCompanyHead") {
@@ -57,11 +62,11 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
         if (facts.length) lines.push(`Stamoplysninger: ${facts.join("; ")}.`);
       }
     }
-    if (c.type === "LassoKeyFigureCards" || c.type === "LassoBarChart") {
-      const f = ds.financials[c.company];
+    if ((c === figures && "company" in c) || c.type === "LassoBarChart") {
+      const f = "company" in c && c.company ? ds.financials[c.company] : undefined;
       const last = f?.years.at(-1);
       const prev = f?.years.at(-2);
-      if (last && c.type === "LassoKeyFigureCards") {
+      if (last && c === figures) {
         // Kun oplyste tal; omsætning 0 er i praksis "ikke oplyst" for små selskaber (review P2-6).
         const chg = percentChange([prev?.grossProfit, last.grossProfit]);
         const cur = last.currency ?? f?.currency;

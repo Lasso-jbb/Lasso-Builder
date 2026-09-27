@@ -736,8 +736,19 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-textsections { display: flex; flex-direction: column; gap: var(--lasso-space-4); }
 .lasso-textsection { display: flex; flex-direction: column; gap: 4px; }
 .lasso-textsection__heading { font-size: var(--lasso-fs-sm); font-weight: 600; color: var(--lasso-text); }
-.lasso-textsection__body { margin: 0; font-size: var(--lasso-fs); line-height: 21px; color: var(--lasso-text-2); overflow-wrap: anywhere; }
+.lasso-textsection__body { margin: 0; font-size: var(--lasso-fs); line-height: 21px; color: var(--lasso-text-2); overflow-wrap: anywhere; white-space: pre-line; }
 .lasso-textsection__note { font-size: var(--lasso-fs-sm); color: var(--lasso-muted); }
+/* Navne med Lasso-ID i analysens tekst: koral som andre navne, understreget ved hover (regel 5).
+   Element-selektor, så farven vinder over ".lasso-root button { color: inherit }". */
+.lasso-textsection button.lasso-textsection__entity { display: inline; color: var(--lasso-accent-text); white-space: normal; }
+.lasso-textsection button.lasso-textsection__entity:hover { text-decoration: underline; }
+.lasso-textsections .lasso-more { align-self: flex-start; }
+/* Hele regnskabsanalysen i fuld bredde: læsbar linjelængde, de øvrige afsnit i to spalter på brede skærme. */
+.lasso-textsections--analysis .lasso-textsection__body { max-width: 760px; }
+.lasso-textsections__rest { display: grid; gap: var(--lasso-space-4) var(--lasso-space-6); }
+@media (min-width: 900px) {
+  .lasso-textsections__rest { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
 /* ---------- Resumé (12, node A8H-0): foldet med hvid toning ---------- */
 .lasso-summary { position: relative; overflow: hidden; }

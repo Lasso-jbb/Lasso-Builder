@@ -25,6 +25,7 @@ import {
   METRIC_KIND,
   METRIC_LABELS,
   searchKey,
+  textSectionsFor,
   type Dataset,
   type FinancialsVM,
   type FinancialStatementsVM,
@@ -473,13 +474,12 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     }
   }
 
-  if (types.has("LassoTextSections")) {
-    const t = ds.textSections[lassoId];
-    if (t?.sections.length) {
-      for (const s of t.sections) {
-        card.section(s.heading);
-        card.text(s.body);
-      }
+  // Samme afsnit som visningen: profilen uden branche (den står under stamoplysninger), analysen for sig.
+  for (const c of spec.components) {
+    if (c.type !== "LassoTextSections" || c.company !== lassoId) continue;
+    for (const s of textSectionsFor(ds.textSections[lassoId]?.sections ?? [], c.variant)) {
+      card.section(s.heading);
+      card.text(s.body);
     }
   }
 

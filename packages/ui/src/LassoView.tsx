@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import {
   changeFeedKey,
+  companyFactOptions,
   emptyDataset,
   entityRefOf,
   FOCUS_LABELS,
   isPersonId,
+  sameAddress,
   savedPagesKey,
   searchKey,
   widthOf,
@@ -126,7 +128,9 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     }
     case "LassoCompareTable":
       return <CompareTable key={key} companies={c.companies} metrics={c.metrics} title={c.title} dataset={empty} onAction={act} canDrillDown={Boolean(props.host.drillDown)} />;
-    case "LassoKeyValueList":
+    case "LassoKeyValueList": {
+      // Det, hovedet, kontaktblokken og ejerlisten viser på samme side, gentages ikke (companyFacts).
+      const page = companyFactOptions(props.spec.components, c.company);
       return (
         <KeyValueList
           key={key}
@@ -136,12 +140,21 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           variant={c.variant}
           title={c.title}
           error={c.variant === "financials" ? err(`financials:${c.company}`) : err(`company:${c.company}`)}
-          hideContact={props.spec.components.some((x) => x.type === "LassoContact" && x.company === c.company)}
+          hideContact={page.hideContact}
+          hideIdentity={page.hideIdentity}
+          hideAuditor={page.hideAuditor}
+          exclude={c.exclude}
           onOpen={props.host.drillDown ? act : undefined}
         />
       );
-    case "LassoContact":
-      return <LassoContact key={key} contact={empty.contact[c.company]} title={c.title} error={err(`contact:${c.company}`)} />;
+    }
+    case "LassoContact": {
+      // Adressen står i hovedet; kontaktblokken viser den kun, når den er en anden (fx fra hjemmesiden).
+      const contact = empty.contact[c.company];
+      const headOnPage = props.spec.components.some((x) => x.type === "LassoCompanyHead" && x.company === c.company);
+      const omitAddress = headOnPage && sameAddress(contact?.address, empty.companies[c.company]?.address);
+      return <LassoContact key={key} contact={contact} title={c.title} error={err(`contact:${c.company}`)} omitAddress={omitAddress} />;
+    }
     case "LassoContactPersons":
       return <LassoContactPersons key={key} data={empty.contactPersons[c.company]} title={c.title} error={err(`contactPersons:${c.company}`)} />;
     case "LassoMultiYearTable":
@@ -191,7 +204,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
         />
       );
     case "LassoTextSections":
-      return <LassoTextSections key={key} sections={empty.textSections[c.company]} title={c.title} error={err(`textSections:${c.company}`)} />;
+      return <LassoTextSections key={key} sections={empty.textSections[c.company]} title={c.title} variant={c.variant} error={err(`textSections:${c.company}`)} onOpen={props.host.drillDown ? act : undefined} />;
     case "LassoSummary":
       return <LassoSummary key={key} text={c.text} title={c.title} source={c.source} updated={c.updated} />;
     case "LassoTimeline": {
@@ -202,6 +215,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           key={key}
           timeline={empty.timeline[k]}
           title={c.title}
+          limit={c.limit}
           error={err(`timeline:${k}`)}
           onOpen={props.host.drillDown ? act : undefined}
           emptyReason={c.person ? "Der er ingen registrerede rolleskift for personen i CVR." : undefined}
