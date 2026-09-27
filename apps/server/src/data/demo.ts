@@ -2,6 +2,9 @@ import {
   formatAmount,
   searchKey,
   type BeneficialOwnershipVM,
+  type ChangeEntryVM,
+  type ChangeFeedVM,
+  foldChangeEntries,
   type CompanyRowVM,
   type CompanyVM,
   type ContactPersonVM,
@@ -28,7 +31,7 @@ import {
 import { applyCriteria, sortRows } from "./criteria-eval.js";
 import { demoOwnershipGraph } from "./demoGraph.js";
 import { demoFindPersons, demoPerson, demoPersonIds, demoPersonNetwork } from "./demoPeople.js";
-import { NotFoundError, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
+import { NotFoundError, type ChangeFeedOptions, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
 
 /**
  * Opdigtede demodata, så UI og MCP-flow kan bygges og testes uden adgang til
@@ -488,6 +491,44 @@ const CONTACT_PERSONS: Record<string, ContactPersonVM[]> = {
   ],
 };
 
+/**
+ * Katalog 21: ændringsfeed for demolisten "Kunder". Tidspunkterne ligger relativt til i dag (0, 1 og 2 dage
+ * tilbage), så feedet altid viser "I dag" og "I går". Fem stamdata-ændringer samme dag foldes til én række.
+ */
+const DEMO_LIST = "Kunder";
+function changeFeedFor(opts: ChangeFeedOptions): ChangeFeedVM {
+  const days = Math.max(1, Math.min(90, opts.days));
+  if (opts.list && opts.list.trim().toLowerCase() !== DEMO_LIST.toLowerCase()) {
+    return { listName: opts.list, days, entries: [], total: 0, emptyReason: `Der er ingen overvågningsliste med navnet "${opts.list}" i demodata (kun "${DEMO_LIST}").` };
+  }
+  const at = (daysAgo: number, hhmm: string) => {
+    const d = new Date();
+    d.setDate(d.getDate() - daysAgo);
+    const [h, m] = hhmm.split(":").map(Number);
+    d.setHours(h!, m!, 0, 0);
+    return d.toISOString();
+  };
+  const name = (cvr: string) => COMPANIES.find((c) => c.cvr === cvr)!;
+  const E = (cvr: string, type: ChangeEntryVM["type"], text: string, daysAgo: number, hhmm: string, read: boolean, extra: Partial<ChangeEntryVM> = {}): ChangeEntryVM => {
+    const c = name(cvr);
+    return { lassoId: c.lassoId, companyName: c.name, type, text, at: at(daysAgo, hhmm), source: type === "kredit" ? "Kredit" : "CVR", read, ...extra };
+  };
+  const all: ChangeEntryVM[] = [
+    E("99000011", "status", "Status ændret", 0, "09:14", false, { from: "Aktiv", to: "Under konkurs" }),
+    E("99000008", "regnskab", "Årsrapport 2025 offentliggjort, bruttofortjeneste 96,4 mio. kr. (+12,1 %)", 0, "07:02", false),
+    E("99000005", "kredit", "Kreditscore ændret fra 47 til 52 (+5)", 0, "06:30", false),
+    E("99000001", "ledelse", "Nyt bestyrelsesmedlem: Carla Prøve indtrådt", 1, "14:40", true),
+    E("99000004", "ejerskab", "Eksempel Holding ApS har øget sin ejerandel til 100 %", 1, "11:05", true),
+    E("99000002", "regnskab", "Årsrapport 2025 offentliggjort, bruttofortjeneste 14,9 mio. kr. (+4,8 %)", 1, "08:15", true),
+    ...["99000001", "99000004", "99000006", "99000007", "99000012"].map((cvr) => E(cvr, "stamdata", "Antal ansatte opdateret for 3. kvartal", 1, "06:00", true)),
+    E("99000003", "ledelse", "Gitte Prøve er fratrådt som direktør", 2, "16:20", true),
+    E("99000010", "stamdata", "Adresse ændret fra Prøvevej 1 til Prøvevej 3, 8600 Silkeborg", 2, "10:45", true),
+  ];
+  const cutoff = Date.now() - days * 86_400_000;
+  const inPeriod = all.filter((e) => new Date(e.at).getTime() >= cutoff && (!opts.types || opts.types.includes(e.type)));
+  return { listName: DEMO_LIST, days, entries: foldChangeEntries(inPeriod), total: inPeriod.length, source: "Eksempeldata", updated: new Date().toISOString().slice(0, 10) };
+}
+
 function contactFor(c: DemoCompany): ContactVM {
   const hasAny = Boolean(c.phone || c.email || c.website);
   return { lassoId: c.lassoId, phone: c.phone, email: c.email, website: c.website, address: c.address, source: hasAny ? "CVR" : undefined, updated: hasAny ? "2026-09-20" : undefined };
@@ -641,5 +682,10 @@ export class DemoProvider implements DataProvider {
 
   async findPersons(name: string, limit: number) {
     return demoFindPersons(COMPANIES, name, limit);
+  }
+
+  /** Katalog 21: eksempelfeed for listen "Kunder". */
+  async changeFeed(opts: ChangeFeedOptions): Promise<ChangeFeedVM> {
+    return changeFeedFor(opts);
   }
 }

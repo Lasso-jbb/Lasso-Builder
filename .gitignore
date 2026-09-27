@@ -32,3 +32,4 @@ venv/
 
 # Lokale værktøjer
 .claude/routing-log.json
+.claude/

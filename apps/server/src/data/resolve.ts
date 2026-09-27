@@ -1,4 +1,5 @@
 import {
+  changeFeedKey,
   emptyDataset,
   searchKey,
   toLassoId,
@@ -83,6 +84,7 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
   const searches: Extract<ViewComponent, { type: "LassoCompanyTable" }>["search"][] = [];
   const newsWanted = new Map<string, number>();
   const graphs: Extract<ViewComponent, { type: "LassoOwnershipDiagram" }>[] = [];
+  const feeds: Extract<ViewComponent, { type: "LassoChangeFeed" }>[] = [];
 
   for (const c of spec.components) {
     switch (c.type) {
@@ -182,6 +184,9 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
       case "LassoPersonNetwork":
         want(c.person, "personNetwork");
         break;
+      case "LassoChangeFeed":
+        feeds.push(c);
+        break;
     }
   }
 
@@ -215,6 +220,15 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider): Promi
     run(`graph:${key}`, async () => {
       ds.ownershipGraphs[key] = await provider.ownershipGraph(g.company, { ingoingDepth: g.ingoingDepth, outgoingDepth: g.outgoingDepth, onDate: g.onDate });
     });
+  }
+
+  // Katalog 21: ét feed pr. (liste, dage, typer); nøglen er changeFeedKey, fejlnøglen "changeFeed:<key>".
+  const feedKeys = new Set<string>();
+  for (const f of feeds) {
+    const key = changeFeedKey(f);
+    if (feedKeys.has(key)) continue;
+    feedKeys.add(key);
+    run(`changeFeed:${key}`, async () => void (ds.changeFeeds[key] = await provider.changeFeed({ list: f.list, days: f.days, types: f.types })));
   }
 
   await Promise.all(jobs);

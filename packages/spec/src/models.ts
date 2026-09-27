@@ -513,6 +513,92 @@ export interface ScoreVM {
   updated?: string;
 }
 
+/* ---------- Katalog 21: overvågning og notifikationer ---------- */
+
+/** Ændringstyper i overvågningsfeedet, i den rækkefølge typefilteret og indstillingerne viser dem. */
+export const CHANGE_TYPES = ["regnskab", "ledelse", "ejerskab", "status", "stamdata", "kredit"] as const;
+export type ChangeType = (typeof CHANGE_TYPES)[number];
+
+export const CHANGE_TYPE_LABELS: Record<ChangeType, string> = {
+  regnskab: "Regnskab",
+  ledelse: "Ledelse",
+  ejerskab: "Ejerskab",
+  status: "Status",
+  stamdata: "Stamdata",
+  kredit: "Kredit",
+};
+
+/** Én ændring i en overvåget virksomhed (katalog 21, "Ændringsfeed"). */
+export interface ChangeEntryVM {
+  lassoId?: string;
+  companyName: string;
+  type: ChangeType;
+  /** Beskrivelsen, fx "Årsrapport 2025 offentliggjort, bruttofortjeneste 96,4 mio. kr. (+12,1 %)". */
+  text: string;
+  /** Sat sammen ved en statusændring, vist som "fra → til" (fra gennemstreget, til i mørk rød). */
+  from?: string;
+  to?: string;
+  /** ISO-tidsstempel med klokkeslæt. */
+  at: string;
+  /** Fx "CVR" eller "Kredit". */
+  source: string;
+  read: boolean;
+  /** Foldet række: antal virksomheder med samme lille ændring samme dag ("5 virksomheder"). */
+  count?: number;
+  /** Navnene bag en foldet række, til "Vis alle". */
+  companies?: string[];
+}
+
+export interface ChangeFeedVM {
+  /** Overvågningslistens navn, fx "Kunder". */
+  listName?: string;
+  /** Antal dage feedet dækker. */
+  days: number;
+  entries: ChangeEntryVM[];
+  /** Samlet antal ændringer i perioden (kan være større end entries, når mange er foldet). */
+  total: number;
+  source?: string;
+  updated?: string;
+  /** Forklaring til tom-tilstanden, fx når ingen liste overvåges. */
+  emptyReason?: string;
+}
+
+/** Stabil nøgle for et ændringsfeed, så UI og server finder samme data. */
+export function changeFeedKey(c: { list?: string; days?: number; types?: readonly ChangeType[] }): string {
+  return `${c.list ?? ""}|${c.days ?? 7}|${(c.types ?? []).join(",")}`;
+}
+
+/**
+ * Folder mange små ændringer af samme type samme dag til én række ("5 virksomheder"), som kataloget
+ * foreskriver. Kun stamdata og kredit foldes, og først fra `min` ændringer; status, regnskab, ledelse
+ * og ejerskab står altid hver for sig. Rækkefølgen bliver nyeste først.
+ */
+export function foldChangeEntries(entries: readonly ChangeEntryVM[], min = 3): ChangeEntryVM[] {
+  const sorted = [...entries].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+  const foldable = (e: ChangeEntryVM) => e.type === "stamdata" || e.type === "kredit";
+  const keyOf = (e: ChangeEntryVM) => `${e.type}|${e.at.slice(0, 10)}|${e.text}`;
+  const groups = new Map<string, ChangeEntryVM[]>();
+  for (const e of sorted) if (foldable(e)) groups.set(keyOf(e), [...(groups.get(keyOf(e)) ?? []), e]);
+  const emitted = new Set<string>();
+  const out: ChangeEntryVM[] = [];
+  for (const e of sorted) {
+    if (!foldable(e)) {
+      out.push(e);
+      continue;
+    }
+    const key = keyOf(e);
+    const g = groups.get(key) ?? [e];
+    if (g.length < min) {
+      out.push(e);
+      continue;
+    }
+    if (emitted.has(key)) continue;
+    emitted.add(key);
+    out.push({ ...e, count: g.length, companies: g.map((x) => x.companyName), read: g.every((x) => x.read) });
+  }
+  return out;
+}
+
 /** Alt det data, én visning skal bruge, slået op på nøgle. */
 export interface Dataset {
   source: DataSourceKind;
@@ -543,6 +629,8 @@ export interface Dataset {
   /** Katalog 16: personer (Lasso-ID "CVR-3-…") og deres netværk. */
   persons: Record<string, PersonVM>;
   personNetworks: Record<string, PersonNetworkVM>;
+  /** Katalog 21: ændringsfeed pr. changeFeedKey. */
+  changeFeeds: Record<string, ChangeFeedVM>;
   /** Fejl pr. nøgle, fx "company:CVR-1-12345678" -> "Ingen adgang". */
   errors: Record<string, string>;
 }
@@ -572,6 +660,7 @@ export function emptyDataset(source: DataSourceKind): Dataset {
     ownershipGraphs: {},
     persons: {},
     personNetworks: {},
+    changeFeeds: {},
     errors: {},
   };
 }

@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   amountScale,
+  changeFeedKey,
+  CHANGE_TYPES,
+  COMPONENT_CATALOG,
   currencyUnit,
+  foldChangeEntries,
+  type ChangeEntryVM,
+  type ChangeType,
   isForeignCurrency,
   formatShare,
   ownershipGraphKey,
@@ -335,4 +341,47 @@ test("valuta: DKK giver stadig 'kr.', EUR/USD giver koden (bagudkompatibelt)", (
   assert.equal(formatMetricValue("omsaetning", 12_500_000), "12,5 mio. kr.");
   assert.equal(formatMetricValue("ansatte", 42, "EUR"), "42");
   assert.equal(amountScale([117e9, 250e9], currencyUnit("EUR")).label, "mia. EUR");
+});
+
+test("LassoChangeFeed (katalog 21): schema, standardværdier, bredde og katalog", () => {
+  const spec = parseViewSpec({ title: "Overvågning", components: [{ type: "LassoChangeFeed", list: "Kunder" }] });
+  const c = spec.components[0]!;
+  if (c.type !== "LassoChangeFeed") throw new Error("forkert type");
+  assert.equal(c.days, 7);
+  assert.equal(c.list, "Kunder");
+  assert.equal(c.types, undefined);
+  assert.equal(widthOf(c, "dashboard"), "full");
+  assert.equal(changeFeedKey(c), "Kunder|7|");
+  const typed = parseViewSpec({ title: "x", components: [{ type: "LassoChangeFeed", days: 30, types: ["status", "regnskab"] }] }).components[0]!;
+  if (typed.type !== "LassoChangeFeed") throw new Error("forkert type");
+  assert.equal(changeFeedKey(typed), "|30|status,regnskab");
+  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoChangeFeed", days: 0 }] }));
+  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoChangeFeed", days: 91 }] }));
+  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoChangeFeed", types: ["nyheder"] }] }));
+  const entry = COMPONENT_CATALOG.find((e) => e.type === "LassoChangeFeed");
+  assert.ok(entry);
+  for (const part of ["Brug til:", "Brug ikke når:", "Kræver:", "Eksempel:"]) assert.ok(entry.description.includes(part), part);
+  assert.deepEqual([...CHANGE_TYPES], ["regnskab", "ledelse", "ejerskab", "status", "stamdata", "kredit"]);
+});
+
+test("foldChangeEntries folder kun små ændringer (stamdata/kredit) af samme type samme dag, fra 3 stk., nyeste først", () => {
+  const e = (companyName: string, type: ChangeType, at: string, text = "Antal ansatte opdateret", read = true): ChangeEntryVM => ({ companyName, type, text, at, source: "CVR", read });
+  const folded = foldChangeEntries([
+    e("A", "stamdata", "2026-09-24T06:00:00Z"),
+    e("B", "stamdata", "2026-09-24T06:00:00Z", "Antal ansatte opdateret", false),
+    e("C", "stamdata", "2026-09-24T06:00:00Z"),
+    e("D", "stamdata", "2026-09-23T06:00:00Z"),
+    e("E", "status", "2026-09-25T09:14:00Z", "Status ændret"),
+    e("F", "status", "2026-09-25T09:10:00Z", "Status ændret"),
+    e("G", "kredit", "2026-09-24T07:00:00Z", "Kreditscore ændret"),
+    e("H", "kredit", "2026-09-24T07:00:00Z", "Kreditscore ændret"),
+  ]);
+  assert.deepEqual(
+    folded.map((x) => `${x.companyName}:${x.count ?? 1}`),
+    ["E:1", "F:1", "G:1", "H:1", "A:3", "D:1"],
+  );
+  const group = folded.find((x) => x.companyName === "A")!;
+  assert.deepEqual(group.companies, ["A", "B", "C"]);
+  assert.equal(group.read, false, "en foldet række er ulæst, når ét medlem er det");
+  assert.equal(foldChangeEntries([]).length, 0);
 });

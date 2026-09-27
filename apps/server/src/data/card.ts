@@ -1,6 +1,8 @@
 import {
   mergedObservations,
   amountScale,
+  changeFeedKey,
+  CHANGE_TYPE_LABELS,
   chartSeries,
   currencyUnit,
   isForeignCurrency,
@@ -629,6 +631,42 @@ function listCard(spec: ViewSpec, ds: Dataset): string | null {
   return card.toString();
 }
 
+/** Katalog 21: ændringsfeedet som tekst. Navn, type; beskrivelse (status som "fra -> til"); kilde, klokkeslæt. 3 + "Se N flere". */
+function changeFeedCard(spec: ViewSpec, ds: Dataset): string | null {
+  const c = spec.components.find((x) => x.type === "LassoChangeFeed");
+  if (!c || c.type !== "LassoChangeFeed") return null;
+  const feed = ds.changeFeeds[changeFeedKey(c)];
+  if (!feed) return null;
+  const card = new Card();
+  const title = c.title ?? (feed.listName ? `Ændringer i "${feed.listName}"` : "Ændringer i overvågningen");
+  card.section(`${title} (${formatNumber(feed.total)})`);
+  if (feed.entries.length === 0) {
+    card.text(feed.emptyReason ?? `Ingen ændringer de seneste ${feed.days} dage`);
+    return card.toString();
+  }
+  const clock = (iso: string) => {
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? "" : `kl. ${String(d.getHours()).padStart(2, "0")}.${String(d.getMinutes()).padStart(2, "0")}`;
+  };
+  let lastDay = "";
+  let shown = 0;
+  for (const e of feed.entries.slice(0, 3)) {
+    const day = e.at.slice(0, 10);
+    if (day !== lastDay) {
+      card.text(formatDate(day));
+      lastDay = day;
+    }
+    const who = (e.count ?? 1) > 1 ? `${formatNumber(e.count)} virksomheder` : e.companyName;
+    card.text(`${who}, ${CHANGE_TYPE_LABELS[e.type].toLowerCase()}`);
+    const body = e.type === "status" && (e.from || e.to) ? `${e.from ?? ""} -> ${e.to ?? ""}`.trim() : e.text;
+    for (const l of wrap(`${body}${e.read ? "" : ", ulæst"}`, W - 2)) card.raw(`  ${l}`);
+    for (const l of wrap(`${e.source}, ${clock(e.at)}`, W - 2)) card.raw(`  ${l}`);
+    shown++;
+  }
+  if (feed.entries.length > shown) card.text(`Se ${feed.entries.length - shown} flere`);
+  return card.toString();
+}
+
 /** Tekstkort for visningen, eller null når den ikke har noget, der kan vises som tekst. */
 export function textCard(spec: ViewSpec, ds: Dataset): string | null {
   const companies = [...new Set(spec.components.flatMap((c) => ("company" in c ? [c.company] : [])))];
@@ -637,6 +675,7 @@ export function textCard(spec: ViewSpec, ds: Dataset): string | null {
     ...(companies.length === 1 ? [companyCard(spec, ds, companies[0]!)] : []),
     ...(persons.length === 1 ? [personCard(spec, ds, persons[0]!)] : []),
     listCard(spec, ds),
+    changeFeedCard(spec, ds),
     summaryCard(spec),
   ].filter((c): c is string => Boolean(c));
   return cards.length ? cards.join("\n") : null;
