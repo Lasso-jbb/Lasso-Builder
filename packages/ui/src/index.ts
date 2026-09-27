@@ -73,6 +73,8 @@ export { ModuleBar } from "./components/ModuleBar.js";
 export type { ModuleBarProps, ModuleAction } from "./components/ModuleBar.js";
 export { ModuleToolbar } from "./components/ModuleToolbar.js";
 export type { ModuleToolbarProps, ToolbarAction } from "./components/ModuleToolbar.js";
+export { LoginCard, LOGIN_HELP } from "./components/LoginCard.js";
+export type { LoginCardProps } from "./components/LoginCard.js";
 export { ShellIcon } from "./components/ShellIcons.js";
 export type { ShellIconName } from "./components/ShellIcons.js";
 export { StateBox, Skeleton, Sparkline, Badge, StatusBadge, DataState, Missing, SourceLine, Section, SeverityIcon, severityWord } from "./primitives.js";

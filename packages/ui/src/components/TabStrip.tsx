@@ -32,10 +32,12 @@ export interface TabStripProps {
   onBell?: () => void;
   onFeedback?: () => void;
   onAccount?: () => void;
+  /** Eget kontoelement i stedet for kontoknappen, fx en <Menu> med brugerens navn og "Log ud" (portalen). */
+  account?: ReactNode;
   className?: string;
 }
 
-export function TabStrip({ tabs, onSelect, onClose, onAdd, unread = 0, important, bellOpen, onBell, onFeedback, onAccount, className = "" }: TabStripProps) {
+export function TabStrip({ tabs, onSelect, onClose, onAdd, unread = 0, important, bellOpen, onBell, onFeedback, onAccount, account, className = "" }: TabStripProps) {
   return (
     <div className={`lasso-strip ${className}`}>
       <div className="lasso-strip__tabs" role="tablist" aria-label="Åbne sider">
@@ -68,11 +70,12 @@ export function TabStrip({ tabs, onSelect, onClose, onAdd, unread = 0, important
             <ShellIcon name="feedback" size={18} />
           </button>
         ) : null}
-        {onAccount ? (
-          <button type="button" className="lasso-strip__tool" aria-label="Konto" title="Konto" onClick={onAccount}>
-            <ShellIcon name="user" size={18} />
-          </button>
-        ) : null}
+        {account ??
+          (onAccount ? (
+            <button type="button" className="lasso-strip__tool" aria-label="Konto" title="Konto" onClick={onAccount}>
+              <ShellIcon name="user" size={18} />
+            </button>
+          ) : null)}
       </div>
     </div>
   );
