@@ -12,3 +12,4 @@ export * from "./person.js";
 export * from "./composePerson.js";
 export * from "./riskSignals.js";
 export * from "./credit.js";
+export * from "./statements.js";

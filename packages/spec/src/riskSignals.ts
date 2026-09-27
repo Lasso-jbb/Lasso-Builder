@@ -1,4 +1,5 @@
 import { formatAmount, formatDate } from "./format.js";
+import { hasReportingDuty } from "./statements.js";
 import type { Dataset, ObservationRowVM, ObservationsVM, Severity } from "./models.js";
 
 /**
@@ -69,8 +70,9 @@ export function riskSignals(lassoId: string, ds: Dataset, now: Date = new Date()
     if (!ended) {
       const age = monthsBetween(company?.founded, now);
       const nowYear = now.getFullYear();
-      if (!last && age !== null && age > 24) {
-        add("regnskab", 50, "Intet offentliggjort regnskab", "Selskabet er over to år gammelt, men der findes intet regnskab.", "Regnskab");
+      // Personligt ejede virksomheder (ENK, PMV) skal ikke indsende regnskab: intet regnskab er ikke et signal der.
+      if (!last && age !== null && age > 24 && hasReportingDuty(company?.form)) {
+        add("regnskab", 50, "Intet offentliggjort regnskab", "Virksomheden er over to år gammel, men der findes intet regnskab.", "Regnskab");
       } else if (last && last.year < nowYear - 2) {
         add("regnskab", 50, "Regnskab mangler", `Seneste offentliggjorte regnskab er for ${last.year}.`, "Regnskab");
       }
@@ -108,7 +110,7 @@ const TOPIC: Record<string, RegExp> = {
   "afledt:egenkapital": /egenkapital/,
   "afledt:underskud": /underskud|negativt resultat/,
   "afledt:revisor": /revisor/,
-  "afledt:regnskab": /regnskab mangler|intet regnskab|manglende regnskab/,
+  "afledt:regnskab": /regnskab mangler|intet (offentliggjort )?regnskab|manglende regnskab|ikke (offentliggjort|indsendt|aflagt)[^|]*regnskab|ingen regnskab/,
   "afledt:ledelse": /ledelsesskift|udskiftning/,
   "afledt:ingen-ledelse": /ingen (registreret )?ledelse|ingen direktion/,
 };

@@ -1,4 +1,4 @@
-import type { FinancialStatementsVM } from "@lasso/spec";
+import { noStatementsReason, type CompanyVM, type FinancialStatementsVM } from "@lasso/spec";
 import { StatementTable, type StatementRow, type StatementSection } from "./statementTable.js";
 
 const MISMATCH_REASON = "Aktiver i alt og passiver i alt matcher ikke. Balancen bør altid gå op; tjek de underliggende regnskabstal.";
@@ -8,12 +8,12 @@ const MISMATCH_REASON = "Aktiver i alt og passiver i alt matcher ikke. Balancen 
  * side. Egenkapital og balancesum er de samme tal som i LassoKeyFigureCards/nøgletallet
  * "balancesum"; underposterne er ubekræftede og kan stå som "Ikke oplyst".
  */
-export function LassoBalanceSheet({ statements, years, title, error }: { statements?: FinancialStatementsVM; years: number; title?: string; error?: string }) {
+export function LassoBalanceSheet({ statements, company, years, title, error }: { statements?: FinancialStatementsVM; company?: CompanyVM; years: number; title?: string; error?: string }) {
   const heading = title ?? "Balance";
   if (!statements) return <StatementTable title={heading} unit="t. kr., 31.12" years={[]} sections={[]} prefix="lasso-balance" error={error} loading={!error} />;
   const all = statements.balanceSheet;
   if (all.length === 0) {
-    return <StatementTable title={heading} unit="t. kr., 31.12" years={[]} sections={[]} prefix="lasso-balance" emptyReason="Virksomheden har ikke offentliggjort regnskaber endnu." />;
+    return <StatementTable title={heading} unit="t. kr., 31.12" years={[]} sections={[]} prefix="lasso-balance" emptyReason={noStatementsReason(company)} />;
   }
   const span = Math.max(2, Math.min(3, years));
   const shown = all.slice(-span);

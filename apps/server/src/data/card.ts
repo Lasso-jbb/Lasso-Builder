@@ -1,5 +1,7 @@
 import {
   mergedObservations,
+  hasNoStatements,
+  noStatementsReason,
   amountScale,
   changeFeedKey,
   CHANGE_TYPE_LABELS,
@@ -417,7 +419,13 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     if (f && c.type === "LassoWaterfallChart" && c.company === lassoId) waterfallText(card, f);
     if (f && c.type === "LassoShareBars" && c.company === lassoId) shareBarsText(card, f);
     const stmt = ds.financialStatements[lassoId];
-    if (stmt && c.type === "LassoIncomeStatement" && c.company === lassoId) incomeStatementText(card, stmt, c.years);
+    if (stmt && c.type === "LassoIncomeStatement" && c.company === lassoId) {
+      // Intet offentliggjort regnskab: tekstkortet siger hvorfor, som visningen (én gang, ikke pr. tabel).
+      if (hasNoStatements(stmt)) {
+        card.section(c.title ?? "Regnskab");
+        card.text(noStatementsReason(ds.companies[lassoId]));
+      } else incomeStatementText(card, stmt, c.years);
+    }
     if (stmt && c.type === "LassoBalanceSheet" && c.company === lassoId) balanceSheetText(card, stmt, c.years);
     if (stmt && c.type === "LassoCashFlow" && c.company === lassoId) cashFlowText(card, stmt, c.years);
     if (c.type === "LassoOwnershipDiagram" && c.company === lassoId) {

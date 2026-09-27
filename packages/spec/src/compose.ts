@@ -1,5 +1,6 @@
 import type { Dataset, FinancialYear } from "./models.js";
 import { mergedObservations } from "./riskSignals.js";
+import { hasNoStatements } from "./statements.js";
 import { mainMetric } from "./series.js";
 import { METRIC_FIELD, viewSpecSchema, type Metric, type ViewComponent, type ViewSpec } from "./spec.js";
 
@@ -85,9 +86,10 @@ const FOLLOW_UPS: Record<Focus, FollowUpRule[]> = {
     { label: "Ejere", prompt: "Hvem ejer {navn}?", needs: (d) => d.owners > 0 },
   ],
   regnskab: [
-    { label: "Udvikling over år", prompt: "Hvordan har økonomien i {navn} udviklet sig over årene?" },
+    { label: "Udvikling over år", prompt: "Hvordan har økonomien i {navn} udviklet sig over årene?", needs: (d) => d.fin > 0 },
     { label: "Risiko", prompt: "Er der røde flag ved {navn}?" },
     { label: "Kreditvurdering", prompt: "Hvad er kreditvurderingen for {navn}?" },
+    { label: "Ledelse", prompt: "Hvem sidder i ledelsen af {navn}?", needs: (d) => d.people > 0 },
   ],
   ejerskab: [
     { label: "Ledelse", prompt: "Hvem sidder i ledelsen af {navn}?", needs: (d) => d.people > 0 },
@@ -204,6 +206,17 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
       break;
     }
     case "regnskab": {
+      if (hasNoStatements(statements)) {
+        // Intet offentliggjort regnskab (fx en enkeltmandsvirksomhed uden regnskabspligt): én tom
+        // tilstand, der siger hvorfor, på nøgletallenes plads, ikke to tomme tabeller med samme tekst.
+        // Oplysninger og ledelse (ellers ejere) ved siden af hinanden, så siden stadig er en side.
+        columns = 2;
+        top.push({ type: "LassoIncomeStatement", company: id, years: 3, title: "Regnskab" });
+        put(1, { type: "LassoKeyValueList", company: id, variant: "company", title: "Virksomhedsoplysninger" });
+        if (people.some((p) => !p.to)) put(2, { type: "LassoPersonList", company: id, show: "current", title: "Ledelse" });
+        else ownershipBlock(2);
+        break;
+      }
       // Fuldt regnskab: tabeller står altid i fuld bredde (guide 23), stablet i regnskabets rækkefølge.
       bottom.push({ type: "LassoIncomeStatement", company: id, years: 3 });
       bottom.push({ type: "LassoBalanceSheet", company: id, years: 3 });
