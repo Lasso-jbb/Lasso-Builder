@@ -25,6 +25,20 @@ const schema = z.object({
   /** Så mange dage virker et link fra Claude. */
   LINK_TTL_DAYS: z.coerce.number().int().min(1).max(365).default(30),
 
+  /**
+   * Gem-laget (docs/gem-lag.md): flere adgangsnøgler til /mcp, hver bundet til en bruger, så gemte
+   * sider er personlige uden OAuth. Format: "nøgle:bruger-id:Navn:org;nøgle2:id2" (navn og org kan
+   * udelades; org = DEMO_ORG). Tom = kun MCP_ACCESS_KEY, og alle kald er demobrugeren.
+   */
+  MCP_USER_KEYS: z.string().default(""),
+  /** Server-til-server-nøgle til POST /api/send-to-lasso. Tom = ADMIN_API_KEY. */
+  SEND_TO_LASSO_KEY: z.string().default(""),
+  /** true = /e/<lassoId> kan åbnes uden signeret link (offentlige entitetssider = gratis opslag på servernøglen). */
+  ENTITY_PAGES_PUBLIC: z
+    .string()
+    .default("false")
+    .transform((v) => v === "true" || v === "1"),
+
   /** Hardcoded demobruger, indtil Lasso ID kobles på (se src/auth/user.ts). */
   DEMO_USER_ID: z.string().default("demo"),
   DEMO_USER_NAME: z.string().default("Demobruger"),

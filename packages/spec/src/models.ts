@@ -599,6 +599,41 @@ export function foldChangeEntries(entries: readonly ChangeEntryVM[], min = 3): C
   return out;
 }
 
+/* Gem-laget (docs/gem-lag.md): brugerens gemte virksomheds- og personsider. */
+export type SavedPageKind = "company" | "person";
+/** Hvordan siden kom på listen: manuelt (tool eller knap), via et signeret link, eller sendt fra et eksternt system. */
+export type SavedPageOrigin = "manual" | "link" | "send";
+export const SAVED_PAGE_ORIGINS: readonly SavedPageOrigin[] = ["manual", "link", "send"];
+
+export interface SavedPageVM {
+  lassoId: string;
+  kind: SavedPageKind;
+  /** Navnesnapshot fra gemmetidspunktet; selve siden viser altid friske data. */
+  name: string;
+  cvr?: string;
+  /** Visningens focus (fx "oekonomi"), når siden blev gemt fra en fokusvisning. */
+  focus?: string;
+  note?: string;
+  origin: SavedPageOrigin;
+  savedAt: string;
+  /** Signeret link til den hostede side (/e/<lassoId>), sat af serveren. */
+  url?: string;
+}
+
+export interface SavedPagesVM {
+  /** Nyeste først. */
+  pages: SavedPageVM[];
+  /** Antal gemte sider i alt for brugeren af den valgte slags (før limit). */
+  total: number;
+  kind: SavedPageKind | "all";
+  limit: number;
+}
+
+/** Stabil nøgle for en gemt-liste i Dataset.savedPages. */
+export function savedPagesKey(c: { kind?: SavedPageKind | "all"; limit?: number }): string {
+  return `${c.kind ?? "all"}|${c.limit ?? 20}`;
+}
+
 /** Alt det data, én visning skal bruge, slået op på nøgle. */
 export interface Dataset {
   source: DataSourceKind;
@@ -631,6 +666,10 @@ export interface Dataset {
   personNetworks: Record<string, PersonNetworkVM>;
   /** Katalog 21: ændringsfeed pr. changeFeedKey. */
   changeFeeds: Record<string, ChangeFeedVM>;
+  /** Gem-laget: gemte sider pr. savedPagesKey (LassoSavedPages). Fejlnøgle "savedPages:<key>". */
+  savedPages: Record<string, SavedPagesVM>;
+  /** Gem-laget: hvilke Lasso-ID'er i visningen brugeren allerede har gemt (til Gem/Gemt-knappen). */
+  savedIds?: string[];
   /** Fejl pr. nøgle, fx "company:CVR-1-12345678" -> "Ingen adgang". */
   errors: Record<string, string>;
 }
@@ -661,6 +700,7 @@ export function emptyDataset(source: DataSourceKind): Dataset {
     persons: {},
     personNetworks: {},
     changeFeeds: {},
+    savedPages: {},
     errors: {},
   };
 }

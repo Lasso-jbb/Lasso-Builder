@@ -37,6 +37,7 @@ import type { DataProvider } from "../data/provider.js";
 import { errorMessage, normalizeSpec, resolveSpec } from "../data/resolve.js";
 import { textCard } from "../data/card.js";
 import { summarizeView } from "../data/summary.js";
+import type { SavedPageStore } from "../pages/store.js";
 import { SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "../views/store.js";
 import { companyLink, personLink } from "../web/links.js";
 import { findPerson } from "../data/personLookup.js";
@@ -49,6 +50,8 @@ export interface McpContext {
   config: Config;
   provider: DataProvider;
   store: ViewStore;
+  /** Gem-laget: brugerens gemte sider (docs/gem-lag.md). */
+  pages: SavedPageStore;
   user: CurrentUser;
 }
 

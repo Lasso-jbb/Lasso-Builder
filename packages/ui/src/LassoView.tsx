@@ -188,6 +188,9 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       const k = changeFeedKey(c);
       return <ChangeFeed key={key} feed={empty.changeFeeds[k]} title={c.title} types={c.types} error={err(`changeFeed:${k}`)} onOpen={props.host.drillDown ? act : undefined} />;
     }
+    case "LassoSavedPages":
+      // Gem-laget (docs/gem-lag.md): tegnes af SavedPages; pladsholder indtil komponenten er bygget.
+      return <Skeleton key={key} lines={3} height={160} />;
   }
 }
 

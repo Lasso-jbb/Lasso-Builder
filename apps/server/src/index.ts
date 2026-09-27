@@ -4,7 +4,9 @@ import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
 import cors from "cors";
 import type { NextFunction, Request, Response } from "express";
 import { companyTemplate, composeCompany, composeProbe, composePerson, composePersonProbe, listTemplate, parseViewSpec, searchQuerySchema, toLassoId, viewSpecSchema } from "@lasso/spec";
-import { getCurrentUser } from "./auth/user.js";
+import { getCurrentUser, isValidMcpKey, mcpKeyRequired, providedKey } from "./auth/user.js";
+import { createPool } from "./db.js";
+import { createSavedPageStore, type SavedPageStore } from "./pages/store.js";
 import { hasLassoCredentials, isSet, loadConfig, type Config } from "./config.js";
 import { createProvider, type DataProvider } from "./data/index.js";
 import { errorMessage, normalizeSpec, resolveSpec } from "./data/resolve.js";
@@ -24,20 +26,14 @@ export interface AppDeps {
   client: LassoClient;
   provider: DataProvider;
   store: ViewStore;
+  /** Gem-laget: brugerens gemte sider (docs/gem-lag.md). */
+  pages: SavedPageStore;
 }
 
 function safeEqual(a: string, b: string): boolean {
   const x = Buffer.from(a, "utf8");
   const y = Buffer.from(b, "utf8");
   return x.length === y.length && timingSafeEqual(x, y);
-}
-
-function providedKey(req: Request): string {
-  const auth = req.header("authorization");
-  const bearer = auth?.toLowerCase().startsWith("bearer ") ? auth.slice(7).trim() : undefined;
-  const fromQuery = typeof req.query.key === "string" ? req.query.key : undefined;
-  const fromPath = typeof req.params.key === "string" ? req.params.key : undefined;
-  return fromPath ?? req.header("x-api-key") ?? bearer ?? fromQuery ?? "";
 }
 
 /** Kræver nøglen, hvis den er sat. Uden nøgle er ruten åben (kun til lokal udvikling). */
@@ -49,7 +45,16 @@ function requireKey(expected: string) {
   };
 }
 
-export function createApp({ config, client, provider, store }: AppDeps) {
+/** /mcp: MCP_ACCESS_KEY eller en af brugernøglerne i MCP_USER_KEYS (se auth/user.ts). Uden nøgler er ruten åben. */
+function requireMcpKey(config: Config) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!mcpKeyRequired(config)) return next();
+    if (isValidMcpKey(config, providedKey(req))) return next();
+    res.status(401).json({ error: "Unauthorized" });
+  };
+}
+
+export function createApp({ config, client, provider, store, pages }: AppDeps) {
   const app = createMcpExpressApp({ host: "0.0.0.0", jsonLimit: "1mb" });
   app.disable("x-powered-by");
 
@@ -65,7 +70,7 @@ export function createApp({ config, client, provider, store }: AppDeps) {
 
   app.get("/health", async (_req, res) => {
     // Altid 200, så en midlertidig databasefejl ikke stopper et deploy. Tilstanden står i svaret.
-    const dbOk = await store.ping();
+    const dbOk = (await store.ping()) && (await pages.ping());
     res.json({
       status: dbOk ? "ok" : "degraded",
       version: VERSION,
@@ -74,7 +79,7 @@ export function createApp({ config, client, provider, store }: AppDeps) {
       lassoCredentials: hasLassoCredentials(config),
       database: store.kind,
       databaseOk: dbOk,
-      mcpKeyRequired: isSet(config.MCP_ACCESS_KEY),
+      mcpKeyRequired: mcpKeyRequired(config),
       uptimeSeconds: Math.round(process.uptime()),
     });
   });
@@ -82,7 +87,7 @@ export function createApp({ config, client, provider, store }: AppDeps) {
   // --- MCP (Streamable HTTP, stateless: ny server pr. request) --------------
   const handleMcp = async (req: Request, res: Response) => {
     const user = getCurrentUser(req, config);
-    const server = createMcpServer({ config, provider, store, user });
+    const server = createMcpServer({ config, provider, store, pages, user });
     const transport = new NodeStreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     res.on("close", () => {
       transport.close().catch(() => {});
@@ -99,8 +104,8 @@ export function createApp({ config, client, provider, store }: AppDeps) {
     }
   };
   app.use("/mcp", cors({ exposedHeaders: ["Mcp-Session-Id"] }));
-  app.all("/mcp", requireKey(config.MCP_ACCESS_KEY), handleMcp);
-  app.all("/mcp/:key", requireKey(config.MCP_ACCESS_KEY), handleMcp);
+  app.all("/mcp", requireMcpKey(config), handleMcp);
+  app.all("/mcp/:key", requireMcpKey(config), handleMcp);
 
   // --- Gemte visninger -------------------------------------------------------
   app.get("/api/views/:org/:slug", async (req, res) => {
@@ -347,7 +352,10 @@ async function main() {
   const config = loadConfig();
   const client = new LassoClient(config);
   const provider = createProvider(config, client);
-  const store = createViewStore(config.DATABASE_URL);
+  // Én pool deles af gemte visninger og gemte sider; uden DATABASE_URL holdes begge i hukommelsen.
+  const pool = createPool(config.DATABASE_URL);
+  const store = createViewStore(pool ?? "");
+  const pages = createSavedPageStore(pool ?? "");
 
   // Databasen kan starte efter appen på Railway: prøv i baggrunden med backoff.
   // Lykkes det ikke, prøver hvert kald til databasen igen.
@@ -355,6 +363,7 @@ async function main() {
     for (let attempt = 1; attempt <= 8; attempt++) {
       try {
         await store.migrate();
+        await pages.migrate();
         if (attempt > 1) console.log(`[db] migreret (forsøg ${attempt})`);
         return;
       } catch (err) {
@@ -364,10 +373,10 @@ async function main() {
     }
   })();
 
-  const app = createApp({ config, client, provider, store });
+  const app = createApp({ config, client, provider, store, pages });
   const server = app.listen(config.PORT, "0.0.0.0", () => {
     console.log(
-      `[lasso-mcp] v${VERSION} ${config.APP_ENV} på port ${config.PORT} | data: ${provider.kind} | lasso-credentials: ${hasLassoCredentials(config) ? "ja" : "nej"} | søgning: ${client.hasSearchCredentials ? config.LASSO_SEARCH_API_BASE_URL : "ingen nøgle"} | db: ${store.kind} | mcp-nøgle: ${isSet(config.MCP_ACCESS_KEY) ? "ja" : "nej"} | ${config.publicBaseUrl}/mcp`,
+      `[lasso-mcp] v${VERSION} ${config.APP_ENV} på port ${config.PORT} | data: ${provider.kind} | lasso-credentials: ${hasLassoCredentials(config) ? "ja" : "nej"} | søgning: ${client.hasSearchCredentials ? config.LASSO_SEARCH_API_BASE_URL : "ingen nøgle"} | db: ${store.kind} | mcp-nøgle: ${mcpKeyRequired(config) ? "ja" : "nej"} | ${config.publicBaseUrl}/mcp`,
     );
     void probeLasso(config, client, provider).catch((err) => console.error("[lasso-probe] fejl:", errorMessage(err)));
   });
@@ -375,7 +384,9 @@ async function main() {
   const shutdown = () => {
     console.log("[lasso-mcp] lukker ned");
     server.close(() => {
-      void store.close().finally(() => process.exit(0));
+      void Promise.all([store.close(), pages.close()])
+        .then(() => pool?.end())
+        .finally(() => process.exit(0));
     });
     setTimeout(() => process.exit(0), 10_000).unref();
   };

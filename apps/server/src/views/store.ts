@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import pg from "pg";
 import type { ViewSpec } from "@lasso/spec";
+import { createPool, isDatabaseUrl } from "../db.js";
 
 export const VISIBILITIES = ["private", "org", "link"] as const;
 export type Visibility = (typeof VISIBILITIES)[number];
@@ -128,9 +129,12 @@ export class PgViewStore implements ViewStore {
   private readonly pool: pg.Pool;
   private migrated: Promise<void> | null = null;
 
-  constructor(connectionString: string) {
-    this.pool = new pg.Pool({ connectionString, max: 5, idleTimeoutMillis: 30_000, connectionTimeoutMillis: 10_000 });
-    this.pool.on("error", (err) => console.error("[db] pool error:", err.message));
+  private readonly ownsPool: boolean;
+
+  /** Tager en connection string (egen pool) eller en delt pool (se db.ts), som ejeren selv lukker. */
+  constructor(conn: string | pg.Pool) {
+    this.ownsPool = typeof conn === "string";
+    this.pool = typeof conn === "string" ? createPool(conn)! : conn;
   }
 
   /** Idempotent. Fejler den (fx fordi databasen ikke er oppe endnu), prøves igen ved næste kald. */
@@ -219,7 +223,7 @@ export class PgViewStore implements ViewStore {
   }
 
   async close() {
-    await this.pool.end();
+    if (this.ownsPool) await this.pool.end();
   }
 }
 
@@ -265,6 +269,7 @@ export class MemoryViewStore implements ViewStore {
   }
 }
 
-export function createViewStore(databaseUrl: string): ViewStore {
-  return databaseUrl && !databaseUrl.startsWith("${{") ? new PgViewStore(databaseUrl) : new MemoryViewStore();
+export function createViewStore(conn: string | pg.Pool): ViewStore {
+  if (typeof conn !== "string") return new PgViewStore(conn);
+  return isDatabaseUrl(conn) ? new PgViewStore(conn) : new MemoryViewStore();
 }

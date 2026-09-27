@@ -301,6 +301,15 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     props: `list?, days? (1–90, standard 7), types? (delmængde af ${CHANGE_TYPES.join(" | ")}), title?`,
   },
 
+  // Gem-laget (docs/gem-lag.md) ------------------------------------------------
+  {
+    type: "LassoSavedPages",
+    title: "Gemte sider",
+    description:
+      "Brug til: brugerens egne gemte virksomheds- og personsider – 'mine gemte', 'hvad har jeg gemt', 'min liste'. Vises normalt af list_saved_pages; i render_view kun sammen med andre elementer. Brug ikke når: brugeren vil gemme eller fjerne en side (save_page / remove_saved_page) eller have et delbart link til en visning (save_view). Kræver: kind? (company | person | all, standard all), limit? (1–100, standard 20); ingen gemte sider giver tom tilstand med forklaring. Eksempel: 'Vis mine gemte virksomheder' → list_saved_pages { kind: 'company' }.",
+    props: "kind? (company | person | all), limit? (1–100, standard 20), title?",
+  },
+
   // Interaktion ----------------------------------------------------------------
   {
     type: "LassoFollowUps",
