@@ -256,9 +256,23 @@ export interface BeneficialOwnershipVM {
 }
 
 /** Tekstsektioner fra CVR-stamdata (katalog 12, "Tekstsektioner"). Felter ud over branche er ubekræftede. */
+/**
+ * Et stykke tekst, evt. med en navngiven entitet (Lassos "{Navn|LassoId}"-markup): `lassoId`
+ * sat = navnet kan åbnes som virksomhed (CVR-1-) eller person (CVR-3-) i værter med drill-down.
+ * `highlight` = virksomhedens eget navn i fed (Paqle). Bruges i nyheder og tekstsektioner.
+ */
+export interface TextSegment {
+  text: string;
+  lassoId?: string;
+  highlight?: boolean;
+}
+
 export interface TextSectionItem {
   heading: string;
+  /** Ren tekst uden markup (navnene beholdes). */
   body: string;
+  /** Samme tekst opdelt i segmenter med entiteter, når kilden har markup (regnskabsanalysen). */
+  segments?: TextSegment[];
   /** Ekstra linje under brødteksten i muted, fx "NACE 631000". */
   note?: string;
 }
@@ -305,8 +319,8 @@ export interface NewsItemVM {
    * virksomhedens navn (regel 17: navn i fed, ikke koral). Bruges i stedet for en gættet
    * tekstsøgning, når de findes.
    */
-  headlineSegments?: { text: string; highlight?: boolean }[];
-  extractSegments?: { text: string; highlight?: boolean }[];
+  headlineSegments?: TextSegment[];
+  extractSegments?: TextSegment[];
 }
 
 export interface NewsVM {
