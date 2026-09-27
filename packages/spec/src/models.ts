@@ -292,6 +292,11 @@ export interface TimelineEventVM {
   from?: string;
   to?: string;
   category: string;
+  /**
+   * Samme titel opdelt i segmenter, når den nævner en entitet (personens historik: selskabsnavnet
+   * med Lasso-ID, så det kan åbnes i værter med drill-down). `title` er altid den rene tekst.
+   */
+  titleSegments?: TextSegment[];
 }
 
 export interface TimelineVM {
@@ -487,9 +492,20 @@ export interface OwnershipGraphVM {
   note?: string;
 }
 
-/** Stabil nøgle for et ejerdiagram, så UI og server finder samme graf. */
-export function ownershipGraphKey(g: { company: string; ingoingDepth: number; outgoingDepth: number; onDate?: string }): string {
-  return `${g.company}|${g.ingoingDepth}|${g.outgoingDepth}|${g.onDate ?? ""}`;
+/**
+ * Stabil nøgle for et ejerdiagram, så UI og server finder samme graf. Roden er en virksomhed
+ * (`company`) eller en person (`person`, personsidens ejerskaber); nøglen har samme form.
+ */
+export function ownershipGraphKey(g: { company?: string; person?: string; ingoingDepth: number; outgoingDepth: number; onDate?: string }): string {
+  return `${g.company ?? g.person ?? ""}|${g.ingoingDepth}|${g.outgoingDepth}|${g.onDate ?? ""}`;
+}
+
+/**
+ * Den entitet, en tidslinje, nyhedsliste eller et ejerdiagram handler om: virksomheden eller
+ * personen (præcis én af dem er sat, se spec.ts). Nøglen i Dataset (timeline, news) og fejlnøglen.
+ */
+export function entityRefOf(c: { company?: string; person?: string }): string {
+  return c.company ?? c.person ?? "";
 }
 
 export interface CompanyRowVM {

@@ -33,11 +33,12 @@ import {
   type TextSegment,
   type TimelineVM,
   hasReportingDuty,
+  isPersonId,
 } from "@lasso/spec";
 import { CREDIT_NONE_REASON } from "../lasso/creditAdapters.js";
 import { applyCriteria, sortRows } from "./criteria-eval.js";
-import { demoOwnershipGraph } from "./demoGraph.js";
-import { demoFindPersons, demoPerson, demoPersonIds, demoPersonNetwork } from "./demoPeople.js";
+import { demoOwnershipGraph, demoPersonOwnershipGraph } from "./demoGraph.js";
+import { demoFindPersons, demoPerson, demoPersonIds, demoPersonNetwork, demoPersonNews } from "./demoPeople.js";
 import { NotFoundError, type ChangeFeedOptions, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
 
 /**
@@ -735,6 +736,8 @@ export class DemoProvider implements DataProvider {
   }
 
   async news(lassoId: string, limit: number) {
+    // Katalog 16: nyheder om en person (Lasso News tager både virksomheds- og person-ID'er).
+    if (isPersonId(lassoId)) return demoPersonNews(COMPANIES, lassoId, limit);
     return newsFor(get(lassoId), limit);
   }
 
@@ -768,11 +771,14 @@ export class DemoProvider implements DataProvider {
   }
 
   async ownershipGraph(lassoId: string, opts: OwnershipGraphOptions) {
-    get(lassoId);
-    return demoOwnershipGraph(lassoId, opts, (id) => {
+    const lookup = (id: string) => {
       const c = BY_ID.get(id);
       return c ? strip(c) : undefined;
-    });
+    };
+    // Katalog 16: personsidens ejerskaber med personen som rod.
+    if (isPersonId(lassoId)) return demoPersonOwnershipGraph(demoPerson(COMPANIES, lassoId), opts, lookup);
+    get(lassoId);
+    return demoOwnershipGraph(lassoId, opts, lookup);
   }
 
   async person(lassoId: string) {

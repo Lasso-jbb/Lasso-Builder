@@ -1,6 +1,8 @@
 import {
   isPersonId,
+  longestPeriodYears,
   roleKind,
+  type PeriodInput,
   type PersonNetworkCompanyVM,
   type PersonNetworkRowVM,
   type PersonNetworkVM,
@@ -8,7 +10,8 @@ import {
   type PersonSearchRowVM,
   type PersonVM,
 } from "@lasso/spec";
-import { arr, at, dateStr, isObj, items, num, shareText, statusKind, str, titleCase, type Json } from "./adapters.js";
+import type { OwnershipEdgeVM, OwnershipGraphVM, OwnershipNodeVM } from "@lasso/spec";
+import { arr, at, dateStr, isObj, items, num, shareRange, shareText, statusKind, str, titleCase, type Json } from "./adapters.js";
 
 /**
  * Personsiden (katalog 16). Svarformerne er læst i docs.lassox.com (api/people/people og
@@ -108,22 +111,44 @@ export function adaptPerson(lassoId: string, current: Json, history?: Json): Per
   for (const r of merged) unique.set(`${roleKey(r)}|${r.from ?? ""}`, r);
 
   const addr = isObj(at(current, "address.value")) ? at(current, "address.value") : at(current, "address");
-  const secret = at(current, "address.secret") === true;
+  const secret = at(current, "address.secret") === true || at(current, "addressProtected") === true;
   return {
     lassoId: str(current, "lassoId") ?? lassoId,
     name: str(current, "name") ?? str(history, "name") ?? lassoId,
+    // Kun by, postnummer, kommune og land; gade og husnummer læses aldrig (personhovedets regel).
     city: secret ? undefined : str(addr, "postalDistrict", "cityName", "city"),
     municipality: secret ? undefined : titleCase(str(addr, "municipality.name", "municipality")),
+    zip: secret ? undefined : str(addr, "postalCode", "zipCode", "zip"),
+    country: secret ? undefined : foreignCountry(str(addr, "countryCode", "country")),
+    ...(secret ? { addressProtected: true } : {}),
+    unitNumber: str(current, "unitNumber", "unitNo"),
     roles: [...unique.values()],
     updated: dateStr(current, "lastUpdated", "updated", "updatedAt"),
   };
 }
 
-const YEAR_MS = 365.25 * 86_400_000;
+/** Landet som dansk navn, når bopælen er uden for Danmark ("SE" -> "Sverige"); Danmark udelades. */
+function foreignCountry(raw: string | undefined): string | undefined {
+  const v = raw?.trim();
+  if (!v || /^(dk|dnk|danmark|denmark)$/i.test(v)) return undefined;
+  if (/^[a-z]{2}$/i.test(v)) {
+    try {
+      return new Intl.DisplayNames(["da"], { type: "region" }).of(v.toUpperCase()) ?? v.toUpperCase();
+    } catch {
+      return v.toUpperCase();
+    }
+  }
+  return titleCase(v) ?? v;
+}
 
 /**
  * GET /modules/network/{lassoId}: [{ name, unitNo, companyRelation: [{ companyName, cvr, status,
  * currentRoles: [], overlaps: [{ from, to, theirRoles: [], ownRoles: [] }] }] }].
+ *
+ * "År sammen" (overlapYears) er den LÆNGSTE SAMMENHÆNGENDE periode, de to har siddet sammen i
+ * mindst ét selskab: alle overlap på tværs af selskaberne lægges sammen, hvor de overlapper eller
+ * støder op til hinanden, og et hul bryder perioden (longestPeriodYears). Tidligere blev
+ * overlappene summeret, så 13 fælles selskaber kunne give "105 år sammen".
  */
 export function adaptPersonNetwork(lassoId: string, raw: Json, today = new Date().toISOString().slice(0, 10)): PersonNetworkVM {
   const list = Array.isArray(raw) ? raw : arr(raw, "network", "people", "persons", "results", "items");
@@ -134,7 +159,7 @@ export function adaptPersonNetwork(lassoId: string, raw: Json, today = new Date(
     const unit = num(e, "unitNo", "unitNumber");
     const id = str(e, "lassoId", "id") ?? (unit !== undefined ? `CVR-3-${unit}` : undefined);
     if (id === lassoId) continue;
-    let ms = 0;
+    const periods: PeriodInput[] = [];
     let active = false;
     const companies: PersonNetworkCompanyVM[] = [];
     for (const c of arr(e, "companyRelation", "companyRelations", "companies", "relations")) {
@@ -152,7 +177,7 @@ export function adaptPersonNetwork(lassoId: string, raw: Json, today = new Date(
         if (f && (!from || f < from)) from = f;
         if (!t) open = true;
         else if (!to || t > to) to = t;
-        if (f) ms += Math.max(0, Date.parse(t ?? today) - Date.parse(f));
+        if (f) periods.push({ from: f, to: t });
         const theirs = arr(o, "theirRoles").find((r): r is string => typeof r === "string");
         if (theirs) role = theirs;
       }
@@ -176,7 +201,7 @@ export function adaptPersonNetwork(lassoId: string, raw: Json, today = new Date(
       lassoId: id,
       name,
       companies,
-      overlapYears: Math.round(ms / YEAR_MS),
+      overlapYears: longestPeriodYears(periods, today),
       since: froms[0],
       until: active ? undefined : tos.at(-1),
       active,
@@ -184,6 +209,35 @@ export function adaptPersonNetwork(lassoId: string, raw: Json, today = new Date(
   }
   people.sort((a, b) => b.overlapYears - a.overlapYears || Number(b.active) - Number(a.active) || a.name.localeCompare(b.name, "da"));
   return { lassoId, people };
+}
+
+/**
+ * Reserve for personsidens ejerdiagram, når ejergrafen ikke kan hentes for et person-ID: personen
+ * som rod og ét lag med de selskaber, personen ejer legalt ifølge sine ejerroller (GET /{lassoId},
+ * gruppen `owner`). Reelt ejerskab (`trueOwner`) er ikke en kant i ejergrafen og tages ikke med.
+ */
+export function graphFromPersonRoles(p: PersonVM, opts: { outgoingDepth: number; onDate?: string }): OwnershipGraphVM {
+  const nodes: OwnershipNodeVM[] = [{ id: p.lassoId, name: p.name, kind: "person", root: true }];
+  const edges: OwnershipEdgeVM[] = [];
+  if (opts.outgoingDepth >= 1) {
+    for (const r of p.roles) {
+      if (r.kind !== "owner" || /reel/i.test(r.role) || !r.companyId) continue;
+      if (!nodes.some((n) => n.id === r.companyId)) {
+        nodes.push({ id: r.companyId, name: r.companyName, kind: "company", cvr: r.cvr, form: r.companyForm, status: r.companyStatus, statusKind: r.companyStatusKind });
+      }
+      edges.push({ from: p.lassoId, to: r.companyId, share: shareRange(r.share), since: r.from, ...(r.to ? { until: r.to } : {}) });
+    }
+  }
+  return {
+    rootId: p.lassoId,
+    nodes,
+    edges,
+    ingoingDepth: 0,
+    outgoingDepth: Math.min(1, opts.outgoingDepth),
+    onDate: opts.onDate,
+    fetchedAt: new Date().toISOString(),
+    note: "Kun personens direkte ejerskaber; ejergrafen kunne ikke hentes.",
+  };
 }
 
 /** Personer fra GET /data/cvr/search?type=person: { people: { results: [{ lassoId, name, city, … }] } }. */

@@ -1,15 +1,59 @@
 import { useMemo, useState } from "react";
-import { formatDate, type TimelineVM } from "@lasso/spec";
+import { formatDate, isPersonId, type TextSegment, type TimelineVM } from "@lasso/spec";
+import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 
 const ALL = "Alle typer";
 
 /**
+ * Titel med entiteter (personens historik): et selskab (CVR-1-) eller en person (CVR-3-/CVR-4-)
+ * med Lasso-ID kan åbnes, når værten har drill-down; ellers står navnet som almindelig tekst.
+ */
+function TitleSegments({ segments, onOpen }: { segments: readonly TextSegment[]; onOpen?: (a: ViewAction) => void }) {
+  return (
+    <>
+      {segments.map((s, i) => {
+        const id = s.lassoId;
+        if (onOpen && id && /^CVR-1-/i.test(id)) {
+          return (
+            <button key={i} type="button" className="lasso-link lasso-timeline__entity" onClick={() => onOpen({ kind: "open-company", lassoId: id, name: s.text })}>
+              {s.text}
+            </button>
+          );
+        }
+        if (onOpen && isPersonId(id)) {
+          return (
+            <button key={i} type="button" className="lasso-link lasso-timeline__entity" onClick={() => onOpen({ kind: "open-person", lassoId: id, name: s.text })}>
+              {s.text}
+            </button>
+          );
+        }
+        return <span key={i}>{s.text}</span>;
+      })}
+    </>
+  );
+}
+
+/**
  * Tidslinje (katalog 12, "Tidslinje"). Årsoverskrift som overlinje, nyeste
  * begivenhed har koral prik, ændringer vises som "fra → til", kategori og
- * dato i sidste linje.
+ * dato i sidste linje. Bruges også til personens historik (katalog 16), hvor
+ * selskabsnavnene i titlerne kan åbnes (`onOpen`).
  */
-export function LassoTimeline({ timeline, title, error }: { timeline?: TimelineVM; title?: string; error?: string }) {
+export function LassoTimeline({
+  timeline,
+  title,
+  error,
+  onOpen,
+  emptyReason,
+}: {
+  timeline?: TimelineVM;
+  title?: string;
+  error?: string;
+  onOpen?: (a: ViewAction) => void;
+  /** Tom tilstand; standard er virksomhedens tekst. */
+  emptyReason?: string;
+}) {
   const heading = title ?? "Historik";
   const categories = useMemo(() => [...new Set((timeline?.events ?? []).map((e) => e.category))], [timeline]);
   const [filter, setFilter] = useState(ALL);
@@ -38,7 +82,7 @@ export function LassoTimeline({ timeline, title, error }: { timeline?: TimelineV
   if (matching.length === 0) {
     return (
       <Section title={heading} action={picker} span="half">
-        <DataState state="empty" reason="Der er ingen registrerede begivenheder i CVR endnu." />
+        <DataState state="empty" reason={emptyReason ?? "Der er ingen registrerede begivenheder i CVR endnu."} />
       </Section>
     );
   }
@@ -59,7 +103,7 @@ export function LassoTimeline({ timeline, title, error }: { timeline?: TimelineV
                   {i < events.length - 1 ? <span className="lasso-timeline__line" aria-hidden="true" /> : null}
                 </div>
                 <div className="lasso-timeline__body">
-                  <div className="lasso-timeline__title">{e.title}</div>
+                  <div className="lasso-timeline__title">{e.titleSegments ? <TitleSegments segments={e.titleSegments} onOpen={onOpen} /> : e.title}</div>
                   {e.from || e.to ? (
                     <div className="lasso-timeline__change">
                       {e.from ? <span className="lasso-timeline__from">{e.from}</span> : null}

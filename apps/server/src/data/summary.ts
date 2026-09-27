@@ -17,6 +17,7 @@ import {
   percentChange,
   personCompanies,
   personCounts,
+  personFacts,
   personRisk,
   savedPagesKey,
   searchKey,
@@ -105,7 +106,17 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
       if (o?.owners.length) lines.push(`Ejere: ${o.owners.slice(0, 4).map((x) => `${x.name}${x.share ? ` ${x.share}` : ""}${x.votes ? ` (stemmer ${x.votes})` : ""}`).join(", ")}.`);
       if (o?.auditor) lines.push(`Revisor: ${o.auditor.name}.`);
     }
-    if (c.type === "LassoOwnershipDiagram") {
+    if (c.type === "LassoOwnershipDiagram" && c.person) {
+      // Katalog 16: personens ejerskaber (personen er roden).
+      const g = ds.ownershipGraphs[ownershipGraphKey(c)];
+      if (g) {
+        const name = (id: string) => g.nodes.find((n) => n.id === id)?.name ?? id;
+        const owned = g.edges.filter((e) => e.from === g.rootId && !e.until).map((e) => `${name(e.to)}${e.share ? ` ${formatShare(e.share)}` : ""}`);
+        const below = g.edges.filter((e) => e.from !== g.rootId && !e.until).length;
+        lines.push(`Ejerskab: ${owned.length ? `ejer direkte ${owned.slice(0, 6).join(", ")}` : "ejer ingen selskaber i CVR"}${below ? `; de ejede selskaber ejer ${below} ${below === 1 ? "selskab" : "selskaber"} mere` : ""}.`);
+        if (g.note) lines.push(g.note);
+      }
+    } else if (c.type === "LassoOwnershipDiagram") {
       const g = ds.ownershipGraphs[ownershipGraphKey(c)];
       if (g) {
         const name = (id: string) => g.nodes.find((n) => n.id === id)?.name ?? id;
@@ -133,7 +144,30 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
     }
     if (c.type === "LassoPersonNetwork") {
       const net = ds.personNetworks[c.person];
-      if (net?.people.length) lines.push(`Netværk: ${net.people.slice(0, 5).map((x) => `${x.name} (${x.overlapYears} år, ${x.companies.length} fælles selskaber${x.active ? "" : ", afsluttet"})`).join(", ")}.`);
+      // "år sammen" er den længste sammenhængende periode i fælles selskaber, ikke summen.
+      if (net?.people.length) lines.push(`Netværk (år sammen = længste sammenhængende periode): ${net.people.slice(0, 5).map((x) => `${x.name} (${x.overlapYears} år, ${x.companies.length} fælles selskaber${x.active ? "" : ", afsluttet"})`).join(", ")}.`);
+    }
+    if (c.type === "LassoPersonFacts") {
+      const p = ds.persons[c.person];
+      if (p) {
+        const f = personFacts(p);
+        const home = p.addressProtected ? "adressebeskyttet" : [[p.zip, p.city].filter(Boolean).join(" "), p.municipality && `${p.municipality} Kommune`, p.country].filter(Boolean).join(", ");
+        const facts = [
+          home && `bopæl ${home}`,
+          `ejer ${f.ownedCompanies} ${f.ownedCompanies === 1 ? "selskab" : "selskaber"}`,
+          f.firstRegistered && `første registrering ${f.firstRegistered.slice(0, 4)}`,
+          f.latestChange && `seneste rolleskift ${formatDate(f.latestChange)}`,
+        ].filter(Boolean);
+        lines.push(`Stamoplysninger: ${facts.join("; ")}.`);
+      }
+    }
+    if (c.type === "LassoTimeline" && c.person) {
+      const events = ds.timeline[c.person]?.events ?? [];
+      if (events.length) lines.push(`Historik (seneste ${Math.min(3, events.length)} af ${events.length}): ${events.slice(0, 3).map((e) => `${formatDate(e.date)} ${e.title}`).join("; ")}.`);
+    }
+    if (c.type === "LassoNews" && c.person) {
+      const items = ds.news[c.person]?.items ?? [];
+      if (items.length) lines.push(`Nyheder om personen (seneste ${Math.min(3, items.length)}): ${items.slice(0, 3).map((n) => `${n.time ? `${formatDate(n.time)} ` : ""}${n.headline} (${n.source})`).join("; ")}.`);
     }
     if (c.type === "LassoPersonRisk") {
       const p = ds.persons[c.person];

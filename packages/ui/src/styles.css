@@ -1113,6 +1113,14 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-column:last-child .lasso-column__item { padding-right: 0; }
 /* Komponenter i en kolonne fylder kolonnen; deres egne spans gælder ikke her */
 .lasso-column__item > * { grid-column: auto; width: 100%; }
+/* Bånd med bredder (personsiden: roller ¾ + stamoplysninger ¼): forholdet sættes af LassoView (bandTemplate).
+   Under 960 px bliver ¼ for smal; så står kolonnerne under hinanden i fuld bredde, adskilt af en linje. */
+.lasso-columns--ratio { grid-template-columns: var(--lasso-columns-template); }
+@container lasso (max-width: 960px) {
+  .lasso-columns--ratio { grid-template-columns: minmax(0, 1fr); }
+  .lasso-columns--ratio > .lasso-column + .lasso-column { border-left: 0; border-top: 1px solid var(--lasso-border); }
+  .lasso-columns--ratio .lasso-column__item { padding-left: 0; padding-right: 0; }
+}
 @container lasso (max-width: 960px) {
   .lasso-columns--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lasso-columns--3 .lasso-column:nth-child(3) { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--lasso-border); }
@@ -1124,6 +1132,8 @@ button.lasso-relations__name:hover { text-decoration: underline; }
   .lasso-column { display: contents; }
   .lasso-column__item, .lasso-column + .lasso-column .lasso-column__item { min-width: 0; order: var(--lasso-mobile-order, 30); padding: var(--lasso-space-5) 0; border-left: 0; border-top: 1px solid var(--lasso-border); }
   .lasso-column__item + .lasso-column__item { border-top: 1px solid var(--lasso-border); }
+  /* Personsiden: båndet lige under hovedet (roller | stamoplysninger); hovedets bundlinje er nok (som på desktop) */
+  .lasso-cell:has(> .lasso-personhead) + .lasso-columns > .lasso-column:first-child > .lasso-column__item:first-child { border-top: 0; }
 }
 
 /* Nøgle-værdi i en smal kolonne: nøglen tager 45 % i stedet for fast 190 px, så værdien ikke skæres af */
@@ -1138,6 +1148,17 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-personhead__kind { font-size: var(--lasso-fs-sm); line-height: 18px; font-weight: 500; color: var(--lasso-text-2); }
 .lasso-personhead__facts { margin: 0; font-size: var(--lasso-fs); line-height: 20px; color: var(--lasso-text-2); }
 .lasso-personhead .lasso-source { margin-top: 2px; }
+
+/* Stamoplysninger (¼): nøglen får halvdelen og må ombrydes i den smalle kolonne i stedet for at blive skåret af. */
+.lasso-personfacts { container: personfacts / inline-size; }
+.lasso-personfacts .lasso-kv-row__label, .lasso-column .lasso-personfacts .lasso-kv-row__label { width: min(50%, 190px); white-space: normal; }
+.lasso-column .lasso-personfacts .lasso-kv-row__value { overflow-wrap: break-word; }
+@container personfacts (max-width: 320px) {
+  .lasso-personfacts .lasso-kv-row--long { flex-wrap: wrap; row-gap: 2px; padding: 8px 0; }
+  .lasso-column .lasso-personfacts .lasso-kv-row--long .lasso-kv-row__label { width: 100%; }
+}
+/* Personens historik: selskabsnavnet i titlen kan åbnes; samme vægt som resten af titlen. */
+.lasso-timeline__entity { display: inline; font-weight: inherit; }
 
 /* Roller over tid: én række pr. selskab, bånd 6 px med 11 px tekst over båndet. */
 .lasso-personroles__legend { display: flex; flex-wrap: wrap; gap: 6px 16px; }

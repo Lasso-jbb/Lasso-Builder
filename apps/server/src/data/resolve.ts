@@ -1,6 +1,9 @@
 import {
   changeFeedKey,
   emptyDataset,
+  entityRefOf,
+  isPersonId,
+  personTimeline,
   savedPagesKey,
   searchKey,
   toLassoId,
@@ -33,7 +36,8 @@ const FETCHERS: Record<string, (ds: Dataset, p: DataProvider, id: string) => Pro
   score: async (ds, p, id) => void (ds.scores[id] = await p.score(id)),
   beneficialOwnership: async (ds, p, id) => void (ds.beneficialOwnership[id] = await p.beneficialOwnership(id)),
   textSections: async (ds, p, id) => void (ds.textSections[id] = await p.textSections(id)),
-  timeline: async (ds, p, id) => void (ds.timeline[id] = await p.timeline(id)),
+  // Katalog 16: personens historik afledes af rollerne (samme cachede personopslag som hovedet).
+  timeline: async (ds, p, id) => void (ds.timeline[id] = isPersonId(id) ? personTimeline(await p.person(id)) : await p.timeline(id)),
   observations: async (ds, p, id) => void (ds.observations[id] = await p.observations(id)),
   creditRating: async (ds, p, id) => void (ds.creditRatings[id] = await p.creditRating(id)),
   auditorIndependence: async (ds, p, id) => void (ds.auditorIndependence[id] = await p.auditorIndependence(id)),
@@ -109,7 +113,8 @@ export function normalizeSpec(spec: ViewSpec, companyPrefix: string): ViewSpec {
   const fix = (ref: string) => toLassoId(ref, companyPrefix);
   const components = spec.components.map((c): ViewComponent => {
     if (c.type === "LassoLineChart") return { ...c, company: fix(c.company), benchmark: c.benchmark ? fix(c.benchmark) : undefined };
-    if ("company" in c) return { ...c, company: fix(c.company) };
+    // Tidslinje, nyheder og ejerdiagram kan gælde en person i stedet (ingen company).
+    if ("company" in c && typeof c.company === "string") return { ...c, company: fix(c.company) };
     if (c.type === "LassoCompareTable" || c.type === "LassoRanking") return { ...c, companies: c.companies.map(fix) };
     return c;
   });
@@ -189,11 +194,14 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
         want(c.company, "textSections");
         break;
       case "LassoTimeline":
-        want(c.company, "timeline");
+        // Virksomhed eller person; nøglen i ds.timeline og fejlnøglen er entitetens ID.
+        want(entityRefOf(c), "timeline");
         break;
-      case "LassoNews":
-        newsWanted.set(c.company, Math.max(newsWanted.get(c.company) ?? 0, c.limit));
+      case "LassoNews": {
+        const id = entityRefOf(c);
+        newsWanted.set(id, Math.max(newsWanted.get(id) ?? 0, c.limit));
         break;
+      }
       case "LassoSummary":
         break;
       case "LassoRiskObservations":
@@ -249,6 +257,7 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
       case "LassoPersonHead":
       case "LassoPersonRoles":
       case "LassoPersonRisk":
+      case "LassoPersonFacts":
         want(c.person, "person");
         break;
       case "LassoPersonNetwork":
@@ -291,7 +300,8 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
     if (graphKeys.has(key)) continue;
     graphKeys.add(key);
     run(`graph:${key}`, async () => {
-      ds.ownershipGraphs[key] = await provider.ownershipGraph(g.company, { ingoingDepth: g.ingoingDepth, outgoingDepth: g.outgoingDepth, onDate: g.onDate });
+      // Roden er virksomheden eller personen (personsidens ejerskaber).
+      ds.ownershipGraphs[key] = await provider.ownershipGraph(entityRefOf(g), { ingoingDepth: g.ingoingDepth, outgoingDepth: g.outgoingDepth, onDate: g.onDate });
     });
   }
 

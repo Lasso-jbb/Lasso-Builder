@@ -176,6 +176,7 @@ export function LassoNews({
   limit,
   error,
   onOpen,
+  emptyReason,
 }: {
   news?: NewsVM;
   companyName?: string;
@@ -185,6 +186,8 @@ export function LassoNews({
   error?: string;
   /** Værten kan åbne virksomheder og personer (drill-down): navne med Lasso-ID bliver links. */
   onOpen?: (a: ViewAction) => void;
+  /** Tom tilstand for andre entiteter end virksomheder, fx "Ingen nyheder om personen." */
+  emptyReason?: string;
 }) {
   const title = "Nyheder";
   const [expanded, setExpanded] = useState(false);
@@ -198,7 +201,7 @@ export function LassoNews({
   if (news.items.length === 0) {
     return (
       <Section title={title} span="half">
-        <DataState state="empty" reason="Der er ikke fundet nyheder om virksomheden." />
+        <DataState state="empty" reason={emptyReason ?? "Der er ikke fundet nyheder om virksomheden."} />
       </Section>
     );
   }
