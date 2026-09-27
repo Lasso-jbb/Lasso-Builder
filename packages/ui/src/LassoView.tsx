@@ -1,5 +1,19 @@
-import { useState } from "react";
-import { changeFeedKey, emptyDataset, riskSignals, searchKey, widthOf, type Dataset, type ViewComponent, ownershipGraphKey } from "@lasso/spec";
+import { useEffect, useState } from "react";
+import {
+  changeFeedKey,
+  emptyDataset,
+  FOCUS_LABELS,
+  isPersonId,
+  riskSignals,
+  savedPagesKey,
+  searchKey,
+  widthOf,
+  type Dataset,
+  type Focus,
+  type ViewComponent,
+  type ViewSpec,
+  ownershipGraphKey,
+} from "@lasso/spec";
 import { FollowUps } from "./components/FollowUps.js";
 import { LassoMark } from "./LassoMark.js";
 import { CompanyHead } from "./components/CompanyHead.js";
@@ -41,12 +55,14 @@ import { PersonRisk } from "./components/PersonRisk.js";
 import { RiskObservations } from "./components/RiskObservations.js";
 import { AuditorIndependence } from "./components/AuditorIndependence.js";
 import { ChangeFeed } from "./components/ChangeFeed.js";
+import { SavedPages } from "./components/SavedPages.js";
+import { ShellIcon } from "./components/ShellIcons.js";
 import { ReportA4 } from "./components/ReportA4.js";
 import { specToCsv } from "./csv.js";
 import { Badge, Skeleton } from "./primitives.js";
 import { SaveDialog } from "./SaveDialog.js";
-import { ToastProvider, Toasts, useHasToastProvider, useToast } from "./components/Toast.js";
-import type { LassoViewProps, ViewAction } from "./types.js";
+import { ToastProvider, Toasts, useHasToastProvider, useToast, type ToastOptions } from "./components/Toast.js";
+import type { ActionResult, LassoViewProps, ViewAction } from "./types.js";
 
 function formatStamp(iso: string | undefined): string {
   if (!iso) return "";
@@ -188,9 +204,21 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       const k = changeFeedKey(c);
       return <ChangeFeed key={key} feed={empty.changeFeeds[k]} title={c.title} types={c.types} error={err(`changeFeed:${k}`)} onOpen={props.host.drillDown ? act : undefined} />;
     }
-    case "LassoSavedPages":
-      // Gem-laget (docs/gem-lag.md): tegnes af SavedPages; pladsholder indtil komponenten er bygget.
-      return <Skeleton key={key} lines={3} height={160} />;
+    case "LassoSavedPages": {
+      // Gem-laget (docs/gem-lag.md). onAction direkte (ikke act), så et mislykket "Fjern" kan rulles tilbage.
+      const k = savedPagesKey(c);
+      return (
+        <SavedPages
+          key={key}
+          list={empty.savedPages?.[k]}
+          title={c.title}
+          error={err(`savedPages:${k}`)}
+          onAction={props.onAction}
+          canDrillDown={Boolean(props.host.drillDown)}
+          canRemove={Boolean(props.host.savePage)}
+        />
+      );
+    }
   }
 }
 
@@ -199,6 +227,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
  * relationer, historik og nyheder, i stedet for kolonne 1 (lange navnelister) først.
  */
 const MOBILE_ORDER: Partial<Record<ViewComponent["type"], number>> = {
+  LassoSavedPages: 5,
   LassoBarChart: 10,
   LassoGroupedBarChart: 10,
   LassoLineChart: 10,
@@ -248,6 +277,88 @@ function columnBands(components: readonly ViewComponent[]): Band[] {
   return bands;
 }
 
+type SaveTarget = Extract<ViewAction, { kind: "save-page" }>;
+
+/**
+ * Gem-laget: den virksomhed eller person, en entitetsside handler om. Første komponent med
+ * `company` (virksomhedsside) eller `person` (personside); navnet fra datasættet, ellers titlen.
+ * focus sendes kun, når undertitlen er præcis et fokusnavn fra komponisten (composeCompany
+ * sætter subtitle = FOCUS_LABELS[focus]); ellers udelades den.
+ */
+export function saveTarget(spec: ViewSpec, ds: Dataset | null): SaveTarget | null {
+  if (spec.kind === "company") {
+    const id = spec.components.map((c) => ("company" in c && typeof c.company === "string" ? c.company : undefined)).find(Boolean);
+    if (!id) return null;
+    const focus = (Object.entries(FOCUS_LABELS) as [Focus, string][]).find(([f, label]) => f !== "overblik" && label === spec.subtitle)?.[0];
+    return { kind: "save-page", lassoId: id, pageKind: "company", name: ds?.companies[id]?.name ?? spec.title, ...(focus ? { focus } : {}) };
+  }
+  if (spec.kind === "person") {
+    const id = spec.components.map((c) => ("person" in c && typeof c.person === "string" ? c.person : undefined)).find(Boolean);
+    if (!isPersonId(id)) return null;
+    return { kind: "save-page", lassoId: id, pageKind: "person", name: ds?.persons[id]?.name ?? spec.title };
+  }
+  return null;
+}
+
+/**
+ * Gem/Gemt øverst til højre i hovedet (katalog 01, regel 21): lille ikonknap med bogmærke og ord.
+ * Gemt = fyldt ikon og "Gemt" (aria-pressed), aldrig farvet fyld (regel 15). Klik skifter straks
+ * (optimistisk) og rulles tilbage, hvis værten svarer med en fejl. Tilstanden følger datasættets
+ * savedIds, når værten opdaterer det.
+ */
+function SavePageButton({
+  target,
+  saved: fromData,
+  onAction,
+  notify,
+}: {
+  target: SaveTarget;
+  saved: boolean;
+  onAction: LassoViewProps["onAction"];
+  notify: (o: ToastOptions) => void;
+}) {
+  const [saved, setSaved] = useState(fromData);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (!busy) setSaved(fromData);
+    // Kun når værtens tilstand skifter; mens et klik venter på svar, bestemmer klikket.
+  }, [fromData]);
+
+  const run = async (want: boolean) => {
+    setSaved(want);
+    setBusy(true);
+    let res: ActionResult | void;
+    try {
+      res = await onAction(want ? target : { kind: "remove-saved-page", lassoId: target.lassoId });
+    } catch (e) {
+      res = { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
+    setBusy(false);
+    if (res && !res.ok) {
+      setSaved(!want);
+      notify({ text: res.error, tone: "error", action: { label: "Prøv igen", onClick: () => void run(want) } });
+      return;
+    }
+    notify({ text: want ? (res?.message ?? "Gemt på din liste") : "Fjernet fra din liste", tone: "ok" });
+  };
+
+  return (
+    <button
+      type="button"
+      className="lasso-iconbtn lasso-frame__save"
+      aria-pressed={saved}
+      aria-busy={busy || undefined}
+      title={saved ? "Fjern fra din liste" : "Gem på din liste"}
+      onClick={() => {
+        if (!busy) void run(!saved);
+      }}
+    >
+      <ShellIcon name="bookmark" size={16} filled={saved} />
+      <span>{saved ? "Gemt" : "Gem"}</span>
+    </button>
+  );
+}
+
 /**
  * Den faste ramme om alle visninger: header (logo, navn, datatidspunkt) ->
  * kriterie-chips -> indhold -> handlingsbjælke. Ens uanset indhold.
@@ -282,17 +393,20 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
   const reportCompany = spec.kind === "company" ? spec.components.map((c) => ("company" in c && typeof c.company === "string" ? c.company : undefined)).find(Boolean) : undefined;
   const canReport = Boolean(host.export && dataset && reportCompany && dataset.companies[reportCompany]);
 
-  // "Link kopieret"/fejl som besked nederst i midten (07). Uden provider: tekst i handlingsbjælken.
-  const copy = async (link: string) => {
-    const res = await onAction({ kind: "copy-link", url: link });
-    const failed = Boolean(res && !res.ok);
-    const text = res && !res.ok ? res.error : "Link kopieret";
-    const shown = toast.show(failed ? { text, tone: "error", action: { label: "Prøv igen", onClick: () => void copy(link) } } : { text, tone: "ok" });
-    if (shown === null) {
-      setNotice(text);
+  // Beskeder nederst i midten (07). Uden provider: tekst i handlingsbjælken.
+  const notify = (o: ToastOptions) => {
+    if (toast.show(o) === null) {
+      setNotice(o.text);
       setTimeout(() => setNotice(null), 2500);
     }
   };
+  const copy = async (link: string) => {
+    const res = await onAction({ kind: "copy-link", url: link });
+    notify(res && !res.ok ? { text: res.error, tone: "error", action: { label: "Prøv igen", onClick: () => void copy(link) } } : { text: "Link kopieret", tone: "ok" });
+  };
+
+  // Gem-laget: Gem/Gemt i hovedet på virksomheds- og personsider, når værten kender brugeren.
+  const target = host.savePage ? saveTarget(spec, dataset) : null;
 
   return (
     <div className="lasso-root" data-theme={theme ?? "light"}>
@@ -317,6 +431,9 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
               {dataset?.source === "demo" ? <Badge tone="demo">Demodata</Badge> : null}
             </div>
           </div>
+          {target && dataset ? (
+            <SavePageButton key={target.lassoId} target={target} saved={Boolean(dataset.savedIds?.includes(target.lassoId))} onAction={onAction} notify={notify} />
+          ) : null}
         </header>
 
         {spec.criteria.length > 0 || (host.refine && spec.kind === "list") ? (
@@ -407,10 +524,11 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
               Del link
             </button>
           ) : null}
-          {/* Én primær knap pr. område, yderst til højre (katalog 01) */}
+          {/* Én primær knap pr. område, yderst til højre (katalog 01). "Gem visning" = delbart link (save_view);
+              Gem/Gemt i hovedet er gem-lagets personlige liste (save_page), så ordene holdes adskilt. */}
           {host.save ? (
             <button className="lasso-btn lasso-btn--primary" onClick={() => setSaving(true)} disabled={saving}>
-              {shareUrl ? "Gem igen" : "Gem"}
+              {shareUrl ? "Gem visning igen" : "Gem visning"}
             </button>
           ) : null}
         </footer>

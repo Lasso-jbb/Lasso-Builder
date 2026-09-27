@@ -44,6 +44,8 @@ export { PersonRoles } from "./components/PersonRoles.js";
 export { PersonNetwork } from "./components/PersonNetwork.js";
 export { PersonRisk } from "./components/PersonRisk.js";
 export { ChangeFeed, dayHeading, clockText } from "./components/ChangeFeed.js";
+export { SavedPages, SAVED_PAGES_EMPTY } from "./components/SavedPages.js";
+export type { SavedPagesProps } from "./components/SavedPages.js";
 export { NotificationPanel, relativeTime, NOTIFICATION_KIND_LABELS } from "./components/NotificationPanel.js";
 export type { NotificationVM, NotificationKind, NotificationPanelProps } from "./components/NotificationPanel.js";
 export { MonitorSettings, MonitorBell, MONITOR_TYPES, MONITOR_TYPE_LABELS } from "./components/MonitorSettings.js";

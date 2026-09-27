@@ -18,6 +18,26 @@ function textOf(result: CallToolResult): string {
     .join("\n");
 }
 
+/** Gem-laget: læg et Lasso-ID til eller træk det fra datasættets savedIds (Gem/Gemt i hovedet). */
+function withSaved(ds: Dataset, lassoId: string, saved: boolean): Dataset {
+  const ids = new Set(ds.savedIds ?? []);
+  if (saved) ids.add(lassoId);
+  else ids.delete(lassoId);
+  return { ...ds, savedIds: [...ids] };
+}
+
+/** Navnet på en virksomhed eller person i datasættet, også fra en liste over gemte sider. */
+function nameIn(ds: Dataset | null | undefined, lassoId: string): string | undefined {
+  if (!ds) return undefined;
+  return (
+    ds.companies[lassoId]?.name ??
+    ds.persons[lassoId]?.name ??
+    Object.values(ds.savedPages ?? {})
+      .flatMap((l) => l.pages)
+      .find((p) => p.lassoId === lassoId)?.name
+  );
+}
+
 async function resolve(app: App, spec: ViewSpec): Promise<Screen> {
   const res = await app.callServerTool({ name: "resolve_view", arguments: { spec } });
   if (res.isError) throw new Error(textOf(res) || "Kunne ikke hente data");
@@ -83,6 +103,9 @@ export function McpView() {
   const current = stack.at(-1);
 
   const replaceTop = (s: Screen) => setStack((st) => [...st.slice(0, -1), s]);
+  // Gem-laget: savedIds opdateres på alle skærme i stakken, så Gem/Gemt også passer efter "tilbage".
+  const patchSaved = (lassoId: string, saved: boolean) =>
+    setStack((st) => st.map((s) => (s.dataset ? { ...s, dataset: withSaved(s.dataset, lassoId, saved) } : s)));
 
   const onAction = async (a: ViewAction): Promise<ActionResult | void> => {
     if (!app) return { ok: false, error: "Ikke forbundet" };
@@ -152,6 +175,41 @@ export function McpView() {
           const url = (r.structuredContent as { url?: string } | undefined)?.url;
           if (url) replaceTop({ ...current, url });
           return { ok: true, url };
+        }
+        case "save-page": {
+          // Gem-laget (docs/gem-lag.md): gem den viste virksomhed eller person på brugerens liste.
+          const r = await app.callServerTool({
+            name: "save_page",
+            arguments: { page: a.lassoId, kind: a.pageKind, ...(a.focus ? { focus: a.focus } : {}) },
+          });
+          if (r.isError) return { ok: false, error: textOf(r) || "Siden kunne ikke gemmes" };
+          patchSaved(a.lassoId, true);
+          const name = (r.structuredContent as { name?: string } | undefined)?.name ?? a.name;
+          void app
+            .updateModelContext({ content: [{ type: "text", text: `Brugeren gemte ${name} (${a.lassoId}) på sin liste.` }] })
+            .catch(() => {});
+          return { ok: true, message: "Gemt på din liste" };
+        }
+        case "remove-saved-page": {
+          const r = await app.callServerTool({ name: "remove_saved_page", arguments: { page: a.lassoId } });
+          if (r.isError) return { ok: false, error: textOf(r) || "Siden kunne ikke fjernes" };
+          const top = current;
+          const name = nameIn(top?.dataset, a.lassoId) ?? a.lassoId;
+          patchSaved(a.lassoId, false);
+          void app
+            .updateModelContext({ content: [{ type: "text", text: `Brugeren fjernede ${name} (${a.lassoId}) fra sin liste.` }] })
+            .catch(() => {});
+          // Viser skærmen listen over gemte sider, hentes den igen, så antal og rækker passer.
+          if (top && top.spec.components.some((c) => c.type === "LassoSavedPages")) {
+            setLoading(true);
+            try {
+              const fresh = await resolve(app, top.spec);
+              setStack((st) => (st.at(-1)?.spec === top.spec ? [...st.slice(0, -1), { ...fresh, url: top.url }] : st));
+            } catch {
+              // Siden er fjernet; listen står med rækken som "fjernet", til den hentes igen.
+            }
+          }
+          return { ok: true };
         }
         case "copy-link":
           try {
@@ -235,6 +293,7 @@ export function McpView() {
         host={{
           prompt: true,
           save: true,
+          savePage: true,
           refine: true,
           drillDown: true,
           back: stack.length > 1,

@@ -1172,6 +1172,25 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 /* PersonList: navnet som link til personsiden (16) beholder rækkens vægt. */
 .lasso-row__open { font-weight: inherit; color: inherit; }
 
+/* ---------- Gem-laget (docs/gem-lag.md) ---------- */
+/* Gem/Gemt øverst til højre i hovedet (01, regel 21): lille ikonknap 32 px (40 px på mobil), 1 px kant, radius 8.
+   Gemt = fyldt ikon + 600, aldrig farvet fyld (regel 15); koral kun som 1 px fokuskant.
+   ".lasso-root" foran, så knappens skrift vinder over ".lasso-root button { font: inherit }". */
+.lasso-root .lasso-iconbtn { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: var(--lasso-btn-h-sm); min-width: var(--lasso-btn-h-sm); padding: 0 10px; border-radius: var(--lasso-radius); border: 1px solid var(--lasso-border-strong); background: var(--lasso-surface); color: var(--lasso-text-2); font-size: var(--lasso-fs-sm); line-height: 16px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+.lasso-root .lasso-iconbtn:hover { background: var(--lasso-surface-2); border-color: var(--lasso-icon); }
+.lasso-root .lasso-iconbtn:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
+.lasso-root .lasso-iconbtn[aria-pressed="true"] { color: var(--lasso-text); font-weight: 600; }
+.lasso-root .lasso-iconbtn[aria-busy="true"] { cursor: progress; }
+.lasso-frame__header .lasso-iconbtn { margin-left: auto; }
+@container lasso (max-width: 560px) {
+  .lasso-root .lasso-iconbtn { height: 40px; min-width: 40px; }
+}
+/* Gemte sider: rækkerne er personlistens (.lasso-row, mindst 44 px på mobil). Dato og "Fjern" står side om side. */
+.lasso-savedpages__side { display: inline-flex; align-items: center; gap: var(--lasso-space-3); }
+.lasso-savedpages__remove { display: inline-flex; align-items: center; min-height: var(--lasso-btn-h-sm); }
+.lasso-savedpages__removed { font-weight: 500; }
+.lasso-savedpages__note { overflow-wrap: anywhere; }
+
 /* ---------- 21 Overvågning og notifikationer (node CA3-0) ---------- */
 /* Ændringsfeed (CA9-0): overskrift 18/600 + periodevælger 32 px; filter-chips 30 px pille, 12 px; valgt = ink-kant + 600 (ingen mørkt fyld). */
 .lasso-feed-section .lasso-section__head { align-items: center; margin-bottom: var(--lasso-space-3); }
