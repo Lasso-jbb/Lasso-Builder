@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -6,6 +7,7 @@ import { AppShell } from "./components/AppShell.js";
 import { LoginCard, LOGIN_HELP } from "./components/LoginCard.js";
 import { Menu } from "./components/Menu.js";
 import { ModuleToolbar } from "./components/ModuleToolbar.js";
+import { Rail } from "./components/Rail.js";
 import { TabStrip } from "./components/TabStrip.js";
 
 const noop = () => {};
@@ -99,4 +101,33 @@ test("AppShell: bundnavigation med portalens tre punkter (Søg, Lister, Konto), 
   assert.doesNotMatch(nav, /Overvågning/);
   assert.match(nav, /class="lasso-bottomnav__item is-on" aria-current="page"[^>]*>[^]*?Søg</);
   assert.match(html, /lasso-mobilebar__title">Søgning</);
+});
+
+test("Skinnen: fod uden plus-ikon ('Se alle gemte'), mens 'Opret ny liste' beholder plusset som standard", () => {
+  const html = renderToStaticMarkup(
+    createElement(Rail, {
+      groups: [
+        { id: "firmaer", label: "Firmaer", items: [{ id: "c1", label: "Eksempel A/S", icon: "letter" }], footer: { label: "Se alle gemte", icon: "none" } },
+        { id: "lister", label: "Lister", items: [], footer: { label: "Opret ny liste" } },
+      ],
+    }),
+  );
+  const at = html.indexOf("lasso-rail__footer--plain");
+  const plain = html.slice(at, html.indexOf("</button>", at));
+  assert.match(html, /class="lasso-rail__item lasso-rail__footer lasso-rail__footer--plain" title="Se alle gemte"/);
+  assert.doesNotMatch(plain, /<svg/, "ingen plus ved 'Se alle gemte'");
+  assert.match(plain, /lasso-rail__icon lasso-rail__icon--empty/);
+  const create = html.slice(html.indexOf('title="Opret ny liste"'));
+  assert.match(create, /^title="Opret ny liste"[^>]*><span class="lasso-rail__icon"><svg/);
+  assert.match(html, /class="lasso-rail__item lasso-rail__footer " title="Opret ny liste"/);
+});
+
+test("Primære knapper: hvid tekst på koral vinder over '.lasso-root button { color: inherit }'", () => {
+  const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+  const inherit = css.indexOf(".lasso-root button { font: inherit; color: inherit; }");
+  const fix = css.indexOf(".lasso-root .lasso-btn--primary, .lasso-root .lasso-btn--primary:hover { color: var(--lasso-on-accent); }");
+  assert.ok(inherit >= 0 && fix > inherit, "reglen findes med samme eller højere specificitet efter arvereglen");
+  // Dialogens primære og "Gem visning" bruger lasso-btn--primary og rammes derfor af reglen
+  assert.match(readFileSync(new URL("./components/Dialog.tsx", import.meta.url), "utf8"), /"lasso-btn--primary"/);
+  assert.match(readFileSync(new URL("./LassoView.tsx", import.meta.url), "utf8"), /className="lasso-btn lasso-btn--primary"[^\n]*\n\s*\{shareUrl \? "Gem visning igen" : "Gem visning"\}/);
 });

@@ -6,6 +6,7 @@ import {
   ShellIcon,
   ToastProvider,
   useToast,
+  useWidth,
   type ActionResult,
   type AppShellMobile,
   type RailGroup,
@@ -108,6 +109,8 @@ function Shell({ user, api, baseUrl, onLoggedOut }: PortalShellProps) {
   const [saved, setSaved] = useState<SavedPageVM[] | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [accountOpen, setAccountOpen] = useState(false);
+  // Bredden på portalens rod, samme container som AppShells mobilbrudpunkt (én synlig Gem-knap).
+  const [rootRef, shellWidth] = useWidth<HTMLDivElement>(typeof window === "undefined" ? 1280 : window.innerWidth);
 
   // Seneste tilstand til asynkrone handlinger, og et løbenummer pr. fane, så et sent svar aldrig
   // overskriver et nyere (hurtige fokusskift, ny søgning mens den forrige henter).
@@ -448,7 +451,7 @@ function Shell({ user, api, baseUrl, onLoggedOut }: PortalShellProps) {
       onSelect: () =>
         openEntity(p.kind === "company" ? { kind: "company", id: p.lassoId, focus: isFocus(p.focus) ? p.focus : "overblik" } : { kind: "person", id: p.lassoId }, p.name),
     });
-    const footer = { label: "Se alle gemte", onSelect: openSaved };
+    const footer = { label: "Se alle gemte", icon: "none" as const, onSelect: openSaved };
     return [
       {
         id: "vaerktoejer",
@@ -541,6 +544,7 @@ function Shell({ user, api, baseUrl, onLoggedOut }: PortalShellProps) {
           route={route}
           data={d}
           savePrefix={savePrefix}
+          shellWidth={shellWidth}
           saved={on}
           canAct={Boolean(entity)}
           onFocus={(focus) => route.kind === "company" && setRoute(active, { ...route, focus })}
@@ -554,7 +558,7 @@ function Shell({ user, api, baseUrl, onLoggedOut }: PortalShellProps) {
   }
 
   return (
-    <div className="lasso-root lasso-portal" data-theme="light">
+    <div ref={rootRef} className="lasso-root lasso-portal" data-theme="light">
       <AppShell
         rail={{
           groups: railGroups,

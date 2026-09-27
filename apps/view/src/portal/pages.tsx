@@ -14,6 +14,7 @@ import {
 } from "@lasso/ui";
 import { FOCUSES, FOCUS_LABELS, type Focus } from "@lasso/spec";
 import type { ViewResult } from "./api.js";
+import { entityHost } from "./data.js";
 import { dataKey, isFocus, type PortalRoute } from "./routes.js";
 import type { PortalTab } from "./tabs.js";
 
@@ -39,9 +40,8 @@ const PERSON_MODULES: readonly TabItem[] = [{ id: "profil", label: "Profil" }];
 
 export const SEARCH_EMPTY = "Søg på navn, CVR-nummer eller en beskrivelse, fx 'revisorer i Aarhus med mindst 10 ansatte'.";
 
-/** Hvad LassoView må i hver slags fane (docs/portal.md). Knapper uden kapabilitet skjules. */
+/** Hvad LassoView må i hver slags fane (docs/portal.md). Knapper uden kapabilitet skjules. Virksomhed og person: entityHost i data.ts. */
 export const SEARCH_HOST: HostCapabilities = { refine: true, drillDown: true, refresh: true, export: true, save: true, savePage: false };
-export const ENTITY_HOST: HostCapabilities = { savePage: true, save: true, refine: false, drillDown: true, refresh: true, export: true, back: false };
 export const SAVED_HOST: HostCapabilities = { savePage: true, drillDown: true };
 
 /** Tilstanden, fanen står i lige nu (de fem tilstande: tom, henter, fejl, fyldt, og fyldt mens den opdateres). */
@@ -162,6 +162,7 @@ export function EntityPage({
   route,
   data,
   savePrefix,
+  shellWidth,
   saved,
   canAct,
   onFocus,
@@ -174,6 +175,8 @@ export function EntityPage({
   route: EntityRoute;
   data: TabData | undefined;
   savePrefix: string;
+  /** Rammens bredde: afgør, om Gem står i modulbjælken (desktop) eller i visningens hoved (mobil). */
+  shellWidth: number;
   /** Står siden på brugerens liste (Gem/Gemt). */
   saved: boolean;
   /** Handlingerne vises, når siden er hentet og vi kender dens Lasso-ID. */
@@ -226,7 +229,7 @@ export function EntityPage({
             url={data.url}
             loading={state === "refreshing"}
             theme="light"
-            host={ENTITY_HOST}
+            host={entityHost(shellWidth)}
             savePrefix={savePrefix}
             onAction={onAction}
           />

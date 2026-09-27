@@ -207,6 +207,9 @@
 .lasso-btn:disabled { opacity: 0.5; cursor: default; }
 .lasso-btn--primary { background: var(--lasso-accent); border-color: var(--lasso-accent); color: var(--lasso-on-accent); font-weight: 600; }
 .lasso-btn--primary:hover { background: var(--lasso-accent-hover); border-color: var(--lasso-accent-hover); }
+/* ".lasso-root" foran, så den hvide tekst vinder over ".lasso-root button { color: inherit }" (fx "Log ind", "Gem visning" og Dialogens primære) */
+.lasso-root .lasso-btn--primary, .lasso-root .lasso-btn--primary:hover { color: var(--lasso-on-accent); }
+.lasso-root .lasso-btn--ink, .lasso-root .lasso-btn--ink:hover { color: var(--lasso-bg); }
 .lasso-btn--ghost { border-color: transparent; background: transparent; color: var(--lasso-text-3); padding: 0 12px; }
 .lasso-btn--ghost:hover { background: var(--lasso-surface-2); border-color: transparent; }
 .lasso-btn--prompt { color: var(--lasso-text-2); background: var(--lasso-surface); }
@@ -1737,6 +1740,8 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
   .lasso-rail__head-label, .lasso-rail__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .lasso-rail__item { justify-content: center; gap: 0; width: 44px; height: 44px; padding: 0; }
   .lasso-rail__footer { width: 100%; height: 46px; }
+  /* En fod uden ikon ("Se alle gemte") har intet at vise i den smalle ikonskinne; værktøjet står i Værktøjer */
+  .lasso-rail__footer--plain { display: none; }
   .lasso-page-columns--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lasso-page-columns--3 > .lasso-page-column:nth-child(3) { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--lasso-border); }
 }

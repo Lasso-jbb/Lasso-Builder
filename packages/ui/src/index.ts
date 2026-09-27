@@ -76,6 +76,7 @@ export type { ModuleToolbarProps, ToolbarAction } from "./components/ModuleToolb
 export { LoginCard, LOGIN_HELP } from "./components/LoginCard.js";
 export type { LoginCardProps } from "./components/LoginCard.js";
 export { ShellIcon } from "./components/ShellIcons.js";
+export { useWidth } from "./useWidth.js";
 export type { ShellIconName } from "./components/ShellIcons.js";
 export { StateBox, Skeleton, Sparkline, Badge, StatusBadge, DataState, Missing, SourceLine, Section, SeverityIcon, severityWord } from "./primitives.js";
 export type { DataStateKind, DataStateProps } from "./primitives.js";
