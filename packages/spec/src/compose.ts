@@ -1,5 +1,4 @@
 import type { Dataset, FinancialYear } from "./models.js";
-import { mergedObservations } from "./riskSignals.js";
 import { hasNoStatements } from "./statements.js";
 import { mainMetric } from "./series.js";
 import { METRIC_FIELD, viewSpecSchema, type Metric, type ViewComponent, type ViewSpec } from "./spec.js";
@@ -49,7 +48,6 @@ export function composeProbe(lassoId: string, focus: Focus = "overblik"): ViewSp
     { type: "LassoKeyFigureCards", company: c },
     { type: "LassoPersonList", company: c, show: "all" },
     { type: "LassoOwnerList", company: c },
-    { type: "LassoRiskObservations", company: c },
   ];
   if (focus === "overblik" || focus === "historik" || focus === "ledelse" || focus === "risiko") components.push({ type: "LassoTimeline", company: c });
   if (focus === "overblik" || focus === "historik") components.push({ type: "LassoNews", company: c, limit: 5 });
@@ -142,7 +140,6 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
   const fin = ds.financials[id]?.years ?? [];
   const people = ds.people[id] ?? [];
   const owners = ds.ownership[id]?.owners ?? [];
-  const obs = ds.observations[id]?.observations ?? [];
   const events = ds.timeline[id]?.events ?? [];
   const news = ds.news[id]?.items ?? [];
   const texts = ds.textSections[id]?.sections ?? [];
@@ -158,19 +155,11 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
   const metric = mainMetric(fin, options.chartMetric);
   const nYears = yearsWith(fin, metric).length;
   const hasProfit = yearsWith(fin, "resultat").length >= 3;
-  // Lassos observationer plus egne signaler (status, egenkapital, underskud ...): et konkursbo
-  // får altid risikoboksen, også når Lassos observationer er tomme.
-  const risk = mergedObservations(id, ds);
-  const seriousRisk = risk.observations.some((o) => o.severity >= 50) || obs.some((o) => o.severity >= 50);
-
   const top: ViewComponent[] = [{ type: "LassoCompanyHead", company: id }];
   const cols: ViewComponent[][] = [[], [], []];
   const bottom: ViewComponent[] = [];
   const put = (col: 1 | 2 | 3, c: ViewComponent) => cols[col - 1]!.push({ ...c, column: col } as ViewComponent);
 
-  // Risiko står øverst, men kun når den er alvorlig, eller når brugeren spørger til risiko (guide 23).
-  // Uden for risiko er boksen kompakt: fundene og "Se alle", så den ikke skubber svaret ned.
-  if (seriousRisk || focus === "risiko") top.push({ type: "LassoRiskObservations", company: id, ...(focus === "risiko" ? {} : { compact: true }) });
   if (fin.length > 0 && focus !== "kontakt") {
     const wanted: Metric[] = focus === "oekonomi" ? [metric, "bruttofortjeneste", "resultat", "egenkapital", "ansatte"] : [metric, "resultat", "egenkapital", "ansatte"];
     top.push({ type: "LassoKeyFigureCards", company: id, metrics: presentNow(fin, wanted).slice(0, 5) });
@@ -252,7 +241,7 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
     }
     case "risiko": {
       columns = 2;
-      // Kreditvurderingen (½) øverst i kolonne 2 ved siden af oplysningerne, lige under risikoboksen.
+      // Kreditvurderingen (½) øverst i kolonne 2 ved siden af oplysningerne.
       if (hasCredit) put(2, { type: "LassoCreditRating", company: id });
       put(1, { type: "LassoKeyValueList", company: id, variant: "company", title: "Virksomhedsoplysninger" });
       if (people.length > 0) put(1, { type: "LassoPersonList", company: id, show: "all" });
@@ -275,8 +264,6 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
       // Overblik, som portalens virksomhedsside: relationer | profil | oplysninger og regnskab.
       if (people.length > 0 || owners.length > 0) put(1, { type: "LassoRelations", company: id });
       if (news.length > 0) put(1, { type: "LassoNews", company: id, limit: 3 });
-      // Kun ved et alvorligt risikosignal, og kun hvis vurderingen allerede er hentet (overblikket henter den ikke).
-      if (seriousRisk && hasCredit) put(2, { type: "LassoCreditRating", company: id });
       if (texts.length > 0) put(2, { type: "LassoTextSections", company: id, title: "Virksomhedsprofil" });
       if (events.length >= 3) put(2, { type: "LassoTimeline", company: id });
       if (hasContact) put(3, { type: "LassoContact", company: id });

@@ -53,7 +53,7 @@ Fejlsvar har formen `{ "errorMessage": string, "httpStatusCode": number, "errorC
 | Legale ejere, historik | GET | `/{lassoId}/history/owners/legal` | ikke koblet på | — | dokumenteret, ikke afprøvet |
 | Reelle ejere | GET | `/{lassoId}/owners/beneficial` | `ownersBeneficial` | `LassoBeneficialOwners` (11) | dokumenteret; **tilkøb (401 for nuværende nøgle)** |
 | Ejergraf | POST | `/modules/relations/graph` | `relationsGraph` | `LassoOwnershipDiagram` (14) | **bekræftet mod API 27.09.2026** |
-| Risikoobservationer | POST | `/modules/observations/{lassoId}` | `observations` | `LassoRiskObservations` (17) | **bekræftet mod API 27.09.2026** |
+| Risikoobservationer | POST | `/modules/observations/{lassoId}` | `observations` | ingen (fjernet fra visningerne 27.09.2026; adapteren bliver) | **bekræftet mod API 27.09.2026** |
 | Lasso News | POST | `/modules/news` | `lassoNews` | `LassoNews` (12) | **bekræftet mod API 27.09.2026** |
 | Paqle-nyheder | GET | `/data/paqle/{lassoId}/news` | `news` | `LassoNews` (12) | **bekræftet mod API 27.09.2026**; tilkøb (Paqle findes på nuværende nøgle) |
 | CHR (husdyr) | GET | `/data/CHR/livestock/{cvr}?onlyCurrent=true` | `chrLivestock` | `LassoLivestock` (20) | **bekræftet mod API 27.09.2026** (kræver Ejendomme-modulet; findes på nuværende nøgle) — adapteren rettes til den bekræftede form i et parallelt arbejde |

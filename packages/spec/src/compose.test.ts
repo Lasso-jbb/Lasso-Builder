@@ -3,12 +3,10 @@ import { test } from "node:test";
 import { composeCompany, composeProbe, shortCompanyName } from "./compose.js";
 import { composePerson } from "./composePerson.js";
 import { emptyDataset, type Dataset, type FinancialYear } from "./models.js";
-import { mergedObservations, riskSignals } from "./riskSignals.js";
 import { effectiveMetric, mainMetric } from "./series.js";
 import { widthOf } from "./spec.js";
 
 const id = "CVR-1-12345678";
-const NOW = new Date("2026-09-26T12:00:00Z");
 
 function company(status = "Normal", founded = "2010-01-01"): Dataset {
   const ds = emptyDataset("demo");
@@ -64,75 +62,6 @@ test("fordelingen af balancen kræver gæld eller balancesum, ikke kun egenkapit
   assert.ok(!composeCompany(id, ds, { focus: "oekonomi" }).components.some((c) => c.type === "LassoShareBars"));
   ds.financials[id] = { lassoId: id, currency: "DKK", years: years.map((y) => ({ ...y, assetsTotal: 5_000_000 })) };
   assert.ok(composeCompany(id, ds, { focus: "oekonomi" }).components.some((c) => c.type === "LassoShareBars"));
-});
-
-test("riskSignals: under konkurs er vigtig (100), opløst er mulig vigtig (50)", () => {
-  const konkurs = riskSignals(id, company("Under konkurs"), NOW);
-  assert.equal(konkurs.signals[0]!.severity, 100);
-  assert.match(konkurs.signals[0]!.title, /Under konkurs/);
-  assert.equal(riskSignals(id, company("Under tvangsopløsning"), NOW).signals[0]!.severity, 100);
-  assert.equal(riskSignals(id, company("Opløst efter spaltning"), NOW).signals[0]!.severity, 50);
-  assert.equal(riskSignals(id, company("Normal"), NOW).signals.length, 0);
-});
-
-test("riskSignals: negativ egenkapital, underskud i træk og manglende regnskab", () => {
-  const ds = company();
-  const y = (year: number, profit: number, equity: number): FinancialYear => ({ year, profit, equity, grossProfit: 1 });
-  ds.financials[id] = { lassoId: id, currency: "DKK", years: [y(2022, 5, 10), y(2023, -1, 5), y(2024, -2, 3), y(2025, -3, -752_000)] };
-  const s = riskSignals(id, ds, NOW).signals;
-  const by = (key: string) => s.find((x) => x.id === `afledt:${key}`);
-  assert.equal(by("egenkapital")?.severity, 50);
-  assert.equal(by("underskud")?.severity, 50);
-  assert.equal(by("underskud")?.title, "Underskud 3 år i træk");
-  assert.equal(by("regnskab"), undefined);
-
-  ds.financials[id] = { lassoId: id, currency: "DKK", years: [y(2024, -1, 5), y(2025, -2, 3)] };
-  assert.equal(riskSignals(id, ds, NOW).signals.find((x) => x.id === "afledt:underskud")?.severity, 25);
-
-  // Seneste regnskab for 2021 i 2026: mangler.
-  ds.financials[id] = { lassoId: id, currency: "DKK", years: [y(2021, 1, 5)] };
-  assert.equal(riskSignals(id, ds, NOW).signals.find((x) => x.id === "afledt:regnskab")?.severity, 50);
-  // Et nystiftet selskab uden regnskab er ikke et signal.
-  const young = company("Normal", "2026-01-01");
-  young.financials[id] = { lassoId: id, currency: "DKK", years: [] };
-  assert.equal(riskSignals(id, young, NOW).signals.length, 0);
-});
-
-test("riskSignals: revisorskift for nylig og mange ledelsesskift (25)", () => {
-  const ds = company();
-  ds.ownership[id] = { lassoId: id, owners: [], auditor: { name: "Revisor ApS", from: "2026-05-01" } };
-  ds.people[id] = [
-    { name: "A", role: "Direktør", from: "2025-01-01" },
-    { name: "B", role: "Direktør", from: "2020-01-01", to: "2025-01-01" },
-    { name: "C", role: "Bestyrelsesmedlem", from: "2025-06-01" },
-    { name: "D", role: "Bestyrelsesmedlem", from: "2019-01-01", to: "2025-06-01" },
-  ];
-  const s = riskSignals(id, ds, NOW);
-  assert.equal(s.signals.find((x) => x.id === "afledt:revisor")?.severity, 25);
-  assert.equal(s.signals.find((x) => x.id === "afledt:ledelse")?.severity, 25);
-  assert.deepEqual(s.checked, ["status", "revisor", "ledelse"]);
-});
-
-test("et selskab under konkurs får altid risikoboksen, også når Lassos observationer er tomme (TIGA)", () => {
-  const ds = company("Under konkurs");
-  ds.people[id] = [];
-  ds.observations[id] = { lassoId: id, observations: [] };
-  ds.financials[id] = { lassoId: id, currency: "DKK", years: [{ year: 2024, equity: -752_000, profit: -70_000, grossProfit: -36_000 }] };
-  for (const focus of ["overblik", "risiko", "oekonomi"] as const) {
-    const spec = composeCompany(id, ds, { focus });
-    assert.equal(spec.components[1]!.type, "LassoRiskObservations", focus);
-  }
-  const merged = mergedObservations(id, ds, NOW);
-  assert.equal(merged.observations[0]!.severity, 100);
-  // Ingen "ingen ledelse"-signal for et konkursbo (forventeligt) og ingen dubletter.
-  assert.ok(!merged.observations.some((o) => o.id === "afledt:ingen-ledelse"));
-});
-
-test("mergedObservations: Lassos egen observation om samme emne vinder over den afledte", () => {
-  const ds = company("Under konkurs");
-  ds.observations[id] = { lassoId: id, observations: [{ id: "l1", severity: 100, title: "Selskabet er under konkurs" }] };
-  const merged = mergedObservations(id, ds, NOW);
-  assert.deepEqual(merged.observations.map((o) => o.id), ["l1"]);
 });
 
 test("ejerskab gentager ikke ejerne i relationer, kontakt viser CVR-ledelsen uden kontaktpersoner", () => {
@@ -195,8 +124,8 @@ test("risiko viser kreditvurderingen (½) øverst i kolonne 2 ved siden af oplys
     assert.ok(credit, state);
     assert.equal(credit.column, 2);
     assert.equal(widthOf(credit, spec.layout), "half");
-    // Risikoboksen står stadig øverst i fuld bredde; Creditsafe er et eget element, aldrig en del af måleren.
-    assert.equal(spec.components[1]!.type, "LassoRiskObservations");
+    // Ingen risikoboks (fjernet 27.09.2026); Creditsafe er et eget element, aldrig en del af måleren.
+    assert.ok(!spec.components.some((c) => c.type === "LassoRiskObservations"));
     assert.ok(!spec.components.some((c) => c.type === "LassoScoreGauge"));
     const col2 = spec.components.filter((c) => c.column === 2);
     assert.equal(col2[0]!.type, "LassoCreditRating");
@@ -214,21 +143,15 @@ test("overblik viser ikke kreditvurderingen, heller ikke når den findes i datas
   for (const focus of ["oekonomi", "ejerskab", "ledelse", "historik", "kontakt"] as const) {
     assert.ok(!composeCompany(id, withCredit(company()), { focus }).components.some((c) => c.type === "LassoCreditRating"), focus);
   }
-  // Undtagelse: et alvorligt risikosignal OG en allerede hentet vurdering (overblikket henter den aldrig selv).
-  const serious = composeCompany(id, withCredit(company("Under konkurs")), { focus: "overblik" });
-  assert.equal(serious.components.find((c) => c.type === "LassoCreditRating")?.column, 2);
-  assert.ok(!composeCompany(id, company("Under konkurs"), { focus: "overblik" }).components.some((c) => c.type === "LassoCreditRating"));
+  // Heller ikke for et konkursbo med en allerede hentet vurdering: kreditvurderingen hører til focus risiko.
+  assert.ok(!composeCompany(id, withCredit(company("Under konkurs")), { focus: "overblik" }).components.some((c) => c.type === "LassoCreditRating"));
 });
 
-test("risikoboksen er kompakt uden for focus risiko og fuld på risiko", () => {
-  const ds = company();
-  ds.observations[id] = { lassoId: id, observations: [{ id: "o1", title: "Ukendte ejere", severity: 50 }] };
-  for (const focus of ["overblik", "oekonomi", "regnskab", "ejerskab", "ledelse", "historik", "kontakt"] as const) {
-    const box = composeCompany(id, ds, { focus }).components.find((c) => c.type === "LassoRiskObservations");
-    assert.ok(box && box.type === "LassoRiskObservations", focus);
-    assert.equal(box.compact, true, focus);
+test("risikoobservationer komponeres ikke længere, uanset fokus og alvor", () => {
+  const ds = company("Under konkurs");
+  ds.observations[id] = { lassoId: id, observations: [{ id: "o1", title: "Selskabet er under konkurs", severity: 100 }] };
+  for (const focus of ["overblik", "oekonomi", "regnskab", "ejerskab", "ledelse", "risiko", "historik", "kontakt"] as const) {
+    assert.ok(!composeCompany(id, ds, { focus }).components.some((c) => c.type === "LassoRiskObservations"), focus);
+    assert.ok(!composeProbe(id, focus).components.some((c) => c.type === "LassoRiskObservations"), focus);
   }
-  const risk = composeCompany(id, ds, { focus: "risiko" }).components.find((c) => c.type === "LassoRiskObservations");
-  assert.ok(risk && risk.type === "LassoRiskObservations");
-  assert.equal(risk.compact, undefined);
 });

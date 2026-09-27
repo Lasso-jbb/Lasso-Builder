@@ -321,10 +321,10 @@ test("komponisten vælger form efter datas form, ikke efter en fast skabelon", a
   persons.ownership[id] = { lassoId: id, owners: [{ name: "Bo", kind: "person", share: "100 %" }] };
   assert.ok(!composeCompany(id, persons, { focus: "ejerskab" }).components.some((c) => c.type === "LassoOwnershipDiagram"));
 
-  // Alvorlig risiko står øverst, også uden risikofokus.
+  // Risikoobservationer komponeres ikke (fjernet 27.09.2026), heller ikke ved alvorlige observationer.
   const risky = base();
   risky.observations[id] = { lassoId: id, observations: [{ id: "1", severity: 100, title: "Negativ egenkapital" }] };
-  assert.equal(composeCompany(id, risky).components[1]!.type, "LassoRiskObservations");
+  assert.ok(!composeCompany(id, risky).components.some((c) => c.type === "LassoRiskObservations"));
 
   // Kolonnerne er fyldt fra 1 uden huller.
   for (const spec of [mSpec, oSpec, none]) {
@@ -398,7 +398,7 @@ test("LassoCreditRating (katalog 17): schema, bredde ½ og katalogtekst efter sk
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoCreditRating" }] }), "company er påkrævet");
   const entry = COMPONENT_CATALOG.find((e) => e.type === "LassoCreditRating");
   assert.ok(entry);
-  for (const part of ["Brug til:", "Brug ikke når:", "Kræver:", "Eksempel:", "LassoRiskObservations", "LassoScoreGauge", "låst"]) assert.ok(entry.description.includes(part), part);
+  for (const part of ["Brug til:", "Brug ikke når:", "Kræver:", "Eksempel:", "LassoScoreGauge", "låst"]) assert.ok(entry.description.includes(part), part);
 });
 
 test("Creditsafe-skalaen A–E: tone, ord, ændring og tekstlinje (blandes aldrig med 0–100)", () => {

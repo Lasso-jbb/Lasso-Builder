@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { composeCompany } from "./compose.js";
 import { emptyDataset, type Dataset } from "./models.js";
-import { extraSignals, riskSignals } from "./riskSignals.js";
 import { hasNoStatements, hasReportingDuty, NO_STATEMENTS_REASON, noStatementsReason } from "./statements.js";
 
 const id = "CVR-1-43811983";
@@ -28,7 +27,7 @@ function enk(): Dataset {
 test("regnskab uden offentliggjort regnskab: én tom tilstand på nøgletallenes plads, oplysninger og ledelse ved siden af", () => {
   const spec = composeCompany(id, enk(), { focus: "regnskab" });
   const types = spec.components.map((c) => c.type);
-  assert.deepEqual(types, ["LassoCompanyHead", "LassoRiskObservations", "LassoIncomeStatement", "LassoKeyValueList", "LassoPersonList", "LassoFollowUps"]);
+  assert.deepEqual(types, ["LassoCompanyHead", "LassoIncomeStatement", "LassoKeyValueList", "LassoPersonList", "LassoFollowUps"]);
   const stmt = spec.components.find((c) => c.type === "LassoIncomeStatement");
   assert.equal(stmt?.title, "Regnskab");
   assert.equal(stmt?.column, undefined);
@@ -74,21 +73,6 @@ test("hasNoStatements: kun hentet og tomt, aldrig 'ikke hentet'", () => {
   assert.equal(hasNoStatements({ incomeStatement: [{}], balanceSheet: [] }), false);
 });
 
-test("Lassos 'Intet offentliggjort regnskab' dækker det afledte signal, så det ikke står to gange", () => {
-  // Et anpartsselskab, så det afledte signal findes (en ENK har ingen regnskabspligt, se nedenfor).
-  const ds = enk();
-  ds.companies[id] = { ...ds.companies[id]!, form: "ApS" };
-  const derived = riskSignals(id, ds, NOW).signals;
-  assert.ok(derived.some((s) => s.id === "afledt:regnskab"), "over to år gammel uden regnskab giver signalet");
-  assert.ok(!extraSignals(ds.observations[id]!.observations, derived).some((s) => s.id === "afledt:regnskab"));
-  // Uden Lassos observation står det afledte signal.
-  assert.ok(extraSignals([], derived).some((s) => s.id === "afledt:regnskab"));
-  // Andre formuleringer fra Lasso dækker også.
-  for (const title of ["Regnskab mangler", "Ikke offentliggjort årsregnskab", "Ingen regnskaber"]) {
-    assert.ok(!extraSignals([{ id: "x", title, severity: 50 }], derived).some((s) => s.id === "afledt:regnskab"), title);
-  }
-});
-
 test("noStatementsReason: siger hvorfor efter virksomhedsform og alder", () => {
   assert.match(noStatementsReason({ lassoId: id, name: "Lasso", form: "ENK", founded: "2023-01-30" }, NOW), /^Enkeltmandsvirksomheder/);
   assert.match(noStatementsReason({ lassoId: id, name: "X", form: "PMV" }, NOW), /^Enkeltmandsvirksomheder/);
@@ -101,18 +85,10 @@ test("noStatementsReason: siger hvorfor efter virksomhedsform og alder", () => {
   assert.equal(noStatementsReason(undefined, NOW), NO_STATEMENTS_REASON);
 });
 
-test("regnskabspligt: personligt ejede virksomheder får ikke det afledte 'intet regnskab'-signal", () => {
+test("hasReportingDuty: personligt ejede virksomheder har ingen regnskabspligt", () => {
   assert.equal(hasReportingDuty("ENK"), false);
   assert.equal(hasReportingDuty("PMV"), false);
   assert.equal(hasReportingDuty("Enkeltmandsvirksomhed"), false);
   assert.equal(hasReportingDuty("ApS"), true);
   assert.equal(hasReportingDuty(undefined), true);
-  const ds = enk();
-  ds.observations[id] = { lassoId: id, observations: [] };
-  assert.ok(!riskSignals(id, ds, NOW).signals.some((s) => s.id === "afledt:regnskab"));
-  // Et anpartsselskab på samme alder uden regnskab: signalet står, og teksten siger "virksomheden".
-  ds.companies[id] = { ...ds.companies[id]!, form: "ApS" };
-  const signal = riskSignals(id, ds, NOW).signals.find((s) => s.id === "afledt:regnskab");
-  assert.equal(signal?.severity, 50);
-  assert.match(signal?.detail ?? "", /^Virksomheden er over to år gammel/);
 });

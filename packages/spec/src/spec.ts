@@ -324,6 +324,7 @@ export const scoreGaugeSchema = z.object({
   title: z.string().max(80).optional().describe("Standard: 'Score'."),
 });
 
+/** Fjernet fra visningerne 27.09.2026. Skemaet bliver, så ældre gemte visninger stadig kan læses; komponenten vises og hentes ikke. */
 export const riskObservationsSchema = z.object({
   type: z.literal("LassoRiskObservations"),
   company: companyRef,

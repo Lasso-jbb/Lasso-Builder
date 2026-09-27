@@ -51,8 +51,7 @@ Modellen skriver aldrig HTML. Den sender en JSON-spec, og Lassos kode henter dat
 ### Data fra Lasso
 
 Ud over CVR-stamdata, regnskaber og søgning henter serveren i dag: legale ejere og ejergraf
-(katalog 11, 14), risikoobservationer (Firmaindsigt) og nyheder fra Lasso News + Paqle (katalog
-12, 17), produktionsenheder via P-numre (`CVR-2-…`), CHR-husdyrdata, verificerede telefonnumre
+(katalog 11, 14), nyheder fra Lasso News + Paqle (katalog 12), produktionsenheder via P-numre (`CVR-2-…`), CHR-husdyrdata, verificerede telefonnumre
 (live number) og en tekstlig regnskabsanalyse (katalog 08, 19, 20), samt kreditvurdering fra
 Creditsafe (`LassoCreditRating`, katalog 17). Gemte sider vises med komponenten `LassoSavedPages`.
 Status pr. endpoint (bekræftet/dokumenteret/tilkøb) står i `docs/lasso-endpoints.md`.

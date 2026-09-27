@@ -1,5 +1,4 @@
 import {
-  mergedObservations,
   hasNoStatements,
   noStatementsReason,
   amountScale,
@@ -505,20 +504,6 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     }
   }
 
-
-  // Lassos observationer plus egne signaler (status, egenkapital ...): aldrig "intet" for et konkursbo.
-  if (types.has("LassoRiskObservations")) {
-    const risk = mergedObservations(lassoId, ds);
-    card.section("Risikoobservationer");
-    if (risk.observations.length === 0) {
-      card.text(risk.lasso?.checkedAt ? "Lasso fandt intet at bemærke" : "Ingen observationer fundet");
-    } else {
-      const sorted = risk.observations;
-      const word = (s: number) => (s === 100 ? "Vigtig" : s === 50 ? "Mulig vigtig" : s === 25 ? "Info" : "Neutral");
-      for (const o of sorted.slice(0, 3)) card.text(`${word(o.severity)}: ${o.title}`);
-      if (sorted.length > 3) card.text(`Se ${sorted.length - 3} flere`);
-    }
-  }
 
   // Katalog 17: Creditsafe på én linje, egen skala A–E (blandes aldrig med scoren eller observationerne).
   const credit = types.has("LassoCreditRating") ? ds.creditRatings?.[lassoId] : undefined;
