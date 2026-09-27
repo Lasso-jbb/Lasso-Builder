@@ -57,6 +57,8 @@ export function composeProbe(lassoId: string, focus: Focus = "overblik"): ViewSp
   if (focus === "kontakt") components.push({ type: "LassoContactPersons", company: c });
   if (focus === "regnskab") components.push({ type: "LassoIncomeStatement", company: c, years: 3 });
   if (focus === "risiko") components.push({ type: "LassoAuditorIndependence", company: c });
+  // Creditsafe kun på risiko: et opslag kan koste en kredit og tage 5–45 s, så overblikket henter det aldrig.
+  if (focus === "risiko") components.push({ type: "LassoCreditRating", company: c });
   if (focus === "ejerskab") {
     components.push({ type: "LassoBeneficialOwners", company: c });
     components.push({ type: "LassoOwnershipDiagram", company: c, ingoingDepth: 3, outgoingDepth: 2 });
@@ -85,6 +87,7 @@ const FOLLOW_UPS: Record<Focus, FollowUpRule[]> = {
   regnskab: [
     { label: "Udvikling over år", prompt: "Hvordan har økonomien i {navn} udviklet sig over årene?" },
     { label: "Risiko", prompt: "Er der røde flag ved {navn}?" },
+    { label: "Kreditvurdering", prompt: "Hvad er kreditvurderingen for {navn}?" },
   ],
   ejerskab: [
     { label: "Ledelse", prompt: "Hvem sidder i ledelsen af {navn}?", needs: (d) => d.people > 0 },
@@ -147,6 +150,8 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
   const contactPeople = ds.contactPersons[id]?.people ?? [];
   const statements = ds.financialStatements[id];
   const auditor = ds.auditorIndependence?.[id];
+  // Creditsafe (katalog 17) står kun, hvor den er hentet (focus risiko i composeProbe), også låst eller fejlet.
+  const hasCredit = Boolean(ds.creditRatings?.[id] || ds.errors?.[`creditRating:${id}`]);
 
   const metric = mainMetric(fin, options.chartMetric);
   const nYears = yearsWith(fin, metric).length;
@@ -233,6 +238,8 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
     }
     case "risiko": {
       columns = 2;
+      // Kreditvurderingen (½) øverst i kolonne 2 ved siden af oplysningerne, lige under risikoboksen.
+      if (hasCredit) put(2, { type: "LassoCreditRating", company: id });
       put(1, { type: "LassoKeyValueList", company: id, variant: "company", title: "Virksomhedsoplysninger" });
       if (people.length > 0) put(1, { type: "LassoPersonList", company: id, show: "all" });
       if (events.length >= 3) put(2, { type: "LassoTimeline", company: id });
@@ -254,6 +261,8 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
       // Overblik, som portalens virksomhedsside: relationer | profil | oplysninger og regnskab.
       if (people.length > 0 || owners.length > 0) put(1, { type: "LassoRelations", company: id });
       if (news.length > 0) put(1, { type: "LassoNews", company: id, limit: 3 });
+      // Kun ved et alvorligt risikosignal, og kun hvis vurderingen allerede er hentet (overblikket henter den ikke).
+      if (seriousRisk && hasCredit) put(2, { type: "LassoCreditRating", company: id });
       if (texts.length > 0) put(2, { type: "LassoTextSections", company: id, title: "Virksomhedsprofil" });
       if (events.length >= 3) put(2, { type: "LassoTimeline", company: id });
       if (hasContact) put(3, { type: "LassoContact", company: id });

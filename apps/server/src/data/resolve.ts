@@ -34,6 +34,7 @@ const FETCHERS: Record<string, (ds: Dataset, p: DataProvider, id: string) => Pro
   textSections: async (ds, p, id) => void (ds.textSections[id] = await p.textSections(id)),
   timeline: async (ds, p, id) => void (ds.timeline[id] = await p.timeline(id)),
   observations: async (ds, p, id) => void (ds.observations[id] = await p.observations(id)),
+  creditRating: async (ds, p, id) => void (ds.creditRatings[id] = await p.creditRating(id)),
   auditorIndependence: async (ds, p, id) => void (ds.auditorIndependence[id] = await p.auditorIndependence(id)),
   productionUnits: async (ds, p, id) => void (ds.productionUnits[id] = await p.productionUnits(id)),
   properties: async (ds, p, id) => void (ds.properties[id] = await p.properties(id)),
@@ -165,6 +166,9 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
         break;
       case "LassoRiskObservations":
         want(c.company, "observations");
+        break;
+      case "LassoCreditRating":
+        want(c.company, "creditRating");
         break;
       case "LassoAuditorIndependence":
         want(c.company, "auditorIndependence");

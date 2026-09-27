@@ -28,6 +28,8 @@ export { LassoBalanceSheet } from "./components/BalanceSheet.js";
 export { LassoCashFlow } from "./components/CashFlow.js";
 export { ScoreGauge } from "./components/ScoreGauge.js";
 export { RiskObservations } from "./components/RiskObservations.js";
+export { CreditRating } from "./components/CreditRating.js";
+export type { CreditRatingProps } from "./components/CreditRating.js";
 export { AuditorIndependence } from "./components/AuditorIndependence.js";
 export { ProductionUnits } from "./components/ProductionUnits.js";
 export { Properties } from "./components/Properties.js";

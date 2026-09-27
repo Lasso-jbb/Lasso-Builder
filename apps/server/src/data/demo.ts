@@ -1,4 +1,6 @@
 import {
+  CREDIT_LOCKED_REASON,
+  CREDIT_SOURCE,
   formatAmount,
   searchKey,
   type BeneficialOwnershipVM,
@@ -10,6 +12,8 @@ import {
   type ContactPersonVM,
   type ContactPersonsVM,
   type ContactVM,
+  type CreditAssessment,
+  type CreditRatingVM,
   type FinancialsVM,
   type FinancialStatementsVM,
   type NewsVM,
@@ -28,6 +32,7 @@ import {
   type TextSectionsVM,
   type TimelineVM,
 } from "@lasso/spec";
+import { CREDIT_NONE_REASON } from "../lasso/creditAdapters.js";
 import { applyCriteria, sortRows } from "./criteria-eval.js";
 import { demoOwnershipGraph } from "./demoGraph.js";
 import { demoFindPersons, demoPerson, demoPersonIds, demoPersonNetwork } from "./demoPeople.js";
@@ -430,6 +435,40 @@ function auditorIndependenceFor(c: DemoCompany): AuditorIndependenceVM {
   };
 }
 
+/**
+ * Eksempeldata til kreditvurderingen (katalog 17, Creditsafe A–E). Eksempel Byg: A med forrige B; Eksempel Transport:
+ * D med forrige C; Eksempel Energi (under konkurs): E uden kreditmaksimum; Eksempel Software: låst (intet tilkøb);
+ * Eksempel Café (ophørt): ikke beregnet. De øvrige afledes af væksten (B, C eller D, uændret fra forrige).
+ */
+function creditRatingFor(c: DemoCompany): CreditRatingVM {
+  const base = { lassoId: c.lassoId, cvr: c.cvr, source: CREDIT_SOURCE, updated: "2026-09-25", cachedUntil: "2026-09-26T08:30:00Z" };
+  const a = (letter: CreditAssessment["internationalScore"], creditMax: number | null, localScore: number | null, word?: string): CreditAssessment => ({
+    creditMax,
+    creditCurrency: "DKK",
+    internationalScore: letter,
+    ...(word ? { internationalDescription: word, localDescription: `${word} Risk` } : {}),
+    localScore,
+  });
+  const pdf = (cvr: string | undefined) => `https://example.com/eksempel-kreditrapport-${cvr}.pdf`;
+  switch (c.cvr) {
+    case "99000005":
+      return { lassoId: c.lassoId, cvr: c.cvr, source: CREDIT_SOURCE, state: "locked", reason: CREDIT_LOCKED_REASON };
+    case "99000009":
+      return { lassoId: c.lassoId, cvr: c.cvr, source: CREDIT_SOURCE, state: "unavailable", reason: CREDIT_NONE_REASON };
+    case "99000001":
+      return { ...base, state: "ok", current: a("A", 4_500_000, 91, "Very Low"), previous: a("B", 3_750_000, 68, "Low"), latestChange: "2026-04-15", pdfUrl: pdf(c.cvr) };
+    case "99000004":
+      return { ...base, state: "ok", current: a("D", 150_000, 21, "High"), previous: a("C", 400_000, 38, "Moderate"), latestChange: "2026-08-02", pdfUrl: pdf(c.cvr) };
+    case "99000011":
+      return { ...base, state: "ok", current: a("E", null, null), previous: a("D", 50_000, 12, "High"), latestChange: "2026-06-30", pdfUrl: pdf(c.cvr) };
+  }
+  const seed = Number(c.cvr!.slice(-2));
+  const [letter, word, low] = c.growth >= 0.05 ? (["B", "Low", 60] as const) : c.growth >= 0 ? (["C", "Moderate", 40] as const) : (["D", "High", 20] as const);
+  const creditMax = Math.round((c.base * 0.04) / 10_000) * 10_000;
+  const rating = a(letter, creditMax, low + (seed % 10), word);
+  return { ...base, state: "ok", current: rating, previous: rating, latestChange: "2025-11-03" };
+}
+
 function get(lassoId: string): DemoCompany {
   const c = BY_ID.get(lassoId);
   if (!c) throw new NotFoundError(`Virksomheden ${lassoId} (demodata har kun CVR 99000001-99000013)`);
@@ -674,6 +713,11 @@ export class DemoProvider implements DataProvider {
   async observations(lassoId: string): Promise<ObservationsVM> {
     const c = get(lassoId);
     return observationsFor(c, financialsFor(c));
+  }
+
+  /** Katalog 17: eksempler på alle tilstande (fuld, låst, ikke beregnet); se creditRatingFor. */
+  async creditRating(lassoId: string): Promise<CreditRatingVM> {
+    return creditRatingFor(get(lassoId));
   }
 
   async auditorIndependence(lassoId: string): Promise<AuditorIndependenceVM> {

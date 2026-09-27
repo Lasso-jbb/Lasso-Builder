@@ -326,6 +326,15 @@ export class LassoClient {
     return this.get("data/bbr/property/summary", { bfeNumber });
   }
   /**
+   * Katalog 17: kreditvurdering fra Creditsafe (GET /data/creditsafe/rating/{cvr}?skipCache=false). Kræver
+   * CVR-nummeret (ikke Lasso-ID) og Creditsafe-tilføjelsen til abonnementet. Lasso gemmer svaret 24 timer pr.
+   * organisation (højst én kredit pr. virksomhed pr. døgn); skipCache=true beregner igen og koster en ny kredit,
+   * så det sendes aldrig fra modellen (se docs/endpoints-creditsafe.md). Creditsafe svarer på 5–45 s: egen timeout.
+   */
+  creditsafeRating(cvr: string, skipCache = false) {
+    return this.get(`data/creditsafe/rating/${enc(cvr)}`, { skipCache }, { timeoutMs: 50_000 });
+  }
+  /**
    * Katalog 20, CHR. UBEKRÆFTET: intet CHR-endpoint er fundet i docs.lassox.com
    * under dette arbejde. Stien er et gæt (samme mønster som de øvrige
    * `modules/*`-endpoints) og kaldes ikke fra `LiveProvider`, før den er

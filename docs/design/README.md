@@ -52,6 +52,7 @@ Virksomhedsside: hoved, risiko (kun ved 50+), nøgletal, én graf ved siden af n
 | Placering blandt lignende | Rangliste, sammenligning i kolonner | 13, 22 |
 | Score 0–100 | Scoremåler, score over tid | 10, 13, 18 |
 | Risiko | Alvorsskala + observationsliste | 17 |
+| Kreditvurdering (Creditsafe A–E) | Kreditvurdering | 17 |
 | Personer og roller | Rolleliste, tidsbånd, netværk | 11, 16 |
 | Ejerskab | Ejerliste med interval-bjælke, ejerdiagram | 11, 14 |
 | Mange virksomheder | Tabel med værktøjslinje og paginering | 15 |

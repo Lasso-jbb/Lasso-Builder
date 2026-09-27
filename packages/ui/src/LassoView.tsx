@@ -53,6 +53,7 @@ import { PersonRoles } from "./components/PersonRoles.js";
 import { PersonNetwork } from "./components/PersonNetwork.js";
 import { PersonRisk } from "./components/PersonRisk.js";
 import { RiskObservations } from "./components/RiskObservations.js";
+import { CreditRating } from "./components/CreditRating.js";
 import { AuditorIndependence } from "./components/AuditorIndependence.js";
 import { ChangeFeed } from "./components/ChangeFeed.js";
 import { SavedPages } from "./components/SavedPages.js";
@@ -153,6 +154,8 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return <ScoreGauge key={key} score={empty.scores[c.company]} title={c.title} error={err(`score:${c.company}`)} />;
     case "LassoRiskObservations":
       return <RiskObservations key={key} data={empty.observations[c.company]} derived={ds ? riskSignals(c.company, empty) : undefined} error={err(`observations:${c.company}`)} title={c.title} />;
+    case "LassoCreditRating":
+      return <CreditRating key={key} rating={empty.creditRatings?.[c.company]} title={c.title} error={err(`creditRating:${c.company}`)} onAction={act} />;
     case "LassoAuditorIndependence":
       return <AuditorIndependence key={key} data={empty.auditorIndependence[c.company]} error={err(`auditorIndependence:${c.company}`)} title={c.title} />;
     case "LassoProductionUnits":
@@ -228,6 +231,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
  */
 const MOBILE_ORDER: Partial<Record<ViewComponent["type"], number>> = {
   LassoSavedPages: 5,
+  LassoCreditRating: 8,
   LassoBarChart: 10,
   LassoGroupedBarChart: 10,
   LassoLineChart: 10,

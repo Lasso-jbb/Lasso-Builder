@@ -18,6 +18,9 @@ import {
   type ScoreVM,
   type SearchQuery,
   type SearchResultVM,
+  cvrFromLassoId,
+  CREDIT_PENDING_REASON,
+  CREDIT_SOURCE,
 } from "@lasso/spec";
 import type { Config } from "../config.js";
 import {
@@ -52,6 +55,7 @@ import { describeShape, LassoApiError, type LassoClient } from "../lasso/client.
 import { adaptOwnershipLegal } from "../lasso/ownershipAdapters.js";
 import { adaptPerson, adaptPersonNetwork, adaptPersonSearch } from "../lasso/personAdapters.js";
 import { adaptChrLivestock, adaptLiveNumber, adaptReportAnalysisSection, buildProductionUnits } from "../lasso/unitAdapters.js";
+import { loadCreditRating } from "../lasso/creditAdapters.js";
 import { criteriaToFilters, DEFAULT_ACTIVE_STATUS_FILTER, filtersToCriteria, SERVER_SORT, type LassoFilter } from "../lasso/searchFilters.js";
 import { applyCriteria, needsFinancials, sortRows } from "./criteria-eval.js";
 import { mapLimit, type ChangeFeedOptions, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
@@ -61,6 +65,9 @@ export const CONTACT_BUDGET_MS = 2_500;
 
 /** Så længe venter tekstsektionerne på regnskabsanalysen, før den udelades (svaret kan tage 5–10 s). */
 export const TEXT_SECTIONS_BUDGET_MS = 8_000;
+
+/** Så længe venter kreditvurderingen på Creditsafe (5–45 s ved live beregning), før "beregner stadig" vises. */
+export const CREDIT_BUDGET_MS = 12_000;
 
 /** Venter højst `ms` på et løfte; derefter undefined (løftet kører videre og fylder klientens cache). */
 async function withinBudget<T>(p: Promise<T | undefined>, ms: number): Promise<T | undefined> {
@@ -366,6 +373,17 @@ export class LiveProvider implements DataProvider {
   /** Formen for /modules/observations er ubekræftet; se docs/lasso-endpoints.md. */
   async observations(lassoId: string) {
     return adaptObservations(lassoId, await this.client.observations(lassoId));
+  }
+
+  /**
+   * Katalog 17: Creditsafe via Lasso (docs/endpoints-creditsafe.md). Aldrig skipCache: Lassos 24-timers cache og
+   * klientens egen cache bruges altid. 401/403 = låst, 404/tomt = ikke beregnet, timeout = beregner stadig.
+   */
+  async creditRating(lassoId: string) {
+    // Creditsafe kan tage 5–45 s, når vurderingen beregnes live. Visningen venter højst CREDIT_BUDGET_MS;
+    // derefter vises "beregner stadig" med "Hent igen", mens kaldet kører færdigt og lander i klientens cache.
+    const rating = await withinBudget(loadCreditRating(lassoId, (cvr) => this.client.creditsafeRating(cvr)), CREDIT_BUDGET_MS);
+    return rating ?? { lassoId, cvr: cvrFromLassoId(lassoId) ?? undefined, state: "unavailable" as const, reason: CREDIT_PENDING_REASON, source: CREDIT_SOURCE };
   }
 
   /**

@@ -1,7 +1,11 @@
 import type { ReactNode } from "react";
 import {
+  creditChange,
+  creditDescription,
+  creditScoreWord,
   currencyUnit,
   formatAmount,
+  formatCreditMax,
   formatDate,
   formatNumber,
   formatPercent,
@@ -11,6 +15,7 @@ import {
   percentChange,
   riskSignals,
   extraSignals,
+  type CreditRatingVM,
   type Dataset,
   type FinancialYear,
   type Metric,
@@ -188,6 +193,36 @@ function StatementTable({ title, years, rows }: { title: string; years: readonly
   );
 }
 
+/**
+ * Katalog 17 på side 4: Creditsafes vurdering som ren tekst under Lassos score. Egen skala A–E,
+ * aldrig tegnet i målerens 0–100-bånd, og i print uden tonefarver (ordet bærer betydningen).
+ */
+function CreditsafeText({ rating }: { rating: CreditRatingVM }) {
+  const c = rating.current!;
+  const score = c.internationalScore;
+  const prev = rating.previous?.internationalScore;
+  const change = creditChange(score, prev);
+  const local = typeof c.localScore === "number" ? `lokal score ${formatNumber(c.localScore)}${c.localDescription ? `, ${creditDescription(c.localDescription)}` : ""}` : undefined;
+  const facts = [typeof c.creditMax === "number" ? `Kreditmaksimum ${formatCreditMax(c)}` : "Kreditmaksimum ikke oplyst", local].filter(Boolean).join(", ");
+  return (
+    <div className="lasso-a4-credit">
+      <h3 className="lasso-a4__h3">Creditsafe</h3>
+      <p className="lasso-a4__strong">{score ? `${score}, ${creditScoreWord(score, c.internationalDescription)}` : "International score ikke oplyst"}</p>
+      <p className="lasso-a4__small">{facts}.</p>
+      {prev ? (
+        <p className="lasso-a4__small">
+          Forrige vurdering {prev} ({creditScoreWord(prev, rating.previous?.internationalDescription)}){rating.latestChange ? `, ændret ${formatDate(rating.latestChange)}` : ""}
+          {change ? `, ${change.arrow ? `${change.arrow}\u00a0` : ""}${change.word}` : ""}.
+        </p>
+      ) : null}
+      <p className="lasso-a4__small">
+        {rating.source}
+        {rating.updated ? `, ${formatDate(rating.updated)}` : ""}. Skala A (lav risiko) til E (høj risiko), uafhængig af Lassos score 0–100.
+      </p>
+    </div>
+  );
+}
+
 export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
   const c = dataset.companies[company];
   const name = c?.name ?? company;
@@ -203,6 +238,9 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
   const owners = ownership?.owners ?? [];
   const beneficial = dataset.beneficialOwnership[company];
   const score = dataset.scores[company];
+  // Creditsafe kun, når der er en vurdering (låst, ikke beregnet og fejl hører ikke hjemme i en rapport).
+  const creditRating = dataset.creditRatings?.[company];
+  const credit = creditRating?.state === "ok" && creditRating.current ? creditRating : undefined;
   const lassoObs = dataset.observations[company];
   const derived = riskSignals(company, dataset);
   const observations: ObservationRowVM[] = [...(lassoObs?.observations ?? []), ...extraSignals(lassoObs?.observations ?? [], derived.signals)].sort((a, b) => b.severity - a.severity);
@@ -210,7 +248,7 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
   const auditorName = auditor?.auditorName ?? ownership?.auditor?.name;
 
   const stamp = formatStamp(generatedAt ?? dataset.generatedAt);
-  const sourceNames = ["CVR", ...(years.length ? ["Erhvervsstyrelsen (regnskaber)"] : []), ...(score?.source && score.score !== null ? [score.source] : [])].filter(
+  const sourceNames = ["CVR", ...(years.length ? ["Erhvervsstyrelsen (regnskaber)"] : []), ...(score?.source && score.score !== null ? [score.source] : []), ...(credit ? ["Creditsafe"] : [])].filter(
     (s, i, a) => a.indexOf(s) === i,
   );
   const sources = sourceNames.join(", ");
@@ -426,7 +464,7 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
   }
 
   // Side 4: Kreditvurdering, risikoobservationer, reelle ejere, revisor og "Om rapporten".
-  if (score || observations.length || beneficial || auditorName || auditor) {
+  if (score || credit || observations.length || beneficial || auditorName || auditor) {
     pages.push({
       key: "risiko",
       toc: ["Kreditvurdering og risiko", ...(beneficial || owners.length ? ["Reelle ejere og ejerstruktur"] : []), ...(auditorName || auditor ? ["Revisor og uafhængighed"] : [])],
@@ -472,12 +510,13 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
                     </div>
                     <p className="lasso-a4__small">Score 0 (lav risiko) til 100 (høj risiko). Vurderingen er en modelvurdering og ikke en garanti.</p>
                   </>
-                ) : (
+                ) : credit ? null : (
                   <>
                     <p className="lasso-a4-score__missing">Ikke oplyst</p>
                     <p className="lasso-a4__small">Der findes ingen kreditvurdering for virksomheden.</p>
                   </>
                 )}
+                {credit ? <CreditsafeText rating={credit} /> : null}
               </div>
               <div className="lasso-a4-col">
                 <h2 className="lasso-a4__h2">Risikoobservationer</h2>
