@@ -1,4 +1,4 @@
-import { isPersonId, toLassoId, viewSpecSchema, type Dataset, type Focus, type SavedPageKind, type ViewSpec } from "@lasso/spec";
+import { isFocusFor, isPersonId, toLassoId, viewSpecSchema, type Dataset, type PageFocus, type SavedPageKind, type ViewSpec } from "@lasso/spec";
 import { findCompany, isCompanyRef, normalizeCompanyName } from "../data/lookup.js";
 import { findPerson } from "../data/personLookup.js";
 import { errorMessage, resolveSpec } from "../data/resolve.js";
@@ -55,7 +55,8 @@ export interface SavePageInput {
   page: string;
   /** Kun ved navn: "person" slår en person op. Standard: virksomhed. */
   kind?: SavedPageKind;
-  focus?: Focus;
+  /** Fokus, siden blev vist med: virksomhedsfokus for en virksomhed, personfokus for en person (ellers gemmes intet fokus). */
+  focus?: PageFocus;
   /** Brugerens egen note til siden. */
   note?: string;
 }
@@ -118,14 +119,16 @@ export async function savePage(ctx: UseCaseCtx, input: SavePageInput): Promise<S
   }
   let saved: Awaited<ReturnType<SavedPageStore["save"]>>;
   try {
-    saved = await pages.save({ org: user.org, userId: user.id, lassoId, kind: snapshot.kind, name: snapshot.name, cvr: snapshot.cvr, focus, note, origin: "manual" });
+    // Et fokus, der ikke findes for sidens slags (fx "oekonomi" for en person), gemmes ikke.
+    const pageFocus = focus && isFocusFor(snapshot.kind, focus) ? focus : undefined;
+    saved = await pages.save({ org: user.org, userId: user.id, lassoId, kind: snapshot.kind, name: snapshot.name, cvr: snapshot.cvr, focus: pageFocus, note, origin: "manual" });
   } catch (err) {
     if (err instanceof SavedPageError) return fail(400, err.message);
     throw err;
   }
   const { page: rec, created } = saved;
   const total = await totalSaved(ctx);
-  const url = entityLink(config, rec.lassoId, { focus: savedFocus(rec.focus) });
+  const url = entityLink(config, rec.lassoId, { focus: savedFocus(rec.kind, rec.focus) });
   return {
     lassoId: rec.lassoId,
     kind: rec.kind,

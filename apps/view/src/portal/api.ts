@@ -1,4 +1,4 @@
-import type { Dataset, Focus, SavedPageKind, ViewSpec } from "@lasso/spec";
+import type { Dataset, Focus, PersonFocus, SavedPageKind, ViewSpec } from "@lasso/spec";
 import type { Visibility } from "@lasso/ui";
 import type { PortalUser } from "../boot.js";
 
@@ -110,7 +110,7 @@ export function createPortalApi(onUnauthorized: () => void, fetcher: typeof fetc
     me: () => call<{ user: PortalUser }>("GET", "/me", undefined, { session: false }),
     search: (q: string) => call<ViewResult>("GET", `/search${query({ query: q })}`),
     company: (ref: string, focus: Focus) => call<ViewResult>("GET", `/company/${encodeURIComponent(ref)}${query({ focus })}`),
-    person: (ref: string) => call<ViewResult>("GET", `/person/${encodeURIComponent(ref)}`),
+    person: (ref: string, focus: PersonFocus = "overblik") => call<ViewResult>("GET", `/person/${encodeURIComponent(ref)}${query({ focus: focus === "overblik" ? undefined : focus })}`),
     resolve: (spec: ViewSpec) => call<ViewResult>("POST", "/resolve", { spec }),
     pages: (kind: SavedPageKind | "all" = "all", limit = 100) => call<ViewResult>("GET", `/pages${query({ kind, limit })}`),
     savePage: (body: { page: string; kind?: SavedPageKind; focus?: string; note?: string }) => call<SavePageResult>("POST", "/pages", body),

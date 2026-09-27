@@ -117,6 +117,12 @@ const companyRef = z
   .describe("Lasso-ID (fx 'CVR-1-12345678') eller et 8-cifret CVR-nummer.");
 
 /* Personsiden (katalog 16). */
+/** LassoPersonRoles: tidsbånd (all) eller en kort liste med de aktive, ophørte eller ejede selskaber. */
+export const PERSON_ROLES_SHOW = ["all", "current", "ended", "owner"] as const;
+export type PersonRolesShow = (typeof PERSON_ROLES_SHOW)[number];
+/** Personens tidslinje afgrænset til selskaberne med konkurs eller tvangsopløsning (fokus risiko). */
+export const TIMELINE_FILTERS = ["risiko"] as const;
+
 const personRef = z
   .string()
   .min(1)
@@ -254,6 +260,10 @@ export const timelineSchema = z
     ...companyOrPerson,
     title: z.string().max(80).optional(),
     limit: z.number().int().min(1).max(20).optional().describe("Antal begivenheder før 'Se alle N begivenheder'. Standard 5; overblikket viser 3 (regel 9)."),
+    filter: z
+      .enum(TIMELINE_FILTERS)
+      .optional()
+      .describe("Kun med person: 'risiko' viser kun forløbet i de selskaber, der er gået konkurs eller tvangsopløst (roller ind og ud og selskabets status)."),
   })
   .refine(exactlyOneEntity, EXACTLY_ONE_ENTITY)
   .describe("Virksomhed: stiftelse, ledelsesskift og regnskaber. Person: indtrådt/udtrådt som X i selskaber og selskabernes konkurser/tvangsopløsninger.");
@@ -404,12 +414,24 @@ export const personHeadSchema = z.object({
 export const personRolesSchema = z.object({
   type: z.literal("LassoPersonRoles"),
   person: personRef,
+  show: z
+    .enum(PERSON_ROLES_SHOW)
+    .optional()
+    .describe(
+      "'all' (standard): alle roller som tidsbånd fra–til. 'current': de aktive roller som kort liste pr. selskab. 'ended': de ophørte roller som liste, senest ophørte først. 'owner': de selskaber, personen ejer nu, med ejerandel og siden-dato.",
+    ),
+  limit: z.number().int().min(1).max(50).optional().describe("Antal selskaber før 'Se alle N selskaber'. Standard 3 for tidsbåndene og 5 for listerne (regel 9)."),
+  except: z
+    .enum(TIMELINE_FILTERS)
+    .optional()
+    .describe("Kun show 'ended': 'risiko' udelader selskaber, der er gået konkurs eller tvangsopløst (de står i risikoens forløb)."),
   title: z.string().max(80).optional(),
 });
 
 export const personNetworkSchema = z.object({
   type: z.literal("LassoPersonNetwork"),
   person: personRef,
+  limit: z.number().int().min(1).max(50).optional().describe("Antal personer før 'Se alle N'. Standard 3 (regel 9)."),
   title: z.string().max(80).optional(),
 });
 

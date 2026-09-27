@@ -56,7 +56,7 @@ interface, når (a) identiteten mod Lasso er afklaret, og (b) endpoints er verif
 | kind | company \| person | Afledt af og tjekket mod ID'et |
 | name | text | Navnesnapshot fra gemmetidspunktet; siden viser altid friske data |
 | cvr | text? | Kun virksomheder |
-| focus | text? | Fokusvisningen, siden blev gemt fra (fx `oekonomi`) |
+| focus | text? | Fokusvisningen, siden blev gemt fra: et virksomhedsfokus (fx `oekonomi`) eller et personfokus (fx `netvaerk`); et fokus, der ikke passer til siden, gemmes ikke og kommer aldrig i linket |
 | note | text? | Brugerens note (højst 500 tegn) |
 | origin | manual \| link \| send | Tool/knap, signeret link, eller eksternt system |
 | saved_at | timestamptz | Nyeste først; gemmes siden igen, flyttes den øverst |

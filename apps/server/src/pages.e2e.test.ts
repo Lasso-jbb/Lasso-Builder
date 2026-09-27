@@ -254,10 +254,17 @@ test("/e/<lassoId> viser virksomheds- og personsider fra gyldige links, ellers 4
   assert.match(boot(await eco.text()), /"subtitle":"Økonomi"/);
 
   const listed = await a.callTool({ name: "list_saved_pages", arguments: { kind: "person" } });
-  const personUrl = (listed._meta as Record<string, Dataset>)[DATASET_META_KEY]!.savedPages["person|20"]!.pages[0]!.url!;
-  const person = await fetch(personUrl);
+  const saved = (listed._meta as Record<string, Dataset>)[DATASET_META_KEY]!.savedPages["person|20"]!.pages[0]!;
+  const person = await fetch(saved.url!);
   assert.equal(person.status, 200);
   assert.match(boot(await person.text()), /"LassoPersonRoles"/);
+  // Personsiden med personfokus: samme komponist og fokus som show_person.
+  const risk = await fetch(entityLink(config, saved.lassoId, { focus: "risiko" }));
+  assert.equal(risk.status, 200);
+  const riskBoot = boot(await risk.text());
+  assert.match(riskBoot, /"subtitle":"Risiko"/);
+  assert.match(riskBoot, /"LassoPersonRisk"/);
+  assert.doesNotMatch(riskBoot, /"LassoPersonFacts"/);
 
   const forged = await fetch(entityLink(config, "CVR-1-99000001").replace("CVR-1-99000001", "CVR-1-99000002"));
   assert.equal(forged.status, 403);
@@ -375,6 +382,9 @@ test("POST /api/send-to-lasso kræver nøglen, validerer og gemmer på brugerens
   assert.equal((await post({ cvr: "99000005" }, SEND)).status, 400);
   assert.equal((await post({ cvr: "99000005", userId: "ikke gyldig;" }, SEND)).status, 400);
   assert.equal((await post({ cvr: "99000005", userId: USER_A.id, focus: "alt" }, SEND)).status, 400);
+  // Et personfokus på en virksomhed (og omvendt) afvises.
+  assert.equal((await post({ cvr: "99000005", userId: USER_A.id, focus: "roller" }, SEND)).status, 400);
+  assert.equal((await post({ lassoId: await personId(), userId: USER_A.id, focus: "oekonomi" }, SEND)).status, 400);
   assert.equal((await post({ lassoId: "CVR-2-1000000000", userId: USER_A.id }, SEND)).status, 400);
   const missing = await post({ cvr: "12345678", userId: USER_A.id }, SEND);
   assert.equal(missing.status, 404);

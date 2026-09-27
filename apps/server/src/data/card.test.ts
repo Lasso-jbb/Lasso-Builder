@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   composeCompany,
+  composePerson,
+  PERSON_GRAPH_DEPTH,
+  personTimeline,
+  type PersonFocus,
   changeFeedKey,
   companyTemplate,
   emptyDataset,
@@ -381,6 +385,83 @@ test("personkortet (katalog 16) har samme bredde på alle linjer og ingen midter
   assert.match(card, /Adm\. direktør, siden 2012/);
   assert.match(card, /Søren Krogh Eksempel\s+14 år/);
   assert.match(card, /Konkurser\s+1, Info/);
+});
+
+test("personkortet følger fokus: kun det, siden viser, i sidens rækkefølge og antal", () => {
+  const id = "CVR-3-4000000001";
+  const ds = emptyDataset("live");
+  const person = {
+    lassoId: id,
+    name: "Mette Holm Eksempel",
+    city: "København",
+    zip: "2100",
+    roles: [
+      { companyId: "CVR-1-11111111", companyName: "Data Eksempel A/S", kind: "direction" as const, role: "Adm. direktør", from: "2012-05-14", active: true },
+      { companyId: "CVR-1-22222222", companyName: "Holm Holding ApS", kind: "owner" as const, role: "Ejer", share: "100 %", from: "2009-01-01", active: true },
+      { companyId: "CVR-1-33333333", companyName: "Cloud Eksempel A/S", kind: "board" as const, role: "Bestyrelsesmedlem", from: "2014-01-01", to: "2018-06-01", active: false, companyStatus: "Under konkurs", companyStatusKind: "warning" as const, companyEnded: "2026-02-01" },
+      { companyId: "CVR-1-44444444", companyName: "Andet Eksempel ApS", kind: "direction" as const, role: "Direktør", from: "2005-01-01", to: "2008-01-01", active: false },
+    ],
+  };
+  ds.persons[id] = person;
+  ds.personNetworks[id] = {
+    lassoId: id,
+    people: Array.from({ length: 5 }, (_, i) => ({ name: `Person ${i} Eksempel`, companies: [{ companyName: "Data Eksempel A/S" }], overlapYears: 10 - i, active: true })),
+  };
+  ds.timeline[id] = personTimeline(person, "2026-09-27");
+  ds.news[id] = { lassoId: id, items: [{ source: "Lasso", headline: "Mette Holm Eksempel i ny bestyrelse" }] };
+  const key = ownershipGraphKey({ person: id, ...PERSON_GRAPH_DEPTH });
+  ds.ownershipGraphs[key] = {
+    rootId: id,
+    nodes: [
+      { id, name: "Mette Holm Eksempel", kind: "person", root: true },
+      { id: "CVR-1-22222222", name: "Holm Holding ApS", kind: "company" },
+      { id: "CVR-1-55555555", name: "Holm Datter ApS", kind: "company" },
+    ],
+    edges: [
+      { from: id, to: "CVR-1-22222222", share: [100, 100] },
+      { from: "CVR-1-22222222", to: "CVR-1-55555555", share: [100, 100] },
+    ],
+    ingoingDepth: 0,
+    outgoingDepth: 2,
+  };
+  const card = (focus: PersonFocus) => textCard(composePerson(id, ds, { focus }), ds)!;
+  const same = (c: string) => assert.equal(new Set(c.split("\n").map((l) => [...l].length)).size, 1, c);
+
+  const overview = card("overblik");
+  same(overview);
+  assert.match(overview, /AKTIVE ROLLER/);
+  assert.match(overview, /Adm\. direktør, siden 2012/);
+  assert.doesNotMatch(overview, /NYHEDER/);
+  // Stamoplysningerne gentager ikke hovedets tal; netværket viser 3 som siden, resten som "og 2 flere".
+  assert.match(overview, /Bopæl\s+2100 København/);
+  assert.doesNotMatch(overview, /Første reg\.|Ejer af/);
+  assert.match(overview, /Person 2 Eksempel/);
+  assert.doesNotMatch(overview, /Person 3 Eksempel/);
+  assert.match(overview, /og 2 flere/);
+
+  const risk = card("risiko");
+  same(risk);
+  assert.match(risk, /FORLØB I SELSKABERNE/);
+  assert.match(risk, /Cloud Eksempel A\/S kom under/);
+  assert.match(risk, /ØVRIGE OPHØRTE ROLLER/);
+  assert.match(risk, /Andet Eksempel ApS/);
+  assert.doesNotMatch(risk, /Indtrådt som adm\. direktør i Data Eksempel/, "forløbet har kun konkursselskabet");
+  assert.doesNotMatch(risk, /STAMOPLYSNINGER|NYHEDER|SIDDER SAMMEN MED/);
+
+  const owner = card("ejerskab");
+  same(owner);
+  assert.match(owner, /EJERSKABER/);
+  assert.match(owner, /Ejer 100 %, siden 2009/);
+  // Diagrammet gentager ikke de ejede selskaber, men viser strukturen under dem.
+  assert.match(owner, /EJERSTRUKTUR/);
+  assert.match(owner, /Under de ejede selskaber \(1\):/);
+  assert.match(owner, /Holm Datter ApS, 100 %/);
+  assert.doesNotMatch(owner, /Ejerandel 100 %/);
+
+  const history = card("historik");
+  assert.match(history, /NYHEDER/);
+  assert.match(history, /og 2 flere begivenheder/);
+  assert.doesNotMatch(card("netvaerk"), /og \d+ flere/, "netværksfanen viser alle 5");
 });
 
 test("tekstkort og resumé viser EUR/USD-regnskaber i deres valuta, ikke som kroner (Vestas/Mærsk)", async () => {

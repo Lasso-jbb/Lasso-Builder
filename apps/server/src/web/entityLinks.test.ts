@@ -29,6 +29,24 @@ test("entityLink signeres, verificeres, bærer focus og udløber", () => {
   assert.deepEqual(verifyEntityLink(config, "CVR-3-4000455341", query(plain), now), { ok: true, lassoId: "CVR-3-4000455341" });
 });
 
+test("entityLink for en person bærer personfokus; virksomheds- og personfokus kan ikke byttes", () => {
+  const now = Date.UTC(2026, 8, 27);
+  const url = entityLink(config, "CVR-3-4000455341", { focus: "netvaerk" }, now);
+  assert.equal(query(url).f, "netvaerk");
+  assert.deepEqual(verifyEntityLink(config, "CVR-3-4000455341", query(url), now), { ok: true, lassoId: "CVR-3-4000455341", focus: "netvaerk" });
+  // Fælles navne (risiko, ejerskab, historik) gælder begge; "roller" kun personer, "oekonomi" kun virksomheder.
+  const risk = entityLink(config, "CVR-3-4000455341", { focus: "risiko" }, now);
+  assert.deepEqual(verifyEntityLink(config, "CVR-3-4000455341", query(risk), now), { ok: true, lassoId: "CVR-3-4000455341", focus: "risiko" });
+  assert.deepEqual(verifyEntityLink(config, "CVR-3-4000455341", { ...query(url), f: "oekonomi" }, now), { ok: false, reason: "invalid" });
+  const open = loadConfig({ MCP_ACCESS_KEY: "k", LINK_SECRET: "hemmelig", ENTITY_PAGES_PUBLIC: "true" });
+  assert.deepEqual(verifyEntityLink(open, "CVR-1-34580820", { f: "roller" }), { ok: false, reason: "invalid" });
+  assert.deepEqual(verifyEntityLink(open, "CVR-3-4000455341", { f: "roller" }), { ok: true, lassoId: "CVR-3-4000455341", focus: "roller" });
+  // Send til Lasso: samme regel.
+  const send = sendToLassoLink(config, { lassoId: "CVR-3-4000455341", userId: "jbb", org: "lasso", focus: "roller" }, now);
+  assert.deepEqual(verifySendToLassoLink(config, query(send), now), { ok: true, link: { lassoId: "CVR-3-4000455341", userId: "jbb", org: "lasso", focus: "roller" } });
+  assert.deepEqual(verifySendToLassoLink(config, { ...query(send), id: "CVR-1-34580820" }, now), { ok: false, reason: "invalid" });
+});
+
 test("ENTITY_PAGES_PUBLIC tillader usignerede links, men tjekker stadig et signeret", () => {
   const closed = config;
   assert.deepEqual(verifyEntityLink(closed, "CVR-1-34580820", {}), { ok: false, reason: "invalid" });

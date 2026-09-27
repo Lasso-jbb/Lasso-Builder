@@ -19,6 +19,8 @@ import {
   personCounts,
   personFacts,
   personRisk,
+  personRoleRows,
+  riskTimeline,
   savedPagesKey,
   searchKey,
   type Dataset,
@@ -142,15 +144,30 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
     }
     if (c.type === "LassoPersonRoles") {
       const p = ds.persons[c.person];
-      if (p) {
+      const show = c.show ?? "all";
+      if (p && show === "all") {
         const list = personCompanies(p).slice(0, 8).map((x) => `${x.companyName} [${x.companyId ?? "?"}]: ${x.roles.map((r) => `${r.role}${r.share ? ` ${r.share}` : ""}${r.active ? "" : " (fratrådt)"}`).join(", ")}`);
         if (list.length) lines.push(`Roller: ${list.join("; ")}.`);
+      } else if (p && show !== "all") {
+        // Rollelisterne (overblik: aktive; ejerskab: ejede selskaber; risiko: øvrige ophørte).
+        const rows = personRoleRows(p, show, { except: c.except });
+        const label = c.title ?? { current: "Aktive roller", ended: "Ophørte roller", owner: "Ejerskaber" }[show];
+        const list = rows.slice(0, 8).map((r) => `${r.companyName} [${r.companyId ?? "?"}]: ${r.text}${r.period ? `, ${r.period}` : ""}${r.companyStatus ? ` (selskabet ${r.companyStatus.toLowerCase()})` : ""}`);
+        lines.push(`${label}: ${list.length ? `${list.join("; ")}${rows.length > 8 ? `; og ${rows.length - 8} flere` : ""}` : show === "owner" ? "ejer ingen selskaber i CVR" : "ingen"}.`);
       }
     }
     if (c.type === "LassoPersonNetwork") {
       const net = ds.personNetworks[c.person];
       // "år sammen" er den længste sammenhængende periode i fælles selskaber, ikke summen.
-      if (net?.people.length) lines.push(`Netværk (år sammen = længste sammenhængende periode): ${net.people.slice(0, 5).map((x) => `${x.name} (${x.overlapYears} år, ${x.companies.length} fælles selskaber${x.active ? "" : ", afsluttet"})`).join(", ")}.`);
+      const n = Math.max(5, c.limit ?? 0);
+      if (net?.people.length) {
+        lines.push(
+          `Netværk (år sammen = længste sammenhængende periode): ${net.people
+            .slice(0, n)
+            .map((x) => `${x.name} (${x.overlapYears} år, ${x.companies.length} fælles selskaber${x.active ? "" : ", afsluttet"})`)
+            .join(", ")}${net.people.length > n ? `, og ${net.people.length - n} flere` : ""}.`,
+        );
+      } else if (net) lines.push("Netværk: personen sidder ikke sammen med andre i registrerede selskaber.");
     }
     if (c.type === "LassoPersonFacts") {
       const p = ds.persons[c.person];
@@ -167,12 +184,18 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
       }
     }
     if (c.type === "LassoTimeline" && c.person) {
-      const events = ds.timeline[c.person]?.events ?? [];
-      if (events.length) lines.push(`Historik (seneste ${Math.min(3, events.length)} af ${events.length}): ${events.slice(0, 3).map((e) => `${formatDate(e.date)} ${e.title}`).join("; ")}.`);
+      // Som på siden: de seneste `limit` (overblikket 3, ellers 5); på risiko kun forløbet i konkursselskaberne.
+      const all = ds.timeline[c.person];
+      const p = ds.persons[c.person];
+      const events = (c.filter === "risiko" && all && p ? riskTimeline(all, p) : all)?.events ?? [];
+      const n = Math.min(c.limit ?? 5, events.length);
+      const label = c.filter === "risiko" ? "Forløb i selskaberne med konkurs eller tvangsopløsning" : "Historik";
+      if (events.length) lines.push(`${label} (seneste ${n} af ${events.length}): ${events.slice(0, n).map((e) => `${formatDate(e.date)} ${e.title}`).join("; ")}.`);
     }
     if (c.type === "LassoNews" && c.person) {
       const items = ds.news[c.person]?.items ?? [];
-      if (items.length) lines.push(`Nyheder om personen (seneste ${Math.min(3, items.length)}): ${items.slice(0, 3).map((n) => `${n.time ? `${formatDate(n.time)} ` : ""}${n.headline} (${n.source})`).join("; ")}.`);
+      const n = Math.min(c.limit, items.length);
+      if (items.length) lines.push(`Nyheder om personen (seneste ${n}): ${items.slice(0, n).map((x) => `${x.time ? `${formatDate(x.time)} ` : ""}${x.headline} (${x.source})`).join("; ")}.`);
     }
     if (c.type === "LassoPersonRisk") {
       const p = ds.persons[c.person];

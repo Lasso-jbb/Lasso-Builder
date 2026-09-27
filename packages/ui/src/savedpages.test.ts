@@ -53,8 +53,13 @@ test("Gemte sider: rækken viser navn alene, hvad siden er, fokus, oprindelse, n
       page(1, { origin: "send" }),
       { lassoId: "CVR-3-4000123", kind: "person", name: "Anne Eksempel", origin: "link", savedAt: "2026-09-20" },
       page(2, { focus: "ukendt" }),
+      { lassoId: "CVR-3-4000124", kind: "person", name: "Bo Eksempel", focus: "netvaerk", origin: "manual", savedAt: "2026-09-21" },
+      page(3, { focus: "roller" }),
     ]),
   });
+  // Personfokus med personens navne; et personfokus på en virksomhed er ukendt og vises ikke.
+  assert.match(html, /class="lasso-row__sub">Person, fokus: Netværk</);
+  assert.match(html, /class="lasso-row__sub">Virksomhed, CVR 34580823</);
   assert.match(html, /class="lasso-row__sub">Virksomhed, CVR 34580820, fokus: Økonomi</);
   assert.match(html, /class="lasso-row__sub lasso-savedpages__note">Tjek regnskab i januar</);
   assert.match(html, /class="lasso-row__sub">Virksomhed, CVR 34580821, sendt til Lasso</);
@@ -164,6 +169,14 @@ test("saveTarget: navn fra datasættet, focus kun når undertitlen er et fokusna
   assert.deepEqual(saveTarget(oek, data([])), { kind: "save-page", lassoId: COMPANY, pageKind: "company", name: "Eksempel A/S", focus: "oekonomi" });
   const free = spec({ subtitle: "Sammenlignet med branchen", components: [{ type: "LassoCompanyHead", company: COMPANY }] });
   assert.equal(saveTarget(free, data([]))?.focus, undefined);
+  // Personsiden: composePerson sætter undertitlen til personfokusets navn uden for overblik.
+  const risk = spec({ kind: "person", title: "Anne Eksempel", subtitle: "Netværk", components: [{ type: "LassoPersonHead", person: PERSON }] });
+  assert.deepEqual(saveTarget(risk, data([])), { kind: "save-page", lassoId: PERSON, pageKind: "person", name: "Anne Eksempel", focus: "netvaerk" });
+  const overview = spec({ kind: "person", title: "Anne Eksempel", subtitle: "Roller i 3 selskaber", components: [{ type: "LassoPersonHead", person: PERSON }] });
+  assert.equal(saveTarget(overview, data([]))?.focus, undefined);
+  // Et virksomhedsfokus som undertitel på en personside er ikke et personfokus.
+  const wrong = spec({ kind: "person", title: "Anne Eksempel", subtitle: "Økonomi", components: [{ type: "LassoPersonHead", person: PERSON }] });
+  assert.equal(saveTarget(wrong, data([]))?.focus, undefined);
   assert.equal(saveTarget(spec({ kind: "custom", components: [{ type: "LassoCompanyHead", company: COMPANY }] }), data([])), null);
 });
 

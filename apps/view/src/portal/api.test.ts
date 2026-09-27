@@ -20,8 +20,13 @@ test("API: GET uden CSRF-header, cookien med (same-origin), forespørgsel kodet"
   const api = createPortalApi(() => assert.fail("ingen 401"), fetcher);
   await api.search("revisorer i Aarhus");
   await api.company("CVR-1-34580820", "oekonomi");
+  await api.person("CVR-3-4000000002", "risiko");
+  await api.person("Bo Eksempel", "overblik");
   assert.equal(calls[0]!.url, "/api/portal/search?query=revisorer+i+Aarhus");
   assert.equal(calls[1]!.url, "/api/portal/company/CVR-1-34580820?focus=oekonomi");
+  // Personfokus som query; standardfokus (overblik) udelades.
+  assert.equal(calls[2]!.url, "/api/portal/person/CVR-3-4000000002?focus=risiko");
+  assert.equal(calls[3]!.url, "/api/portal/person/Bo%20Eksempel");
   for (const c of calls) {
     assert.equal(c.init.method, "GET");
     assert.equal(c.init.credentials, "same-origin");

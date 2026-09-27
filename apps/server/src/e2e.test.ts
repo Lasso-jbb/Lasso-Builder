@@ -184,6 +184,7 @@ test("show_person (katalog 16) finder en person på navn og komponerer personsid
   assert.equal(sc.spec.kind, "person");
   assert.deepEqual(
     sc.spec.components.map((c) => `${c.type}${c.column ? `@${c.column}` : ""}${c.width ? `/${c.width}` : ""}`),
+    // Overblik (standard): aktive roller ¾ + stamoplysninger ¼, netværk | risiko, historik | ejerskab.
     [
       "LassoPersonHead",
       "LassoPersonRoles@1/three-quarters",
@@ -191,21 +192,30 @@ test("show_person (katalog 16) finder en person på navn og komponerer personsid
       "LassoPersonNetwork@1",
       "LassoPersonRisk@2",
       "LassoTimeline@1",
-      "LassoNews@2",
-      "LassoOwnershipDiagram",
+      "LassoOwnershipDiagram@2",
       "LassoFollowUps",
     ],
   );
+  const roles = sc.spec.components.find((c) => c.type === "LassoPersonRoles");
+  assert.equal(roles?.type === "LassoPersonRoles" && roles.show, "current");
   assert.match(sc.summary, /Fundet ud fra navnet "Bo Eksempel"/);
+  assert.match(sc.summary, /Aktive roller: Eksempel Holding ApS \[CVR-1-99000010\]: Direktør, ejer 100 %, siden 2005/);
   assert.match(sc.summary, /1 konkurser og 0 tvangsopløsninger/);
   assert.match(sc.summary, /Stamoplysninger: bopæl 8600 Silkeborg, Silkeborg Kommune; ejer 1 selskab; første registrering 2005/);
   assert.match(sc.summary, /Historik \(seneste 3 af \d+\): 02\.02\.2026 Eksempel Energi A\/S kom under konkurs/);
-  assert.match(sc.summary, /Nyheder om personen/);
+  assert.doesNotMatch(sc.summary, /Nyheder om personen/, "nyhederne står på fokus historik");
   assert.match(sc.summary, /Ejerskab: ejer direkte Eksempel Holding ApS 100 %/);
   // "År sammen" er den længste sammenhængende periode, ikke summen over selskaber.
   assert.match(sc.summary, /Vera Eksempel \(13 år, 1 fælles selskaber\)/);
   assert.match(sc.card, /SIDDER SAMMEN MED/);
-  for (const section of ["STAMOPLYSNINGER", "HISTORIK", "NYHEDER", "EJERSKAB"]) assert.match(sc.card, new RegExp(section));
+  for (const section of ["AKTIVE ROLLER", "STAMOPLYSNINGER", "HISTORIK", "EJERSKAB"]) assert.match(sc.card, new RegExp(section));
+  assert.doesNotMatch(sc.card, /NYHEDER/);
+  // Tekstkortets stamoplysninger gentager ikke hovedets tal (som siden).
+  assert.doesNotMatch(sc.card, /Første reg\./);
+  assert.deepEqual(
+    sc.spec.components.flatMap((c) => (c.type === "LassoFollowUps" ? c.prompts.map((p) => p.label) : [])),
+    ["Roller", "Netværk", "Risiko"],
+  );
   assert.doesNotMatch(sc.card, /Prøvevej/, "aldrig gade og husnummer for en person");
   assert.match(sc.link, /\/p\/CVR-3-\d+\?e=\w+&s=[\w-]{22}$/);
   const page = await fetch(sc.link);
@@ -213,6 +223,48 @@ test("show_person (katalog 16) finder en person på navn og komponerer personsid
   assert.match(await page.text(), /"LassoPersonRoles"/);
   const forged = await fetch(sc.link.replace(/CVR-3-(\d+)/, (_, n: string) => `CVR-3-${Number(n) + 1}`));
   assert.equal(forged.status, 403);
+});
+
+test("show_person med focus: risiko henter og viser kun risikoen og forløbet; linket åbner samme fokus", async () => {
+  const res = await client.callTool({ name: "show_person", arguments: { person: "CVR-3-4000000002", focus: "risiko" } });
+  assert.equal(res.isError, undefined);
+  const sc = res.structuredContent as { spec: ViewSpec; card: string; link: string; summary: string };
+  assert.equal(sc.spec.subtitle, "Risiko");
+  assert.deepEqual(
+    sc.spec.components.map((c) => c.type),
+    ["LassoPersonHead", "LassoPersonRisk", "LassoTimeline", "LassoFollowUps"],
+  );
+  const dataset = (res._meta as Record<string, { news: object; ownershipGraphs: object; personNetworks: object }>)[DATASET_META_KEY]!;
+  assert.deepEqual(Object.keys(dataset.news), [], "ingen nyheder hentet på risiko");
+  assert.deepEqual(Object.keys(dataset.ownershipGraphs), [], "intet ejerdiagram hentet på risiko");
+  assert.deepEqual(Object.keys(dataset.personNetworks), [], "intet netværk hentet på risiko");
+  assert.match(sc.summary, /1 konkurser og 0 tvangsopløsninger/);
+  assert.match(sc.summary, /Forløb i selskaberne med konkurs eller tvangsopløsning \(seneste 3 af 3\)/);
+  assert.match(sc.card, /FORLØB I SELSKABERNE/);
+  for (const section of ["STAMOPLYSNINGER", "NYHEDER", "SIDDER SAMMEN MED", "EJERSTRUKTUR"]) assert.doesNotMatch(sc.card, new RegExp(section));
+  assert.match(sc.link, /\/p\/CVR-3-4000000002\?e=\w+&f=risiko&s=[\w-]{22}$/);
+  const page = await fetch(sc.link);
+  assert.equal(page.status, 200);
+  // Sidens boot-data (ikke render-appens kode, som nævner alle komponenter).
+  const boot = /window\.__LASSO_BOOT__=(.*?);<\/script>/s.exec(await page.text())![1]!;
+  assert.match(boot, /"filter":"risiko"/);
+  assert.doesNotMatch(boot, /"LassoNews"/);
+  // Et andet fokus med samme signatur afvises.
+  assert.equal((await fetch(sc.link.replace("f=risiko", "f=historik"))).status, 403);
+
+  const hist = await client.callTool({ name: "show_person", arguments: { person: "Bo Eksempel", focus: "historik" } });
+  const h = hist.structuredContent as { spec: ViewSpec; card: string; summary: string };
+  assert.deepEqual(h.spec.components.map((c) => `${c.type}${c.column ? `@${c.column}` : ""}`), ["LassoPersonHead", "LassoTimeline@1", "LassoNews@2", "LassoFollowUps"]);
+  assert.match(h.summary, /Nyheder om personen/);
+  assert.match(h.card, /NYHEDER/);
+
+  const net = await client.callTool({ name: "show_person", arguments: { person: "Bo Eksempel", focus: "netvaerk" } });
+  const n = net.structuredContent as { spec: ViewSpec; card: string };
+  assert.deepEqual(n.spec.components.map((c) => c.type), ["LassoPersonHead", "LassoPersonNetwork", "LassoFollowUps"]);
+  assert.match(n.card, /SIDDER SAMMEN MED/);
+
+  const bad = await client.callTool({ name: "show_person", arguments: { person: "Bo Eksempel", focus: "oekonomi" } });
+  assert.equal(bad.isError, true);
 });
 
 test("show_person afviser CVR-numre og ukendte navne med en brugbar fejl", async () => {
@@ -267,6 +319,11 @@ test("instruktionerne er korte og uden dubletter af katalog og søgefelter (revi
   assert.doesNotMatch(instr, /grid-2/);
   assert.match(instr, /show_person/);
   for (const f of ["overblik", "oekonomi", "regnskab", "ejerskab", "ledelse", "risiko", "historik", "kontakt"]) assert.match(instr, new RegExp(`'${f}'`));
+  // Personfokus til show_person.
+  for (const f of ["roller", "netvaerk"]) assert.match(instr, new RegExp(`'${f}'`));
+  assert.match(instr, /show_person med navn eller person-ID \(CVR-3-…\)\. Vælg focus/);
+  const person = (await client.listTools()).tools.find((t) => t.name === "show_person")!;
+  assert.deepEqual((person.inputSchema.properties as Record<string, { enum?: string[] }>).focus?.enum, ["overblik", "roller", "netvaerk", "ejerskab", "risiko", "historik"]);
   assert.doesNotMatch(instr, /Komponentkatalog/);
   const { tools } = await client.listTools();
   const summary = (await client.callTool({ name: "show_company", arguments: { company: "99000001" } })).content as { text: string }[];

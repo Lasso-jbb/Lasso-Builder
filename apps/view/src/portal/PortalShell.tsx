@@ -13,11 +13,11 @@ import {
   type StripTab,
   type ViewAction,
 } from "@lasso/ui";
-import { FOCUS_LABELS, type SavedPageVM, type ViewSpec } from "@lasso/spec";
+import { FOCUS_LABELS, isPersonFocus, PERSON_FOCUS_LABELS, type SavedPageVM, type ViewSpec } from "@lasso/spec";
 import type { PortalUser } from "../boot.js";
 import { errorText, isUnauthorized, LOGGED_OUT, PortalApiError, type PortalApi, type ViewResult } from "./api.js";
 import { entityOf, isSaved, savedPagesOf, withSaved, type Entity } from "./data.js";
-import { EntityPage, FOCUS_MODULES, SavedPage, SearchPage, type TabData } from "./pages.js";
+import { EntityPage, FOCUS_MODULES, PERSON_MODULES, SavedPage, SearchPage, type TabData } from "./pages.js";
 import { dataKey, formatRoute, isFocus, portalRoute, sameRoute, type PortalRoute } from "./routes.js";
 import {
   activate,
@@ -182,7 +182,7 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true }: PortalShel
         case "company":
           return api.company(route.id, route.focus);
         case "person":
-          return api.person(route.id);
+          return api.person(route.id, route.focus);
       }
     },
     [api],
@@ -355,7 +355,7 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true }: PortalShel
           openEntity({ kind: "company", id: a.lassoId, focus: "overblik" }, a.name);
           return { ok: true };
         case "open-person":
-          openEntity({ kind: "person", id: a.lassoId }, a.name);
+          openEntity({ kind: "person", id: a.lassoId, focus: "overblik" }, a.name);
           return { ok: true };
         case "set-criteria": {
           if (!result) return;
@@ -451,7 +451,12 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true }: PortalShel
       label: p.name,
       icon: "letter" as const,
       onSelect: () =>
-        openEntity(p.kind === "company" ? { kind: "company", id: p.lassoId, focus: isFocus(p.focus) ? p.focus : "overblik" } : { kind: "person", id: p.lassoId }, p.name),
+        openEntity(
+          p.kind === "company"
+            ? { kind: "company", id: p.lassoId, focus: isFocus(p.focus) ? p.focus : "overblik" }
+            : { kind: "person", id: p.lassoId, focus: isPersonFocus(p.focus) ? p.focus : "overblik" },
+          p.name,
+        ),
     });
     const footer = { label: "Se alle gemte", icon: "none" as const, onSelect: openSaved };
     return [
@@ -498,10 +503,15 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true }: PortalShel
   const route = active.route;
   const mobile: AppShellMobile = {
     title: active.label,
-    subtitle: route.kind === "company" ? FOCUS_LABELS[route.focus] : route.kind === "person" ? "Person" : undefined,
-    sections: route.kind === "company" ? FOCUS_MODULES : undefined,
-    activeSection: route.kind === "company" ? route.focus : undefined,
-    onSelectSection: route.kind === "company" ? (id) => isFocus(id) && setRoute(active, { ...route, focus: id }) : undefined,
+    subtitle: route.kind === "company" ? FOCUS_LABELS[route.focus] : route.kind === "person" ? PERSON_FOCUS_LABELS[route.focus] : undefined,
+    sections: route.kind === "company" ? FOCUS_MODULES : route.kind === "person" ? PERSON_MODULES : undefined,
+    activeSection: route.kind === "company" || route.kind === "person" ? route.focus : undefined,
+    onSelectSection:
+      route.kind === "company"
+        ? (id) => isFocus(id) && setRoute(active, { ...route, focus: id })
+        : route.kind === "person"
+          ? (id) => isPersonFocus(id) && setRoute(active, { ...route, focus: id })
+          : undefined,
     nav: [
       { id: "soeg", label: "Søg", icon: <ShellIcon name="search" size={20} />, active: route.kind === "search", onSelect: openSearch },
       { id: "lister", label: "Lister", icon: <ShellIcon name="list" size={20} />, active: route.kind === "saved", onSelect: openSaved },
@@ -549,8 +559,11 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true }: PortalShel
           shellWidth={shellWidth}
           saved={on}
           canAct={Boolean(entity)}
-          onFocus={(focus) => route.kind === "company" && setRoute(active, { ...route, focus })}
-          onToggleSaved={() => entity && void toggleSaved(entity, route.kind === "company" ? route.focus : undefined)}
+          onFocus={(focus) => {
+            if (route.kind === "company" && isFocus(focus)) setRoute(active, { ...route, focus });
+            else if (route.kind === "person" && isPersonFocus(focus)) setRoute(active, { ...route, focus });
+          }}
+          onToggleSaved={() => entity && void toggleSaved(entity, route.focus)}
           onShare={() => void shareLink(active)}
           onRetry={() => void load(active)}
           onAction={onAction}

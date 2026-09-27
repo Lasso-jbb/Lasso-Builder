@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FOCUS_LABELS, formatDate, formatNumber, type Focus, type SavedPageKind, type SavedPageVM, type SavedPagesVM } from "@lasso/spec";
+import { FOCUS_LABELS, formatDate, formatNumber, PERSON_FOCUS_LABELS, type SavedPageKind, type SavedPageVM, type SavedPagesVM } from "@lasso/spec";
 import type { ActionResult, ViewAction } from "../types.js";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
 import { Tabs } from "./Tabs.js";
@@ -19,7 +19,8 @@ const count = (n: number) => `${formatNumber(n)} ${n === 1 ? "gemt side" : "gemt
 function describe(p: SavedPageVM): string {
   const parts = [p.kind === "company" ? (p.cvr ? `Virksomhed, CVR ${p.cvr}` : "Virksomhed") : "Person"];
   // Overblik er standardvisningen og siger intet; ukendte fokusnavne udelades.
-  if (p.focus && p.focus !== "overblik" && Object.prototype.hasOwnProperty.call(FOCUS_LABELS, p.focus)) parts.push(`fokus: ${FOCUS_LABELS[p.focus as Focus]}`);
+  const labels: Record<string, string> = p.kind === "person" ? PERSON_FOCUS_LABELS : FOCUS_LABELS;
+  if (p.focus && p.focus !== "overblik" && Object.prototype.hasOwnProperty.call(labels, p.focus)) parts.push(`fokus: ${labels[p.focus]}`);
   if (p.origin === "send" || p.origin === "link") parts.push("sendt til Lasso");
   return parts.join(", ");
 }
