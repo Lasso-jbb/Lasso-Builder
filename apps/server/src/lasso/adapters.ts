@@ -167,7 +167,8 @@ export function titleCase(s: string | undefined): string | undefined {
   return s.toLowerCase().replace(/(^|[\s-])(\p{L})/gu, (_, sep: string, ch: string) => sep + ch.toUpperCase());
 }
 
-function address(raw: Json): CompanyVM["address"] {
+/** Adresse-objekt (samme form for virksomheder, personer og produktionsenheder). Eksporteret til unitAdapters.ts. */
+export function address(raw: Json): CompanyVM["address"] {
   const a = pick(raw, "address", "addresses.0", "location", "beliggenhedsadresse", "mainAddress") ?? raw;
   const street =
     str(a, "street", "streetAddress", "addressLine", "line1", "vejnavn") ??

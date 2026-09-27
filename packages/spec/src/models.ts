@@ -32,6 +32,20 @@ export interface CompanyVM {
 }
 
 /**
+ * Ét verificeret telefonnummer fra Lassos "live number" (katalog 08). Kræver egen
+ * livenumber-tilføjelse til Lasso-abonnementet; se docs/endpoints-enheder-kontakt-analyse.md.
+ */
+export interface VerifiedPhoneNumberVM {
+  phoneNumber: string;
+  /** Højere = bedre. */
+  score?: number;
+  explanation?: string;
+  callable: boolean;
+  /** Fx "CVR", "Website". */
+  sources: string[];
+}
+
+/**
  * Kontaktoplysninger (katalog 08, "Kontaktblok"). Samme felter som CompanyVM's
  * telefon/e-mail/web/adresse, men med en kildelinje, fordi værdierne her kan
  * stamme fra virksomhedens hjemmeside (websites()/contacts()) og ikke kun CVR.
@@ -45,6 +59,12 @@ export interface ContactVM {
   /** Fx "CVR" eller "Virksomhedens hjemmeside". */
   source?: string;
   updated?: string;
+  /** Lassos "live number": højst 3 verificerede numre, sorteret efter score. */
+  verifiedNumbers?: VerifiedPhoneNumberVM[];
+  /** Tilmeldt Robinsonlisten (må ikke kontaktes med markedsføring). */
+  isRobinson?: boolean;
+  /** Hvornår live number-opslaget er opdateret. */
+  verifiedAt?: string;
 }
 
 /** Katalog 08, én kontaktperson (rolle/afdeling, telefon og/eller e-mail). */
@@ -298,6 +318,8 @@ export interface ProductionUnitVM {
 export interface ProductionUnitsVM {
   lassoId: string;
   units: ProductionUnitVM[];
+  /** Sat, når virksomheden har flere end de viste enheder (højst 25 hentes med detaljer). */
+  total?: number;
 }
 
 /** Katalog 20: én bygning i BBR-bygningstabellen. */
@@ -364,6 +386,11 @@ export interface LivestockVM {
   /** "SPF" m.fl., vist som ren tekst. */
   healthStatus?: string;
   events: VetEventVM[];
+  /**
+   * Forklaring til tom-tilstanden: enten at CHR-svarets struktur ikke er verificeret endnu,
+   * eller at Ejendomme-modulet mangler i abonnementet (401/403/404).
+   */
+  unavailableReason?: string;
 }
 
 /** En enhed i ejergrafen (katalog 14). Personer tegnes som piller, selskaber som kasser. */

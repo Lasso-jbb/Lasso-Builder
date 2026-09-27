@@ -58,6 +58,12 @@ export const NEGATIVE_TTL_MS = 90_000;
 export const SCRAPE_TIMEOUT_MS = 8_000;
 
 /**
+ * Timeout for regnskabsanalysen (POST /modules/reportanalysis), som ifølge Lasso kan tage
+ * længere end almindelige kald (op til 5 års regnskabsdata analyseres). Bruges kun for dette kald.
+ */
+export const REPORT_ANALYSIS_TIMEOUT_MS = 30_000;
+
+/**
  * Om en fejl må huskes kortvarigt: timeout og 4xx (undtagen 408/429) giver samme svar ved et
  * nyt forsøg lige efter. 5xx, 429 og netværksfejl kan være forbigående og prøves igen straks.
  */
@@ -136,7 +142,7 @@ export class LassoClient {
   }
 
   /** POST med JSON-body. Caches som GET, med body som del af nøglen. */
-  async post<T = unknown>(path: string, body: unknown): Promise<T> {
+  async post<T = unknown>(path: string, body: unknown, opts: RequestOptions = {}): Promise<T> {
     const url = new URL(path.replace(/^\/+/, ""), `${this.baseUrl}/`);
     const json = JSON.stringify(body);
     const key = `POST ${url} ${json}`;
@@ -144,7 +150,7 @@ export class LassoClient {
     const now = Date.now();
     const hit = this.cache.get(key);
     if (hit && hit.expires > now) return hit.value as Promise<T>;
-    const value = this.fetchJson(url, { method: "POST", body: json, headers: { ...this.headers, "Content-Type": "application/json" } });
+    const value = this.fetchJson(url, { method: "POST", body: json, headers: { ...this.headers, "Content-Type": "application/json" } }, opts.timeoutMs);
     this.remember(key, value, now);
     return value as Promise<T>;
   }
@@ -239,8 +245,24 @@ export class LassoClient {
   company(lassoId: string) {
     return this.get(enc(lassoId));
   }
+  /**
+   * Katalog 20, produktionsenhed: samme kombinerede endpoint som company/person, med et
+   * "CVR-2-…"-ID (`lassoId` fra company-fulds `productionUnits`-felt). Bekræftet af Lasso
+   * 27.09.2026, se docs/endpoints-enheder-kontakt-analyse.md.
+   */
+  productionUnit(lassoId: string) {
+    return this.get(enc(lassoId));
+  }
   reports(lassoId: string) {
     return this.get(`${enc(lassoId)}/reports/advanced`);
+  }
+  /**
+   * Regnskabsanalyse (katalog 12/19): tekstlig AI/redaktionel analyse med simple HTML-tags.
+   * Kan tage længere end almindelige kald, se REPORT_ANALYSIS_TIMEOUT_MS. Bekræftet af Lasso
+   * 27.09.2026 (metode og sti); svarets indpakning (rent HTML eller `{ text: … }`) er ikke set.
+   */
+  reportAnalysis(lassoId: string) {
+    return this.post(`modules/reportanalysis/${enc(lassoId)}`, {}, { timeoutMs: Math.max(this.timeoutMs, REPORT_ANALYSIS_TIMEOUT_MS) });
   }
   tinglysning(lassoId: string) {
     return this.get(`data/tinglysning/${enc(lassoId)}`);
@@ -283,6 +305,14 @@ export class LassoClient {
   contacts(lassoId: string, p: ContactParams = { contacts: true }) {
     return this.get(`apps/contacts/${enc(lassoId)}/data`, { ...p }, { timeoutMs: this.scrapeTimeoutMs });
   }
+  /**
+   * Live number (katalog 08): verificerede telefonnumre for én virksomhed. Kræver egen
+   * livenumber-tilføjelse til abonnementet (401/403/404 uden den). Bekræftet af Lasso
+   * 27.09.2026, se docs/endpoints-enheder-kontakt-analyse.md.
+   */
+  liveNumber(lassoId: string) {
+    return this.get(`data/livenumber/${enc(lassoId)}`);
+  }
   /** BBR-opsummering for én ejendom ud fra BFE-nummeret. Sti og parameter bekræftet af Lasso 26.09.2026. */
   bbrSummary(bfeNumber: string | number) {
     return this.get("data/bbr/property/summary", { bfeNumber });
@@ -295,6 +325,15 @@ export class LassoClient {
    */
   chr(lassoId: string) {
     return this.get(`modules/chr/${enc(lassoId)}`);
+  }
+
+  /**
+   * CHR-husdyrdata for virksomhedens CVR-nummer (katalog 20). Kræver "Ejendomme"-modulet i
+   * abonnementet (401/403/404 uden det). Sti og metode bekræftet af Lasso 27.09.2026;
+   * svarformen er IKKE dokumenteret, se docs/endpoints-enheder-kontakt-analyse.md.
+   */
+  chrLivestock(cvr: string | number) {
+    return this.get(`data/CHR/livestock/${enc(String(cvr))}`, { onlyCurrent: true });
   }
 
   /* ---------- Katalog 21, overvågning. UBEKRÆFTET, se docs/lasso-endpoints.md "Ubekræftet: overvågningsfeed" ---------- */
