@@ -3,8 +3,27 @@ import { createMcpExpressApp } from "@modelcontextprotocol/express";
 import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
 import cors from "cors";
 import type { NextFunction, Request, Response } from "express";
-import { companyTemplate, composeCompany, composeProbe, composePerson, composePersonProbe, listTemplate, parseViewSpec, searchQuerySchema, toLassoId, viewSpecSchema } from "@lasso/spec";
-import { getCurrentUser } from "./auth/user.js";
+import {
+  companyTemplate,
+  composeCompany,
+  composeProbe,
+  composePerson,
+  composePersonProbe,
+  cvrFromLassoId,
+  FOCUSES,
+  listTemplate,
+  mainMetric,
+  parseViewSpec,
+  searchQuerySchema,
+  toLassoId,
+  viewSpecSchema,
+  type Focus,
+  type Metric,
+} from "@lasso/spec";
+import { getCurrentUser, isValidMcpKey, mcpKeyRequired, providedKey } from "./auth/user.js";
+import { createPool } from "./db.js";
+import { entitySnapshot, savedPageVM } from "./pages/resolveExtras.js";
+import { createSavedPageStore, pageKindOf, SavedPageError, validateSavedPage, type SavedPageStore } from "./pages/store.js";
 import { hasLassoCredentials, isSet, loadConfig, type Config } from "./config.js";
 import { createProvider, type DataProvider } from "./data/index.js";
 import { errorMessage, normalizeSpec, resolveSpec } from "./data/resolve.js";
@@ -14,7 +33,7 @@ import { adaptSearch, at } from "./lasso/adapters.js";
 import { describeShape, LassoApiError, LassoClient, probeAuthVariants, type Query } from "./lasso/client.js";
 import { createMcpServer } from "./mcp/server.js";
 import { createViewStore, SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "./views/store.js";
-import { verifyCompanyLink, verifyPersonLink } from "./web/links.js";
+import { entityLink, isEntityId, sendToLassoLink, verifyCompanyLink, verifyEntityLink, verifyPersonLink, verifySendToLassoLink } from "./web/links.js";
 import { injectBoot, loadViewHtml } from "./web/page.js";
 
 const VERSION = "0.1.0";
@@ -24,20 +43,14 @@ export interface AppDeps {
   client: LassoClient;
   provider: DataProvider;
   store: ViewStore;
+  /** Gem-laget: brugerens gemte sider (docs/gem-lag.md). */
+  pages: SavedPageStore;
 }
 
 function safeEqual(a: string, b: string): boolean {
   const x = Buffer.from(a, "utf8");
   const y = Buffer.from(b, "utf8");
   return x.length === y.length && timingSafeEqual(x, y);
-}
-
-function providedKey(req: Request): string {
-  const auth = req.header("authorization");
-  const bearer = auth?.toLowerCase().startsWith("bearer ") ? auth.slice(7).trim() : undefined;
-  const fromQuery = typeof req.query.key === "string" ? req.query.key : undefined;
-  const fromPath = typeof req.params.key === "string" ? req.params.key : undefined;
-  return fromPath ?? req.header("x-api-key") ?? bearer ?? fromQuery ?? "";
 }
 
 /** Kræver nøglen, hvis den er sat. Uden nøgle er ruten åben (kun til lokal udvikling). */
@@ -49,7 +62,51 @@ function requireKey(expected: string) {
   };
 }
 
-export function createApp({ config, client, provider, store }: AppDeps) {
+/** Nøglen til "send til Lasso" (POST /api/send-to-lasso og …/link): SEND_TO_LASSO_KEY, ellers ADMIN_API_KEY. */
+export function sendToLassoKey(config: Config): string {
+  return isSet(config.SEND_TO_LASSO_KEY) ? config.SEND_TO_LASSO_KEY : config.ADMIN_API_KEY;
+}
+
+type SendRequest = { lassoId: string; userId: string; org: string; focus?: Focus; note?: string };
+
+/**
+ * Body til send-til-Lasso: { lassoId | cvr, userId, org?, focus?, note? }. Bruger og org
+ * valideres med samme regler som lageret (validateSavedPage), så et link aldrig kan pege på
+ * en liste, lageret ville afvise.
+ */
+function parseSendRequest(body: unknown, config: Config, withNote: boolean): SendRequest | { error: string } {
+  const b = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
+  const rawId = typeof b.lassoId === "string" && b.lassoId.trim() ? b.lassoId : typeof b.cvr === "string" || typeof b.cvr === "number" ? String(b.cvr) : "";
+  const lassoId = toLassoId(rawId, config.LASSO_COMPANY_ID_PREFIX);
+  if (!isEntityId(lassoId)) return { error: "Angiv lassoId (CVR-1-… for en virksomhed, CVR-3-… for en person) eller et 8-cifret cvr." };
+  if (typeof b.userId !== "string" || !b.userId.trim()) return { error: "Angiv userId." };
+  if (b.org !== undefined && typeof b.org !== "string") return { error: "org skal være tekst." };
+  const userId = b.userId.trim();
+  const org = typeof b.org === "string" && b.org.trim() ? b.org.trim() : config.DEMO_ORG;
+  if (b.focus !== undefined && (typeof b.focus !== "string" || !(FOCUSES as readonly string[]).includes(b.focus))) return { error: `focus skal være en af: ${FOCUSES.join(", ")}.` };
+  const focus = b.focus as Focus | undefined;
+  if (withNote && b.note !== undefined && (typeof b.note !== "string" || b.note.length > 500)) return { error: "note skal være tekst på højst 500 tegn." };
+  const note = withNote && typeof b.note === "string" ? b.note : undefined;
+  try {
+    // Navnet er ikke hentet endnu; kun bruger, org og ID tjekkes her.
+    validateSavedPage({ org, userId, lassoId, kind: pageKindOf(lassoId)!, name: lassoId, origin: "send" });
+  } catch (err) {
+    if (err instanceof SavedPageError) return { error: err.message };
+    throw err;
+  }
+  return { lassoId, userId, org, ...(focus ? { focus } : {}), ...(note ? { note } : {}) };
+}
+
+/** /mcp: MCP_ACCESS_KEY eller en af brugernøglerne i MCP_USER_KEYS (se auth/user.ts). Uden nøgler er ruten åben. */
+function requireMcpKey(config: Config) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!mcpKeyRequired(config)) return next();
+    if (isValidMcpKey(config, providedKey(req))) return next();
+    res.status(401).json({ error: "Unauthorized" });
+  };
+}
+
+export function createApp({ config, client, provider, store, pages }: AppDeps) {
   const app = createMcpExpressApp({ host: "0.0.0.0", jsonLimit: "1mb" });
   app.disable("x-powered-by");
 
@@ -65,7 +122,7 @@ export function createApp({ config, client, provider, store }: AppDeps) {
 
   app.get("/health", async (_req, res) => {
     // Altid 200, så en midlertidig databasefejl ikke stopper et deploy. Tilstanden står i svaret.
-    const dbOk = await store.ping();
+    const dbOk = (await store.ping()) && (await pages.ping());
     res.json({
       status: dbOk ? "ok" : "degraded",
       version: VERSION,
@@ -74,7 +131,7 @@ export function createApp({ config, client, provider, store }: AppDeps) {
       lassoCredentials: hasLassoCredentials(config),
       database: store.kind,
       databaseOk: dbOk,
-      mcpKeyRequired: isSet(config.MCP_ACCESS_KEY),
+      mcpKeyRequired: mcpKeyRequired(config),
       uptimeSeconds: Math.round(process.uptime()),
     });
   });
@@ -82,7 +139,7 @@ export function createApp({ config, client, provider, store }: AppDeps) {
   // --- MCP (Streamable HTTP, stateless: ny server pr. request) --------------
   const handleMcp = async (req: Request, res: Response) => {
     const user = getCurrentUser(req, config);
-    const server = createMcpServer({ config, provider, store, user });
+    const server = createMcpServer({ config, provider, store, pages, user });
     const transport = new NodeStreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     res.on("close", () => {
       transport.close().catch(() => {});
@@ -99,8 +156,8 @@ export function createApp({ config, client, provider, store }: AppDeps) {
     }
   };
   app.use("/mcp", cors({ exposedHeaders: ["Mcp-Session-Id"] }));
-  app.all("/mcp", requireKey(config.MCP_ACCESS_KEY), handleMcp);
-  app.all("/mcp/:key", requireKey(config.MCP_ACCESS_KEY), handleMcp);
+  app.all("/mcp", requireMcpKey(config), handleMcp);
+  app.all("/mcp/:key", requireMcpKey(config), handleMcp);
 
   // --- Gemte visninger -------------------------------------------------------
   app.get("/api/views/:org/:slug", async (req, res) => {
@@ -152,57 +209,144 @@ export function createApp({ config, client, provider, store }: AppDeps) {
       .send(injectBoot(html, { mode: "web", spec: view.spec, dataset, url, name: view.name, version: view.version, updatedAt: view.updatedAt }, view.name ?? view.spec.title));
   });
 
-  // --- Interaktiv virksomhedsvisning fra et signeret link (se web/links.ts) ----
-  app.get("/k/:cvr", async (req, res) => {
-    const html = await loadViewHtml();
-    const fail = (status: number, message: string) =>
-      void res.status(status).type("html").set("X-Robots-Tag", "noindex").send(injectBoot(html, { mode: "web", error: message }, "Lasso"));
-    const check = verifyCompanyLink(config, String(req.params.cvr), req.query as Record<string, unknown>);
-    if (!check.ok) {
-      return fail(
-        check.reason === "expired" ? 410 : 403,
-        check.reason === "expired" ? "Linket er udløbet. Spørg Claude om virksomheden igen for at få et nyt link." : "Linket er ugyldigt. Brug linket fra Claude, som det er.",
-      );
-    }
-    const lassoId = toLassoId(check.link.cvr, config.LASSO_COMPANY_ID_PREFIX);
+  // --- Hostede sider for én virksomhed eller person (signerede links, se web/links.ts) ----
+  // /k/<cvr> og /p/<id> fra show_company/show_person, og /e/<lassoId> fra gem-laget, deler de to
+  // hjælpere nedenfor: samme komponist som i chatten, friske data ved hver visning, ingen
+  // opfølgningsknapper (ingen chat på websiden), og aldrig i søgemaskiner.
+  const failPage = (res: Response, html: string, status: number, message: string) =>
+    void res.status(status).type("html").set("X-Robots-Tag", "noindex").send(injectBoot(html, { mode: "web", error: message }, "Lasso"));
+  const linkFailure = (reason: "invalid" | "expired", expired: string) =>
+    reason === "expired" ? { status: 410, message: `Linket er udløbet. ${expired}` } : { status: 403, message: "Linket er ugyldigt. Brug linket fra Claude, som det er." };
+  const ASK_AGAIN = (what: string) => `Spørg Claude om ${what} igen for at få et nyt link.`;
+  const FROM_LIST = "Åbn siden igen fra dine gemte sider i Claude (\"mine gemte sider\") for at få et nyt link.";
+  const sendPage = (req: Request, res: Response, html: string, boot: Record<string, unknown>, title: string) =>
+    void res
+      .type("html")
+      .set("Cache-Control", "no-store")
+      .set("X-Robots-Tag", "noindex")
+      .send(injectBoot(html, { mode: "web", ...boot, url: `${config.publicBaseUrl}${req.originalUrl}` }, title));
+
+  /** Virksomhedssiden. metric udeladt = hovednøgletallet (som show_company). */
+  async function renderCompanyPage(req: Request, res: Response, html: string, lassoId: string, opts: { focus: Focus; years: number; metric?: Metric }) {
     let name: string;
     try {
       name = (await provider.company(lassoId)).name;
     } catch (err) {
-      return fail(404, `Virksomheden kunne ikke hentes: ${errorMessage(err)}`);
+      return failPage(res, html, 404, `Virksomheden kunne ikke hentes: ${errorMessage(err)}`);
     }
-    // Samme komponist som i chatten: hent data, og lad formen følge virksomhedens data.
-    const focus = check.link.focus ?? "overblik";
-    const dataset = await resolveSpec(composeProbe(lassoId, focus), provider);
-    const spec = composeCompany(lassoId, dataset, { focus, years: check.link.years, chartMetric: check.link.metric, name, followUps: false });
-    res
-      .type("html")
-      .set("Cache-Control", "no-store")
-      .set("X-Robots-Tag", "noindex")
-      .send(injectBoot(html, { mode: "web", spec, dataset, url: `${config.publicBaseUrl}${req.originalUrl}`, name }, name));
+    const dataset = await resolveSpec(composeProbe(lassoId, opts.focus), provider);
+    const metric = opts.metric ?? mainMetric(dataset.financials[lassoId]?.years ?? []);
+    const spec = composeCompany(lassoId, dataset, { focus: opts.focus, years: opts.years, chartMetric: metric, name, followUps: false });
+    sendPage(req, res, html, { spec, dataset, name }, name);
+  }
+
+  /** Personsiden (katalog 16). */
+  async function renderPersonPage(req: Request, res: Response, html: string, lassoId: string) {
+    const dataset = await resolveSpec(composePersonProbe(lassoId), provider);
+    const person = dataset.persons[lassoId];
+    if (!person) return failPage(res, html, 404, `Personen kunne ikke hentes: ${dataset.errors[`person:${lassoId}`] ?? "ukendt fejl"}`);
+    const spec = composePerson(lassoId, dataset, { name: person.name, followUps: false });
+    sendPage(req, res, html, { spec, dataset, name: person.name }, person.name);
+  }
+
+  app.get("/k/:cvr", async (req, res) => {
+    const html = await loadViewHtml();
+    const check = verifyCompanyLink(config, String(req.params.cvr), req.query as Record<string, unknown>);
+    if (!check.ok) {
+      const f = linkFailure(check.reason, ASK_AGAIN("virksomheden"));
+      return failPage(res, html, f.status, f.message);
+    }
+    const lassoId = toLassoId(check.link.cvr, config.LASSO_COMPANY_ID_PREFIX);
+    await renderCompanyPage(req, res, html, lassoId, { focus: check.link.focus ?? "overblik", years: check.link.years, metric: check.link.metric });
   });
 
-  // --- Interaktiv personside fra et signeret link (katalog 16, se web/links.ts) ----
   app.get("/p/:id", async (req, res) => {
     const html = await loadViewHtml();
-    const fail = (status: number, message: string) =>
-      void res.status(status).type("html").set("X-Robots-Tag", "noindex").send(injectBoot(html, { mode: "web", error: message }, "Lasso"));
     const check = verifyPersonLink(config, String(req.params.id), req.query as Record<string, unknown>);
     if (!check.ok) {
-      return fail(
-        check.reason === "expired" ? 410 : 403,
-        check.reason === "expired" ? "Linket er udløbet. Spørg Claude om personen igen for at få et nyt link." : "Linket er ugyldigt. Brug linket fra Claude, som det er.",
-      );
+      const f = linkFailure(check.reason, ASK_AGAIN("personen"));
+      return failPage(res, html, f.status, f.message);
     }
-    const dataset = await resolveSpec(composePersonProbe(check.lassoId), provider);
-    const person = dataset.persons[check.lassoId];
-    if (!person) return fail(404, `Personen kunne ikke hentes: ${dataset.errors[`person:${check.lassoId}`] ?? "ukendt fejl"}`);
-    const spec = composePerson(check.lassoId, dataset, { name: person.name, followUps: false });
-    res
-      .type("html")
-      .set("Cache-Control", "no-store")
-      .set("X-Robots-Tag", "noindex")
-      .send(injectBoot(html, { mode: "web", spec, dataset, url: `${config.publicBaseUrl}${req.originalUrl}`, name: person.name }, person.name));
+    await renderPersonPage(req, res, html, check.lassoId);
+  });
+
+  // Gem-laget: én side pr. entitet (virksomhed CVR-1-…, person CVR-3-/CVR-4-…), fra gemte sider og send-til-Lasso.
+  app.get("/e/:lassoId", async (req, res) => {
+    const html = await loadViewHtml();
+    const check = verifyEntityLink(config, String(req.params.lassoId), req.query as Record<string, unknown>);
+    if (!check.ok) {
+      const f = linkFailure(check.reason, FROM_LIST);
+      return failPage(res, html, f.status, f.message);
+    }
+    if (pageKindOf(check.lassoId) === "company") {
+      const focus = check.focus ?? "overblik";
+      return renderCompanyPage(req, res, html, check.lassoId, { focus, years: focus === "oekonomi" ? 10 : 5 });
+    }
+    await renderPersonPage(req, res, html, check.lassoId);
+  });
+
+  // --- Send til Lasso (docs/gem-lag.md, "Indgange udefra") ---------------------
+  // Server-til-server fra portalen, et CRM eller en e-mail-tjeneste: gemmer siden på brugerens liste.
+  // Skriver til brugernes lister ud fra et userId i body'en, så uden nøgle er ruten lukket
+  // (503) uden for lokal udvikling; de øvrige admin-ruter er åbne uden nøgle, men de er kun læsning.
+  const sendKey = (req: Request, res: Response, next: NextFunction) => {
+    const expected = sendToLassoKey(config);
+    if (!isSet(expected)) {
+      if (config.APP_ENV === "development") return next();
+      return void res.status(503).json({ error: "Send til Lasso er ikke sat op: SEND_TO_LASSO_KEY (eller ADMIN_API_KEY) mangler." });
+    }
+    if (safeEqual(providedKey(req), expected)) return next();
+    res.status(401).json({ error: "Unauthorized" });
+  };
+
+  app.post("/api/send-to-lasso", sendKey, async (req, res) => {
+    const parsed = parseSendRequest(req.body, config, true);
+    if ("error" in parsed) return void res.status(400).json({ error: parsed.error });
+    let snapshot: Awaited<ReturnType<typeof entitySnapshot>>;
+    try {
+      snapshot = await entitySnapshot(provider, parsed.lassoId);
+    } catch (err) {
+      return void res.status(404).json({ error: `Kunne ikke hente ${parsed.lassoId}: ${errorMessage(err)}` });
+    }
+    try {
+      const { page, created } = await pages.save({ ...parsed, kind: snapshot.kind, name: snapshot.name, cvr: snapshot.cvr, origin: "send" });
+      res.status(created ? 201 : 200).json({ saved: savedPageVM(config, page), created, url: entityLink(config, page.lassoId, { focus: parsed.focus }) });
+    } catch (err) {
+      if (err instanceof SavedPageError) return void res.status(400).json({ error: err.message });
+      throw err;
+    }
+  });
+
+  // Et signeret link til en knap i en e-mail eller et CRM. Gemmer intet; det gør GET /send-to-lasso.
+  app.post("/api/send-to-lasso/link", sendKey, (req, res) => {
+    const parsed = parseSendRequest(req.body, config, false);
+    if ("error" in parsed) return void res.status(400).json({ error: parsed.error });
+    const { lassoId, userId, org, focus } = parsed;
+    res.json({ url: sendToLassoLink(config, { lassoId, userId, org, ...(focus ? { focus } : {}) }) });
+  });
+
+  // Knappen i e-mailen/CRM'et: gemmer siden (oprindelse "link") og sender videre til /e/<lassoId>.
+  app.get("/send-to-lasso", async (req, res) => {
+    const html = await loadViewHtml();
+    const check = verifySendToLassoLink(config, req.query as Record<string, unknown>);
+    if (!check.ok) {
+      const f = linkFailure(check.reason, "Siden er ikke gemt. Bed om et nyt link.");
+      return failPage(res, html, f.status, f.message);
+    }
+    const { lassoId, userId, org, focus } = check.link;
+    let snapshot: Awaited<ReturnType<typeof entitySnapshot>>;
+    try {
+      snapshot = await entitySnapshot(provider, lassoId);
+    } catch (err) {
+      return failPage(res, html, 404, `Kunne ikke hente ${pageKindOf(lassoId) === "person" ? "personen" : "virksomheden"}: ${errorMessage(err)}`);
+    }
+    try {
+      await pages.save({ org, userId, lassoId, kind: snapshot.kind, name: snapshot.name, cvr: snapshot.cvr, focus, origin: "link" });
+    } catch (err) {
+      if (err instanceof SavedPageError) return failPage(res, html, 400, err.message);
+      throw err;
+    }
+    res.set("Cache-Control", "no-store").set("X-Robots-Tag", "noindex").redirect(302, entityLink(config, lassoId, { focus }));
   });
 
   // --- Fejlfinding (kræver ADMIN_API_KEY) ------------------------------------
@@ -298,6 +442,11 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
         }
       }
     }
+    // Svarformer for de endpoints, adapterne er skrevet efter Lassos dokumentation uden en nøgle
+    // (docs/endpoints-*.md): ét kald pr. endpoint mod testvirksomheden, kun struktur og et kort
+    // udsnit af første element i loggen (offentlige CVR-data, aldrig nøgler). Creditsafe udelades,
+    // fordi et opslag koster en kredit. Tilkøb (Paqle, live number, CHR) logges som deres HTTP-status.
+    await probeEndpointShapes(client, first.lassoId, log);
     if (!verbose) return;
 
     for (const [name, fn] of [
@@ -343,11 +492,80 @@ async function probeLasso(config: Config, client: LassoClient, provider: DataPro
   }
 }
 
+/** Kort udsnit af første element i en liste (eller af objektet), så brøk/procent og feltnavne kan ses. */
+function firstSlice(raw: unknown, maxChars: number, ...paths: string[]): string {
+  let node: unknown = raw;
+  for (const path of paths) {
+    const next = at(node as Parameters<typeof at>[0], path);
+    if (next !== undefined) {
+      node = next;
+      break;
+    }
+  }
+  const item = Array.isArray(node) ? node[0] : node;
+  return JSON.stringify(item ?? null).slice(0, maxChars);
+}
+
+/** Top-niveauets skalarfelter (fx observations' score og version), uden listerne. */
+function scalarsOf(raw: unknown): string {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return JSON.stringify(raw ?? null).slice(0, 200);
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) if (v === null || typeof v !== "object") out[k] = v;
+  return JSON.stringify(out).slice(0, 400);
+}
+
+/**
+ * Logger form og et udsnit af svaret fra de endpoints, adapterne bygger på (opstartsprobe).
+ * Fejl logges som status, fx "403 (tilkøb?)", og stopper aldrig opstarten.
+ */
+export async function probeEndpointShapes(client: LassoClient, lassoId: string, log: (label: string, v: unknown) => void): Promise<void> {
+  const cvr = cvrFromLassoId(lassoId) ?? "";
+  // [navn, kald, stier til første element, maks tegn i udsnittet]
+  const calls: [string, () => Promise<unknown>, string[], number][] = [
+    ["owners/legal", () => client.get(`${encodeURIComponent(lassoId)}/owners/legal`), ["owners"], 700],
+    ["owners/beneficial", () => client.get(`${encodeURIComponent(lassoId)}/owners/beneficial`), ["owners"], 700],
+    [
+      "relations/graph",
+      () => client.post("modules/relations/graph", { ids: [lassoId], relationTypes: ["ownership"], enrichments: ["companyinfo", "personinfo"], ingoingDepth: 1, outgoingDepth: 1 }),
+      ["relations"],
+      700,
+    ],
+    ["relations/graph entity", () => client.post("modules/relations/graph", { ids: [lassoId], relationTypes: ["ownership"], enrichments: ["companyinfo", "personinfo"], ingoingDepth: 1, outgoingDepth: 1 }), ["entities"], 900],
+    ["observations (CompanyInsight)", () => client.post(`modules/observations/${encodeURIComponent(lassoId)}`, { observationTags: ["CompanyInsight"] }), ["observations"], 700],
+    ["modules/news", () => client.post("modules/news?limit=2&orderBy=publishtime", [lassoId]), [], 700],
+    ["productionUnit (CVR-2)", async () => {
+      const units = at((await client.company(lassoId)) as Parameters<typeof at>[0], "productionUnits");
+      const first = Array.isArray(units) ? units[0] : undefined;
+      const id = first && typeof first === "object" ? (first as { lassoId?: string }).lassoId : undefined;
+      return id ? client.get(encodeURIComponent(id)) : undefined;
+    }, [], 900],
+    ["paqle/news", () => client.get(`data/paqle/${encodeURIComponent(lassoId)}/news`), ["news"], 700],
+    ["livenumber", () => client.get(`data/livenumber/${encodeURIComponent(lassoId)}`), ["numbers"], 700],
+    ["CHR/livestock", () => client.get(`data/CHR/livestock/${cvr}`, { onlyCurrent: "true" }), [], 3500],
+    ["reportanalysis", () => client.post(`modules/reportanalysis/${encodeURIComponent(lassoId)}`, {}, {}, { timeoutMs: 30_000 }), [], 600],
+  ];
+  for (const [name, fn, paths, maxChars] of calls) {
+    const t0 = Date.now();
+    try {
+      const raw = await fn();
+      log(`form ${name} (${Date.now() - t0} ms)`, describeShape(raw, 5));
+      if (raw && typeof raw === "object" && !Array.isArray(raw)) log(`felter ${name}`, scalarsOf(raw));
+      log(`udsnit ${name}`, firstSlice(raw, maxChars, ...paths));
+    } catch (err) {
+      const status = err instanceof LassoApiError ? `HTTP ${err.status}${err.status === 401 || err.status === 403 ? " (tilkøb eller ingen adgang)" : ""}` : errorMessage(err);
+      log(`form ${name} FEJL (${Date.now() - t0} ms)`, status);
+    }
+  }
+}
+
 async function main() {
   const config = loadConfig();
   const client = new LassoClient(config);
   const provider = createProvider(config, client);
-  const store = createViewStore(config.DATABASE_URL);
+  // Én pool deles af gemte visninger og gemte sider; uden DATABASE_URL holdes begge i hukommelsen.
+  const pool = createPool(config.DATABASE_URL);
+  const store = createViewStore(pool ?? "");
+  const pages = createSavedPageStore(pool ?? "");
 
   // Databasen kan starte efter appen på Railway: prøv i baggrunden med backoff.
   // Lykkes det ikke, prøver hvert kald til databasen igen.
@@ -355,6 +573,7 @@ async function main() {
     for (let attempt = 1; attempt <= 8; attempt++) {
       try {
         await store.migrate();
+        await pages.migrate();
         if (attempt > 1) console.log(`[db] migreret (forsøg ${attempt})`);
         return;
       } catch (err) {
@@ -364,10 +583,10 @@ async function main() {
     }
   })();
 
-  const app = createApp({ config, client, provider, store });
+  const app = createApp({ config, client, provider, store, pages });
   const server = app.listen(config.PORT, "0.0.0.0", () => {
     console.log(
-      `[lasso-mcp] v${VERSION} ${config.APP_ENV} på port ${config.PORT} | data: ${provider.kind} | lasso-credentials: ${hasLassoCredentials(config) ? "ja" : "nej"} | søgning: ${client.hasSearchCredentials ? config.LASSO_SEARCH_API_BASE_URL : "ingen nøgle"} | db: ${store.kind} | mcp-nøgle: ${isSet(config.MCP_ACCESS_KEY) ? "ja" : "nej"} | ${config.publicBaseUrl}/mcp`,
+      `[lasso-mcp] v${VERSION} ${config.APP_ENV} på port ${config.PORT} | data: ${provider.kind} | lasso-credentials: ${hasLassoCredentials(config) ? "ja" : "nej"} | søgning: ${client.hasSearchCredentials ? config.LASSO_SEARCH_API_BASE_URL : "ingen nøgle"} | db: ${store.kind} | mcp-nøgle: ${mcpKeyRequired(config) ? "ja" : "nej"} | ${config.publicBaseUrl}/mcp`,
     );
     void probeLasso(config, client, provider).catch((err) => console.error("[lasso-probe] fejl:", errorMessage(err)));
   });
@@ -375,7 +594,9 @@ async function main() {
   const shutdown = () => {
     console.log("[lasso-mcp] lukker ned");
     server.close(() => {
-      void store.close().finally(() => process.exit(0));
+      void Promise.all([store.close(), pages.close()])
+        .then(() => pool?.end())
+        .finally(() => process.exit(0));
     });
     setTimeout(() => process.exit(0), 10_000).unref();
   };

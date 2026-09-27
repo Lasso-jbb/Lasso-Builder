@@ -16,6 +16,7 @@ const { loadConfig } = await import("./config.js");
 const { LassoClient } = await import("./lasso/client.js");
 const { DemoProvider } = await import("./data/demo.js");
 const { createViewStore } = await import("./views/store.js");
+const { createSavedPageStore } = await import("./pages/store.js");
 
 const KEY = "test-mcp-key";
 const ADMIN = "test-admin-key";
@@ -34,7 +35,9 @@ before(async () => {
   });
   const store = createViewStore(config.DATABASE_URL);
   await store.migrate();
-  const app = createApp({ config, client: new LassoClient(config), provider: new DemoProvider(), store });
+  const pages = createSavedPageStore(config.DATABASE_URL);
+  await pages.migrate();
+  const app = createApp({ config, client: new LassoClient(config), provider: new DemoProvider(), store, pages });
   http = app.listen(0);
   await new Promise((r) => http.once("listening", r));
   base = `http://127.0.0.1:${(http.address() as AddressInfo).port}`;
@@ -63,7 +66,7 @@ test("health svarer", async () => {
 test("tools og UI-ressource er registreret", async () => {
   const { tools } = await client.listTools();
   const names = tools.map((t) => t.name).sort();
-  assert.deepEqual(names, ["render_view", "resolve_view", "save_view", "search_companies", "show_company", "show_person"]);
+  assert.deepEqual(names, ["list_saved_pages", "remove_saved_page", "render_view", "resolve_view", "save_page", "save_view", "search_companies", "show_company", "show_person"]);
   const show = tools.find((t) => t.name === "show_company")!;
   const uri = (show._meta as { ui?: { resourceUri?: string } }).ui?.resourceUri ?? "";
   // Adressen bærer app-versionen, så værten ikke genbruger en gemt, forældet render-app.

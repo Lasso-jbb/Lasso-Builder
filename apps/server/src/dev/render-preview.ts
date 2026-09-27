@@ -38,6 +38,7 @@ if (reportId) {
       { type: "LassoOwnerList", company: reportId },
       { type: "LassoBeneficialOwners", company: reportId },
       { type: "LassoScoreGauge", company: reportId },
+      { type: "LassoCreditRating", company: reportId },
       { type: "LassoRiskObservations", company: reportId },
       { type: "LassoAuditorIndependence", company: reportId },
     ],

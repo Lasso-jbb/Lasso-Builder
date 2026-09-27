@@ -4,6 +4,7 @@ import {
   changeFeedKey,
   CHANGE_TYPE_LABELS,
   chartSeries,
+  creditRatingText,
   currencyUnit,
   isForeignCurrency,
   formatAmount,
@@ -17,6 +18,7 @@ import {
   personCompanies,
   personCounts,
   personRisk,
+  savedPagesKey,
   METRIC_FIELD,
   METRIC_KIND,
   METRIC_LABELS,
@@ -28,6 +30,7 @@ import {
   type OwnershipGraphVM,
   type ViewSpec,
 } from "@lasso/spec";
+import { SAVED_PAGES_NO_USER } from "./resolve.js";
 
 /**
  * Tekstkort: samme visning tegnet med tegn i en kodeblok, til apps der ikke kan
@@ -504,6 +507,14 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     }
   }
 
+  // Katalog 17: Creditsafe på én linje, egen skala A–E (blandes aldrig med scoren eller observationerne).
+  const credit = types.has("LassoCreditRating") ? ds.creditRatings?.[lassoId] : undefined;
+  if (credit) {
+    card.section("Kreditvurdering (Creditsafe)");
+    const line = creditRatingText(credit);
+    card.text(line.charAt(0).toUpperCase() + line.slice(1));
+  }
+
   const auditorIndependence = types.has("LassoAuditorIndependence") ? ds.auditorIndependence[lassoId] : undefined;
   if (auditorIndependence) {
     card.section("Revisoruafhængighed");
@@ -667,6 +678,41 @@ function changeFeedCard(spec: ViewSpec, ds: Dataset): string | null {
   return card.toString();
 }
 
+const SAVED_TITLE = { all: "Mine gemte sider", company: "Mine gemte virksomheder", person: "Mine gemte personer" } as const;
+
+/**
+ * Gem-laget: brugerens gemte sider som tekst. Navn, slags og gemt-dato pr. side (som søgelisten),
+ * og efter kortet et "Åbn"-link pr. side, så værter uden MCP Apps kan åbne siderne.
+ */
+function savedPagesCard(spec: ViewSpec, ds: Dataset): string | null {
+  const c = spec.components.find((x) => x.type === "LassoSavedPages");
+  if (!c || c.type !== "LassoSavedPages") return null;
+  const key = savedPagesKey(c);
+  const list = ds.savedPages[key];
+  const card = new Card();
+  const title = c.title ?? SAVED_TITLE[c.kind];
+  if (!list) {
+    card.section(title);
+    card.text(ds.errors[`savedPages:${key}`] ?? SAVED_PAGES_NO_USER);
+    return card.toString();
+  }
+  card.section(`${title} (${formatNumber(list.total)})`);
+  if (list.pages.length === 0) {
+    card.text("Ingen gemte sider endnu.");
+    return card.toString();
+  }
+  const shown = list.pages.slice(0, 20);
+  shown.forEach((p, i) => {
+    const n = `${i + 1}.`;
+    wrap(p.name, W - 4).forEach((l, j) => card.raw(`${pad(j === 0 ? n : "", 3)} ${l}`));
+    card.raw(`    ${p.kind === "company" ? "Virksomhed" : "Person"}, gemt ${formatDate(p.savedAt)}`);
+  });
+  const more = list.total - shown.length;
+  if (more > 0) card.text(`og ${formatNumber(more)} flere`);
+  const links = shown.flatMap((p, i) => (p.url ? [`${i + 1}. Åbn: ${p.url}`] : []));
+  return [card.toString(), ...links].join("\n");
+}
+
 /** Tekstkort for visningen, eller null når den ikke har noget, der kan vises som tekst. */
 export function textCard(spec: ViewSpec, ds: Dataset): string | null {
   const companies = [...new Set(spec.components.flatMap((c) => ("company" in c ? [c.company] : [])))];
@@ -676,6 +722,7 @@ export function textCard(spec: ViewSpec, ds: Dataset): string | null {
     ...(persons.length === 1 ? [personCard(spec, ds, persons[0]!)] : []),
     listCard(spec, ds),
     changeFeedCard(spec, ds),
+    savedPagesCard(spec, ds),
     summaryCard(spec),
   ].filter((c): c is string => Boolean(c));
   return cards.length ? cards.join("\n") : null;

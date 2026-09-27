@@ -5,6 +5,10 @@ import {
   changeFeedKey,
   CHANGE_TYPES,
   COMPONENT_CATALOG,
+  creditChange,
+  creditRatingText,
+  creditScoreWord,
+  creditTone,
   currencyUnit,
   foldChangeEntries,
   type ChangeEntryVM,
@@ -384,4 +388,37 @@ test("foldChangeEntries folder kun små ændringer (stamdata/kredit) af samme ty
   assert.deepEqual(group.companies, ["A", "B", "C"]);
   assert.equal(group.read, false, "en foldet række er ulæst, når ét medlem er det");
   assert.equal(foldChangeEntries([]).length, 0);
+});
+
+test("LassoCreditRating (katalog 17): schema, bredde ½ og katalogtekst efter skabelonen", () => {
+  const spec = parseViewSpec({ title: "Kredit", components: [{ type: "LassoCreditRating", company: "CVR-1-12345678" }] });
+  const c = spec.components[0]!;
+  assert.equal(c.type, "LassoCreditRating");
+  assert.equal(widthOf(c, "dashboard"), "half");
+  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoCreditRating" }] }), "company er påkrævet");
+  const entry = COMPONENT_CATALOG.find((e) => e.type === "LassoCreditRating");
+  assert.ok(entry);
+  for (const part of ["Brug til:", "Brug ikke når:", "Kræver:", "Eksempel:", "LassoRiskObservations", "LassoScoreGauge", "låst"]) assert.ok(entry.description.includes(part), part);
+});
+
+test("Creditsafe-skalaen A–E: tone, ord, ændring og tekstlinje (blandes aldrig med 0–100)", () => {
+  assert.deepEqual((["A", "B", "C", "D", "E"] as const).map(creditTone), ["ok", "ok", "warning", "danger", "danger"]);
+  assert.deepEqual((["A", "B", "C", "D", "E"] as const).map((s) => creditScoreWord(s)), ["Meget lav risiko", "Lav risiko", "Moderat risiko", "Høj risiko", "Meget høj risiko"]);
+  // Creditsafes egen beskrivelse vinder, på dansk når den er kendt, ellers som den står.
+  assert.equal(creditScoreWord("B", "Low"), "Lav risiko");
+  assert.equal(creditScoreWord("E", "Not Rated"), "Ikke vurderet");
+  assert.equal(creditScoreWord("C", "Særlig vurdering"), "Særlig vurdering");
+  // Stigning i risiko = ▲ dårligere, fald = ▼ bedre (datatyper del A, risikoskala).
+  assert.deepEqual(creditChange("B", "C"), { direction: "better", arrow: "▼", word: "bedre" });
+  assert.deepEqual(creditChange("D", "B"), { direction: "worse", arrow: "▲", word: "dårligere" });
+  assert.equal(creditChange("B", "B")?.word, "uændret");
+  assert.equal(creditChange("B", undefined), null);
+  const base = { lassoId: "CVR-1-1", source: "Creditsafe via Lasso" };
+  assert.equal(
+    creditRatingText({ ...base, state: "ok", current: { internationalScore: "B", internationalDescription: "Low", creditMax: 250_000, creditCurrency: "DKK" }, previous: { internationalScore: "C" } }),
+    "B, lav risiko, kreditmaksimum 250 t. kr., forrige C",
+  );
+  assert.equal(creditRatingText({ ...base, state: "ok", current: { internationalScore: "A", creditMax: 1_200_000, creditCurrency: "EUR" } }), "A, meget lav risiko, kreditmaksimum 1,2 mio. EUR");
+  assert.equal(creditRatingText({ ...base, state: "locked" }), "låst: kræver Creditsafe-tilføjelse");
+  assert.equal(creditRatingText({ ...base, state: "ok" }), "ikke oplyst");
 });

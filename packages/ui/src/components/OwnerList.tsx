@@ -24,7 +24,7 @@ export function OwnerList({ ownership, error, onOpen }: { ownership?: OwnershipV
       </Section>
     );
   }
-  const { owners, auditor } = ownership;
+  const { owners, auditor, hasOwnersUnderFivePercent } = ownership;
   if (owners.length === 0 && !auditor) {
     return (
       <Section title={title} span="half">
@@ -65,6 +65,9 @@ export function OwnerList({ ownership, error, onOpen }: { ownership?: OwnershipV
       ) : (
         <DataState state="empty" reason="Der er ingen registrerede legale ejere i CVR." />
       )}
+      {hasOwnersUnderFivePercent ? (
+        <p className="lasso-kv-line lasso-muted">Der er ejere under 5 %, som ikke er registreret enkeltvis.</p>
+      ) : null}
       {auditor ? (
         <p className="lasso-kv-line">
           <span className="lasso-kv-line__key">Revisor</span>

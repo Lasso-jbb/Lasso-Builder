@@ -7,6 +7,7 @@ import type {
   CompanyVM,
   ContactPersonsVM,
   ContactVM,
+  CreditRatingVM,
   Criterion,
   DataSourceKind,
   FinancialsVM,
@@ -58,6 +59,8 @@ export interface DataProvider {
   timeline(lassoId: string): Promise<TimelineVM>;
   news(lassoId: string, limit: number): Promise<NewsVM>;
   observations(lassoId: string): Promise<ObservationsVM>;
+  /** Katalog 17: kreditvurdering fra Creditsafe. Låst, ikke beregnet og fejl er tilstande i svaret, ikke undtagelser. */
+  creditRating(lassoId: string): Promise<CreditRatingVM>;
   auditorIndependence(lassoId: string): Promise<AuditorIndependenceVM>;
   /** Katalog 20: produktionsenheder (P-numre). */
   productionUnits(lassoId: string): Promise<ProductionUnitsVM>;

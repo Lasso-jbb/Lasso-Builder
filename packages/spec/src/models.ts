@@ -32,6 +32,20 @@ export interface CompanyVM {
 }
 
 /**
+ * Ét verificeret telefonnummer fra Lassos "live number" (katalog 08). Kræver egen
+ * livenumber-tilføjelse til Lasso-abonnementet; se docs/endpoints-enheder-kontakt-analyse.md.
+ */
+export interface VerifiedPhoneNumberVM {
+  phoneNumber: string;
+  /** Højere = bedre. */
+  score?: number;
+  explanation?: string;
+  callable: boolean;
+  /** Fx "CVR", "Website". */
+  sources: string[];
+}
+
+/**
  * Kontaktoplysninger (katalog 08, "Kontaktblok"). Samme felter som CompanyVM's
  * telefon/e-mail/web/adresse, men med en kildelinje, fordi værdierne her kan
  * stamme fra virksomhedens hjemmeside (websites()/contacts()) og ikke kun CVR.
@@ -45,6 +59,12 @@ export interface ContactVM {
   /** Fx "CVR" eller "Virksomhedens hjemmeside". */
   source?: string;
   updated?: string;
+  /** Lassos "live number": højst 3 verificerede numre, sorteret efter score. */
+  verifiedNumbers?: VerifiedPhoneNumberVM[];
+  /** Tilmeldt Robinsonlisten (må ikke kontaktes med markedsføring). */
+  isRobinson?: boolean;
+  /** Hvornår live number-opslaget er opdateret. */
+  verifiedAt?: string;
 }
 
 /** Katalog 08, én kontaktperson (rolle/afdeling, telefon og/eller e-mail). */
@@ -205,6 +225,11 @@ export interface OwnershipVM {
   lassoId: string;
   owners: OwnerVM[];
   auditor?: { name: string; lassoId?: string; from?: string };
+  /**
+   * GET /{lassoId}/owners/legal: der findes ejere under 5 %, som CVR ikke registrerer enkeltvis
+   * (kun ejere over 5 % listes ved navn). Kun sat, når det dokumenterede endpoint er brugt.
+   */
+  hasOwnersUnderFivePercent?: boolean;
 }
 
 /** Reelle ejere (katalog 11, "Reelle ejere"). Endpoint ubekræftet, se docs/lasso-endpoints.md. */
@@ -260,7 +285,10 @@ export interface TimelineVM {
   events: TimelineEventVM[];
 }
 
-/** Én nyhed (katalog 12, "Nyheder"). Kilde: docs.lassox.com/data-apis/paqle/. */
+/**
+ * Én nyhed (katalog 12, "Nyheder"). To kilder: Lasso News (POST /modules/news) og Paqle
+ * (GET /data/paqle/{lassoId}/news), se docs/endpoints-risiko-nyheder.md.
+ */
 export interface NewsItemVM {
   source: string;
   url?: string;
@@ -270,11 +298,24 @@ export interface NewsItemVM {
   excerpt?: string;
   /** Sprogkode eller -navn, når artiklen ikke er dansk, fx "engelsk". */
   language?: string;
+  /** Dansk etiket for Lasso News' nyhedstype, fx "Nyt regnskab" eller "Bestyrelsesændring". */
+  typeLabel?: string;
+  /**
+   * Paqles tekstsegmenter for overskrift/uddrag, med `highlight:true` på det stykke, der er
+   * virksomhedens navn (regel 17: navn i fed, ikke koral). Bruges i stedet for en gættet
+   * tekstsøgning, når de findes.
+   */
+  headlineSegments?: { text: string; highlight?: boolean }[];
+  extractSegments?: { text: string; highlight?: boolean }[];
 }
 
 export interface NewsVM {
   lassoId: string;
   items: NewsItemVM[];
+  /** Hvilke af de to kilder (Lasso News, Paqle) der faktisk bidrog, til sektionens kildelinje. */
+  sources?: string[];
+  /** Nyeste posts tidsstempel på tværs af kilder, til kildelinjens "opdateret …". */
+  updatedAt?: string;
 }
 
 /** Katalog 20: én produktionsenhed (P-nummer). */
@@ -298,6 +339,8 @@ export interface ProductionUnitVM {
 export interface ProductionUnitsVM {
   lassoId: string;
   units: ProductionUnitVM[];
+  /** Sat, når virksomheden har flere end de viste enheder (højst 25 hentes med detaljer). */
+  total?: number;
 }
 
 /** Katalog 20: én bygning i BBR-bygningstabellen. */
@@ -342,6 +385,13 @@ export interface LivestockHerdVM {
   category?: string;
   count?: number | null;
   unit?: string;
+  /**
+   * CHR-nummer for den ejendom, denne besætning hører til. Kan afvige fra
+   * `LivestockVM.chrNumber` (virksomhedens første ejendom), når virksomheden har flere.
+   */
+  chrNumber?: string;
+  /** Ejendommens adresse og kommune, fx "Orevej 5, 3660 Stenløse (Egedal)". */
+  propertyAddress?: string;
 }
 
 /** Katalog 20: én veterinær hændelse på tidslinjen. */
@@ -364,6 +414,11 @@ export interface LivestockVM {
   /** "SPF" m.fl., vist som ren tekst. */
   healthStatus?: string;
   events: VetEventVM[];
+  /**
+   * Forklaring til tom-tilstanden: enten at CHR-svarets struktur ikke er verificeret endnu,
+   * eller at Ejendomme-modulet mangler i abonnementet (401/403/404).
+   */
+  unavailableReason?: string;
 }
 
 /** En enhed i ejergrafen (katalog 14). Personer tegnes som piller, selskaber som kasser. */
@@ -385,6 +440,8 @@ export interface OwnershipNodeVM {
   equity?: number | null;
   /** Den virksomhed, diagrammet er åbnet fra. Kun én. */
   root?: boolean;
+  /** Syntetisk knude for lovligt uregistreret ejerskab under 5 % ("{lassoId}_UNKNOWN" i ejergrafen). */
+  unknown?: boolean;
 }
 
 /** Ejerskab fra `from` (ejer) til `to` (den ejede). Andele i procent 0–100 som CVR-interval. */
@@ -451,6 +508,10 @@ export interface ObservationRowVM {
   /** Fx "CVR", "Regnskab 2025" eller "Ledelse". */
   source?: string;
   date?: string;
+  /** Observationstypen fra Lasso, fx "DirectBankruptcies" (docs/endpoints-risiko-nyheder.md). */
+  type?: string;
+  /** Lasso kunne ikke beregne observationen (fx manglende data); vises som ren tekst, ingen badge. */
+  notAvailable?: boolean;
 }
 
 export interface ObservationsVM {
@@ -460,6 +521,17 @@ export interface ObservationsVM {
   checkedAt?: string;
   /** Datakilder til kildelinjen, fx ["CVR", "regnskab", "ledelse"]. */
   sources?: string[];
+  /**
+   * Indirekte observationer (fx konkursrelationer), der egentlig måler en tilknyttet person
+   * eller et tilknyttet selskab, grupperet pr. entitet (relatedObservations i det bekræftede
+   * svar — nøglerne kan være både personer og selskaber). Navnet slås op af LiveProvider, hvor
+   * det kan findes; ellers vises entitetens Lasso-ID.
+   */
+  related?: { lassoId: string; name?: string; rows: ObservationRowVM[] }[];
+  /** Svarets versionsstempel (bekræftet felt 27.09.2026, ubrugt indtil videre). */
+  version?: string;
+  /** En samlet score i det bekræftede svar (27.09.2026); skalaen er ikke dokumenteret endnu, vises ikke i UI'en. */
+  score?: number;
 }
 
 /** Samme alvorsskala som observationer, men kun tre trin bruges her (katalog 22): 0, 50, 100. */
@@ -511,6 +583,48 @@ export interface ScoreVM {
   score: number | null;
   source?: string;
   updated?: string;
+}
+
+/* ---------- Katalog 17: kreditvurdering fra Creditsafe (egen skala A–E, blandes aldrig med 0–100) ---------- */
+
+/** Creditsafes internationale score: A (meget lav risiko) til E (meget høj risiko). */
+export const CREDIT_SCORES = ["A", "B", "C", "D", "E"] as const;
+export type CreditScore = (typeof CREDIT_SCORES)[number];
+
+/** Én vurdering fra Creditsafe (GET /data/creditsafe/rating/{cvr}, felterne `current` og `previous`). */
+export interface CreditAssessment {
+  creditMax?: number | null;
+  /** ISO-valuta for kreditmaksimum, fx "DKK". */
+  creditCurrency?: string;
+  internationalScore?: CreditScore;
+  /** Creditsafes egen tekst til bogstavet, fx "Low". */
+  internationalDescription?: string;
+  localScore?: number | null;
+  /** Creditsafes tekst til den lokale score, fx "Low Risk". */
+  localDescription?: string;
+}
+
+/**
+ * Kreditvurdering fra Creditsafe via Lasso. Kræver Creditsafe-tilføjelsen til Lasso-abonnementet;
+ * uden den er tilstanden "locked". Modellen beder aldrig om en ny beregning (skipCache), fordi det
+ * koster en kredit; se docs/endpoints-creditsafe.md.
+ */
+export interface CreditRatingVM {
+  lassoId: string;
+  cvr?: string;
+  /** Ingen adgang (tilkøb), ikke beregnet endnu, eller fejl. */
+  state: "ok" | "locked" | "unavailable" | "error";
+  reason?: string;
+  current?: CreditAssessment;
+  previous?: CreditAssessment;
+  /** Dato for seneste ændring af vurderingen (ÅÅÅÅ-MM-DD). */
+  latestChange?: string;
+  /** Link til Creditsafes kreditrapport som PDF (kun http/https). */
+  pdfUrl?: string;
+  source: string;
+  updated?: string;
+  /** Cache hos Lasso: 24 timer pr. organisation; ny beregning koster en kredit og tager 5–45 s. */
+  cachedUntil?: string;
 }
 
 /* ---------- Katalog 21: overvågning og notifikationer ---------- */
@@ -599,6 +713,41 @@ export function foldChangeEntries(entries: readonly ChangeEntryVM[], min = 3): C
   return out;
 }
 
+/* Gem-laget (docs/gem-lag.md): brugerens gemte virksomheds- og personsider. */
+export type SavedPageKind = "company" | "person";
+/** Hvordan siden kom på listen: manuelt (tool eller knap), via et signeret link, eller sendt fra et eksternt system. */
+export type SavedPageOrigin = "manual" | "link" | "send";
+export const SAVED_PAGE_ORIGINS: readonly SavedPageOrigin[] = ["manual", "link", "send"];
+
+export interface SavedPageVM {
+  lassoId: string;
+  kind: SavedPageKind;
+  /** Navnesnapshot fra gemmetidspunktet; selve siden viser altid friske data. */
+  name: string;
+  cvr?: string;
+  /** Visningens focus (fx "oekonomi"), når siden blev gemt fra en fokusvisning. */
+  focus?: string;
+  note?: string;
+  origin: SavedPageOrigin;
+  savedAt: string;
+  /** Signeret link til den hostede side (/e/<lassoId>), sat af serveren. */
+  url?: string;
+}
+
+export interface SavedPagesVM {
+  /** Nyeste først. */
+  pages: SavedPageVM[];
+  /** Antal gemte sider i alt for brugeren af den valgte slags (før limit). */
+  total: number;
+  kind: SavedPageKind | "all";
+  limit: number;
+}
+
+/** Stabil nøgle for en gemt-liste i Dataset.savedPages. */
+export function savedPagesKey(c: { kind?: SavedPageKind | "all"; limit?: number }): string {
+  return `${c.kind ?? "all"}|${c.limit ?? 20}`;
+}
+
 /** Alt det data, én visning skal bruge, slået op på nøgle. */
 export interface Dataset {
   source: DataSourceKind;
@@ -619,6 +768,8 @@ export interface Dataset {
   searches: Record<string, SearchResultVM>;
   scores: Record<string, ScoreVM>;
   observations: Record<string, ObservationsVM>;
+  /** Katalog 17: kreditvurdering fra Creditsafe pr. Lasso-ID. */
+  creditRatings: Record<string, CreditRatingVM>;
   auditorIndependence: Record<string, AuditorIndependenceVM>;
   /** Katalog 20: produktionsenheder, ejendomme/BBR og CHR, slået op pr. Lasso-ID. */
   productionUnits: Record<string, ProductionUnitsVM>;
@@ -631,6 +782,10 @@ export interface Dataset {
   personNetworks: Record<string, PersonNetworkVM>;
   /** Katalog 21: ændringsfeed pr. changeFeedKey. */
   changeFeeds: Record<string, ChangeFeedVM>;
+  /** Gem-laget: gemte sider pr. savedPagesKey (LassoSavedPages). Fejlnøgle "savedPages:<key>". */
+  savedPages: Record<string, SavedPagesVM>;
+  /** Gem-laget: hvilke Lasso-ID'er i visningen brugeren allerede har gemt (til Gem/Gemt-knappen). */
+  savedIds?: string[];
   /** Fejl pr. nøgle, fx "company:CVR-1-12345678" -> "Ingen adgang". */
   errors: Record<string, string>;
 }
@@ -653,6 +808,7 @@ export function emptyDataset(source: DataSourceKind): Dataset {
     searches: {},
     scores: {},
     observations: {},
+    creditRatings: {},
     auditorIndependence: {},
     productionUnits: {},
     properties: {},
@@ -661,6 +817,7 @@ export function emptyDataset(source: DataSourceKind): Dataset {
     persons: {},
     personNetworks: {},
     changeFeeds: {},
+    savedPages: {},
     errors: {},
   };
 }

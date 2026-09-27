@@ -14,6 +14,10 @@ export type ViewAction =
   | { kind: "set-criteria"; criteria: Criterion[] }
   | { kind: "refresh" }
   | { kind: "save"; name: string; slug?: string; visibility: Visibility }
+  /** Gem-laget (docs/gem-lag.md): gem den viste virksomhed eller person på brugerens liste. */
+  | { kind: "save-page"; lassoId: string; pageKind: "company" | "person"; name: string; focus?: string }
+  /** Gem-laget: fjern en side fra brugerens liste (fra hovedet eller fra listen over gemte sider). */
+  | { kind: "remove-saved-page"; lassoId: string }
   | { kind: "copy-link"; url: string }
   | { kind: "open-link"; url: string }
   | { kind: "export"; filename: string; csv: string }
@@ -26,6 +30,8 @@ export type ActionResult = { ok: true; url?: string; message?: string } | { ok: 
 export interface HostCapabilities {
   prompt?: boolean;
   save?: boolean;
+  /** Gem-laget: værten kan gemme/fjerne sider for en kendt bruger (save_page/remove_saved_page). */
+  savePage?: boolean;
   refine?: boolean;
   drillDown?: boolean;
   fullscreen?: boolean;

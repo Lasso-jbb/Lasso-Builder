@@ -3,6 +3,7 @@ import {
   currencyUnit,
   isForeignCurrency,
   chartSeries,
+  creditRatingText,
   formatAmount,
   formatCriterion,
   formatDate,
@@ -18,6 +19,7 @@ import {
   personCompanies,
   personCounts,
   personRisk,
+  savedPagesKey,
   searchKey,
   type Dataset,
   type ViewSpec,
@@ -98,6 +100,11 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
         lines.push(risk.lasso?.checkedAt ? "Risiko: Lasso har gennemgået virksomheden og fandt intet at bemærke." : "Risiko: ingen observationer fra Lasso og ingen signaler i status, regnskab og ledelse.");
       }
     }
+    if (c.type === "LassoCreditRating") {
+      // Creditsafes skala A–E; nævnes aldrig sammen med Lassos 0–100-score.
+      const r = ds.creditRatings?.[c.company];
+      if (r) lines.push(`Kreditvurdering (Creditsafe): ${creditRatingText(r)}.`);
+    }
     if (c.type === "LassoPersonList") {
       const people = ds.people[c.company] ?? [];
       const current = people.filter((p) => !p.to).slice(0, 6);
@@ -172,6 +179,20 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
       if (pr?.properties.length) {
         const buildings = pr.properties.reduce((sum, p) => sum + p.buildings.length, 0);
         lines.push(`Ejendomme: ${pr.properties.length}, i alt ${buildings} bygninger.`);
+      }
+    }
+    if (c.type === "LassoSavedPages") {
+      // Gem-laget: brugerens egne gemte sider, så modellen kan svare på "hvad har jeg gemt".
+      const list = ds.savedPages[savedPagesKey(c)];
+      if (list && list.pages.length === 0) lines.push("Gemte sider: ingen endnu.");
+      if (list?.pages.length) {
+        const named = list.pages.slice(0, 10).map((p) => {
+          const what = p.kind === "company" ? `Virksomhed${p.cvr ? `, CVR ${p.cvr}` : ""}` : `Person, ${p.lassoId}`;
+          const note = p.note ? `, note "${p.note.length > 80 ? `${p.note.slice(0, 79)}…` : p.note}"` : "";
+          return `${p.name} (${what}, gemt ${formatDate(p.savedAt)}${note})`;
+        });
+        const rest = list.total - named.length;
+        lines.push(`Gemte sider (${list.total} i alt, viser ${list.pages.length}): ${named.join(", ")}${rest > 0 ? ` … og ${rest} til` : ""}.`);
       }
     }
     if (c.type === "LassoLivestock") {

@@ -11,12 +11,17 @@ import {
   type FinancialsVM,
   type FinancialStatementsVM,
   type LivestockVM,
+  type ObservationsVM,
   type OwnershipGraphVM,
+  type OwnershipVM,
   type ProductionUnitsVM,
   type PropertiesVM,
   type ScoreVM,
   type SearchQuery,
   type SearchResultVM,
+  cvrFromLassoId,
+  CREDIT_PENDING_REASON,
+  CREDIT_SOURCE,
 } from "@lasso/spec";
 import type { Config } from "../config.js";
 import {
@@ -47,14 +52,32 @@ import {
   graphFromOwnership,
   participantNames,
 } from "../lasso/adapters.js";
-import { LassoApiError, type LassoClient } from "../lasso/client.js";
+import { describeShape, LassoApiError, type LassoClient } from "../lasso/client.js";
+import { adaptOwnershipLegal } from "../lasso/ownershipAdapters.js";
+import { adaptLassoNews, mergeNews } from "../lasso/riskNewsAdapters.js";
 import { adaptPerson, adaptPersonNetwork, adaptPersonSearch } from "../lasso/personAdapters.js";
+import { adaptChrLivestock, adaptLiveNumber, adaptReportAnalysisSections, buildProductionUnits } from "../lasso/unitAdapters.js";
+import { loadCreditRating } from "../lasso/creditAdapters.js";
 import { criteriaToFilters, DEFAULT_ACTIVE_STATUS_FILTER, filtersToCriteria, SERVER_SORT, type LassoFilter } from "../lasso/searchFilters.js";
 import { applyCriteria, needsFinancials, sortRows } from "./criteria-eval.js";
 import { mapLimit, type ChangeFeedOptions, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
 
 /** Så længe venter kontaktblokken på hjemmesidens telefon/e-mail, før den vises uden. */
 export const CONTACT_BUDGET_MS = 2_500;
+
+/** Så længe venter tekstsektionerne på regnskabsanalysen, før den udelades (svaret kan tage 5–10 s). */
+export const TEXT_SECTIONS_BUDGET_MS = 8_000;
+
+/** Så længe venter kreditvurderingen på Creditsafe (5–45 s ved live beregning), før "beregner stadig" vises. */
+export const CREDIT_BUDGET_MS = 12_000;
+
+/**
+ * Så længe venter en visning på risikoobservationer, før resten hellere må vises uden. Målt
+ * svartid for det største selskab (Novo Nordisk, 27.09.2026): 11,8 s, så budgettet ligger over
+ * det. Over budgettet giver en fejl (med "Prøv igen"), i stedet for at hele siden venter; kaldet
+ * kører videre i baggrunden og ligger klar i klientens cache til næste forsøg (som CONTACT_BUDGET_MS).
+ */
+export const OBSERVATIONS_BUDGET_MS = 14_000;
 
 /** Venter højst `ms` på et løfte; derefter undefined (løftet kører videre og fylder klientens cache). */
 async function withinBudget<T>(p: Promise<T | undefined>, ms: number): Promise<T | undefined> {
@@ -96,6 +119,9 @@ export class LiveProvider implements DataProvider {
     private readonly client: LassoClient,
     private readonly config: Config,
   ) {}
+
+  /** Sikrer at CHR-svarets form kun logges én gang pr. kørende server, ikke pr. opslag. */
+  private chrShapeLogged = false;
 
   async search(q: SearchQuery): Promise<SearchResultVM> {
     // Med søgenøgle filtrerer Lasso selv i hele CVR; kun det, Lasso ikke kan, klares her.
@@ -250,16 +276,23 @@ export class LiveProvider implements DataProvider {
    * Katalog 08: kontaktblok. CVR først; hjemmesidens kontaktdata kun, når CVR mangler noget.
    * Den scrapende telefon/e-mail-opslag får højst CONTACT_BUDGET_MS: er den ikke færdig, vises
    * CVR og hjemmeside nu, og kaldet kører færdigt i baggrunden og ligger i cachen til næste gang.
+   * Live number (kræver egen tilføjelse) hentes parallelt og tilføjer verificerede numre/Robinson,
+   * når abonnementet har adgang; 401/403/404 og andre fejl udelades stille (`safe`).
    */
   async contact(lassoId: string): Promise<ContactVM> {
     const companyRaw = await this.client.company(lassoId);
     const co = adaptCompany(lassoId, companyRaw);
-    if (co.phone && co.email && co.website) return adaptContact(lassoId, companyRaw, undefined, undefined);
-    const [websites, contacts] = await Promise.all([
-      safe(() => this.client.websites(lassoId)),
-      withinBudget(safe(() => this.client.contacts(lassoId, { emails: true, phonenumbers: true, links: true })), CONTACT_BUDGET_MS),
+    const needsScrape = !(co.phone && co.email && co.website);
+    const [websites, contacts, liveNumberRaw] = await Promise.all([
+      needsScrape ? safe(() => this.client.websites(lassoId)) : Promise.resolve(undefined),
+      needsScrape
+        ? withinBudget(safe(() => this.client.contacts(lassoId, { emails: true, phonenumbers: true, links: true })), CONTACT_BUDGET_MS)
+        : Promise.resolve(undefined),
+      safe(() => this.client.liveNumber(lassoId)),
     ]);
-    return adaptContact(lassoId, companyRaw, websites, contacts);
+    const base = adaptContact(lassoId, companyRaw, websites, contacts);
+    const live = adaptLiveNumber(liveNumberRaw);
+    return live ? { ...base, ...live } : base;
   }
 
   /**
@@ -296,8 +329,23 @@ export class LiveProvider implements DataProvider {
     return adaptPeople(await this.client.company(lassoId));
   }
 
-  async ownership(lassoId: string) {
-    return adaptOwnership(lassoId, await this.client.company(lassoId));
+  /**
+   * Legale ejere (katalog 11/09): foretrækker det dokumenterede endpoint GET /{lassoId}/owners/legal
+   * (docs/endpoints-ejerskab.md), som også giver `hasOwnersUnderFivePercent`. Svarer det med en
+   * 4xx-fejl (eller en anden form, som `adaptOwnershipLegal` ikke kan læse), falder vi tilbage til
+   * ejerne i company-full (som i dag). Revisoren er ikke en del af /owners/legal, så den hentes
+   * altid fra company-full, som klientens cache deler med resten af virksomhedsopslaget.
+   */
+  async ownership(lassoId: string): Promise<OwnershipVM> {
+    const companyRaw = this.client.company(lassoId);
+    try {
+      const legal = adaptOwnershipLegal(lassoId, await this.client.ownersLegal(lassoId));
+      if (legal) return { ...legal, auditor: adaptOwnership(lassoId, await companyRaw).auditor };
+    } catch (err) {
+      // Ejerne i company-full er den sikre reserve, uanset om /owners/legal svarer 4xx, 5xx eller slet ikke.
+      if (!(err instanceof LassoApiError) || err.status >= 500) console.warn(`[lasso] owners/legal fejlede for ${lassoId}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    return adaptOwnership(lassoId, await companyRaw);
   }
 
   /** Katalog 10: der er endnu ingen bekræftet Lasso-kilde til en 0–100 score. "Ikke oplyst", ikke en fejl. */
@@ -309,8 +357,19 @@ export class LiveProvider implements DataProvider {
     return adaptBeneficialOwnership(lassoId, await this.client.ownersBeneficial(lassoId));
   }
 
+  /**
+   * Katalog 12/19: branche/formål/tegningsregler (CVR) plus regnskabsanalysens sektioner
+   * (konklusion, resultat, likviditet m.fl., én pr. felt i `sections`), når svaret kommer inden
+   * for TEXT_SECTIONS_BUDGET_MS. Langsomt, tomt eller fejlende svar (401/403/404 m.fl.) udelader
+   * blot sektionerne (`safe`/`withinBudget`), aldrig en fejl.
+   */
   async textSections(lassoId: string) {
-    return adaptTextSections(lassoId, await this.client.company(lassoId));
+    const [base, analysisRaw] = await Promise.all([
+      this.client.company(lassoId).then((raw) => adaptTextSections(lassoId, raw)),
+      withinBudget(safe(() => this.client.reportAnalysis(lassoId)), TEXT_SECTIONS_BUDGET_MS),
+    ]);
+    const analysisSections = analysisRaw === undefined ? [] : adaptReportAnalysisSections(analysisRaw);
+    return analysisSections.length ? { ...base, sections: [...base.sections, ...analysisSections] } : base;
   }
 
   async timeline(lassoId: string) {
@@ -318,13 +377,69 @@ export class LiveProvider implements DataProvider {
     return adaptTimeline(lassoId, co, adaptPeople(co), financials.years);
   }
 
+  /**
+   * Katalog 12: nyheder. Lasso News (POST /modules/news) hentes altid; Paqle (GET
+   * /data/paqle/{lassoId}/news) kun når kontoen har adgang til Paqle-tilføjelsen. Fejler den ene
+   * kilde (manglende adgang, 4xx/5xx, timeout), vises blot det, den anden kilde leverede — se
+   * docs/endpoints-risiko-nyheder.md. Flettet efter tid (nyeste først) og skåret til `limit`.
+   */
   async news(lassoId: string, limit: number) {
-    return adaptNews(lassoId, await this.client.news(lassoId), limit);
+    const [lassoItems, paqleItems] = await Promise.all([
+      safe(() => this.client.lassoNews([lassoId], { limit })).then((raw) => (raw === undefined ? [] : adaptLassoNews(raw))),
+      safe(() => this.client.news(lassoId)).then((raw) => (raw === undefined ? [] : adaptNews(lassoId, raw, Number.MAX_SAFE_INTEGER).items)),
+    ]);
+    return mergeNews(
+      lassoId,
+      [
+        { items: lassoItems, label: "Lasso News" },
+        { items: paqleItems, label: "Paqle" },
+      ],
+      limit,
+    );
   }
 
-  /** Formen for /modules/observations er ubekræftet; se docs/lasso-endpoints.md. */
-  async observations(lassoId: string) {
-    return adaptObservations(lassoId, await this.client.observations(lassoId));
+  /**
+   * Katalog 17: risikoobservationer (Firmaindsigt). Svarformen er bekræftet mod api.lassox.com
+   * 27.09.2026 (docs/endpoints-risiko-nyheder.md). Kaldet kan tage flere sekunder for store
+   * selskaber (11,8 s målt for Novo Nordisk); et budget forhindrer, at hele visningen venter så
+   * længe — kaldet kører videre i baggrunden og ligger klar i klientens cache til næste forsøg,
+   * og RiskObservations.tsx viser sin fejltilstand med "Prøv igen" i stedet. Indirekte
+   * observationer under `relatedObservations` (personer OG selskaber) navngives bedst muligt
+   * ud fra entitetens eget CVR-opslag.
+   */
+  async observations(lassoId: string, budgetMs = OBSERVATIONS_BUDGET_MS) {
+    const raw = await withinBudget(this.client.observations(lassoId), budgetMs);
+    if (raw === undefined) {
+      const err = new Error(`Observationer svarede ikke inden for ${Math.round(budgetMs / 1000)} s`);
+      err.name = "TimeoutError";
+      throw err;
+    }
+    const vm = adaptObservations(lassoId, raw);
+    return this.withRelatedNames(vm);
+  }
+
+  /** Bedste forsøg på at navngive de personer og selskaber, `related` (relatedObservations) peger på. */
+  private async withRelatedNames(vm: ObservationsVM): Promise<ObservationsVM> {
+    if (!vm.related?.length) return vm;
+    const toName = vm.related.slice(0, 12);
+    const named = await mapLimit(toName, 4, async (entity) => {
+      const raw = await safe(() => this.client.company(entity.lassoId));
+      const name = raw === undefined ? undefined : str(raw, "name", "fullName", "names.0");
+      return name ? { ...entity, name } : entity;
+    });
+    const byId = new Map(named.map((p) => [p.lassoId, p] as const));
+    return { ...vm, related: vm.related.map((p) => byId.get(p.lassoId) ?? p) };
+  }
+
+  /**
+   * Katalog 17: Creditsafe via Lasso (docs/endpoints-creditsafe.md). Aldrig skipCache: Lassos 24-timers cache og
+   * klientens egen cache bruges altid. 401/403 = låst, 404/tomt = ikke beregnet, timeout = beregner stadig.
+   */
+  async creditRating(lassoId: string) {
+    // Creditsafe kan tage 5–45 s, når vurderingen beregnes live. Visningen venter højst CREDIT_BUDGET_MS;
+    // derefter vises "beregner stadig" med "Hent igen", mens kaldet kører færdigt og lander i klientens cache.
+    const rating = await withinBudget(loadCreditRating(lassoId, (cvr) => this.client.creditsafeRating(cvr)), CREDIT_BUDGET_MS);
+    return rating ?? { lassoId, cvr: cvrFromLassoId(lassoId) ?? undefined, state: "unavailable" as const, reason: CREDIT_PENDING_REASON, source: CREDIT_SOURCE };
   }
 
   /**
@@ -374,9 +489,16 @@ export class LiveProvider implements DataProvider {
     };
   }
 
-  /** Katalog 20. Genbruger CVR-svaret; UBEKRÆFTET om det indeholder produktionsenheder (docs/lasso-endpoints.md). */
+  /**
+   * Katalog 20. Company-fulds bekræftede `productionUnits: [{ lassoId, pNumber }]` giver
+   * referencerne; op til 25 enheder hentes med fulde detaljer parallelt (`buildProductionUnits`,
+   * mapLimit 5). De gamle feltnavne-gæt (`adaptProductionUnits`) bruges som reserve, hvis feltet
+   * mangler, eller for enheder detaljeopslaget ikke selv fandt et P-nummer for.
+   */
   async productionUnits(lassoId: string): Promise<ProductionUnitsVM> {
-    return adaptProductionUnits(lassoId, await this.client.company(lassoId));
+    const companyRaw = await this.client.company(lassoId);
+    const legacy = adaptProductionUnits(lassoId, companyRaw).units;
+    return buildProductionUnits(lassoId, companyRaw, legacy, (unitLassoId) => this.client.productionUnit(unitLassoId));
   }
 
   /**
@@ -402,12 +524,28 @@ export class LiveProvider implements DataProvider {
   }
 
   /**
-   * Katalog 20. CHR-endpointet er UBEKRÆFTET og ikke fundet i docs.lassox.com
-   * under dette arbejde (se docs/lasso-endpoints.md). Der kaldes derfor intet
-   * endpoint her; komponenten viser sin tom-tilstand med en forklarende årsag.
+   * Katalog 20. CHR-opslaget kræver virksomhedens CVR-nummer (ikke Lasso-ID'et) og "Ejendomme"-
+   * modulet i abonnementet; 401/403/404 giver en tom, forklaret tilstand i stedet for en fejl.
+   * Svarformen er IKKE dokumenteret (se docs/endpoints-enheder-kontakt-analyse.md); formen logges
+   * med describeShape på debug-niveau (LOG_LEVEL=debug), én gang, så adapteren kan rettes til.
    */
   async livestock(lassoId: string): Promise<LivestockVM> {
-    return { lassoId, herds: [], events: [] };
+    const co = await this.company(lassoId);
+    if (!co.cvr) return { lassoId, herds: [], events: [] };
+    let raw: unknown;
+    try {
+      raw = await this.client.chrLivestock(co.cvr);
+    } catch (err) {
+      if (err instanceof LassoApiError && [401, 403, 404].includes(err.status)) {
+        return { lassoId, herds: [], events: [], unavailableReason: "Kræver Ejendomme-modulet i Lasso-abonnementet" };
+      }
+      throw err;
+    }
+    if (!this.chrShapeLogged && this.config.LOG_LEVEL === "debug") {
+      this.chrShapeLogged = true;
+      console.debug("[lasso-chr] svarform for GET /data/CHR/livestock:", JSON.stringify(describeShape(raw, 4)));
+    }
+    return adaptChrLivestock(lassoId, raw);
   }
 
   async ownershipGraph(lassoId: string, opts: OwnershipGraphOptions) {

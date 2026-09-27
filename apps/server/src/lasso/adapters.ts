@@ -17,7 +17,6 @@ import type {
   FinancialsVM,
   FinancialStatementsVM,
   IncomeStatementYear,
-  NewsVM,
   OwnerVM,
   OwnershipEdgeVM,
   OwnershipGraphVM,
@@ -27,9 +26,6 @@ import type {
   TextSectionsVM,
   TimelineEventVM,
   TimelineVM,
-  ObservationRowVM,
-  ObservationsVM,
-  Severity,
   LivestockHerdVM,
   LivestockVM,
   ProductionUnitVM,
@@ -39,6 +35,7 @@ import type {
   VetEventVM,
 } from "@lasso/spec";
 import { currencyUnit, foldChangeEntries, formatAmount, formatDate } from "@lasso/spec";
+import { adaptBeneficialOwnershipDocumented, markUnknownOwnershipNodes } from "./ownershipAdapters.js";
 
 /**
  * Oversætter Lassos rå API-svar til vores datamodeller.
@@ -167,7 +164,8 @@ export function titleCase(s: string | undefined): string | undefined {
   return s.toLowerCase().replace(/(^|[\s-])(\p{L})/gu, (_, sep: string, ch: string) => sep + ch.toUpperCase());
 }
 
-function address(raw: Json): CompanyVM["address"] {
+/** Adresse-objekt (samme form for virksomheder, personer og produktionsenheder). Eksporteret til unitAdapters.ts. */
+export function address(raw: Json): CompanyVM["address"] {
   const a = pick(raw, "address", "addresses.0", "location", "beliggenhedsadresse", "mainAddress") ?? raw;
   const street =
     str(a, "street", "streetAddress", "addressLine", "line1", "vejnavn") ??
@@ -324,7 +322,7 @@ function prettyRole(role: string): string {
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
-const percentFormat = new Intl.NumberFormat("da-DK", { maximumFractionDigits: 2 });
+export const percentFormat = new Intl.NumberFormat("da-DK", { maximumFractionDigits: 2 });
 
 /**
  * Ejerandel som tekst. Lasso giver intervaller som brøker: { from: 0.25, to: 0.3332 } -> "25–33,32 %".
@@ -396,7 +394,7 @@ export function applyGraphNames(g: OwnershipGraphVM, names: ReadonlyMap<string, 
 }
 
 /** Nedre grænse af en ejerandel som tal: "25–33,32 %" -> 25; ukendt -> -1. */
-function shareFloor(share: string | undefined): number {
+export function shareFloor(share: string | undefined): number {
   const m = /(\d+(?:,\d+)?)/.exec(share ?? "");
   return m ? Number(m[1]!.replace(",", ".")) : -1;
 }
@@ -975,8 +973,17 @@ function formatAmountShort(v: number, currency?: string): string {
  * (totalOwnerPercentageMin/Max) og en eller flere kæder ("paths") af
  * mellemliggende selskaber. Et "UNKNOWN"-element markerer andel, CVR ikke
  * kan følge til en person.
+ *
+ * Lassos egen dokumentation (docs/endpoints-ejerskab.md) er siden læst og beskriver en anden,
+ * bekræftet form (`{ couldNotIdentify, exemptionStatus, fallbackDescription, fallbackType,
+ * owners: [...] }` med PRÆCISE andele 0–1); den prøves derfor FØRST
+ * (`adaptBeneficialOwnershipDocumented` i ownershipAdapters.ts). Kun når raw slet ikke ligner den
+ * dokumenterede form (intet owners-array), falder vi tilbage til gættet nedenfor, så intet der
+ * virkede før i dag går i stykker.
  */
 export function adaptBeneficialOwnership(lassoId: string, raw: Json): BeneficialOwnershipVM {
+  const documented = adaptBeneficialOwnershipDocumented(lassoId, raw);
+  if (documented) return documented;
   const list = items(raw);
   const owners: BeneficialOwnerVM[] = [];
   const gaps: BeneficialOwnerGapVM[] = [];
@@ -1019,76 +1026,11 @@ function beneficialChain(entry: Json): string | undefined {
 }
 
 /**
- * Nyheder (katalog 12, "Nyheder"). Bekræftet mod docs.lassox.com/data-apis/paqle/:
- * { news: [{ headline, content, url, time, provider, providerData: { sourceName, published } }], continuationToken }.
+ * Nyheder og risikoobservationer flyttet til riskNewsAdapters.ts, ud fra Lassos officielle
+ * dokumentation af de svarformer, disse to moduler faktisk bruger (docs/endpoints-risiko-nyheder.md).
+ * Genexporteret her, så eksisterende importer fra "./adapters.js" (adapters.test.ts m.fl.) fortsat virker.
  */
-export function adaptNews(lassoId: string, raw: Json, limit: number): NewsVM {
-  const list = arr(raw, "news").length ? arr(raw, "news") : items(raw);
-  const newsItems = list
-    .map((n) => {
-      const headline = str(n, "headline", "providerData.headline");
-      if (!headline) return null;
-      return {
-        source: str(n, "providerData.sourceName", "provider", "source") ?? "Ukendt kilde",
-        url: str(n, "url", "link"),
-        time: dateStr(n, "time", "providerData.published", "publishedAt"),
-        headline,
-        excerpt: str(n, "content", "excerpt", "providerData.extract"),
-        language: str(n, "language", "lang"),
-      };
-    })
-    .filter((n): n is NonNullable<typeof n> => n !== null)
-    .slice(0, limit);
-  return { lassoId, items: newsItems };
-}
-
-/**
- * Svarformen for GET /modules/observations/{lassoId} er UBEKRÆFTET (ingen
- * API-nøgle i denne omgang; se docs/lasso-endpoints.md under "Ubekræftet" for
- * den antagne form). Adapteren er derfor defensiv: den prøver mange
- * feltnavne, accepterer et rent array eller et svar pakket i {observations|items|results:[...]},
- * og falder tilbage til "0 observationer" frem for at kaste, hvis formen ikke matcher.
- */
-function normalizeSeverity(v: Json): Severity {
-  const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" && !Number.isNaN(Number(v)) ? Number(v) : undefined;
-  if (typeof n === "number" && Number.isFinite(n)) {
-    if (n >= 90) return 100;
-    if (n >= 40) return 50;
-    if (n >= 10) return 25;
-    return 0;
-  }
-  const s = typeof v === "string" ? v.toLowerCase() : "";
-  if (/high|vigtig|critical|important|konflikt|alert/.test(s)) return 100;
-  if (/medium|mulig|warning|moderat/.test(s)) return 50;
-  if (/low|info|minor|notice/.test(s)) return 25;
-  return 0;
-}
-
-export function adaptObservations(lassoId: string, raw: Json): ObservationsVM {
-  // items() kender ikke "observations" som pakke-nøgle, så den prøves først.
-  const list = Array.isArray(raw) ? raw : arr(raw, "observations", "results", "items", "hits", "data", "records", "value");
-  const observations: ObservationRowVM[] = [];
-  let i = 0;
-  for (const o of list) {
-    const title = str(o, "title", "headline", "summary", "text", "message", "name", "description");
-    if (!title) continue;
-    const description = str(o, "detail", "description", "explanation", "body", "text");
-    observations.push({
-      id: str(o, "id", "observationId", "uuid") ?? `${lassoId}-${i++}`,
-      severity: normalizeSeverity(pick(o, "severity", "score", "riskScore", "level", "importance", "category")),
-      title,
-      detail: description && description !== title ? description : undefined,
-      source: str(o, "source", "category", "origin", "basedOn", "module"),
-      date: dateStr(o, "date", "observedAt", "createdAt", "eventDate", "occurredAt", "reportedAt"),
-    });
-  }
-  return {
-    lassoId,
-    observations,
-    checkedAt: dateStr(raw, "checkedAt", "generatedAt", "lastChecked", "updatedAt", "meta.checkedAt", "meta.generatedAt"),
-    sources: undefined,
-  };
-}
+export { adaptNews, adaptObservations } from "./riskNewsAdapters.js";
 
 /**
  * Katalog 20, produktionsenheder. UBEKRÆFTET: ingen testvirksomhed med flere
@@ -1271,7 +1213,12 @@ export function shareRange(v: Json): [number, number] | undefined {
     return [round2(lo * scale), round2(hi * scale)];
   }
   const lo = typeof v === "number" ? v : isObj(v) ? num(v, "from", "min", "lower", "low", "value", "share") : undefined;
-  if (lo === undefined) return undefined;
+  if (lo === undefined) {
+    // Dokumenteret ejergraf-form (docs/endpoints-ejerskab.md): { label: "5-9,99%", from, to }.
+    // Mangler from/to (kun label), læses procentteksten i stedet.
+    const label = isObj(v) ? str(v, "label") : undefined;
+    return label ? shareRange(label) : undefined;
+  }
   const hi = isObj(v) ? (num(v, "to", "max", "upper", "high") ?? lo) : lo;
   const scale = hi <= 1 ? 100 : 1;
   return [round2(lo * scale), round2(hi * scale)];
@@ -1311,7 +1258,8 @@ function nodeFrom(raw: Json, id: string): OwnershipNodeVM {
     name: name ?? id,
     kind,
     cvr: get("cvr", "cvrNumber", "vat", "vatNumber") ?? (/^CVR-1-(\d{8})$/i.exec(id)?.[1]),
-    form: get("form.shortDescription", "companyForm", "legalForm", "form"),
+    // "companyType" er det dokumenterede feltnavn (docs/endpoints-ejerskab.md); de øvrige er reserve.
+    form: get("companyType", "form.shortDescription", "companyForm", "legalForm", "form"),
     status,
     statusKind: statusKind(status),
     country: cc,
@@ -1336,7 +1284,8 @@ export function adaptOwnershipGraph(
 ): OwnershipGraphVM {
   const container = isObj(raw) && isObj(at(raw, "graph")) ? at(raw, "graph") : isObj(raw) && isObj(at(raw, "data")) && !Array.isArray(at(raw, "data")) ? at(raw, "data") : raw;
   const nodes = new Map<string, OwnershipNodeVM>();
-  const nodeSource = pick(container, "nodes", "entities", "vertices", "participants", "items");
+  // "entities" er det dokumenterede feltnavn (docs/endpoints-ejerskab.md: POST /modules/relations/graph); de øvrige er reserve.
+  const nodeSource = pick(container, "entities", "nodes", "vertices", "participants", "items");
   const nodeList: [string | undefined, Json][] = Array.isArray(nodeSource)
     ? nodeSource.map((n) => [undefined, n])
     : isObj(nodeSource)
@@ -1348,7 +1297,8 @@ export function adaptOwnershipGraph(
     nodes.set(id, nodeFrom(n, id));
   }
 
-  const relList = Array.isArray(container) ? container : arr(container, "edges", "relations", "links", "relationships", "ownerships", "results");
+  // "relations" er det dokumenterede feltnavn; de øvrige er reserve.
+  const relList = Array.isArray(container) ? container : arr(container, "relations", "edges", "links", "relationships", "ownerships", "results");
   const edges: OwnershipEdgeVM[] = [];
   for (const r of relList) {
     const type = (str(r, "relationType", "type", "kind", "relation") ?? "ownership").toLowerCase();
@@ -1358,8 +1308,9 @@ export function adaptOwnershipGraph(
     if (!from.id || !to.id) continue;
     for (const ep of [from, to]) if (!nodes.has(ep.id!)) nodes.set(ep.id!, nodeFrom(ep.obj ?? {}, ep.id!));
     const props = pick(r, "properties", "attributes", "data") ?? r;
-    const share = shareRange(pick(props, "ownership", "share", "ownershipShare", "ownershipPercentage", "capital", "interval", "percentage") ?? pick(r, "ownership", "share"));
-    const votes = shareRange(pick(props, "voteRights", "votingRights", "votes", "voting") ?? pick(r, "voteRights", "votingRights"));
+    // "ownershipPercentage"/"votingrightsPercentage" er de dokumenterede feltnavne; de øvrige er reserve.
+    const share = shareRange(pick(props, "ownershipPercentage", "ownership", "share", "ownershipShare", "capital", "interval", "percentage") ?? pick(r, "ownership", "share"));
+    const votes = shareRange(pick(props, "votingrightsPercentage", "voteRights", "votingRights", "votes", "voting") ?? pick(r, "voteRights", "votingRights"));
     edges.push({
       from: from.id,
       to: to.id,
@@ -1373,7 +1324,8 @@ export function adaptOwnershipGraph(
   // Roden findes altid, også når grafen er tom.
   if (!nodes.has(rootId)) nodes.set(rootId, nodeFrom({}, rootId));
   nodes.get(rootId)!.root = true;
-  return {
+  // "{lassoId}_UNKNOWN"-knuder (docs/endpoints-ejerskab.md, unknownOwnership) får navn og flag.
+  return markUnknownOwnershipNodes({
     rootId,
     nodes: [...nodes.values()],
     edges,
@@ -1381,7 +1333,7 @@ export function adaptOwnershipGraph(
     outgoingDepth: opts.outgoingDepth,
     onDate: opts.onDate,
     fetchedAt: new Date().toISOString(),
-  };
+  });
 }
 
 /** Reserve, når ejergrafen ikke kan hentes: direkte ejere fra virksomhedsopslaget (ét lag op). */

@@ -20,7 +20,7 @@ export interface CatalogEntry {
  * beskrivelserne, så modellen vælger værktøj, antal og rækkefølge før den vælger komponent.
  */
 export const COMPOSITION_RULES = `Komposition (guide 23):
-- Én virksomhed: brug show_company med focus. Serveren henter data og bygger selv siden efter virksomhedens data. Byg IKKE selv en virksomhedsside med render_view. Routing efter spørgsmål: bredt ("fortæl om X") → overblik; økonomi, omsætning, resultat, nøgletal, soliditetsgrad, "hvordan går det" → oekonomi; fuldt regnskab, resultatopgørelse, balance, pengestrøm, "alle posterne" → regnskab; ejere, reelle ejere, koncern → ejerskab; direktion, bestyrelse, udskiftning → ledelse; røde flag, "kan vi handle med dem", revisors uafhængighed → risiko; "hvad er der sket", nyheder → historik; kontaktoplysninger, telefon, e-mail, web, kontaktpersoner → kontakt. Snævre stamdataspørgsmål ("hvem er revisor", "hvornår stiftet", "hvor mange ansatte") → overblik.
+- Én virksomhed: brug show_company med focus. Serveren henter data og bygger selv siden efter virksomhedens data. Byg IKKE selv en virksomhedsside med render_view. Routing efter spørgsmål: bredt ("fortæl om X") → overblik; økonomi, omsætning, resultat, nøgletal, soliditetsgrad, "hvordan går det" → oekonomi; fuldt regnskab, resultatopgørelse, balance, pengestrøm, "alle posterne" → regnskab; ejere, reelle ejere, koncern → ejerskab; direktion, bestyrelse, udskiftning → ledelse; røde flag, "kan vi handle med dem", kreditvurdering, Creditsafe, revisors uafhængighed → risiko; "hvad er der sket", nyheder → historik; kontaktoplysninger, telefon, e-mail, web, kontaktpersoner → kontakt. Snævre stamdataspørgsmål ("hvem er revisor", "hvornår stiftet", "hvor mange ansatte") → overblik.
 - Én person ("hvem er X", "hvor sidder X i bestyrelser", "har X været i konkurser") → show_person. Byg ikke personsider med render_view.
 - Flere virksomheder → render_view: LassoCompareTable (2–6 navngivne, flere nøgletal), LassoRanking (2–10 navngivne, ét nøgletal) eller LassoLineChart (2 virksomheder, ét nøgletal over tid); mange fundet med kriterier → search_companies eller LassoCompanyTable. Aldrig én enkeltvisning pr. virksomhed.
 - render_view til én virksomhed kun, når brugeren beder om elementer, ingen focus dækker (fx LassoStackedBarChart, LassoProductionUnits, LassoProperties, en egen vurdering i LassoSummary), eller om en kombination på tværs af focus (fx ejere + revisor, resultatopgørelse + ejere). Læg da ALT i én spec: LassoCompanyHead først, dernæst det bestilte, og LassoSummary som sidste sektion.
@@ -222,7 +222,13 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
   {
     type: "LassoRiskObservations",
     title: "Risikoobservationer",
-    description: `Brug til: Lassos observationer om virksomheden (negativ egenkapital, revisorskifte, ledelsesændringer, tvangsopløsning m.m.) sorteret efter alvor 0–100 – 'risiko', 'røde flag', 'kreditvurdering', 'kan vi handle med dem'. Brug ikke når: det specifikt gælder revisorens uafhængighed (LassoAuditorIndependence), eller en talscore ønskes (LassoScoreGauge har ingen live data; brug denne). Kræver: company; ingen observationer giver tom tilstand. ${F("risiko (og på alle sider, når en observation er ≥50)")} Eksempel: 'Er der risikosignaler hos X?' → show_company focus risiko.`,
+    description: `Brug til: Lassos observationer om virksomheden (negativ egenkapital, revisorskifte, ledelsesændringer, tvangsopløsning m.m.) sorteret efter alvor 0–100 – 'risiko', 'røde flag', 'kan vi handle med dem'. Brug ikke når: det gælder kreditvurdering fra Creditsafe (LassoCreditRating), det specifikt gælder revisorens uafhængighed (LassoAuditorIndependence), eller en talscore ønskes (LassoScoreGauge har ingen live data; brug denne). Kræver: company; ingen observationer giver tom tilstand. ${F("risiko (og på alle sider, når en observation er ≥50)")} Eksempel: 'Er der risikosignaler hos X?' → show_company focus risiko.`,
+    props: "company, title?",
+  },
+  {
+    type: "LassoCreditRating",
+    title: "Kreditvurdering, Creditsafe",
+    description: `Brug til: kreditvurdering fra Creditsafe (kreditmaksimum, international score A–E, lokal score, ændring fra forrige vurdering, PDF-rapport) – 'kan vi give dem kredit', 'kreditvurdering', 'Creditsafe'. Brug ikke når: det gælder Lassos egne risikosignaler (LassoRiskObservations) eller Lassos 0–100-score (LassoScoreGauge); skalaerne må ikke blandes. Kræver: company; uden Creditsafe-tilkøb viser den låst tilstand. Et opslag kan tage op til 45 sekunder, når Creditsafe beregner; Lasso gemmer vurderingen i 24 timer, så vis den højst én gang pr. svar og bed aldrig om en ny beregning (koster en kredit). ${F("risiko")} Eksempel: 'Hvad er kreditvurderingen for Lasso X?' → show_company focus risiko.`,
     props: "company, title?",
   },
   {
@@ -299,6 +305,15 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     description:
       "Brug til: hvad der er sket i de virksomheder, brugeren overvåger – ændringer på tværs af en overvågningsliste grupperet pr. dag med filter på type (regnskab, ledelse, ejerskab, status, stamdata, kredit) – 'hvad er der sket i mine kunder', 'ændringer i min overvågning', 'nyt i listen Kunder'. Brug ikke når: det gælder én virksomheds egen historik (LassoTimeline), nyheder i medierne (LassoNews) eller risikosignaler (LassoRiskObservations). Kræver: list? (listens navn, fx 'Kunder'), days? (standard 7, 1–90), types? (delmængde af ændringstyper); ingen ændringer i perioden giver tom tilstand, og uden overvågningsliste forklarer komponenten hvorfor. Dækkes ikke af show_company. Eksempel: 'Hvad er der sket i mine overvågede kunder den seneste uge?' → render_view med LassoChangeFeed { list: 'Kunder', days: 7 }.",
     props: `list?, days? (1–90, standard 7), types? (delmængde af ${CHANGE_TYPES.join(" | ")}), title?`,
+  },
+
+  // Gem-laget (docs/gem-lag.md) ------------------------------------------------
+  {
+    type: "LassoSavedPages",
+    title: "Gemte sider",
+    description:
+      "Brug til: brugerens egne gemte virksomheds- og personsider – 'mine gemte', 'hvad har jeg gemt', 'min liste'. Vises normalt af list_saved_pages; i render_view kun sammen med andre elementer. Brug ikke når: brugeren vil gemme eller fjerne en side (save_page / remove_saved_page) eller have et delbart link til en visning (save_view). Kræver: kind? (company | person | all, standard all), limit? (1–100, standard 20); ingen gemte sider giver tom tilstand med forklaring. Eksempel: 'Vis mine gemte virksomheder' → list_saved_pages { kind: 'company' }.",
+    props: "kind? (company | person | all), limit? (1–100, standard 20), title?",
   },
 
   // Interaktion ----------------------------------------------------------------

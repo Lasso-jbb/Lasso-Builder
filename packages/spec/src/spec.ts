@@ -330,6 +330,13 @@ export const riskObservationsSchema = z.object({
   title: z.string().max(80).optional(),
 });
 
+/** Katalog 17: kreditvurdering fra Creditsafe (A–E + lokal score). Egen skala; blandes aldrig med 0–100 eller 0/25/50/100. */
+export const creditRatingSchema = z.object({
+  type: z.literal("LassoCreditRating"),
+  company: companyRef,
+  title: z.string().max(80).optional().describe("Standard: 'Kreditvurdering'."),
+});
+
 export const productionUnitsSchema = z.object({
   type: z.literal("LassoProductionUnits"),
   company: companyRef,
@@ -392,6 +399,16 @@ export const changeFeedSchema = z
   })
   .describe("Ændringer i de overvågede virksomheder, grupperet pr. dag, med filter på ændringstype.");
 
+/** Gem-laget (docs/gem-lag.md): brugerens gemte virksomheds- og personsider. Vises af list_saved_pages. */
+export const savedPagesSchema = z
+  .object({
+    type: z.literal("LassoSavedPages"),
+    kind: z.enum(["company", "person", "all"]).default("all").describe("Kun virksomheder, kun personer eller begge (standard)."),
+    limit: z.number().int().min(1).max(100).default(20).describe("Højst så mange sider, nyeste først. Standard 20."),
+    title: z.string().max(80).optional(),
+  })
+  .describe("Brugerens gemte sider (virksomheder og personer), nyeste først, med åbn og fjern.");
+
 export const actionsSchema = z.object({
   type: z.literal("LassoFollowUps"),
   prompts: z
@@ -449,6 +466,7 @@ export const componentSchema = z.discriminatedUnion("type", [
   w(cashFlowSchema),
   w(scoreGaugeSchema),
   w(riskObservationsSchema),
+  w(creditRatingSchema),
   w(auditorIndependenceSchema),
   w(productionUnitsSchema),
   w(propertiesSchema),
@@ -465,6 +483,7 @@ export const componentSchema = z.discriminatedUnion("type", [
   w(personNetworkSchema),
   w(personRiskSchema),
   w(changeFeedSchema),
+  w(savedPagesSchema),
 ]);
 export type ViewComponent = z.infer<typeof componentSchema>;
 export type ComponentType = ViewComponent["type"];
@@ -522,6 +541,7 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoCashFlow: "full",
   LassoScoreGauge: "quarter",
   LassoRiskObservations: "full",
+  LassoCreditRating: "half",
   LassoAuditorIndependence: "full",
   LassoProductionUnits: "full",
   LassoProperties: "full",
@@ -538,6 +558,7 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoPersonNetwork: "half",
   LassoPersonRisk: "half",
   LassoChangeFeed: "full",
+  LassoSavedPages: "full",
 };
 
 /** Den bredde, en komponent får i visningen. 'stack' giver altid fuld bredde. */

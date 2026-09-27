@@ -813,6 +813,37 @@ button.lasso-relations__name:hover { text-decoration: underline; }
   .lasso-observation--important { margin-inline: calc(-1 * var(--lasso-space-3)); padding-inline: var(--lasso-space-3); }
 }
 
+/* ---------- Kreditvurdering, Creditsafe (17): egen skala A–E, blandes aldrig med scoremåleren (10) ---------- */
+/* Bogstav i ink, tonen som ikon + ord (regel 7). Skalaen er fem tekstpositioner; den aktuelle har kun 1 px kant, intet fyld. */
+.lasso-credit__score { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px; margin: 0; padding-top: 8px; }
+.lasso-credit__letter { font-size: 40px; line-height: 44px; font-weight: 600; letter-spacing: -0.03em; color: var(--lasso-text); }
+.lasso-credit__word { display: inline-flex; align-items: center; gap: 6px; font-size: var(--lasso-fs); line-height: 18px; font-weight: 500; }
+.lasso-credit__icon { display: block; flex: none; }
+.lasso-credit__tone--ok { color: var(--lasso-positive); }
+.lasso-credit__tone--warning { color: var(--lasso-warning); }
+.lasso-credit__tone--danger { color: var(--lasso-danger); }
+.lasso-credit__sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.lasso-credit__scale { list-style: none; margin: var(--lasso-space-3) 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--lasso-space-1); }
+.lasso-credit__step { display: flex; align-items: center; justify-content: center; height: 28px; border: 1px solid transparent; border-radius: var(--lasso-radius-sm); font-size: var(--lasso-fs-sm); color: var(--lasso-muted); }
+.lasso-credit__step.is-current { border-color: var(--lasso-text); color: var(--lasso-text); font-weight: 600; }
+.lasso-credit__ends { display: flex; justify-content: space-between; gap: var(--lasso-space-2); margin-top: 4px; font-size: 11px; color: var(--lasso-muted); }
+.lasso-credit__facts { margin: var(--lasso-space-4) 0 0; border-top: 1px solid var(--lasso-border); }
+.lasso-credit__fact { display: flex; gap: var(--lasso-space-4); padding: 10px 0; border-bottom: 1px solid var(--lasso-divider-subtle); }
+.lasso-credit__fact:last-child { border-bottom: 0; }
+.lasso-credit__key { flex: none; width: 136px; margin: 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-3); }
+.lasso-credit__value { flex: 1; min-width: 0; margin: 0; font-size: var(--lasso-fs); line-height: 18px; color: var(--lasso-text); overflow-wrap: anywhere; }
+.lasso-credit__change { font-weight: 500; }
+.lasso-credit__change--better { color: var(--lasso-positive); }
+.lasso-credit__change--worse { color: var(--lasso-negative); }
+.lasso-credit__change--same { color: var(--lasso-muted); }
+/* Handlingslink (PDF, "Hent igen") i koral tekst som sektionshandlinger; skal slå `.lasso-root button { color: inherit }`. */
+.lasso-credit .lasso-credit__action { display: inline-block; margin-top: var(--lasso-space-3); color: var(--lasso-accent-text); font-weight: 500; }
+.lasso-credit__note { margin: var(--lasso-space-3) 0 0; font-size: 12px; line-height: 17px; color: var(--lasso-muted); }
+@container lasso (max-width: 560px) {
+  .lasso-credit__fact { flex-wrap: wrap; row-gap: 2px; min-height: var(--lasso-touch-h); }
+  .lasso-credit__key { width: 100%; }
+}
+
 /* ---------- Revisoruafhængighed (22): sammenfatning og relationstabel ---------- */
 /* Vurderingskolonnen bruger alvorsskalaen fra 17 som ord alene, uden ikon (regel 7: ordet bærer betydningen). */
 .lasso-assessment { font-size: 12px; font-weight: 500; color: var(--lasso-text-2); }
@@ -1172,6 +1203,25 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 /* PersonList: navnet som link til personsiden (16) beholder rækkens vægt. */
 .lasso-row__open { font-weight: inherit; color: inherit; }
 
+/* ---------- Gem-laget (docs/gem-lag.md) ---------- */
+/* Gem/Gemt øverst til højre i hovedet (01, regel 21): lille ikonknap 32 px (40 px på mobil), 1 px kant, radius 8.
+   Gemt = fyldt ikon + 600, aldrig farvet fyld (regel 15); koral kun som 1 px fokuskant.
+   ".lasso-root" foran, så knappens skrift vinder over ".lasso-root button { font: inherit }". */
+.lasso-root .lasso-iconbtn { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: var(--lasso-btn-h-sm); min-width: var(--lasso-btn-h-sm); padding: 0 10px; border-radius: var(--lasso-radius); border: 1px solid var(--lasso-border-strong); background: var(--lasso-surface); color: var(--lasso-text-2); font-size: var(--lasso-fs-sm); line-height: 16px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+.lasso-root .lasso-iconbtn:hover { background: var(--lasso-surface-2); border-color: var(--lasso-icon); }
+.lasso-root .lasso-iconbtn:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
+.lasso-root .lasso-iconbtn[aria-pressed="true"] { color: var(--lasso-text); font-weight: 600; }
+.lasso-root .lasso-iconbtn[aria-busy="true"] { cursor: progress; }
+.lasso-frame__header .lasso-iconbtn { margin-left: auto; }
+@container lasso (max-width: 560px) {
+  .lasso-root .lasso-iconbtn { height: 40px; min-width: 40px; }
+}
+/* Gemte sider: rækkerne er personlistens (.lasso-row, mindst 44 px på mobil). Dato og "Fjern" står side om side. */
+.lasso-savedpages__side { display: inline-flex; align-items: center; gap: var(--lasso-space-3); }
+.lasso-savedpages__remove { display: inline-flex; align-items: center; min-height: var(--lasso-btn-h-sm); }
+.lasso-savedpages__removed { font-weight: 500; }
+.lasso-savedpages__note { overflow-wrap: anywhere; }
+
 /* ---------- 21 Overvågning og notifikationer (node CA3-0) ---------- */
 /* Ændringsfeed (CA9-0): overskrift 18/600 + periodevælger 32 px; filter-chips 30 px pille, 12 px; valgt = ink-kant + 600 (ingen mørkt fyld). */
 .lasso-feed-section .lasso-section__head { align-items: center; margin-bottom: var(--lasso-space-3); }
@@ -1394,6 +1444,9 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 .lasso-a4-score__band--1 { color: var(--lasso-warning); }
 .lasso-a4-score__band--2 { color: var(--lasso-danger); }
 .lasso-a4-score__missing { font-size: 22px; line-height: 28px; font-weight: 600; color: var(--lasso-faint); }
+/* Creditsafe (17) som tekst under scoren: egen skala A–E, ingen måler og ingen tonefarver i print. */
+.lasso-a4-credit { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--lasso-divider-subtle); }
+.lasso-a4-credit p { margin: 0; }
 .lasso-a4-scale { display: flex; flex-direction: column; gap: 3px; }
 .lasso-a4-scale__track { position: relative; display: flex; height: 8px; border-radius: 4px; overflow: visible; }
 .lasso-a4-scale__seg { display: block; height: 8px; }
