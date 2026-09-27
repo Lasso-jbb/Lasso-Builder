@@ -45,6 +45,7 @@ import { ReportA4 } from "./components/ReportA4.js";
 import { specToCsv } from "./csv.js";
 import { Badge, Skeleton } from "./primitives.js";
 import { SaveDialog } from "./SaveDialog.js";
+import { ToastProvider, Toasts, useHasToastProvider, useToast } from "./components/Toast.js";
 import type { LassoViewProps, ViewAction } from "./types.js";
 
 function formatStamp(iso: string | undefined): string {
@@ -249,7 +250,19 @@ function columnBands(components: readonly ViewComponent[]): Band[] {
  * kriterie-chips -> indhold -> handlingsbjælke. Ens uanset indhold.
  */
 export function LassoView(props: LassoViewProps) {
+  // Beskeder (07) kræver en ToastProvider; står der ingen over visningen, pakker den sig selv ind.
+  const provided = useHasToastProvider();
+  if (provided) return <LassoViewInner {...props} />;
+  return (
+    <ToastProvider container={false}>
+      <LassoViewInner {...props} ownToasts />
+    </ToastProvider>
+  );
+}
+
+function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
   const { spec, dataset, host, onAction, url, theme, loading, savePrefix } = props;
+  const toast = useToast();
   const [saving, setSaving] = useState(false);
   const [savedUrl, setSavedUrl] = useState<string | undefined>(url);
   // "Gemt"-boksen vises kun lige efter en gemning i denne visning (ikke på en allerede delt side).
@@ -266,10 +279,16 @@ export function LassoView(props: LassoViewProps) {
   const reportCompany = spec.kind === "company" ? spec.components.map((c) => ("company" in c && typeof c.company === "string" ? c.company : undefined)).find(Boolean) : undefined;
   const canReport = Boolean(host.export && dataset && reportCompany && dataset.companies[reportCompany]);
 
+  // "Link kopieret"/fejl som besked nederst i midten (07). Uden provider: tekst i handlingsbjælken.
   const copy = async (link: string) => {
     const res = await onAction({ kind: "copy-link", url: link });
-    setNotice(res && !res.ok ? res.error : "Link kopieret");
-    setTimeout(() => setNotice(null), 2500);
+    const failed = Boolean(res && !res.ok);
+    const text = res && !res.ok ? res.error : "Link kopieret";
+    const shown = toast.show(failed ? { text, tone: "error", action: { label: "Prøv igen", onClick: () => void copy(link) } } : { text, tone: "ok" });
+    if (shown === null) {
+      setNotice(text);
+      setTimeout(() => setNotice(null), 2500);
+    }
   };
 
   return (
@@ -392,6 +411,8 @@ export function LassoView(props: LassoViewProps) {
             </button>
           ) : null}
         </footer>
+
+        {props.ownToasts ? <Toasts /> : null}
 
         {reportOpen && dataset && reportCompany ? (
           <div className="lasso-a4-overlay" role="dialog" aria-label="Virksomhedsrapport">

@@ -335,8 +335,8 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 @keyframes lasso-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
 @media (prefers-reduced-motion: reduce) { .lasso-skeleton { animation: none; } }
 
-/* ---------- Gem-dialog ---------- */
-.lasso-save { display: grid; gap: var(--lasso-space-4); padding: 18px; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); box-shadow: var(--lasso-shadow-pop); }
+/* ---------- Felter (02/03) og "Visningen er gemt". Selve gem-dialogen er en Dialog (07). ---------- */
+.lasso-save__fields { display: grid; gap: var(--lasso-space-4); }
 .lasso-field { display: grid; gap: 8px; }
 .lasso-field label, .lasso-field__name { font-size: var(--lasso-fs); font-weight: 600; color: var(--lasso-text); }
 .lasso-input, .lasso-select { height: var(--lasso-field-h); padding: 0 13px; border-radius: var(--lasso-radius); border: 1px solid var(--lasso-border-strong); background: var(--lasso-surface); color: var(--lasso-text); font: inherit; font-size: var(--lasso-fs); width: 100%; min-width: 0; }
@@ -1440,4 +1440,122 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
   .lasso-a4 { gap: 0; padding: 0; background: transparent; }
   .lasso-a4-page { break-after: page; page-break-after: always; box-shadow: none; border: 0; }
   .lasso-a4-page:last-child { break-after: auto; page-break-after: auto; }
+}
+
+/* ---------- 07 Dialoger, menuer og beskeder (node 9L1-0) ---------- */
+/* Laget: portal i document.body, hele viewporten, gennemsigtigt; kun det svævende tager klik. */
+.lasso-layer { position: fixed; inset: 0; z-index: 50; background: transparent; pointer-events: none; }
+.lasso-layer > * { pointer-events: auto; }
+.lasso-root [hidden] { display: none !important; }
+/* Knapper, der kun findes her: tekstknap, rød tekst (destruktiv) og ink (destruktiv bekræftelse) */
+.lasso-btn--text { border-color: transparent; background: transparent; }
+.lasso-btn--text:hover { background: var(--lasso-surface-muted); border-color: transparent; }
+.lasso-btn--danger { color: var(--lasso-danger); }
+.lasso-btn--danger:hover { background: var(--lasso-danger-soft); }
+.lasso-btn--ink { background: var(--lasso-text); border-color: var(--lasso-text); color: var(--lasso-bg); }
+.lasso-btn--ink:hover { background: var(--lasso-text-2); border-color: var(--lasso-text-2); }
+
+/* Dialog: 520 bred, 28 padding, radius 14, overlay 36 % mørk. Knapperne i dialoger er 42 px (05). */
+.lasso-dialog-wrap { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: var(--lasso-space-5); overflow: auto; pointer-events: auto; }
+.lasso-dialog__scrim { position: absolute; inset: 0; background: color-mix(in srgb, var(--lasso-overlay) 36%, transparent); }
+.lasso-dialog { position: relative; z-index: 1; width: var(--lasso-dialog-w); max-width: 100%; max-height: 100%; display: flex; flex-direction: column; padding: var(--lasso-space-7); border-radius: var(--lasso-radius-xl); background: var(--lasso-surface); box-shadow: var(--lasso-shadow-pop); color: var(--lasso-text); outline: none; }
+.lasso-dialog--sm { width: 440px; }
+.lasso-dialog__grip { display: none; }
+.lasso-dialog__head { display: flex; align-items: flex-start; gap: var(--lasso-space-3); }
+.lasso-dialog__titles { flex: 1; min-width: 0; display: grid; gap: 6px; }
+.lasso-dialog__title { margin: 0; font-size: var(--lasso-fs-lg); line-height: 24px; font-weight: 600; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.lasso-dialog__desc { margin: 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-muted); }
+.lasso-dialog__close { flex: none; width: 32px; height: 32px; margin: -6px -8px 0 0; padding: 0; display: grid; place-items: center; border: 1px solid transparent; border-radius: var(--lasso-radius); background: transparent; color: var(--lasso-text-3); cursor: pointer; }
+.lasso-dialog__close:hover { background: var(--lasso-surface-muted); color: var(--lasso-text); }
+.lasso-dialog__close:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
+.lasso-dialog__body { margin-top: var(--lasso-space-5); min-height: 0; overflow: auto; }
+.lasso-dialog__foot { display: flex; align-items: center; gap: var(--lasso-space-2); margin-top: var(--lasso-space-5); padding-top: var(--lasso-space-5); border-top: 1px solid var(--lasso-border); }
+.lasso-dialog__spacer { flex: 1; }
+.lasso-dialog .lasso-btn { height: var(--lasso-btn-h-lg); padding: 0 18px; font-size: var(--lasso-fs); }
+.lasso-dialog__destructive { border-color: var(--lasso-border-strong); }
+.lasso-dialog__destructive:hover { border-color: var(--lasso-border-strong); }
+
+/* Menu: radius 10, 6 padding, 36 px punkter, min 220 bred, svæver med pop-skygge */
+.lasso-menu { position: relative; display: inline-flex; vertical-align: middle; }
+.lasso-menu__scrim { display: none; }
+.lasso-menu__pop { position: absolute; top: calc(100% + 6px); left: 0; z-index: 50; min-width: 220px; max-width: 320px; padding: 6px; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); box-shadow: var(--lasso-shadow-pop); color: var(--lasso-text); font-size: var(--lasso-fs); font-variant-numeric: tabular-nums; }
+.lasso-menu__pop--end { left: auto; right: 0; }
+.lasso-menu__pop--layer { position: fixed; top: var(--lasso-menu-y, 0); left: var(--lasso-menu-x, 0); right: auto; }
+.lasso-menu__pop--layer.lasso-menu__pop--end { transform: translateX(-100%); }
+.lasso-menu__pop--layer.lasso-menu__pop--up { transform: translateY(-100%); }
+.lasso-menu__pop--layer.lasso-menu__pop--up.lasso-menu__pop--end { transform: translate(-100%, -100%); }
+.lasso-menu__context { display: none; }
+.lasso-menu__list { display: flex; flex-direction: column; }
+.lasso-menu__group { display: flex; flex-direction: column; }
+.lasso-menu__group + .lasso-menu__group { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--lasso-border); }
+.lasso-menu__heading { padding: 10px 10px 6px; font-size: var(--lasso-fs-label); line-height: 14px; font-weight: 600; letter-spacing: var(--lasso-ls-label); text-transform: uppercase; color: var(--lasso-muted); }
+.lasso-menu__item { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 36px; padding: 0 10px; border: 1px solid transparent; border-radius: var(--lasso-radius-menu); background: transparent; color: var(--lasso-text); font-size: var(--lasso-fs); line-height: 18px; text-align: left; cursor: pointer; white-space: nowrap; }
+.lasso-menu__item:hover:not(:disabled), .lasso-menu__item:focus-visible { background: var(--lasso-surface-muted); outline: none; }
+.lasso-menu__item:focus-visible { border-color: var(--lasso-focus-border); }
+.lasso-menu__item:disabled { color: var(--lasso-disabled); cursor: default; }
+.lasso-menu__item.is-on { background: var(--lasso-accent-soft); color: var(--lasso-text); }
+.lasso-menu__item--danger { color: var(--lasso-danger); }
+.lasso-menu__item--danger:hover:not(:disabled) { background: var(--lasso-danger-soft); }
+/* Destruktivt punkt nederst, adskilt af en linje */
+.lasso-menu__item:not(.lasso-menu__item--danger) + .lasso-menu__item--danger { margin-top: 13px; }
+.lasso-menu__item:not(.lasso-menu__item--danger) + .lasso-menu__item--danger::before { content: ""; position: absolute; left: -6px; right: -6px; top: -7px; border-top: 1px solid var(--lasso-border); }
+.lasso-menu__icon { flex: none; width: 16px; height: 16px; display: grid; place-items: center; color: var(--lasso-text-3); }
+.lasso-menu__icon svg { width: 16px; height: 16px; }
+.lasso-menu__item--danger .lasso-menu__icon { color: inherit; }
+.lasso-menu__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; padding: 6px 0; }
+.lasso-menu__label { overflow: hidden; text-overflow: ellipsis; }
+.lasso-menu__sub { font-size: var(--lasso-fs-sm); line-height: 16px; color: var(--lasso-muted); white-space: normal; }
+.lasso-menu__text:has(.lasso-menu__sub) .lasso-menu__label { font-weight: 600; }
+.lasso-menu__check { flex: none; display: grid; place-items: center; color: var(--lasso-accent-text); }
+.lasso-menu__cancel { display: none; }
+
+/* Besked/toast: nederst i midten, 52 px, ikon + tekst + handling + luk, stakkes */
+.lasso-toasts { position: fixed; left: 50%; bottom: var(--lasso-space-5); z-index: 60; display: flex; flex-direction: column; align-items: center; gap: var(--lasso-space-2); transform: translateX(-50%); max-width: min(560px, calc(100% - 32px)); pointer-events: none; }
+.lasso-toasts:empty { display: none; }
+.lasso-toast { pointer-events: auto; display: flex; align-items: center; gap: var(--lasso-space-3); min-height: 52px; min-width: 320px; max-width: 100%; padding: 0 8px 0 16px; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); box-shadow: var(--lasso-shadow-pop); color: var(--lasso-text); font-size: var(--lasso-fs); line-height: 18px; font-weight: 500; }
+.lasso-toast__icon { flex: none; display: grid; place-items: center; width: 18px; color: var(--lasso-text); }
+.lasso-toast--error .lasso-toast__icon { color: var(--lasso-danger); }
+.lasso-toast__text { flex: 1; min-width: 0; padding: 8px 0; overflow-wrap: anywhere; }
+.lasso-toast__action { flex: none; height: 32px; padding: 0 8px; border: 1px solid transparent; border-radius: var(--lasso-radius); background: transparent; color: var(--lasso-accent-text); font-size: var(--lasso-fs); font-weight: 600; cursor: pointer; white-space: nowrap; }
+.lasso-toast__action:hover { background: var(--lasso-accent-soft); }
+.lasso-toast__action:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
+.lasso-toast__close { flex: none; width: 28px; height: 28px; padding: 0; display: grid; place-items: center; border: 1px solid transparent; border-radius: var(--lasso-radius); background: transparent; color: var(--lasso-icon); cursor: pointer; }
+.lasso-toast__close:hover { color: var(--lasso-text); background: var(--lasso-surface-muted); }
+.lasso-toast__close:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
+
+/* Tooltip: maks 280 bred, mørk flade med lys tekst 13, over elementet */
+.lasso-tip { position: relative; display: inline-flex; }
+.lasso-tip__bubble { position: absolute; left: 50%; bottom: calc(100% + 8px); z-index: 60; width: max-content; max-width: 280px; padding: 8px 10px; border-radius: var(--lasso-radius); background: var(--lasso-tooltip); color: var(--lasso-bg); font-size: var(--lasso-fs-sm); line-height: 18px; font-weight: 400; white-space: normal; text-align: left; transform: translateX(-50%); opacity: 0; visibility: hidden; transition: opacity 120ms; pointer-events: none; }
+.lasso-tip--bottom .lasso-tip__bubble { bottom: auto; top: calc(100% + 8px); }
+.lasso-tip.is-open .lasso-tip__bubble { opacity: 1; visibility: visible; }
+
+/* Mobil (26a, < 560 px): dialoger bliver bundark, menuer handlingsark, beskeder over bundnavigationen */
+@container lasso (max-width: 560px) {
+  .lasso-dialog-wrap { place-items: end stretch; padding: 0; }
+  .lasso-dialog { width: 100%; max-height: min(90dvh, 100%); padding: 8px 16px 16px; border-radius: var(--lasso-radius-xl) var(--lasso-radius-xl) 0 0; }
+  .lasso-dialog__grip { display: block; width: 36px; height: 4px; margin: 0 auto 14px; border-radius: 2px; background: var(--lasso-border-strong); }
+  .lasso-dialog__close { display: none; }
+  .lasso-dialog__foot { flex-direction: column; align-items: stretch; gap: 4px; border-top: 0; padding-top: 0; margin-top: var(--lasso-space-4); }
+  .lasso-dialog__spacer { display: none; }
+  .lasso-dialog__primary { order: -1; width: 100%; height: 48px; }
+  .lasso-dialog .lasso-dialog__secondary, .lasso-dialog .lasso-dialog__destructive { width: 100%; height: 44px; border-color: transparent; background: transparent; }
+  .lasso-dialog__secondary { color: var(--lasso-text-2); }
+
+  .lasso-menu__scrim { display: block; position: fixed; inset: 0; z-index: 50; background: color-mix(in srgb, var(--lasso-overlay) 36%, transparent); }
+  .lasso-menu__pop, .lasso-menu__pop--layer { position: fixed; top: auto; bottom: 12px; left: 12px; right: 12px; z-index: 51; min-width: 0; max-width: none; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; transform: none; display: flex; flex-direction: column; gap: 10px; }
+  .lasso-menu__context { display: grid; gap: 2px; padding: 12px 16px; border-bottom: 1px solid var(--lasso-border); background: var(--lasso-surface); border-radius: var(--lasso-radius-xl) var(--lasso-radius-xl) 0 0; }
+  .lasso-menu__context-title { font-size: var(--lasso-fs); font-weight: 600; color: var(--lasso-text); }
+  .lasso-menu__context-sub { font-size: var(--lasso-fs-sm); color: var(--lasso-muted); }
+  .lasso-menu__list { background: var(--lasso-surface); border-radius: var(--lasso-radius-xl); overflow: hidden; }
+  .lasso-menu__context + .lasso-menu__list { border-radius: 0 0 var(--lasso-radius-xl) var(--lasso-radius-xl); }
+  .lasso-menu__group + .lasso-menu__group { margin: 0; padding: 0; border-top: 0; }
+  .lasso-menu__heading { padding: 12px 16px 4px; }
+  .lasso-menu__item { min-height: 52px; padding: 0 16px; border-radius: 0; border: 0; border-bottom: 1px solid var(--lasso-border); }
+  .lasso-menu__group:last-child .lasso-menu__item:last-child { border-bottom: 0; }
+  .lasso-menu__item:not(.lasso-menu__item--danger) + .lasso-menu__item--danger { margin-top: 0; }
+  .lasso-menu__item:not(.lasso-menu__item--danger) + .lasso-menu__item--danger::before { display: none; }
+  .lasso-menu__cancel { display: block; height: 56px; border: 0; border-radius: var(--lasso-radius-xl); background: var(--lasso-surface); color: var(--lasso-text); font-size: var(--lasso-fs); font-weight: 600; cursor: pointer; }
+
+  .lasso-toasts { left: 12px; right: 12px; bottom: 12px; transform: none; max-width: none; align-items: stretch; }
+  .lasso-toast { min-width: 0; }
 }

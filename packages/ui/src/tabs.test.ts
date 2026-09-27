@@ -31,8 +31,12 @@ test("Niveau 1: over 8 faner samles bag Flere, og den valgte trækkes frem", () 
   // 6 faste + den valgte + "Flere"
   assert.equal((html.match(/role="tab"/g) ?? []).length, 7);
   assert.match(html, /aria-selected="true"[^>]*>Fane 10</);
-  assert.match(html, /<option value=""[^>]*>Flere<\/option>/);
-  assert.match(html, /<option value="f6">Fane 6<\/option>/);
+  // "Flere" er en menuknap (07), og de skjulte faner står som menupunkter i den lukkede menu
+  assert.match(html, /<button[^>]*class="lasso-tab lasso-tab--more"[^>]*aria-haspopup="menu"[^>]*aria-expanded="false"[^>]*>Flere<\/button>/);
+  assert.match(html, /role="menu"[^>]*aria-label="Flere faner"/);
+  assert.match(html, /role="menuitem"[^>]*>(?:(?!<\/button>).)*Fane 6/);
+  assert.doesNotMatch(html, /role="menuitem"[^>]*>(?:(?!<\/button>).)*Fane 10</);
+  assert.doesNotMatch(html, /<select/);
 });
 
 test("Niveau 3: segmentkontrol, og over 3 segmenter får en dropdown til mobil", () => {

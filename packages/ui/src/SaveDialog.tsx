@@ -1,4 +1,5 @@
 import { useState, type KeyboardEvent } from "react";
+import { Dialog } from "./components/Dialog.js";
 import type { ActionResult, ViewAction, Visibility } from "./types.js";
 
 function slugify(s: string): string {
@@ -16,6 +17,7 @@ function slugify(s: string): string {
 
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
 
+/** "Gem visning": en Dialog (07) med navn, adresse og synlighed. Enter i et felt gemmer. */
 export function SaveDialog({
   defaultName,
   prefix,
@@ -50,49 +52,59 @@ export function SaveDialog({
   };
 
   return (
-    <div className="lasso-save" role="dialog" aria-label="Gem visning" onKeyDown={(e: KeyboardEvent) => {
-      if (e.key === "Enter" && (e.target as HTMLElement).tagName === "INPUT") void submit();
-      if (e.key === "Escape") onClose();
-    }}>
-      <div className="lasso-field">
-        <label htmlFor="lasso-save-name">Navn</label>
-        <input id="lasso-save-name" className={`lasso-input ${nameError ? "lasso-input--invalid" : ""}`} value={name} onChange={(e) => setName(e.target.value)} maxLength={120} autoFocus />
-        {nameError ? <div className="lasso-field__error">{nameError}</div> : null}
-      </div>
-      <div className="lasso-field">
-        <label htmlFor="lasso-save-slug">Adresse</label>
-        <div className="lasso-slug">
-          <span>{prefix}</span>
-          <input
-            id="lasso-save-slug"
-            className={`lasso-input ${slugError ? "lasso-input--invalid" : ""}`}
-            value={effectiveSlug}
-            placeholder="tilfældig"
-            onChange={(e) => {
-              setSlugTouched(true);
-              setSlug(e.target.value.toLowerCase());
-            }}
-          />
+    <Dialog
+      open
+      title="Gem visning"
+      description="Giv visningen et navn, og vælg hvem der kan se den."
+      onClose={() => onClose()}
+      className="lasso-save"
+      actions={{
+        secondary: { label: "Annuller", onClick: () => onClose() },
+        primary: { label: busy ? "Gemmer…" : "Gem og få link", onClick: () => void submit(), disabled: busy || Boolean(nameError || slugError) },
+      }}
+    >
+      <div
+        className="lasso-save__fields"
+        onKeyDown={(e: KeyboardEvent) => {
+          if (e.key === "Enter" && (e.target as HTMLElement).tagName === "INPUT") void submit();
+        }}
+      >
+        <div className="lasso-field">
+          <label htmlFor="lasso-save-name">Navn</label>
+          <input id="lasso-save-name" className={`lasso-input ${nameError ? "lasso-input--invalid" : ""}`} value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
+          {nameError ? <div className="lasso-field__error">{nameError}</div> : null}
         </div>
-        {slugError ? <div className="lasso-field__error">{slugError}</div> : <div className="lasso-field__hint">Gemmer du igen på samme adresse, opdateres den. Tidligere versioner bevares.</div>}
+        <div className="lasso-field">
+          <label htmlFor="lasso-save-slug">Adresse</label>
+          <div className="lasso-slug">
+            <span>{prefix}</span>
+            <input
+              id="lasso-save-slug"
+              className={`lasso-input ${slugError ? "lasso-input--invalid" : ""}`}
+              value={effectiveSlug}
+              placeholder="tilfældig"
+              onChange={(e) => {
+                setSlugTouched(true);
+                setSlug(e.target.value.toLowerCase());
+              }}
+            />
+          </div>
+          {slugError ? <div className="lasso-field__error">{slugError}</div> : <div className="lasso-field__hint">Gemmer du igen på samme adresse, opdateres den. Tidligere versioner bevares.</div>}
+        </div>
+        <div className="lasso-field">
+          <label htmlFor="lasso-save-vis">Hvem kan se den</label>
+          <select id="lasso-save-vis" className="lasso-select" value={visibility} onChange={(e) => setVisibility(e.target.value as Visibility)}>
+            <option value="private">Kun mig</option>
+            <option value="org">Min organisation</option>
+            <option value="link">Alle med linket</option>
+          </select>
+        </div>
+        {error ? (
+          <div className="lasso-field__error" role="alert">
+            {error}
+          </div>
+        ) : null}
       </div>
-      <div className="lasso-field">
-        <label htmlFor="lasso-save-vis">Hvem kan se den</label>
-        <select id="lasso-save-vis" className="lasso-select" value={visibility} onChange={(e) => setVisibility(e.target.value as Visibility)}>
-          <option value="private">Kun mig</option>
-          <option value="org">Min organisation</option>
-          <option value="link">Alle med linket</option>
-        </select>
-      </div>
-      {error ? <div className="lasso-field__error" role="alert">{error}</div> : null}
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-        <button type="button" className="lasso-btn lasso-btn--ghost" onClick={() => onClose()}>
-          Annullér
-        </button>
-        <button type="button" className="lasso-btn lasso-btn--primary" onClick={() => void submit()} disabled={busy || Boolean(nameError || slugError)}>
-          {busy ? "Gemmer…" : "Gem og få link"}
-        </button>
-      </div>
-    </div>
+    </Dialog>
   );
 }

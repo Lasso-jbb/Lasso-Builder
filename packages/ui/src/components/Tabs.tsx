@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
 import { DataState } from "../primitives.js";
+import { Menu } from "./Menu.js";
 
 /**
  * Fanebjælke, tre niveauer (Paper 29, node IWE-0).
@@ -130,14 +131,13 @@ export function Tabs({ level, items, value, onChange, ariaLabel, id, className =
         );
       })}
       {hidden.length > 0 ? (
-        <select className="lasso-tab lasso-tab--more" aria-label="Flere faner" value="" onChange={(e) => e.target.value && onChange(e.target.value)}>
-          <option value="">Flere</option>
-          {hidden.map((t) => (
-            <option key={t.id} value={t.id} disabled={t.disabled}>
-              {t.label}
-            </option>
-          ))}
-        </select>
+        <Menu
+          trigger="Flere"
+          triggerClassName="lasso-tab lasso-tab--more"
+          label="Flere faner"
+          align="end"
+          items={hidden.map((t) => ({ id: t.id, label: t.label, disabled: t.disabled, onSelect: () => onChange(t.id) }))}
+        />
       ) : null}
     </div>
     </div>
