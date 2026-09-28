@@ -6,6 +6,25 @@
  */
 :root,
 .lasso-root {
+  /* Tilføjet af 01/05 (W2): linjehøjder til typografiskalaen, ikonstreg og kontrolmål fra Paper */
+  --lasso-lh-label: 14px;           /* overlinje 11/14 */
+  --lasso-lh-sm: 18px;              /* lille 13/18 */
+  --lasso-lh: 18px;                 /* brødtekst 14/18 */
+  --lasso-lh-body: 20px;            /* løbende tekst og kontaktrækker 14/20 */
+  --lasso-lh-lg: 24px;              /* sidetitel 18/24 */
+  --lasso-lh-xl: 32px;              /* titel 24/32 */
+  --lasso-lh-display: 40px;         /* display 32/40 */
+  --lasso-fw-regular: 400;
+  --lasso-fw-medium: 500;           /* status, værdier, knaptekst */
+  --lasso-fw-semibold: 600;         /* overskrifter, feltnavne, primær knap */
+  --lasso-fs-btn: 14px;             /* knaptekst 14/500 (05) */
+  --lasso-icon-stroke: 1.8;         /* ikonstreg (01), også til CSS-tegnede ikoner */
+  --lasso-iconbtn-lg: 38px;         /* ikonknap (05.2) */
+  --lasso-iconbtn-sm: 32px;
+  --lasso-label-h: 28px;            /* etiket, kun visning (05.6) */
+  --lasso-status-new: var(--lasso-accent-text);  /* "Ny" som ren tekst (05.7) */
+  --lasso-status-liquidation: var(--lasso-warning);
+
   /* Koral: den eneste accentfarve */
   --lasso-accent: #ff6b35;          /* primary */
   --lasso-accent-hover: #f25a22;
@@ -1837,3 +1856,7 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 @container lasso (max-width: 560px) {
   .lasso-accordion__button { min-height: var(--lasso-touch-h); }
 }
+
+/* ---------- 01.6 Ikoner (node 9B9-0) ---------- */
+/* Ét sæt (Icon.tsx): streg 1,8, runde ender, 24-grid. Ikonet står alene, aldrig i en grå flise (regel 20). */
+.lasso-icon { flex: none; display: inline-block; vertical-align: middle; }
