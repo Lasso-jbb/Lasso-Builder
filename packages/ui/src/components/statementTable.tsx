@@ -1,4 +1,5 @@
 import { amountScale, currencyUnit, formatPercent, formatScaled, percentChange } from "@lasso/spec";
+import { QualityFlag } from "./Values.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 
 /**
@@ -34,17 +35,6 @@ function changeText(prev: number | null | undefined, last: number | null | undef
 }
 
 /** Lille udråbstegn-ikon med forklaring i `title` (tooltip ved mouseover, katalog 19 note: "ingen mærke eller understregning"). */
-function QualityFlag({ reason }: { reason: string }) {
-  return (
-    <span className="lasso-stmt__flag" title={reason} aria-label={`Kvalitetsflag: ${reason}`}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
-        <path d="M12 7v6M12 16.5v.5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-      </svg>
-    </span>
-  );
-}
-
 export function StatementTable({
   title,
   unit,

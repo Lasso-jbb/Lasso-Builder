@@ -90,6 +90,26 @@ export {
 export type { FieldRowProps, Option, MultiSelectProps, TagInputProps, AmountFieldValue, PersonaValue, PersonaFieldProps, TechMode, TechValue } from "./components/Fields.js";
 export { DB07_EXCERPT, leafCodes, treeLabels } from "./components/industries.js";
 export type { TreeNode } from "./components/industries.js";
+// Felter med data (02c)
+export {
+  ValueRow,
+  NotReported,
+  FoldText,
+  NumberValue,
+  RangeValue,
+  AmountValue,
+  PeriodValue,
+  BooleanValue,
+  ValueList,
+  IndustryValue,
+  AddressValue,
+  mapLink,
+  EntityRef,
+  ShareValue,
+  ScoreValue,
+  QualityFlag,
+  LockedValue,
+} from "./components/Values.js";
 export { Tabs, TabPanel, tabId, panelId } from "./components/Tabs.js";
 export { Dialog } from "./components/Dialog.js";
 export type { DialogProps, DialogAction } from "./components/Dialog.js";

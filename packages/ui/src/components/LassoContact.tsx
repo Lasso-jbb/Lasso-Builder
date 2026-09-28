@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { formatDate, type ContactVM } from "@lasso/spec";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { mapLink } from "./Values.js";
 
 /** Rene omridsikoner, samme streg som SeverityIcon (primitives.tsx): kun form, ingen farve. */
 function PinIcon() {
@@ -136,6 +137,10 @@ export function LassoContact({
             <span className="lasso-contact__value lasso-contact__value--multiline">
               {addressLine1 ? <span>{addressLine1}</span> : null}
               {addressLine2 ? <span>{addressLine2}</span> : null}
+              {/* 02c.11: diskret kortlink under adressen */}
+              <a className="lasso-address__map" href={mapLink([addressLine1, addressLine2])} target="_blank" rel="noreferrer">
+                Vis på kort
+              </a>
             </span>
           </div>
         ) : null}

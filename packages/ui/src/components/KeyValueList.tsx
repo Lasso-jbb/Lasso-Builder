@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { companyFacts, currencyUnit, formatAmount, formatDate, formatMetricValue, isPersonId, METRIC_FIELD, METRIC_LABELS, type CompanyVM, type FinancialsVM, type Metric, type OwnershipVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
-import { DataState, Missing, Section, stateForError } from "../primitives.js";
+import { DataState, Section, stateForError } from "../primitives.js";
+import { FoldText, IndustryValue, NotReported } from "./Values.js";
 import { Tabs } from "./Tabs.js";
 
-/** "2025-01-01" -> "01.01" (dag.måned, uden år, katalog 09: "01.01 – 31.12"). */
+/** "2025-01-01" -> "01.01" (dag.måned, uden år, katalog 09: "01.01–31.12"). */
 function dayMonth(value: string | undefined): string | undefined {
   const m = value ? /^\d{4}-(\d{2})-(\d{2})/.exec(value) : null;
   return m ? `${m[2]}.${m[1]}` : undefined;
@@ -16,6 +17,8 @@ interface Row {
   danger?: boolean;
   /** Entitetens Lasso-ID (revisoren), så navnet kan åbnes i værter med drill-down. */
   lassoId?: string;
+  /** 02c.10: branchekoden, vist i muted før teksten. */
+  code?: string;
 }
 
 /**
@@ -36,7 +39,7 @@ const FINANCIALS_ROW_METRICS: Metric[] = ["resultat", "egenkapital", "ansatte", 
 
 function financialsRows(year: FinancialsVM["years"][number], currency?: string, exclude: readonly Metric[] = []): Row[] {
   const cur = year.currency ?? currency;
-  const period = dayMonth(year.periodStart) && dayMonth(year.periodEnd) ? `${dayMonth(year.periodStart)} – ${dayMonth(year.periodEnd)}` : undefined;
+  const period = dayMonth(year.periodStart) && dayMonth(year.periodEnd) ? `${dayMonth(year.periodStart)}–${dayMonth(year.periodEnd)}` : undefined;
   const rows: Row[] = [
     { label: "Regnskabsperiode", value: period },
     { label: "Regnskab udgivet", value: year.published ? formatDate(year.published) : undefined },
@@ -61,14 +64,14 @@ function financialsRows(year: FinancialsVM["years"][number], currency?: string, 
 function Value({ value, lassoId, onOpen }: { value: string; lassoId?: string; onOpen?: (a: ViewAction) => void }) {
   if (onOpen && lassoId?.startsWith("CVR-1-")) {
     return (
-      <button type="button" className="lasso-link" onClick={() => onOpen({ kind: "open-company", lassoId, name: value })}>
+      <button type="button" className="lasso-link" onClick={(e) => { e.stopPropagation(); onOpen({ kind: "open-company", lassoId, name: value }); }}>
         {value}
       </button>
     );
   }
   if (onOpen && isPersonId(lassoId)) {
     return (
-      <button type="button" className="lasso-link" onClick={() => onOpen({ kind: "open-person", lassoId, name: value })}>
+      <button type="button" className="lasso-link" onClick={(e) => { e.stopPropagation(); onOpen({ kind: "open-person", lassoId, name: value }); }}>
         {value}
       </button>
     );
@@ -76,11 +79,20 @@ function Value({ value, lassoId, onOpen }: { value: string; lassoId?: string; on
   return <>{value}</>;
 }
 
+/** Handling for en klikbar række (02c.13): åbner virksomheden eller personen, når værten kan. */
+function rowOpener(r: Row, onOpen?: (a: ViewAction) => void): (() => void) | undefined {
+  if (!onOpen || !r.value || !r.lassoId) return undefined;
+  if (r.lassoId.startsWith("CVR-1-")) return () => onOpen({ kind: "open-company", lassoId: r.lassoId!, name: r.value });
+  if (isPersonId(r.lassoId)) return () => onOpen({ kind: "open-person", lassoId: r.lassoId!, name: r.value });
+  return undefined;
+}
+
 /**
  * Nøgle-værdi-liste (katalog 09). To varianter: "company" (stamdata, venstrestillet
- * værdi) og "financials" (regnskabstal med årsvælger, tal højrestillet, seneste
- * regnskab valgt som standard). Nøgle 13/400 grå i fast kolonne, værdi 14/400
- * (14/500 højrestillet i financials-varianten). Manglende værdi: "—" i faint.
+ * værdi) og "financials" (regnskabstal med årsvælger, seneste regnskab valgt som
+ * standard). Nøgle 13/400 grå i fast kolonne, værdi 14/400 (14/500 i financials-varianten), tal
+ * venstrestillet i nøgle-værdi (02c.2). Manglende værdi: "Ikke oplyst"/"Ikke registreret" (02c.17).
+ * Lange tekster foldes efter 3 linjer med "Vis mere" (02c.1).
  */
 export function KeyValueList({
   company,
@@ -154,7 +166,7 @@ export function KeyValueList({
           {rows.map((r) => (
             <div className="lasso-kv-row" key={r.label}>
               <div className="lasso-kv-row__label">{r.label}</div>
-              <div className={`lasso-kv-row__value ${r.danger ? "lasso-down" : ""}`}>{r.value ?? <Missing />}</div>
+              <div className={`lasso-kv-row__value ${r.danger ? "lasso-down" : ""}`}>{r.value ?? <NotReported />}</div>
             </div>
           ))}
         </div>
@@ -173,14 +185,25 @@ export function KeyValueList({
   return (
     <Section title={heading} span="half">
       <div className="lasso-kv-list">
-        {rows.map((r) => (
-          <div className="lasso-kv-row" key={r.label}>
-            <div className="lasso-kv-row__label">{r.label}</div>
-            <div className="lasso-kv-row__value" title={r.value}>
-              {r.value ? <Value value={r.value} lassoId={r.lassoId} onOpen={onOpen} /> : <Missing />}
+        {rows.map((r) => {
+          const open = rowOpener(r, onOpen);
+          return (
+            // 02c.13: har værdien et Lasso-ID, er hele rækken klikbar (navnet er stadig knappen for tastatur).
+            <div className={`lasso-kv-row ${open ? "lasso-kv-row--link" : ""}`} key={r.label} onClick={open}>
+              <div className="lasso-kv-row__label">{r.label}</div>
+              <div className="lasso-kv-row__value lasso-kv-row__value--wrap">
+                {r.code ? (
+                  <IndustryValue code={r.code} text={r.value} />
+                ) : r.value ? (
+                  r.lassoId && onOpen ? <Value value={r.value} lassoId={r.lassoId} onOpen={onOpen} /> : <FoldText text={r.value} />
+                ) : (
+                  // 02c.17: felter siger "Ikke registreret", når kilden er tom; tabeller beholder "—".
+                  <NotReported kind="registered" />
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </Section>
   );
