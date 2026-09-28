@@ -1,40 +1,54 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { formatDate, type ContactVM } from "@lasso/spec";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { Icon } from "./Icon.js";
 
-/** Rene omridsikoner, samme streg som SeverityIcon (primitives.tsx): kun form, ingen farve. */
-function PinIcon() {
+/** Omridsikoner fra ikonsættet (01): kun form, ingen farve. */
+const PinIcon = () => <Icon name="pin" size={16} className="lasso-contact__icon" />;
+const PhoneIcon = () => <Icon name="phone" size={16} className="lasso-contact__icon" />;
+const MailIcon = () => <Icon name="mail" size={16} className="lasso-contact__icon" />;
+const GlobeIcon = () => <Icon name="globe" size={16} className="lasso-contact__icon" />;
+
+/**
+ * Handling til højre i rækken (26a, kontakt som 48 px rækker): Kort og Kopiér som koral tekst,
+ * Ring som 40 px ikonknap med koral ikon. Vises kun på mobil (< 560 px); på desktop er værdien
+ * selv klikbar (tel:/mailto:).
+ */
+function MapAction({ query }: { query: string }) {
   return (
-    <svg className="lasso-contact__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M12 21s7-6.1 7-11.5A7 7 0 105 9.5C5 14.9 12 21 12 21z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-      <circle cx="12" cy="9.5" r="2.4" stroke="currentColor" strokeWidth="1.6" />
-    </svg>
+    <a className="lasso-contact__action" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`} target="_blank" rel="noopener noreferrer">
+      Kort
+    </a>
   );
 }
 
-function PhoneIcon() {
+function CallAction({ phone }: { phone: string }) {
   return (
-    <svg className="lasso-contact__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M5 4.5h3.2l1.4 4-2 1.6a11.5 11.5 0 006.3 6.3l1.6-2 4 1.4V19a1.5 1.5 0 01-1.6 1.5A15.5 15.5 0 013.5 6.1 1.5 1.5 0 015 4.5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-    </svg>
+    <a className="lasso-contact__call" href={`tel:${phone.replace(/\s+/g, "")}`} aria-label={`Ring ${phone}`} title="Ring">
+      <Icon name="phone" size={16} />
+    </a>
   );
 }
 
-function MailIcon() {
+function CopyAction({ text }: { text: string }) {
+  const [done, setDone] = useState(false);
   return (
-    <svg className="lasso-contact__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="3.5" y="5.5" width="17" height="13" rx="1.6" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M4.5 6.5l7.5 6 7.5-6" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function GlobeIcon() {
-  return (
-    <svg className="lasso-contact__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M3.7 12h16.6M12 3.5c2.4 2.5 3.8 5.6 3.8 8.5s-1.4 6-3.8 8.5c-2.4-2.5-3.8-5.6-3.8-8.5S9.6 6 12 3.5z" stroke="currentColor" strokeWidth="1.4" />
-    </svg>
+    <button
+      type="button"
+      className="lasso-contact__action"
+      onClick={() => {
+        const clip = typeof navigator !== "undefined" ? navigator.clipboard : undefined;
+        clip?.writeText(text).then(
+          () => {
+            setDone(true);
+            setTimeout(() => setDone(false), 2000);
+          },
+          () => undefined,
+        );
+      }}
+    >
+      {done ? "Kopieret" : "Kopiér"}
+    </button>
   );
 }
 
@@ -52,7 +66,7 @@ function prettyUrl(v: string): string {
   }
 }
 
-function Row({ icon, href, children }: { icon: ReactNode; href?: string; children: ReactNode }) {
+function Row({ icon, href, action, children }: { icon: ReactNode; href?: string; action?: ReactNode; children: ReactNode }) {
   return (
     <div className="lasso-contact__row">
       {icon}
@@ -63,6 +77,7 @@ function Row({ icon, href, children }: { icon: ReactNode; href?: string; childre
       ) : (
         <span className="lasso-contact__value">{children}</span>
       )}
+      {action ? <span className="lasso-contact__side">{action}</span> : null}
     </div>
   );
 }
@@ -137,16 +152,19 @@ export function LassoContact({
               {addressLine1 ? <span>{addressLine1}</span> : null}
               {addressLine2 ? <span>{addressLine2}</span> : null}
             </span>
+            <span className="lasso-contact__side">
+              <MapAction query={[addressLine1, addressLine2].filter(Boolean).join(", ")} />
+            </span>
           </div>
         ) : null}
         {contact.phone ? (
-          <Row icon={<PhoneIcon />} href={`tel:${contact.phone.replace(/\s+/g, "")}`}>
+          <Row icon={<PhoneIcon />} href={`tel:${contact.phone.replace(/\s+/g, "")}`} action={<CallAction phone={contact.phone} />}>
             {prettyPhone(contact.phone)}
             {phoneVerified ? <span className="lasso-small lasso-muted"> — Telefon (verificeret {formatDate(contact.verifiedAt)})</span> : null}
           </Row>
         ) : null}
         {contact.email ? (
-          <Row icon={<MailIcon />} href={`mailto:${contact.email}`}>
+          <Row icon={<MailIcon />} href={`mailto:${contact.email}`} action={<CopyAction text={contact.email} />}>
             {contact.email}
           </Row>
         ) : null}
@@ -156,7 +174,7 @@ export function LassoContact({
           </Row>
         ) : null}
         {otherVerified.map((n, i) => (
-          <Row key={`verified-${i}`} icon={<PhoneIcon />} href={n.callable ? `tel:${n.phoneNumber.replace(/\s+/g, "")}` : undefined}>
+          <Row key={`verified-${i}`} icon={<PhoneIcon />} href={n.callable ? `tel:${n.phoneNumber.replace(/\s+/g, "")}` : undefined} action={n.callable ? <CallAction phone={n.phoneNumber} /> : undefined}>
             {prettyPhone(n.phoneNumber)}
             <span className="lasso-small lasso-muted"> — Telefon (verificeret {formatDate(contact.verifiedAt)})</span>
           </Row>

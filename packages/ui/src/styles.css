@@ -1764,7 +1764,7 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 .lasso-page-column .lasso-section__title { font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: var(--lasso-tracking-tight); }
 .lasso-page-column .lasso-section__head { margin-bottom: 20px; }
 /* Mobil topbjælke, sektionsark og bundnavigation (26a): skjult på desktop */
-.lasso-mobilebar { align-items: center; gap: 8px; height: 52px; padding: 0 8px; background: var(--lasso-surface); border-bottom: 1px solid var(--lasso-border); }
+.lasso-mobilebar { align-items: center; gap: 8px; height: 52px; padding: 0 8px; background: var(--lasso-chrome); border-bottom: 1px solid var(--lasso-chrome-border); }
 .lasso-mobilebar__btn { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: var(--lasso-radius); background: none; cursor: pointer; color: var(--lasso-text); }
 .lasso-mobilebar__btn--empty { width: 8px; }
 .lasso-mobilebar__titles { flex: 1; min-width: 0; }
@@ -1975,3 +1975,54 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 
 /* ---------- 05.7 Status som ren tekst (node 9HM-0) ---------- */
 /* 14/500, ingen pille, ingen prik: Aktiv tekstfarve, Konkurs mørk rød, Likvidation warning, Ophørt muted, Ny koral tekst (regler i .lasso-badge/.lasso-status ovenfor). */
+
+/* ---------- 26a.3 Topbjælke + bundnavigation (node DUY-0) ---------- */
+/* Topbjælken står på chrome-grå med 20 px ikoner; bundnavigationen har altid fire punkter, et punkt uden funktion står dæmpet. */
+.lasso-bottomnav__item:disabled { color: var(--lasso-disabled); cursor: default; }
+.lasso-mobilebar__btn:hover, .lasso-mobilebar .lasso-bell:hover { background: rgb(255 255 255 / 0.7); }
+.lasso-mobilebar__btn:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: -1px; }
+.lasso-mobilebar .lasso-bell__badge { border-color: var(--lasso-chrome); }
+.lasso-mobilebar .lasso-bell { width: 40px; height: 40px; }
+
+/* ---------- 26a.6 Kontaktblok, mobil (node DWQ-0) ---------- */
+/* 48 px rækker med handling til højre: Kort og Kopiér som koral tekst, Ring som 40 px ikonknap med koral ikon. Kun på mobil. */
+.lasso-contact__side { display: none; }
+.lasso-contact__action { flex: none; padding: 0; border: 0; background: none; cursor: pointer; font: inherit; font-size: var(--lasso-fs-sm); font-weight: var(--lasso-fw-medium); color: var(--lasso-accent-text); text-decoration: none; }
+.lasso-root button.lasso-contact__action { color: var(--lasso-accent-text); }
+.lasso-contact__call { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius); background: var(--lasso-surface); color: var(--lasso-accent); }
+.lasso-contact__action:focus-visible, .lasso-contact__call:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: 2px; }
+@container lasso (max-width: 560px) {
+  .lasso-contact { gap: 0; }
+  .lasso-contact__row { align-items: center; min-height: 48px; }
+  .lasso-contact__icon { margin-top: 0; }
+  .lasso-contact__value { flex: 1; min-width: 0; }
+  .lasso-contact__side { display: inline-flex; flex: none; margin-left: auto; }
+}
+
+/* ---------- 26a.7 Genveje, mobil (node DXD-0) ---------- */
+/* Desktop: sekundære knapper, der ombrydes. Mobil: én vandret række, der ruller med fade i højre kant. */
+.lasso-followups { display: flex; flex-wrap: wrap; gap: var(--lasso-space-2); }
+@container lasso (max-width: 560px) {
+  .lasso-followups { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-right: calc(-1 * var(--lasso-space-3)); padding-right: 24px; mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); }
+  .lasso-followups::-webkit-scrollbar { display: none; }
+  .lasso-followups .lasso-btn { flex: none; height: 40px; }
+}
+
+/* ---------- 26a.8 Formularfelter, mobil (node DXR-0) ---------- */
+/* 48 px touch-mål i felter og 40 px valg-chips under 560 px: tokens sættes for alt inde i .lasso-root, så felterne (02/03) følger med uden egne regler. */
+@container lasso (max-width: 560px) {
+  :where(.lasso-root) > * { --lasso-field-h: 48px; --lasso-chip-h: 40px; }
+}
+
+/* ---------- 26a.11 Besked / toast, mobil (node E0W-0) ---------- */
+/* Stakkes over bundnavigationen med 12 px margen (Toasts måler dens højde), swipe ned lukker. */
+@container lasso (max-width: 560px) {
+  .lasso-toasts { bottom: calc(var(--lasso-toast-offset, 0px) + 12px); }
+  .lasso-toast { touch-action: pan-x; transition: transform 160ms ease, opacity 160ms ease; }
+  .lasso-toast.is-dragging { transition: none; }
+  /* Ingen hover på mobil: handlingen står i beskeden, lukning sker ved swipe eller efter 5 sek. */
+  .lasso-toast__close { display: none; }
+  .lasso-toast { padding-right: 12px; }
+}
+/* Handlingen (Fortryd, Prøv igen) i koral tekst; ".lasso-root" foran vinder over ".lasso-root button { color: inherit }" */
+.lasso-root .lasso-toast__action { color: var(--lasso-accent-text); }

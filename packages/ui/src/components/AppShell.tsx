@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { Menu, type MenuItem } from "./Menu.js";
 import { MonitorBell } from "./MonitorSettings.js";
 import { Rail, type RailProps } from "./Rail.js";
 import { ShellIcon, type ShellIconName } from "./ShellIcons.js";
@@ -25,6 +26,9 @@ export interface MobileNavItem {
   label: string;
   icon?: ReactNode;
   active?: boolean;
+  /** Punktet findes, men kan ikke bruges endnu; tegnes dæmpet med grunden som tooltip. */
+  disabled?: boolean;
+  disabledReason?: string;
   onSelect?: () => void;
 }
 
@@ -47,6 +51,8 @@ export interface AppShellMobile {
   /** Maks 2 ikonhandlinger i topbjælken; flere samles bag "…" via onMore. */
   actions?: readonly MobileAction[];
   onMore?: () => void;
+  /** "…" som handlingsark (07/26a) med titel og undertitel som kontekst. Vinder over onMore. */
+  moreItems?: readonly MenuItem[];
   /** Ulæste til klokken i topbjælken (vises når onBell er sat). */
   unread?: number;
   important?: boolean;
@@ -111,7 +117,17 @@ export function AppShell({ rail, tabs, mobile, children, className = "" }: AppSh
               {a.icon}
             </button>
           ))}
-          {mobile?.onMore ? (
+          {mobile?.moreItems?.length ? (
+            <Menu
+              trigger={<ShellIcon name="more" size={20} />}
+              triggerClassName="lasso-mobilebar__btn"
+              triggerLabel="Flere handlinger"
+              label="Flere handlinger"
+              align="end"
+              items={mobile.moreItems}
+              context={{ title, subtitle: mobile.subtitle }}
+            />
+          ) : mobile?.onMore ? (
             <button type="button" className="lasso-mobilebar__btn" aria-label="Flere handlinger" onClick={mobile.onMore}>
               <ShellIcon name="more" size={20} />
             </button>
@@ -153,7 +169,15 @@ export function AppShell({ rail, tabs, mobile, children, className = "" }: AppSh
 
       <nav className="lasso-bottomnav" aria-label="Hovednavigation">
         {nav.map((n) => (
-          <button key={n.id} type="button" className={`lasso-bottomnav__item ${n.active ? "is-on" : ""}`} aria-current={n.active ? "page" : undefined} onClick={n.onSelect}>
+          <button
+            key={n.id}
+            type="button"
+            className={`lasso-bottomnav__item ${n.active ? "is-on" : ""}`}
+            aria-current={n.active ? "page" : undefined}
+            disabled={n.disabled}
+            title={n.disabled ? n.disabledReason : undefined}
+            onClick={n.onSelect}
+          >
             <span className="lasso-bottomnav__icon">{n.icon}</span>
             <span className="lasso-bottomnav__label">{n.label}</span>
           </button>
