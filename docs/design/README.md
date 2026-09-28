@@ -63,6 +63,18 @@ Virksomhedsside: hoved, risiko (kun ved 50+), nøgletal, én graf ved siden af n
 
 1440 → 1200 (panel under midten) → 960 (skinnen skjules) → 768 (to kolonner, maks 6 tabelkolonner) → 390 (én kolonne). På mobil bliver tabeller til kortlister og ejerdiagrammet til en liste, rækker er mindst 44 px, grafer viser maks 5 punkter. Kun brudpunkter, ingen separate mobiludgaver.
 
+Brudpunktsregler (26, node `DH5-0`; guide 23 trin 7) og hvor de står i `styles.css`:
+
+| Bredde | Sideskabelon (`AppShell`, container = hele portalen) | Midten (`LassoView`, container = selve visningen) |
+|---|---|---|
+| ≥ 1200 | Skinne 236 + midte + panel 336 (`panel`-prop) | Midten er > 960: 4-kolonne-grid, gap 24 |
+| 1024–1199 (`max-width: 1199px`) | Skinne 64 med ikoner; panelet falder ned under midten | — |
+| ≤ 960 (`max-width: 960px`) | Skinnen skjules; fanebjælke + midte, bundnavigation | Tablet: 2 kolonner, ½ + ½ holder, ¼ og ¾ bliver fuld, gap 16; kolonnebånd 3 → 2 + 1, ¾ + ¼ stables. Chatten (640–900 px) står her. |
+| < 768 (`max-width: 767px`) | Mobil: topbjælke 52 med "Sektioner", ingen fanebjælke, én kolonne, panelet nederst, padding 16 | — |
+| ≤ 560 (`max-width: 560px`) | — | Mobil: én kolonne, gap 12, elementernes mobilformer (kortlister, 2 × 2 nøgletal, 44 px). Kun Claude på mobil (390) rammer den; chatten gør aldrig (30). |
+
+Midtens brud er lavere end skærmens, fordi containeren er midten: ved skærm 1200 er midten ~960 px.
+
 ## Faner, layout, navigation, dialoger, overvågning og eksport (06, 07, 21, 27, 29, 30)
 
 Bygget på `feat/faner`. Alt ligger i `packages/ui` og eksporteres fra `@lasso/ui`; kun overvågningsfeedet er en spec-komponent med data.
@@ -86,7 +98,7 @@ Tilstande: hvile, hover (tekst ink + divider-streg), valgt, fokus (1 px koral ka
 
 ### Layout, fra spørgsmål til skærm (30, node `J48-0`)
 
-`LAYOUT_RULES` i `packages/spec/src/catalog.ts` står i `render_view`-beskrivelsen efter `COMPOSITION_RULES` og er det, modellen slår op i: tre svarniveauer (A Element, B Sektion, C Side), ni mønstre (1 Overblik, 2 Fokus, 3 Ligeværdige, 4 Liste først, 5 Sammenligning, 6 Tidslinje, 7 Fortælling, 8 Kortgitter, 9 Harmonika) og foldreglerne på 1440/768/390. Mønster 1–7 tegnes med bredderne ¼/½/¾/fuld og `column` i `LassoView`; 8 og 9 har egne primitiver:
+`LAYOUT_RULES` i `packages/spec/src/catalog.ts` står i `render_view`-beskrivelsen efter `COMPOSITION_RULES` og er det, modellen slår op i: tre svarniveauer (A Element, B Sektion, C Side), ni mønstre (1 Overblik, 2 Fokus, 3 Ligeværdige, 4 Liste først, 5 Sammenligning, 6 Tidslinje, 7 Fortælling, 8 Kortgitter, 9 Harmonika) og foldreglerne på 1440/768/390. Mønster 1–7 tegnes med bredderne ¼/½/¾/fuld og `column` i `LassoView`; 8 og 9 har egne primitiver, som `LassoView` bruger, når sammenhængende komponenter i en spec har samme `group: { id, pattern: "cards" | "accordion", title? }` (i dashboard, i fuld bredde og inde i en kolonne; én komponent alene er ingen gruppe; harmonikaens rækkenavn er komponentens `title` eller typens navn, første række åben):
 
 ```ts
 <CardGrid>…artikler…</CardGrid>                       // to kolonner, én på mobil, luft og tynde linjer
@@ -98,7 +110,7 @@ Modulværktøjslinjen (56 px under modulbjælken, primær handling til venstre, 
 ### Navigation og sideskabelon (06, node `9I4-0`; mobil 26a)
 
 ```ts
-<AppShell rail={RailProps} tabs={TabStripProps} mobile?={{ title, subtitle?, sections?, activeSection?, onSelectSection?, actions?, onMore?, unread?, onBell?, nav?, sheetOpen?, onToggleSheet? }}>
+<AppShell rail={RailProps} tabs={TabStripProps} panel?={ReactNode /* højre panel 336, sammendrag og handlinger */} panelLabel? mobile?={{ title, subtitle?, sections?, activeSection?, onSelectSection?, actions?, onMore?, unread?, onBell?, nav?, sheetOpen?, onToggleSheet? }}>
   <ModuleBar modules={TabItem[]} value onChange actions?={[{ id, label, icon?, tone?: "accent", menu?, onSelect }]} />
   <ModuleToolbar primary?={{ label, onClick }} secondary?=[…] controls?={<Tabs level={3} …/>} />
   <Columns count={3}><Column>…</Column><Column>…</Column><Column>…</Column></Columns>

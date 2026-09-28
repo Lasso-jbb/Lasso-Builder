@@ -16,7 +16,11 @@ import type { TabItem } from "./Tabs.js";
  * (burger, der åbner "Sektioner"-arket med modulerne som 44 px rækker; titel + undertitel; maks
  * 2 ikoner + "…") og en bundnavigation 56 px med fire punkter (Søg, Lister, Overvågning, Konto;
  * ikon + navn, aktiv i koral, aldrig badges). Bundnavigationen står altid i markup og skjules på
- * desktop med CSS. Tablet (560–1199): skinnen bliver 64 px med ikoner og tooltip.
+ * desktop med CSS.
+ *
+ * Brudpunkter (26, node DH5-0; guide 23 trin 7): ≥ 1200 skinne + midte + panel 336; 1024–1199
+ * skinnen bliver 64 px med ikoner, og panelet falder ned under midten; ≤ 960 skinnen skjules, og
+ * bundnavigationen overtager; < 768 mobil (topbjælke med "Sektioner", ingen fanebjælke, padding 16).
  *
  * Tilstandsløs, bortset fra om sektionsarket er åbent (ren UI-tilstand; kan også styres udefra).
  */
@@ -64,6 +68,13 @@ export interface AppShellProps {
   mobile?: AppShellMobile;
   /** Sidens indhold: ModuleBar, evt. ModuleToolbar og Columns. */
   children?: ReactNode;
+  /**
+   * Højre panel 336 px (06/26, guide 23 trin 1): sammendrag og handlinger, aldrig primært indhold.
+   * Under 1200 falder panelet ned under midten. Udeladt = skabelonen uden panel (lister og søgning, 15).
+   */
+  panel?: ReactNode;
+  /** Tilgængeligt navn til panelet (standard "Sammendrag og handlinger"). */
+  panelLabel?: string;
   className?: string;
 }
 
@@ -74,7 +85,7 @@ const DEFAULT_NAV: readonly { id: string; label: string; icon: ShellIconName }[]
   { id: "konto", label: "Konto", icon: "user" },
 ];
 
-export function AppShell({ rail, tabs, mobile, children, className = "" }: AppShellProps) {
+export function AppShell({ rail, tabs, mobile, children, panel, panelLabel, className = "" }: AppShellProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const sheetOpen = mobile?.sheetOpen ?? internalOpen;
   const setSheet = (open: boolean) => {
@@ -88,7 +99,7 @@ export function AppShell({ rail, tabs, mobile, children, className = "" }: AppSh
   const hasSections = !!mobile?.sections?.length;
 
   return (
-    <div className={`lasso-shell ${hasSections ? "lasso-shell--sections" : ""} ${className}`}>
+    <div className={`lasso-shell ${hasSections ? "lasso-shell--sections" : ""} ${panel ? "lasso-shell--panel" : ""} ${className}`}>
       <Rail {...rail} />
       <TabStrip {...tabs} />
 
@@ -119,7 +130,16 @@ export function AppShell({ rail, tabs, mobile, children, className = "" }: AppSh
         </div>
       </header>
 
-      <main className="lasso-page">{children}</main>
+      {panel ? (
+        <div className="lasso-page lasso-page--panel">
+          <main className="lasso-page__main">{children}</main>
+          <aside className="lasso-page__panel" aria-label={panelLabel ?? "Sammendrag og handlinger"}>
+            {panel}
+          </aside>
+        </div>
+      ) : (
+        <main className="lasso-page">{children}</main>
+      )}
 
       {hasSections && sheetOpen ? (
         <div className="lasso-sheet-backdrop" onClick={() => setSheet(false)}>

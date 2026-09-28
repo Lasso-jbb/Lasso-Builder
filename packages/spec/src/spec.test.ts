@@ -99,6 +99,20 @@ test("width er valgfri på alle komponenter, og stack giver altid fuld bredde", 
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoRelations", company: "CVR-1-1", width: "third" }] }));
 });
 
+test("group (30, mønster 8/9) er valgfri, og pattern skal være cards eller accordion", () => {
+  const spec = parseViewSpec({
+    title: "x",
+    components: [
+      { type: "LassoIncomeStatement", company: "CVR-1-1", group: { id: "regnskab", pattern: "accordion", title: "Regnskab" } },
+      { type: "LassoBalanceSheet", company: "CVR-1-1", group: { id: "regnskab", pattern: "accordion" } },
+      { type: "LassoNews", company: "CVR-1-1" },
+    ],
+  });
+  assert.deepEqual(spec.components.map((c) => c.group?.pattern), ["accordion", "accordion", undefined]);
+  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoNews", company: "CVR-1-1", group: { id: "n", pattern: "tabs" } }] }));
+  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoNews", company: "CVR-1-1", group: { id: "", pattern: "cards" } }] }));
+});
+
 test("LassoContact og LassoContactPersons parses med standardbredde half", () => {
   const spec = parseViewSpec({
     title: "Kontakt",

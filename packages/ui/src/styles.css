@@ -458,12 +458,16 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-span-half { grid-column: span 2; }
 .lasso-span-three-quarters { grid-column: span 3; }
 .lasso-content--grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: var(--lasso-space-5); row-gap: var(--lasso-space-10); }
+/* Foldning (30, 26.1): tablet = 2 kolonner, ½ + ½ holder, ¼ og ¾ bliver fuld; gap 24/16/12.
+   Containeren er midten, ikke skærmen: midten er ~960 px, når skærmen er 1200 (skinne + panel fratrukket),
+   og chatten (640–900 px) skal have tablet-reglerne, mens den selvstændige visning (1080 px) er desktop. */
 @container lasso (max-width: 960px) {
-  .lasso-content--grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .lasso-content--grid-4 > .lasso-span-half, .lasso-content--grid-4 > .lasso-span-three-quarters { grid-column: 1 / -1; }
+  .lasso-content--grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--lasso-space-4); }
+  .lasso-content--grid-4 > .lasso-span-half { grid-column: span 1; }
+  .lasso-content--grid-4 > .lasso-span-quarter, .lasso-content--grid-4 > .lasso-span-three-quarters { grid-column: 1 / -1; }
 }
 @container lasso (max-width: 560px) {
-  .lasso-content--grid-4 { grid-template-columns: minmax(0, 1fr); row-gap: var(--lasso-space-7); }
+  .lasso-content--grid-4 { grid-template-columns: minmax(0, 1fr); column-gap: var(--lasso-space-3); row-gap: var(--lasso-space-7); }
   .lasso-content--grid-4 > * { grid-column: 1 / -1; }
 }
 
@@ -1093,19 +1097,21 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-odlist__more svg { fill: none; stroke: var(--lasso-placeholder); stroke-width: 1.5; }
 
 /* ---------- Dashboard (guide 23): hvert element står i sin celle i 4-kolonne-grid'et ---------- */
-.lasso-content--dashboard, .lasso-content--grid-2 { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: var(--lasso-space-7); row-gap: var(--lasso-space-10); align-items: start; }
+.lasso-content--dashboard, .lasso-content--grid-2 { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: var(--lasso-space-5); row-gap: var(--lasso-space-10); align-items: start; }
 .lasso-cell { min-width: 0; }
 .lasso-cell--quarter { grid-column: span 1; }
 .lasso-cell--half { grid-column: span 2; }
 .lasso-cell--three-quarters { grid-column: span 3; }
 .lasso-cell--full { grid-column: 1 / -1; }
 .lasso-cell > * { grid-column: auto; }
+/* Foldning (30): tablet (midten ≤ 960, svarer til skærm < 1200) to kolonner; ½ + ½ holder (chatten 640–900 px), ¼ + ¾ bliver fuld + fuld */
 @container lasso (max-width: 960px) {
-  .lasso-content--dashboard, .lasso-content--grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .lasso-cell--half, .lasso-cell--three-quarters { grid-column: 1 / -1; }
+  .lasso-content--dashboard, .lasso-content--grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--lasso-space-4); }
+  .lasso-cell--half { grid-column: span 1; }
+  .lasso-cell--quarter, .lasso-cell--three-quarters { grid-column: 1 / -1; }
 }
 @container lasso (max-width: 560px) {
-  .lasso-content--dashboard, .lasso-content--grid-2 { grid-template-columns: minmax(0, 1fr); row-gap: var(--lasso-space-7); }
+  .lasso-content--dashboard, .lasso-content--grid-2 { grid-template-columns: minmax(0, 1fr); column-gap: var(--lasso-space-3); row-gap: var(--lasso-space-7); }
   .lasso-cell { grid-column: 1 / -1; }
 }
 
@@ -1125,7 +1131,7 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 /* Komponenter i en kolonne fylder kolonnen; deres egne spans gælder ikke her */
 .lasso-column__item > * { grid-column: auto; width: 100%; }
 /* Bånd med bredder (personsiden: roller ¾ + stamoplysninger ¼): forholdet sættes af LassoView (bandTemplate).
-   Under 960 px bliver ¼ for smal; så står kolonnerne under hinanden i fuld bredde, adskilt af en linje. */
+   På tablet (midten ≤ 960, skærm < 1200) bliver ¼ + ¾ til fuld + fuld (30): kolonnerne står under hinanden, adskilt af en linje. */
 .lasso-columns--ratio { grid-template-columns: var(--lasso-columns-template); }
 @container lasso (max-width: 960px) {
   .lasso-columns--ratio { grid-template-columns: minmax(0, 1fr); }
@@ -1762,7 +1768,7 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 .lasso-bottomnav__icon { display: inline-flex; }
 .lasso-bottomnav__label { font-size: 11px; line-height: 14px; font-weight: 500; white-space: nowrap; }
 .lasso-bottomnav__item.is-on .lasso-bottomnav__label { color: var(--lasso-accent-text); }
-/* Tablet (560–1199): skinnen 64 px med 44 px ikoner og navn som tooltip; modulbjælken viser maks 5 + Flere (ModuleBar måler selv) */
+/* Tablet (768–1199): skinnen 64 px med 44 px ikoner og navn som tooltip; modulbjælken viser maks 5 + Flere (ModuleBar måler selv) */
 @container lasso (max-width: 1199px) {
   .lasso-shell { grid-template-columns: 64px minmax(0, 1fr); }
   .lasso-modulebar .lasso-tabs--l1 { gap: 20px; }
@@ -1783,8 +1789,9 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
   .lasso-page-columns--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lasso-page-columns--3 > .lasso-page-column:nth-child(3) { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--lasso-border); }
 }
-/* Mobil (< 560): skinne og fanebjælke væk; topbjælke 52 + krop i én kolonne + bundnavigation 56 */
-@container lasso (max-width: 560px) {
+/* Mobil (< 768, 26.1): skinne og fanebjælke væk; topbjælke 52 + krop i én kolonne + bundnavigation 56.
+   Elementerne inde i siden bruger stadig deres egne 560-regler (30: 640–900 px er tablet). */
+@container lasso (max-width: 767px) {
   .lasso-shell { display: flex; flex-direction: column; background: var(--lasso-surface); }
   .lasso-shell > .lasso-rail, .lasso-shell > .lasso-strip { display: none; }
   .lasso-mobilebar { display: flex; flex: none; position: sticky; top: 0; z-index: 2; }
@@ -1795,7 +1802,7 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
   .lasso-modulebar__actions { display: none; }
   .lasso-toolbar { padding: 0 16px; }
   .lasso-page-columns, .lasso-page-columns--2, .lasso-page-columns--3 { grid-template-columns: minmax(0, 1fr); }
-  .lasso-page-column, .lasso-page-columns--3 > .lasso-page-column:nth-child(3) { gap: 28px; padding: 24px 16px; border-left: 0; border-top: 1px solid var(--lasso-border); }
+  .lasso-page-column, .lasso-page-column + .lasso-page-column, .lasso-page-columns--3 > .lasso-page-column:nth-child(3) { gap: 28px; padding: 24px 16px; border-left: 0; border-top: 1px solid var(--lasso-border); }
   .lasso-page-column:first-child { border-top: 0; }
   .lasso-bottomnav { display: grid; flex: none; position: sticky; bottom: 0; z-index: 2; }
 }
@@ -1837,3 +1844,39 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 @container lasso (max-width: 560px) {
   .lasso-accordion__button { min-height: var(--lasso-touch-h); }
 }
+
+/* ---------- 23.1 + 26.1 Sideskabelon: højre panel 336 og brudpunkter 1440/1200/960/768/390 (nodes CK9-0, DH5-0) ---------- */
+/* ≥ 1200: skinne 236 + midte + panel 336. Panelet er sammendrag og handlinger, adskilt af 1 px linje, aldrig kort på grå */
+.lasso-page--panel { flex-direction: row; align-items: stretch; }
+.lasso-page__main { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
+.lasso-page__panel { flex: none; display: flex; flex-direction: column; gap: var(--lasso-space-10); width: var(--lasso-panel-w); min-width: 0; padding: var(--lasso-space-10) var(--lasso-space-5); border-left: 1px solid var(--lasso-border); background: var(--lasso-surface); }
+.lasso-page__panel .lasso-section__title { font-size: var(--lasso-fs-lg); line-height: 24px; }
+/* 1024–1199: desktop uden højre panel; panelet falder ned under midten i fuld bredde */
+@container lasso (max-width: 1199px) {
+  .lasso-page--panel { flex-direction: column; }
+  .lasso-page__panel { width: auto; border-left: 0; border-top: 1px solid var(--lasso-border); padding: var(--lasso-space-7) var(--lasso-space-5); }
+}
+/* ≤ 960: skinnen skjules; fanebjælke + midte fylder bredden, bundnavigationen (Søg, Lister, Overvågning, Konto) overtager */
+@container lasso (max-width: 960px) {
+  .lasso-shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: 56px minmax(0, 1fr) auto; }
+  .lasso-shell > .lasso-rail { display: none; }
+  .lasso-shell > .lasso-strip { grid-column: 1; padding-left: 12px; }
+  .lasso-shell > .lasso-page { grid-column: 1; border-top-left-radius: 0; }
+  .lasso-shell > .lasso-bottomnav { display: grid; grid-column: 1; grid-row: 3; position: sticky; bottom: 0; z-index: 2; }
+}
+/* < 768: panelet står nederst i én kolonne med padding 16 (26.1, Sideskabelon) */
+@container lasso (max-width: 767px) {
+  .lasso-page__panel { padding: var(--lasso-space-6) var(--lasso-space-4); gap: var(--lasso-space-7); }
+}
+
+/* ---------- 30.11 Mønster 8 og 9 i LassoView: group { id, pattern, title? } (node JV3-0) ---------- */
+.lasso-group { min-width: 0; }
+.lasso-cardgrid__item > * { width: 100%; }
+/* Harmonika: rækkenavnet er komponentens titel, så komponentens egen overskrift gentages ikke i panelet */
+.lasso-group--accordion .lasso-accordion__panel > .lasso-section > .lasso-section__head > .lasso-section__titles { display: none; }
+.lasso-group--accordion .lasso-accordion__panel > .lasso-section > .lasso-section__head:not(:has(.lasso-section__action)) { display: none; }
+.lasso-group--accordion .lasso-accordion__panel { padding-top: var(--lasso-space-2); }
+
+/* Rækkenavnet 14/600: .lasso-root button { font: inherit } må ikke nulstille vægten */
+.lasso-root .lasso-accordion__button { font-size: var(--lasso-fs); font-weight: 600; }
+.lasso-root .lasso-accordion__meta { font-weight: 400; }

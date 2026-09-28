@@ -19,6 +19,8 @@ import {
   type ViewComponent,
   type ViewSpec,
   type Width,
+  type ComponentGroup,
+  COMPONENT_CATALOG,
   ownershipGraphKey,
 } from "@lasso/spec";
 import { FollowUps } from "./components/FollowUps.js";
@@ -68,6 +70,7 @@ import { ShellIcon } from "./components/ShellIcons.js";
 import { ReportA4 } from "./components/ReportA4.js";
 import { specToCsv } from "./csv.js";
 import { Badge, Skeleton } from "./primitives.js";
+import { Accordion, CardGrid } from "./components/Layout.js";
 import { SaveDialog } from "./SaveDialog.js";
 import { ToastProvider, Toasts, useHasToastProvider, useToast, type ToastOptions } from "./components/Toast.js";
 import type { ActionResult, LassoViewProps, ViewAction } from "./types.js";
@@ -355,6 +358,121 @@ export function columnBands(components: readonly ViewComponent[]): Band[] {
   return bands;
 }
 
+/** En række i visningen: én komponent eller en gruppe (mønster 8/9) af sammenhængende komponenter. */
+export type Run = { kind: "one"; item: Indexed } | { kind: "group"; group: ComponentGroup; items: Indexed[] };
+
+/**
+ * Mønster 8 (kortgitter) og 9 (harmonika), Paper 30: sammenhængende komponenter med samme
+ * group.id samles i én række. Gruppens overskrift er første medlems group.title. En gruppe med
+ * kun ét medlem tegnes som en almindelig komponent (en harmonika med én række giver ingen mening).
+ */
+export function groupRuns(items: readonly Indexed[]): Run[] {
+  const runs: Run[] = [];
+  for (const it of items) {
+    const g = it.c.group;
+    const last = runs.at(-1);
+    if (g && last?.kind === "group" && last.group.id === g.id) {
+      last.items.push(it);
+      if (!last.group.title && g.title) last.group = { ...last.group, title: g.title };
+    } else if (g) {
+      runs.push({ kind: "group", group: g, items: [it] });
+    } else {
+      runs.push({ kind: "one", item: it });
+    }
+  }
+  return runs.map((r) => (r.kind === "group" && r.items.length === 1 ? { kind: "one", item: r.items[0]! } : r));
+}
+
+/** Rækkenavn i harmonikaen: komponentens egen title, ellers et brugervendt navn for typen. */
+const ITEM_LABELS: Partial<Record<ViewComponent["type"], string>> = {
+  LassoKeyFigureCards: "Nøgletal",
+  LassoBarChart: "Udvikling",
+  LassoGroupedBarChart: "Udvikling",
+  LassoLineChart: "Udvikling",
+  LassoIncomeStatement: "Resultatopgørelse",
+  LassoBalanceSheet: "Balance",
+  LassoCashFlow: "Pengestrøm",
+  LassoMultiYearTable: "Flerårsoversigt",
+  LassoPersonList: "Ledelse",
+  LassoOwnerList: "Ejere",
+  LassoOwnershipDiagram: "Ejerdiagram",
+  LassoBeneficialOwners: "Reelle ejere",
+  LassoTimeline: "Historik",
+  LassoNews: "Nyheder",
+  LassoCreditRating: "Kreditvurdering",
+  LassoScoreGauge: "Score",
+  LassoAuditorIndependence: "Revisoruafhængighed",
+  LassoProductionUnits: "Produktionsenheder",
+  LassoProperties: "Ejendomme",
+  LassoLivestock: "Husdyr",
+  LassoContact: "Kontakt",
+  LassoContactPersons: "Kontaktpersoner",
+  LassoSummary: "Analyse",
+  LassoRelations: "Relationer",
+};
+export function groupItemLabel(c: ViewComponent): string {
+  if ("title" in c && typeof c.title === "string" && c.title) return c.title;
+  if (c.type === "LassoKeyValueList") return c.variant === "financials" ? "Nøgletal" : "Virksomhedsoplysninger";
+  if (c.type === "LassoTextSections") return c.variant === "analyse" ? "Regnskabsanalyse" : "Profil";
+  return ITEM_LABELS[c.type] ?? COMPONENT_CATALOG.find((e) => e.type === c.type)?.title ?? c.type;
+}
+
+function renderGroup(group: ComponentGroup, items: readonly Indexed[], ds: Dataset | null, props: LassoViewProps, act: (a: ViewAction) => void) {
+  const body =
+    group.pattern === "cards" ? (
+      <CardGrid>
+        {items.map(({ c, i }) => (
+          <div key={i} className="lasso-cardgrid__item">
+            {renderComponent(c, ds, props, act, i)}
+          </div>
+        ))}
+      </CardGrid>
+    ) : (
+      <Accordion
+        defaultOpen={[`${group.id}-${items[0]!.i}`]}
+        items={items.map(({ c, i }) => ({ id: `${group.id}-${i}`, title: groupItemLabel(c), children: renderComponent(c, ds, props, act, i) }))}
+      />
+    );
+  return (
+    <section className={`lasso-section lasso-group lasso-group--${group.pattern}`} data-group={group.id}>
+      {group.title ? (
+        <div className="lasso-section__head">
+          <div className="lasso-section__titles">
+            <h3 className="lasso-section__title">{group.title}</h3>
+          </div>
+        </div>
+      ) : null}
+      {body}
+    </section>
+  );
+}
+
+/** Gruppens bredde: første medlems width, hvis den er sat; ellers fuld (kortgitter og harmonika fylder rækken). */
+function groupWidth(items: readonly Indexed[], layout: ViewSpec["layout"]): Width {
+  if (layout === "stack") return "full";
+  return items[0]!.c.width ?? "full";
+}
+
+/** Layout 'columns': sammenhængende fuldbredde-komponenter med samme group samles i ét bånd. */
+export type ColumnsBand = Band | { kind: "group"; group: ComponentGroup; items: Indexed[] };
+export function mergeFullGroups(bands: readonly Band[]): ColumnsBand[] {
+  const out: ColumnsBand[] = [];
+  let pending: Indexed[] = [];
+  const flush = () => {
+    for (const r of groupRuns(pending)) out.push(r.kind === "one" ? { kind: "full", item: r.item } : { kind: "group", group: r.group, items: r.items });
+    pending = [];
+  };
+  for (const b of bands) {
+    if (b.kind === "full") pending.push(b.item);
+    else {
+      flush();
+      out.push(b);
+    }
+  }
+  flush();
+  return out;
+}
+
 const WIDTH_FR: Record<Width, number> = { quarter: 1, half: 2, "three-quarters": 3, full: 4 };
 
 /**
@@ -538,8 +656,12 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
         ) : (
           <main className={`lasso-content lasso-content--grid-4 lasso-content--${spec.layout}`}>
             {spec.layout === "columns"
-              ? columnBands(spec.components).map((band, b) =>
-                  band.kind === "full" ? (
+              ? mergeFullGroups(columnBands(spec.components)).map((band, b) =>
+                  band.kind === "group" ? (
+                    <div key={`b${b}`} className="lasso-cell lasso-cell--full">
+                      {renderGroup(band.group, band.items, dataset, props, act)}
+                    </div>
+                  ) : band.kind === "full" ? (
                     <div key={`b${b}`} className="lasso-cell lasso-cell--full">
                       {renderComponent(band.item.c, dataset, props, act, band.item.i)}
                     </div>
@@ -551,21 +673,33 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
                     >
                       {band.columns.map((col, k) => (
                         <div key={k} className="lasso-column">
-                          {col.map(({ c, i }) => (
-                            <div key={i} className="lasso-column__item" style={{ ["--lasso-mobile-order" as string]: mobileOrder(c) }}>
-                              {renderComponent(c, dataset, props, act, i)}
-                            </div>
-                          ))}
+                          {groupRuns(col).map((run) =>
+                            run.kind === "one" ? (
+                              <div key={run.item.i} className="lasso-column__item" style={{ ["--lasso-mobile-order" as string]: mobileOrder(run.item.c) }}>
+                                {renderComponent(run.item.c, dataset, props, act, run.item.i)}
+                              </div>
+                            ) : (
+                              <div key={run.items[0]!.i} className="lasso-column__item" style={{ ["--lasso-mobile-order" as string]: mobileOrder(run.items[0]!.c) }}>
+                                {renderGroup(run.group, run.items, dataset, props, act)}
+                              </div>
+                            ),
+                          )}
                         </div>
                       ))}
                     </div>
                   ),
                 )
-              : spec.components.map((c, i) => (
-                  <div key={i} className={`lasso-cell lasso-cell--${widthOf(c, spec.layout)}`}>
-                    {renderComponent(c, dataset, props, act, i)}
-                  </div>
-                ))}
+              : groupRuns(spec.components.map((c, i) => ({ c, i }))).map((run) =>
+                  run.kind === "one" ? (
+                    <div key={run.item.i} className={`lasso-cell lasso-cell--${widthOf(run.item.c, spec.layout)}`}>
+                      {renderComponent(run.item.c, dataset, props, act, run.item.i)}
+                    </div>
+                  ) : (
+                    <div key={run.items[0]!.i} className={`lasso-cell lasso-cell--${groupWidth(run.items, spec.layout)}`}>
+                      {renderGroup(run.group, run.items, dataset, props, act)}
+                    </div>
+                  ),
+                )}
           </main>
         )}
 

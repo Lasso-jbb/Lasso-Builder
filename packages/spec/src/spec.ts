@@ -489,6 +489,21 @@ export const actionsSchema = z.object({
  */
 export const WIDTHS = ["quarter", "half", "three-quarters", "full"] as const;
 export type Width = (typeof WIDTHS)[number];
+/**
+ * Layoutmønster 8 (Kortgitter) og 9 (Harmonika) fra Paper 30 (node JV3-0). Sammenhængende
+ * komponenter med samme group.id tegnes samlet: 'cards' i et kortgitter (to kolonner, én på
+ * mobil), 'accordion' som harmonika (48 px rækker, første række åben). title er gruppens
+ * overskrift og står over gruppen; første medlem med title bestemmer den.
+ */
+export const GROUP_PATTERNS = ["cards", "accordion"] as const;
+export type GroupPattern = (typeof GROUP_PATTERNS)[number];
+export const groupSchema = z.object({
+  id: z.string().min(1).max(40),
+  pattern: z.enum(GROUP_PATTERNS),
+  title: z.string().max(80).optional(),
+});
+export type ComponentGroup = z.infer<typeof groupSchema>;
+
 const widthShape = {
   width: z.enum(WIDTHS).optional().describe("Bredde i dashboardet: quarter (¼), half (½), three-quarters (¾) eller full. Udelad for standardbredden."),
   column: z
@@ -499,6 +514,11 @@ const widthShape = {
     .optional()
     .describe(
       "Kun layout 'columns': hvilken kolonne komponenten stables i. Udeladt = fuld bredde over eller under kolonnerne. Et lavere kolonnenummer end forrige komponents starter et nyt bånd af kolonner; står width på båndets komponenter, bestemmer den kolonnernes forhold (fx ¾ + ¼).",
+    ),
+  group: groupSchema
+    .optional()
+    .describe(
+      "Mønster 8/9 (Paper 30): sammenhængende komponenter med samme group.id tegnes samlet, pattern 'cards' som kortgitter (to kolonner, én på mobil) eller 'accordion' som harmonika (en række pr. komponent, første åben). title = gruppens overskrift. Udelad for almindelig placering.",
     ),
 };
 function w<S extends z.ZodRawShape>(schema: z.ZodObject<S>) {

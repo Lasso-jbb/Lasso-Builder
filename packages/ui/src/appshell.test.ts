@@ -114,3 +114,12 @@ test("AppShell (06 + 26a): skinne, fanebjælke, side, tre kolonner og bundnaviga
   // Sektionsarket er lukket som udgangspunkt
   assert.doesNotMatch(html, /lasso-sheet"/);
 });
+
+test("Sideskabelon (23.1, 26.1): valgfrit højre panel som aside ved siden af midten; uden panel er siden uændret", () => {
+  const withPanel = renderToStaticMarkup(createElement(AppShell, { rail, tabs, panel: createElement("p", null, "Genveje") }, createElement("div", null, "midte")));
+  assert.match(withPanel, /class="lasso-shell +lasso-shell--panel/);
+  assert.match(withPanel, /<div class="lasso-page lasso-page--panel"><main class="lasso-page__main"><div>midte<\/div><\/main><aside class="lasso-page__panel" aria-label="Sammendrag og handlinger"><p>Genveje<\/p><\/aside><\/div>/);
+  const without = renderToStaticMarkup(createElement(AppShell, { rail, tabs }, createElement("div", null, "midte")));
+  assert.match(without, /<main class="lasso-page"><div>midte<\/div><\/main>/);
+  assert.doesNotMatch(without, /lasso-page__panel/);
+});
