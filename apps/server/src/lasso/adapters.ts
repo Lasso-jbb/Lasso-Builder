@@ -809,14 +809,18 @@ export function adaptFinancialStatements(lassoId: string, raw: Json): FinancialS
   const balanceSheet: BalanceSheetYear[] = [];
   const cashFlow: CashFlowYear[] = [];
   const currencies: { year: number; currency: string }[] = [];
+  // Katalog 19.1: scope, påtegning og PDF fra den nyeste rapport. Påtegning og PDF er UBEKRÆFTEDE feltnavne.
+  const latest: { year: number; scope?: "Koncern" | "Selskab"; opinion?: string; pdf?: string }[] = [];
   for (const r of reports) {
     const periodEnd = dateStr(r, "period.to", "periodEnd", "period.end", "endDate", "end", "reportingPeriod.end", "to");
     const periodStart = dateStr(r, "period.from", "periodStart", "period.start", "startDate", "reportingPeriod.start", "from");
     const year = num(r, "reportYear", "year", "fiscalYear", "financialYear", "aar") ?? (periodEnd ? Number(periodEnd.slice(0, 4)) : undefined);
     if (!year || !Number.isFinite(year)) continue;
     // Samme scope (koncern eller selskab) og valuta som adaptFinancials, så de to aldrig er uenige.
-    const { facts, balances, currency } = reportFacts(r, periodEnd);
+    const { facts, balances, currency, scope } = reportFacts(r, periodEnd);
     if (currency) currencies.push({ year, currency });
+    const pdf = str(r, "pdfUrl", "documentUrl", "pdf", "links.pdf", "reportUrl");
+    latest.push({ year, scope, opinion: str(r, "auditorOpinion", "auditorsReport.type", "auditorReport.opinion", "audit.opinion"), pdf: pdf && /^https?:\/\//i.test(pdf) ? pdf : undefined });
     const g = (...concepts: string[]): number | null => firstFact(facts, concepts) ?? null;
     // Resultatopgørelsen i visningen har fortegn: omkostninger negative, indtægter positive.
     // XBRL angiver beløbet positivt og retningen i "balance" (debit = omkostning), så fortegnet
@@ -944,6 +948,10 @@ export function adaptFinancialStatements(lassoId: string, raw: Json): FinancialS
     incomeStatement: dedupeByYear(incomeStatement),
     balanceSheet: dedupeByYear(balanceSheet),
     cashFlow: dedupeByYear(cashFlow),
+    ...(() => {
+      const last = latest.sort((a, b) => a.year - b.year).at(-1);
+      return { ...(last?.scope ? { scope: last.scope } : {}), ...(last?.opinion ? { auditorOpinion: last.opinion } : {}), ...(last?.pdf ? { pdfUrl: last.pdf } : {}) };
+    })(),
   };
 }
 

@@ -412,3 +412,16 @@ det er ikke koblet til "Overvåg"/"Stop overvågning" endnu.
 - **Ejendomme/BBR** (`GET /data/ejf/{lassoId}/ownerships/current`, katalog 20): ejf's overordnede
   svarform er slet ikke set; kun BBR-summary-endpointets sti/parameter er bekræftet.
 - **Tinglysning** (`GET /data/tinglysning/{lassoId}`): dokumenteret, men ingen komponent kalder den.
+
+## Ubekræftet: regnskabets værktøjslinje (katalog 19.1)
+
+`adaptFinancialStatements` (`GET /{lassoId}/reports/advanced`) sætter nu også `scope` (koncern/selskab, samme
+valg som nøgletallene), og læser defensivt fra den nyeste rapport:
+
+- revisorpåtegning: `auditorOpinion`, `auditorsReport.type`, `auditorReport.opinion` eller `audit.opinion` (tekst)
+- PDF-link: `pdfUrl`, `documentUrl`, `pdf`, `links.pdf` eller `reportUrl` (kun http/https)
+
+Ingen af felterne er set i et rigtigt svar. Mangler de, viser værktøjslinjen hverken påtegning eller "Hent PDF".
+Det andet scope (`alternate`, fx koncernregnskabet ved siden af selskabets) og periodetyperne (`periods`: halvår,
+kvartal) findes kun i demodata; i live er "Koncern"/"Selskab" dæmpet med forklaring, og halvår/kvartal er dæmpet
+med "Kun årsregnskab indberettet".

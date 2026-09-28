@@ -390,7 +390,14 @@ function financialStatementsFor(c: DemoCompany): FinancialStatementsVM {
       liabilitiesAndEquityTotal: assetsTotal,
     });
   });
-  return { lassoId: c.lassoId, currency: "DKK", incomeStatement, balanceSheet, cashFlow };
+  const opinion = c.auditor && c.auditor !== "Ingen" ? "Revisionspåtegning uden forbehold (eksempeldata)" : undefined;
+  const base: FinancialStatementsVM = { lassoId: c.lassoId, currency: "DKK", incomeStatement, balanceSheet, cashFlow, scope: "Selskab", periods: ["year"], ...(opinion ? { auditorOpinion: opinion } : {}) };
+  // Katalog 19.1: eksempelvirksomheden aflægger også koncernregnskab (selskabets tal × 1,35, eksempeldata).
+  if (c.cvr === "99000001") {
+    const k = <T extends object>(rows: T[]): T[] => rows.map((r) => Object.fromEntries(Object.entries(r).map(([key, v]) => [key, typeof v === "number" && key !== "year" ? Math.round(v * 1.35) : v])) as T);
+    base.alternate = { currency: "DKK", incomeStatement: k(incomeStatement), balanceSheet: k(balanceSheet), cashFlow: k(cashFlow), scope: "Koncern", periods: ["year"], ...(opinion ? { auditorOpinion: opinion } : {}) };
+  }
+  return base;
 }
 
 function toRow(c: DemoCompany): CompanyRowVM {

@@ -201,6 +201,16 @@ export interface FinancialStatementsVM {
   balanceSheet: BalanceSheetYear[];
   /** Tom, når selskabet ikke aflægger pengestrømsopgørelse (klasse B) eller regnskabet ikke oplyser den. */
   cashFlow: CashFlowYear[];
+  /** Katalog 19.1: hvilket regnskab tallene er fra (samme valg som FinancialYear.scope). */
+  scope?: "Koncern" | "Selskab";
+  /** Katalog 19.1: det andet scope (koncern/selskab), når begge er aflagt. Værktøjslinjen skifter imellem dem. */
+  alternate?: Omit<FinancialStatementsVM, "lassoId" | "alternate">;
+  /** Katalog 19.1: periodetyper, selskabet indberetter. Standard kun "year"; halvår/kvartal er ellers dæmpet. */
+  periods?: ("year" | "half" | "quarter")[];
+  /** Katalog 19.1: revisorpåtegningen som tekst, fx "Revisionspåtegning uden forbehold". Ubekræftet i live. */
+  auditorOpinion?: string;
+  /** Katalog 19.1: link til årsrapporten som PDF (kun http/https). Ubekræftet i live. */
+  pdfUrl?: string;
 }
 
 export interface PersonRowVM {

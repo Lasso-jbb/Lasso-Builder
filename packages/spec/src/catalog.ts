@@ -163,6 +163,13 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     props: "company, years? (2–3, standard 2), title?",
   },
 
+  {
+    type: "LassoFinancialStatements",
+    title: "Regnskabsdetaljer med værktøjslinje",
+    description: `Brug til: det fulde regnskab som ÉT element, hvor brugeren selv skifter mellem resultat, balance og pengestrøm, koncern og selskab og enhed, med revisorpåtegning og 'Hent PDF' – 'vis hele regnskabet', 'regnskabet med koncerntal', 'hent årsrapporten'. Brug ikke når: kun én opgørelse er bestilt (LassoIncomeStatement/LassoBalanceSheet/LassoCashFlow) eller nøgletal over år (LassoMultiYearTable). Kræver: company, statement? (income | balance | cashflow), years? (2–5, standard 5); halvår og kvartal er dæmpet, når selskabet kun indberetter årsregnskab. Dækkes ikke af show_company endnu. Eksempel: 'Vis hele regnskabet for Lasso X med koncerntal' → render_view med LassoCompanyHead og LassoFinancialStatements.`,
+    props: "company, statement? (income | balance | cashflow), years? (2–5, standard 5), title?",
+  },
+
   // (b) Personer og ejere ------------------------------------------------------
   {
     type: "LassoPersonList",

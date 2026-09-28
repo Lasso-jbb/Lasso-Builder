@@ -437,6 +437,19 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     }
     if (stmt && c.type === "LassoBalanceSheet" && c.company === lassoId) balanceSheetText(card, stmt, c.years);
     if (stmt && c.type === "LassoCashFlow" && c.company === lassoId) cashFlowText(card, stmt, c.years);
+    if (stmt && c.type === "LassoFinancialStatements" && c.company === lassoId) {
+      // Katalog 19.1: tekstkortet viser den valgte opgørelse (3 år) med påtegningen som tekst.
+      if (hasNoStatements(stmt)) {
+        card.section(c.title ?? "Regnskab");
+        card.text(noStatementsReason(ds.companies[lassoId]));
+      } else {
+        const kind = c.statement ?? "income";
+        if (kind === "balance") balanceSheetText(card, stmt, 3);
+        else if (kind === "cashflow") cashFlowText(card, stmt, 3);
+        else incomeStatementText(card, stmt, 3);
+        if (stmt.auditorOpinion) card.text(stmt.auditorOpinion);
+      }
+    }
     if (c.type === "LassoOwnershipDiagram" && c.company === lassoId) {
       const g = ds.ownershipGraphs[ownershipGraphKey(c)];
       if (g) ownershipTreeCard(card, g);

@@ -245,6 +245,7 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
       case "LassoIncomeStatement":
       case "LassoBalanceSheet":
       case "LassoCashFlow":
+      case "LassoFinancialStatements":
         want(c.company, "financialStatements");
         break;
       case "LassoScoreGauge":

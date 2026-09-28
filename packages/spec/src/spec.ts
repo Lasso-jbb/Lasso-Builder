@@ -360,6 +360,15 @@ export const cashFlowSchema = z.object({
   title: z.string().max(80).optional(),
 }).describe("Pengestrømsopgørelsen (drift, investering, finansiering), 2–3 år side om side. Tom tilstand, når selskabet ikke aflægger den (klasse B).");
 
+/** Katalog 19.1 (mobil 26d.8–26d.11, tablet 26f.3): regnskabsdetaljer med værktøjslinje og segmentskift. */
+export const financialStatementsSchema = z.object({
+  type: z.literal("LassoFinancialStatements"),
+  company: companyRef,
+  statement: z.enum(["income", "balance", "cashflow"]).optional().describe("Opgørelsen, der vises først: 'income' (standard), 'balance' eller 'cashflow'."),
+  years: z.number().int().min(2).max(5).default(5).describe("År side om side på desktop, standard 5. Tablet viser 3, mobil ét år + ændring."),
+  title: z.string().max(80).optional(),
+}).describe("Fuldt regnskab med værktøjslinje (koncern/selskab, periode, enhed, revisorpåtegning, Hent PDF) og segmentskift mellem resultat, balance og pengestrøm.");
+
 /** Ingen live datakilde endnu (se resolve.ts og LiveProvider.score); demodata i DemoProvider, "ikke oplyst" i live. */
 export const scoreGaugeSchema = z.object({
   type: z.literal("LassoScoreGauge"),
@@ -559,6 +568,7 @@ export const componentSchema = z.discriminatedUnion("type", [
   w(personRiskSchema),
   w(personFactsSchema),
   w(personStatsSchema),
+  w(financialStatementsSchema),
   w(changeFeedSchema),
   w(savedPagesSchema),
 ]);
@@ -636,6 +646,7 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoPersonRisk: "half",
   LassoPersonFacts: "quarter",
   LassoPersonStats: "full",
+  LassoFinancialStatements: "full",
   LassoChangeFeed: "full",
   LassoSavedPages: "full",
 };
