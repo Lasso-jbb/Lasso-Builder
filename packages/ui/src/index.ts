@@ -82,6 +82,8 @@ export { Button, IconButton, ActionRow, Label, buttonClass, iconButtonClass } fr
 export type { ButtonProps, ButtonVariant, ButtonSize, IconButtonProps, IconButtonSize, IconButtonVariant, ActionRowProps, ActionRowAction } from "./components/Button.js";
 export { PageHeader } from "./components/PageHeader.js";
 export type { PageHeaderProps } from "./components/PageHeader.js";
+export { TreePicker, TreePickerDialog, expandSelection, compactSelection } from "./components/TreePicker.js";
+export type { TreeNode, TreePickerProps, TreePickerDialogProps } from "./components/TreePicker.js";
 export { useWidth } from "./useWidth.js";
 export type { ShellIconName } from "./components/ShellIcons.js";
 export { StateBox, Skeleton, Sparkline, Badge, StatusBadge, statusTone, DataState, Missing, SourceLine, Section, SeverityIcon, severityWord } from "./primitives.js";
