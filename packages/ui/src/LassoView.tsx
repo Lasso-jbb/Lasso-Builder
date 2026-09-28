@@ -12,6 +12,7 @@ import {
   sameAddress,
   savedPagesKey,
   searchKey,
+  personSearchKey,
   widthOf,
   type Dataset,
   type Focus,
@@ -26,6 +27,7 @@ import { LassoMark } from "./LassoMark.js";
 import { CompanyHead } from "./components/CompanyHead.js";
 import { CompanyTable } from "./components/CompanyTable.js";
 import { CompareTable } from "./components/CompareTable.js";
+import { PersonTable } from "./components/PersonTable.js";
 import { ProductionUnits } from "./components/ProductionUnits.js";
 import { Properties } from "./components/Properties.js";
 import { Livestock } from "./components/Livestock.js";
@@ -128,7 +130,37 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     }
     case "LassoCompanyTable": {
       const k = searchKey(c.search);
-      return <CompanyTable key={key} result={empty.searches[k]} columns={c.columns} title={c.title} error={err(`search:${k}`)} onAction={act} canDrillDown={Boolean(props.host.drillDown)} />;
+      return (
+        <CompanyTable
+          key={key}
+          result={empty.searches[k]}
+          columns={c.columns}
+          title={c.title}
+          error={err(`search:${k}`)}
+          onAction={act}
+          canDrillDown={Boolean(props.host.drillDown)}
+          criteria={c.search.criteria}
+          onApplyCriteria={props.host.refine ? (criteria) => act({ kind: "set-criteria", criteria }) : undefined}
+          canExport={Boolean(props.host.export)}
+          canPrompt={Boolean(props.host.prompt)}
+          canSavePage={Boolean(props.host.savePage)}
+          onRetry={props.host.refresh ? () => act({ kind: "refresh" }) : undefined}
+        />
+      );
+    }
+    case "LassoPersonTable": {
+      const k = personSearchKey(c);
+      return (
+        <PersonTable
+          key={key}
+          result={empty.personSearches?.[k]}
+          title={c.title}
+          error={err(`personSearch:${k}`)}
+          onAction={act}
+          canDrillDown={Boolean(props.host.drillDown)}
+          onRetry={props.host.refresh ? () => act({ kind: "refresh" }) : undefined}
+        />
+      );
     }
     case "LassoCompareTable":
       return <CompareTable key={key} companies={c.companies} metrics={c.metrics} title={c.title} dataset={empty} onAction={act} canDrillDown={Boolean(props.host.drillDown)} />;
@@ -529,7 +561,10 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
         </header>
 
         {spec.criteria.length > 0 || (host.refine && spec.kind === "list") ? (
-          <FilterPanel criteria={spec.criteria} editable={Boolean(host.refine)} onApply={(criteria) => act({ kind: "set-criteria", criteria })} />
+          // 26c.8: med en virksomhedstabel står filtrene i tabellens værktøjslinje og bundark på mobil.
+          <div className={spec.components.some((c) => c.type === "LassoCompanyTable") ? "lasso-frame__filters lasso-frame__filters--table" : "lasso-frame__filters"}>
+            <FilterPanel criteria={spec.criteria} editable={Boolean(host.refine)} onApply={(criteria) => act({ kind: "set-criteria", criteria })} />
+          </div>
         ) : null}
         {unsupported.length > 0 ? <div className="lasso-notice">Kunne ikke anvendes endnu: {unsupported.join(", ")}</div> : null}
 

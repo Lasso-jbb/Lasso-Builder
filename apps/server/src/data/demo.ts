@@ -39,7 +39,7 @@ import { CREDIT_NONE_REASON } from "../lasso/creditAdapters.js";
 import { applyCriteria, sortRows } from "./criteria-eval.js";
 import { demoOwnershipGraph, demoPersonOwnershipGraph } from "./demoGraph.js";
 import { demoFindPersons, demoPerson, demoPersonIds, demoPersonNetwork, demoPersonNews } from "./demoPeople.js";
-import { NotFoundError, type ChangeFeedOptions, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
+import { NotFoundError, searchPersonsTable, type ChangeFeedOptions, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
 
 /**
  * Opdigtede demodata, så UI og MCP-flow kan bygges og testes uden adgang til
@@ -411,7 +411,15 @@ function toRow(c: DemoCompany): CompanyRowVM {
     grossProfit: last?.grossProfit ?? null,
     profit: last?.profit ?? null,
     trend: f.years.slice(-5).map((y) => y.grossProfit ?? 0),
+    score: demoScore(c),
   };
+}
+
+/** Eksempelscore 0–100 (samme tal som scoremåleren); ophørte og konkursramte har ingen. */
+function demoScore(c: DemoCompany): number | null {
+  if (c.status !== "Aktiv" || !c.cvr) return null;
+  const seed = Number(c.cvr.slice(-2));
+  return Math.max(5, Math.min(95, 22 + ((seed * 13) % 70)));
 }
 
 function strip(c: DemoCompany): CompanyVM {
@@ -752,10 +760,8 @@ export class DemoProvider implements DataProvider {
 
   /** Katalog 10: eksempelscore, da der endnu ikke findes en live datakilde. */
   async score(lassoId: string): Promise<ScoreVM> {
-    const c = get(lassoId);
-    const seed = Number(c.cvr!.slice(-2));
-    if (c.status !== "Aktiv") return { lassoId, score: null };
-    const score = Math.max(5, Math.min(95, 22 + ((seed * 13) % 70)));
+    const score = demoScore(get(lassoId));
+    if (score === null) return { lassoId, score: null };
     return { lassoId, score, source: "Eksempeldata", updated: "2026-09-12" };
   }
 
@@ -823,6 +829,10 @@ export class DemoProvider implements DataProvider {
 
   async personNetwork(lassoId: string) {
     return demoPersonNetwork(COMPANIES, lassoId);
+  }
+
+  async personSearch(query: string, limit: number) {
+    return searchPersonsTable(this, query, limit);
   }
 
   async findPersons(name: string, limit: number) {

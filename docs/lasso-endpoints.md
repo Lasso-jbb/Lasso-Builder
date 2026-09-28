@@ -412,3 +412,7 @@ det er ikke koblet til "Overvåg"/"Stop overvågning" endnu.
 - **Ejendomme/BBR** (`GET /data/ejf/{lassoId}/ownerships/current`, katalog 20): ejf's overordnede
   svarform er slet ikke set; kun BBR-summary-endpointets sti/parameter er bekræftet.
 - **Tinglysning** (`GET /data/tinglysning/{lassoId}`): dokumenteret, men ingen komponent kalder den.
+
+## Ubekræftet: persontabel (katalog 15.3, LassoPersonTable)
+
+Personsøgningen bruger den bekræftede navnesøgning (`search` med `type: "person"`) og beriger hver række med personopslaget (`GET /{lassoId}` + historik), højst 5 samtidige kald. Fødselsår (`PersonVM.birthYear`) er ikke fundet i personsvaret og udfyldes kun i demodata; live står rækken med by alene, indtil feltet er bekræftet. CPR og fuld adresse hentes eller vises aldrig.

@@ -10,6 +10,8 @@ import {
   type FieldDef,
   type Operator,
 } from "@lasso/spec";
+import { useWidth } from "../useWidth.js";
+import { Dialog } from "./Dialog.js";
 
 /**
  * Filterpanelet over et resultat: viser det, AI'en forstod, som tags og lader
@@ -107,16 +109,24 @@ function fromDraft(d: Draft): { criterion?: Criterion; error?: string } {
   return issue ? { error: issue.message } : { criterion };
 }
 
-export function FilterPanel({ criteria, editable, onApply }: { criteria: readonly Criterion[]; editable: boolean; onApply: (c: Criterion[]) => void }) {
-  const [open, setOpen] = useState(false);
-  const [drafts, setDrafts] = useState<Draft[]>([]);
+/**
+ * Redigering af kriterierne. "inline" står i rammen over resultatet (desktop); "sheet" er
+ * indholdet i bundarket (26c.8): 48 px rækker, 36 px valgchips og en primær knap i fuld
+ * bredde nederst, der viser antallet af filtre, med "Annuller" som tekstknap under.
+ */
+export function FilterEditor({
+  criteria,
+  onApply,
+  onCancel,
+  layout = "inline",
+}: {
+  criteria: readonly Criterion[];
+  onApply: (c: Criterion[]) => void;
+  onCancel: () => void;
+  layout?: "inline" | "sheet";
+}) {
+  const [drafts, setDrafts] = useState<Draft[]>(() => criteria.map((c) => toDraft(c)));
   const [showErrors, setShowErrors] = useState(false);
-
-  const start = () => {
-    setDrafts(criteria.map((c) => toDraft(c)));
-    setShowErrors(false);
-    setOpen(true);
-  };
   const update = (id: number, patch: Partial<Draft>) => setDrafts((ds) => ds.map((d) => (d.id === id ? { ...d, ...patch } : d)));
 
   const results = useMemo(() => drafts.map(fromDraft), [drafts]);
@@ -126,34 +136,12 @@ export function FilterPanel({ criteria, editable, onApply }: { criteria: readonl
   const apply = () => {
     if (results.some((r) => r.error)) return setShowErrors(true);
     onApply(results.map((r) => r.criterion!));
-    setOpen(false);
   };
-
-  if (!open) {
-    if (criteria.length === 0 && !editable) return null;
-    return (
-      <div className="lasso-chips" aria-label="Kriterier">
-        {criteria.map((c, i) => (
-          <span key={i} className="lasso-chip">
-            {formatCriterion(c)}
-            {editable ? (
-              <button className="lasso-chip__remove" aria-label={`Fjern ${formatCriterion(c)}`} onClick={() => onApply(criteria.filter((_, j) => j !== i))}>
-                <XIcon />
-              </button>
-            ) : null}
-          </span>
-        ))}
-        {editable ? (
-          <button className="lasso-btn lasso-btn--ghost lasso-btn--sm" onClick={start}>
-            {criteria.length ? "Redigér filtre" : "＋ Tilføj filter"}
-          </button>
-        ) : null}
-      </div>
-    );
-  }
+  const sheet = layout === "sheet";
+  const count = drafts.length;
 
   return (
-    <section className="lasso-filters" aria-label="Filtre">
+    <section className={`lasso-filters ${sheet ? "lasso-filters--sheet" : ""}`} aria-label="Filtre">
       {drafts.map((d, i) => {
         const f = FIELD_BY_KEY.get(d.field);
         const err = showErrors ? results[i]?.error : undefined;
@@ -197,16 +185,112 @@ export function FilterPanel({ criteria, editable, onApply }: { criteria: readonl
         </div>
       ) : null}
 
-      <div className="lasso-filters__footer">
-        <span className="lasso-filters__effect">{drafts.length === 0 ? "Ingen filtre: alle virksomheder, der matcher søgningen." : ""}</span>
-        <button className="lasso-btn lasso-btn--ghost" onClick={() => setOpen(false)}>
-          Annuller
-        </button>
-        <button className="lasso-btn lasso-btn--primary" onClick={apply}>
-          {onlyAdditions ? "＋ Tilføj til målgruppen" : "Opdater målgruppe"}
-        </button>
-      </div>
+      {sheet ? (
+        <div className="lasso-filters__sheetfoot">
+          <button className="lasso-btn lasso-btn--primary lasso-filters__apply" onClick={apply}>
+            {count === 0 ? "Vis alle virksomheder" : `Anvend ${count} filtre`.replace("1 filtre", "1 filter")}
+          </button>
+          <button className="lasso-btn lasso-btn--text lasso-filters__cancel" onClick={onCancel}>
+            Annuller
+          </button>
+        </div>
+      ) : (
+        <div className="lasso-filters__footer">
+          <span className="lasso-filters__effect">{drafts.length === 0 ? "Ingen filtre: alle virksomheder, der matcher søgningen." : ""}</span>
+          <button className="lasso-btn lasso-btn--ghost" onClick={onCancel}>
+            Annuller
+          </button>
+          <button className="lasso-btn lasso-btn--primary" onClick={apply}>
+            {onlyAdditions ? "＋ Tilføj til målgruppen" : "Opdater målgruppe"}
+          </button>
+        </div>
+      )}
     </section>
+  );
+}
+
+/**
+ * Filterarket (26c.8): filtrene i et bundark (Dialog; på desktop en dialog på 520 px).
+ * Bruges af tabellens "Filtre"-knap og af FilterPanel under 560 px.
+ */
+export function FilterSheet({ open, criteria, onApply, onClose }: { open: boolean; criteria: readonly Criterion[]; onApply: (c: Criterion[]) => void; onClose: () => void }) {
+  return (
+    <Dialog open={open} title="Filtre" description={criteria.length ? `${criteria.length} aktive` : "Ingen aktive filtre"} onClose={onClose} className="lasso-dialog--filters">
+      {open ? (
+        <FilterEditor
+          layout="sheet"
+          criteria={criteria}
+          onCancel={onClose}
+          onApply={(c) => {
+            onApply(c);
+            onClose();
+          }}
+        />
+      ) : null}
+    </Dialog>
+  );
+}
+
+/** Aktive filtre som fjernbare chips (katalog 26c.8: under søgefeltet på mobil). */
+export function CriteriaChips({ criteria, onApply, className = "" }: { criteria: readonly Criterion[]; onApply?: (c: Criterion[]) => void; className?: string }) {
+  if (criteria.length === 0) return null;
+  return (
+    <div className={`lasso-chips ${className}`} aria-label="Aktive filtre">
+      {criteria.map((c, i) => (
+        <span key={i} className="lasso-chip">
+          {formatCriterion(c)}
+          {onApply ? (
+            <button className="lasso-chip__remove" aria-label={`Fjern ${formatCriterion(c)}`} onClick={() => onApply(criteria.filter((_, j) => j !== i))}>
+              <XIcon />
+            </button>
+          ) : null}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+export function FilterPanel({ criteria, editable, onApply }: { criteria: readonly Criterion[]; editable: boolean; onApply: (c: Criterion[]) => void }) {
+  const [open, setOpen] = useState(false);
+  // Under 560 px redigeres filtrene i et bundark (26c.8); ellers udfoldet i rammen.
+  const [ref, width] = useWidth<HTMLDivElement>(900);
+  const narrow = width < 560;
+
+  if (!open || narrow) {
+    if (criteria.length === 0 && !editable) return null;
+    return (
+      <div className="lasso-chips" aria-label="Kriterier" ref={ref}>
+        {criteria.map((c, i) => (
+          <span key={i} className="lasso-chip">
+            {formatCriterion(c)}
+            {editable ? (
+              <button className="lasso-chip__remove" aria-label={`Fjern ${formatCriterion(c)}`} onClick={() => onApply(criteria.filter((_, j) => j !== i))}>
+                <XIcon />
+              </button>
+            ) : null}
+          </span>
+        ))}
+        {editable ? (
+          <button className="lasso-btn lasso-btn--ghost lasso-btn--sm" onClick={() => setOpen(true)}>
+            {criteria.length ? "Redigér filtre" : "＋ Tilføj filter"}
+          </button>
+        ) : null}
+        {narrow ? <FilterSheet open={open} criteria={criteria} onApply={onApply} onClose={() => setOpen(false)} /> : null}
+      </div>
+    );
+  }
+
+  return (
+    <div ref={ref}>
+      <FilterEditor
+        criteria={criteria}
+        onCancel={() => setOpen(false)}
+        onApply={(c) => {
+          onApply(c);
+          setOpen(false);
+        }}
+      />
+    </div>
   );
 }
 

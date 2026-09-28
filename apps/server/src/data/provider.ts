@@ -18,6 +18,7 @@ import type {
   OwnershipVM,
   PersonRowVM,
   PersonNetworkVM,
+  PersonSearchResultVM,
   PersonSearchRowVM,
   PersonVM,
   ScoreVM,
@@ -29,6 +30,7 @@ import type {
   TextSectionsVM,
   TimelineVM,
 } from "@lasso/spec";
+import { personSearchKey, personTableRow } from "@lasso/spec";
 
 /**
  * Datalaget. Både MCP-tools og (senere) Lassos interne chat kalder de samme
@@ -76,6 +78,8 @@ export interface DataProvider {
   personNetwork(lassoId: string): Promise<PersonNetworkVM>;
   /** Navneopslag på personer (til show_person med et navn). */
   findPersons(name: string, limit: number): Promise<PersonSearchRowVM[]>;
+  /** Katalog 15.3: personsøgning som tabel (roller, konkurser, fødselsår, by). */
+  personSearch(query: string, limit: number): Promise<PersonSearchResultVM>;
   /** Katalog 21: ændringer i de overvågede virksomheder de seneste `days` dage. Live-endpoint ubekræftet. */
   changeFeed(opts: ChangeFeedOptions): Promise<ChangeFeedVM>;
 }
@@ -112,4 +116,22 @@ export async function mapLimit<T, R>(list: readonly T[], limit: number, fn: (t: 
   });
   await Promise.all(workers);
   return out;
+}
+
+/**
+ * Katalog 15.3: navnesøgningen beriget med hver persons roller (samme opslag som personsiden),
+ * højst 5 ad gangen. Kan en person ikke hentes, står rækken med navn og by alene, så én fejl
+ * aldrig vælter tabellen.
+ */
+export async function searchPersonsTable(provider: Pick<DataProvider, "findPersons" | "person">, query: string, limit: number): Promise<PersonSearchResultVM> {
+  const hits = await provider.findPersons(query, limit);
+  const rows = await mapLimit(hits, 5, async (h) => {
+    try {
+      const row = personTableRow(await provider.person(h.lassoId));
+      return { ...row, name: row.name || h.name, city: row.city ?? h.city };
+    } catch {
+      return { lassoId: h.lassoId, name: h.name, roles: [], bankruptcies: 0, city: h.city };
+    }
+  });
+  return { key: personSearchKey({ query, limit }), query, total: rows.length, rows };
 }

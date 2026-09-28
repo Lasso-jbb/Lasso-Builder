@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   amountScale,
+  personSearchKey,
+  personTableRow,
   changeFeedKey,
   CHANGE_TYPES,
   COMPONENT_CATALOG,
@@ -421,4 +423,26 @@ test("Creditsafe-skalaen A–E: tone, ord, ændring og tekstlinje (blandes aldri
   assert.equal(creditRatingText({ ...base, state: "ok", current: { internationalScore: "A", creditMax: 1_200_000, creditCurrency: "EUR" } }), "A, meget lav risiko, kreditmaksimum 1,2 mio. EUR");
   assert.equal(creditRatingText({ ...base, state: "locked" }), "låst: kræver Creditsafe-tilføjelse");
   assert.equal(creditRatingText({ ...base, state: "ok" }), "ikke oplyst");
+});
+
+test("LassoPersonTable (15.3): navn påkrævet, standard 25 rækker, personrækken fra PersonVM", () => {
+  const spec = parseViewSpec({ title: "P", components: [{ type: "LassoPersonTable", query: "Mette Holm" }] });
+  const c = spec.components[0]!;
+  assert.equal(c.type, "LassoPersonTable");
+  if (c.type === "LassoPersonTable") assert.equal(c.limit, 25);
+  assert.throws(() => parseViewSpec({ title: "P", components: [{ type: "LassoPersonTable", query: "" }] }));
+  const row = personTableRow({
+    lassoId: "CVR-3-1",
+    name: "Mette Eksempel",
+    city: "København",
+    birthYear: 1978,
+    roles: [
+      { companyName: "B Eksempel ApS", kind: "owner", role: "Ejer", share: "100 %", active: true },
+      { companyName: "A Eksempel A/S", kind: "direction", role: "Direktør", active: true },
+      { companyName: "C Eksempel A/S", kind: "board", role: "Bestyrelsesmedlem", active: false, companyStatus: "Under konkurs" },
+    ],
+  });
+  assert.deepEqual(row.roles.map((r) => r.role), ["direktør", "ejer 100 %"]);
+  assert.equal(row.bankruptcies, 1);
+  assert.equal(personSearchKey({ query: " Mette Holm ", limit: 25 }), "mette holm|25");
 });

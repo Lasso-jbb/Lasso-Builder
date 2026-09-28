@@ -297,6 +297,14 @@ export const tableSchema = z.object({
   title: z.string().max(80).optional(),
 });
 
+/** Katalog 15.3: persontabel, samme tabel som virksomhedstabellen med personkolonner. */
+export const personTableSchema = z.object({
+  type: z.literal("LassoPersonTable"),
+  query: z.string().min(2).max(120).describe("Navnet eller den del af navnet, der søges på, fx 'Mette Holm'."),
+  limit: z.number().int().min(1).max(50).default(25),
+  title: z.string().max(80).optional(),
+});
+
 export const comparisonSchema = z.object({
   type: z.literal("LassoCompareTable"),
   companies: z.array(companyRef).min(2).max(6),
@@ -519,6 +527,7 @@ export const componentSchema = z.discriminatedUnion("type", [
   w(ownershipSchema),
   w(ownershipDiagramSchema),
   w(tableSchema),
+  w(personTableSchema),
   w(comparisonSchema),
   w(keyValueListSchema),
   w(contactSchema),
@@ -595,6 +604,7 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoOwnerList: "half",
   LassoOwnershipDiagram: "full",
   LassoCompanyTable: "full",
+  LassoPersonTable: "full",
   LassoCompareTable: "full",
   LassoKeyValueList: "half",
   LassoContact: "half",

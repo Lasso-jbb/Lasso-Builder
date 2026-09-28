@@ -217,6 +217,13 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       "Brug til: mange virksomheder fundet med kriterier – målgrupper, 'alle X i Y', 'top N efter Z' (sort) – som del af en render_view-spec med andet; står søgningen alene, så brug search_companies. Brugeren kan sortere, fjerne kriterier og klikke ind på en virksomhed. Brug ikke når: du kender 2–6 navngivne virksomheder til sammenligning (LassoCompareTable) eller 2–10 navngivne på ét nøgletal (LassoRanking). Kræver: source 'search', search { query, criteria[], sort?, limit? }, columns?; ingen match giver tom tilstand med kriterierne synlige. Eksempel: 'Vis de 20 største revisionsfirmaer i Aarhus efter ansatte.' → search_companies.",
     props: `source='search', search { query, criteria[], sort?, limit? }, columns? (${TABLE_COLUMNS.join(" | ")}), title?`,
   },
+  {
+    type: "LassoPersonTable",
+    title: "Persontabel, navnesøgning",
+    description:
+      "Brug til: flere personer med samme eller lignende navn som tabel – 'find personer der hedder X', 'hvilke Mette Holm findes der', 'personer med navnet …' – med aktive roller som tekst, antal konkurser, fødselsår og by, så brugeren kan vælge den rigtige og klikke ind. Brug ikke når: det er klart, hvilken person der menes (show_person), det gælder én virksomheds ledelse (LassoPersonList), eller der søges virksomheder (LassoCompanyTable/search_companies). Kræver: query (navn, mindst 2 tegn), limit? (standard 25); ingen match giver tom tilstand, og CPR eller fuld adresse vises aldrig. Dækkes ikke af show_person. Eksempel: 'Hvilke personer hedder Mette Holm?' → render_view med LassoPersonTable { query: 'Mette Holm' }.",
+    props: "query (navn), limit? (1–50, standard 25), title?",
+  },
 
   // (e) Risiko og revision -----------------------------------------------------
   {

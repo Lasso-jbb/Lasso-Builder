@@ -6,6 +6,7 @@ import {
   personTimeline,
   savedPagesKey,
   searchKey,
+  personSearchKey,
   toLassoId,
   type Dataset,
   type SavedPageKind,
@@ -153,6 +154,7 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
     needs.set(id, s);
   };
   const searches: Extract<ViewComponent, { type: "LassoCompanyTable" }>["search"][] = [];
+  const personSearches: Extract<ViewComponent, { type: "LassoPersonTable" }>[] = [];
   const newsWanted = new Map<string, number>();
   const graphs: Extract<ViewComponent, { type: "LassoOwnershipDiagram" }>[] = [];
   const feeds: Extract<ViewComponent, { type: "LassoChangeFeed" }>[] = [];
@@ -228,6 +230,9 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
       case "LassoCompanyTable":
         searches.push(c.search);
         break;
+      case "LassoPersonTable":
+        personSearches.push(c);
+        break;
       case "LassoKeyValueList":
         if (c.variant === "financials") want(c.company, "financials");
         else want(c.company, "company", "ownership", "financials");
@@ -292,6 +297,17 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
   for (const s of searches) {
     const key = searchKey(s);
     run(`search:${key}`, async () => void (ds.searches[key] = await provider.search(s)));
+  }
+
+  // Katalog 15.3: én personsøgning pr. (navn, antal); nøglen er personSearchKey, fejlnøglen "personSearch:<key>".
+  const personKeys = new Set<string>();
+  for (const p of personSearches) {
+    const key = personSearchKey(p);
+    if (personKeys.has(key)) continue;
+    personKeys.add(key);
+    run(`personSearch:${key}`, async () => {
+      (ds.personSearches ??= {})[key] = await provider.personSearch(p.query, p.limit);
+    });
   }
 
   const graphKeys = new Set<string>();
