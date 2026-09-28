@@ -870,8 +870,8 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-assessment--50 { color: var(--lasso-warning); font-weight: 600; }
 .lasso-assessment--100 { color: var(--lasso-danger); font-weight: 600; }
 /* Afsluttede relationer dæmpes, men vises altid. */
-.lasso-relations tbody tr.is-ended td { color: var(--lasso-muted); }
-.lasso-relations tbody tr.is-ended .lasso-table__name { color: var(--lasso-text-3); font-weight: 400; }
+.lasso-audit__table tbody tr.is-ended td { color: var(--lasso-muted); }
+.lasso-audit__table tbody tr.is-ended .lasso-table__name { color: var(--lasso-text-3); font-weight: 400; }
 /* ---------- 20 P-enheder, ejendomme og CHR ---------- */
 
 /* Produktionsenheder: koral overline UNDER P-nummeret (tekst, ingen pille, regel 1/2). */
@@ -1956,4 +1956,47 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
   .lasso-bulkbar .lasso-tbtn { height: var(--lasso-touch-h); }
   /* Persontabellen som kort: navn, fødselsår og by, roller som tekst */
   .lasso-ptable .lasso-ttoolbar { padding-bottom: var(--lasso-space-3); }
+}
+
+/* ---------- Udskrift af ét element (22.2 og 14.1: PDF-eksport via browserens udskrift) ---------- */
+@media print {
+  html.lasso-printing body * { visibility: hidden !important; }
+  html.lasso-printing .lasso-print-target, html.lasso-printing .lasso-print-target * { visibility: visible !important; }
+  html.lasso-printing .lasso-print-target { position: absolute; left: 0; top: 0; width: 100%; }
+  html.lasso-printing .lasso-print-target .lasso-noprint { display: none !important; }
+  html.lasso-printing .lasso-print-target .lasso-printonly { display: block !important; }
+}
+.lasso-printonly { display: none; }
+
+/* ---------- 22.1 Sammenligning (node CFH-0): tilføj-slot, "Ikke hentet", par på mobil ---------- */
+/* Tom kolonne med stiplet kant er "tilføj"-slot; den forsvinder ved 6 virksomheder. */
+.lasso-table .lasso-compare__slot { width: 160px; min-width: 140px; border-left: 1px dashed var(--lasso-border-strong); border-right: 1px dashed var(--lasso-border-strong); background: var(--lasso-surface); text-transform: none; letter-spacing: 0; vertical-align: bottom; }
+.lasso-compare tbody td.lasso-compare__slot { border-bottom-color: transparent; }
+.lasso-compare__add { letter-spacing: 0; text-transform: none; display: inline-flex; align-items: center; gap: 6px; height: var(--lasso-btn-h-sm); padding: 0 10px; border: 1px dashed var(--lasso-border-strong); border-radius: var(--lasso-radius); background: var(--lasso-surface); color: var(--lasso-text-2); font: inherit; font-size: var(--lasso-fs-sm); font-weight: 500; cursor: pointer; white-space: nowrap; }
+.lasso-compare__add:hover { border-color: var(--lasso-icon); color: var(--lasso-text); }
+.lasso-compare__add:focus-visible { outline: none; border-color: var(--lasso-focus-border); border-style: solid; }
+.lasso-compare__pairs { display: none; }
+@container lasso (max-width: 560px) {
+  /* Mønster 5 på mobil: udgangsvirksomheden + én anden ad gangen, prikker og swipe vælger parret. */
+  .lasso-compare__pairs { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 0 0 var(--lasso-space-3); }
+  .lasso-compare__dot { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 4px; background: var(--lasso-border-strong); cursor: pointer; }
+  .lasso-compare__dot.is-on { width: 20px; background: var(--lasso-text); }
+  .lasso-compare__dot:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: 2px; }
+  .lasso-compare__hint { margin-left: 8px; font-size: 12px; color: var(--lasso-muted); }
+  .lasso-compare .is-offpair { display: none; }
+  .lasso-comparesec .lasso-table-wrap { padding: 0; touch-action: pan-y; }
+  .lasso-compare th:first-child, .lasso-compare td:first-child { width: 118px; min-width: 118px; max-width: 118px; white-space: normal; padding-left: 12px; padding-right: 8px; }
+  .lasso-compare th:not(:first-child), .lasso-compare td:not(:first-child) { white-space: normal; padding-left: 10px; padding-right: 12px; }
+  .lasso-compare { table-layout: fixed; }
+  .lasso-table .lasso-compare__slot { display: none; }
+}
+
+/* ---------- 22.2 Revisoruafhængighed (node CI4-0): værktøjslinje med eksport til PDF og Excel ---------- */
+.lasso-audit__meta { min-width: 0; font-size: var(--lasso-fs-sm); color: var(--lasso-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lasso-audit__printhead { margin: 0 0 var(--lasso-space-3); font-size: var(--lasso-fs-sm); color: var(--lasso-muted); }
+@container lasso (max-width: 560px) {
+  .lasso-audit .lasso-ttoolbar { padding: 8px 12px; min-height: 52px; }
+  .lasso-audit .lasso-ttoolbar__left { flex: 1 1 0; }
+  .lasso-audit .lasso-tbtn { height: var(--lasso-touch-h); }
+  .lasso-audit__table td.lasso-cell--name { grid-column: 1 / -1; flex-direction: column; align-items: flex-start; gap: 0; text-align: left; font-size: var(--lasso-fs); }
 }

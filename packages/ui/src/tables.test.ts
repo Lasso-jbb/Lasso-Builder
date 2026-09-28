@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { CompanyRowVM, PersonSearchResultVM, SearchResultVM } from "@lasso/spec";
+import { emptyDataset, type CompanyRowVM, type PersonSearchResultVM, type SearchResultVM } from "@lasso/spec";
+import { CompareTable } from "./components/CompareTable.js";
+import { AuditorIndependence, auditorCsv } from "./components/AuditorIndependence.js";
 import { CompanyTable, cardFigures, statusTone } from "./components/CompanyTable.js";
 import { PersonTable, personSub, rolesText } from "./components/PersonTable.js";
 import { BulkBar, Pagination, pageItems } from "./components/TableKit.js";
@@ -121,4 +123,44 @@ test("Persontabel (15.3): navn alene, 2 roller + 'og n flere', konkurser kun > 0
   const loading = renderToStaticMarkup(createElement(PersonTable, { onAction: noop, canDrillDown: false }));
   assert.match(loading, /<thead>/);
   assert.match(loading, /aria-busy="true"/);
+});
+
+test("Sammenligning (22.1): tilføj-slot til og med 5, 'Ikke hentet' mod 'Ikke oplyst', par på mobil", () => {
+  const ds = emptyDataset("demo");
+  const ids = ["CVR-1-1", "CVR-1-2", "CVR-1-3"];
+  ds.companies["CVR-1-1"] = { lassoId: "CVR-1-1", name: "Eksempel A ApS" };
+  ds.companies["CVR-1-2"] = { lassoId: "CVR-1-2", name: "Eksempel B ApS" };
+  ds.companies["CVR-1-3"] = { lassoId: "CVR-1-3", name: "Eksempel C ApS" };
+  ds.financials["CVR-1-1"] = { lassoId: "CVR-1-1", currency: "DKK", years: [{ year: 2025, grossProfit: 5_000_000, profit: null } as never] };
+  ds.financials["CVR-1-2"] = { lassoId: "CVR-1-2", currency: "DKK", years: [{ year: 2025, grossProfit: 4_000_000, profit: 1 } as never] };
+  const html = renderToStaticMarkup(createElement(CompareTable, { companies: ids, metrics: ["bruttofortjeneste", "resultat"], dataset: ds, onAction: noop, canDrillDown: false, canAdd: true }));
+  assert.match(html, /Tilføj virksomhed/);
+  assert.match(html, /Ikke hentet/);
+  assert.match(html, /Ikke oplyst/);
+  assert.match(html, /swipe for næste par/);
+  assert.match(html, /is-offpair/);
+  const six = Array.from({ length: 6 }, (_, i) => `CVR-1-${i + 1}`);
+  const full = renderToStaticMarkup(createElement(CompareTable, { companies: six, metrics: ["bruttofortjeneste"], dataset: ds, onAction: noop, canDrillDown: false, canAdd: true }));
+  assert.doesNotMatch(full, /Tilføj virksomhed/);
+});
+
+test("Revisoruafhængighed (22.2): værktøjslinje med PDF og Excel, CSV til arbejdspapirer", () => {
+  const data = {
+    lassoId: "CVR-1-1",
+    auditorName: "Eksempel Revision ApS",
+    checkedAt: "2026-09-25",
+    relations: [
+      { id: "a", assessment: 0 as const, name: "Prøve Person", relation: "Tidligere direktør", to: "2020-01-01" },
+      { id: "b", assessment: 50 as const, name: "Eksempel Partner", relation: "Bestyrelsesmedlem", via: "Eksempel Invest ApS", from: "2022-01-01" },
+    ],
+  };
+  const html = renderToStaticMarkup(createElement(AuditorIndependence, { data, onAction: noop, canExport: true }));
+  assert.match(html, /role="toolbar"/);
+  assert.match(html, />PDF</);
+  assert.match(html, />Excel</);
+  assert.match(html, /2 relationer, tjekket 25\.09\.2026/);
+  const lines = auditorCsv(data).split("\r\n");
+  assert.equal(lines.length, 3);
+  assert.match(lines[1]!, /^Vurdér;Eksempel Partner;/);
+  assert.match(lines[2]!, /Neutral;Prøve Person;.*01\.01\.2020/);
 });

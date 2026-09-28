@@ -163,7 +163,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       );
     }
     case "LassoCompareTable":
-      return <CompareTable key={key} companies={c.companies} metrics={c.metrics} title={c.title} dataset={empty} onAction={act} canDrillDown={Boolean(props.host.drillDown)} />;
+      return <CompareTable key={key} companies={c.companies} metrics={c.metrics} title={c.title} dataset={empty} onAction={act} canDrillDown={Boolean(props.host.drillDown)} canAdd={Boolean(props.host.prompt)} />;
     case "LassoKeyValueList": {
       // Det, hovedet, kontaktblokken og ejerlisten viser på samme side, gentages ikke (companyFacts).
       const page = companyFactOptions(props.spec.components, c.company);
@@ -209,7 +209,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoCreditRating":
       return <CreditRating key={key} rating={empty.creditRatings?.[c.company]} title={c.title} error={err(`creditRating:${c.company}`)} onAction={act} />;
     case "LassoAuditorIndependence":
-      return <AuditorIndependence key={key} data={empty.auditorIndependence[c.company]} error={err(`auditorIndependence:${c.company}`)} title={c.title} />;
+      return <AuditorIndependence key={key} data={empty.auditorIndependence[c.company]} error={err(`auditorIndependence:${c.company}`)} title={c.title} onAction={act} canExport={Boolean(props.host.export)} />;
     case "LassoProductionUnits":
       return <ProductionUnits key={key} units={empty.productionUnits[c.company]} error={err(`productionUnits:${c.company}`)} />;
     case "LassoProperties":
