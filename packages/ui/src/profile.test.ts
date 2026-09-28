@@ -203,3 +203,67 @@ test("LassoView: hver oplysning om identiteten står én gang på overblik, kont
   assert.equal(count(text(overblik), "eksempelbyg.dk"), 2, "e-mail og web, hver én gang");
   assert.equal(count(overblik, "Kilde: Lasso regnskabsanalyse"), 1);
 });
+
+/* ---------- Spørgsmålets data pr. element: only, year, rows, roles, role, kinds ---------- */
+
+test("Regnskab med only og year: kun de spurgte nøgletal for det spurgte år; findes året ikke, seneste år med en note", () => {
+  const html = renderToStaticMarkup(createElement(KeyValueList, { financials: FINANCIALS, variant: "financials", only: ["soliditetsgrad", "egenkapital"], year: 2024 }));
+  assert.deepEqual(labels(html), ["Regnskabsperiode", "Regnskab udgivet", "Soliditetsgrad", "Egenkapital"]);
+  assert.match(html, /aria-selected="true"[^>]*class="lasso-tab is-on"[^>]*>2024<\/button>/);
+  assert.match(html, /01\.01 – 31\.12/);
+  assert.doesNotMatch(text(html), /intet offentliggjort regnskab for/);
+  const missing = renderToStaticMarkup(createElement(KeyValueList, { financials: FINANCIALS, variant: "financials", only: ["omsaetning"], year: 2019 }));
+  assert.match(text(missing), /Kilde: regnskabet for 2025; der er intet offentliggjort regnskab for 2019/);
+  // Kortene på siden: listen udelader stadig deres nøgletal.
+  const both = renderToStaticMarkup(createElement(KeyValueList, { financials: FINANCIALS, variant: "financials", only: ["soliditetsgrad", "egenkapital"], exclude: ["egenkapital"] }));
+  assert.deepEqual(labels(both), ["Regnskabsperiode", "Regnskab udgivet", "Soliditetsgrad"]);
+});
+
+test("Virksomhedsoplysninger med rows: kun revisor, revisorskift og regnskabsperiode; uden revisor siger den tomme tilstand det", () => {
+  const html = renderToStaticMarkup(
+    createElement(KeyValueList, { company: COMPANY, ownership: OWNERSHIP, financials: FINANCIALS, variant: "company", title: "Revisor", hideIdentity: true, rows: ["revisor", "revisorskift", "regnskabsperiode"] }),
+  );
+  assert.deepEqual(labels(html), ["Revisor", "Seneste revisorskift", "Regnskabsperiode"]);
+  assert.match(html, /Eksempel Revision Midt ApS/);
+  const none = renderToStaticMarkup(createElement(KeyValueList, { company: COMPANY, variant: "company", hideIdentity: true, rows: ["revisor", "revisorskift"] }));
+  assert.match(text(none), /ikke registreret en revisor/);
+});
+
+test("LassoView: personliste med roles, personroller med role og tidslinje med kinds", () => {
+  const ds = emptyDataset("demo");
+  ds.people[ID] = [
+    { name: "Anne Eksempel", role: "Adm. direktør", from: "2015-01-01" },
+    { name: "Bo Eksempel", role: "Bestyrelsesformand", from: "2012-05-01" },
+  ];
+  ds.timeline[ID] = { lassoId: ID, events: [{ date: "2024-03-15", title: "Carla Prøve er indtrådt", category: "Ledelse" }, { date: "2025-04-15", title: "Årsrapport 2024 offentliggjort", category: "Regnskab" }] };
+  const PID = "CVR-3-4000000002";
+  ds.persons[PID] = {
+    lassoId: PID,
+    name: "Bo Eksempel",
+    roles: [
+      { companyId: ID, companyName: "Eksempel Byg A/S", kind: "board", role: "Bestyrelsesformand", from: "2012-05-01", active: true },
+      { companyId: "CVR-1-99000010", companyName: "Eksempel Holding ApS", kind: "direction", role: "Direktør", from: "2005-01-01", active: true },
+    ],
+  };
+  const spec = {
+    version: 2 as const,
+    kind: "custom" as const,
+    title: "x",
+    layout: "stack" as const,
+    criteria: [],
+    components: [
+      { type: "LassoPersonList" as const, company: ID, show: "current" as const, roles: "direktion" as const },
+      { type: "LassoTimeline" as const, company: ID, kinds: ["ledelse" as const] },
+      { type: "LassoTimeline" as const, company: ID, kinds: ["status" as const] },
+      { type: "LassoPersonRoles" as const, person: PID, show: "current" as const, role: "bestyrelse" as const },
+    ],
+  };
+  const html = text(renderToStaticMarkup(createElement(LassoView, { spec, dataset: ds, host: {}, onAction: () => {} })));
+  assert.match(html, /Direktion Anne Eksempel/);
+  assert.doesNotMatch(html, /Bo Eksempel \(formand\)/);
+  assert.match(html, /Ledelsesændringer .*Carla Prøve er indtrådt/);
+  assert.doesNotMatch(html, /Årsrapport 2024 offentliggjort/);
+  assert.match(html, /Statusændringer .*Ingen statusændringer registreret\./);
+  assert.match(html, /Bestyrelsesposter Eksempel Byg A\/S/);
+  assert.doesNotMatch(html, /Eksempel Holding ApS/);
+});

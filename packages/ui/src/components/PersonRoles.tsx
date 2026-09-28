@@ -1,5 +1,17 @@
 import { useState } from "react";
-import { personCompanies, personRoleRows, type PersonCompanyVM, type PersonRoleRowVM, type PersonRoleVM, type PersonRolesShow, type PersonVM } from "@lasso/spec";
+import {
+  PERSON_ROLE_FILTER_EMPTY,
+  PERSON_ROLE_FILTER_TITLES,
+  personCompanies,
+  personRoleRows,
+  personWithRole,
+  type PersonCompanyVM,
+  type PersonRoleFilter,
+  type PersonRoleRowVM,
+  type PersonRoleVM,
+  type PersonRolesShow,
+  type PersonVM,
+} from "@lasso/spec";
 import type { MoreInTab, ViewAction } from "../types.js";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
 
@@ -84,6 +96,7 @@ function PersonRoleList({
   heading,
   onOpen,
   moreIn,
+  role,
 }: {
   person: PersonVM;
   show: Exclude<PersonRolesShow, "all">;
@@ -92,13 +105,14 @@ function PersonRoleList({
   heading: string;
   onOpen?: (a: ViewAction) => void;
   moreIn?: MoreInTab;
+  role?: PersonRoleFilter;
 }) {
   const [expanded, setExpanded] = useState(false);
   const rows = personRoleRows(person, show, { except });
   if (rows.length === 0) {
     return (
       <Section title={heading}>
-        <DataState state="empty" reason={except === "risiko" && show === "ended" ? "Personen har ingen andre ophørte roller i CVR." : LIST_EMPTY[show]} />
+        <DataState state="empty" reason={role ? PERSON_ROLE_FILTER_EMPTY[role] : except === "risiko" && show === "ended" ? "Personen har ingen andre ophørte roller i CVR." : LIST_EMPTY[show]} />
       </Section>
     );
   }
@@ -150,11 +164,12 @@ function PersonRoleList({
  * Med `show` 'current', 'ended' eller 'owner' er rollerne i stedet en kort liste (PersonRoleList).
  */
 export function PersonRoles({
-  person,
+  person: whole,
   title,
   show = "all",
   limit,
   except,
+  role,
   error,
   onOpen,
   moreIn,
@@ -164,13 +179,16 @@ export function PersonRoles({
   show?: PersonRolesShow;
   limit?: number;
   except?: "risiko";
+  /** Kun bestyrelsesposter, direktørposter eller ejerskaber (spørgsmålet); titlen følger filteret. */
+  role?: PersonRoleFilter;
   error?: string;
   onOpen?: (a: ViewAction) => void;
   /** Smagsprøve på overblikket: "Se alle N selskaber i Roller" åbner fanen i stedet for at folde ud. */
   moreIn?: MoreInTab;
 }) {
-  const heading = title ?? (show === "all" ? "Roller over tid" : LIST_TITLE[show]);
+  const heading = title ?? (role ? PERSON_ROLE_FILTER_TITLES[role] : show === "all" ? "Roller over tid" : LIST_TITLE[show]);
   const [expanded, setExpanded] = useState(false);
+  const person = whole ? personWithRole(whole, role) : undefined;
   if (!person) {
     return (
       <Section title={heading}>
@@ -178,13 +196,13 @@ export function PersonRoles({
       </Section>
     );
   }
-  if (show !== "all") return <PersonRoleList person={person} show={show} limit={limit ?? LIST_COLLAPSED} except={except} heading={heading} onOpen={onOpen} moreIn={moreIn} />;
+  if (show !== "all") return <PersonRoleList person={person} show={show} limit={limit ?? LIST_COLLAPSED} except={except} heading={heading} onOpen={onOpen} moreIn={moreIn} role={role} />;
   const collapsed = limit ?? COLLAPSED;
   const companies = personCompanies(person);
   if (companies.length === 0) {
     return (
       <Section title={heading}>
-        <DataState state="empty" reason="Personen har ingen registrerede roller i selskaber i CVR." />
+        <DataState state="empty" reason={role ? PERSON_ROLE_FILTER_EMPTY[role] : "Personen har ingen registrerede roller i selskaber i CVR."} />
       </Section>
     );
   }

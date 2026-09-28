@@ -10,6 +10,7 @@ import {
   companyTemplate,
   emptyDataset,
   listTemplate,
+  parseAsk,
   parseViewSpec,
   searchKey,
   searchQuerySchema,
@@ -593,4 +594,35 @@ test("tekstkortet viser samme tekstafsnit som visningen: profilen uden branche o
   for (const part of ["Fremstilling af farmaceutiske", "BALANCE OG KAPITALFORHOLD", "BRANCHESTATISTIK"]) assert.ok(!profil.includes(part), `"${part}" hører ikke til profilen:\n${profil}`);
   const analyse = card("analyse");
   assert.ok(analyse.includes("BRANCHESTATISTIK") && !analyse.includes("FORMÅL"), analyse);
+});
+
+test("tekstkortet svarer på spørgsmålet først og følger elementernes filtre (roles, kinds, rows, only)", () => {
+  const ds = dataset();
+  ds.timeline[ID] = { lassoId: ID, events: [{ date: "2025-11-14", title: "Bo Formand er indtrådt", category: "Ledelse" }, { date: "2025-04-15", title: "Årsrapport 2024 offentliggjort", category: "Regnskab" }] };
+  const ask = parseAsk("Hvem er direktør i Testfirma?", "company", { name: "TESTFIRMA A/S" });
+  const spec = composeCompany(ID, ds, { ask, name: "TESTFIRMA A/S" });
+  const card = textCard(spec, ds, { ask })!;
+  for (const l of card.split("\n")) assert.equal([...l].length, 38, `linjen "${l}" har forkert bredde`);
+  // SVAR lige under navnet og status, før stamoplysningerne.
+  assert.ok(card.indexOf("SVAR") < card.indexOf("STAMOPLYSNINGER"), card);
+  assert.match(card, /Direktion: Anne Direktør/);
+  // Personlisten viser kun direktionen, historikken kun ledelsesændringerne.
+  assert.ok(!card.includes("Bo Formand\n") && !/Formand +Bo Formand/.test(card), card);
+  assert.match(card, /LEDELSESÆNDRINGER/);
+  assert.ok(!card.includes("Årsrapport 2024 offentliggjort"));
+  // Revisoren som rækker (rows) og nøgletallene for et år (only, year).
+  const rows = parseViewSpec({
+    title: "x",
+    kind: "company",
+    components: [
+      { type: "LassoCompanyHead", company: ID },
+      { type: "LassoKeyValueList", company: ID, variant: "company", rows: ["revisor", "regnskabsperiode"], title: "Revisor" },
+      { type: "LassoKeyValueList", company: ID, variant: "financials", only: ["egenkapital", "gaeld"], year: 2024 },
+    ],
+  });
+  const withRows = textCard(rows, ds)!;
+  assert.match(withRows, /REVISOR[\s\S]*Revisor +DELOITTE/);
+  assert.match(withRows, /REGNSKAB 2024[\s\S]*Egenkapital +143 mia\.[\s\S]*Gæld +155 mia\./);
+  // Uden spørgsmål: ingen SVAR-sektion.
+  assert.ok(!textCard(composeCompany(ID, ds, {}), ds)!.includes("SVAR"));
 });

@@ -422,3 +422,49 @@ test("Creditsafe-skalaen A–E: tone, ord, ændring og tekstlinje (blandes aldri
   assert.equal(creditRatingText({ ...base, state: "locked" }), "låst: kræver Creditsafe-tilføjelse");
   assert.equal(creditRatingText({ ...base, state: "ok" }), "ikke oplyst");
 });
+
+test("nye parametre: roles, only, year, rows, kinds og role valideres og filtrerer", async () => {
+  const { companyFacts, peopleWithRole, timelineKindsText, timelineOfKinds } = await import("./index.js");
+  const id = "CVR-1-12345678";
+  const spec = parseViewSpec({
+    title: "x",
+    components: [
+      { type: "LassoPersonList", company: id, roles: "direktion" },
+      { type: "LassoKeyValueList", company: id, variant: "financials", only: ["soliditetsgrad", "egenkapital"], year: 2023 },
+      { type: "LassoKeyValueList", company: id, rows: ["revisor", "revisorskift", "regnskabsperiode"] },
+      { type: "LassoTimeline", company: id, kinds: ["ledelse", "status"] },
+      { type: "LassoPersonRoles", person: "CVR-3-4000000001", role: "bestyrelse" },
+    ],
+  });
+  assert.equal(spec.components.length, 5);
+  for (const bad of [
+    { type: "LassoPersonList", company: id, roles: "ejere" },
+    { type: "LassoKeyValueList", company: id, only: ["omsaetning", "salg"] },
+    { type: "LassoKeyValueList", company: id, rows: ["cvr"] },
+    { type: "LassoTimeline", company: id, kinds: ["nyheder"] },
+    { type: "LassoPersonRoles", person: "CVR-3-4000000001", role: "revisor" },
+  ]) {
+    assert.throws(() => parseViewSpec({ title: "x", components: [bad] }), JSON.stringify(bad));
+  }
+  const people = [
+    { name: "A", role: "Adm. direktør" },
+    { name: "B", role: "Bestyrelsesformand" },
+    { name: "C", role: "Bestyrelsessuppleant" },
+    { name: "D", role: "Suppleant" },
+    { name: "E", role: "Revisor" },
+  ];
+  assert.deepEqual(peopleWithRole(people, "direktion").map((p) => p.name), ["A"]);
+  assert.deepEqual(peopleWithRole(people, "bestyrelse").map((p) => p.name), ["B", "C", "D"]);
+  assert.equal(peopleWithRole(people).length, 5);
+  const t = { lassoId: id, events: [{ date: "2025-01-01", title: "a", category: "Ledelse" }, { date: "2024-01-01", title: "b", category: "Regnskab" }] };
+  assert.deepEqual(timelineOfKinds(t, ["ledelse"]).events.map((e) => e.title), ["a"]);
+  assert.deepEqual(timelineOfKinds(t, ["status"]).events, []);
+  assert.deepEqual(timelineKindsText(["status"]), { title: "Statusændringer", empty: "Ingen statusændringer registreret." });
+  // rows: kun de bedte rækker i den bedte rækkefølge; hovedet ejer stadig identiteten.
+  const co = { lassoId: id, name: "X", founded: "2001-01-01", industryCode: "1", address: { municipality: "Aarhus", region: "Midtjylland" } };
+  const own = { lassoId: id, owners: [], auditor: { name: "Rev ApS", from: "2020-01-01" } };
+  const labels = (rows: Parameters<typeof companyFacts>[3]) => companyFacts(co, own, { year: 2025, periodStart: "2025-01-01", periodEnd: "2025-12-31" }, rows).map((r) => `${r.key}:${r.value}`);
+  assert.deepEqual(labels({ rows: ["regnskabsperiode", "revisor"] }), ["regnskabsperiode:01.01 – 31.12", "revisor:Rev ApS"]);
+  assert.deepEqual(labels({ hideIdentity: true, rows: ["stiftet", "kommune"] }), ["kommune:Aarhus"]);
+  assert.deepEqual(labels({ hideAuditor: true, rows: ["revisor", "revisorskift"] }), []);
+});

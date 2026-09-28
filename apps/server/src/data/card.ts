@@ -5,6 +5,8 @@ import {
   changeFeedKey,
   CHANGE_TYPE_LABELS,
   chartSeries,
+  companyFactOptions,
+  companyFacts,
   creditRatingText,
   currencyUnit,
   isForeignCurrency,
@@ -16,19 +18,26 @@ import {
   formatShare,
   ownershipGraphKey,
   percentChange,
+  PERSON_ROLE_FILTER_EMPTY,
+  PERSON_ROLE_FILTER_TITLES,
+  peopleWithRole,
   personCompanies,
   personCounts,
   personFactOptions,
   personFacts,
   personRisk,
   personRoleRows,
+  personWithRole,
   riskTimeline,
   savedPagesKey,
+  timelineKindsText,
+  timelineOfKinds,
   METRIC_FIELD,
   METRIC_KIND,
   METRIC_LABELS,
   searchKey,
   textSectionsFor,
+  type Ask,
   type Dataset,
   type FinancialsVM,
   type FinancialStatementsVM,
@@ -36,6 +45,7 @@ import {
   type OwnershipGraphVM,
   type ViewSpec,
 } from "@lasso/spec";
+import { answerText } from "./answer.js";
 import { SAVED_PAGES_NO_USER } from "./resolve.js";
 
 /**
@@ -154,6 +164,21 @@ function chart(card: Card, f: FinancialsVM, wanted: Metric, years: number) {
 }
 
 const amt = (v: number | null | undefined, currency?: string) => formatAmount(v, currencyUnit(currency)).replace(" kr.", "");
+
+/** Nøgletallenes korte navne, så de kan stå i kortets faste labelbredde (12 tegn). */
+const SHORT_METRIC_LABEL: Record<Metric, string> = {
+  omsaetning: "Omsætning",
+  bruttofortjeneste: "Bruttofortj.",
+  resultat: "Resultat",
+  egenkapital: "Egenkapital",
+  ansatte: "Ansatte",
+  ebitda: "EBITDA",
+  balancesum: "Balancesum",
+  gaeld: "Gæld",
+  soliditetsgrad: "Soliditet",
+  overskudsgrad: "Overskudsgr.",
+  likviditetsgrad: "Likviditet",
+};
 
 /**
  * Samme trin som `LassoWaterfallChart` (packages/ui/src/components/WaterfallChart.tsx),
@@ -328,13 +353,21 @@ function cashFlowText(card: Card, s: FinancialStatementsVM, years: number) {
   );
 }
 
-function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | null {
+/** Et spørgsmål med et emne: svaret som første sektion, lige under navnet. */
+function answerSection(card: Card, answer: string | null) {
+  if (!answer) return;
+  card.section("Svar");
+  card.text(answer);
+}
+
+function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string, answer: string | null = null): string | null {
   const card = new Card();
   const types = new Set(spec.components.filter((c) => "company" in c && c.company === lassoId).map((c) => c.type));
   const co = ds.companies[lassoId];
   if (co) {
     card.text(co.name);
     card.text([co.status, co.form, co.address?.city].filter(Boolean).join(", "));
+    answerSection(card, answer);
     card.section("Stamoplysninger");
     const a = co.address;
     card.row("CVR", co.cvr);
@@ -368,7 +401,10 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     }
   }
 
-  const people = types.has("LassoPersonList") || types.has("LassoRelations") ? (ds.people[lassoId] ?? []).filter((p) => !p.to) : [];
+  // Personlisten med `roles` viser kun direktionen eller bestyrelsen; kortet følger den.
+  const personList = spec.components.find((c) => c.type === "LassoPersonList" && c.company === lassoId);
+  const listRoles = personList?.type === "LassoPersonList" ? personList.roles : undefined;
+  const people = types.has("LassoPersonList") || types.has("LassoRelations") ? peopleWithRole(ds.people[lassoId] ?? [], listRoles).filter((p) => !p.to) : [];
   const owners = types.has("LassoOwnerList") || types.has("LassoRelations") ? ds.ownership[lassoId] : undefined;
   if (people.length || owners) {
     card.section(owners ? "Ledelse og ejere" : "Ledelse");
@@ -395,28 +431,17 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
   const f = ds.financials[lassoId];
   const last = f?.years.at(-1);
   const prev = f?.years.at(-2);
-  if (f && last && types.has("LassoKeyFigureCards")) {
+  const figures = spec.components.find((c) => c.type === "LassoKeyFigureCards" && c.company === lassoId);
+  if (f && last && figures?.type === "LassoKeyFigureCards") {
     const cur = last.currency ?? f.currency;
     // Valuta og koncern står i overskriften, så rækkerne holder kortets bredde.
     card.section(`Regnskab ${last.year}${last.scope === "Koncern" ? " (koncern)" : ""}${prev ? `, ændring fra ${prev.year}` : ""}${isForeignCurrency(cur) ? `, beløb i ${currencyUnit(cur)}` : ""}`);
-    const metrics: Metric[] = [last.revenue != null ? "omsaetning" : "bruttofortjeneste", "resultat", "egenkapital", "ansatte"];
+    // De nøgletal, kortene på siden viser (spørgsmålets først); ellers standardkortene.
+    const metrics: Metric[] = figures.metrics?.length ? [...figures.metrics] : [last.revenue != null ? "omsaetning" : "bruttofortjeneste", "resultat", "egenkapital", "ansatte"];
     for (const m of metrics) {
       const v = last[METRIC_FIELD[m]];
       if (typeof v !== "number") continue;
-      const SHORT_LABEL: Record<Metric, string> = {
-        omsaetning: "Omsætning",
-        bruttofortjeneste: "Bruttofortj.",
-        resultat: "Resultat",
-        egenkapital: "Egenkapital",
-        ansatte: "Ansatte",
-        ebitda: "EBITDA",
-        balancesum: "Balancesum",
-        gaeld: "Gæld",
-        soliditetsgrad: "Soliditet",
-        overskudsgrad: "Overskudsgr.",
-        likviditetsgrad: "Likviditet",
-      };
-      const label = SHORT_LABEL[m];
+      const label = SHORT_METRIC_LABEL[m];
       card.raw(`${pad(label, 12)}${padStart(short(v, m), 10)} ${delta(prev?.[METRIC_FIELD[m]] as number | null | undefined, v)}`);
     }
   }
@@ -486,13 +511,41 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     }
   }
 
-  if (types.has("LassoTimeline")) {
-    const tl = ds.timeline[lassoId];
+  const timelineSpec = spec.components.find((c) => c.type === "LassoTimeline" && c.company === lassoId);
+  if (timelineSpec?.type === "LassoTimeline") {
+    // Med `kinds` kun de slags begivenheder, siden viser (fx ledelsesændringer); tom tilstand som på siden.
+    const all = ds.timeline[lassoId];
+    const tl = all && timelineSpec.kinds?.length ? timelineOfKinds(all, timelineSpec.kinds) : all;
+    const kinds = timelineSpec.kinds?.length ? timelineKindsText(timelineSpec.kinds) : undefined;
     if (tl?.events.length) {
-      card.section("Historik");
+      card.section(timelineSpec.title ?? kinds?.title ?? "Historik");
       for (const e of tl.events.slice(0, 6)) {
         card.text(e.title);
         card.text(`${formatDate(e.date)}, ${e.category}`);
+      }
+    } else if (tl && kinds) {
+      card.section(timelineSpec.title ?? kinds.title);
+      card.text(kinds.empty);
+    }
+  }
+
+  // Nøgle-værdi-lister med spørgsmålets rækker (revisor …) eller nøgletal for et bestemt år.
+  for (const c of spec.components) {
+    if (c.type !== "LassoKeyValueList" || c.company !== lassoId) continue;
+    if (c.variant === "company" && c.rows?.length && co) {
+      const rows = companyFacts(co, ds.ownership[lassoId], f?.years.at(-1), { ...companyFactOptions(spec.components, lassoId), rows: c.rows });
+      card.section(c.title ?? "Virksomhedsoplysninger");
+      if (rows.length === 0) card.text(c.rows.includes("revisor") ? "Ingen registreret revisor" : "Ikke oplyst");
+      for (const r of rows) card.row(r.label, r.value ?? "—");
+    }
+    if (c.variant === "financials" && (c.only?.length || c.year !== undefined) && f?.years.length) {
+      const y = f.years.find((x) => x.year === c.year) ?? f.years.at(-1)!;
+      const cur = y.currency ?? f.currency;
+      const metrics = (c.only ?? (["omsaetning", "bruttofortjeneste", "resultat", "egenkapital", "soliditetsgrad"] as Metric[])).filter((m) => !c.exclude?.includes(m));
+      card.section(`${c.title ?? "Regnskab"} ${y.year}${isForeignCurrency(cur) ? `, beløb i ${currencyUnit(cur)}` : ""}`);
+      for (const m of metrics) {
+        const v = y[METRIC_FIELD[m]] as number | null | undefined;
+        card.row(SHORT_METRIC_LABEL[m], v == null ? "—" : short(v, m, cur));
       }
     }
   }
@@ -568,7 +621,7 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
  * ejerskab (de selskaber, personen ejer, fra ejerdiagrammet). Lister viser det antal, siden viser,
  * resten som "og N flere".
  */
-function personCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | null {
+function personCard(spec: ViewSpec, ds: Dataset, lassoId: string, answer: string | null = null): string | null {
   const p = ds.persons[lassoId];
   const card = new Card();
   const year = (d?: string) => (d ? d.slice(0, 4) : "");
@@ -583,16 +636,19 @@ function personCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | null
         card.text(p.name);
         card.text(["Person", p.city].filter(Boolean).join(", "));
         card.text(`${pl(n.activeRoles, "aktiv rolle", "aktive roller")} i ${pl(n.activeCompanies, "selskab", "selskaber")}${n.endedRoles ? `, ${pl(n.endedRoles, "ophørt", "ophørte")}` : ""}`);
+        answerSection(card, answer);
         break;
       }
       case "LassoPersonRoles": {
         if (!p) break;
+        // Med `role` kun bestyrelsesposterne, direktørposterne eller ejerskaberne (som på siden).
+        const who = personWithRole(p, c.role);
         const show = c.show ?? "all";
         if (show === "all") {
-          const companies = personCompanies(p);
+          const companies = personCompanies(who);
           const limit = c.limit ?? 3;
-          card.section(c.title ?? "Roller");
-          if (companies.length === 0) card.text("Ingen registrerede roller i selskaber");
+          card.section(c.title ?? (c.role ? PERSON_ROLE_FILTER_TITLES[c.role] : "Roller"));
+          if (companies.length === 0) card.text(c.role ? PERSON_ROLE_FILTER_EMPTY[c.role] : "Ingen registrerede roller i selskaber");
           for (const x of companies.slice(0, limit)) {
             const ended = x.companyStatusKind === "warning" || x.companyStatusKind === "inactive";
             card.text(`${x.companyName}${ended ? ` (${(x.companyStatus ?? "ophørt").toLowerCase()})` : ""}`);
@@ -605,10 +661,10 @@ function personCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | null
           if (companies.length > limit) card.text(`og ${companies.length - limit} flere selskaber`);
           break;
         }
-        const rows = personRoleRows(p, show, { except: c.except });
+        const rows = personRoleRows(who, show, { except: c.except });
         const limit = c.limit ?? 5;
-        card.section(c.title ?? { current: "Aktive roller", ended: "Ophørte roller", owner: "Ejerskaber" }[show]);
-        if (rows.length === 0) card.text({ current: "Ingen aktive roller i selskaber", ended: "Ingen ophørte roller", owner: "Ejer ingen selskaber i CVR" }[show]);
+        card.section(c.title ?? (c.role ? PERSON_ROLE_FILTER_TITLES[c.role] : { current: "Aktive roller", ended: "Ophørte roller", owner: "Ejerskaber" }[show]));
+        if (rows.length === 0) card.text(c.role ? PERSON_ROLE_FILTER_EMPTY[c.role] : { current: "Ingen aktive roller i selskaber", ended: "Ingen ophørte roller", owner: "Ejer ingen selskaber i CVR" }[show]);
         for (const r of rows.slice(0, limit)) {
           card.text(`${r.companyName}${r.companyStatus ? ` (${r.companyStatus.toLowerCase()}${r.companyEnded ? ` ${year(r.companyEnded)}` : ""})` : ""}`);
           for (const l of wrap([r.text, r.period].filter(Boolean).join(", "), W - 2)) card.raw(`  ${l}`);
@@ -822,13 +878,15 @@ function savedPagesCard(spec: ViewSpec, ds: Dataset): string | null {
 }
 
 /** Tekstkort for visningen, eller null når den ikke har noget, der kan vises som tekst. */
-export function textCard(spec: ViewSpec, ds: Dataset): string | null {
+export function textCard(spec: ViewSpec, ds: Dataset, opts: { ask?: Ask } = {}): string | null {
   // Tidslinje, nyheder og ejerdiagram har enten company eller person.
   const companies = [...new Set(spec.components.flatMap((c) => ("company" in c && typeof c.company === "string" ? [c.company] : [])))];
   const persons = [...new Set(spec.components.flatMap((c) => ("person" in c && typeof c.person === "string" ? [c.person] : [])))];
+  // Et spørgsmål med et emne: kortet svarer først (samme tekst som resuméets "Svar:").
+  const answer = answerText(spec, ds, opts.ask);
   const cards = [
-    ...(companies.length === 1 ? [companyCard(spec, ds, companies[0]!)] : []),
-    ...(persons.length === 1 ? [personCard(spec, ds, persons[0]!)] : []),
+    ...(companies.length === 1 ? [companyCard(spec, ds, companies[0]!, answer)] : []),
+    ...(persons.length === 1 ? [personCard(spec, ds, persons[0]!, answer)] : []),
     listCard(spec, ds),
     changeFeedCard(spec, ds),
     savedPagesCard(spec, ds),

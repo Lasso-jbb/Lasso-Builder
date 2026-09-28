@@ -12,6 +12,8 @@ import {
   sameAddress,
   savedPagesKey,
   searchKey,
+  timelineKindsText,
+  timelineOfKinds,
   widthOf,
   type Dataset,
   type Focus,
@@ -130,7 +132,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
         />
       );
     case "LassoPersonList":
-      return <PersonList key={key} people={empty.people[c.company]} show={c.show} title={c.title} error={err(`people:${c.company}`)} onOpen={props.host.drillDown ? act : undefined} />;
+      return <PersonList key={key} people={empty.people[c.company]} show={c.show} roles={c.roles} title={c.title} error={err(`people:${c.company}`)} onOpen={props.host.drillDown ? act : undefined} />;
     case "LassoOwnerList":
       return <OwnerList key={key} ownership={empty.ownership[c.company]} error={err(`ownership:${c.company}`)} onOpen={props.host.drillDown ? act : undefined} />;
     case "LassoOwnershipDiagram": {
@@ -159,6 +161,9 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           hideIdentity={page.hideIdentity}
           hideAuditor={page.hideAuditor}
           exclude={c.exclude}
+          only={c.only}
+          year={c.year}
+          rows={c.rows}
           onOpen={props.host.drillDown ? act : undefined}
         />
       );
@@ -225,21 +230,27 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoTimeline": {
       // Virksomhed eller person (katalog 16: personens historik med selskabsnavne, der kan åbnes).
       // filter 'risiko' (personens fokus risiko): kun forløbet i selskaberne med konkurs/tvangsopløsning.
+      // kinds (virksomhed): kun ledelses-, regnskabs-, status- … begivenheder, med titel og tom tilstand derefter.
       const k = entityRefOf(c);
       const all = empty.timeline[k];
       const person = c.person ? empty.persons[c.person] : undefined;
       const risk = c.filter === "risiko" && Boolean(c.person);
+      const kinds = c.kinds?.length && !c.person ? timelineKindsText(c.kinds) : undefined;
       return (
         <LassoTimeline
           key={key}
-          timeline={risk && all ? (person ? riskTimeline(all, person) : undefined) : all}
-          title={c.title}
+          timeline={risk && all ? (person ? riskTimeline(all, person) : undefined) : all && kinds ? timelineOfKinds(all, c.kinds) : all}
+          title={c.title ?? kinds?.title}
           limit={c.limit}
           moreIn={moreIn(c.more)}
           error={err(`timeline:${k}`) ?? (risk && c.person ? err(`person:${c.person}`) : undefined)}
           onOpen={props.host.drillDown ? act : undefined}
           emptyReason={
-            risk ? "Ingen registrerede rolleskift i selskaberne med konkurs eller tvangsopløsning." : c.person ? "Der er ingen registrerede rolleskift for personen i CVR." : undefined
+            risk
+              ? "Ingen registrerede rolleskift i selskaberne med konkurs eller tvangsopløsning."
+              : c.person
+                ? "Der er ingen registrerede rolleskift for personen i CVR."
+                : kinds?.empty
           }
         />
       );
@@ -274,6 +285,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           limit={c.limit}
           moreIn={moreIn(c.more)}
           except={c.except}
+          role={c.role}
           error={err(`person:${c.person}`)}
           onOpen={props.host.drillDown ? act : undefined}
         />

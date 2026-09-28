@@ -16,6 +16,7 @@ import {
   searchQuerySchema,
   TABLE_COLUMNS,
   viewSpecSchema,
+  type Ask,
   type Dataset,
   type ViewSpec,
 } from "@lasso/spec";
@@ -56,8 +57,9 @@ export type McpContext = UseCaseCtx;
 const INSTRUCTIONS = `Lasso giver adgang til data om danske virksomheder og personer (CVR): stamdata, regnskaber, nøgletal, ledelse, bestyrelse, ejere, revisor, risiko, historik og kontakt, samt søgning med kriterier (målgrupper).
 
 Vælg værktøj:
-- Én virksomhed: show_company med CVR-nummer, Lasso-ID eller navn (serveren slår navnet op; brug ikke search_companies først). Vælg focus efter spørgsmålet: 'overblik' (standard, "fortæl om X", snævre stamdataspørgsmål som revisor, stiftet, ansatte), 'oekonomi' (omsætning, resultat, nøgletal, "hvordan går det"), 'regnskab' (resultatopgørelse, balance, pengestrøm), 'ejerskab' (ejere, reelle ejere, koncern), 'ledelse' (direktion, bestyrelse, udskiftning), 'risiko' (røde flag, kreditvurdering, "kan vi handle med dem"), 'historik' (hvad er der sket, nyheder), 'kontakt' (telefon, e-mail, web, kontaktpersoner). Serveren vælger selv formen efter virksomhedens data.
-- Én person: show_person med navn eller person-ID (CVR-3-…). Vælg focus efter spørgsmålet: 'overblik' (standard, "hvem er X"), 'roller' (hvor sidder X i bestyrelser/direktioner, roller over tid), 'netvaerk' (hvem sidder X sammen med), 'ejerskab' (hvilke selskaber ejer X), 'risiko' (har X været med i konkurser eller tvangsopløsninger), 'historik' (hvad er der sket, rolleskift, nyheder om X).
+- Én virksomhed: show_company med CVR-nummer, Lasso-ID eller navn (serveren slår navnet op; brug ikke search_companies først). Serveren bygger siden omkring svaret på spørgsmålet: svar-elementet først med de nævnte nøgletal, roller og år, og kontekst rundt om. Sæt kun focus, når spørgsmålet er generelt: 'overblik' (standard, "fortæl om X"), 'oekonomi' ("hvordan går det"), 'regnskab', 'ejerskab', 'ledelse', 'risiko', 'historik', 'kontakt'.
+- Én person: show_person med navn eller person-ID (CVR-3-…). Vælg focus kun ved et generelt spørgsmål: 'overblik' (standard, "hvem er X"), 'roller' (roller over tid), 'netvaerk' (hvem sidder X sammen med), 'ejerskab' (hvilke selskaber ejer X), 'risiko' (konkurser og tvangsopløsninger), 'historik' (hvad er der sket, nyheder om X).
+- Send altid brugerens spørgsmål ordret i question.
 - Lister og målgrupper ("revisorer i Region Midt med mindst 10 ansatte"): search_companies med brugerens formulering som query.
 - Flere navngivne virksomheder (sammenligning, rangering) eller elementer, ingen focus dækker: render_view med en spec fra kataloget i dens beskrivelse. Navne må bruges i stedet for CVR-numre.
 - "Gem virksomheden/personen", "husk", "bogmærk", "sæt på min liste": save_page. "Mine gemte", "hvad har jeg gemt", "min liste": list_saved_pages. "Fjern fra listen": remove_saved_page. save_view er kun til et delbart link til en visning.
@@ -75,11 +77,12 @@ Regler:
  * Resuméet står både som tekst og i structuredContent: nogle værter (fx Claude Code)
  * giver kun modellen structuredContent, og så skal tallene at kommentere stå der.
  */
-function viewResult(spec: ViewSpec, ds: Dataset, extra: { note?: string; link?: string } = {}): CallToolResult {
-  const summary = [extra.note, summarizeView(spec, ds), extra.link && `Interaktiv Lasso-visning (link til brugeren): ${extra.link}`]
+function viewResult(spec: ViewSpec, ds: Dataset, extra: { note?: string; link?: string; ask?: Ask } = {}): CallToolResult {
+  // Med et spørgsmål svarer resuméet og tekstkortet på det først ("Svar: …").
+  const summary = [extra.note, summarizeView(spec, ds, { ask: extra.ask }), extra.link && `Interaktiv Lasso-visning (link til brugeren): ${extra.link}`]
     .filter(Boolean)
     .join("\n");
-  const card = textCard(spec, ds);
+  const card = textCard(spec, ds, { ask: extra.ask });
   return {
     content: [
       { type: "text", text: summary },
@@ -129,10 +132,12 @@ export function createMcpServer(ctx: McpContext): McpServer {
     {
       title: "Vis virksomhed",
       description:
-        "Vis én dansk virksomhed som ét skærmbillede, der tilpasser sig virksomhedens data. Du angiver kun hensigten med focus; serveren henter data og vælger selv formen (fx graf ved mange regnskabsår, alle tal ved få, ejerdiagram ved en koncern, ingen nyhedssektion når der ingen nyheder er) og lægger det i kolonner som Lassos portal. Kald det kun én gang pr. svar, og kald ikke render_view bagefter. Brug til alle spørgsmål om én bestemt virksomhed. focus: 'overblik' (standard, 'fortæl om X'), 'oekonomi' (regnskab, omsætning, resultat, 'hvordan går det'), 'ejerskab' (ejere, reelle ejere, koncern), 'ledelse' (direktion, bestyrelse, udskiftning), 'risiko' (røde flag, kreditvurdering fra Creditsafe, kan vi handle med dem), 'historik' (hvad er der sket, nyheder), 'regnskab' (resultatopgørelse, balance, pengestrøm, alle linjer), 'kontakt' (telefon, e-mail, web, adresse, kontaktpersoner). Tager CVR-nummer, Lasso-ID eller navn; ved navn vælger serveren det bedste match og nævner alternativerne. Brug kun render_view, når brugeren beder om noget, focus ikke dækker (fx sammenligning af flere virksomheder).",
+        "Vis én dansk virksomhed som ét skærmbillede, der tilpasser sig spørgsmålet og virksomhedens data. Send brugerens spørgsmål ordret i question: serveren afleder, hvad der spørges om, og bygger en hel side i Lassos portal-layout, hvor svar-elementet står først med data afgrænset til spørgsmålet (fx soliditetsgraden først på kortene og som linjegraf, kun direktionen i personlisten, regnskabet for det nævnte år, kun ledelsesændringerne i historikken), og resten af siden er kontekst fra hele komponentkataloget. Samme spørgsmål giver altid samme side. Kald det kun én gang pr. svar, og kald ikke render_view bagefter. Brug til alle spørgsmål om én bestemt virksomhed. focus bruges kun ved et generelt spørgsmål ('fortæl om X', 'hvordan går det'): 'overblik' (standard), 'oekonomi', 'ejerskab', 'ledelse', 'risiko' (kreditvurdering fra Creditsafe), 'historik', 'regnskab', 'kontakt'. Tager CVR-nummer, Lasso-ID eller navn; ved navn vælger serveren det bedste match og nævner alternativerne. Brug kun render_view, når brugeren beder om noget, show_company ikke dækker (fx sammenligning af flere virksomheder).",
       inputSchema: z.object({
         company: z.string().min(1).describe("8-cifret CVR-nummer, Lasso-ID (fx CVR-1-12345678) eller virksomhedens navn."),
-        focus: z.enum(FOCUSES).optional().describe("Hvad brugeren vil vide. Standard: overblik."),
+        question: z.string().max(300).optional().describe("Brugerens spørgsmål ordret. Serveren vælger niveau, elementer og data (nøgletal, roller, år) efter spørgsmålet."),
+        metrics: z.array(z.enum(METRICS)).max(5).optional().describe("Valgfrit: de nøgletal, spørgsmålet handler om, hvis de ikke står med deres navn (fx 'egenkapitalandel' = soliditetsgrad)."),
+        focus: z.enum(FOCUSES).optional().describe("Sæt kun focus, når spørgsmålet er generelt; ellers bestemmer spørgsmålet. Standard: overblik."),
         sections: z.array(z.enum(COMPANY_SECTIONS)).optional().describe("Forældet: fast skabelon. Brug focus i stedet."),
         chart_metric: z.enum(METRICS).optional().describe("Nøgletal i grafen, kun hvis brugeren nævner et bestemt. Standard: omsætning, hvis den er oplyst, ellers bruttofortjeneste."),
         years: z.number().int().min(2).max(10).optional().describe("Antal år i grafer og tabeller. Standard: 5, ved økonomi 10."),
@@ -143,7 +148,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     async (input): Promise<CallToolResult> => {
       const r = await showCompany(ctx, input);
       if ("error" in r) return toolError(r.error);
-      return viewResult(r.spec, r.dataset, { note: r.note, link: r.link });
+      return viewResult(r.spec, r.dataset, { note: r.note, link: r.link, ask: r.ask });
     },
   );
 
@@ -153,10 +158,11 @@ export function createMcpServer(ctx: McpContext): McpServer {
     {
       title: "Vis person",
       description:
-        "Vis én person fra CVR som ét skærmbillede (katalog 16), der tilpasser sig personens data. Du angiver kun hensigten med focus; serveren henter kun det, fokus viser, og vælger selv formen (tomme sektioner udelades). Personhovedet (by, antal aktive og ophørte roller, ejerskaber, konkurser blandt selskaberne) står på alle fokus. focus: 'overblik' (standard, 'hvem er X': de aktive roller som liste, stamoplysninger, netværk (top 3), risiko, seneste historik og de ejede selskaber), 'roller' ('hvor sidder X i bestyrelser', 'hvilke selskaber er X direktør i': alle roller som tidsbånd fra–til og stamoplysninger), 'netvaerk' ('hvem sidder X sammen med': hele netværket; år sammen = længste sammenhængende periode), 'ejerskab' ('hvilke selskaber ejer X': ejede selskaber med ejerandel og siden-dato og ejerdiagram med personen øverst), 'risiko' ('har X været i konkurser': alle konkurser og tvangsopløsninger blandt personens selskaber og forløbet i de selskaber), 'historik' ('hvad er der sket', nyheder: rolleskift og selskabernes konkurser, nyheder om personen fra Lasso News). Tager navn eller personens Lasso-ID (CVR-3-…); ved navn vælger serveren det bedste match og nævner alternativerne. Personer har ikke CVR-nummer; brug show_company til virksomheder. Kald det kun én gang pr. svar.",
+        "Vis én person fra CVR som ét skærmbillede (katalog 16), der tilpasser sig spørgsmålet og personens data. Send brugerens spørgsmål ordret i question: serveren bygger siden omkring svaret (fx kun bestyrelsesposterne ved 'sidder X i bestyrelser', konkurserne ved 'har X været i konkurser') med kontekst rundt om. Uden spørgsmål, eller ved et generelt spørgsmål, angiver focus hensigten; serveren henter kun det, siden viser, og vælger selv formen (tomme sektioner udelades). Personhovedet (by, antal aktive og ophørte roller, ejerskaber, konkurser blandt selskaberne) står på alle fokus. focus: 'overblik' (standard, 'hvem er X': de aktive roller som liste, stamoplysninger, netværk (top 3), risiko, seneste historik og de ejede selskaber), 'roller' ('hvor sidder X i bestyrelser', 'hvilke selskaber er X direktør i': alle roller som tidsbånd fra–til og stamoplysninger), 'netvaerk' ('hvem sidder X sammen med': hele netværket; år sammen = længste sammenhængende periode), 'ejerskab' ('hvilke selskaber ejer X': ejede selskaber med ejerandel og siden-dato og ejerdiagram med personen øverst), 'risiko' ('har X været i konkurser': alle konkurser og tvangsopløsninger blandt personens selskaber og forløbet i de selskaber), 'historik' ('hvad er der sket', nyheder: rolleskift og selskabernes konkurser, nyheder om personen fra Lasso News). Tager navn eller personens Lasso-ID (CVR-3-…); ved navn vælger serveren det bedste match og nævner alternativerne. Personer har ikke CVR-nummer; brug show_company til virksomheder. Kald det kun én gang pr. svar.",
       inputSchema: z.object({
         person: z.string().min(1).describe("Personens navn (fx 'Mette Holm') eller Lasso-ID (fx 'CVR-3-4000000001')."),
-        focus: z.enum(PERSON_FOCUSES).optional().describe("Hvad brugeren vil vide om personen. Standard: overblik."),
+        question: z.string().max(300).optional().describe("Brugerens spørgsmål ordret. Serveren vælger elementer og data (roller, konkurser, netværk) efter spørgsmålet."),
+        focus: z.enum(PERSON_FOCUSES).optional().describe("Sæt kun focus, når spørgsmålet er generelt; ellers bestemmer spørgsmålet. Standard: overblik."),
       }),
       annotations: { title: "Vis person", ...readOnly },
       _meta: ui,
@@ -164,7 +170,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     async (input): Promise<CallToolResult> => {
       const r = await showPerson(ctx, input);
       if ("error" in r) return toolError(r.error);
-      return viewResult(r.spec, r.dataset, { note: r.note, link: r.link });
+      return viewResult(r.spec, r.dataset, { note: r.note, link: r.link, ask: r.ask });
     },
   );
 

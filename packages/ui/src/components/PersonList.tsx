@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { formatDate, isPersonId, type PersonRowVM } from "@lasso/spec";
+import { formatDate, isPersonId, PERSON_LIST_ROLE_TITLES, peopleWithRole, type PersonListRole, type PersonRowVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { Tabs } from "./Tabs.js";
@@ -18,10 +18,32 @@ function splitChair(role: string): { role: string; chair: boolean } {
  * periode i fast kolonne til højre. Fratrådte kun under "Alle", dæmpet med ordet
  * "fratrådt" i rolleteksten. Formand som tekst i parentes. Ingen initial-cirkler.
  */
-export function PersonList({ people, show, title, error, onOpen }: { people?: PersonRowVM[]; show: "current" | "all"; title?: string; error?: string; onOpen?: (a: ViewAction) => void }) {
-  const heading = title ?? "Ledelse";
+const EMPTY: Record<PersonListRole | "all", string> = {
+  all: "Der er ingen registrerede personer i ledelsen.",
+  direktion: "Der er ingen registrerede personer i direktionen.",
+  bestyrelse: "Der er ingen registrerede personer i bestyrelsen.",
+};
+
+export function PersonList({
+  people: all,
+  show,
+  roles,
+  title,
+  error,
+  onOpen,
+}: {
+  people?: PersonRowVM[];
+  show: "current" | "all";
+  /** Kun direktionen eller kun bestyrelsen (spørgsmålet "hvem er direktør"); titlen følger filteret. */
+  roles?: PersonListRole;
+  title?: string;
+  error?: string;
+  onOpen?: (a: ViewAction) => void;
+}) {
+  const heading = title ?? (roles ? PERSON_LIST_ROLE_TITLES[roles] : "Ledelse");
   const [mode, setMode] = useState<"current" | "all">(show);
   const [expanded, setExpanded] = useState(false);
+  const people = all ? peopleWithRole(all, roles) : undefined;
   if (!people) {
     return (
       <Section title={heading} span="half">
@@ -47,7 +69,7 @@ export function PersonList({ people, show, title, error, onOpen }: { people?: Pe
   if (rows.length === 0) {
     return (
       <Section title={heading} action={toggle} span="half">
-        <DataState state="empty" reason="Der er ingen registrerede personer i ledelsen." />
+        <DataState state="empty" reason={EMPTY[roles ?? "all"]} />
       </Section>
     );
   }

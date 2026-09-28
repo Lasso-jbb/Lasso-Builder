@@ -1,7 +1,21 @@
 import { useState } from "react";
-import { companyFacts, currencyUnit, formatAmount, formatDate, formatMetricValue, isPersonId, METRIC_FIELD, METRIC_LABELS, type CompanyVM, type FinancialsVM, type Metric, type OwnershipVM } from "@lasso/spec";
+import {
+  companyFacts,
+  currencyUnit,
+  formatAmount,
+  formatDate,
+  formatMetricValue,
+  isPersonId,
+  METRIC_FIELD,
+  METRIC_LABELS,
+  type CompanyFactKey,
+  type CompanyVM,
+  type FinancialsVM,
+  type Metric,
+  type OwnershipVM,
+} from "@lasso/spec";
 import type { ViewAction } from "../types.js";
-import { DataState, Missing, Section, stateForError } from "../primitives.js";
+import { DataState, Missing, Section, SourceLine, stateForError } from "../primitives.js";
 import { Tabs } from "./Tabs.js";
 
 /** "2025-01-01" -> "01.01" (dag.måned, uden år, katalog 09: "01.01 – 31.12"). */
@@ -28,19 +42,30 @@ function companyRows(
   ownership: OwnershipVM | undefined,
   lastYear: FinancialsVM["years"][number] | undefined,
   hide: { identity: boolean; contact: boolean; auditor: boolean },
+  rows?: readonly CompanyFactKey[],
 ): Row[] {
-  return companyFacts(company, ownership, lastYear, { hideIdentity: hide.identity, hideContact: hide.contact, hideAuditor: hide.auditor });
+  return companyFacts(company, ownership, lastYear, { hideIdentity: hide.identity, hideContact: hide.contact, hideAuditor: hide.auditor, rows });
 }
 
 const FINANCIALS_ROW_METRICS: Metric[] = ["resultat", "egenkapital", "ansatte", "ebitda", "soliditetsgrad", "overskudsgrad", "likviditetsgrad", "balancesum", "gaeld"];
 
-function financialsRows(year: FinancialsVM["years"][number], currency?: string, exclude: readonly Metric[] = []): Row[] {
+function metricRow(year: FinancialsVM["years"][number], m: Metric, cur: string | undefined): Row {
+  let v = year[METRIC_FIELD[m]] as number | null | undefined;
+  // Gæld i alt = balancesum − egenkapital, når den ikke er oplyst direkte.
+  if (m === "gaeld" && v == null && typeof year.assetsTotal === "number" && typeof year.equity === "number") v = year.assetsTotal - year.equity;
+  if (m === "omsaetning" || m === "bruttofortjeneste") return { label: METRIC_LABELS[m], value: v != null ? formatAmount(v, currencyUnit(cur)) : undefined };
+  return { label: METRIC_LABELS[m], value: v != null ? formatMetricValue(m, v, cur) : undefined, danger: typeof v === "number" && v < 0 };
+}
+
+function financialsRows(year: FinancialsVM["years"][number], currency?: string, exclude: readonly Metric[] = [], only?: readonly Metric[]): Row[] {
   const cur = year.currency ?? currency;
   const period = dayMonth(year.periodStart) && dayMonth(year.periodEnd) ? `${dayMonth(year.periodStart)} – ${dayMonth(year.periodEnd)}` : undefined;
   const rows: Row[] = [
     { label: "Regnskabsperiode", value: period },
     { label: "Regnskab udgivet", value: year.published ? formatDate(year.published) : undefined },
   ];
+  // Kun de nøgletal, spørgsmålet gælder, i den rækkefølge de er bedt om.
+  if (only) return [...rows, ...only.filter((m) => !exclude.includes(m)).map((m) => metricRow(year, m, cur))];
   // Omsætning, ellers bruttofortjeneste; udeladt, når nøgletalskortene på siden allerede viser den.
   const main: Metric = year.revenue != null ? "omsaetning" : "bruttofortjeneste";
   if (!exclude.includes(main)) {
@@ -49,10 +74,7 @@ function financialsRows(year: FinancialsVM["years"][number], currency?: string, 
   }
   for (const m of FINANCIALS_ROW_METRICS) {
     if (exclude.includes(m)) continue;
-    let v = year[METRIC_FIELD[m]] as number | null | undefined;
-    // Gæld i alt = balancesum − egenkapital, når den ikke er oplyst direkte.
-    if (m === "gaeld" && v == null && typeof year.assetsTotal === "number" && typeof year.equity === "number") v = year.assetsTotal - year.equity;
-    rows.push({ label: METRIC_LABELS[m], value: v != null ? formatMetricValue(m, v, cur) : undefined, danger: typeof v === "number" && v < 0 });
+    rows.push(metricRow(year, m, cur));
   }
   return rows;
 }
@@ -94,6 +116,9 @@ export function KeyValueList({
   hideIdentity = false,
   hideAuditor = false,
   exclude,
+  only,
+  year: startYear,
+  rows: rowKeys,
 }: {
   company?: CompanyVM;
   ownership?: OwnershipVM;
@@ -111,6 +136,12 @@ export function KeyValueList({
   hideAuditor?: boolean;
   /** Variant "financials": nøgletal, der allerede står på siden (nøgletalskortene). */
   exclude?: readonly Metric[];
+  /** Variant "financials": kun disse nøgletal (plus periode og udgivet). */
+  only?: readonly Metric[];
+  /** Variant "financials": regnskabsåret, årsvælgeren starter på; findes det ikke, seneste år med en note. */
+  year?: number;
+  /** Variant "company": kun disse rækker. */
+  rows?: readonly CompanyFactKey[];
 }) {
   const heading = title ?? (variant === "financials" ? "Regnskab" : "Virksomhedsoplysninger");
   const ready = variant === "financials" ? Boolean(financials) : Boolean(company);
@@ -134,9 +165,13 @@ export function KeyValueList({
         </Section>
       );
     }
-    const options = years.slice(-5).reverse();
-    const selected = years.find((y) => y.year === year) ?? last;
-    const rows = financialsRows(selected, financials!.currency, exclude);
+    // Det bedte år står i årsvælgeren, også når det er ældre end de seneste 5.
+    const asked = startYear !== undefined ? years.find((y) => y.year === startYear) : undefined;
+    const recent = years.slice(-5);
+    const options = (asked && !recent.includes(asked) ? [asked, ...recent] : recent).reverse();
+    const selected = years.find((y) => y.year === year) ?? asked ?? last;
+    const rows = financialsRows(selected, financials!.currency, exclude, only);
+    const missingYear = startYear !== undefined && !asked;
     return (
       <Section
         title={heading}
@@ -158,15 +193,19 @@ export function KeyValueList({
             </div>
           ))}
         </div>
+        {missingYear ? <SourceLine source={`regnskabet for ${last.year}; der er intet offentliggjort regnskab for ${startYear}`} /> : null}
       </Section>
     );
   }
 
-  const rows = companyRows(company!, ownership, financials?.years.at(-1), { identity: hideIdentity, contact: hideContact, auditor: hideAuditor });
+  const rows = companyRows(company!, ownership, financials?.years.at(-1), { identity: hideIdentity, contact: hideContact, auditor: hideAuditor }, rowKeys);
   if (rows.length === 0) {
     return (
       <Section title={heading} span="half">
-        <DataState state="empty" reason="CVR har ikke oplyst flere oplysninger om virksomheden end dem øverst på siden." />
+        <DataState
+          state="empty"
+          reason={rowKeys?.includes("revisor") && !hideAuditor ? "Der er ikke registreret en revisor for virksomheden i CVR." : "CVR har ikke oplyst flere oplysninger om virksomheden end dem øverst på siden."}
+        />
       </Section>
     );
   }

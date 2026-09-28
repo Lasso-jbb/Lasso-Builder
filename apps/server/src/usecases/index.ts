@@ -4,6 +4,7 @@
  */
 export { extrasOf, fail, type UseCaseCtx, type UseCaseError, type ViewData } from "./context.js";
 export {
+  companyNameHints,
   criteriaError,
   lookupCompanyNames,
   renderView,

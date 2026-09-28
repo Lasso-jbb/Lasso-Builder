@@ -69,8 +69,10 @@ Fejl: `400 { error }` ved ugyldigt input, `404 { error }` når virksomheden/pers
 
 ## Fokus og elementer (packages/spec/src/compose.ts)
 
-Serveren bygger virksomhedssiden efter data; modellen vælger kun fokus. Ingen oplysning står
-1:1 to gange på samme side. Samme oplysning i en anden sammenhæng er tilladt (se nederst).
+Serveren bygger virksomhedssiden efter data; uden spørgsmål (portalens faner) eller med et
+generelt spørgsmål vælger modellen kun fokus. Med et spørgsmål, der har et emne, bygger serveren en
+hel side omkring svaret (se "Spørgsmålet styrer formen"). Ingen oplysning står 1:1 to gange på samme
+side. Samme oplysning i en anden sammenhæng er tilladt (se nederst).
 
 **Hvert modul ejer sit indhold.** En elementtype står på præcis ét fokus. Kun overblikket må vise
 en kort smagsprøve af et andet fokus' element, og så med "Se alle … i <fane>", der åbner fanen
@@ -159,8 +161,8 @@ begivenheder under profilen) ville det være 23,5 / 67,4 / 35,0.
 
 ## Personfokus og elementer (packages/spec/src/composePerson.ts)
 
-Personsiden bygges på samme måde: modellen (`show_person` med `focus`) eller portalens faner vælger
-fokus, `composePersonProbe(lassoId, focus)` henter kun det, fokus viser, og `composePerson` vælger
+Personsiden bygges på samme måde: modellen (`show_person` med `focus`, eller med `question`, se
+"Spørgsmålet styrer formen") eller portalens faner vælger fokus, `composePersonProbe(lassoId, focus)` henter kun det, fokus viser, og `composePerson` vælger
 form efter data. Hovedet (`LassoPersonHead`) står på alle fokus. To halve står side om side i ét
 bånd; en halv, der står alene, får fuld bredde. Tomme sektioner udelades, undtagen hvor den tomme
 tilstand er svaret på fanens spørgsmål.
@@ -205,6 +207,127 @@ række; tidsbånd 2,4 pr. selskab; stamoplysninger 1,6 pr. række; netværk 3 pr
 vælger blandt de mulige par den parring, der giver de mest lige bånd (ved under 2 linjers forskel
 den foretrukne rækkefølge). Bo Eksempel (demo) ved 1280 px: aktive roller 299 px | stamoplysninger
 251 px, netværk 365 | risiko 299, historik 412 | ejerskab 385.
+
+## Spørgsmålet styrer formen (packages/spec/src/ask.ts)
+
+`show_company` og `show_person` tager `question`: brugerens spørgsmål ordret (højst 300 tegn).
+`show_company` tager desuden `metrics` (højst 5), de nøgletal, modellen har genkendt, når de ikke står
+med deres navn i spørgsmålet ("egenkapitalandel" = soliditetsgrad). `focus` bliver, men bruges kun ved
+et generelt spørgsmål; ellers bestemmer spørgsmålet. Serverens instruktioner: "Send altid brugerens
+spørgsmål ordret i question." Portalens faner sender intet spørgsmål og er uændrede.
+
+**Fra spørgsmål til side.** `parseAsk(question, kind, { metrics, name })` giver en deterministisk
+spørgsmålsprofil (`Ask`): nøgletal og emner i nævnt rækkefølge, årstal (`year`), antal år (`years`),
+udvikling (`trend`) og tidligere (`past`). Store/små bogstaver og æøå/ae-oe-aa er ligegyldige, og
+ordstammer fanger bøjningerne ("gælden", "gaeld", "egenkapitalandelen"). Virksomhedens eller personens
+navn fjernes først, så "Eksempel Ejendomme ApS" og "X Holding" ikke bliver emnerne ejendomme og
+koncern, og et 8-cifret CVR-nummer er aldrig et årstal. `askPlan(ask, kind)` giver planen
+`{ top, lead, context }`: kortrækken, svar-elementerne i nævnt rækkefølge og kontekstmodulerne i
+rangorden. Proben (`composeProbe`/`composePersonProbe` med `ask`) henter alt i planen, hver
+datakilde én gang; komponisten (`composeCompany`/`composePerson` med `ask`) tilpasser planen til data.
+`askFocus`/`askPersonFocus` giver spørgsmålets fokus (opfølgningerne og rammen for et generelt
+spørgsmål), og `askLabel` sidens undertitel ("Soliditetsgrad", "Gæld og egenkapital", "Direktion",
+"Revisor", "Bestyrelsesposter"). Samme spørgsmål giver altid samme side for samme data.
+
+**Altid en hel side.** Et spørgsmål med et emne giver aldrig et tyndt svar, men en hel side i
+overbliksrammen: hovedet, evt. kortrækken, tre kolonner og fuldbredde-elementer nederst (personsiden:
+to kolonner som i dag). Svar-elementet står først: øverst i kolonne 1 (flere svar: øverst i kolonne 1,
+2 og 3 i nævnt rækkefølge, aldrig under hinanden), eller i fuld bredde over kolonnerne, når det er en
+tabel, et regnskab, et diagram eller en liste over enheder. Svar-elementet står også tomt (den tomme
+tilstand er svaret). Kontekstmodulerne lægges ét ad gangen i den kolonne, der vejer mindst
+(`componentWeight`), til hver kolonne vejer mindst 25 "linjer" (`ASK_COLUMN_TARGET`) eller puljen er
+brugt; tomme kontekstmoduler udelades, og fuldbredde-moduler står under kolonnerne. Efter
+ranglisten kommer en fælles hale (graf over hovednøgletallet, historik, relationer,
+virksomhedsoplysninger, nyheder, profil, kontakt; for personer aktive roller, netværk, historik,
+risiko og nyheder), så en virksomhed med lidt data stadig får en fuld side. Falder en kolonne ud,
+bruges 2 kolonner; står kun én, får dens elementer fuld bredde. Uden spørgsmål, med et generelt
+spørgsmål ("fortæl om X", "hvordan går det", "tjener de penge") eller med en fane-besked ("Vis
+historik for X", fra "Se alle … i Historik") er det fokus-siderne som hidtil (fokus fra modellen,
+ellers spørgsmålets, ellers overblik).
+
+**Data pr. element følger spørgsmålet** (parametre på de eksisterende elementer, ingen nye former):
+
+| Element | Parameter | Eksempel |
+|---|---|---|
+| `LassoKeyFigureCards` | `metrics`: 4–5, de spurgte først, så de beslægtede, fyldt op med standardkortene | "soliditetsgraden" → soliditetsgrad, egenkapital, gæld, omsætning |
+| `LassoKeyValueList` financials | `only` (kun de nøgletal, minus kortenes), `year` (årsvælgeren starter på året; findes det ikke, seneste år og en note i kildelinjen) | "omsætningen i 2023" → omsætning, bruttofortjeneste, resultat for 2023 |
+| `LassoKeyValueList` company | `rows` (`COMPANY_FACT_KEYS`) | "hvem er revisor" → revisor, seneste revisorskift, regnskabsperiode |
+| `LassoPersonList` | `roles`: `direktion` (`/direkt/`) eller `bestyrelse` (`/bestyrelse\|formand/`, suppleanter med); titel efter filteret | "hvem er direktør" → kun direktionen |
+| `LassoTimeline` (virksomhed) | `kinds` (`TIMELINE_KINDS`: stamdata, ledelse, regnskab, status, ejerskab = begivenhedens kategori); titel og tom tilstand efter filteret ("Ingen statusændringer registreret.") | "hvad er der sket i ledelsen" → kun ledelsesændringer |
+| `LassoPersonRoles` | `role`: `bestyrelse`, `direktion` eller `ejer`; titel "Bestyrelsesposter", "Direktørposter", "Ejerskaber" | "sidder X i bestyrelser" → kun bestyrelsesposterne |
+| grafer | nøgletal og år: 1 nøgletal → søjler, procent → linje, gæld/egenkapital → stablede søjler, 2–3 → grupperede; `years` = spurgte år, ellers 10 ved udvikling, ellers 5 | "gælden de sidste 5 år" → stablede søjler over 5 år |
+
+Beslægtede nøgletal (spurgt først, højst 4–5 på kort, højst 5 i listen): omsætning → bruttofortjeneste,
+resultat; bruttofortjeneste → resultat, ansatte; resultat → overskudsgrad, omsætning (bruttofortjeneste,
+når omsætning ikke er oplyst); egenkapital → soliditetsgrad, balancesum; gæld → egenkapital,
+soliditetsgrad, balancesum; soliditetsgrad → egenkapital, gæld; likviditetsgrad → gæld; balancesum →
+egenkapital, gæld; overskudsgrad → resultat, omsætning; EBITDA → resultat, omsætning; ansatte → ingen.
+
+### Virksomhed: svar-element og kontekst pr. spørgsmålstype
+
+Notation: `Graf(m)` = søjler, linje (procent), stablede søjler (gæld/egenkapital) eller grupperede
+søjler (2–3 nøgletal); `Liste[only]` = regnskabslisten; `Rækker[…]` = virksomhedsoplysninger med `rows`.
+
+| Spørgsmålstype (signal) | Øverst (fuld bredde) | Svar-element (lead) | Kontekst i rangorden |
+|---|---|---|---|
+| Nøgletal 1–3, evt. udvikling, antal år eller år | Hoved; kort (spurgte + beslægtede, 4–5; ingen ved et år) | Graf(m) (under 3 år med tal: Liste[only]); med år: Liste[only, year] og grafen, der dækker året, som første kontekst | Liste[only minus kortenes], andelsbjælker (balancenøgletal), vandfald (resultatnøgletal med omsætning), regnskabsanalyse, flerårstabel (fuld), historik (regnskab), resultatopgørelse eller balance (fuld, den nøgletallet hører til), relationer |
+| 4+ nøgletal, "tabel", "år for år" | Hoved; kort (spurgte) | Flerårstabel (fuld) | Graf(første), regnskabslisten, regnskabsanalyse, historik (regnskab) |
+| Direktion, bestyrelse, ledelse | Hoved | Personlisten med `roles` (alle ved "tidligere"/"udskiftning"); "hvad er der sket i ledelsen": historik (ledelse) først | Historik (ledelse), ejerliste, profil, kontaktpersoner, nyheder (3), reelle ejere |
+| Ejere, reelle ejere, koncern | Hoved | Ejerlisten (reelle → reelle ejere først; koncern → ejerdiagrammet i fuld bredde under hovedet) | De andre ejer-elementer, personlisten (nuværende), historik (ejerskab, ellers alle), nyheder (3), profil |
+| Revisor, revisorskift | Hoved; standardkort | Rækker[revisor, revisorskift, regnskabsperiode] (revisorskift: + revisoruafhængighed) | Revisoruafhængighed, graf (hovednøgletal), regnskabsanalyse, historik (regnskab), ejerliste |
+| Stiftet, status, branche, formål, adresse | Hoved (svarer); standardkort | Profil (formål/branche), historik (stamdata og status) eller kontakt (adresse) | Relationer, historik, Rækker[kommune, region, branchekode], graf, nyheder (3), produktionsenheder |
+| Telefon, e-mail, web, kontaktpersoner | Hoved | Kontakt (kontaktpersoner først, når de nævnes) | Den anden kontaktblok, produktionsenheder, personlisten (direktion), Rækker[kommune, region], profil, nyheder (3) |
+| Nyheder, historik | Hoved (standardkort ved historik) | Nyheder (5); historik → historikken (8) først ("sket med regnskabet": kun regnskaber) | Den anden af de to, relationer, profil |
+| Konkurs (status med konkursord) | Hoved; kort: egenkapital, resultat, soliditetsgrad, likviditetsgrad | "Status og historik": historikken med statusændringerne (8); uden statusbegivenheder hele historikken (hovedet viser status), aldrig en tom tilstand, når der er historik | Liste[gæld, balancesum], andelsbjælker, regnskabsanalyse, relationer, revisoruafhængighed |
+| Kredit, røde flag, "kan vi handle med dem" | Hoved; kort som ved konkurs | Kreditvurdering (hentes kun her og på fokus risiko) | Revisoruafhængighed, historik (status), andelsbjælker, regnskabsanalyse, relationer |
+| Score | Hoved; standardkort | Scoremåler | Graf, regnskabslisten, regnskabsanalyse, relationer |
+| Resultatopgørelse, balance, pengestrøm, regnskab | Hoved; standardkort | Det regnskab, der spørges om (fuld; "regnskabet": resultatopgørelse og balance); uden regnskab én tom tilstand, der siger hvorfor | Vandfald / andelsbjælker, regnskabsanalyse, Liste[de relevante nøgletal], historik (regnskab) |
+| P-enheder, ejendomme, besætning | Hoved | Produktionsenheder / ejendomme / besætning (fuld) | Kontakt, Rækker[kommune, region, branchekode], personlisten, profil, nyheder (3) |
+| Flere typer ("hvem ejer og hvem er revisor", "omsætning og direktør") | Hoved; kortene fra den første type, der har kort | Svarene i nævnt rækkefølge, hvert øverst i sin kolonne | Ranglisterne flettet efter rang, uden dubletter |
+| Fælles hale (efter hver rangliste) | | | Graf (hovednøgletal), historik (5), relationer, Rækker[kommune, region, branchekode], nyheder (3), profil, kontakt; bruges kun, til siden er fuld |
+
+### Person: svar-element og kontekst
+
+| Spørgsmålstype | Svar-element | Kontekst i rangorden |
+|---|---|---|
+| Bestyrelse, direktion, ejer, roller | Rollerne med `role` (nu; "tidligere" → ophørte; udvikling → tidsbånd; "roller" → alle som tidsbånd), 8, ¾ + stamoplysninger ¼ | Netværk (5), historik (5), risiko, ejerdiagram (ejer), nyheder (3) |
+| Konkurs | Risiko ¾ + stamoplysninger ¼ | Forløbet i selskaberne (historik, risiko), ophørte roller uden konkursselskaberne, netværk (3) |
+| Netværk | Netværket (8) ¾ + stamoplysninger ¼ | Aktive roller (5), historik (5), risiko |
+| Nyheder, historik | Nyheder (5) / historik (8) ¾ + stamoplysninger ¼ | Den anden, aktive roller, risiko |
+| Bopæl | Stamoplysninger (fuld) | Aktive roller, netværk, historik |
+| Ejerstruktur, koncern | Ejerdiagrammet (fuld) | Ejerskaber (show owner), netværk, risiko |
+| Fælles hale (efter hver rangliste) | | Aktive roller (5), netværk (3), historik (5), risiko, nyheder (3); bruges kun, til siden er fuld |
+
+### Regler og eksempler
+
+Reglerne ovenfor gælder også her: hovedet ejer identiteten; kort og regnskabsliste deler ikke
+nøgletal (listen får `only` uden kortenes, ellers `exclude`); ejerlisten viser revisoren, så
+spørges der om både ejere og revisor, svarer ejerlisten på begge, og revisor-rækkerne udelades (og
+omvendt står ejerlisten ikke som kontekst, når revisor-rækkerne er svaret); relationerne står aldrig
+ved siden af person- eller ejerlisten; højst én graf pr. side (søjler, linje, stablede eller
+grupperede; vandfald og andelsbjælker tæller ikke med, men står højst én gang hver); hvert element
+højst én gang; højst 12 elementer (viewSpecSchema). Opfølgningerne peger altid tilbage til hele siden
+("Hele økonomien" / "Hele overblikket") og derefter på fokusets naturlige næste spørgsmål.
+
+- "Hvad er soliditetsgraden i Eksempel Byg?" → kort (soliditetsgrad, egenkapital, gæld, omsætning),
+  linjegraf over soliditetsgraden (kolonne 1), andelsbjælker, regnskabsanalyse, historik (regnskaber),
+  virksomhedsoplysninger, nyheder; flerårstabel og balance nederst.
+- "Hvordan har gælden udviklet sig de sidste 5 år?" → kort med gæld først, stablede søjler over 5 år.
+- "Hvem er direktør i Eksempel Byg?" → personlisten med kun direktionen, ledelsesændringer, ejerliste,
+  profil, kontaktpersoner, nyheder.
+- "Hvem ejer, og hvem er revisor?" → standardkort, ejerlisten (med revisor) i kolonne 1, reelle ejere,
+  revisoruafhængighed, graf, regnskabsanalyse …; ejerdiagrammet nederst.
+- "Sidder Bo Eksempel i bestyrelser?" → bestyrelsesposterne ¾ + stamoplysninger ¼, netværk, historik,
+  risiko og nyheder to og to.
+
+**Links, resumé og tekstkort.** Det signerede `/k/`-link bærer spørgsmålet (`q=`, og modellens
+nøgletal som `qm=`), `/p/`-linket ligeså (`q=`), begge i den signerede payload; uden `q` er payloaden
+som før, så ældre links stadig verificeres, og et `q` over 300 tegn afvises. `/k/` og `/p/` læser
+spørgsmålet igen (uden navnet) og viser samme side som i chatten. `/e/`-links (portalen) er uændrede.
+Resuméet til modellen har "Svar: …" lige efter hovedlinjen (fx "Svar: Soliditetsgrad 2025: 54,1 %
+(2024: 55,6 %).", "Svar: Direktion: Anne Eksempel (direktør)." eller ved konkurs "Svar: Status: Under
+konkurs siden 02.02.2026." med status fra hovedet og datoen for den seneste statusændring, når den findes), og tekstkortet har en SVAR-sektion
+lige under navnet; begge følger elementernes filtre.
 
 ## Ikke i denne runde
 

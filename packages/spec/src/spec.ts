@@ -1,7 +1,8 @@
 import { z } from "zod";
+import { COMPANY_FACT_KEYS } from "./companyFacts.js";
 import { criterionSchema } from "./criteria.js";
 import { currencyUnit, formatAmount, formatNumber, formatPercent } from "./format.js";
-import { CHANGE_TYPES, type FinancialYear } from "./models.js";
+import { CHANGE_TYPES, type FinancialYear, type TimelineVM } from "./models.js";
 import { TEXT_SECTIONS_VARIANTS } from "./textSections.js";
 
 /**
@@ -124,6 +125,59 @@ export type PersonRolesShow = (typeof PERSON_ROLES_SHOW)[number];
 export const TIMELINE_FILTERS = ["risiko"] as const;
 
 /**
+ * Begivenhedernes kategorier i tidslinjen (TimelineEventVM.category, som kortet viser: "Ledelse",
+ * "Regnskab" …) som nøgler, så en tidslinje kan vise netop de begivenheder, spørgsmålet gælder
+ * (LassoTimeline `kinds`). En begivenhed hører til en nøgle, når kategorien med små bogstaver er den.
+ */
+export const TIMELINE_KINDS = ["stamdata", "ledelse", "regnskab", "status", "ejerskab"] as const;
+export type TimelineKind = (typeof TIMELINE_KINDS)[number];
+
+/** LassoPersonList `roles`: kun direktionen eller kun bestyrelsen (formand og suppleanter med). */
+export const PERSON_LIST_ROLES = ["direktion", "bestyrelse"] as const;
+export type PersonListRole = (typeof PERSON_LIST_ROLES)[number];
+
+/** LassoPersonRoles `role`: kun personens bestyrelsesposter, direktørposter eller ejerskaber. */
+export const PERSON_ROLE_FILTERS = ["bestyrelse", "direktion", "ejer"] as const;
+export type PersonRoleFilter = (typeof PERSON_ROLE_FILTERS)[number];
+
+/** Standardtitlen på en personliste med `roles`. */
+export const PERSON_LIST_ROLE_TITLES: Record<PersonListRole, string> = { direktion: "Direktion", bestyrelse: "Bestyrelse" };
+
+/** Hører rolleteksten til direktionen eller bestyrelsen? Suppleanter hører til bestyrelsen. */
+export function isListRole(role: string, filter: PersonListRole): boolean {
+  if (filter === "direktion") return /direkt/i.test(role);
+  return /bestyrelse|formand/i.test(role) || (/suppleant/i.test(role) && !/direkt/i.test(role));
+}
+
+/** Personerne i en virksomheds ledelse, der hører til `roles` (udeladt = alle). */
+export function peopleWithRole<T extends { role: string }>(people: readonly T[], roles?: PersonListRole): T[] {
+  return roles ? people.filter((p) => isListRole(p.role, roles)) : [...people];
+}
+
+/** Tidslinjen med kun de begivenheder, hvis kategori er en af `kinds` (udeladt = alle). */
+export function timelineOfKinds(t: TimelineVM, kinds?: readonly TimelineKind[]): TimelineVM {
+  if (!kinds?.length) return t;
+  const wanted = new Set<string>(kinds);
+  return { ...t, events: t.events.filter((e) => wanted.has(e.category.trim().toLowerCase())) };
+}
+
+const KIND_WORDS: Record<TimelineKind, { title: string; none: string }> = {
+  stamdata: { title: "Stamdata", none: "stamdataændringer" },
+  ledelse: { title: "Ledelsesændringer", none: "ledelsesændringer" },
+  regnskab: { title: "Regnskaber", none: "offentliggjorte regnskaber" },
+  status: { title: "Statusændringer", none: "statusændringer" },
+  ejerskab: { title: "Ejerskifter", none: "ejerskifter" },
+};
+
+/** Titel og tom tilstand for en tidslinje med `kinds`: "Statusændringer", "Ingen statusændringer registreret." */
+export function timelineKindsText(kinds: readonly TimelineKind[]): { title: string; empty: string } {
+  const words = kinds.map((k) => KIND_WORDS[k]);
+  const title = words.length === 1 ? words[0]!.title : "Historik";
+  const none = words.map((w) => w.none).join(" eller ");
+  return { title, empty: `Ingen ${none} registreret.` };
+}
+
+/**
  * "Se alle" på en smagsprøve (overblikket): 'expand' (standard) folder listen ud på stedet; et
  * fokusnavn åbner i stedet den fane, der ejer elementet ("Se alle 12 begivenheder i Historik"),
  * når værten kan skifte fane (open-focus). Uden den kapabilitet folder listen ud som før.
@@ -227,6 +281,10 @@ export const peopleListSchema = z.object({
   type: z.literal("LassoPersonList"),
   company: companyRef,
   show: z.enum(["current", "all"]).default("current").describe("'all' tager fratrådte med, så man kan se udskiftning."),
+  roles: z
+    .enum(PERSON_LIST_ROLES)
+    .optional()
+    .describe("Kun 'direktion' (direktører) eller kun 'bestyrelse' (med formand og suppleanter). Udeladt = hele ledelsen. Titlen følger filteret."),
   title: z.string().max(80).optional(),
 });
 
@@ -274,6 +332,12 @@ export const timelineSchema = z
       .enum(TIMELINE_FILTERS)
       .optional()
       .describe("Kun med person: 'risiko' viser kun forløbet i de selskaber, der er gået konkurs eller tvangsopløst (roller ind og ud og selskabets status)."),
+    kinds: z
+      .array(z.enum(TIMELINE_KINDS))
+      .min(1)
+      .max(TIMELINE_KINDS.length)
+      .optional()
+      .describe("Kun med company: vis kun disse slags begivenheder ('ledelse', 'regnskab', 'status', 'stamdata', 'ejerskab'). Tom tilstand, når ingen er registreret."),
     more: z.enum(MORE_HISTORIK).optional().describe(moreDescription("historik")),
   })
   .refine(exactlyOneEntity, EXACTLY_ONE_ENTITY)
@@ -329,6 +393,25 @@ export const keyValueListSchema = z.object({
     .max(METRICS.length)
     .optional()
     .describe("Kun variant 'financials': nøgletal, der allerede står på siden (fx i LassoKeyFigureCards), og som listen derfor udelader."),
+  only: z
+    .array(metric)
+    .min(1)
+    .max(METRICS.length)
+    .optional()
+    .describe("Kun variant 'financials': vis kun disse nøgletal (i denne rækkefølge) plus regnskabsperiode og udgivelsesdato."),
+  year: z
+    .number()
+    .int()
+    .min(1990)
+    .max(2100)
+    .optional()
+    .describe("Kun variant 'financials': det regnskabsår, årsvælgeren starter på. Findes året ikke, vises seneste år med en note i kildelinjen."),
+  rows: z
+    .array(z.enum(COMPANY_FACT_KEYS))
+    .min(1)
+    .max(COMPANY_FACT_KEYS.length)
+    .optional()
+    .describe("Kun variant 'company': vis kun disse rækker (fx ['revisor','revisorskift','regnskabsperiode']). Det, hovedet, kontaktblokken og ejerlisten viser på siden, gentages stadig ikke."),
 });
 
 export const contactSchema = z.object({
@@ -437,6 +520,10 @@ export const personRolesSchema = z.object({
     .enum(TIMELINE_FILTERS)
     .optional()
     .describe("Kun show 'ended': 'risiko' udelader selskaber, der er gået konkurs eller tvangsopløst (de står i risikoens forløb)."),
+  role: z
+    .enum(PERSON_ROLE_FILTERS)
+    .optional()
+    .describe("Kun personens 'bestyrelse'-poster (formand og suppleant med), 'direktion'-poster eller 'ejer'-skaber. Udeladt = alle roller. Titlen følger filteret."),
   more: z.enum(MORE_ROLLER).optional().describe(moreDescription("roller")),
   title: z.string().max(80).optional(),
 });

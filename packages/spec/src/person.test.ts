@@ -18,6 +18,8 @@ import {
   PERSON_FOCUS_LABELS,
   PERSON_FOCUSES,
   PERSON_GRAPH_DEPTH,
+  parseAsk,
+  personWithRole,
   personCompanies,
   personCounts,
   personFactOptions,
@@ -450,4 +452,88 @@ test("personTimeline: indtrådt/udtrådt som X i et selskab, ejerskab og konkurs
   assert.equal(t.events.length, 6);
   // "Adm. direktør" skrives med småt midt i sætningen.
   assert.ok(t.events.some((e) => e.title === "Indtrådt som adm. direktør i Data Eksempel A/S"));
+});
+
+/* ---------- Spørgsmålet styrer formen: personsiden (ask.ts) ---------- */
+
+const personAsk = (q: string) => parseAsk(q, "person", { name: person.name });
+
+test("composePerson spørgsmål: 'sidder X i bestyrelser' giver kun bestyrelsesposterne (¾) + stamoplysninger (¼) og kontekst to og to", () => {
+  const spec = composePerson(ID, fullDataset(), { ask: personAsk("Sidder Mette Holm Eksempel i bestyrelser?") });
+  assert.equal(spec.subtitle, "Bestyrelsesposter");
+  assert.deepEqual(spec.components.slice(0, 3).map(shape), ["LassoPersonHead", "LassoPersonRoles@1/three-quarters[current,#8]", "LassoPersonFacts@2/quarter"]);
+  const roles = spec.components[1]!;
+  assert.ok(roles.type === "LassoPersonRoles" && roles.role === "bestyrelse");
+  // Konteksten: netværk, historik, risiko og nyheder, to og to (ingen komponent to gange).
+  const rest = spec.components.slice(3).filter((c) => c.type !== "LassoFollowUps");
+  assert.deepEqual(rest.map((c) => c.type).sort(), ["LassoNews", "LassoPersonNetwork", "LassoPersonRisk", "LassoTimeline"]);
+  assert.ok(rest.every((c) => c.column === 1 || c.column === 2));
+  assertNoDuplicates(spec.components);
+  // Udsnittet: kun bestyrelsesroller (én aktiv, én ophørt).
+  assert.deepEqual(personRoleRows(personWithRole(person, "bestyrelse"), "current").map((r) => r.companyName), ["Data Eksempel A/S"]);
+});
+
+test("composePerson spørgsmål: tidligere poster giver de ophørte, udviklingen giver tidsbåndene", () => {
+  const ended = composePerson(ID, fullDataset(), { ask: personAsk("hvilke bestyrelser har Mette tidligere siddet i") }).components[1]!;
+  assert.ok(ended.type === "LassoPersonRoles" && ended.show === "ended" && ended.role === "bestyrelse");
+  const all = composePerson(ID, fullDataset(), { ask: personAsk("hvordan har Mettes direktørposter udviklet sig") }).components[1]!;
+  assert.ok(all.type === "LassoPersonRoles" && all.show === "all" && all.role === "direktion");
+  const owner = composePerson(ID, fullDataset(), { ask: personAsk("hvilke selskaber ejer Mette") });
+  assert.equal(owner.subtitle, "Ejerskaber");
+  assert.ok(owner.components[1]!.type === "LassoPersonRoles" && owner.components[1]!.role === "ejer");
+  // Ejerdiagrammet står som kontekst, når de ejede selskaber selv ejer selskaber.
+  assert.ok(owner.components.some((c) => c.type === "LassoOwnershipDiagram"));
+});
+
+test("composePerson spørgsmål: konkurser giver risikoen som svar og forløbet i selskaberne; de ophørte roller uden konkursselskaberne", () => {
+  const spec = composePerson(ID, fullDataset(), { ask: personAsk("har Mette været med i konkurser?") });
+  assert.deepEqual(spec.components.slice(0, 3).map(shape), ["LassoPersonHead", "LassoPersonRisk@1/three-quarters", "LassoPersonFacts@2/quarter"]);
+  const risk = spec.components.find((c) => c.type === "LassoTimeline");
+  assert.ok(risk?.type === "LassoTimeline" && risk.filter === "risiko");
+  // Ingen andre ophørte roller end konkursselskabet: den liste udelades (tom kontekst), og siden fyldes
+  // i stedet med de aktive roller fra den fælles hale.
+  assert.ok(!spec.components.some((c) => c.type === "LassoPersonRoles" && c.show === "ended"));
+  assert.ok(spec.components.some((c) => c.type === "LassoPersonRoles" && c.show === "current"));
+  assertNoDuplicates(spec.components);
+});
+
+test("composePerson spørgsmål: netværket som svar; tomme kontekstmoduler udelades", () => {
+  const ds = fullDataset();
+  ds.news[ID] = { lassoId: ID, items: [] };
+  const spec = composePerson(ID, ds, { ask: personAsk("hvem sidder Mette sammen med") });
+  assert.equal(spec.subtitle, "Netværk");
+  assert.equal(spec.components[1]!.type, "LassoPersonNetwork");
+  assert.equal((spec.components[1] as { limit?: number }).limit, 8);
+  assert.ok(!spec.components.some((c) => c.type === "LassoNews"));
+  // Også uden netværk står svaret (den tomme tilstand er svaret).
+  ds.personNetworks[ID] = { lassoId: ID, people: [] };
+  assert.equal(composePerson(ID, ds, { ask: personAsk("hvem sidder Mette sammen med") }).components[1]!.type, "LassoPersonNetwork");
+});
+
+test("composePerson spørgsmål: bopæl og ejerstruktur står i fuld bredde; stamoplysningerne kun én gang", () => {
+  const home = composePerson(ID, fullDataset(), { ask: personAsk("hvor bor Mette") });
+  assert.equal(home.subtitle, "Bopæl");
+  assert.equal(shape(home.components[1]!), "LassoPersonFacts");
+  assert.equal(home.components.filter((c) => c.type === "LassoPersonFacts").length, 1);
+  const group = composePerson(ID, fullDataset(), { ask: personAsk("hvordan ser Mettes ejerstruktur ud") });
+  const diagram = group.components[1]!;
+  assert.ok(diagram.type === "LassoOwnershipDiagram" && !diagram.column && ownershipGraphKey(diagram) === GRAPH_KEY);
+});
+
+test("composePerson spørgsmål: generelt spørgsmål giver fokus-siden; opfølgningen peger tilbage til hele siden", () => {
+  const ds = fullDataset();
+  assert.deepEqual(composePerson(ID, ds, { ask: personAsk("hvem er Mette Holm Eksempel") }), composePerson(ID, ds));
+  const f = composePerson(ID, ds, { ask: personAsk("sidder Mette i bestyrelser") }).components.find((c) => c.type === "LassoFollowUps");
+  assert.ok(f?.type === "LassoFollowUps" && f.prompts[0]!.label === "Hele overblikket" && /Hvem er Mette Holm Eksempel\?/.test(f.prompts[0]!.prompt));
+});
+
+test("composePersonProbe spørgsmål: henter alt i planen med personsidens ejerdiagram; uden emne som fokus", () => {
+  const types = composePersonProbe(ID, undefined, personAsk("hvilke selskaber ejer Mette")).components.map((c) =>
+    c.type === "LassoOwnershipDiagram" ? `${c.type}${ownershipGraphKey(c).slice(ID.length)}` : c.type,
+  );
+  assert.equal(types[0], "LassoPersonHead");
+  for (const t of ["LassoPersonNetwork", "LassoTimeline", "LassoNews", "LassoOwnershipDiagram|0|2|"]) assert.ok(types.includes(t), t);
+  // Roller, risiko og stamoplysninger afledes af personen: ét opslag (hovedet).
+  assert.ok(!types.includes("LassoPersonRoles") && !types.includes("LassoPersonRisk"));
+  assert.deepEqual(composePersonProbe(ID, undefined, personAsk("hvem er Mette")), composePersonProbe(ID, "overblik"));
 });

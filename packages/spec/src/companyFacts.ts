@@ -10,7 +10,30 @@ import type { ViewComponent } from "./spec.js";
  * ansatte i CVR, branche), kontaktblokken ejer telefon/e-mail/web, og ejerlisten viser revisor
  * med skiftedato. Står de på siden, viser listen kun det, de ikke viser.
  */
+/**
+ * Rækkernes nøgler, så et element kan vise netop de rækker, spørgsmålet gælder (LassoKeyValueList
+ * variant "company" med `rows`, fx revisor, seneste revisorskift og regnskabsperiode).
+ */
+export const COMPANY_FACT_KEYS = [
+  "revisor",
+  "revisorskift",
+  "regnskabsperiode",
+  "stiftet",
+  "form",
+  "branche",
+  "ansatte",
+  "adresse",
+  "branchekode",
+  "kommune",
+  "region",
+  "telefon",
+  "email",
+  "web",
+] as const;
+export type CompanyFactKey = (typeof COMPANY_FACT_KEYS)[number];
+
 export interface CompanyFact {
+  key: CompanyFactKey;
   label: string;
   value?: string;
   /** Revisorens Lasso-ID, så navnet kan åbnes i værter med drill-down. */
@@ -24,6 +47,8 @@ export interface CompanyFactOptions {
   hideContact?: boolean;
   /** LassoOwnerList står på siden og viser revisor og skiftedato. */
   hideAuditor?: boolean;
+  /** Kun disse rækker, i denne rækkefølge (efter reglerne ovenfor: hovedet ejer stadig identiteten). */
+  rows?: readonly CompanyFactKey[];
 }
 
 /** "2025-01-01" -> "01.01" (dag.måned, uden år, katalog 09: "01.01 – 31.12"). */
@@ -60,27 +85,30 @@ export function companyFacts(company: CompanyVM, ownership: OwnershipVM | undefi
   const auditor = ownership?.auditor;
   const rows: CompanyFact[] = [];
   if (!options.hideAuditor) {
-    if (auditor?.name || lastYear) rows.push({ label: "Revisor", value: auditor?.name, lassoId: auditor?.lassoId });
-    if (auditor?.from) rows.push({ label: "Seneste revisorskift", value: formatDate(auditor.from) });
+    if (auditor?.name || lastYear) rows.push({ key: "revisor", label: "Revisor", value: auditor?.name, lassoId: auditor?.lassoId });
+    if (auditor?.from) rows.push({ key: "revisorskift", label: "Seneste revisorskift", value: formatDate(auditor.from) });
   }
-  rows.push({ label: "Regnskabsperiode", value: accountingPeriod(lastYear) });
+  rows.push({ key: "regnskabsperiode", label: "Regnskabsperiode", value: accountingPeriod(lastYear) });
   if (!options.hideIdentity) {
     rows.push(
-      { label: "Stiftet", value: company.founded ? formatDate(company.founded) : undefined },
-      { label: "Virksomhedsform", value: company.form },
-      { label: "Branche", value: company.industryText ? `${company.industryText}${company.industryCode ? ` (${company.industryCode})` : ""}` : undefined },
-      { label: "Ansatte", value: employeesText(company, lastYear) },
+      { key: "stiftet", label: "Stiftet", value: company.founded ? formatDate(company.founded) : undefined },
+      { key: "form", label: "Virksomhedsform", value: company.form },
+      { key: "branche", label: "Branche", value: company.industryText ? `${company.industryText}${company.industryCode ? ` (${company.industryCode})` : ""}` : undefined },
+      { key: "ansatte", label: "Ansatte", value: employeesText(company, lastYear) },
     );
-    if (!options.hideContact) rows.push({ label: "Adresse", value: [a?.street, [a?.zip, a?.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || undefined });
+    if (!options.hideContact) rows.push({ key: "adresse", label: "Adresse", value: [a?.street, [a?.zip, a?.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || undefined });
   } else {
     // Hovedet viser branchens tekst; koden er det eneste nye.
-    rows.push({ label: "Branchekode", value: company.industryCode });
+    rows.push({ key: "branchekode", label: "Branchekode", value: company.industryCode });
   }
-  rows.push({ label: "Kommune", value: a?.municipality }, { label: "Region", value: a?.region });
+  rows.push({ key: "kommune", label: "Kommune", value: a?.municipality }, { key: "region", label: "Region", value: a?.region });
   if (!options.hideContact) {
-    rows.push({ label: "Telefon", value: company.phone }, { label: "E-mail", value: company.email }, { label: "Web", value: company.website });
+    rows.push({ key: "telefon", label: "Telefon", value: company.phone }, { key: "email", label: "E-mail", value: company.email }, { key: "web", label: "Web", value: company.website });
   }
-  return rows.filter((r) => r.value !== undefined || r.label === "Revisor");
+  const shown = rows.filter((r) => r.value !== undefined || r.key === "revisor");
+  if (!options.rows) return shown;
+  // Kun de rækker, elementet er bedt om, i den bedte rækkefølge.
+  return options.rows.flatMap((k) => shown.filter((r) => r.key === k));
 }
 
 /** Hvad der ellers står på siden for virksomheden, afledt af specen (samme regel i komponisten og i LassoView). */

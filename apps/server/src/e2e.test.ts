@@ -422,3 +422,89 @@ test("ukendt delt side giver 404 med pæn side", async () => {
   assert.equal(res.status, 404);
   assert.match(await res.text(), /Visningen findes ikke/);
 });
+
+/* ---------- Spørgsmålet styrer formen (question på show_company og show_person) ---------- */
+
+const texts = (res: Awaited<ReturnType<Client["callTool"]>>) => (res.content as { text: string }[]).map((c) => c.text);
+const bootOf = async (link: string) => JSON.parse(/window\.__LASSO_BOOT__=(.*?);<\/script>/s.exec(await (await fetch(link)).text())![1]!) as { spec: ViewSpec };
+
+test("show_company og show_person tager question (og metrics); instruktionerne beder om spørgsmålet ordret", async () => {
+  const { tools } = await client.listTools();
+  const props = (name: string) => (tools.find((t) => t.name === name)!.inputSchema.properties ?? {}) as Record<string, { type?: string; maxLength?: number; description?: string }>;
+  assert.equal(props("show_company").question?.maxLength, 300);
+  assert.match(props("show_company").question?.description ?? "", /Brugerens spørgsmål ordret/);
+  assert.ok(props("show_company").metrics);
+  assert.match(props("show_company").focus?.description ?? "", /Sæt kun focus, når spørgsmålet er generelt/);
+  assert.equal(props("show_person").question?.maxLength, 300);
+  assert.match(client.getInstructions() ?? "", /Send altid brugerens spørgsmål ordret i question\./);
+});
+
+test("show_company 'hvad er soliditetsgraden': kort med soliditetsgraden først, linjegraf, en hel side; resuméet svarer først", async () => {
+  const res = await client.callTool({ name: "show_company", arguments: { company: "Eksempel Byg", question: "Hvad er soliditetsgraden i Eksempel Byg?" } });
+  assert.ok(!res.isError, JSON.stringify(res.content));
+  const sc = res.structuredContent as { spec: ViewSpec; link: string; summary: string; card?: string };
+  const cards = sc.spec.components.find((c) => c.type === "LassoKeyFigureCards");
+  assert.ok(cards?.type === "LassoKeyFigureCards" && cards.metrics![0] === "soliditetsgrad");
+  const chart = sc.spec.components.find((c) => c.type === "LassoLineChart");
+  assert.ok(chart?.type === "LassoLineChart" && chart.metric === "soliditetsgrad" && chart.column === 1);
+  assert.equal(sc.spec.subtitle, "Soliditetsgrad");
+  assert.ok(sc.spec.components.length >= 8, sc.spec.components.map((c) => c.type).join(", "));
+  // Resuméet: "Svar:" lige efter hovedlinjen; tekstkortet svarer også først.
+  const lines = texts(res)[0]!.split("\n");
+  const head = lines.findIndex((l) => l.startsWith("Eksempel Byg A/S (CVR 99000001"));
+  assert.match(lines[head + 1]!, /^Svar: Soliditetsgrad 2025: [\d,]+ % \(2024: [\d,]+ %\)\.$/);
+  assert.match(sc.card ?? "", /SVAR[\s\S]*Soliditetsgrad 2025/);
+  // Det delte link bærer spørgsmålet og åbner samme svar.
+  assert.match(sc.link, /[?&]q=/);
+  const boot = await bootOf(sc.link);
+  assert.deepEqual(boot.spec.components.map((c) => c.type), sc.spec.components.filter((c) => c.type !== "LassoFollowUps").map((c) => c.type));
+});
+
+test("show_company 'hvordan har gælden udviklet sig': stablede søjler over 5 år; regnskabslisten deler ikke nøgletal med kortene", async () => {
+  const res = await client.callTool({ name: "show_company", arguments: { company: "99000001", question: "Hvordan har gælden udviklet sig de sidste 5 år?" } });
+  const spec = (res.structuredContent as { spec: ViewSpec }).spec;
+  const chart = spec.components.find((c) => c.type === "LassoStackedBarChart");
+  assert.ok(chart?.type === "LassoStackedBarChart" && chart.years === 5 && chart.column === 1);
+  const cards = spec.components.find((c) => c.type === "LassoKeyFigureCards");
+  assert.ok(cards?.type === "LassoKeyFigureCards" && cards.metrics![0] === "gaeld");
+  for (const c of spec.components) {
+    if (c.type === "LassoKeyValueList" && c.variant === "financials" && c.only) assert.ok(!c.only.some((m) => cards.metrics!.includes(m)));
+  }
+  assert.match(texts(res)[0]!, /Svar: Gæld i alt 2025: [^\n]+\(2024: [^;]+; 2021: /);
+});
+
+test("show_company 'hvem er direktør': personlisten med kun direktionen; resuméet svarer med navnet", async () => {
+  const res = await client.callTool({ name: "show_company", arguments: { company: "Eksempel Byg", question: "Hvem er direktør i Eksempel Byg?" } });
+  const spec = (res.structuredContent as { spec: ViewSpec }).spec;
+  const list = spec.components.find((c) => c.type === "LassoPersonList");
+  assert.ok(list?.type === "LassoPersonList" && list.roles === "direktion" && list.column === 1);
+  assert.equal(spec.subtitle, "Direktion");
+  assert.match(texts(res)[0]!, /Svar: Direktion: Anne Eksempel \(direktør\)\./);
+  // Et generelt spørgsmål giver fokus-siden som før (her økonomien).
+  const how = await client.callTool({ name: "show_company", arguments: { company: "99000001", question: "Hvordan går det med Eksempel Byg?" } });
+  const howSpec = (how.structuredContent as { spec: ViewSpec }).spec;
+  assert.equal(howSpec.subtitle, "Økonomi");
+  assert.doesNotMatch(texts(how)[0]!, /Svar:/);
+});
+
+test("show_company 'er de gået konkurs': status og historik som svar; resuméet svarer med status fra hovedet", async () => {
+  const res = await client.callTool({ name: "show_company", arguments: { company: "99000011", question: "Er Eksempel Energi gået konkurs?" } });
+  assert.ok(!res.isError, JSON.stringify(res.content));
+  const spec = (res.structuredContent as { spec: ViewSpec }).spec;
+  const lead = spec.components.find((c) => c.column === 1);
+  assert.ok(lead?.type === "LassoTimeline" && lead.title === "Status og historik" && lead.kinds === undefined, JSON.stringify(lead));
+  assert.match(texts(res)[0]!, /\nSvar: Status: Under konkurs\.\n/);
+});
+
+test("show_person 'sidder X i bestyrelser': kun bestyrelsesposterne; linket /p/ bærer spørgsmålet", async () => {
+  const res = await client.callTool({ name: "show_person", arguments: { person: "Bo Eksempel", question: "Sidder Bo Eksempel i bestyrelser?" } });
+  assert.ok(!res.isError, JSON.stringify(res.content));
+  const sc = res.structuredContent as { spec: ViewSpec; link: string };
+  const roles = sc.spec.components[1];
+  assert.ok(roles?.type === "LassoPersonRoles" && roles.role === "bestyrelse" && roles.width === "three-quarters");
+  assert.equal(sc.spec.subtitle, "Bestyrelsesposter");
+  assert.match(texts(res)[0]!, /Svar: Bestyrelsesposter: .*Eksempel/);
+  assert.match(sc.link, /\/p\/CVR-3-\d+\?.*q=/);
+  const boot = await bootOf(sc.link);
+  assert.equal(boot.spec.subtitle, "Bestyrelsesposter");
+});

@@ -1,5 +1,5 @@
 import type { CompanyVM, TextSegment, TimelineEventVM, TimelineVM } from "./models.js";
-import type { PersonRolesShow, ViewComponent } from "./spec.js";
+import type { PersonRoleFilter, PersonRolesShow, ViewComponent } from "./spec.js";
 
 /**
  * Personsiden (katalog 16). Én person på tværs af alle selskaber: hoved, roller over tid,
@@ -100,6 +100,29 @@ export function roleKind(role: string, group?: string): PersonRoleKind {
   if (/management|direktion|ledelse/.test(g) || /direkt|ceo|adm\./.test(r)) return "direction";
   if (/founder|stift/.test(g) || /stift/.test(r)) return "founder";
   return "other";
+}
+
+/** LassoPersonRoles `role` som rolletyper: bestyrelse (formand og suppleant med), direktion, ejer. */
+const ROLE_FILTER_KINDS: Record<PersonRoleFilter, PersonRoleKind> = { bestyrelse: "board", direktion: "direction", ejer: "owner" };
+
+/** Standardtitlen på personens roller med `role`. */
+export const PERSON_ROLE_FILTER_TITLES: Record<PersonRoleFilter, string> = { bestyrelse: "Bestyrelsesposter", direktion: "Direktørposter", ejer: "Ejerskaber" };
+
+/** Tom tilstand for personens roller med `role`. */
+export const PERSON_ROLE_FILTER_EMPTY: Record<PersonRoleFilter, string> = {
+  bestyrelse: "Personen har ingen bestyrelsesposter i CVR.",
+  direktion: "Personen har ingen direktørposter i CVR.",
+  ejer: "Personen ejer ikke selskaber i CVR.",
+};
+
+/**
+ * Personen med kun de roller, `role` gælder (udeladt = alle), så rollelister, tidsbånd, tekstkort og
+ * resumé viser samme udsnit uden egen filterlogik.
+ */
+export function personWithRole(p: PersonVM, role?: PersonRoleFilter): PersonVM {
+  if (!role) return p;
+  const kind = ROLE_FILTER_KINDS[role];
+  return { ...p, roles: p.roles.filter((r) => r.kind === kind) };
 }
 
 export const ROLE_KIND_LABELS: Record<PersonRoleKind, string> = {

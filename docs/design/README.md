@@ -86,6 +86,8 @@ Tilstande: hvile, hover (tekst ink + divider-streg), valgt, fokus (1 px koral ka
 
 ### Layout, fra spørgsmål til skærm (30, node `J48-0`)
 
+`packages/spec/src/ask.ts` er serverens implementering af Paper 30 for `show_company` og `show_person` med `question`: spørgsmålet ordret → spørgsmålsprofil (`parseAsk`) → en hel side med svar-elementet først og kontekst fra hele kataloget (`askPlan`, se `docs/portal.md`, "Spørgsmålet styrer formen").
+
 `LAYOUT_RULES` i `packages/spec/src/catalog.ts` står i `render_view`-beskrivelsen efter `COMPOSITION_RULES` og er det, modellen slår op i: tre svarniveauer (A Element, B Sektion, C Side), ni mønstre (1 Overblik, 2 Fokus, 3 Ligeværdige, 4 Liste først, 5 Sammenligning, 6 Tidslinje, 7 Fortælling, 8 Kortgitter, 9 Harmonika) og foldreglerne på 1440/768/390. Mønster 1–7 tegnes med bredderne ¼/½/¾/fuld og `column` i `LassoView`; 8 og 9 har egne primitiver:
 
 ```ts

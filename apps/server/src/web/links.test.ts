@@ -54,3 +54,48 @@ test("personlinket /p/ bærer personfokus, og fokus er signeret; overblik står 
   assert.deepEqual(verifyPersonLink(config, "CVR-3-4000000002", { ...query(plain), f: "risiko" }, NOW), { ok: false, reason: "invalid" });
   assert.equal(personLink(config, "CVR-3-4000000002", undefined, NOW), plain);
 });
+
+test("linket bærer spørgsmålet (q), og det er signeret; modellens nøgletal (qm) med", () => {
+  const url = companyLink(config, { cvr: "34580820", metric: "omsaetning", years: 5, question: "Hvad er soliditetsgraden i Novo?", metrics: ["soliditetsgrad"] }, NOW);
+  const q = query(url);
+  assert.equal(q.q, "Hvad er soliditetsgraden i Novo?");
+  assert.equal(q.qm, "soliditetsgrad");
+  assert.deepEqual(verifyCompanyLink(config, "34580820", q, NOW), {
+    ok: true,
+    link: { cvr: "34580820", metric: "omsaetning", years: 5, question: "Hvad er soliditetsgraden i Novo?", metrics: ["soliditetsgrad"] },
+  });
+  // Et andet spørgsmål eller andre nøgletal med samme signatur afvises; qm uden q og ukendte nøgletal også.
+  assert.deepEqual(verifyCompanyLink(config, "34580820", { ...q, q: "Hvem ejer Novo?" }, NOW), { ok: false, reason: "invalid" });
+  assert.deepEqual(verifyCompanyLink(config, "34580820", { ...q, qm: "gaeld" }, NOW), { ok: false, reason: "invalid" });
+  assert.deepEqual(verifyCompanyLink(config, "34580820", { ...q, q: undefined }, NOW), { ok: false, reason: "invalid" });
+  assert.deepEqual(verifyCompanyLink(config, "34580820", { ...q, qm: "salg" }, NOW), { ok: false, reason: "invalid" });
+  // Punktummer i spørgsmålet kan ikke flytte felterne i signaturen.
+  const dots = query(companyLink(config, { cvr: "34580820", metric: "omsaetning", years: 5, focus: "oekonomi", question: "a.b.c" }, NOW));
+  assert.equal(verifyCompanyLink(config, "34580820", dots, NOW).ok, true);
+  assert.deepEqual(verifyCompanyLink(config, "34580820", { ...dots, f: undefined, q: "oekonomi.q=a.b.c" }, NOW), { ok: false, reason: "invalid" });
+});
+
+test("gamle links uden q er stadig gyldige, og et spørgsmål kan ikke sættes på bagefter", () => {
+  // Samme payload som før spørgsmålene: "k1.<cvr>.<metric>.<years>.<exp>[.<focus>]".
+  const old = query(companyLink(config, { cvr: "34580820", metric: "resultat", years: 10, focus: "oekonomi" }, NOW));
+  assert.equal(old.q, undefined);
+  assert.deepEqual(verifyCompanyLink(config, "34580820", old, NOW), { ok: true, link: { cvr: "34580820", metric: "resultat", years: 10, focus: "oekonomi" } });
+  assert.deepEqual(verifyCompanyLink(config, "34580820", { ...old, q: "hvem ejer" }, NOW), { ok: false, reason: "invalid" });
+  const person = query(personLink(config, "CVR-3-4000000002", "risiko", NOW));
+  assert.deepEqual(verifyPersonLink(config, "CVR-3-4000000002", person, NOW), { ok: true, lassoId: "CVR-3-4000000002", focus: "risiko" });
+  assert.deepEqual(verifyPersonLink(config, "CVR-3-4000000002", { ...person, q: "sidder hun i bestyrelser" }, NOW), { ok: false, reason: "invalid" });
+});
+
+test("et spørgsmål over 300 tegn (eller tomt) afvises; linket selv klipper det til 300", () => {
+  const long = "x".repeat(301);
+  const url = companyLink(config, { cvr: "34580820", metric: "omsaetning", years: 5, question: long }, NOW);
+  assert.equal(query(url).q!.length, 300);
+  assert.equal(verifyCompanyLink(config, "34580820", query(url), NOW).ok, true);
+  assert.deepEqual(verifyCompanyLink(config, "34580820", { ...query(url), q: long }, NOW), { ok: false, reason: "invalid" });
+  assert.deepEqual(verifyCompanyLink(config, "34580820", { ...query(url), q: " " }, NOW), { ok: false, reason: "invalid" });
+  const p = query(personLink(config, "CVR-3-4000000002", undefined, "Sidder Bo i bestyrelser?", NOW));
+  assert.equal(p.q, "Sidder Bo i bestyrelser?");
+  assert.deepEqual(verifyPersonLink(config, "CVR-3-4000000002", p, NOW), { ok: true, lassoId: "CVR-3-4000000002", question: "Sidder Bo i bestyrelser?" });
+  assert.deepEqual(verifyPersonLink(config, "CVR-3-4000000002", { ...p, q: long }, NOW), { ok: false, reason: "invalid" });
+  assert.deepEqual(verifyPersonLink(config, "CVR-3-4000000002", { ...p, qm: "resultat" }, NOW), { ok: false, reason: "invalid" });
+});
