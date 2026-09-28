@@ -45,10 +45,23 @@ export function Section({
   );
 }
 
+/**
+ * Statusens tone (katalog 05.7): Aktiv i tekstfarve, konkurs/tvangsopløsning mørk rød,
+ * likvidation warning-tekst, ophørt muted, "Ny" koral tekst. Likvidation har ikke egen statusKind
+ * i modellen (den er "warning" ligesom konkurs), så den skelnes på ordet.
+ */
+export type StatusTone = "active" | "warning" | "liquidation" | "inactive" | "new";
+
+export function statusTone(status: string | undefined, kind: CompanyVM["statusKind"] | "new" | undefined): StatusTone {
+  if (kind === "new" || (status && /^ny$/i.test(status.trim()))) return "new";
+  if (status && /likvidation/i.test(status) && !/konkurs|tvangs/i.test(status)) return "liquidation";
+  return kind ?? "inactive";
+}
+
 /** Regel 1: status er ren tekst i vægt 500 — ingen pille, prik eller farvet flade. */
-export function StatusBadge({ status, kind }: { status?: string; kind?: CompanyVM["statusKind"] }) {
+export function StatusBadge({ status, kind }: { status?: string; kind?: CompanyVM["statusKind"] | "new" }) {
   if (!status) return null;
-  return <span className={`lasso-badge lasso-badge--${kind ?? "inactive"}`}>{status}</span>;
+  return <span className={`lasso-badge lasso-badge--${statusTone(status, kind)}`}>{status}</span>;
 }
 
 /** Regel 2: ingen dekorative badges. Bevaret som ren tekst, så eksisterende kald virker. */

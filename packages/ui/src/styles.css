@@ -220,7 +220,7 @@
 .lasso-notice { font-size: var(--lasso-fs-sm); color: var(--lasso-text-3); background: var(--lasso-surface-2); border-left: 3px solid var(--lasso-border-strong); padding: 10px 14px; }
 
 /* ---------- Knapper og badges ---------- */
-.lasso-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: var(--lasso-btn-h); padding: 0 14px; border-radius: var(--lasso-radius); border: 1px solid var(--lasso-border-strong); background: var(--lasso-surface); color: var(--lasso-text-2); font-size: var(--lasso-fs-sm); font-weight: 600; cursor: pointer; white-space: nowrap; }
+.lasso-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: var(--lasso-btn-h); padding: 0 14px; border-radius: var(--lasso-radius); border: 1px solid var(--lasso-border-strong); background: var(--lasso-surface); color: var(--lasso-text-2); font-size: var(--lasso-fs-btn); line-height: var(--lasso-lh); font-weight: var(--lasso-fw-medium); cursor: pointer; white-space: nowrap; }
 .lasso-btn:hover { background: var(--lasso-surface-2); border-color: var(--lasso-icon); }
 .lasso-btn:focus-visible, .lasso-chip__remove:focus-visible, .lasso-link:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
 .lasso-btn:disabled { opacity: 0.5; cursor: default; }
@@ -237,7 +237,10 @@
 .lasso-badge { display: inline; font-size: inherit; font-weight: 500; color: var(--lasso-text-2); white-space: nowrap; }
 .lasso-badge--active { color: var(--lasso-text-2); }
 .lasso-badge--warning { color: var(--lasso-bankrupt); }
-.lasso-badge--inactive, .lasso-badge--demo, .lasso-badge--plain { color: var(--lasso-muted); font-weight: 400; }
+.lasso-badge--inactive { color: var(--lasso-muted); }
+.lasso-badge--liquidation { color: var(--lasso-status-liquidation); }
+.lasso-badge--new { color: var(--lasso-status-new); }
+.lasso-badge--demo, .lasso-badge--plain { color: var(--lasso-muted); font-weight: 400; }
 
 /* ---------- Kort ---------- */
 .lasso-card { background: var(--lasso-surface); border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); padding: 18px; box-shadow: var(--lasso-shadow); min-width: 0; }
@@ -342,6 +345,8 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-status { font-weight: 500; color: var(--lasso-text-2); }
 .lasso-status--warning { color: var(--lasso-bankrupt); }
 .lasso-status--inactive { color: var(--lasso-muted); }
+.lasso-status--liquidation { color: var(--lasso-status-liquidation); }
+.lasso-status--new { color: var(--lasso-status-new); }
 .lasso-trend { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; }
 .lasso-trend__pct { font-weight: 500; font-size: var(--lasso-fs-sm); }
 .lasso-spark { width: 72px; height: 22px; }
@@ -1860,3 +1865,52 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 /* ---------- 01.6 Ikoner (node 9B9-0) ---------- */
 /* Ét sæt (Icon.tsx): streg 1,8, runde ender, 24-grid. Ikonet står alene, aldrig i en grå flise (regel 20). */
 .lasso-icon { flex: none; display: inline-block; vertical-align: middle; }
+
+/* ---------- 05.1 Knapper (node 9EM-0): varianter, størrelser og tilstande ---------- */
+/* Tekst 14/500, primær 600. 42 i dialoger og paneler, 36 i sidehoveder (standard), 32 i kompakte rækker. */
+/* ".lasso-root" foran, så vægten vinder over ".lasso-root button { font: inherit }" */
+.lasso-root .lasso-btn { font-size: var(--lasso-fs-btn); line-height: var(--lasso-lh); font-weight: var(--lasso-fw-medium); }
+.lasso-root .lasso-btn--primary { font-weight: var(--lasso-fw-semibold); }
+.lasso-btn--lg { height: var(--lasso-btn-h-lg); padding: 0 18px; }
+.lasso-btn--primary:disabled { opacity: 0.45; }
+.lasso-btn--danger { border-color: var(--lasso-border-strong); }
+.lasso-root .lasso-btn--danger { color: var(--lasso-danger); }
+/* Link: koral tekst med chevron, ingen kant eller flade ("Se alle >") */
+.lasso-btn--link { height: auto; min-height: 24px; padding: 0 2px; gap: 4px; border-color: transparent; background: transparent; }
+.lasso-root .lasso-btn--link, .lasso-root .lasso-btn--link:hover { color: var(--lasso-accent-text); }
+.lasso-btn--link:hover { background: transparent; border-color: transparent; text-decoration: underline; }
+/* Gemmer…: lille spinner i knappens tekstfarve, knappen er optaget */
+.lasso-btn[aria-busy="true"] { cursor: progress; opacity: 1; }
+.lasso-btn__spinner { flex: none; width: 14px; height: 14px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: lasso-spin 0.8s linear infinite; }
+@keyframes lasso-spin { to { transform: rotate(360deg); } }
+
+/* ---------- 05.2 Ikonknapper, 38 / 32 (node 9FU-0) ---------- */
+/* Kvadratisk; bygger på .lasso-iconbtn (1 px kant, radius 8). Mobil: 32 → 40, 36/38 → 44. */
+.lasso-root .lasso-iconbtn--sq { padding: 0; gap: 0; }
+.lasso-root .lasso-iconbtn--38 { width: var(--lasso-iconbtn-lg); height: var(--lasso-iconbtn-lg); min-width: var(--lasso-iconbtn-lg); }
+.lasso-root .lasso-iconbtn--36 { width: var(--lasso-btn-h); height: var(--lasso-btn-h); min-width: var(--lasso-btn-h); }
+.lasso-root .lasso-iconbtn--32 { width: var(--lasso-iconbtn-sm); height: var(--lasso-iconbtn-sm); min-width: var(--lasso-iconbtn-sm); }
+.lasso-root .lasso-iconbtn--sq:disabled { opacity: 0.45; cursor: default; }
+/* Aktiv (Overvåg slået til, åben menu): koral lys flade, koral kant og ikon; aldrig mørkt fyld (regel 15) */
+.lasso-root .lasso-iconbtn--active, .lasso-root .lasso-iconbtn--active[aria-pressed="true"], .lasso-root .lasso-iconbtn--sq[aria-expanded="true"] { background: var(--lasso-accent-soft); border-color: var(--lasso-accent-border); color: var(--lasso-accent); }
+.lasso-root .lasso-iconbtn--active:hover { background: var(--lasso-accent-soft); border-color: var(--lasso-accent-border); }
+.lasso-root .lasso-iconbtn--subtle { background: var(--lasso-surface-muted); border-color: transparent; color: var(--lasso-text-2); }
+.lasso-root .lasso-iconbtn--subtle:hover { background: var(--lasso-tag-hover); border-color: transparent; }
+.lasso-root .lasso-iconbtn--bare { background: transparent; border-color: transparent; color: var(--lasso-text-3); }
+.lasso-root .lasso-iconbtn--bare:hover { background: var(--lasso-surface-muted); border-color: transparent; color: var(--lasso-text); }
+@container lasso (max-width: 560px) {
+  .lasso-root .lasso-iconbtn--38, .lasso-root .lasso-iconbtn--36 { width: 44px; height: 44px; min-width: 44px; }
+  .lasso-root .lasso-iconbtn--32 { width: 40px; height: 40px; min-width: 40px; }
+}
+
+/* ---------- 05.3 Handlingsrække, fast rækkefølge (node 9GD-0) ---------- */
+/* "…" yderst til venstre, sekundær i midten, primær yderst til højre */
+.lasso-actionrow { display: flex; align-items: center; gap: var(--lasso-space-2); min-width: 0; }
+.lasso-actionrow__spacer { flex: 1; }
+.lasso-actionrow--42 .lasso-btn { height: var(--lasso-btn-h-lg); padding: 0 18px; }
+
+/* ---------- 05.6 Etiket, 28 px, kun visning (node 9HF-0) ---------- */
+.lasso-label { display: inline-flex; align-items: center; height: var(--lasso-label-h); padding: 0 10px; border-radius: var(--lasso-radius-sm); background: var(--lasso-tag); color: var(--lasso-text-2); font-size: var(--lasso-fs); line-height: var(--lasso-lh); font-weight: var(--lasso-fw-regular); white-space: nowrap; }
+
+/* ---------- 05.7 Status som ren tekst (node 9HM-0) ---------- */
+/* 14/500, ingen pille, ingen prik: Aktiv tekstfarve, Konkurs mørk rød, Likvidation warning, Ophørt muted, Ny koral tekst (regler i .lasso-badge/.lasso-status ovenfor). */
