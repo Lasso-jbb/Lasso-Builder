@@ -53,6 +53,43 @@ export type { NotificationVM, NotificationKind, NotificationPanelProps } from ".
 export { MonitorSettings, MonitorBell, MONITOR_TYPES, MONITOR_TYPE_LABELS } from "./components/MonitorSettings.js";
 export type { MonitorType, MonitorSettingsProps, MonitorBellProps } from "./components/MonitorSettings.js";
 export { FilterPanel, parseAmount, parseDate } from "./components/FilterPanel.js";
+export type { FilterPanelProps } from "./components/FilterPanel.js";
+// Felt-familien (02a, 02b, 03)
+export {
+  FieldRow,
+  FieldSection,
+  SectionIntro,
+  InfoTip,
+  EffectLine,
+  effectText,
+  FieldActions,
+  OperatorSelect,
+  SelectField,
+  MultiSelect,
+  TagInput,
+  ListField,
+  splitList,
+  summarize,
+  ChoiceChips,
+  YesNoChips,
+  Toggle,
+  SegmentYesNo,
+  UnitInput,
+  RangeInputs,
+  AmountField,
+  CHANGE_OPERATORS,
+  CHANGE_LABELS,
+  DatePicker,
+  DateInput,
+  DateField,
+  TreePicker,
+  IndustryField,
+  PersonaField,
+  TechnologyField,
+} from "./components/Fields.js";
+export type { FieldRowProps, Option, MultiSelectProps, TagInputProps, AmountFieldValue, PersonaValue, PersonaFieldProps, TechMode, TechValue } from "./components/Fields.js";
+export { DB07_EXCERPT, leafCodes, treeLabels } from "./components/industries.js";
+export type { TreeNode } from "./components/industries.js";
 export { Tabs, TabPanel, tabId, panelId } from "./components/Tabs.js";
 export { Dialog } from "./components/Dialog.js";
 export type { DialogProps, DialogAction } from "./components/Dialog.js";

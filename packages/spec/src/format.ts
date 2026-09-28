@@ -103,11 +103,13 @@ export function percentChange(series: readonly (number | null | undefined)[]): n
 export function formatCriterionValue(field: FieldDef | undefined, value: CriterionValue): string {
   if (Array.isArray(value)) return summarizeList(value.map((v) => formatCriterionValue(field, v)));
   if (typeof value === "number") {
+    if (field?.type === "percent") return formatPercent(value, false);
     if (field?.type === "amount") return formatAmount(value, field.unit ?? "kr.");
     if (field?.key === "postnummer") return String(value);
     return formatNumber(value);
   }
-  if (typeof value === "boolean") return value ? "ja" : "nej";
+  if (typeof value === "boolean") return value ? "Ja" : "Nej";
+  if (field?.type === "percent" && typeof value === "number") return formatPercent(value, false);
   if (field?.type === "date") return formatDate(value);
   return value;
 }
@@ -141,3 +143,4 @@ export function formatShare(range: readonly [number, number] | null | undefined)
   const a = shareFormat.format(lo);
   return Math.abs(hi - lo) < 0.005 ? `${a} %` : `${a}–${shareFormat.format(hi)} %`;
 }
+
