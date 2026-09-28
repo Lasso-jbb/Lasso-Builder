@@ -1912,5 +1912,23 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 /* ---------- 05.6 Etiket, 28 px, kun visning (node 9HF-0) ---------- */
 .lasso-label { display: inline-flex; align-items: center; height: var(--lasso-label-h); padding: 0 10px; border-radius: var(--lasso-radius-sm); background: var(--lasso-tag); color: var(--lasso-text-2); font-size: var(--lasso-fs); line-height: var(--lasso-lh); font-weight: var(--lasso-fw-regular); white-space: nowrap; }
 
+/* ---------- 04.1 Sidehoved med titel og handlinger (node 495-0) ---------- */
+/* Titel 22/600 + undertitel 13 muted; "Ændret, ikke gemt" som ren tekst; handlinger 36 px til højre. Omdøb på stedet: feltet har titlens skrift og 1 px koral kant. */
+.lasso-pagehead { display: flex; align-items: center; gap: var(--lasso-space-4); min-height: 76px; padding: var(--lasso-space-4) var(--lasso-space-5); border-bottom: 1px solid var(--lasso-border); background: var(--lasso-surface); }
+.lasso-pagehead__titles { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.lasso-pagehead__title { margin: 0; font-size: 22px; line-height: 28px; font-weight: var(--lasso-fw-semibold); letter-spacing: var(--lasso-tracking-tight); color: var(--lasso-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lasso-pagehead__input { width: min(100%, 520px); height: 36px; margin: -4px 0 0 -9px; padding: 0 8px; border: 1px solid var(--lasso-focus-border); border-radius: var(--lasso-radius); background: var(--lasso-surface); color: var(--lasso-text); font: inherit; font-size: 22px; line-height: 28px; font-weight: var(--lasso-fw-semibold); letter-spacing: var(--lasso-tracking-tight); }
+.lasso-pagehead__input:focus { outline: none; }
+.lasso-pagehead__meta { margin: 0; font-size: var(--lasso-fs-sm); line-height: var(--lasso-lh-sm); color: var(--lasso-muted); }
+.lasso-pagehead__state { font-weight: var(--lasso-fw-medium); color: var(--lasso-text-2); }
+.lasso-pagehead__actions { flex: none; }
+@container lasso (max-width: 560px) {
+  .lasso-pagehead { flex-wrap: wrap; padding: var(--lasso-space-3) var(--lasso-space-4); }
+  .lasso-pagehead__title, .lasso-pagehead__input { font-size: 20px; line-height: 26px; }
+  .lasso-pagehead__input { width: 100%; margin-left: 0; }
+  .lasso-pagehead.is-dirty .lasso-pagehead__actions { width: 100%; }
+  .lasso-pagehead.is-dirty .lasso-pagehead__actions .lasso-btn { flex: 1; height: 44px; }
+}
+
 /* ---------- 05.7 Status som ren tekst (node 9HM-0) ---------- */
 /* 14/500, ingen pille, ingen prik: Aktiv tekstfarve, Konkurs mørk rød, Likvidation warning, Ophørt muted, Ny koral tekst (regler i .lasso-badge/.lasso-status ovenfor). */

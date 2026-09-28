@@ -80,6 +80,8 @@ export { Icon, CATALOG_ICONS, ICON_LABELS, ICON_STROKE } from "./components/Icon
 export type { IconName, IconProps, CatalogIconName } from "./components/Icon.js";
 export { Button, IconButton, ActionRow, Label, buttonClass, iconButtonClass } from "./components/Button.js";
 export type { ButtonProps, ButtonVariant, ButtonSize, IconButtonProps, IconButtonSize, IconButtonVariant, ActionRowProps, ActionRowAction } from "./components/Button.js";
+export { PageHeader } from "./components/PageHeader.js";
+export type { PageHeaderProps } from "./components/PageHeader.js";
 export { useWidth } from "./useWidth.js";
 export type { ShellIconName } from "./components/ShellIcons.js";
 export { StateBox, Skeleton, Sparkline, Badge, StatusBadge, statusTone, DataState, Missing, SourceLine, Section, SeverityIcon, severityWord } from "./primitives.js";
