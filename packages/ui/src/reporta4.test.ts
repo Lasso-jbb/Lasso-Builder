@@ -125,5 +125,11 @@ test("indholdsfortegnelsen peger på de rigtige sider", () => {
   const html = render(dataset({ score: 52 }));
   assert.match(html, /Nøgletal og udvikling<\/span><span class="lasso-a4-toc__page">2/);
   assert.match(html, /Regnskab 2021–2025<\/span><span class="lasso-a4-toc__page">3/);
-  assert.match(html, /Kreditvurdering<\/span><span class="lasso-a4-toc__page">4/);
+  assert.match(html, /Kreditvurdering og risiko<\/span><span class="lasso-a4-toc__page">4/);
+});
+
+test("27.4: side 4 viser risikoobservationerne med alvorsord, når de er hentet", () => {
+  const html = render(dataset({ score: 52 }));
+  assert.match(html, /<h2 class="lasso-a4__h2">Risikoobservationer<\/h2>/);
+  assert.match(html, /lasso-a4-obs__dot--middel[^]*Middel, Revisor skiftet/);
 });

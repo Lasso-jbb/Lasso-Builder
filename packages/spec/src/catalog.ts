@@ -226,6 +226,12 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     props: "company, title?",
   },
   {
+    type: "LassoRiskObservations",
+    title: "Risikoobservationer",
+    description: `Brug til: Lassos risikoobservationer for én virksomhed som liste – sammenfatning øverst som filtre (høj, middel, info) og observationerne sorteret efter alvor – når brugeren beder om 'risikoobservationer', 'røde flag i detaljer' eller 'alle observationer'. Brug ikke når: spørgsmålet er bredt om risiko eller kredit (show_company focus risiko), eller det gælder Creditsafe (LassoCreditRating). Kræver: company; opslaget tager 10–14 sekunder, så brug den kun, når brugeren beder om listen. Tom liste er positiv information ('intet at bemærke, tjekket DATO'). Dækkes ikke af show_company. Eksempel: 'Vis alle risikoobservationer for Lasso X' → render_view med LassoCompanyHead og LassoRiskObservations.`,
+    props: "company, title?, compact?",
+  },
+  {
     type: "LassoAuditorIndependence",
     title: "Revisoruafhængighed",
     description: `Brug til: relationer mellem revisionshuset og kundens ledelse/ejere, vurderet pr. relation – kun når spørgsmålet nævner revisor SAMMEN MED uafhængighed, habilitet eller relationer. Brug ikke når: brugeren blot vil vide, hvem revisor er (LassoKeyValueList variant 'company'), eller spørger bredt om risiko (show_company focus risiko). Kræver: company; dækker kun navnesammenfald mellem revisionshusets og kundens personer, og komponenten skriver selv den begrænsning. ${F("risiko")} Eksempel: 'Er revisor for X uafhængig af ledelsen?' → show_company focus risiko.`,
@@ -290,6 +296,13 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     description:
       "Brug til: konkurser og tvangsopløsninger blandt selskaber, personen har eller har haft roller i – 'har X været involveret i konkurser'. Brug ikke når: det gælder en virksomheds risiko (show_company focus risiko). Kræver: person; ingen roller giver tom tilstand. Dækkes af show_person (focus risiko). Eksempel: 'Har X været med i konkurser?' → show_person focus risiko.",
     props: "person, title?",
+  },
+  {
+    type: "LassoPersonStats",
+    title: "Netværkstal, person",
+    description:
+      "Brug til: tre små tal-kort om en person – personer i 1. led (netværk), konkurser og tvangsopløsninger blandt personens selskaber – som hurtigt overblik under rollerne. Brug ikke når: brugeren vil se hvem (LassoPersonNetwork) eller hvilke selskaber (LassoPersonRisk). Kræver: person. Eksempel: 'Hvor stort er X's netværk, og har X været i konkurser?' → show_person, eller render_view med LassoPersonHead og LassoPersonStats.",
+    props: "person",
   },
   {
     type: "LassoPersonFacts",

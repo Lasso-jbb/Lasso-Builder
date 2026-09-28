@@ -60,7 +60,9 @@ import { PersonRoles } from "./components/PersonRoles.js";
 import { PersonNetwork } from "./components/PersonNetwork.js";
 import { PersonRisk } from "./components/PersonRisk.js";
 import { PersonFacts } from "./components/PersonFacts.js";
+import { PersonStats } from "./components/PersonStats.js";
 import { CreditRating } from "./components/CreditRating.js";
+import { RiskObservations } from "./components/RiskObservations.js";
 import { AuditorIndependence } from "./components/AuditorIndependence.js";
 import { ChangeFeed } from "./components/ChangeFeed.js";
 import { SavedPages } from "./components/SavedPages.js";
@@ -172,8 +174,8 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoScoreGauge":
       return <ScoreGauge key={key} score={empty.scores[c.company]} title={c.title} error={err(`score:${c.company}`)} />;
     case "LassoRiskObservations":
-      // Fjernet fra visningerne 27.09.2026; ældre gemte visninger med komponenten viser den ikke.
-      return null;
+      // Katalog 17.2: komponeres ikke automatisk (observationskaldet tager 10–14 s), men vises, når en spec beder om den.
+      return <RiskObservations key={key} data={empty.observations[c.company]} error={err(`observations:${c.company}`)} title={c.title} compact={c.compact} demo={empty.source === "demo"} />;
     case "LassoCreditRating":
       return <CreditRating key={key} rating={empty.creditRatings?.[c.company]} title={c.title} error={err(`creditRating:${c.company}`)} onAction={act} />;
     case "LassoAuditorIndependence":
@@ -249,8 +251,19 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
         />
       );
     }
-    case "LassoPersonHead":
-      return <PersonHead key={key} person={empty.persons[c.person]} error={err(`person:${c.person}`)} />;
+    case "LassoPersonHead": {
+      // 26d.1: to primære handlinger + overløb, kun når værten kan stille opfølgende spørgsmål.
+      const name = empty.persons[c.person]?.name;
+      const ask = (prompt: string) => () => act({ kind: "prompt", prompt });
+      const actions = props.host.prompt && name ? [{ id: "network", label: "Vis netværk", icon: "network" as const, onSelect: ask(`Hvem sidder ${name} sammen med?`) }] : [];
+      const more = props.host.prompt && name
+        ? [
+            { id: "roles", label: "Roller over tid", onSelect: ask(`Hvilke roller har ${name} haft over tid?`) },
+            { id: "risk", label: "Konkurser og tvangsopløsninger", onSelect: ask(`Har ${name} været involveret i konkurser?`) },
+          ]
+        : [];
+      return <PersonHead key={key} person={empty.persons[c.person]} error={err(`person:${c.person}`)} actions={actions} more={more} />;
+    }
     case "LassoPersonRoles":
       return (
         <PersonRoles
@@ -268,6 +281,8 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return <PersonNetwork key={key} network={empty.personNetworks[c.person]} title={c.title} limit={c.limit} error={err(`personNetwork:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} />;
     case "LassoPersonRisk":
       return <PersonRisk key={key} person={empty.persons[c.person]} title={c.title} error={err(`person:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} />;
+    case "LassoPersonStats":
+      return <PersonStats key={key} person={empty.persons[c.person]} network={empty.personNetworks[c.person]} error={err(`person:${c.person}`)} networkError={err(`personNetwork:${c.person}`)} />;
     case "LassoPersonFacts":
       // Det, personhovedet på samme side viser (antal roller, ejerskaber, første registrering), gentages ikke.
       return <PersonFacts key={key} person={empty.persons[c.person]} title={c.title} hideCounts={personFactOptions(props.spec.components, c.person).hideCounts} error={err(`person:${c.person}`)} />;

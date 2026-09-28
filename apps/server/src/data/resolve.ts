@@ -205,7 +205,8 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
       case "LassoSummary":
         break;
       case "LassoRiskObservations":
-        // Fjernet fra visningerne 27.09.2026: observationerne hentes ikke, komponenten vises ikke.
+        // Katalog 17.2: hentes kun, når en spec eksplicit beder om listen (compose tilføjer den ikke).
+        want(c.company, "observations");
         break;
       case "LassoCreditRating":
         want(c.company, "creditRating");
@@ -261,6 +262,10 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
         want(c.person, "person");
         break;
       case "LassoPersonNetwork":
+        want(c.person, "personNetwork");
+        break;
+      case "LassoPersonStats":
+        want(c.person, "person");
         want(c.person, "personNetwork");
         break;
       case "LassoChangeFeed":

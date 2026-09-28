@@ -613,6 +613,10 @@ export interface ScoreVM {
   score: number | null;
   source?: string;
   updated?: string;
+  /** Katalog 26d.7: scoren over de seneste 24 måneder, ældste først (datoer ÅÅÅÅ-MM-DD). Kun demodata. */
+  history?: { date: string; score: number }[];
+  /** Katalog 26d.7: seneste ændringer i scoren med årsag, nyeste først. `delta` i point (+ = højere risiko). */
+  changes?: { date: string; label: string; delta: number }[];
 }
 
 /* ---------- Katalog 17: kreditvurdering fra Creditsafe (egen skala A–E, blandes aldrig med 0–100) ---------- */

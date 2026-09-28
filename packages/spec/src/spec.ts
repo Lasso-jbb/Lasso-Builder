@@ -367,7 +367,11 @@ export const scoreGaugeSchema = z.object({
   title: z.string().max(80).optional().describe("Standard: 'Score'."),
 });
 
-/** Fjernet fra visningerne 27.09.2026. Skemaet bliver, så ældre gemte visninger stadig kan læses; komponenten vises og hentes ikke. */
+/**
+ * Katalog 17.2: observationsliste med sammenfatning (filterchips høj/middel/info) og kort sorteret
+ * efter alvor. Komponeres ikke automatisk af compose (observationskaldet tager 10–14 s); vises kun,
+ * når en spec beder om den.
+ */
 export const riskObservationsSchema = z.object({
   type: z.literal("LassoRiskObservations"),
   company: companyRef,
@@ -440,6 +444,14 @@ export const personRiskSchema = z.object({
   person: personRef,
   title: z.string().max(80).optional(),
 });
+
+/** Katalog 16 (mobil 26d.5): netværkstal som tre små kort, Netværk, Konkurser og Tvangsopløsninger. */
+export const personStatsSchema = z
+  .object({
+    type: z.literal("LassoPersonStats"),
+    person: personRef,
+  })
+  .describe("Tre små tal-kort: personer i 1. led, konkurser og tvangsopløsninger blandt personens selskaber.");
 
 export const personFactsSchema = z
   .object({
@@ -546,6 +558,7 @@ export const componentSchema = z.discriminatedUnion("type", [
   w(personNetworkSchema),
   w(personRiskSchema),
   w(personFactsSchema),
+  w(personStatsSchema),
   w(changeFeedSchema),
   w(savedPagesSchema),
 ]);
@@ -622,6 +635,7 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoPersonNetwork: "half",
   LassoPersonRisk: "half",
   LassoPersonFacts: "quarter",
+  LassoPersonStats: "full",
   LassoChangeFeed: "full",
   LassoSavedPages: "full",
 };

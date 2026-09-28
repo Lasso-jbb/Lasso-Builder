@@ -422,3 +422,10 @@ test("Creditsafe-skalaen A–E: tone, ord, ændring og tekstlinje (blandes aldri
   assert.equal(creditRatingText({ ...base, state: "locked" }), "låst: kræver Creditsafe-tilføjelse");
   assert.equal(creditRatingText({ ...base, state: "ok" }), "ikke oplyst");
 });
+
+test("26d.5: parseViewSpec accepterer LassoPersonStats (fuld bredde) og kataloget beskriver den", () => {
+  const spec = parseViewSpec({ title: "x", components: [{ type: "LassoPersonStats", person: "CVR-3-4000000001" }] });
+  assert.equal(spec.components[0]!.type, "LassoPersonStats");
+  assert.ok(COMPONENT_CATALOG.some((e) => e.type === "LassoPersonStats" && /Brug til/.test(e.description)));
+  assert.ok(COMPONENT_CATALOG.some((e) => e.type === "LassoRiskObservations" && /Brug ikke når/.test(e.description)));
+});

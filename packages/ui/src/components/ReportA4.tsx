@@ -22,6 +22,7 @@ import {
 } from "@lasso/spec";
 import { LassoMark, LassoWordmark } from "../LassoMark.js";
 import { SeverityIcon, severityWord } from "../primitives.js";
+import { observationLevel, sortObservations } from "./RiskObservations.js";
 
 /**
  * Eksport, virksomhedsrapport som A4-PDF (katalog 27, node DO8-0). Det, der kommer ud,
@@ -239,6 +240,9 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
   const creditRating = dataset.creditRatings?.[company];
   const credit = creditRating?.state === "ok" && creditRating.current ? creditRating : undefined;
   const auditor = dataset.auditorIndependence[company];
+  // Katalog 27.4: risikoobservationer (17) kun, når de er hentet til visningen; ellers udelades blokken.
+  const lassoObs = dataset.observations[company];
+  const observations = lassoObs ? sortObservations(lassoObs.observations.filter((o) => !o.notAvailable)) : [];
   const auditorName = auditor?.auditorName ?? ownership?.auditor?.name;
 
   const stamp = formatStamp(generatedAt ?? dataset.generatedAt);
@@ -457,11 +461,11 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
     });
   }
 
-  // Side 4: Kreditvurdering, reelle ejere, revisor og "Om rapporten".
-  if (score || credit || beneficial || auditorName || auditor) {
+  // Side 4: Kreditvurdering, risikoobservationer, reelle ejere, revisor og "Om rapporten".
+  if (score || credit || lassoObs || beneficial || auditorName || auditor) {
     pages.push({
       key: "risiko",
-      toc: ["Kreditvurdering", ...(beneficial || owners.length ? ["Reelle ejere og ejerstruktur"] : []), ...(auditorName || auditor ? ["Revisor og uafhængighed"] : [])],
+      toc: [lassoObs ? "Kreditvurdering og risiko" : "Kreditvurdering", ...(beneficial || owners.length ? ["Reelle ejere og ejerstruktur"] : []), ...(auditorName || auditor ? ["Revisor og uafhængighed"] : [])],
       render: (page, total) => {
         const value = score && score.score !== null ? Math.max(0, Math.min(100, score.score)) : null;
         const band = value !== null ? scoreBand(value) : null;
@@ -512,6 +516,36 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
                 )}
                 {credit ? <CreditsafeText rating={credit} /> : null}
               </div>
+              {lassoObs ? (
+                <div className="lasso-a4-col">
+                  <h2 className="lasso-a4__h2">Risikoobservationer</h2>
+                  {observations.length ? (
+                    <div className="lasso-a4-obs">
+                      {observations.slice(0, 5).map((o) => {
+                        const level = observationLevel(o.severity);
+                        return (
+                          <div key={o.id} className="lasso-a4-obs__row">
+                            <span className={`lasso-a4-obs__dot lasso-a4-obs__dot--${level}`} aria-hidden="true" />
+                            <span className="lasso-a4-obs__main">
+                              <span className="lasso-a4-obs__title">
+                                {level === "neutral" ? "" : `${level[0]!.toUpperCase()}${level.slice(1)}, `}
+                                {o.title}
+                              </span>
+                              {o.detail ? <span className="lasso-a4-obs__detail">{o.detail}</span> : null}
+                              {o.source || o.date ? <span className="lasso-a4-obs__meta">{[o.source, o.date ? formatDate(o.date) : null].filter(Boolean).join(", ")}</span> : null}
+                            </span>
+                          </div>
+                        );
+                      })}
+                      {observations.length > 5 ? <p className="lasso-a4__note">og {observations.length - 5} flere</p> : null}
+                    </div>
+                  ) : (
+                    <p className="lasso-a4__small">
+                      {lassoObs.checkedAt ? `Lasso har gennemgået virksomheden og fandt intet at bemærke. Tjekket ${formatDate(lassoObs.checkedAt)}.` : "Lasso har ingen risikoobservationer om virksomheden."}
+                    </p>
+                  )}
+                </div>
+              ) : null}
             </div>
 
             {beneficial || owners.length ? (

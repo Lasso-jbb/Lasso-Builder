@@ -446,6 +446,13 @@ function observationsFor(c: DemoCompany, f: FinancialsVM): ObservationsVM {
   if (c.auditor === "Ingen" && hasReportingDuty(c.form)) {
     rows.push({ id: "revisor-fravalgt", severity: 50, title: "Revisor fravalgt", detail: "Selskabet har ikke registreret en revisor.", source: "CVR" });
   }
+  // Katalog 26d.6: eksempelvirksomheden viser Paper-eksemplets tre alvorsgrader (høj, middel, info).
+  if (c.cvr === "99000001") {
+    rows.push(
+      { id: "ejer-egenkapital", severity: 100, title: "Negativ egenkapital hos ejer", detail: "Eksempel Holding ApS har negativ egenkapital i seneste regnskab.", source: "Regnskab", date: "2026-06-02" },
+      { id: "delt-adresse", severity: 50, title: "Adresse deles med 12 virksomheder", detail: "Eksempelvej 1 er registreret som hovedadresse for 12 aktive selskaber.", source: "CVR", date: "2026-02-14" },
+    );
+  }
   const ended = c.people.find((p) => p.to);
   if (ended) rows.push({ id: "afgang", severity: 25, title: `${ended.name} er fratrådt som ${ended.role.toLowerCase()}`, source: "Ledelse", date: ended.to });
   const newest = [...c.people].filter((p) => !p.to).sort((a, b) => (b.from ?? "").localeCompare(a.from ?? ""))[0];
@@ -756,7 +763,16 @@ export class DemoProvider implements DataProvider {
     const seed = Number(c.cvr!.slice(-2));
     if (c.status !== "Aktiv") return { lassoId, score: null };
     const score = Math.max(5, Math.min(95, 22 + ((seed * 13) % 70)));
-    return { lassoId, score, source: "Eksempeldata", updated: "2026-09-12" };
+    // Katalog 26d.7: seks målinger over 24 måneder og tre ændringer med årsag (eksempeldata).
+    const steps = [-3, -1, -4, -1, -3, 0].map((d, i) => Math.max(1, Math.min(99, score + d - (i === 4 ? 2 : 0))));
+    const dates = ["2024-09-01", "2025-01-01", "2025-05-01", "2025-09-01", "2026-01-01", "2026-09-01"];
+    const history = dates.map((date, i) => ({ date, score: i === dates.length - 1 ? score : steps[i]! }));
+    const changes = [
+      { date: "2026-06-06", label: "Regnskab 2025 indlæst", delta: 5 },
+      { date: "2026-01-01", label: "Alder på selskab, eksempeldata", delta: 2 },
+      { date: "2025-05-20", label: "Betalingsanmærkning, eksempeldata", delta: -4 },
+    ];
+    return { lassoId, score, source: "Eksempeldata", updated: "2026-09-12", history, changes };
   }
 
   async beneficialOwnership(lassoId: string) {
