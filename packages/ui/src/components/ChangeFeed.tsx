@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { CHANGE_TYPES, CHANGE_TYPE_LABELS, formatDate, formatNumber, type ChangeEntryVM, type ChangeFeedVM, type ChangeType } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { usePrintMode } from "../print.js";
 
 /** Rækker vist før "Se alle N ændringer" (regel 9). */
 const COLLAPSED_ROWS = 8;
@@ -46,7 +47,7 @@ const PERIODS: { days: number; label: string }[] = [
 ];
 
 function ChangeRow({ entry, firstUnread, onOpen }: { entry: ChangeEntryVM; firstUnread: boolean; onOpen?: (a: ViewAction) => void }) {
-  const [showAll, setShowAll] = useState(false);
+  const [showAll, setShowAll] = useState(usePrintMode());
   const folded = (entry.count ?? 1) > 1;
   const name = folded ? `${formatNumber(entry.count)} virksomheder` : entry.companyName;
   const canOpen = !folded && onOpen && entry.lassoId;
@@ -103,7 +104,7 @@ function ChangeRow({ entry, firstUnread, onOpen }: { entry: ChangeEntryVM; first
 export function ChangeFeed({ feed, title, types, error, now, onOpen }: { feed?: ChangeFeedVM; title?: string; types?: readonly ChangeType[]; error?: string; now?: Date; onOpen?: (a: ViewAction) => void }) {
   const [filter, setFilter] = useState<ChangeType | "alle">("alle");
   const [days, setDays] = useState<number | null>(null);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(usePrintMode());
   const shownDays = days ?? feed?.days ?? 7;
   const clock = now ?? new Date();
 

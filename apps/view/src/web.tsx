@@ -104,6 +104,11 @@ function SharedView({ boot, dark }: { boot: Boot & { spec: NonNullable<Boot["spe
       case "export":
         downloadCsv(a.filename, a.csv);
         return;
+      case "pdf":
+        // "Gem som PDF": serverens .pdf-link til netop denne side; browseren gemmer filen (attachment).
+        if (!boot.pdfUrl) return { ok: false, error: "Siden kan ikke gemmes som PDF." };
+        location.href = boot.pdfUrl;
+        return { ok: true };
       default:
         return;
     }
@@ -116,7 +121,7 @@ function SharedView({ boot, dark }: { boot: Boot & { spec: NonNullable<Boot["spe
         dataset={boot.dataset ?? null}
         url={boot.url}
         theme={dark ? "dark" : "light"}
-        host={{ refresh: true, export: true, drillDown: hasLinks(boot.links), openFocus: hasLinks(boot.focusLinks) }}
+        host={{ refresh: true, export: true, pdf: boot.pdf !== false && Boolean(boot.pdfUrl), drillDown: hasLinks(boot.links), openFocus: hasLinks(boot.focusLinks) }}
         onAction={onAction}
       />
     </div>

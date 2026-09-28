@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { formatDate, isPersonId, type NewsItemVM, type NewsVM, type TextSegment } from "@lasso/spec";
 import type { MoreInTab, ViewAction } from "../types.js";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { usePrintMode } from "../print.js";
 
 /** "2026-04-15" -> "for 3 dage siden" under 7 dage gammel, ellers "15.04.2026". */
 function relativeOrDate(iso: string | undefined): string {
@@ -121,7 +122,9 @@ function Headline({ item, ...opts }: { item: NewsItemVM } & SegmentOpts) {
 
 function SourceMark({ source, url }: { source: string; url?: string }) {
   const [broken, setBroken] = useState(false);
-  const src = broken ? null : favicon(url);
+  // Print (PDF): kun det neutrale ikon, så serverens Chromium aldrig henter noget udefra.
+  const print = usePrintMode();
+  const src = broken || print ? null : favicon(url);
   return (
     <span className="lasso-news__mark" aria-hidden="true">
       {src ? (
@@ -193,7 +196,7 @@ export function LassoNews({
   moreIn?: MoreInTab;
 }) {
   const title = "Nyheder";
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(usePrintMode());
   if (!news) {
     return (
       <Section title={title} span="half">

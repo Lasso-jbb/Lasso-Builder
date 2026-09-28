@@ -5,11 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/client";
 import { LassoView, LassoMark, type ActionResult, type ViewAction } from "@lasso/ui";
 import { composeCompany, composePerson, composeProbe, composePersonProbe, DATASET_META_KEY, formatCriterion, type Dataset, type ViewSpec } from "@lasso/spec";
 import { focusPrompt } from "./focusPrompt.js";
+import { downloadPdfInHost } from "./pdfDownload.js";
 
 interface Screen {
   spec: ViewSpec;
   dataset: Dataset | null;
   url?: string;
+  /** "Gem som PDF": serverens signerede .pdf-link til denne skærm (structuredContent.pdfLink). */
+  pdfLink?: string;
 }
 
 function textOf(result: CallToolResult): string {
@@ -42,9 +45,9 @@ function nameIn(ds: Dataset | null | undefined, lassoId: string): string | undef
 async function resolve(app: App, spec: ViewSpec): Promise<Screen> {
   const res = await app.callServerTool({ name: "resolve_view", arguments: { spec } });
   if (res.isError) throw new Error(textOf(res) || "Kunne ikke hente data");
-  const sc = res.structuredContent as { spec: ViewSpec; dataset: Dataset } | undefined;
+  const sc = res.structuredContent as { spec: ViewSpec; dataset: Dataset; pdfLink?: string } | undefined;
   if (!sc) throw new Error("Tomt svar fra serveren");
-  return { spec: sc.spec, dataset: sc.dataset };
+  return { spec: sc.spec, dataset: sc.dataset, ...(sc.pdfLink ? { pdfLink: sc.pdfLink } : {}) };
 }
 
 /** MCP App: tegner tool-resultater i Claude/ChatGPT og håndterer interaktion uden model-tur. */
@@ -63,19 +66,21 @@ export function McpView() {
       setError(textOf(result) || "Værktøjet fejlede");
       return;
     }
-    const sc = result.structuredContent as { spec?: ViewSpec } | undefined;
+    const sc = result.structuredContent as { spec?: ViewSpec; pdfLink?: string } | undefined;
     if (!sc?.spec) return;
     const ds = (result._meta as Record<string, unknown> | undefined)?.[DATASET_META_KEY] as Dataset | undefined;
+    const pdfLink = sc.pdfLink ? { pdfLink: sc.pdfLink } : {};
     setError(null);
     if (ds) {
-      setStack([{ spec: sc.spec, dataset: ds }]);
+      setStack([{ spec: sc.spec, dataset: ds, ...pdfLink }]);
       return;
     }
     // Værten sendte ikke _meta med: hent data via det app-interne tool.
-    setStack([{ spec: sc.spec, dataset: null }]);
+    setStack([{ spec: sc.spec, dataset: null, ...pdfLink }]);
     if (!app) return;
     try {
-      setStack([await resolve(app, sc.spec)]);
+      // Værktøjets eget pdfLink (med visningens fokus) vinder over resolve_view's.
+      setStack([{ ...(await resolve(app, sc.spec)), ...pdfLink }]);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -132,7 +137,7 @@ export function McpView() {
           const fetched = await resolve(app, probe);
           const ds = fetched.dataset!;
           const name = ds.companies[a.lassoId]?.name ?? a.name ?? a.lassoId;
-          replaceTop({ spec: composeCompany(a.lassoId, ds, { focus: "overblik", name }), dataset: ds });
+          replaceTop({ spec: composeCompany(a.lassoId, ds, { focus: "overblik", name }), dataset: ds, pdfLink: fetched.pdfLink });
           void app
             .updateModelContext({ content: [{ type: "text", text: `Brugeren kigger nu på ${name} (${a.lassoId}) i Lasso-visningen.` }] })
             .catch(() => {});
@@ -146,7 +151,7 @@ export function McpView() {
           const fetched = await resolve(app, probe);
           const ds = fetched.dataset!;
           const name = ds.persons[a.lassoId]?.name ?? a.name ?? a.lassoId;
-          replaceTop({ spec: composePerson(a.lassoId, ds, { name }), dataset: ds });
+          replaceTop({ spec: composePerson(a.lassoId, ds, { name }), dataset: ds, pdfLink: fetched.pdfLink });
           void app
             .updateModelContext({ content: [{ type: "text", text: `Brugeren kigger nu på personen ${name} (${a.lassoId}) i Lasso-visningen.` }] })
             .catch(() => {});
@@ -238,6 +243,11 @@ export function McpView() {
           });
           return r.isError ? { ok: false, error: "Download blev afvist" } : { ok: true };
         }
+        case "pdf": {
+          // "Gem som PDF": serveren laver filen; appen gemmer den gennem værten (pdfDownload.ts).
+          if (!current?.pdfLink) return { ok: false, error: "Denne visning kan ikke gemmes som PDF." };
+          return await downloadPdfInHost(app, current.pdfLink);
+        }
         case "fullscreen": {
           const next = ctx?.displayMode === "fullscreen" ? "inline" : "fullscreen";
           await app.requestDisplayMode({ mode: next });
@@ -311,6 +321,7 @@ export function McpView() {
           back: stack.length > 1,
           refresh: true,
           export: true,
+          pdf: Boolean(current.pdfLink),
           fullscreen: canFullscreen,
           openFocus: canMessage,
         }}

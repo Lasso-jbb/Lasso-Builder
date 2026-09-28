@@ -44,7 +44,10 @@ import { companyNameHints } from "./usecases/index.js";
 import { createViewStore, SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "./views/store.js";
 import { entityLink, focusLinks, isEntityId, sendToLassoLink, verifyCompanyLink, verifyEntityLink, verifyPersonLink, verifySendToLassoLink } from "./web/links.js";
 import { injectBoot, loadViewHtml } from "./web/page.js";
+import { ASK_AGAIN, failPage, FROM_LIST, linkFailure, VIEW_MISSING, VIEW_OUTDATED } from "./web/linkErrors.js";
 import { portalApi, portalErrorHandler } from "./web/portalApi.js";
+import { pdfAvailable, pdfRendererFor, type PdfRenderer } from "./pdf/renderer.js";
+import { pdfBoot, pdfRoutes, portalPdfRoutes } from "./pdf/routes.js";
 
 const VERSION = "0.1.0";
 
@@ -55,6 +58,8 @@ export interface AppDeps {
   store: ViewStore;
   /** Gem-laget: brugerens gemte sider (docs/gem-lag.md). */
   pages: SavedPageStore;
+  /** "Gem som PDF" (pdf/renderer.ts). Udeladt: en renderer ud fra PDF_CHROMIUM_PATH. */
+  pdf?: PdfRenderer;
 }
 
 function safeEqual(a: string, b: string): boolean {
@@ -119,7 +124,7 @@ function requireMcpKey(config: Config) {
   };
 }
 
-export function createApp({ config, client, provider, store, pages }: AppDeps) {
+export function createApp({ config, client, provider, store, pages, pdf = pdfRendererFor(config) }: AppDeps) {
   const app = createMcpExpressApp({ host: "0.0.0.0", jsonLimit: "1mb" });
   app.disable("x-powered-by");
 
@@ -164,7 +169,7 @@ export function createApp({ config, client, provider, store, pages }: AppDeps) {
     res
       .type("html")
       .set("Cache-Control", "no-store")
-      .send(injectBoot(html, { mode: "portal", user, loginRequired: portalLoginRequired(config), baseUrl: config.publicBaseUrl }, "Portal"));
+      .send(injectBoot(html, { mode: "portal", user, loginRequired: portalLoginRequired(config), baseUrl: config.publicBaseUrl, pdf: pdfAvailable(config) }, "Portal"));
   });
 
   app.get("/health", async (_req, res) => {
@@ -179,6 +184,7 @@ export function createApp({ config, client, provider, store, pages }: AppDeps) {
       database: store.kind,
       databaseOk: dbOk,
       mcpKeyRequired: mcpKeyRequired(config),
+      pdf: pdfAvailable(config),
       uptimeSeconds: Math.round(process.uptime()),
     });
   });
@@ -208,6 +214,7 @@ export function createApp({ config, client, provider, store, pages }: AppDeps) {
 
   // --- Portal-API (docs/portal.md): samme use-cases som MCP-tools, kræver session ----------
   // Login, logout og me står øverst og kræver ikke session; alt andet under /api/portal gør.
+  app.use("/api/portal/pdf", requirePortal(config), portalPdfRoutes({ config, provider, store, pages, pdf }));
   app.use("/api/portal", requirePortal(config), portalApi({ config, provider, store, pages }));
   app.use("/api/portal", portalErrorHandler);
 
@@ -246,18 +253,21 @@ export function createApp({ config, client, provider, store, pages }: AppDeps) {
    */
   const pageLinks = (dataset: Dataset): Record<string, string> => Object.fromEntries(datasetEntityIds(dataset).map((id) => [id, entityLink(config, id)]));
 
+  // "Gem som PDF": /k/, /p/, /e/, /v/ med .pdf (før HTML-siderne), /x/<token>.pdf og print-siden.
+  app.use(pdfRoutes({ config, provider, store, pdf }));
+
   // --- Delt side: specen hentes, data hentes friskt, render-appen tegner -----
   app.get("/v/:org/:slug", async (req, res) => {
     const view = await store.get(req.params.org, req.params.slug);
     const html = await loadViewHtml();
     if (!view) {
-      res.status(404).type("html").send(injectBoot(html, { mode: "web", error: "Visningen findes ikke eller er slettet." }, "Ikke fundet"));
+      res.status(404).type("html").send(injectBoot(html, { mode: "web", error: VIEW_MISSING }, "Ikke fundet"));
       return;
     }
     // Visninger fra før komponentsættet blev bygget om efter Paper-kataloget (spec v1) kan ikke vises.
     const parsed = viewSpecSchema.safeParse(view.spec);
     if (!parsed.success || (view.spec as { version?: number }).version !== 2) {
-      res.status(410).type("html").send(injectBoot(html, { mode: "web", error: "Visningen er lavet med en ældre version af Lasso og kan ikke vises længere. Bed Claude om at lave den igen, og gem den på ny." }, view.name ?? "Ældre visning"));
+      res.status(410).type("html").send(injectBoot(html, { mode: "web", error: VIEW_OUTDATED }, view.name ?? "Ældre visning"));
       return;
     }
     const dataset = await resolveSpec(parsed.data, provider);
@@ -268,7 +278,7 @@ export function createApp({ config, client, provider, store, pages }: AppDeps) {
       .send(
         injectBoot(
           html,
-          { mode: "web", spec: view.spec, dataset, url, name: view.name, version: view.version, updatedAt: view.updatedAt, links: pageLinks(dataset), focusLinks: focusLinks(config, parsed.data) },
+          { mode: "web", spec: view.spec, dataset, url, name: view.name, version: view.version, updatedAt: view.updatedAt, links: pageLinks(dataset), focusLinks: focusLinks(config, parsed.data), ...pdfBoot(config, req) },
           view.name ?? view.spec.title,
         ),
       );
@@ -278,18 +288,13 @@ export function createApp({ config, client, provider, store, pages }: AppDeps) {
   // /k/<cvr> og /p/<id> fra show_company/show_person, og /e/<lassoId> fra gem-laget, deler de to
   // hjælpere nedenfor: samme komponist som i chatten, friske data ved hver visning, ingen
   // opfølgningsknapper (ingen chat på websiden), og aldrig i søgemaskiner.
-  const failPage = (res: Response, html: string, status: number, message: string) =>
-    void res.status(status).type("html").set("X-Robots-Tag", "noindex").send(injectBoot(html, { mode: "web", error: message }, "Lasso"));
-  const linkFailure = (reason: "invalid" | "expired", expired: string) =>
-    reason === "expired" ? { status: 410, message: `Linket er udløbet. ${expired}` } : { status: 403, message: "Linket er ugyldigt. Brug linket fra Claude, som det er." };
-  const ASK_AGAIN = (what: string) => `Spørg Claude om ${what} igen for at få et nyt link.`;
-  const FROM_LIST = "Åbn siden igen fra dine gemte sider i Claude (\"mine gemte sider\") for at få et nyt link.";
+  // "Gem som PDF": pdf og pdfUrl (samme side som .pdf, samme signerede query) i boot'en (pdf/routes.ts).
   const sendPage = (req: Request, res: Response, html: string, boot: Record<string, unknown>, title: string) =>
     void res
       .type("html")
       .set("Cache-Control", "no-store")
       .set("X-Robots-Tag", "noindex")
-      .send(injectBoot(html, { mode: "web", ...boot, url: `${config.publicBaseUrl}${req.originalUrl}` }, title));
+      .send(injectBoot(html, { mode: "web", ...boot, url: `${config.publicBaseUrl}${req.originalUrl}`, ...pdfBoot(config, req) }, title));
 
   /**
    * Virksomhedssiden. metric udeladt = hovednøgletallet (som show_company). Med spørgsmålet (q i et
@@ -674,10 +679,11 @@ async function main() {
     }
   })();
 
-  const app = createApp({ config, client, provider, store, pages });
+  const pdf = pdfRendererFor(config);
+  const app = createApp({ config, client, provider, store, pages, pdf });
   const server = app.listen(config.PORT, "0.0.0.0", () => {
     console.log(
-      `[lasso-mcp] v${VERSION} ${config.APP_ENV} på port ${config.PORT} | data: ${provider.kind} | lasso-credentials: ${hasLassoCredentials(config) ? "ja" : "nej"} | søgning: ${client.hasSearchCredentials ? config.LASSO_SEARCH_API_BASE_URL : "ingen nøgle"} | db: ${store.kind} | mcp-nøgle: ${mcpKeyRequired(config) ? "ja" : "nej"} | portal: ${portalLoginRequired(config) ? "login" : "åben"} | ${config.publicBaseUrl}/mcp`,
+      `[lasso-mcp] v${VERSION} ${config.APP_ENV} på port ${config.PORT} | data: ${provider.kind} | lasso-credentials: ${hasLassoCredentials(config) ? "ja" : "nej"} | søgning: ${client.hasSearchCredentials ? config.LASSO_SEARCH_API_BASE_URL : "ingen nøgle"} | db: ${store.kind} | mcp-nøgle: ${mcpKeyRequired(config) ? "ja" : "nej"} | pdf: ${pdfAvailable(config) ? "ja" : "nej"} | portal: ${portalLoginRequired(config) ? "login" : "åben"} | ${config.publicBaseUrl}/mcp`,
     );
     void probeLasso(config, client, provider).catch((err) => console.error("[lasso-probe] fejl:", errorMessage(err)));
   });
@@ -685,7 +691,7 @@ async function main() {
   const shutdown = () => {
     console.log("[lasso-mcp] lukker ned");
     server.close(() => {
-      void Promise.all([store.close(), pages.close()])
+      void Promise.all([store.close(), pages.close(), pdf.close()])
         .then(() => pool?.end())
         .finally(() => process.exit(0));
     });

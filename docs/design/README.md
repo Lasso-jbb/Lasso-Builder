@@ -127,4 +127,27 @@ Spec-komponent `LassoChangeFeed { list?, days? (7), types?, title? }` → `Chang
 
 ### A4-eksport (27, node `DO8-0`)
 
-`ReportA4({ company, dataset, generatedAt? })` tegner op til fire A4-sider (forside, nøgletal + graf + ledelse/ejere, regnskab 5 år, kreditvurdering/risiko/reelle ejere/revisor) uden interaktion; `@media print` giver ét ark pr. side. `LassoView` viser knappen "Eksportér PDF" (host.export, spec.kind "company") med Print og Luk. Preview: `npx tsx apps/server/src/dev/render-preview.ts <mappe> --report CVR-1-99000001`.
+`ReportA4({ company, dataset, generatedAt? })` tegner op til fire A4-sider (forside, nøgletal + graf + ledelse/ejere, regnskab 5 år, kreditvurdering/risiko/reelle ejere/revisor) uden interaktion; i print er hver `.lasso-a4-page` præcis ét ark (210 × 297 mm, `break-after: page`, uden skygge og ramme). Preview: `npx tsx apps/server/src/dev/render-preview.ts <mappe> --report CVR-1-99000001`.
+
+**"Gem som PDF"** står øverst til højre i hovedet på alle sider i alle tre værter (MCP-appen, delte sider og portalen), ved siden af Gem/Gemt: samme lille ikonknap (regel 21) med download-ikonet og ordet, kun ikonet under 640 px (aria-label "Gem som PDF"). `LassoView` viser den med `host.pdf` og beder værten om `{ kind: "pdf" }`; mens værten arbejder, står der "Laver PDF …", og knappen er slået fra. Den gamle "Eksportér PDF" nederst og overlay'en med Print og Luk er fjernet; "Eksportér CSV" står, hvor den stod.
+
+Klik giver en rigtig PDF-fil, lavet på serveren med headless Chromium (`apps/server/src/pdf/`):
+
+- **Virksomhed** (spec.kind "company"): rapporten ovenfor som A4-PDF, ét ark pr. side, vektorgrafer og sidetal "x af n". Data hentes friskt (stamdata, regnskab 5 år og fuldt regnskab, ledelse, ejere, reelle ejere, score og revisor); Creditsafe kun fra fokus risiko, fordi et opslag kan koste en kredit.
+- **Alle andre sider** (person, lister, `render_view`, gemte sider og visninger): selve visningen i print-tilstand (`LassoView print`): A4 stående, 794 px bred skaleret ind mellem margenerne (`@page { size: A4; margin: 14mm }`), uden handlingsbjælke, modulbjælke, knapper og kontroller, "Se alle" og "Vis hele" foldet ud, faner (`Tabs`) som overskrift med den viste fanes navn, `break-inside: avoid` på elementerne og rækkerne (tabeller løber videre på næste ark med kolonneoverskrifterne gentaget). Sidehoved med Lasso-mærket, sidens navn og datastempel og sidefod med kilder og "side x af n" på hvert ark (Chromiums sidehoved og sidefod, `pageTemplates` i `packages/ui/src/print.tsx`).
+- Filnavn: `Virksomhedsrapport <navn> <ÅÅÅÅ-MM-DD>.pdf` eller `<sidens titel> <ÅÅÅÅ-MM-DD>.pdf`; tegn uden for bogstaver, tal, mellemrum, bindestreg og punktum bliver "-".
+
+Serveren (én delt Chromium via playwright-core, startet ved første PDF og lukket efter 5 minutters stilhed, højst 2 PDF'er ad gangen, `PDF_TIMEOUT_MS` = 25 s pr. PDF; ved fejl lukkes browseren, og næste kald starter en ny) opretter et print-job i hukommelsen (engangstoken, 60 s), åbner `http://127.0.0.1:<PORT>/print/<token>` (svarer kun til loopback; render-appen med `boot.mode "print"`), venter på fontene og `document.documentElement.dataset.lassoReady === "1"` og gemmer siden med `page.pdf`. Siden må kun hente fra serveren selv; fontene er indlejret i render-appen, og nyhedernes kildeikoner udefra vises ikke i print. Hver PDF logges med varighed (`[pdf] company CVR-1-… 1.4 s`).
+
+| Rute | Giver |
+|---|---|
+| `GET /k/:cvr.pdf?m=&y=&e=&f=&s=` | Virksomhedsrapporten. Samme signerede query som `/k/:cvr` (samme signatur, samme fejl: 403 ugyldig, 410 udløbet). |
+| `GET /p/:id.pdf?f=&e=&s=` | Personsiden med samme fokus. |
+| `GET /e/:lassoId.pdf?f=&e=&s=` | Rapport for `CVR-1-…`, siden for `CVR-3-…`. |
+| `GET /v/:org/:slug.pdf` | En gemt visning som side-PDF (samme adgang som `/v/`). |
+| `GET /x/:token.pdf` | MCP-appens `render_view`, `search_companies` og `list_saved_pages`: specen og data, som de blev vist, i et kortlivet lager (10 min, kan hentes flere gange i den tid; tokenet er 32 tilfældige bytes). |
+| `GET /api/portal/pdf/company/:id?focus=`, `GET /api/portal/pdf/person/:id?focus=`, `POST /api/portal/pdf/spec` | Portalen bag session (se `docs/portal.md`). |
+
+Alle svarer `application/pdf` med `Content-Disposition: attachment; filename*=UTF-8''…`. Uden Chromium (`PDF_CHROMIUM_PATH` findes ikke) svarer de `503 { error: "PDF er ikke slået til på denne server." }`, `/health` viser `pdf: false`, og værterne skjuler knappen (`boot.pdf === false`, eller intet `pdfLink` i MCP-svaret).
+
+Værterne: MCP-appen får `pdfLink` i `structuredContent` (`show_company` → `/k/<cvr>.pdf`, `show_person` → `/p/<id>.pdf`, `render_view`, `search_companies` og `list_saved_pages` → `/x/<token>.pdf`, `resolve_view` efter drill-down og filterændringer), henter filen og gemmer den gennem værten (`app.downloadFile` med PDF'en som blob); kan appen ikke hente linket, eller afviser værten download, åbnes linket i stedet (`app.openLink`), og browseren gemmer filen. Appens ressource tillader forbindelser til serveren selv (`csp.connectDomains`). Delte sider får `pdf` og `pdfUrl` (sidens eget .pdf-link) i boot'en og går til linket. Portalen henter fra `/api/portal/pdf/*` med sessionen og gemmer med `<a download>`; beskeden er "PDF'en er hentet" eller fejlen med "Prøv igen".

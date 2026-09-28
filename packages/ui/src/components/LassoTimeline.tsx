@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { formatDate, isPersonId, type TextSegment, type TimelineVM } from "@lasso/spec";
 import type { MoreInTab, ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
+import { usePrintMode } from "../print.js";
 
 const ALL = "Alle typer";
 
@@ -63,7 +64,7 @@ export function LassoTimeline({
   const heading = title ?? "Historik";
   const categories = useMemo(() => [...new Set((timeline?.events ?? []).map((e) => e.category))], [timeline]);
   const [filter, setFilter] = useState(ALL);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(usePrintMode());
   if (!timeline) {
     return (
       <Section title={heading} span="half">

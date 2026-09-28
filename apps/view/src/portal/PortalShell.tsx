@@ -18,6 +18,7 @@ import type { PortalUser } from "../boot.js";
 import { errorText, isUnauthorized, LOGGED_OUT, PortalApiError, type PortalApi, type ViewResult } from "./api.js";
 import { entityOf, isSaved, savedPagesOf, withSaved, type Entity } from "./data.js";
 import { EntityPage, FOCUS_MODULES, PERSON_MODULES, SavedPage, SearchPage, type TabData } from "./pages.js";
+import { savePortalPdf } from "./pdf.js";
 import { dataKey, focusRoute, formatRoute, isFocus, portalRoute, sameRoute, type PortalRoute } from "./routes.js";
 import {
   activate,
@@ -93,6 +94,8 @@ export interface PortalShellProps {
   onLoggedOut: () => void;
   /** Åben portal uden login (PORTAL_PUBLIC eller ingen nøgler): ingen kontomenu og intet "Log ud". */
   canLogout?: boolean;
+  /** "Gem som PDF" øverst på siderne (serveren har Chromium, boot.pdf). */
+  pdf?: boolean;
 }
 
 /** Beskeder (07) hører til rammen: logges brugeren ud, forsvinder de med den. */
@@ -104,7 +107,7 @@ export function PortalShell(props: PortalShellProps) {
   );
 }
 
-function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true }: PortalShellProps) {
+function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true, pdf = false }: PortalShellProps) {
   const toast = useToast();
   const [tabs, setTabs] = useState<TabsState>(() => initialTabs(window.location.hash, readTabs(), newId));
   const [data, setData] = useState<Record<string, TabData>>({});
@@ -403,6 +406,9 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true }: PortalShel
         case "export":
           downloadCsv(a.filename, a.csv);
           return { ok: true };
+        case "pdf":
+          // "Gem som PDF": rapporten, personsiden eller den viste spec fra /api/portal/pdf/* (portal/pdf.ts).
+          return savePortalPdf(api, tab.route, result);
         default:
           return;
       }
@@ -540,6 +546,7 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true }: PortalShel
           route={route}
           data={d}
           savePrefix={savePrefix}
+          pdf={pdf}
           onSearch={(q) => {
             if (!q) return;
             if (q === route.q) void load(active);
@@ -551,7 +558,7 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true }: PortalShel
       );
       break;
     case "saved":
-      page = <SavedPage key={active.id} tab={active} data={d} onRetry={() => void loadSaved()} onAction={onAction} />;
+      page = <SavedPage key={active.id} tab={active} data={d} pdf={pdf} onRetry={() => void loadSaved()} onAction={onAction} />;
       break;
     default: {
       const entity = d?.result && d.resultKey === d.key ? entityOf(d.result.spec, d.result.dataset) : null;
@@ -564,6 +571,7 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true }: PortalShel
           data={d}
           savePrefix={savePrefix}
           shellWidth={shellWidth}
+          pdf={pdf}
           saved={on}
           canAct={Boolean(entity)}
           onFocus={(focus) => {

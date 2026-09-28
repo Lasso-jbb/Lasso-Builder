@@ -2,6 +2,7 @@ import { useState } from "react";
 import { isPersonId, type PersonNetworkCompanyVM, type PersonNetworkVM } from "@lasso/spec";
 import type { MoreInTab, ViewAction } from "../types.js";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { usePrintMode } from "../print.js";
 
 const COLLAPSED = 3;
 const year = (d?: string) => (d ? d.slice(0, 4) : "");
@@ -35,7 +36,7 @@ export function PersonNetwork({
   moreIn?: MoreInTab;
 }) {
   const heading = title ?? "Sidder sammen med";
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(usePrintMode());
   if (!network) {
     return (
       <Section title={heading} span="half">

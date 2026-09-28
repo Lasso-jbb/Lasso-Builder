@@ -32,6 +32,7 @@ import {
   type LayoutNode,
   type TreeItem,
 } from "../ownershipLayout.js";
+import { usePrintMode } from "../print.js";
 
 /** Under denne bredde bliver diagrammet en indrykket liste (26c). */
 const LIST_BELOW = 560;
@@ -738,6 +739,8 @@ function OwnershipList({
   personRoot?: boolean;
 }) {
   const [openRows, setOpenRows] = useState<ReadonlySet<string>>(new Set());
+  // Print (PDF): alle rækker står, ingen "+ N datterselskaber".
+  const print = usePrintMode();
   const tree = useMemo(() => ownershipTree(graph, { depthUp, depthDown }), [graph, depthUp, depthDown]);
   const root = graph.nodes.find((n) => n.id === graph.rootId);
   const both = tree.owners.length > 0 && tree.subsidiaries.length > 0;
@@ -749,7 +752,7 @@ function OwnershipList({
   };
 
   const rows = (items: TreeItem[], level: number, parentKey: string, noun: string): ReactElement[] => {
-    const all = openRows.has(parentKey);
+    const all = print || openRows.has(parentKey);
     const shown = all || items.length <= LIST_SHOW + 1 ? items : items.slice(0, LIST_SHOW);
     const out: ReactElement[] = [];
     for (const it of shown) {

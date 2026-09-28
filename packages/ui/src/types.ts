@@ -26,6 +26,8 @@ export type ViewAction =
   | { kind: "copy-link"; url: string }
   | { kind: "open-link"; url: string }
   | { kind: "export"; filename: string; csv: string }
+  /** "Gem som PDF" (hovedet): værten henter en rigtig PDF-fil fra serveren og gemmer den. */
+  | { kind: "pdf" }
   | { kind: "fullscreen" }
   | { kind: "back" };
 
@@ -52,6 +54,8 @@ export interface HostCapabilities {
   back?: boolean;
   refresh?: boolean;
   export?: boolean;
+  /** "Gem som PDF" øverst i hovedet: værten kan hente sidens PDF fra serveren (pdfLink, boot.pdfUrl, portal-API). */
+  pdf?: boolean;
   /**
    * Værten kan skifte fane på siden (open-focus): overblikkets smagsprøver ("Se alle … i Historik")
    * åbner fanen. Uden den folder "Se alle" ud på stedet.
@@ -71,4 +75,9 @@ export interface LassoViewProps {
   loading?: boolean;
   /** Basis-URL til "gem"-dialogens adressevisning, fx "lassox.com/v/revisorhuset/". */
   savePrefix?: string;
+  /**
+   * Print-tilstand (serverens PDF af sider, der ikke er virksomhedsrapporten): ingen knapper,
+   * handlingsbjælke eller filterredigering, "Se alle" foldet ud og faner som overskrifter.
+   */
+  print?: boolean;
 }

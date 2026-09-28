@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { ContactPersonVM, ContactPersonsVM } from "@lasso/spec";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { usePrintMode } from "../print.js";
 
 /** Store lister foldes sammen efter de første (regel 9: 3 + "Se N …"). */
 const COLLAPSED_ROWS = 3;
@@ -56,7 +57,7 @@ function PersonRow({ person }: { person: ContactPersonVM }) {
  */
 export function LassoContactPersons({ data, title, error }: { data?: ContactPersonsVM; title?: string; error?: string }) {
   const heading = title ?? "Kontaktpersoner";
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(usePrintMode());
 
   if (!data) {
     return (

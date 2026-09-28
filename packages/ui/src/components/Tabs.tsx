@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
 import { DataState } from "../primitives.js";
 import { Menu } from "./Menu.js";
+import { usePrintMode } from "../print.js";
 
 /**
  * Fanebjælke, tre niveauer (Paper 29, node IWE-0).
@@ -58,6 +59,7 @@ export function Tabs({ level, items, value, onChange, ariaLabel, id, className =
   const autoId = useId();
   const base = id ?? autoId;
   const listRef = useRef<HTMLDivElement>(null);
+  const print = usePrintMode();
 
   // Mobil (29): den valgte fane rulles ind i syne ved skift.
   useEffect(() => {
@@ -83,6 +85,16 @@ export function Tabs({ level, items, value, onChange, ariaLabel, id, className =
     else return;
     e.preventDefault();
   };
+
+  // Print (PDF): ingen fanebjælke, men den viste fanes navn som overskrift over indholdet.
+  if (print) {
+    const label = items.find((t) => t.id === value)?.label;
+    return label ? (
+      <div className={`lasso-tabs-print lasso-tabs-print--l${level} ${className}`} role="heading" aria-level={level + 2}>
+        {label}
+      </div>
+    ) : null;
+  }
 
   const limit = maxVisible ?? (level === 1 ? 8 : Infinity);
   const overflow = items.length > limit;

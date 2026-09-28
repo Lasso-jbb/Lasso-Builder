@@ -77,6 +77,7 @@ export function SearchPage({
   route,
   data,
   savePrefix,
+  pdf = false,
   onSearch,
   onRetry,
   onAction,
@@ -85,6 +86,8 @@ export function SearchPage({
   route: SearchRoute;
   data: TabData | undefined;
   savePrefix: string;
+  /** "Gem som PDF" øverst (boot.pdf). */
+  pdf?: boolean;
   onSearch: (q: string) => void;
   onRetry: () => void;
   onAction: OnAction;
@@ -147,7 +150,7 @@ export function SearchPage({
           url={data.url}
           loading={state === "refreshing"}
           theme="light"
-          host={SEARCH_HOST}
+          host={{ ...SEARCH_HOST, pdf }}
           savePrefix={savePrefix}
           onAction={onAction}
         />
@@ -164,6 +167,7 @@ export function EntityPage({
   data,
   savePrefix,
   shellWidth,
+  pdf = false,
   saved,
   canAct,
   onFocus,
@@ -178,6 +182,8 @@ export function EntityPage({
   savePrefix: string;
   /** Rammens bredde: afgør, om Gem står i modulbjælken (desktop) eller i visningens hoved (mobil). */
   shellWidth: number;
+  /** "Gem som PDF" øverst i visningens hoved (boot.pdf). */
+  pdf?: boolean;
   /** Står siden på brugerens liste (Gem/Gemt). */
   saved: boolean;
   /** Handlingerne vises, når siden er hentet og vi kender dens Lasso-ID. */
@@ -232,7 +238,7 @@ export function EntityPage({
             url={data.url}
             loading={state === "refreshing"}
             theme="light"
-            host={entityHost(shellWidth)}
+            host={{ ...entityHost(shellWidth), pdf }}
             savePrefix={savePrefix}
             onAction={onAction}
           />
@@ -244,7 +250,7 @@ export function EntityPage({
 
 /* ---------- Gemte sider: #/saved ---------- */
 
-export function SavedPage({ tab, data, onRetry, onAction }: { tab: PortalTab; data: TabData | undefined; onRetry: () => void; onAction: OnAction }) {
+export function SavedPage({ tab, data, pdf = false, onRetry, onAction }: { tab: PortalTab; data: TabData | undefined; pdf?: boolean; onRetry: () => void; onAction: OnAction }) {
   const state = viewState({ kind: "saved" }, data);
   if (state === "error") {
     return (
@@ -267,7 +273,7 @@ export function SavedPage({ tab, data, onRetry, onAction }: { tab: PortalTab; da
       dataset={data.result.dataset}
       loading={state === "refreshing"}
       theme="light"
-      host={SAVED_HOST}
+      host={{ ...SAVED_HOST, pdf }}
       onAction={onAction}
     />
   );

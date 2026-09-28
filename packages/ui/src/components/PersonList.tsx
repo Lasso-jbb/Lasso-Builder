@@ -3,6 +3,7 @@ import { formatDate, isPersonId, PERSON_LIST_ROLE_TITLES, peopleWithRole, type P
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { Tabs } from "./Tabs.js";
+import { usePrintMode } from "../print.js";
 
 /** Store bestyrelser (fx 18 personer) foldes sammen efter de første (regel 9). */
 const COLLAPSED_ROWS = 8;
@@ -42,7 +43,7 @@ export function PersonList({
 }) {
   const heading = title ?? (roles ? PERSON_LIST_ROLE_TITLES[roles] : "Ledelse");
   const [mode, setMode] = useState<"current" | "all">(show);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(usePrintMode());
   const people = all ? peopleWithRole(all, roles) : undefined;
   if (!people) {
     return (

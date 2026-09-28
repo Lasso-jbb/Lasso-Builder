@@ -67,8 +67,9 @@ import { AuditorIndependence } from "./components/AuditorIndependence.js";
 import { ChangeFeed } from "./components/ChangeFeed.js";
 import { SavedPages } from "./components/SavedPages.js";
 import { ShellIcon } from "./components/ShellIcons.js";
-import { ReportA4 } from "./components/ReportA4.js";
 import { specToCsv } from "./csv.js";
+import { PdfButton } from "./PdfButton.js";
+import { PrintMode } from "./print.js";
 import { Badge, Skeleton } from "./primitives.js";
 import { SaveDialog } from "./SaveDialog.js";
 import { ToastProvider, Toasts, useHasToastProvider, useToast, type ToastOptions } from "./components/Toast.js";
@@ -494,12 +495,15 @@ function SavePageButton({
 export function LassoView(props: LassoViewProps) {
   // Beskeder (07) kræver en ToastProvider; står der ingen over visningen, pakker den sig selv ind.
   const provided = useHasToastProvider();
-  if (provided) return <LassoViewInner {...props} />;
-  return (
+  const view = provided ? (
+    <LassoViewInner {...props} />
+  ) : (
     <ToastProvider container={false}>
       <LassoViewInner {...props} ownToasts />
     </ToastProvider>
   );
+  // Print-tilstand (PDF): komponenterne folder ud og viser faner som overskrifter (print.tsx).
+  return props.print ? <PrintMode value>{view}</PrintMode> : view;
 }
 
 function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
@@ -515,11 +519,8 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
   const unsupported = Object.values(dataset?.searches ?? {}).flatMap((s) => s.unsupportedCriteria ?? []);
   const csv = dataset ? specToCsv(spec, dataset) : null;
   const shareUrl = savedUrl ?? url;
-
-  // Katalog 27: "Eksportér PDF" på en virksomhedsside viser A4-rapporten i en overlay med "Print" og "Luk".
-  const [reportOpen, setReportOpen] = useState(false);
-  const reportCompany = spec.kind === "company" ? spec.components.map((c) => ("company" in c && typeof c.company === "string" ? c.company : undefined)).find(Boolean) : undefined;
-  const canReport = Boolean(host.export && dataset && reportCompany && dataset.companies[reportCompany]);
+  // Print-tilstand (serverens PDF): ingen knapper eller handlingsbjælke; komponenterne folder ud (print.tsx).
+  const print = Boolean(props.print);
 
   // Beskeder nederst i midten (07). Uden provider: tekst i handlingsbjælken.
   const notify = (o: ToastOptions) => {
@@ -534,13 +535,15 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
   };
 
   // Gem-laget: Gem/Gemt i hovedet på virksomheds- og personsider, når værten kender brugeren.
-  const target = host.savePage ? saveTarget(spec, dataset) : null;
+  const target = host.savePage && !print ? saveTarget(spec, dataset) : null;
+  // "Gem som PDF" øverst ved Gem/Gemt på alle sider, når værten kan hente PDF'en (host.pdf).
+  const pdf = Boolean(host.pdf) && !print;
 
   return (
-    <div className="lasso-root" data-theme={theme ?? "light"}>
+    <div className={print ? "lasso-root lasso-root--print" : "lasso-root"} data-theme={print ? "light" : (theme ?? "light")}>
       <div className="lasso-frame">
         <header className="lasso-frame__header">
-          {host.back ? (
+          {host.back && !print ? (
             <button className="lasso-btn lasso-btn--ghost lasso-frame__back" onClick={() => act({ kind: "back" })} aria-label="Tilbage">
               ←
             </button>
@@ -559,13 +562,18 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
               {dataset?.source === "demo" ? <Badge tone="demo">Demodata</Badge> : null}
             </div>
           </div>
-          {target && dataset ? (
-            <SavePageButton key={target.lassoId} target={target} saved={Boolean(dataset.savedIds?.includes(target.lassoId))} onAction={onAction} notify={notify} />
+          {pdf || (target && dataset) ? (
+            <div className="lasso-frame__actions">
+              {pdf ? <PdfButton onAction={onAction} notify={notify} /> : null}
+              {target && dataset ? (
+                <SavePageButton key={target.lassoId} target={target} saved={Boolean(dataset.savedIds?.includes(target.lassoId))} onAction={onAction} notify={notify} />
+              ) : null}
+            </div>
           ) : null}
         </header>
 
-        {spec.criteria.length > 0 || (host.refine && spec.kind === "list") ? (
-          <FilterPanel criteria={spec.criteria} editable={Boolean(host.refine)} onApply={(criteria) => act({ kind: "set-criteria", criteria })} />
+        {spec.criteria.length > 0 || (host.refine && spec.kind === "list" && !print) ? (
+          <FilterPanel criteria={spec.criteria} editable={Boolean(host.refine) && !print} onApply={(criteria) => act({ kind: "set-criteria", criteria })} />
         ) : null}
         {unsupported.length > 0 ? <div className="lasso-notice">Kunne ikke anvendes endnu: {unsupported.join(", ")}</div> : null}
 
@@ -628,59 +636,41 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
           </div>
         ) : null}
 
-        <footer className="lasso-actionbar">
-          {host.fullscreen ? (
-            <button className="lasso-btn lasso-btn--ghost" onClick={() => act({ kind: "fullscreen" })} aria-label="Fuld skærm">
-              ⤢<span className="lasso-btn__label--optional"> Fuld skærm</span>
-            </button>
-          ) : null}
-          {host.refresh ? (
-            <button className="lasso-btn lasso-btn--ghost" onClick={() => act({ kind: "refresh" })}>
-              Opdatér
-            </button>
-          ) : null}
-          <span className="lasso-actionbar__spacer" />
-          {notice ? <span className="lasso-small lasso-muted" role="status">{notice}</span> : null}
-          {host.export && csv ? (
-            <button className="lasso-btn" onClick={() => act({ kind: "export", filename: `${spec.title.replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase()}.csv`, csv })}>
-              Eksportér<span className="lasso-btn__label--optional"> CSV</span>
-            </button>
-          ) : null}
-          {canReport ? (
-            <button className="lasso-btn" onClick={() => setReportOpen(true)}>
-              Eksportér<span className="lasso-btn__label--optional"> PDF</span>
-            </button>
-          ) : null}
-          {shareUrl ? (
-            <button className="lasso-btn" onClick={() => void copy(shareUrl)}>
-              Del link
-            </button>
-          ) : null}
-          {/* Én primær knap pr. område, yderst til højre (katalog 01). "Gem visning" = delbart link (save_view);
-              Gem/Gemt i hovedet er gem-lagets personlige liste (save_page), så ordene holdes adskilt. */}
-          {host.save ? (
-            <button className="lasso-btn lasso-btn--primary" onClick={() => setSaving(true)} disabled={saving}>
-              {shareUrl ? "Gem visning igen" : "Gem visning"}
-            </button>
-          ) : null}
-        </footer>
-
-        {props.ownToasts ? <Toasts /> : null}
-
-        {reportOpen && dataset && reportCompany ? (
-          <div className="lasso-a4-overlay" role="dialog" aria-label="Virksomhedsrapport">
-            <div className="lasso-a4-toolbar">
-              <span className="lasso-a4-toolbar__title">Virksomhedsrapport, {dataset.companies[reportCompany]?.name}</span>
-              <button className="lasso-btn lasso-btn--primary" onClick={() => window.print()}>
-                Print
+        {print ? null : (
+          <footer className="lasso-actionbar">
+            {host.fullscreen ? (
+              <button className="lasso-btn lasso-btn--ghost" onClick={() => act({ kind: "fullscreen" })} aria-label="Fuld skærm">
+                ⤢<span className="lasso-btn__label--optional"> Fuld skærm</span>
               </button>
-              <button className="lasso-btn" onClick={() => setReportOpen(false)}>
-                Luk
+            ) : null}
+            {host.refresh ? (
+              <button className="lasso-btn lasso-btn--ghost" onClick={() => act({ kind: "refresh" })}>
+                Opdatér
               </button>
-            </div>
-            <ReportA4 company={reportCompany} dataset={dataset} />
-          </div>
-        ) : null}
+            ) : null}
+            <span className="lasso-actionbar__spacer" />
+            {notice ? <span className="lasso-small lasso-muted" role="status">{notice}</span> : null}
+            {host.export && csv ? (
+              <button className="lasso-btn" onClick={() => act({ kind: "export", filename: `${spec.title.replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase()}.csv`, csv })}>
+                Eksportér<span className="lasso-btn__label--optional"> CSV</span>
+              </button>
+            ) : null}
+            {shareUrl ? (
+              <button className="lasso-btn" onClick={() => void copy(shareUrl)}>
+                Del link
+              </button>
+            ) : null}
+            {/* Én primær knap pr. område, yderst til højre (katalog 01). "Gem visning" = delbart link (save_view);
+                Gem/Gemt i hovedet er gem-lagets personlige liste (save_page), så ordene holdes adskilt. */}
+            {host.save ? (
+              <button className="lasso-btn lasso-btn--primary" onClick={() => setSaving(true)} disabled={saving}>
+                {shareUrl ? "Gem visning igen" : "Gem visning"}
+              </button>
+            ) : null}
+          </footer>
+        )}
+
+        {props.ownToasts && !print ? <Toasts /> : null}
       </div>
     </div>
   );

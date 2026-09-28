@@ -46,9 +46,11 @@ Modellen skriver aldrig HTML. Den sender en JSON-spec, og Lassos kode henter dat
 | `GET /api/views/:org/:slug` | Gemt spec som JSON. |
 | `POST /api/views` | Gem via API. Kræver `ADMIN_API_KEY`. |
 | `/api/debug/lasso/<sti>` | Rå svar fra Lassos API til tilpasning af adapters. Kræver `ADMIN_API_KEY`. `?shape=true` viser kun struktur. |
-| `/health` | Status, datakilde, database. |
+| `/k/:cvr.pdf`, `/p/:id.pdf`, `/e/:lassoId.pdf`, `/v/:org/:slug.pdf` | "Gem som PDF": samme signerede link som siden, som rigtig PDF-fil (virksomhed = rapporten, alt andet = siden i print-tilstand). |
+| `/x/:token.pdf` | "Gem som PDF" i MCP-appen for `render_view`, `search_companies` og `list_saved_pages` (kortlivet link, 10 min). |
+| `/health` | Status, datakilde, database, `pdf` (Chromium fundet). |
 | `/portal` | Portalen i browseren (login med bruger-id + adgangsnøgle, skinne, faner, søgning, virksomheds- og personsider, gemte sider). Roden `/` sender hertil. Se `docs/portal.md`. |
-| `/api/portal/*` | Portalens API bag session-cookie og CSRF-header; samme use-cases som MCP-tools. |
+| `/api/portal/*` | Portalens API bag session-cookie og CSRF-header; samme use-cases som MCP-tools. `/api/portal/pdf/*` giver "Gem som PDF". |
 
 ### Data fra Lasso
 
@@ -106,6 +108,21 @@ Nøglen står under servicens Variables på Railway. Claude Code: `claude mcp ad
 ## Miljøvariabler
 
 Se `.env.example`. På Railway er `DATABASE_URL` en reference til Postgres-servicen, og `PUBLIC_BASE_URL` peger på servicens eget domæne.
+
+| Variabel | Standard | |
+|---|---|---|
+| `PDF_CHROMIUM_PATH` | `/usr/bin/chromium` | Chromium til "Gem som PDF" (øverst på alle sider i MCP-appen, delte sider og portalen). Findes filen ikke, er PDF slået fra: knappen skjules, PDF-ruterne svarer 503, og `/health` viser `pdf: false`. Docker-billedet sætter den. |
+| `PDF_TIMEOUT_MS` | `25000` | Så længe må én PDF tage. |
+
+### Docker og "Gem som PDF"
+
+Slutstadiet i `Dockerfile` installerer `chromium`, `fonts-liberation` og `fonts-noto-core` fra Debian og
+sætter `PDF_CHROMIUM_PATH=/usr/bin/chromium`. Serveren starter én Chromium (playwright-core) ved første
+PDF, med `--no-sandbox --disable-dev-shm-usage --disable-gpu`, fordi en container uden brugernavnerum ikke
+kan starte Chromiums egen sandkasse; Chromium åbner kun serverens egen print-side på loopback
+(`/print/<token>`), og alle andre adresser blokeres. Render-appens fonte er indlejret i `view.html`, så
+Chromium aldrig skal ud på nettet. Browseren lukkes efter 5 minutters stilhed. Lokalt uden Docker: sæt
+`PDF_CHROMIUM_PATH` til en Chromium på maskinen (fx Playwrights). Se `docs/design/README.md`, "A4-eksport (27)".
 
 ## Kendte forbehold
 

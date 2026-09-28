@@ -79,6 +79,14 @@ const schema = z.object({
   LASSO_STARTUP_PROBE_QUERY: z.string().default("lasso"),
   /** Lasso-ID, som opstartsproben tester virksomheds- og regnskabsendpoints med (fx en stor virksomhed med regnskaber). */
   LASSO_STARTUP_PROBE_ID: z.string().default(""),
+
+  /**
+   * "Gem som PDF" (apps/server/src/pdf/): Chromium, der tegner PDF'erne. Findes filen ikke, er PDF
+   * slået fra (knappen skjules, ruterne svarer 503, /health viser pdf: false).
+   */
+  PDF_CHROMIUM_PATH: z.string().default("/usr/bin/chromium"),
+  /** Så længe må én PDF tage, fra siden åbnes, til filen er lavet. */
+  PDF_TIMEOUT_MS: z.coerce.number().int().positive().default(25000),
 });
 
 export type Config = z.infer<typeof schema> & { publicBaseUrl: string };

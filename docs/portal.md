@@ -26,7 +26,7 @@ portal.lassox.com bruges i dag. Den bor på `/portal` (roden `/` sender videre),
 | `POST /api/portal/login` | `{ user, key }` | `200 { user: { id, name, org, isDemo } }`, ellers `401 { error }` |
 | `POST /api/portal/logout` | – | `200 { ok: true }` og cookien slettes |
 | `GET /api/portal/me` | – | `200 { user }` eller `401` |
-| `GET /portal` | – | Render-appen med `window.__LASSO_BOOT__ = { mode: "portal", user: {…} \| null, loginRequired, baseUrl }` |
+| `GET /portal` | – | Render-appen med `window.__LASSO_BOOT__ = { mode: "portal", user: {…} \| null, loginRequired, baseUrl, pdf }` (`pdf` = serveren har Chromium til "Gem som PDF") |
 
 ## Portal-API (kræver session; alle svar er JSON)
 
@@ -43,9 +43,14 @@ med det i Claude: `{ spec, dataset, note? }` som `structuredContent.spec` + `_me
 | `POST /api/portal/pages` `{ page, kind?, focus?, note? }` | Som `save_page` (`focus` er et virksomhedsfokus for en virksomhed og et personfokus for en person; et fokus, der ikke passer til siden, gemmes ikke) | `{ lassoId, kind, name, cvr?, savedAt, created, total, url }` |
 | `DELETE /api/portal/pages/:lassoId` | Som `remove_saved_page` | `{ lassoId, removed, total }` |
 | `POST /api/portal/views` `{ spec, name?, slug?, visibility? }` | Som `save_view` | `{ url, org, slug, version, name, visibility }` |
+| `GET /api/portal/pdf/company/:id?focus=` | "Gem som PDF" på en virksomhedsfane: virksomhedsrapporten (Lasso-ID eller CVR; Creditsafe kun med `focus=risiko`) | `application/pdf` (attachment) |
+| `GET /api/portal/pdf/person/:id?focus=` | "Gem som PDF" på en personfane: siden med samme personfokus i print-tilstand | `application/pdf` (attachment) |
+| `POST /api/portal/pdf/spec` `{ spec }` | "Gem som PDF" på søgning og gemte sider: den viste spec med friske data (som `resolve`) | `application/pdf` (attachment) |
 
 Fejl: `400 { error }` ved ugyldigt input, `404 { error }` når virksomheden/personen ikke findes,
-`401`/`403` fra sessionen, `409` ved optaget adresse i `views`.
+`401`/`403` fra sessionen, `409` ved optaget adresse i `views`, `503 { error: "PDF er ikke slået til på
+denne server." }` fra PDF-ruterne, når serveren ikke har Chromium. PDF-ruterne er GET (ingen CSRF-header)
+undtagen `POST /pdf/spec`, der sender `x-lasso-portal: 1` som de andre POST-kald.
 
 ## Render-appen i portal-tilstand (apps/view/src/portal/)
 
@@ -56,8 +61,13 @@ Fejl: `400 { error }` ved ugyldigt input, `404 { error }` når virksomheden/pers
   de åbne sider (søgning, gemte, hver virksomhed/person) med luk og "+" (ny søgning), klokke
   udeladt (ingen overvågning endnu), konto = navn + "Log ud".
 - En virksomhedsfane har `ModuleBar` med de otte fokus (Overblik … Kontakt) og handlingerne
-  Gem/Gemt (accent), Del link og Eksportér; kroppen er `LassoView` med host `{ savePage, save,
-  refine, drillDown, refresh, export, back: false, openFocus }` og handlinger via fetch mod API'et.
+  Gem/Gemt (accent) og Del link; kroppen er `LassoView` med host `{ savePage, save, refine, drillDown,
+  refresh, export, pdf, back: false, openFocus }` og handlinger via fetch mod API'et.
+- **"Gem som PDF"** står øverst til højre i visningens hoved på alle faner (virksomhed, person,
+  søgning og gemte sider), når `boot.pdf` ikke er `false`. Klik henter PDF'en fra `/api/portal/pdf/*`
+  med sessionen (`portal/pdf.ts`: virksomhedsfanen → rapporten med fanens fokus, personfanen → siden
+  med fanens fokus, ellers den viste spec) og gemmer den med `<a download>`. Beskeden er "PDF'en er
+  hentet"; en fejl vises med "Prøv igen". Se `docs/design/README.md`, "A4-eksport (27)".
   `open-focus` (overblikkets "Se alle … i Historik") skifter fanens fokus som et klik i modulbjælken
   (`focusRoute` i `routes.ts`).
 - En personfane har på samme måde `ModuleBar` med de seks personfokus (Overblik, Roller, Netværk,

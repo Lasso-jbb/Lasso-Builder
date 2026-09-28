@@ -2,6 +2,7 @@ import { useState } from "react";
 import { analysisSource, isAnalysisSection, isPersonId, textSectionsFor, type TextSectionItem, type TextSectionsVariant, type TextSectionsVM, type TextSegment } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { usePrintMode } from "../print.js";
 
 const TRUNCATE_AT = 220;
 
@@ -54,7 +55,7 @@ function Runs({ segments, onOpen }: { segments: readonly TextSegment[]; onOpen?:
  * `toggle` får et langt afsnit sin egen "Vis hele"; ellers folder elementet det ud samlet.
  */
 function TextBody({ item, limit, toggle, onOpen }: { item: TextSectionItem; limit: number; toggle: boolean; onOpen?: (a: ViewAction) => void }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(usePrintMode());
   const segments: readonly TextSegment[] = item.segments?.length ? item.segments : [{ text: item.body }];
   const long = segments.reduce((n, s) => n + s.text.length, 0) > limit;
   const folded = long && !(toggle && expanded);
@@ -113,7 +114,7 @@ function analysisHeading(heading: string): string {
  * ud på stedet ("Vis mindre" folder igen). Foldet ud står alle afsnit i fuld længde.
  */
 function Analysis({ items, onOpen }: { items: TextSectionItem[]; onOpen?: (a: ViewAction) => void }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(usePrintMode());
   const [first, ...rest] = items;
   const leadLong = (first!.segments?.length ? first!.segments.reduce((n, s) => n + s.text.length, 0) : first!.body.length) > ANALYSIS_LEAD_AT;
   return (

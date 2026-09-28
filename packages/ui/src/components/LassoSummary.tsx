@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Section, SourceLine } from "../primitives.js";
+import { usePrintMode } from "../print.js";
 
 const FOLD_AT = 340;
 
@@ -9,7 +10,7 @@ const FOLD_AT = 340;
  * uden "Skrevet af AI"-mærke (regel 4). Lange resuméer foldes med hvid toning.
  */
 export function LassoSummary({ text, title, source = "Lasso", updated }: { text: string; title?: string; source?: string; updated?: string }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(usePrintMode());
   const foldable = text.length > FOLD_AT;
   return (
     <Section title={title ?? "Resumé"} span="full">

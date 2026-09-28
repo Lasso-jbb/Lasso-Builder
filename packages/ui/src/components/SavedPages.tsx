@@ -4,6 +4,7 @@ import type { ActionResult, ViewAction } from "../types.js";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
 import { Tabs } from "./Tabs.js";
 import { useToast } from "./Toast.js";
+import { usePrintMode } from "../print.js";
 
 /** Regel 9: over 8 gemte sider vises de 8 nyeste + "Se alle N". */
 const COLLAPSED_ROWS = 8;
@@ -46,7 +47,7 @@ export function SavedPages({ list, title, error, onAction, canDrillDown, canRemo
   const heading = title ?? "Gemte sider";
   const toast = useToast();
   const [filter, setFilter] = useState<Filter>("all");
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(usePrintMode());
   // Optimistisk fjernet, bundet til den liste, klikket skete i: når værten sender en ny liste, gælder den.
   const [removed, setRemoved] = useState<{ list?: SavedPagesVM; ids: ReadonlySet<string> }>({ ids: new Set() });
 

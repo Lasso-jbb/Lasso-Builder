@@ -1,7 +1,11 @@
 export { LassoView } from "./LassoView.js";
-export { LassoMark, LassoWordmark } from "./LassoMark.js";
+export { LassoMark, LassoWordmark, LASSO_MARK_PATH } from "./LassoMark.js";
 export { ReportA4 } from "./components/ReportA4.js";
 export type { ReportA4Props } from "./components/ReportA4.js";
+// "Gem som PDF": knappen i hovedet og print-tilstanden, serverens Chromium tegner (docs/design/README.md, 27).
+export { PdfButton, runPdf, PDF_LABEL, PDF_BUSY_LABEL } from "./PdfButton.js";
+export { PrintMode, usePrintMode, pageTemplates, pageScale, printSources, printStamp, A4_WIDTH_PX, PAGE_MARGIN_MM } from "./print.js";
+export type { PageTemplateInput } from "./print.js";
 export { CompanyHead } from "./components/CompanyHead.js";
 export { KeyFigureCards } from "./components/KeyFigureCards.js";
 export { BarChart } from "./components/BarChart.js";

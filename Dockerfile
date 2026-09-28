@@ -25,6 +25,10 @@ RUN npm ci --omit=dev --no-audit --no-fund -w @lasso/server
 
 FROM node:22-slim
 ENV NODE_ENV=production
+# "Gem som PDF": Chromium tegner PDF'erne (apps/server/src/pdf/). Fontene til render-appen er indlejret
+# i view.html; Liberation og Noto dækker tegn, Poppins ikke har (fx pile og symboler).
+RUN apt-get update && apt-get install -y --no-install-recommends chromium fonts-liberation fonts-noto-core && rm -rf /var/lib/apt/lists/*
+ENV PDF_CHROMIUM_PATH=/usr/bin/chromium
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/apps/server/dist ./dist

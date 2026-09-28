@@ -21,6 +21,7 @@ import {
   type ViewSpec,
 } from "@lasso/spec";
 import { textCard } from "../data/card.js";
+import { mcpPdfLink } from "../pdf/routes.js";
 import { summarizeView } from "../data/summary.js";
 import { VISIBILITIES } from "../views/store.js";
 import { loadViewHtml, viewVersion } from "../web/page.js";
@@ -77,7 +78,7 @@ Regler:
  * Resuméet står både som tekst og i structuredContent: nogle værter (fx Claude Code)
  * giver kun modellen structuredContent, og så skal tallene at kommentere stå der.
  */
-function viewResult(spec: ViewSpec, ds: Dataset, extra: { note?: string; link?: string; ask?: Ask } = {}): CallToolResult {
+function viewResult(spec: ViewSpec, ds: Dataset, extra: { note?: string; link?: string; ask?: Ask; pdfLink?: string } = {}): CallToolResult {
   // Med et spørgsmål svarer resuméet og tekstkortet på det først ("Svar: …").
   const summary = [extra.note, summarizeView(spec, ds, { ask: extra.ask }), extra.link && `Interaktiv Lasso-visning (link til brugeren): ${extra.link}`]
     .filter(Boolean)
@@ -88,9 +89,31 @@ function viewResult(spec: ViewSpec, ds: Dataset, extra: { note?: string; link?: 
       { type: "text", text: summary },
       ...(card ? [{ type: "text" as const, text: `Tekstkort:\n${card}` }] : []),
     ],
-    structuredContent: { spec, source: ds.source, summary, ...(card ? { card } : {}), ...(extra.link ? { link: extra.link } : {}) },
+    structuredContent: {
+      spec,
+      source: ds.source,
+      summary,
+      ...(card ? { card } : {}),
+      ...(extra.link ? { link: extra.link } : {}),
+      // "Gem som PDF" i appen: det signerede .pdf-link til netop denne visning (pdf/routes.ts).
+      ...(extra.pdfLink ? { pdfLink: extra.pdfLink } : {}),
+    },
     _meta: { [DATASET_META_KEY]: ds },
   };
+}
+
+/** { [key]: value } når value findes, ellers {}. */
+function optional<K extends string, V>(key: K, value: V | undefined): { [P in K]?: V } {
+  return (value === undefined ? {} : { [key]: value }) as { [P in K]?: V };
+}
+
+/** Appens CSP: må hente fra serverens egen adresse (PDF'en bag pdfLink). */
+function serverCsp(publicBaseUrl: string): { connectDomains: string[] } | undefined {
+  try {
+    return { connectDomains: [new URL(publicBaseUrl).origin] };
+  } catch {
+    return undefined;
+  }
 }
 
 function toolError(message: string): CallToolResult {
@@ -122,7 +145,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     async (input): Promise<CallToolResult> => {
       const r = await searchCompanies(ctx, input);
       if ("error" in r) return toolError(r.error);
-      return viewResult(r.spec, r.dataset, { note: r.note });
+      return viewResult(r.spec, r.dataset, { note: r.note, pdfLink: mcpPdfLink(ctx.config, r) });
     },
   );
 
@@ -148,7 +171,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     async (input): Promise<CallToolResult> => {
       const r = await showCompany(ctx, input);
       if ("error" in r) return toolError(r.error);
-      return viewResult(r.spec, r.dataset, { note: r.note, link: r.link, ask: r.ask });
+      return viewResult(r.spec, r.dataset, { note: r.note, link: r.link, ask: r.ask, pdfLink: mcpPdfLink(ctx.config, r) });
     },
   );
 
@@ -170,7 +193,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     async (input): Promise<CallToolResult> => {
       const r = await showPerson(ctx, input);
       if ("error" in r) return toolError(r.error);
-      return viewResult(r.spec, r.dataset, { note: r.note, link: r.link, ask: r.ask });
+      return viewResult(r.spec, r.dataset, { note: r.note, link: r.link, ask: r.ask, pdfLink: mcpPdfLink(ctx.config, r) });
     },
   );
 
@@ -190,7 +213,7 @@ ${LAYOUT_RULES}\n\nKomponentkatalog (hver linje: Brug til / Brug ikke når / Kr�
       // Navne ("Risika") slås op som i show_company, så modellen ikke skal søge først (review P1-7).
       const r = await renderView(ctx, input);
       if ("error" in r) return toolError(r.error);
-      return viewResult(r.spec, r.dataset, { note: r.note });
+      return viewResult(r.spec, r.dataset, { note: r.note, pdfLink: mcpPdfLink(ctx.config, r) });
     },
   );
 
@@ -299,7 +322,7 @@ ${LAYOUT_RULES}\n\nKomponentkatalog (hver linje: Brug til / Brug ikke når / Kr�
     },
     async (input): Promise<CallToolResult> => {
       const { spec, dataset } = await listSavedPages(ctx, input);
-      return viewResult(spec, dataset);
+      return viewResult(spec, dataset, { pdfLink: mcpPdfLink(ctx.config, { spec, dataset }) });
     },
   );
 
@@ -319,7 +342,7 @@ ${LAYOUT_RULES}\n\nKomponentkatalog (hver linje: Brug til / Brug ikke når / Kr�
       if ("error" in r) return toolError(r.error);
       return {
         content: [{ type: "text", text: "ok" }],
-        structuredContent: { spec: r.spec, dataset: r.dataset },
+        structuredContent: { spec: r.spec, dataset: r.dataset, ...optional("pdfLink", mcpPdfLink(ctx.config, r)) },
       };
     },
   );
@@ -335,7 +358,8 @@ ${LAYOUT_RULES}\n\nKomponentkatalog (hver linje: Brug til / Brug ikke når / Kr�
           uri: VIEW_URI,
           mimeType: RESOURCE_MIME_TYPE,
           text: await loadViewHtml(),
-          _meta: { ui: { prefersBorder: false } },
+          // connectDomains: appen henter "Gem som PDF" (pdfLink) fra serveren selv.
+          _meta: { ui: { prefersBorder: false, ...optional("csp", serverCsp(ctx.config.publicBaseUrl)) } },
         },
       ],
     }),

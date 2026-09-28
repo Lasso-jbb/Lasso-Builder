@@ -14,6 +14,7 @@ import {
 } from "@lasso/spec";
 import type { MoreInTab, ViewAction } from "../types.js";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { usePrintMode } from "../print.js";
 
 /** Regel 9: tre selskaber i tidsbåndene og fem i listerne, resten under "Se alle N" (limit kan ændre det). */
 const COLLAPSED = 3;
@@ -107,7 +108,7 @@ function PersonRoleList({
   moreIn?: MoreInTab;
   role?: PersonRoleFilter;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(usePrintMode());
   const rows = personRoleRows(person, show, { except });
   if (rows.length === 0) {
     return (
@@ -187,7 +188,7 @@ export function PersonRoles({
   moreIn?: MoreInTab;
 }) {
   const heading = title ?? (role ? PERSON_ROLE_FILTER_TITLES[role] : show === "all" ? "Roller over tid" : LIST_TITLE[show]);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(usePrintMode());
   const person = whole ? personWithRole(whole, role) : undefined;
   if (!person) {
     return (

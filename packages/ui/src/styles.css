@@ -1254,6 +1254,14 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-root .lasso-iconbtn[aria-pressed="true"] { color: var(--lasso-text); font-weight: 600; }
 .lasso-root .lasso-iconbtn[aria-busy="true"] { cursor: progress; }
 .lasso-frame__header .lasso-iconbtn { margin-left: auto; }
+/* "Gem som PDF" og Gem/Gemt står sammen øverst til højre i hovedet (katalog 01, regel 21). */
+.lasso-frame__actions { flex: none; margin-left: auto; display: flex; align-items: center; gap: var(--lasso-space-2); }
+.lasso-frame__actions .lasso-iconbtn { margin-left: 0; }
+.lasso-root .lasso-iconbtn:disabled { cursor: progress; opacity: 1; color: var(--lasso-muted); }
+@container lasso (max-width: 640px) {
+  /* Kun ikonet; aria-label bærer "Gem som PDF". */
+  .lasso-frame__pdf-label { display: none; }
+}
 @container lasso (max-width: 560px) {
   .lasso-root .lasso-iconbtn { height: 40px; min-width: 40px; }
 }
@@ -1521,20 +1529,45 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 /* "Om rapporten": tynd kant, panelflade */
 .lasso-a4-about { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius); background: var(--lasso-surface-2); }
 .lasso-a4-about__text { font-size: 10px; line-height: 14px; color: var(--lasso-text-3); }
-/* Overlay i visningen: rapporten over indholdet med "Print" og "Luk" (knapperne er ikke en del af rapporten) */
-.lasso-a4-overlay { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; background: var(--lasso-chrome); overflow: auto; }
-.lasso-a4-toolbar { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: var(--lasso-space-2); padding: var(--lasso-space-3) var(--lasso-space-4); background: var(--lasso-surface); border-bottom: 1px solid var(--lasso-border); }
-.lasso-a4-toolbar__title { flex: 1; font-size: var(--lasso-fs); font-weight: 600; color: var(--lasso-text); }
+/* PDF (serverens Chromium, @page { size: A4; margin: 0 } fra print-siden): hver side er præcis ét ark,
+   uden skygge og ramme. 297 mm i stedet for 1123 px, så en side aldrig flyder en halv pixel ind på næste ark. */
 @media print {
-  @page { size: A4; margin: 0; }
-  .lasso-root:has(.lasso-a4-overlay) .lasso-frame > :not(.lasso-a4-overlay) { display: none !important; }
-  .lasso-root:has(.lasso-a4-overlay) .lasso-frame { padding: 0; gap: 0; }
-  .lasso-a4-overlay { position: static; overflow: visible; background: transparent; }
-  .lasso-a4-toolbar { display: none; }
   .lasso-a4 { gap: 0; padding: 0; background: transparent; }
-  .lasso-a4-page { break-after: page; page-break-after: always; box-shadow: none; border: 0; }
+  .lasso-a4-page { width: 210mm; height: 297mm; break-after: page; page-break-after: always; box-shadow: none; border: 0; }
   .lasso-a4-page:last-child { break-after: auto; page-break-after: auto; }
 }
+
+/* ---------- "Gem som PDF": sider i print-tilstand (alt andet end virksomhedsrapporten) ---------- */
+/* A4 stående, 794 px bred (skaleres ind mellem margenerne på 14 mm), hvid, uden knapper, kontroller
+   og skygger. Sidehoved og sidefod står i margenen (Chromiums skabeloner, print.tsx). Elementerne
+   deles ikke over to ark, når de kan være på ét; tabeller løber videre på næste ark (rækkerne holdes
+   hele, og kolonneoverskrifterne gentages), så en lang tabel ikke efterlader et tomt ark. */
+.lasso-root--print { background: #ffffff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.lasso-root--print .lasso-frame { padding: 0; }
+.lasso-root--print .lasso-cell:not(.lasso-columns):not(:has(table, .lasso-stmt, .lasso-myt)),
+.lasso-root--print .lasso-column__item:not(:has(table, .lasso-stmt, .lasso-myt)),
+.lasso-root--print .lasso-row,
+.lasso-root--print .lasso-news__row,
+.lasso-root--print tr { break-inside: avoid; page-break-inside: avoid; }
+.lasso-root--print .lasso-section__head, .lasso-root--print h2, .lasso-root--print h3 { break-after: avoid; page-break-after: avoid; }
+.lasso-root--print .lasso-more,
+.lasso-root--print .lasso-state__retry,
+.lasso-root--print .lasso-select,
+.lasso-root--print .lasso-tabs__select,
+.lasso-root--print .lasso-odiagram__toolbar,
+.lasso-root--print .lasso-odiagram__zoom,
+.lasso-root--print .lasso-odlist__more,
+.lasso-root--print .lasso-btn--prompt { display: none !important; }
+.lasso-root--print .lasso-skeleton { animation: none; }
+/* Tabeller skal kunne stå i arkets bredde: ingen vandret rulning, tættere celler. */
+.lasso-root--print .lasso-table-wrap { overflow: visible; }
+.lasso-root--print .lasso-table th, .lasso-root--print .lasso-table td { padding-left: 10px; padding-right: 10px; }
+.lasso-root--print .lasso-cell--name { min-width: 110px; }
+.lasso-root--print .lasso-spark { width: 40px; }
+.lasso-root--print * { box-shadow: none !important; }
+/* Faner (Tabs) som overskrifter: den viste fanes navn over indholdet. */
+.lasso-tabs-print { font-size: var(--lasso-fs-sm); line-height: 18px; font-weight: 600; color: var(--lasso-text); }
+.lasso-tabs-print--l1, .lasso-tabs-print--l2 { font-size: var(--lasso-fs); padding-bottom: var(--lasso-space-2); border-bottom: 1px solid var(--lasso-border); }
 
 /* ---------- 07 Dialoger, menuer og beskeder (node 9L1-0) ---------- */
 /* Laget: portal i document.body, hele viewporten, gennemsigtigt; kun det svævende tager klik. */
