@@ -2000,3 +2000,24 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
   .lasso-audit .lasso-tbtn { height: var(--lasso-touch-h); }
   .lasso-audit__table td.lasso-cell--name { grid-column: 1 / -1; flex-direction: column; align-items: flex-start; gap: 0; text-align: left; font-size: var(--lasso-fs); }
 }
+
+/* ---------- 26c.3 Flerårstabel på mobil (node ED8-0): variant A og B ---------- */
+/* B: år i rækker, nøgletal i kolonner (få nøgletal, mange år). Nyeste år øverst i vægt 600. */
+.lasso-myt-b { width: 100%; border-collapse: collapse; font-size: var(--lasso-fs); font-variant-numeric: tabular-nums; }
+.lasso-myt-b th, .lasso-myt-b td { height: 44px; padding: 0 8px; border-bottom: 1px solid var(--lasso-divider-subtle); text-align: left; }
+.lasso-myt-b thead th { height: 36px; border-bottom: 1px solid var(--lasso-border); font-size: 12px; font-weight: 600; color: var(--lasso-muted); white-space: normal; line-height: 14px; }
+.lasso-myt-b tbody th { width: 64px; font-weight: 500; color: var(--lasso-text); }
+.lasso-myt-b td { color: var(--lasso-text-2); }
+.lasso-myt-b .lasso-num { text-align: right; }
+.lasso-myt-b tr.is-last td, .lasso-myt-b tr.is-last th { font-weight: 600; color: var(--lasso-text); }
+.lasso-myt-b tr.is-last td.lasso-down { color: var(--lasso-negative); }
+.lasso-myt-b th:first-child, .lasso-myt-b td:first-child { padding-left: 0; }
+.lasso-myt-b th:last-child, .lasso-myt-b td:last-child { padding-right: 0; }
+.lasso-myt-b tbody tr:last-child th, .lasso-myt-b tbody tr:last-child td { border-bottom: 0; }
+
+/* ---------- 26c.4 Personliste på mobil (node EG1-0): 56 px rækker, "Vis alle" som 44 px række ---------- */
+@container lasso (max-width: 560px) {
+  .lasso-personlist .lasso-row { min-height: 56px; }
+  .lasso-root .lasso-rowmore { display: flex; align-items: center; width: 100%; min-height: var(--lasso-touch-h); margin: 0; padding: 0; border: 0; border-bottom: 1px solid var(--lasso-border); border-radius: 0; background: transparent; font-size: var(--lasso-fs); font-weight: 500; color: var(--lasso-accent-text); text-align: left; }
+  .lasso-root .lasso-rowmore:hover { text-decoration: none; background: var(--lasso-surface-2); }
+}

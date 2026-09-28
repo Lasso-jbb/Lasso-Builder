@@ -9,6 +9,8 @@ import { CompanyTable, cardFigures, statusTone } from "./components/CompanyTable
 import { PersonTable, personSub, rolesText } from "./components/PersonTable.js";
 import { BulkBar, Pagination, pageItems } from "./components/TableKit.js";
 import { rowsToCsv } from "./csv.js";
+import { multiYearVariant } from "./components/MultiYearTable.js";
+import { PersonList } from "./components/PersonList.js";
 
 const noop = () => {};
 const rows: CompanyRowVM[] = Array.from({ length: 30 }, (_, i) => ({
@@ -163,4 +165,18 @@ test("Revisoruafhængighed (22.2): værktøjslinje med PDF og Excel, CSV til arb
   assert.equal(lines.length, 3);
   assert.match(lines[1]!, /^Vurdér;Eksempel Partner;/);
   assert.match(lines[2]!, /Neutral;Prøve Person;.*01\.01\.2020/);
+});
+
+test("Flerårstabel (26c.3): variant B ved få nøgletal på mobil, ellers A", () => {
+  assert.equal(multiYearVariant(390, 2), "B");
+  assert.equal(multiYearVariant(390, 5), "A");
+  assert.equal(multiYearVariant(390, 5, "B"), "B");
+  assert.equal(multiYearVariant(1200, 1), "A");
+});
+
+test("Personliste (26c.4): 'Vis alle' som række efter de første 8", () => {
+  const people = Array.from({ length: 12 }, (_, i) => ({ name: `Prøve ${i}`, role: "Bestyrelsesmedlem" }));
+  const html = renderToStaticMarkup(createElement(PersonList, { people, show: "current" }));
+  assert.match(html, /lasso-rows lasso-personlist/);
+  assert.match(html, /lasso-rowmore[^>]*>Vis alle 12</);
 });
