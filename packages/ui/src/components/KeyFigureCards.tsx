@@ -1,4 +1,4 @@
-import { effectiveMetric, formatMetricValue, formatPercent, mainMetric, METRIC_FIELD, METRIC_LABELS, type FinancialsVM, type Metric } from "@lasso/spec";
+import { effectiveMetric, formatMetricValue, mainMetric, METRIC_FIELD, METRIC_LABELS, type FinancialsVM, type Metric } from "@lasso/spec";
 import { DataState, Delta, Sparkline, stateForError } from "../primitives.js";
 import { QualityFlag } from "./QualityFlag.js";
 
@@ -87,14 +87,6 @@ export function KeyFigureCards({ financials, metrics, error, plain = false }: { 
   const ordered = explicit ? [...present, ...unique.filter((m) => !has(m))] : present;
   const chosen: Metric[] = (ordered.length > 0 ? ordered : unique.slice(0, 1)).slice(0, 5);
 
-  // Katalog 09.1: branchetal som tekst efter ændringen ("branche +3,1 %"), aldrig som et ekstra tal.
-  const bench = (m: Metric) => {
-    const v = financials.benchmark?.change[m];
-    if (typeof v !== "number") return null;
-    // 09.1: "▲ 7,5 % fra 2024, branche +2,1 %" på én linje, uden branchekode.
-    return <span className="lasso-kpi__bench">{`branche ${formatPercent(v)}`}</span>;
-  };
-
   return (
     <div className={`lasso-kpis lasso-span-full${plain ? " lasso-kpis--plain" : ""}`} style={{ ["--lasso-kpi-count" as string]: chosen.length }}>
       {/* 26c.1: på mobil står titlen "Nøgletal ÅÅÅÅ" over de fire kort; på desktop er kortene selv overskriften. */}
@@ -131,9 +123,8 @@ export function KeyFigureCards({ financials, metrics, error, plain = false }: { 
               {series.length >= 3 && !plain ? <Sparkline values={series} tone="accent" bare /> : null}
             </div>
             <div className="lasso-kpi__delta">
+              {/* 02c.4/02c.5 (Jakob 29.09.2026): kun pil + procent; ingen "fra 2024" og ingen anden procent (branche) efter. */}
               {before === value ? <span className="lasso-muted">Uændret</span> : <Delta from={before} to={value} />}
-              {prev ? <span className="lasso-kpi__year">fra {prev.year}{bench(m) && !plain ? "," : ""}</span> : null}
-              {plain ? null : bench(m)}
             </div>
           </div>
         );

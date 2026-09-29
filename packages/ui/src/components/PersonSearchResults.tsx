@@ -1,3 +1,4 @@
+import { moreText } from "@lasso/spec";
 import { Section } from "../primitives.js";
 import { ShellIcon } from "./ShellIcons.js";
 import { Tabs } from "./Tabs.js";
@@ -72,7 +73,7 @@ export function PersonSearchResults({ rows, onOpen, query, onQuery, searchKind =
       <ul className="lasso-psearch">
         {rows.map((r) => {
           const total = r.totalCompanyCount ?? r.companies.length;
-          const companies = r.companies.slice(0, 2).join(", ") + (total > 2 ? ` og ${total - 2} flere` : "");
+          const companies = r.companies.slice(0, 2).join(", ") + (total > 2 ? ` og ${moreText(total - 2)}` : "");
           const company = r.kind === "company";
           const sub = r.sub ?? [company ? null : "Person", r.city].filter(Boolean).join(", ");
           return (

@@ -37,7 +37,7 @@ test("19.2: ændringskolonnen farver kun subtotaler; underposter som muted proce
   const { changeText } = await import("./components/statementTable.js");
   assert.deepEqual(changeText(17481, 18792, "subtotal"), { text: "▲ 7,5 %", tone: "up" });
   assert.deepEqual(changeText(-12104, -14890, "line"), { text: "+23,0 %", tone: "" });
-  assert.deepEqual(changeText(1084, -338, "subtotal"), { text: "▼", tone: "down" });
-  assert.deepEqual(changeText(-239, 137, "line"), { text: "", tone: "" });
+  assert.deepEqual(changeText(1084, -338, "subtotal"), { text: "▼ 131,2 %", tone: "down" });
+  assert.deepEqual(changeText(-239, 137, "line"), { text: "\u221242,7 %", tone: "" });
   assert.deepEqual(changeText(-612, -6702, "line", true), { text: "", tone: "" });
 });

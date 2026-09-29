@@ -6,7 +6,7 @@ import {
   formatPercent,
   formatScaled,
   noStatementsReason,
-  percentChange,
+  changePercent,
   type AmountScale,
   type CompanyVM,
   type FinancialStatementsVM,
@@ -60,10 +60,10 @@ function periodText(start?: string, end?: string): string | undefined {
   return `${s.slice(0, 5)}–${e}`;
 }
 
-/** Δ mod året før: "+7,5 %"; underposter som ændring i størrelse ("+9,1 %"), "—" ved fortegnsskift, kvalitetsflag eller manglende tal (26d.9). */
+/** Δ mod året før: "+7,5 %"; underposter som ændring i størrelse ("+9,1 %"); også ved fortegnsskift (02c.4). "—" ved kvalitetsflag, manglende tal eller forrige = 0 (26d.9). */
 function deltaText(prev: number | null | undefined, cur: number | null | undefined, line = false, flagged = false): { text: string; tone: "up" | "down" | "" } {
-  if (flagged || typeof prev !== "number" || typeof cur !== "number" || prev === 0 || Math.sign(prev) !== Math.sign(cur)) return { text: "—", tone: "" };
-  const pct = line ? ((Math.abs(cur) - Math.abs(prev)) / Math.abs(prev)) * 100 : percentChange([prev, cur]);
+  if (flagged || typeof prev !== "number" || typeof cur !== "number" || prev === 0) return { text: "—", tone: "" };
+  const pct = line ? ((Math.abs(cur) - Math.abs(prev)) / Math.abs(prev)) * 100 : changePercent(prev, cur);
   if (pct === null) return { text: "—", tone: "" };
   return { text: formatPercent(pct), tone: pct < 0 ? "down" : "up" };
 }

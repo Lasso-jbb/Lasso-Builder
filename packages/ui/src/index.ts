@@ -126,6 +126,7 @@ export {
   DatePicker,
   DateInput,
   DateField,
+  dateRangeError,
   TreePicker as IndustryTreePicker,
   IndustryField,
   formatIndustryCode,
@@ -133,6 +134,7 @@ export {
   personaTitle,
   TechnologyField,
   TechnologyRow,
+  techAnyLabel,
 } from "./components/Fields.js";
 export type { FieldRowProps, Option, MultiSelectProps, TagInputProps, AmountFieldValue, PersonaValue, PersonaFieldProps, TechMode, TechValue } from "./components/Fields.js";
 export { DB07_EXCERPT, leafCodes, treeLabels } from "./components/industries.js";

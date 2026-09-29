@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { amountScale, currencyUnit, formatPercent, formatScaled, percentChange, type AmountScale } from "@lasso/spec";
+import { amountScale, currencyUnit, formatPercent, formatScaled, changePercent, type AmountScale } from "@lasso/spec";
 import { QualityFlag } from "./QualityFlag.js";
 export { QualityFlag };
 import { DataState, Section, stateForError } from "../primitives.js";
@@ -36,18 +36,17 @@ export interface StatementSection {
 
 /**
  * Ændringskolonnen (19.2): kun subtotaler og bundlinje får ▲/▼ i farve ("▲ 7,5 %"); underposter får
- * ændringen i størrelse som muted ren tekst uden pil ("+23,0 %"). Skifter fortegnet, vises kun pilen
- * ("▼") på subtotaler og "—" på underposter; "—" også når tallet har kvalitetsflag eller mangler.
+ * ændringen i størrelse som muted ren tekst uden pil ("+23,0 %"). Skifter fortegnet, vises stadig pil +
+ * procent (02c.4); "—" når tallet har kvalitetsflag, mangler eller forrige er 0.
  */
 export function changeText(prev: number | null | undefined, last: number | null | undefined, kind: StatementRow["kind"] = "line", flagged = false): { text: string; tone: "up" | "down" | "" } {
   if (flagged || typeof prev !== "number" || typeof last !== "number" || prev === 0) return { text: "", tone: "" };
   const sum = kind === "subtotal" || kind === "bottom";
-  if (Math.sign(prev) !== Math.sign(last)) return sum ? { text: last < prev ? "▼" : "▲", tone: last < prev ? "down" : "up" } : { text: "", tone: "" };
   if (!sum) {
     const pct = ((Math.abs(last) - Math.abs(prev)) / Math.abs(prev)) * 100;
     return { text: formatPercent(pct), tone: "" };
   }
-  const pct = percentChange([prev, last]);
+  const pct = changePercent(prev, last);
   if (pct === null) return { text: "", tone: "" };
   return { text: `${pct < 0 ? "▼" : "▲"} ${formatPercent(Math.abs(pct), false)}`, tone: pct < 0 ? "down" : "up" };
 }

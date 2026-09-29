@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { formatNumber, operatorLabel, type Operator } from "@lasso/spec";
+import { DATE_RANGE_ERROR, moreText, formatNumber, operatorLabel, type Operator } from "@lasso/spec";
 import { Dialog } from "./Dialog.js";
 import { CheckIcon } from "./Layer.js";
 import { Picker } from "./Menu.js";
@@ -285,11 +285,11 @@ export function SelectField({ options, value, onChange, placeholder = "Vælg", l
   );
 }
 
-/** Tekst i et lukket felt med flere valg: to navne og "og N flere" (gennemgående, også "og 1 flere"; 02a.12, 02b.14, 26.3). */
+/** Tekst i et lukket felt med flere valg: to navne og "og N flere" ("og 1 mere" ved én, "og N flere" ved flere; 02a.12, 02b.14, 26.3). */
 export function summarize(labels: readonly string[], max = 2): string {
   if (labels.length <= max) return labels.join(", ");
   const rest = labels.length - max;
-  return `${labels.slice(0, max).join(", ")} og ${rest} flere`;
+  return `${labels.slice(0, max).join(", ")} og ${moreText(rest)}`;
 }
 
 export interface MultiSelectProps {
@@ -888,8 +888,9 @@ function SmallChevron({ dir }: { dir: "left" | "right" | "down" }) {
  * i 32 px celler, mandag først. I dag = koral-lys rund flade med koral 600-tekst; valgt dag = koral
  * rund flade med hvid tekst; dage fra forrige/næste måned står i faint.
  */
-export function DatePicker({ value, onSelect, today = new Date(), minYear = 1900, maxYear }: { value?: string | null; onSelect: (iso: string) => void; today?: Date; minYear?: number; maxYear?: number }) {
-  const start = value && /^\d{4}-\d{2}/.test(value) ? { y: Number(value.slice(0, 4)), m: Number(value.slice(5, 7)) - 1 } : { y: today.getFullYear(), m: today.getMonth() };
+export function DatePicker({ value, onSelect, today = new Date(), minYear = 1900, maxYear, min }: { value?: string | null; onSelect: (iso: string) => void; today?: Date; minYear?: number; maxYear?: number; /** Tidligste dato, der kan vælges (ÅÅÅÅ-MM-DD). "Mellem": til-datoen kan ikke vælges før fra-datoen; dagene før står deaktiverede. */ min?: string | null }) {
+  const startFrom = value && /^\d{4}-\d{2}/.test(value) ? value : min && /^\d{4}-\d{2}/.test(min) ? min : null;
+  const start = startFrom ? { y: Number(startFrom.slice(0, 4)), m: Number(startFrom.slice(5, 7)) - 1 } : { y: today.getFullYear(), m: today.getMonth() };
   const [view, setView] = useState(start);
   const top = maxYear ?? today.getFullYear() + 1;
   const years = Array.from({ length: top - minYear + 1 }, (_, i) => top - i);
@@ -959,6 +960,7 @@ export function DatePicker({ value, onSelect, today = new Date(), minYear = 1900
         ))}
         {cells.map((c) => {
           const v = iso(c.y, c.m, c.d);
+          const off = Boolean(min && v < min);
           return (
             <button
               key={v}
@@ -966,7 +968,9 @@ export function DatePicker({ value, onSelect, today = new Date(), minYear = 1900
               role="gridcell"
               aria-selected={v === value}
               aria-current={v === todayIso ? "date" : undefined}
-              className={`lasso-cal__day ${c.out ? "is-out" : ""} ${v === value ? "is-on" : ""} ${v === todayIso ? "is-today" : ""}`}
+              aria-disabled={off || undefined}
+              disabled={off}
+              className={`lasso-cal__day ${c.out ? "is-out" : ""} ${v === value ? "is-on" : ""} ${v === todayIso ? "is-today" : ""} ${off ? "is-disabled" : ""}`}
               onClick={() => onSelect(v)}
             >
               {c.d}
@@ -979,7 +983,7 @@ export function DatePicker({ value, onSelect, today = new Date(), minYear = 1900
 }
 
 /** 02a.6 Datofelt: "dd.mm.åååå" som tekst eller valgt i kalenderen (ikonet åbner datovælgeren). */
-export function DateInput({ value, onChange, invalid, label = "Dato", defaultOpen = false, today, placeholder = "dd.mm.åååå" }: { value: string; onChange: (text: string) => void; invalid?: boolean; label?: string; defaultOpen?: boolean; today?: Date; /** 02b.10: "Vælg dato". */ placeholder?: string }) {
+export function DateInput({ value, onChange, invalid, label = "Dato", defaultOpen = false, today, placeholder = "dd.mm.åååå", min }: { value: string; onChange: (text: string) => void; invalid?: boolean; label?: string; defaultOpen?: boolean; today?: Date; /** 02b.10: "Vælg dato". */ placeholder?: string; /** Tidligste dato i kalenderen (ÅÅÅÅ-MM-DD); dagene før er deaktiverede. */ min?: string | null }) {
   const [open, setOpen] = useState(defaultOpen);
   const wrap = useRef<HTMLDivElement>(null);
   const pop = useRef<HTMLDivElement>(null);
@@ -1018,6 +1022,7 @@ export function DateInput({ value, onChange, invalid, label = "Dato", defaultOpe
           <DatePicker
             value={textToIso(value)}
             today={today}
+            min={min}
             onSelect={(v) => {
               onChange(isoToText(v));
               setOpen(false);
@@ -1029,16 +1034,37 @@ export function DateInput({ value, onChange, invalid, label = "Dato", defaultOpe
   );
 }
 
-/** 02a.6 Dato: operator (efter den, før den, præcis den, mellem) + ét eller to datofelter. */
-export function DateField({ operator, operators, values, onOperator, onChange, invalid, defaultOpen, today, labels, placeholder }: { operator: Operator; operators: readonly Operator[]; values: readonly string[]; onOperator: (op: Operator) => void; onChange: (v: string[]) => void; invalid?: boolean; /** Kalenderen i første datofelt åben fra start (02b.10, statisk forhåndsvisning). */ defaultOpen?: boolean; today?: Date; /** Egne operatorord, fx { after: "Efter" } (02b.10). */ labels?: Partial<Record<Operator, string>>; placeholder?: string }) {
+/**
+ * 02a.6/02b.10: fejlen i "mellem", når til-datoen (tekst dd.mm.åååå eller ÅÅÅÅ-MM-DD) ligger før
+ * fra-datoen. null, når intervallet er gyldigt eller ufuldstændigt.
+ */
+export function dateRangeError(values: readonly string[]): string | null {
+  const from = textToIso(values[0] ?? "");
+  const to = textToIso(values[1] ?? "");
+  return from && to && to < from ? DATE_RANGE_ERROR : null;
+}
+
+/**
+ * 02a.6 Dato: operator (efter den, før den, præcis den, mellem) + ét eller to datofelter. Ved
+ * "mellem" (fra-dato og til-dato) kan til-datoen ikke vælges før fra-datoen: dagene før fra-datoen
+ * er deaktiverede i kalenderen, og en indtastet til-dato før fra-datoen afvises med fejltekst.
+ */
+export function DateField({ operator, operators, values, onOperator, onChange, invalid, defaultOpen, defaultOpenTo, today, labels, placeholder }: { operator: Operator; operators: readonly Operator[]; values: readonly string[]; onOperator: (op: Operator) => void; onChange: (v: string[]) => void; invalid?: boolean; /** Kalenderen i første datofelt åben fra start (02b.10, statisk forhåndsvisning). */ defaultOpen?: boolean; /** Kalenderen i til-datofeltet åben fra start ("mellem", statisk forhåndsvisning). */ defaultOpenTo?: boolean; today?: Date; /** Egne operatorord, fx { after: "Efter" } (02b.10). */ labels?: Partial<Record<Operator, string>>; placeholder?: string }) {
+  const between = operator === "between";
+  const rangeError = between ? dateRangeError(values) : null;
   return (
     <>
       <OperatorSelect value={operator} operators={operators} fieldType="date" labels={labels} onChange={onOperator} />
-      <DateInput value={values[0] ?? ""} invalid={invalid} defaultOpen={defaultOpen} today={today} placeholder={placeholder} label={operator === "between" ? "Fra dato" : "Dato"} onChange={(v) => onChange(operator === "between" ? [v, values[1] ?? ""] : [v])} />
-      {operator === "between" ? (
+      <DateInput value={values[0] ?? ""} invalid={invalid} defaultOpen={defaultOpen} today={today} placeholder={placeholder} label={between ? "Fra dato" : "Dato"} onChange={(v) => onChange(between ? [v, values[1] ?? ""] : [v])} />
+      {between ? (
         <span className="lasso-inputunit lasso-inputunit--date">
           <span className="lasso-unit">og</span>
-          <DateInput value={values[1] ?? ""} invalid={invalid} today={today} label="Til dato" onChange={(v) => onChange([values[0] ?? "", v])} />
+          <DateInput value={values[1] ?? ""} invalid={invalid || Boolean(rangeError)} defaultOpen={defaultOpenTo} today={today} placeholder={placeholder} label="Til dato" min={textToIso(values[0] ?? "")} onChange={(v) => onChange([values[0] ?? "", v])} />
+        </span>
+      ) : null}
+      {rangeError && !invalid ? (
+        <span className="lasso-field__error lasso-datefield__error" role="alert">
+          {rangeError}
         </span>
       ) : null}
     </>
@@ -1302,37 +1328,28 @@ export interface TechValue {
   values: string[];
 }
 
+/** 02b.2/03.3: teksten for "kun typen" i operator-dropdown'en, fx "Firmaer der benytter et Live chat". */
+export function techAnyLabel(type: string): string {
+  return `Firmaer der benytter et ${type}`;
+}
+
 /**
- * 03.2 Teknologifelt: kontakten først, så "Firmaer der benytter" og dropdown'en ("Et CMS" som
- * standard). Vælger man "Inkluder kun følgende" / "Ekskluder følgende", forsvinder teksten, og
- * søg-og-vælg-feltet står efter dropdown'en. Kontakt fra = kun kontakten. Ryd står i rækken.
- *
- * `variant="operator"` er 02b.2 Med / uden: operatoren "benytter"/"benytter ikke" + søgefelt,
- * samme felt, to retninger (erstatter to separate felter i produktionen).
+ * 02b.2 / 03.2–03.4 Teknologifelt (Jakobs justering 29.09.2026). Teknologier er grupperet i typer
+ * (fx CRM-system, Live chat, Digital marketing); `label` er typen og skal altid være en konkret
+ * type (en gruppe uden type giver ikke mening). Til/fra-kontakten foran slår kriteriet til og fra.
+ * Operator-dropdown'en har tre valg:
+ * - "Firmaer der benytter et <type>" (mode "any"): kun typen, ingen produktvalg, intet søgefelt.
+ * - "Inkluder kun følgende" / "Ekskluder følgende": produkt-tags + "Søg efter flere…".
+ * Kontakt fra = kun kontakten. `variant` er bevaret for gamle kald; begge varianter tegnes ens.
  */
-export function TechnologyField({ label, value, onChange, suggestions, variant = "row" }: { label: string; value: TechValue; onChange: (v: TechValue) => void; suggestions?: readonly string[]; variant?: "row" | "operator" }) {
-  const anyLabel = `Et ${label}`;
-  if (variant === "operator") {
-    return (
-      <>
-        <OperatorSelect
-          value={value.mode === "exclude" ? "not_in" : "in"}
-          operators={["in", "not_in"]}
-          labels={{ in: "benytter", not_in: "benytter ikke" }}
-          onChange={(op) => onChange({ ...value, on: true, mode: op === "not_in" ? "exclude" : "include" })}
-        />
-        <TagInput values={value.values} suggestions={suggestions} placeholder="Søg efter en teknologi…" morePlaceholder="Søg efter en teknologi…" onChange={(values) => onChange({ ...value, on: true, values })} />
-      </>
-    );
-  }
+export function TechnologyField({ label, value, onChange, suggestions }: { label: string; value: TechValue; onChange: (v: TechValue) => void; suggestions?: readonly string[]; /** @deprecated 02b.2 og 03.3/03.4 er afstemt: samme felt. */ variant?: "row" | "operator" }) {
   return (
     <>
       <Toggle on={value.on} label={label} onChange={(on) => onChange({ ...value, on })} />
       {value.on ? (
         <>
-          {value.mode === "any" ? <span className="lasso-field__fixed">Firmaer der benytter</span> : null}
           <SelectField
-            options={[{ id: "any", label: anyLabel }, { id: "include", label: "Inkluder kun følgende" }, { id: "exclude", label: "Ekskluder følgende" }]}
+            options={[{ id: "any", label: techAnyLabel(label) }, { id: "include", label: "Inkluder kun følgende" }, { id: "exclude", label: "Ekskluder følgende" }]}
             value={value.mode}
             grow={false}
             label={`${label}, valg`}

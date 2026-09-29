@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { formatDate, type ObservationRowVM, type ObservationsVM, type Severity } from "@lasso/spec";
+import { moreText, formatDate, type ObservationRowVM, type ObservationsVM, type Severity } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, SeverityIcon, SourceLine, severityWord, stateForError } from "../primitives.js";
 
@@ -350,7 +350,7 @@ export function RiskObservations({ data, error, title, compact = false, demo = f
               </ul>
             </div>
           ))}
-          {related.length > 3 ? <p className="lasso-row__sub">{`Se ${related.length - 3} flere relaterede i Lasso.`}</p> : null}
+          {related.length > 3 ? <p className="lasso-row__sub">{`Se ${moreText(related.length - 3, "relateret", "relaterede")} i Lasso.`}</p> : null}
         </div>
       ) : null}
       {data.checkedAt ? (

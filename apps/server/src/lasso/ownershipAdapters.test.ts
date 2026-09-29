@@ -111,7 +111,7 @@ test("adaptOwnershipGraph læser den dokumenterede relations/entities-form (LASS
   assert.equal(root.name, LASSO_X_NAME);
   assert.equal(root.cvr, "34580820");
   assert.equal(root.form, "A/S");
-  assert.equal(root.status, "NORMAL");
+  assert.equal(root.status, "Normal");
 
   const eggertEdge = g.edges.find((e) => e.from === EGGERT_HOLDING_ID && e.to === LASSO_X_LASSO_ID)!;
   assert.deepEqual(eggertEdge.share, [5, 9.99]);

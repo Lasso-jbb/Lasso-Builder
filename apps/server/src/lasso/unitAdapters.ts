@@ -1,3 +1,4 @@
+import { statusLabel } from "@lasso/spec";
 import type { Address, ContactVM, LivestockHerdVM, LivestockVM, ProductionUnitVM, ProductionUnitsVM, TextSectionItem, VerifiedPhoneNumberVM, VetEventVM } from "@lasso/spec";
 import { mapLimit } from "../data/provider.js";
 import { adaptCompany, arr, at, dateStr, isObj, num, pick, statusKind, str, address, type Json } from "./adapters.js";
@@ -46,7 +47,7 @@ export function productionUnitRefs(companyRaw: Json): ProductionUnitRef[] {
  * fullTimeEquivalentCount, …}, creationDate. `isMain` sættes ikke her, men af `mergeProductionUnits`.
  */
 export function adaptProductionUnitDetail(ref: ProductionUnitRef, raw: Json): ProductionUnitVM {
-  const status = str(raw, "status");
+  const status = statusLabel(str(raw, "status"));
   const endedRaw = dateStr(raw, "lifeTime.to");
   const employees = num(raw, "employees.count", "employees.fullTimeEquivalentCount", "employees.interval.from");
   return {

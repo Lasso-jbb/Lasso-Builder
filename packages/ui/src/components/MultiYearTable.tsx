@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { amountScale, currencyUnit, formatNumber, formatPercent, formatScaled, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, percentChange, type FinancialsVM, type Metric } from "@lasso/spec";
+import { amountScale, currencyUnit, formatNumber, formatPercent, formatScaled, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, changePercent, type FinancialsVM, type Metric } from "@lasso/spec";
 import { DataState, Missing, Section, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
 
@@ -52,11 +52,9 @@ function Trend({ values }: { values: readonly number[] }) {
   );
 }
 
-/** "▲ overskud"/"▼ underskud" ved fortegnsskift, ellers pil + procent (samme regel som Delta, katalog 09). */
+/** Pil + procent, også ved fortegnsskift; intet når forrige mangler eller er 0 (samme regel som Delta, 02c.4). */
 function changeText(prev: number | undefined, last: number | undefined): { text: string; tone: "up" | "down" | "" } {
-  if (typeof prev !== "number" || typeof last !== "number") return { text: "", tone: "" };
-  if (prev !== 0 && Math.sign(prev) !== Math.sign(last)) return { text: last < 0 ? "▼ underskud" : "▲ overskud", tone: last < 0 ? "down" : "up" };
-  const pct = percentChange([prev, last]);
+  const pct = changePercent(prev, last);
   if (pct === null) return { text: "", tone: "" };
   return { text: `${pct < 0 ? "▼" : "▲"} ${formatPercent(Math.abs(pct), false)}`, tone: pct < 0 ? "down" : "up" };
 }

@@ -1,4 +1,4 @@
-import { formatShare, type OwnershipEdgeVM, type OwnershipGraphVM, type OwnershipNodeVM } from "@lasso/spec";
+import { moreText, formatShare, type OwnershipEdgeVM, type OwnershipGraphVM, type OwnershipNodeVM } from "@lasso/spec";
 
 /**
  * Layout af ejerdiagrammet (katalog 14 og 14b). Ren TypeScript uden React, så
@@ -705,7 +705,7 @@ function capLayers(
         kind: "group",
         count: fold.length,
         members: fold,
-        title: sign < 0 ? `${fold.length} flere ejere` : `${fold.length} flere datterselskaber`,
+        title: sign < 0 ? moreText(fold.length, "ejer", "ejere") : moreText(fold.length, "datterselskab", "datterselskaber"),
         subtitle: sign < 0 ? `${subtitle ?? "Andele ikke oplyst"}, fold ud` : subtitle,
         weight: -2,
       });

@@ -1,3 +1,4 @@
+import { moreText } from "@lasso/spec";
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { CloseIcon, focusables, useLayer } from "./Layer.js";
 import { ShellIcon } from "./ShellIcons.js";
@@ -173,7 +174,7 @@ export function SidePanelList({ groups, selected, onSelect, limit = 8, ariaLabel
       })}
       {shownTotal < total ? (
         <button type="button" className="lasso-link lasso-panellist__more" onClick={() => setAll(true)}>
-          Vis {total - shownTotal} flere
+          Vis {moreText(total - shownTotal)}
         </button>
       ) : null}
     </nav>

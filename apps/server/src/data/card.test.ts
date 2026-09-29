@@ -72,7 +72,7 @@ test("tekstkortet har samme bredde på alle linjer og alle sektioner", () => {
     assert.ok(card.includes(part), `mangler "${part}":\n${card}`);
   }
   // Negativt resultat får pil ned; fratrådte personer er ikke med.
-  assert.match(card, /Resultat\s+−2 mia\.\s+▼ underskud/);
+  assert.match(card, /Resultat\s+−2 mia\.\s+▼ 102,0 %/);
   assert.ok(!card.includes("Dan Tidligere"));
 });
 
@@ -518,7 +518,7 @@ test("ændringsfeedet (katalog 21) som tekstkort: samme bredde, ingen midterprik
   assert.match(card, /Aktiv -> Under konkurs, ulæst/);
   assert.match(card, /CVR, kl\. 09\.14/);
   assert.match(card, /5 virksomheder, stamdata/);
-  assert.match(card, /Se 1 flere/);
+  assert.match(card, /Se 1 mere/);
   assert.ok(!card.includes("Prøve ApS"), "kun 3 rækker vises");
 
   // Tom tilstand siger hvorfor

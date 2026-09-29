@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { formatNumber, type MapPointVM, type MapVM } from "@lasso/spec";
+import { moreText, formatNumber, type MapPointVM, type MapVM } from "@lasso/spec";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
 import { isCompact } from "../chartPick.js";
@@ -167,7 +167,7 @@ function PointCard({ m, onOpen, onClose }: { m: MapMarker; onOpen?: (p: MapPoint
           {p.meta ? <span className="lasso-map__card-sub">{p.meta}</span> : null}
         </div>
       ))}
-      {m.points.length > 3 ? <div className="lasso-map__card-more">og {formatNumber(m.points.length - 3)} flere</div> : null}
+      {m.points.length > 3 ? <div className="lasso-map__card-more">og {moreText(m.points.length - 3)}</div> : null}
     </div>
   );
 }

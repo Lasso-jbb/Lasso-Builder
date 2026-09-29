@@ -1,4 +1,4 @@
-import { isPersonId, type OwnershipVM, type PersonRowVM } from "@lasso/spec";
+import { moreText, isPersonId, type OwnershipVM, type PersonRowVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { Icon } from "./Icon.js";
@@ -133,7 +133,7 @@ export function LassoRelations({
               <Name name={o.name} lassoId={o.lassoId} onOpen={onOpen} />
             </div>
           ))}
-          {owners.length > MAX_OWNERS ? <div className="lasso-relations__more">og {owners.length - MAX_OWNERS} flere</div> : null}
+          {owners.length > MAX_OWNERS ? <div className="lasso-relations__more">og {moreText(owners.length - MAX_OWNERS)}</div> : null}
         </div>
       ) : null}
       {beneficialLocked ? (

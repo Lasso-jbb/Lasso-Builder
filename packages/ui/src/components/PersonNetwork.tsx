@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { isPersonId, type PersonNetworkCompanyVM, type PersonNetworkVM } from "@lasso/spec";
+import { isPersonId, statusGroup, type PersonNetworkCompanyVM, type PersonNetworkVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 
@@ -87,7 +87,9 @@ export function PersonNetwork({
                 </div>
                 <div className="lasso-personnet__companies">
                   {p.companies.map((c, j) => {
-                    const bankrupt = c.statusKind === "warning";
+                    // 02c.8: rød kun for problem-statusser (konkurs, tvangsopløsning, rekonstruktion …).
+                    const group = statusGroup(c.status);
+                    const bankrupt = group ? group === "problem" : c.statusKind === "warning";
                     const nameClass = `lasso-personnet__company ${bankrupt ? "is-bankrupt" : ""}`;
                     const detail = [c.role, period(c), bankrupt ? c.status?.toLowerCase() : null].filter(Boolean).join(", ");
                     return (

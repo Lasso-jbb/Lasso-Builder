@@ -8,7 +8,7 @@ import {
   formatAmount,
   formatNumber,
   formatPercent,
-  percentChange,
+  changePercent,
   TABLE_COLUMN_LABELS,
   TABLE_COLUMNS,
   type CompanyRowVM,
@@ -668,7 +668,7 @@ function CompanyCard({ r, figures, selected, onOpen }: { r: CompanyRowVM; figure
 
 /** Udvikling i tabeller: sparkline i koral + procent (grøn/rød), katalog 15. */
 function Trend({ values }: { values: readonly number[] }) {
-  const pct = percentChange([values.at(-2), values.at(-1)]);
+  const pct = changePercent(values.at(-2), values.at(-1));
   return (
     <span className="lasso-trend">
       <Sparkline values={values} tone="accent" bare />

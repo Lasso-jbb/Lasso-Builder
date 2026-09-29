@@ -7,7 +7,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactElement,
 } from "react";
-import {
+import { moreText,
   formatAmount,
   formatDate,
   formatShare,
@@ -1068,7 +1068,7 @@ function DetailPanel({
               ) : null}
             </div>
           ))}
-          {people.length > 3 ? <div className="lasso-odiagram__chain-sub">Se {people.length - 3} flere i listen</div> : null}
+          {people.length > 3 ? <div className="lasso-odiagram__chain-sub">Se {moreText(people.length - 3)} i listen</div> : null}
         </div>
       ) : null}
       {direct?.since || direct?.until ? (

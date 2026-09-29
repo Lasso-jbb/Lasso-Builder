@@ -1180,7 +1180,7 @@ const datatypes: GalleryEntry[] = [
     nr: "28.1",
     title: "Værdilister (enumerations)",
     node: "H0N-0",
-    note: "Dokumentation som i Paper: status i to grupper med farve fra statusTone (konkurs mørk rød, likvidation/rekonstruktion warning), virksomhedsform, ansatte-interval, enhedstype, brug i filtre og mobilt filterark.",
+    note: "Dokumentation som i Paper: status i to grupper med farve fra statusTone (fire farvegrupper, se 02c.8: midlertidig warning, problem mørk rød, inaktiv muted), virksomhedsform, ansatte-interval, enhedstype, brug i filtre og mobilt filterark.",
     render: () => <Enumerations />,
   },
   { nr: "28.2", title: "Regnskabspublicering (nyt/korrigeret regnskab)", node: "H3L-0", spec: one("Regnskabspublicering", { type: "LassoPublications", company: C }) },

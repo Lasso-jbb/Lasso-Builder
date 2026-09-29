@@ -1,6 +1,6 @@
 import React, { useState, type ReactNode } from "react";
 void React;
-import { formatAge, parseViewSpec, type Dataset } from "@lasso/spec";
+import { formatAge, parseViewSpec, STATUS_GROUPS, statusKind, type Dataset } from "@lasso/spec";
 import {
   ActionRow,
   AddressValue,
@@ -81,6 +81,42 @@ function KV({ children }: { children: ReactNode }) {
     <div className="lasso-kv-list" style={{ maxWidth: 560 }}>
       {children}
     </div>
+  );
+}
+
+/**
+ * 02c.8/05.7 (Jakob 29.09.2026): alle 19 CVR-statusser i de fire farvegrupper. Ren tekst i vægt
+ * 500, ingen pille; farven følger ordet (statusTone), og ordet bærer betydningen (regel 7).
+ */
+function StatusGroups({ kv = false }: { kv?: boolean }) {
+  if (kv) {
+    return (
+      <>
+        {STATUS_GROUPS.map((g) => (
+          <ValueRow key={g.group} label={g.title}>
+            <span style={{ display: "flex", flexWrap: "wrap", columnGap: 16, rowGap: 4 }}>
+              {g.statuses.map((st) => (
+                <StatusBadge key={st} status={st} kind={statusKind(st)} />
+              ))}
+            </span>
+          </ValueRow>
+        ))}
+      </>
+    );
+  }
+  return (
+    <Stack gap={20}>
+      {STATUS_GROUPS.map((g) => (
+        <div key={g.group}>
+          <Cap>{g.title}</Cap>
+          <Row gap={16}>
+            {g.statuses.map((st) => (
+              <StatusBadge key={st} status={st} kind={statusKind(st)} />
+            ))}
+          </Row>
+        </div>
+      ))}
+    </Stack>
   );
 }
 
@@ -420,14 +456,20 @@ export const entries: GalleryEntry[] = [
     nr: "02c.4",
     title: "Beløb + ændring",
     node: "GMN-0",
-    note: "Fuldt beløb i tooltip vises ved hover og kan ikke vises statisk.",
+    note: "Jakob 29.09.2026: kun pil + procent i grøn/rød, ingen ord efter (ingen stigning, fald, fra 2024 eller underskud). Fortegnsskift viser også pil + procent; uden forrige år (eller forrige = 0) ingen ændring. Fuldt beløb i tooltip vises ved hover og kan ikke vises statisk.",
     render: () => (
       <KV>
         <ValueRow label="Bruttofortjeneste (2025)">
-          <AmountValue value={18_834_000} previous={17_520_000} since="2024" />
+          <AmountValue value={48_300_000} previous={42_970_000} since="2024" />
+        </ValueRow>
+        <ValueRow label="Omsætning (2025)">
+          <AmountValue value={3_400_000} previous={4_005_000} since="2024" />
         </ValueRow>
         <ValueRow label="Resultat efter skat (2025)">
           <AmountValue value={-201_000} previous={318_000} since="2024" />
+        </ValueRow>
+        <ValueRow label="Egenkapital (første regnskab)">
+          <AmountValue value={1_250_000} />
         </ValueRow>
       </KV>
     ),
@@ -436,10 +478,11 @@ export const entries: GalleryEntry[] = [
     nr: "02c.5",
     title: "Procent",
     node: "GNF-0",
+    note: "Jakob 29.09.2026: kun den første procent; ingen anden procent eller branchesammenligning efter.",
     render: () => (
       <KV>
         <ValueRow label="Soliditetsgrad (2025)">
-          <PercentValue value={17.3} compare={34} compareNote="eksempeldata" />
+          <PercentValue value={17.3} />
         </ValueRow>
         <ValueRow label="Afkastningsgrad (2025)">
           <PercentValue value={-4.1} />
@@ -487,20 +530,10 @@ export const entries: GalleryEntry[] = [
     nr: "02c.8",
     title: "Enum og status",
     node: "GPE-0",
+    note: "Jakob 29.09.2026: alle 19 CVR-statusser i fire grupper (aktiv, midlertidig/gul, problem/rød, inaktiv/muted). CVR-koder som OPLØSTEFTERKONKURS vises med de danske navne.",
     render: () => (
       <KV>
-        <ValueRow label="Status">
-          <StatusBadge status="Aktiv" kind="active" />
-        </ValueRow>
-        <ValueRow label="Status">
-          <StatusBadge status="Ophørt" kind="inactive" />
-        </ValueRow>
-        <ValueRow label="Status">
-          <StatusBadge status="Under konkurs" kind="warning" />
-        </ValueRow>
-        <ValueRow label="Status">
-          <StatusBadge status="Under likvidation" kind="warning" />
-        </ValueRow>
+        <StatusGroups kv />
         <ValueRow label="Virksomhedsform">Aktieselskab (A/S)</ValueRow>
       </KV>
     ),
@@ -509,13 +542,17 @@ export const entries: GalleryEntry[] = [
     nr: "02c.9",
     title: "Liste af værdier",
     node: "GQ6-0",
+    note: "Jakob 29.09.2026: \"og 1 mere\" ved én ekstra, \"og N flere\" ved to eller flere.",
     render: () => (
       <KV>
         <ValueRow label="Direktion">
           <ValueList values={["Anne Eksempel", "Bo Eksempel", "Carla Eksempel", "Dan Eksempel"]} onShowAll={noop} />
         </ValueRow>
         <ValueRow label="Bestyrelse">
-          <ValueList values={["Erik Eksempel", "Frida Eksempel"]} onShowAll={noop} />
+          <ValueList values={["Erik Eksempel", "Frida Eksempel", "Gitte Eksempel"]} onShowAll={noop} />
+        </ValueRow>
+        <ValueRow label="Revisorer">
+          <ValueList values={["Eksempel Revision I/S", "Prøve Revision ApS"]} onShowAll={noop} />
         </ValueRow>
         <ValueRow label="Bibrancher">
           <ValueList values={[]} />
@@ -580,16 +617,17 @@ export const entries: GalleryEntry[] = [
     nr: "02c.13",
     title: "Reference til person eller virksomhed",
     node: "GSI-0",
+    note: "Jakob 29.09.2026: virksomhedsreferencer kun med navnet (ingen CVR, rolle eller andel); personreferencer med \"Siden <dato>\".",
     render: () => (
       <KV>
         <ValueRow label="Moderselskab" onClick={noop}>
-          <EntityRef name="Eksempel Holding ApS" secondary="CVR 99000010" onOpen={noop} />
+          <EntityRef kind="company" name="Eksempel Holding ApS" onOpen={noop} />
         </ValueRow>
         <ValueRow label="Direktør" onClick={noop}>
-          <EntityRef name="Anne Eksempel" secondary="siden 2016" onOpen={noop} />
+          <EntityRef name="Anne Eksempel" secondary="Siden 01.03.2016" onOpen={noop} />
         </ValueRow>
         <ValueRow label="Revisor" onClick={noop}>
-          <EntityRef name="Eksempel Revision I/S" secondary="CVR 99000002" onOpen={noop} />
+          <EntityRef kind="company" name="Eksempel Revision I/S" onOpen={noop} />
         </ValueRow>
       </KV>
     ),
@@ -773,16 +811,15 @@ export const entries: GalleryEntry[] = [
     nr: "05.7",
     title: "Status som ren tekst",
     node: "9HM-0",
+    note: "Jakob 29.09.2026: alle 19 CVR-statusser grupperet i de fire farvegrupper; \"Ny\" (koral) er ikke en CVR-status.",
     render: () => (
-      <div style={{ fontSize: 12 }}>
-        <Row gap={8}>
-          <StatusBadge status="Aktiv" kind="active" />
-          <StatusBadge status="Under konkurs" kind="warning" />
-          <StatusBadge status="Ophørt" kind="inactive" />
-          <StatusBadge status="Under likvidation" />
+      <Stack gap={20}>
+        <StatusGroups />
+        <div>
+          <Cap>Ikke CVR-status</Cap>
           <StatusBadge status="Ny" kind="new" />
-        </Row>
-      </div>
+        </div>
+      </Stack>
     ),
   },
   {

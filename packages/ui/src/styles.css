@@ -304,6 +304,7 @@
 .lasso-company__status { font-size: var(--lasso-fs); line-height: 18px; font-weight: 500; color: var(--lasso-text-2); }
 .lasso-company__status--warning { color: var(--lasso-bankrupt); }
 .lasso-company__status--inactive { color: var(--lasso-muted); }
+.lasso-company__status--liquidation { color: var(--lasso-status-liquidation); } /* 02c.8: midlertidig, ikke krise (warning-tekst) */
 .lasso-company--inactive .lasso-company__name { color: var(--lasso-text-3); }
 .lasso-company__facts { margin: 0; font-size: var(--lasso-fs); line-height: 20px; color: var(--lasso-text-2); }
 /* Faktaceller bruges stadig af nøgle-værdi-listen */
@@ -2722,6 +2723,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-root .lasso-cal__day:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
 .lasso-root .lasso-cal__day.is-today { background: var(--lasso-accent-soft); color: var(--lasso-accent-text); font-weight: 600; }
 .lasso-root .lasso-cal__day.is-on { background: var(--lasso-accent-soft); border-color: var(--lasso-accent); color: var(--lasso-text); font-weight: 600; }
+.lasso-root .lasso-cal__day.is-disabled, .lasso-root .lasso-cal__day:disabled { color: var(--lasso-faint); background: transparent; cursor: not-allowed; opacity: .6; } /* 02a.6/02b.10: dage før fra-datoen i "mellem" */
+.lasso-datefield__error { flex: 1 1 100%; }
 /* 02a/02b.14 Formularfelt: feltnavn over feltet (14/600, gap 10), hjælpetekst under (13/18 muted), ingen bundlinje */
 .lasso-field--form { grid-template-columns: minmax(0, 1fr) auto; row-gap: 10px; padding: 0; border-bottom: 0; }
 .lasso-field--form .lasso-field__name { min-height: 0; }
@@ -2937,7 +2940,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-company, .lasso-personhead.lasso-company { display: flex; flex-direction: column; gap: 6px; }
   .lasso-company__name, .lasso-personhead.lasso-company .lasso-company__name { font-size: 20px; line-height: 28px; }
   .lasso-company__status { font-size: var(--lasso-fs-sm); }
-  .lasso-company__status:not(.lasso-company__status--warning):not(.lasso-company__status--inactive) { font-weight: 400; color: var(--lasso-muted); } /* 26a.4: "Aktiv" 13/400 muted efter navnet */
+  .lasso-company__status:not(.lasso-company__status--warning):not(.lasso-company__status--inactive):not(.lasso-company__status--liquidation) { font-weight: 400; color: var(--lasso-muted); } /* 26a.4: "Aktiv" 13/400 muted efter navnet */
   .lasso-company__facts { order: 1; font-size: var(--lasso-fs-sm); line-height: 18px; }
   .lasso-company > .lasso-company__actions { order: 2; align-self: flex-end; margin-top: 6px; }
   .lasso-company > .lasso-headrisk { order: 3; }

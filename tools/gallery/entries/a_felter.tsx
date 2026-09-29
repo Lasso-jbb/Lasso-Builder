@@ -22,7 +22,6 @@ import {
   SegmentYesNo,
   SelectField,
   TagInput,
-  TechnologyField,
   TechnologyRow,
   ToggleField,
   ToastItem,
@@ -396,12 +395,18 @@ function PercentDemo() {
 }
 
 function DateDemo() {
-  const [op, setOp] = useState<Operator>("after");
-  const [vals, setVals] = useState<string[]>([""]);
+  const [op, setOp] = useState<Operator>("between");
+  const [vals, setVals] = useState<string[]>(["01.01.2015", "31.12.2020"]);
+  const [bad, setBad] = useState<string[]>(["01.01.2020", "31.12.2019"]);
   return (
-    <FieldRow label="Stiftelsesdato" layout="form" help="Operatorer: efter den, før den, præcis den, mellem (viser to datofelter)">
-      <DateField operator={op} operators={["after", "before", "eq", "between"]} values={vals} onOperator={setOp} onChange={setVals} />
-    </FieldRow>
+    <div style={{ display: "grid", gap: 24 }}>
+      <FieldRow label="Stiftelsesdato" layout="form" help="Operatorer: efter den, før den, præcis den, mellem (fra-dato og til-dato; til-datoen kan ikke være før fra-datoen)">
+        <DateField operator={op} operators={["after", "before", "eq", "between"]} values={vals} onOperator={setOp} onChange={setVals} />
+      </FieldRow>
+      <FieldRow label="Stiftelsesdato, til-dato før fra-dato" layout="form">
+        <DateField operator="between" operators={["after", "before", "eq", "between"]} values={bad} onOperator={noop} onChange={setBad} />
+      </FieldRow>
+    </div>
   );
 }
 
@@ -558,12 +563,21 @@ function PersonaModal() {
   );
 }
 
+/**
+ * 02b.2 (Jakob 29.09.2026, afstemt med 03.3/03.4): teknologier er grupperet i typer. Pr. type:
+ * kontakten slår kriteriet til/fra; dropdown'en har tre valg: "Firmaer der benytter et <type>"
+ * (kun typen, intet søgefelt), "Inkluder kun følgende" og "Ekskluder følgende" (tags + søg).
+ */
 function TechOperatorDemo() {
-  const [v, setV] = useState<TechValue>({ on: true, mode: "include", values: ["HubSpot"] });
+  const [a, setA] = useState<TechValue>({ on: true, mode: "include", values: ["Google Ads"] });
+  const [b, setB] = useState<TechValue>({ on: true, mode: "exclude", values: ["HubSpot"] });
+  const [c, setC] = useState<TechValue>({ on: true, mode: "any", values: [] });
   return (
-    <FieldRow label="Teknologier" layout="form" info="Teknologier fundet på virksomhedens hjemmeside." help="Operatoren erstatter to separate felter i produktionen: benytter, benytter ikke.">
-      <TechnologyField label="Teknologier" variant="operator" value={v} onChange={setV} suggestions={["HubSpot", "Salesforce", "Pipedrive", ...TECH]} />
-    </FieldRow>
+    <div>
+      <TechnologyRow label="Digital marketing" value={a} onChange={setA} onClear={noop} suggestions={["Google Ads", "Meta Ads", "LinkedIn Ads"]} />
+      <TechnologyRow label="CRM-system" value={b} onChange={setB} onClear={noop} suggestions={["HubSpot", "Salesforce", "Pipedrive"]} />
+      <TechnologyRow label="Live chat" value={c} onChange={setC} onClear={noop} suggestions={["Intercom", "Zendesk", "LiveChat"]} />
+    </div>
   );
 }
 
@@ -642,11 +656,19 @@ function PasteDemo() {
 
 function DateOpen() {
   const [vals, setVals] = useState<string[]>([""]);
+  const [range, setRange] = useState<string[]>(["10.09.2026", ""]);
   return (
-    <div style={{ minHeight: 360 }}>
-      <FieldRow label="Stiftelsesdato" layout="form">
-        <DateField operator="after" operators={["after", "before", "eq", "between"]} labels={{ after: "Efter", before: "Før", eq: "Præcis", between: "Mellem" }} placeholder="Vælg dato" values={vals} onOperator={noop} onChange={setVals} defaultOpen today={new Date(2026, 8, 4)} />
-      </FieldRow>
+    <div style={{ display: "grid", gap: 24 }}>
+      <div style={{ minHeight: 360 }}>
+        <FieldRow label="Stiftelsesdato" layout="form">
+          <DateField operator="after" operators={["after", "before", "eq", "between"]} labels={{ after: "Efter", before: "Før", eq: "Præcis", between: "Mellem" }} placeholder="Vælg dato" values={vals} onOperator={noop} onChange={setVals} defaultOpen today={new Date(2026, 8, 4)} />
+        </FieldRow>
+      </div>
+      <div style={{ minHeight: 360 }}>
+        <FieldRow label="Stiftelsesdato, mellem (til-dato åben)" layout="form" help="Dagene før fra-datoen (10.09.2026) er deaktiverede i kalenderen.">
+          <DateField operator="between" operators={["after", "before", "eq", "between"]} labels={{ after: "Efter", before: "Før", eq: "Præcis", between: "Mellem" }} placeholder="Vælg dato" values={range} onOperator={noop} onChange={setRange} defaultOpenTo today={new Date(2026, 8, 4)} />
+        </FieldRow>
+      </div>
     </div>
   );
 }
@@ -797,7 +819,7 @@ export const entries: GalleryEntry[] = [
   { nr: "02a.3", title: "Tal, mellem", node: "4CA-0", render: () => <NumberDemo between /> },
   { nr: "02a.4", title: "Beløb + ændring", node: "4SC-0", render: () => <AmountDemo /> },
   { nr: "02a.5", title: "Procent", node: "4DE-0", render: () => <PercentDemo /> },
-  { nr: "02a.6", title: "Dato", node: "4DT-0", render: () => <DateDemo /> },
+  { nr: "02a.6", title: "Dato", node: "4DT-0", render: () => <DateDemo />, note: "Jakob 29.09.2026: \"mellem\" med fra-dato og til-dato; til-datoen kan ikke være før fra-datoen (afvises med fejltekst)." },
   { nr: "02a.7", title: "Enkeltvalg", node: "4EC-0", render: () => <SingleDemo /> },
   { nr: "02a.8", title: "Multivalg (tags)", node: "4R0-0", render: () => <TagsDemo />, note: "Hover-tilstanden på krydset er tegnet med inline koral farve (kan ikke hovers statisk)." },
   { nr: "02a.9", title: "Chips", node: "4FH-0", render: () => <ChipsDemo /> },
@@ -808,7 +830,7 @@ export const entries: GalleryEntry[] = [
 
   { nr: "02b.1", title: "Persona (sammensat kriterie)", node: "4IA-0", render: () => <PersonaDemo /> },
   { nr: "02b.1", title: "Persona, redigér i dialog (separat tilstand)", node: "4IA-0", render: () => <PersonaModal />, note: "Separat tilstand: Redigér på kortet åbner dialogen (07.1) på overlay. Selve elementet (kortet + Tilføj persona) står i indgangen ovenfor." },
-  { nr: "02b.2", title: "Teknologi med / uden", node: "4IV-0", render: () => <TechOperatorDemo /> },
+  { nr: "02b.2", title: "Teknologi med / uden", node: "4IV-0", render: () => <TechOperatorDemo />, note: "Jakob 29.09.2026 (afstemt med 03.3/03.4): teknologier grupperet i typer; dropdown med \"Firmaer der benytter et <type>\" (kun typen), \"Inkluder kun følgende\" og \"Ekskluder følgende\". Kontakten slår kriteriet til og fra." },
   { nr: "02b.3", title: "Til / fra-kontakt", node: "4JT-0", render: () => <ToggleDemo /> },
   { nr: "02b.4", title: "Sektionens brødtekst", node: "4KA-0", render: () => <SectionIntroDemo /> },
   { nr: "02b.5", title: "Info-ikon med forklaring", node: "4KF-0", render: () => <InfoDemo /> },
@@ -816,7 +838,7 @@ export const entries: GalleryEntry[] = [
   { nr: "02b.7", title: "Dropdown, åben", node: "4LZ-0", render: () => <DropdownOpen /> },
   { nr: "02b.8", title: "Segmenteret ja/nej", node: "4MS-0", render: () => <SegmentDemo /> },
   { nr: "02b.9", title: "Indsæt liste", node: "4NA-0", render: () => <PasteDemo /> },
-  { nr: "02b.10", title: "Datovælger, åben", node: "4NS-0", render: () => <DateOpen /> },
+  { nr: "02b.10", title: "Datovælger, åben", node: "4NS-0", render: () => <DateOpen />, note: "Jakob 29.09.2026: ved \"Mellem\" er dagene før fra-datoen deaktiverede i til-datoens kalender." },
   { nr: "02b.11", title: "Chips med antal", node: "4PD-0", render: () => <ChipsCountDemo /> },
   { nr: "02b.12", title: "Liste med antal", node: "4Q1-0", render: () => <ListCountDemo /> },
   { nr: "02b.13", title: "Direkte redigering (filtergruppe udfoldet)", node: "5G6-0", render: () => <DirectEdit />, note: "Fokuskanten er FieldRow active (ingen fokus i skærmbilledet); toasten er tegnet inline med ToastItem variant added." },
@@ -824,6 +846,6 @@ export const entries: GalleryEntry[] = [
 
   { nr: "03.1", title: "Filterfelt, tilstande (i ro / i redigering / opdater)", node: "47B-0", render: () => <FieldStates /> },
   { nr: "03.2", title: "Teknologifelt (kontakt + dropdown + søg-og-vælg)", node: "6LR-0", render: () => <TechRow label="CMS" init={{ on: true, mode: "exclude", values: ["Umbraco"] }} pending /> },
-  { nr: "03.3", title: "Teknologifelt, kontakt til (kun dropdown)", node: "6NM-0", render: () => <TechRow label="E-commerce" init={{ on: true, mode: "any", values: [] }} /> },
-  { nr: "03.4", title: "Teknologifelt, kontakt fra", node: "6O1-0", render: () => <TechRow label="Live chat" init={{ on: false, mode: "any", values: [] }} /> },
+  { nr: "03.3", title: "Teknologifelt, kontakt til (kun dropdown)", node: "6NM-0", render: () => <TechRow label="E-commerce" init={{ on: true, mode: "any", values: [] }} />, note: "Jakob 29.09.2026: kun typen = dropdown-valget \"Firmaer der benytter et E-commerce\" (ingen tekst foran, intet søgefelt); de to andre valg er Inkluder kun følgende / Ekskluder følgende." },
+  { nr: "03.4", title: "Teknologifelt, kontakt fra", node: "6O1-0", render: () => <TechRow label="Live chat" init={{ on: false, mode: "any", values: [] }} />, note: "Kontakt fra = kriteriet er slået fra; kun kontakten vises. Slås den til, står dropdown'en med \"Firmaer der benytter et Live chat\"." },
 ];

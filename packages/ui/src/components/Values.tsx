@@ -11,6 +11,7 @@ import {
   formatRange,
   formatShare,
   listParts,
+  moreText,
   NOT_REGISTERED,
   NOT_REPORTED,
   scoreWord,
@@ -90,17 +91,14 @@ export function RangeValue({ from, to, unit }: { from?: number | null; to?: numb
 
 /**
  * 02c.4 Beløb + ændring: mio./t. kr. med én decimal, fuldt tal i tooltip, ægte minus (U+2212).
- * Med `since` (fx "2024") skrives ændringen som i Paper: "▲7,5 % fra 2024", og ved fortegnsskift
- * "▼underskud, fra 318 t. kr.". Uden `since`: "▲ 12,4 % stigning". Farve kun sammen med tegn og ord.
+ * Ændringen er kun pil + procent i grøn (stigning) eller rød (fald): "48,3 mio. kr. ▲ 12,4 %",
+ * "3,4 mio. kr. ▼ 15,1 %". Ingen ord efter procenten ("stigning", "fald", "fra 2024", "underskud").
+ * Ved fortegnsskift vises stadig pil + procent; kan ændringen ikke beregnes (intet forrige år, eller
+ * forrige = 0), vises ingen ændring. `since` skrives ikke længere; den bruges kun i skærmlæsertekst.
  */
-export function AmountValue({ value, previous, unit = "kr.", since }: { value: number | null | undefined; previous?: number | null; unit?: string; /** Året, der sammenlignes med, fx "2024". */ since?: string }) {
+export function AmountValue({ value, previous, unit = "kr.", since }: { value: number | null | undefined; previous?: number | null; unit?: string; /** Året, der sammenlignes med, fx "2024" (kun skærmlæser). */ since?: string }) {
   if (value === null || value === undefined || !Number.isFinite(value)) return <NotReported />;
   const change = changeText(previous, value);
-  let text = change ? `${change.arrow} ${change.text}` : "";
-  if (change && since !== undefined && typeof previous === "number") {
-    const flip = previous !== 0 && value !== 0 && Math.sign(previous) !== Math.sign(value);
-    text = flip ? `${change.arrow}${change.text}, fra ${formatAmount(previous, unit)}` : `${change.arrow}${change.text.replace(/ (stigning|fald)$/, "")} fra ${since}`;
-  }
   return (
     <span className="lasso-amount">
       <Tooltip text={formatFullAmount(value, unit)}>
@@ -108,7 +106,11 @@ export function AmountValue({ value, previous, unit = "kr.", since }: { value: n
           {formatAmount(value, unit)}
         </span>
       </Tooltip>
-      {change ? <span className={`lasso-amount__change ${change.tone === "down" ? "lasso-down" : "lasso-up"}`}>{text}</span> : null}
+      {change ? (
+        <span className={`lasso-amount__change ${change.tone === "down" ? "lasso-down" : "lasso-up"}`} aria-label={`${change.tone === "down" ? "Fald" : "Stigning"} på ${change.text}${since ? ` siden ${since}` : ""}`}>
+          {`${change.arrow} ${change.text}`}
+        </span>
+      ) : null}
     </span>
   );
 }
@@ -132,17 +134,13 @@ export function PeriodValue({ from, to, date, yearOnly, open = "since", extra, d
 }
 
 /**
- * 02c.5 Procent: mellemrum før % og én decimal ("17,3 %"). Sammenligningen står som muted tekst
- * efter et mellemrum ("17,3 %  branche 34 %, eksempeldata"), aldrig som et ekstra tal i samme farve.
+ * 02c.5 Procent: mellemrum før % og én decimal ("17,3 %"). Kun den ene procent: ingen anden procent
+ * eller sammenligning efter (ingen "branchen 11,2 %"). `compare`, `compareLabel` og `compareNote`
+ * tegnes ikke længere (bevaret, så gamle kald stadig typetjekker).
  */
-export function PercentValue({ value, compare, compareLabel = "branche", compareNote }: { value: number | null | undefined; /** Sammenligningstal, fx branchens. */ compare?: number | null; compareLabel?: string; /** Tillæg efter sammenligningen, fx "eksempeldata". */ compareNote?: string }) {
+export function PercentValue({ value }: { value: number | null | undefined; /** @deprecated Tegnes ikke (02c.5: kun én procent). */ compare?: number | null; /** @deprecated */ compareLabel?: string; /** @deprecated */ compareNote?: string }) {
   if (value === null || value === undefined || !Number.isFinite(value)) return <NotReported />;
-  return (
-    <span>
-      <span className="lasso-num">{formatPercent(value, false)}</span>
-      {compare !== null && compare !== undefined && Number.isFinite(compare) ? <span className="lasso-muted-extra">{` ${compareLabel} ${formatPercent(compare, false).replace(",0 %", " %")}${compareNote ? `, ${compareNote}` : ""}`}</span> : null}
-    </span>
-  );
+  return <span className="lasso-num">{formatPercent(value, false)}</span>;
 }
 
 /** 02c.7 Ja/nej: altid ordene Ja/Nej, konsekvensen efter komma, ukendt = "Ikke oplyst". */
@@ -152,8 +150,8 @@ export function BooleanValue({ value, consequence }: { value: boolean | null | u
 }
 
 /**
- * 02c.9 Liste af værdier: komma, "og" før sidste, desktop op til 2 navne, mobil 1. "og N flere" er
- * et link, der åbner "Se alle"-panelet (onShowAll). Tom liste = "Ingen" i muted.
+ * 02c.9 Liste af værdier: komma, "og" før sidste, desktop op til 2 navne, mobil 1. "og 1 mere" /
+ * "og N flere" er et link, der åbner "Se alle"-panelet (onShowAll). Tom liste = "Ingen" i muted.
  */
 export function ValueList({ values, onShowAll, max = 2, mobileMax = 1 }: { values: readonly string[]; onShowAll?: () => void; max?: number; mobileMax?: number }) {
   const desk = listParts(values, max);
@@ -166,10 +164,10 @@ export function ValueList({ values, onShowAll, max = 2, mobileMax = 1 }: { value
           {p.shown.join(", ")} og{" "}
           {onShowAll ? (
             <button type="button" className="lasso-link lasso-link--more" onClick={onShowAll}>
-              {p.rest} flere
+              {moreText(p.rest)}
             </button>
           ) : (
-            `${p.rest} flere`
+            moreText(p.rest)
           )}
         </>
       ) : (
@@ -251,10 +249,10 @@ export function ContactValue({ kind, value, more = 0, onShowAll }: { kind: "phon
           <span className="lasso-muted-extra">, </span>
           {onShowAll ? (
             <button type="button" className="lasso-link lasso-link--more" onClick={onShowAll}>
-              {`Se ${more} flere`}
+              {`Se ${moreText(more)}`}
             </button>
           ) : (
-            <span className="lasso-muted-extra">{`${more} flere`}</span>
+            <span className="lasso-muted-extra">{moreText(more)}</span>
           )}
         </>
       ) : null}
@@ -269,9 +267,12 @@ export function mapLink(parts: readonly (string | null | undefined)[]): string {
 
 /**
  * 02c.13 Reference til person eller virksomhed: navnet i tekstfarve 500, koral med understregning
- * ved hover, ingen ikonkasse foran. Sekundær identitet (CVR) i muted efter navnet på desktop.
+ * ved hover, ingen ikonkasse foran. Virksomhedsreferencer (`kind="company"`) vises KUN med navnet:
+ * ingen undertekst som CVR, rolle eller andel (`secondary` ignoreres). Personreferencer må have
+ * "Siden <dato>" under navnet (`secondary`).
  */
-export function EntityRef({ name, secondary, onOpen }: { name: string; secondary?: string; onOpen?: () => void }) {
+export function EntityRef({ name, secondary, onOpen, kind = "person" }: { name: string; /** Kun personer: fx "Siden 01.03.2016". */ secondary?: string; onOpen?: () => void; kind?: "person" | "company" }) {
+  const sub = kind === "company" ? undefined : secondary;
   return (
     <span className="lasso-entity">
       {onOpen ? (
@@ -281,7 +282,7 @@ export function EntityRef({ name, secondary, onOpen }: { name: string; secondary
       ) : (
         <span className="lasso-entity__name">{name}</span>
       )}
-      {secondary ? <span className="lasso-entity__sub">{secondary}</span> : null}
+      {sub ? <span className="lasso-entity__sub">{sub}</span> : null}
     </span>
   );
 }

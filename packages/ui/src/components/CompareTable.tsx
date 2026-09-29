@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { amountScale, currencyUnit, formatAmount, formatNumber, formatPercent, formatScaled, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, percentChange, type Dataset, type Metric } from "@lasso/spec";
+import { amountScale, currencyUnit, formatAmount, formatNumber, formatPercent, formatScaled, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, changePercent, type Dataset, type Metric } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section } from "../primitives.js";
 
@@ -75,7 +75,7 @@ export function CompareTable({
   const missing = (i: number) => <span className="lasso-notreported">{cols[i]!.fetched ? "Ikke oplyst" : "Ikke hentet"}</span>;
   const firstAmount = metrics.find((m) => METRIC_KIND[m] === "amount");
   // 22.1: højeste vækst er entydigt bedst og står i vægt 600 som de andre rækker.
-  const growth = firstAmount ? cols.map((c) => percentChange([c.prev?.[METRIC_FIELD[firstAmount]] as number | undefined, c.last?.[METRIC_FIELD[firstAmount]] as number | undefined])) : [];
+  const growth = firstAmount ? cols.map((c) => changePercent(c.prev?.[METRIC_FIELD[firstAmount]] as number | undefined, c.last?.[METRIC_FIELD[firstAmount]] as number | undefined)) : [];
   const growthPresent = growth.filter((v): v is number => v !== null);
   const bestGrowth = growthPresent.length > 1 ? Math.max(...growthPresent) : null;
   const addPrompt = () => onAction({ kind: "prompt", prompt: `Tilføj en virksomhed til sammenligningen af ${cols.map((c) => c.name).join(", ")}.` });

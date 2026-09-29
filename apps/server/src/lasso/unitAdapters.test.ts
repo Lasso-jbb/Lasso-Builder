@@ -40,7 +40,7 @@ test("adaptProductionUnitDetail læser navn, adresse, branche, ansatte, status o
   assert.equal(vm.industryCode, "412000");
   assert.equal(vm.industryText, "Opførelse af bygninger");
   assert.equal(vm.employees, 64);
-  assert.equal(vm.status, "NORMAL");
+  assert.equal(vm.status, "Normal");
   assert.equal(vm.created, "1998-04-01");
 });
 

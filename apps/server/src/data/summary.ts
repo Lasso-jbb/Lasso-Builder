@@ -1,4 +1,4 @@
-import {
+import { moreText,
   amountScale,
   currencyUnit,
   isForeignCurrency,
@@ -153,7 +153,7 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
         const rows = personRoleRows(p, show, { except: c.except });
         const label = c.title ?? { current: "Aktive roller", ended: "Ophørte roller", owner: "Ejerskaber" }[show];
         const list = rows.slice(0, 8).map((r) => `${r.companyName} [${r.companyId ?? "?"}]: ${r.text}${r.period ? `, ${r.period}` : ""}${r.companyStatus ? ` (selskabet ${r.companyStatus.toLowerCase()})` : ""}`);
-        lines.push(`${label}: ${list.length ? `${list.join("; ")}${rows.length > 8 ? `; og ${rows.length - 8} flere` : ""}` : show === "owner" ? "ejer ingen selskaber i CVR" : "ingen"}.`);
+        lines.push(`${label}: ${list.length ? `${list.join("; ")}${rows.length > 8 ? `; og ${moreText(rows.length - 8)}` : ""}` : show === "owner" ? "ejer ingen selskaber i CVR" : "ingen"}.`);
       }
     }
     if (c.type === "LassoPersonNetwork") {
@@ -165,7 +165,7 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
           `Netværk (år sammen = længste sammenhængende periode): ${net.people
             .slice(0, n)
             .map((x) => `${x.name} (${x.overlapYears} år, ${x.companies.length} fælles selskaber${x.active ? "" : ", afsluttet"})`)
-            .join(", ")}${net.people.length > n ? `, og ${net.people.length - n} flere` : ""}.`,
+            .join(", ")}${net.people.length > n ? `, og ${moreText(net.people.length - n)}` : ""}.`,
         );
       } else if (net) lines.push("Netværk: personen sidder ikke sammen med andre i registrerede selskaber.");
     }

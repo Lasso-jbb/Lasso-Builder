@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { MISSING, formatDate, formatPercent, percentChange, type CompanyVM, type Severity } from "@lasso/spec";
+import { MISSING, changePercent, formatDate, formatPercent, percentChange, statusGroup, type CompanyVM, type Severity, type StatusGroup } from "@lasso/spec";
 import { Icon } from "./components/Icon.js";
 
 export function Card({ title, children, className = "" }: { title?: ReactNode; children: ReactNode; className?: string }) {
@@ -53,15 +53,21 @@ export function Section({
 }
 
 /**
- * Statusens tone (katalog 05.7, 28.1): Aktiv i tekstfarve, konkurs/tvangsopløsning mørk rød,
- * likvidation og rekonstruktion i warning-tekst, ophørt muted, "Ny" koral tekst. Likvidation og
- * rekonstruktion har ikke egen statusKind i modellen (de er "warning" ligesom konkurs), så de skelnes på ordet.
+ * Statusens tone (katalog 02c.8, 05.7, 28.1; Jakobs justering 29.09.2026). Farven følger ordet via
+ * statusGroup (packages/spec/src/status.ts), fire grupper for alle 19 CVR-statusser:
+ * aktiv = tekstfarve ("active"), midlertidig = warning-tekst ("liquidation": Fremtid, Uden retsvirkning,
+ * Under frivillig likvidation, Under reassumering), problem = mørk rød ("warning": Under konkurs,
+ * Under tvangsopløsning, Under rekonstruktion, Tvangsopløst, Opløst efter konkurs), inaktiv = muted
+ * ("inactive"). "Ny" er koral tekst. Ukendte ord falder tilbage på modellens statusKind.
  */
 export type StatusTone = "active" | "warning" | "liquidation" | "inactive" | "new";
 
+const GROUP_TONE: Record<StatusGroup, StatusTone> = { active: "active", temporary: "liquidation", problem: "warning", inactive: "inactive" };
+
 export function statusTone(status: string | undefined, kind: CompanyVM["statusKind"] | "new" | undefined): StatusTone {
   if (kind === "new" || (status && /^ny$/i.test(status.trim()))) return "new";
-  if (status && kind !== "inactive" && /likvidation|rekonstruktion/i.test(status) && !/konkurs|tvangs/i.test(status)) return "liquidation";
+  const group = statusGroup(status);
+  if (group) return GROUP_TONE[group];
   return kind ?? "inactive";
 }
 
@@ -441,12 +447,13 @@ export function Sparkline({
   );
 }
 
+/**
+ * 02c.4 / katalog 09: ændring som pil + procent i grøn (stigning) eller rød (fald), fx "▲ 12,4 %".
+ * Ingen ord efter procenten. Ved fortegnsskift vises også pil + procent; kan ændringen ikke
+ * beregnes (intet forrige år, eller forrige = 0), vises intet.
+ */
 export function Delta({ from, to }: { from?: number | null; to?: number | null }) {
-  const pct = percentChange([from, to]);
-  if (pct === null && typeof from === "number" && typeof to === "number" && from !== 0 && Math.sign(from) !== Math.sign(to)) {
-    // Katalog 09: skifter fortegnet, vises pil + ord (regel 7: aldrig kun farve).
-    return <span className={to < 0 ? "lasso-down" : "lasso-up"}>{to < 0 ? "▼ underskud" : "▲ overskud"}</span>;
-  }
+  const pct = changePercent(from, to);
   if (pct === null) return null;
   return (
     <span className={pct < 0 ? "lasso-down" : "lasso-up"}>

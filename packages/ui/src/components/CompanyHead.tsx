@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { formatDate, formatNumber, type CompanyVM, type HeadVariant, type ObservationsVM } from "@lasso/spec";
-import { DataState, stateForError } from "../primitives.js";
+import { DataState, stateForError, statusTone } from "../primitives.js";
 import { HeadActions, hasHeadActions, type HeadActionsProps } from "./HeadActions.js";
 import { companyRiskSummary, HeadRiskLine } from "./HeadRisk.js";
 
@@ -75,6 +75,8 @@ export function CompanyHead({ company, error, variant = "full", actions, risk, o
   }
 
   const kind = company.statusKind ?? "active";
+  // 02c.8/05.7: farven følger ordet (fire grupper), ikke kun livsforløbet.
+  const tone = statusTone(company.status, kind);
   const ceased = isCeased(company);
   // Ophørt (08.8): kun handlingen "Se historik", ingen Overvåg og ingen ikonknapper.
   const acts: HeadActionsProps | undefined = ceased
@@ -88,7 +90,7 @@ export function CompanyHead({ company, error, variant = "full", actions, risk, o
     return (
       <header className={`lasso-headline lasso-span-full lasso-company--${kind}${ceased ? " is-ceased" : ""}`}>
         <h2 className="lasso-headline__name">{company.name}</h2>
-        {status ? <span className={`lasso-company__status lasso-company__status--${kind}`}>{status}</span> : null}
+        {status ? <span className={`lasso-company__status lasso-company__status--${tone}`}>{status}</span> : null}
         {facts.length > 0 ? <span className="lasso-headline__facts">{facts.join(", ")}</span> : null}
       </header>
     );
@@ -101,7 +103,7 @@ export function CompanyHead({ company, error, variant = "full", actions, risk, o
         <div className="lasso-headcompact__main">
           <div className="lasso-headcompact__title">
             <h2 className="lasso-headcompact__name">{company.name}</h2>
-            {status && kind !== "active" ? <span className={`lasso-headcompact__status lasso-company__status--${kind}`}>{status}</span> : null}
+            {status && kind !== "active" ? <span className={`lasso-headcompact__status lasso-company__status--${tone}`}>{status}</span> : null}
           </div>
           {facts.length > 0 ? <p className="lasso-headcompact__facts">{facts.join(", ")}</p> : null}
         </div>
@@ -116,7 +118,7 @@ export function CompanyHead({ company, error, variant = "full", actions, risk, o
     <header className={`lasso-company lasso-span-full lasso-company--${kind}${showActions ? " lasso-company--actions" : ""}`}>
       <div className="lasso-company__title">
         <h2 className="lasso-company__name">{company.name}</h2>
-        {status ? <span className={`lasso-company__status lasso-company__status--${kind}`}>{status}</span> : null}
+        {status ? <span className={`lasso-company__status lasso-company__status--${tone}`}>{status}</span> : null}
         {alias ? <span className="lasso-company__alias">Binavn: {alias}</span> : null}
       </div>
       {showActions ? <HeadActions {...acts!} className="lasso-company__actions" /> : null}

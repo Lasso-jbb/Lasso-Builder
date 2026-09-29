@@ -1,4 +1,4 @@
-import {
+import { moreText,
   companyRiskSummary,
   personRiskSummary,
   activityHeatmapKey,
@@ -19,7 +19,7 @@ import {
   formatScaled,
   formatShare,
   ownershipGraphKey,
-  percentChange,
+  changePercent,
   personCompanies,
   personCounts,
   personFactOptions,
@@ -130,9 +130,9 @@ const short = (v: number | null | undefined, metric: Metric, currency?: string) 
 };
 
 function delta(from: number | null | undefined, to: number | null | undefined): string {
-  if (typeof from !== "number" || typeof to !== "number" || from === 0) return "";
-  const pct = percentChange([from, to]);
-  if (pct === null) return to < 0 ? "▼ underskud" : "▲ overskud";
+  // 02c.4: pil + procent, også ved fortegnsskift; intet når forrige mangler eller er 0.
+  const pct = changePercent(from, to);
+  if (pct === null) return "";
   const text = new Intl.NumberFormat("da-DK", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Math.abs(pct));
   return `${pct >= 0 ? "▲" : "▼"} ${padStart(text, 4)} %`;
 }
@@ -251,7 +251,7 @@ function ownershipTreeCard(card: Card, g: OwnershipGraphVM) {
         seen.add(other);
         if (level + 1 < Math.min(depth, 3)) walk(other, level + 1);
       });
-      if (list.length > 4) card.raw(`${"  ".repeat(level)}og ${list.length - 4} flere`);
+      if (list.length > 4) card.raw(`${"  ".repeat(level)}og ${moreText(list.length - 4)}`);
     };
     walk(g.rootId, 0);
   };
@@ -395,14 +395,14 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     // Ingen direktion eller bestyrelse (fx en enkeltmandsvirksomhed med en fuldt ansvarlig deltager): rollerne som de er, regel 9.
     if (!ceo && !chair && board.length === 0) {
       for (const p of people.slice(0, 3)) card.row(p.role, p.name);
-      if (people.length > 3) card.row("", `Se ${people.length - 3} flere`);
+      if (people.length > 3) card.row("", `Se ${moreText(people.length - 3)}`);
     }
     for (const o of owners?.owners.slice(0, 3) ?? []) {
       card.row("Ejer", o.name);
       card.row("", o.share ? `${o.share}${o.votes ? " kapital" : ""}` : undefined);
       card.row("", o.votes ? `${o.votes} stemmer` : undefined);
     }
-    if (owners && owners.owners.length > 3) card.row("", `og ${owners.owners.length - 3} flere ejere`);
+    if (owners && owners.owners.length > 3) card.row("", `og ${moreText(owners.owners.length - 3, "ejer", "ejere")}`);
     card.row("Revisor", owners?.auditor?.name);
   }
 
@@ -446,7 +446,7 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
       if (o) {
         card.section("Ejerkreds");
         for (const x of o.owners.slice(0, 3)) card.row(x.share ?? "—", x.name);
-        if (o.owners.length > 3) card.row("", `og ${o.owners.length - 3} flere`);
+        if (o.owners.length > 3) card.row("", `og ${moreText(o.owners.length - 3)}`);
       }
     }
     const stmt = ds.financialStatements[lassoId];
@@ -529,7 +529,7 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     if (map.points.length === 0) card.text(map.emptyReason ?? "Ingen koordinater");
     const pts = [...map.points].sort((a, b) => (a.kind === "focus" ? -1 : b.kind === "focus" ? 1 : 0));
     for (const p of pts.slice(0, 3)) card.row(p.kind === "focus" ? "Hoved" : "Adresse", [p.name, p.address].filter(Boolean).join(", "));
-    if (pts.length > 3) card.row("", `og ${pts.length - 3} flere`);
+    if (pts.length > 3) card.row("", `og ${moreText(pts.length - 3)}`);
   }
 
   if (types.has("LassoBeneficialOwners")) {
@@ -559,7 +559,7 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
           card.row(p.role ?? "Kontakt", p.name);
           card.row("", [p.phone, p.email].filter(Boolean).join(", ") || undefined);
         }
-        if (cp.people.length > 3) card.row("", `og ${cp.people.length - 3} flere`);
+        if (cp.people.length > 3) card.row("", `og ${moreText(cp.people.length - 3)}`);
       }
     }
   }
@@ -609,7 +609,7 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
   if (events && types.has("LassoAnnouncements") && events.announcements.length) {
     card.section("Statstidende");
     for (const a of events.announcements.slice(0, 3)) card.text(`${a.date ? `${formatDate(a.date)}, ` : ""}${a.type}`);
-    if (events.announcements.length > 3) card.text(`Se ${events.announcements.length - 3} flere`);
+    if (events.announcements.length > 3) card.text(`Se ${moreText(events.announcements.length - 3)}`);
   }
   if (events && types.has("LassoPublications")) {
     card.section("Regnskabspublicering");
@@ -628,7 +628,7 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
         card.text(obs.checkedAt ? `Intet at bemærke, tjekket ${formatDate(obs.checkedAt)}` : "Ingen risikoobservationer");
       } else {
         for (const o of sorted.slice(0, 3)) card.text(`${level(o.severity)}: ${o.title}`);
-        if (sorted.length > 3) card.text(`Se ${sorted.length - 3} flere`);
+        if (sorted.length > 3) card.text(`Se ${moreText(sorted.length - 3)}`);
       }
     }
   }
@@ -650,7 +650,7 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
       const sorted = [...auditorIndependence.relations].sort((a, b) => b.assessment - a.assessment);
       const word = (s: number) => (s === 100 ? "Konflikt" : s === 50 ? "Vurdér" : "Neutral");
       for (const r of sorted.slice(0, 3)) card.text(`${word(r.assessment)}: ${r.name}, ${r.relation}`);
-      if (sorted.length > 3) card.text(`Se ${sorted.length - 3} flere`);
+      if (sorted.length > 3) card.text(`Se ${moreText(sorted.length - 3)}`);
     }
   }
 
@@ -661,7 +661,7 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     for (const u of units.units.slice(0, 5)) {
       card.row(u.pNumber ?? "P-nr.", [u.name, u.isMain ? "hovedenhed" : undefined].filter(Boolean).join(", "));
     }
-    if (units.units.length > 5) card.row("", `og ${units.units.length - 5} flere`);
+    if (units.units.length > 5) card.row("", `og ${moreText(units.units.length - 5)}`);
   }
 
   const properties = types.has("LassoProperties") ? ds.properties[lassoId] : undefined;
@@ -729,7 +729,7 @@ function personCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | null
               for (const l of wrap([what, when].filter(Boolean).join(", "), W - 2)) card.raw(`  ${l}`);
             }
           }
-          if (companies.length > limit) card.text(`og ${companies.length - limit} flere selskaber`);
+          if (companies.length > limit) card.text(`og ${moreText(companies.length - limit, "selskab", "selskaber")}`);
           break;
         }
         const rows = personRoleRows(p, show, { except: c.except });
@@ -740,7 +740,7 @@ function personCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | null
           card.text(`${r.companyName}${r.companyStatus ? ` (${r.companyStatus.toLowerCase()}${r.companyEnded ? ` ${year(r.companyEnded)}` : ""})` : ""}`);
           for (const l of wrap([r.text, r.period].filter(Boolean).join(", "), W - 2)) card.raw(`  ${l}`);
         }
-        if (rows.length > limit) card.text(`og ${rows.length - limit} flere selskaber`);
+        if (rows.length > limit) card.text(`og ${moreText(rows.length - limit, "selskab", "selskaber")}`);
         break;
       }
       case "LassoPersonFacts": {
@@ -773,7 +773,7 @@ function personCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | null
           const yrs = x.overlapYears < 1 ? "<1 år" : `${x.overlapYears} år`;
           wrap(x.name, W - 8).forEach((l, i, all) => card.raw(`${pad(l, W - 7)}${i === all.length - 1 ? padStart(yrs, 7) : ""}`));
         }
-        if (net.people.length > limit) card.text(`og ${net.people.length - limit} flere`);
+        if (net.people.length > limit) card.text(`og ${moreText(net.people.length - limit)}`);
         break;
       }
       case "LassoPersonStats": {
@@ -813,7 +813,7 @@ function personCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | null
           card.text(formatDate(e.date));
           for (const l of wrap(e.title, W - 2)) card.raw(`  ${l}`);
         }
-        if (events.length > limit) card.text(`og ${events.length - limit} flere begivenheder`);
+        if (events.length > limit) card.text(`og ${moreText(events.length - limit, "begivenhed", "begivenheder")}`);
         break;
       }
       case "LassoNews": {
@@ -824,7 +824,7 @@ function personCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | null
           card.text([n.source, n.time ? formatDate(n.time) : null].filter(Boolean).join(", "));
           for (const l of wrap(n.headline, W - 2)) card.raw(`  ${l}`);
         }
-        if (news.length > c.limit) card.text(`og ${news.length - c.limit} flere nyheder`);
+        if (news.length > c.limit) card.text(`og ${moreText(news.length - c.limit, "nyhed", "nyheder")}`);
         break;
       }
       case "LassoOwnershipDiagram": {
@@ -839,7 +839,7 @@ function personCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | null
             card.text(graph.nodes.find((n) => n.id === e.to)?.name ?? e.to);
             card.raw(`  Ejerandel ${e.share ? formatShare(e.share) : "ikke oplyst"}`);
           }
-          if (owned.length > 5) card.text(`og ${owned.length - 5} flere selskaber`);
+          if (owned.length > 5) card.text(`og ${moreText(owned.length - 5, "selskab", "selskaber")}`);
         }
         const below = graph.edges.filter((e) => e.from !== lassoId && !e.until);
         if (below.length && ownerList) {
@@ -847,7 +847,7 @@ function personCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | null
           for (const e of below.slice(0, 5)) {
             for (const l of wrap(`${graph.nodes.find((n) => n.id === e.to)?.name ?? e.to}${e.share ? `, ${formatShare(e.share)}` : ""}`, W - 2)) card.raw(`  ${l}`);
           }
-          if (below.length > 5) card.text(`og ${below.length - 5} flere selskaber`);
+          if (below.length > 5) card.text(`og ${moreText(below.length - 5, "selskab", "selskaber")}`);
         } else if (below.length) card.text(`De ejede selskaber ejer ${below.length} ${below.length === 1 ? "selskab" : "selskaber"} mere`);
         else if (ownerList) card.text("De ejede selskaber ejer ingen andre selskaber");
         break;
@@ -916,12 +916,12 @@ function personTableCard(spec: ViewSpec, ds: Dataset): string | null {
     const n = `${i + 1}.`;
     wrap(r.name, W - 4).forEach((l, j) => card.raw(`${pad(j === 0 ? n : "", 3)} ${l}`));
     const roles = r.roles.slice(0, 2).map((x) => `${x.role}, ${x.companyName}`);
-    const more = r.roles.length > 2 ? ` og ${r.roles.length - 2} flere` : "";
+    const more = r.roles.length > 2 ? ` og ${moreText(r.roles.length - 2)}` : "";
     if (roles.length) for (const l of wrap(roles.join("; ") + more, W - 4)) card.raw(`    ${l}`);
     const facts = [r.birthYear ? `f. ${r.birthYear}` : null, r.city, r.bankruptcies > 0 ? `${r.bankruptcies} konkurs${r.bankruptcies === 1 ? "" : "er"}` : null].filter(Boolean).join(", ");
     if (facts) for (const l of wrap(facts, W - 4)) card.raw(`    ${l}`);
   });
-  if (result.rows.length > 20) card.text(`og ${formatNumber(result.rows.length - 20)} flere`);
+  if (result.rows.length > 20) card.text(`og ${moreText(result.rows.length - 20)}`);
   return card.toString();
 }
 
@@ -957,7 +957,7 @@ function changeFeedCard(spec: ViewSpec, ds: Dataset): string | null {
     for (const l of wrap(`${e.source}, ${clock(e.at)}`, W - 2)) card.raw(`  ${l}`);
     shown++;
   }
-  if (feed.entries.length > shown) card.text(`Se ${feed.entries.length - shown} flere`);
+  if (feed.entries.length > shown) card.text(`Se ${moreText(feed.entries.length - shown)}`);
   return card.toString();
 }
 
@@ -1011,7 +1011,7 @@ function savedPagesCard(spec: ViewSpec, ds: Dataset): string | null {
     card.raw(`    ${p.kind === "company" ? "Virksomhed" : "Person"}, gemt ${formatDate(p.savedAt)}`);
   });
   const more = list.total - shown.length;
-  if (more > 0) card.text(`og ${formatNumber(more)} flere`);
+  if (more > 0) card.text(`og ${moreText(more)}`);
   const links = shown.flatMap((p, i) => (p.url ? [`${i + 1}. Åbn: ${p.url}`] : []));
   return [card.toString(), ...links].join("\n");
 }

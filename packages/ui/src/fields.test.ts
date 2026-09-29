@@ -104,7 +104,7 @@ test("02a.12 Branchevælger: to navne og N flere, tomt = Vælg brancher, træ me
   const empty = render(h(IndustryField, { tree: DB07_EXCERPT, values: [], onChange: noop }));
   assert.match(empty, /Vælg brancher/);
   const some = render(h(IndustryField, { tree: DB07_EXCERPT, values: ["692000", "691000", "620100"], onChange: noop }));
-  assert.match(some, /69\.20 Bogføring og revision; skatterådgivning, 69\.10 Juridisk bistand og 1 flere/);
+  assert.match(some, /69\.20 Bogføring og revision; skatterådgivning, 69\.10 Juridisk bistand og 1 mere/);
   assert.match(some, /lasso-industryfield__icon/);
   const tree = render(h(TreePicker, { tree: DB07_EXCERPT, values: ["692000"], onChange: noop }));
   assert.match(tree, /role="tree"/);
@@ -123,10 +123,14 @@ test("02b.1 Persona og 03.2 Teknologi", () => {
   assert.match(f, /Direktør, alle afdelinger/);
   const t = render(h(TechnologyField, { label: "CMS", value: { on: true, mode: "any", values: [] }, onChange: noop }));
   assert.match(t, /role="switch" aria-checked="true"/);
-  assert.match(t, /Firmaer der benytter/);
-  assert.match(t, /Et CMS/);
+  // 02b.2/03.3 (Jakob 29.09.2026): kun typen er et af tre valg i dropdown'en; ingen tekst foran.
+  assert.match(t, /aria-expanded="false"[^>]*>Firmaer der benytter et CMS<\/button>/);
+  assert.doesNotMatch(t, /lasso-field__fixed/);
+  assert.doesNotMatch(t, /Søg efter flere/);
+  assert.match(t, /Inkluder kun følgende[^]*Ekskluder følgende/);
   const ex = render(h(TechnologyField, { label: "CMS", value: { on: true, mode: "exclude", values: ["Umbraco"] }, onChange: noop }));
-  assert.doesNotMatch(ex, /Firmaer der benytter/);
+  assert.doesNotMatch(ex, /aria-expanded="false"[^>]*>Firmaer der benytter/);
+  assert.match(ex, /Søg efter flere/);
   assert.match(ex, /Ekskluder følgende/);
   assert.match(ex, /Umbraco/);
   const off = render(h(TechnologyField, { label: "Live chat", value: { on: false, mode: "any", values: [] }, onChange: noop }));
@@ -177,7 +181,8 @@ test("FilterPanel: procent- og Ja/Nej-felter fra et udvidet katalog", () => {
 
 test("02a.12 summarize: \"og N flere\" gennemgående, også ved én", () => {
   assert.equal(summarize(["A", "B"]), "A, B");
-  assert.equal(summarize(["A", "B", "C"]), "A, B og 1 flere");
+  assert.equal(summarize(["A", "B", "C"]), "A, B og 1 mere");
+  assert.equal(summarize(["A", "B", "C", "D"]), "A, B og 2 flere");
   assert.equal(summarize(["A", "B", "C", "D"]), "A, B og 2 flere");
 });
 
@@ -192,7 +197,7 @@ test("03.4 TechnologyRow: Ryd kun når kontakten er til", () => {
   assert.doesNotMatch(off, />Ryd</);
   const on = render(h(TechnologyRow, { label: "E-commerce", value: { on: true, mode: "any", values: [] }, onChange: noop, onClear: noop }));
   assert.match(on, />Ryd</);
-  assert.match(on, /Firmaer der benytter/);
+  assert.match(on, /Firmaer der benytter et E-commerce/);
 });
 
 test("02a.3/02a.6 enheden og \"og\" står i gruppe med feltet; DateField kan åbne kalenderen", () => {
@@ -234,4 +239,16 @@ test("02b.3 ToggleField og 26a.8 FormPage", () => {
 test("26c.8 Filterark: rækkens værdi uden feltnavn, Alle når tom", () => {
   assert.equal(criterionSummary(undefined), "Alle");
   assert.equal(criterionSummary({ field: "region", operator: "in", value: ["Hovedstaden"] }), "Hovedstaden");
+});
+
+test("02a.6/02b.10 Dato mellem: til-datoen kan ikke vælges før fra-datoen", async () => {
+  const { dateRangeError } = await import("./components/Fields.js");
+  const open = render(h(DateField, { operator: "between", operators: ["after", "between"], values: ["15.09.2026", ""], onOperator: noop, onChange: noop, defaultOpenTo: true, today: new Date(2026, 8, 29) }));
+  // Dagene før fra-datoen er deaktiverede; fra-datoen selv og dagene efter kan vælges.
+  assert.match(open, /aria-disabled="true" disabled=""[^>]*>14</);
+  assert.doesNotMatch(open, /aria-disabled="true" disabled=""[^>]*>15</);
+  assert.equal(dateRangeError(["15.09.2026", "14.09.2026"]), "Til-datoen kan ikke være før fra-datoen.");
+  assert.equal(dateRangeError(["15.09.2026", "15.09.2026"]), null);
+  const bad = render(h(DateField, { operator: "between", operators: ["between"], values: ["15.09.2026", "01.09.2026"], onOperator: noop, onChange: noop }));
+  assert.match(bad, /role="alert">Til-datoen kan ikke være før fra-datoen\./);
 });

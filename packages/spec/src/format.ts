@@ -86,10 +86,30 @@ export function formatDate(value: string | null | undefined): string {
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
 }
 
-/** "Normal / aktiv, Ophørt og 3 flere" – de to første nævnes, resten tælles. */
+/**
+ * 02c.9: tællingen efter de viste navne: "1 mere" ved én ekstra, "N flere" ved to eller flere.
+ * Bruges overalt, hvor en liste opsummeres ("og 1 mere", "og 2 flere", "Se 1 mere").
+ */
+export function moreText(rest: number, one?: string, many?: string): string {
+  // Med navneord: "1 selskab mere" / "3 flere selskaber".
+  if (rest === 1) return one ? `1 ${one} mere` : "1 mere";
+  return `${intFormat.format(rest)} flere${many ? ` ${many}` : ""}`;
+}
+
+/** "Normal / aktiv, Ophørt og 1 mere" / "… og 3 flere" – de to første nævnes, resten tælles. */
 export function summarizeList(values: readonly string[]): string {
   if (values.length <= 2) return values.join(", ");
-  return `${values.slice(0, 2).join(", ")} og ${values.length - 2} flere`;
+  return `${values.slice(0, 2).join(", ")} og ${moreText(values.length - 2)}`;
+}
+
+/**
+ * 02c.4: procentvis ændring fra forrige til nu, også ved fortegnsskift (fra overskud til underskud
+ * eller omvendt): (nu − forrige) / |forrige|. null, når den ikke kan beregnes (intet forrige år,
+ * forrige = 0 eller manglende tal).
+ */
+export function changePercent(from: number | null | undefined, to: number | null | undefined): number | null {
+  if (typeof from !== "number" || typeof to !== "number" || !Number.isFinite(from) || !Number.isFinite(to) || from === 0) return null;
+  return ((to - from) / Math.abs(from)) * 100;
 }
 
 /** Procentvis ændring fra første til sidste tal i en serie. */
@@ -236,7 +256,8 @@ export function formatBoolean(value: boolean | null | undefined, consequence?: s
 }
 
 /**
- * 02c.9 Liste af værdier: komma, "og" før sidste, afkortet efter `max` navne med "og N flere".
+ * 02c.9 Liste af værdier: komma, "og" før sidste, afkortet efter `max` navne med "og 1 mere" /
+ * "og N flere".
  * Returnerer delene, så "og N flere" kan tegnes som et link. Tom liste = "Ingen".
  */
 export function listParts(values: readonly string[], max = 2): { shown: string[]; rest: number; text: string } {
@@ -248,23 +269,18 @@ export function listParts(values: readonly string[], max = 2): { shown: string[]
   }
   const shown = clean.slice(0, max);
   const rest = clean.length - max;
-  return { shown, rest, text: `${shown.join(", ")} og ${rest} flere` };
+  return { shown, rest, text: `${shown.join(", ")} og ${moreText(rest)}` };
 }
 
 /**
- * 02c.4: ændringen som ord efter trekanten: "stigning" eller "fald" (og "overskud"/"underskud" når
- * fortegnet skifter). Procent kun når begge år har samme fortegn.
+ * 02c.4: ændringen som pil + procent, uden ord efter: "▲ 12,4 %" (grøn) eller "▼ 15,1 %" (rød).
+ * Ved fortegnsskift vises stadig pil + procent; kan ændringen ikke beregnes (intet forrige år,
+ * eller forrige = 0), er svaret null, og der vises ingen ændring. `text` er procenten uden pil.
  */
 export function changeText(from: number | null | undefined, to: number | null | undefined): { arrow: "▲" | "▼"; text: string; tone: "up" | "down" } | null {
-  if (typeof from !== "number" || typeof to !== "number" || !Number.isFinite(from) || !Number.isFinite(to)) return null;
-  if (from !== 0 && Math.sign(from) !== Math.sign(to) && to !== 0) {
-    return to < 0 ? { arrow: "▼", text: "underskud", tone: "down" } : { arrow: "▲", text: "overskud", tone: "up" };
-  }
-  const pct = percentChange([from, to]);
+  const pct = changePercent(from, to);
   if (pct === null) return null;
-  return pct < 0
-    ? { arrow: "▼", text: `${formatPercent(Math.abs(pct), false)} fald`, tone: "down" }
-    : { arrow: "▲", text: `${formatPercent(pct, false)} stigning`, tone: "up" };
+  return pct < 0 ? { arrow: "▼", text: formatPercent(Math.abs(pct), false), tone: "down" } : { arrow: "▲", text: formatPercent(pct, false), tone: "up" };
 }
 
 /** 02c.4: fuldt beløb til tooltip, "18.812.400 kr." med ægte minus. */

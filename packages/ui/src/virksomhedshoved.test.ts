@@ -241,9 +241,10 @@ const fin: FinancialsVM = {
   quality: { ansatte: "Ansatte i regnskabet afviger fra CVR (eksempel)." },
 };
 
-test("09.1: branchetal som tekst efter ændringen og kvalitetsflag med tooltip, aldrig som pille", () => {
+test("09.1: kun pil + procent (ingen \"fra ÅÅÅÅ\", ingen branche-procent) og kvalitetsflag med tooltip, aldrig som pille", () => {
   const out = html(h(KeyFigureCards, { financials: fin, metrics: ["bruttofortjeneste", "ansatte"] }));
-  assert.match(out, /lasso-kpi__bench">branche \+3,1 %</);
+  assert.match(out, /lasso-kpi__delta"><span class="lasso-up">▲ 9,1 %<\/span><\/div>/);
+  assert.doesNotMatch(out, /branche|lasso-kpi__year/);
   assert.match(out, /class="lasso-qflag__btn" aria-label="Mulig fejl: Ansatte i regnskabet afviger fra CVR \(eksempel\)\."/);
   assert.match(out, /role="tooltip"[^>]*>Ansatte i regnskabet afviger/);
 });

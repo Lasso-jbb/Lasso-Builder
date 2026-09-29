@@ -1,5 +1,5 @@
 import { useState, type KeyboardEvent, type ReactNode } from "react";
-import { formatPercent, percentChange } from "@lasso/spec";
+import { changePercent, formatPercent } from "@lasso/spec";
 
 /**
  * Fælles interaktion for graferne i katalog 13 og mobilformerne i 26b.
@@ -39,16 +39,13 @@ export interface ChangeText {
 }
 
 /**
- * Ændring fra forrige værdi som pil + procent (09: skifter fortegnet, vises kun pilen og ordet).
+ * Ændring fra forrige værdi som pil + procent (02c.4: også ved fortegnsskift; intet når forrige er 0).
  * `higherIsWorse` bruges til risiko, hvor en stigning er dårlig; retningen (pilen) er den samme.
  */
 export function changeText(prev: number | null | undefined, cur: number | null | undefined): ChangeText | null {
   if (typeof prev !== "number" || typeof cur !== "number") return null;
-  const pct = percentChange([prev, cur]);
-  if (pct === null) {
-    if (prev !== 0 && Math.sign(prev) !== Math.sign(cur)) return { text: cur < 0 ? "▼ underskud" : "▲ overskud", dir: cur < 0 ? "down" : "up" };
-    return null;
-  }
+  const pct = changePercent(prev, cur);
+  if (pct === null) return null;
   if (Math.abs(pct) < 0.05) return { text: "uændret", dir: "flat" };
   return { text: `${pct < 0 ? "▼" : "▲"} ${formatPercent(Math.abs(pct), false)}`, dir: pct < 0 ? "down" : "up" };
 }

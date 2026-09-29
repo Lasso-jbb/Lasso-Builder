@@ -34,7 +34,7 @@ import type {
   PropertyVM,
   VetEventVM,
 } from "@lasso/spec";
-import { currencyUnit, foldChangeEntries, formatAmount, formatDate, statusKind as specStatusKind } from "@lasso/spec";
+import { currencyUnit, foldChangeEntries, formatAmount, formatDate, statusKind as specStatusKind, statusLabel } from "@lasso/spec";
 import { adaptBeneficialOwnershipDocumented, markUnknownOwnershipNodes } from "./ownershipAdapters.js";
 
 /**
@@ -168,7 +168,7 @@ export function address(raw: Json): CompanyVM["address"] {
 }
 
 export function adaptCompany(lassoId: string, raw: Json): CompanyVM {
-  const status = str(raw, "status", "companyStatus", "state", "virksomhedsstatus", "lifecycle.status");
+  const status = statusLabel(str(raw, "status", "companyStatus", "state", "virksomhedsstatus", "lifecycle.status"));
   return {
     lassoId: str(raw, "lassoId", "id") ?? lassoId,
     cvr: str(raw, "cvr", "cvrNumber", "vat", "vatNumber", "cvrnummer"),
@@ -1015,7 +1015,7 @@ export function adaptSearch(raw: Json, companyPrefix: string): { total?: number;
     const type = (str(it, "type", "entityType", "kind") ?? "").toLowerCase();
     if (type && /person/.test(type)) continue;
     if (!type && !lassoId.startsWith(companyPrefix) && /^CVR-/i.test(lassoId)) continue;
-    const status = str(it, "status", "companyStatus", "state");
+    const status = statusLabel(str(it, "status", "companyStatus", "state"));
     const a = address(it);
     const street = str(it, "address1");
     if (street && a) a.street = street;
@@ -1177,7 +1177,7 @@ export function adaptProductionUnits(lassoId: string, raw: Json): ProductionUnit
     .map((u): ProductionUnitVM | null => {
       const pNumber = str(u, "pNumber", "productionUnitNumber", "unitNumber", "pnr", "number");
       if (!pNumber) return null;
-      const status = str(u, "status", "unitStatus", "companyStatus", "virksomhedsstatus");
+      const status = statusLabel(str(u, "status", "unitStatus", "companyStatus", "virksomhedsstatus"));
       const endedRaw = dateStr(u, "endDate", "to", "lifeTime.to", "ophoersdato", "validTo");
       return {
         pNumber,
@@ -1381,7 +1381,7 @@ function nodeFrom(raw: Json, id: string): OwnershipNodeVM {
   // Personnoder har navnet under andre nøgler end selskaber (fx fullName/personName/person.name).
   const name = get("name", "companyName", "legalName", "displayName", "fullName", "personName", "person.name", "participant.name", "names.0", "navn");
   const kind = participantKind(type || undefined, id, name);
-  const status = get("status", "companyStatus", "lifecycle.status", "state");
+  const status = statusLabel(get("status", "companyStatus", "lifecycle.status", "state"));
   const cc = country && country.length <= 3 && !/^(dk|dnk|danmark|denmark)$/i.test(country) ? country.toUpperCase().slice(0, 2) : undefined;
   return {
     id,

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import {
+import { moreText,
   currencyUnit,
   formatAmount,
   formatCreditMax,
@@ -9,7 +9,7 @@ import {
   mainMetric,
   METRIC_FIELD,
   METRIC_LABELS,
-  percentChange,
+  changePercent,
   type Dataset,
   type FinancialYear,
   type Metric,
@@ -59,12 +59,11 @@ function scoreBand(score: number): { label: string; index: 0 | 1 | 2 } {
   return { label: "Høj risiko", index: 2 };
 }
 
-/** "▲ 7,5 %" / "▼ underskud" som ren tekst med retning (katalog 09). */
+/** "▲ 7,5 %" / "▼ 163,2 %" som ren tekst med retning (02c.4: pil + procent, også ved fortegnsskift). */
 function delta(prev: number | null | undefined, last: number | null | undefined): { text: string; tone: "up" | "down" | "" } {
   if (typeof prev !== "number" || typeof last !== "number") return { text: "", tone: "" };
   if (prev === last) return { text: "Uændret", tone: "" };
-  if (prev !== 0 && Math.sign(prev) !== Math.sign(last)) return { text: last < 0 ? "▼ underskud" : "▲ overskud", tone: last < 0 ? "down" : "up" };
-  const pct = percentChange([prev, last]);
+  const pct = changePercent(prev, last);
   if (pct === null) return { text: "", tone: "" };
   return { text: `${pct < 0 ? "▼" : "▲"} ${formatPercent(Math.abs(pct), false)}`, tone: pct < 0 ? "down" : "up" };
 }
@@ -248,7 +247,7 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
   const field = METRIC_FIELD[metric];
   const mainValue = last ? (last[field] as number | null | undefined) : undefined;
   const mainPrev = prev ? (prev[field] as number | null | undefined) : undefined;
-  const mainPct = percentChange([mainPrev, mainValue]);
+  const mainPct = changePercent(mainPrev, mainValue);
   const coverDelta = mainPct !== null ? formatPercent(mainPct) : delta(mainPrev, mainValue).text;
   const firstYear = years.at(-YEARS)?.year ?? years[0]?.year;
   const span = last ? (firstYear && firstYear !== last.year ? `${firstYear}–${last.year}` : String(last.year)) : "";
@@ -295,7 +294,6 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
                           <span className={`lasso-a4-kpi__value ${v == null ? "lasso-a4__faint" : ""}`}>{text}</span>
                           <span className={`lasso-a4-kpi__delta ${d.tone === "up" ? "lasso-a4__up" : d.tone === "down" ? "lasso-a4__down" : ""}`}>
                             {d.text}
-                            {d.text && prev && d.text !== "Uændret" && m === metric ? ` fra ${prev.year}` : ""}
                           </span>
                         </div>
                       );
@@ -359,7 +357,7 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
                   ) : (
                     <p className="lasso-a4__note">Der er ingen registrerede personer i ledelsen.</p>
                   )}
-                  {people.length > MAX_ROWS ? <p className="lasso-a4__note">og {people.length - MAX_ROWS} flere</p> : null}
+                  {people.length > MAX_ROWS ? <p className="lasso-a4__note">og {moreText(people.length - MAX_ROWS)}</p> : null}
                   <p className="lasso-a4__note">
                     Revisor: {ownership?.auditor?.name ?? auditorName ?? "Ikke oplyst"}
                     {ownership?.auditor?.from ? `, siden ${formatDate(ownership.auditor.from)}` : ""}
@@ -379,7 +377,7 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
                   ) : (
                     <p className="lasso-a4__note">Der er ingen registrerede legale ejere i CVR.</p>
                   )}
-                  {owners.length > MAX_ROWS ? <p className="lasso-a4__note">og {owners.length - MAX_ROWS} flere</p> : null}
+                  {owners.length > MAX_ROWS ? <p className="lasso-a4__note">og {moreText(owners.length - MAX_ROWS)}</p> : null}
                   <p className="lasso-a4__note">Ejerandele som CVR-intervaller{beneficial ? `, reelle ejere på side ${total}` : ""}</p>
                 </div>
               </div>
@@ -529,7 +527,7 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
                           </div>
                         );
                       })}
-                      {observations.length > 5 ? <p className="lasso-a4__note">og {observations.length - 5} flere</p> : null}
+                      {observations.length > 5 ? <p className="lasso-a4__note">og {moreText(observations.length - 5)}</p> : null}
                     </div>
                   ) : (
                     <p className="lasso-a4__small">

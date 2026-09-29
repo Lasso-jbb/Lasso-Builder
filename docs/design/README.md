@@ -6,7 +6,7 @@ Tokens står i `packages/ui/src/styles.css`. Komponenterne bruger kun CSS-variab
 
 ## Faste regler (01, guide 23)
 
-1. Status er ren tekst i vægt 500. Ingen piller, prikker eller farvede flader.
+1. Status er ren tekst i vægt 500. Ingen piller, prikker eller farvede flader. Farven følger ordet (se "Status" nedenfor).
 2. Ingen dekorative piller eller badges. Tællere står aldrig på faner.
 3. Hvid flade overalt. Opdel med tynde linjer og luft, aldrig hvide kort på grå baggrund.
 4. Ingen farvede bannerbokse. AI-analyser er almindelige sektioner med kildelinje og intet "Skrevet af AI"-mærke.
@@ -26,10 +26,30 @@ Alle elementer har **fyldt**, **henter** (skelet i samme højde), **tom** (siger
 - Beløb: `842 t. kr.`, `18,8 mio. kr.`, `2,4 mia. kr.`
 - Tal `1.243.501`, procent med én decimal og mellemrum: `17,3 %`
 - Negative tal med ægte minus `−201`, aldrig parentes
-- Udvikling ▲/▼ + procent; skifter fortegnet, vises kun pilen
-- Dato `15.04.2026`
+- Beløb + ændring (02c.4): kun pil + procent i grøn (stigning) eller rød (fald): `48,3 mio. kr. ▲ 12,4 %`, `3,4 mio. kr. ▼ 15,1 %`. Ingen ord efter procenten ("stigning", "fald", "fra 2024", "underskud"). Ved fortegnsskift vises stadig pil + procent (`changePercent`: (nu − forrige) / |forrige|); kan ændringen ikke beregnes (intet forrige år eller forrige = 0), vises ingen ændring. Gælder nøgletalskort, nøgle-værdi, tabeller, grafer, A4-rapport og tekstkort.
+- Procent (02c.5): kun den ene procent; ingen anden procent eller sammenligning efter (ingen "branchen 11,2 %").
+- Liste af værdier (02c.9): "og 1 mere" ved én ekstra, "og N flere" ved to eller flere, overalt hvor der opsummeres (`moreText`, `listParts`).
+- Reference til virksomhed (02c.13): kun navnet, ingen undertekst (CVR, rolle eller andel). Personreferencer må have "Siden <dato>" (`EntityRef kind`).
+- Dato `15.04.2026`. Datofelt "mellem" (02a.6, 02b.10): fra-dato og til-dato; til-datoen kan ikke vælges før fra-datoen (dagene før er deaktiverede i kalenderen), og en indtastet til-dato før fra-datoen afvises med fejlteksten "Til-datoen kan ikke være før fra-datoen." (`DATE_RANGE_ERROR`).
 
 Alt dette ligger i `packages/spec/src/format.ts`.
+
+## Status (02c.8, 05.7, 28.1)
+
+Alle 19 CVR-statusser står som ren tekst i vægt 500 med dansk navn; CVR's originalnavne (`NORMAL`, `OPLØSTEFTERKONKURS`, `UNDERREASSUMERING`/`UNDERREASUMMERING` …) mappes med `statusLabel`. Farven følger ordet (`statusGroup` i `packages/spec/src/status.ts`, `statusTone` i `primitives.tsx`), og ordet bærer altid betydningen (regel 7):
+
+| Gruppe | Farve | Statusser |
+|---|---|---|
+| Aktiv | tekstfarve | Aktiv, Normal |
+| Midlertidig, ikke krise | gul (warning-tekst) | Fremtid, Uden retsvirkning, Under frivillig likvidation, Under reassumering |
+| Problem | rød (mørk rød som konkurs) | Under konkurs, Under tvangsopløsning, Under rekonstruktion, Tvangsopløst, Opløst efter konkurs |
+| Inaktiv | muted (som Ophørt) | Ophørt, Opløst, Opløst efter erklæring, Opløst efter frivillig likvidation, Opløst efter fusion, Opløst efter grænseoverskridende fusion, Opløst efter spaltning, Slettet |
+
+`statusKind` i modellen siger stadig kun, om virksomheden er i drift (`active`), i et forløb (`warning`) eller afsluttet (`inactive`); "Opløst efter konkurs" er afsluttet, men farves som problem.
+
+## Teknologi (02b.2, 03.3, 03.4)
+
+Teknologier er grupperet i typer (fx CRM-system, Live chat, Digital marketing); en gruppe uden type bruges ikke. Pr. type slår til/fra-kontakten foran rækken kriteriet til og fra. Operator-dropdown'en har tre valg: "Firmaer der benytter et <type>" (kun typen, intet søgefelt), "Inkluder kun følgende" og "Ekskluder følgende" (produkt-tags + "Søg efter flere…"). `TechnologyField`/`TechnologyRow`.
 
 ## Grid og rækkefølge (06, guide 23)
 

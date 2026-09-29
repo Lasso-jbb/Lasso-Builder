@@ -54,7 +54,8 @@ test("13.2: søjlegrafen har nøgletalsvælger øverst til højre og en fokuserb
   assert.match(h, /class="lasso-chart__plot" tabindex="0"/);
   assert.deepEqual(pickableMetrics(FIN, 5), ["bruttofortjeneste", "resultat", "egenkapital", "gaeld", "soliditetsgrad", "overskudsgrad"]);
   assert.deepEqual(changeText(100, 112.1), { text: "▲ 12,1 %", dir: "up" });
-  assert.deepEqual(changeText(100, -5), { text: "▼ underskud", dir: "down" });
+  assert.deepEqual(changeText(100, -5), { text: "▼ 105,0 %", dir: "down" });
+  assert.equal(changeText(0, 5), null);
 });
 
 test("13.5/13.7: balance som aktiver og passiver, vandfald fra bruttofortjeneste med underposter", () => {
