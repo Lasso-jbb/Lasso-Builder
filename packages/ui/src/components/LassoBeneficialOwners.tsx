@@ -11,8 +11,24 @@ import { ShellIcon } from "./ShellIcons.js";
  * fritaget (årsag + forbehold i muted) og kunne ikke identificeres (udråbstegn-ikon). "throughRole"
  * vises som ", via rolle" i muted efter navnet.
  */
-export function LassoBeneficialOwners({ ownership, error, onOpen }: { ownership?: BeneficialOwnershipVM; error?: string; onOpen?: (a: ViewAction) => void }) {
+export function LassoBeneficialOwners({
+  ownership,
+  error,
+  onOpen,
+  onDiagram,
+}: {
+  ownership?: BeneficialOwnershipVM;
+  error?: string;
+  onOpen?: (a: ViewAction) => void;
+  /** 11.4: "Åbn ejerdiagram →" som koral link ved sektionstitlen. */
+  onDiagram?: () => void;
+}) {
   const title = "Reelle ejere";
+  const diagram = onDiagram ? (
+    <button type="button" className="lasso-link" onClick={onDiagram}>
+      Åbn ejerdiagram →
+    </button>
+  ) : undefined;
   if (!ownership) {
     return (
       <Section title={title} span="half">
@@ -60,7 +76,7 @@ export function LassoBeneficialOwners({ ownership, error, onOpen }: { ownership?
     );
   }
   return (
-    <Section title={title} span="half">
+    <Section title={title} span="half" action={diagram}>
       {special?.kind === "management" ? <p className="lasso-bo__reason lasso-bo__reason--lead">{special.reason}</p> : null}
       <ul className="lasso-rows">
         {owners.map((o, i) => {

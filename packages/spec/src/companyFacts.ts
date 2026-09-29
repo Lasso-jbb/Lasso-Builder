@@ -103,7 +103,8 @@ export function companyFacts(company: CompanyVM, ownership: OwnershipVM | undefi
 /** Hvad der ellers står på siden for virksomheden, afledt af specen (samme regel i komponisten og i LassoView). */
 export function companyFactOptions(page: readonly ViewComponent[], company: string): CompanyFactOptions {
   const has = (type: ViewComponent["type"]) => page.some((c) => c.type === type && "company" in c && c.company === company);
-  return { hideIdentity: has("LassoCompanyHead"), hideContact: has("LassoContact"), hideAuditor: has("LassoOwnerList") };
+  // 11.3: ejerlisten viser ikke længere revisoren, så nøgle-værdi-listen beholder den.
+  return { hideIdentity: has("LassoCompanyHead"), hideContact: has("LassoContact"), hideAuditor: false };
 }
 
 /** Samme adresse (vej og postnummer, uden forskel på store/små bogstaver og mellemrum). */

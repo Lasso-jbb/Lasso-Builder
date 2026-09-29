@@ -1,4 +1,4 @@
-import { formatDate, shareText, type OwnershipVM } from "@lasso/spec";
+import { shareText, type OwnershipVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 
@@ -13,7 +13,8 @@ export function parseShare(share: string | undefined): [number, number] | null {
 /**
  * Ejerliste med interval-bjælke (katalog 11). CVR oplyser ejerandel i intervaller:
  * fuld koral = sikker minimumsandel, lys koral = intervallets spænd.
- * Navnet står alene uden ikonkasse eller initialer. Revisor som sidste linje.
+ * Navnet står alene uden ikonkasse eller initialer; personer har "Person" under navnet. Bjælken er
+ * 120 × 6 i en fast kolonne (mobil: fuld bredde under navnet). Revisoren står i nøgle-værdi-listen.
  */
 export function OwnerList({ ownership, error, onOpen }: { ownership?: OwnershipVM; error?: string; onOpen?: (a: ViewAction) => void }) {
   const title = "Ejere";
@@ -24,11 +25,11 @@ export function OwnerList({ ownership, error, onOpen }: { ownership?: OwnershipV
       </Section>
     );
   }
-  const { owners, auditor, hasOwnersUnderFivePercent } = ownership;
-  if (owners.length === 0 && !auditor) {
+  const { owners, hasOwnersUnderFivePercent } = ownership;
+  if (owners.length === 0) {
     return (
       <Section title={title} span="half">
-        <DataState state="empty" reason="Der er ingen registrerede legale ejere eller revisor i CVR." />
+        <DataState state="empty" reason="Der er ingen registrerede legale ejere i CVR." />
       </Section>
     );
   }
@@ -47,7 +48,9 @@ export function OwnerList({ ownership, error, onOpen }: { ownership?: OwnershipV
                   <div className="lasso-row__name lasso-row__name--regular">
                     {click ? <button type="button" className="lasso-link" onClick={click}>{o.name}</button> : o.name}
                   </div>
-                  {o.votes ? <div className="lasso-row__sub">Stemmer {o.votes}</div> : null}
+                  {o.kind === "person" || o.votes ? (
+                    <div className="lasso-row__sub">{o.kind === "person" ? (o.votes ? `Person, stemmer ${o.votes}` : "Person") : `Stemmer ${o.votes}`}</div>
+                  ) : null}
                 </div>
                 <div className="lasso-share" aria-hidden="true">
                   {range ? (
@@ -67,15 +70,6 @@ export function OwnerList({ ownership, error, onOpen }: { ownership?: OwnershipV
       )}
       {hasOwnersUnderFivePercent ? (
         <p className="lasso-kv-line lasso-muted">Der er ejere under 5 %, som ikke er registreret enkeltvis.</p>
-      ) : null}
-      {auditor ? (
-        <p className="lasso-kv-line">
-          <span className="lasso-kv-line__key">Revisor</span>
-          <span>
-            {open(auditor.lassoId, auditor.name) ? <button type="button" className="lasso-link" onClick={open(auditor.lassoId, auditor.name)}>{auditor.name}</button> : auditor.name}
-            {auditor.from ? <span className="lasso-muted">, siden {formatDate(auditor.from)}</span> : null}
-          </span>
-        </p>
       ) : null}
     </Section>
   );

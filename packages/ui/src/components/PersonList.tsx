@@ -3,6 +3,7 @@ import { formatDate, isPersonId, type PersonRowVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { Tabs } from "./Tabs.js";
+import { Icon } from "./Icon.js";
 
 /** Store bestyrelser (fx 18 personer) foldes sammen efter de første (regel 9). */
 const COLLAPSED_ROWS = 8;
@@ -35,6 +36,7 @@ export function PersonList({ people, show, title, error, onOpen }: { people?: Pe
   const toggle = hasEnded ? (
     <Tabs
       level={3}
+      className="lasso-seg-pill"
       ariaLabel="Vis personer"
       items={[
         { id: "current", label: "Nuværende" },
@@ -75,6 +77,8 @@ export function PersonList({ people, show, title, error, onOpen }: { people?: Pe
                 <div className="lasso-row__sub">{p.to ? `${role}, fratrådt` : role}</div>
               </div>
               <div className="lasso-row__side">{period}</div>
+              {/* 11.2: chevron yderst til højre, når personen kan åbnes. */}
+              {onOpen && isPersonId(p.lassoId) ? <Icon name="chevron-right" size={16} className="lasso-row__chevron" /> : null}
             </li>
           );
         })}

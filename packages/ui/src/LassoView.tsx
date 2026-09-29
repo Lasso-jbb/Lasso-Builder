@@ -433,6 +433,11 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           ownership={empty.beneficialOwnership[c.company]}
           error={err(`beneficialOwnership:${c.company}`)}
           onOpen={props.host.drillDown ? act : undefined}
+          onDiagram={
+            props.spec.components.some((x) => x.type === "LassoOwnershipDiagram")
+              ? undefined
+              : sectionAction(props, act, { lassoId: c.company, pageKind: "company", section: "ejerskab", name: empty.companies[c.company]?.name ?? c.company, label: "Ejerdiagram" })
+          }
         />
       );
     case "LassoTextSections":

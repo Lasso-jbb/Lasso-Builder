@@ -221,7 +221,7 @@ export function KeyValueList({
           options.length > 1 ? (
             // Årsvælger = niveau 3-faner (29). Over 3 år på mobil bliver den en dropdown (29, mobil).
             <div className="lasso-kv-years">
-              <Tabs level={3} ariaLabel="Vælg regnskabsår" items={options.map((y) => ({ id: String(y.year), label: String(y.year) }))} value={String(selected.year)} onChange={(id) => setYear(Number(id))} />
+              <Tabs level={3} className="lasso-seg-panel" ariaLabel="Vælg regnskabsår" items={options.map((y) => ({ id: String(y.year), label: String(y.year) }))} value={String(selected.year)} onChange={(id) => setYear(Number(id))} />
             </div>
           ) : undefined
         }

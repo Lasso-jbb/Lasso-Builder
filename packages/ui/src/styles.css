@@ -117,6 +117,7 @@
   /* Kun det, der svæver, har skygge. Fokus er 1 px koral kant, aldrig ring. */
   --lasso-shadow: none;
   --lasso-shadow-pop: 0 14px 34px rgb(16 18 24 / 0.14);
+  --lasso-shadow-seg: 0 1px 2px rgb(16 18 24 / 0.10);  /* 11.2: valgt segment i en grå pille */
   --lasso-focus-ring: none;
   --lasso-focus-border: var(--lasso-accent-border);
 
@@ -186,6 +187,7 @@
   --lasso-positive: #5cc28c;
   --lasso-positive-soft: #16301f;
   --lasso-negative: #f28b82;
+  --lasso-shadow-seg: 0 1px 2px rgb(0 0 0 / 0.45);
   --lasso-warning: #e6b45a;
   --lasso-warning-soft: #33280f;
   --lasso-chart-bar: #7a3b1f;
@@ -582,6 +584,9 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-share { position: relative; flex: none; width: 200px; /* 02c.14: 200 × 6 */ height: 6px; border-radius: 3px; background: var(--lasso-divider-subtle); overflow: hidden; }
 .lasso-share__min { position: absolute; left: 0; top: 0; bottom: 0; background: var(--lasso-chart-1); }
 .lasso-share__span { position: absolute; top: 0; bottom: 0; background: var(--lasso-chart-4); }
+/* 11.3: bjælken 120 × 6 i en fast kolonne, procent 14/500 til højre. */
+.lasso-rows--owners .lasso-row--owner .lasso-share { width: 120px; }
+.lasso-rows--owners .lasso-row--owner .lasso-row__value { font-weight: 500; }
 /* 06.1/24.10: ejerlisten i en smal kolonne (⅓ af kroppen). Navnet får hele linjen ved siden af andelen,
    og bjælken står under i fuld bredde, så navnet aldrig brydes bogstav for bogstav eller dækkes af bjælken. */
 .lasso-rows--owners { container: owners / inline-size; }
@@ -627,6 +632,14 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-tabs--l3 .lasso-tab:hover:not(:disabled) { background: var(--lasso-surface-muted); }
 .lasso-tabs--l3 .lasso-tab.is-on { border-color: var(--lasso-text); background: var(--lasso-surface); }
 .lasso-tabs--l3 .lasso-tab:focus-visible { outline-offset: -1px; border-radius: 7px; }
+/* 09.5: årsvælgeren på grå panel-flade; valgt år hvidt med 1 px ink-kant og 600. */
+.lasso-seg-panel .lasso-tabs--l3 { background: var(--lasso-surface-muted); border-color: var(--lasso-surface-muted); }
+.lasso-seg-panel .lasso-tabs--l3 .lasso-tab.is-on { font-weight: 600; }
+/* 11.2: "Nuværende | Alle" som grå pille; valgt segment hvidt med skygge, 32 px (også på mobil). */
+.lasso-seg-pill .lasso-tabs--l3 { padding: 2px; gap: 2px; background: var(--lasso-surface-muted); border: 0; border-radius: 999px; }
+.lasso-seg-pill .lasso-tabs--l3 .lasso-tab { height: 28px; border: 0; border-radius: 999px; }
+.lasso-seg-pill .lasso-tabs--l3 .lasso-tab.is-on { background: var(--lasso-surface); box-shadow: var(--lasso-shadow-seg); font-weight: 500; }
+.lasso-row__chevron { flex: none; color: var(--lasso-icon); }
 /* Panel: skelet i samme højde mens data hentes; fanen selv får ingen markering */
 .lasso-tabpanel { min-width: 0; }
 .lasso-tabpanel__loading { margin: var(--lasso-space-3) 0 0; font-size: var(--lasso-fs-sm); color: var(--lasso-faint); }
@@ -643,6 +656,9 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
   /* Segmentkontrollen flytter ned under elementets overskrift i fuld bredde */
   .lasso-section__head:has(.lasso-tabs--l3) { flex-wrap: wrap; }
   .lasso-section__action:has(.lasso-tabs--l3) { flex-basis: 100%; }
+  .lasso-seg-pill .lasso-tabs--l3 { display: inline-flex; width: auto; height: 32px; }
+  .lasso-seg-pill .lasso-tabs--l3 .lasso-tab { flex: none; height: 28px; font-size: var(--lasso-fs-sm); }
+  .lasso-section__action:has(.lasso-seg-pill) { flex-basis: auto; }
   .lasso-kv-years { overflow: visible; }
 }
 /* Ældre alias for niveau 3 (segmentkontrol), så eksisterende markup ser ens ud */
@@ -654,6 +670,13 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
   .lasso-row { min-height: var(--lasso-touch-h); flex-wrap: wrap; row-gap: 4px; }
   .lasso-row__side { flex-basis: 100%; }
   .lasso-share { width: 72px; }
+  .lasso-personlist .lasso-row { position: relative; padding-right: 24px; }
+  .lasso-personlist .lasso-row__chevron { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
+  /* 26c.5: bjælken 6 px i fuld bredde under navnet, procenten på navnelinjen. */
+  .lasso-rows--owners .lasso-row--owner { flex-wrap: wrap; row-gap: 6px; }
+  .lasso-rows--owners .lasso-row--owner .lasso-row__main { flex: 1 1 0; }
+  .lasso-rows--owners .lasso-row--owner .lasso-row__value { order: 2; min-width: 0; }
+  .lasso-rows--owners .lasso-row--owner .lasso-share { order: 3; flex: 1 1 100%; width: 100%; }
 }
 
 /* 'stack' = alle elementer i fuld bredde; 'grid-2' = elementernes egne bredder (½ for grafer og lister) */
