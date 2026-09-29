@@ -33,6 +33,10 @@ import {
   LineChart,
   MultiYearTable,
   ReportA4,
+  StatementsReportA4,
+  PersonReportA4,
+  AnalysisReportA4,
+  ANALYSIS_DISCLAIMER,
   ReportBatches,
   Section,
   ShellIcon,
@@ -747,28 +751,84 @@ const REPORT_SPEC = {
     { type: "LassoOwnerList", company: C },
     { type: "LassoBeneficialOwners", company: C },
     { type: "LassoScoreGauge", company: C },
-    { type: "LassoCreditRating", company: C },
     { type: "LassoRiskObservations", company: C },
+    { type: "LassoContact", company: C },
+    { type: "LassoProductionUnits", company: C },
   ],
 };
 
-function A4Page({ ds, n }: { ds: Dataset; n: number }) {
+/** Én side af en A4-rapport: kun side n vises (galleriet tegner hver side som sin egen indgang). */
+function A4Only({ n, children }: { n: number; children: ReactNode }) {
   return (
     <div className={`e-a4-${n}`} style={{ margin: -24 }}>
       <style>{`.e-a4-${n} .lasso-a4 > .lasso-a4-page:not(:nth-child(${n})){display:none}`}</style>
-      <ReportA4 company={C} dataset={ds} generatedAt="2026-09-29T08:00:00Z" />
+      {children}
     </div>
   );
 }
 
+const A4_NOTE = "Samme A4-mekanisme i portal og chat (LassoView-overlay med Print, værtskapaciteten export). Ingen kildelinje (G3); 'Data pr.' i sidefoden.";
+
 const report: GalleryEntry[] = [
-  ["27.1", "A4 side 1: Forside", "DOE-0"],
-  ["27.2", "A4 side 2: Nøgletal, graf, ledelse og ejere", "DPI-0"],
-  ["27.3", "A4 side 3: Regnskab", "FUE-0"],
-  ["27.4", "A4 side 4: Kredit, risiko, reelle ejere og revisor", "FZF-0"],
-].map(([nr, title, node], i) =>
-  dataEntry({ nr: nr!, title: title!, node, only: "desktop", desktopWidth: 860, note: "ReportA4 med samme data som render-preview.ts --report; kun denne side vises.", probe: REPORT_SPEC, draw: (ds) => <A4Page ds={ds} n={i + 1} /> }),
-);
+  dataEntry({
+    nr: "19.6",
+    title: "Regnskabsanalyse som PDF (A4)",
+    node: "LZM-0",
+    only: "desktop",
+    desktopWidth: 860,
+    note: `AnalysisReportA4 (Paper LZP-0): det, 'Hent som PDF' i 19.3 laver. Hele analysen med alle afsnit foldet ud, navn, CVR og regnskabsår øverst, 'Tal der indgår i analysen' og forbeholdet til sidst. Lange analyser fortsætter på næste A4 ved udskrift. ${A4_NOTE}`,
+    probe: { kind: "company", title: "Regnskabsanalyse", components: [{ type: "LassoCompanyHead", company: C }, { type: "LassoTextSections", company: C, variant: "analyse" }, { type: "LassoMultiYearTable", company: C, years: 5 }] },
+    draw: (ds) => <AnalysisReportA4 company={C} dataset={ds} disclaimer={ANALYSIS_DISCLAIMER} generatedAt="2026-09-29T08:00:00Z" />,
+  }),
+  dataEntry({
+    nr: "27.1",
+    title: "Standard virksomhedsrapport, side 1 af 2: forside",
+    node: "DOE-0",
+    only: "desktop",
+    desktopWidth: 860,
+    note: `ReportA4 (Paper DOE-0): Risikoscore '52 af 100, lav', hovedtal og ansatte; indhold = 4 punkter på side 2. ${A4_NOTE}`,
+    probe: REPORT_SPEC,
+    draw: (ds) => (
+      <A4Only n={1}>
+        <ReportA4 company={C} dataset={ds} generatedAt="2026-09-29T08:00:00Z" />
+      </A4Only>
+    ),
+  }),
+  dataEntry({
+    nr: "27.2",
+    title: "Standard virksomhedsrapport, side 2 af 2: overblik (kun det relevante)",
+    node: "DPI-0",
+    only: "desktop",
+    desktopWidth: 860,
+    note: `ReportA4 side 2 (Paper DPK-0 + bånd MIT-0): nøgletal (pil + procent), bruttofortjeneste 5 år, ledelse og legale ejere, Risiko (score, måler, 2 vigtigste observationer) og Kontakt og oplysninger. ${A4_NOTE}`,
+    probe: REPORT_SPEC,
+    draw: (ds) => (
+      <A4Only n={2}>
+        <ReportA4 company={C} dataset={ds} generatedAt="2026-09-29T08:00:00Z" />
+      </A4Only>
+    ),
+  }),
+  dataEntry({
+    nr: "27.3",
+    title: "Rapport af det man står i: PDF af Regnskab-fanen (princip)",
+    node: "FUE-0",
+    only: "desktop",
+    desktopWidth: 860,
+    note: `StatementsReportA4 (Paper FUE-0): eksempel på princippet 'PDF af det man står i' (siden/fanen/elementet som det vises): Regnskab-fanen med sidehoved 'Regnskab, hentet …', side 1 af 1. Rækker uden data udelades. Samme mekanisme bruges af 'Hent som PDF' i regnskabsanalysen (19.3/19.6). ${A4_NOTE}`,
+    probe: REPORT_SPEC,
+    draw: (ds) => <StatementsReportA4 company={C} dataset={ds} generatedAt="2026-09-29T08:00:00Z" />,
+  }),
+  dataEntry({
+    nr: "27.4",
+    title: "Standard personrapport, 1 side",
+    node: "FZF-0",
+    only: "desktop",
+    desktopWidth: 860,
+    note: `PersonReportA4 (Paper FZH-0: persontal MK4-0, aktive roller MKS-0, tidligere roller MLF-0, 'Sidder sammen med' + 'Risiko' MLS-0) for Bo Eksempel. Navnet alene i sidehovedet (G9). Findes i personhovedets Eksportér-menu ('Personrapport (PDF)'). ${A4_NOTE}`,
+    probe: personProbe(),
+    draw: (ds) => <PersonReportA4 person={P} dataset={ds} generatedAt="2026-09-29T08:00:00Z" />,
+  }),
+];
 
 /* ---------- 28 Øvrige datatyper ---------- */
 

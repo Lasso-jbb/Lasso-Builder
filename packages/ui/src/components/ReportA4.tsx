@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { moreText,
   currencyUnit,
   formatAmount,
-  formatCreditMax,
   formatDate,
   formatNumber,
   formatPercent,
@@ -10,20 +9,25 @@ import { moreText,
   METRIC_FIELD,
   METRIC_LABELS,
   changePercent,
+  personCompanies,
+  personCounts,
+  personRisk,
+  textSectionsFor,
   type Dataset,
   type FinancialYear,
   type Metric,
 } from "@lasso/spec";
 import { LassoMark, LassoWordmark } from "../LassoMark.js";
 import { observationLevel, sortObservations } from "./RiskObservations.js";
+import { severityWord } from "../primitives.js";
 
 /**
- * Eksport, virksomhedsrapport som A4-PDF (katalog 27, node DO8-0). Det, der kommer ud,
- * når man trykker "Eksportér" på en virksomhed: A4 (794×1123 px ved 96 dpi, margen 56),
- * samme typografi og elementer som skærmen, men uden interaktion. Ingen knapper, ingen
- * hover, tal altid som tekst, grafer som vektor. Sidehoved og sidefod gentages på alle
- * sider; sidefoden bærer kilder, datastempel og sidetal "x af n". Sider uden data
- * udelades, og sidetallene beregnes derefter.
+ * Rapporter og PDF som A4 (katalog 27 "Rapporter og PDF, A4", node DO8-0). To slags PDF:
+ * standardrapporter (virksomhed 27.1-27.2, person 27.4) og "det man står i" (27.3, fx regnskabsanalysen
+ * 19.6). A4 (794×1123 px ved 96 dpi, margen 56), samme typografi og elementer som skærmen, men uden
+ * interaktion. Ingen knapper, ingen hover, tal altid som tekst, grafer som vektor. Sidehoved og sidefod
+ * gentages på alle sider; sidefoden bærer "Data pr. …" og sidetal "x af n" (ingen kildelinje, G3).
+ * Sider og blokke uden data udelades, og sidetallene beregnes derefter.
  *
  * Print-regler (katalog 27): alt i sort/grå + koral, ingen fyldte farveflader større end
  * 24 px, "Eksempeldata" må aldrig indgå i en rigtig rapport (kun demo).
@@ -48,11 +52,11 @@ function formatStamp(iso: string): { date: string; time: string } {
   return { date: `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`, time: `${pad(d.getHours())}.${pad(d.getMinutes())}` };
 }
 
-/** Samme tre trin som scoremåleren (katalog 10): 0–59 lav, 60–79 mulig, 80–100 høj. */
-function scoreBand(score: number): { label: string; index: 0 | 1 | 2 } {
-  if (score < 60) return { label: "Lav risiko", index: 0 };
-  if (score < 80) return { label: "Mulig risiko", index: 1 };
-  return { label: "Høj risiko", index: 2 };
+/** Samme tre trin som scoremåleren (katalog 10.1/18.1): 0–59 lav, 60–79 moderat, 80–100 høj (100 = høj risiko). */
+function scoreBand(score: number): { label: string; short: string; index: 0 | 1 | 2 } {
+  if (score < 60) return { label: "Lav risiko", short: "lav", index: 0 };
+  if (score < 80) return { label: "Moderat risiko", short: "moderat", index: 1 };
+  return { label: "Høj risiko", short: "høj", index: 2 };
 }
 
 /** "▲ 7,5 %" / "▼ 163,2 %" som ren tekst med retning (02c.4: pil + procent, også ved fortegnsskift). */
@@ -96,55 +100,6 @@ function ticks(max: number): number[] {
   return out;
 }
 
-/** Sidehoved: forsiden kun navnelogo + tidsstempel, øvrige sider navnelogo + virksomhed + CVR. */
-function PageHead({ cover, name, cvr, stamp }: { cover?: boolean; name: string; cvr?: string; stamp: { date: string; time: string } }) {
-  if (cover) {
-    return (
-      <header className="lasso-a4__head lasso-a4__head--cover">
-        <LassoWordmark className="lasso-a4__wordmark" />
-        <span className="lasso-a4__stamp">
-          Virksomhedsrapport, genereret {stamp.date}
-          {stamp.time ? ` kl. ${stamp.time}` : ""}
-        </span>
-      </header>
-    );
-  }
-  return (
-    <header className="lasso-a4__head">
-      <span className="lasso-a4__head-left">
-        <LassoWordmark className="lasso-a4__wordmark lasso-a4__wordmark--small" />
-        <span className="lasso-a4__head-divider" aria-hidden="true" />
-        <span className="lasso-a4__head-name">{name},</span>
-        {cvr ? <span className="lasso-a4__head-cvr">CVR {cvr}</span> : null}
-      </span>
-      <span className="lasso-a4__stamp">Virksomhedsrapport, {stamp.date}</span>
-    </header>
-  );
-}
-
-function PageFoot({ sources, date, page, total }: { sources: string; date: string; page: number; total: number }) {
-  return (
-    <footer className="lasso-a4__foot">
-      <span>
-        Kilder: {sources}. Data pr. {date}
-      </span>
-      <span className="lasso-a4__foot-right">
-        <LassoMark className="lasso-a4__mark" />
-        <span>
-          Udarbejdet i Lasso, lassox.com, side {page} af {total}
-        </span>
-      </span>
-    </footer>
-  );
-}
-
-interface PageDef {
-  key: string;
-  /** Overskrifter til indholdsfortegnelsen (forsiden har ingen). */
-  toc: string[];
-  render: (page: number, total: number) => ReactNode;
-}
-
 /** Regnskabsrække i tabellerne på side 3. */
 interface Row {
   label: string;
@@ -183,6 +138,112 @@ function StatementTable({ title, years, rows }: { title: string; years: readonly
   );
 }
 
+/**
+ * Sidehoved (27, 19.6): forsiden og enkeltsider med stor titel har navnelogo + etiket til højre
+ * ("Virksomhedsrapport, genereret …"); øvrige sider navnelogo | NAVN, CVR over en linje og etiketten
+ * til højre ("Virksomhedsrapport, 25.09.2026", "Regnskab, hentet …", "Personrapport, …"). G9: navnet
+ * står alene; en person har ingen CVR.
+ */
+function PageHead({ cover, label, name, cvr }: { cover?: boolean; label: string; name?: string; cvr?: string }) {
+  if (cover) {
+    return (
+      <header className="lasso-a4__head lasso-a4__head--cover">
+        <LassoWordmark className="lasso-a4__wordmark" />
+        <span className="lasso-a4__stamp">{label}</span>
+      </header>
+    );
+  }
+  return (
+    <header className="lasso-a4__head">
+      <span className="lasso-a4__head-left">
+        <LassoWordmark className="lasso-a4__wordmark lasso-a4__wordmark--small" />
+        <span className="lasso-a4__head-divider" aria-hidden="true" />
+        <span className="lasso-a4__head-name">
+          {name}
+          {cvr ? "," : ""}
+        </span>
+        {cvr ? <span className="lasso-a4__head-cvr">CVR {cvr}</span> : null}
+      </span>
+      <span className="lasso-a4__stamp">{label}</span>
+    </header>
+  );
+}
+
+/** Sidefod (27): "Data pr. …" til venstre (ingen kildelinje, G3), Lasso-ikon og "side x af n" til højre. */
+function PageFoot({ date, page, total, left }: { date: string; page: number; total: number; left?: string }) {
+  return (
+    <footer className="lasso-a4__foot">
+      <span>{left ?? `Data pr. ${date}`}</span>
+      <span className="lasso-a4__foot-right">
+        <LassoMark className="lasso-a4__mark" />
+        <span>
+          Udarbejdet i Lasso, lassox.com, side {page} af {total}
+        </span>
+      </span>
+    </footer>
+  );
+}
+
+interface PageDef {
+  key: string;
+  /** Overskrifter til indholdsfortegnelsen (forsiden har ingen). */
+  toc: string[];
+  render: (page: number, total: number) => ReactNode;
+}
+
+/** Nøgle-værdi-række (27.2 "Kontakt og oplysninger", 19.6 "Tal der indgår i analysen"). */
+function KvRows({ rows, className = "" }: { rows: readonly { label: string; value: string; tone?: "ok" | "warning" | "danger" | "muted" }[]; className?: string }) {
+  return (
+    <div className={`lasso-a4-kv ${className}`}>
+      {rows.map((r) => (
+        <div key={r.label} className="lasso-a4-kv__row">
+          <span className="lasso-a4-kv__label">{r.label}</span>
+          <span className={`lasso-a4-kv__value${r.tone ? ` lasso-a4-kv__value--${r.tone}` : ""}`}>{r.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Måleren (samme tre zoner som 10.1/18.1) med markør og akselabels "0, lav risiko" / "Høj risiko, 100". */
+function ScoreScale({ value }: { value: number }) {
+  return (
+    <div className="lasso-a4-scale">
+      <div className="lasso-a4-scale__track" aria-hidden="true">
+        <span className="lasso-a4-scale__seg lasso-a4-scale__seg--0" />
+        <span className="lasso-a4-scale__seg lasso-a4-scale__seg--1" />
+        <span className="lasso-a4-scale__seg lasso-a4-scale__seg--2" />
+        <span className="lasso-a4-scale__marker" style={{ left: `${value}%` }} />
+      </div>
+      <div className="lasso-a4-scale__labels">
+        <span>0, lav risiko</span>
+        <span>Høj risiko, 100</span>
+      </div>
+    </div>
+  );
+}
+
+/** "01.01–31.12" ud fra seneste regnskabsperiode. */
+function periodText(y: FinancialYear | undefined): string | undefined {
+  if (!y?.periodStart || !y.periodEnd) return undefined;
+  return `${formatDate(y.periodStart).slice(0, 5)}–${formatDate(y.periodEnd).slice(0, 5)}`;
+}
+
+function companyStamp(dataset: Dataset, generatedAt?: string) {
+  return formatStamp(generatedAt ?? dataset.generatedAt);
+}
+
+/**
+ * Standard virksomhedsrapport som A4-PDF (katalog 27.1 + 27.2, Paper DO8-0). Det, der kommer ud, når man
+ * vælger "Virksomhedsrapport (PDF)" på en virksomhed: to sider med kun det relevante for et overblik.
+ * Side 1 (27.1) er forsiden: navnelogo, overlinje, navn, CVR/form/status, adresse, branche, risikoscore,
+ * hovedtal og ansatte, og indholdsfortegnelsen nederst. Side 2 (27.2) er overblikket: nøgletal for seneste
+ * år (pil + procent), grafen for hovedtallet over 5 år, ledelse og legale ejere, og båndet MIT-0 med
+ * Risiko (score, måler og de to vigtigste observationer) og Kontakt og oplysninger. A4 794×1123 px ved
+ * 96 dpi, margen 56, samme typografi som skærmen, uden interaktion; sidefoden bærer kun "Data pr. …" og
+ * sidetal (G3: ingen kildelinje). Blokke uden data udelades. "Eksempeldata" indgår kun i demo.
+ * Rapport "af det man står i" (27.3): se StatementsReportA4 og AnalysisReportA4.
+ */
 export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
   const c = dataset.companies[company];
   const name = c?.name ?? company;
@@ -192,43 +253,50 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
   const last = years.at(-1);
   const prev = years.at(-2);
   const unit = currencyUnit(fin?.currency);
-  const statements = dataset.financialStatements[company];
   const people = (dataset.people[company] ?? []).filter((p) => !p.to);
   const ownership = dataset.ownership[company];
   const owners = ownership?.owners ?? [];
   const beneficial = dataset.beneficialOwnership[company];
   const score = dataset.scores[company];
-  // Creditsafe kun, når der er en vurdering (låst, ikke beregnet og fejl hører ikke hjemme i en rapport).
-  const creditRating = dataset.creditRatings?.[company];
-  const credit = creditRating?.state === "ok" && creditRating.current ? creditRating : undefined;
-  const auditor = dataset.auditorIndependence[company];
-  // Katalog 27.4: risikoobservationer (17) kun, når de er hentet til visningen; ellers udelades blokken.
+  const scoreValue = score && score.score !== null && (score.state ?? "ok") === "ok" ? Math.max(0, Math.min(100, score.score)) : null;
   const lassoObs = dataset.observations[company];
   const observations = lassoObs ? sortObservations(lassoObs.observations.filter((o) => !o.notAvailable)) : [];
-  const auditorName = auditor?.auditorName ?? ownership?.auditor?.name;
+  const auditorName = ownership?.auditor?.name ?? dataset.auditorIndependence[company]?.auditorName;
+  const contact = dataset.contact[company];
+  const units = dataset.productionUnits[company]?.units ?? [];
 
-  const stamp = formatStamp(generatedAt ?? dataset.generatedAt);
-  const sourceNames = ["CVR", ...(years.length ? ["Erhvervsstyrelsen (regnskaber)"] : []), ...(credit ? ["Creditsafe"] : [])].filter(
-    (s, i, a) => a.indexOf(s) === i,
-  );
-  const sources = sourceNames.join(", ");
-
+  const stamp = companyStamp(dataset, generatedAt);
   const metric: Metric = years.length ? mainMetric(years) : "bruttofortjeneste";
   const field = METRIC_FIELD[metric];
   const mainValue = last ? (last[field] as number | null | undefined) : undefined;
   const mainPrev = prev ? (prev[field] as number | null | undefined) : undefined;
-  const mainPct = changePercent(mainPrev, mainValue);
-  const coverDelta = mainPct !== null ? formatPercent(mainPct) : delta(mainPrev, mainValue).text;
-  const firstYear = years.at(-YEARS)?.year ?? years[0]?.year;
-  const span = last ? (firstYear && firstYear !== last.year ? `${firstYear}–${last.year}` : String(last.year)) : "";
+  const coverDelta = delta(mainPrev, mainValue).text;
 
+  const phone = c?.phone ?? contact?.phone;
+  const email = c?.email ?? contact?.email;
+  const web = c?.website ?? contact?.website;
+  const activeUnits = units.filter((u) => u.statusKind !== "inactive" && !u.endedYear);
+  const contactRows = [
+    ...(phone ? [{ label: "Telefon", value: phone }] : []),
+    ...(email ? [{ label: "E-mail", value: email }] : []),
+    ...(web ? [{ label: "Web", value: web.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "") }] : []),
+    ...(periodText(last) ? [{ label: "Regnskabsperiode", value: periodText(last)! }] : []),
+    ...(c?.founded ? [{ label: "Stiftet", value: formatDate(c.founded) }] : []),
+    ...(activeUnits.length ? [{ label: "Produktionsenheder", value: activeUnits.length === 1 && activeUnits[0]!.address?.city ? `1, ${activeUnits[0]!.address.city}` : formatNumber(activeUnits.length) }] : []),
+  ];
+  const hasRisk = scoreValue !== null || observations.length > 0;
+
+  const toc = [
+    ...(last ? ["Nøgletal og udvikling"] : []),
+    ...(people.length || owners.length ? ["Ledelse, ejere og revisor"] : []),
+    ...(hasRisk ? ["Risiko og observationer"] : []),
+    ...(contactRows.length ? ["Kontakt og oplysninger"] : []),
+  ];
   const pages: PageDef[] = [];
-
-  // Side 2: Nøgletal seneste år, søjlegraf, ledelse og legale ejere.
-  if (last || people.length || owners.length) {
+  if (toc.length) {
     pages.push({
-      key: "noegletal",
-      toc: [...(last ? ["Nøgletal og udvikling"] : []), ...(people.length || owners.length ? ["Ledelse og ejere"] : [])],
+      key: "overblik",
+      toc,
       render: (page, total) => {
         const kpis: Metric[] = [metric, "resultat", "egenkapital", "soliditetsgrad", "ansatte"];
         const points = years.slice(-YEARS).flatMap((y) => (typeof y[field] === "number" ? [{ year: y.year, value: y[field] as number }] : []));
@@ -244,9 +312,11 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
         const slot = W / Math.max(points.length, 1);
         // 27.2: søjler ca. 40 px som i Paper (koral-soft, seneste år koral); tallet står som tekst over søjlen.
         const barW = 40;
+        const band = scoreValue !== null ? scoreBand(scoreValue) : null;
+        const beneficialNames = beneficial?.owners.map((o) => o.name) ?? [];
         return (
           <section className="lasso-a4-page" key="p2">
-            <PageHead name={name} cvr={cvr} stamp={stamp} />
+            <PageHead name={name} cvr={cvr} label={`Virksomhedsrapport, ${stamp.date}`} />
             {last ? (
               <>
                 <div className="lasso-a4-block">
@@ -256,15 +326,14 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
                       const f = METRIC_FIELD[m];
                       const v = last[f] as number | null | undefined;
                       const p = prev?.[f] as number | null | undefined;
-                      const d = delta(p, v);
+                      // 27.2: soliditetsgraden har "af aktiver" under tallet i stedet for en ændring.
+                      const d = m === "soliditetsgrad" ? { text: "af aktiver", tone: "" as const } : delta(p, v);
                       const text = v == null ? "Ikke oplyst" : m === "ansatte" ? formatNumber(v) : m === "soliditetsgrad" ? formatPercent(v, false) : formatAmount(v, unit);
                       return (
                         <div key={m} className="lasso-a4-kpi">
                           <span className="lasso-a4-kpi__label">{m === "resultat" ? "Resultat efter skat" : METRIC_LABELS[m]}</span>
                           <span className={`lasso-a4-kpi__value ${v == null ? "lasso-a4__faint" : ""}`}>{text}</span>
-                          <span className={`lasso-a4-kpi__delta ${d.tone === "up" ? "lasso-a4__up" : d.tone === "down" ? "lasso-a4__down" : ""}`}>
-                            {d.text}
-                          </span>
+                          <span className={`lasso-a4-kpi__delta ${d.tone === "up" ? "lasso-a4__up" : d.tone === "down" ? "lasso-a4__down" : ""}`}>{d.text}</span>
                         </div>
                       );
                     })}
@@ -276,7 +345,7 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
                       <h2 className="lasso-a4__h2">
                         {METRIC_LABELS[metric]} {points.length > 1 ? `${points[0]!.year}–${points.at(-1)!.year}` : points[0]!.year}
                       </h2>
-                      <span className="lasso-a4__note">{scale.label.endsWith(".") ? scale.label : `${scale.label}.`} Kilde: årsrapporter</span>
+                      <span className="lasso-a4__note">{scale.label}</span>
                     </div>
                     <svg className="lasso-a4-chart" width={682} height={plotH + 40} viewBox={`0 0 682 ${plotH + 40}`} role="img" aria-label={`${METRIC_LABELS[metric]} pr. år, ${scale.label}`}>
                       {tk.map((t) => (
@@ -287,21 +356,21 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
                           </text>
                         </g>
                       ))}
-                      {points.map((p, i) => {
+                      {points.map((pt, i) => {
                         const isLast = i === points.length - 1;
-                        const v = p.value / scale.divisor;
+                        const v = pt.value / scale.divisor;
                         const x = 32 + i * slot + (slot - barW) / 2;
                         const y0 = 6 + yOf(0);
                         const yv = 6 + yOf(Math.max(0, v));
                         const h = Math.max(1, y0 - yv);
                         return (
-                          <g key={p.year}>
+                          <g key={pt.year}>
                             <rect className={`lasso-a4-chart__bar ${isLast ? "lasso-a4-chart__bar--last" : ""}`} x={x} y={yv} width={barW} height={h} rx={3} />
                             <text className={`lasso-a4-chart__value ${isLast ? "lasso-a4-chart__value--last" : ""}`} x={x + barW / 2} y={yv - 6} textAnchor="middle">
-                              {scale.fmt(p.value)}
+                              {scale.fmt(pt.value)}
                             </text>
                             <text className={`lasso-a4-chart__label ${isLast ? "lasso-a4-chart__label--last" : ""}`} x={x + barW / 2} y={plotH + 32} textAnchor="middle">
-                              {p.year}
+                              {pt.year}
                             </text>
                           </g>
                         );
@@ -328,10 +397,12 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
                     <p className="lasso-a4__note">Der er ingen registrerede personer i ledelsen.</p>
                   )}
                   {people.length > MAX_ROWS ? <p className="lasso-a4__note">og {moreText(people.length - MAX_ROWS)}</p> : null}
-                  <p className="lasso-a4__note">
-                    Revisor: {ownership?.auditor?.name ?? auditorName ?? "Ikke oplyst"}
-                    {ownership?.auditor?.from ? `, siden ${formatDate(ownership.auditor.from)}` : ""}
-                  </p>
+                  {auditorName ? (
+                    <p className="lasso-a4__note">
+                      Revisor: {auditorName}
+                      {ownership?.auditor?.from ? `, siden ${formatDate(ownership.auditor.from)}` : ""}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="lasso-a4-col">
                   <h3 className="lasso-a4__h3">Legale ejere</h3>
@@ -348,247 +419,61 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
                     <p className="lasso-a4__note">Der er ingen registrerede legale ejere i CVR.</p>
                   )}
                   {owners.length > MAX_ROWS ? <p className="lasso-a4__note">og {moreText(owners.length - MAX_ROWS)}</p> : null}
-                  <p className="lasso-a4__note">Ejerandele som CVR-intervaller{beneficial ? `, reelle ejere på side ${total}` : ""}</p>
+                  <p className="lasso-a4__note">
+                    Ejerandele som CVR-intervaller.
+                    {beneficialNames.length ? ` Reelle ejere: ${beneficialNames.slice(0, 3).join(", ")}${beneficialNames.length > 3 ? ` og ${moreText(beneficialNames.length - 3)}` : ""}` : ""}
+                  </p>
                 </div>
               </div>
             ) : null}
-            <PageFoot sources={sources} date={stamp.date} page={page} total={total} />
-          </section>
-        );
-      },
-    });
-  }
-
-  // Side 3: Regnskab 5 år, seneste først.
-  const shownYears = years.slice(-YEARS).reverse();
-  if (shownYears.length) {
-    pages.push({
-      key: "regnskab",
-      toc: [`Regnskab ${span}`],
-      render: (page, total) => {
-        const ys = shownYears.map((y) => y.year);
-        const inc = ys.map((y) => statements?.incomeStatement.find((s) => s.year === y));
-        const bal = ys.map((y) => statements?.balanceSheet.find((s) => s.year === y));
-        const revenueTop = shownYears.some((y) => y.revenue != null);
-        const income: Row[] = [
-          ...(revenueTop ? [{ label: "Omsætning", values: shownYears.map((y) => thousands(y.revenue)), kind: "sum" as const }] : []),
-          { label: "Bruttofortjeneste", values: shownYears.map((y) => thousands(y.grossProfit)), kind: "sum" },
-          { label: "Personaleomkostninger", values: inc.map((s) => thousands(s?.staffCosts)) },
-          { label: "Andre driftsomkostninger", values: inc.map((s) => thousands(s?.otherOperatingCosts)) },
-          { label: "EBITDA", values: shownYears.map((y, i) => thousands(y.ebitda ?? inc[i]?.ebitda)), kind: "sum" },
-          { label: "Af- og nedskrivninger", values: inc.map((s) => thousands(s?.depreciation)) },
-          { label: "Finansielle poster, netto", values: inc.map((s) => thousands(s?.financialItemsNet)) },
-          { label: "Resultat før skat", values: inc.map((s) => thousands(s?.profitBeforeTax)), kind: "sum" },
-          { label: "Skat af årets resultat", values: inc.map((s) => thousands(s?.tax)) },
-          { label: "Årets resultat", values: shownYears.map((y) => thousands(y.profit)), kind: "bottom" },
-        ];
-        const balance: Row[] = [
-          { label: "Anlægsaktiver", values: bal.map((s) => thousands(s?.fixedAssetsTotal)) },
-          { label: "Omsætningsaktiver", values: bal.map((s) => thousands(s?.currentAssetsTotal)) },
-          { label: "Aktiver i alt", values: shownYears.map((y, i) => thousands(y.assetsTotal ?? bal[i]?.assetsTotal)), kind: "sum" },
-          { label: "Egenkapital", values: shownYears.map((y) => thousands(y.equity)), kind: "sum" },
-          { label: "Langfristet gæld", values: bal.map((s) => thousands(s?.longTermLiabilities)) },
-          { label: "Kortfristet gæld", values: bal.map((s) => thousands(s?.shortTermLiabilities)) },
-          { label: "Passiver i alt", values: shownYears.map((y, i) => thousands(bal[i]?.liabilitiesAndEquityTotal ?? y.assetsTotal)), kind: "bottom" },
-        ];
-        const ratios: Row[] = [
-          { label: "Soliditetsgrad", values: shownYears.map((y) => pct(y.soliditetsgrad)), kind: "plain" },
-          { label: "Likviditetsgrad", values: shownYears.map((y) => pct(y.likviditetsgrad)), kind: "plain" },
-          { label: "Overskudsgrad", values: shownYears.map((y) => pct(y.overskudsgrad)), kind: "plain" },
-          { label: "Ansatte (årsrapport)", values: shownYears.map((y) => (typeof y.employees === "number" ? formatNumber(y.employees) : "-")), kind: "plain" },
-        ];
-        const period = last?.periodStart && last.periodEnd ? `regnskabsår ${formatDate(last.periodStart).slice(0, 5)}–${formatDate(last.periodEnd).slice(0, 5)}` : "";
-        const scopeNote = shownYears.some((y) => y.scope === "Koncern") ? "Koncerntal, hvor koncernregnskab findes. " : "";
-        return (
-          <section className="lasso-a4-page" key="p3">
-            <PageHead name={name} cvr={cvr} stamp={stamp} />
-            <div className="lasso-a4__titlerow">
-              <h2 className="lasso-a4__h2">Regnskab {span}</h2>
-              <span className="lasso-a4__note">
-                t. {unit}
-                {period ? `, ${period}` : ""}. Kilde: årsrapporter
-              </span>
-            </div>
-            <StatementTable title="Resultatopgørelse" years={ys} rows={income} />
-            <StatementTable title="Balance pr. 31.12" years={ys} rows={balance} />
-            <StatementTable title="Nøgletal" years={ys} rows={ratios} />
-            <p className="lasso-a4__note lasso-a4__note--small">
-              {scopeNote}Hovedtal (omsætning/bruttofortjeneste, årets resultat, egenkapital, balancesum, ansatte) er fra årsrapporterne. Underposter og nøgletal er beregnet eller
-              hentet fra XBRL og kan mangle ("-").
-            </p>
-            <PageFoot sources={sources} date={stamp.date} page={page} total={total} />
-          </section>
-        );
-      },
-    });
-  }
-
-  // Side 4: Kreditvurdering, risikoobservationer, reelle ejere, revisor og "Om rapporten".
-  if (score || credit || lassoObs || beneficial || auditorName) {
-    pages.push({
-      key: "risiko",
-      toc: [lassoObs ? "Kreditvurdering og risiko" : score || credit ? "Kreditvurdering" : "Ejere og revisor"],
-      render: (page, total) => {
-        const value = score && score.score !== null ? Math.max(0, Math.min(100, score.score)) : null;
-        const band = value !== null ? scoreBand(value) : null;
-        return (
-          <section className="lasso-a4-page" key="p4">
-            <PageHead name={name} cvr={cvr} stamp={stamp} />
-            <div className="lasso-a4-cols">
-              <div className="lasso-a4-col">
-                <h2 className="lasso-a4__h2">Kreditvurdering</h2>
-                {value !== null && band ? (
-                  <>
-                    <div className="lasso-a4-score">
-                      <span className="lasso-a4-score__number">
-                        {Math.round(value)}
-                        <span className="lasso-a4-score__of">af 100</span>
-                      </span>
-                      <span className="lasso-a4-score__text">
-                        <span className={`lasso-a4-score__band lasso-a4-score__band--${band.index}`}>{band.label}</span>
-                        <span className="lasso-a4__small">
-                          {credit?.current && typeof credit.current.creditMax === "number" ? `Kreditmaks ${formatCreditMax(credit.current).replace(/\.$/, "")}. ` : ""}
-                          {credit ? "Creditsafe" : (score?.source ?? "Lasso")}
-                          {(credit?.updated ?? score?.updated) ? `, ${formatDate((credit?.updated ?? score?.updated)!)}` : ""}
-                        </span>
-                      </span>
-                    </div>
-                    <div className="lasso-a4-scale">
-                      <div className="lasso-a4-scale__track" aria-hidden="true">
-                        <span className="lasso-a4-scale__seg lasso-a4-scale__seg--0" />
-                        <span className="lasso-a4-scale__seg lasso-a4-scale__seg--1" />
-                        <span className="lasso-a4-scale__seg lasso-a4-scale__seg--2" />
-                        <span className="lasso-a4-scale__marker" style={{ left: `${value}%` }} />
+            {hasRisk || contactRows.length ? (
+              <div className="lasso-a4-cols">
+                {hasRisk ? (
+                  <div className="lasso-a4-col lasso-a4-risk">
+                    <h3 className="lasso-a4__h3">Risiko</h3>
+                    {scoreValue !== null && band ? (
+                      <>
+                        <div className="lasso-a4-risk__score">
+                          <span className="lasso-a4-risk__number">{Math.round(scoreValue)}</span>
+                          <span className="lasso-a4-risk__of">af 100</span>
+                          <span className={`lasso-a4-risk__band lasso-a4-score__band--${band.index}`}>{band.label}</span>
+                        </div>
+                        <ScoreScale value={scoreValue} />
+                      </>
+                    ) : null}
+                    {observations.length ? (
+                      <div className="lasso-a4-obs lasso-a4-obs--compact">
+                        {observations.slice(0, 2).map((o) => {
+                          const level = observationLevel(o.severity);
+                          return (
+                            <div key={o.id} className="lasso-a4-obs__row">
+                              <span className={`lasso-a4-obs__dot lasso-a4-obs__dot--${level}`} aria-hidden="true" />
+                              <span className="lasso-a4-obs__main">
+                                <span className="lasso-a4-obs__title">
+                                  {severityWord(o.severity)}: {o.title}
+                                </span>
+                                {o.detail || o.date ? <span className="lasso-a4-obs__detail">{[o.detail?.replace(/\.\s*$/, ""), o.date ? formatDate(o.date) : null].filter(Boolean).join(", ")}</span> : null}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
-                      <div className="lasso-a4-scale__labels">
-                        <span>0, lav risiko</span>
-                        <span>60</span>
-                        <span>80</span>
-                        <span>100, høj risiko</span>
-                      </div>
-                    </div>
-                    {/* 18.1/18.2 (Jakob 29.09): ingen scorehistorik; kun den aktuelle score. */}
-                    <p className="lasso-a4__small">Score 0 (lav risiko) til 100 (høj risiko). Vurderingen er en modelvurdering og ikke en garanti.</p>
-                  </>
-                ) : credit ? null : (
-                  <>
-                    <p className="lasso-a4-score__missing">Ikke oplyst</p>
-                    <p className="lasso-a4__small">Der findes ingen kreditvurdering for virksomheden.</p>
-                  </>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="lasso-a4-col" />
+                )}
+                {contactRows.length ? (
+                  <div className="lasso-a4-col">
+                    <h3 className="lasso-a4__h3">Kontakt og oplysninger</h3>
+                    <KvRows rows={contactRows} />
+                  </div>
+                ) : (
+                  <div className="lasso-a4-col" />
                 )}
               </div>
-              {lassoObs ? (
-                <div className="lasso-a4-col">
-                  <h2 className="lasso-a4__h2">Risikoobservationer</h2>
-                  {observations.length ? (
-                    <div className="lasso-a4-obs">
-                      {observations.slice(0, 5).map((o) => {
-                        const level = observationLevel(o.severity);
-                        return (
-                          <div key={o.id} className="lasso-a4-obs__row">
-                            {/* 27.4: prikkens farve er alvorsmarkeringen på papiret (Paper); ordet står kun for skærmlæsere. */}
-                            <span className={`lasso-a4-obs__dot lasso-a4-obs__dot--${level}`} role="img" aria-label={level === "neutral" ? "neutral" : `alvor ${level}`} />
-                            <span className="lasso-a4-obs__main">
-                              <span className="lasso-a4-obs__title">{o.title}</span>
-                              {o.detail ? <span className="lasso-a4-obs__detail">{o.detail}</span> : null}
-                              {o.source || o.date ? <span className="lasso-a4-obs__meta">{[o.source, o.date ? formatDate(o.date) : null].filter(Boolean).join(", ")}</span> : null}
-                            </span>
-                          </div>
-                        );
-                      })}
-                      {observations.length > 5 ? <p className="lasso-a4__note">og {moreText(observations.length - 5)}</p> : null}
-                    </div>
-                  ) : (
-                    <p className="lasso-a4__small">
-                      {lassoObs.checkedAt ? `Lasso har gennemgået virksomheden og fandt intet at bemærke. Tjekket ${formatDate(lassoObs.checkedAt)}.` : "Lasso har ingen risikoobservationer om virksomheden."}
-                    </p>
-                  )}
-                </div>
-              ) : null}
-            </div>
-
-            {beneficial || owners.length ? (
-              <div className="lasso-a4-block">
-                <h2 className="lasso-a4__h2">Reelle ejere og ejerstruktur</h2>
-                <div className="lasso-a4-cols">
-                  <div className="lasso-a4-col">
-                    <div className="lasso-a4-table">
-                      <div className="lasso-a4-table__row lasso-a4-table__row--head">
-                        <span className="lasso-a4-table__label">Legal ejer</span>
-                        <span className="lasso-a4-table__cell">Ejerandel</span>
-                        <span className="lasso-a4-table__cell">Stemmer</span>
-                      </div>
-                      {owners.slice(0, MAX_ROWS).map((o, i) => (
-                        <div key={`${o.name}-${i}`} className="lasso-a4-table__row">
-                          <span className="lasso-a4-table__label">{o.name}</span>
-                          <span className={`lasso-a4-table__cell ${o.share ? "" : "lasso-a4__faint"}`}>{o.share ?? "Ikke oplyst"}</span>
-                          <span className={`lasso-a4-table__cell ${o.votes ?? o.share ? "" : "lasso-a4__faint"}`}>{o.votes ?? o.share ?? "Ikke oplyst"}</span>
-                        </div>
-                      ))}
-                      {owners.length === 0 ? (
-                        <div className="lasso-a4-table__row">
-                          <span className="lasso-a4-table__label lasso-a4__faint">Ingen registrerede legale ejere</span>
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                  <div className="lasso-a4-col">
-                    <div className="lasso-a4-table__row lasso-a4-table__row--head">
-                      <span className="lasso-a4-table__label">Reelle ejere (personer bag holdingselskaber)</span>
-                    </div>
-                    {beneficial && beneficial.owners.length ? (
-                      <div className="lasso-a4-table">
-                        {beneficial.owners.slice(0, MAX_ROWS).map((o, i) => (
-                          <div key={`${o.name}-${i}`} className="lasso-a4-table__row lasso-a4-table__row--tall">
-                            <span className="lasso-a4-table__label">
-                              {o.name}
-                              {o.chain ? <span className="lasso-a4-table__sub">{o.chain}</span> : null}
-                            </span>
-                            <span className={`lasso-a4-table__cell lasso-a4-table__cell--wide ${o.share ? "" : "lasso-a4__faint"}`}>{o.share ? `Reelt ${o.share}` : "Ikke oplyst"}</span>
-                          </div>
-                        ))}
-                        {(beneficial.gaps ?? []).map((g, i) => (
-                          <div key={`gap-${i}`} className="lasso-a4-table__row lasso-a4-table__row--tall">
-                            <span className="lasso-a4-table__label">
-                              Ingen reel ejer for {g.share ?? "en del af ejerskabet"}
-                              {g.reason ? <span className="lasso-a4-table__sub">{g.reason}</span> : null}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="lasso-a4-empty">
-                        {beneficial?.gaps?.length
-                          ? `Ingen reel ejer registreret for ${beneficial.gaps.map((g) => g.share ?? "en del af ejerskabet").join(", ")}`
-                          : "Der er ikke registreret nogen reel ejer for virksomheden"}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
             ) : null}
-
-            {auditorName ? (
-              // 22.2 udgår (Jakob 29.09): kun revisoren og seneste revisorskift, ingen uafhængighedslinjer.
-              <div className="lasso-a4-block">
-                <h2 className="lasso-a4__h2">Revisor</h2>
-                <div className="lasso-a4-col">
-                  <span className="lasso-a4__strong">{auditorName}</span>
-                  <span className="lasso-a4__small">{ownership?.auditor?.from ? `Revisor siden ${formatDate(ownership.auditor.from)}` : "Revisor ifølge CVR"}</span>
-                </div>
-              </div>
-            ) : null}
-
-            <div className="lasso-a4-about">
-              <span className="lasso-a4__strong">Om rapporten</span>
-              <span className="lasso-a4-about__text">
-                Data er samlet af Lasso fra {sources}. Ejerandele vises som CVR-intervaller. En kreditscore er en modelvurdering og ikke en garanti. Rapporten er genereret{" "}
-                {stamp.date}
-                {stamp.time ? ` kl. ${stamp.time}` : ""} og afspejler data på dette tidspunkt.
-                {dataset.source === "demo" ? " Alle tal er eksempeldata." : ""}
-              </span>
-            </div>
-            <PageFoot sources={sources} date={stamp.date} page={page} total={total} />
+            <PageFoot date={stamp.date} page={page} total={total} />
           </section>
         );
       },
@@ -596,18 +481,18 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
   }
 
   const total = pages.length + 1;
-  const toc: { title: string; page: number }[] = pages.flatMap((p, i) => p.toc.map((title) => ({ title, page: i + 2 })));
+  const tocRows: { title: string; page: number }[] = pages.flatMap((p, i) => p.toc.map((title) => ({ title, page: i + 2 })));
   const facts = [
     [cvr ? `CVR ${cvr}` : null, c?.form, c?.status].filter(Boolean).join(", "),
     c?.address ? [c.address.street, [c.address.zip, c.address.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") : "",
     [c?.industryCode, c?.industryText].filter(Boolean).join(" "),
   ].filter(Boolean);
-  const scoreText = score && score.score !== null ? `${Math.round(score.score)}, ${scoreBand(score.score).label.toLowerCase()}` : "Ikke oplyst";
+  const scoreText = scoreValue !== null ? `${Math.round(scoreValue)} af 100, ${scoreBand(scoreValue).short}` : "Ikke oplyst";
 
   return (
     <div className="lasso-a4">
       <section className="lasso-a4-page lasso-a4-page--cover" key="p1">
-        <PageHead cover name={name} cvr={cvr} stamp={stamp} />
+        <PageHead cover label={`Virksomhedsrapport, genereret ${stamp.date}${stamp.time ? ` kl. ${stamp.time}` : ""}`} />
         <div className="lasso-a4-cover">
           <span className="lasso-a4__overline">Virksomhedsrapport</span>
           <h1 className="lasso-a4-cover__name">{name}</h1>
@@ -621,8 +506,8 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
           </p>
           <div className="lasso-a4-cover__figures">
             <div className="lasso-a4-cover__figure">
-              <span className="lasso-a4-cover__label">Kreditscore</span>
-              <span className={`lasso-a4-cover__value ${score && score.score !== null ? "" : "lasso-a4__faint"}`}>{scoreText}</span>
+              <span className="lasso-a4-cover__label">Risikoscore</span>
+              <span className={`lasso-a4-cover__value ${scoreValue !== null ? "" : "lasso-a4__faint"}`}>{scoreText}</span>
             </div>
             <div className="lasso-a4-cover__figure">
               <span className="lasso-a4-cover__label">
@@ -643,8 +528,8 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
         <div className="lasso-a4-toc">
           <span className="lasso-a4__overline lasso-a4__overline--muted">Indhold</span>
           <div className="lasso-a4-toc__rows">
-            {toc.length ? (
-              toc.map((t) => (
+            {tocRows.length ? (
+              tocRows.map((t) => (
                 <div key={t.title} className="lasso-a4-toc__row">
                   <span>{t.title}</span>
                   <span className="lasso-a4-toc__page">{t.page}</span>
@@ -655,9 +540,309 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
             )}
           </div>
         </div>
-        <PageFoot sources={sources} date={stamp.date} page={1} total={total} />
+        <PageFoot date={stamp.date} page={1} total={total} />
       </section>
       {pages.map((p, i) => p.render(i + 2, total))}
+    </div>
+  );
+}
+
+/**
+ * Rapport "af det man står i" (katalog 27.3, Paper FUE-0): PDF af Regnskab-fanen, samme indhold som
+ * skærmen (resultatopgørelse, balance og nøgletal for 5 år, seneste først), sidehoved "Regnskab, hentet …"
+ * og "side 1 af 1". Eksemplet på princippet: siden/fanen/elementet printes, som det vises, uden interaktion.
+ */
+export function StatementsReportA4({ company, dataset, generatedAt }: ReportA4Props) {
+  const c = dataset.companies[company];
+  const fin = dataset.financials[company];
+  const years: FinancialYear[] = fin?.years ?? [];
+  const last = years.at(-1);
+  const unit = currencyUnit(fin?.currency);
+  const statements = dataset.financialStatements[company];
+  const stamp = companyStamp(dataset, generatedAt);
+  const shownYears = years.slice(-YEARS).reverse();
+  const firstYear = years.at(-YEARS)?.year ?? years[0]?.year;
+  const span = last ? (firstYear && firstYear !== last.year ? `${firstYear}–${last.year}` : String(last.year)) : "";
+  const ys = shownYears.map((y) => y.year);
+  const inc = ys.map((y) => statements?.incomeStatement.find((s) => s.year === y));
+  const bal = ys.map((y) => statements?.balanceSheet.find((s) => s.year === y));
+  const revenueTop = shownYears.some((y) => y.revenue != null);
+  const has = (vals: readonly string[]) => vals.some((v) => v !== "-");
+  // Mangler en post i data, udelades rækken (19.1: ingen tomme rækker).
+  const keep = (rows: Row[]) => rows.filter((r) => has(r.values));
+  const income = keep([
+    ...(revenueTop ? [{ label: "Omsætning", values: shownYears.map((y) => thousands(y.revenue)), kind: "sum" as const }] : []),
+    { label: "Bruttofortjeneste", values: shownYears.map((y) => thousands(y.grossProfit)), kind: "sum" },
+    { label: "Personaleomkostninger", values: inc.map((s) => thousands(s?.staffCosts)) },
+    { label: "Andre driftsomkostninger", values: inc.map((s) => thousands(s?.otherOperatingCosts)) },
+    { label: "EBITDA", values: shownYears.map((y, i) => thousands(y.ebitda ?? inc[i]?.ebitda)), kind: "sum" },
+    { label: "Af- og nedskrivninger", values: inc.map((s) => thousands(s?.depreciation)) },
+    { label: "Finansielle poster, netto", values: inc.map((s) => thousands(s?.financialItemsNet)) },
+    { label: "Resultat før skat", values: inc.map((s) => thousands(s?.profitBeforeTax)), kind: "sum" },
+    { label: "Skat af årets resultat", values: inc.map((s) => thousands(s?.tax)) },
+    { label: "Årets resultat", values: shownYears.map((y) => thousands(y.profit)), kind: "bottom" },
+  ]);
+  const balance = keep([
+    { label: "Anlægsaktiver", values: bal.map((s) => thousands(s?.fixedAssetsTotal)) },
+    { label: "Omsætningsaktiver", values: bal.map((s) => thousands(s?.currentAssetsTotal)) },
+    { label: "Aktiver i alt", values: shownYears.map((y, i) => thousands(y.assetsTotal ?? bal[i]?.assetsTotal)), kind: "sum" },
+    { label: "Egenkapital", values: shownYears.map((y) => thousands(y.equity)), kind: "sum" },
+    { label: "Langfristet gæld", values: bal.map((s) => thousands(s?.longTermLiabilities)) },
+    { label: "Kortfristet gæld", values: bal.map((s) => thousands(s?.shortTermLiabilities)) },
+    { label: "Passiver i alt", values: shownYears.map((y, i) => thousands(bal[i]?.liabilitiesAndEquityTotal ?? y.assetsTotal)), kind: "bottom" },
+  ]);
+  const ratios = keep([
+    { label: "Soliditetsgrad", values: shownYears.map((y) => pct(y.soliditetsgrad)), kind: "plain" },
+    { label: "Likviditetsgrad", values: shownYears.map((y) => pct(y.likviditetsgrad)), kind: "plain" },
+    { label: "Overskudsgrad", values: shownYears.map((y) => pct(y.overskudsgrad)), kind: "plain" },
+    { label: "Ansatte (årsrapport)", values: shownYears.map((y) => (typeof y.employees === "number" ? formatNumber(y.employees) : "-")), kind: "plain" },
+  ]);
+  const period = periodText(last);
+  return (
+    <div className="lasso-a4">
+      <section className="lasso-a4-page" key="stmt">
+        <PageHead name={c?.name ?? company} cvr={c?.cvr} label={`Regnskab, hentet ${stamp.date}`} />
+        {shownYears.length ? (
+          <>
+            <div className="lasso-a4__titlerow">
+              <h2 className="lasso-a4__h2">Regnskab {span}</h2>
+              <span className="lasso-a4__note">
+                t. {unit}
+                {period ? `, regnskabsår ${period}` : ""}
+              </span>
+            </div>
+            {income.length ? <StatementTable title="Resultatopgørelse" years={ys} rows={income} /> : null}
+            {balance.length ? <StatementTable title="Balance pr. 31.12" years={ys} rows={balance} /> : null}
+            {ratios.length ? <StatementTable title="Nøgletal" years={ys} rows={ratios} /> : null}
+          </>
+        ) : (
+          <p className="lasso-a4__note">Der er ingen offentliggjorte regnskaber for virksomheden.</p>
+        )}
+        <PageFoot date={stamp.date} page={1} total={1} />
+      </section>
+    </div>
+  );
+}
+
+/**
+ * Regnskabsanalysen som A4-PDF (katalog 19.6, Paper LZM-0/LZP-0): det, "Hent som PDF" i 19.3 laver.
+ * Sidehoved som 27.1 (navnelogo + "Regnskabsanalyse, genereret …"), overlinje REGNSKABSANALYSE, navnet
+ * 28/700, "CVR …, regnskabsår … (periode), sammenlignet med …", ALLE afsnit foldet ud, "Tal der indgår i
+ * analysen" som nøgle-værdi-liste og forbeholdet som sidste linje. Ingen kildelinje (G3); "genereret"
+ * står kun i sidehovedet. Sidefod: navn, CVR og "regnskabsanalyse <år>" til venstre, sidetal til højre.
+ * Ved lange analyser fortsætter teksten på næste side (samme hoved/fod) via print-CSS (break-inside).
+ */
+export function AnalysisReportA4({ company, dataset, generatedAt, disclaimer, name: fallbackName }: ReportA4Props & { disclaimer: string; /** Navnet, når virksomheden ikke er i datasættet (fx visningens titel). */ name?: string }) {
+  const c = dataset.companies[company];
+  const name = c?.name ?? fallbackName ?? company;
+  const v = dataset.textSections[company];
+  const items = v ? textSectionsFor(v.sections, "analyse") : [];
+  const fin = dataset.financials[company];
+  const years: FinancialYear[] = fin?.years ?? [];
+  const last = years.at(-1);
+  const unit = currencyUnit(fin?.currency);
+  const stamp = companyStamp(dataset, v?.analysisGenerated ?? generatedAt);
+  const first = years.at(-YEARS)?.year;
+  const periodLong = last?.periodStart && last.periodEnd ? ` (${formatDate(last.periodStart)}–${formatDate(last.periodEnd)})` : "";
+  const sub = [cvr(c?.cvr), last ? `regnskabsår ${last.year}${periodLong}${first && first < last.year ? `, sammenlignet med ${first}–${last.year - 1}` : ""}` : null].filter(Boolean).join(", ");
+  const heading = (h: string, i: number) => (i === 0 && v?.analysisHeadline ? v.analysisHeadline : h.replace(/^Regnskabsanalyse:?\s*/i, "").replace(/^./, (x) => x.toUpperCase()) || "Konklusion");
+  const numbers = last
+    ? [
+        ...(typeof last.grossProfit === "number" ? [{ label: `Bruttofortjeneste ${last.year}`, value: formatAmount(last.grossProfit, unit) }] : []),
+        ...(typeof last.ebitda === "number" ? [{ label: `EBITDA ${last.year}`, value: formatAmount(last.ebitda, unit) }] : []),
+        ...(typeof last.profit === "number" ? [{ label: `Årets resultat ${last.year}`, value: formatAmount(last.profit, unit) }] : []),
+        ...(typeof last.soliditetsgrad === "number" ? [{ label: "Soliditetsgrad", value: formatPercent(last.soliditetsgrad, false) }] : []),
+        ...(typeof last.likviditetsgrad === "number" ? [{ label: "Likviditetsgrad", value: formatPercent(last.likviditetsgrad, false) }] : []),
+      ]
+    : [];
+  return (
+    <div className="lasso-a4">
+      <section className="lasso-a4-page lasso-a4-page--flow" key="analysis">
+        <PageHead cover label={`Regnskabsanalyse, genereret ${stamp.date}${stamp.time ? ` kl. ${stamp.time}` : ""}`} />
+        <div className="lasso-a4-doc__intro">
+          <span className="lasso-a4__overline">Regnskabsanalyse</span>
+          <h1 className="lasso-a4-doc__title">{name}</h1>
+          {sub ? <p className="lasso-a4-doc__sub">{sub}</p> : null}
+        </div>
+        <div className="lasso-a4-doc__sections">
+          {items.map((it, i) => (
+            <div key={`${it.heading}-${i}`} className="lasso-a4-doc__section">
+              <h2 className="lasso-a4-doc__h">{heading(it.heading, i)}</h2>
+              <p className="lasso-a4-doc__body">{it.segments?.length ? it.segments.map((s) => s.text).join("") : it.body}</p>
+            </div>
+          ))}
+        </div>
+        {numbers.length ? (
+          <div className="lasso-a4-block">
+            <span className="lasso-a4__overline lasso-a4__overline--muted">Tal der indgår i analysen</span>
+            <KvRows rows={numbers} className="lasso-a4-kv--doc" />
+          </div>
+        ) : null}
+        <p className="lasso-a4-doc__disclaimer">{disclaimer}</p>
+        <PageFoot date={stamp.date} page={1} total={1} left={[name, cvr(c?.cvr), last ? `regnskabsanalyse ${last.year}` : "regnskabsanalyse"].filter(Boolean).join(", ")} />
+      </section>
+    </div>
+  );
+}
+
+function cvr(n: string | undefined): string | null {
+  return n ? `CVR ${n}` : null;
+}
+
+export interface PersonReportA4Props {
+  /** Lasso-ID for personen, fx "CVR-3-4000000001". */
+  person: string;
+  dataset: Dataset;
+  generatedAt?: string;
+}
+
+const yearOf = (d?: string) => (d ? d.slice(0, 4) : "");
+
+/**
+ * Standard personrapport som A4-PDF (katalog 27.4, Paper FZF-0/FZH-0): én side med kun det relevante for et
+ * overblik. Sidehoved med navnet alene (G9) og "Personrapport, <dato>"; overlinje PERSONRAPPORT og navnet
+ * 28/700; persontal MK4-0/MK7-0 (aktive roller, tidligere roller, ejerskab, netværk 1. led, konkurser);
+ * aktive roller som tabel (selskab, rolle, siden, status, MKS-0); tidligere roller dæmpet (MLF-0, konkurs i
+ * rødt); "Sidder sammen med" (de 3 med længst fælles periode) og "Risiko" (PEP, stråmand, konkurser,
+ * tvangsopløsninger) side om side (MLS-0). Ingen CPR, adresse eller kildelinje.
+ */
+export function PersonReportA4({ person, dataset, generatedAt }: PersonReportA4Props) {
+  const p = dataset.persons[person];
+  const stamp = formatStamp(generatedAt ?? dataset.generatedAt);
+  const name = p?.name ?? person;
+  const network = dataset.personNetworks[person];
+  if (!p) {
+    return (
+      <div className="lasso-a4">
+        <section className="lasso-a4-page">
+          <PageHead name={name} label={`Personrapport, ${stamp.date}`} />
+          <p className="lasso-a4__note">Der er ingen data om personen.</p>
+          <PageFoot date={stamp.date} page={1} total={1} />
+        </section>
+      </div>
+    );
+  }
+  const companies = personCompanies(p);
+  const active = companies.filter((c) => c.active);
+  const ended = companies.filter((c) => !c.active);
+  const counts = personCounts(p);
+  const risk = personRisk(p);
+  const owned = companies.filter((c) => c.active && c.roles.some((r) => r.active && r.kind === "owner"));
+  const lastLeft = ended.flatMap((c) => c.roles.map((r) => r.to)).filter((t): t is string => Boolean(t)).sort().at(-1);
+  const bankrupt = risk.bankruptcies[0];
+  const roleText = (c: (typeof companies)[number], onlyActive: boolean) => {
+    const rs = c.roles.filter((r) => (onlyActive ? r.active : true));
+    const labels = rs.map((r) => (r.kind === "owner" && r.share ? `${r.role} ${r.share}` : r.role));
+    const uniq = labels.filter((l, i) => labels.indexOf(l) === i);
+    return uniq.map((l, i) => (i === 0 ? l : l.charAt(0).toLowerCase() + l.slice(1))).join(", ");
+  };
+  const stats: { label: string; value: string; sub: string; danger?: boolean }[] = [
+    { label: "Aktive roller", value: formatNumber(counts.activeRoles), sub: `i ${active.length} ${active.length === 1 ? "selskab" : "selskaber"}` },
+    { label: "Tidligere roller", value: formatNumber(counts.endedRoles), sub: lastLeft ? `seneste fratrådt ${yearOf(lastLeft)}` : "ingen" },
+    {
+      label: "Ejerskab",
+      value: formatNumber(owned.length),
+      sub: owned.length === 1 ? [owned[0]!.companyName, owned[0]!.roles.find((r) => r.kind === "owner")?.share].filter(Boolean).join(", ") : owned.length ? "selskaber" : "ingen",
+    },
+    ...(network ? [{ label: "Netværk, 1. led", value: formatNumber(network.people.length), sub: "personer" }] : []),
+    {
+      label: "Konkurser i netværket",
+      value: formatNumber(risk.bankruptcies.length),
+      sub: bankrupt ? (bankrupt.yearsBefore !== undefined ? `fratrådt ${bankrupt.yearsBefore} år før` : bankrupt.involved ? "med rolle ved konkursen" : "registreret") : "ingen",
+      danger: risk.bankruptcies.length > 0,
+    },
+  ];
+  const peers = network ? [...network.people].sort((a, b) => Number(b.active) - Number(a.active) || b.overlapYears - a.overlapYears).slice(0, 3) : [];
+  const riskRows: { label: string; value: string; tone?: "ok" | "warning" | "danger" | "muted" }[] = [
+    { label: "PEP, politisk eksponeret", value: p.pep ? (p.pep.match ? "Ja" : "Nej") : "Ikke tjekket", tone: p.pep ? (p.pep.match ? "warning" : "ok") : "muted" },
+    ...(p.strawman ? [{ label: "Stråmandsindikator", value: p.strawman.level === "possible" ? "Mulig" : "Nej", tone: p.strawman.level === "possible" ? ("warning" as const) : ("ok" as const) }] : []),
+    { label: "Konkurser i netværket", value: risk.bankruptcies.length ? `${risk.bankruptcies.length}${risk.bankruptcies.every((b) => !b.involved) ? ", neutral" : ""}` : "0" },
+    { label: "Tvangsopløsninger", value: formatNumber(risk.dissolutions.length) },
+  ];
+  const riskNote = [p.pep?.checkedAt ? `PEP tjekket ${formatDate(p.pep.checkedAt)}.` : null, p.strawman?.level === "possible" && p.strawman.detail ? `Stråmand: ${p.strawman.detail}` : null].filter(Boolean).join(" ");
+  const RoleRows = ({ list, past }: { list: typeof companies; past?: boolean }) => (
+    <div className={`lasso-a4-roles${past ? " lasso-a4-roles--past" : ""}`}>
+      {list.slice(0, MAX_ROWS).map((c) => {
+        const froms = c.roles.map((r) => r.from).filter((f): f is string => Boolean(f)).sort();
+        const tos = c.roles.map((r) => r.to).filter((t): t is string => Boolean(t)).sort();
+        const bankruptHere = /konkurs/i.test(c.companyStatus ?? "");
+        const status = past ? (bankruptHere ? `${c.companyStatus ?? "Konkurs"}${c.companyEnded ? ` ${yearOf(c.companyEnded)}` : ""}` : "Fratrådt") : (c.companyStatus ?? "Aktiv");
+        return (
+          <div key={c.key} className="lasso-a4-roles__row">
+            <span className="lasso-a4-roles__company">{c.companyName}</span>
+            <span className="lasso-a4-roles__role">{roleText(c, !past)}</span>
+            <span className="lasso-a4-roles__since">{past ? [yearOf(froms[0]), yearOf(tos.at(-1))].filter(Boolean).join("–") : froms[0] ? formatDate(froms[0]) : "-"}</span>
+            <span className={`lasso-a4-roles__status${past && bankruptHere ? " lasso-a4__neg" : ""}`}>{status}</span>
+          </div>
+        );
+      })}
+      {list.length > MAX_ROWS ? <p className="lasso-a4__note">og {moreText(list.length - MAX_ROWS)}</p> : null}
+    </div>
+  );
+  return (
+    <div className="lasso-a4">
+      <section className="lasso-a4-page lasso-a4-page--person" key="person">
+        <PageHead name={name} label={`Personrapport, ${stamp.date}`} />
+        <div className="lasso-a4-doc__intro">
+          <span className="lasso-a4__overline">Personrapport</span>
+          <h1 className="lasso-a4-doc__title">{name}</h1>
+        </div>
+        <div className="lasso-a4-kpis lasso-a4-kpis--person">
+          {stats.map((s) => (
+            <div key={s.label} className="lasso-a4-kpi">
+              <span className="lasso-a4-kpi__label">{s.label}</span>
+              <span className={`lasso-a4-kpi__value${s.danger ? " lasso-a4__neg" : ""}`}>{s.value}</span>
+              <span className="lasso-a4-kpi__sub">{s.sub}</span>
+            </div>
+          ))}
+        </div>
+        {active.length ? (
+          <div className="lasso-a4-block">
+            <h2 className="lasso-a4__h2">Aktive roller</h2>
+            <div className="lasso-a4-roles__row lasso-a4-roles__row--head">
+              <span className="lasso-a4-roles__company">Selskab</span>
+              <span className="lasso-a4-roles__role">Rolle</span>
+              <span className="lasso-a4-roles__since">Siden</span>
+              <span className="lasso-a4-roles__status">Status</span>
+            </div>
+            <RoleRows list={active} />
+          </div>
+        ) : null}
+        {ended.length ? (
+          <div className="lasso-a4-block">
+            <h2 className="lasso-a4__h2">Tidligere roller</h2>
+            <RoleRows list={ended} past />
+          </div>
+        ) : null}
+        <div className="lasso-a4-cols">
+          <div className="lasso-a4-col">
+            <h3 className="lasso-a4__h3">Sidder sammen med</h3>
+            {peers.length ? (
+              <div className="lasso-a4-rows">
+                {peers.map((n, i) => {
+                  const shared = n.companies.length;
+                  const tail = n.active ? `${n.overlapYears} år` : "afsluttet";
+                  return (
+                    <div key={`${n.name}-${i}`} className={`lasso-a4-row${n.active ? "" : " lasso-a4-row--muted"}`}>
+                      <span className="lasso-a4-row__name">{n.name}</span>
+                      <span className="lasso-a4-row__side">{`${shared} ${shared === 1 ? "fælles selskab" : "fælles selskaber"}, ${tail}`}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="lasso-a4__note">{network ? "Personen sidder ikke sammen med andre i CVR." : "Netværket er ikke hentet."}</p>
+            )}
+            {network && network.people.length > peers.length ? <p className="lasso-a4__note">De {peers.length} med længst fælles periode; {network.people.length - peers.length} flere i portalen</p> : null}
+          </div>
+          <div className="lasso-a4-col">
+            <h3 className="lasso-a4__h3">Risiko</h3>
+            <KvRows rows={riskRows} className="lasso-a4-kv--risk" />
+            {riskNote ? <p className="lasso-a4__note">{riskNote}</p> : null}
+          </div>
+        </div>
+        <PageFoot date={stamp.date} page={1} total={1} />
+      </section>
     </div>
   );
 }

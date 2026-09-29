@@ -1,7 +1,7 @@
 export { LassoView } from "./LassoView.js";
 export { LassoMark, LassoWordmark } from "./LassoMark.js";
-export { ReportA4 } from "./components/ReportA4.js";
-export type { ReportA4Props } from "./components/ReportA4.js";
+export { ReportA4, StatementsReportA4, AnalysisReportA4, PersonReportA4 } from "./components/ReportA4.js";
+export type { ReportA4Props, PersonReportA4Props } from "./components/ReportA4.js";
 export { CompanyHead } from "./components/CompanyHead.js";
 export { KeyFigureCards } from "./components/KeyFigureCards.js";
 export { BarChart, pickableMetrics } from "./components/BarChart.js";
@@ -74,7 +74,7 @@ export { Livestock } from "./components/Livestock.js";
 export { FollowUps } from "./components/FollowUps.js";
 export { LassoRelations } from "./components/LassoRelations.js";
 export { LassoBeneficialOwners } from "./components/LassoBeneficialOwners.js";
-export { LassoTextSections } from "./components/LassoTextSections.js";
+export { LassoTextSections, ANALYSIS_DISCLAIMER } from "./components/LassoTextSections.js";
 export { LassoSummary } from "./components/LassoSummary.js";
 export { LassoTimeline } from "./components/LassoTimeline.js";
 export { LassoNews } from "./components/LassoNews.js";
