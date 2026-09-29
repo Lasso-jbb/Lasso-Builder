@@ -61,11 +61,12 @@ const cellTone = (tone: Col["tone"], emph?: boolean): CSSProperties => ({
 });
 
 /** Papers dokumentationstabel: overlinje-hoved 36 px på panel-flade, rækker ≥ 36 px med tynde linjer. */
-export function DocTable({ cols, rows }: { cols: readonly Col[]; rows: readonly (readonly ReactNode[] | { group: string } | { emph: readonly ReactNode[] })[] }) {
-  const cell = (c: Col): CSSProperties => ({ flex: c.width ? `0 0 ${c.width}px` : "1 1 0", minWidth: 0, textAlign: c.align ?? "left", paddingRight: c.align ? 0 : 16 });
+export function DocTable({ cols, rows, small = false }: { cols: readonly Col[]; rows: readonly (readonly ReactNode[] | { group: string } | { emph: readonly ReactNode[] })[]; /** 12 px tekst og 14 px sidemargen (23.7). */ small?: boolean }) {
+  const cell = (c: Col): CSSProperties => ({ flex: c.width ? `0 0 ${c.width}px` : "1 1 0", minWidth: 0, textAlign: c.align ?? "left", paddingRight: c.align ? 0 : small ? 12 : 16 });
+  const padX = small ? 14 : 16;
   return (
     <div style={frame}>
-      <div style={{ display: "flex", alignItems: "center", minHeight: 36, padding: "0 16px", background: "var(--lasso-surface-muted)", borderBottom: "1px solid var(--lasso-border)" }}>
+      <div style={{ display: "flex", alignItems: "center", minHeight: 36, padding: `0 ${padX}px`, background: "var(--lasso-surface-muted)", borderBottom: "1px solid var(--lasso-border)" }}>
         {cols.map((c) => (
           <div key={c.label} style={{ ...cell(c), ...overline }}>
             {c.label}
@@ -85,7 +86,7 @@ export function DocTable({ cols, rows }: { cols: readonly Col[]; rows: readonly 
         const emph = "emph" in r;
         const cells = "emph" in r ? r.emph : r;
         return (
-          <div key={i} style={{ display: "flex", alignItems: "flex-start", minHeight: 36, padding: "9px 16px", borderBottom: line, background: emph ? "var(--lasso-surface-muted)" : undefined, fontSize: "var(--lasso-fs)", lineHeight: "18px" }}>
+          <div key={i} style={{ display: "flex", alignItems: "flex-start", minHeight: 36, padding: `9px ${padX}px`, borderBottom: line, background: emph ? "var(--lasso-surface-muted)" : undefined, fontSize: small ? 12 : "var(--lasso-fs)", lineHeight: small ? "16px" : "18px" }}>
             {cols.map((c, j) => (
               <div key={j} style={{ ...cell(c), ...cellTone(c.tone, emph) }}>
                 {cells[j]}
@@ -98,54 +99,74 @@ export function DocTable({ cols, rows }: { cols: readonly Col[]; rows: readonly 
   );
 }
 
-/* ---------- 23.1 Sideskabelon: skitse af zonerne ---------- */
+/* ---------- 23.1 Sideskabelon: skitse af zonerne (660 px som i Paper) ---------- */
 
-const zone = (extra: CSSProperties = {}): CSSProperties => ({
-  border: "1px dashed var(--lasso-border-strong)",
-  borderRadius: "var(--lasso-radius)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  textAlign: "center",
-  padding: 12,
-  fontSize: "var(--lasso-fs-sm)",
-  lineHeight: "18px",
-  color: "var(--lasso-muted)",
-  background: "var(--lasso-surface)",
-  ...extra,
-});
-const bar = (label: string) => (
-  <div style={{ height: 56, flex: "none", display: "flex", alignItems: "center", padding: "0 20px", borderBottom: "1px solid var(--lasso-border)", fontSize: "var(--lasso-fs-sm)", color: "var(--lasso-text-2)", background: "var(--lasso-surface)" }}>
-    {label}
+const sketchText = (color = "var(--lasso-text-2)"): CSSProperties => ({ fontSize: 10, lineHeight: "12px", fontWeight: 600, color });
+const box = (grow: number, height: number, label: string, accent = false) => (
+  <div
+    style={{
+      flex: `${grow} 1 0`,
+      height,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      border: `1px dashed ${accent ? "var(--lasso-accent-border)" : "var(--lasso-border)"}`,
+      borderRadius: 6,
+      background: accent ? "var(--lasso-accent-soft)" : undefined,
+    }}
+  >
+    <span style={sketchText(accent ? "var(--lasso-accent-text)" : undefined)}>{label}</span>
+  </div>
+);
+const side = (width: number, title: string, text: string, edge: "left" | "right") => (
+  <div
+    style={{
+      width,
+      flex: "none",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 4,
+      padding: 8,
+      textAlign: "center",
+      background: "var(--lasso-surface-muted)",
+      [edge === "left" ? "borderRight" : "borderLeft"]: "1px solid var(--lasso-border)",
+    }}
+  >
+    <span style={{ fontSize: 11, lineHeight: "14px", fontWeight: 600, color: "var(--lasso-text)" }}>{title}</span>
+    <span style={{ fontSize: 10, lineHeight: "12px", color: "var(--lasso-muted)" }}>{text}</span>
   </div>
 );
 
 export function ZoneSketch() {
   return (
-    <Block label="23.1, Trin 1, Sideskabelon (06) — én ramme, tre zoner">
-      <div style={{ ...frame, display: "flex", height: 640, background: "var(--lasso-chrome)" }}>
-        <div style={{ width: 236, flex: "none", borderRight: "1px solid var(--lasso-border)", padding: 16, display: "flex" }}>
-          <div style={zone({ flex: 1 })}>Skinne 236 px, sektioner / kriterier (06, 02)</div>
-        </div>
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-          {bar("Fanebjælke, 56 px, åbne virksomheder og værktøjer (06)")}
-          {bar("Modulbjælke, 56 px, hvert punkt er et modul + sidens handlinger til højre")}
-          <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
-            <div style={{ flex: 1, minWidth: 0, padding: 28, display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gridAutoRows: "min-content", gap: 24, alignContent: "start" }}>
-              <div style={zone({ gridColumn: "1 / -1", height: 88, background: "var(--lasso-accent-soft)", borderColor: "var(--lasso-accent-border)", color: "var(--lasso-accent-text)", fontWeight: 600 })}>Nøgletalskort 4/4 (09)</div>
-              <div style={zone({ gridColumn: "span 2", height: 180 })}>Graf 2/4 (13)</div>
-              <div style={zone({ gridColumn: "span 2", height: 180 })}>Nøgle-værdi 2/4 (09)</div>
-              <div style={zone({ gridColumn: "1 / -1", height: 120 })}>Tabel 4/4 (15)</div>
-              <div style={{ gridColumn: "1 / -1", ...note }}>Midte, flydende, padding 28, gutter 24, 4-kolonne grid</div>
+    <div style={{ width: 660 }}>
+      <Block label="23.1, Trin 1, Sideskabelon (06) — én ramme, tre zoner">
+        <div style={{ border: "1px solid var(--lasso-border)", borderRadius: "var(--lasso-radius-lg)", overflow: "hidden", background: "var(--lasso-surface)" }}>
+          <div style={{ height: 26, display: "flex", alignItems: "center", padding: "0 12px", background: "var(--lasso-chrome)", borderBottom: "1px solid var(--lasso-chrome-border)" }}>
+            <span style={sketchText()}>Fanebjælke, 56 px, åbne virksomheder og værktøjer (06)</span>
+          </div>
+          <div style={{ height: 32, display: "flex", alignItems: "center", padding: "0 12px", borderBottom: "1px solid var(--lasso-border)" }}>
+            <span style={sketchText()}>Modulbjælke, 56 px, hvert punkt er et modul + sidens handlinger til højre (06, niveau 1 i 29) — navnet står øverst i første kolonne (08)</span>
+          </div>
+          <div style={{ display: "flex", height: 300 }}>
+            {side(108, "Skinne", "236 px, sektioner / kriterier (06, 02)", "left")}
+            <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 8, padding: 12 }}>
+              <div style={{ display: "flex", gap: 8 }}>{box(1, 44, "Nøgletalskort 4/4 (09)", true)}</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                {box(2, 120, "Graf 2/4 (13)")}
+                {box(2, 120, "Nøgle-værdi 2/4 (09)")}
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>{box(1, 70, "Tabel 4/4 (15)")}</div>
+              <div style={{ fontSize: 10, lineHeight: "12px", color: "var(--lasso-muted)", textAlign: "center" }}>Midte, flydende, padding 28, gutter 24, 4-kolonne grid</div>
             </div>
-            <div style={{ width: 336, flex: "none", borderLeft: "1px solid var(--lasso-border)", padding: 16, display: "flex", background: "var(--lasso-surface)" }}>
-              <div style={zone({ flex: 1 })}>Panel 336 px, kontakt, genveje, risiko-sammenfatning (08, 17), valgfrit</div>
-            </div>
+            {side(150, "Panel", "336 px, kontakt, genveje, risiko-sammenfatning (08, 17), valgfrit", "right")}
           </div>
         </div>
-      </div>
-      <p style={note}>{ZONE_NOTE}</p>
-    </Block>
+        <p style={note}>{ZONE_NOTE}</p>
+      </Block>
+    </div>
   );
 }
 
@@ -242,7 +263,7 @@ function TwoCards({ cards }: { cards: readonly (readonly [string, string])[] }) 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
       {cards.map(([t, text]) => (
-        <div key={t} style={card}>
+        <div key={t} style={{ ...card, gap: 8 }}>
           <div style={cardTitle}>{t}</div>
           <div style={body}>{text}</div>
         </div>
@@ -261,7 +282,8 @@ export const MappingTable = () => (
   <Block label="23.7, Trin 7, Mapping pr. element: desktop → tablet → mobil">
     <p style={{ ...body, margin: 0 }}>{MAPPING_INTRO}</p>
     <DocTable
-      cols={[{ label: "Element", width: 190, tone: "strong" }, { label: "Desktop 1440" }, { label: "Tablet 768" }, { label: "Mobil 390", tone: "ink" }, { label: "Ref.", width: 90, align: "right", tone: "muted" }]}
+      small
+      cols={[{ label: "Element", width: 192, tone: "strong" }, { label: "Desktop 1440", width: 262 }, { label: "Tablet 768", width: 262 }, { label: "Mobil 390" }, { label: "Ref.", width: 70, align: "right", tone: "muted" }]}
       rows={MAPPING_ROWS}
     />
     <TwoCards cards={MAPPING_CARDS} />
@@ -272,7 +294,7 @@ export const CoverageTable = () => (
   <Block label="23.8, Trin 8, Dækningstabel mod docs.lassox.com/api — hver datatype har et element på desktop og mobil">
     <p style={{ ...body, margin: 0 }}>{COVERAGE_INTRO}</p>
     <DocTable
-      cols={[{ label: "Datatype / endpoint", width: 260, tone: "ink" }, { label: "Element(er)" }, { label: "Desktop", width: 160 }, { label: "Mobil / tablet", width: 160 }, { label: "Dækket", width: 70 }]}
+      cols={[{ label: "Datatype / endpoint", width: 250, tone: "ink" }, { label: "Element(er)" }, { label: "Desktop", width: 150 }, { label: "Mobil / tablet", width: 150 }, { label: "Dækket", width: 60 }]}
       rows={COVERAGE_ROWS.map((r) => (typeof r === "string" ? { group: r } : [...r, "Ja"]))}
     />
     <p style={note}>{COVERAGE_SOURCE}</p>
@@ -282,9 +304,9 @@ export const CoverageTable = () => (
 /* ---------- 30.12 Fra spørgsmål til layout ---------- */
 
 export const LookupTable = () => (
-  <Block label="Fra spørgsmål til layout — den tabel en AI slår op i, før den tegner. Findes spørgsmålet ikke, vælges nærmeste række, aldrig en ny form">
+  <Block label="30.12, Fra spørgsmål til layout — den tabel en AI slår op i, før den tegner. Findes spørgsmålet ikke, vælges nærmeste række, aldrig en ny form">
     <DocTable
-      cols={[{ label: "Spørgsmål", width: 270, tone: "ink" }, { label: "Niveau", width: 90 }, { label: "Mønster", width: 130 }, { label: "Elementer i rækkefølge (artboard)" }, { label: "Link videre", width: 170, tone: "accent" }]}
+      cols={[{ label: "Spørgsmål", width: 300, tone: "ink" }, { label: "Niveau", width: 90 }, { label: "Mønster", width: 130 }, { label: "Elementer i rækkefølge (artboard)" }, { label: "Link videre", width: 200, tone: "accent" }]}
       rows={LOOKUP_ROWS.map(([q, lvl, m, el, link]) => [q, lvl, m, el, <span style={{ fontWeight: 400 }}>{link}</span>])}
     />
     <p style={note}>{LOOKUP_RULES}</p>
