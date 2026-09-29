@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { amountScale, formatDate, formatScaled, type CompanyEventsVM, type CompanyVM, type MergerPartyVM } from "@lasso/spec";
+import { formatAmount, formatDate, type CompanyEventsVM, type CompanyVM, type MergerPartyVM } from "@lasso/spec";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
 import type { ViewAction } from "../types.js";
 
 function Loading({ title, error, lines = 3 }: { title: string; error?: string; lines?: number }) {
   return (
-    <Section title={title} span="full">
+    <Section title={title} span="full" card>
       {error ? <DataState state={stateForError(error) === "noaccess" ? "empty" : "error"} reason={error} /> : <DataState state="loading" lines={lines} height={lines * 40} />}
     </Section>
   );
@@ -41,7 +41,7 @@ export function Mergers({ events, company, title, error, demo, onOpen }: { event
   const list = events.mergers;
   if (list.length === 0) {
     return (
-      <Section title={heading} span="full">
+      <Section title={heading} span="full" card>
         <DataState state="empty" reason="Der er ingen registrerede fusioner eller spaltninger for virksomheden i CVR." />
       </Section>
     );
@@ -114,12 +114,13 @@ function CeasedToggle({ parties }: { parties: MergerPartyVM[] }) {
 const ANNOUNCEMENTS_SHOWN = 3;
 
 /**
- * Statstidende, seneste bekendtgørelser (katalog 28.8). Typen er en fast tekstkolonne farvet efter
- * alvor som status (konkurs mørk rød, rekonstruktion/likvidation warning, øvrige tekstfarve), altid
- * med ordet. Brødteksten er Statstidendes egen, foldet til to linjer med "Vis". Sektionen udelades
- * helt, når der ingen bekendtgørelser er (ikke tom tilstand).
+ * Statstidende, seneste bekendtgørelser (katalog 28.8). Kort med "<virksomhed>" under titlen. Rækker:
+ * dato | type farvet efter alvor som status (konkurs mørk rød, rekonstruktion/likvidation warning,
+ * øvrige tekstfarve), altid med ordet | Statstidendes egen tekst foldet til to linjer med "Vis" og en
+ * kildelinje pr. bekendtgørelse | "Åbn i Statstidende". Mobil: 60 px rækker med chevron. Sektionen
+ * udelades helt, når der ingen bekendtgørelser er (ikke tom tilstand).
  */
-export function Announcements({ events, title, error }: { events?: CompanyEventsVM; title?: string; error?: string }) {
+export function Announcements({ events, company, demo, title, error }: { events?: CompanyEventsVM; company?: CompanyVM; demo?: boolean; title?: string; error?: string }) {
   const heading = title ?? "Statstidende";
   const [open, setOpen] = useState<Set<number>>(new Set());
   const [all, setAll] = useState(false);
@@ -127,8 +128,9 @@ export function Announcements({ events, title, error }: { events?: CompanyEvents
   const list = events.announcements;
   if (list.length === 0) return null;
   const shown = all ? list : list.slice(0, ANNOUNCEMENTS_SHOWN);
+  const subtitle = [company?.name, demo ? "eksempeldata" : null].filter(Boolean).join(", ") || undefined;
   return (
-    <Section title={heading} subtitle="Seneste bekendtgørelser" span="full" className="lasso-announce">
+    <Section title={heading} subtitle={subtitle} span="full" card className="lasso-announce">
       <ul className="lasso-announce__rows">
         {shown.map((a, i) => (
           <li key={`${a.date}-${i}`} className="lasso-announce__row">
@@ -151,7 +153,15 @@ export function Announcements({ events, title, error }: { events?: CompanyEvents
                   {open.has(i) ? "Skjul" : "Vis"}
                 </button>
               ) : null}
+              {a.source ? <span className="lasso-announce__source">{a.source}</span> : null}
             </span>
+            {a.url ? (
+              <a className="lasso-announce__open" href={a.url} target="_blank" rel="noopener noreferrer">
+                Åbn i Statstidende
+              </a>
+            ) : (
+              <span />
+            )}
           </li>
         ))}
       </ul>
@@ -160,16 +170,44 @@ export function Announcements({ events, title, error }: { events?: CompanyEvents
           {all ? "Vis færre" : `Se alle ${list.length} bekendtgørelser`}
         </button>
       ) : null}
-      <SourceLine source="Statstidende via Lasso, inkl. kreditoroplysninger" updated={events.updated} />
     </Section>
   );
 }
 
+/** "01.01–31.12.2025" (28.2); uden start kun slutdatoen. */
+function periodRange(start?: string, end?: string): string | undefined {
+  if (!end) return undefined;
+  const e = formatDate(end);
+  return start ? `${formatDate(start).slice(0, 5)}–${e}` : e;
+}
+
+function FlagIcon() {
+  return (
+    <span className="lasso-stmt__flag" title="Korrigeret regnskab" aria-hidden="true">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+        <path d="M12 7v6M12 16.5v.5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+      </svg>
+    </span>
+  );
+}
+
+/** Beløb med enhed ("18,8 mio. kr.", "−201 t. kr."), negativt i rødt, og "før …" i muted ved korrektion. */
+function Money({ value, previous, corrected }: { value?: number | null; previous?: number | null; corrected?: boolean }) {
+  return (
+    <span className="lasso-publications__figure">
+      <span className={typeof value === "number" && value < 0 ? "lasso-down" : undefined}>{typeof value === "number" ? formatAmount(value) : <span className="lasso-notreported">—</span>}</span>
+      {corrected && typeof previous === "number" ? <span className="lasso-publications__before">før {formatAmount(previous)}</span> : null}
+    </span>
+  );
+}
+
 /**
- * Regnskabspublicering (katalog 28.2): tabel (15) sorteret efter offentliggørelsesdato, nyeste
- * først. Type "Årsrapport", "Halvår" eller "Kvartal" plus "ny" eller "korrigeret". Et korrigeret
- * regnskab får udråbstegn-ikonet fra kvalitetsflaget og den tidligere værdi som "før …" i muted
- * under tallet, aldrig gennemstreget. Mobil: rækkerne foldes (fælles `.lasso-table--fold`).
+ * Regnskabspublicering (katalog 28.2): kort med tabel (15) sorteret efter offentliggørelsesdato,
+ * nyeste først: Offentliggjort | Periode ("01.01–31.12.2025") | Type ("Årsrapport, ny", "Korrigeret"
+ * med udråbstegn efter ordet, "Halvår") | Bruttofortjeneste (eller omsætning) | Resultat (negativt i
+ * rødt). Et korrigeret regnskab får den tidligere værdi som "før …" i muted under tallet, aldrig
+ * gennemstreget. Mobil: rækkerne foldes til etiket og værdi (fælles `.lasso-table--fold`).
  */
 export function Publications({ events, title, error, limit = 5 }: { events?: CompanyEventsVM; title?: string; error?: string; limit?: number }) {
   const heading = title ?? "Regnskabspublicering";
@@ -178,65 +216,53 @@ export function Publications({ events, title, error, limit = 5 }: { events?: Com
   const list = events.publications;
   if (list.length === 0) {
     return (
-      <Section title={heading} span="full">
+      <Section title={heading} span="full" card>
         <DataState state="empty" reason="Virksomheden har ikke offentliggjort regnskaber i Erhvervsstyrelsen." />
       </Section>
     );
   }
-  const values = list.flatMap((p) => [p.figure?.value, p.figure?.previous]).filter((v): v is number => typeof v === "number");
-  const scale = amountScale(values);
+  const figureLabel = list.find((p) => p.figure)?.figure?.label ?? "Hovedtal";
   const shown = all ? list : list.slice(0, limit);
   return (
-    <Section title={heading} span="full" className="lasso-publications">
-      <div className="lasso-table-frame">
-        <div className="lasso-table-wrap">
-          <table className="lasso-table lasso-table--fold lasso-publications__table">
-            <thead>
-              <tr>
-                <th>Offentliggjort</th>
-                <th>Type</th>
-                <th>Periode</th>
-                <th className="lasso-num">Hovedtal, {scale.label}</th>
+    <Section title={heading} span="full" card className="lasso-publications">
+      <div className="lasso-table-wrap">
+        <table className="lasso-table lasso-table--fold lasso-publications__table">
+          <thead>
+            <tr>
+              <th>Offentliggjort</th>
+              <th>Periode</th>
+              <th>Type</th>
+              <th className="lasso-num">{figureLabel}</th>
+              <th className="lasso-num">Resultat</th>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((p, i) => (
+              <tr key={`${p.published}-${i}`}>
+                <td data-label="Offentliggjort" className="lasso-cell--name">{p.published ? formatDate(p.published) : <span className="lasso-notreported">—</span>}</td>
+                <td data-label="Periode">{periodRange(p.periodStart, p.periodEnd) ?? <span className="lasso-notreported">—</span>}</td>
+                <td data-label="Type">
+                  <span className="lasso-publications__type">
+                    {p.corrected ? "Korrigeret" : p.kind === "Årsrapport" ? "Årsrapport, ny" : p.kind}
+                    {p.corrected ? <FlagIcon /> : null}
+                  </span>
+                </td>
+                <td data-label={p.figure?.label ?? "Hovedtal"} className="lasso-num">
+                  <Money value={p.figure?.value} previous={p.figure?.previous} corrected={p.corrected} />
+                </td>
+                <td data-label="Resultat" className="lasso-num">
+                  <Money value={p.profit?.value} previous={p.profit?.previous} corrected={p.corrected} />
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {shown.map((p, i) => (
-                <tr key={`${p.published}-${i}`}>
-                  <td data-label="Offentliggjort">{p.published ? formatDate(p.published) : <span className="lasso-notreported">—</span>}</td>
-                  <td data-label="Type" className="lasso-cell--name">
-                    <span className="lasso-publications__type">
-                      {p.corrected ? (
-                        <span className="lasso-stmt__flag" title="Korrigeret regnskab" aria-hidden="true">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
-                            <path d="M12 7v6M12 16.5v.5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-                          </svg>
-                        </span>
-                      ) : null}
-                      {`${p.kind}${p.year ? ` ${p.year}` : ""}, ${p.corrected ? "korrigeret" : "ny"}`}
-                    </span>
-                  </td>
-                  <td data-label="Periode">{p.periodEnd ? `til ${formatDate(p.periodEnd)}` : <span className="lasso-notreported">—</span>}</td>
-                  <td data-label={p.figure?.label ?? "Hovedtal"} className="lasso-num">
-                    <span className="lasso-publications__figure">
-                      <span className={typeof p.figure?.value === "number" && p.figure.value < 0 ? "lasso-down" : undefined}>
-                        {typeof p.figure?.value === "number" ? formatScaled(p.figure.value, scale) : <span className="lasso-notreported">—</span>}
-                      </span>
-                      {p.corrected && typeof p.figure?.previous === "number" ? <span className="lasso-publications__before">før {formatScaled(p.figure.previous, scale)}</span> : null}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
       {list.length > limit ? (
         <button type="button" className="lasso-link lasso-more" aria-expanded={all} onClick={() => setAll(!all)}>
           {all ? "Vis færre" : `Se alle ${list.length} regnskaber`}
         </button>
       ) : null}
-      <SourceLine source="Erhvervsstyrelsen via Lasso" updated={events.updated} />
     </Section>
   );
 }

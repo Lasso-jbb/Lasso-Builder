@@ -1076,16 +1076,22 @@ export interface AnnouncementVM {
   text?: string;
   /** Link til bekendtgørelsen (kun http/https). */
   url?: string;
+  /** 28.8: kildelinje pr. bekendtgørelse, fx "Statstidende, sagsnr. 1234, kreditorinformation vedlagt". */
+  source?: string;
 }
 
 /** Katalog 28.2: ét offentliggjort regnskab. */
 export interface PublicationVM {
   /** Offentliggørelsesdato (ÅÅÅÅ-MM-DD). */
   published?: string;
+  /** Periodens start (28.2: "01.01–31.12.2025"). */
+  periodStart?: string;
   /** Periodens slut, så klik kan åbne 19 med perioden valgt. */
   periodEnd?: string;
   year?: number;
   kind: "Årsrapport" | "Halvår" | "Kvartal";
+  /** 28.2: årets resultat i perioden (negativt i rødt) og den tidligere værdi ved korrektion. */
+  profit?: { value: number | null; previous?: number | null };
   /** Korrigeret regnskab: udråbstegn-ikon og den tidligere værdi som "før …". */
   corrected?: boolean;
   /** Hovedtallet (bruttofortjeneste/omsætning) og dets tidligere værdi ved korrektion. */

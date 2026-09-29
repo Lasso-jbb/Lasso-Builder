@@ -1139,10 +1139,15 @@ const datatypes: GalleryEntry[] = [
     node: "H5N-0",
     render: () => (
       <EntityUpdates
+        title={'Ændringer i "Kunder"'}
+        subtitle="Personer og P-enheder, eksempeldata"
+        now={new Date(2026, 8, 29, 12, 0)}
         items={[
-          { id: "1", subject: "Anne Eksempel", subjectKind: "person", type: "Person, ledelse", text: "Rolle", from: "Bestyrelsesmedlem", to: "Formand", at: "2026-09-20" },
-          { id: "2", subject: "Eksempel Byg A/S", subjectKind: "company", type: "P-enhed fjernet", text: "Eksempelvej 4, 2600 Glostrup", at: "2026-09-21" },
-          { id: "3", subject: "Bo Eksempel", subjectKind: "person", type: "Person, ledelse", text: "Indtrådt som direktør i Eksempel Software ApS", at: "2026-09-22" },
+          { id: "1", subject: "Anne Eksempel", subjectKind: "person", type: "Person, ledelse", text: "Tiltrådt som direktør i Nordisk Datacenter A/S", at: "2026-09-29T09:14:00", source: "CVR, gældende fra 01.09.2026" },
+          { id: "2", subject: "Peter Eksempel", subjectKind: "person", type: "Person, ejerskab", text: "Reel ejer i Holm Holding ApS", from: "50–66,66 %", to: "66,67–89,99 %", at: "2026-09-29T08:02:00", source: "CVR, registreret 24.09.2026" },
+          { id: "3", subject: "LASSO X A/S", subjectKind: "company", type: "P-enhed tilføjet", text: "Ny produktionsenhed: LASSO X, Aarhus (eksempel), P-nr. 1000000022", at: "2026-09-28T16:40:00", source: "CVR, 24.09.2026, eksempeldata" },
+          { id: "4", subject: "Hosting Eksempel ApS", subjectKind: "company", type: "P-enhed opdateret", text: "Lager, Lyngby: ansatte 2–4 → 5–9, adresse uændret", at: "2026-09-28T11:20:00", source: "CVR, 24.09.2026, eksempeldata" },
+          { id: "5", subject: "Cloud Eksempel A/S", subjectKind: "company", type: "P-enhed fjernet", text: "Produktionsenhed Butik, Odense er ophørt (P-nr. 1000000023)", at: "2026-09-22", source: "CVR, 22.09.2026, eksempeldata" },
         ]}
       />
     ),
@@ -1153,10 +1158,12 @@ const datatypes: GalleryEntry[] = [
     node: "H7M-0",
     render: () => (
       <ReportBatches
+        order={{ count: 142, listName: "Kunder", defaultName: "Kunder Q3", onOrder: noop }}
         batches={[
-          { id: "a", name: "Kunder Q3", reportType: "Virksomhedsrapport", createdAt: "2026-09-20", status: "running", done: 120, total: 480, owner: "Anne Eksempel" },
-          { id: "b", name: "Leverandører", reportType: "Kreditrapport", createdAt: "2026-09-18", status: "failed", errors: ["CVR 1 ukendt"] },
-          { id: "c", name: "Nye kunder", reportType: "Virksomhedsrapport", createdAt: "2026-09-25", status: "planned" },
+          { id: "a", name: "Kunder Q3", reportType: "Revision", createdAt: "2026-09-29", status: "running", done: 87, total: 142, count: 142, format: "PDF", owner: "Anne Eksempel" },
+          { id: "b", name: "Reelle ejere, revisionskunder", reportType: "Reelle ejere", createdAt: "2026-09-28", status: "failed", done: 36, total: 38, count: 38, format: "Zip", errors: ["CVR 10000001 ukendt", "CVR 10000002 ophørt"] },
+          { id: "c", name: "Finansrapport, LASSO X A/S", reportType: "Finans", createdAt: "2026-09-22", status: "done", count: 1, format: "PDF" },
+          { id: "d", name: "Månedskørsel oktober", reportType: "Revision udvidet", createdAt: "2026-10-01", status: "planned", count: 210, format: "Zip" },
         ]}
         onAction={noop}
       />
@@ -1168,9 +1175,13 @@ const datatypes: GalleryEntry[] = [
     node: "HAL-0",
     render: () => (
       <PersonSearchResults
+        query="jakob bech company:lasso"
+        searchKind="persons"
+        summary={"2 personer fundet, filtreret på selskab 'lasso'"}
         rows={[
-          { lassoId: "CVR-3-4000000001", name: "Anne Eksempel", city: "København", companies: ["Eksempel Byg A/S", "Eksempel Holding ApS"], totalCompanyCount: 4, foundVia: "binavn" },
-          { lassoId: "CVR-3-4000000002", name: "Bo Eksempel", city: "Aarhus", companies: ["Eksempel Software ApS"], totalCompanyCount: 1 },
+          { lassoId: "CVR-3-4000000001", name: "Jakob Bech Benediktson", city: "Kongens Lyngby (eksempel)", companies: ["LASSO X A/S", "Benediktson Holding ApS"], totalCompanyCount: 3, rolesText: "3 selskaber, 4 roller (eksempel)", foundVia: "navn" },
+          { lassoId: "CVR-3-4000000002", name: "Jeppe Andreas Bech Madsen", city: "København (eksempel)", companies: ["LASSO X A/S", "JEBEMA Holding ApS"], totalCompanyCount: 2, rolesText: "2 selskaber, 3 roller (eksempel)", foundVia: "navn" },
+          { lassoId: "CVR-1-34580820", kind: "company", name: "LASSO X A/S", sub: "CVR 34580820, København K", companies: [], foundVia: "binavn 'Lasso' (eksempel)" },
         ]}
       />
     ),

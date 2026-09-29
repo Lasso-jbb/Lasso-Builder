@@ -391,7 +391,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
         />
       );
     case "LassoAnnouncements":
-      return <Announcements key={key} events={empty.companyEvents?.[c.company]} title={c.title} error={err(`companyEvents:${c.company}`)} />;
+      return <Announcements key={key} events={empty.companyEvents?.[c.company]} company={empty.companies[c.company]} demo={empty.source === "demo"} title={c.title} error={err(`companyEvents:${c.company}`)} />;
     case "LassoPublications":
       return <Publications key={key} events={empty.companyEvents?.[c.company]} title={c.title} limit={c.limit} error={err(`companyEvents:${c.company}`)} />;
     case "LassoFinancialStatements":

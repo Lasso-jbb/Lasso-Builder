@@ -34,15 +34,15 @@ test("28.6/26h.8: fusion som 'fra → til', fokus med koral kant, ophørt i mute
 test("28.8: Statstidende med alvorsfarvet type; udelades helt uden bekendtgørelser", () => {
   const html = renderToStaticMarkup(createElement(Announcements, { events: ev }));
   assert.match(html, /lasso-announce__type--bankrupt">Dekret om konkurs</);
-  assert.match(html, /kreditoroplysninger/);
+  assert.doesNotMatch(html, /lasso-source/, "kildelinjen står pr. bekendtgørelse, ikke samlet");
   assert.equal(renderToStaticMarkup(createElement(Announcements, { events: { ...ev, announcements: [] } })), "");
 });
 
 test("28.2: publicering med ny/korrigeret, udråbstegn og 'før …' under tallet", () => {
   const html = renderToStaticMarkup(createElement(Publications, { events: ev }));
-  assert.match(html, /Årsrapport 2025, ny/);
-  assert.match(html, /lasso-stmt__flag[^]*Årsrapport 2024, korrigeret/);
-  assert.match(html, /125,6<\/span><span class="lasso-publications__before">før 135,7/);
+  assert.match(html, />Årsrapport, ny</);
+  assert.match(html, />Korrigeret<span class="lasso-stmt__flag"/, "flaget står efter ordet");
+  assert.match(html, /125,6 mio\. kr\.<\/span><span class="lasso-publications__before">før 135,7 mio\. kr\./);
   assert.doesNotMatch(html, /<s>|line-through/);
 });
 
@@ -73,14 +73,16 @@ test("28.4: batchstatus som ren tekst, fremdriftsbjælke ved kørsel og ét teks
   );
   assert.match(html, /Kører, 25,0 %, 120 af 480/);
   assert.match(html, /role="progressbar"/);
-  assert.match(html, /Færdig med fejl[^]*Se fejl/);
+  assert.match(html, /Færdig med fejl[^]*se 1 fejl/);
   assert.match(html, /lasso-batches__status--planned">Planlagt/);
   assert.match(html, /title="Bestilt af Anne Eksempel"/);
 });
 
 test("28.5: personresultat med by, to selskaber, 'og N flere' og 'Fundet via'", () => {
   const html = renderToStaticMarkup(createElement(PersonSearchResults, { rows: [{ lassoId: "CVR-3-1", name: "Mette Eksempel", city: "København", companies: ["Data Eksempel A/S", "Nordisk Eksempel ApS", "X"], totalCompanyCount: 5, foundVia: "binavn" }] }));
-  assert.match(html, /København, Data Eksempel A\/S, Nordisk Eksempel ApS og 3 flere/);
+  assert.match(html, /Person, København<[^]*Data Eksempel A\/S, Nordisk Eksempel ApS og 3 flere/);
+  const withBar = renderToStaticMarkup(createElement(PersonSearchResults, { rows: [], query: "jakob bech company:lasso", summary: "2 personer fundet" }));
+  assert.match(withBar, /value="jakob bech company:lasso"[^]*>Virksomheder<[^]*>Personer<[^]*2 personer fundet/);
   assert.match(html, /Fundet via binavn/);
   assert.doesNotMatch(html, /score|relevans/i);
 });
@@ -138,4 +140,20 @@ test("28.7/26h.9: regnskabsoplysninger og kapital som to kort; fravalgt revision
   assert.match(profile, /lasso-reg__chip">631000 Databehandling, hoved</);
   assert.match(profile, /Formål[^]*At drive it-virksomhed\./);
   assert.match(profile, />Vis tegningsregel og vedtægter</);
+});
+
+test("28.4: bestillingsformular med de fire rapporttyper, PDF | Zip og 'Bestil N rapporter'; koral links", async () => {
+  const { ReportBatches: RB } = await import("./components/ReportBatches.js");
+  const html = renderToStaticMarkup(
+    createElement(RB, {
+      order: { count: 142, listName: "Kunder", onOrder: () => {} },
+      batches: [{ id: "a", name: "Kunder Q3", reportType: "Revision", createdAt: "2026-09-29", status: "done" as const, count: 142, format: "Zip" as const }],
+      onAction: () => {},
+    }),
+  );
+  assert.match(html, /Bestil rapporter[^]*Batchnavn[^]*Rapporttype[^]*<option selected="">Revision<\/option><option>Finans<\/option><option>Reelle ejere<\/option><option>Revision udvidet<\/option>/);
+  assert.match(html, />PDF<[^]*>Zip</);
+  assert.match(html, />Bestil 142 rapporter</);
+  assert.match(html, /142 virksomheder, Zip/);
+  assert.match(html, /lasso-batches__action">Hent zip</);
 });

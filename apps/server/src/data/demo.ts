@@ -938,7 +938,7 @@ export class DemoProvider implements DataProvider {
     const publications = publicationsFromYears(years.map((y) => ({ ...y, published: y.published ?? (y.periodEnd ? `${Number(y.periodEnd.slice(0, 4)) + 1}-05-28` : undefined) })));
     if (c.cvr === "99000001" && publications[1]?.figure) {
       // Eksempel på et korrigeret regnskab: den tidligere værdi står som "før …".
-      publications[1] = { ...publications[1], corrected: true, published: publications[1].published?.replace(/-05-28$/, "-08-14"), figure: { ...publications[1].figure, previous: Math.round((publications[1].figure.value ?? 0) * 1.08) } };
+      publications[1] = { ...publications[1], corrected: true, published: publications[1].published?.replace(/-05-28$/, "-08-14"), figure: { ...publications[1].figure, previous: Math.round((publications[1].figure.value ?? 0) * 1.08) }, profit: publications[1].profit ? { ...publications[1].profit, previous: Math.round((publications[1].profit.value ?? 0) * 1.12) } : undefined };
     }
     const mergers: CompanyEventsVM["mergers"] =
       c.cvr === "99000001"
@@ -960,11 +960,13 @@ export class DemoProvider implements DataProvider {
             },
           ]
         : [];
+    const src = "Statstidende, sagsnr. eksempel, kreditorinformation vedlagt";
     const announcements: CompanyEventsVM["announcements"] = /konkurs/i.test(c.status ?? "")
-      ? [
-          { date: "2026-08-12", type: "Dekret om konkurs", severity: "bankrupt", text: `${c.name} (eksempeldata) er erklæret konkurs ved skifterettens dekret. Kurator er advokat Eksempel Prøvesen. Fristen for anmeldelse af krav er fire uger fra bekendtgørelsen.` },
-          { date: "2026-08-20", type: "Indkaldelse af kreditorer", severity: "neutral", text: "Kreditorer indkaldes til skiftesamling (eksempeldata)." },
-        ].sort((a, b) => b.date.localeCompare(a.date)) as CompanyEventsVM["announcements"]
+      ? ([
+          { date: "2026-08-18", type: "Konkursdekret", severity: "bankrupt", url: "https://www.statstidende.dk/", source: src, text: `Skifteretten i København har afsagt konkursdekret over ${c.name} (eksempeldata). Kurator: advokat Eksempel Prøvesen. Anmeldelse af krav senest fire uger efter bekendtgørelsen.` },
+          { date: "2026-06-02", type: "Rekonstruktion indledt", severity: "warning", url: "https://www.statstidende.dk/", source: src, text: "Rekonstruktionsbehandling indledt med rekonstruktør og regnskabskyndig tillidsmand (eksempeldata)." },
+          { date: "2026-01-11", type: "Kapitalnedsættelse", severity: "neutral", url: "https://www.statstidende.dk/", source: src, text: "Beslutning om nedsættelse af selskabskapitalen, opfordring til kreditorer om at anmelde krav (eksempeldata)." },
+        ] as CompanyEventsVM["announcements"]).sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""))
       : [];
     return { lassoId, mergers, announcements, publications, updated: "2026-09-25" };
   }
