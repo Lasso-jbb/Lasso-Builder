@@ -1,4 +1,6 @@
 import {
+  askFocus,
+  askPersonFocus,
   companyTemplate,
   composeCompany,
   composePerson,
@@ -9,9 +11,12 @@ import {
   isPersonId,
   listTemplate,
   mainMetric,
+  parseAsk,
+  shortCompanyName,
   toLassoId,
   validateCriteria,
   viewSpecSchema,
+  type Ask,
   type CompanySection,
   type Dataset,
   type Focus,
@@ -121,21 +126,34 @@ export interface ShowCompanyInput {
   chart_metric?: Metric;
   /** Forældet: fast skabelon i stedet for komponisten. */
   sections?: CompanySection[];
+  /** Brugerens spørgsmål ordret (højst 300 tegn): serveren vælger elementer og data efter det. */
+  question?: string;
+  /** Nøgletal, modellen har genkendt i spørgsmålet (lægges forrest i spørgsmålsprofilen). */
+  metrics?: Metric[];
 }
 
 export interface CompanyView extends ViewData {
   /** Virksomhedens Lasso-ID (CVR-1-…), også når den blev fundet ud fra et navn. */
   lassoId: string;
-  /** Signeret link til /k/ med samme focus og hovednøgletal (MCP-tools). Portalen bruger /e/. */
+  /** Signeret link til /k/ med samme focus, hovednøgletal og spørgsmål (MCP-tools). Portalen bruger /e/. */
   link?: string;
+  /** Spørgsmålsprofilen, når spørgsmålet har et emne (resuméets "Svar:" og tekstkortet svarer først). */
+  ask?: Ask;
 }
 
-/** Én virksomhed som ét skærmbillede, komponeret ud fra hensigt (focus) og virksomhedens data. */
+/** Navnet på en virksomhed i de stavemåder, der fjernes fra spørgsmålet, før det læses. */
+export const companyNameHints = (name: string | undefined) => (name ? [name, shortCompanyName(name)] : undefined);
+
+/**
+ * Én virksomhed som ét skærmbillede, komponeret ud fra spørgsmålet (question: en hel side i
+ * spørgsmålets kontekst), ellers hensigten (focus), og virksomhedens data.
+ */
 export async function showCompany(ctx: UseCaseCtx, input: ShowCompanyInput): Promise<CompanyView | UseCaseError> {
   const { config, provider } = ctx;
-  const { company, focus, sections, chart_metric, years } = input;
+  const { company, sections, chart_metric, years } = input;
   let lassoId = toLassoId(company, config.LASSO_COMPANY_ID_PREFIX);
   let note: string | undefined;
+  let official: string | undefined;
   if (!isCompanyRef(company)) {
     let found: CompanyPick | null;
     try {
@@ -145,13 +163,19 @@ export async function showCompany(ctx: UseCaseCtx, input: ShowCompanyInput): Pro
     }
     if (!found) return fail(404, `Fandt ingen virksomhed, der hedder "${company}". Prøv et andet navn eller CVR-nummeret.`);
     lassoId = found.pick.lassoId;
+    official = found.pick.name;
     const alt = found.alternatives.map((r) => `${r.name} (${r.cvr ?? r.lassoId})`).join("; ");
     note = `Fundet ud fra navnet "${company}": ${found.pick.name} (${found.pick.cvr ?? found.pick.lassoId}).${alt ? ` Andre match: ${alt}. Mente brugeren en af dem, så kald show_company igen med dens CVR-nummer.` : ""}`;
   }
-  // Ét samlet hent: navnet tages fra datasættet (begge specs har LassoCompanyHead og henter
-  // derfor virksomheden), så CVR-opslaget ikke laves to gange efter hinanden.
+  // Spørgsmålet læses uden virksomhedens navn ("X Holding", "X Ejendomme" er ikke emner); ved et
+  // CVR-nummer hentes navnet først (samme cachede opslag som hovedet), som på den delte side /k/.
+  const question = sections?.length ? undefined : input.question?.trim() || undefined;
+  if (question && !official) official = await provider.company(lassoId).then((c) => c.name).catch(() => undefined);
+  const ask = question ? parseAsk(question, "company", { metrics: input.metrics, name: companyNameHints(official) }) : undefined;
+  // Et generelt spørgsmål uden focus giver fokus-siden for spørgsmålets fokus ("hvordan går det" → oekonomi).
+  const focus = input.focus ?? (ask?.generic ? askFocus(ask) : undefined);
   const dataset: Dataset = await resolveSpec(
-    sections?.length ? companyTemplate(lassoId, { sections, chartMetric: chart_metric, years }) : composeProbe(lassoId, focus),
+    sections?.length ? companyTemplate(lassoId, { sections, chartMetric: chart_metric, years }) : composeProbe(lassoId, focus, ask),
     provider,
     extrasOf(ctx),
   );
@@ -162,13 +186,19 @@ export async function showCompany(ctx: UseCaseCtx, input: ShowCompanyInput): Pro
   // Ældre kald med faste sektioner får skabelonen; ellers komponeres ud fra datas form.
   const spec: ViewSpec = sections?.length
     ? companyTemplate(lassoId, { sections, chartMetric: chart_metric, years, name })
-    : composeCompany(lassoId, dataset, { focus, years, chartMetric: chart_metric, name });
+    : composeCompany(lassoId, dataset, { focus, years, chartMetric: chart_metric, name, ask });
   const cvr = cvrFromLassoId(lassoId);
-  // Linket åbner samme visning (focus) med samme hovednøgletal som i chatten (review P2-7).
+  // Linket åbner samme visning (focus og spørgsmål) med samme hovednøgletal som i chatten (review P2-7).
   const link = cvr
-    ? companyLink(config, { cvr, metric: chart_metric ?? mainMetric(dataset.financials[lassoId]?.years ?? []), years: years ?? (focus === "oekonomi" ? 10 : 5), focus: sections?.length ? undefined : focus })
+    ? companyLink(config, {
+        cvr,
+        metric: chart_metric ?? mainMetric(dataset.financials[lassoId]?.years ?? []),
+        years: years ?? (focus === "oekonomi" ? 10 : 5),
+        focus: sections?.length ? undefined : focus,
+        ...(ask ? { question: ask.question, ...(input.metrics?.length ? { metrics: input.metrics } : {}) } : {}),
+      })
     : undefined;
-  return { spec, dataset, ...(note ? { note } : {}), lassoId, ...(link ? { link } : {}) };
+  return { spec, dataset, ...(note ? { note } : {}), lassoId, ...(link ? { link } : {}), ...(ask && !ask.generic ? { ask } : {}) };
 }
 
 /* --- show_person / GET /api/portal/person/:ref -------------------------------------------- */
@@ -176,8 +206,10 @@ export async function showCompany(ctx: UseCaseCtx, input: ShowCompanyInput): Pro
 export interface PersonView extends ViewData {
   /** Personens Lasso-ID (CVR-3-…). */
   lassoId: string;
-  /** Signeret link til personsiden /p/ med samme fokus. */
+  /** Signeret link til personsiden /p/ med samme fokus og spørgsmål. */
   link: string;
+  /** Spørgsmålsprofilen, når spørgsmålet har et emne (resuméets "Svar:" og tekstkortet svarer først). */
+  ask?: Ask;
 }
 
 export interface ShowPersonInput {
@@ -185,6 +217,8 @@ export interface ShowPersonInput {
   person: string;
   /** Personfokus (overblik, roller, netvaerk, ejerskab, risiko, historik). Standard: overblik. */
   focus?: PersonFocus;
+  /** Brugerens spørgsmål ordret (højst 300 tegn): serveren vælger elementer og data efter det. */
+  question?: string;
 }
 
 /** Én person fra CVR som ét skærmbillede (katalog 16), komponeret ud fra hensigt (focus) og personens data. Tager navn eller person-ID. */
@@ -193,6 +227,7 @@ export async function showPerson(ctx: UseCaseCtx, input: ShowPersonInput): Promi
   const ref = input.person.trim();
   let lassoId = ref;
   let note: string | undefined;
+  let official: string | undefined;
   if (!isPersonId(ref)) {
     if (isCompanyRef(ref)) return fail(400, `"${ref}" er et CVR-nummer eller virksomheds-ID. Brug show_company til virksomheder.`);
     let found;
@@ -203,17 +238,22 @@ export async function showPerson(ctx: UseCaseCtx, input: ShowPersonInput): Promi
     }
     if (!found) return fail(404, `Fandt ingen person, der hedder "${ref}". Prøv med fulde navn.`);
     lassoId = found.pick.lassoId;
+    official = found.pick.name;
     const alt = found.alternatives.map((r) => `${r.name}${r.city ? `, ${r.city}` : ""} (${r.lassoId})`).join("; ");
     note = `Fundet ud fra navnet "${ref}": ${found.pick.name}${found.pick.city ? `, ${found.pick.city}` : ""} (${found.pick.lassoId}).${alt ? ` Andre match: ${alt}. Mente brugeren en af dem, så kald show_person igen med dens ID.` : ""}`;
   }
-  const focus = input.focus ?? "overblik";
-  // Kun det, fokus viser, hentes (fx nyheder kun på historik, ejerdiagrammet kun på overblik og ejerskab).
-  const dataset = await resolveSpec(composePersonProbe(lassoId, focus), provider, extrasOf(ctx));
+  // Spørgsmålet læses uden personens navn; ved et ID hentes navnet først (samme opslag som hovedet).
+  const question = input.question?.trim() || undefined;
+  if (question && !official) official = await provider.person(lassoId).then((x) => x.name).catch(() => undefined);
+  const ask = question ? parseAsk(question, "person", { name: official }) : undefined;
+  const focus = input.focus ?? (ask?.generic ? askPersonFocus(ask) : undefined) ?? "overblik";
+  // Kun det, fokus (eller spørgsmålet) viser, hentes (fx nyheder kun på historik, ejerdiagrammet kun på overblik og ejerskab).
+  const dataset = await resolveSpec(composePersonProbe(lassoId, focus, ask), provider, extrasOf(ctx));
   const p = dataset.persons[lassoId];
   if (!p) return fail(404, `Kunne ikke hente personen ${lassoId}: ${dataset.errors[`person:${lassoId}`] ?? "ukendt fejl"}.`);
-  const spec = composePerson(lassoId, dataset, { focus, name: p.name });
-  // Linket åbner samme fokus som i chatten.
-  return { spec, dataset, ...(note ? { note } : {}), lassoId, link: personLink(config, lassoId, focus) };
+  const spec = composePerson(lassoId, dataset, { focus, name: p.name, ask });
+  // Linket åbner samme fokus og samme svar som i chatten.
+  return { spec, dataset, ...(note ? { note } : {}), lassoId, link: personLink(config, lassoId, focus, ask?.question), ...(ask && !ask.generic ? { ask } : {}) };
 }
 
 /* --- render_view -------------------------------------------------------------------------- */

@@ -1,6 +1,7 @@
-import { isPersonId, type OwnershipVM, type PersonRowVM } from "@lasso/spec";
+import { moreText, isPersonId, type OwnershipVM, type PersonRowVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
+import { Icon } from "./Icon.js";
 
 const MAX_OWNERS = 3;
 
@@ -42,6 +43,10 @@ export function LassoRelations({
   peopleError,
   ownershipError,
   onOpen,
+  beneficialLocked = false,
+  onBeneficialInfo,
+  productionUnits,
+  onProductionUnits,
 }: {
   people?: PersonRowVM[];
   ownership?: OwnershipVM;
@@ -49,6 +54,14 @@ export function LassoRelations({
   peopleError?: string;
   ownershipError?: string;
   onOpen?: (a: ViewAction) => void;
+  /** 11.1: reelle ejere kræver adgang; vises som låst række ("Kræver adgang", "Læs mere"). */
+  beneficialLocked?: boolean;
+  /** "Læs mere" i den låste række. */
+  onBeneficialInfo?: () => void;
+  /** 11.1: antal produktionsenheder som tællerrække under en 1 px linje ("Produktionsenheder  1 ›"). */
+  productionUnits?: number;
+  /** Åbner produktionsenhederne (sektionen). */
+  onProductionUnits?: () => void;
 }) {
   const heading = title ?? "Relationer";
   if (!people || !ownership) {
@@ -120,8 +133,36 @@ export function LassoRelations({
               <Name name={o.name} lassoId={o.lassoId} onOpen={onOpen} />
             </div>
           ))}
-          {owners.length > MAX_OWNERS ? <div className="lasso-relations__more">og {owners.length - MAX_OWNERS} flere</div> : null}
+          {owners.length > MAX_OWNERS ? <div className="lasso-relations__more">og {moreText(owners.length - MAX_OWNERS)}</div> : null}
         </div>
+      ) : null}
+      {beneficialLocked ? (
+        <div className="lasso-relations__group">
+          <div className="lasso-relations__label">Reelle ejere</div>
+          <div className="lasso-relations__locked">
+            <Icon name="lock" size={14} />
+            <span>Kræver adgang</span>
+            {onBeneficialInfo ? (
+              <button type="button" className="lasso-relations__lockmore" onClick={onBeneficialInfo}>
+                Læs mere
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+      {typeof productionUnits === "number" && productionUnits > 0 ? (
+        onProductionUnits ? (
+          <button type="button" className="lasso-relations__count" onClick={onProductionUnits}>
+            <span>Produktionsenheder</span>
+            <span className="lasso-relations__countn">{productionUnits}</span>
+            <Icon name="chevron-right" size={14} />
+          </button>
+        ) : (
+          <div className="lasso-relations__count">
+            <span>Produktionsenheder</span>
+            <span className="lasso-relations__countn">{productionUnits}</span>
+          </div>
+        )
       ) : null}
     </Section>
   );

@@ -22,3 +22,19 @@ export function openFromLinks(
   navigate(url);
   return { ok: true, url };
 }
+
+/**
+ * Delt side: "open-focus" (overblikkets "Se alle … i Historik") går til det signerede /e/-link med
+ * det fokus, serveren har lagt i boot'en (focusLinks). Signaturen dækker fokus, så siden kan ikke
+ * selv skifte f= i adressen; uden link svarer den med en fejl.
+ */
+export function openFocusFromLinks(
+  focusLinks: Readonly<Record<string, string>> | undefined,
+  a: Extract<ViewAction, { kind: "open-focus" }>,
+  navigate: (url: string) => void,
+): ActionResult {
+  const url = focusLinks?.[a.focus];
+  if (!url) return { ok: false, error: NO_LINK };
+  navigate(url);
+  return { ok: true, url };
+}

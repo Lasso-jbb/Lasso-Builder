@@ -1,12 +1,21 @@
-import { chartSeries, currencyUnit, formatNumber, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, type FinancialsVM, type Metric } from "@lasso/spec";
-import { DataState, Section, stateForError } from "../primitives.js";
+import { chartSeries, currencyUnit, formatNumber, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, type FinancialsVM, type IndustryBenchmarkVM, type Metric } from "@lasso/spec";
+import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
-import { CHART_AXIS_W, CHART_BOTTOM, CHART_H, CHART_TOP, clampMobilePoints, labelFor, makeYScale, niceTicks, yearRange } from "../charts.js";
+import { CHART_AXIS_W, CHART_BOTTOM, CHART_H, CHART_TOP, labelFor, makeYScale, niceTicks, yearRange } from "../charts.js";
+import { ChartReadout, ChartTooltip, changeText, isCompact, shortSeriesName, useChartPick, type PickRow } from "../chartPick.js";
+
+/** Indeks som helt tal ("238"), som Paper 13.6/26b.4. */
+const indexLabel = (v: number) => new Intl.NumberFormat("da-DK", { maximumFractionDigits: 0 }).format(Math.round(v)).replace("-", "−");
 
 /**
- * Linjegraf med områdefyld, ét nøgletal over flere år, med valgfri benchmark-serie
- * (chart-5, stiplet) fra en sammenligningsvirksomhed (katalog 13, række 2).
- * Mobil: maks 5 år (26b).
+ * Linje + område (katalog 13.6, node AF3-0). Koral linje 2,5 px med 8 % områdefyld. Benchmark som
+ * 2 px stiplet neutral (chart-5) på samme akse, aldrig som egen akse. Seneste værdi står som tekst ved
+ * linjens ende. Hover: lodret hårlinje + punkt på alle serier + én mørk tooltip.
+ *
+ * Med benchmark (branchen eller en navngiven virksomhed) tegnes begge serier som indeks med første
+ * viste år = 100 og indeks 100 i aksefarve (13.6: "indeks 2021 = 100"), så forskellige størrelser kan
+ * sammenlignes; værdien i kroner står i tooltip/valgfelt. Uden benchmark: nøgletallet i kroner.
+ * Mobil (26b.4): maks 5 år, valgt punkt via tryk i et fast felt under grafen.
  */
 export function LineChart({
   financials,
@@ -16,6 +25,11 @@ export function LineChart({
   benchmarkFinancials,
   benchmarkName,
   benchmarkError,
+  industry,
+  industryError,
+  companyName,
+  extraMetrics,
+  title: titleOverride,
 }: {
   financials?: FinancialsVM;
   metric: Metric;
@@ -24,56 +38,114 @@ export function LineChart({
   benchmarkFinancials?: FinancialsVM;
   benchmarkName?: string;
   benchmarkError?: string;
+  /** Branchens median pr. år (13.6, indeks-visning). */
+  industry?: IndustryBenchmarkVM;
+  industryError?: string;
+  /** Virksomhedens navn i legenden og aflæsningen (13.6); uden står "Virksomheden". */
+  companyName?: string;
+  /**
+   * 30.11: flere nøgletal som ekstra serier i samme graf (fx styret af afkrydsningen i flerårstabellen).
+   * Kun nøgletal af samme slags som `metric` (beløb med beløb) og kun uden benchmark/branche.
+   */
+  extraMetrics?: readonly Metric[];
+  /** Overskrift i stedet for nøgletallets navn (fx "Udvikling" ved flere serier). */
+  title?: string;
 }) {
   const [ref, W] = useWidth<HTMLDivElement>();
-  if (!financials) {
+  const compact = isCompact(W);
+  const series = financials ? chartSeries(financials, metric, years) : null;
+  const allPoints = series?.points ?? [];
+  const points = compact ? allPoints.slice(-5) : allPoints;
+  const pick = useChartPick(points.length, compact);
+  const indexMode = industry !== undefined || industryError !== undefined;
+
+  if (!financials || !series) {
     return (
       <Section title={METRIC_LABELS[metric]} span="half" className="lasso-chart">
         {error ? <DataState state={stateForError(error) === "noaccess" ? "empty" : "error"} reason={error} /> : <DataState state="loading" lines={4} height={CHART_H} />}
       </Section>
     );
   }
-  const { metric: shown, points: allPoints } = chartSeries(financials, metric, years);
+  const shown = series.metric;
   if (allPoints.length === 0) {
     return (
-      <Section title={METRIC_LABELS[metric]} span="half" className="lasso-chart">
-        <DataState state="empty" reason={`Virksomheden har ikke oplyst ${METRIC_LABELS[metric].toLowerCase()} i sine regnskaber.`} height={CHART_H} />
+      <Section title={METRIC_LABELS[shown]} span="half" className="lasso-chart">
+        <DataState state="empty" reason={`Virksomheden har ikke oplyst ${METRIC_LABELS[shown].toLowerCase()} i sine regnskaber.`} height={CHART_H} />
       </Section>
     );
   }
-  const points = clampMobilePoints(allPoints, W);
+
+  // Benchmark-serien pr. år: en anden virksomheds tal eller branchens median.
   const benchByYear = new Map<number, number>();
-  if (benchmarkFinancials) {
+  if (indexMode && industry?.state === "ok") {
+    for (const y of industry.years) {
+      const v = y.median[shown];
+      if (typeof v === "number") benchByYear.set(y.year, v);
+    }
+  } else if (benchmarkFinancials) {
     for (const y of benchmarkFinancials.years) {
       const v = y[METRIC_FIELD[shown]];
       if (typeof v === "number") benchByYear.set(y.year, v);
     }
   }
   const hasBenchmark = points.some((p) => benchByYear.has(p.year));
+  // 30.11: ekstra serier (s2, s3, …) på samme skala; aldrig sammen med benchmark eller indeks.
+  const extras = indexMode || hasBenchmark ? [] : (extraMetrics ?? []).filter((m, i, arr) => m !== shown && METRIC_KIND[m] === METRIC_KIND[shown] && arr.indexOf(m) === i).slice(0, 4);
+  const extraByYear = extras.map((m) => {
+    const map = new Map<number, number>();
+    for (const yv of financials.years) {
+      const v = yv[METRIC_FIELD[m]];
+      if (typeof v === "number") map.set(yv.year, v);
+    }
+    return map;
+  });
+  const benchLabel = indexMode ? (industry?.industryText ? `Branchen, ${industry.industryText.toLowerCase()}` : "Branchen") : (benchmarkName ?? "Sammenligning");
 
-  const allValues = [...points.map((p) => p.value), ...(hasBenchmark ? points.filter((p) => benchByYear.has(p.year)).map((p) => benchByYear.get(p.year)!) : [])];
-  const { scale, label } = labelFor(allValues, METRIC_KIND[shown], currencyUnit(financials.currency));
-  const values = points.map((p) => (scale ? p.value / scale.divisor : p.value));
+  // Indeks: første viste år = 100 for begge serier (kun når første værdi er positiv, ellers giver indekset ingen mening).
+  const baseYear = points[0]!.year;
+  const baseCompany = points[0]!.value;
+  const baseBench = benchByYear.get(baseYear);
+  // 13.6: indeks, når der er noget at sammenligne med (branche eller virksomhed), og begge baser er positive.
+  const canIndex = (indexMode || (hasBenchmark && (baseBench ?? 0) > 0)) && baseCompany > 0;
+  const toIndex = (v: number, base: number | undefined) => (base && base > 0 ? (v / base) * 100 : null);
+
+  const { scale, label } = labelFor(
+    [...points.map((p) => p.value), ...points.filter((p) => benchByYear.has(p.year)).map((p) => benchByYear.get(p.year)!), ...extraByYear.flatMap((mp) => points.filter((p) => mp.has(p.year)).map((p) => mp.get(p.year)!))],
+    METRIC_KIND[shown],
+    currencyUnit(financials.currency),
+  );
+  const unitLabel = (v: number) => `${label(v)}${scale ? ` ${scale.label}` : ""}`;
+  const values = points.map((p) => (canIndex ? toIndex(p.value, baseCompany)! : scale ? p.value / scale.divisor : p.value));
   const benchValues = points.map((p) => {
     const v = benchByYear.get(p.year);
-    return v === undefined ? null : scale ? v / scale.divisor : v;
+    if (v === undefined) return null;
+    return canIndex ? toIndex(v, baseBench) : scale ? v / scale.divisor : v;
   });
+  const extraValues = extraByYear.map((mp) => points.map((p) => (mp.has(p.year) ? (scale ? mp.get(p.year)! / scale.divisor : mp.get(p.year)!) : null)));
+  const shortLabel = (i: number, bench = false) => {
+    const v = bench ? benchValues[i] : values[i];
+    if (v === null || v === undefined) return "";
+    return canIndex ? indexLabel(v) : label(bench ? benchByYear.get(points[i]!.year)! : points[i]!.value);
+  };
   const first = points[0]!.year;
   const last = points.at(-1)!.year;
-  const subtitle = `${scale ? `${scale.label}, ` : ""}${yearRange(first, last)}`;
+  const subtitle = canIndex ? `Indeks ${baseYear} = 100, ${yearRange(first, last)}` : `${scale ? `${scale.label}, ` : ""}${yearRange(first, last)}`;
+  const title = titleOverride ?? (indexMode ? `${METRIC_LABELS[shown]} mod branchen` : METRIC_LABELS[shown]);
 
-  const flat = [...values, ...benchValues.filter((v): v is number => v !== null)];
-  const ticks = niceTicks(Math.min(0, ...flat), Math.max(0, ...flat));
+  const flat = [...values, ...benchValues.filter((v): v is number => v !== null), ...extraValues.flat().filter((v): v is number => v !== null)];
+  const ticks = canIndex ? niceTicks(Math.min(100, ...flat), Math.max(100, ...flat)) : niceTicks(Math.min(0, ...flat), Math.max(0, ...flat));
   const tMin = ticks[0]!;
   const tMax = ticks.at(-1)!;
   const plotH = CHART_H - CHART_TOP - CHART_BOTTOM;
   const sidePad = 20;
-  const plotW = Math.max(0, W - CHART_AXIS_W - sidePad);
+  const endLabelW = compact ? 0 : 44;
+  const plotW = Math.max(0, W - CHART_AXIS_W - sidePad - endLabelW);
   const y = makeYScale(tMin, tMax, CHART_TOP, plotH);
   const x = (i: number) => CHART_AXIS_W + sidePad / 2 + (points.length === 1 ? plotW / 2 : (i / (points.length - 1)) * plotW);
+  const floor = canIndex ? tMin : 0;
 
   const linePath = values.map((v, i) => `${i === 0 ? "M" : "L"}${x(i)},${y(v)}`).join(" ");
-  const areaPath = `${linePath} L${x(points.length - 1)},${y(0)} L${x(0)},${y(0)} Z`;
+  const areaPath = `${linePath} L${x(points.length - 1)},${y(floor)} L${x(0)},${y(floor)} Z`;
   const benchSegments: string[] = [];
   let seg: string[] = [];
   benchValues.forEach((v, i) => {
@@ -85,60 +157,140 @@ export function LineChart({
     seg.push(`${seg.length === 0 ? "M" : "L"}${x(i)},${y(v)}`);
   });
   if (seg.length > 1) benchSegments.push(seg.join(" "));
+  const extraPaths = extraValues.map((vals) => {
+    const parts: string[] = [];
+    let cur: string[] = [];
+    vals.forEach((v, i) => {
+      if (v === null) {
+        if (cur.length > 1) parts.push(cur.join(" "));
+        cur = [];
+        return;
+      }
+      cur.push(`${cur.length === 0 ? "M" : "L"}${x(i)},${y(v)}`);
+    });
+    if (cur.length > 1) parts.push(cur.join(" "));
+    return parts;
+  });
+
+  const rowsFor = (i: number): PickRow[] => {
+    const p = points[i]!;
+    const idx = allPoints.findIndex((q) => q.year === p.year);
+    const prev = idx > 0 ? allPoints[idx - 1] : undefined;
+    const rows: PickRow[] = [
+      {
+        label: indexMode || hasBenchmark ? (companyName ?? "Virksomheden") : METRIC_LABELS[shown],
+        short: indexMode || hasBenchmark ? shortSeriesName(companyName ?? "Virksomheden") : undefined,
+        value: canIndex ? (compact ? indexLabel(values[i]!) : `${indexLabel(values[i]!)} (${unitLabel(p.value)})`) : unitLabel(p.value),
+        swatch: "s1",
+        change: changeText(prev?.value, p.value),
+      },
+    ];
+    extras.forEach((m, k) => {
+      const raw = extraByYear[k]!.get(p.year);
+      if (raw === undefined) return;
+      rows.push({ label: METRIC_LABELS[m], value: unitLabel(raw), swatch: `s${k + 2}`, change: changeText(extraByYear[k]!.get(prev?.year ?? -1), raw) });
+    });
+    const bv = benchValues[i];
+    if (bv !== null && bv !== undefined) {
+      const raw = benchByYear.get(p.year)!;
+      rows.push({ label: compact && indexMode ? "branche" : benchLabel, short: indexMode ? "branche" : shortSeriesName(benchLabel), value: canIndex ? (compact ? indexLabel(bv) : `${indexLabel(bv)} (${unitLabel(raw)})`) : unitLabel(raw), swatch: "s5", dashed: true, change: changeText(benchByYear.get(prev?.year ?? -1), raw) });
+    }
+    return rows;
+  };
+  const t = pick.tooltip;
+  const a = pick.active;
+  const lastI = points.length - 1;
+  const industryNote =
+    indexMode && industry?.state !== "ok" ? (industryError ?? industry?.reason ?? "Branchetal er ikke tilgængelige for virksomheden.") : undefined;
 
   return (
-    <Section title={METRIC_LABELS[shown]} subtitle={subtitle} span="half" className="lasso-chart">
-      {hasBenchmark ? (
-        <div className="lasso-chart__legend">
-          <span className="lasso-chart__legend-item"><span className="lasso-chart__swatch lasso-chart__swatch--s1" aria-hidden="true" />Virksomheden</span>
-          <span className="lasso-chart__legend-item lasso-chart__legend-item--dashed">
-            <span className="lasso-chart__swatch lasso-chart__swatch--s5" aria-hidden="true" />
-            {benchmarkName ?? "Sammenligning"}
-          </span>
-        </div>
-      ) : null}
+    <Section
+      title={title}
+      subtitle={subtitle}
+      span="half"
+      className="lasso-chart"
+      action={
+        extras.length ? (
+          <div className="lasso-chart__legend lasso-chart__legend--right">
+            {[shown, ...extras].map((m, k) => (
+              <span key={m} className="lasso-chart__legend-item lasso-chart__legend-item--line">
+                <span className={`lasso-chart__swatch lasso-chart__swatch--s${k + 1}`} aria-hidden="true" />
+                {METRIC_LABELS[m]}
+              </span>
+            ))}
+          </div>
+        ) : hasBenchmark ? (
+          <div className="lasso-chart__legend lasso-chart__legend--right">
+            {/* 13.6: legenden bruger linjemarkører (fuld koral og stiplet neutral) og virksomhedens navn. */}
+            <span className="lasso-chart__legend-item lasso-chart__legend-item--line">
+              <span className="lasso-chart__swatch lasso-chart__swatch--s1" aria-hidden="true" />
+              {companyName ?? "Virksomheden"}
+            </span>
+            <span className="lasso-chart__legend-item lasso-chart__legend-item--dashed">
+              <span className="lasso-chart__swatch lasso-chart__swatch--s5" aria-hidden="true" />
+              {indexMode ? "Branchen" : benchLabel}
+            </span>
+          </div>
+        ) : undefined
+      }
+    >
       {benchmarkError ? <p className="lasso-small lasso-muted">Sammenligning: {benchmarkError}</p> : null}
-      <div ref={ref}>
+      {industryNote ? <p className="lasso-small lasso-muted">{industryNote}</p> : null}
+      <div ref={ref} className="lasso-chart__plot" {...pick.frame} aria-label={`${title} pr. år. Brug piletasterne for at se hvert år.`}>
         {W > 0 ? (
-          <svg width={W} height={CHART_H} viewBox={`0 0 ${W} ${CHART_H}`} role="img" aria-label={`${METRIC_LABELS[shown]} pr. år, ${subtitle}`}>
-            {ticks.map((t) => (
-              <g key={t}>
-                <line className="lasso-chart__grid" x1={CHART_AXIS_W} x2={W} y1={y(t)} y2={y(t)} />
-                <text className="lasso-chart__tick" x={0} y={y(t) + 4}>{formatNumber(t)}</text>
+          <svg width={W} height={CHART_H} viewBox={`0 0 ${W} ${CHART_H}`} role="img" aria-label={`${title} pr. år, ${subtitle}`}>
+            {ticks.map((tk) => (
+              <g key={tk}>
+                <line className={canIndex && tk === 100 ? "lasso-chart__axis" : "lasso-chart__grid"} x1={CHART_AXIS_W} x2={W} y1={y(tk)} y2={y(tk)} />
+                <text className="lasso-chart__tick" x={0} y={y(tk) + 4}>{formatNumber(tk)}</text>
               </g>
             ))}
-            <path className="lasso-chart__area" d={areaPath} />
+            {canIndex && !ticks.includes(100) ? <line className="lasso-chart__axis" x1={CHART_AXIS_W} x2={W} y1={y(100)} y2={y(100)} /> : null}
+            {extras.length ? null : <path className="lasso-chart__area" d={areaPath} />}
+            {extraPaths.map((parts, k) =>
+              parts.map((d, j) => <path key={`${k}-${j}`} className={`lasso-chart__line lasso-chart__line--s${k + 2}`} d={d} />),
+            )}
             {benchSegments.map((d, i) => (
               <path key={i} className="lasso-chart__line lasso-chart__line--bench" d={d} />
             ))}
             <path className="lasso-chart__line" d={linePath} />
+            {a !== null ? <line className="lasso-chart__hairline" x1={x(a)} x2={x(a)} y1={CHART_TOP - 10} y2={CHART_H - CHART_BOTTOM} /> : null}
             {points.map((p, i) => {
-              const isLast = i === points.length - 1;
+              const isLast = i === lastI;
               const bv = benchValues[i];
+              const on = a === i;
               return (
                 <g key={p.year}>
-                  <title>{`${p.year}: ${label(p.value)}${scale ? ` ${scale.label}` : ""}${bv !== null ? `, ${benchmarkName ?? "sammenligning"} ${label(benchByYear.get(p.year)!)}` : ""}`}</title>
-                  <circle className={`lasso-chart__dot ${isLast ? "lasso-chart__dot--last" : ""}`} cx={x(i)} cy={y(values[i]!)} r={isLast ? 4 : 3} />
-                  {bv !== null ? <circle className="lasso-chart__dot lasso-chart__dot--bench" cx={x(i)} cy={y(bv)} r={3} /> : null}
-                  {isLast ? (
-                    <text className="lasso-chart__value lasso-chart__value--last" x={x(i)} y={y(values[i]!) - 10} textAnchor="end">
-                      {label(p.value)}
-                    </text>
-                  ) : null}
-                  {isLast && bv !== null ? (
-                    <text className="lasso-chart__value" x={x(i)} y={y(bv) + 16} textAnchor="end">
-                      {label(benchByYear.get(p.year)!)}
-                    </text>
-                  ) : null}
-                  <text className={`lasso-chart__label ${isLast ? "lasso-chart__label--last" : ""}`} x={x(i)} y={CHART_H - 6} textAnchor="middle">
+                  {isLast || on ? <circle className={`lasso-chart__dot ${isLast ? "lasso-chart__dot--last" : ""}`} cx={x(i)} cy={y(values[i]!)} r={on ? 4.5 : 4} /> : null}
+                  {bv !== null && (on || isLast) ? <circle className="lasso-chart__dot lasso-chart__dot--bench" cx={x(i)} cy={y(bv)} r={on ? 4 : 3} /> : null}
+                  <text className={`lasso-chart__label ${isLast || on ? "lasso-chart__label--last" : ""}`} x={x(i)} y={CHART_H - 6} textAnchor="middle">
                     {p.year}
                   </text>
                 </g>
               );
             })}
+            {/* Seneste værdi som tekst ved linjens ende (højre for punktet; på mobil over punktet). */}
+            <text className="lasso-chart__value lasso-chart__value--last" x={compact ? x(lastI) : x(lastI) + 8} y={compact ? y(values[lastI]!) - 10 : y(values[lastI]!) + 4} textAnchor={compact ? "end" : "start"}>
+              {shortLabel(lastI)}
+            </text>
+            {benchValues[lastI] !== null && benchValues[lastI] !== undefined ? (
+              <text className="lasso-chart__value" x={compact ? x(lastI) : x(lastI) + 8} y={compact ? y(benchValues[lastI]!) + 16 : y(benchValues[lastI]!) + 4} textAnchor={compact ? "end" : "start"}>
+                {shortLabel(lastI, true)}
+              </text>
+            ) : null}
+            {points.map((p, i) => {
+              const left = i === 0 ? CHART_AXIS_W : (x(i - 1) + x(i)) / 2;
+              const right = i === lastI ? W : (x(i) + x(i + 1)) / 2;
+              return <rect key={p.year} className="lasso-chart__hit" x={left} y={0} width={Math.max(0, right - left)} height={CHART_H} onMouseEnter={() => pick.enter(i)} onClick={() => pick.pick(i)} />;
+            })}
           </svg>
         ) : null}
+        {t !== null && W > 0 ? <ChartTooltip x={x(t)} y={Math.min(y(values[t]!), benchValues[t] !== null ? y(benchValues[t]!) : Infinity)} width={W} title={points[t]!.year} rows={rowsFor(t)} /> : null}
       </div>
+      {pick.readout !== null ? <ChartReadout inline title={points[pick.readout]!.year} rows={rowsFor(pick.readout)} /> : null}
+      {indexMode && industry?.state === "ok" && industry.source ? (
+        <SourceLine source={`${industry.source}${industry.peers ? `, median af ${formatNumber(industry.peers)} virksomheder` : ""}`} updated={industry.updated} />
+      ) : null}
     </Section>
   );
 }

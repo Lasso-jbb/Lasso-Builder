@@ -1,21 +1,31 @@
-import { amountScale, currencyUnit, formatPercent, formatScaled, percentChange } from "@lasso/spec";
+import type { ReactNode } from "react";
+import { amountScale, currencyUnit, formatPercent, formatScaled, changePercent, type AmountScale } from "@lasso/spec";
+import { QualityFlag } from "./QualityFlag.js";
+export { QualityFlag };
 import { DataState, Section, stateForError } from "../primitives.js";
 
 /**
  * Delt tabel-anatomi for de tre fulde regnskabsopgørelser (katalog 19: LassoIncomeStatement,
- * LassoBalanceSheet, LassoCashFlow). Ikke en selvstændig katalogkomponent — kun en intern
+ * LassoBalanceSheet, LassoCashFlow). Ikke en selvstændig katalogkomponent - kun en intern
  * byggesten, som de tre filer bruger, ligesom BarChart/GroupedBarChart/LineChart deler charts.ts.
  */
+
+/** Paper 19: opgørelserne står altid i t. kr. med tusindtalspunktum ("18.834"). */
+export function thousands(currency?: string): AmountScale {
+  return { divisor: 1_000, label: `t. ${currencyUnit(currency)}` };
+}
 
 export interface StatementRow {
   key: string;
   label: string;
   /** Én værdi pr. år i `years`, samme rækkefølge. */
   values: readonly (number | null | undefined)[];
-  /** "line" (standard, underpost): 13/400 sekundær, indrykket 16 px. "subtotal": 14/600 på panel-flade. "bottom": 700 med streg over. */
-  kind?: "line" | "subtotal" | "bottom";
+  /** "line" (standard, underpost): 13/400 sekundær, indrykket 16 px. "subtotal": 14/600 på panel-flade. "bottom": 700 med streg over. "total": 600 uden flade (fx "Likvider ultimo"). */
+  kind?: "line" | "subtotal" | "bottom" | "total";
   /** Forklaring til et lille udråbstegn-ikon ved seneste års værdi (tooltip ved mouseover). */
   flag?: string;
+  /** Kort etiket til smalle tabeller (tablet 26f.3), fx "Personaleomk.". */
+  short?: string;
 }
 
 export interface StatementSection {
@@ -24,25 +34,21 @@ export interface StatementSection {
   rows: StatementRow[];
 }
 
-/** "▲ overskud"/"▼ underskud" ved fortegnsskift, ellers pil + procent (samme regel som MultiYearTable/Delta, katalog 09). */
-function changeText(prev: number | null | undefined, last: number | null | undefined): { text: string; tone: "up" | "down" | "" } {
-  if (typeof prev !== "number" || typeof last !== "number") return { text: "", tone: "" };
-  if (prev !== 0 && Math.sign(prev) !== Math.sign(last)) return { text: last < 0 ? "▼ underskud" : "▲ overskud", tone: last < 0 ? "down" : "up" };
-  const pct = percentChange([prev, last]);
+/**
+ * Ændringskolonnen (19.2): kun subtotaler og bundlinje får ▲/▼ i farve ("▲ 7,5 %"); underposter får
+ * ændringen i størrelse som muted ren tekst uden pil ("+23,0 %"). Skifter fortegnet, vises stadig pil +
+ * procent (02c.4); "-" når tallet har kvalitetsflag, mangler eller forrige er 0.
+ */
+export function changeText(prev: number | null | undefined, last: number | null | undefined, kind: StatementRow["kind"] = "line", flagged = false): { text: string; tone: "up" | "down" | "" } {
+  if (flagged || typeof prev !== "number" || typeof last !== "number" || prev === 0) return { text: "", tone: "" };
+  const sum = kind === "subtotal" || kind === "bottom";
+  if (!sum) {
+    const pct = ((Math.abs(last) - Math.abs(prev)) / Math.abs(prev)) * 100;
+    return { text: formatPercent(pct), tone: "" };
+  }
+  const pct = changePercent(prev, last);
   if (pct === null) return { text: "", tone: "" };
   return { text: `${pct < 0 ? "▼" : "▲"} ${formatPercent(Math.abs(pct), false)}`, tone: pct < 0 ? "down" : "up" };
-}
-
-/** Lille udråbstegn-ikon med forklaring i `title` (tooltip ved mouseover, katalog 19 note: "ingen mærke eller understregning"). */
-function QualityFlag({ reason }: { reason: string }) {
-  return (
-    <span className="lasso-stmt__flag" title={reason} aria-label={`Kvalitetsflag: ${reason}`}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
-        <path d="M12 7v6M12 16.5v.5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-      </svg>
-    </span>
-  );
 }
 
 export function StatementTable({
@@ -55,6 +61,14 @@ export function StatementTable({
   loading,
   emptyReason,
   currency,
+  bare = false,
+  scale: forcedScale,
+  deltaLabel = "Ændring",
+  showDelta = true,
+  headLabel,
+  unitSuffix = "",
+  newestFirst = false,
+  short = false,
 }: {
   title?: string;
   unit: string;
@@ -67,78 +81,83 @@ export function StatementTable({
   emptyReason?: string;
   /** ISO-valuta for beløbene (FinancialStatementsVM.currency); DKK vises som "kr.". */
   currency?: string;
+  /** Uden sektionsramme (titel og luft), når tabellen indgår i LassoFinancialStatements (19.1). */
+  bare?: boolean;
+  /** Fast enhed fra værktøjslinjens enhedsvælger (19.1) i stedet for den automatiske. */
+  scale?: AmountScale;
+  /** Overskrift på ændringskolonnen, fx "Δ 2024". */
+  deltaLabel?: string;
+  /** Uden ændringskolonne (balance og pengestrøm, 19.4/19.5). */
+  showDelta?: boolean;
+  /** Tekst i hovedets første celle i stedet for enheden, fx "Resultatopgørelse" (tablet 26f.3). */
+  headLabel?: string;
+  /** Tilføjes enheden i hovedet, fx ", 31.12" → "T. KR., 31.12" (19.4). */
+  unitSuffix?: string;
+  /** Nyeste år først (tablet 26f.3: 2025, 2024, 2023). */
+  newestFirst?: boolean;
+  /** Brug rækkernes korte etiketter (`short`). */
+  short?: boolean;
 }) {
-  if (loading) {
-    return (
-      <Section title={title} span="full">
-        <DataState state="loading" lines={8} height={420} />
-      </Section>
-    );
-  }
-  if (error) {
-    return (
-      <Section title={title} span="full">
-        <DataState state={stateForError(error) === "noaccess" ? "empty" : "error"} reason={error} />
-      </Section>
-    );
-  }
-  if (emptyReason) {
-    return (
-      <Section title={title} span="full">
-        <DataState state="empty" reason={emptyReason} />
-      </Section>
-    );
-  }
+  const wrap = (children: ReactNode) => (bare ? <div className="lasso-stmt-bare">{children}</div> : <Section title={title} span="full">{children}</Section>);
+  if (loading) return wrap(<DataState state="loading" lines={8} height={420} />);
+  if (error) return wrap(<DataState state={stateForError(error) === "noaccess" ? "empty" : "error"} reason={error} />);
+  if (emptyReason) return wrap(<DataState state="empty" reason={emptyReason} />);
   const allValues = sections.flatMap((s) => s.rows.flatMap((r) => r.values.filter((v): v is number => typeof v === "number")));
-  const scale = allValues.length ? amountScale(allValues, currencyUnit(currency)) : null;
+  const scale = forcedScale ?? (allValues.length ? amountScale(allValues, currencyUnit(currency)) : null);
+  const order = years.map((_, i) => i);
+  if (newestFirst) order.reverse();
   const fmt = (v: number | null | undefined) => {
     if (v == null) return null;
     return scale ? formatScaled(v, scale) : formatScaled(v, { divisor: 1, label: unit });
   };
 
-  return (
-    <Section title={title} span="full">
+  return wrap(
       <div className="lasso-table-wrap">
         <div className={`lasso-stmt ${prefix}`}>
           <div className={`lasso-stmt__row lasso-stmt__row--head ${prefix}__head`}>
-            <div className="lasso-stmt__label">{scale ? scale.label.toUpperCase() : unit.toUpperCase()}</div>
-            {years.map((y, i) => (
-              <div key={y} className={`lasso-stmt__year ${i === years.length - 1 ? "lasso-stmt__year--last" : ""}`}>
-                {y}
+            <div className={`lasso-stmt__label${headLabel ? " lasso-stmt__label--named" : ""}`}>{headLabel ?? `${(scale ? scale.label : unit).toUpperCase()}${unitSuffix}`}</div>
+            {order.map((i) => (
+              <div key={years[i]} className={`lasso-stmt__year ${i === years.length - 1 ? "lasso-stmt__year--last" : ""}`}>
+                {years[i]}
               </div>
             ))}
-            <div className="lasso-stmt__delta">Ændring</div>
+            {showDelta ? <div className="lasso-stmt__delta">{deltaLabel}</div> : null}
           </div>
           {sections.map((section, si) => (
             <div className="lasso-stmt__section" key={section.heading ?? si}>
               {section.heading ? <div className="lasso-stmt__group">{section.heading}</div> : null}
               {section.rows.map((row) => {
-                const change = changeText(row.values.at(-2), row.values.at(-1));
+                const change = changeText(row.values.at(-2), row.values.at(-1), row.kind, Boolean(row.flag));
                 return (
                   <div
                     className={`lasso-stmt__row lasso-stmt__row--${row.kind ?? "line"}`}
                     key={row.key}
                   >
-                    <div className="lasso-stmt__label">{row.label}</div>
-                    {row.values.map((v, i) => (
+                    <div className="lasso-stmt__label" title={short && row.short ? row.label : undefined}>{short && row.short ? row.short : row.label}</div>
+                    {order.map((i) => {
+                      const v = row.values[i];
+                      return (
                       <div
                         key={years[i]}
                         className={`lasso-stmt__year ${i === row.values.length - 1 ? "lasso-stmt__year--last" : ""} ${typeof v === "number" && v < 0 ? "lasso-down" : ""}`}
                       >
-                        {fmt(v) ?? <span className="lasso-notreported">—</span>}
+                        {/* 19.1 (Jakob): kvalitetsflaget står foran tallet. */}
                         {row.flag && i === row.values.length - 1 ? <QualityFlag reason={row.flag} /> : null}
+                        {fmt(v) ?? <span className="lasso-notreported">-</span>}
                       </div>
-                    ))}
-                    <div className={`lasso-stmt__delta ${change.tone === "down" ? "lasso-down" : change.tone === "up" ? "lasso-up" : ""}`}>
-                      {change.text || <span className="lasso-notreported">—</span>}
-                    </div>
+                      );
+                    })}
+                    {showDelta ? (
+                      <div className={`lasso-stmt__delta ${change.tone === "down" ? "lasso-down" : change.tone === "up" ? "lasso-up" : "lasso-stmt__delta--plain"}`}>
+                        {change.text || <span className="lasso-notreported">-</span>}
+                      </div>
+                    ) : null}
                   </div>
                 );
               })}
             </div>
           ))}
         </div>
-      </div>
-    </Section>
+      </div>,
   );
 }

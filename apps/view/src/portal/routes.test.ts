@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { dataKey, formatRoute, portalRoute, sameRoute, type PortalRoute } from "./routes.js";
+import { dataKey, focusRoute, formatRoute, portalRoute, sameRoute, type PortalRoute } from "./routes.js";
 import { closeTab, initialTabs, newSearch, openRoute, parseTabs, serializeTabs, setLabel, updateRoute, EMPTY_TABS, type TabsState } from "./tabs.js";
 
 /* ---------- Ruter (docs/portal.md) ---------- */
@@ -98,6 +98,31 @@ test("openRoute: en åben person beholder sit fokus ved drill-down; adressen sæ
   s = openRoute(s, person(), id, { fromHistory: true });
   assert.deepEqual(s.tabs[1]!.route, person());
   assert.equal(s.tabs[1]!.label, "Bo Eksempel");
+});
+
+test("open-focus ('Se alle … i Historik'): samme fane skifter fokus som et klik i modulbjælken", () => {
+  const id = ids();
+  let s = openRoute(newSearch(EMPTY_TABS, id), company("CVR-1-1"), id, { label: "Eksempel A/S" });
+  const tab = s.tabs[1]!;
+  const next = focusRoute(tab.route, "historik");
+  assert.deepEqual(next, { kind: "company", id: "CVR-1-1", focus: "historik" });
+  s = updateRoute(s, tab.id, next!);
+  // Samme fane (ingen ny), nyt fokus i adressen og dermed nye data.
+  assert.equal(s.tabs.length, 2);
+  assert.equal(s.active, tab.id);
+  assert.equal(s.tabs[1]!.label, "Eksempel A/S");
+  assert.equal(formatRoute(s.tabs[1]!.route), "#/company/CVR-1-1?focus=historik");
+  assert.notEqual(dataKey(s.tabs[1]!.route), dataKey(tab.route));
+  // Personer: fanerne Roller, Netværk og Historik.
+  const person: PortalRoute = { kind: "person", id: "CVR-3-9", focus: "overblik" };
+  assert.deepEqual(focusRoute(person, "netvaerk"), { ...person, focus: "netvaerk" });
+  assert.deepEqual(focusRoute(person, "roller"), { ...person, focus: "roller" });
+  assert.deepEqual(focusRoute(person, "historik"), { ...person, focus: "historik" });
+  // Et fokus, der ikke passer til siden, eller en side uden fokus: ingen rute.
+  assert.equal(focusRoute(person, "oekonomi"), null);
+  assert.equal(focusRoute(company("CVR-1-1"), "roller"), null);
+  assert.equal(focusRoute({ kind: "search", q: "x" }, "historik"), null);
+  assert.equal(focusRoute({ kind: "saved" }, "historik"), null);
 });
 
 test("Søgefaner: '+' genbruger en tom søgning, ny søgetekst skifter navn, tilbage genbruger den aktive søgefane", () => {

@@ -107,8 +107,10 @@ test("/portal uden cookie: render-appen i portal-tilstand uden bruger", async ()
   const res = await fetch(`${base}/portal`);
   assert.equal(res.status, 200);
   assert.equal(res.headers.get("cache-control"), "no-store");
-  const b = boot(await res.text());
+  const { pdf, ...b } = boot(await res.text()) as Record<string, unknown>;
   assert.deepEqual(b, { mode: "portal", user: null, loginRequired: true, baseUrl: PUBLIC });
+  // "Gem som PDF": om serveren har Chromium (PDF_CHROMIUM_PATH); pdf.e2e.test.ts tester begge dele.
+  assert.equal(typeof pdf, "boolean");
 });
 
 test("login: rigtig nøgle giver Set-Cookie og { user }, forkert nøgle eller bruger 401", async () => {

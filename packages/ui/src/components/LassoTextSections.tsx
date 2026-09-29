@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { analysisSource, isAnalysisSection, isPersonId, textSectionsFor, type TextSectionItem, type TextSectionsVariant, type TextSectionsVM, type TextSegment } from "@lasso/spec";
+import { isAnalysisSection, isPersonId, textSectionsFor, type TextSectionItem, type TextSectionsVariant, type TextSectionsVM, type TextSegment } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
-import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { DataState, Section, stateForError } from "../primitives.js";
+import { usePrintMode } from "../print.js";
 
 const TRUNCATE_AT = 220;
 
@@ -51,10 +52,10 @@ function Runs({ segments, onOpen }: { segments: readonly TextSegment[]; onOpen?:
 
 /**
  * Brødteksten (segmenter, når kilden har navne med Lasso-ID), skåret ved `limit` tegn. Med
- * `toggle` får et langt afsnit sin egen "Vis hele"; ellers folder elementet det ud samlet.
+ * `toggle` får et langt afsnit sin egen "Vis mere"; ellers folder elementet det ud samlet.
  */
 function TextBody({ item, limit, toggle, onOpen }: { item: TextSectionItem; limit: number; toggle: boolean; onOpen?: (a: ViewAction) => void }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(usePrintMode());
   const segments: readonly TextSegment[] = item.segments?.length ? item.segments : [{ text: item.body }];
   const long = segments.reduce((n, s) => n + s.text.length, 0) > limit;
   const folded = long && !(toggle && expanded);
@@ -66,7 +67,7 @@ function TextBody({ item, limit, toggle, onOpen }: { item: TextSectionItem; limi
       </p>
       {long && toggle ? (
         <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-          {expanded ? "Vis mindre" : "Vis hele"}
+          {expanded ? "Vis mindre" : "Vis mere"}
         </button>
       ) : null}
     </>
@@ -96,29 +97,65 @@ function Item({
   );
 }
 
-/** Konklusionen i fuld bredde: ca. 6 linjer, før resten står bag linket. */
-const ANALYSIS_LEAD_AT = 600;
-
 /**
- * Under elementets titel "Regnskabsanalyse" er "Regnskabsanalyse: konklusion" bare "Konklusion";
- * hele analysen som ét afsnit ("Regnskabsanalyse") får ingen overskrift ud over titlen.
+ * Variant "profil" (12.1): lange afsnit foldes hver for sig, men ét "Vis mere" (koral) til sidst folder
+ * hele sektionen ud på én gang, i stedet for et link efter hvert afsnit.
  */
+function Profile({ items, onOpen, limit }: { items: TextSectionItem[]; onOpen?: (a: ViewAction) => void; limit?: number }) {
+  const [open, setOpen] = useState(false);
+  // Kompakt profil (højdebudgettet, 23.3): kun de første `limit` afsnit, til "Vis mere" folder resten ud.
+  const clipped = limit !== undefined && items.length > limit;
+  const long = clipped || items.some((it) => (it.segments?.length ? it.segments.reduce((n, s) => n + s.text.length, 0) : it.body.length) > TRUNCATE_AT);
+  return (
+    <>
+      {(clipped && !open ? items.slice(0, limit) : items).map((s, i) => (
+        <Item key={i} item={s} limit={open ? Number.POSITIVE_INFINITY : TRUNCATE_AT} toggle={false} onOpen={onOpen} />
+      ))}
+      {long ? (
+        <button type="button" className="lasso-link lasso-more" aria-expanded={open} onClick={() => setOpen(!open)}>
+          {open ? "Vis mindre" : "Vis mere"}
+        </button>
+      ) : null}
+    </>
+  );
+}
+
+/** 19.3: fast afsluttende linje under regnskabsanalysen. */
+export const ANALYSIS_DISCLAIMER = "Forbehold: analysen er skrevet automatisk ud fra de offentliggjorte regnskaber og tallene i tabellerne. Den kan indeholde fejl og er ikke rådgivning.";
+
+/** Under elementets titel "Regnskabsanalyse" er "Regnskabsanalyse: konklusion" bare "Konklusion". */
 function analysisHeading(heading: string): string {
   const rest = heading.replace(/^Regnskabsanalyse:?\s*/i, "");
   return rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : "";
 }
 
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ transform: open ? undefined : "rotate(-90deg)" }}>
+      <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 /**
- * Hele regnskabsanalysen (variant "analyse"): konklusionen først og ét link, der folder resten
- * ud på stedet ("Vis mindre" folder igen). Foldet ud står alle afsnit i fuld længde.
+ * Regnskabsanalysen (variant "analyse", 19.3 / mobil 26h.3). Desktop: overskrift 17/600, konklusionen
+ * som brødtekst 15/25, den faste linje "Forbehold: …" og handlingslinjen "Vis kilder (N)" + "Var det
+ * brugbart? Ja / Nej". Kildelinjen står under titlen. Mobil: kortet kan foldes med chevron, teksten er
+ * foldet til 4 linjer, og nederst står "Læs hele analysen" til venstre og genereringslinjen til højre.
  */
-function Analysis({ items, onOpen }: { items: TextSectionItem[]; onOpen?: (a: ViewAction) => void }) {
-  const [open, setOpen] = useState(false);
+function Analysis({ v, items, onOpen, folded = false }: { v: TextSectionsVM; items: TextSectionItem[]; onOpen?: (a: ViewAction) => void; folded?: boolean }) {
+  const [open, setOpen] = useState(usePrintMode());
+  const [sources, setSources] = useState(false);
+  const [vote, setVote] = useState<"ja" | "nej" | null>(null);
   const [first, ...rest] = items;
-  const leadLong = (first!.segments?.length ? first!.segments.reduce((n, s) => n + s.text.length, 0) : first!.body.length) > ANALYSIS_LEAD_AT;
+  const segments: readonly TextSegment[] = first!.segments?.length ? first!.segments : [{ text: first!.body }];
+  const list = v.analysisSources ?? [];
   return (
     <>
-      <Item item={first!} heading={analysisHeading(first!.heading)} limit={open ? Number.POSITIVE_INFINITY : ANALYSIS_LEAD_AT} toggle={false} onOpen={onOpen} />
+      {v.analysisHeadline ? <p className="lasso-analysis__headline">{v.analysisHeadline}</p> : null}
+      <p className={`lasso-analysis__body${open ? " is-open" : ""}`}>
+        <Runs segments={segments} onOpen={onOpen} />
+      </p>
       {open && rest.length > 0 ? (
         <div className="lasso-textsections__rest">
           {rest.map((s, i) => (
@@ -126,21 +163,176 @@ function Analysis({ items, onOpen }: { items: TextSectionItem[]; onOpen?: (a: Vi
           ))}
         </div>
       ) : null}
-      {rest.length > 0 || leadLong ? (
-        <button type="button" className="lasso-link lasso-more" aria-expanded={open} onClick={() => setOpen(!open)}>
-          {open ? "Vis mindre" : rest.length > 0 ? `Se hele regnskabsanalysen (${items.length} afsnit)` : "Vis hele"}
-        </button>
+      <p className="lasso-analysis__disclaimer">{ANALYSIS_DISCLAIMER}</p>
+      <div className="lasso-analysis__actions">
+        {list.length ? (
+          <button type="button" className="lasso-link lasso-analysis__sources-btn" aria-expanded={sources} onClick={() => setSources(!sources)}>
+            {sources ? "Skjul kilder" : `Vis kilder (${list.length})`}
+          </button>
+        ) : null}
+        <span className="lasso-analysis__feedback">
+          {vote ? (
+            "Tak for svaret"
+          ) : (
+            <>
+              Var det brugbart?{" "}
+              <button type="button" className="lasso-analysis__vote" onClick={() => setVote("ja")}>
+                Ja
+              </button>
+              {" / "}
+              <button type="button" className="lasso-analysis__vote" onClick={() => setVote("nej")}>
+                Nej
+              </button>
+            </>
+          )}
+        </span>
+      </div>
+      {sources && list.length ? (
+        <ul className="lasso-analysis__sources">
+          {list.map((x) => (
+            <li key={x}>{x}</li>
+          ))}
+        </ul>
       ) : null}
+      <div className="lasso-analysis__foot">
+        <button type="button" className="lasso-link lasso-analysis__more" aria-expanded={open} onClick={() => setOpen(!open)}>
+          {open ? "Vis mindre" : folded ? "Vis mere" : "Læs hele analysen"}
+        </button>
+      </div>
     </>
+  );
+}
+
+/** Analysens sektion: kildelinjen under titlen (desktop) og chevron, der folder kortet (mobil). */
+function AnalysisSection({ heading, v, items, onOpen, folded = false }: { heading: string; v: TextSectionsVM; items: TextSectionItem[]; onOpen?: (a: ViewAction) => void; folded?: boolean }) {
+  const [collapsed, setCollapsed] = useState(false);
+  return (
+    <Section
+      title={heading}
+      span="full"
+      className={`lasso-textsections lasso-textsections--analysis${folded ? " lasso-textsections--folded" : ""}${collapsed ? " is-collapsed" : ""}`}
+      action={
+        <button type="button" className="lasso-iconbtn lasso-analysis__toggle" aria-expanded={!collapsed} aria-label={collapsed ? "Vis analysen" : "Fold analysen sammen"} onClick={() => setCollapsed(!collapsed)}>
+          <Chevron open={!collapsed} />
+        </button>
+      }
+    >
+      {collapsed ? null : <Analysis v={v} items={items} onOpen={onOpen} folded={folded} />}
+    </Section>
+  );
+}
+
+/** Analysens afsnit som overskrift: første afsnit bærer analysens overskrift (analysisHeadline), når den findes. */
+function rowHeading(v: TextSectionsVM, item: TextSectionItem, i: number): string {
+  if (i === 0 && v.analysisHeadline) return v.analysisHeadline;
+  return analysisHeading(item.heading) || "Konklusion";
+}
+
+/** Download-ikonet fra 01.6 (streg 1,8, runde ender), som i Paper LYT-0. */
+function DownloadGlyph() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 4v11M7 10l5 5 5-5M5 19h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/**
+ * Regnskabsanalysen (katalog 19.3, Paper LYO-0): almindelig sektion på hvid flade med overskriften 18/600 og
+ * "Hent som PDF" (sekundær 32 px-knap med download-ikon og ord, LYT-0) i hovedet, når værten kan eksportere
+ * (G1). Afsnittene er foldbare rækker (44 px, overskrift 14/600, chevron), første afsnit åbent (brødtekst
+ * 14/22); forbeholdet er en fast afsluttende linje, og "Vis kilder (N)" + "Var det brugbart? Ja / Nej" står
+ * under. Ingen genereringsdato eller kildelinje (G3). "Hent som PDF" laver en A4 af HELE analysen med alle
+ * afsnit foldet ud (19.6, AnalysisReportA4) med samme mekanisme som rapporten (27).
+ */
+function AnalysisRows({ heading, v, items, onOpen, onPdf }: { heading: string; v: TextSectionsVM; items: TextSectionItem[]; onOpen?: (a: ViewAction) => void; onPdf?: () => void }) {
+  const [open, setOpen] = useState<ReadonlySet<number>>(() => new Set([0]));
+  const [sources, setSources] = useState(false);
+  const [vote, setVote] = useState<"ja" | "nej" | null>(null);
+  const list = v.analysisSources ?? [];
+  const toggle = (i: number) =>
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+  return (
+    <Section
+      title={heading}
+      span="full"
+      className="lasso-textsections lasso-textsections--analysis lasso-analysis19"
+      action={
+        onPdf ? (
+          <button type="button" className="lasso-btn lasso-btn--sm lasso-analysis19__pdf" onClick={onPdf}>
+            <DownloadGlyph />
+            Hent som PDF
+          </button>
+        ) : undefined
+      }
+    >
+      <div className="lasso-analysis19__rows">
+        {items.map((it, i) => {
+          const isOpen = open.has(i);
+          const segments: readonly TextSegment[] = it.segments?.length ? it.segments : [{ text: it.body }];
+          const id = `lasso-analysis-${i}`;
+          return (
+            <div key={`${it.heading}-${i}`} className={`lasso-analysis19__row${isOpen ? " is-open" : ""}`}>
+              <button type="button" className="lasso-analysis19__head" aria-expanded={isOpen} aria-controls={id} onClick={() => toggle(i)}>
+                <span className="lasso-analysis19__title">{rowHeading(v, it, i)}</span>
+                <svg className="lasso-analysis19__chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d={isOpen ? "M6 14.5l6-6 6 6" : "M6 9.5l6 6 6-6"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              {isOpen ? (
+                <p id={id} className="lasso-analysis19__body">
+                  <Runs segments={segments} onOpen={onOpen} />
+                </p>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+      <p className="lasso-analysis19__disclaimer">{ANALYSIS_DISCLAIMER}</p>
+      <div className="lasso-analysis19__actions">
+        {list.length ? (
+          <button type="button" className="lasso-analysis19__sources" aria-expanded={sources} onClick={() => setSources(!sources)}>
+            {sources ? "Skjul kilder" : `Vis kilder (${list.length})`}
+          </button>
+        ) : null}
+        <span className="lasso-analysis19__feedback">
+          {vote ? (
+            "Tak for svaret"
+          ) : (
+            <>
+              Var det brugbart?{" "}
+              <button type="button" className="lasso-analysis__vote" onClick={() => setVote("ja")}>
+                Ja
+              </button>
+              {" / "}
+              <button type="button" className="lasso-analysis__vote" onClick={() => setVote("nej")}>
+                Nej
+              </button>
+            </>
+          )}
+        </span>
+      </div>
+      {sources && list.length ? (
+        <ul className="lasso-analysis__sources">
+          {list.map((x) => (
+            <li key={x}>{x}</li>
+          ))}
+        </ul>
+      ) : null}
+    </Section>
   );
 }
 
 /**
  * Tekstsektioner (katalog 12, "Tekstsektioner"). Variant "profil" (overblik): formål og
  * tegningsregler fra CVR plus regnskabsanalysens konklusion, resultat og likviditet, hvert
- * afsnit foldet med "Vis hele". Branche står i hovedet og gentages ikke. Variant "analyse"
- * (oekonomi): hele regnskabsanalysen, foldet efter konklusionen. Analysens kildelinje står én
- * gang pr. element. Navne med Lasso-ID kan åbnes, når værten har drill-down (`onOpen`).
+ * afsnit foldet med "Vis mere". Branche står i hovedet og gentages ikke. Variant "analyse"
+ * (oekonomi): hele regnskabsanalysen, foldet efter konklusionen. Ingen kildelinje (G3). Navne med Lasso-ID kan åbnes, når værten har drill-down (`onOpen`).
  */
 export function LassoTextSections({
   sections,
@@ -148,10 +340,19 @@ export function LassoTextSections({
   variant = "profil",
   error,
   onOpen,
+  folded = false,
+  limit,
+  onPdf,
 }: {
+  /** Variant "profil": kun de første N afsnit, resten bag "Vis mere" (kompakt profil, 23.3). */
+  limit?: number;
+  /** 19.3: "Hent som PDF" i analysens hoved (19.6). Uden den vises knappen ikke (G1). */
+  onPdf?: () => void;
   sections?: TextSectionsVM;
   title?: string;
   variant?: TextSectionsVariant;
+  /** Variant "analyse": foldet til 3 linjer med "Vis mere" på alle bredder (30.13). */
+  folded?: boolean;
   error?: string;
   onOpen?: (a: ViewAction) => void;
 }) {
@@ -173,11 +374,15 @@ export function LassoTextSections({
       </Section>
     );
   }
-  const hasAnalysis = shown.some(isAnalysisSection);
+  if (analysis) {
+    // 30.13 (niveau B): foldet til 3 linjer med "Vis mere"; ellers 19.3 med foldbare afsnit og "Hent som PDF".
+    if (folded) return <AnalysisSection heading={heading} v={sections} items={shown} onOpen={onOpen} folded />;
+    return <AnalysisRows heading={heading} v={sections} items={shown} onOpen={onOpen} onPdf={onPdf} />;
+  }
   return (
-    <Section title={heading} span={span} className={`lasso-textsections${analysis ? " lasso-textsections--analysis" : ""}`}>
-      {analysis ? <Analysis items={shown} onOpen={onOpen} /> : shown.map((s, i) => <Item key={i} item={s} onOpen={onOpen} />)}
-      {hasAnalysis ? <SourceLine source={analysisSource(shown)} /> : null}
+    <Section title={heading} span={span} className="lasso-textsections">
+      {/* 12.1: ingen kildelinje (G3). */}
+      <Profile items={shown} onOpen={onOpen} limit={limit} />
     </Section>
   );
 }

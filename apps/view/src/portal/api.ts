@@ -1,6 +1,7 @@
 import type { Dataset, Focus, PersonFocus, SavedPageKind, ViewSpec } from "@lasso/spec";
 import type { Visibility } from "@lasso/ui";
 import type { PortalUser } from "../boot.js";
+import { filenameFromDisposition, pdfErrorText, type FetchedPdf } from "../pdfDownload.js";
 
 /**
  * Klient til portal-API'et (docs/portal.md). Samme origin, session-cookien sendes med
@@ -103,6 +104,29 @@ export function createPortalApi(onUnauthorized: () => void, fetcher: typeof fetc
     return json as T;
   }
 
+  /**
+   * "Gem som PDF" (/api/portal/pdf/*): samme session og CSRF-regler som resten, men svaret er en
+   * PDF-fil (blob) med filnavnet fra Content-Disposition. GET kræver ingen CSRF-header; POST /spec gør.
+   */
+  async function pdf(path: string, body?: unknown): Promise<FetchedPdf> {
+    const method = body === undefined ? "GET" : "POST";
+    const headers: Record<string, string> = { accept: "application/pdf" };
+    if (method !== "GET") headers[CSRF_HEADER] = "1";
+    if (body !== undefined) headers["content-type"] = "application/json";
+    let res: Response;
+    try {
+      res = await fetcher(`${PORTAL_API}/pdf${path}`, { method, credentials: "same-origin", headers, body: body === undefined ? undefined : JSON.stringify(body) });
+    } catch {
+      throw new PortalApiError(0, "Serveren kunne ikke nås. Tjek forbindelsen, og prøv igen.");
+    }
+    if (res.status === 401) {
+      onUnauthorized();
+      throw new PortalApiError(401, LOGGED_OUT);
+    }
+    if (!res.ok) throw new PortalApiError(res.status, pdfErrorText(res.status, await res.json().catch(() => null)));
+    return { blob: await res.blob(), filename: filenameFromDisposition(res.headers.get("content-disposition")) ?? "Lasso.pdf" };
+  }
+
   return {
     /** 401 her er forkert bruger/nøgle, ikke en udløbet session. */
     login: (user: string, key: string) => call<{ user: PortalUser }>("POST", "/login", { user, key }, { session: false }),
@@ -116,6 +140,12 @@ export function createPortalApi(onUnauthorized: () => void, fetcher: typeof fetc
     savePage: (body: { page: string; kind?: SavedPageKind; focus?: string; note?: string }) => call<SavePageResult>("POST", "/pages", body),
     removePage: (lassoId: string) => call<RemovePageResult>("DELETE", `/pages/${encodeURIComponent(lassoId)}`),
     saveView: (body: { spec: ViewSpec; name?: string; slug?: string; visibility?: Visibility }) => call<SaveViewResult>("POST", "/views", body),
+    /** Virksomhedsrapporten (PDF) med fanens fokus (Creditsafe kun fra Risiko). */
+    pdfCompany: (id: string, focus: Focus = "overblik") => pdf(`/company/${encodeURIComponent(id)}${query({ focus: focus === "overblik" ? undefined : focus })}`),
+    /** Personsiden som PDF med fanens fokus. */
+    pdfPerson: (id: string, focus: PersonFocus = "overblik") => pdf(`/person/${encodeURIComponent(id)}${query({ focus: focus === "overblik" ? undefined : focus })}`),
+    /** Søgning og gemte sider: den viste spec som PDF. */
+    pdfSpec: (spec: ViewSpec) => pdf("/spec", { spec }),
   };
 }
 

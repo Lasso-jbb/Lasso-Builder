@@ -1,27 +1,8 @@
 import { formatDate, formatNumber, type LivestockVM } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
 
-function HerdIcon({ species }: { species?: string }) {
-  if (species && /kvæg/i.test(species)) {
-    return (
-      <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" className="lasso-livestock__icon">
-        <path d="M5 14a7 5 0 0014 0V9H5z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-        <path d="M8 9V6M16 9V6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      </svg>
-    );
-  }
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" className="lasso-livestock__icon">
-      <ellipse cx="12" cy="13" rx="7" ry="5" fill="none" stroke="currentColor" strokeWidth="1.8" />
-      <circle cx="9" cy="12" r="1" fill="currentColor" />
-      <circle cx="15" cy="12" r="1" fill="currentColor" />
-      <path d="M6 8l-2-3M18 8l2-3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 /**
- * CHR (katalog 20): besætninger pr. dyretype + veterinære hændelser.
+ * CHR (katalog 20): besætninger pr. dyretype + veterinære hændelser. 20.4 (Jakob): ingen dyreikoner i rækkerne.
  * Vises kun for landbrug med et CHR-nummer; modellen/værten inkluderer kun
  * komponenten, når det er tilfældet. Tom tilstand dækker tre situationer, alle uden
  * fejl: ingen besætninger, intet Ejendomme-modul i abonnementet, eller et CHR-svar
@@ -39,10 +20,11 @@ export function Livestock({ livestock, error }: { livestock?: LivestockVM; error
   }
   if (!livestock.chrNumber || livestock.herds.length === 0) {
     return (
-      <Section title={title} span="full">
+      <Section title={title} span="full" action={<span className="lasso-section__meta">Ikke relevant</span>}>
         <DataState
           state="empty"
-          reason={livestock.unavailableReason ?? "Virksomheden har intet CHR-nummer, eller der er ingen registrerede besætninger."}
+          inline
+          reason={livestock.unavailableReason ?? "Ingen CHR-registreringer. Sektionen skjules i overblikket og vises kun her med tom tilstand, så brugeren ved, at der er søgt."}
         />
       </Section>
     );
@@ -50,13 +32,14 @@ export function Livestock({ livestock, error }: { livestock?: LivestockVM; error
   const speciesCount = new Set(livestock.herds.map((h) => h.species).filter(Boolean)).size;
 
   return (
-    <Section title={title} subtitle="Husdyr pr. type og veterinære hændelser — kun for landbrug" span="full">
+    <Section title={title} subtitle="Husdyr pr. type og veterinære hændelser - kun for landbrug" span="full">
       <div className="lasso-livestock">
         <div className="lasso-livestock__herds">
           <div className="lasso-livestock__head">
             <span className="lasso-livestock__title">Besætninger, CHR {livestock.chrNumber}</span>
             <span className="lasso-small lasso-muted">
-              {[livestock.ownerName, livestock.updated ? `opdateret ${formatDate(livestock.updated)}` : undefined].filter(Boolean).join(", ")}
+              {/* G3: ingen "opdateret"-kildelinje; kun ejeren */}
+              {livestock.ownerName}
             </span>
           </div>
           <div className="lasso-table-frame">
@@ -64,21 +47,20 @@ export function Livestock({ livestock, error }: { livestock?: LivestockVM; error
               <tbody>
                 {livestock.herds.map((h, i) => (
                   <tr key={i}>
-                    <td className="lasso-livestock__icon-cell">
-                      <HerdIcon species={h.species} />
-                    </td>
                     <td className="lasso-cell--name">{[h.species, h.category].filter(Boolean).join(", ")}</td>
-                    <td className="lasso-num lasso-property__strong">{h.count != null ? formatNumber(h.count) : "—"}</td>
-                    <td className="lasso-num lasso-muted">{h.unit}</td>
+                    {/* 20.4: antal højrestillet med enheden i muted i samme celle. */}
+                    <td className="lasso-num">
+                      <span className="lasso-property__strong">{h.count != null ? formatNumber(h.count) : "-"}</span>
+                      {h.unit ? <span className="lasso-livestock__unit"> {h.unit}</span> : null}
+                    </td>
                   </tr>
                 ))}
                 <tr className="lasso-table__total">
-                  <td />
                   <td className="lasso-property__strong">
                     {livestock.herds.length} besætning{livestock.herds.length === 1 ? "" : "er"}, {speciesCount} dyreart{speciesCount === 1 ? "" : "er"}
                   </td>
-                  <td className="lasso-num lasso-muted" colSpan={2}>
-                    Sundhedsstatus {livestock.healthStatus ? <span className="lasso-livestock__health">{livestock.healthStatus}</span> : "—"}
+                  <td className="lasso-num lasso-muted">
+                    Sundhedsstatus {livestock.healthStatus ? <span className="lasso-livestock__health">{livestock.healthStatus}</span> : "-"}
                   </td>
                 </tr>
               </tbody>

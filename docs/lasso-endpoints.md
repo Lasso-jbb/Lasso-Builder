@@ -337,6 +337,24 @@ i `packages/ui` er rene UI-komponenter med props; de kalder ingen endpoints. Mon
 tilføje/fjerne virksomheder (`POST/DELETE /apps/monitoring/jobs/thirdparty/{Provider}/items`), men
 det er ikke koblet til "Overvåg"/"Stop overvågning" endnu.
 
+## Ubekræftet: branchetal, koordinater, heatmap og scorehistorik (katalog 13 og 18)
+
+- **Branchetal (13.6 linje mod branchen, 13.10 nøgletalsmåler).** ANTAGET endpoint
+  `GET /data/cvr/industries/{DB07-kode}/keyfigures` med svar `{ industryCode, industryText, companyCount,
+  years: [{ year, median: { soliditetsgrad | solvencyRatio, overskudsgrad | profitMargin, likviditetsgrad |
+  currentRatio, … } }] }` (`adaptIndustryBenchmark` i `apps/server/src/lasso/chartAdapters.ts`). Brøker
+  under 1,5 for soliditets- og overskudsgrad ganges med 100. 4xx eller ukendt form = `state: "unavailable"`
+  med årsag (tom tilstand), aldrig en fejl. Lassos regnskabsanalyse har kun branchestatistik som HTML-tekst.
+- **Koordinater (13.12 kort).** ANTAGET at CVR-svarets adresseobjekter (virksomhed og `productionUnits`)
+  kan have WGS84 som `latitude/longitude`, `lat/lng`, `wgs84.*` eller `coordinates.*`
+  (`coordinatesOf`). Kun punkter i Danmark (53–58,5 N, 7–16 Ø) bruges; UTM/ETRS89 (x/y i meter)
+  afvises. Mangler de, er kortet tomt med årsag, og adresserne tælles i `missing`.
+- **Heatmap (13.11).** Ingen ny kilde: samme overvågningsjob og delta-liste som ændringsfeedet
+  (se ovenfor), bare op til 24 måneder tilbage og talt pr. måned og type (`buildActivityHeatmap`).
+- **Scorehistorik (18.2) og scoremålerens hente-tilstande (10.1).** Ingen Lasso-kilde til en 0–100 score;
+  LiveProvider giver tom historik med årsag. Kreditsaldoen til 18.3 (`CreditRatingVM.creditBalance`)
+  er heller ikke bekræftet og udelades live.
+
 ## Skal verificeres
 
 **Fra opstartsproben 27.09.2026 (tilkøb):**
@@ -412,3 +430,82 @@ det er ikke koblet til "Overvåg"/"Stop overvågning" endnu.
 - **Ejendomme/BBR** (`GET /data/ejf/{lassoId}/ownerships/current`, katalog 20): ejf's overordnede
   svarform er slet ikke set; kun BBR-summary-endpointets sti/parameter er bekræftet.
 - **Tinglysning** (`GET /data/tinglysning/{lassoId}`): dokumenteret, men ingen komponent kalder den.
+
+## Ubekræftet: virksomheds- og personhovedet, live-nummer og personrisiko (katalog 08, 09, 16)
+
+Tilføjet med W3 (08.1, 08.5, 08.7, 09.1, 16.4). Ingen af felterne er set i et rigtigt svar endnu; LiveProvider
+læser dem defensivt og udelader dem, når de mangler, så siden ser ud som før.
+
+- **`GET /{lassoId}` (CVR-stamdata)**: binavne (`secondaryNames`/`alternativeNames`/`binavne`, strenge eller
+  `{ name }`), dato for nuværende status ved konkurs/likvidation/ophør (`statusDate`, `status.date`,
+  `statusValidFrom`, `lifecycle.statusDate`, `bankruptcyDate`, `lifeTime.to`) og kurator/likvidator
+  (`curator`, `curator.name`, `receiver.name`, `liquidator.name`). Adapter: `companyHeadExtras` i
+  `apps/server/src/lasso/adapters.ts`.
+- **Live-nummer i realtid (08.5)**: `ViewAction { kind: "verify-contact", lassoId }` beder værten slå numrene
+  op igen; værten opdaterer `ContactVM.verifiedAt` (ISO-tidspunkt) og `VerifiedPhoneNumberVM.expired`
+  (dato, nummeret ikke længere er i brug). Endpoint og svarform for et udgået nummer kendes ikke.
+- **Kontaktpersoner (08.7)**: gruppe, LinkedIn, noter og kilder pr. person (`ContactPersonVM.group`,
+  `linkedin`, `phoneNote`, `emailNote`, `sources`) kommer kun fra demodata; `/apps/contacts/{lassoId}/data`
+  er ikke læst for dem. Uden gruppe afledes den af rollen (`contactPersonGroup`).
+- **Branchetal og kvalitetsflag (09.1)**: `FinancialsVM.benchmark` og `FinancialsVM.quality` har ingen
+  kilde endnu (demodata for CVR-1-99000001).
+- **Personrisiko (16.4)**: PEP-opslag, stråmandsindikator og sanktionslister (`PersonVM.pep`, `strawman`,
+  `sanctions`) har intet endpoint; uden data står rækkerne som "Ikke tjekket"/"Ikke beregnet"/"Ikke
+  tilgængelig endnu", aldrig som "Nej".
+- **Overvågning (08.1)**: `ViewAction { kind: "monitor" }` og `Dataset.monitoredIds` sættes af værten; at
+  tilføje en virksomhed til et overvågningsjob (skrivning) er ikke bekræftet (kun `GET /apps/monitoring/jobs`).
+
+## Ubekræftet: persontabel (katalog 15.3, LassoPersonTable)
+
+Personsøgningen bruger den bekræftede navnesøgning (`search` med `type: "person"`) og beriger hver række med personopslaget (`GET /{lassoId}` + historik), højst 5 samtidige kald. Fødselsår (`PersonVM.birthYear`) er ikke fundet i personsvaret og udfyldes kun i demodata; live står rækken med by alene, indtil feltet er bekræftet. CPR og fuld adresse hentes eller vises aldrig.
+
+## Ubekræftet: regnskabets værktøjslinje (katalog 19.1)
+
+`adaptFinancialStatements` (`GET /{lassoId}/reports/advanced`) sætter nu også `scope` (koncern/selskab, samme
+valg som nøgletallene), og læser defensivt fra den nyeste rapport:
+
+- revisorpåtegning: `auditorOpinion`, `auditorsReport.type`, `auditorReport.opinion` eller `audit.opinion` (tekst)
+- PDF-link: `pdfUrl`, `documentUrl`, `pdf`, `links.pdf` eller `reportUrl` (kun http/https)
+
+Ingen af felterne er set i et rigtigt svar. Mangler de, viser værktøjslinjen hverken påtegning eller "Hent PDF".
+Det andet scope (`alternate`, fx koncernregnskabet ved siden af selskabets) og periodetyperne (`periods`: halvår,
+kvartal) findes kun i demodata; i live er "Koncern"/"Selskab" dæmpet med forklaring, og halvår/kvartal er dæmpet
+med "Kun årsregnskab indberettet".
+
+## Ubekræftet: matrikelgeometri og revisorhistorik (katalog 20.2, 22/26e.8)
+
+`PropertyVM.geometry` (matrikelpolygon og bygningsomrids i lokale meter) og `AuditorIndependenceVM.history`
+(revisorer over tid) findes kun i demodata. En live-kilde (Datafordeleren MAT/BBR for geometri, CVR-historik
+for revisorskift) er ikke bekræftet; uden data viser ejendomskortet "Intet matrikelkort tilgængeligt", og
+revisorhistorikken udelades.
+
+## Ubekræftet: bibrancher, fravalgt revision og kapital (katalog 28.7)
+
+`companyDetailsExtras` i `adapters.ts` (kaldt fra `adaptCompany`) læser defensivt `altIndustry1`–`altIndustry3`
+(eller `altIndustries`) som `{ code, text }` eller tekst, `accounting.auditExempt`/`auditExemption` (true, "ja",
+"fravalgt") og `contributedCapital.amount`/`contributedCapital`/`capital.amount` med valuta og `capitalClasses`.
+Felterne kommer efter Paper-overlinjen "companies/company-details" og er ikke set i et rigtigt svar; mangler de,
+udelades rækkerne (ingen "Ingen registreret" uden grundlag).
+
+## Ubekræftet: fusioner, Statstidende og regnskabspublicering (katalog 28.2, 28.6, 28.8)
+
+`LiveProvider.companyEvents` bruger virksomhedens fulde svar (`client.company`, samme kald som hovedet) og
+regnskabsårene. `eventAdapters.ts` antager:
+
+- fusioner/spaltninger: `mergers[]` og `demergers[]` med `date`/`effectiveDate`, ophørende selskaber i
+  `ceasingCompanies`/`from`/`mergedCompanies` og fortsættende i `continuingCompanies`/`to`/`receivingCompanies`
+  (objekter med `name`, `lassoId` eller rene navne). Webhook `merger` er ikke koblet på.
+- Statstidende: `statstidende.announcements[]`, `statstidende[]` eller `announcements[]` med `type`/`title`,
+  `date`/`publicationDate`, `text`/`body` og `url` (kun http/https). Alvor udledes af typen.
+- publicering: fra regnskabsårenes `published`/`publicationTime` (bekræftet felt). "Korrigeret" og halvår/kvartal
+  (`financials/report-delta`, webhook `newReport`) er ikke koblet på og findes kun i demodata.
+
+Ingen af de tre lister er set i et rigtigt svar; mangler felterne, er listerne tomme (fusioner og publicering viser
+tom tilstand, Statstidende udelades).
+
+## Ubekræftet: personopdateringer, P-enhedsopdateringer, rapportbestilling og personsøgning (28.3–28.5)
+
+`EntityUpdates`, `ReportBatches` og `PersonSearchResults` er rene UI-komponenter i `@lasso/ui`. Endpoints
+`people/people-updates`, `production-units/production-unit-updates` (webhooks `pUnitAdded/Updated/Removed`),
+`platform/reporting` og `people/search` (med `foundByName`) er ikke koblet til en provider; værten (portalen)
+leverer rækkerne.

@@ -73,7 +73,7 @@ export const OBSERVATIONS_FIXTURE: Json = {
     },
   ],
   // Nøglerne er i SMÅ bogstaver i det rigtige svar, og dækker både personer (cvr-3-…) og
-  // selskaber (cvr-1-…) — adapteren normaliserer dem til kanonisk form (canonicalLassoId).
+  // selskaber (cvr-1-…) - adapteren normaliserer dem til kanonisk form (canonicalLassoId).
   relatedObservations: {
     "cvr-3-4000002550": [
       {

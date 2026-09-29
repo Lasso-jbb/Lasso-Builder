@@ -60,14 +60,6 @@ test("regnskab uden offentliggjort regnskab og uden oplysninger ud over hovedet:
   assert.equal(spec.components.find((c) => c.type === "LassoOwnerList")?.column, 2);
 });
 
-test("regnskab uden ledelse: ejere (eller revisor) i kolonne 2", () => {
-  const ds = enk();
-  ds.people[id] = [];
-  ds.ownership[id] = { lassoId: id, owners: [{ name: "Christian", kind: "person", share: "100 %" }] };
-  const spec = composeCompany(id, ds, { focus: "regnskab" });
-  assert.equal(spec.components.find((c) => c.column === 2)?.type, "LassoOwnerList");
-});
-
 test("regnskab med regnskab: tabellerne står stadig i fuld bredde", () => {
   const ds = enk();
   ds.financialStatements[id] = {

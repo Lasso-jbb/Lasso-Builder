@@ -3,7 +3,7 @@
  *
  * `POST /modules/news` leverer headline/content/tagLine med indlejret markup i formatet
  * "{Navn|LassoId}" (fx "{LASSO X A/S|CVR-1-34580820}"). Lasso demonstrerer selv mekanismen i
- * deres dokumentation med regex /{([^}]*)}/g, split på "|" — se docs/endpoints-risiko-nyheder.md.
+ * deres dokumentation med regex /{([^}]*)}/g, split på "|" - se docs/endpoints-risiko-nyheder.md.
  * `content` er desuden HTML ("sæt som innerHTML" ifølge dokumentationen), men vores UI sætter
  * aldrig innerHTML (packages/ui/src/components/LassoNews.tsx), så HTML strippes til ren tekst her.
  */
@@ -37,7 +37,7 @@ export function parseEntityMarkup(text: string): MarkupSegment[] {
 
 /**
  * Ren tekst uden markup (navnene beholdes, klammerne og Lasso Id'erne fjernes). Vandret
- * mellemrum (mellemrum/tab) collapses, men linjeskift bevares — `stripHtml` lægger dem ind for
+ * mellemrum (mellemrum/tab) collapses, men linjeskift bevares - `stripHtml` lægger dem ind for
  * <br>/<li>, og de skal ikke gå tabt igen her (fx en liste af nye bestyrelsesmedlemmer).
  */
 export function plainTextFromMarkup(text: string | undefined): string | undefined {

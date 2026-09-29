@@ -29,7 +29,7 @@ test("Gemte sider: over 8 rækker vises 8 + 'Se alle 10' (regel 9), undertitel m
   assert.match(html, /aria-expanded="false"[^>]*>Se alle 10</);
   assert.match(html, /class="lasso-section__title">Gemte sider</);
   assert.match(html, /class="lasso-section__subtitle">10 gemte sider</);
-  assert.match(html, /Kilde: Gemt i Lasso</);
+  assert.doesNotMatch(html, /Kilde:/, "G3: ingen kildelinje");
   // Ingen piller, badges eller initial-cirkler
   assert.doesNotMatch(html, /lasso-badge|avatar|initial/);
   // 8 rækker eller færre foldes ikke
@@ -136,15 +136,26 @@ const view = (s: ReturnType<typeof spec>, ds: Dataset | null, host: HostCapabili
 
 const headerOf = (html: string) => html.slice(html.indexOf("<header class=\"lasso-frame__header\""), html.indexOf("</header>") + 9);
 
-test("Hoved: Gem-knap på en virksomhedsside, når værten kan gemme sider", () => {
-  const html = headerOf(view(spec({ components: [{ type: "LassoCompanyHead", company: COMPANY }] }), data([]), { savePage: true }));
-  assert.match(html, /<button type="button" class="lasso-iconbtn lasso-frame__save" aria-pressed="false"[^>]*>/);
-  assert.match(html, /<svg[^>]*fill="none"[^>]*>.*<\/svg><span>Gem<\/span><\/button>/);
+/** Virksomheds-/personhovedet (katalog 08.1): Gem er en 32 px ikonknap blandt hovedets handlinger. */
+const headOf = (html: string) => {
+  const at = html.search(/<header class="lasso-(company|personhead) /);
+  return html.slice(at, html.indexOf("</header>", at) + 9);
+};
+
+test("Hoved: Gem-knap i virksomhedshovedet (08.1), når værten kan gemme sider; ikke i rammens header", () => {
+  const html = view(spec({ components: [{ type: "LassoCompanyHead", company: COMPANY }] }), data([]), { savePage: true });
+  assert.match(headOf(html), /<button type="button" class="lasso-headbtn lasso-headbtn--save" aria-pressed="false" aria-label="Gem på din liste"[^>]*><svg[^>]*fill="none"/);
+  assert.doesNotMatch(headerOf(html), /lasso-frame__save/);
   assert.doesNotMatch(html, /Gemt/);
 });
 
 test("Hoved: Gemt med aria-pressed og fyldt ikon, når siden står i savedIds", () => {
-  const html = headerOf(view(spec({ components: [{ type: "LassoCompanyHead", company: COMPANY }] }), data([COMPANY]), { savePage: true }));
+  const html = headOf(view(spec({ components: [{ type: "LassoCompanyHead", company: COMPANY }] }), data([COMPANY]), { savePage: true }));
+  assert.match(html, /class="lasso-headbtn lasso-headbtn--save" aria-pressed="true" aria-label="Gemt, fjern fra din liste"[^>]*><svg[^>]*fill="currentColor"/);
+});
+
+test("Rammens header: Gem/Gemt står der kun, når siden ikke har et fuldt hoved (fx variant 'line')", () => {
+  const html = headerOf(view(spec({ components: [{ type: "LassoCompanyHead", company: COMPANY, variant: "line" }] }), data([COMPANY]), { savePage: true }));
   assert.match(html, /class="lasso-iconbtn lasso-frame__save" aria-pressed="true"/);
   assert.match(html, /<svg[^>]*fill="currentColor"[^>]*>.*<\/svg><span>Gemt<\/span><\/button>/);
 });
@@ -160,7 +171,12 @@ test("Hoved: ingen Gem-knap uden host.savePage, på lister eller før data er he
 test("Hoved: personside får Gem-knap med personens ID", () => {
   const ds = data([PERSON]);
   const s = spec({ kind: "person", title: "Anne Eksempel", subtitle: "Roller i 3 selskaber", components: [{ type: "LassoPersonHead", person: PERSON }] });
+  // Uden personens data tegner hovedet et skelet, så Gem står i rammens header.
   assert.match(headerOf(view(s, ds, { savePage: true })), /aria-pressed="true"[^>]*>.*<span>Gemt<\/span>/);
+  ds.persons[PERSON] = { lassoId: PERSON, name: "Anne Eksempel", roles: [] };
+  const withPerson = view(s, ds, { savePage: true });
+  assert.match(headOf(withPerson), /lasso-headbtn--save" aria-pressed="true"/);
+  assert.doesNotMatch(headerOf(withPerson), /lasso-frame__save/);
   assert.deepEqual(saveTarget(s, ds), { kind: "save-page", lassoId: PERSON, pageKind: "person", name: "Anne Eksempel" });
 });
 
@@ -193,4 +209,17 @@ test("LassoView: LassoSavedPages tegnes fra datasættet; Fjern kun med host.save
   const shared = data(undefined);
   shared.errors[`savedPages:${savedPagesKey({ kind: "all", limit: 20 })}`] = "Gemte sider kræver adgang som bruger i Lasso.";
   assert.match(view(s, shared, { refresh: true }), /class="lasso-state"><div class="lasso-small">Gemte sider kræver adgang som bruger i Lasso\./);
+});
+
+test("frameless (06.1/24/25): i portalens ramme udelades visningens egen header og fod", () => {
+  const s = spec({ components: [{ type: "LassoCompanyHead", company: COMPANY }] });
+  const host: HostCapabilities = { savePage: true, save: true, export: true, refresh: true };
+  const framed = view(s, data([]), host);
+  assert.match(framed, /lasso-frame__header/);
+  assert.match(framed, /<footer class="lasso-actionbar"/);
+  const bare = renderToStaticMarkup(createElement(LassoView, { spec: s, dataset: data([]), host, onAction: noop, frameless: true }));
+  assert.match(bare, /class="lasso-frame lasso-frame--bare"/);
+  assert.doesNotMatch(bare, /lasso-frame__header|lasso-frame__eyebrow|Virksomhedsprofil|Data hentet|lasso-actionbar|Gem visning/);
+  // Hovedet og dets handlinger står stadig
+  assert.match(bare, /lasso-headbtn--save/);
 });

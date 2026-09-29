@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { formatDate, isPersonId, type PersonRowVM } from "@lasso/spec";
+import { formatDate, isPersonId, PERSON_LIST_ROLE_TITLES, peopleWithRole, type PersonListRole, type PersonRowVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { Tabs } from "./Tabs.js";
+import { usePrintMode } from "../print.js";
+import { Icon } from "./Icon.js";
 
 /** Store bestyrelser (fx 18 personer) foldes sammen efter de første (regel 9). */
 const COLLAPSED_ROWS = 8;
@@ -18,10 +20,32 @@ function splitChair(role: string): { role: string; chair: boolean } {
  * periode i fast kolonne til højre. Fratrådte kun under "Alle", dæmpet med ordet
  * "fratrådt" i rolleteksten. Formand som tekst i parentes. Ingen initial-cirkler.
  */
-export function PersonList({ people, show, title, error, onOpen }: { people?: PersonRowVM[]; show: "current" | "all"; title?: string; error?: string; onOpen?: (a: ViewAction) => void }) {
-  const heading = title ?? "Ledelse";
+const EMPTY: Record<PersonListRole | "all", string> = {
+  all: "Der er ingen registrerede personer i ledelsen.",
+  direktion: "Der er ingen registrerede personer i direktionen.",
+  bestyrelse: "Der er ingen registrerede personer i bestyrelsen.",
+};
+
+export function PersonList({
+  people: all,
+  show,
+  roles,
+  title,
+  error,
+  onOpen,
+}: {
+  people?: PersonRowVM[];
+  show: "current" | "all";
+  /** Kun direktionen eller kun bestyrelsen (spørgsmålet "hvem er direktør"); titlen følger filteret. */
+  roles?: PersonListRole;
+  title?: string;
+  error?: string;
+  onOpen?: (a: ViewAction) => void;
+}) {
+  const heading = title ?? (roles ? PERSON_LIST_ROLE_TITLES[roles] : "Ledelse");
   const [mode, setMode] = useState<"current" | "all">(show);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(usePrintMode());
+  const people = all ? peopleWithRole(all, roles) : undefined;
   if (!people) {
     return (
       <Section title={heading} span="half">
@@ -32,9 +56,10 @@ export function PersonList({ people, show, title, error, onOpen }: { people?: Pe
   const hasEnded = people.some((p) => p.to);
   const rows = (mode === "all" ? people : people.filter((p) => !p.to)).slice().sort((a, b) => Number(Boolean(a.to)) - Number(Boolean(b.to)));
   // Niveau 3-faner (29): skifter kun elementets egen visning.
-  const toggle = hasEnded ? (
+  const segment = hasEnded ? (
     <Tabs
       level={3}
+      className="lasso-seg-pill"
       ariaLabel="Vis personer"
       items={[
         { id: "current", label: "Nuværende" },
@@ -44,10 +69,17 @@ export function PersonList({ people, show, title, error, onOpen }: { people?: Pe
       onChange={(id) => setMode(id as "current" | "all")}
     />
   ) : null;
+  // 26c.4 mobil: intet segment, men antallet ("5 personer") til højre for titlen.
+  const toggle = (
+    <>
+      {segment ? <span className="lasso-personlist__segment">{segment}</span> : null}
+      <span className="lasso-personlist__count">{`${people.length} ${people.length === 1 ? "person" : "personer"}`}</span>
+    </>
+  );
   if (rows.length === 0) {
     return (
       <Section title={heading} action={toggle} span="half">
-        <DataState state="empty" reason="Der er ingen registrerede personer i ledelsen." />
+        <DataState state="empty" reason={EMPTY[roles ?? "all"]} />
       </Section>
     );
   }
@@ -55,7 +87,7 @@ export function PersonList({ people, show, title, error, onOpen }: { people?: Pe
   const visible = foldable && !expanded ? rows.slice(0, COLLAPSED_ROWS) : rows;
   return (
     <Section title={heading} action={toggle} span="half">
-      <ul className="lasso-rows">
+      <ul className="lasso-rows lasso-personlist">
         {visible.map((p, i) => {
           const { role, chair } = splitChair(p.role);
           const period = p.to ? `${p.from ? p.from.slice(0, 4) : ""} – ${p.to.slice(0, 4)}`.trim() : p.from ? `siden ${formatDate(p.from)}` : "";
@@ -72,16 +104,27 @@ export function PersonList({ people, show, title, error, onOpen }: { people?: Pe
                   )}
                   {chair ? <span className="lasso-row__note">(formand)</span> : null}
                 </div>
-                <div className="lasso-row__sub">{p.to ? `${role}, fratrådt` : role}</div>
+                <div className="lasso-row__sub">
+                  {p.to ? `${role}, fratrådt` : role}
+                  {/* 11.2: "også i N andre selskaber" efter rollen, når kilden leverer tallet. */}
+                  {!p.to && p.otherCompanies ? `, også i ${p.otherCompanies} ${p.otherCompanies === 1 ? "andet selskab" : "andre selskaber"}` : null}
+                </div>
               </div>
               <div className="lasso-row__side">{period}</div>
+              {/* 11.2: chevron yderst til højre, når personen kan åbnes. */}
+              {onOpen && isPersonId(p.lassoId) ? <Icon name="chevron-right" size={16} className="lasso-row__chevron" /> : null}
             </li>
           );
         })}
       </ul>
       {foldable ? (
-        <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-          {expanded ? "Vis færre" : `Se alle ${rows.length}`}
+        <button type="button" className="lasso-link lasso-more lasso-rowmore" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+          {expanded ? "Vis færre" : `Vis alle ${rows.length}`}
+        </button>
+      ) : null}
+      {hasEnded && mode === "current" ? (
+        <button type="button" className="lasso-link lasso-personlist__all" onClick={() => setMode("all")}>
+          {`Vis alle ${people.length}, inkl. fratrådte`}
         </button>
       ) : null}
     </Section>

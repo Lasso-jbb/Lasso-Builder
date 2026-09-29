@@ -1,4 +1,4 @@
-import { isFocusFor, isPersonId, toLassoId, viewSpecSchema, type Dataset, type PageFocus, type SavedPageKind, type ViewSpec } from "@lasso/spec";
+import { moreText, isFocusFor, isPersonId, toLassoId, viewSpecSchema, type Dataset, type PageFocus, type SavedPageKind, type ViewSpec } from "@lasso/spec";
 import { findCompany, isCompanyRef, normalizeCompanyName } from "../data/lookup.js";
 import { findPerson } from "../data/personLookup.js";
 import { errorMessage, resolveSpec } from "../data/resolve.js";
@@ -196,7 +196,7 @@ export async function removeSavedPage(ctx: UseCaseCtx, input: { page: string }):
     const hits = matchSavedByName(mine, ref);
     if (hits.length === 0) return fail(404, `Der er ingen gemt side, der hedder "${ref}". Brug list_saved_pages for at se listen, eller angiv CVR-nummeret eller ID'et.`);
     if (hits.length > 1) {
-      const listed = `${hits.slice(0, 10).map(pageLabel).join("; ")}${hits.length > 10 ? ` og ${hits.length - 10} flere` : ""}`;
+      const listed = `${hits.slice(0, 10).map(pageLabel).join("; ")}${hits.length > 10 ? ` og ${moreText(hits.length - 10)}` : ""}`;
       return fail(400, `Flere gemte sider passer på "${ref}": ${listed}. Angiv CVR-nummeret eller ID'et på den, der skal fjernes.`);
     }
     lassoId = hits[0]!.lassoId;

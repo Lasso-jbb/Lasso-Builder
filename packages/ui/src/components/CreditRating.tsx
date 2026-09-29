@@ -3,7 +3,6 @@ import {
   CREDIT_LOCKED_REASON,
   CREDIT_PENDING_REASON,
   CREDIT_SCORES,
-  creditChange,
   creditDescription,
   creditScoreWord,
   creditTone,
@@ -13,9 +12,10 @@ import {
   type CreditRatingVM,
   type CreditTone,
 } from "@lasso/spec";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { DataState, Missing, Section, SourceLine, stateForError } from "../primitives.js";
 import type { ViewAction } from "../types.js";
+import { CreditConfirmDialog } from "./CreditConfirmDialog.js";
 
 /**
  * Kreditvurdering fra Creditsafe (katalog 17, datatyper del B afsnit 5). Creditsafes egen skala:
@@ -76,6 +76,7 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
 export function CreditRating({ rating, title, error, onAction }: CreditRatingProps) {
   const heading = title ?? "Kreditvurdering";
   const retry = onAction ? () => onAction({ kind: "refresh" }) : undefined;
+  const [confirm, setConfirm] = useState(false);
 
   if (!rating) {
     if (error) {
@@ -97,21 +98,34 @@ export function CreditRating({ rating, title, error, onAction }: CreditRatingPro
   if (rating.state === "locked") {
     return (
       <Section title={heading} span="half" className="lasso-credit">
-        <DataState state="empty" reason={`Låst. ${sentence(rating.reason ?? CREDIT_LOCKED_REASON)}`} />
+        {/* Låst (26h.1): indholdet dæmpes bag et forklarende kort. */}
+        <DataState state="locked" reason={`Låst. ${sentence(rating.reason ?? CREDIT_LOCKED_REASON)}`} lines={4} />
       </Section>
     );
   }
 
   if (rating.state === "unavailable") {
     const pending = rating.reason === CREDIT_PENDING_REASON;
+    if (pending) {
+      // På forespørgsel (26h.1): pris og varighed først, ventetilstand som 48 px række med ring.
+      return (
+        <Section title={heading} span="half" className="lasso-credit">
+          <DataState
+            state="onrequest"
+            reason={`Ikke beregnet endnu. ${sentence(rating.reason!)} ${CREDIT_COST_NOTE}`}
+            pending={{ title: "Henter vurdering …", detail: "ca. 5–45 sek. Du kan fortsætte imens." }}
+          />
+          {retry ? (
+            <button type="button" className="lasso-link lasso-credit__action" onClick={retry}>
+              Hent igen
+            </button>
+          ) : null}
+        </Section>
+      );
+    }
     return (
       <Section title={heading} span="half" className="lasso-credit">
         <DataState state="empty" reason={`Ikke beregnet endnu.${rating.reason ? ` ${sentence(rating.reason)}` : ""}`} />
-        {pending && retry ? (
-          <button type="button" className="lasso-link lasso-credit__action" onClick={retry}>
-            Hent igen
-          </button>
-        ) : null}
       </Section>
     );
   }
@@ -137,9 +151,6 @@ export function CreditRating({ rating, title, error, onAction }: CreditRatingPro
   const score = current.internationalScore;
   const tone = score ? creditTone(score) : undefined;
   const word = score ? creditScoreWord(score, current.internationalDescription) : undefined;
-  const prev = rating.previous;
-  const prevScore = prev?.internationalScore;
-  const change = creditChange(score, prevScore);
   const local = typeof current.localScore === "number" ? `${formatNumber(current.localScore)}${current.localDescription ? `, ${creditDescription(current.localDescription)}` : ""}` : creditDescription(current.localDescription);
 
   return (
@@ -179,25 +190,30 @@ export function CreditRating({ rating, title, error, onAction }: CreditRatingPro
         </p>
       )}
 
+      {/* 18.1 (Jakob 29.09): ingen historik; kun den aktuelle score. Ingen "forrige" og ingen ændring. */}
+      {onAction && typeof rating.creditBalance === "number" ? (
+        <button type="button" className="lasso-btn lasso-credit__refresh" onClick={() => setConfirm(true)}>
+          Hent ny vurdering
+        </button>
+      ) : null}
+
       <dl className="lasso-credit__facts">
         <Fact label="Kreditmaksimum">{typeof current.creditMax === "number" ? formatCreditMax(current) : <Missing />}</Fact>
         <Fact label="Lokal score">{local ?? <Missing />}</Fact>
-        {prevScore ? (
-          <Fact label="Forrige vurdering">
-            {prevScore} ({creditScoreWord(prevScore, prev?.internationalDescription)})
-            {rating.latestChange ? `, ændret ${formatDate(rating.latestChange)}` : ""}
-            {change ? (
-              <span className={`lasso-credit__change lasso-credit__change--${change.direction}`}>
-                {", "}
-                {change.arrow ? <span aria-hidden="true">{`${change.arrow}\u00a0`}</span> : null}
-                {change.word}
-              </span>
-            ) : null}
-          </Fact>
-        ) : rating.latestChange ? (
-          <Fact label="Seneste ændring">{formatDate(rating.latestChange)}</Fact>
-        ) : null}
+        {rating.latestChange ? <Fact label="Seneste ændring">{formatDate(rating.latestChange)}</Fact> : null}
       </dl>
+      {onAction && typeof rating.creditBalance === "number" ? (
+        <CreditConfirmDialog
+          open={confirm}
+          onClose={() => setConfirm(false)}
+          onConfirm={() => {
+            setConfirm(false);
+            onAction({ kind: "refresh" });
+          }}
+          balance={rating.creditBalance}
+          what={`kreditvurderingen hos ${rating.source}`}
+        />
+      ) : null}
 
       {rating.pdfUrl ? (
         onAction ? (

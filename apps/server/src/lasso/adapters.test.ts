@@ -822,7 +822,7 @@ const ARL_2024 = {
   },
 };
 
-test("adaptFinancials: ÅRL-gæld (…OtherThanProvisions) giver gæld og likviditetsgrad, ikke '—'", () => {
+test("adaptFinancials: ÅRL-gæld (…OtherThanProvisions) giver gæld og likviditetsgrad, ikke '-'", () => {
   const y = adaptFinancials("CVR-1-1", [ARL_2024]).years[0]!;
   // Ingen samlet gæld tagget: kort + lang + hensatte.
   assert.equal(y.liabilities, 9_716_227 + 3_024_007 + 200_000);
@@ -843,7 +843,7 @@ test("adaptFinancials: samlet ÅRL-gæld uden hensatte + hensatte, når det saml
   assert.equal(adaptFinancialStatements("CVR-1-1", [r]).balanceSheet[0]!.liabilitiesTotal, 450);
 });
 
-test("overskudsgrad = resultat af primær drift (EBIT) / omsætning; '—' uden omsætning", () => {
+test("overskudsgrad = resultat af primær drift (EBIT) / omsætning; '-' uden omsætning", () => {
   const y = adaptFinancials("CVR-1-1", [ARL_2024]).years[0]!;
   assert.equal(y.overskudsgrad, 3); // 1,8 mio. / 60 mio.
   const klasseB = { period: { to: "2023-12-31" }, reportYear: 2023, data: { company: { facts: { incomeStatement: tree({ GrossProfitLoss: leaf(24_992_309), ProfitLossFromOrdinaryOperatingActivities: leaf(1_500_000), ProfitLoss: leaf(1_027_633) }) } } } };
@@ -882,7 +882,7 @@ test("adaptFinancials vælger årets tal og ikke sammenligningstal fra året fø
   };
   assert.equal(adaptFinancials("CVR-1-24256790", [withValues]).years[0]!.employees, 59_000);
 
-  // Kun forrige års tal findes: hellere "—" end forrige års tal.
+  // Kun forrige års tal findes: hellere "-" end forrige års tal.
   const onlyPrior = {
     period: { to: "2023-12-31" },
     reportYear: 2023,
@@ -1033,4 +1033,28 @@ test("adaptChangeFeed: delta-liste -> feed, kun overvågede, kun i perioden, sta
   assert.equal(adaptChangeFeed(undefined, { days: 7, now }).total, 0);
   // Uden monitored-sæt tages alt med
   assert.ok(adaptChangeFeed(raw, { days: 7, now }).entries.some((e) => e.companyName === "Fremmed A/S"));
+});
+
+test("adaptCompany (08.1, ubekræftet): binavne, statusdato og kurator læses defensivt og udelades, når de mangler", () => {
+  const vm = adaptCompany("CVR-1-11111111", { name: "Eksempel A/S", status: "Under konkurs", statusDate: "2026-06-03T00:00:00", secondaryNames: ["Eksempel A/S", { name: "Eksempel Vind" }], curator: { name: "Advokat Eksempel" } });
+  assert.deepEqual(vm.secondaryNames, ["Eksempel Vind"]);
+  assert.equal(vm.statusDate, "2026-06-03");
+  assert.equal(vm.curator, "Advokat Eksempel");
+  const plain = adaptCompany("CVR-1-11111111", { name: "Eksempel A/S", status: "Normal" });
+  assert.equal("secondaryNames" in plain || "statusDate" in plain || "curator" in plain, false);
+});
+
+test("28.7: companyDetailsExtras læser bibrancher, fravalgt revision og kapital defensivt", async () => {
+  const { companyDetailsExtras } = await import("./adapters.js");
+  const out = companyDetailsExtras({ altIndustry1: { code: "620200", text: "It-rådgivning" }, altIndustry2: null, accounting: { auditExempt: true }, contributedCapital: { amount: 400000, currency: "DKK" } });
+  assert.deepEqual(out.altIndustries, [{ code: "620200", text: "It-rådgivning" }]);
+  assert.equal(out.auditExempt, true);
+  assert.deepEqual(out.registeredCapital, { amount: 400000, currency: "DKK" });
+  assert.deepEqual(companyDetailsExtras({ name: "x" }), {});
+});
+
+test("adaptPeople læser antal andre selskaber defensivt (11.2) og udelader det ellers", () => {
+  const rows = adaptPeople({ management: { ceo: { name: "Anne Eksempel", otherCompaniesCount: 3 } }, board: { members: [{ name: "Bo Eksempel" }] } });
+  assert.equal(rows.find((r) => r.name === "Anne Eksempel")?.otherCompanies, 3);
+  assert.equal(rows.find((r) => r.name === "Bo Eksempel")?.otherCompanies, undefined);
 });

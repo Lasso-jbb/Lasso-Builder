@@ -1,3 +1,4 @@
+import { statusLabel } from "@lasso/spec";
 import {
   isPersonId,
   longestPeriodYears,
@@ -61,8 +62,8 @@ function companyStatusText(s: string | undefined): string | undefined {
   const p = pretty(s);
   if (!p) return undefined;
   if (/^(normal|aktiv)$/i.test(p)) return "Aktiv";
-  if (/^underkonkurs$/i.test(p)) return "Under konkurs";
-  return p;
+  // CVR-koder (UNDERKONKURS, OPLØSTEFTERKONKURS …) -> danske navne (packages/spec/src/status.ts).
+  return statusLabel(p);
 }
 
 function rolesFrom(raw: Json): PersonRoleVM[] {

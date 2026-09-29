@@ -10,8 +10,10 @@ import {
   companyTemplate,
   emptyDataset,
   listTemplate,
+  parseAsk,
   parseViewSpec,
   searchKey,
+  personSearchKey,
   searchQuerySchema,
   type Dataset,
   ownershipGraphKey,
@@ -71,7 +73,7 @@ test("tekstkortet har samme bredde på alle linjer og alle sektioner", () => {
     assert.ok(card.includes(part), `mangler "${part}":\n${card}`);
   }
   // Negativt resultat får pil ned; fratrådte personer er ikke med.
-  assert.match(card, /Resultat\s+−2 mia\.\s+▼ underskud/);
+  assert.match(card, /Resultat\s+−2 mia\.\s+▼ 102,0 %/);
   assert.ok(!card.includes("Dan Tidligere"));
 });
 
@@ -167,7 +169,7 @@ test("tekstkortet viser reelle ejere, tekstsektioner, historik og nyheder, når 
   assert.match(card, /Ejer\s+Anne Eksempel/);
 });
 
-test("resumeet skrives som en sektion med kildelinje, uden AI-mærke", () => {
+test("resumeet skrives som en sektion uden kildelinje (G3) og uden AI-mærke", () => {
   const spec = {
     version: 2 as const,
     kind: "custom" as const,
@@ -178,7 +180,7 @@ test("resumeet skrives som en sektion med kildelinje, uden AI-mærke", () => {
   };
   const card = textCard(parseViewSpec(spec), emptyDataset("demo"))!;
   assert.ok(card.includes("Firmaet vokser pænt."));
-  assert.ok(card.includes("Kilde: Lasso"));
+  assert.ok(!card.includes("Kilde:"));
   assert.ok(!/skrevet af ai/i.test(card));
 });
 
@@ -443,10 +445,11 @@ test("personkortet følger fokus: kun det, siden viser, i sidens rækkefølge og
   same(risk);
   assert.match(risk, /FORLØB I SELSKABERNE/);
   assert.match(risk, /Cloud Eksempel A\/S kom under/);
-  assert.match(risk, /ØVRIGE OPHØRTE ROLLER/);
-  assert.match(risk, /Andet Eksempel ApS/);
+  // De øvrige ophørte roller hører til fanen Roller (tidsbåndene), ikke risiko.
+  assert.doesNotMatch(risk, /ØVRIGE OPHØRTE ROLLER|Andet Eksempel ApS/);
   assert.doesNotMatch(risk, /Indtrådt som adm\. direktør i Data Eksempel/, "forløbet har kun konkursselskabet");
   assert.doesNotMatch(risk, /STAMOPLYSNINGER|NYHEDER|SIDDER SAMMEN MED/);
+  assert.match(card("roller"), /Andet Eksempel ApS/);
 
   const owner = card("ejerskab");
   same(owner);
@@ -515,9 +518,10 @@ test("ændringsfeedet (katalog 21) som tekstkort: samme bredde, ingen midterprik
   assert.match(card, /25\.09\.2026/);
   assert.match(card, /Cloud Eksempel A\/S, status/);
   assert.match(card, /Aktiv -> Under konkurs, ulæst/);
-  assert.match(card, /CVR, kl\. 09\.14/);
+  assert.match(card, / kl\. 09\.14/);
+  assert.doesNotMatch(card, /CVR, kl\./, "21.1: ingen kildetype");
   assert.match(card, /5 virksomheder, stamdata/);
-  assert.match(card, /Se 1 flere/);
+  assert.match(card, /Se 1 mere/);
   assert.ok(!card.includes("Prøve ApS"), "kun 3 rækker vises");
 
   // Tom tilstand siger hvorfor
@@ -525,20 +529,44 @@ test("ændringsfeedet (katalog 21) som tekstkort: samme bredde, ingen midterprik
   assert.match(textCard(spec, ds)!, /Ingen ændringer i "Kunder"/);
 });
 
-test("tekstkort for regnskab uden regnskab: forklaringen én gang, og ledelsen med sine roller, når der hverken er direktør eller bestyrelse", () => {
+test("tekstkort for regnskab uden regnskab: forklaringen én gang og ingen ledelse (den står på ledelse, med sine roller, når der hverken er direktør eller bestyrelse)", () => {
   const ds = dataset();
   ds.companies[ID] = { ...ds.companies[ID]!, form: "ENK", founded: "2023-01-30" };
   ds.people[ID] = [{ name: "Christian Sander Kjær", role: "Fuldt ansvarlig deltager", from: "2023-01-30" }];
   ds.financials[ID] = { lassoId: ID, currency: "DKK", years: [] };
   ds.financialStatements[ID] = { lassoId: ID, currency: "DKK", incomeStatement: [], balanceSheet: [], cashFlow: [] };
-  const spec = composeCompany(ID, ds, { focus: "regnskab" });
-  const card = textCard(spec, ds)!;
+  const card = textCard(composeCompany(ID, ds, { focus: "regnskab" }), ds)!;
   assert.match(card, /REGNSKAB\s*│\n│ Enkeltmandsvirksomheder og/);
   assert.equal((card.match(/skal ikke indsende/g) ?? []).length, 1);
-  // Ikke en tom "LEDELSE"-overskrift: rollen står som den er (regel 9).
-  assert.match(card, /LEDELSE[\s│]*\n│ Fuldt ansvarlig deltager/);
+  // Paper (23.1): regnskab uden regnskab viser oplysninger og ledelse ved siden af den tomme tilstand.
   assert.match(card, /Christian Sander Kjær/);
   for (const l of card.split("\n")) assert.equal([...l].length, 38, `linjen "${l}" har forkert bredde`);
+  // Ikke en tom "LEDELSE"-overskrift på ledelse: rollen står som den er (regel 9).
+  const lead = textCard(composeCompany(ID, ds, { focus: "ledelse" }), ds)!;
+  assert.match(lead, /LEDELSE[^\n]*│\n│ Fuldt ansvarlig deltager/);
+  assert.match(lead, /Christian Sander Kjær/);
+  for (const l of lead.split("\n")) assert.equal([...l].length, 38, `linjen "${l}" har forkert bredde`);
+});
+
+test("resuméet på risiko har kreditvurderingen og revisoruafhængigheden, ikke ledelse, ejere eller historik", async () => {
+  const { summarizeView } = await import("./summary.js");
+  const ds = dataset();
+  ds.creditRatings[ID] = { lassoId: ID, state: "ok", source: "Creditsafe via Lasso", current: { internationalScore: "B", creditMax: 250_000, creditCurrency: "DKK", localScore: 62 } };
+  ds.auditorIndependence[ID] = {
+    lassoId: ID,
+    auditorName: "Revisor ApS",
+    relations: [
+      { id: "r1", assessment: 50, name: "Bo Eksempel", relation: "Tidligere ansat hos revisor" },
+      { id: "r2", assessment: 100, name: "Anne Eksempel", relation: "Bestyrelsesmedlem hos revisor" },
+    ],
+  };
+  // showAll: uden højdebudgettet (23.3) står revisoruafhængigheden med på risikosiden (den er ellers lav prioritet).
+  const summary = summarizeView(composeCompany(ID, ds, { focus: "risiko", showAll: true }), ds);
+  assert.match(summary, /Kreditvurdering \(Creditsafe\): /);
+  assert.match(summary, /Revisoruafhængighed \(revisor Revisor ApS\): 2 relationer; konflikt: Anne Eksempel, Bestyrelsesmedlem hos revisor; vurdér: Bo Eksempel/);
+  // Uden kendte relationer siger resuméet det (og hvorfor, når kilden mangler).
+  ds.auditorIndependence[ID] = { lassoId: ID, relations: [], unavailableReason: "Kilden er ikke bekræftet endnu." };
+  assert.match(summarizeView(composeCompany(ID, ds, { focus: "risiko", showAll: true }), ds), /Revisoruafhængighed: Kilden er ikke bekræftet endnu\.$/m);
 });
 
 test("resuméet til modellen har regnskabslinjen én gang, også på regnskab, hvor nøgletalskortene ikke står", async () => {
@@ -569,4 +597,70 @@ test("tekstkortet viser samme tekstafsnit som visningen: profilen uden branche o
   for (const part of ["Fremstilling af farmaceutiske", "BALANCE OG KAPITALFORHOLD", "BRANCHESTATISTIK"]) assert.ok(!profil.includes(part), `"${part}" hører ikke til profilen:\n${profil}`);
   const analyse = card("analyse");
   assert.ok(analyse.includes("BRANCHESTATISTIK") && !analyse.includes("FORMÅL"), analyse);
+});
+
+test("tekstkortet svarer på spørgsmålet først og følger elementernes filtre (roles, kinds, rows, only)", () => {
+  const ds = dataset();
+  ds.timeline[ID] = { lassoId: ID, events: [{ date: "2025-11-14", title: "Bo Formand er indtrådt", category: "Ledelse" }, { date: "2025-04-15", title: "Årsrapport 2024 offentliggjort", category: "Regnskab" }] };
+  const ask = parseAsk("Hvem er direktør i Testfirma?", "company", { name: "TESTFIRMA A/S" });
+  const spec = composeCompany(ID, ds, { ask, name: "TESTFIRMA A/S" });
+  const card = textCard(spec, ds, { ask })!;
+  for (const l of card.split("\n")) assert.equal([...l].length, 38, `linjen "${l}" har forkert bredde`);
+  // SVAR lige under navnet og status, før stamoplysningerne.
+  assert.ok(card.indexOf("SVAR") < card.indexOf("STAMOPLYSNINGER"), card);
+  assert.match(card, /Direktion: Anne Direktør/);
+  // Personlisten viser kun direktionen, historikken kun ledelsesændringerne.
+  assert.ok(!card.includes("Bo Formand\n") && !/Formand +Bo Formand/.test(card), card);
+  assert.match(card, /LEDELSESÆNDRINGER/);
+  assert.ok(!card.includes("Årsrapport 2024 offentliggjort"));
+  // Revisoren som rækker (rows) og nøgletallene for et år (only, year).
+  const rows = parseViewSpec({
+    title: "x",
+    kind: "company",
+    components: [
+      { type: "LassoCompanyHead", company: ID },
+      { type: "LassoKeyValueList", company: ID, variant: "company", rows: ["revisor", "regnskabsperiode"], title: "Revisor" },
+      { type: "LassoKeyValueList", company: ID, variant: "financials", only: ["egenkapital", "gaeld"], year: 2024 },
+    ],
+  });
+  const withRows = textCard(rows, ds)!;
+  assert.match(withRows, /REVISOR[\s\S]*Revisor +DELOITTE/);
+  assert.match(withRows, /REGNSKAB 2024[\s\S]*Egenkapital +143 mia\.[\s\S]*Gæld +155 mia\./);
+  // Uden spørgsmål: ingen SVAR-sektion.
+  assert.ok(!textCard(composeCompany(ID, ds, {}), ds)!.includes("SVAR"));
+});
+
+test("08.1/16.1: tekstkortet viser status med dato, binavn, kurator og risikolinjen som hovedet", () => {
+  const ds = dataset();
+  ds.companies[ID] = { ...ds.companies[ID]!, status: "Under konkurs", statusKind: "warning", statusDate: "2026-06-03", curator: "Advokat Eksempel", secondaryNames: ["Test Vind"] };
+  ds.observations[ID] = { lassoId: ID, observations: [{ id: "k", severity: 100, title: "Virksomheden er under konkurs" }] };
+  const card = textCard(parseViewSpec({ kind: "company", title: "X", components: [{ type: "LassoCompanyHead", company: ID, risk: true }] }), ds)!;
+  for (const l of card.split("\n")) assert.equal([...l].length, 38, `linjen "${l}" har forkert bredde`);
+  const flat = card.replace(/\s+/g, " ");
+  assert.ok(flat.includes("Under konkurs, siden 03.06.2026"), card);
+  assert.ok(flat.includes("binavn Test Vind"), card);
+  assert.ok(flat.includes("Kurator: Advokat Eksempel"), card);
+  assert.ok(flat.includes("Risiko: 1 vigtig observation"), card);
+  assert.ok(!card.includes("·"));
+});
+
+test("tekstkort for persontabellen (15.3): roller, fødselsår, by og konkurser", () => {
+  const spec = parseViewSpec({ title: "Personer", components: [{ type: "LassoPersonTable", query: "Mette Eksempel" }] });
+  const ds = emptyDataset("demo");
+  const key = personSearchKey({ query: "Mette Eksempel", limit: 25 });
+  ds.personSearches = {
+    [key]: {
+      key,
+      query: "Mette Eksempel",
+      total: 1,
+      rows: [{ lassoId: "CVR-3-1", name: "Mette Eksempel", birthYear: 1978, city: "København", bankruptcies: 1, roles: [{ companyName: "Data Eksempel A/S", role: "direktør" }] }],
+    },
+  };
+  const card = textCard(spec, ds)!;
+  for (const l of card.split("\n")) assert.equal([...l].length, 38);
+  assert.ok(card.includes("Mette Eksempel"));
+  // 15.3: kun navnet; ingen fødselsår eller by.
+  assert.ok(card.includes("1 konkurs"));
+  assert.doesNotMatch(card, /f\. 1978|København/);
+  assert.doesNotMatch(card, /·/);
 });

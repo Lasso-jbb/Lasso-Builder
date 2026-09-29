@@ -6,6 +6,7 @@ import type { Boot } from "./boot.js";
 import { loadFonts } from "./fonts.js";
 import { McpView } from "./mcp.js";
 import { PortalApp } from "./portal/PortalApp.js";
+import { PrintView } from "./print.js";
 import { WebView } from "./web.js";
 
 declare global {
@@ -16,13 +17,15 @@ declare global {
 
 // Samme HTML-fil bruges tre steder: som MCP App i Claude/ChatGPT (ingen boot-data), som delt
 // side /v/:org/:slug (boot.mode "web") og som portalen /portal (boot.mode "portal"). Serveren
-// indsætter window.__LASSO_BOOT__ i de to sidste.
+// indsætter window.__LASSO_BOOT__ i de to sidste, og i print-siden, dens Chromium laver PDF'er
+// fra (boot.mode "print", "Gem som PDF").
 const boot = window.__LASSO_BOOT__;
 loadFonts();
 
 function Root() {
   if (!boot) return <McpView />;
   if (boot.mode === "portal") return <PortalApp boot={boot} />;
+  if (boot.mode === "print") return <PrintView boot={boot} />;
   return <WebView boot={boot} />;
 }
 

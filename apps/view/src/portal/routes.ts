@@ -70,6 +70,17 @@ export function formatRoute(route: PortalRoute): string {
   }
 }
 
+/**
+ * open-focus ("Se alle … i Historik" på overblikket): samme side med et andet fokus, som et klik på
+ * modulbjælkens fane. null, når fokus ikke passer til siden (et personfokus på en virksomhed og
+ * omvendt) eller ruten ikke er en virksomheds- eller personside.
+ */
+export function focusRoute(route: PortalRoute, focus: string): PortalRoute | null {
+  if (route.kind === "company") return isFocus(focus) ? { ...route, focus } : null;
+  if (route.kind === "person") return isPersonFocus(focus) ? { ...route, focus } : null;
+  return null;
+}
+
 export function sameRoute(a: PortalRoute, b: PortalRoute): boolean {
   return formatRoute(a) === formatRoute(b);
 }

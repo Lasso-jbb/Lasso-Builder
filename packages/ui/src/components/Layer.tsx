@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { Icon } from "./Icon.js";
 
 /**
  * Laget, alt det svævende tegnes i (katalog 07): dialoger, menuer og beskeder.
@@ -47,20 +48,12 @@ export function focusables(root: HTMLElement | null): HTMLElement[] {
   return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => !el.hidden && el.getAttribute("aria-hidden") !== "true");
 }
 
-/** Luk-kryds, 32 px neutral (07). */
+/** Luk-kryds, 32 px neutral (07). Fra ikonsættet (01, streg 1,8). */
 export function CloseIcon({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
+  return <Icon name="close" size={size} />;
 }
 
-/** Flueben til valgt punkt (vælgerliste) og "gemt"-beskeder. */
+/** Flueben til valgt punkt (vælgerliste) og "gemt"-beskeder. Fra ikonsættet (01, streg 1,8). */
 export function CheckIcon({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
+  return <Icon name="check" size={size} />;
 }

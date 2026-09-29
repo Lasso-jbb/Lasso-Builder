@@ -6,30 +6,62 @@ Tokens står i `packages/ui/src/styles.css`. Komponenterne bruger kun CSS-variab
 
 ## Faste regler (01, guide 23)
 
-1. Status er ren tekst i vægt 500. Ingen piller, prikker eller farvede flader.
+1. Status er ren tekst i vægt 500. Ingen piller, prikker eller farvede flader. Farven følger ordet (se "Status" nedenfor).
 2. Ingen dekorative piller eller badges. Tællere står aldrig på faner.
 3. Hvid flade overalt. Opdel med tynde linjer og luft, aldrig hvide kort på grå baggrund.
-4. Ingen farvede bannerbokse. AI-analyser er almindelige sektioner med kildelinje og intet "Skrevet af AI"-mærke.
+4. Ingen farvede bannerbokse. AI-analyser er almindelige sektioner uden kildelinje og uden "Skrevet af AI"-mærke.
 5. Navne står alene: ingen initial-cirkler eller ikonkasser.
 6. Ingen midterprik nogen steder. Brug komma.
 7. Ikon + ord ved enhver farvekodning, aldrig kun farve.
-8. Kildelinje én gang pr. sektion: "Kilde: Navn, opdateret DD.MM.ÅÅÅÅ" (`SourceLine`).
+8. UDGÅET (Jakob 29.09, G3): ingen kildelinje ("Kilde: …, opdateret …") i nogen elementer. `SourceLine` tegner intet og bruges ikke. Kilder vises højst som i Se alle-panelet (08.7): overskriften "Kilder" med selve kildelinket.
 9. Flere værdier end formen kan vise: vis 3 + "Se N …".
 10. Risikoskala 0 (lav) til 100 (høj). Fire trin: 0 neutral, 25 info, 50 mulig vigtig, 100 vigtig.
 
+## Generelle regler fra Jakobs gennemgang (29.09.2026)
+
+- G1: Knapper vises kun, når de har en funktion (værtens kapabilitet eller handler findes). En segmentkontrol med ét valg tegnes ikke.
+- G2: Ikoner ved en værdi (telefon, e-mail) vises kun, når der er data; ingen dæmpede ikoner for manglende kanaler.
+- G3: Ingen kildelinje nogen steder (se regel 8).
+- G5: Ingen "Gem", "Gem visning" eller "Opdatér" på elementer; data kommer i realtid. Gem hører kun til sidens hoved (gem-laget).
+- G7: Tankestreg "-" som skilletegn i tekst erstattes af bindestreg "-". Intervaller (66,67–89,99 %) beholder tankestreg; "-" for manglende værdi i tabeller afventer Jakob.
+- G8: Luk er altid et ×-ikon (ikonknap med aria-label "Luk"), aldrig ordet "Luk".
+- G9: Hoveder viser kun navnet (virksomhed: med status og binavn). Ingen faktalinje (CVR, adresse, ansatte …) under navnet og ingen skillestreg under hovedet. Identiteten står i nøgle-værdi-listen, adressen i kontaktblokken.
+- Faner: kun faner, der har data, vises (ingen deaktiverede faner, alle niveauer).
+- Skeletter er i bevægelse (shimmer), når der hentes; stille ved prefers-reduced-motion.
+
 ## Fem tilstande
 
-Alle elementer har **fyldt**, **henter** (skelet i samme højde), **tom** (siger hvorfor, stiplet ramme, aldrig "0"), **ikke oplyst** ("Ikke oplyst" eller "—" i text-faint) og **fejl** (kun teknisk fejl, med "Prøv igen"). Brug `DataState` fra `packages/ui/src/primitives.tsx`.
+Alle elementer har **fyldt**, **henter** (skelet i samme højde), **tom** (siger hvorfor, stiplet ramme, aldrig "0"), **ikke oplyst** ("Ikke oplyst" eller "-" i text-faint) og **fejl** (kun teknisk fejl, med "Prøv igen"). Brug `DataState` fra `packages/ui/src/primitives.tsx`.
 
 ## Talformat (09)
 
 - Beløb: `842 t. kr.`, `18,8 mio. kr.`, `2,4 mia. kr.`
 - Tal `1.243.501`, procent med én decimal og mellemrum: `17,3 %`
 - Negative tal med ægte minus `−201`, aldrig parentes
-- Udvikling ▲/▼ + procent; skifter fortegnet, vises kun pilen
-- Dato `15.04.2026`
+- Beløb + ændring (02c.4): kun pil + procent i grøn (stigning) eller rød (fald): `48,3 mio. kr. ▲ 12,4 %`, `3,4 mio. kr. ▼ 15,1 %`. Ingen ord efter procenten ("stigning", "fald", "fra 2024", "underskud"). Ved fortegnsskift vises stadig pil + procent (`changePercent`: (nu − forrige) / |forrige|); kan ændringen ikke beregnes (intet forrige år eller forrige = 0), vises ingen ændring. Gælder nøgletalskort, nøgle-værdi, tabeller, grafer, A4-rapport og tekstkort.
+- Procent (02c.5): kun den ene procent; ingen anden procent eller sammenligning efter (ingen "branchen 11,2 %").
+- Liste af værdier (02c.9): "og 1 mere" ved én ekstra, "og N flere" ved to eller flere, overalt hvor der opsummeres (`moreText`, `listParts`).
+- Reference til virksomhed (02c.13): kun navnet, ingen undertekst (CVR, rolle eller andel). Personreferencer må have "Siden <dato>" (`EntityRef kind`).
+- Dato `15.04.2026`. Datofelt "mellem" (02a.6, 02b.10): fra-dato og til-dato; til-datoen kan ikke vælges før fra-datoen (dagene før er deaktiverede i kalenderen), og en indtastet til-dato før fra-datoen afvises med fejlteksten "Til-datoen kan ikke være før fra-datoen." (`DATE_RANGE_ERROR`).
 
 Alt dette ligger i `packages/spec/src/format.ts`.
+
+## Status (02c.8, 05.7, 28.1)
+
+Alle 19 CVR-statusser står som ren tekst i vægt 500 med dansk navn; CVR's originalnavne (`NORMAL`, `OPLØSTEFTERKONKURS`, `UNDERREASSUMERING`/`UNDERREASUMMERING` …) mappes med `statusLabel`. Farven følger ordet (`statusGroup` i `packages/spec/src/status.ts`, `statusTone` i `primitives.tsx`), og ordet bærer altid betydningen (regel 7):
+
+| Gruppe | Farve | Statusser |
+|---|---|---|
+| Aktiv | tekstfarve | Aktiv, Normal |
+| Midlertidig, ikke krise | gul (warning-tekst) | Fremtid, Uden retsvirkning, Under frivillig likvidation, Under reassumering |
+| Problem | rød (mørk rød som konkurs) | Under konkurs, Under tvangsopløsning, Under rekonstruktion, Tvangsopløst, Opløst efter konkurs |
+| Inaktiv | muted (som Ophørt) | Ophørt, Opløst, Opløst efter erklæring, Opløst efter frivillig likvidation, Opløst efter fusion, Opløst efter grænseoverskridende fusion, Opløst efter spaltning, Slettet |
+
+`statusKind` i modellen siger stadig kun, om virksomheden er i drift (`active`), i et forløb (`warning`) eller afsluttet (`inactive`); "Opløst efter konkurs" er afsluttet, men farves som problem.
+
+## Teknologi (02b.2, 03.3, 03.4)
+
+Teknologier er grupperet i typer (fx CRM-system, Live chat, Digital marketing); en gruppe uden type bruges ikke. Pr. type slår til/fra-kontakten foran rækken kriteriet til og fra. Operator-dropdown'en har tre valg: "Firmaer der benytter et <type>" (kun typen, intet søgefelt), "Inkluder kun følgende" og "Ekskluder følgende" (produkt-tags + "Søg efter flere…"). `TechnologyField`/`TechnologyRow`.
 
 ## Grid og rækkefølge (06, guide 23)
 
@@ -63,6 +95,18 @@ Virksomhedsside: hoved, risiko (kun ved 50+), nøgletal, én graf ved siden af n
 
 1440 → 1200 (panel under midten) → 960 (skinnen skjules) → 768 (to kolonner, maks 6 tabelkolonner) → 390 (én kolonne). På mobil bliver tabeller til kortlister og ejerdiagrammet til en liste, rækker er mindst 44 px, grafer viser maks 5 punkter. Kun brudpunkter, ingen separate mobiludgaver.
 
+Brudpunktsregler (26, node `DH5-0`; guide 23 trin 7) og hvor de står i `styles.css`:
+
+| Bredde | Sideskabelon (`AppShell`, container = hele portalen) | Midten (`LassoView`, container = selve visningen) |
+|---|---|---|
+| ≥ 1200 | Skinne 236 + midte + panel 336 (`panel`-prop) | Midten er > 960: 4-kolonne-grid, gap 24 |
+| 1024–1199 (`max-width: 1199px`) | Skinne 64 med ikoner; panelet falder ned under midten | - |
+| ≤ 960 (`max-width: 960px`) | Skinnen skjules; fanebjælke + midte, bundnavigation | Tablet: 2 kolonner, ½ + ½ holder, ¼ og ¾ bliver fuld, gap 16; kolonnebånd 3 → 2 + 1, ¾ + ¼ stables. Chatten (640–900 px) står her. |
+| < 768 (`max-width: 767px`) | Mobil: topbjælke 52 med "Sektioner", ingen fanebjælke, én kolonne, panelet nederst, padding 16 | - |
+| ≤ 560 (`max-width: 560px`) | - | Mobil: én kolonne, gap 12, elementernes mobilformer (kortlister, 2 × 2 nøgletal, 44 px). Kun Claude på mobil (390) rammer den; chatten gør aldrig (30). |
+
+Midtens brud er lavere end skærmens, fordi containeren er midten: ved skærm 1200 er midten ~960 px.
+
 ## Faner, layout, navigation, dialoger, overvågning og eksport (06, 07, 21, 27, 29, 30)
 
 Bygget på `feat/faner`. Alt ligger i `packages/ui` og eksporteres fra `@lasso/ui`; kun overvågningsfeedet er en spec-komponent med data.
@@ -86,7 +130,9 @@ Tilstande: hvile, hover (tekst ink + divider-streg), valgt, fokus (1 px koral ka
 
 ### Layout, fra spørgsmål til skærm (30, node `J48-0`)
 
-`LAYOUT_RULES` i `packages/spec/src/catalog.ts` står i `render_view`-beskrivelsen efter `COMPOSITION_RULES` og er det, modellen slår op i: tre svarniveauer (A Element, B Sektion, C Side), ni mønstre (1 Overblik, 2 Fokus, 3 Ligeværdige, 4 Liste først, 5 Sammenligning, 6 Tidslinje, 7 Fortælling, 8 Kortgitter, 9 Harmonika) og foldreglerne på 1440/768/390. Mønster 1–7 tegnes med bredderne ¼/½/¾/fuld og `column` i `LassoView`; 8 og 9 har egne primitiver:
+`packages/spec/src/ask.ts` er serverens implementering af Paper 30 for `show_company` og `show_person` med `question`: spørgsmålet ordret → spørgsmålsprofil (`parseAsk`) → en hel side med svar-elementet først og kontekst fra hele kataloget (`askPlan`, se `docs/portal.md`, "Spørgsmålet styrer formen").
+
+`LAYOUT_RULES` i `packages/spec/src/catalog.ts` står i `render_view`-beskrivelsen efter `COMPOSITION_RULES` og er det, modellen slår op i: tre svarniveauer (A Element, B Sektion, C Side), ni mønstre (1 Overblik, 2 Fokus, 3 Ligeværdige, 4 Liste først, 5 Sammenligning, 6 Tidslinje, 7 Fortælling, 8 Kortgitter, 9 Harmonika) og foldreglerne på 1440/768/390. Mønster 1–7 tegnes med bredderne ¼/½/¾/fuld og `column` i `LassoView`; 8 og 9 har egne primitiver, som `LassoView` bruger, når sammenhængende komponenter i en spec har samme `group: { id, pattern: "cards" | "accordion", title? }` (i dashboard, i fuld bredde og inde i en kolonne; én komponent alene er ingen gruppe; harmonikaens rækkenavn er komponentens `title` eller typens navn, første række åben):
 
 ```ts
 <CardGrid>…artikler…</CardGrid>                       // to kolonner, én på mobil, luft og tynde linjer
@@ -98,7 +144,7 @@ Modulværktøjslinjen (56 px under modulbjælken, primær handling til venstre, 
 ### Navigation og sideskabelon (06, node `9I4-0`; mobil 26a)
 
 ```ts
-<AppShell rail={RailProps} tabs={TabStripProps} mobile?={{ title, subtitle?, sections?, activeSection?, onSelectSection?, actions?, onMore?, unread?, onBell?, nav?, sheetOpen?, onToggleSheet? }}>
+<AppShell rail={RailProps} tabs={TabStripProps} panel?={ReactNode /* højre panel 336, sammendrag og handlinger */} panelLabel? mobile?={{ title, subtitle?, sections?, activeSection?, onSelectSection?, actions?, onMore?, unread?, onBell?, nav?, sheetOpen?, onToggleSheet? }}>
   <ModuleBar modules={TabItem[]} value onChange actions?={[{ id, label, icon?, tone?: "accent", menu?, onSelect }]} />
   <ModuleToolbar primary?={{ label, onClick }} secondary?=[…] controls?={<Tabs level={3} …/>} />
   <Columns count={3}><Column>…</Column><Column>…</Column><Column>…</Column></Columns>
@@ -125,4 +171,45 @@ Spec-komponent `LassoChangeFeed { list?, days? (7), types?, title? }` → `Chang
 
 ### A4-eksport (27, node `DO8-0`)
 
-`ReportA4({ company, dataset, generatedAt? })` tegner op til fire A4-sider (forside, nøgletal + graf + ledelse/ejere, regnskab 5 år, kreditvurdering/risiko/reelle ejere/revisor) uden interaktion; `@media print` giver ét ark pr. side. `LassoView` viser knappen "Eksportér PDF" (host.export, spec.kind "company") med Print og Luk. Preview: `npx tsx apps/server/src/dev/render-preview.ts <mappe> --report CVR-1-99000001`.
+`ReportA4({ company, dataset, generatedAt? })` tegner op til fire A4-sider (forside, nøgletal + graf + ledelse/ejere, regnskab 5 år, kreditvurdering/risiko/reelle ejere/revisor) uden interaktion; i print er hver `.lasso-a4-page` præcis ét ark (210 × 297 mm, `break-after: page`, uden skygge og ramme). Preview: `npx tsx apps/server/src/dev/render-preview.ts <mappe> --report CVR-1-99000001`.
+
+**"Gem som PDF"** står øverst til højre i hovedet på alle sider i alle tre værter (MCP-appen, delte sider og portalen), ved siden af Gem/Gemt: samme lille ikonknap (regel 21) med download-ikonet og ordet, kun ikonet under 640 px (aria-label "Gem som PDF"). `LassoView` viser den med `host.pdf` og beder værten om `{ kind: "pdf" }`; mens værten arbejder, står der "Laver PDF …", og knappen er slået fra. Den gamle "Eksportér PDF" nederst og overlay'en med Print og Luk er fjernet; "Eksportér CSV" står, hvor den stod.
+
+Klik giver en rigtig PDF-fil, lavet på serveren med headless Chromium (`apps/server/src/pdf/`):
+
+- **Virksomhed** (spec.kind "company"): rapporten ovenfor som A4-PDF, ét ark pr. side, vektorgrafer og sidetal "x af n". Data hentes friskt (stamdata, regnskab 5 år og fuldt regnskab, ledelse, ejere, reelle ejere, score og revisor); Creditsafe kun fra fokus risiko, fordi et opslag kan koste en kredit.
+- **Alle andre sider** (person, lister, `render_view`, gemte sider og visninger): selve visningen i print-tilstand (`LassoView print`): A4 stående, 794 px bred skaleret ind mellem margenerne (`@page { size: A4; margin: 14mm }`), uden handlingsbjælke, modulbjælke, knapper og kontroller, "Se alle" og "Vis hele" foldet ud, faner (`Tabs`) som overskrift med den viste fanes navn, `break-inside: avoid` på elementerne og rækkerne (tabeller løber videre på næste ark med kolonneoverskrifterne gentaget). Sidehoved med Lasso-mærket, sidens navn og datastempel og sidefod med kilder og "side x af n" på hvert ark (Chromiums sidehoved og sidefod, `pageTemplates` i `packages/ui/src/print.tsx`).
+- Filnavn: `Virksomhedsrapport <navn> <ÅÅÅÅ-MM-DD>.pdf` eller `<sidens titel> <ÅÅÅÅ-MM-DD>.pdf`; tegn uden for bogstaver, tal, mellemrum, bindestreg og punktum bliver "-".
+
+Serveren (én delt Chromium via playwright-core, startet ved første PDF og lukket efter 5 minutters stilhed, højst 2 PDF'er ad gangen, `PDF_TIMEOUT_MS` = 25 s pr. PDF; ved fejl lukkes browseren, og næste kald starter en ny) opretter et print-job i hukommelsen (engangstoken, 60 s), åbner `http://127.0.0.1:<PORT>/print/<token>` (svarer kun til loopback; render-appen med `boot.mode "print"`), venter på fontene og `document.documentElement.dataset.lassoReady === "1"` og gemmer siden med `page.pdf`. Siden må kun hente fra serveren selv; fontene er indlejret i render-appen, og nyhedernes kildeikoner udefra vises ikke i print. Hver PDF logges med varighed (`[pdf] company CVR-1-… 1.4 s`).
+
+| Rute | Giver |
+|---|---|
+| `GET /k/:cvr.pdf?m=&y=&e=&f=&s=` | Virksomhedsrapporten. Samme signerede query som `/k/:cvr` (samme signatur, samme fejl: 403 ugyldig, 410 udløbet). |
+| `GET /p/:id.pdf?f=&e=&s=` | Personsiden med samme fokus. |
+| `GET /e/:lassoId.pdf?f=&e=&s=` | Rapport for `CVR-1-…`, siden for `CVR-3-…`. |
+| `GET /v/:org/:slug.pdf` | En gemt visning som side-PDF (samme adgang som `/v/`). |
+| `GET /x/:token.pdf` | MCP-appens `render_view`, `search_companies` og `list_saved_pages`: specen og data, som de blev vist, i et kortlivet lager (10 min, kan hentes flere gange i den tid; tokenet er 32 tilfældige bytes). |
+| `GET /api/portal/pdf/company/:id?focus=`, `GET /api/portal/pdf/person/:id?focus=`, `POST /api/portal/pdf/spec` | Portalen bag session (se `docs/portal.md`). |
+
+Alle svarer `application/pdf` med `Content-Disposition: attachment; filename*=UTF-8''…`. Uden Chromium (`PDF_CHROMIUM_PATH` findes ikke) svarer de `503 { error: "PDF er ikke slået til på denne server." }`, `/health` viser `pdf: false`, og værterne skjuler knappen (`boot.pdf === false`, eller intet `pdfLink` i MCP-svaret).
+
+Værterne: MCP-appen får `pdfLink` i `structuredContent` (`show_company` → `/k/<cvr>.pdf`, `show_person` → `/p/<id>.pdf`, `render_view`, `search_companies` og `list_saved_pages` → `/x/<token>.pdf`, `resolve_view` efter drill-down og filterændringer), henter filen og gemmer den gennem værten (`app.downloadFile` med PDF'en som blob); kan appen ikke hente linket, eller afviser værten download, åbnes linket i stedet (`app.openLink`), og browseren gemmer filen. Appens ressource tillader forbindelser til serveren selv (`csp.connectDomains`). Delte sider får `pdf` og `pdfUrl` (sidens eget .pdf-link) i boot'en og går til linket. Portalen henter fra `/api/portal/pdf/*` med sessionen og gemmer med `<a download>`; beskeden er "PDF'en er hentet" eller fejlen med "Prøv igen".
+
+### Virksomheds- og personhoved, genveje og "Se alle"-panelet (08, 09, 16)
+
+```ts
+<CompanyHead company variant?="full|compact|line" actions?={HeadActionsProps} risk?={ObservationsVM} onSeeRisk? onHistory? below? />
+<PersonHead person variant? actions? onSeeRisk? below? />
+<HeadActions monitor?={{ monitoring, onClick }} save?={{ saved, onClick }} exportItems?={MenuItem[]} more?={MenuItem[]} history? labels? />
+<Shortcuts items={[{ id, label, icon, onSelect }]} />                       // 08.4, maks 6 + "Flere"
+<SidePanel open title subtitle? onClose list={<SidePanelList groups selected onSelect />} detail? view?="list|detail" onBack? />   // 08.7
+```
+
+Handlingerne (Overvåg/Overvåger, Gem/Gemt, Eksportér, "…") er 32 px ikonknapper øverst til højre i hovedet; `LassoView` fylder dem ud fra `HostCapabilities` (`monitor`, `savePage`, `export`, `refresh`, `fullscreen`) og flytter dem ud af rammens header og footer, når sidens hoved står på siden. "Se risiko" (`risk: true` i specen, kun ved 50+), "Se historik" (ophørt) og genveje sender `open-section` (værten skifter fokus) eller en `prompt`. `headTabs` på `LassoView` giver sektionsfanerne (08.2) under hovedet. Kontaktpersoner (08.6) viser 3 + "Se N kontaktpersoner" og åbner `SidePanel` (720/600 px, fuldskærmsark på mobil). Live-nummeret (08.5) har fire tilstande (`liveState`), og `verify-contact` beder værten verificere i realtid.
+
+## Tabeller, massehandlinger og persontabel (15, mobil 26c)
+
+`CompanyTable` har værktøjslinjen (søg i resultatet, `Filtre (n)` der åbner `FilterSheet`, kolonnevalg, eksport), afkrydsning med `BulkBar` (15.2: "N markeret, vælg alle", handlinger, luk; destruktiv som rød tekst), 25 rækker pr. side med `Pagination` (aktiv side ink 600 + 2 px streg) og tilstande inde i rammen (`TableStateRows`, hovedet står). Under 560 px bliver den en kortliste (navn + status, CVR og by, tynd linje, tre nøgletal + score) med fjernbare filterchips. `LassoPersonTable { query, limit? }` (15.3) er samme tabel med personer: navn alene, fødselsår og by, 2 roller + "og n flere", konkurser kun > 0. Delene ligger i `components/TableKit.tsx`.
+
+Ejerdiagrammet (14, layoutregel 3) har Legale/Reelle ejere, datovælger (klientsidet ud fra registreringsdatoer), dobbeltklik for nyt fokus, mini-kort med viewport-ramme og eksport til PNG/PDF af hele grafen med legende og dato (`ownershipExport.ts`, `print.tsx`).

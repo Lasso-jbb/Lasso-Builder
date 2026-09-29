@@ -1,4 +1,4 @@
-import {
+import { moreText,
   amountScale,
   currencyUnit,
   isForeignCurrency,
@@ -15,17 +15,23 @@ import {
   METRIC_LABELS,
   ownershipGraphKey,
   percentChange,
+  PERSON_LIST_ROLE_TITLES,
+  PERSON_ROLE_FILTER_TITLES,
+  peopleWithRole,
   personCompanies,
   personCounts,
   personFacts,
   personRisk,
   personRoleRows,
+  personWithRole,
   riskTimeline,
   savedPagesKey,
   searchKey,
+  type Ask,
   type Dataset,
   type ViewSpec,
 } from "@lasso/spec";
+import { answerText } from "./answer.js";
 
 /**
  * Kort tekst til modellen. Brugeren ser allerede visningen, så teksten er kun
@@ -35,8 +41,13 @@ import {
 /** Elementer, der viser seneste regnskabsårs nøgletal; det første på siden giver resuméets regnskabslinje. */
 const SUMMARY_FIGURES: ReadonlySet<ViewSpec["components"][number]["type"]> = new Set(["LassoKeyFigureCards", "LassoIncomeStatement", "LassoBalanceSheet", "LassoMultiYearTable"]);
 
-export function summarizeView(spec: ViewSpec, ds: Dataset): string {
+export function summarizeView(spec: ViewSpec, ds: Dataset, opts: { ask?: Ask } = {}): string {
   const lines: string[] = [];
+  // Et spørgsmål med et emne: svaret står først, lige efter hovedlinjen (identiteten).
+  const answer = answerText(spec, ds, opts.ask);
+  const answered = () => {
+    if (answer && !lines.some((l) => l.startsWith("Svar: "))) lines.push(`Svar: ${answer}`);
+  };
   if (ds.source === "demo") lines.push("OBS: Demodata (opdigtede virksomheder), ikke rigtige Lasso-data.");
   // Seneste regnskabsår én gang: fra nøgletalskortene, eller fra tabellerne på regnskab, hvor kortene ikke står.
   const figures = spec.components.find((x) => SUMMARY_FIGURES.has(x.type));
@@ -47,6 +58,7 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
       if (co) {
         const where = [co.address?.city, co.industryText].filter(Boolean).join(", ");
         lines.push(`${co.name} (CVR ${co.cvr ?? "?"}, Lasso-ID ${co.lassoId}): ${co.status ?? "ukendt status"}${where ? `, ${where}` : ""}.`);
+        answered();
         // Stamoplysninger, så modellen kan svare på dem (og værter uden grafik kan vise dem).
         const a = co.address;
         const facts = [
@@ -103,10 +115,24 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
       const r = ds.creditRatings?.[c.company];
       if (r) lines.push(`Kreditvurdering (Creditsafe): ${creditRatingText(r)}.`);
     }
+    if (c.type === "LassoAuditorIndependence") {
+      // Risiko viser kun kreditvurderingen og revisoruafhængigheden: begge skal med i resuméet.
+      const a = ds.auditorIndependence[c.company];
+      if (a) {
+        const word = (s: number) => (s === 100 ? "konflikt" : s === 50 ? "vurdér" : "neutral");
+        const sorted = [...a.relations].sort((x, y) => y.assessment - x.assessment);
+        const who = a.auditorName ? ` (revisor ${a.auditorName})` : "";
+        lines.push(
+          sorted.length
+            ? `Revisoruafhængighed${who}: ${sorted.length} ${sorted.length === 1 ? "relation" : "relationer"}; ${sorted.slice(0, 3).map((r) => `${word(r.assessment)}: ${r.name}, ${r.relation}`).join("; ")}${sorted.length > 3 ? `; og ${sorted.length - 3} flere` : ""}.`
+            : `Revisoruafhængighed${who}: ${(a.unavailableReason ?? "ingen kendte relationer mellem revisor, kunden og personer").replace(/\.$/, "")}.`,
+        );
+      }
+    }
     if (c.type === "LassoPersonList") {
-      const people = ds.people[c.company] ?? [];
+      const people = peopleWithRole(ds.people[c.company] ?? [], c.roles);
       const current = people.filter((p) => !p.to).slice(0, 6);
-      if (current.length) lines.push(`Ledelse: ${current.map((p) => `${p.name} (${p.role})`).join(", ")}.`);
+      if (current.length) lines.push(`${c.roles ? PERSON_LIST_ROLE_TITLES[c.roles] : "Ledelse"}: ${current.map((p) => `${p.name} (${p.role})`).join(", ")}.`);
     }
     if (c.type === "LassoOwnerList") {
       const o = ds.ownership[c.company];
@@ -140,20 +166,22 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
       if (p) {
         const n = personCounts(p);
         lines.push(`Person: ${p.name} (Lasso-ID ${p.lassoId})${p.city ? `, ${p.city}` : ""}: ${n.activeRoles} aktive roller i ${n.activeCompanies} selskaber, ${n.endedRoles} ophørte${n.firstYear ? `, første registrering ${n.firstYear}` : ""}.`);
+        answered();
       }
     }
     if (c.type === "LassoPersonRoles") {
-      const p = ds.persons[c.person];
+      const whole = ds.persons[c.person];
+      const p = whole ? personWithRole(whole, c.role) : undefined;
       const show = c.show ?? "all";
       if (p && show === "all") {
         const list = personCompanies(p).slice(0, 8).map((x) => `${x.companyName} [${x.companyId ?? "?"}]: ${x.roles.map((r) => `${r.role}${r.share ? ` ${r.share}` : ""}${r.active ? "" : " (fratrådt)"}`).join(", ")}`);
         if (list.length) lines.push(`Roller: ${list.join("; ")}.`);
       } else if (p && show !== "all") {
-        // Rollelisterne (overblik: aktive; ejerskab: ejede selskaber; risiko: øvrige ophørte).
+        // Rollelisterne (overblik: aktive eller ophørte; ejerskab: ejede selskaber).
         const rows = personRoleRows(p, show, { except: c.except });
-        const label = c.title ?? { current: "Aktive roller", ended: "Ophørte roller", owner: "Ejerskaber" }[show];
+        const label = c.title ?? (c.role ? PERSON_ROLE_FILTER_TITLES[c.role] : { current: "Aktive roller", ended: "Ophørte roller", owner: "Ejerskaber" }[show]);
         const list = rows.slice(0, 8).map((r) => `${r.companyName} [${r.companyId ?? "?"}]: ${r.text}${r.period ? `, ${r.period}` : ""}${r.companyStatus ? ` (selskabet ${r.companyStatus.toLowerCase()})` : ""}`);
-        lines.push(`${label}: ${list.length ? `${list.join("; ")}${rows.length > 8 ? `; og ${rows.length - 8} flere` : ""}` : show === "owner" ? "ejer ingen selskaber i CVR" : "ingen"}.`);
+        lines.push(`${label}: ${list.length ? `${list.join("; ")}${rows.length > 8 ? `; og ${moreText(rows.length - 8)}` : ""}` : show === "owner" ? "ejer ingen selskaber i CVR" : "ingen"}.`);
       }
     }
     if (c.type === "LassoPersonNetwork") {
@@ -165,7 +193,7 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
           `Netværk (år sammen = længste sammenhængende periode): ${net.people
             .slice(0, n)
             .map((x) => `${x.name} (${x.overlapYears} år, ${x.companies.length} fælles selskaber${x.active ? "" : ", afsluttet"})`)
-            .join(", ")}${net.people.length > n ? `, og ${net.people.length - n} flere` : ""}.`,
+            .join(", ")}${net.people.length > n ? `, og ${moreText(net.people.length - n)}` : ""}.`,
         );
       } else if (net) lines.push("Netværk: personen sidder ikke sammen med andre i registrerede selskaber.");
     }
@@ -253,6 +281,8 @@ export function summarizeView(spec: ViewSpec, ds: Dataset): string {
     }
   }
 
+  // Uden hoved på siden (fx en render_view-spec) står svaret alligevel.
+  answered();
   const errors = Object.entries(ds.errors);
   if (errors.length) lines.push(`Fejl: ${errors.slice(0, 3).map(([k, v]) => `${k.split(":")[0]}: ${v}`).join("; ")}.`);
   // Hvornår tekstkortet vises, står ét sted: serverinstruktionerne (review P1-6).

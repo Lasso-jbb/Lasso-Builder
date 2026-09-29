@@ -1,7 +1,8 @@
 import { z } from "zod";
+import { COMPANY_FACT_KEYS } from "./companyFacts.js";
 import { criterionSchema } from "./criteria.js";
 import { currencyUnit, formatAmount, formatNumber, formatPercent } from "./format.js";
-import { CHANGE_TYPES, type FinancialYear } from "./models.js";
+import { CHANGE_TYPES, type FinancialYear, type TimelineVM } from "./models.js";
 import { TEXT_SECTIONS_VARIANTS } from "./textSections.js";
 
 /**
@@ -90,6 +91,7 @@ export const TABLE_COLUMNS = [
   "bruttofortjeneste",
   "resultat",
   "udvikling",
+  "score",
 ] as const;
 export type TableColumn = (typeof TABLE_COLUMNS)[number];
 
@@ -105,6 +107,7 @@ export const TABLE_COLUMN_LABELS: Record<TableColumn, string> = {
   bruttofortjeneste: "Bruttofortjeneste",
   resultat: "Resultat",
   udvikling: "Udvikling",
+  score: "Score",
 };
 
 export const DEFAULT_TABLE_COLUMNS: readonly TableColumn[] = ["navn", "by", "branche", "ansatte", "bruttofortjeneste", "udvikling"];
@@ -122,6 +125,69 @@ export const PERSON_ROLES_SHOW = ["all", "current", "ended", "owner"] as const;
 export type PersonRolesShow = (typeof PERSON_ROLES_SHOW)[number];
 /** Personens tidslinje afgrænset til selskaberne med konkurs eller tvangsopløsning (fokus risiko). */
 export const TIMELINE_FILTERS = ["risiko"] as const;
+
+/**
+ * Begivenhedernes kategorier i tidslinjen (TimelineEventVM.category, som kortet viser: "Ledelse",
+ * "Regnskab" …) som nøgler, så en tidslinje kan vise netop de begivenheder, spørgsmålet gælder
+ * (LassoTimeline `kinds`). En begivenhed hører til en nøgle, når kategorien med små bogstaver er den.
+ */
+export const TIMELINE_KINDS = ["stamdata", "ledelse", "regnskab", "status", "ejerskab"] as const;
+export type TimelineKind = (typeof TIMELINE_KINDS)[number];
+
+/** LassoPersonList `roles`: kun direktionen eller kun bestyrelsen (formand og suppleanter med). */
+export const PERSON_LIST_ROLES = ["direktion", "bestyrelse"] as const;
+export type PersonListRole = (typeof PERSON_LIST_ROLES)[number];
+
+/** LassoPersonRoles `role`: kun personens bestyrelsesposter, direktørposter eller ejerskaber. */
+export const PERSON_ROLE_FILTERS = ["bestyrelse", "direktion", "ejer"] as const;
+export type PersonRoleFilter = (typeof PERSON_ROLE_FILTERS)[number];
+
+/** Standardtitlen på en personliste med `roles`. */
+export const PERSON_LIST_ROLE_TITLES: Record<PersonListRole, string> = { direktion: "Direktion", bestyrelse: "Bestyrelse" };
+
+/** Hører rolleteksten til direktionen eller bestyrelsen? Suppleanter hører til bestyrelsen. */
+export function isListRole(role: string, filter: PersonListRole): boolean {
+  if (filter === "direktion") return /direkt/i.test(role);
+  return /bestyrelse|formand/i.test(role) || (/suppleant/i.test(role) && !/direkt/i.test(role));
+}
+
+/** Personerne i en virksomheds ledelse, der hører til `roles` (udeladt = alle). */
+export function peopleWithRole<T extends { role: string }>(people: readonly T[], roles?: PersonListRole): T[] {
+  return roles ? people.filter((p) => isListRole(p.role, roles)) : [...people];
+}
+
+/** Tidslinjen med kun de begivenheder, hvis kategori er en af `kinds` (udeladt = alle). */
+export function timelineOfKinds(t: TimelineVM, kinds?: readonly TimelineKind[]): TimelineVM {
+  if (!kinds?.length) return t;
+  const wanted = new Set<string>(kinds);
+  return { ...t, events: t.events.filter((e) => wanted.has(e.category.trim().toLowerCase())) };
+}
+
+const KIND_WORDS: Record<TimelineKind, { title: string; none: string }> = {
+  stamdata: { title: "Stamdata", none: "stamdataændringer" },
+  ledelse: { title: "Ledelsesændringer", none: "ledelsesændringer" },
+  regnskab: { title: "Regnskaber", none: "offentliggjorte regnskaber" },
+  status: { title: "Statusændringer", none: "statusændringer" },
+  ejerskab: { title: "Ejerskifter", none: "ejerskifter" },
+};
+
+/** Titel og tom tilstand for en tidslinje med `kinds`: "Statusændringer", "Ingen statusændringer registreret." */
+export function timelineKindsText(kinds: readonly TimelineKind[]): { title: string; empty: string } {
+  const words = kinds.map((k) => KIND_WORDS[k]);
+  const title = words.length === 1 ? words[0]!.title : "Historik";
+  const none = words.map((w) => w.none).join(" eller ");
+  return { title, empty: `Ingen ${none} registreret.` };
+}
+
+/**
+ * "Se alle" på en smagsprøve (overblikket): 'expand' (standard) folder listen ud på stedet; et
+ * fokusnavn åbner i stedet den fane, der ejer elementet ("Se alle 12 begivenheder i Historik"),
+ * når værten kan skifte fane (open-focus). Uden den kapabilitet folder listen ud som før.
+ */
+export const MORE_HISTORIK = ["expand", "historik"] as const;
+export const MORE_ROLLER = ["expand", "roller"] as const;
+export const MORE_NETVAERK = ["expand", "netvaerk"] as const;
+const moreDescription = (tab: string) => `'expand' (standard): 'Se alle N' folder ud på stedet. '${tab}': knappen åbner fanen ${tab} (kun på overblikket, som en smagsprøve).`;
 
 const personRef = z
   .string()
@@ -157,15 +223,31 @@ export const searchQuerySchema = z
   .describe("En virksomhedssøgning.");
 export type SearchQuery = z.infer<typeof searchQuerySchema>;
 
+/** Katalog 08.1 og 30: fuldt hoved (side), kompakt 56 px (sidepanel, sammenligning) og linje 40 px (svarniveau A/B). */
+export const HEAD_VARIANTS = ["full", "compact", "line"] as const;
+export type HeadVariant = (typeof HEAD_VARIANTS)[number];
+
 export const companyHeaderSchema = z.object({
   type: z.literal("LassoCompanyHead"),
   company: companyRef,
+  variant: z
+    .enum(HEAD_VARIANTS)
+    .optional()
+    .describe("'full' (standard): navn 28, status, faktalinje og handlinger. 'compact': 56 px med navn og én faktalinje (sidepanel, sammenligning). 'line': én linje på 40 px over et enkelt element (svarniveau A/B)."),
+  risk: z
+    .boolean()
+    .optional()
+    .describe("Hent risikoobservationer og vis 'Se risiko'-linjen under faktalinjen ved mindst én observation på 50+. Tager 10–14 s; brug kun, når spørgsmålet handler om risiko."),
 });
 
 export const keyFiguresSchema = z.object({
   type: z.literal("LassoKeyFigureCards"),
   company: companyRef,
   metrics: z.array(metric).min(1).max(6).optional().describe("Standard: omsætning/bruttofortjeneste, resultat, egenkapital, ansatte."),
+  variant: z
+    .enum(["plain"])
+    .optional()
+    .describe("'plain' (24.5/30.13): felter adskilt af 1 px lodrette linjer uden ydre ramme, ingen sparkline og ingen branchelinje; kun én udviklingslinje. Portalens sider bruger altid denne form."),
 });
 
 export const financialChartSchema = z.object({
@@ -186,7 +268,7 @@ export const stackedBarChartSchema = z.object({
   type: z.literal("LassoStackedBarChart"),
   company: companyRef,
   years: z.number().int().min(2).max(10).default(5),
-}).describe("Egenkapital og gæld som dele af balancen, pr. år.");
+}).describe("Balancen på seneste balancedag: aktiver mod passiver som to stablede søjler.");
 
 export const lineChartSchema = z.object({
   type: z.literal("LassoLineChart"),
@@ -194,6 +276,10 @@ export const lineChartSchema = z.object({
   metric: metric.default("bruttofortjeneste"),
   years: z.number().int().min(2).max(10).default(5),
   benchmark: companyRef.optional().describe("Valgfri sammenligningsvirksomhed, vist som stiplet benchmark-linje (chart-5)."),
+  industry: z
+    .boolean()
+    .optional()
+    .describe("true: sammenlign med branchens median i stedet for en virksomhed; begge serier vises som indeks med første år = 100 (13.6). Udelukker benchmark."),
 });
 
 export const waterfallChartSchema = z.object({
@@ -201,10 +287,15 @@ export const waterfallChartSchema = z.object({
   company: companyRef,
 }).describe("Fra omsætning/bruttofortjeneste til årets resultat for seneste regnskabsår.");
 
+export const SHARE_BARS_VARIANTS = ["balance", "ejerkreds"] as const;
 export const shareBarsSchema = z.object({
   type: z.literal("LassoShareBars"),
   company: companyRef,
-}).describe("Egenkapital og gæld som andele af balancen for seneste regnskabsår.");
+  variant: z
+    .enum(SHARE_BARS_VARIANTS)
+    .optional()
+    .describe("'balance' (standard, også når udeladt): egenkapital og gæld som andele af balancen. 'ejerkreds': de legale ejere med CVR's ejerandelsintervaller."),
+}).describe("Fordeling: donut med tal i midten + andelsbjælker (13.8).");
 
 export const rankingSchema = z.object({
   type: z.literal("LassoRanking"),
@@ -217,6 +308,10 @@ export const peopleListSchema = z.object({
   type: z.literal("LassoPersonList"),
   company: companyRef,
   show: z.enum(["current", "all"]).default("current").describe("'all' tager fratrådte med, så man kan se udskiftning."),
+  roles: z
+    .enum(PERSON_LIST_ROLES)
+    .optional()
+    .describe("Kun 'direktion' (direktører) eller kun 'bestyrelse' (med formand og suppleanter). Udeladt = hele ledelsen. Titlen følger filteret."),
   title: z.string().max(80).optional(),
 });
 
@@ -244,6 +339,14 @@ export const textSectionsSchema = z.object({
     .default("profil")
     .describe("'profil' (standard): formål og tegningsregler fra CVR plus regnskabsanalysens konklusion, resultat og likviditet. 'analyse': hele regnskabsanalysen (alle afsnit), foldet efter konklusionen."),
   title: z.string().max(80).optional(),
+  folded: z.boolean().optional().describe("Kun variant 'analyse': analysen foldet til 3 linjer med 'Vis mere' på alle bredder (30.13, svar i chatten). Udeladt: foldet kun på mobil."),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(10)
+    .optional()
+    .describe("Kun variant 'profil': vis kun de første N afsnit; resten kommer frem med 'Vis mere' (kompakt profil, når siden er over højdebudgettet, 23.3). Udeladt: alle afsnit."),
 });
 
 export const summarySchema = z.object({
@@ -264,6 +367,17 @@ export const timelineSchema = z
       .enum(TIMELINE_FILTERS)
       .optional()
       .describe("Kun med person: 'risiko' viser kun forløbet i de selskaber, der er gået konkurs eller tvangsopløst (roller ind og ud og selskabets status)."),
+    kinds: z
+      .array(z.enum(TIMELINE_KINDS))
+      .min(1)
+      .max(TIMELINE_KINDS.length)
+      .optional()
+      .describe("Kun med company: vis kun disse slags begivenheder ('ledelse', 'regnskab', 'status', 'stamdata', 'ejerskab'). Tom tilstand, når ingen er registreret."),
+    more: z.enum(MORE_HISTORIK).optional().describe(moreDescription("historik")),
+    filterColumn: z
+      .boolean()
+      .optional()
+      .describe("Mønster 6, Tidslinje (30.9): typefiltrene i en kolonne ¼ ved siden af strømmen ¾; fylder hele bredden. Under 960 px bliver filtrene chips over strømmen. Standard: typevælger i sektionens hoved."),
   })
   .refine(exactlyOneEntity, EXACTLY_ONE_ENTITY)
   .describe("Virksomhed: stiftelse, ledelsesskift og regnskaber. Person: indtrådt/udtrådt som X i selskaber og selskabernes konkurser/tvangsopløsninger.");
@@ -273,6 +387,11 @@ export const newsSchema = z
     type: z.literal("LassoNews"),
     ...companyOrPerson,
     limit: z.number().int().min(1).max(10).default(5),
+    more: z.enum(MORE_HISTORIK).optional().describe(moreDescription("historik")),
+    layout: z
+      .enum(["grid"])
+      .optional()
+      .describe("'grid' (mønster 8, 30.11): artiklerne som kortgitter i to kolonner i fuld bredde (én kolonne på mobil). Udeladt: liste i ½."),
   })
   .refine(exactlyOneEntity, EXACTLY_ONE_ENTITY);
 
@@ -297,6 +416,14 @@ export const tableSchema = z.object({
   title: z.string().max(80).optional(),
 });
 
+/** Katalog 15.3: persontabel, samme tabel som virksomhedstabellen med personkolonner. */
+export const personTableSchema = z.object({
+  type: z.literal("LassoPersonTable"),
+  query: z.string().min(2).max(120).describe("Navnet eller den del af navnet, der søges på, fx 'Mette Holm'."),
+  limit: z.number().int().min(1).max(50).default(25),
+  title: z.string().max(80).optional(),
+});
+
 export const comparisonSchema = z.object({
   type: z.literal("LassoCompareTable"),
   companies: z.array(companyRef).min(2).max(6),
@@ -310,13 +437,34 @@ export const keyValueListSchema = z.object({
   variant: z
     .enum(["company", "financials"])
     .default("company")
-    .describe("'company': stamdata og revisor. 'financials': regnskabstal med årsvælger, tal højrestillet."),
+    .describe("'company': stamdata og revisor. 'financials': regnskabstal med årsvælger."),
   title: z.string().max(80).optional(),
   exclude: z
     .array(metric)
     .max(METRICS.length)
     .optional()
     .describe("Kun variant 'financials': nøgletal, der allerede står på siden (fx i LassoKeyFigureCards), og som listen derfor udelader."),
+  only: z
+    .array(metric)
+    .min(1)
+    .max(METRICS.length)
+    .optional()
+    .describe("Kun variant 'financials': vis kun disse nøgletal (i denne rækkefølge) plus regnskabsperiode og udgivelsesdato."),
+  year: z
+    .number()
+    .int()
+    .min(1990)
+    .max(2100)
+    .optional()
+    .describe("Kun variant 'financials': det regnskabsår, årsvælgeren starter på. Findes året ikke, vises seneste år med en note i kildelinjen."),
+  rows: z
+    .array(z.enum(COMPANY_FACT_KEYS))
+    .min(1)
+    .max(COMPANY_FACT_KEYS.length)
+    .optional()
+    .describe("Kun variant 'company': vis kun disse rækker (fx ['revisor','revisorskift','regnskabsperiode']). Det, hovedet, kontaktblokken og ejerlisten viser på siden, gentages stadig ikke."),
+  years: z.number().int().min(2).max(5).optional().describe("Kun variant 'financials': antal år i årsvælgeren (standard 5). 2 giver segmentet '2025 | 2024' i fuld bredde på mobil (30.13)."),
+  maxRows: z.number().int().min(1).max(20).optional().describe("Vis kun de første N rækker; resten bag 'Se N oplysninger' (30.13, svarniveau B). Udeladt: alle rækker."),
 });
 
 export const contactSchema = z.object({
@@ -324,6 +472,21 @@ export const contactSchema = z.object({
   company: companyRef,
   title: z.string().max(80).optional(),
 }).describe("Kontaktblok: telefon, e-mail, web og adresse, klikbare.");
+
+/** Katalog 08.4: Lasso-værktøjer, en genvej kan åbne på virksomheden (i den rækkefølge, de vises). */
+export const SHORTCUT_TOOLS = ["ejerdiagram", "regnskabsanalyse", "noegletal", "ejendomme", "tinglysning", "firmaindsigt", "ledelse", "kontakt", "historik", "risiko"] as const;
+export type ShortcutTool = (typeof SHORTCUT_TOOLS)[number];
+/** Standardgenvejene (Paper 08.4): de seks Lasso-værktøjer i katalogets rækkefølge. */
+export const DEFAULT_SHORTCUT_TOOLS: readonly ShortcutTool[] = ["ejerdiagram", "regnskabsanalyse", "noegletal", "ejendomme", "tinglysning", "firmaindsigt"];
+
+export const shortcutsSchema = z
+  .object({
+    type: z.literal("LassoShortcuts"),
+    company: companyRef,
+    tools: z.array(z.enum(SHORTCUT_TOOLS)).min(1).max(10).optional().describe("Standard: ejerdiagram, regnskabsanalyse, noegletal, ejendomme, tinglysning, firmaindsigt. Over 6 samles resten under 'Flere'."),
+    title: z.string().max(80).optional(),
+  })
+  .describe("Genveje: sekundære knapper med koral ikon, der åbner et Lasso-værktøj på virksomheden.");
 
 export const contactPersonsSchema = z.object({
   type: z.literal("LassoContactPersons"),
@@ -337,6 +500,7 @@ export const multiYearTableSchema = z.object({
   metrics: z.array(metric).min(1).max(6).optional().describe("Standard: bruttofortjeneste/omsætning, resultat, egenkapital, ansatte."),
   years: z.number().int().min(2).max(10).default(5),
   title: z.string().max(80).optional(),
+  variant: z.enum(["A", "B"]).optional().describe("Kun mobil (26c.3): A = nøgletal i rækker med fast kolonne og vandret rul; B = ét kort pr. nøgletal med årene som kolonner. Standard: B ved 1–2 nøgletal, ellers A."),
 });
 
 export const incomeStatementSchema = z.object({
@@ -360,14 +524,94 @@ export const cashFlowSchema = z.object({
   title: z.string().max(80).optional(),
 }).describe("Pengestrømsopgørelsen (drift, investering, finansiering), 2–3 år side om side. Tom tilstand, når selskabet ikke aflægger den (klasse B).");
 
+/** Katalog 19.1 (mobil 26d.8–26d.11, tablet 26f.3): regnskabsdetaljer med værktøjslinje og segmentskift. */
+export const financialStatementsSchema = z.object({
+  type: z.literal("LassoFinancialStatements"),
+  company: companyRef,
+  statement: z.enum(["income", "balance", "cashflow"]).optional().describe("Opgørelsen, der vises først: 'income' (standard), 'balance' eller 'cashflow'."),
+  years: z.number().int().min(2).max(5).default(2).describe("År side om side i resultatopgørelsen på desktop, standard 2 + ændring (19.1). Tablet viser 3, mobil ét år + ændring."),
+  title: z.string().max(80).optional(),
+}).describe("Fuldt regnskab med værktøjslinje (selskab/koncern, periode, enhed, revisorpåtegning, Hent PDF); desktop viser resultat, balance og pengestrøm samlet, mobil skifter med segment.");
+
+/** Katalog 28.6 (mobil 26h.8): fusioner og spaltninger som "fra → til". Live-felter ubekræftede. */
+export const mergersSchema = z.object({
+  type: z.literal("LassoMergers"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
+}).describe("Fusioner og spaltninger: dato og type, 'fra → til' med selskabskort; ophørte selskaber i muted.");
+
+/** Katalog 28.7 (mobil 26h.9): regnskabsoplysninger og kapital/vedtægter; 'profile' = bibrancher og formål. Felter ud over CVR-teksterne er ubekræftede. */
+export const registrationSchema = z.object({
+  type: z.literal("LassoRegistration"),
+  company: companyRef,
+  variant: z.enum(["full", "profile"]).default("full").describe("'full' (standard) = to kort: regnskabsoplysninger og kapital og vedtægter. 'profile' = bibrancher og formål."),
+  title: z.string().max(80).optional(),
+}).describe("Regnskabsoplysninger (revision, regnskabsår og -perioder, regnskabsklasse, bibrancher) og kapital og vedtægter (kapital, kapitalklasser, vedtægter, tegningsregel, formål, reklamebeskyttet, børsnoteret).");
+
+/** Katalog 28.8: Statstidende, seneste bekendtgørelser. Udelades helt uden bekendtgørelser. */
+export const announcementsSchema = z.object({
+  type: z.literal("LassoAnnouncements"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
+}).describe("Statstidende: bekendtgørelser med type farvet efter alvor (konkurs og rekonstruktion rød, likvidation gul) og teksten foldet.");
+
+/** Katalog 28.2: offentliggjorte regnskaber (ny/korrigeret) sorteret efter offentliggørelsesdato. */
+export const publicationsSchema = z.object({
+  type: z.literal("LassoPublications"),
+  company: companyRef,
+  limit: z.number().int().min(1).max(20).optional().describe("Rækker før 'Se alle', standard 5."),
+  title: z.string().max(80).optional(),
+}).describe("Regnskabspublicering: offentliggjort, type (Årsrapport/Halvår/Kvartal, ny/korrigeret), periode og hovedtal.");
+
 /** Ingen live datakilde endnu (se resolve.ts og LiveProvider.score); demodata i DemoProvider, "ikke oplyst" i live. */
 export const scoreGaugeSchema = z.object({
   type: z.literal("LassoScoreGauge"),
   company: companyRef,
-  title: z.string().max(80).optional().describe("Standard: 'Score'."),
+  title: z.string().max(80).optional().describe("Standard: 'Kreditvurdering'."),
+  detail: z.boolean().optional().describe("Udviklingen over 24 måneder og seneste ændringer under måleren (26d.7). Standard: fra."),
 });
 
-/** Fjernet fra visningerne 27.09.2026. Skemaet bliver, så ældre gemte visninger stadig kan læses; komponenten vises og hentes ikke. */
+/**
+ * UDGÅET (Jakob 29.09): 18.2 Scorehistorik. Der kan ikke laves historik, og typen er fjernet fra kataloget
+ * (COMPONENT_CATALOG), så AI'en vælger den ikke. Skemaet står kun, så gemte specs stadig kan læses.
+ */
+export const scoreHistorySchema = z.object({
+  type: z.literal("LassoScoreHistory"),
+  company: companyRef,
+  title: z.string().max(80).optional().describe("Standard: 'Kreditscore <første år>–<sidste år>'."),
+  compare: z.boolean().optional().describe("Forrige vs. nu (18.1) over grafen. Standard: til; fra viser grafen alene (18.2)."),
+});
+
+/** Katalog 13.10: nøgletalsmåler med branchemærke. Branchetal er ubekræftede i live (docs/lasso-endpoints.md). */
+export const GAUGE_METRICS = ["soliditetsgrad", "overskudsgrad", "likviditetsgrad"] as const;
+export const keyFigureGaugeSchema = z.object({
+  type: z.literal("LassoKeyFigureGauge"),
+  company: companyRef,
+  metrics: z.array(z.enum(GAUGE_METRICS)).min(1).max(3).optional().describe("Standard: alle tre (soliditetsgrad, overskudsgrad, likviditetsgrad)."),
+  title: z.string().max(80).optional(),
+});
+
+/** Katalog 13.11: heatmap over ændringer pr. måned i en overvågningsliste. Samme ubekræftede kilde som LassoChangeFeed. */
+export const heatmapSchema = z.object({
+  type: z.literal("LassoHeatmap"),
+  list: z.string().max(80).optional().describe("Overvågningslistens navn, fx 'Kunder'. Udeladt = alle overvågede virksomheder."),
+  months: z.number().int().min(3).max(24).default(12).describe("Antal måneder tilbage, standard 12 (3–24)."),
+  types: z.array(z.enum(CHANGE_TYPES)).min(1).optional().describe("Delmængde af ændringstyper (rækkerne); udeladt = alle."),
+  title: z.string().max(80).optional(),
+});
+
+/** Katalog 13.12: kort med hovedadresse, P-enheder og klynger. Koordinater er ubekræftede i live. */
+export const mapSchema = z.object({
+  type: z.literal("LassoMap"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
+});
+
+/**
+ * Katalog 17.2: observationsliste med sammenfatning (filterchips høj/middel/info) og kort sorteret
+ * efter alvor. Komponeres ikke automatisk af compose (observationskaldet tager 10–14 s); vises kun,
+ * når en spec beder om den.
+ */
 export const riskObservationsSchema = z.object({
   type: z.literal("LassoRiskObservations"),
   company: companyRef,
@@ -394,6 +638,10 @@ export const propertiesSchema = z.object({
   title: z.string().max(80).optional(),
 });
 
+/**
+ * UDGÅET (Jakob 29.09): 22.2 Revisoruafhængighed kan ikke laves. Fjernet fra kataloget; skemaet står kun,
+ * fordi compose.ts endnu bygger elementet på risikosiden (skal fjernes af compose-ejeren) og for gemte specs.
+ */
 export const auditorIndependenceSchema = z.object({
   type: z.literal("LassoAuditorIndependence"),
   company: companyRef,
@@ -409,6 +657,7 @@ export const livestockSchema = z.object({
 export const personHeadSchema = z.object({
   type: z.literal("LassoPersonHead"),
   person: personRef,
+  variant: z.enum(HEAD_VARIANTS).optional().describe("'full' (standard), 'compact' (56 px) eller 'line' (40 px), som LassoCompanyHead."),
 });
 
 export const personRolesSchema = z.object({
@@ -425,6 +674,11 @@ export const personRolesSchema = z.object({
     .enum(TIMELINE_FILTERS)
     .optional()
     .describe("Kun show 'ended': 'risiko' udelader selskaber, der er gået konkurs eller tvangsopløst (de står i risikoens forløb)."),
+  role: z
+    .enum(PERSON_ROLE_FILTERS)
+    .optional()
+    .describe("Kun personens 'bestyrelse'-poster (formand og suppleant med), 'direktion'-poster eller 'ejer'-skaber. Udeladt = alle roller. Titlen følger filteret."),
+  more: z.enum(MORE_ROLLER).optional().describe(moreDescription("roller")),
   title: z.string().max(80).optional(),
 });
 
@@ -432,6 +686,7 @@ export const personNetworkSchema = z.object({
   type: z.literal("LassoPersonNetwork"),
   person: personRef,
   limit: z.number().int().min(1).max(50).optional().describe("Antal personer før 'Se alle N'. Standard 3 (regel 9)."),
+  more: z.enum(MORE_NETVAERK).optional().describe(moreDescription("netvaerk")),
   title: z.string().max(80).optional(),
 });
 
@@ -440,6 +695,14 @@ export const personRiskSchema = z.object({
   person: personRef,
   title: z.string().max(80).optional(),
 });
+
+/** Katalog 16 (mobil 26d.5): netværkstal som tre små kort, Netværk, Konkurser og Tvangsopløsninger. */
+export const personStatsSchema = z
+  .object({
+    type: z.literal("LassoPersonStats"),
+    person: personRef,
+  })
+  .describe("Tre små tal-kort: personer i 1. led, konkurser og tvangsopløsninger blandt personens selskaber.");
 
 export const personFactsSchema = z
   .object({
@@ -484,21 +747,60 @@ export const actionsSchema = z.object({
 });
 
 /**
- * Bredde i 4-kolonne-grid'et (guide 23: kun ¼, ½, ¾ og fuld). Udeladt = komponentens
- * standardbredde (DEFAULT_WIDTH). På tablet og mobil lægger elementerne sig under hinanden.
+ * Bredde i 12-kolonne-gitteret (gridmodellen 23.1): ¼ = 3, ⅓ = 4, ½ = 6, ⅔ = 8, ¾ = 9 og fuld = 12
+ * kolonner, ingen andre. Udeladt = komponentens standardbredde (DEFAULT_WIDTH). På tablet og mobil
+ * folder båndene (se LAYOUT_RULES).
  */
-export const WIDTHS = ["quarter", "half", "three-quarters", "full"] as const;
+export const WIDTHS = ["quarter", "third", "half", "two-thirds", "three-quarters", "full"] as const;
 export type Width = (typeof WIDTHS)[number];
+/** Kolonner i 12-kolonne-gitteret pr. bredde. */
+export const WIDTH_COLUMNS: Record<Width, number> = { quarter: 3, third: 4, half: 6, "two-thirds": 8, "three-quarters": 9, full: 12 };
+/**
+ * Layoutmønster 8 (Kortgitter) og 9 (Harmonika) fra Paper 30 (node JV3-0). Sammenhængende
+ * komponenter med samme group.id tegnes samlet: 'cards' i et kortgitter (to kolonner, én på
+ * mobil), 'accordion' som harmonika (48 px rækker, første række åben). title er gruppens
+ * overskrift og står over gruppen; første medlem med title bestemmer den.
+ */
+export const GROUP_PATTERNS = ["cards", "accordion"] as const;
+export type GroupPattern = (typeof GROUP_PATTERNS)[number];
+/**
+ * Modulværktøjslinjen (Paper 30.11, ModuleToolbar): 56 px under modulets overskrift, primær handling
+ * som sekundær knap yderst til venstre, evt. flere handlinger som tekstknapper. Hver handling er et
+ * opfølgende spørgsmål til Claude (prompt). Udelades, når modulet ingen handlinger har.
+ */
+export const toolbarActionSchema = z.object({
+  label: z.string().min(1).max(40),
+  prompt: z.string().min(1).max(400).describe("Opfølgende spørgsmål, der sendes til Claude ved klik, fx 'Eksportér nøgletallene for X som CSV'."),
+});
+export const groupSchema = z.object({
+  id: z.string().min(1).max(40),
+  pattern: z.enum(GROUP_PATTERNS),
+  title: z.string().max(80).optional(),
+  toolbar: z
+    .object({
+      primary: toolbarActionSchema.optional(),
+      actions: z.array(toolbarActionSchema).max(3).optional(),
+    })
+    .optional()
+    .describe("Modulværktøjslinjen (30.11): primary = modulets primære handling (sekundær knap yderst til venstre), actions = op til 3 tekstknapper efter den. Udelad, når modulet ingen handlinger har."),
+});
+export type ComponentGroup = z.infer<typeof groupSchema>;
+
 const widthShape = {
-  width: z.enum(WIDTHS).optional().describe("Bredde i dashboardet: quarter (¼), half (½), three-quarters (¾) eller full. Udelad for standardbredden."),
+  width: z.enum(WIDTHS).optional().describe("Bredde i 12-kolonne-gitteret: quarter (¼), third (⅓), half (½), two-thirds (⅔), three-quarters (¾) eller full. Udelad for standardbredden."),
   column: z
     .number()
     .int()
     .min(1)
-    .max(3)
+    .max(4)
     .optional()
     .describe(
-      "Kun layout 'columns': hvilken kolonne komponenten stables i. Udeladt = fuld bredde over eller under kolonnerne. Et lavere kolonnenummer end forrige komponents starter et nyt bånd af kolonner; står width på båndets komponenter, bestemmer den kolonnernes forhold (fx ¾ + ¼).",
+      "Kun layout 'columns': hvilken kolonne (stak) komponenten stables i, 1–4. Et bånd med bredder, der summerer til 12, er et bånd i gridmodellen (23.1). Udeladt = fuld bredde over eller under kolonnerne. Et lavere kolonnenummer end forrige komponents starter et nyt bånd af kolonner; står width på båndets komponenter, bestemmer den kolonnernes forhold (fx ¾ + ¼).",
+    ),
+  group: groupSchema
+    .optional()
+    .describe(
+      "Mønster 8/9 (Paper 30): sammenhængende komponenter med samme group.id tegnes samlet, pattern 'cards' som kortgitter (to kolonner, én på mobil) eller 'accordion' som harmonika (en række pr. komponent, første åben). title = gruppens overskrift. toolbar = modulværktøjslinjen (30.11) med handlinger som opfølgende spørgsmål. Udelad for almindelig placering.",
     ),
 };
 function w<S extends z.ZodRawShape>(schema: z.ZodObject<S>) {
@@ -519,15 +821,21 @@ export const componentSchema = z.discriminatedUnion("type", [
   w(ownershipSchema),
   w(ownershipDiagramSchema),
   w(tableSchema),
+  w(personTableSchema),
   w(comparisonSchema),
   w(keyValueListSchema),
   w(contactSchema),
   w(contactPersonsSchema),
+  w(shortcutsSchema),
   w(multiYearTableSchema),
   w(incomeStatementSchema),
   w(balanceSheetSchema),
   w(cashFlowSchema),
   w(scoreGaugeSchema),
+  w(scoreHistorySchema),
+  w(keyFigureGaugeSchema),
+  w(heatmapSchema),
+  w(mapSchema),
   w(riskObservationsSchema),
   w(creditRatingSchema),
   w(auditorIndependenceSchema),
@@ -546,6 +854,12 @@ export const componentSchema = z.discriminatedUnion("type", [
   w(personNetworkSchema),
   w(personRiskSchema),
   w(personFactsSchema),
+  w(personStatsSchema),
+  w(financialStatementsSchema),
+  w(mergersSchema),
+  w(registrationSchema),
+  w(announcementsSchema),
+  w(publicationsSchema),
   w(changeFeedSchema),
   w(savedPagesSchema),
 ]);
@@ -559,15 +873,33 @@ export type ComponentType = ViewComponent["type"];
  */
 export const LAYOUTS = ["dashboard", "stack", "grid-2", "columns"] as const;
 
+/** Svarets bundlinje (Paper 30.1–30.3 og 30.13): kildelinje til venstre, ét link videre til højre. */
+export const answerFootSchema = z.object({
+  source: z.string().min(1).max(200).optional(),
+  next: z
+    .object({
+      label: z.string().min(1).max(60),
+      prompt: z.string().min(1).max(400).describe("Opfølgende spørgsmål, der sendes til Claude ved klik, fx 'Vis hele økonomien for X'."),
+    })
+    .optional(),
+  logo: z.boolean().optional(),
+});
+export type AnswerFoot = z.infer<typeof answerFootSchema>;
+
 export const viewSpecSchema = z.object({
   /** v2: komponentsættet bygget fra Paper-kataloget. v1-visninger (gamle komponentnavne) afvises. */
   version: z.literal(2).default(2),
   kind: z.enum(["company", "person", "list", "custom"]).default("custom"),
   title: z.string().min(1).max(120),
   subtitle: z.string().max(200).optional(),
-  layout: z.enum(LAYOUTS).default("dashboard").describe("'dashboard' (standard) = ét samlet overblik i 4-kolonne-grid med hver komponents bredde. 'stack' = alt i fuld bredde under hinanden."),
+  layout: z.enum(LAYOUTS).default("dashboard").describe("'dashboard' (standard) = ét samlet overblik i 12-kolonne-gitteret: komponenterne pakkes i bånd og stakke efter gridmodellen (23.1) med hver komponents bredde. 'stack' = alt i fuld bredde under hinanden."),
   criteria: z.array(criterionSchema).max(20).default([]).describe("Vises som chips i rammen under titlen."),
   columns: z.number().int().min(2).max(3).optional().describe("Kun layout 'columns': antal kolonner på desktop (2 eller 3). Serverens komponist sætter det."),
+  answer: answerFootSchema
+    .optional()
+    .describe(
+      "Svarets bundlinje (Paper 30.1–30.3): source vises ikke længere (ingen kildelinje, Jakob 29.09; feltet accepteres bagudkompatibelt), next = ét koral link videre til næste niveau ({ label: 'Se hele økonomien', prompt }), logo = dæmpet Lasso-navnelogo (niveau C). Udelad i portalen.",
+    ),
   components: z.array(componentSchema).min(1).max(12),
 });
 export type ViewSpec = z.infer<typeof viewSpecSchema>;
@@ -578,8 +910,9 @@ export function parseViewSpec(input: unknown): ViewSpec {
 }
 
 /**
- * Standardbredde pr. komponent (guide 23): nøgletal, tabeller og hoveder i fuld bredde,
- * grafer mindst ½, lister og tekst ½, smalle overblik ¼.
+ * Standardbredde pr. komponent = elementtabellens standardbredde (gridmodellen 23.2, GRID_RULES.std
+ * i catalog.ts; grid.test.ts holder dem ens): hoveder, nøgletalskort og store tabeller i fuld bredde,
+ * grafer, tekst og kompakte regnskaber ½, ejerdiagram og roller ⅔, lister og kontakt ⅓, relationer ¼.
  */
 export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoCompanyHead: "full",
@@ -591,37 +924,49 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoWaterfallChart: "half",
   LassoShareBars: "half",
   LassoRanking: "half",
-  LassoPersonList: "half",
-  LassoOwnerList: "half",
-  LassoOwnershipDiagram: "full",
+  LassoPersonList: "third",
+  LassoOwnerList: "third",
+  LassoOwnershipDiagram: "two-thirds",
   LassoCompanyTable: "full",
+  LassoPersonTable: "full",
   LassoCompareTable: "full",
   LassoKeyValueList: "half",
-  LassoContact: "half",
-  LassoContactPersons: "half",
-  LassoMultiYearTable: "full",
-  LassoIncomeStatement: "full",
-  LassoBalanceSheet: "full",
-  LassoCashFlow: "full",
+  LassoContact: "third",
+  LassoContactPersons: "third",
+  LassoShortcuts: "half",
+  LassoMultiYearTable: "half",
+  LassoIncomeStatement: "half",
+  LassoBalanceSheet: "half",
+  LassoCashFlow: "half",
   LassoScoreGauge: "quarter",
-  LassoRiskObservations: "full",
+  LassoScoreHistory: "half",
+  LassoKeyFigureGauge: "third",
+  LassoHeatmap: "half",
+  LassoMap: "half",
+  LassoRiskObservations: "half",
   LassoCreditRating: "half",
   LassoAuditorIndependence: "full",
   LassoProductionUnits: "full",
-  LassoProperties: "full",
+  LassoProperties: "half",
   LassoLivestock: "half",
   LassoFollowUps: "full",
   LassoRelations: "quarter",
-  LassoBeneficialOwners: "half",
+  LassoBeneficialOwners: "third",
   LassoTextSections: "half",
   LassoSummary: "full",
   LassoTimeline: "half",
   LassoNews: "half",
   LassoPersonHead: "full",
-  LassoPersonRoles: "full",
+  LassoPersonRoles: "two-thirds",
   LassoPersonNetwork: "half",
   LassoPersonRisk: "half",
-  LassoPersonFacts: "quarter",
+  LassoPersonFacts: "third",
+  LassoPersonStats: "full",
+  LassoFinancialStatements: "full",
+  LassoMergers: "half",
+  LassoRegistration: "full",
+  LassoAnnouncements: "full",
+  LassoPublications: "half",
   LassoChangeFeed: "full",
   LassoSavedPages: "full",
 };
@@ -629,5 +974,9 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
 /** Den bredde, en komponent får i visningen. 'stack' giver altid fuld bredde. */
 export function widthOf(c: ViewComponent, layout: ViewSpec["layout"]): Width {
   if (layout === "stack") return "full";
+  // 30.9: tidslinjen med filterkolonne (¼ + ¾) fylder altid hele bredden.
+  if (c.type === "LassoTimeline" && c.filterColumn) return "full";
+  // 30.11 mønster 8: nyhedernes kortgitter står i fuld bredde.
+  if (c.type === "LassoNews" && c.layout === "grid" && !c.width) return "full";
   return c.width ?? DEFAULT_WIDTH[c.type];
 }

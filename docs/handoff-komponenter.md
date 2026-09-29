@@ -64,11 +64,13 @@ PDF'en har 41 artboards. Tallene i parentes nedenfor er artboard-numrene.
 - Beløb: < 1 mio. skrives `842 t. kr.`, ≥ 1 mio. `18,8 mio. kr.`, ≥ 1 mia. `2,4 mia. kr.`
 - Tal: `1.243.501` og `17,3`, mellemrum før %, én decimal i procent.
 - Negative tal med ægte minus `−201`, aldrig parentes. Rød kun når negativt er dårligt.
-- Udvikling: ▲ grøn / ▼ rød + procent. Skifter fortegnet, vises kun pilen.
+- Udvikling: kun ▲ grøn / ▼ rød + procent (`▲ 12,4 %`), ingen ord, intet "fra ÅÅÅÅ" og ingen anden procent (branche) efter. Skifter fortegnet, vises stadig pil + procent; uden forrige år (eller forrige = 0) ingen ændring.
+- Lister: "og 1 mere" ved én ekstra, "og N flere" ved to eller flere. Virksomhedsreferencer kun med navnet.
+- Status: 19 CVR-statusser i fire farvegrupper (aktiv, midlertidig gul, problem rød, inaktiv muted); se `docs/design/README.md`.
 - Dato `15.04.2026`. Intervaller som tekst: `25–33,32 %`.
 
 ### Fem tilstande (alle elementer skal have dem)
-**Fyldt**, **henter** (skelet i samme højde), **tom** (siger hvorfor, stiplet ramme, aldrig "0"), **ikke oplyst** ("Ikke oplyst"/"—" i text-faint) og **fejl** (kun ved teknisk fejl, med "Prøv igen").
+**Fyldt**, **henter** (skelet i samme højde), **tom** (siger hvorfor, stiplet ramme, aldrig "0"), **ikke oplyst** ("Ikke oplyst"/"-" i text-faint) og **fejl** (kun ved teknisk fejl, med "Prøv igen").
 
 ### Sideskabelon og grid (06, guide 23)
 - Fanebjælke 56 px, sidehoved 70 px, skinne 236 px, midte flydende (padding 28, gutter 24, 4-kolonne-grid), panel 336 px (valgfrit).

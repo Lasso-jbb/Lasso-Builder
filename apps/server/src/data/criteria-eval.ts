@@ -54,7 +54,7 @@ export function evaluate(row: CompanyRowVM, c: Criterion): boolean | null {
   const type = FIELD_BY_KEY.get(c.field)?.type ?? "text";
   const values = Array.isArray(c.value) ? c.value : [c.value];
 
-  if (type === "number" || type === "amount") {
+  if (type === "number" || type === "amount" || type === "percent") {
     const n = typeof raw === "number" ? raw : Number(raw);
     if (!Number.isFinite(n)) return false;
     const [a, b] = values.map(Number);

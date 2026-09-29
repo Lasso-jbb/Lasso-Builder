@@ -91,8 +91,9 @@ Fejl, der huskes i klientens negative cache (4xx undtagen 408/429 og timeout), g
 - **Kun `show_company focus risiko`** henter Creditsafe (`composeProbe`). Overblik og de andre fokus kalder aldrig
   endpointet, så et almindeligt opslag hverken koster en kredit eller venter 5–45 s. Overblikket viser kun
   kreditvurderingen, hvis datasættet allerede har den og der er et alvorligt risikosignal (i praksis aldrig i dag).
-- På risiko-siden står `LassoCreditRating` (½) øverst i kolonne 2 ved siden af virksomhedsoplysningerne, under
-  risikoboksen. Den står der også, når tilstanden er låst eller hentningen fejlede.
+- På risiko-siden står `LassoCreditRating` (½) ved siden af revisoruafhængigheden (½); står den alene, i fuld
+  bredde. Den står der også, når tilstanden er låst eller hentningen fejlede, og når hverken den eller
+  revisoruafhængigheden har data, så siden aldrig er tom (docs/portal.md, "Fokus og elementer").
 - Et risiko-opslag, hvor Creditsafe skal beregne, gør hele `show_company`-kaldet op til ~45 s langsomt (dataene
   hentes parallelt, men værktøjssvaret venter på det langsomste kald).
 - Tre risikoskalaer blandes aldrig: Lassos score 0–100 (`LassoScoreGauge`), observationer 0/25/50/100

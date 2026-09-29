@@ -24,7 +24,7 @@ const render = (props: CreditRatingProps) => renderToStaticMarkup(createElement(
 /** Synlig tekst uden tags og skjult skærmlæsertekst. */
 const text = (html: string) => html.replace(/<span class="lasso-credit__sr">[^<]*<\/span>/g, "").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ");
 
-test("fyldt: bogstav + ord, kreditmaksimum, lokal score, forrige vurdering, PDF, forbehold og kildelinje", () => {
+test("fyldt: bogstav + ord, kreditmaksimum, lokal score, seneste ændring (ingen forrige), PDF, forbehold og kildelinje", () => {
   const html = render({ rating: OK, onAction: () => {} });
   const t = text(html);
   assert.match(html, /<h3 class="lasso-section__title">Kreditvurdering<\/h3>/);
@@ -34,10 +34,12 @@ test("fyldt: bogstav + ord, kreditmaksimum, lokal score, forrige vurdering, PDF,
   assert.match(html, /<span class="lasso-credit__sr">B, <\/span>Lav risiko/, "skærmlæser: 'B, Lav risiko'");
   assert.match(t, /Kreditmaksimum250 t\. kr\./);
   assert.match(t, /Lokal score62, Lav risiko/);
-  assert.match(t, /Forrige vurderingC \(Moderat risiko\), ændret 15\.04\.2026, ▼\u00a0bedre/);
+  // 18.1 (Jakob 29.09): kun den aktuelle vurdering; ingen forrige, ingen pil/ændring.
+  assert.doesNotMatch(html, /lasso-scorecmp|Forrige|mindre risiko/);
+  assert.match(t, /Seneste ændring15\.04\.2026/);
   assert.match(html, /<button type="button" class="lasso-link lasso-credit__action">Hent kreditrapport \(PDF\)<\/button>/);
   assert.match(t, /Ny beregning hos Creditsafe koster en kredit og tager 5–45 sekunder; vurderingen gemmes 24 timer\./);
-  assert.match(t, /Kilde: Creditsafe via Lasso, opdateret 25\.09\.2026/);
+  assert.doesNotMatch(t, /Kilde:/, "G3: ingen kildelinje");
   // Egen skala: ingen 0–100-måler eller observationernes alvorsord.
   assert.doesNotMatch(html, /lasso-gauge|af 100|lasso-sev-/);
   assert.doesNotMatch(t, /·/, "regel 6: ingen midterprik");
@@ -64,9 +66,9 @@ test("tonen står aldrig som farve alene: hver toneklasse bærer ikon og ord", (
     const m = new RegExp(`<span class="lasso-credit__word lasso-credit__tone--${tone}"><svg[^]*?</svg><span class="lasso-credit__sr">${letter}, </span>${word}</span>`).exec(html);
     assert.ok(m, `${letter}: ikon + ord i tone ${tone}`);
   }
-  // Forrige vurdering: pil + ord, farven kun som forstærkning.
+  // 18.1: ingen forrige vurdering vises, heller ikke når data har en.
   const worse = render({ rating: { ...OK, current: { internationalScore: "D" }, previous: { internationalScore: "B" } } });
-  assert.match(worse, /lasso-credit__change--worse">, <span aria-hidden="true">▲\u00a0<\/span>dårligere</);
+  assert.doesNotMatch(worse, /lasso-scorecmp|mere risiko/);
   // Ingen farvet flade, pille eller banner i komponenten.
   assert.doesNotMatch(worse, /style="[^"]*background|lasso-badge|lasso-notice/);
 });
@@ -112,23 +114,13 @@ test("LassoView tegner LassoCreditRating fra datasættet og slår fejlnøglen cr
   assert.match(renderToStaticMarkup(createElement(LassoView, { spec, dataset: failed, host: {}, onAction: () => {} })), /Virksomheden blev ikke fundet/);
 });
 
-test("A4-rapporten (side 4) viser Creditsafe som tekst ved siden af scoren, aldrig i måleren", () => {
+test("A4-rapporten (27.1-27.2): Creditsafe indgår ikke; Lassos risikoscore står alene", () => {
   const ds = emptyDataset("demo");
   ds.companies[ID] = { lassoId: ID, cvr: "99000001", name: "Eksempel Byg A/S" };
   ds.scores[ID] = { lassoId: ID, score: 42, source: "Eksempeldata" };
   ds.creditRatings[ID] = OK;
-  const html = renderToStaticMarkup(createElement(ReportA4, { company: ID, dataset: ds }));
-  const t = text(html);
-  assert.match(t, /Creditsafe/);
-  assert.match(t, /B, Lav risiko/);
-  assert.match(t, /Kreditmaksimum 250 t\. kr\., lokal score 62, Lav risiko\./);
-  assert.match(t, /Forrige vurdering C \(Moderat risiko\), ændret 15\.04\.2026, ▼\u00a0bedre\./, "pil og ord brydes ikke fra hinanden");
-  assert.match(t, /42af 100/, "Lassos score står uændret");
-  assert.match(t, /Kilder?:?[^]*Creditsafe/);
-  // Uden Creditsafe-data er siden som før.
-  const without = emptyDataset("demo");
-  without.companies[ID] = ds.companies[ID]!;
-  without.scores[ID] = ds.scores[ID]!;
-  without.creditRatings[ID] = { ...base, state: "locked" };
-  assert.doesNotMatch(text(renderToStaticMarkup(createElement(ReportA4, { company: ID, dataset: without }))), /Creditsafe/);
+  const t = text(renderToStaticMarkup(createElement(ReportA4, { company: ID, dataset: ds })));
+  assert.match(t, /42 af 100, lav/, "Lassos score på forsiden");
+  assert.doesNotMatch(t, /Creditsafe/);
+  assert.doesNotMatch(t, /Kreditmaks/);
 });

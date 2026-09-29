@@ -18,7 +18,8 @@ import type { PortalUser } from "../boot.js";
 import { errorText, isUnauthorized, LOGGED_OUT, PortalApiError, type PortalApi, type ViewResult } from "./api.js";
 import { entityOf, isSaved, savedPagesOf, withSaved, type Entity } from "./data.js";
 import { EntityPage, FOCUS_MODULES, PERSON_MODULES, SavedPage, SearchPage, type TabData } from "./pages.js";
-import { dataKey, formatRoute, isFocus, portalRoute, sameRoute, type PortalRoute } from "./routes.js";
+import { savePortalPdf } from "./pdf.js";
+import { dataKey, focusRoute, formatRoute, isFocus, portalRoute, sameRoute, type PortalRoute } from "./routes.js";
 import {
   activate,
   activeTab,
@@ -93,6 +94,8 @@ export interface PortalShellProps {
   onLoggedOut: () => void;
   /** Åben portal uden login (PORTAL_PUBLIC eller ingen nøgler): ingen kontomenu og intet "Log ud". */
   canLogout?: boolean;
+  /** "Gem som PDF" øverst på siderne (serveren har Chromium, boot.pdf). */
+  pdf?: boolean;
 }
 
 /** Beskeder (07) hører til rammen: logges brugeren ud, forsvinder de med den. */
@@ -104,7 +107,7 @@ export function PortalShell(props: PortalShellProps) {
   );
 }
 
-function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true }: PortalShellProps) {
+function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true, pdf = false }: PortalShellProps) {
   const toast = useToast();
   const [tabs, setTabs] = useState<TabsState>(() => initialTabs(window.location.hash, readTabs(), newId));
   const [data, setData] = useState<Record<string, TabData>>({});
@@ -346,6 +349,9 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true }: PortalShel
 
   /* ---------- Handlinger fra LassoView og modulbjælken ---------- */
 
+  /** Genvejene (08.4) peger på et værktøj; i portalen svarer de til et fokus. */
+  const SECTION_FOCUS: Record<string, string> = { ejerdiagram: "ejerskab", regnskabsanalyse: "oekonomi", noegletal: "oekonomi" };
+
   const actionFor =
     (tab: PortalTab) =>
     async (a: ViewAction): Promise<ActionResult | void> => {
@@ -357,6 +363,13 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true }: PortalShel
         case "open-person":
           openEntity({ kind: "person", id: a.lassoId, focus: "overblik" }, a.name);
           return { ok: true };
+        case "open-focus": {
+          // Overblikkets "Se alle … i Historik": samme fane, andet fokus, som et klik i modulbjælken.
+          const next = focusRoute(tab.route, a.focus);
+          if (!next) return { ok: false, error: "Fanen findes ikke på denne side." };
+          setRoute(tab, next);
+          return { ok: true };
+        }
         case "set-criteria": {
           if (!result) return;
           const criteria = a.criteria;
@@ -396,6 +409,23 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true }: PortalShel
         case "export":
           downloadCsv(a.filename, a.csv);
           return { ok: true };
+        case "pdf":
+          // "Gem som PDF": rapporten, personsiden eller den viste spec fra /api/portal/pdf/* (portal/pdf.ts).
+          return savePortalPdf(api, tab.route, result);
+        case "open-section": {
+          // 08/24: "Se risiko", "Se historik" og genveje skifter fokus på samme fane.
+          const route = tab.route;
+          const focus = SECTION_FOCUS[a.section] ?? a.section;
+          if (route.kind === "company" && route.id === a.lassoId && isFocus(focus)) {
+            setRoute(tab, { ...route, focus });
+            return { ok: true };
+          }
+          if (route.kind === "person" && route.id === a.lassoId && isPersonFocus(focus)) {
+            setRoute(tab, { ...route, focus });
+            return { ok: true };
+          }
+          return { ok: false, error: "Værktøjet findes ikke i portalen endnu." };
+        }
         default:
           return;
       }
@@ -515,6 +545,8 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true }: PortalShel
     nav: [
       { id: "soeg", label: "Søg", icon: <ShellIcon name="search" size={20} />, active: route.kind === "search", onSelect: openSearch },
       { id: "lister", label: "Lister", icon: <ShellIcon name="list" size={20} />, active: route.kind === "saved", onSelect: openSaved },
+      // 26a: bundnavigationen har altid fire punkter. Portalen har endnu ingen overvågning, så punktet står dæmpet med grunden.
+      { id: "overvaagning", label: "Overvågning", icon: <ShellIcon name="bell" size={20} />, disabled: true, disabledReason: "Overvågning er ikke slået til i portalen" },
       ...(canLogout ? [{ id: "konto", label: "Konto", icon: <ShellIcon name="user" size={20} />, active: accountOpen, onSelect: () => setAccountOpen(true) }] : []),
     ],
   };
@@ -533,6 +565,7 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true }: PortalShel
           route={route}
           data={d}
           savePrefix={savePrefix}
+          pdf={pdf}
           onSearch={(q) => {
             if (!q) return;
             if (q === route.q) void load(active);
@@ -544,11 +577,18 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true }: PortalShel
       );
       break;
     case "saved":
-      page = <SavedPage key={active.id} tab={active} data={d} onRetry={() => void loadSaved()} onAction={onAction} />;
+      page = <SavedPage key={active.id} tab={active} data={d} pdf={pdf} onRetry={() => void loadSaved()} onAction={onAction} />;
       break;
     default: {
       const entity = d?.result && d.resultKey === d.key ? entityOf(d.result.spec, d.result.dataset) : null;
       const on = entity ? isSaved(entity.id, d?.result?.dataset, saved) : false;
+      // "…" i mobilens topbjælke (26a): sidens handlinger som handlingsark.
+      if (entity) {
+        mobile.moreItems = [
+          { id: "save", label: on ? "Fjern fra din liste" : "Gem på din liste", icon: <ShellIcon name="bookmark" size={16} filled={on} />, onSelect: () => void toggleSaved(entity, route.focus) },
+          { id: "share", label: "Del link", icon: <ShellIcon name="copy" size={16} />, onSelect: () => void shareLink(active) },
+        ];
+      }
       page = (
         <EntityPage
           key={active.id}
@@ -557,6 +597,7 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true }: PortalShel
           data={d}
           savePrefix={savePrefix}
           shellWidth={shellWidth}
+          pdf={pdf}
           saved={on}
           canAct={Boolean(entity)}
           onFocus={(focus) => {

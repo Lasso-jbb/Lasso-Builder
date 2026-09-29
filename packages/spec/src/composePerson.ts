@@ -1,6 +1,7 @@
 import { entityRefOf, ownershipGraphKey, type Dataset } from "./models.js";
-import { personCompanies, personFactOptions, personRisk, personRoleRows, riskTimeline, type PersonVM } from "./person.js";
-import { componentWeight, FOCUSES, type Focus } from "./compose.js";
+import { askLabel, askPersonFocus, askPlan, type Ask, type AskItem } from "./ask.js";
+import { personCompanies, personFactOptions, personRisk, personRoleRows, personWithRole, riskTimeline, type PersonVM } from "./person.js";
+import { askComponent, askProbe, componentWeight, FOCUSES, type Focus } from "./compose.js";
 import { viewSpecSchema, type ViewComponent, type ViewSpec } from "./spec.js";
 
 /**
@@ -16,8 +17,12 @@ import { viewSpecSchema, type ViewComponent, type ViewSpec } from "./spec.js";
  * Ingen 1:1-gentagelser på samme side (docs/portal.md, "Personfokus og elementer"): hovedet ejer
  * antallet af roller, ejerskaber og første registrering, så stamoplysningerne udelader dem
  * (personFactOptions); tidsbåndene viser de ophørte roller, så rollefanen har ingen ophørt-liste
- * ved siden af; risikoens forløb viser selskabernes roller og status, så listen over ophørte
- * roller dér udelader de samme selskaber.
+ * ved siden af.
+ *
+ * Hvert modul ejer sit indhold (som på virksomhedssiden): rollerne står på roller, netværket på
+ * netvaerk, historikken på historik. Overblikket viser smagsprøver med "Se alle … i <fane>", der
+ * åbner fanen (more); de øvrige fokus låner ikke hinandens elementer (risiko har ingen liste over
+ * ophørte roller; den hører til roller).
  */
 export const PERSON_FOCUSES = ["overblik", "roller", "netvaerk", "ejerskab", "risiko", "historik"] as const;
 export type PersonFocus = (typeof PERSON_FOCUSES)[number];
@@ -62,8 +67,17 @@ const TAB_ROLES = 8;
 const TAB_NETWORK = 8;
 const NEWS = 5;
 
-/** De komponenter, der skal hentes data til, før komponisten vælger form. Vises ikke. Kun det, fokus viser. */
-export function composePersonProbe(lassoId: string, focus: PersonFocus = "overblik"): ViewSpec {
+/** Personens ejerdiagram får altid personsidens dybde (proben og komponisten henter samme graf). */
+const withPersonDepth = (c: ViewComponent): ViewComponent => (c.type === "LassoOwnershipDiagram" ? { ...c, ...PERSON_GRAPH_DEPTH } : c);
+
+/**
+ * De komponenter, der skal hentes data til, før komponisten vælger form. Vises ikke. Kun det, fokus
+ * viser; med et (ikke-generisk) spørgsmål alt i planen for spørgsmålet.
+ */
+export function composePersonProbe(lassoId: string, focus?: PersonFocus, ask?: Ask): ViewSpec {
+  const plan = ask && !ask.generic ? askPlan(ask, "person") : undefined;
+  if (plan?.lead.length) return askProbe(lassoId, "person", [...plan.top, ...plan.lead, ...plan.context], withPersonDepth);
+  focus = focus ?? (ask ? askPersonFocus(ask) : undefined) ?? "overblik";
   const person = lassoId;
   // Hovedet henter personen; roller, stamoplysninger, risiko og historik afledes af den (ingen ekstra opslag).
   const components: ViewComponent[] = [{ type: "LassoPersonHead", person }];
@@ -79,6 +93,11 @@ export interface ComposePersonOptions {
   name?: string;
   /** Opfølgningsknapper sender en besked til modellen; slå fra på websiden uden chat. */
   followUps?: boolean;
+  /**
+   * Spørgsmålsprofilen (parseAsk). Ikke generisk: en hel side i spørgsmålets kontekst (askPlan), hvor
+   * svar-elementet står først; generisk: fokus-siden (focus, ellers askPersonFocus, ellers overblik).
+   */
+  ask?: Ask;
 }
 
 interface FollowUpRule {
@@ -216,7 +235,9 @@ export function pairByWeight(halves: readonly ViewComponent[], weigh: (c: ViewCo
 }
 
 export function composePerson(lassoId: string, ds: Dataset, options: ComposePersonOptions = {}): ViewSpec {
-  const focus = options.focus ?? "overblik";
+  // Et spørgsmål med et emne: en hel side i spørgsmålets kontekst; ellers fokus-siden som hidtil.
+  if (options.ask && !options.ask.generic && askPlan(options.ask, "person").lead.length) return composeAskPerson(lassoId, ds, options.ask, options);
+  const focus = options.focus ?? (options.ask ? askPersonFocus(options.ask) : undefined) ?? "overblik";
   const id = lassoId;
   const person = ds.persons[id];
   const network = ds.personNetworks[id]?.people ?? [];
@@ -280,13 +301,9 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
       // Alle sager med detaljer; uden sager kun den positive tomme tilstand.
       components.push({ type: "LassoPersonRisk", person: id });
       if (cases.length === 0) break;
-      const halves: ViewComponent[] = [];
-      // Forløbet i de berørte selskaber (ind, ud og status), ikke kun statushændelserne, som sagerne allerede viser.
-      halves.push({ type: "LassoTimeline", person: id, filter: "risiko", title: "Forløb i selskaberne" });
-      if (personRoleRows(person, "ended", { except: "risiko" }).length > 0) {
-        halves.push({ type: "LassoPersonRoles", person: id, show: "ended", except: "risiko", title: "Øvrige ophørte roller" });
-      }
-      pair(halves);
+      // Forløbet i de berørte selskaber (ind, ud og status), ikke kun statushændelserne, som sagerne
+      // allerede viser, i fuld bredde. De øvrige ophørte roller står på roller (tidsbåndene).
+      components.push({ type: "LassoTimeline", person: id, filter: "risiko", title: "Forløb i selskaberne" });
       break;
     }
     case "historik": {
@@ -305,19 +322,20 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
       // De aktive roller som kort liste (¾) + stamoplysninger (¼); uden aktive roller de ophørte.
       const current = personRoleRows(person, "current").length > 0;
       const ended = personRoleRows(person, "ended").length > 0;
+      // Smagsprøverne på fanerne: "Se alle … i Roller/Netværk/Historik" åbner fanen (more).
       withFacts(
         current
-          ? { type: "LassoPersonRoles", person: id, show: "current", limit: OVERVIEW_ROLES }
+          ? { type: "LassoPersonRoles", person: id, show: "current", limit: OVERVIEW_ROLES, more: "roller" }
           : ended
-            ? { type: "LassoPersonRoles", person: id, show: "ended", limit: OVERVIEW_ROLES }
+            ? { type: "LassoPersonRoles", person: id, show: "ended", limit: OVERVIEW_ROLES, more: "roller" }
             : null,
       );
       // Netværk, risiko, historik og ejerskab to og to; ingen nyheder på overblikket (de står på historik).
       const halves: ViewComponent[] = [];
-      if (network.length > 0) halves.push({ type: "LassoPersonNetwork", person: id, limit: OVERVIEW_NETWORK });
+      if (network.length > 0) halves.push({ type: "LassoPersonNetwork", person: id, limit: OVERVIEW_NETWORK, more: "netvaerk" });
       // Risiko står altid, når personen har roller: "ingen konkurser" er også et svar.
       if (hasRoles && !serious) halves.push({ type: "LassoPersonRisk", person: id });
-      if (events.length > 0) halves.push({ type: "LassoTimeline", person: id, limit: OVERVIEW_EVENTS });
+      if (events.length > 0) halves.push({ type: "LassoTimeline", person: id, limit: OVERVIEW_EVENTS, more: "historik" });
       const d = diagram({ title: "Ejerskab", showError: false });
       if (d) halves.push(d);
       pair(halves);
@@ -341,4 +359,100 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
     columns: 2,
     components,
   });
+}
+
+/**
+ * Viser personens ejerdiagram noget, rollelisten ikke gør (de ejede selskaber ejer selv selskaber)?
+ * Samme regel som på overblikket og ejerskab.
+ */
+function diagramShowsStructure(ds: Dataset, id: string): boolean {
+  const graph = ds.ownershipGraphs[ownershipGraphKey({ person: id, ...PERSON_GRAPH_DEPTH })];
+  if (!graph) return false;
+  const owned = new Set(graph.edges.filter((e) => e.from === id && !e.until).map((e) => e.to));
+  return graph.edges.some((e) => owned.has(e.from) && !e.until);
+}
+
+/** Højst 12 komponenter i en spec; én plads er til opfølgningen. */
+const ASK_MAX_PERSON = 11;
+
+/**
+ * Personsiden for et spørgsmål (askPlan): hovedet, svar-elementet først (¾ med stamoplysningerne
+ * ¼ ved siden af, eller i fuld bredde: bopæl og ejerstruktur), derefter de øvrige svar og
+ * kontekstmodulerne i rangorden to og to (½ + ½, pairByWeight). Tomme kontekstmoduler udelades.
+ */
+function composeAskPerson(lassoId: string, ds: Dataset, ask: Ask, options: ComposePersonOptions): ViewSpec {
+  const id = lassoId;
+  const person = ds.persons[id];
+  const components: ViewComponent[] = [{ type: "LassoPersonHead", person: id }];
+  const subtitle = askLabel(ask, "person");
+  if (!person) return viewSpecSchema.parse({ kind: "person", title: options.name ?? lassoId, subtitle, layout: "columns", columns: 2, components });
+
+  const plan = askPlan(ask, "person");
+  const network = ds.personNetworks[id]?.people ?? [];
+  const news = ds.news[id]?.items ?? [];
+  const hasRoles = person.roles.length > 0;
+  const adapt = (i: AskItem, lead: boolean): ViewComponent | null => {
+    const c = withPersonDepth(askComponent(i, "person", id));
+    if (lead) return c;
+    switch (c.type) {
+      case "LassoPersonRoles": {
+        const p = personWithRole(person, c.role);
+        const show = c.show ?? "all";
+        return (show === "all" ? personCompanies(p).length : personRoleRows(p, show, { except: c.except }).length) > 0 ? c : null;
+      }
+      case "LassoPersonNetwork":
+        return network.length > 0 ? c : null;
+      case "LassoTimeline": {
+        const t = ds.timeline[id];
+        if (!t) return null;
+        return (c.filter === "risiko" ? riskTimeline(t, person).events : t.events).length > 0 ? c : null;
+      }
+      case "LassoPersonRisk":
+        // "Ingen konkurser" er også et svar, når personen har roller (som på overblikket).
+        return hasRoles ? c : null;
+      case "LassoOwnershipDiagram":
+        return diagramShowsStructure(ds, id) ? c : null;
+      case "LassoNews":
+        return news.length > 0 ? c : null;
+      default:
+        return c;
+    }
+  };
+
+  const seen = new Set<string>(["LassoPersonHead"]);
+  const take = (c: ViewComponent | null): c is ViewComponent => {
+    if (!c || seen.has(c.type)) return false;
+    seen.add(c.type);
+    return true;
+  };
+  const leads = plan.lead.map((i) => adapt(i, true)).filter(take);
+  const halves: ViewComponent[] = [];
+  const [first, ...rest] = leads;
+  if (first && (first.type === "LassoPersonFacts" || first.type === "LassoOwnershipDiagram")) components.push(first);
+  else if (first) {
+    // Svaret (¾) med stamoplysningerne (¼) ved siden af, som på roller-fanen.
+    seen.add("LassoPersonFacts");
+    components.push({ ...first, column: 1, width: "three-quarters" } as ViewComponent, { type: "LassoPersonFacts", person: id, column: 2, width: "quarter" });
+  }
+  halves.push(...rest);
+  for (const i of plan.context) {
+    if (components.length + halves.length >= ASK_MAX_PERSON) break;
+    const c = adapt(i, false);
+    if (take(c)) halves.push(c);
+  }
+  const page = [...components, ...halves];
+  components.push(...pairByWeight(halves, (c) => personComponentWeight(c, ds, page, { half: true })));
+
+  const focus = askPersonFocus(ask) ?? "overblik";
+  const name = options.name ?? person.name;
+  const data = { roles: hasRoles, network: network.length > 0, owns: person.roles.some((r) => r.active && r.kind === "owner") };
+  // Altid en vej til hele personsiden (niveau C), dernæst fokusets naturlige næste spørgsmål.
+  const whole: FollowUpRule = { label: "Hele overblikket", prompt: "Hvem er {navn}?" };
+  const prompts = [whole, ...FOLLOW_UPS[focus]]
+    .filter((f) => f.needs === undefined || f.needs(data))
+    .slice(0, 3)
+    .map((f) => ({ label: f.label, prompt: f.prompt.replace("{navn}", name) }));
+  if (options.followUps !== false && prompts.length > 0) components.push({ type: "LassoFollowUps", prompts });
+
+  return viewSpecSchema.parse({ kind: "person", title: name, subtitle, layout: "columns", columns: 2, components });
 }

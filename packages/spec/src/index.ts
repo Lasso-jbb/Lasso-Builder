@@ -14,3 +14,8 @@ export * from "./credit.js";
 export * from "./statements.js";
 export * from "./textSections.js";
 export * from "./companyFacts.js";
+export * from "./ask.js";
+export * from "./contactPersons.js";
+export * from "./headRisk.js";
+export * from "./status.js";
+export * from "./grid.js";

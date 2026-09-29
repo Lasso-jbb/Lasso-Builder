@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { loadConfig } from "../config.js";
-import { entityLink, isEntityId, sendToLassoLink, verifyEntityLink, verifySendToLassoLink } from "./links.js";
+import { entityLink, focusLinks, isEntityId, sendToLassoLink, verifyEntityLink, verifySendToLassoLink } from "./links.js";
+import { parseViewSpec } from "@lasso/spec";
 
 const config = loadConfig({ MCP_ACCESS_KEY: "k", LINK_SECRET: "hemmelig", PUBLIC_BASE_URL: "https://lasso.test" });
 const query = (url: string) => Object.fromEntries(new URL(url).searchParams);
@@ -74,4 +75,34 @@ test("uden nogen nøgle (lokalt) er links usignerede men stadig tidsbegrænsede"
   const url = entityLink(local, "CVR-1-34580820");
   assert.equal(query(url).s, undefined);
   assert.equal(verifyEntityLink(local, "CVR-1-34580820", query(url)).ok, true);
+});
+
+test("focusLinks: ét signeret /e/-link pr. fane, smagsprøverne peger på, til sidens egen entitet", () => {
+  const now = Date.UTC(2026, 8, 27);
+  const company = parseViewSpec({
+    kind: "company",
+    title: "Eksempel",
+    components: [
+      { type: "LassoCompanyHead", company: "CVR-1-34580820" },
+      { type: "LassoNews", company: "CVR-1-34580820", limit: 3, more: "historik" },
+      { type: "LassoTimeline", company: "CVR-1-34580820", limit: 3, more: "historik" },
+    ],
+  });
+  const links = focusLinks(config, company, now)!;
+  assert.deepEqual(Object.keys(links), ["historik"]);
+  assert.deepEqual(verifyEntityLink(config, "CVR-1-34580820", query(links.historik!), now), { ok: true, lassoId: "CVR-1-34580820", focus: "historik" });
+  const person = parseViewSpec({
+    kind: "person",
+    title: "Bo",
+    components: [
+      { type: "LassoPersonHead", person: "CVR-3-4000455341" },
+      { type: "LassoPersonRoles", person: "CVR-3-4000455341", show: "current", more: "roller" },
+      { type: "LassoPersonNetwork", person: "CVR-3-4000455341", more: "netvaerk" },
+      { type: "LassoTimeline", person: "CVR-3-4000455341", more: "expand" },
+    ],
+  });
+  assert.deepEqual(Object.keys(focusLinks(config, person, now)!).sort(), ["netvaerk", "roller"]);
+  // Uden smagsprøver, eller på en liste: ingen links.
+  assert.equal(focusLinks(config, parseViewSpec({ kind: "company", title: "x", components: [{ type: "LassoTimeline", company: "CVR-1-34580820" }] }), now), undefined);
+  assert.equal(focusLinks(config, parseViewSpec({ kind: "list", title: "x", components: [{ type: "LassoTimeline", company: "CVR-1-34580820", more: "historik" }] }), now), undefined);
 });

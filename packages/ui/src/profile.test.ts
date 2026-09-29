@@ -34,14 +34,14 @@ const FINANCIALS: FinancialsVM = {
 };
 
 /** Nøgle-kolonnen i en nøgle-værdi-liste. */
-const labels = (html: string) => [...html.matchAll(/lasso-kv-row__label">([^<]*)</g)].map((m) => m[1]);
+const labels = (html: string) => [...html.matchAll(/lasso-kv-row__labeltext">([^<]*)</g)].map((m) => m[1]);
 /** Synlig tekst uden tags. */
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").replace(/\s+/g, " ");
 const count = (haystack: string, needle: string) => haystack.split(needle).length - 1;
 
 test("Virksomhedsoplysninger under hovedet: ingen stiftet, form, branche, ansatte eller adresse, men branchekode, kommune og region", () => {
   const html = renderToStaticMarkup(createElement(KeyValueList, { company: COMPANY, ownership: OWNERSHIP, financials: FINANCIALS, variant: "company", hideIdentity: true, hideContact: true }));
-  assert.deepEqual(labels(html), ["Revisor", "Seneste revisorskift", "Regnskabsperiode", "Branchekode", "Kommune", "Region"]);
+  assert.deepEqual(labels(html), ["Revisor", "Seneste revisorskift", "Regnskabsperiode", "Branchekode", "Ansatte", "Kommune", "Region"]);
   assert.match(html, /412000/);
   // Uden kontaktblok på siden står telefon, e-mail og web stadig her (adressen står i hovedet).
   const noContact = renderToStaticMarkup(createElement(KeyValueList, { company: COMPANY, ownership: OWNERSHIP, financials: FINANCIALS, variant: "company", hideIdentity: true }));
@@ -49,7 +49,7 @@ test("Virksomhedsoplysninger under hovedet: ingen stiftet, form, branche, ansatt
   assert.ok(!labels(noContact).includes("Adresse"));
   // Ejerlisten på siden viser revisoren: listen gentager den ikke.
   const withOwners = renderToStaticMarkup(createElement(KeyValueList, { company: COMPANY, ownership: OWNERSHIP, financials: FINANCIALS, variant: "company", hideIdentity: true, hideContact: true, hideAuditor: true }));
-  assert.deepEqual(labels(withOwners), ["Regnskabsperiode", "Branchekode", "Kommune", "Region"]);
+  assert.deepEqual(labels(withOwners), ["Regnskabsperiode", "Branchekode", "Ansatte", "Kommune", "Region"]);
   // Uden hoved (fx en render_view-spec uden LassoCompanyHead) står identiteten i listen.
   const alone = renderToStaticMarkup(createElement(KeyValueList, { company: COMPANY, ownership: OWNERSHIP, financials: FINANCIALS, variant: "company" }));
   for (const l of ["Stiftet", "Virksomhedsform", "Branche", "Ansatte", "Adresse"]) assert.ok(labels(alone).includes(l), l);
@@ -94,13 +94,13 @@ const SECTIONS: TextSectionsVM = {
 };
 const headings = (html: string) => [...html.matchAll(/lasso-textsection__heading">([^<]*)</g)].map((m) => m[1]);
 
-test("Virksomhedsprofil (overblik): CVR-tekster uden branche plus konklusion, resultat og likviditet, én kildelinje", () => {
+test("Virksomhedsprofil (overblik): CVR-tekster uden branche plus konklusion, resultat og likviditet, ingen kildelinje (12.1)", () => {
   const html = renderToStaticMarkup(createElement(LassoTextSections, { sections: SECTIONS }));
   assert.deepEqual(headings(html), ["Formål", "Tegningsregler", "Regnskabsanalyse: konklusion", "Resultat", "Likviditet"]);
-  assert.equal(count(html, "Kilde: Lasso regnskabsanalyse"), 1);
+  assert.doesNotMatch(html, /Kilde:/);
   assert.doesNotMatch(html, /NACE 412000/);
-  // Lange afsnit foldes hver for sig som før.
-  assert.match(html, /Vis hele/);
+  // 12.1: lange afsnit foldes hver for sig, men der er ét "Vis mere" for hele sektionen.
+  assert.equal(count(html, ">Vis mere<"), 1);
   assert.doesNotMatch(html, /Se hele regnskabsanalysen/);
   // Kun CVR-tekster: ingen analysekilde.
   const cvr = renderToStaticMarkup(createElement(LassoTextSections, { sections: { ...SECTIONS, sections: SECTIONS.sections.slice(0, 3) } }));
@@ -108,15 +108,20 @@ test("Virksomhedsprofil (overblik): CVR-tekster uden branche plus konklusion, re
   assert.doesNotMatch(cvr, /Kilde:/);
 });
 
-test("Regnskabsanalyse (oekonomi): konklusionen og ét link til hele analysen, én kildelinje, ingen CVR-tekster", () => {
-  const html = renderToStaticMarkup(createElement(LassoTextSections, { sections: SECTIONS, variant: "analyse" }));
+test("Regnskabsanalyse (19.3, LYO-0): foldbare afsnit med det første åbent, forbehold, Vis kilder og feedback; ingen genereringslinje (G3) og ingen CVR-tekster", () => {
+  const v = { ...SECTIONS, analysisGenerated: "2026-09-25T08:00:00Z", analysisBasis: "2021–2025", analysisHeadline: "Vækst i toplinjen", analysisSources: ["A", "B", "C", "D"] };
+  const html = renderToStaticMarkup(createElement(LassoTextSections, { sections: v, variant: "analyse" }));
   assert.match(html, /<h3 class="lasso-section__title">Regnskabsanalyse<\/h3>/);
-  assert.deepEqual(headings(html), ["Konklusion"]);
-  assert.match(html, /aria-expanded="false"[^>]*>Se hele regnskabsanalysen \(7 afsnit\)<\/button>/);
-  assert.equal(count(html, "Kilde: Lasso regnskabsanalyse"), 1);
-  assert.doesNotMatch(html, /Formål|Tegningsregler|Branchestatistik/);
-  // Ét link: konklusionen har ikke sit eget "Vis hele" ved siden af.
-  assert.doesNotMatch(html, />Vis hele</);
+  assert.doesNotMatch(html, /Genereret af Lasso/);
+  assert.match(html, /aria-expanded="true"[^>]*><span class="lasso-analysis19__title">Vækst i toplinjen</);
+  assert.match(html, /aria-expanded="false"/);
+  assert.match(html, /lasso-analysis19__disclaimer">Forbehold: /);
+  assert.match(html, />Vis kilder \(4\)<[^]*Var det brugbart\?/);
+  // "Hent som PDF" kun med en handling (G1).
+  assert.doesNotMatch(html, /Hent som PDF/);
+  assert.match(renderToStaticMarkup(createElement(LassoTextSections, { sections: v, variant: "analyse", onPdf: () => {} })), /lasso-analysis19__pdf[^]*Hent som PDF/);
+  assert.doesNotMatch(html, /lasso-source/);
+  assert.doesNotMatch(html, /Formål|Tegningsregler/);
   // Uden analyse: tom tilstand, der siger hvorfor.
   const none = renderToStaticMarkup(createElement(LassoTextSections, { sections: { ...SECTIONS, sections: SECTIONS.sections.slice(0, 3) }, variant: "analyse" }));
   assert.match(none, /ingen regnskabsanalyse/);
@@ -154,12 +159,12 @@ test("Kontaktblok: adressen udelades, når hovedet viser den; et verificeret CVR
       { phoneNumber: "20 30 40 50", callable: true, sources: ["Website"] },
     ],
   };
-  const html = renderToStaticMarkup(createElement(LassoContact, { contact, omitAddress: true }));
+  const html = renderToStaticMarkup(createElement(LassoContact, { contact, omitAddress: true, foldExtra: false }));
   assert.doesNotMatch(html, /Prøvevej 1/);
   assert.equal(count(html, "86 12 34 56"), 1);
   assert.match(html, /20 30 40 50/);
-  assert.equal(count(html, "Kilde:"), 1);
-  assert.match(text(html), /Kilde: CVR og Lasso live number, opdateret 20\.09\.2026/);
+  assert.equal(count(html, "Kilde:"), 0);
+  assert.doesNotMatch(text(html), /Kilde:/, "G3: ingen kildelinje");
   // Uden hoved (alene i en render_view-spec) står adressen.
   assert.match(renderToStaticMarkup(createElement(LassoContact, { contact })), /Prøvevej 1/);
 });
@@ -194,12 +199,86 @@ test("LassoView: hver oplysning om identiteten står én gang på overblik, kont
     const t = text(html);
     assert.equal(count(t, "Prøvevej 1"), 1, `${focus}: adressen`);
     assert.equal(count(t, "99000001"), 1, `${focus}: CVR-nummeret`);
-    assert.equal(count(t, "Opførelse af bygninger"), 1, `${focus}: branchen`);
-    assert.equal(count(t, "01.04.1998"), 1, `${focus}: stiftelsesdatoen`);
-    assert.ok(!labels(html).some((l) => ["Stiftet", "Virksomhedsform", "Branche", "Ansatte", "Adresse"].includes(l!)), focus);
+    // Overblikket viser oplysninger kompakt (rows 6, Paper 23.3 B3); rækkerne efter de 6 står under "Se alle oplysninger".
+    const once = (n: number, what: string) => (focus === "overblik" ? assert.ok(n <= 1, `${focus}: ${what} ${n} gange`) : assert.equal(n, 1, `${focus}: ${what}`));
+    once(count(t, "Opførelse af bygninger"), "branchen");
+    once(count(t, "01.04.1998"), "stiftelsesdatoen");
+    // G9 (Jakob 29.09): hovedet viser kun navnet; identiteten står i nøgle-værdi-listen, adressen én gang.
+    assert.doesNotMatch(html, /lasso-company__facts/, focus);
   }
   // Overblikket: telefonen står i kontaktblokken, ikke også i listen, og analysens kilde én gang.
   const overblik = renderToStaticMarkup(createElement(LassoView, { spec: composeCompany(ID, ds, { followUps: false }), dataset: ds, host: {}, onAction: () => {} }));
   assert.equal(count(text(overblik), "eksempelbyg.dk"), 2, "e-mail og web, hver én gang");
-  assert.equal(count(overblik, "Kilde: Lasso regnskabsanalyse"), 1);
+  assert.equal(count(overblik, "Kilde: Lasso regnskabsanalyse"), 0, "12.1: ingen kildelinje");
+  // 24/25/26g: i portalens sideskabelon (embedded) ingen rammeheader og ingen handlingslinje nederst.
+  const spec = composeCompany(ID, ds, { followUps: false });
+  const framed = renderToStaticMarkup(createElement(LassoView, { spec, dataset: ds, host: { save: true }, onAction: () => {} }));
+  assert.match(framed, /lasso-frame__header/);
+  const embedded = renderToStaticMarkup(createElement(LassoView, { spec, dataset: ds, host: { save: true }, onAction: () => {}, embedded: true }));
+  assert.doesNotMatch(embedded, /lasso-frame__header|lasso-frame__eyebrow|lasso-badge--demo/);
+  assert.doesNotMatch(embedded, /lasso-actionbar|Gem visning/);
+});
+
+/* ---------- Spørgsmålets data pr. element: only, year, rows, roles, role, kinds ---------- */
+
+test("Regnskab med only og year: kun de spurgte nøgletal for det spurgte år; findes året ikke, seneste år med en note", () => {
+  const html = renderToStaticMarkup(createElement(KeyValueList, { financials: FINANCIALS, variant: "financials", only: ["soliditetsgrad", "egenkapital"], year: 2024 }));
+  assert.deepEqual(labels(html), ["Regnskabsperiode", "Regnskab udgivet", "Soliditetsgrad", "Egenkapital"]);
+  assert.match(html, /aria-selected="true"[^>]*class="lasso-tab is-on"[^>]*>2024<\/button>/);
+  assert.match(html, /01\.01 – 31\.12/);
+  assert.doesNotMatch(text(html), /intet offentliggjort regnskab for/);
+  const missing = renderToStaticMarkup(createElement(KeyValueList, { financials: FINANCIALS, variant: "financials", only: ["omsaetning"], year: 2019 }));
+  assert.match(text(missing), /Kilde: regnskabet for 2025; der er intet offentliggjort regnskab for 2019/);
+  // Kortene på siden: listen udelader stadig deres nøgletal.
+  const both = renderToStaticMarkup(createElement(KeyValueList, { financials: FINANCIALS, variant: "financials", only: ["soliditetsgrad", "egenkapital"], exclude: ["egenkapital"] }));
+  assert.deepEqual(labels(both), ["Regnskabsperiode", "Regnskab udgivet", "Soliditetsgrad"]);
+});
+
+test("Virksomhedsoplysninger med rows: kun revisor, revisorskift og regnskabsperiode; uden revisor siger den tomme tilstand det", () => {
+  const html = renderToStaticMarkup(
+    createElement(KeyValueList, { company: COMPANY, ownership: OWNERSHIP, financials: FINANCIALS, variant: "company", title: "Revisor", hideIdentity: true, rows: ["revisor", "revisorskift", "regnskabsperiode"] }),
+  );
+  assert.deepEqual(labels(html), ["Revisor", "Seneste revisorskift", "Regnskabsperiode"]);
+  assert.match(html, /Eksempel Revision Midt ApS/);
+  const none = renderToStaticMarkup(createElement(KeyValueList, { company: COMPANY, variant: "company", hideIdentity: true, rows: ["revisor", "revisorskift"] }));
+  assert.match(text(none), /ikke registreret en revisor/);
+});
+
+test("LassoView: personliste med roles, personroller med role og tidslinje med kinds", () => {
+  const ds = emptyDataset("demo");
+  ds.people[ID] = [
+    { name: "Anne Eksempel", role: "Adm. direktør", from: "2015-01-01" },
+    { name: "Bo Eksempel", role: "Bestyrelsesformand", from: "2012-05-01" },
+  ];
+  ds.timeline[ID] = { lassoId: ID, events: [{ date: "2024-03-15", title: "Carla Prøve er indtrådt", category: "Ledelse" }, { date: "2025-04-15", title: "Årsrapport 2024 offentliggjort", category: "Regnskab" }] };
+  const PID = "CVR-3-4000000002";
+  ds.persons[PID] = {
+    lassoId: PID,
+    name: "Bo Eksempel",
+    roles: [
+      { companyId: ID, companyName: "Eksempel Byg A/S", kind: "board", role: "Bestyrelsesformand", from: "2012-05-01", active: true },
+      { companyId: "CVR-1-99000010", companyName: "Eksempel Holding ApS", kind: "direction", role: "Direktør", from: "2005-01-01", active: true },
+    ],
+  };
+  const spec = {
+    version: 2 as const,
+    kind: "custom" as const,
+    title: "x",
+    layout: "stack" as const,
+    criteria: [],
+    components: [
+      { type: "LassoPersonList" as const, company: ID, show: "current" as const, roles: "direktion" as const },
+      { type: "LassoTimeline" as const, company: ID, kinds: ["ledelse" as const] },
+      { type: "LassoTimeline" as const, company: ID, kinds: ["status" as const] },
+      { type: "LassoPersonRoles" as const, person: PID, show: "current" as const, role: "bestyrelse" as const },
+    ],
+  };
+  const html = text(renderToStaticMarkup(createElement(LassoView, { spec, dataset: ds, host: {}, onAction: () => {} })));
+  assert.match(html, /Direktion[\s\S]*?Anne Eksempel/);
+  assert.doesNotMatch(html, /Bo Eksempel \(formand\)/);
+  assert.match(html, /Ledelsesændringer .*Carla Prøve er indtrådt/);
+  assert.doesNotMatch(html, /Årsrapport 2024 offentliggjort/);
+  assert.match(html, /Statusændringer .*Ingen statusændringer registreret\./);
+  assert.match(html, /Bestyrelsesposter[\s\S]*?Eksempel Byg A\/S/);
+  assert.doesNotMatch(html, /Eksempel Holding ApS/);
 });

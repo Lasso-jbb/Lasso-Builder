@@ -5,8 +5,10 @@ import {
   ModuleBar,
   ModuleToolbar,
   ShellIcon,
+  specToCsv,
   TabPanel,
   type ActionResult,
+  type MenuItem,
   type HostCapabilities,
   type ModuleAction,
   type TabItem,
@@ -14,7 +16,7 @@ import {
 } from "@lasso/ui";
 import { FOCUSES, FOCUS_LABELS, isPersonFocus, PERSON_FOCUSES, PERSON_FOCUS_LABELS, type Focus, type PersonFocus } from "@lasso/spec";
 import type { ViewResult } from "./api.js";
-import { entityHost } from "./data.js";
+import { entityHost, SHELL_MOBILE_MAX, SHELL_TABLET_MAX } from "./data.js";
 import { dataKey, isFocus, type PortalRoute } from "./routes.js";
 import type { PortalTab } from "./tabs.js";
 
@@ -77,6 +79,7 @@ export function SearchPage({
   route,
   data,
   savePrefix,
+  pdf = false,
   onSearch,
   onRetry,
   onAction,
@@ -85,6 +88,8 @@ export function SearchPage({
   route: SearchRoute;
   data: TabData | undefined;
   savePrefix: string;
+  /** "Gem som PDF" øverst (boot.pdf). */
+  pdf?: boolean;
   onSearch: (q: string) => void;
   onRetry: () => void;
   onAction: OnAction;
@@ -147,7 +152,7 @@ export function SearchPage({
           url={data.url}
           loading={state === "refreshing"}
           theme="light"
-          host={SEARCH_HOST}
+          host={{ ...SEARCH_HOST, pdf }}
           savePrefix={savePrefix}
           onAction={onAction}
         />
@@ -164,6 +169,7 @@ export function EntityPage({
   data,
   savePrefix,
   shellWidth,
+  pdf = false,
   saved,
   canAct,
   onFocus,
@@ -171,6 +177,8 @@ export function EntityPage({
   onShare,
   onRetry,
   onAction,
+  onMonitor,
+  monitoring = false,
 }: {
   tab: PortalTab;
   route: EntityRoute;
@@ -178,6 +186,8 @@ export function EntityPage({
   savePrefix: string;
   /** Rammens bredde: afgør, om Gem står i modulbjælken (desktop) eller i visningens hoved (mobil). */
   shellWidth: number;
+  /** "Gem som PDF" øverst i visningens hoved (boot.pdf). */
+  pdf?: boolean;
   /** Står siden på brugerens liste (Gem/Gemt). */
   saved: boolean;
   /** Handlingerne vises, når siden er hentet og vi kender dens Lasso-ID. */
@@ -188,31 +198,54 @@ export function EntityPage({
   onShare: () => void;
   onRetry: () => void;
   onAction: OnAction;
+  /** 24.3: Overvåg i modulbjælken; udeladt, indtil portalen har et overvågnings-API. */
+  onMonitor?: () => void;
+  monitoring?: boolean;
 }) {
   const state = viewState(route, data);
   const company = route.kind === "company";
   const panel = `portal-${tab.id}`;
   const value = route.focus;
   const label = company ? FOCUS_LABELS[route.focus] : PERSON_FOCUS_LABELS[route.focus];
+  // 24.3: "Eksportér ▾" (link og tal som CSV), Gem/Gemt og Overvåg, når portalen kan overvåge.
+  const csv = data?.result ? specToCsv(data.result.spec, data.result.dataset) : null;
+  const exportItems: MenuItem[] = [
+    { id: "del", label: "Del link", icon: <ShellIcon name="copy" size={16} />, onSelect: onShare },
+    ...(csv && data?.result
+      ? [{ id: "csv", label: "Tal som CSV", icon: <ShellIcon name="download" size={16} />, onSelect: () => void onAction({ kind: "export", filename: `${data.result!.spec.title.replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase()}.csv`, csv }) }]
+      : []),
+  ];
   const actions: ModuleAction[] = canAct
     ? [
+        { id: "eksport", label: "Eksportér", items: exportItems },
         { id: "gem", label: saved ? "Gemt" : "Gem", icon: <ShellIcon name="bookmark" filled={saved} />, tone: saved ? "accent" : undefined, onSelect: onToggleSaved },
-        { id: "del", label: "Del link", onSelect: onShare },
+        ...(onMonitor ? [{ id: "overvaag", label: monitoring ? "Overvåger" : "Overvåg", icon: <ShellIcon name="rss" />, tone: "accent" as const, onSelect: onMonitor }] : []),
       ]
     : [];
   const waiting = state === "loading" || state === "error";
+  // 26f.1/26.3: under 1024 px ingen modulbjælke; modulerne står som faner under hovedet (tablet: 5 + "Mere").
+  const narrow = shellWidth <= SHELL_TABLET_MAX;
+  const modules = company ? FOCUS_MODULES : PERSON_MODULES;
+  const selectFocus = (id: string) => {
+    if (company ? isFocus(id) : isPersonFocus(id)) onFocus(id as Focus | PersonFocus);
+  };
+  const headTabs = narrow
+    ? { items: modules, value, onChange: selectFocus, ariaLabel: "Fokus", ...(shellWidth > SHELL_MOBILE_MAX ? { maxVisible: 6, moreLabel: "Mere" } : { maxVisible: modules.length }) }
+    : undefined;
   return (
     <>
-      <ModuleBar
-        id={panel}
-        modules={company ? FOCUS_MODULES : PERSON_MODULES}
-        value={value}
-        onChange={(id) => {
-          if (company ? isFocus(id) : isPersonFocus(id)) onFocus(id as Focus | PersonFocus);
-        }}
-        actions={actions}
-        ariaLabel="Fokus"
-      />
+      {narrow ? null : (
+        <ModuleBar
+          id={panel}
+          modules={company ? FOCUS_MODULES : PERSON_MODULES}
+          value={value}
+          onChange={(id) => {
+            if (company ? isFocus(id) : isPersonFocus(id)) onFocus(id as Focus | PersonFocus);
+          }}
+          actions={actions}
+          ariaLabel="Fokus"
+        />
+      )}
       <TabPanel
         id={panel}
         tab={value}
@@ -232,9 +265,12 @@ export function EntityPage({
             url={data.url}
             loading={state === "refreshing"}
             theme="light"
-            host={entityHost(shellWidth)}
+            host={{ ...entityHost(shellWidth, Boolean(onMonitor)), pdf }}
+            headTabs={headTabs}
+            page
             savePrefix={savePrefix}
             onAction={onAction}
+            frameless
           />
         ) : null}
       </TabPanel>
@@ -244,7 +280,7 @@ export function EntityPage({
 
 /* ---------- Gemte sider: #/saved ---------- */
 
-export function SavedPage({ tab, data, onRetry, onAction }: { tab: PortalTab; data: TabData | undefined; onRetry: () => void; onAction: OnAction }) {
+export function SavedPage({ tab, data, pdf = false, onRetry, onAction }: { tab: PortalTab; data: TabData | undefined; pdf?: boolean; onRetry: () => void; onAction: OnAction }) {
   const state = viewState({ kind: "saved" }, data);
   if (state === "error") {
     return (
@@ -267,8 +303,9 @@ export function SavedPage({ tab, data, onRetry, onAction }: { tab: PortalTab; da
       dataset={data.result.dataset}
       loading={state === "refreshing"}
       theme="light"
-      host={SAVED_HOST}
+      host={{ ...SAVED_HOST, pdf }}
       onAction={onAction}
+      frameless
     />
   );
 }
