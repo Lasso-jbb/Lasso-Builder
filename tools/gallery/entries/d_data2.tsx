@@ -341,7 +341,7 @@ export const entries: GalleryEntry[] = [
       />
     ),
   },
-  { nr: "18.2", title: "Scorehistorik (trinlinje)", node: "BY5-0", spec: company("Eksempel Byg A/S", [{ type: "LassoScoreHistory", company: BYG, width: "full" }]) },
+  { nr: "18.2", title: "Scorehistorik (trinlinje)", node: "BY5-0", spec: company("Eksempel Byg A/S", [{ type: "LassoScoreHistory", company: BYG, compare: false, width: "full" }]) },
   {
     nr: "18.3",
     title: "Bekræft hentning (dialog)",

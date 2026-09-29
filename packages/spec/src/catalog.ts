@@ -301,8 +301,8 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     type: "LassoScoreHistory",
     title: "Scorehistorik (kun demo)",
     description:
-      "Brug til: KUN demovisninger. Lassos 0–100-score over tid som trinlinje med zonerne lav/moderat/høj og forrige vs. nu; der er ingen live datakilde, så rigtige virksomheder viser tom tilstand. Vælg den aldrig til en kunde, der spørger om risiko eller kreditvurdering (show_company focus risiko). Brug ikke når: det gælder Creditsafes vurdering (LassoCreditRating). Kræver: company, title? (standard 'Kreditvurdering'), detail? (true tilføjer udviklingen over 24 måneder og seneste ændringer). Eksempel: intet kundespørgsmål fører hertil.",
-    props: "company, title?, detail?",
+      "Brug til: KUN demovisninger. Lassos 0–100-score over tid som trinlinje med zonerne lav/moderat/høj og forrige vs. nu; der er ingen live datakilde, så rigtige virksomheder viser tom tilstand. Vælg den aldrig til en kunde, der spørger om risiko eller kreditvurdering (show_company focus risiko). Brug ikke når: det gælder Creditsafes vurdering (LassoCreditRating). Kræver: company, title? (standard 'Kreditscore 2023–2026' ud fra hentningerne), compare? (false viser grafen alene uden forrige vs. nu-striben). Eksempel: intet kundespørgsmål fører hertil.",
+    props: "company, title?, compare?",
   },
 
   // (f) Fysiske enheder --------------------------------------------------------

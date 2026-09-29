@@ -462,7 +462,8 @@ export const scoreGaugeSchema = z.object({
 export const scoreHistorySchema = z.object({
   type: z.literal("LassoScoreHistory"),
   company: companyRef,
-  title: z.string().max(80).optional().describe("Standard: 'Score over tid'."),
+  title: z.string().max(80).optional().describe("Standard: 'Kreditscore <første år>–<sidste år>'."),
+  compare: z.boolean().optional().describe("Forrige vs. nu (18.1) over grafen. Standard: til; fra viser grafen alene (18.2)."),
 });
 
 /** Katalog 13.10: nøgletalsmåler med branchemærke. Branchetal er ubekræftede i live (docs/lasso-endpoints.md). */
