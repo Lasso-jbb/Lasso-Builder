@@ -84,7 +84,7 @@ export interface DataStateProps {
   state: DataStateKind;
   /** Tom: skal sige HVORFOR der intet er (aldrig "0"). Låst: hvad der kræves. På forespørgsel: pris og varighed. */
   reason?: string;
-  /** Fed første linje, fx "Ingen nyheder endnu" eller "Regnskab kunne ikke hentes". */
+  /** Fed første linje, fx "Ingen nyheder endnu", "Regnskab kunne ikke hentes", "Reelle ejere kræver Lasso Pro" (låst) eller "Kreditvurdering" (på forespørgsel). */
   title?: string;
   /** Tom (26h.1): hvornår der sidst blev tjekket; vises som "Sidst tjekket DD.MM.ÅÅÅÅ". */
   checkedAt?: string;
@@ -202,7 +202,10 @@ export function DataState({ state, reason, title, checkedAt, positive, onRetry, 
           )}
         </div>
         <div className="lasso-state-locked__card">
-          <p className="lasso-state-locked__text">{reason ?? "Kræver en anden Lasso-pakke."}</p>
+          <div>
+            {title ? <div className="lasso-state__title">{title}</div> : null}
+            <p className="lasso-state-locked__text">{reason ?? "Kræver en anden Lasso-pakke."}</p>
+          </div>
           {action ? (
             <button type="button" className="lasso-btn lasso-btn--primary lasso-state__wide" onClick={action.onClick} disabled={!action.onClick}>
               {action.label}
@@ -216,7 +219,12 @@ export function DataState({ state, reason, title, checkedAt, positive, onRetry, 
     // På forespørgsel (26h.1): pris og varighed før knappen; ventetilstand som 48 px række med ring.
     return (
       <div className="lasso-state-request">
-        {reason ? <p className="lasso-state-request__text">{reason}</p> : null}
+        {title || reason ? (
+          <div>
+            {title ? <div className="lasso-state__title">{title}</div> : null}
+            {reason ? <p className="lasso-state-request__text">{reason}</p> : null}
+          </div>
+        ) : null}
         {pending ? (
           <div className="lasso-state-request__pending" role="status">
             <PendingRing />
