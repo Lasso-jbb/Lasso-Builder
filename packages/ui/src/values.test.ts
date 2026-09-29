@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { AmountValue, BooleanValue, FoldText, IndustryValue, LockedValue, NotReported, QualityFlag, ScoreValue, ShareValue, ValueList } from "./components/Values.js";
+import { AmountValue, BooleanValue, ContactValue, FoldText, formatPhone, formatWeb, PercentValue, PeriodValue, IndustryValue, LockedValue, NotReported, QualityFlag, ScoreValue, ShareValue, ValueList } from "./components/Values.js";
 
 const noop = () => {};
 const render = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(el);
@@ -30,4 +30,21 @@ test("02c Felter med data", () => {
   assert.doesNotMatch(locked, /Pro/);
   assert.match(render(h(FoldText, { text: "Kort" })), /Kort/);
   assert.match(render(h(FoldText, { text: "x ".repeat(200) })), /Vis mere/);
+});
+
+test("02c.5 PercentValue, 02c.6 PeriodValue med én dato, 02c.12 ContactValue", () => {
+  const pct = render(h(PercentValue, { value: 17.3, compare: 11.2 }));
+  assert.match(pct, /17,3 %<\/span><span class="lasso-muted-extra">, branchen 11,2 %/);
+  assert.match(render(h(PercentValue, { value: null })), /Ikke oplyst/);
+  assert.match(render(h(PeriodValue, { date: "2016-03-01", extra: "10 år" })), /^<span>01\.03\.2016<span class="lasso-muted-extra">, 10 år<\/span><\/span>$/);
+  assert.match(render(h(PeriodValue, { from: "2016-03-01", to: "2016-03-01" })), /^<span>01\.03\.2016<\/span>$/);
+  assert.match(render(h(PeriodValue, { from: "2025-01-01", to: "2025-12-31" })), /01\.01\.2025–31\.12\.2025/);
+  assert.equal(formatPhone("+45 71747812"), "71 74 78 12");
+  assert.equal(formatWeb("https://www.eksempelbyg.dk/"), "eksempelbyg.dk");
+  const tel = render(h(ContactValue, { kind: "phone", value: "71747812", more: 2, onShowAll: noop }));
+  assert.match(tel, /href="tel:\+4571747812">71 74 78 12<\/a>/);
+  assert.match(tel, /Se 2 flere/);
+  assert.match(render(h(ContactValue, { kind: "email", value: "Info@Eksempel.DK" })), /mailto:info@eksempel\.dk">info@eksempel\.dk/);
+  assert.match(render(h(ContactValue, { kind: "web", value: "https://www.eksempelbyg.dk" })), /href="https:\/\/www\.eksempelbyg\.dk" target="_blank"[^>]*>eksempelbyg\.dk/);
+  assert.match(render(h(ContactValue, { kind: "phone", value: null })), /Ikke registreret/);
 });

@@ -23,7 +23,7 @@
   --lasso-iconbtn-sm: 32px;
   --lasso-label-h: 28px;            /* etiket, kun visning (05.6) */
   --lasso-status-new: var(--lasso-accent-text);  /* "Ny" som ren tekst (05.7) */
-  --lasso-status-liquidation: var(--lasso-warning);
+  --lasso-status-liquidation: var(--lasso-bankrupt);  /* 02c.8: konkurs og likvidation begge mørk rød */
 
   /* Koral: den eneste accentfarve */
   --lasso-accent: #ff6b35;          /* primary */
@@ -348,6 +348,9 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-avatar { display: none; } /* regel 5: navne står alene */
 .lasso-link { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; font-weight: 400; text-align: left; color: var(--lasso-text); border-radius: var(--lasso-radius-sm); }
 .lasso-link:hover { color: var(--lasso-accent-text); text-decoration: underline; }
+/* 02c.12: link-værdier (telefon, e-mail, web) i tekstfarve; understregning kun ved hover */
+.lasso-root a.lasso-link { color: var(--lasso-text); text-decoration: none; }
+.lasso-root a.lasso-link:hover { color: var(--lasso-accent-text); text-decoration: underline; }
 .lasso-new { font-size: var(--lasso-fs-label); font-weight: 600; letter-spacing: var(--lasso-ls-label); text-transform: uppercase; color: var(--lasso-accent-text); background: var(--lasso-accent-soft); border-radius: var(--lasso-radius-sm); padding: 1px 6px; margin-left: 8px; vertical-align: 1px; }
 
 /* ---------- Tabel (15): ramme, 52 px rækker, overlinje i hoved ---------- */
@@ -2277,7 +2280,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 /* 02c.10 Branche med kode */
 .lasso-industry { display: inline-flex; align-items: baseline; gap: 8px; min-width: 0; }
 .lasso-industry__code { flex: none; font-size: var(--lasso-fs-sm); color: var(--lasso-muted); font-variant-numeric: tabular-nums; }
-.lasso-industry__text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.lasso-industry__text { min-width: 0; overflow-wrap: break-word; } /* 02c.10: ombrydes, aldrig "…" i detaljevisning */
 /* 02c.11 Adresse: to linjer, diskret kortlink */
 .lasso-address { display: inline-flex; flex-direction: column; }
 .lasso-root .lasso-address__map { width: fit-content; margin-top: 2px; font-size: var(--lasso-fs-sm); color: var(--lasso-muted); text-decoration: underline; text-underline-offset: 2px; }

@@ -129,7 +129,7 @@ const PATHS: Record<IconName, string> = {
   network: "M6 8.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM18 8.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM12 20.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM7.5 8l3.3 7.8M16.5 8l-3.3 7.8M8.5 6h7",
   chart: "M4 20h16M7 16v-5M12 16V6M17 16v-8",
   minus: "M5 12h14",
-  alert: "M12 7v6M12 16.5h.01",
+  alert: "M12 21a9 9 0 100-18 9 9 0 000 18zM12 7.5v5M12 16h.01", /* 02c.16: udråbstegn i cirkel */
   document: "M7 3.5h7l4 4v13H7zM14 3.5v4h4M10 12h5M10 15.5h5",
   trend: "M4 16l5-5 3.5 3.5L20 7M15 7h5v5",
   book: "M5 5.5A2.5 2.5 0 017.5 3H19v15H7.5A2.5 2.5 0 005 20.5zM5 20.5A2.5 2.5 0 007.5 23H19v-5",

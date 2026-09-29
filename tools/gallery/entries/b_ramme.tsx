@@ -27,6 +27,8 @@ import {
   NumberValue,
   PageHeader,
   PeriodValue,
+  PercentValue,
+  ContactValue,
   Picker,
   QualityFlag,
   Rail,
@@ -433,20 +435,13 @@ export const entries: GalleryEntry[] = [
     nr: "02c.5",
     title: "Procent",
     node: "GNF-0",
-    note: "Ingen egen komponent i Values.tsx; tegnet med formatPercent-formatet (17,3 %) og .lasso-muted-extra.",
     render: () => (
       <KV>
         <ValueRow label="Overskudsgrad (2024)">
-          <span>
-            <span className="lasso-num">17,3 %</span>
-            <span className="lasso-muted-extra">, branchen 11,2 %</span>
-          </span>
+          <PercentValue value={17.3} compare={11.2} />
         </ValueRow>
         <ValueRow label="Soliditetsgrad (2024)">
-          <span>
-            <span className="lasso-num">−4,1 %</span>
-            <span className="lasso-muted-extra">, branchen 32,0 %</span>
-          </span>
+          <PercentValue value={-4.1} compare={32} />
         </ValueRow>
       </KV>
     ),
@@ -458,9 +453,7 @@ export const entries: GalleryEntry[] = [
     render: () => (
       <KV>
         <ValueRow label="Stiftet">
-          <span>
-            01.03.2016<span className="lasso-muted-extra">, {formatAge("2016-03-01")}</span>
-          </span>
+          <PeriodValue date="2016-03-01" extra={formatAge("2016-03-01")} />
         </ValueRow>
         <ValueRow label="Regnskabsperiode">
           <PeriodValue from="2025-01-01" to="2025-12-31" />
@@ -574,29 +567,16 @@ export const entries: GalleryEntry[] = [
     nr: "02c.12",
     title: "Telefon, e-mail og web",
     node: "GRT-0",
-    note: "Ingen egen værdikomponent i Values.tsx (formateringen ligger privat i LassoContact.prettyPhone); tegnet med .lasso-link.",
     render: () => (
       <KV>
         <ValueRow label="Telefon">
-          <span>
-            <a className="lasso-link" href="tel:+4571747812">
-              71 74 78 12
-            </a>
-            <span className="lasso-muted-extra">, </span>
-            <button type="button" className="lasso-link lasso-link--more">
-              Se 2 flere
-            </button>
-          </span>
+          <ContactValue kind="phone" value="71747812" more={2} onShowAll={noop} />
         </ValueRow>
         <ValueRow label="E-mail">
-          <a className="lasso-link" href="mailto:info@eksempelbyg.dk">
-            info@eksempelbyg.dk
-          </a>
+          <ContactValue kind="email" value="Info@EksempelByg.dk" />
         </ValueRow>
         <ValueRow label="Web">
-          <a className="lasso-link" href="https://www.eksempelbyg.dk" target="_blank" rel="noreferrer">
-            eksempelbyg.dk
-          </a>
+          <ContactValue kind="web" value="https://www.eksempelbyg.dk" />
         </ValueRow>
       </KV>
     ),

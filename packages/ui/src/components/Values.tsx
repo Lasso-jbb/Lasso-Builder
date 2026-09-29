@@ -3,8 +3,10 @@ import {
   changeText,
   formatAmount,
   formatBoolean,
+  formatDate,
   formatFullAmount,
   formatNumber,
+  formatPercent,
   formatPeriod,
   formatRange,
   formatShare,
@@ -112,12 +114,28 @@ export function AmountValue({ value, previous, unit = "kr." }: { value: number |
  * 02c.6 Dato og periode: dd.mm.åååå, perioder med tankestreg, åben periode som "siden 2016" eller
  * "2016 →", alder/varighed som muted tillæg.
  */
-export function PeriodValue({ from, to, yearOnly, open = "since", extra }: { from?: string | null; to?: string | null; yearOnly?: boolean; open?: "since" | "arrow"; /** Muted tillæg, fx formatAge(stiftet). */ extra?: string }) {
-  if (!from && !to) return <NotReported />;
+export function PeriodValue({ from, to, date, yearOnly, open = "since", extra }: { from?: string | null; to?: string | null; /** Én dato (fx stiftet): "01.03.2016" uden periode. from = to giver det samme. */ date?: string | null; yearOnly?: boolean; open?: "since" | "arrow"; /** Muted tillæg, fx formatAge(stiftet): "01.03.2016, 10 år". */ extra?: string }) {
+  const single = date ?? (from && to && from === to ? from : null);
+  if (!single && !from && !to) return <NotReported />;
+  const text = single ? (yearOnly ? (/^(\d{4})/.exec(single)?.[1] ?? single) : formatDate(single)) : formatPeriod(from, to, { yearOnly, open });
   return (
     <span>
-      {formatPeriod(from, to, { yearOnly, open })}
+      {text}
       {extra ? <span className="lasso-muted-extra">, {extra}</span> : null}
+    </span>
+  );
+}
+
+/**
+ * 02c.5 Procent: mellemrum før % og én decimal ("17,3 %"). Sammenligningen står som muted tekst
+ * efter værdien ("17,3 %, branchen 11,2 %"), aldrig som et ekstra tal i samme størrelse.
+ */
+export function PercentValue({ value, compare, compareLabel = "branchen" }: { value: number | null | undefined; /** Sammenligningstal, fx branchens. */ compare?: number | null; compareLabel?: string }) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return <NotReported />;
+  return (
+    <span>
+      <span className="lasso-num">{formatPercent(value, false)}</span>
+      {compare !== null && compare !== undefined && Number.isFinite(compare) ? <span className="lasso-muted-extra">{`, ${compareLabel} ${formatPercent(compare, false)}`}</span> : null}
     </span>
   );
 }
@@ -192,6 +210,48 @@ export function AddressValue({ street, zip, city, mapUrl, inline = false, mapLab
         <a className="lasso-address__map" href={mapUrl} target="_blank" rel="noreferrer">
           {mapLabel}
         </a>
+      ) : null}
+    </span>
+  );
+}
+
+/** 02c.12: "12345678" / "+4512345678" -> "12 34 56 78" (grupper af to). */
+export function formatPhone(v: string): string {
+  const digits = v.replace(/[\s-]/g, "").replace(/^(\+45|0045)/, "");
+  return /^\d{8}$/.test(digits) ? digits.replace(/^(\d{2})(\d{2})(\d{2})(\d{2})$/, "$1 $2 $3 $4") : v.trim();
+}
+
+/** 02c.12: web uden https:// og www. ("https://www.eksempelbyg.dk/" -> "eksempelbyg.dk"). */
+export function formatWeb(v: string): string {
+  return v.trim().replace(/^https?:\/\//i, "").replace(/^www\./i, "").replace(/\/$/, "");
+}
+
+/**
+ * 02c.12 Telefon, e-mail og web: telefon i grupper af to, web uden https:// og www., e-mail med
+ * små bogstaver. Link i tekstfarve, understregning kun ved hover. Telefon åbner opkald (tel:),
+ * web åbner i ny fane. Flere: den primære og "Se N flere", der åbner panelet fra højre (onShowAll).
+ */
+export function ContactValue({ kind, value, more = 0, onShowAll }: { kind: "phone" | "email" | "web"; value: string | null | undefined; /** Antal øvrige numre/adresser. */ more?: number; onShowAll?: () => void }) {
+  if (!value || !value.trim()) return <NotReported kind="registered" />;
+  const text = kind === "phone" ? formatPhone(value) : kind === "email" ? value.trim().toLowerCase() : formatWeb(value);
+  const href = kind === "phone" ? `tel:+45${text.replace(/\s/g, "")}` : kind === "email" ? `mailto:${text}` : /^https?:\/\//i.test(value.trim()) ? value.trim() : `https://${value.trim()}`;
+  const ext = kind === "web" ? { target: "_blank", rel: "noreferrer" } : {};
+  return (
+    <span className="lasso-contactvalue">
+      <a className="lasso-link" href={href} {...ext}>
+        {text}
+      </a>
+      {more > 0 ? (
+        <>
+          <span className="lasso-muted-extra">, </span>
+          {onShowAll ? (
+            <button type="button" className="lasso-link lasso-link--more" onClick={onShowAll}>
+              {`Se ${more} flere`}
+            </button>
+          ) : (
+            <span className="lasso-muted-extra">{`${more} flere`}</span>
+          )}
+        </>
       ) : null}
     </span>
   );
