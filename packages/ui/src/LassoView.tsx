@@ -85,7 +85,7 @@ import { SavedPages } from "./components/SavedPages.js";
 import { ShellIcon } from "./components/ShellIcons.js";
 import { ReportA4 } from "./components/ReportA4.js";
 import { personRolesCsv, specToCsv } from "./csv.js";
-import { Badge, Skeleton } from "./primitives.js";
+import { Badge, Skeleton, stateForError } from "./primitives.js";
 import { Accordion, CardGrid } from "./components/Layout.js";
 import { ModuleToolbar } from "./components/ModuleToolbar.js";
 import { SaveDialog } from "./SaveDialog.js";
@@ -419,6 +419,11 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           peopleError={err(`people:${c.company}`)}
           ownershipError={err(`ownership:${c.company}`)}
           onOpen={props.host.drillDown ? act : undefined}
+          // 11.1: låst række, når reelle ejere kræver adgang; tællerrække, når produktionsenhederne er hentet.
+          beneficialLocked={Boolean(err(`beneficialOwnership:${c.company}`)) && stateForError(err(`beneficialOwnership:${c.company}`)) === "noaccess"}
+          onBeneficialInfo={props.host.prompt ? () => act({ kind: "prompt", prompt: "Hvad kræver det at se reelle ejere i Lasso?" }) : undefined}
+          productionUnits={empty.productionUnits[c.company] ? (empty.productionUnits[c.company]!.total ?? empty.productionUnits[c.company]!.units.length) : undefined}
+          onProductionUnits={props.host.prompt ? () => act({ kind: "prompt", prompt: `Vis produktionsenhederne for ${empty.companies[c.company]?.name ?? c.company}` }) : undefined}
         />
       );
     case "LassoBeneficialOwners":

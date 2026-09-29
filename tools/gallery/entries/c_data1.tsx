@@ -388,7 +388,22 @@ export const entries: GalleryEntry[] = [
   { nr: "10.4", title: "Scoremåler, tilstande", node: "BGZ-0", render: () => <ScoreStates /> },
 
   // 11 Personer og ejere
-  { nr: "11.1", title: "Rolleliste, kompakt", node: "A3I-0", spec: co("Eksempel Byg A/S", [{ type: "LassoRelations", company: B }]) },
+  {
+    nr: "11.1",
+    title: "Rolleliste, kompakt",
+    node: "A3I-0",
+    spec: co("Eksempel Byg A/S", [{ type: "LassoRelations", company: B }]),
+    note: "Eksempel: flere ejere end tre, reelle ejere uden adgang og én produktionsenhed (tilstandene i Paper).",
+    mutate: (ds) => {
+      const own = ds.ownership[B];
+      if (own) {
+        const base = own.owners[0]!;
+        own.owners = [...own.owners, ...["Prøve Invest ApS", "Carla Prøve", "Dan Prøve", "Eva Prøve"].map((name) => ({ ...base, name, lassoId: undefined }))];
+      }
+      ds.errors[`beneficialOwnership:${B}`] = "Reelle ejere kræver adgang (403).";
+      ds.productionUnits[B] = { lassoId: B, units: [], total: 1 };
+    },
+  },
   { nr: "11.2", title: "Personliste, udfoldet", node: "A4F-0", spec: co("Eksempel Byg A/S", [{ type: "LassoPersonList", company: B, show: "all", width: "full" }]) },
   { nr: "11.3", title: "Ejerliste", node: "A5X-0", spec: co("Eksempel Byg A/S", [{ type: "LassoOwnerList", company: B, width: "full" }]) },
   { nr: "11.4", title: "Reelle ejere", node: "B33-0", spec: co("Eksempel Byg A/S", [{ type: "LassoBeneficialOwners", company: B, width: "full" }]) },

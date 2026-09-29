@@ -879,8 +879,17 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-relations { display: flex; flex-direction: column; gap: var(--lasso-space-4); }
 .lasso-relations__group { display: flex; flex-direction: column; gap: 6px; }
 .lasso-relations__label { font-size: var(--lasso-fs-sm); font-weight: 600; color: var(--lasso-text); }
-.lasso-relations__name { font-size: var(--lasso-fs); line-height: 20px; color: var(--lasso-accent-text); }
-.lasso-relations__more { font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-text-3); }
+/* 11.1: navnene er koral links (14/400); ".lasso-root" foran, så farven vinder over ".lasso-root button { color: inherit }". */
+.lasso-root .lasso-relations__name { font-size: var(--lasso-fs); line-height: 20px; font-weight: 400; color: var(--lasso-accent-text); }
+.lasso-relations__more { font-size: var(--lasso-fs-sm); font-weight: 400; color: var(--lasso-muted); }
+.lasso-relations__locked { display: flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 10px; border-radius: var(--lasso-radius); background: var(--lasso-surface-muted); font-size: var(--lasso-fs-sm); color: var(--lasso-text-2); }
+.lasso-relations__locked .lasso-icon { color: var(--lasso-muted); flex: none; }
+.lasso-root .lasso-relations__lockmore { margin-left: auto; padding: 0; border: 0; background: none; font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-accent-text); cursor: pointer; }
+.lasso-root .lasso-relations__count { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 40px; padding: 8px 0 0; border: 0; border-top: 1px solid var(--lasso-border); background: none; font-size: var(--lasso-fs); color: var(--lasso-text); text-align: left; cursor: pointer; }
+div.lasso-relations__count { cursor: default; }
+.lasso-relations__count > span:first-child { flex: 1; }
+.lasso-relations__countn { font-weight: 500; color: var(--lasso-accent-text); }
+.lasso-relations__count .lasso-icon { color: var(--lasso-icon); }
 button.lasso-relations__name:hover { text-decoration: underline; }
 
 /* ---------- Reelle ejere (11, node B33-0) ---------- */
