@@ -25,7 +25,7 @@ export function MobileForm() {
         <OperatorSelect value={op} operators={["gte", "lte", "between"]} labels={{ gte: "Mindst", lte: "Højst", between: "Mellem" }} onChange={setOp} />
         <UnitInput value={ansatte} onChange={setAnsatte} label="Antal ansatte" />
       </FieldRow>
-      <FieldRow label="Stiftet efter" layout="form" help="Åbner systemets datovælger.">
+      <FieldRow label="Stiftet efter" layout="form" help="Åbner systemets datovælger — aldrig egen kalender på mobil.">
         <DateInput value={stiftet} onChange={setStiftet} label="Stiftet efter" />
       </FieldRow>
       <ToggleField label="Kun aktive virksomheder" on={aktive} onChange={setAktive} />

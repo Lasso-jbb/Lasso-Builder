@@ -2327,7 +2327,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-root .lasso-cal__nav:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
 .lasso-cal__grid { display: grid; grid-template-columns: repeat(7, 32px); justify-content: space-between; row-gap: 2px; }
 .lasso-cal__wd { height: 28px; line-height: 28px; text-align: center; font-size: 12px; font-weight: 400; color: var(--lasso-muted); }
-.lasso-root .lasso-cal__day { width: 32px; height: 32px; padding: 0; border: 1px solid transparent; border-radius: 50%; background: transparent; color: var(--lasso-text); font: inherit; font-size: var(--lasso-fs-sm); font-variant-numeric: tabular-nums; cursor: pointer; }
+.lasso-root .lasso-cal__day { width: 32px; height: 32px; padding: 0; border: 1px solid transparent; border-radius: var(--lasso-radius); background: transparent; color: var(--lasso-text); font: inherit; font-size: var(--lasso-fs-sm); font-variant-numeric: tabular-nums; cursor: pointer; }
 .lasso-root .lasso-cal__day.is-out { color: var(--lasso-faint); }
 .lasso-root .lasso-cal__day:hover { background: var(--lasso-surface-muted); }
 .lasso-root .lasso-cal__day:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
@@ -2347,9 +2347,9 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-field__summary { flex: 1; min-width: 0; margin: 0 8px 0 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; font-weight: 400; color: var(--lasso-text-3); }
 /* 26a.8 Formularside på mobil: topbjælke "‹ Kriterier (5)" + "Vis 1.243" (koral link), felter under hinanden */
 .lasso-formpage { display: flex; flex-direction: column; min-width: 0; background: var(--lasso-surface); }
-.lasso-formpage__bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 0 16px 0 8px; border-bottom: 1px solid var(--lasso-border); }
-.lasso-root .lasso-formpage__back { display: inline-flex; align-items: center; gap: 4px; height: 44px; padding: 0 8px 0 4px; border: 1px solid transparent; border-radius: var(--lasso-radius); background: transparent; color: var(--lasso-text); font: inherit; font-size: var(--lasso-fs-lg); line-height: 24px; font-weight: 600; cursor: pointer; }
-.lasso-root .lasso-formpage__back svg { color: var(--lasso-text-3); }
+.lasso-formpage__bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 0 16px 0 8px; border-bottom: 1px solid var(--lasso-border); background: var(--lasso-chrome); }
+.lasso-root .lasso-formpage__back { display: inline-flex; align-items: center; gap: 4px; height: 44px; padding: 0 8px 0 4px; border: 1px solid transparent; border-radius: var(--lasso-radius); background: transparent; color: var(--lasso-text); font: inherit; font-size: 15px; line-height: 20px; font-weight: 600; cursor: pointer; }
+.lasso-root .lasso-formpage__back svg { margin-right: 10px; color: var(--lasso-text); }
 .lasso-root .lasso-formpage__action { height: 44px; padding: 0 4px; border: 1px solid transparent; border-radius: var(--lasso-radius); background: transparent; color: var(--lasso-accent-text); font: inherit; font-size: var(--lasso-fs); font-weight: 600; cursor: pointer; }
 .lasso-root .lasso-formpage__back:focus-visible, .lasso-root .lasso-formpage__action:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
 .lasso-formpage__body { display: flex; flex-direction: column; gap: 20px; padding: 16px; }
@@ -2380,6 +2380,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-field__control > .lasso-personacard { flex: 1 1 100%; }
 /* 02a.12: liste/træ-ikonet yderst til højre i stedet for chevron */
 .lasso-select.lasso-industryfield { background-image: none; padding-right: 12px; }
+.lasso-root button.lasso-industryfield { font-weight: 400; }
 .lasso-industryfield__icon { flex: none; display: grid; place-items: center; margin-left: auto; color: var(--lasso-icon); }
 /* Tilføj filter */
 .lasso-filter-add .lasso-menu { width: min(440px, 100%); }
@@ -2392,6 +2393,9 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-field__foot, .lasso-field__error, .lasso-field__helpline { grid-column: 1 / -1; }
   .lasso-field__name { min-height: 0; }
   .lasso-root .lasso-field__clear { height: auto; align-self: center; }
+  /* 26a.8 mobil: valg-chips som piller, kontakten som ren række (feltnavn 600 + kontakt), ingen kortramme */
+  .lasso-choice__chip { border-radius: var(--lasso-radius-pill); }
+  .lasso-togglefield__card { min-height: 48px; padding: 0; border: 0; background: transparent; }
   /* 02a.8/26a.8 mobil: tag-feltet står alene i fuld bredde (operatoren på linjen over) */
   .lasso-field__control > .lasso-tagfield { flex-basis: 100%; }
   /* 03.1/26a.8 mobil: effekt og handlinger i et gråt panel under feltet; Annuller/Opdater som to knapper i fuld bredde (48 px), effekten over */
@@ -3123,7 +3127,9 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-fsheet__chips { display: flex; flex-direction: column; gap: 10px; padding: 12px 0 16px; border-bottom: 1px solid var(--lasso-divider-subtle); }
 .lasso-fsheet__label { font-size: var(--lasso-fs); line-height: 18px; font-weight: 600; color: var(--lasso-text); }
 .lasso-fsheet .lasso-choice { gap: 8px; }
-.lasso-fsheet .lasso-choice__chip { height: 36px; padding: 0 12px; }
+.lasso-fsheet .lasso-choice__chip { height: 36px; padding: 0 14px; border-radius: var(--lasso-radius-pill); color: var(--lasso-text); }
+.lasso-fsheet .lasso-choice__chip.is-on { color: var(--lasso-accent-text); }
+.lasso-fsheet__head { border-bottom: 1px solid var(--lasso-divider-subtle); }
 .lasso-root .lasso-fsheet__row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 0; border: 0; border-bottom: 1px solid var(--lasso-divider-subtle); background: transparent; color: var(--lasso-text); font: inherit; font-size: var(--lasso-fs); text-align: left; cursor: pointer; }
 .lasso-root .lasso-fsheet__row:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: -1px; }
 .lasso-fsheet__row--toggle { cursor: default; justify-content: space-between; }

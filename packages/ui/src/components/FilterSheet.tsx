@@ -399,6 +399,7 @@ function FilterSheetBody({
               <div key={sf.key} className="lasso-fsheet__chips">
                 <div className="lasso-fsheet__label">{label}</div>
                 <ChoiceChips
+                  check={false}
                   label={label}
                   options={opts.map((o) => ({ id: o, label: cap(o) }))}
                   values={values}

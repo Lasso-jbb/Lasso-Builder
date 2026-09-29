@@ -27,7 +27,6 @@ import {
   ToggleField,
   ToastItem,
   Tooltip,
-  UnitInput,
   XIcon,
   YesNoChips,
   type AmountFieldValue,
@@ -345,41 +344,38 @@ function SingleDemo() {
 
 const KOMMUNER = ["Aarhus", "Odense", "Aalborg", "Esbjerg", "Randers", "Kolding", "Horsens", "Vejle", "Roskilde", "Herning", "Silkeborg", "København", "Frederiksberg"];
 
+const STATUS_TAGS = ["Normal / aktiv", "Ophørt", "Under konkurs", "Under likvidation", "Tvangsopløst", "Slettet"];
+
 function TagsDemo() {
-  const [v, setV] = useState<string[]>(["Aarhus", "Odense", "Aalborg", "Esbjerg", "Randers"]);
+  const [v, setV] = useState<string[]>(["Normal / aktiv", "Ophørt"]);
+  const tag = (t: string, hover = false) => (
+    <span className={`lasso-chip ${hover ? "gal-hover" : ""}`}>
+      {t}
+      <button type="button" className="lasso-chip__remove" aria-label={`Fjern ${t}`}>
+        <XIcon />
+      </button>
+    </span>
+  );
   return (
-    <Grid>
-      <FieldRow label="Kommune" layout="form" help="Tom = alle. Feltet vokser i højden når tags ombrydes.">
+    <div style={{ display: "grid", gap: 24 }}>
+      <FieldRow label="Virksomhedsstatus" layout="form" help="Tom = alle. Feltet vokser i højden når tags ombrydes.">
         <OperatorSelect value="in" operators={["in", "not_in"]} onChange={noop} />
-        <TagInput values={v} suggestions={KOMMUNER} onChange={setV} dropdown morePlaceholder="Tilføj flere…" />
+        <TagInput values={v} suggestions={STATUS_TAGS} onChange={setV} dropdown morePlaceholder="Tilføj flere…" />
       </FieldRow>
-      <St label="Tagets tilstande">
-        <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
-          <div style={{ display: "grid", gap: 8, justifyItems: "start" }}>
-            <span className="lasso-chip">
-              Aarhus
-              <button type="button" className="lasso-chip__remove" aria-label="Fjern Aarhus">
-                <XIcon />
-              </button>
-            </span>
-            <span className="lasso-field__help" style={{ marginTop: 0 }}>Hvile</span>
-          </div>
-          <style>{".gal-hover.lasso-chip{background:var(--lasso-tag-hover)}.gal-hover .lasso-chip__remove{color:var(--lasso-accent)}"}</style>
-          <div style={{ display: "grid", gap: 8, justifyItems: "start" }}>
-            <span className="lasso-chip gal-hover">
-              Odense
-              <button type="button" className="lasso-chip__remove" aria-label="Fjern Odense">
-                <XIcon />
-              </button>
-            </span>
-            <span className="lasso-field__help" style={{ marginTop: 0 }}>Markøren over krydset</span>
-          </div>
+      <div style={{ display: "grid", gap: 10 }}>
+        <div style={{ fontSize: "var(--lasso-fs-sm)", lineHeight: "18px", fontWeight: 600, color: "var(--lasso-text-2)" }}>Tagets tilstande</div>
+        <style>{".gal-hover.lasso-chip{background:var(--lasso-tag-hover)}.gal-hover .lasso-chip__remove{color:var(--lasso-accent)}"}</style>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+          {tag("Normal / aktiv")}
+          <span className="lasso-small lasso-muted" style={{ marginRight: 28 }}>Hvile</span>
+          {tag("Normal / aktiv", true)}
+          <span className="lasso-small lasso-muted">Markøren over krydset</span>
         </div>
-        <p className="lasso-field__help" style={{ maxWidth: 720 }}>
+        <p className="lasso-field__help" style={{ margin: 0 }}>
           Krydset er gråt i hvile — ellers står et felt med fem tags og skriger. Det bliver koralt når markøren rammer det, så man ved hvad man er ved at fjerne. Rød er forbeholdt det der ikke kan fortrydes.
         </p>
-      </St>
-    </Grid>
+      </div>
+    </div>
   );
 }
 
@@ -429,7 +425,7 @@ const PAPER_TREE: IndustryTreeNode[] = [
 function IndustryDemo() {
   const [v, setV] = useState<string[]>(["620100", "620200", "620300"]);
   return (
-    <FieldRow label="Branche" layout="form" help="Ét felt, ingen løs knap. Feltet viser de valgte som tekst — to navne og “og N flere” — og hele feltet åbner træ-vælgeren. Tomt: “Vælg brancher”.">
+    <FieldRow label="Branchekode" layout="form" help="Ét felt, ingen løs knap. Feltet viser de valgte som tekst — to navne og “og N flere” — og hele feltet åbner træ-vælgeren. Tomt: “Vælg brancher”.">
       <OperatorSelect value="in" operators={["in", "not_in"]} onChange={noop} />
       <IndustryField tree={PAPER_TREE} values={v} onChange={setV} />
     </FieldRow>
@@ -456,20 +452,16 @@ function CapDemo() {
 
 const ROLES: Option[] = [
   { id: "dir", label: "Direktør", count: 122856 },
-  { id: "head", label: "Head of", count: 18412 },
-  { id: "chef", label: "Chef", count: 64210 },
-  { id: "leder", label: "Leder", count: 41377 },
-  { id: "ejer", label: "Ejer", count: 98530 },
+  { id: "head", label: "Head of", count: 101468 },
+  { id: "manager", label: "Manager", count: 100998 },
+  { id: "partner", label: "Partner", count: 35617 },
+  { id: "best", label: "Bestyrelse", count: 51071 },
 ];
 const DEPTS: Option[] = [
-  { id: "dir", label: "Direktion", count: 54012 },
-  { id: "oek", label: "Økonomi", count: 31264 },
-  { id: "salg", label: "Salg", count: 29870 },
-  { id: "it", label: "IT", count: 14102 },
-  { id: "hr", label: "HR", count: 11846 },
-  { id: "mark", label: "Marketing", count: 9655 },
-  { id: "prod", label: "Produktion", count: 8702 },
-  { id: "lager", label: "Lager og logistik", count: 5431 },
+  { id: "adm", label: "Administration", count: 20149 },
+  { id: "adv", label: "Advokater", count: 18139 },
+  { id: "best", label: "Bestyrelse", count: 88144 },
+  { id: "dir", label: "Direktion", count: 41964 },
 ];
 
 function PersonaDemo() {
@@ -507,7 +499,7 @@ function ToggleDemo() {
 function SectionIntroDemo() {
   return (
     <div>
-      <SectionIntro>Tallene er fra seneste offentliggjorte årsregnskab. Virksomheder i regnskabsklasse B skal ikke oplyse omsætning.</SectionIntro>
+      <SectionIntro>Find firmaer hvor du kan få telefonnummer og mailadresse direkte på de beslutningstagere du leder efter. Fx salgschefen, CTO’en eller den HR-ansvarlige.</SectionIntro>
       <div className="lasso-field__help">Kun på sektioner der har brug for en forklaring. Står øverst, før første felt.</div>
     </div>
   );
@@ -518,16 +510,12 @@ function InfoDemo() {
     <div style={{ minHeight: 90 }}>
       <div className="lasso-field lasso-field--form" role="group">
         <div className="lasso-field__name">
-          <span>Bruttofortjeneste</span>
-          <Tooltip text="Omsætning minus vareforbrug og andre eksterne omkostninger. Oplyses af de fleste virksomheder i regnskabsklasse B." className="lasso-infotip" placement="right" open>
-            <button type="button" className="lasso-infotip__btn" aria-label="Om Bruttofortjeneste">
+          <span>Familiedrevet virksomhed</span>
+          <Tooltip text="To eller flere direktions- og bestyrelsesmedlemmer med samme efternavn" className="lasso-infotip" placement="right" open>
+            <button type="button" className="lasso-infotip__btn" aria-label="Om Familiedrevet virksomhed">
               <Icon name="info" size={14} />
             </button>
           </Tooltip>
-        </div>
-        <div className="lasso-field__control">
-          <OperatorSelect value="gte" operators={["gte", "lte"]} onChange={noop} />
-          <UnitInput value="2.000.000" onChange={noop} unit="kr." />
         </div>
         <div className="lasso-field__help lasso-field__helpline">Erstatter underlinjen under feltnavnet, så forklaringen ikke fylder i listen når man ikke har brug for den.</div>
       </div>
@@ -544,14 +532,14 @@ function RequiredDemo() {
   );
 }
 
-const STATUSER = ["Normal / aktiv", "Under konkurs", "Under likvidation", "Under frivillig likvidation", "Opløst efter konkurs", "Opløst efter fusion", "Tvangsopløst", "Ophørt"];
+const STATUSER = ["Ophørt", "Tvangsopløst", "Normal / aktiv", "Slettet"];
 
 function DropdownOpen() {
   const [v, setV] = useState<string[]>(["Normal / aktiv"]);
   return (
     <div style={{ minHeight: 480, maxWidth: 520 }}>
       <FieldRow label="Status" layout="form">
-        <MultiSelect options={STATUSER} values={v} onChange={setV} defaultOpen help="Vælg en eller flere. Tom = alle." label="Status" />
+        <MultiSelect options={STATUSER} values={v} onChange={setV} defaultOpen searchable help="Vælg en eller flere. Tom = alle." label="Status" />
       </FieldRow>
     </div>
   );
@@ -560,7 +548,7 @@ function DropdownOpen() {
 function SegmentDemo() {
   const [v, setV] = useState<boolean | null>(null);
   return (
-    <FieldRow label="Reklamebeskyttet" layout="form" help="Dev3 bruger denne. Variant 10 (to chips) er stadig anbefalingen — den fjerner en knap der ikke gør noget. Dokumenteret her, så valget er bevidst.">
+    <FieldRow label="Har ejere" layout="form" help="Dev3 bruger denne. Variant 10 (to chips) er stadig anbefalingen — den fjerner en knap der ikke gør noget. Dokumenteret her, så valget er bevidst.">
       <SegmentYesNo value={v} onChange={setV} />
     </FieldRow>
   );
@@ -687,7 +675,7 @@ function FieldStates() {
   return (
     <Grid gap={32}>
       <St label="1 I ro">
-        <FieldRow label="Kommune" layout="stacked" collapsible open={open} onToggle={() => setOpen(!open)} summary="Aarhus, Odense og 3 flere">
+        <FieldRow label="Kommune" layout="stacked" collapsible open={open} onToggle={() => setOpen(!open)}>
           <span />
         </FieldRow>
       </St>

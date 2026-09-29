@@ -686,7 +686,7 @@ export function ListField({
  * uden flueben, så valget kan skelnes selv når fem står ved siden af hinanden.
  * `single` gør dem til enkeltvalg (klik på den valgte fjerner valget).
  */
-export function ChoiceChips({ options, values, onChange, single = false, label }: { options: readonly (string | Option)[]; values: readonly string[]; onChange: (v: string[]) => void; single?: boolean; label?: string }) {
+export function ChoiceChips({ options, values, onChange, single = false, label, check }: { options: readonly (string | Option)[]; values: readonly string[]; onChange: (v: string[]) => void; single?: boolean; label?: string; /** Flueben på valgte (standard: ja, undtagen chips med antal; 26c.8 filterark: nej). */ check?: boolean }) {
   const opts = toOptions(options);
   const has = (oid: string) => values.some((v) => v.toLowerCase() === oid.toLowerCase());
   const toggle = (oid: string) => {
@@ -701,7 +701,7 @@ export function ChoiceChips({ options, values, onChange, single = false, label }
         const on = has(o.id);
         return (
           <button key={o.id} type="button" className={`lasso-choice__chip ${on ? "is-on" : ""}`} aria-pressed={on} onClick={() => toggle(o.id)}>
-            {on && !counted ? <CheckIcon size={14} /> : null}
+            {on && (check ?? !counted) ? <CheckIcon size={14} /> : null}
             {o.label}
             {o.count !== undefined ? <span className="lasso-choice__count">{formatNumber(o.count)}</span> : null}
           </button>
@@ -1115,7 +1115,7 @@ export function formatIndustryCode(code: string): string {
 function TreeListIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M4 6h10M8 12h12M8 18h12M4 6v12M4 12h2M4 18h2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M4 7h16M7 12h13M10 17h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }
