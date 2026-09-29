@@ -349,8 +349,8 @@ export const entries: GalleryEntry[] = [
   },
 
   /* ---------- 19 Regnskabsdetaljer ---------- */
-  { nr: "19.1", title: "Regnskabsværktøjslinje", node: "C0Z-0", spec: company("Eksempel Byg A/S", [{ type: "LassoFinancialStatements", company: BYG }]) },
-  { nr: "19.2", title: "Resultatopgørelse", node: "C1X-0", spec: company("Eksempel Byg A/S", [{ type: "LassoIncomeStatement", company: BYG }]) },
+  { nr: "19.1", title: "Regnskabsværktøjslinje", node: "C0Z-0", spec: company("Eksempel Byg A/S", [{ type: "LassoFinancialStatements", company: BYG, years: 5 }]), note: "Fuld bredde: værktøjslinje og 5 år. Kun årsregnskaber (ingen År/Halvår/Kvartal); alle poster, som regnskabet indeholder; kvalitetsflaget står foran tallet." },
+  { nr: "19.2", title: "Resultatopgørelse", node: "C1X-0", spec: company("Eksempel Byg A/S", [{ type: "LassoIncomeStatement", company: BYG }]), note: "Kompakt (2 år + ændring): bruges, når elementet ikke står i fuld bredde; i fuld bredde bruges 19.1." },
   { nr: "19.3", title: "Regnskabsanalyse", node: "C3M-0", spec: company("Eksempel Byg A/S", [{ type: "LassoTextSections", company: BYG, variant: "analyse", width: "full" }]) },
   { nr: "19.4", title: "Balance", node: "DA9-0", spec: company("Eksempel Byg A/S", [{ type: "LassoBalanceSheet", company: BYG }]) },
   { nr: "19.5", title: "Pengestrømsopgørelse", node: "DC9-0", spec: company("Eksempel Byg A/S", [{ type: "LassoCashFlow", company: BYG }]) },

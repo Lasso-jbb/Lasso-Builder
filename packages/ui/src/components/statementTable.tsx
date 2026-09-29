@@ -141,8 +141,9 @@ export function StatementTable({
                         key={years[i]}
                         className={`lasso-stmt__year ${i === row.values.length - 1 ? "lasso-stmt__year--last" : ""} ${typeof v === "number" && v < 0 ? "lasso-down" : ""}`}
                       >
-                        {fmt(v) ?? <span className="lasso-notreported">—</span>}
+                        {/* 19.1 (Jakob): kvalitetsflaget står foran tallet. */}
                         {row.flag && i === row.values.length - 1 ? <QualityFlag reason={row.flag} /> : null}
+                        {fmt(v) ?? <span className="lasso-notreported">—</span>}
                       </div>
                       );
                     })}

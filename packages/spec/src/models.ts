@@ -199,11 +199,19 @@ export interface IncomeStatementYear {
   periodStart?: string;
   periodEnd?: string;
   revenue?: number | null;
+  /** 19.1: vareforbrug og eksterne omkostninger (negativ), mellem omsætning og bruttofortjeneste. */
+  externalCosts?: number | null;
   grossProfit?: number | null;
   staffCosts?: number | null;
   otherOperatingCosts?: number | null;
   ebitda?: number | null;
   depreciation?: number | null;
+  /** 19.1: resultat af primær drift (EBIT). */
+  ebit?: number | null;
+  /** 19.1: finansielle indtægter (positiv). */
+  financialIncome?: number | null;
+  /** 19.1: finansielle omkostninger (negativ). */
+  financialExpenses?: number | null;
   financialItemsNet?: number | null;
   profitBeforeTax?: number | null;
   tax?: number | null;
@@ -215,7 +223,11 @@ export interface BalanceSheetYear {
   periodEnd?: string;
   intangibleAssets?: number | null;
   tangibleAssets?: number | null;
+  /** 19.1: finansielle anlægsaktiver (kapitalandele, langfristede tilgodehavender). */
+  financialFixedAssets?: number | null;
   fixedAssetsTotal?: number | null;
+  /** 19.1: varebeholdninger. */
+  inventories?: number | null;
   tradeReceivables?: number | null;
   otherReceivables?: number | null;
   cash?: number | null;
@@ -224,6 +236,8 @@ export interface BalanceSheetYear {
   shareCapital?: number | null;
   retainedEarnings?: number | null;
   equityTotal?: number | null;
+  /** 19.1: hensatte forpligtelser (står mellem egenkapital og gæld). */
+  provisions?: number | null;
   longTermLiabilities?: number | null;
   shortTermLiabilities?: number | null;
   liabilitiesTotal?: number | null;

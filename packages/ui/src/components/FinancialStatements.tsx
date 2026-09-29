@@ -88,8 +88,8 @@ function MobileRows({ rows, year, prevYear, scale }: { rows: StatementRow[]; yea
           <div key={r.key} className={`lasso-fs-m__row lasso-fs-m__row--${r.kind ?? "line"}`}>
             <span className="lasso-fs-m__label">{r.label}</span>
             <span className={`lasso-fs-m__value${typeof cur === "number" && cur < 0 ? " lasso-down" : ""}`}>
-              {typeof cur === "number" ? formatScaled(cur, scale) : <span className="lasso-notreported">—</span>}
               {r.flag ? <QualityFlag reason={r.flag} /> : null}
+              {typeof cur === "number" ? formatScaled(cur, scale) : <span className="lasso-notreported">—</span>}
             </span>
             <span className={`lasso-fs-m__delta${r.key === "top" && d.tone === "up" ? " lasso-up" : ""}`}>{d.text}</span>
           </div>
@@ -159,10 +159,10 @@ function MobileCashFlow({ s, year, scale }: { s: FinancialStatementsVM; year: nu
 
 /**
  * Regnskabsdetaljer med værktøjslinje (katalog 19.1, mobil 26d.8–26d.11, tablet 26f.3, 26h.2).
- * Desktop: værktøjslinjen i en kortramme (56 px): [Selskab | Koncern], [År | Halvår | Kvartal]
- * (niveau 3, valgt = 1 px ink-kant og 600), periode-dropdown "2025, 01.01–31.12", enheds-dropdown
- * "t. kr." uden etiket, revisorpåtegningen som muted tekst og "Hent PDF" yderst til højre. Halvår/
- * kvartal er dæmpet 45 % med tooltip, når selskabet kun indberetter årsregnskab. Under linjen står
+ * Desktop: værktøjslinjen i en kortramme (56 px): [Selskab | Koncern] (niveau 3, valgt = 1 px ink-kant
+ * og 600), periode-dropdown "2025, 01.01–31.12", enheds-dropdown "t. kr." uden etiket,
+ * revisorpåtegningen som muted tekst og "Hent PDF" yderst til højre. Ingen År/Halvår/Kvartal (kun
+ * årsregnskaber, Jakob 29.09). Under linjen står
  * resultatopgørelsen (2 år + ændring) og balance og pengestrøm side om side (2 år, uden ændring).
  * Tablet: titel + "t. kr., 3 år synlige" og segment "Resultat + balance | Pengestrøm"; to opgørelser
  * side om side med 3 år, nyeste først. Mobil: titel + periode og 36 px årsdropdown, segment
@@ -174,7 +174,6 @@ export function FinancialStatements({ statements, company, statement = "income",
   const [tab, setTab] = useState<StatementKind>(statement);
   const [pairSel, setPair] = useState<"balance" | "cashflow">(statement === "cashflow" ? "cashflow" : "balance");
   const [scopeSel, setScope] = useState<Scope | null>(null);
-  const [period, setPeriod] = useState("year");
   const [unit, setUnit] = useState<Unit>("t");
   const [yearSel, setYear] = useState<number | null>(null);
 
@@ -200,7 +199,6 @@ export function FinancialStatements({ statements, company, statement = "income",
   const year = yearSel !== null && allYears.includes(yearSel) ? yearSel : allYears.at(-1)!;
   const prevYear = allYears[allYears.indexOf(year) - 1];
   const hasOther = statements.alternate?.scope && statements.alternate.scope !== baseScope;
-  const periods = s.periods ?? ["year"];
 
   const values = [
     ...s.incomeStatement.flatMap((y) => [y.revenue, y.grossProfit, y.profit]),
@@ -314,18 +312,7 @@ export function FinancialStatements({ statements, company, statement = "income",
           onChange={(id) => setScope(id as Scope)}
           className="lasso-fs__scope"
         />
-        <Tabs
-          level={3}
-          ariaLabel="Periode"
-          items={[
-            { id: "year", label: "År" },
-            { id: "half", label: "Halvår", disabled: !periods.includes("half"), disabledReason: "Kun årsregnskab indberettet" },
-            { id: "quarter", label: "Kvartal", disabled: !periods.includes("quarter"), disabledReason: "Kun årsregnskab indberettet" },
-          ]}
-          value={period}
-          onChange={setPeriod}
-          className="lasso-fs__period"
-        />
+        {/* 19.1 (Jakob 29.09): ingen periodevælger (År/Halvår/Kvartal); Lasso viser kun årsregnskaber. */}
         <label className="lasso-fs__select lasso-fs__periodsel">
           <span className="lasso-sr">Regnskabsperiode</span>
           <select value={year} onChange={(e) => setYear(Number(e.target.value))}>

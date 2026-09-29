@@ -2875,6 +2875,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-score--high .lasso-score__meta { color: var(--lasso-danger); }
 /* 02c.16 Kvalitetsflag: 14 px, warning, 6 px efter tallet; linje ved tryk på mobil */
 .lasso-qflag { display: inline-flex; flex-wrap: wrap; align-items: center; margin-left: 6px; vertical-align: -2px; }
+/* 19.1 (Jakob): i regnskabstabellerne står flaget foran tallet. */
+.lasso-stmt__year .lasso-qflag, .lasso-fs-m__value .lasso-qflag { margin-left: 0; margin-right: 6px; }
 .lasso-root .lasso-qflag__btn { display: grid; place-items: center; width: 16px; height: 16px; padding: 0; border: 1px solid transparent; border-radius: var(--lasso-radius-sm); background: transparent; color: var(--lasso-warning); cursor: help; }
 .lasso-root .lasso-qflag__btn:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
 .lasso-qflag__line { display: none; }
