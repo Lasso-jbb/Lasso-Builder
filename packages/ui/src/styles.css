@@ -5194,3 +5194,13 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-root .lasso-news__row--featured .lasso-news__headline { font-size: 16px; line-height: 22px; font-weight: 600; }
   .lasso-root .lasso-news__row--featured .lasso-news__excerpt { -webkit-line-clamp: unset; display: block; }
 }
+
+/* 14.1 (runde 5, Paper AY0-0): detaljepanelet som overlay oven på diagramlærredet: højre 16, top 16,
+   300 px, hvid, 1 px kant, radius 10, skygge; lærredet fylder hele bredden. Panelet holder sig over
+   zoomknapperne og mini-kortet nederst til højre og ruller selv, når det er højere. */
+.lasso-odiagram__body.has-overlay { position: relative; }
+.lasso-root .lasso-odiagram__body.has-overlay > .lasso-odiagram__panel { position: absolute; top: 16px; right: 16px; z-index: 3; width: 300px; max-height: max(260px, calc(100% - 188px)); overflow-y: auto; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); box-shadow: var(--lasso-shadow-pop); }
+.lasso-odiagram__body.has-overlay > .lasso-odiagram__panel .lasso-odiagram__panel-spacer { display: none; }
+.lasso-root .lasso-odiagram__body.has-overlay .lasso-odiagram__panel-actions { position: sticky; bottom: 0; z-index: 1; background: var(--lasso-surface); padding: 14px 16px 16px; }
+.lasso-root .lasso-odiagram__body.has-overlay .lasso-odiagram__panel-actions .lasso-btn { min-width: 0; height: 40px; padding: 0 10px; font-size: 13px; }
+.lasso-root .lasso-odiagram__body.has-overlay .lasso-odiagram__panel-head, .lasso-root .lasso-odiagram__body.has-overlay .lasso-odiagram__panel-sec { padding-left: 16px; padding-right: 16px; }

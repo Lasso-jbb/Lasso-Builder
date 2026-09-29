@@ -211,8 +211,11 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
   );
 
   const panelBeside = W >= PANEL_BESIDE_FROM;
+  // 14.1 (runde 5, Paper AY0-0): på desktop ligger detaljepanelet som overlay oven på lærredet (højre 16,
+  // top 16, 300 px), og lærredet fylder hele bredden. Tablet beholder panelet ved siden af/under.
+  const panelOverlay = panelBeside && !tablet;
   const selectedNode = layout?.nodes.find((n) => n.id === selected && n.entity) ?? null;
-  const canvasW = Math.max(200, selectedNode && panelBeside ? W - 336 - 16 : W);
+  const canvasW = Math.max(200, selectedNode && panelBeside && !panelOverlay ? W - 336 - 16 : W);
   // Tilpas: hele bredden skal kunne ses; høje strukturer skaleres højst ned til 80 % og panoreres.
   // Der holdes 56 px fri i begge sider, så zoomknapperne i hjørnet ikke dækker noder eller baner.
   const canvasMax = tablet ? TABLET_CANVAS_H : CANVAS_MAX;
@@ -747,7 +750,7 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
       <div ref={printRef}>
         {toolbar}
         {printSvg ? <div className="lasso-printonly lasso-odiagram__print" dangerouslySetInnerHTML={{ __html: printSvg }} /> : null}
-        <div className={`lasso-odiagram__body lasso-noprint ${selectedNode && panelBeside ? "has-panel" : ""}`}>
+        <div className={`lasso-odiagram__body lasso-noprint ${selectedNode && panelOverlay ? "has-overlay" : selectedNode && panelBeside ? "has-panel" : ""}`}>
           {canvas}
           {selectedNode ? (
             <DetailPanel
