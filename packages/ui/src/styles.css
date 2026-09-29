@@ -2569,7 +2569,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 /* ---------- 08.4 Genveje (node 9TL-0) ---------- */
 /* Sekundære knapper med koral ikon: det eneste sted koral står på et ikon i hvile ("åbner et Lasso-værktøj"). */
 .lasso-shortcuts { display: flex; flex-wrap: wrap; gap: var(--lasso-space-2); }
-.lasso-root .lasso-shortcut { flex: none; display: inline-flex; align-items: center; gap: 8px; height: var(--lasso-btn-h); padding: 0 14px; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius); background: var(--lasso-surface); color: var(--lasso-text); font: inherit; font-size: var(--lasso-fs-sm); line-height: 16px; font-weight: 500; white-space: nowrap; cursor: pointer; }
+.lasso-root .lasso-shortcut { flex: none; display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius); background: var(--lasso-surface); color: var(--lasso-text); font: inherit; font-size: var(--lasso-fs); line-height: 16px; font-weight: 500; white-space: nowrap; cursor: pointer; }
 .lasso-root .lasso-shortcut:hover { background: var(--lasso-surface-2); border-color: var(--lasso-icon); }
 .lasso-root .lasso-shortcut:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
 .lasso-shortcut__icon { flex: none; color: var(--lasso-accent); }
