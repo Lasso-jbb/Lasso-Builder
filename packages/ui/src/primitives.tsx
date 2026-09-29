@@ -217,8 +217,8 @@ export function DataState({ state, reason, title, checkedAt, positive, onRetry, 
           {reason ?? "Der er ingen data at vise."}
           {checkedAt ? ` Sidst tjekket ${formatDate(checkedAt)}.` : ""}
         </p>
-        {action ? (
-          <button type="button" className="lasso-link lasso-state-panel__action" onClick={action.onClick} disabled={!action.onClick}>
+        {action?.onClick ? (
+          <button type="button" className="lasso-link lasso-state-panel__action" onClick={action.onClick}>
             {action.label}
           </button>
         ) : null}
@@ -247,8 +247,8 @@ export function DataState({ state, reason, title, checkedAt, positive, onRetry, 
           {reason ?? "Der er ingen data at vise."}
           {checkedAt ? ` Sidst tjekket ${formatDate(checkedAt)}.` : ""}
         </div>
-        {action ? (
-          <button type="button" className="lasso-btn lasso-state__action" onClick={action.onClick} disabled={!action.onClick}>
+        {action?.onClick ? (
+          <button type="button" className="lasso-btn lasso-state__action" onClick={action.onClick}>
             {action.label}
           </button>
         ) : null}
@@ -276,8 +276,8 @@ export function DataState({ state, reason, title, checkedAt, positive, onRetry, 
             {title ? <div className="lasso-state__title">{title}</div> : null}
             <p className="lasso-state-locked__text">{reason ?? "Kræver en anden Lasso-pakke."}</p>
           </div>
-          {action ? (
-            <button type="button" className="lasso-btn lasso-btn--primary lasso-state__wide" onClick={action.onClick} disabled={!action.onClick}>
+          {action?.onClick ? (
+            <button type="button" className="lasso-btn lasso-btn--primary lasso-state__wide" onClick={action.onClick}>
               {action.label}
             </button>
           ) : null}
@@ -303,8 +303,8 @@ export function DataState({ state, reason, title, checkedAt, positive, onRetry, 
               {pending.detail ? <span className="lasso-state-request__detail">{pending.detail}</span> : null}
             </span>
           </div>
-        ) : action ? (
-          <button type="button" className="lasso-btn lasso-btn--primary lasso-state__wide" onClick={action.onClick} disabled={!action.onClick}>
+        ) : action?.onClick ? (
+          <button type="button" className="lasso-btn lasso-btn--primary lasso-state__wide" onClick={action.onClick}>
             {action.label}
           </button>
         ) : null}
@@ -318,15 +318,15 @@ export function DataState({ state, reason, title, checkedAt, positive, onRetry, 
       <div className="lasso-state__body">
         <div className="lasso-state__title">{title ?? "Data kunne ikke hentes"}</div>
         {reason ? <div className="lasso-small">{reason}</div> : null}
-        {onRetry || secondaryAction ? (
+        {onRetry || secondaryAction?.onClick ? (
           <div className="lasso-state__actions">
             {onRetry ? (
               <button type="button" className="lasso-btn lasso-btn--primary lasso-btn--sm lasso-state__retry" onClick={onRetry}>
                 Prøv igen
               </button>
             ) : null}
-            {secondaryAction ? (
-              <button type="button" className="lasso-btn lasso-btn--ghost lasso-btn--sm" onClick={secondaryAction.onClick} disabled={!secondaryAction.onClick}>
+            {secondaryAction?.onClick ? (
+              <button type="button" className="lasso-btn lasso-btn--ghost lasso-btn--sm" onClick={secondaryAction.onClick}>
                 {secondaryAction.label}
               </button>
             ) : null}

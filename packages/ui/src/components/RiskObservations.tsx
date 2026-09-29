@@ -190,8 +190,9 @@ export function RiskUnavailable({ reason, checkedAt, detail, onSeePackages }: Ri
       <p className="lasso-riskna__title">{title}</p>
       <p className="lasso-riskna__text">{text}</p>
       {reason === "none" && checkedAt ? <p className="lasso-riskna__meta">{`Tjekket ${formatDate(checkedAt)}`}</p> : null}
-      {reason === "package" ? (
-        <button type="button" className="lasso-link lasso-riskna__link" onClick={onSeePackages} disabled={!onSeePackages}>
+      {/* G1: "Se pakker" kun, når værten kan vise pakkerne. */}
+      {reason === "package" && onSeePackages ? (
+        <button type="button" className="lasso-link lasso-riskna__link" onClick={onSeePackages}>
           Se pakker →
         </button>
       ) : null}

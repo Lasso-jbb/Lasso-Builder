@@ -394,7 +394,6 @@ const PAPER_PERSON_TABS: readonly TabItem[] = [
   { id: "risiko", label: "Risiko" },
   { id: "historik", label: "Historik" },
   { id: "nyheder", label: "Nyheder" },
-  { id: "tvilling", label: "Tvilling" },
 ];
 
 function PaperCompanyPage({ ds }: { ds: Dataset }) {
@@ -1325,6 +1324,7 @@ const L1: TabItem[] = [
   { id: "historik", label: "Historik" },
   { id: "kontakt", label: "Kontakt" },
   { id: "nyheder", label: "Nyheder" },
+  { id: "tvilling", label: "Tvilling" },
 ];
 
 /** Nøgle-værdi-rækker (09) til eksemplerne i 29.3–29.5. */

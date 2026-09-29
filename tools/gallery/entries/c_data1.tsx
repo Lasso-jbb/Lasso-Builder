@@ -361,6 +361,7 @@ export const entries: GalleryEntry[] = [
     nr: "09.4",
     title: "Nøgletalskort, varianter",
     node: "BKI-0",
+    note: "Henter: skeletterne er i bevægelse (et lyst skær glider fra venstre mod højre, 1,6 s; stille ved prefers-reduced-motion). Billedet her er statisk.",
     render: () => (
       <Stack>
         <Labelled label="Med sparkline, branche og kvalitetsflag (ansatte)">

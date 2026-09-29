@@ -48,7 +48,8 @@ test("17.3: tom liste er positiv information med dato, stiplet ramme og ingen fe
   assert.match(html, /Tjekket 25\.09\.2026/);
   assert.doesNotMatch(html, /lasso-state--error|role="alert"/);
   const noAccess = renderToStaticMarkup(createElement(RiskObservations, { error: "403 ingen adgang" }));
-  assert.match(noAccess, /Ikke i din pakke[^]*Lasso Risiko[^]*Se pakker →/);
+  assert.match(noAccess, /Ikke i din pakke[^]*Lasso Risiko/);
+  assert.doesNotMatch(noAccess, /Se pakker →/, "G1: ingen knap uden funktion");
 });
 
 test("17.2: sammenfatning og sortering", () => {
