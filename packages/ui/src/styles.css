@@ -4663,3 +4663,11 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-table.lasso-compare .lasso-compare__slot { border-left: 1px dashed var(--lasso-faint); }
 .lasso-table.lasso-compare tbody td.lasso-compare__slot { border-bottom-color: var(--lasso-border); }
 .lasso-table.lasso-compare tbody tr:last-child td.lasso-compare__slot { border-bottom-color: transparent; }
+
+/* 08.5/26h.7: telefonnummeret står altid på én linje; en lang status ved siden af ombrydes i stedet. */
+.lasso-contact__value[href^="tel:"], .lasso-contact__value--struck { white-space: nowrap; flex: none; }
+.lasso-contact__aside { min-width: 0; }
+@container lasso (max-width: 560px) {
+  .lasso-contact__row .lasso-contact__value[href^="tel:"] { flex: none; }
+  .lasso-contact__value[href^="tel:"] + .lasso-contact__aside { flex: 1 1 auto; justify-content: flex-end; text-align: right; }
+}
