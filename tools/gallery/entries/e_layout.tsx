@@ -889,6 +889,7 @@ const REPORT_SPEC = {
     { type: "LassoBeneficialOwners", company: C },
     { type: "LassoScoreGauge", company: C },
     { type: "LassoCreditRating", company: C },
+    { type: "LassoScoreHistory", company: C },
     { type: "LassoRiskObservations", company: C },
     { type: "LassoAuditorIndependence", company: C },
   ],

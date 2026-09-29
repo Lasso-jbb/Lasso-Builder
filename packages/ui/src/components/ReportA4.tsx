@@ -1,8 +1,5 @@
 import type { ReactNode } from "react";
 import {
-  creditChange,
-  creditDescription,
-  creditScoreWord,
   currencyUnit,
   formatAmount,
   formatCreditMax,
@@ -13,15 +10,15 @@ import {
   METRIC_FIELD,
   METRIC_LABELS,
   percentChange,
-  type CreditRatingVM,
   type Dataset,
   type FinancialYear,
   type Metric,
+  type ScoreHistoryVM,
   type RelationAssessment,
   type Severity,
 } from "@lasso/spec";
 import { LassoMark, LassoWordmark } from "../LassoMark.js";
-import { SeverityIcon, severityWord } from "../primitives.js";
+import { severityWord } from "../primitives.js";
 import { observationLevel, sortObservations } from "./RiskObservations.js";
 
 /**
@@ -192,33 +189,28 @@ function StatementTable({ title, years, rows }: { title: string; years: readonly
 }
 
 /**
- * Katalog 17 på side 4: Creditsafes vurdering som ren tekst under Lassos score. Egen skala A–E,
- * aldrig tegnet i målerens 0–100-bånd, og i print uden tonefarver (ordet bærer betydningen).
+ * 27.4: udviklingen i Lassos score over 24 måneder som tekst under zonebjælken, fx
+ * "Udvikling 24 mdr.: 44 → 47 → 52 (+8). Seneste ændring 12.09.2026." Højst tre punkter.
  */
-function CreditsafeText({ rating }: { rating: CreditRatingVM }) {
-  const c = rating.current!;
-  const score = c.internationalScore;
-  const prev = rating.previous?.internationalScore;
-  const change = creditChange(score, prev);
-  const local = typeof c.localScore === "number" ? `lokal score ${formatNumber(c.localScore)}${c.localDescription ? `, ${creditDescription(c.localDescription)}` : ""}` : undefined;
-  const facts = [typeof c.creditMax === "number" ? `Kreditmaksimum ${formatCreditMax(c)}` : "Kreditmaksimum ikke oplyst", local].filter(Boolean).join(", ");
-  return (
-    <div className="lasso-a4-credit">
-      <h3 className="lasso-a4__h3">Creditsafe</h3>
-      <p className="lasso-a4__strong">{score ? `${score}, ${creditScoreWord(score, c.internationalDescription)}` : "International score ikke oplyst"}</p>
-      <p className="lasso-a4__small">{facts}.</p>
-      {prev ? (
-        <p className="lasso-a4__small">
-          Forrige vurdering {prev} ({creditScoreWord(prev, rating.previous?.internationalDescription)}){rating.latestChange ? `, ændret ${formatDate(rating.latestChange)}` : ""}
-          {change ? `, ${change.arrow ? `${change.arrow}\u00a0` : ""}${change.word}` : ""}.
-        </p>
-      ) : null}
-      <p className="lasso-a4__small">
-        {rating.source}
-        {rating.updated ? `, ${formatDate(rating.updated)}` : ""}. Skala A (lav risiko) til E (høj risiko), uafhængig af Lassos score 0–100.
-      </p>
-    </div>
-  );
+function scoreDevelopment(history: ScoreHistoryVM | undefined): string | null {
+  const pts = [...(history?.points ?? [])].filter((p) => typeof p.score === "number").sort((a, b) => a.date.localeCompare(b.date));
+  const lastPt = pts.at(-1);
+  if (!lastPt || pts.length < 2) return null;
+  const end = new Date(lastPt.date);
+  const from = new Date(end);
+  from.setMonth(from.getMonth() - 24);
+  const within = pts.filter((p) => new Date(p.date) >= from);
+  if (within.length < 2) return null;
+  const picks = within.length <= 3 ? within : [within[0]!, within[Math.floor((within.length - 1) / 2)]!, within.at(-1)!];
+  const diff = Math.round(lastPt.score) - Math.round(within[0]!.score);
+  const sign = diff > 0 ? "+" : diff < 0 ? "\u2212" : "±";
+  const changed = [...within].reverse().find((p, i, a) => i + 1 < a.length && Math.round(p.score) !== Math.round(a[i + 1]!.score));
+  return `Udvikling 24 mdr.: ${picks.map((p) => formatNumber(Math.round(p.score))).join(" → ")} (${sign}${Math.abs(diff)}).${changed ? ` Seneste ændring ${formatDate(changed.date)}.` : ""}`;
+}
+
+/** 27.4: revisorlinjernes prik: grøn (ingen eller neutral), gul (vurdér), rød (høj). */
+function relDot(sev: Severity): "ok" | "warn" | "high" {
+  return sev >= 100 ? "high" : sev >= 50 ? "warn" : "ok";
 }
 
 export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
@@ -240,13 +232,14 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
   const creditRating = dataset.creditRatings?.[company];
   const credit = creditRating?.state === "ok" && creditRating.current ? creditRating : undefined;
   const auditor = dataset.auditorIndependence[company];
+  const history = dataset.scoreHistories?.[company];
   // Katalog 27.4: risikoobservationer (17) kun, når de er hentet til visningen; ellers udelades blokken.
   const lassoObs = dataset.observations[company];
   const observations = lassoObs ? sortObservations(lassoObs.observations.filter((o) => !o.notAvailable)) : [];
   const auditorName = auditor?.auditorName ?? ownership?.auditor?.name;
 
   const stamp = formatStamp(generatedAt ?? dataset.generatedAt);
-  const sourceNames = ["CVR", ...(years.length ? ["Erhvervsstyrelsen (regnskaber)"] : []), ...(score?.source && score.score !== null ? [score.source] : []), ...(credit ? ["Creditsafe"] : [])].filter(
+  const sourceNames = ["CVR", ...(years.length ? ["Erhvervsstyrelsen (regnskaber)"] : []), ...(credit ? ["Creditsafe"] : [])].filter(
     (s, i, a) => a.indexOf(s) === i,
   );
   const sources = sourceNames.join(", ");
@@ -280,8 +273,8 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
         const yOf = (v: number) => plotH - (v / tMax) * plotH;
         const W = 640;
         const slot = W / Math.max(points.length, 1);
-        // Print-regel (27): ingen fyldte farveflader bredere end 24 px (blæk), tallet står som tekst over søjlen.
-        const barW = 24;
+        // 27.2: søjler ca. 40 px som i Paper (koral-soft, seneste år koral); tallet står som tekst over søjlen.
+        const barW = 40;
         return (
           <section className="lasso-a4-page" key="p2">
             <PageHead name={name} cvr={cvr} stamp={stamp} />
@@ -466,7 +459,7 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
   if (score || credit || lassoObs || beneficial || auditorName || auditor) {
     pages.push({
       key: "risiko",
-      toc: [lassoObs ? "Kreditvurdering og risiko" : "Kreditvurdering", ...(beneficial || owners.length ? ["Reelle ejere og ejerstruktur"] : []), ...(auditorName || auditor ? ["Revisor og uafhængighed"] : [])],
+      toc: [lassoObs ? "Kreditvurdering og risiko" : score || credit ? "Kreditvurdering" : "Ejere og revisor"],
       render: (page, total) => {
         const value = score && score.score !== null ? Math.max(0, Math.min(100, score.score)) : null;
         const band = value !== null ? scoreBand(value) : null;
@@ -488,8 +481,9 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
                       <span className="lasso-a4-score__text">
                         <span className={`lasso-a4-score__band lasso-a4-score__band--${band.index}`}>{band.label}</span>
                         <span className="lasso-a4__small">
-                          {score?.source ?? "Lasso"}
-                          {score?.updated ? `, ${formatDate(score.updated)}` : ""}
+                          {credit?.current && typeof credit.current.creditMax === "number" ? `Kreditmaks ${formatCreditMax(credit.current).replace(/\.$/, "")}. ` : ""}
+                          {credit ? "Creditsafe" : (score?.source ?? "Lasso")}
+                          {(credit?.updated ?? score?.updated) ? `, ${formatDate((credit?.updated ?? score?.updated)!)}` : ""}
                         </span>
                       </span>
                     </div>
@@ -507,7 +501,7 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
                         <span>100, høj risiko</span>
                       </div>
                     </div>
-                    <p className="lasso-a4__small">Score 0 (lav risiko) til 100 (høj risiko). Vurderingen er en modelvurdering og ikke en garanti.</p>
+                    <p className="lasso-a4__small">{scoreDevelopment(history) ?? "Score 0 (lav risiko) til 100 (høj risiko). Vurderingen er en modelvurdering og ikke en garanti."}</p>
                   </>
                 ) : credit ? null : (
                   <>
@@ -515,7 +509,6 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
                     <p className="lasso-a4__small">Der findes ingen kreditvurdering for virksomheden.</p>
                   </>
                 )}
-                {credit ? <CreditsafeText rating={credit} /> : null}
               </div>
               {lassoObs ? (
                 <div className="lasso-a4-col">
@@ -625,16 +618,16 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
                     {relations.length ? (
                       relations.slice(0, 4).map((r) => (
                         <span key={r.id} className="lasso-a4-rel">
-                          <SeverityIcon severity={toSeverity(r.assessment)} />
+                          <span className={`lasso-a4-rel__dot lasso-a4-rel__dot--${relDot(toSeverity(r.assessment))}`} aria-label={severityWord(r.assessment, "assessment")} />
                           <span>
-                            {severityWord(r.assessment, "assessment")}, {r.name}: {r.relation}
+                            {r.name}: {r.relation}
                             {r.to ? " (afsluttet)" : ""}
                           </span>
                         </span>
                       ))
                     ) : (
                       <span className="lasso-a4-rel">
-                        <SeverityIcon severity={0} />
+                        <span className="lasso-a4-rel__dot lasso-a4-rel__dot--ok" aria-hidden="true" />
                         <span>{auditor?.unavailableReason ?? "Ingen fundne relationer mellem revisor, kunden og personer"}</span>
                       </span>
                     )}
