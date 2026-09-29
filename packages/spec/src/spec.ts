@@ -90,6 +90,7 @@ export const TABLE_COLUMNS = [
   "bruttofortjeneste",
   "resultat",
   "udvikling",
+  "score",
 ] as const;
 export type TableColumn = (typeof TABLE_COLUMNS)[number];
 
@@ -105,6 +106,7 @@ export const TABLE_COLUMN_LABELS: Record<TableColumn, string> = {
   bruttofortjeneste: "Bruttofortjeneste",
   resultat: "Resultat",
   udvikling: "Udvikling",
+  score: "Score",
 };
 
 export const DEFAULT_TABLE_COLUMNS: readonly TableColumn[] = ["navn", "by", "branche", "ansatte", "bruttofortjeneste", "udvikling"];

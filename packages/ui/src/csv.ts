@@ -21,6 +21,7 @@ export function rowsToCsv(rows: readonly CompanyRowVM[], columns: readonly Table
       omsaetning: r.revenue,
       bruttofortjeneste: r.grossProfit,
       resultat: r.profit,
+      score: r.score,
     };
     return [r.lassoId, ...cols.map((c) => val[c])].map(esc).join(";");
   });

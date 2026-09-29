@@ -804,7 +804,7 @@ const tablet: GalleryEntry[] = [
     node: "FAA-0",
     only: "desktop",
     desktopWidth: 768,
-    spec: { kind: "list", title: "Virksomheder", components: [{ type: "LassoCompanyTable", source: "search", search: { query: "", criteria: [], limit: 8 } }] },
+    spec: { kind: "list", title: "Kunder", components: [{ type: "LassoCompanyTable", title: "Kunder", source: "search", search: { query: "", criteria: [], limit: 8 }, columns: ["navn", "status", "bruttofortjeneste", "resultat", "ansatte", "score"] }] },
   },
   { nr: "26f.3", title: "Regnskab, tablet", node: "FCA-0", only: "desktop", desktopWidth: 768, spec: one("Regnskab", { type: "LassoFinancialStatements", company: C }) },
   { nr: "26f.4", title: "Ejerdiagram, tablet", node: "FFB-0", only: "desktop", desktopWidth: 768, spec: one("Ejerdiagram", { type: "LassoOwnershipDiagram", company: C }) },

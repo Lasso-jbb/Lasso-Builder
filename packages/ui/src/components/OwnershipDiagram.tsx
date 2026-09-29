@@ -21,6 +21,7 @@ import { downloadPng, svgForExport } from "../ownershipExport.js";
 import { Menu } from "./Menu.js";
 import { DataState, Section, SourceLine, stateForError, statusTone } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
+import { Tabs } from "./Tabs.js";
 import {
   DEFAULT_MAX_NODES,
   beneficialGraph,
@@ -127,7 +128,7 @@ const BUILDING_CEASED = "M3 21h18M5 21V5l8-2v18M13 9l6 2v10";
  * føres udenom i koral stiplet. Under 560 px bliver strukturen en indrykket liste.
  */
 export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, canDrillDown, canPrompt, canFullscreen, defaultSelected }: OwnershipDiagramProps) {
-  const [ref, W] = useWidth<HTMLDivElement>(900);
+  const [ref, W] = useWidth<HTMLDivElement>(1100);
   const heading = title ?? "Ejerstruktur";
   const [direction, setDirection] = useState<Direction>("both");
   const [depthUp, setDepthUp] = useState<number | null>(null);
@@ -146,6 +147,7 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
   const [focus, setFocus] = useState<string | null>(null);
   const [onDate, setOnDate] = useState<string | undefined>(undefined);
   const [printSvg, setPrintSvg] = useState<string | null>(null);
+  const [tabletView, setTabletView] = useState<"diagram" | "list">("diagram");
   const svgRef = useRef<SVGSVGElement>(null);
   const printRef = useRef<HTMLDivElement>(null);
   const graph = useMemo(() => {
@@ -588,33 +590,93 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
           )}
         </div>
       ) : null}
-      {!empty && canvasW >= 720 ? <Legend personRoot={personRoot} /> : null}
-      {!empty && canvasW >= 720 ? (
+      {!empty && canvasW >= 720 && !tablet ? <Legend personRoot={personRoot} /> : null}
+      {!empty && canvasW >= 720 && !tablet ? (
         <Minimap
           layout={layout}
           view={{ x: p.x, y: p.y, zoom: z, width: canvasW, height: canvasH }}
           onMove={(lx, ly) => setPan({ x: Math.round(canvasW / 2 - lx * z), y: Math.round((canvasH - foot) / 2 - ly * z) })}
         />
       ) : null}
-      <div className="lasso-odiagram__zoom" role="group" aria-label="Zoom">
-        <button type="button" aria-label="Zoom ind" onClick={() => setZoomStep(1)} disabled={z >= 2}>
-          +
-        </button>
-        <span className="lasso-odiagram__zoomval" aria-live="polite">
-          {Math.round(z * 100)} %
-        </span>
-        <button type="button" aria-label="Zoom ud" onClick={() => setZoomStep(-1)} disabled={z <= 0.25}>
-          −
-        </button>
-        <button type="button" aria-label="Tilpas" title="Tilpas" onClick={fitView}>
-          <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="4" y="4" width="16" height="16" rx="2" />
-            <path d="M8 12h8" />
-          </svg>
-        </button>
-      </div>
+      {tablet ? (
+        <>
+          {/* 26f.4: hjælpechip nederst til venstre og 36 px zoomknapper nederst til højre. */}
+          <span className="lasso-odiagram__hint">Træk for at panorere, knib for zoom</span>
+          <div className="lasso-odiagram__zoom lasso-odiagram__zoom--tablet" role="group" aria-label="Zoom">
+            <button type="button" aria-label="Zoom ind" onClick={() => setZoomStep(1)} disabled={z >= 2}>
+              +
+            </button>
+            <button type="button" aria-label="Zoom ud" onClick={() => setZoomStep(-1)} disabled={z <= 0.25}>
+              −
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className="lasso-odiagram__zoom" role="group" aria-label="Zoom">
+          <button type="button" aria-label="Zoom ind" onClick={() => setZoomStep(1)} disabled={z >= 2}>
+            +
+          </button>
+          <span className="lasso-odiagram__zoomval" aria-live="polite">
+            {Math.round(z * 100)} %
+          </span>
+          <button type="button" aria-label="Zoom ud" onClick={() => setZoomStep(-1)} disabled={z <= 0.25}>
+            −
+          </button>
+          <button type="button" aria-label="Tilpas" title="Tilpas" onClick={fitView}>
+            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="4" y="4" width="16" height="16" rx="2" />
+              <path d="M8 12h8" />
+            </svg>
+          </button>
+        </div>
+      )}
     </div>
   );
+
+  // 26f.4 tablet: kort "Ejerstruktur, <navn>" med "Diagram | Liste" og fuld skærm i hovedet; lærred 340 px
+  // med hjælpechip og zoomknapper; værktøjslinje, mini-kort, legende og noter står kun på desktop.
+  if (tablet) {
+    return (
+      <Section
+        title={title ?? `${heading}, ${rootName}`}
+        className="lasso-odiagram lasso-odiagram--tablet"
+        action={
+          <span className="lasso-odiagram__tabletactions">
+            <Tabs
+              level={3}
+              ariaLabel="Visning"
+              items={[
+                { id: "diagram", label: "Diagram" },
+                { id: "list", label: "Liste" },
+              ]}
+              value={tabletView}
+              onChange={(v) => setTabletView(v as "diagram" | "list")}
+            />
+            {canFullscreen && onAction ? (
+              <button type="button" className="lasso-iconbtn lasso-odiagram__fullbtn" aria-label="Fuld skærm" onClick={() => onAction({ kind: "fullscreen" })}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                  <path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5" />
+                </svg>
+              </button>
+            ) : null}
+          </span>
+        }
+      >
+        <div ref={ref}>
+          {tabletView === "list" ? (
+            <OwnershipList graph={graph} depthUp={up} depthDown={down} open={open} personRoot={personRoot} />
+          ) : (
+            <div className={`lasso-odiagram__body ${selectedNode && panelBeside ? "has-panel" : ""}`}>
+              {canvas}
+              {selectedNode ? (
+                <DetailPanel node={selectedNode} graph={graph} rootName={rootName} personRoot={personRoot} onClose={() => setSelected(null)} open={open(selectedNode.entity)} />
+              ) : null}
+            </div>
+          )}
+        </div>
+      </Section>
+    );
+  }
 
   return (
     <Section title={heading} subtitle={rootName} className="lasso-odiagram">

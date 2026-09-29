@@ -1177,6 +1177,12 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-odiagram__zoom button:disabled { color: var(--lasso-disabled); cursor: default; }
 .lasso-odiagram__zoom svg { fill: none; stroke: var(--lasso-text-2); stroke-width: 1.8; stroke-linecap: round; }
 .lasso-odiagram__zoomval { font-size: 12px; font-weight: 600; cursor: default; }
+/* 26f.4 tablet: hjælpechip nederst til venstre, zoomknapper 36 px nederst til højre, Diagram | Liste + fuld skærm i hovedet. */
+.lasso-odiagram__hint { position: absolute; left: 12px; bottom: 12px; display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-pill); background: var(--lasso-surface); font-size: 11px; color: var(--lasso-text-3); pointer-events: none; }
+.lasso-odiagram__zoom--tablet { right: 12px; bottom: 12px; }
+.lasso-odiagram__tabletactions { display: inline-flex; align-items: center; gap: var(--lasso-space-2); }
+.lasso-root .lasso-odiagram__fullbtn { width: 36px; height: 36px; padding: 0; color: var(--lasso-text-2); }
+.lasso-odiagram--tablet .lasso-odiagram__canvas { border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); }
 
 /* Detaljepanel til højre (panelbredde fra sideskabelonen), under lærredet på smalle flader. */
 .lasso-odiagram__panel { display: flex; flex-direction: column; flex: none; width: var(--lasso-panel-w); max-width: 100%; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); overflow: hidden; }
@@ -3787,6 +3793,9 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-ctable__table td.lasso-cell--trend .lasso-trend { gap: 6px; }
   .lasso-ctable .lasso-tsearch { flex: 0 1 220px; width: 220px; }
   .lasso-ctable .lasso-pager__page, .lasso-ctable .lasso-pager__step { min-width: 36px; height: 36px; }
+  /* 26f.2: ingen markeringskolonne og ingen eksport på tablet; værktøjslinjen er søg + Filter + Kolonner. */
+  .lasso-ctable__table .lasso-cell--check, .lasso-ctable__export { display: none; }
+  .lasso-ctable__table .lasso-table__name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; display: block; }
 }
 /* 19.3: fast forbeholdslinje under regnskabsanalysen, ren tekst i muted (ingen flade eller mærke). */
 .lasso-textsections__disclaimer { margin: var(--lasso-space-3) 0 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-muted); }
