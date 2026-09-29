@@ -50,10 +50,10 @@ test("08.1: Overvåger er samme knap i valgt tilstand (aria-pressed, udfyldt iko
   assert.deepEqual([...out.matchAll(/<span>(Eksportér|Gemt|Overvåger)<\/span>/g)].map((m) => m[1]), ["Eksportér", "Gemt", "Overvåger"]);
 });
 
-test("08.1: konkurs med dato i mørk rød og binavn i muted; ingen faktalinje (G9)", () => {
+test("08.1: konkurs med dato i mørk rød; intet binavn og ingen faktalinje (G9, kontrol r5 08.8)", () => {
   const out = html(h(CompanyHead, { company: energi }));
   assert.match(out, /lasso-company__status--warning">Under konkurs, siden 03\.06\.2026</);
-  assert.match(out, /lasso-company__alias">Binavn: Eksempel Vind</);
+  assert.doesNotMatch(out, /Binavn/);
   assert.doesNotMatch(out, /kurator: Advokat Eksempel/);
 });
 

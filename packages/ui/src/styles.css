@@ -3103,7 +3103,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-shortcut__icon { flex: none; color: var(--lasso-accent); }
 .lasso-root .lasso-shortcut--more { color: var(--lasso-text-2); }
 @container lasso (max-width: 560px) {
-  .lasso-shortcuts { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-right: calc(-1 * var(--lasso-space-4)); padding-right: var(--lasso-space-4); }
+  /* Kontrol r5 (08.4 mobil): genvejene ombrydes i stedet for at løbe ud over kanten */
   .lasso-root .lasso-shortcut { height: var(--lasso-touch-h); font-size: var(--lasso-fs); }
 }
 
@@ -5238,10 +5238,15 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-root .lasso-news__row:first-child { padding-top: 0; }
   .lasso-root .lasso-news__headline { font-weight: 400; line-height: 20px; }
   .lasso-root .lasso-news__row > .lasso-news__excerpt { display: none; }
-  .lasso-root .lasso-news__row--featured, .lasso-root .lasso-news__row--featured:first-child { display: block; padding: 12px; border: 1px solid var(--lasso-border); }
-  .lasso-root .lasso-news__row--featured .lasso-news__head { margin-bottom: 6px; }
-  .lasso-root .lasso-news__row--featured .lasso-news__headline { font-size: 16px; line-height: 22px; font-weight: 600; }
-  .lasso-root .lasso-news__row--featured > .lasso-news__excerpt { -webkit-line-clamp: unset; display: block; }
+  /* Kontrol r5 (12.4/30.14 mobil): samme design som desktop (LMF-0) for alle nyheder: kildelinjen over
+     overskriften, overskrift 14/400, ingen kort med kant, ingen større fed overskrift, ingen "… uddrag …"
+     og ingen "Kilde …"/"Åbn artikel"-fod; fremhævede nyheder ser ud som de øvrige. */
+  .lasso-root .lasso-news__head, .lasso-root .lasso-news__headline { order: 0; }
+  .lasso-root .lasso-news__row--featured, .lasso-root .lasso-news__row--featured:first-child { display: flex; padding: 12px 0; border: 0; border-top: 1px solid var(--lasso-divider-subtle); border-radius: 0; }
+  .lasso-root .lasso-news__row--featured:first-child { padding-top: 0; border-top: 0; }
+  .lasso-root .lasso-news__row--featured .lasso-news__headline { font-size: 14px; line-height: 20px; font-weight: 400; margin: 0; }
+  .lasso-root .lasso-news__row--featured > .lasso-row__sub, .lasso-root .lasso-news__row--featured .lasso-news__foot { display: none; }
+  .lasso-root .lasso-news:has(.lasso-news__row--featured) { gap: 0; }
 }
 
 /* 14.1 (runde 5, Paper AY0-0): detaljepanelet som overlay oven på diagramlærredet: højre 16, top 16,

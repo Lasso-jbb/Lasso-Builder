@@ -283,7 +283,7 @@ export function FilterSheet({
   defaultEdit?: string;
 }) {
   return (
-    <Dialog open={open} title={title} onClose={onClose} className="lasso-dialog--filters lasso-dialog--fsheet">
+    <Dialog open={open} title={title} onClose={onClose} className="lasso-dialog--filters lasso-dialog--fsheet" initialFocus="panel">
       {open ? <FilterSheetBody criteria={criteria} fields={fields} count={count} title={title} defaultEdit={defaultEdit} onClose={onClose} onApply={(c) => (onApply(c), onClose())} /> : null}
     </Dialog>
   );
