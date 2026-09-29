@@ -351,7 +351,7 @@ function NumberDemo({ between = false }: { between?: boolean }) {
 }
 
 function AmountDemo() {
-  const [a, setA] = useState<AmountFieldValue>({ operator: "gte", values: ["5.000.000"] });
+  const [a, setA] = useState<AmountFieldValue>({ operator: "gte", values: ["10.000.000"] });
   const [c, setC] = useState<AmountFieldValue>({ operator: "gte", values: ["10"] });
   return (
     <Grid>
@@ -361,19 +361,22 @@ function AmountDemo() {
         </FieldRow>
       </St>
       <St label="Ændring, de tre operatorer">
-        <Grid gap={10}>
+        <div className="lasso-amountfield">
           {(["gte", "lte", "between"] as Operator[]).map((op) => (
-            <div key={op} className="lasso-amountfield__row">
+            <div key={op} className="lasso-amountfield__row lasso-amountfield__row--change">
               <OperatorSelect value={op} operators={CHANGE_OPERATORS} labels={CHANGE_LABELS} onChange={noop} />
               <RangeInputs operator={op} values={op === "between" ? ["10", "40"] : ["10"]} unit="% ændring" onChange={noop} />
             </div>
           ))}
-        </Grid>
+        </div>
       </St>
-      <St label="Operatoren åben (liste)">
+      <St label="Operatoren åben">
         <div style={{ minHeight: 190 }}>
-          <div className="lasso-amountfield__row">
-            <OperatorSelect value="gte" operators={CHANGE_OPERATORS} labels={CHANGE_LABELS} onChange={noop} defaultOpen />
+          <div className="lasso-amountfield">
+            <div className="lasso-amountfield__row lasso-amountfield__row--change">
+              <OperatorSelect value="gte" operators={CHANGE_OPERATORS} labels={CHANGE_LABELS} onChange={noop} defaultOpen />
+              <RangeInputs operator="gte" values={["10"]} unit="% ændring" onChange={noop} />
+            </div>
           </div>
         </div>
       </St>
@@ -667,7 +670,7 @@ function ListCountDemo() {
           onChange={setV}
           defaultOpen
           searchable
-          placeholder="Alle afdelinger"
+          allLabel="Alle afdelinger"
           searchPlaceholder="Søg i afdelinger…"
           help={
             <>

@@ -2566,10 +2566,12 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 /* 02b.7 Dropdown, åben: søgefelt øverst, flueben, lukker ikke ved valg */
 .lasso-msel { position: relative; display: flex; flex-direction: column; min-width: 0; }
 .lasso-msel__trigger { justify-content: flex-start; }
+.lasso-msel__pop:not([hidden]) + .lasso-field__help { margin-top: 10px; }
+.lasso-msel__all { font-weight: 400; color: var(--lasso-text-3); }
 .lasso-msel__value { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .lasso-msel__tags { display: flex; gap: 6px; min-width: 0; overflow: hidden; margin-left: -5px; }
 .lasso-msel__tag { flex: none; font-weight: 400; }
-.lasso-msel__pop { position: absolute; top: calc(100% + 6px); /* under hjælpeteksten, så den levende optælling ses mens man vælger (02b.7, 02b.12) */ left: 0; z-index: 40; width: min(400px, 100%); min-width: 240px; max-height: 360px; overflow: auto; padding: 0 0 4px; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); box-shadow: var(--lasso-shadow-pop); }
+.lasso-msel__pop { position: relative; margin-top: 10px; /* i flowet under feltet; hjælpeteksten (levende optælling) står under listen (02b.7, 02b.12) */ z-index: 40; width: min(400px, 100%); min-width: 240px; max-height: 360px; overflow: auto; padding: 0 0 4px; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); box-shadow: var(--lasso-shadow-pop); }
 /* 02b.7: søgefeltet uden ramme, søgeikon + "Søg…" og 1 px bundlinje */
 .lasso-msel__search { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border-bottom: 1px solid var(--lasso-border); color: var(--lasso-icon); }
 .lasso-msel__search:focus-within { color: var(--lasso-text-3); }
@@ -2622,7 +2624,12 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-amountfield { display: flex; flex-direction: column; gap: 10px; flex: 1 1 100%; min-width: 0; }
 .lasso-amountfield__row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 /* 02a.4: operatoren har fast bredde i begge rækker, så talfelterne står under hinanden */
-.lasso-amountfield .lasso-select--op { width: var(--lasso-op-w, 172px); justify-content: space-between; }
+.lasso-amountfield .lasso-select--op { width: var(--lasso-op-w, 170px); justify-content: space-between; }
+/* 02a.4: beløbsfeltet 170, ændringsfeltet 110, så rækkerne står i kolonne */
+.lasso-amountfield__row--amount .lasso-input--short { width: 170px; }
+.lasso-amountfield__row--change .lasso-input--short { width: 110px; }
+/* 02a.4: operatorens chevron peger op, når listen er åben */
+.lasso-select--op[aria-expanded="true"] { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24'%3E%3Cpath d='M6 14.5l6-6 6 6' fill='none' stroke='%239AA0A8' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E"); }
 /* 02a.6, 02b.10 Datofelt og datovælger */
 .lasso-dateinput { position: relative; flex: none; width: 170px; }
 .lasso-dateinput__input { padding-right: 40px; }

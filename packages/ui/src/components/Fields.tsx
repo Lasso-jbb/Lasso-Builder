@@ -310,14 +310,18 @@ export interface MultiSelectProps {
   searchable?: boolean;
   /** Valgte i feltet: "tags" (02b.7, standard) eller "text" (to navne og "og N flere"). */
   display?: "tags" | "text";
+  /** Tomt felt betyder "alle": teksten står som værdi (text-secondary, 400), ikke som grå placeholder (02b.12 "Alle afdelinger"). */
+  allLabel?: string;
 }
 
 /**
  * 02b.7 Dropdown, åben (og 02b.12 Liste med antal): søgefelt øverst, valgte markeres med flueben,
  * listen lukker ikke ved valg. Feltet får samme tynde koral kant som når man skriver i det.
+ * Listen står i flowet lige under feltet (10 px), og hjælpeteksten (den levende optælling) står under
+ * listen, så den ses, mens man vælger.
  * Antal står i højre bane. Esc og klik udenfor lukker.
  */
-export function MultiSelect({ options, values, onChange, placeholder = "Vælg", searchPlaceholder = "Søg…", help, max, label, invalid, defaultOpen = false, searchable, display = "tags" }: MultiSelectProps) {
+export function MultiSelect({ options, values, onChange, placeholder = "Vælg", searchPlaceholder = "Søg…", help, max, label, invalid, defaultOpen = false, searchable, display = "tags", allLabel }: MultiSelectProps) {
   const opts = useMemo(() => toOptions(options), [options]);
   const [open, setOpen] = useState(defaultOpen);
   const [q, setQ] = useState("");
@@ -364,7 +368,7 @@ export function MultiSelect({ options, values, onChange, placeholder = "Vælg", 
         onClick={() => setOpen(!open)}
       >
         {values.length === 0 ? (
-          <span className="lasso-placeholder">{placeholder}</span>
+          allLabel ? <span className="lasso-msel__all">{allLabel}</span> : <span className="lasso-placeholder">{placeholder}</span>
         ) : display === "tags" ? (
           <span className="lasso-msel__tags">
             {selectedLabels.map((l) => (
@@ -382,7 +386,6 @@ export function MultiSelect({ options, values, onChange, placeholder = "Vælg", 
           </span>
         ) : null}
       </button>
-      {help ? <div className="lasso-field__help">{help}</div> : null}
       <div className="lasso-msel__pop" hidden={!open}>
         {withSearch ? (
           <div className="lasso-msel__search">
@@ -414,6 +417,7 @@ export function MultiSelect({ options, values, onChange, placeholder = "Vælg", 
           })}
         </div>
       </div>
+      {help ? <div className="lasso-field__help">{help}</div> : null}
     </div>
   );
 }
@@ -832,12 +836,12 @@ export interface AmountFieldValue {
 export function AmountField({ amount, change, operators, onAmount, onChange, invalid, defaultOpenChange }: { amount: AmountFieldValue; change?: AmountFieldValue; operators: readonly Operator[]; onAmount: (v: AmountFieldValue) => void; onChange?: (v: AmountFieldValue) => void; invalid?: boolean; /** Ændringens operatorliste åben fra start (statisk forhåndsvisning). */ defaultOpenChange?: boolean }) {
   return (
     <div className="lasso-amountfield">
-      <div className="lasso-amountfield__row">
+      <div className="lasso-amountfield__row lasso-amountfield__row--amount">
         <OperatorSelect value={amount.operator} operators={operators} fieldType="amount" labels={AMOUNT_LABELS} onChange={(operator) => onAmount({ operator, values: operator === "between" ? amount.values : amount.values.slice(0, 1) })} />
         <RangeInputs operator={amount.operator} values={amount.values} unit="kr." invalid={invalid} onChange={(values) => onAmount({ ...amount, values })} />
       </div>
       {change && onChange ? (
-        <div className="lasso-amountfield__row">
+        <div className="lasso-amountfield__row lasso-amountfield__row--change">
           <OperatorSelect value={change.operator} operators={CHANGE_OPERATORS} labels={CHANGE_LABELS} defaultOpen={defaultOpenChange} onChange={(operator) => onChange({ operator, values: operator === "between" ? change.values : change.values.slice(0, 1) })} />
           <RangeInputs operator={change.operator} values={change.values} unit="% ændring" onChange={(values) => onChange({ ...change, values })} />
         </div>
