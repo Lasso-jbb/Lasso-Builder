@@ -23,6 +23,14 @@ export interface PickRow {
   dashed?: boolean;
   /** Ændringen mod året før, fx "▲ 12,1 %". */
   change?: ChangeText | null;
+  /** Kort navn til det faste felt på mobil (26b.4), fx "Eksempel Byg" uden selskabsform. */
+  short?: string;
+}
+
+/** 26b.4: seriens navn i det faste felt: uden selskabsform og højst 16 tegn. */
+export function shortSeriesName(name: string): string {
+  const bare = name.replace(/\s+(A\/S|ApS|I\/S|P\/S|K\/S|IVS|A\.m\.b\.A\.|SMBA|F\.M\.B\.A\.)$/i, "").trim();
+  return bare.length > 16 ? `${bare.slice(0, 15).trimEnd()}…` : bare;
 }
 
 export interface ChangeText {
@@ -139,7 +147,7 @@ export function ChartReadout({ title, rows, note, hint = "Tryk på et år for at
           {rows.map((r, i) => (
             <span key={i}>
               {i > 0 ? ", " : null}
-              {one ? null : `${r.label} `}
+              {one ? null : `${r.short ?? r.label} `}
               <span className="lasso-pick__value">{r.value}</span>
               {one && r.change ? (
                 <>

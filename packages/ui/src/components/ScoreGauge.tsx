@@ -253,8 +253,19 @@ export function ScoreGauge({
   }
   const value = Math.max(0, Math.min(100, score.score));
   const { label, index } = scoreBand(value);
+  // 26b.9 mobil: kilden kort til højre i hovedet, og under bjælken én linje "Forrige 47, +5" | "Kreditmaks …".
+  const prevScore = score.history && score.history.length >= 2 ? score.history[score.history.length - 2]!.score : undefined;
+  const diff = prevScore === undefined ? undefined : Math.round(value) - Math.round(prevScore);
+  const maxFact = score.facts?.find((f) => /kreditmaks/i.test(f.label));
+  const shortSource = score.source ? [score.source.replace(/^Kilde:\s*/i, ""), score.updated ? formatDate(score.updated) : undefined].filter(Boolean).join(", ") : undefined;
   return (
-    <Section title={heading} subtitle={sourceLine} span="half" className="lasso-gauge-section">
+    <Section
+      title={heading}
+      subtitle={sourceLine}
+      span="half"
+      className="lasso-gauge-section"
+      action={shortSource ? <span className="lasso-gauge__srcshort">{shortSource}</span> : undefined}
+    >
       <div className="lasso-gauge">
         <div className="lasso-gauge__value">
           <span className="lasso-gauge__number">{Math.round(value)}</span>
@@ -274,6 +285,12 @@ export function ScoreGauge({
           <span>100, høj</span>
         </div>
         <Facts facts={score.facts} />
+        {prevScore !== undefined || maxFact ? (
+          <p className="lasso-gauge__mobline">
+            <span>{prevScore !== undefined ? `Forrige ${Math.round(prevScore)}, ${diff! > 0 ? "+" : diff! < 0 ? "\u2212" : "±"}${Math.abs(diff!)}` : ""}</span>
+            {maxFact ? <span>{`Kreditmaks ${maxFact.value}`}</span> : null}
+          </p>
+        ) : null}
         {onReport ? (
           <button type="button" className="lasso-btn lasso-btn--sm lasso-gauge__report" onClick={onReport}>
             <ShellIcon name="document" size={15} />

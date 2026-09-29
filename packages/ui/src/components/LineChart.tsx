@@ -2,7 +2,7 @@ import { chartSeries, currencyUnit, formatNumber, METRIC_FIELD, METRIC_KIND, MET
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
 import { CHART_AXIS_W, CHART_BOTTOM, CHART_H, CHART_TOP, labelFor, makeYScale, niceTicks, yearRange } from "../charts.js";
-import { ChartReadout, ChartTooltip, changeText, isCompact, useChartPick, type PickRow } from "../chartPick.js";
+import { ChartReadout, ChartTooltip, changeText, isCompact, shortSeriesName, useChartPick, type PickRow } from "../chartPick.js";
 
 /** Indeks som helt tal ("238"), som Paper 13.6/26b.4. */
 const indexLabel = (v: number) => new Intl.NumberFormat("da-DK", { maximumFractionDigits: 0 }).format(Math.round(v)).replace("-", "−");
@@ -145,6 +145,7 @@ export function LineChart({
     const rows: PickRow[] = [
       {
         label: indexMode || hasBenchmark ? (companyName ?? "Virksomheden") : METRIC_LABELS[shown],
+        short: indexMode || hasBenchmark ? shortSeriesName(companyName ?? "Virksomheden") : undefined,
         value: canIndex ? (compact ? indexLabel(values[i]!) : `${indexLabel(values[i]!)} (${unitLabel(p.value)})`) : unitLabel(p.value),
         swatch: "s1",
         change: changeText(prev?.value, p.value),
@@ -153,7 +154,7 @@ export function LineChart({
     const bv = benchValues[i];
     if (bv !== null && bv !== undefined) {
       const raw = benchByYear.get(p.year)!;
-      rows.push({ label: compact && indexMode ? "branche" : benchLabel, value: canIndex ? (compact ? indexLabel(bv) : `${indexLabel(bv)} (${unitLabel(raw)})`) : unitLabel(raw), swatch: "s5", dashed: true, change: changeText(benchByYear.get(prev?.year ?? -1), raw) });
+      rows.push({ label: compact && indexMode ? "branche" : benchLabel, short: indexMode ? "branche" : shortSeriesName(benchLabel), value: canIndex ? (compact ? indexLabel(bv) : `${indexLabel(bv)} (${unitLabel(raw)})`) : unitLabel(raw), swatch: "s5", dashed: true, change: changeText(benchByYear.get(prev?.year ?? -1), raw) });
     }
     return rows;
   };
