@@ -210,3 +210,16 @@ test("LassoView: LassoSavedPages tegnes fra datasættet; Fjern kun med host.save
   shared.errors[`savedPages:${savedPagesKey({ kind: "all", limit: 20 })}`] = "Gemte sider kræver adgang som bruger i Lasso.";
   assert.match(view(s, shared, { refresh: true }), /class="lasso-state"><div class="lasso-small">Gemte sider kræver adgang som bruger i Lasso\./);
 });
+
+test("frameless (06.1/24/25): i portalens ramme udelades visningens egen header og fod", () => {
+  const s = spec({ components: [{ type: "LassoCompanyHead", company: COMPANY }] });
+  const host: HostCapabilities = { savePage: true, save: true, export: true, refresh: true };
+  const framed = view(s, data([]), host);
+  assert.match(framed, /lasso-frame__header/);
+  assert.match(framed, /<footer class="lasso-actionbar"/);
+  const bare = renderToStaticMarkup(createElement(LassoView, { spec: s, dataset: data([]), host, onAction: noop, frameless: true }));
+  assert.match(bare, /class="lasso-frame lasso-frame--bare"/);
+  assert.doesNotMatch(bare, /lasso-frame__header|lasso-frame__eyebrow|Virksomhedsprofil|Data hentet|lasso-actionbar|Gem visning/);
+  // Hovedet og dets handlinger står stadig
+  assert.match(bare, /lasso-headbtn--save/);
+});

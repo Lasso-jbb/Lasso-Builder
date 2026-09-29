@@ -119,11 +119,11 @@ const notBuilt = () => <p className="lasso-small">Ikke bygget i koden</p>;
 
 // Samme regler som apps/view/src/portal/portal.css (kun tokens); galleriet indlæser kun styles.css.
 const PORTAL_CSS = `.e-portal{display:flex;flex-direction:column;background:var(--lasso-chrome);margin:-24px}
-.e-portal .lasso-page .lasso-frame{padding:var(--lasso-space-5)}
+.e-portal .lasso-page .lasso-frame:not(.lasso-frame--bare){padding:var(--lasso-space-5)}
 .e-portal-body{padding:var(--lasso-space-5)}
 .e-portal .lasso-bottomnav,.e-portal .lasso-shell > .lasso-bottomnav,.e-portal .lasso-mobilebar{position:static}
 .e-screen{min-height:100vh}.e-screen > .lasso-shell{flex:1}
-@container lasso (max-width:560px){.e-portal .lasso-page .lasso-frame{padding:var(--lasso-space-4)}.e-portal-body{padding:var(--lasso-space-4)}}`;
+@container lasso (max-width:560px){.e-portal .lasso-page .lasso-frame:not(.lasso-frame--bare){padding:var(--lasso-space-4)}.e-portal-body{padding:var(--lasso-space-4)}}`;
 
 const COMPANY_MODULES: readonly TabItem[] = FOCUSES.map((f) => ({ id: f, label: FOCUS_LABELS[f] }));
 const PERSON_MODULES: readonly TabItem[] = PERSON_FOCUSES.map((f) => ({ id: f, label: PERSON_FOCUS_LABELS[f] }));
@@ -257,7 +257,7 @@ function CompanyPage({ ds }: { ds: Dataset }) {
   const spec = companySpec(ds);
   return (
     <Shell kind="company" title={ds.companies[C]?.name ?? "Eksempel Byg A/S"} modules={COMPANY_MODULES} value="overblik">
-      <LassoView spec={spec} dataset={ds} host={entityHost()} onAction={noop} theme="light" />
+      <LassoView spec={spec} dataset={ds} host={entityHost()} onAction={noop} theme="light" frameless />
     </Shell>
   );
 }
@@ -266,7 +266,7 @@ function PersonPage({ ds }: { ds: Dataset }) {
   const spec = personSpec(ds);
   return (
     <Shell kind="person" title={ds.persons[P]?.name ?? "Bo Eksempel"} modules={PERSON_MODULES} value="overblik">
-      <LassoView spec={spec} dataset={ds} host={entityHost()} onAction={noop} theme="light" />
+      <LassoView spec={spec} dataset={ds} host={entityHost()} onAction={noop} theme="light" frameless />
     </Shell>
   );
 }
