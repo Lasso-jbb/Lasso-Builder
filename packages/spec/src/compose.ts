@@ -3,7 +3,7 @@ import { companyFactOptions, companyFacts, sameAddress } from "./companyFacts.js
 import type { Dataset, FinancialYear } from "./models.js";
 import { hasNoStatements } from "./statements.js";
 import { mainMetric } from "./series.js";
-import { bandsToComponents, measuredHeight, packBands, type PackedBand } from "./grid.js";
+import { bandsToComponents, measuredHeight, packWithinBudget, PAGE_HEIGHT_BUDGET, type PackedBand } from "./grid.js";
 import { METRIC_FIELD, viewSpecSchema, type Metric, type ViewComponent, type ViewSpec, type Width } from "./spec.js";
 import { isAnalysisSection, textSectionsFor } from "./textSections.js";
 
@@ -44,6 +44,14 @@ export interface ComposeOptions {
   name?: string;
   /** Opfølgningsknapper sender en besked til modellen; slå fra på websiden uden chat. */
   followUps?: boolean;
+  /**
+   * "Vis alt om X": alle elementer i fuld form, også når siden bliver længere end højdebudgettet
+   * (23.3). Standard: siden holdes inden for PAGE_HEIGHT_BUDGET, og de mindst relevante elementer
+   * udelades eller vises kompakt.
+   */
+  showAll?: boolean;
+  /** Højdebudget i px ved 1200 (standard PAGE_HEIGHT_BUDGET = 1300, ca. 1½ skærm). Ignoreres med showAll. */
+  heightBudget?: number;
 }
 
 /**
@@ -173,7 +181,7 @@ export function componentWeight(c: ViewComponent, ds: Dataset, page: readonly Vi
     case "LassoTextSections": {
       const all = textSectionsFor(ds.textSections[c.company]?.sections ?? [], c.variant);
       // Profilen viser alle sine afsnit (hvert foldet ved 220 tegn, ca. 6 linjer); analysen kun konklusionen, til den foldes ud.
-      const shown = c.variant === "analyse" ? all.slice(0, 1) : all;
+      const shown = c.variant === "analyse" ? all.slice(0, 1) : c.limit ? all.slice(0, c.limit) : all;
       const lines = shown.reduce((sum, s) => sum + 1.5 + Math.ceil(Math.min(s.body.length, 220) / 38) + (s.body.length > 220 ? 1.3 : 0), 0);
       return TITLE + lines + (all.some(isAnalysisSection) ? 1.2 : 0) + (all.length > shown.length ? 1.3 : 0);
     }
@@ -275,9 +283,21 @@ const ITEM_PADDING = 48;
  * Pakker sidens komponenter i bånd (gridmodellen) og returnerer dem i layout 'columns'-form.
  * `page` er alle sidens komponenter, så højderne tager hensyn til, hvad andre elementer allerede viser.
  */
-export function packPage(items: readonly ViewComponent[], ds: Dataset): { bands: PackedBand[]; components: ViewComponent[] } {
-  const bands = packBands(items, (c, width) => gridHeight(c, width, ds, items) + ITEM_PADDING, { gap: 0 });
-  return { bands, components: bandsToComponents(bands) };
+export interface PackPageOptions {
+  /** Højdebudget i px (standard: intet budget). Se packWithinBudget. */
+  budget?: number;
+  /** Elementer, der altid er med i fuld form (hoved, nøgletalskort, svar-elementet, opfølgning). */
+  keep?: ReadonlySet<ViewComponent>;
+}
+
+export function packPage(
+  items: readonly ViewComponent[],
+  ds: Dataset,
+  options: PackPageOptions = {},
+): { bands: PackedBand[]; components: ViewComponent[]; height: number; dropped: ViewComponent[]; compacted: ViewComponent[] } {
+  // Højderne regnes med hele sidens elementer (page), så de tager hensyn til, hvad andre elementer viser.
+  const r = packWithinBudget(items, (c, width) => gridHeight(c, width, ds, items) + ITEM_PADDING, { gap: 0, budget: options.budget, keep: options.keep });
+  return { ...r, components: bandsToComponents(r.bands) };
 }
 
 /** Største antal stakke i et bånd, som spec.columns (2–3; bånd med bredder tegnes efter bredderne). */
@@ -455,7 +475,12 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
     .map((f) => ({ label: f.label, prompt: f.prompt.replace("{navn}", shortCompanyName(options.name ?? ds.companies[id]?.name ?? lassoId)) }));
   if (options.followUps !== false && followUps.length > 0) bottom.push({ type: "LassoFollowUps", prompts: followUps });
 
-  const { bands, components } = packPage([...top, ...items, ...bottom], ds);
+  // Højdebudget (23.3): hoved, nøgletalskort, opfølgning og regnskabstabellerne (fokus regnskab) er
+  // altid med; på et fokus er det første element svaret og altid med. Uden spørgsmål (overblik) er
+  // intet element svaret, så profilen kan også stå kompakt. "Vis alt" (showAll) slår budgettet fra.
+  const keep = new Set<ViewComponent>([...top, ...bottom.filter((c) => c.type !== "LassoAuditorIndependence"), ...(focus !== "overblik" && items[0] ? [items[0]] : [])]);
+  const budget = options.showAll ? Number.POSITIVE_INFINITY : (options.heightBudget ?? PAGE_HEIGHT_BUDGET);
+  const { bands, components } = packPage([...top, ...items, ...bottom], ds, { budget, keep });
 
   return viewSpecSchema.parse({
     kind: "company",

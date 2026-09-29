@@ -12,10 +12,13 @@ import {
   GRID_HEIGHT_LABEL,
   GRID_RULES,
   GRID_WIDTH_LABEL,
+  gridHeight,
   gridRuleOf,
   mainMetric,
   measuredHeight,
   packBands,
+  packPage,
+  PAGE_HEIGHT_BUDGET,
   WIDTH_COLUMNS,
   WIDTHS,
   type ComponentType,
@@ -97,10 +100,13 @@ const SHORT: Partial<Record<ComponentType, string>> = {
   LassoPersonList: "Ledelse",
 };
 function label(c: ViewComponent): string {
-  if (c.type === "LassoKeyValueList" && c.variant === "financials") return "Regnskabsliste";
+  const rows = (c as { rows?: number }).rows;
+  if (c.type === "LassoKeyValueList" && c.variant === "financials") return rows ? `Regnskabsliste (${rows} rk.)` : "Regnskabsliste";
   if (c.type === "LassoTextSections" && c.variant === "analyse") return "Regnskabsanalyse";
   const lim = (c as { limit?: number }).limit;
   const base = SHORT[c.type] ?? TITLE[c.type] ?? c.type;
+  if (c.type === "LassoKeyValueList" && rows) return `${base} (${rows} rk.)`;
+  if (c.type === "LassoTextSections" && lim) return `${base} (${lim} afsnit)`;
   return lim && (c.type === "LassoTimeline" || c.type === "LassoNews") ? `${base} (${lim})` : base;
 }
 
@@ -340,6 +346,7 @@ const ALGO: { t: string; d: string }[] = [
   { t: "Fuldbånd", d: "Hoved, nøgletalskort/persontal, opfølgning og alle elementer med minimum 1/1 (fuldt regnskab, virksomhedstabel, persontabel) får hvert sit fuldbånd i rækkefølgen." },
   { t: "Anker og restbredde", d: "Det første element i restlisten er anker i sin standardbredde; H = h(anker). Hver lovlig kombination med ankerets bredde fyldes: hver ledig stak tager den første delmængde af restlisten (i prioritet), der tillader stakkens bredde og lander mellem 0,85 × H og H / 0,85." },
   { t: "Vælg kombinationen", d: "Afvigelse ≤ 15 % først, så færrest elementer med nedsat rækkeloft (flex rækker: rows/limit sættes ned, kun når ellers intet passer), færrest kolonner uden for standardbredderne, lavest afvigelse, færrest stakke, flest elementer brugt og rækkefølgen tættest på prioriteten. Kan det første element ikke bære et bånd, bliver det næste høje element (højst 3 frem) anker, og det første stables ved siden af." },
+  { t: "Højdebudget", d: `Siden må højst være ${PAGE_HEIGHT_BUDGET} px ved 1200 (ca. 1½ skærm; 23.3). Hoved, nøgletalskort og svar-elementet er altid med. Er siden længere, vises lister og profil kompakt (færre rækker/afsnit med 'Se alle'/'Vis mere'), og de mindst relevante elementer udelades bagfra; et element, der står gratis som stakfyld, bliver. Til sidst får udeladte og kompakte elementer pladsen tilbage i prioritet, hvis budgettet holder. 'Vis alt om X' (showAll) slår budgettet fra.` },
   { t: "Gentag, afslut, fold", d: "Næste bånd starter med det næste element i restlisten. Sidste bånd er opfølgning (fuld). Under 1200 bliver 9+3 og 8+4 til 12+12, 4+4+4 til 6+6+12, 6+6 holder til 768; mobil er én kolonne. Rækkefølgen ændres aldrig, kun foldningen." },
 ];
 
@@ -549,7 +556,18 @@ const noop = () => undefined;
 
 export function DefaultPageGuide({ ds, company }: { ds: Dataset; company: string }) {
   const spec = composeCompany(company, ds, { focus: "overblik", name: ds.companies[company]?.name, chartMetric: mainMetric(ds.financials[company]?.years ?? []), followUps: false });
-  const bands = packBands(DOC_PAGES.overblik.items, docHeight);
+  // A: præcis det, composeCompany gør: sidens elementer (showAll = alle, i prioriteret rækkefølge) pakket af
+  // packPage uden og med højdebudgettet (samme højder: gridHeight med demodata + 48 px luft pr. element).
+  const all = composeCompany(company, ds, { focus: "overblik", name: ds.companies[company]?.name, chartMetric: mainMetric(ds.financials[company]?.years ?? []), followUps: false, showAll: true });
+  const items = all.components.map((x) => {
+    if (!x.column) return x;
+    const { column: _c, width: _w, ...rest } = x;
+    return rest as ViewComponent;
+  });
+  const before = packPage(items, ds);
+  const after = packPage(items, ds, { budget: PAGE_HEIGHT_BUDGET, keep: new Set(items.filter((x) => x.type === "LassoCompanyHead" || x.type === "LassoKeyFigureCards")) });
+  // Skitsen tegner gap 24 mellem elementerne; tallet er elementets højde + 24 px luft, så stakkene får sidens højde.
+  const hh = (x: ViewComponent, w: Width) => gridHeight(x, w, ds, items) + 24;
   return (
     <div style={col(32)}>
       <Title
@@ -559,8 +577,22 @@ export function DefaultPageGuide({ ds, company }: { ds: Dataset; company: string
       />
       <div style={two}>
         <div style={col(12)}>
-          <div style={h3}>A. Default-siden i gridmodellen (skala 1:2, 1200-gitter, målte højder)</div>
-          <BandSketch bands={bands} width={540} scale={2} />
+          <div style={h3}>{`A. Default-siden i gridmodellen med højdebudget ${PAGE_HEIGHT_BUDGET} px (skala 1:3, 1200-gitter, pakket af packPage med demodata)`}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 16, alignItems: "start" }}>
+            <div style={col(6)}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--lasso-text)" }}>{`Før: alle elementer, ${before.height} px`}</div>
+              <BandSketch bands={before.bands} width={250} scale={3} h={hh} />
+            </div>
+            <div style={col(6)}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--lasso-text)" }}>{`Efter: inden for budgettet, ${after.height} px (${Math.round((after.height / before.height) * 100)} %)`}</div>
+              <BandSketch bands={after.bands} width={250} scale={3} h={hh} />
+              <p style={note}>{`Kompakt: ${after.compacted.map(label).join(", ") || "ingen"}. Udeladt: ${after.dropped.map(label).join(", ") || "ingen"} (nås via genveje, moduler og 'Se alle').`}</p>
+            </div>
+          </div>
+          <div style={{ ...card, gap: 6 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--lasso-text)" }}>Højdebudgettet: ikke alle elementer på ét skærmbillede</div>
+            <p style={note}>{`Systemet kender alle kombinationer, men fylder ikke alle elementer ud. Siden må højst være ${PAGE_HEIGHT_BUDGET} px ved 1200 px bredde: en typisk skærm viser 800–900 px, så budgettet er ca. 1½ skærm og ca. 60 % af den fulde side. Hoved og nøgletalskort (og på et spørgsmål svar-elementet) er altid med. Derefter tages elementerne i rækkefølgen nedenfor: først vises lister og profil kompakt (oplysninger 8 rækker, profil 3 afsnit, historik og nyheder 3), så udelades de mindst relevante bagfra, og til sidst får elementer pladsen tilbage i prioritet, hvis budgettet holder. Siden er stadig fyldt: båndene summerer til 12, og stakkene strækkes, så der er 0 huller. Beder brugeren om alt ('vis alt om X'), slår showAll budgettet fra.`}</p>
+          </div>
         </div>
         <div style={col(4)}>
           <div style={h3}>Hvad en gennemsnitlig bruger vil vide, i den rækkefølge</div>
@@ -569,6 +601,7 @@ export function DefaultPageGuide({ ds, company }: { ds: Dataset; company: string
               {o.d}
             </Step>
           ))}
+          <p style={{ ...note, marginTop: 8 }}>Rækkefølgen er også prioriteten i højdebudgettet: det, der står sidst, udelades først, når siden bliver for lang.</p>
           <p style={{ ...note, marginTop: 8 }}>Ikke på default-siden: risiko, kreditvurdering, fuldt regnskab, ejerdiagram, produktionsenheder, ejendomme. De hører til det spørgsmål, der peger på dem, og nås via genveje, moduler og opfølgning.</p>
         </div>
       </div>
@@ -601,7 +634,7 @@ export function DefaultPageGuide({ ds, company }: { ds: Dataset; company: string
       </div>
       <div style={col(12)}>
         <div style={h3}>C. Default-siden tegnet af koden (composeCompany, focus overblik, demodata Eksempel Byg A/S)</div>
-        <p style={note}>{`Bånd: ${bandSummary(spec.components)}. LassoView tegner hvert bånd på 12 kolonner; stakkene strækkes, og sidste element i hver stak fylder resten, så kolonnelinjerne når båndets bund.`}</p>
+        <p style={note}>{`Bånd: ${bandSummary(spec.components)} (inden for højdebudgettet ${PAGE_HEIGHT_BUDGET} px). LassoView tegner hvert bånd på 12 kolonner; stakkene strækkes, og sidste element i hver stak fylder resten, så kolonnelinjerne når båndets bund.`}</p>
         <div style={{ border: "1px solid var(--lasso-border)", borderRadius: "var(--lasso-radius-lg)", padding: 24 }}>
           <LassoView spec={spec} dataset={ds} host={HOST} onAction={noop} theme="light" frameless />
         </div>

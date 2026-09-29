@@ -115,11 +115,13 @@ for (const m of manifest) {
     // Skjulte tooltips (.lasso-tip__bubble, visibility hidden) tæller ikke; de vises kun ved hover.
     await page.addStyleTag({ content: ".lasso-tip__bubble{display:none!important}" });
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
-    const res = { nr: m.nr, title: m.title, width, overflow, cellHole: holes.cellHole, bands: bands.map((b, i) => ({ ...b, hole: holes.bands[i] ?? 0 })) };
+    // Sidehøjde (px) som tegnet med strækningen slået fra; bruges til højdebudgettet (23.3).
+    const pageHeight = await page.evaluate(() => Math.round(document.getElementById("stage")?.getBoundingClientRect().height ?? document.documentElement.scrollHeight));
+    const res = { nr: m.nr, title: m.title, width, overflow, pageHeight, cellHole: holes.cellHole, bands: bands.map((b, i) => ({ ...b, hole: holes.bands[i] ?? 0 })) };
     results.push(res);
     const maxDev = Math.max(0, ...res.bands.map((b) => b.dev ?? 0));
     const maxHole = Math.max(holes.cellHole, ...res.bands.map((b) => b.hole));
-    console.log(`${m.nr} ${m.title.slice(0, 40)} @${width}: ${res.bands.length} bånd, hul ${maxHole} px, afvigelse ${maxDev} %${overflow ? ", VANDRET OVERLØB" : ""}`);
+    console.log(`${m.nr} ${m.title.slice(0, 40)} @${width}: ${res.bands.length} bånd, højde ${pageHeight} px, hul ${maxHole} px, afvigelse ${maxDev} %${overflow ? ", VANDRET OVERLØB" : ""}`);
     for (const b of res.bands) console.log(`    ${b.stacks.map((s) => `[${s.w}] ${s.names} (${s.h})`).join(" | ")}  afv ${b.dev ?? "-"} %  hul ${b.hole}`);
     await page.close();
   }

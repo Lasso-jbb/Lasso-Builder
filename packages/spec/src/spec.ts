@@ -272,6 +272,13 @@ export const textSectionsSchema = z.object({
     .describe("'profil' (standard): formål og tegningsregler fra CVR plus regnskabsanalysens konklusion, resultat og likviditet. 'analyse': hele regnskabsanalysen (alle afsnit), foldet efter konklusionen."),
   title: z.string().max(80).optional(),
   folded: z.boolean().optional().describe("Kun variant 'analyse': analysen foldet til 3 linjer med 'Vis mere' på alle bredder (30.13, svar i chatten). Udeladt: foldet kun på mobil."),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(10)
+    .optional()
+    .describe("Kun variant 'profil': vis kun de første N afsnit; resten kommer frem med 'Vis mere' (kompakt profil, når siden er over højdebudgettet, 23.3). Udeladt: alle afsnit."),
 });
 
 export const summarySchema = z.object({

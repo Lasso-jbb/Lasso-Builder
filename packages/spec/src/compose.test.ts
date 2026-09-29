@@ -315,7 +315,8 @@ test("ledelse: ledelsen står først til venstre, og siden er bånd uden huller 
 
 test("overblik (23.3): default-sidens rækkefølge i bånd uden huller (brugerens holdingeksempel)", () => {
   const ds = holding();
-  const spec = composeCompany(id, ds, { focus: "overblik" });
+  // showAll ("vis alt om X"): alle elementer; standardsiden holder højdebudgettet (se testen nedenfor).
+  const spec = composeCompany(id, ds, { focus: "overblik", showAll: true });
   const order = spec.components.map((c) => c.type);
   // Hoved og nøgletal i egne fuldbånd øverst; profilen er første anker, genveje og opfølgning sidst.
   assert.deepEqual(order.slice(0, 2), ["LassoCompanyHead", "LassoKeyFigureCards"]);
@@ -373,7 +374,7 @@ test("regnskabsanalysen: overblikket viser konklusion, resultat og likviditet, o
   assert.equal(profile.length, 1);
   assert.ok(profile[0]!.type === "LassoTextSections" && profile[0]!.variant === "profil" && profile[0]!.title === "Virksomhedsprofil");
 
-  const eco = composeCompany(id, ds, { focus: "oekonomi" });
+  const eco = composeCompany(id, ds, { focus: "oekonomi", showAll: true });
   const types = eco.components.map((c) => c.type);
   const analysis = eco.components.find((c) => c.type === "LassoTextSections");
   assert.ok(analysis?.type === "LassoTextSections" && analysis.variant === "analyse" && analysis.title === "Regnskabsanalyse");

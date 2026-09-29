@@ -474,3 +474,145 @@ export function bandsToComponents(bands: readonly PackedBand[]): ViewComponent[]
     return b.stacks.flatMap((s, i) => s.items.map((c) => ({ ...c, column: i + 1, width: s.width }) as ViewComponent));
   });
 }
+
+/* ---------- Højdebudget (23.3, Jakob 29.09 "sidelængde") ---------- */
+
+/**
+ * Højdebudget for en side (px ved 1200-gitteret, i pakningens højder): ca. 1½ skærm. En typisk skærm
+ * ved 1200 px bredde viser 800–900 px af siden; 1300 px er 1,5 skærm og ca. 60 % af den gamle
+ * default-side (2100 px). Systemet kender alle kombinationer, men fylder ikke alle elementer ud: de
+ * mest relevante vælges inden for budgettet. `Infinity` (vis alt) slår budgettet fra.
+ */
+export const PAGE_HEIGHT_BUDGET = 1300;
+
+/**
+ * Kompakt form af et element, når siden er over budgettet: lister med færre rækker og profilen med
+ * færre afsnit ("Se alle"/"Vis mere" under). null = elementet har ingen kompakt form (eller er allerede kompakt).
+ */
+export function compactOf(c: ViewComponent): ViewComponent | null {
+  if (c.type === "LassoKeyValueList" && c.variant !== "financials" && (c.rows ?? 99) > 8) return { ...c, rows: 8 };
+  if (c.type === "LassoKeyValueList" && c.variant === "financials" && (c.rows ?? 99) > 6) return { ...c, rows: 6 };
+  if (c.type === "LassoTextSections" && c.variant !== "analyse" && (c.limit ?? 99) > 3) return { ...c, limit: 3 };
+  if (c.type === "LassoTimeline" && !c.filterColumn && (c.limit ?? 5) > 3) return { ...c, limit: 3 };
+  if (c.type === "LassoNews" && !c.layout && c.limit > 3) return { ...c, limit: 3 };
+  return null;
+}
+
+export interface BudgetOptions extends PackOptions {
+  /** Sidens højdebudget i px (samme enhed som h). Udeladt eller Infinity: intet budget, alle elementer pakkes. */
+  budget?: number;
+  /**
+   * Elementer, der altid er med i fuld form (hoved, nøgletalskort, svar-elementet, opfølgning).
+   * Udeladt: fuldbåndstyperne (hoved, nøgletalskort, persontal, opfølgning) og det første øvrige element (svaret).
+   */
+  keep?: ReadonlySet<ViewComponent>;
+}
+
+export interface BudgetResult {
+  bands: PackedBand[];
+  /** Sidens højde (px): Σ båndhøjder + afstand mellem båndene. */
+  height: number;
+  /** Elementer, der er udeladt for at holde budgettet (i prioriteret rækkefølge). */
+  dropped: ViewComponent[];
+  /** Elementer, der står i kompakt form (originalerne). */
+  compacted: ViewComponent[];
+}
+
+/** Sidens samlede højde for båndene (px). */
+export function pageHeight(bands: readonly PackedBand[], gap = GRID_GAP): number {
+  return bands.reduce((s, b) => s + b.height, 0) + Math.max(0, bands.length - 1) * gap;
+}
+
+/**
+ * Båndpakning inden for et højdebudget (23.3). Input i prioriteret rækkefølge. Deterministisk:
+ * 1. Holder siden budgettet med alle elementer, pakkes den som før (packBands).
+ * 2. Ellers vises alle elementer, der kan, i kompakt form (compactOf) – undtagen dem i `keep`.
+ * 3. Er siden stadig over budgettet, udelades det mindst relevante element (bagfra), hvis fjernelse gør
+ *    siden lavere (et element, der står gratis som stakfyld, bliver); gentages, til siden holder budgettet.
+ * 4. Udeladte elementer prøves igen i prioritet (plads kan være frigjort), og kompakte elementer får
+ *    deres fulde form tilbage i prioritet, så længe siden holder budgettet.
+ * Hoved, nøgletalskort og svar-elementet er altid med i fuld form, også hvis de alene er over budgettet.
+ * Båndene er stadig fulde (summen er 12), og stakkene strækkes, så der aldrig er huller.
+ */
+export function packWithinBudget(items: readonly ViewComponent[], h: HeightFn, options: BudgetOptions = {}): BudgetResult {
+  const gap = options.gap ?? GRID_GAP;
+  const budget = options.budget ?? Number.POSITIVE_INFINITY;
+  const pack = (list: readonly ViewComponent[]) => {
+    const bands = packBands(list, h, options);
+    return { bands, height: pageHeight(bands, gap), deviation: Math.max(0, ...bands.map((b) => b.deviation)) };
+  };
+  // En ændring må ikke gøre båndene skæve: højst 15 % afvigelse, eller ikke værre end før.
+  const even = (t: { deviation: number }, cur: { deviation: number }) => t.deviation <= Math.max(BAND_MAX_DEVIATION, cur.deviation) + 1e-9;
+  let best = pack(items);
+  if (!(best.height > budget)) return { bands: best.bands, height: best.height, dropped: [], compacted: [] };
+
+  const keep = options.keep ?? defaultKeep(items);
+  // Arbejdslisten: [original, vist element] i prioriteret rækkefølge; null = udeladt.
+  const slots: { orig: ViewComponent; shown: ViewComponent | null }[] = items.map((c) => ({ orig: c, shown: keep.has(c) ? c : (compactOf(c) ?? c) }));
+  const listOf = (s: typeof slots) => s.flatMap((x) => (x.shown ? [x.shown] : []));
+  best = pack(listOf(slots));
+
+  // 3. Udelad bagfra, til siden holder budgettet. Først prøves de STRICT_WINDOW mindst relevante
+  // elementer, og kun udeladelser, der holder båndene lige (højst 15 % afvigelse); findes ingen, den
+  // mindst relevante, der gør siden lavere. Vinduet sikrer, at et vigtigt element aldrig ofres for et
+  // mindre vigtigt bare for at få pænere bånd.
+  while (best.height > budget) {
+    let removed = false;
+    for (const strict of [true, false]) {
+      let seen = 0;
+      for (let i = slots.length - 1; i >= 0 && !removed; i--) {
+        const s = slots[i]!;
+        if (!s.shown || keep.has(s.orig)) continue;
+        if (strict && ++seen > STRICT_WINDOW) break;
+        const trial = slots.map((x, k) => (k === i ? { ...x, shown: null } : x));
+        const t = pack(listOf(trial));
+        if (t.height < best.height && (!strict || even(t, best))) {
+          slots[i] = trial[i]!;
+          best = t;
+          removed = true;
+        }
+      }
+      if (removed) break;
+    }
+    if (!removed) break;
+  }
+
+  // 4a. Udeladte elementer tilbage i prioritet, hvis siden stadig holder budgettet.
+  slots.forEach((s, i) => {
+    if (s.shown || keep.has(s.orig)) return;
+    const shown = compactOf(s.orig) ?? s.orig;
+    const trial = slots.map((x, k) => (k === i ? { ...x, shown } : x));
+    const t = pack(listOf(trial));
+    if (t.height <= budget && even(t, best)) {
+      slots[i] = trial[i]!;
+      best = t;
+    }
+  });
+  // 4b. Fuld form tilbage i prioritet.
+  slots.forEach((s, i) => {
+    if (!s.shown || s.shown === s.orig) return;
+    const trial = slots.map((x, k) => (k === i ? { ...x, shown: x.orig } : x));
+    const t = pack(listOf(trial));
+    if (t.height <= budget && even(t, best)) {
+      slots[i] = trial[i]!;
+      best = t;
+    }
+  });
+  return {
+    bands: best.bands,
+    height: best.height,
+    dropped: slots.filter((s) => !s.shown).map((s) => s.orig),
+    compacted: slots.filter((s) => s.shown && s.shown !== s.orig).map((s) => s.orig),
+  };
+}
+
+/** Så mange af de mindst relevante elementer må springes over for at holde båndene lige (trin 3). */
+const STRICT_WINDOW = 2;
+
+/** Standard for `keep`: fuldbåndstyperne (hoved, nøgletalskort, persontal, opfølgning) og det første øvrige element (svaret). */
+function defaultKeep(items: readonly ViewComponent[]): Set<ViewComponent> {
+  const keep = new Set(items.filter((c) => FULL_BAND_TYPES.has(c.type)));
+  const answer = items.find((c) => !FULL_BAND_TYPES.has(c.type));
+  if (answer) keep.add(answer);
+  return keep;
+}

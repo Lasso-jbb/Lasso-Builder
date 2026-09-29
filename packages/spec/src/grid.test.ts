@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { GRID_RULES, gridRuleOf } from "./catalog.js";
-import { allowsWidth, BAND_COMBOS, BAND_MAX_DEVIATION, measuredHeight, MEASURED_HEIGHTS, packBands, type PackedBand } from "./grid.js";
+import { allowsWidth, BAND_COMBOS, BAND_MAX_DEVIATION, compactOf, measuredHeight, MEASURED_HEIGHTS, packBands, packWithinBudget, pageHeight, PAGE_HEIGHT_BUDGET, type PackedBand } from "./grid.js";
 import { DEFAULT_WIDTH, WIDTH_COLUMNS, WIDTHS, type ComponentType, type ViewComponent, type Width } from "./spec.js";
 
 const COMPONENT_TYPES = Object.keys(DEFAULT_WIDTH) as ComponentType[];
@@ -106,4 +106,51 @@ test("minimumsbredder er hårde: registrering, virksomhedstabel og fuldt regnska
   assert.equal(bands[1]!.stacks.length, 1);
   assert.equal(bands[1]!.stacks[0]!.items[0]!.type, "LassoFinancialStatements");
   assert.notEqual(bands[0]!.stacks.find((s) => s.items.some((i) => i.type === "LassoRegistration"))?.width, "half");
+});
+
+test("højdebudget (23.3): de mindst relevante udelades bagfra, hoved og nøgletal bliver, og uden budget ændres intet", () => {
+  const items = [
+    c("LassoCompanyHead"),
+    c("LassoKeyFigureCards"),
+    c("LassoTextSections", { variant: "profil" }),
+    c("LassoKeyValueList", { variant: "company" }),
+    c("LassoRelations"),
+    c("LassoBarChart", { metric: "omsaetning", years: 5 }),
+    c("LassoContact"),
+    c("LassoTimeline", { limit: 3 }),
+    c("LassoNews", { limit: 3 }),
+    c("LassoShortcuts"),
+  ];
+  const full = packBands(items, docHeight);
+  // Uden budget (og med et budget, siden holder) er resultatet det samme som packBands.
+  assert.deepEqual(shape(packWithinBudget(items, docHeight).bands), shape(full));
+  assert.deepEqual(shape(packWithinBudget(items, docHeight, { budget: 10_000 }).bands), shape(full));
+  const budget = Math.round(pageHeight(full) * 0.6);
+  const r = packWithinBudget(items, docHeight, { budget });
+  assert.ok(r.height <= budget, `${r.height} > ${budget}`);
+  assert.equal(r.height, pageHeight(r.bands));
+  assertLegal(r.bands);
+  const shown = r.bands.flatMap((b) => b.stacks.flatMap((s) => s.items.map((i) => i.type)));
+  // Hoved, nøgletal og svaret (første element) er altid med; det sidste i prioritet forsvinder før det første.
+  for (const t of ["LassoCompanyHead", "LassoKeyFigureCards", "LassoTextSections"]) assert.ok(shown.includes(t as ViewComponent["type"]), t);
+  assert.ok(r.dropped.length > 0);
+  assert.ok(r.dropped.every((d) => !["LassoCompanyHead", "LassoKeyFigureCards", "LassoTextSections"].includes(d.type)));
+  for (const b of r.bands) assert.equal(b.stacks.reduce((n, s) => n + WIDTH_COLUMNS[s.width], 0), 12);
+  // Deterministisk.
+  assert.deepEqual(shape(packWithinBudget(items, docHeight, { budget }).bands), shape(r.bands));
+  // keep: et element i keep er altid med i fuld form, selv over budgettet.
+  const tight = packWithinBudget(items, docHeight, { budget: 100, keep: new Set([items[0]!, items[3]!]) });
+  const kept = tight.bands.flatMap((b) => b.stacks.flatMap((s) => s.items));
+  assert.ok(kept.includes(items[0]!) && kept.includes(items[3]!));
+  assert.equal(kept.length, 2);
+});
+
+test("højdebudget: kompakte former (færre rækker/afsnit) og standardbudgettet", () => {
+  assert.equal(PAGE_HEIGHT_BUDGET, 1300);
+  assert.deepEqual(compactOf(c("LassoKeyValueList", { variant: "company" })), c("LassoKeyValueList", { variant: "company", rows: 8 }));
+  assert.deepEqual(compactOf(c("LassoTextSections", { variant: "profil" })), c("LassoTextSections", { variant: "profil", limit: 3 }));
+  assert.equal(compactOf(c("LassoTextSections", { variant: "analyse" })), null);
+  assert.equal((compactOf(c("LassoTimeline")) as { limit?: number }).limit, 3);
+  assert.equal(compactOf(c("LassoTimeline", { limit: 3 })), null);
+  assert.equal(compactOf(c("LassoBarChart")), null);
 });
