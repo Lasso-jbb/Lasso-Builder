@@ -894,6 +894,7 @@ export const entries: GalleryEntry[] = [
     node: "JNY-0",
     only: "desktop",
     desktopWidth: 1440,
+    gridWidth: 236,
     note: "Kun desktop: under 1200 px bliver skinnen 64 px med ikoner, og på mobil skjules den (bundnavigation, 26a).",
     render: () => (
       <div style={{ width: 236, background: "var(--lasso-chrome)", paddingTop: 12, borderRadius: 10 }}>

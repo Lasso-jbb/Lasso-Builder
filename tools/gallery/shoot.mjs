@@ -89,6 +89,12 @@ async function pagesFor(m) {
   const noteLines = m.note ? Math.ceil(m.note.length / 160) : 0;
   const avail = PAGE_H - HEAD_H - noteLines * NOTE_LINE - (noteLines ? 2 : 0) - CAP_H;
   const out = [];
+  let carry = [];
+  const emit = (fixed, flow) => emitPages(out, fixed, flow);
+  const flush = () => {
+    if (carry.length) emit([], carry);
+    carry = [];
+  };
   for (const row of rows(m)) {
     const imgs = [];
     for (const s of row) {
@@ -117,33 +123,44 @@ async function pagesFor(m) {
         cuts.push({ top, hPx: end - top });
         top = end;
       }
-      return cuts.map((c, k) => ({ i, k, n: cuts.length, top: c.top, hPx: c.hPx, w: i.w * scale }));
+      return cuts.map((c, k) => ({ i, k, n: cuts.length, top: c.top, hPx: c.hPx, w: i.w * scale, scale }));
     };
     // Første billede (desktop) står fast til venstre, én del pr. side; de øvrige (mobil) flyder som
     // spalter i den ledige bredde, så et højt mobilbillede ikke giver en side pr. 160 mm.
     const fixed = imgs.length > 1 ? slices(imgs[0]) : [];
-    const flow = (imgs.length > 1 ? imgs.slice(1) : imgs).flatMap(slices);
-    while (fixed.length || flow.length) {
-      const parts = [];
-      let used = 0;
-      if (fixed.length) {
-        const f = fixed.shift();
-        parts.push(f);
-        used = f.w;
-      }
-      while (flow.length && used + (used ? GAP : 0) + flow[0].w <= PAGE_W + 0.01) {
-        const g = flow.shift();
-        used += (used ? GAP : 0) + g.w;
-        parts.push(g);
-      }
-      if (!parts.length) parts.push(flow.shift());
-      const figs = parts
-        .map(({ i, k, n, top, hPx, w }) => `<figure style="width:${w.toFixed(2)}mm"><figcaption>${esc(label(i))}${n > 1 ? `, del ${k + 1} af ${n}` : ""}</figcaption><div class="clip" style="width:${w.toFixed(2)}mm;height:${(hPx * scale).toFixed(2)}mm"><img src="${i.src}" style="width:${w.toFixed(2)}mm;margin-top:${(-top * scale).toFixed(2)}mm"></div></figure>`)
-        .join("");
-      out.push({ figs });
+    // Rækker med ét billede (fx tabletbredderne) flyder videre i samme spalteforløb som forrige række.
+    if (!fixed.length) {
+      carry.push(...imgs.flatMap(slices));
+      continue;
     }
+    flush();
+    const flow = imgs.slice(1).flatMap(slices);
+    emit(fixed, flow);
   }
+  flush();
   return out.map((p, i, all) => ({ ...p, part: all.length > 1 ? `side ${i + 1} af ${all.length}` : "" }));
+}
+
+function emitPages(out, fixed, flow) {
+  while (fixed.length || flow.length) {
+    const parts = [];
+    let used = 0;
+    if (fixed.length) {
+      const f = fixed.shift();
+      parts.push(f);
+      used = f.w;
+    }
+    while (flow.length && used + (used ? GAP : 0) + flow[0].w <= PAGE_W + 0.01) {
+      const g = flow.shift();
+      used += (used ? GAP : 0) + g.w;
+      parts.push(g);
+    }
+    if (!parts.length) parts.push(flow.shift());
+    const figs = parts
+      .map(({ i, k, n, top, hPx, w, scale }) => `<figure style="width:${w.toFixed(2)}mm"><figcaption>${esc(label(i))}${n > 1 ? `, del ${k + 1} af ${n}` : ""}</figcaption><div class="clip" style="width:${w.toFixed(2)}mm;height:${(hPx * scale).toFixed(2)}mm"><img src="${i.src}" style="width:${w.toFixed(2)}mm;margin-top:${(-top * scale).toFixed(2)}mm"></div></figure>`)
+      .join("");
+    out.push({ figs });
+  }
 }
 
 // Ensfarvede pixelrækker pr. billede (til delingen af høje billeder), målt i en browserside.
