@@ -769,7 +769,7 @@ export const entries: GalleryEntry[] = [
     node: "9HM-0",
     render: () => (
       <div style={{ fontSize: 12 }}>
-        <Row gap={24}>
+        <Row gap={8}>
           <StatusBadge status="Aktiv" kind="active" />
           <StatusBadge status="Under konkurs" kind="warning" />
           <StatusBadge status="Ophørt" kind="inactive" />

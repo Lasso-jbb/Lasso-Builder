@@ -281,7 +281,7 @@
 .lasso-badge--warning { color: var(--lasso-bankrupt); }
 .lasso-badge--inactive { color: var(--lasso-muted); }
 .lasso-badge--liquidation { color: var(--lasso-status-liquidation); }
-.lasso-badge--new { color: var(--lasso-status-new); }
+.lasso-badge--new { color: var(--lasso-status-new); font-weight: 600; } /* 05.7: "Ny" koral tekst 600 */
 .lasso-badge--demo, .lasso-badge--plain { color: var(--lasso-muted); font-weight: 400; }
 
 /* ---------- Kort ---------- */
@@ -634,6 +634,9 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 /* Mobil: niveau 1 og 2 ruller vandret med fade i højre kant; niveau 3 fylder bredden, 44 px, lige brede segmenter */
 @container lasso (max-width: 560px) {
   .lasso-tabs--l1, .lasso-tabs--l2 { mask-image: linear-gradient(90deg, #000 calc(100% - 40px), transparent); -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 40px), transparent); }
+  /* 26a.5: dividerens 1 px står i fuld bredde under rækken (uden fade); fanens streg ligger oven på. */
+  .lasso-tabs-wrap--l1:not(.lasso-modulebar__tabs) { box-shadow: inset 0 -1px 0 var(--lasso-border); }
+  .lasso-tabs-wrap--l2 { box-shadow: inset 0 -1px 0 var(--lasso-divider-subtle); }
   .lasso-tabs--l1 { gap: 24px; }
   .lasso-tabs-wrap--l3 { display: flex; width: 100%; }
   .lasso-tabs--l3 { display: flex; width: 100%; height: 44px; }

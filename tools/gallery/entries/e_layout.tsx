@@ -517,20 +517,20 @@ const responsive: GalleryEntry[] = [
     title: "Brudpunktsregler",
     node: "DH5-0",
     only: "desktop",
-    note: "Brudpunkterne, som AppShell og styles.css bruger (container-forespørgsler på .lasso-root). Tekst fra AppShell.tsx/Rail.tsx/LAYOUT_RULES.",
+    note: "Papers brudpunktstabel (DH5-0, live 29.09) tegnet med Lasso-tabellen.",
     render: () => (
       <Table
-        head={["Bredde", "Ramme", "Indhold"]}
+        head={["Element", "≥ 1200, desktop", "768–1199, tablet", "< 768, mobil"]}
         rows={[
-          ["≥ 1200", "Skinne 236 + midte + panel 336", "4-kolonne-grid; ¾ + ¼ side om side"],
-          ["1024–1199", "Skinne 64 px med ikoner, panel under midten", "¾ + ¼ bliver fuld + fuld"],
-          ["961–1023", "Skinne 64 px", "½ + ½ holder"],
-          ["768–960", "Skinnen skjules, bundnavigation", "½ + ½ holder til 768"],
-          ["561–767", "Fanebjælke, ingen skinne", "½ + ½ stables; nøgletal 2 × 2; tabeller bliver kortlister"],
-          ["≤ 560", "Mobil: topbjælke 52 + bundnavigation 56", "Én kolonne, padding 16"],
-          ["Chat 640–900", "Ingen ramme", "Tablet-reglerne"],
-          ["Grafer", "", "Maks 5 punkter under 768"],
-        ]}
+          ["Sideskabelon (06)", "Skinne 236 + midte + panel 336", "Skinne 236 + midte; panelet falder ned under midten", "Skinne bag \"Sektioner\"-knap i topbjælken; panel nederst; padding 16"],
+          ["Virksomhedshoved (08)", "Navn + fakta venstre, knapper højre", "Knapper under faktalinjen, venstrestillet", "Navn 20 px; fakta ombrydes; handlinger som 40 px ikonknapper, Overvåg med koral ikon"],
+          ["Sektionsfaner (08)", "Alle faner, \"Flere\" ved > 8", "Vandret scroll, ingen \"Flere\"", "Vandret scroll med fade i kanten, aktiv fane rulles ind"],
+          ["Nøgletalskort (09)", "3–5 på række", "4 på række, sparkline skjules", "2 × 2 grid, tal 20 px, udvikling på én linje"],
+          ["Nøgle-værdi-liste (09)", "Nøgle 190 px + værdi på samme linje", "Uændret", "Nøgle over værdi (2 linjer, 12/14), række 52 px"],
+          ["Grafer (13)", "½ eller fuld bredde", "Altid fuld bredde", "Fuld bredde, maks 5 datapunkter synlige, resten ved swipe; tooltip fast under grafen"],
+          ["Tabel (15)", "Alle kolonner", "Navn fast, resten vandret scroll; kolonnevalg", "Kortliste: navn + 2 vigtigste værdier + status; filtre i bundark; massehandlinger som bundbjælke"],
+          ["Ejerdiagram (14)", "Lærred med panel", "Lærred, panel som bundark", "Indrykket liste: ejere over, fokus, datterselskaber under; \"Åbn diagram\" fuldskærm i landskab"],
+        ].map(([el, ...rest]) => [<span key="e" style={{ fontWeight: 500, color: "var(--lasso-text)" }}>{el}</span>, ...rest])}
       />
     ),
   },

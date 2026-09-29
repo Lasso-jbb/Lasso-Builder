@@ -197,14 +197,14 @@ function Shadows() {
 
 const ICON_NAMES_PAPER = ["søg", "chevron", "videre", "valgt", "luk", "tilføj", "eksportér", "redigér", "flere", "info", "slet", "fortryd", "gemt", "liste", "oversigt", "sidepanel", "notifikation", "bruger", "AI", "virksomhed"];
 
-/** 01.6: 20 ikoner i 2 × 10, 18 px ink, navne med små bogstaver. */
+/** 01.6: 20 ikoner i 2 × 10, 18 px ink alene på hvid flade (regel 20), navne med små bogstaver. */
 function Icons() {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(10, 92px)", gap: 10 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(10, 102px)", rowGap: 32 }}>
       {CATALOG_ICONS.map((n, i) => (
-        <div key={n} style={{ display: "grid", justifyItems: "center", alignContent: "center", gap: 8, height: 74, borderRadius: "var(--lasso-radius-lg)", background: "var(--lasso-surface-muted)", color: "var(--lasso-text)" }}>
+        <div key={n} style={{ display: "grid", justifyItems: "center", alignContent: "center", gap: 10, color: "var(--lasso-text)" }}>
           <Icon name={n} size={18} label={ICON_LABELS[n]} />
-          <span className="lasso-small lasso-muted" style={{ fontSize: 11 }}>{ICON_NAMES_PAPER[i]}</span>
+          <span className="lasso-small lasso-muted" style={{ fontSize: 12 }}>{ICON_NAMES_PAPER[i]}</span>
         </div>
       ))}
     </div>
@@ -218,34 +218,37 @@ const DATA_RULES: string[] = [
   "Ingen ink (sort) baggrund på rækker eller flader. Bundlinjer i tabeller markeres med vægt 700 og en 1 px linje over, ikke fyld. Kun tooltips er ink.",
   "Ingen farvede bannerbokse. Sammenfatninger, risikonoter og AI-analyser er almindelige sektioner på hvid flade: overskrift, brødtekst, diskret kildelink. Et lille farvet ikon foran en tekstlinje er nok.",
   "\"Skrevet af AI\" eller lignende mærker vises ikke. Kilden angives i stedet i kildelinjen.",
-  "Virksomheds- og personnavne står alene i lister og tabeller. Ingen grå ikonkasse med bygnings- eller personikon foran navnet.",
+  "Virksomheds- og personnavne står alene i lister, tabeller, hoveder, netværk, kontaktpersoner og diagrammer. Ingen ikonkasse og ingen rund initial-cirkel (\"JB\", \"?\") foran navnet. Person vs. selskab skelnes med tekst (rolle, \"Person\") og i diagrammet med form (pille / kasse); fratrådt og ukendt skrives som tekst, aldrig som stiplet cirkel.",
   "Nyhedskilder vises med sidens favicon som 16 px mærke (radius 3) foran kildenavnet. Ingen bogstavskasser.",
   "Mulig fejl i data: 14 px udråbstegn-ikon i warning-farve efter tallet, forklaring i tooltip ved mouseover. Ingen mærke, pille eller stiplet understregning.",
-  "Separator i nøglefakta-, metadata- og kildelinjer er komma: \"CVR 34580820, A/S, København K\". Midterprik og lodret streg bruges aldrig, hverken i produktet eller i katalogets egne noter, overlinjer og specifikationer.",
+  "Separator i nøglefakta-, metadata- og kildelinjer er komma: \"CVR 34580820, A/S, København K\". Midterprik og lodret streg bruges aldrig — hverken i produktet eller i katalogets egne noter, overlinjer og specifikationer (\"13/18, 400\").",
   "Reglerne gælder uændret på tablet og mobil. Mobil kompakterer med label over værdi, aldrig med piller eller ikoner som erstatning for tekst.",
   "Faner viser kun navnet: ingen antal, badges eller prikker på sektionsfaner, segmentkontroller, sidepanelets sektioner eller bundnavigationen. Antal hører til i sektionens overskrift eller i teksten.",
-  "Hvid flade overalt, også på tablet og mobil. Sektioner adskilles med 1 px linjer og luft, aldrig hvide kort på grå baggrund. Muted tekst er mindst #667085 (4,5:1); faint bruges kun til dekoration.",
+  "Hvid flade overalt, også på tablet og mobil. Sektioner adskilles med 1 px linjer og luft, aldrig hvide kort på grå baggrund.",
   "Flere værdier end formen kan vise: vis de første 3 og \"Se N …\", som åbner et panel fra højre over siden (08 Kontaktpersoner). Gælder kontaktpersoner, telefonnumre, e-mails, P-enheder, bibrancher og ejere.",
-  "Én grå til al hjælpetekst: metatekst, kildelinjer, feltforklaringer og overlinjer bruger samme token (text-muted = text-secondary, #5B6068). Den lysere grå (#8A9099) er kun til ikoner og dekoration, aldrig til tekst der skal læses, på desktop, tablet og mobil.",
+  "Én grå til al hjælpetekst: metatekst, kildelinjer, feltforklaringer og overlinjer bruger samme token (--color-text-muted = --color-text-secondary, #5B6068). Den lysere grå (#8A9099) er kun til ikoner og dekoration, aldrig til tekst der skal læses — på desktop, tablet og mobil.",
   "Aktive elementer har aldrig mørkt fyld. Aktiv side i paginering = ink-tekst i vægt 600 med tynd understregning; aktive segmenter, chips og trin markeres med tekstvægt, tynd kant eller koral-soft, aldrig en sort kasse.",
-  "Logo: kun de to mastere i 01b (ikon og navnelogo) i ink på hvid, klonet, aldrig tegnet som tekst eller farvet kasse. Navnelogo 18 px i fanebjælken, ikon 20 px i mobil-topbjælke og tabletskinne, 16 px som Lasso News-kilde, 28/14 px på rapportforside og i sidehoved/-fod.",
+  "Logo: kun de to mastere i 01b (ikon og navnelogo) i ink, klonet, aldrig tegnet som tekst eller farvet kasse. Logoet er diskret og står aldrig i topbjælken ved siden af entitetens navn: navnelogo 14 px dæmpet (55 %) som bundlinje nederst i sideskinnen på desktop og nederst på mobilskærme sammen med kildelinjen \"Data fra CVR …\", ikon 24 px i tabletskinnen, 16 px som Lasso News-kilde, 28/14/12 px på rapportforside og i sidehoved/-fod (27).",
   "Nyheder: én kilde pr. nyhed (favicon 16 px, navn, tid), ingen billeder, ingen tone-mærker, ingen samlede historier eller favicon-stakke. Virksomhedsnavnet i uddraget står i fed (ink, 600), aldrig i koral eller på farvet baggrund.",
   "Korte ikon + værdi-lister (kontaktblok, genveje, maks 5 rækker) adskilles med luft, ikke skillelinjer. Linjer bruges kun i tabeller, nøgle-værdi-lister og lange lister.",
+  "Risikoskalaen går fra 0 = lav risiko til 100 = høj risiko. Målere og skalaer har grøn til venstre/nederst (0–60), gul i midten (60–80) og rød til højre/øverst (80–100); en stigning i score er mere risiko og vises i warning- eller danger-tekst, aldrig grøn. Vurderingsteksten (lav/moderat/høj) er kildens egen (Creditsafe).",
+  "Ikoner står alene på hvid flade: ingen grå eller farvede fliser, kasser eller cirkler bag et ikon (ikonsæt, tomme tilstande, rækker, app-ikoner, fokus). Baggrund og kant kun når ikonet er en ægte knap med tydelig funktion (ikonknap 38/32 med 1 px kant, genvej med kant).",
+  "Handlinger i virksomheds- og personhoveder er små ikonknapper øverst til højre (32 px desktop, 40 px mobil, 1 px kant): Overvåg med koral ikon og koral kant, Gem, Eksportér/Netværk, Flere. Aldrig store fyldte knapper eller knapper i fuld bredde i hovedet; den primære handling er et lille koralt ikon, ikke en koral blok.",
 ];
 
 function DataRules({ split = 9 }: { split?: number }) {
   const col = (from: number, to: number) => (
-    <ol style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 14, alignContent: "start" }}>
+    <ol style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 10, alignContent: "start" }}>
       {DATA_RULES.slice(from, to).map((t, i) => (
-        <li key={i} style={{ display: "grid", gridTemplateColumns: "28px 1fr", fontSize: "var(--lasso-fs-sm)", lineHeight: "var(--lasso-lh-body)", color: "var(--lasso-text-2)" }}>
-          <span style={{ color: "var(--lasso-accent-text)", fontWeight: 600 }}>{from + i + 1}</span>
+        <li key={i} style={{ display: "grid", gridTemplateColumns: "22px 1fr", columnGap: 10, fontSize: "var(--lasso-fs)", lineHeight: "19px", color: "var(--lasso-text-2)" }}>
+          <span style={{ color: "var(--lasso-accent)", fontWeight: 600, fontSize: 12 }}>{from + i + 1}</span>
           <span>{t}</span>
         </li>
       ))}
     </ol>
   );
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "14px 56px" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 460px))", gap: "10px 24px" }}>
       {col(0, split)}
       {col(split, DATA_RULES.length)}
     </div>
@@ -255,8 +258,8 @@ function DataRules({ split = 9 }: { split?: number }) {
 // ---------- 01b Logo ----------
 
 function LogoMasters() {
-  const card: React.CSSProperties = { display: "grid", placeItems: "center", height: 118, border: "1px solid var(--lasso-border)", borderRadius: "var(--lasso-radius-lg)", color: "var(--lasso-text)" };
-  const note: React.CSSProperties = { margin: 0, fontSize: "var(--lasso-fs-sm)", lineHeight: "var(--lasso-lh-body)", color: "var(--lasso-text-2)" };
+  const card: React.CSSProperties = { display: "grid", placeItems: "center", height: 120, border: "1px solid var(--lasso-border)", borderRadius: "var(--lasso-radius-lg)", color: "var(--lasso-text)" };
+  const note: React.CSSProperties = { margin: 0, fontSize: "var(--lasso-fs)", lineHeight: "19px", color: "var(--lasso-muted)" };
   return (
     <div style={{ display: "grid", gridTemplateColumns: "180px 280px 180px minmax(200px, 1fr)", gap: 32, alignItems: "start" }}>
       <style>{".gal-mark{width:76px;height:auto}.gal-word{width:150px;height:auto}.gal-mark48{width:58px;height:48px;display:block}"}</style>
@@ -287,32 +290,32 @@ function LogoMasters() {
         </div>
       </St>
       <St label="Brug">
-        <p style={note}>{LOGO_USE}</p>
+        <p style={{ ...note, color: "var(--lasso-text-2)" }}>{LOGO_USE}</p>
       </St>
     </div>
   );
 }
 
 const LOGO_USE =
-  "Ikon 20 px i topbjælken og i tabletskinnen, 16 px som favicon og som Lasso News-kilde (radius 3, samme mønster som andre favicons). Navnelogo 18 px høj i fanebjælken og mobil-topbjælken, 28 px på rapportforsiden, 14 px i sidehoved/-fod på PDF. Aldrig i koral, aldrig på farvet flade, aldrig strakt, aldrig med skygge eller ramme. Minimum: ikon 12 px, navnelogo 12 px høj.";
+  "Diskret: navnelogo 14 px dæmpet (55 %) nederst i sideskinnen på desktop og nederst på mobilskærme, altid med kildelinjen \"Data fra CVR, Erhvervsstyrelsen og Creditsafe\". Aldrig i topbjælken ved siden af virksomheds- eller personnavnet. Ikon 24 px i tabletskinnen, 16 px som favicon og Lasso News-kilde. PDF: navnelogo 28 px på forsiden, 14 px i sidehovedet, ikon 12 px i sidefoden. Aldrig i koral, aldrig på farvet flade, aldrig strakt, aldrig med skygge eller ramme.";
 
 function LogoSizes() {
-  const mark: [number, string][] = [[16, "favicon, kilde"], [20, "topbjælke"], [24, "skinne"], [32, "tom tilstand"]];
-  const word: [number, string][] = [[14, "PDF hoved/fod"], [18, "fanebjælke, mobil"], [28, "forside, login"]];
+  const mark: [number, string][] = [[16, "favicon, kilde"], [20, "app-ikon"], [24, "skinne"], [32, "tom tilstand"]];
+  const word: [number, string][] = [[14, "bundlinje, PDF hoved"], [18, "login, tomme tilstande"], [28, "forside, login"]];
   return (
     <div style={{ display: "flex", gap: 40, alignItems: "flex-end", flexWrap: "wrap", color: "var(--lasso-text)", padding: "16px 0", borderTop: "1px solid var(--lasso-border)", borderBottom: "1px solid var(--lasso-border)" }}>
       <style>{mark.map(([h]) => `.gal-m${h}{height:${h}px;width:${(h * 117) / 97}px;display:block}`).join("") + word.map(([h]) => `.gal-w${h}{height:${h}px;width:${(h * 453) / 132}px;display:block}`).join("")}</style>
       {mark.map(([h, t]) => (
         <div key={h} style={{ display: "grid", justifyItems: "center", gap: 8 }}>
           <LassoMark className={`gal-m${h}`} />
-          <span className="lasso-small lasso-muted">{h}, {t}</span>
+          <span className="lasso-small lasso-muted" style={{ fontSize: 12 }}>{h}, {t}</span>
         </div>
       ))}
       <div style={{ width: 1, alignSelf: "stretch", background: "var(--lasso-border)" }} />
       {word.map(([h, t]) => (
         <div key={h} style={{ display: "grid", justifyItems: "center", gap: 8 }}>
           <LassoWordmark className={`gal-w${h}`} />
-          <span className="lasso-small lasso-muted">{h}, {t}</span>
+          <span className="lasso-small lasso-muted" style={{ fontSize: 12 }}>{h}, {t}</span>
         </div>
       ))}
     </div>
@@ -865,7 +868,7 @@ export const entries: GalleryEntry[] = [
   { nr: "01.6", title: "Ikoner", node: "9B9-0", render: () => <Icons /> },
   { nr: "01.7", title: "Datavisning, faste regler", node: "GY5-0", note: "Reglerne tegnet som i Paper (nummereret, to kolonner).", render: () => <DataRules /> },
   { nr: "01b.1", title: "Logo, mastere (ikon, navnelogo, frizone, brug)", node: "IFD-0", render: () => <LogoMasters /> },
-  { nr: "01b.2", title: "Logostørrelser", node: "IG6-0", render: () => <LogoSizes />, note: "Paper viser 8 eksempler (4 ikon, 3–4 navnelogo); her 4 + 3 størrelser tegnet med samme komponenter." },
+  { nr: "01b.2", title: "Logostørrelser", node: "IG6-0", render: () => <LogoSizes />, note: "Paper (live 29.09) har 7 størrelser: ikon 16/20/24/32 og navnelogo 14/18/28." },
 
   { nr: "02a.1", title: "Fritekst", node: "4BF-0", render: () => <FreeText /> },
   { nr: "02a.2", title: "Tal", node: "4BU-0", render: () => <NumberDemo /> },
