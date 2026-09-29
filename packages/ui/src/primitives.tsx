@@ -71,7 +71,7 @@ export function statusTone(status: string | undefined, kind: CompanyVM["statusKi
   return kind ?? "inactive";
 }
 
-/** Regel 1: status er ren tekst i vægt 500 — ingen pille, prik eller farvet flade. */
+/** Regel 1: status er ren tekst i vægt 500 - ingen pille, prik eller farvet flade. */
 export function StatusBadge({ status, kind, size }: { status?: string; kind?: CompanyVM["statusKind"] | "new"; /** "sm": 12 px (05.7, status stående alene); standard arver størrelsen fra omgivelsen. */ size?: "sm" }) {
   if (!status) return null;
   return <span className={`lasso-badge lasso-badge--${statusTone(status, kind)}${size === "sm" ? " lasso-badge--sm" : ""}`}>{status}</span>;
@@ -342,14 +342,13 @@ export function Missing() {
   return <span className="lasso-notreported">{MISSING}</span>;
 }
 
-/** Regel 8: kildelinje én gang pr. sektion, "Kilde: Navn, opdateret DD.MM.ÅÅÅÅ". */
-export function SourceLine({ source, updated, verb = "opdateret" }: { source: string; updated?: string | null; verb?: string }) {
-  return (
-    <p className="lasso-source">
-      Kilde: {source}
-      {updated ? `, ${verb} ${formatDate(updated)}` : ""}
-    </p>
-  );
+/**
+ * Kildelinjen ("Kilde: Navn, opdateret DD.MM.ÅÅÅÅ") er UDGÅET (Jakob 29.09, G3): den vises ikke i
+ * noget element. Komponenten beholdes, så eksisterende kald stadig kompilerer, men tegner intet.
+ * Kilder vises højst som i Se alle-panelet (08.7): overskriften "Kilder" med selve kildelinket.
+ */
+export function SourceLine(_props: { source: string; updated?: string | null; verb?: string }) {
+  return null;
 }
 
 export type StateKind = "empty" | "loading" | "noaccess" | "error";

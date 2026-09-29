@@ -311,7 +311,7 @@ function Sparklines() {
         { label: "Stigende", values: [7.9, 15.5, 17.7, 17.5, 18.8], value: "18,8" },
         { label: "Krydser nul", values: [120, 64, -40, -210, -338], value: "−338", negative: true },
         { label: "Sparsøjler (ansatte pr. kvartal)", values: [14, 15, 15, 16, 17, 17, 18, 19], value: "19", kind: "bars" },
-        { label: "Under 3 datapunkter — ingen sparkline", values: [4.2, 4.7], value: "4,7" },
+        { label: "Under 3 datapunkter - ingen sparkline", values: [4.2, 4.7], value: "4,7" },
       ]}
     />
   );

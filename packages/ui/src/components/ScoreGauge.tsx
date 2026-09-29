@@ -184,7 +184,8 @@ export function ScoreGauge({
 }) {
   const heading = title ?? "Kreditvurdering";
   const [requested, setRequested] = useState(false);
-  const sourceLine = score?.source ? `Kilde: ${score.source}${score.updated ? `, opdateret ${formatDate(score.updated)}` : ""}` : undefined;
+  // G3 (Jakob 29.09): ingen kildelinje i elementerne, heller ikke som undertitel eller kort kilde i hovedet.
+  const sourceLine: string | undefined = undefined;
   if (!score) {
     return (
       <Section title={heading} span="half" className="lasso-gauge-section">
@@ -260,7 +261,7 @@ export function ScoreGauge({
     // 26d.7: fuld form. Kilde og dato til højre for titlen, vurderingsordet med kreditmaks under ved siden af tallet,
     // zonebjælke med 60/80-mærker, udvikling over 24 måneder og seneste ændringer.
     const creditMax = score.facts?.find((f) => f.label.startsWith("Kreditmaks"));
-    const src = score.source ? `${score.source}${score.updated ? `, ${formatDate(score.updated)}` : ""}` : undefined;
+    const src: string | undefined = undefined;
     return (
       <Section title={heading} action={src ? <span className="lasso-gauge__source">{src}</span> : undefined} span="half" className="lasso-gauge-section lasso-gauge-section--detail">
         <div className="lasso-gauge lasso-gauge--detail">
@@ -296,7 +297,7 @@ export function ScoreGauge({
   const prevScore = score.history && score.history.length >= 2 ? score.history[score.history.length - 2]!.score : undefined;
   const diff = prevScore === undefined ? undefined : Math.round(value) - Math.round(prevScore);
   const maxFact = score.facts?.find((f) => /kreditmaks/i.test(f.label));
-  const shortSource = score.source ? [score.source.replace(/^Kilde:\s*/i, ""), score.updated ? formatDate(score.updated) : undefined].filter(Boolean).join(", ") : undefined;
+  const shortSource: string | undefined = undefined;
   return (
     <Section
       title={heading}

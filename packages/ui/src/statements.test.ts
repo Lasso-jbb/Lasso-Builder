@@ -14,11 +14,9 @@ test("Virksomhedshoved: ansatte kun som tal, aldrig '— ansatte' når det ikke 
   // Livedata kan sende null for "ikke oplyst" (fx en enkeltmandsvirksomhed).
   const html = renderToStaticMarkup(createElement(CompanyHead, { company: { ...enk, employees: null as unknown as number } }));
   assert.ok(!html.includes("ansatte"), html);
-  assert.match(html, /CVR-1-43811983|ENK, stiftet 30\.01\.2023, Computerkonsulentbistand/);
-  // 08.1: sidens hoved viser ikke ansatte; den kompakte variant viser tallet (også 0).
+  // G9 (Jakob 29.09): ingen hovedvariant viser ansatte (eller andre fakta) under navnet.
   assert.ok(!renderToStaticMarkup(createElement(CompanyHead, { company: { ...enk, employees: 64 } })).includes("ansatte"));
-  assert.match(renderToStaticMarkup(createElement(CompanyHead, { company: { ...enk, employees: 64 }, variant: "compact" })), /64 ansatte/);
-  assert.match(renderToStaticMarkup(createElement(CompanyHead, { company: { ...enk, employees: 0 }, variant: "compact" })), /0 ansatte/);
+  assert.ok(!renderToStaticMarkup(createElement(CompanyHead, { company: { ...enk, employees: 64 }, variant: "compact" })).includes("ansatte"));
 });
 
 test("Regnskabstabeller uden regnskab: tom tilstand, der siger hvorfor (ikke en fejl)", () => {

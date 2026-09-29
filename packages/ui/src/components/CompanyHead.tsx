@@ -58,10 +58,10 @@ export interface CompanyHeadProps {
 }
 
 /**
- * Virksomhedshoved (katalog 08.1). Ingen kortramme, kun linjen under. Navn 28/600, status som ren
- * tekst 14/500 lige efter navnet (konkurs/likvidation i mørk rød med dato, ophørt navn i
- * text-secondary), binavn i muted efter status, nøglefakta som én linje adskilt med komma (kurator
- * ved konkurs). Handlinger som 32 px ikonknapper øverst til højre. "Se risiko"-linjen ved 50+.
+ * Virksomhedshoved (katalog 08.1). Ingen kortramme og ingen skillestreg under (08.8). Navn 28/600,
+ * status som ren tekst 14/500 lige efter navnet (konkurs/likvidation i mørk rød med dato, ophørt navn
+ * i text-secondary), binavn i muted efter status. Ingen faktalinje under navnet (G9). Handlinger som
+ * 32 px ikonknapper øverst til højre, kun med funktion (G1). "Se risiko"-linjen ved 50+.
  */
 export function CompanyHead({ company, error, variant = "full", actions, risk, onSeeRisk, onHistory, below }: CompanyHeadProps) {
   if (!company) {
@@ -84,14 +84,14 @@ export function CompanyHead({ company, error, variant = "full", actions, risk, o
     : actions;
   const status = companyStatusText(company);
   const alias = company.secondaryNames?.find((n) => n && n !== company.name);
-  const facts = companyFactsLine(company, variant);
+  // G9 (Jakob 29.09): navnet står alene i alle hovedvarianter; faktalinjen (CVR, form, stiftet,
+  // adresse, ansatte, branche) tegnes ikke længere. companyFactsLine bruges stadig af tekstkort o.l.
 
   if (variant === "line") {
     return (
       <header className={`lasso-headline lasso-span-full lasso-company--${kind}${ceased ? " is-ceased" : ""}`}>
         <h2 className="lasso-headline__name">{company.name}</h2>
         {status ? <span className={`lasso-company__status lasso-company__status--${tone}`}>{status}</span> : null}
-        {facts.length > 0 ? <span className="lasso-headline__facts">{facts.join(", ")}</span> : null}
       </header>
     );
   }
@@ -105,7 +105,6 @@ export function CompanyHead({ company, error, variant = "full", actions, risk, o
             <h2 className="lasso-headcompact__name">{company.name}</h2>
             {status && kind !== "active" ? <span className={`lasso-headcompact__status lasso-company__status--${tone}`}>{status}</span> : null}
           </div>
-          {facts.length > 0 ? <p className="lasso-headcompact__facts">{facts.join(", ")}</p> : null}
         </div>
         {hasHeadActions(compactActs) ? <HeadActions {...compactActs!} /> : null}
       </header>
@@ -122,7 +121,6 @@ export function CompanyHead({ company, error, variant = "full", actions, risk, o
         {alias ? <span className="lasso-company__alias">Binavn: {alias}</span> : null}
       </div>
       {showActions ? <HeadActions {...acts!} className="lasso-company__actions" /> : null}
-      {facts.length > 0 ? <p className="lasso-company__facts">{facts.join(", ")}</p> : null}
       {summary ? <HeadRiskLine summary={summary} onSee={onSeeRisk} /> : null}
       {below}
     </header>

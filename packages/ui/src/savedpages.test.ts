@@ -29,7 +29,7 @@ test("Gemte sider: over 8 rækker vises 8 + 'Se alle 10' (regel 9), undertitel m
   assert.match(html, /aria-expanded="false"[^>]*>Se alle 10</);
   assert.match(html, /class="lasso-section__title">Gemte sider</);
   assert.match(html, /class="lasso-section__subtitle">10 gemte sider</);
-  assert.match(html, /Kilde: Gemt i Lasso</);
+  assert.doesNotMatch(html, /Kilde:/, "G3: ingen kildelinje");
   // Ingen piller, badges eller initial-cirkler
   assert.doesNotMatch(html, /lasso-badge|avatar|initial/);
   // 8 rækker eller færre foldes ikke

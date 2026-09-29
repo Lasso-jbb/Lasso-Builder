@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { personCounts, personRisk, type HeadVariant, type PersonVM } from "@lasso/spec";
 import { DataState, stateForError } from "../primitives.js";
 import { HeadActions, hasHeadActions, type HeadActionsProps } from "./HeadActions.js";
-import { HeadRiskLine, personRiskSummary } from "./HeadRisk.js";
 
 /** Antal observationer til linket i navnelinjen (16.1): stråmand, PEP-match og sager, personen var med i. */
 export function personObservationCount(person: PersonVM): number {
@@ -58,13 +57,12 @@ export interface PersonHeadProps {
 }
 
 /**
- * Personhoved (katalog 16.1). Samme komponent som virksomhedshovedet (08): navn 28/600, ordet
- * "Person" som ren tekst lige efter navnet (i stedet for status), en faktalinje, der tæller roller og
- * selskaber adskilt med komma, og handlinger som 32 px ikonknapper øverst til højre. Observationer
- * opsummeres som én rolig linje med "Se risiko" (udfoldes i risikoblokken). Ingen initial-cirkel,
- * aldrig CPR eller fuld privatadresse; kun by.
+ * Personhoved (katalog 16.1, 25.3, 26d.1). Samme komponent som virksomhedshovedet (08): kun navnet
+ * 28/600 og handlingerne som 32 px ikonknapper øverst til højre (Jakob 29.09, G9). Faktalinjen,
+ * ordet "Person" og observationslinjen udgår; risikoen står i risikoblokken. `onSeeRisk` og
+ * `riskLine` modtages stadig (bagudkompatibelt), men tegner intet.
  */
-export function PersonHead({ person, error, variant = "full", actions, onSeeRisk, below, riskLine = false }: PersonHeadProps) {
+export function PersonHead({ person, error, variant = "full", actions, below }: PersonHeadProps) {
   if (!person) {
     const height = variant === "line" ? 40 : variant === "compact" ? 56 : 92;
     if (!error) return <div className="lasso-span-full"><DataState state="loading" lines={variant === "full" ? 2 : 1} height={height} /></div>;
@@ -74,14 +72,12 @@ export function PersonHead({ person, error, variant = "full", actions, onSeeRisk
       </div>
     );
   }
-  const facts = personFactsLine(person, variant);
-
+  // 16.1 (Jakob 29.09, G9): kun navnet. Intet "Person", ingen faktalinje, tællerlinje eller
+  // observationslinje under navnet, og ingen skillestreg under hovedet. Handlinger kun med funktion (G1).
   if (variant === "line") {
     return (
       <header className="lasso-headline lasso-span-full">
         <h2 className="lasso-headline__name">{person.name}</h2>
-        <span className="lasso-personhead__kind">Person</span>
-        <span className="lasso-headline__facts">{facts.join(", ")}</span>
       </header>
     );
   }
@@ -92,43 +88,20 @@ export function PersonHead({ person, error, variant = "full", actions, onSeeRisk
         <div className="lasso-headcompact__main">
           <div className="lasso-headcompact__title">
             <h2 className="lasso-headcompact__name">{person.name}</h2>
-            <span className="lasso-headcompact__status">Person</span>
           </div>
-          <p className="lasso-headcompact__facts">{facts.join(", ")}</p>
         </div>
         {hasHeadActions(compactActs) ? <HeadActions {...compactActs!} /> : null}
       </header>
     );
   }
 
-  const summary = personRiskSummary(person);
-  const obs = summary ? Math.max(1, personObservationCount(person)) : 0;
-  const obsText = `${obs} observation${obs === 1 ? "" : "er"}`;
   const showActions = hasHeadActions(actions);
   return (
     <header className={`lasso-personhead lasso-company lasso-span-full${showActions ? " lasso-company--actions" : ""}`}>
       <div className="lasso-company__title">
         <h2 className="lasso-company__name">{person.name}</h2>
-        <span className="lasso-personhead__kind">Person</span>
-        {obs && !riskLine ? (
-          onSeeRisk ? (
-            <button type="button" className="lasso-link lasso-personhead__obs" onClick={onSeeRisk} title={summary!.text}>
-              {obsText}
-            </button>
-          ) : (
-            <span className="lasso-personhead__obs" title={summary!.text}>
-              {obsText}
-            </span>
-          )
-        ) : null}
       </div>
-      {/* 26d.1 mobil: "Person, f. 1978" under navnet og tællerlinjen i stedet for faktalinjen. */}
-      <p className="lasso-personhead__mobsub">{["Person", person.birthYear ? `f. ${person.birthYear}` : null].filter(Boolean).join(", ")}</p>
       {showActions ? <HeadActions {...actions!} className="lasso-company__actions" /> : null}
-      <p className="lasso-company__facts lasso-personhead__facts">{facts.join(", ")}</p>
-      <p className="lasso-personhead__counts">{personCountsLine(person)}</p>
-      {/* 25.3: på den sammensatte personside står observationerne som linje under faktalinjen (som 24.4). */}
-      {riskLine && summary ? <HeadRiskLine summary={summary} onSee={onSeeRisk} /> : null}
       {below}
     </header>
   );

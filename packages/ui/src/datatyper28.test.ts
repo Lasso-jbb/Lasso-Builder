@@ -111,7 +111,7 @@ test("28.9: reelle ejere i tre særlige tilstande og 'via rolle' i den almindeli
   assert.doesNotMatch(exempt, /lasso-state/);
   const unid = r({ lassoId: "x", owners: [], special: { kind: "unidentified", reason: "Registreret i CVR." }, gaps: [{ reason: "dublet" }] });
   assert.match(unid, /lasso-bo__alert[^]*Registreret i CVR\.[^]*Indgår som observation i risikovurderingen/);
-  assert.match(unid, /Kilde: CVR/);
+  assert.doesNotMatch(unid, /Kilde:/, "G3: ingen kildelinje");
   assert.doesNotMatch(unid, /dublet/);
   const via = r({ lassoId: "x", owners: [{ name: "Bo", throughRole: true, share: "25 %" }] });
   assert.match(via, /Bo<span class="lasso-bo__via">, via rolle<\/span>/);

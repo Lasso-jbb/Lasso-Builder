@@ -750,7 +750,7 @@ export const entries: GalleryEntry[] = [
 
   /* ---------- 04 Sidehoved ---------- */
   { nr: "04.1", title: "Sidehoved (kort med titel og handlinger)", node: "495-0", note: "Tilstand 1: i ro, gemt, intet ændret.", render: () => <Head /> },
-  { nr: "04.2", title: "Sidehoved, ændret — ikke gemt", node: "49K-0", render: () => <Head dirty /> },
+  { nr: "04.2", title: "Sidehoved, ændret - ikke gemt", node: "49K-0", render: () => <Head dirty /> },
   { nr: "04.3", title: "Sidehoved, menu åben (omdøb)", node: "4A3-0", render: () => <Head menu minHeight={300} /> },
   { nr: "04.4", title: "Sidehoved, omdøber", node: "4AX-0", render: () => <Head renaming /> },
 

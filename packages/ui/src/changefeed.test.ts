@@ -61,7 +61,7 @@ test("Ændringsfeed (21): overskrift med antal, chips med antal, dagsgrupper, ul
   // Kilde + klokkeslæt i small muted, med komma (ingen midterprik)
   assert.match(html, /lasso-feed__meta">CVR, kl\. 09\.14</);
   assert.doesNotMatch(html, /·/);
-  assert.match(html, /Kilde: Eksempeldata, opdateret 25\.09\.2026/);
+  assert.doesNotMatch(html, /Kilde:/, "G3: ingen kildelinje");
   // Periodevælger
   assert.match(html, /aria-label="Vælg periode"/);
   assert.match(html, /<option value="7"[^>]*>Seneste 7 dage/);

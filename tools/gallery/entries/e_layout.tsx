@@ -1347,7 +1347,7 @@ const KEY_ROWS: [string, string][] = [
   ["Egenkapital", formatAmount(3_214_000)],
 ];
 
-/** 29.1: tilstandsrækken — valgt, hvile, hover (Regnskab), fokus (Ejerskab), deaktiveret (Risiko), "Flere". */
+/** 29.1: tilstandsrækken - valgt, hvile, hover (Regnskab), fokus (Ejerskab), deaktiveret (Risiko), "Flere". */
 function Level1() {
   const [v, setV] = useState("overblik");
   return (

@@ -142,13 +142,13 @@ const side = (width: number, title: string, text: string, edge: "left" | "right"
 export function ZoneSketch() {
   return (
     <div style={{ width: 660 }}>
-      <Block label="23.1, Trin 1, Sideskabelon (06) — én ramme, tre zoner">
+      <Block label="23.1, Trin 1, Sideskabelon (06) - én ramme, tre zoner">
         <div style={{ border: "1px solid var(--lasso-border)", borderRadius: "var(--lasso-radius-lg)", overflow: "hidden", background: "var(--lasso-surface)" }}>
           <div style={{ height: 26, display: "flex", alignItems: "center", padding: "0 12px", background: "var(--lasso-chrome)", borderBottom: "1px solid var(--lasso-chrome-border)" }}>
             <span style={sketchText()}>Fanebjælke, 56 px, åbne virksomheder og værktøjer (06)</span>
           </div>
           <div style={{ height: 32, display: "flex", alignItems: "center", padding: "0 12px", borderBottom: "1px solid var(--lasso-border)" }}>
-            <span style={sketchText()}>Modulbjælke, 56 px, hvert punkt er et modul + sidens handlinger til højre (06, niveau 1 i 29) — navnet står øverst i første kolonne (08)</span>
+            <span style={sketchText()}>Modulbjælke, 56 px, hvert punkt er et modul + sidens handlinger til højre (06, niveau 1 i 29) - navnet står øverst i første kolonne (08)</span>
           </div>
           <div style={{ display: "flex", height: 300 }}>
             {side(108, "Skinne", "236 px, sektioner / kriterier (06, 02)", "left")}
@@ -183,7 +183,7 @@ export const WidthTable = () => (
 );
 
 export const OrderSteps = () => (
-  <Block label="23.3, Trin 3, Rækkefølge på en side — oppefra og ned">
+  <Block label="23.3, Trin 3, Rækkefølge på en side - oppefra og ned">
     <div style={{ display: "flex", flexDirection: "column" }}>
       {ORDER_STEPS.map(([n, title, text], i) => (
         <div key={n} style={{ display: "flex", gap: 12, padding: "10px 0", borderBottom: i < ORDER_STEPS.length - 1 ? "1px solid var(--lasso-divider-subtle)" : undefined }}>
@@ -215,7 +215,7 @@ export const OrderSteps = () => (
 );
 
 export const DatatypeTable = () => (
-  <Block label="23.4, Trin 4, Datatype → element — slå op før du tegner noget nyt">
+  <Block label="23.4, Trin 4, Datatype → element - slå op før du tegner noget nyt">
     <DocTable cols={[{ label: "Datatype", width: 230 }, { label: "Element", tone: "ink" }, { label: "Artboard", width: 90, align: "right", tone: "accent" }]} rows={DATATYPE_ROWS} />
   </Block>
 );
@@ -291,7 +291,7 @@ export const MappingTable = () => (
 );
 
 export const CoverageTable = () => (
-  <Block label="23.8, Trin 8, Dækningstabel mod docs.lassox.com/api — hver datatype har et element på desktop og mobil">
+  <Block label="23.8, Trin 8, Dækningstabel mod docs.lassox.com/api - hver datatype har et element på desktop og mobil">
     <p style={{ ...body, margin: 0 }}>{COVERAGE_INTRO}</p>
     <DocTable
       cols={[{ label: "Datatype / endpoint", width: 250, tone: "ink" }, { label: "Element(er)" }, { label: "Desktop", width: 150 }, { label: "Mobil / tablet", width: 150 }, { label: "Dækket", width: 60 }]}
@@ -304,7 +304,7 @@ export const CoverageTable = () => (
 /* ---------- 30.12 Fra spørgsmål til layout ---------- */
 
 export const LookupTable = () => (
-  <Block label="30.12, Fra spørgsmål til layout — den tabel en AI slår op i, før den tegner. Findes spørgsmålet ikke, vælges nærmeste række, aldrig en ny form">
+  <Block label="30.12, Fra spørgsmål til layout - den tabel en AI slår op i, før den tegner. Findes spørgsmålet ikke, vælges nærmeste række, aldrig en ny form">
     <DocTable
       cols={[{ label: "Spørgsmål", width: 300, tone: "ink" }, { label: "Niveau", width: 90 }, { label: "Mønster", width: 130 }, { label: "Elementer i rækkefølge (artboard)" }, { label: "Link videre", width: 200, tone: "accent" }]}
       rows={LOOKUP_ROWS.map(([q, lvl, m, el, link]) => [q, lvl, m, el, <span style={{ fontWeight: 400 }}>{link}</span>])}

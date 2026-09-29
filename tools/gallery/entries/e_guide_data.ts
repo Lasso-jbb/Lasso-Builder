@@ -16,13 +16,13 @@ export const WIDTH_NOTE =
 
 /** 23.3: rækkefølge på en side. */
 export const ORDER_STEPS: readonly (readonly [string, string, string])[] = [
-  ["1", "Hvem — hoved", "Virksomhedshoved (08) eller personhoved (16) med status, nøglefakta og handlinger. Altid først, altid fuld bredde."],
-  ["2", "Pas på — risiko", 'Sammenfatning af observationer (17) hvis der er noget på 50+. Ellers udelades blokken helt — ingen tom "alt er fint"-boks over folden.'],
-  ["3", "Hvor stor — nøgletal", "3–5 nøgletalskort (09) med udvikling. Kreditscore (10) hører til her, ikke under risiko."],
-  ["4", "Hvordan går det — udvikling", "Én graf (13) ved siden af nøgle-værdi-listen (09). Flere grafer = hver sin fane, aldrig stablet på overblikket."],
-  ["5", "Hvem står bag — personer og ejere", "Rolleliste og ejerliste (11). Diagrammet (14) ligger i sin egen fane."],
-  ["6", "Hvad er der sket — historik og nyheder", "Tidslinje og nyhedsliste (12) nederst. Det er langt og foldes til 4–5 poster."],
-  ["P", "Panel — kontakt og genveje", 'Kontaktblok, genveje (08) og "Overvåger"-status (21). Panelet gentager aldrig tal fra midten.'],
+  ["1", "Hvem - hoved", "Virksomhedshoved (08) eller personhoved (16) med status, nøglefakta og handlinger. Altid først, altid fuld bredde."],
+  ["2", "Pas på - risiko", 'Sammenfatning af observationer (17) hvis der er noget på 50+. Ellers udelades blokken helt - ingen tom "alt er fint"-boks over folden.'],
+  ["3", "Hvor stor - nøgletal", "3–5 nøgletalskort (09) med udvikling. Kreditscore (10) hører til her, ikke under risiko."],
+  ["4", "Hvordan går det - udvikling", "Én graf (13) ved siden af nøgle-værdi-listen (09). Flere grafer = hver sin fane, aldrig stablet på overblikket."],
+  ["5", "Hvem står bag - personer og ejere", "Rolleliste og ejerliste (11). Diagrammet (14) ligger i sin egen fane."],
+  ["6", "Hvad er der sket - historik og nyheder", "Tidslinje og nyhedsliste (12) nederst. Det er langt og foldes til 4–5 poster."],
+  ["P", "Panel - kontakt og genveje", 'Kontaktblok, genveje (08) og "Overvåger"-status (21). Panelet gentager aldrig tal fra midten.'],
 ];
 
 /** 23.4: datatype → element → artboard. */
@@ -181,13 +181,13 @@ export const COVERAGE_SOURCE =
 
 /** 23.1: zonernes note. */
 export const ZONE_NOTE =
-  "Midten er det eneste der skifter indhold. Skinnen er navigation eller kriterier — aldrig data. Panelet er sammendrag og handlinger — aldrig primært indhold. Lister og søgeresultater (15) bruger skabelonen uden panel.";
+  "Midten er det eneste der skifter indhold. Skinnen er navigation eller kriterier - aldrig data. Panelet er sammendrag og handlinger - aldrig primært indhold. Lister og søgeresultater (15) bruger skabelonen uden panel.";
 
 /** 23.6: to kort. */
 export const WIDTH_PAPER_CARDS: readonly (readonly [string, string])[] = [
   [
     "Responsiv (26)",
-    "Tegn 1440 først, men kontrollér mod brudpunkterne i 26 før aflevering: 1024–1199 mister højre panel, 768–1023 får skinne-navigation og to kolonner (26f), under 768 stables alt i én kolonne med topbar + bundnav (26a). Hvert element har én mobilform — den står i mappingtabellen i trin 7 og er tegnet i 26a–26e. Touch-mål: 44 px for rækker og ikonknapper, 48 px for felter og primære knapper på mobil; 36 px på tablet.",
+    "Tegn 1440 først, men kontrollér mod brudpunkterne i 26 før aflevering: 1024–1199 mister højre panel, 768–1023 får skinne-navigation og to kolonner (26f), under 768 stables alt i én kolonne med topbar + bundnav (26a). Hvert element har én mobilform - den står i mappingtabellen i trin 7 og er tegnet i 26a–26e. Touch-mål: 44 px for rækker og ikonknapper, 48 px for felter og primære knapper på mobil; 36 px på tablet.",
   ],
   [
     "Eksport og print (27)",

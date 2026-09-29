@@ -168,7 +168,7 @@ test("tekstkortet viser reelle ejere, tekstsektioner, historik og nyheder, når 
   assert.match(card, /Ejer\s+Anne Eksempel/);
 });
 
-test("resumeet skrives som en sektion med kildelinje, uden AI-mærke", () => {
+test("resumeet skrives som en sektion uden kildelinje (G3) og uden AI-mærke", () => {
   const spec = {
     version: 2 as const,
     kind: "custom" as const,
@@ -179,7 +179,7 @@ test("resumeet skrives som en sektion med kildelinje, uden AI-mærke", () => {
   };
   const card = textCard(parseViewSpec(spec), emptyDataset("demo"))!;
   assert.ok(card.includes("Firmaet vokser pænt."));
-  assert.ok(card.includes("Kilde: Lasso"));
+  assert.ok(!card.includes("Kilde:"));
   assert.ok(!/skrevet af ai/i.test(card));
 });
 

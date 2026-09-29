@@ -97,7 +97,7 @@ const headings = (html: string) => [...html.matchAll(/lasso-textsection__heading
 test("Virksomhedsprofil (overblik): CVR-tekster uden branche plus konklusion, resultat og likviditet, én kildelinje", () => {
   const html = renderToStaticMarkup(createElement(LassoTextSections, { sections: SECTIONS }));
   assert.deepEqual(headings(html), ["Formål", "Tegningsregler", "Regnskabsanalyse: konklusion", "Resultat", "Likviditet"]);
-  assert.equal(count(html, "Kilde: Lasso regnskabsanalyse"), 1);
+  assert.equal(count(html, "Kilde: Lasso regnskabsanalyse"), 0);
   assert.doesNotMatch(html, /NACE 412000/);
   // 12.1: lange afsnit foldes hver for sig, men der er ét "Vis hele" for hele sektionen.
   assert.equal(count(html, ">Vis hele<"), 1);
@@ -160,8 +160,8 @@ test("Kontaktblok: adressen udelades, når hovedet viser den; et verificeret CVR
   assert.doesNotMatch(html, /Prøvevej 1/);
   assert.equal(count(html, "86 12 34 56"), 1);
   assert.match(html, /20 30 40 50/);
-  assert.equal(count(html, "Kilde:"), 1);
-  assert.match(text(html), /Kilde: CVR og Lasso live number, opdateret 20\.09\.2026/);
+  assert.equal(count(html, "Kilde:"), 0);
+  assert.doesNotMatch(text(html), /Kilde:/, "G3: ingen kildelinje");
   // Uden hoved (alene i en render_view-spec) står adressen.
   assert.match(renderToStaticMarkup(createElement(LassoContact, { contact })), /Prøvevej 1/);
 });
@@ -198,13 +198,13 @@ test("LassoView: hver oplysning om identiteten står én gang på overblik, kont
     assert.equal(count(t, "99000001"), 1, `${focus}: CVR-nummeret`);
     assert.equal(count(t, "Opførelse af bygninger"), 1, `${focus}: branchen`);
     assert.equal(count(t, "01.04.1998"), 1, `${focus}: stiftelsesdatoen`);
-    // 08.1: ansatte står ikke i hovedet, men i listen.
-    assert.ok(!labels(html).some((l) => ["Stiftet", "Virksomhedsform", "Branche", "Adresse"].includes(l!)), focus);
+    // G9 (Jakob 29.09): hovedet viser kun navnet; identiteten står i nøgle-værdi-listen, adressen én gang.
+    assert.doesNotMatch(html, /lasso-company__facts/, focus);
   }
   // Overblikket: telefonen står i kontaktblokken, ikke også i listen, og analysens kilde én gang.
   const overblik = renderToStaticMarkup(createElement(LassoView, { spec: composeCompany(ID, ds, { followUps: false }), dataset: ds, host: {}, onAction: () => {} }));
   assert.equal(count(text(overblik), "eksempelbyg.dk"), 2, "e-mail og web, hver én gang");
-  assert.equal(count(overblik, "Kilde: Lasso regnskabsanalyse"), 1);
+  assert.equal(count(overblik, "Kilde: Lasso regnskabsanalyse"), 0);
   // 24/25/26g: i portalens sideskabelon (embedded) ingen rammeheader og ingen handlingslinje nederst.
   const spec = composeCompany(ID, ds, { followUps: false });
   const framed = renderToStaticMarkup(createElement(LassoView, { spec, dataset: ds, host: { save: true }, onAction: () => {} }));

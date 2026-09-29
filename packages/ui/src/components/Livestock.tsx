@@ -51,7 +51,7 @@ export function Livestock({ livestock, error }: { livestock?: LivestockVM; error
   const speciesCount = new Set(livestock.herds.map((h) => h.species).filter(Boolean)).size;
 
   return (
-    <Section title={title} subtitle="Husdyr pr. type og veterinære hændelser — kun for landbrug" span="full">
+    <Section title={title} subtitle="Husdyr pr. type og veterinære hændelser - kun for landbrug" span="full">
       <div className="lasso-livestock">
         <div className="lasso-livestock__herds">
           <div className="lasso-livestock__head">

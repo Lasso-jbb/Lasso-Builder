@@ -224,7 +224,7 @@ test("02a.13/02a.8/02a.11 TagInput: Vælg N mere…, dropdown-chevron, søgeikon
   assert.match(render(h(TagInput, { values: ["A"], dropdown: true, morePlaceholder: "Tilføj flere…", onChange: noop })), /placeholder="Tilføj flere…"[^]*lasso-tagfield__chevron/);
   const empty = render(h(TagInput, { values: [], searchIcon: true, onChange: noop }));
   assert.match(empty, /lasso-tagfield__icon/);
-  assert.match(empty, /placeholder="Søg, eller indsæt en liste — fx 2100, 8000, 5000"/);
+  assert.match(empty, /placeholder="Søg, eller indsæt en liste - fx 2100, 8000, 5000"/);
 });
 
 test("02b.3 ToggleField og 26a.8 FormPage", () => {

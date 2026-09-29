@@ -10,7 +10,6 @@ import {
   PERSON_FOCUS_LABELS,
   personFactOptions,
   riskTimeline,
-  sameAddress,
   savedPagesKey,
   searchKey,
   personSearchKey,
@@ -84,6 +83,7 @@ import { AuditorIndependence } from "./components/AuditorIndependence.js";
 import { ChangeFeed } from "./components/ChangeFeed.js";
 import { SavedPages } from "./components/SavedPages.js";
 import { ShellIcon } from "./components/ShellIcons.js";
+import { Icon } from "./components/Icon.js";
 import { ReportA4 } from "./components/ReportA4.js";
 import { personRolesCsv, specToCsv } from "./csv.js";
 import { Badge, Skeleton, stateForError } from "./primitives.js";
@@ -343,10 +343,9 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       );
     }
     case "LassoContact": {
-      // Adressen står i hovedet; kontaktblokken viser den kun, når den er en anden (fx fra hjemmesiden).
+      // G9 (Jakob 29.09): hovedet viser kun navnet, så kontaktblokken viser altid adressen.
       const contact = empty.contact[c.company];
-      const headOnPage = props.spec.components.some((x) => x.type === "LassoCompanyHead" && x.company === c.company);
-      const omitAddress = headOnPage && sameAddress(contact?.address, empty.companies[c.company]?.address);
+      const omitAddress = false;
       return (
         <LassoContact
           key={key}
@@ -988,7 +987,7 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
     more: headActions
       ? [
           ...(shareUrl ? [{ id: "link", label: "Kopiér link", icon: <ShellIcon name="copy" size={16} />, onSelect: () => void copy(shareUrl) }] : []),
-          ...(host.refresh ? [{ id: "refresh", label: "Opdatér", onSelect: () => act({ kind: "refresh" }) }] : []),
+          // G5 (Jakob 29.09): intet "Opdatér"; data kommer i realtid.
           ...(host.fullscreen ? [{ id: "fullscreen", label: "Fuld skærm", onSelect: () => act({ kind: "fullscreen" }) }] : []),
         ]
       : [],
@@ -1081,12 +1080,12 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
                 )}
           </main>
         )}
-        {spec.answer && (spec.answer.source || spec.answer.next || spec.answer.logo) ? (
-          // 30.1–30.3: svarets bundlinje, kildelinje (evt. med dæmpet navnelogo) til venstre og ét koral link videre til højre.
+        {spec.answer && (spec.answer.next || spec.answer.logo) ? (
+          // 30.1–30.3: svarets bundlinje, dæmpet navnelogo til venstre og ét koral link videre til højre.
+          // G3 (Jakob 29.09): kildeteksten (answer.source) vises ikke længere.
           <footer className="lasso-answerfoot">
             <span className="lasso-answerfoot__source">
               {spec.answer.logo ? <LassoWordmark className="lasso-answerfoot__mark" /> : null}
-              {spec.answer.source ? <span>{spec.answer.source}</span> : null}
             </span>
             {spec.answer.next ? (
               <button type="button" className="lasso-answerfoot__next" onClick={() => act({ kind: "prompt", prompt: spec.answer!.next!.prompt })}>
@@ -1128,11 +1127,6 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
               ⤢<span className="lasso-btn__label--optional"> Fuld skærm</span>
             </button>
           ) : null}
-          {host.refresh && !headActions ? (
-            <button className="lasso-btn lasso-btn--ghost" onClick={() => act({ kind: "refresh" })}>
-              Opdatér
-            </button>
-          ) : null}
           <span className="lasso-actionbar__spacer" />
           {notice ? <span className="lasso-small lasso-muted" role="status">{notice}</span> : null}
           {host.export && csv && !headActions ? (
@@ -1150,13 +1144,8 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
               Del link
             </button>
           ) : null}
-          {/* Én primær knap pr. område, yderst til højre (katalog 01). "Gem visning" = delbart link (save_view);
-              Gem/Gemt i hovedet er gem-lagets personlige liste (save_page), så ordene holdes adskilt. */}
-          {host.save ? (
-            <button className="lasso-btn lasso-btn--primary" onClick={() => setSaving(true)} disabled={saving}>
-              {shareUrl ? "Gem visning igen" : "Gem visning"}
-            </button>
-          ) : null}
+          {/* G5 (Jakob 29.09): ingen "Gem visning" på visningen; et element kan ikke gemmes, og data kommer i
+              realtid. Gem hører kun til sidens hoved (gem-laget, save_page). Delbart link laves af save_view. */}
         </footer>
         )}
 
@@ -1169,8 +1158,9 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
               <button className="lasso-btn lasso-btn--primary" onClick={() => window.print()}>
                 Print
               </button>
-              <button className="lasso-btn" onClick={() => setReportOpen(false)}>
-                Luk
+              {/* G8: luk er altid et ×-ikon med aria-label "Luk". */}
+              <button type="button" className="lasso-iconbtn lasso-iconbtn--sq lasso-iconbtn--38" onClick={() => setReportOpen(false)} aria-label="Luk" title="Luk">
+                <Icon name="close" size={18} />
               </button>
             </div>
             <ReportA4 company={reportCompany} dataset={dataset} />

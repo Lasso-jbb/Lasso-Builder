@@ -455,7 +455,7 @@ export interface TagInputProps {
  * Tags i felt (05.5, 30 px) med søgbare forslag. Accepterer en indsat liste adskilt med komma,
  * semikolon eller linjeskift. Backspace i tomt felt fjerner seneste tag.
  */
-export function TagInput({ values, onChange, suggestions, placeholder = "Søg, eller indsæt en liste — fx 2100, 8000, 5000", invalid, max, strict, label, defaultText = "", morePlaceholder = "Søg eller indsæt flere…", dropdown = false, searchIcon = false }: TagInputProps) {
+export function TagInput({ values, onChange, suggestions, placeholder = "Søg, eller indsæt en liste - fx 2100, 8000, 5000", invalid, max, strict, label, defaultText = "", morePlaceholder = "Søg eller indsæt flere…", dropdown = false, searchIcon = false }: TagInputProps) {
   const [text, setText] = useState(defaultText);
   const [focus, setFocus] = useState(false);
   const [hi, setHi] = useState(0);

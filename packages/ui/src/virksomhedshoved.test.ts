@@ -37,7 +37,8 @@ test("08.1: handlinger som 32 px ikonknapper i rækkefølgen Overvåg, Gem, Eksp
   assert.deepEqual(order, ["Overvåg", "Gem på din liste", "Virksomhedsrapport (PDF)", "Flere handlinger"]);
   assert.match(out, /class="lasso-headbtn lasso-headbtn--monitor" aria-pressed="false"/);
   assert.doesNotMatch(out, /lasso-btn--primary/);
-  assert.match(out, /CVR 99000001, A\/S, stiftet 01\.04\.1998, Prøvevej 1, 8600 Silkeborg, Opførelse af bygninger/);
+  // G9 (Jakob 29.09): navnet står alene; ingen faktalinje og ingen skillestreg under hovedet.
+  assert.doesNotMatch(out, /lasso-company__facts|CVR 99000001/);
   assert.doesNotMatch(out, /·/);
 });
 
@@ -48,11 +49,11 @@ test("08.1: Overvåger er samme knap i valgt tilstand (aria-pressed, udfyldt iko
   assert.deepEqual([...out.matchAll(/<span>(Eksportér|Gemt|Overvåger)<\/span>/g)].map((m) => m[1]), ["Eksportér", "Gemt", "Overvåger"]);
 });
 
-test("08.1: konkurs med dato i mørk rød, binavn i muted og kurator i faktalinjen", () => {
+test("08.1: konkurs med dato i mørk rød og binavn i muted; ingen faktalinje (G9)", () => {
   const out = html(h(CompanyHead, { company: energi }));
   assert.match(out, /lasso-company__status--warning">Under konkurs, siden 03\.06\.2026</);
   assert.match(out, /lasso-company__alias">Binavn: Eksempel Vind</);
-  assert.match(out, /kurator: Advokat Eksempel &amp; Co\./);
+  assert.doesNotMatch(out, /kurator: Advokat Eksempel/);
 });
 
 test("08.1: ophørt har ingen Overvåg; handlingen er 'Se historik'", () => {
@@ -65,11 +66,12 @@ test("08.1: ophørt har ingen Overvåg; handlingen er 'Se historik'", () => {
 test("08.1/30: kompakt 56 px og linje 40 px", () => {
   const compact = html(h(CompanyHead, { company: byg, variant: "compact", actions: { monitor: { monitoring: false, onClick: noop }, save: { saved: false, onClick: noop } } }));
   assert.match(compact, /<header class="lasso-headcompact/);
-  assert.match(compact, /CVR 99000001, Silkeborg, 64 ansatte</);
+  assert.doesNotMatch(compact, /CVR 99000001|64 ansatte/, "G9: kun navnet");
   assert.match(compact, /lasso-headbtn--monitor/);
   assert.doesNotMatch(compact, /lasso-headbtn--save/, "kompakt: kun Overvåg");
   const line = html(h(CompanyHead, { company: byg, variant: "line" }));
   assert.match(line, /<header class="lasso-headline/);
+  assert.doesNotMatch(line, /lasso-headline__facts/, "30.1/G9: kun navnet");
   assert.doesNotMatch(line, /lasso-headactions/);
   const ceased = html(h(CompanyHead, { company: cafe, variant: "compact", onHistory: noop }));
   assert.match(ceased, /is-ceased/);
@@ -122,12 +124,11 @@ const bo: PersonVM = {
   strawman: { level: "possible", detail: "Direktør i 3 selskaber uden ejerskab (eksempel)." },
 };
 
-test("16.1: 'Person' som ren tekst, ingen initial-cirkel, handlinger og én rolig observationslinje", () => {
-  const out = html(h(PersonHead, { person: bo, actions: { monitor: { monitoring: false, onClick: noop }, save: { saved: false, onClick: noop } }, onSeeRisk: noop }));
-  assert.match(out, /lasso-personhead__kind">Person</);
+test("16.1: kun navnet og handlingerne; intet 'Person', ingen faktalinje, tællerlinje eller observationslinje", () => {
+  const out = html(h(PersonHead, { person: bo, actions: { monitor: { monitoring: false, onClick: noop }, save: { saved: false, onClick: noop } }, onSeeRisk: noop, riskLine: true }));
+  assert.match(out, /lasso-company__name">Bo Eksempel</);
   assert.match(out, /lasso-headbtn--monitor/);
-  // 16.1: observationer som koral link lige efter "Person"; faktalinjen begynder med fødselsåret
-  assert.match(out, /lasso-personhead__kind">Person<\/span><button[^>]*lasso-personhead__obs[^>]*title="1 mulig vigtig observation: stråmandsindikator\. Ingen PEP-match\."[^>]*>1 observation</);
+  assert.doesNotMatch(out, /lasso-personhead__kind|lasso-personhead__obs|lasso-personhead__facts|lasso-personhead__counts|lasso-personhead__mobsub|Silkeborg/);
   assert.doesNotMatch(out, /lasso-headrisk/);
   assert.doesNotMatch(out, /initial|avatar/);
 });

@@ -220,12 +220,12 @@ const DATA_RULES: string[] = [
   "Virksomheds- og personnavne står alene i lister, tabeller, hoveder, netværk, kontaktpersoner og diagrammer. Ingen ikonkasse og ingen rund initial-cirkel (\"JB\", \"?\") foran navnet. Person vs. selskab skelnes med tekst (rolle, \"Person\") og i diagrammet med form (pille / kasse); fratrådt og ukendt skrives som tekst, aldrig som stiplet cirkel.",
   "Nyhedskilder vises med sidens favicon som 16 px mærke (radius 3) foran kildenavnet. Ingen bogstavskasser.",
   "Mulig fejl i data: 14 px udråbstegn-ikon i warning-farve efter tallet, forklaring i tooltip ved mouseover. Ingen mærke, pille eller stiplet understregning.",
-  "Separator i nøglefakta-, metadata- og kildelinjer er komma: \"CVR 34580820, A/S, København K\". Midterprik og lodret streg bruges aldrig — hverken i produktet eller i katalogets egne noter, overlinjer og specifikationer (\"13/18, 400\").",
+  "Separator i nøglefakta-, metadata- og kildelinjer er komma: \"CVR 34580820, A/S, København K\". Midterprik og lodret streg bruges aldrig - hverken i produktet eller i katalogets egne noter, overlinjer og specifikationer (\"13/18, 400\").",
   "Reglerne gælder uændret på tablet og mobil. Mobil kompakterer med label over værdi, aldrig med piller eller ikoner som erstatning for tekst.",
   "Faner viser kun navnet: ingen antal, badges eller prikker på sektionsfaner, segmentkontroller, sidepanelets sektioner eller bundnavigationen. Antal hører til i sektionens overskrift eller i teksten.",
   "Hvid flade overalt, også på tablet og mobil. Sektioner adskilles med 1 px linjer og luft, aldrig hvide kort på grå baggrund.",
   "Flere værdier end formen kan vise: vis de første 3 og \"Se N …\", som åbner et panel fra højre over siden (08 Kontaktpersoner). Gælder kontaktpersoner, telefonnumre, e-mails, P-enheder, bibrancher og ejere.",
-  "Én grå til al hjælpetekst: metatekst, kildelinjer, feltforklaringer og overlinjer bruger samme token (--color-text-muted = --color-text-secondary, #5B6068). Den lysere grå (#8A9099) er kun til ikoner og dekoration, aldrig til tekst der skal læses — på desktop, tablet og mobil.",
+  "Én grå til al hjælpetekst: metatekst, kildelinjer, feltforklaringer og overlinjer bruger samme token (--color-text-muted = --color-text-secondary, #5B6068). Den lysere grå (#8A9099) er kun til ikoner og dekoration, aldrig til tekst der skal læses - på desktop, tablet og mobil.",
   "Aktive elementer har aldrig mørkt fyld. Aktiv side i paginering = ink-tekst i vægt 600 med tynd understregning; aktive segmenter, chips og trin markeres med tekstvægt, tynd kant eller koral-soft, aldrig en sort kasse.",
   "Logo: kun de to mastere i 01b (ikon og navnelogo) i ink, klonet, aldrig tegnet som tekst eller farvet kasse. Logoet er diskret og står aldrig i topbjælken ved siden af entitetens navn: navnelogo 14 px dæmpet (55 %) som bundlinje nederst i sideskinnen på desktop og nederst på mobilskærme sammen med kildelinjen \"Data fra CVR …\", ikon 24 px i tabletskinnen, 16 px som Lasso News-kilde, 28/14/12 px på rapportforside og i sidehoved/-fod (27).",
   "Nyheder: én kilde pr. nyhed (favicon 16 px, navn, tid), ingen billeder, ingen tone-mærker, ingen samlede historier eller favicon-stakke. Virksomhedsnavnet i uddraget står i fed (ink, 600), aldrig i koral eller på farvet baggrund.",
@@ -454,7 +454,7 @@ function TagsDemo() {
           <span className="lasso-small lasso-muted">Markøren over krydset</span>
         </div>
         <p className="lasso-field__help" style={{ margin: 0 }}>
-          Krydset er gråt i hvile — ellers står et felt med fem tags og skriger. Det bliver koralt når markøren rammer det, så man ved hvad man er ved at fjerne. Rød er forbeholdt det der ikke kan fortrydes.
+          Krydset er gråt i hvile - ellers står et felt med fem tags og skriger. Det bliver koralt når markøren rammer det, så man ved hvad man er ved at fjerne. Rød er forbeholdt det der ikke kan fortrydes.
         </p>
       </div>
     </div>
@@ -507,7 +507,7 @@ const PAPER_TREE: IndustryTreeNode[] = [
 function IndustryDemo() {
   const [v, setV] = useState<string[]>(["620100", "620200", "620300"]);
   return (
-    <FieldRow label="Branchekode" layout="form" help="Ét felt, ingen løs knap. Feltet viser de valgte som tekst — to navne og “og N flere” — og hele feltet åbner træ-vælgeren. Tomt: “Vælg brancher”.">
+    <FieldRow label="Branchekode" layout="form" help="Ét felt, ingen løs knap. Feltet viser de valgte som tekst - to navne og “og N flere” - og hele feltet åbner træ-vælgeren. Tomt: “Vælg brancher”.">
       <OperatorSelect value="in" operators={["in", "not_in"]} onChange={noop} />
       <IndustryField tree={PAPER_TREE} values={v} onChange={setV} />
     </FieldRow>
@@ -637,7 +637,7 @@ function DropdownOpen() {
 function SegmentDemo() {
   const [v, setV] = useState<boolean | null>(null);
   return (
-    <FieldRow label="Har ejere" layout="form" help="Dev3 bruger denne. Variant 10 (to chips) er stadig anbefalingen — den fjerner en knap der ikke gør noget. Dokumenteret her, så valget er bevidst.">
+    <FieldRow label="Har ejere" layout="form" help="Dev3 bruger denne. Variant 10 (to chips) er stadig anbefalingen - den fjerner en knap der ikke gør noget. Dokumenteret her, så valget er bevidst.">
       <SegmentYesNo value={v} onChange={setV} />
     </FieldRow>
   );
@@ -678,7 +678,7 @@ function DateOpen() {
 function ChipsCountDemo() {
   const [v, setV] = useState<string[]>(["dir", "head"]);
   return (
-    <FieldRow label="Rolle" layout="form" help="Tom = alle roller. Valgt chip får fuld koral kant, ikke kun blød flade — den skal kunne skelnes selv når fem står ved siden af hinanden.">
+    <FieldRow label="Rolle" layout="form" help="Tom = alle roller. Valgt chip får fuld koral kant, ikke kun blød flade - den skal kunne skelnes selv når fem står ved siden af hinanden.">
       <ChoiceChips options={ROLES} values={v} onChange={setV} label="Rolle" />
     </FieldRow>
   );
@@ -742,11 +742,11 @@ const RULES = [
   "Har feltet en operator, står den altid først og bestemmer resten af rækken. Vælger man “er mellem”, folder et andet felt sig ud. Tekst: indeholder, begynder med, er lig med, er ikke. Tal: er lig med, er mindst, er højst, er større end, er mindre end, er mellem, er ikke.",
   "Alle felter er 44 px høje med 8 px radius og 1 px kant i border-farven. Tags inde i felter er 30 px med 6 px radius, neutrale og med kryds.",
   "Feltet man redigerer får kun en tynd 1 px koral kant (primary-border). Ingen blød ring eller skygge udenom. Rammen om en hel feltblok bruges aldrig.",
-  "Påkrævet uden værdi: rød stjerne efter feltnavnet. Fejl: rød hjælpetekst under feltet — kanten forbliver neutral.",
-  "Koral markerer valg, fokus og den ene primære handling — aldrig dekoration.",
+  "Påkrævet uden værdi: rød stjerne efter feltnavnet. Fejl: rød hjælpetekst under feltet - kanten forbliver neutral.",
+  "Koral markerer valg, fokus og den ene primære handling - aldrig dekoration.",
   "Under seks faste værdier: chips (09). Ja/nej: segmenteret kontrol eller kontakt. Ellers: søgbar liste (11) eller dropdown.",
   "En valgt chip er koral lys med flueben. Et tag inde i et felt er neutralt med kryds, fordi alt i feltet allerede er valgt.",
-  "Sammenklappet viser et felt sin værdi som rolig grå tekst til højre for navnet. Flere værdier: de to første nævnes, resten tælles — “Normal / aktiv, Ophørt og 3 flere”.",
+  "Sammenklappet viser et felt sin værdi som rolig grå tekst til højre for navnet. Flere værdier: de to første nævnes, resten tælles - “Normal / aktiv, Ophørt og 3 flere”.",
   "Et felt med værdi har “Ryd” yderst til højre i rækken. Der er intet kryds på rækken.",
   "Handlingslinjen under et felt (effekt til venstre, Annuller + primær knap til højre) vises kun, når en ændring venter på at blive bekræftet. Knappen hedder det man gør: “Tilføj”, “Opdater”, “Gem”.",
   "Man kan aldrig have to ubekræftede ændringer på én gang. Går man videre fra et felt med ubekræftet indhold, spørger en dialog: gå videre uden, annullér, gem og gå videre.",

@@ -39,7 +39,7 @@ test("fyldt: bogstav + ord, kreditmaksimum, lokal score, forrige vurdering, PDF,
   assert.match(t, /ForrigeC[^]*Moderat risiko[^]*▼ 1 trin, mindre risiko[^]*Nu, 15\.04\.2026B[^]*Lav risiko/);
   assert.match(html, /<button type="button" class="lasso-link lasso-credit__action">Hent kreditrapport \(PDF\)<\/button>/);
   assert.match(t, /Ny beregning hos Creditsafe koster en kredit og tager 5–45 sekunder; vurderingen gemmes 24 timer\./);
-  assert.match(t, /Kilde: Creditsafe via Lasso, opdateret 25\.09\.2026/);
+  assert.doesNotMatch(t, /Kilde:/, "G3: ingen kildelinje");
   // Egen skala: ingen 0–100-måler eller observationernes alvorsord.
   assert.doesNotMatch(html, /lasso-gauge|af 100|lasso-sev-/);
   assert.doesNotMatch(t, /·/, "regel 6: ingen midterprik");

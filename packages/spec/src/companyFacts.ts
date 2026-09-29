@@ -70,6 +70,7 @@ export function companyFacts(company: CompanyVM, ownership: OwnershipVM | undefi
   rows.push({ label: "Regnskabsperiode", value: accountingPeriod(lastYear) });
   if (!options.hideIdentity) {
     rows.push(
+      { label: "CVR-nummer", value: company.cvr },
       { label: "Stiftet", value: company.founded ? formatDate(company.founded) : undefined },
       { label: "Virksomhedsform", value: company.form },
       { label: "Branche", value: company.industryText, code: company.industryText ? company.industryCode : undefined },
@@ -104,7 +105,9 @@ export function companyFacts(company: CompanyVM, ownership: OwnershipVM | undefi
 export function companyFactOptions(page: readonly ViewComponent[], company: string): CompanyFactOptions {
   const has = (type: ViewComponent["type"]) => page.some((c) => c.type === type && "company" in c && c.company === company);
   // 11.3: ejerlisten viser ikke længere revisoren, så nøgle-værdi-listen beholder den.
-  return { hideIdentity: has("LassoCompanyHead"), hideContact: has("LassoContact"), hideAuditor: false };
+  // G9 (Jakob 29.09): hovedet viser kun navnet, så identiteten (CVR, stiftet, form, branche, ansatte)
+  // står i nøgle-værdi-listen, også når hovedet er på siden.
+  return { hideIdentity: false, hideContact: has("LassoContact"), hideAuditor: false };
 }
 
 /** Samme adresse (vej og postnummer, uden forskel på store/små bogstaver og mellemrum). */

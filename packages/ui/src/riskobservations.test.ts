@@ -38,7 +38,7 @@ test("17.2 / 26d.6: sammenfatningskort på desktop, filterchips og kort på mobi
   assert.doesNotMatch(mob.slice(0, mob.indexOf("Kilde:") > 0 ? mob.indexOf("Kilde:") : undefined), /lasso-obs-card--neutral/);
   assert.match(mob, /lasso-obs-card--høj[^]*lasso-sr">Høj: <[^]*lasso-obs-card__meta">Regnskab, 02\.06\.2026</);
   assert.doesNotMatch(html, /·/);
-  assert.match(html, /Kilde: Lasso \(CVR, regnskab\), opdateret 25\.09\.2026/);
+  assert.doesNotMatch(html, /Kilde:/, "G3: ingen kildelinje");
 });
 
 test("17.3: tom liste er positiv information med dato, stiplet ramme og ingen fejl", () => {

@@ -863,7 +863,7 @@ function summaryCard(spec: ViewSpec): string | null {
   const card = new Card();
   card.section(s.title ?? "Resumé");
   card.text(s.text);
-  card.text(`Kilde: ${s.source}${s.updated ? `, opdateret ${formatDate(s.updated)}` : ""}`);
+  // G3 (Jakob 29.09): ingen kildelinje, heller ikke i tekstkortet.
   return card.toString();
 }
 

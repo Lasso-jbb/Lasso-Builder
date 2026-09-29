@@ -127,7 +127,8 @@ test("Primære knapper: hvid tekst på koral vinder over '.lasso-root button { c
   const inherit = css.indexOf(".lasso-root button { font: inherit; color: inherit; }");
   const fix = css.indexOf(".lasso-root .lasso-btn--primary, .lasso-root .lasso-btn--primary:hover { color: var(--lasso-on-accent); }");
   assert.ok(inherit >= 0 && fix > inherit, "reglen findes med samme eller højere specificitet efter arvereglen");
-  // Dialogens primære og "Gem visning" bruger lasso-btn--primary og rammes derfor af reglen
+  // Dialogens primære bruger lasso-btn--primary og rammes derfor af reglen
   assert.match(readFileSync(new URL("./components/Dialog.tsx", import.meta.url), "utf8"), /"lasso-btn--primary"/);
-  assert.match(readFileSync(new URL("./LassoView.tsx", import.meta.url), "utf8"), /className="lasso-btn lasso-btn--primary"[^\n]*\n\s*\{shareUrl \? "Gem visning igen" : "Gem visning"\}/);
+  // G5 (Jakob 29.09): "Gem visning" står ikke længere i handlingsbjælken.
+  assert.doesNotMatch(readFileSync(new URL("./LassoView.tsx", import.meta.url), "utf8"), /"Gem visning igen"/);
 });
