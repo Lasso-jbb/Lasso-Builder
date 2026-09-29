@@ -7,6 +7,7 @@ import {
   type ChangeEntryVM,
   type ChangeFeedVM,
   foldChangeEntries,
+  type CompanyEventsVM,
   type CompanyRowVM,
   type CompanyVM,
   type ContactPersonVM,
@@ -34,12 +35,15 @@ import {
   type TimelineVM,
   hasReportingDuty,
   isPersonId,
+  statusKind,
 } from "@lasso/spec";
+import { publicationsFromYears } from "../lasso/eventAdapters.js";
 import { CREDIT_NONE_REASON } from "../lasso/creditAdapters.js";
 import { applyCriteria, sortRows } from "./criteria-eval.js";
 import { demoOwnershipGraph, demoPersonOwnershipGraph } from "./demoGraph.js";
 import { demoFindPersons, demoPerson, demoPersonIds, demoPersonNetwork, demoPersonNews } from "./demoPeople.js";
-import { NotFoundError, type ChangeFeedOptions, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
+import { NotFoundError, searchPersonsTable, type ActivityHeatmapOptions, type ChangeFeedOptions, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
+import { demoHeatmap, demoIndustry, demoMap, demoScore, demoScoreHistory } from "./demoCharts.js";
 
 /**
  * Opdigtede demodata, så UI og MCP-flow kan bygges og testes uden adgang til
@@ -63,28 +67,28 @@ const RAW: Omit<DemoCompany, "lassoId" | "statusKind">[] = [
   { cvr: "99000001", name: "Eksempel Byg A/S", status: "Aktiv", form: "A/S", industryCode: "412000", industryText: "Opførelse af bygninger", address: { street: "Prøvevej 1", zip: "8600", city: "Silkeborg", municipality: "Silkeborg", region: "Midtjylland" }, founded: "1998-04-01", employees: 64, base: 38_000_000, growth: 0.07,
     phone: "86123456", email: "kontakt@eksempelbyg.dk", website: "https://eksempelbyg.dk",
     people: [P("Anne Eksempel", "Direktør", "2015-01-01"), P("Bo Eksempel", "Bestyrelsesformand", "2012-05-01"), P("Carla Prøve", "Bestyrelsesmedlem", "2024-03-15"), P("Dan Prøve", "Bestyrelsesmedlem", "2016-06-01", "2024-03-15")],
-    owners: [{ name: "Eksempel Holding ApS", share: "66,67-89,99 %", kind: "company", lassoId: "CVR-1-99000010" }, { name: "Anne Eksempel", share: "10-14,99 %", kind: "person" }], auditor: "Eksempel Revision Midt ApS" },
+    owners: [{ name: "Eksempel Holding ApS", share: "66,67–89,99 %", kind: "company", lassoId: "CVR-1-99000010" }, { name: "Anne Eksempel", share: "10–14,99 %", kind: "person" }], auditor: "Eksempel Revision Midt ApS" },
   { cvr: "99000002", name: "Eksempel Revision Midt ApS", status: "Aktiv", form: "ApS", industryCode: "692000", industryText: "Revision og bogføring", address: { street: "Tællegade 12", zip: "8000", city: "Aarhus C", municipality: "Aarhus", region: "Midtjylland" }, founded: "2006-09-01", employees: 22, base: 14_500_000, growth: 0.05,
     people: [P("Erik Prøve", "Direktør", "2006-09-01"), P("Fie Eksempel", "Bestyrelsesformand", "2019-01-01")],
-    owners: [{ name: "Erik Prøve", share: "50-66,66 %", kind: "person" }, { name: "Fie Eksempel", share: "33,34-49,99 %", kind: "person" }], auditor: "Eksempel Revision Nord ApS" },
+    owners: [{ name: "Erik Prøve", share: "50–66,66 %", kind: "person" }, { name: "Fie Eksempel", share: "33,34–49,99 %", kind: "person" }], auditor: "Eksempel Revision Nord ApS" },
   { cvr: "99000003", name: "Eksempel Revision Nord ApS", status: "Aktiv", form: "ApS", industryCode: "692000", industryText: "Revision og bogføring", address: { street: "Bilagsvej 4", zip: "9000", city: "Aalborg", municipality: "Aalborg", region: "Nordjylland" }, founded: "2011-02-01", employees: 17, base: 11_200_000, growth: 0.03,
     people: [P("Gitte Prøve", "Direktør", "2011-02-01")], owners: [{ name: "Gitte Prøve", share: "100 %", kind: "person" }], auditor: "Eksempel Revision Midt ApS" },
   { cvr: "99000004", name: "Eksempel Transport A/S", status: "Aktiv", form: "A/S", industryCode: "494100", industryText: "Vejgodstransport", address: { street: "Lastvej 20", zip: "7100", city: "Vejle", municipality: "Vejle", region: "Syddanmark" }, founded: "1987-11-01", employees: 118, base: 52_000_000, growth: -0.02,
     people: [P("Hans Eksempel", "Direktør", "2020-08-01"), P("Ida Prøve", "Direktør", "2009-01-01", "2020-08-01"), P("Jens Eksempel", "Bestyrelsesformand", "2018-04-01")],
     owners: [{ name: "Eksempel Holding ApS", share: "100 %", kind: "company", lassoId: "CVR-1-99000010" }], auditor: "Eksempel Revision Midt ApS" },
   { cvr: "99000005", name: "Eksempel Software ApS", status: "Aktiv", form: "ApS", industryCode: "620100", industryText: "Computerprogrammering", address: { street: "Kodevej 3", zip: "8200", city: "Aarhus N", municipality: "Aarhus", region: "Midtjylland" }, founded: "2017-03-01", employees: 41, base: 21_000_000, growth: 0.22,
-    people: [P("Kim Prøve", "Direktør", "2017-03-01"), P("Lene Eksempel", "Bestyrelsesmedlem", "2023-10-01")], owners: [{ name: "Kim Prøve", share: "50-66,66 %", kind: "person" }, { name: "Lene Eksempel", share: "20-24,99 %", kind: "person" }], auditor: "Eksempel Revision Midt ApS" },
+    people: [P("Kim Prøve", "Direktør", "2017-03-01"), P("Lene Eksempel", "Bestyrelsesmedlem", "2023-10-01")], owners: [{ name: "Kim Prøve", share: "50–66,66 %", kind: "person" }, { name: "Lene Eksempel", share: "20–24,99 %", kind: "person" }], auditor: "Eksempel Revision Midt ApS" },
   { cvr: "99000006", name: "Eksempel Tømrer ApS", status: "Aktiv", form: "ApS", industryCode: "433200", industryText: "Tømrer- og bygningssnedkervirksomhed", address: { street: "Høvlvej 8", zip: "8800", city: "Viborg", municipality: "Viborg", region: "Midtjylland" }, founded: "2009-06-01", employees: 12, base: 6_800_000, growth: 0.04,
     people: [P("Mads Eksempel", "Direktør", "2009-06-01")], owners: [{ name: "Mads Eksempel", share: "100 %", kind: "person" }], auditor: "Eksempel Revision Midt ApS" },
   { cvr: "99000007", name: "Eksempel Rådgivning A/S", status: "Aktiv", form: "A/S", industryCode: "702200", industryText: "Virksomhedsrådgivning", address: { street: "Strategistræde 2", zip: "1150", city: "København K", municipality: "København", region: "Hovedstaden" }, founded: "2002-01-01", employees: 35, base: 29_000_000, growth: 0.09,
-    people: [P("Nina Prøve", "Direktør", "2021-01-01"), P("Ole Eksempel", "Bestyrelsesformand", "2002-01-01")], owners: [{ name: "Ole Eksempel", share: "90-100 %", kind: "person" }], auditor: "Eksempel Revision Nord ApS" },
+    people: [P("Nina Prøve", "Direktør", "2021-01-01"), P("Ole Eksempel", "Bestyrelsesformand", "2002-01-01")], owners: [{ name: "Ole Eksempel", share: "90–100 %", kind: "person" }], auditor: "Eksempel Revision Nord ApS" },
   { cvr: "99000008", name: "Eksempel Maskinfabrik A/S", status: "Aktiv", form: "A/S", industryCode: "282900", industryText: "Fremstilling af maskiner", address: { street: "Smedevej 15", zip: "7400", city: "Herning", municipality: "Herning", region: "Midtjylland" }, founded: "1974-05-01", employees: 210, base: 96_000_000, growth: 0.01,
-    people: [P("Per Eksempel", "Direktør", "2016-01-01"), P("Rikke Prøve", "Bestyrelsesformand", "2024-06-01"), P("Søren Eksempel", "Bestyrelsesformand", "2010-01-01", "2024-06-01")], owners: [{ name: "Eksempel Holding ApS", share: "50-66,66 %", kind: "company", lassoId: "CVR-1-99000010" }], auditor: "Eksempel Revision Nord ApS" },
-  { cvr: "99000009", name: "Eksempel Café I/S", status: "Ophørt", form: "I/S", industryCode: "563000", industryText: "Caféer og barer", address: { street: "Torvet 1", zip: "8660", city: "Skanderborg", municipality: "Skanderborg", region: "Midtjylland" }, founded: "2015-05-01", employees: 0, base: 1_200_000, growth: -0.3,
-    people: [P("Tina Prøve", "Interessent", "2015-05-01", "2023-12-31")], owners: [{ name: "Tina Prøve", share: "50-66,66 %", kind: "person" }], auditor: "Ingen" },
+    people: [P("Per Eksempel", "Direktør", "2016-01-01"), P("Rikke Prøve", "Bestyrelsesformand", "2024-06-01"), P("Søren Eksempel", "Bestyrelsesformand", "2010-01-01", "2024-06-01")], owners: [{ name: "Eksempel Holding ApS", share: "50–66,66 %", kind: "company", lassoId: "CVR-1-99000010" }], auditor: "Eksempel Revision Nord ApS" },
+  { cvr: "99000009", name: "Eksempel Café I/S", status: "Ophørt", statusDate: "2024-09-30", form: "I/S", industryCode: "563000", industryText: "Caféer og barer", address: { street: "Torvet 1", zip: "8660", city: "Skanderborg", municipality: "Skanderborg", region: "Midtjylland" }, founded: "2015-05-01", employees: 0, base: 1_200_000, growth: -0.3,
+    people: [P("Tina Prøve", "Interessent", "2015-05-01", "2023-12-31")], owners: [{ name: "Tina Prøve", share: "50–66,66 %", kind: "person" }], auditor: "Ingen" },
   { cvr: "99000010", name: "Eksempel Holding ApS", status: "Aktiv", form: "ApS", industryCode: "642020", industryText: "Ikke-finansielle holdingselskaber", address: { street: "Prøvevej 1", zip: "8600", city: "Silkeborg", municipality: "Silkeborg", region: "Midtjylland" }, founded: "2005-01-01", employees: 1, base: 3_000_000, growth: 0.1,
     people: [P("Bo Eksempel", "Direktør", "2005-01-01")], owners: [{ name: "Bo Eksempel", share: "100 %", kind: "person" }], auditor: "Eksempel Revision Midt ApS" },
-  { cvr: "99000011", name: "Eksempel Energi A/S", status: "Under konkurs", form: "A/S", industryCode: "351100", industryText: "Produktion af elektricitet", address: { street: "Vindvej 9", zip: "6700", city: "Esbjerg", municipality: "Esbjerg", region: "Syddanmark" }, founded: "2012-08-01", employees: 8, base: 9_000_000, growth: -0.18,
+  { cvr: "99000011", name: "Eksempel Energi A/S", status: "Under konkurs", statusDate: "2026-06-03", curator: "Advokat Eksempel & Co.", secondaryNames: ["Eksempel Vind"], form: "A/S", industryCode: "351100", industryText: "Produktion af elektricitet", address: { street: "Vindvej 9", zip: "6700", city: "Esbjerg", municipality: "Esbjerg", region: "Syddanmark" }, founded: "2012-08-01", employees: 8, base: 9_000_000, growth: -0.18,
     people: [P("Uffe Prøve", "Direktør", "2012-08-01"), P("Bo Eksempel", "Bestyrelsesmedlem", "2014-03-01", "2018-06-30")], owners: [{ name: "Uffe Prøve", share: "100 %", kind: "person" }], auditor: "Eksempel Revision Nord ApS" },
   { cvr: "99000012", name: "Eksempel Ejendomme ApS", status: "Aktiv", form: "ApS", industryCode: "682040", industryText: "Udlejning af erhvervsejendomme", address: { street: "Murervej 5", zip: "8700", city: "Horsens", municipality: "Horsens", region: "Midtjylland" }, founded: "2013-10-01", employees: 3, base: 7_500_000, growth: 0.06,
     people: [P("Vera Eksempel", "Direktør", "2013-10-01"), P("Bo Eksempel", "Bestyrelsesmedlem", "2013-10-01")], owners: [{ name: "Eksempel Holding ApS", share: "100 %", kind: "company", lassoId: "CVR-1-99000010" }], auditor: "Eksempel Revision Midt ApS" },
@@ -106,7 +110,8 @@ function beneficialOwnersFor(c: DemoCompany): BeneficialOwnershipVM {
       const holder = COMPANIES.find((x) => x.lassoId === o.lassoId);
       const person = holder?.owners.find((p) => p.kind === "person");
       if (!person) return [];
-      return [{ name: person.name, lassoId: person.lassoId, chain: `via ${o.name}, ${o.share ?? "100 %"}`, share: o.share }];
+      // Katalog 11.4: kæden som "via …, andel → andel" (personens andel i holdingselskabet → holdingselskabets andel her).
+      return [{ name: person.name, lassoId: person.lassoId, chain: `via ${o.name}, ${person.share ?? "100 %"} → ${o.share ?? "100 %"}`, share: o.share }];
     }
     return [{ name: o.name, lassoId: o.lassoId, share: o.share }];
   });
@@ -169,7 +174,18 @@ function textSectionsFor(c: DemoCompany): TextSectionsVM {
   ];
   // Katalog 12/19: eksempel på regnskabsanalysen (POST /modules/reportanalysis) i samme form som
   // live-svaret: ét afsnit pr. felt, med navne som segmenter med Lasso-ID. Kun for to eksempler.
-  if (c.lassoId === "CVR-1-99000001" || c.lassoId === "CVR-1-99000010") sections.push(...analysisFor(c));
+  if (c.lassoId === "CVR-1-99000001" || c.lassoId === "CVR-1-99000010") {
+    sections.push(...analysisFor(c));
+    return {
+      lassoId: c.lassoId,
+      title: "Virksomhedsprofil",
+      sections,
+      analysisGenerated: "2026-09-12T08:00:00Z",
+      analysisBasis: "2021–2025",
+      analysisHeadline: "Vækst i toplinjen, men omkostningerne løber hurtigere (eksempeltekst)",
+      analysisSources: ["Årsrapport 2025, Erhvervsstyrelsen", "Årsrapport 2024, Erhvervsstyrelsen", "Årsrapport 2023, Erhvervsstyrelsen", "CVR, ledelse og ejere"],
+    };
+  }
   return { lassoId: c.lassoId, title: "Virksomhedsprofil", sections };
 }
 
@@ -185,6 +201,12 @@ function timelineFor(c: DemoCompany): TimelineVM {
       (x): x is string => Boolean(x),
     );
     events.push({ date: `${y.year}-04-15`, title: `Årsrapport ${y.year} offentliggjort`, detail: bits.join(", ") || undefined, category: "Regnskab" });
+  }
+  // Katalog 12.3: ændringer vises som "fra → til" (gammel adresse gennemstreget, kapital før og efter).
+  const a = c.address;
+  if (c.status === "Aktiv" && c.founded && c.founded < "2020-01-01" && a) {
+    events.push({ date: "2024-06-01", title: "Kapitalforhøjelse (eksempel)", from: "1,0 mio. kr.", to: "1,2 mio. kr.", category: "Kapital" });
+    events.push({ date: "2023-09-01", title: "Adresse ændret (eksempel)", from: `Gammelvej 2, ${a.zip} ${a.city}`, to: `${a.street}, ${a.zip} ${a.city}`, category: "Stamdata" });
   }
   events.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   return { lassoId: c.lassoId, events };
@@ -223,12 +245,8 @@ function newsFor(c: DemoCompany, limit: number): NewsVM {
   return { lassoId: c.lassoId, items };
 }
 
-function statusKindOf(s: string | undefined): CompanyVM["statusKind"] {
-  if (!s) return undefined;
-  if (/konkurs|likvid/i.test(s)) return "warning";
-  if (/ophørt/i.test(s)) return "inactive";
-  return "active";
-}
+/** Katalog 28.1: samme klassificering som live-data (fx "Tvangsopløst" og "Under rekonstruktion" er advarsler, aldrig aktive). */
+const statusKindOf = statusKind;
 
 const COMPANIES: DemoCompany[] = RAW.map((c) => ({ ...c, lassoId: `CVR-1-${c.cvr}`, statusKind: statusKindOf(c.status) }));
 const BY_ID = new Map(COMPANIES.map((c) => [c.lassoId, c]));
@@ -237,9 +255,21 @@ const PERSON_IDS = demoPersonIds(COMPANIES);
 
 const YEARS = [2020, 2021, 2022, 2023, 2024, 2025];
 
+/** Katalog 09.1: branchetal og kvalitetsflag til nøgletalskortene, kun for første demovirksomhed. */
+const FINANCIAL_EXTRAS: Record<string, Pick<FinancialsVM, "benchmark" | "quality">> = {
+  "CVR-1-99000001": {
+    benchmark: { label: "branche", change: { bruttofortjeneste: 3.1, omsaetning: 2.4, resultat: -1.8, egenkapital: 4.2 } },
+    quality: { ansatte: "Ansatte i regnskabet afviger fra CVR's tal. Regnskabet tæller koncernen (eksempel)." },
+  },
+};
+
 function financialsFor(c: DemoCompany): FinancialsVM {
   // Ingen regnskaber: personligt ejede virksomheder (ENK, PMV) indsender ikke årsregnskab.
   if (c.base <= 0) return { lassoId: c.lassoId, currency: "DKK", years: [] };
+  return { ...financialYearsFor(c), ...FINANCIAL_EXTRAS[c.lassoId] };
+}
+
+function financialYearsFor(c: DemoCompany): FinancialsVM {
   // Deterministisk "støj", så graferne ikke er helt glatte.
   const seed = Number(c.cvr!.slice(-2));
   return {
@@ -273,7 +303,8 @@ function financialsFor(c: DemoCompany): FinancialsVM {
         soliditetsgrad: pct(y.equity, assetsTotal),
         // Overskudsgrad = EBIT / omsætning; EBIT her = EBITDA minus opdigtede afskrivninger (3 % af bruttofortjenesten).
         overskudsgrad: pct(Math.round((y.grossProfit ?? 0) * (1 - 0.62 - 0.045 - 0.03)), y.revenue),
-        likviditetsgrad: null,
+        // 13.10: et eksempel-tal, så målerne også viser den røde tilstand (klart under branchen).
+        likviditetsgrad: Math.round((48 + (seed % 5) * 16 + (y.year - YEARS[0]!) * 1.5) * 10) / 10,
       };
     }),
   };
@@ -296,26 +327,39 @@ function financialStatementsFor(c: DemoCompany): FinancialStatementsVM {
   const balanceSheet: FinancialStatementsVM["balanceSheet"] = [];
   const cashFlow: FinancialStatementsVM["cashFlow"] = [];
   let cashCursor = Math.round((f.years[0]?.liabilities ?? 2_000_000) * 0.18);
-  f.years.forEach((y) => {
+  f.years.forEach((y, idx) => {
     const gp = y.grossProfit ?? 0;
-    const staffCosts = -Math.round(gp * 0.62);
-    const otherOperatingCosts = -Math.round(gp * 0.045);
+    // Andelene svinger lidt fra år til år, så underposterne ikke har samme ændring som hovedtallet (19.2).
+    const staffCosts = -Math.round(gp * (0.62 + (((idx + seed) % 3) - 1) * 0.012));
+    // Katalog 19.2: kvalitetsflaget (> 10× fra året før) på "Andre driftsomkostninger" for Eksempel Byg A/S.
+    const flagged = c.cvr === "99000001" && idx === f.years.length - 2;
+    const otherOperatingCosts = -Math.round(gp * (flagged ? 0.003 : 0.045 + ((idx + seed) % 2) * 0.006));
     const ebitda = gp + staffCosts + otherOperatingCosts;
     const depreciation = -Math.round(Math.abs(ebitda) * 0.3 + 150 + (seed % 7) * 20);
     const profit = y.profit ?? 0;
     const tax = profit >= 0 ? -Math.round(profit * 0.22) : Math.round(-profit * 0.29);
     const profitBeforeTax = profit - tax;
     const financialItemsNet = profitBeforeTax - (ebitda + depreciation);
+    // 19.1: alle poster i resultatopgørelsen (eksempeldata): vareforbrug = omsætning − bruttofortjeneste,
+    // EBIT = EBITDA + af- og nedskrivninger, finansielle poster opdelt i indtægter og omkostninger.
+    const externalCosts = typeof y.revenue === "number" ? gp - y.revenue : null;
+    const ebit = ebitda + depreciation;
+    const financialIncome = Math.round(Math.abs(financialItemsNet) * 0.18 + 40_000 + (seed % 4) * 15_000);
+    const financialExpenses = financialItemsNet - financialIncome;
     incomeStatement.push({
       year: y.year,
       periodStart: y.periodStart,
       periodEnd: y.periodEnd,
       revenue: y.revenue,
+      externalCosts,
       grossProfit: gp,
       staffCosts,
       otherOperatingCosts,
       ebitda,
       depreciation,
+      ebit,
+      financialIncome,
+      financialExpenses,
       financialItemsNet,
       profitBeforeTax,
       tax,
@@ -325,11 +369,14 @@ function financialStatementsFor(c: DemoCompany): FinancialStatementsVM {
     const equityTotal = y.equity ?? 0;
     const liabilitiesTotal = y.liabilities ?? 0;
     const assetsTotal = equityTotal + liabilitiesTotal;
-    const longTermLiabilities = Math.round(liabilitiesTotal * 0.45);
-    const shortTermLiabilities = liabilitiesTotal - longTermLiabilities;
+    // 19.1: hensatte forpligtelser står for sig; "gæld i alt" er lang- plus kortfristet gæld.
+    const provisions = Math.round(liabilitiesTotal * 0.04);
+    const longTermLiabilities = Math.round(liabilitiesTotal * 0.42);
+    const shortTermLiabilities = liabilitiesTotal - provisions - longTermLiabilities;
     const fixedAssetsTotal = Math.round(assetsTotal * 0.36);
-    const intangibleAssets = Math.round(fixedAssetsTotal * 0.65);
-    const tangibleAssets = fixedAssetsTotal - intangibleAssets;
+    const intangibleAssets = Math.round(fixedAssetsTotal * 0.6);
+    const financialFixedAssets = Math.round(fixedAssetsTotal * 0.08);
+    const tangibleAssets = fixedAssetsTotal - intangibleAssets - financialFixedAssets;
     const currentAssetsTotal = assetsTotal - fixedAssetsTotal;
     const shareCapital = Math.min(equityTotal, Math.round(assetsTotal * 0.06) || 1000);
     const retainedEarnings = equityTotal - shareCapital;
@@ -367,15 +414,18 @@ function financialStatementsFor(c: DemoCompany): FinancialStatementsVM {
     } else {
       cash = Math.round(currentAssetsTotal * 0.28);
     }
-    const tradeReceivables = Math.max(0, Math.round((currentAssetsTotal - cash) * 0.6));
-    const otherReceivables = Math.max(0, currentAssetsTotal - cash - tradeReceivables);
+    const inventories = Math.max(0, Math.round((currentAssetsTotal - cash) * 0.12));
+    const tradeReceivables = Math.max(0, Math.round((currentAssetsTotal - cash) * 0.52));
+    const otherReceivables = Math.max(0, currentAssetsTotal - cash - inventories - tradeReceivables);
 
     balanceSheet.push({
       year: y.year,
       periodEnd: y.periodEnd,
       intangibleAssets,
       tangibleAssets,
+      financialFixedAssets,
       fixedAssetsTotal,
+      inventories,
       tradeReceivables,
       otherReceivables,
       cash,
@@ -384,13 +434,22 @@ function financialStatementsFor(c: DemoCompany): FinancialStatementsVM {
       shareCapital,
       retainedEarnings,
       equityTotal,
+      provisions,
       longTermLiabilities,
       shortTermLiabilities,
-      liabilitiesTotal,
+      liabilitiesTotal: longTermLiabilities + shortTermLiabilities,
       liabilitiesAndEquityTotal: assetsTotal,
     });
   });
-  return { lassoId: c.lassoId, currency: "DKK", incomeStatement, balanceSheet, cashFlow };
+  const opinion = c.auditor && c.auditor !== "Ingen" ? `Revideret af ${c.auditor}, udgivet 15.04.2026` : undefined;
+  const note = "Underposter og tidligere år er eksempeldata.";
+  const base: FinancialStatementsVM = { lassoId: c.lassoId, currency: "DKK", incomeStatement, balanceSheet, cashFlow, scope: "Selskab", periods: ["year"], note, pdfUrl: `https://regnskaber.virk.dk/eksempel/${c.cvr}.pdf`, ...(opinion ? { auditorOpinion: opinion } : {}) };
+  // Katalog 19.1: eksempelvirksomheden aflægger også koncernregnskab (selskabets tal × 1,35, eksempeldata).
+  if (c.cvr === "99000001") {
+    const k = <T extends object>(rows: T[]): T[] => rows.map((r) => Object.fromEntries(Object.entries(r).map(([key, v]) => [key, typeof v === "number" && key !== "year" ? Math.round(v * 1.35) : v])) as T);
+    base.alternate = { currency: "DKK", incomeStatement: k(incomeStatement), balanceSheet: k(balanceSheet), cashFlow: k(cashFlow), scope: "Koncern", periods: ["year"], ...(opinion ? { auditorOpinion: opinion } : {}) };
+  }
+  return base;
 }
 
 function toRow(c: DemoCompany): CompanyRowVM {
@@ -411,11 +470,33 @@ function toRow(c: DemoCompany): CompanyRowVM {
     grossProfit: last?.grossProfit ?? null,
     profit: last?.profit ?? null,
     trend: f.years.slice(-5).map((y) => y.grossProfit ?? 0),
+    score: demoRowScore(c),
   };
+}
+
+/** Eksempelscore 0–100 (samme tal som scoremåleren); ophørte og konkursramte har ingen. */
+function demoRowScore(c: DemoCompany): number | null {
+  if (c.status !== "Aktiv" || !c.cvr) return null;
+  const seed = Number(c.cvr.slice(-2));
+  return Math.max(5, Math.min(95, 22 + ((seed * 13) % 70)));
 }
 
 function strip(c: DemoCompany): CompanyVM {
   const { base: _b, growth: _g, people: _p, owners: _o, auditor: _a, ...vm } = c;
+  // Katalog 28.7/26h.9: eksempelvirksomheden har bibrancher og registreret kapital (eksempeldata).
+  if (c.cvr === "99000001") {
+    return {
+      ...vm,
+      altIndustries: [{ code: "433200", text: "Tømrer- og bygningssnedkervirksomhed" }, { code: "711200", text: "Rådgivende ingeniørvirksomhed" }],
+      registeredCapital: { amount: 2_000_000, currency: "DKK", classes: ["A-aktier 1.500.000 DKK, 10 stemmer pr. aktie", "B-aktier 500.000 DKK, 1 stemme pr. aktie"] },
+      accountingClass: "B",
+      firstPeriod: { start: "1998-04-01", end: "1999-12-31" },
+      statutesChanged: "2024-03-12",
+      advertisingProtected: false,
+      listed: false,
+    };
+  }
+  if (c.auditor === "Ingen" && c.form !== "Enkeltmandsvirksomhed" && c.form !== "I/S") return { ...vm, auditExempt: true, auditExemptSince: 2024 };
   return vm;
 }
 
@@ -445,6 +526,13 @@ function observationsFor(c: DemoCompany, f: FinancialsVM): ObservationsVM {
   // Personligt ejede virksomheder har hverken regnskabs- eller revisionspligt: ingen revisor er ikke et fund der.
   if (c.auditor === "Ingen" && hasReportingDuty(c.form)) {
     rows.push({ id: "revisor-fravalgt", severity: 50, title: "Revisor fravalgt", detail: "Selskabet har ikke registreret en revisor.", source: "CVR" });
+  }
+  // Katalog 26d.6: eksempelvirksomheden viser Paper-eksemplets tre alvorsgrader (høj, middel, info).
+  if (c.cvr === "99000001") {
+    rows.push(
+      { id: "ejer-egenkapital", severity: 100, title: "Negativ egenkapital hos ejer", detail: "Eksempel Holding ApS har negativ egenkapital i seneste regnskab.", source: "Regnskab", date: "2026-06-02" },
+      { id: "delt-adresse", severity: 50, title: "Adresse deles med 12 virksomheder", detail: "Eksempelvej 1 er registreret som hovedadresse for 12 aktive selskaber.", source: "CVR", date: "2026-02-14" },
+    );
   }
   const ended = c.people.find((p) => p.to);
   if (ended) rows.push({ id: "afgang", severity: 25, title: `${ended.name} er fratrådt som ${ended.role.toLowerCase()}`, source: "Ledelse", date: ended.to });
@@ -497,6 +585,22 @@ function auditorIndependenceFor(c: DemoCompany): AuditorIndependenceVM {
     checkedAt: "2026-09-25",
     relations,
     unavailableReason: relations.length ? undefined : "Der er ikke fundet kendte relationer mellem revisor, kunden og personer i demodata.",
+    basis: "Baseret på CVR-roller og ejerskab, 3 led",
+    opinion: "Revisionspåtegning, uden forbehold (eksempeldata)",
+    report: "Årsrapport 2025",
+    checks: relations.length
+      ? [
+          { label: "Ingen fælles ledelse med revisor", ok: true },
+          { label: "Ingen ejerrelation til revisor", ok: true },
+          { label: "Samme revisor i 9 år", sub: "Rotation anbefales efter 7 år for PIE-selskaber", ok: false },
+          { label: "Revisor har ikke revideret ejerselskaber", ok: true },
+        ]
+      : undefined,
+    // Katalog 26e.8: revisorhistorik som proportional bjælke (eksempeldata).
+    history: [
+      { name: "Eksempel Revision", from: "2012-01-01", to: "2016-12-31" },
+      { name: c.auditor ?? "Nuværende revisor", from: "2017-01-01" },
+    ],
   };
 }
 
@@ -521,7 +625,7 @@ function creditRatingFor(c: DemoCompany): CreditRatingVM {
     case "99000009":
       return { lassoId: c.lassoId, cvr: c.cvr, source: CREDIT_SOURCE, state: "unavailable", reason: CREDIT_NONE_REASON };
     case "99000001":
-      return { ...base, state: "ok", current: a("A", 4_500_000, 91, "Very Low"), previous: a("B", 3_750_000, 68, "Low"), latestChange: "2026-04-15", pdfUrl: pdf(c.cvr) };
+      return { ...base, state: "ok", current: a("A", 4_500_000, 91, "Very Low"), previous: a("B", 3_750_000, 68, "Low"), latestChange: "2026-04-15", pdfUrl: pdf(c.cvr), creditBalance: 12 };
     case "99000004":
       return { ...base, state: "ok", current: a("D", 150_000, 21, "High"), previous: a("C", 400_000, 38, "Moderate"), latestChange: "2026-08-02", pdfUrl: pdf(c.cvr) };
     case "99000011":
@@ -543,8 +647,11 @@ function get(lassoId: string): DemoCompany {
 /** Katalog 20: Produktionsenheder ud over hovedenheden. Kun sat for virksomheder, hvor eksemplet skal vise flere P-numre. */
 const PRODUCTION_UNITS: Record<string, ProductionUnitsVM["units"]> = {
   "CVR-1-99000001": [
-    { pNumber: "1000000020", name: "Eksempel Byg A/S", address: { street: "Prøvevej 1", zip: "8600", city: "Silkeborg", municipality: "Silkeborg", region: "Midtjylland" }, isMain: true, industryCode: "412000", industryText: "Opførelse af bygninger", employees: 64, status: "Aktiv", statusKind: "active", created: "1998-04-01" },
-    { pNumber: "1000000021", name: "Eksempel Byg, Aarhus (eksempel)", address: { street: "Eksempelvej 12", zip: "8000", city: "Aarhus C", municipality: "Aarhus", region: "Midtjylland" }, industryCode: "412000", industryText: "Opførelse af bygninger", employees: 8, status: "Aktiv", statusKind: "active", created: "2015-03-01" },
+    { pNumber: "1000000020", name: "Eksempel Byg A/S", address: { street: "Prøvevej 1", zip: "8600", city: "Silkeborg", municipality: "Silkeborg", region: "Midtjylland" }, isMain: true, industryCode: "412000", industryText: "Opførelse af bygninger", employees: 64, status: "Aktiv", statusKind: "active", created: "1998-04-01", phone: "86 12 34 56", email: "kontakt@eksempelbyg.dk" },
+    { pNumber: "1000000021", name: "Eksempel Byg, Aarhus (eksempel)", address: { street: "Eksempelvej 12", zip: "8000", city: "Aarhus C", municipality: "Aarhus", region: "Midtjylland" }, industryCode: "412000", industryText: "Opførelse af bygninger", employees: 8, status: "Aktiv", statusKind: "active", created: "2015-03-01", phone: "86 00 00 00" },
+    // 13.12: to enheder mere i Aarhus, så kortet viser en koral klynge med antal.
+    { pNumber: "1000000023", name: "Eksempel Byg, Aarhus Nord (eksempel)", address: { street: "Prøvegade 3", zip: "8000", city: "Aarhus C", municipality: "Aarhus", region: "Midtjylland" }, industryCode: "412000", industryText: "Opførelse af bygninger", employees: 5, status: "Aktiv", statusKind: "active", created: "2019-08-01" },
+    { pNumber: "1000000024", name: "Eksempel Byg, Værksted Aarhus (eksempel)", address: { street: "Testvej 21", zip: "8000", city: "Aarhus C", municipality: "Aarhus", region: "Midtjylland" }, industryCode: "433200", industryText: "Tømrer- og bygningssnedkervirksomhed", employees: 3, status: "Aktiv", statusKind: "active", created: "2021-02-01" },
     { pNumber: "1000000022", name: "Eksempel Byg, Lager (eksempel)", address: { street: "Eksempelvej 4", zip: "8600", city: "Silkeborg", municipality: "Silkeborg", region: "Midtjylland" }, industryCode: "521000", industryText: "Oplagring", employees: null, status: "Ophørt", statusKind: "inactive", endedYear: 2023, created: "2010-01-01" },
   ],
 };
@@ -562,7 +669,16 @@ const PROPERTIES: Record<string, PropertiesVM["properties"]> = {
       builtAreaM2: 1450,
       publicValuation: { amount: 18_500_000, year: 2024 },
       encumbrances: 1,
-      hasGeometry: false,
+      hasGeometry: true,
+      // Eksempelgeometri (meter, lokalt): skæv matrikel med to bygninger; bygning 1 er valgt.
+      geometry: {
+        parcel: [[0, 0], [78, 4], [74, 46], [4, 42]],
+        buildings: [
+          { number: 1, polygon: [[10, 10], [40, 12], [39, 30], [9, 28]] },
+          { number: 2, polygon: [[48, 14], [68, 15], [67, 36], [47, 35]] },
+        ],
+        selected: 1,
+      },
       buildings: [
         { number: 1, usage: "Kontor og administration", builtYear: 2001, floors: 2, areaM2: 900, units: 4 },
         { number: 2, usage: "Lager og produktion", builtYear: 2001, floors: 1, areaM2: 550, units: 1 },
@@ -595,12 +711,27 @@ const LIVESTOCK: Record<string, LivestockVM> = {
 /** Katalog 08: kontaktpersoner. Kun sat for det første eksempel, med nok rækker til at vise "Se N flere". */
 const CONTACT_PERSONS: Record<string, ContactPersonVM[]> = {
   "CVR-1-99000001": [
-    { name: "Anne Eksempel", role: "Direktør", phone: "86123456", email: "anne@eksempelbyg.dk" },
-    { name: "Bo Eksempel", role: "Bestyrelsesformand", phone: "86123457" },
+    // Katalog 08.6/08.7: grupper, noter, LinkedIn og kilder til "Se alle"-panelet (alle værdier er eksempler).
+    {
+      name: "Anne Eksempel",
+      role: "Direktør",
+      phone: "86123456",
+      email: "anne@eksempelbyg.dk",
+      phoneNote: "Direkte, eksempelnummer",
+      emailNote: "Eksempeladresse",
+      linkedin: "https://www.linkedin.com/in/eksempel",
+      sources: [
+        { label: "eksempelbyg.dk/om-os", url: "https://eksempelbyg.dk/om-os", text: "rolle og navn", date: "2026-09-20" },
+        { label: "CVR", text: "registreret direktør", date: "2015-01-01" },
+      ],
+    },
+    { name: "Bo Eksempel", role: "Bestyrelsesformand", phone: "86123457", sources: [{ label: "CVR", text: "registreret bestyrelsesformand", date: "2012-05-01" }] },
     { name: "Carla Prøve", role: "Bestyrelsesmedlem", email: "carla@eksempelbyg.dk" },
     { name: "Dan Prøve", role: "Salgschef" },
     { name: "Eva Prøve", role: "Økonomichef", phone: "86123458", email: "eva@eksempelbyg.dk" },
     { name: "Frank Eksempel", role: "Projektleder", phone: "86123459", email: "frank@eksempelbyg.dk" },
+    { name: "Gustav Prøve", role: "Key Account Manager", phone: "86123460", email: "gustav@eksempelbyg.dk" },
+    { name: "Hanne Eksempel", role: "CTO", group: "IT-udvikling", email: "hanne@eksempelbyg.dk" },
   ],
 };
 
@@ -648,6 +779,8 @@ const VERIFIED_NUMBERS: Record<string, { verifiedNumbers: NonNullable<ContactVM[
     verifiedNumbers: [
       { phoneNumber: "86123456", score: 91, explanation: "Bekræftet fra flere kilder (eksempel)", callable: true, sources: ["CVR", "Website"] },
       { phoneNumber: "20304050", score: 62, explanation: "Fundet på hjemmesiden (eksempel)", callable: true, sources: ["Website"] },
+      // Katalog 08.5: et udgået eksempelnummer (gennemstreget, beholdes).
+      { phoneNumber: "33123456", score: 20, explanation: "Nummeret er ikke længere i brug (eksempel)", callable: false, sources: ["Website"], expired: "2026-08-12" },
     ],
     isRobinson: true,
     verifiedAt: "2026-09-20",
@@ -686,6 +819,9 @@ function defaultUnit(c: DemoCompany): ProductionUnitsVM["units"][number] {
     status: c.status,
     statusKind: c.statusKind,
     created: c.founded,
+    // 20.1: P-enhedens kontakt fra CVR (eksempel: virksomhedens egne oplysninger).
+    ...(c.phone ? { phone: c.phone } : {}),
+    ...(c.email ? { email: c.email } : {}),
   };
 }
 
@@ -737,7 +873,12 @@ export class DemoProvider implements DataProvider {
   }
 
   async people(lassoId: string) {
-    return get(lassoId).people.map((p) => ({ ...p, lassoId: p.lassoId ?? PERSON_IDS.get(p.name) }));
+    // 11.2: "også i N andre selskaber" = andre demovirksomheder, hvor personen har en aktiv rolle.
+    const others = (name: string) => COMPANIES.filter((x) => x.lassoId !== lassoId && x.people.some((q) => q.name === name && !q.to)).length;
+    return get(lassoId).people.map((p) => {
+      const n = others(p.name);
+      return { ...p, lassoId: p.lassoId ?? PERSON_IDS.get(p.name), ...(n ? { otherCompanies: n } : {}) };
+    });
   }
 
   async ownership(lassoId: string): Promise<OwnershipVM> {
@@ -750,13 +891,48 @@ export class DemoProvider implements DataProvider {
     };
   }
 
-  /** Katalog 10: eksempelscore, da der endnu ikke findes en live datakilde. */
+  /** Katalog 10.1: eksempelscore og -hentetilstande, da der endnu ikke findes en live datakilde (se demoScore). */
   async score(lassoId: string): Promise<ScoreVM> {
     const c = get(lassoId);
-    const seed = Number(c.cvr!.slice(-2));
-    if (c.status !== "Aktiv") return { lassoId, score: null };
-    const score = Math.max(5, Math.min(95, 22 + ((seed * 13) % 70)));
-    return { lassoId, score, source: "Eksempeldata", updated: "2026-09-12" };
+    const base = demoScore(c);
+    // Jakob 29.09: kun den aktuelle score; der findes ingen scorehistorik (18.2 udgår).
+    if (base.state !== "ok" || base.score === null) return base;
+    // 18.1 (Paper LWU-0): grundlag og "Hvad trækker scoren" (eksempeldata afledt af demoregnskabet).
+    const years = financialsFor(c).years;
+    const last = years.at(-1);
+    const eqYears = years.slice(-3);
+    const obs = observationsFor(c, financialsFor(c)).observations.filter((o) => !o.notAvailable);
+    const factors: NonNullable<ScoreVM["factors"]> = [];
+    if (eqYears.length === 3 && eqYears.every((y) => typeof y.equity === "number" && y.equity > 0)) factors.push({ label: "Positiv egenkapital 3 år i træk", tone: "ok" });
+    if (obs.length === 0) factors.push({ label: "Ingen registrerede observationer", tone: "ok" });
+    if (typeof last?.profit === "number") factors.push(last.profit < 0 ? { label: "Underskud i seneste regnskab", tone: "warning" } : { label: "Overskud i seneste regnskab", tone: "ok" });
+    if (obs.length > 0) factors.push({ label: obs.length === 1 ? "1 risikoobservation" : `${obs.length} risikoobservationer`, tone: "warning" });
+    return { ...base, basis: last ? `Regnskab ${last.year}, status` : "Status", factors: factors.slice(0, 4) };
+  }
+
+  /** Katalog 18.2: eksempelhistorik, der ender i den aktuelle demoscore. */
+  async scoreHistory(lassoId: string) {
+    const c = get(lassoId);
+    return demoScoreHistory(c, demoScore(c));
+  }
+
+  /** Katalog 13.6/13.10: eksempel-branchetal afledt af virksomhedens egne nøgletal. */
+  async industryBenchmark(lassoId: string) {
+    const c = get(lassoId);
+    return demoIndustry(c, financialsFor(c));
+  }
+
+  /** Katalog 13.11: heatmap for demolisten "Kunder". */
+  async activityHeatmap(opts: ActivityHeatmapOptions) {
+    return demoHeatmap(opts, DEMO_LIST);
+  }
+
+  /** Katalog 13.12: hovedadresse, P-enheder og koncernens øvrige selskaber (samme ejer) på kort. */
+  async mapPoints(lassoId: string) {
+    const c = get(lassoId);
+    const ownerIds = new Set(c.owners.flatMap((o) => (o.lassoId ? [o.lassoId] : [])));
+    const group = COMPANIES.filter((x) => x.lassoId !== c.lassoId && x.status === "Aktiv" && (ownerIds.has(x.lassoId) || x.owners.some((o) => o.lassoId && (ownerIds.has(o.lassoId) || o.lassoId === c.lassoId))));
+    return demoMap(c, PRODUCTION_UNITS[lassoId] ?? [defaultUnit(c)], group);
   }
 
   async beneficialOwnership(lassoId: string) {
@@ -785,6 +961,46 @@ export class DemoProvider implements DataProvider {
   /** Katalog 17: eksempler på alle tilstande (fuld, låst, ikke beregnet); se creditRatingFor. */
   async creditRating(lassoId: string): Promise<CreditRatingVM> {
     return creditRatingFor(get(lassoId));
+  }
+
+  /** Katalog 28.2/28.6/28.8 (eksempeldata): én fusion hos eksempelvirksomheden, konkursdekret hos konkursboet, publicering fra regnskabsårene. */
+  async companyEvents(lassoId: string): Promise<CompanyEventsVM> {
+    const c = get(lassoId);
+    const years = financialsFor(c).years;
+    const publications = publicationsFromYears(years.map((y) => ({ ...y, published: y.published ?? (y.periodEnd ? `${Number(y.periodEnd.slice(0, 4)) + 1}-05-28` : undefined) })));
+    if (c.cvr === "99000001" && publications[1]?.figure) {
+      // Eksempel på et korrigeret regnskab: den tidligere værdi står som "før …".
+      publications[1] = { ...publications[1], corrected: true, published: publications[1].published?.replace(/-05-28$/, "-08-14"), figure: { ...publications[1].figure, previous: Math.round((publications[1].figure.value ?? 0) * 1.08) }, profit: publications[1].profit ? { ...publications[1].profit, previous: Math.round((publications[1].profit.value ?? 0) * 1.12) } : undefined };
+    }
+    const mergers: CompanyEventsVM["mergers"] =
+      c.cvr === "99000001"
+        ? [
+            {
+              date: "2022-07-01",
+              type: "Fusion",
+              from: [
+                { name: "Cloud Eksempel A/S", cvr: "10000001", ceased: true },
+                { name: "Data Eksempel A/S", cvr: "10000002", ceased: true },
+              ],
+              to: [{ name: c.name, lassoId: c.lassoId, cvr: c.cvr, role: "fortsættende selskab" }],
+            },
+            {
+              date: "2019-03-15",
+              type: "Spaltning",
+              from: [{ name: c.name, lassoId: c.lassoId, cvr: c.cvr, role: "afgivende selskab" }],
+              to: [{ name: "Eksempel Ejendomme ApS", lassoId: "CVR-1-99000012", cvr: "99000012", role: "modtagende, nystiftet" }],
+            },
+          ]
+        : [];
+    const src = "Statstidende, sagsnr. eksempel, kreditorinformation vedlagt";
+    const announcements: CompanyEventsVM["announcements"] = /konkurs/i.test(c.status ?? "")
+      ? ([
+          { date: "2026-08-18", type: "Konkursdekret", severity: "bankrupt", url: "https://www.statstidende.dk/", source: src, text: `Skifteretten i København har afsagt konkursdekret over ${c.name} (eksempeldata). Kurator: advokat Eksempel Prøvesen. Anmeldelse af krav senest fire uger efter bekendtgørelsen.` },
+          { date: "2026-06-02", type: "Rekonstruktion indledt", severity: "bankrupt", url: "https://www.statstidende.dk/", source: src, text: "Rekonstruktionsbehandling indledt med rekonstruktør og regnskabskyndig tillidsmand (eksempeldata)." },
+          { date: "2026-01-11", type: "Kapitalnedsættelse", severity: "neutral", url: "https://www.statstidende.dk/", source: src, text: "Beslutning om nedsættelse af selskabskapitalen, opfordring til kreditorer om at anmelde krav (eksempeldata)." },
+        ] as CompanyEventsVM["announcements"]).sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""))
+      : [];
+    return { lassoId, mergers, announcements, publications, updated: "2026-09-25" };
   }
 
   async auditorIndependence(lassoId: string): Promise<AuditorIndependenceVM> {
@@ -822,7 +1038,12 @@ export class DemoProvider implements DataProvider {
   }
 
   async personNetwork(lassoId: string) {
-    return demoPersonNetwork(COMPANIES, lassoId);
+    // 25.5: demo-netværket er markeret som eksempeldata i fodnoten.
+    return { ...demoPersonNetwork(COMPANIES, lassoId), note: "Eksempeldata" };
+  }
+
+  async personSearch(query: string, limit: number) {
+    return searchPersonsTable(this, query, limit);
   }
 
   async findPersons(name: string, limit: number) {

@@ -95,7 +95,9 @@ test("'Gem som PDF' står i hovedet med host.pdf og mangler uden", () => {
 
 test("'Gem som PDF' står ved siden af Gem/Gemt", () => {
   const on = html(companySpec(), { pdf: true, savePage: true });
-  assert.match(on, /<div class="lasso-frame__actions">.*?Gem som PDF.*?lasso-frame__save.*?<\/div><\/header>/s);
+  // Paper (08.1): på en virksomhedsside står Gem/Gemt i hovedet (headActions); 'Gem som PDF' står i rammens hoved.
+  assert.match(on, /<div class="lasso-frame__actions"><button type="button" class="lasso-iconbtn lasso-frame__pdf" aria-label="Gem som PDF"/);
+  assert.match(on, /lasso-headbtn--save/);
 });
 
 test("den gamle 'Eksportér PDF' med Print/Luk er væk; 'Eksportér CSV' bliver", () => {
@@ -153,8 +155,8 @@ test("print-tilstand: ingen handlingsbjælke eller knapper, 'Se alle' foldet ud"
   for (let i = 0; i < 8; i++) assert.match(print, new RegExp(`Årsrapport ${2025 - i} offentliggjort`));
   for (let n = 1; n <= 6; n++) assert.match(print, new RegExp(`Nyhed ${n} om byggeriet`));
   assert.match(print, /Finn Prøve/);
-  // "Vis færre" står i markup'en, men print-CSS'en skjuler .lasso-more.
-  assert.doesNotMatch(print.replace(/<button type="button" class="lasso-link lasso-more"[^>]*>Vis færre<\/button>/g, ""), /<button/);
+  // "Vis færre" står i markup'en, men print-CSS'en skjuler foldeknapperne (.lasso-more, .lasso-news__more m.fl.).
+  assert.doesNotMatch(print.replace(/<button type="button" class="lasso-link[^"]*"[^>]*>Vis færre[^]*?<\/button>/g, ""), /<button/);
   // Ingen kildeikoner udefra: serverens Chromium henter intet fra nettet.
   assert.doesNotMatch(print, /<img/);
 });

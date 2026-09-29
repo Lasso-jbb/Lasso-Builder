@@ -1,4 +1,8 @@
-import {
+import { moreText,
+  companyRiskSummary,
+  personRiskSummary,
+  activityHeatmapKey,
+  GAUGE_METRICS,
   hasNoStatements,
   noStatementsReason,
   amountScale,
@@ -17,10 +21,10 @@ import {
   formatScaled,
   formatShare,
   ownershipGraphKey,
-  percentChange,
   PERSON_ROLE_FILTER_EMPTY,
   PERSON_ROLE_FILTER_TITLES,
   peopleWithRole,
+  changePercent,
   personCompanies,
   personCounts,
   personFactOptions,
@@ -28,6 +32,7 @@ import {
   personRisk,
   personRoleRows,
   personWithRole,
+  personSearchKey,
   riskTimeline,
   savedPagesKey,
   timelineKindsText,
@@ -131,16 +136,19 @@ const short = (v: number | null | undefined, metric: Metric, currency?: string) 
   const kind = METRIC_KIND[metric];
   if (kind === "count") return formatNumber(v);
   if (kind === "percent") return formatPercent(v, false);
-  return formatAmount(v, currencyUnit(currency)).replace(" kr.", "");
+  return formatAmount(v, currencyUnit(currency), { trimZero: true }).replace(" kr.", "");
 };
 
 function delta(from: number | null | undefined, to: number | null | undefined): string {
-  if (typeof from !== "number" || typeof to !== "number" || from === 0) return "";
-  const pct = percentChange([from, to]);
-  if (pct === null) return to < 0 ? "▼ underskud" : "▲ overskud";
+  // 02c.4: pil + procent, også ved fortegnsskift; intet når forrige mangler eller er 0.
+  const pct = changePercent(from, to);
+  if (pct === null) return "";
   const text = new Intl.NumberFormat("da-DK", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Math.abs(pct));
   return `${pct >= 0 ? "▲" : "▼"} ${padStart(text, 4)} %`;
 }
+
+/** 0–60 lav, 60–80 moderat, 80–100 høj (10.1, 18.2). */
+const scoreWord = (v: number) => (v < 60 ? "Lav risiko" : v < 80 ? "Moderat risiko" : "Høj risiko");
 
 function chart(card: Card, f: FinancialsVM, wanted: Metric, years: number) {
   const { metric, points } = chartSeries(f, wanted, years);
@@ -163,7 +171,7 @@ function chart(card: Card, f: FinancialsVM, wanted: Metric, years: number) {
   }
 }
 
-const amt = (v: number | null | undefined, currency?: string) => formatAmount(v, currencyUnit(currency)).replace(" kr.", "");
+const amt = (v: number | null | undefined, currency?: string) => formatAmount(v, currencyUnit(currency), { trimZero: true }).replace(" kr.", "");
 
 /** Nøgletallenes korte navne, så de kan stå i kortets faste labelbredde (12 tegn). */
 const SHORT_METRIC_LABEL: Record<Metric, string> = {
@@ -268,7 +276,7 @@ function ownershipTreeCard(card: Card, g: OwnershipGraphVM) {
         seen.add(other);
         if (level + 1 < Math.min(depth, 3)) walk(other, level + 1);
       });
-      if (list.length > 4) card.raw(`${"  ".repeat(level)}og ${list.length - 4} flere`);
+      if (list.length > 4) card.raw(`${"  ".repeat(level)}og ${moreText(list.length - 4)}`);
     };
     walk(g.rootId, 0);
   };
@@ -284,7 +292,7 @@ function ownershipTreeCard(card: Card, g: OwnershipGraphVM) {
 function statementRows(card: Card, label: string, rows: { label: string; values: readonly (number | null | undefined)[] }[], yearsShown: readonly number[], currency?: string) {
   card.section(`${label} ${yearsShown.join("/")}${isForeignCurrency(currency) ? `, ${currencyUnit(currency)}` : ""}`);
   for (const r of rows) {
-    const parts = r.values.map((v) => (v == null ? "—" : amt(v, currency)));
+    const parts = r.values.map((v) => (v == null ? "-" : amt(v, currency)));
     card.row(r.label, parts.join(" → "));
   }
 }
@@ -366,7 +374,13 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string, answer: strin
   const co = ds.companies[lassoId];
   if (co) {
     card.text(co.name);
-    card.text([co.status, co.form, co.address?.city].filter(Boolean).join(", "));
+    // 08.1: status med dato ("Under konkurs, siden 03.06.2026"), binavn og kurator som i hovedet.
+    const status = co.status && co.statusDate ? (co.statusKind === "warning" ? `${co.status}, siden ${formatDate(co.statusDate)}` : `${co.status} ${formatDate(co.statusDate)}`) : co.status;
+    const alias = co.secondaryNames?.find((n) => n && n !== co.name);
+    card.text([status, co.form, co.address?.city, alias ? `binavn ${alias}` : undefined].filter(Boolean).join(", "));
+    if (co.curator) card.text(`${/likvidation/i.test(co.status ?? "") ? "Likvidator" : "Kurator"}: ${co.curator}`);
+    const risk = companyRiskSummary(ds.observations[lassoId]);
+    if (risk) card.text(`Risiko: ${risk.text}`);
     answerSection(card, answer);
     card.section("Stamoplysninger");
     const a = co.address;
@@ -417,14 +431,14 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string, answer: strin
     // Ingen direktion eller bestyrelse (fx en enkeltmandsvirksomhed med en fuldt ansvarlig deltager): rollerne som de er, regel 9.
     if (!ceo && !chair && board.length === 0) {
       for (const p of people.slice(0, 3)) card.row(p.role, p.name);
-      if (people.length > 3) card.row("", `Se ${people.length - 3} flere`);
+      if (people.length > 3) card.row("", `Se ${moreText(people.length - 3)}`);
     }
     for (const o of owners?.owners.slice(0, 3) ?? []) {
       card.row("Ejer", o.name);
       card.row("", o.share ? `${o.share}${o.votes ? " kapital" : ""}` : undefined);
       card.row("", o.votes ? `${o.votes} stemmer` : undefined);
     }
-    if (owners && owners.owners.length > 3) card.row("", `og ${owners.owners.length - 3} flere ejere`);
+    if (owners && owners.owners.length > 3) card.row("", `og ${moreText(owners.owners.length - 3, "ejer", "ejere")}`);
     card.row("Revisor", owners?.auditor?.name);
   }
 
@@ -451,7 +465,15 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string, answer: strin
     if (f && c.type === "LassoGroupedBarChart" && c.company === lassoId) for (const m of c.metrics) chart(card, f, m, c.years);
     if (f && c.type === "LassoStackedBarChart" && c.company === lassoId) stackedText(card, f, c.years);
     if (f && c.type === "LassoWaterfallChart" && c.company === lassoId) waterfallText(card, f);
-    if (f && c.type === "LassoShareBars" && c.company === lassoId) shareBarsText(card, f);
+    if (f && c.type === "LassoShareBars" && c.company === lassoId && c.variant !== "ejerkreds") shareBarsText(card, f);
+    if (c.type === "LassoShareBars" && c.company === lassoId && c.variant === "ejerkreds") {
+      const o = ds.ownership[lassoId];
+      if (o) {
+        card.section("Ejerkreds");
+        for (const x of o.owners.slice(0, 3)) card.row(x.share ?? "-", x.name);
+        if (o.owners.length > 3) card.row("", `og ${moreText(o.owners.length - 3)}`);
+      }
+    }
     const stmt = ds.financialStatements[lassoId];
     if (stmt && c.type === "LassoIncomeStatement" && c.company === lassoId) {
       // Intet offentliggjort regnskab: tekstkortet siger hvorfor, som visningen (én gang, ikke pr. tabel).
@@ -462,6 +484,19 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string, answer: strin
     }
     if (stmt && c.type === "LassoBalanceSheet" && c.company === lassoId) balanceSheetText(card, stmt, c.years);
     if (stmt && c.type === "LassoCashFlow" && c.company === lassoId) cashFlowText(card, stmt, c.years);
+    if (stmt && c.type === "LassoFinancialStatements" && c.company === lassoId) {
+      // Katalog 19.1: tekstkortet viser den valgte opgørelse (3 år) med påtegningen som tekst.
+      if (hasNoStatements(stmt)) {
+        card.section(c.title ?? "Regnskab");
+        card.text(noStatementsReason(ds.companies[lassoId]));
+      } else {
+        const kind = c.statement ?? "income";
+        if (kind === "balance") balanceSheetText(card, stmt, 3);
+        else if (kind === "cashflow") cashFlowText(card, stmt, 3);
+        else incomeStatementText(card, stmt, 3);
+        if (stmt.auditorOpinion) card.text(stmt.auditorOpinion);
+      }
+    }
     if (c.type === "LassoOwnershipDiagram" && c.company === lassoId) {
       const g = ds.ownershipGraphs[ownershipGraphKey(c)];
       if (g) ownershipTreeCard(card, g);
@@ -470,19 +505,71 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string, answer: strin
   const score = types.has("LassoScoreGauge") ? ds.scores[lassoId] : undefined;
   if (score) {
     card.section("Score");
-    card.raw(score.score != null ? `${padStart(String(Math.round(score.score)), 3)} af 100` : "Ikke oplyst");
+    // 10.1: hente-tilstandene som tekst (tallet først, når scoren er hentet).
+    if (score.state === "notfetched") card.text(`Ikke hentet, koster ${score.cost ?? "1 kredit"} at hente`);
+    else if (score.state === "fetching") card.text("Henter scoren");
+    else if (score.state === "unavailable") card.text(`Kan ikke hentes. ${score.reason ?? ""}`.trim());
+    else card.raw(score.score != null ? `${padStart(String(Math.round(score.score)), 3)} af 100, ${scoreWord(score.score).toLowerCase()}` : "Ikke oplyst");
+    for (const f of score.facts ?? []) card.row(f.label, f.value);
+  }
+
+  // 18.2: scorehistorik, forrige og nu (18.1) og de seneste hentninger.
+  const hist = types.has("LassoScoreHistory") ? ds.scoreHistories?.[lassoId] : undefined;
+  if (hist) {
+    card.section("Score over tid");
+    if (hist.points.length === 0) card.text(hist.reason ?? "Ingen historik");
+    const last = hist.points.at(-1);
+    const prev = hist.points.at(-2);
+    if (last && prev) {
+      const d = Math.round(last.score - prev.score);
+      card.text(`Forrige ${Math.round(prev.score)}, nu ${Math.round(last.score)}: ${d === 0 ? "uændret" : `${d > 0 ? "▲" : "▼"} ${Math.abs(d)} point, ${d > 0 ? "mere" : "mindre"} risiko`}`);
+    }
+    for (const p of hist.points.slice(-4).reverse()) card.row(formatDate(p.date), `${Math.round(p.score)}, ${(p.label ?? scoreWord(p.score)).toLowerCase()}`);
+  }
+
+  // 13.10: nøgletalsmåler mod branchen.
+  const gauge = spec.components.find((c) => c.type === "LassoKeyFigureGauge" && c.company === lassoId);
+  const industry = ds.industryBenchmarks?.[lassoId];
+  if (gauge && gauge.type === "LassoKeyFigureGauge" && f && industry) {
+    card.section("Nøgletal mod branchen");
+    if (industry.state !== "ok") card.text(industry.reason ?? "Ingen branchetal");
+    else {
+      const lastY = f.years.at(-1);
+      const bench = industry.years.at(-1);
+      for (const m of gauge.metrics ?? GAUGE_METRICS) {
+        const v = lastY?.[METRIC_FIELD[m]];
+        const med = bench?.median[m];
+        if (typeof v !== "number" || typeof med !== "number" || med <= 0) continue;
+        const r = v / med;
+        card.row(METRIC_LABELS[m], `${formatPercent(v, false)}, branche ${formatPercent(med, false)}`);
+        card.row("", r >= 1 ? "✓ på eller over branchen" : r >= 0.6 ? "! under branchen" : "!! klart under branchen");
+      }
+    }
+  }
+
+  // 13.12: adresserne på kortet som liste.
+  const map = types.has("LassoMap") ? ds.maps?.[lassoId] : undefined;
+  if (map) {
+    card.section("Adresser på kort");
+    if (map.points.length === 0) card.text(map.emptyReason ?? "Ingen koordinater");
+    const pts = [...map.points].sort((a, b) => (a.kind === "focus" ? -1 : b.kind === "focus" ? 1 : 0));
+    for (const p of pts.slice(0, 3)) card.row(p.kind === "focus" ? "Hoved" : "Adresse", [p.name, p.address].filter(Boolean).join(", "));
+    if (pts.length > 3) card.row("", `og ${moreText(pts.length - 3)}`);
   }
 
   if (types.has("LassoBeneficialOwners")) {
     const b = ds.beneficialOwnership[lassoId];
     if (b) {
       card.section("Reelle ejere");
-      if (b.owners.length === 0 && !b.gaps?.length) card.text("Ingen registreret reel ejer");
+      // 28.9: særlig tilstand forklarer altid, hvorfor listen ser ud, som den gør.
+      if (b.special) card.text(b.special.kind === "unidentified" ? `Kunne ikke identificeres. ${b.special.reason}` : b.special.reason);
+      if (b.special?.caveat) card.text(b.special.caveat);
+      if (b.owners.length === 0 && !b.gaps?.length && !b.special) card.text("Ingen registreret reel ejer");
       for (const o of b.owners.slice(0, 3)) {
-        card.row("Ejer", o.name);
-        card.row("", o.share ? `Reelt ${o.share}` : undefined);
+        card.row(o.role ? "Indsat" : "Ejer", o.throughRole ? `${o.name}, via rolle` : o.name);
+        card.row("", o.role ?? (o.share ? `Reelt ${o.share}` : undefined));
       }
-      for (const g of b.gaps ?? []) card.text(`Ingen reel ejer for ${g.share ?? "en del"}`);
+      if (!b.special) for (const g of b.gaps ?? []) card.text(`Ingen reel ejer for ${g.share ?? "en del"}`);
     }
   }
 
@@ -497,7 +584,7 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string, answer: strin
           card.row(p.role ?? "Kontakt", p.name);
           card.row("", [p.phone, p.email].filter(Boolean).join(", ") || undefined);
         }
-        if (cp.people.length > 3) card.row("", `og ${cp.people.length - 3} flere`);
+        if (cp.people.length > 3) card.row("", `og ${moreText(cp.people.length - 3)}`);
       }
     }
   }
@@ -562,6 +649,43 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string, answer: strin
   }
 
 
+  // Katalog 28.2/28.6/28.8: fusioner, Statstidende og publicering.
+  const events = ds.companyEvents?.[lassoId];
+  if (events && types.has("LassoMergers")) {
+    card.section("Fusioner og spaltninger");
+    if (events.mergers.length === 0) card.text("Ingen registrerede fusioner eller spaltninger");
+    for (const m of events.mergers.slice(0, 3)) {
+      const names = (ps: typeof m.from) => ps.map((p) => (p.lassoId === lassoId ? "denne virksomhed" : p.name)).join(", ");
+      card.text(`${m.date ? `${formatDate(m.date)}, ` : ""}${m.type.toLowerCase()}: ${names(m.from)} → ${names(m.to)}`);
+    }
+  }
+  if (events && types.has("LassoAnnouncements") && events.announcements.length) {
+    card.section("Statstidende");
+    for (const a of events.announcements.slice(0, 3)) card.text(`${a.date ? `${formatDate(a.date)}, ` : ""}${a.type}`);
+    if (events.announcements.length > 3) card.text(`Se ${moreText(events.announcements.length - 3)}`);
+  }
+  if (events && types.has("LassoPublications")) {
+    card.section("Regnskabspublicering");
+    if (events.publications.length === 0) card.text("Ingen offentliggjorte regnskaber");
+    for (const p of events.publications.slice(0, 3)) card.text(`${p.published ? formatDate(p.published) : "-"}, ${p.kind}${p.year ? ` ${p.year}` : ""}, ${p.corrected ? "korrigeret" : "ny"}`);
+  }
+
+  // Katalog 17.2: observationerne sorteret efter alvor, 3 + "Se N flere"; tom liste er positiv information.
+  if (types.has("LassoRiskObservations")) {
+    const obs = ds.observations[lassoId];
+    if (obs) {
+      card.section("Risikoobservationer");
+      const level = (s: number) => (s === 100 ? "Høj" : s === 50 ? "Middel" : s === 25 ? "Info" : "Neutral");
+      const sorted = obs.observations.filter((o) => !o.notAvailable).sort((a, b) => b.severity - a.severity);
+      if (!sorted.some((o) => o.severity >= 25)) {
+        card.text(obs.checkedAt ? `Intet at bemærke, tjekket ${formatDate(obs.checkedAt)}` : "Ingen risikoobservationer");
+      } else {
+        for (const o of sorted.slice(0, 3)) card.text(`${level(o.severity)}: ${o.title}`);
+        if (sorted.length > 3) card.text(`Se ${moreText(sorted.length - 3)}`);
+      }
+    }
+  }
+
   // Katalog 17: Creditsafe på én linje, egen skala A–E (blandes aldrig med scoren eller observationerne).
   const credit = types.has("LassoCreditRating") ? ds.creditRatings?.[lassoId] : undefined;
   if (credit) {
@@ -579,7 +703,7 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string, answer: strin
       const sorted = [...auditorIndependence.relations].sort((a, b) => b.assessment - a.assessment);
       const word = (s: number) => (s === 100 ? "Konflikt" : s === 50 ? "Vurdér" : "Neutral");
       for (const r of sorted.slice(0, 3)) card.text(`${word(r.assessment)}: ${r.name}, ${r.relation}`);
-      if (sorted.length > 3) card.text(`Se ${sorted.length - 3} flere`);
+      if (sorted.length > 3) card.text(`Se ${moreText(sorted.length - 3)}`);
     }
   }
 
@@ -590,7 +714,7 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string, answer: strin
     for (const u of units.units.slice(0, 5)) {
       card.row(u.pNumber ?? "P-nr.", [u.name, u.isMain ? "hovedenhed" : undefined].filter(Boolean).join(", "));
     }
-    if (units.units.length > 5) card.row("", `og ${units.units.length - 5} flere`);
+    if (units.units.length > 5) card.row("", `og ${moreText(units.units.length - 5)}`);
   }
 
   const properties = types.has("LassoProperties") ? ds.properties[lassoId] : undefined;
@@ -636,6 +760,9 @@ function personCard(spec: ViewSpec, ds: Dataset, lassoId: string, answer: string
         card.text(p.name);
         card.text(["Person", p.city].filter(Boolean).join(", "));
         card.text(`${pl(n.activeRoles, "aktiv rolle", "aktive roller")} i ${pl(n.activeCompanies, "selskab", "selskaber")}${n.endedRoles ? `, ${pl(n.endedRoles, "ophørt", "ophørte")}` : ""}`);
+        // 16.1: observationerne som én linje, som på siden.
+        const risk = personRiskSummary(p);
+        if (risk) card.text(`Risiko: ${risk.text}`);
         answerSection(card, answer);
         break;
       }
@@ -658,7 +785,7 @@ function personCard(spec: ViewSpec, ds: Dataset, lassoId: string, answer: string
               for (const l of wrap([what, when].filter(Boolean).join(", "), W - 2)) card.raw(`  ${l}`);
             }
           }
-          if (companies.length > limit) card.text(`og ${companies.length - limit} flere selskaber`);
+          if (companies.length > limit) card.text(`og ${moreText(companies.length - limit, "selskab", "selskaber")}`);
           break;
         }
         const rows = personRoleRows(who, show, { except: c.except });
@@ -669,7 +796,7 @@ function personCard(spec: ViewSpec, ds: Dataset, lassoId: string, answer: string
           card.text(`${r.companyName}${r.companyStatus ? ` (${r.companyStatus.toLowerCase()}${r.companyEnded ? ` ${year(r.companyEnded)}` : ""})` : ""}`);
           for (const l of wrap([r.text, r.period].filter(Boolean).join(", "), W - 2)) card.raw(`  ${l}`);
         }
-        if (rows.length > limit) card.text(`og ${rows.length - limit} flere selskaber`);
+        if (rows.length > limit) card.text(`og ${moreText(rows.length - limit, "selskab", "selskaber")}`);
         break;
       }
       case "LassoPersonFacts": {
@@ -702,7 +829,18 @@ function personCard(spec: ViewSpec, ds: Dataset, lassoId: string, answer: string
           const yrs = x.overlapYears < 1 ? "<1 år" : `${x.overlapYears} år`;
           wrap(x.name, W - 8).forEach((l, i, all) => card.raw(`${pad(l, W - 7)}${i === all.length - 1 ? padStart(yrs, 7) : ""}`));
         }
-        if (net.people.length > limit) card.text(`og ${net.people.length - limit} flere`);
+        if (net.people.length > limit) card.text(`og ${moreText(net.people.length - limit)}`);
+        break;
+      }
+      case "LassoPersonStats": {
+        // Katalog 26d.5: tre tal på én linje hver.
+        if (!p) break;
+        const risk = personRisk(p);
+        const net = ds.personNetworks[lassoId];
+        card.section("Netværkstal");
+        card.row("Netværk", net ? `${net.people.length} i 1. led` : undefined);
+        card.row("Konkurser", String(risk.bankruptcies.length));
+        card.row("Tvangsopl.", String(risk.dissolutions.length));
         break;
       }
       case "LassoPersonRisk": {
@@ -710,6 +848,9 @@ function personCard(spec: ViewSpec, ds: Dataset, lassoId: string, answer: string
         const risk = personRisk(p);
         card.section(c.title ?? "Risiko");
         const word = (cases: typeof risk.bankruptcies) => (cases.length === 0 ? "Ingen" : cases.some((x) => x.involved) ? "Mulig vigtig" : "Info");
+        // 16.4: PEP og stråmandsindikator, når opslaget findes; ellers som på siden.
+        card.row("PEP", p.pep ? (p.pep.match ? "Ja, mulig vigtig" : "Nej") : "Ikke tjekket");
+        card.row("Stråmand", p.strawman ? (p.strawman.level === "possible" ? "Mulig" : "Nej") : "Ikke beregnet");
         card.row("Konkurser", `${risk.bankruptcies.length}, ${word(risk.bankruptcies)}`);
         card.row("Tvangsopl.", `${risk.dissolutions.length}, ${word(risk.dissolutions)}`);
         for (const x of [...risk.bankruptcies, ...risk.dissolutions]) {
@@ -728,7 +869,7 @@ function personCard(spec: ViewSpec, ds: Dataset, lassoId: string, answer: string
           card.text(formatDate(e.date));
           for (const l of wrap(e.title, W - 2)) card.raw(`  ${l}`);
         }
-        if (events.length > limit) card.text(`og ${events.length - limit} flere begivenheder`);
+        if (events.length > limit) card.text(`og ${moreText(events.length - limit, "begivenhed", "begivenheder")}`);
         break;
       }
       case "LassoNews": {
@@ -739,7 +880,7 @@ function personCard(spec: ViewSpec, ds: Dataset, lassoId: string, answer: string
           card.text([n.source, n.time ? formatDate(n.time) : null].filter(Boolean).join(", "));
           for (const l of wrap(n.headline, W - 2)) card.raw(`  ${l}`);
         }
-        if (news.length > c.limit) card.text(`og ${news.length - c.limit} flere nyheder`);
+        if (news.length > c.limit) card.text(`og ${moreText(news.length - c.limit, "nyhed", "nyheder")}`);
         break;
       }
       case "LassoOwnershipDiagram": {
@@ -754,7 +895,7 @@ function personCard(spec: ViewSpec, ds: Dataset, lassoId: string, answer: string
             card.text(graph.nodes.find((n) => n.id === e.to)?.name ?? e.to);
             card.raw(`  Ejerandel ${e.share ? formatShare(e.share) : "ikke oplyst"}`);
           }
-          if (owned.length > 5) card.text(`og ${owned.length - 5} flere selskaber`);
+          if (owned.length > 5) card.text(`og ${moreText(owned.length - 5, "selskab", "selskaber")}`);
         }
         const below = graph.edges.filter((e) => e.from !== lassoId && !e.until);
         if (below.length && ownerList) {
@@ -762,7 +903,7 @@ function personCard(spec: ViewSpec, ds: Dataset, lassoId: string, answer: string
           for (const e of below.slice(0, 5)) {
             for (const l of wrap(`${graph.nodes.find((n) => n.id === e.to)?.name ?? e.to}${e.share ? `, ${formatShare(e.share)}` : ""}`, W - 2)) card.raw(`  ${l}`);
           }
-          if (below.length > 5) card.text(`og ${below.length - 5} flere selskaber`);
+          if (below.length > 5) card.text(`og ${moreText(below.length - 5, "selskab", "selskaber")}`);
         } else if (below.length) card.text(`De ejede selskaber ejer ${below.length} ${below.length === 1 ? "selskab" : "selskaber"} mere`);
         else if (ownerList) card.text("De ejede selskaber ejer ingen andre selskaber");
         break;
@@ -778,7 +919,7 @@ function summaryCard(spec: ViewSpec): string | null {
   const card = new Card();
   card.section(s.title ?? "Resumé");
   card.text(s.text);
-  card.text(`Kilde: ${s.source}${s.updated ? `, opdateret ${formatDate(s.updated)}` : ""}`);
+  // G3 (Jakob 29.09): ingen kildelinje, heller ikke i tekstkortet.
   return card.toString();
 }
 
@@ -806,7 +947,42 @@ function listCard(spec: ViewSpec, ds: Dataset): string | null {
   return card.toString();
 }
 
-/** Katalog 21: ændringsfeedet som tekst. Navn, type; beskrivelse (status som "fra -> til"); kilde, klokkeslæt. 3 + "Se N flere". */
+/**
+ * Katalog 15.3: persontabellen som tekst. Navn alene; roller (højst 2 + "og n flere"),
+ * fødselsår og by; konkurser kun når der er nogen. Aldrig CPR eller adresse.
+ */
+function personTableCard(spec: ViewSpec, ds: Dataset): string | null {
+  const c = spec.components.find((x) => x.type === "LassoPersonTable");
+  if (!c || c.type !== "LassoPersonTable") return null;
+  const key = personSearchKey(c);
+  const result = ds.personSearches?.[key];
+  const card = new Card();
+  const title = c.title ?? `Personer, "${c.query}"`;
+  if (!result) {
+    card.section(title);
+    card.text(ds.errors[`personSearch:${key}`] ?? "Henter personer");
+    return card.toString();
+  }
+  card.section(`${title} (${formatNumber(result.total ?? result.rows.length)})`);
+  if (result.rows.length === 0) {
+    card.text(`Ingen personer matcher "${c.query}".`);
+    return card.toString();
+  }
+  result.rows.slice(0, 20).forEach((r, i) => {
+    const n = `${i + 1}.`;
+    wrap(r.name, W - 4).forEach((l, j) => card.raw(`${pad(j === 0 ? n : "", 3)} ${l}`));
+    const roles = r.roles.slice(0, 2).map((x) => `${x.role}, ${x.companyName}`);
+    const more = r.roles.length > 2 ? ` og ${moreText(r.roles.length - 2)}` : "";
+    if (roles.length) for (const l of wrap(roles.join("; ") + more, W - 4)) card.raw(`    ${l}`);
+    // 15.3 (Jakob): kun navnet; ingen fødselsår eller by.
+    const facts = [r.bankruptcies > 0 ? `${r.bankruptcies} konkurs${r.bankruptcies === 1 ? "" : "er"}` : null].filter(Boolean).join(", ");
+    if (facts) for (const l of wrap(facts, W - 4)) card.raw(`    ${l}`);
+  });
+  if (result.rows.length > 20) card.text(`og ${moreText(result.rows.length - 20)}`);
+  return card.toString();
+}
+
+/** Katalog 21: ændringsfeedet som tekst. Navn, type; beskrivelse (status som "fra -> til"); klokkeslæt (21.1: ingen kilde). 3 + "Se N flere". Kredit-typen udgår (Jakob 15:41). */
 function changeFeedCard(spec: ViewSpec, ds: Dataset): string | null {
   const c = spec.components.find((x) => x.type === "LassoChangeFeed");
   if (!c || c.type !== "LassoChangeFeed") return null;
@@ -825,7 +1001,8 @@ function changeFeedCard(spec: ViewSpec, ds: Dataset): string | null {
   };
   let lastDay = "";
   let shown = 0;
-  for (const e of feed.entries.slice(0, 3)) {
+  const entries = feed.entries.filter((e) => e.type !== "kredit");
+  for (const e of entries.slice(0, 3)) {
     const day = e.at.slice(0, 10);
     if (day !== lastDay) {
       card.text(formatDate(day));
@@ -835,10 +1012,30 @@ function changeFeedCard(spec: ViewSpec, ds: Dataset): string | null {
     card.text(`${who}, ${CHANGE_TYPE_LABELS[e.type].toLowerCase()}`);
     const body = e.type === "status" && (e.from || e.to) ? `${e.from ?? ""} -> ${e.to ?? ""}`.trim() : e.text;
     for (const l of wrap(`${body}${e.read ? "" : ", ulæst"}`, W - 2)) card.raw(`  ${l}`);
-    for (const l of wrap(`${e.source}, ${clock(e.at)}`, W - 2)) card.raw(`  ${l}`);
+    card.raw(`  ${clock(e.at)}`);
     shown++;
   }
-  if (feed.entries.length > shown) card.text(`Se ${feed.entries.length - shown} flere`);
+  if (entries.length > shown) card.text(`Se ${moreText(entries.length - shown)}`);
+  return card.toString();
+}
+
+/** Katalog 13.11: heatmappet som tekst: pr. type antal i perioden og den travleste måned. */
+function heatmapCard(spec: ViewSpec, ds: Dataset): string | null {
+  const c = spec.components.find((x) => x.type === "LassoHeatmap");
+  if (!c || c.type !== "LassoHeatmap") return null;
+  const h = ds.activityHeatmaps?.[activityHeatmapKey(c)];
+  if (!h) return null;
+  const card = new Card();
+  card.section(`${c.title ?? (h.listName ? `Aktivitet i "${h.listName}"` : "Aktivitet pr. måned")} (${formatNumber(h.total)})`);
+  if (h.total === 0 || h.rows.length === 0) {
+    card.text(h.emptyReason ?? "Ingen ændringer i perioden");
+    return card.toString();
+  }
+  for (const r of h.rows) {
+    const sum = r.counts.reduce((a, b) => a + b, 0);
+    const top = r.counts.indexOf(Math.max(...r.counts));
+    card.row(CHANGE_TYPE_LABELS[r.type], sum ? `${formatNumber(sum)}, flest ${h.months[top]!.split("-").reverse().join(".")}` : "0");
+  }
   return card.toString();
 }
 
@@ -872,7 +1069,7 @@ function savedPagesCard(spec: ViewSpec, ds: Dataset): string | null {
     card.raw(`    ${p.kind === "company" ? "Virksomhed" : "Person"}, gemt ${formatDate(p.savedAt)}`);
   });
   const more = list.total - shown.length;
-  if (more > 0) card.text(`og ${formatNumber(more)} flere`);
+  if (more > 0) card.text(`og ${moreText(more)}`);
   const links = shown.flatMap((p, i) => (p.url ? [`${i + 1}. Åbn: ${p.url}`] : []));
   return [card.toString(), ...links].join("\n");
 }
@@ -888,7 +1085,9 @@ export function textCard(spec: ViewSpec, ds: Dataset, opts: { ask?: Ask } = {}):
     ...(companies.length === 1 ? [companyCard(spec, ds, companies[0]!, answer)] : []),
     ...(persons.length === 1 ? [personCard(spec, ds, persons[0]!, answer)] : []),
     listCard(spec, ds),
+    personTableCard(spec, ds),
     changeFeedCard(spec, ds),
+    heatmapCard(spec, ds),
     savedPagesCard(spec, ds),
     summaryCard(spec),
   ].filter((c): c is string => Boolean(c));

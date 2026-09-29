@@ -29,6 +29,15 @@ export type ViewAction =
   /** "Gem som PDF" (hovedet): værten henter en rigtig PDF-fil fra serveren og gemmer den. */
   | { kind: "pdf" }
   | { kind: "fullscreen" }
+  /**
+   * Katalog 08/16: "Overvåg" i hovedet. `monitoring` er tilstanden FØR klikket: falsk = start
+   * overvågning, sand = åbn overvågningsindstillingerne (aldrig slå fra med ét klik).
+   */
+  | { kind: "monitor"; lassoId: string; pageKind: "company" | "person"; name: string; monitoring: boolean }
+  /** Katalog 08/24: åbn en sektion/et fokus på siden, fx "Se risiko", "Se historik" eller en genvej (08.4). */
+  | { kind: "open-section"; lassoId: string; pageKind: "company" | "person"; section: string; name?: string }
+  /** Katalog 08.5: bed værten verificere virksomhedens telefonnumre/e-mail nu (live number). Værten opdaterer datasættet. */
+  | { kind: "verify-contact"; lassoId: string }
   | { kind: "back" };
 
 /**
@@ -61,6 +70,12 @@ export interface HostCapabilities {
    * åbner fanen. Uden den folder "Se alle" ud på stedet.
    */
   openFocus?: boolean;
+  /** Katalog 08/16: værten kan starte overvågning og åbne overvågningsindstillinger ("Overvåg"/"Overvåger"). */
+  monitor?: boolean;
+  /** Katalog 08/24: værten kan skifte til en sektion/et fokus ("Se risiko", "Se historik", genveje). */
+  openSection?: boolean;
+  /** Katalog 08.5: værten kan verificere kontaktoplysninger i realtid (live number). */
+  verifyContact?: boolean;
 }
 
 export interface LassoViewProps {
@@ -80,4 +95,35 @@ export interface LassoViewProps {
    * handlingsbjælke eller filterredigering, "Se alle" foldet ud og faner som overskrifter.
    */
   print?: boolean;
+  /**
+   * Katalog 08.2: sektionsfaner (niveau 1, 48 px) lige under virksomheds-/personhovedet, der skifter
+   * sidens indhold. Uden prop'en tegnes ingen faner (portalen har dem i modulbjælken).
+   */
+  /**
+   * Katalog 24/25/26g: visningen står i portalens sideskabelon (AppShell med skinne, fanebjælke og
+   * modulbjælke). Så tegnes hverken rammens egen header (logo, "Virksomhedsprofil", datastempel) eller
+   * handlingslinjen nederst på virksomheds- og personsider; sidens hoved bærer Gem, Eksportér og "…".
+   */
+  /** @deprecated Brug `frameless` (samme betydning). */
+  embedded?: boolean;
+  headTabs?: { items: readonly { id: string; label: string; disabled?: boolean; disabledReason?: string }[]; value: string; onChange: (id: string) => void; ariaLabel?: string; maxVisible?: number; moreLabel?: string };
+  /**
+   * Katalog 06.1/24/25: visningen står i portalens ramme (AppShell med fanebjælke og modulbjælke).
+   * Så udelades visningens egen ramme: headeren (logo, "Virksomhedsprofil", "Data hentet …", Gem)
+   * og foden (Eksportér, Del link, "Gem visning"). Kroppen går direkte under modulbjælken, og
+   * værten står selv for sidens handlinger (modulbjælkens Eksportér, Gem, Overvåg).
+   */
+  frameless?: boolean;
+  /**
+   * Mobil (< 560, 26g.1/26g.2): hver sektion står som kort (1 px kant, radius 12, 16 px luft) i stedet
+   * for at være adskilt af dividere, og sektionsfanerne under hovedet går i fuld bredde. Kun med frameless.
+   */
+  sectionCards?: boolean;
+  /**
+   * Visningen er en sammensat side i portalen (24, 25, 26.2/26.3, 26f.1, 26g): elementerne bruger
+   * sidens rolige former: nøgletal med lodrette linjer uden ramme og sparkline (24.5), personrisiko som
+   * tjeklinjer (25.6) og personhovedets observationslinje med "Se risiko" (25.3). Udeladt: elementernes
+   * egne former (09.1, 16.1, 16.4).
+   */
+  page?: boolean;
 }

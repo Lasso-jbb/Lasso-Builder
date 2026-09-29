@@ -349,6 +349,9 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true, pdf = false 
 
   /* ---------- Handlinger fra LassoView og modulbjælken ---------- */
 
+  /** Genvejene (08.4) peger på et værktøj; i portalen svarer de til et fokus. */
+  const SECTION_FOCUS: Record<string, string> = { ejerdiagram: "ejerskab", regnskabsanalyse: "oekonomi", noegletal: "oekonomi" };
+
   const actionFor =
     (tab: PortalTab) =>
     async (a: ViewAction): Promise<ActionResult | void> => {
@@ -409,6 +412,20 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true, pdf = false 
         case "pdf":
           // "Gem som PDF": rapporten, personsiden eller den viste spec fra /api/portal/pdf/* (portal/pdf.ts).
           return savePortalPdf(api, tab.route, result);
+        case "open-section": {
+          // 08/24: "Se risiko", "Se historik" og genveje skifter fokus på samme fane.
+          const route = tab.route;
+          const focus = SECTION_FOCUS[a.section] ?? a.section;
+          if (route.kind === "company" && route.id === a.lassoId && isFocus(focus)) {
+            setRoute(tab, { ...route, focus });
+            return { ok: true };
+          }
+          if (route.kind === "person" && route.id === a.lassoId && isPersonFocus(focus)) {
+            setRoute(tab, { ...route, focus });
+            return { ok: true };
+          }
+          return { ok: false, error: "Værktøjet findes ikke i portalen endnu." };
+        }
         default:
           return;
       }
@@ -528,6 +545,8 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true, pdf = false 
     nav: [
       { id: "soeg", label: "Søg", icon: <ShellIcon name="search" size={20} />, active: route.kind === "search", onSelect: openSearch },
       { id: "lister", label: "Lister", icon: <ShellIcon name="list" size={20} />, active: route.kind === "saved", onSelect: openSaved },
+      // 26a: bundnavigationen har altid fire punkter. Portalen har endnu ingen overvågning, så punktet står dæmpet med grunden.
+      { id: "overvaagning", label: "Overvågning", icon: <ShellIcon name="bell" size={20} />, disabled: true, disabledReason: "Overvågning er ikke slået til i portalen" },
       ...(canLogout ? [{ id: "konto", label: "Konto", icon: <ShellIcon name="user" size={20} />, active: accountOpen, onSelect: () => setAccountOpen(true) }] : []),
     ],
   };
@@ -563,6 +582,13 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true, pdf = false 
     default: {
       const entity = d?.result && d.resultKey === d.key ? entityOf(d.result.spec, d.result.dataset) : null;
       const on = entity ? isSaved(entity.id, d?.result?.dataset, saved) : false;
+      // "…" i mobilens topbjælke (26a): sidens handlinger som handlingsark.
+      if (entity) {
+        mobile.moreItems = [
+          { id: "save", label: on ? "Fjern fra din liste" : "Gem på din liste", icon: <ShellIcon name="bookmark" size={16} filled={on} />, onSelect: () => void toggleSaved(entity, route.focus) },
+          { id: "share", label: "Del link", icon: <ShellIcon name="copy" size={16} />, onSelect: () => void shareLink(active) },
+        ];
+      }
       page = (
         <EntityPage
           key={active.id}

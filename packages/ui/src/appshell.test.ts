@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppShell, Column, Columns } from "./components/AppShell.js";
-import { ModuleBar } from "./components/ModuleBar.js";
+import { ModuleBar, fitModules } from "./components/ModuleBar.js";
 import { ModuleToolbar } from "./components/ModuleToolbar.js";
 import { Rail } from "./components/Rail.js";
 import { TabStrip } from "./components/TabStrip.js";
@@ -83,6 +83,19 @@ test("Modulbjælken (06): Tabs niveau 1 med role=tablist, handlinger til højre 
   assert.match(html, /lasso-modulebar__action--accent[^>]*>[^]*?Gemt/);
 });
 
+test("Modulbjælken (06.1/06.4): så mange moduler som der er plads til, resten bag Flere", () => {
+  const labels = ["Overblik", "Salg", "Stamoplysninger", "Nøgletal", "Ejerdiagram", "Nyheder", "Historik", "Tvilling", "Rating", "Regnskab", "Ejendomme"];
+  const px = (l: string) => l.length * 7;
+  // Alle kan stå: ingen Flere
+  assert.equal(fitModules(labels, 2000, px), labels.length);
+  // 9 moduler + Flere: 9 labels (75 tegn = 525 px) + 9 mellemrum (252) + Flere (54) = 831 px
+  assert.equal(fitModules(labels, 835, px), 10);
+  assert.equal(fitModules(labels, 828, px), 9);
+  const html = renderToStaticMarkup(createElement(ModuleBar, { modules: labels.map((label) => ({ id: label, label })), value: "Overblik", onChange: () => {}, maxVisible: 10 }));
+  assert.equal((html.match(/role="tab"/g) ?? []).length, 9);
+  assert.match(html, /lasso-tab--more[^>]*>Flere</);
+});
+
 test("Modulværktøjslinjen: udelades helt uden handlinger, ellers primær til venstre og visningsvalg til højre", () => {
   assert.equal(renderToStaticMarkup(createElement(ModuleToolbar, {})), "");
   const html = renderToStaticMarkup(createElement(ModuleToolbar, { primary: { label: "Tilføj kriterium" }, controls: createElement("span", { className: "ctl" }, "Segment") }));
@@ -113,4 +126,13 @@ test("AppShell (06 + 26a): skinne, fanebjælke, side, tre kolonner og bundnaviga
   assert.doesNotMatch(html.slice(html.indexOf("lasso-bottomnav")), /badge/);
   // Sektionsarket er lukket som udgangspunkt
   assert.doesNotMatch(html, /lasso-sheet"/);
+});
+
+test("Sideskabelon (23.1, 26.1): valgfrit højre panel som aside ved siden af midten; uden panel er siden uændret", () => {
+  const withPanel = renderToStaticMarkup(createElement(AppShell, { rail, tabs, panel: createElement("p", null, "Genveje") }, createElement("div", null, "midte")));
+  assert.match(withPanel, /class="lasso-shell +lasso-shell--panel/);
+  assert.match(withPanel, /<div class="lasso-page lasso-page--panel"><main class="lasso-page__main"><div>midte<\/div><\/main><aside class="lasso-page__panel" aria-label="Sammendrag og handlinger"><p>Genveje<\/p><\/aside><\/div>/);
+  const without = renderToStaticMarkup(createElement(AppShell, { rail, tabs }, createElement("div", null, "midte")));
+  assert.match(without, /<main class="lasso-page"><div>midte<\/div><\/main>/);
+  assert.doesNotMatch(without, /lasso-page__panel/);
 });

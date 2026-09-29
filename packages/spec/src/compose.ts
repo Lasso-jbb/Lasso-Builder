@@ -4,7 +4,8 @@ import { companyFactOptions, companyFacts, sameAddress } from "./companyFacts.js
 import type { Dataset, FinancialYear } from "./models.js";
 import { hasNoStatements } from "./statements.js";
 import { effectiveMetric, mainMetric } from "./series.js";
-import { componentSchema, METRIC_FIELD, peopleWithRole, timelineOfKinds, viewSpecSchema, type ComponentType, type Metric, type ViewComponent, type ViewSpec } from "./spec.js";
+import { bandsToComponents, measuredHeight, packWithinBudget, PAGE_HEIGHT_BUDGET, type PackedBand } from "./grid.js";
+import { componentSchema, METRIC_FIELD, peopleWithRole, timelineOfKinds, viewSpecSchema, type ComponentType, type Metric, type ViewComponent, type ViewSpec, type Width } from "./spec.js";
 import { isAnalysisSection, textSectionsFor } from "./textSections.js";
 
 /**
@@ -54,6 +55,14 @@ export interface ComposeOptions {
    * svar-elementet står først; generisk: fokus-siden (focus, ellers askFocus, ellers overblik).
    */
   ask?: Ask;
+  /**
+   * "Vis alt om X": alle elementer i fuld form, også når siden bliver længere end højdebudgettet
+   * (23.3). Standard: siden holdes inden for PAGE_HEIGHT_BUDGET, og de mindst relevante elementer
+   * udelades eller vises kompakt.
+   */
+  showAll?: boolean;
+  /** Højdebudget i px ved 1200 (standard PAGE_HEIGHT_BUDGET = 1300, ca. 1½ skærm). Ignoreres med showAll. */
+  heightBudget?: number;
 }
 
 /**
@@ -228,7 +237,7 @@ export function componentWeight(c: ViewComponent, ds: Dataset, page: readonly Vi
     case "LassoTextSections": {
       const all = textSectionsFor(ds.textSections[c.company]?.sections ?? [], c.variant);
       // Profilen viser alle sine afsnit (hvert foldet ved 220 tegn, ca. 6 linjer); analysen kun konklusionen, til den foldes ud.
-      const shown = c.variant === "analyse" ? all.slice(0, 1) : all;
+      const shown = c.variant === "analyse" ? all.slice(0, 1) : c.limit ? all.slice(0, c.limit) : all;
       const lines = shown.reduce((sum, s) => sum + 1.5 + Math.ceil(Math.min(s.body.length, 220) / 38) + (s.body.length > 220 ? 1.3 : 0), 0);
       return TITLE + lines + (all.some(isAnalysisSection) ? 1.2 : 0) + (all.length > shown.length ? 1.3 : 0);
     }
@@ -242,14 +251,15 @@ export function componentWeight(c: ViewComponent, ds: Dataset, page: readonly Vi
     }
     case "LassoKeyValueList": {
       // Regnskabslisten har 12 rækker (periode, udgivet, omsætning/bruttofortjeneste og 9 nøgletal);
-      // med `only` kun periode, udgivet og de valgte nøgletal.
+      // only viser kun de valgte; maxRows viser kun de første N rækker og "Se N oplysninger" under (flex rækker, 23.1).
+      const shown = (n: number) => (c.maxRows && c.maxRows < n ? 1.6 * c.maxRows + 1.5 : 1.6 * n);
       if (c.variant === "financials") {
-        const shown = c.only ? 2 + c.only.filter((m) => !c.exclude?.includes(m)).length : 12 - (c.exclude?.length ?? 0);
-        return TITLE + 1.6 * shown;
+        const base = c.only ? 2 + c.only.filter((m) => !c.exclude?.includes(m)).length : 12 - (c.exclude?.length ?? 0);
+        return TITLE + shown(base);
       }
       const co = ds.companies[c.company];
       const rows = co ? companyFacts(co, ds.ownership[c.company], ds.financials[c.company]?.years.at(-1), { ...companyFactOptions(page, c.company), rows: c.rows }).length : 6;
-      return TITLE + 1.6 * rows;
+      return TITLE + shown(rows);
     }
     case "LassoBarChart":
     case "LassoGroupedBarChart":
@@ -291,16 +301,73 @@ export function componentWeight(c: ViewComponent, ds: Dataset, page: readonly Vi
 }
 
 /**
- * Lægger de flytbare sektioner én ad gangen i den kolonne, der indtil nu vejer mindst (ved lige
- * vægt den første), så fx en lang profil ikke står over for en halvtom kolonne.
+ * componentWeight for målesættets komponenter med demodata (tools/gallery/measure/entries.ts), så en
+ * målt højde kan rettes efter komponentens egne data. Mangler typen her, bruges den målte højde.
  */
-export function placeByWeight(cols: ViewComponent[][], flexible: readonly ViewComponent[], weigh: (c: ViewComponent) => number): void {
-  const sums = cols.map((col) => col.reduce((sum, c) => sum + weigh(c), 0));
-  for (const c of flexible) {
-    const i = sums.indexOf(Math.min(...sums));
-    cols[i]!.push({ ...c, column: i + 1 } as ViewComponent);
-    sums[i] = sums[i]! + weigh(c);
-  }
+const MEASURED_WEIGHT: Partial<Record<string, number>> = {
+  LassoKeyValueList: 27,
+  "LassoKeyValueList (financials)": 22.2,
+  LassoContact: 18.7,
+  LassoContactPersons: 13.2,
+  LassoTextSections: 39.3,
+  LassoTimeline: 27,
+  LassoNews: 15.9,
+  LassoPersonList: 10.5,
+  LassoOwnerList: 9.5,
+  LassoBeneficialOwners: 8,
+  LassoRelations: 11.9,
+};
+/** Titel og luft i componentWeight (3 linjer) svarer til ca. 60 px, som ikke skaleres med data. */
+const TITLE_WEIGHT = 3;
+const TITLE_PX = 60;
+
+/**
+ * h(type, bredde, rækker) i gridmodellen (23.1): den målte højde i bredden, rettet efter datas omfang.
+ * Rettelsen er lineær i componentWeight ud over titlen, så fx en tidslinje med 3 begivenheder er ca.
+ * 176 px lavere end målingen med 5. Højden er et skøn til pakningen; siden tegnes altid uden huller,
+ * fordi den korteste stak strækkes.
+ */
+export function gridHeight(c: ViewComponent, width: Width, ds: Dataset, page: readonly ViewComponent[] = []): number {
+  const base = measuredHeight(c, width);
+  const key = c.type === "LassoKeyValueList" && c.variant === "financials" ? "LassoKeyValueList (financials)" : c.type;
+  const std = MEASURED_WEIGHT[key];
+  if (!std) return base;
+  const w = componentWeight(c, ds, page);
+  const perUnit = (base - TITLE_PX) / (std - TITLE_WEIGHT);
+  return Math.max(TITLE_PX, Math.round(base + (w - std) * perUnit));
+}
+
+/**
+ * I layout 'columns' har hvert element 24 px luft over og under (.lasso-column__item) i stedet for et
+ * gap på 24 mellem kort; en stak med n elementer er derfor Σh + 48·n høj. Pakningen regner med gap 0
+ * og 48 px pr. element, så afvigelsen regnes på det, der faktisk tegnes.
+ */
+const ITEM_PADDING = 48;
+
+/**
+ * Pakker sidens komponenter i bånd (gridmodellen) og returnerer dem i layout 'columns'-form.
+ * `page` er alle sidens komponenter, så højderne tager hensyn til, hvad andre elementer allerede viser.
+ */
+export interface PackPageOptions {
+  /** Højdebudget i px (standard: intet budget). Se packWithinBudget. */
+  budget?: number;
+  /** Elementer, der altid er med i fuld form (hoved, nøgletalskort, svar-elementet, opfølgning). */
+  keep?: ReadonlySet<ViewComponent>;
+}
+
+export function packPage(
+  items: readonly ViewComponent[],
+  ds: Dataset,
+  options: PackPageOptions = {},
+): { bands: PackedBand[]; components: ViewComponent[]; height: number; dropped: ViewComponent[]; compacted: ViewComponent[] } {
+  // Højderne regnes med hele sidens elementer (page), så de tager hensyn til, hvad andre elementer viser.
+  const r = packWithinBudget(items, (c, width) => gridHeight(c, width, ds, items) + ITEM_PADDING, { gap: 0, budget: options.budget, keep: options.keep });
+  return { ...r, components: bandsToComponents(r.bands) };
+}
+
+/** Største antal stakke i et bånd, som spec.columns (2–3; bånd med bredder tegnes efter bredderne). */
+function columnsOf(bands: readonly PackedBand[]): number {
+  return Math.max(2, Math.min(3, Math.max(0, ...bands.map((b) => b.stacks.length))));
 }
 
 export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOptions = {}): ViewSpec {
@@ -312,6 +379,7 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
   const fin = ds.financials[id]?.years ?? [];
   const people = ds.people[id] ?? [];
   const owners = ds.ownership[id]?.owners ?? [];
+  const hasOwnerBlock = owners.length > 0 || Boolean(ds.ownership[id]?.auditor);
   const events = ds.timeline[id]?.events ?? [];
   const news = ds.news[id]?.items ?? [];
   const texts = ds.textSections[id]?.sections ?? [];
@@ -328,15 +396,10 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
   const nYears = yearsWith(fin, metric).length;
   const hasProfit = yearsWith(fin, "resultat").length >= 3;
   const top: ViewComponent[] = [{ type: "LassoCompanyHead", company: id }];
-  const cols: ViewComponent[][] = [[], [], []];
+  // Sidens elementer i prioriteret rækkefølge (gridmodellen 23.3: det vigtigste først); packPage
+  // lægger dem i bånd og stakke uden huller. Hoved og nøgletalskort står altid i egne fuldbånd øverst.
+  const items: ViewComponent[] = [];
   const bottom: ViewComponent[] = [];
-  const put = (col: 1 | 2 | 3, c: ViewComponent) => cols[col - 1]!.push({ ...c, column: col } as ViewComponent);
-  // Et fokus' egne elementer: to side om side (½ + ½); står et alene, får det fuld bredde, så der
-  // aldrig er en tom halvdel ved siden af (og fanen låner ikke et andet fokus' element som fyld).
-  const halves = (...items: ViewComponent[]) => {
-    if (items.length >= 2) items.forEach((c, i) => put((i + 1) as 1 | 2 | 3, c));
-    else bottom.push(...items);
-  };
 
   // Nøgletalskortene kun på overblik og oekonomi. På regnskab står tallene i tabellerne, og på de
   // øvrige fokus er de ikke svaret på spørgsmålet (og gentog sig på hver fane).
@@ -365,116 +428,114 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
 
   // "Virksomhedsoplysninger" (kun på overblik) viser kun det, hovedet og kontaktblokken ikke viser,
   // og udelades under 2 rækker. Uden stamdata står fejlen allerede i hovedet.
-  const companyList = (page: { contact: boolean }): ViewComponent | null => {
+  const companyList = (page: { contact: boolean; owners: boolean }): ViewComponent | null => {
     const co = ds.companies[id];
     if (!co) return null;
-    const rows = companyFacts(co, ds.ownership[id], fin.at(-1), { hideIdentity: true, hideContact: page.contact, hideAuditor: false });
+    const rows = companyFacts(co, ds.ownership[id], fin.at(-1), { hideIdentity: true, hideContact: page.contact, hideAuditor: page.owners });
     return rows.filter((r) => r.value).length >= 2 ? { type: "LassoKeyValueList", company: id, variant: "company", title: "Virksomhedsoplysninger" } : null;
   };
+  const push = (c: ViewComponent | null | undefined | false) => {
+    if (c) items.push(c);
+  };
+  const ownerList = (): ViewComponent | null => (hasOwnerBlock ? { type: "LassoOwnerList", company: id } : null);
+  const shortcuts: ViewComponent = { type: "LassoShortcuts", company: id };
 
-  let columns: 2 | 3 = 3;
   switch (focus) {
     case "oekonomi": {
-      columns = 2;
+      // 23.1 Økonomi: graf | vandfald, regnskabsliste | andelsbjælker + flerårstabel, analysen i fuld bredde.
       const f = finance();
-      if (f) put(1, f);
+      push(f);
       // Vandfaldet viser vejen fra top til bund for seneste år; andelsbjælkerne balancens sammensætning.
       // Kun med omsætning i seneste regnskab: ellers er der kun "bruttofortjeneste -> øvrige poster ->
       // resultat", som hverken passer til titlen "Fra omsætning til resultat" eller siger noget nyt.
-      if (typeof fin.at(-1)?.revenue === "number" && typeof fin.at(-1)?.grossProfit === "number") put(1, { type: "LassoWaterfallChart", company: id });
-      // Under 3 år er regnskabslisten allerede "grafen" i kolonne 1; den står ikke to gange.
-      if (fin.length > 0 && f?.type !== "LassoKeyValueList") put(2, financialsList());
+      if (typeof fin.at(-1)?.revenue === "number" && typeof fin.at(-1)?.grossProfit === "number") push({ type: "LassoWaterfallChart", company: id });
+      // Under 3 år er regnskabslisten allerede "grafen"; den står ikke to gange.
+      if (fin.length > 0 && f?.type !== "LassoKeyValueList") push(financialsList());
       // Fordelingen kræver egenkapital og enten gæld eller balancesum (gæld = balancesum − egenkapital).
       const lastYear = fin.at(-1);
-      if (typeof lastYear?.equity === "number" && (typeof lastYear.liabilities === "number" || typeof lastYear.assetsTotal === "number")) put(2, { type: "LassoShareBars", company: id });
+      if (typeof lastYear?.equity === "number" && (typeof lastYear.liabilities === "number" || typeof lastYear.assetsTotal === "number")) push({ type: "LassoShareBars", company: id });
+      if (nYears >= 4) push({ type: "LassoMultiYearTable", company: id, years: Math.min(years, 10) });
       // Hele regnskabsanalysen i fuld bredde under graferne; overblikket viser kun dens korte afsnit.
-      if (textSectionsFor(texts, "analyse").length > 0) bottom.push({ type: "LassoTextSections", company: id, variant: "analyse", title: "Regnskabsanalyse" });
-      if (nYears >= 4) bottom.push({ type: "LassoMultiYearTable", company: id, years: Math.min(years, 10) });
+      // Den pakkes efter graferne og listerne: alene i fuld bredde, eller ved siden af et element, der ellers ville stå alene.
+      if (textSectionsFor(texts, "analyse").length > 0) push({ type: "LassoTextSections", company: id, variant: "analyse", title: "Regnskabsanalyse" });
       break;
     }
     case "regnskab": {
       if (hasNoStatements(statements)) {
         // Intet offentliggjort regnskab (fx en enkeltmandsvirksomhed uden regnskabspligt): én tom
         // tilstand, der siger hvorfor, på nøgletallenes plads, ikke to tomme tabeller med samme tekst.
-        // Intet andet: oplysninger, ledelse og ejere hører til andre faner og står ikke her som fyld.
-        columns = 2;
-        top.push({ type: "LassoIncomeStatement", company: id, years: 3, title: "Regnskab" });
+        top.push({ type: "LassoIncomeStatement", company: id, years: 3, title: "Regnskab", width: "full" });
+        // Oplysninger, ledelse og ejere, højst to af dem, så siden stadig er en side.
+        const lead = people.some((p) => !p.to);
+        const blocks = [companyList({ contact: false, owners: !lead && hasOwnerBlock }), lead ? ({ type: "LassoPersonList", company: id, show: "current", title: "Ledelse" } as ViewComponent) : null, ownerList()];
+        for (const b of blocks.filter(Boolean).slice(0, 2)) push(b);
         break;
       }
-      // Fuldt regnskab: tabeller står altid i fuld bredde (guide 23), stablet i regnskabets rækkefølge.
-      bottom.push({ type: "LassoIncomeStatement", company: id, years: 3 });
-      bottom.push({ type: "LassoBalanceSheet", company: id, years: 3 });
-      if (statements?.cashFlow?.length) bottom.push({ type: "LassoCashFlow", company: id, years: 3 });
+      // Fuldt regnskab: tabellerne står i fuld bredde (19.2), stablet i regnskabets rækkefølge.
+      bottom.push({ type: "LassoIncomeStatement", company: id, years: 3, width: "full" });
+      bottom.push({ type: "LassoBalanceSheet", company: id, years: 3, width: "full" });
+      if (statements?.cashFlow?.length) bottom.push({ type: "LassoCashFlow", company: id, years: 3, width: "full" });
       break;
     }
     case "kontakt": {
-      // Kontaktblokken (også som tom tilstand: det er svaret) og kontaktpersonerne fra hjemmesiden
-      // ved siden af; uden kontaktpersoner står kontakten alene i fuld bredde. Ledelsen og
-      // oplysningerne hører til ledelse og overblik.
-      columns = 2;
-      const contactBlock: ViewComponent = { type: "LassoContact", company: id };
-      halves(contactBlock, ...(contactPeople.length > 0 ? [{ type: "LassoContactPersons", company: id } as ViewComponent] : []));
+      // Oplysningerne (uden kontaktfelter og identitet) som anker, kontakt og personer stablet ved siden af.
+      push(companyList({ contact: true, owners: false }));
+      push({ type: "LassoContact", company: id });
+      if (contactPeople.length > 0) push({ type: "LassoContactPersons", company: id });
+      // Uden kontaktpersoner fra hjemmesiden er direktion og bestyrelse fra CVR de bedste indgange.
+      else if (people.some((p) => !p.to)) push({ type: "LassoPersonList", company: id, show: "current", title: "Ledelse (CVR)" });
       break;
     }
     case "ejerskab": {
-      // Ejerlisten (med revisor) står altid, også som tom tilstand: den er svaret på "hvem ejer".
-      // Reelle ejere ved siden af, når de er registreret; ellers ejerne alene i fuld bredde.
-      // Ikke LassoRelations eller ledelsen her: de hører til overblik og ledelse.
-      columns = 2;
-      const ownerList: ViewComponent = { type: "LassoOwnerList", company: id };
-      const hasBeneficial = beneficial.length > 0 || Boolean(ds.beneficialOwnership[id]?.gaps?.length);
-      halves(ownerList, ...(hasBeneficial ? [{ type: "LassoBeneficialOwners", company: id } as ViewComponent] : []));
-      if (owners.some((o) => o.kind === "company")) bottom.push({ type: "LassoOwnershipDiagram", company: id, ingoingDepth: 3, outgoingDepth: 2 });
+      // 23.1 Ejerskab: ejerdiagram ⅔ | ejerliste + reelle ejere + ledelse ⅓, derunder genveje.
+      if (owners.some((o) => o.kind === "company")) push({ type: "LassoOwnershipDiagram", company: id, ingoingDepth: 3, outgoingDepth: 2 });
+      push(ownerList());
+      if (beneficial.length > 0 || ds.beneficialOwnership[id]?.gaps?.length) push({ type: "LassoBeneficialOwners", company: id });
+      // Ikke LassoRelations her: den gentager de legale ejere fra ejerlisten ved siden af.
+      if (people.some((p) => !p.to)) push({ type: "LassoPersonList", company: id, show: "current", title: "Ledelse" });
       break;
     }
     case "ledelse": {
-      // Hele ledelsen (også de fratrådte) i fuld bredde, også som tom tilstand. Historik og ejere
-      // står på deres egne faner.
-      columns = 2;
-      bottom.push({ type: "LassoPersonList", company: id, show: "all" });
+      if (people.length > 0) push({ type: "LassoPersonList", company: id, show: "all" });
+      if (events.length >= 3) push({ type: "LassoTimeline", company: id });
+      push(ownerList());
       break;
     }
     case "risiko": {
-      // Kreditvurderingen og revisoruafhængigheden side om side; står en alene, fuld bredde. Uden
-      // nogen af dem viser kreditvurderingen sin egen tilstand (låst, ikke beregnet, fejl), så siden
-      // aldrig er tom. Oplysninger, ledelse, historik og ejere hører til de andre faner.
-      columns = 2;
-      const credit: ViewComponent = { type: "LassoCreditRating", company: id };
-      const independence: ViewComponent = { type: "LassoAuditorIndependence", company: id };
-      if (auditor) halves(...(hasCredit ? [credit, independence] : [independence]));
-      else halves(credit);
+      // Kreditvurderingen (½) øverst ved siden af oplysningerne.
+      // Uden historik står ejerne (med revisor) på siden, ikke relationerne, som gentager ledelsen fra listen.
+      const ownerFallback = events.length < 3 && hasOwnerBlock;
+      push(companyList({ contact: false, owners: ownerFallback }));
+      if (hasCredit) push({ type: "LassoCreditRating", company: id });
+      if (people.length > 0) push({ type: "LassoPersonList", company: id, show: "all" });
+      if (events.length >= 3) push({ type: "LassoTimeline", company: id });
+      else if (ownerFallback) push(ownerList());
+      if (auditor) bottom.push({ type: "LassoAuditorIndependence", company: id, width: "full" });
       break;
     }
     case "historik": {
-      // Hele historikken (5 + "Se alle", folder ud på stedet) | nyhederne (5); uden nyheder står
-      // historikken alene i fuld bredde. Ingen graf eller regnskabsliste som fyld.
-      columns = 2;
-      const timeline: ViewComponent = { type: "LassoTimeline", company: id };
-      const hasNews = news.length > 0 || Boolean(ds.errors[`news:${id}`]);
-      halves(timeline, ...(hasNews ? [{ type: "LassoNews", company: id, limit: 5 } as ViewComponent] : []));
+      if (events.length > 0) push({ type: "LassoTimeline", company: id });
+      if (news.length > 0) push({ type: "LassoNews", company: id, limit: 5 });
+      else if (fin.length > 0) push(finance());
       break;
     }
     default: {
-      // Overblik, som portalens virksomhedsside: relationer | profil | kontakt, oplysninger og regnskab.
-      if (people.length > 0 || owners.length > 0) put(1, { type: "LassoRelations", company: id });
-      if (textSectionsFor(texts, "profil").length > 0) put(2, { type: "LassoTextSections", company: id, variant: "profil", title: "Virksomhedsprofil" });
-      if (hasContact) put(3, { type: "LassoContact", company: id });
-      const list = companyList({ contact: hasContact });
-      if (list) put(3, list);
-      const f = finance();
-      if (f) put(3, f);
-      // Nyheder og historik har ingen fast plads: hver lægges i den kolonne, der vejer mindst indtil nu.
-      // Begge er smagsprøver på fanen Historik: "Se alle … i Historik" åbner den (more).
-      const flexible: ViewComponent[] = [];
-      if (news.length > 0) flexible.push({ type: "LassoNews", company: id, limit: 3, more: "historik" });
+      // 23.3 default-siden (overblik, ingen kontekst): hvad laver de (profil), stamdata og revisor
+      // (oplysninger), hvem står bag (relationer), udviklingen (graf), hvordan kontakter jeg dem
+      // (kontakt), hvad er der sket (historik, nyheder), og hvor kommer jeg videre (genveje).
+      // Nyheder og historik er smagsprøver på fanen Historik: "Se alle … i Historik" åbner den (more).
+      if (textSectionsFor(texts, "profil").length > 0) push({ type: "LassoTextSections", company: id, variant: "profil", title: "Virksomhedsprofil" });
+      push(companyList({ contact: hasContact, owners: false }));
+      if (people.length > 0 || owners.length > 0) push({ type: "LassoRelations", company: id });
+      push(finance());
+      if (hasContact) push({ type: "LassoContact", company: id });
       // Historikken viser 3 begivenheder + "Se alle N" (regel 9); hele forløbet står på historik.
-      if (events.length >= 3) flexible.push({ type: "LassoTimeline", company: id, limit: 3, more: "historik" });
-      const page = [...top, ...cols.flat(), ...flexible];
-      placeByWeight(cols, flexible, (c) => componentWeight(c, ds, page));
-      // En tom kolonne må ikke efterlade et hul: gå ned på 2 kolonner.
-      if (cols.filter((c) => c.length > 0).length < 3) columns = 2;
+      if (events.length >= 3) push({ type: "LassoTimeline", company: id, limit: 3, more: "historik" });
+      if (news.length > 0) push({ type: "LassoNews", company: id, limit: 3, more: "historik" });
+      push(shortcuts);
     }
   }
+  if (focus === "ejerskab") push(shortcuts);
 
   const known: FollowUpData = {
     fin: ds.financials[id] ? fin.length : undefined,
@@ -488,18 +549,20 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
     .map((f) => ({ label: f.label, prompt: f.prompt.replace("{navn}", shortCompanyName(options.name ?? ds.companies[id]?.name ?? lassoId)) }));
   if (options.followUps !== false && followUps.length > 0) bottom.push({ type: "LassoFollowUps", prompts: followUps });
 
-  // Tomme kolonner rykkes sammen, så kolonne 1..n altid er fyldt.
-  const filled = cols.filter((c) => c.length > 0);
-  const colComponents = filled.flatMap((c, i) => c.map((x) => ({ ...x, column: i + 1 }) as ViewComponent));
-  if (filled.length === 1) columns = 2;
+  // Højdebudget (23.3): hoved, nøgletalskort, opfølgning og regnskabstabellerne (fokus regnskab) er
+  // altid med; på et fokus er det første element svaret og altid med. Uden spørgsmål (overblik) er
+  // intet element svaret, så profilen kan også stå kompakt. "Vis alt" (showAll) slår budgettet fra.
+  const keep = new Set<ViewComponent>([...top, ...bottom.filter((c) => c.type !== "LassoAuditorIndependence"), ...(focus !== "overblik" && items[0] ? [items[0]] : [])]);
+  const budget = options.showAll ? Number.POSITIVE_INFINITY : (options.heightBudget ?? PAGE_HEIGHT_BUDGET);
+  const { bands, components } = packPage([...top, ...items, ...bottom], ds, { budget, keep });
 
   return viewSpecSchema.parse({
     kind: "company",
     title: options.name ?? lassoId,
     subtitle: focus === "overblik" ? undefined : FOCUS_LABELS[focus],
     layout: "columns",
-    columns: Math.max(2, Math.min(columns, Math.max(filled.length, 2))),
-    components: [...top, ...colComponents, ...bottom],
+    columns: columnsOf(bands),
+    components,
   });
 }
 

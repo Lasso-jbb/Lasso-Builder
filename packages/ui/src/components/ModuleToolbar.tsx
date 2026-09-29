@@ -30,7 +30,7 @@ export interface ModuleToolbarProps {
 export function ModuleToolbar({ field, primary, secondary = [], controls, className = "" }: ModuleToolbarProps) {
   if (!field && !primary && secondary.length === 0 && !controls) return null;
   return (
-    <div className={`lasso-toolbar ${field ? "lasso-toolbar--field" : ""} ${className}`}>
+    <div className={["lasso-toolbar", field ? "lasso-toolbar--field" : "", className].filter(Boolean).join(" ")}>
       <div className="lasso-toolbar__actions">
         {field ? <div className="lasso-toolbar__field">{field}</div> : null}
         {primary ? (

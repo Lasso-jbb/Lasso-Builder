@@ -9,29 +9,66 @@ function buildingLabel(b: BuildingVM, i: number): string {
 }
 
 /**
- * Ejendomskortet fra katalog 20/13: matrikelpolygon i map-fill og koral kant på
- * den valgte bygning. Vi har ingen bekræftet geometri-kilde (docs/lasso-endpoints.md),
- * så kortet tegnes kun illustrativt, når `hasGeometry` er sat (demodata); ellers
- * viser vi tom-tilstand i stedet for at opdigte en polygon.
+ * Ejendomskortet (katalog 20.2, samme kortform som 13): baggrund med vejnet, matrikelpolygon i
+ * map-fill og koral kant på den valgte bygning; øvrige bygninger hvide med tynd kant. Tegnes i
+ * målestok fra `geometry` (lokale meter). Uden geometri vises en tom tilstand i stedet for at
+ * opdigte et kort; ældre demodata med kun `hasGeometry` får det skematiske udsnit.
  */
 function PropertyMap({ property }: { property: PropertyVM }) {
-  if (!property.hasGeometry) {
+  const g = property.geometry;
+  if (!g && !property.hasGeometry) {
     return (
       <div className="lasso-property-map lasso-property-map--empty">
         <span className="lasso-small lasso-muted">Intet matrikelkort tilgængeligt</span>
       </div>
     );
   }
-  return (
-    <div className="lasso-property-map">
-      <svg viewBox="0 0 360 140" className="lasso-property-map__svg" aria-hidden="true">
-        <rect width="360" height="140" className="lasso-property-map__bg" />
-        <path d="M0 40H360M0 100H360M120 0V140M250 0V140" className="lasso-property-map__grid" />
+  const W = 360;
+  const H = 140;
+  let body;
+  if (g && g.parcel.length >= 3) {
+    const pts = [...g.parcel, ...(g.buildings ?? []).flatMap((b) => b.polygon)];
+    const xs = pts.map((p) => p[0]);
+    const ys = pts.map((p) => p[1]);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+    const pad = 24;
+    const k = Math.min((W - 2 * pad) / Math.max(1, maxX - minX), (H - 2 * pad) / Math.max(1, maxY - minY));
+    const ox = (W - (maxX - minX) * k) / 2;
+    const oy = (H - (maxY - minY) * k) / 2;
+    const path = (poly: [number, number][]) => poly.map(([x, y], i) => `${i ? "L" : "M"}${(ox + (x - minX) * k).toFixed(1)},${(H - oy - (y - minY) * k).toFixed(1)}`).join(" ") + "Z";
+    body = (
+      <>
+        <path d={path(g.parcel)} className="lasso-property-map__parcel" />
+        {(g.buildings ?? []).map((b, i) => (
+          <path key={b.number ?? i} d={path(b.polygon)} className={`lasso-property-map__plot ${b.number !== undefined && b.number === g.selected ? "lasso-property-map__plot--selected" : "lasso-property-map__plot--other"}`} />
+        ))}
+      </>
+    );
+  } else {
+    body = (
+      <>
         <rect x="20" y="52" width="80" height="38" className="lasso-property-map__plot lasso-property-map__plot--other" />
         <rect x="140" y="52" width="90" height="38" className="lasso-property-map__plot lasso-property-map__plot--selected" />
         <rect x="262" y="52" width="70" height="38" className="lasso-property-map__plot lasso-property-map__plot--other" />
+      </>
+    );
+  }
+  return (
+    <div className="lasso-property-map">
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid slice" className="lasso-property-map__svg" role="img" aria-label={property.matrikel ? `Matrikelkort, ${property.matrikel}` : "Matrikelkort"}>
+        <rect width={W} height={H} className="lasso-property-map__bg" />
+        <path d="M0 14H360M0 126H360M8 0V140M352 0V140M180 0V14M180 126V140" className="lasso-property-map__grid" />
+        {body}
       </svg>
       {property.matrikel ? <span className="lasso-property-map__label">{property.matrikel}</span> : null}
+      <div className="lasso-property-map__m" aria-hidden="true">
+        {Array.from({ length: 6 }, (_, i) => (
+          <span key={i} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -49,6 +86,25 @@ function PropertyBlock({ property }: { property: PropertyVM }) {
     <div className="lasso-property">
       <div className="lasso-property__card">
         <PropertyMap property={property} />
+        {/* 26e.2 mobil: anvendelse, opført, erhvervsareal og ejerforhold i to kolonner. */}
+        <dl className="lasso-property__mkv">
+          <div>
+            <dt>Anvendelse</dt>
+            <dd>{buildings[0]?.usage ?? property.propertyType ?? <Missing />}</dd>
+          </div>
+          <div>
+            <dt>Opført</dt>
+            <dd>{buildings[0]?.builtYear ?? <Missing />}</dd>
+          </div>
+          <div>
+            <dt>Erhvervsareal</dt>
+            <dd>{totalArea > 0 ? `${formatNumber(totalArea)} m²` : <Missing />}</dd>
+          </div>
+          <div>
+            <dt>Ejerforhold</dt>
+            <dd>{property.ownership ?? <Missing />}</dd>
+          </div>
+        </dl>
         <div className="lasso-property__head">
           <div className="lasso-property__address">{addressLine ?? <Missing />}</div>
           <div className="lasso-small lasso-muted">
@@ -79,7 +135,7 @@ function PropertyBlock({ property }: { property: PropertyVM }) {
           <div className="lasso-property__row">
             <span>Hæftelser</span>
             <span className={property.encumbrances ? "lasso-property__link" : undefined}>
-              {property.encumbrances == null ? <Missing /> : property.encumbrances > 0 ? `${property.encumbrances}, se tinglysning` : "Ingen"}
+              {property.encumbrances == null ? <Missing /> : property.encumbrances > 0 ? `${property.encumbrances}, Se tinglysning` : "Ingen"}
             </span>
           </div>
         </div>
@@ -121,14 +177,14 @@ function PropertyBlock({ property }: { property: PropertyVM }) {
                     </tr>
                   ))}
                   <tr className="lasso-table__total">
-                    <td />
-                    <td className="lasso-property__strong">
+                    <td className="lasso-cell--blank" />
+                    <td className="lasso-property__strong lasso-cell--total">
                       I alt, {buildings.length} bygning{buildings.length === 1 ? "" : "er"}
                     </td>
-                    <td />
-                    <td />
-                    <td className="lasso-num lasso-property__strong">{formatNumber(totalArea)}</td>
-                    <td className="lasso-num lasso-property__strong">{totalUnits > 0 ? formatNumber(totalUnits) : <Missing />}</td>
+                    <td className="lasso-cell--blank" />
+                    <td className="lasso-cell--blank" />
+                    <td data-label="Samlet m²" className="lasso-num lasso-property__strong">{formatNumber(totalArea)}</td>
+                    <td data-label="Enheder" className="lasso-num lasso-property__strong">{totalUnits > 0 ? formatNumber(totalUnits) : <Missing />}</td>
                   </tr>
                 </tbody>
               </table>
@@ -173,7 +229,7 @@ function PropertyBlock({ property }: { property: PropertyVM }) {
  * {@link MAX_PROPERTIES} ejendomme: vis de første og "Se N flere" (regel 9).
  */
 export function Properties({ properties, title, error }: { properties?: PropertiesVM; title?: string; error?: string }) {
-  const heading = title ?? "Ejendomme, BBR";
+  const heading = title ?? (properties?.properties.length === 1 ? "Ejendom, BBR" : "Ejendomme, BBR");
   if (!properties) {
     return (
       <Section title={heading} span="full">
@@ -191,7 +247,7 @@ export function Properties({ properties, title, error }: { properties?: Properti
   const shown = properties.properties.slice(0, MAX_PROPERTIES);
   const rest = properties.properties.length - shown.length;
   return (
-    <Section title={heading} subtitle="Ejendomskort, bygninger og enheder, arealfordeling" span="full">
+    <Section title={heading} subtitle="Ejendomskort, bygninger og enheder, arealfordeling" span="full" className="lasso-properties-section">
       <div className="lasso-properties">
         {shown.map((p, i) => (
           <PropertyBlock key={p.bfeNumber ?? i} property={p} />

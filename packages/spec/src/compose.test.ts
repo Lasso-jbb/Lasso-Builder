@@ -6,7 +6,8 @@ import { componentWeight, composeCompany, composeProbe, FOCUSES, shortCompanyNam
 import { composePerson } from "./composePerson.js";
 import { emptyDataset, type Dataset, type FinancialYear } from "./models.js";
 import { effectiveMetric, mainMetric } from "./series.js";
-import { viewSpecSchema, widthOf, type ViewComponent, type ViewSpec } from "./spec.js";
+import { BAND_COMBOS } from "./grid.js";
+import { viewSpecSchema, WIDTH_COLUMNS, widthOf, type ViewComponent, type ViewSpec } from "./spec.js";
 import { textSectionsFor } from "./textSections.js";
 
 const id = "CVR-1-12345678";
@@ -17,6 +18,34 @@ function company(status = "Normal", founded = "2010-01-01"): Dataset {
   ds.people[id] = [{ name: "Anne", role: "Direktør", from: "2015-01-01" }];
   ds.ownership[id] = { lassoId: id, owners: [{ name: "Bo", kind: "person", share: "100 %" }] };
   return ds;
+}
+
+/** Sidens delte bånd som stakke (samme regel som LassoView.columnBands: lavere kolonne = nyt bånd). */
+function bandsOf(spec: ViewSpec): ViewComponent[][][] {
+  const bands: ViewComponent[][][] = [];
+  let last = 0;
+  for (const c of spec.components) {
+    if (!c.column) {
+      last = 0;
+      continue;
+    }
+    if (last === 0 || c.column < last) bands.push([]);
+    const band = bands.at(-1)!;
+    while (band.length < c.column) band.push([]);
+    band[c.column - 1]!.push(c);
+    last = c.column;
+  }
+  return bands;
+}
+
+/** Hvert delt bånd er en lovlig kombination, der summerer til 12, og alle i en stak har stakkens bredde. */
+function assertFullBands(spec: ViewSpec) {
+  const legal = BAND_COMBOS.map((x) => x.join("+"));
+  for (const band of bandsOf(spec)) {
+    const cols = band.map((st) => WIDTH_COLUMNS[st[0]!.width!]);
+    assert.ok(legal.includes(cols.join("+")), `ulovligt bånd ${cols.join("+")}`);
+    for (const st of band) assert.ok(st.every((c) => c.width === st[0]!.width));
+  }
 }
 
 /** Lasso X-mønstret: omsætning oplyst 2012–2019, derefter kun bruttofortjeneste. */
@@ -67,23 +96,14 @@ test("fordelingen af balancen kræver gæld eller balancesum, ikke kun egenkapit
   assert.ok(composeCompany(id, ds, { focus: "oekonomi" }).components.some((c) => c.type === "LassoShareBars"));
 });
 
-/** Sidens elementer med plads: "Type@kolonne" for en halv, "Type" for fuld bredde (uden opfølgning). */
-const placed = (spec: ViewSpec) => spec.components.filter((c) => c.type !== "LassoFollowUps").map((c) => `${c.type}${c.column ? `@${c.column}` : ""}`);
 
-test("ejerskab og kontakt låner ikke ledelsen som fyld; et element alene står i fuld bredde", () => {
+test("ejerskab gentager ikke ejerne i relationer, kontakt viser CVR-ledelsen uden kontaktpersoner", () => {
   const ds = company();
-  // Ejerskab uden reelle ejere: ejerlisten alene i fuld bredde, ingen relationer eller ledelse.
-  assert.deepEqual(placed(composeCompany(id, ds, { focus: "ejerskab" })), ["LassoCompanyHead", "LassoOwnerList"]);
-  ds.beneficialOwnership[id] = { lassoId: id, owners: [{ name: "Bo", share: "100 %" }] };
-  assert.deepEqual(placed(composeCompany(id, ds, { focus: "ejerskab" })), ["LassoCompanyHead", "LassoOwnerList@1", "LassoBeneficialOwners@2"]);
-  // Ingen ejere: ejerlistens tomme tilstand er svaret, stadig ikke ledelsen i stedet.
-  const none = company();
-  none.ownership[id] = { lassoId: id, owners: [] };
-  assert.deepEqual(placed(composeCompany(id, none, { focus: "ejerskab" })), ["LassoCompanyHead", "LassoOwnerList"]);
-  // Kontakt uden kontaktpersoner: kontaktblokken alene i fuld bredde, ingen "Ledelse (CVR)" eller oplysninger.
-  assert.deepEqual(placed(composeCompany(id, ds, { focus: "kontakt" })), ["LassoCompanyHead", "LassoContact"]);
-  ds.contactPersons[id] = { lassoId: id, people: [{ name: "Bo", role: "Direktør" }] };
-  assert.deepEqual(placed(composeCompany(id, ds, { focus: "kontakt" })), ["LassoCompanyHead", "LassoContact@1", "LassoContactPersons@2"]);
+  const own = composeCompany(id, ds, { focus: "ejerskab" });
+  assert.ok(!own.components.some((c) => c.type === "LassoRelations"));
+  assert.ok(own.components.some((c) => c.type === "LassoPersonList"));
+  const contact = composeCompany(id, ds, { focus: "kontakt" });
+  assert.ok(contact.components.some((c) => c.type === "LassoPersonList" && c.title === "Ledelse (CVR)"));
 });
 
 test("opfølgninger bruger kortnavnet, ikke det juridiske navn i versaler", () => {
@@ -130,30 +150,33 @@ test("Creditsafe hentes kun til focus risiko: overblik og de andre fokus koster 
   }
 });
 
-/** Revisoruafhængighed til komponisten (risiko). */
-function withAuditor(ds: Dataset): Dataset {
-  ds.auditorIndependence[id] = { lassoId: id, auditorName: "Revisor ApS", relations: [{ id: "r1", assessment: 50, name: "Bo", relation: "Tidligere ansat hos revisor" }] };
-  return ds;
-}
-
-test("risiko: kreditvurdering (½) | revisoruafhængighed (½), også låst; intet lånt fra andre faner", () => {
+test("risiko viser kreditvurderingen øverst i første bånd (ved siden af oplysningerne, når de findes), også låst", () => {
   for (const state of ["ok", "locked"] as const) {
-    const spec = composeCompany(id, withAuditor(withCredit(holding(), state)), { focus: "risiko" });
-    assert.deepEqual(placed(spec), ["LassoCompanyHead", "LassoCreditRating@1", "LassoAuditorIndependence@2"], state);
-    const credit = spec.components.find((c) => c.type === "LassoCreditRating")!;
-    assert.equal(widthOf(credit, spec.layout), "half");
+    const spec = composeCompany(id, withCredit(company(), state), { focus: "risiko" });
+    const credit = spec.components.find((c) => c.type === "LassoCreditRating");
+    assert.ok(credit, state);
+    // Gridmodellen: kreditvurderingen står øverst i første delte bånd, lige under hovedet, i en tilladt bredde.
+    assert.ok(credit.column);
+    assert.ok(["half", "two-thirds"].includes(widthOf(credit, spec.layout)));
+    const band = bandsOf(spec)[0]!;
+    assertFullBands(spec);
     // Ingen risikoboks (fjernet 27.09.2026); Creditsafe er et eget element, aldrig en del af måleren.
-    assert.ok(!spec.components.some((c) => c.type === "LassoRiskObservations" || c.type === "LassoScoreGauge"));
+    assert.ok(!spec.components.some((c) => c.type === "LassoRiskObservations"));
+    assert.ok(!spec.components.some((c) => c.type === "LassoScoreGauge"));
+    assert.equal(band[credit.column - 1]![0], credit);
   }
-  // Kun den ene: fuld bredde. En hentningsfejl vises også (fejltilstand med "Prøv igen").
-  assert.deepEqual(placed(composeCompany(id, withCredit(holding()), { focus: "risiko" })), ["LassoCompanyHead", "LassoCreditRating"]);
-  assert.deepEqual(placed(composeCompany(id, withAuditor(holding()), { focus: "risiko" })), ["LassoCompanyHead", "LassoAuditorIndependence"]);
-  const failed = holding();
+  // Med oplysninger står de først og kreditvurderingen ved siden af.
+  const withList = withCredit(holding());
+  const s2 = composeCompany(id, withList, { focus: "risiko" });
+  // Gridmodellen vælger det bånd, der holder 15 % (23.1 4c); kreditvurderingen står øverst i en stak i de to første bånd.
+  const [first, second] = bandsOf(s2);
+  assert.equal(first![0]![0]!.type, "LassoKeyValueList");
+  assert.ok([...first!, ...(second ?? [])].some((st) => st[0]!.type === "LassoCreditRating"));
+  // En hentningsfejl vises også (fejltilstand med "Prøv igen"), men uden data eller fejl står den ikke.
+  const failed = company();
   failed.errors[`creditRating:${id}`] = "Lasso API svarede ikke i tide";
-  assert.deepEqual(placed(composeCompany(id, failed, { focus: "risiko" })), ["LassoCompanyHead", "LassoCreditRating"]);
-  // Hverken kreditvurdering eller revisoruafhængighed: kreditvurderingen viser sin egen tilstand, så
-  // siden aldrig er tom, og ingen oplysninger, ledelse, historik eller ejere som fyld.
-  assert.deepEqual(placed(composeCompany(id, holding(), { focus: "risiko" })), ["LassoCompanyHead", "LassoCreditRating"]);
+  assert.ok(composeCompany(id, failed, { focus: "risiko" }).components.some((c) => c.type === "LassoCreditRating"));
+  assert.ok(!composeCompany(id, company(), { focus: "risiko" }).components.some((c) => c.type === "LassoCreditRating"));
 });
 
 test("overblik viser ikke kreditvurderingen, heller ikke når den findes i datasættet", () => {
@@ -212,11 +235,6 @@ function holding(): Dataset {
 }
 
 /** Summen af vægte pr. kolonne, som komponisten ser siden. */
-function columnWeights(spec: ViewSpec, ds: Dataset): number[] {
-  const sums: number[] = [];
-  for (const c of spec.components) if (c.column) sums[c.column - 1] = (sums[c.column - 1] ?? 0) + componentWeight(c, ds, spec.components);
-  return sums;
-}
 
 test("nøgletalskortene står kun på overblik og oekonomi", () => {
   const ds = holding();
@@ -249,9 +267,10 @@ test("oekonomi: regnskabslisten udelader kortenes nøgletal og står aldrig to g
   const o = composeCompany(id, short, { focus: "overblik" }).components.find((c) => c.type === "LassoKeyValueList" && c.variant === "financials");
   assert.ok(o?.type === "LassoKeyValueList");
   assert.deepEqual(o.exclude, ["omsaetning", "resultat", "egenkapital", "ansatte"]);
-  // Historik uden nyheder låner ikke regnskabslisten eller grafen som fyld: historikken står alene.
+  // Uden kort på siden (historik uden nyheder) udelades intet.
   short.news[id] = { lassoId: id, items: [] };
-  assert.deepEqual(placed(composeCompany(id, short, { focus: "historik" })), ["LassoCompanyHead", "LassoTimeline"]);
+  const h = composeCompany(id, short, { focus: "historik" }).components.find((c) => c.type === "LassoKeyValueList");
+  assert.ok(h?.type === "LassoKeyValueList" && h.exclude === undefined);
 });
 
 test("virksomhedsoplysninger gentager ikke hovedet, kontaktblokken eller ejerlisten og udelades under 2 rækker", () => {
@@ -259,16 +278,18 @@ test("virksomhedsoplysninger gentager ikke hovedet, kontaktblokken eller ejerlis
   const co = ds.companies[id]!;
   const last = ds.financials[id]!.years.at(-1);
   const labels = (o: Parameters<typeof companyFacts>[3]) => companyFacts(co, ds.ownership[id], last, o).map((r) => r.label);
-  assert.deepEqual(labels({ hideIdentity: true, hideContact: true }), ["Revisor", "Seneste revisorskift", "Regnskabsperiode", "Branchekode", "Kommune", "Region"]);
-  assert.deepEqual(labels({ hideIdentity: true }), ["Revisor", "Seneste revisorskift", "Regnskabsperiode", "Branchekode", "Kommune", "Region", "Telefon"]);
-  assert.deepEqual(labels({ hideIdentity: true, hideContact: true, hideAuditor: true }), ["Regnskabsperiode", "Branchekode", "Kommune", "Region"]);
+  // 08.1: ansatte står ikke i hovedet, så listen har dem også under hovedet.
+  assert.deepEqual(labels({ hideIdentity: true, hideContact: true }), ["Revisor", "Seneste revisorskift", "Regnskabsperiode", "Branchekode", "Ansatte", "Kommune", "Region"]);
+  assert.deepEqual(labels({ hideIdentity: true }), ["Revisor", "Seneste revisorskift", "Regnskabsperiode", "Branchekode", "Ansatte", "Kommune", "Region", "Telefon"]);
+  assert.deepEqual(labels({ hideIdentity: true, hideContact: true, hideAuditor: true }), ["Regnskabsperiode", "Branchekode", "Ansatte", "Kommune", "Region"]);
   // Uden hoved på siden (fx en render_view-spec) står identiteten i listen som før.
-  assert.deepEqual(labels({}).slice(3, 8), ["Stiftet", "Virksomhedsform", "Branche", "Ansatte", "Adresse"]);
+  // G9 (Jakob 29.09): hovedet viser kun navnet, så identiteten står i listen, også med hovedet på siden.
+  assert.deepEqual(labels({}).slice(3, 9), ["CVR-nummer", "Stiftet", "Virksomhedsform", "Branche", "Ansatte", "Adresse"]);
   assert.equal(companyFacts(co, ds.ownership[id], last, { hideIdentity: true }).find((r) => r.label === "Revisor")?.lassoId, "CVR-1-99000002");
 
   // Kun én ny oplysning (branchekoden): listen udelades på alle fokus.
   const thin = holding();
-  thin.companies[id] = { ...co, address: { street: "Prøvevej 1", zip: "8600", city: "Silkeborg" }, phone: undefined };
+  thin.companies[id] = { ...co, address: { street: "Prøvevej 1", zip: "8600", city: "Silkeborg" }, phone: undefined, employees: undefined };
   thin.ownership[id] = { lassoId: id, owners: [] };
   thin.financials[id] = { lassoId: id, currency: "DKK", years: [] };
   for (const focus of FOCUSES) {
@@ -276,40 +297,9 @@ test("virksomhedsoplysninger gentager ikke hovedet, kontaktblokken eller ejerlis
   }
 });
 
-test("ledelse: hele ledelsen i fuld bredde, uden historik og ejere (de har deres egne faner)", () => {
-  const spec = composeCompany(id, holding(), { focus: "ledelse" });
-  assert.deepEqual(placed(spec), ["LassoCompanyHead", "LassoPersonList"]);
-  const list = spec.components.find((c) => c.type === "LassoPersonList");
-  assert.ok(list?.type === "LassoPersonList" && list.show === "all");
-  // Også uden personer: listens tomme tilstand er svaret.
-  const none = holding();
-  none.people[id] = [];
-  assert.deepEqual(placed(composeCompany(id, none, { focus: "ledelse" })), ["LassoCompanyHead", "LassoPersonList"]);
-});
-
-test("historik: historik (5, folder ud på stedet) | nyheder (5); uden nyheder historikken alene i fuld bredde", () => {
-  const ds = holding();
-  const spec = composeCompany(id, ds, { focus: "historik" });
-  assert.deepEqual(placed(spec), ["LassoCompanyHead", "LassoTimeline@1", "LassoNews@2"]);
-  const timeline = spec.components.find((c) => c.type === "LassoTimeline");
-  const news = spec.components.find((c) => c.type === "LassoNews");
-  // Fanen ejer elementerne: "Se alle" folder ud på stedet, ingen henvisning videre.
-  assert.ok(timeline?.type === "LassoTimeline" && timeline.limit === undefined && timeline.more === undefined);
-  assert.ok(news?.type === "LassoNews" && news.limit === 5 && news.more === undefined);
-  ds.news[id] = { lassoId: id, items: [] };
-  assert.deepEqual(placed(composeCompany(id, ds, { focus: "historik" })), ["LassoCompanyHead", "LassoTimeline"]);
-  // Kunne nyhederne ikke hentes, står nyhedernes fejltilstand ved siden af.
-  ds.errors[`news:${id}`] = "Lasso API-fejl (500)";
-  assert.deepEqual(placed(composeCompany(id, ds, { focus: "historik" })), ["LassoCompanyHead", "LassoTimeline@1", "LassoNews@2"]);
-  // Ingen begivenheder: historikkens tomme tilstand, ikke en graf i stedet.
-  const empty = holding();
-  empty.timeline[id] = { lassoId: id, events: [] };
-  empty.news[id] = { lassoId: id, items: [] };
-  assert.deepEqual(placed(composeCompany(id, empty, { focus: "historik" })), ["LassoCompanyHead", "LassoTimeline"]);
-});
-
 test("overblik: nyheder og historik er smagsprøver, hvis 'Se alle' åbner fanen Historik (more)", () => {
-  const spec = composeCompany(id, holding(), { focus: "overblik" });
+  // showAll: uden højdebudgettet står både nyheder og historik på overblikket (23.3 kan ellers udelade dem).
+  const spec = composeCompany(id, holding(), { focus: "overblik", showAll: true });
   const timeline = spec.components.find((c) => c.type === "LassoTimeline");
   const news = spec.components.find((c) => c.type === "LassoNews");
   assert.ok(timeline?.type === "LassoTimeline" && timeline.limit === 3 && timeline.more === "historik");
@@ -322,96 +312,40 @@ test("overblik: nyheder og historik er smagsprøver, hvis 'Se alle' åbner fanen
   assert.throws(() => viewSpecSchema.parse({ title: "x", components: [{ type: "LassoTimeline", company: id, more: "ledelse" }] }));
 });
 
-test("hvert modul ejer sit indhold: ingen elementtype står på to fokus ud over overblikket", () => {
-  // Alt, en virksomhed kan have: reelle ejere, kontaktpersoner, kreditvurdering, revisoruafhængighed og regnskab.
-  const ds = withAuditor(withCredit(holding()));
-  ds.beneficialOwnership[id] = { lassoId: id, owners: [{ name: "Bo", share: "100 %" }] };
-  ds.contactPersons[id] = { lassoId: id, people: [{ name: "Bo", role: "Direktør" }] };
-  ds.ownership[id]!.owners.push({ name: "Holding ApS", kind: "company", share: "10 %", lassoId: "CVR-1-99000003" });
-  ds.financialStatements[id] = { lassoId: id, currency: "DKK", incomeStatement: [{ year: 2025, revenue: 1 }], balanceSheet: [{ year: 2025, assetsTotal: 1 }], cashFlow: [{ year: 2025 }] };
-  // Hovedet på alle fokus, nøgletalskortene på overblik og oekonomi og opfølgningen er rammen, ikke indhold.
-  const frame = new Set(["LassoCompanyHead", "LassoKeyFigureCards", "LassoFollowUps"]);
-  const key = (c: ViewComponent) => `${c.type}${"variant" in c && c.variant ? `:${c.variant}` : ""}`;
-  const owner = new Map<string, string>();
-  for (const focus of FOCUSES.filter((f) => f !== "overblik")) {
-    for (const c of composeCompany(id, ds, { focus }).components) {
-      if (frame.has(c.type)) continue;
-      const k = key(c);
-      assert.ok(!owner.has(k) || owner.get(k) === focus, `${k} står på både ${owner.get(k)} og ${focus}`);
-      owner.set(k, focus);
-    }
-  }
-  assert.deepEqual(Object.fromEntries(owner), {
-    "LassoGroupedBarChart": "oekonomi",
-    "LassoWaterfallChart": "oekonomi",
-    "LassoKeyValueList:financials": "oekonomi",
-    "LassoShareBars": "oekonomi",
-    "LassoTextSections:analyse": "oekonomi",
-    "LassoMultiYearTable": "oekonomi",
-    "LassoIncomeStatement": "regnskab",
-    "LassoBalanceSheet": "regnskab",
-    "LassoCashFlow": "regnskab",
-    "LassoOwnerList": "ejerskab",
-    "LassoBeneficialOwners": "ejerskab",
-    "LassoOwnershipDiagram": "ejerskab",
-    "LassoPersonList": "ledelse",
-    "LassoCreditRating": "risiko",
-    "LassoAuditorIndependence": "risiko",
-    "LassoTimeline": "historik",
-    "LassoNews": "historik",
-    "LassoContact": "kontakt",
-    "LassoContactPersons": "kontakt",
-  });
-  // Overblikket: det, der også står på en fane, er en smagsprøve (kort) eller peger på fanen.
-  const overview = composeCompany(id, ds, { focus: "overblik" }).components.filter((c) => !frame.has(c.type));
-  for (const c of overview) {
-    const tab = owner.get(key(c));
-    if (!tab) continue;
-    if (c.type === "LassoTimeline" || c.type === "LassoNews") assert.equal(c.more, "historik", c.type);
-    else assert.ok(["LassoContact", "LassoBarChart"].includes(c.type), `${key(c)} står på overblik og ${tab}`);
-  }
+test("ledelse: ledelsen står først til venstre, og siden er bånd uden huller (gridmodel)", () => {
+  const spec = composeCompany(id, holding(), { focus: "ledelse" });
+  // Én direktør og én ejer står ½ + ½; de otte begivenheder er for høje til at stå ved siden af og får eget bånd.
+  assert.equal(spec.components.find((c) => c.type === "LassoPersonList")?.column, 1);
+  assert.ok(spec.components.some((c) => c.type === "LassoTimeline"));
+  assert.ok(spec.components.findIndex((c) => c.type === "LassoPersonList") < spec.components.findIndex((c) => c.type === "LassoTimeline"));
+  assertFullBands(spec);
 });
 
-test("overblik: nyheder og historik lægges i den kolonne, der vejer mindst (brugerens holdingeksempel)", () => {
+test("overblik (23.3): default-sidens rækkefølge i bånd uden huller (brugerens holdingeksempel)", () => {
   const ds = holding();
-  const spec = composeCompany(id, ds, { focus: "overblik" });
-  const col = (type: ViewComponent["type"]) => spec.components.find((c) => c.type === type)?.column;
-  // Faste pladser: relationer | profil | kontakt, oplysninger og graf.
-  assert.equal(col("LassoRelations"), 1);
-  assert.equal(col("LassoTextSections"), 2);
-  assert.deepEqual(
-    spec.components.filter((c) => c.column === 3).map((c) => c.type),
-    ["LassoContact", "LassoKeyValueList", "LassoBarChart"],
-  );
+  // showAll ("vis alt om X"): alle elementer; standardsiden holder højdebudgettet (se testen nedenfor).
+  const spec = composeCompany(id, ds, { focus: "overblik", showAll: true });
+  const order = spec.components.map((c) => c.type);
+  // Hoved og nøgletal i egne fuldbånd øverst; profilen er første anker, genveje og opfølgning sidst.
+  assert.deepEqual(order.slice(0, 2), ["LassoCompanyHead", "LassoKeyFigureCards"]);
+  assert.equal(spec.components[2]!.type, "LassoTextSections");
+  assert.equal(spec.components[2]!.column, 1);
+  assert.ok(order.includes("LassoShortcuts"));
+  assert.equal(order.at(-1), "LassoFollowUps");
   // Historikken viser 3 + "Se alle" på overblikket.
   const timeline = spec.components.find((c) => c.type === "LassoTimeline");
   assert.ok(timeline?.type === "LassoTimeline" && timeline.limit === 3);
-  // Den lange profil får hverken nyheder eller historik, og ingen kolonne står halvtom.
-  assert.notEqual(col("LassoNews"), 2);
-  assert.notEqual(col("LassoTimeline"), 2);
-  const w = columnWeights(spec, ds);
-  assert.equal(w.length, 3);
-  assert.ok(Math.max(...w) / Math.min(...w) < 1.5, `kolonnevægte ${w.map((x) => x.toFixed(1)).join("/")}`);
-  // Nyheder og historik i samme kolonne kun, når ingen anden kolonne er nær tom.
-  if (col("LassoNews") === col("LassoTimeline")) assert.ok(Math.min(...w) > 0.6 * Math.max(...w));
+  assertFullBands(spec);
+  // Den lange profil får hverken nyheder eller historik i sin stak.
+  const profileBand = bandsOf(spec).find((b) => b[0]!.some((c) => c.type === "LassoTextSections"))!;
+  assert.ok(!profileBand.flat().some((c) => c.type === "LassoNews" || c.type === "LassoTimeline"));
 
-  // En kort profil (kun CVR-tekster) får historikken, så kolonne 1 ikke bærer begge.
-  const short = holding();
-  short.textSections[id]!.sections = short.textSections[id]!.sections
-    .filter((s) => s.heading === "Formål" || s.heading === "Tegningsregler")
-    .map((s) => ({ ...s, body: "Kort tekst." }));
-  const s2 = composeCompany(id, short, { focus: "overblik" });
-  const col2 = (type: ViewComponent["type"]) => s2.components.find((c) => c.type === type)?.column;
-  assert.equal(col2("LassoNews"), 1);
-  assert.equal(col2("LassoTimeline"), 2);
-
-  // Uden relationer fylder nyhederne kolonne 1 i stedet for et hul.
+  // Uden relationer og med kort profil: stadig bånd på 12 uden huller.
   const alone = holding();
   alone.people[id] = [];
   alone.ownership[id] = { lassoId: id, owners: [], auditor: alone.ownership[id]!.auditor };
-  const s3 = composeCompany(id, alone, { focus: "overblik" });
-  assert.equal(s3.columns, 3);
-  assert.equal(s3.components.find((c) => c.type === "LassoNews")?.column, 1);
+  alone.textSections[id]!.sections = alone.textSections[id]!.sections.filter((x) => x.heading === "Formål").map((x) => ({ ...x, body: "Kort tekst." }));
+  assertFullBands(composeCompany(id, alone, { focus: "overblik" }));
 });
 
 test("componentWeight: vægten følger datas form", () => {
@@ -448,15 +382,15 @@ test("regnskabsanalysen: overblikket viser konklusion, resultat og likviditet, o
   assert.equal(profile.length, 1);
   assert.ok(profile[0]!.type === "LassoTextSections" && profile[0]!.variant === "profil" && profile[0]!.title === "Virksomhedsprofil");
 
-  const eco = composeCompany(id, ds, { focus: "oekonomi" });
+  const eco = composeCompany(id, ds, { focus: "oekonomi", showAll: true });
   const types = eco.components.map((c) => c.type);
   const analysis = eco.components.find((c) => c.type === "LassoTextSections");
   assert.ok(analysis?.type === "LassoTextSections" && analysis.variant === "analyse" && analysis.title === "Regnskabsanalyse");
-  assert.equal(analysis.column, undefined, "fuld bredde");
-  // Under graferne (kolonnebåndet) og over flerårstabellen.
-  const lastColumn = eco.components.reduce((last, c, i) => (c.column ? i : last), -1);
-  assert.ok(types.indexOf("LassoTextSections") > lastColumn);
-  assert.ok(types.indexOf("LassoTextSections") < types.indexOf("LassoMultiYearTable"));
+  // Gridmodellen: analysen pakkes sidst (efter grafer, regnskabsliste og flerårstabel), i fuld bredde
+  // eller ved siden af et element, der ellers ville stå alene.
+  assert.equal(types.filter((t) => t !== "LassoFollowUps").at(-1), "LassoTextSections");
+  assert.ok(types.indexOf("LassoTextSections") > types.indexOf("LassoGroupedBarChart"));
+  assertFullBands(eco);
 
   // Uden analyse: ingen tom sektion på oekonomi.
   const cvr = holding();

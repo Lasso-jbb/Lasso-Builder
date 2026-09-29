@@ -103,13 +103,15 @@ test("moreInTab: kun med 'more' på en fane og en vært, der kan skifte fane; fa
 
 test("virksomhedens overblik: 'Se alle … i Historik' med openFocus, ellers fold ud på stedet som før", () => {
   const ds = company();
-  const spec = composeCompany(CO, ds, { focus: "overblik", followUps: false });
+  // showAll: uden højdebudgettet (23.3) står både nyheder og historik som smagsprøver på overblikket.
+  const spec = composeCompany(CO, ds, { focus: "overblik", followUps: false, showAll: true });
   const linked = render(spec, ds, { openFocus: true });
   assert.match(linked, /Se alle 8 begivenheder i Historik/);
   assert.match(linked, /Se alle 5 nyheder i Historik/);
   const inPlace = render(spec, ds, {});
   assert.match(inPlace, /Se alle 8 begivenheder /);
-  assert.match(inPlace, /Se alle 5 nyheder /);
+  // Paper: nyhedslistens foldeknap hedder "Vis flere" (uden openFocus peger den ikke videre).
+  assert.match(inPlace, /Vis flere/);
   assert.doesNotMatch(inPlace, /i Historik/);
   // Fanen Historik ejer elementerne: dér folder "Se alle" ud på stedet, også med openFocus.
   const history = render(composeCompany(CO, ds, { focus: "historik", followUps: false }), ds, { openFocus: true });
@@ -140,9 +142,9 @@ test("personens overblik: roller, netværk og historik peger på deres faner", (
   assert.match(linked, /Se alle 3 selskaber i Roller/);
   assert.match(linked, /Se alle 5 personer i Netværk/);
   assert.match(linked, /begivenheder i Historik/);
-  // Uden openFocus: netværket folder ud på stedet, og de to aktive roller har ingen knap.
+  // Uden openFocus: netværket folder ud på stedet (Paper: "Vis alle N"), og de to aktive roller har ingen knap.
   const inPlace = render(spec, ds, {});
-  assert.match(inPlace, /Se alle 5 /);
+  assert.match(inPlace, /Vis alle 5 /);
   assert.doesNotMatch(inPlace, / i (Roller|Netværk|Historik)/);
   assert.doesNotMatch(inPlace, /Se alle 3 selskaber/);
 

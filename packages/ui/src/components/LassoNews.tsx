@@ -3,15 +3,22 @@ import { formatDate, isPersonId, type NewsItemVM, type NewsVM, type TextSegment 
 import type { MoreInTab, ViewAction } from "../types.js";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
 import { usePrintMode } from "../print.js";
+import { Icon } from "./Icon.js";
+import { LassoMark } from "../LassoMark.js";
 
 /** "2026-04-15" -> "for 3 dage siden" under 7 dage gammel, ellers "15.04.2026". */
 function relativeOrDate(iso: string | undefined): string {
   if (!iso) return "";
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return formatDate(iso);
-  const days = Math.max(0, Math.floor((Date.now() - then) / 86_400_000));
+  const ms = Math.max(0, Date.now() - then);
+  const days = Math.floor(ms / 86_400_000);
   if (days >= 7) return formatDate(iso);
-  if (days === 0) return "i dag";
+  // 26h.6: under et døgn i timer ("for 2 timer siden"); under en time "for lidt siden".
+  if (days === 0) {
+    const hours = Math.floor(ms / 3_600_000);
+    return hours === 0 ? "for lidt siden" : hours === 1 ? "for 1 time siden" : `for ${hours} timer siden`;
+  }
   if (days === 1) return "i går";
   return `for ${days} dage siden`;
 }
@@ -120,33 +127,49 @@ function Headline({ item, ...opts }: { item: NewsItemVM } & SegmentOpts) {
   return <>{parts}</>;
 }
 
+/** Lassos egen nyhedskilde ("Lasso News", "Lasso"). */
+export function isLassoSource(source: string | undefined): boolean {
+  return /^lasso(\s+news)?$/i.test((source ?? "").trim());
+}
+
 function SourceMark({ source, url }: { source: string; url?: string }) {
   const [broken, setBroken] = useState(false);
+  // 12.4: Lasso News bruger Lasso-ikonet fra 01b (ink, ingen flise), aldrig et hentet favicon eller globussen.
+  const lasso = isLassoSource(source);
   // Print (PDF): kun det neutrale ikon, så serverens Chromium aldrig henter noget udefra.
   const print = usePrintMode();
-  const src = broken || print ? null : favicon(url);
+  const src = broken || lasso || print ? null : favicon(url);
   return (
     <span className="lasso-news__mark" aria-hidden="true">
-      {src ? (
+      {lasso ? (
+        <LassoMark className="lasso-news__lasso" />
+      ) : src ? (
         <img src={src} alt="" width={16} height={16} onError={() => setBroken(true)} />
       ) : (
-        <svg viewBox="0 0 24 24" width={16} height={16}>
-          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1.6" />
-          <path d="M3 12h18M12 3c2.5 2.6 4 6 4 9s-1.5 6.4-4 9c-2.5-2.6-4-6-4-9s1.5-6.4 4-9z" fill="none" stroke="currentColor" strokeWidth="1.4" />
-        </svg>
+        <Icon name="globe" size={16} />
       )}
       <span className="lasso-news__source">{source},</span>
     </span>
   );
 }
 
+/** "Eksempeldata, kilde Paqle" (26h.6). Uden provider: Lasso News for Lassos egne, ellers Paqle. */
+function footText(item: NewsItemVM): string {
+  const provider = item.provider ?? (isLassoSource(item.source) ? "Lasso News" : "Paqle");
+  const text = [item.note, `kilde ${provider}`].filter(Boolean).join(", ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 function NewsRow({ item, mention, ...opts }: { item: NewsItemVM; mention?: string } & SegmentOpts) {
-  // Typeetiket og tidspunkt er ren tekst, komma-adskilt (regel 6: ingen midterprikker).
-  const meta = [item.typeLabel, relativeOrDate(item.time), item.language].filter(Boolean).join(", ");
+  // 12.4: kildelinjen er "Kilde, for 3 dage siden" / "Kilde, dd.mm.åååå, engelsk", komma-adskilt
+  // (regel 6), uden nyhedstypen.
+  const meta = [relativeOrDate(item.time), item.language].filter(Boolean).join(", ");
   // Rækken er ikke selv et link (links og knapper må ikke ligge i hinanden): overskriften linker til
   // artiklen, og navne med Lasso-ID i overskrift og uddrag åbner virksomheden eller personen.
   return (
-    <article className="lasso-news__row">
+    // 26h.6: en artikel med Paqle-fremhævning (firmanavnet udpeget i uddraget) står som kort på mobil;
+    // almindelige nyheder står som kompakt liste (26c.9).
+    <article className={`lasso-news__row${item.extractSegments?.some((x) => x.highlight) ? " lasso-news__row--featured" : ""}`}>
       <div className="lasso-news__head">
         <SourceMark source={item.source} url={item.url} />
         <span className="lasso-news__time">{meta}</span>
@@ -157,10 +180,19 @@ function NewsRow({ item, mention, ...opts }: { item: NewsItemVM; mention?: strin
       {item.excerpt ? (
         // Lasso News' content kan have linjeskift fra en HTML-liste (<li>); white-space: pre-line
         // viser dem, uden at gå via en stylesheet-ændring (uddraget er ellers almindelig løbetekst).
-        <div className="lasso-row__sub" style={{ whiteSpace: "pre-line" }}>
+        <div className={`lasso-row__sub lasso-news__excerpt${isLassoSource(item.source) ? "" : " lasso-news__snippet"}`} style={{ whiteSpace: "pre-line" }}>
           {item.extractSegments ? <Segments segments={item.extractSegments} {...opts} /> : <Excerpt text={item.excerpt} mention={mention} />}
         </div>
       ) : null}
+      {/* 26h.6 mobil: bundlinje med note og nyhedstjeneste til venstre og "Åbn artikel" til højre. */}
+      <div className="lasso-news__foot">
+        <span className="lasso-news__provider">{footText(item)}</span>
+        {item.url ? (
+          <a className="lasso-news__open" href={item.url} target="_blank" rel="noreferrer">
+            Åbn artikel
+          </a>
+        ) : null}
+      </div>
     </article>
   );
 }
@@ -181,8 +213,11 @@ export function LassoNews({
   onOpen,
   emptyReason,
   moreIn,
+  layout,
 }: {
   news?: NewsVM;
+  /** "grid" (mønster 8, 30.11): artiklerne som kortgitter i to kolonner i fuld bredde. */
+  layout?: "grid";
   companyName?: string;
   /** Virksomheden, siden handler om: dens navn i nyhederne står i fed og linker ikke til sig selv. */
   companyId?: string;
@@ -215,8 +250,8 @@ export function LassoNews({
   const max = limit ?? 5;
   const items = expanded ? news.items : news.items.slice(0, max);
   return (
-    <Section title={title} span="half">
-      <div className="lasso-news">
+    <Section title={title} span={layout === "grid" ? "full" : "half"}>
+      <div className={`lasso-news${layout === "grid" ? " lasso-news--grid" : ""}`}>
         {items.map((n, i) => (
           <NewsRow key={i} item={n} mention={companyName} selfId={companyId} onOpen={onOpen} />
         ))}
@@ -227,8 +262,10 @@ export function LassoNews({
             {`Se alle ${news.items.length} nyheder i ${moreIn.tab}`}
           </button>
         ) : (
-          <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-            {expanded ? "Vis færre" : `Se alle ${news.items.length} nyheder`}
+          // 12.4 (runde 5, Paper LNE-0): "Vis flere" som tekstknap med chevron under en tynd linje.
+          <button type="button" className="lasso-link lasso-news__more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+            {expanded ? "Vis færre" : "Vis flere"}
+            <Icon name={expanded ? "chevron-up" : "chevron-down"} size={14} />
           </button>
         )
       ) : null}

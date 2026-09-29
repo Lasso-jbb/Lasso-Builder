@@ -1,6 +1,11 @@
 import {
+  buildActivityHeatmap,
   formatCriterion,
   searchKey,
+  type ActivityHeatmapVM,
+  type IndustryBenchmarkVM,
+  type MapVM,
+  type ScoreHistoryVM,
   type AuditorIndependenceVM,
   type ChangeFeedVM,
   type AuditorRelationVM,
@@ -54,14 +59,16 @@ import {
   participantNames,
 } from "../lasso/adapters.js";
 import { describeShape, LassoApiError, type LassoClient } from "../lasso/client.js";
-import { adaptOwnershipLegal } from "../lasso/ownershipAdapters.js";
+import { adaptOwnershipLegal, withFallbackPeople } from "../lasso/ownershipAdapters.js";
 import { adaptLassoNews, mergeNews } from "../lasso/riskNewsAdapters.js";
+import { adaptCompanyEvents } from "../lasso/eventAdapters.js";
 import { adaptPerson, adaptPersonNetwork, adaptPersonSearch, graphFromPersonRoles } from "../lasso/personAdapters.js";
+import { adaptIndustryBenchmark, adaptMapPoints } from "../lasso/chartAdapters.js";
 import { adaptChrLivestock, adaptLiveNumber, adaptReportAnalysisSections, buildProductionUnits } from "../lasso/unitAdapters.js";
 import { loadCreditRating } from "../lasso/creditAdapters.js";
 import { criteriaToFilters, DEFAULT_ACTIVE_STATUS_FILTER, filtersToCriteria, SERVER_SORT, type LassoFilter } from "../lasso/searchFilters.js";
 import { applyCriteria, needsFinancials, sortRows } from "./criteria-eval.js";
-import { mapLimit, type ChangeFeedOptions, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
+import { searchPersonsTable, mapLimit, type ActivityHeatmapOptions, type ChangeFeedOptions, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
 
 /** Så længe venter kontaktblokken på hjemmesidens telefon/e-mail, før den vises uden. */
 export const CONTACT_BUDGET_MS = 2_500;
@@ -355,7 +362,14 @@ export class LiveProvider implements DataProvider {
   }
 
   async beneficialOwnership(lassoId: string) {
-    return adaptBeneficialOwnership(lassoId, await this.client.ownersBeneficial(lassoId));
+    const bo = adaptBeneficialOwnership(lassoId, await this.client.ownersBeneficial(lassoId));
+    // 28.9: ledelsen som reelle ejere -> de indsatte personer hentes fra virksomhedens roller.
+    if (bo.special?.kind !== "management" || bo.owners.length > 0) return bo;
+    try {
+      return withFallbackPeople(bo, adaptPeople(await this.client.company(lassoId)));
+    } catch {
+      return bo;
+    }
   }
 
   /**
@@ -370,7 +384,14 @@ export class LiveProvider implements DataProvider {
       withinBudget(safe(() => this.client.reportAnalysis(lassoId)), TEXT_SECTIONS_BUDGET_MS),
     ]);
     const analysisSections = analysisRaw === undefined ? [] : adaptReportAnalysisSections(analysisRaw);
-    return analysisSections.length ? { ...base, sections: [...base.sections, ...analysisSections] } : base;
+    // Analysen genereres ved opslaget (POST), så genereringsdatoen er tidspunktet for svaret.
+    return analysisSections.length ? { ...base, sections: [...base.sections, ...analysisSections], analysisGenerated: new Date().toISOString() } : base;
+  }
+
+  /** Katalog 28.2/28.6/28.8: fra virksomhedens fulde svar og regnskabsårene. Feltnavne ubekræftede (eventAdapters.ts). */
+  async companyEvents(lassoId: string) {
+    const [raw, financials] = await Promise.all([this.client.company(lassoId), this.financials(lassoId)]);
+    return adaptCompanyEvents(lassoId, raw, financials.years);
   }
 
   async timeline(lassoId: string) {
@@ -381,7 +402,7 @@ export class LiveProvider implements DataProvider {
   /**
    * Katalog 12: nyheder. Lasso News (POST /modules/news) hentes altid; Paqle (GET
    * /data/paqle/{lassoId}/news) kun når kontoen har adgang til Paqle-tilføjelsen. Fejler den ene
-   * kilde (manglende adgang, 4xx/5xx, timeout), vises blot det, den anden kilde leverede — se
+   * kilde (manglende adgang, 4xx/5xx, timeout), vises blot det, den anden kilde leverede - se
    * docs/endpoints-risiko-nyheder.md. Flettet efter tid (nyeste først) og skåret til `limit`.
    */
   async news(lassoId: string, limit: number) {
@@ -406,7 +427,7 @@ export class LiveProvider implements DataProvider {
    * Katalog 17: risikoobservationer (Firmaindsigt). Svarformen er bekræftet mod api.lassox.com
    * 27.09.2026 (docs/endpoints-risiko-nyheder.md). Kaldet kan tage flere sekunder for store
    * selskaber (11,8 s målt for Novo Nordisk); et budget forhindrer, at hele visningen venter så
-   * længe — kaldet kører videre i baggrunden og ligger klar i klientens cache til næste forsøg,
+   * længe - kaldet kører videre i baggrunden og ligger klar i klientens cache til næste forsøg,
    * og RiskObservations.tsx viser sin fejltilstand med "Prøv igen" i stedet. Indirekte
    * observationer under `relatedObservations` (personer OG selskaber) navngives bedst muligt
    * ud fra entitetens eget CVR-opslag.
@@ -632,6 +653,10 @@ export class LiveProvider implements DataProvider {
     return adaptPersonNetwork(lassoId, await this.client.personNetwork(lassoId));
   }
 
+  async personSearch(query: string, limit: number) {
+    return searchPersonsTable(this, query, limit);
+  }
+
   async findPersons(name: string, limit: number) {
     const raw = await this.client.search({ query: name, type: "person", pageSize: limit, personStatus: "all", companyStatus: "all" });
     return adaptPersonSearch(raw).slice(0, limit);
@@ -644,7 +669,12 @@ export class LiveProvider implements DataProvider {
    * overvågede. Findes ingen overvågningsliste, er det en tom tilstand med forklaring, ikke en fejl.
    */
   async changeFeed(opts: ChangeFeedOptions): Promise<ChangeFeedVM> {
-    const days = Math.max(1, Math.min(90, opts.days));
+    return this.monitoredChanges(opts, 90);
+  }
+
+  /** Fælles for ændringsfeedet (maks 90 dage) og heatmappet (13.11, op til 24 måneder). */
+  private async monitoredChanges(opts: ChangeFeedOptions, maxDays: number): Promise<ChangeFeedVM> {
+    const days = Math.max(1, Math.min(maxDays, opts.days));
     const jobs = adaptMonitoringJobs(await this.client.monitoringJobs().catch((err: unknown) => {
       if (err instanceof LassoApiError && [400, 404, 405, 501].includes(err.status)) return [];
       throw err;
@@ -675,5 +705,54 @@ export class LiveProvider implements DataProvider {
     }
     const feed = adaptChangeFeed(results, { listName: job.name ?? opts.list, days, types: opts.types, monitored, now });
     return feed.entries.length ? feed : { ...feed, emptyReason: `Ingen ændringer i "${feed.listName ?? "overvågningen"}" de seneste ${days} dage.` };
+  }
+  /** Katalog 18.2: ingen bekræftet Lasso-kilde til en 0–100 score, derfor heller ingen historik. Tom med årsag, ikke en fejl. */
+  async scoreHistory(lassoId: string): Promise<ScoreHistoryVM> {
+    return { lassoId, points: [], reason: "Lasso har endnu ingen score for virksomheden, så der er ingen historik at vise." };
+  }
+
+  /**
+   * Katalog 13.6/13.10. UBEKRÆFTET (docs/lasso-endpoints.md, "Ubekræftet: branchetal"): branchens
+   * nøgletal hentes med GET /data/cvr/industries/{DB07-kode}/keyfigures. Svarer Lasso 4xx, eller
+   * kender vi ikke branchekoden, er det "unavailable" med årsag (tom tilstand), ikke en fejl.
+   */
+  async industryBenchmark(lassoId: string): Promise<IndustryBenchmarkVM> {
+    const co = adaptCompany(lassoId, await this.client.company(lassoId));
+    const industryCode = co.industryCode;
+    if (!industryCode) return { lassoId, state: "unavailable", reason: "Virksomheden har ingen registreret branchekode.", years: [] };
+    try {
+      const raw = await this.client.get(`/data/cvr/industries/${encodeURIComponent(industryCode)}/keyfigures`);
+      return adaptIndustryBenchmark(lassoId, raw, { industryCode, industryText: co.industryText });
+    } catch (err) {
+      if (err instanceof LassoApiError && err.status < 500) {
+        return { lassoId, state: "unavailable", reason: "Lasso har ingen branchetal for virksomhedens branche endnu.", industryCode, industryText: co.industryText, years: [] };
+      }
+      throw err;
+    }
+  }
+
+  /** Katalog 13.11: samme ubekræftede kilde som ændringsfeedet, lagt i måneder (op til 24 måneder tilbage). */
+  async activityHeatmap(opts: ActivityHeatmapOptions): Promise<ActivityHeatmapVM> {
+    const months = Math.max(3, Math.min(24, opts.months));
+    const feed = await this.monitoredChanges({ list: opts.list, days: months * 31, types: opts.types }, 24 * 31);
+    return buildActivityHeatmap(feed.entries, {
+      months,
+      types: opts.types,
+      listName: feed.listName,
+      source: "CVR via Lasso",
+      updated: new Date().toISOString().slice(0, 10),
+      emptyReason: feed.entries.length ? undefined : feed.emptyReason,
+    });
+  }
+
+  /**
+   * Katalog 13.12. UBEKRÆFTET (docs/lasso-endpoints.md, "Ubekræftet: koordinater"): WGS84-koordinater
+   * læses defensivt fra virksomhedens og produktionsenhedernes adresseobjekter i CVR-svaret. Mangler
+   * de, er kortet tomt med årsag.
+   */
+  async mapPoints(lassoId: string): Promise<MapVM> {
+    const raw = await this.client.company(lassoId);
+    const units = arr(raw, "productionUnits", "produktionsenheder", "units", "secondaryUnits", "establishments");
+    return adaptMapPoints(lassoId, raw, units);
   }
 }

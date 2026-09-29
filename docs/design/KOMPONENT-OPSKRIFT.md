@@ -21,7 +21,7 @@ Der er ingen PDF. Filen er **"Lasso Portal - Designguide"**, `fileId` = `01M1GZG
 5. Navne står alene: ingen initial-cirkler eller ikonkasser.
 6. **Ingen midterprik (·) nogen steder, heller ikke i tekstkortet.** Brug komma.
 7. Ikon eller ord ved enhver farvekodning, aldrig kun farve.
-8. Kildelinje én gang pr. sektion: `SourceLine` ("Kilde: Navn, opdateret DD.MM.ÅÅÅÅ").
+8. UDGÅET (Jakob 29.09, G3): ingen kildelinje i elementerne; `SourceLine` tegner intet.
 9. Flere værdier end formen kan vise: 3 + "Se N …".
 10. Risikoskala 0 (lav) til 100 (høj).
 

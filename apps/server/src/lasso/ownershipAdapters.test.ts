@@ -16,7 +16,7 @@ import {
   legalOwnersLassoXRaw,
   ownershipGraphLassoXRaw,
 } from "./fixtures/ownership.js";
-import { adaptBeneficialOwnershipDocumented, adaptOwnershipLegal } from "./ownershipAdapters.js";
+import { adaptBeneficialOwnershipDocumented, adaptOwnershipLegal, withFallbackPeople } from "./ownershipAdapters.js";
 
 /**
  * Tester ejerskabsadapterne mod de svarformer, Lassos egen dokumentation beskriver
@@ -37,8 +37,9 @@ test("adaptBeneficialOwnershipDocumented: præcise procenter, sortering og via-r
   assert.equal(o.owners[0]!.share, "44 %");
   assert.equal(o.owners[2]!.share, "15,84 %");
   assert.equal(o.owners[0]!.chain, undefined, "direkte ejerskab har ingen kæde-tekst");
-  // throughRole=true ender som en forklarende tekst, ikke et direkte ejerskab.
-  assert.match(o.owners[3]!.chain ?? "", /via en rolle/i);
+  // throughRole=true vises som ", via rolle" i muted efter navnet (28.9), ikke som en ejerkæde.
+  assert.equal(o.owners[3]!.throughRole, true);
+  assert.equal(o.owners[3]!.chain, undefined);
   assert.equal(o.gaps, undefined);
 });
 
@@ -50,6 +51,18 @@ test("adaptBeneficialOwnershipDocumented: tom owners-liste udleder forklaring af
   // fallbackDescription, når den er sat, vinder over de udledte tekster.
   const withDescription = { ...beneficialOwnersEmptyExempt, fallbackDescription: "Lassos egen forklaringstekst." };
   assert.equal(adaptBeneficialOwnershipDocumented("x", withDescription)!.gaps![0]!.reason, "Lassos egen forklaringstekst.");
+});
+
+test("28.9: de tre særlige tilstande udledes af couldNotIdentify, exemptionStatus og fallbackType", () => {
+  assert.equal(adaptBeneficialOwnershipDocumented("x", beneficialOwnersEmptyCouldNotIdentify)!.special?.kind, "unidentified");
+  const exempt = adaptBeneficialOwnershipDocumented("x", beneficialOwnersEmptyExempt)!.special;
+  assert.equal(exempt?.kind, "exempt");
+  assert.ok(exempt?.caveat);
+  const mgmt = adaptBeneficialOwnershipDocumented("x", beneficialOwnersEmptyFallbackManagement)!.special;
+  assert.equal(mgmt?.kind, "management");
+  assert.equal(mgmt?.fallback, "management");
+  assert.equal(adaptBeneficialOwnershipDocumented("x", beneficialOwnersEmptyNotYetRegistered)!.special, undefined);
+  assert.equal(adaptBeneficialOwnershipDocumented(LASSO_X_LASSO_ID, beneficialOwnersLassoXRaw)!.special, undefined);
 });
 
 test("adaptBeneficialOwnershipDocumented: undefined for en form uden owners-array (falder tilbage)", () => {
@@ -98,7 +111,7 @@ test("adaptOwnershipGraph læser den dokumenterede relations/entities-form (LASS
   assert.equal(root.name, LASSO_X_NAME);
   assert.equal(root.cvr, "34580820");
   assert.equal(root.form, "A/S");
-  assert.equal(root.status, "NORMAL");
+  assert.equal(root.status, "Normal");
 
   const eggertEdge = g.edges.find((e) => e.from === EGGERT_HOLDING_ID && e.to === LASSO_X_LASSO_ID)!;
   assert.deepEqual(eggertEdge.share, [5, 9.99]);
@@ -124,4 +137,17 @@ test("adaptOwnershipGraph læser den dokumenterede relations/entities-form (LASS
   // De øvrige (ikke-UNKNOWN) noder er ikke fejlagtigt flaget som ukendte.
   assert.equal(root.unknown, undefined);
   assert.equal(g.nodes.find((n) => n.id === EGGERT_HOLDING_ID)?.unknown, undefined);
+});
+
+test("28.9: ledelsen som reelle ejere fyldes med de aktive direktører (bestyrelsen ved BOARD)", () => {
+  const bo = adaptBeneficialOwnershipDocumented("x", beneficialOwnersEmptyFallbackManagement)!;
+  const people = [
+    { name: "Anne Eksempel", lassoId: "CVR-3-1", role: "Direktør" },
+    { name: "Bo Eksempel", lassoId: "CVR-3-2", role: "Bestyrelsesformand" },
+    { name: "Carla Prøve", lassoId: "CVR-3-3", role: "Direktør", to: "2020-01-01" },
+  ];
+  const filled = withFallbackPeople(bo, people);
+  assert.deepEqual(filled.owners.map((o) => [o.name, o.role]), [["Anne Eksempel", "Direktør"]]);
+  const board = withFallbackPeople({ ...bo, special: { ...bo.special!, fallback: "board" } }, people);
+  assert.deepEqual(board.owners.map((o) => o.name), ["Bo Eksempel"]);
 });

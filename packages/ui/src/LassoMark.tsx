@@ -4,7 +4,7 @@ export const LASSO_MARK_PATH =
 
 /**
  * Lassos master-ikon (designkatalog 01B, node IFL-0). Præcis vektor fra Paper,
- * viewBox 117×97 — samme form for alt fra favicon til skinne, aldrig et eget
+ * viewBox 117×97 - samme form for alt fra favicon til skinne, aldrig et eget
  * mobil- eller kompaktikon. Ink-farvet på hvid, uden flise, kasse eller cirkel
  * bagved (fundament, regel 20).
  */

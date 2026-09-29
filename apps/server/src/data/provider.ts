@@ -1,6 +1,8 @@
 import type {
+  ActivityHeatmapVM,
   BeneficialOwnershipVM,
   ChangeFeedVM,
+  CompanyEventsVM,
   ChangeType,
   AuditorIndependenceVM,
   CompanyRowVM,
@@ -12,15 +14,19 @@ import type {
   DataSourceKind,
   FinancialsVM,
   FinancialStatementsVM,
+  IndustryBenchmarkVM,
+  MapVM,
   NewsVM,
   ObservationsVM,
   OwnershipGraphVM,
   OwnershipVM,
   PersonRowVM,
   PersonNetworkVM,
+  PersonSearchResultVM,
   PersonSearchRowVM,
   PersonVM,
   ScoreVM,
+  ScoreHistoryVM,
   LivestockVM,
   PropertiesVM,
   ProductionUnitsVM,
@@ -29,6 +35,7 @@ import type {
   TextSectionsVM,
   TimelineVM,
 } from "@lasso/spec";
+import { personSearchKey, personTableRow } from "@lasso/spec";
 
 /**
  * Datalaget. Både MCP-tools og (senere) Lassos interne chat kalder de samme
@@ -76,8 +83,26 @@ export interface DataProvider {
   personNetwork(lassoId: string): Promise<PersonNetworkVM>;
   /** Navneopslag på personer (til show_person med et navn). */
   findPersons(name: string, limit: number): Promise<PersonSearchRowVM[]>;
+  /** Katalog 15.3: personsøgning som tabel (roller, konkurser, fødselsår, by). */
+  personSearch(query: string, limit: number): Promise<PersonSearchResultVM>;
+  /** Katalog 28.2/28.6/28.8: fusioner/spaltninger, Statstidende-bekendtgørelser og regnskabspublicering. Live ubekræftet. */
+  companyEvents(lassoId: string): Promise<CompanyEventsVM>;
   /** Katalog 21: ændringer i de overvågede virksomheder de seneste `days` dage. Live-endpoint ubekræftet. */
   changeFeed(opts: ChangeFeedOptions): Promise<ChangeFeedVM>;
+  /** Katalog 18.2: scorehistorik (én hentning = ét punkt). Ingen live datakilde endnu; tom med årsag. */
+  scoreHistory(lassoId: string): Promise<ScoreHistoryVM>;
+  /** Katalog 13.6/13.10: branchens median pr. år. Live-endpoint ubekræftet; "unavailable" med årsag. */
+  industryBenchmark(lassoId: string): Promise<IndustryBenchmarkVM>;
+  /** Katalog 13.11: ændringer pr. måned og type i en overvågningsliste. Samme ubekræftede kilde som changeFeed. */
+  activityHeatmap(opts: ActivityHeatmapOptions): Promise<ActivityHeatmapVM>;
+  /** Katalog 13.12: hovedadresse og P-enheder med koordinater. Koordinater ubekræftede i live. */
+  mapPoints(lassoId: string): Promise<MapVM>;
+}
+
+export interface ActivityHeatmapOptions {
+  list?: string;
+  months: number;
+  types?: readonly ChangeType[];
 }
 
 export interface ChangeFeedOptions {
@@ -112,4 +137,22 @@ export async function mapLimit<T, R>(list: readonly T[], limit: number, fn: (t: 
   });
   await Promise.all(workers);
   return out;
+}
+
+/**
+ * Katalog 15.3: navnesøgningen beriget med hver persons roller (samme opslag som personsiden),
+ * højst 5 ad gangen. Kan en person ikke hentes, står rækken med navn og by alene, så én fejl
+ * aldrig vælter tabellen.
+ */
+export async function searchPersonsTable(provider: Pick<DataProvider, "findPersons" | "person">, query: string, limit: number): Promise<PersonSearchResultVM> {
+  const hits = await provider.findPersons(query, limit);
+  const rows = await mapLimit(hits, 5, async (h) => {
+    try {
+      const row = personTableRow(await provider.person(h.lassoId));
+      return { ...row, name: row.name || h.name, city: row.city ?? h.city };
+    } catch {
+      return { lassoId: h.lassoId, name: h.name, roles: [], bankruptcies: 0, city: h.city };
+    }
+  });
+  return { key: personSearchKey({ query, limit }), query, total: rows.length, rows };
 }

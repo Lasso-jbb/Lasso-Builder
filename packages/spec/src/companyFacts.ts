@@ -1,4 +1,4 @@
-import { formatDate, formatNumber } from "./format.js";
+import { formatDate, formatEmail, formatNumber, formatPhone, formatWeb } from "./format.js";
 import type { Address, CompanyVM, FinancialYear, OwnershipVM } from "./models.js";
 import type { ViewComponent } from "./spec.js";
 
@@ -33,11 +33,16 @@ export const COMPANY_FACT_KEYS = [
 export type CompanyFactKey = (typeof COMPANY_FACT_KEYS)[number];
 
 export interface CompanyFact {
-  key: CompanyFactKey;
+  /** Rækkens nøgle, når den svarer til en CompanyFactKey (så `rows` kan vælge den). Nye Paper-rækker (CVR-nummer, bibrancher, revision, kapital) er uden nøgle. */
+  key?: CompanyFactKey;
   label: string;
   value?: string;
   /** Revisorens Lasso-ID, så navnet kan åbnes i værter med drill-down. */
   lassoId?: string;
+  /** 02c.10 Branche med kode: koden står først i muted, derefter branchetekst (value). */
+  code?: string;
+  /** Katalog 28.7: "Fravalgt" revision er den eneste værdi, der farves (warning-tekst, med ordet). */
+  tone?: "warning";
 }
 
 export interface CompanyFactOptions {
@@ -51,13 +56,13 @@ export interface CompanyFactOptions {
   rows?: readonly CompanyFactKey[];
 }
 
-/** "2025-01-01" -> "01.01" (dag.måned, uden år, katalog 09: "01.01 – 31.12"). */
+/** "2025-01-01" -> "01.01" (dag.måned, uden år, katalog 09: "01.01–31.12"). */
 function dayMonth(value: string | undefined): string | undefined {
   const m = value ? /^\d{4}-(\d{2})-(\d{2})/.exec(value) : null;
   return m ? `${m[2]}.${m[1]}` : undefined;
 }
 
-/** Regnskabsperioden uden år, "01.01 – 31.12", når begge datoer er kendt. */
+/** Regnskabsperioden uden år, "01.01 – 31.12" (09.2: mellemrum om tankestregen), når begge datoer er kendt. */
 export function accountingPeriod(year: Pick<FinancialYear, "periodStart" | "periodEnd"> | undefined): string | undefined {
   const from = dayMonth(year?.periodStart);
   const to = dayMonth(year?.periodEnd);
@@ -77,8 +82,8 @@ function employeesText(company: CompanyVM, lastYear: FinancialYear | undefined):
 }
 
 /**
- * Rækkerne med værdi, i fast rækkefølge. Revisor står også uden navn ("—"), når virksomheden har
- * regnskaber (så mangler den reelt); ellers udelades tomme rækker, så listen ikke fyldes af "—".
+ * Rækkerne med værdi, i fast rækkefølge. Revisor står også uden navn ("-"), når virksomheden har
+ * regnskaber (så mangler den reelt); ellers udelades tomme rækker, så listen ikke fyldes af "-".
  */
 export function companyFacts(company: CompanyVM, ownership: OwnershipVM | undefined, lastYear: FinancialYear | undefined, options: CompanyFactOptions = {}): CompanyFact[] {
   const a = company.address;
@@ -91,19 +96,33 @@ export function companyFacts(company: CompanyVM, ownership: OwnershipVM | undefi
   rows.push({ key: "regnskabsperiode", label: "Regnskabsperiode", value: accountingPeriod(lastYear) });
   if (!options.hideIdentity) {
     rows.push(
+      { label: "CVR-nummer", value: company.cvr },
       { key: "stiftet", label: "Stiftet", value: company.founded ? formatDate(company.founded) : undefined },
       { key: "form", label: "Virksomhedsform", value: company.form },
-      { key: "branche", label: "Branche", value: company.industryText ? `${company.industryText}${company.industryCode ? ` (${company.industryCode})` : ""}` : undefined },
+      { key: "branche", label: "Branche", value: company.industryText, code: company.industryText ? company.industryCode : undefined },
       { key: "ansatte", label: "Ansatte", value: employeesText(company, lastYear) },
     );
     if (!options.hideContact) rows.push({ key: "adresse", label: "Adresse", value: [a?.street, [a?.zip, a?.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || undefined });
   } else {
-    // Hovedet viser branchens tekst; koden er det eneste nye.
-    rows.push({ key: "branchekode", label: "Branchekode", value: company.industryCode });
+    // Hovedet viser branchens tekst; koden er det eneste nye. Ansatte står ikke i hovedet (08.1).
+    rows.push({ key: "branchekode", label: "Branchekode", value: company.industryCode }, { key: "ansatte", label: "Ansatte", value: employeesText(company, lastYear) });
   }
   rows.push({ key: "kommune", label: "Kommune", value: a?.municipality }, { key: "region", label: "Region", value: a?.region });
+  // Katalog 28.7/26h.9: bibrancher med kode først (hovedbranchen står i hovedet/Branche), revision og kapital.
+  if (company.altIndustries) {
+    rows.push({
+      label: "Bibrancher",
+      value: company.altIndustries.length ? company.altIndustries.slice(0, 3).map((b) => [b.code, b.text].filter(Boolean).join(" ")).join(", ") : "Ingen registreret",
+    });
+  }
+  if (company.auditExempt) rows.push({ label: "Revision", value: "Fravalgt", tone: "warning" });
+  if (company.registeredCapital) {
+    const cap = company.registeredCapital;
+    rows.push({ label: "Kapital", value: [`${formatNumber(cap.amount)} ${cap.currency ?? "DKK"}`, ...(cap.classes ?? [])].join(", ") });
+  }
   if (!options.hideContact) {
-    rows.push({ key: "telefon", label: "Telefon", value: company.phone }, { key: "email", label: "E-mail", value: company.email }, { key: "web", label: "Web", value: company.website });
+    // 02c.12: telefon i grupper af to, e-mail i små bogstaver, web uden https:// og www.
+    rows.push({ key: "telefon", label: "Telefon", value: formatPhone(company.phone) }, { key: "email", label: "E-mail", value: formatEmail(company.email) }, { key: "web", label: "Web", value: formatWeb(company.website) });
   }
   const shown = rows.filter((r) => r.value !== undefined || r.key === "revisor");
   if (!options.rows) return shown;
@@ -114,7 +133,10 @@ export function companyFacts(company: CompanyVM, ownership: OwnershipVM | undefi
 /** Hvad der ellers står på siden for virksomheden, afledt af specen (samme regel i komponisten og i LassoView). */
 export function companyFactOptions(page: readonly ViewComponent[], company: string): CompanyFactOptions {
   const has = (type: ViewComponent["type"]) => page.some((c) => c.type === type && "company" in c && c.company === company);
-  return { hideIdentity: has("LassoCompanyHead"), hideContact: has("LassoContact"), hideAuditor: has("LassoOwnerList") };
+  // 11.3: ejerlisten viser ikke længere revisoren, så nøgle-værdi-listen beholder den.
+  // G9 (Jakob 29.09): hovedet viser kun navnet, så identiteten (CVR, stiftet, form, branche, ansatte)
+  // står i nøgle-værdi-listen, også når hovedet er på siden.
+  return { hideIdentity: false, hideContact: has("LassoContact"), hideAuditor: false };
 }
 
 /** Samme adresse (vej og postnummer, uden forskel på store/små bogstaver og mellemrum). */

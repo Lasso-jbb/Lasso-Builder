@@ -100,7 +100,7 @@ test("resuméet nævner højst 10 navne og tæller resten", async () => {
   assert.match(summary, / … og 3 til\./);
   const card = textCard(spec, ds)!;
   assert.match(card, /MINE GEMTE SIDER \(13\)/);
-  assert.match(card, /og 1 flere/);
+  assert.match(card, /og 1 mere/);
   assert.equal((card.match(/Åbn: https:\/\/lasso\.test\/e\//g) ?? []).length, 12);
 });
 

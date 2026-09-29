@@ -32,13 +32,15 @@ function enk(): Dataset {
   return ds;
 }
 
-test("regnskab uden offentliggjort regnskab: kun én tom tilstand på nøgletallenes plads, intet lånt fra andre faner", () => {
+test("regnskab uden offentliggjort regnskab: én tom tilstand på nøgletallenes plads, oplysninger og ledelse ved siden af", () => {
   const spec = composeCompany(id, enk(), { focus: "regnskab" });
   const types = spec.components.map((c) => c.type);
-  assert.deepEqual(types, ["LassoCompanyHead", "LassoIncomeStatement", "LassoFollowUps"]);
+  assert.deepEqual(types, ["LassoCompanyHead", "LassoIncomeStatement", "LassoKeyValueList", "LassoPersonList", "LassoFollowUps"]);
   const stmt = spec.components.find((c) => c.type === "LassoIncomeStatement");
   assert.equal(stmt?.title, "Regnskab");
   assert.equal(stmt?.column, undefined);
+  assert.equal(spec.components.find((c) => c.type === "LassoKeyValueList")?.column, 1);
+  assert.equal(spec.components.find((c) => c.type === "LassoPersonList")?.column, 2);
   assert.equal(spec.columns, 2);
   // Ikke to tomme tabeller med samme tekst, og ingen opfølgning, der kræver regnskabstal.
   assert.ok(!types.includes("LassoBalanceSheet"));
@@ -47,12 +49,15 @@ test("regnskab uden offentliggjort regnskab: kun én tom tilstand på nøgletall
   assert.deepEqual(follow.prompts.map((p) => p.label), ["Risiko", "Kreditvurdering", "Ledelse"]);
 });
 
-test("regnskab uden offentliggjort regnskab: heller ikke oplysninger, ledelse eller ejere, når de findes (de har deres egne faner)", () => {
+test("regnskab uden offentliggjort regnskab og uden oplysninger ud over hovedet: ledelse og ejere side om side", () => {
   const ds = enk();
-  ds.ownership[id] = { lassoId: id, owners: [{ name: "Christian", kind: "person", share: "100 %" }], auditor: { name: "Revisor ApS" } };
-  ds.people[id] = [{ name: "Christian", role: "Direktør", from: "2023-01-30" }];
-  const types = composeCompany(id, ds, { focus: "regnskab", followUps: false }).components.map((c) => c.type);
-  assert.deepEqual(types, ["LassoCompanyHead", "LassoIncomeStatement"]);
+  // Kun branchekoden er ny i forhold til hovedet: listen med én række udelades.
+  ds.companies[id]!.address = { street: "Prøveparken 16", zip: "9381", city: "Sulsted" };
+  ds.ownership[id] = { lassoId: id, owners: [{ name: "Christian", kind: "person", share: "100 %" }] };
+  const spec = composeCompany(id, ds, { focus: "regnskab" });
+  assert.ok(!spec.components.some((c) => c.type === "LassoKeyValueList"));
+  assert.equal(spec.components.find((c) => c.type === "LassoPersonList")?.column, 1);
+  assert.equal(spec.components.find((c) => c.type === "LassoOwnerList")?.column, 2);
 });
 
 test("regnskab med regnskab: tabellerne står stadig i fuld bredde", () => {

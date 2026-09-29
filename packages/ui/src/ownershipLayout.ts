@@ -1,4 +1,4 @@
-import { formatShare, type OwnershipEdgeVM, type OwnershipGraphVM, type OwnershipNodeVM } from "@lasso/spec";
+import { moreText, formatShare, type OwnershipEdgeVM, type OwnershipGraphVM, type OwnershipNodeVM } from "@lasso/spec";
 
 /**
  * Layout af ejerdiagrammet (katalog 14 og 14b). Ren TypeScript uden React, så
@@ -324,7 +324,7 @@ interface WEdge {
 function shareLines(e: OwnershipEdgeVM | undefined, historic: boolean): LabelLine[] | undefined {
   if (!e?.share && !e?.votes) return undefined;
   const share = e.share ? formatShare(e.share) : undefined;
-  const prefix = e.classes ? `${e.classes}: ` : "";
+  const prefix = e.beneficial ? "Reelt " : e.classes ? `${e.classes}: ` : "";
   const suffix = historic && e.until ? `, til ${e.until.slice(0, 4)}` : "";
   if (e.votes && share && !sameShare(e.share, e.votes)) {
     return [
@@ -339,12 +339,23 @@ function entityNode(n: OwnershipNodeVM, weight: number): WNode {
   return { id: n.id, kind: n.kind, entity: n, title: n.name, subtitle: entitySubtitle(n), weight };
 }
 
-/** Undertekst under navnet: "CVR 32343554, ApS", "Person", "Udenlandsk, Norge", "Ophørt". */
+/**
+ * Undertekst under navnet: "CVR 32343554", "Udenlandsk, Norge", "Ophørt". 14.1 (Jakob): ingen
+ * selskabsform efter CVR-nummeret, og personer har ingen undertekst (tom streng; ikke "Person").
+ */
 export function entitySubtitle(n: OwnershipNodeVM): string {
-  if (n.kind === "person") return "Person";
-  if (n.country && n.country.toUpperCase() !== "DK") return [n.registrationNo ? `Reg.nr. ${n.registrationNo}` : "Udenlandsk", countryName(n.country)].join(", ");
+  if (n.kind === "person") return "";
+  // 14.2/14b: "Udenlandsk, Norge" eller registreringsnummeret med landets betegnelse ("Org.nr. 000 000 002, Norge", "HRB 000000, Tyskland").
+  if (n.country && n.country.toUpperCase() !== "DK") return [n.registrationNo ? registrationText(n.country, n.registrationNo) : "Udenlandsk", countryName(n.country)].join(", ");
   if (isCeased(n)) return n.status ?? "Ophørt";
-  return [n.cvr ? `CVR ${n.cvr}` : undefined, n.form].filter(Boolean).join(", ") || (n.status ?? "Virksomhed");
+  return n.cvr ? `CVR ${n.cvr}` : (n.status ?? "Virksomhed");
+}
+
+/** Registreringsnummer med landets betegnelse: Norge og Sverige "Org.nr.", Tyskland som "HRB …" uændret. */
+function registrationText(country: string, no: string): string {
+  if (/^[A-Z]{2,4}\s/.test(no)) return no;
+  const c = country.toUpperCase();
+  return `${c === "NO" || c === "SE" || c === "FI" ? "Org.nr." : "Reg.nr."} ${no}`;
 }
 
 const COUNTRIES: Record<string, string> = { NO: "Norge", SE: "Sverige", DE: "Tyskland", FI: "Finland", GB: "Storbritannien", UK: "Storbritannien", NL: "Holland", US: "USA", FR: "Frankrig", CH: "Schweiz", LU: "Luxembourg", IS: "Island", PL: "Polen", BE: "Belgien", ES: "Spanien", IE: "Irland" };
@@ -402,8 +413,16 @@ export function layoutOwnership(graph: OwnershipGraphVM, options: LayoutOptions 
 
   // 4. Foldning af lange kæder med én ejer pr. led.
   if (!expandAll) {
+    const layer0 = new Map(layer);
     const folded = foldChains(work, wedges, layer, rootId, expanded, isTree);
     if (folded) {
+      // 14b: i en foldet kæde siger de viste led, hvilket lag de står i ("Lag 1, 100 %", "Lag 6, 100 %").
+      for (const [id, w] of work) {
+        const L = layer0.get(id);
+        if (!w.entity || id === rootId || L === undefined || L === 0) continue;
+        const e = folded.edges.find((x) => (L > 0 ? x.to === id : x.from === id) && x.edge?.share);
+        w.subtitle = `Lag ${Math.abs(L)}${e?.edge?.share ? `, ${formatShare(e.edge.share)}` : ""}`;
+      }
       wedges = folded.edges;
       layer = relayer(rootId, work, wedges);
     }
@@ -424,12 +443,18 @@ export function layoutOwnership(graph: OwnershipGraphVM, options: LayoutOptions 
     if (direct.length > 0) {
       const sumMax = direct.reduce((s, e) => s + (e.edge!.share![1] ?? 0), 0);
       const sumMin = direct.reduce((s, e) => s + (e.edge!.share![0] ?? 0), 0);
-      if (sumMax < 99.99 && sumMin < 100) {
-        const rest = Math.max(0, 100 - sumMin);
+      // Intervallerne fra CVR (fx 50–66,66 + 45–49,99) kan dække 100 % uden at gøre det: en rest på
+      // højst 5 % er ejere under registreringsgrænsen (14b: "ukendt < 5 %").
+      const small = 100 - sumMin > 0.01 && 100 - sumMin <= 5.01;
+      if ((sumMax < 99.99 && sumMin < 100) || small) {
+        // 14b: én stiplet node UNDER fokus: "Ukendt ejerskab, resterende 25 %", ingen pil eller label.
+        const lo = Math.max(0, 100 - sumMax);
+        const hi = Math.max(0, 100 - sumMin);
+        const rest = sumMax >= 99.99 ? "under 5 %" : hi - lo < 0.005 ? formatShare([lo, lo]) : `op til ${formatShare([hi, hi])}`;
         const id = "unknown:owners";
-        work.set(id, { id, kind: "unknown", title: "Ukendt ejer", subtitle: "Ikke registreret", weight: -1 });
-        layer.set(id, -1);
-        wedges.push({ id: `${id}>${rootId}`, from: id, to: rootId, dashed: true, lines: [{ text: `≤ ${formatShare([rest, rest])}`, tone: "muted" }], cycleSize: 0 });
+        work.set(id, { id, kind: "unknown", title: `Ukendt ejerskab, resterende ${rest}`, subtitle: "Andele under 5 % registreres ikke i CVR", weight: -1 });
+        layer.set(id, 1);
+        wedges.push({ id: `${rootId}>${id}`, from: rootId, to: id, dashed: true, cycleSize: 0 });
       }
     }
   }
@@ -683,12 +708,15 @@ function capLayers(
         kind: "group",
         count: fold.length,
         members: fold,
-        title: sign < 0 ? `${fold.length} flere ejere` : `${fold.length} flere datterselskaber`,
+        title: sign < 0 ? moreText(fold.length, "ejer", "ejere") : moreText(fold.length, "datterselskab", "datterselskaber"),
         subtitle: sign < 0 ? `${subtitle ?? "Andele ikke oplyst"}, fold ud` : subtitle,
         weight: -2,
       });
+      // 14.1 (Jakob): på ejersiden viser linjen de sammenklappede ejeres samlede, udregnede andel
+      // (summen af intervallerne, højst 100 %), fx "40–66,66 %", ikke "6 ejere".
+      const total: [number, number] = [Math.min(100, shares.reduce((a, s) => a + s[0], 0)), Math.min(100, shares.reduce((a, s) => a + s[1], 0))];
       const lines: LabelLine[] | undefined = shares.length
-        ? [{ text: same ? `${fold.length} × ${formatShare(shares[0])}` : sign < 0 ? `${fold.length} ejere` : `${fold.length} selskaber`, tone: "share" }]
+        ? [{ text: sign < 0 ? formatShare(total) : same ? `${fold.length} × ${formatShare(shares[0])}` : `${fold.length} selskaber`, tone: "share" }]
         : undefined;
       for (const n of fold) work.delete(n);
       edges = edges.filter((e) => !foldSet.has(e.from) && !foldSet.has(e.to));
@@ -781,8 +809,13 @@ export function countCrossings(layout: Pick<OwnershipLayout, "nodes" | "edges">)
 /* 8. Koordinater                                                      */
 /* ------------------------------------------------------------------ */
 
+/** 14b: den ukendte rest er bredere, så "Ukendt ejerskab, resterende 25 %" står på én linje. */
+export const UNKNOWN_W = 280;
+
 function sizeOf(n: WNode, root: boolean): [number, number] {
   if (root) return [ROOT_W, ROOT_H];
+  // 14.2/14b: titlen står altid på én linje; lange intervaller ("resterende op til 30,01 %") gør noden bredere.
+  if (n.kind === "unknown") return [Math.max(UNKNOWN_W, Math.ceil(n.title.length * 8.4) + 36), NODE_H];
   if (n.kind === "person") return [NODE_W, PERSON_H];
   return [NODE_W, NODE_H];
 }
@@ -1113,4 +1146,75 @@ export function ownershipTree(graph: OwnershipGraphVM, opts: { depthUp?: number;
   };
   const owners = build(graph.rootId, true);
   return { owners, subsidiaries: build(graph.rootId, false) };
+}
+
+/* ------------------------------------------------------------------ */
+/* Afsnit 3 i layoutreglerne (14.4): nyt fokus, reelle ejere, pr. dato  */
+/* ------------------------------------------------------------------ */
+
+/** Samme graf med `id` som fokus (dobbeltklik på en node). Dybden regnes derefter fra den nye rod. */
+export function refocusGraph(graph: OwnershipGraphVM, id: string): OwnershipGraphVM {
+  if (id === graph.rootId || !graph.nodes.some((n) => n.id === id)) return graph;
+  return { ...graph, rootId: id, nodes: graph.nodes.map((n) => ({ ...n, root: n.id === id })) };
+}
+
+/**
+ * Grafen, som den så ud på datoen (ÅÅÅÅ-MM-DD): ejerskaber registreret efter datoen udelades.
+ * Ophørte ejerskaber beholdes; layoutet tegner dem stiplet, når de var ophørt på datoen.
+ * Tilnærmelse på klienten ud fra since/until; API'et kan hente et præcist øjebliksbillede (onDate).
+ */
+export function graphOnDate(graph: OwnershipGraphVM, date: string | undefined): OwnershipGraphVM {
+  if (!date) return graph;
+  const edges = graph.edges.filter((e) => !e.since || e.since.slice(0, 10) <= date);
+  return { ...graph, edges, onDate: date };
+}
+
+/**
+ * "Reelle ejere" (14.1): personerne bag ejerkæderne med deres beregnede indirekte andel i
+ * roden (indirectShare), tegnet som direkte kanter person → rod. Mellemliggende selskaber
+ * udelades. Tom liste af kanter, når ingen personer kan findes i de hentede lag.
+ */
+export function beneficialGraph(graph: OwnershipGraphVM, onDate?: string): OwnershipGraphVM {
+  const { nodes, inn } = normalizeGraph(graph, { onDate });
+  const rootId = graph.rootId;
+  const people = new Set<string>();
+  const seen = new Set([rootId]);
+  const stack = [rootId];
+  while (stack.length) {
+    const id = stack.pop()!;
+    for (const e of inn.get(id) ?? []) {
+      if (seen.has(e.from)) continue;
+      seen.add(e.from);
+      const n = nodes.get(e.from);
+      if (!n) continue;
+      if (n.kind === "person") people.add(n.id);
+      else stack.push(n.id);
+    }
+  }
+  const edges: OwnershipEdgeVM[] = [];
+  for (const id of people) {
+    const share = indirectShare(graph, id, rootId);
+    if (share && share[1] > 0) edges.push({ from: id, to: rootId, share, beneficial: true });
+  }
+  const keep = new Set([rootId, ...edges.map((e) => e.from)]);
+  return { ...graph, nodes: graph.nodes.filter((n) => keep.has(n.id)), edges, ingoingDepth: 1, outgoingDepth: 0 };
+}
+
+/** Mini-kortets geometri: målestok, der får hele grafen ind i boksen, og viewport-rammen i kortets koordinater. */
+export function minimapFrame(
+  layout: { width: number; height: number },
+  view: { x: number; y: number; zoom: number; width: number; height: number },
+  box: { width: number; height: number } = { width: 168, height: 104 },
+): { scale: number; width: number; height: number; frame: { x: number; y: number; w: number; h: number } } {
+  const scale = Math.min(box.width / layout.width, box.height / layout.height);
+  const width = Math.round(layout.width * scale);
+  const height = Math.round(layout.height * scale);
+  const x0 = (-view.x / view.zoom) * scale;
+  const y0 = (-view.y / view.zoom) * scale;
+  const w = (view.width / view.zoom) * scale;
+  const h = (view.height / view.zoom) * scale;
+  // Rammen klippes til kortet, så den altid kan ses.
+  const cx = Math.max(0, Math.min(width, x0));
+  const cy = Math.max(0, Math.min(height, y0));
+  return { scale, width, height, frame: { x: cx, y: cy, w: Math.max(4, Math.min(width, x0 + w) - cx), h: Math.max(4, Math.min(height, y0 + h) - cy) } };
 }

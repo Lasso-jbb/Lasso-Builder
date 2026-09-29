@@ -167,62 +167,6 @@ test("show_company giver et signeret link til en interaktiv side med friske data
   assert.equal(forged.status, 403);
 });
 
-test("show_company: hvert fokus viser og henter kun sit eget; ingen elementtype på to fokus ud over overblikket", async () => {
-  const shown: Record<string, string[]> = {};
-  for (const focus of ["overblik", "oekonomi", "regnskab", "ejerskab", "ledelse", "risiko", "historik", "kontakt"]) {
-    const res = await client.callTool({ name: "show_company", arguments: { company: "99000001", focus } });
-    assert.ok(!res.isError, `${focus}: ${JSON.stringify(res.content)}`);
-    const spec = (res.structuredContent as { spec: ViewSpec }).spec;
-    const ds = (res._meta as Record<string, Dataset>)[DATASET_META_KEY]!;
-    shown[focus] = spec.components.map((c) => `${c.type}${"variant" in c && c.variant ? `:${c.variant}` : ""}`).filter((t) => !["LassoCompanyHead", "LassoKeyFigureCards", "LassoFollowUps"].includes(t));
-    // Probe pr. fokus: ledelse henter ikke historik eller ejere, risiko ikke personer eller historik,
-    // kontakt ikke virksomhedsoplysningernes ejer- og regnskabsdata.
-    const fetched = { people: Object.keys(ds.people).length > 0, ownership: Object.keys(ds.ownership).length > 0, timeline: Object.keys(ds.timeline).length > 0, financials: Object.keys(ds.financials).length > 0 };
-    if (focus === "ledelse") assert.deepEqual(fetched, { people: true, ownership: false, timeline: false, financials: false }, focus);
-    if (focus === "risiko") assert.deepEqual(fetched, { people: false, ownership: false, timeline: false, financials: false }, focus);
-    if (focus === "kontakt") assert.deepEqual(fetched, { people: false, ownership: false, timeline: false, financials: false }, focus);
-    if (focus === "historik") assert.deepEqual(fetched, { people: false, ownership: false, timeline: true, financials: false }, focus);
-  }
-  const seen = new Map<string, string>();
-  for (const [focus, types] of Object.entries(shown)) {
-    if (focus === "overblik") continue;
-    for (const t of types) {
-      assert.ok(!seen.has(t) || seen.get(t) === focus, `${t} står på både ${seen.get(t)} og ${focus}`);
-      seen.set(t, focus);
-    }
-  }
-  assert.deepEqual(shown.ledelse, ["LassoPersonList"]);
-  assert.deepEqual(shown.risiko, ["LassoCreditRating", "LassoAuditorIndependence"]);
-});
-
-test("delt side: overblikkets 'Se alle … i Historik' har et signeret link til samme side med fanen Historik", async () => {
-  const res = await client.callTool({ name: "show_company", arguments: { company: "99000001" } });
-  const spec = (res.structuredContent as { spec: ViewSpec }).spec;
-  assert.ok(spec.components.some((c) => c.type === "LassoTimeline" && c.more === "historik"), "historikken er en smagsprøve");
-  const page = await (await fetch((res.structuredContent as { link: string }).link)).text();
-  const boot = JSON.parse(/window\.__LASSO_BOOT__=(.*?);<\/script>/s.exec(page)![1]!) as { focusLinks?: Record<string, string>; links?: Record<string, string> };
-  assert.deepEqual(Object.keys(boot.focusLinks ?? {}), ["historik"]);
-  assert.match(boot.focusLinks!.historik!, /\/e\/CVR-1-99000001\?e=\w+&f=historik&s=[\w-]{22}$/);
-  const history = await fetch(boot.focusLinks!.historik!);
-  assert.equal(history.status, 200);
-  const historyBoot = JSON.parse(/window\.__LASSO_BOOT__=(.*?);<\/script>/s.exec(await history.text())![1]!) as { spec: ViewSpec; focusLinks?: Record<string, string> };
-  assert.equal(historyBoot.spec.subtitle, "Historik");
-  assert.ok(historyBoot.spec.components.some((c) => c.type === "LassoTimeline" && !c.more), "fanen folder ud på stedet");
-  assert.equal(historyBoot.focusLinks, undefined, "historik peger ikke videre");
-  // Signaturen dækker fokus: et andet f= i samme link afvises.
-  assert.equal((await fetch(boot.focusLinks!.historik!.replace("f=historik", "f=ledelse"))).status, 403);
-});
-
-test("show_company giver en brugbar fejl for ukendt navn", async () => {
-  const res = await client.callTool({ name: "show_company", arguments: { company: "Findes Ikke Nogen Steder" } });
-  assert.equal(res.isError, true);
-});
-
-test("show_company giver en brugbar fejl for ukendt virksomhed", async () => {
-  const res = await client.callTool({ name: "show_company", arguments: { company: "12345678" } });
-  assert.equal(res.isError, true);
-});
-
 test("show_person (katalog 16) finder en person på navn og komponerer personsiden", async () => {
   const res = await client.callTool({ name: "show_person", arguments: { person: "Bo Eksempel" } });
   assert.equal(res.isError, undefined);

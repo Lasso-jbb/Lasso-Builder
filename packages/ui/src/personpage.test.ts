@@ -83,7 +83,7 @@ test("PersonFacts: bopæl som postnummer og by, kommune, enhedsnummer og tal afl
   assert.match(html, /Ejer af.*1 selskab</);
   assert.match(html, /Første registrering.*2005/);
   assert.match(html, /Seneste ændring.*30\.06\.2018/);
-  assert.match(html, /Kilde: CVR via Lasso, opdateret 12\.09\.2026/);
+  assert.doesNotMatch(html, /Kilde:/, "G3: ingen kildelinje");
   assert.doesNotMatch(html, />0</, "aldrig et nul, kun 'Ingen'");
 });
 
@@ -94,8 +94,8 @@ test("PersonFacts: adressebeskyttet, tom tilstand der siger hvorfor, henter og f
   assert.match(facts({ lassoId: ID, name: "Tom", roles: [] }), /hverken en bopæl eller roller/);
   assert.match(facts(undefined), /aria-busy="true"/);
   assert.match(facts(undefined, "Lasso API-fejl (500)"), /Data kunne ikke hentes/);
-  // Uden bopæl, men med roller: "—" i stedet for en tom række.
-  assert.match(facts({ ...bo, city: undefined, zip: undefined, municipality: undefined }), /Bopæl.*—/);
+  // Uden bopæl, men med roller: "-" i stedet for en tom række.
+  assert.match(facts({ ...bo, city: undefined, zip: undefined, municipality: undefined }), /Bopæl.*-/);
 });
 
 test("columnBands: et lavere kolonnenummer starter et nyt bånd, og bredderne giver båndets forhold", () => {
@@ -107,7 +107,7 @@ test("columnBands: et lavere kolonnenummer starter et nyt bånd, og bredderne gi
     ["LassoPersonHead", "LassoPersonRoles | LassoPersonFacts", "LassoPersonNetwork | LassoOwnershipDiagram", "LassoPersonRisk | LassoTimeline"],
   );
   const [, rolesBand, netBand] = bands;
-  assert.equal(rolesBand?.kind === "columns" && bandTemplate(rolesBand.columns), "minmax(0, 3fr) minmax(0, 1fr)");
+  assert.equal(rolesBand?.kind === "columns" && bandTemplate(rolesBand.columns), "minmax(0, 9fr) minmax(0, 3fr)");
   assert.equal(netBand?.kind === "columns" && bandTemplate(netBand.columns), undefined);
   // Virksomhedssidens kolonner (stigende kolonnenumre uden bredder) er stadig ét bånd.
   const company = parseViewSpec({
@@ -128,7 +128,7 @@ test("columnBands: et lavere kolonnenummer starter et nyt bånd, og bredderne gi
 test("personsiden, overblik: aktive roller som liste ¾ + stamoplysninger ¼ (uden hovedets tal), historik (3) og ejerdiagram, ingen nyheder", () => {
   const spec = composePerson(ID, dataset(), { followUps: false });
   const html = render(spec, dataset(), { drillDown: true });
-  assert.match(html, /lasso-columns--ratio" style="--lasso-columns-template:minmax\(0, 3fr\) minmax\(0, 1fr\)"/);
+  assert.match(html, /lasso-columns--ratio lasso-band" style="--lasso-columns-template:minmax\(0, 9fr\) minmax\(0, 3fr\)"/);
   // Aktive roller: én række pr. selskab med rollerne under og "siden" til højre; navnet kan åbnes.
   assert.match(html, /class="lasso-section__title">Aktive roller</);
   assert.match(html, /<button type="button" class="lasso-link lasso-row__open">Eksempel Holding ApS<\/button><\/div><div class="lasso-row__sub">Direktør, ejer 100 %<\/div><\/div><div class="lasso-row__side">siden 2005</);
@@ -137,15 +137,16 @@ test("personsiden, overblik: aktive roller som liste ¾ + stamoplysninger ¼ (ud
   assert.match(html, /Stamoplysninger/);
   assert.match(html, /Enhedsnummer/);
   assert.doesNotMatch(html, /lasso-kv-row__label">Aktive roller|lasso-kv-row__label">Ejer af|lasso-kv-row__label">Første registrering/);
-  assert.match(html, /første registrering 2005/, "hovedet viser den");
+  assert.doesNotMatch(html, /første registrering 2005/, "16.1: hovedet viser kun navnet (G9)");
   // Historik: nyeste først (konkursen), selskabsnavnet som knap, 3 + "Se alle".
   assert.match(html, /<button type="button" class="lasso-link lasso-timeline__entity">Eksempel Energi A\/S<\/button><span> kom under konkurs<\/span>/);
   assert.match(html, /Se alle 6 begivenheder/);
   // Ingen nyheder på overblikket.
   assert.doesNotMatch(html, /Carla Prøve indtræder i bestyrelsen/);
-  // Ejerdiagram med personen som rod: "Fokusperson", ingen retningsvalg (en person har ingen ejere).
+  // Ejerdiagram med personen som rod: ingen retningsvalg (en person har ingen ejere); 14.1: legenden
+  // forklarer ikke fokus, virksomhed eller person.
   assert.match(html, /Ejerskab/);
-  assert.match(html, /Fokusperson/);
+  assert.doesNotMatch(html, /Fokusperson/);
   assert.doesNotMatch(html, /Kun ejere/);
   assert.match(html, /aria-label="Eksempel Holding ApS, CVR 99000010/);
   assert.match(html, /100 %/);
@@ -217,7 +218,7 @@ test("PersonRoles show 'current': de aktive roller pr. selskab, limit + 'Se alle
   assert.match(html, /Eksempel Byg A\/S<\/div><div class="lasso-row__sub">Bestyrelsesformand<\/div><\/div><div class="lasso-row__side">siden 2012</);
   assert.doesNotMatch(html, /Eksempel Energi/);
   assert.doesNotMatch(html, /Se alle/);
-  assert.match(html, /Kilde: CVR via Lasso, opdateret 12\.09\.2026/);
+  assert.doesNotMatch(html, /Kilde:/, "G3: ingen kildelinje");
   // limit 1: én række + "Se alle 2 selskaber".
   const one = roles({ show: "current", limit: 1 });
   assert.equal((one.match(/<li class="lasso-row"/g) ?? []).length, 1);
@@ -251,13 +252,22 @@ test("PersonRoles show 'all' (tidsbånd): limit bestemmer, hvor mange selskaber 
   assert.match(two, /aria-expanded="false"[^>]*>Se alle 3 selskaber</);
 });
 
-test("PersonNetwork limit: 3 som standard, flere på fanen Netværk", () => {
-  const people = Array.from({ length: 10 }, (_, i) => ({ name: `Person ${i} Eksempel`, companies: [{ companyName: "Eksempel Byg A/S" }], overlapYears: 10 - i, active: true }));
-  const net = (limit?: number) => renderToStaticMarkup(createElement(PersonNetwork, { network: { lassoId: ID, people }, limit }));
-  assert.equal((net().match(/<li class="lasso-personnet__row/g) ?? []).length, 3);
-  assert.match(net(), /Se alle 10/);
-  assert.equal((net(8).match(/<li class="lasso-personnet__row/g) ?? []).length, 8);
-  assert.match(net(8), /Se alle 10/);
+test("PersonNetwork (16.3): tidsbånd pr. fælles selskab, limit 3 som standard + 'Vis alle N', ingen 'Vis som graf'", () => {
+  const people = Array.from({ length: 10 }, (_, i) => ({ name: `Person ${i} Eksempel`, companies: [{ companyName: "Eksempel Byg A/S", role: "bestyrelse", from: "2012-01-01" }], overlapYears: 10 - i, active: true }));
+  const net = (limit?: number) => renderToStaticMarkup(createElement(PersonNetwork, { network: { lassoId: ID, people }, limit, onGraph: () => {} }));
+  const desk = (h: string) => (h.split("lasso-personnet__mob")[0]!.match(/<li class="lasso-personroles__row lasso-personnet__brow/g) ?? []).length;
+  assert.equal(desk(net()), 3);
+  assert.match(net(), /Vis alle 10/);
+  assert.equal(desk(net(8)), 8);
+  assert.match(net(), /lasso-personnet__band"/);
+  assert.match(net(), /Eksempel Byg A\/S, bestyrelse, siden 2012/);
+  assert.doesNotMatch(net(), /Vis som graf/);
+  // Afsluttet = stiplet bånd; konkurs = rød markør og ordet.
+  const ended = renderToStaticMarkup(createElement(PersonNetwork, { network: { lassoId: ID, people: [{ name: "Peter Eksempel", overlapYears: 4, active: false, companies: [{ companyName: "Eksempel Energi A/S", role: "direktør", from: "2014-01-01", to: "2018-01-01", status: "Under konkurs", statusKind: "warning" }] }] } }));
+  assert.match(ended, /lasso-personnet__band lasso-personnet__band--ended/);
+  assert.match(ended, /lasso-personnet__marker[^>]*aria-label="Eksempel Energi A\/S, under konkurs"/);
+  assert.match(ended, /1 fælles selskab, afsluttet/);
+  assert.match(ended, />tidligere</);
 });
 
 test("LassoView: tidslinjen med filter 'risiko' viser kun forløbet i selskaberne med konkurs", () => {

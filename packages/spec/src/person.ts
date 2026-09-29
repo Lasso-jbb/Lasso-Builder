@@ -45,6 +45,20 @@ export interface PersonVM {
   roles: PersonRoleVM[];
   /** Hvornår Lasso sidst opdaterede personen (kildelinjen). */
   updated?: string;
+  /**
+   * Katalog 16.4: PEP-opslag (politisk eksponeret person) mod Finanstilsynets liste. Udeladt, når
+   * opslaget ikke er foretaget; så står rækken som "Ikke tjekket" (aldrig "Nej").
+   */
+  pep?: { match: boolean; checkedAt?: string; detail?: string };
+  /**
+   * Katalog 16.4: stråmandsindikator, et mønster i rollerne (fx direktør i flere nystiftede selskaber
+   * uden ejerskab). "possible" = mulig vigtig; udeladt = ikke beregnet.
+   */
+  strawman?: { level: "none" | "possible"; detail?: string };
+  /** Katalog 16.4: sanktionslister. `available: false` = ikke i kundens pakke (låst række). */
+  sanctions?: { available: boolean; match?: boolean; checkedAt?: string };
+  /** Fødselsår, når kilden oplyser det. Fuld fødselsdato og CPR gemmes aldrig. */
+  birthYear?: number;
 }
 
 export interface PersonNetworkCompanyVM {
@@ -77,6 +91,66 @@ export interface PersonNetworkRowVM {
 export interface PersonNetworkVM {
   lassoId: string;
   people: PersonNetworkRowVM[];
+  /** Forbehold foran fodnoten (25.5), fx "Eksempeldata" for demodata. */
+  note?: string;
+}
+
+/**
+ * Persontabel (katalog 15.3): én række pr. person i et søgeresultat. Navnet står alene,
+ * aktive roller som tekst (højst 2 synlige, resten "og n flere"), konkurser som tal,
+ * fødselsår og by som sekundær linje. Aldrig CPR eller fuld adresse.
+ */
+export interface PersonTableRoleVM {
+  companyId?: string;
+  companyName: string;
+  role: string;
+}
+
+export interface PersonTableRowVM {
+  lassoId: string;
+  name: string;
+  /** Aktive roller, direktion og bestyrelse først. */
+  roles: PersonTableRoleVM[];
+  /** Selskaber med konkurs, personen har eller har haft en rolle i. */
+  bankruptcies: number;
+  birthYear?: number;
+  city?: string;
+  /** 15.3 "Selskaber": antal forskellige selskaber, personen har eller har haft en rolle i. */
+  companies?: number;
+  /** 15.3 "Seneste ændring": nyeste til- eller fratrædelsesdato (ISO). */
+  lastChange?: string;
+}
+
+export interface PersonSearchResultVM {
+  key: string;
+  query: string;
+  /** Antal personer, søgningen fandt i alt (kan være flere end rækkerne). */
+  total?: number;
+  rows: PersonTableRowVM[];
+}
+
+/** Stabil nøgle for en personsøgning (LassoPersonTable), så UI og server finder samme resultat. */
+export function personSearchKey(s: { query: string; limit?: number }): string {
+  return `${s.query.trim().toLowerCase()}|${s.limit ?? 25}`;
+}
+
+/** Tabelrækken for én person: aktive roller (direktion, bestyrelse, øvrige, ejer) og antal konkurser. */
+export function personTableRow(p: PersonVM): PersonTableRowVM {
+  const order: Record<PersonRoleKind, number> = { direction: 0, board: 1, other: 2, founder: 3, owner: 4 };
+  const roles = p.roles
+    .filter((r) => r.active)
+    .sort((a, b) => order[a.kind] - order[b.kind] || a.companyName.localeCompare(b.companyName, "da"))
+    .map((r) => ({ companyId: r.companyId, companyName: r.companyName, role: r.share && r.kind === "owner" ? `ejer ${r.share}` : r.role.toLowerCase() }));
+  return {
+    lassoId: p.lassoId,
+    name: p.name,
+    roles,
+    bankruptcies: personRisk(p).bankruptcies.length,
+    birthYear: p.birthYear,
+    city: p.addressProtected ? undefined : p.city,
+    companies: new Set(p.roles.map((r) => r.companyId ?? r.companyName)).size,
+    lastChange: p.roles.flatMap((r) => [r.from, r.to]).filter((d): d is string => Boolean(d)).sort().at(-1),
+  };
 }
 
 /** Søgerække ved opslag på navn. */

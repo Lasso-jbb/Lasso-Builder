@@ -1,4 +1,5 @@
 import {
+  activityHeatmapKey,
   changeFeedKey,
   emptyDataset,
   entityRefOf,
@@ -6,6 +7,7 @@ import {
   personTimeline,
   savedPagesKey,
   searchKey,
+  personSearchKey,
   toLassoId,
   type Dataset,
   type SavedPageKind,
@@ -34,6 +36,9 @@ const FETCHERS: Record<string, (ds: Dataset, p: DataProvider, id: string) => Pro
   people: async (ds, p, id) => void (ds.people[id] = await p.people(id)),
   ownership: async (ds, p, id) => void (ds.ownership[id] = await p.ownership(id)),
   score: async (ds, p, id) => void (ds.scores[id] = await p.score(id)),
+  scoreHistory: async (ds, p, id) => void (ds.scoreHistories[id] = await p.scoreHistory(id)),
+  industryBenchmark: async (ds, p, id) => void (ds.industryBenchmarks[id] = await p.industryBenchmark(id)),
+  mapPoints: async (ds, p, id) => void (ds.maps[id] = await p.mapPoints(id)),
   beneficialOwnership: async (ds, p, id) => void (ds.beneficialOwnership[id] = await p.beneficialOwnership(id)),
   textSections: async (ds, p, id) => void (ds.textSections[id] = await p.textSections(id)),
   // Katalog 16: personens historik afledes af rollerne (samme cachede personopslag som hovedet).
@@ -46,6 +51,7 @@ const FETCHERS: Record<string, (ds: Dataset, p: DataProvider, id: string) => Pro
   livestock: async (ds, p, id) => void (ds.livestock[id] = await p.livestock(id)),
   person: async (ds, p, id) => void (ds.persons[id] = await p.person(id)),
   personNetwork: async (ds, p, id) => void (ds.personNetworks[id] = await p.personNetwork(id)),
+  companyEvents: async (ds, p, id) => void (ds.companyEvents[id] = await p.companyEvents(id)),
 };
 
 /**
@@ -153,27 +159,55 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
     needs.set(id, s);
   };
   const searches: Extract<ViewComponent, { type: "LassoCompanyTable" }>["search"][] = [];
+  const personSearches: Extract<ViewComponent, { type: "LassoPersonTable" }>[] = [];
   const newsWanted = new Map<string, number>();
   const graphs: Extract<ViewComponent, { type: "LassoOwnershipDiagram" }>[] = [];
   const feeds: Extract<ViewComponent, { type: "LassoChangeFeed" }>[] = [];
   const savedLists: Extract<ViewComponent, { type: "LassoSavedPages" }>[] = [];
+  const heatmaps: Extract<ViewComponent, { type: "LassoHeatmap" }>[] = [];
 
   for (const c of spec.components) {
     switch (c.type) {
       case "LassoCompanyHead":
         want(c.company, "company");
+        // 08.1/24.4: "Se risiko"-linjen. Observationerne tager 10–14 s, så kun når specen beder om dem.
+        if (c.risk) want(c.company, "observations");
+        break;
+      case "LassoShortcuts":
+        // 08.4: genvejene har ingen egne data; navnet bruges i beskeden til værten.
+        want(c.company, "company");
         break;
       case "LassoKeyFigureCards":
       case "LassoBarChart":
       case "LassoGroupedBarChart":
+        want(c.company, "financials");
+        break;
       case "LassoStackedBarChart":
       case "LassoWaterfallChart":
+        // 13.5/13.7: balancens og resultatopgørelsens underposter fra det fulde regnskab, når de findes.
+        want(c.company, "financials", "financialStatements");
+        break;
       case "LassoShareBars":
-        want(c.company, "financials");
+        want(c.company, c.variant === "ejerkreds" ? "ownership" : "financials");
         break;
       case "LassoLineChart":
         want(c.company, "financials");
-        if (c.benchmark) want(c.benchmark, "company", "financials");
+        // 13.6: med sammenligning står virksomhedens navn i legenden, så stamdata hentes også.
+        if (c.industry || c.benchmark) want(c.company, "company");
+        if (c.industry) want(c.company, "industryBenchmark");
+        else if (c.benchmark) want(c.benchmark, "company", "financials");
+        break;
+      case "LassoKeyFigureGauge":
+        want(c.company, "financials", "industryBenchmark");
+        break;
+      case "LassoScoreHistory":
+        want(c.company, "scoreHistory");
+        break;
+      case "LassoMap":
+        want(c.company, "mapPoints");
+        break;
+      case "LassoHeatmap":
+        heatmaps.push(c);
         break;
       case "LassoRanking":
         c.companies.forEach((id) => want(id, "company", "financials"));
@@ -205,13 +239,15 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
       case "LassoSummary":
         break;
       case "LassoRiskObservations":
-        // Fjernet fra visningerne 27.09.2026: observationerne hentes ikke, komponenten vises ikke.
+        // Katalog 17.2: hentes kun, når en spec eksplicit beder om listen (compose tilføjer den ikke).
+        want(c.company, "observations");
         break;
       case "LassoCreditRating":
         want(c.company, "creditRating");
         break;
       case "LassoAuditorIndependence":
         want(c.company, "auditorIndependence");
+        want(c.company, "company"); // 22.2: "Uafhængighedstjek, <navn>"
         break;
       case "LassoProductionUnits":
         want(c.company, "productionUnits");
@@ -228,6 +264,9 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
       case "LassoCompanyTable":
         searches.push(c.search);
         break;
+      case "LassoPersonTable":
+        personSearches.push(c);
+        break;
       case "LassoKeyValueList":
         if (c.variant === "financials") want(c.company, "financials");
         else want(c.company, "company", "ownership", "financials");
@@ -236,7 +275,8 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
         want(c.company, "contact");
         break;
       case "LassoContactPersons":
-        want(c.company, "contactPersons");
+        // 08.7: "Se alle"-panelets første kolonne viser virksomheden og dens kontaktoplysninger.
+        want(c.company, "contactPersons", "company", "contact");
         break;
       case "LassoMultiYearTable":
         want(c.company, "financials");
@@ -244,6 +284,7 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
       case "LassoIncomeStatement":
       case "LassoBalanceSheet":
       case "LassoCashFlow":
+      case "LassoFinancialStatements":
         want(c.company, "financialStatements");
         break;
       case "LassoScoreGauge":
@@ -261,6 +302,24 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
         want(c.person, "person");
         break;
       case "LassoPersonNetwork":
+        want(c.person, "personNetwork");
+        break;
+      case "LassoMergers":
+        want(c.company, "company");
+        want(c.company, "companyEvents");
+        break;
+      case "LassoRegistration":
+        want(c.company, "company", "ownership", "financials", "textSections");
+        break;
+      case "LassoAnnouncements":
+        want(c.company, "company"); // 28.8: "<navn>, eksempeldata" under titlen
+        want(c.company, "companyEvents");
+        break;
+      case "LassoPublications":
+        want(c.company, "companyEvents");
+        break;
+      case "LassoPersonStats":
+        want(c.person, "person");
         want(c.person, "personNetwork");
         break;
       case "LassoChangeFeed":
@@ -294,6 +353,17 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
     run(`search:${key}`, async () => void (ds.searches[key] = await provider.search(s)));
   }
 
+  // Katalog 15.3: én personsøgning pr. (navn, antal); nøglen er personSearchKey, fejlnøglen "personSearch:<key>".
+  const personKeys = new Set<string>();
+  for (const p of personSearches) {
+    const key = personSearchKey(p);
+    if (personKeys.has(key)) continue;
+    personKeys.add(key);
+    run(`personSearch:${key}`, async () => {
+      (ds.personSearches ??= {})[key] = await provider.personSearch(p.query, p.limit);
+    });
+  }
+
   const graphKeys = new Set<string>();
   for (const g of graphs) {
     const key = ownershipGraphKey(g);
@@ -312,6 +382,15 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
     if (feedKeys.has(key)) continue;
     feedKeys.add(key);
     run(`changeFeed:${key}`, async () => void (ds.changeFeeds[key] = await provider.changeFeed({ list: f.list, days: f.days, types: f.types })));
+  }
+
+  // Katalog 13.11: ét heatmap pr. (liste, måneder, typer); nøglen er activityHeatmapKey, fejlnøglen "activityHeatmap:<key>".
+  const heatKeys = new Set<string>();
+  for (const h of heatmaps) {
+    const key = activityHeatmapKey(h);
+    if (heatKeys.has(key)) continue;
+    heatKeys.add(key);
+    run(`activityHeatmap:${key}`, async () => void (ds.activityHeatmaps[key] = await provider.activityHeatmap({ list: h.list, months: h.months, types: h.types })));
   }
 
   // Gem-laget: én liste pr. (slags, antal); nøglen er savedPagesKey, fejlnøglen "savedPages:<key>".

@@ -3,7 +3,8 @@
  * former, og UI-pakken kender kun dem. Derfor kan UI'en bygges og testes uden
  * at kende Lassos API, og serverlaget kan skiftes (fx ved flytning til Azure).
  */
-import type { PersonNetworkVM, PersonVM } from "./person.js";
+import type { PersonNetworkVM, PersonSearchResultVM, PersonVM } from "./person.js";
+import type { Metric } from "./spec.js";
 
 export interface Address {
   street?: string;
@@ -29,6 +30,30 @@ export interface CompanyVM {
   website?: string;
   email?: string;
   phone?: string;
+  /** Katalog 08.1: binavne fra CVR; det første vises i muted efter status ("Binavn: …"). */
+  secondaryNames?: string[];
+  /** Katalog 08.1: dato for den nuværende status, fx konkursdekret ("Under konkurs, siden 03.06.2026") eller ophør. */
+  statusDate?: string;
+  /** Katalog 08.1: kurator ved konkurs/likvidation (likvidator), vist i faktalinjen. */
+  curator?: string;
+  /** Katalog 28.7/26h.9: bibrancher (op til tre), kode først. `[]` = ingen registreret; udeladt = ukendt. Ubekræftet. */
+  altIndustries?: { code?: string; text: string }[];
+  /** Katalog 28.7: revision fravalgt (ÅRL § 135). Den eneste værdi, der farves (warning-tekst). Ubekræftet. */
+  auditExempt?: boolean;
+  /** Katalog 28.7: registreret kapital med valutakode og kapitalklasser. Ubekræftet. */
+  registeredCapital?: { amount: number; currency?: string; classes?: string[] };
+  /** Katalog 28.7: revision fravalgt siden dette regnskabsår. Ubekræftet. */
+  auditExemptSince?: number;
+  /** Katalog 28.7: regnskabsklasse (A, B, C, D). Ubekræftet. */
+  accountingClass?: string;
+  /** Katalog 28.7: første regnskabsperiode (ÅÅÅÅ-MM-DD). Ubekræftet. */
+  firstPeriod?: { start?: string; end?: string };
+  /** Katalog 28.7: vedtægter senest ændret (ÅÅÅÅ-MM-DD). Ubekræftet. */
+  statutesChanged?: string;
+  /** Katalog 28.7: reklamebeskyttet i CVR. Ubekræftet. */
+  advertisingProtected?: boolean;
+  /** Katalog 28.7: børsnoteret. Ubekræftet. */
+  listed?: boolean;
 }
 
 /**
@@ -43,6 +68,11 @@ export interface VerifiedPhoneNumberVM {
   callable: boolean;
   /** Fx "CVR", "Website". */
   sources: string[];
+  /**
+   * Katalog 08.5: nummeret er udgået (ikke længere i brug) siden denne dato. Værdien beholdes
+   * gennemstreget med "Udgået, DD.MM.ÅÅÅÅ"; den slettes aldrig fra blokken.
+   */
+  expired?: string;
 }
 
 /**
@@ -63,8 +93,13 @@ export interface ContactVM {
   verifiedNumbers?: VerifiedPhoneNumberVM[];
   /** Tilmeldt Robinsonlisten (må ikke kontaktes med markedsføring). */
   isRobinson?: boolean;
-  /** Hvornår live number-opslaget er opdateret. */
+  /**
+   * Hvornår live number-opslaget er opdateret. Dato (ÅÅÅÅ-MM-DD) eller ISO-tidspunkt; et tidspunkt
+   * inden for 60 sek. giver "Verificeret nu" (katalog 08.5), ellers "Verificeret for N dage siden".
+   */
   verifiedAt?: string;
+  /** Katalog 08.7: flere e-mailadresser end `email` (fx kontakt@ og contact@), vist under "Emailadresser". */
+  emails?: string[];
 }
 
 /** Katalog 08, én kontaktperson (rolle/afdeling, telefon og/eller e-mail). */
@@ -73,6 +108,19 @@ export interface ContactPersonVM {
   role?: string;
   phone?: string;
   email?: string;
+  /**
+   * Katalog 08.7: afdeling/gruppe i "Se alle"-panelet (Direktion, Ledelse, Salg, IT-udvikling,
+   * Konsulenter, Øvrige). Mangler den, afledes den af rollen (contactPersonGroup).
+   */
+  group?: string;
+  /** Profil-URL på LinkedIn (panelets detalje: "LinkedIn-profil, Åbn"). */
+  linkedin?: string;
+  /** Muted tekst under telefonnummeret, fx "Direkte" eller "Omstilling". */
+  phoneNote?: string;
+  /** Muted tekst under e-mailen, fx "Personlig" eller "Fælles". */
+  emailNote?: string;
+  /** Kilder til personen i panelet: navn (link, når url er sat), hvad kilden siger og dato. */
+  sources?: { label: string; url?: string; text?: string; date?: string }[];
 }
 
 export interface ContactPersonsVM {
@@ -111,7 +159,7 @@ export interface FinancialYear {
   soliditetsgrad?: number | null;
   /**
    * Overskudsgrad: resultat af primær drift (EBIT) i procent af nettoomsætningen (ÅRL-nøgletal).
-   * Beregnet; null ("—"), når omsætning eller EBIT ikke er oplyst (typisk klasse B).
+   * Beregnet; null ("-"), når omsætning eller EBIT ikke er oplyst (typisk klasse B).
    */
   overskudsgrad?: number | null;
   /** Hvilket regnskab tallene er fra: "Koncern" (når koncernregnskab findes) eller "Selskab". Aldrig blandet. */
@@ -127,6 +175,16 @@ export interface FinancialsVM {
   currency: string;
   /** Sorteret stigende efter år. */
   years: FinancialYear[];
+  /**
+   * Katalog 09.1: branchens udvikling pr. nøgletal i seneste år (procent, fx 3.1 = +3,1 %), vist som
+   * tekst efter ændringen ("branche ▲ 3,1 %"), aldrig som et ekstra tal. `label` er fx "branche 6201".
+   */
+  benchmark?: { label?: string; change: Partial<Record<Metric, number>> };
+  /**
+   * Katalog 09.1: kvalitetsflag pr. nøgletal i seneste år: forklaringen vises i tooltip ved det gule
+   * udråbstegn, fx "Ansatte i regnskabet afviger fra CVR (17)".
+   */
+  quality?: Partial<Record<Metric, string>>;
 }
 
 /**
@@ -136,18 +194,26 @@ export interface FinancialsVM {
  * tal som i `FinancialYear`; underposterne (personaleomkostninger, andre
  * driftsomkostninger, af- og nedskrivninger, finansielle poster, skat, og hele
  * balancens linjer ud over egenkapital/balancesum) er UBEKRÆFTEDE XBRL-begreber
- * (se docs/lasso-endpoints.md) og kan mangle ("—") for rigtige virksomheder.
+ * (se docs/lasso-endpoints.md) og kan mangle ("-") for rigtige virksomheder.
  */
 export interface IncomeStatementYear {
   year: number;
   periodStart?: string;
   periodEnd?: string;
   revenue?: number | null;
+  /** 19.1: vareforbrug og eksterne omkostninger (negativ), mellem omsætning og bruttofortjeneste. */
+  externalCosts?: number | null;
   grossProfit?: number | null;
   staffCosts?: number | null;
   otherOperatingCosts?: number | null;
   ebitda?: number | null;
   depreciation?: number | null;
+  /** 19.1: resultat af primær drift (EBIT). */
+  ebit?: number | null;
+  /** 19.1: finansielle indtægter (positiv). */
+  financialIncome?: number | null;
+  /** 19.1: finansielle omkostninger (negativ). */
+  financialExpenses?: number | null;
   financialItemsNet?: number | null;
   profitBeforeTax?: number | null;
   tax?: number | null;
@@ -159,7 +225,11 @@ export interface BalanceSheetYear {
   periodEnd?: string;
   intangibleAssets?: number | null;
   tangibleAssets?: number | null;
+  /** 19.1: finansielle anlægsaktiver (kapitalandele, langfristede tilgodehavender). */
+  financialFixedAssets?: number | null;
   fixedAssetsTotal?: number | null;
+  /** 19.1: varebeholdninger. */
+  inventories?: number | null;
   tradeReceivables?: number | null;
   otherReceivables?: number | null;
   cash?: number | null;
@@ -168,6 +238,8 @@ export interface BalanceSheetYear {
   shareCapital?: number | null;
   retainedEarnings?: number | null;
   equityTotal?: number | null;
+  /** 19.1: hensatte forpligtelser (står mellem egenkapital og gæld). */
+  provisions?: number | null;
   longTermLiabilities?: number | null;
   shortTermLiabilities?: number | null;
   liabilitiesTotal?: number | null;
@@ -201,6 +273,18 @@ export interface FinancialStatementsVM {
   balanceSheet: BalanceSheetYear[];
   /** Tom, når selskabet ikke aflægger pengestrømsopgørelse (klasse B) eller regnskabet ikke oplyser den. */
   cashFlow: CashFlowYear[];
+  /** Katalog 19.1: hvilket regnskab tallene er fra (samme valg som FinancialYear.scope). */
+  scope?: "Koncern" | "Selskab";
+  /** Katalog 19.1: det andet scope (koncern/selskab), når begge er aflagt. Værktøjslinjen skifter imellem dem. */
+  alternate?: Omit<FinancialStatementsVM, "lassoId" | "alternate">;
+  /** Katalog 19.1: periodetyper, selskabet indberetter. Standard kun "year"; halvår/kvartal er ellers dæmpet. */
+  periods?: ("year" | "half" | "quarter")[];
+  /** Katalog 19.1: revisorpåtegningen som tekst, fx "Revisionspåtegning uden forbehold". Ubekræftet i live. */
+  auditorOpinion?: string;
+  /** Katalog 19.1: link til årsrapporten som PDF (kun http/https). Ubekræftet i live. */
+  pdfUrl?: string;
+  /** Katalog 26d.9/26f.3: fodnote under opgørelserne, fx hvilke tal der er eksempeldata. */
+  note?: string;
 }
 
 export interface PersonRowVM {
@@ -209,6 +293,11 @@ export interface PersonRowVM {
   role: string;
   from?: string;
   to?: string;
+  /**
+   * Katalog 11.2: antal andre selskaber, personen har en aktiv rolle i ("også i 3 andre selskaber").
+   * Udeladt, når kilden ikke leverer tallet (feltet er ikke dokumenteret i Lasso-API'et; læses defensivt).
+   */
+  otherCompanies?: number;
 }
 
 export interface OwnerVM {
@@ -240,6 +329,10 @@ export interface BeneficialOwnerVM {
   chain?: string;
   /** Den beregnede indirekte andel, fx "20–24,99 %". */
   share?: string;
+  /** Ejerskabet skyldes en rolle i virksomheden (API: throughRole). Vises som "via rolle" i muted efter navnet (28.9). */
+  throughRole?: boolean;
+  /** Ledelsen som reelle ejere (28.9): personens rolle, fx "Direktør". Står til højre i stedet for andelen. */
+  role?: string;
 }
 
 /** Et led i ejerkæden, som CVR ikke kan følge til en reel person (fx et fondsejet led). */
@@ -249,10 +342,31 @@ export interface BeneficialOwnerGapVM {
   reason?: string;
 }
 
+/**
+ * De tre særlige tilstande for reelle ejere (katalog 28.9). Teksten forklarer altid, hvorfor listen
+ * ser ud, som den gør; aldrig farvet boks, aldrig tom sektion.
+ * - "management": ingen registrerede reelle ejere, så ledelsen/bestyrelsen/den daglige ledelse er
+ *   indsat (API: fallbackType/effectiveFallbackType). De indsatte personer står som rækker i `owners` med `role`.
+ * - "exempt": virksomheden er undtaget registreringskravet (API: exemptionStatus "EXEMPT"); forbehold i muted.
+ * - "unidentified": virksomheden har registreret, at den ikke kan identificere sine reelle ejere
+ *   (API: couldNotIdentify). Vises med udråbstegn-ikon, fordi det er en observation.
+ */
+export interface BeneficialOwnershipSpecialVM {
+  kind: "management" | "exempt" | "unidentified";
+  /** Årsagen i én sætning, fx Lassos fallbackDescription. */
+  reason: string;
+  /** Fritaget: forbeholdet i muted. */
+  caveat?: string;
+  /** Ledelsen som reelle ejere: hvilken gruppe der er indsat. */
+  fallback?: "management" | "daily-management" | "board";
+}
+
 export interface BeneficialOwnershipVM {
   lassoId: string;
   owners: BeneficialOwnerVM[];
   gaps?: BeneficialOwnerGapVM[];
+  /** Særlig tilstand (28.9): fallback til ledelsen, fritaget eller kunne ikke identificeres. */
+  special?: BeneficialOwnershipSpecialVM;
 }
 
 /** Tekstsektioner fra CVR-stamdata (katalog 12, "Tekstsektioner"). Felter ud over branche er ubekræftede. */
@@ -281,6 +395,14 @@ export interface TextSectionsVM {
   lassoId: string;
   title?: string;
   sections: TextSectionItem[];
+  /** 19.3: hvornår regnskabsanalysen blev genereret (ISO); står i analysens kildelinje. */
+  analysisGenerated?: string;
+  /** 19.3: regnskabsårene, analysen bygger på, fx "2021–2025" ("Genereret af Lasso ud fra regnskab 2021–2025"). */
+  analysisBasis?: string;
+  /** 19.3: analysens overskrift 17/600, fx "Vækst i toplinjen, men omkostningerne løber hurtigere". */
+  analysisHeadline?: string;
+  /** 19.3: kilderne bag analysen ("Vis kilder (4)"), fx "Årsrapport 2025". */
+  analysisSources?: string[];
 }
 
 /** Begivenhed i virksomhedens historik (katalog 12, "Tidslinje"). */
@@ -326,6 +448,10 @@ export interface NewsItemVM {
    */
   headlineSegments?: TextSegment[];
   extractSegments?: TextSegment[];
+  /** 26h.6: nyhedstjenesten bag artiklen ("Paqle" eller "Lasso News"), til kortets bundlinje "kilde Paqle". */
+  provider?: string;
+  /** 26h.6: kort note forrest i bundlinjen, fx "Eksempeldata". */
+  note?: string;
 }
 
 export interface NewsVM {
@@ -353,6 +479,10 @@ export interface ProductionUnitVM {
   /** Ophørsår, når enheden er ophørt (vises i status: "Ophørt 2024"). */
   endedYear?: number;
   created?: string;
+  /** Katalog 20.1: P-enhedens telefonnummer fra CVR (nuværende). Udeladt, når CVR ikke har et. */
+  phone?: string;
+  /** Katalog 20.1: P-enhedens e-mail fra CVR (nuværende). Udeladt, når CVR ikke har en. */
+  email?: string;
 }
 
 export interface ProductionUnitsVM {
@@ -369,7 +499,7 @@ export interface BuildingVM {
   builtYear?: number;
   floors?: number;
   areaM2?: number | null;
-  /** Antal enheder i bygningen; "—" når ikke relevant (fx garage). */
+  /** Antal enheder i bygningen; "-" når ikke relevant (fx garage). */
   units?: number | null;
 }
 
@@ -390,6 +520,16 @@ export interface PropertyVM {
   buildings: BuildingVM[];
   /** Sat, når vi har en reel matrikelgeometri at tegne; ellers vises kortet med tom-tilstand. */
   hasGeometry?: boolean;
+  /**
+   * Katalog 20.2: matrikelpolygon og bygningsomrids i et lokalt, metrisk koordinatsystem (x mod øst,
+   * y mod nord), så kortet kan tegnes i målestok. `selected` er bygningsnummeret med koral kant.
+   * Live-kilde (Datafordeleren/MAT og BBR) er ubekræftet; uden geometri vises tom tilstand.
+   */
+  geometry?: {
+    parcel: [number, number][];
+    buildings?: { number?: number; polygon: [number, number][] }[];
+    selected?: number;
+  };
 }
 
 export interface PropertiesVM {
@@ -472,6 +612,8 @@ export interface OwnershipEdgeVM {
   votes?: [number, number];
   /** Aktieklasser, fx "A, B", præcis som CVR leverer dem. */
   classes?: string;
+  /** 14.3: beregnet indirekte andel i reelle-ejere-visningen; labelen skrives "Reelt 22 %". */
+  beneficial?: boolean;
   since?: string;
   /** Slutdato for et ophørt ejerskab. */
   until?: string;
@@ -525,6 +667,8 @@ export interface CompanyRowVM {
   currency?: string;
   /** Bruttofortjeneste over tid, ældste først, til sparklines. */
   trend?: number[];
+  /** Lassos score 0 (lav risiko) til 100 (høj), når kilden har den (katalog 10). Mobilkortet viser den som fjerde tal. */
+  score?: number | null;
 }
 
 /** Alvorsskala (katalog 17, guide 23 regel 10): 0 neutral, 25 info, 50 mulig vigtig, 100 vigtig. */
@@ -554,7 +698,7 @@ export interface ObservationsVM {
   /**
    * Indirekte observationer (fx konkursrelationer), der egentlig måler en tilknyttet person
    * eller et tilknyttet selskab, grupperet pr. entitet (relatedObservations i det bekræftede
-   * svar — nøglerne kan være både personer og selskaber). Navnet slås op af LiveProvider, hvor
+   * svar - nøglerne kan være både personer og selskaber). Navnet slås op af LiveProvider, hvor
    * det kan findes; ellers vises entitetens Lasso-ID.
    */
   related?: { lassoId: string; name?: string; rows: ObservationRowVM[] }[];
@@ -588,6 +732,16 @@ export interface AuditorIndependenceVM {
   relations: AuditorRelationVM[];
   /** Sat når data mangler eller er ufuldstændige (ny datamodel, ingen bekræftet kilde endnu). */
   unavailableReason?: string;
+  /** Katalog 22/26e.8: revisorhistorik, ældste først; perioder som ÅÅÅÅ-MM-DD. Kun demodata indtil videre. */
+  history?: { name: string; from?: string; to?: string }[];
+  /** 22.2: hvad tjekket bygger på, fx "Baseret på CVR-roller og ejerskab, 3 led". */
+  basis?: string;
+  /** 26e.8: revisors påtegning, fx "Revisionspåtegning, uden forbehold". */
+  opinion?: string;
+  /** 26e.8: regnskabet, revisor er hentet fra, fx "Årsrapport 2025". */
+  report?: string;
+  /** 26e.8: uafhængighed som tjeklinjer (ok = grønt flueben, ellers gult "!"). Uden dem bruges relationerne. */
+  checks?: { label: string; sub?: string; ok: boolean }[];
 }
 
 export interface SearchResultVM {
@@ -611,6 +765,151 @@ export type DataSourceKind = "live" | "demo";
 export interface ScoreVM {
   lassoId: string;
   score: number | null;
+  source?: string;
+  updated?: string;
+  /**
+   * Katalog 10.1, hente-tilstande: "notfetched" = kan hentes (handling koster, stiplet ramme),
+   * "fetching" = henter (fuld ramme, spinner, 4 px fremdriftsbjælke), "unavailable" = kan ikke hentes
+   * (grå flade, altid med årsag). Udeladt = "ok", når score er sat, ellers "ikke oplyst".
+   */
+  state?: "ok" | "notfetched" | "fetching" | "unavailable";
+  /** Årsagen i "unavailable" (og forklaringen i "notfetched"). */
+  reason?: string;
+  /** Prisen for at hente, fx "1 kredit". Vises i "notfetched". */
+  cost?: string;
+  /** Fremdrift 0–1 i "fetching"; udeladt = ubestemt (bjælken glider). */
+  progress?: number;
+  /** Nøgle-værdi-linjer under måleren, fx Kreditmaksimum og International score. */
+  facts?: { label: string; value: string }[];
+  /** Katalog 18.1 (LWV-0): "Grundlag" under "Beregnet", fx "Regnskab 2025, status". Udelades, når ukendt. */
+  basis?: string;
+  /**
+   * Katalog 18.1 (LXL-0): "Hvad trækker scoren", op til 4 forklarende faktorer med tone (ok = trækker ned mod lav
+   * risiko, warning/danger = trækker op). Kun når scoremodellen leverer dem; ellers vises kun ¼-kortet.
+   */
+  factors?: { label: string; tone: "ok" | "warning" | "danger" }[];
+  /** Katalog 26d.7: scoren over de seneste 24 måneder, ældste først (datoer ÅÅÅÅ-MM-DD). Kun demodata. */
+  history?: { date: string; score: number }[];
+  /** Katalog 26d.7: seneste ændringer i scoren med årsag, nyeste først. `delta` i point (+ = højere risiko). */
+  changes?: { date: string; label: string; delta: number }[];
+  /** Katalog 26d.7: kort note til højre for "Udvikling, 24 måneder", fx "eksempeldata før 09.2026". */
+  historyNote?: string;
+}
+
+/* ---------- Katalog 18.2: scorehistorik (én hentning = ét punkt) ---------- */
+
+/** Én hentning af scoren. `date` er ÅÅÅÅ-MM-DD; `label` er kildens egen vurderingstekst (lav/moderat/høj). */
+export interface ScorePointVM {
+  date: string;
+  score: number;
+  label?: string;
+}
+
+/**
+ * Scorehistorik (18.2): hver hentning er et punkt, sorteret stigende efter dato. Skalaen er 0 = lav
+ * risiko til 100 = høj risiko. Tom `points` med `reason` = ingen historik (fx ingen live datakilde).
+ */
+export interface ScoreHistoryVM {
+  lassoId: string;
+  points: ScorePointVM[];
+  reason?: string;
+  source?: string;
+  updated?: string;
+}
+
+/* ---------- Katalog 13.6 og 13.10: branchetal (median pr. år) ---------- */
+
+/**
+ * Branchens median pr. år for virksomhedens hovedbranche (DB07). Bruges af linjegrafen som indeks
+ * (13.6) og af nøgletalsmåleren som branchemærke (13.10). Live-kilden er UBEKRÆFTET
+ * (docs/lasso-endpoints.md, "Ubekræftet: branchetal"); "unavailable" med årsag, når den mangler.
+ */
+export interface IndustryBenchmarkVM {
+  lassoId: string;
+  state: "ok" | "unavailable";
+  reason?: string;
+  industryCode?: string;
+  industryText?: string;
+  /** Antal virksomheder i medianen. */
+  peers?: number;
+  /** Stigende efter år; nøglerne er nøgletallene (Metric). */
+  years: { year: number; median: Partial<Record<Metric, number | null>> }[];
+  source?: string;
+  updated?: string;
+}
+
+/* ---------- Katalog 13.11: heatmap, aktivitet pr. måned i en overvågningsliste ---------- */
+
+export interface ActivityHeatmapVM {
+  listName?: string;
+  /** Månederne som "ÅÅÅÅ-MM", ældste først. */
+  months: string[];
+  /** Én række pr. ændringstype; `counts[i]` hører til `months[i]`. */
+  rows: { type: ChangeType; counts: number[] }[];
+  total: number;
+  source?: string;
+  updated?: string;
+  emptyReason?: string;
+}
+
+/** Stabil nøgle for et heatmap (liste, antal måneder, typer). */
+export function activityHeatmapKey(c: { list?: string; months?: number; types?: readonly ChangeType[] }): string {
+  return `${c.list ?? ""}|${c.months ?? 12}|${(c.types ?? []).join(",")}`;
+}
+
+/**
+ * Heatmap fra ændringer (13.11): tæller ændringer pr. måned og type for de seneste `months` måneder til
+ * og med `now`s måned. Foldede rækker ("5 virksomheder") tæller med deres antal. Rækker uden ændringer
+ * i hele perioden udelades, medmindre `types` er givet.
+ */
+export function buildActivityHeatmap(
+  entries: readonly Pick<ChangeEntryVM, "type" | "at" | "count">[],
+  opts: { months: number; now?: Date; types?: readonly ChangeType[]; listName?: string; source?: string; updated?: string; emptyReason?: string },
+): ActivityHeatmapVM {
+  const now = opts.now ?? new Date();
+  const months: string[] = [];
+  for (let i = opts.months - 1; i >= 0; i--) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    months.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`);
+  }
+  const index = new Map(months.map((m, i) => [m, i]));
+  const types = opts.types ?? CHANGE_TYPES;
+  const counts = new Map<ChangeType, number[]>(types.map((t) => [t, months.map(() => 0)]));
+  let total = 0;
+  for (const e of entries) {
+    const row = counts.get(e.type);
+    const i = index.get(e.at.slice(0, 7));
+    if (!row || i === undefined) continue;
+    const n = e.count ?? 1;
+    row[i]! += n;
+    total += n;
+  }
+  const rows = types.map((type) => ({ type, counts: counts.get(type)! })).filter((r) => opts.types || r.counts.some((n) => n > 0));
+  return { listName: opts.listName, months, rows, total, source: opts.source, updated: opts.updated, ...(opts.emptyReason ? { emptyReason: opts.emptyReason } : {}) };
+}
+
+/* ---------- Katalog 13.12: kort med adresse, P-enheder og klynger ---------- */
+
+/** Ét punkt på kortet. "focus" = virksomhedens adresse (ink-nål), "related" = P-enheder og relaterede adresser (blå ring). */
+export interface MapPointVM {
+  id: string;
+  kind: "focus" | "related";
+  name: string;
+  address?: string;
+  /** WGS84. */
+  lat: number;
+  lon: number;
+  /** Fx "P-nr. 1000000021" eller "8 ansatte". */
+  meta?: string;
+  lassoId?: string;
+}
+
+export interface MapVM {
+  lassoId: string;
+  points: MapPointVM[];
+  /** Adresser uden koordinater (vises som tekst under kortet). */
+  missing?: number;
+  emptyReason?: string;
   source?: string;
   updated?: string;
 }
@@ -655,6 +954,8 @@ export interface CreditRatingVM {
   updated?: string;
   /** Cache hos Lasso: 24 timer pr. organisation; ny beregning koster en kredit og tager 5–45 s. */
   cachedUntil?: string;
+  /** Kreditter tilbage på kontoen (18.3, bekræft hentning). Ubekræftet i Lassos API; udeladt = ingen "Hent ny vurdering". */
+  creditBalance?: number;
 }
 
 /* ---------- Katalog 21: overvågning og notifikationer ---------- */
@@ -778,6 +1079,71 @@ export function savedPagesKey(c: { kind?: SavedPageKind | "all"; limit?: number 
   return `${c.kind ?? "all"}|${c.limit ?? 20}`;
 }
 
+/* ---------- Katalog 28: øvrige datatyper (fusioner, Statstidende, regnskabspublicering) ---------- */
+
+/** Ét selskab i en fusion/spaltning (28.6). */
+export interface MergerPartyVM {
+  name: string;
+  lassoId?: string;
+  /** Ophørte ved fusionen/spaltningen (vises i muted med "ophørt ved fusionen"). */
+  ceased?: boolean;
+  /** 28.6: CVR-nummeret under navnet ("CVR …, ophørt ved fusionen"). */
+  cvr?: string;
+  /** 28.6: selskabets rolle i hændelsen, fx "fortsættende selskab", "afgivende selskab", "modtagende, nystiftet". */
+  role?: string;
+}
+
+/** Katalog 28.6: én fusion eller spaltning, "fra → til". */
+export interface MergerEventVM {
+  date?: string;
+  type: "Fusion" | "Spaltning";
+  from: MergerPartyVM[];
+  to: MergerPartyVM[];
+}
+
+/** Katalog 28.8: én bekendtgørelse i Statstidende. */
+export interface AnnouncementVM {
+  date?: string;
+  /** Fx "Dekret om konkurs", "Rekonstruktion", "Likvidation", "Indkaldelse af kreditorer". */
+  type: string;
+  /** Alvor, der styrer farven (statusgrupperne, Jakob 29.09.2026): problem (konkurs, rekonstruktion, tvangsopløsning) "bankrupt" i mørk rød, midlertidig (frivillig likvidation) "warning", øvrige tekst. */
+  severity: "bankrupt" | "warning" | "neutral";
+  /** Statstidendes egen tekst (foldes til to linjer). */
+  text?: string;
+  /** Link til bekendtgørelsen (kun http/https). */
+  url?: string;
+  /** 28.8: kildelinje pr. bekendtgørelse, fx "Statstidende, sagsnr. 1234, kreditorinformation vedlagt". */
+  source?: string;
+}
+
+/** Katalog 28.2: ét offentliggjort regnskab. */
+export interface PublicationVM {
+  /** Offentliggørelsesdato (ÅÅÅÅ-MM-DD). */
+  published?: string;
+  /** Periodens start (28.2: "01.01–31.12.2025"). */
+  periodStart?: string;
+  /** Periodens slut, så klik kan åbne 19 med perioden valgt. */
+  periodEnd?: string;
+  year?: number;
+  kind: "Årsrapport" | "Halvår" | "Kvartal";
+  /** 28.2: årets resultat i perioden (negativt i rødt) og den tidligere værdi ved korrektion. */
+  profit?: { value: number | null; previous?: number | null };
+  /** Korrigeret regnskab: udråbstegn-ikon og den tidligere værdi som "før …". */
+  corrected?: boolean;
+  /** Hovedtallet (bruttofortjeneste/omsætning) og dets tidligere værdi ved korrektion. */
+  figure?: { label: string; value: number | null; previous?: number | null };
+}
+
+/** Katalog 28.2/28.6/28.8: begivenheder for én virksomhed ud over CVR-tidslinjen. */
+export interface CompanyEventsVM {
+  lassoId: string;
+  mergers: MergerEventVM[];
+  announcements: AnnouncementVM[];
+  publications: PublicationVM[];
+  /** Hvornår Lasso hentede oplysningerne (kildelinjen). */
+  updated?: string;
+}
+
 /** Alt det data, én visning skal bruge, slået op på nøgle. */
 export interface Dataset {
   source: DataSourceKind;
@@ -797,6 +1163,14 @@ export interface Dataset {
   news: Record<string, NewsVM>;
   searches: Record<string, SearchResultVM>;
   scores: Record<string, ScoreVM>;
+  /** Katalog 18.2: scorehistorik pr. Lasso-ID. */
+  scoreHistories: Record<string, ScoreHistoryVM>;
+  /** Katalog 13.6/13.10: branchetal pr. Lasso-ID (virksomhedens hovedbranche). */
+  industryBenchmarks: Record<string, IndustryBenchmarkVM>;
+  /** Katalog 13.11: heatmap pr. activityHeatmapKey. */
+  activityHeatmaps: Record<string, ActivityHeatmapVM>;
+  /** Katalog 13.12: kortpunkter pr. Lasso-ID. */
+  maps: Record<string, MapVM>;
   observations: Record<string, ObservationsVM>;
   /** Katalog 17: kreditvurdering fra Creditsafe pr. Lasso-ID. */
   creditRatings: Record<string, CreditRatingVM>;
@@ -810,12 +1184,18 @@ export interface Dataset {
   /** Katalog 16: personer (Lasso-ID "CVR-3-…") og deres netværk. */
   persons: Record<string, PersonVM>;
   personNetworks: Record<string, PersonNetworkVM>;
+  /** Katalog 15.3: personsøgninger (LassoPersonTable) pr. personSearchKey. Fejlnøgle "personSearch:<key>". */
+  personSearches?: Record<string, PersonSearchResultVM>;
   /** Katalog 21: ændringsfeed pr. changeFeedKey. */
   changeFeeds: Record<string, ChangeFeedVM>;
+  /** Katalog 28.2/28.6/28.8: fusioner, Statstidende og regnskabspublicering pr. Lasso-ID. */
+  companyEvents: Record<string, CompanyEventsVM>;
   /** Gem-laget: gemte sider pr. savedPagesKey (LassoSavedPages). Fejlnøgle "savedPages:<key>". */
   savedPages: Record<string, SavedPagesVM>;
   /** Gem-laget: hvilke Lasso-ID'er i visningen brugeren allerede har gemt (til Gem/Gemt-knappen). */
   savedIds?: string[];
+  /** Katalog 08/16: hvilke Lasso-ID'er i visningen brugeren allerede overvåger ("Overvåger"). Sættes af værten. */
+  monitoredIds?: string[];
   /** Fejl pr. nøgle, fx "company:CVR-1-12345678" -> "Ingen adgang". */
   errors: Record<string, string>;
 }
@@ -837,6 +1217,10 @@ export function emptyDataset(source: DataSourceKind): Dataset {
     news: {},
     searches: {},
     scores: {},
+    scoreHistories: {},
+    industryBenchmarks: {},
+    activityHeatmaps: {},
+    maps: {},
     observations: {},
     creditRatings: {},
     auditorIndependence: {},
@@ -846,6 +1230,8 @@ export function emptyDataset(source: DataSourceKind): Dataset {
     ownershipGraphs: {},
     persons: {},
     personNetworks: {},
+    personSearches: {},
+    companyEvents: {},
     changeFeeds: {},
     savedPages: {},
     errors: {},

@@ -37,9 +37,10 @@ test("dagsoverskrift og klokkeslæt (21)", () => {
 
 test("Ændringsfeed (21): overskrift med antal, chips med antal, dagsgrupper, ulæst-markering og status som fra -> til", () => {
   const html = renderToStaticMarkup(createElement(ChangeFeed, { feed: feed(), now: NOW }));
-  assert.match(html, /Ændringer i &quot;Kunder&quot; \(9\)/);
-  // Filter-chips (ikke faner): Alle + de seks typer med antal i parentes
-  assert.match(html, /aria-pressed="true"[^>]*>Alle \(9\)/);
+  // 21.1: Kredit-rækken i data udgår (Jakob 15:41), så 8 af 9 tælles.
+  assert.match(html, /Ændringer i &quot;Kunder&quot; \(8\)/);
+  // Filter-chips (ikke faner): Alle + typerne (uden Kredit) med antal i parentes
+  assert.match(html, /aria-pressed="true"[^>]*>Alle \(8\)/);
   assert.match(html, /Regnskab \(1\)/);
   assert.match(html, /Status \(1\)/);
   assert.match(html, /Stamdata \(5\)/);
@@ -47,7 +48,8 @@ test("Ændringsfeed (21): overskrift med antal, chips med antal, dagsgrupper, ul
   // Dagsoverskrifter som overline
   assert.match(html, /class="lasso-feed__day">I dag, fredag 25\.09\.2026</);
   assert.match(html, /class="lasso-feed__day">I går, 24\.09\.2026</);
-  assert.match(html, /class="lasso-feed__day">onsdag 23\.09\.2026</);
+  // Onsdagen har kun en Kredit-ændring, som er skjult (21.1), så dagen står ikke.
+  assert.doesNotMatch(html, /class="lasso-feed__day">onsdag 23\.09\.2026</);
   // Ulæst: koral prik + venstrekant; første ulæste får soft-flade
   assert.equal((html.match(/lasso-feed__row--unread/g) ?? []).length, 2);
   assert.equal((html.match(/lasso-feed__row--first/g) ?? []).length, 1);
@@ -58,10 +60,10 @@ test("Ændringsfeed (21): overskrift med antal, chips med antal, dagsgrupper, ul
   // Foldet række
   assert.match(html, /5 virksomheder/);
   assert.match(html, /Vis alle/);
-  // Kilde + klokkeslæt i small muted, med komma (ingen midterprik)
-  assert.match(html, /lasso-feed__meta">CVR, kl\. 09\.14</);
+  // 21.1 (Jakob): kun klokkeslættet i tredje linje (ingen kildetype), ingen kildelinje (G3)
+  assert.match(html, /lasso-feed__meta">kl\. 09\.14</);
   assert.doesNotMatch(html, /·/);
-  assert.match(html, /Kilde: Eksempeldata, opdateret 25\.09\.2026/);
+  assert.doesNotMatch(html, /Kilde:/);
   // Periodevælger
   assert.match(html, /aria-label="Vælg periode"/);
   assert.match(html, /<option value="7"[^>]*>Seneste 7 dage/);
@@ -88,15 +90,16 @@ test("Notifikationspanel (21): overskrift, faner niveau 2, ulæst-prik, kilde + 
     { id: "5", kind: "konto", text: "Din Lasso Risiko-prøveperiode udløber om 5 dage", at: at(3, 9, 0), read: true },
   ];
   const html = renderToStaticMarkup(createElement(NotificationPanel, { items, now: NOW, onMarkAllRead: () => {}, onSeeAll: () => {} }));
-  assert.match(html, /Notifikationer \(3\)/);
+  assert.match(html.replace(/<[^>]+>/g, ""), /Notifikationer \(3\)/);
   assert.match(html, /Markér alle som læst/);
   assert.match(html, /class="lasso-tabs lasso-tabs--l2"/);
   assert.match(html, /aria-selected="true"[^>]*>Ulæste</);
   assert.match(html, />Alle<\/button>/);
   assert.match(html, />Overvågning<\/button>/);
-  // Fanen "Ulæste" er valgt: tre ulæste rækker med prik, læste vises ikke
-  assert.equal((html.match(/lasso-notif__row--unread/g) ?? []).length, 3);
-  assert.doesNotMatch(html, /6 ændringer i/);
+  // Fanen "Ulæste" er valgt (desktop): tre ulæste rækker med prik, læste vises ikke
+  const desk = html.slice(html.indexOf("lasso-notif__body--d"), html.indexOf("lasso-notif__body--m"));
+  assert.equal((desk.match(/lasso-notif__row--unread/g) ?? []).length, 3);
+  assert.doesNotMatch(desk, /6 ændringer i/);
   assert.match(html, /Overvågning &quot;Kunder&quot;, for 2 timer siden/);
   assert.match(html, /Kredit, for 4 timer siden/);
   assert.match(html, /Eksport, i går kl\. 16\.20/);
@@ -108,21 +111,24 @@ test("Notifikationspanel (21): overskrift, faner niveau 2, ulæst-prik, kilde + 
   const done = renderToStaticMarkup(createElement(NotificationPanel, { items: items.map((n) => ({ ...n, read: true })), now: NOW, onMarkAllRead: () => {} }));
   assert.doesNotMatch(done, /Markér alle som læst/);
   assert.match(done, /Alt er læst\./);
+  // "Luk" står kun på mobil (skjult med CSS på desktop), og aldrig i den indlejrede mobilliste.
+  assert.match(renderToStaticMarkup(createElement(NotificationPanel, { items, now: NOW, onClose: () => {} })), /lasso-notif__close/);
+  assert.doesNotMatch(renderToStaticMarkup(createElement(NotificationPanel, { items, now: NOW, onClose: () => {}, inline: true })), /lasso-notif__close/);
 });
 
-test("Klokke (21): ingen badge, koral badge med antal, rød badge ved vigtig ændring", () => {
+test("Klokke (21.3): aldrig badge; ulæste = koral klokke, vigtig ændring = mørk rød, antallet i skærmlæserteksten", () => {
   const none = renderToStaticMarkup(createElement(MonitorBell, { unread: 0 }));
   assert.match(none, /aria-label="Notifikationer, ingen ulæste"/);
-  assert.doesNotMatch(none, /lasso-bell__badge/);
+  assert.doesNotMatch(none, /lasso-bell--unread/);
   const three = renderToStaticMarkup(createElement(MonitorBell, { unread: 3 }));
-  assert.match(three, /aria-label="Notifikationer, 3 ulæste"/);
-  assert.match(three, /class="lasso-bell__badge" aria-hidden="true">3</);
+  assert.match(three, /class="lasso-bell lasso-bell--unread"[^>]*aria-label="Notifikationer, 3 ulæste"/);
   const important = renderToStaticMarkup(createElement(MonitorBell, { unread: 3, important: true }));
-  assert.match(important, /lasso-bell__badge lasso-bell__badge--important"[^>]*>!</);
+  assert.match(important, /lasso-bell--important/);
   assert.match(important, /vigtig ændring, 3 ulæste/);
+  for (const h of [none, three, important]) assert.doesNotMatch(h, /lasso-bell__badge/);
 });
 
-test("Overvåger-indstillinger (21): knap i koral-soft, fakta, Stop overvågning som tekstknap, toggles pr. type", () => {
+test("Overvåger-indstillinger (21): knap i koral-soft, kun titlen, Stop overvågning som tekstknap, toggles pr. type", () => {
   const html = renderToStaticMarkup(
     createElement(MonitorSettings, {
       companyName: "LASSO X A/S",
@@ -138,16 +144,44 @@ test("Overvåger-indstillinger (21): knap i koral-soft, fakta, Stop overvågning
   assert.match(html, /lasso-monitor__btn is-on"[^>]*aria-pressed="true"/);
   assert.match(html, />Overvåger<\/button>/);
   assert.match(html, /LASSO X A\/S overvåges</);
-  assert.match(html, /I listen &quot;Kunder&quot;, siden 03\.03\.2025, besked pr\. e-mail dagligt/);
+  // 21.4 (Jakob): kun titlen, ingen tekst under.
+  assert.doesNotMatch(html, /I listen &quot;Kunder&quot;|besked pr\. e-mail/);
   assert.match(html, /class="lasso-link lasso-monitor__stop"[^>]*>Stop overvågning</);
+  // 4 typekontakter (Kreditscore skjult, 21.1) + mobilens statuskontakt (26e.4, skjult på desktop).
   assert.equal((html.match(/role="switch"/g) ?? []).length, 5);
-  assert.equal((html.match(/aria-checked="true"/g) ?? []).length, 3);
+  assert.equal((html.match(/aria-checked="true"/g) ?? []).length, 4);
+  assert.match(html, /lasso-monitor__mstatus/);
   assert.match(html, /Status og konkurs/);
-  assert.match(html, /Kreditscore ændrer sig ≥ 5 point/);
+  assert.doesNotMatch(html, /Kreditscore/);
   assert.doesNotMatch(html, /·/);
   // Ikke overvåget: kun "Overvåg"-knappen, ingen toggles
   const off = renderToStaticMarkup(createElement(MonitorSettings, { companyName: "Prøve ApS", monitoring: false, settings: {}, onStart: () => {} }));
   assert.match(off, />Overvåg<\/button>/);
-  assert.doesNotMatch(off, /role="switch"/);
+  // Ingen typekontakter, når virksomheden ikke overvåges (kun mobilens statuskontakt).
+  assert.equal((off.match(/role="switch"/g) ?? []).length, 1);
   assert.doesNotMatch(off, /Stop overvågning/);
+});
+
+test("21.4: kontakterne står som i Paper: status og konkurs, nyt regnskab, ledelse og ejere, stamdata, kreditscore", async () => {
+  const { MONITOR_TYPES } = await import("./components/MonitorSettings.js");
+  const { CHANGE_TYPES } = await import("@lasso/spec");
+  assert.deepEqual([...MONITOR_TYPES], ["status", "regnskab", "ledelse", "stamdata", "kredit"]);
+  assert.ok(MONITOR_TYPES.every((t) => (CHANGE_TYPES as readonly string[]).includes(t)));
+});
+
+test("26e.4: mobilen har hoved, kun titlen i statusrækken, emner med undertekst og Levering kun med handling (G1)", () => {
+  const props = { companyName: "LASSO X A/S", monitoring: true, since: "2025-03-03", delivery: "Push + e-mail dagligt", settings: { status: true, regnskab: true, ledelse: true, kredit: false }, onToggle: () => {}, onStop: () => {} };
+  const html = renderToStaticMarkup(createElement(MonitorSettings, { ...props, onDelivery: () => {} }));
+  assert.match(html, /lasso-monitor__mhead-title">Overvågning<[^]*LASSO X A\/S/);
+  assert.doesNotMatch(html, /lasso-monitor__mstatus-sub|3 emner/);
+  assert.match(html, />Regnskab<span class="lasso-monitor__label-sub">Nyt regnskab, revisorforbehold</);
+  assert.match(html, />Levering<[^]*Push \+ e-mail dagligt/);
+  assert.doesNotMatch(renderToStaticMarkup(createElement(MonitorSettings, props)), />Levering</);
+});
+
+test("21.1: typen Kredit udgår i feed og filtervalg (Jakob 15:41)", () => {
+  const f = feed();
+  const withCredit = { ...f, entries: [...f.entries, { ...f.entries[0]!, type: "kredit" as const, text: "Kreditscore ændret fra 47 til 52", lassoId: "CVR-1-77" }] };
+  const html = renderToStaticMarkup(createElement(ChangeFeed, { feed: withCredit, now: NOW }));
+  assert.doesNotMatch(html, />Kredit \(|Kreditscore ændret/);
 });
