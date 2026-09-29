@@ -329,6 +329,22 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-kpi__missing { font-size: var(--lasso-fs-lg); line-height: 32px; font-weight: 500; color: var(--lasso-muted); }
 .lasso-kpi__delta { display: flex; flex-wrap: wrap; gap: 4px 8px; font-size: var(--lasso-fs-sm); line-height: 18px; font-weight: 500; }
 .lasso-kpi__year { font-weight: 400; color: var(--lasso-muted); }
+.lasso-kpis__title { display: none; }
+.lasso-kpi__delta.lasso-muted { font-weight: 400; color: var(--lasso-muted); }
+.lasso-kpi__missing { font-weight: 500; color: var(--lasso-muted); }
+.lasso-kpi__label .lasso-qflag { margin-left: 6px; }
+/* 26c.1 mobil: titel over 2×2 selvstændige kort (1 px kant, radius 10), etiket 12 muted, tal 20/600 med
+   enheden i samme størrelse ("18,8 mio."), én udviklingslinje 12 px, ingen sparkline eller branchelinje. */
+@container lasso (max-width: 560px) {
+  .lasso-root .lasso-kpis { gap: 8px; border: 0; border-radius: 0; background: transparent; }
+  .lasso-root .lasso-kpis__title { display: block; grid-column: 1 / -1; margin: 0 0 4px; }
+  .lasso-root .lasso-kpi { border: 1px solid var(--lasso-border); border-radius: 10px; padding: 12px; gap: 4px; }
+  .lasso-root .lasso-kpi + .lasso-kpi, .lasso-root .lasso-kpi:nth-child(n + 3) { border: 1px solid var(--lasso-border); }
+  .lasso-kpi__label { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+  .lasso-kpi__label-extra, .lasso-kpi__unit-cur, .lasso-kpi__bench, .lasso-kpi__year, .lasso-root .lasso-kpi .lasso-spark { display: none; }
+  .lasso-kpi__unit { font-size: inherit; font-weight: inherit; color: inherit; margin-left: 5px; letter-spacing: inherit; }
+  .lasso-kpi__delta { font-size: 12px; line-height: 16px; }
+}
 /* Udvikling: grøn op, rød ned (brugerens ønske; afviger fra "rød kun til det, der ikke kan fortrydes"). */
 .lasso-up { color: var(--lasso-positive); }
 .lasso-down { color: var(--lasso-negative); }
