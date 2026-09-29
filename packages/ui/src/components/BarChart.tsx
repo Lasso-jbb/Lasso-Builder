@@ -58,7 +58,8 @@ export function BarChart({
     );
   }
   const shown = series.metric;
-  const options = picker ? pickableMetrics(financials, years) : [];
+  // 26b.1: på mobil ingen nøgletalsvælger i hovedet, kun enheden som muted tekst til højre.
+  const options = picker && !compact ? pickableMetrics(financials, years) : [];
   const action =
     options.length >= 2 ? (
       <label className="lasso-chart__picker">
@@ -116,7 +117,13 @@ export function BarChart({
   const t = pick.tooltip;
 
   return (
-    <Section title={METRIC_LABELS[shown]} subtitle={subtitle} span="half" className="lasso-chart" action={action}>
+    <Section
+      title={METRIC_LABELS[shown]}
+      subtitle={compact ? undefined : subtitle}
+      span="half"
+      className="lasso-chart"
+      action={compact ? (scale ? <span className="lasso-chart__unit">{scale.label}</span> : undefined) : action}
+    >
       <div ref={ref} className="lasso-chart__plot" {...pick.frame} aria-label={`${METRIC_LABELS[shown]} pr. år. Brug piletasterne for at se hvert år.`}>
         {W > 0 ? (
           <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${METRIC_LABELS[shown]} pr. år, ${subtitle}`}>
@@ -126,7 +133,7 @@ export function BarChart({
                 <text className="lasso-chart__tick" x={0} y={y(tk) + 4}>{formatNumber(tk)}</text>
               </g>
             ))}
-            {pick.active !== null ? <rect className="lasso-chart__band" x={axisW + pick.active * slot} y={top - 18} width={slot} height={plotH + 18} rx="6" /> : null}
+            {pick.active !== null && !compact ? <rect className="lasso-chart__band" x={axisW + pick.active * slot} y={top - 18} width={slot} height={plotH + 18} rx="6" /> : null}
             {points.map((p, i) => {
               const v = values[i]!;
               const isLast = i === points.length - 1;
@@ -163,7 +170,7 @@ export function BarChart({
           />
         ) : null}
       </div>
-      {pick.readout !== null ? <ChartReadout title={points[pick.readout]!.year} rows={rowsFor(pick.readout)} note={prevYear(pick.readout) ? `Ændring fra ${prevYear(pick.readout)}` : undefined} /> : null}
+      {pick.readout !== null ? <ChartReadout inline title={points[pick.readout]!.year} rows={rowsFor(pick.readout)} /> : null}
     </Section>
   );
 }

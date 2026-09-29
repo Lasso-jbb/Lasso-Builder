@@ -4,18 +4,17 @@ import { useWidth } from "../useWidth.js";
 import { CHART_AXIS_W, CHART_BOTTOM, CHART_H, CHART_TOP, labelFor, makeYScale, niceTicks, yearRange } from "../charts.js";
 import { ChartReadout, ChartTooltip, changeText, isCompact, useChartPick, type PickRow } from "../chartPick.js";
 
-/** Indeks med én decimal ("108,4"), samme talformat som resten (09). */
-const indexLabel = (v: number) => new Intl.NumberFormat("da-DK", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(v).replace("-", "−");
+/** Indeks som helt tal ("238"), som Paper 13.6/26b.4. */
+const indexLabel = (v: number) => new Intl.NumberFormat("da-DK", { maximumFractionDigits: 0 }).format(Math.round(v)).replace("-", "−");
 
 /**
  * Linje + område (katalog 13.6, node AF3-0). Koral linje 2,5 px med 8 % områdefyld. Benchmark som
  * 2 px stiplet neutral (chart-5) på samme akse, aldrig som egen akse. Seneste værdi står som tekst ved
  * linjens ende. Hover: lodret hårlinje + punkt på alle serier + én mørk tooltip.
  *
- * To benchmark-former:
- * - `industry` (branchen): begge serier som indeks med første viste år = 100, og indeks 100 tegnet i
- *   aksefarve ("udvikling mod branche, indeks 2021 = 100").
- * - `benchmarkFinancials` (en navngiven virksomhed): samme nøgletal i kroner for begge.
+ * Med benchmark (branchen eller en navngiven virksomhed) tegnes begge serier som indeks med første
+ * viste år = 100 og indeks 100 i aksefarve (13.6: "indeks 2021 = 100"), så forskellige størrelser kan
+ * sammenlignes; værdien i kroner står i tooltip/valgfelt. Uden benchmark: nøgletallet i kroner.
  * Mobil (26b.4): maks 5 år, valgt punkt via tryk i et fast felt under grafen.
  */
 export function LineChart({
@@ -87,7 +86,8 @@ export function LineChart({
   const baseYear = points[0]!.year;
   const baseCompany = points[0]!.value;
   const baseBench = benchByYear.get(baseYear);
-  const canIndex = indexMode && baseCompany > 0;
+  // 13.6: indeks, når der er noget at sammenligne med (branche eller virksomhed), og begge baser er positive.
+  const canIndex = (indexMode || (hasBenchmark && (baseBench ?? 0) > 0)) && baseCompany > 0;
   const toIndex = (v: number, base: number | undefined) => (base && base > 0 ? (v / base) * 100 : null);
 
   const { scale, label } = labelFor(
@@ -145,7 +145,7 @@ export function LineChart({
     const rows: PickRow[] = [
       {
         label: indexMode || hasBenchmark ? (companyName ?? "Virksomheden") : METRIC_LABELS[shown],
-        value: canIndex ? `${indexLabel(values[i]!)} (${unitLabel(p.value)})` : unitLabel(p.value),
+        value: canIndex ? (compact ? indexLabel(values[i]!) : `${indexLabel(values[i]!)} (${unitLabel(p.value)})`) : unitLabel(p.value),
         swatch: "s1",
         change: changeText(prev?.value, p.value),
       },
@@ -153,7 +153,7 @@ export function LineChart({
     const bv = benchValues[i];
     if (bv !== null && bv !== undefined) {
       const raw = benchByYear.get(p.year)!;
-      rows.push({ label: benchLabel, value: canIndex ? `${indexLabel(bv)} (${unitLabel(raw)})` : unitLabel(raw), swatch: "s5", dashed: true, change: changeText(benchByYear.get(prev?.year ?? -1), raw) });
+      rows.push({ label: compact && indexMode ? "branche" : benchLabel, value: canIndex ? (compact ? indexLabel(bv) : `${indexLabel(bv)} (${unitLabel(raw)})`) : unitLabel(raw), swatch: "s5", dashed: true, change: changeText(benchByYear.get(prev?.year ?? -1), raw) });
     }
     return rows;
   };
@@ -235,7 +235,7 @@ export function LineChart({
         ) : null}
         {t !== null && W > 0 ? <ChartTooltip x={x(t)} y={Math.min(y(values[t]!), benchValues[t] !== null ? y(benchValues[t]!) : Infinity)} width={W} title={points[t]!.year} rows={rowsFor(t)} /> : null}
       </div>
-      {pick.readout !== null ? <ChartReadout title={points[pick.readout]!.year} rows={rowsFor(pick.readout)} hint="Tryk på et punkt for at se tallene" /> : null}
+      {pick.readout !== null ? <ChartReadout inline title={points[pick.readout]!.year} rows={rowsFor(pick.readout)} /> : null}
       {indexMode && industry?.state === "ok" && industry.source ? (
         <SourceLine source={`${industry.source}${industry.peers ? `, median af ${formatNumber(industry.peers)} virksomheder` : ""}`} updated={industry.updated} />
       ) : null}

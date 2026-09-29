@@ -198,7 +198,7 @@ export const stackedBarChartSchema = z.object({
   type: z.literal("LassoStackedBarChart"),
   company: companyRef,
   years: z.number().int().min(2).max(10).default(5),
-}).describe("Egenkapital og gæld som dele af balancen, pr. år.");
+}).describe("Balancen på seneste balancedag: aktiver mod passiver som to stablede søjler.");
 
 export const lineChartSchema = z.object({
   type: z.literal("LassoLineChart"),

@@ -2,7 +2,7 @@ import { currencyUnit, effectiveMetric, formatNumber, METRIC_FIELD, METRIC_KIND,
 import { DataState, Section, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
 import { CHART_AXIS_W, CHART_BOTTOM, CHART_H, CHART_TOP, labelFor, makeYScale, niceTicks, yearRange } from "../charts.js";
-import { ChartReadout, ChartTooltip, changeText, isCompact, useChartPick, type PickRow } from "../chartPick.js";
+import { ChartTooltip, changeText, isCompact, useChartPick, type PickRow } from "../chartPick.js";
 
 /** Farverne har fast rækkefølge (chart-1, chart-2, chart-3): serie 2 aldrig uden serie 1. */
 const SERIES_CLASS = ["lasso-chart__bar--s1", "lasso-chart__bar--s2", "lasso-chart__bar--s3"];
@@ -45,7 +45,8 @@ export function GroupedBarChart({
   // 13.4: søjler 30 px, 4 px imellem og 40 px mellem grupper. Er der ikke plads til alle år i den
   // bredde, grafen har (fx ½ kolonne med 3 serier), falder de ældste år fra (mindst 3), før søjlerne krymper.
   const desktopGroups = Math.max(3, Math.floor((Math.max(0, W - CHART_AXIS_W) + 40) / (effective.length * 30 + (effective.length - 1) * 4 + 40)));
-  const points = compact ? allRows.slice(-5) : allRows.slice(-desktopGroups);
+  // 26b.2: 4 år på mobil (søjler ca. 24 px), ingen fast valgfelt.
+  const points = compact ? allRows.slice(-4) : allRows.slice(-desktopGroups);
   const pick = useChartPick(points.length, compact);
 
   if (!financials) {
@@ -82,7 +83,7 @@ export function GroupedBarChart({
   const y = makeYScale(tMin, tMax, CHART_TOP, plotH);
   const groupSlot = plotW / points.length;
   const innerGap = 4;
-  const target = compact ? 40 : 30;
+  const target = compact ? 24 : 30;
   // Katalog: 40 px mellem grupper; søjlerne krymper først, når der ikke er plads til det.
   const room = compact ? groupSlot * 0.8 : Math.min((plotW - (points.length - 1) * 40) / points.length, groupSlot * 0.82);
   const desired = n * target + (n - 1) * innerGap;
@@ -119,7 +120,7 @@ export function GroupedBarChart({
                 <text className="lasso-chart__tick" x={0} y={y(tk) + 4}>{formatNumber(tk)}</text>
               </g>
             ))}
-            {pick.active !== null ? <rect className="lasso-chart__band" x={CHART_AXIS_W + pick.active * groupSlot} y={CHART_TOP - 18} width={groupSlot} height={plotH + 18} rx="6" /> : null}
+            {pick.tooltip !== null ? <rect className="lasso-chart__band" x={CHART_AXIS_W + pick.tooltip * groupSlot} y={CHART_TOP - 18} width={groupSlot} height={plotH + 18} rx="6" /> : null}
             {points.map((p, i) => {
               const isLast = i === points.length - 1;
               const groupX = CHART_AXIS_W + i * groupSlot + (groupSlot - groupW) / 2;
@@ -134,15 +135,10 @@ export function GroupedBarChart({
                     return (
                       <g key={j}>
                         <rect className={`lasso-chart__bar ${SERIES_CLASS[j]}`} x={x} y={rectY} width={barW} height={h} rx="3" />
-                        {isLast && !compact ? (
-                          <text className="lasso-chart__value lasso-chart__value--last" x={x + barW / 2} y={v >= 0 ? rectY - 7 : rectY + h + 15} textAnchor="middle">
-                            {label(p.values[j]!)}
-                          </text>
-                        ) : null}
                       </g>
                     );
                   })}
-                  <text className={`lasso-chart__label ${isLast || pick.active === i ? "lasso-chart__label--last" : ""}`} x={groupX + groupW / 2} y={CHART_H - 6} textAnchor="middle">
+                  <text className={`lasso-chart__label ${isLast || pick.tooltip === i ? "lasso-chart__label--last" : ""}`} x={groupX + groupW / 2} y={CHART_H - 6} textAnchor="middle">
                     {p.year}
                   </text>
                   <rect className="lasso-chart__hit" x={CHART_AXIS_W + i * groupSlot} y={0} width={groupSlot} height={CHART_H} onMouseEnter={() => pick.enter(i)} onClick={() => pick.pick(i)} />
@@ -155,7 +151,6 @@ export function GroupedBarChart({
           <ChartTooltip x={CHART_AXIS_W + t * groupSlot + groupSlot / 2} y={Math.min(y(0), ...values[t]!.map((v) => y(v)))} width={W} title={points[t]!.year} rows={rowsFor(t)} />
         ) : null}
       </div>
-      {pick.readout !== null ? <ChartReadout title={points[pick.readout]!.year} rows={rowsFor(pick.readout)} /> : null}
       {extraMetrics.length > 0 ? (
         <table className="lasso-chart__extra">
           <caption className="lasso-sr">{extraMetrics.map((m) => METRIC_LABELS[m]).join(", ")} pr. år</caption>

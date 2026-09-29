@@ -26,8 +26,11 @@ export function trendPoints(values: readonly number[], w = 72, h = 22, pad = 3):
   const crossesZero = Math.min(...values) < 0 && Math.max(...values) > 0;
   const min = crossesZero ? Math.min(...values, 0) : Math.min(...values);
   const max = crossesZero ? Math.max(...values, 0) : Math.max(...values);
-  const span = max - min;
-  const y = (v: number) => (span === 0 ? h / 2 : h - pad - ((v - min) / span) * (h - 2 * pad));
+  // En næsten flad serie må ikke blæses op fra top til bund: spændet er mindst 15 % af den største værdi.
+  const floor = 0.15 * Math.max(Math.abs(max), Math.abs(min));
+  const span = Math.max(max - min, floor);
+  const lo = min - (span - (max - min)) / 2;
+  const y = (v: number) => (span === 0 ? h / 2 : h - pad - ((v - lo) / span) * (h - 2 * pad));
   return values.map((v, i) => [pad + (values.length > 1 ? i / (values.length - 1) : 0) * (w - 2 * pad), y(v)] as const);
 }
 function Trend({ values }: { values: readonly number[] }) {

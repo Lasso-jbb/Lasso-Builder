@@ -2924,23 +2924,27 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-pick--readout .lasso-pick__value { color: var(--lasso-text); }
 .lasso-pick--readout .lasso-pick__change { color: var(--lasso-text-3); opacity: 1; }
 .lasso-pick--readout .lasso-pick__note { color: var(--lasso-muted); opacity: 1; }
+.lasso-chart__unit { font-size: var(--lasso-fs-sm); line-height: 24px; color: var(--lasso-muted); white-space: nowrap; }
+.lasso-pick--line { display: flex; align-items: center; justify-content: space-between; gap: var(--lasso-space-3); min-height: 44px; margin-top: var(--lasso-space-3); border-top: 1px solid var(--lasso-divider-subtle); font-size: var(--lasso-fs); line-height: 20px; color: var(--lasso-text); }
+.lasso-pick--line .lasso-pick__title { font-weight: 600; }
+.lasso-pick--line .lasso-pick__line { text-align: right; min-width: 0; }
+.lasso-pick--line .lasso-pick__value { font-weight: 400; }
+.lasso-pick--line .lasso-pick__change { font-weight: 500; opacity: 1; }
+.lasso-pick--line .lasso-pick__change--up { color: var(--lasso-positive); }
+.lasso-pick--line .lasso-pick__change--down { color: var(--lasso-negative); }
 /* 26b.3: stablet balance lagt ned som to vandrette bjælker */
-.lasso-hbal { display: flex; flex-direction: column; gap: var(--lasso-space-4); }
+.lasso-hbal { display: flex; flex-direction: column; gap: var(--lasso-space-3); }
 .lasso-chart__years { display: flex; gap: 4px; overflow-x: auto; }
 .lasso-chart__year { flex: 1 0 auto; min-height: var(--lasso-touch-h); padding: 0 10px; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius); background: var(--lasso-surface); color: var(--lasso-text-2); font: inherit; font-size: var(--lasso-fs-sm); cursor: pointer; }
 .lasso-chart__year.is-active { border-color: var(--lasso-text); color: var(--lasso-text); font-weight: 600; }
 .lasso-chart__year:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
-.lasso-hbal__head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
-.lasso-hbal__title { font-size: var(--lasso-fs); font-weight: 600; color: var(--lasso-text); }
-.lasso-hbal__total { font-size: var(--lasso-fs-sm); color: var(--lasso-text-2); }
-.lasso-hbal__bar { display: flex; height: 24px; border-radius: 4px; overflow: hidden; background: var(--lasso-divider-subtle); gap: 2px; }
-.lasso-hbal__seg { display: block; height: 100%; }
-.lasso-hbal__list { list-style: none; margin: 8px 0 0; padding: 0; }
-.lasso-hbal__row { display: grid; grid-template-columns: 10px 1fr auto 52px; align-items: center; gap: var(--lasso-space-2); min-height: 32px; font-size: var(--lasso-fs-sm); border-bottom: 1px solid var(--lasso-divider-subtle); }
-.lasso-hbal__row:last-child { border-bottom: 0; }
-.lasso-hbal__label { color: var(--lasso-text-2); }
-.lasso-hbal__value { font-weight: 500; color: var(--lasso-text); text-align: right; }
-.lasso-hbal__pct { color: var(--lasso-muted); text-align: right; }
+.lasso-hbal__title { margin-bottom: 4px; font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-text-2); }
+.lasso-hbal__bar { display: flex; height: 28px; border-radius: 4px; overflow: hidden; background: var(--lasso-divider-subtle); gap: 2px; }
+.lasso-hbal__seg { display: flex; align-items: center; height: 100%; padding: 0 6px; overflow: hidden; white-space: nowrap; font-size: 12px; font-weight: 500; color: var(--lasso-on-accent); }
+.lasso-hbal__seg--light { color: var(--lasso-text); }
+.lasso-hbal__foot { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--lasso-space-3); }
+.lasso-hbal__legend { flex-wrap: wrap; row-gap: 4px; }
+.lasso-hbal__total { flex: none; font-size: var(--lasso-fs-sm); font-weight: 600; color: var(--lasso-text); }
 /* 26b.5: vandfald lagt ned som vandrette bjælker med tal til højre */
 .lasso-hwf { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .lasso-hwf__row { display: grid; grid-template-columns: minmax(96px, 38%) 1fr auto; align-items: center; gap: var(--lasso-space-2); min-height: var(--lasso-touch-h); border-bottom: 1px solid var(--lasso-divider-subtle); }
