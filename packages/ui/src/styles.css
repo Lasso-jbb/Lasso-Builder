@@ -681,7 +681,19 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
   .lasso-kv-row__label { width: 100%; }
   .lasso-kv-list--financials .lasso-kv-row__label { width: 100%; }
   .lasso-kv-list--financials .lasso-kv-row__value { flex-basis: 100%; text-align: left; }
+  /* 26c.2: rækker ca. 52 px, etiket 12 muted over værdi 14 ink; info-ikoner er forbeholdt hover (desktop). */
+  .lasso-kv-row, .lasso-kv-row:has(> .lasso-kv-row__value--wrap) { padding: 8px 0; min-height: 52px; }
+  .lasso-kv-row__label { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+  .lasso-root .lasso-kv-row__label .lasso-infohint, .lasso-root .lasso-kv-row__label .lasso-infohint-tip { display: none; }
+  .lasso-kv-row__value { line-height: 20px; }
+  .lasso-kv-list:has(> .lasso-kv-row--half) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .lasso-kv-list:has(> .lasso-kv-row--half) > .lasso-kv-row { grid-column: 1 / -1; }
+  .lasso-kv-list > .lasso-kv-row.lasso-kv-row--half { grid-column: auto; }
+  .lasso-kv-row--half-end { justify-content: flex-end; text-align: right; }
+  .lasso-kv-row--half-end .lasso-kv-row__label { justify-content: flex-end; }
 }
+/* 09.2: værdien er 14/400 i alle rækker, også når den er et link (revisoren). */
+.lasso-root .lasso-kv-row--link .lasso-link, .lasso-root .lasso-kv-row .lasso-entity__name { font-weight: 400; }
 
 /* ---------- 10 Flerårstabel ---------- */
 .lasso-myt { display: flex; flex-direction: column; min-width: max-content; }

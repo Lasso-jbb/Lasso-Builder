@@ -716,7 +716,7 @@ const mobileCharts: GalleryEntry[] = [
 
 const mobileLists: GalleryEntry[] = [
   { nr: "26c.1", title: "Nøgletalskort / KPI 2×2 (mobil)", node: "EC5-0", only: "mobile", spec: one("Nøgletal", { type: "LassoKeyFigureCards", company: C }) },
-  { nr: "26c.2", title: "Nøgle-værdi-liste (mobil)", node: "ECP-0", only: "mobile", spec: one("Virksomhedsoplysninger", { type: "LassoKeyValueList", company: C, variant: "company", title: "Virksomhedsoplysninger" }) },
+  { nr: "26c.2", title: "Nøgle-værdi-liste (mobil)", node: "ECP-0", only: "mobile", spec: one("Stamdata", { type: "LassoKeyValueList", company: C, variant: "company", title: "Stamdata" }) },
   {
     nr: "26c.3",
     title: "Flerårstabel (mobil), variant A og B",

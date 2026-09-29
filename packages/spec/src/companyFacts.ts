@@ -36,11 +36,11 @@ function dayMonth(value: string | undefined): string | undefined {
   return m ? `${m[2]}.${m[1]}` : undefined;
 }
 
-/** Regnskabsperioden uden år, "01.01–31.12", når begge datoer er kendt. */
+/** Regnskabsperioden uden år, "01.01 – 31.12" (09.2: mellemrum om tankestregen), når begge datoer er kendt. */
 export function accountingPeriod(year: Pick<FinancialYear, "periodStart" | "periodEnd"> | undefined): string | undefined {
   const from = dayMonth(year?.periodStart);
   const to = dayMonth(year?.periodEnd);
-  return from && to ? `${from}–${to}` : undefined;
+  return from && to ? `${from} – ${to}` : undefined;
 }
 
 /**

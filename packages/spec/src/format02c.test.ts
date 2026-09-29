@@ -15,7 +15,7 @@ test("02c.6 Periode: tankestreg, åben periode, alder", () => {
   assert.equal(formatPeriod("2016-03-01", null, { yearOnly: true }), "siden 2016");
   assert.equal(formatPeriod("2016-03-01", null, { yearOnly: true, open: "arrow" }), "2016 →");
   assert.equal(formatAge("2016-03-01", new Date("2025-09-01T00:00:00Z")), "9 år");
-  assert.equal(accountingPeriod({ periodStart: "2025-01-01", periodEnd: "2025-12-31" }), "01.01–31.12");
+  assert.equal(accountingPeriod({ periodStart: "2025-01-01", periodEnd: "2025-12-31" }), "01.01 – 31.12");
 });
 
 test("02c.7 Ja/nej: ordene, konsekvens efter komma, ukendt = Ikke oplyst", () => {
