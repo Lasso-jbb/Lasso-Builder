@@ -3,6 +3,7 @@ import { formatDate, isPersonId, type NewsItemVM, type NewsVM, type TextSegment 
 import type { ViewAction } from "../types.js";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
 import { Icon } from "./Icon.js";
+import { LassoMark } from "../LassoMark.js";
 
 /** "2026-04-15" -> "for 3 dage siden" under 7 dage gammel, ellers "15.04.2026". */
 function relativeOrDate(iso: string | undefined): string {
@@ -120,12 +121,21 @@ function Headline({ item, ...opts }: { item: NewsItemVM } & SegmentOpts) {
   return <>{parts}</>;
 }
 
+/** Lassos egen nyhedskilde ("Lasso News", "Lasso"). */
+export function isLassoSource(source: string | undefined): boolean {
+  return /^lasso(\s+news)?$/i.test((source ?? "").trim());
+}
+
 function SourceMark({ source, url }: { source: string; url?: string }) {
   const [broken, setBroken] = useState(false);
-  const src = broken ? null : favicon(url);
+  // 12.4: Lasso News bruger Lasso-ikonet fra 01b (ink, ingen flise), aldrig et hentet favicon eller globussen.
+  const lasso = isLassoSource(source);
+  const src = broken || lasso ? null : favicon(url);
   return (
     <span className="lasso-news__mark" aria-hidden="true">
-      {src ? (
+      {lasso ? (
+        <LassoMark className="lasso-news__lasso" />
+      ) : src ? (
         <img src={src} alt="" width={16} height={16} onError={() => setBroken(true)} />
       ) : (
         <Icon name="globe" size={16} />

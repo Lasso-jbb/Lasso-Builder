@@ -1,4 +1,4 @@
-import { formatDate, type OwnershipVM } from "@lasso/spec";
+import { formatDate, shareText, type OwnershipVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 
@@ -57,7 +57,7 @@ export function OwnerList({ ownership, error, onOpen }: { ownership?: OwnershipV
                     </>
                   ) : null}
                 </div>
-                <div className="lasso-row__value">{o.share ?? <span className="lasso-notreported">Ikke oplyst</span>}</div>
+                <div className="lasso-row__value">{shareText(o.share) ?? <span className="lasso-notreported">Ikke oplyst</span>}</div>
               </li>
             );
           })}

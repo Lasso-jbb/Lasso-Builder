@@ -1,4 +1,4 @@
-import { amountScale, currencyUnit, formatNumber, formatPercent, formatScaled, type FinancialsVM, type OwnershipVM } from "@lasso/spec";
+import { amountScale, currencyUnit, formatNumber, formatPercent, formatScaled, shareText, type FinancialsVM, type OwnershipVM } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
 
 /** Én andel i fordelingen. `lo`/`hi` er procent (0–100); et CVR-interval har lo < hi, et præcist tal lo = hi. */
@@ -122,7 +122,7 @@ export function ShareBars({ financials, ownership, variant = "balance", error }:
     const items: ShareItem[] = ownership.owners
       .map((o, i) => {
         const r = parseShareRange(o.share);
-        return r ? { key: `${i}`, label: o.name, lo: r[0], hi: r[1], valueText: o.share ?? "" } : null;
+        return r ? { key: `${i}`, label: o.name, lo: r[0], hi: r[1], valueText: shareText(o.share) ?? "" } : null;
       })
       .filter((x): x is ShareItem => x !== null)
       .sort((a, b) => b.hi - a.hi);

@@ -31,12 +31,15 @@ export function isForeignCurrency(currency?: string | null): boolean {
  * 12500000 -> "12,5 mio. kr." ; 950000 -> "950 t. kr.". `unit` er enheden efter tallet;
  * brug `currencyUnit(financials.currency)` for regnskabstal ("mio. EUR").
  */
-export function formatAmount(value: number | null | undefined, unit = "kr."): string {
+export function formatAmount(value: number | null | undefined, unit = "kr.", options: { trimZero?: boolean } = {}): string {
   if (value === null || value === undefined || Number.isNaN(value)) return MISSING;
   const abs = Math.abs(value);
   const suffix = unit ? ` ${unit}` : "";
-  if (abs >= 1_000_000_000) return minus(`${oneDecimal.format(value / 1_000_000_000)} mia.${suffix}`);
-  if (abs >= 1_000_000) return minus(`${oneDecimal.format(value / 1_000_000)} mio.${suffix}`);
+  // 01.7/02c.4: mio. og mia. altid med én decimal ("34,0 mio. kr."), så beløbene står ens.
+  // trimZero: grænseværdier i kriterier skrives uden ",0" ("større end 10 mio. kr.").
+  const dec = options.trimZero ? oneDecimal : fixedOneDecimal;
+  if (abs >= 1_000_000_000) return minus(`${dec.format(value / 1_000_000_000)} mia.${suffix}`);
+  if (abs >= 1_000_000) return minus(`${dec.format(value / 1_000_000)} mio.${suffix}`);
   if (abs >= 10_000) return minus(`${intFormat.format(Math.round(value / 1_000))} t.${suffix}`);
   return minus(`${intFormat.format(value)}${suffix}`);
 }
@@ -104,7 +107,7 @@ export function formatCriterionValue(field: FieldDef | undefined, value: Criteri
   if (Array.isArray(value)) return summarizeList(value.map((v) => formatCriterionValue(field, v)));
   if (typeof value === "number") {
     if (field?.type === "percent") return formatPercent(value, false);
-    if (field?.type === "amount") return formatAmount(value, field.unit ?? "kr.");
+    if (field?.type === "amount") return formatAmount(value, field.unit ?? "kr.", { trimZero: true });
     if (field?.key === "postnummer") return String(value);
     return formatNumber(value);
   }
@@ -142,6 +145,16 @@ export function formatShare(range: readonly [number, number] | null | undefined)
   if (!Number.isFinite(lo) || !Number.isFinite(hi)) return MISSING;
   const a = shareFormat.format(lo);
   return Math.abs(hi - lo) < 0.005 ? `${a} %` : `${a}–${shareFormat.format(hi)} %`;
+}
+
+/**
+ * 02c.14: en ejerandel, der allerede er tekst (fra API'et eller demodata), vises altid med tankestreg
+ * uden mellemrum: "66,67-89,99 %" -> "66,67–89,99 %". Andre tekster vises uændret.
+ */
+export function shareText(value: string): string;
+export function shareText(value: string | undefined): string | undefined;
+export function shareText(value: string | undefined): string | undefined {
+  return value?.replace(/(\d)\s*[-\u2010\u2011\u2012]\s*(\d)/g, "$1\u2013$2");
 }
 
 // ---------- 02c Felter med data: visning af enkeltværdier ----------
@@ -188,6 +201,31 @@ export function formatAge(from: string | null | undefined, today: Date = new Dat
   if (months < 12) return months <= 1 ? "1 md." : `${months} mdr.`;
   const years = Math.floor(months / 12);
   return years === 1 ? "1 år" : `${years} år`;
+}
+
+/**
+ * 02c.12 Telefon i grupper af to: "86123456" -> "86 12 34 56", "+4586123456" -> "+45 86 12 34 56".
+ * Andre formater (udenlandske numre) vises uændret.
+ */
+export function formatPhone(value: string | null | undefined): string | undefined {
+  if (!value) return undefined;
+  const v = value.trim();
+  const compact = v.replace(/[\s-]/g, "");
+  const m = /^(\+45|0045)?(\d{8})$/.exec(compact);
+  if (!m) return v;
+  const local = m[2]!.replace(/^(\d{2})(\d{2})(\d{2})(\d{2})$/, "$1 $2 $3 $4");
+  return m[1] ? `+45 ${local}` : local;
+}
+
+/** 02c.12 Web uden https:// og www. (og uden afsluttende skråstreg): "https://www.eksempelbyg.dk/" -> "eksempelbyg.dk". */
+export function formatWeb(value: string | null | undefined): string | undefined {
+  if (!value) return undefined;
+  return value.trim().replace(/^https?:\/\//i, "").replace(/^www\./i, "").replace(/\/+$/, "");
+}
+
+/** 02c.12 E-mail i små bogstaver. */
+export function formatEmail(value: string | null | undefined): string | undefined {
+  return value ? value.trim().toLowerCase() : undefined;
 }
 
 /** 02c.7 Ja/nej: altid ordene, ukendt skrives "Ikke oplyst". Konsekvensen kan følge efter komma. */

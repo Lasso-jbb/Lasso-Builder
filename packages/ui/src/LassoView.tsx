@@ -206,6 +206,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           years={c.years}
           error={err(`financials:${c.company}`)}
           benchmarkFinancials={c.benchmark && !c.industry ? empty.financials[c.benchmark] : undefined}
+          companyName={empty.companies[c.company]?.name}
           benchmarkName={c.benchmark ? empty.companies[c.benchmark]?.name : undefined}
           benchmarkError={c.benchmark && !c.industry ? err(`financials:${c.benchmark}`) : undefined}
           industry={c.industry ? empty.industryBenchmarks?.[c.company] : undefined}

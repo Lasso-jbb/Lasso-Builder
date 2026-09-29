@@ -126,7 +126,7 @@ const short = (v: number | null | undefined, metric: Metric, currency?: string) 
   const kind = METRIC_KIND[metric];
   if (kind === "count") return formatNumber(v);
   if (kind === "percent") return formatPercent(v, false);
-  return formatAmount(v, currencyUnit(currency)).replace(" kr.", "");
+  return formatAmount(v, currencyUnit(currency), { trimZero: true }).replace(" kr.", "");
 };
 
 function delta(from: number | null | undefined, to: number | null | undefined): string {
@@ -161,7 +161,7 @@ function chart(card: Card, f: FinancialsVM, wanted: Metric, years: number) {
   }
 }
 
-const amt = (v: number | null | undefined, currency?: string) => formatAmount(v, currencyUnit(currency)).replace(" kr.", "");
+const amt = (v: number | null | undefined, currency?: string) => formatAmount(v, currencyUnit(currency), { trimZero: true }).replace(" kr.", "");
 
 /**
  * Samme trin som `LassoWaterfallChart` (packages/ui/src/components/WaterfallChart.tsx),

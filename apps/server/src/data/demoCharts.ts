@@ -99,7 +99,8 @@ export function demoIndustry(c: DemoLike, f: FinancialsVM): IndustryBenchmarkVM 
       ansatte: typeof first.employees === "number" ? Math.max(1, Math.round(first.employees * grow)) : null,
       soliditetsgrad: typeof y.soliditetsgrad === "number" ? Math.round((y.soliditetsgrad / bias) * 10) / 10 : 32.5,
       overskudsgrad: typeof y.overskudsgrad === "number" ? Math.round((y.overskudsgrad * (bias > 1.2 ? 1.9 : 0.9)) * 10) / 10 : 6.2,
-      likviditetsgrad: typeof y.likviditetsgrad === "number" ? y.likviditetsgrad : Math.round((118 + (seed % 5) * 9) * 10) / 10,
+      // Branchens likviditetsgrad står fast (ikke afledt af virksomhedens), så måleren kan blive både grøn, gul og rød.
+      likviditetsgrad: Math.round((118 + (seed % 5) * 9) * 10) / 10,
     };
     return { year: y.year, median: m };
   });

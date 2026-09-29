@@ -15,6 +15,8 @@ import {
   composePersonProbe,
   composeProbe,
   formatAmount,
+  formatPeriod,
+  formatRange,
   formatDate,
   formatNumber,
   formatPercent,
@@ -426,11 +428,14 @@ const guide: GalleryEntry[] = [
           head={["Værdi", "Format"]}
           rows={[
             ["18.800.000 kr.", formatAmount(18_800_000)],
-            ["-201.000 kr.", formatAmount(-201_000)],
+            ["\u2212201.000 kr.", formatAmount(-201_000)],
+            ["34.000.000 kr.", formatAmount(34_000_000)],
             ["3.200.000 kr.", formatAmount(3_200_000)],
             ["1243 (antal)", formatNumber(1243)],
             ["7,5 % (ændring)", formatPercent(7.5)],
             ["2012-05-14 (dato)", formatDate("2012-05-14")],
+            ["10 til 19 (interval)", formatRange(10, 19)],
+            ["2025-01-01 til 2025-12-31 (periode)", formatPeriod("2025-01-01", "2025-12-31")],
             ["null", formatAmount(null)],
           ]}
         />

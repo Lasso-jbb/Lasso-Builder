@@ -1,4 +1,4 @@
-import type { BeneficialOwnershipVM } from "@lasso/spec";
+import { shareText, type BeneficialOwnershipVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 
@@ -37,16 +37,16 @@ export function LassoBeneficialOwners({ ownership, error, onOpen }: { ownership?
                 <div className="lasso-row__name lasso-row__name--regular">
                   {click ? <button type="button" className="lasso-link" onClick={click}>{o.name}</button> : o.name}
                 </div>
-                {o.chain ? <div className="lasso-row__sub">{o.chain}</div> : null}
+                {o.chain ? <div className="lasso-row__sub">{shareText(o.chain)}</div> : null}
               </div>
-              <div className="lasso-row__value">{o.share ? `Reelt ${o.share}` : <span className="lasso-notreported">Ikke oplyst</span>}</div>
+              <div className="lasso-row__value lasso-row__value--share">{o.share ? `Reelt ${shareText(o.share)}` : <span className="lasso-notreported">Ikke oplyst</span>}</div>
             </li>
           );
         })}
         {(gaps ?? []).map((g, i) => (
           <li key={`gap-${i}`} className="lasso-row">
             <div className="lasso-row__main">
-              <div className="lasso-row__name lasso-row__name--regular">Ingen reel ejer for {g.share ?? "en del af ejerskabet"}</div>
+              <div className="lasso-row__name lasso-row__name--regular">Ingen reel ejer for {shareText(g.share) ?? "en del af ejerskabet"}</div>
               {g.reason ? <div className="lasso-row__sub">{g.reason}</div> : null}
             </div>
           </li>

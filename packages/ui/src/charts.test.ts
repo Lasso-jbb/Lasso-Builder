@@ -73,7 +73,7 @@ test("13.8: donut + andelsbjælker; ejerkreds med CVR-intervaller som tekst, bj�
   const h = html(createElement(ShareBars, { variant: "ejerkreds", ownership: { lassoId: ID, owners: [{ name: "Erik Prøve", share: "50-66,66 %" }, { name: "Fie Eksempel", share: "33,34-49,99 %" }] } }));
   assert.match(h, /lasso-donut/);
   assert.match(h, /width:66\.66%/);
-  assert.match(text(h), /Erik Prøve 50-66,66 %/);
+  assert.match(text(h), /Erik Prøve 50–66,66 %/);
   assert.doesNotMatch(h, /·/);
 });
 
