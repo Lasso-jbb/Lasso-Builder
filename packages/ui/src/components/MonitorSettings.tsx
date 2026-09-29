@@ -2,8 +2,11 @@ import { formatDate, formatNumber } from "@lasso/spec";
 import { DataState } from "../primitives.js";
 import { Icon } from "./Icon.js";
 
-/** Ændringstyper, man kan slå til og fra pr. virksomhed (katalog 21), i samme rækkefølge som typefiltret i feedet. */
-export const MONITOR_TYPES = ["status", "regnskab", "ledelse", "stamdata", "kredit"] as const;
+/**
+ * Ændringstyper, man kan slå til og fra pr. virksomhed (katalog 21), i samme rækkefølge som typefiltret
+ * i feedet (Regnskab, Ledelse, Ejerskab, Status, Stamdata, Kredit); ledelse og ejerskab er én kontakt.
+ */
+export const MONITOR_TYPES = ["regnskab", "ledelse", "status", "stamdata", "kredit"] as const;
 export type MonitorType = (typeof MONITOR_TYPES)[number];
 
 export const MONITOR_TYPE_LABELS: Record<MonitorType, string> = {
@@ -97,6 +100,23 @@ export function MonitorSettings({ companyName, monitoring, listName, since, freq
   const facts = [listName ? `I listen "${listName}"` : null, since ? `siden ${formatDate(since)}` : null, `besked pr. e-mail ${frequency ?? "dagligt"}`].filter(Boolean).join(", ");
   return (
     <div className={`lasso-monitor ${monitoring ? "lasso-monitor--on" : ""}`}>
+      {/* 26e.4 mobil: overvågningsstatus som fremhævet 52 px række med kontakt; navn og fakta under. */}
+      <div className="lasso-monitor__mstatus">
+        <span className="lasso-monitor__mstatus-label">
+          <BellIcon filled={monitoring} size={16} />
+          {monitoring ? "Overvåger" : "Overvåg"}
+        </span>
+        <Toggle
+          on={monitoring}
+          label={monitoring ? `Overvåger ${companyName}` : `Overvåg ${companyName}`}
+          onChange={monitoring ? (onStop ? () => onStop() : undefined) : onStart ? () => onStart() : undefined}
+          disabled={monitoring ? !onStop : !onStart}
+        />
+      </div>
+      <div className="lasso-monitor__mfacts">
+        <div className="lasso-monitor__title">{monitoring ? `${companyName} overvåges` : `${companyName} overvåges ikke`}</div>
+        <div className="lasso-monitor__sub">{monitoring ? facts : "Få besked, når status, regnskab, ledelse eller stamdata ændrer sig."}</div>
+      </div>
       <div className="lasso-monitor__head">
         <button type="button" className={`lasso-monitor__btn ${monitoring ? "is-on" : ""}`} aria-pressed={monitoring} onClick={monitoring ? undefined : onStart}>
           <BellIcon filled={monitoring} size={15} />

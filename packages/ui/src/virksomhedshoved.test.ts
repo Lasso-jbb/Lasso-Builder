@@ -15,6 +15,7 @@ import { KeyValueList } from "./components/KeyValueList.js";
 import { PersonRisk } from "./components/PersonRisk.js";
 import { ModuleBar } from "./components/ModuleBar.js";
 import { LassoView } from "./LassoView.js";
+import { personRolesCsv } from "./csv.js";
 
 const noop = () => undefined;
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(el);
@@ -255,4 +256,11 @@ test("24.3: modulbjælkens handling med punkter åbner en menu (Eksportér ▾)"
   const out = html(h(ModuleBar, { modules: [{ id: "o", label: "Overblik" }], value: "o", onChange: noop, actions: [{ id: "x", label: "Eksportér", items: [{ id: "csv", label: "Tal som CSV" }] }, { id: "g", label: "Gem" }, { id: "m", label: "Overvåg", tone: "accent" }] }));
   assert.match(out, /aria-haspopup="menu"[^>]*>.*Eksportér/);
   assert.equal((out.match(/lasso-modulebar__action/g) ?? []).length >= 3, true);
+});
+
+test("16.1: personens roller som CSV til Eksportér i personhovedet (uden adresse)", () => {
+  const csv = personRolesCsv({ lassoId: "CVR-3-1", name: "Test Person", city: "Aarhus", roles: [{ companyName: "Eksempel A/S", cvr: "1", kind: "direction", role: "Direktør", from: "2020-01-01", active: true }] } as PersonVM);
+  assert.match(csv, /Selskab;CVR;Rolle/);
+  assert.match(csv, /Eksempel A\/S;1;Direktør;;2020-01-01;;Ja/);
+  assert.doesNotMatch(csv, /Aarhus/);
 });

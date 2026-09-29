@@ -96,6 +96,9 @@ function Item({
   );
 }
 
+/** 19.3: fast forbehold under regnskabsanalysen. */
+export const ANALYSIS_DISCLAIMER = "Analysen er skrevet automatisk ud fra de offentliggjorte regnskaber og tallene i tabellerne. Den kan indeholde fejl og er ikke rådgivning.";
+
 /** Konklusionen i fuld bredde: ca. 6 linjer, før resten står bag linket. */
 const ANALYSIS_LEAD_AT = 600;
 
@@ -177,7 +180,9 @@ export function LassoTextSections({
   return (
     <Section title={heading} span={span} className={`lasso-textsections${analysis ? " lasso-textsections--analysis" : ""}`}>
       {analysis ? <Analysis items={shown} onOpen={onOpen} /> : shown.map((s, i) => <Item key={i} item={s} onOpen={onOpen} />)}
-      {hasAnalysis ? <SourceLine source={analysisSource(shown)} /> : null}
+      {/* 19.3: forbeholdet er en fast afsluttende linje (også når analysen er foldet), og kildelinjen har genereringsdatoen. */}
+      {analysis && hasAnalysis ? <p className="lasso-textsections__disclaimer">{ANALYSIS_DISCLAIMER}</p> : null}
+      {hasAnalysis ? <SourceLine source={analysisSource(shown)} updated={sections.analysisGenerated} verb="genereret" /> : null}
     </Section>
   );
 }

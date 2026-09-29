@@ -424,12 +424,15 @@ export function layoutOwnership(graph: OwnershipGraphVM, options: LayoutOptions 
     if (direct.length > 0) {
       const sumMax = direct.reduce((s, e) => s + (e.edge!.share![1] ?? 0), 0);
       const sumMin = direct.reduce((s, e) => s + (e.edge!.share![0] ?? 0), 0);
-      if (sumMax < 99.99 && sumMin < 100) {
+      // Intervallerne fra CVR (fx 50–66,66 + 45–49,99) kan dække 100 % uden at gøre det: en rest på
+      // højst 5 % er ejere under registreringsgrænsen (14b: "ukendt < 5 %").
+      const small = 100 - sumMin > 0.01 && 100 - sumMin <= 5.01;
+      if ((sumMax < 99.99 && sumMin < 100) || small) {
         const rest = Math.max(0, 100 - sumMin);
         const id = "unknown:owners";
         work.set(id, { id, kind: "unknown", title: "Ukendt ejer", subtitle: "Ikke registreret", weight: -1 });
         layer.set(id, -1);
-        wedges.push({ id: `${id}>${rootId}`, from: id, to: rootId, dashed: true, lines: [{ text: `≤ ${formatShare([rest, rest])}`, tone: "muted" }], cycleSize: 0 });
+        wedges.push({ id: `${id}>${rootId}`, from: id, to: rootId, dashed: true, lines: [{ text: sumMax >= 99.99 ? "< 5 %" : `≤ ${formatShare([rest, rest])}`, tone: "muted" }], cycleSize: 0 });
       }
     }
   }

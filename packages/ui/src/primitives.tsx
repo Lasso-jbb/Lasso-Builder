@@ -202,6 +202,7 @@ export function DataState({ state, reason, title, checkedAt, positive, onRetry, 
           )}
         </div>
         <div className="lasso-state-locked__card">
+          {title ? <p className="lasso-state-locked__title">{title}</p> : null}
           <p className="lasso-state-locked__text">{reason ?? "Kræver en anden Lasso-pakke."}</p>
           {action ? (
             <button type="button" className="lasso-btn lasso-btn--primary lasso-state__wide" onClick={action.onClick} disabled={!action.onClick}>
@@ -265,11 +266,11 @@ export function Missing() {
 }
 
 /** Regel 8: kildelinje én gang pr. sektion, "Kilde: Navn, opdateret DD.MM.ÅÅÅÅ". */
-export function SourceLine({ source, updated }: { source: string; updated?: string | null }) {
+export function SourceLine({ source, updated, verb = "opdateret" }: { source: string; updated?: string | null; verb?: string }) {
   return (
     <p className="lasso-source">
       Kilde: {source}
-      {updated ? `, opdateret ${formatDate(updated)}` : ""}
+      {updated ? `, ${verb} ${formatDate(updated)}` : ""}
     </p>
   );
 }

@@ -189,7 +189,7 @@ export type { ShellIconName } from "./components/ShellIcons.js";
 export { StateBox, Skeleton, Sparkline, Badge, StatusBadge, statusTone, DataState, Missing, SourceLine, Section, SeverityIcon, severityWord } from "./primitives.js";
 export type { StatusTone } from "./primitives.js";
 export type { DataStateKind, DataStateProps } from "./primitives.js";
-export { specToCsv, rowsToCsv, tableToCsv } from "./csv.js";
+export { specToCsv, rowsToCsv, tableToCsv, personRolesCsv } from "./csv.js";
 export type { ActionResult, HostCapabilities, LassoViewProps, ViewAction, Visibility } from "./types.js";
 export { CardGrid, Accordion } from "./components/Layout.js";
 export type { AccordionItem, AccordionProps } from "./components/Layout.js";

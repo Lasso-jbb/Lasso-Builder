@@ -27,8 +27,10 @@ test("26e.5: notifikationspanelet har filterchips Alle/Ulæste/Vigtige og rød p
 
 test("26e.8: revisorhistorik som proportional bjælke med nuværende revisor fremhævet", () => {
   const html = renderToStaticMarkup(createElement(AuditorHistory, { history: [{ name: "Eks. Revision", from: "2012-01-01", to: "2016-12-31" }, { name: "AAEN & CO.", from: "2017-01-01" }], now: new Date("2026-09-29") }));
-  assert.match(html, /flex-grow:5[^]*Eks\. Revision 2012–16/);
-  assert.match(html, /lasso-audhist__seg is-current" style="flex-grow:10"[^>]*>AAEN &amp; CO\. 2017–</);
+  assert.match(html, /flex-grow:5"[^>]*title="Eks\. Revision 2012–16"[^>]*><span class="lasso-audhist__label">2012–16</);
+  assert.match(html, /lasso-audhist__seg is-current" style="flex-grow:10"[^>]*><span class="lasso-audhist__label">2017–</);
+  // Navnene står i legenden under bjælken, så de ikke klippes.
+  assert.match(html, /lasso-audhist__name">AAEN &amp; CO\.<\/span>, 2017–i dag/);
 });
 
 test("20.2: ejendomskortet tegner matrikelpolygon og valgt bygning fra geometri; uden geometri tom tilstand", () => {

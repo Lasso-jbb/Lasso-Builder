@@ -68,8 +68,11 @@ export function Livestock({ livestock, error }: { livestock?: LivestockVM; error
                       <HerdIcon species={h.species} />
                     </td>
                     <td className="lasso-cell--name">{[h.species, h.category].filter(Boolean).join(", ")}</td>
-                    <td className="lasso-num lasso-property__strong">{h.count != null ? formatNumber(h.count) : "—"}</td>
-                    <td className="lasso-num lasso-muted">{h.unit}</td>
+                    {/* 20.4: antal højrestillet med enheden i muted i samme celle. */}
+                    <td className="lasso-num">
+                      <span className="lasso-property__strong">{h.count != null ? formatNumber(h.count) : "—"}</span>
+                      {h.unit ? <span className="lasso-livestock__unit"> {h.unit}</span> : null}
+                    </td>
                   </tr>
                 ))}
                 <tr className="lasso-table__total">
@@ -77,7 +80,7 @@ export function Livestock({ livestock, error }: { livestock?: LivestockVM; error
                   <td className="lasso-property__strong">
                     {livestock.herds.length} besætning{livestock.herds.length === 1 ? "" : "er"}, {speciesCount} dyreart{speciesCount === 1 ? "" : "er"}
                   </td>
-                  <td className="lasso-num lasso-muted" colSpan={2}>
+                  <td className="lasso-num lasso-muted">
                     Sundhedsstatus {livestock.healthStatus ? <span className="lasso-livestock__health">{livestock.healthStatus}</span> : "—"}
                   </td>
                 </tr>

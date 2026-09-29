@@ -84,7 +84,7 @@ import { ChangeFeed } from "./components/ChangeFeed.js";
 import { SavedPages } from "./components/SavedPages.js";
 import { ShellIcon } from "./components/ShellIcons.js";
 import { ReportA4 } from "./components/ReportA4.js";
-import { specToCsv } from "./csv.js";
+import { personRolesCsv, specToCsv } from "./csv.js";
 import { Badge, Skeleton } from "./primitives.js";
 import { Accordion, CardGrid } from "./components/Layout.js";
 import { SaveDialog } from "./SaveDialog.js";
@@ -896,6 +896,10 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
       ? [
           ...(canReport ? [{ id: "pdf", label: "Virksomhedsrapport (PDF)", icon: <ShellIcon name="document" size={16} />, onSelect: () => setReportOpen(true) }] : []),
           ...(host.export && csv ? [{ id: "csv", label: "Tal som CSV", icon: <ShellIcon name="download" size={16} />, onSelect: () => act({ kind: "export", filename: csvName, csv }) }] : []),
+          // 16.1: personhovedet har også Eksportér (rollerne som CSV).
+          ...(host.export && entity?.pageKind === "person" && dataset?.persons[entity.lassoId]
+            ? [{ id: "roles-csv", label: "Roller som CSV", icon: <ShellIcon name="download" size={16} />, onSelect: () => act({ kind: "export", filename: csvName.replace(/\.csv$/, "-roller.csv"), csv: personRolesCsv(dataset.persons[entity.lassoId]!) }) }]
+            : []),
         ]
       : [],
     more: headActions

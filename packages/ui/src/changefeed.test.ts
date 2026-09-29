@@ -140,14 +140,25 @@ test("Overvåger-indstillinger (21): knap i koral-soft, fakta, Stop overvågning
   assert.match(html, /LASSO X A\/S overvåges</);
   assert.match(html, /I listen &quot;Kunder&quot;, siden 03\.03\.2025, besked pr\. e-mail dagligt/);
   assert.match(html, /class="lasso-link lasso-monitor__stop"[^>]*>Stop overvågning</);
-  assert.equal((html.match(/role="switch"/g) ?? []).length, 5);
-  assert.equal((html.match(/aria-checked="true"/g) ?? []).length, 3);
+  // 5 typekontakter + mobilens statuskontakt (26e.4, skjult på desktop).
+  assert.equal((html.match(/role="switch"/g) ?? []).length, 6);
+  assert.equal((html.match(/aria-checked="true"/g) ?? []).length, 4);
+  assert.match(html, /lasso-monitor__mstatus/);
   assert.match(html, /Status og konkurs/);
   assert.match(html, /Kreditscore ændrer sig ≥ 5 point/);
   assert.doesNotMatch(html, /·/);
   // Ikke overvåget: kun "Overvåg"-knappen, ingen toggles
   const off = renderToStaticMarkup(createElement(MonitorSettings, { companyName: "Prøve ApS", monitoring: false, settings: {}, onStart: () => {} }));
   assert.match(off, />Overvåg<\/button>/);
-  assert.doesNotMatch(off, /role="switch"/);
+  // Ingen typekontakter, når virksomheden ikke overvåges (kun mobilens statuskontakt).
+  assert.equal((off.match(/role="switch"/g) ?? []).length, 1);
   assert.doesNotMatch(off, /Stop overvågning/);
+});
+
+test("21.3/21.4: kontakterne står i samme rækkefølge som feedets typefilter", async () => {
+  const { MONITOR_TYPES } = await import("./components/MonitorSettings.js");
+  const { CHANGE_TYPES } = await import("@lasso/spec");
+  const pos = MONITOR_TYPES.map((t) => (CHANGE_TYPES as readonly string[]).indexOf(t));
+  assert.ok(pos.every((p) => p >= 0));
+  assert.deepEqual([...pos].sort((a, b) => a - b), pos);
 });

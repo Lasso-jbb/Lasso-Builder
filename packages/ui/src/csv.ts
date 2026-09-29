@@ -1,4 +1,4 @@
-import { searchKey, TABLE_COLUMN_LABELS, DEFAULT_TABLE_COLUMNS, type CompanyRowVM, type Dataset, type TableColumn, type ViewSpec } from "@lasso/spec";
+import { searchKey, TABLE_COLUMN_LABELS, DEFAULT_TABLE_COLUMNS, type CompanyRowVM, type Dataset, type PersonVM, type TableColumn, type ViewSpec } from "@lasso/spec";
 
 function esc(v: string | number | null | undefined): string {
   const s = v === null || v === undefined ? "" : String(v);
@@ -39,4 +39,12 @@ export function specToCsv(spec: ViewSpec, ds: Dataset): string | null {
   const result = ds.searches[searchKey(table.search)];
   if (!result) return null;
   return rowsToCsv(result.rows, table.columns?.length ? table.columns : DEFAULT_TABLE_COLUMNS);
+}
+
+/** 16.1: personens roller som CSV (Eksportér i personhovedet). Ingen CPR eller adresse. */
+export function personRolesCsv(person: PersonVM): string {
+  return tableToCsv(
+    ["Selskab", "CVR", "Rolle", "Ejerandel", "Fra", "Til", "Aktiv", "Selskabets status"],
+    person.roles.map((r) => [r.companyName, r.cvr, r.role, r.share, r.from, r.to, r.active ? "Ja" : "Nej", r.companyStatus]),
+  );
 }
