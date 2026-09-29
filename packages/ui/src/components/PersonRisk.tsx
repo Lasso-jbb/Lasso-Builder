@@ -128,7 +128,7 @@ function SanctionsTile({ person, onUpgrade }: { person: PersonVM; onUpgrade?: ()
         tone="locked"
         action={
           onUpgrade ? (
-            <button type="button" className="lasso-btn lasso-btn--sm lasso-personrisk__upgrade" onClick={onUpgrade}>
+            <button type="button" className="lasso-btn lasso-btn--sm lasso-personrisk__upgrade" data-link="true" onClick={onUpgrade}>
               Opgrader
             </button>
           ) : null
@@ -152,8 +152,14 @@ export function PersonRisk({
   error,
   onOpen,
   onUpgrade,
+  lines = false,
 }: {
   person?: PersonVM;
+  /**
+   * 25.6 (personsiden): fire tjeklinjer adskilt af 1 px dividere i stedet for fliser med egen ramme,
+   * titel 15/500, "Tjekket DATO" til højre i hovedet og "Opgrader" som link ved låste lister.
+   */
+  lines?: boolean;
   title?: string;
   error?: string;
   onOpen?: (a: ViewAction) => void;
@@ -177,8 +183,14 @@ export function PersonRisk({
     );
   }
   const risk = personRisk(person);
+  const checked = person.pep?.checkedAt ?? person.sanctions?.checkedAt;
   return (
-    <Section title={heading} span="half" className="lasso-personrisk">
+    <Section
+      title={heading}
+      span="half"
+      className={`lasso-personrisk${lines ? " lasso-personrisk--lines" : ""}`}
+      action={lines && checked ? <span className="lasso-personrisk__checked">{`Tjekket ${formatDate(checked)}`}</span> : undefined}
+    >
       <ul className="lasso-personrisk__items">
         <PepTile person={person} />
         <StrawmanTile person={person} />

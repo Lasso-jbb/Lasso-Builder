@@ -1594,6 +1594,8 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-personnet__side { flex: none; min-width: 64px; text-align: right; }
 .lasso-personnet__years { font-size: var(--lasso-fs-lg); line-height: 24px; font-weight: 600; color: var(--lasso-text); white-space: nowrap; }
 .lasso-personnet__unit { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+.lasso-personnet__note { margin: var(--lasso-space-3) 0 0; font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+.lasso-root .lasso-personnet__graph { font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-accent-text); }
 .lasso-personnet__row.is-ended .lasso-personnet__name,
 .lasso-personnet__row.is-ended .lasso-personnet__years { color: var(--lasso-text-3); font-weight: 400; }
 .lasso-personnet__row.is-ended .lasso-personnet__company:not(.is-bankrupt) { color: var(--lasso-text-3); }
@@ -1618,6 +1620,13 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-personrisk__word--50 { color: var(--lasso-warning); }
 .lasso-personrisk__word--neutral { color: var(--lasso-muted); }
 .lasso-personrisk__upgrade { flex: none; }
+/* 25.6 personsiden: tjeklinjer adskilt af 1 px dividere, titel 15/500, "Tjekket DATO" i hovedet, "Opgrader" som koral link. */
+.lasso-personrisk--lines .lasso-personrisk__items { gap: 0; }
+.lasso-root .lasso-personrisk--lines .lasso-personrisk__item { padding: 14px 0; border: 0; border-radius: 0; border-top: 1px solid var(--lasso-border); background: transparent; }
+.lasso-root .lasso-personrisk--lines .lasso-personrisk__item:first-child { border-top: 0; }
+.lasso-personrisk--lines .lasso-personrisk__title { font-weight: 500; }
+.lasso-personrisk__checked { font-size: var(--lasso-fs-sm); color: var(--lasso-muted); white-space: nowrap; }
+.lasso-root .lasso-personrisk--lines .lasso-personrisk__upgrade { height: auto; padding: 0; border: 0; background: none; color: var(--lasso-accent-text); font-weight: 500; }
 .lasso-personroles .lasso-section__head { flex-wrap: wrap; row-gap: var(--lasso-space-2); }
 @container lasso (max-width: 560px) {
   .lasso-personroles__desk .lasso-section__action { flex-basis: 100%; }
@@ -4565,7 +4574,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   /* Mobil: kort med 1 px kant, navn 20/600, "Person, f. 1978" muted, tællerlinje 13 ink, fire 40 px knapper
      (Overvåg, Netværk, Gem, Flere) højrestillet. Ingen observationslinje. */
   .lasso-personhead.lasso-company { padding: var(--lasso-space-4); border: 1px solid var(--lasso-border); border-radius: 12px; gap: 4px; }
-  .lasso-personhead .lasso-personhead__kind, .lasso-personhead .lasso-personhead__obs, .lasso-personhead .lasso-personhead__facts { display: none; }
+  .lasso-personhead .lasso-personhead__kind, .lasso-personhead .lasso-personhead__obs, .lasso-personhead .lasso-personhead__facts, .lasso-personhead > .lasso-headrisk { display: none; }
   .lasso-personhead__mobsub { display: block; order: 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-muted); }
   .lasso-personhead__counts { display: block; order: 1; margin-top: 4px; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text); }
   .lasso-root .lasso-personhead .lasso-headbtn--network { display: inline-flex; }

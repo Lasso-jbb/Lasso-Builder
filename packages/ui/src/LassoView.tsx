@@ -188,6 +188,7 @@ function PersonHeadBridge({ c, ds, props, act, frame }: { c: Extract<ViewCompone
             : undefined
       }
       onSeeRisk={sectionAction(props, act, { lassoId: c.person, pageKind: "person", section: "risiko", name, label: "Risiko" })}
+      riskLine={Boolean(props.frameless || props.embedded)}
       below={full ? headTabsOf(props) : undefined}
     />
   );
@@ -525,7 +526,18 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
         />
       );
     case "LassoPersonNetwork":
-      return <PersonNetwork key={key} network={empty.personNetworks[c.person]} title={c.title} limit={c.limit} error={err(`personNetwork:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} />;
+      return (
+        <PersonNetwork
+          key={key}
+          network={empty.personNetworks[c.person]}
+          title={c.title}
+          limit={c.limit}
+          error={err(`personNetwork:${c.person}`)}
+          demo={empty.source === "demo"}
+          onOpen={props.host.drillDown ? act : undefined}
+          onGraph={sectionAction(props, act, { lassoId: c.person, pageKind: "person", section: "netvaerk", name: empty.persons[c.person]?.name ?? c.person, label: "Netværk" })}
+        />
+      );
     case "LassoPersonRisk":
       return (
         <PersonRisk
@@ -535,6 +547,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           error={err(`person:${c.person}`)}
           onOpen={props.host.drillDown ? act : undefined}
           onUpgrade={props.host.prompt ? () => act({ kind: "prompt", prompt: "Hvilke Lasso-pakker giver adgang til tjek mod sanktionslister?" }) : undefined}
+          lines={Boolean(props.frameless || props.embedded)}
         />
       );
     case "LassoPersonStats":
