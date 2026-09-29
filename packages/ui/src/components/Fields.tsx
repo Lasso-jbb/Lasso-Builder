@@ -285,11 +285,11 @@ export function SelectField({ options, value, onChange, placeholder = "Vælg", l
   );
 }
 
-/** Tekst i et lukket felt med flere valg: to navne og "og N flere" ("og 1 mere" ved én). */
+/** Tekst i et lukket felt med flere valg: to navne og "og N flere" (gennemgående, også "og 1 flere"; 02a.12, 02b.14, 26.3). */
 export function summarize(labels: readonly string[], max = 2): string {
   if (labels.length <= max) return labels.join(", ");
   const rest = labels.length - max;
-  return `${labels.slice(0, max).join(", ")} og ${rest} ${rest === 1 ? "mere" : "flere"}`;
+  return `${labels.slice(0, max).join(", ")} og ${rest} flere`;
 }
 
 export interface MultiSelectProps {

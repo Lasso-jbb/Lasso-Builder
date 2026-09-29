@@ -104,7 +104,7 @@ test("02a.12 Branchevælger: to navne og N flere, tomt = Vælg brancher, træ me
   const empty = render(h(IndustryField, { tree: DB07_EXCERPT, values: [], onChange: noop }));
   assert.match(empty, /Vælg brancher/);
   const some = render(h(IndustryField, { tree: DB07_EXCERPT, values: ["692000", "691000", "620100"], onChange: noop }));
-  assert.match(some, /69\.20 Bogføring og revision; skatterådgivning, 69\.10 Juridisk bistand og 1 mere/);
+  assert.match(some, /69\.20 Bogføring og revision; skatterådgivning, 69\.10 Juridisk bistand og 1 flere/);
   assert.match(some, /lasso-industryfield__icon/);
   const tree = render(h(TreePicker, { tree: DB07_EXCERPT, values: ["692000"], onChange: noop }));
   assert.match(tree, /role="tree"/);
@@ -175,9 +175,9 @@ test("FilterPanel: procent- og Ja/Nej-felter fra et udvidet katalog", () => {
 });
 
 
-test("02b.1 summarize: \"og 1 mere\" ved én, \"og N flere\" ved flere", () => {
+test("02a.12 summarize: \"og N flere\" gennemgående, også ved én", () => {
   assert.equal(summarize(["A", "B"]), "A, B");
-  assert.equal(summarize(["A", "B", "C"]), "A, B og 1 mere");
+  assert.equal(summarize(["A", "B", "C"]), "A, B og 1 flere");
   assert.equal(summarize(["A", "B", "C", "D"]), "A, B og 2 flere");
 });
 

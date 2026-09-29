@@ -72,17 +72,17 @@ function Tile({ v, name, hex, use, w, h }: { v: string; name: string; hex: strin
 
 const CORAL: [string, string, string, string][] = [
   ["--lasso-accent", "Koral", "primary, #FF6B35", "primær knap, aktiv"],
-  ["--lasso-accent-soft", "Koral lys", "primary-soft, #FFF2EB", "valgt, fokus"],
-  ["--lasso-accent-border", "Koral kant", "primary-border, #FFCFB6", ""],
+  ["--lasso-accent-soft", "Koral lys", "primary-soft, #FFF2EB", "valgt flade, fremhævet nævnelse"],
+  ["--lasso-accent-border", "Koral kant", "primary-border, #FFCFB6", "fokuskant 1 px, valgte chips"],
   ["--lasso-accent-text", "Koral mørk", "primary-text, #B2450F", "tekst, flueben"],
 ];
 const TEXTS: [string, string, string, string][] = [
   ["--lasso-text", "ink", "#16181D", "overskrift"],
   ["--lasso-text-2", "text", "#3F444B", "brødtekst"],
-  ["--lasso-text-3", "text-secondary", "#5B6068", "ikoner"],
-  ["--lasso-placeholder", "text-muted", "#8A9099", "hjælpetekst"],
+  ["--lasso-text-3", "text-secondary", "#5B6068", "hjælpetekst, metatekst, overlinjer"],
+  ["--lasso-placeholder", "text-muted", "#8A9099", "ikoner, dekoration"],
   ["--lasso-icon", "icon", "#9AA0A8", "chevrons"],
-  ["--lasso-faint", "text-faint", "#B9BEC5", "tællere"],
+  ["--lasso-faint", "text-faint", "#B9BEC5", "deaktiveret"],
   ["--lasso-danger", "danger", "#D92D20", "fejl, slet"],
   ["--lasso-positive", "success", "#1F8A4C", "kvittering"],
 ];
@@ -802,7 +802,8 @@ export const entries: GalleryEntry[] = [
   { nr: "02a.12", title: "Hierarki (brancher)", node: "4H6-0", render: () => <IndustryDemo /> },
   { nr: "02a.13", title: "Multivalg med loft", node: "4HR-0", render: () => <CapDemo /> },
 
-  { nr: "02b.1", title: "Persona (sammensat kriterie)", node: "4IA-0", render: () => (<Grid><PersonaDemo /><St label="Redigér i modal (dialog åben)"><PersonaModal /></St></Grid>), note: "Paper viser kun kortet; dialogen (07.1) er tegnet åben under som ekstra." },
+  { nr: "02b.1", title: "Persona (sammensat kriterie)", node: "4IA-0", render: () => <PersonaDemo /> },
+  { nr: "02b.1", title: "Persona, redigér i dialog (separat tilstand)", node: "4IA-0", render: () => <PersonaModal />, note: "Separat tilstand: Redigér på kortet åbner dialogen (07.1) på overlay. Selve elementet (kortet + Tilføj persona) står i indgangen ovenfor." },
   { nr: "02b.2", title: "Teknologi med / uden", node: "4IV-0", render: () => <TechOperatorDemo /> },
   { nr: "02b.3", title: "Til / fra-kontakt", node: "4JT-0", render: () => <ToggleDemo /> },
   { nr: "02b.4", title: "Sektionens brødtekst", node: "4KA-0", render: () => <SectionIntroDemo /> },
