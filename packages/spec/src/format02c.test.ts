@@ -7,7 +7,7 @@ test("02c.3 Tal-interval: tankestreg uden mellemrum, åbne intervaller", () => {
   assert.equal(formatRange(10, 19), "10–19");
   assert.equal(formatRange(1000, null), "1.000+");
   assert.equal(formatRange(null, 5), "under 5");
-  assert.equal(formatRange(null, null), "—");
+  assert.equal(formatRange(null, null), "-");
 });
 
 test("02c.6 Periode: tankestreg, åben periode, alder", () => {

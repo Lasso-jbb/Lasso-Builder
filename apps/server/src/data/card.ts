@@ -267,7 +267,7 @@ function ownershipTreeCard(card: Card, g: OwnershipGraphVM) {
 function statementRows(card: Card, label: string, rows: { label: string; values: readonly (number | null | undefined)[] }[], yearsShown: readonly number[], currency?: string) {
   card.section(`${label} ${yearsShown.join("/")}${isForeignCurrency(currency) ? `, ${currencyUnit(currency)}` : ""}`);
   for (const r of rows) {
-    const parts = r.values.map((v) => (v == null ? "—" : amt(v, currency)));
+    const parts = r.values.map((v) => (v == null ? "-" : amt(v, currency)));
     card.row(r.label, parts.join(" → "));
   }
 }
@@ -445,7 +445,7 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
       const o = ds.ownership[lassoId];
       if (o) {
         card.section("Ejerkreds");
-        for (const x of o.owners.slice(0, 3)) card.row(x.share ?? "—", x.name);
+        for (const x of o.owners.slice(0, 3)) card.row(x.share ?? "-", x.name);
         if (o.owners.length > 3) card.row("", `og ${moreText(o.owners.length - 3)}`);
       }
     }
@@ -614,7 +614,7 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
   if (events && types.has("LassoPublications")) {
     card.section("Regnskabspublicering");
     if (events.publications.length === 0) card.text("Ingen offentliggjorte regnskaber");
-    for (const p of events.publications.slice(0, 3)) card.text(`${p.published ? formatDate(p.published) : "—"}, ${p.kind}${p.year ? ` ${p.year}` : ""}, ${p.corrected ? "korrigeret" : "ny"}`);
+    for (const p of events.publications.slice(0, 3)) card.text(`${p.published ? formatDate(p.published) : "-"}, ${p.kind}${p.year ? ` ${p.year}` : ""}, ${p.corrected ? "korrigeret" : "ny"}`);
   }
 
   // Katalog 17.2: observationerne sorteret efter alvor, 3 + "Se N flere"; tom liste er positiv information.

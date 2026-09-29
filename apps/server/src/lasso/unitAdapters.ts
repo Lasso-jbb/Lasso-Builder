@@ -188,10 +188,10 @@ function companyOwnerName(owner: Json): string | undefined {
 /**
  * CHR-husdyrdata (katalog 20), BEKRÆFTET MOD API 27.09.2026: `GET /data/CHR/livestock/{cvr}
  * ?onlyCurrent=true` svarer med et rent array af ejendomme. Hver ejendom har sit eget
- * `chrNumber`, en `property` (adresse/kommune) og `livestockList.livestock[]` — én række pr.
+ * `chrNumber`, en `property` (adresse/kommune) og `livestockList.livestock[]` - én række pr.
  * dyretype/anvendelse. Flere ejendomme (flere array-elementer) flades ud til én liste af rækker;
  * hver række får sit eget `chrNumber`/`propertyAddress`, så de kan skelnes i UI'en. Persondata:
- * ejer/bruger vises kun, når det er en virksomhed (se `companyOwnerName`) — privatpersoners navn
+ * ejer/bruger vises kun, når det er en virksomhed (se `companyOwnerName`) - privatpersoners navn
  * og adresse fra `owner`/`user` læses ikke.
  */
 function adaptChrLivestockConfirmed(lassoId: string, properties: Json[]): LivestockVM {
@@ -331,7 +331,7 @@ const REPORT_ANALYSIS_SOURCE = "Kilde: Lasso regnskabsanalyse";
  * previousReport }`. Findes `sections` med mindst ét ikke-tomt felt, giver hver én
  * `TextSectionItem` i den bekræftede rækkefølge (tomme felter udelades); ellers falder den
  * tilbage til `text` som én samlet sektion. HTML'et konverteres til ren tekst med `htmlToText`.
- * Tomt/ukendt svar giver en tom liste (sektionerne udelades da helt — katalogregel 4/5: ingen
+ * Tomt/ukendt svar giver en tom liste (sektionerne udelades da helt - katalogregel 4/5: ingen
  * AI-mærke, ingen bannerboks, blot almindelige sektioner med kildelinje).
  *
  * Hver sektion starter i kilden med sin egen overskrift ("<b>Revisoroplysninger</b><br>…"), som

@@ -543,13 +543,13 @@ export function CompanyTable({
                           ) : c === "status" ? (
                             r.status ? <span className={`lasso-status lasso-status--${statusTone(r.status!, r.statusKind ?? "active")}`}>{r.status}</span> : <span className="lasso-notreported">Ikke oplyst</span>
                           ) : c === "udvikling" ? (
-                            (r.trend?.length ?? 0) >= 2 ? <Trend values={r.trend!} /> : <span className="lasso-notreported">—</span>
+                            (r.trend?.length ?? 0) >= 2 ? <Trend values={r.trend!} /> : <span className="lasso-notreported">-</span>
                           ) : NUMERIC.has(c) && sortValue(r, c) == null ? (
                             <span className="lasso-notreported">Ikke oplyst</span>
                           ) : NUMERIC.has(c) && (sortValue(r, c) as number) < 0 ? (
                             <span className="lasso-down">{shown(r, c)}</span>
                           ) : (
-                            shown(r, c) || <span className="lasso-notreported">—</span>
+                            shown(r, c) || <span className="lasso-notreported">-</span>
                           )}
                         </td>
                       ))}
@@ -628,7 +628,7 @@ export function CompanyTable({
 
 function figureValue(r: CompanyRowVM, c: TableColumn) {
   const v = sortValue(r, c);
-  if (v == null) return <span className="lasso-notreported">—</span>;
+  if (v == null) return <span className="lasso-notreported">-</span>;
   if (c === "ansatte") return formatNumber(v as number);
   // 26c.7: kortene viser beløb uden "kr." ("18,8 mio.", "−201 t."), så fire tal står på én linje.
   const unit = currencyUnit(r.currency);
@@ -659,7 +659,7 @@ function CompanyCard({ r, figures, selected, onOpen }: { r: CompanyRowVM; figure
         ))}
         <div>
           <dt>Score</dt>
-          <dd>{typeof r.score === "number" ? formatNumber(r.score) : <span className="lasso-notreported">—</span>}</dd>
+          <dd>{typeof r.score === "number" ? formatNumber(r.score) : <span className="lasso-notreported">-</span>}</dd>
         </div>
       </dl>
     </li>

@@ -282,7 +282,7 @@ function Palette() {
 /**
  * 13.9 og 26b.7: sparkline-tilstandene som 44 px rækker med etiket, sparkline og værdi til højre.
  * Sparklinen er altid koral; krydser værdierne 0, står en stiplet nullinje; sparsøjler til
- * kvartalstal; under 3 datapunkter står "—" i stedet for en sparkline.
+ * kvartalstal; under 3 datapunkter står "-" i stedet for en sparkline.
  */
 export function SparkList({ title, rows }: { title?: string; rows: { label: string; values: number[]; value: string; kind?: "line" | "bars"; negative?: boolean }[] }) {
   return (

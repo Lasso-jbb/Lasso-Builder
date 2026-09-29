@@ -51,7 +51,7 @@ function DotsIcon() {
 /**
  * Persontabel (katalog 15.3): samme tabel som virksomhedstabellen med andre kolonner:
  * markering, Person (navn alene, "Født 1978, København" under), "Roller, aktive" (højst to
- * rolleord + "+n"), Selskaber, Konkurser (rødt tal eller "—"), Seneste ændring og "…"-menu.
+ * rolleord + "+n"), Selskaber, Konkurser (rødt tal eller "-"), Seneste ændring og "…"-menu.
  * Samme værktøjslinje (søgning), handlingsbjælke, paginering og tilstande inde i rammen.
  */
 export function PersonTable({
@@ -203,9 +203,9 @@ export function PersonTable({
                           <span className="lasso-notreported">Ingen aktive roller</span>
                         )}
                       </td>
-                      <td className="lasso-num">{typeof r.companies === "number" ? formatNumber(r.companies) : <span className="lasso-notreported">—</span>}</td>
-                      <td className="lasso-num">{r.bankruptcies > 0 ? <span className="lasso-ptable__bankrupt">{formatNumber(r.bankruptcies)}</span> : <span className="lasso-notreported">—</span>}</td>
-                      <td className="lasso-num">{r.lastChange ? formatDate(r.lastChange) : <span className="lasso-notreported">—</span>}</td>
+                      <td className="lasso-num">{typeof r.companies === "number" ? formatNumber(r.companies) : <span className="lasso-notreported">-</span>}</td>
+                      <td className="lasso-num">{r.bankruptcies > 0 ? <span className="lasso-ptable__bankrupt">{formatNumber(r.bankruptcies)}</span> : <span className="lasso-notreported">-</span>}</td>
+                      <td className="lasso-num">{r.lastChange ? formatDate(r.lastChange) : <span className="lasso-notreported">-</span>}</td>
                       <td className="lasso-cell--menu" onClick={(e) => e.stopPropagation()}>
                         <Menu
                           trigger={<DotsIcon />}

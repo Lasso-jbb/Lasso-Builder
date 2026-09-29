@@ -25,7 +25,7 @@ const yesNo = (v: boolean | undefined) => (v === undefined ? undefined : v ? "Ja
 /** "01.01.2025–31.12.2025" fra to ISO-datoer. */
 function range(start?: string, end?: string): string | undefined {
   if (!start && !end) return undefined;
-  return `${start ? formatDate(start) : "—"}–${end ? formatDate(end) : "—"}`;
+  return `${start ? formatDate(start) : "-"}–${end ? formatDate(end) : "-"}`;
 }
 
 function Rows({ rows }: { rows: [string, ReactNode | undefined][] }) {

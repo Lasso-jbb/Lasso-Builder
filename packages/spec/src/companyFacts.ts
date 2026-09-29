@@ -56,8 +56,8 @@ function employeesText(company: CompanyVM, lastYear: FinancialYear | undefined):
 }
 
 /**
- * Rækkerne med værdi, i fast rækkefølge. Revisor står også uden navn ("—"), når virksomheden har
- * regnskaber (så mangler den reelt); ellers udelades tomme rækker, så listen ikke fyldes af "—".
+ * Rækkerne med værdi, i fast rækkefølge. Revisor står også uden navn ("-"), når virksomheden har
+ * regnskaber (så mangler den reelt); ellers udelades tomme rækker, så listen ikke fyldes af "-".
  */
 export function companyFacts(company: CompanyVM, ownership: OwnershipVM | undefined, lastYear: FinancialYear | undefined, options: CompanyFactOptions = {}): CompanyFact[] {
   const a = company.address;

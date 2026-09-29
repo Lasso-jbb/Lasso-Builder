@@ -822,7 +822,7 @@ const ARL_2024 = {
   },
 };
 
-test("adaptFinancials: ÅRL-gæld (…OtherThanProvisions) giver gæld og likviditetsgrad, ikke '—'", () => {
+test("adaptFinancials: ÅRL-gæld (…OtherThanProvisions) giver gæld og likviditetsgrad, ikke '-'", () => {
   const y = adaptFinancials("CVR-1-1", [ARL_2024]).years[0]!;
   // Ingen samlet gæld tagget: kort + lang + hensatte.
   assert.equal(y.liabilities, 9_716_227 + 3_024_007 + 200_000);
@@ -843,7 +843,7 @@ test("adaptFinancials: samlet ÅRL-gæld uden hensatte + hensatte, når det saml
   assert.equal(adaptFinancialStatements("CVR-1-1", [r]).balanceSheet[0]!.liabilitiesTotal, 450);
 });
 
-test("overskudsgrad = resultat af primær drift (EBIT) / omsætning; '—' uden omsætning", () => {
+test("overskudsgrad = resultat af primær drift (EBIT) / omsætning; '-' uden omsætning", () => {
   const y = adaptFinancials("CVR-1-1", [ARL_2024]).years[0]!;
   assert.equal(y.overskudsgrad, 3); // 1,8 mio. / 60 mio.
   const klasseB = { period: { to: "2023-12-31" }, reportYear: 2023, data: { company: { facts: { incomeStatement: tree({ GrossProfitLoss: leaf(24_992_309), ProfitLossFromOrdinaryOperatingActivities: leaf(1_500_000), ProfitLoss: leaf(1_027_633) }) } } } };
@@ -882,7 +882,7 @@ test("adaptFinancials vælger årets tal og ikke sammenligningstal fra året fø
   };
   assert.equal(adaptFinancials("CVR-1-24256790", [withValues]).years[0]!.employees, 59_000);
 
-  // Kun forrige års tal findes: hellere "—" end forrige års tal.
+  // Kun forrige års tal findes: hellere "-" end forrige års tal.
   const onlyPrior = {
     period: { to: "2023-12-31" },
     reportYear: 2023,

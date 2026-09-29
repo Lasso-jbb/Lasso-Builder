@@ -47,7 +47,7 @@ export function personFactRows(p: PersonVM, { hideCounts = false }: { hideCounts
 
 /**
  * Stamoplysninger (katalog 16, ¼ ved siden af rollerne). Nøgle-værdi som katalog 09: nøgle
- * 13/400 grå, værdi 14/400, manglende værdi "—" i faint, aldrig "0". Bopælen står kun som
+ * 13/400 grå, værdi 14/400, manglende værdi "-" i faint, aldrig "0". Bopælen står kun som
  * postnummer og by, som i personhovedet (aldrig fuld privatadresse); en adressebeskyttet person
  * får ordet "Adressebeskyttet". Roller, ejerskaber og datoer er afledt af rollerne i CVR.
  */

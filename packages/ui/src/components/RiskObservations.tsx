@@ -99,12 +99,12 @@ function ObservationCard({ o }: { o: ObservationRowVM }) {
 
 /**
  * Én observation på desktop (17.2): ikon i venstre kolonne, alvorsordet som farvet overlinje
- * (VIGTIG, MULIG VIGTIG), titel 15/600, forklaring 14 og "Kilde, dato. Se regnskab". Den vigtige
- * ligger på rød-soft flade; info og neutrale fakta er kompakte rækker (44 px) med dato til højre.
+ * (VIGTIG, MULIG VIGTIG), titel 15/600, forklaring 14 og "Kilde, dato. Se regnskab". Ingen farvet
+ * flade (17.2): alvoren bæres af ikon + ord. Info og neutrale fakta er kompakte rækker (44 px) med dato til højre.
  */
 function ObservationRow({ o, lassoId, onAction }: { o: ObservationRowVM; lassoId: string; onAction?: (a: ViewAction) => void }) {
   const compact = o.notAvailable || o.severity <= 25;
-  const word = o.notAvailable ? "Ikke tilgængelig" : o.severity === 0 ? "–" : severityWord(o.severity);
+  const word = o.notAvailable ? "Ikke tilgængelig" : o.severity === 0 ? "-" : severityWord(o.severity);
   const section = o.source ? SECTION_FOR_SOURCE[o.source.toLowerCase()] : undefined;
   const cls = `lasso-obsrow lasso-obsrow--${o.notAvailable ? "na" : o.severity}${compact ? " lasso-obsrow--compact" : ""}`;
   if (compact) {
@@ -112,7 +112,7 @@ function ObservationRow({ o, lassoId, onAction }: { o: ObservationRowVM; lassoId
       <li className={cls}>
         <span className="lasso-obsrow__icon">{o.notAvailable ? <span className="lasso-sev-dot" aria-hidden="true" /> : <SeverityIcon severity={o.severity} />}</span>
         <span className="lasso-obsrow__word">
-          {o.severity === 0 && !o.notAvailable ? <span aria-hidden="true">–</span> : word}
+          {o.severity === 0 && !o.notAvailable ? <span aria-hidden="true">-</span> : word}
           {o.severity === 0 && !o.notAvailable ? <span className="lasso-sr">Neutral</span> : null}
         </span>
         <span className="lasso-obsrow__title">{o.title}</span>

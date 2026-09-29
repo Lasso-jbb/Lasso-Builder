@@ -67,7 +67,7 @@ export function EntityUpdates({ items, onOpen, title = "Opdateringer på persone
               </span>
               <span className="lasso-entupd__text">
                 {u.text}
-                {u.from || u.to ? `: ${u.from ?? "—"} → ${u.to ?? "—"}` : ""}
+                {u.from || u.to ? `: ${u.from ?? "-"} → ${u.to ?? "-"}` : ""}
               </span>
               <span className="lasso-entupd__source">
                 {u.source ?? ""}

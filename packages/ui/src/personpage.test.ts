@@ -94,8 +94,8 @@ test("PersonFacts: adressebeskyttet, tom tilstand der siger hvorfor, henter og f
   assert.match(facts({ lassoId: ID, name: "Tom", roles: [] }), /hverken en bopæl eller roller/);
   assert.match(facts(undefined), /aria-busy="true"/);
   assert.match(facts(undefined, "Lasso API-fejl (500)"), /Data kunne ikke hentes/);
-  // Uden bopæl, men med roller: "—" i stedet for en tom række.
-  assert.match(facts({ ...bo, city: undefined, zip: undefined, municipality: undefined }), /Bopæl.*—/);
+  // Uden bopæl, men med roller: "-" i stedet for en tom række.
+  assert.match(facts({ ...bo, city: undefined, zip: undefined, municipality: undefined }), /Bopæl.*-/);
 });
 
 test("columnBands: et lavere kolonnenummer starter et nyt bånd, og bredderne giver båndets forhold", () => {

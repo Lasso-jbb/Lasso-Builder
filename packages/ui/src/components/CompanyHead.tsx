@@ -23,7 +23,7 @@ export function companyStatusText(c: CompanyVM): string | undefined {
 export function companyFactsLine(c: CompanyVM, variant: HeadVariant = "full"): string[] {
   const a = c.address;
   const curator = c.curator ? `${/likvidation/i.test(c.status ?? "") ? "likvidator" : "kurator"}: ${c.curator}` : null;
-  // Kun et tal: null/undefined (ikke oplyst, fx en enkeltmandsvirksomhed) må ikke blive "— ansatte".
+  // Kun et tal: null/undefined (ikke oplyst, fx en enkeltmandsvirksomhed) må ikke blive "- ansatte".
   const employees = typeof c.employees === "number" ? `${formatNumber(c.employees)} ansatte` : null;
   if (variant !== "full") {
     // Kompakt og linje: CVR, by, ansatte (Paper 08.1 "CVR 34580820, København K, 17 ansatte").

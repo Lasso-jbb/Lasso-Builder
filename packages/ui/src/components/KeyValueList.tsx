@@ -300,7 +300,7 @@ export function KeyValueList({
                 ) : r.value ? (
                   r.lassoId && onOpen ? <Value value={r.value} lassoId={r.lassoId} onOpen={onOpen} /> : <FoldText text={r.value} />
                 ) : (
-                  // 02c.17: felter siger "Ikke registreret", når kilden er tom; tabeller beholder "—".
+                  // 02c.17: felter siger "Ikke registreret", når kilden er tom; tabeller beholder "-".
                   <NotReported kind="registered" />
                 )}
                 {r.flag && r.value ? <QualityFlag text={r.flag} /> : null}

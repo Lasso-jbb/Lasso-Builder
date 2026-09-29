@@ -4,7 +4,7 @@
 /** 23.2: kolonnebredder ved 1440 px. [zone, med panel, uden panel, fremhævet] */
 export const WIDTH_ROWS: readonly (readonly [string, string, string, boolean?])[] = [
   ["Skinne", "236", "236"],
-  ["Panel", "336", "—"],
+  ["Panel", "336", "-"],
   ["Midte inkl. padding 28", "868", "1.204"],
   ["Indholdsbredde", "812", "1.148", true],
   ["1 kolonne (¼), gutter 24", "185", "269"],
@@ -58,7 +58,7 @@ export const STATE_DEFS: readonly (readonly [string, string])[] = [
   ["Fyldt", "Det normale. Design det først."],
   ["Henter", "Skelet i samme højde som fyldt, spinner + tekst kun når det tager > 2 sek., fremdrift ved kendt ventetid (18)."],
   ["Tom", 'Sig hvorfor og hvad man kan gøre (15, 17). Stiplet ramme. Aldrig "0".'],
-  ["Ikke oplyst", '"Ikke oplyst" eller "—" i text-faint, årsag under når den kendes (09).'],
+  ["Ikke oplyst", '"Ikke oplyst" eller "-" i text-faint, årsag under når den kendes (09).'],
   ["Fejl", 'Kun ved teknisk fejl, rød ikon, "Prøv igen", fejl-id, kriterier og input bevares (15).'],
 ];
 

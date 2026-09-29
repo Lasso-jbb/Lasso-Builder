@@ -337,7 +337,7 @@ export function DataState({ state, reason, title, checkedAt, positive, onRetry, 
   );
 }
 
-/** Enkelt manglende værdi i en celle eller et felt: "—" i text-faint. */
+/** Enkelt manglende værdi i en celle eller et felt: "-" i text-faint. */
 export function Missing() {
   return <span className="lasso-notreported">{MISSING}</span>;
 }
@@ -379,7 +379,7 @@ export function Skeleton({ lines = 3, height }: { lines?: number; height?: numbe
 /**
  * Sparkline (13.9, 26b.7): altid koral ved `tone="accent"`, prik på seneste værdi. Krydser serien 0,
  * tegnes en stiplet nullinje. `kind="bars"` giver sparsøjler (fx ansatte pr. kvartal) med seneste søjle
- * i koral. Under 3 datapunkter tegnes ingen sparkline, kun "—".
+ * i koral. Under 3 datapunkter tegnes ingen sparkline, kun "-".
  */
 export function Sparkline({
   values,

@@ -49,7 +49,7 @@ export function PersonStats({ person, network, error, networkError }: { person?:
           <span className="lasso-personstats__label" title={c.key === "dissolutions" ? "Tvangsopløsninger" : undefined}>
             {c.label}
           </span>
-          <span className={`lasso-personstats__value${c.tone ? " lasso-personstats__value--danger" : ""}`}>{c.value === null ? "—" : c.value}</span>
+          <span className={`lasso-personstats__value${c.tone ? " lasso-personstats__value--danger" : ""}`}>{c.value === null ? "-" : c.value}</span>
           <span className="lasso-personstats__sub">{c.sub}</span>
         </li>
       ))}

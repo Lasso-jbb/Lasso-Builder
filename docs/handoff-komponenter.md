@@ -70,7 +70,7 @@ PDF'en har 41 artboards. Tallene i parentes nedenfor er artboard-numrene.
 - Dato `15.04.2026`. Intervaller som tekst: `25–33,32 %`.
 
 ### Fem tilstande (alle elementer skal have dem)
-**Fyldt**, **henter** (skelet i samme højde), **tom** (siger hvorfor, stiplet ramme, aldrig "0"), **ikke oplyst** ("Ikke oplyst"/"—" i text-faint) og **fejl** (kun ved teknisk fejl, med "Prøv igen").
+**Fyldt**, **henter** (skelet i samme højde), **tom** (siger hvorfor, stiplet ramme, aldrig "0"), **ikke oplyst** ("Ikke oplyst"/"-" i text-faint) og **fejl** (kun ved teknisk fejl, med "Prøv igen").
 
 ### Sideskabelon og grid (06, guide 23)
 - Fanebjælke 56 px, sidehoved 70 px, skinne 236 px, midte flydende (padding 28, gutter 24, 4-kolonne-grid), panel 336 px (valgfrit).

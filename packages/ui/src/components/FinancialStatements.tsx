@@ -60,11 +60,11 @@ function periodText(start?: string, end?: string): string | undefined {
   return `${s.slice(0, 5)}–${e}`;
 }
 
-/** Δ mod året før: "+7,5 %"; underposter som ændring i størrelse ("+9,1 %"); også ved fortegnsskift (02c.4). "—" ved kvalitetsflag, manglende tal eller forrige = 0 (26d.9). */
+/** Δ mod året før: "+7,5 %"; underposter som ændring i størrelse ("+9,1 %"); også ved fortegnsskift (02c.4). "-" ved kvalitetsflag, manglende tal eller forrige = 0 (26d.9). */
 function deltaText(prev: number | null | undefined, cur: number | null | undefined, line = false, flagged = false): { text: string; tone: "up" | "down" | "" } {
-  if (flagged || typeof prev !== "number" || typeof cur !== "number" || prev === 0) return { text: "—", tone: "" };
+  if (flagged || typeof prev !== "number" || typeof cur !== "number" || prev === 0) return { text: "-", tone: "" };
   const pct = line ? ((Math.abs(cur) - Math.abs(prev)) / Math.abs(prev)) * 100 : changePercent(prev, cur);
-  if (pct === null) return { text: "—", tone: "" };
+  if (pct === null) return { text: "-", tone: "" };
   return { text: formatPercent(pct), tone: pct < 0 ? "down" : "up" };
 }
 
@@ -88,7 +88,7 @@ function MobileRows({ rows, year, prevYear, scale }: { rows: StatementRow[]; yea
           <div key={r.key} className={`lasso-fs-m__row lasso-fs-m__row--${r.kind ?? "line"}`}>
             <span className="lasso-fs-m__label">{r.label}</span>
             <span className={`lasso-fs-m__value${typeof cur === "number" && cur < 0 ? " lasso-down" : ""}`}>
-              {typeof cur === "number" ? formatScaled(cur, scale) : <span className="lasso-notreported">—</span>}
+              {typeof cur === "number" ? formatScaled(cur, scale) : <span className="lasso-notreported">-</span>}
               {r.flag ? <QualityFlag reason={r.flag} /> : null}
             </span>
             <span className={`lasso-fs-m__delta${r.key === "top" && d.tone === "up" ? " lasso-up" : ""}`}>{d.text}</span>
@@ -103,7 +103,7 @@ function MobileRows({ rows, year, prevYear, scale }: { rows: StatementRow[]; yea
 function MobileBalance({ s, year, scale }: { s: FinancialStatementsVM; year: number; scale: AmountScale }) {
   const b = s.balanceSheet.find((y) => y.year === year);
   if (!b) return <DataState state="empty" reason="Balancen er ikke indberettet for året." />;
-  const v = (n: number | null | undefined) => (typeof n === "number" ? <span className={n < 0 ? "lasso-down" : undefined}>{formatScaled(n, scale)}</span> : <span className="lasso-notreported">—</span>);
+  const v = (n: number | null | undefined) => (typeof n === "number" ? <span className={n < 0 ? "lasso-down" : undefined}>{formatScaled(n, scale)}</span> : <span className="lasso-notreported">-</span>);
   const cards = [
     { key: "a", head: "Aktiver", total: b.assetsTotal, rows: [["Anlæg", b.fixedAssetsTotal], ["Oms.aktiver", b.currentAssetsTotal]] as const },
     { key: "p", head: "Passiver", total: b.liabilitiesAndEquityTotal ?? b.assetsTotal, rows: [["Egenkapital", b.equityTotal], ["Gæld", b.liabilitiesTotal]] as const },
@@ -146,12 +146,12 @@ function MobileCashFlow({ s, year, scale }: { s: FinancialStatementsVM; year: nu
           <span className="lasso-fs-cf__track" aria-hidden="true">
             {typeof r.v === "number" && r.v !== 0 ? <span className={`lasso-fs-cf__bar lasso-fs-cf__bar--${r.v < 0 ? "neg" : "pos"}`} style={{ width: `max(16px, ${(Math.abs(r.v) / max) * 100}%)` }} /> : null}
           </span>
-          <span className={`lasso-fs-cf__value${typeof r.v === "number" && r.v < 0 ? " lasso-down" : ""}`}>{typeof r.v === "number" ? formatScaled(r.v, scale) : "—"}</span>
+          <span className={`lasso-fs-cf__value${typeof r.v === "number" && r.v < 0 ? " lasso-down" : ""}`}>{typeof r.v === "number" ? formatScaled(r.v, scale) : "-"}</span>
         </div>
       ))}
       <div className="lasso-fs-cf__row lasso-fs-cf__row--total">
         <span className="lasso-fs-cf__label">Ændring i likvider</span>
-        <span className={`lasso-fs-cf__value${typeof c.netCashFlow === "number" && c.netCashFlow < 0 ? " lasso-down" : ""}`}>{typeof c.netCashFlow === "number" ? formatScaled(c.netCashFlow, scale) : "—"}</span>
+        <span className={`lasso-fs-cf__value${typeof c.netCashFlow === "number" && c.netCashFlow < 0 ? " lasso-down" : ""}`}>{typeof c.netCashFlow === "number" ? formatScaled(c.netCashFlow, scale) : "-"}</span>
       </div>
     </div>
   );

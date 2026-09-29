@@ -7,7 +7,7 @@
  * De legale ejeres andele (interval) og selskabsnavnene/-kæden er citeret direkte fra
  * dokumentationens eksempel. De bagvedliggende personers PRÆCISE reelle andel er IKKE opgivet i
  * dokumentationen (den viser kun grafen, ikke et fuldt /owners/beneficial-svar) og er derfor
- * illustrative eksempeltal i samme størrelsesorden — CVR- og Lasso-ID'er er også opdigtede, ikke
+ * illustrative eksempeltal i samme størrelsesorden - CVR- og Lasso-ID'er er også opdigtede, ikke
  * de rigtige numre for de nævnte selskaber/personer.
  */
 
@@ -21,7 +21,7 @@ export const ELLA_EGGERT_ID = "CVR-3-4000000101";
 export const LILI_EGGERT_ID = "CVR-3-4000000102";
 export const JAKOB_BENEDIKTSON_ID = "CVR-3-4000000103";
 
-/** GET /{lassoId}/owners/beneficial — dokumenteret form, udfyldt (reelle ejere). */
+/** GET /{lassoId}/owners/beneficial - dokumenteret form, udfyldt (reelle ejere). */
 export const beneficialOwnersLassoXRaw = {
   couldNotIdentify: false,
   exemptionStatus: "NOT EXEMPT",
@@ -81,7 +81,7 @@ export const beneficialOwnersLassoXRaw = {
   ],
 };
 
-/** GET /{lassoId}/owners/beneficial — tom owners-liste: årsag 1, virksomheden er undtaget lovkravet. */
+/** GET /{lassoId}/owners/beneficial - tom owners-liste: årsag 1, virksomheden er undtaget lovkravet. */
 export const beneficialOwnersEmptyExempt = {
   couldNotIdentify: false,
   exemptionStatus: "EXEMPT",
@@ -108,7 +108,7 @@ export const beneficialOwnersEmptyCouldNotIdentify = {
   owners: [],
 };
 
-/** Årsag 4: ingen enkeltperson har over 25 % — direktionen er registreret som fallback. */
+/** Årsag 4: ingen enkeltperson har over 25 % - direktionen er registreret som fallback. */
 export const beneficialOwnersEmptyFallbackManagement = {
   couldNotIdentify: false,
   exemptionStatus: "NOT EXEMPT",
@@ -117,7 +117,7 @@ export const beneficialOwnersEmptyFallbackManagement = {
   owners: [],
 };
 
-/** GET /{lassoId}/owners/legal — dokumenteret form, LASSO X A/S' legale ejere. */
+/** GET /{lassoId}/owners/legal - dokumenteret form, LASSO X A/S' legale ejere. */
 export const legalOwnersLassoXRaw = {
   hasOwnersUnderFivePercent: true,
   owners: [
@@ -158,7 +158,7 @@ export const legalOwnersLassoXRaw = {
 };
 
 /**
- * POST /modules/relations/graph — dokumenteret form (relations/entities), LASSO X A/S' ejergraf.
+ * POST /modules/relations/graph - dokumenteret form (relations/entities), LASSO X A/S' ejergraf.
  * Inkluderer en "_UNKNOWN"-kant (den lovligt uregistrerede andel under 5 %) og et lag ned til de
  * bagvedliggende personer i to af holdingselskaberne.
  */

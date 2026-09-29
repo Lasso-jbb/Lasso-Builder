@@ -23,7 +23,7 @@ Tokens står i `packages/ui/src/styles.css`. Komponenterne bruger kun CSS-variab
 - G2: Ikoner ved en værdi (telefon, e-mail) vises kun, når der er data; ingen dæmpede ikoner for manglende kanaler.
 - G3: Ingen kildelinje nogen steder (se regel 8).
 - G5: Ingen "Gem", "Gem visning" eller "Opdatér" på elementer; data kommer i realtid. Gem hører kun til sidens hoved (gem-laget).
-- G7: Tankestreg "—" som skilletegn i tekst erstattes af bindestreg "-". Intervaller (66,67–89,99 %) beholder tankestreg; "—" for manglende værdi i tabeller afventer Jakob.
+- G7: Tankestreg "-" som skilletegn i tekst erstattes af bindestreg "-". Intervaller (66,67–89,99 %) beholder tankestreg; "-" for manglende værdi i tabeller afventer Jakob.
 - G8: Luk er altid et ×-ikon (ikonknap med aria-label "Luk"), aldrig ordet "Luk".
 - G9: Hoveder viser kun navnet (virksomhed: med status og binavn). Ingen faktalinje (CVR, adresse, ansatte …) under navnet og ingen skillestreg under hovedet. Identiteten står i nøgle-værdi-listen, adressen i kontaktblokken.
 - Faner: kun faner, der har data, vises (ingen deaktiverede faner, alle niveauer).
@@ -31,7 +31,7 @@ Tokens står i `packages/ui/src/styles.css`. Komponenterne bruger kun CSS-variab
 
 ## Fem tilstande
 
-Alle elementer har **fyldt**, **henter** (skelet i samme højde), **tom** (siger hvorfor, stiplet ramme, aldrig "0"), **ikke oplyst** ("Ikke oplyst" eller "—" i text-faint) og **fejl** (kun teknisk fejl, med "Prøv igen"). Brug `DataState` fra `packages/ui/src/primitives.tsx`.
+Alle elementer har **fyldt**, **henter** (skelet i samme højde), **tom** (siger hvorfor, stiplet ramme, aldrig "0"), **ikke oplyst** ("Ikke oplyst" eller "-" i text-faint) og **fejl** (kun teknisk fejl, med "Prøv igen"). Brug `DataState` fra `packages/ui/src/primitives.tsx`.
 
 ## Talformat (09)
 
@@ -100,10 +100,10 @@ Brudpunktsregler (26, node `DH5-0`; guide 23 trin 7) og hvor de står i `styles.
 | Bredde | Sideskabelon (`AppShell`, container = hele portalen) | Midten (`LassoView`, container = selve visningen) |
 |---|---|---|
 | ≥ 1200 | Skinne 236 + midte + panel 336 (`panel`-prop) | Midten er > 960: 4-kolonne-grid, gap 24 |
-| 1024–1199 (`max-width: 1199px`) | Skinne 64 med ikoner; panelet falder ned under midten | — |
+| 1024–1199 (`max-width: 1199px`) | Skinne 64 med ikoner; panelet falder ned under midten | - |
 | ≤ 960 (`max-width: 960px`) | Skinnen skjules; fanebjælke + midte, bundnavigation | Tablet: 2 kolonner, ½ + ½ holder, ¼ og ¾ bliver fuld, gap 16; kolonnebånd 3 → 2 + 1, ¾ + ¼ stables. Chatten (640–900 px) står her. |
-| < 768 (`max-width: 767px`) | Mobil: topbjælke 52 med "Sektioner", ingen fanebjælke, én kolonne, panelet nederst, padding 16 | — |
-| ≤ 560 (`max-width: 560px`) | — | Mobil: én kolonne, gap 12, elementernes mobilformer (kortlister, 2 × 2 nøgletal, 44 px). Kun Claude på mobil (390) rammer den; chatten gør aldrig (30). |
+| < 768 (`max-width: 767px`) | Mobil: topbjælke 52 med "Sektioner", ingen fanebjælke, én kolonne, panelet nederst, padding 16 | - |
+| ≤ 560 (`max-width: 560px`) | - | Mobil: én kolonne, gap 12, elementernes mobilformer (kortlister, 2 × 2 nøgletal, 44 px). Kun Claude på mobil (390) rammer den; chatten gør aldrig (30). |
 
 Midtens brud er lavere end skærmens, fordi containeren er midten: ved skærm 1200 er midten ~960 px.
 

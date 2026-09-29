@@ -247,7 +247,7 @@ function contactValue(entry: Json, ...paths: string[]): string | undefined {
  * `GET /apps/contacts/{lassoId}/data?emails=true&phonenumbers=true&links=true` (UBEKRÆFTET
  * svarform; læst defensivt som en liste af telefonnumre/e-mails, enten rene strenge eller
  * objekter med et værdifelt). Bruges af `LiveProvider.company`, så `LassoCompanyHead` og
- * `LassoKeyValueList` (variant "company") ikke viser "—", når værdien findes ét af stederne.
+ * `LassoKeyValueList` (variant "company") ikke viser "-", når værdien findes ét af stederne.
  */
 export function fillContactInfo(co: CompanyVM, websitesRaw: Json | undefined, contactsRaw: Json | undefined): CompanyVM {
   if (co.phone && co.email && co.website) return co;
@@ -678,7 +678,7 @@ export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
     // Balancesum: det direkte begreb, ellers egenkapital + gæld (regnskabsligningen).
     const assetsTotal = f(CONCEPTS.assets, "assets", "totalAssets") ?? (typeof equity === "number" && typeof liabilities === "number" ? equity + liabilities : null);
     // EBITDA: det direkte begreb, ellers driftsresultat (EBIT) lagt til af- og nedskrivninger.
-    // Driftsresultatet alene er IKKE EBITDA (det er efter afskrivninger), så uden afskrivninger vises "—".
+    // Driftsresultatet alene er IKKE EBITDA (det er efter afskrivninger), så uden afskrivninger vises "-".
     const ebit = f(CONCEPTS.ebit, "operatingProfit", "ebit");
     const dep = firstFact(facts, CONCEPTS.depreciation) ?? null;
     const ebitda = f(["ebitda"], "ebitda") ?? (typeof ebit === "number" && typeof dep === "number" ? ebit + Math.abs(dep) : null);
@@ -702,7 +702,7 @@ export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
       ebitda,
       soliditetsgrad: ratio(equity, assetsTotal),
       // Overskudsgrad = resultat af primær drift (EBIT) i procent af nettoomsætningen (ÅRL-nøgletal).
-      // Uden omsætning (klasse B) er nøgletallet ikke defineret og vises som "—".
+      // Uden omsætning (klasse B) er nøgletallet ikke defineret og vises som "-".
       overskudsgrad: ratio(ebit, revenue),
       likviditetsgrad: ratio(currentAssets, currentLiabilities),
     });
@@ -722,7 +722,7 @@ export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
   };
 }
 
-/** Nøgletal som "a i procent af b", afrundet til 1 decimal; "—" (null), når et af tallene mangler eller b er 0. */
+/** Nøgletal som "a i procent af b", afrundet til 1 decimal; "-" (null), når et af tallene mangler eller b er 0. */
 function ratio(a: number | null | undefined, b: number | null | undefined): number | null {
   if (typeof a !== "number" || typeof b !== "number" || b === 0) return null;
   return Math.round((a / b) * 1000) / 10;
@@ -841,7 +841,7 @@ function factValue(node: Record<string, Json>, periodEnd: string | undefined): {
  * ud fra samme svar som `adaptFinancials` (GET /{lassoId}/reports/advanced, bekræftet
  * endpoint). Hovedtallene (bruttofortjeneste/omsætning, resultat, egenkapital, balancesum)
  * er de samme bekræftede/afledte tal som i `FinancialsVM`; underposterne er UBEKRÆFTEDE
- * XBRL-begreb-gæt (se docs/lasso-endpoints.md) og bliver `null` ("—" i UI'en), når de ikke
+ * XBRL-begreb-gæt (se docs/lasso-endpoints.md) og bliver `null` ("-" i UI'en), når de ikke
  * findes i svaret, i stedet for at fejle. Pengestrøm er kun til stede, når mindst ét af
  * dens begreber er fundet (klasse B skal ikke aflægge den).
  */
