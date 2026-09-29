@@ -25,6 +25,8 @@ export interface NotificationVM {
   read: boolean;
   /** Handling til højre, fx "Hent" for en færdig eksport. */
   action?: { label: string; href?: string };
+  /** Vigtig (26e.5), fx en statusændring som konkurs: rød ulæst-prik og med under filteret "Vigtige". */
+  important?: boolean;
 }
 
 export interface NotificationPanelProps {
@@ -44,7 +46,7 @@ export interface NotificationPanelProps {
   onRetry?: () => void;
 }
 
-type PanelTab = "ulaeste" | "alle" | "overvaagning";
+type PanelTab = "ulaeste" | "alle" | "overvaagning" | "vigtige";
 
 /** "for 2 timer siden" under 24 timer, "i går kl. 16.20", ellers "22.09.2026". */
 export function relativeTime(iso: string, now: Date = new Date()): string {
@@ -74,8 +76,10 @@ export function NotificationPanel({ items, onMarkAllRead, onAction, onSeeAll, on
   const clock = now ?? new Date();
   const unread = items.filter((n) => !n.read).length;
   const sorted = [...items].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
-  const rows = tab === "ulaeste" ? sorted.filter((n) => !n.read) : tab === "overvaagning" ? sorted.filter((n) => n.kind === "overvaagning") : sorted;
-  const emptyReason = tab === "ulaeste" ? "Alt er læst." : tab === "overvaagning" ? "Ingen notifikationer fra overvågningen endnu." : "Ingen notifikationer endnu.";
+  const rows =
+    tab === "ulaeste" ? sorted.filter((n) => !n.read) : tab === "overvaagning" ? sorted.filter((n) => n.kind === "overvaagning") : tab === "vigtige" ? sorted.filter((n) => n.important) : sorted;
+  const emptyReason =
+    tab === "ulaeste" ? "Alt er læst." : tab === "overvaagning" ? "Ingen notifikationer fra overvågningen endnu." : tab === "vigtige" ? "Ingen vigtige notifikationer." : "Ingen notifikationer endnu.";
 
   return (
     <div className="lasso-notif" role="dialog" aria-label="Notifikationer">
@@ -107,6 +111,20 @@ export function NotificationPanel({ items, onMarkAllRead, onAction, onSeeAll, on
         value={tab}
         onChange={(id) => setTab(id as PanelTab)}
       />
+      {/* Mobil (26e.5): valgbare filterchips Alle, Ulæste, Vigtige i stedet for faner. Valgt = ink-kant, aldrig fyld. */}
+      <div className="lasso-notif__chips" role="group" aria-label="Filtrér notifikationer">
+        {(
+          [
+            ["alle", "Alle"],
+            ["ulaeste", "Ulæste"],
+            ["vigtige", "Vigtige"],
+          ] as const
+        ).map(([id, label]) => (
+          <button key={id} type="button" className={`lasso-notif__chip${tab === id ? " is-selected" : ""}`} aria-pressed={tab === id} onClick={() => setTab(id)}>
+            {label}
+          </button>
+        ))}
+      </div>
       <div className="lasso-notif__body">
         {loading ? (
           <div className="lasso-notif__state">
@@ -124,7 +142,7 @@ export function NotificationPanel({ items, onMarkAllRead, onAction, onSeeAll, on
           <ul className="lasso-notif__list">
             {rows.map((n) => (
               <li key={n.id} className={`lasso-notif__row ${n.read ? "" : "lasso-notif__row--unread"}`}>
-                {n.read ? <span className="lasso-notif__dotspace" aria-hidden="true" /> : <span className="lasso-notif__dot" role="img" aria-label="Ulæst" />}
+                {n.read ? <span className="lasso-notif__dotspace" aria-hidden="true" /> : <span className={`lasso-notif__dot${n.important ? " lasso-notif__dot--important" : ""}`} role="img" aria-label={n.important ? "Ulæst, vigtig" : "Ulæst"} />}
                 <div className="lasso-notif__main">
                   {onOpen ? (
                     <button type="button" className="lasso-link lasso-notif__text" onClick={() => onOpen(n)}>

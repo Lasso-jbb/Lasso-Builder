@@ -36,6 +36,12 @@ export interface CompanyVM {
   statusDate?: string;
   /** Katalog 08.1: kurator ved konkurs/likvidation (likvidator), vist i faktalinjen. */
   curator?: string;
+  /** Katalog 28.7/26h.9: bibrancher (op til tre), kode først. `[]` = ingen registreret; udeladt = ukendt. Ubekræftet. */
+  altIndustries?: { code?: string; text: string }[];
+  /** Katalog 28.7: revision fravalgt (ÅRL § 135). Den eneste værdi, der farves (warning-tekst). Ubekræftet. */
+  auditExempt?: boolean;
+  /** Katalog 28.7: registreret kapital med valutakode og kapitalklasser. Ubekræftet. */
+  registeredCapital?: { amount: number; currency?: string; classes?: string[] };
 }
 
 /**
@@ -239,6 +245,16 @@ export interface FinancialStatementsVM {
   balanceSheet: BalanceSheetYear[];
   /** Tom, når selskabet ikke aflægger pengestrømsopgørelse (klasse B) eller regnskabet ikke oplyser den. */
   cashFlow: CashFlowYear[];
+  /** Katalog 19.1: hvilket regnskab tallene er fra (samme valg som FinancialYear.scope). */
+  scope?: "Koncern" | "Selskab";
+  /** Katalog 19.1: det andet scope (koncern/selskab), når begge er aflagt. Værktøjslinjen skifter imellem dem. */
+  alternate?: Omit<FinancialStatementsVM, "lassoId" | "alternate">;
+  /** Katalog 19.1: periodetyper, selskabet indberetter. Standard kun "year"; halvår/kvartal er ellers dæmpet. */
+  periods?: ("year" | "half" | "quarter")[];
+  /** Katalog 19.1: revisorpåtegningen som tekst, fx "Revisionspåtegning uden forbehold". Ubekræftet i live. */
+  auditorOpinion?: string;
+  /** Katalog 19.1: link til årsrapporten som PDF (kun http/https). Ubekræftet i live. */
+  pdfUrl?: string;
 }
 
 export interface PersonRowVM {
@@ -428,6 +444,16 @@ export interface PropertyVM {
   buildings: BuildingVM[];
   /** Sat, når vi har en reel matrikelgeometri at tegne; ellers vises kortet med tom-tilstand. */
   hasGeometry?: boolean;
+  /**
+   * Katalog 20.2: matrikelpolygon og bygningsomrids i et lokalt, metrisk koordinatsystem (x mod øst,
+   * y mod nord), så kortet kan tegnes i målestok. `selected` er bygningsnummeret med koral kant.
+   * Live-kilde (Datafordeleren/MAT og BBR) er ubekræftet; uden geometri vises tom tilstand.
+   */
+  geometry?: {
+    parcel: [number, number][];
+    buildings?: { number?: number; polygon: [number, number][] }[];
+    selected?: number;
+  };
 }
 
 export interface PropertiesVM {
@@ -628,6 +654,8 @@ export interface AuditorIndependenceVM {
   relations: AuditorRelationVM[];
   /** Sat når data mangler eller er ufuldstændige (ny datamodel, ingen bekræftet kilde endnu). */
   unavailableReason?: string;
+  /** Katalog 22/26e.8: revisorhistorik, ældste først; perioder som ÅÅÅÅ-MM-DD. Kun demodata indtil videre. */
+  history?: { name: string; from?: string; to?: string }[];
 }
 
 export interface SearchResultVM {
@@ -667,6 +695,10 @@ export interface ScoreVM {
   progress?: number;
   /** Nøgle-værdi-linjer under måleren, fx Kreditmaksimum og International score. */
   facts?: { label: string; value: string }[];
+  /** Katalog 26d.7: scoren over de seneste 24 måneder, ældste først (datoer ÅÅÅÅ-MM-DD). Kun demodata. */
+  history?: { date: string; score: number }[];
+  /** Katalog 26d.7: seneste ændringer i scoren med årsag, nyeste først. `delta` i point (+ = højere risiko). */
+  changes?: { date: string; label: string; delta: number }[];
 }
 
 /* ---------- Katalog 18.2: scorehistorik (én hentning = ét punkt) ---------- */
@@ -952,6 +984,61 @@ export function savedPagesKey(c: { kind?: SavedPageKind | "all"; limit?: number 
   return `${c.kind ?? "all"}|${c.limit ?? 20}`;
 }
 
+/* ---------- Katalog 28: øvrige datatyper (fusioner, Statstidende, regnskabspublicering) ---------- */
+
+/** Ét selskab i en fusion/spaltning (28.6). */
+export interface MergerPartyVM {
+  name: string;
+  lassoId?: string;
+  /** Ophørte ved fusionen/spaltningen (vises i muted med "ophørt ved fusionen"). */
+  ceased?: boolean;
+}
+
+/** Katalog 28.6: én fusion eller spaltning, "fra → til". */
+export interface MergerEventVM {
+  date?: string;
+  type: "Fusion" | "Spaltning";
+  from: MergerPartyVM[];
+  to: MergerPartyVM[];
+}
+
+/** Katalog 28.8: én bekendtgørelse i Statstidende. */
+export interface AnnouncementVM {
+  date?: string;
+  /** Fx "Dekret om konkurs", "Rekonstruktion", "Likvidation", "Indkaldelse af kreditorer". */
+  type: string;
+  /** Alvor, der styrer farven: konkurs mørk rød, rekonstruktion/likvidation warning, øvrige tekst. */
+  severity: "bankrupt" | "warning" | "neutral";
+  /** Statstidendes egen tekst (foldes til to linjer). */
+  text?: string;
+  /** Link til bekendtgørelsen (kun http/https). */
+  url?: string;
+}
+
+/** Katalog 28.2: ét offentliggjort regnskab. */
+export interface PublicationVM {
+  /** Offentliggørelsesdato (ÅÅÅÅ-MM-DD). */
+  published?: string;
+  /** Periodens slut, så klik kan åbne 19 med perioden valgt. */
+  periodEnd?: string;
+  year?: number;
+  kind: "Årsrapport" | "Halvår" | "Kvartal";
+  /** Korrigeret regnskab: udråbstegn-ikon og den tidligere værdi som "før …". */
+  corrected?: boolean;
+  /** Hovedtallet (bruttofortjeneste/omsætning) og dets tidligere værdi ved korrektion. */
+  figure?: { label: string; value: number | null; previous?: number | null };
+}
+
+/** Katalog 28.2/28.6/28.8: begivenheder for én virksomhed ud over CVR-tidslinjen. */
+export interface CompanyEventsVM {
+  lassoId: string;
+  mergers: MergerEventVM[];
+  announcements: AnnouncementVM[];
+  publications: PublicationVM[];
+  /** Hvornår Lasso hentede oplysningerne (kildelinjen). */
+  updated?: string;
+}
+
 /** Alt det data, én visning skal bruge, slået op på nøgle. */
 export interface Dataset {
   source: DataSourceKind;
@@ -996,6 +1083,8 @@ export interface Dataset {
   personSearches?: Record<string, PersonSearchResultVM>;
   /** Katalog 21: ændringsfeed pr. changeFeedKey. */
   changeFeeds: Record<string, ChangeFeedVM>;
+  /** Katalog 28.2/28.6/28.8: fusioner, Statstidende og regnskabspublicering pr. Lasso-ID. */
+  companyEvents: Record<string, CompanyEventsVM>;
   /** Gem-laget: gemte sider pr. savedPagesKey (LassoSavedPages). Fejlnøgle "savedPages:<key>". */
   savedPages: Record<string, SavedPagesVM>;
   /** Gem-laget: hvilke Lasso-ID'er i visningen brugeren allerede har gemt (til Gem/Gemt-knappen). */
@@ -1037,6 +1126,7 @@ export function emptyDataset(source: DataSourceKind): Dataset {
     persons: {},
     personNetworks: {},
     personSearches: {},
+    companyEvents: {},
     changeFeeds: {},
     savedPages: {},
     errors: {},

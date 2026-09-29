@@ -73,6 +73,8 @@ interface Row {
   lassoId?: string;
   /** 02c.10: branchekoden, vist i muted før teksten. */
   code?: string;
+  /** Katalog 28.7: warning-tekst (kun "Fravalgt" revision). */
+  tone?: "warning";
 }
 
 /**
@@ -259,7 +261,7 @@ export function KeyValueList({
             // 02c.13: har værdien et Lasso-ID, er hele rækken klikbar (navnet er stadig knappen for tastatur).
             <div className={`lasso-kv-row ${open ? "lasso-kv-row--link" : ""}`} key={r.label} onClick={open}>
               <Label text={r.label} info={info} />
-              <div className="lasso-kv-row__value lasso-kv-row__value--wrap">
+              <div className={`lasso-kv-row__value lasso-kv-row__value--wrap${r.tone === "warning" ? " lasso-kv-row__value--warning" : ""}`}>
                 {r.code ? (
                   <IndustryValue code={r.code} text={r.value} />
                 ) : r.value ? (

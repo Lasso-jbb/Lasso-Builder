@@ -33,6 +33,36 @@ function period(r: AuditorRelationVM): string | null {
 }
 
 /**
+ * Revisorhistorik (26e.8): én proportional bjælke med en del pr. revisor, længde efter år.
+ * Nuværende revisor i koral-soft med koral kant, tidligere i grå; navn og periode står i delen
+ * og som tekst til skærmlæsere.
+ */
+export function AuditorHistory({ history, now = new Date() }: { history: NonNullable<AuditorIndependenceVM["history"]>; now?: Date }) {
+  const yearOf = (d?: string) => (d ? Number(d.slice(0, 4)) : undefined);
+  const nowYear = now.getFullYear();
+  const parts = history
+    .map((h) => ({ ...h, a: yearOf(h.from), b: h.to ? yearOf(h.to) : undefined }))
+    .filter((h): h is typeof h & { a: number } => typeof h.a === "number");
+  if (parts.length === 0) return null;
+  const span = (p: (typeof parts)[number]) => Math.max(1, (p.b ?? nowYear) - p.a + 1);
+  return (
+    <div className="lasso-audhist">
+      <p className="lasso-audhist__title">Revisorhistorik</p>
+      <div className="lasso-audhist__bar">
+        {parts.map((p, i) => {
+          const label = `${p.name} ${p.a}–${p.b ? String(p.b).slice(2) : ""}`;
+          return (
+            <span key={`${p.name}-${i}`} className={`lasso-audhist__seg${p.b ? "" : " is-current"}`} style={{ flexGrow: span(p) }} title={label}>
+              {label}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/**
  * Revisoruafhængighed (katalog 22): sammenfatning, derefter en relationstabel mellem
  * revisionshuset, kunden og personer. Vurderingskolonnen bruger alvorsskalaen fra 17
  * (Neutral / Vurdér = mulig vigtig / Konflikt = vigtig) og er sorteringsnøglen.
@@ -131,6 +161,7 @@ export function AuditorIndependence({ data, error, title, onAction, canExport = 
         </div>
       </div>
       {data.unavailableReason ? <p className="lasso-notice">{data.unavailableReason}</p> : null}
+      {data.history?.length ? <AuditorHistory history={data.history} /> : null}
       {data.checkedAt ? <SourceLine source="CVR-roller og ejerskab" updated={data.checkedAt} /> : null}
       </div>
     </Section>

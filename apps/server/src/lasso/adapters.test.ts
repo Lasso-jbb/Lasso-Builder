@@ -1043,3 +1043,12 @@ test("adaptCompany (08.1, ubekræftet): binavne, statusdato og kurator læses de
   const plain = adaptCompany("CVR-1-11111111", { name: "Eksempel A/S", status: "Normal" });
   assert.equal("secondaryNames" in plain || "statusDate" in plain || "curator" in plain, false);
 });
+
+test("28.7: companyDetailsExtras læser bibrancher, fravalgt revision og kapital defensivt", async () => {
+  const { companyDetailsExtras } = await import("./adapters.js");
+  const out = companyDetailsExtras({ altIndustry1: { code: "620200", text: "It-rådgivning" }, altIndustry2: null, accounting: { auditExempt: true }, contributedCapital: { amount: 400000, currency: "DKK" } });
+  assert.deepEqual(out.altIndustries, [{ code: "620200", text: "It-rådgivning" }]);
+  assert.equal(out.auditExempt, true);
+  assert.deepEqual(out.registeredCapital, { amount: 400000, currency: "DKK" });
+  assert.deepEqual(companyDetailsExtras({ name: "x" }), {});
+});

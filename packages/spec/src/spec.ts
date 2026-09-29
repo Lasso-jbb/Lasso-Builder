@@ -404,6 +404,37 @@ export const cashFlowSchema = z.object({
   title: z.string().max(80).optional(),
 }).describe("Pengestrømsopgørelsen (drift, investering, finansiering), 2–3 år side om side. Tom tilstand, når selskabet ikke aflægger den (klasse B).");
 
+/** Katalog 19.1 (mobil 26d.8–26d.11, tablet 26f.3): regnskabsdetaljer med værktøjslinje og segmentskift. */
+export const financialStatementsSchema = z.object({
+  type: z.literal("LassoFinancialStatements"),
+  company: companyRef,
+  statement: z.enum(["income", "balance", "cashflow"]).optional().describe("Opgørelsen, der vises først: 'income' (standard), 'balance' eller 'cashflow'."),
+  years: z.number().int().min(2).max(5).default(5).describe("År side om side på desktop, standard 5. Tablet viser 3, mobil ét år + ændring."),
+  title: z.string().max(80).optional(),
+}).describe("Fuldt regnskab med værktøjslinje (koncern/selskab, periode, enhed, revisorpåtegning, Hent PDF) og segmentskift mellem resultat, balance og pengestrøm.");
+
+/** Katalog 28.6 (mobil 26h.8): fusioner og spaltninger som "fra → til". Live-felter ubekræftede. */
+export const mergersSchema = z.object({
+  type: z.literal("LassoMergers"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
+}).describe("Fusioner og spaltninger: dato og type, 'fra → til' med selskabskort; ophørte selskaber i muted.");
+
+/** Katalog 28.8: Statstidende, seneste bekendtgørelser. Udelades helt uden bekendtgørelser. */
+export const announcementsSchema = z.object({
+  type: z.literal("LassoAnnouncements"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
+}).describe("Statstidende: bekendtgørelser med type farvet efter alvor (konkurs, rekonstruktion/likvidation) og teksten foldet.");
+
+/** Katalog 28.2: offentliggjorte regnskaber (ny/korrigeret) sorteret efter offentliggørelsesdato. */
+export const publicationsSchema = z.object({
+  type: z.literal("LassoPublications"),
+  company: companyRef,
+  limit: z.number().int().min(1).max(20).optional().describe("Rækker før 'Se alle', standard 5."),
+  title: z.string().max(80).optional(),
+}).describe("Regnskabspublicering: offentliggjort, type (Årsrapport/Halvår/Kvartal, ny/korrigeret), periode og hovedtal.");
+
 /** Ingen live datakilde endnu (se resolve.ts og LiveProvider.score); demodata i DemoProvider, "ikke oplyst" i live. */
 export const scoreGaugeSchema = z.object({
   type: z.literal("LassoScoreGauge"),
@@ -443,7 +474,11 @@ export const mapSchema = z.object({
   title: z.string().max(80).optional(),
 });
 
-/** Fjernet fra visningerne 27.09.2026. Skemaet bliver, så ældre gemte visninger stadig kan læses; komponenten vises og hentes ikke. */
+/**
+ * Katalog 17.2: observationsliste med sammenfatning (filterchips høj/middel/info) og kort sorteret
+ * efter alvor. Komponeres ikke automatisk af compose (observationskaldet tager 10–14 s); vises kun,
+ * når en spec beder om den.
+ */
 export const riskObservationsSchema = z.object({
   type: z.literal("LassoRiskObservations"),
   company: companyRef,
@@ -517,6 +552,14 @@ export const personRiskSchema = z.object({
   person: personRef,
   title: z.string().max(80).optional(),
 });
+
+/** Katalog 16 (mobil 26d.5): netværkstal som tre små kort, Netværk, Konkurser og Tvangsopløsninger. */
+export const personStatsSchema = z
+  .object({
+    type: z.literal("LassoPersonStats"),
+    person: personRef,
+  })
+  .describe("Tre små tal-kort: personer i 1. led, konkurser og tvangsopløsninger blandt personens selskaber.");
 
 export const personFactsSchema = z
   .object({
@@ -649,6 +692,11 @@ export const componentSchema = z.discriminatedUnion("type", [
   w(personNetworkSchema),
   w(personRiskSchema),
   w(personFactsSchema),
+  w(personStatsSchema),
+  w(financialStatementsSchema),
+  w(mergersSchema),
+  w(announcementsSchema),
+  w(publicationsSchema),
   w(changeFeedSchema),
   w(savedPagesSchema),
 ]);
@@ -731,6 +779,11 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoPersonNetwork: "half",
   LassoPersonRisk: "half",
   LassoPersonFacts: "quarter",
+  LassoPersonStats: "full",
+  LassoFinancialStatements: "full",
+  LassoMergers: "full",
+  LassoAnnouncements: "full",
+  LassoPublications: "full",
   LassoChangeFeed: "full",
   LassoSavedPages: "full",
 };

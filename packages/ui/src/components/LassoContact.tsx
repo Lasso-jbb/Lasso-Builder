@@ -23,6 +23,49 @@ function prettyUrl(v: string): string {
   }
 }
 
+/**
+ * Live-nummer (katalog 08, mobil 26h.7): nummeret i et felt med "Verificeret DATO, live-opslag"
+ * (flueben + ord i grøn), kopiér-knap og ring-knap på 40 px. Ring er primær (koral), kopiér
+ * er en omridsknap; begge med skærmlæsertekst.
+ */
+export function LiveNumber({ number, verifiedAt, callable = true }: { number: string; verifiedAt?: string; callable?: boolean }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    try {
+      void navigator.clipboard?.writeText(number.replace(/\s+/g, "")).then(() => setCopied(true));
+    } catch {
+      /* Udklipsholderen er ikke tilgængelig (fx i en sandkasse); nummeret kan stadig markeres. */
+    }
+  };
+  return (
+    <div className="lasso-livenum">
+      <div className="lasso-livenum__main">
+        <span className="lasso-livenum__number">{prettyPhone(number)}</span>
+        <span className="lasso-livenum__verified">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+            <path d="M8 12.5l2.7 2.7L16 9.8" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          {`Verificeret ${verifiedAt ? formatDate(verifiedAt) : "nu"}, live-opslag`}
+        </span>
+      </div>
+      <button type="button" className="lasso-livenum__btn" onClick={copy} aria-label={copied ? "Nummer kopieret" : "Kopiér nummer"} title={copied ? "Kopieret" : "Kopiér nummer"}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="8" y="8" width="11" height="11" rx="2" stroke="currentColor" strokeWidth="1.7" />
+          <path d="M5 15V6a1 1 0 011-1h9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+        </svg>
+      </button>
+      {callable ? (
+        <a className="lasso-livenum__btn lasso-livenum__btn--call" href={`tel:${number.replace(/\s+/g, "")}`} aria-label="Ring op" title="Ring op">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M5 4.5h3.2l1.4 4-2 1.6a11.5 11.5 0 006.3 6.3l1.6-2 4 1.4V19a1.5 1.5 0 01-1.6 1.5A15.5 15.5 0 013.5 6.1 1.5 1.5 0 015 4.5z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+          </svg>
+        </a>
+      ) : null}
+    </div>
+  );
+}
+
 /** Kun cifrene, så "86 12 34 56" og "+45 86123456" er samme nummer. */
 function digits(v: string): string {
   const d = v.replace(/\D/g, "");

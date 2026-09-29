@@ -2,6 +2,7 @@ import type {
   ActivityHeatmapVM,
   BeneficialOwnershipVM,
   ChangeFeedVM,
+  CompanyEventsVM,
   ChangeType,
   AuditorIndependenceVM,
   CompanyRowVM,
@@ -84,6 +85,8 @@ export interface DataProvider {
   findPersons(name: string, limit: number): Promise<PersonSearchRowVM[]>;
   /** Katalog 15.3: personsøgning som tabel (roller, konkurser, fødselsår, by). */
   personSearch(query: string, limit: number): Promise<PersonSearchResultVM>;
+  /** Katalog 28.2/28.6/28.8: fusioner/spaltninger, Statstidende-bekendtgørelser og regnskabspublicering. Live ubekræftet. */
+  companyEvents(lassoId: string): Promise<CompanyEventsVM>;
   /** Katalog 21: ændringer i de overvågede virksomheder de seneste `days` dage. Live-endpoint ubekræftet. */
   changeFeed(opts: ChangeFeedOptions): Promise<ChangeFeedVM>;
   /** Katalog 18.2: scorehistorik (én hentning = ét punkt). Ingen live datakilde endnu; tom med årsag. */

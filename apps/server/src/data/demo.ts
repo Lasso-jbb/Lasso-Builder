@@ -7,6 +7,7 @@ import {
   type ChangeEntryVM,
   type ChangeFeedVM,
   foldChangeEntries,
+  type CompanyEventsVM,
   type CompanyRowVM,
   type CompanyVM,
   type ContactPersonVM,
@@ -35,6 +36,7 @@ import {
   hasReportingDuty,
   isPersonId,
 } from "@lasso/spec";
+import { publicationsFromYears } from "../lasso/eventAdapters.js";
 import { CREDIT_NONE_REASON } from "../lasso/creditAdapters.js";
 import { applyCriteria, sortRows } from "./criteria-eval.js";
 import { demoOwnershipGraph, demoPersonOwnershipGraph } from "./demoGraph.js";
@@ -403,7 +405,14 @@ function financialStatementsFor(c: DemoCompany): FinancialStatementsVM {
       liabilitiesAndEquityTotal: assetsTotal,
     });
   });
-  return { lassoId: c.lassoId, currency: "DKK", incomeStatement, balanceSheet, cashFlow };
+  const opinion = c.auditor && c.auditor !== "Ingen" ? "Revisionspåtegning uden forbehold (eksempeldata)" : undefined;
+  const base: FinancialStatementsVM = { lassoId: c.lassoId, currency: "DKK", incomeStatement, balanceSheet, cashFlow, scope: "Selskab", periods: ["year"], ...(opinion ? { auditorOpinion: opinion } : {}) };
+  // Katalog 19.1: eksempelvirksomheden aflægger også koncernregnskab (selskabets tal × 1,35, eksempeldata).
+  if (c.cvr === "99000001") {
+    const k = <T extends object>(rows: T[]): T[] => rows.map((r) => Object.fromEntries(Object.entries(r).map(([key, v]) => [key, typeof v === "number" && key !== "year" ? Math.round(v * 1.35) : v])) as T);
+    base.alternate = { currency: "DKK", incomeStatement: k(incomeStatement), balanceSheet: k(balanceSheet), cashFlow: k(cashFlow), scope: "Koncern", periods: ["year"], ...(opinion ? { auditorOpinion: opinion } : {}) };
+  }
+  return base;
 }
 
 function toRow(c: DemoCompany): CompanyRowVM {
@@ -437,6 +446,11 @@ function demoRowScore(c: DemoCompany): number | null {
 
 function strip(c: DemoCompany): CompanyVM {
   const { base: _b, growth: _g, people: _p, owners: _o, auditor: _a, ...vm } = c;
+  // Katalog 28.7/26h.9: eksempelvirksomheden har bibrancher og registreret kapital (eksempeldata).
+  if (c.cvr === "99000001") {
+    return { ...vm, altIndustries: [{ code: "433200", text: "Tømrer- og bygningssnedkervirksomhed" }, { code: "711200", text: "Rådgivende ingeniørvirksomhed" }], registeredCapital: { amount: 2_000_000, currency: "DKK", classes: ["A-aktier 1.500.000 DKK", "B-aktier 500.000 DKK"] } };
+  }
+  if (c.auditor === "Ingen" && c.form !== "Enkeltmandsvirksomhed" && c.form !== "I/S") return { ...vm, auditExempt: true };
   return vm;
 }
 
@@ -466,6 +480,13 @@ function observationsFor(c: DemoCompany, f: FinancialsVM): ObservationsVM {
   // Personligt ejede virksomheder har hverken regnskabs- eller revisionspligt: ingen revisor er ikke et fund der.
   if (c.auditor === "Ingen" && hasReportingDuty(c.form)) {
     rows.push({ id: "revisor-fravalgt", severity: 50, title: "Revisor fravalgt", detail: "Selskabet har ikke registreret en revisor.", source: "CVR" });
+  }
+  // Katalog 26d.6: eksempelvirksomheden viser Paper-eksemplets tre alvorsgrader (høj, middel, info).
+  if (c.cvr === "99000001") {
+    rows.push(
+      { id: "ejer-egenkapital", severity: 100, title: "Negativ egenkapital hos ejer", detail: "Eksempel Holding ApS har negativ egenkapital i seneste regnskab.", source: "Regnskab", date: "2026-06-02" },
+      { id: "delt-adresse", severity: 50, title: "Adresse deles med 12 virksomheder", detail: "Eksempelvej 1 er registreret som hovedadresse for 12 aktive selskaber.", source: "CVR", date: "2026-02-14" },
+    );
   }
   const ended = c.people.find((p) => p.to);
   if (ended) rows.push({ id: "afgang", severity: 25, title: `${ended.name} er fratrådt som ${ended.role.toLowerCase()}`, source: "Ledelse", date: ended.to });
@@ -518,6 +539,11 @@ function auditorIndependenceFor(c: DemoCompany): AuditorIndependenceVM {
     checkedAt: "2026-09-25",
     relations,
     unavailableReason: relations.length ? undefined : "Der er ikke fundet kendte relationer mellem revisor, kunden og personer i demodata.",
+    // Katalog 26e.8: revisorhistorik som proportional bjælke (eksempeldata).
+    history: [
+      { name: "Eksempel Revision", from: "2012-01-01", to: "2016-12-31" },
+      { name: c.auditor ?? "Nuværende revisor", from: "2017-01-01" },
+    ],
   };
 }
 
@@ -583,7 +609,16 @@ const PROPERTIES: Record<string, PropertiesVM["properties"]> = {
       builtAreaM2: 1450,
       publicValuation: { amount: 18_500_000, year: 2024 },
       encumbrances: 1,
-      hasGeometry: false,
+      hasGeometry: true,
+      // Eksempelgeometri (meter, lokalt): skæv matrikel med to bygninger; bygning 1 er valgt.
+      geometry: {
+        parcel: [[0, 0], [78, 4], [74, 46], [4, 42]],
+        buildings: [
+          { number: 1, polygon: [[10, 10], [40, 12], [39, 30], [9, 28]] },
+          { number: 2, polygon: [[48, 14], [68, 15], [67, 36], [47, 35]] },
+        ],
+        selected: 1,
+      },
       buildings: [
         { number: 1, usage: "Kontor og administration", builtYear: 2001, floors: 2, areaM2: 900, units: 4 },
         { number: 2, usage: "Lager og produktion", builtYear: 2001, floors: 1, areaM2: 550, units: 1 },
@@ -791,7 +826,19 @@ export class DemoProvider implements DataProvider {
   /** Katalog 10.1: eksempelscore og -hentetilstande, da der endnu ikke findes en live datakilde (se demoScore). */
   async score(lassoId: string): Promise<ScoreVM> {
     const c = get(lassoId);
-    return demoScore(c, creditRatingFor(c));
+    const base = demoScore(c, creditRatingFor(c));
+    if (typeof base.score !== "number") return base;
+    const score = base.score;
+    // Katalog 26d.7: seks målinger over 24 måneder og tre ændringer med årsag (eksempeldata).
+    const steps = [-3, -1, -4, -1, -3, 0].map((d, i) => Math.max(1, Math.min(99, score + d - (i === 4 ? 2 : 0))));
+    const dates = ["2024-09-01", "2025-01-01", "2025-05-01", "2025-09-01", "2026-01-01", "2026-09-01"];
+    const history = dates.map((date, i) => ({ date, score: i === dates.length - 1 ? score : steps[i]! }));
+    const changes = [
+      { date: "2026-06-06", label: "Regnskab 2025 indlæst", delta: 5 },
+      { date: "2026-01-01", label: "Alder på selskab, eksempeldata", delta: 2 },
+      { date: "2025-05-20", label: "Betalingsanmærkning, eksempeldata", delta: -4 },
+    ];
+    return { ...base, history, changes };
   }
 
   /** Katalog 18.2: eksempelhistorik, der ender i den aktuelle demoscore. */
@@ -845,6 +892,28 @@ export class DemoProvider implements DataProvider {
   /** Katalog 17: eksempler på alle tilstande (fuld, låst, ikke beregnet); se creditRatingFor. */
   async creditRating(lassoId: string): Promise<CreditRatingVM> {
     return creditRatingFor(get(lassoId));
+  }
+
+  /** Katalog 28.2/28.6/28.8 (eksempeldata): én fusion hos eksempelvirksomheden, konkursdekret hos konkursboet, publicering fra regnskabsårene. */
+  async companyEvents(lassoId: string): Promise<CompanyEventsVM> {
+    const c = get(lassoId);
+    const years = financialsFor(c).years;
+    const publications = publicationsFromYears(years.map((y) => ({ ...y, published: y.published ?? (y.periodEnd ? `${Number(y.periodEnd.slice(0, 4)) + 1}-05-28` : undefined) })));
+    if (c.cvr === "99000001" && publications[1]?.figure) {
+      // Eksempel på et korrigeret regnskab: den tidligere værdi står som "før …".
+      publications[1] = { ...publications[1], corrected: true, published: publications[1].published?.replace(/-05-28$/, "-08-14"), figure: { ...publications[1].figure, previous: Math.round((publications[1].figure.value ?? 0) * 1.08) } };
+    }
+    const mergers: CompanyEventsVM["mergers"] =
+      c.cvr === "99000001"
+        ? [{ date: "2022-07-01", type: "Fusion", from: [{ name: "Data Eksempel A/S", ceased: true }], to: [{ name: c.name, lassoId: c.lassoId }] }]
+        : [];
+    const announcements: CompanyEventsVM["announcements"] = /konkurs/i.test(c.status ?? "")
+      ? [
+          { date: "2026-08-12", type: "Dekret om konkurs", severity: "bankrupt", text: `${c.name} (eksempeldata) er erklæret konkurs ved skifterettens dekret. Kurator er advokat Eksempel Prøvesen. Fristen for anmeldelse af krav er fire uger fra bekendtgørelsen.` },
+          { date: "2026-08-20", type: "Indkaldelse af kreditorer", severity: "neutral", text: "Kreditorer indkaldes til skiftesamling (eksempeldata)." },
+        ].sort((a, b) => b.date.localeCompare(a.date)) as CompanyEventsVM["announcements"]
+      : [];
+    return { lassoId, mergers, announcements, publications, updated: "2026-09-25" };
   }
 
   async auditorIndependence(lassoId: string): Promise<AuditorIndependenceVM> {

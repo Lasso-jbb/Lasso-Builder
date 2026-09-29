@@ -47,6 +47,9 @@ const PANEL_BESIDE_FROM = 900;
 const ZOOM_STEPS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.9, 1, 1.25, 1.5, 2];
 const CANVAS_MIN = 360;
 const CANVAS_MAX = 720;
+/** 26f.4: tablet indlejrer diagrammet i 340 px højde og samler over 4 noder pr. lag i "+N". */
+const TABLET_CANVAS_H = 340;
+const TABLET_LAYER_CAP = 4;
 /** Luft i bunden af lærredet til legende og zoomknapper. */
 const CANVAS_FOOT = 88;
 
@@ -138,6 +141,8 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
     return () => clearTimeout(t);
   }, [printSvg]);
 
+  // 26f.4: på tablet (768–1023) højst 4 noder pr. lag før "+N", og diagrammet indlejres i 340 px højde.
+  const tablet = W > 560 && W < 1024;
   const up = beneficial ? 1 : (depthUp ?? graph?.ingoingDepth ?? 2);
   const down = beneficial ? 0 : (depthDown ?? graph?.outgoingDepth ?? 1);
   const layout = useMemo(
@@ -152,9 +157,10 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
             maxNodes: showAll || expandAll ? Infinity : DEFAULT_MAX_NODES,
             showHistoric,
             onDate,
+            ...(tablet ? { layerCap: TABLET_LAYER_CAP } : {}),
           })
         : null,
-    [graph, direction, up, down, expanded, expandAll, showAll, showHistoric, onDate, beneficial],
+    [graph, direction, up, down, expanded, expandAll, showAll, showHistoric, onDate, beneficial, tablet],
   );
 
   const panelBeside = W >= PANEL_BESIDE_FROM;
@@ -162,9 +168,10 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
   const canvasW = Math.max(200, selectedNode && panelBeside ? W - 336 - 16 : W);
   // Tilpas: hele bredden skal kunne ses; høje strukturer skaleres højst ned til 80 % og panoreres.
   // Der holdes 56 px fri i begge sider, så zoomknapperne i hjørnet ikke dækker noder eller baner.
-  const fitZoom = layout ? Math.max(0.25, Math.min(1, (canvasW - 112) / layout.width, Math.max(0.8, (CANVAS_MAX - CANVAS_FOOT) / layout.height))) : 1;
+  const canvasMax = tablet ? TABLET_CANVAS_H : CANVAS_MAX;
+  const fitZoom = layout ? Math.max(0.25, Math.min(1, (canvasW - 112) / layout.width, Math.max(tablet ? 0.6 : 0.8, (canvasMax - CANVAS_FOOT) / layout.height))) : 1;
   const z = zoom ?? fitZoom;
-  const canvasH = layout ? Math.round(Math.min(CANVAS_MAX, Math.max(CANVAS_MIN, layout.height * fitZoom + CANVAS_FOOT))) : CANVAS_MIN;
+  const canvasH = layout ? (tablet ? TABLET_CANVAS_H : Math.round(Math.min(CANVAS_MAX, Math.max(CANVAS_MIN, layout.height * fitZoom + CANVAS_FOOT)))) : CANVAS_MIN;
   const defaultPan = layout ? { x: Math.round((canvasW - layout.width * z) / 2), y: Math.round(Math.max(8, (canvasH - CANVAS_FOOT - layout.height * z) / 2)) } : { x: 0, y: 0 };
   const p = pan ?? defaultPan;
 

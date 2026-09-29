@@ -176,6 +176,32 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     props: "company, years? (2–3, standard 2), title?",
   },
 
+  {
+    type: "LassoFinancialStatements",
+    title: "Regnskabsdetaljer med værktøjslinje",
+    description: `Brug til: det fulde regnskab som ÉT element, hvor brugeren selv skifter mellem resultat, balance og pengestrøm, koncern og selskab og enhed, med revisorpåtegning og 'Hent PDF' – 'vis hele regnskabet', 'regnskabet med koncerntal', 'hent årsrapporten'. Brug ikke når: kun én opgørelse er bestilt (LassoIncomeStatement/LassoBalanceSheet/LassoCashFlow) eller nøgletal over år (LassoMultiYearTable). Kræver: company, statement? (income | balance | cashflow), years? (2–5, standard 5); halvår og kvartal er dæmpet, når selskabet kun indberetter årsregnskab. Dækkes ikke af show_company endnu. Eksempel: 'Vis hele regnskabet for Lasso X med koncerntal' → render_view med LassoCompanyHead og LassoFinancialStatements.`,
+    props: "company, statement? (income | balance | cashflow), years? (2–5, standard 5), title?",
+  },
+
+  {
+    type: "LassoMergers",
+    title: "Fusioner og spaltninger",
+    description: `Brug til: virksomhedens fusioner og spaltninger som 'fra → til' med dato og type – 'har X fusioneret', 'hvilke selskaber er fusioneret ind i X', 'spaltning'. Brug ikke når: det gælder ejerskifte (LassoOwnerList/LassoOwnershipDiagram) eller hele historikken (LassoTimeline). Kræver: company; ingen hændelser giver en tom tilstand, der siger det. Dækkes ikke af show_company. Eksempel: 'Er Lasso X fusioneret med andre selskaber?' → render_view med LassoCompanyHead og LassoMergers.`,
+    props: "company, title?",
+  },
+  {
+    type: "LassoAnnouncements",
+    title: "Statstidende",
+    description: `Brug til: seneste bekendtgørelser i Statstidende (konkursdekret, rekonstruktion, likvidation, indkaldelse af kreditorer) – 'står X i Statstidende', 'er der bekendtgjort konkurs'. Brug ikke når: det gælder CVR-status alene (LassoCompanyHead) eller Creditsafe (LassoCreditRating). Kræver: company; komponenten udelades helt, når der ingen bekendtgørelser er. Dækkes ikke af show_company. Eksempel: 'Har X bekendtgørelser i Statstidende?' → render_view med LassoCompanyHead og LassoAnnouncements.`,
+    props: "company, title?",
+  },
+  {
+    type: "LassoPublications",
+    title: "Regnskabspublicering",
+    description: `Brug til: listen over offentliggjorte regnskaber med dato, type (årsrapport, halvår, kvartal; ny eller korrigeret) og hovedtal – 'hvornår kom regnskabet', 'er regnskabet korrigeret'. Brug ikke når: tallene selv skal ses (LassoFinancialStatements/LassoMultiYearTable). Kræver: company, limit? (standard 5). Dækkes ikke af show_company. Eksempel: 'Hvornår har X offentliggjort sine regnskaber?' → render_view med LassoCompanyHead og LassoPublications.`,
+    props: "company, limit?, title?",
+  },
+
   // (b) Personer og ejere ------------------------------------------------------
   {
     type: "LassoPersonList",
@@ -244,6 +270,12 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     title: "Kreditvurdering, Creditsafe",
     description: `Brug til: kreditvurdering fra Creditsafe (kreditmaksimum, international score A–E, lokal score, ændring fra forrige vurdering, PDF-rapport) – 'kan vi give dem kredit', 'kreditvurdering', 'Creditsafe'. Brug ikke når: det gælder Lassos 0–100-score (LassoScoreGauge); skalaerne må ikke blandes. Kræver: company; uden Creditsafe-tilkøb viser den låst tilstand. Et opslag kan tage op til 45 sekunder, når Creditsafe beregner; Lasso gemmer vurderingen i 24 timer, så vis den højst én gang pr. svar og bed aldrig om en ny beregning (koster en kredit). ${F("risiko")} Eksempel: 'Hvad er kreditvurderingen for Lasso X?' → show_company focus risiko.`,
     props: "company, title?",
+  },
+  {
+    type: "LassoRiskObservations",
+    title: "Risikoobservationer",
+    description: `Brug til: Lassos risikoobservationer for én virksomhed som liste – sammenfatning øverst som filtre (høj, middel, info) og observationerne sorteret efter alvor – når brugeren beder om 'risikoobservationer', 'røde flag i detaljer' eller 'alle observationer'. Brug ikke når: spørgsmålet er bredt om risiko eller kredit (show_company focus risiko), eller det gælder Creditsafe (LassoCreditRating). Kræver: company; opslaget tager 10–14 sekunder, så brug den kun, når brugeren beder om listen. Tom liste er positiv information ('intet at bemærke, tjekket DATO'). Dækkes ikke af show_company. Eksempel: 'Vis alle risikoobservationer for Lasso X' → render_view med LassoCompanyHead og LassoRiskObservations.`,
+    props: "company, title?, compact?",
   },
   {
     type: "LassoAuditorIndependence",
@@ -325,6 +357,13 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     description:
       "Brug til: konkurser og tvangsopløsninger blandt selskaber, personen har eller har haft roller i – 'har X været involveret i konkurser'. Brug ikke når: det gælder en virksomheds risiko (show_company focus risiko). Kræver: person; ingen roller giver tom tilstand. Dækkes af show_person (focus risiko). Eksempel: 'Har X været med i konkurser?' → show_person focus risiko.",
     props: "person, title?",
+  },
+  {
+    type: "LassoPersonStats",
+    title: "Netværkstal, person",
+    description:
+      "Brug til: tre små tal-kort om en person – personer i 1. led (netværk), konkurser og tvangsopløsninger blandt personens selskaber – som hurtigt overblik under rollerne. Brug ikke når: brugeren vil se hvem (LassoPersonNetwork) eller hvilke selskaber (LassoPersonRisk). Kræver: person. Eksempel: 'Hvor stort er X's netværk, og har X været i konkurser?' → show_person, eller render_view med LassoPersonHead og LassoPersonStats.",
+    props: "person",
   },
   {
     type: "LassoPersonFacts",

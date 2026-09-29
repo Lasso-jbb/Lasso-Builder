@@ -459,6 +459,19 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     }
     if (stmt && c.type === "LassoBalanceSheet" && c.company === lassoId) balanceSheetText(card, stmt, c.years);
     if (stmt && c.type === "LassoCashFlow" && c.company === lassoId) cashFlowText(card, stmt, c.years);
+    if (stmt && c.type === "LassoFinancialStatements" && c.company === lassoId) {
+      // Katalog 19.1: tekstkortet viser den valgte opgørelse (3 år) med påtegningen som tekst.
+      if (hasNoStatements(stmt)) {
+        card.section(c.title ?? "Regnskab");
+        card.text(noStatementsReason(ds.companies[lassoId]));
+      } else {
+        const kind = c.statement ?? "income";
+        if (kind === "balance") balanceSheetText(card, stmt, 3);
+        else if (kind === "cashflow") cashFlowText(card, stmt, 3);
+        else incomeStatementText(card, stmt, 3);
+        if (stmt.auditorOpinion) card.text(stmt.auditorOpinion);
+      }
+    }
     if (c.type === "LassoOwnershipDiagram" && c.company === lassoId) {
       const g = ds.ownershipGraphs[ownershipGraphKey(c)];
       if (g) ownershipTreeCard(card, g);
@@ -579,6 +592,43 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     }
   }
 
+
+  // Katalog 28.2/28.6/28.8: fusioner, Statstidende og publicering.
+  const events = ds.companyEvents?.[lassoId];
+  if (events && types.has("LassoMergers")) {
+    card.section("Fusioner og spaltninger");
+    if (events.mergers.length === 0) card.text("Ingen registrerede fusioner eller spaltninger");
+    for (const m of events.mergers.slice(0, 3)) {
+      const names = (ps: typeof m.from) => ps.map((p) => (p.lassoId === lassoId ? "denne virksomhed" : p.name)).join(", ");
+      card.text(`${m.date ? `${formatDate(m.date)}, ` : ""}${m.type.toLowerCase()}: ${names(m.from)} → ${names(m.to)}`);
+    }
+  }
+  if (events && types.has("LassoAnnouncements") && events.announcements.length) {
+    card.section("Statstidende");
+    for (const a of events.announcements.slice(0, 3)) card.text(`${a.date ? `${formatDate(a.date)}, ` : ""}${a.type}`);
+    if (events.announcements.length > 3) card.text(`Se ${events.announcements.length - 3} flere`);
+  }
+  if (events && types.has("LassoPublications")) {
+    card.section("Regnskabspublicering");
+    if (events.publications.length === 0) card.text("Ingen offentliggjorte regnskaber");
+    for (const p of events.publications.slice(0, 3)) card.text(`${p.published ? formatDate(p.published) : "—"}, ${p.kind}${p.year ? ` ${p.year}` : ""}, ${p.corrected ? "korrigeret" : "ny"}`);
+  }
+
+  // Katalog 17.2: observationerne sorteret efter alvor, 3 + "Se N flere"; tom liste er positiv information.
+  if (types.has("LassoRiskObservations")) {
+    const obs = ds.observations[lassoId];
+    if (obs) {
+      card.section("Risikoobservationer");
+      const level = (s: number) => (s === 100 ? "Høj" : s === 50 ? "Middel" : s === 25 ? "Info" : "Neutral");
+      const sorted = obs.observations.filter((o) => !o.notAvailable).sort((a, b) => b.severity - a.severity);
+      if (!sorted.some((o) => o.severity >= 25)) {
+        card.text(obs.checkedAt ? `Intet at bemærke, tjekket ${formatDate(obs.checkedAt)}` : "Ingen risikoobservationer");
+      } else {
+        for (const o of sorted.slice(0, 3)) card.text(`${level(o.severity)}: ${o.title}`);
+        if (sorted.length > 3) card.text(`Se ${sorted.length - 3} flere`);
+      }
+    }
+  }
 
   // Katalog 17: Creditsafe på én linje, egen skala A–E (blandes aldrig med scoren eller observationerne).
   const credit = types.has("LassoCreditRating") ? ds.creditRatings?.[lassoId] : undefined;
@@ -721,6 +771,17 @@ function personCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | null
           wrap(x.name, W - 8).forEach((l, i, all) => card.raw(`${pad(l, W - 7)}${i === all.length - 1 ? padStart(yrs, 7) : ""}`));
         }
         if (net.people.length > limit) card.text(`og ${net.people.length - limit} flere`);
+        break;
+      }
+      case "LassoPersonStats": {
+        // Katalog 26d.5: tre tal på én linje hver.
+        if (!p) break;
+        const risk = personRisk(p);
+        const net = ds.personNetworks[lassoId];
+        card.section("Netværkstal");
+        card.row("Netværk", net ? `${net.people.length} i 1. led` : undefined);
+        card.row("Konkurser", String(risk.bankruptcies.length));
+        card.row("Tvangsopl.", String(risk.dissolutions.length));
         break;
       }
       case "LassoPersonRisk": {

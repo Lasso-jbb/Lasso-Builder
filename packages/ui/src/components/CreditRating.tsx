@@ -100,21 +100,34 @@ export function CreditRating({ rating, title, error, onAction }: CreditRatingPro
   if (rating.state === "locked") {
     return (
       <Section title={heading} span="half" className="lasso-credit">
-        <DataState state="empty" reason={`Låst. ${sentence(rating.reason ?? CREDIT_LOCKED_REASON)}`} />
+        {/* Låst (26h.1): indholdet dæmpes bag et forklarende kort. */}
+        <DataState state="locked" reason={`Låst. ${sentence(rating.reason ?? CREDIT_LOCKED_REASON)}`} lines={4} />
       </Section>
     );
   }
 
   if (rating.state === "unavailable") {
     const pending = rating.reason === CREDIT_PENDING_REASON;
+    if (pending) {
+      // På forespørgsel (26h.1): pris og varighed først, ventetilstand som 48 px række med ring.
+      return (
+        <Section title={heading} span="half" className="lasso-credit">
+          <DataState
+            state="onrequest"
+            reason={`Ikke beregnet endnu. ${sentence(rating.reason!)} ${CREDIT_COST_NOTE}`}
+            pending={{ title: "Henter vurdering …", detail: "ca. 5–45 sek. Du kan fortsætte imens." }}
+          />
+          {retry ? (
+            <button type="button" className="lasso-link lasso-credit__action" onClick={retry}>
+              Hent igen
+            </button>
+          ) : null}
+        </Section>
+      );
+    }
     return (
       <Section title={heading} span="half" className="lasso-credit">
         <DataState state="empty" reason={`Ikke beregnet endnu.${rating.reason ? ` ${sentence(rating.reason)}` : ""}`} />
-        {pending && retry ? (
-          <button type="button" className="lasso-link lasso-credit__action" onClick={retry}>
-            Hent igen
-          </button>
-        ) : null}
       </Section>
     );
   }

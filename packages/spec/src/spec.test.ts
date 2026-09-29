@@ -460,3 +460,10 @@ test("LassoPersonTable (15.3): navn påkrævet, standard 25 rækker, personrækk
   assert.equal(row.bankruptcies, 1);
   assert.equal(personSearchKey({ query: " Mette Holm ", limit: 25 }), "mette holm|25");
 });
+
+test("26d.5: parseViewSpec accepterer LassoPersonStats (fuld bredde) og kataloget beskriver den", () => {
+  const spec = parseViewSpec({ title: "x", components: [{ type: "LassoPersonStats", person: "CVR-3-4000000001" }] });
+  assert.equal(spec.components[0]!.type, "LassoPersonStats");
+  assert.ok(COMPONENT_CATALOG.some((e) => e.type === "LassoPersonStats" && /Brug til/.test(e.description)));
+  assert.ok(COMPONENT_CATALOG.some((e) => e.type === "LassoRiskObservations" && /Brug ikke når/.test(e.description)));
+});

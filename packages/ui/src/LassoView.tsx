@@ -55,6 +55,8 @@ import { MultiYearTable } from "./components/MultiYearTable.js";
 import { LassoIncomeStatement } from "./components/IncomeStatement.js";
 import { LassoBalanceSheet } from "./components/BalanceSheet.js";
 import { LassoCashFlow } from "./components/CashFlow.js";
+import { FinancialStatements } from "./components/FinancialStatements.js";
+import { Announcements, Mergers, Publications } from "./components/CompanyEvents.js";
 import { OwnerList } from "./components/OwnerList.js";
 import { OwnershipDiagram } from "./components/OwnershipDiagram.js";
 import { PersonList } from "./components/PersonList.js";
@@ -74,7 +76,9 @@ import { PersonRoles } from "./components/PersonRoles.js";
 import { PersonNetwork } from "./components/PersonNetwork.js";
 import { PersonRisk } from "./components/PersonRisk.js";
 import { PersonFacts } from "./components/PersonFacts.js";
+import { PersonStats } from "./components/PersonStats.js";
 import { CreditRating } from "./components/CreditRating.js";
+import { RiskObservations } from "./components/RiskObservations.js";
 import { AuditorIndependence } from "./components/AuditorIndependence.js";
 import { ChangeFeed } from "./components/ChangeFeed.js";
 import { SavedPages } from "./components/SavedPages.js";
@@ -288,7 +292,18 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       );
     }
     case "LassoCompareTable":
-      return <CompareTable key={key} companies={c.companies} metrics={c.metrics} title={c.title} dataset={empty} onAction={act} canDrillDown={Boolean(props.host.drillDown)} canAdd={Boolean(props.host.prompt)} />;
+      return (
+        <CompareTable
+          key={key}
+          companies={c.companies}
+          metrics={c.metrics}
+          title={c.title}
+          dataset={empty}
+          onAction={act}
+          canDrillDown={Boolean(props.host.drillDown)}
+          canAdd={Boolean(props.host.prompt)}
+        />
+      );
     case "LassoKeyValueList": {
       // Det, hovedet, kontaktblokken og ejerlisten viser på samme side, gentages ikke (companyFacts).
       const page = companyFactOptions(props.spec.components, c.company);
@@ -357,11 +372,19 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return <LassoBalanceSheet key={key} statements={empty.financialStatements[c.company]} company={empty.companies[c.company]} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} />;
     case "LassoCashFlow":
       return <LassoCashFlow key={key} statements={empty.financialStatements[c.company]} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} />;
+    case "LassoMergers":
+      return <Mergers key={key} events={empty.companyEvents?.[c.company]} company={empty.companies[c.company]} title={c.title} error={err(`companyEvents:${c.company}`)} demo={empty.source === "demo"} onOpen={props.host.drillDown ? act : undefined} />;
+    case "LassoAnnouncements":
+      return <Announcements key={key} events={empty.companyEvents?.[c.company]} title={c.title} error={err(`companyEvents:${c.company}`)} />;
+    case "LassoPublications":
+      return <Publications key={key} events={empty.companyEvents?.[c.company]} title={c.title} limit={c.limit} error={err(`companyEvents:${c.company}`)} />;
+    case "LassoFinancialStatements":
+      return <FinancialStatements key={key} statements={empty.financialStatements[c.company]} company={empty.companies[c.company]} statement={c.statement} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} onAction={act} />;
     case "LassoScoreGauge":
       return <ScoreGauge key={key} score={empty.scores[c.company]} title={c.title} error={err(`score:${c.company}`)} onFetch={props.host.refresh ? () => act({ kind: "refresh" }) : undefined} />;
     case "LassoRiskObservations":
-      // Fjernet fra visningerne 27.09.2026; ældre gemte visninger med komponenten viser den ikke.
-      return null;
+      // Katalog 17.2: komponeres ikke automatisk (observationskaldet tager 10–14 s), men vises, når en spec beder om den.
+      return <RiskObservations key={key} data={empty.observations[c.company]} error={err(`observations:${c.company}`)} title={c.title} compact={c.compact} demo={empty.source === "demo"} />;
     case "LassoCreditRating":
       return <CreditRating key={key} rating={empty.creditRatings?.[c.company]} title={c.title} error={err(`creditRating:${c.company}`)} onAction={act} />;
     case "LassoAuditorIndependence":
@@ -456,6 +479,8 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return <PersonNetwork key={key} network={empty.personNetworks[c.person]} title={c.title} limit={c.limit} error={err(`personNetwork:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} />;
     case "LassoPersonRisk":
       return <PersonRisk key={key} person={empty.persons[c.person]} title={c.title} error={err(`person:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} />;
+    case "LassoPersonStats":
+      return <PersonStats key={key} person={empty.persons[c.person]} network={empty.personNetworks[c.person]} error={err(`person:${c.person}`)} networkError={err(`personNetwork:${c.person}`)} />;
     case "LassoPersonFacts":
       // Det, personhovedet på samme side viser (antal roller, ejerskaber, første registrering), gentages ikke.
       return <PersonFacts key={key} person={empty.persons[c.person]} title={c.title} hideCounts={personFactOptions(props.spec.components, c.person).hideCounts} error={err(`person:${c.person}`)} />;

@@ -29,9 +29,25 @@ export function ProductionUnits({ units, error }: { units?: ProductionUnitsVM; e
       </Section>
     );
   }
+  const active = units.units.filter((u) => u.statusKind !== "inactive" && !u.endedYear).length;
   return (
-    <Section title={title} subtitle="P-nr., navn, adresse, branche, ansatte, status — hovedenhed først" span="full">
-      <div className="lasso-table-frame">
+    <Section title={title} subtitle="P-nr., navn, adresse, branche, ansatte, status — hovedenhed først" span="full" className="lasso-units" action={<span className="lasso-units__count">{`${active} aktive`}</span>}>
+      {/* Mobil (26e.1): rækker i tre linjer, navn, adresse og P-nr. med ansatte. Ingen ikonkasse (regel 5). */}
+      <ul className="lasso-units-m">
+        {units.units.map((u, i) => {
+          const address = u.address ? [u.address.street, [u.address.zip, u.address.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") : undefined;
+          const status = unitStatusText(u);
+          const meta = [u.pNumber ? `P-nr. ${u.pNumber}` : null, u.employees != null ? `${formatNumber(u.employees)} ansatte` : null, u.statusKind === "inactive" ? status : null].filter(Boolean).join(", ");
+          return (
+            <li key={u.pNumber ?? i} className={`lasso-units-m__row${u.statusKind === "inactive" ? " is-ended" : ""}`}>
+              <span className="lasso-units-m__name">{`${u.name ?? "Uden navn"}${u.isMain ? ", hovedenhed" : ""}`}</span>
+              {address ? <span className="lasso-units-m__address">{address}</span> : null}
+              {meta ? <span className="lasso-units-m__meta">{meta}</span> : null}
+            </li>
+          );
+        })}
+      </ul>
+      <div className="lasso-table-frame lasso-units__table">
         <div className="lasso-table-wrap">
           <table className="lasso-table lasso-table--fold lasso-table--units">
             <thead>

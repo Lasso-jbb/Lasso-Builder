@@ -198,6 +198,7 @@ export function adaptCompany(lassoId: string, raw: Json): CompanyVM {
     email: str(raw, "email", "emailAddress"),
     phone: str(raw, "phone", "phoneNumber", "telephone", "telefon"),
     ...companyHeadExtras(raw, status),
+    ...companyDetailsExtras(raw),
   };
 }
 
@@ -215,6 +216,35 @@ function companyHeadExtras(raw: Json, status: string | undefined): Pick<CompanyV
   const statusDate = warning ? dateStr(raw, "statusDate", "status.date", "statusValidFrom", "lifecycle.statusDate", "bankruptcyDate", "lifeTime.to") : undefined;
   const curator = str(raw, "curator", "curator.name", "receiver.name", "liquidator.name", "kurator");
   return { ...(names.length ? { secondaryNames: names } : {}), ...(statusDate ? { statusDate } : {}), ...(curator ? { curator } : {}) };
+}
+
+/**
+ * Katalog 28.7 (companies/company-details): bibrancher (altIndustry1–3), fravalg af revision og
+ * registreret kapital. UBEKRÆFTEDE feltnavne (docs/lasso-endpoints.md, "Ubekræftet"); felter, der
+ * ikke findes, udelades, så UI'en ikke påstår "Ingen registreret" uden grundlag.
+ */
+export function companyDetailsExtras(raw: Json): Pick<CompanyVM, "altIndustries" | "auditExempt" | "registeredCapital"> {
+  const out: Pick<CompanyVM, "altIndustries" | "auditExempt" | "registeredCapital"> = {};
+  const keys = ["altIndustry1", "altIndustry2", "altIndustry3"];
+  if (keys.some((k) => pick(raw, k) !== undefined) || Array.isArray(pick(raw, "altIndustries"))) {
+    const list = Array.isArray(pick(raw, "altIndustries")) ? (pick(raw, "altIndustries") as Json[]) : keys.map((k) => pick(raw, k));
+    out.altIndustries = list
+      .map((v) => (typeof v === "string" ? { text: v } : v && typeof v === "object" ? { code: str(v, "code", "industryCode"), text: str(v, "text", "name", "description") ?? "" } : null))
+      .filter((v): v is { code: string | undefined; text: string } => Boolean(v && v.text))
+      .map((v) => (v.code ? { code: v.code, text: v.text } : { text: v.text }));
+  }
+  const exempt = pick(raw, "accounting.auditExempt", "accounting.auditExemption", "auditExempt", "auditExemption");
+  if (exempt === true || (typeof exempt === "string" && /^(true|ja|fravalgt)$/i.test(exempt))) out.auditExempt = true;
+  const amount = num(raw, "contributedCapital.amount", "contributedCapital", "capital.amount", "registeredCapital");
+  if (typeof amount === "number") {
+    const classes = pick(raw, "capitalClasses");
+    out.registeredCapital = {
+      amount,
+      currency: str(raw, "contributedCapital.currency", "capital.currency", "capitalCurrency"),
+      ...(Array.isArray(classes) ? { classes: classes.map((c) => (typeof c === "string" ? c : str(c, "name", "description"))).filter((c): c is string => Boolean(c)) } : {}),
+    };
+  }
+  return out;
 }
 
 /** Ét element fra en telefon-/e-mail-liste: enten en ren streng eller et objekt med et værdifelt. */
@@ -826,14 +856,18 @@ export function adaptFinancialStatements(lassoId: string, raw: Json): FinancialS
   const balanceSheet: BalanceSheetYear[] = [];
   const cashFlow: CashFlowYear[] = [];
   const currencies: { year: number; currency: string }[] = [];
+  // Katalog 19.1: scope, påtegning og PDF fra den nyeste rapport. Påtegning og PDF er UBEKRÆFTEDE feltnavne.
+  const latest: { year: number; scope?: "Koncern" | "Selskab"; opinion?: string; pdf?: string }[] = [];
   for (const r of reports) {
     const periodEnd = dateStr(r, "period.to", "periodEnd", "period.end", "endDate", "end", "reportingPeriod.end", "to");
     const periodStart = dateStr(r, "period.from", "periodStart", "period.start", "startDate", "reportingPeriod.start", "from");
     const year = num(r, "reportYear", "year", "fiscalYear", "financialYear", "aar") ?? (periodEnd ? Number(periodEnd.slice(0, 4)) : undefined);
     if (!year || !Number.isFinite(year)) continue;
     // Samme scope (koncern eller selskab) og valuta som adaptFinancials, så de to aldrig er uenige.
-    const { facts, balances, currency } = reportFacts(r, periodEnd);
+    const { facts, balances, currency, scope } = reportFacts(r, periodEnd);
     if (currency) currencies.push({ year, currency });
+    const pdf = str(r, "pdfUrl", "documentUrl", "pdf", "links.pdf", "reportUrl");
+    latest.push({ year, scope, opinion: str(r, "auditorOpinion", "auditorsReport.type", "auditorReport.opinion", "audit.opinion"), pdf: pdf && /^https?:\/\//i.test(pdf) ? pdf : undefined });
     const g = (...concepts: string[]): number | null => firstFact(facts, concepts) ?? null;
     // Resultatopgørelsen i visningen har fortegn: omkostninger negative, indtægter positive.
     // XBRL angiver beløbet positivt og retningen i "balance" (debit = omkostning), så fortegnet
@@ -961,6 +995,10 @@ export function adaptFinancialStatements(lassoId: string, raw: Json): FinancialS
     incomeStatement: dedupeByYear(incomeStatement),
     balanceSheet: dedupeByYear(balanceSheet),
     cashFlow: dedupeByYear(cashFlow),
+    ...(() => {
+      const last = latest.sort((a, b) => a.year - b.year).at(-1);
+      return { ...(last?.scope ? { scope: last.scope } : {}), ...(last?.opinion ? { auditorOpinion: last.opinion } : {}), ...(last?.pdf ? { pdfUrl: last.pdf } : {}) };
+    })(),
   };
 }
 

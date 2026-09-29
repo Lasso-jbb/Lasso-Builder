@@ -17,6 +17,8 @@ export interface CompanyFact {
   lassoId?: string;
   /** 02c.10 Branche med kode: koden står først i muted, derefter branchetekst (value). */
   code?: string;
+  /** Katalog 28.7: "Fravalgt" revision er den eneste værdi, der farves (warning-tekst, med ordet). */
+  tone?: "warning";
 }
 
 export interface CompanyFactOptions {
@@ -79,6 +81,18 @@ export function companyFacts(company: CompanyVM, ownership: OwnershipVM | undefi
     rows.push({ label: "Branchekode", value: company.industryCode });
   }
   rows.push({ label: "Kommune", value: a?.municipality }, { label: "Region", value: a?.region });
+  // Katalog 28.7/26h.9: bibrancher med kode først (hovedbranchen står i hovedet/Branche), revision og kapital.
+  if (company.altIndustries) {
+    rows.push({
+      label: "Bibrancher",
+      value: company.altIndustries.length ? company.altIndustries.slice(0, 3).map((b) => [b.code, b.text].filter(Boolean).join(" ")).join(", ") : "Ingen registreret",
+    });
+  }
+  if (company.auditExempt) rows.push({ label: "Revision", value: "Fravalgt", tone: "warning" });
+  if (company.registeredCapital) {
+    const cap = company.registeredCapital;
+    rows.push({ label: "Kapital", value: [`${formatNumber(cap.amount)} ${cap.currency ?? "DKK"}`, ...(cap.classes ?? [])].join(", ") });
+  }
   if (!options.hideContact) {
     rows.push({ label: "Telefon", value: company.phone }, { label: "E-mail", value: company.email }, { label: "Web", value: company.website });
   }

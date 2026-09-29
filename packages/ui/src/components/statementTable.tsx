@@ -1,5 +1,7 @@
-import { amountScale, currencyUnit, formatPercent, formatScaled, percentChange } from "@lasso/spec";
-import { QualityFlag } from "./Values.js";
+import type { ReactNode } from "react";
+import { amountScale, currencyUnit, formatPercent, formatScaled, percentChange, type AmountScale } from "@lasso/spec";
+import { QualityFlag } from "./QualityFlag.js";
+export { QualityFlag };
 import { DataState, Section, stateForError } from "../primitives.js";
 
 /**
@@ -34,7 +36,6 @@ function changeText(prev: number | null | undefined, last: number | null | undef
   return { text: `${pct < 0 ? "▼" : "▲"} ${formatPercent(Math.abs(pct), false)}`, tone: pct < 0 ? "down" : "up" };
 }
 
-/** Lille udråbstegn-ikon med forklaring i `title` (tooltip ved mouseover, katalog 19 note: "ingen mærke eller understregning"). */
 export function StatementTable({
   title,
   unit,
@@ -45,6 +46,9 @@ export function StatementTable({
   loading,
   emptyReason,
   currency,
+  bare = false,
+  scale: forcedScale,
+  deltaLabel = "Ændring",
 }: {
   title?: string;
   unit: string;
@@ -57,37 +61,25 @@ export function StatementTable({
   emptyReason?: string;
   /** ISO-valuta for beløbene (FinancialStatementsVM.currency); DKK vises som "kr.". */
   currency?: string;
+  /** Uden sektionsramme (titel og luft), når tabellen indgår i LassoFinancialStatements (19.1). */
+  bare?: boolean;
+  /** Fast enhed fra værktøjslinjens enhedsvælger (19.1) i stedet for den automatiske. */
+  scale?: AmountScale;
+  /** Overskrift på ændringskolonnen, fx "Δ 2024". */
+  deltaLabel?: string;
 }) {
-  if (loading) {
-    return (
-      <Section title={title} span="full">
-        <DataState state="loading" lines={8} height={420} />
-      </Section>
-    );
-  }
-  if (error) {
-    return (
-      <Section title={title} span="full">
-        <DataState state={stateForError(error) === "noaccess" ? "empty" : "error"} reason={error} />
-      </Section>
-    );
-  }
-  if (emptyReason) {
-    return (
-      <Section title={title} span="full">
-        <DataState state="empty" reason={emptyReason} />
-      </Section>
-    );
-  }
+  const wrap = (children: ReactNode) => (bare ? <div className="lasso-stmt-bare">{children}</div> : <Section title={title} span="full">{children}</Section>);
+  if (loading) return wrap(<DataState state="loading" lines={8} height={420} />);
+  if (error) return wrap(<DataState state={stateForError(error) === "noaccess" ? "empty" : "error"} reason={error} />);
+  if (emptyReason) return wrap(<DataState state="empty" reason={emptyReason} />);
   const allValues = sections.flatMap((s) => s.rows.flatMap((r) => r.values.filter((v): v is number => typeof v === "number")));
-  const scale = allValues.length ? amountScale(allValues, currencyUnit(currency)) : null;
+  const scale = forcedScale ?? (allValues.length ? amountScale(allValues, currencyUnit(currency)) : null);
   const fmt = (v: number | null | undefined) => {
     if (v == null) return null;
     return scale ? formatScaled(v, scale) : formatScaled(v, { divisor: 1, label: unit });
   };
 
-  return (
-    <Section title={title} span="full">
+  return wrap(
       <div className="lasso-table-wrap">
         <div className={`lasso-stmt ${prefix}`}>
           <div className={`lasso-stmt__row lasso-stmt__row--head ${prefix}__head`}>
@@ -97,7 +89,7 @@ export function StatementTable({
                 {y}
               </div>
             ))}
-            <div className="lasso-stmt__delta">Ændring</div>
+            <div className="lasso-stmt__delta">{deltaLabel}</div>
           </div>
           {sections.map((section, si) => (
             <div className="lasso-stmt__section" key={section.heading ?? si}>
@@ -128,7 +120,6 @@ export function StatementTable({
             </div>
           ))}
         </div>
-      </div>
-    </Section>
+      </div>,
   );
 }

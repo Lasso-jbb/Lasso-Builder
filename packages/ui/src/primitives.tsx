@@ -70,17 +70,36 @@ export function Badge({ children, tone = "plain" }: { children: ReactNode; tone?
 }
 
 /**
- * De fem tilstande fra kataloget. "filled" tegnes af komponenten selv;
- * de fire andre tegnes her, så alle elementer ser ens ud.
+ * De fem tilstande fra kataloget + de to adgangstilstande fra 26h ("låst", "på forespørgsel").
+ * "filled" tegnes af komponenten selv; de øvrige tegnes her, så alle elementer ser ens ud.
  */
-export type DataStateKind = "loading" | "empty" | "notreported" | "error" | "ondemand";
+export type DataStateKind = "loading" | "empty" | "notreported" | "error" | "ondemand" | "locked" | "onrequest";
+
+export interface DataStateAction {
+  label: string;
+  onClick?: () => void;
+}
 
 export interface DataStateProps {
   state: DataStateKind;
-  /** Tom: skal sige HVORFOR der intet er (aldrig "0"). */
+  /** Tom: skal sige HVORFOR der intet er (aldrig "0"). Låst: hvad der kræves. På forespørgsel: pris og varighed. */
   reason?: string;
-  /** Fejl: kun teknisk fejl. Giver en "Prøv igen"-knap, når den er sat. */
+  /** Fed første linje, fx "Ingen nyheder endnu" eller "Regnskab kunne ikke hentes". */
+  title?: string;
+  /** Tom (26h.1): hvornår der sidst blev tjekket; vises som "Sidst tjekket DD.MM.ÅÅÅÅ". */
+  checkedAt?: string;
+  /** Tom som positiv information ("intet fundet", katalog 17): flueben i stedet for dokumentikonet. */
+  positive?: boolean;
+  /** Fejl: kun teknisk fejl. Giver en "Prøv igen"-knap (primær), når den er sat. */
   onRetry?: () => void;
+  /** Tom/låst/på forespørgsel: én handling ("Overvåg nyheder", "Se planer", "Hent kreditvurdering"). */
+  action?: DataStateAction;
+  /** Fejl: sekundær handling ved siden af "Prøv igen", fx "Rapportér". */
+  secondaryAction?: DataStateAction;
+  /** På forespørgsel: ventetilstanden (48 px række med ring), fx { title: "Henter vurdering …", detail: "ca. 20 sek. …" }. */
+  pending?: { title: string; detail?: string };
+  /** Låst: indholdet, der dæmpes til 35 % bag det forklarende kort. Standard: skeletlinjer. */
+  children?: ReactNode;
   /** Henter: skelettet får samme højde som det fyldte element. */
   height?: number;
   lines?: number;
@@ -92,7 +111,45 @@ export interface DataStateProps {
   cost?: string;
 }
 
-export function DataState({ state, reason, onRetry, height, lines = 3, actionLabel, onAction, cost }: DataStateProps) {
+function StateIcon({ kind }: { kind: "doc" | "check" | "alert" | "lock" }) {
+  if (kind === "check") {
+    return (
+      <svg className="lasso-state__icon lasso-state__icon--check" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
+        <path d="M8 12.5l2.7 2.7L16 9.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (kind === "alert") {
+    return (
+      <svg className="lasso-state__icon lasso-state__icon--alert" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
+        <path d="M12 7.5v5.5M12 16.2v.3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (kind === "lock") {
+    return (
+      <svg className="lasso-state__icon lasso-state__icon--lock" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="5" y="10.5" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.8" />
+        <path d="M8 10.5V7.5a4 4 0 018 0v3" stroke="currentColor" strokeWidth="1.8" />
+      </svg>
+    );
+  }
+  return (
+    <svg className="lasso-state__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="4" y="5" width="16" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M8 10h8M8 14h5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** Ventering (26h.1): 18 px ring, der drejer; stille ved reduceret bevægelse. */
+export function PendingRing() {
+  return <span className="lasso-ring" aria-hidden="true" />;
+}
+
+export function DataState({ state, reason, title, checkedAt, positive, onRetry, action, secondaryAction, pending, children, height, lines = 3, actionLabel, onAction, cost }: DataStateProps) {
   if (state === "loading") return <Skeleton lines={lines} height={height} />;
   if (state === "ondemand") {
     // 10.3 (node A2I-0): stiplet ramme som "tom", men med årsag og en handling, der starter beregningen.
@@ -111,21 +168,93 @@ export function DataState({ state, reason, onRetry, height, lines = 3, actionLab
   }
   if (state === "notreported") return <span className="lasso-notreported">Ikke oplyst</span>;
   if (state === "empty") {
+    // Tom (26h.1): ikon, én linje årsag, tidsstempel og højst én handling. Stiplet ramme, aldrig grå fyld.
     return (
-      <div className="lasso-state" style={height ? { minHeight: height } : undefined}>
-        <div className="lasso-small">{reason ?? "Der er ingen data at vise."}</div>
+      <div className={`lasso-state${positive ? " lasso-state--positive" : ""}`} style={height ? { minHeight: height } : undefined}>
+        {title || positive ? <StateIcon kind={positive ? "check" : "doc"} /> : null}
+        {title ? <div className="lasso-state__title">{title}</div> : null}
+        <div className="lasso-small">
+          {reason ?? "Der er ingen data at vise."}
+          {checkedAt ? ` Sidst tjekket ${formatDate(checkedAt)}.` : ""}
+        </div>
+        {action ? (
+          <button type="button" className="lasso-btn lasso-state__action" onClick={action.onClick} disabled={!action.onClick}>
+            {action.label}
+          </button>
+        ) : null}
       </div>
     );
   }
+  if (state === "locked") {
+    // Låst (26h.1): indholdet dæmpes til 35 % bag et forklarende kort med én primær handling.
+    return (
+      <div className="lasso-state-locked">
+        <span className="lasso-state-locked__lock" title="Låst">
+          <StateIcon kind="lock" />
+        </span>
+        <div className="lasso-state-locked__content" aria-hidden="true">
+          {children ?? (
+            <div className="lasso-skeleton-group lasso-skeleton-group--static">
+              {Array.from({ length: lines }, (_, i) => (
+                <div key={i} className="lasso-skeleton" style={{ width: `${55 - i * 5}%` }} />
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="lasso-state-locked__card">
+          <p className="lasso-state-locked__text">{reason ?? "Kræver en anden Lasso-pakke."}</p>
+          {action ? (
+            <button type="button" className="lasso-btn lasso-btn--primary lasso-state__wide" onClick={action.onClick} disabled={!action.onClick}>
+              {action.label}
+            </button>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+  if (state === "onrequest") {
+    // På forespørgsel (26h.1): pris og varighed før knappen; ventetilstand som 48 px række med ring.
+    return (
+      <div className="lasso-state-request">
+        {reason ? <p className="lasso-state-request__text">{reason}</p> : null}
+        {pending ? (
+          <div className="lasso-state-request__pending" role="status">
+            <PendingRing />
+            <span>
+              <span className="lasso-state-request__title">{pending.title}</span>
+              {pending.detail ? <span className="lasso-state-request__detail">{pending.detail}</span> : null}
+            </span>
+          </div>
+        ) : action ? (
+          <button type="button" className="lasso-btn lasso-btn--primary lasso-state__wide" onClick={action.onClick} disabled={!action.onClick}>
+            {action.label}
+          </button>
+        ) : null}
+      </div>
+    );
+  }
+  // Fejl (26h.1): rød kant, årsag og "Prøv igen" som primær. Kun ved teknisk fejl.
   return (
     <div className="lasso-state lasso-state--error" role="alert" style={height ? { minHeight: height } : undefined}>
-      <div className="lasso-state__title">Data kunne ikke hentes</div>
-      {reason ? <div className="lasso-small">{reason}</div> : null}
-      {onRetry ? (
-        <button type="button" className="lasso-btn lasso-btn--sm lasso-state__retry" onClick={onRetry}>
-          Prøv igen
-        </button>
-      ) : null}
+      <StateIcon kind="alert" />
+      <div className="lasso-state__body">
+        <div className="lasso-state__title">{title ?? "Data kunne ikke hentes"}</div>
+        {reason ? <div className="lasso-small">{reason}</div> : null}
+        {onRetry || secondaryAction ? (
+          <div className="lasso-state__actions">
+            {onRetry ? (
+              <button type="button" className="lasso-btn lasso-btn--primary lasso-btn--sm lasso-state__retry" onClick={onRetry}>
+                Prøv igen
+              </button>
+            ) : null}
+            {secondaryAction ? (
+              <button type="button" className="lasso-btn lasso-btn--ghost lasso-btn--sm" onClick={secondaryAction.onClick} disabled={!secondaryAction.onClick}>
+                {secondaryAction.label}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
