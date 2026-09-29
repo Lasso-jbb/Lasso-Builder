@@ -49,7 +49,7 @@ function Rows({ rows }: { rows: [string, ReactNode | undefined][] }) {
  * regnskabsår, nuværende og første regnskabsperiode, regnskabsklasse og bibrancher (kode i muted +
  * navn, én pr. linje, højst tre; "Ingen registreret" uden bibrancher). "Kapital og vedtægter":
  * registreret kapital, kapitalklasser én pr. linje, vedtægter senest ændret, tegningsregel og formål
- * foldet ("Vis hele formålet"), reklamebeskyttet og børsnoteret. Mobil: etiket over værdi.
+ * foldet til to linjer ("Vis" / "Vis hele formålet"), reklamebeskyttet og børsnoteret. Mobil: etiket over værdi.
  * "profile" (26h.9): "Bibrancher og formål" med branchechips (hovedbranche først), formålet og
  * "Vis tegningsregel og vedtægter". Felter uden værdi udelades; alle felter ud over CVR-teksterne er
  * ubekræftede i live-data.
@@ -157,7 +157,7 @@ export function Registration({ company, ownership, financials, texts, variant = 
             ],
             ["Vedtægter senest ændret", company.statutesChanged ? formatDate(company.statutesChanged) : undefined],
             ["Tegningsregel", signing ? <FoldText text={signing} lines={2} moreLabel="Vis" /> : undefined],
-            ["Formål", purpose ? <FoldText text={purpose} lines={3} moreLabel="Vis hele formålet" /> : undefined],
+            ["Formål", purpose ? <FoldText text={purpose} lines={2} moreLabel="Vis hele formålet" /> : undefined],
             ["Reklamebeskyttet", yesNo(company.advertisingProtected)],
             ["Børsnoteret", yesNo(company.listed)],
           ]}

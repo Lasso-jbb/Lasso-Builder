@@ -201,6 +201,8 @@ export function CompanyTable({
   const [pageSize, setPageSize] = useState(initialPageSize);
   const [frameRef, frameWidth] = useWidth<HTMLDivElement>(1200);
   const mobile = frameWidth <= 560;
+  // 26f.2 tablet (561–1023): titel og antal i kortets hoved, søgefelt 220, "Filter (n)" og "Kolonner"; beløb uden valuta.
+  const tablet = !mobile && frameWidth < 1024;
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
@@ -353,10 +355,65 @@ export function CompanyTable({
     </div>
   ) : null;
 
+  /** 26f.2: på tablet står beløb uden valuta ("18,8 mio.", "−201 t."). */
+  const shown = (r: CompanyRowVM, c: TableColumn) => (tablet && NUMERIC.has(c) ? cellText(r, c).replace(/\s(?:kr\.|DKK|EUR|USD|SEK|NOK)$/, "") : cellText(r, c));
+  const columnsMenu = (icon: boolean) => (
+    <Menu
+      trigger={
+        <>
+          {icon ? <ColumnsIcon /> : null}
+          <span className="lasso-tbtn__label">Kolonner</span>
+        </>
+      }
+      triggerClassName="lasso-btn lasso-tbtn lasso-tbtn--optional"
+      triggerLabel="Vælg kolonner"
+      align="end"
+      label="Kolonner"
+      context={{ title: "Kolonner", subtitle: `Højst ${MAX_COLUMNS}` }}
+      items={TABLE_COLUMNS.filter((c) => c !== "navn").map((c) => ({
+        id: c,
+        label: TABLE_COLUMN_LABELS[c],
+        icon: cols.includes(c) ? <CheckMark /> : <span />,
+        disabled: !cols.includes(c) && cols.length >= MAX_COLUMNS,
+        onSelect: () => toggleCol(c),
+      }))}
+    />
+  );
+
   const toolbar =
     selCount > 0 ? (
       <BulkBar count={selCount} total={total} allSelected={allSelected} onSelectAll={() => setAllSelected(true)} actions={bulkActions} onClear={clearSelection} />
     ) : (
+      tablet ? (
+        <TableToolbar
+          left={
+            <div className="lasso-ctable__head">
+              {title ? <h3 className="lasso-ctable__headtitle">{title}</h3> : null}
+              {result ? <span className="lasso-ctable__headcount">{formatNumber(total)}</span> : null}
+            </div>
+          }
+          right={
+            <>
+              <div className="lasso-ctable__tsearch">
+                <TableSearch
+                  value={query}
+                  placeholder="Søg i listen"
+                  onChange={(v) => {
+                    setQuery(v);
+                    setPage(1);
+                  }}
+                />
+              </div>
+              {onApplyCriteria ? (
+                <button type="button" className="lasso-btn lasso-tbtn lasso-ctable__filter lasso-ctable__filter--tablet" onClick={() => setFiltersOpen(true)} aria-haspopup="dialog">
+                  {criteria.length ? `Filter (${criteria.length})` : "Filter"}
+                </button>
+              ) : null}
+              {columnsMenu(false)}
+            </>
+          }
+        />
+      ) : (
       <TableToolbar
         left={
           <>
@@ -390,26 +447,7 @@ export function CompanyTable({
         }
         right={
           <>
-            <Menu
-              trigger={
-                <>
-                  <ColumnsIcon />
-                  <span className="lasso-tbtn__label">Kolonner</span>
-                </>
-              }
-              triggerClassName="lasso-btn lasso-tbtn lasso-tbtn--optional"
-              triggerLabel="Vælg kolonner"
-              align="end"
-              label="Kolonner"
-              context={{ title: "Kolonner", subtitle: `Højst ${MAX_COLUMNS}` }}
-              items={TABLE_COLUMNS.filter((c) => c !== "navn").map((c) => ({
-                id: c,
-                label: TABLE_COLUMN_LABELS[c],
-                icon: cols.includes(c) ? <CheckMark /> : <span />,
-                disabled: !cols.includes(c) && cols.length >= MAX_COLUMNS,
-                onSelect: () => toggleCol(c),
-              }))}
-            />
+            {columnsMenu(true)}
             {canExport && !mobile ? (
               <button type="button" className="lasso-btn lasso-tbtn lasso-ctable__export" onClick={() => exportRows(rows)} disabled={!result || rows.length === 0}>
                 <DownloadIcon />
@@ -424,12 +462,13 @@ export function CompanyTable({
           </>
         }
       />
+      )
     );
 
   const countText = result ? `${formatNumber(total)} virksomhed${total === 1 ? "" : "er"}` : undefined;
 
   return (
-    <Section title={title} action={countText ? <span className="lasso-ctable__count">{countText}</span> : undefined} span="full" className="lasso-ctable">
+    <Section title={tablet ? undefined : title} action={countText && !tablet ? <span className="lasso-ctable__count">{countText}</span> : undefined} span="full" className="lasso-ctable">
       <div className="lasso-table-frame lasso-ctable__frame" ref={frameRef}>
         {toolbar}
         {mobile ? chips : null}
@@ -508,9 +547,9 @@ export function CompanyTable({
                           ) : NUMERIC.has(c) && sortValue(r, c) == null ? (
                             <span className="lasso-notreported">Ikke oplyst</span>
                           ) : NUMERIC.has(c) && (sortValue(r, c) as number) < 0 ? (
-                            <span className="lasso-down">{cellText(r, c)}</span>
+                            <span className="lasso-down">{shown(r, c)}</span>
                           ) : (
-                            cellText(r, c) || <span className="lasso-notreported">—</span>
+                            shown(r, c) || <span className="lasso-notreported">—</span>
                           )}
                         </td>
                       ))}

@@ -66,6 +66,11 @@ export interface AppShellMobile {
   onBell?: () => void;
   /** Bundnavigationens fire punkter. Udeladt = Søg, Lister, Overvågning, Konto uden handlinger. */
   nav?: readonly MobileNavItem[];
+  /**
+   * Entitetsside (26g.1/26g.2): topbjælken bliver "‹ Navn" med tilbagepil til venstre og del-ikon +
+   * burger (sektionsarket) til højre; klokke og "…" vises ikke. Undertitlen udelades.
+   */
+  back?: { label?: string; onBack?: () => void; onShare?: () => void };
   /** Styret åbning af sektionsarket (ellers intern tilstand). */
   sheetOpen?: boolean;
   onToggleSheet?: (open: boolean) => void;
@@ -158,7 +163,30 @@ export function AppShell({ rail, tabs, mobile, tablet, children, panel, panelLab
         ))}
       </nav>
 
-      <MobileBar mobile={mobile} title={title} hasSections={hasSections} sheetOpen={sheetOpen} onToggleSheet={setSheet} />
+      {mobile?.back ? (
+        <header className="lasso-mobilebar lasso-mobilebar--back">
+          <button type="button" className="lasso-mobilebar__btn" aria-label={mobile.back.label ?? "Tilbage"} onClick={mobile.back.onBack}>
+            <ShellIcon name="chevron-left" size={20} />
+          </button>
+          <div className="lasso-mobilebar__titles">
+            <div className="lasso-mobilebar__title">{title}</div>
+          </div>
+          <div className="lasso-mobilebar__tools">
+            {mobile.back.onShare ? (
+              <button type="button" className="lasso-mobilebar__btn" aria-label="Del" title="Del" onClick={mobile.back.onShare}>
+                <ShellIcon name="share" size={20} />
+              </button>
+            ) : null}
+            {hasSections ? (
+              <button type="button" className="lasso-mobilebar__btn" aria-label="Sektioner" aria-expanded={sheetOpen} aria-controls="lasso-sheet-sections" onClick={() => setSheet(!sheetOpen)}>
+                <ShellIcon name="menu" size={20} />
+              </button>
+            ) : null}
+          </div>
+        </header>
+      ) : (
+        <MobileBar mobile={mobile} title={title} hasSections={hasSections} sheetOpen={sheetOpen} onToggleSheet={setSheet} />
+      )}
 
       {panel ? (
         <div className="lasso-page lasso-page--panel">

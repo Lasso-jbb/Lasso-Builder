@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { personCounts, personRisk, type HeadVariant, type PersonVM } from "@lasso/spec";
 import { DataState, stateForError } from "../primitives.js";
 import { HeadActions, hasHeadActions, type HeadActionsProps } from "./HeadActions.js";
-import { personRiskSummary } from "./HeadRisk.js";
+import { HeadRiskLine, personRiskSummary } from "./HeadRisk.js";
 
 /** Antal observationer til linket i navnelinjen (16.1): stråmand, PEP-match og sager, personen var med i. */
 export function personObservationCount(person: PersonVM): number {
@@ -53,6 +53,8 @@ export interface PersonHeadProps {
   /** Klik på "Se risiko" i observationslinjen. */
   onSeeRisk?: () => void;
   below?: ReactNode;
+  /** 25.3: observationerne som linje med ikon og "Se risiko" under faktalinjen (personsiden) i stedet for "N observationer"-linket. */
+  riskLine?: boolean;
 }
 
 /**
@@ -62,7 +64,7 @@ export interface PersonHeadProps {
  * opsummeres som én rolig linje med "Se risiko" (udfoldes i risikoblokken). Ingen initial-cirkel,
  * aldrig CPR eller fuld privatadresse; kun by.
  */
-export function PersonHead({ person, error, variant = "full", actions, onSeeRisk, below }: PersonHeadProps) {
+export function PersonHead({ person, error, variant = "full", actions, onSeeRisk, below, riskLine = false }: PersonHeadProps) {
   if (!person) {
     const height = variant === "line" ? 40 : variant === "compact" ? 56 : 92;
     if (!error) return <div className="lasso-span-full"><DataState state="loading" lines={variant === "full" ? 2 : 1} height={height} /></div>;
@@ -108,7 +110,7 @@ export function PersonHead({ person, error, variant = "full", actions, onSeeRisk
       <div className="lasso-company__title">
         <h2 className="lasso-company__name">{person.name}</h2>
         <span className="lasso-personhead__kind">Person</span>
-        {obs ? (
+        {obs && !riskLine ? (
           onSeeRisk ? (
             <button type="button" className="lasso-link lasso-personhead__obs" onClick={onSeeRisk} title={summary!.text}>
               {obsText}
@@ -125,6 +127,8 @@ export function PersonHead({ person, error, variant = "full", actions, onSeeRisk
       {showActions ? <HeadActions {...actions!} className="lasso-company__actions" /> : null}
       <p className="lasso-company__facts lasso-personhead__facts">{facts.join(", ")}</p>
       <p className="lasso-personhead__counts">{personCountsLine(person)}</p>
+      {/* 25.3: på den sammensatte personside står observationerne som linje under faktalinjen (som 24.4). */}
+      {riskLine && summary ? <HeadRiskLine summary={summary} onSee={onSeeRisk} /> : null}
       {below}
     </header>
   );

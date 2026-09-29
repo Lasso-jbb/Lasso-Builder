@@ -35,8 +35,8 @@ function Donut({ items, center, sub, size }: { items: readonly { tone: string; s
   let acc = 0;
   const gap = items.length > 1 ? 2 : 0;
   return (
-    <div className="lasso-donut" style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
+    <div className="lasso-donut" style={{ ["--lasso-donut-base" as string]: `${size}px` }}>
+      <svg width="100%" height="100%" viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
         <circle className="lasso-donut__track" cx={size / 2} cy={size / 2} r={r} strokeWidth={ring} />
         {items.map((it, i) => {
           const len = (it.share / total) * c;

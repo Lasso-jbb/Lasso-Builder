@@ -38,7 +38,12 @@ function Unit({ unit }: { unit: string }) {
   );
 }
 
-export function KeyFigureCards({ financials, metrics, error }: { financials?: FinancialsVM; metrics?: readonly Metric[]; error?: string }) {
+/**
+ * plain (24.5/30.13, portalens sider): felterne står mellem en 1 px top- og bundlinje, adskilt af lodrette
+ * linjer uden ydre ramme; ingen sparkline, ingen branchelinje og "Ansatte 19 årsrapport 2025" i stedet for
+ * "(regnskab)". På tablet (26f.1) bliver felterne selvstændige kort, på mobil 2×2 kort (26c.1).
+ */
+export function KeyFigureCards({ financials, metrics, error, plain = false }: { financials?: FinancialsVM; metrics?: readonly Metric[]; error?: string; plain?: boolean }) {
   if (!financials) {
     if (!error) {
       // 09.1/09.4: "Henter" er kortformede skeletter, 3 linjer pr. kort, i samme højde som et fyldt kort.
@@ -91,7 +96,7 @@ export function KeyFigureCards({ financials, metrics, error }: { financials?: Fi
   };
 
   return (
-    <div className="lasso-kpis lasso-span-full" style={{ ["--lasso-kpi-count" as string]: chosen.length }}>
+    <div className={`lasso-kpis lasso-span-full${plain ? " lasso-kpis--plain" : ""}`} style={{ ["--lasso-kpi-count" as string]: chosen.length }}>
       {/* 26c.1: på mobil står titlen "Nøgletal ÅÅÅÅ" over de fire kort; på desktop er kortene selv overskriften. */}
       <h3 className="lasso-section__title lasso-kpis__title">Nøgletal {last.year}</h3>
       {chosen.map((m) => {
@@ -114,21 +119,21 @@ export function KeyFigureCards({ financials, metrics, error }: { financials?: Fi
         return (
           <div className="lasso-kpi" key={m}>
             <div className="lasso-kpi__label">
-              {label(m)}
+              {plain ? METRIC_LABELS[m] : label(m)}
               {/* 09.4 (Paper live): kvalitetsflaget står efter etiketten. */}
-              {financials.quality?.[m] ? <QualityFlag text={financials.quality[m]!} /> : null}
+              {financials.quality?.[m] && !plain ? <QualityFlag text={financials.quality[m]!} /> : null}
             </div>
             <div className="lasso-kpi__row">
               <div className="lasso-kpi__value">
                 {num}
-                {unit ? <Unit unit={unit} /> : null}
+                {unit ? <Unit unit={unit} /> : plain && m === "ansatte" ? <span className="lasso-kpi__unit lasso-kpi__unit--note">årsrapport {last.year}</span> : null}
               </div>
-              {series.length >= 3 ? <Sparkline values={series} tone="accent" bare /> : null}
+              {series.length >= 3 && !plain ? <Sparkline values={series} tone="accent" bare /> : null}
             </div>
             <div className="lasso-kpi__delta">
               {before === value ? <span className="lasso-muted">Uændret</span> : <Delta from={before} to={value} />}
-              {prev ? <span className="lasso-kpi__year">fra {prev.year}{bench(m) ? "," : ""}</span> : null}
-              {bench(m)}
+              {prev ? <span className="lasso-kpi__year">fra {prev.year}{bench(m) && !plain ? "," : ""}</span> : null}
+              {plain ? null : bench(m)}
             </div>
           </div>
         );

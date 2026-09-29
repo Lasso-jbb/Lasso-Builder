@@ -10,9 +10,14 @@ function relativeOrDate(iso: string | undefined): string {
   if (!iso) return "";
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return formatDate(iso);
-  const days = Math.max(0, Math.floor((Date.now() - then) / 86_400_000));
+  const ms = Math.max(0, Date.now() - then);
+  const days = Math.floor(ms / 86_400_000);
   if (days >= 7) return formatDate(iso);
-  if (days === 0) return "i dag";
+  // 26h.6: under et døgn i timer ("for 2 timer siden"); under en time "for lidt siden".
+  if (days === 0) {
+    const hours = Math.floor(ms / 3_600_000);
+    return hours === 0 ? "for lidt siden" : hours === 1 ? "for 1 time siden" : `for ${hours} timer siden`;
+  }
   if (days === 1) return "i går";
   return `for ${days} dage siden`;
 }
@@ -204,8 +209,11 @@ export function LassoNews({
   error,
   onOpen,
   emptyReason,
+  layout,
 }: {
   news?: NewsVM;
+  /** "grid" (mønster 8, 30.11): artiklerne som kortgitter i to kolonner i fuld bredde. */
+  layout?: "grid";
   companyName?: string;
   /** Virksomheden, siden handler om: dens navn i nyhederne står i fed og linker ikke til sig selv. */
   companyId?: string;
@@ -236,8 +244,8 @@ export function LassoNews({
   const max = limit ?? 5;
   const items = expanded ? news.items : news.items.slice(0, max);
   return (
-    <Section title={title} span="half">
-      <div className="lasso-news">
+    <Section title={title} span={layout === "grid" ? "full" : "half"}>
+      <div className={`lasso-news${layout === "grid" ? " lasso-news--grid" : ""}`}>
         {items.map((n, i) => (
           <NewsRow key={i} item={n} mention={companyName} selfId={companyId} onOpen={onOpen} />
         ))}

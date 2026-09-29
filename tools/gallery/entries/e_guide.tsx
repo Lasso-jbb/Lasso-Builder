@@ -61,8 +61,8 @@ const cellTone = (tone: Col["tone"], emph?: boolean): CSSProperties => ({
 });
 
 /** Papers dokumentationstabel: overlinje-hoved 36 px på panel-flade, rækker ≥ 36 px med tynde linjer. */
-export function DocTable({ cols, rows, small = false }: { cols: readonly Col[]; rows: readonly (readonly ReactNode[] | { group: string } | { emph: readonly ReactNode[] })[]; /** 12 px tekst og 14 px sidemargen (23.7). */ small?: boolean }) {
-  const cell = (c: Col): CSSProperties => ({ flex: c.width ? `0 0 ${c.width}px` : "1 1 0", minWidth: 0, textAlign: c.align ?? "left", paddingRight: c.align ? 0 : small ? 12 : 16 });
+export function DocTable({ cols, rows, small = false }: { cols: readonly Col[]; rows: readonly (readonly ReactNode[] | { group: string } | { emph: readonly ReactNode[] })[]; /** 13 px tekst og 14 px sidemargen (23.7). */ small?: boolean }) {
+  const cell = (c: Col): CSSProperties => ({ flex: c.width ? `0 0 ${c.width}px` : "1 1 0", minWidth: 0, overflowWrap: "anywhere", textAlign: c.align ?? "left", paddingRight: c.align ? 0 : small ? 12 : 16 });
   const padX = small ? 14 : 16;
   return (
     <div style={frame}>
@@ -86,7 +86,7 @@ export function DocTable({ cols, rows, small = false }: { cols: readonly Col[]; 
         const emph = "emph" in r;
         const cells = "emph" in r ? r.emph : r;
         return (
-          <div key={i} style={{ display: "flex", alignItems: "flex-start", minHeight: 36, padding: `9px ${padX}px`, borderBottom: line, background: emph ? "var(--lasso-surface-muted)" : undefined, fontSize: small ? 12 : "var(--lasso-fs)", lineHeight: small ? "16px" : "18px" }}>
+          <div key={i} style={{ display: "flex", alignItems: "flex-start", minHeight: 36, padding: `9px ${padX}px`, borderBottom: line, background: emph ? "var(--lasso-surface-muted)" : undefined, fontSize: small ? "var(--lasso-fs-sm)" : "var(--lasso-fs)", lineHeight: "18px" }}>
             {cols.map((c, j) => (
               <div key={j} style={{ ...cell(c), ...cellTone(c.tone, emph) }}>
                 {cells[j]}
@@ -283,7 +283,7 @@ export const MappingTable = () => (
     <p style={{ ...body, margin: 0 }}>{MAPPING_INTRO}</p>
     <DocTable
       small
-      cols={[{ label: "Element", width: 192, tone: "strong" }, { label: "Desktop 1440", width: 262 }, { label: "Tablet 768", width: 262 }, { label: "Mobil 390" }, { label: "Ref.", width: 70, align: "right", tone: "muted" }]}
+      cols={[{ label: "Element", width: 170, tone: "strong" }, { label: "Desktop 1440", width: 220 }, { label: "Tablet 768", width: 220 }, { label: "Mobil 390" }, { label: "Ref.", width: 64, align: "right", tone: "muted" }]}
       rows={MAPPING_ROWS}
     />
     <TwoCards cards={MAPPING_CARDS} />

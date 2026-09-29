@@ -16,7 +16,7 @@ import {
 } from "@lasso/ui";
 import { FOCUSES, FOCUS_LABELS, isPersonFocus, PERSON_FOCUSES, PERSON_FOCUS_LABELS, type Focus, type PersonFocus } from "@lasso/spec";
 import type { ViewResult } from "./api.js";
-import { entityHost } from "./data.js";
+import { entityHost, SHELL_MOBILE_MAX, SHELL_TABLET_MAX } from "./data.js";
 import { dataKey, isFocus, type PortalRoute } from "./routes.js";
 import type { PortalTab } from "./tabs.js";
 
@@ -217,18 +217,29 @@ export function EntityPage({
       ]
     : [];
   const waiting = state === "loading" || state === "error";
+  // 26f.1/26.3: under 1024 px ingen modulbjælke; modulerne står som faner under hovedet (tablet: 5 + "Mere").
+  const narrow = shellWidth <= SHELL_TABLET_MAX;
+  const modules = company ? FOCUS_MODULES : PERSON_MODULES;
+  const selectFocus = (id: string) => {
+    if (company ? isFocus(id) : isPersonFocus(id)) onFocus(id as Focus | PersonFocus);
+  };
+  const headTabs = narrow
+    ? { items: modules, value, onChange: selectFocus, ariaLabel: "Fokus", ...(shellWidth > SHELL_MOBILE_MAX ? { maxVisible: 6, moreLabel: "Mere" } : { maxVisible: modules.length }) }
+    : undefined;
   return (
     <>
-      <ModuleBar
-        id={panel}
-        modules={company ? FOCUS_MODULES : PERSON_MODULES}
-        value={value}
-        onChange={(id) => {
-          if (company ? isFocus(id) : isPersonFocus(id)) onFocus(id as Focus | PersonFocus);
-        }}
-        actions={actions}
-        ariaLabel="Fokus"
-      />
+      {narrow ? null : (
+        <ModuleBar
+          id={panel}
+          modules={company ? FOCUS_MODULES : PERSON_MODULES}
+          value={value}
+          onChange={(id) => {
+            if (company ? isFocus(id) : isPersonFocus(id)) onFocus(id as Focus | PersonFocus);
+          }}
+          actions={actions}
+          ariaLabel="Fokus"
+        />
+      )}
       <TabPanel
         id={panel}
         tab={value}
@@ -248,7 +259,9 @@ export function EntityPage({
             url={data.url}
             loading={state === "refreshing"}
             theme="light"
-            host={entityHost(shellWidth)}
+            host={entityHost(shellWidth, Boolean(onMonitor))}
+            headTabs={headTabs}
+            page
             savePrefix={savePrefix}
             onAction={onAction}
             frameless

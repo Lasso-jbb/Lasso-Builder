@@ -128,10 +128,11 @@ test("indholdsfortegnelsen peger på de rigtige sider", () => {
   assert.match(html, /Kreditvurdering og risiko<\/span><span class="lasso-a4-toc__page">4/);
 });
 
-test("27.4: side 4 viser risikoobservationerne med alvorsord, når de er hentet", () => {
+test("27.4: side 4 viser risikoobservationerne med farvet prik og titel uden alvorsord (Paper), ordet kun for skærmlæsere", () => {
   const html = render(dataset({ score: 52 }));
   assert.match(html, /<h2 class="lasso-a4__h2">Risikoobservationer<\/h2>/);
-  assert.match(html, /lasso-a4-obs__dot--middel[^]*Middel, Revisor skiftet/);
+  assert.match(html, /lasso-a4-obs__dot--middel" role="img" aria-label="alvor middel"[^]*>Revisor skiftet</);
+  assert.doesNotMatch(html, /Middel, Revisor skiftet/);
 });
 
 test("27.2: grafens søjler er ca. 40 px brede som i Paper (Fable-review R3)", () => {

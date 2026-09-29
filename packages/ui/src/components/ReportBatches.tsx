@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { formatDate, formatNumber, formatPercent } from "@lasso/spec";
+import { formatDate, formatNumber } from "@lasso/spec";
 import { Section } from "../primitives.js";
 import { Tabs } from "./Tabs.js";
 
@@ -50,7 +50,7 @@ function statusText(b: ReportBatchVM): string {
   if (b.status === "done") return "Færdig";
   if (b.status === "failed") return `Færdig med fejl${b.total ? `, ${formatNumber(b.done ?? b.total)} af ${formatNumber(b.total)}` : ""}`;
   const pct = b.total ? (100 * (b.done ?? 0)) / b.total : 0;
-  return `Kører, ${formatPercent(pct, false)}${b.total ? `, ${formatNumber(b.done ?? 0)} af ${formatNumber(b.total)}` : ""}`;
+  return `Kører, ${formatNumber(Math.round(pct))} %${b.total ? `, ${formatNumber(b.done ?? 0)} af ${formatNumber(b.total)}` : ""}`;
 }
 
 function OrderForm({ order }: { order: NonNullable<ReportBatchesProps["order"]> }) {

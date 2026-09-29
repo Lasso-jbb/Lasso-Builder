@@ -967,7 +967,7 @@ export class DemoProvider implements DataProvider {
               date: "2019-03-15",
               type: "Spaltning",
               from: [{ name: c.name, lassoId: c.lassoId, cvr: c.cvr, role: "afgivende selskab" }],
-              to: [{ name: "Eksempel Ejendomme ApS", lassoId: "CVR-1-99000012", role: "modtagende, nystiftet" }],
+              to: [{ name: "Eksempel Ejendomme ApS", lassoId: "CVR-1-99000012", cvr: "99000012", role: "modtagende, nystiftet" }],
             },
           ]
         : [];

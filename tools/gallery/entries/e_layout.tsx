@@ -46,6 +46,7 @@ import {
   statusTone,
   TabPanel,
   Tabs,
+  ValueRow,
   ToastProvider,
   Toasts,
   type AppShellMobile,
@@ -200,6 +201,7 @@ function Shell({
   panel,
   sheetOpen,
   screen,
+  moduleBar = true,
 }: {
   kind: "company" | "person" | "search";
   title: string;
@@ -210,6 +212,8 @@ function Shell({
   sheetOpen?: boolean;
   /** Fylder hele skærmen (ark og faste lag kommer med i billedet). */
   screen?: boolean;
+  /** Modulbjælken over siden (standard). Under 1024 px står modulerne i stedet under hovedet (26f.1/26.3). */
+  moduleBar?: boolean;
 }) {
   const [focus, setFocus] = useState(value ?? "overblik");
   const mobile: AppShellMobile = {
@@ -237,11 +241,11 @@ function Shell({
       <style>{PORTAL_CSS}</style>
       <AppShell
         rail={{ groups: railGroups(kind === "company" ? C : kind === "person" ? P : "search"), onToggleGroup: noop, onLogo: noop }}
-        tabs={{ tabs: stripTabs(kind, kind === "company" ? title : undefined, kind === "person" ? title : undefined), onSelect: noop, onClose: noop, onAdd: noop, onBell: noop, unread: 3, onFeedback: noop, onAccount: noop }}
+        tabs={{ tabs: stripTabs(kind, kind === "company" ? title : undefined, kind === "person" ? title : undefined), onSelect: noop, onClose: noop, onAdd: noop, onBell: noop, unread: isNarrow() ? 0 : 3, onFeedback: noop, onAccount: noop }}
         mobile={mobile}
         panel={panel}
       >
-        {modules ? <ModuleBar id="e-mod" modules={modules} value={focus} onChange={setFocus} actions={moduleActions()} ariaLabel="Fokus" /> : null}
+        {modules && moduleBar ? <ModuleBar id="e-mod" modules={modules} value={focus} onChange={setFocus} actions={moduleActions()} ariaLabel="Fokus" /> : null}
         {children}
       </AppShell>
     </div>
@@ -255,11 +259,28 @@ function personSpec(ds: Dataset, followUps = false): ViewSpec {
   return composePerson(P, ds, { focus: "overblik", name: ds.persons[P]?.name, followUps });
 }
 
+/** Under 1024 px (tablet 26f.1, mobil 26.3): ingen modulbjælke; modulerne som faner under hovedet (tablet 5 + "Mere"). */
+const isNarrow = () => typeof window !== "undefined" && window.innerWidth < 1024;
+function narrowTabs(items: readonly TabItem[], value: string, onChange: (id: string) => void) {
+  return isMobile() ? { items, value, onChange, ariaLabel: "Moduler", maxVisible: items.length } : { items, value, onChange, ariaLabel: "Moduler", maxVisible: 6, moreLabel: "Mere" };
+}
+
 function CompanyPage({ ds }: { ds: Dataset }) {
   const spec = companySpec(ds);
+  const [focus, setFocus] = useState("overblik");
+  const narrow = isNarrow();
   return (
-    <Shell kind="company" title={ds.companies[C]?.name ?? "Eksempel Byg A/S"} modules={COMPANY_MODULES} value="overblik">
-      <LassoView spec={spec} dataset={ds} host={entityHost()} onAction={noop} theme="light" frameless />
+    <Shell kind="company" title={ds.companies[C]?.name ?? "Eksempel Byg A/S"} modules={COMPANY_MODULES} value="overblik" moduleBar={!narrow}>
+      <LassoView
+        spec={spec}
+        dataset={ds}
+        host={narrow ? { ...entityHost(), savePage: true, monitor: true } : entityHost()}
+        headTabs={narrow ? narrowTabs(COMPANY_MODULES, focus, setFocus) : undefined}
+        onAction={noop}
+        theme="light"
+        frameless
+        page
+      />
     </Shell>
   );
 }
@@ -285,7 +306,7 @@ const paperRailCompany = (): RailGroup[] => [
     id: "firmaer",
     label: "Firmaer",
     items: [
-      { id: "overvaager", label: "Overvåger", icon: "letter" },
+      { id: "overvaager", label: "Overvåger", icon: <ShellIcon name="rss" /> },
       { id: "advisory", label: "Advisory Board", icon: "letter" },
       { id: "kunder", label: "Kunder", icon: "letter" },
       { id: "salgspartnere", label: "Salgspartnere", icon: "letter" },
@@ -334,8 +355,8 @@ function PaperShell({ kind, title, company, children }: { kind: "company" | "per
     sections: kind === "company" ? COMPANY_MODULES : PERSON_MODULES,
     activeSection: focus,
     onSelectSection: setFocus,
-    onBell: noop,
-    moreItems: [{ id: "share", label: "Del link", icon: <ShellIcon name="copy" size={16} />, onSelect: noop }],
+    // 26g.1/26g.2: entitetssiden har "‹ Navn" med del-ikon og burger i topbjælken.
+    back: { onBack: noop, onShare: noop },
     nav: [
       { id: "soeg", label: "Søg", icon: <ShellIcon name="search" size={20} />, active: true },
       { id: "lister", label: "Lister", icon: <ShellIcon name="list" size={20} /> },
@@ -355,26 +376,58 @@ function PaperShell({ kind, title, company, children }: { kind: "company" | "per
         tabs={{ tabs, onSelect: noop, onBell: noop, onAccount: noop }}
         mobile={mobile}
       >
-        {kind === "company" ? <ModuleBar id="e-mod" modules={COMPANY_MODULES} value={focus} onChange={setFocus} actions={paperModuleActions()} maxVisible={8} ariaLabel="Moduler" /> : null}
+        {kind === "company" && !isNarrow() ? <ModuleBar id="e-mod" modules={COMPANY_MODULES} value={focus} onChange={setFocus} actions={paperModuleActions()} maxVisible={8} ariaLabel="Moduler" /> : null}
         {children}
       </AppShell>
     </div>
   );
 }
 
+/** 26g.2: personfanerne under hovedet på mobil (Paper EPB-0/FOV-0). */
+const PAPER_PERSON_TABS: readonly TabItem[] = [
+  { id: "roller", label: "Roller" },
+  { id: "netvaerk", label: "Netværk" },
+  { id: "risiko", label: "Risiko" },
+  { id: "historik", label: "Historik" },
+  { id: "nyheder", label: "Nyheder" },
+];
+
 function PaperCompanyPage({ ds }: { ds: Dataset }) {
   const name = ds.companies[C]?.name ?? "Eksempel Byg A/S";
+  const [focus, setFocus] = useState("overblik");
+  const narrow = isNarrow();
   return (
     <PaperShell kind="company" title={name} company={name}>
-      <LassoView spec={companySpec(ds)} dataset={ds} host={paperHost()} onAction={noop} theme="light" frameless />
+      <LassoView
+        spec={companySpec(ds)}
+        dataset={ds}
+        host={paperHost()}
+        headTabs={narrow ? narrowTabs(COMPANY_MODULES, focus, setFocus) : undefined}
+        sectionCards
+        onAction={noop}
+        theme="light"
+        frameless
+        page
+      />
     </PaperShell>
   );
 }
 
 function PaperPersonPage({ ds }: { ds: Dataset }) {
+  const [tab, setTab] = useState("roller");
   return (
     <PaperShell kind="person" title={ds.persons[P]?.name ?? "Bo Eksempel"} company={ds.companies[C]?.name ?? "Eksempel Byg A/S"}>
-      <LassoView spec={personSpec(ds)} dataset={ds} host={paperHost()} onAction={noop} theme="light" frameless />
+      <LassoView
+        spec={personSpec(ds)}
+        dataset={ds}
+        host={paperHost()}
+        headTabs={isMobile() ? { items: PAPER_PERSON_TABS, value: tab, onChange: setTab, ariaLabel: "Personfaner", maxVisible: PAPER_PERSON_TABS.length } : undefined}
+        sectionCards
+        onAction={noop}
+        theme="light"
+        frameless
+        page
+      />
     </PaperShell>
   );
 }
@@ -651,7 +704,7 @@ function SparkRows() {
 
 const mobileCharts: GalleryEntry[] = [
   { nr: "26b.1", title: "Søjlegraf (mobil)", node: "E2T-0", only: "mobile", spec: one("Søjlegraf", { type: "LassoBarChart", company: C }) },
-  { nr: "26b.2", title: "Grupperede søjler (mobil)", node: "E3K-0", only: "mobile", spec: one("Grupperede søjler", { type: "LassoGroupedBarChart", company: C, metrics: ["omsaetning", "bruttofortjeneste", "resultat"] }) },
+  { nr: "26b.2", title: "Grupperede søjler (mobil)", node: "E3K-0", only: "mobile", spec: one("Grupperede søjler", { type: "LassoGroupedBarChart", company: C, metrics: ["omsaetning", "bruttofortjeneste"] }) },
   { nr: "26b.3", title: "Stablede søjler / balance (mobil)", node: "E49-0", only: "mobile", spec: one("Balance", { type: "LassoStackedBarChart", company: C }) },
   { nr: "26b.4", title: "Linjegraf (mobil)", node: "E5A-0", only: "mobile", spec: one("Linjegraf", { type: "LassoLineChart", company: C, benchmark: "CVR-1-99000006" }) },
   { nr: "26b.5", title: "Vandfald (mobil)", node: "E62-0", only: "mobile", spec: one("Vandfald", { type: "LassoWaterfallChart", company: C }) },
@@ -795,7 +848,13 @@ const tablet: GalleryEntry[] = [
     node: "FAA-0",
     only: "desktop",
     desktopWidth: 768,
-    spec: { kind: "list", title: "Kunder", components: [{ type: "LassoCompanyTable", title: "Kunder", source: "search", search: { query: "", criteria: [], limit: 8 }, columns: ["navn", "status", "bruttofortjeneste", "resultat", "ansatte", "score"] }] },
+    // 26f.2: to aktive kriterier giver "Filter (2)" i kortets hoved.
+    spec: {
+      kind: "list",
+      title: "Kunder",
+      criteria: [{ field: "ansatte", operator: "gte", value: 1 }, { field: "status", operator: "eq", value: "aktiv" }],
+      components: [{ type: "LassoCompanyTable", title: "Kunder", source: "search", search: { query: "", criteria: [{ field: "ansatte", operator: "gte", value: 1 }, { field: "status", operator: "eq", value: "aktiv" }], limit: 8 }, columns: ["navn", "status", "bruttofortjeneste", "resultat", "ansatte", "score"] }],
+    },
   },
   { nr: "26f.3", title: "Regnskab, tablet", node: "FCA-0", only: "desktop", desktopWidth: 768, spec: one("Regnskab", { type: "LassoFinancialStatements", company: C }) },
   { nr: "26f.4", title: "Ejerdiagram, tablet", node: "FFB-0", only: "desktop", desktopWidth: 768, spec: one("Ejerdiagram", { type: "LassoOwnershipDiagram", company: C }) },
@@ -948,7 +1007,8 @@ const mobileStates: GalleryEntry[] = [
         source: "Børsen",
         url: "https://borsen.dk/",
         time: new Date(Date.now() - 2 * 3_600_000).toISOString(),
-        headline: "Eksempel Byg udvider med ejendomsdata fra BBR (eksempeloverskrift)",
+        headline: "Eksempel Byg udvider med ejendomsdata fra BBR",
+        language: "eksempeloverskrift",
         excerpt: "datavirksomheden Eksempel Byg A/S oplyser, at BBR-data nu indgår i virksomhedsoverblikket for alle danske",
         extractSegments: [{ text: "datavirksomheden " }, { text: "Eksempel Byg A/S", highlight: true }, { text: " oplyser, at BBR-data nu indgår i virksomhedsoverblikket for alle danske" }],
         provider: "Paqle",
@@ -1024,7 +1084,7 @@ const report: GalleryEntry[] = [
 const ENUM_CARD: CSSProperties = { border: "1px solid var(--lasso-border)", borderRadius: "var(--lasso-radius-card)", padding: 16, background: "var(--lasso-surface)", minWidth: 0 };
 const ENUM_OVERLINE: CSSProperties = { margin: "0 0 8px", fontSize: "var(--lasso-fs-label)", lineHeight: "14px", fontWeight: 600, letterSpacing: "var(--lasso-ls-label)", textTransform: "uppercase", color: "var(--lasso-muted)" };
 const ENUM_ROW: CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, minHeight: 30, borderBottom: "1px solid var(--lasso-divider-subtle)", fontSize: "var(--lasso-fs-sm)" };
-const ENUM_GROUP: CSSProperties = { margin: "10px 0 2px", fontSize: 12, fontWeight: 600, color: "var(--lasso-text-3)" };
+const ENUM_GROUP: CSSProperties = { margin: "10px 0 2px", fontSize: 12, fontWeight: 400, color: "var(--lasso-muted)" };
 
 function Enumerations() {
   // Status: tekst fra værdilisten, farve fra gruppen (packages/spec/src/status.ts + statusTone).
@@ -1178,13 +1238,30 @@ const datatypes: GalleryEntry[] = [
     ),
   },
   { nr: "28.6", title: "Fusioner og spaltninger", node: "HCC-0", spec: one("Fusioner og spaltninger", { type: "LassoMergers", company: C }) },
-  {
+  dataEntry({
     nr: "28.7",
     title: "Regnskabsoplysninger, bibrancher, kapital, tegningsregel og formål",
     node: "HDZ-0",
-    note: "LassoRegistration: to kort (regnskabsoplysninger, kapital og vedtægter). Paper viser desuden en eksempelrække for et B-selskab med fravalgt revision; den tilstand ses hos virksomheder uden revisor i demodata.",
-    spec: one("Oplysninger", { type: "LassoRegistration", company: C }),
-  },
+    note: "LassoRegistration: to kort (regnskabsoplysninger, kapital og vedtægter), tegningsregel og formål foldet til to linjer. Under: Papers eksempelrække for et B-selskab med fravalgt revision (samme ValueRow og warning-tekst som komponenten).",
+    probe: one("Oplysninger", { type: "LassoRegistration", company: C }),
+    draw: (ds) => (
+      <div className="lasso-root" data-theme="light" style={stack(16)}>
+        <LassoView spec={parseViewSpec(one("Oplysninger", { type: "LassoRegistration", company: C }))} dataset={ds} host={{}} onAction={noop} theme="light" frameless />
+        <div className="lasso-reg lasso-span-full" style={{ padding: "0 24px" }}>
+          <Section title="Revision, eksempel B-selskab" card>
+            <div className="lasso-reg__rows">
+              <ValueRow label="Revision">
+                <span>
+                  <span className="lasso-reg__warn">Fravalgt</span>
+                  <span className="lasso-reg__muted">, siden regnskabsåret 2024</span>
+                </span>
+              </ValueRow>
+            </div>
+          </Section>
+        </div>
+      </div>
+    ),
+  }),
   { nr: "28.8", title: "Statstidende, seneste bekendtgørelser", node: "HGH-0", spec: one("Statstidende", { type: "LassoAnnouncements", company: "CVR-1-99000011" }) },
   {
     nr: "28.9",
@@ -1272,6 +1349,25 @@ function Level1() {
     <div>
       {caption("Niveau 1, sideniveau, 48 px: valgt, hvile, hover (Regnskab), fokus (Ejerskab), deaktiveret (Risiko) og 'Flere' ved mere end 8 faner")}
       <Tabs level={1} items={L1} value={v} onChange={setV} ariaLabel="Sider" hoverId="regnskab" focusId="ejerskab" />
+      {/* Papers forklaringer under rækken (IWK-0). */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 24, marginTop: 16 }}>
+        {[
+          ["Valgt", "Ink 600, 2 px koral understregning i fanens bredde"],
+          ["Hvile", "Text-secondary 400, ingen streg"],
+          ["Hover", "Tekst bliver ink, 2 px divider-streg, ingen baggrund"],
+          ["Fokus", "1 px koral kant (primary-border) omkring navnet, radius 6, kun ved tastatur"],
+          ["Deaktiveret", "45 % opacitet, tooltip siger hvorfor, fx \"Ingen regnskaber indberettet\""],
+          ["Flere", "Ved mere end 8 faner: \"Flere\" med pil åbner menu (07)"],
+        ].map(([t, d]) => (
+          <div key={t}>
+            <div style={{ fontSize: "var(--lasso-fs)", lineHeight: "20px", fontWeight: 600, color: "var(--lasso-text)" }}>{t}</div>
+            <div className="lasso-small" style={{ color: "var(--lasso-text-2)" }}>{d}</div>
+          </div>
+        ))}
+      </div>
+      <p className="lasso-small" style={{ ...muted, margin: "16px 0 0" }}>
+        Højde 48, tekst 14, gap 28 mellem faner, ingen vandret padding på fanen, 1 px divider under hele rækken, understregning ligger oven på divideren.
+      </p>
     </div>
   );
 }
@@ -1387,10 +1483,22 @@ function PhoneTabs() {
   const [l3, setL3] = useState("2025");
   return (
     <div style={{ border: "1px solid var(--lasso-border)", borderRadius: "var(--lasso-radius-toast)", overflow: "hidden", background: "var(--lasso-surface)" }}>
-      <header className="lasso-mobilebar" style={{ paddingLeft: 16 }}>
+      {/* 29.5: samme topbjælke som 26a.1 (burger, titel + undertitel, klokke og "…"). */}
+      <header className="lasso-mobilebar">
+        <span className="lasso-mobilebar__btn" aria-hidden="true">
+          <ShellIcon name="menu" size={20} />
+        </span>
         <div className="lasso-mobilebar__titles">
           <div className="lasso-mobilebar__title">LASSO X A/S</div>
           <div className="lasso-mobilebar__subtitle">Økonomi</div>
+        </div>
+        <div className="lasso-mobilebar__tools">
+          <span className="lasso-mobilebar__btn" aria-hidden="true">
+            <ShellIcon name="bell" size={20} />
+          </span>
+          <span className="lasso-mobilebar__btn" aria-hidden="true">
+            <ShellIcon name="more" size={20} />
+          </span>
         </div>
       </header>
       <div style={{ padding: "16px 16px 0" }}>
@@ -1508,9 +1616,11 @@ const MODULES_PROBE = {
     { type: "LassoRelations", company: C },
     { type: "LassoNews", company: C, limit: 4 },
     { type: "LassoTimeline", company: C, limit: 6 },
+    { type: "LassoKeyValueList", company: C, variant: "company" },
+    { type: "LassoPersonList", company: C },
     { type: "LassoScoreGauge", company: C },
-    { type: "LassoIncomeStatement", company: C },
-    { type: "LassoBalanceSheet", company: C },
+    { type: "LassoLineChart", company: C, metric: "bruttofortjeneste", industry: true },
+    { type: "LassoRiskObservations", company: C },
   ],
 };
 
@@ -1544,24 +1654,32 @@ function FiveModules({ ds }: { ds: Dataset }) {
   );
   return (
     <div className="lasso-root" data-theme="light" style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-      <ModuleExample title="Nøgletal" pattern="mønster 1 + 4" text="Nøgletalskort i fuld bredde og flerårstabellen under. Print til venstre; Vend graf og Selskab/Koncern som visningsvalg til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Print" }} controls={<>{ghost("Vend")}<Seg items={["Selskab", "Koncern"]} /></>} />}>
-        {view([{ type: "LassoKeyFigureCards", company: C, width: "full" }, { type: "LassoMultiYearTable", company: C, width: "full" }])}
+      <ModuleExample title="Nøgletal" pattern="mønster 1 + 4: graf fuld, flerårstabel fuld" text="Linjegrafen i fuld bredde og flerårstabellen (5 år) under. Print til venstre; Vend graf og Selskab/Koncern som visningsvalg til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Print" }} controls={<>{ghost("Vend")}<Seg items={["Selskab", "Koncern"]} /></>} />}>
+        {view([{ type: "LassoLineChart", company: C, metric: "bruttofortjeneste", industry: true, width: "full" }, { type: "LassoMultiYearTable", company: C, width: "full" }])}
       </ModuleExample>
       <ModuleExample title="Ejerdiagram" pattern="mønster 2" text="Diagrammet ¾ med relationerne ¼ ved siden. Udskriv og Gem til venstre; Layout og Rediger til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Udskriv" }} secondary={[{ label: "Gem" }]} controls={<>{ghost("Layout")}{ghost("Rediger")}</>} />}>
         {view([{ type: "LassoOwnershipDiagram", company: C, width: "three-quarters" }, { type: "LassoRelations", company: C, width: "quarter" }])}
       </ModuleExample>
       <ModuleExample title="Nyheder" pattern="mønster 8" text="Faner niveau 2 over kildernes strømme, artiklerne som kortgitter. Filtre yderst til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" field={<Seg level={2} items={["Lasso", "Artikler", "Ritzau", "Statstidende"]} />} controls={ghost("Filtre")} />}>
-        {view([{ type: "LassoNews", company: C, limit: 4, group: { id: "nyheder", pattern: "cards" } }, { type: "LassoContact", company: C, group: { id: "nyheder", pattern: "cards" } }])}
+        {view([{ type: "LassoNews", company: C, limit: 4, layout: "grid" }])}
       </ModuleExample>
-      <ModuleExample title="Historik" pattern="mønster 6, spejlet" text="Den kronologiske strøm med filtrene i en smal kolonne. Print til venstre; Vælg dato og Filtrer til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Print" }} controls={<>{ghost("Vælg dato")}{ghost("Filtrer")}</>} />}>
-        {view([{ type: "LassoTimeline", company: C, limit: 6, filterColumn: true }])}
+      <ModuleExample title="Historik" pattern="mønster 6, spejlet: øjebliksbillede ⅓, tidslinje ⅔" text="Datoen styrer venstre side: oplysningerne pr. dato (adresse, ledelse, ejere, revisor). Til højre tidslinjen med årsmarkører og ændringer som før → efter. Print til venstre; Vælg dato og Filtrer til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Print" }} controls={<>{ghost("Vælg dato")}{ghost("Filtrer")}</>} />}>
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr)", alignItems: "start" }}>
+          <div style={{ display: "grid", gap: 12 }}>
+            <SnapshotPicker subject="Oplysninger" what="oplysninger" date="2024-06-01" today="2026-09-29" onChange={noop} />
+            {view([{ type: "LassoKeyValueList", company: C, variant: "company", title: "Oplysninger pr. 01.06.2024" }, { type: "LassoPersonList", company: C }])}
+          </div>
+          <div style={{ borderLeft: "1px solid var(--lasso-border)" }}>{view([{ type: "LassoTimeline", company: C, limit: 6 }])}</div>
+        </div>
       </ModuleExample>
       <ModuleExample title="Firmaindsigt" pattern="mønster 9" text="Hoved med score og sektionerne som harmonika, første række åben. Udskriv til venstre; Ejerdiagram til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Udskriv" }} controls={ghost("Ejerdiagram")} />}>
         {view([
-          { type: "LassoKeyFigureCards", company: C, metrics: ["bruttofortjeneste", "resultat", "egenkapital"], width: "three-quarters" },
+          { type: "LassoCompanyHead", company: C, variant: "compact", width: "half" },
           { type: "LassoScoreGauge", company: C, width: "quarter" },
-          { type: "LassoIncomeStatement", company: C, title: "Resultatopgørelse", group: { id: "fi", pattern: "accordion" } },
-          { type: "LassoBalanceSheet", company: C, title: "Balance", group: { id: "fi", pattern: "accordion" } },
+          { type: "LassoKeyFigureCards", company: C, metrics: ["bruttofortjeneste", "resultat", "egenkapital"], width: "quarter" },
+          { type: "LassoRiskObservations", company: C, title: "Observationer", group: { id: "fi", pattern: "accordion" } },
+          { type: "LassoKeyFigureCards", company: C, group: { id: "fi", pattern: "accordion" } },
+          { type: "LassoMultiYearTable", company: C, title: "Flerårstabel", group: { id: "fi", pattern: "accordion" } },
         ])}
       </ModuleExample>
     </div>
@@ -1756,7 +1874,19 @@ const layout: GalleryEntry[] = [
     node: "JEU-0",
     desktopWidth: 880,
     note: "Svarniveau B, mønster 1 ('Hvordan går det med X?') i chatbredde 880 og mobil 390.",
-    spec: { kind: "company", title: "Økonomi", answer: ANSWER_B_FOOT, components: ANSWER_B },
+    // 30.13: nøgletal i den rolige form, "Virksomhedsoplysninger" med 2025 | 2024 og 4 rækker, analysen foldet til 3 linjer.
+    spec: {
+      kind: "company",
+      title: "Økonomi",
+      answer: ANSWER_B_FOOT,
+      components: [
+        head("compact"),
+        { type: "LassoKeyFigureCards", company: C, variant: "plain", width: "full" },
+        { type: "LassoBarChart", company: C, width: "half" },
+        { type: "LassoKeyValueList", company: C, variant: "financials", title: "Virksomhedsoplysninger", years: 2, rows: 4, exclude: ["omsaetning", "resultat", "egenkapital", "ansatte"], width: "half" },
+        { type: "LassoTextSections", company: C, variant: "analyse", folded: true, width: "full" },
+      ],
+    },
   },
 ];
 

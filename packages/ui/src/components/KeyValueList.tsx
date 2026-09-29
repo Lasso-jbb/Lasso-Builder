@@ -167,6 +167,8 @@ export function KeyValueList({
   info = true,
   links,
   onPdf,
+  years: yearCount = 5,
+  maxRows,
 }: {
   company?: CompanyVM;
   ownership?: OwnershipVM;
@@ -190,10 +192,23 @@ export function KeyValueList({
   links?: readonly KeyValueLink[];
   /** Variant "financials" (09.5): rækken "PDF-regnskab" med "Hent ÅÅÅÅ ⤓" højrestillet i koral. */
   onPdf?: (year: number) => void;
+  /** Variant "financials": antal år i årsvælgeren (30.13: 2 → "2025 | 2024"). */
+  years?: number;
+  /** Kun de første N rækker; resten bag "Se N oplysninger" (30.13). */
+  maxRows?: number;
 }) {
   const heading = title ?? (variant === "financials" ? "Regnskab" : "Virksomhedsoplysninger");
   const ready = variant === "financials" ? Boolean(financials) : Boolean(company);
   const [year, setYear] = useState<number | null>(null);
+  const [allRows, setAllRows] = useState(false);
+  /** 30.13: de første maxRows rækker og "Se N oplysninger" under listen. */
+  const cut = <T,>(rows: readonly T[]): readonly T[] => (maxRows && !allRows ? rows.slice(0, maxRows) : rows);
+  const moreRows = (n: number) =>
+    maxRows && n > maxRows ? (
+      <button type="button" className="lasso-link lasso-more" aria-expanded={allRows} onClick={() => setAllRows(!allRows)}>
+        {allRows ? "Vis færre" : `Se ${n} oplysninger`}
+      </button>
+    ) : null;
 
   if (!ready) {
     return (
@@ -213,7 +228,7 @@ export function KeyValueList({
         </Section>
       );
     }
-    const options = years.slice(-5).reverse();
+    const options = years.slice(-yearCount).reverse();
     const selected = years.find((y) => y.year === year) ?? last;
     // Kvalitetsflaggene gælder seneste regnskab.
     const rows = financialsRows(selected, financials!.currency, exclude, selected === last ? financials!.quality : undefined);
@@ -231,7 +246,7 @@ export function KeyValueList({
         span="half"
       >
         <div className="lasso-kv-list lasso-kv-list--financials">
-          {rows.map((r) => (
+          {cut(rows).map((r) => (
             <div className="lasso-kv-row" key={r.label}>
               <Label text={r.label} info={info} />
               <div className={`lasso-kv-row__value ${r.danger ? "lasso-down" : ""}`}>
@@ -252,6 +267,7 @@ export function KeyValueList({
             </div>
           ) : null}
         </div>
+        {moreRows(rows.length)}
         <Links links={links} />
       </Section>
     );
@@ -273,7 +289,7 @@ export function KeyValueList({
   return (
     <Section title={heading} span="half">
       <div className="lasso-kv-list">
-        {rows.map((r, i) => {
+        {cut(rows).map((r, i) => {
           const open = rowOpener(r, onOpen);
           const half = pairAt >= 0 && (i === pairAt || i === pairAt + 1) ? (i === pairAt ? " lasso-kv-row--half" : " lasso-kv-row--half lasso-kv-row--half-end") : "";
           return (
@@ -295,6 +311,7 @@ export function KeyValueList({
           );
         })}
       </div>
+      {moreRows(rows.length)}
       <Links links={links} />
     </Section>
   );

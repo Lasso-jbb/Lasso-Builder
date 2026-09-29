@@ -78,7 +78,7 @@ export interface LassoViewProps {
    */
   /** @deprecated Brug `frameless` (samme betydning). */
   embedded?: boolean;
-  headTabs?: { items: readonly { id: string; label: string; disabled?: boolean; disabledReason?: string }[]; value: string; onChange: (id: string) => void; ariaLabel?: string };
+  headTabs?: { items: readonly { id: string; label: string; disabled?: boolean; disabledReason?: string }[]; value: string; onChange: (id: string) => void; ariaLabel?: string; maxVisible?: number; moreLabel?: string };
   /**
    * Katalog 06.1/24/25: visningen står i portalens ramme (AppShell med fanebjælke og modulbjælke).
    * Så udelades visningens egen ramme: headeren (logo, "Virksomhedsprofil", "Data hentet …", Gem)
@@ -86,4 +86,16 @@ export interface LassoViewProps {
    * værten står selv for sidens handlinger (modulbjælkens Eksportér, Gem, Overvåg).
    */
   frameless?: boolean;
+  /**
+   * Mobil (< 560, 26g.1/26g.2): hver sektion står som kort (1 px kant, radius 12, 16 px luft) i stedet
+   * for at være adskilt af dividere, og sektionsfanerne under hovedet går i fuld bredde. Kun med frameless.
+   */
+  sectionCards?: boolean;
+  /**
+   * Visningen er en sammensat side i portalen (24, 25, 26.2/26.3, 26f.1, 26g): elementerne bruger
+   * sidens rolige former: nøgletal med lodrette linjer uden ramme og sparkline (24.5), personrisiko som
+   * tjeklinjer (25.6) og personhovedets observationslinje med "Se risiko" (25.3). Udeladt: elementernes
+   * egne former (09.1, 16.1, 16.4).
+   */
+  page?: boolean;
 }

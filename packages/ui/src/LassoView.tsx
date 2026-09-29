@@ -148,7 +148,7 @@ function headActionsFor(id: string, name: string, frame: FrameTools): HeadAction
 function headTabsOf(props: LassoViewProps) {
   const t = props.headTabs;
   if (!t) return undefined;
-  return <Tabs level={1} items={t.items} value={t.value} onChange={t.onChange} ariaLabel={t.ariaLabel ?? "Sektioner"} className="lasso-headtabs" />;
+  return <Tabs level={1} items={t.items} value={t.value} onChange={t.onChange} ariaLabel={t.ariaLabel ?? "Sektioner"} maxVisible={t.maxVisible} moreLabel={t.moreLabel} className="lasso-headtabs" />;
 }
 
 function CompanyHeadBridge({ c, ds, props, act, frame }: { c: Extract<ViewComponent, { type: "LassoCompanyHead" }>; ds: Dataset; props: LassoViewProps; act: (a: ViewAction) => void; frame: FrameTools }) {
@@ -188,6 +188,7 @@ function PersonHeadBridge({ c, ds, props, act, frame }: { c: Extract<ViewCompone
             : undefined
       }
       onSeeRisk={sectionAction(props, act, { lassoId: c.person, pageKind: "person", section: "risiko", name, label: "Risiko" })}
+      riskLine={Boolean(props.page)}
       below={full ? headTabsOf(props) : undefined}
     />
   );
@@ -200,7 +201,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoCompanyHead":
       return <CompanyHeadBridge key={key} c={c} ds={empty} props={props} act={act} frame={frame} />;
     case "LassoKeyFigureCards":
-      return <KeyFigureCards key={key} financials={empty.financials[c.company]} metrics={c.metrics} error={err(`financials:${c.company}`)} />;
+      return <KeyFigureCards key={key} financials={empty.financials[c.company]} metrics={c.metrics} plain={c.variant === "plain" || Boolean(props.page)} error={err(`financials:${c.company}`)} />;
     case "LassoBarChart":
       return <BarChart key={key} financials={empty.financials[c.company]} metric={c.metric} years={c.years} error={err(`financials:${c.company}`)} />;
     case "LassoGroupedBarChart":
@@ -334,7 +335,9 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           hideAuditor={page.hideAuditor}
           exclude={c.exclude}
           onOpen={props.host.drillDown ? act : undefined}
-          links={c.variant === "financials" ? statementsLink(c.company, empty, props, act) : undefined}
+          links={c.variant === "financials" && !c.rows ? statementsLink(c.company, empty, props, act) : undefined}
+          years={c.years}
+          maxRows={c.rows}
           onPdf={c.variant === "financials" && empty.financialStatements[c.company]?.pdfUrl ? () => act({ kind: "open-link", url: empty.financialStatements[c.company]!.pdfUrl! }) : undefined}
         />
       );
@@ -466,7 +469,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
         />
       );
     case "LassoTextSections":
-      return <LassoTextSections key={key} sections={empty.textSections[c.company]} title={c.title} variant={c.variant} error={err(`textSections:${c.company}`)} onOpen={props.host.drillDown ? act : undefined} />;
+      return <LassoTextSections key={key} sections={empty.textSections[c.company]} title={c.title} variant={c.variant} folded={c.folded} error={err(`textSections:${c.company}`)} onOpen={props.host.drillDown ? act : undefined} />;
     case "LassoSummary":
       return <LassoSummary key={key} text={c.text} title={c.title} source={c.source} updated={c.updated} />;
     case "LassoTimeline": {
@@ -500,6 +503,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           key={key}
           news={empty.news[k]}
           limit={c.limit}
+          layout={c.layout}
           companyName={mention}
           companyId={k}
           error={err(`news:${k}`)}
@@ -524,7 +528,17 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
         />
       );
     case "LassoPersonNetwork":
-      return <PersonNetwork key={key} network={empty.personNetworks[c.person]} title={c.title} limit={c.limit} error={err(`personNetwork:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} onGraph={props.host.prompt ? () => act({ kind: "prompt", prompt: `Vis netværket for ${empty.persons?.[c.person]?.name ?? c.person} som graf` }) : undefined} />;
+      return (
+        <PersonNetwork
+          key={key}
+          network={empty.personNetworks[c.person]}
+          title={c.title}
+          limit={c.limit}
+          error={err(`personNetwork:${c.person}`)}
+          onOpen={props.host.drillDown ? act : undefined}
+          onGraph={sectionAction(props, act, { lassoId: c.person, pageKind: "person", section: "netvaerk", name: empty.persons[c.person]?.name ?? c.person, label: "Netværk" })}
+        />
+      );
     case "LassoPersonRisk":
       return (
         <PersonRisk
@@ -534,6 +548,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           error={err(`person:${c.person}`)}
           onOpen={props.host.drillDown ? act : undefined}
           onUpgrade={props.host.prompt ? () => act({ kind: "prompt", prompt: "Hvilke Lasso-pakker giver adgang til tjek mod sanktionslister?" }) : undefined}
+          lines={Boolean(props.page)}
         />
       );
     case "LassoPersonStats":
@@ -981,7 +996,7 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
 
   return (
     <div className="lasso-root" data-theme={theme ?? "light"}>
-      <div className={`lasso-frame ${frameless ? "lasso-frame--bare" : ""}`}>
+      <div className={`lasso-frame ${frameless ? "lasso-frame--bare" : ""}${frameless && props.sectionCards ? " lasso-frame--cards" : ""}`}>
         {frameless ? null : (
         <header className="lasso-frame__header">
           {host.back ? (
