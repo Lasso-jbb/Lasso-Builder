@@ -2597,6 +2597,26 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-contact { gap: 0; }
   .lasso-contact__row { align-items: center; min-height: 48px; }
 }
+/* 08.3: ingen titel over blokken på desktop; på mobil overlinjen "KONTAKT" (26a.6). Rækker ca. 36–40 px
+   uden skillelinjer, website som koral link, ekstra værdier som "Se N …" i muted til højre. Handlingerne
+   (Kort, Ring, Kopiér) kun på mobil. */
+.lasso-contact__overline { display: none; margin-bottom: var(--lasso-space-2); font-size: var(--lasso-fs-label); line-height: 14px; font-weight: 600; letter-spacing: var(--lasso-ls-label); text-transform: uppercase; color: var(--lasso-muted); }
+.lasso-contact-section .lasso-contact { gap: var(--lasso-space-1, 4px); }
+.lasso-contact-section .lasso-contact__row { align-items: flex-start; min-height: 36px; padding: 8px 0; }
+.lasso-contact__act { display: none; }
+.lasso-contact__aside { gap: var(--lasso-space-3); }
+.lasso-root .lasso-contact__more { padding: 0; border: 0; background: none; font: inherit; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-muted); cursor: pointer; white-space: nowrap; }
+.lasso-root .lasso-contact__more:hover { color: var(--lasso-accent-text); text-decoration: underline; }
+.lasso-root .lasso-contact__value--accent, .lasso-root a.lasso-contact__value--accent { color: var(--lasso-accent-text); }
+@container lasso (max-width: 560px) {
+  .lasso-contact__overline { display: block; }
+  .lasso-contact__act { display: inline-flex; }
+  .lasso-contact-section .lasso-contact { gap: 0; }
+  .lasso-contact-section .lasso-contact__row { align-items: center; min-height: 48px; padding: 4px 0; }
+  .lasso-contact__value--multiline { flex-direction: row; flex-wrap: wrap; column-gap: 0.3em; }
+  .lasso-contact__value--multiline > span:not(:last-child)::after { content: ","; }
+  .lasso-root .lasso-contact__call { width: 40px; height: 40px; border: 0; border-radius: var(--lasso-radius); background: var(--lasso-accent-soft); color: var(--lasso-accent-text); }
+}
 
 /* ---------- 08.6 Kontaktpersoner, blok på siden (node I6B-0) ---------- */
 /* "Se N …"-links i koral (regel 9); ".lasso-root" foran, så farven vinder over ".lasso-root button { color: inherit }". */

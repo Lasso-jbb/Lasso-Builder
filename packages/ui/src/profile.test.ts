@@ -154,7 +154,7 @@ test("Kontaktblok: adressen udelades, når hovedet viser den; et verificeret CVR
       { phoneNumber: "20 30 40 50", callable: true, sources: ["Website"] },
     ],
   };
-  const html = renderToStaticMarkup(createElement(LassoContact, { contact, omitAddress: true }));
+  const html = renderToStaticMarkup(createElement(LassoContact, { contact, omitAddress: true, foldExtra: false }));
   assert.doesNotMatch(html, /Prøvevej 1/);
   assert.equal(count(html, "86 12 34 56"), 1);
   assert.match(html, /20 30 40 50/);

@@ -164,17 +164,20 @@ function LiveNumberStates() {
     verifiedNumbers: [{ phoneNumber: "86123456", callable: true, sources: ["CVR"], score: 90 }],
   } as ContactVM;
   return (
+    // Blokken står i kontaktkolonnens bredde (ca. 380 px), som i Paper.
+    <div style={{ maxWidth: 380 }}>
     <Stack>
       <Labelled label="Verificeret nu + Udgået (gennemstreget)">
-        <LassoContact contact={withNumbers} now={now} onCopy={noop} />
+        <LassoContact contact={withNumbers} now={now} onCopy={noop} foldExtra={false} />
       </Labelled>
       <Labelled label="Tjekker … (opslag i gang, højst 10 sek.)">
-        <LassoContact contact={stale} now={now} onVerify={() => new Promise(() => undefined)} onCopy={noop} />
+        <LassoContact contact={stale} now={now} onVerify={() => new Promise(() => undefined)} onCopy={noop} foldExtra={false} />
       </Labelled>
       <Labelled label="Tidsstempel (verificeret for N dage siden)">
-        <LassoContact contact={stale} now={now} onCopy={noop} />
+        <LassoContact contact={stale} now={now} onCopy={noop} foldExtra={false} />
       </Labelled>
     </Stack>
+    </div>
   );
 }
 
