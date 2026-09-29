@@ -154,7 +154,7 @@ export function ChartReadout({ title, rows, note, hint = "Tryk på et år for at
               <span className="lasso-pick__value">{r.value}</span>
               {one && r.change ? (
                 <>
-                  {", "}
+                  {",\u00a0"}
                   <span className={`lasso-pick__change lasso-pick__change--${r.change.dir}`}>{r.change.text}</span>
                 </>
               ) : null}

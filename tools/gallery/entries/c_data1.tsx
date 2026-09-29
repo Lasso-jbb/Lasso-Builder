@@ -165,7 +165,8 @@ function SeeAllPanel({ view = "detail", minHeight = 940 }: { view?: "list" | "de
   return (
     <div style={{ minHeight }}>
       <NoAnim />
-      <style>{`.lasso-layer{position:absolute!important;height:${minHeight}px!important}.lasso-sidepanel-wrap{position:absolute!important}.lasso-panellist__row:focus-visible{outline:none!important}`}</style>
+      {/* Kontrol r5 (08.9): laget dækker hele billedet inkl. galleriets luft (24 px top og bund), så panelet ikke rager ud under rammen */}
+      <style>{`.lasso-layer{position:absolute!important;height:${minHeight + 48}px!important}.lasso-sidepanel-wrap{position:absolute!important}.lasso-panellist__row:focus-visible{outline:none!important}`}</style>
       <LassoContactPersons
         data={LX_DATA}
         companyName="LASSO X A/S"

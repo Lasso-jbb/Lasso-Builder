@@ -203,7 +203,13 @@ export function AppShell({ rail, tabs, mobile, tablet, children, panel, panelLab
         <div className="lasso-sheet-backdrop" onClick={() => setSheet(false)}>
           <div id="lasso-sheet-sections" className="lasso-sheet" role="dialog" aria-label="Sektioner" onClick={(e) => e.stopPropagation()}>
             <span className="lasso-sheet__grip" aria-hidden="true" />
-            <div className="lasso-sheet__overline">Sektioner, {title}</div>
+            <div className="lasso-sheet__top">
+              <div className="lasso-sheet__overline">Sektioner, {title}</div>
+              {/* G8: luk er altid et ×-ikon */}
+              <button type="button" className="lasso-sheet__close" aria-label="Luk sektioner" onClick={() => setSheet(false)}>
+                <ShellIcon name="close" size={18} />
+              </button>
+            </div>
             <ul className="lasso-sheet__list">
               {mobile!.sections!.map((s) => {
                 const on = s.id === mobile!.activeSection;

@@ -535,7 +535,7 @@ export function CompanyTable({
                           {c === "navn" ? (
                             <>
                               <span className="lasso-table__name">{r.name}</span>
-                              {(showCvrUnderName && r.cvr) || (statusUnderName && r.status && r.statusKind && r.statusKind !== "active") || r.city ? (
+                              {(showCvrUnderName && r.cvr) || (r.status && r.statusKind && r.statusKind !== "active") || r.city ? (
                                 <span className="lasso-table__sub">
                                   {showCvrUnderName && r.cvr ? <span>CVR {r.cvr}</span> : null}
                                   {/* 26f.2: byen står under navnet (med by-kolonne kun på tablet, hvor kolonnen skjules). */}
@@ -545,6 +545,13 @@ export function CompanyTable({
                                       {showCvrUnderName && r.cvr ? ", " : ""}
                                       <span className={`lasso-status lasso-status--${statusTone(r.status, r.statusKind)}`}>{r.status}</span>
                                     </>
+                                  ) : null}
+                                  {/* Kontrol r5 (26f.2): på tablet (≤ 960) skjules statuskolonnen; en status, der ikke er Aktiv, står da under navnet. */}
+                                  {!statusUnderName && r.status && r.statusKind && r.statusKind !== "active" ? (
+                                    <span className="lasso-ctable__substatus">
+                                      {(showCvrUnderName && r.cvr) || r.city ? ", " : ""}
+                                      <span className={`lasso-status lasso-status--${statusTone(r.status, r.statusKind)}`}>{r.status}</span>
+                                    </span>
                                   ) : null}
                                 </span>
                               ) : null}

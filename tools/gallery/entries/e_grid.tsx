@@ -497,7 +497,7 @@ export function ElementTable() {
 /* ---------- 23.3 Default-siden og spørgsmålet ---------- */
 
 const ORDER: { t: string; d: string }[] = [
-  { t: "Hvem er de? Virksomhedshoved (08), fuld", d: "Navn, status, form, branche, adresse og sidens handlinger (Overvåg, Gem, Eksportér). Altid første bånd." },
+  { t: "Hvem er de? Virksomhedshoved (08), fuld", d: "Kun navnet (+ status) og sidens handlinger med funktion (Overvåg, Gem, Eksportér); ingen faktalinje (G9). Altid første bånd." },
   { t: "Hvor store er de, og går det godt? Nøgletalskort (09), fuld", d: "Omsætning eller bruttofortjeneste, resultat, egenkapital, ansatte med ændring mod året før. Udelades uden regnskab." },
   { t: "Hvad laver de? Virksomhedsprofil (12), 1/2", d: "Formål og tegningsregler fra CVR plus analysens korte afsnit, klippet efter 6 linjer med 'Vis mere'. Flex: linjer." },
   { t: "Stamdata og revisor? Virksomhedsoplysninger (09), 1/2", d: "Revisor, seneste revisorskift, regnskabsperiode, branchekode, kommune, region. Uden det, hovedet og kontaktblokken allerede viser. Høj mod høj (regel a)." },

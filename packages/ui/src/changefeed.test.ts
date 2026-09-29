@@ -169,14 +169,14 @@ test("21.4: kontakterne står som i Paper: status og konkurs, nyt regnskab, lede
   assert.ok(MONITOR_TYPES.every((t) => (CHANGE_TYPES as readonly string[]).includes(t)));
 });
 
-test("26e.4: mobilen har hoved, 'siden 03.2025, 3 emner', emner med undertekst og en Levering-række", () => {
-  const html = renderToStaticMarkup(
-    createElement(MonitorSettings, { companyName: "LASSO X A/S", monitoring: true, since: "2025-03-03", delivery: "Push + e-mail dagligt", settings: { status: true, regnskab: true, ledelse: true, kredit: false }, onToggle: () => {}, onStop: () => {} }),
-  );
+test("26e.4: mobilen har hoved, kun titlen i statusrækken, emner med undertekst og Levering kun med handling (G1)", () => {
+  const props = { companyName: "LASSO X A/S", monitoring: true, since: "2025-03-03", delivery: "Push + e-mail dagligt", settings: { status: true, regnskab: true, ledelse: true, kredit: false }, onToggle: () => {}, onStop: () => {} };
+  const html = renderToStaticMarkup(createElement(MonitorSettings, { ...props, onDelivery: () => {} }));
   assert.match(html, /lasso-monitor__mhead-title">Overvågning<[^]*LASSO X A\/S/);
-  assert.match(html, /lasso-monitor__mstatus-sub">siden 03\.2025, 3 emner</);
+  assert.doesNotMatch(html, /lasso-monitor__mstatus-sub|3 emner/);
   assert.match(html, />Regnskab<span class="lasso-monitor__label-sub">Nyt regnskab, revisorforbehold</);
   assert.match(html, />Levering<[^]*Push \+ e-mail dagligt/);
+  assert.doesNotMatch(renderToStaticMarkup(createElement(MonitorSettings, props)), />Levering</);
 });
 
 test("21.1: typen Kredit udgår i feed og filtervalg (Jakob 15:41)", () => {

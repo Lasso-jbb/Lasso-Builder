@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { amountScale, currencyUnit, formatNumber, formatPercent, formatScaled, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, changePercent, type FinancialsVM, type Metric } from "@lasso/spec";
 import { DataState, Missing, Section, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
@@ -93,6 +93,21 @@ export function MultiYearTable({ financials, metrics, years, title, error, varia
   const heading = title ?? "Flerårstabel";
   const [ref, W] = useWidth<HTMLDivElement>(1048);
   const [allRows, setAllRows] = useState(false);
+  // Kontrol r5 (10.2 mobil): hjælpeteksten nævner kun de år, der faktisk ligger uden for billedet (målt).
+  const mobileTable = useRef<HTMLTableElement>(null);
+  const [fitYears, setFitYears] = useState<number | null>(null);
+  useEffect(() => {
+    const measure = () => {
+      const t = mobileTable.current;
+      if (!t || !t.parentElement) return;
+      const right = t.parentElement.getBoundingClientRect().right + 1;
+      const cols = Array.from(t.querySelectorAll("thead th:not(.lasso-myt-m__name)"));
+      setFitYears(cols.filter((th) => th.getBoundingClientRect().right <= right).length);
+    };
+    measure();
+    // Skrifttypen kan ændre kolonnebredderne efter første måling.
+    if (typeof document !== "undefined") void document.fonts?.ready.then(measure);
+  }, [W, financials, years]);
   if (!financials) {
     return (
       <Section title={heading} span="full">
@@ -158,13 +173,13 @@ export function MultiYearTable({ financials, metrics, years, title, error, varia
     // 26c.3 variant A (ED8-0): fast navnekolonne med lodret kant, hovedrække på grå flade, nyeste år først
     // (600), vandret rul til de ældre år med en hjælpetekst under tabellen. Højst 4 rækker, før resten foldes.
     const newestFirst = [...shown].reverse();
-    const visibleYears = Math.max(1, Math.floor((W - 120) / 72));
+    const visibleYears = fitYears ?? Math.max(1, Math.floor((W - 120) / 60));
     const hidden = newestFirst.slice(visibleYears).map((y) => y.year);
     const mRows = chosen.length > MOBILE_A_ROWS && !allRows ? chosen.slice(0, MOBILE_A_ROWS) : chosen;
     return (
       <Section title={heading} subtitle={scale ? scale.label : undefined} span="full">
         <div className="lasso-myt-m" ref={ref}>
-          <table className="lasso-myt-m__table" data-variant="A">
+          <table className="lasso-myt-m__table" data-variant="A" ref={mobileTable}>
             <thead>
               <tr>
                 <th scope="col" className="lasso-myt-m__name">Nøgletal</th>

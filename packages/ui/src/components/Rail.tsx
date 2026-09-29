@@ -50,16 +50,23 @@ export interface RailProps {
    * Bundlinje nederst i skinnen (25.2): dæmpet navnelogo + kildelinje, fx "Data fra CVR, Erhvervsstyrelsen
    * og Creditsafe" (regel 15: logoet i bundlinjen med kildelinje). Skjules i den smalle ikonskinne.
    */
-  bottom?: { source: string };
+  /** Bundlinjen med navnelogoet. source udgår (G3: ingen kildelinje) og vises kun, hvis den gives. */
+  bottom?: { source?: string };
   className?: string;
 }
 
 function itemIcon(item: RailItem): ReactNode {
   if (item.icon === "letter") {
+    // Kontrol r5 (26f.1): i den smalle ikonskinne (< 1200) ingen bogstaver; listen vises med liste-ikonet.
     return (
-      <span className="lasso-rail__letter" aria-hidden="true">
-        {item.label.trim().charAt(0).toUpperCase()}
-      </span>
+      <>
+        <span className="lasso-rail__letter" aria-hidden="true">
+          {item.label.trim().charAt(0).toUpperCase()}
+        </span>
+        <span className="lasso-rail__icon lasso-rail__letter-icon" aria-hidden="true">
+          <ShellIcon name="list" />
+        </span>
+      </>
     );
   }
   if (item.icon) return <span className="lasso-rail__icon">{item.icon}</span>;
@@ -127,7 +134,7 @@ export function Rail({ groups, activeItem, onToggleGroup, onLogo, logo = true, b
       {bottom ? (
         <div className="lasso-rail__bottom">
           <LassoWordmark className="lasso-rail__bottom-mark" />
-          <span className="lasso-rail__bottom-source">{bottom.source}</span>
+          {bottom.source ? <span className="lasso-rail__bottom-source">{bottom.source}</span> : null}
         </div>
       ) : null}
     </nav>

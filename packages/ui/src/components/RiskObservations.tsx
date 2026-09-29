@@ -4,16 +4,17 @@ import type { ViewAction } from "../types.js";
 import { DataState, Section, SeverityIcon, SourceLine, severityWord, stateForError } from "../primitives.js";
 
 /**
- * Alvor som ord i mobilens filterchips (26d.6): høj, middel, info. Neutrale fakta (0) er ikke et
+ * Alvorsniveau (bruges i A4-rapporten): høj, middel, info. Mobilens filterchips bruger desktopordene (vigtig, mulig, info). Neutrale fakta (0) er ikke et
  * fund og tælles for sig. Desktop (17.2) bruger skalaens ord (severityWord: Vigtig, Mulig vigtig, Info, Neutral).
  */
 export function observationLevel(severity: Severity): "høj" | "middel" | "info" | "neutral" {
   return severity === 100 ? "høj" : severity === 50 ? "middel" : severity === 25 ? "info" : "neutral";
 }
 
-const FILTERS: { severity: Severity; word: "høj" | "middel" | "info" }[] = [
-  { severity: 100, word: "høj" },
-  { severity: 50, word: "middel" },
+/** Kontrol r5 (17.2): mobilens filterchips bruger samme ord som desktop (vigtig, mulig, info). */
+const FILTERS: { severity: Severity; word: "vigtig" | "mulig" | "info" }[] = [
+  { severity: 100, word: "vigtig" },
+  { severity: 50, word: "mulig" },
   { severity: 25, word: "info" },
 ];
 
@@ -22,7 +23,7 @@ const SHOWN = 6;
 /** Kompakt (uden for fokus risiko): højst tre. */
 const COMPACT_SHOWN = 3;
 
-/** "1 høj, 2 middel og 3 info" som sætning til skærmlæsere og print. */
+/** "1 vigtig, 2 mulig og 3 info" som sætning til skærmlæsere og print. */
 export function observationSummary(rows: readonly ObservationRowVM[]): string {
   const counted = rows.filter((r) => !r.notAvailable);
   const parts = FILTERS.map((f) => ({ n: counted.filter((r) => r.severity === f.severity).length, word: f.word }))

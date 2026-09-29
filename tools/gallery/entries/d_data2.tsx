@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { ownershipGraphKey, type Dataset, type OwnershipGraphVM } from "@lasso/spec";
 import {
-  BellIcon,
   BulkBar,
   CompanyTable,
   DownloadIcon,
@@ -124,6 +123,27 @@ function addThreeCycle(ds: Dataset) {
   };
 }
 
+/* Kontrol r5 (14.1/14.4): mange ejere i ét lag, så den sammenklappede node "N flere ejere" med den samlede,
+   udregnede andel på kanten kan ses som diagram. Eksempeldata. */
+function addManyOwners(ds: Dataset) {
+  // Direkte ejere foldes aldrig (14.4), så de mange ejere står i lag 2: over holdingselskabet.
+  const key = ownershipGraphKey({ company: LANDBRUG, ingoingDepth: 2, outgoingDepth: 0 });
+  const mid = "CVR-1-99000210";
+  const names = ["Anne Eksempel", "Bo Eksempel", "Carla Prøve", "Dan Prøve", "Eva Eksempel", "Finn Prøve", "Gitte Eksempel", "Hans Prøve", "Ida Eksempel", "Jens Prøve"];
+  const shares: [number, number][] = [[20, 24.99], [15, 19.99], [10, 14.99], [10, 14.99], [5, 9.99], [5, 9.99], [5, 9.99], [5, 9.99], [5, 9.99], [5, 9.99]];
+  const nodes: OwnershipGraphVM["nodes"] = [
+    { id: LANDBRUG, name: "Eksempel Landbrug I/S", kind: "company", cvr: "99000013", form: "I/S", status: "Aktiv", statusKind: "active", root: true },
+    { id: mid, name: "Eksempel Familieholding ApS", kind: "company", cvr: "99000210", form: "ApS", status: "Aktiv", statusKind: "active" },
+  ];
+  const edges: OwnershipGraphVM["edges"] = [{ from: mid, to: LANDBRUG, share: [100, 100], since: "2015-01-01" }];
+  names.forEach((name, i) => {
+    const id = `CVR-3-49000000${String(i).padStart(2, "0")}`;
+    nodes.push({ id, name, kind: "person" });
+    edges.push({ from: id, to: mid, share: shares[i]!, since: "2018-01-01" });
+  });
+  ds.ownershipGraphs[key] = { rootId: LANDBRUG, ingoingDepth: 2, outgoingDepth: 0, fetchedAt: "2026-09-29T08:00:00Z", nodes, edges };
+}
+
 /* 14.2: alle nodetilstande i én lille graf. */
 const NODE_GRAPH: OwnershipGraphVM = {
   rootId: BYG,
@@ -170,10 +190,10 @@ const FULL_GRAPH: OwnershipGraphVM = {
   ],
 };
 
-/* 15.2: handlingerne som i Paper, med ikoner. */
+/* 15.2: handlingerne som i CompanyTable, med ikoner. "Overvåg" vises ikke: ingen vært har en overvåg-handling
+   for flere rækker endnu (G1, kontrol r5). */
 const bulkActions = (): BulkAction[] => [
   { id: "list", label: "Føj til liste", icon: <PlusIcon />, onSelect: noop },
-  { id: "monitor", label: "Overvåg", icon: <BellIcon />, onSelect: noop },
   { id: "export", label: "Eksportér", icon: <DownloadIcon />, onSelect: noop },
   { id: "remove", label: "Fjern fra liste", onSelect: noop, destructive: true },
 ];
@@ -226,7 +246,7 @@ export const entries: GalleryEntry[] = [
     title: "Ejerdiagram-noder (nodetilstande)",
     node: "AZK-0",
     render: () => <OwnershipDiagram graph={NODE_GRAPH} title="Nodetilstande" />,
-    note: "Nodetilstandene i én graf: fokus, virksomhed, person, ophørt, udenlandsk og ukendt ejerskab (< 100 % registreret, under fokus). 'Valgt' (klik) og hover kan ikke vises statisk; folde-noden '+N flere' ses i 14.4.",
+    note: "Nodetilstandene i én graf: fokus, virksomhed, person, ophørt, udenlandsk og ukendt ejerskab (< 100 % registreret, under fokus). 'Valgt' (klik) og hover kan ikke vises statisk; folde-noden 'N flere ejere' ses i 14.4.",
   },
   {
     nr: "14.3",
@@ -251,11 +271,13 @@ export const entries: GalleryEntry[] = [
     nr: "14.4",
     title: "Layoutregler, eksempler (standardlayout med foldning og Pr. dato)",
     node: "B2Y-0",
-    gridWidth: 760,
+    // Kontrol r5: eksemplerne tegnes som diagram i fuld bredde (i ½ faldt de tilbage til listeformen).
     spec: company("Eksempel Holding ApS", [
-      { type: "LassoOwnershipDiagram", company: HOLDING, ingoingDepth: 1, outgoingDepth: 2, title: "Ejere over, ejede under, +N flere over 5 i et lag" },
-      { type: "LassoOwnershipDiagram", company: HOLDING, ingoingDepth: 1, outgoingDepth: 1, onDate: "2024-01-01", title: "Pr. dato 01.01.2024: ophørt relation stiplet" },
+      { type: "LassoOwnershipDiagram", company: HOLDING, ingoingDepth: 1, outgoingDepth: 2, width: "full", title: "Ejere over, ejede under, foldning til \"N flere\" over 5 i et lag" },
+      { type: "LassoOwnershipDiagram", company: HOLDING, ingoingDepth: 1, outgoingDepth: 1, onDate: "2024-01-01", width: "full", title: "Pr. dato 01.01.2024: ophørt relation stiplet" },
+      { type: "LassoOwnershipDiagram", company: LANDBRUG, ingoingDepth: 2, outgoingDepth: 0, width: "full", title: "Mange ejere i ét lag: \"N flere ejere\" med den samlede andel på kanten" },
     ]),
+    mutate: addManyOwners,
     note: "Reglerne fra 14.4 vist på demokoncernen: standardlayout med foldning og 'Pr. dato' (ophørt relation stiplet).",
   },
   {
@@ -263,10 +285,10 @@ export const entries: GalleryEntry[] = [
     title: "Ejerdiagram, særlige tilstande",
     node: "DDU-0",
     spec: company("Særlige tilstande", [
-      { type: "LassoOwnershipDiagram", company: EJENDOMME, ingoingDepth: 0, outgoingDepth: 7, title: "Dyb kæde, 7 lag foldes" },
-      { type: "LassoOwnershipDiagram", company: TRANSPORT, ingoingDepth: 2, outgoingDepth: 1, title: "Cirkulært ejerskab over flere led" },
-      { type: "LassoOwnershipDiagram", company: MASKIN, ingoingDepth: 1, outgoingDepth: 0, title: "Udenlandske ejere og ukendt < 5 %" },
-      { type: "LassoOwnershipDiagram", company: KONSULENT, ingoingDepth: 2, outgoingDepth: 1, title: "Tom tilstand, ingen registrerede ejere" },
+      { type: "LassoOwnershipDiagram", company: EJENDOMME, ingoingDepth: 0, outgoingDepth: 7, width: "full", title: "Dyb kæde, 7 lag foldes" },
+      { type: "LassoOwnershipDiagram", company: TRANSPORT, ingoingDepth: 2, outgoingDepth: 1, width: "full", title: "Cirkulært ejerskab over flere led" },
+      { type: "LassoOwnershipDiagram", company: MASKIN, ingoingDepth: 1, outgoingDepth: 0, width: "full", title: "Udenlandske ejere og ukendt < 5 %" },
+      { type: "LassoOwnershipDiagram", company: KONSULENT, ingoingDepth: 2, outgoingDepth: 1, width: "full", title: "Tom tilstand, ingen registrerede ejere" },
     ]),
     mutate: (ds) => {
       addForeignOwner(ds);
@@ -291,7 +313,7 @@ export const entries: GalleryEntry[] = [
     title: "Massehandlinger (handlingsbjælke)",
     node: "BA7-0",
     only: "desktop",
-    note: "Mobil: se de to 15.2-mobilindgange (bundbjælke og Flere-ark, Paper LOA-0).",
+    note: "Samme handlinger som CompanyTable: Føj til liste, Eksportér og Fjern fra liste. Overvåg vises først, når værten har en overvåg-handling for flere rækker (G1). Mobil: se de to 15.2-mobilindgange (bundbjælke og Flere-ark, Paper LOA-0).",
     render: () => (
       <Stack
         items={[
@@ -467,7 +489,7 @@ export const entries: GalleryEntry[] = [
     nr: "21.2",
     title: "Notifikationspanel",
     node: "CAY-0",
-    note: "På mobil (390) fylder panelet skærmen som ark (fast placeret); i portalen lukkes det med Luk.",
+    note: "På mobil (390) fylder panelet skærmen som ark (fast placeret); i portalen lukkes det med × (G8).",
     render: () => (
       // På mobil er panelet et fast ark i fuld skærm (position: fixed); højden giver billedet plads til det.
       <div style={{ maxWidth: 400, minHeight: 620 }}>

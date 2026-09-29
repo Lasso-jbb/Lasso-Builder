@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { formatDate, formatNumber } from "@lasso/spec";
+import { formatNumber } from "@lasso/spec";
 import { DataState } from "../primitives.js";
 import { Icon } from "./Icon.js";
 import { HIDDEN_CHANGE_TYPES } from "./ChangeFeed.js";
@@ -96,7 +96,7 @@ export interface MonitorSettingsProps {
  * Mobil (26e.4): hoved "Overvågning" + navn, fremhævet 52 px række "Overvåger" + "siden 03.2026, 3 emner"
  * med kontakt, fire 48 px emnerækker med undertekst og en "Levering"-række nederst.
  */
-export function MonitorSettings({ companyName, monitoring, since, frequency, settings, onToggle, onStart, onStop, delivery, onDelivery, loading, error, onRetry }: MonitorSettingsProps) {
+export function MonitorSettings({ companyName, monitoring, frequency, settings, onToggle, onStart, onStop, delivery, onDelivery, loading, error, onRetry }: MonitorSettingsProps) {
   if (loading || error) {
     return (
       <div className="lasso-monitor">
@@ -106,7 +106,6 @@ export function MonitorSettings({ companyName, monitoring, since, frequency, set
   }
   // 21.1/21.4 (Jakob 29.09): rækken "Kreditscore ændrer sig" udgår (afklaret 15:41).
   const types = MONITOR_TYPES.filter((t) => !(HIDDEN_CHANGE_TYPES as readonly string[]).includes(t));
-  const mobileOn = types.filter((t) => MOBILE[t] && settings[t]).length;
   return (
     <div className={`lasso-monitor ${monitoring ? "lasso-monitor--on" : ""}`}>
       {/* 26e.4 mobil: hoved, overvågningsstatus som fremhævet 52 px række med kontakt. */}
@@ -119,7 +118,7 @@ export function MonitorSettings({ companyName, monitoring, since, frequency, set
           <BellIcon filled={false} size={18} />
           <span className="lasso-monitor__mstatus-text">
             <span className="lasso-monitor__mstatus-title">{monitoring ? "Overvåger" : "Overvåg"}</span>
-            {monitoring ? <span className="lasso-monitor__mstatus-sub">{[since ? `siden ${formatDate(since).slice(3)}` : null, `${formatNumber(mobileOn)} ${mobileOn === 1 ? "emne" : "emner"}`].filter(Boolean).join(", ")}</span> : null}
+            {/* 21.4 (Jakob, kontrol r5): kun titlen, også på mobil (ingen "siden …, N emner") */}
           </span>
         </span>
         <Toggle
@@ -166,8 +165,9 @@ export function MonitorSettings({ companyName, monitoring, since, frequency, set
           })}
         </ul>
       ) : null}
-      {monitoring ? (
-        <button type="button" className="lasso-monitor__delivery" onClick={onDelivery} disabled={!onDelivery}>
+      {/* G1 (kontrol r5): "Levering" kun, når værten kan åbne leveringsindstillingerne */}
+      {monitoring && onDelivery ? (
+        <button type="button" className="lasso-monitor__delivery" onClick={onDelivery}>
           <span>Levering</span>
           <span className="lasso-monitor__delivery-value">
             {delivery ?? `E-mail ${frequency ?? "dagligt"}`}

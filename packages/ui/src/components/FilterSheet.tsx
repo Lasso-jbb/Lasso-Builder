@@ -3,6 +3,7 @@
  * det fulde filterpanel (02a/02b); dette er den kompakte udgave i tabellen.
  */
 import { useMemo, useState } from "react";
+import { ShellIcon } from "./ShellIcons.js";
 import {
   FIELD_BY_KEY,
   FIELDS,
@@ -282,7 +283,7 @@ export function FilterSheet({
   defaultEdit?: string;
 }) {
   return (
-    <Dialog open={open} title={title} onClose={onClose} className="lasso-dialog--filters lasso-dialog--fsheet">
+    <Dialog open={open} title={title} onClose={onClose} className="lasso-dialog--filters lasso-dialog--fsheet" initialFocus="panel">
       {open ? <FilterSheetBody criteria={criteria} fields={fields} count={count} title={title} defaultEdit={defaultEdit} onClose={onClose} onApply={(c) => (onApply(c), onClose())} /> : null}
     </Dialog>
   );
@@ -374,9 +375,6 @@ function FilterSheetBody({
 
   return (
     <div className="lasso-fsheet">
-      <button type="button" className="lasso-sr" onClick={onClose}>
-        Luk filtre
-      </button>
       <div className="lasso-fsheet__head">
         <button type="button" className="lasso-fsheet__reset" onClick={() => setCrit([])} disabled={crit.length === 0}>
           Nulstil
@@ -384,7 +382,10 @@ function FilterSheetBody({
         <span className="lasso-fsheet__title" aria-hidden="true">
           {title}
         </span>
-        <span className="lasso-fsheet__spacer" />
+        {/* G8: luk er altid et ×-ikon */}
+        <button type="button" className="lasso-fsheet__close" aria-label="Luk filtre" onClick={onClose}>
+          <ShellIcon name="close" size={18} />
+        </button>
       </div>
       <div className="lasso-fsheet__list">
         {all.map((sf) => {

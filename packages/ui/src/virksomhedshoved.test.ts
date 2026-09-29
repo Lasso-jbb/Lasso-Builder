@@ -50,10 +50,10 @@ test("08.1: Overvåger er samme knap i valgt tilstand (aria-pressed, udfyldt iko
   assert.deepEqual([...out.matchAll(/<span>(Eksportér|Gemt|Overvåger)<\/span>/g)].map((m) => m[1]), ["Eksportér", "Gemt", "Overvåger"]);
 });
 
-test("08.1: konkurs med dato i mørk rød og binavn i muted; ingen faktalinje (G9)", () => {
+test("08.1: konkurs med dato i mørk rød; intet binavn og ingen faktalinje (G9, kontrol r5 08.8)", () => {
   const out = html(h(CompanyHead, { company: energi }));
   assert.match(out, /lasso-company__status--warning">Under konkurs, siden 03\.06\.2026</);
-  assert.match(out, /lasso-company__alias">Binavn: Eksempel Vind</);
+  assert.doesNotMatch(out, /Binavn/);
   assert.doesNotMatch(out, /kurator: Advokat Eksempel/);
 });
 
@@ -81,13 +81,11 @@ test("08.1/30: kompakt 56 px og linje 40 px", () => {
 
 const obs = (sev: (0 | 25 | 50 | 100)[]): ObservationsVM => ({ lassoId: byg.lassoId, observations: sev.map((severity, i) => ({ id: `o${i}`, severity, title: i === 0 ? "Soliditetsgrad 17,3 % er under branchemedianen på 34 %" : `Observation ${i}` })) });
 
-test("24.4: 'Se risiko'-linjen kun ved en observation på 50+, med ikon, ord og link", () => {
+test("G9 (kontrol r5, 30.3): ingen observationslinje under navnet, heller ikke ved observationer på 50+", () => {
   assert.doesNotMatch(html(h(CompanyHead, { company: byg, risk: obs([25, 0]) })), /lasso-headrisk/);
   const out = html(h(CompanyHead, { company: byg, risk: obs([50, 25, 25]), onSeeRisk: noop }));
-  assert.match(out, /1 mulig vigtig observation: soliditetsgrad 17,3 % er under branchemedianen på 34 %\. 2 til orientering\./);
-  assert.match(out, /lasso-sev-icon--50/);
-  assert.match(out, />Se risiko</);
-  assert.match(html(h(CompanyHead, { company: byg, risk: obs([100]) })), /1 vigtig observation/);
+  assert.doesNotMatch(out, /lasso-headrisk|Se risiko/);
+  assert.doesNotMatch(html(h(CompanyHead, { company: byg, risk: obs([100]) })), /vigtig observation/);
 });
 
 test("08.2: sektionsfaner under hovedet via LassoView.headTabs", () => {

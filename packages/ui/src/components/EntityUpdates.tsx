@@ -16,7 +16,7 @@ export interface EntityUpdateVM {
   to?: string;
   /** ISO-dato eller tidsstempel. */
   at: string;
-  /** Kildelinje under teksten, fx "CVR, gældende fra 01.09.2026" (28.3). */
+  /** Tredje linje under teksten, fx "gældende fra 01.09.2026" (28.3; ingen kildetype, jf. 21.1). */
   source?: string;
 }
 
