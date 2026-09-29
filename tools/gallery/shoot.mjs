@@ -15,21 +15,29 @@ const page = pathToFileURL(join(out, "gallery.html")).href;
 const b = await chromium.launch();
 const sel = manifest.filter((m) => !filter || m.nr.startsWith(filter));
 const errors = [];
-for (const m of sel) {
+async function shootOne(m) {
   const widths = m.only === "mobile" ? [390] : m.only === "desktop" ? [m.desktopWidth ?? 1200] : [m.desktopWidth ?? 1200, 390];
   m.shots = [];
   for (const w of widths) {
     const p = await b.newPage({ viewport: { width: w, height: 800 }, deviceScaleFactor: 1 });
     p.on("pageerror", (e) => errors.push(`${m.nr} ${m.title} @${w}: ${e.message}`));
-    await p.goto(`${page}?id=${m.id}`);
-    await p.waitForFunction(() => window.__GALLERY_READY__ === true, null, { timeout: 5000 }).catch(() => undefined);
-    await p.waitForTimeout(500);
     const file = join(shots, `${String(m.id).padStart(3, "0")}-${w}.png`);
-    await p.locator("#stage").screenshot({ path: file });
-    m.shots.push({ w, file });
+    try {
+      await p.goto(`${page}?id=${m.id}`, { timeout: 20000 });
+      await p.waitForFunction(() => window.__GALLERY_READY__ === true, null, { timeout: 5000 }).catch(() => undefined);
+      await p.waitForTimeout(500);
+      await p.locator("#stage").screenshot({ path: file, animations: "disabled", timeout: 20000 });
+      m.shots.push({ w, file });
+    } catch (e) {
+      errors.push(`${m.nr} ${m.title} @${w}: skærmbillede fejlede: ${e.message.split("\n")[0]}`);
+    }
     await p.close();
   }
 }
+const queue = [...sel];
+await Promise.all(Array.from({ length: 4 }, async () => {
+  while (queue.length) await shootOne(queue.shift());
+}));
 writeFileSync(join(out, "shots.json"), JSON.stringify(sel, null, 1));
 
 // PDF: én side pr. element, desktop til venstre (skaleret) og mobil til højre.
