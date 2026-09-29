@@ -176,7 +176,7 @@ export const WidthTable = () => (
   <Block label="23.2, Trin 2, Kolonnebredder ved 1440 px">
     <DocTable
       cols={[{ label: "Zone" }, { label: "Med panel", width: 120, align: "right", tone: "ink" }, { label: "Uden panel", width: 120, align: "right", tone: "ink" }]}
-      rows={WIDTH_ROWS.map(([z, a, b, strong]) => (strong ? { emph: [z, a, b] } : [z, a, b === "—" ? <span style={{ color: "var(--lasso-faint)" }}>—</span> : b]))}
+      rows={WIDTH_ROWS.map(([z, a, b, strong]) => (strong ? { emph: [z, a, b] } : [z, a, b === "-" ? <span style={{ color: "var(--lasso-faint)" }}>-</span> : b]))}
     />
     <p style={note}>{WIDTH_NOTE}</p>
   </Block>

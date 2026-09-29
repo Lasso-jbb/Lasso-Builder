@@ -3,14 +3,14 @@ import { Section } from "../primitives.js";
 import { Menu } from "./Menu.js";
 import { ShellIcon, type ShellIconName } from "./ShellIcons.js";
 
-/** Katalog 08.4: navn og ikon pr. Lasso-værktøj. */
+/** Katalog 08.4: navn og ikon pr. Lasso-værktøj (ikonerne som i Paper 9TL-0, Jakob 29.09). */
 export const SHORTCUT_LABELS: Record<ShortcutTool, { label: string; icon: ShellIconName }> = {
-  ejerdiagram: { label: "Ejerdiagram", icon: "network" },
-  regnskabsanalyse: { label: "Regnskabsanalyse", icon: "document" },
-  noegletal: { label: "Nøgletal", icon: "trend" },
-  ejendomme: { label: "Ejendomme", icon: "home" },
-  tinglysning: { label: "Tinglysning", icon: "book" },
-  firmaindsigt: { label: "Firmaindsigt", icon: "sparkle" },
+  ejerdiagram: { label: "Ejerdiagram", icon: "tool-ownership" },
+  regnskabsanalyse: { label: "Regnskabsanalyse", icon: "tool-analysis" },
+  noegletal: { label: "Nøgletal", icon: "tool-keyfigures" },
+  ejendomme: { label: "Ejendomme", icon: "tool-property" },
+  tinglysning: { label: "Tinglysning", icon: "tool-registry" },
+  firmaindsigt: { label: "Firmaindsigt", icon: "tool-insight" },
   ledelse: { label: "Ledelse", icon: "user" },
   kontakt: { label: "Kontakt", icon: "phone" },
   historik: { label: "Historik", icon: "clock" },
@@ -40,7 +40,7 @@ export function Shortcuts({ items, title, bare = false }: { items: readonly Shor
     <div className="lasso-shortcuts" role="group" aria-label={title ?? "Genveje"}>
       {shown.map((s) => (
         <button key={s.id} type="button" className="lasso-shortcut" onClick={s.onSelect}>
-          <ShellIcon name={s.icon} size={15} className="lasso-shortcut__icon" />
+          <ShellIcon name={s.icon} size={16} className="lasso-shortcut__icon" />
           <span>{s.label}</span>
         </button>
       ))}

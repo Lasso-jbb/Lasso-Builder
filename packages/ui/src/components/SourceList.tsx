@@ -34,7 +34,7 @@ export function SourceList({ title = "Kilder og opdatering", sources, pdf, onOpe
           return (
             <li key={s.name} className="lasso-sourcelist__row">
               <span className="lasso-sourcelist__name">{s.name}</span>
-              <span className="lasso-sourcelist__time">{m ? `${m[3]}.${m[2]}.${m[1]}` : (s.updated ?? "—")}</span>
+              <span className="lasso-sourcelist__time">{m ? `${m[3]}.${m[2]}.${m[1]}` : (s.updated ?? "-")}</span>
             </li>
           );
         })}

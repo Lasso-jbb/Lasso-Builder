@@ -282,7 +282,7 @@ function Palette() {
 /**
  * 13.9 og 26b.7: sparkline-tilstandene som 44 px rækker med etiket, sparkline og værdi til højre.
  * Sparklinen er altid koral; krydser værdierne 0, står en stiplet nullinje; sparsøjler til
- * kvartalstal; under 3 datapunkter står "—" i stedet for en sparkline.
+ * kvartalstal; under 3 datapunkter står "-" i stedet for en sparkline.
  */
 export function SparkList({ title, rows }: { title?: string; rows: { label: string; values: number[]; value: string; kind?: "line" | "bars"; negative?: boolean }[] }) {
   return (
@@ -311,7 +311,7 @@ function Sparklines() {
         { label: "Stigende", values: [7.9, 15.5, 17.7, 17.5, 18.8], value: "18,8" },
         { label: "Krydser nul", values: [120, 64, -40, -210, -338], value: "−338", negative: true },
         { label: "Sparsøjler (ansatte pr. kvartal)", values: [14, 15, 15, 16, 17, 17, 18, 19], value: "19", kind: "bars" },
-        { label: "Under 3 datapunkter — ingen sparkline", values: [4.2, 4.7], value: "4,7" },
+        { label: "Under 3 datapunkter - ingen sparkline", values: [4.2, 4.7], value: "4,7" },
       ]}
     />
   );
@@ -361,6 +361,7 @@ export const entries: GalleryEntry[] = [
     nr: "09.4",
     title: "Nøgletalskort, varianter",
     node: "BKI-0",
+    note: "Henter: skeletterne er i bevægelse (et lyst skær glider fra venstre mod højre, 1,6 s; stille ved prefers-reduced-motion). Billedet her er statisk.",
     render: () => (
       <Stack>
         <Labelled label="Med sparkline, branche og kvalitetsflag (ansatte)">
@@ -380,7 +381,7 @@ export const entries: GalleryEntry[] = [
     title: "Nøgle-værdi-liste med årsvælger",
     node: "9WR-0",
     spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "financials" }]),
-    note: "Med årsrapportens PDF-link i datasættet (rækken 'PDF-regnskab').",
+    note: "Med årsrapportens PDF-link i datasættet: 'Hent regnskabet' øverst i elementet og 'Se alle' under listen (Jakob 29.09).",
     mutate: (ds) => {
       ds.financialStatements[B] = { lassoId: B, currency: "DKK", incomeStatement: [], balanceSheet: [], cashFlow: [], pdfUrl: "https://example.com/aarsrapport.pdf" };
     },

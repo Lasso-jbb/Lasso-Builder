@@ -16,7 +16,7 @@ import { at, isObj, num, participantKind, participantLassoId, percentFormat, pic
  * `{ couldNotIdentify, exemptionStatus, fallbackDescription, fallbackType,
  *    owners: [{ ownership: 0-1, voteRights: 0-1, throughRole, name, lassoId, type, unitNumber, role, from }] }`.
  *
- * Andele er PRÆCISE tal (ikke et interval — kataloget tillader det for reelle ejere, i modsætning
+ * Andele er PRÆCISE tal (ikke et interval - kataloget tillader det for reelle ejere, i modsætning
  * til legale ejere). `throughRole=true` betyder, at ejerskabet skyldes en rolle (fx direktion/
  * bestyrelse som fallback), ikke et direkte kapitalejerskab; det får sin egen kort forklaringstekst
  * i stedet for en egentlig ejerkæde (den dokumenterede form har ingen "paths" af mellemliggende
@@ -160,7 +160,7 @@ function fallbackTypeText(t: string): string {
  * dokumenteret form: `{ hasOwnersUnderFivePercent, owners: [{ ownership: {from,to},
  * voteRights: {from,to}, name, type, lassoId|cvr|unitNumber, address, role, from }] }`.
  *
- * Andele er brøk-INTERVALLER, aldrig ét tal (CVR-registeret kræver kun intervaller) — samme form
+ * Andele er brøk-INTERVALLER, aldrig ét tal (CVR-registeret kræver kun intervaller) - samme form
  * som `ownership.owners` i company-full, så `shareText` genbruges uændret. `hasOwnersUnderFivePercent`
  * lægges direkte i `OwnershipVM`, så `OwnerList` kan vise en linje om det.
  *

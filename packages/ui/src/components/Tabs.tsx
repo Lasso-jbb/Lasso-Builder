@@ -19,16 +19,17 @@ import { Menu } from "./Menu.js";
  * aldrig direkte over hinanden.
  *
  * Tilgængelighed: role=tablist/tab/tabpanel, aria-selected, aria-controls/labelledby. Kun den
- * valgte fane er i tab-rækkefølgen; piletaster flytter og vælger, Home/End går til første/sidste,
- * deaktiverede faner springes over.
+ * valgte fane er i tab-rækkefølgen; piletaster flytter og vælger, Home/End går til første/sidste.
+ * Faner uden data vises ikke (Jakob 29.09, 29.2): en fane med `disabled` tegnes slet ikke.
  */
 export type TabLevel = 1 | 2 | 3;
 
 export interface TabItem {
   id: string;
   label: string;
+  /** Fanen har ingen data og vises derfor IKKE (29.2). Beholdt, så værten kan sende alle faner. */
   disabled?: boolean;
-  /** Vises som tooltip (title) på en deaktiveret fane, fx "Kun årsregnskab indberettet". */
+  /** Ældre: tooltip på en deaktiveret fane. Bruges ikke længere, da fanen skjules. */
   disabledReason?: string;
 }
 
@@ -62,9 +63,13 @@ export function panelId(base: string, item: string): string {
   return `${base}-panel-${item}`;
 }
 
-export function Tabs({ level, items, value, onChange, ariaLabel, id, className = "", maxVisible, hoverId, focusId, compact = false, moreLabel = "Flere" }: TabsProps) {
+export function Tabs({ level, items: allItems, value, onChange, ariaLabel, id, className = "", maxVisible, hoverId, focusId, compact = false, moreLabel = "Flere" }: TabsProps) {
   const autoId = useId();
   const base = id ?? autoId;
+  // 29.2 (Jakob 29.09): kun faner, der har data, vises; en deaktiveret fane tegnes slet ikke (alle niveauer).
+  const items = allItems.filter((t) => !t.disabled);
+  // G1: en segmentkontrol (niveau 3) med kun ét valg har ingen funktion og tegnes ikke.
+  const hideAll = level === 3 && items.length <= 1;
   const listRef = useRef<HTMLDivElement>(null);
 
   // Mobil (29): den valgte fane rulles ind i syne ved skift.
@@ -124,6 +129,7 @@ export function Tabs({ level, items, value, onChange, ariaLabel, id, className =
       </select>
     ) : null;
 
+  if (hideAll) return null;
   return (
     <div className={`lasso-tabs-wrap lasso-tabs-wrap--l${level} ${mobileSelect ? "lasso-tabs-wrap--many" : ""}${compact ? " lasso-tabs-wrap--compact" : ""} ${className}`}>
     {mobileSelect}

@@ -6,7 +6,7 @@ import { DataState, Section, stateForError } from "../primitives.js";
 
 /**
  * Delt tabel-anatomi for de tre fulde regnskabsopgørelser (katalog 19: LassoIncomeStatement,
- * LassoBalanceSheet, LassoCashFlow). Ikke en selvstændig katalogkomponent — kun en intern
+ * LassoBalanceSheet, LassoCashFlow). Ikke en selvstændig katalogkomponent - kun en intern
  * byggesten, som de tre filer bruger, ligesom BarChart/GroupedBarChart/LineChart deler charts.ts.
  */
 
@@ -37,7 +37,7 @@ export interface StatementSection {
 /**
  * Ændringskolonnen (19.2): kun subtotaler og bundlinje får ▲/▼ i farve ("▲ 7,5 %"); underposter får
  * ændringen i størrelse som muted ren tekst uden pil ("+23,0 %"). Skifter fortegnet, vises stadig pil +
- * procent (02c.4); "—" når tallet har kvalitetsflag, mangler eller forrige er 0.
+ * procent (02c.4); "-" når tallet har kvalitetsflag, mangler eller forrige er 0.
  */
 export function changeText(prev: number | null | undefined, last: number | null | undefined, kind: StatementRow["kind"] = "line", flagged = false): { text: string; tone: "up" | "down" | "" } {
   if (flagged || typeof prev !== "number" || typeof last !== "number" || prev === 0) return { text: "", tone: "" };
@@ -141,14 +141,14 @@ export function StatementTable({
                         key={years[i]}
                         className={`lasso-stmt__year ${i === row.values.length - 1 ? "lasso-stmt__year--last" : ""} ${typeof v === "number" && v < 0 ? "lasso-down" : ""}`}
                       >
-                        {fmt(v) ?? <span className="lasso-notreported">—</span>}
+                        {fmt(v) ?? <span className="lasso-notreported">-</span>}
                         {row.flag && i === row.values.length - 1 ? <QualityFlag reason={row.flag} /> : null}
                       </div>
                       );
                     })}
                     {showDelta ? (
                       <div className={`lasso-stmt__delta ${change.tone === "down" ? "lasso-down" : change.tone === "up" ? "lasso-up" : "lasso-stmt__delta--plain"}`}>
-                        {change.text || <span className="lasso-notreported">—</span>}
+                        {change.text || <span className="lasso-notreported">-</span>}
                       </div>
                     ) : null}
                   </div>

@@ -63,7 +63,14 @@ export type IconName =
   | "clock"
   | "linkedin"
   | "lock"
-  | "share";
+  | "share"
+  /* 08.4 Genveje (Paper 9TL-0): værktøjsikonerne som i Paper. */
+  | "tool-ownership"
+  | "tool-analysis"
+  | "tool-keyfigures"
+  | "tool-property"
+  | "tool-registry"
+  | "tool-insight";
 
 /** Danske navne på katalogets 20 ikoner, i katalogets rækkefølge (til aria-label og oversigter). */
 export const ICON_LABELS: Record<CatalogIconName, string> = {
@@ -139,6 +146,13 @@ const PATHS: Record<IconName, string> = {
   linkedin: "M4.5 4.5h15v15h-15zM8.5 10.5v5M8.5 8v.5M11.5 15.5v-5M11.5 12.5a2 2 0 014 0v3",
   lock: "M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 017 0v3",
   share: "M17.5 8a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM6.5 14.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM17.5 21a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM8.7 10.8l6.6-3.6M8.7 13.2l6.6 3.6", /* 26g.1: del-ikon i tilbage-topbjælken */
+  /* 08.4 (Jakob 29.09): genvejenes ikoner præcis som i Paper 9TL-0. */
+  "tool-ownership": "M5 4h3a1.5 1.5 0 011.5 1.5v3A1.5 1.5 0 018 10H5a1.5 1.5 0 01-1.5-1.5v-3A1.5 1.5 0 015 4zM16 14h3a1.5 1.5 0 011.5 1.5v3A1.5 1.5 0 0119 20h-3a1.5 1.5 0 01-1.5-1.5v-3A1.5 1.5 0 0116 14zM6.5 10v4.5a2 2 0 002 2h6",
+  "tool-analysis": "M6 3.5h8l4 4v13H6zM9 12h6M9 15.5h6",
+  "tool-keyfigures": "M4 16l5-5 4 3 7-7",
+  "tool-property": "M4.5 11L12 4.5l7.5 6.5v8.5h-15z",
+  "tool-registry": "M12 6.5c-2-1.5-5-2-8-1.5v13c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V5c-3-.5-6 0-8 1.5zM12 6.5v13",
+  "tool-insight": "M10 4.5l1.6 4.4 4.4 1.6-4.4 1.6L10 16.5l-1.6-4.4L4 10.5l4.4-1.6z",
 };
 
 export interface IconProps {

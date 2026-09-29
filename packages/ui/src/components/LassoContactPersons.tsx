@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { contactPersonGroup, formatDate, formatPhone, groupContactPersons, type ContactPersonVM, type ContactPersonsVM } from "@lasso/spec";
+import { contactPersonGroup, formatPhone, groupContactPersons, type ContactPersonVM, type ContactPersonsVM } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { ShellIcon } from "./ShellIcons.js";
 import { SidePanel, SidePanelList } from "./SidePanel.js";
@@ -9,11 +9,13 @@ const BLOCK_ROWS = 3;
 
 const prettyPhone = (v: string): string => formatPhone(v) ?? v;
 
+/** G2 (Jakob 29.09): telefon-/mailikon kun, når personen har telefon/mail; ingen dæmpede ikoner. */
 function Channels({ person }: { person: ContactPersonVM }) {
+  if (!person.phone && !person.email) return null;
   return (
     <span className="lasso-contactpersons__actions" aria-hidden="true">
-      <ShellIcon name="phone" size={15} className={`lasso-contactpersons__icon${person.phone ? "" : " lasso-contactpersons__icon--muted"}`} />
-      <ShellIcon name="mail" size={15} className={`lasso-contactpersons__icon${person.email ? "" : " lasso-contactpersons__icon--muted"}`} />
+      {person.phone ? <ShellIcon name="phone" size={15} className="lasso-contactpersons__icon" /> : null}
+      {person.email ? <ShellIcon name="mail" size={15} className="lasso-contactpersons__icon" /> : null}
     </span>
   );
 }
@@ -52,8 +54,10 @@ function Detail({ person, companyName, updated, onCopy, onOpenLink }: { person: 
         {label}
       </a>
     );
-  const dates = (person.sources ?? []).map((s) => s.date).filter((d): d is string => Boolean(d)).sort();
-  const when = dates.at(-1) ?? updated;
+  // 08.11 (Jakob 29.09): kilder kun som overskriften "Kilder" med selve kildelinket; ingen
+  // kildebeskrivelse, dato, CVR-linje eller "Opdateret …" (G3).
+  const linked = (person.sources ?? []).filter((x): x is typeof x & { url: string } => Boolean(x.url));
+  void updated;
   return (
     <div className="lasso-cpdetail">
       <h3 className="lasso-cpdetail__name">{person.name}</h3>
@@ -115,28 +119,24 @@ function Detail({ person, companyName, updated, onCopy, onOpenLink }: { person: 
           <li className="lasso-cpdetail__channel lasso-cpdetail__channel--none">Der er ikke fundet telefon, e-mail eller LinkedIn for personen.</li>
         ) : null}
       </ul>
-      {person.sources?.length ? (
+      {linked.length ? (
         <div className="lasso-cpdetail__sources">
           <div className="lasso-cpdetail__overline">Kilder</div>
           <ul>
-            {person.sources.map((s, i) => (
-              <li key={i}>
-                {s.url ? link(s.url, s.label, "lasso-cpdetail__source") : <span className="lasso-cpdetail__source lasso-cpdetail__source--plain">{s.label}</span>}
-                {s.text || s.date ? <span className="lasso-cpdetail__sourcetext">{[s.text, s.date ? formatDate(s.date) : undefined].filter(Boolean).join(", ")}</span> : null}
-              </li>
+            {linked.map((s, i) => (
+              <li key={i}>{link(s.url, s.label, "lasso-cpdetail__source")}</li>
             ))}
           </ul>
         </div>
       ) : null}
-      {when ? <p className="lasso-cpdetail__updated">Opdateret {formatDate(when)}.</p> : null}
     </div>
   );
 }
 
 /**
  * Kontaktpersoner (katalog 08.6, node I6B-0): blok på siden med de første 3 (Direktion først), rækker
- * på 52 px med rolle og afdeling i muted under navnet og telefon-/mailikon til højre (faint, når
- * kanalen mangler). Klik på række, ikon eller "Se N kontaktpersoner" åbner "Se alle"-panelet fra
+ * på 52 px med rolle og afdeling i muted under navnet og telefon-/mailikon til højre, kun når
+ * kanalen findes (G2). Klik på række, ikon eller "Se N kontaktpersoner" åbner "Se alle"-panelet fra
  * højre (08.7) med personen valgt. Ingen initial-cirkler (regel 5).
  */
 export function LassoContactPersons({ data, title, error, companyName, onCopy, onOpenLink, defaultOpen }: LassoContactPersonsProps) {

@@ -157,7 +157,7 @@ export interface FinancialYear {
   soliditetsgrad?: number | null;
   /**
    * Overskudsgrad: resultat af primær drift (EBIT) i procent af nettoomsætningen (ÅRL-nøgletal).
-   * Beregnet; null ("—"), når omsætning eller EBIT ikke er oplyst (typisk klasse B).
+   * Beregnet; null ("-"), når omsætning eller EBIT ikke er oplyst (typisk klasse B).
    */
   overskudsgrad?: number | null;
   /** Hvilket regnskab tallene er fra: "Koncern" (når koncernregnskab findes) eller "Selskab". Aldrig blandet. */
@@ -192,7 +192,7 @@ export interface FinancialsVM {
  * tal som i `FinancialYear`; underposterne (personaleomkostninger, andre
  * driftsomkostninger, af- og nedskrivninger, finansielle poster, skat, og hele
  * balancens linjer ud over egenkapital/balancesum) er UBEKRÆFTEDE XBRL-begreber
- * (se docs/lasso-endpoints.md) og kan mangle ("—") for rigtige virksomheder.
+ * (se docs/lasso-endpoints.md) og kan mangle ("-") for rigtige virksomheder.
  */
 export interface IncomeStatementYear {
   year: number;
@@ -479,7 +479,7 @@ export interface BuildingVM {
   builtYear?: number;
   floors?: number;
   areaM2?: number | null;
-  /** Antal enheder i bygningen; "—" når ikke relevant (fx garage). */
+  /** Antal enheder i bygningen; "-" når ikke relevant (fx garage). */
   units?: number | null;
 }
 
@@ -678,7 +678,7 @@ export interface ObservationsVM {
   /**
    * Indirekte observationer (fx konkursrelationer), der egentlig måler en tilknyttet person
    * eller et tilknyttet selskab, grupperet pr. entitet (relatedObservations i det bekræftede
-   * svar — nøglerne kan være både personer og selskaber). Navnet slås op af LiveProvider, hvor
+   * svar - nøglerne kan være både personer og selskaber). Navnet slås op af LiveProvider, hvor
    * det kan findes; ellers vises entitetens Lasso-ID.
    */
   related?: { lassoId: string; name?: string; rows: ObservationRowVM[] }[];

@@ -31,7 +31,7 @@ export function ProductionUnits({ units, error }: { units?: ProductionUnitsVM; e
   }
   const active = units.units.filter((u) => u.statusKind !== "inactive" && !u.endedYear).length;
   return (
-    <Section title={title} subtitle="P-nr., navn, adresse, branche, ansatte, status — hovedenhed først" span="full" className="lasso-units" action={<span className="lasso-units__count">{`${active} aktive`}</span>}>
+    <Section title={title} subtitle="P-nr., navn, adresse, branche, ansatte, status - hovedenhed først" span="full" className="lasso-units" action={<span className="lasso-units__count">{`${active} aktive`}</span>}>
       {/* Mobil (26e.1): rækker i tre linjer, navn, adresse og P-nr. med ansatte. Ingen ikonkasse (regel 5). */}
       <ul className="lasso-units-m">
         {units.units.map((u, i) => {

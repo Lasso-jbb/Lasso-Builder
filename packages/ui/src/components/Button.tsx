@@ -165,7 +165,7 @@ export function ActionRow({ more, moreLabel = "Flere handlinger", moreContext, s
 }
 
 /**
- * Etiket (05.6, "ETIKET, 28 PX — KUN VISNING"): 28 px, radius 6, grå flade, 13/400 tekst.
+ * Etiket (05.6, "ETIKET, 28 PX - KUN VISNING"): 28 px, radius 6, grå flade, 13/400 tekst.
  * Kun visning (fx "Branchekode", "Antal ansatte" som kriterienavne); kan ikke klikkes eller fjernes.
  * Bruges aldrig til status (regel 1) eller som tæller.
  */

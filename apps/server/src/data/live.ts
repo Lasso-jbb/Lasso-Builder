@@ -402,7 +402,7 @@ export class LiveProvider implements DataProvider {
   /**
    * Katalog 12: nyheder. Lasso News (POST /modules/news) hentes altid; Paqle (GET
    * /data/paqle/{lassoId}/news) kun når kontoen har adgang til Paqle-tilføjelsen. Fejler den ene
-   * kilde (manglende adgang, 4xx/5xx, timeout), vises blot det, den anden kilde leverede — se
+   * kilde (manglende adgang, 4xx/5xx, timeout), vises blot det, den anden kilde leverede - se
    * docs/endpoints-risiko-nyheder.md. Flettet efter tid (nyeste først) og skåret til `limit`.
    */
   async news(lassoId: string, limit: number) {
@@ -427,7 +427,7 @@ export class LiveProvider implements DataProvider {
    * Katalog 17: risikoobservationer (Firmaindsigt). Svarformen er bekræftet mod api.lassox.com
    * 27.09.2026 (docs/endpoints-risiko-nyheder.md). Kaldet kan tage flere sekunder for store
    * selskaber (11,8 s målt for Novo Nordisk); et budget forhindrer, at hele visningen venter så
-   * længe — kaldet kører videre i baggrunden og ligger klar i klientens cache til næste forsøg,
+   * længe - kaldet kører videre i baggrunden og ligger klar i klientens cache til næste forsøg,
    * og RiskObservations.tsx viser sin fejltilstand med "Prøv igen" i stedet. Indirekte
    * observationer under `relatedObservations` (personer OG selskaber) navngives bedst muligt
    * ud fra entitetens eget CVR-opslag.

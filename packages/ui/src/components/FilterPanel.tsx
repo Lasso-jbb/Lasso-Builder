@@ -1,3 +1,4 @@
+import { IconButton } from "./Button.js";
 import { useMemo, useState } from "react";
 import {
   FIELDS,
@@ -297,9 +298,8 @@ export function FilterPanel({ criteria, editable, onApply, fields = FIELDS, esti
 
       <div className="lasso-filters__footer">
         <span className="lasso-filters__effect">{criteria.length === 0 && rows.length === 0 ? "Ingen filtre: alle virksomheder, der matcher søgningen." : ""}</span>
-        <button type="button" className="lasso-btn lasso-btn--text" onClick={() => setOpen(false)}>
-          Luk
-        </button>
+        {/* G8 (Jakob 29.09): luk er et ×-ikon med aria-label "Luk". */}
+        <IconButton icon="close" label="Luk" size={32} variant="bare" onClick={() => setOpen(false)} />
       </div>
     </section>
   );

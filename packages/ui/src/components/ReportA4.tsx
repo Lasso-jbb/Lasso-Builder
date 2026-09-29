@@ -68,14 +68,14 @@ function delta(prev: number | null | undefined, last: number | null | undefined)
   return { text: `${pct < 0 ? "▼" : "▲"} ${formatPercent(Math.abs(pct), false)}`, tone: pct < 0 ? "down" : "up" };
 }
 
-/** Beløb i t. kr. som tekst med tusindtalspunktum og ægte minus; "—" når tallet mangler. */
+/** Beløb i t. kr. som tekst med tusindtalspunktum og ægte minus; "-" når tallet mangler. */
 function thousands(v: number | null | undefined): string {
-  if (typeof v !== "number" || !Number.isFinite(v)) return "—";
+  if (typeof v !== "number" || !Number.isFinite(v)) return "-";
   return formatNumber(Math.round(v / 1000));
 }
 
 function pct(v: number | null | undefined): string {
-  return typeof v === "number" && Number.isFinite(v) ? formatPercent(v, false) : "—";
+  return typeof v === "number" && Number.isFinite(v) ? formatPercent(v, false) : "-";
 }
 
 /** Fælles skala for søjlegrafen: "mio. kr." osv., altid med én decimal i mio./mia. */
@@ -174,7 +174,7 @@ function StatementTable({ title, years, rows }: { title: string; years: readonly
           {r.values.map((v, i) => (
             <span
               key={years[i] ?? i}
-              className={`lasso-a4-stmt__cell ${i === 0 ? "lasso-a4-stmt__cell--last" : ""} ${v === "—" ? "lasso-a4__faint" : ""} ${
+              className={`lasso-a4-stmt__cell ${i === 0 ? "lasso-a4-stmt__cell--last" : ""} ${v === "-" ? "lasso-a4__faint" : ""} ${
                 r.kind && r.kind !== "line" && v.startsWith("−") ? "lasso-a4__neg" : ""
               }`}
             >
@@ -425,7 +425,7 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
           { label: "Soliditetsgrad", values: shownYears.map((y) => pct(y.soliditetsgrad)), kind: "plain" },
           { label: "Likviditetsgrad", values: shownYears.map((y) => pct(y.likviditetsgrad)), kind: "plain" },
           { label: "Overskudsgrad", values: shownYears.map((y) => pct(y.overskudsgrad)), kind: "plain" },
-          { label: "Ansatte (årsrapport)", values: shownYears.map((y) => (typeof y.employees === "number" ? formatNumber(y.employees) : "—")), kind: "plain" },
+          { label: "Ansatte (årsrapport)", values: shownYears.map((y) => (typeof y.employees === "number" ? formatNumber(y.employees) : "-")), kind: "plain" },
         ];
         const period = last?.periodStart && last.periodEnd ? `regnskabsår ${formatDate(last.periodStart).slice(0, 5)}–${formatDate(last.periodEnd).slice(0, 5)}` : "";
         const scopeNote = shownYears.some((y) => y.scope === "Koncern") ? "Koncerntal, hvor koncernregnskab findes. " : "";
@@ -444,7 +444,7 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
             <StatementTable title="Nøgletal" years={ys} rows={ratios} />
             <p className="lasso-a4__note lasso-a4__note--small">
               {scopeNote}Hovedtal (omsætning/bruttofortjeneste, årets resultat, egenkapital, balancesum, ansatte) er fra årsrapporterne. Underposter og nøgletal er beregnet eller
-              hentet fra XBRL og kan mangle ("—").
+              hentet fra XBRL og kan mangle ("-").
             </p>
             <PageFoot sources={sources} date={stamp.date} page={page} total={total} />
           </section>

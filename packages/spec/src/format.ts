@@ -5,8 +5,8 @@ const intFormat = new Intl.NumberFormat("da-DK", { maximumFractionDigits: 0 });
 const oneDecimal = new Intl.NumberFormat("da-DK", { maximumFractionDigits: 1 });
 const fixedOneDecimal = new Intl.NumberFormat("da-DK", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-/** Katalog 09: manglende værdi vises som "—" (i text-faint). */
-export const MISSING = "—";
+/** Katalog 09: manglende værdi vises som "-" (i text-faint). */
+export const MISSING = "-";
 
 /** Katalog 09: negative tal med ægte minus (U+2212), aldrig bindestreg eller parentes. */
 function minus(s: string): string {
@@ -200,7 +200,7 @@ export function formatRange(lo: number | null | undefined, hi: number | null | u
 /**
  * 02c.6 Periode: datoer med tankestreg uden mellemrum ("01.01.2025–31.12.2025"). Åben periode
  * (ingen slutdato) som "siden 2016" (style "since") eller "2016 →" (style "arrow"); kun år, når
- * `yearOnly` er sat. Ingen dato i det hele taget giver "—".
+ * `yearOnly` er sat. Ingen dato i det hele taget giver "-".
  */
 export function formatPeriod(from: string | null | undefined, to: string | null | undefined, options: { yearOnly?: boolean; open?: "since" | "arrow" } = {}): string {
   const fmt = (v: string) => (options.yearOnly ? (/^(\d{4})/.exec(v)?.[1] ?? v) : formatDate(v));

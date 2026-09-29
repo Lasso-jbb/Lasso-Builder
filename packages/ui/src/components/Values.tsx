@@ -38,10 +38,10 @@ export function ValueRow({ label, children, onClick }: { label: ReactNode; child
 
 /**
  * 02c.17 Manglende værdi: "Ikke oplyst" når virksomheden ikke skal oplyse det, "Ikke registreret"
- * når feltet er tomt i kilden. I tabelceller bruges `Missing` ("—") i stedet.
+ * når feltet er tomt i kilden. I tabelceller bruges `Missing` ("-") i stedet.
  */
 export function NotReported({ kind = "reported" }: { kind?: "reported" | "registered" }) {
-  // 02c.17: ordene står i muted (læsbare); kun "—" i tabeller og deaktiveret står i faint.
+  // 02c.17: ordene står i muted (læsbare); kun "-" i tabeller og deaktiveret står i faint.
   return <span className="lasso-notreported lasso-notreported--text">{kind === "registered" ? NOT_REGISTERED : NOT_REPORTED}</span>;
 }
 

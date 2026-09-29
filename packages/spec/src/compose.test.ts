@@ -248,7 +248,8 @@ test("virksomhedsoplysninger gentager ikke hovedet, kontaktblokken eller ejerlis
   assert.deepEqual(labels({ hideIdentity: true }), ["Revisor", "Seneste revisorskift", "Regnskabsperiode", "Branchekode", "Ansatte", "Kommune", "Region", "Telefon"]);
   assert.deepEqual(labels({ hideIdentity: true, hideContact: true, hideAuditor: true }), ["Regnskabsperiode", "Branchekode", "Ansatte", "Kommune", "Region"]);
   // Uden hoved på siden (fx en render_view-spec) står identiteten i listen som før.
-  assert.deepEqual(labels({}).slice(3, 8), ["Stiftet", "Virksomhedsform", "Branche", "Ansatte", "Adresse"]);
+  // G9 (Jakob 29.09): hovedet viser kun navnet, så identiteten står i listen, også med hovedet på siden.
+  assert.deepEqual(labels({}).slice(3, 9), ["CVR-nummer", "Stiftet", "Virksomhedsform", "Branche", "Ansatte", "Adresse"]);
   assert.equal(companyFacts(co, ds.ownership[id], last, { hideIdentity: true }).find((r) => r.label === "Revisor")?.lassoId, "CVR-1-99000002");
 
   // Kun én ny oplysning (branchekoden): listen udelades på alle fokus.

@@ -168,7 +168,7 @@ test("tekstkortet viser reelle ejere, tekstsektioner, historik og nyheder, når 
   assert.match(card, /Ejer\s+Anne Eksempel/);
 });
 
-test("resumeet skrives som en sektion med kildelinje, uden AI-mærke", () => {
+test("resumeet skrives som en sektion uden kildelinje (G3) og uden AI-mærke", () => {
   const spec = {
     version: 2 as const,
     kind: "custom" as const,
@@ -179,7 +179,7 @@ test("resumeet skrives som en sektion med kildelinje, uden AI-mærke", () => {
   };
   const card = textCard(parseViewSpec(spec), emptyDataset("demo"))!;
   assert.ok(card.includes("Firmaet vokser pænt."));
-  assert.ok(card.includes("Kilde: Lasso"));
+  assert.ok(!card.includes("Kilde:"));
   assert.ok(!/skrevet af ai/i.test(card));
 });
 
@@ -601,6 +601,7 @@ test("tekstkort for persontabellen (15.3): roller, fødselsår, by og konkurser"
   const card = textCard(spec, ds)!;
   for (const l of card.split("\n")) assert.equal([...l].length, 38);
   assert.ok(card.includes("Mette Eksempel"));
-  assert.ok(card.includes("f. 1978, København, 1 konkurs"));
+  assert.ok(card.includes("1 konkurs"));
+  assert.ok(!card.includes("f. 1978") && !card.includes("København"), "15.3: intet fødselsår eller by");
   assert.doesNotMatch(card, /·/);
 });

@@ -22,11 +22,10 @@ test("19.1: værktøjslinje med selskab/koncern, periode, enhed, påtegning og H
   const html = renderToStaticMarkup(createElement(FinancialStatements, { statements: s }));
   assert.match(html, /role="toolbar" aria-label="Regnskabets værktøjslinje"/);
   // Intet koncernregnskab: Koncern dæmpet med forklaring
-  assert.match(html, /disabled=""[^>]*title="Intet koncernregnskab indberettet"[^>]*>Koncern</);
-  assert.match(html, /disabled=""[^>]*title="Kun årsregnskab indberettet"[^>]*>Halvår</);
-  assert.match(html, /disabled=""[^>]*title="Kun årsregnskab indberettet"[^>]*>Kvartal</);
+  // 29.2 (Jakob 29.09): faner uden data (Koncern uden koncernregnskab, Halvår, Kvartal) vises ikke.
+  assert.doesNotMatch(html, />Koncern<|>Halvår<|>Kvartal</);
   // Selskab først, periode-dropdown "2025, 01.01–31.12", enhed "t. kr." uden synlig etiket
-  assert.match(html, />Selskab<[^]*>Koncern</);
+  assert.doesNotMatch(html, />Selskab</, "G1: segmentkontrol med ét valg tegnes ikke");
   assert.match(html, /<option value="2025"[^>]*>2025, 01\.01–31\.12<\/option>/);
   assert.match(html, /lasso-sr">Enhed<\/span><select[^>]*><option value="t"[^>]*>t\. kr\.</);
   assert.match(html, /lasso-fs__opinion"[^>]*>Revisionspåtegning uden forbehold</);

@@ -166,7 +166,7 @@ function lassoNewsSourceLabel(provider: string | undefined): string {
  * { headline, content (HTML), tagLine, time, promotedUntil, type, provider, providerData (kan
  * være null), url, storyId, imageId, uniqueId, lassoIds[] }. headline/content/tagLine
  * indeholder entitets-markup "{Navn|LassoId}" (newsMarkup.ts), også midt i HTML-lister
- * (fx "<ul><li>{Navn|LassoId}</li></ul>"); content strippes for HTML til ren tekst — UI'en
+ * (fx "<ul><li>{Navn|LassoId}</li></ul>"); content strippes for HTML til ren tekst - UI'en
  * sætter aldrig innerHTML. `headline`/`excerpt` er ren tekst; `headlineSegments`/`extractSegments`
  * er samme tekst som segmenter, hvor navnene beholder deres Lasso-ID (links i UI'en), og sættes
  * kun, når teksten faktisk har navne med Lasso-ID.

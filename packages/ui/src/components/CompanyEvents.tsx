@@ -136,7 +136,7 @@ export function Announcements({ events, company, demo, title, error }: { events?
       <ul className="lasso-announce__rows">
         {shown.map((a, i) => (
           <li key={`${a.date}-${i}`} className="lasso-announce__row">
-            <span className="lasso-announce__date">{a.date ? formatDate(a.date) : "—"}</span>
+            <span className="lasso-announce__date">{a.date ? formatDate(a.date) : "-"}</span>
             <span className={`lasso-announce__type lasso-announce__type--${a.severity}`}>{a.type}</span>
             <span className="lasso-announce__body">
               {/* 28.8: brødteksten er foldet til to linjer uden "Vis"-link; et klik (eller Enter) på teksten folder den ud og ind. */}
@@ -203,7 +203,7 @@ function FlagIcon() {
 function Money({ value, previous, corrected }: { value?: number | null; previous?: number | null; corrected?: boolean }) {
   return (
     <span className="lasso-publications__figure">
-      <span className={typeof value === "number" && value < 0 ? "lasso-down" : undefined}>{typeof value === "number" ? formatAmount(value) : <span className="lasso-notreported">—</span>}</span>
+      <span className={typeof value === "number" && value < 0 ? "lasso-down" : undefined}>{typeof value === "number" ? formatAmount(value) : <span className="lasso-notreported">-</span>}</span>
       {corrected && typeof previous === "number" ? <span className="lasso-publications__before">før {formatAmount(previous)}</span> : null}
     </span>
   );
@@ -246,8 +246,8 @@ export function Publications({ events, title, error, limit = 5 }: { events?: Com
           <tbody>
             {shown.map((p, i) => (
               <tr key={`${p.published}-${i}`}>
-                <td data-label="Offentliggjort" className="lasso-cell--name">{p.published ? formatDate(p.published) : <span className="lasso-notreported">—</span>}</td>
-                <td data-label="Periode">{periodRange(p.periodStart, p.periodEnd) ?? <span className="lasso-notreported">—</span>}</td>
+                <td data-label="Offentliggjort" className="lasso-cell--name">{p.published ? formatDate(p.published) : <span className="lasso-notreported">-</span>}</td>
+                <td data-label="Periode">{periodRange(p.periodStart, p.periodEnd) ?? <span className="lasso-notreported">-</span>}</td>
                 <td data-label="Type">
                   <span className="lasso-publications__type">
                     {p.corrected ? "Korrigeret" : p.kind === "Årsrapport" ? "Årsrapport, ny" : p.kind}

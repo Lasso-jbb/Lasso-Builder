@@ -255,7 +255,7 @@ function chipValues(c: Criterion | undefined): string[] {
 /**
  * Filterarket (26c.8, node EM6-0): bundark (Dialog; på desktop en dialog på 520 px) med "Nulstil" i
  * koral til venstre og titlen "Filtre" centreret. Felterne er valgchips (36 px), 48 px rækker med
- * værdien og en chevron ("Region — Hovedstaden ›", tap åbner feltet) og kontakter (44×26). Den primære
+ * værdien og en chevron ("Region - Hovedstaden ›", tap åbner feltet) og kontakter (44×26). Den primære
  * knap i fuld bredde nederst viser antallet: "Vis 312 virksomheder". Intet ændres, før den trykkes.
  * Bruges af tabellens "Filtre"-knap og af FilterPanel under 560 px.
  */
@@ -518,7 +518,7 @@ function FieldControl({ draft, field, invalid, onChange }: { draft: Draft; field
           values={draft.values}
           options={field?.options}
           invalid={invalid}
-          placeholder={field?.options ? "Tilføj flere…" : "Søg, eller indsæt en liste — fx 2100, 8000"}
+          placeholder={field?.options ? "Tilføj flere…" : "Søg, eller indsæt en liste - fx 2100, 8000"}
           onChange={(values) => onChange({ values })}
         />
       </>

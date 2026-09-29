@@ -83,7 +83,7 @@ test("PersonFacts: bopæl som postnummer og by, kommune, enhedsnummer og tal afl
   assert.match(html, /Ejer af.*1 selskab</);
   assert.match(html, /Første registrering.*2005/);
   assert.match(html, /Seneste ændring.*30\.06\.2018/);
-  assert.match(html, /Kilde: CVR via Lasso, opdateret 12\.09\.2026/);
+  assert.doesNotMatch(html, /Kilde:/, "G3: ingen kildelinje");
   assert.doesNotMatch(html, />0</, "aldrig et nul, kun 'Ingen'");
 });
 
@@ -94,8 +94,8 @@ test("PersonFacts: adressebeskyttet, tom tilstand der siger hvorfor, henter og f
   assert.match(facts({ lassoId: ID, name: "Tom", roles: [] }), /hverken en bopæl eller roller/);
   assert.match(facts(undefined), /aria-busy="true"/);
   assert.match(facts(undefined, "Lasso API-fejl (500)"), /Data kunne ikke hentes/);
-  // Uden bopæl, men med roller: "—" i stedet for en tom række.
-  assert.match(facts({ ...bo, city: undefined, zip: undefined, municipality: undefined }), /Bopæl.*—/);
+  // Uden bopæl, men med roller: "-" i stedet for en tom række.
+  assert.match(facts({ ...bo, city: undefined, zip: undefined, municipality: undefined }), /Bopæl.*-/);
 });
 
 test("columnBands: et lavere kolonnenummer starter et nyt bånd, og bredderne giver båndets forhold", () => {
@@ -137,7 +137,7 @@ test("personsiden, overblik: aktive roller som liste ¾ + stamoplysninger ¼ (ud
   assert.match(html, /Stamoplysninger/);
   assert.match(html, /Enhedsnummer/);
   assert.doesNotMatch(html, /lasso-kv-row__label">Aktive roller|lasso-kv-row__label">Ejer af|lasso-kv-row__label">Første registrering/);
-  assert.match(html, /første registrering 2005/, "hovedet viser den");
+  assert.doesNotMatch(html, /første registrering 2005/, "16.1: hovedet viser kun navnet (G9)");
   // Historik: nyeste først (konkursen), selskabsnavnet som knap, 3 + "Se alle".
   assert.match(html, /<button type="button" class="lasso-link lasso-timeline__entity">Eksempel Energi A\/S<\/button><span> kom under konkurs<\/span>/);
   assert.match(html, /Se alle 6 begivenheder/);
@@ -217,7 +217,7 @@ test("PersonRoles show 'current': de aktive roller pr. selskab, limit + 'Se alle
   assert.match(html, /Eksempel Byg A\/S<\/div><div class="lasso-row__sub">Bestyrelsesformand<\/div><\/div><div class="lasso-row__side">siden 2012</);
   assert.doesNotMatch(html, /Eksempel Energi/);
   assert.doesNotMatch(html, /Se alle/);
-  assert.match(html, /Kilde: CVR via Lasso, opdateret 12\.09\.2026/);
+  assert.doesNotMatch(html, /Kilde:/, "G3: ingen kildelinje");
   // limit 1: én række + "Se alle 2 selskaber".
   const one = roles({ show: "current", limit: 1 });
   assert.equal((one.match(/<li class="lasso-row"/g) ?? []).length, 1);

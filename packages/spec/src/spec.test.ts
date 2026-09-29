@@ -46,7 +46,7 @@ test("toLassoId normaliserer CVR-numre", () => {
 test("formatAmount bruger danske enheder", () => {
   assert.equal(formatAmount(12_500_000), "12,5 mio. kr.");
   assert.equal(formatAmount(950_000), "950 t. kr.");
-  assert.equal(formatAmount(null), "—");
+  assert.equal(formatAmount(null), "-");
 });
 
 test("formatCriterion bruger én fælles operatorliste og skelner gt og gte", () => {
@@ -283,19 +283,19 @@ test("de nye nøgletal (katalog 19) er i METRICS med label, felt og formattering
   assert.equal(METRIC_KIND.ansatte, "count");
 });
 
-test("formatMetricValue formaterer efter METRIC_KIND (beløb, antal, procent) og viser — når værdien mangler", () => {
+test("formatMetricValue formaterer efter METRIC_KIND (beløb, antal, procent) og viser - når værdien mangler", () => {
   assert.equal(formatMetricValue("resultat", 12_500_000), "12,5 mio. kr.");
   assert.equal(formatMetricValue("ansatte", 42), "42");
   assert.equal(formatMetricValue("soliditetsgrad", 34.5), "34,5 %");
-  assert.equal(formatMetricValue("ebitda", null), "—");
-  assert.equal(formatMetricValue("likviditetsgrad", undefined), "—");
+  assert.equal(formatMetricValue("ebitda", null), "-");
+  assert.equal(formatMetricValue("likviditetsgrad", undefined), "-");
 });
 
 test("formatShare skriver CVR-intervaller", () => {
   assert.equal(formatShare([20, 24.99]), "20–24,99 %");
   assert.equal(formatShare([100, 100]), "100 %");
   assert.equal(formatShare([66.67, 89.99]), "66,67–89,99 %");
-  assert.equal(formatShare(undefined), "—");
+  assert.equal(formatShare(undefined), "-");
 });
 
 test("komponisten vælger form efter datas form, ikke efter en fast skabelon", async () => {

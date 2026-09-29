@@ -37,7 +37,6 @@ import {
   ScoreValue,
   SelectField,
   ShareValue,
-  SourceLine,
   StatusBadge,
   TopBar,
   TagInput,
@@ -732,25 +731,11 @@ export const entries: GalleryEntry[] = [
       </KV>
     ),
   },
-  {
-    nr: "02c.19",
-    title: "Kilde og opdateret",
-    node: "GXL-0",
-    render: () => (
-      <div style={{ maxWidth: 560 }}>
-        <KV>
-          <ValueRow label="CVR-nummer">99000001</ValueRow>
-          <ValueRow label="Virksomhedsform">Aktieselskab</ValueRow>
-          <ValueRow label="Stiftet">01.03.2016</ValueRow>
-        </KV>
-        <SourceLine source="CVR, Erhvervsstyrelsen" updated="2026-09-24" />
-      </div>
-    ),
-  },
+  // 02c.19 "Kilde og opdateret" UDGÅR (Jakob 29.09, G3): ingen kildelinje i nogen elementer.
 
   /* ---------- 04 Sidehoved ---------- */
   { nr: "04.1", title: "Sidehoved (kort med titel og handlinger)", node: "495-0", note: "Tilstand 1: i ro, gemt, intet ændret.", render: () => <Head /> },
-  { nr: "04.2", title: "Sidehoved, ændret — ikke gemt", node: "49K-0", render: () => <Head dirty /> },
+  { nr: "04.2", title: "Sidehoved, ændret - ikke gemt", node: "49K-0", render: () => <Head dirty /> },
   { nr: "04.3", title: "Sidehoved, menu åben (omdøb)", node: "4A3-0", render: () => <Head menu minHeight={300} /> },
   { nr: "04.4", title: "Sidehoved, omdøber", node: "4AX-0", render: () => <Head renaming /> },
 
@@ -847,33 +832,21 @@ export const entries: GalleryEntry[] = [
     nr: "05.9",
     title: "Knaptilstande, primær",
     node: "9FE-0",
-    note: "Hover er tegnet statisk med klassen is-hover (samme farve som :hover).",
+    note: "Som i Paper: tilstanden står som knappens egen tekst, fire knapper på én linje med 12 px mellemrum. Hover er tegnet statisk med klassen is-hover (samme farve som :hover).",
     render: () => (
-      <Row gap={16}>
-        <div>
-          <Cap>Hvile</Cap>
-          <Button variant="primary" size={42}>
-            Gem liste
-          </Button>
-        </div>
-        <div>
-          <Cap>Hover</Cap>
-          <Button variant="primary" size={42} className="is-hover">
-            Gem liste
-          </Button>
-        </div>
-        <div>
-          <Cap>Deaktiveret</Cap>
-          <Button variant="primary" size={42} disabled>
-            Gem liste
-          </Button>
-        </div>
-        <div>
-          <Cap>Gemmer…</Cap>
-          <Button variant="primary" size={42} loading>
-            Gemmer…
-          </Button>
-        </div>
+      <Row gap={12}>
+        <Button variant="primary" size={42}>
+          Hvile
+        </Button>
+        <Button variant="primary" size={42} className="is-hover">
+          Hover
+        </Button>
+        <Button variant="primary" size={42} disabled>
+          Deaktiveret
+        </Button>
+        <Button variant="primary" size={42} loading>
+          Gemmer…
+        </Button>
       </Row>
     ),
   },

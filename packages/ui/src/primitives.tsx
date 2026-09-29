@@ -71,7 +71,7 @@ export function statusTone(status: string | undefined, kind: CompanyVM["statusKi
   return kind ?? "inactive";
 }
 
-/** Regel 1: status er ren tekst i vægt 500 — ingen pille, prik eller farvet flade. */
+/** Regel 1: status er ren tekst i vægt 500 - ingen pille, prik eller farvet flade. */
 export function StatusBadge({ status, kind, size }: { status?: string; kind?: CompanyVM["statusKind"] | "new"; /** "sm": 12 px (05.7, status stående alene); standard arver størrelsen fra omgivelsen. */ size?: "sm" }) {
   if (!status) return null;
   return <span className={`lasso-badge lasso-badge--${statusTone(status, kind)}${size === "sm" ? " lasso-badge--sm" : ""}`}>{status}</span>;
@@ -217,8 +217,8 @@ export function DataState({ state, reason, title, checkedAt, positive, onRetry, 
           {reason ?? "Der er ingen data at vise."}
           {checkedAt ? ` Sidst tjekket ${formatDate(checkedAt)}.` : ""}
         </p>
-        {action ? (
-          <button type="button" className="lasso-link lasso-state-panel__action" onClick={action.onClick} disabled={!action.onClick}>
+        {action?.onClick ? (
+          <button type="button" className="lasso-link lasso-state-panel__action" onClick={action.onClick}>
             {action.label}
           </button>
         ) : null}
@@ -247,8 +247,8 @@ export function DataState({ state, reason, title, checkedAt, positive, onRetry, 
           {reason ?? "Der er ingen data at vise."}
           {checkedAt ? ` Sidst tjekket ${formatDate(checkedAt)}.` : ""}
         </div>
-        {action ? (
-          <button type="button" className="lasso-btn lasso-state__action" onClick={action.onClick} disabled={!action.onClick}>
+        {action?.onClick ? (
+          <button type="button" className="lasso-btn lasso-state__action" onClick={action.onClick}>
             {action.label}
           </button>
         ) : null}
@@ -276,8 +276,8 @@ export function DataState({ state, reason, title, checkedAt, positive, onRetry, 
             {title ? <div className="lasso-state__title">{title}</div> : null}
             <p className="lasso-state-locked__text">{reason ?? "Kræver en anden Lasso-pakke."}</p>
           </div>
-          {action ? (
-            <button type="button" className="lasso-btn lasso-btn--primary lasso-state__wide" onClick={action.onClick} disabled={!action.onClick}>
+          {action?.onClick ? (
+            <button type="button" className="lasso-btn lasso-btn--primary lasso-state__wide" onClick={action.onClick}>
               {action.label}
             </button>
           ) : null}
@@ -303,8 +303,8 @@ export function DataState({ state, reason, title, checkedAt, positive, onRetry, 
               {pending.detail ? <span className="lasso-state-request__detail">{pending.detail}</span> : null}
             </span>
           </div>
-        ) : action ? (
-          <button type="button" className="lasso-btn lasso-btn--primary lasso-state__wide" onClick={action.onClick} disabled={!action.onClick}>
+        ) : action?.onClick ? (
+          <button type="button" className="lasso-btn lasso-btn--primary lasso-state__wide" onClick={action.onClick}>
             {action.label}
           </button>
         ) : null}
@@ -318,15 +318,15 @@ export function DataState({ state, reason, title, checkedAt, positive, onRetry, 
       <div className="lasso-state__body">
         <div className="lasso-state__title">{title ?? "Data kunne ikke hentes"}</div>
         {reason ? <div className="lasso-small">{reason}</div> : null}
-        {onRetry || secondaryAction ? (
+        {onRetry || secondaryAction?.onClick ? (
           <div className="lasso-state__actions">
             {onRetry ? (
               <button type="button" className="lasso-btn lasso-btn--primary lasso-btn--sm lasso-state__retry" onClick={onRetry}>
                 Prøv igen
               </button>
             ) : null}
-            {secondaryAction ? (
-              <button type="button" className="lasso-btn lasso-btn--ghost lasso-btn--sm" onClick={secondaryAction.onClick} disabled={!secondaryAction.onClick}>
+            {secondaryAction?.onClick ? (
+              <button type="button" className="lasso-btn lasso-btn--ghost lasso-btn--sm" onClick={secondaryAction.onClick}>
                 {secondaryAction.label}
               </button>
             ) : null}
@@ -337,19 +337,18 @@ export function DataState({ state, reason, title, checkedAt, positive, onRetry, 
   );
 }
 
-/** Enkelt manglende værdi i en celle eller et felt: "—" i text-faint. */
+/** Enkelt manglende værdi i en celle eller et felt: "-" i text-faint. */
 export function Missing() {
   return <span className="lasso-notreported">{MISSING}</span>;
 }
 
-/** Regel 8: kildelinje én gang pr. sektion, "Kilde: Navn, opdateret DD.MM.ÅÅÅÅ". */
-export function SourceLine({ source, updated, verb = "opdateret" }: { source: string; updated?: string | null; verb?: string }) {
-  return (
-    <p className="lasso-source">
-      Kilde: {source}
-      {updated ? `, ${verb} ${formatDate(updated)}` : ""}
-    </p>
-  );
+/**
+ * Kildelinjen ("Kilde: Navn, opdateret DD.MM.ÅÅÅÅ") er UDGÅET (Jakob 29.09, G3): den vises ikke i
+ * noget element. Komponenten beholdes, så eksisterende kald stadig kompilerer, men tegner intet.
+ * Kilder vises højst som i Se alle-panelet (08.7): overskriften "Kilder" med selve kildelinket.
+ */
+export function SourceLine(_props: { source: string; updated?: string | null; verb?: string }) {
+  return null;
 }
 
 export type StateKind = "empty" | "loading" | "noaccess" | "error";
@@ -380,7 +379,7 @@ export function Skeleton({ lines = 3, height }: { lines?: number; height?: numbe
 /**
  * Sparkline (13.9, 26b.7): altid koral ved `tone="accent"`, prik på seneste værdi. Krydser serien 0,
  * tegnes en stiplet nullinje. `kind="bars"` giver sparsøjler (fx ansatte pr. kvartal) med seneste søjle
- * i koral. Under 3 datapunkter tegnes ingen sparkline, kun "—".
+ * i koral. Under 3 datapunkter tegnes ingen sparkline, kun "-".
  */
 export function Sparkline({
   values,

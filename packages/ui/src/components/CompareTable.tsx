@@ -16,7 +16,7 @@ const SHORT: Partial<Record<Metric, string>> = { bruttofortjeneste: "Bruttofortj
  * Tom kolonne med stiplet kant er "tilføj"-slot, "+ Tilføj (op til 6)" i koral (forsvinder ved 6).
  * Hovedrækken står på panel-flade; negative tal i rødt.
  * Tablet (26f.5): titel + "Tilføj"/"Nøgletal" i hovedet, fast nøgletalskolonne "Nøgletal, t. kr." og
- * emnevirksomheden i koral-soft hoved med "Emne, CVR"; alle tal i t. kr.; 4+ virksomheder ruller.
+ * emnevirksomheden i koral-soft hoved med "Emne"; alle tal i t. kr.; 4+ virksomheder ruller.
  * Mobil (26e.7, mønster 5): udgangsvirksomheden og én anden ad gangen; swipe eller prikkerne vælger
  * næste par; "+ Tilføj virksomhed" og "Vælg nøgletal" under tabellen.
  */
@@ -145,9 +145,9 @@ export function CompareTable({
                         c.name
                       )}
                     </div>
-                    {c.sub ? <div className="lasso-compare__sub lasso-compare__v-d">{c.sub}</div> : null}
-                    <div className={`lasso-compare__sub lasso-compare__v-t${i === 0 ? " is-origin" : ""}`}>{i === 0 ? ["Emne", c.cvr].filter(Boolean).join(", ") : (c.city ?? c.sub)}</div>
-                    <div className="lasso-compare__sub lasso-compare__v-m">{i === 0 ? thousands.label : (c.city ?? c.sub)}</div>
+                    {/* 22.1 (Jakob 29.09, G9): kun navnet; ingen "CVR …, by" under. Tablet markerer emnet, mobil enheden. */}
+                    {i === 0 ? <div className="lasso-compare__sub lasso-compare__v-t is-origin">Emne</div> : null}
+                    {i === 0 ? <div className="lasso-compare__sub lasso-compare__v-m">{thousands.label}</div> : null}
                   </th>
                 ))}
                 {slot ? (

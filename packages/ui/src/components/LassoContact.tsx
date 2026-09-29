@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { formatDate, formatPhone, type ContactVM } from "@lasso/spec";
-import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { DataState, Section, stateForError } from "../primitives.js";
 import { Icon } from "./Icon.js";
 
 /** Omridsikoner fra ikonsættet (01): kun form, ingen farve. */
@@ -244,9 +244,6 @@ export function LassoContact({ contact, title, error, omitAddress = false, onCop
   }
   const stateOf = (n?: { expired?: string }): LiveState | null => (checking ? { kind: "checking" } : n ? liveState(contact.verifiedAt, n.expired, at) : null);
   const mapUrl = hasAddress ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([addressLine1, addressLine2].filter(Boolean).join(", "))}` : undefined;
-  // Regel 8: én kildelinje pr. sektion, også når live number har leveret numre.
-  const sources = [contact.source, hasVerified ? "Lasso live number" : undefined].filter((x): x is string => Boolean(x));
-  const sameDate = !hasVerified || !contact.source || !contact.updated || !contact.verifiedAt || contact.updated === contact.verifiedAt.slice(0, 10);
   const phoneState = stateOf(phoneMatch);
   // 08.3: ét nummer ad gangen; resten (også udgåede) bag "Se N telefonnumre" i muted til højre.
   const folded = foldExtra && !showAll && otherVerified.length > 0;
@@ -315,17 +312,7 @@ export function LassoContact({ contact, title, error, omitAddress = false, onCop
           );
         })}
       </div>
-      {contact.isRobinson ? (
-        <p className="lasso-small lasso-muted">Tilmeldt Robinsonlisten, må ikke kontaktes med markedsføring</p>
-      ) : null}
-      {sources.length === 0 || foldExtra ? null : sameDate ? (
-        <SourceLine source={sources.join(" og ")} updated={contact.updated ?? contact.verifiedAt} />
-      ) : (
-        <p className="lasso-source">
-          Kilde: {contact.source}
-          {contact.updated ? `, opdateret ${formatDate(contact.updated)}` : ""}; Lasso live number, opdateret {formatDate(contact.verifiedAt)}
-        </p>
-      )}
+      {/* 08.3 (Jakob 29.09): ingen Robinson-linje og ingen kildelinje (G3) under kontaktrækkerne. */}
     </Section>
   );
 }
