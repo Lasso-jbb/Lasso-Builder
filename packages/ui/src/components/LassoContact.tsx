@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { formatDate, type ContactVM } from "@lasso/spec";
+import { formatDate, formatPhone, type ContactVM } from "@lasso/spec";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
 import { Icon } from "./Icon.js";
 
@@ -9,10 +9,7 @@ const PhoneIcon = () => <Icon name="phone" size={16} className="lasso-contact__i
 const MailIcon = () => <Icon name="mail" size={16} className="lasso-contact__icon" />;
 const GlobeIcon = () => <Icon name="globe" size={16} className="lasso-contact__icon" />;
 
-/** "12345678" -> "12 34 56 78" (samme gruppering som tekstkortet, card.ts). */
-function prettyPhone(v: string): string {
-  return /^\d{8}$/.test(v) ? v.replace(/^(\d{2})(\d{2})(\d{2})(\d{2})$/, "$1 $2 $3 $4") : v;
-}
+const prettyPhone = (v: string): string => formatPhone(v) ?? v;
 
 /** "https://example.dk/" -> "example.dk" til visning; klikket bruger den fulde adresse. */
 function prettyUrl(v: string): string {

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { accountingPeriod } from "./companyFacts.js";
-import { changeText, formatAge, formatBoolean, formatFullAmount, formatPeriod, formatRange, listParts, scoreWord } from "./format.js";
+import { changeText, formatAge, formatAmount, formatBoolean, formatEmail, formatFullAmount, formatPeriod, formatPhone, formatRange, formatWeb, listParts, scoreWord } from "./format.js";
 
 test("02c.3 Tal-interval: tankestreg uden mellemrum, åbne intervaller", () => {
   assert.equal(formatRange(10, 19), "10–19");
@@ -38,3 +38,19 @@ test("02c.4 Ændring som trekant + ord, fuldt beløb", () => {
   assert.equal(scoreWord(72), "mulig risiko");
 });
 
+
+test("02c.12 Telefon i grupper af to, web uden https:// og www., e-mail med små bogstaver", () => {
+  assert.equal(formatPhone("86123456"), "86 12 34 56");
+  assert.equal(formatPhone("+4586123456"), "+45 86 12 34 56");
+  assert.equal(formatPhone("+46 8 123 456"), "+46 8 123 456");
+  assert.equal(formatWeb("https://www.eksempelbyg.dk/"), "eksempelbyg.dk");
+  assert.equal(formatWeb("http://eksempelbyg.dk/om"), "eksempelbyg.dk/om");
+  assert.equal(formatEmail("Info@Eksempelbyg.DK"), "info@eksempelbyg.dk");
+});
+
+test("01.7/23.5 Beløb: mio. og mia. med én decimal og ægte minus", () => {
+  assert.equal(formatAmount(34_000_000), "34,0 mio. kr.");
+  assert.equal(formatAmount(135_800_000), "135,8 mio. kr.");
+  assert.equal(formatAmount(-201_000), "\u2212201 t. kr.");
+  assert.equal(formatAmount(10_000_000, "kr.", { trimZero: true }), "10 mio. kr.");
+});

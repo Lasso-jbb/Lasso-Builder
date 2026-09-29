@@ -1,4 +1,4 @@
-import { formatDate, formatNumber } from "./format.js";
+import { formatDate, formatEmail, formatNumber, formatPhone, formatWeb } from "./format.js";
 import type { Address, CompanyVM, FinancialYear, OwnershipVM } from "./models.js";
 import type { ViewComponent } from "./spec.js";
 
@@ -94,7 +94,8 @@ export function companyFacts(company: CompanyVM, ownership: OwnershipVM | undefi
     rows.push({ label: "Kapital", value: [`${formatNumber(cap.amount)} ${cap.currency ?? "DKK"}`, ...(cap.classes ?? [])].join(", ") });
   }
   if (!options.hideContact) {
-    rows.push({ label: "Telefon", value: company.phone }, { label: "E-mail", value: company.email }, { label: "Web", value: company.website });
+    // 02c.12: telefon i grupper af to, e-mail i små bogstaver, web uden https:// og www.
+    rows.push({ label: "Telefon", value: formatPhone(company.phone) }, { label: "E-mail", value: formatEmail(company.email) }, { label: "Web", value: formatWeb(company.website) });
   }
   return rows.filter((r) => r.value !== undefined || r.label === "Revisor");
 }

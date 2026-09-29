@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { contactPersonGroup, formatDate, groupContactPersons, type ContactPersonVM, type ContactPersonsVM } from "@lasso/spec";
+import { contactPersonGroup, formatDate, formatPhone, groupContactPersons, type ContactPersonVM, type ContactPersonsVM } from "@lasso/spec";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
 import { ShellIcon } from "./ShellIcons.js";
 import { SidePanel, SidePanelList } from "./SidePanel.js";
@@ -7,10 +7,7 @@ import { SidePanel, SidePanelList } from "./SidePanel.js";
 /** Regel 9: blokken viser 3 + "Se N kontaktpersoner"; resten står i "Se alle"-panelet (08.7). */
 const BLOCK_ROWS = 3;
 
-/** "12345678" -> "12 34 56 78". */
-function prettyPhone(v: string): string {
-  return /^\d{8}$/.test(v) ? v.replace(/^(\d{2})(\d{2})(\d{2})(\d{2})$/, "$1 $2 $3 $4") : v;
-}
+const prettyPhone = (v: string): string => formatPhone(v) ?? v;
 
 function Channels({ person }: { person: ContactPersonVM }) {
   return (
