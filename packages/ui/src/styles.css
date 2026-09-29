@@ -531,6 +531,8 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-row__sub { font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-muted); }
 .lasso-row__side { flex: none; font-size: var(--lasso-fs-sm); color: var(--lasso-muted); white-space: nowrap; }
 .lasso-row__value { flex: none; min-width: 84px; text-align: right; font-size: var(--lasso-fs); font-weight: 500; color: var(--lasso-text); white-space: nowrap; }
+/* 11.4: den beregnede indirekte andel som ren tekst 13/600. */
+.lasso-row__value--share { font-size: var(--lasso-fs-sm); font-weight: 600; }
 .lasso-row--ended { opacity: 0.6; }
 .lasso-share { position: relative; flex: none; width: 200px; /* 02c.14: 200 × 6 */ height: 6px; border-radius: 3px; background: var(--lasso-divider-subtle); overflow: hidden; }
 .lasso-share__min { position: absolute; left: 0; top: 0; bottom: 0; background: var(--lasso-chart-1); }
