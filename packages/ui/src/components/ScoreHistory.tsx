@@ -108,7 +108,7 @@ export function ScoreHistory({ history, title, error, onFetch }: { history?: Sco
                 ) : null}
               </g>
             ))}
-            {[0, 60, 80, 100].map((tk) => (
+            {[0, 20, 40, 60, 80, 100].map((tk) => (
               <text key={tk} className="lasso-chart__tick" x={0} y={y(tk) + 4}>
                 {tk}
               </text>
