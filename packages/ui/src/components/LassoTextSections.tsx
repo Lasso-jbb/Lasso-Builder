@@ -100,12 +100,14 @@ function Item({
  * Variant "profil" (12.1): lange afsnit foldes hver for sig, men ét "Vis mere" (koral) til sidst folder
  * hele sektionen ud på én gang, i stedet for et link efter hvert afsnit.
  */
-function Profile({ items, onOpen }: { items: TextSectionItem[]; onOpen?: (a: ViewAction) => void }) {
+function Profile({ items, onOpen, limit }: { items: TextSectionItem[]; onOpen?: (a: ViewAction) => void; limit?: number }) {
   const [open, setOpen] = useState(false);
-  const long = items.some((it) => (it.segments?.length ? it.segments.reduce((n, s) => n + s.text.length, 0) : it.body.length) > TRUNCATE_AT);
+  // Kompakt profil (højdebudgettet, 23.3): kun de første `limit` afsnit, til "Vis mere" folder resten ud.
+  const clipped = limit !== undefined && items.length > limit;
+  const long = clipped || items.some((it) => (it.segments?.length ? it.segments.reduce((n, s) => n + s.text.length, 0) : it.body.length) > TRUNCATE_AT);
   return (
     <>
-      {items.map((s, i) => (
+      {(clipped && !open ? items.slice(0, limit) : items).map((s, i) => (
         <Item key={i} item={s} limit={open ? Number.POSITIVE_INFINITY : TRUNCATE_AT} toggle={false} onOpen={onOpen} />
       ))}
       {long ? (
@@ -338,8 +340,11 @@ export function LassoTextSections({
   error,
   onOpen,
   folded = false,
+  limit,
   onPdf,
 }: {
+  /** Variant "profil": kun de første N afsnit, resten bag "Vis mere" (kompakt profil, 23.3). */
+  limit?: number;
   /** 19.3: "Hent som PDF" i analysens hoved (19.6). Uden den vises knappen ikke (G1). */
   onPdf?: () => void;
   sections?: TextSectionsVM;
@@ -376,7 +381,7 @@ export function LassoTextSections({
   return (
     <Section title={heading} span={span} className="lasso-textsections">
       {/* 12.1: ingen kildelinje (G3). */}
-      <Profile items={shown} onOpen={onOpen} />
+      <Profile items={shown} onOpen={onOpen} limit={limit} />
     </Section>
   );
 }

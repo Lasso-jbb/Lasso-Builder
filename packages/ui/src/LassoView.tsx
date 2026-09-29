@@ -508,6 +508,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           title={c.title}
           variant={c.variant}
           folded={c.folded}
+          limit={c.limit}
           error={err(`textSections:${c.company}`)}
           onOpen={props.host.drillDown ? act : undefined}
           // 19.3: "Hent som PDF" (19.6) kun, når værten kan eksportere (G1).
