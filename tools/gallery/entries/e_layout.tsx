@@ -1345,6 +1345,25 @@ function Level1() {
     <div>
       {caption("Niveau 1, sideniveau, 48 px: valgt, hvile, hover (Regnskab), fokus (Ejerskab), deaktiveret (Risiko) og 'Flere' ved mere end 8 faner")}
       <Tabs level={1} items={L1} value={v} onChange={setV} ariaLabel="Sider" hoverId="regnskab" focusId="ejerskab" />
+      {/* Papers forklaringer under rækken (IWK-0). */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 24, marginTop: 16 }}>
+        {[
+          ["Valgt", "Ink 600, 2 px koral understregning i fanens bredde"],
+          ["Hvile", "Text-secondary 400, ingen streg"],
+          ["Hover", "Tekst bliver ink, 2 px divider-streg, ingen baggrund"],
+          ["Fokus", "1 px koral kant (primary-border) omkring navnet, radius 6, kun ved tastatur"],
+          ["Deaktiveret", "45 % opacitet, tooltip siger hvorfor, fx \"Ingen regnskaber indberettet\""],
+          ["Flere", "Ved mere end 8 faner: \"Flere\" med pil åbner menu (07)"],
+        ].map(([t, d]) => (
+          <div key={t}>
+            <div style={{ fontSize: "var(--lasso-fs)", lineHeight: "20px", fontWeight: 600, color: "var(--lasso-text)" }}>{t}</div>
+            <div className="lasso-small" style={{ color: "var(--lasso-text-2)" }}>{d}</div>
+          </div>
+        ))}
+      </div>
+      <p className="lasso-small" style={{ ...muted, margin: "16px 0 0" }}>
+        Højde 48, tekst 14, gap 28 mellem faner, ingen vandret padding på fanen, 1 px divider under hele rækken, understregning ligger oven på divideren.
+      </p>
     </div>
   );
 }
@@ -1460,10 +1479,22 @@ function PhoneTabs() {
   const [l3, setL3] = useState("2025");
   return (
     <div style={{ border: "1px solid var(--lasso-border)", borderRadius: "var(--lasso-radius-toast)", overflow: "hidden", background: "var(--lasso-surface)" }}>
-      <header className="lasso-mobilebar" style={{ paddingLeft: 16 }}>
+      {/* 29.5: samme topbjælke som 26a.1 (burger, titel + undertitel, klokke og "…"). */}
+      <header className="lasso-mobilebar">
+        <span className="lasso-mobilebar__btn" aria-hidden="true">
+          <ShellIcon name="menu" size={20} />
+        </span>
         <div className="lasso-mobilebar__titles">
           <div className="lasso-mobilebar__title">LASSO X A/S</div>
           <div className="lasso-mobilebar__subtitle">Økonomi</div>
+        </div>
+        <div className="lasso-mobilebar__tools">
+          <span className="lasso-mobilebar__btn" aria-hidden="true">
+            <ShellIcon name="bell" size={20} />
+          </span>
+          <span className="lasso-mobilebar__btn" aria-hidden="true">
+            <ShellIcon name="more" size={20} />
+          </span>
         </div>
       </header>
       <div style={{ padding: "16px 16px 0" }}>
