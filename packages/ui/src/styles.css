@@ -901,8 +901,9 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-sev-icon--25 { color: var(--lasso-chart-2); }
 .lasso-sev-icon--50 { color: var(--lasso-warning); }
 .lasso-sev-icon--100 { color: var(--lasso-danger); }
-/* Kun info-ikonet står i en let tonet cirkel, som i kataloget (afledt af chart-2, ingen ny hex). */
-.lasso-sev-scale__item:nth-child(2) .lasso-sev-icon-wrap { background: color-mix(in srgb, var(--lasso-chart-2) 12%, var(--lasso-surface)); }
+/* 17.1: mulig vigtig og vigtig står på en let flade i egen tone (gul, rød); info og neutral uden flade. */
+.lasso-sev-icon-wrap--50 { background: var(--lasso-warning-soft); }
+.lasso-sev-icon-wrap--100 { background: var(--lasso-danger-soft); }
 
 .lasso-sev-scale { list-style: none; margin: 0 0 var(--lasso-space-5); padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--lasso-space-3); }
 .lasso-sev-scale__item { border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); padding: var(--lasso-space-4); display: flex; flex-direction: column; gap: 10px; min-width: 0; }
@@ -3176,21 +3177,65 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-state__wide { align-self: stretch; width: 100%; height: var(--lasso-touch-h); font-size: var(--lasso-fs); }
 }
 
-/* ---------- 17.2 / 26d.6 Risikoobservationer: filterchips og kort med farvekant (node BUO-0, ES9-0) ---------- */
+/* ---------- 17.2 / 26d.6 Risikoobservationer (node BUO-0, ES9-0) ---------- */
+/* Begge former tegnes; containerbredden vælger: desktop (17.2) over 560, mobil (26d.6) derunder. */
+.lasso-obs__mob { display: none; }
 .lasso-obs .lasso-section__head { align-items: center; margin-bottom: var(--lasso-space-3); }
 .lasso-obs__count { font-size: var(--lasso-fs-sm); color: var(--lasso-muted); font-weight: 400; }
+/* 17.2 desktop: sammenfatningskort med overskrift 20/600, muted linje og alvorsbjælke til højre. */
+.lasso-obs-summary { display: flex; align-items: center; justify-content: space-between; gap: var(--lasso-space-5); padding: var(--lasso-space-4) 20px; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); margin-bottom: var(--lasso-space-2); }
+.lasso-obs-summary__text { min-width: 0; }
+.lasso-obs-summary__head { margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; color: var(--lasso-text); }
+.lasso-obs-summary__sub { margin: 2px 0 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-muted); }
+.lasso-obs-summary__bar { display: flex; gap: 3px; flex: none; }
+.lasso-obs-summary__seg { width: 28px; height: 8px; border-radius: 2px; background: var(--lasso-border-strong); }
+.lasso-obs-summary__seg--100 { background: var(--lasso-danger); }
+.lasso-obs-summary__seg--50 { background: var(--lasso-warning); }
+.lasso-obs-summary__seg--25 { background: var(--lasso-chart-2); }
+.lasso-obs-summary__seg--0 { background: var(--lasso-faint); }
+.lasso-obsrows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.lasso-obsrows--after { margin-top: var(--lasso-space-4); }
+.lasso-obsrow { display: grid; grid-template-columns: 24px minmax(0, 1fr); column-gap: var(--lasso-space-3); padding: var(--lasso-space-4) 0; border-bottom: 1px solid var(--lasso-border); }
+.lasso-obsrow:last-child { border-bottom: 0; }
+.lasso-obsrow__icon { display: flex; align-items: center; justify-content: center; height: 20px; }
+.lasso-obsrow__icon .lasso-sev-icon { width: 18px; height: 18px; }
+.lasso-obsrow__body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.lasso-obsrow__word { font-size: var(--lasso-fs-label); line-height: 14px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--lasso-muted); }
+.lasso-obsrow--100 .lasso-obsrow__word { color: var(--lasso-danger); }
+.lasso-obsrow--50 .lasso-obsrow__word { color: var(--lasso-warning); }
+.lasso-obsrow--25 .lasso-obsrow__word { color: var(--lasso-chart-2); }
+.lasso-obsrow__title { font-size: 15px; line-height: 20px; font-weight: 600; color: var(--lasso-text); }
+.lasso-obsrow__detail { font-size: var(--lasso-fs); line-height: 20px; color: var(--lasso-text-2); }
+.lasso-obsrow__meta { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+.lasso-root .lasso-obsrow__action { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--lasso-accent-text); }
+/* Kun den vigtige (100) får en tonet flade ("maks én farveflade pr. skærm", guide 23). */
+.lasso-obsrow--100 { background: var(--lasso-danger-soft); border-radius: var(--lasso-radius); padding-inline: var(--lasso-space-4); border-bottom-color: transparent; grid-template-columns: 24px minmax(0, 1fr); margin-bottom: 1px; }
+/* Info og neutrale fakta: kompakte rækker på 44 px med kilde og dato yderst til højre. */
+.lasso-obsrow--compact { grid-template-columns: 24px 92px minmax(0, 1fr) auto; align-items: center; min-height: var(--lasso-touch-h); padding: 0; }
+.lasso-obsrow--compact .lasso-obsrow__icon { height: auto; }
+.lasso-obsrow--compact .lasso-obsrow__title { font-size: var(--lasso-fs); font-weight: 400; color: var(--lasso-text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lasso-obsrow--compact .lasso-obsrow__date { font-size: 12px; color: var(--lasso-muted); white-space: nowrap; padding-left: var(--lasso-space-3); }
+.lasso-obsrow--na .lasso-obsrow__title { color: var(--lasso-muted); }
+/* 17.3: stiplet kort, venstrestillet titel 15/600 og forklaring. Aldrig rød kant eller grå fyld. */
+.lasso-riskna { border: 1px dashed var(--lasso-border-strong); border-radius: var(--lasso-radius-lg); padding: var(--lasso-space-4) 20px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; background: var(--lasso-surface); }
+.lasso-riskna__title { margin: 0; font-size: 15px; line-height: 20px; font-weight: 600; color: var(--lasso-text); }
+.lasso-riskna__text { margin: 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-3); }
+.lasso-riskna__meta { margin: 4px 0 0; font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+.lasso-root .lasso-riskna__link { margin-top: 6px; font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-accent-text); }
+/* 26d.6 mobil: filterchips og kort med 3 px farvekant og chevron. */
 .lasso-obs__filters { display: flex; flex-wrap: wrap; gap: var(--lasso-space-2); margin-bottom: var(--lasso-space-4); }
-.lasso-obs__chip { height: 30px; padding: 0 12px; border-radius: var(--lasso-radius-pill); border: 1px solid var(--lasso-border-strong); background: var(--lasso-surface); font: inherit; font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-text-2); cursor: pointer; }
+.lasso-obs__chip { height: 30px; padding: 0 12px; border-radius: var(--lasso-radius-pill); border: 1px solid var(--lasso-border-strong); background: var(--lasso-surface); font: inherit; font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-text); cursor: pointer; }
 .lasso-root .lasso-obs__chip--høj { color: var(--lasso-danger); }
 .lasso-root .lasso-obs__chip--middel { color: var(--lasso-warning); }
 .lasso-obs__chip:hover { border-color: var(--lasso-icon); }
 .lasso-obs__chip.is-selected { border-color: var(--lasso-text); font-weight: 600; }
 .lasso-obs__chip:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
 .lasso-obs__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.lasso-obs__list--after { margin-top: var(--lasso-space-4); }
 .lasso-obs__item { padding: 0 0 var(--lasso-space-3); }
 .lasso-obs__item + .lasso-obs__item { padding-top: var(--lasso-space-3); border-top: 1px solid var(--lasso-divider-subtle); }
-.lasso-obs-card { display: flex; flex-direction: column; gap: 4px; padding: 10px var(--lasso-space-4) 12px; border-left: 3px solid var(--lasso-faint); border-radius: var(--lasso-radius) 0 0 var(--lasso-radius); }
+.lasso-obs-card { display: flex; align-items: center; gap: var(--lasso-space-2); padding: 10px 0 12px var(--lasso-space-4); border-left: 3px solid var(--lasso-faint); border-radius: var(--lasso-radius) 0 0 var(--lasso-radius); }
+.lasso-obs-card__body { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.lasso-obs-card__chevron { flex: none; color: var(--lasso-icon); }
 .lasso-obs-card--høj { border-left-color: var(--lasso-danger); }
 .lasso-obs-card--middel { border-left-color: var(--lasso-warning); }
 .lasso-obs-card--info { border-left-color: var(--lasso-icon); }
@@ -3203,8 +3248,12 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-obs__related-title { margin: 0; font-size: var(--lasso-fs); font-weight: 600; color: var(--lasso-text); }
 .lasso-obs__related-name { margin: 0 0 var(--lasso-space-2); font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-text-2); }
 @container lasso (max-width: 560px) {
+  .lasso-obs__desk { display: none; }
+  .lasso-obs__mob { display: block; }
+  span.lasso-obs__mob { display: inline; }
   .lasso-obs__chip { height: 32px; }
-  .lasso-obs-card { min-height: var(--lasso-touch-h); padding-right: 0; }
+  .lasso-obs-card { min-height: var(--lasso-touch-h); }
+  .lasso-riskna { padding: var(--lasso-space-4); }
 }
 /* 27.4 A4 side 4: observationer med prik i alvorsfarve + ord (tryk: ingen flader over 24 px). */
 .lasso-a4-obs__dot { flex: none; width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; background: var(--lasso-placeholder); }

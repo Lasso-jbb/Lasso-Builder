@@ -1,19 +1,18 @@
 import type { ReactNode } from "react";
-import { ownershipGraphKey, type Dataset, type OwnershipGraphVM, type Severity } from "@lasso/spec";
+import { ownershipGraphKey, type Dataset, type OwnershipGraphVM } from "@lasso/spec";
 import {
   BandIcon,
   BulkBar,
   CreditConfirmDialog,
-  DataState,
   MonitorBell,
   MonitorSettings,
   NotificationPanel,
   OwnershipDiagram,
   ScoreCompare,
+  RiskUnavailable,
   Section,
-  SeverityIcon,
+  SeverityScale,
   TableStateRows,
-  severityWord,
   type NotificationVM,
   type TableState,
 } from "@lasso/ui";
@@ -161,8 +160,6 @@ const NOTIFICATIONS: NotificationVM[] = [
   { id: "n6", kind: "konto", text: "Du har 12 kreditter tilbage", source: "Konto", at: "2026-09-26T09:00:00+02:00", read: true },
 ];
 
-const SEVERITIES: Severity[] = [0, 25, 50, 100];
-
 export const entries: GalleryEntry[] = [
   /* ---------- 14 Ejerdiagram ---------- */
   {
@@ -295,17 +292,7 @@ export const entries: GalleryEntry[] = [
     nr: "17.1",
     title: "Alvorsskala",
     node: "BTL-0",
-    render: () => (
-      <Row
-        items={SEVERITIES.map((s) => [
-          `severity ${s}`,
-          <span key={s} style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
-            <SeverityIcon severity={s} />
-            <span>{severityWord(s)}</span>
-          </span>,
-        ])}
-      />
-    ),
+    render: () => <SeverityScale />,
   },
   { nr: "17.2", title: "Observationsliste med sammenfatning", node: "BUO-0", spec: company("Eksempel Byg A/S", [{ type: "LassoRiskObservations", company: BYG }]) },
   {
@@ -314,23 +301,13 @@ export const entries: GalleryEntry[] = [
     node: "BV2-0",
     render: () => (
       <Section title="Risikoobservationer" span="full">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-          <div>
-            <Label>Intet fundet (positiv)</Label>
-            <DataState state="empty" positive title="Intet at bemærke" reason="Lasso har gennemgået virksomheden og fandt ingen risikoobservationer." checkedAt="2026-09-28" />
-          </div>
-          <div>
-            <Label>Ingen adgang</Label>
-            <DataState state="locked" title="Kræver Lasso Risiko" reason="Risikoobservationer er en del af Lasso Risiko." action={{ label: "Se planer", onClick: noop }} />
-          </div>
-          <div>
-            <Label>Kunne ikke hentes</Label>
-            <DataState state="error" title="Risikoobservationer kunne ikke hentes" reason="Lasso svarede ikke inden for 15 sekunder." onRetry={noop} />
-          </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
+          <RiskUnavailable reason="none" checkedAt="2026-09-28" />
+          <RiskUnavailable reason="cannot" />
+          <RiskUnavailable reason="package" onSeePackages={noop} />
         </div>
       </Section>
     ),
-    note: "Paper-teksten for de tre årsager er ikke tilgængelig her; tolket som intet fundet, ingen adgang og teknisk fejl med DataState.",
   },
 
   /* ---------- 18 Kreditvurdering over tid ---------- */
