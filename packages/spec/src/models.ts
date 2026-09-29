@@ -294,6 +294,10 @@ export interface BeneficialOwnerVM {
   chain?: string;
   /** Den beregnede indirekte andel, fx "20–24,99 %". */
   share?: string;
+  /** Ejerskabet skyldes en rolle i virksomheden (API: throughRole). Vises som "via rolle" i muted efter navnet (28.9). */
+  throughRole?: boolean;
+  /** Ledelsen som reelle ejere (28.9): personens rolle, fx "Direktør". Står til højre i stedet for andelen. */
+  role?: string;
 }
 
 /** Et led i ejerkæden, som CVR ikke kan følge til en reel person (fx et fondsejet led). */
@@ -303,10 +307,31 @@ export interface BeneficialOwnerGapVM {
   reason?: string;
 }
 
+/**
+ * De tre særlige tilstande for reelle ejere (katalog 28.9). Teksten forklarer altid, hvorfor listen
+ * ser ud, som den gør; aldrig farvet boks, aldrig tom sektion.
+ * - "management": ingen registrerede reelle ejere, så ledelsen/bestyrelsen/den daglige ledelse er
+ *   indsat (API: fallbackType/effectiveFallbackType). De indsatte personer står som rækker i `owners` med `role`.
+ * - "exempt": virksomheden er undtaget registreringskravet (API: exemptionStatus "EXEMPT"); forbehold i muted.
+ * - "unidentified": virksomheden har registreret, at den ikke kan identificere sine reelle ejere
+ *   (API: couldNotIdentify). Vises med udråbstegn-ikon, fordi det er en observation.
+ */
+export interface BeneficialOwnershipSpecialVM {
+  kind: "management" | "exempt" | "unidentified";
+  /** Årsagen i én sætning, fx Lassos fallbackDescription. */
+  reason: string;
+  /** Fritaget: forbeholdet i muted. */
+  caveat?: string;
+  /** Ledelsen som reelle ejere: hvilken gruppe der er indsat. */
+  fallback?: "management" | "daily-management" | "board";
+}
+
 export interface BeneficialOwnershipVM {
   lassoId: string;
   owners: BeneficialOwnerVM[];
   gaps?: BeneficialOwnerGapVM[];
+  /** Særlig tilstand (28.9): fallback til ledelsen, fritaget eller kunne ikke identificeres. */
+  special?: BeneficialOwnershipSpecialVM;
 }
 
 /** Tekstsektioner fra CVR-stamdata (katalog 12, "Tekstsektioner"). Felter ud over branche er ubekræftede. */

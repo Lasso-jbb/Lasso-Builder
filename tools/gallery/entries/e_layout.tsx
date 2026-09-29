@@ -1043,22 +1043,37 @@ const datatypes: GalleryEntry[] = [
     nr: "28.9",
     title: "Reelle ejere: fritagelse, ledelsen som reelle ejere, kunne ikke identificeres",
     node: "HHS-0",
-    note: "LassoBeneficialOwners kender kun ejere, udækkede andele (gaps) og tom tilstand. De tre særlige tilstande (fallback til ledelsen, fritaget, kunne ikke identificeres) er ikke bygget; her vist med de tilstande, komponenten har.",
+    note: "Tre tilstande: ledelsen som reelle ejere (årsag + indsatte personer), fritaget (forbehold i muted) og kunne ikke identificeres (udråbstegn). Fjerde: almindelig liste med \"via rolle\".",
     spec: {
       kind: "custom",
       title: "Reelle ejere",
-      components: BO_STATES.map((company) => ({ type: "LassoBeneficialOwners", company, width: "full" })),
+      components: [...BO_STATES, C].map((company) => ({ type: "LassoBeneficialOwners", company, width: "full" })),
     },
     mutate: (ds) => {
       ds.beneficialOwnership[BO_STATES[0]!] = {
         lassoId: BO_STATES[0]!,
+        special: { kind: "management", fallback: "management", reason: "Virksomheden har ikke reelle ejere, og ledelsen er indsat som reelle ejere." },
         owners: [
-          { name: "Anne Eksempel", lassoId: "CVR-3-4000000001", chain: "Ledelsen er registreret som reelle ejere" },
-          { name: "Bo Eksempel", lassoId: "CVR-3-4000000002", chain: "Ledelsen er registreret som reelle ejere" },
+          { name: "Anne Eksempel", lassoId: "CVR-3-4000000001", role: "Direktør" },
+          { name: "Bo Eksempel", lassoId: "CVR-3-4000000002", role: "Direktør" },
         ],
       };
-      ds.beneficialOwnership[BO_STATES[1]!] = { lassoId: BO_STATES[1]!, owners: [] };
-      ds.beneficialOwnership[BO_STATES[2]!] = { lassoId: BO_STATES[2]!, owners: [], gaps: [{ share: "100 %", reason: "Den reelle ejer kunne ikke identificeres." }] };
+      ds.beneficialOwnership[BO_STATES[1]!] = {
+        lassoId: BO_STATES[1]!,
+        owners: [],
+        special: {
+          kind: "exempt",
+          reason: "Virksomheden er undtaget kravet om at registrere reelle ejere.",
+          caveat: "Undtagelsen er vurderet ud fra virksomhedsform, branche og øvrige forhold i CVR og kan i særlige tilfælde være forkert.",
+        },
+      };
+      ds.beneficialOwnership[BO_STATES[2]!] = {
+        lassoId: BO_STATES[2]!,
+        owners: [],
+        special: { kind: "unidentified", reason: "Virksomheden har registreret i CVR, at den ikke kan identificere sine reelle ejere." },
+      };
+      const base = ds.beneficialOwnership[C];
+      if (base) ds.beneficialOwnership[C] = { ...base, owners: [...base.owners, { name: "Carla Prøve", lassoId: "CVR-3-4000000003", throughRole: true }] };
     },
   },
 ];

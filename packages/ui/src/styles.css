@@ -3477,3 +3477,13 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-psearch__row { flex-direction: column; align-items: flex-start; gap: 2px; }
   .lasso-psearch__via { text-align: left; }
 }
+
+/* 28.9 Reelle ejere: særlige tilstande. Ren tekst og tynde linjer, aldrig farvet boks. */
+.lasso-bo__reason { margin: 0; font-size: var(--lasso-fs); line-height: 20px; color: var(--lasso-text); }
+.lasso-bo__reason--lead { padding-bottom: var(--lasso-space-3); }
+.lasso-bo__note { display: flex; flex-direction: column; gap: var(--lasso-space-1); padding: var(--lasso-space-3) 0; border-top: 1px solid var(--lasso-border); border-bottom: 1px solid var(--lasso-border); }
+.lasso-bo__caveat { margin: 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-muted); }
+.lasso-bo__via { color: var(--lasso-muted); font-weight: 400; }
+.lasso-bo__role { color: var(--lasso-muted); font-weight: 400; }
+.lasso-row--bo-special { align-items: flex-start; gap: var(--lasso-space-3); }
+.lasso-bo__alert { flex: none; display: inline-flex; margin-top: 1px; color: var(--lasso-warning); }
