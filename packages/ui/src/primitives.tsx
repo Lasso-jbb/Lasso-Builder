@@ -47,7 +47,7 @@ export function Section({
 
 /**
  * Statusens tone (katalog 05.7): Aktiv i tekstfarve, konkurs/tvangsopløsning mørk rød,
- * likvidation warning-tekst, ophørt muted, "Ny" koral tekst. Likvidation har ikke egen statusKind
+ * likvidation samme mørke røde (02c.8), ophørt muted, "Ny" koral tekst. Likvidation har ikke egen statusKind
  * i modellen (den er "warning" ligesom konkurs), så den skelnes på ordet.
  */
 export type StatusTone = "active" | "warning" | "liquidation" | "inactive" | "new";

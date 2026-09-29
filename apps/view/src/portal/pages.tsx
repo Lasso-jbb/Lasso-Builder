@@ -251,6 +251,7 @@ export function EntityPage({
             host={entityHost(shellWidth)}
             savePrefix={savePrefix}
             onAction={onAction}
+            frameless
           />
         ) : null}
       </TabPanel>
@@ -285,6 +286,7 @@ export function SavedPage({ tab, data, onRetry, onAction }: { tab: PortalTab; da
       theme="light"
       host={SAVED_HOST}
       onAction={onAction}
+      frameless
     />
   );
 }

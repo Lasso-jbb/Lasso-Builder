@@ -842,7 +842,7 @@ export function LassoView(props: LassoViewProps) {
 }
 
 function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
-  const { spec, dataset, host, onAction, url, theme, loading, savePrefix } = props;
+  const { spec, dataset, host, onAction, url, theme, loading, savePrefix, frameless = false } = props;
   const toast = useToast();
   const [saving, setSaving] = useState(false);
   const [savedUrl, setSavedUrl] = useState<string | undefined>(url);
@@ -908,7 +908,8 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
 
   return (
     <div className="lasso-root" data-theme={theme ?? "light"}>
-      <div className="lasso-frame">
+      <div className={`lasso-frame ${frameless ? "lasso-frame--bare" : ""}`}>
+        {frameless ? null : (
         <header className="lasso-frame__header">
           {host.back ? (
             <button className="lasso-btn lasso-btn--ghost lasso-frame__back" onClick={() => act({ kind: "back" })} aria-label="Tilbage">
@@ -931,6 +932,7 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
           </div>
           {target && dataset && !headActions ? <SavePageButton save={save} /> : null}
         </header>
+        )}
 
         {spec.criteria.length > 0 || (host.refine && spec.kind === "list") ? (
           // 26c.8: med en virksomhedstabel står filtrene i tabellens værktøjslinje og bundark på mobil.
@@ -1015,6 +1017,9 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
           </div>
         ) : null}
 
+        {frameless ? (
+          notice ? <div className="lasso-small lasso-muted" role="status">{notice}</div> : null
+        ) : (
         <footer className="lasso-actionbar">
           {host.fullscreen && !headActions ? (
             <button className="lasso-btn lasso-btn--ghost" onClick={() => act({ kind: "fullscreen" })} aria-label="Fuld skærm">
@@ -1051,6 +1056,7 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
             </button>
           ) : null}
         </footer>
+        )}
 
         {props.ownToasts ? <Toasts /> : null}
 
