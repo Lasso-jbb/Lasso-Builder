@@ -279,6 +279,7 @@ function CompanyPage({ ds }: { ds: Dataset }) {
         onAction={noop}
         theme="light"
         frameless
+        page
       />
     </Shell>
   );
@@ -406,6 +407,7 @@ function PaperCompanyPage({ ds }: { ds: Dataset }) {
         onAction={noop}
         theme="light"
         frameless
+        page
       />
     </PaperShell>
   );
@@ -424,6 +426,7 @@ function PaperPersonPage({ ds }: { ds: Dataset }) {
         onAction={noop}
         theme="light"
         frameless
+        page
       />
     </PaperShell>
   );

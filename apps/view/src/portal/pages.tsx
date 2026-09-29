@@ -261,6 +261,7 @@ export function EntityPage({
             theme="light"
             host={entityHost(shellWidth, Boolean(onMonitor))}
             headTabs={headTabs}
+            page
             savePrefix={savePrefix}
             onAction={onAction}
             frameless

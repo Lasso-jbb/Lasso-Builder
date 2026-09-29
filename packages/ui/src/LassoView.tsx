@@ -188,7 +188,7 @@ function PersonHeadBridge({ c, ds, props, act, frame }: { c: Extract<ViewCompone
             : undefined
       }
       onSeeRisk={sectionAction(props, act, { lassoId: c.person, pageKind: "person", section: "risiko", name, label: "Risiko" })}
-      riskLine={Boolean(props.frameless || props.embedded)}
+      riskLine={Boolean(props.page)}
       below={full ? headTabsOf(props) : undefined}
     />
   );
@@ -201,7 +201,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoCompanyHead":
       return <CompanyHeadBridge key={key} c={c} ds={empty} props={props} act={act} frame={frame} />;
     case "LassoKeyFigureCards":
-      return <KeyFigureCards key={key} financials={empty.financials[c.company]} metrics={c.metrics} plain={c.variant === "plain" || Boolean(props.frameless || props.embedded)} error={err(`financials:${c.company}`)} />;
+      return <KeyFigureCards key={key} financials={empty.financials[c.company]} metrics={c.metrics} plain={c.variant === "plain" || Boolean(props.page)} error={err(`financials:${c.company}`)} />;
     case "LassoBarChart":
       return <BarChart key={key} financials={empty.financials[c.company]} metric={c.metric} years={c.years} error={err(`financials:${c.company}`)} />;
     case "LassoGroupedBarChart":
@@ -549,7 +549,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           error={err(`person:${c.person}`)}
           onOpen={props.host.drillDown ? act : undefined}
           onUpgrade={props.host.prompt ? () => act({ kind: "prompt", prompt: "Hvilke Lasso-pakker giver adgang til tjek mod sanktionslister?" }) : undefined}
-          lines={Boolean(props.frameless || props.embedded)}
+          lines={Boolean(props.page)}
         />
       );
     case "LassoPersonStats":

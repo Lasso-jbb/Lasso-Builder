@@ -91,4 +91,11 @@ export interface LassoViewProps {
    * for at være adskilt af dividere, og sektionsfanerne under hovedet går i fuld bredde. Kun med frameless.
    */
   sectionCards?: boolean;
+  /**
+   * Visningen er en sammensat side i portalen (24, 25, 26.2/26.3, 26f.1, 26g): elementerne bruger
+   * sidens rolige former: nøgletal med lodrette linjer uden ramme og sparkline (24.5), personrisiko som
+   * tjeklinjer (25.6) og personhovedets observationslinje med "Se risiko" (25.3). Udeladt: elementernes
+   * egne former (09.1, 16.1, 16.4).
+   */
+  page?: boolean;
 }
