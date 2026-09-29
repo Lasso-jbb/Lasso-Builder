@@ -74,7 +74,7 @@ export const NUMBER_DEFS: readonly (readonly [string, string])[] = [
 /** 23.5: tjeklisten "Aflever aldrig uden". */
 export const CHECKLIST: readonly string[] = [
   "Alle fem tilstande for hvert nyt element",
-  "Ingen kildelinje (\"Kilde: …, opdateret …\") på elementerne; kilder højst som \"Kilder\" med link i Se alle-panelet (08.7)",
+  "Ingen kildelinje (\"Kilde: …, opdateret …\") på elementerne; ingen \"Vis kilder (N)\" og ingen \"Kilder\" med link nogen steder (heller ikke 08.7)",
   "Genereret tekst uden AI-mærke og uden farvet boks",
   "Ikon + ord ved enhver farvekodning",
   "Fokus = 1 px koral kant, ingen ring",

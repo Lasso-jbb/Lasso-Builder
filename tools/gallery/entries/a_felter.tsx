@@ -218,7 +218,7 @@ const DATA_RULES: string[] = [
   "Ingen dekorative piller: Positiv, Lav risiko, Ny og lignende skrives som tekst eller udelades. Tællere står kun i overskrifter og tekst, aldrig på faner. Kun filter-chips (valgbare) må have kant.",
   "Ingen ink (sort) baggrund på rækker eller flader. Bundlinjer i tabeller markeres med vægt 700 og en 1 px linje over, ikke fyld. Kun tooltips er ink.",
   "Ingen farvede bannerbokse. Sammenfatninger, risikonoter og AI-analyser er almindelige sektioner på hvid flade: overskrift og brødtekst, ingen kildelinje. Et lille farvet ikon foran en tekstlinje er nok.",
-  "\"Skrevet af AI\" eller lignende mærker vises ikke, og der er ingen kildelinje (\"Kilde: …, opdateret …\") på elementerne; kilder vises højst som \"Kilder\" med kildelinket i Se alle-panelet (08.7).",
+  "\"Skrevet af AI\" eller lignende mærker vises ikke, og der er ingen kildelinje (\"Kilde: …, opdateret …\") på elementerne; ingen \"Vis kilder (N)\" og ingen \"Kilder\" med link, heller ikke i Se alle-panelet (08.7). Nyhedens egen kilde (favicon, navn, tid) er ikke en kildelinje.",
   "Virksomheds- og personnavne står alene i lister, tabeller, hoveder, netværk, kontaktpersoner og diagrammer. Ingen ikonkasse og ingen rund initial-cirkel (\"JB\", \"?\") foran navnet. Person vs. selskab skelnes med tekst (rolle, \"Person\") og i diagrammet med form (pille / kasse); fratrådt og ukendt skrives som tekst, aldrig som stiplet cirkel.",
   "Nyhedskilder vises med sidens favicon som 16 px mærke (radius 3) foran kildenavnet. Ingen bogstavskasser.",
   "Mulig fejl i data: 14 px udråbstegn-ikon i warning-farve FORAN tallet, forklaring i tooltip ved mouseover. Ingen mærke, pille eller stiplet understregning.",

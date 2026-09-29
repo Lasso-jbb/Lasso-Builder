@@ -5068,7 +5068,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
    Desktop ≥ 1200: bredt panel (1104) i portalens ramme med tre kolonner: virksomheden (320, L7H-0) |
    stillinger pr. afdeling (flex, L8Z-0) | valgt person (360, LCJ-0). Tablet: panel fra højre med liste +
    detalje; mobil: ark med liste, detalje med tilbagepil. Samme detalje i alle bredder: navn, stilling,
-   "Kopiér telefonnummer"/"Kopiér e-mailadresse" med værdien og "Kilder" med link (ingen Ring/LinkedIn). */
+   "Kopiér telefonnummer"/"Kopiér e-mailadresse" med værdien (ingen kilder, ingen Ring/LinkedIn). */
 .lasso-sidepanel--seeall .lasso-sidepanel__head { min-height: 60px; padding: 0 20px 0 28px; }
 .lasso-sidepanel--seeall .lasso-sidepanel__titles { gap: 2px 10px; }
 .lasso-sidepanel--seeall .lasso-sidepanel__title { font-size: 16px; line-height: 20px; font-weight: 600; }

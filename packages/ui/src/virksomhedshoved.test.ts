@@ -193,7 +193,7 @@ const people: ContactPersonsVM = {
   people: [
     { name: "Sofie Eksempel", role: "Salgschef", phone: "00000000", email: "a@eksempel.dk" },
     { name: "Mikkel Eksempel", role: "CTO", email: "b@eksempel.dk" },
-    { name: "Jakob Eksempel", role: "CEO", phone: "00000001", email: "c@eksempel.dk", linkedin: "https://www.linkedin.com/in/eksempel", sources: [{ label: "CVR", text: "registreret direktør", date: "2012-05-14" }] },
+    { name: "Jakob Eksempel", role: "CEO", phone: "00000001", email: "c@eksempel.dk", linkedin: "https://www.linkedin.com/in/eksempel", sources: [{ label: "CVR", text: "registreret direktør", date: "2012-05-14" }, { label: "Web", url: "https://eksempel.dk/om" }] },
     { name: "Anders Eksempel", role: "Key Account Manager", phone: "00000002" },
     { name: "Camilla Eksempel", role: "Økonomichef" },
   ],
@@ -210,7 +210,7 @@ test("08.6: blokken viser 3 (Direktion først) + 'Se N kontaktpersoner', der åb
   assert.doesNotMatch(out, /lasso-contactpersons__icon--muted/, "G2: intet ikon, når kanalen mangler");
 });
 
-test("08.7: panelet grupperer stillinger pr. afdeling, markerer den valgte og viser kopiér-handlinger og kilder", () => {
+test("08.7: panelet grupperer stillinger pr. afdeling, markerer den valgte og viser kopiér-handlinger uden kilder (runde 6)", () => {
   const out = html(h(LassoContactPersons, { data: people, companyName: "Eksempel Byg A/S", onCopy: noop, defaultOpen: 0 }));
   assert.match(out, /role="dialog" aria-modal="true"/);
   assert.match(out, /lasso-sidepanel--seeall/);
@@ -223,7 +223,8 @@ test("08.7: panelet grupperer stillinger pr. afdeling, markerer den valgte og vi
   assert.match(out, /lasso-panellist__row is-selected" aria-current="true"/);
   assert.match(out, /Kopiér telefonnummer/);
   assert.match(out, /Kopiér e-mailadresse/);
-  // Ingen Ring/Skriv/LinkedIn og ingen kildebeskrivelse, CVR-linje eller "Opdateret" (08.11, G3).
+  // Ingen Ring/Skriv/LinkedIn og ingen kildevisning overhovedet (Jakob runde 6).
+  assert.doesNotMatch(out, />Kilder<|lasso-cpdetail__source/);
   assert.doesNotMatch(out, /LinkedIn|>Ring<|>Skriv<|registreret direktør|lasso-cpdetail__updated|lasso-cpdetail__sourcetext/);
   assert.match(out, /lasso-sidepanel__close" aria-label="Luk"/);
   // Uden kopiér-handling (G1): kun værdien, ingen knap.

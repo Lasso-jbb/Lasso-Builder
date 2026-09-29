@@ -61,7 +61,6 @@ export function sortObservations(rows: readonly ObservationRowVM[]): Observation
   });
 }
 
-const joinAnd = (xs: readonly string[]) => (xs.length <= 1 ? (xs[0] ?? "") : `${xs.slice(0, -1).join(", ")} og ${xs.at(-1)}`);
 
 /** Kilder, der har en sektion at åbne ("Se regnskab"). */
 const SECTION_FOR_SOURCE: Record<string, string> = { regnskab: "regnskab", ledelse: "ledelse", ejerskab: "ejerskab" };
@@ -243,7 +242,6 @@ export function RiskObservations({ data, error, title, compact = false, demo = f
 
   const rows = sortObservations(data.observations);
   const findings = rows.filter((r) => !r.notAvailable && r.severity >= 25);
-  const sources = data.sources?.length ? data.sources : ["CVR"];
   const source = data.sources?.length ? `Lasso (${data.sources.join(", ")})` : "Lasso";
 
   if (findings.length === 0 && !(data.related ?? []).some((p) => p.rows.some((r) => r.severity >= 25))) {
@@ -292,7 +290,8 @@ export function RiskObservations({ data, error, title, compact = false, demo = f
           <div className="lasso-obs-summary__text">
             <p className="lasso-obs-summary__head">{observationHeadline(rows)}</p>
             <p className="lasso-obs-summary__sub">
-              {[latest ? `Seneste observation ${formatDate(latest)}` : null, `baseret på ${joinAnd(sources)}`].filter(Boolean).join(", ")}
+              {/* Jakob runde 6: ingen kildevisning, derfor ikke "baseret på CVR og regnskab". */}
+              {latest ? `Seneste observation ${formatDate(latest)}` : null}
               {demo ? ", eksempeldata" : ""}
             </p>
           </div>

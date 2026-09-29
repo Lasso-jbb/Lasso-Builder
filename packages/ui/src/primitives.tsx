@@ -387,7 +387,7 @@ export function Missing() {
 /**
  * Kildelinjen ("Kilde: Navn, opdateret DD.MM.ÅÅÅÅ") er UDGÅET (Jakob 29.09, G3): den vises ikke i
  * noget element. Komponenten beholdes, så eksisterende kald stadig kompilerer, men tegner intet.
- * Kilder vises højst som i Se alle-panelet (08.7): overskriften "Kilder" med selve kildelinket.
+ * Ingen anden kildevisning heller (Jakob runde 6): ingen "Vis kilder (N)" og ingen "Kilder" + link.
  */
 export function SourceLine(_props: { source: string; updated?: string | null; verb?: string }) {
   return null;

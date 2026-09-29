@@ -108,7 +108,7 @@ test("Virksomhedsprofil (overblik): CVR-tekster uden branche plus konklusion, re
   assert.doesNotMatch(cvr, /Kilde:/);
 });
 
-test("Regnskabsanalyse (19.3, LYO-0): foldbare afsnit med det første åbent, forbehold, Vis kilder og feedback; ingen genereringslinje (G3) og ingen CVR-tekster", () => {
+test("Regnskabsanalyse (19.3, LYO-0): foldbare afsnit med det første åbent, forbehold og feedback uden Vis kilder (runde 6); ingen genereringslinje (G3) og ingen CVR-tekster", () => {
   const v = { ...SECTIONS, analysisGenerated: "2026-09-25T08:00:00Z", analysisBasis: "2021–2025", analysisHeadline: "Vækst i toplinjen", analysisSources: ["A", "B", "C", "D"] };
   const html = renderToStaticMarkup(createElement(LassoTextSections, { sections: v, variant: "analyse" }));
   assert.match(html, /<h3 class="lasso-section__title">Regnskabsanalyse<\/h3>/);
@@ -116,7 +116,8 @@ test("Regnskabsanalyse (19.3, LYO-0): foldbare afsnit med det første åbent, fo
   assert.match(html, /aria-expanded="true"[^>]*><span class="lasso-analysis19__title">Vækst i toplinjen</);
   assert.match(html, /aria-expanded="false"/);
   assert.match(html, /lasso-analysis19__disclaimer">Forbehold: /);
-  assert.match(html, />Vis kilder \(4\)<[^]*Var det brugbart\?/);
+  assert.match(html, /Var det brugbart\?/);
+  assert.doesNotMatch(html, /Vis kilder|Skjul kilder/);
   // "Hent som PDF" kun med en handling (G1).
   assert.doesNotMatch(html, /Hent som PDF/);
   assert.match(renderToStaticMarkup(createElement(LassoTextSections, { sections: v, variant: "analyse", onPdf: () => {} })), /lasso-analysis19__pdf[^]*Hent som PDF/);
