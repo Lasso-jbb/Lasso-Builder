@@ -77,8 +77,8 @@ export function companyFacts(company: CompanyVM, ownership: OwnershipVM | undefi
     );
     if (!options.hideContact) rows.push({ label: "Adresse", value: [a?.street, [a?.zip, a?.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || undefined });
   } else {
-    // Hovedet viser branchens tekst; koden er det eneste nye.
-    rows.push({ label: "Branchekode", value: company.industryCode });
+    // Hovedet viser branchens tekst; koden er det eneste nye. Ansatte står ikke i hovedet (08.1).
+    rows.push({ label: "Branchekode", value: company.industryCode }, { label: "Ansatte", value: employeesText(company, lastYear) });
   }
   rows.push({ label: "Kommune", value: a?.municipality }, { label: "Region", value: a?.region });
   // Katalog 28.7/26h.9: bibrancher med kode først (hovedbranchen står i hovedet/Branche), revision og kapital.

@@ -16,11 +16,15 @@ export function companyStatusText(c: CompanyVM): string | undefined {
   return c.statusKind === "warning" ? `${c.status}, siden ${formatDate(c.statusDate)}` : `${c.status} ${formatDate(c.statusDate)}`;
 }
 
-/** Faktalinjen (08.1): CVR, form, stiftet, adresse, kurator, ansatte, branche; adskilt med komma. */
+/**
+ * Faktalinjen (08.1): CVR, form, stiftet, adresse, kurator, branche; adskilt med komma. Ansatte står
+ * ikke i sidens hoved (Paper 08.1), men i nøgle-værdi-listen; kompakt og linje har dem.
+ */
 export function companyFactsLine(c: CompanyVM, variant: HeadVariant = "full"): string[] {
   const a = c.address;
   const curator = c.curator ? `${/likvidation/i.test(c.status ?? "") ? "likvidator" : "kurator"}: ${c.curator}` : null;
-  const employees = typeof c.employees === "number" ? `${formatNumber(c.employees)} ansatte${variant === "full" ? " (CVR)" : ""}` : null;
+  // Kun et tal: null/undefined (ikke oplyst, fx en enkeltmandsvirksomhed) må ikke blive "— ansatte".
+  const employees = typeof c.employees === "number" ? `${formatNumber(c.employees)} ansatte` : null;
   if (variant !== "full") {
     // Kompakt og linje: CVR, by, ansatte (Paper 08.1 "CVR 34580820, København K, 17 ansatte").
     return [c.cvr ? `CVR ${c.cvr}` : null, a?.city ?? null, curator, c.statusKind === "inactive" ? null : employees].filter((f): f is string => Boolean(f));
@@ -32,8 +36,6 @@ export function companyFactsLine(c: CompanyVM, variant: HeadVariant = "full"): s
     a?.street ?? null,
     [a?.zip, a?.city].filter(Boolean).join(" ") || null,
     curator,
-    // Kun et tal: null/undefined (ikke oplyst, fx en enkeltmandsvirksomhed) må ikke blive "— ansatte".
-    employees,
     c.industryText ?? null,
   ].filter((f): f is string => Boolean(f));
 }

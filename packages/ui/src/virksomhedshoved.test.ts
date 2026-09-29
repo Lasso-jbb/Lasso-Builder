@@ -37,7 +37,7 @@ test("08.1: handlinger som 32 px ikonknapper i rækkefølgen Overvåg, Gem, Eksp
   assert.deepEqual(order, ["Overvåg", "Gem på din liste", "Virksomhedsrapport (PDF)", "Flere handlinger"]);
   assert.match(out, /class="lasso-headbtn lasso-headbtn--monitor" aria-pressed="false"/);
   assert.doesNotMatch(out, /lasso-btn--primary/);
-  assert.match(out, /CVR 99000001, A\/S, stiftet 01\.04\.1998, Prøvevej 1, 8600 Silkeborg, 64 ansatte \(CVR\), Opførelse af bygninger/);
+  assert.match(out, /CVR 99000001, A\/S, stiftet 01\.04\.1998, Prøvevej 1, 8600 Silkeborg, Opførelse af bygninger/);
   assert.doesNotMatch(out, /·/);
 });
 
