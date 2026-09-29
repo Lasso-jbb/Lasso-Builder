@@ -4626,3 +4626,10 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-gauge-section--detail .lasso-gauge-changes__date { font-size: 12px; }
 .lasso-gauge-section--detail .lasso-gauge-history__readout span:last-child { color: var(--lasso-text); font-size: var(--lasso-fs-sm); }
 .lasso-gauge-section--detail .lasso-gauge-history__date { font-size: 12px; }
+
+/* ---------- 16.4 Personrisiko: antal i ikonpladsen, "Opgrader" som tekstlink ---------- */
+.lasso-personrisk__icon:has(.lasso-personrisk__count) { width: 32px; height: 32px; margin: -6px 0 -6px -6px; }
+.lasso-personrisk__count { display: inline-grid; place-items: center; width: 32px; height: 32px; min-width: 0; padding: 0; border-radius: 50%; background: var(--lasso-surface-muted); color: var(--lasso-text); font-size: var(--lasso-fs-sm); line-height: 16px; font-weight: 700; }
+.lasso-root .lasso-personrisk__upgrade { display: inline; padding: 0; font-size: inherit; line-height: inherit; }
+.lasso-root .lasso-personrisk__upgrade { color: var(--lasso-accent-text); }
+.lasso-root .lasso-link.lasso-personnet__graph { color: var(--lasso-accent-text); font-size: var(--lasso-fs-sm); font-weight: 500; white-space: nowrap; }

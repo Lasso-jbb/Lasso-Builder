@@ -45,31 +45,26 @@ function Tile({
   word,
   tone,
   children,
-  action,
 }: {
   label: string;
   count?: number;
-  desc: string;
+  desc: React.ReactNode;
   word?: string;
   tone: Tone;
   children?: React.ReactNode;
-  action?: React.ReactNode;
 }) {
   return (
     <li className={`lasso-personrisk__item${tone === "locked" ? " lasso-personrisk__item--locked" : ""}`}>
       <span className="lasso-personrisk__icon">
-        <ToneIcon tone={tone} />
+        {/* 16.4: antallet står som rund flade i ikonpladsen foran titlen. */}
+        {count ? <span className="lasso-personrisk__count">{count}</span> : <ToneIcon tone={tone} />}
       </span>
       <div className="lasso-personrisk__main">
-        <div className="lasso-personrisk__title">
-          {label}
-          {count ? <span className="lasso-personrisk__count">{count}</span> : null}
-        </div>
+        <div className="lasso-personrisk__title">{label}</div>
         <div className="lasso-personrisk__desc">{desc}</div>
         {children}
       </div>
       {word ? <span className={`lasso-personrisk__word lasso-personrisk__word--${tone}`}>{word}</span> : null}
-      {action ?? null}
     </li>
   );
 }
@@ -124,15 +119,24 @@ function SanctionsTile({ person, onUpgrade }: { person: PersonVM; onUpgrade?: ()
     return (
       <Tile
         label="Sanktionslister"
-        desc={s ? "Tjek mod EU's og FN's sanktionslister er ikke en del af din pakke." : "Tjek mod sanktionslister er ikke tilgængeligt endnu."}
-        tone="locked"
-        action={
-          onUpgrade ? (
-            <button type="button" className="lasso-btn lasso-btn--sm lasso-personrisk__upgrade" onClick={onUpgrade}>
-              Opgrader
-            </button>
-          ) : null
+        desc={
+          s ? (
+            <>
+              Ikke tilgængelig i din pakke.
+              {onUpgrade ? (
+                <>
+                  {" "}
+                  <button type="button" className="lasso-link lasso-personrisk__upgrade" onClick={onUpgrade}>
+                    Opgrader
+                  </button>
+                </>
+              ) : null}
+            </>
+          ) : (
+            "Tjek mod sanktionslister er ikke tilgængeligt endnu."
+          )
         }
+        tone="locked"
       />
     );
   }
