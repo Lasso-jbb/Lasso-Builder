@@ -53,8 +53,8 @@
   --lasso-text: #16181d;            /* ink: overskrifter */
   --lasso-text-2: #3f444b;          /* text */
   --lasso-text-3: #5b6068;          /* text-secondary */
-  --lasso-text-4: #5b6068;          /* overlinjer bruger samme læsbare grå */
-  --lasso-muted: #5b6068;           /* ALT læsbar hjælpe- og metatekst */
+  --lasso-text-4: var(--lasso-text-3);  /* alias: overlinjer bruger samme læsbare grå (ikke en egen Paper-farve) */
+  --lasso-muted: var(--lasso-text-3);   /* alias: ALT læsbar hjælpe- og metatekst (ikke en egen Paper-farve) */
   --lasso-faint: #b9bec5;           /* text-faint: "Ikke oplyst", "—" */
   --lasso-placeholder: #8a9099;     /* kun ikoner, dekoration og placeholders */
   --lasso-icon: #9aa0a8;
@@ -107,7 +107,7 @@
   --lasso-chart-bar-neg: #f4b7b0;
 
   /* Hjørner: felter og knapper 8, menupunkter 9, faner og kort 10, dialoger 14 */
-  --lasso-radius-sm: 6px;
+  --lasso-radius-sm: var(--lasso-radius);  /* alias: Paper har kun 8/9/10/14 (+ pille til kontakten) */
   --lasso-radius: 8px;
   --lasso-radius-menu: 9px;
   --lasso-radius-lg: 10px;
@@ -135,8 +135,9 @@
   --lasso-space-2: 8px;
   --lasso-space-3: 12px;
   --lasso-space-4: 16px;
+  --lasso-space-row: 20px;          /* 01.3: 18–20 px luft i hver række, kolonneafstand i FieldRow */
   --lasso-space-5: 24px;            /* gutter */
-  --lasso-space-6: 24px;
+  --lasso-space-6: var(--lasso-space-5);  /* alias for 24 px (ikke et eget trin) */
   --lasso-space-7: 28px;            /* midtens padding */
   --lasso-space-10: 40px;
 
@@ -174,8 +175,8 @@
   --lasso-text: #f2f3f5;
   --lasso-text-2: #d3d6db;
   --lasso-text-3: #b3b8bf;
-  --lasso-text-4: #9aa0a8;
-  --lasso-muted: #a1a7b0;
+  --lasso-text-4: var(--lasso-text-3);
+  --lasso-muted: var(--lasso-text-3);
   --lasso-placeholder: #7d838c;
   --lasso-icon: #7d838c;
   --lasso-disabled: #4a4f57;
@@ -2096,7 +2097,7 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 .lasso-root .lasso-toast__action { color: var(--lasso-accent-text); }
 
 /* ---------- 02a, 02b, 03 Felt-familien: formularfelter, mønstre og feltets tilstande (nodes 4BA-0, G62-0, 470-0) ---------- */
-.lasso-field { display: grid; grid-template-columns: minmax(120px, 244px) minmax(0, 1fr) auto; column-gap: 20px; row-gap: 12px; align-items: start; padding: 16px 0; border-bottom: 1px solid var(--lasso-border); }
+.lasso-field { display: grid; grid-template-columns: minmax(120px, 244px) minmax(0, 1fr) auto; column-gap: var(--lasso-space-row); row-gap: 12px; align-items: start; padding: 16px 0; border-bottom: 1px solid var(--lasso-border); }
 .lasso-field__name { display: flex; align-items: center; gap: 6px; min-width: 0; min-height: var(--lasso-field-h); font-size: var(--lasso-fs); line-height: 18px; font-weight: 600; color: var(--lasso-text); }
 .lasso-field__control { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; min-width: 0; }
 .lasso-field__control > .lasso-unit, .lasso-field__control > .lasso-field__fixed, .lasso-amountfield__row > .lasso-unit { line-height: var(--lasso-field-h); }

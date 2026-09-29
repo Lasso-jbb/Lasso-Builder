@@ -79,10 +79,10 @@ function Colors() {
         <Swatches vars={["--lasso-accent", "--lasso-accent-text", "--lasso-accent-soft", "--lasso-accent-border"]} />
       </St>
       <St label="Tekst (8)">
-        <Swatches vars={["--lasso-text", "--lasso-text-2", "--lasso-text-3", "--lasso-muted", "--lasso-placeholder", "--lasso-icon", "--lasso-faint", "--lasso-disabled"]} />
+        <Swatches vars={["--lasso-text", "--lasso-text-2", "--lasso-text-3", "--lasso-placeholder", "--lasso-icon", "--lasso-faint", "--lasso-danger", "--lasso-positive"]} />
       </St>
       <St label="Flader og linjer (8)">
-        <Swatches vars={["--lasso-bg", "--lasso-surface-2", "--lasso-surface-muted", "--lasso-chrome", "--lasso-tag", "--lasso-border", "--lasso-border-strong", "--lasso-divider-subtle"]} />
+        <Swatches vars={["--lasso-bg", "--lasso-surface-2", "--lasso-surface-muted", "--lasso-chrome", "--lasso-border", "--lasso-border-strong", "--lasso-divider-subtle", "--lasso-overlay"]} />
       </St>
       <St label="Status">
         <Swatches vars={["--lasso-danger", "--lasso-danger-soft", "--lasso-positive", "--lasso-positive-soft", "--lasso-warning", "--lasso-warning-soft", "--lasso-bankrupt"]} />
@@ -116,8 +116,8 @@ function Typography() {
 }
 
 function Spacing() {
-  const steps = ["--lasso-space-1", "--lasso-space-2", "--lasso-space-3", "--lasso-space-4", "--lasso-space-5", "--lasso-space-6", "--lasso-space-7", "--lasso-space-10"];
-  const px = ["4", "8", "12", "16", "24", "24", "28", "40"];
+  const steps = ["--lasso-space-1", "--lasso-space-2", "--lasso-space-3", "--lasso-space-4", "--lasso-space-row", "--lasso-space-5", "--lasso-space-7", "--lasso-space-10"];
+  const px = ["4", "8", "12", "16", "20", "24", "28", "40"];
   return (
     <div style={{ display: "grid", gap: 10 }}>
       {steps.map((s, i) => (
@@ -137,7 +137,6 @@ function Radii() {
     ["--lasso-radius-lg", "Faner og kort"],
     ["--lasso-radius-xl", "Dialoger"],
     ["--lasso-radius-pill", "Kontakt/pille"],
-    ["--lasso-radius-sm", "Små (ikon-knap i felt)"],
   ];
   return (
     <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
@@ -821,7 +820,7 @@ function TechRow({ label, init, pending }: { label: string; init: TechValue; pen
 export const entries: GalleryEntry[] = [
   { nr: "01.1", title: "Farver", node: "964-0", render: () => <Colors /> },
   { nr: "01.2", title: "Typografi", node: "98Q-0", render: () => <Typography /> },
-  { nr: "01.3", title: "Afstande", node: "99K-0", render: () => <Spacing />, note: "8 trin fra --lasso-space-*; space-5 og space-6 er begge 24 px, og 20 px (luft i rækken) findes ikke som token." },
+  { nr: "01.3", title: "Afstande", node: "99K-0", render: () => <Spacing /> },
   { nr: "01.4", title: "Hjørner", node: "9AC-0", render: () => <Radii /> },
   { nr: "01.5", title: "Skygger og fokus", node: "9AV-0", render: () => <Shadows /> },
   { nr: "01.6", title: "Ikoner", node: "9B9-0", render: () => <Icons /> },
