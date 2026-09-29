@@ -3846,7 +3846,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 /* 26d.6 mobil: filterchips og kort med 3 px farvekant og chevron. */
 .lasso-obs__filters { display: flex; flex-wrap: wrap; gap: var(--lasso-space-2); margin-bottom: var(--lasso-space-4); }
 .lasso-obs__chip { height: 30px; padding: 0 12px; border-radius: var(--lasso-radius-pill); border: 1px solid var(--lasso-border-strong); background: var(--lasso-surface); font: inherit; font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-text); cursor: pointer; }
-.lasso-root .lasso-obs__chip--høj { color: var(--lasso-danger); }
+.lasso-root .lasso-obs__chip--høj { color: var(--lasso-bankrupt); } /* 26d.6: rød tekst (mørk rød, ikke koral) */
 .lasso-root .lasso-obs__chip--middel { color: var(--lasso-warning); }
 .lasso-obs__chip:hover { border-color: var(--lasso-icon); }
 .lasso-obs__chip.is-selected { border-color: var(--lasso-text); font-weight: 600; }
@@ -4137,6 +4137,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-compare__company:nth-child(2n) { scroll-snap-align: start; }
   .lasso-compare__company.is-origin { box-shadow: none; background: var(--lasso-accent-soft); }
   .lasso-compare__sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* 26e.7: navnet på én linje med ellipsis, så hovedrækken er ca. 56 px (navn + undertekst). */
+  .lasso-compare__name, .lasso-compare__name .lasso-link { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .lasso-compare__action { height: var(--lasso-touch-h); }
 }
 

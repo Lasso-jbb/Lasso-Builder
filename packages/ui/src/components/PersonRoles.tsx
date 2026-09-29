@@ -321,6 +321,16 @@ function SectionHead({ title, action }: { title: string; action?: ReactNode }) {
 }
 
 /** Mobil (26d.3): højst seks rækker før "Vis alle". */
+/** 26d.3: korte rolleord i tidsbåndets etiket på mobil, så navnet står helt ("…, bestyrelse"). */
+function mobileRole(role: string): string {
+  const r = role.toLowerCase();
+  if (r === "bestyrelsesmedlem" || r === "bestyrelsesmedlemmer") return "bestyrelse";
+  if (r === "bestyrelsesformand") return "formand";
+  if (r === "næstformand" || r === "bestyrelsesnæstformand") return "næstformand";
+  if (r === "administrerende direktør") return "adm. direktør";
+  return r;
+}
+
 const MOBILE_ROWS = 6;
 
 /**
@@ -365,7 +375,7 @@ function MobileBands({ person, title, onOpen }: { person: PersonVM; title?: stri
           const left = pos(r.from, start);
           const right = pos(r.to ?? (bankrupt(r) ? r.companyEnded : undefined), now);
           const period = `${year(r.from)}–${r.to ? year(r.to) : ""}`;
-          const label = `${r.companyName}, ${r.role.toLowerCase()}${r.share ? ` ${r.share}` : ""}`;
+          const label = `${r.companyName}, ${mobileRole(r.role)}${r.share ? ` ${r.share}` : ""}`;
           const tone = bankrupt(r) ? "bankrupt" : r.kind === "owner" ? "owner" : "mgmt";
           return (
             <li key={`${r.companyName}-${r.role}-${i}`} className={`lasso-mbands__row lasso-mbands__row--${tone}`}>
