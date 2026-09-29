@@ -30,7 +30,7 @@ test("17.2 / 26d.6: sammenfatningskort på desktop, filterchips og kort på mobi
   // Mobil (26d.6): tal i hovedet, chips og kun fund (neutrale fakta vises ikke)
   assert.match(html, /3, eksempeldata/);
   assert.match(html, /aria-pressed="false"[^>]*>1 vigtig</);
-  assert.match(html, />1 middel</);
+  assert.match(html, />1 mulig</);
   assert.match(html, />1 info</);
   const mob = html.slice(html.indexOf('lasso-obs__mob"><div class="lasso-obs__filters'));
   const order = ["Negativ egenkapital", "Adresse deles", "Revisor skiftet"].map((t) => mob.indexOf(t));

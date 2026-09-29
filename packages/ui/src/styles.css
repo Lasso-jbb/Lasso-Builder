@@ -2308,6 +2308,7 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 /* Gemt liste: 20 px bogstav-ikon i tynd kant, 11/600 */
 .lasso-rail__letter { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius-letter); font-size: var(--lasso-fs-label); line-height: 1; font-weight: 600; color: var(--lasso-text-2); background: var(--lasso-surface); }
 .lasso-rail__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.lasso-rail__letter-icon { display: none; }
 .lasso-rail__footer { margin-top: 6px; border-top: 1px solid var(--lasso-border); border-radius: 0 0 var(--lasso-radius) var(--lasso-radius); height: 46px; }
 /* 25.2: bundlinje med dæmpet navnelogo og kildelinje nederst i skinnen (regel 15). */
 .lasso-rail__bottom { margin-top: auto; display: flex; flex-direction: column; gap: 6px; padding: 16px 10px 0; }
@@ -2419,6 +2420,8 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
   .lasso-rail__head { justify-content: center; height: 32px; padding: 0; }
   .lasso-rail__head-label, .lasso-rail__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .lasso-rail__item { justify-content: center; gap: 0; width: 44px; height: 44px; padding: 0; }
+  .lasso-rail__letter { display: none; }
+  .lasso-rail__letter-icon { display: inline-flex; }
   .lasso-rail__footer { width: 100%; height: 46px; }
   /* En fod uden ikon ("Se alle gemte") har intet at vise i den smalle ikonskinne; værktøjet står i Værktøjer */
   .lasso-rail__bottom { display: none; }
@@ -4682,6 +4685,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-frame__filters--table { display: none; }
 @container lasso (min-width: 561px) { .lasso-ctable__chips { display: flex; padding: var(--lasso-space-3) 16px 0; } }
 .lasso-ctable__subcity { display: none; }
+.lasso-ctable__substatus { display: none; }
 /* 7+ kolonner: tættere celler og navne/brancher må ombrydes, så tabellen holder sig inden for 1200 px. */
 .lasso-ctable__table--dense th, .lasso-ctable__table--dense td { padding-left: 12px; padding-right: 12px; }
 .lasso-ctable__table--dense .lasso-table__name { white-space: normal; }
@@ -4689,6 +4693,9 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-ctable__table--dense td.lasso-cell--wrap { max-width: 200px; }
 .lasso-ctable__table td.lasso-cell--wrap { overflow-wrap: normal; word-break: normal; hyphens: manual; }
 @container lasso (min-width: 561px) and (max-width: 960px) {
+  /* Kontrol r5 (26f.2): statuskolonnen skjules (lavest prioritet), så "…"-kolonnen ikke klippes; ikke-aktiv status står under navnet */
+  .lasso-ctable__table th[data-col="status"], .lasso-ctable__table td[data-col="status"] { display: none; }
+  .lasso-ctable__substatus { display: inline; }
   /* 26f.2 tablet: maks 6 kolonner; by (og CVR) under navnet, rækker 48 px, søgefelt 220 px. */
   .lasso-ctable__table th[data-col="by"], .lasso-ctable__table td[data-col="by"] { display: none; }
   .lasso-ctable__subcity { display: inline; }
