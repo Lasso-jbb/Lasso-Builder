@@ -177,7 +177,7 @@ function NewsRow({ item, mention, ...opts }: { item: NewsItemVM; mention?: strin
       {item.excerpt ? (
         // Lasso News' content kan have linjeskift fra en HTML-liste (<li>); white-space: pre-line
         // viser dem, uden at gå via en stylesheet-ændring (uddraget er ellers almindelig løbetekst).
-        <div className={`lasso-row__sub${isLassoSource(item.source) ? "" : " lasso-news__snippet"}`} style={{ whiteSpace: "pre-line" }}>
+        <div className={`lasso-row__sub lasso-news__excerpt${isLassoSource(item.source) ? "" : " lasso-news__snippet"}`} style={{ whiteSpace: "pre-line" }}>
           {item.extractSegments ? <Segments segments={item.extractSegments} {...opts} /> : <Excerpt text={item.excerpt} mention={mention} />}
         </div>
       ) : null}
@@ -251,8 +251,10 @@ export function LassoNews({
         ))}
       </div>
       {news.items.length > max ? (
-        <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-          {expanded ? "Vis færre" : `Se alle ${news.items.length} nyheder`}
+        // 12.4 (runde 5, Paper LNE-0): "Vis flere" som tekstknap med chevron under en tynd linje.
+        <button type="button" className="lasso-link lasso-news__more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+          {expanded ? "Vis færre" : "Vis flere"}
+          <Icon name={expanded ? "chevron-up" : "chevron-down"} size={14} />
         </button>
       ) : null}
       {news.sources?.length ? <SourceLine source={news.sources.join(" og ")} updated={news.updatedAt} /> : null}
