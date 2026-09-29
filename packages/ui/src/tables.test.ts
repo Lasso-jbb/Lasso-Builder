@@ -8,7 +8,7 @@ import { AuditorIndependence, auditorCsv } from "./components/AuditorIndependenc
 import { CompanyTable, cardFigures } from "./components/CompanyTable.js";
 import { statusTone } from "./primitives.js";
 import { PersonTable, personSub, rolesText } from "./components/PersonTable.js";
-import { BulkBar, Pagination, pageItems } from "./components/TableKit.js";
+import { BulkBar, MobileBulkBar, Pagination, pageItems } from "./components/TableKit.js";
 import { rowsToCsv } from "./csv.js";
 import { multiYearVariant } from "./components/MultiYearTable.js";
 import { PersonList } from "./components/PersonList.js";
@@ -191,4 +191,30 @@ test("Personliste (26c.4): 'Vis alle' som række efter de første 8", () => {
   const html = renderToStaticMarkup(createElement(PersonList, { people, show: "current" }));
   assert.match(html, /lasso-rows lasso-personlist/);
   assert.match(html, /lasso-rowmore[^>]*>Vis alle 12</);
+});
+
+test("15.2 mobil: bundbjælke med antal, to handlinger med ikon + ord, Flere-ark med kontekst, Vælg alle og destruktiv i rødt", () => {
+  const icon = createElement("svg");
+  const actions = [
+    { id: "compare", label: "Sammenlign", onSelect: () => {} },
+    { id: "save", label: "Føj til liste", short: "Til liste", icon, onSelect: () => {} },
+    { id: "export", label: "Eksportér", icon, onSelect: () => {} },
+    { id: "remove", label: "Fjern fra liste", destructive: true, onSelect: () => {} },
+  ];
+  const h = renderToStaticMarkup(createElement(MobileBulkBar, { count: 2, total: 1243, allSelected: false, onSelectAll: () => {}, onClear: () => {}, actions, names: ["A ApS", "B A/S"], defaultMoreOpen: true }));
+  assert.match(h, /2 markeret/);
+  const btns = [...h.matchAll(/class="lasso-mbulk__btn"[^>]*>(?:<svg[^]*?<\/svg>)?<span>([^<]+)</g)].map((m) => m[1]);
+  assert.deepEqual(btns.slice(0, 2), ["Til liste", "Eksportér"]);
+  assert.match(h, /Flere/);
+  assert.match(h, /aria-label="Ryd markering"/);
+  assert.match(h, /A ApS, B A\/S/);
+  assert.match(h, /Vælg alle 1\.243 virksomheder/);
+  assert.match(h, /Sammenlign/);
+});
+
+test("15.2 mobil: markerede kort viser kun afkrydsningsboksen (ingen flade eller kant i koden)", () => {
+  const rows: CompanyRowVM[] = [{ lassoId: "CVR-1-1", name: "A ApS" }, { lassoId: "CVR-1-2", name: "B A/S" }];
+  const h = renderToStaticMarkup(createElement(CompanyTable, { result: { key: "k", total: 2, rows }, onAction: () => {}, canDrillDown: false, preview: { selected: ["CVR-1-1"] } }));
+  assert.match(h, /lasso-ccard__check/);
+  assert.match(h, /aria-label="Markér A ApS"[^>]*checked=""|checked=""[^>]*aria-label="Markér A ApS"/);
 });

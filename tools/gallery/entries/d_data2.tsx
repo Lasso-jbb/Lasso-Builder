@@ -274,6 +274,8 @@ export const entries: GalleryEntry[] = [
     nr: "15.2",
     title: "Massehandlinger (handlingsbjælke)",
     node: "BA7-0",
+    only: "desktop",
+    note: "Mobil: se de to 15.2-mobilindgange (bundbjælke og Flere-ark, Paper LOA-0).",
     render: () => (
       <Stack
         items={[

@@ -15,12 +15,14 @@ import {
   parseViewSpec,
   STATUS_GROUPS,
   statusKind,
+  type CompanyRowVM,
   type Dataset,
   type Metric,
   type ViewSpec,
 } from "@lasso/spec";
 import {
   AppShell,
+  CompanyTable,
   CreditConfirmDialog,
   EntityUpdates,
   LassoBeneficialOwners,
@@ -570,6 +572,33 @@ function MobileFrame({ sheetOpen, children }: { sheetOpen?: boolean; children?: 
 }
 
 
+/** 15.2 mobil (Paper LOA-0): listen "Kunder" med to markerede kort og massehandlingerne i bundbjælken. */
+const BULK_ROWS: CompanyRowVM[] = [
+  { lassoId: "CVR-1-99000001", cvr: "99000001", name: "Eksempel Byg A/S", city: "Silkeborg", status: "Aktiv", statusKind: "active", employees: 64, grossProfit: 38_000_000, profit: 4_200_000, score: 18 },
+  { lassoId: "CVR-1-99000004", cvr: "99000004", name: "Eksempel Software ApS", city: "Aarhus", status: "Aktiv", statusKind: "active", employees: 22, grossProfit: 14_100_000, profit: 1_900_000, score: 24 },
+  { lassoId: "CVR-1-99000005", cvr: "99000005", name: "Eksempel Transport A/S", city: "Kolding", status: "Aktiv", statusKind: "active", employees: 41, grossProfit: 21_300_000, profit: -600_000, score: 47 },
+];
+function BulkMobile({ moreOpen = false }: { moreOpen?: boolean }) {
+  return (
+    <Shell kind="search" title="Kunder" screen>
+      <div className="e-portal-body">
+        <CompanyTable
+          title="Kunder"
+          result={{ key: "kunder", total: 1243, rows: BULK_ROWS }}
+          criteria={[{ field: "status", operator: "eq", value: "Aktiv" }]}
+          onApplyCriteria={noop}
+          onAction={noop}
+          canDrillDown
+          canSavePage
+          canExport
+          canPrompt
+          preview={{ selected: ["CVR-1-99000001", "CVR-1-99000004"], moreOpen }}
+        />
+      </div>
+    </Shell>
+  );
+}
+
 function TabsDemo({ level, items, value, ariaLabel, maxVisible }: { level: 1 | 2 | 3; items: readonly TabItem[]; value: string; ariaLabel: string; maxVisible?: number }) {
   const [v, setV] = useState(value);
   return <Tabs level={level} items={items} value={v} onChange={setV} ariaLabel={ariaLabel} maxVisible={maxVisible} />;
@@ -620,6 +649,24 @@ const mobileNav: GalleryEntry[] = [
         <CreditConfirmDialog open balance={38} onClose={noop} onConfirm={noop} description="LASSO X A/S, seneste vurdering er 13 dage gammel." title="Hent ny kreditvurdering?" />
       </div>
     ),
+  },
+  {
+    nr: "15.2",
+    sortAs: "15.2",
+    title: "Massehandlinger, mobil: bundbjælke over bundnavigationen",
+    node: "LOD-0",
+    only: "mobile",
+    note: "Paper LOA-0/LPJ-0: 2 markeret, Til liste og Eksportér som ikon + ord, Flere og ×; markerede kort uden flade eller kant (kun afkrydsningsboksen). 'Overvåg' som massehandling findes ikke i koden endnu (kræver en værtshandling).",
+    render: () => <BulkMobile />,
+  },
+  {
+    nr: "15.2",
+    sortAs: "15.2",
+    title: "Massehandlinger, mobil: Flere-ark",
+    node: "LQP-0",
+    only: "mobile",
+    note: "Paper LT2-0: handlingsarket (26a.10) med antal og navne som kontekst, Sammenlign, Vælg alle 1.243, Fjern fra liste i rødt og Annuller.",
+    render: () => <BulkMobile moreOpen />,
   },
   { nr: "26a.10", sortAs: "07.3", title: "Handlingsark (menu på mobil)", node: "E05-0", only: "mobile", note: "Menu med defaultOpen og kontekst.", render: () => <OpenMenu /> },
   {

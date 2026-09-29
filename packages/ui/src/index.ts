@@ -21,7 +21,7 @@ export { CompanyTable, cardFigures } from "./components/CompanyTable.js";
 export type { CompanyTableProps } from "./components/CompanyTable.js";
 export { CompareTable } from "./components/CompareTable.js";
 export { PersonTable, rolesText, personSub } from "./components/PersonTable.js";
-export { Checkbox, TableToolbar, TableSearch, FilterButton, BulkBar, Pagination, TableStateRows, TableStateBox, TableLoadingLine, pageItems, PlusIcon, BellIcon, DownloadIcon } from "./components/TableKit.js";
+export { Checkbox, TableToolbar, TableSearch, FilterButton, BulkBar, MobileBulkBar, Pagination, TableStateRows, TableStateBox, TableLoadingLine, pageItems, PlusIcon, BellIcon, DownloadIcon } from "./components/TableKit.js";
 export type { BulkAction, TableState } from "./components/TableKit.js";
 export { KeyValueList } from "./components/KeyValueList.js";
 export { LassoContact } from "./components/LassoContact.js";
