@@ -415,7 +415,7 @@ export const entries: GalleryEntry[] = [
     title: "Rolleliste, kompakt",
     node: "A3I-0",
     spec: co("Eksempel Byg A/S", [{ type: "LassoRelations", company: B }]),
-    note: "G6: standardbredde ¼. Eksempel: flere ejere end tre, reelle ejere uden adgang og én produktionsenhed (tilstandene i Paper).",
+    note: "Eksempel: flere ejere end tre, reelle ejere uden adgang og én produktionsenhed (tilstandene i Paper).",
     mutate: (ds) => {
       const own = ds.ownership[B];
       if (own) {
@@ -426,9 +426,9 @@ export const entries: GalleryEntry[] = [
       ds.productionUnits[B] = { lassoId: B, units: [], total: 1 };
     },
   },
-  { nr: "11.2", title: "Personliste, udfoldet", node: "A4F-0", spec: co("Eksempel Byg A/S", [{ type: "LassoPersonList", company: B, show: "all" }]), note: "G6: tegnet i sin standardbredde (½) på 1200-gitteret." },
-  { nr: "11.3", title: "Ejerliste", node: "A5X-0", spec: co("Eksempel Byg A/S", [{ type: "LassoOwnerList", company: B }]), note: "G6: standardbredde ½. Revisoren står ikke under ejerlisten (11.3)." },
-  { nr: "11.4", title: "Reelle ejere", node: "B33-0", spec: co("Eksempel Byg A/S", [{ type: "LassoBeneficialOwners", company: B }]), note: "G6: standardbredde ½." },
+  { nr: "11.2", title: "Personliste, udfoldet", node: "A4F-0", spec: co("Eksempel Byg A/S", [{ type: "LassoPersonList", company: B, show: "all", width: "full" }]) },
+  { nr: "11.3", title: "Ejerliste", node: "A5X-0", spec: co("Eksempel Byg A/S", [{ type: "LassoOwnerList", company: B, width: "full" }]) },
+  { nr: "11.4", title: "Reelle ejere", node: "B33-0", spec: co("Eksempel Byg A/S", [{ type: "LassoBeneficialOwners", company: B, width: "full" }]) },
 
   // 12 Tekst og historik
   { nr: "12.1", title: "Tekstsektioner", node: "A83-0", spec: co("Eksempel Byg A/S", [{ type: "LassoTextSections", company: B }]) },
