@@ -1,19 +1,20 @@
 import { useState } from "react";
 import { isPersonId, type PersonNetworkCompanyVM, type PersonNetworkVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
-import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { DataState, Section, stateForError } from "../primitives.js";
 
 const COLLAPSED = 3;
 const year = (d?: string) => (d ? d.slice(0, 4) : "");
 
 function period(c: PersonNetworkCompanyVM): string {
-  if (!c.to) return c.from ? `siden ${year(c.from)}` : "";
+  // Paper 16.3: aktiv relation som "2016 →", afsluttet som "2014–2018".
+  if (!c.to) return c.from ? `${year(c.from)} \u2192` : "";
   return [year(c.from), year(c.to)].filter(Boolean).join("–");
 }
 
 /**
  * Netværk (katalog 16, "Sidder sammen med"): personer med fælles selskaber, sorteret efter
- * år sammen. Overlap i år som stort tal til højre; fælles selskaber som tekst med rolle og
+ * år sammen. "Vis som graf →" ved titlen, ingen kildelinje (16.3). Overlap i år som stort tal til højre; fælles selskaber som tekst med rolle og
  * periode efter komma. Afsluttede relationer er dæmpede. Selskaber under konkurs skrives i
  * mørk rød OG med ordet (regel 7). Navne står alene, uden initial-cirkler.
  */
@@ -23,6 +24,7 @@ export function PersonNetwork({
   limit = COLLAPSED,
   error,
   onOpen,
+  onGraph,
 }: {
   network?: PersonNetworkVM;
   title?: string;
@@ -30,6 +32,8 @@ export function PersonNetwork({
   limit?: number;
   error?: string;
   onOpen?: (a: ViewAction) => void;
+  /** "Vis som graf →" ved titlen (16.3): åbner netværket i ejerdiagrammets komponent (14). */
+  onGraph?: () => void;
 }) {
   const heading = title ?? "Sidder sammen med";
   const [expanded, setExpanded] = useState(false);
@@ -49,7 +53,18 @@ export function PersonNetwork({
   }
   const rows = expanded ? network.people : network.people.slice(0, limit);
   return (
-    <Section title={heading} span="half" className="lasso-personnet">
+    <Section
+      title={heading}
+      span="half"
+      className="lasso-personnet"
+      action={
+        onGraph ? (
+          <button type="button" className="lasso-link lasso-personnet__graph" onClick={onGraph}>
+            Vis som graf {"\u2192"}
+          </button>
+        ) : undefined
+      }
+    >
       <ul className="lasso-personnet__rows">
         {rows.map((p, i) => {
           const openPerson = onOpen && isPersonId(p.lassoId) ? () => onOpen({ kind: "open-person", lassoId: p.lassoId!, name: p.name }) : undefined;
@@ -92,7 +107,7 @@ export function PersonNetwork({
               </div>
               <div className="lasso-personnet__side">
                 <div className="lasso-personnet__years">{p.overlapYears < 1 ? "<1 år" : `${p.overlapYears} år`}</div>
-                <div className="lasso-personnet__unit">{p.active ? "sammen" : "tidligere"}</div>
+                <div className="lasso-personnet__unit">{p.active ? "overlap" : "tidligere"}</div>
               </div>
             </li>
           );
@@ -103,7 +118,6 @@ export function PersonNetwork({
           {expanded ? "Vis færre" : `Se alle ${network.people.length}`}
         </button>
       ) : null}
-      <SourceLine source="CVR via Lasso" />
     </Section>
   );
 }
