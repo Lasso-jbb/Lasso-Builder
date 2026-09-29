@@ -3074,7 +3074,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-skeleton-group--static .lasso-skeleton { animation: none; }
 .lasso-state-locked__card { border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); padding: var(--lasso-space-3); display: flex; flex-direction: column; gap: var(--lasso-space-3); }
 .lasso-state-locked__text, .lasso-state-request__text { margin: 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-2); }
-.lasso-state__wide { width: 100%; height: var(--lasso-btn-h-lg); font-size: var(--lasso-fs); }
+.lasso-state__wide { align-self: flex-start; height: var(--lasso-btn-h); font-size: var(--lasso-fs-sm); }
+.lasso-state-locked__title { margin: 0 0 -8px; font-size: var(--lasso-fs); line-height: 20px; font-weight: 600; color: var(--lasso-text); }
 /* På forespørgsel: pris og varighed før knappen; ventetilstand som 48 px række med ring. */
 .lasso-state-request { display: flex; flex-direction: column; gap: var(--lasso-space-3); }
 .lasso-state-request__pending { display: flex; align-items: center; gap: var(--lasso-space-3); min-height: 48px; padding: 6px var(--lasso-space-3); border: 1px solid var(--lasso-accent-border); border-radius: var(--lasso-radius); background: var(--lasso-accent-soft); }
@@ -3085,7 +3086,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 @media (prefers-reduced-motion: reduce) { .lasso-ring { animation: none; } }
 @container lasso (max-width: 560px) {
   .lasso-state__actions .lasso-state__retry, .lasso-state__actions .lasso-btn { height: var(--lasso-touch-h); }
-  .lasso-state__wide { height: var(--lasso-touch-h); }
+  /* 26h.1: på mobil står den primære handling i fuld bredde. */
+  .lasso-state__wide { align-self: stretch; width: 100%; height: var(--lasso-touch-h); font-size: var(--lasso-fs); }
 }
 
 /* ---------- 17.2 / 26d.6 Risikoobservationer: filterchips og kort med farvekant (node BUO-0, ES9-0) ---------- */
