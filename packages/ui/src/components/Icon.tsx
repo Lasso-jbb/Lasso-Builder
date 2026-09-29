@@ -70,7 +70,11 @@ export type IconName =
   | "tool-keyfigures"
   | "tool-property"
   | "tool-registry"
-  | "tool-insight";
+  | "tool-insight"
+  /* 08.7 Se alle-panel (Paper L7H-0): genvejene Tvillinger og Nyheder og det grønne verificeret-skjold. */
+  | "users"
+  | "news"
+  | "shield-check";
 
 /** Danske navne på katalogets 20 ikoner, i katalogets rækkefølge (til aria-label og oversigter). */
 export const ICON_LABELS: Record<CatalogIconName, string> = {
@@ -153,6 +157,9 @@ const PATHS: Record<IconName, string> = {
   "tool-property": "M4.5 11L12 4.5l7.5 6.5v8.5h-15z",
   "tool-registry": "M12 6.5c-2-1.5-5-2-8-1.5v13c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V5c-3-.5-6 0-8 1.5zM12 6.5v13",
   "tool-insight": "M10 4.5l1.6 4.4 4.4 1.6-4.4 1.6L10 16.5l-1.6-4.4L4 10.5l4.4-1.6z",
+  users: "M9 11.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM3 19c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5M15.5 5a3.5 3.5 0 010 6.5M17 13.7c2.4.6 4 2.5 4 5.3",
+  news: "M4 5h11a3 3 0 013 3v11H7a3 3 0 01-3-3zM18 8h2v9a2 2 0 01-2 2M8 9h6M8 12.5h6M8 16h4",
+  "shield-check": "M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6zM9 12l2 2 4-4",
 };
 
 export interface IconProps {

@@ -172,7 +172,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
   {
     type: "LassoContactPersons",
     title: "Kontaktpersoner",
-    description: `Brug til: navngivne kontaktpersoner fra virksomhedens hjemmeside med rolle/afdeling, telefon og e-mail – 'hvem kan jeg kontakte hos X', 'kontaktpersoner'. Brug ikke når: det gælder direktion/bestyrelse i CVR (LassoPersonList) eller virksomhedens hovednumre (LassoContact). Kræver: company; listen er tom, når hjemmesiden er ukendt eller ingen personer er fundet. ${F("kontakt")} Eksempel: 'Hvem er kontaktpersonerne hos Lasso X?' → show_company focus kontakt.`,
+    description: `Brug til: navngivne kontaktpersoner fra virksomhedens hjemmeside med rolle/afdeling, telefon og e-mail – 'hvem kan jeg kontakte hos X', 'kontaktpersoner'. Brug ikke når: det gælder direktion/bestyrelse i CVR (LassoPersonList) eller virksomhedens hovednumre (LassoContact). Kræver: company; listen er tom, når hjemmesiden er ukendt eller ingen personer er fundet. Blokken viser 3 personer; 'Se N kontaktpersoner' åbner 'Se alle'-panelet (08.7): på desktop tre kolonner (virksomheden med adresse, CVR, Live Nummer, telefonnumre og e-mailadresser | stillinger pr. afdeling | valgt person med 'Kopiér telefonnummer'/'Kopiér e-mailadresse' og 'Kilder'), på tablet og mobil liste + detalje; intet kan rettes eller gemmes i panelet. ${F("kontakt")} Eksempel: 'Hvem er kontaktpersonerne hos Lasso X?' → show_company focus kontakt.`,
     props: "company, title?",
   },
   {

@@ -37,9 +37,17 @@ export interface SidePanelProps {
   detailTitle?: string;
   closeLabel?: string;
   className?: string;
+  /**
+   * "seeall" (08.7, Paper L75-0): på skærme ≥ 1200 px et bredt panel (1104 px) i portalens ramme med
+   * tre kolonner: `aside` (virksomheden, 320) | liste (flex) | detalje (360). Under 1200 px det
+   * almindelige panel fra højre (08.9) og arket på mobil (08.10/08.11), uden `aside`.
+   */
+  variant?: "default" | "seeall";
+  /** Første kolonne i "seeall" på desktop (fx virksomhedens kontaktoplysninger og genveje). */
+  aside?: ReactNode;
 }
 
-export function SidePanel({ open, title, subtitle, onClose, list, detail, view = "list", onBack, detailTitle, closeLabel = "Luk", className = "" }: SidePanelProps) {
+export function SidePanel({ open, title, subtitle, onClose, list, detail, view = "list", onBack, detailTitle, closeLabel = "Luk", className = "", variant = "default", aside }: SidePanelProps) {
   const layer = useLayer();
   const panel = useRef<HTMLDivElement>(null);
   const id = useId();
@@ -85,7 +93,7 @@ export function SidePanel({ open, title, subtitle, onClose, list, detail, view =
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`lasso-sidepanel${detail ? "" : " lasso-sidepanel--list-only"} ${className}`}
+        className={`lasso-sidepanel${detail ? "" : " lasso-sidepanel--list-only"}${variant === "seeall" ? " lasso-sidepanel--seeall" : ""}${aside ? " lasso-sidepanel--aside" : ""} ${className}`}
         data-view={detail ? view : "list"}
         onKeyDown={onKeyDown}
       >
@@ -109,6 +117,7 @@ export function SidePanel({ open, title, subtitle, onClose, list, detail, view =
           </button>
         </header>
         <div className="lasso-sidepanel__body">
+          {aside ? <div className="lasso-sidepanel__aside">{aside}</div> : null}
           <div className="lasso-sidepanel__list">{list}</div>
           {detail ? <div className="lasso-sidepanel__detail">{detail}</div> : null}
         </div>

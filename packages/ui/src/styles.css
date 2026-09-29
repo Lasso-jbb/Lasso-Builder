@@ -5002,3 +5002,103 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-contact__row .lasso-contact__value[href^="tel:"] { flex: none; }
   .lasso-contact__value[href^="tel:"] + .lasso-contact__aside { flex: 1 1 auto; justify-content: flex-end; text-align: right; }
 }
+
+/* ---------- 08.7 Se alle-panel (Paper L75-0; tablet MCE-0, mobil MES-0/MGT-0), runde 5 ----------
+   Desktop ≥ 1200: bredt panel (1104) i portalens ramme med tre kolonner: virksomheden (320, L7H-0) |
+   stillinger pr. afdeling (flex, L8Z-0) | valgt person (360, LCJ-0). Tablet: panel fra højre med liste +
+   detalje; mobil: ark med liste, detalje med tilbagepil. Samme detalje i alle bredder: navn, stilling,
+   "Kopiér telefonnummer"/"Kopiér e-mailadresse" med værdien og "Kilder" med link (ingen Ring/LinkedIn). */
+.lasso-sidepanel--seeall .lasso-sidepanel__head { min-height: 60px; padding: 0 20px 0 28px; }
+.lasso-sidepanel--seeall .lasso-sidepanel__titles { gap: 2px 10px; }
+.lasso-sidepanel--seeall .lasso-sidepanel__title { font-size: 16px; line-height: 20px; font-weight: 600; }
+.lasso-sidepanel--seeall .lasso-sidepanel__subtitle { font-size: 13px; line-height: 16px; color: var(--lasso-muted); }
+.lasso-sidepanel--seeall .lasso-sidepanel__list { padding: 28px; }
+.lasso-sidepanel--seeall .lasso-sidepanel__detail { padding: 28px; }
+.lasso-sidepanel--seeall .lasso-panellist { display: flex; flex-direction: column; gap: 32px; }
+.lasso-sidepanel--seeall .lasso-panellist__group { display: flex; flex-direction: column; gap: 6px; }
+.lasso-sidepanel--seeall .lasso-panellist__label { padding: 0 0 6px; border-bottom: 1px solid var(--lasso-border); font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.06em; color: var(--lasso-text-3); }
+.lasso-sidepanel--seeall .lasso-panellist__items { display: flex; flex-direction: column; gap: 6px; }
+.lasso-root .lasso-sidepanel--seeall .lasso-panellist__row { min-height: 24px; padding: 0; gap: 12px; border: 0; border-radius: var(--lasso-radius-xs); background: none; }
+.lasso-root .lasso-sidepanel--seeall .lasso-panellist__row:hover { background: none; }
+.lasso-root .lasso-sidepanel--seeall .lasso-panellist__row:hover .lasso-panellist__name { color: var(--lasso-accent-text); }
+.lasso-root .lasso-sidepanel--seeall .lasso-panellist__row.is-selected { background: none; border: 0; }
+.lasso-sidepanel--seeall .lasso-panellist__name { font-size: 14px; line-height: 18px; font-weight: 400; color: var(--lasso-text-2); }
+.lasso-sidepanel--seeall .is-selected .lasso-panellist__name { font-weight: 500; color: var(--lasso-accent-text); }
+.lasso-sidepanel--seeall .lasso-sidepanel__list .lasso-panellist__trailing { display: inline-flex; }
+.lasso-sidepanel--seeall .lasso-contactpersons__actions { gap: 10px; }
+.lasso-sidepanel--seeall .lasso-panellist__trailing .lasso-contactpersons__icon { color: var(--lasso-text-3); }
+.lasso-sidepanel--seeall .is-selected .lasso-panellist__trailing .lasso-contactpersons__icon { color: var(--lasso-accent-text); }
+.lasso-root .lasso-sidepanel--seeall .lasso-panellist__more { margin: 0; align-self: flex-start; }
+
+.lasso-sidepanel--seeall .lasso-cpdetail { display: flex; flex-direction: column; gap: 24px; }
+.lasso-cpdetail__head { display: flex; flex-direction: column; gap: 4px; }
+.lasso-sidepanel--seeall .lasso-cpdetail__name { font-size: 20px; line-height: 24px; letter-spacing: -0.01em; }
+.lasso-sidepanel--seeall .lasso-cpdetail__role { margin: 0; font-size: 14px; line-height: 18px; color: var(--lasso-text-2); }
+.lasso-cpdetail__copies { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.lasso-root .lasso-cpdetail__copy { display: inline-flex; align-items: center; gap: 12px; min-height: 52px; padding: 6px 16px 6px 14px; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius); background: var(--lasso-surface); font: inherit; text-align: left; color: var(--lasso-text-2); cursor: pointer; }
+.lasso-root .lasso-cpdetail__copy:hover { border-color: var(--lasso-icon); background: var(--lasso-surface-2); }
+.lasso-root .lasso-cpdetail__copy:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
+.lasso-cpdetail__copyicon { flex: none; color: var(--lasso-text-2); }
+.lasso-cpdetail__copytext, .lasso-cpdetail__plain { display: flex; flex-direction: column; }
+.lasso-cpdetail__copylabel { font-size: 13px; line-height: 18px; font-weight: 500; color: var(--lasso-text-2); }
+.lasso-cpdetail__copyvalue { font-size: 12px; line-height: 16px; color: var(--lasso-muted); overflow-wrap: anywhere; }
+.lasso-cpdetail__none { margin: 0; font-size: 13px; line-height: 18px; color: var(--lasso-muted); }
+.lasso-sidepanel--seeall .lasso-cpdetail__sources { margin: 0; padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.lasso-cpdetail__sourcestitle { font-size: 14px; line-height: 18px; font-weight: 600; color: var(--lasso-text); }
+.lasso-sidepanel--seeall .lasso-cpdetail__sources ul { flex-direction: column; gap: 4px; }
+.lasso-sidepanel--seeall .lasso-cpdetail__sources li { font-size: 14px; line-height: 18px; color: inherit; }
+.lasso-sidepanel--seeall .lasso-cpdetail__sources li + li::before { content: none; }
+.lasso-root .lasso-sidepanel--seeall .lasso-cpdetail__sources .lasso-cpdetail__source { color: var(--lasso-accent-text); font-size: 14px; line-height: 18px; text-align: left; }
+.lasso-root .lasso-sidepanel--seeall .lasso-cpdetail__source:hover { text-decoration: underline; }
+
+.lasso-sidepanel__aside { display: none; }
+.lasso-cpcompany { display: flex; flex-direction: column; justify-content: space-between; gap: 24px; min-height: 100%; }
+.lasso-cpcompany__facts { display: flex; flex-direction: column; gap: 20px; }
+.lasso-cpcompany__name { font-size: 18px; line-height: 22px; font-weight: 600; letter-spacing: -0.01em; color: var(--lasso-text); overflow-wrap: anywhere; }
+.lasso-cpcompany__lines { display: flex; flex-direction: column; gap: 2px; }
+.lasso-cpcompany__lines, .lasso-cpcompany__line, .lasso-cpcompany__value { font-size: 14px; line-height: 18px; color: var(--lasso-text-2); }
+.lasso-cpcompany__group { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.lasso-cpcompany__label { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; line-height: 18px; font-weight: 600; color: var(--lasso-text); }
+.lasso-cpcompany__info { display: inline-flex; color: var(--lasso-placeholder); }
+.lasso-cpcompany__value { display: inline-flex; align-items: center; gap: 6px; overflow-wrap: anywhere; }
+.lasso-cpcompany__shield { flex: none; color: var(--lasso-positive); }
+.lasso-root .lasso-cpcompany__web, .lasso-root .lasso-cpcompany__more { align-self: flex-start; padding: 0; border: 0; background: none; font: inherit; text-align: left; text-decoration: none; color: var(--lasso-accent-text); cursor: pointer; }
+.lasso-root .lasso-cpcompany__web { font-size: 14px; line-height: 18px; }
+.lasso-root .lasso-cpcompany__more { font-size: 13px; line-height: 18px; font-weight: 500; }
+.lasso-root .lasso-cpcompany__web:hover, .lasso-root .lasso-cpcompany__more:hover { text-decoration: underline; }
+.lasso-cpcompany__shortcuts { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 24px; }
+.lasso-root .lasso-cpcompany__shortcut { gap: 7px; padding: 0 16px 0 14px; font-size: 13px; line-height: 18px; }
+
+@container lasso (min-width: 1200px) {
+  .lasso-sidepanel.lasso-sidepanel--seeall { top: 24px; bottom: auto; right: auto; left: max(24px, calc(50% - 552px)); width: min(1104px, calc(100% - 48px)); max-height: calc(100% - 48px); border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); animation-name: lasso-sheet-in; }
+  .lasso-sidepanel--seeall .lasso-sidepanel__body { grid-template-columns: minmax(0, 1fr) 360px; }
+  .lasso-sidepanel--seeall.lasso-sidepanel--aside .lasso-sidepanel__body { grid-template-columns: 320px minmax(0, 1fr) 360px; }
+  .lasso-sidepanel--seeall .lasso-sidepanel__aside { display: block; min-height: 0; overflow-y: auto; padding: 28px; border-right: 1px solid var(--lasso-border); }
+}
+@container lasso (max-width: 1199px) {
+  .lasso-sidepanel--seeall .lasso-sidepanel__list { padding: 20px; }
+  .lasso-sidepanel--seeall .lasso-sidepanel__detail { padding: 20px; }
+  .lasso-sidepanel--seeall .lasso-sidepanel__subtitle { display: inline; }
+  .lasso-sidepanel--seeall .lasso-panellist { gap: 24px; }
+  .lasso-root .lasso-sidepanel--seeall .lasso-panellist__row { min-height: 32px; }
+}
+@container lasso (max-width: 560px) {
+  /* 08.10/08.11: arket. Rækker 52 px med stilling, telefon-/mailikon ved data og pil; afdelingsoverskrift med linje under. */
+  .lasso-sidepanel--seeall .lasso-sidepanel__head { min-height: 56px; padding: 10px 12px 10px 16px; }
+  .lasso-sidepanel--seeall .lasso-sidepanel__subtitle { display: inline; }
+  .lasso-sidepanel--seeall .lasso-sidepanel__list { padding: 8px 0 16px; }
+  .lasso-sidepanel--seeall .lasso-panellist { gap: 8px; }
+  .lasso-sidepanel--seeall .lasso-panellist__group { gap: 0; }
+  .lasso-sidepanel--seeall .lasso-panellist__label { padding: 14px 16px 6px; }
+  .lasso-sidepanel--seeall .lasso-panellist__items { gap: 0; }
+  .lasso-root .lasso-sidepanel--seeall .lasso-panellist__row { min-height: 52px; padding: 8px 16px; border-bottom: 1px solid var(--lasso-divider-subtle); border-radius: 0; }
+  .lasso-sidepanel--seeall .lasso-panellist__name { font-size: 15px; line-height: 20px; }
+  .lasso-sidepanel--seeall .is-selected .lasso-panellist__name { font-weight: 400; color: var(--lasso-text-2); }
+  .lasso-sidepanel--seeall .is-selected .lasso-panellist__trailing .lasso-contactpersons__icon { color: var(--lasso-text-3); }
+  .lasso-sidepanel--seeall .lasso-panellist__trailing svg:nth-child(2) { display: block; }
+  .lasso-root .lasso-sidepanel--seeall .lasso-panellist__more { margin: 12px 16px 0; }
+  .lasso-sidepanel--seeall .lasso-sidepanel__detail { padding: 16px; }
+  .lasso-root .lasso-sidepanel--seeall[data-view="detail"] .lasso-sidepanel__close { display: inline-grid; }
+  .lasso-cpdetail__copies { align-items: stretch; }
+  .lasso-sidepanel--seeall .lasso-cpdetail__name { font-size: 18px; line-height: 22px; }
+}
