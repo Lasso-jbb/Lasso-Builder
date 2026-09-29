@@ -1553,6 +1553,8 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-column { min-width: 0; display: flex; flex-direction: column; }
 /* Kolonnerne direkte under hovedet: hovedets bundlinje er nok, ellers står der en dobbelt linje (review P1-8) */
 .lasso-cell:has(> .lasso-company) + .lasso-columns, .lasso-cell:has(> .lasso-personhead) + .lasso-columns { border-top: 0; }
+/* HOVED-LUFT (runde 6): båndet lige under hovedet begynder uden ekstra luft; afstanden er sektionsmellemrummet (row-gap). */
+.lasso-root .lasso-cell:has(> .lasso-company, > .lasso-personhead) + .lasso-columns > .lasso-column > .lasso-column__item:first-child { padding-top: 0; }
 .lasso-column + .lasso-column { border-left: 1px solid var(--lasso-border); }
 .lasso-column__item { padding: var(--lasso-space-6) var(--lasso-space-6); }
 .lasso-column__item + .lasso-column__item { border-top: 1px solid var(--lasso-border); }
@@ -1644,7 +1646,7 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 
 /* ---------- 16 Personside (node BN9-0; mobil 26d EOD-0) ---------- */
 /* Personhoved: samme form som virksomhedshovedet (08); "Person" som ren tekst i stedet for status. */
-.lasso-personhead { display: flex; flex-direction: column; gap: 6px; padding-bottom: var(--lasso-space-5); }
+.lasso-personhead { display: flex; flex-direction: column; gap: 6px; padding-bottom: 0; } /* HOVED-LUFT (runde 6) */
 .lasso-personhead__title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
 .lasso-personhead__name { margin: 0; font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: var(--lasso-tracking-tight); color: var(--lasso-text); overflow-wrap: anywhere; }
 .lasso-personhead__kind { font-size: var(--lasso-fs-sm); line-height: 18px; font-weight: 500; color: var(--lasso-text-2); }
@@ -3092,6 +3094,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-company__status { font-size: var(--lasso-fs-sm); }
   .lasso-company__facts { order: 1; font-size: var(--lasso-fs-sm); line-height: 18px; }
   .lasso-company > .lasso-company__actions { order: 2; align-self: flex-start; margin-top: 2px; }
+  .lasso-company > .lasso-company__title { align-self: stretch; }
   .lasso-company > .lasso-company__actions.lasso-headactions { justify-content: flex-start; }
   /* 26a.4/26g.1: mobilhovedet har kun navn, fakta og ikonknapper; observationslinjen står kun på desktop (24.4). */
   .lasso-company > .lasso-headrisk { display: none; }
