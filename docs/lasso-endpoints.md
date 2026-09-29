@@ -432,3 +432,11 @@ med "Kun årsregnskab indberettet".
 (revisorer over tid) findes kun i demodata. En live-kilde (Datafordeleren MAT/BBR for geometri, CVR-historik
 for revisorskift) er ikke bekræftet; uden data viser ejendomskortet "Intet matrikelkort tilgængeligt", og
 revisorhistorikken udelades.
+
+## Ubekræftet: bibrancher, fravalgt revision og kapital (katalog 28.7)
+
+`companyDetailsExtras` i `adapters.ts` (kaldt fra `adaptCompany`) læser defensivt `altIndustry1`–`altIndustry3`
+(eller `altIndustries`) som `{ code, text }` eller tekst, `accounting.auditExempt`/`auditExemption` (true, "ja",
+"fravalgt") og `contributedCapital.amount`/`contributedCapital`/`capital.amount` med valuta og `capitalClasses`.
+Felterne kommer efter Paper-overlinjen "companies/company-details" og er ikke set i et rigtigt svar; mangler de,
+udelades rækkerne (ingen "Ingen registreret" uden grundlag).

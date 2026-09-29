@@ -423,6 +423,11 @@ function toRow(c: DemoCompany): CompanyRowVM {
 
 function strip(c: DemoCompany): CompanyVM {
   const { base: _b, growth: _g, people: _p, owners: _o, auditor: _a, ...vm } = c;
+  // Katalog 28.7/26h.9: eksempelvirksomheden har bibrancher og registreret kapital (eksempeldata).
+  if (c.cvr === "99000001") {
+    return { ...vm, altIndustries: [{ code: "433200", text: "Tømrer- og bygningssnedkervirksomhed" }, { code: "711200", text: "Rådgivende ingeniørvirksomhed" }], registeredCapital: { amount: 2_000_000, currency: "DKK", classes: ["A-aktier 1.500.000 DKK", "B-aktier 500.000 DKK"] } };
+  }
+  if (c.auditor === "Ingen" && c.form !== "Enkeltmandsvirksomhed" && c.form !== "I/S") return { ...vm, auditExempt: true };
   return vm;
 }
 

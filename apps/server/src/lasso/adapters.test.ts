@@ -1034,3 +1034,12 @@ test("adaptChangeFeed: delta-liste -> feed, kun overvågede, kun i perioden, sta
   // Uden monitored-sæt tages alt med
   assert.ok(adaptChangeFeed(raw, { days: 7, now }).entries.some((e) => e.companyName === "Fremmed A/S"));
 });
+
+test("28.7: companyDetailsExtras læser bibrancher, fravalgt revision og kapital defensivt", async () => {
+  const { companyDetailsExtras } = await import("./adapters.js");
+  const out = companyDetailsExtras({ altIndustry1: { code: "620200", text: "It-rådgivning" }, altIndustry2: null, accounting: { auditExempt: true }, contributedCapital: { amount: 400000, currency: "DKK" } });
+  assert.deepEqual(out.altIndustries, [{ code: "620200", text: "It-rådgivning" }]);
+  assert.equal(out.auditExempt, true);
+  assert.deepEqual(out.registeredCapital, { amount: 400000, currency: "DKK" });
+  assert.deepEqual(companyDetailsExtras({ name: "x" }), {});
+});

@@ -197,7 +197,37 @@ export function adaptCompany(lassoId: string, raw: Json): CompanyVM {
     website: str(raw, "website", "homepage", "web", "url"),
     email: str(raw, "email", "emailAddress"),
     phone: str(raw, "phone", "phoneNumber", "telephone", "telefon"),
+    ...companyDetailsExtras(raw),
   };
+}
+
+/**
+ * Katalog 28.7 (companies/company-details): bibrancher (altIndustry1–3), fravalg af revision og
+ * registreret kapital. UBEKRÆFTEDE feltnavne (docs/lasso-endpoints.md, "Ubekræftet"); felter, der
+ * ikke findes, udelades, så UI'en ikke påstår "Ingen registreret" uden grundlag.
+ */
+export function companyDetailsExtras(raw: Json): Pick<CompanyVM, "altIndustries" | "auditExempt" | "registeredCapital"> {
+  const out: Pick<CompanyVM, "altIndustries" | "auditExempt" | "registeredCapital"> = {};
+  const keys = ["altIndustry1", "altIndustry2", "altIndustry3"];
+  if (keys.some((k) => pick(raw, k) !== undefined) || Array.isArray(pick(raw, "altIndustries"))) {
+    const list = Array.isArray(pick(raw, "altIndustries")) ? (pick(raw, "altIndustries") as Json[]) : keys.map((k) => pick(raw, k));
+    out.altIndustries = list
+      .map((v) => (typeof v === "string" ? { text: v } : v && typeof v === "object" ? { code: str(v, "code", "industryCode"), text: str(v, "text", "name", "description") ?? "" } : null))
+      .filter((v): v is { code: string | undefined; text: string } => Boolean(v && v.text))
+      .map((v) => (v.code ? { code: v.code, text: v.text } : { text: v.text }));
+  }
+  const exempt = pick(raw, "accounting.auditExempt", "accounting.auditExemption", "auditExempt", "auditExemption");
+  if (exempt === true || (typeof exempt === "string" && /^(true|ja|fravalgt)$/i.test(exempt))) out.auditExempt = true;
+  const amount = num(raw, "contributedCapital.amount", "contributedCapital", "capital.amount", "registeredCapital");
+  if (typeof amount === "number") {
+    const classes = pick(raw, "capitalClasses");
+    out.registeredCapital = {
+      amount,
+      currency: str(raw, "contributedCapital.currency", "capital.currency", "capitalCurrency"),
+      ...(Array.isArray(classes) ? { classes: classes.map((c) => (typeof c === "string" ? c : str(c, "name", "description"))).filter((c): c is string => Boolean(c)) } : {}),
+    };
+  }
+  return out;
 }
 
 /** Ét element fra en telefon-/e-mail-liste: enten en ren streng eller et objekt med et værdifelt. */

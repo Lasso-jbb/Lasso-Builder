@@ -16,6 +16,8 @@ interface Row {
   danger?: boolean;
   /** Entitetens Lasso-ID (revisoren), så navnet kan åbnes i værter med drill-down. */
   lassoId?: string;
+  /** Katalog 28.7: warning-tekst (kun "Fravalgt" revision). */
+  tone?: "warning";
 }
 
 /**
@@ -176,7 +178,7 @@ export function KeyValueList({
         {rows.map((r) => (
           <div className="lasso-kv-row" key={r.label}>
             <div className="lasso-kv-row__label">{r.label}</div>
-            <div className="lasso-kv-row__value" title={r.value}>
+            <div className={`lasso-kv-row__value${r.tone === "warning" ? " lasso-kv-row__value--warning" : ""}`} title={r.value}>
               {r.value ? <Value value={r.value} lassoId={r.lassoId} onOpen={onOpen} /> : <Missing />}
             </div>
           </div>

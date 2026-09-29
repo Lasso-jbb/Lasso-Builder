@@ -29,6 +29,12 @@ export interface CompanyVM {
   website?: string;
   email?: string;
   phone?: string;
+  /** Katalog 28.7/26h.9: bibrancher (op til tre), kode først. `[]` = ingen registreret; udeladt = ukendt. Ubekræftet. */
+  altIndustries?: { code?: string; text: string }[];
+  /** Katalog 28.7: revision fravalgt (ÅRL § 135). Den eneste værdi, der farves (warning-tekst). Ubekræftet. */
+  auditExempt?: boolean;
+  /** Katalog 28.7: registreret kapital med valutakode og kapitalklasser. Ubekræftet. */
+  registeredCapital?: { amount: number; currency?: string; classes?: string[] };
 }
 
 /**
