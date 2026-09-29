@@ -21,6 +21,7 @@ import {
   formatNumber,
   formatPercent,
   mainMetric,
+  parseViewSpec,
   statusKind,
   type Dataset,
   type ViewSpec,
@@ -35,6 +36,7 @@ import {
   LiveNumber,
   Menu,
   ModuleBar,
+  ModuleToolbar,
   MonitorSettings,
   NotificationPanel,
   PersonSearchResults,
@@ -1187,28 +1189,127 @@ const ANSWER_B = [
   { type: "LassoTextSections", company: C, variant: "analyse", width: "full" },
 ];
 
+/** 30.2 og 30.13: niveau B slutter med kildelinje og link til hele siden. */
+const ANSWER_B_FOOT = { source: "Kilde: CVR og årsrapport 2025, opdateret 25.09.2026", next: { label: "Åbn Eksempel Byg A/S i Lasso", prompt: "Fortæl om Eksempel Byg A/S" } };
+
+/** 30.3: niveau C i chatten = fuldt hoved med modulbjælken (niveau 1) under, første modul åbent, og Lasso-bundlinje. */
+function AnswerC({ ds }: { ds: Dataset }) {
+  const [focus, setFocus] = useState("overblik");
+  const spec: ViewSpec = { ...companySpec(ds, false), answer: { logo: true, source: "data fra CVR og Creditsafe" } };
+  return (
+    <LassoView
+      spec={spec}
+      dataset={ds}
+      host={{ save: false, drillDown: true, openSection: true, monitor: true, savePage: true, export: true }}
+      headTabs={{ items: COMPANY_MODULES, value: focus, onChange: setFocus, ariaLabel: "Moduler" }}
+      onAction={noop}
+      theme="light"
+      frameless
+    />
+  );
+}
+
+
+/* 30.11: fem moduleksempler, hvert med sit mønster og sin modulværktøjslinje (56 px, primær handling
+   yderst til venstre, visningsvalg yderst til højre, tynd linje under). */
+const MODULES_PROBE = {
+  kind: "company",
+  title: "Moduler",
+  components: [
+    { type: "LassoCompanyHead", company: C },
+    { type: "LassoKeyFigureCards", company: C },
+    { type: "LassoMultiYearTable", company: C },
+    { type: "LassoOwnershipDiagram", company: C },
+    { type: "LassoRelations", company: C },
+    { type: "LassoNews", company: C, limit: 4 },
+    { type: "LassoTimeline", company: C, limit: 6 },
+    { type: "LassoScoreGauge", company: C },
+    { type: "LassoIncomeStatement", company: C },
+    { type: "LassoBalanceSheet", company: C },
+  ],
+};
+
+function Seg({ items, level = 3 }: { items: readonly string[]; level?: 2 | 3 }) {
+  const [v, setV] = useState(items[0]!);
+  return <Tabs level={level} items={items.map((l) => ({ id: l, label: l }))} value={v} onChange={setV} ariaLabel="Visning" />;
+}
+const ghost = (label: string) => (
+  <button key={label} type="button" className="lasso-btn lasso-btn--ghost">
+    {label}
+  </button>
+);
+
+function ModuleExample({ title, pattern, text, toolbar, children }: { title: string; pattern: string; text: string; toolbar: ReactNode; children: ReactNode }) {
+  return (
+    <section style={{ display: "flex", flexDirection: "column", gap: 12, paddingBottom: 32, borderBottom: "1px solid var(--lasso-border)" }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+        <span style={{ fontSize: 15, lineHeight: "22px", fontWeight: 600, color: "var(--lasso-text)" }}>{title}</span>
+        <span className="lasso-small" style={muted}>{pattern}</span>
+      </div>
+      <p className="lasso-small" style={{ ...muted, margin: 0, maxWidth: 760 }}>{text}</p>
+      {toolbar}
+      {children}
+    </section>
+  );
+}
+
+function FiveModules({ ds }: { ds: Dataset }) {
+  const view = (components: Record<string, unknown>[]) => (
+    <LassoView spec={parseViewSpec({ kind: "company", title: "Modul", components })} dataset={ds} host={{ drillDown: true }} onAction={noop} theme="light" frameless />
+  );
+  return (
+    <div className="lasso-root" data-theme="light" style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+      <ModuleExample title="Nøgletal" pattern="mønster 1 + 4" text="Nøgletalskort i fuld bredde og flerårstabellen under. Print til venstre; Vend graf og Selskab/Koncern som visningsvalg til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Print" }} controls={<>{ghost("Vend")}<Seg items={["Selskab", "Koncern"]} /></>} />}>
+        {view([{ type: "LassoKeyFigureCards", company: C, width: "full" }, { type: "LassoMultiYearTable", company: C, width: "full" }])}
+      </ModuleExample>
+      <ModuleExample title="Ejerdiagram" pattern="mønster 2" text="Diagrammet ¾ med relationerne ¼ ved siden. Udskriv og Gem til venstre; Layout og Rediger til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Udskriv" }} secondary={[{ label: "Gem" }]} controls={<>{ghost("Layout")}{ghost("Rediger")}</>} />}>
+        {view([{ type: "LassoOwnershipDiagram", company: C, width: "three-quarters" }, { type: "LassoRelations", company: C, width: "quarter" }])}
+      </ModuleExample>
+      <ModuleExample title="Nyheder" pattern="mønster 8" text="Faner niveau 2 over kildernes strømme, artiklerne som kortgitter. Filtre yderst til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" field={<Seg level={2} items={["Lasso", "Artikler", "Ritzau", "Statstidende"]} />} controls={ghost("Filtre")} />}>
+        {view([{ type: "LassoNews", company: C, limit: 4, group: { id: "nyheder", pattern: "cards" } }, { type: "LassoContact", company: C, group: { id: "nyheder", pattern: "cards" } }])}
+      </ModuleExample>
+      <ModuleExample title="Historik" pattern="mønster 6, spejlet" text="Den kronologiske strøm med filtrene i en smal kolonne. Print til venstre; Vælg dato og Filtrer til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Print" }} controls={<>{ghost("Vælg dato")}{ghost("Filtrer")}</>} />}>
+        {view([{ type: "LassoTimeline", company: C, limit: 6, filterColumn: true }])}
+      </ModuleExample>
+      <ModuleExample title="Firmaindsigt" pattern="mønster 9" text="Hoved med score og sektionerne som harmonika, første række åben. Udskriv til venstre; Ejerdiagram til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Udskriv" }} controls={ghost("Ejerdiagram")} />}>
+        {view([
+          { type: "LassoKeyFigureCards", company: C, metrics: ["bruttofortjeneste", "resultat", "egenkapital"], width: "three-quarters" },
+          { type: "LassoScoreGauge", company: C, width: "quarter" },
+          { type: "LassoIncomeStatement", company: C, title: "Resultatopgørelse", group: { id: "fi", pattern: "accordion" } },
+          { type: "LassoBalanceSheet", company: C, title: "Balance", group: { id: "fi", pattern: "accordion" } },
+        ])}
+      </ModuleExample>
+    </div>
+  );
+}
+
 const layout: GalleryEntry[] = [
   {
     nr: "30.1",
     title: "Svarniveau A, Element",
     node: "J4H-0",
     note: "LAYOUT_RULES: 'hvad er omsætningen' → hoved som linje (40 px) + LassoKeyFigureCards med ét metric.",
-    spec: { kind: "company", title: "Omsætning", components: [head("line"), { type: "LassoKeyFigureCards", company: C, metrics: ["omsaetning"], width: "full" }] },
+    spec: {
+      kind: "company",
+      title: "Omsætning",
+      answer: { source: "Kilde: CVR og årsrapport 2025, opdateret 25.09.2026", next: { label: "Se hele økonomien", prompt: "Hvordan går det med Eksempel Byg A/S?" } },
+      components: [head("line"), { type: "LassoKeyFigureCards", company: C, metrics: ["omsaetning"], width: "full" }],
+    },
   },
   {
     nr: "30.2",
     title: "Svarniveau B, Sektion",
     node: "J4U-0",
     note: "LAYOUT_RULES: 'hvordan går det' → mønster 1 med kompakt hoved (56 px), nøgletal, graf ½ + nøgle-værdi ½ og analysen.",
-    spec: { kind: "company", title: "Økonomi", components: ANSWER_B },
+    spec: { kind: "company", title: "Økonomi", answer: ANSWER_B_FOOT, components: ANSWER_B },
   },
   dataEntry({
     nr: "30.3",
     title: "Svarniveau C, Side",
     node: "J5G-0",
-    note: "LAYOUT_RULES: 'fortæl om X' → show_company (composeCompany, focus overblik) som i chatten, med opfølgningsknapper.",
-    probe: companyProbe(),
-    draw: (ds) => <LassoView spec={companySpec(ds, true)} dataset={ds} host={{ prompt: true, save: true, drillDown: true, export: true, openSection: true }} onAction={noop} theme="light" />,
+    note: "Niveau C som i chatten: fuldt hoved med modulbjælken (niveau 1, første modul åbent) og Lasso-bundlinjen (answer.logo). Sektionerne er show_company-kompositionen (compose.ts).",
+    probe: paperCompanyProbe(),
+    draw: (ds) => <AnswerC ds={ds} />,
   }),
   {
     nr: "30.4",
@@ -1316,27 +1417,15 @@ const layout: GalleryEntry[] = [
       ],
     },
   },
-  {
+  dataEntry({
     nr: "30.11",
     title: "Moduler sættes sammen forskelligt (inkl. mønster 8 kortgitter og 9 harmonika)",
     node: "JV3-0",
-    note: "group.pattern 'cards' (kortgitter, to kolonner) og 'accordion' (harmonika, første række åben), begge med modulværktøjslinjen (group.toolbar, 56 px).",
-    spec: {
-      kind: "company",
-      title: "Mønster 8 og 9",
-      components: [
-        head("compact"),
-        { type: "LassoContact", company: C, group: { id: "kort", pattern: "cards", title: "Mønster 8, Kortgitter", toolbar: { primary: { label: "Overvåg", prompt: "Overvåg Eksempel Byg A/S" }, actions: [{ label: "Eksportér", prompt: "Eksportér oplysningerne om Eksempel Byg A/S som CSV" }] } } },
-        { type: "LassoKeyValueList", company: C, variant: "company", group: { id: "kort", pattern: "cards" } },
-        { type: "LassoPersonList", company: C, group: { id: "kort", pattern: "cards" } },
-        { type: "LassoOwnerList", company: C, group: { id: "kort", pattern: "cards" } },
-        { type: "LassoIncomeStatement", company: C, title: "Resultatopgørelse", group: { id: "harm", pattern: "accordion", title: "Mønster 9, Harmonika", toolbar: { primary: { label: "Hent årsrapport", prompt: "Hent årsrapporten for Eksempel Byg A/S som PDF" } } } },
-        { type: "LassoBalanceSheet", company: C, title: "Balance", group: { id: "harm", pattern: "accordion" } },
-        { type: "LassoCashFlow", company: C, title: "Pengestrøm", group: { id: "harm", pattern: "accordion" } },
-        { type: "LassoTextSections", company: C, variant: "analyse", title: "Regnskabsanalyse", group: { id: "harm", pattern: "accordion" } },
-      ],
-    },
-  },
+    only: "desktop",
+    note: "Papers fem moduleksempler (Nøgletal, Ejerdiagram, Nyheder, Historik, Firmaindsigt), hver med ModuleToolbar (primær handling til venstre, visningsvalg til højre, tynd linje under) over modulets elementer i sit mønster.",
+    probe: MODULES_PROBE,
+    draw: (ds) => <FiveModules ds={ds} />,
+  }),
   {
     nr: "30.14",
     title: "Mønster 8, Kortgitter",
@@ -1383,7 +1472,7 @@ const layout: GalleryEntry[] = [
     node: "JEU-0",
     desktopWidth: 880,
     note: "Svarniveau B, mønster 1 ('Hvordan går det med X?') i chatbredde 880 og mobil 390.",
-    spec: { kind: "company", title: "Økonomi", components: ANSWER_B },
+    spec: { kind: "company", title: "Økonomi", answer: ANSWER_B_FOOT, components: ANSWER_B },
   },
 ];
 

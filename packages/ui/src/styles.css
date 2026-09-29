@@ -3673,3 +3673,16 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-kpis > .lasso-kpi + .lasso-kpi { border-left: 0; border-top: 1px solid var(--lasso-border); }
   .lasso-kpis .lasso-kpi__value { font-size: var(--lasso-fs-xl); line-height: 32px; }
 }
+
+/* 30.1–30.3 og 30.13: svarets bundlinje. Kildelinje til venstre (12 muted), ét koral link videre til højre;
+   på mobil står linket som 44 px knap med kant i fuld bredde under kilden. */
+.lasso-answerfoot { display: flex; align-items: center; justify-content: space-between; gap: var(--lasso-space-4); margin-top: var(--lasso-space-5); padding-top: var(--lasso-space-3); border-top: 1px solid var(--lasso-divider-subtle); }
+.lasso-answerfoot__source { display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-size: 12px; line-height: 17px; color: var(--lasso-muted); }
+.lasso-answerfoot__mark { flex: none; display: block; width: 44px; height: 13px; color: var(--lasso-muted); }
+.lasso-answerfoot__next, .lasso-root .lasso-answerfoot__next { flex: none; padding: 0; border: 0; background: none; font: inherit; font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-accent-text); cursor: pointer; border-radius: var(--lasso-radius-sm); }
+.lasso-answerfoot__next:hover { text-decoration: underline; }
+.lasso-answerfoot__next:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: 2px; }
+@container lasso (max-width: 560px) {
+  .lasso-answerfoot { flex-direction: column; align-items: stretch; gap: var(--lasso-space-3); }
+  .lasso-root .lasso-answerfoot__next { height: var(--lasso-touch-h, 44px); border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius); background: var(--lasso-surface); text-align: center; }
+}
