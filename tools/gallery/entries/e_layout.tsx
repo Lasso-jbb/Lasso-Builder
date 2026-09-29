@@ -1619,10 +1619,13 @@ const layout: GalleryEntry[] = [
       title: "Mønster 3, Ligeværdige",
       components: [
         head("compact"),
+        // Kontrol r5: balancen (741 px) er for høj til at stå alene ved siden af resultatet (444); gridmodellen
+        // lagde den derfor alene i fuld bredde. Med balancen først står den ½ over for stakken resultat + ledelse,
+        // og ejerne følger efter (samme vægt, ½ + ½).
+        { type: "LassoBalanceSheet", company: C, width: "half" },
+        { type: "LassoIncomeStatement", company: C, width: "half" },
         { type: "LassoPersonList", company: C, width: "half" },
         { type: "LassoOwnerList", company: C, width: "half" },
-        { type: "LassoIncomeStatement", company: C, width: "half" },
-        { type: "LassoBalanceSheet", company: C, width: "half" },
       ],
     },
   },

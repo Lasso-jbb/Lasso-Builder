@@ -887,6 +887,15 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-stmt__delta { flex: none; width: 90px; text-align: right; font-size: var(--lasso-fs-sm); font-weight: 500; white-space: nowrap; }
 .lasso-stmt__delta--plain { font-size: 12px; font-weight: 400; color: var(--lasso-muted); }
 .lasso-stmt__flag { display: inline-flex; color: var(--lasso-warning); cursor: help; }
+/* Kontrol r5 (19.2/30.6 i ½): den kompakte opgørelse (2 år + ændring) skal passe i sin egen bredde.
+   Under 620 px ombrydes posterne, og år-/ændringskolonnerne bliver smallere, så Ændring ikke klippes. */
+.lasso-table-wrap:has(> .lasso-stmt) { container: stmt / inline-size; }
+@container stmt (max-width: 620px) {
+  .lasso-stmt { min-width: 0; }
+  .lasso-stmt__label { flex: 1 1 0; min-width: 0; white-space: normal; padding-right: 8px; }
+  .lasso-stmt__year { width: 88px; }
+  .lasso-stmt__delta { width: 72px; }
+}
 @container lasso (max-width: 768px) {
   .lasso-stmt__year:not(.lasso-stmt__year--last) { display: none; }
 }
@@ -1255,9 +1264,11 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 
 /* Ejendomme, BBR: ejendomskort (genbruger kort-mønstret fra 13) + bygningstabel + arealfordeling. */
 .lasso-properties { display: flex; flex-direction: column; gap: var(--lasso-space-6); }
-.lasso-property { display: flex; align-items: flex-start; gap: var(--lasso-space-5); }
-.lasso-property__card { flex: none; width: 360px; min-width: 0; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); overflow: hidden; }
-.lasso-property__side { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: var(--lasso-space-4); }
+.lasso-property { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--lasso-space-5); }
+/* Kontrol r5 (20.2–20.3 i ½): kortet (360) og bygningstabellen (min. 520) står side om side, når der er plads;
+   ellers ombrydes tabellen under kortet, og begge fylder bredden (ingen klipning). */
+.lasso-property__card { flex: 1 1 360px; min-width: 0; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); overflow: hidden; }
+.lasso-property__side { flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: var(--lasso-space-4); }
 .lasso-property-map { position: relative; height: 140px; background: var(--lasso-surface-muted); }
 .lasso-property-map--empty { display: grid; place-items: center; text-align: center; padding: var(--lasso-space-4); border-bottom: 1px solid var(--lasso-border); }
 .lasso-property-map__svg { display: block; width: 100%; height: 100%; }
@@ -1278,6 +1289,17 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-table--buildings th:nth-child(4), .lasso-table--buildings td:nth-child(4) { width: 90px; }
 .lasso-table--buildings th:nth-child(5), .lasso-table--buildings td:nth-child(5) { width: 110px; }
 .lasso-table--buildings th:nth-child(6), .lasso-table--buildings td:nth-child(6) { width: 90px; }
+/* Kontrol r5 (20.2–20.3 i ½): tabellen skal passe i sin egen bredde. Under 600 px bliver kolonnerne smallere,
+   og Etager (lavest prioritet) skjules; ingen vandret klipning. */
+.lasso-property__side { container: propside / inline-size; }
+@container lasso (min-width: 561px) { @container propside (max-width: 600px) {
+  .lasso-table--buildings th:nth-child(4), .lasso-table--buildings td:nth-child(4) { display: none; }
+  .lasso-table--buildings th:nth-child(1), .lasso-table--buildings td:nth-child(1) { width: 56px; }
+  .lasso-table--buildings th:nth-child(3), .lasso-table--buildings td:nth-child(3) { width: 68px; }
+  .lasso-table--buildings th:nth-child(5), .lasso-table--buildings td:nth-child(5) { width: 96px; }
+  .lasso-table--buildings th:nth-child(6), .lasso-table--buildings td:nth-child(6) { width: 80px; }
+  .lasso-table--buildings .lasso-cell--name { min-width: 0; }
+} }
 .lasso-table__total td { background: var(--lasso-surface-2); }
 .lasso-arealfordeling { display: flex; flex-direction: column; gap: var(--lasso-space-2); }
 .lasso-arealfordeling__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--lasso-space-3); }
@@ -1295,9 +1317,10 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-chart-tone-5 { background: var(--lasso-chart-5); }
 
 /* CHR: besætninger pr. type (venstre) og veterinære hændelser som tidslinje (højre, mønster fra 12). */
-.lasso-livestock { display: flex; align-items: flex-start; gap: var(--lasso-space-5); }
-.lasso-livestock__herds { flex: none; width: 540px; min-width: 0; display: flex; flex-direction: column; gap: var(--lasso-space-2); }
-.lasso-livestock__events { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: var(--lasso-space-2); }
+.lasso-livestock { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--lasso-space-5); }
+/* Kontrol r5 (20.4–20.5 i ½): besætninger og hændelser ombrydes under hinanden, når de ikke kan stå side om side */
+.lasso-livestock__herds { flex: 1 1 540px; min-width: 0; display: flex; flex-direction: column; gap: var(--lasso-space-2); }
+.lasso-livestock__events { flex: 999 1 280px; min-width: 0; display: flex; flex-direction: column; gap: var(--lasso-space-2); }
 .lasso-livestock__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--lasso-space-3); }
 .lasso-livestock__title { font-size: var(--lasso-fs-lg); line-height: 24px; font-weight: 600; color: var(--lasso-text); }
 .lasso-table--herds td { height: 48px; border-bottom: 1px solid var(--lasso-divider-subtle); }
@@ -1313,10 +1336,9 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 
 @container lasso (max-width: 560px) {
   .lasso-property { flex-direction: column; }
-  .lasso-property__card { width: 100%; }
+  .lasso-property__card, .lasso-property__side { flex: none; width: 100%; }
   .lasso-livestock { flex-direction: column; }
-  .lasso-livestock__herds { width: 100%; }
-  .lasso-table--herds td:first-child { display: none; } /* ikonet fylder for meget i den smalle kortvisning */
+  .lasso-livestock__herds, .lasso-livestock__events { flex: none; width: 100%; }
 }
 /* ---------- 14 Ejerdiagram ---------- */
 /* Katalog 14 (fuld visning, anatomi), 14b (særlige tilstande), 26f (tablet), 26c (mobil: liste). */
@@ -4535,6 +4557,14 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-publications__figure { display: inline-flex; flex-direction: column; align-items: flex-end; }
 .lasso-publications__before { font-size: 12px; line-height: 16px; color: var(--lasso-muted); font-weight: 400; }
 .lasso-publications__feed { display: none; list-style: none; margin: 0; padding: 0; }
+/* Kontrol r5 (28.2 i ½): tabellen skal passe i sin egen bredde. Under 620 px skjules Periode (lavest prioritet;
+   året står i Type/offentliggørelsen), datoen får ingen minimumsbredde, og beløbene ombrydes ikke. */
+.lasso-publications { container: pub / inline-size; }
+.lasso-publications__figure > span:first-child { white-space: nowrap; }
+@container lasso (min-width: 561px) { @container pub (max-width: 620px) {
+  .lasso-publications__table th:nth-child(2), .lasso-publications__table td:nth-child(2) { display: none; }
+  .lasso-publications__table .lasso-cell--name { min-width: 0; white-space: nowrap; }
+} }
 @container lasso (max-width: 560px) {
   /* 28.2 mobil: ændringsfeed-rækker i stedet for den foldede tabel. */
   .lasso-publications .lasso-table-wrap { display: none; }

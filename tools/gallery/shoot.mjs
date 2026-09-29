@@ -22,6 +22,20 @@ const sel = manifest.filter((m) => !filter || m.nr.startsWith(filter));
 const errors = [];
 const STAGE_PAD = 24; // luften om elementet i galleriet (lasso-frame--bare / render-rammen)
 
+/** Højden (px) af siden, hvis et fast placeret, synligt ark/scrim dækker viewporten; ellers 0. */
+async function openSheetHeight(p) {
+  return p.evaluate(() => {
+    const vw = window.innerWidth, vh = window.innerHeight;
+    for (const el of document.querySelectorAll(".lasso-menu__scrim, .lasso-dialog-wrap, .lasso-sheet-backdrop")) {
+      const cs = getComputedStyle(el);
+      if (cs.display === "none" || cs.visibility === "hidden" || cs.position !== "fixed") continue;
+      const r = el.getBoundingClientRect();
+      if (r.width >= vw * 0.9 && r.height >= vh * 0.6) return Math.ceil(document.documentElement.scrollHeight);
+    }
+    return 0;
+  });
+}
+
 async function shootOne(m) {
   const main = m.only === "mobile" ? [390] : m.only === "desktop" ? [m.desktopWidth ?? 1200] : [m.desktopWidth ?? 1200, 390];
   const widths = [...main, ...(m.extraWidths ?? [])];
@@ -44,6 +58,23 @@ async function shootOne(m) {
         });
         const width = Math.min(box.width, m.gridWidth + 2 * STAGE_PAD);
         await p.screenshot({ path: file, fullPage: true, animations: "disabled", clip: { x: box.x, y: box.y, width, height: box.height }, timeout: 20000 });
+      } else if (w <= 560 && (await openSheetHeight(p)) > 0) {
+        // Mobil med åbent ark (handlingsark, bundark): arket og scrimmen er fast placeret i viewporten,
+        // så et billede af #stage alene viser kun scrimmen (02b.2, 04.3) eller klipper arket (02a.4, 18.3).
+        // Billedet tages af hele viewporten; derefter lukkes arket, og feltet/elementet tages lukket.
+        const h = Math.max(await openSheetHeight(p), 800);
+        await p.screenshot({ path: file, fullPage: true, animations: "disabled", clip: { x: 0, y: 0, width: w, height: h }, timeout: 20000 });
+        m.shots.push({ w, file, extra: false, variant: "med åbent ark" });
+        await p.keyboard.press("Escape");
+        await p.mouse.click(w - 2, 2);
+        await p.waitForTimeout(300);
+        if ((await openSheetHeight(p)) === 0) {
+          const closed = join(shots, `${String(m.id).padStart(3, "0")}-${w}-lukket.png`);
+          await stage.screenshot({ path: closed, animations: "disabled", timeout: 20000 });
+          m.shots.push({ w, file: closed, extra: false, variant: "lukket" });
+        }
+        await p.close();
+        continue;
       } else {
         await stage.screenshot({ path: file, animations: "disabled", timeout: 20000 });
       }
@@ -76,7 +107,8 @@ const GAP = 8; // mm mellem billederne
 const SCALE = 192 / 1200; // mm pr. px: 1200 px = 192 mm, 390 px = 62,4 mm
 const MIN_FIT = 0.75; // et billede må skaleres ned til 75 % for at undgå en sidedeling
 
-const label = (s) => (s.extra ? `Tablet ${s.w} px` : s.w === 390 ? "Mobil 390 px" : `Desktop ${s.w} px`);
+// 08.9/26f: 768–1199 er tablet (26.1), også når det er elementets hovedbredde.
+const label = (s) => (s.w <= 560 ? `Mobil ${s.w} px${s.variant ? `, ${s.variant}` : ""}` : s.extra || s.w < 1200 ? `Tablet ${s.w} px` : `Desktop ${s.w} px`);
 
 /** Rækker: hovedbilledet (desktop + mobil side om side) og derefter hver ekstra bredde for sig. */
 function rows(m) {

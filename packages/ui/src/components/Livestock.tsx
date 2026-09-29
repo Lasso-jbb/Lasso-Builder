@@ -38,7 +38,8 @@ export function Livestock({ livestock, error }: { livestock?: LivestockVM; error
           <div className="lasso-livestock__head">
             <span className="lasso-livestock__title">Besætninger, CHR {livestock.chrNumber}</span>
             <span className="lasso-small lasso-muted">
-              {[livestock.ownerName, livestock.updated ? `opdateret ${formatDate(livestock.updated)}` : undefined].filter(Boolean).join(", ")}
+              {/* G3: ingen "opdateret"-kildelinje; kun ejeren */}
+              {livestock.ownerName}
             </span>
           </div>
           <div className="lasso-table-frame">

@@ -573,8 +573,13 @@ function TechOperatorDemo() {
   // Paper (efter Jakob): ét eksempel, "Live chat" med kontakt og dropdown'en ÅBEN, så de tre valg ses.
   const [c, setC] = useState<TechValue>({ on: true, mode: "any", values: [] });
   return (
-    <div style={{ minHeight: 200 }}>
-      <TechnologyRow label="Live chat" value={c} onChange={setC} onClear={noop} suggestions={["Intercom", "Zendesk", "LiveChat"]} defaultOpen />
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ minHeight: 200 }}>
+        <TechnologyRow label="Live chat" value={c} onChange={setC} onClear={noop} suggestions={["Intercom", "Zendesk", "LiveChat"]} defaultOpen />
+      </div>
+      {/* Kontrol r5: de to andre valg med tags + "Søg efter flere…" vises også her (ikke kun i 03.2) */}
+      <TechRow label="Live chat" init={{ on: true, mode: "include", values: ["Intercom", "Zendesk"] }} />
+      <TechRow label="CMS" init={{ on: true, mode: "exclude", values: ["Umbraco"] }} />
     </div>
   );
 }
