@@ -84,6 +84,7 @@
   /* Grafserier: fast rækkefølge, serie 2 aldrig uden serie 1 */
   --lasso-chart-1: #ff6b35;
   --lasso-chart-2: #2f5d8a;
+  --lasso-info-soft: #eaf1f8;       /* 17.1: flade bag info-ikonet */
   --lasso-chart-3: #8fb8de;
   --lasso-chart-4: #ffc1a3;         /* tidligere år */
   --lasso-chart-5: #9aa0a8;         /* branche/benchmark */
@@ -200,6 +201,7 @@
   --lasso-chart-bar: #7a3b1f;
   --lasso-chart-bar-strong: #ff7a4a;
   --lasso-chart-bar-neg: #6b2c26;
+  --lasso-info-soft: #1c2a38;
   --lasso-gauge-low: #2f5d43;
   --lasso-gauge-mid: #6b5730;
   --lasso-gauge-high: #6b3330;
@@ -1106,7 +1108,8 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-sev-icon--25 { color: var(--lasso-chart-2); }
 .lasso-sev-icon--50 { color: var(--lasso-warning); }
 .lasso-sev-icon--100 { color: var(--lasso-danger); }
-/* 17.1: mulig vigtig og vigtig står på en let flade i egen tone (gul, rød); info og neutral uden flade. */
+/* 17.1: info, mulig vigtig og vigtig står på en let flade i egen tone (blå, gul, rød); neutral uden flade. */
+.lasso-sev-icon-wrap--25 { background: var(--lasso-info-soft); }
 .lasso-sev-icon-wrap--50 { background: var(--lasso-warning-soft); }
 .lasso-sev-icon-wrap--100 { background: var(--lasso-danger-soft); }
 
