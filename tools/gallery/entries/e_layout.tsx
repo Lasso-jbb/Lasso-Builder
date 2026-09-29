@@ -514,42 +514,62 @@ const pages: GalleryEntry[] = [
 const responsive: GalleryEntry[] = [
   {
     nr: "26.1",
-    title: "Brudpunktsregler",
+    title: "Brudpunktsregler: ≥ 1200 desktop, 768–1199 tablet, < 768 mobil",
     node: "DH5-0",
     only: "desktop",
-    note: "Papers brudpunktstabel (DH5-0, live 29.09) tegnet med Lasso-tabellen.",
+    note: "Papers intro DH4-0 og brudpunktstabel DH5-0 (live 29.09, efter Fables oprydning): tre brudpunkter, foldning efter gridmodellen 23.1. Tegnet med Lasso-tabellen.",
     render: () => (
-      <Table
-        head={["Element", "≥ 1200, desktop", "768–1199, tablet", "< 768, mobil"]}
-        rows={[
-          ["Sideskabelon (06)", "Skinne 236 + midte + panel 336", "Skinne 236 + midte; panelet falder ned under midten", "Skinne bag \"Sektioner\"-knap i topbjælken; panel nederst; padding 16"],
-          ["Virksomhedshoved (08)", "Navn + fakta venstre, knapper højre", "Knapper under faktalinjen, venstrestillet", "Navn 20 px; fakta ombrydes; handlinger som 40 px ikonknapper, Overvåg med koral ikon"],
-          ["Sektionsfaner (08)", "Alle faner, \"Flere\" ved > 8", "Vandret scroll, ingen \"Flere\"", "Vandret scroll med fade i kanten, aktiv fane rulles ind"],
-          ["Nøgletalskort (09)", "3–5 på række", "4 på række, sparkline skjules", "2 × 2 grid, tal 20 px, udvikling på én linje"],
-          ["Nøgle-værdi-liste (09)", "Nøgle 190 px + værdi på samme linje", "Uændret", "Nøgle over værdi (2 linjer, 12/14), række 52 px"],
-          ["Grafer (13)", "½ eller fuld bredde", "Altid fuld bredde", "Fuld bredde, maks 5 datapunkter synlige, resten ved swipe; tooltip fast under grafen"],
-          ["Tabel (15)", "Alle kolonner", "Navn fast, resten vandret scroll; kolonnevalg", "Kortliste: navn + 2 vigtigste værdier + status; filtre i bundark; massehandlinger som bundbjælke"],
-          ["Ejerdiagram (14)", "Lærred med panel", "Lærred, panel som bundark", "Indrykket liste: ejere over, fokus, datterselskaber under; \"Åbn diagram\" fuldskærm i landskab"],
-        ].map(([el, ...rest]) => [<span key="e" style={{ fontWeight: 500, color: "var(--lasso-text)" }}>{el}</span>, ...rest])}
-      />
+      <div style={stack(16)}>
+        <p style={{ margin: 0, maxWidth: 940, fontSize: 15, lineHeight: "23px", color: "var(--lasso-text-3)" }}>
+          Samme elementer, tre brudpunkter: desktop ≥ 1200, tablet 768–1199, mobil &lt; 768. Foldningen følger gridmodellen (23.1): under 1200 bliver 9+3 og 8+4 til 12+12 og 4+4+4 til
+          6+6+12, mens 6+6 holder til 768; under 768 bliver alt én kolonne. Tablet beholder skabelonens midte, men skinnen bliver en 64 px ikonskinne under en 56 px topbjælke, og
+          panelet falder ned under midten; 236 px-skinnen og panelet ved siden af midten kommer først fra 1200. Mobil stabler alt i én kolonne, tabeller bliver kortlister og
+          ejerdiagrammet bliver en liste. Intet element må have en egen mobiludgave - kun brudpunktsregler.
+        </p>
+        <Table
+          head={["Element", "≥ 1200, desktop", "768–1199, tablet", "< 768, mobil"]}
+          rows={[
+            ["Sideskabelon (06)", "Skinne 236 + midte + panel 336 (fra 1200); indhold 1152 = 12 kolonner à 74, gutter 24", "Topbjælke 56 + ikonskinne 64 + midte; panelet falder ned under midten", "Skinne bag \"Sektioner\"-knap i topbjælken; panel nederst; padding 16"],
+            ["Virksomhedshoved (08)", "Kun navn + status venstre, 32 px ikonknapper højre (ingen faktalinje, G9)", "Som desktop: navn 24 px, knapper højre på samme linje", "Navn 20 px alene; handlinger som 40 px ikonknapper under navnet, Overvåg med koral ikon"],
+            ["Sektionsfaner (08)", "Alle faner, \"Flere\" ved > 8", "Vandret scroll, ingen \"Flere\"", "Vandret scroll med fade i kanten, aktiv fane rulles ind"],
+            ["Nøgletalskort (09)", "3–5 på række", "4 på række, sparkline skjules", "2 × 2 grid, tal 20 px, udvikling på én linje"],
+            ["Nøgle-værdi-liste (09)", "Nøgle 190 px + værdi på samme linje", "Uændret", "Nøgle over værdi (2 linjer, 12/14), række 52 px"],
+            ["Grafer (13)", "⅓, ½, ⅔ eller fuld bredde; højde 300", "½ holder (6+6); ⅓ bliver ½; ⅔ bliver fuld", "Fuld bredde, maks 5 datapunkter synlige, resten ved swipe; tooltip fast under grafen"],
+            ["Tabel (15)", "Alle kolonner", "Navn fast, resten vandret scroll; kolonnevalg", "Kortliste: navn + 2 vigtigste værdier + status; filtre i bundark; massehandlinger som bundbjælke"],
+            ["Ejerdiagram (14)", "Lærred med panel", "Lærred, panel som bundark", "Indrykket liste: ejere over, fokus, datterselskaber under; \"Åbn diagram\" fuldskærm i landskab"],
+            ["Gitter og bånd (23.1)", "12 kolonner à 74 px, gutter 24; bånd = 12 | 6+6 | 8+4 | 9+3 | 4+4+4 | 3+3+6 | 3+3+3+3; stakke strækkes til båndets bund", "Indhold 720 px, 12 kolonner à 38 px, gutter 24; 6+6 holder, 8+4 og 9+3 stables til 12+12, 4+4+4 bliver 6+6+12; ¼ og ⅓ bliver ½", "Én kolonne på 358 px (padding 16): hver stak i rækkefølge fra venstre; intet element ændrer rækkefølge, kun foldning"],
+            ["Bredder pr. element (23.2)", "Standard- og minimumsbredde pr. type: ¼ 270, ⅓ 368, ½ 564, ⅔ 760, ¾ 858, 1/1 1152; aldrig under minimum", "Minimum følger med: elementer med min ½ står i ½ (348 px) eller fuld; min ⅔ og 1/1 står altid fuld", "Alle elementer fuld bredde; høje elementer får loft (rows/limit) og \"Se alle\""],
+            ["Kontaktblok og genveje (08)", "Kontakt ⅓ (261) i stak ved siden af højt element; genveje ½, fylder rest i en stak", "Kontakt ½ eller fuld; genveje som vandret række, wrap til 2 linjer", "Kontakt som 48 px rækker med handling til højre (Kort, Ring, Kopiér); genveje som vandret scroll af sekundære knapper"],
+            ["Tekstsektioner og resumé (12)", "½ (590) eller fuld; klip efter N linjer + \"Vis mere\"", "½ eller fuld; samme klip", "Fuld bredde, klip efter 5 linjer, \"Vis mere\" som 44 px tekstknap"],
+            ["Tidslinje og nyheder (12)", "½ standard, limit 3–5 med \"Se alle\"", "½ side om side (6+6) eller fuld", "Fuld bredde, limit 3, kildelinje 12 px, \"Vis flere\" nederst"],
+            ["Regnskab (19)", "Kompakt (2 år + ændring) i ½–¾; fuldt regnskab (5 år + værktøjslinje) kun i 1/1", "Kompakt i ½ eller fuld; fuldt regnskab 3 år synlige, resten vandret scroll", "Segmentkontrol Resultat / Balance / Pengestrøm, år i dropdown, 2 talkolonner (år + Δ), kvalitetsflag foran tallet"],
+            ["Personside (16)", "Personhoved fuld (kun navn); roller som tidsbånd ⅔; netværk ½; risiko ½", "Tidsbånd fuld, færre etiketter; netværk og risiko 6+6", "Én kolonne: hoved, faner, tidsbånd (én 10 px bjælke pr. rolle), roller som 60 px rækker, netværk som kort"],
+            ["Dialoger og menuer (07)", "Dialog 480–560 centreret; menu ved knappen", "Dialog 560 centreret; menu ved knappen", "Dialog bliver bundark med greb; menu bliver handlingsark; luk altid × (G8)"],
+            ["Navigation (06, 26a)", "Skinne 236 + fanebjælke 56 + modulbjælke 56", "Topbjælke 56 + ikonskinne 64; faner ruller vandret", "Topbjælke 52 + bundnavigation 56 (Søg, Lister, Overvågning, Konto); sektioner i ark bag burger"],
+            ["Touch-mål og typografi", "Rækker 40–44, ikonknapper 32, felter 36; brødtekst 14/18", "Rækker 44, ikonknapper 36, felter 40; brødtekst 14/18", "Rækker 44, ikonknapper 40, felter og primære knapper 48; brødtekst 14/20, tal i kort 20 px"],
+            ["Tilstande (10.3, 15.4, 26h)", "Skelet i indholdets mål, i bevægelse; tom/fejl i samme kortramme", "Samme som desktop", "Skelet formet som mobilkortene; samme værktøjslinje (søg + Filter) i alle tilstande; tom og fejl i samme kortramme"],
+            ["Print og PDF (27)", "A4 fra \"Hent som PDF\" på siden, fanen eller elementet: samme elementer, uden interaktion", "Samme", "Samme; deles fra bundark"],
+          ].map(([el, ...rest]) => [<span key="e" style={{ fontWeight: 500, color: "var(--lasso-text)" }}>{el}</span>, ...rest])}
+        />
+      </div>
     ),
   },
   dataEntry({
     nr: "26.2",
-    title: "Sideskabelon, tablet 768",
+    title: "Sideskabelon, tablet 768: topbjælke + 64 px ikonskinne + midte, panel falder ned",
     node: "DIJ-0",
     only: "desktop",
     desktopWidth: 768,
-    note: COMPANY_PAGE_NOTE,
+    note: `Paper DIJ-0 + note MII-0: tablet (768–1199) med topbjælke 56 + 64 px ikonskinne + midte; default-siden (23.3) foldet efter gridmodellen: hoved og nøgletalskort som fuldbånd (4 på række, sparkline skjult), 6+6 holder, 3+6+3 bliver 6+6+12, genveje som stakfyld, panelet falder ned som sidste fuldbånd. Hovedet viser kun navn og status (G9); ikonknapper kun med funktion (G1). Tegnet med koden: ${COMPANY_PAGE_NOTE} Båndenes indhold og rækkefølge kommer fra compose.ts + båndpakningen (se rapporten ved afvigelser fra Papers skitse).`,
     probe: companyProbe(),
     draw: (ds) => <CompanyPage ds={ds} />,
   }),
   dataEntry({
     nr: "26.3",
-    title: "Sideskabelon, mobil 390",
+    title: "Sideskabelon, mobil 390: én kolonne, padding 16, skinne bag knap",
     node: "DKS-0",
     only: "mobile",
-    note: COMPANY_PAGE_NOTE,
+    note: `Paper DKS-0 + note MIJ-0: mobil (< 768) med topbjælke 52 og "Sektioner"-knap (skinnen bag knap) + søg + klokke, én kolonne på 358 px (padding 16), bundnavigation 56. Alle bånd bliver 12 (hver stak i rækkefølge fra venstre); nøgletalskort 2×2 med pil + procent uden ord; nøgle-værdi-lister med nøgle over værdi; tabeller som kortlister; ejerdiagram som indrykket liste. Hovedet viser kun navn og status (G9). Tegnet med koden: ${COMPANY_PAGE_NOTE}`,
     probe: companyProbe(),
     draw: (ds) => <CompanyPage ds={ds} />,
   }),
@@ -838,72 +858,43 @@ const ENUM_OVERLINE: CSSProperties = { margin: "0 0 8px", fontSize: "var(--lasso
 const ENUM_ROW: CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, minHeight: 30, borderBottom: "1px solid var(--lasso-divider-subtle)", fontSize: "var(--lasso-fs-sm)" };
 const ENUM_GROUP: CSSProperties = { margin: "10px 0 2px", fontSize: 12, fontWeight: 400, color: "var(--lasso-muted)" };
 
-function Enumerations() {
-  // Status: tekst fra værdilisten, farve fra gruppen (packages/spec/src/status.ts + statusTone).
-  // 28.1 (Jakob 29.09.2026): alle 19 statusser i de fire farvegrupper fra STATUS_GROUPS.
-  const groupTitle: Record<string, string> = { active: "Aktiv", temporary: "Midlertidig", problem: "Problem", inactive: "Inaktiv" };
-  const toneWord: Record<string, string> = { active: "tekstfarve", warning: "mørk rød", liquidation: "warning-tekst", inactive: "muted", new: "koral" };
-  const statusRow = (st: string) => {
-    const kind = statusKind(st) ?? "active";
-    const tone = statusTone(st, kind);
-    return (
-      <div key={st} style={ENUM_ROW}>
-        <span className={`lasso-status lasso-status--${tone}`}>{st}</span>
-        <span style={{ fontSize: 12, color: "var(--lasso-muted)" }}>{toneWord[tone]}</span>
-      </div>
-    );
-  };
-  const forms: [string, string, string][] = [
-    ["ENK", "Enkeltmandsvirksomhed", "34,8 %"],
-    ["ApS", "Anpartsselskab", "33,9 %"],
-    ["A/S", "Aktieselskab", "4,2 %"],
-    ["I/S", "Interessentskab", "1,1 %"],
-  ];
+/* 28.1 (Paper H0N-0): de 19 statusser i fire farvegrupper, brug i filtre (02) og mobilt filterark. */
+const STATUS_GROUP_TITLE: Record<string, string> = { active: "Aktiv, tekstfarve", temporary: "Midlertidig, ikke krise, warning-tekst", problem: "Problem, mørk rød", inactive: "Inaktiv, muted" };
+const STATUS_GROUP_WORD: Record<string, string> = { active: "tekstfarve", temporary: "warning-tekst", problem: "mørk rød", inactive: "muted" };
+
+function Statuses() {
   const filter: [string, boolean][] = [
     ["Aktiv (1.243.501)", true],
     ["Under konkurs (eksempel)", false],
     ["Ophørt (eksempel)", false],
   ];
   return (
-    <div className="lasso-enums" style={{ display: "grid", gap: 16 }}>
-      <div className="lasso-enums__desk" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, alignItems: "start" }}>
-        <div style={ENUM_CARD}>
-          <p style={ENUM_OVERLINE}>Status (19 værdier, 4 farvegrupper)</p>
+    <div className="lasso-enums" style={{ display: "flex", flexWrap: "wrap", gap: 24, alignItems: "flex-start" }}>
+      <div style={{ ...ENUM_CARD, padding: 0, width: 370, maxWidth: "100%" }}>
+        <p style={{ ...ENUM_OVERLINE, margin: 0, padding: "12px 14px", borderBottom: "1px solid var(--lasso-border)" }}>Status (19 værdier, 4 farvegrupper)</p>
+        <div style={{ padding: "4px 14px 12px" }}>
           {STATUS_GROUPS.map((g) => (
             <div key={g.group}>
-              <p style={ENUM_GROUP}>{groupTitle[g.group]}</p>
-              {g.statuses.map(statusRow)}
+              <p style={ENUM_GROUP}>{STATUS_GROUP_TITLE[g.group]}</p>
+              {g.statuses.map((st) => {
+                const tone = statusTone(st, statusKind(st) ?? "active");
+                return (
+                  <div key={st} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, minHeight: 22, fontSize: "var(--lasso-fs-sm)" }}>
+                    <span className={`lasso-status lasso-status--${tone}`}>{st}</span>
+                    <span style={{ fontSize: 12, color: "var(--lasso-muted)" }}>{STATUS_GROUP_WORD[g.group]}</span>
+                  </div>
+                );
+              })}
             </div>
           ))}
         </div>
-        <div style={{ ...ENUM_CARD, display: "grid", gap: 16 }}>
-          <div>
-            <p style={ENUM_OVERLINE}>Virksomhedsform (40+, kode og andel)</p>
-            {forms.map(([code, name, share]) => (
-              <div key={code} style={ENUM_ROW}>
-                <span>
-                  <span style={{ display: "inline-block", width: 40, color: "var(--lasso-muted)" }}>{code}</span>
-                  {name}
-                </span>
-                <span style={{ color: "var(--lasso-muted)" }}>{share}</span>
-              </div>
-            ))}
-            <p className="lasso-more" style={{ margin: "10px 0 0" }}>Vis alle former</p>
-          </div>
-          <div>
-            <p style={ENUM_OVERLINE}>Ansatte-interval (11)</p>
-            <p style={{ margin: 0, fontSize: "var(--lasso-fs-sm)", lineHeight: "20px", color: "var(--lasso-text)" }}>0, 1, 2–4, 5–9, 10–19, 20–49, 50–99, 100–199, 200–499, 500–999, 1.000+</p>
-          </div>
-          <div>
-            <p style={ENUM_OVERLINE}>Enhedstype (4)</p>
-            <p style={{ margin: 0, fontSize: "var(--lasso-fs-sm)", lineHeight: "20px", color: "var(--lasso-text)" }}>Person, Virksomhed, Produktionsenhed, Anden enhed (fx udenlandsk)</p>
-          </div>
-        </div>
+      </div>
+      <div style={{ display: "grid", gap: 8, width: 300, maxWidth: "100%" }}>
+        <p style={{ ...ENUM_OVERLINE, margin: 0 }}>Brug i filtre (02)</p>
         <div style={ENUM_CARD}>
-          <p style={ENUM_OVERLINE}>Brug i filtre (02)</p>
           <p style={{ margin: "0 0 6px", fontSize: "var(--lasso-fs)", fontWeight: 600, color: "var(--lasso-text)" }}>Status</p>
           {filter.map(([label, on]) => (
-            <label key={label} style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 32, fontSize: "var(--lasso-fs-sm)", color: "var(--lasso-text)" }}>
+            <label key={label} style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 22, fontSize: "var(--lasso-fs-sm)", color: "var(--lasso-text)" }}>
               <input type="checkbox" defaultChecked={on} style={{ accentColor: "var(--lasso-accent)" }} />
               {label}
             </label>
@@ -911,30 +902,76 @@ function Enumerations() {
           <p className="lasso-more" style={{ margin: "8px 0 0" }}>Vis alle 19 statusser</p>
         </div>
       </div>
-      {/* Mobil: filterark med rækker og koral flueben ved det valgte. */}
-      <div className="lasso-enums__mob" style={{ ...ENUM_CARD, maxWidth: 360 }}>
-        <p style={{ margin: "0 0 2px", fontSize: 12, color: "var(--lasso-muted)" }}>Mobil, filterark</p>
-        <p style={{ margin: "0 0 6px", fontSize: 17, fontWeight: 600, color: "var(--lasso-text)" }}>Status</p>
+      {/* Mobil: filterark med 44 px rækker og koral flueben ved det valgte (ikke afklippet). */}
+      <div style={{ ...ENUM_CARD, width: 300, maxWidth: "100%" }}>
+        <p style={{ margin: "0 0 10px", fontSize: 12, color: "var(--lasso-muted)" }}>Mobil, filterark</p>
+        <p style={{ margin: "0 0 6px", fontSize: "var(--lasso-fs)", fontWeight: 600, color: "var(--lasso-text)" }}>Status</p>
         {["Aktiv", "Under konkurs", "Ophørt"].map((st, i) => (
-          <div key={st} style={{ ...ENUM_ROW, minHeight: 44, alignItems: "center", fontSize: "var(--lasso-fs)" }}>
+          <div key={st} style={{ ...ENUM_ROW, minHeight: 54, alignItems: "center", fontSize: "var(--lasso-fs)" }}>
             <span>{st}</span>
             {i === 0 ? <span style={{ color: "var(--lasso-accent)", fontWeight: 600 }} aria-label="valgt">✓</span> : null}
           </div>
         ))}
-        <p className="lasso-more" style={{ margin: "10px 0 0" }}>Vis alle 19</p>
+        <p className="lasso-more" style={{ margin: "14px 0 0" }}>Vis alle 19</p>
       </div>
     </div>
   );
 }
 
+/* 28.10 (Paper M4O-0): virksomhedsform, ansatte-interval og enhedstype i én kolonne (M5M-0). */
+function ValueLists() {
+  const forms: [string, string, string][] = [
+    ["ENK", "Enkeltmandsvirksomhed", "34,3 %"],
+    ["ApS", "Anpartsselskab", "33,9 %"],
+    ["A/S", "Aktieselskab", "4,2 %"],
+    ["I/S", "Interessentskab", "eksempel"],
+  ];
+  const text: CSSProperties = { margin: 0, fontSize: "var(--lasso-fs-sm)", lineHeight: "20px", color: "var(--lasso-text)" };
+  return (
+    <div style={{ ...ENUM_CARD, padding: 0, width: 330, maxWidth: "100%" }}>
+      <p style={{ ...ENUM_OVERLINE, margin: 0, padding: "12px 14px", borderBottom: "1px solid var(--lasso-border)" }}>Virksomhedsform (40+, kode og andel)</p>
+      <div style={{ display: "grid", gap: 16, padding: "10px 14px 14px" }}>
+        <div>
+          {forms.map(([code, name, share]) => (
+            <div key={code} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, minHeight: 23, fontSize: "var(--lasso-fs-sm)" }}>
+              <span style={{ color: "var(--lasso-text)" }}>
+                <span style={{ display: "inline-block", width: 48, color: "var(--lasso-muted)" }}>{code}</span>
+                {name}
+              </span>
+              <span style={{ fontSize: 12, color: "var(--lasso-muted)" }}>{share}</span>
+            </div>
+          ))}
+          <p className="lasso-more" style={{ margin: "8px 0 0" }}>Vis alle former</p>
+        </div>
+        <div>
+          <p style={ENUM_OVERLINE}>Ansatte-interval (11)</p>
+          <p style={text}>0, 1, 2–4, 5–9, 10–19, 20–49, 50–99, 100–199, 200–499, 500–999, 1.000+</p>
+        </div>
+        <div>
+          <p style={ENUM_OVERLINE}>Enhedstype (4)</p>
+          <p style={text}>Person, Virksomhed, Produktionsenhed, Anden enhed (typisk udenlandsk)</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const datatypes: GalleryEntry[] = [
   {
     nr: "28.1",
-    title: "Værdilister (enumerations)",
+    title: "Statusser: 19 værdier i fire farvegrupper",
     node: "H0N-0",
-    note: "Dokumentation som i Paper (Jakob 29.09.2026): status med 19 værdier i fire farvegrupper fra statusTone (aktiv tekstfarve, midlertidig warning, problem mørk rød, inaktiv muted, se 02c.8), virksomhedsform, ansatte-interval, enhedstype, brug i filtre og mobilt filterark.",
-    render: () => <Enumerations />,
+    only: "desktop",
+    note: "Paper H0N-0 (companies/enumerations): statuskolonnen H0U-0 med de fire grupper fra STATUS_GROUPS/statusTone (aktiv tekstfarve, midlertidig warning-tekst, problem mørk rød, inaktiv muted), 'Brug i filtre (02)' H2Q-0 og mobilt filterark H37-0. Status hentes fra API'et og hardkodes aldrig; ren tekst, vægt 500, ingen pille. Øvrige værdilister står i 28.10.",
+    render: () => <Statuses />,
+  },
+  {
+    nr: "28.10",
+    title: "Værdilister: virksomhedsform, ansatte-interval, enhedstype",
+    node: "M4O-0",
+    only: "desktop",
+    note: "Paper M4O-0 (nyt nummer, kolonne M5M-0): form med kode først i muted og fuld tekst efter; andelen (procent af alle virksomheder) er valgfri og kun i lister, hvor den giver mening. Ansatte-intervaller med tankestreg og '1.000+' for det åbne interval. Enhedstype styrer, om en deltager linker til person, virksomhed, P-enhed eller vises som udenlandsk uden link. Statusser står i 28.1.",
+    render: () => <ValueLists />,
   },
   { nr: "28.2", title: "Regnskabspublicering (nyt/korrigeret regnskab)", node: "H3L-0", spec: one("Regnskabspublicering", { type: "LassoPublications", company: C }) },
   {
