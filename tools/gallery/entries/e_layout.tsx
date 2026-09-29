@@ -2,24 +2,14 @@
 // øvrige datatyper (28), fanebjælker (29) og layout (30).
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import {
-  COMPONENT_CATALOG,
-  COMPOSITION_RULES,
-  DEFAULT_WIDTH,
   FOCUSES,
   FOCUS_LABELS,
-  LAYOUT_RULES,
   PERSON_FOCUSES,
   PERSON_FOCUS_LABELS,
   composeCompany,
   composePerson,
   composePersonProbe,
   composeProbe,
-  formatAmount,
-  formatPeriod,
-  formatRange,
-  formatDate,
-  formatNumber,
-  formatPercent,
   mainMetric,
   parseViewSpec,
   statusKind,
@@ -267,14 +257,6 @@ function CompanyPage({ ds }: { ds: Dataset }) {
   );
 }
 
-function PersonPage({ ds }: { ds: Dataset }) {
-  const spec = personSpec(ds);
-  return (
-    <Shell kind="person" title={ds.persons[P]?.name ?? "Bo Eksempel"} modules={PERSON_MODULES} value="overblik">
-      <LassoView spec={spec} dataset={ds} host={entityHost()} onAction={noop} theme="light" frameless />
-    </Shell>
-  );
-}
 
 /* ---------- 24, 25 og 26g: eksempelsiderne som i Paper ---------- */
 
@@ -405,7 +387,6 @@ const personProbe = () => composePersonProbe(P, "overblik");
 
 const COMPANY_PAGE_NOTE =
   "Portalens ramme (AppShell: skinne, fanebjælke, modulbjælke) med show_company-kompositionen (composeCompany, focus overblik, followUps fra) for Eksempel Byg A/S i stedet for LASSO X A/S.";
-const PERSON_PAGE_NOTE = "Portalens ramme (AppShell) med show_person-kompositionen (composePerson, focus overblik) for Bo Eksempel i stedet for Mette Holm Eksempel.";
 
 /* ---------- 23 Guide ---------- */
 
