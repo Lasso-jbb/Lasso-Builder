@@ -179,8 +179,8 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
   {
     type: "LassoFinancialStatements",
     title: "Regnskabsdetaljer med værktøjslinje",
-    description: `Brug til: det fulde regnskab som ÉT element, hvor brugeren selv skifter mellem resultat, balance og pengestrøm, koncern og selskab og enhed, med revisorpåtegning og 'Hent PDF' – 'vis hele regnskabet', 'regnskabet med koncerntal', 'hent årsrapporten'. Brug ikke når: kun én opgørelse er bestilt (LassoIncomeStatement/LassoBalanceSheet/LassoCashFlow) eller nøgletal over år (LassoMultiYearTable). Kræver: company, statement? (income | balance | cashflow), years? (2–5, standard 5); halvår og kvartal er dæmpet, når selskabet kun indberetter årsregnskab. Dækkes ikke af show_company endnu. Eksempel: 'Vis hele regnskabet for Lasso X med koncerntal' → render_view med LassoCompanyHead og LassoFinancialStatements.`,
-    props: "company, statement? (income | balance | cashflow), years? (2–5, standard 5), title?",
+    description: `Brug til: det fulde regnskab som ÉT element: værktøjslinje (selskab/koncern, år/halvår/kvartal, periode, enhed, revisorpåtegning og 'Hent PDF'), på desktop resultatopgørelsen (2 år + ændring) med balance og pengestrøm under, på mobil én opgørelse ad gangen – 'vis hele regnskabet', 'regnskabet med koncerntal', 'hent årsrapporten'. Brug ikke når: kun én opgørelse er bestilt (LassoIncomeStatement/LassoBalanceSheet/LassoCashFlow) eller nøgletal over år (LassoMultiYearTable). Kræver: company, statement? (income | balance | cashflow, den der vises først på mobil), years? (2–5, standard 2); halvår og kvartal er dæmpet, når selskabet kun indberetter årsregnskab. Dækkes ikke af show_company endnu. Eksempel: 'Vis hele regnskabet for Lasso X med koncerntal' → render_view med LassoCompanyHead og LassoFinancialStatements.`,
+    props: "company, statement? (income | balance | cashflow), years? (2–5, standard 2), title?",
   },
 
   {
@@ -188,7 +188,13 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     title: "Fusioner og spaltninger",
     description: `Brug til: virksomhedens fusioner og spaltninger som 'fra → til' med dato og type – 'har X fusioneret', 'hvilke selskaber er fusioneret ind i X', 'spaltning'. Brug ikke når: det gælder ejerskifte (LassoOwnerList/LassoOwnershipDiagram) eller hele historikken (LassoTimeline). Kræver: company; ingen hændelser giver en tom tilstand, der siger det. Dækkes ikke af show_company. Eksempel: 'Er Lasso X fusioneret med andre selskaber?' → render_view med LassoCompanyHead og LassoMergers.`,
     props: "company, title?",
+  },  {
+    type: "LassoRegistration",
+    title: "Regnskabsoplysninger og kapital",
+    description: `Brug til: registreringsdetaljer fra CVR – revision (revideret eller fravalgt), regnskabsår, nuværende og første regnskabsperiode, regnskabsklasse, bibrancher, registreret kapital og kapitalklasser, vedtægter, tegningsregel, formål, reklamebeskyttelse og børsnotering – 'er revisionen fravalgt', 'hvilken regnskabsklasse', 'hvad er kapitalen', 'hvad er formålet', 'bibrancher'. Brug ikke når: kun revisor, stiftelse, form eller branche (LassoKeyValueList variant 'company'), eller hele virksomhedsprofilen med regnskabsanalyse (LassoTextSections). Kræver: company, variant? ('full' standard = to kort; 'profile' = bibrancher og formål, en smal blok); felter uden værdi udelades, og alt ud over formål og tegningsregel er ubekræftet i live-data. Dækkes ikke af show_company. Eksempel: 'Har Lasso X fravalgt revision, og hvad er kapitalen?' → render_view med LassoCompanyHead og LassoRegistration.`,
+    props: "company, variant? (full | profile), title?",
   },
+
   {
     type: "LassoAnnouncements",
     title: "Statstidende",
@@ -253,7 +259,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     type: "LassoCompanyTable",
     title: "Virksomhedstabel, søgning",
     description:
-      "Brug til: mange virksomheder fundet med kriterier – målgrupper, 'alle X i Y', 'top N efter Z' (sort) – som del af en render_view-spec med andet; står søgningen alene, så brug search_companies. Brugeren kan sortere, fjerne kriterier og klikke ind på en virksomhed. Brug ikke når: du kender 2–6 navngivne virksomheder til sammenligning (LassoCompareTable) eller 2–10 navngivne på ét nøgletal (LassoRanking). Kræver: source 'search', search { query, criteria[], sort?, limit? }, columns?; ingen match giver tom tilstand med kriterierne synlige. Eksempel: 'Vis de 20 største revisionsfirmaer i Aarhus efter ansatte.' → search_companies.",
+      "Brug til: mange virksomheder fundet med kriterier – målgrupper, 'alle X i Y', 'top N efter Z' (sort) – som del af en render_view-spec med andet; står søgningen alene, så brug search_companies. Brugeren kan sortere, fjerne kriterier og klikke ind på en virksomhed. Brug ikke når: du kender 2–6 navngivne virksomheder til sammenligning (LassoCompareTable) eller 2–10 navngivne på ét nøgletal (LassoRanking). Kræver: source 'search', search { query, criteria[], sort?, limit? }, columns? ('score' er Lassos 0–100-score og findes kun i demodata; live står den som —, så vælg den ikke til kunder); ingen match giver tom tilstand med kriterierne synlige. Eksempel: 'Vis de 20 største revisionsfirmaer i Aarhus efter ansatte.' → search_companies.",
     props: `source='search', search { query, criteria[], sort?, limit? }, columns? (${TABLE_COLUMNS.join(" | ")}), title?`,
   },
   {

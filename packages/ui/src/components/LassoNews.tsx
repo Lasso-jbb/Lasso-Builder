@@ -145,6 +145,13 @@ function SourceMark({ source, url }: { source: string; url?: string }) {
   );
 }
 
+/** "Eksempeldata, kilde Paqle" (26h.6). Uden provider: Lasso News for Lassos egne, ellers Paqle. */
+function footText(item: NewsItemVM): string {
+  const provider = item.provider ?? (isLassoSource(item.source) ? "Lasso News" : "Paqle");
+  const text = [item.note, `kilde ${provider}`].filter(Boolean).join(", ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 function NewsRow({ item, mention, ...opts }: { item: NewsItemVM; mention?: string } & SegmentOpts) {
   // 12.4: kildelinjen er "Kilde, for 3 dage siden" / "Kilde, dd.mm.åååå, engelsk", komma-adskilt
   // (regel 6), uden nyhedstypen.
@@ -163,10 +170,19 @@ function NewsRow({ item, mention, ...opts }: { item: NewsItemVM; mention?: strin
       {item.excerpt ? (
         // Lasso News' content kan have linjeskift fra en HTML-liste (<li>); white-space: pre-line
         // viser dem, uden at gå via en stylesheet-ændring (uddraget er ellers almindelig løbetekst).
-        <div className="lasso-row__sub" style={{ whiteSpace: "pre-line" }}>
+        <div className={`lasso-row__sub${isLassoSource(item.source) ? "" : " lasso-news__snippet"}`} style={{ whiteSpace: "pre-line" }}>
           {item.extractSegments ? <Segments segments={item.extractSegments} {...opts} /> : <Excerpt text={item.excerpt} mention={mention} />}
         </div>
       ) : null}
+      {/* 26h.6 mobil: bundlinje med note og nyhedstjeneste til venstre og "Åbn artikel" til højre. */}
+      <div className="lasso-news__foot">
+        <span className="lasso-news__provider">{footText(item)}</span>
+        {item.url ? (
+          <a className="lasso-news__open" href={item.url} target="_blank" rel="noreferrer">
+            Åbn artikel
+          </a>
+        ) : null}
+      </div>
     </article>
   );
 }

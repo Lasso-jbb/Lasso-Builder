@@ -115,7 +115,7 @@ test("18.1/18.2: forrige vs. nu og trinlinje; en stigning er mere risiko i warni
   assert.match(cmp, /lasso-scorecmp__change--worse[^]*▲ 5 point, mere risiko/);
   const h = html(createElement(ScoreHistory, { history: { lassoId: ID, points: [{ date: "2025-01-01", score: 40 }, { date: "2026-06-01", score: 65 }], source: "Eksempeldata" } }));
   assert.match(h, /lasso-scorehist__zone--low[^]*lasso-scorehist__zone--mid[^]*lasso-scorehist__zone--high/);
-  assert.match(text(h), /Forrige 40[^]*Nu 65/);
+  assert.match(text(h), /Forrige, 01\.01\.2025 40 af 100[^]*\+25, mere risiko[^]*Nu, 01\.06\.2026 65 af 100/);
   const empty = html(createElement(ScoreHistory, { history: { lassoId: ID, points: [], reason: "Ingen historik endnu." } }));
   assert.match(empty, /Ingen historik endnu\./);
 });

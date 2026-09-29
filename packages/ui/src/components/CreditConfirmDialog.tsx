@@ -17,7 +17,7 @@ export interface CreditConfirmDialogProps {
   /** Hvad der hentes, fx "kreditvurderingen for Eksempel Byg A/S". */
   what?: string;
   title?: string;
-  /** Undertekst i stedet for "Koster N kredit: …", fx "LASSO X A/S, seneste vurdering er 13 dage gammel." */
+  /** Undertekst under titlen, fx "LASSO X A/S, seneste vurdering er 13 dage gammel." (18.3). Standard: prisen og `what`. */
   description?: string;
 }
 
@@ -25,7 +25,8 @@ const credits = (n: number) => `${formatNumber(n)} ${n === 1 ? "kredit" : "kredi
 
 /**
  * Bekræft hentning (katalog 18.3, node BYX-0): dialogen fra 07 med tre nøgle-værdi-linjer (pris,
- * saldo efter, ventetid). Prisen gentages i knappen, så man aldrig er i tvivl. Ved 0 kreditter
+ * saldo efter, ventetid), uden ×-lukkeknap og med "Annuller" som tekstknap. Prisen gentages i knappen
+ * ("Hent, 1 kredit"), så man aldrig er i tvivl. Ved 0 kreditter
  * erstattes knappen af "Køb kreditter", og prisen står med rød tekst. Mobil: bundark (07/26a).
  */
 export function CreditConfirmDialog({ open, onClose, onConfirm, onBuy, balance, price = 1, wait = "typisk 5–45 sek.", what, title, description }: CreditConfirmDialogProps) {
@@ -36,12 +37,12 @@ export function CreditConfirmDialog({ open, onClose, onConfirm, onBuy, balance, 
       open={open}
       onClose={onClose}
       size="sm"
-      title={title ?? "Hent ny vurdering?"}
+      title={title ?? "Hent ny kreditvurdering?"}
       description={description ?? `Koster ${credits(price)}${what ? `: ${what}` : ""}.`}
       hideClose
       className="lasso-creditconfirm"
       actions={{
-        secondary: { label: "Annuller", onClick: onClose },
+        secondary: { label: "Annuller", onClick: onClose, text: true },
         primary: enough ? { label: `Hent, ${credits(price)}`, onClick: onConfirm } : { label: "Køb kreditter", onClick: onBuy ?? onClose, disabled: !onBuy },
       }}
     >

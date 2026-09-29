@@ -27,6 +27,10 @@ export interface NotificationVM {
   action?: { label: string; href?: string };
   /** Vigtig (26e.5), fx en statusændring som konkurs: rød ulæst-prik og med under filteret "Vigtige". */
   important?: boolean;
+  /** Mobil (26e.5): kort titel 14 ink, fx "Nyt regnskab 2025"; `text` står da som kildetekst 13 muted under. */
+  title?: string;
+  /** Mobil (26e.5): kategori 12 muted under teksten, fx "Regnskab" eller "Status" (rød, når vigtig). */
+  category?: string;
 }
 
 export interface NotificationPanelProps {
@@ -36,8 +40,10 @@ export interface NotificationPanelProps {
   onAction?: (item: NotificationVM) => void;
   onSeeAll?: () => void;
   onOpen?: (item: NotificationVM) => void;
-  /** Lukker panelet (på mobil fylder det skærmen, så der skal være en "Luk"-knap). */
+  /** Lukker panelet (kun på mobil, hvor det fylder skærmen; desktop lukker ved klik udenfor). */
   onClose?: () => void;
+  /** Mobil: vis listen på siden (26e.5) i stedet for som ark i fuld skærm. */
+  inline?: boolean;
   /** Til tests og deterministisk relativ tid. */
   now?: Date;
   /** Henter-tilstand: skelet i panelets højde. */
@@ -64,34 +70,104 @@ export function relativeTime(iso: string, now: Date = new Date()): string {
   return formatDate(iso.slice(0, 10));
 }
 
+/** Mobilens korte tid (26e.5): "i dag", "i går" eller "11.03". */
+export function shortTime(iso: string, now: Date = new Date()): string {
+  const then = new Date(iso);
+  if (Number.isNaN(then.getTime())) return "";
+  if (then.toDateString() === now.toDateString()) return "i dag";
+  if (new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1).toDateString() === then.toDateString()) return "i går";
+  return formatDate(iso.slice(0, 10)).slice(0, 5);
+}
+
 /**
  * Notifikationspanel (katalog 21, node CB0-0): 380 px, åbnes fra klokken i topbjælken. Overskrift
  * "Notifikationer (N ulæste)" + "Markér alle som læst", faner niveau 2 (Ulæste, Alle, Overvågning),
  * rækker med koral prik for ulæst, tekst, kilde + tid i anden linje og evt. handling til højre,
  * "Se alle notifikationer" nederst. Blander overvågning, kredit, eksport og konto; kilden står altid
- * i anden linje. På mobil fylder panelet skærmen.
+ * i anden linje. "Luk" står kun på mobil, hvor panelet fylder skærmen (eller står på siden med `inline`).
+ * Mobil (26e.5): chips Alle (valgt fra start), Ulæste, Vigtige; rækker med 8 px prik (koral, rød ved
+ * vigtig), titel 14 ink med kort tid til højre, kildetekst 13 muted og kategori 12 muted.
  */
-export function NotificationPanel({ items, onMarkAllRead, onAction, onSeeAll, onOpen, onClose, now, loading, error, onRetry }: NotificationPanelProps) {
+export function NotificationPanel({ items, onMarkAllRead, onAction, onSeeAll, onOpen, onClose, inline, now, loading, error, onRetry }: NotificationPanelProps) {
   const [tab, setTab] = useState<PanelTab>("ulaeste");
+  const [chip, setChip] = useState<PanelTab>("alle");
   const clock = now ?? new Date();
   const unread = items.filter((n) => !n.read).length;
   const sorted = [...items].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
-  const rows =
-    tab === "ulaeste" ? sorted.filter((n) => !n.read) : tab === "overvaagning" ? sorted.filter((n) => n.kind === "overvaagning") : tab === "vigtige" ? sorted.filter((n) => n.important) : sorted;
-  const emptyReason =
-    tab === "ulaeste" ? "Alt er læst." : tab === "overvaagning" ? "Ingen notifikationer fra overvågningen endnu." : tab === "vigtige" ? "Ingen vigtige notifikationer." : "Ingen notifikationer endnu.";
+  const filter = (t: PanelTab) =>
+    t === "ulaeste" ? sorted.filter((n) => !n.read) : t === "overvaagning" ? sorted.filter((n) => n.kind === "overvaagning") : t === "vigtige" ? sorted.filter((n) => n.important) : sorted;
+  const emptyFor = (t: PanelTab) =>
+    t === "ulaeste" ? "Alt er læst." : t === "overvaagning" ? "Ingen notifikationer fra overvågningen endnu." : t === "vigtige" ? "Ingen vigtige notifikationer." : "Ingen notifikationer endnu.";
+
+  const dot = (n: NotificationVM) =>
+    n.read ? <span className="lasso-notif__dotspace" aria-hidden="true" /> : <span className={`lasso-notif__dot${n.important ? " lasso-notif__dot--important" : ""}`} role="img" aria-label={n.important ? "Ulæst, vigtig" : "Ulæst"} />;
+  const action = (n: NotificationVM) =>
+    n.action ? (
+      n.action.href ? (
+        <a className="lasso-notif__action" href={n.action.href} onClick={onAction ? () => onAction(n) : undefined}>
+          {n.action.label}
+        </a>
+      ) : (
+        <button type="button" className="lasso-link lasso-notif__action" onClick={onAction ? () => onAction(n) : undefined}>
+          {n.action.label}
+        </button>
+      )
+    ) : null;
+  const titleEl = (n: NotificationVM, text: string) =>
+    onOpen ? (
+      <button type="button" className="lasso-link lasso-notif__text" onClick={() => onOpen(n)}>
+        {text}
+      </button>
+    ) : (
+      <div className="lasso-notif__text">{text}</div>
+    );
+  const body = (t: PanelTab, mobile: boolean) => {
+    if (loading) return <div className="lasso-notif__state"><DataState state="loading" lines={5} height={220} /></div>;
+    if (error) return <div className="lasso-notif__state"><DataState state="error" reason={error} onRetry={onRetry} /></div>;
+    const rows = filter(t);
+    if (rows.length === 0) return <div className="lasso-notif__state"><DataState state="empty" reason={emptyFor(t)} /></div>;
+    return (
+      <ul className="lasso-notif__list">
+        {rows.map((n) => (
+          <li key={n.id} className={`lasso-notif__row ${n.read ? "" : "lasso-notif__row--unread"}`}>
+            {dot(n)}
+            {mobile ? (
+              <div className="lasso-notif__main">
+                <div className="lasso-notif__titlerow">
+                  {titleEl(n, n.title ?? n.text)}
+                  <span className="lasso-notif__time">{shortTime(n.at, clock)}</span>
+                </div>
+                <div className="lasso-notif__src">{n.title ? n.text : (n.source ?? NOTIFICATION_KIND_LABELS[n.kind])}</div>
+                <div className={`lasso-notif__cat${n.important ? " lasso-notif__cat--important" : ""}`}>{n.category ?? NOTIFICATION_KIND_LABELS[n.kind]}</div>
+              </div>
+            ) : (
+              <div className="lasso-notif__main">
+                {titleEl(n, n.text)}
+                <div className="lasso-notif__meta">
+                  {n.source ?? NOTIFICATION_KIND_LABELS[n.kind]}, {relativeTime(n.at, clock)}
+                </div>
+              </div>
+            )}
+            {action(n)}
+          </li>
+        ))}
+      </ul>
+    );
+  };
 
   return (
-    <div className="lasso-notif" role="dialog" aria-label="Notifikationer">
+    <div className={`lasso-notif${inline ? " lasso-notif--inline" : ""}`} role="dialog" aria-label="Notifikationer">
       <div className="lasso-notif__head">
-        <h2 className="lasso-notif__title">Notifikationer{unread ? ` (${formatNumber(unread)})` : ""}</h2>
+        <h2 className="lasso-notif__title">
+          Notifikationer<span className="lasso-notif__count">{unread ? ` (${formatNumber(unread)})` : ""}</span>
+        </h2>
         <div className="lasso-notif__headactions">
           {unread > 0 && onMarkAllRead ? (
             <button type="button" className="lasso-link lasso-notif__markall" onClick={onMarkAllRead}>
               Markér alle som læst
             </button>
           ) : null}
-          {onClose ? (
+          {onClose && !inline ? (
             <button type="button" className="lasso-link lasso-notif__close" onClick={onClose} aria-label="Luk notifikationer">
               Luk
             </button>
@@ -120,57 +196,13 @@ export function NotificationPanel({ items, onMarkAllRead, onAction, onSeeAll, on
             ["vigtige", "Vigtige"],
           ] as const
         ).map(([id, label]) => (
-          <button key={id} type="button" className={`lasso-notif__chip${tab === id ? " is-selected" : ""}`} aria-pressed={tab === id} onClick={() => setTab(id)}>
+          <button key={id} type="button" className={`lasso-notif__chip${chip === id ? " is-selected" : ""}`} aria-pressed={chip === id} onClick={() => setChip(id)}>
             {label}
           </button>
         ))}
       </div>
-      <div className="lasso-notif__body">
-        {loading ? (
-          <div className="lasso-notif__state">
-            <DataState state="loading" lines={5} height={220} />
-          </div>
-        ) : error ? (
-          <div className="lasso-notif__state">
-            <DataState state="error" reason={error} onRetry={onRetry} />
-          </div>
-        ) : rows.length === 0 ? (
-          <div className="lasso-notif__state">
-            <DataState state="empty" reason={emptyReason} />
-          </div>
-        ) : (
-          <ul className="lasso-notif__list">
-            {rows.map((n) => (
-              <li key={n.id} className={`lasso-notif__row ${n.read ? "" : "lasso-notif__row--unread"}`}>
-                {n.read ? <span className="lasso-notif__dotspace" aria-hidden="true" /> : <span className={`lasso-notif__dot${n.important ? " lasso-notif__dot--important" : ""}`} role="img" aria-label={n.important ? "Ulæst, vigtig" : "Ulæst"} />}
-                <div className="lasso-notif__main">
-                  {onOpen ? (
-                    <button type="button" className="lasso-link lasso-notif__text" onClick={() => onOpen(n)}>
-                      {n.text}
-                    </button>
-                  ) : (
-                    <div className="lasso-notif__text">{n.text}</div>
-                  )}
-                  <div className="lasso-notif__meta">
-                    {n.source ?? NOTIFICATION_KIND_LABELS[n.kind]}, {relativeTime(n.at, clock)}
-                  </div>
-                </div>
-                {n.action ? (
-                  n.action.href ? (
-                    <a className="lasso-notif__action" href={n.action.href} onClick={onAction ? () => onAction(n) : undefined}>
-                      {n.action.label}
-                    </a>
-                  ) : (
-                    <button type="button" className="lasso-link lasso-notif__action" onClick={onAction ? () => onAction(n) : undefined}>
-                      {n.action.label}
-                    </button>
-                  )
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <div className="lasso-notif__body lasso-notif__body--d">{body(tab, false)}</div>
+      <div className="lasso-notif__body lasso-notif__body--m">{body(chip, true)}</div>
       {onSeeAll ? (
         <button type="button" className="lasso-link lasso-notif__all" onClick={onSeeAll}>
           Se alle notifikationer

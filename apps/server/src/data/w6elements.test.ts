@@ -29,7 +29,7 @@ test("19.1: LassoFinancialStatements henter det fulde regnskab; demo har koncern
   assert.equal(s.scope, "Selskab");
   assert.equal(s.alternate?.scope, "Koncern");
   assert.deepEqual(s.periods, ["year"]);
-  assert.match(textCard(spec, ds)!, /Revisionspåtegning uden forbehold/);
+  assert.match(textCard(spec, ds)!, /Revideret af/);
 });
 
 test("26d.5/26d.7: personens netværkstal og scorens historik i demodata", async () => {
@@ -49,12 +49,11 @@ test("28.2/28.6/28.8: companyEvents hentes for de tre komponenter, og tekstkorte
   const p = new DemoProvider();
   const spec = parseViewSpec({ title: "x", components: [{ type: "LassoCompanyHead", company: BYG }, { type: "LassoMergers", company: BYG }, { type: "LassoPublications", company: BYG }] });
   const ds = await resolveSpec(spec, p);
-  assert.equal(ds.companyEvents[BYG]?.mergers.length, 1);
+  assert.deepEqual(ds.companyEvents[BYG]?.mergers.map((m) => m.type), ["Fusion", "Spaltning"]);
   assert.ok(ds.companyEvents[BYG]?.publications.some((x) => x.corrected));
   const card = textCard(spec, ds)!;
   assert.match(card, /FUSIONER OG SPALTNINGER/);
   assert.match(card, /REGNSKABSPUBLICERING/);
   const bankrupt = await p.companyEvents("CVR-1-99000011");
-  assert.equal(bankrupt.announcements[0]?.severity, "neutral");
-  assert.ok(bankrupt.announcements.some((a) => a.severity === "bankrupt"));
+  assert.deepEqual(bankrupt.announcements.map((a) => a.severity), ["bankrupt", "warning", "neutral"]);
 });

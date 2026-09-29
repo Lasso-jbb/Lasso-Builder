@@ -247,6 +247,7 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
         break;
       case "LassoAuditorIndependence":
         want(c.company, "auditorIndependence");
+        want(c.company, "company"); // 22.2: "Uafhængighedstjek, <navn>"
         break;
       case "LassoProductionUnits":
         want(c.company, "productionUnits");
@@ -306,7 +307,13 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
         want(c.company, "company");
         want(c.company, "companyEvents");
         break;
+      case "LassoRegistration":
+        want(c.company, "company", "ownership", "financials", "textSections");
+        break;
       case "LassoAnnouncements":
+        want(c.company, "company"); // 28.8: "<navn>, eksempeldata" under titlen
+        want(c.company, "companyEvents");
+        break;
       case "LassoPublications":
         want(c.company, "companyEvents");
         break;

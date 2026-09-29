@@ -39,10 +39,11 @@ export function Livestock({ livestock, error }: { livestock?: LivestockVM; error
   }
   if (!livestock.chrNumber || livestock.herds.length === 0) {
     return (
-      <Section title={title} span="full">
+      <Section title={title} span="full" action={<span className="lasso-section__meta">Ikke relevant</span>}>
         <DataState
           state="empty"
-          reason={livestock.unavailableReason ?? "Virksomheden har intet CHR-nummer, eller der er ingen registrerede besætninger."}
+          inline
+          reason={livestock.unavailableReason ?? "Ingen CHR-registreringer. Sektionen skjules i overblikket og vises kun her med tom tilstand, så brugeren ved, at der er søgt."}
         />
       </Section>
     );

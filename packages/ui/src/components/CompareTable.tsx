@@ -6,13 +6,19 @@ import { DataState, Section } from "../primitives.js";
 /** "Bedst" er kun entydigt for beløb (og ratio-nøgletal, hvor højere er bedre); aldrig for ansatte, gæld eller balancesum (katalog 22). */
 const BEST_IS_HIGHEST: ReadonlySet<Metric> = new Set(["omsaetning", "bruttofortjeneste", "resultat", "egenkapital", "ebitda", "soliditetsgrad", "overskudsgrad", "likviditetsgrad"]);
 
+const SHORT: Partial<Record<Metric, string>> = { bruttofortjeneste: "Bruttofortj.", resultat: "Resultat", soliditetsgrad: "Soliditet" };
+
 /**
  * Sammenligning, 2–6 virksomheder i kolonner, nøgletal i rækker (katalog 22).
  * Udgangsvirksomheden (første) har 3 px koral topkant. Enheden står i rækkenavnet.
  * Bedste værdi pr. række fremhæves kun med vægt 600. Manglende data: "Ikke hentet" (tallene
  * kunne ikke hentes for virksomheden) eller "Ikke oplyst" (regnskabet har ikke tallet).
- * Tom kolonne med stiplet kant er "tilføj"-slot (forsvinder ved 6). Mobil (26e, mønster 5):
- * udgangsvirksomheden og én anden ad gangen; swipe eller prikkerne vælger næste par.
+ * Tom kolonne med stiplet kant er "tilføj"-slot, "+ Tilføj (op til 6)" i koral (forsvinder ved 6).
+ * Hovedrækken står på panel-flade; negative tal i rødt.
+ * Tablet (26f.5): titel + "Tilføj"/"Nøgletal" i hovedet, fast nøgletalskolonne "Nøgletal, t. kr." og
+ * emnevirksomheden i koral-soft hoved med "Emne, CVR"; alle tal i t. kr.; 4+ virksomheder ruller.
+ * Mobil (26e.7, mønster 5): udgangsvirksomheden og én anden ad gangen; swipe eller prikkerne vælger
+ * næste par; "+ Tilføj virksomhed" og "Vælg nøgletal" under tabellen.
  */
 export function CompareTable({
   companies,
@@ -41,6 +47,8 @@ export function CompareTable({
       id,
       name: co?.name ?? id,
       sub: [co?.cvr ? `CVR ${co.cvr}` : null, co?.address?.city].filter(Boolean).join(", "),
+      cvr: co?.cvr,
+      city: co?.address?.city,
       last: years.at(-1),
       unit: currencyUnit(years.at(-1)?.currency ?? dataset.financials[id]?.currency),
       prev: years.at(-2),
@@ -50,7 +58,7 @@ export function CompareTable({
     };
   });
   // Rammen har allerede visningens titel; sektionen får kun en overskrift, når modellen giver en.
-  const heading = title;
+  const heading = title ?? "Sammenligning";
   if (cols.every((c) => !c.loaded && c.error)) {
     return (
       <Section title={heading} span="full">
@@ -70,9 +78,33 @@ export function CompareTable({
   const growth = firstAmount ? cols.map((c) => percentChange([c.prev?.[METRIC_FIELD[firstAmount]] as number | undefined, c.last?.[METRIC_FIELD[firstAmount]] as number | undefined])) : [];
   const growthPresent = growth.filter((v): v is number => v !== null);
   const bestGrowth = growthPresent.length > 1 ? Math.max(...growthPresent) : null;
+  const addPrompt = () => onAction({ kind: "prompt", prompt: `Tilføj en virksomhed til sammenligningen af ${cols.map((c) => c.name).join(", ")}.` });
+  const metricPrompt = () => onAction({ kind: "prompt", prompt: `Vælg andre nøgletal til sammenligningen af ${cols.map((c) => c.name).join(", ")}.` });
+  const unitAll = cols.find((c) => c.last)?.unit ?? "kr.";
+  const thousands = { divisor: 1_000, label: `t. ${unitAll}` };
+  const subtitle = `${formatNumber(cols.length)} virksomheder${year ? `, ${year}` : ""}`;
 
   return (
-    <Section title={heading} span="full" className="lasso-comparesec">
+    <Section
+      title={heading}
+      subtitle={subtitle}
+      span="full"
+      className={`lasso-comparesec${title ? " has-title" : ""}`}
+      action={
+        canAdd ? (
+          <span className="lasso-compare__tools">
+            {slot ? (
+              <button type="button" className="lasso-btn lasso-btn--sm" onClick={addPrompt}>
+                + Tilføj
+              </button>
+            ) : null}
+            <button type="button" className="lasso-btn lasso-btn--sm" onClick={metricPrompt}>
+              Nøgletal
+            </button>
+          </span>
+        ) : undefined
+      }
+    >
       {cols.length > 2 ? (
         <div className="lasso-compare__pairs" role="group" aria-label="Vælg par">
           {Array.from({ length: pairs }, (_, k) => (
@@ -97,7 +129,11 @@ export function CompareTable({
           <table className={`lasso-table lasso-compare ${slot ? "has-slot" : ""}`}>
             <thead>
               <tr>
-                <th scope="col" className="lasso-compare__corner">Nøgletal{year ? `, ${year}` : ""}</th>
+                <th scope="col" className="lasso-compare__corner">
+                  <span className="lasso-compare__v-d">Nøgletal{year ? `, ${year}` : ""}</span>
+                  <span className="lasso-compare__v-t">Nøgletal, {thousands.label}</span>
+                  <span className="lasso-compare__v-m">Nøgletal</span>
+                </th>
                 {cols.map((c, i) => (
                   <th key={c.id} scope="col" className={`lasso-compare__company ${i === 0 ? "is-origin" : ""} ${off(i)}`}>
                     <div className="lasso-compare__name">
@@ -109,13 +145,15 @@ export function CompareTable({
                         c.name
                       )}
                     </div>
-                    {c.sub ? <div className="lasso-compare__sub">{c.sub}</div> : null}
+                    {c.sub ? <div className="lasso-compare__sub lasso-compare__v-d">{c.sub}</div> : null}
+                    <div className={`lasso-compare__sub lasso-compare__v-t${i === 0 ? " is-origin" : ""}`}>{i === 0 ? ["Emne", c.cvr].filter(Boolean).join(", ") : (c.city ?? c.sub)}</div>
+                    <div className="lasso-compare__sub lasso-compare__v-m">{i === 0 ? thousands.label : (c.city ?? c.sub)}</div>
                   </th>
                 ))}
                 {slot ? (
                   <th scope="col" className="lasso-compare__slot">
-                    <button type="button" className="lasso-compare__add" onClick={() => onAction({ kind: "prompt", prompt: `Tilføj en virksomhed til sammenligningen af ${cols.map((c) => c.name).join(", ")}.` })}>
-                      <span aria-hidden="true">+</span> Tilføj virksomhed
+                    <button type="button" className="lasso-compare__add" onClick={addPrompt}>
+                      + Tilføj (op til 6)
                     </button>
                   </th>
                 ) : null}
@@ -134,12 +172,28 @@ export function CompareTable({
                 return (
                   <tr key={m}>
                     <th scope="row">
-                      {METRIC_LABELS[m]}
-                      {scale ? `, ${scale.label}` : ""}
+                      <span className="lasso-compare__v-d">
+                        {METRIC_LABELS[m]}
+                        {scale ? `, ${scale.label}` : ""}
+                      </span>
+                      <span className="lasso-compare__v-c">{SHORT[m] && kind !== "count" ? <><span className="lasso-compare__v-t">{METRIC_LABELS[m]}</span><span className="lasso-compare__v-m">{SHORT[m]}</span></> : METRIC_LABELS[m]}</span>
                     </th>
                     {values.map((v, i) => (
-                      <td key={cols[i]!.id} className={`lasso-num ${v !== null && v === best ? "lasso-best" : ""} ${v !== null && v < 0 && m === "resultat" ? "lasso-down" : ""} ${off(i)}`}>
-                        {v === null ? missing(i) : kind === "percent" ? formatPercent(v, false) : scale ? formatScaled(v, scale) : mixed ? formatAmount(v, cols[i]!.unit) : formatNumber(v)}
+                      <td key={cols[i]!.id} className={`lasso-num ${v !== null && v === best ? "lasso-best" : ""} ${v !== null && v < 0 ? "lasso-down" : ""} ${off(i)}`}>
+                        {v === null ? (
+                          missing(i)
+                        ) : kind === "percent" ? (
+                          formatPercent(v, false)
+                        ) : scale ? (
+                          <>
+                            <span className="lasso-compare__v-d">{formatScaled(v, scale)}</span>
+                            <span className="lasso-compare__v-c">{formatScaled(v, thousands)}</span>
+                          </>
+                        ) : mixed ? (
+                          formatAmount(v, cols[i]!.unit)
+                        ) : (
+                          formatNumber(v)
+                        )}
                       </td>
                     ))}
                     {slot ? <td className="lasso-compare__slot" aria-hidden="true" /> : null}
@@ -148,7 +202,10 @@ export function CompareTable({
               })}
               {firstAmount ? (
                 <tr>
-                  <th scope="row">Udvikling i {METRIC_LABELS[firstAmount].toLowerCase()}, %</th>
+                  <th scope="row">
+                    <span className="lasso-compare__v-d">Udvikling i {METRIC_LABELS[firstAmount].toLowerCase()}, %</span>
+                    <span className="lasso-compare__v-c">Udvikling, %</span>
+                  </th>
                   {cols.map((c, i) => {
                     const pct = growth[i] ?? null;
                     return (
@@ -164,6 +221,18 @@ export function CompareTable({
           </table>
         </div>
       </div>
+      {canAdd ? (
+        <div className="lasso-compare__mactions">
+          {slot ? (
+            <button type="button" className="lasso-btn" onClick={addPrompt}>
+              + Tilføj virksomhed
+            </button>
+          ) : null}
+          <button type="button" className="lasso-btn" onClick={metricPrompt}>
+            Vælg nøgletal
+          </button>
+        </div>
+      ) : null}
     </Section>
   );
 }

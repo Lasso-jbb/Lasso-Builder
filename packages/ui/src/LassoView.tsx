@@ -57,6 +57,7 @@ import { LassoBalanceSheet } from "./components/BalanceSheet.js";
 import { LassoCashFlow } from "./components/CashFlow.js";
 import { FinancialStatements } from "./components/FinancialStatements.js";
 import { Announcements, Mergers, Publications } from "./components/CompanyEvents.js";
+import { Registration } from "./components/Registration.js";
 import { OwnerList } from "./components/OwnerList.js";
 import { OwnershipDiagram } from "./components/OwnershipDiagram.js";
 import { PersonList } from "./components/PersonList.js";
@@ -387,8 +388,21 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return <LassoCashFlow key={key} statements={empty.financialStatements[c.company]} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} />;
     case "LassoMergers":
       return <Mergers key={key} events={empty.companyEvents?.[c.company]} company={empty.companies[c.company]} title={c.title} error={err(`companyEvents:${c.company}`)} demo={empty.source === "demo"} onOpen={props.host.drillDown ? act : undefined} />;
+    case "LassoRegistration":
+      return (
+        <Registration
+          key={key}
+          company={empty.companies[c.company]}
+          ownership={empty.ownership[c.company]}
+          financials={empty.financials[c.company]}
+          texts={empty.textSections[c.company]}
+          variant={c.variant}
+          title={c.title}
+          error={err(`company:${c.company}`)}
+        />
+      );
     case "LassoAnnouncements":
-      return <Announcements key={key} events={empty.companyEvents?.[c.company]} title={c.title} error={err(`companyEvents:${c.company}`)} />;
+      return <Announcements key={key} events={empty.companyEvents?.[c.company]} company={empty.companies[c.company]} demo={empty.source === "demo"} title={c.title} error={err(`companyEvents:${c.company}`)} />;
     case "LassoPublications":
       return <Publications key={key} events={empty.companyEvents?.[c.company]} title={c.title} limit={c.limit} error={err(`companyEvents:${c.company}`)} />;
     case "LassoFinancialStatements":
@@ -411,7 +425,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoCreditRating":
       return <CreditRating key={key} rating={empty.creditRatings?.[c.company]} title={c.title} error={err(`creditRating:${c.company}`)} onAction={act} />;
     case "LassoAuditorIndependence":
-      return <AuditorIndependence key={key} data={empty.auditorIndependence[c.company]} error={err(`auditorIndependence:${c.company}`)} title={c.title} onAction={act} canExport={Boolean(props.host.export)} />;
+      return <AuditorIndependence key={key} data={empty.auditorIndependence[c.company]} companyName={empty.companies[c.company]?.name} error={err(`auditorIndependence:${c.company}`)} title={c.title} onAction={act} canExport={Boolean(props.host.export)} />;
     case "LassoProductionUnits":
       return <ProductionUnits key={key} units={empty.productionUnits[c.company]} error={err(`productionUnits:${c.company}`)} />;
     case "LassoProperties":
@@ -666,6 +680,7 @@ const ITEM_LABELS: Partial<Record<ViewComponent["type"], string>> = {
   LassoContactPersons: "Kontaktpersoner",
   LassoSummary: "Analyse",
   LassoRelations: "Relationer",
+  LassoRegistration: "Regnskabsoplysninger",
 };
 export function groupItemLabel(c: ViewComponent): string {
   if ("title" in c && typeof c.title === "string" && c.title) return c.title;

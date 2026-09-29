@@ -76,10 +76,12 @@ export function publicationsFromYears(years: readonly FinancialYear[]): Publicat
       const revenue = y.revenue != null;
       return {
         published: (y.published ?? y.publicationTime)?.slice(0, 10),
+        ...(y.periodStart ? { periodStart: y.periodStart } : {}),
         periodEnd: y.periodEnd,
         year: y.year,
         kind: "Årsrapport",
         figure: { label: revenue ? "Omsætning" : "Bruttofortjeneste", value: (revenue ? y.revenue : y.grossProfit) ?? null },
+        ...(y.profit != null ? { profit: { value: y.profit } } : {}),
       };
     })
     .sort((a, b) => (b.published ?? b.periodEnd ?? "").localeCompare(a.published ?? a.periodEnd ?? ""));

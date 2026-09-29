@@ -21,6 +21,8 @@ export interface DialogAction {
   destructive?: boolean;
   /** Ikon før teksten, fx "plus" på "Tilføj" (07.7). */
   icon?: IconName;
+  /** Sekundær som tekstknap uden kant (fx "Annuller" i 18.3). Standard: outline-knap. */
+  text?: boolean;
 }
 
 export interface DialogProps {
@@ -131,7 +133,7 @@ export function Dialog({ open, title, description, onClose, children, actions, s
             {footNote ? <span className="lasso-dialog__note">{footNote}</span> : null}
             <span className="lasso-dialog__spacer" />
             {secondary ? (
-              <button type="button" className="lasso-btn lasso-dialog__secondary" onClick={secondary.onClick} disabled={secondary.disabled}>
+              <button type="button" className={`lasso-btn${secondary.text ? " lasso-btn--text" : ""} lasso-dialog__secondary`} onClick={secondary.onClick} disabled={secondary.disabled}>
                 {secondary.label}
               </button>
             ) : null}

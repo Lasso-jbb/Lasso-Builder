@@ -8,6 +8,14 @@ import { ScoreCompare } from "./ScoreCompare.js";
 const DAY = 86_400_000;
 const time = (d: string) => new Date(`${d.slice(0, 10)}T00:00:00Z`).getTime();
 const TONE = ["ok", "warning", "danger"] as const;
+const MONTHS = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+/** "jan 23" til aksens yderpunkter. */
+const monthTick = (d: string) => `${MONTHS[Number(d.slice(5, 7)) - 1] ?? ""} ${d.slice(2, 4)}`;
+/** Hele måneder mellem to datoer, "6 mdr." (18.1). */
+function monthsBetween(a: string, b: string): string {
+  const m = (Number(b.slice(0, 4)) - Number(a.slice(0, 4))) * 12 + Number(b.slice(5, 7)) - Number(a.slice(5, 7));
+  return m <= 0 ? "under 1 md." : `${formatNumber(m)} ${m === 1 ? "md." : "mdr."}`;
+}
 
 /** Ændring i point mellem to hentninger: stigning = mere risiko (warning-tekst), aldrig grøn. */
 function delta(prev: number, cur: number): PickRow["change"] {
@@ -21,7 +29,9 @@ function delta(prev: number, cur: number): PickRow["change"] {
  * sig, når den hentes; hver hentning er et punkt. Skalaen går fra 0 = lav risiko nederst til 100 =
  * høj risiko øverst med zonerne lav (grøn, 0–60), moderat (gul, 60–80) og høj (rød, 80–100) som svage
  * flader bag linjen. X-aksen er reel tid, så lange huller mellem hentninger er synlige. Sidste punkt er
- * fyldt og har tallet. Over grafen: forrige vs. nu (18.1).
+ * fyldt og har tallet over, forrige punkt har sit tal under. Linjen og punkterne er koral (2 px, hule
+ * punkter). Y-aksen har kun zonegrænserne 0/60/80/100; x-aksen har start og slut som "jan 23"/"sep 26"
+ * (slut 600) og årsskifterne imellem. Over grafen: forrige vs. nu (18.1).
  * Mobil: tryk vælger en hentning, som står i et fast felt under grafen.
  */
 export function ScoreHistory({ history, title, error, onFetch }: { history?: ScoreHistoryVM; title?: string; error?: string; onFetch?: () => void }) {
@@ -88,11 +98,12 @@ export function ScoreHistory({ history, title, error, onFetch }: { history?: Sco
     <Section title={heading} subtitle={`${formatNumber(points.length)} ${points.length === 1 ? "hentning" : "hentninger"}, ${formatDate(points[0]!.date)}–${formatDate(last.date)}`} span="half" className="lasso-chart lasso-scorehist">
       {prev ? (
         <ScoreCompare
-          previous={{ value: formatNumber(Math.round(prev.score)), word: prev.label ?? scoreBand(prev.score).label, tone: TONE[scoreBand(prev.score).index], icon: <BandIcon index={scoreBand(prev.score).index} />, date: prev.date }}
-          current={{ value: formatNumber(Math.round(last.score)), word: last.label ?? lastBand.label, tone: TONE[lastBand.index], icon: <BandIcon index={lastBand.index} />, date: last.date }}
+          previous={{ value: formatNumber(Math.round(prev.score)), of: "af 100", word: prev.label ?? scoreBand(prev.score).label, tone: TONE[scoreBand(prev.score).index], icon: <BandIcon index={scoreBand(prev.score).index} />, date: prev.date }}
+          current={{ value: formatNumber(Math.round(last.score)), of: "af 100", word: last.label ?? lastBand.label, tone: TONE[lastBand.index], icon: <BandIcon index={lastBand.index} />, date: last.date }}
           direction={last.score > prev.score ? "worse" : last.score < prev.score ? "better" : "same"}
-          amount={last.score !== prev.score ? `${formatNumber(Math.abs(Math.round(last.score - prev.score)))} point` : undefined}
-          action={onFetch ? { label: "Hent ny score", onClick: onFetch } : undefined}
+          delta={last.score !== prev.score ? `${last.score > prev.score ? "+" : "\u2212"}${formatNumber(Math.abs(Math.round(last.score - prev.score)))}` : undefined}
+          period={monthsBetween(prev.date, last.date)}
+          action={onFetch ? { label: "Hent ny, 1 kredit", onClick: onFetch, primary: true } : undefined}
         />
       ) : null}
       <div ref={ref} className="lasso-chart__plot" {...pick.frame} aria-label={`${heading}. Brug piletasterne for at se hver hentning.`}>
@@ -108,7 +119,7 @@ export function ScoreHistory({ history, title, error, onFetch }: { history?: Sco
                 ) : null}
               </g>
             ))}
-            {[0, 20, 40, 60, 80, 100].map((tk) => (
+            {[0, 60, 80, 100].map((tk) => (
               <text key={tk} className="lasso-chart__tick" x={0} y={y(tk) + 4}>
                 {tk}
               </text>
@@ -117,30 +128,32 @@ export function ScoreHistory({ history, title, error, onFetch }: { history?: Sco
             {yearTicks.map((tk) => (
               <g key={tk}>
                 <line className="lasso-chart__grid" x1={x(tk)} x2={x(tk)} y1={top} y2={y(0)} />
-                <text className="lasso-chart__label" x={x(tk)} y={H - 6} textAnchor="middle">
-                  {tk.slice(0, 4)}
-                </text>
+                {x(tk) - x(points[0]!.date) > 44 && x(last.date) - x(tk) > 44 ? (
+                  <text className="lasso-chart__label" x={x(tk)} y={H - 6} textAnchor="middle">
+                    {tk.slice(0, 4)}
+                  </text>
+                ) : null}
               </g>
             ))}
-            {yearTicks.length === 0 ? (
-              <>
-                <text className="lasso-chart__label" x={x(points[0]!.date)} y={H - 6} textAnchor="start">
-                  {formatDate(points[0]!.date)}
-                </text>
-                <text className="lasso-chart__label" x={x(last.date)} y={H - 6} textAnchor="end">
-                  {formatDate(last.date)}
-                </text>
-              </>
-            ) : null}
+            <text className="lasso-chart__label" x={x(points[0]!.date)} y={H - 6} textAnchor="start">
+              {monthTick(points[0]!.date)}
+            </text>
+            <text className="lasso-chart__label lasso-scorehist__xlast" x={x(last.date)} y={H - 6} textAnchor="end">
+              {monthTick(last.date)}
+            </text>
             <path className="lasso-scorehist__line" d={d} />
             {pick.active !== null ? <line className="lasso-chart__hairline" x1={x(points[pick.active]!.date)} x2={x(points[pick.active]!.date)} y1={top} y2={y(0)} /> : null}
             {points.map((p, i) => {
               const isLast = i === points.length - 1;
               return (
                 <g key={`${p.date}-${i}`}>
-                  <circle className={`lasso-scorehist__dot${isLast ? " is-last" : ""}${pick.active === i ? " is-active" : ""}`} cx={x(p.date)} cy={y(p.score)} r={isLast || pick.active === i ? 5 : 3.5} />
+                  <circle className={`lasso-scorehist__dot${isLast ? " is-last" : ""}${pick.active === i ? " is-active" : ""}`} cx={x(p.date)} cy={y(p.score)} r={isLast || pick.active === i ? 5 : 4} />
                   {isLast ? (
-                    <text className="lasso-chart__value lasso-chart__value--last" x={x(p.date) - 8} y={y(p.score) - 10} textAnchor="end">
+                    <text className="lasso-chart__value lasso-chart__value--last" x={x(p.date)} y={y(p.score) - 12} textAnchor="middle">
+                      {formatNumber(Math.round(p.score))}
+                    </text>
+                  ) : i === points.length - 2 ? (
+                    <text className="lasso-chart__value" x={x(p.date)} y={y(p.score) + 20} textAnchor="middle">
                       {formatNumber(Math.round(p.score))}
                     </text>
                   ) : null}

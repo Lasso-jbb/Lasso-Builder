@@ -42,6 +42,18 @@ export interface CompanyVM {
   auditExempt?: boolean;
   /** Katalog 28.7: registreret kapital med valutakode og kapitalklasser. Ubekræftet. */
   registeredCapital?: { amount: number; currency?: string; classes?: string[] };
+  /** Katalog 28.7: revision fravalgt siden dette regnskabsår. Ubekræftet. */
+  auditExemptSince?: number;
+  /** Katalog 28.7: regnskabsklasse (A, B, C, D). Ubekræftet. */
+  accountingClass?: string;
+  /** Katalog 28.7: første regnskabsperiode (ÅÅÅÅ-MM-DD). Ubekræftet. */
+  firstPeriod?: { start?: string; end?: string };
+  /** Katalog 28.7: vedtægter senest ændret (ÅÅÅÅ-MM-DD). Ubekræftet. */
+  statutesChanged?: string;
+  /** Katalog 28.7: reklamebeskyttet i CVR. Ubekræftet. */
+  advertisingProtected?: boolean;
+  /** Katalog 28.7: børsnoteret. Ubekræftet. */
+  listed?: boolean;
 }
 
 /**
@@ -255,6 +267,8 @@ export interface FinancialStatementsVM {
   auditorOpinion?: string;
   /** Katalog 19.1: link til årsrapporten som PDF (kun http/https). Ubekræftet i live. */
   pdfUrl?: string;
+  /** Katalog 26d.9/26f.3: fodnote under opgørelserne, fx hvilke tal der er eksempeldata. */
+  note?: string;
 }
 
 export interface PersonRowVM {
@@ -362,6 +376,12 @@ export interface TextSectionsVM {
   sections: TextSectionItem[];
   /** 19.3: hvornår regnskabsanalysen blev genereret (ISO); står i analysens kildelinje. */
   analysisGenerated?: string;
+  /** 19.3: regnskabsårene, analysen bygger på, fx "2021–2025" ("Genereret af Lasso ud fra regnskab 2021–2025"). */
+  analysisBasis?: string;
+  /** 19.3: analysens overskrift 17/600, fx "Vækst i toplinjen, men omkostningerne løber hurtigere". */
+  analysisHeadline?: string;
+  /** 19.3: kilderne bag analysen ("Vis kilder (4)"), fx "Årsrapport 2025". */
+  analysisSources?: string[];
 }
 
 /** Begivenhed i virksomhedens historik (katalog 12, "Tidslinje"). */
@@ -407,6 +427,10 @@ export interface NewsItemVM {
    */
   headlineSegments?: TextSegment[];
   extractSegments?: TextSegment[];
+  /** 26h.6: nyhedstjenesten bag artiklen ("Paqle" eller "Lasso News"), til kortets bundlinje "kilde Paqle". */
+  provider?: string;
+  /** 26h.6: kort note forrest i bundlinjen, fx "Eksempeldata". */
+  note?: string;
 }
 
 export interface NewsVM {
@@ -685,6 +709,14 @@ export interface AuditorIndependenceVM {
   unavailableReason?: string;
   /** Katalog 22/26e.8: revisorhistorik, ældste først; perioder som ÅÅÅÅ-MM-DD. Kun demodata indtil videre. */
   history?: { name: string; from?: string; to?: string }[];
+  /** 22.2: hvad tjekket bygger på, fx "Baseret på CVR-roller og ejerskab, 3 led". */
+  basis?: string;
+  /** 26e.8: revisors påtegning, fx "Revisionspåtegning, uden forbehold". */
+  opinion?: string;
+  /** 26e.8: regnskabet, revisor er hentet fra, fx "Årsrapport 2025". */
+  report?: string;
+  /** 26e.8: uafhængighed som tjeklinjer (ok = grønt flueben, ellers gult "!"). Uden dem bruges relationerne. */
+  checks?: { label: string; sub?: string; ok: boolean }[];
 }
 
 export interface SearchResultVM {
@@ -1021,6 +1053,10 @@ export interface MergerPartyVM {
   lassoId?: string;
   /** Ophørte ved fusionen/spaltningen (vises i muted med "ophørt ved fusionen"). */
   ceased?: boolean;
+  /** 28.6: CVR-nummeret under navnet ("CVR …, ophørt ved fusionen"). */
+  cvr?: string;
+  /** 28.6: selskabets rolle i hændelsen, fx "fortsættende selskab", "afgivende selskab", "modtagende, nystiftet". */
+  role?: string;
 }
 
 /** Katalog 28.6: én fusion eller spaltning, "fra → til". */
@@ -1042,16 +1078,22 @@ export interface AnnouncementVM {
   text?: string;
   /** Link til bekendtgørelsen (kun http/https). */
   url?: string;
+  /** 28.8: kildelinje pr. bekendtgørelse, fx "Statstidende, sagsnr. 1234, kreditorinformation vedlagt". */
+  source?: string;
 }
 
 /** Katalog 28.2: ét offentliggjort regnskab. */
 export interface PublicationVM {
   /** Offentliggørelsesdato (ÅÅÅÅ-MM-DD). */
   published?: string;
+  /** Periodens start (28.2: "01.01–31.12.2025"). */
+  periodStart?: string;
   /** Periodens slut, så klik kan åbne 19 med perioden valgt. */
   periodEnd?: string;
   year?: number;
   kind: "Årsrapport" | "Halvår" | "Kvartal";
+  /** 28.2: årets resultat i perioden (negativt i rødt) og den tidligere værdi ved korrektion. */
+  profit?: { value: number | null; previous?: number | null };
   /** Korrigeret regnskab: udråbstegn-ikon og den tidligere værdi som "før …". */
   corrected?: boolean;
   /** Hovedtallet (bruttofortjeneste/omsætning) og dets tidligere værdi ved korrektion. */

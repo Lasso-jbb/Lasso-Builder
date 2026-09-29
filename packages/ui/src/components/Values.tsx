@@ -48,7 +48,7 @@ export function NotReported({ kind = "reported" }: { kind?: "reported" | "regist
  * 02c.1 Fritekst: korte tekster i én linje, lange foldes efter 4 linjer med "Vis mere" (uden "…").
  * Ingen anførselstegn, ingen kursiv. Folden måles i browseren; uden DOM skønnes den på længden.
  */
-export function FoldText({ text, lines = 4 }: { text: string; lines?: number }) {
+export function FoldText({ text, lines = 4, moreLabel = "Vis mere" }: { text: string; lines?: number; /** Fx "Vis hele formålet" (28.7). */ moreLabel?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
   const [open, setOpen] = useState(false);
   const [overflow, setOverflow] = useState(text.length > 60 * lines);
@@ -64,7 +64,7 @@ export function FoldText({ text, lines = 4 }: { text: string; lines?: number }) 
       </span>
       {overflow || open ? (
         <button type="button" className="lasso-fold__more" aria-expanded={open} onClick={() => setOpen(!open)}>
-          {open ? "Vis mindre" : "Vis mere"}
+          {open ? "Vis mindre" : moreLabel}
         </button>
       ) : null}
     </span>

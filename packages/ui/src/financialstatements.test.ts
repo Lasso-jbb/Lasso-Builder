@@ -18,20 +18,28 @@ const s: FinancialStatementsVM = {
   cashFlow: years.map((year) => ({ year, operatingCashFlow: 3_410_000, investingCashFlow: -2_620_000, financingCashFlow: -900_000, netCashFlow: -110_000 })),
 };
 
-test("19.1: værktøjslinje med koncern/selskab, periode, enhed, påtegning og Hent PDF", () => {
+test("19.1: værktøjslinje med selskab/koncern, periode, enhed, påtegning og Hent PDF", () => {
   const html = renderToStaticMarkup(createElement(FinancialStatements, { statements: s }));
   assert.match(html, /role="toolbar" aria-label="Regnskabets værktøjslinje"/);
   // Intet koncernregnskab: Koncern dæmpet med forklaring
   assert.match(html, /disabled=""[^>]*title="Intet koncernregnskab indberettet"[^>]*>Koncern</);
   assert.match(html, /disabled=""[^>]*title="Kun årsregnskab indberettet"[^>]*>Halvår</);
   assert.match(html, /disabled=""[^>]*title="Kun årsregnskab indberettet"[^>]*>Kvartal</);
-  assert.match(html, /Enhed<\/span><select/);
-  assert.match(html, /lasso-fs__opinion"><svg[^]*<\/svg>Revisionspåtegning uden forbehold/);
+  // Selskab først, periode-dropdown "2025, 01.01–31.12", enhed "t. kr." uden synlig etiket
+  assert.match(html, />Selskab<[^]*>Koncern</);
+  assert.match(html, /<option value="2025"[^>]*>2025, 01\.01–31\.12<\/option>/);
+  assert.match(html, /lasso-sr">Enhed<\/span><select[^>]*><option value="t"[^>]*>t\. kr\.</);
+  assert.match(html, /lasso-fs__opinion">Revisionspåtegning uden forbehold</);
   assert.match(html, /href="https:\/\/example\.com\/aarsrapport\.pdf"[^>]*>[^]*Hent PDF/);
-  // Segment Resultat/Balance/Pengestrøm (niveau 3), aldrig badge
-  assert.match(html, /aria-label="Opgørelse"[^]*>Resultat<[^]*>Balance<[^]*>Pengestrøm</);
+  // Segment Resultat/Balance/Pengestrøm (niveau 3) kun i mobilformen, aldrig badge
+  assert.match(html, /lasso-fs__mobile[^]*aria-label="Opgørelse"[^]*>Resultat<[^]*>Balance<[^]*>Pengestrøm</);
   assert.doesNotMatch(html, /lasso-badge|·/);
-  // Desktop: 5 år i den brede tabel; titel og periode
+  // Desktop: resultatopgørelsen med 2 år + ændring, balance og pengestrøm under uden ændring
+  const wide = html.slice(html.indexOf("lasso-fs__wide"), html.indexOf("lasso-fs__tablet"));
+  assert.match(wide, /lasso-income[^]*>2024<[^]*>2025<[^]*Ændring[^]*lasso-balance[^]*lasso-cashflow/);
+  assert.doesNotMatch(wide, />2023</);
+  assert.equal((wide.match(/lasso-stmt__delta"/g) ?? []).length, 1, "kun resultatopgørelsen har ændringskolonne");
+  // Titel og periode (tablet/mobil)
   assert.match(html, /Regnskab 2025/);
   assert.match(html, /01\.01–31\.12\.2025/);
 });
@@ -49,9 +57,10 @@ test("26d.8/26d.10/26d.11: mobilformer (år + Δ, balance som to kort, pengestr�
 test("26f.3: tablet har to opgørelser side om side med 3 år", () => {
   const html = renderToStaticMarkup(createElement(FinancialStatements, { statements: s }));
   const tablet = html.slice(html.indexOf("lasso-fs__tablet"), html.indexOf("lasso-fs__mobile"));
-  assert.match(tablet, /Resultatopgørelse[^]*Balance/);
+  assert.match(tablet, /Resultatopgørelse[^]*Balance 31\.12/);
   assert.doesNotMatch(tablet, />2022</);
-  assert.match(tablet, />2023<[^]*>2024<[^]*>2025</);
+  assert.match(tablet, />2025<[^]*>2024<[^]*>2023</, "nyeste år først");
+  assert.match(html, /Resultat \+ balance[^]*Pengestrøm/);
 });
 
 test("19.1: koncern kan vælges, når alternativt scope findes", () => {

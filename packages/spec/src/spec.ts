@@ -90,6 +90,7 @@ export const TABLE_COLUMNS = [
   "bruttofortjeneste",
   "resultat",
   "udvikling",
+  "score",
 ] as const;
 export type TableColumn = (typeof TABLE_COLUMNS)[number];
 
@@ -105,6 +106,7 @@ export const TABLE_COLUMN_LABELS: Record<TableColumn, string> = {
   bruttofortjeneste: "Bruttofortjeneste",
   resultat: "Resultat",
   udvikling: "Udvikling",
+  score: "Score",
 };
 
 export const DEFAULT_TABLE_COLUMNS: readonly TableColumn[] = ["navn", "by", "branche", "ansatte", "bruttofortjeneste", "udvikling"];
@@ -414,9 +416,9 @@ export const financialStatementsSchema = z.object({
   type: z.literal("LassoFinancialStatements"),
   company: companyRef,
   statement: z.enum(["income", "balance", "cashflow"]).optional().describe("Opgørelsen, der vises først: 'income' (standard), 'balance' eller 'cashflow'."),
-  years: z.number().int().min(2).max(5).default(5).describe("År side om side på desktop, standard 5. Tablet viser 3, mobil ét år + ændring."),
+  years: z.number().int().min(2).max(5).default(2).describe("År side om side i resultatopgørelsen på desktop, standard 2 + ændring (19.1). Tablet viser 3, mobil ét år + ændring."),
   title: z.string().max(80).optional(),
-}).describe("Fuldt regnskab med værktøjslinje (koncern/selskab, periode, enhed, revisorpåtegning, Hent PDF) og segmentskift mellem resultat, balance og pengestrøm.");
+}).describe("Fuldt regnskab med værktøjslinje (selskab/koncern, periode, enhed, revisorpåtegning, Hent PDF); desktop viser resultat, balance og pengestrøm samlet, mobil skifter med segment.");
 
 /** Katalog 28.6 (mobil 26h.8): fusioner og spaltninger som "fra → til". Live-felter ubekræftede. */
 export const mergersSchema = z.object({
@@ -424,6 +426,14 @@ export const mergersSchema = z.object({
   company: companyRef,
   title: z.string().max(80).optional(),
 }).describe("Fusioner og spaltninger: dato og type, 'fra → til' med selskabskort; ophørte selskaber i muted.");
+
+/** Katalog 28.7 (mobil 26h.9): regnskabsoplysninger og kapital/vedtægter; 'profile' = bibrancher og formål. Felter ud over CVR-teksterne er ubekræftede. */
+export const registrationSchema = z.object({
+  type: z.literal("LassoRegistration"),
+  company: companyRef,
+  variant: z.enum(["full", "profile"]).default("full").describe("'full' (standard) = to kort: regnskabsoplysninger og kapital og vedtægter. 'profile' = bibrancher og formål."),
+  title: z.string().max(80).optional(),
+}).describe("Regnskabsoplysninger (revision, regnskabsår og -perioder, regnskabsklasse, bibrancher) og kapital og vedtægter (kapital, kapitalklasser, vedtægter, tegningsregel, formål, reklamebeskyttet, børsnoteret).");
 
 /** Katalog 28.8: Statstidende, seneste bekendtgørelser. Udelades helt uden bekendtgørelser. */
 export const announcementsSchema = z.object({
@@ -717,6 +727,7 @@ export const componentSchema = z.discriminatedUnion("type", [
   w(personStatsSchema),
   w(financialStatementsSchema),
   w(mergersSchema),
+  w(registrationSchema),
   w(announcementsSchema),
   w(publicationsSchema),
   w(changeFeedSchema),
@@ -804,6 +815,7 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoPersonStats: "full",
   LassoFinancialStatements: "full",
   LassoMergers: "full",
+  LassoRegistration: "full",
   LassoAnnouncements: "full",
   LassoPublications: "full",
   LassoChangeFeed: "full",

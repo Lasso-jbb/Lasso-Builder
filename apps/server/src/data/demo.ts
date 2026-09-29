@@ -176,7 +176,15 @@ function textSectionsFor(c: DemoCompany): TextSectionsVM {
   // live-svaret: ét afsnit pr. felt, med navne som segmenter med Lasso-ID. Kun for to eksempler.
   if (c.lassoId === "CVR-1-99000001" || c.lassoId === "CVR-1-99000010") {
     sections.push(...analysisFor(c));
-    return { lassoId: c.lassoId, title: "Virksomhedsprofil", sections, analysisGenerated: "2026-09-12T08:00:00Z" };
+    return {
+      lassoId: c.lassoId,
+      title: "Virksomhedsprofil",
+      sections,
+      analysisGenerated: "2026-09-12T08:00:00Z",
+      analysisBasis: "2021–2025",
+      analysisHeadline: "Vækst i toplinjen, men omkostningerne løber hurtigere (eksempeltekst)",
+      analysisSources: ["Årsrapport 2025, Erhvervsstyrelsen", "Årsrapport 2024, Erhvervsstyrelsen", "Årsrapport 2023, Erhvervsstyrelsen", "CVR, ledelse og ejere"],
+    };
   }
   return { lassoId: c.lassoId, title: "Virksomhedsprofil", sections };
 }
@@ -416,8 +424,9 @@ function financialStatementsFor(c: DemoCompany): FinancialStatementsVM {
       liabilitiesAndEquityTotal: assetsTotal,
     });
   });
-  const opinion = c.auditor && c.auditor !== "Ingen" ? "Revisionspåtegning uden forbehold (eksempeldata)" : undefined;
-  const base: FinancialStatementsVM = { lassoId: c.lassoId, currency: "DKK", incomeStatement, balanceSheet, cashFlow, scope: "Selskab", periods: ["year"], ...(opinion ? { auditorOpinion: opinion } : {}) };
+  const opinion = c.auditor && c.auditor !== "Ingen" ? `Revideret af ${c.auditor}, udgivet 15.04.2026` : undefined;
+  const note = "Underposter og tidligere år er eksempeldata.";
+  const base: FinancialStatementsVM = { lassoId: c.lassoId, currency: "DKK", incomeStatement, balanceSheet, cashFlow, scope: "Selskab", periods: ["year"], note, pdfUrl: `https://regnskaber.virk.dk/eksempel/${c.cvr}.pdf`, ...(opinion ? { auditorOpinion: opinion } : {}) };
   // Katalog 19.1: eksempelvirksomheden aflægger også koncernregnskab (selskabets tal × 1,35, eksempeldata).
   if (c.cvr === "99000001") {
     const k = <T extends object>(rows: T[]): T[] => rows.map((r) => Object.fromEntries(Object.entries(r).map(([key, v]) => [key, typeof v === "number" && key !== "year" ? Math.round(v * 1.35) : v])) as T);
@@ -459,9 +468,18 @@ function strip(c: DemoCompany): CompanyVM {
   const { base: _b, growth: _g, people: _p, owners: _o, auditor: _a, ...vm } = c;
   // Katalog 28.7/26h.9: eksempelvirksomheden har bibrancher og registreret kapital (eksempeldata).
   if (c.cvr === "99000001") {
-    return { ...vm, altIndustries: [{ code: "433200", text: "Tømrer- og bygningssnedkervirksomhed" }, { code: "711200", text: "Rådgivende ingeniørvirksomhed" }], registeredCapital: { amount: 2_000_000, currency: "DKK", classes: ["A-aktier 1.500.000 DKK", "B-aktier 500.000 DKK"] } };
+    return {
+      ...vm,
+      altIndustries: [{ code: "433200", text: "Tømrer- og bygningssnedkervirksomhed" }, { code: "711200", text: "Rådgivende ingeniørvirksomhed" }],
+      registeredCapital: { amount: 2_000_000, currency: "DKK", classes: ["A-aktier 1.500.000 DKK, 10 stemmer pr. aktie", "B-aktier 500.000 DKK, 1 stemme pr. aktie"] },
+      accountingClass: "B",
+      firstPeriod: { start: "1998-04-01", end: "1999-12-31" },
+      statutesChanged: "2024-03-12",
+      advertisingProtected: false,
+      listed: false,
+    };
   }
-  if (c.auditor === "Ingen" && c.form !== "Enkeltmandsvirksomhed" && c.form !== "I/S") return { ...vm, auditExempt: true };
+  if (c.auditor === "Ingen" && c.form !== "Enkeltmandsvirksomhed" && c.form !== "I/S") return { ...vm, auditExempt: true, auditExemptSince: 2024 };
   return vm;
 }
 
@@ -550,6 +568,17 @@ function auditorIndependenceFor(c: DemoCompany): AuditorIndependenceVM {
     checkedAt: "2026-09-25",
     relations,
     unavailableReason: relations.length ? undefined : "Der er ikke fundet kendte relationer mellem revisor, kunden og personer i demodata.",
+    basis: "Baseret på CVR-roller og ejerskab, 3 led",
+    opinion: "Revisionspåtegning, uden forbehold (eksempeldata)",
+    report: "Årsrapport 2025",
+    checks: relations.length
+      ? [
+          { label: "Ingen fælles ledelse med revisor", ok: true },
+          { label: "Ingen ejerrelation til revisor", ok: true },
+          { label: "Samme revisor i 9 år", sub: "Rotation anbefales efter 7 år for PIE-selskaber", ok: false },
+          { label: "Revisor har ikke revideret ejerselskaber", ok: true },
+        ]
+      : undefined,
     // Katalog 26e.8: revisorhistorik som proportional bjælke (eksempeldata).
     history: [
       { name: "Eksempel Revision", from: "2012-01-01", to: "2016-12-31" },
@@ -915,17 +944,35 @@ export class DemoProvider implements DataProvider {
     const publications = publicationsFromYears(years.map((y) => ({ ...y, published: y.published ?? (y.periodEnd ? `${Number(y.periodEnd.slice(0, 4)) + 1}-05-28` : undefined) })));
     if (c.cvr === "99000001" && publications[1]?.figure) {
       // Eksempel på et korrigeret regnskab: den tidligere værdi står som "før …".
-      publications[1] = { ...publications[1], corrected: true, published: publications[1].published?.replace(/-05-28$/, "-08-14"), figure: { ...publications[1].figure, previous: Math.round((publications[1].figure.value ?? 0) * 1.08) } };
+      publications[1] = { ...publications[1], corrected: true, published: publications[1].published?.replace(/-05-28$/, "-08-14"), figure: { ...publications[1].figure, previous: Math.round((publications[1].figure.value ?? 0) * 1.08) }, profit: publications[1].profit ? { ...publications[1].profit, previous: Math.round((publications[1].profit.value ?? 0) * 1.12) } : undefined };
     }
     const mergers: CompanyEventsVM["mergers"] =
       c.cvr === "99000001"
-        ? [{ date: "2022-07-01", type: "Fusion", from: [{ name: "Data Eksempel A/S", ceased: true }], to: [{ name: c.name, lassoId: c.lassoId }] }]
+        ? [
+            {
+              date: "2022-07-01",
+              type: "Fusion",
+              from: [
+                { name: "Cloud Eksempel A/S", cvr: "10000001", ceased: true },
+                { name: "Data Eksempel A/S", cvr: "10000002", ceased: true },
+              ],
+              to: [{ name: c.name, lassoId: c.lassoId, cvr: c.cvr, role: "fortsættende selskab" }],
+            },
+            {
+              date: "2019-03-15",
+              type: "Spaltning",
+              from: [{ name: c.name, lassoId: c.lassoId, cvr: c.cvr, role: "afgivende selskab" }],
+              to: [{ name: "Eksempel Ejendomme ApS", lassoId: "CVR-1-99000012", role: "modtagende, nystiftet" }],
+            },
+          ]
         : [];
+    const src = "Statstidende, sagsnr. eksempel, kreditorinformation vedlagt";
     const announcements: CompanyEventsVM["announcements"] = /konkurs/i.test(c.status ?? "")
-      ? [
-          { date: "2026-08-12", type: "Dekret om konkurs", severity: "bankrupt", text: `${c.name} (eksempeldata) er erklæret konkurs ved skifterettens dekret. Kurator er advokat Eksempel Prøvesen. Fristen for anmeldelse af krav er fire uger fra bekendtgørelsen.` },
-          { date: "2026-08-20", type: "Indkaldelse af kreditorer", severity: "neutral", text: "Kreditorer indkaldes til skiftesamling (eksempeldata)." },
-        ].sort((a, b) => b.date.localeCompare(a.date)) as CompanyEventsVM["announcements"]
+      ? ([
+          { date: "2026-08-18", type: "Konkursdekret", severity: "bankrupt", url: "https://www.statstidende.dk/", source: src, text: `Skifteretten i København har afsagt konkursdekret over ${c.name} (eksempeldata). Kurator: advokat Eksempel Prøvesen. Anmeldelse af krav senest fire uger efter bekendtgørelsen.` },
+          { date: "2026-06-02", type: "Rekonstruktion indledt", severity: "warning", url: "https://www.statstidende.dk/", source: src, text: "Rekonstruktionsbehandling indledt med rekonstruktør og regnskabskyndig tillidsmand (eksempeldata)." },
+          { date: "2026-01-11", type: "Kapitalnedsættelse", severity: "neutral", url: "https://www.statstidende.dk/", source: src, text: "Beslutning om nedsættelse af selskabskapitalen, opfordring til kreditorer om at anmelde krav (eksempeldata)." },
+        ] as CompanyEventsVM["announcements"]).sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""))
       : [];
     return { lassoId, mergers, announcements, publications, updated: "2026-09-25" };
   }

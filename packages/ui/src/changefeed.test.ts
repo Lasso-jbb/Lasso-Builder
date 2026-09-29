@@ -88,15 +88,16 @@ test("Notifikationspanel (21): overskrift, faner niveau 2, ulæst-prik, kilde + 
     { id: "5", kind: "konto", text: "Din Lasso Risiko-prøveperiode udløber om 5 dage", at: at(3, 9, 0), read: true },
   ];
   const html = renderToStaticMarkup(createElement(NotificationPanel, { items, now: NOW, onMarkAllRead: () => {}, onSeeAll: () => {} }));
-  assert.match(html, /Notifikationer \(3\)/);
+  assert.match(html.replace(/<[^>]+>/g, ""), /Notifikationer \(3\)/);
   assert.match(html, /Markér alle som læst/);
   assert.match(html, /class="lasso-tabs lasso-tabs--l2"/);
   assert.match(html, /aria-selected="true"[^>]*>Ulæste</);
   assert.match(html, />Alle<\/button>/);
   assert.match(html, />Overvågning<\/button>/);
-  // Fanen "Ulæste" er valgt: tre ulæste rækker med prik, læste vises ikke
-  assert.equal((html.match(/lasso-notif__row--unread/g) ?? []).length, 3);
-  assert.doesNotMatch(html, /6 ændringer i/);
+  // Fanen "Ulæste" er valgt (desktop): tre ulæste rækker med prik, læste vises ikke
+  const desk = html.slice(html.indexOf("lasso-notif__body--d"), html.indexOf("lasso-notif__body--m"));
+  assert.equal((desk.match(/lasso-notif__row--unread/g) ?? []).length, 3);
+  assert.doesNotMatch(desk, /6 ændringer i/);
   assert.match(html, /Overvågning &quot;Kunder&quot;, for 2 timer siden/);
   assert.match(html, /Kredit, for 4 timer siden/);
   assert.match(html, /Eksport, i går kl\. 16\.20/);
@@ -108,19 +109,21 @@ test("Notifikationspanel (21): overskrift, faner niveau 2, ulæst-prik, kilde + 
   const done = renderToStaticMarkup(createElement(NotificationPanel, { items: items.map((n) => ({ ...n, read: true })), now: NOW, onMarkAllRead: () => {} }));
   assert.doesNotMatch(done, /Markér alle som læst/);
   assert.match(done, /Alt er læst\./);
+  // "Luk" står kun på mobil (skjult med CSS på desktop), og aldrig i den indlejrede mobilliste.
+  assert.match(renderToStaticMarkup(createElement(NotificationPanel, { items, now: NOW, onClose: () => {} })), /lasso-notif__close/);
+  assert.doesNotMatch(renderToStaticMarkup(createElement(NotificationPanel, { items, now: NOW, onClose: () => {}, inline: true })), /lasso-notif__close/);
 });
 
-test("Klokke (06/21/26a): aldrig badge; ulæste = koral klokke, antal i aria-label", () => {
+test("Klokke (21.3): aldrig badge; ulæste = koral klokke, vigtig ændring = mørk rød, antallet i skærmlæserteksten", () => {
   const none = renderToStaticMarkup(createElement(MonitorBell, { unread: 0 }));
   assert.match(none, /aria-label="Notifikationer, ingen ulæste"/);
   assert.doesNotMatch(none, /lasso-bell--unread/);
   const three = renderToStaticMarkup(createElement(MonitorBell, { unread: 3 }));
-  assert.match(three, /aria-label="Notifikationer, 3 ulæste"/);
-  assert.match(three, /lasso-bell--unread/);
-  assert.doesNotMatch(three, /lasso-bell__badge/);
+  assert.match(three, /class="lasso-bell lasso-bell--unread"[^>]*aria-label="Notifikationer, 3 ulæste"/);
   const important = renderToStaticMarkup(createElement(MonitorBell, { unread: 3, important: true }));
-  assert.doesNotMatch(important, /lasso-bell__badge/);
+  assert.match(important, /lasso-bell--important/);
   assert.match(important, /vigtig ændring, 3 ulæste/);
+  for (const h of [none, three, important]) assert.doesNotMatch(h, /lasso-bell__badge/);
 });
 
 test("Overvåger-indstillinger (21): knap i koral-soft, fakta, Stop overvågning som tekstknap, toggles pr. type", () => {
@@ -156,10 +159,19 @@ test("Overvåger-indstillinger (21): knap i koral-soft, fakta, Stop overvågning
   assert.doesNotMatch(off, /Stop overvågning/);
 });
 
-test("21.3/21.4: kontakterne står i samme rækkefølge som feedets typefilter", async () => {
+test("21.4: kontakterne står som i Paper: status og konkurs, nyt regnskab, ledelse og ejere, stamdata, kreditscore", async () => {
   const { MONITOR_TYPES } = await import("./components/MonitorSettings.js");
   const { CHANGE_TYPES } = await import("@lasso/spec");
-  const pos = MONITOR_TYPES.map((t) => (CHANGE_TYPES as readonly string[]).indexOf(t));
-  assert.ok(pos.every((p) => p >= 0));
-  assert.deepEqual([...pos].sort((a, b) => a - b), pos);
+  assert.deepEqual([...MONITOR_TYPES], ["status", "regnskab", "ledelse", "stamdata", "kredit"]);
+  assert.ok(MONITOR_TYPES.every((t) => (CHANGE_TYPES as readonly string[]).includes(t)));
+});
+
+test("26e.4: mobilen har hoved, 'siden 03.2025, 3 emner', emner med undertekst og en Levering-række", () => {
+  const html = renderToStaticMarkup(
+    createElement(MonitorSettings, { companyName: "LASSO X A/S", monitoring: true, since: "2025-03-03", delivery: "Push + e-mail dagligt", settings: { status: true, regnskab: true, ledelse: true, kredit: false }, onToggle: () => {}, onStop: () => {} }),
+  );
+  assert.match(html, /lasso-monitor__mhead-title">Overvågning<[^]*LASSO X A\/S/);
+  assert.match(html, /lasso-monitor__mstatus-sub">siden 03\.2025, 3 emner</);
+  assert.match(html, />Regnskab<span class="lasso-monitor__label-sub">Nyt regnskab, revisorforbehold</);
+  assert.match(html, />Levering<[^]*Push \+ e-mail dagligt/);
 });

@@ -64,6 +64,11 @@ function PropertyMap({ property }: { property: PropertyVM }) {
         {body}
       </svg>
       {property.matrikel ? <span className="lasso-property-map__label">{property.matrikel}</span> : null}
+      <div className="lasso-property-map__m" aria-hidden="true">
+        {Array.from({ length: 6 }, (_, i) => (
+          <span key={i} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -81,6 +86,25 @@ function PropertyBlock({ property }: { property: PropertyVM }) {
     <div className="lasso-property">
       <div className="lasso-property__card">
         <PropertyMap property={property} />
+        {/* 26e.2 mobil: anvendelse, opført, erhvervsareal og ejerforhold i to kolonner. */}
+        <dl className="lasso-property__mkv">
+          <div>
+            <dt>Anvendelse</dt>
+            <dd>{buildings[0]?.usage ?? property.propertyType ?? <Missing />}</dd>
+          </div>
+          <div>
+            <dt>Opført</dt>
+            <dd>{buildings[0]?.builtYear ?? <Missing />}</dd>
+          </div>
+          <div>
+            <dt>Erhvervsareal</dt>
+            <dd>{totalArea > 0 ? `${formatNumber(totalArea)} m²` : <Missing />}</dd>
+          </div>
+          <div>
+            <dt>Ejerforhold</dt>
+            <dd>{property.ownership ?? <Missing />}</dd>
+          </div>
+        </dl>
         <div className="lasso-property__head">
           <div className="lasso-property__address">{addressLine ?? <Missing />}</div>
           <div className="lasso-small lasso-muted">
@@ -111,7 +135,7 @@ function PropertyBlock({ property }: { property: PropertyVM }) {
           <div className="lasso-property__row">
             <span>Hæftelser</span>
             <span className={property.encumbrances ? "lasso-property__link" : undefined}>
-              {property.encumbrances == null ? <Missing /> : property.encumbrances > 0 ? `${property.encumbrances}, se tinglysning` : "Ingen"}
+              {property.encumbrances == null ? <Missing /> : property.encumbrances > 0 ? `${property.encumbrances}, Se tinglysning` : "Ingen"}
             </span>
           </div>
         </div>
@@ -205,7 +229,7 @@ function PropertyBlock({ property }: { property: PropertyVM }) {
  * {@link MAX_PROPERTIES} ejendomme: vis de første og "Se N flere" (regel 9).
  */
 export function Properties({ properties, title, error }: { properties?: PropertiesVM; title?: string; error?: string }) {
-  const heading = title ?? "Ejendomme, BBR";
+  const heading = title ?? (properties?.properties.length === 1 ? "Ejendom, BBR" : "Ejendomme, BBR");
   if (!properties) {
     return (
       <Section title={heading} span="full">
@@ -223,7 +247,7 @@ export function Properties({ properties, title, error }: { properties?: Properti
   const shown = properties.properties.slice(0, MAX_PROPERTIES);
   const rest = properties.properties.length - shown.length;
   return (
-    <Section title={heading} subtitle="Ejendomskort, bygninger og enheder, arealfordeling" span="full">
+    <Section title={heading} subtitle="Ejendomskort, bygninger og enheder, arealfordeling" span="full" className="lasso-properties-section">
       <div className="lasso-properties">
         {shown.map((p, i) => (
           <PropertyBlock key={p.bfeNumber ?? i} property={p} />

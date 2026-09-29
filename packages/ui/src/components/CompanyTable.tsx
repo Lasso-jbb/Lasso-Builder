@@ -25,8 +25,8 @@ import { Menu } from "./Menu.js";
 import { BulkBar, CheckMark, Checkbox, ColumnsIcon, DownloadIcon, FilterIcon, Pagination, PlusIcon, TableLoadingLine, TableSearch, TableStateBox, TableStateRows, TableToolbar, slugFile, type BulkAction, type TableState } from "./TableKit.js";
 import { XIcon } from "./FilterSheet.js";
 
-const NUMERIC: ReadonlySet<TableColumn> = new Set(["ansatte", "omsaetning", "bruttofortjeneste", "resultat", "udvikling"]);
-const SORTABLE: ReadonlySet<TableColumn> = new Set(["navn", "by", "region", "branche", "ansatte", "omsaetning", "bruttofortjeneste", "resultat"]);
+const NUMERIC: ReadonlySet<TableColumn> = new Set(["ansatte", "omsaetning", "bruttofortjeneste", "resultat", "udvikling", "score"]);
+const SORTABLE: ReadonlySet<TableColumn> = new Set(["navn", "by", "region", "branche", "ansatte", "omsaetning", "bruttofortjeneste", "resultat", "score"]);
 /** Rækker pr. side (15.1). */
 export const PAGE_SIZE = 25;
 const MAX_COLUMNS = 8;
@@ -49,6 +49,8 @@ function sortValue(r: CompanyRowVM, c: TableColumn): string | number | null | un
       return r.grossProfit;
     case "resultat":
       return r.profit;
+    case "score":
+      return r.score;
     default:
       return undefined;
   }
@@ -78,13 +80,15 @@ export function cellText(r: CompanyRowVM, c: TableColumn): string {
       return formatAmount(r.profit, currencyUnit(r.currency));
     case "udvikling":
       return "";
+    case "score":
+      return typeof r.score === "number" ? formatNumber(r.score) : "";
   }
 }
 
 
 /** De tre nøgletal på mobilkortet (26c): tabellens tal-kolonner i rækkefølge, fyldt op med standard. */
 export function cardFigures(cols: readonly TableColumn[]): TableColumn[] {
-  const numeric = cols.filter((c) => NUMERIC.has(c) && c !== "udvikling");
+  const numeric = cols.filter((c) => NUMERIC.has(c) && c !== "udvikling" && c !== "score");
   const fill: TableColumn[] = ["bruttofortjeneste", "resultat", "ansatte", "omsaetning"];
   const out = [...numeric];
   for (const f of fill) if (out.length < 3 && !out.includes(f)) out.push(f);
@@ -407,7 +411,7 @@ export function CompanyTable({
               }))}
             />
             {canExport && !mobile ? (
-              <button type="button" className="lasso-btn lasso-tbtn" onClick={() => exportRows(rows)} disabled={!result || rows.length === 0}>
+              <button type="button" className="lasso-btn lasso-tbtn lasso-ctable__export" onClick={() => exportRows(rows)} disabled={!result || rows.length === 0}>
                 <DownloadIcon />
                 <span className="lasso-tbtn__label">Eksportér</span>
               </button>
@@ -483,11 +487,11 @@ export function CompanyTable({
                           {c === "navn" ? (
                             <>
                               <span className="lasso-table__name">{r.name}</span>
-                              {(showCvrUnderName && r.cvr) || (statusUnderName && r.status && r.statusKind && r.statusKind !== "active") || (cols.includes("by") && r.city) ? (
+                              {(showCvrUnderName && r.cvr) || (statusUnderName && r.status && r.statusKind && r.statusKind !== "active") || r.city ? (
                                 <span className="lasso-table__sub">
                                   {showCvrUnderName && r.cvr ? <span>CVR {r.cvr}</span> : null}
-                                  {/* 26f.2: på tablet flytter byen ind under navnet (kolonnen skjules). */}
-                                  {cols.includes("by") && r.city ? <span className="lasso-ctable__subcity">{showCvrUnderName && r.cvr ? ", " : ""}{r.city}</span> : null}
+                                  {/* 26f.2: byen står under navnet (med by-kolonne kun på tablet, hvor kolonnen skjules). */}
+                                  {r.city ? <span className={cols.includes("by") ? "lasso-ctable__subcity" : undefined}>{showCvrUnderName && r.cvr ? ", " : ""}{r.city}</span> : null}
                                   {statusUnderName && r.status && r.statusKind && r.statusKind !== "active" ? (
                                     <>
                                       {showCvrUnderName && r.cvr ? ", " : ""}
@@ -503,6 +507,8 @@ export function CompanyTable({
                             (r.trend?.length ?? 0) >= 2 ? <Trend values={r.trend!} /> : <span className="lasso-notreported">—</span>
                           ) : NUMERIC.has(c) && sortValue(r, c) == null ? (
                             <span className="lasso-notreported">Ikke oplyst</span>
+                          ) : NUMERIC.has(c) && (sortValue(r, c) as number) < 0 ? (
+                            <span className="lasso-down">{cellText(r, c)}</span>
                           ) : (
                             cellText(r, c) || <span className="lasso-notreported">—</span>
                           )}
