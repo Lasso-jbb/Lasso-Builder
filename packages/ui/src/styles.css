@@ -1351,14 +1351,16 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-personnet__row.is-ended .lasso-personnet__company:not(.is-bankrupt) { color: var(--lasso-text-3); }
 
 /* Personrisiko: rækker adskilt med linjer, ingen tonede fliser. Ordet bærer alvoren (regel 7). */
-.lasso-personrisk__items { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--lasso-space-3); }
-/* 16.4: fem risikofliser, hvid flade med tynd kant: navn, ikon + ord, forklaring. */
-.lasso-personrisk__item { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 14px 16px; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); }
-.lasso-personrisk__value { display: flex; align-items: center; gap: 6px; }
-.lasso-personrisk__icon { flex: none; width: 16px; display: inline-flex; justify-content: center; }
+/* 16.4: fire fliser som lodret liste i fuld bredde: ikon 20 px, titel 15/600, forklaring, vurderingsord til højre. */
+.lasso-personrisk__items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--lasso-space-2); }
+.lasso-personrisk__item { display: flex; align-items: flex-start; gap: var(--lasso-space-3); min-width: 0; padding: 14px 16px; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); }
+.lasso-personrisk__item--locked { border-style: dashed; border-color: var(--lasso-border-strong); align-items: center; }
+.lasso-personrisk__icon { flex: none; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; }
+.lasso-personrisk__icon .lasso-sev-icon { width: 18px; height: 18px; }
 .lasso-personrisk__check { color: var(--lasso-positive); display: block; }
-.lasso-personrisk__main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.lasso-personrisk__title { font-size: var(--lasso-fs-sm); line-height: 18px; font-weight: 600; color: var(--lasso-text); }
+.lasso-personrisk__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lasso-personrisk__title { display: flex; align-items: center; gap: 8px; font-size: 15px; line-height: 20px; font-weight: 600; color: var(--lasso-text); }
+.lasso-personrisk__count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--lasso-danger-soft); color: var(--lasso-bankrupt); font-size: 12px; line-height: 1; font-weight: 600; }
 .lasso-personrisk__desc { font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-3); }
 .lasso-personrisk__cases { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-3); }
 .lasso-personrisk__company { font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-bankrupt); }
@@ -1366,6 +1368,8 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-personrisk__word--none { color: var(--lasso-positive); }
 .lasso-personrisk__word--25 { color: var(--lasso-chart-2); }
 .lasso-personrisk__word--50 { color: var(--lasso-warning); }
+.lasso-personrisk__word--neutral { color: var(--lasso-muted); }
+.lasso-personrisk__upgrade { flex: none; }
 .lasso-personroles .lasso-section__head { flex-wrap: wrap; row-gap: var(--lasso-space-2); }
 @container lasso (max-width: 560px) {
   .lasso-personroles__desk .lasso-section__action { flex-basis: 100%; }

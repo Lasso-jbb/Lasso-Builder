@@ -485,7 +485,16 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoPersonNetwork":
       return <PersonNetwork key={key} network={empty.personNetworks[c.person]} title={c.title} limit={c.limit} error={err(`personNetwork:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} />;
     case "LassoPersonRisk":
-      return <PersonRisk key={key} person={empty.persons[c.person]} title={c.title} error={err(`person:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} />;
+      return (
+        <PersonRisk
+          key={key}
+          person={empty.persons[c.person]}
+          title={c.title}
+          error={err(`person:${c.person}`)}
+          onOpen={props.host.drillDown ? act : undefined}
+          onUpgrade={props.host.prompt ? () => act({ kind: "prompt", prompt: "Hvilke Lasso-pakker giver adgang til tjek mod sanktionslister?" }) : undefined}
+        />
+      );
     case "LassoPersonStats":
       return <PersonStats key={key} person={empty.persons[c.person]} network={empty.personNetworks[c.person]} error={err(`person:${c.person}`)} networkError={err(`personNetwork:${c.person}`)} />;
     case "LassoPersonFacts":

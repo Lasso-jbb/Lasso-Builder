@@ -130,11 +130,12 @@ test("16.1: 'Person' som ren tekst, ingen initial-cirkel, handlinger og én roli
   assert.doesNotMatch(out, /initial|avatar/);
 });
 
-test("16.4: personrisiko med fem rækker: PEP, stråmand, konkurser, tvangsopløsninger, sanktionslister", () => {
-  const out = html(h(PersonRisk, { person: bo }));
+test("16.4: personrisiko som fire fliser: PEP, stråmand, konkurser i netværket, sanktionslister", () => {
+  const out = html(h(PersonRisk, { person: bo, onUpgrade: noop }));
   const titles = [...out.matchAll(/lasso-personrisk__title">([^<]+)</g)].map((m) => m[1]);
-  assert.deepEqual(titles, ["PEP, politisk eksponeret", "Stråmandsindikator", "Konkurser", "Tvangsopløsninger", "Sanktionslister"]);
-  assert.match(out, /Tjekket 25\.09\.2026/);
+  assert.deepEqual(titles, ["PEP, politisk eksponeret", "Stråmandsindikator", "Konkurser i netværket", "Sanktionslister"]);
+  assert.match(out, /tjekket 25\.09\.2026/);
+  assert.match(out, /lasso-personrisk__item--locked[^]*>Opgrader</);
   assert.match(out, /lasso-personrisk__word--50">Mulig</);
   // Uden opslag: "Ikke tjekket", aldrig "Nej".
   const unknown = html(h(PersonRisk, { person: { ...bo, pep: undefined, strawman: undefined } }));
