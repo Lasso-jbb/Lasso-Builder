@@ -1,6 +1,7 @@
 import { personCompanies, personRisk, type PersonRiskCaseVM, type PersonVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, SeverityIcon, SourceLine, stateForError } from "../primitives.js";
+import { Icon } from "./Icon.js";
 
 const year = (d?: string) => (d ? d.slice(0, 4) : "");
 
@@ -11,11 +12,7 @@ function level(cases: PersonRiskCaseVM[]): { word: string; tone: "none" | "25" |
 }
 
 function CheckIcon() {
-  return (
-    <svg className="lasso-personrisk__check" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
+  return <Icon name="check" size={14} className="lasso-personrisk__check" />;
 }
 
 function caseText(c: PersonRiskCaseVM): string {

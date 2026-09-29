@@ -1,5 +1,6 @@
 import { formatDate, formatNumber } from "@lasso/spec";
 import { DataState } from "../primitives.js";
+import { Icon } from "./Icon.js";
 
 /** Ændringstyper, man kan slå til og fra pr. virksomhed (katalog 21), i samme rækkefølge som typefiltret i feedet. */
 export const MONITOR_TYPES = ["status", "regnskab", "ledelse", "stamdata", "kredit"] as const;
@@ -14,12 +15,7 @@ export const MONITOR_TYPE_LABELS: Record<MonitorType, string> = {
 };
 
 function BellIcon({ filled = false, size = 18 }: { filled?: boolean; size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M18 8.5a6 6 0 10-12 0c0 6.5-2.5 6.5-2.5 8.5h17c0-2-2.5-2-2.5-8.5" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.9" strokeLinejoin="round" strokeLinecap="round" />
-      {filled ? null : <path d="M10 20a2 2 0 004 0" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />}
-    </svg>
-  );
+  return <Icon name="bell" size={size} filled={filled} />;
 }
 
 export interface MonitorBellProps {

@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { formatDate, isPersonId, type NewsItemVM, type NewsVM, type TextSegment } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { Icon } from "./Icon.js";
 
 /** "2026-04-15" -> "for 3 dage siden" under 7 dage gammel, ellers "15.04.2026". */
 function relativeOrDate(iso: string | undefined): string {
@@ -127,10 +128,7 @@ function SourceMark({ source, url }: { source: string; url?: string }) {
       {src ? (
         <img src={src} alt="" width={16} height={16} onError={() => setBroken(true)} />
       ) : (
-        <svg viewBox="0 0 24 24" width={16} height={16}>
-          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1.6" />
-          <path d="M3 12h18M12 3c2.5 2.6 4 6 4 9s-1.5 6.4-4 9c-2.5-2.6-4-6-4-9s1.5-6.4 4-9z" fill="none" stroke="currentColor" strokeWidth="1.4" />
-        </svg>
+        <Icon name="globe" size={16} />
       )}
       <span className="lasso-news__source">{source},</span>
     </span>

@@ -1,5 +1,5 @@
 import { formatDate, formatNumber, type ProductionUnitVM, type ProductionUnitsVM } from "@lasso/spec";
-import { DataState, Missing, Section, stateForError } from "../primitives.js";
+import { DataState, Missing, Section, stateForError, statusTone } from "../primitives.js";
 
 function unitStatusText(u: ProductionUnitVM): string | undefined {
   if (u.endedYear) return `Ophørt ${u.endedYear}`;
@@ -68,7 +68,7 @@ export function ProductionUnits({ units, error }: { units?: ProductionUnitsVM; e
                       {u.employees != null ? formatNumber(u.employees) : <Missing />}
                     </td>
                     <td data-label="Status">
-                      {status ? <span className={`lasso-status lasso-status--${u.statusKind ?? "active"}`}>{status}</span> : <Missing />}
+                      {status ? <span className={`lasso-status lasso-status--${statusTone(status, u.statusKind ?? "active")}`}>{status}</span> : <Missing />}
                     </td>
                     <td data-label="Oprettet" className="lasso-num">
                       {u.created ? formatDate(u.created) : <Missing />}

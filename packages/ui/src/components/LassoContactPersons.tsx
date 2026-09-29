@@ -1,25 +1,17 @@
 import { useState } from "react";
 import type { ContactPersonVM, ContactPersonsVM } from "@lasso/spec";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { Icon } from "./Icon.js";
 
 /** Store lister foldes sammen efter de første (regel 9: 3 + "Se N …"). */
 const COLLAPSED_ROWS = 3;
 
 function PhoneIcon({ muted }: { muted: boolean }) {
-  return (
-    <svg className={`lasso-contactpersons__icon ${muted ? "lasso-contactpersons__icon--muted" : ""}`} width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M5 4.5h3.2l1.4 4-2 1.6a11.5 11.5 0 006.3 6.3l1.6-2 4 1.4V19a1.5 1.5 0 01-1.6 1.5A15.5 15.5 0 013.5 6.1 1.5 1.5 0 015 4.5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-    </svg>
-  );
+  return <Icon name="phone" size={15} className={`lasso-contactpersons__icon ${muted ? "lasso-contactpersons__icon--muted" : ""}`} />;
 }
 
 function MailIcon({ muted }: { muted: boolean }) {
-  return (
-    <svg className={`lasso-contactpersons__icon ${muted ? "lasso-contactpersons__icon--muted" : ""}`} width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="3.5" y="5.5" width="17" height="13" rx="1.6" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M4.5 6.5l7.5 6 7.5-6" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-    </svg>
-  );
+  return <Icon name="mail" size={15} className={`lasso-contactpersons__icon ${muted ? "lasso-contactpersons__icon--muted" : ""}`} />;
 }
 
 function PersonRow({ person }: { person: ContactPersonVM }) {

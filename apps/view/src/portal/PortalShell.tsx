@@ -515,6 +515,8 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true }: PortalShel
     nav: [
       { id: "soeg", label: "Søg", icon: <ShellIcon name="search" size={20} />, active: route.kind === "search", onSelect: openSearch },
       { id: "lister", label: "Lister", icon: <ShellIcon name="list" size={20} />, active: route.kind === "saved", onSelect: openSaved },
+      // 26a: bundnavigationen har altid fire punkter. Portalen har endnu ingen overvågning, så punktet står dæmpet med grunden.
+      { id: "overvaagning", label: "Overvågning", icon: <ShellIcon name="bell" size={20} />, disabled: true, disabledReason: "Overvågning er ikke slået til i portalen" },
       ...(canLogout ? [{ id: "konto", label: "Konto", icon: <ShellIcon name="user" size={20} />, active: accountOpen, onSelect: () => setAccountOpen(true) }] : []),
     ],
   };
@@ -549,6 +551,13 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true }: PortalShel
     default: {
       const entity = d?.result && d.resultKey === d.key ? entityOf(d.result.spec, d.result.dataset) : null;
       const on = entity ? isSaved(entity.id, d?.result?.dataset, saved) : false;
+      // "…" i mobilens topbjælke (26a): sidens handlinger som handlingsark.
+      if (entity) {
+        mobile.moreItems = [
+          { id: "save", label: on ? "Fjern fra din liste" : "Gem på din liste", icon: <ShellIcon name="bookmark" size={16} filled={on} />, onSelect: () => void toggleSaved(entity, route.focus) },
+          { id: "share", label: "Del link", icon: <ShellIcon name="copy" size={16} />, onSelect: () => void shareLink(active) },
+        ];
+      }
       page = (
         <EntityPage
           key={active.id}

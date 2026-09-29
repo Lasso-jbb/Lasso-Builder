@@ -12,7 +12,7 @@ import {
   type TableColumn,
 } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
-import { DataState, Missing, Section, Sparkline, stateForError } from "../primitives.js";
+import { DataState, Missing, Section, Sparkline, stateForError, statusTone } from "../primitives.js";
 
 const NUMERIC: ReadonlySet<TableColumn> = new Set(["ansatte", "omsaetning", "bruttofortjeneste", "resultat", "udvikling"]);
 const SORTABLE: ReadonlySet<TableColumn> = new Set(["navn", "by", "region", "branche", "ansatte", "omsaetning", "bruttofortjeneste", "resultat"]);
@@ -160,7 +160,7 @@ export function CompanyTable({
                           {showCvrUnderName && r.cvr ? <span className="lasso-table__sub">CVR {r.cvr}</span> : null}
                         </>
                       ) : c === "status" ? (
-                        r.status ? <span className={`lasso-status lasso-status--${r.statusKind ?? "active"}`}>{r.status}</span> : <Missing />
+                        r.status ? <span className={`lasso-status lasso-status--${statusTone(r.status, r.statusKind ?? "active")}`}>{r.status}</span> : <Missing />
                       ) : c === "udvikling" ? (
                         (r.trend?.length ?? 0) >= 2 ? <Trend values={r.trend!} /> : <Missing />
                       ) : NUMERIC.has(c) && sortValue(r, c) == null ? (

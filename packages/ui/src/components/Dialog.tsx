@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { Icon, type IconName } from "./Icon.js";
 import { CloseIcon, focusables, useLayer } from "./Layer.js";
 
 /**
@@ -18,6 +19,8 @@ export interface DialogAction {
   disabled?: boolean;
   /** Primær: bekræfter en sletning (ink i stedet for koral). Destruktiv: altid rød tekst. */
   destructive?: boolean;
+  /** Ikon før teksten, fx "plus" på "Tilføj" (07.7). */
+  icon?: IconName;
 }
 
 export interface DialogProps {
@@ -31,14 +34,16 @@ export interface DialogProps {
     secondary?: DialogAction;
     destructive?: DialogAction;
   };
-  /** sm = 440 px, md = 520 px (--lasso-dialog-w). */
-  size?: "sm" | "md";
+  /** sm = 440 px, md = 520 px (--lasso-dialog-w), lg = 760 px (trævælger, 07.7). */
+  size?: "sm" | "md" | "lg";
+  /** Effekt-linje nederst til venstre i foden, fx "Reducerer resultatet med 1.782" (07.7). */
+  footNote?: ReactNode;
   /** Skærmlæsertekst på luk-krydset. */
   closeLabel?: string;
   className?: string;
 }
 
-export function Dialog({ open, title, description, onClose, children, actions, size = "md", closeLabel = "Luk", className = "" }: DialogProps) {
+export function Dialog({ open, title, description, onClose, children, actions, size = "md", footNote, closeLabel = "Luk", className = "" }: DialogProps) {
   const layer = useLayer();
   const panel = useRef<HTMLDivElement>(null);
   const id = useId();
@@ -78,7 +83,7 @@ export function Dialog({ open, title, description, onClose, children, actions, s
   };
 
   const { primary, secondary, destructive } = actions ?? {};
-  const hasFoot = Boolean(primary || secondary || destructive);
+  const hasFoot = Boolean(primary || secondary || destructive || footNote);
 
   return layer.render(
     <div className="lasso-dialog-wrap">
@@ -117,6 +122,7 @@ export function Dialog({ open, title, description, onClose, children, actions, s
                 {destructive.label}
               </button>
             ) : null}
+            {footNote ? <span className="lasso-dialog__note">{footNote}</span> : null}
             <span className="lasso-dialog__spacer" />
             {secondary ? (
               <button type="button" className="lasso-btn lasso-dialog__secondary" onClick={secondary.onClick} disabled={secondary.disabled}>
@@ -130,6 +136,7 @@ export function Dialog({ open, title, description, onClose, children, actions, s
                 onClick={primary.onClick}
                 disabled={primary.disabled}
               >
+                {primary.icon ? <Icon name={primary.icon} size={16} /> : null}
                 {primary.label}
               </button>
             ) : null}
