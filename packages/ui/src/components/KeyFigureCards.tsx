@@ -22,9 +22,24 @@ const label = (m: Metric) => (m === "ansatte" ? "Ansatte (regnskab)" : METRIC_LA
 
 export function KeyFigureCards({ financials, metrics, error }: { financials?: FinancialsVM; metrics?: readonly Metric[]; error?: string }) {
   if (!financials) {
+    if (!error) {
+      // 09.1/09.4: "Henter" er kortformede skeletter, 3 linjer pr. kort, i samme højde som et fyldt kort.
+      const count = Math.min(Math.max(metrics?.length ?? 4, 3), 5);
+      return (
+        <div className="lasso-kpis lasso-kpis--loading lasso-span-full" aria-busy="true" aria-label="Henter nøgletal" style={{ ["--lasso-kpi-count" as string]: count }}>
+          {Array.from({ length: count }, (_, i) => (
+            <div className="lasso-kpi" key={i}>
+              <div className="lasso-skeleton lasso-kpi__skel lasso-kpi__skel--label" />
+              <div className="lasso-skeleton lasso-kpi__skel lasso-kpi__skel--value" />
+              <div className="lasso-skeleton lasso-kpi__skel lasso-kpi__skel--delta" />
+            </div>
+          ))}
+        </div>
+      );
+    }
     return (
       <div className="lasso-span-full">
-        {error ? <DataState state={stateForError(error) === "noaccess" ? "empty" : "error"} reason={error} /> : <DataState state="loading" lines={3} height={122} />}
+        <DataState state={stateForError(error) === "noaccess" ? "empty" : "error"} reason={error} />
       </div>
     );
   }
@@ -33,13 +48,21 @@ export function KeyFigureCards({ financials, metrics, error }: { financials?: Fi
   const prev = years.at(-2);
   if (!last) return <div className="lasso-span-full"><DataState state="empty" reason="Virksomheden har ikke offentliggjort et regnskab endnu." /></div>;
 
-  // Uden omsætning i seneste regnskab (typisk klasse B) vises bruttofortjeneste i stedet, og
-  // nøgletal uden tal i seneste regnskab udelades, så "Ikke oplyst" aldrig står som første kort.
-  const base: Metric[] = metrics?.length ? [...metrics] : [mainMetric(years), "resultat", "egenkapital", "ansatte"];
-  const wanted: Metric[] = base.map((m) => effectiveMetric(years, m));
+  // Uden omsætning i seneste regnskab (typisk klasse B) vises bruttofortjeneste i stedet, medmindre
+  // bruttofortjenesten allerede er valgt ved siden af. Standardkortene udelader nøgletal uden tal i
+  // seneste regnskab; er nøgletallene valgt, vises de manglende som "Ikke oplyst" med årsag (09.4),
+  // men aldrig som første kort.
+  const explicit = Boolean(metrics?.length);
+  const base: Metric[] = explicit ? [...metrics!] : [mainMetric(years), "resultat", "egenkapital", "ansatte"];
+  const wanted: Metric[] = base.map((m) => {
+    const eff = effectiveMetric(years, m);
+    return explicit && eff !== m && base.includes(eff) ? m : eff;
+  });
   const unique = wanted.filter((m, i, a) => a.indexOf(m) === i);
-  const present = unique.filter((m) => typeof last[METRIC_FIELD[m]] === "number");
-  const chosen: Metric[] = (present.length > 0 ? present : unique.slice(0, 1)).slice(0, 5);
+  const has = (m: Metric) => typeof last[METRIC_FIELD[m]] === "number";
+  const present = unique.filter(has);
+  const ordered = explicit ? [...present, ...unique.filter((m) => !has(m))] : present;
+  const chosen: Metric[] = (ordered.length > 0 ? ordered : unique.slice(0, 1)).slice(0, 5);
 
   // Katalog 09.1: branchetal som tekst efter ændringen ("branche +3,1 %"), aldrig som et ekstra tal.
   const bench = (m: Metric) => {

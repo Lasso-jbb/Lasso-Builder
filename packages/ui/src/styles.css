@@ -313,6 +313,11 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-kpi__row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .lasso-kpi__value { font-size: var(--lasso-fs-xl); line-height: 32px; font-weight: 600; letter-spacing: var(--lasso-tracking-tight); color: var(--lasso-text); white-space: nowrap; }
 .lasso-kpi__unit { font-size: var(--lasso-fs); font-weight: 500; letter-spacing: 0; color: var(--lasso-text-2); margin-left: 6px; }
+/* 09.1 Henter: tre skeletlinjer pr. kort i samme højde som etiket, tal og udvikling. */
+.lasso-kpi__skel { height: 12px; margin: 3px 0; }
+.lasso-kpi__skel--label { width: 55%; }
+.lasso-kpi__skel--value { width: 70%; height: 24px; margin: 4px 0; }
+.lasso-kpi__skel--delta { width: 40%; }
 .lasso-kpi__missing { font-size: var(--lasso-fs-lg); line-height: 32px; font-weight: 500; color: var(--lasso-muted); }
 .lasso-kpi__delta { display: flex; flex-wrap: wrap; gap: 4px 8px; font-size: var(--lasso-fs-sm); line-height: 18px; font-weight: 500; }
 .lasso-kpi__year { font-weight: 400; color: var(--lasso-muted); }
@@ -616,12 +621,13 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-kv-row:last-child { border-bottom: 0; }
 .lasso-kv-row__label { flex: none; width: 190px; color: var(--lasso-text-3); font-size: var(--lasso-fs-sm); line-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lasso-kv-row__value { flex: 1; min-width: 0; color: var(--lasso-text); font-size: var(--lasso-fs); line-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* 02c.2: tal venstrestillet i nøgle-værdi (højrestillet kun i tabeller) */
-.lasso-kv-list--financials .lasso-kv-row__value { font-weight: 500; font-variant-numeric: tabular-nums; }
+/* 02c.2: tal venstrestillet i nøgle-værdi; varianten med årsvælger (09.5) står højrestillet, 14/500. */
+.lasso-kv-list--financials .lasso-kv-row__value { font-weight: 500; font-variant-numeric: tabular-nums; text-align: right; }
 .lasso-kv-years { max-width: 100%; overflow-x: auto; }
 .lasso-section__action:has(> .lasso-kv-years) { min-width: 0; flex-shrink: 1; }
 @container lasso (max-width: 560px) {
-  .lasso-kv-row { flex-wrap: wrap; row-gap: 2px; min-height: var(--lasso-touch-h); }
+  /* 26c.2: etiket over værdi med luft i rækken, så værdien aldrig rører næste nøgle. */
+  .lasso-kv-row { flex-wrap: wrap; row-gap: 2px; min-height: var(--lasso-touch-h); padding: 8px 0; }
   .lasso-kv-row__label { width: 100%; }
   .lasso-kv-list--financials .lasso-kv-row__label { width: 100%; }
   .lasso-kv-list--financials .lasso-kv-row__value { flex-basis: 100%; text-align: left; }
