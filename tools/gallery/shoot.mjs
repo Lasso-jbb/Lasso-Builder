@@ -144,10 +144,14 @@ async function pagesFor(m) {
     const slices = (i) => {
       const cuts = [];
       let top = 0;
+      // Kontrol r5 (26.3, 30.4, 30.6): delene gøres lige store (ingen strimmel på egen side til sidst).
+      const parts = Math.ceil(i.h / slicePx);
+      const partPx = Math.min(slicePx, Math.ceil(i.h / parts) + 8);
       while (top < i.h) {
-        let end = Math.min(i.h, top + slicePx);
+        let end = Math.min(i.h, top + partPx);
+        if (i.h - end < partPx * 0.25) end = Math.min(i.h, top + slicePx);
         if (end < i.h) {
-          const floor = top + Math.floor(slicePx * 0.7);
+          const floor = top + Math.floor(partPx * 0.7);
           let c = end;
           while (c > floor && !i.blank[c]) c--;
           if (c > floor) end = c;
@@ -189,7 +193,7 @@ function emitPages(out, fixed, flow) {
     }
     if (!parts.length) parts.push(flow.shift());
     const figs = parts
-      .map(({ i, k, n, top, hPx, w, scale }) => `<figure style="width:${w.toFixed(2)}mm"><figcaption>${esc(label(i))}${n > 1 ? `, del ${k + 1} af ${n}` : ""}</figcaption><div class="clip" style="width:${w.toFixed(2)}mm;height:${(hPx * scale).toFixed(2)}mm"><img src="${i.src}" style="width:${w.toFixed(2)}mm;margin-top:${(-top * scale).toFixed(2)}mm"></div></figure>`)
+      .map(({ i, k, n, top, hPx, w, scale }) => `<figure style="width:${w.toFixed(2)}mm"><figcaption>${esc(label(i))}${n > 1 ? `, del ${k + 1} af ${n}` : ""}${scale < SCALE - 1e-6 ? `, vist i ${Math.round((scale / SCALE) * 100)} % (samme målestok kunne ikke være på siden)` : ""}</figcaption><div class="clip" style="width:${w.toFixed(2)}mm;height:${(hPx * scale).toFixed(2)}mm"><img src="${i.src}" style="width:${w.toFixed(2)}mm;margin-top:${(-top * scale).toFixed(2)}mm"></div></figure>`)
       .join("");
     out.push({ figs });
   }
@@ -230,7 +234,7 @@ await probe.close();
 const pages = pageSets
   .flatMap(([m, list]) =>
     list.map(
-      (p) => `<section class="pg"><header><span class="nr">${esc(m.nr)}</span><span class="t">${esc(m.title)}${p.part ? `<span class="cont">${esc(p.part)}</span>` : ""}</span><span class="meta">${m.node ? "Paper " + esc(m.node) + ", " : ""}${m.kind === "spec" ? "visning med demodata" : "UI-komponent"}${m.gridWidth ? `, bredde ${m.gridWidth} px` : ""}</span></header>
+      (p) => `<section class="pg"><header><span class="nr">${esc(m.nr)}</span><span class="t">${esc(m.title)}${p.part ? `<span class="cont">${esc(p.part)}</span>` : ""}</span><span class="meta">${m.node ? "Paper " + esc(m.node) + ", " : ""}${m.kind === "spec" ? "visning med demodata" : "UI-komponent"}${m.gridWidth ? `, bredde ${m.gridWidth} px (billedet ${m.gridWidth + 2 * STAGE_PAD} px inkl. 24 px luft)` : ""}</span></header>
 ${m.note ? `<p class="note">${esc(m.note)}</p>` : ""}<div class="row">${p.figs}</div></section>`,
     ),
   )
@@ -239,7 +243,7 @@ const toc = sel.map((m) => `<tr><td>${esc(m.nr)}</td><td>${esc(m.title)}</td><td
 const html = `<!doctype html><html lang="da"><head><meta charset="utf-8"><style>
 @page{size:A4 landscape;margin:10mm}
 body{font-family:Poppins,system-ui,sans-serif;color:#16181D;margin:0}
-.cover{break-after:page;padding:20mm 10mm}.cover h1{font-size:28px;margin:0 0 6px}.cover p{color:#5B6068;font-size:12px}
+.cover{break-after:page;padding:20mm 10mm 0}tr{break-inside:avoid}.cover h1{font-size:28px;margin:0 0 6px}.cover p{color:#5B6068;font-size:12px}
 table{border-collapse:collapse;font-size:9px;width:100%}td{padding:2px 6px;border-bottom:1px solid #E6E7EB}
 .pg{break-after:page;break-inside:avoid;height:${PAGE_H}mm;overflow:hidden;display:flex;flex-direction:column;position:relative}
 header{flex:none;height:${HEAD_H - 3}mm;box-sizing:border-box;display:flex;gap:10px;align-items:baseline;border-bottom:1px solid #E4E4E7;margin-bottom:3mm;background:#fff}
