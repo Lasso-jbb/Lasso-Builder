@@ -1031,11 +1031,11 @@ const datatypes: GalleryEntry[] = [
         subtitle="Personer og P-enheder, eksempeldata"
         now={new Date(2026, 8, 29, 12, 0)}
         items={[
-          { id: "1", subject: "Anne Eksempel", subjectKind: "person", type: "Person, ledelse", text: "Tiltrådt som direktør i Nordisk Datacenter A/S", at: "2026-09-29T09:14:00", source: "CVR, gældende fra 01.09.2026" },
-          { id: "2", subject: "Peter Eksempel", subjectKind: "person", type: "Person, ejerskab", text: "Reel ejer i Holm Holding ApS", from: "50–66,66 %", to: "66,67–89,99 %", at: "2026-09-29T08:02:00", source: "CVR, registreret 24.09.2026" },
-          { id: "3", subject: "LASSO X A/S", subjectKind: "company", type: "P-enhed tilføjet", text: "Ny produktionsenhed: LASSO X, Aarhus (eksempel), P-nr. 1000000022", at: "2026-09-28T16:40:00", source: "CVR, 24.09.2026, eksempeldata" },
-          { id: "4", subject: "Hosting Eksempel ApS", subjectKind: "company", type: "P-enhed opdateret", text: "Lager, Lyngby: ansatte 2–4 → 5–9, adresse uændret", at: "2026-09-28T11:20:00", source: "CVR, 24.09.2026, eksempeldata" },
-          { id: "5", subject: "Cloud Eksempel A/S", subjectKind: "company", type: "P-enhed fjernet", text: "Produktionsenhed Butik, Odense er ophørt (P-nr. 1000000023)", at: "2026-09-22", source: "CVR, 22.09.2026, eksempeldata" },
+          { id: "1", subject: "Anne Eksempel", subjectKind: "person", type: "Person, ledelse", text: "Tiltrådt som direktør i Nordisk Datacenter A/S", at: "2026-09-29T09:14:00", source: "gældende fra 01.09.2026" },
+          { id: "2", subject: "Peter Eksempel", subjectKind: "person", type: "Person, ejerskab", text: "Reel ejer i Holm Holding ApS", from: "50–66,66 %", to: "66,67–89,99 %", at: "2026-09-29T08:02:00", source: "registreret 24.09.2026" },
+          { id: "3", subject: "LASSO X A/S", subjectKind: "company", type: "P-enhed tilføjet", text: "Ny produktionsenhed: LASSO X, Aarhus (eksempel), P-nr. 1000000022", at: "2026-09-28T16:40:00", source: "24.09.2026, eksempeldata" },
+          { id: "4", subject: "Hosting Eksempel ApS", subjectKind: "company", type: "P-enhed opdateret", text: "Lager, Lyngby: ansatte 2–4 → 5–9, adresse uændret", at: "2026-09-28T11:20:00", source: "24.09.2026, eksempeldata" },
+          { id: "5", subject: "Cloud Eksempel A/S", subjectKind: "company", type: "P-enhed fjernet", text: "Produktionsenhed Butik, Odense er ophørt (P-nr. 1000000023)", at: "2026-09-22", source: "22.09.2026, eksempeldata" },
         ]}
       />
     ),
@@ -1187,7 +1187,9 @@ function Level1() {
       {caption("Niveau 1, sideniveau, 48 px: valgt, hvile, hover (Regnskab), fokus (Ejerskab) og 'Flere' ved mere end 8 faner")}
       <Tabs level={1} items={L1} value={v} onChange={setV} ariaLabel="Sider" hoverId="regnskab" focusId="ejerskab" />
       {/* Papers forklaringer under rækken (IWK-0). */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 24, marginTop: 16 }}>
+      {/* Kontrol r5 (29.1 mobil): forklaringen i to kolonner på mobil, så teksterne ikke ligger oven i hinanden */}
+      <style>{".gal-l1legend{grid-template-columns:repeat(6,minmax(0,1fr))}@media (max-width:560px){.gal-l1legend{grid-template-columns:repeat(2,minmax(0,1fr))}}"}</style>
+      <div className="gal-l1legend" style={{ display: "grid", gap: 24, marginTop: 16 }}>
         {[
           ["Valgt", "Ink 600, 2 px koral understregning i fanens bredde"],
           ["Hvile", "Text-secondary 400, ingen streg"],
@@ -1244,7 +1246,9 @@ function Level3() {
     </div>
   );
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 40, alignItems: "start" }}>
+    <div className="gal-l3" style={{ display: "grid", gap: 40, alignItems: "start" }}>
+      {/* Kontrol r5 (29.3 mobil): én kolonne på mobil (ingen overlap, segmentkontrollen klippes ikke) */}
+      <style>{".gal-l3{grid-template-columns:repeat(3,minmax(0,1fr))}@media (max-width:560px){.gal-l3{grid-template-columns:minmax(0,1fr);gap:28px!important}}"}</style>
       <div><Section title="Nøgletal" action={<TabsDemo level={3} items={["2025", "2024", "2023"].map((y) => ({ id: y, label: y }))} value="2025" ariaLabel="Vælg regnskabsår" />}>
         <KvRows rows={KEY_ROWS} />
       </Section></div>
