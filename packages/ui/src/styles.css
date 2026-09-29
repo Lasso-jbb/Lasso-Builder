@@ -2535,13 +2535,16 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 /* 08.2: sektionsfaner lige under hovedet (niveau 1, 48 px). */
 .lasso-company > .lasso-headtabs { margin-top: var(--lasso-space-3); margin-bottom: calc(-1 * var(--lasso-space-5)); }
 /* Kompakt, 56 px: navn 15/600, én faktalinje i muted, Overvåg eller "Se historik" til højre. */
-.lasso-headcompact { display: flex; align-items: center; gap: var(--lasso-space-3); min-height: 56px; padding: 8px 0; border-bottom: 1px solid var(--lasso-border); }
+.lasso-headcompact { display: flex; align-items: center; gap: var(--lasso-space-3); min-height: 56px; padding: 8px 0; border-top: 1px solid var(--lasso-border); border-bottom: 1px solid var(--lasso-border); }
+/* 08.8: den kompakte variants klokke er neutral (grå kant, ink ikon); koral kun i "Overvåger"-tilstand. */
+.lasso-root .lasso-headcompact .lasso-headbtn--monitor:not(.is-on) { color: var(--lasso-text); border-color: var(--lasso-border-strong); }
 .lasso-headcompact__main { flex: 1; min-width: 0; }
 .lasso-headcompact__title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; }
-.lasso-headcompact__name { margin: 0; font-size: 15px; line-height: 20px; font-weight: 600; color: var(--lasso-text); }
+.lasso-headcompact__name { margin: 0; font-size: 16px; line-height: 22px; font-weight: 600; color: var(--lasso-text); }
 .lasso-headcompact__status { font-size: var(--lasso-fs-sm); line-height: 18px; font-weight: 500; color: var(--lasso-text-3); }
-.lasso-headcompact__facts { margin: 2px 0 0; font-size: 12px; line-height: 16px; color: var(--lasso-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lasso-headcompact__facts { margin: 2px 0 0; font-size: var(--lasso-fs-sm); line-height: 18px; font-weight: 400; color: var(--lasso-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lasso-headcompact.is-ceased .lasso-headcompact__name, .lasso-headline.is-ceased .lasso-headline__name { color: var(--lasso-text-3); }
+.lasso-headcompact.is-ceased .lasso-headcompact__status { font-weight: 400; color: var(--lasso-muted); }
 /* Linje, 40 px (svarniveau A/B, katalog 30): navn, status og fakta på én linje over elementet. */
 .lasso-headline { display: flex; align-items: baseline; gap: 0 10px; min-height: 40px; padding: 8px 0; border-bottom: 1px solid var(--lasso-border); overflow: hidden; }
 .lasso-headline__name { flex: none; margin: 0; font-size: 16px; line-height: 22px; font-weight: 600; color: var(--lasso-text); }

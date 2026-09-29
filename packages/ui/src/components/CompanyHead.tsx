@@ -76,9 +76,9 @@ export function CompanyHead({ company, error, variant = "full", actions, risk, o
 
   const kind = company.statusKind ?? "active";
   const ceased = isCeased(company);
-  // Ophørt: ingen Overvåg; "Se historik" er handlingen (08.1).
+  // Ophørt (08.8): kun handlingen "Se historik", ingen Overvåg og ingen ikonknapper.
   const acts: HeadActionsProps | undefined = ceased
-    ? { ...actions, monitor: undefined, history: onHistory ?? actions?.history }
+    ? { context: actions?.context, history: onHistory ?? actions?.history }
     : actions;
   const status = companyStatusText(company);
   const alias = company.secondaryNames?.find((n) => n && n !== company.name);

@@ -333,8 +333,8 @@ export const entries: GalleryEntry[] = [
         <Labelled label="Kompakt (56 px)">
           <CompanyHead company={BYG} variant="compact" actions={headActions(false)} />
         </Labelled>
-        <Labelled label="Ophørt">
-          <CompanyHead company={CAFE} actions={headActions(false)} onHistory={noop} />
+        <Labelled label="Ophørt (kompakt række)">
+          <CompanyHead company={CAFE} variant="compact" actions={headActions(false)} onHistory={noop} />
         </Labelled>
       </Stack>
     ),
