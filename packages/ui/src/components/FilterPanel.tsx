@@ -1,53 +1,101 @@
 import { useMemo, useState } from "react";
 import {
-  FIELD_BY_KEY,
   FIELDS,
+  fieldOperators,
   formatCriterion,
-  operatorLabel,
-  OPERATORS_BY_TYPE,
   validateCriteria,
   type Criterion,
   type FieldDef,
   type Operator,
 } from "@lasso/spec";
+import {
+  AmountField,
+  ChoiceChips,
+  DateField,
+  FieldRow,
+  IndustryField,
+  MultiSelect,
+  OperatorSelect,
+  RangeInputs,
+  SectionIntro,
+  SegmentYesNo,
+  SelectField,
+  TagInput,
+  Toggle,
+  XIcon,
+  YesNoChips,
+} from "./Fields.js";
+import { DB07_EXCERPT, type TreeNode } from "./industries.js";
+import { useToast } from "./Toast.js";
 
 /**
- * Filterpanelet over et resultat: viser det, AI'en forstod, som tags og lader
- * brugeren rette det. Følger "Filterfelter" i designdokumentet: operatoren
- * står først og bestemmer rækken, under seks faste værdier bliver til chips,
- * "Ryd" tømmer feltet, og intet ændres, før man trykker "Opdater målgruppe".
+ * Filterpanelet over et resultat (katalog 02a, 02b, 03): viser det, AI'en forstod, som tags og lader
+ * brugeren rette det felt for felt. Hvert felt har tre tilstande (03.1): i ro (ingen handlingslinje),
+ * i redigering (koral kant, effekten under feltet og Annuller/"+ Tilføj" eller "Opdater") og
+ * tilføjet (besked nederst i midten, "Postnummer er tilføjet", med "Se alle filtre").
+ *
+ * Kontrollen vælges ud fra feltet: fritekst (operator + felt), beløb (+ ændring), procent, dato
+ * med datovælger, chips under seks faste værdier (uden operator), søgbar flervalgsliste fra seks,
+ * søgbar liste med tags (postnummer, kommune), branchevælger i dialog og Ja/Nej som chips.
+ *
+ * API'et er bagudkompatibelt: `criteria`, `editable` og `onApply` som før; resten er valgfrit.
  */
+export interface FilterPanelProps {
+  criteria: readonly Criterion[];
+  editable: boolean;
+  onApply: (c: Criterion[]) => void;
+  /** Feltkataloget (standard: FIELDS fra @lasso/spec). */
+  fields?: readonly FieldDef[];
+  /** Antal resultater for et sæt kriterier (til effektlinjen). null = ukendt. */
+  estimate?: (criteria: Criterion[]) => number | null | undefined;
+  /** Antal i det nuværende resultat. Udelades, beregnes det med `estimate(criteria)`. */
+  total?: number;
+  /** Branchetræet til branchevælgeren (standard: et udsnit af DB07). */
+  industryTree?: readonly TreeNode[];
+  /** Værdilister til søgbare felter, fx { kommune: [...], postnummer: [...] }. */
+  suggestions?: Readonly<Record<string, readonly string[]>>;
+  /** Sektionens brødtekst (02b.4) øverst i panelet. */
+  intro?: string;
+  /** Åben fra start (statisk forhåndsvisning og tests). */
+  defaultOpen?: boolean;
+}
 
 interface Draft {
   id: number;
   field: string;
   operator: Operator;
   values: string[];
-  isNew: boolean;
 }
 
 const CHIP_LIMIT = 6;
 let nextId = 1;
 
-function isChipField(f: FieldDef | undefined): boolean {
-  return f?.type === "enum" && (f.options?.length ?? 0) < CHIP_LIMIT;
-}
-
-function toDraft(c: Criterion, isNew = false): Draft {
-  const f = FIELD_BY_KEY.get(c.field);
-  const raw = Array.isArray(c.value) ? c.value : [c.value];
-  let operator = c.operator;
-  if (isChipField(f)) operator = operator === "neq" || operator === "not_in" ? "not_in" : "in";
-  return { id: nextId++, field: c.field, operator, values: raw.map((v) => valueToText(f, v)), isNew };
-}
+const isChipField = (f: FieldDef | undefined) => f?.type === "enum" && (f.options?.length ?? 0) < CHIP_LIMIT;
+const isMultiField = (f: FieldDef | undefined) => f?.type === "enum" || f?.control === "list" || f?.control === "hierarchy";
 
 function valueToText(f: FieldDef | undefined, v: string | number | boolean): string {
-  if (typeof v === "number" && f?.type === "amount") return new Intl.NumberFormat("da-DK").format(v);
+  if (typeof v === "boolean") return v ? "ja" : "nej";
+  if (typeof v === "number" && (f?.type === "amount" || f?.type === "percent")) return new Intl.NumberFormat("da-DK").format(v);
   if (typeof v === "string" && f?.type === "date") {
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(v);
     if (m) return `${m[3]}.${m[2]}.${m[1]}`;
   }
   return String(v);
+}
+
+function emptyDraft(f: FieldDef): Draft {
+  const operator: Operator = f.type === "boolean" ? "eq" : isMultiField(f) ? "in" : fieldOperators(f)[0]!;
+  return { id: nextId++, field: f.key, operator, values: [] };
+}
+
+function toDraft(c: Criterion, f: FieldDef | undefined): Draft {
+  const raw = Array.isArray(c.value) ? c.value : [c.value];
+  let operator = c.operator;
+  // Lister, chips og flervalg taler "er en af"; lighed fra modellen bliver en liste med én værdi.
+  if (isMultiField(f) && (operator === "eq" || operator === "neq")) {
+    operator = operator === "neq" ? "not_in" : "in";
+  }
+  return { id: nextId++, field: c.field, operator, values: raw.map((v) => valueToText(f, v)) };
 }
 
 /** "10.000.000", "10 mio", "2,5 mio." -> 10000000 osv. */
@@ -71,63 +119,59 @@ export function parseDate(text: string): string | null {
   return m ? t : null;
 }
 
-function parseOne(f: FieldDef | undefined, text: string): string | number | null {
+function parseOne(f: FieldDef | undefined, text: string): string | number | boolean | null {
   const t = text.trim();
   if (!t) return null;
+  if (f?.type === "boolean") return t === "ja" ? true : t === "nej" ? false : null;
   if (f?.type === "amount") return parseAmount(t);
-  if (f?.type === "number") {
-    const n = Number(t.replace(/[.\s]/g, "").replace(",", "."));
+  if (f?.type === "number" || f?.type === "percent") {
+    const n = Number(t.replace(/%$/, "").trim().replace(/[.\s]/g, "").replace(",", "."));
     return Number.isFinite(n) ? n : null;
   }
   if (f?.type === "date") return parseDate(t);
   return t;
 }
 
-function fromDraft(d: Draft): { criterion?: Criterion; error?: string } {
-  const f = FIELD_BY_KEY.get(d.field);
+/** Kladde -> kriterium. `criterion: null` = feltet er tomt og tæller ikke med. */
+function fromDraft(d: Draft, f: FieldDef | undefined): { criterion?: Criterion | null; error?: string } {
+  const filled = d.values.filter((v) => v.trim());
+  if (filled.length === 0) return { criterion: null };
   const values = d.values.map((v) => parseOne(f, v));
-  if (values.length === 0 || values.every((v) => v === null)) return { error: "Mangler en værdi" };
-  if (values.some((v) => v === null)) {
+  if (values.some((v, i) => v === null && d.values[i]!.trim())) {
     return { error: f?.type === "date" ? "Skriv datoen som dd.mm.åååå" : f?.type === "amount" ? "Skriv et beløb, fx 10.000.000" : "Ugyldig værdi" };
   }
-  const clean = values as (string | number)[];
-  let operator = d.operator;
+  const clean = values.filter((v): v is string | number | boolean => v !== null);
   let value: Criterion["value"];
-  if (operator === "between") {
+  if (d.operator === "between") {
     if (clean.length < 2) return { error: "Udfyld begge felter" };
-    value = [clean[0]!, clean[1]!];
-  } else if (operator === "in" || operator === "not_in") {
-    if (clean.length === 1 && isChipField(f)) operator = operator === "in" ? "eq" : "neq";
-    value = operator === "eq" || operator === "neq" ? clean[0]! : clean;
+    value = [clean[0] as string | number, clean[1] as string | number];
+  } else if (d.operator === "in" || d.operator === "not_in") {
+    value = clean as (string | number)[];
   } else {
     value = clean[0]!;
   }
-  const criterion: Criterion = { field: d.field, operator, value };
+  const criterion: Criterion = { field: d.field, operator: d.operator, value };
   const issue = validateCriteria([criterion])[0];
   return issue ? { error: issue.message } : { criterion };
 }
 
-export function FilterPanel({ criteria, editable, onApply }: { criteria: readonly Criterion[]; editable: boolean; onApply: (c: Criterion[]) => void }) {
-  const [open, setOpen] = useState(false);
-  const [drafts, setDrafts] = useState<Draft[]>([]);
-  const [showErrors, setShowErrors] = useState(false);
+const same = (a: Criterion | null | undefined, b: Criterion | null | undefined) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+
+export function FilterPanel({ criteria, editable, onApply, fields = FIELDS, estimate, total, industryTree = DB07_EXCERPT, suggestions, intro, defaultOpen = false }: FilterPanelProps) {
+  const byKey = useMemo(() => new Map(fields.map((f) => [f.key, f])), [fields]);
+  const [open, setOpen] = useState(defaultOpen);
+  /** Kladder pr. kriterium (samme indeks) plus nye felter bagerst (committed = undefined). */
+  const [rows, setRows] = useState<{ draft: Draft; committed?: number }[]>(() => criteria.map((c, i) => ({ draft: toDraft(c, byKey.get(c.field)), committed: i })));
+  const [errors, setErrors] = useState<Record<number, string>>({});
+  const toast = useToast();
 
   const start = () => {
-    setDrafts(criteria.map((c) => toDraft(c)));
-    setShowErrors(false);
+    setRows(criteria.map((c, i) => ({ draft: toDraft(c, byKey.get(c.field)), committed: i })));
+    setErrors({});
     setOpen(true);
   };
-  const update = (id: number, patch: Partial<Draft>) => setDrafts((ds) => ds.map((d) => (d.id === id ? { ...d, ...patch } : d)));
 
-  const results = useMemo(() => drafts.map(fromDraft), [drafts]);
-  const unused = FIELDS.filter((f) => !drafts.some((d) => d.field === f.key));
-  const onlyAdditions = drafts.length > criteria.length && drafts.slice(0, criteria.length).every((d, i) => JSON.stringify(fromDraft(d).criterion) === JSON.stringify(criteria[i]));
-
-  const apply = () => {
-    if (results.some((r) => r.error)) return setShowErrors(true);
-    onApply(results.map((r) => r.criterion!));
-    setOpen(false);
-  };
+  const current = useMemo(() => (total ?? estimate?.([...criteria]) ?? null), [total, estimate, criteria]);
 
   if (!open) {
     if (criteria.length === 0 && !editable) return null;
@@ -137,245 +181,224 @@ export function FilterPanel({ criteria, editable, onApply }: { criteria: readonl
           <span key={i} className="lasso-chip">
             {formatCriterion(c)}
             {editable ? (
-              <button className="lasso-chip__remove" aria-label={`Fjern ${formatCriterion(c)}`} onClick={() => onApply(criteria.filter((_, j) => j !== i))}>
+              <button type="button" className="lasso-chip__remove" aria-label={`Fjern ${formatCriterion(c)}`} onClick={() => onApply(criteria.filter((_, j) => j !== i))}>
                 <XIcon />
               </button>
             ) : null}
           </span>
         ))}
         {editable ? (
-          <button className="lasso-btn lasso-btn--ghost lasso-btn--sm" onClick={start}>
-            {criteria.length ? "Redigér filtre" : "＋ Tilføj filter"}
+          <button type="button" className="lasso-btn lasso-btn--ghost lasso-btn--sm" onClick={start}>
+            {criteria.length ? "Redigér filtre" : "Tilføj filter"}
           </button>
         ) : null}
       </div>
     );
   }
 
+  const unused = fields.filter((f) => !rows.some((r) => r.draft.field === f.key));
+
+  /** Kriterierne, hvis rækken `idx` blev bekræftet som den står nu. */
+  const withRow = (idx: number, c: Criterion | null): Criterion[] => {
+    const r = rows[idx]!;
+    const next = [...criteria];
+    if (r.committed !== undefined) {
+      if (c) next[r.committed] = c;
+      else next.splice(r.committed, 1);
+    } else if (c) next.push(c);
+    return next;
+  };
+
+  const confirm = (idx: number) => {
+    const r = rows[idx]!;
+    const f = byKey.get(r.draft.field);
+    const res = fromDraft(r.draft, f);
+    if (res.error) return setErrors({ ...errors, [r.draft.id]: res.error });
+    const next = withRow(idx, res.criterion ?? null);
+    onApply(next);
+    const label = f?.label ?? r.draft.field;
+    // Rækkerne følger de nye kriterier: den bekræftede række står nu i ro.
+    const out: { draft: Draft; committed?: number }[] = [];
+    rows.forEach((x, j) => {
+      if (j === idx) {
+        if (!res.criterion) return;
+        out.push({ draft: x.draft, committed: r.committed ?? criteria.length });
+      } else if (x.committed !== undefined && r.committed !== undefined && !res.criterion && x.committed > r.committed) {
+        out.push({ ...x, committed: x.committed - 1 });
+      } else out.push(x);
+    });
+    setRows(out);
+    setErrors({ ...errors, [r.draft.id]: "" });
+    if (toast.available) {
+      toast.show({
+        text: res.criterion ? (r.committed === undefined ? `${label} er tilføjet` : `${label} er opdateret`) : `${label} er fjernet`,
+        action: { label: "Se alle filtre", onClick: () => setOpen(true) },
+      });
+    }
+  };
+
+  const cancel = (idx: number) => {
+    const r = rows[idx]!;
+    if (r.committed === undefined) setRows(rows.filter((_, j) => j !== idx));
+    else setRows(rows.map((x, j) => (j === idx ? { ...x, draft: toDraft(criteria[r.committed!]!, byKey.get(criteria[r.committed!]!.field)) } : x)));
+    setErrors({ ...errors, [r.draft.id]: "" });
+  };
+
+  const update = (idx: number, patch: Partial<Draft>) => setRows(rows.map((x, j) => (j === idx ? { ...x, draft: { ...x.draft, ...patch } } : x)));
+
   return (
     <section className="lasso-filters" aria-label="Filtre">
-      {drafts.map((d, i) => {
-        const f = FIELD_BY_KEY.get(d.field);
-        const err = showErrors ? results[i]?.error : undefined;
+      {intro ? <SectionIntro>{intro}</SectionIntro> : null}
+      {rows.map((r, idx) => {
+        const f = byKey.get(r.draft.field);
+        const res = fromDraft(r.draft, f);
+        const committed = r.committed !== undefined ? criteria[r.committed] : undefined;
+        const dirty = r.committed === undefined ? Boolean(res.criterion) || Boolean(res.error) : !same(res.criterion, committed) || Boolean(res.error && r.draft.values.some((v) => v.trim()));
+        const delta = dirty && estimate && current !== null && !res.error ? (() => {
+          const n = estimate(withRow(idx, res.criterion ?? null));
+          return typeof n === "number" ? n - current : null;
+        })() : null;
+        const err = errors[r.draft.id] || undefined;
         return (
-          <div className="lasso-filter-row" key={d.id}>
-            <div className="lasso-filter-row__name">
-              {f?.label ?? d.field}
-              {err ? <span className="lasso-required" aria-hidden="true">*</span> : null}
-            </div>
-            <div className="lasso-filter-row__control">
-              <FieldControl draft={d} field={f} invalid={Boolean(err)} onChange={(patch) => update(d.id, patch)} />
-            </div>
-            <button className="lasso-btn lasso-btn--ghost lasso-filter-row__clear" onClick={() => setDrafts((ds) => ds.filter((x) => x.id !== d.id))}>
-              Ryd
-            </button>
-            {err ? <div className="lasso-filter-row__error">{err}</div> : null}
-          </div>
+          <FieldRow
+            key={r.draft.id}
+            label={f?.label ?? r.draft.field}
+            info={f?.description}
+            active={dirty}
+            error={err}
+            onClear={
+              r.committed === undefined
+                ? () => setRows(rows.filter((_, j) => j !== idx))
+                : r.draft.values.length
+                  ? () => update(idx, { values: [] })
+                  : undefined
+            }
+            pending={dirty ? { mode: r.committed === undefined ? "add" : "update", delta, onCancel: () => cancel(idx), onConfirm: () => confirm(idx) } : undefined}
+          >
+            <FieldControl draft={r.draft} field={f} invalid={Boolean(err)} tree={industryTree} suggestions={suggestions?.[r.draft.field]} onChange={(p) => update(idx, p)} />
+          </FieldRow>
         );
       })}
 
       {unused.length > 0 ? (
         <div className="lasso-filter-add">
-          <select
-            className="lasso-select lasso-select--add"
-            value=""
-            aria-label="Tilføj filter"
-            onChange={(e) => {
-              const f = FIELD_BY_KEY.get(e.target.value);
-              if (!f) return;
-              const operator: Operator = isChipField(f) ? "in" : OPERATORS_BY_TYPE[f.type][0]!;
-              setDrafts((ds) => [...ds, { id: nextId++, field: f.key, operator, values: [], isNew: true }]);
+          <SelectField
+            label="Tilføj filter"
+            placeholder="Tilføj filter"
+            options={unused.map((f) => ({ id: f.key, label: f.label }))}
+            value={null}
+            onChange={(key) => {
+              const f = byKey.get(key);
+              if (f) setRows([...rows, { draft: emptyDraft(f) }]);
             }}
-          >
-            <option value="">＋ Tilføj filter</option>
-            {unused.map((f) => (
-              <option key={f.key} value={f.key}>
-                {f.label}
-              </option>
-            ))}
-          </select>
+          />
         </div>
       ) : null}
 
       <div className="lasso-filters__footer">
-        <span className="lasso-filters__effect">{drafts.length === 0 ? "Ingen filtre: alle virksomheder, der matcher søgningen." : ""}</span>
-        <button className="lasso-btn lasso-btn--ghost" onClick={() => setOpen(false)}>
-          Annuller
-        </button>
-        <button className="lasso-btn lasso-btn--primary" onClick={apply}>
-          {onlyAdditions ? "＋ Tilføj til målgruppen" : "Opdater målgruppe"}
+        <span className="lasso-filters__effect">{criteria.length === 0 && rows.length === 0 ? "Ingen filtre: alle virksomheder, der matcher søgningen." : ""}</span>
+        <button type="button" className="lasso-btn lasso-btn--text" onClick={() => setOpen(false)}>
+          Luk
         </button>
       </div>
     </section>
   );
 }
 
-function FieldControl({ draft, field, invalid, onChange }: { draft: Draft; field?: FieldDef; invalid: boolean; onChange: (p: Partial<Draft>) => void }) {
+/** Kontrollen for ét felt, valgt ud fra feltets type og kontrol (02a/02b). */
+function FieldControl({ draft, field, invalid, tree, suggestions, onChange }: { draft: Draft; field?: FieldDef; invalid: boolean; tree: readonly TreeNode[]; suggestions?: readonly string[]; onChange: (p: Partial<Draft>) => void }) {
   const type = field?.type ?? "text";
-  const chips = isChipField(field);
-  const ops: readonly Operator[] = chips ? ["in", "not_in"] : OPERATORS_BY_TYPE[type];
-  const inputCls = `lasso-input ${invalid ? "lasso-input--invalid" : ""}`;
+  const ops = fieldOperators(field, draft.operator);
+  const setOp = (operator: Operator) => {
+    const multi = operator === "in" || operator === "not_in";
+    onChange({ operator, values: operator === "between" ? draft.values.slice(0, 2) : multi ? draft.values : draft.values.slice(0, 1) });
+  };
+  const opSelect = <OperatorSelect value={draft.operator} operators={ops} fieldType={type} onChange={setOp} />;
+  const multiOp = draft.operator === "in" || draft.operator === "not_in";
 
-  const operatorSelect = (
-    <select
-      className="lasso-select lasso-select--op"
-      value={draft.operator}
-      aria-label="Operator"
-      onChange={(e) => {
-        const operator = e.target.value as Operator;
-        const multi = operator === "in" || operator === "not_in";
-        onChange({ operator, values: operator === "between" ? draft.values.slice(0, 2) : multi ? draft.values : draft.values.slice(0, 1) });
-      }}
-    >
-      {ops.map((op) => (
-        <option key={op} value={op}>
-          {operatorLabel(op, type)}
-        </option>
-      ))}
-    </select>
-  );
+  // 02a.10 / 02b.3 / 02b.8: Ja / Nej
+  if (type === "boolean") {
+    const v = draft.values[0] === "ja" ? true : draft.values[0] === "nej" ? false : null;
+    const set = (b: boolean | null) => onChange({ operator: "eq", values: b === null ? [] : [b ? "ja" : "nej"] });
+    if (field?.control === "toggle") return <Toggle on={v === true} label={field.label} onChange={(on) => set(on ? true : null)} />;
+    if (field?.control === "segment") return <SegmentYesNo value={v} label={field.label} onChange={set} />;
+    return <YesNoChips value={v} label={field?.label} onChange={set} />;
+  }
 
-  if (chips) {
-    const toggle = (opt: string) => {
-      const has = draft.values.some((v) => v.toLowerCase() === opt.toLowerCase());
-      onChange({ values: has ? draft.values.filter((v) => v.toLowerCase() !== opt.toLowerCase()) : [...draft.values, opt] });
-    };
+  // 02a.9 Chips: få faste værdier, ingen operator (undtagen når kriteriet er "er ikke en af").
+  if (isChipField(field) && multiOp) {
     return (
       <>
-        {operatorSelect}
-        <div className="lasso-choice" role="group">
-          {field!.options!.map((opt) => {
-            const on = draft.values.some((v) => v.toLowerCase() === opt.toLowerCase());
-            return (
-              <button key={opt} className={`lasso-choice__chip ${on ? "is-on" : ""}`} aria-pressed={on} onClick={() => toggle(opt)}>
-                {on ? <CheckIcon /> : null}
-                {opt}
-              </button>
-            );
-          })}
-        </div>
+        {draft.operator === "not_in" ? opSelect : null}
+        <ChoiceChips options={field!.options!} values={draft.values} label={field!.label} onChange={(values) => onChange({ values })} />
       </>
     );
   }
 
-  const placeholder = type === "date" ? "dd.mm.åååå" : type === "amount" ? "Beløb" : type === "number" ? "Tal" : "Indtast";
-  const unit = type === "amount" ? <span className="lasso-unit">kr.</span> : null;
-
-  if (draft.operator === "in" || draft.operator === "not_in") {
+  // 02a.12 Hierarki: branchevælgeren i dialog.
+  if (field?.control === "hierarchy" && multiOp) {
     return (
       <>
-        {operatorSelect}
-        <TagInput
-          values={draft.values}
-          options={field?.options}
-          invalid={invalid}
-          placeholder={field?.options ? "Tilføj flere…" : "Søg, eller indsæt en liste — fx 2100, 8000"}
-          onChange={(values) => onChange({ values })}
-        />
+        {draft.operator === "not_in" ? opSelect : null}
+        <IndustryField tree={tree} values={draft.values} invalid={invalid} onChange={(values) => onChange({ values })} />
       </>
     );
   }
 
-  if (draft.operator === "between") {
+  // 02b.7 Dropdown, åben: søgbar flervalgsliste (enum fra seks værdier).
+  if (field?.type === "enum" && field.options) {
+    if (multiOp) {
+      return (
+        <>
+          {opSelect}
+          <MultiSelect options={field.options} values={draft.values} label={field.label} max={field.max} invalid={invalid} placeholder="Vælg" help="Vælg en eller flere. Tom = alle." onChange={(values) => onChange({ values })} />
+        </>
+      );
+    }
+    // 02a.7 Enkeltvalg
     return (
       <>
-        {operatorSelect}
-        <input className={`${inputCls} lasso-input--short`} value={draft.values[0] ?? ""} placeholder={placeholder} inputMode={type === "text" ? undefined : "decimal"} onChange={(e) => onChange({ values: [e.target.value, draft.values[1] ?? ""] })} />
-        <span className="lasso-unit">og</span>
-        <input className={`${inputCls} lasso-input--short`} value={draft.values[1] ?? ""} placeholder={placeholder} inputMode={type === "text" ? undefined : "decimal"} onChange={(e) => onChange({ values: [draft.values[0] ?? "", e.target.value] })} />
-        {unit}
+        {opSelect}
+        <SelectField options={field.options} value={draft.values[0]} label={field.label} invalid={invalid} onChange={(v) => onChange({ values: [v] })} />
       </>
     );
   }
 
+  // 02a.11 / 02a.13: søgbar liste med tags (og loft).
+  if (multiOp) {
+    return (
+      <>
+        {opSelect}
+        <TagInput values={draft.values} suggestions={suggestions ?? field?.options} max={field?.max} invalid={invalid} label={field?.label} onChange={(values) => onChange({ values })} />
+      </>
+    );
+  }
+
+  // 02a.6 Dato med datovælger
+  if (type === "date") {
+    return <DateField operator={draft.operator} operators={ops} values={draft.values} invalid={invalid} onOperator={setOp} onChange={(values) => onChange({ values })} />;
+  }
+
+  // 02a.4 Beløb (+ ændring)
+  if (type === "amount") {
+    return <AmountField amount={{ operator: draft.operator, values: draft.values }} operators={ops} invalid={invalid} onAmount={(a) => onChange({ operator: a.operator, values: a.values })} />;
+  }
+
+  // 02a.5 Procent og tal
+  if (type === "percent" || type === "number") {
+    return (
+      <>
+        {opSelect}
+        <RangeInputs operator={draft.operator} values={draft.values} unit={type === "percent" ? "%" : field?.unit} placeholder={type === "percent" ? "Procent" : "Tal"} invalid={invalid} onChange={(values) => onChange({ values })} />
+      </>
+    );
+  }
+
+  // 02a.1 Fritekst
   return (
     <>
-      {operatorSelect}
-      {field?.options ? (
-        <select className={`lasso-select ${invalid ? "lasso-input--invalid" : ""}`} value={draft.values[0] ?? ""} onChange={(e) => onChange({ values: [e.target.value] })}>
-          <option value="">Vælg</option>
-          {field.options.map((o) => (
-            <option key={o} value={o}>
-              {o}
-            </option>
-          ))}
-        </select>
-      ) : (
-        <input
-          className={`${inputCls} ${type === "text" ? "" : "lasso-input--short"}`}
-          value={draft.values[0] ?? ""}
-          placeholder={placeholder}
-          inputMode={type === "number" || type === "amount" ? "decimal" : undefined}
-          onChange={(e) => onChange({ values: [e.target.value] })}
-        />
-      )}
-      {unit}
+      {opSelect}
+      <input className={`lasso-input ${invalid ? "lasso-input--invalid" : ""}`} value={draft.values[0] ?? ""} placeholder="Indtast" aria-label={field?.label ?? "Værdi"} onChange={(e) => onChange({ values: [e.target.value] })} />
     </>
-  );
-}
-
-function TagInput({ values, options, invalid, placeholder, onChange }: { values: string[]; options?: readonly string[]; invalid: boolean; placeholder: string; onChange: (v: string[]) => void }) {
-  const [text, setText] = useState("");
-  const add = (raw: string) => {
-    const parts = raw.split(/[,\n;]+/).map((s) => s.trim()).filter(Boolean);
-    if (parts.length === 0) return;
-    const next = [...values];
-    for (const p of parts) if (!next.some((v) => v.toLowerCase() === p.toLowerCase())) next.push(p);
-    onChange(next);
-    setText("");
-  };
-  return (
-    <div className={`lasso-tagfield ${invalid ? "lasso-input--invalid" : ""}`}>
-      {values.map((v) => (
-        <span key={v} className="lasso-chip">
-          {v}
-          <button className="lasso-chip__remove" aria-label={`Fjern ${v}`} onClick={() => onChange(values.filter((x) => x !== v))}>
-            <XIcon />
-          </button>
-        </span>
-      ))}
-      {options ? (
-        <select className="lasso-tagfield__select" value="" aria-label="Tilføj værdi" onChange={(e) => e.target.value && add(e.target.value)}>
-          <option value="">{placeholder}</option>
-          {options.filter((o) => !values.includes(o)).map((o) => (
-            <option key={o} value={o}>
-              {o}
-            </option>
-          ))}
-        </select>
-      ) : (
-        <input
-          className="lasso-tagfield__input"
-          value={text}
-          placeholder={values.length ? "" : placeholder}
-          onChange={(e) => (/[,\n;]/.test(e.target.value) ? add(e.target.value) : setText(e.target.value))}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              add(text);
-            } else if (e.key === "Backspace" && !text && values.length) {
-              onChange(values.slice(0, -1));
-            }
-          }}
-          onBlur={() => add(text)}
-        />
-      )}
-    </div>
-  );
-}
-
-function XIcon() {
-  return (
-    <svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
   );
 }

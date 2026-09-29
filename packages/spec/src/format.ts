@@ -103,11 +103,13 @@ export function percentChange(series: readonly (number | null | undefined)[]): n
 export function formatCriterionValue(field: FieldDef | undefined, value: CriterionValue): string {
   if (Array.isArray(value)) return summarizeList(value.map((v) => formatCriterionValue(field, v)));
   if (typeof value === "number") {
+    if (field?.type === "percent") return formatPercent(value, false);
     if (field?.type === "amount") return formatAmount(value, field.unit ?? "kr.");
     if (field?.key === "postnummer") return String(value);
     return formatNumber(value);
   }
-  if (typeof value === "boolean") return value ? "ja" : "nej";
+  if (typeof value === "boolean") return value ? "Ja" : "Nej";
+  if (field?.type === "percent" && typeof value === "number") return formatPercent(value, false);
   if (field?.type === "date") return formatDate(value);
   return value;
 }
@@ -140,4 +142,100 @@ export function formatShare(range: readonly [number, number] | null | undefined)
   if (!Number.isFinite(lo) || !Number.isFinite(hi)) return MISSING;
   const a = shareFormat.format(lo);
   return Math.abs(hi - lo) < 0.005 ? `${a} %` : `${a}–${shareFormat.format(hi)} %`;
+}
+
+// ---------- 02c Felter med data: visning af enkeltværdier ----------
+
+/** 02c.17: "Ikke oplyst" når virksomheden ikke skal oplyse det, "Ikke registreret" når kilden er tom. */
+export const NOT_REPORTED = "Ikke oplyst";
+export const NOT_REGISTERED = "Ikke registreret";
+
+/**
+ * 02c.3 Tal-interval: tankestreg uden mellemrum ("10–19"), åbne intervaller som "1.000+" og
+ * "under 5", aldrig "10 til 19". `null` i en ende betyder åben.
+ */
+export function formatRange(lo: number | null | undefined, hi: number | null | undefined, unit = ""): string {
+  const u = unit ? ` ${unit}` : "";
+  const hasLo = typeof lo === "number" && Number.isFinite(lo);
+  const hasHi = typeof hi === "number" && Number.isFinite(hi);
+  if (hasLo && hasHi) return lo === hi ? `${formatNumber(lo)}${u}` : `${formatNumber(lo)}–${formatNumber(hi)}${u}`;
+  if (hasLo) return `${formatNumber(lo)}+${u}`;
+  if (hasHi) return `under ${formatNumber(hi)}${u}`;
+  return MISSING;
+}
+
+/**
+ * 02c.6 Periode: datoer med tankestreg uden mellemrum ("01.01.2025–31.12.2025"). Åben periode
+ * (ingen slutdato) som "siden 2016" (style "since") eller "2016 →" (style "arrow"); kun år, når
+ * `yearOnly` er sat. Ingen dato i det hele taget giver "—".
+ */
+export function formatPeriod(from: string | null | undefined, to: string | null | undefined, options: { yearOnly?: boolean; open?: "since" | "arrow" } = {}): string {
+  const fmt = (v: string) => (options.yearOnly ? (/^(\d{4})/.exec(v)?.[1] ?? v) : formatDate(v));
+  if (from && to) return `${fmt(from)}–${fmt(to)}`;
+  if (from) return options.open === "arrow" ? `${fmt(from)} →` : `siden ${fmt(from)}`;
+  if (to) return `til ${fmt(to)}`;
+  return MISSING;
+}
+
+/** 02c.6: alder eller varighed som muted tillæg, fx "9 år" eller "3 mdr." fra en dato til i dag. */
+export function formatAge(from: string | null | undefined, today: Date = new Date()): string {
+  if (!from) return "";
+  const d = new Date(`${from.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return "";
+  let months = (today.getUTCFullYear() - d.getUTCFullYear()) * 12 + (today.getUTCMonth() - d.getUTCMonth());
+  if (today.getUTCDate() < d.getUTCDate()) months -= 1;
+  if (months < 0) return "";
+  if (months < 12) return months <= 1 ? "1 md." : `${months} mdr.`;
+  const years = Math.floor(months / 12);
+  return years === 1 ? "1 år" : `${years} år`;
+}
+
+/** 02c.7 Ja/nej: altid ordene, ukendt skrives "Ikke oplyst". Konsekvensen kan følge efter komma. */
+export function formatBoolean(value: boolean | null | undefined, consequence?: string): string {
+  if (value === null || value === undefined) return NOT_REPORTED;
+  const word = value ? "Ja" : "Nej";
+  return consequence ? `${word}, ${consequence}` : word;
+}
+
+/**
+ * 02c.9 Liste af værdier: komma, "og" før sidste, afkortet efter `max` navne med "og N flere".
+ * Returnerer delene, så "og N flere" kan tegnes som et link. Tom liste = "Ingen".
+ */
+export function listParts(values: readonly string[], max = 2): { shown: string[]; rest: number; text: string } {
+  const clean = values.filter((v) => v && v.trim());
+  if (clean.length === 0) return { shown: [], rest: 0, text: "Ingen" };
+  if (clean.length <= max) {
+    const text = clean.length === 1 ? clean[0]! : `${clean.slice(0, -1).join(", ")} og ${clean.at(-1)}`;
+    return { shown: clean, rest: 0, text };
+  }
+  const shown = clean.slice(0, max);
+  const rest = clean.length - max;
+  return { shown, rest, text: `${shown.join(", ")} og ${rest} flere` };
+}
+
+/**
+ * 02c.4: ændringen som ord efter trekanten: "stigning" eller "fald" (og "overskud"/"underskud" når
+ * fortegnet skifter). Procent kun når begge år har samme fortegn.
+ */
+export function changeText(from: number | null | undefined, to: number | null | undefined): { arrow: "▲" | "▼"; text: string; tone: "up" | "down" } | null {
+  if (typeof from !== "number" || typeof to !== "number" || !Number.isFinite(from) || !Number.isFinite(to)) return null;
+  if (from !== 0 && Math.sign(from) !== Math.sign(to) && to !== 0) {
+    return to < 0 ? { arrow: "▼", text: "underskud", tone: "down" } : { arrow: "▲", text: "overskud", tone: "up" };
+  }
+  const pct = percentChange([from, to]);
+  if (pct === null) return null;
+  return pct < 0
+    ? { arrow: "▼", text: `${formatPercent(Math.abs(pct), false)} fald`, tone: "down" }
+    : { arrow: "▲", text: `${formatPercent(pct, false)} stigning`, tone: "up" };
+}
+
+/** 02c.4: fuldt beløb til tooltip, "18.812.400 kr." med ægte minus. */
+export function formatFullAmount(value: number | null | undefined, unit = "kr."): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return MISSING;
+  return `${formatNumber(Math.round(value))} ${unit}`.trim();
+}
+
+/** 02c.15 Score: tolkningen som ord, samme tre trin som scoremåleren (10): under 60, 60–79, 80+. */
+export function scoreWord(score: number): "lav risiko" | "mulig risiko" | "høj risiko" {
+  return score >= 80 ? "høj risiko" : score >= 60 ? "mulig risiko" : "lav risiko";
 }

@@ -15,6 +15,8 @@ export interface CompanyFact {
   value?: string;
   /** Revisorens Lasso-ID, så navnet kan åbnes i værter med drill-down. */
   lassoId?: string;
+  /** 02c.10 Branche med kode: koden står først i muted, derefter branchetekst (value). */
+  code?: string;
 }
 
 export interface CompanyFactOptions {
@@ -26,17 +28,17 @@ export interface CompanyFactOptions {
   hideAuditor?: boolean;
 }
 
-/** "2025-01-01" -> "01.01" (dag.måned, uden år, katalog 09: "01.01 – 31.12"). */
+/** "2025-01-01" -> "01.01" (dag.måned, uden år, katalog 09: "01.01–31.12"). */
 function dayMonth(value: string | undefined): string | undefined {
   const m = value ? /^\d{4}-(\d{2})-(\d{2})/.exec(value) : null;
   return m ? `${m[2]}.${m[1]}` : undefined;
 }
 
-/** Regnskabsperioden uden år, "01.01 – 31.12", når begge datoer er kendt. */
+/** Regnskabsperioden uden år, "01.01–31.12", når begge datoer er kendt. */
 export function accountingPeriod(year: Pick<FinancialYear, "periodStart" | "periodEnd"> | undefined): string | undefined {
   const from = dayMonth(year?.periodStart);
   const to = dayMonth(year?.periodEnd);
-  return from && to ? `${from} – ${to}` : undefined;
+  return from && to ? `${from}–${to}` : undefined;
 }
 
 /**
@@ -68,7 +70,7 @@ export function companyFacts(company: CompanyVM, ownership: OwnershipVM | undefi
     rows.push(
       { label: "Stiftet", value: company.founded ? formatDate(company.founded) : undefined },
       { label: "Virksomhedsform", value: company.form },
-      { label: "Branche", value: company.industryText ? `${company.industryText}${company.industryCode ? ` (${company.industryCode})` : ""}` : undefined },
+      { label: "Branche", value: company.industryText, code: company.industryText ? company.industryCode : undefined },
       { label: "Ansatte", value: employeesText(company, lastYear) },
     );
     if (!options.hideContact) rows.push({ label: "Adresse", value: [a?.street, [a?.zip, a?.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || undefined });

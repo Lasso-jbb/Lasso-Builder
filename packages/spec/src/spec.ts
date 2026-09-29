@@ -310,7 +310,7 @@ export const keyValueListSchema = z.object({
   variant: z
     .enum(["company", "financials"])
     .default("company")
-    .describe("'company': stamdata og revisor. 'financials': regnskabstal med årsvælger, tal højrestillet."),
+    .describe("'company': stamdata og revisor. 'financials': regnskabstal med årsvælger."),
   title: z.string().max(80).optional(),
   exclude: z
     .array(metric)

@@ -3,6 +3,8 @@ import { formatDate, type ContactVM } from "@lasso/spec";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
 import { Icon } from "./Icon.js";
 
+import { mapLink } from "./Values.js";
+
 /** Omridsikoner fra ikonsættet (01): kun form, ingen farve. */
 const PinIcon = () => <Icon name="pin" size={16} className="lasso-contact__icon" />;
 const PhoneIcon = () => <Icon name="phone" size={16} className="lasso-contact__icon" />;
@@ -151,6 +153,10 @@ export function LassoContact({
             <span className="lasso-contact__value lasso-contact__value--multiline">
               {addressLine1 ? <span>{addressLine1}</span> : null}
               {addressLine2 ? <span>{addressLine2}</span> : null}
+              {/* 02c.11: diskret kortlink under adressen */}
+              <a className="lasso-address__map" href={mapLink([addressLine1, addressLine2])} target="_blank" rel="noreferrer">
+                Vis på kort
+              </a>
             </span>
             <span className="lasso-contact__side">
               <MapAction query={[addressLine1, addressLine2].filter(Boolean).join(", ")} />
