@@ -60,7 +60,7 @@ export function Badge({ children, tone = "plain" }: { children: ReactNode; tone?
  * De fem tilstande fra kataloget. "filled" tegnes af komponenten selv;
  * de fire andre tegnes her, så alle elementer ser ens ud.
  */
-export type DataStateKind = "loading" | "empty" | "notreported" | "error";
+export type DataStateKind = "loading" | "empty" | "notreported" | "error" | "ondemand";
 
 export interface DataStateProps {
   state: DataStateKind;
@@ -71,10 +71,31 @@ export interface DataStateProps {
   /** Henter: skelettet får samme højde som det fyldte element. */
   height?: number;
   lines?: number;
+  /** Beregnes på forespørgsel (10.3): knaptekst, fx "Beregn nu" eller "Hent score". */
+  actionLabel?: string;
+  /** Beregnes på forespørgsel: handlingen. Uden den vises kun forklaringen. */
+  onAction?: () => void;
+  /** Beregnes på forespørgsel: prisen/ventetiden, fx "Koster 1 kredit, tager 5–45 sekunder". */
+  cost?: string;
 }
 
-export function DataState({ state, reason, onRetry, height, lines = 3 }: DataStateProps) {
+export function DataState({ state, reason, onRetry, height, lines = 3, actionLabel, onAction, cost }: DataStateProps) {
   if (state === "loading") return <Skeleton lines={lines} height={height} />;
+  if (state === "ondemand") {
+    // 10.3 (node A2I-0): stiplet ramme som "tom", men med årsag og en handling, der starter beregningen.
+    return (
+      <div className="lasso-state lasso-state--ondemand" style={height ? { minHeight: height } : undefined}>
+        <div className="lasso-state__title">Beregnes på forespørgsel</div>
+        <div className="lasso-small">{reason ?? "Tallet beregnes først, når du beder om det."}</div>
+        {cost ? <div className="lasso-state__cost">{cost}</div> : null}
+        {onAction ? (
+          <button type="button" className="lasso-btn lasso-btn--sm lasso-state__retry" onClick={onAction}>
+            {actionLabel ?? "Beregn nu"}
+          </button>
+        ) : null}
+      </div>
+    );
+  }
   if (state === "notreported") return <span className="lasso-notreported">Ikke oplyst</span>;
   if (state === "empty") {
     return (

@@ -116,8 +116,8 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     type: "LassoLineChart",
     title: "Linjegraf med benchmark",
     description:
-      "Brug til: ét nøgletal som linje over år for én virksomhed med ÉN benchmark-virksomhed som stiplet linje – præcis to virksomheder, ét nøgletal, over tid. Brug ikke når: én virksomhed uden benchmark (LassoBarChart), 3+ virksomheder (LassoCompareTable for flere nøgletal, LassoRanking for ét), eller flere nøgletal for én virksomhed (LassoGroupedBarChart). Kræver: company, metric, years, benchmark. Dækkes ikke af show_company. Eksempel: 'Sammenlign omsætningsudviklingen for Netto og Rema 1000 over 5 år.'",
-    props: `company, metric (${METRICS.join(" | ")}), years (2–10, standard 5), benchmark? (virksomhed)`,
+      "Brug til: ét nøgletal som linje over år for én virksomhed med ÉN benchmark-virksomhed som stiplet linje – præcis to virksomheder, ét nøgletal, over tid – eller med industry true: virksomheden mod branchens median, begge som indeks (første år = 100) – 'udvikler de sig bedre end branchen'. Brug ikke når: én virksomhed uden benchmark (LassoBarChart), 3+ virksomheder (LassoCompareTable for flere nøgletal, LassoRanking for ét), flere nøgletal for én virksomhed (LassoGroupedBarChart), eller seneste års nøgletal mod branchen (LassoKeyFigureGauge). Kræver: company, metric, years, benchmark ELLER industry; branchetal kan mangle, og grafen siger da hvorfor. Dækkes ikke af show_company. Eksempel: 'Sammenlign omsætningsudviklingen for Netto og Rema 1000 over 5 år.' / 'Vokser X hurtigere end branchen?' → industry true.",
+    props: `company, metric (${METRICS.join(" | ")}), years (2–10, standard 5), benchmark? (virksomhed), industry? (true = branchen som indeks)`,
   },
   {
     type: "LassoStackedBarChart",
@@ -129,14 +129,20 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
   {
     type: "LassoShareBars",
     title: "Andelsbjælker, balance seneste år",
-    description: `Brug til: egenkapital og gæld som andele i procent af balancen for seneste regnskabsår. Brug ikke når: flere år (LassoStackedBarChart), eller soliditetsgraden som tal med ændring (LassoKeyFigureCards metrics ['soliditetsgrad']). Kræver: company; mangler gæld i regnskabet, vises tom tilstand. ${F("oekonomi")} Eksempel: 'Hvor stor en del af balancen er egenkapital hos X?' → show_company focus oekonomi.`,
-    props: "company",
+    description: `Brug til: dele af en helhed som donut med total i midten + andelsbjælker. variant 'balance' (standard): egenkapital og gæld som andele i procent af balancen for seneste regnskabsår. variant 'ejerkreds': ejerkredsen som andele med CVR's intervaller som tekst ('hvordan er ejerskabet fordelt'). Brug ikke når: flere år (LassoStackedBarChart), soliditetsgraden som tal med ændring (LassoKeyFigureCards metrics ['soliditetsgrad']), eller ejernes navne og roller (LassoOwnerList). Kræver: company, variant?; mangler gæld i regnskabet eller ejerandele i CVR, vises tom tilstand. ${F("oekonomi (balance)")} Eksempel: 'Hvor stor en del af balancen er egenkapital hos X?' → show_company focus oekonomi.`,
+    props: "company, variant? (balance | ejerkreds)",
   },
   {
     type: "LassoWaterfallChart",
     title: "Vandfald, omsætning til resultat",
     description: `Brug til: hvordan omsætning/bruttofortjeneste bliver til årets resultat i seneste regnskabsår. Brug ikke når: udvikling over år (LassoBarChart), enkelte tal med ændring (LassoKeyFigureCards), eller alle linjer i resultatopgørelsen (LassoIncomeStatement). Kræver: company; mangler resultat i seneste regnskab, vises tom tilstand. ${F("oekonomi")} Eksempel: 'Hvor bliver pengene af mellem omsætning og resultat hos X?' → show_company focus oekonomi.`,
     props: "company",
+  },
+  {
+    type: "LassoKeyFigureGauge",
+    title: "Nøgletalsmåler, mod branchen",
+    description: `Brug til: seneste års soliditetsgrad, overskudsgrad og likviditetsgrad mod branchens median som målere (grøn/gul/rød + ord) – 'hvordan ligger X i forhold til branchen', 'er soliditeten god for branchen'. Brug ikke når: udviklingen over år mod branchen (LassoLineChart med industry true), nøgletallene uden sammenligning (LassoKeyFigureCards), eller andre navngivne virksomheder (LassoRanking/LassoCompareTable). Kræver: company, metrics? (delmængde af soliditetsgrad | overskudsgrad | likviditetsgrad); branchetal kan mangle for rigtige virksomheder, og måleren viser da tom tilstand med årsag. Dækkes ikke af show_company. Eksempel: 'Er soliditeten hos X god i forhold til branchen?'`,
+    props: "company, metrics? (soliditetsgrad | overskudsgrad | likviditetsgrad), title?",
   },
   {
     type: "LassoMultiYearTable",
@@ -239,6 +245,14 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     props: "company, title?",
   },
 
+  {
+    type: "LassoScoreHistory",
+    title: "Scorehistorik (kun demo)",
+    description:
+      "Brug til: KUN demovisninger. Lassos 0–100-score over tid som trinlinje med zonerne lav/moderat/høj og forrige vs. nu; der er ingen live datakilde, så rigtige virksomheder viser tom tilstand. Vælg den aldrig til en kunde, der spørger om risiko eller kreditvurdering (show_company focus risiko). Brug ikke når: det gælder Creditsafes vurdering (LassoCreditRating). Kræver: company. Eksempel: intet kundespørgsmål fører hertil.",
+    props: "company, title?",
+  },
+
   // (f) Fysiske enheder --------------------------------------------------------
   {
     type: "LassoProductionUnits",
@@ -252,6 +266,13 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     title: "Ejendomme, BBR",
     description:
       "Brug til: ejendomme, virksomheden ejer (ejerfortegnelsen), med BBR-bygninger (anvendelse, opført, etager, areal) og arealfordeling – 'ejendomme', 'bygninger', 'BBR', 'matrikel'. Brug ikke når: adresser for afdelinger (LassoProductionUnits) eller virksomhedens egen adresse (LassoCompanyHead). Kræver: company; ejer virksomheden ingen ejendomme, vises tom tilstand. Dækkes ikke af show_company. Eksempel: 'Hvilke ejendomme ejer X, og hvor store er bygningerne?'",
+    props: "company, title?",
+  },
+  {
+    type: "LassoMap",
+    title: "Kort, adresser og P-enheder",
+    description:
+      "Brug til: virksomhedens hovedadresse og P-enheder på et kort, med klynger hvor mange ligger tæt – 'hvor ligger afdelingerne', 'vis på kort'. Brug ikke når: adresserne som liste med ansatte og status (LassoProductionUnits), ejendomme og bygninger (LassoProperties) eller kun hovedadressen som tekst (LassoCompanyHead). Kræver: company; koordinater er ikke bekræftet i Lassos data, så kortet kan være tomt med en forklaring. Dækkes ikke af show_company. Eksempel: 'Vis X's afdelinger på et kort.'",
     props: "company, title?",
   },
   {
@@ -306,6 +327,14 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     description:
       "Brug til: hvad der er sket i de virksomheder, brugeren overvåger – ændringer på tværs af en overvågningsliste grupperet pr. dag med filter på type (regnskab, ledelse, ejerskab, status, stamdata, kredit) – 'hvad er der sket i mine kunder', 'ændringer i min overvågning', 'nyt i listen Kunder'. Brug ikke når: det gælder én virksomheds egen historik (LassoTimeline) eller nyheder i medierne (LassoNews). Kræver: list? (listens navn, fx 'Kunder'), days? (standard 7, 1–90), types? (delmængde af ændringstyper); ingen ændringer i perioden giver tom tilstand, og uden overvågningsliste forklarer komponenten hvorfor. Dækkes ikke af show_company. Eksempel: 'Hvad er der sket i mine overvågede kunder den seneste uge?' → render_view med LassoChangeFeed { list: 'Kunder', days: 7 }.",
     props: `list?, days? (1–90, standard 7), types? (delmængde af ${CHANGE_TYPES.join(" | ")}), title?`,
+  },
+
+  {
+    type: "LassoHeatmap",
+    title: "Heatmap, aktivitet pr. måned",
+    description:
+      "Brug til: hvor meget der er sket i de overvågede virksomheder måned for måned, pr. ændringstype (regnskab, ledelse, ejerskab, status, stamdata, kredit) – 'hvornår sker der mest i mine kunder', 'aktivitet det seneste år'. Brug ikke når: de enkelte ændringer (LassoChangeFeed) eller én virksomheds historik (LassoTimeline). Kræver: list? (listens navn), months? (3–24, standard 12), types?; ingen ændringer giver tom tilstand, og uden overvågningsliste forklarer komponenten hvorfor. Samme ubekræftede live-kilde som LassoChangeFeed. Dækkes ikke af show_company. Eksempel: 'Hvornår har der været mest aktivitet i listen Kunder det seneste år?' → render_view med LassoHeatmap { list: 'Kunder', months: 12 }.",
+    props: `list?, months? (3–24, standard 12), types? (delmængde af ${CHANGE_TYPES.join(" | ")}), title?`,
   },
 
   // Gem-laget (docs/gem-lag.md) ------------------------------------------------

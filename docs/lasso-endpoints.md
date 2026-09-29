@@ -337,6 +337,24 @@ i `packages/ui` er rene UI-komponenter med props; de kalder ingen endpoints. Mon
 tilføje/fjerne virksomheder (`POST/DELETE /apps/monitoring/jobs/thirdparty/{Provider}/items`), men
 det er ikke koblet til "Overvåg"/"Stop overvågning" endnu.
 
+## Ubekræftet: branchetal, koordinater, heatmap og scorehistorik (katalog 13 og 18)
+
+- **Branchetal (13.6 linje mod branchen, 13.10 nøgletalsmåler).** ANTAGET endpoint
+  `GET /data/cvr/industries/{DB07-kode}/keyfigures` med svar `{ industryCode, industryText, companyCount,
+  years: [{ year, median: { soliditetsgrad | solvencyRatio, overskudsgrad | profitMargin, likviditetsgrad |
+  currentRatio, … } }] }` (`adaptIndustryBenchmark` i `apps/server/src/lasso/chartAdapters.ts`). Brøker
+  under 1,5 for soliditets- og overskudsgrad ganges med 100. 4xx eller ukendt form = `state: "unavailable"`
+  med årsag (tom tilstand), aldrig en fejl. Lassos regnskabsanalyse har kun branchestatistik som HTML-tekst.
+- **Koordinater (13.12 kort).** ANTAGET at CVR-svarets adresseobjekter (virksomhed og `productionUnits`)
+  kan have WGS84 som `latitude/longitude`, `lat/lng`, `wgs84.*` eller `coordinates.*`
+  (`coordinatesOf`). Kun punkter i Danmark (53–58,5 N, 7–16 Ø) bruges; UTM/ETRS89 (x/y i meter)
+  afvises. Mangler de, er kortet tomt med årsag, og adresserne tælles i `missing`.
+- **Heatmap (13.11).** Ingen ny kilde: samme overvågningsjob og delta-liste som ændringsfeedet
+  (se ovenfor), bare op til 24 måneder tilbage og talt pr. måned og type (`buildActivityHeatmap`).
+- **Scorehistorik (18.2) og scoremålerens hente-tilstande (10.1).** Ingen Lasso-kilde til en 0–100 score;
+  LiveProvider giver tom historik med årsag. Kreditsaldoen til 18.3 (`CreditRatingVM.creditBalance`)
+  er heller ikke bekræftet og udelades live.
+
 ## Skal verificeres
 
 **Fra opstartsproben 27.09.2026 (tilkøb):**
