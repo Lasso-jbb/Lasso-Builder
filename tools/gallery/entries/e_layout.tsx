@@ -2,25 +2,16 @@
 // øvrige datatyper (28), fanebjælker (29) og layout (30).
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import {
-  COMPONENT_CATALOG,
-  COMPOSITION_RULES,
-  DEFAULT_WIDTH,
   FOCUSES,
   FOCUS_LABELS,
-  LAYOUT_RULES,
   PERSON_FOCUSES,
   PERSON_FOCUS_LABELS,
   composeCompany,
   composePerson,
   composePersonProbe,
   composeProbe,
-  formatAmount,
-  formatPeriod,
-  formatRange,
-  formatDate,
-  formatNumber,
-  formatPercent,
   mainMetric,
+  parseViewSpec,
   statusKind,
   type ContactVM,
   type Dataset,
@@ -38,6 +29,7 @@ import {
   LiveNumber,
   Menu,
   ModuleBar,
+  ModuleToolbar,
   MonitorSettings,
   NotificationPanel,
   PersonSearchResults,
@@ -66,6 +58,7 @@ import { MobileFilterSheet, MobileForm } from "./felter_mobil.js";
 
 import { SparkList } from "./c_data1.js";
 import type { GalleryEntry } from "../types.js";
+import { CoverageTable, DatatypeTable, LookupTable, MappingTable, OrderSteps, StatesAndFormat, WidthAndPaper, WidthTable, ZoneSketch } from "./e_guide.js";
 
 /* ---------- Fælles ---------- */
 
@@ -122,7 +115,6 @@ const placeholder = (label: string, height = 120): ReactNode => (
     {label}
   </div>
 );
-const notBuilt = () => <p className="lasso-small">Ikke bygget i koden</p>;
 
 /* ---------- Portalens ramme (AppShell) med en komponeret side ---------- */
 
@@ -271,21 +263,136 @@ function CompanyPage({ ds }: { ds: Dataset }) {
   );
 }
 
-function PersonPage({ ds }: { ds: Dataset }) {
-  const spec = personSpec(ds);
+
+/* ---------- 24, 25 og 26g: eksempelsiderne som i Paper ---------- */
+
+/** 24.1: skinnen på virksomhedssiden (Værktøjer, Firmaer = gemte lister, Personer sammenfoldet); intet punkt er aktivt. */
+const paperRailCompany = (): RailGroup[] => [
+  {
+    id: "vaerktoejer",
+    label: "Værktøjer",
+    items: [
+      { id: "udtraek", label: "Dataudtræk", icon: <ShellIcon name="download" /> },
+      { id: "ejendomme", label: "Ejendomme", icon: <ShellIcon name="home" /> },
+      { id: "maalgruppe", label: "Målgruppesøgning", icon: <ShellIcon name="target" /> },
+      { id: "overvaagning", label: "Overvågning", icon: <ShellIcon name="bell" /> },
+      { id: "risiko", label: "Risikovurdering", icon: <ShellIcon name="alert" /> },
+      { id: "flere", label: "Flere", icon: <ShellIcon name="chevron-down" /> },
+    ],
+  },
+  {
+    id: "firmaer",
+    label: "Firmaer",
+    items: [
+      { id: "overvaager", label: "Overvåger", icon: "letter" },
+      { id: "advisory", label: "Advisory Board", icon: "letter" },
+      { id: "kunder", label: "Kunder", icon: "letter" },
+      { id: "salgspartnere", label: "Salgspartnere", icon: "letter" },
+      { id: "flere", label: "Flere", icon: <ShellIcon name="chevron-down" /> },
+    ],
+    footer: { label: "Opret ny liste", icon: "plus" },
+  },
+  { id: "personer", label: "Personer", collapsed: true, items: [] },
+];
+
+/** 25.2: personsidens skinne er sektionerne (Overblik aktiv) med Lasso-bundlinje. */
+const paperRailPerson = (): RailGroup[] => [
+  {
+    id: "sektioner",
+    label: "Sektioner",
+    items: ["Overblik", "Roller over tid", "Selskaber", "Ejerskab", "Netværk", "Risiko", "Historik"].map((l, i) => ({ id: `s${i}`, label: l, active: i === 0 })),
+  },
+];
+
+/** 24.3: modulbjælkens handlinger, siden er gemt (fyldt koral bogmærke) og kan overvåges. */
+const paperModuleActions = (): ModuleAction[] => [
+  { id: "eksport", label: "Eksportér", items: [{ id: "pdf", label: "PDF-rapport", icon: <ShellIcon name="download" size={16} />, onSelect: noop }, { id: "csv", label: "Tal som CSV", icon: <ShellIcon name="download" size={16} />, onSelect: noop }] },
+  { id: "gem", label: "Gemt", icon: <ShellIcon name="bookmark" filled />, tone: "accent", onSelect: noop },
+  { id: "overvaag", label: "Overvåg", icon: <ShellIcon name="rss" />, tone: "accent", onSelect: noop },
+];
+
+/** Hovedet i Paper har Overvåg, Gem, Eksportér og Flere (24.4, 25.3). */
+const paperHost = (): HostCapabilities => ({ ...entityHost(), savePage: true, monitor: true });
+
+function PaperShell({ kind, title, company, children }: { kind: "company" | "person"; title: string; company: string; children: ReactNode }) {
+  const [focus, setFocus] = useState("overblik");
+  const tabs: StripTab[] =
+    kind === "company"
+      ? [
+          { id: "c", label: company, icon: <ShellIcon name="company" />, active: true },
+          { id: "s", label: "Søgning", icon: <ShellIcon name="search" /> },
+          { id: "o", label: "Overvågning", icon: <ShellIcon name="bell" /> },
+        ]
+      : [
+          { id: "c", label: company, icon: <ShellIcon name="company" /> },
+          { id: "p", label: title, icon: <ShellIcon name="user" />, active: true },
+          { id: "s", label: "Søgning", icon: <ShellIcon name="search" /> },
+        ];
+  const mobile: AppShellMobile = {
+    title,
+    sections: kind === "company" ? COMPANY_MODULES : PERSON_MODULES,
+    activeSection: focus,
+    onSelectSection: setFocus,
+    onBell: noop,
+    moreItems: [{ id: "share", label: "Del link", icon: <ShellIcon name="copy" size={16} />, onSelect: noop }],
+    nav: [
+      { id: "soeg", label: "Søg", icon: <ShellIcon name="search" size={20} />, active: true },
+      { id: "lister", label: "Lister", icon: <ShellIcon name="list" size={20} /> },
+      { id: "overvaagning", label: "Overvågning", icon: <ShellIcon name="bell" size={20} /> },
+      { id: "konto", label: "Konto", icon: <ShellIcon name="user" size={20} /> },
+    ],
+  };
   return (
-    <Shell kind="person" title={ds.persons[P]?.name ?? "Bo Eksempel"} modules={PERSON_MODULES} value="overblik">
-      <LassoView spec={spec} dataset={ds} host={entityHost()} onAction={noop} theme="light" frameless />
-    </Shell>
+    <div className="lasso-root lasso-portal e-portal" data-theme="light">
+      <style>{PORTAL_CSS}</style>
+      <AppShell
+        rail={
+          kind === "company"
+            ? { groups: paperRailCompany(), onToggleGroup: noop, onLogo: noop }
+            : { groups: paperRailPerson(), onToggleGroup: noop, logo: false, bottom: { source: "Data fra CVR, Erhvervsstyrelsen og Creditsafe" } }
+        }
+        tabs={{ tabs, onSelect: noop, onBell: noop, onAccount: noop }}
+        mobile={mobile}
+      >
+        {kind === "company" ? <ModuleBar id="e-mod" modules={COMPANY_MODULES} value={focus} onChange={setFocus} actions={paperModuleActions()} maxVisible={8} ariaLabel="Moduler" /> : null}
+        {children}
+      </AppShell>
+    </div>
   );
 }
 
+function PaperCompanyPage({ ds }: { ds: Dataset }) {
+  const name = ds.companies[C]?.name ?? "Eksempel Byg A/S";
+  return (
+    <PaperShell kind="company" title={name} company={name}>
+      <LassoView spec={companySpec(ds)} dataset={ds} host={paperHost()} onAction={noop} theme="light" frameless />
+    </PaperShell>
+  );
+}
+
+function PaperPersonPage({ ds }: { ds: Dataset }) {
+  return (
+    <PaperShell kind="person" title={ds.persons[P]?.name ?? "Bo Eksempel"} company={ds.companies[C]?.name ?? "Eksempel Byg A/S"}>
+      <LassoView spec={personSpec(ds)} dataset={ds} host={paperHost()} onAction={noop} theme="light" frameless />
+    </PaperShell>
+  );
+}
+
+/** Probe med risikoobservationerne, så hovedets observationslinje ("Se risiko", 24.4) har data. */
+const paperCompanyProbe = (): ViewSpec => {
+  const p = composeProbe(C, "overblik");
+  return { ...p, components: [...p.components, { type: "LassoRiskObservations", company: C }].slice(0, 12) as ViewSpec["components"] };
+};
+
 const companyProbe = () => composeProbe(C, "overblik");
+const PAPER_COMPANY_NOTE =
+  "Rammen som i Paper (skinne med Værktøjer/Firmaer/Personer, faner uden luk/+/badge, modulbjælke med 7 moduler + Flere og Gemt/Overvåg, hoved med fire ikonknapper og observationslinje) om show_company-kompositionen (composeCompany, overblik) for Eksempel Byg A/S. Sidens moduler bestemmes af compose.ts (se rapporten).";
+const PAPER_PERSON_NOTE =
+  "Rammen som i Paper (faner uden luk/+/badge, skinne med sektioner og Lasso-bundlinje, ingen modulbjælke, hoved med fire ikonknapper) om show_person-kompositionen (composePerson, overblik) for Bo Eksempel. Sidens moduler bestemmes af composePerson.ts (se rapporten).";
 const personProbe = () => composePersonProbe(P, "overblik");
 
 const COMPANY_PAGE_NOTE =
   "Portalens ramme (AppShell: skinne, fanebjælke, modulbjælke) med show_company-kompositionen (composeCompany, focus overblik, followUps fra) for Eksempel Byg A/S i stedet for LASSO X A/S.";
-const PERSON_PAGE_NOTE = "Portalens ramme (AppShell) med show_person-kompositionen (composePerson, focus overblik) for Bo Eksempel i stedet for Mette Holm Eksempel.";
 
 /* ---------- 23 Guide ---------- */
 
@@ -316,176 +423,15 @@ function Table({ head, rows }: { head: readonly string[]; rows: readonly (readon
   );
 }
 
-const WIDTH_LABEL: Record<string, string> = { quarter: "¼", half: "½", "three-quarters": "¾", full: "Fuld" };
-
-function OrderList({ ds }: { ds: Dataset }) {
-  const spec = companySpec(ds, true);
-  const title = (t: string) => COMPONENT_CATALOG.find((c) => c.type === t)?.title ?? t;
-  return (
-    <Section title="Rækkefølge på en side (composeCompany, overblik)">
-      <ol style={{ margin: 0, paddingLeft: 20, display: "grid", gap: 6 }}>
-        {spec.components.map((c, i) => (
-          <li key={i}>
-            <strong>{title(c.type)}</strong>{" "}
-            <span className="lasso-small" style={muted}>
-              {c.type}
-              {c.column ? `, kolonne ${c.column}` : ", fuld bredde"}
-            </span>
-          </li>
-        ))}
-      </ol>
-    </Section>
-  );
-}
-
-function RulesText({ text }: { text: string }) {
-  return (
-    <ul style={{ margin: 0, paddingLeft: 20, display: "grid", gap: 8 }} className="lasso-small">
-      {text
-        .split("\n")
-        .slice(1)
-        .map((l, i) => (
-          <li key={i}>{l.replace(/^- /, "")}</li>
-        ))}
-    </ul>
-  );
-}
-
-const WIDTHS_SPEC = {
-  kind: "company",
-  title: "Kolonnebredder ved 1440 px",
-  components: [
-    { type: "LassoKeyFigureCards", company: C, width: "full" },
-    { type: "LassoBarChart", company: C, width: "half" },
-    { type: "LassoKeyValueList", company: C, variant: "financials", width: "half" },
-    { type: "LassoOwnershipDiagram", company: C, width: "three-quarters" },
-    { type: "LassoRelations", company: C, width: "quarter" },
-    { type: "LassoScoreGauge", company: C, width: "quarter" },
-    { type: "LassoLineChart", company: C, width: "three-quarters" },
-    { type: "LassoMultiYearTable", company: C, width: "full" },
-  ],
-};
-
 const guide: GalleryEntry[] = [
-  {
-    nr: "23.1",
-    title: "Trin 1: Sideskabelon",
-    node: "CK9-0",
-    only: "desktop",
-    desktopWidth: 1440,
-    note: "AppShell med de tre zoner: skinne (navigation), midte (modulbjælke + indhold) og højre panel 336 px (sammendrag og handlinger). Pladsholdere i stedet for indhold.",
-    render: () => (
-      <Shell kind="company" title="Eksempel Byg A/S" modules={COMPANY_MODULES} value="overblik" panel={<div style={{ padding: 24 }}>{placeholder("Panel: sammendrag og handlinger", 480)}</div>}>
-        <div className="e-portal-body" style={stack(16)}>
-          {placeholder("Midte: det eneste, der skifter indhold", 200)}
-          {placeholder("Midte, sektion 2", 160)}
-        </div>
-      </Shell>
-    ),
-  },
-  {
-    nr: "23.2",
-    title: "Trin 2: Kolonnebredder ved 1440 px",
-    node: "CL1-0",
-    desktopWidth: 1440,
-    note: "LassoView-spec med de fire bredder (¼, ½, ¾, fuld) fra WIDTHS i packages/spec/src/spec.ts. Mobil: alt i én kolonne.",
-    spec: WIDTHS_SPEC,
-  },
-  dataEntry({
-    nr: "23.3",
-    title: "Trin 3: Rækkefølge på en side",
-    node: "CM3-0",
-    only: "desktop",
-    note: "Rækkefølgen, som serverens komponist faktisk bygger for virksomhedsoverblikket (composeCompany). Paper beskriver 7 trin i tekst; koden har ingen separat trinliste.",
-    probe: companyProbe(),
-    draw: (ds) => <OrderList ds={ds} />,
-  }),
-  {
-    nr: "23.4",
-    title: "Trin 4: Datatype → element (mappingtabel)",
-    node: "CNC-0",
-    only: "desktop",
-    note: "Komponentkataloget (COMPONENT_CATALOG i packages/spec/src/catalog.ts) med standardbredde (DEFAULT_WIDTH). Paper har 25 rækker ordnet efter datatype; koden ordner efter komponent.",
-    render: () => (
-      <Table
-        head={["Element", "Komponent", "Standardbredde", "Props"]}
-        rows={COMPONENT_CATALOG.map((c) => [c.title, <code key="t">{c.type}</code>, WIDTH_LABEL[DEFAULT_WIDTH[c.type]] ?? DEFAULT_WIDTH[c.type], <span key="p" className="lasso-small">{c.props}</span>])}
-      />
-    ),
-  },
-  {
-    nr: "23.5",
-    title: "Trin 5: Tjek tilstande og talformat",
-    node: "CPU-0",
-    only: "desktop",
-    note: "Tilstandene fra DataState (primitives.tsx) og talformatet fra packages/spec/src/format.ts. Tjeklisten 'Aflever aldrig uden' (21 punkter) findes ikke i koden.",
-    render: () => (
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-        <div style={stack(16)}>
-          {caption("Tom")}
-          <DataState state="empty" title="Ingen nyheder endnu" reason="Der er ikke skrevet om virksomheden de seneste 12 måneder." checkedAt="2026-09-29" />
-          {caption("Henter")}
-          <DataState state="loading" lines={3} height={96} />
-          {caption("Fejl")}
-          <DataState state="error" title="Regnskab kunne ikke hentes" reason="Erhvervsstyrelsen svarede ikke." onRetry={noop} />
-          {caption("Ikke oplyst")}
-          <DataState state="notreported" reason="Virksomheden har ikke oplyst antal ansatte." />
-        </div>
-        <Table
-          head={["Værdi", "Format"]}
-          rows={[
-            ["18.800.000 kr.", formatAmount(18_800_000)],
-            ["\u2212201.000 kr.", formatAmount(-201_000)],
-            ["34.000.000 kr.", formatAmount(34_000_000)],
-            ["3.200.000 kr.", formatAmount(3_200_000)],
-            ["1243 (antal)", formatNumber(1243)],
-            ["7,5 % (ændring)", formatPercent(7.5)],
-            ["2012-05-14 (dato)", formatDate("2012-05-14")],
-            ["10 til 19 (interval)", formatRange(10, 19)],
-            ["2025-01-01 til 2025-12-31 (periode)", formatPeriod("2025-01-01", "2025-12-31")],
-            ["null", formatAmount(null)],
-          ]}
-        />
-      </div>
-    ),
-  },
-  {
-    nr: "23.6",
-    title: "Trin 6: Tænk bredden og papiret med",
-    node: "DT7-0",
-    only: "desktop",
-    note: "Reglen står i koden som foldereglerne i LAYOUT_RULES (catalog.ts); bredderne ses i 26/26f/26g og papiret i 27 (ReportA4).",
-    render: () => (
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-        <Section title="Responsiv (26)">
-          <p className="lasso-small" style={{ margin: 0 }}>
-            {LAYOUT_RULES.split("\n").find((l) => l.startsWith("Foldning"))}
-          </p>
-        </Section>
-        <Section title="Eksport og print (27)">
-          <p className="lasso-small" style={{ margin: 0 }}>
-            ReportA4 (packages/ui/src/components/ReportA4.tsx): fire A4-sider 794 × 1123 med sidehoved, kildelinje og sidetal. Se 27.1–27.4.
-          </p>
-        </Section>
-      </div>
-    ),
-  },
-  {
-    nr: "23.7",
-    title: "Trin 7: Mapping pr. element desktop → tablet → mobil",
-    node: "G67-0",
-    only: "desktop",
-    note: "Mappingtabellen er dokumentation; koden har ingen tabel over desktop/tablet/mobil pr. element (formerne ligger i CSS'ens container-forespørgsler, se 26a–26f).",
-    render: notBuilt,
-  },
-  {
-    nr: "23.8",
-    title: "Trin 8: Dækningstabel mod API",
-    node: "HJ0-0",
-    only: "desktop",
-    note: "Dækningstabellen mod de 25 API-endpoints findes kun som dokumentation (docs/lasso-endpoints.md), ikke i koden.",
-    render: notBuilt,
-  },
+  { nr: "23.1", title: "Trin 1: Sideskabelon", node: "CK9-0", only: "desktop", desktopWidth: 1440, note: "Papers skitse af zonerne med mål og artboard-henvisninger, tegnet med tokens (e_guide.tsx).", render: () => <ZoneSketch /> },
+  { nr: "23.2", title: "Trin 2: Kolonnebredder ved 1440 px", node: "CL1-0", only: "desktop", note: "Papers tabel over kolonnebredder (tekst fra Paper).", render: () => <WidthTable /> },
+  { nr: "23.3", title: "Trin 3: Rækkefølge på en side", node: "CM3-0", only: "desktop", note: "Papers 7 trin (1–6 + P) med cirkel-numre og forklaring.", render: () => <OrderSteps /> },
+  { nr: "23.4", title: "Trin 4: Datatype → element (mappingtabel)", node: "CNC-0", only: "desktop", note: "Papers opslagstabel Datatype | Element | Artboard.", render: () => <DatatypeTable /> },
+  { nr: "23.5", title: "Trin 5: Tjek tilstande og talformat", node: "CPU-0", only: "desktop", note: "Papers tre kort: fem tilstande, talformat (ægte minus) og tjeklisten 'Aflever aldrig uden' (21 punkter).", render: () => <StatesAndFormat /> },
+  { nr: "23.6", title: "Trin 6: Tænk bredden og papiret med", node: "DT7-0", only: "desktop", note: "Papers to kort Responsiv (26) og Eksport og print (27).", render: () => <WidthAndPaper /> },
+  { nr: "23.7", title: "Trin 7: Mapping pr. element desktop → tablet → mobil", node: "G67-0", only: "desktop", note: "Papers mappingtabel desktop/tablet/mobil + kortene 'Touch-mål og afstande' og 'Sådan bygger du en mobilskærm'.", render: () => <MappingTable /> },
+  { nr: "23.8", title: "Trin 8: Dækningstabel mod API", node: "HJ0-0", only: "desktop", note: "Papers dækningstabel mod docs.lassox.com/api med gruppeoverskrifter og kildelinje.", render: () => <CoverageTable /> },
 ];
 
 /* ---------- 24 og 25: eksempelsider ---------- */
@@ -497,9 +443,9 @@ const pages: GalleryEntry[] = [
     node: "JT5-0",
     only: "desktop",
     desktopWidth: 1440,
-    note: COMPANY_PAGE_NOTE,
-    probe: companyProbe(),
-    draw: (ds) => <CompanyPage ds={ds} />,
+    note: PAPER_COMPANY_NOTE,
+    probe: paperCompanyProbe(),
+    draw: (ds) => <PaperCompanyPage ds={ds} />,
   }),
   dataEntry({
     nr: "25.1–25.6",
@@ -507,9 +453,9 @@ const pages: GalleryEntry[] = [
     node: "D3A-0",
     only: "desktop",
     desktopWidth: 1440,
-    note: PERSON_PAGE_NOTE,
+    note: PAPER_PERSON_NOTE,
     probe: personProbe(),
-    draw: (ds) => <PersonPage ds={ds} />,
+    draw: (ds) => <PaperPersonPage ds={ds} />,
   }),
 ];
 
@@ -858,8 +804,8 @@ const tablet: GalleryEntry[] = [
 /* ---------- 26g Mobil: eksempelskærme ---------- */
 
 const mobilePages: GalleryEntry[] = [
-  dataEntry({ nr: "26g.1", title: "Virksomhedsoverblik, mobil (eksempel)", node: "FJ3-0", only: "mobile", note: COMPANY_PAGE_NOTE, probe: companyProbe(), draw: (ds) => <CompanyPage ds={ds} /> }),
-  dataEntry({ nr: "26g.2", title: "Personside, mobil (eksempel)", node: "FOV-0", only: "mobile", note: PERSON_PAGE_NOTE, probe: personProbe(), draw: (ds) => <PersonPage ds={ds} /> }),
+  dataEntry({ nr: "26g.1", title: "Virksomhedsoverblik, mobil (eksempel)", node: "FJ3-0", only: "mobile", note: PAPER_COMPANY_NOTE, probe: paperCompanyProbe(), draw: (ds) => <PaperCompanyPage ds={ds} /> }),
+  dataEntry({ nr: "26g.2", title: "Personside, mobil (eksempel)", node: "FOV-0", only: "mobile", note: PAPER_PERSON_NOTE, probe: personProbe(), draw: (ds) => <PaperPersonPage ds={ds} /> }),
 ];
 
 /* ---------- 26h Mobil: tilstande og småelementer ---------- */
@@ -1047,6 +993,7 @@ const REPORT_SPEC = {
     { type: "LassoBeneficialOwners", company: C },
     { type: "LassoScoreGauge", company: C },
     { type: "LassoCreditRating", company: C },
+    { type: "LassoScoreHistory", company: C },
     { type: "LassoRiskObservations", company: C },
     { type: "LassoAuditorIndependence", company: C },
   ],
@@ -1526,28 +1473,127 @@ const ANSWER_B = [
   { type: "LassoTextSections", company: C, variant: "analyse", width: "full" },
 ];
 
+/** 30.2 og 30.13: niveau B slutter med kildelinje og link til hele siden. */
+const ANSWER_B_FOOT = { source: "Kilde: CVR og årsrapport 2025, opdateret 25.09.2026", next: { label: "Åbn Eksempel Byg A/S i Lasso", prompt: "Fortæl om Eksempel Byg A/S" } };
+
+/** 30.3: niveau C i chatten = fuldt hoved med modulbjælken (niveau 1) under, første modul åbent, og Lasso-bundlinje. */
+function AnswerC({ ds }: { ds: Dataset }) {
+  const [focus, setFocus] = useState("overblik");
+  const spec: ViewSpec = { ...companySpec(ds, false), answer: { logo: true, source: "data fra CVR og Creditsafe" } };
+  return (
+    <LassoView
+      spec={spec}
+      dataset={ds}
+      host={{ save: false, drillDown: true, openSection: true, monitor: true, savePage: true, export: true }}
+      headTabs={{ items: COMPANY_MODULES, value: focus, onChange: setFocus, ariaLabel: "Moduler" }}
+      onAction={noop}
+      theme="light"
+      frameless
+    />
+  );
+}
+
+
+/* 30.11: fem moduleksempler, hvert med sit mønster og sin modulværktøjslinje (56 px, primær handling
+   yderst til venstre, visningsvalg yderst til højre, tynd linje under). */
+const MODULES_PROBE = {
+  kind: "company",
+  title: "Moduler",
+  components: [
+    { type: "LassoCompanyHead", company: C },
+    { type: "LassoKeyFigureCards", company: C },
+    { type: "LassoMultiYearTable", company: C },
+    { type: "LassoOwnershipDiagram", company: C },
+    { type: "LassoRelations", company: C },
+    { type: "LassoNews", company: C, limit: 4 },
+    { type: "LassoTimeline", company: C, limit: 6 },
+    { type: "LassoScoreGauge", company: C },
+    { type: "LassoIncomeStatement", company: C },
+    { type: "LassoBalanceSheet", company: C },
+  ],
+};
+
+function Seg({ items, level = 3 }: { items: readonly string[]; level?: 2 | 3 }) {
+  const [v, setV] = useState(items[0]!);
+  return <Tabs level={level} items={items.map((l) => ({ id: l, label: l }))} value={v} onChange={setV} ariaLabel="Visning" />;
+}
+const ghost = (label: string) => (
+  <button key={label} type="button" className="lasso-btn lasso-btn--ghost">
+    {label}
+  </button>
+);
+
+function ModuleExample({ title, pattern, text, toolbar, children }: { title: string; pattern: string; text: string; toolbar: ReactNode; children: ReactNode }) {
+  return (
+    <section style={{ display: "flex", flexDirection: "column", gap: 12, paddingBottom: 32, borderBottom: "1px solid var(--lasso-border)" }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+        <span style={{ fontSize: 15, lineHeight: "22px", fontWeight: 600, color: "var(--lasso-text)" }}>{title}</span>
+        <span className="lasso-small" style={muted}>{pattern}</span>
+      </div>
+      <p className="lasso-small" style={{ ...muted, margin: 0, maxWidth: 760 }}>{text}</p>
+      {toolbar}
+      {children}
+    </section>
+  );
+}
+
+function FiveModules({ ds }: { ds: Dataset }) {
+  const view = (components: Record<string, unknown>[]) => (
+    <LassoView spec={parseViewSpec({ kind: "company", title: "Modul", components })} dataset={ds} host={{ drillDown: true }} onAction={noop} theme="light" frameless />
+  );
+  return (
+    <div className="lasso-root" data-theme="light" style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+      <ModuleExample title="Nøgletal" pattern="mønster 1 + 4" text="Nøgletalskort i fuld bredde og flerårstabellen under. Print til venstre; Vend graf og Selskab/Koncern som visningsvalg til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Print" }} controls={<>{ghost("Vend")}<Seg items={["Selskab", "Koncern"]} /></>} />}>
+        {view([{ type: "LassoKeyFigureCards", company: C, width: "full" }, { type: "LassoMultiYearTable", company: C, width: "full" }])}
+      </ModuleExample>
+      <ModuleExample title="Ejerdiagram" pattern="mønster 2" text="Diagrammet ¾ med relationerne ¼ ved siden. Udskriv og Gem til venstre; Layout og Rediger til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Udskriv" }} secondary={[{ label: "Gem" }]} controls={<>{ghost("Layout")}{ghost("Rediger")}</>} />}>
+        {view([{ type: "LassoOwnershipDiagram", company: C, width: "three-quarters" }, { type: "LassoRelations", company: C, width: "quarter" }])}
+      </ModuleExample>
+      <ModuleExample title="Nyheder" pattern="mønster 8" text="Faner niveau 2 over kildernes strømme, artiklerne som kortgitter. Filtre yderst til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" field={<Seg level={2} items={["Lasso", "Artikler", "Ritzau", "Statstidende"]} />} controls={ghost("Filtre")} />}>
+        {view([{ type: "LassoNews", company: C, limit: 4, group: { id: "nyheder", pattern: "cards" } }, { type: "LassoContact", company: C, group: { id: "nyheder", pattern: "cards" } }])}
+      </ModuleExample>
+      <ModuleExample title="Historik" pattern="mønster 6, spejlet" text="Den kronologiske strøm med filtrene i en smal kolonne. Print til venstre; Vælg dato og Filtrer til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Print" }} controls={<>{ghost("Vælg dato")}{ghost("Filtrer")}</>} />}>
+        {view([{ type: "LassoTimeline", company: C, limit: 6, filterColumn: true }])}
+      </ModuleExample>
+      <ModuleExample title="Firmaindsigt" pattern="mønster 9" text="Hoved med score og sektionerne som harmonika, første række åben. Udskriv til venstre; Ejerdiagram til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Udskriv" }} controls={ghost("Ejerdiagram")} />}>
+        {view([
+          { type: "LassoKeyFigureCards", company: C, metrics: ["bruttofortjeneste", "resultat", "egenkapital"], width: "three-quarters" },
+          { type: "LassoScoreGauge", company: C, width: "quarter" },
+          { type: "LassoIncomeStatement", company: C, title: "Resultatopgørelse", group: { id: "fi", pattern: "accordion" } },
+          { type: "LassoBalanceSheet", company: C, title: "Balance", group: { id: "fi", pattern: "accordion" } },
+        ])}
+      </ModuleExample>
+    </div>
+  );
+}
+
 const layout: GalleryEntry[] = [
   {
     nr: "30.1",
     title: "Svarniveau A, Element",
     node: "J4H-0",
     note: "LAYOUT_RULES: 'hvad er omsætningen' → hoved som linje (40 px) + LassoKeyFigureCards med ét metric.",
-    spec: { kind: "company", title: "Omsætning", components: [head("line"), { type: "LassoKeyFigureCards", company: C, metrics: ["omsaetning"], width: "full" }] },
+    spec: {
+      kind: "company",
+      title: "Omsætning",
+      answer: { source: "Kilde: CVR og årsrapport 2025, opdateret 25.09.2026", next: { label: "Se hele økonomien", prompt: "Hvordan går det med Eksempel Byg A/S?" } },
+      components: [head("line"), { type: "LassoKeyFigureCards", company: C, metrics: ["omsaetning"], width: "full" }],
+    },
   },
   {
     nr: "30.2",
     title: "Svarniveau B, Sektion",
     node: "J4U-0",
     note: "LAYOUT_RULES: 'hvordan går det' → mønster 1 med kompakt hoved (56 px), nøgletal, graf ½ + nøgle-værdi ½ og analysen.",
-    spec: { kind: "company", title: "Økonomi", components: ANSWER_B },
+    spec: { kind: "company", title: "Økonomi", answer: ANSWER_B_FOOT, components: ANSWER_B },
   },
   dataEntry({
     nr: "30.3",
     title: "Svarniveau C, Side",
     node: "J5G-0",
-    note: "LAYOUT_RULES: 'fortæl om X' → show_company (composeCompany, focus overblik) som i chatten, med opfølgningsknapper.",
-    probe: companyProbe(),
-    draw: (ds) => <LassoView spec={companySpec(ds, true)} dataset={ds} host={{ prompt: true, save: true, drillDown: true, export: true, openSection: true }} onAction={noop} theme="light" />,
+    note: "Niveau C som i chatten: fuldt hoved med modulbjælken (niveau 1, første modul åbent) og Lasso-bundlinjen (answer.logo). Sektionerne er show_company-kompositionen (compose.ts).",
+    probe: paperCompanyProbe(),
+    draw: (ds) => <AnswerC ds={ds} />,
   }),
   {
     nr: "30.4",
@@ -1611,13 +1657,12 @@ const layout: GalleryEntry[] = [
     nr: "30.8",
     title: "Mønster 5, Sammenligning",
     node: "JAC-0",
-    note: "Én kolonne pr. virksomhed (LassoCompareTable) + rangering.",
+    note: "Etiketkolonne + én kolonne pr. virksomhed (LassoCompareTable), bedste værdi 600.",
     spec: {
       kind: "custom",
       title: "Mønster 5, Sammenligning",
       components: [
         { type: "LassoCompareTable", companies: [C, "CVR-1-99000005", "CVR-1-99000008"], width: "full" },
-        { type: "LassoRanking", companies: [C, "CVR-1-99000005", "CVR-1-99000008", "CVR-1-99000004"], width: "half" },
       ],
     },
   },
@@ -1655,27 +1700,15 @@ const layout: GalleryEntry[] = [
       ],
     },
   },
-  {
+  dataEntry({
     nr: "30.11",
     title: "Moduler sættes sammen forskelligt (inkl. mønster 8 kortgitter og 9 harmonika)",
     node: "JV3-0",
-    note: "group.pattern 'cards' (kortgitter, to kolonner) og 'accordion' (harmonika, første række åben), begge med modulværktøjslinjen (group.toolbar, 56 px).",
-    spec: {
-      kind: "company",
-      title: "Mønster 8 og 9",
-      components: [
-        head("compact"),
-        { type: "LassoContact", company: C, group: { id: "kort", pattern: "cards", title: "Mønster 8, Kortgitter", toolbar: { primary: { label: "Overvåg", prompt: "Overvåg Eksempel Byg A/S" }, actions: [{ label: "Eksportér", prompt: "Eksportér oplysningerne om Eksempel Byg A/S som CSV" }] } } },
-        { type: "LassoKeyValueList", company: C, variant: "company", group: { id: "kort", pattern: "cards" } },
-        { type: "LassoPersonList", company: C, group: { id: "kort", pattern: "cards" } },
-        { type: "LassoOwnerList", company: C, group: { id: "kort", pattern: "cards" } },
-        { type: "LassoIncomeStatement", company: C, title: "Resultatopgørelse", group: { id: "harm", pattern: "accordion", title: "Mønster 9, Harmonika", toolbar: { primary: { label: "Hent årsrapport", prompt: "Hent årsrapporten for Eksempel Byg A/S som PDF" } } } },
-        { type: "LassoBalanceSheet", company: C, title: "Balance", group: { id: "harm", pattern: "accordion" } },
-        { type: "LassoCashFlow", company: C, title: "Pengestrøm", group: { id: "harm", pattern: "accordion" } },
-        { type: "LassoTextSections", company: C, variant: "analyse", title: "Regnskabsanalyse", group: { id: "harm", pattern: "accordion" } },
-      ],
-    },
-  },
+    only: "desktop",
+    note: "Papers fem moduleksempler (Nøgletal, Ejerdiagram, Nyheder, Historik, Firmaindsigt), hver med ModuleToolbar (primær handling til venstre, visningsvalg til højre, tynd linje under) over modulets elementer i sit mønster.",
+    probe: MODULES_PROBE,
+    draw: (ds) => <FiveModules ds={ds} />,
+  }),
   {
     nr: "30.14",
     title: "Mønster 8, Kortgitter",
@@ -1713,17 +1746,8 @@ const layout: GalleryEntry[] = [
     title: "Fra spørgsmål til layout (opslagstabel)",
     node: "JCJ-0",
     only: "desktop",
-    note: "Opslagstabellen findes i koden som regeltekst til modellen (LAYOUT_RULES og COMPOSITION_RULES i catalog.ts), ikke som tabel.",
-    render: () => (
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-        <Section title="LAYOUT_RULES">
-          <RulesText text={"x\n" + LAYOUT_RULES.split("\n").slice(1).join("\n")} />
-        </Section>
-        <Section title="COMPOSITION_RULES">
-          <RulesText text={COMPOSITION_RULES} />
-        </Section>
-      </div>
-    ),
+    note: "Papers opslagstabel (12 rækker) og de fire regler. Samme regler står til modellen i LAYOUT_RULES/COMPOSITION_RULES (catalog.ts).",
+    render: () => <LookupTable />,
   },
   {
     nr: "30.13",
@@ -1731,7 +1755,7 @@ const layout: GalleryEntry[] = [
     node: "JEU-0",
     desktopWidth: 880,
     note: "Svarniveau B, mønster 1 ('Hvordan går det med X?') i chatbredde 880 og mobil 390.",
-    spec: { kind: "company", title: "Økonomi", components: ANSWER_B },
+    spec: { kind: "company", title: "Økonomi", answer: ANSWER_B_FOOT, components: ANSWER_B },
   },
 ];
 

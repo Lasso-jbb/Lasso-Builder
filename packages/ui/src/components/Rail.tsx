@@ -44,6 +44,13 @@ export interface RailProps {
   onToggleGroup?: (id: string) => void;
   /** Klik på logoet, fx "gå til forsiden". */
   onLogo?: () => void;
+  /** Logoet øverst i skinnen (standard). false, når logoet står i bundlinjen (fx personsiden, 25.2). */
+  logo?: boolean;
+  /**
+   * Bundlinje nederst i skinnen (25.2): dæmpet navnelogo + kildelinje, fx "Data fra CVR, Erhvervsstyrelsen
+   * og Creditsafe" (regel 15: logoet i bundlinjen med kildelinje). Skjules i den smalle ikonskinne.
+   */
+  bottom?: { source: string };
   className?: string;
 }
 
@@ -59,10 +66,10 @@ function itemIcon(item: RailItem): ReactNode {
   return <span className="lasso-rail__icon lasso-rail__icon--empty" aria-hidden="true" />;
 }
 
-export function Rail({ groups, activeItem, onToggleGroup, onLogo, className = "" }: RailProps) {
+export function Rail({ groups, activeItem, onToggleGroup, onLogo, logo = true, bottom, className = "" }: RailProps) {
   return (
     <nav className={`lasso-rail ${className}`} aria-label="Navigation">
-      <div className="lasso-rail__logo">
+      {logo ? <div className="lasso-rail__logo">
         {onLogo ? (
           <button type="button" className="lasso-rail__logo-btn" onClick={onLogo} aria-label="Lasso, forside">
             <LassoWordmark className="lasso-rail__wordmark" />
@@ -70,7 +77,7 @@ export function Rail({ groups, activeItem, onToggleGroup, onLogo, className = ""
         ) : (
           <LassoWordmark className="lasso-rail__wordmark" />
         )}
-      </div>
+      </div> : null}
       {groups.map((g) => {
         const open = !g.collapsed;
         const listId = `lasso-rail-${g.id}`;
@@ -117,6 +124,12 @@ export function Rail({ groups, activeItem, onToggleGroup, onLogo, className = ""
           </section>
         );
       })}
+      {bottom ? (
+        <div className="lasso-rail__bottom">
+          <LassoWordmark className="lasso-rail__bottom-mark" />
+          <span className="lasso-rail__bottom-source">{bottom.source}</span>
+        </div>
+      ) : null}
     </nav>
   );
 }

@@ -114,19 +114,18 @@ test("LassoView tegner LassoCreditRating fra datasættet og slår fejlnøglen cr
   assert.match(renderToStaticMarkup(createElement(LassoView, { spec, dataset: failed, host: {}, onAction: () => {} })), /Virksomheden blev ikke fundet/);
 });
 
-test("A4-rapporten (side 4) viser Creditsafe som tekst ved siden af scoren, aldrig i måleren", () => {
+test("A4-rapporten (side 4, 27.4): kreditmaks fra Creditsafe står ved Lassos score, ingen særskilt Creditsafe-sektion", () => {
   const ds = emptyDataset("demo");
   ds.companies[ID] = { lassoId: ID, cvr: "99000001", name: "Eksempel Byg A/S" };
   ds.scores[ID] = { lassoId: ID, score: 42, source: "Eksempeldata" };
   ds.creditRatings[ID] = OK;
   const html = renderToStaticMarkup(createElement(ReportA4, { company: ID, dataset: ds }));
   const t = text(html);
-  assert.match(t, /Creditsafe/);
-  assert.match(t, /B, Lav risiko/);
-  assert.match(t, /Kreditmaksimum 250 t\. kr\., lokal score 62, Lav risiko\./);
-  assert.match(t, /Forrige vurdering C \(Moderat risiko\), ændret 15\.04\.2026, ▼\u00a0bedre\./, "pil og ord brydes ikke fra hinanden");
   assert.match(t, /42af 100/, "Lassos score står uændret");
+  assert.match(t, /Kreditmaks 250 t\. kr\. Creditsafe/);
+  assert.doesNotMatch(t, /Forrige vurdering/, "ingen ekstra Creditsafe-undersektion (Paper 27.4)");
   assert.match(t, /Kilder?:?[^]*Creditsafe/);
+  assert.doesNotMatch(t, /Kilder: [^.]*Eksempeldata/, "scorens egen kilde står ikke i sidefoden (27.1)");
   // Uden Creditsafe-data er siden som før.
   const without = emptyDataset("demo");
   without.companies[ID] = ds.companies[ID]!;

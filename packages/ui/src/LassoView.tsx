@@ -31,7 +31,7 @@ import type { MenuItem } from "./components/Menu.js";
 import { Shortcuts, SHORTCUT_LABELS } from "./components/Shortcuts.js";
 import { Tabs } from "./components/Tabs.js";
 import { FollowUps } from "./components/FollowUps.js";
-import { LassoMark } from "./LassoMark.js";
+import { LassoMark, LassoWordmark } from "./LassoMark.js";
 import { CompanyHead } from "./components/CompanyHead.js";
 import { CompanyTable } from "./components/CompanyTable.js";
 import { CompareTable } from "./components/CompareTable.js";
@@ -1066,6 +1066,20 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
                 )}
           </main>
         )}
+        {spec.answer && (spec.answer.source || spec.answer.next || spec.answer.logo) ? (
+          // 30.1–30.3: svarets bundlinje, kildelinje (evt. med dæmpet navnelogo) til venstre og ét koral link videre til højre.
+          <footer className="lasso-answerfoot">
+            <span className="lasso-answerfoot__source">
+              {spec.answer.logo ? <LassoWordmark className="lasso-answerfoot__mark" /> : null}
+              {spec.answer.source ? <span>{spec.answer.source}</span> : null}
+            </span>
+            {spec.answer.next ? (
+              <button type="button" className="lasso-answerfoot__next" onClick={() => act({ kind: "prompt", prompt: spec.answer!.next!.prompt })}>
+                {spec.answer.next.label}
+              </button>
+            ) : null}
+          </footer>
+        ) : null}
 
         {saving ? (
           <SaveDialog

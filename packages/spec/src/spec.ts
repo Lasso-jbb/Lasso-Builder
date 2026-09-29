@@ -743,6 +743,19 @@ export type ComponentType = ViewComponent["type"];
  */
 export const LAYOUTS = ["dashboard", "stack", "grid-2", "columns"] as const;
 
+/** Svarets bundlinje (Paper 30.1–30.3 og 30.13): kildelinje til venstre, ét link videre til højre. */
+export const answerFootSchema = z.object({
+  source: z.string().min(1).max(200).optional(),
+  next: z
+    .object({
+      label: z.string().min(1).max(60),
+      prompt: z.string().min(1).max(400).describe("Opfølgende spørgsmål, der sendes til Claude ved klik, fx 'Vis hele økonomien for X'."),
+    })
+    .optional(),
+  logo: z.boolean().optional(),
+});
+export type AnswerFoot = z.infer<typeof answerFootSchema>;
+
 export const viewSpecSchema = z.object({
   /** v2: komponentsættet bygget fra Paper-kataloget. v1-visninger (gamle komponentnavne) afvises. */
   version: z.literal(2).default(2),
@@ -752,6 +765,11 @@ export const viewSpecSchema = z.object({
   layout: z.enum(LAYOUTS).default("dashboard").describe("'dashboard' (standard) = ét samlet overblik i 4-kolonne-grid med hver komponents bredde. 'stack' = alt i fuld bredde under hinanden."),
   criteria: z.array(criterionSchema).max(20).default([]).describe("Vises som chips i rammen under titlen."),
   columns: z.number().int().min(2).max(3).optional().describe("Kun layout 'columns': antal kolonner på desktop (2 eller 3). Serverens komponist sætter det."),
+  answer: answerFootSchema
+    .optional()
+    .describe(
+      "Svarets bundlinje (Paper 30.1–30.3): source = kildelinjen til venstre ('Kilde: CVR, opdateret 25.09.2026'), next = ét koral link videre til næste niveau ({ label: 'Se hele økonomien', prompt }), logo = dæmpet Lasso-navnelogo foran kilden (niveau C). Udelad i portalen.",
+    ),
   components: z.array(componentSchema).min(1).max(12),
 });
 export type ViewSpec = z.infer<typeof viewSpecSchema>;
