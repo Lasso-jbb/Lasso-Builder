@@ -612,17 +612,17 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-span-half { grid-column: span 2; }
 .lasso-span-three-quarters { grid-column: span 3; }
 .lasso-content--grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: var(--lasso-space-5); row-gap: var(--lasso-space-10); }
-/* Foldning (30, 26.1): tablet = 2 kolonner, ½ + ½ holder, ¼ og ¾ bliver fuld; gap 24/16/12.
+/* Foldning (30, 26.1): tablet = 2 kolonner, ½ + ½ holder, ¼ og ¾ bliver fuld; gap 24/24/12 (kontrol r5: 16 var for tæt ved 880).
    Containeren er midten, ikke skærmen: midten er ~960 px, når skærmen er 1200 (skinne + panel fratrukket),
    og chatten (640–900 px) skal have tablet-reglerne, mens den selvstændige visning (1080 px) er desktop. */
 @container lasso (max-width: 960px) {
-  .lasso-content--grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--lasso-space-4); }
+  .lasso-content--grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--lasso-space-5); }
   .lasso-content--grid-4 > .lasso-span-half { grid-column: span 1; }
   .lasso-content--grid-4 > .lasso-span-quarter, .lasso-content--grid-4 > .lasso-span-three-quarters { grid-column: 1 / -1; }
 }
 /* Tablet går op til skærm 1199 (26f): samme regler, når skærmen er under 1200, også hvor midten er bredere end 960 (portalen 1024–1199 uden skinne). */
 @media (max-width: 1199px) {
-  .lasso-content--grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--lasso-space-4); }
+  .lasso-content--grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--lasso-space-5); }
   .lasso-content--grid-4 > .lasso-span-half { grid-column: span 1; }
   .lasso-content--grid-4 > .lasso-span-quarter, .lasso-content--grid-4 > .lasso-span-three-quarters { grid-column: 1 / -1; }
 }
@@ -1530,11 +1530,11 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-dstack__item:last-child > * { flex: 1 0 auto; }
 .lasso-dstack__item > * { grid-column: auto; width: 100%; }
 @container lasso (max-width: 960px) {
-  .lasso-dband { grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--lasso-space-4); }
+  .lasso-dband { grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--lasso-space-5); } /* kontrol r5 (30.13 ved 880): 24 px, så enheden og naboens titel ikke rører hinanden */
   .lasso-dband > .lasso-dstack { grid-column: span var(--lasso-span-t, 12); }
 }
 @media (max-width: 1199px) {
-  .lasso-dband { grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--lasso-space-4); }
+  .lasso-dband { grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--lasso-space-5); } /* kontrol r5 (30.13 ved 880): 24 px, så enheden og naboens titel ikke rører hinanden */
   .lasso-dband > .lasso-dstack { grid-column: span var(--lasso-span-t, 12); }
 }
 @container lasso (max-width: 560px) {
