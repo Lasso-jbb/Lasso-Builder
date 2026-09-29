@@ -159,7 +159,7 @@ test("loft pr. lag: over 5 datterselskaber samles de mindste i +N; direkte ejere
   assert.equal(layoutOwnership(graph("R", nodes, edges, 1, 1), { expandAll: true }).nodes.filter((n) => n.layer === 1).length, 8);
 });
 
-test("loft pr. lag i anden række: '3 × 5–9,99 %' og 'hver' når andelene er ens", () => {
+test("loft pr. lag i anden række: 'hver' når andelene er ens; linjen viser den samlede andel (14.1)", () => {
   const owners = ["A", "B", "C", "D", "E", "G", "H"];
   const nodes = [co("R"), co("M"), ...owners.map((id) => co(id))];
   const edges = [own("M", "R"), ...owners.map((id, i) => (i < 3 ? own(id, "M", 20, 24.99) : own(id, "M", 5, 9.99)))];
@@ -168,7 +168,8 @@ test("loft pr. lag i anden række: '3 × 5–9,99 %' og 'hver' når andelene er 
   assert.equal(group.count, 3);
   assert.equal(group.subtitle, "5–9,99 % hver, fold ud");
   const e = l.edges.find((x) => x.from === group.id)!;
-  assert.equal(e.label?.lines[0]?.text, "3 × 5–9,99 %");
+  // 14.1 (Jakob): de sammenklappede ejeres samlede, udregnede andel (summen af intervallerne).
+  assert.equal(e.label?.lines[0]?.text, "15–29,97 %");
 });
 
 test("ukendt ejer (14b): summen af registrerede andele under 100 % giver én stiplet node under fokus", () => {

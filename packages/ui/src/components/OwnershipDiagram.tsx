@@ -347,14 +347,11 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
   // "Pr. dato" fra specen (API: onDate) eller valgt i værktøjslinjen; uden dato vises "i dag".
   const date = onDate ?? graph.onDate;
   const dateText = date ? `Pr. ${formatDate(date)}` : `Pr. i dag, ${formatDate(today)}`;
+  // 14.1 (Jakob): kun Ophørt, Sammenklappet, Historisk, Cirkulært ejerskab og stemmenoten.
   const legendLines = [
-    personRoot ? "Fokusperson (koral kant)" : "Fokusvirksomhed (koral kant)",
-    "Virksomhed (kasse)",
-    "Person (pille)",
     "Ophørt (grå flade)",
-    "Ukendt / sammenklappet (stiplet kasse)",
-    "Ejerskab: pil mod det ejede",
-    "Historisk / ukendt: stiplet linje",
+    "Sammenklappet (stiplet kasse)",
+    "Historisk: stiplet linje",
     "Cirkulært ejerskab: koral stiplet",
     beneficial ? "Reelle ejere: beregnet indirekte andel" : "Legale ejere: registreret andel",
   ];
@@ -801,7 +798,8 @@ function NodeShape({ n, selected, onClick, onDoubleClick, onHover }: { n: Layout
   const person = n.kind === "person";
   const folded = n.kind === "chain" || n.kind === "group";
   const foreign = n.entity?.country;
-  const hasIcon = n.kind === "company" || folded;
+  // 14.1: sammenklappede noder har intet "+N"-mærke, kun "6 flere ejere"; derfor heller ingen ikonplads.
+  const hasIcon = n.kind === "company";
   const padL = n.root ? 14 : person ? 16 : 8;
   // 14.1: ikonet (14 px) og 6 px luft, så navnet (14/600) får plads på én linje i 196 px.
   const textX = n.x + padL + (hasIcon ? 22 : 0);
@@ -823,13 +821,14 @@ function NodeShape({ n, selected, onClick, onDoubleClick, onHover }: { n: Layout
   const e = n.entity;
   const distress = e && e.kind === "company" && !n.ceased && e.status && e.statusKind && e.statusKind !== "active" ? e.status : undefined;
   const subtitle = distress ? [distress, baseSubtitle].filter(Boolean).join(", ") : baseSubtitle;
-  const label = folded ? `${n.title}. ${n.subtitle ?? ""}. Klik for at folde ud.` : `${n.title}, ${subtitle ?? ""}`;
+  const label = folded ? `${n.title}. ${n.subtitle ?? ""}. Klik for at folde ud.` : subtitle ? `${n.title}, ${subtitle}` : n.title;
   // Navne afkortes ikke hårdt: et langt navn ombrydes til to linjer ved et mellemrum, først derefter "…".
   const rawTitle = n.kind === "group" && textWidth(n.title, nameSize, 600) > maxText ? n.title.replace("datterselskaber", "selskaber") : n.title;
   // 14.1: navnet står på én linje (14/600), så noden holder 196 × 64; for langt afkortes med "…".
   const nameLines = splitName(rawTitle, maxText, nameSize, 600, false);
   const lineH = nameSize + 3;
-  const top = cy - 3 - ((nameLines.length - 1) * lineH) / 2 - (nameLines.length > 1 ? 3 : 0);
+  // Uden undertekst (personer, 14.1) står navnet lodret centreret i noden.
+  const top = subtitle ? cy - 3 - ((nameLines.length - 1) * lineH) / 2 - (nameLines.length > 1 ? 3 : 0) : cy + nameSize * 0.35 - ((nameLines.length - 1) * lineH) / 2;
   const subY = top + (nameLines.length - 1) * lineH + 15;
   return (
     <g
@@ -868,11 +867,7 @@ function NodeShape({ n, selected, onClick, onDoubleClick, onHover }: { n: Layout
     >
       <title>{label}</title>
       <rect className="lasso-odiagram__box" x={n.x} y={n.y} width={n.w} height={n.h} rx={person ? n.h / 2 : 8} />
-      {folded ? (
-        <text className="lasso-odiagram__plus" x={n.x + padL + 9} y={cy + 4} textAnchor="middle">
-          +{n.count}
-        </text>
-      ) : n.kind === "company" && foreign ? (
+      {n.kind === "company" && foreign ? (
         <text className="lasso-odiagram__cc" x={n.x + padL + 9} y={cy + 4} textAnchor="middle">
           {foreign}
         </text>
@@ -961,20 +956,20 @@ function Minimap({ layout, view, onMove }: { layout: { width: number; height: nu
   );
 }
 
-function Legend({ personRoot = false }: { personRoot?: boolean }) {
+/**
+ * 14.1 (Jakob): signaturforklaringen forklarer kun det, der ikke er selvforklarende: Ophørt,
+ * Sammenklappet, Historisk, Cirkulært ejerskab og stemmenoten (ingen fokus, virksomhed, person eller pil).
+ */
+function Legend(_: { personRoot?: boolean }) {
   return (
     <div className="lasso-odiagram__legend" aria-label="Signaturforklaring">
       <div className="lasso-odiagram__legend-row">
-        {personRoot ? <span><i className="lg-box lg-box--root lg-box--person" />Fokusperson</span> : <span><i className="lg-box lg-box--root" />Fokusvirksomhed</span>}
-        <span><i className="lg-box" />Virksomhed</span>
-        <span><i className="lg-box lg-box--person" />Person</span>
         <span><i className="lg-box lg-box--ceased" />Ophørt</span>
-        <span><i className="lg-box lg-box--unknown" />Ukendt / sammenklappet</span>
+        <span><i className="lg-box lg-box--unknown" />Sammenklappet</span>
+        <span><i className="lg-line lg-line--dashed" />Historisk</span>
+        <span><i className="lg-line lg-line--cycle" />Cirkulært ejerskab</span>
       </div>
       <div className="lasso-odiagram__legend-row">
-        <span><i className="lg-line" />Ejerskab (pil mod det ejede)</span>
-        <span><i className="lg-line lg-line--dashed" />Historisk / ukendt</span>
-        <span><i className="lg-line lg-line--cycle" />Cirkulært ejerskab</span>
         <span><b className="lg-votes">Stemmer</b> vises kun når de afviger fra ejerandelen</span>
       </div>
     </div>
@@ -1006,8 +1001,8 @@ function DetailPanel({
   const shortRoot = rootName.replace(/\s+(A\/S|ApS|I\/S|K\/S|P\/S|IVS|AS|AB|GmbH)$/i, "");
   const direct: OwnershipEdgeVM | undefined = node.layer < 0 ? graph.edges.find((e) => e.from === n.id && e.to === rootId) : graph.edges.find((e) => e.from === rootId && e.to === n.id);
   const indirect = node.layer < 0 ? indirectShare(graph, n.id, rootId) : node.layer > 0 ? indirectShare(graph, rootId, n.id) : null;
-  const role = node.root ? "Valgt, fokus" : node.layer < 0 ? "Valgt, ejer" : personRoot ? "Valgt, ejet selskab" : "Valgt, datterselskab";
-  const sub = n.kind === "person" ? "Person" : [n.cvr ? `CVR ${n.cvr}` : n.registrationNo ? `Reg.nr. ${n.registrationNo}` : undefined, n.form, n.status].filter(Boolean).join(", ");
+  // 14.1 (Jakob): ingen overlinje ("Valgt, ejer"), ingen selskabsform og intet "Person" i underteksten.
+  const sub = n.kind === "person" ? "" : [n.cvr ? `CVR ${n.cvr}` : n.registrationNo ? `Reg.nr. ${n.registrationNo}` : undefined, n.status].filter(Boolean).join(", ");
 
   const rows: [string, string, boolean?][] = [];
   if (node.root && personRoot) {
@@ -1020,7 +1015,8 @@ function DetailPanel({
     rows.push([node.layer < 0 ? `Ejerandel i ${shortRoot}` : `${shortRoot} ejer`, share ? formatShare(share) : "Ikke oplyst", !share]);
     if (direct?.votes || direct?.share) rows.push(["Stemmeandel", formatShare(direct.votes ?? direct.share)]);
     const below = personRoot ? (direct ? "Ejet direkte" : "Ejet indirekte, via et selskab") : direct ? "Datterselskab, direkte" : "Datterselskab, indirekte";
-    rows.push(["Type", node.layer < 0 ? (direct ? "Legal ejer, direkte" : "Legal ejer, indirekte") : below]);
+    // 14.1 (Jakob): rækken "Type" står ikke i firmapanelet.
+    if (n.kind === "person") rows.push(["Type", node.layer < 0 ? (direct ? "Legal ejer, direkte" : "Legal ejer, indirekte") : below]);
     if (direct?.since) rows.push(["Registreret siden", formatDate(direct.since)]);
     if (direct?.until) rows.push(["Ophørt", formatDate(direct.until)]);
   }
@@ -1049,9 +1045,8 @@ function DetailPanel({
     <aside className="lasso-odiagram__panel" aria-label={`Detaljer for ${n.name}`}>
       <div className="lasso-odiagram__panel-head">
         <div>
-          <div className="lasso-odiagram__overline">{role}</div>
           <div className="lasso-odiagram__panel-name">{n.name}</div>
-          <div className="lasso-odiagram__panel-sub">{sub}</div>
+          {sub ? <div className="lasso-odiagram__panel-sub">{sub}</div> : null}
         </div>
         <button type="button" className="lasso-odiagram__close" aria-label="Luk" onClick={onClose}>
           <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">

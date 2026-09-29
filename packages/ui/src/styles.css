@@ -1060,16 +1060,12 @@ button.lasso-relations__name:hover { text-decoration: underline; }
   .lasso-analysis__gen { font-size: 11px; line-height: 16px; color: var(--lasso-muted); text-align: right; }
 }
 
-/* ---------- Resumé (12, node A8H-0): foldet med hvid toning ---------- */
-.lasso-summary { position: relative; overflow: hidden; }
-/* 12.2: brødtekst 15/25 i læsebredde (højst ca. 72 tegn pr. linje), afsnit med 12 px luft, foldet til 5 linjer. */
+/* ---------- Resumé (12, node A8H-0): klippet rent efter 5 linjer (ingen toning) ---------- */
+.lasso-summary { position: relative; }
+/* 12.2: brødtekst 15/25 i læsebredde (højst ca. 72 tegn pr. linje), afsnit med 12 px luft. */
 .lasso-summary__body { margin: 0; max-width: 72ch; font-size: 15px; line-height: 25px; color: var(--lasso-text-2); overflow-wrap: anywhere; }
 .lasso-summary__body + .lasso-summary__body { margin-top: 12px; }
-.lasso-summary--folded { max-height: 125px; }
-.lasso-summary--folded::after {
-  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 64px;
-  background: linear-gradient(180deg, transparent 0%, var(--lasso-surface) 90%);
-}
+.lasso-summary__body--clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; line-clamp: 5; overflow: hidden; }
 
 /* ---------- Tidslinje (12, node A8Z-0) ---------- */
 .lasso-timeline { display: flex; flex-direction: column; }
@@ -1122,7 +1118,8 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-news__lasso { display: block; width: 16px; height: 16px; color: var(--lasso-text); }
 .lasso-news__source { font-size: 12px; font-weight: 600; color: var(--lasso-text); }
 .lasso-news__time { font-size: 12px; color: var(--lasso-muted); }
-.lasso-news__headline { font-size: 15px; line-height: 20px; font-weight: 600; color: var(--lasso-text); }
+/* 12.4 (Jakob): samme typografi som historikkens begivenhedsoverskrift (12.3: fs/18/500). */
+.lasso-news__headline { font-size: var(--lasso-fs); line-height: 18px; font-weight: 500; color: var(--lasso-text); }
 /* 26c.9: mobil som kompakt liste, overskrift 14/400 først (højst to linjer), kildelinjen med favicon under, intet uddrag. */
 @container lasso (max-width: 560px) {
   .lasso-news__row { display: flex; flex-direction: column; gap: 6px; padding: 12px 0; }
@@ -1356,7 +1353,6 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-odiagram__node.is-ceased .lasso-odiagram__name { fill: var(--lasso-muted); }
 .lasso-odiagram__node--unknown .lasso-odiagram__name { fill: var(--lasso-text-3); }
 .lasso-odiagram__node--group .lasso-odiagram__name, .lasso-odiagram__node--chain .lasso-odiagram__name { fill: var(--lasso-accent-text); }
-.lasso-odiagram__plus { fill: var(--lasso-accent-text); font-size: 12px; font-weight: 600; }
 .lasso-odiagram__cc { fill: var(--lasso-text-2); font-size: 10px; font-weight: 600; }
 
 /* Kanter: 1,5 px, stiplet 5/4 for historisk/ukendt, koral 4/3 for cirkulært, ink 2 px ved fokus. */

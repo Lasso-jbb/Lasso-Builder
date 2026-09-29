@@ -10,6 +10,9 @@ import { DataState, Section, stateForError } from "../primitives.js";
 
 const ALL = "Alle typer";
 
+/** 12.3: regnskabsbegivenheder (kategori "Regnskab") viser indberetningsdatoen i anden linje. */
+const isReport = (category: string) => /^regnskab/i.test(category);
+
 /**
  * Titel med entiteter (personens historik): et selskab (CVR-1-) eller en person (CVR-3-/CVR-4-)
  * med Lasso-ID kan åbnes, når værten har drill-down; ellers står navnet som almindelig tekst.
@@ -218,7 +221,10 @@ export function LassoTimeline({
                           e.title
                         )}
                       </div>
-                      {e.from || e.to ? (
+                      {isReport(e.category) ? (
+                        // 12.3: regnskab har "Indberettet <dato>" som anden linje (ikke nøgletal); datoen gentages ikke i tredje linje.
+                        <div className="lasso-row__sub">Indberettet {formatDate(e.date)}</div>
+                      ) : e.from || e.to ? (
                         <div className="lasso-timeline__change">
                           {e.from ? (
                             // 12.3: kun en gammel adresse gennemstreges; fx kapital skrives "1,0 mio. kr. → 1,2 mio. kr.".
@@ -235,8 +241,14 @@ export function LassoTimeline({
                         <div className="lasso-row__sub">{e.detail}</div>
                       ) : null}
                       <div className="lasso-timeline__meta">
-                        {formatDate(e.date)}
-                        <span className="lasso-timeline__cat">, {e.category}</span>
+                        {isReport(e.category) ? (
+                          <span className="lasso-timeline__cat">{e.category}</span>
+                        ) : (
+                          <>
+                            {formatDate(e.date)}
+                            <span className="lasso-timeline__cat">, {e.category}</span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>

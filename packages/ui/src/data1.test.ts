@@ -7,6 +7,7 @@ import { KeyFigureCards } from "./components/KeyFigureCards.js";
 import { LassoSummary, paragraphs } from "./components/LassoSummary.js";
 import { Ranking } from "./components/Ranking.js";
 import { LassoNews } from "./components/LassoNews.js";
+import { LassoTimeline } from "./components/LassoTimeline.js";
 import { LineChart } from "./components/LineChart.js";
 import { Sparkline } from "./primitives.js";
 
@@ -30,12 +31,15 @@ test("09.4: valgte nøgletal uden tal vises som 'Ikke oplyst' med årsag, aldrig
   assert.ok(out.indexOf("Bruttofortjeneste") < out.indexOf("Ikke oplyst"));
 });
 
-test("12.2: afsnit bevares, og foldet tekst har 'Læs mere' med chevron", () => {
+test("12.2: afsnit bevares; foldet tekst klippes rent (ingen toning) med 'Vis mere', ingen kildelinje", () => {
   assert.deepEqual(paragraphs("Et.\n\nTo\nlinjer."), ["Et.", "To linjer."]);
   const long = `${"Første afsnit er langt. ".repeat(12)}\n\n${"Andet afsnit. ".repeat(10)}`;
-  const out = html(h(LassoSummary, { text: long }));
-  assert.equal(out.match(/<p class="lasso-summary__body">/g)?.length, 2);
-  assert.match(out, />Læs mere<svg/);
+  const out = html(h(LassoSummary, { text: long, source: "Lasso", updated: "2026-09-28" }));
+  assert.match(out, /lasso-summary__body--clamp/);
+  assert.match(out, />Vis mere</);
+  assert.doesNotMatch(out, /Læs mere|lasso-summary--folded|Kilde/);
+  const short = html(h(LassoSummary, { text: "Et.\n\nTo." }));
+  assert.equal(short.match(/<p class="lasso-summary__body">/g)?.length, 2);
 });
 
 test("13.3: tallet står lige efter bjælken (i samme spor), ingen medianrække", () => {
@@ -75,4 +79,21 @@ test("13.9: en næsten flad serie tegnes flad (lille udsving), ikke fra top til 
   const out = html(h(Sparkline, { values: [12, 12.2, 11.9, 12.1], bare: true }));
   const ys = [...out.matchAll(/[ML][\d.]+,([\d.]+)/g)].map((m) => Number(m[1]));
   assert.ok(Math.max(...ys) - Math.min(...ys) < 4, `udsving ${ys.join(", ")}`);
+});
+
+test("12.3: regnskab har 'Indberettet <dato>' som anden linje og kun kategorien i tredje; andre begivenheder dato + kategori", () => {
+  const out = html(
+    h(LassoTimeline, {
+      timeline: {
+        lassoId: "CVR-1-1",
+        events: [
+          { date: "2026-04-15", title: "Årsrapport 2025 offentliggjort", detail: "Bruttofortjeneste 38,0 mio. kr., resultat 4,2 mio. kr.", category: "Regnskab" },
+          { date: "2026-02-01", title: "Ny direktør", category: "Ledelse" },
+        ],
+      },
+    }),
+  );
+  assert.match(out, /Årsrapport 2025 offentliggjort<\/div><div class="lasso-row__sub">Indberettet 15\.04\.2026<\/div><div class="lasso-timeline__meta"><span class="lasso-timeline__cat">Regnskab<\/span>/);
+  assert.doesNotMatch(out, /Bruttofortjeneste/);
+  assert.match(out, /01\.02\.2026<span class="lasso-timeline__cat">, Ledelse<\/span>/);
 });
