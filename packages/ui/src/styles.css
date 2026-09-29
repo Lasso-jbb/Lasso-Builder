@@ -1456,7 +1456,8 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-odiagram__kv > div { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 36px; border-bottom: 1px solid var(--lasso-divider-subtle); font-size: var(--lasso-fs-sm); line-height: 16px; }
 .lasso-odiagram__kv > div:last-child { border-bottom: 0; }
 .lasso-odiagram__kv dt { color: var(--lasso-text-2); }
-.lasso-odiagram__kv dd { margin: 0; font-weight: 600; color: var(--lasso-text); text-align: right; }
+.lasso-odiagram__kv dd { margin: 0; flex: none; font-weight: 600; color: var(--lasso-text); text-align: right; white-space: nowrap; } /* 14.1: procentintervaller ombrydes aldrig; nøglen ombrydes i stedet */
+.lasso-odiagram__kv dt { min-width: 0; }
 .lasso-odiagram__panel-sec { display: flex; flex-direction: column; gap: 8px; padding: 12px 18px 16px; border-top: 1px solid var(--lasso-border); }
 .lasso-odiagram__chain-row { display: flex; justify-content: space-between; gap: 8px; font-size: var(--lasso-fs-sm); line-height: 16px; color: var(--lasso-text); }
 .lasso-odiagram__chain-row b { font-size: 12px; font-weight: 600; }
@@ -4915,6 +4916,10 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 /* 26c.6: koral prik foran emnet, ingen gruppeoverlinjer, "Underniveauer er eksempeldata" i hovedet. */
 .lasso-odlist__dot { flex: none; width: 8px; height: 8px; border-radius: 4px; background: var(--lasso-accent); }
 .lasso-odiagram__demo { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+/* Kontrol r5 (14.3 mobil): eksempeldata-noten står under titlen, så titlen ikke presses ind i en smal spalte */
+@container lasso (max-width: 560px) {
+  .lasso-section__head:has(> .lasso-section__action > .lasso-odiagram__demo) { flex-direction: column; gap: 2px; }
+}
 .lasso-odiagram--list .lasso-section__head { align-items: baseline; flex-wrap: nowrap; }
 .lasso-odlist__row { font-size: var(--lasso-fs); line-height: 18px; }
 .lasso-odlist__share { font-size: var(--lasso-fs-sm); }

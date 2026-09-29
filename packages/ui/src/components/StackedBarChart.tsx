@@ -9,7 +9,7 @@ interface Segment {
   key: string;
   label: string;
   value: number;
-  tone: "s1" | "s2" | "s3" | "s4" | "s4b";
+  tone: "s1" | "s2" | "s3" | "s4" | "s4b" | "s6";
 }
 
 interface BalanceYear {
@@ -39,6 +39,8 @@ export function balanceYears(financials: FinancialsVM | undefined, statements: F
     const debtTotal = num(b?.liabilitiesTotal) ? b!.liabilitiesTotal! : num(long) && num(short) ? long + short : y.liabilities;
     if (!num(equity) || !num(debtTotal)) continue;
     const liabilities: Segment[] = [{ key: "equity", label: "Egenkapital", value: equity, tone: "s1" }];
+    // Kontrol r5 (13.5): hensatte forpligtelser med, så passiver = aktiver (balancen balancerer).
+    if (num(b?.provisions) && b!.provisions! > 0) liabilities.push({ key: "provisions", label: "Hensatte forpligtelser", value: b!.provisions!, tone: "s6" });
     if (num(long) && num(short)) {
       liabilities.push({ key: "long", label: "Langfristet gæld", value: long, tone: "s2" });
       liabilities.push({ key: "short", label: "Kortfristet gæld", value: short, tone: "s3" });
@@ -66,6 +68,7 @@ const SHORT: Record<string, string> = {
   current: "Omsætning",
   assets: "Aktiver",
   equity: "Egenkapital",
+  provisions: "Hensatte",
   long: "Langfristet",
   short: "Kortfristet",
   debt: "Gæld",
@@ -222,9 +225,9 @@ export function StackedBarChart({ financials, statements, years, error }: { fina
               return (
                 <g key={c.title}>
                   {stack(c.segments, x)}
-                  {/* 13.5: navn og total på én linje under søjlen, "Aktiver · 62,8" i 600. */}
+                  {/* 13.5: navn og total på én linje under søjlen, "Aktiver, 62,8" i 600 (regel 9: aldrig midterprik). */}
                   <text className="lasso-chart__value lasso-chart__value--last" x={cx} y={y(0) + 20} textAnchor="middle">
-                    {`${c.title} \u00b7 ${label(c.total)}`}
+                    {`${c.title}, ${label(c.total)}`}
                   </text>
                 </g>
               );
