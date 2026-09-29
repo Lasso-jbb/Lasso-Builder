@@ -304,3 +304,22 @@ test("adaptChrLivestock læser 'problems' som en hændelseslinje, når veterinar
   assert.equal(vm.events[0]!.title, "Bemærkning");
   assert.equal(vm.events[0]!.detail, "Ingen kendte aktuelle problemer");
 });
+
+test("20.1: P-enhedens telefon og e-mail læses fra nuværende form og historikform; tomme felter udelades (G2)", () => {
+  const ref = { lassoId: "CVR-2-1011011010", pNumber: "1011011010" };
+  const now = adaptProductionUnitDetail(ref, { pNumber: 1011011010, name: "HOVEDKVARTERET", phone: "71717171", email: "def@firmaet.dk", fax: null });
+  assert.equal(now.phone, "71717171");
+  assert.equal(now.email, "def@firmaet.dk");
+  const hist = adaptProductionUnitDetail(ref, {
+    pNumber: 1011011010,
+    phone: [
+      { value: "12341234", from: "2012-07-02", to: "2013-07-31", current: false },
+      { value: "71717171", from: "2018-08-10", to: null, current: true },
+    ],
+    email: [],
+  });
+  assert.equal(hist.phone, "71717171");
+  assert.equal("email" in hist, false);
+  const none = adaptProductionUnitDetail(ref, { pNumber: 1011011010, phone: null });
+  assert.equal("phone" in none, false);
+});
