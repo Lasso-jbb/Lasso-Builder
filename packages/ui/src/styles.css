@@ -873,11 +873,12 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 
 /* Rangliste (BFK-0): navn i fast kolonne, bjælke, virksomheden selv i koral, andre i neutral (chart-5). */
 .lasso-ranking-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.lasso-ranking__row { display: grid; grid-template-columns: 20px 170px 1fr; align-items: center; gap: var(--lasso-space-3); min-height: 40px; padding: 6px 0; border-bottom: 1px solid var(--lasso-border); }
+.lasso-ranking__row { display: grid; grid-template-columns: 20px minmax(170px, max-content) 1fr; align-items: center; gap: var(--lasso-space-3); min-height: 40px; padding: 6px 0; border-bottom: 1px solid var(--lasso-border); }
 .lasso-ranking__row:last-child { border-bottom: 0; }
 /* 13.3: plads-nummer som overlinje (11/600) til venstre. */
 .lasso-ranking__rank { font-size: var(--lasso-fs-label); font-weight: 600; letter-spacing: var(--lasso-ls-label); color: var(--lasso-muted); text-align: right; }
-.lasso-ranking__name { font-size: var(--lasso-fs-sm); color: var(--lasso-text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 13.3: navnene vises fuldt (højst ca. 220 px, derefter ombrydning), aldrig afkortet med "…". */
+.lasso-ranking__name { max-width: 220px; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-2); overflow-wrap: break-word; }
 .lasso-ranking__row--origin .lasso-ranking__name { color: var(--lasso-text); font-weight: 600; }
 /* Bjælken (18 px, radius 3, ingen baggrundsbane) og tallet lige efter den; plads til tallet fratrækkes bjælkens længde. */
 .lasso-ranking__track { display: flex; align-items: center; gap: var(--lasso-space-2); min-width: 0; }
