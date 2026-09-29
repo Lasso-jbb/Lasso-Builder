@@ -358,6 +358,8 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
   .lasso-kpi__label-extra, .lasso-kpi__unit-cur, .lasso-kpi__bench, .lasso-kpi__year, .lasso-root .lasso-kpi .lasso-spark { display: none; }
   .lasso-kpi__unit { font-size: inherit; font-weight: inherit; color: inherit; margin-left: 5px; letter-spacing: inherit; }
   .lasso-kpi__delta { font-size: 12px; line-height: 16px; }
+  /* 26c.1/26c.2: ingen info-ikoner ved nøgletal og nøgle-værdi på mobil (Paper); flaget findes på desktop og i 26h.2-rækkerne. */
+  .lasso-root .lasso-kpi__label .lasso-qflag, .lasso-root .lasso-kv-row .lasso-qflag { display: none; }
 }
 /* 24.5/30.13 plain: 1 px linje over og under, lodrette skillelinjer, ingen ydre ramme; første felt flugter med kolonnen. */
 .lasso-root .lasso-kpis--plain { border: 0; border-top: 1px solid var(--lasso-border); border-bottom: 1px solid var(--lasso-border); border-radius: 0; background: transparent; }
@@ -814,7 +816,7 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-myt-m__table { border-collapse: separate; border-spacing: 0; min-width: 100%; font-size: var(--lasso-fs); font-variant-numeric: tabular-nums; }
 .lasso-myt-m__table th, .lasso-myt-m__table td { height: 44px; padding: 0 12px; white-space: nowrap; border-bottom: 1px solid var(--lasso-divider-subtle); text-align: right; color: var(--lasso-text-2); font-weight: 400; background: var(--lasso-surface); }
 .lasso-myt-m__table thead th { height: 36px; background: var(--lasso-surface-muted); border-bottom: 1px solid var(--lasso-border); font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-muted); }
-.lasso-myt-m__table .lasso-myt-m__name { position: sticky; left: 0; z-index: 1; width: 120px; min-width: 120px; max-width: 140px; text-align: left; white-space: normal; line-height: 18px; font-weight: 500; color: var(--lasso-text); border-right: 1px solid var(--lasso-border); }
+.lasso-myt-m__table .lasso-myt-m__name { position: sticky; left: 0; z-index: 1; width: 120px; min-width: 120px; max-width: 120px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 18px; /* 26c.3: lange etiketter afkortes ("Bruttofortj…") i stedet for at løbe ind i kanten */ font-weight: 500; color: var(--lasso-text); border-right: 1px solid var(--lasso-border); }
 .lasso-myt-m__table thead .lasso-myt-m__name { color: var(--lasso-muted); font-weight: 500; background: var(--lasso-surface-muted); }
 .lasso-myt-m__table .is-last { font-weight: 600; color: var(--lasso-text); }
 .lasso-myt-m__table thead .is-last { color: var(--lasso-text); }
@@ -1415,7 +1417,8 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-odlist__row--root { border-top: 0; background: var(--lasso-accent-soft); }
 .lasso-odlist__row--root .lasso-odlist__name { font-weight: 600; }
 .lasso-odlist__dash { flex: none; width: 14px; height: 1px; background: var(--lasso-faint); }
-.lasso-odlist__name { flex: 1 1 0; min-width: 0; color: var(--lasso-text); overflow-wrap: anywhere; }
+.lasso-odlist__name { flex: 1 1 0; min-width: 0; color: var(--lasso-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* 26c.6: navne på én linje */
+.lasso-odlist__name > .lasso-link { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
 .lasso-odlist__row.is-deep .lasso-odlist__name { color: var(--lasso-text-2); }
 .lasso-odlist__row.is-ceased .lasso-odlist__name { color: var(--lasso-muted); }
 .lasso-odlist__share { flex: none; font-size: 12px; font-weight: 600; color: var(--lasso-text); }
@@ -4506,8 +4509,10 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-ccards-state { display: none; }
 @container lasso (max-width: 560px) {
   /* 26c.7: søgefelt + "Filter" med koral tæller, chips under og "Sortér: Navn". */
-  .lasso-ctable__chips--mobile { flex-wrap: wrap; overflow: visible; padding: 0 0 var(--lasso-space-3); }
-  .lasso-ctable__sortnote { font-size: var(--lasso-fs-sm); color: var(--lasso-text-2); white-space: nowrap; }
+  /* 26c.7: chips og "Sortér: Navn" på én vandret rullende række; sorteringen som kantet chip til sidst. */
+  .lasso-ctable__chips--mobile { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 0 0 var(--lasso-space-3); }
+  .lasso-ctable__chips--mobile > * { flex: none; }
+  .lasso-ctable__sortnote { display: inline-flex; align-items: center; height: var(--lasso-tag-h); padding: 0 10px; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius); font-size: var(--lasso-fs-sm); color: var(--lasso-text-2); white-space: nowrap; }
   .lasso-root .lasso-ctable .lasso-ctable__filter { width: auto; padding: 0 12px; gap: 6px; }
   .lasso-ctable__filtercount { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--lasso-accent); color: var(--lasso-on-accent); font-size: 11px; line-height: 1; font-weight: 600; }
   .lasso-ccards-state { display: block; }

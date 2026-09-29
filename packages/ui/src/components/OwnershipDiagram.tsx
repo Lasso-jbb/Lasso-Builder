@@ -1107,6 +1107,8 @@ function DetailPanel({
 /* ---------- Mobil: indrykket liste (26c) ---------- */
 
 const LIST_SHOW = 3;
+/** 26c.6: hele listen foldes efter 4 rækker under emnet. */
+const LIST_FOLD = 4;
 
 function OwnershipList({
   graph,
@@ -1183,8 +1185,28 @@ function OwnershipList({
           <span className="lasso-odlist__name">{root?.name ?? graph.rootId}</span>
           <span className="lasso-odlist__tag">Emne</span>
         </li>
-        {rows(tree.owners, 1, "o", "ejere")}
-        {rows(tree.subsidiaries, 1, "s", personRoot ? "selskaber" : "datterselskaber")}
+        {(() => {
+          // 26c.6: efter 4 rækker samles resten bag én fold-række "+ N ejere" med chevron.
+          const ownerRows = rows(tree.owners, 1, "o", "ejere");
+          const subRows = rows(tree.subsidiaries, 1, "s", personRoot ? "selskaber" : "datterselskaber");
+          const all = [...ownerRows, ...subRows];
+          if (openRows.has("*") || all.length <= LIST_FOLD + 1) return all;
+          const hiddenOwners = Math.max(0, ownerRows.length - LIST_FOLD);
+          const hiddenSubs = subRows.length - Math.max(0, LIST_FOLD - ownerRows.length);
+          const rest = all.length - LIST_FOLD;
+          const noun = hiddenSubs <= 0 ? "ejere" : hiddenOwners === 0 ? (personRoot ? "selskaber" : "datterselskaber") : "rækker";
+          return [
+            ...all.slice(0, LIST_FOLD),
+            <li key="fold" className="lasso-odlist__row lasso-odlist__row--more">
+              <button type="button" className="lasso-odlist__more" onClick={() => toggle("*")} aria-expanded={false}>
+                <span>+ {rest} {noun}</span>
+                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M3 6l5 5 5-5" />
+                </svg>
+              </button>
+            </li>,
+          ];
+        })()}
       </ul>
       {emptyAll ? (
         <DataState
