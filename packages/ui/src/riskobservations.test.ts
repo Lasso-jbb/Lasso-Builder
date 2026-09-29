@@ -58,7 +58,8 @@ test("17.2: sammenfatning og sortering", () => {
 
 test("26h.1: DataState låst, på forespørgsel, tom med handling og fejl med rød kant", () => {
   const locked = renderToStaticMarkup(createElement(DataState, { state: "locked", reason: "Reelle ejere kræver Lasso Pro.", action: { label: "Se planer", onClick: () => {} } }));
-  assert.match(locked, /lasso-state-locked__content/);
+  // 17.3 (Jakob): ingen skeletstreger bag låsekortet, når der ikke er indhold at dæmpe.
+  assert.doesNotMatch(locked, /lasso-state-locked__content|lasso-skeleton/);
   assert.match(locked, /Reelle ejere kræver Lasso Pro\.[^]*lasso-btn--primary[^>]*>Se planer</);
   const titled = renderToStaticMarkup(createElement(DataState, { state: "locked", title: "Reelle ejere kræver Lasso Pro", reason: "Se hvem der ejer.", action: { label: "Se planer" } }));
   assert.match(titled, /lasso-state__title">Reelle ejere kræver Lasso Pro<[^]*Se hvem der ejer\./);

@@ -19,13 +19,17 @@ export interface ScoreSide {
 }
 
 export interface ScoreCompareProps {
-  previous: ScoreSide;
+  /**
+   * Forrige vurdering. 18.1 (Jakob 29.09): der findes ingen scorehistorik, så elementet viser kun den
+   * aktuelle score; `previous` udelades. Beholdes som valgfri for bagudkompatibilitet.
+   */
+  previous?: ScoreSide;
   current: ScoreSide;
   /**
    * Ændringen på risikoskalaen: "worse" = mere risiko (warning-tekst, aldrig grøn), "better" = mindre
    * risiko (almindelig tekst), "same" = uændret.
    */
-  direction: "better" | "worse" | "same";
+  direction?: "better" | "worse" | "same";
   /** Fx "5 point" eller "1 trin" (vises som "▲ 5 point, mere risiko"). Bruges, når `delta` mangler. */
   amount?: string;
   /** Ændringen med fortegn, fx "+5" (18.1: "+5, mere risiko"). Går forud for `amount`. */
@@ -69,21 +73,26 @@ function Side({ label, side, strong }: { label: string; side: ScoreSide; strong?
  * warning-tekst, aldrig grøn (18.2).
  * Mobil: forrige, ændring og nu står side om side; handlingen lægger sig under i fuld bredde.
  */
-export function ScoreCompare({ previous, current, direction, amount, delta, period, action }: ScoreCompareProps) {
+export function ScoreCompare({ previous, current, direction = "same", amount, delta, period, action }: ScoreCompareProps) {
   const arrow = direction === "worse" ? "▲" : direction === "better" ? "▼" : "";
   const word = direction === "worse" ? "mere risiko" : direction === "better" ? "mindre risiko" : "uændret";
   const text = delta ? (direction === "same" ? word : `${delta}, ${word}`) : `${arrow ? `${arrow} ` : ""}${amount ? `${amount}, ` : ""}${word}`;
   return (
-    <div className={`lasso-scorecmp${action ? "" : " lasso-scorecmp--noact"}`}>
-      <Side label="Forrige" side={previous} />
-      <div className={`lasso-scorecmp__cell lasso-scorecmp__change lasso-scorecmp__change--${direction}`}>
-        <svg className="lasso-scorecmp__arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M4 12h15M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        <span className="lasso-scorecmp__delta">{text}</span>
-        {period ? <span className="lasso-scorecmp__period">{period}</span> : null}
-      </div>
-      <Side label="Nu" side={current} strong />
+    <div className={`lasso-scorecmp${action ? "" : " lasso-scorecmp--noact"}${previous ? "" : " lasso-scorecmp--single"}`}>
+      {previous ? (
+        <>
+          <Side label="Forrige" side={previous} />
+          <div className={`lasso-scorecmp__cell lasso-scorecmp__change lasso-scorecmp__change--${direction}`}>
+            <svg className="lasso-scorecmp__arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 12h15M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="lasso-scorecmp__delta">{text}</span>
+            {period ? <span className="lasso-scorecmp__period">{period}</span> : null}
+          </div>
+        </>
+      ) : null}
+      {/* 18.1: uden forrige vurdering står kun den aktuelle score ("Aktuel score", ingen dato for tidligere måling). */}
+      <Side label={previous ? "Nu" : "Aktuel score"} side={current} strong />
       {action ? (
         <div className="lasso-scorecmp__cell lasso-scorecmp__act">
           <button type="button" className={`lasso-btn${action.primary ? " lasso-btn--primary" : ""} lasso-scorecmp__action`} onClick={action.onClick}>

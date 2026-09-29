@@ -20,7 +20,7 @@ export interface CatalogEntry {
  * beskrivelserne, så modellen vælger værktøj, antal og rækkefølge før den vælger komponent.
  */
 export const COMPOSITION_RULES = `Komposition (guide 23):
-- Én virksomhed: brug show_company med focus. Serveren henter data og bygger selv siden efter virksomhedens data. Byg IKKE selv en virksomhedsside med render_view. Routing efter spørgsmål: bredt ("fortæl om X") → overblik; økonomi, omsætning, resultat, nøgletal, soliditetsgrad, "hvordan går det" → oekonomi; fuldt regnskab, resultatopgørelse, balance, pengestrøm, "alle posterne" → regnskab; ejere, reelle ejere, koncern → ejerskab; direktion, bestyrelse, udskiftning → ledelse; røde flag, "kan vi handle med dem", kreditvurdering, Creditsafe, revisors uafhængighed → risiko; "hvad er der sket", nyheder → historik; kontaktoplysninger, telefon, e-mail, web, kontaktpersoner → kontakt. Snævre stamdataspørgsmål ("hvem er revisor", "hvornår stiftet", "hvor mange ansatte") → overblik.
+- Én virksomhed: brug show_company med focus. Serveren henter data og bygger selv siden efter virksomhedens data. Byg IKKE selv en virksomhedsside med render_view. Routing efter spørgsmål: bredt ("fortæl om X") → overblik; økonomi, omsætning, resultat, nøgletal, soliditetsgrad, "hvordan går det" → oekonomi; fuldt regnskab, resultatopgørelse, balance, pengestrøm, "alle posterne" → regnskab; ejere, reelle ejere, koncern → ejerskab; direktion, bestyrelse, udskiftning → ledelse; røde flag, "kan vi handle med dem", kreditvurdering, Creditsafe → risiko; "hvad er der sket", nyheder → historik; kontaktoplysninger, telefon, e-mail, web, kontaktpersoner → kontakt. Snævre stamdataspørgsmål ("hvem er revisor", "hvornår stiftet", "hvor mange ansatte") → overblik.
 - Én person → show_person med focus: "hvem er X" → overblik; "hvor sidder X i bestyrelser", roller over tid → roller; "hvem sidder X sammen med" → netvaerk; "hvilke selskaber ejer X" → ejerskab; "har X været i konkurser" → risiko; "hvad er der sket", nyheder om X → historik. Byg ikke personsider med render_view.
 - Flere virksomheder → render_view: LassoCompareTable (2–6 navngivne, flere nøgletal), LassoRanking (2–10 navngivne, ét nøgletal) eller LassoLineChart (2 virksomheder, ét nøgletal over tid); mange fundet med kriterier → search_companies eller LassoCompanyTable. Aldrig én enkeltvisning pr. virksomhed.
 - render_view til én virksomhed kun, når brugeren beder om elementer, ingen focus dækker (fx LassoStackedBarChart, LassoProductionUnits, LassoProperties, en egen vurdering i LassoSummary), eller om en kombination på tværs af focus (fx ejere + revisor, resultatopgørelse + ejere). Læg da ALT i én spec: LassoCompanyHead først, dernæst det bestilte, og LassoSummary som sidste sektion.
@@ -274,7 +274,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
   {
     type: "LassoCreditRating",
     title: "Kreditvurdering, Creditsafe",
-    description: `Brug til: kreditvurdering fra Creditsafe (kreditmaksimum, international score A–E, lokal score, ændring fra forrige vurdering, PDF-rapport) – 'kan vi give dem kredit', 'kreditvurdering', 'Creditsafe'. Brug ikke når: det gælder Lassos 0–100-score (LassoScoreGauge); skalaerne må ikke blandes. Kræver: company; uden Creditsafe-tilkøb viser den låst tilstand. Et opslag kan tage op til 45 sekunder, når Creditsafe beregner; Lasso gemmer vurderingen i 24 timer, så vis den højst én gang pr. svar og bed aldrig om en ny beregning (koster en kredit). ${F("risiko")} Eksempel: 'Hvad er kreditvurderingen for Lasso X?' → show_company focus risiko.`,
+    description: `Brug til: kreditvurdering fra Creditsafe (kreditmaksimum, international score A–E, lokal score, PDF-rapport; kun den aktuelle vurdering, ingen historik) – 'kan vi give dem kredit', 'kreditvurdering', 'Creditsafe'. Brug ikke når: det gælder Lassos 0–100-score (LassoScoreGauge); skalaerne må ikke blandes. Kræver: company; uden Creditsafe-tilkøb viser den låst tilstand. Et opslag kan tage op til 45 sekunder, når Creditsafe beregner; Lasso gemmer vurderingen i 24 timer, så vis den højst én gang pr. svar og bed aldrig om en ny beregning (koster en kredit). ${F("risiko")} Eksempel: 'Hvad er kreditvurderingen for Lasso X?' → show_company focus risiko.`,
     props: "company, title?",
   },
   {
@@ -284,25 +284,11 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     props: "company, title?, compact?",
   },
   {
-    type: "LassoAuditorIndependence",
-    title: "Revisoruafhængighed",
-    description: `Brug til: relationer mellem revisionshuset og kundens ledelse/ejere, vurderet pr. relation – kun når spørgsmålet nævner revisor SAMMEN MED uafhængighed, habilitet eller relationer. Brug ikke når: brugeren blot vil vide, hvem revisor er (LassoKeyValueList variant 'company'), eller spørger bredt om risiko (show_company focus risiko). Kræver: company; dækker kun navnesammenfald mellem revisionshusets og kundens personer, og komponenten skriver selv den begrænsning. ${F("risiko")} Eksempel: 'Er revisor for X uafhængig af ledelsen?' → show_company focus risiko.`,
-    props: "company, title?",
-  },
-  {
     type: "LassoScoreGauge",
     title: "Scoremåler (kun demo)",
     description:
       "Brug til: KUN demovisninger. Der er ingen live datakilde for en 0–100 score; for rigtige virksomheder viser måleren 'Ikke oplyst'. Vælg den aldrig til en kunde, der spørger om risiko, score eller kreditvurdering (show_company focus risiko). Kræver: company, title? (standard 'Kreditvurdering'), detail? (true tilføjer udviklingen over 24 måneder og seneste ændringer). Eksempel: intet kundespørgsmål fører hertil.",
     props: "company, title?, detail?",
-  },
-
-  {
-    type: "LassoScoreHistory",
-    title: "Scorehistorik (kun demo)",
-    description:
-      "Brug til: KUN demovisninger. Lassos 0–100-score over tid som trinlinje med zonerne lav/moderat/høj og forrige vs. nu; der er ingen live datakilde, så rigtige virksomheder viser tom tilstand. Vælg den aldrig til en kunde, der spørger om risiko eller kreditvurdering (show_company focus risiko). Brug ikke når: det gælder Creditsafes vurdering (LassoCreditRating). Kræver: company, title? (standard 'Kreditscore 2023–2026' ud fra hentningerne), compare? (false viser grafen alene uden forrige vs. nu-striben). Eksempel: intet kundespørgsmål fører hertil.",
-    props: "company, title?, compare?",
   },
 
   // (f) Fysiske enheder --------------------------------------------------------

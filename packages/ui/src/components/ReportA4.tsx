@@ -13,12 +13,8 @@ import { moreText,
   type Dataset,
   type FinancialYear,
   type Metric,
-  type ScoreHistoryVM,
-  type RelationAssessment,
-  type Severity,
 } from "@lasso/spec";
 import { LassoMark, LassoWordmark } from "../LassoMark.js";
-import { severityWord } from "../primitives.js";
 import { observationLevel, sortObservations } from "./RiskObservations.js";
 
 /**
@@ -187,31 +183,6 @@ function StatementTable({ title, years, rows }: { title: string; years: readonly
   );
 }
 
-/**
- * 27.4: udviklingen i Lassos score over 24 måneder som tekst under zonebjælken, fx
- * "Udvikling 24 mdr.: 44 → 47 → 52 (+8). Seneste ændring 12.09.2026." Højst tre punkter.
- */
-function scoreDevelopment(history: ScoreHistoryVM | undefined): string | null {
-  const pts = [...(history?.points ?? [])].filter((p) => typeof p.score === "number").sort((a, b) => a.date.localeCompare(b.date));
-  const lastPt = pts.at(-1);
-  if (!lastPt || pts.length < 2) return null;
-  const end = new Date(lastPt.date);
-  const from = new Date(end);
-  from.setMonth(from.getMonth() - 24);
-  const within = pts.filter((p) => new Date(p.date) >= from);
-  if (within.length < 2) return null;
-  const picks = within.length <= 3 ? within : [within[0]!, within[Math.floor((within.length - 1) / 2)]!, within.at(-1)!];
-  const diff = Math.round(lastPt.score) - Math.round(within[0]!.score);
-  const sign = diff > 0 ? "+" : diff < 0 ? "\u2212" : "±";
-  const changed = [...within].reverse().find((p, i, a) => i + 1 < a.length && Math.round(p.score) !== Math.round(a[i + 1]!.score));
-  return `Udvikling 24 mdr.: ${picks.map((p) => formatNumber(Math.round(p.score))).join(" → ")} (${sign}${Math.abs(diff)}).${changed ? ` Seneste ændring ${formatDate(changed.date)}.` : ""}`;
-}
-
-/** 27.4: revisorlinjernes prik: grøn (ingen eller neutral), gul (vurdér), rød (høj). */
-function relDot(sev: Severity): "ok" | "warn" | "high" {
-  return sev >= 100 ? "high" : sev >= 50 ? "warn" : "ok";
-}
-
 export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
   const c = dataset.companies[company];
   const name = c?.name ?? company;
@@ -231,7 +202,6 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
   const creditRating = dataset.creditRatings?.[company];
   const credit = creditRating?.state === "ok" && creditRating.current ? creditRating : undefined;
   const auditor = dataset.auditorIndependence[company];
-  const history = dataset.scoreHistories?.[company];
   // Katalog 27.4: risikoobservationer (17) kun, når de er hentet til visningen; ellers udelades blokken.
   const lassoObs = dataset.observations[company];
   const observations = lassoObs ? sortObservations(lassoObs.observations.filter((o) => !o.notAvailable)) : [];
@@ -454,15 +424,13 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
   }
 
   // Side 4: Kreditvurdering, risikoobservationer, reelle ejere, revisor og "Om rapporten".
-  if (score || credit || lassoObs || beneficial || auditorName || auditor) {
+  if (score || credit || lassoObs || beneficial || auditorName) {
     pages.push({
       key: "risiko",
       toc: [lassoObs ? "Kreditvurdering og risiko" : score || credit ? "Kreditvurdering" : "Ejere og revisor"],
       render: (page, total) => {
         const value = score && score.score !== null ? Math.max(0, Math.min(100, score.score)) : null;
         const band = value !== null ? scoreBand(value) : null;
-        const relations = [...(auditor?.relations ?? [])].sort((a, b) => b.assessment - a.assessment);
-        const toSeverity = (a: RelationAssessment): Severity => a;
         return (
           <section className="lasso-a4-page" key="p4">
             <PageHead name={name} cvr={cvr} stamp={stamp} />
@@ -499,7 +467,8 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
                         <span>100, høj risiko</span>
                       </div>
                     </div>
-                    <p className="lasso-a4__small">{scoreDevelopment(history) ?? "Score 0 (lav risiko) til 100 (høj risiko). Vurderingen er en modelvurdering og ikke en garanti."}</p>
+                    {/* 18.1/18.2 (Jakob 29.09): ingen scorehistorik; kun den aktuelle score. */}
+                    <p className="lasso-a4__small">Score 0 (lav risiko) til 100 (høj risiko). Vurderingen er en modelvurdering og ikke en garanti.</p>
                   </>
                 ) : credit ? null : (
                   <>
@@ -599,35 +568,13 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
               </div>
             ) : null}
 
-            {auditorName || auditor ? (
+            {auditorName ? (
+              // 22.2 udgår (Jakob 29.09): kun revisoren og seneste revisorskift, ingen uafhængighedslinjer.
               <div className="lasso-a4-block">
-                <h2 className="lasso-a4__h2">Revisor og uafhængighed</h2>
-                <div className="lasso-a4-cols">
-                  <div className="lasso-a4-col">
-                    <span className="lasso-a4__strong">{auditorName ?? "Ikke oplyst"}</span>
-                    <span className="lasso-a4__small">
-                      {ownership?.auditor?.from ? `Revisor siden ${formatDate(ownership.auditor.from)}` : "Revisor ifølge CVR"}
-                      {auditor?.checkedAt ? `, relationer tjekket ${formatDate(auditor.checkedAt)}` : ""}
-                    </span>
-                  </div>
-                  <div className="lasso-a4-col">
-                    {relations.length ? (
-                      relations.slice(0, 4).map((r) => (
-                        <span key={r.id} className="lasso-a4-rel">
-                          <span className={`lasso-a4-rel__dot lasso-a4-rel__dot--${relDot(toSeverity(r.assessment))}`} aria-label={severityWord(r.assessment, "assessment")} />
-                          <span>
-                            {r.name}: {r.relation}
-                            {r.to ? " (afsluttet)" : ""}
-                          </span>
-                        </span>
-                      ))
-                    ) : (
-                      <span className="lasso-a4-rel">
-                        <span className="lasso-a4-rel__dot lasso-a4-rel__dot--ok" aria-hidden="true" />
-                        <span>{auditor?.unavailableReason ?? "Ingen fundne relationer mellem revisor, kunden og personer"}</span>
-                      </span>
-                    )}
-                  </div>
+                <h2 className="lasso-a4__h2">Revisor</h2>
+                <div className="lasso-a4-col">
+                  <span className="lasso-a4__strong">{auditorName}</span>
+                  <span className="lasso-a4__small">{ownership?.auditor?.from ? `Revisor siden ${formatDate(ownership.auditor.from)}` : "Revisor ifølge CVR"}</span>
                 </div>
               </div>
             ) : null}

@@ -839,7 +839,7 @@ const mobileUnits: GalleryEntry[] = [
     ) },
   { nr: "26e.6", title: "Push-notifikation (systembanner)", node: "F2X-0", only: "mobile", render: () => <PushBanner event="Konkurs" company="Eksempel Energi A/S" time="nu" /> },
   { nr: "26e.7", title: "Sammenligning (mobil)", node: "F3C-0", only: "mobile", spec: one("Sammenligning", { type: "LassoCompareTable", companies: [C, "CVR-1-99000005", "CVR-1-99000008"] }, "custom") },
-  { nr: "26e.8", title: "Revisor og uafhængighed (mobil)", node: "F52-0", only: "mobile", spec: one("Revisor", { type: "LassoAuditorIndependence", company: C }) },
+  // 26e.8 Revisor og uafhængighed (mobil) udgår sammen med 22.2 (Jakob 29.09).
 ];
 
 /* ---------- 26f Tablet 768 ---------- */
@@ -1058,9 +1058,7 @@ const REPORT_SPEC = {
     { type: "LassoBeneficialOwners", company: C },
     { type: "LassoScoreGauge", company: C },
     { type: "LassoCreditRating", company: C },
-    { type: "LassoScoreHistory", company: C },
     { type: "LassoRiskObservations", company: C },
-    { type: "LassoAuditorIndependence", company: C },
   ],
 };
 

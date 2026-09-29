@@ -33,7 +33,7 @@ export function rolesText(r: Pick<PersonTableRowVM, "roles">): string {
   return more > 0 ? `${text} +${more}` : text;
 }
 
-/** "Født 1978, København" som sekundær linje; aldrig CPR eller fuld adresse. */
+/** "Født 1978, København"; aldrig CPR eller fuld adresse. 15.3: vises ikke længere i tabellen/kortet (kun navnet). */
 export function personSub(r: Pick<PersonTableRowVM, "birthYear" | "city">): string {
   return [r.birthYear ? `Født ${r.birthYear}` : null, r.city].filter(Boolean).join(", ");
 }
@@ -190,8 +190,8 @@ export function PersonTable({
                         <Checkbox checked={on} onChange={(v) => toggle([r.lassoId], v)} label={`Markér ${r.name}`} />
                       </td>
                       <td className="lasso-cell--name">
+                        {/* 15.3 (Jakob): personcellen viser kun navnet (ingen fødselsår eller by under). */}
                         <span className="lasso-table__name">{r.name}</span>
-                        {personSub(r) ? <span className="lasso-table__sub">{personSub(r)}</span> : null}
                       </td>
                       <td className="lasso-ptable__roles">
                         {r.roles.length ? (
@@ -233,7 +233,6 @@ export function PersonTable({
                 <div className="lasso-ccard__top">
                   <div className="lasso-ccard__id">
                     <span className="lasso-ccard__name">{r.name}</span>
-                    {personSub(r) ? <span className="lasso-ccard__sub">{personSub(r)}</span> : null}
                   </div>
                   {r.bankruptcies > 0 ? (
                     <span className="lasso-ccard__status lasso-ptable__bankrupt">

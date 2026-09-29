@@ -601,6 +601,8 @@ test("tekstkort for persontabellen (15.3): roller, fødselsår, by og konkurser"
   const card = textCard(spec, ds)!;
   for (const l of card.split("\n")) assert.equal([...l].length, 38);
   assert.ok(card.includes("Mette Eksempel"));
-  assert.ok(card.includes("f. 1978, København, 1 konkurs"));
+  // 15.3: kun navnet; ingen fødselsår eller by.
+  assert.ok(card.includes("1 konkurs"));
+  assert.doesNotMatch(card, /f\. 1978|København/);
   assert.doesNotMatch(card, /·/);
 });

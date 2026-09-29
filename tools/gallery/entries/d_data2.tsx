@@ -328,20 +328,14 @@ export const entries: GalleryEntry[] = [
   /* ---------- 18 Kreditvurdering over tid ---------- */
   {
     nr: "18.1",
-    title: "Forrige vs. nu (kreditscore)",
+    title: "Aktuel score",
     node: "BX9-0",
     render: () => (
-      <ScoreCompare
-        previous={{ value: "47", of: "af 100", word: "Lav risiko", tone: "ok", date: "2026-03-14", detail: "Kreditmaks 0,9 mio. kr." }}
-        current={{ value: "52", of: "af 100", word: "Lav risiko", tone: "ok", date: "2026-09-12", detail: "Kreditmaks 1,25 mio. kr., international score B. Kilde: Creditsafe" }}
-        direction="worse"
-        delta="+5"
-        period="6 mdr."
-        action={{ label: "Hent ny, 1 kredit", onClick: noop, primary: true, note: "Du har 38 kreditter, seneste hentning for 13 dage siden" }}
-      />
+      <ScoreCompare current={{ value: "52", of: "af 100", word: "Lav risiko", tone: "ok", date: "2026-09-12" }} />
     ),
+    note: "Jakob 29.09: kun den aktuelle score (ingen forrige, pil eller ændring; ingen Creditsafe). Scoregrundlag og skala afventer Jakob/Jeppe; Paper BX9-0 redesignes af Fable.",
   },
-  { nr: "18.2", title: "Scorehistorik (trinlinje)", node: "BY5-0", spec: company("Eksempel Byg A/S", [{ type: "LassoScoreHistory", company: BYG, compare: false, width: "full" }]) },
+  // 18.2 Scorehistorik udgår (Jakob 29.09): der kan ikke laves historik.
   {
     nr: "18.3",
     title: "Bekræft hentning (dialog)",
@@ -444,5 +438,5 @@ export const entries: GalleryEntry[] = [
       components: [{ type: "LassoCompareTable", companies: [BYG, "CVR-1-99000004", "CVR-1-99000008"], metrics: ["omsaetning", "bruttofortjeneste", "resultat", "egenkapital", "ansatte"] }],
     },
   },
-  { nr: "22.2", title: "Revisoruafhængighed (relationstabel)", node: "CI4-0", spec: company("Eksempel Byg A/S", [{ type: "LassoAuditorIndependence", company: BYG }]) },
+  // 22.2 Revisoruafhængighed udgår (Jakob 29.09); revisoren står i nøgle-værdi-listen (09.2).
 ];

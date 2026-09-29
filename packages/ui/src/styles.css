@@ -3438,6 +3438,9 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 /* ---------- 18.1 Forrige vs. nu, to scorer side om side, ændring som pil (node BX9-0) ---------- */
 .lasso-scorecmp { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, auto) minmax(0, 1fr) minmax(0, 1fr); border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-card); overflow: hidden; margin-bottom: var(--lasso-space-4); background: var(--lasso-surface); }
 .lasso-scorecmp--noact { grid-template-columns: minmax(0, 1fr) minmax(120px, auto) minmax(0, 1fr); }
+/* 18.1 (Jakob): kun den aktuelle score; med handling står den til højre. */
+.lasso-scorecmp.lasso-scorecmp--single { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.lasso-scorecmp.lasso-scorecmp--single.lasso-scorecmp--noact { grid-template-columns: minmax(0, 1fr); }
 .lasso-scorecmp__cell { display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; padding: var(--lasso-space-4) var(--lasso-space-5); border-left: 1px solid var(--lasso-border); }
 .lasso-scorecmp__cell:first-child { border-left: 0; }
 .lasso-scorecmp__side:not(.is-current) { background: var(--lasso-surface-2); }
@@ -3558,6 +3561,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-map > .lasso-map__card { margin-top: var(--lasso-space-3); box-shadow: none; }
   /* 18.1 på mobil: de to scorer står side om side, handlingen under i fuld bredde */
   .lasso-scorecmp, .lasso-scorecmp--noact { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .lasso-scorecmp.lasso-scorecmp--single { grid-template-columns: minmax(0, 1fr); }
   .lasso-scorecmp__cell { padding: var(--lasso-space-3); }
   .lasso-scorecmp__change { grid-column: 1 / -1; order: 3; flex-direction: row; justify-content: flex-start; gap: var(--lasso-space-2); border-left: 0; border-top: 1px solid var(--lasso-border); }
   .lasso-scorecmp__act { order: 4; }

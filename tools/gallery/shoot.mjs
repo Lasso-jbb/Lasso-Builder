@@ -57,14 +57,15 @@ const html = `<!doctype html><html lang="da"><head><meta charset="utf-8"><style>
 body{font-family:Poppins,system-ui,sans-serif;color:#16181D;margin:0}
 .cover{page-break-after:always;padding:20mm 10mm}.cover h1{font-size:28px;margin:0 0 6px}.cover p{color:#5B6068;font-size:12px}
 table{border-collapse:collapse;font-size:9px;width:100%;columns:2}td{padding:2px 6px;border-bottom:1px solid #E6E7EB}
-.pg{page-break-after:always;height:188mm;display:flex;flex-direction:column}
+.pg{page-break-after:always;height:188mm;display:flex;flex-direction:column;overflow:hidden}
 header{display:flex;gap:10px;align-items:baseline;border-bottom:1px solid #E4E4E7;padding-bottom:6px;margin-bottom:8px}
 .nr{font-weight:700;color:#B2450F;font-size:16px}.t{font-weight:600;font-size:16px}.meta{margin-left:auto;color:#8A9099;font-size:10px}
 .note{font-size:10px;color:#5B6068;margin:0 0 6px}
 .row{display:flex;gap:10mm;flex:1;min-height:0;align-items:flex-start}
 figure{margin:0;display:flex;flex-direction:column;min-height:0;max-height:100%}figcaption{font-size:9px;color:#8A9099;margin-bottom:3px}
 figure img{border:1px solid #E6E7EB;object-fit:contain;object-position:top left;max-height:170mm}
-.d{flex:3 1 0;min-width:0}.d img{max-width:100%}.m{flex:0 0 62mm}.m img{width:62mm}
+.d{flex:3 1 0;min-width:0}.d img{max-width:100%}.m{flex:0 0 62mm}.m img{width:62mm;max-height:170mm}
+/* G4/14b.1: et højt billede skaleres ned inden for siden (contain) og flyder aldrig ind over næste sides hoved. */
 </style></head><body><div class="cover"><h1>Lasso designkatalog, tegnet fra koden</h1><p>${sel.length} elementer. Hvert element er tegnet af komponenterne i Lasso-Builder med demodata og mærket med nummeret fra Paper, så det kan sammenlignes side om side med designkataloget. Genereret ${new Date().toISOString().slice(0, 10)}.</p><table>${toc}</table></div>${pages}</body></html>`;
 writeFileSync(join(out, "galleri.html"), html);
 const pdfPage = await b.newPage();

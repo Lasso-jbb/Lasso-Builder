@@ -256,21 +256,18 @@ export function DataState({ state, reason, title, checkedAt, positive, onRetry, 
     );
   }
   if (state === "locked") {
-    // Låst (26h.1): indholdet dæmpes til 35 % bag et forklarende kort med én primær handling.
+    // Låst (26h.1): et givet indhold (children) dæmpes til 35 % bag et forklarende kort med én primær
+    // handling. 17.3 (Jakob): uden indhold tegnes ingen skeletstreger bag kortet; kun låsekortet.
     return (
       <div className="lasso-state-locked">
         <span className="lasso-state-locked__lock" title="Låst">
           <StateIcon kind="lock" />
         </span>
-        <div className="lasso-state-locked__content" aria-hidden="true">
-          {children ?? (
-            <div className="lasso-skeleton-group lasso-skeleton-group--static">
-              {Array.from({ length: lines }, (_, i) => (
-                <div key={i} className="lasso-skeleton" style={{ width: `${55 - i * 5}%` }} />
-              ))}
-            </div>
-          )}
-        </div>
+        {children ? (
+          <div className="lasso-state-locked__content" aria-hidden="true">
+            {children}
+          </div>
+        ) : null}
         <div className="lasso-state-locked__card">
           <div>
             {title ? <div className="lasso-state__title">{title}</div> : null}
