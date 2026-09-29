@@ -102,7 +102,7 @@ const PATHS: Record<IconName, string> = {
   trash: "M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 12.5h9l1-12.5M10.5 11v5M13.5 11v5",
   undo: "M9 5L4.5 9.5 9 14M4.5 9.5H15a4.5 4.5 0 010 9h-3",
   saved: "M7 4h10v16l-5-3.5L7 20z",
-  list: "M8 7h12M8 12h12M8 17h12M4 7h.01M4 12h.01M4 17h.01",
+  list: "M5 7h14M5 12h14M5 17h9", /* 01.6/26a.3: tre streger uden prikker */
   overview: "M4.5 4.5h6v6h-6zM13.5 4.5h6v6h-6zM4.5 13.5h6v6h-6zM13.5 13.5h6v6h-6z",
   sidepanel: "M4 5h16v14H4zM15 5v14",
   bell: "M18 8.5a6 6 0 10-12 0c0 6.5-2.5 6.5-2.5 8.5h17c0-2-2.5-2-2.5-8.5M10 20a2 2 0 004 0",

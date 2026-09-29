@@ -110,15 +110,16 @@ test("Notifikationspanel (21): overskrift, faner niveau 2, ulæst-prik, kilde + 
   assert.match(done, /Alt er læst\./);
 });
 
-test("Klokke (21): ingen badge, koral badge med antal, rød badge ved vigtig ændring", () => {
+test("Klokke (06/21/26a): aldrig badge; ulæste = koral klokke, antal i aria-label", () => {
   const none = renderToStaticMarkup(createElement(MonitorBell, { unread: 0 }));
   assert.match(none, /aria-label="Notifikationer, ingen ulæste"/);
-  assert.doesNotMatch(none, /lasso-bell__badge/);
+  assert.doesNotMatch(none, /lasso-bell--unread/);
   const three = renderToStaticMarkup(createElement(MonitorBell, { unread: 3 }));
   assert.match(three, /aria-label="Notifikationer, 3 ulæste"/);
-  assert.match(three, /class="lasso-bell__badge" aria-hidden="true">3</);
+  assert.match(three, /lasso-bell--unread/);
+  assert.doesNotMatch(three, /lasso-bell__badge/);
   const important = renderToStaticMarkup(createElement(MonitorBell, { unread: 3, important: true }));
-  assert.match(important, /lasso-bell__badge lasso-bell__badge--important"[^>]*>!</);
+  assert.doesNotMatch(important, /lasso-bell__badge/);
   assert.match(important, /vigtig ændring, 3 ulæste/);
 });
 

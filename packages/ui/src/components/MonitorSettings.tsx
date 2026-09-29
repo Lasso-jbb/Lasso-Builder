@@ -32,24 +32,14 @@ export interface MonitorBellProps {
 }
 
 /**
- * Klokken i topbjælken (katalog 21, node CDW-0): ingen ulæste = klokke alene, N ulæste = koral badge
- * med tallet, vigtig ændring (status/konkurs) = rød badge med "!". Badgen er den eneste tilladte badge
- * i kataloget; teksten til skærmlæsere bærer betydningen (regel 7).
+ * Klokken i topbjælken (katalog 06/21/26a): aldrig badge. Ulæste = klokken står i koral; ingen
+ * ulæste = neutral klokke. Antal og "vigtig ændring" bæres af aria-label (regel 7 og 11).
  */
 export function MonitorBell({ unread, important, onClick, open }: MonitorBellProps) {
   const label = important ? `Notifikationer, vigtig ændring, ${formatNumber(unread)} ulæste` : unread > 0 ? `Notifikationer, ${formatNumber(unread)} ulæste` : "Notifikationer, ingen ulæste";
   return (
-    <button type="button" className={`lasso-bell ${unread > 0 ? "lasso-bell--unread" : ""}`} aria-label={label} aria-expanded={open} onClick={onClick}>
-      <BellIcon />
-      {important ? (
-        <span className="lasso-bell__badge lasso-bell__badge--important" aria-hidden="true">
-          !
-        </span>
-      ) : unread > 0 ? (
-        <span className="lasso-bell__badge" aria-hidden="true">
-          {unread > 99 ? "99+" : formatNumber(unread)}
-        </span>
-      ) : null}
+    <button type="button" className={`lasso-bell ${unread > 0 || important ? "lasso-bell--unread" : ""}`} aria-label={label} aria-expanded={open} onClick={onClick}>
+      <BellIcon size={20} />
     </button>
   );
 }

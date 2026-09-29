@@ -78,7 +78,7 @@ test("Menu (07): knap med aria-haspopup/expanded, liste role=menu, destruktivt p
   assert.match(html, new RegExp(`<div id="${listId}" class="lasso-menu__pop[^"]*" hidden=""`));
   assert.match(html, /role="menu"[^>]*aria-label="Handlinger"/);
   assert.equal((html.match(/role="menuitem"/g) ?? []).length, 3);
-  assert.match(html, /lasso-menu__item lasso-menu__item--danger [^"]*"[^>]*>(?:(?!<\/button>).)*Slet/);
+  assert.match(html, /lasso-menu__item lasso-menu__item--danger[^"]*"[^>]*>(?:(?!<\/button>).)*Slet/);
   assert.match(html, /lasso-menu__context-title">Store IT-selskaber</);
   assert.match(html, /lasso-menu__context-sub">Gemt liste, 1.243 virksomheder</);
   assert.match(html, /lasso-menu__cancel"[^>]*>Annuller</);
@@ -117,7 +117,8 @@ test("Besked/toast (07): ikon + tekst + handling + luk, stak med role=status", (
   assert.equal((html.match(/class="lasso-toast lasso-toast--/g) ?? []).length, 2);
   assert.match(html, /lasso-toast--ok"[^>]*>(?:(?!lasso-toast--error).)*Fortryd/);
   assert.match(html, /lasso-toast--error" role="alert"[^>]*>(?:(?!<\/div>).)*Prøv igen/);
-  assert.equal((html.match(/aria-label="Luk"/g) ?? []).length, 2);
+  // 07.5: fejlbeskeden har ingen luk-kryds (kun "Prøv igen").
+  assert.equal((html.match(/aria-label="Luk"/g) ?? []).length, 1);
   const one = renderToStaticMarkup(createElement(ToastItem, { toast: { id: 1, text: "Link kopieret" } }));
   assert.match(one, /lasso-toast__text">Link kopieret</);
   assert.doesNotMatch(one, /lasso-toast__action/);

@@ -5,7 +5,7 @@ import { cloneElement, isValidElement, useEffect, useId, useRef, useState, type 
  * over elementet, centreret. Vises ved hover og tastaturfokus efter 150 ms (aldrig over 300), skjules
  * straks ved Esc. role=tooltip, og elementet får aria-describedby, så teksten læses op.
  */
-export function Tooltip({ text, children, placement = "top", className = "", open: forced }: { text: string; children: ReactNode; /** "right": til højre for elementet på samme linje med pil mod det (02b.5 info-ikon). */ placement?: "top" | "bottom" | "right"; className?: string; /** Tvinger visning (statisk forhåndsvisning). */ open?: boolean }) {
+export function Tooltip({ text, children, placement = "top", className = "", open: forced }: { text: string; children: ReactNode; placement?: "top" | "bottom" | "right"; className?: string; /** Tvinger visning (statisk forhåndsvisning). */ open?: boolean }) {
   const id = useId();
   const tipId = `${id}-tip`;
   const [shown, setOpen] = useState(false);

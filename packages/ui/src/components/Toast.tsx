@@ -1,5 +1,4 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { Icon } from "./Icon.js";
 import { CheckIcon, CloseIcon, useLayer } from "./Layer.js";
 
 /**
@@ -90,8 +89,9 @@ export function useHasToastProvider(): boolean {
   return useContext(ToastContext) !== null;
 }
 
+/** 07.5: fejl = rødt "!" uden cirkel. */
 function ErrorIcon() {
-  return <Icon name="alert" size={16} />;
+  return <span className="lasso-toast__bang">!</span>;
 }
 
 /**
@@ -154,9 +154,11 @@ export function ToastItem({ toast, onDismiss }: { toast: ToastEntry; onDismiss?:
           {toast.action.label}
         </button>
       ) : null}
-      <button type="button" className="lasso-toast__close" aria-label="Luk" onClick={() => onDismiss?.(toast.id)}>
-        <CloseIcon size={14} />
-      </button>
+      {tone === "error" ? null : (
+        <button type="button" className="lasso-toast__close" aria-label="Luk" onClick={() => onDismiss?.(toast.id)}>
+          <CloseIcon size={14} />
+        </button>
+      )}
     </div>
   );
 }

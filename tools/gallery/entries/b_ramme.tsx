@@ -143,7 +143,7 @@ const MODULES: TabItem[] = [
 const MODULE_ACTIONS = [
   { id: "export", label: "Eksportér", items: [{ id: "pdf", label: "PDF" }, { id: "csv", label: "CSV" }, { id: "link", label: "Kopiér link" }] },
   { id: "saved", label: "Gemt", tone: "accent" as const, icon: <Icon name="saved" size={15} filled /> },
-  { id: "monitor", label: "Overvåg", tone: "accent" as const, icon: <Icon name="bell" size={15} /> },
+  { id: "monitor", label: "Overvåg", tone: "accent" as const, icon: <Icon name="rss" size={15} /> },
 ];
 
 function Strip() {
@@ -232,25 +232,29 @@ function FullPage() {
 /* ---------------------------------------------------------------- 04 sidehoved */
 
 const HEAD_MENU: MenuItem[] = [
-  { id: "export", label: "Eksportér", icon: <Icon name="export" /> },
-  { id: "monitor", label: "Overvåg listen", icon: <Icon name="bell" /> },
+  { id: "duplicate", label: "Dublér", icon: <Icon name="copy" /> },
   { id: "delete", label: "Slet", icon: <Icon name="trash" />, destructive: true },
 ];
 
-function Head(p: { dirty?: boolean; menu?: boolean; renaming?: boolean }) {
+/** 04: sidehovedet som hvidt kort (904, radius 10, uden kant) på chrome-grå baggrund. */
+function Head(p: { dirty?: boolean; menu?: boolean; renaming?: boolean; minHeight?: number }) {
   return (
-    <div className="lasso-card" style={{ maxWidth: 760 }}>
-      <PageHeader
-        title="Store IT-selskaber"
-        subtitle="Gemt liste, 1.243 virksomheder"
-        dirty={p.dirty}
-        onSave={noop}
-        secondary={{ label: "Gem som ny", onClick: noop }}
-        onRename={noop}
-        menuItems={HEAD_MENU}
-        defaultMenuOpen={p.menu}
-        defaultRenaming={p.renaming}
-      />
+    <div style={{ background: "var(--lasso-chrome)", padding: 24, margin: -24, minHeight: p.minHeight }}>
+      <div style={{ maxWidth: 904, background: "var(--lasso-surface)", borderRadius: "var(--lasso-radius-lg)", paddingBottom: 24, overflow: "visible" }}>
+        <PageHeader
+          title="Store IT-selskaber"
+          subtitle="5 filtre, 1 uden værdi"
+          dirty={p.dirty}
+          dirtyLabel="5 filtre, ændringer ikke gemt"
+          onSave={noop}
+          secondary={{ label: "Gem som ny", onClick: noop }}
+          onRename={noop}
+          menuItems={HEAD_MENU}
+          defaultMenuOpen={p.menu}
+          menuHighlight={p.menu ? "rename" : undefined}
+          defaultRenaming={p.renaming}
+        />
+      </div>
     </div>
   );
 }
@@ -276,7 +280,6 @@ const TREE: TreeNode[] = [
           { id: "01.4", code: "01.4", label: "Husdyravl", count: 9, children: [{ id: "014100", code: "014100", label: "Hold af malkekvæg", count: 9 }] },
         ],
       },
-      { id: "02", code: "02", label: "Skovbrug og skovning", count: 9, children: [{ id: "021000", code: "021000", label: "Skovdrift", count: 9 }] },
     ],
   },
   { id: "B", code: "B", label: "Råstofindvinding", count: 15, children: [{ id: "08", code: "08", label: "Anden råstofindvinding", count: 15 }] },
@@ -299,6 +302,7 @@ function TreeDialog() {
         searchPlaceholder="Søg branche eller NACE-kode"
         extra={{ label: "Søg også i bibrancher", checked: false, onChange: noop }}
         effect="Reducerer resultatet med 1.782"
+        initialFocus="panel"
         onClose={noop}
         onConfirm={noop}
       />
@@ -385,9 +389,6 @@ export const entries: GalleryEntry[] = [
         <ValueRow label="P-enheder">
           <NumberValue value={14} />
         </ValueRow>
-        <ValueRow label="Ansatte (2023)">
-          <NumberValue value={null} />
-        </ValueRow>
       </KV>
     ),
   },
@@ -416,17 +417,11 @@ export const entries: GalleryEntry[] = [
     note: "Fuldt beløb i tooltip vises ved hover og kan ikke vises statisk.",
     render: () => (
       <KV>
-        <ValueRow label="Omsætning (2024)">
-          <AmountValue value={48_312_400} previous={42_980_000} />
+        <ValueRow label="Bruttofortjeneste (2025)">
+          <AmountValue value={18_834_000} previous={17_520_000} since="2024" />
         </ValueRow>
-        <ValueRow label="Resultat før skat (2024)">
-          <AmountValue value={3_412_000} previous={4_020_000} />
-        </ValueRow>
-        <ValueRow label="Årets resultat (2024)">
-          <AmountValue value={-2_100_000} previous={1_400_000} />
-        </ValueRow>
-        <ValueRow label="Egenkapital (2024)">
-          <AmountValue value={812_400} previous={640_000} />
+        <ValueRow label="Resultat efter skat (2025)">
+          <AmountValue value={-201_000} previous={318_000} since="2024" />
         </ValueRow>
       </KV>
     ),
@@ -437,11 +432,11 @@ export const entries: GalleryEntry[] = [
     node: "GNF-0",
     render: () => (
       <KV>
-        <ValueRow label="Overskudsgrad (2024)">
-          <PercentValue value={17.3} compare={11.2} />
+        <ValueRow label="Soliditetsgrad (2025)">
+          <PercentValue value={17.3} compare={34} compareNote="eksempeldata" />
         </ValueRow>
-        <ValueRow label="Soliditetsgrad (2024)">
-          <PercentValue value={-4.1} compare={32} />
+        <ValueRow label="Afkastningsgrad (2025)">
+          <PercentValue value={-4.1} />
         </ValueRow>
       </KV>
     ),
@@ -453,19 +448,13 @@ export const entries: GalleryEntry[] = [
     render: () => (
       <KV>
         <ValueRow label="Stiftet">
-          <PeriodValue date="2016-03-01" extra={formatAge("2016-03-01")} />
+          <PeriodValue date="2012-05-14" extra={formatAge("2012-05-14")} />
         </ValueRow>
         <ValueRow label="Regnskabsperiode">
-          <PeriodValue from="2025-01-01" to="2025-12-31" />
-        </ValueRow>
-        <ValueRow label="Direktør">
-          <PeriodValue from="2016" yearOnly />
+          <PeriodValue from="2025-01-01" to="2025-12-31" dayMonth />
         </ValueRow>
         <ValueRow label="Bestyrelsesmedlem">
-          <PeriodValue from="2016" yearOnly open="arrow" />
-        </ValueRow>
-        <ValueRow label="Revisor">
-          <PeriodValue from="2012" to="2019" yearOnly />
+          <PeriodValue from="2019" to="2023" yearOnly note="fratrådt" />
         </ValueRow>
       </KV>
     ),
@@ -479,8 +468,8 @@ export const entries: GalleryEntry[] = [
         <ValueRow label="Reklamebeskyttet">
           <BooleanValue value={true} consequence="må ikke kontaktes med reklame" />
         </ValueRow>
-        <ValueRow label="Revideret regnskab">
-          <BooleanValue value={false} />
+        <ValueRow label="Revisorfritaget">
+          <BooleanValue value={false} consequence="revideres af AAEN & CO." />
         </ValueRow>
         <ValueRow label="Momsregistreret">
           <BooleanValue value={null} />
@@ -506,7 +495,7 @@ export const entries: GalleryEntry[] = [
         <ValueRow label="Status">
           <StatusBadge status="Under likvidation" kind="warning" />
         </ValueRow>
-        <ValueRow label="Virksomhedsform">Aktieselskab</ValueRow>
+        <ValueRow label="Virksomhedsform">Aktieselskab (A/S)</ValueRow>
       </KV>
     ),
   },
@@ -624,13 +613,10 @@ export const entries: GalleryEntry[] = [
     render: () => (
       <KV>
         <ValueRow label="Risikoscore">
-          <ScoreValue score={24} />
+          <ScoreValue score={52} />
         </ValueRow>
         <ValueRow label="Risikoscore">
-          <ScoreValue score={68} />
-        </ValueRow>
-        <ValueRow label="Risikoscore">
-          <ScoreValue score={91} />
+          <ScoreValue score={84} />
         </ValueRow>
       </KV>
     ),
@@ -639,24 +625,16 @@ export const entries: GalleryEntry[] = [
     nr: "02c.16",
     title: "Kvalitetsflag (mulig fejl)",
     node: "GV0-0",
-    note: "Flagets egen tooltip (hover) og linjen ved tryk (mobil) kan ikke vises statisk; nederst er tooltippen tegnet åben med Tooltip open.",
+    note: "Forklaringen er tegnet åben (QualityFlag defaultOpen): tooltip til højre på desktop, linje under feltet på mobil.",
     render: () => (
-      <Stack>
-        <KV>
-          <ValueRow label="Ansatte (2024)">
-            <span>
-              <NumberValue value={1243} />
-              <QualityFlag text="Antallet er 12 gange højere end sidste år. Vi viser tallet fra regnskabet." />
-            </span>
-          </ValueRow>
-        </KV>
-        <div style={{ paddingTop: 70, paddingLeft: 140 }}>
-          <Cap>Tooltip ved mouseover</Cap>
-          <Tooltip open text="Antallet er 12 gange højere end sidste år. Vi viser tallet fra regnskabet.">
-            <span className="lasso-num">1.243</span>
-          </Tooltip>
-        </div>
-      </Stack>
+      <KV>
+        <ValueRow label="Ansatte (2024)">
+          <span>
+            <NumberValue value={1243} />
+            <QualityFlag text="Antallet er 12 gange højere end sidste år. Vi viser tallet fra regnskabet." defaultOpen />
+          </span>
+        </ValueRow>
+      </KV>
     ),
   },
   {
@@ -701,11 +679,11 @@ export const entries: GalleryEntry[] = [
     node: "GWO-0",
     render: () => (
       <KV>
-        <ValueRow label="Telefon, direkte">
+        <ValueRow label="Reelle ejere">
           <LockedValue onUpgrade={noop} />
         </ValueRow>
         <ValueRow label="Kontaktpersoner">
-          <LockedValue count={12} linkLabel="Opgradér for at se dem" onUpgrade={noop} />
+          <LockedValue count={3} noun="personer" onUpgrade={noop} />
         </ValueRow>
       </KV>
     ),
@@ -729,7 +707,7 @@ export const entries: GalleryEntry[] = [
   /* ---------- 04 Sidehoved ---------- */
   { nr: "04.1", title: "Sidehoved (kort med titel og handlinger)", node: "495-0", note: "Tilstand 1: i ro, gemt, intet ændret.", render: () => <Head /> },
   { nr: "04.2", title: "Sidehoved, ændret — ikke gemt", node: "49K-0", render: () => <Head dirty /> },
-  { nr: "04.3", title: "Sidehoved, menu åben (omdøb)", node: "4A3-0", render: () => <Room h={800}><Head menu /></Room> },
+  { nr: "04.3", title: "Sidehoved, menu åben (omdøb)", node: "4A3-0", render: () => <Head menu minHeight={300} /> },
   { nr: "04.4", title: "Sidehoved, omdøber", node: "4AX-0", render: () => <Head renaming /> },
 
   /* ---------- 05 Knapper og etiketter ---------- */
@@ -739,10 +717,16 @@ export const entries: GalleryEntry[] = [
     node: "9EM-0",
     render: () => (
       <Row>
-        <Button variant="primary">Gem liste</Button>
-        <Button>Eksportér</Button>
-        <Button variant="text">Annuller</Button>
-        <Button variant="danger">Slet liste</Button>
+        <Button variant="primary" size={42} icon="plus">
+          Gem liste
+        </Button>
+        <Button size={42}>Eksportér</Button>
+        <Button variant="text" size={42}>
+          Annuller
+        </Button>
+        <Button variant="danger" size={42}>
+          Slet liste
+        </Button>
         <Button variant="link">Se alle</Button>
       </Row>
     ),
@@ -752,35 +736,19 @@ export const entries: GalleryEntry[] = [
     title: "Ikonknapper",
     node: "9FU-0",
     render: () => (
-      <Stack gap={20}>
-        <div>
-          <Cap>38 px</Cap>
-          <Row>
-            <IconButton icon="more" label="Flere handlinger" />
-            <IconButton icon="saved" label="Gemt" pressed filled />
-            <IconButton icon="edit" label="Redigér" variant="subtle" />
-            <IconButton icon="close" label="Luk" variant="bare" />
-          </Row>
-        </div>
-        <div>
-          <Cap>32 px</Cap>
-          <Row>
-            <IconButton icon="more" label="Flere handlinger" size={32} />
-            <IconButton icon="saved" label="Gemt" size={32} pressed filled />
-            <IconButton icon="edit" label="Redigér" size={32} variant="subtle" />
-            <IconButton icon="close" label="Luk" size={32} variant="bare" />
-          </Row>
-        </div>
-      </Stack>
+      <Row>
+        <IconButton icon="more" label="Flere handlinger" />
+        <IconButton icon="more" label="Flere handlinger, aktiv" variant="active" />
+        <IconButton icon="edit" label="Redigér" size={32} variant="subtle" />
+        <IconButton icon="close" label="Luk" size={32} variant="bare" />
+      </Row>
     ),
   },
   {
     nr: "05.3",
     title: "Handlingsrække",
     node: "9GD-0",
-    render: () => (
-      <ActionRow more={HEAD_MENU} secondary={[{ label: "Eksportér", onClick: noop }]} primary={{ label: "Gem", onClick: noop }} />
-    ),
+    render: () => <ActionRow size={42} more={HEAD_MENU} secondary={[{ label: "Gem som ny", onClick: noop }]} primary={{ label: "Gem", onClick: noop }} />,
   },
   { nr: "05.4", title: "Valg-chips", node: "9GS-0", render: () => <ChoiceDemo /> },
   { nr: "05.5", title: "Tag i felt", node: "9H4-0", render: () => <TagDemo /> },
@@ -800,13 +768,15 @@ export const entries: GalleryEntry[] = [
     title: "Status som ren tekst",
     node: "9HM-0",
     render: () => (
-      <Row gap={24}>
-        <StatusBadge status="Aktiv" kind="active" />
-        <StatusBadge status="Konkurs" kind="warning" />
-        <StatusBadge status="Likvidation" />
-        <StatusBadge status="Ophørt" kind="inactive" />
-        <StatusBadge status="Ny" kind="new" />
-      </Row>
+      <div style={{ fontSize: 12 }}>
+        <Row gap={8}>
+          <StatusBadge status="Aktiv" kind="active" />
+          <StatusBadge status="Under konkurs" kind="warning" />
+          <StatusBadge status="Ophørt" kind="inactive" />
+          <StatusBadge status="Under likvidation" />
+          <StatusBadge status="Ny" kind="new" />
+        </Row>
+      </div>
     ),
   },
   {
@@ -840,23 +810,31 @@ export const entries: GalleryEntry[] = [
     nr: "05.9",
     title: "Knaptilstande, primær",
     node: "9FE-0",
-    note: "Hover og fokus kan ikke vises statisk; kun standard, gemmer (loading) og deaktiveret er tegnet.",
+    note: "Hover er tegnet statisk med klassen is-hover (samme farve som :hover).",
     render: () => (
       <Row gap={16}>
         <div>
-          <Cap>Standard</Cap>
-          <Button variant="primary">Gem</Button>
+          <Cap>Hvile</Cap>
+          <Button variant="primary" size={42}>
+            Gem liste
+          </Button>
         </div>
         <div>
-          <Cap>Gemmer</Cap>
-          <Button variant="primary" loading>
-            Gemmer…
+          <Cap>Hover</Cap>
+          <Button variant="primary" size={42} className="is-hover">
+            Gem liste
           </Button>
         </div>
         <div>
           <Cap>Deaktiveret</Cap>
-          <Button variant="primary" disabled>
-            Gem
+          <Button variant="primary" size={42} disabled>
+            Gem liste
+          </Button>
+        </div>
+        <div>
+          <Cap>Gemmer…</Cap>
+          <Button variant="primary" size={42} loading>
+            Gemmer…
           </Button>
         </div>
       </Row>
@@ -881,7 +859,7 @@ export const entries: GalleryEntry[] = [
     desktopWidth: 1440,
     note: "Kun desktop: under 1200 px bliver skinnen 64 px med ikoner, og på mobil skjules den (bundnavigation, 26a).",
     render: () => (
-      <div style={{ width: 260, background: "var(--lasso-chrome)", paddingTop: 12, borderRadius: 10 }}>
+      <div style={{ width: 236, background: "var(--lasso-chrome)", paddingTop: 12, borderRadius: 10 }}>
         <Rail groups={RAIL_GROUPS} />
       </div>
     ),
@@ -901,6 +879,8 @@ export const entries: GalleryEntry[] = [
     nr: "06.4",
     title: "Modulbjælke",
     node: "JQO-0",
+    desktopWidth: 1440,
+    note: "Tegnet i 1440 px, så bjælken har samme bredde som i en 1440-side (under 1200 px bliver handlingerne til ikonknapper).",
     render: () => (
       <div style={{ border: "1px solid var(--lasso-border)", borderRadius: 10, overflow: "hidden" }}>
         <Modules />
@@ -919,8 +899,9 @@ export const entries: GalleryEntry[] = [
         <Dialog
           open
           title="Gem ændringer først?"
-          description="Du har ændret Store IT-selskaber uden at gemme. Går du videre nu, går ændringerne tabt."
+          description="Du har ændret “Store IT-selskaber” uden at gemme. Går du videre nu, går ændringerne tabt."
           onClose={noop}
+          hideClose
           actions={{ destructive: { label: "Kassér", onClick: noop }, secondary: { label: "Annuller", onClick: noop }, primary: { label: "Gem og gå videre", onClick: noop } }}
         />
       </Room>
@@ -938,6 +919,8 @@ export const entries: GalleryEntry[] = [
           triggerLabel="Flere handlinger"
           label="Flere handlinger"
           defaultOpen
+          width={240}
+          highlight="rename"
           items={[
             { id: "rename", label: "Omdøb", icon: <Icon name="edit" /> },
             { id: "export", label: "Eksportér", icon: <Icon name="export" /> },
@@ -956,9 +939,10 @@ export const entries: GalleryEntry[] = [
       <Room h={800}>
         <Picker
           trigger={<span>Store IT-selskaber</span>}
-          triggerClassName="lasso-select lasso-select--auto"
+          triggerClassName="lasso-sr-only"
           label="Gemte søgninger"
           defaultOpen
+          width={290}
           value="store"
           groups={[
             { items: [{ id: "ny", label: "Ny", sub: "Start forfra", icon: <Icon name="plus" /> }] },
@@ -982,7 +966,7 @@ export const entries: GalleryEntry[] = [
     note: "Tegnet statisk med ToastItem; i brug står beskeden nederst i midten og forsvinder efter 5 sekunder.",
     render: () => (
       <div style={{ display: "grid", gap: 12, justifyItems: "start" }}>
-        <ToastItem toast={{ id: 1, text: "Store IT-selskaber er gemt", tone: "ok", action: { label: "Fortryd", onClick: noop } }} />
+        <ToastItem toast={{ id: 1, text: "“Store IT-selskaber” er gemt", tone: "ok", action: { label: "Fortryd", onClick: noop } }} />
         <ToastItem toast={{ id: 2, text: "Eksporten kunne ikke hentes", tone: "error", action: { label: "Prøv igen", onClick: noop } }} />
       </div>
     ),

@@ -262,12 +262,15 @@ export interface TreePickerDialogProps extends Omit<TreePickerProps, "onChange">
   confirmLabel?: string;
   /** Effekt-linje i foden, fx "Reducerer resultatet med 1.782" (koral tekst). */
   effect?: string;
+  /** Hvor fokus lander ved åbning: "first" = søgefeltet (standard), "panel" = selve dialogen (statisk forhåndsvisning). */
+  initialFocus?: "first" | "panel";
 }
 
-export function TreePickerDialog({ open, title, description, onClose, onConfirm, confirmLabel = "Tilføj", effect, ...picker }: TreePickerDialogProps) {
+export function TreePickerDialog({ open, title, description, onClose, onConfirm, confirmLabel = "Tilføj", effect, initialFocus, ...picker }: TreePickerDialogProps) {
   return (
     <Dialog
       open={open}
+      initialFocus={initialFocus}
       title={title}
       description={description}
       size="lg"

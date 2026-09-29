@@ -22,12 +22,14 @@ import {
   formatPercent,
   mainMetric,
   statusKind,
+  type ContactVM,
   type Dataset,
   type ViewSpec,
 } from "@lasso/spec";
 import {
   AppShell,
   CreditConfirmDialog,
+  LassoContact,
   DataState,
   EntityUpdates,
   LassoView,
@@ -221,13 +223,13 @@ function Shell({
     onSelectSection: setFocus,
     sheetOpen,
     onBell: noop,
-    unread: 3,
+    unread: 0,
     moreItems: [
       { id: "save", label: "Gem på din liste", icon: <ShellIcon name="bookmark" size={16} />, onSelect: noop },
       { id: "share", label: "Del link", icon: <ShellIcon name="copy" size={16} />, onSelect: noop },
     ],
     nav: [
-      { id: "soeg", label: "Søg", icon: <ShellIcon name="search" size={20} />, active: kind === "search" },
+      { id: "soeg", label: "Søg", icon: <ShellIcon name="search" size={20} />, active: true },
       { id: "lister", label: "Lister", icon: <ShellIcon name="list" size={20} /> },
       { id: "overvaagning", label: "Overvågning", icon: <ShellIcon name="bell" size={20} /> },
       { id: "konto", label: "Konto", icon: <ShellIcon name="user" size={20} /> },
@@ -515,20 +517,20 @@ const responsive: GalleryEntry[] = [
     title: "Brudpunktsregler",
     node: "DH5-0",
     only: "desktop",
-    note: "Brudpunkterne, som AppShell og styles.css bruger (container-forespørgsler på .lasso-root). Tekst fra AppShell.tsx/Rail.tsx/LAYOUT_RULES.",
+    note: "Papers brudpunktstabel (DH5-0, live 29.09) tegnet med Lasso-tabellen.",
     render: () => (
       <Table
-        head={["Bredde", "Ramme", "Indhold"]}
+        head={["Element", "≥ 1200, desktop", "768–1199, tablet", "< 768, mobil"]}
         rows={[
-          ["≥ 1200", "Skinne 236 + midte + panel 336", "4-kolonne-grid; ¾ + ¼ side om side"],
-          ["1024–1199", "Skinne 64 px med ikoner, panel under midten", "¾ + ¼ bliver fuld + fuld"],
-          ["961–1023", "Skinne 64 px", "½ + ½ holder"],
-          ["768–960", "Skinnen skjules, bundnavigation", "½ + ½ holder til 768"],
-          ["561–767", "Fanebjælke, ingen skinne", "½ + ½ stables; nøgletal 2 × 2; tabeller bliver kortlister"],
-          ["≤ 560", "Mobil: topbjælke 52 + bundnavigation 56", "Én kolonne, padding 16"],
-          ["Chat 640–900", "Ingen ramme", "Tablet-reglerne"],
-          ["Grafer", "", "Maks 5 punkter under 768"],
-        ]}
+          ["Sideskabelon (06)", "Skinne 236 + midte + panel 336", "Skinne 236 + midte; panelet falder ned under midten", "Skinne bag \"Sektioner\"-knap i topbjælken; panel nederst; padding 16"],
+          ["Virksomhedshoved (08)", "Navn + fakta venstre, knapper højre", "Knapper under faktalinjen, venstrestillet", "Navn 20 px; fakta ombrydes; handlinger som 40 px ikonknapper, Overvåg med koral ikon"],
+          ["Sektionsfaner (08)", "Alle faner, \"Flere\" ved > 8", "Vandret scroll, ingen \"Flere\"", "Vandret scroll med fade i kanten, aktiv fane rulles ind"],
+          ["Nøgletalskort (09)", "3–5 på række", "4 på række, sparkline skjules", "2 × 2 grid, tal 20 px, udvikling på én linje"],
+          ["Nøgle-værdi-liste (09)", "Nøgle 190 px + værdi på samme linje", "Uændret", "Nøgle over værdi (2 linjer, 12/14), række 52 px"],
+          ["Grafer (13)", "½ eller fuld bredde", "Altid fuld bredde", "Fuld bredde, maks 5 datapunkter synlige, resten ved swipe; tooltip fast under grafen"],
+          ["Tabel (15)", "Alle kolonner", "Navn fast, resten vandret scroll; kolonnevalg", "Kortliste: navn + 2 vigtigste værdier + status; filtre i bundark; massehandlinger som bundbjælke"],
+          ["Ejerdiagram (14)", "Lærred med panel", "Lærred, panel som bundark", "Indrykket liste: ejere over, fokus, datterselskaber under; \"Åbn diagram\" fuldskærm i landskab"],
+        ].map(([el, ...rest]) => [<span key="e" style={{ fontWeight: 500, color: "var(--lasso-text)" }}>{el}</span>, ...rest])}
       />
     ),
   },
@@ -571,6 +573,24 @@ function MobileFrame({ sheetOpen, children }: { sheetOpen?: boolean; children?: 
   );
 }
 
+function MobileContact() {
+  const now = Date.now();
+  return (
+    <LassoContact
+      now={now}
+      onCopy={noop}
+      contact={{
+        lassoId: C,
+        address: { street: "Toldbodgade 37B", zip: "1253", city: "København K" },
+        phone: "71747812",
+        email: "kontakt@lasso.dk",
+        verifiedAt: new Date(now - 5_000).toISOString(),
+        verifiedNumbers: [{ phoneNumber: "71747812", callable: true, sources: ["CVR"], score: 98 }],
+      } as ContactVM}
+    />
+  );
+}
+
 function TabsDemo({ level, items, value, ariaLabel, maxVisible }: { level: 1 | 2 | 3; items: readonly TabItem[]; value: string; ariaLabel: string; maxVisible?: number }) {
   const [v, setV] = useState(value);
   return <Tabs level={level} items={items} value={v} onChange={setV} ariaLabel={ariaLabel} maxVisible={maxVisible} />;
@@ -581,6 +601,7 @@ function OpenMenu() {
     <div style={{ minHeight: 800 }}>
       <Menu
         trigger={<ShellIcon name="more" size={20} />}
+        triggerClassName="lasso-sr-only"
         triggerLabel="Flere handlinger"
         label="Handlinger"
         defaultOpen
@@ -609,7 +630,14 @@ const mobileNav: GalleryEntry[] = [
     note: "Tabs niveau 1 med virksomhedens fokus; ruller vandret med fade.",
     render: () => <TabsDemo level={1} items={COMPANY_MODULES} value="overblik" ariaLabel="Sektioner" />,
   },
-  { nr: "26a.6", title: "Kontaktblok (mobil)", node: "DWQ-0", only: "mobile", spec: { kind: "company", title: "Kontakt", components: [{ type: "LassoContact", company: C }] } },
+  {
+    nr: "26a.6",
+    title: "Kontaktblok (mobil)",
+    node: "DWQ-0",
+    only: "mobile",
+    note: "LassoContact med Papers tre rækker (adresse, verificeret telefon, e-mail); overlinje, adresse på én linje og ring-knap er mobilformen.",
+    render: () => <MobileContact />,
+  },
   { nr: "26a.7", title: "Genveje (mobil)", node: "DXD-0", only: "mobile", spec: { kind: "company", title: "Genveje", components: [{ type: "LassoShortcuts", company: C }] } },
   {
     nr: "26a.8",
@@ -627,7 +655,7 @@ const mobileNav: GalleryEntry[] = [
     note: "CreditConfirmDialog åben; under 600 px bliver dialogen bundark.",
     render: () => (
       <div style={{ minHeight: 800 }}>
-        <CreditConfirmDialog open balance={38} onClose={noop} onConfirm={noop} what="kreditvurderingen for Eksempel Byg A/S" title="Hent ny kreditvurdering?" />
+        <CreditConfirmDialog open balance={38} onClose={noop} onConfirm={noop} description="LASSO X A/S, seneste vurdering er 13 dage gammel." title="Hent ny kreditvurdering?" />
       </div>
     ),
   },
@@ -1081,31 +1109,42 @@ const L1: TabItem[] = [
   { id: "nyheder", label: "Nyheder" },
 ];
 
-function Level1() {
-  const [v, setV] = useState("overblik");
-  const [loading, setLoading] = useState(true);
-  useEffect(() => void setLoading(true), []);
+/** Nøgle-værdi-rækker (09) til eksemplerne i 29.3–29.5. */
+function KvRows({ rows, skeleton = false }: { rows: readonly [string, string][]; skeleton?: boolean }) {
   return (
-    <div style={stack(32)}>
-      <div>
-        {caption("Niveau 1: valgt, hvile, deaktiveret (Risiko) og 'Flere' ved mere end 8 faner")}
-        <Tabs level={1} items={L1} value={v} onChange={setV} ariaLabel="Sider" />
-      </div>
-      <div>
-        {caption("Henter: fanen skifter straks, panelet viser skelet")}
-        <Tabs level={1} id="e-l1" items={L1.slice(0, 4)} value="oekonomi" onChange={noop} ariaLabel="Sider, henter" />
-        <TabPanel id="e-l1" tab="oekonomi" loading={loading} loadingHeight={200} loadingLines={4} loadingLabel="Økonomi">
-          <p>Indhold</p>
-        </TabPanel>
-      </div>
+    <div className="lasso-kv-list lasso-kv-list--financials" style={{ borderTop: 0 }}>
+      {rows.map(([k, v]) => (
+        <div key={k} className="lasso-kv-row">
+          <div className="lasso-kv-row__label">{k}</div>
+          <div className="lasso-kv-row__value">{skeleton ? <span className="lasso-skeleton" style={{ display: "inline-block", width: 64, height: 10, verticalAlign: "middle" }} /> : v}</div>
+        </div>
+      ))}
     </div>
   );
 }
 
+const KEY_ROWS: [string, string][] = [
+  ["Bruttofortjeneste", formatAmount(18_834_000)],
+  ["Resultat efter skat", formatAmount(-201_000)],
+  ["Egenkapital", formatAmount(3_214_000)],
+];
+
+/** 29.1: tilstandsrækken — valgt, hvile, hover (Regnskab), fokus (Ejerskab), deaktiveret (Risiko), "Flere". */
+function Level1() {
+  const [v, setV] = useState("overblik");
+  return (
+    <div>
+      {caption("Niveau 1, sideniveau, 48 px: valgt, hvile, hover (Regnskab), fokus (Ejerskab), deaktiveret (Risiko) og 'Flere' ved mere end 8 faner")}
+      <Tabs level={1} items={L1} value={v} onChange={setV} ariaLabel="Sider" hoverId="regnskab" focusId="ejerskab" />
+    </div>
+  );
+}
+
+/** 29.2: sektionsoverskrift med enhed på samme linje; valgt, hvile, hover (Pengestrøm), fokus (Nøgletal), deaktiveret (Koncern). */
 function Level2() {
   const [v, setV] = useState("resultat");
   return (
-    <Section title="Regnskab" subtitle="t. kr., årsrapport 2025">
+    <Section title="Regnskab" subtitle="t. kr., årsrapport 2025" inlineSubtitle>
       <Tabs
         level={2}
         items={[
@@ -1118,20 +1157,30 @@ function Level2() {
         value={v}
         onChange={setV}
         ariaLabel="Opgørelse"
+        hoverId="pengestroem"
+        focusId="noegletal"
       />
     </Section>
   );
 }
 
+/** 29.3: tre eksempler side om side med indhold under hovedet. */
 function Level3() {
+  const person = (name: string, title: string, role: string) => (
+    <div className="lasso-kv-row" style={{ minHeight: 52 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 500, color: "var(--lasso-text)" }}>{name}</div>
+        <div className="lasso-small lasso-muted">{title}</div>
+      </div>
+      <div className="lasso-small" style={{ color: "var(--lasso-text-2)" }}>{role}</div>
+    </div>
+  );
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 32 }}>
-      <Section title="Nøgletal" action={<TabsDemo level={3} items={["2025", "2024", "2023"].map((y) => ({ id: y, label: y }))} value="2025" ariaLabel="Vælg regnskabsår" />}>
-        <p className="lasso-small" style={muted}>
-          Årsvælger
-        </p>
-      </Section>
-      <Section
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 40, alignItems: "start" }}>
+      <div><Section title="Nøgletal" action={<TabsDemo level={3} items={["2025", "2024", "2023"].map((y) => ({ id: y, label: y }))} value="2025" ariaLabel="Vælg regnskabsår" />}>
+        <KvRows rows={KEY_ROWS} />
+      </Section></div>
+      <div><Section
         title="Ledelse"
         action={
           <TabsDemo
@@ -1145,19 +1194,22 @@ function Level3() {
           />
         }
       >
-        <p className="lasso-small" style={muted}>
-          Nuværende og Alle
-        </p>
-      </Section>
+        <div className="lasso-kv-list" style={{ borderTop: 0 }}>
+          {person("Jakob Eksempel", "Administrerende direktør", "Direktion")}
+          {person("Sofie Eksempel", "Bestyrelsesformand", "Bestyrelse")}
+        </div>
+      </Section></div>
       <div style={stack(12)}>
-        <TabsDemo
+        <Tabs
           level={3}
           items={[
             { id: "selskab", label: "Selskab" },
             { id: "koncern", label: "Koncern" },
           ]}
           value="selskab"
+          onChange={noop}
           ariaLabel="Selskab eller koncern"
+          focusId="koncern"
         />
         <TabsDemo
           level={3}
@@ -1174,25 +1226,104 @@ function Level3() {
   );
 }
 
-const tabs: GalleryEntry[] = [
-  { nr: "29.1", title: "Fanebjælke niveau 1 (sideniveau)", node: "IWK-0", note: "Hover og fokus kan ikke vises statisk.", render: () => <Level1 /> },
-  { nr: "29.2", title: "Fanebjælke niveau 2 (sektionsniveau)", node: "IXR-0", note: "Hover og fokus kan ikke vises statisk.", render: () => <Level2 /> },
-  { nr: "29.3", title: "Segmentkontrol niveau 3 (i et element)", node: "IYR-0", note: "Hover og fokus kan ikke vises statisk.", render: () => <Level3 /> },
-  {
-    nr: "29.4",
-    title: "Fanebjælke, henter (skelet)",
-    node: "J0D-0",
-    note: "Fanen skifter straks; panelet viser skelet, mens indholdet hentes.",
-    render: () => (
+/** 29.4: fanen skifter straks; panelet viser skelet i det fyldte indholds mål. Til højre niveau 3, hvor kun værdierne er skelet. */
+function Loading() {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 1fr)", gap: 40, alignItems: "start" }}>
       <div>
-        <Tabs level={1} id="e-l4" items={L1.slice(0, 5)} value="oekonomi" onChange={noop} ariaLabel="Sider, henter" />
-        <TabPanel id="e-l4" tab="oekonomi" loading loadingHeight={220} loadingLines={5} loadingLabel="Økonomi">
+        <Tabs level={1} id="e-l4" items={L1.slice(0, 4)} value="oekonomi" onChange={noop} ariaLabel="Sider, henter" />
+        <TabPanel id="e-l4" tab="oekonomi" loading loadingShape="overview" loadingLabel="Økonomi">
           <p>Indhold</p>
         </TabPanel>
       </div>
-    ),
-  },
-  { nr: "29.5", title: "Fanebjælke, mobil 390", node: "J1Z-0", only: "mobile", note: "Vandret scroll med fade; ingen 'Flere' på mobil.", render: () => <Level1 /> },
+      <div><Section title="Nøgletal" action={<TabsDemo level={3} items={["2025", "2024", "2023"].map((y) => ({ id: y, label: y }))} value="2024" ariaLabel="Vælg regnskabsår" />}>
+        <KvRows rows={KEY_ROWS} skeleton />
+        <p className="lasso-small lasso-muted" style={{ margin: "12px 0 0" }}>På niveau 3 bliver etiketterne stående og kun værdierne bliver skelet, så listen ikke hopper.</p>
+      </Section></div>
+    </div>
+  );
+}
+
+/** 29.5: mobil 390 tegnet som telefonramme med niveau 1, 2 og 3. */
+function PhoneTabs() {
+  const [l1, setL1] = useState("oekonomi");
+  const [l2, setL2] = useState("resultat");
+  const [l3, setL3] = useState("2025");
+  return (
+    <div style={{ border: "1px solid var(--lasso-border)", borderRadius: "var(--lasso-radius-toast)", overflow: "hidden", background: "var(--lasso-surface)" }}>
+      <header className="lasso-mobilebar" style={{ paddingLeft: 16 }}>
+        <div className="lasso-mobilebar__titles">
+          <div className="lasso-mobilebar__title">LASSO X A/S</div>
+          <div className="lasso-mobilebar__subtitle">Økonomi</div>
+        </div>
+      </header>
+      <div style={{ padding: "16px 16px 0" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+          <span style={{ fontSize: 20, lineHeight: "26px", fontWeight: 600, color: "var(--lasso-text)" }}>LASSO X A/S</span>
+          <span className="lasso-small lasso-muted">Aktiv</span>
+        </div>
+        <div className="lasso-small lasso-muted" style={{ marginTop: 4 }}>CVR 34580820, A/S, stiftet 14.05.2012</div>
+      </div>
+      <div style={{ padding: "8px 0 0 16px" }}>
+        <Tabs level={1} items={L1.slice(0, 6)} value={l1} onChange={setL1} ariaLabel="Sider" />
+      </div>
+      <div style={{ padding: "24px 16px 0" }}>
+        <Section title="Regnskab" subtitle="t. kr." inlineSubtitle>
+          <Tabs
+            level={2}
+            items={[
+              { id: "resultat", label: "Resultatopgørelse" },
+              { id: "balance", label: "Balance" },
+              { id: "pengestroem", label: "Pengestrøm" },
+              { id: "noegletal", label: "Nøgletal" },
+            ]}
+            value={l2}
+            onChange={setL2}
+            ariaLabel="Opgørelse"
+          />
+        </Section>
+      </div>
+      <div style={{ padding: "24px 16px 16px" }}>
+        <Section title="Nøgletal" action={<Tabs level={3} items={["2025", "2024", "2023"].map((y) => ({ id: y, label: y }))} value={l3} onChange={setL3} ariaLabel="Vælg regnskabsår" />}>
+          <KvRows rows={KEY_ROWS} />
+        </Section>
+      </div>
+    </div>
+  );
+}
+
+const PHONE_NOTES: [string, string][] = [
+  ["Niveau 1 på mobil", "Samme 48 px og 14 px tekst. Rækken ruller vandret uden synlig scrollbar, 40 px hvid fade i højre kant så længe der er mere, gap 24, første fane 16 px fra kanten. Den valgte fane rulles ind i syne ved sideskift. Ingen \"Flere\"-menu på mobil; alle faner ligger i rullen."],
+  ["Niveau 2 på mobil", "Samme 36 px og 13 px tekst, ruller vandret med fade som niveau 1. Touch-målet er hele 44 px-højden inkl. 4 px luft over rækken."],
+  ["Niveau 3 på mobil", "Segmentkontrollen flytter ned under elementets overskrift, fylder hele bredden med lige brede segmenter, højde 44 og tekst 14. Ved mere end 3 segmenter bliver den til en 44 px dropdown der åbner som handlingsark (26a)."],
+  ["Tastatur og tilgængelighed", "Fanebjælken er role=\"tablist\" med aria-label, hver fane role=\"tab\" med aria-selected og aria-controls, panelet role=\"tabpanel\" med aria-labelledby. Kun den valgte fane er i tab-rækkefølgen; pil venstre/højre flytter og vælger, Home/End går til første/sidste, Tab går videre ind i panelet. Deaktiverede faner springes over. Gælder alle tre niveauer, også segmentkontrollen."],
+  ["Kodenavn", "Én komponent, LassoTabs, med level 1, 2 eller 3, styret udefra (value + onChange) så indholdet kan hentes ved skift. Årsvælgeren (09), Nuværende/Alle (11, 24) og segmentet i 19 bruger niveau 3 fremover."],
+];
+
+function Phone29() {
+  return (
+    <div style={stack(24)}>
+      <PhoneTabs />
+      <div style={stack(14)}>
+        {PHONE_NOTES.map(([h, t]) => (
+          <div key={h}>
+            <div style={{ fontSize: "var(--lasso-fs-sm)", fontWeight: 600, color: "var(--lasso-text)" }}>{h}</div>
+            <p className="lasso-small lasso-muted" style={{ margin: "2px 0 0", overflowWrap: "anywhere" }}>
+              {t}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const tabs: GalleryEntry[] = [
+  { nr: "29.1", title: "Fanebjælke niveau 1 (sideniveau)", node: "IWK-0", note: "Hover (Regnskab) og fokus (Ejerskab) er tegnet statisk med Tabs hoverId/focusId.", render: () => <Level1 /> },
+  { nr: "29.2", title: "Fanebjælke niveau 2 (sektionsniveau)", node: "IXR-0", note: "Hover (Pengestrøm) og fokus (Nøgletal) er tegnet statisk med Tabs hoverId/focusId.", render: () => <Level2 /> },
+  { nr: "29.3", title: "Segmentkontrol niveau 3 (i et element)", node: "IYR-0", note: "Fokus på Koncern er tegnet statisk med focusId.", render: () => <Level3 /> },
+  { nr: "29.4", title: "Fanebjælke, henter (skelet)", node: "J0D-0", note: "TabPanel loadingShape=\"overview\"; til højre niveau 3, hvor etiketterne står og kun værdierne er skelet.", render: () => <Loading /> },
+  { nr: "29.5", title: "Fanebjælke, mobil 390", node: "J1Z-0", only: "mobile", note: "Telefonramme med niveau 1 og 2 (vandret rul med fade) og niveau 3 i fuld bredde; forklaringerne står under rammen.", render: () => <Phone29 /> },
 ];
 
 /* ---------- 30 Layout: svarniveauer og mønstre ---------- */

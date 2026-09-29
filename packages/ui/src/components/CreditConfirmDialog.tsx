@@ -12,11 +12,13 @@ export interface CreditConfirmDialogProps {
   balance: number;
   /** Pris i kreditter, standard 1. */
   price?: number;
-  /** Ventetid som tekst, standard "5–45 sekunder" (Creditsafe). */
+  /** Ventetid som tekst, standard "typisk 5–45 sek." (Creditsafe). */
   wait?: string;
   /** Hvad der hentes, fx "kreditvurderingen for Eksempel Byg A/S". */
   what?: string;
   title?: string;
+  /** Undertekst i stedet for "Koster N kredit: …", fx "LASSO X A/S, seneste vurdering er 13 dage gammel." */
+  description?: string;
 }
 
 const credits = (n: number) => `${formatNumber(n)} ${n === 1 ? "kredit" : "kreditter"}`;
@@ -26,7 +28,7 @@ const credits = (n: number) => `${formatNumber(n)} ${n === 1 ? "kredit" : "kredi
  * saldo efter, ventetid). Prisen gentages i knappen, så man aldrig er i tvivl. Ved 0 kreditter
  * erstattes knappen af "Køb kreditter", og prisen står med rød tekst. Mobil: bundark (07/26a).
  */
-export function CreditConfirmDialog({ open, onClose, onConfirm, onBuy, balance, price = 1, wait = "5–45 sekunder", what, title }: CreditConfirmDialogProps) {
+export function CreditConfirmDialog({ open, onClose, onConfirm, onBuy, balance, price = 1, wait = "typisk 5–45 sek.", what, title, description }: CreditConfirmDialogProps) {
   const enough = balance >= price;
   const after = balance - price;
   return (
@@ -35,11 +37,12 @@ export function CreditConfirmDialog({ open, onClose, onConfirm, onBuy, balance, 
       onClose={onClose}
       size="sm"
       title={title ?? "Hent ny vurdering?"}
-      description={`Koster ${credits(price)}${what ? `: ${what}` : ""}.`}
+      description={description ?? `Koster ${credits(price)}${what ? `: ${what}` : ""}.`}
+      hideClose
       className="lasso-creditconfirm"
       actions={{
         secondary: { label: "Annuller", onClick: onClose },
-        primary: enough ? { label: `Hent for ${credits(price)}`, onClick: onConfirm } : { label: "Køb kreditter", onClick: onBuy ?? onClose, disabled: !onBuy },
+        primary: enough ? { label: `Hent, ${credits(price)}`, onClick: onConfirm } : { label: "Køb kreditter", onClick: onBuy ?? onClose, disabled: !onBuy },
       }}
     >
       <dl className="lasso-creditconfirm__facts">

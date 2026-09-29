@@ -8,8 +8,8 @@ import { ShellIcon } from "./ShellIcons.js";
  * går i ét med sidens hvide flade under; ikon + navn 14/500 + luk-kryds. Inaktive faner = tekst på
  * grå. Derefter "+", og yderst til højre klokken (MonitorBell, katalog 21), feedback og konto.
  *
- * Kun navnet på fanen: aldrig tal, badge eller prik (regel 2). Klokkens badge er den eneste
- * tilladte. Tilstandsløs: værten åbner, lukker og skifter fane.
+ * Kun navnet på fanen: aldrig tal, badge eller prik (regel 2 og 11); heller ikke på klokken, der står
+ * i koral ved ulæste. Virksomhedsfaner har sidepanel-ikonet 17 px. Tilstandsløs: værten åbner, lukker og skifter fane.
  */
 export interface StripTab {
   id: string;
@@ -46,12 +46,12 @@ export function TabStrip({ tabs, onSelect, onClose, onAdd, unread = 0, important
           return (
             <div key={t.id} role="tab" aria-selected={on} className={`lasso-strip__tab ${on ? "is-on" : ""}`}>
               <button type="button" className="lasso-strip__select" tabIndex={on ? 0 : -1} title={t.label} onClick={() => onSelect?.(t.id)}>
-                <span className="lasso-strip__icon">{t.icon ?? <ShellIcon name="company" />}</span>
+                <span className="lasso-strip__icon">{t.icon ?? <ShellIcon name="sidepanel" size={17} />}</span>
                 <span className="lasso-strip__label">{t.label}</span>
               </button>
               {onClose ? (
                 <button type="button" className="lasso-strip__close" aria-label={`Luk ${t.label}`} onClick={() => onClose(t.id)}>
-                  <ShellIcon name="close" size={13} />
+                  <ShellIcon name="close" size={14} />
                 </button>
               ) : null}
             </div>
@@ -59,7 +59,7 @@ export function TabStrip({ tabs, onSelect, onClose, onAdd, unread = 0, important
         })}
         {onAdd ? (
           <button type="button" className="lasso-strip__add" aria-label="Åbn ny fane" onClick={onAdd}>
-            <ShellIcon name="plus" size={15} />
+            <ShellIcon name="plus" size={16} />
           </button>
         ) : null}
       </div>
@@ -67,13 +67,13 @@ export function TabStrip({ tabs, onSelect, onClose, onAdd, unread = 0, important
         {onBell ? <MonitorBell unread={unread} important={important} open={bellOpen} onClick={onBell} /> : null}
         {onFeedback ? (
           <button type="button" className="lasso-strip__tool" aria-label="Feedback" title="Feedback" onClick={onFeedback}>
-            <ShellIcon name="feedback" size={18} />
+            <ShellIcon name="feedback" size={20} />
           </button>
         ) : null}
         {account ??
           (onAccount ? (
             <button type="button" className="lasso-strip__tool" aria-label="Konto" title="Konto" onClick={onAccount}>
-              <ShellIcon name="user" size={18} />
+              <ShellIcon name="user" size={20} />
             </button>
           ) : null)}
       </div>

@@ -120,10 +120,10 @@ test("18.1/18.2: forrige vs. nu og trinlinje; en stigning er mere risiko i warni
 
 test("18.3: bekræft hentning viser pris, saldo efter og ventetid; ved 0 kreditter 'Køb kreditter' og rød pris", () => {
   const ok = text(html(createElement(CreditConfirmDialog, { open: true, onClose: () => {}, onConfirm: () => {}, balance: 12 })));
-  assert.match(ok, /Pris 1 kredit Saldo efter 11 kreditter Ventetid 5–45 sekunder/);
-  assert.match(ok, /Hent for 1 kredit/, "prisen gentages i knappen");
+  assert.match(ok, /Pris 1 kredit Saldo efter 11 kreditter Ventetid typisk 5–45 sek\./);
+  assert.match(ok, /Hent, 1 kredit/, "prisen gentages i knappen");
   const zero = html(createElement(CreditConfirmDialog, { open: true, onClose: () => {}, onConfirm: () => {}, onBuy: () => {}, balance: 0 }));
   assert.match(zero, /lasso-creditconfirm__price--short">1 kredit/);
   assert.match(zero, />Køb kreditter<\/button>/);
-  assert.doesNotMatch(zero, /Hent for/);
+  assert.doesNotMatch(zero, /Hent, /);
 });

@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { LassoMark } from "../LassoMark.js";
 import { Menu, type MenuItem } from "./Menu.js";
 import { MonitorBell } from "./MonitorSettings.js";
 import { Rail, type RailProps } from "./Rail.js";
@@ -20,8 +21,10 @@ import type { TabItem } from "./Tabs.js";
  * desktop med CSS.
  *
  * Brudpunkter (26, node DH5-0; guide 23 trin 7): ≥ 1200 skinne + midte + panel 336; 1024–1199
- * skinnen bliver 64 px med ikoner, og panelet falder ned under midten; ≤ 960 skinnen skjules, og
- * bundnavigationen overtager; < 768 mobil (topbjælke med "Sektioner", ingen fanebjælke, padding 16).
+ * skinnen bliver 64 px med ikoner, og panelet falder ned under midten; 768–1023 tablet (26f.1):
+ * topbjælke 56 px (Lasso-ikon, søgefelt 320 px, klokke) og en 64 px skinne med fire 44 px
+ * ikonknapper (Søg, Lister, Overvågning, Værktøjer; aktiv i koral-soft), ingen fanebjælke og ingen
+ * bundnavigation; < 768 mobil (topbjælke med "Sektioner", bundnavigation, padding 16).
  *
  * Tilstandsløs, bortset fra om sektionsarket er åbent (ren UI-tilstand; kan også styres udefra).
  */
@@ -68,10 +71,20 @@ export interface AppShellMobile {
   onToggleSheet?: (open: boolean) => void;
 }
 
+/** Tablet 768–1023 (26f.1): topbjælke med søgefelt og 64 px ikonskinne. */
+export interface AppShellTablet {
+  /** Søgefeltet i topbjælken åbner søgningen. */
+  onSearch?: () => void;
+  searchPlaceholder?: string;
+  /** Skinnens fire ikonknapper. Udeladt = Søg, Lister, Overvågning, Værktøjer (aktiv efter bundnavigationens aktive id). */
+  nav?: readonly MobileNavItem[];
+}
+
 export interface AppShellProps {
   rail: RailProps;
   tabs: TabStripProps;
   mobile?: AppShellMobile;
+  tablet?: AppShellTablet;
   /** Sidens indhold: ModuleBar, evt. ModuleToolbar og Columns. */
   children?: ReactNode;
   /**
@@ -91,7 +104,14 @@ const DEFAULT_NAV: readonly { id: string; label: string; icon: ShellIconName }[]
   { id: "konto", label: "Konto", icon: "user" },
 ];
 
-export function AppShell({ rail, tabs, mobile, children, panel, panelLabel, className = "" }: AppShellProps) {
+const DEFAULT_TABLET_NAV: readonly { id: string; label: string; icon: ShellIconName }[] = [
+  { id: "soeg", label: "Søg", icon: "search" },
+  { id: "lister", label: "Lister", icon: "list" },
+  { id: "overvaagning", label: "Overvågning", icon: "bell" },
+  { id: "vaerktoejer", label: "Værktøjer", icon: "overview" },
+];
+
+export function AppShell({ rail, tabs, mobile, tablet, children, panel, panelLabel, className = "" }: AppShellProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const sheetOpen = mobile?.sheetOpen ?? internalOpen;
   const setSheet = (open: boolean) => {
@@ -103,11 +123,41 @@ export function AppShell({ rail, tabs, mobile, children, panel, panelLabel, clas
   const nav: readonly MobileNavItem[] = mobile?.nav ?? DEFAULT_NAV.map((n) => ({ id: n.id, label: n.label, icon: <ShellIcon name={n.icon} size={20} /> }));
   const actions = (mobile?.actions ?? []).slice(0, 2);
   const hasSections = !!mobile?.sections?.length;
+  const activeNav = nav.find((n) => n.active)?.id;
+  const tabletNav: readonly MobileNavItem[] = tablet?.nav ?? DEFAULT_TABLET_NAV.map((n) => ({ id: n.id, label: n.label, icon: <ShellIcon name={n.icon} size={20} />, active: n.id === activeNav, onSelect: nav.find((m) => m.id === n.id)?.onSelect }));
 
   return (
     <div className={`lasso-shell ${hasSections ? "lasso-shell--sections" : ""} ${panel ? "lasso-shell--panel" : ""} ${className}`}>
       <Rail {...rail} />
       <TabStrip {...tabs} />
+
+      <header className="lasso-tabletbar">
+        <span className="lasso-tabletbar__logo" aria-label="Lasso" role="img">
+          <LassoMark className="lasso-tabletbar__mark" />
+        </span>
+        <button type="button" className="lasso-tabletbar__search" onClick={tablet?.onSearch}>
+          <ShellIcon name="search" size={16} />
+          <span>{tablet?.searchPlaceholder ?? "Søg virksomhed, person eller CVR"}</span>
+        </button>
+        <span className="lasso-tabletbar__spacer" />
+        {tabs.onBell ? <MonitorBell unread={tabs.unread ?? 0} important={tabs.important} onClick={tabs.onBell} /> : null}
+      </header>
+      <nav className="lasso-tabletrail" aria-label="Hovednavigation, tablet">
+        {tabletNav.map((n) => (
+          <button
+            key={n.id}
+            type="button"
+            className={`lasso-tabletrail__item ${n.active ? "is-on" : ""}`}
+            aria-label={n.label}
+            title={n.label}
+            aria-current={n.active ? "page" : undefined}
+            disabled={n.disabled}
+            onClick={n.onSelect}
+          >
+            {n.icon}
+          </button>
+        ))}
+      </nav>
 
       <header className="lasso-mobilebar">
         {hasSections ? (

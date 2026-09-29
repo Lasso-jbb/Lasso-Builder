@@ -8,12 +8,12 @@ import { Tooltip } from "./Tooltip.js";
  * en linje under feltet ved tryk. Aldrig mærke, pille eller understregning. Ordet bæres af
  * aria-label (regel 7). `text` og `reason` er det samme (begge navne bruges i koden).
  */
-export function QualityFlag({ text, reason }: { text?: string; reason?: string }) {
+export function QualityFlag({ text, reason, defaultOpen = false }: { text?: string; reason?: string; /** Forklaringen vist fra start (statisk forhåndsvisning): tooltip til højre på desktop, linje under på mobil. */ defaultOpen?: boolean }) {
   const msg = text ?? reason ?? "";
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   return (
     <span className="lasso-qflag">
-      <Tooltip text={msg} className="lasso-qflag-tip">
+      <Tooltip text={msg} className="lasso-qflag-tip lasso-tip--narrow" placement="right" open={defaultOpen ? true : undefined}>
         <button type="button" className="lasso-qflag__btn" aria-label={`Mulig fejl: ${msg}`} aria-expanded={open} onClick={() => setOpen(!open)}>
           <ShellIcon name="alert" size={14} />
         </button>
