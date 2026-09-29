@@ -120,21 +120,17 @@ function SanctionsTile({ person, onUpgrade }: { person: PersonVM; onUpgrade?: ()
       <Tile
         label="Sanktionslister"
         desc={
-          s ? (
-            <>
-              Ikke tilgængelig i din pakke.
-              {onUpgrade ? (
-                <>
-                  {" "}
-                  <button type="button" className="lasso-link lasso-personrisk__upgrade" onClick={onUpgrade}>
-                    Opgrader
-                  </button>
-                </>
-              ) : null}
-            </>
-          ) : (
-            "Tjek mod sanktionslister er ikke tilgængeligt endnu."
-          )
+          <>
+            {s ? "Ikke tilgængelig i din pakke." : "Tjek mod sanktionslister er ikke tilgængeligt endnu."}
+            {onUpgrade ? (
+              <>
+                {" "}
+                <button type="button" className="lasso-link lasso-personrisk__upgrade" onClick={onUpgrade}>
+                  Opgrader
+                </button>
+              </>
+            ) : null}
+          </>
         }
         tone="locked"
       />

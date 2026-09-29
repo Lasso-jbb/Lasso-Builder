@@ -381,6 +381,12 @@ export function participantFieldNames(raw: Json): Record<string, string[] | "tom
  * unitNumber), og en række uden ID får ID'et fra en anden række eller ejer med samme navn, når
  * navnet kun hører til ét ID. Uden ID står navnet som ren tekst uden link.
  */
+function otherCompaniesOf(p: Json): { otherCompanies?: number } {
+  if (typeof p !== "object" || p === null) return {};
+  const n = num(p, "otherCompanies", "otherCompaniesCount", "numberOfOtherCompanies", "participant.otherCompaniesCount", "person.otherCompaniesCount");
+  return typeof n === "number" && Number.isFinite(n) && n > 0 ? { otherCompanies: Math.round(n) } : {};
+}
+
 export function adaptPeople(raw: Json): PersonRowVM[] {
   const sources: [Json[], string][] = [
     [arr(raw, "stakeholders"), "Deltager"],
@@ -405,6 +411,8 @@ export function adaptPeople(raw: Json): PersonRowVM[] {
         role: prettyRole(role),
         from: dateStr(p, "from", "role.from", "start", "startDate", "validFrom"),
         to: dateStr(p, "to", "role.to", "end", "endDate", "validTo"),
+        // 11.2: ikke dokumenteret; læses defensivt, hvis svaret har et antal andre selskaber.
+        ...otherCompaniesOf(p),
       });
     }
   }

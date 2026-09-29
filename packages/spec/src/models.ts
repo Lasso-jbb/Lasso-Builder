@@ -277,6 +277,11 @@ export interface PersonRowVM {
   role: string;
   from?: string;
   to?: string;
+  /**
+   * Katalog 11.2: antal andre selskaber, personen har en aktiv rolle i ("også i 3 andre selskaber").
+   * Udeladt, når kilden ikke leverer tallet (feltet er ikke dokumenteret i Lasso-API'et; læses defensivt).
+   */
+  otherCompanies?: number;
 }
 
 export interface OwnerVM {

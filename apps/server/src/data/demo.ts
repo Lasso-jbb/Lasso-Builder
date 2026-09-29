@@ -853,7 +853,12 @@ export class DemoProvider implements DataProvider {
   }
 
   async people(lassoId: string) {
-    return get(lassoId).people.map((p) => ({ ...p, lassoId: p.lassoId ?? PERSON_IDS.get(p.name) }));
+    // 11.2: "også i N andre selskaber" = andre demovirksomheder, hvor personen har en aktiv rolle.
+    const others = (name: string) => COMPANIES.filter((x) => x.lassoId !== lassoId && x.people.some((q) => q.name === name && !q.to)).length;
+    return get(lassoId).people.map((p) => {
+      const n = others(p.name);
+      return { ...p, lassoId: p.lassoId ?? PERSON_IDS.get(p.name), ...(n ? { otherCompanies: n } : {}) };
+    });
   }
 
   async ownership(lassoId: string): Promise<OwnershipVM> {
