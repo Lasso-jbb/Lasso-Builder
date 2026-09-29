@@ -46,8 +46,8 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
   {
     type: "LassoCompanyHead",
     title: "Virksomhedshoved",
-    description: `Brug til: identitet for én virksomhed (navn, CVR, status, form, branche, adresse) øverst i enhver visning om én virksomhed. Brug ikke når: kun ét stamdatafelt skal vises (LassoKeyValueList variant 'company') eller det gælder flere virksomheder (LassoCompareTable/LassoCompanyTable). Kræver: company; findes for alle CVR-virksomheder. ${F("overblik (og alle andre focus)")} Eksempel: øverst i en render_view-spec om én virksomhed.`,
-    props: "company",
+    description: `Brug til: identitet for én virksomhed (navn, CVR, status, form, branche, adresse) øverst i enhver visning om én virksomhed. Brug ikke når: kun ét stamdatafelt skal vises (LassoKeyValueList variant 'company') eller det gælder flere virksomheder (LassoCompareTable/LassoCompanyTable). Kræver: company, variant?, risk?; findes for alle CVR-virksomheder. variant 'full' (standard) er sidens hoved med handlinger (Overvåg, Gem, Eksportér, Flere); 'compact' (56 px) og 'line' (40 px) står over et enkelt element på svarniveau A/B. risk true henter observationer (10–14 s) og viser 'Se risiko'-linjen ved 50+; kun når spørgsmålet handler om risiko. ${F("overblik (og alle andre focus)")} Eksempel: øverst i en render_view-spec om én virksomhed; 'hvad er omsætningen i X' → variant 'line' + LassoKeyFigureCards med ét metric.`,
+    props: "company, variant?, risk?",
   },
   {
     type: "LassoKeyValueList",
@@ -66,6 +66,12 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     title: "Kontaktpersoner",
     description: `Brug til: navngivne kontaktpersoner fra virksomhedens hjemmeside med rolle/afdeling, telefon og e-mail – 'hvem kan jeg kontakte hos X', 'kontaktpersoner'. Brug ikke når: det gælder direktion/bestyrelse i CVR (LassoPersonList) eller virksomhedens hovednumre (LassoContact). Kræver: company; listen er tom, når hjemmesiden er ukendt eller ingen personer er fundet. ${F("kontakt")} Eksempel: 'Hvem er kontaktpersonerne hos Lasso X?' → show_company focus kontakt.`,
     props: "company, title?",
+  },
+  {
+    type: "LassoShortcuts",
+    title: "Genveje",
+    description: `Brug til: en række knapper, der åbner et Lasso-værktøj på virksomheden (ejerdiagram, regnskabsanalyse, nøgletal, ejendomme, tinglysning, firmaindsigt) – 'hvad kan jeg ellers se om X', som indgang ved siden af kontaktblokken. Brug ikke når: svaret er selve dataene (vis elementet direkte, fx LassoOwnershipDiagram), eller værten ikke kan åbne sektioner (så vises intet). Kræver: company, tools? (maks 6 synlige, resten under 'Flere'). Dækkes ikke af show_company. Eksempel: render_view med LassoCompanyHead, LassoContact og LassoShortcuts.`,
+    props: "company, tools?, title?",
   },
   {
     type: "LassoTextSections",
@@ -268,7 +274,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     title: "Personhoved",
     description:
       "Brug til: identitet for én person (navn, by, antal aktive og ophørte roller) øverst på en personside. Brug ikke når: det gælder en virksomheds ledelse (LassoPersonList). Kræver: person (Lasso-ID 'CVR-3-…'). Dækkes af show_person, som bygger hele personsiden; brug den. Eksempel: 'Hvem er Mette Holm?' → show_person.",
-    props: "person",
+    props: "person, variant?",
   },
   {
     type: "LassoPersonRoles",

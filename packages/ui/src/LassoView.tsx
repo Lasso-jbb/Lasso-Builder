@@ -20,7 +20,12 @@ import {
   type ViewSpec,
   type Width,
   ownershipGraphKey,
+  DEFAULT_SHORTCUT_TOOLS,
 } from "@lasso/spec";
+import type { HeadActionsProps } from "./components/HeadActions.js";
+import type { MenuItem } from "./components/Menu.js";
+import { Shortcuts, SHORTCUT_LABELS } from "./components/Shortcuts.js";
+import { Tabs } from "./components/Tabs.js";
 import { FollowUps } from "./components/FollowUps.js";
 import { LassoMark } from "./LassoMark.js";
 import { CompanyHead } from "./components/CompanyHead.js";
@@ -78,12 +83,98 @@ function formatStamp(iso: string | undefined): string {
   return `Data hentet ${d.toLocaleDateString("da-DK", { day: "numeric", month: "short", year: "numeric" })} kl. ${d.toLocaleTimeString("da-DK", { hour: "2-digit", minute: "2-digit" })}`;
 }
 
-function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewProps, act: (a: ViewAction) => void, key: number) {
+/** Det, rammen giver elementerne: kopiering med besked og hovedets handlinger (08.1, 16.1). */
+export interface FrameTools {
+  copy: (text: string, what: "phone" | "email") => void;
+  /** Gem/Gemt for sidens virksomhed/person (gem-laget), når værten kan gemme sider. */
+  save?: { id: string; saved: boolean; busy: boolean; toggle: () => void };
+  /** Overvåg/Overvåger for sidens virksomhed/person, når værten kan overvåge. */
+  monitor?: { id: string; monitoring: boolean; busy: boolean; toggle: () => void };
+  exportItems: MenuItem[];
+  more: MenuItem[];
+}
+
+/**
+ * En sektion på siden ("Se risiko", "Se historik", en genvej): open-section, når værten kan skifte
+ * sektion (portalen), ellers en besked til modellen (MCP), ellers ingenting (linket skjules).
+ */
+function sectionAction(
+  props: LassoViewProps,
+  act: (a: ViewAction) => void,
+  o: { lassoId: string; pageKind: "company" | "person"; section: string; name: string; label: string },
+): (() => void) | undefined {
+  if (props.host.openSection) return () => act({ kind: "open-section", lassoId: o.lassoId, pageKind: o.pageKind, section: o.section, name: o.name });
+  if (props.host.prompt) return () => act({ kind: "prompt", prompt: `Vis ${o.label.toLowerCase()} for ${o.name}` });
+  return undefined;
+}
+
+/** 09.2: "Se hele regnskabet" som link med ikon under regnskabslisten, når værten kan åbne det. */
+function statementsLink(company: string, ds: Dataset, props: LassoViewProps, act: (a: ViewAction) => void) {
+  if (props.spec.components.some((x) => x.type === "LassoIncomeStatement")) return undefined;
+  const run = sectionAction(props, act, { lassoId: company, pageKind: "company", section: "regnskab", name: ds.companies[company]?.name ?? company, label: "Regnskab" });
+  return run ? [{ label: "Se hele regnskabet", icon: "document" as const, onClick: run }] : undefined;
+}
+
+/** Hovedets handlinger for én entitet: Gem og Overvåg kun for sidens egen virksomhed/person. */
+function headActionsFor(id: string, name: string, frame: FrameTools): HeadActionsProps {
+  return {
+    monitor: frame.monitor?.id === id ? { monitoring: frame.monitor.monitoring, busy: frame.monitor.busy, onClick: frame.monitor.toggle } : undefined,
+    save: frame.save?.id === id ? { saved: frame.save.saved, busy: frame.save.busy, onClick: frame.save.toggle } : undefined,
+    exportItems: frame.exportItems,
+    more: frame.more,
+    context: { title: name },
+  };
+}
+
+/** Sektionsfaner (08.2) under hovedet, når værten giver dem (headTabs). */
+function headTabsOf(props: LassoViewProps) {
+  const t = props.headTabs;
+  if (!t) return undefined;
+  return <Tabs level={1} items={t.items} value={t.value} onChange={t.onChange} ariaLabel={t.ariaLabel ?? "Sektioner"} className="lasso-headtabs" />;
+}
+
+function CompanyHeadBridge({ c, ds, props, act, frame }: { c: Extract<ViewComponent, { type: "LassoCompanyHead" }>; ds: Dataset; props: LassoViewProps; act: (a: ViewAction) => void; frame: FrameTools }) {
+  const company = ds.companies[c.company];
+  const name = company?.name ?? c.company;
+  const variant = c.variant ?? "full";
+  const full = variant === "full";
+  return (
+    <CompanyHead
+      company={company}
+      error={ds.errors[`company:${c.company}`]}
+      variant={variant}
+      actions={full ? headActionsFor(c.company, name, frame) : frame.monitor?.id === c.company ? { monitor: { monitoring: frame.monitor.monitoring, busy: frame.monitor.busy, onClick: frame.monitor.toggle } } : undefined}
+      risk={ds.observations[c.company]}
+      onSeeRisk={sectionAction(props, act, { lassoId: c.company, pageKind: "company", section: "risiko", name, label: "Risiko" })}
+      onHistory={sectionAction(props, act, { lassoId: c.company, pageKind: "company", section: "historik", name, label: "Historik" })}
+      below={full ? headTabsOf(props) : undefined}
+    />
+  );
+}
+
+function PersonHeadBridge({ c, ds, props, act, frame }: { c: Extract<ViewComponent, { type: "LassoPersonHead" }>; ds: Dataset; props: LassoViewProps; act: (a: ViewAction) => void; frame: FrameTools }) {
+  const person = ds.persons[c.person];
+  const name = person?.name ?? c.person;
+  const variant = c.variant ?? "full";
+  const full = variant === "full";
+  return (
+    <PersonHead
+      person={person}
+      error={ds.errors[`person:${c.person}`]}
+      variant={variant}
+      actions={full ? headActionsFor(c.person, name, frame) : frame.monitor?.id === c.person ? { monitor: { monitoring: frame.monitor.monitoring, busy: frame.monitor.busy, onClick: frame.monitor.toggle } } : undefined}
+      onSeeRisk={sectionAction(props, act, { lassoId: c.person, pageKind: "person", section: "risiko", name, label: "Risiko" })}
+      below={full ? headTabsOf(props) : undefined}
+    />
+  );
+}
+
+function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewProps, act: (a: ViewAction) => void, key: number, frame: FrameTools) {
   const empty: Dataset = ds ?? emptyDataset("live");
   const err = (k: string) => empty.errors[k];
   switch (c.type) {
     case "LassoCompanyHead":
-      return <CompanyHead key={key} company={empty.companies[c.company]} error={err(`company:${c.company}`)} />;
+      return <CompanyHeadBridge key={key} c={c} ds={empty} props={props} act={act} frame={frame} />;
     case "LassoKeyFigureCards":
       return <KeyFigureCards key={key} financials={empty.financials[c.company]} metrics={c.metrics} error={err(`financials:${c.company}`)} />;
     case "LassoBarChart":
@@ -149,6 +240,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           hideAuditor={page.hideAuditor}
           exclude={c.exclude}
           onOpen={props.host.drillDown ? act : undefined}
+          links={c.variant === "financials" ? statementsLink(c.company, empty, props, act) : undefined}
         />
       );
     }
@@ -157,10 +249,40 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       const contact = empty.contact[c.company];
       const headOnPage = props.spec.components.some((x) => x.type === "LassoCompanyHead" && x.company === c.company);
       const omitAddress = headOnPage && sameAddress(contact?.address, empty.companies[c.company]?.address);
-      return <LassoContact key={key} contact={contact} title={c.title} error={err(`contact:${c.company}`)} omitAddress={omitAddress} />;
+      return (
+        <LassoContact
+          key={key}
+          contact={contact}
+          title={c.title}
+          error={err(`contact:${c.company}`)}
+          omitAddress={omitAddress}
+          onCopy={frame.copy}
+          onOpenLink={(url) => act({ kind: "open-link", url })}
+          onVerify={props.host.verifyContact ? () => props.onAction({ kind: "verify-contact", lassoId: c.company }) : undefined}
+        />
+      );
     }
     case "LassoContactPersons":
-      return <LassoContactPersons key={key} data={empty.contactPersons[c.company]} title={c.title} error={err(`contactPersons:${c.company}`)} />;
+      return (
+        <LassoContactPersons
+          key={key}
+          data={empty.contactPersons[c.company]}
+          title={c.title}
+          error={err(`contactPersons:${c.company}`)}
+          companyName={empty.companies[c.company]?.name}
+          onCopy={frame.copy}
+          onOpenLink={(url) => act({ kind: "open-link", url })}
+        />
+      );
+    case "LassoShortcuts": {
+      const name = empty.companies[c.company]?.name ?? c.company;
+      const items = (c.tools ?? DEFAULT_SHORTCUT_TOOLS).flatMap((tool) => {
+        const meta = SHORTCUT_LABELS[tool];
+        const run = sectionAction(props, act, { lassoId: c.company, pageKind: "company", section: tool, name, label: meta.label });
+        return run ? [{ id: tool, label: meta.label, icon: meta.icon, onSelect: run }] : [];
+      });
+      return <Shortcuts key={key} items={items} title={c.title} />;
+    }
     case "LassoMultiYearTable":
       return <MultiYearTable key={key} financials={empty.financials[c.company]} metrics={c.metrics} years={c.years} title={c.title} error={err(`financials:${c.company}`)} />;
     case "LassoIncomeStatement":
@@ -250,7 +372,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       );
     }
     case "LassoPersonHead":
-      return <PersonHead key={key} person={empty.persons[c.person]} error={err(`person:${c.person}`)} />;
+      return <PersonHeadBridge key={key} c={c} ds={empty} props={props} act={act} frame={frame} />;
     case "LassoPersonRoles":
       return (
         <PersonRoles
@@ -306,6 +428,7 @@ const MOBILE_ORDER: Partial<Record<ViewComponent["type"], number>> = {
   LassoWaterfallChart: 12,
   LassoContact: 15,
   LassoContactPersons: 16,
+  LassoShortcuts: 17,
   LassoKeyValueList: 20,
   LassoShareBars: 22,
   LassoTextSections: 25,
@@ -398,25 +521,17 @@ export function saveTarget(spec: ViewSpec, ds: Dataset | null): SaveTarget | nul
  * (optimistisk) og rulles tilbage, hvis værten svarer med en fejl. Tilstanden følger datasættets
  * savedIds, når værten opdaterer det.
  */
-function SavePageButton({
-  target,
-  saved: fromData,
-  onAction,
-  notify,
-}: {
-  target: SaveTarget;
-  saved: boolean;
-  onAction: LassoViewProps["onAction"];
-  notify: (o: ToastOptions) => void;
-}) {
+function useSaveToggle(target: SaveTarget | null, fromData: boolean, onAction: LassoViewProps["onAction"], notify: (o: ToastOptions) => void) {
   const [saved, setSaved] = useState(fromData);
   const [busy, setBusy] = useState(false);
+  const id = target?.lassoId;
   useEffect(() => {
     if (!busy) setSaved(fromData);
-    // Kun når værtens tilstand skifter; mens et klik venter på svar, bestemmer klikket.
-  }, [fromData]);
+    // Kun når værtens tilstand (eller siden) skifter; mens et klik venter på svar, bestemmer klikket.
+  }, [fromData, id]);
 
   const run = async (want: boolean) => {
+    if (!target) return;
     setSaved(want);
     setBusy(true);
     let res: ActionResult | void;
@@ -433,21 +548,72 @@ function SavePageButton({
     }
     notify({ text: want ? (res?.message ?? "Gemt på din liste") : "Fjernet fra din liste", tone: "ok" });
   };
+  return {
+    saved,
+    busy,
+    toggle: () => {
+      if (!busy) void run(!saved);
+    },
+  };
+}
 
+/**
+ * Overvåg/Overvåger (katalog 08.1): første klik starter overvågningen (optimistisk, rulles tilbage ved
+ * fejl); når siden overvåges, åbner klik indstillingerne hos værten og slår aldrig fra.
+ */
+function useMonitorToggle(target: SaveTarget | null, fromData: boolean, onAction: LassoViewProps["onAction"], notify: (o: ToastOptions) => void) {
+  const [on, setOn] = useState(fromData);
+  const [busy, setBusy] = useState(false);
+  const id = target?.lassoId;
+  useEffect(() => {
+    if (!busy) setOn(fromData);
+  }, [fromData, id]);
+  const run = async () => {
+    if (!target) return;
+    const was = on;
+    if (!was) setOn(true);
+    setBusy(true);
+    let res: ActionResult | void;
+    try {
+      res = await onAction({ kind: "monitor", lassoId: target.lassoId, pageKind: target.pageKind, name: target.name, monitoring: was });
+    } catch (e) {
+      res = { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
+    setBusy(false);
+    if (res && !res.ok) {
+      if (!was) setOn(false);
+      notify({ text: res.error, tone: "error", action: { label: "Prøv igen", onClick: () => void run() } });
+      return;
+    }
+    if (!was) notify({ text: res?.message ?? `Overvåger ${target.name}`, tone: "ok" });
+  };
+  return {
+    monitoring: on,
+    busy,
+    toggle: () => {
+      if (!busy) void run();
+    },
+  };
+}
+
+/**
+ * Gem/Gemt i rammens header, når siden ikke har et fuldt hoved (katalog 01, regel 21): lille ikonknap
+ * med bogmærke og ord. Står hovedet på siden, flytter Gem ind i hovedets ikonknapper (08.1).
+ */
+function SavePageButton({ save }: { save: { saved: boolean; busy: boolean; toggle: () => void } }) {
   return (
-    <button
-      type="button"
-      className="lasso-iconbtn lasso-frame__save"
-      aria-pressed={saved}
-      aria-busy={busy || undefined}
-      title={saved ? "Fjern fra din liste" : "Gem på din liste"}
-      onClick={() => {
-        if (!busy) void run(!saved);
-      }}
-    >
-      <ShellIcon name="bookmark" size={16} filled={saved} />
-      <span>{saved ? "Gemt" : "Gem"}</span>
+    <button type="button" className="lasso-iconbtn lasso-frame__save" aria-pressed={save.saved} aria-busy={save.busy || undefined} title={save.saved ? "Fjern fra din liste" : "Gem på din liste"} onClick={save.toggle}>
+      <ShellIcon name="bookmark" size={16} filled={save.saved} />
+      <span>{save.saved ? "Gemt" : "Gem"}</span>
     </button>
+  );
+}
+
+/** Står sidens virksomhed/person som fuldt hoved (variant 'full') på siden? Så hører Gem, Overvåg og eksport til hovedet. */
+export function hasFullHead(spec: ViewSpec, lassoId: string | undefined): boolean {
+  if (!lassoId) return false;
+  return spec.components.some(
+    (x) => ((x.type === "LassoCompanyHead" && x.company === lassoId) || (x.type === "LassoPersonHead" && x.person === lassoId)) && (x.variant ?? "full") === "full",
   );
 }
 
@@ -498,7 +664,38 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
   };
 
   // Gem-laget: Gem/Gemt i hovedet på virksomheds- og personsider, når værten kender brugeren.
-  const target = host.savePage ? saveTarget(spec, dataset) : null;
+  const entity = saveTarget(spec, dataset);
+  const target = host.savePage ? entity : null;
+  const monitorTarget = host.monitor ? entity : null;
+  const save = useSaveToggle(target, Boolean(target && dataset?.savedIds?.includes(target.lassoId)), onAction, notify);
+  const monitor = useMonitorToggle(monitorTarget, Boolean(monitorTarget && dataset?.monitoredIds?.includes(monitorTarget.lassoId)), onAction, notify);
+  // Katalog 08.1: står sidens hoved på siden, flytter Gem, Eksportér og "…" ind i hovedet.
+  // Uden entitetens data (henter/fejl) tegner hovedet et skelet; så står Gem i rammens header som før.
+  const entityLoaded = Boolean(entity && (entity.pageKind === "company" ? dataset?.companies[entity.lassoId] : dataset?.persons[entity.lassoId]));
+  const headActions = entityLoaded && hasFullHead(spec, entity?.lassoId);
+  const csvName = `${spec.title.replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase()}.csv`;
+  const frame: FrameTools = {
+    copy: (text, what) => {
+      void Promise.resolve(onAction({ kind: "copy-link", url: text })).then((res) =>
+        notify(res && !res.ok ? { text: res.error, tone: "error" } : { text: what === "phone" ? "Telefonnummer kopieret" : "E-mail kopieret", tone: "ok" }),
+      );
+    },
+    save: headActions && target && dataset ? { id: target.lassoId, ...save } : undefined,
+    monitor: headActions && monitorTarget && dataset ? { id: monitorTarget.lassoId, ...monitor } : undefined,
+    exportItems: headActions
+      ? [
+          ...(canReport ? [{ id: "pdf", label: "Virksomhedsrapport (PDF)", icon: <ShellIcon name="document" size={16} />, onSelect: () => setReportOpen(true) }] : []),
+          ...(host.export && csv ? [{ id: "csv", label: "Tal som CSV", icon: <ShellIcon name="download" size={16} />, onSelect: () => act({ kind: "export", filename: csvName, csv }) }] : []),
+        ]
+      : [],
+    more: headActions
+      ? [
+          ...(shareUrl ? [{ id: "link", label: "Kopiér link", icon: <ShellIcon name="copy" size={16} />, onSelect: () => void copy(shareUrl) }] : []),
+          ...(host.refresh ? [{ id: "refresh", label: "Opdatér", onSelect: () => act({ kind: "refresh" }) }] : []),
+          ...(host.fullscreen ? [{ id: "fullscreen", label: "Fuld skærm", onSelect: () => act({ kind: "fullscreen" }) }] : []),
+        ]
+      : [],
+  };
 
   return (
     <div className="lasso-root" data-theme={theme ?? "light"}>
@@ -523,9 +720,7 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
               {dataset?.source === "demo" ? <Badge tone="demo">Demodata</Badge> : null}
             </div>
           </div>
-          {target && dataset ? (
-            <SavePageButton key={target.lassoId} target={target} saved={Boolean(dataset.savedIds?.includes(target.lassoId))} onAction={onAction} notify={notify} />
-          ) : null}
+          {target && dataset && !headActions ? <SavePageButton save={save} /> : null}
         </header>
 
         {spec.criteria.length > 0 || (host.refine && spec.kind === "list") ? (
@@ -541,7 +736,7 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
               ? columnBands(spec.components).map((band, b) =>
                   band.kind === "full" ? (
                     <div key={`b${b}`} className="lasso-cell lasso-cell--full">
-                      {renderComponent(band.item.c, dataset, props, act, band.item.i)}
+                      {renderComponent(band.item.c, dataset, props, act, band.item.i, frame)}
                     </div>
                   ) : (
                     <div
@@ -553,7 +748,7 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
                         <div key={k} className="lasso-column">
                           {col.map(({ c, i }) => (
                             <div key={i} className="lasso-column__item" style={{ ["--lasso-mobile-order" as string]: mobileOrder(c) }}>
-                              {renderComponent(c, dataset, props, act, i)}
+                              {renderComponent(c, dataset, props, act, i, frame)}
                             </div>
                           ))}
                         </div>
@@ -563,7 +758,7 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
                 )
               : spec.components.map((c, i) => (
                   <div key={i} className={`lasso-cell lasso-cell--${widthOf(c, spec.layout)}`}>
-                    {renderComponent(c, dataset, props, act, i)}
+                    {renderComponent(c, dataset, props, act, i, frame)}
                   </div>
                 ))}
           </main>
@@ -593,29 +788,29 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
         ) : null}
 
         <footer className="lasso-actionbar">
-          {host.fullscreen ? (
+          {host.fullscreen && !headActions ? (
             <button className="lasso-btn lasso-btn--ghost" onClick={() => act({ kind: "fullscreen" })} aria-label="Fuld skærm">
               ⤢<span className="lasso-btn__label--optional"> Fuld skærm</span>
             </button>
           ) : null}
-          {host.refresh ? (
+          {host.refresh && !headActions ? (
             <button className="lasso-btn lasso-btn--ghost" onClick={() => act({ kind: "refresh" })}>
               Opdatér
             </button>
           ) : null}
           <span className="lasso-actionbar__spacer" />
           {notice ? <span className="lasso-small lasso-muted" role="status">{notice}</span> : null}
-          {host.export && csv ? (
-            <button className="lasso-btn" onClick={() => act({ kind: "export", filename: `${spec.title.replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase()}.csv`, csv })}>
+          {host.export && csv && !headActions ? (
+            <button className="lasso-btn" onClick={() => act({ kind: "export", filename: csvName, csv })}>
               Eksportér<span className="lasso-btn__label--optional"> CSV</span>
             </button>
           ) : null}
-          {canReport ? (
+          {canReport && !headActions ? (
             <button className="lasso-btn" onClick={() => setReportOpen(true)}>
               Eksportér<span className="lasso-btn__label--optional"> PDF</span>
             </button>
           ) : null}
-          {shareUrl ? (
+          {shareUrl && !headActions ? (
             <button className="lasso-btn" onClick={() => void copy(shareUrl)}>
               Del link
             </button>

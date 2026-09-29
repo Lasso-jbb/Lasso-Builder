@@ -1,5 +1,6 @@
-import { effectiveMetric, formatMetricValue, mainMetric, METRIC_FIELD, METRIC_LABELS, type FinancialsVM, type Metric } from "@lasso/spec";
+import { effectiveMetric, formatMetricValue, formatPercent, mainMetric, METRIC_FIELD, METRIC_LABELS, type FinancialsVM, type Metric } from "@lasso/spec";
 import { DataState, Delta, Sparkline, stateForError } from "../primitives.js";
+import { QualityFlag } from "./QualityFlag.js";
 
 export function formatMetric(metric: Metric, value: number | null | undefined, currency?: string): string {
   return formatMetricValue(metric, value, currency);
@@ -40,6 +41,13 @@ export function KeyFigureCards({ financials, metrics, error }: { financials?: Fi
   const present = unique.filter((m) => typeof last[METRIC_FIELD[m]] === "number");
   const chosen: Metric[] = (present.length > 0 ? present : unique.slice(0, 1)).slice(0, 5);
 
+  // Katalog 09.1: branchetal som tekst efter ændringen ("branche +3,1 %"), aldrig som et ekstra tal.
+  const bench = (m: Metric) => {
+    const v = financials.benchmark?.change[m];
+    if (typeof v !== "number") return null;
+    return <span className="lasso-kpi__bench">{`${financials.benchmark?.label ?? "branche"} ${formatPercent(v)}`}</span>;
+  };
+
   return (
     <div className="lasso-kpis lasso-span-full" style={{ ["--lasso-kpi-count" as string]: chosen.length }}>
       {chosen.map((m) => {
@@ -66,12 +74,14 @@ export function KeyFigureCards({ financials, metrics, error }: { financials?: Fi
               <div className="lasso-kpi__value">
                 {num}
                 {unit ? <span className="lasso-kpi__unit">{unit}</span> : null}
+                {financials.quality?.[m] ? <QualityFlag text={financials.quality[m]!} /> : null}
               </div>
               {series.length >= 3 ? <Sparkline values={series} tone="accent" bare /> : null}
             </div>
             <div className="lasso-kpi__delta">
               {before === value ? <span className="lasso-muted">Uændret</span> : <Delta from={before} to={value} />}
               {prev ? <span className="lasso-kpi__year">fra {prev.year}</span> : null}
+              {bench(m)}
             </div>
           </div>
         );

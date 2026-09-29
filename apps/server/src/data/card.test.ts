@@ -570,3 +570,17 @@ test("tekstkortet viser samme tekstafsnit som visningen: profilen uden branche o
   const analyse = card("analyse");
   assert.ok(analyse.includes("BRANCHESTATISTIK") && !analyse.includes("FORMÅL"), analyse);
 });
+
+test("08.1/16.1: tekstkortet viser status med dato, binavn, kurator og risikolinjen som hovedet", () => {
+  const ds = dataset();
+  ds.companies[ID] = { ...ds.companies[ID]!, status: "Under konkurs", statusKind: "warning", statusDate: "2026-06-03", curator: "Advokat Eksempel", secondaryNames: ["Test Vind"] };
+  ds.observations[ID] = { lassoId: ID, observations: [{ id: "k", severity: 100, title: "Virksomheden er under konkurs" }] };
+  const card = textCard(parseViewSpec({ kind: "company", title: "X", components: [{ type: "LassoCompanyHead", company: ID, risk: true }] }), ds)!;
+  for (const l of card.split("\n")) assert.equal([...l].length, 38, `linjen "${l}" har forkert bredde`);
+  const flat = card.replace(/\s+/g, " ");
+  assert.ok(flat.includes("Under konkurs, siden 03.06.2026"), card);
+  assert.ok(flat.includes("binavn Test Vind"), card);
+  assert.ok(flat.includes("Kurator: Advokat Eksempel"), card);
+  assert.ok(flat.includes("Risiko: 1 vigtig observation"), card);
+  assert.ok(!card.includes("·"));
+});

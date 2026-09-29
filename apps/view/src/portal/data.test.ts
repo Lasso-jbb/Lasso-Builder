@@ -10,5 +10,5 @@ test("Én synlig Gem-knap: hovedets knap kun under AppShells mobilbrudpunkt (560
   const { savePage: _a, ...desktop } = entityHost(1280);
   const { savePage: _b, ...mobile } = entityHost(390);
   assert.deepEqual(desktop, mobile);
-  assert.deepEqual(desktop, { save: true, refine: false, drillDown: true, refresh: true, export: true, back: false });
+  assert.deepEqual(desktop, { save: true, refine: false, drillDown: true, refresh: true, export: true, back: false, openSection: true });
 });

@@ -346,6 +346,9 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true }: PortalShel
 
   /* ---------- Handlinger fra LassoView og modulbjælken ---------- */
 
+  /** Genvejene (08.4) peger på et værktøj; i portalen svarer de til et fokus. */
+  const SECTION_FOCUS: Record<string, string> = { ejerdiagram: "ejerskab", regnskabsanalyse: "oekonomi", noegletal: "oekonomi" };
+
   const actionFor =
     (tab: PortalTab) =>
     async (a: ViewAction): Promise<ActionResult | void> => {
@@ -396,6 +399,20 @@ function Shell({ user, api, baseUrl, onLoggedOut, canLogout = true }: PortalShel
         case "export":
           downloadCsv(a.filename, a.csv);
           return { ok: true };
+        case "open-section": {
+          // 08/24: "Se risiko", "Se historik" og genveje skifter fokus på samme fane.
+          const route = tab.route;
+          const focus = SECTION_FOCUS[a.section] ?? a.section;
+          if (route.kind === "company" && route.id === a.lassoId && isFocus(focus)) {
+            setRoute(tab, { ...route, focus });
+            return { ok: true };
+          }
+          if (route.kind === "person" && route.id === a.lassoId && isPersonFocus(focus)) {
+            setRoute(tab, { ...route, focus });
+            return { ok: true };
+          }
+          return { ok: false, error: "Værktøjet findes ikke i portalen endnu." };
+        }
         default:
           return;
       }

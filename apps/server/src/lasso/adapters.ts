@@ -197,7 +197,24 @@ export function adaptCompany(lassoId: string, raw: Json): CompanyVM {
     website: str(raw, "website", "homepage", "web", "url"),
     email: str(raw, "email", "emailAddress"),
     phone: str(raw, "phone", "phoneNumber", "telephone", "telefon"),
+    ...companyHeadExtras(raw, status),
   };
+}
+
+/**
+ * Katalog 08.1 (UBEKRÆFTET svarform, se docs/lasso-endpoints.md "Ubekræftet: hovedets binavne, statusdato
+ * og kurator"): binavne, dato for nuværende status og kurator/likvidator, læst defensivt. Mangler felterne,
+ * udelades de, og hovedet viser blot status og navn som hidtil.
+ */
+function companyHeadExtras(raw: Json, status: string | undefined): Pick<CompanyVM, "secondaryNames" | "statusDate" | "curator"> {
+  const name = str(raw, "name", "companyName", "legalName", "navn");
+  const names = arr(raw, "secondaryNames", "alternativeNames", "binavne")
+    .map((n) => (typeof n === "string" ? n : str(n, "name", "value", "navn")))
+    .filter((n): n is string => Boolean(n) && n !== name);
+  const warning = statusKind(status) !== "active";
+  const statusDate = warning ? dateStr(raw, "statusDate", "status.date", "statusValidFrom", "lifecycle.statusDate", "bankruptcyDate", "lifeTime.to") : undefined;
+  const curator = str(raw, "curator", "curator.name", "receiver.name", "liquidator.name", "kurator");
+  return { ...(names.length ? { secondaryNames: names } : {}), ...(statusDate ? { statusDate } : {}), ...(curator ? { curator } : {}) };
 }
 
 /** Ét element fra en telefon-/e-mail-liste: enten en ren streng eller et objekt med et værdifelt. */

@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { formatDate, type ContactVM } from "@lasso/spec";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { ShellIcon } from "./ShellIcons.js";
 
 /** Rene omridsikoner, samme streg som SeverityIcon (primitives.tsx): kun form, ingen farve. */
 function PinIcon() {
@@ -52,52 +53,152 @@ function prettyUrl(v: string): string {
   }
 }
 
-function Row({ icon, href, children }: { icon: ReactNode; href?: string; children: ReactNode }) {
-  return (
-    <div className="lasso-contact__row">
-      {icon}
-      {href ? (
-        <a className="lasso-contact__value lasso-contact__value--link" href={href}>
-          {children}
-        </a>
-      ) : (
-        <span className="lasso-contact__value">{children}</span>
-      )}
-    </div>
-  );
-}
-
 /** Kun cifrene, så "86 12 34 56" og "+45 86123456" er samme nummer. */
 function digits(v: string): string {
   const d = v.replace(/\D/g, "");
   return d.length === 10 && d.startsWith("45") ? d.slice(2) : d;
 }
 
-/**
- * Kontaktblok (katalog 08, node 9SX-0): ikon + værdi, klikbar (tel:/mailto:/https), ingen
- * skillelinjer mellem rækkerne, kun luft. Adresse (ikke klikbar), telefon, e-mail, web, i den
- * rækkefølge. Tom tilstand, når intet er oplyst. Står hovedet med samme adresse på siden,
- * udelades adressen (`omitAddress`), så den ikke står to gange.
- *
- * Live number (kræver egen tilføjelse, udelades stille uden adgang): op til 3 verificerede
- * numre efter de almindelige rækker, mærket "Telefon (verificeret DD.MM.ÅÅÅÅ)" i ren tekst;
- * er CVR-nummeret selv verificeret, står mærket på det i stedet for en række mere. En
- * Robinsonliste-linje i muted og én kildelinje for begge kilder (regel 8).
- */
+/** Live-nummerets fire tilstande (katalog 08.5). "Tjekker" vises aldrig over 10 sek. */
+export type LiveState = { kind: "now" } | { kind: "checking" } | { kind: "expired"; date?: string } | { kind: "stale"; days: number };
 
-export function LassoContact({
-  contact,
-  title,
-  error,
-  omitAddress = false,
-}: {
+/** Tid i ms, hvor en verifikation stadig tæller som "nu" (kilden svarede inden for 60 sek.). */
+const NOW_WINDOW = 60_000;
+/** Længste "Tjekker …", før blokken falder tilbage til det, den vidste i forvejen. */
+export const VERIFY_TIMEOUT = 10_000;
+
+/**
+ * Tilstanden for et verificeret nummer: udgået (gennemstreget, dato), "Verificeret nu" (tidspunkt
+ * inden for 60 sek.), ellers "Verificeret for N dage siden" i muted. Kun datoen (ÅÅÅÅ-MM-DD) giver
+ * aldrig "nu", fordi den ikke siger, at kilden lige har svaret.
+ */
+export function liveState(verifiedAt: string | undefined, expired: string | undefined, now: number): LiveState | null {
+  if (expired) return { kind: "expired", date: expired };
+  if (!verifiedAt) return null;
+  const t = new Date(verifiedAt).getTime();
+  if (Number.isNaN(t)) return null;
+  if (verifiedAt.includes("T") && Math.abs(now - t) <= NOW_WINDOW) return { kind: "now" };
+  return { kind: "stale", days: Math.max(0, Math.floor((now - t) / 86_400_000)) };
+}
+
+function LiveMark({ state }: { state: LiveState }) {
+  if (state.kind === "now") {
+    return (
+      <span className="lasso-live lasso-live--now">
+        <ShellIcon name="check" size={13} />
+        Verificeret nu
+      </span>
+    );
+  }
+  if (state.kind === "checking") {
+    return (
+      <span className="lasso-live lasso-live--checking" role="status">
+        <span className="lasso-live__spinner" aria-hidden="true" />
+        Tjekker …
+      </span>
+    );
+  }
+  if (state.kind === "expired") return <span className="lasso-live lasso-live--expired">Udgået{state.date ? `, ${formatDate(state.date)}` : ""}</span>;
+  const when = state.days === 0 ? "i dag" : state.days === 1 ? "for 1 dag siden" : `for ${state.days} dage siden`;
+  return <span className="lasso-live lasso-live--stale">Verificeret {when}</span>;
+}
+
+/** Én række: ikon, værdi (klikbar) og til højre enten live-tilstanden eller en handling (Kort, Ring, Kopiér). */
+function Row({ icon, href, children, aside, struck = false, onLink }: { icon: ReactNode; href?: string; children: ReactNode; aside?: ReactNode; struck?: boolean; onLink?: (url: string) => void }) {
+  const cls = `lasso-contact__value${struck ? " lasso-contact__value--struck" : ""}`;
+  return (
+    <div className="lasso-contact__row">
+      {icon}
+      {href && !struck ? (
+        onLink && /^https?:/.test(href) ? (
+          <button type="button" className={`${cls} lasso-contact__value--link lasso-contact__value--button`} onClick={() => onLink(href)}>
+            {children}
+          </button>
+        ) : (
+          <a className={`${cls} lasso-contact__value--link`} href={href}>
+            {children}
+          </a>
+        )
+      ) : (
+        <span className={cls}>{children}</span>
+      )}
+      {aside ? <span className="lasso-contact__aside">{aside}</span> : null}
+    </div>
+  );
+}
+
+function ActionLink({ label, href, onClick }: { label: string; href?: string; onClick?: () => void }) {
+  if (onClick) {
+    return (
+      <button type="button" className="lasso-contact__action" onClick={onClick}>
+        {label}
+      </button>
+    );
+  }
+  return (
+    <a className="lasso-contact__action" href={href} target={href?.startsWith("http") ? "_blank" : undefined} rel="noreferrer">
+      {label}
+    </a>
+  );
+}
+
+export interface LassoContactProps {
   contact?: ContactVM;
   title?: string;
   error?: string;
   /** Adressen står allerede i hovedet på samme side (samme vej og postnummer). */
   omitAddress?: boolean;
-}) {
+  /** "Kopiér" ved e-mailen (værten kopierer og viser en besked). Uden: intet Kopiér-link. */
+  onCopy?: (text: string, what: "phone" | "email") => void;
+  /** Åbn et eksternt link (kort, hjemmeside) via værten. Uden: almindeligt link. */
+  onOpenLink?: (url: string) => void;
+  /**
+   * Katalog 08.5: verificér numre og e-mail i realtid, mens blokken er åben. Værten henter og
+   * opdaterer datasættet (verifiedAt); blokken viser "Tjekker …" i højst 10 sek. imens.
+   */
+  onVerify?: () => Promise<unknown> | void;
+  /** Tidspunktet "nu" i ms (tests og statisk forhåndsvisning). */
+  now?: number;
+}
+
+/**
+ * Kontaktblok (katalog 08, node 9SX-0): ikon + værdi, klikbar (tel:/mailto:/https), ingen
+ * skillelinjer mellem rækkerne, kun luft. Adresse (ikke klikbar), telefon, e-mail, web, i den
+ * rækkefølge, med handlingen til højre: Kort, Ring, Kopiér (24.9). Tom tilstand, når intet er oplyst.
+ * Står hovedet med samme adresse på siden, udelades adressen (`omitAddress`).
+ *
+ * Live-nummer (08.5, kræver egen tilføjelse, udelades stille uden adgang): verificerede numre står
+ * efter de almindelige rækker med en af fire tilstande til højre: "Verificeret nu" (grøn, kun mens
+ * kilden svarede inden for 60 sek.), "Tjekker …" (spinner, højst 10 sek.), "Udgået, dato" (gul,
+ * værdien gennemstreget men beholdt) og "Verificeret for N dage siden" (muted). Nummeret vises
+ * altid; verifikationen er et tillæg, aldrig en forudsætning. Robinsonliste-linje i muted og én
+ * kildelinje for begge kilder (regel 8).
+ */
+export function LassoContact({ contact, title, error, omitAddress = false, onCopy, onOpenLink, onVerify, now }: LassoContactProps) {
   const heading = title ?? "Kontakt";
+  const [checking, setChecking] = useState(false);
+  const lassoId = contact?.lassoId;
+  useEffect(() => {
+    if (!onVerify || !lassoId) return;
+    let done = false;
+    setChecking(true);
+    const timer = setTimeout(() => {
+      if (!done) setChecking(false);
+    }, VERIFY_TIMEOUT);
+    Promise.resolve(onVerify())
+      .catch(() => undefined)
+      .finally(() => {
+        done = true;
+        clearTimeout(timer);
+        setChecking(false);
+      });
+    return () => {
+      done = true;
+      clearTimeout(timer);
+    };
+    // Én verifikation pr. virksomhed, mens blokken er åben.
+  }, [lassoId]);
+
   if (!contact) {
     return (
       <Section title={heading} span="half">
@@ -106,13 +207,14 @@ export function LassoContact({
     );
   }
 
+  const at = now ?? Date.now();
   const a = omitAddress ? undefined : contact.address;
   const addressLine1 = a?.street;
   const addressLine2 = [a?.zip, a?.city].filter(Boolean).join(" ") || undefined;
   const hasAddress = Boolean(addressLine1 || addressLine2);
   const hasVerified = Boolean(contact.verifiedNumbers?.length);
   // Er CVR-nummeret også verificeret, står det én gang med verificeringen, ikke to gange.
-  const phoneVerified = contact.phone ? contact.verifiedNumbers?.some((n) => digits(n.phoneNumber) === digits(contact.phone!)) : false;
+  const phoneMatch = contact.phone ? contact.verifiedNumbers?.find((n) => digits(n.phoneNumber) === digits(contact.phone!)) : undefined;
   const otherVerified = (contact.verifiedNumbers ?? []).filter((n) => !contact.phone || digits(n.phoneNumber) !== digits(contact.phone));
   const hasAny = hasAddress || contact.phone || contact.email || contact.website || hasVerified;
 
@@ -123,44 +225,60 @@ export function LassoContact({
       </Section>
     );
   }
+  const stateOf = (n?: { expired?: string }): LiveState | null => (checking ? { kind: "checking" } : n ? liveState(contact.verifiedAt, n.expired, at) : null);
+  const mapUrl = hasAddress ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([addressLine1, addressLine2].filter(Boolean).join(", "))}` : undefined;
   // Regel 8: én kildelinje pr. sektion, også når live number har leveret numre.
   const sources = [contact.source, hasVerified ? "Lasso live number" : undefined].filter((x): x is string => Boolean(x));
-  const sameDate = !hasVerified || !contact.source || !contact.updated || !contact.verifiedAt || contact.updated === contact.verifiedAt;
+  const sameDate = !hasVerified || !contact.source || !contact.updated || !contact.verifiedAt || contact.updated === contact.verifiedAt.slice(0, 10);
+  const phoneState = stateOf(phoneMatch);
 
   return (
     <Section title={heading} span="half">
       <div className="lasso-contact">
         {hasAddress ? (
-          <div className="lasso-contact__row">
-            <PinIcon />
-            <span className="lasso-contact__value lasso-contact__value--multiline">
+          <Row
+            icon={<PinIcon />}
+            aside={mapUrl ? <ActionLink label="Kort" href={mapUrl} onClick={onOpenLink ? () => onOpenLink(mapUrl) : undefined} /> : undefined}
+          >
+            <span className="lasso-contact__value--multiline">
               {addressLine1 ? <span>{addressLine1}</span> : null}
               {addressLine2 ? <span>{addressLine2}</span> : null}
             </span>
-          </div>
+          </Row>
         ) : null}
         {contact.phone ? (
-          <Row icon={<PhoneIcon />} href={`tel:${contact.phone.replace(/\s+/g, "")}`}>
+          <Row
+            icon={<PhoneIcon />}
+            href={`tel:${contact.phone.replace(/\s+/g, "")}`}
+            struck={phoneState?.kind === "expired"}
+            aside={phoneState ? <LiveMark state={phoneState} /> : <ActionLink label="Ring" href={`tel:${contact.phone.replace(/\s+/g, "")}`} />}
+          >
             {prettyPhone(contact.phone)}
-            {phoneVerified ? <span className="lasso-small lasso-muted"> — Telefon (verificeret {formatDate(contact.verifiedAt)})</span> : null}
           </Row>
         ) : null}
         {contact.email ? (
-          <Row icon={<MailIcon />} href={`mailto:${contact.email}`}>
+          <Row
+            icon={<MailIcon />}
+            href={`mailto:${contact.email}`}
+            aside={checking ? <LiveMark state={{ kind: "checking" }} /> : onCopy ? <ActionLink label="Kopiér" onClick={() => onCopy(contact.email!, "email")} /> : undefined}
+          >
             {contact.email}
           </Row>
         ) : null}
         {contact.website ? (
-          <Row icon={<GlobeIcon />} href={contact.website}>
+          <Row icon={<GlobeIcon />} href={contact.website} onLink={onOpenLink}>
             {prettyUrl(contact.website)}
           </Row>
         ) : null}
-        {otherVerified.map((n, i) => (
-          <Row key={`verified-${i}`} icon={<PhoneIcon />} href={n.callable ? `tel:${n.phoneNumber.replace(/\s+/g, "")}` : undefined}>
-            {prettyPhone(n.phoneNumber)}
-            <span className="lasso-small lasso-muted"> — Telefon (verificeret {formatDate(contact.verifiedAt)})</span>
-          </Row>
-        ))}
+        {otherVerified.map((n, i) => {
+          const st = stateOf(n);
+          const callable = n.callable && st?.kind !== "expired";
+          return (
+            <Row key={`verified-${i}`} icon={<PhoneIcon />} href={callable ? `tel:${n.phoneNumber.replace(/\s+/g, "")}` : undefined} struck={st?.kind === "expired"} aside={st ? <LiveMark state={st} /> : undefined}>
+              {prettyPhone(n.phoneNumber)}
+            </Row>
+          );
+        })}
       </div>
       {contact.isRobinson ? (
         <p className="lasso-small lasso-muted">Tilmeldt Robinsonlisten, må ikke kontaktes med markedsføring</p>

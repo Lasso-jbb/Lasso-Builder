@@ -3,6 +3,58 @@ import { companyFacts, currencyUnit, formatAmount, formatDate, formatMetricValue
 import type { ViewAction } from "../types.js";
 import { DataState, Missing, Section, stateForError } from "../primitives.js";
 import { Tabs } from "./Tabs.js";
+import { InfoHint, QualityFlag } from "./QualityFlag.js";
+import { ShellIcon, type ShellIconName } from "./ShellIcons.js";
+
+/**
+ * Katalog 09.2: info-ikon ved nøglen forklarer begrebet. Kun begreber, der kræver forklaring;
+ * almindelige felter (adresse, telefon) får intet ikon.
+ */
+export const KV_CONCEPTS: Record<string, string> = {
+  Regnskabsperiode: "Det tidsrum, regnskabet dækker. Oftest kalenderåret, men selskabet kan vælge et andet regnskabsår.",
+  Regnskabsklasse: "Årsregnskabslovens klasser A–D afgør, hvor meget regnskabet skal indeholde. Klasse B skal ikke oplyse omsætning.",
+  Branchekode: "Danmarks Statistiks branchekode (DB07), som virksomheden selv har valgt i CVR.",
+  Bruttofortjeneste: "Omsætning minus vareforbrug og andre eksterne omkostninger.",
+  EBITDA: "Resultat før renter, skat, af- og nedskrivninger.",
+  Soliditetsgrad: "Egenkapitalen i procent af balancesummen. Viser, hvor stor en del af aktiverne der er finansieret af ejerne.",
+  Overskudsgrad: "Resultat af primær drift i procent af omsætningen (eller bruttofortjenesten).",
+  Likviditetsgrad: "Omsætningsaktiver i procent af den kortfristede gæld. Over 100 % kan de kortfristede forpligtelser dækkes.",
+  Balancesum: "Summen af aktiverne, som er lig summen af egenkapital og gæld.",
+  "Gæld i alt": "Kortfristet og langfristet gæld. Beregnes som balancesum minus egenkapital, når den ikke er oplyst.",
+  Reklamebeskyttet: "Virksomheden har frabedt sig henvendelser med reklame, jf. CVR-loven.",
+  "Seneste revisorskift": "Dato for seneste skift af revisor i CVR. Hyppige skift kan være et opmærksomhedspunkt.",
+};
+
+/** Katalog 09.2: handlinger under listen som link med ikon, fx "Se hele regnskabet". */
+export interface KeyValueLink {
+  label: string;
+  icon?: ShellIconName;
+  onClick: () => void;
+}
+
+function Label({ text, info }: { text: string; info: boolean }) {
+  const concept = info ? KV_CONCEPTS[text] : undefined;
+  return (
+    <div className="lasso-kv-row__label">
+      <span className="lasso-kv-row__labeltext">{text}</span>
+      {concept ? <InfoHint text={concept} label={text} /> : null}
+    </div>
+  );
+}
+
+function Links({ links }: { links?: readonly KeyValueLink[] }) {
+  if (!links?.length) return null;
+  return (
+    <div className="lasso-kv-links">
+      {links.map((l) => (
+        <button key={l.label} type="button" className="lasso-kv-link" onClick={l.onClick}>
+          {l.icon ? <ShellIcon name={l.icon} size={15} /> : null}
+          <span>{l.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
 
 /** "2025-01-01" -> "01.01" (dag.måned, uden år, katalog 09: "01.01 – 31.12"). */
 function dayMonth(value: string | undefined): string | undefined {
@@ -14,6 +66,8 @@ interface Row {
   label: string;
   value?: string;
   danger?: boolean;
+  /** Kvalitetsflag (09.1/09.2): forklaring i tooltip ved det gule udråbstegn. */
+  flag?: string;
   /** Entitetens Lasso-ID (revisoren), så navnet kan åbnes i værter med drill-down. */
   lassoId?: string;
 }
@@ -34,7 +88,7 @@ function companyRows(
 
 const FINANCIALS_ROW_METRICS: Metric[] = ["resultat", "egenkapital", "ansatte", "ebitda", "soliditetsgrad", "overskudsgrad", "likviditetsgrad", "balancesum", "gaeld"];
 
-function financialsRows(year: FinancialsVM["years"][number], currency?: string, exclude: readonly Metric[] = []): Row[] {
+function financialsRows(year: FinancialsVM["years"][number], currency?: string, exclude: readonly Metric[] = [], quality?: FinancialsVM["quality"]): Row[] {
   const cur = year.currency ?? currency;
   const period = dayMonth(year.periodStart) && dayMonth(year.periodEnd) ? `${dayMonth(year.periodStart)} – ${dayMonth(year.periodEnd)}` : undefined;
   const rows: Row[] = [
@@ -45,14 +99,14 @@ function financialsRows(year: FinancialsVM["years"][number], currency?: string, 
   const main: Metric = year.revenue != null ? "omsaetning" : "bruttofortjeneste";
   if (!exclude.includes(main)) {
     const v = year.revenue != null ? year.revenue : year.grossProfit;
-    rows.push({ label: METRIC_LABELS[main], value: v != null ? formatAmount(v, currencyUnit(cur)) : undefined });
+    rows.push({ label: METRIC_LABELS[main], value: v != null ? formatAmount(v, currencyUnit(cur)) : undefined, flag: quality?.[main] });
   }
   for (const m of FINANCIALS_ROW_METRICS) {
     if (exclude.includes(m)) continue;
     let v = year[METRIC_FIELD[m]] as number | null | undefined;
     // Gæld i alt = balancesum − egenkapital, når den ikke er oplyst direkte.
     if (m === "gaeld" && v == null && typeof year.assetsTotal === "number" && typeof year.equity === "number") v = year.assetsTotal - year.equity;
-    rows.push({ label: METRIC_LABELS[m], value: v != null ? formatMetricValue(m, v, cur) : undefined, danger: typeof v === "number" && v < 0 });
+    rows.push({ label: METRIC_LABELS[m], value: v != null ? formatMetricValue(m, v, cur) : undefined, danger: typeof v === "number" && v < 0, flag: quality?.[m] });
   }
   return rows;
 }
@@ -94,6 +148,8 @@ export function KeyValueList({
   hideIdentity = false,
   hideAuditor = false,
   exclude,
+  info = true,
+  links,
 }: {
   company?: CompanyVM;
   ownership?: OwnershipVM;
@@ -111,6 +167,10 @@ export function KeyValueList({
   hideAuditor?: boolean;
   /** Variant "financials": nøgletal, der allerede står på siden (nøgletalskortene). */
   exclude?: readonly Metric[];
+  /** Info-ikon med begrebsforklaring ved nøglen (KV_CONCEPTS). Standard til. */
+  info?: boolean;
+  /** Handlinger under listen som link med ikon (09.2), fx "Se hele regnskabet". */
+  links?: readonly KeyValueLink[];
 }) {
   const heading = title ?? (variant === "financials" ? "Regnskab" : "Virksomhedsoplysninger");
   const ready = variant === "financials" ? Boolean(financials) : Boolean(company);
@@ -136,7 +196,8 @@ export function KeyValueList({
     }
     const options = years.slice(-5).reverse();
     const selected = years.find((y) => y.year === year) ?? last;
-    const rows = financialsRows(selected, financials!.currency, exclude);
+    // Kvalitetsflaggene gælder seneste regnskab.
+    const rows = financialsRows(selected, financials!.currency, exclude, selected === last ? financials!.quality : undefined);
     return (
       <Section
         title={heading}
@@ -153,16 +214,23 @@ export function KeyValueList({
         <div className="lasso-kv-list lasso-kv-list--financials">
           {rows.map((r) => (
             <div className="lasso-kv-row" key={r.label}>
-              <div className="lasso-kv-row__label">{r.label}</div>
-              <div className={`lasso-kv-row__value ${r.danger ? "lasso-down" : ""}`}>{r.value ?? <Missing />}</div>
+              <Label text={r.label} info={info} />
+              <div className={`lasso-kv-row__value ${r.danger ? "lasso-down" : ""}`}>
+                {r.value ?? <Missing />}
+                {r.flag && r.value ? <QualityFlag text={r.flag} /> : null}
+              </div>
             </div>
           ))}
         </div>
+        <Links links={links} />
       </Section>
     );
   }
 
-  const rows = companyRows(company!, ownership, financials?.years.at(-1), { identity: hideIdentity, contact: hideContact, auditor: hideAuditor });
+  const ansatteFlag = financials?.quality?.ansatte;
+  const rows = companyRows(company!, ownership, financials?.years.at(-1), { identity: hideIdentity, contact: hideContact, auditor: hideAuditor }).map((r): Row =>
+    r.label === "Ansatte" && ansatteFlag ? { ...r, flag: ansatteFlag } : r,
+  );
   if (rows.length === 0) {
     return (
       <Section title={heading} span="half">
@@ -175,13 +243,15 @@ export function KeyValueList({
       <div className="lasso-kv-list">
         {rows.map((r) => (
           <div className="lasso-kv-row" key={r.label}>
-            <div className="lasso-kv-row__label">{r.label}</div>
+            <Label text={r.label} info={info} />
             <div className="lasso-kv-row__value" title={r.value}>
               {r.value ? <Value value={r.value} lassoId={r.lassoId} onOpen={onOpen} /> : <Missing />}
+              {r.flag && r.value ? <QualityFlag text={r.flag} /> : null}
             </div>
           </div>
         ))}
       </div>
+      <Links links={links} />
     </Section>
   );
 }

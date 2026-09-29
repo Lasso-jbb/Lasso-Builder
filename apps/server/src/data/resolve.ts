@@ -162,6 +162,12 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
     switch (c.type) {
       case "LassoCompanyHead":
         want(c.company, "company");
+        // 08.1/24.4: "Se risiko"-linjen. Observationerne tager 10–14 s, så kun når specen beder om dem.
+        if (c.risk) want(c.company, "observations");
+        break;
+      case "LassoShortcuts":
+        // 08.4: genvejene har ingen egne data; navnet bruges i beskeden til værten.
+        want(c.company, "company");
         break;
       case "LassoKeyFigureCards":
       case "LassoBarChart":

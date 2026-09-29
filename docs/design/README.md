@@ -126,3 +126,15 @@ Spec-komponent `LassoChangeFeed { list?, days? (7), types?, title? }` → `Chang
 ### A4-eksport (27, node `DO8-0`)
 
 `ReportA4({ company, dataset, generatedAt? })` tegner op til fire A4-sider (forside, nøgletal + graf + ledelse/ejere, regnskab 5 år, kreditvurdering/risiko/reelle ejere/revisor) uden interaktion; `@media print` giver ét ark pr. side. `LassoView` viser knappen "Eksportér PDF" (host.export, spec.kind "company") med Print og Luk. Preview: `npx tsx apps/server/src/dev/render-preview.ts <mappe> --report CVR-1-99000001`.
+
+### Virksomheds- og personhoved, genveje og "Se alle"-panelet (08, 09, 16)
+
+```ts
+<CompanyHead company variant?="full|compact|line" actions?={HeadActionsProps} risk?={ObservationsVM} onSeeRisk? onHistory? below? />
+<PersonHead person variant? actions? onSeeRisk? below? />
+<HeadActions monitor?={{ monitoring, onClick }} save?={{ saved, onClick }} exportItems?={MenuItem[]} more?={MenuItem[]} history? labels? />
+<Shortcuts items={[{ id, label, icon, onSelect }]} />                       // 08.4, maks 6 + "Flere"
+<SidePanel open title subtitle? onClose list={<SidePanelList groups selected onSelect />} detail? view?="list|detail" onBack? />   // 08.7
+```
+
+Handlingerne (Overvåg/Overvåger, Gem/Gemt, Eksportér, "…") er 32 px ikonknapper øverst til højre i hovedet; `LassoView` fylder dem ud fra `HostCapabilities` (`monitor`, `savePage`, `export`, `refresh`, `fullscreen`) og flytter dem ud af rammens header og footer, når sidens hoved står på siden. "Se risiko" (`risk: true` i specen, kun ved 50+), "Se historik" (ophørt) og genveje sender `open-section` (værten skifter fokus) eller en `prompt`. `headTabs` på `LassoView` giver sektionsfanerne (08.2) under hovedet. Kontaktpersoner (08.6) viser 3 + "Se N kontaktpersoner" og åbner `SidePanel` (720/600 px, fuldskærmsark på mobil). Live-nummeret (08.5) har fire tilstande (`liveState`), og `verify-contact` beder værten verificere i realtid.
