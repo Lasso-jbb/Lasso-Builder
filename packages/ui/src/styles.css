@@ -64,6 +64,7 @@
   --lasso-disabled: #c9cdd3;
   --lasso-skeleton: #eeeff2;
   --lasso-skeleton-shine: #f8f8fa;
+  --lasso-skeleton-sheen: rgb(255 255 255 / 0.7); /* 10b: lyst bånd (hvid 70 %) over skeletstregerne */
   --lasso-tooltip: #16181d;
 
   /* Semantik: kun til status og risiko, altid med ikon eller ord */
@@ -192,6 +193,7 @@
   --lasso-disabled: #4a4f57;
   --lasso-skeleton: #262a30;
   --lasso-skeleton-shine: #32373e;
+  --lasso-skeleton-sheen: rgb(255 255 255 / 0.06);
   --lasso-tooltip: #f2f3f5;
   --lasso-neutral-soft: #2a2d33;
   --lasso-positive: #5cc28c;
@@ -469,7 +471,7 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-state--error { border-style: solid; border-color: var(--lasso-border-strong); background: var(--lasso-surface-2); }
 /* 09.4/29.4 (Jakob 29.09): skeletter er i bevægelse, når der hentes: et lyst skær glider fra venstre
    mod højre over den grå flade (shimmer). prefers-reduced-motion: stille flade. */
-.lasso-skeleton { border-radius: 7px; background-color: var(--lasso-skeleton); background-image: linear-gradient(90deg, transparent 0%, transparent 40%, var(--lasso-skeleton-shine) 50%, transparent 60%, transparent 100%); background-size: 300% 100%; background-repeat: no-repeat; animation: lasso-shimmer 1.6s linear infinite; height: 14px; }
+.lasso-skeleton { border-radius: 4px; background-color: var(--lasso-skeleton); background-image: linear-gradient(90deg, transparent 0%, transparent 40%, var(--lasso-skeleton-shine) 50%, transparent 60%, transparent 100%); background-size: 300% 100%; background-repeat: no-repeat; animation: lasso-shimmer 1.4s linear infinite; height: 14px; }
 @keyframes lasso-shimmer { from { background-position: 100% 0; } to { background-position: 0% 0; } }
 @keyframes lasso-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
 @media (prefers-reduced-motion: reduce) { .lasso-skeleton { animation: none; background-image: none; } }
@@ -5102,3 +5104,68 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-cpdetail__copies { align-items: stretch; }
   .lasso-sidepanel--seeall .lasso-cpdetail__name { font-size: 18px; line-height: 22px; }
 }
+
+/* ---------- 10b Tilstande, ét fælles tilstandssprog (Paper LDP-0, regler LE7-0), runde 5 ----------
+   1 Rammen og overskriften bliver stående; kun indholdet skifter. 2 Henter = skelet i indholdets form
+   (12 px streger, radius 4, divider-subtle, 10-14 px mellemrum). 3 Shimmer: lyst bånd glider venstre ->
+   højre, 1,4 s lineært uendeligt; stille ved prefers-reduced-motion. 4 Tom = ikon 24 faint + titel 14/600 +
+   én linje 13 muted + højst én sekundær handling. 5 Fejl = samme + danger-ikon, "Prøv igen" primær og
+   fejl-id som tekst; ingen rød kant. 6 På forespørgsel/ikke tilgængelig uden stiplet ramme og skeletstreger. */
+.lasso-skel { display: block; flex: none; border-radius: 4px; background-color: var(--lasso-divider-subtle); background-image: linear-gradient(90deg, transparent 0%, var(--lasso-skeleton-sheen) 50%, transparent 100%); background-size: 200% 100%; background-repeat: no-repeat; animation: lasso-shimmer 1.4s linear infinite; }
+.lasso-skel--block { background-color: var(--lasso-surface-muted); }
+@media (prefers-reduced-motion: reduce) { .lasso-skel { animation: none; background-image: none; } }
+.lasso-skelshape { display: flex; flex-direction: column; gap: 14px; }
+.lasso-skelshape__lead { display: flex; align-items: flex-end; gap: 10px; }
+.lasso-skelshape__pair { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.lasso-skelshape__pair--center { align-items: center; }
+.lasso-skelshape__pair--top { padding-top: 6px; }
+.lasso-skelshape__track { display: flex; gap: 4px; }
+.lasso-skelshape__track .lasso-skel { flex-shrink: 1; flex-basis: 0; border-radius: 3px; }
+.lasso-skelshape--card { gap: 10px; padding: 14px; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); }
+.lasso-skelshape__rule { display: block; height: 1px; background: var(--lasso-divider-subtle); }
+.lasso-skelshape__figs { display: flex; gap: 16px; }
+.lasso-skelshape__fig { display: flex; flex-direction: column; gap: 6px; }
+.lasso-skelshape__fig--end { align-items: flex-end; }
+.lasso-state-loading { display: flex; flex-direction: column; gap: 16px; flex: 1 1 auto; justify-content: space-between; }
+.lasso-state-loading__note { font-size: 11px; line-height: 14px; color: var(--lasso-faint); }
+
+.lasso-root .lasso-state { justify-content: center; gap: 8px; padding: 24px 16px; border: 0; border-radius: var(--lasso-radius-lg); background: none; text-align: center; }
+.lasso-root .lasso-state.lasso-state--solid { border: 1px solid var(--lasso-border); }
+.lasso-root .lasso-state .lasso-state__icon { color: var(--lasso-placeholder); }
+.lasso-root .lasso-state .lasso-state__icon--check { color: var(--lasso-positive); }
+.lasso-root .lasso-state .lasso-state__icon--alert { color: var(--lasso-danger); }
+.lasso-root .lasso-state .lasso-state__title { margin: 0; font-size: 14px; line-height: 18px; font-weight: 600; color: var(--lasso-text); }
+.lasso-root .lasso-state > .lasso-small { max-width: 320px; font-size: 13px; line-height: 18px; color: var(--lasso-muted); }
+.lasso-root .lasso-state .lasso-state__action { margin-top: 4px; height: var(--lasso-btn-h); padding: 0 16px; font-size: 13px; font-weight: 500; color: var(--lasso-text-2); }
+.lasso-root .lasso-state.lasso-state--inline { padding: 16px; }
+.lasso-root .lasso-state.lasso-state--ondemand { align-items: flex-start; justify-content: center; gap: 14px; padding: 0; text-align: left; }
+.lasso-root .lasso-state--ondemand > .lasso-small { max-width: none; }
+.lasso-root .lasso-state__cta { align-self: flex-start; gap: 7px; height: var(--lasso-btn-h); padding: 0 16px 0 14px; font-size: 13px; line-height: 18px; font-weight: 600; }
+.lasso-root .lasso-state.lasso-state--error { flex-direction: column; align-items: center; gap: 8px; padding: 24px 16px; border: 0; background: none; text-align: center; }
+.lasso-root .lasso-state--error .lasso-state__actions { justify-content: center; flex-wrap: wrap; gap: 12px; margin-top: 4px; }
+.lasso-root .lasso-state--error .lasso-state__retry { margin: 0; height: var(--lasso-btn-h); padding: 0 16px; font-size: 13px; }
+.lasso-root .lasso-state--error .lasso-state__secondary { height: var(--lasso-btn-h); padding: 0 16px; font-size: 13px; }
+.lasso-state__errid { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+
+/* 15.4 (runde 5, Paper LHA-0 og BB1-0): tabeltilstandene i det fælles tilstandssprog (10b). Tom og fejl:
+   ikon 24 (faint/danger), titel 14/600, én linje 13 muted, én handling; fejl-id som tekst ved "Prøv igen".
+   Mobil: skeletkort formet som 26c.7, tom og fejl i samme kortramme (1 px, radius 10) og højde. */
+.lasso-root .lasso-tstate__box { gap: 8px; }
+.lasso-root .lasso-tstate__box .lasso-tstate__title { font-size: 14px; line-height: 18px; font-weight: 600; }
+.lasso-root .lasso-tstate__text { font-size: 13px; line-height: 18px; color: var(--lasso-muted); }
+.lasso-root .lasso-tstate__icon { color: var(--lasso-placeholder); }
+.lasso-root .lasso-tstate__icon--warn { color: var(--lasso-danger); }
+.lasso-tstate__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; margin-top: 4px; }
+.lasso-root .lasso-tstate__actions .lasso-tstate__retry { margin: 0; height: var(--lasso-btn-h); padding: 0 16px; font-size: 13px; }
+.lasso-root .lasso-tstate__action .lasso-btn { height: var(--lasso-btn-h); padding: 0 16px; font-size: 13px; font-weight: 500; }
+.lasso-ccards-state__skels { display: flex; flex-direction: column; gap: 12px; }
+@container lasso (max-width: 560px) {
+  .lasso-root .lasso-ccards-state .lasso-tstate__box { min-height: 328px; align-content: center; border: 1px solid var(--lasso-border); border-style: solid; border-radius: var(--lasso-radius-lg); padding: 24px 16px; }
+  .lasso-root .lasso-ccards-state .lasso-tstate__box .lasso-btn { width: auto; height: var(--lasso-btn-h); }
+}
+
+/* 10b regel 1: elementramme (Section frame, eller .lasso-framewrap om et element, der tegner sin egen sektion). */
+.lasso-root .lasso-section.lasso-section--frame, .lasso-root .lasso-framewrap > .lasso-section { display: flex; flex-direction: column; gap: 16px; width: 100%; height: 100%; box-sizing: border-box; padding: 20px; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); }
+.lasso-root .lasso-section--frame > .lasso-section__head, .lasso-root .lasso-framewrap > .lasso-section > .lasso-section__head { margin: 0; }
+.lasso-root .lasso-section--frame .lasso-section__title, .lasso-root .lasso-framewrap > .lasso-section .lasso-section__title { font-size: 18px; line-height: 22px; font-weight: 600; letter-spacing: -0.01em; }
+.lasso-root .lasso-section--frame > .lasso-state, .lasso-root .lasso-framewrap > .lasso-section > .lasso-state { flex: 1 1 auto; padding: 0; min-height: 0 !important; }

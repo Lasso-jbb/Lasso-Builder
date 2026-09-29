@@ -131,7 +131,7 @@ const LASSO_X_CONTACT: ContactVM = {
   emails: ["contact@lassox.com"],
   website: "https://lassox.com",
   address: LASSO_X.address,
-  verifiedNumbers: [{ phoneNumber: "71747812", score: 95, callable: true }],
+  verifiedNumbers: [{ phoneNumber: "71747812", score: 95, callable: true, sources: ["Website"] }],
   verifiedAt: "2026-09-20",
 };
 const src = [{ label: "lassox.com", url: "https://lassox.com/om-os/lasso-x" }];
@@ -236,20 +236,29 @@ const FIN_MISSING: FinancialsVM = {
   years: [Y(2023, null, 19_800_000, 2_100_000, 6_000_000, 38), Y(2024, null, 21_000_000, 2_600_000, 7_400_000, 41)],
 } as FinancialsVM;
 
+/** 10b: tre tilstandskort side om side (Paper: 352 px, samme højde). */
+function StateRow({ children, height }: { children: ReactNode; height: number }) {
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "stretch", gap: 24 }}>
+      {(Array.isArray(children) ? children : [children]).map((c, i) => (
+        <div key={i} style={{ display: "flex", width: 352, minHeight: height }}>
+          {c}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ScoreStates() {
   const s = (x: Partial<ScoreVM>): ScoreVM => ({ lassoId: B, score: null, source: "Lasso", ...x }) as ScoreVM;
+  // Scoremåleren tegner sin egen sektion; rammen (10b regel 1) er galleriets kort om hver tilstand.
+  const card = (node: ReactNode) => <div className="lasso-framewrap" style={{ flex: 1 }}>{node}</div>;
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24 }}>
-      <Labelled label="Ikke hentet (stiplet ramme, handling koster)">
-        <div className="lasso-grid"><ScoreGauge score={s({ state: "notfetched", cost: "1 kredit", reason: "Hent vurderingen for at se scoren og skalaen." })} onFetch={noop} /></div>
-      </Labelled>
-      <Labelled label="Henter (fuld ramme, spinner, 4 px fremdrift)">
-        <div className="lasso-grid"><ScoreGauge score={s({ state: "fetching", progress: 0.45 })} /></div>
-      </Labelled>
-      <Labelled label="Ikke tilgængelig (grå flade, årsag)">
-        <div className="lasso-grid"><ScoreGauge score={s({ state: "unavailable", reason: "Scoren kan ikke beregnes for virksomheder under konkurs." })} /></div>
-      </Labelled>
-    </div>
+    <StateRow height={232}>
+      {card(<ScoreGauge score={s({ state: "notfetched" })} onFetch={noop} />)}
+      {card(<ScoreGauge score={s({ state: "fetching" })} />)}
+      {card(<ScoreGauge score={s({ state: "unavailable", reason: "Virksomheden er under konkurs. Der beregnes ikke en score for virksomheder under konkurs eller tvangsopløsning." })} />)}
+    </StateRow>
   );
 }
 
@@ -437,23 +446,24 @@ export const entries: GalleryEntry[] = [
   { nr: "10.2", title: "Flerårstabel", node: "A0Q-0", spec: co("Eksempel Byg A/S", [{ type: "LassoMultiYearTable", company: B, metrics: ["omsaetning", "bruttofortjeneste", "resultat", "egenkapital"], years: 5 }]) },
   {
     nr: "10.3",
-    title: "Datatilstande",
-    node: "A2H-0",
+    title: "Datatilstande (fælles tilstandssprog, 10b)",
+    node: "LEQ-0",
+    note: "10b (Paper LDP-0): samme ramme og overskrift i alle tilstande. Henter: skelet af nøgle-værdi-listen med shimmer (1,4 s, lineært, uendeligt; stille ved prefers-reduced-motion); billedet her er statisk.",
     render: () => (
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24 }}>
-        <Labelled label="Beregnes på forespørgsel">
-          <DataState state="ondemand" reason="Risikovurderingen beregnes, når du beder om den." cost="Koster 1 kredit, tager 5–45 sekunder" actionLabel="Beregn risiko" onAction={noop} />
-        </Labelled>
-        <Labelled label="Henter, skelet">
-          <DataState state="loading" lines={4} height={140} framed />
-        </Labelled>
-        <Labelled label="Ingen data">
-          <DataState state="empty" look="panel" title="Ingen nyheder endnu" reason="Der er ikke fundet artikler om virksomheden." checkedAt="2026-09-28" action={{ label: "Overvåg og få besked", onClick: noop }} />
-        </Labelled>
-      </div>
+      <StateRow height={264}>
+        <Section title="Risikovurdering" frame>
+          <DataState state="ondemand" reason="Lassos egen vurdering ud fra regnskab, ledelse og ejerskab. Tager et par sekunder." actionLabel="Beregn risiko" onAction={noop} />
+        </Section>
+        <Section title="Risikovurdering" frame>
+          <DataState state="loading" shape="keyvalue" note="Shimmer: lyst bånd glider venstre→højre, 1,4 s, uendeligt. Statisk ved prefers-reduced-motion." />
+        </Section>
+        <Section title="Risikovurdering" frame>
+          <DataState state="empty" title="Ingen regnskaber endnu" reason="Virksomheden er stiftet for under et år siden. Første regnskab forventes 30.06.2027." action={{ label: "Overvåg og få besked", onClick: noop }} />
+        </Section>
+      </StateRow>
     ),
   },
-  { nr: "10.4", title: "Scoremåler, tilstande", node: "BGZ-0", render: () => <ScoreStates /> },
+  { nr: "10.4", title: "Scoremåler, tilstande (10b)", node: "LG2-0", note: "10b: ikke beregnet, henter (skelet af måleren med shimmer), ikke tilgængelig. Lassos risikoscore, ingen Creditsafe.", render: () => <ScoreStates /> },
 
   // 11 Personer og ejere
   {

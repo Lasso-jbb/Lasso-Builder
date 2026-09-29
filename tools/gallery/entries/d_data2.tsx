@@ -190,6 +190,12 @@ function OwnershipLayoutRules() {
   );
 }
 
+/** 15.4: samme kriterier i alle tre tilstande (Paper LHA-0: Status: Aktiv, Region: Hovedstaden). */
+const CRIT154 = [
+  { field: "status", operator: "eq", value: "Aktiv" },
+  { field: "region", operator: "eq", value: "Hovedstaden" },
+] as const;
+
 export const entries: GalleryEntry[] = [
   /* ---------- 14 Ejerdiagram ---------- */
   {
@@ -311,12 +317,13 @@ export const entries: GalleryEntry[] = [
     nr: "15.4",
     title: "Tabeltilstande (tom, hentende, fejlende)",
     node: "BB0-0",
+    note: "Mobil efter 10b (Paper LHA-0): værktøjslinje (søg + Filter m. tæller), filterchips og tælleren bliver stående i alle tilstande; Henter = tre skeletkort som 26c.7 med shimmer (1,4 s, stille ved prefers-reduced-motion; billedet er statisk); tom og fejl i samme kortramme.",
     render: () => (
       <Stack
         items={[
-          ["Tom", <CompanyTable key="e" result={{ key: "tom", total: 0, rows: [] }} criteria={[{ field: "region", operator: "eq", value: "Hovedstaden" }, { field: "ansatte", operator: "gte", value: 10 }]} onApplyCriteria={noop} onAction={noop} canDrillDown={false} />],
-          ["Hentende", <CompanyTable key="l" loadingTotal={1243} onAction={noop} canDrillDown={false} />],
-          ["Fejlende", <CompanyTable key="f" error="Lasso svarede ikke inden for 15 sekunder." errorId="4F2A" onRetry={noop} onAction={noop} canDrillDown={false} />],
+          ["Tom", <CompanyTable key="e" title="Kunder" result={{ key: "tom", total: 0, rows: [] }} criteria={CRIT154} onApplyCriteria={noop} onAction={noop} canDrillDown={false} />],
+          ["Hentende", <CompanyTable key="l" title="Kunder" loadingTotal={1248} criteria={CRIT154} onApplyCriteria={noop} onAction={noop} canDrillDown={false} />],
+          ["Fejlende", <CompanyTable key="f" title="Kunder" error="Forbindelsen til CVR svarede ikke. Dine kriterier er gemt, prøv igen om et øjeblik." errorId="4F2A" loadingTotal={1248} criteria={CRIT154} onApplyCriteria={noop} onRetry={noop} onAction={noop} canDrillDown={false} />],
         ]}
       />
     ),

@@ -235,7 +235,7 @@ test("08.7: panelet grupperer stillinger pr. afdeling, markerer den valgte og vi
 });
 
 test("08.7: virksomhedskolonnen med Live Nummer, telefonnumre, e-mailadresser og genveje kun med funktion", () => {
-  const contact = { lassoId: byg.lassoId, phone: "71747812", email: "kontakt@lasso.dk", emails: ["contact@lassox.com"], website: "https://lassox.com", verifiedNumbers: [{ phoneNumber: "71747812", score: 95 }] };
+  const contact = { lassoId: byg.lassoId, phone: "71747812", email: "kontakt@lasso.dk", emails: ["contact@lassox.com"], website: "https://lassox.com", verifiedNumbers: [{ phoneNumber: "71747812", score: 95, callable: true, sources: ["Website"] }] };
   const out = html(h(CompanyColumn, { company: byg, contact, shortcuts: [{ id: "nyheder", label: "Nyheder", icon: "news", onSelect: noop }] }));
   assert.match(out, /Live Nummer/);
   assert.match(out, />Telefonnumre</);

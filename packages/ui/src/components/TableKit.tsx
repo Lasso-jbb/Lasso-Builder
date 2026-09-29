@@ -338,17 +338,15 @@ export function TableStateBox({ state }: { state: Exclude<TableState, { kind: "l
       <WarnIcon />
       <div className="lasso-tstate__title">{state.title ?? "Data kunne ikke hentes"}</div>
       {state.reason ? <div className="lasso-tstate__text">{state.reason}</div> : null}
-      {state.onRetry ? (
-        <button type="button" className="lasso-btn lasso-btn--primary lasso-tstate__retry" onClick={state.onRetry}>
-          Prøv igen
-        </button>
-      ) : null}
-      {state.errorId ? (
-        <div className="lasso-tstate__errid">
-          {`Fejl-id ${state.errorId}, `}
-          <button type="button" className="lasso-link lasso-tstate__copy" onClick={() => void globalThis.navigator?.clipboard?.writeText(state.errorId!)}>
-            kopiér
-          </button>
+      {state.onRetry || state.errorId ? (
+        <div className="lasso-tstate__actions">
+          {state.onRetry ? (
+            <button type="button" className="lasso-btn lasso-btn--primary lasso-tstate__retry" onClick={state.onRetry}>
+              Prøv igen
+            </button>
+          ) : null}
+          {/* 10b regel 5: fejl-id som tekst ved siden af "Prøv igen" (ingen kopiér-link). */}
+          {state.errorId ? <span className="lasso-tstate__errid">{`Fejl-id ${state.errorId}`}</span> : null}
         </div>
       ) : null}
     </div>

@@ -17,12 +17,12 @@ import {
   type TableColumn,
 } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
-import { Section, Sparkline, stateForError, statusTone } from "../primitives.js";
+import { Section, SkeletonShape, Sparkline, stateForError, statusTone } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
 import { rowsToCsv } from "../csv.js";
 import { FilterSheet } from "./FilterSheet.js";
 import { Menu } from "./Menu.js";
-import { BulkBar, CheckMark, Checkbox, ColumnsIcon, DownloadIcon, FilterIcon, Pagination, PlusIcon, TableLoadingLine, TableSearch, TableStateBox, TableStateRows, TableToolbar, slugFile, type BulkAction, type TableState } from "./TableKit.js";
+import { BulkBar, CheckMark, Checkbox, ColumnsIcon, DownloadIcon, FilterIcon, Pagination, PlusIcon, TableSearch, TableStateBox, TableStateRows, TableToolbar, slugFile, type BulkAction, type TableState } from "./TableKit.js";
 import { XIcon } from "./FilterSheet.js";
 
 const NUMERIC: ReadonlySet<TableColumn> = new Set(["ansatte", "omsaetning", "bruttofortjeneste", "resultat", "udvikling", "score"]);
@@ -465,7 +465,9 @@ export function CompanyTable({
       )
     );
 
-  const countText = result ? `${formatNumber(total)} virksomhed${total === 1 ? "" : "er"}` : undefined;
+  // 15.4 (10b regel 1): tælleren bliver stående i alle tilstande; mens der hentes, det forventede antal.
+  const countTotal = result ? total : loadingTotal;
+  const countText = countTotal !== undefined ? `${formatNumber(countTotal)} virksomhed${countTotal === 1 ? "" : "er"}` : undefined;
 
   return (
     <Section title={tablet ? undefined : title} action={countText && !tablet ? <span className="lasso-ctable__count">{countText}</span> : undefined} span="full" className="lasso-ctable">
@@ -578,14 +580,13 @@ export function CompanyTable({
         {state ? (
           <div className="lasso-ccards-state">
             {state.kind === "loading" ? (
-              <>
-                <div className="lasso-skeleton-group" aria-busy="true" aria-label="Henter data">
-                  {[0, 1, 2].map((i) => (
-                    <div key={i} className="lasso-skeleton lasso-ccards-state__skel" />
-                  ))}
-                </div>
-                {state.label ? <TableLoadingLine label={state.label} /> : null}
-              </>
+              // 15.4 mobil (runde 5, Paper LHD-0): tre skeletkort formet som mobilkortene (26c.7) med
+              // shimmer; "Henter 1.243 …"-teksten udgår, skelettet er selv signalet.
+              <div className="lasso-ccards-state__skels" aria-busy="true" aria-label="Henter data">
+                {[0, 1, 2].map((i) => (
+                  <SkeletonShape key={i} shape="card" />
+                ))}
+              </div>
             ) : (
               <TableStateBox state={state} />
             )}

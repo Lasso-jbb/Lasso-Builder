@@ -26,25 +26,39 @@ const FIN: FinancialsVM = {
   years: [2021, 2022, 2023].map((year, i) => ({ year, grossProfit: 10_000_000 + i * 1_000_000, profit: 900_000 + i * 100_000, equity: 4_000_000 + i * 500_000, liabilities: 3_000_000, soliditetsgrad: 50 + i, overskudsgrad: 6 - i })),
 };
 
-test("10.1: scoremålerens hente-tilstande: stiplet med pris i knappen, henter med 4 px bjælke, grå med årsag; tallet først efter hentning", () => {
+test("10.4: scoremålerens tilstande i det fælles tilstandssprog (10b): ikke beregnet, henter (skelet af måleren), ikke tilgængelig; tallet først efter beregning", () => {
   const base: ScoreVM = { lassoId: ID, score: null };
   const idle = html(createElement(ScoreGauge, { score: { ...base, state: "notfetched", cost: "1 kredit" }, onFetch: () => {} }));
-  assert.match(idle, /lasso-gauge-state--idle/);
-  assert.match(idle, />Hent vurdering, 1 kredit<\/button>/);
-  assert.doesNotMatch(idle, /af 100|lasso-gauge__track/);
+  assert.match(idle, /lasso-state--ondemand/);
+  assert.match(text(idle), /Ikke beregnet endnu/);
+  assert.match(idle, /Beregn score<\/button>/);
+  assert.doesNotMatch(idle, /kredit|af 100|lasso-gauge__track/);
   const busy = html(createElement(ScoreGauge, { score: { ...base, state: "fetching", progress: 0.4 } }));
-  assert.match(busy, /lasso-gauge-state--busy[^]*lasso-spinner[^]*role="progressbar"[^]*aria-valuenow="40"/);
+  assert.match(busy, /aria-busy="true"[^]*lasso-skelshape[^]*lasso-skelshape__track/);
+  assert.match(text(busy), /Tager typisk et par sekunder/);
   const off = html(createElement(ScoreGauge, { score: { ...base, state: "unavailable", reason: "Holdingselskab uden drift." } }));
-  assert.match(off, /lasso-gauge-state--off[^]*Holdingselskab uden drift\./);
+  assert.match(off, /lasso-state--unavailable[^]*Score ikke tilgængelig[^]*Holdingselskab uden drift\./);
+  assert.doesNotMatch(off, /<button/);
   const ok = text(html(createElement(ScoreGauge, { score: { lassoId: ID, score: 72, facts: [{ label: "Kreditmaksimum", value: "4,5 mio. kr." }] } })));
   assert.match(ok, /72 af 100 Moderat risiko/);
   assert.match(ok, /Kreditmaksimum 4,5 mio\. kr\./);
 });
 
-test("10.3: DataState 'ondemand' har årsag, pris og handling i stiplet ramme", () => {
+test("10.3: DataState 'ondemand' har titel, årsag og primær handling uden stiplet ramme (10b)", () => {
   const h = html(createElement(DataState, { state: "ondemand", reason: "Beregnes ud fra seneste regnskab.", cost: "Tager op til 10 sekunder", actionLabel: "Beregn nu", onAction: () => {} }));
   assert.match(h, /lasso-state lasso-state--ondemand/);
-  assert.match(text(h), /Beregnes på forespørgsel Beregnes ud fra seneste regnskab\. Tager op til 10 sekunder Beregn nu/);
+  assert.match(h, /lasso-btn lasso-btn--primary lasso-state__cta/);
+  assert.match(text(h), /Ikke beregnet endnu Beregnes ud fra seneste regnskab\. Tager op til 10 sekunder Beregn nu/);
+});
+
+test("10b: henter i indholdets form (nøgle-værdi-liste, måler, mobilkort), fejl med fejl-id som tekst", () => {
+  for (const shape of ["keyvalue", "gauge", "card"] as const) {
+    const h = html(createElement(DataState, { state: "loading", shape }));
+    assert.match(h, /aria-busy="true"/);
+    assert.match(h, /lasso-skel\b/);
+  }
+  const err = html(createElement(DataState, { state: "error", title: "Listen kunne ikke hentes", reason: "Forbindelsen svarede ikke.", onRetry: () => {}, errorId: "4F2A" }));
+  assert.match(err, /role="alert"[^]*Prøv igen<\/button>[^]*Fejl-id 4F2A/);
 });
 
 test("13.2: søjlegrafen har nøgletalsvælger øverst til højre og en fokuserbar ramme til tastatur", () => {
