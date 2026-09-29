@@ -194,7 +194,7 @@ export function Menu({ trigger, triggerClassName = "lasso-btn lasso-btn--ghost",
                       aria-checked={picker ? on : undefined}
                       disabled={item.disabled}
                       tabIndex={-1}
-                      className={`lasso-menu__item ${item.destructive ? "lasso-menu__item--danger" : ""} ${on ? "is-on" : ""} ${highlight === item.id ? "is-hi" : ""}`}
+                      className={["lasso-menu__item", item.destructive ? "lasso-menu__item--danger" : "", on ? "is-on" : "", highlight === item.id ? "is-hi" : ""].filter(Boolean).join(" ")}
                       onClick={() => select(item)}
                     >
                       {item.icon ? <span className="lasso-menu__icon">{item.icon}</span> : null}

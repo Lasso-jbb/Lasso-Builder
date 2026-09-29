@@ -389,9 +389,6 @@ export const entries: GalleryEntry[] = [
         <ValueRow label="P-enheder">
           <NumberValue value={14} />
         </ValueRow>
-        <ValueRow label="Ansatte (2023)">
-          <NumberValue value={null} />
-        </ValueRow>
       </KV>
     ),
   },
@@ -420,17 +417,11 @@ export const entries: GalleryEntry[] = [
     note: "Fuldt beløb i tooltip vises ved hover og kan ikke vises statisk.",
     render: () => (
       <KV>
-        <ValueRow label="Omsætning (2024)">
-          <AmountValue value={48_312_400} previous={42_980_000} />
+        <ValueRow label="Bruttofortjeneste (2025)">
+          <AmountValue value={18_834_000} previous={17_520_000} since="2024" />
         </ValueRow>
-        <ValueRow label="Resultat før skat (2024)">
-          <AmountValue value={3_412_000} previous={4_020_000} />
-        </ValueRow>
-        <ValueRow label="Årets resultat (2024)">
-          <AmountValue value={-2_100_000} previous={1_400_000} />
-        </ValueRow>
-        <ValueRow label="Egenkapital (2024)">
-          <AmountValue value={812_400} previous={640_000} />
+        <ValueRow label="Resultat efter skat (2025)">
+          <AmountValue value={-201_000} previous={318_000} since="2024" />
         </ValueRow>
       </KV>
     ),
@@ -441,11 +432,11 @@ export const entries: GalleryEntry[] = [
     node: "GNF-0",
     render: () => (
       <KV>
-        <ValueRow label="Overskudsgrad (2024)">
-          <PercentValue value={17.3} compare={11.2} />
+        <ValueRow label="Soliditetsgrad (2025)">
+          <PercentValue value={17.3} compare={34} compareNote="eksempeldata" />
         </ValueRow>
-        <ValueRow label="Soliditetsgrad (2024)">
-          <PercentValue value={-4.1} compare={32} />
+        <ValueRow label="Afkastningsgrad (2025)">
+          <PercentValue value={-4.1} />
         </ValueRow>
       </KV>
     ),
@@ -457,19 +448,13 @@ export const entries: GalleryEntry[] = [
     render: () => (
       <KV>
         <ValueRow label="Stiftet">
-          <PeriodValue date="2016-03-01" extra={formatAge("2016-03-01")} />
+          <PeriodValue date="2012-05-14" extra={formatAge("2012-05-14")} />
         </ValueRow>
         <ValueRow label="Regnskabsperiode">
-          <PeriodValue from="2025-01-01" to="2025-12-31" />
-        </ValueRow>
-        <ValueRow label="Direktør">
-          <PeriodValue from="2016" yearOnly />
+          <PeriodValue from="2025-01-01" to="2025-12-31" dayMonth />
         </ValueRow>
         <ValueRow label="Bestyrelsesmedlem">
-          <PeriodValue from="2016" yearOnly open="arrow" />
-        </ValueRow>
-        <ValueRow label="Revisor">
-          <PeriodValue from="2012" to="2019" yearOnly />
+          <PeriodValue from="2019" to="2023" yearOnly note="fratrådt" />
         </ValueRow>
       </KV>
     ),
@@ -483,8 +468,8 @@ export const entries: GalleryEntry[] = [
         <ValueRow label="Reklamebeskyttet">
           <BooleanValue value={true} consequence="må ikke kontaktes med reklame" />
         </ValueRow>
-        <ValueRow label="Revideret regnskab">
-          <BooleanValue value={false} />
+        <ValueRow label="Revisorfritaget">
+          <BooleanValue value={false} consequence="revideres af AAEN & CO." />
         </ValueRow>
         <ValueRow label="Momsregistreret">
           <BooleanValue value={null} />
@@ -510,7 +495,7 @@ export const entries: GalleryEntry[] = [
         <ValueRow label="Status">
           <StatusBadge status="Under likvidation" kind="warning" />
         </ValueRow>
-        <ValueRow label="Virksomhedsform">Aktieselskab</ValueRow>
+        <ValueRow label="Virksomhedsform">Aktieselskab (A/S)</ValueRow>
       </KV>
     ),
   },
@@ -628,13 +613,10 @@ export const entries: GalleryEntry[] = [
     render: () => (
       <KV>
         <ValueRow label="Risikoscore">
-          <ScoreValue score={24} />
+          <ScoreValue score={52} />
         </ValueRow>
         <ValueRow label="Risikoscore">
-          <ScoreValue score={68} />
-        </ValueRow>
-        <ValueRow label="Risikoscore">
-          <ScoreValue score={91} />
+          <ScoreValue score={84} />
         </ValueRow>
       </KV>
     ),
@@ -643,24 +625,16 @@ export const entries: GalleryEntry[] = [
     nr: "02c.16",
     title: "Kvalitetsflag (mulig fejl)",
     node: "GV0-0",
-    note: "Flagets egen tooltip (hover) og linjen ved tryk (mobil) kan ikke vises statisk; nederst er tooltippen tegnet åben med Tooltip open.",
+    note: "Forklaringen er tegnet åben (QualityFlag defaultOpen): tooltip til højre på desktop, linje under feltet på mobil.",
     render: () => (
-      <Stack>
-        <KV>
-          <ValueRow label="Ansatte (2024)">
-            <span>
-              <NumberValue value={1243} />
-              <QualityFlag text="Antallet er 12 gange højere end sidste år. Vi viser tallet fra regnskabet." />
-            </span>
-          </ValueRow>
-        </KV>
-        <div style={{ paddingTop: 70, paddingLeft: 140 }}>
-          <Cap>Tooltip ved mouseover</Cap>
-          <Tooltip open text="Antallet er 12 gange højere end sidste år. Vi viser tallet fra regnskabet.">
-            <span className="lasso-num">1.243</span>
-          </Tooltip>
-        </div>
-      </Stack>
+      <KV>
+        <ValueRow label="Ansatte (2024)">
+          <span>
+            <NumberValue value={1243} />
+            <QualityFlag text="Antallet er 12 gange højere end sidste år. Vi viser tallet fra regnskabet." defaultOpen />
+          </span>
+        </ValueRow>
+      </KV>
     ),
   },
   {
@@ -705,11 +679,11 @@ export const entries: GalleryEntry[] = [
     node: "GWO-0",
     render: () => (
       <KV>
-        <ValueRow label="Telefon, direkte">
+        <ValueRow label="Reelle ejere">
           <LockedValue onUpgrade={noop} />
         </ValueRow>
         <ValueRow label="Kontaktpersoner">
-          <LockedValue count={12} linkLabel="Opgradér for at se dem" onUpgrade={noop} />
+          <LockedValue count={3} noun="personer" onUpgrade={noop} />
         </ValueRow>
       </KV>
     ),

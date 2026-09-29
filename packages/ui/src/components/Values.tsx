@@ -40,14 +40,15 @@ export function ValueRow({ label, children, onClick }: { label: ReactNode; child
  * når feltet er tomt i kilden. I tabelceller bruges `Missing` ("—") i stedet.
  */
 export function NotReported({ kind = "reported" }: { kind?: "reported" | "registered" }) {
-  return <span className="lasso-notreported">{kind === "registered" ? NOT_REGISTERED : NOT_REPORTED}</span>;
+  // 02c.17: ordene står i muted (læsbare); kun "—" i tabeller og deaktiveret står i faint.
+  return <span className="lasso-notreported lasso-notreported--text">{kind === "registered" ? NOT_REGISTERED : NOT_REPORTED}</span>;
 }
 
 /**
- * 02c.1 Fritekst: korte tekster i én linje, lange foldes efter 3 linjer med "Vis mere".
+ * 02c.1 Fritekst: korte tekster i én linje, lange foldes efter 4 linjer med "Vis mere" (uden "…").
  * Ingen anførselstegn, ingen kursiv. Folden måles i browseren; uden DOM skønnes den på længden.
  */
-export function FoldText({ text, lines = 3 }: { text: string; lines?: number }) {
+export function FoldText({ text, lines = 4 }: { text: string; lines?: number }) {
   const ref = useRef<HTMLSpanElement>(null);
   const [open, setOpen] = useState(false);
   const [overflow, setOverflow] = useState(text.length > 60 * lines);
@@ -58,7 +59,7 @@ export function FoldText({ text, lines = 3 }: { text: string; lines?: number }) 
   }, [text, open]);
   return (
     <span className="lasso-fold">
-      <span ref={ref} className={`lasso-fold__text ${open ? "is-open" : ""}`} style={{ WebkitLineClamp: open ? "unset" : lines }}>
+      <span ref={ref} className={`lasso-fold__text ${open ? "is-open" : ""}`} style={open ? undefined : { maxHeight: `${lines}lh` }}>
         {text}
       </span>
       {overflow || open ? (
@@ -88,12 +89,18 @@ export function RangeValue({ from, to, unit }: { from?: number | null; to?: numb
 }
 
 /**
- * 02c.4 Beløb + ændring: mio./t. kr. med én decimal, fuldt tal i tooltip, ægte minus, ændringen som
- * trekant + ord ("▲ 12,4 % stigning"), farve kun sammen med tegn og ord.
+ * 02c.4 Beløb + ændring: mio./t. kr. med én decimal, fuldt tal i tooltip, ægte minus (U+2212).
+ * Med `since` (fx "2024") skrives ændringen som i Paper: "▲7,5 % fra 2024", og ved fortegnsskift
+ * "▼underskud, fra 318 t. kr.". Uden `since`: "▲ 12,4 % stigning". Farve kun sammen med tegn og ord.
  */
-export function AmountValue({ value, previous, unit = "kr." }: { value: number | null | undefined; previous?: number | null; unit?: string }) {
+export function AmountValue({ value, previous, unit = "kr.", since }: { value: number | null | undefined; previous?: number | null; unit?: string; /** Året, der sammenlignes med, fx "2024". */ since?: string }) {
   if (value === null || value === undefined || !Number.isFinite(value)) return <NotReported />;
   const change = changeText(previous, value);
+  let text = change ? `${change.arrow} ${change.text}` : "";
+  if (change && since !== undefined && typeof previous === "number") {
+    const flip = previous !== 0 && value !== 0 && Math.sign(previous) !== Math.sign(value);
+    text = flip ? `${change.arrow}${change.text}, fra ${formatAmount(previous, unit)}` : `${change.arrow}${change.text.replace(/ (stigning|fald)$/, "")} fra ${since}`;
+  }
   return (
     <span className="lasso-amount">
       <Tooltip text={formatFullAmount(value, unit)}>
@@ -101,11 +108,7 @@ export function AmountValue({ value, previous, unit = "kr." }: { value: number |
           {formatAmount(value, unit)}
         </span>
       </Tooltip>
-      {change ? (
-        <span className={`lasso-amount__change ${change.tone === "down" ? "lasso-down" : "lasso-up"}`}>
-          {change.arrow} {change.text}
-        </span>
-      ) : null}
+      {change ? <span className={`lasso-amount__change ${change.tone === "down" ? "lasso-down" : "lasso-up"}`}>{text}</span> : null}
     </span>
   );
 }
@@ -114,28 +117,30 @@ export function AmountValue({ value, previous, unit = "kr." }: { value: number |
  * 02c.6 Dato og periode: dd.mm.åååå, perioder med tankestreg, åben periode som "siden 2016" eller
  * "2016 →", alder/varighed som muted tillæg.
  */
-export function PeriodValue({ from, to, date, yearOnly, open = "since", extra }: { from?: string | null; to?: string | null; /** Én dato (fx stiftet): "01.03.2016" uden periode. from = to giver det samme. */ date?: string | null; yearOnly?: boolean; open?: "since" | "arrow"; /** Muted tillæg, fx formatAge(stiftet): "01.03.2016, 10 år". */ extra?: string }) {
+export function PeriodValue({ from, to, date, yearOnly, open = "since", extra, dayMonth, note }: { from?: string | null; to?: string | null; /** Regnskabsperiode uden år: "01.01–31.12". */ dayMonth?: boolean; /** Tillæg i tekstfarve efter komma, fx "fratrådt": "2019–2023, fratrådt". */ note?: string; /** Én dato (fx stiftet): "01.03.2016" uden periode. from = to giver det samme. */ date?: string | null; yearOnly?: boolean; open?: "since" | "arrow"; /** Muted tillæg efter mellemrum, fx formatAge(stiftet): "14.05.2012  14 år". */ extra?: string }) {
   const single = date ?? (from && to && from === to ? from : null);
   if (!single && !from && !to) return <NotReported />;
-  const text = single ? (yearOnly ? (/^(\d{4})/.exec(single)?.[1] ?? single) : formatDate(single)) : formatPeriod(from, to, { yearOnly, open });
+  const dm = (v: string | null | undefined) => (v ? formatDate(v).slice(0, 5) : "");
+  const text = dayMonth && from && to ? `${dm(from)}–${dm(to)}` : single ? (yearOnly ? (/^(\d{4})/.exec(single)?.[1] ?? single) : formatDate(single)) : formatPeriod(from, to, { yearOnly, open });
   return (
     <span>
       {text}
-      {extra ? <span className="lasso-muted-extra">, {extra}</span> : null}
+      {note ? `, ${note}` : null}
+      {extra ? <span className="lasso-muted-extra"> {extra}</span> : null}
     </span>
   );
 }
 
 /**
  * 02c.5 Procent: mellemrum før % og én decimal ("17,3 %"). Sammenligningen står som muted tekst
- * efter værdien ("17,3 %, branchen 11,2 %"), aldrig som et ekstra tal i samme størrelse.
+ * efter et mellemrum ("17,3 %  branche 34 %, eksempeldata"), aldrig som et ekstra tal i samme farve.
  */
-export function PercentValue({ value, compare, compareLabel = "branchen" }: { value: number | null | undefined; /** Sammenligningstal, fx branchens. */ compare?: number | null; compareLabel?: string }) {
+export function PercentValue({ value, compare, compareLabel = "branche", compareNote }: { value: number | null | undefined; /** Sammenligningstal, fx branchens. */ compare?: number | null; compareLabel?: string; /** Tillæg efter sammenligningen, fx "eksempeldata". */ compareNote?: string }) {
   if (value === null || value === undefined || !Number.isFinite(value)) return <NotReported />;
   return (
     <span>
       <span className="lasso-num">{formatPercent(value, false)}</span>
-      {compare !== null && compare !== undefined && Number.isFinite(compare) ? <span className="lasso-muted-extra">{`, ${compareLabel} ${formatPercent(compare, false)}`}</span> : null}
+      {compare !== null && compare !== undefined && Number.isFinite(compare) ? <span className="lasso-muted-extra">{` ${compareLabel} ${formatPercent(compare, false).replace(",0 %", " %")}${compareNote ? `, ${compareNote}` : ""}`}</span> : null}
     </span>
   );
 }
@@ -302,8 +307,8 @@ export function ShareValue({ range, bar = true }: { range: readonly [number, num
 }
 
 /**
- * 02c.15 Score: tallet i vægt 600, skala og tolkning i muted efter komma ("72, af 100, lav risiko").
- * Kun høj risiko farves (danger-tekst). Ingen pille, prik eller måler i lister.
+ * 02c.15 Score: tallet i vægt 600 ink, skala og tolkning i muted efter mellemrum ("52 af 100, lav risiko").
+ * Ved høj risiko står kun "af 100, høj risiko" i danger; tallet forbliver ink. Ingen pille, prik eller måler i lister.
  */
 export function ScoreValue({ score, max = 100 }: { score: number | null | undefined; max?: number }) {
   if (score === null || score === undefined || !Number.isFinite(score)) return <NotReported />;
@@ -313,7 +318,7 @@ export function ScoreValue({ score, max = 100 }: { score: number | null | undefi
     <span className={`lasso-score ${high ? "lasso-score--high" : ""}`}>
       <span className="lasso-score__n">{formatNumber(score)}</span>
       <span className="lasso-score__meta">
-        , af {formatNumber(max)}, {word}
+        {" "}af {formatNumber(max)}, {word}
       </span>
     </span>
   );
@@ -322,31 +327,35 @@ export function ScoreValue({ score, max = 100 }: { score: number | null | undefi
 export { QualityFlag } from "./QualityFlag.js";
 
 /**
- * 02c.18 Låst værdi: feltet beholder plads og label. 14 px låseikon i muted, derefter en sløret
- * pladsholder eller antallet (hvis det må vises), og et kort link i primary-text. Ingen boks,
- * badge eller "Pro"-pille.
+ * 02c.18 Låst værdi: feltet beholder plads og label. 14 px låseikon i muted og et kort link i
+ * primary-text ("Kræver Lasso Pro"). Må antallet vises, står det før linket ("3 personer" +
+ * "Se med Lasso Pro"). Ingen boks, badge eller pille. `blur` giver en sløret pladsholder i stedet.
  */
-export function LockedValue({ count, linkLabel = "Opgradér for at se", onUpgrade, href }: { count?: number; linkLabel?: string; onUpgrade?: () => void; href?: string }) {
+export function LockedValue({ count, noun, linkLabel, onUpgrade, href, blur = false }: { count?: number; /** Navneord efter antallet, fx "personer". */ noun?: string; linkLabel?: string; onUpgrade?: () => void; href?: string; blur?: boolean }) {
+  const hasCount = typeof count === "number";
+  const label = linkLabel ?? (hasCount ? "Se med Lasso Pro" : "Kræver Lasso Pro");
   return (
     <span className="lasso-locked">
-      <svg className="lasso-locked__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.8" />
-        <path d="M8 11V8a4 4 0 018 0v3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      </svg>
-      {typeof count === "number" ? (
-        <span className="lasso-locked__count">{formatNumber(count)}</span>
-      ) : (
+      {hasCount ? null : (
+        <svg className="lasso-locked__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M8 11V8a4 4 0 018 0v3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      )}
+      {hasCount ? (
+        <span className="lasso-locked__count">{`${formatNumber(count)}${noun ? ` ${noun}` : ""}`}</span>
+      ) : blur ? (
         <span className="lasso-locked__blur" aria-label="Skjult værdi">
           00.000.000
         </span>
-      )}
+      ) : null}
       {href ? (
         <a className="lasso-locked__link" href={href}>
-          {linkLabel}
+          {label}
         </a>
       ) : (
         <button type="button" className="lasso-locked__link" onClick={onUpgrade}>
-          {linkLabel}
+          {label}
         </button>
       )}
     </span>

@@ -22,21 +22,26 @@ test("02c Felter med data", () => {
   const share = render(h(ShareValue, { range: [25, 33.32] }));
   assert.match(share, /25–33,32 %/);
   assert.match(share, /left:25%;width:8\.32/);
-  assert.match(render(h(ScoreValue, { score: 85 })), /lasso-score--high[^]*85[^]*, af 100, høj risiko/);
+  assert.match(render(h(ScoreValue, { score: 85 })), /lasso-score--high[^]*85<\/span><span class="lasso-score__meta"> af 100, høj risiko/);
   assert.match(render(h(QualityFlag, { reason: "Afviger fra sidste år" })), /aria-label="Mulig fejl: Afviger fra sidste år"/);
   const locked = render(h(LockedValue, { onUpgrade: noop }));
-  assert.match(locked, /lasso-locked__blur/);
-  assert.match(locked, />Opgradér for at se</);
-  assert.doesNotMatch(locked, /Pro/);
+  assert.doesNotMatch(locked, /lasso-locked__blur/);
+  assert.match(locked, /lasso-locked__icon/);
+  assert.match(locked, />Kræver Lasso Pro</);
+  const lockedCount = render(h(LockedValue, { count: 3, noun: "personer", onUpgrade: noop }));
+  assert.match(lockedCount, />3 personer<\/span>.*>Se med Lasso Pro</);
+  assert.match(render(h(AmountValue, { value: 18_834_000, previous: 17_520_000, since: "2024" })), /▲7,5 % fra 2024/);
+  assert.match(render(h(AmountValue, { value: -201_000, previous: 318_000, since: "2024" })), /\u2212201 t\. kr\.[^]*▼underskud, fra 318 t\. kr\./);
+  assert.match(render(h(ScoreValue, { score: 52 })), /52<\/span><span class="lasso-score__meta"> af 100, lav risiko/);
   assert.match(render(h(FoldText, { text: "Kort" })), /Kort/);
   assert.match(render(h(FoldText, { text: "x ".repeat(200) })), /Vis mere/);
 });
 
 test("02c.5 PercentValue, 02c.6 PeriodValue med én dato, 02c.12 ContactValue", () => {
   const pct = render(h(PercentValue, { value: 17.3, compare: 11.2 }));
-  assert.match(pct, /17,3 %<\/span><span class="lasso-muted-extra">, branchen 11,2 %/);
+  assert.match(pct, /17,3 %<\/span><span class="lasso-muted-extra"> branche 11,2 %/);
   assert.match(render(h(PercentValue, { value: null })), /Ikke oplyst/);
-  assert.match(render(h(PeriodValue, { date: "2016-03-01", extra: "10 år" })), /^<span>01\.03\.2016<span class="lasso-muted-extra">, 10 år<\/span><\/span>$/);
+  assert.match(render(h(PeriodValue, { date: "2016-03-01", extra: "10 år" })), /^<span>01\.03\.2016<span class="lasso-muted-extra"> 10 år<\/span><\/span>$/);
   assert.match(render(h(PeriodValue, { from: "2016-03-01", to: "2016-03-01" })), /^<span>01\.03\.2016<\/span>$/);
   assert.match(render(h(PeriodValue, { from: "2025-01-01", to: "2025-12-31" })), /01\.01\.2025–31\.12\.2025/);
   assert.equal(formatPhone("+45 71747812"), "71 74 78 12");
