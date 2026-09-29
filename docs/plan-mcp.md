@@ -26,6 +26,7 @@ Samlet fra hele forløbet 29.09.2026. Ændres kun af ejeren.
 | Ø10 | **Ikke kun dyre modeller.** | Rollemodellen i afsnit 3: billigste tilstrækkelige rolle pr. delopgave. |
 | Ø11 | **Produktion deployes af ejeren** via GitHub (`staging → main`). AI pusher kun `staging`. | Hver fase leveres gate-grøn på `staging`; ejeren tester og promoverer. |
 | Ø12 | **Paper-designet (Fables runder) er gældende UI**, inkl. højdebudget og "hoved-luft". | Nye elementer på siderne skal holde sig inden for højdebudgettet; `show_all` slår det fra. |
+| Ø13 | **Komponenternes bredde skal passe til indholdet.** Nogle moduler trives kun bredt (fx "Sidder sammen med": lange selskabsnavne, flere rækker pr. person og en tidsakse), andre trives bedst smalt (fx "Aktive roller", "Stamoplysninger", kontakt, ejerlister) og må ikke strækkes ud i fuld bredde med tom plads. | Hver komponent får en bredde-profil (bred / smal / fleksibel) med indholdsstyret mindstebredde, og pakkeren må hverken klemme et bredt modul eller strække et smalt. Se A11–A13 og B8–B9. |
 
 **Antagelser (kan modsiges):**
 - A1. "Alle komponenter" = de 53 spec-typer, som MCP'en kan udsende. De 9 rene portal-komponenter afventer (Ø9).
@@ -42,6 +43,7 @@ Samlet fra hele forløbet 29.09.2026. Ændres kun af ejeren.
 - 15 typer bruges *kun* hvis modellen selv vælger dem i `render_view`; 2 mangler katalogpost (`AuditorIndependence`, `ScoreHistory`).
 - Score: `score()` returnerer altid `null`, `scoreHistory()` altid tom → `ScoreGauge`/`ScoreHistory` er altid tomme live.
 - Fast token-last pr. samtale ≈ 20.000 (heraf ≈ 14.200 = komponentkataloget i `render_view`-beskrivelsen). Pr. kald ≈ 2.000 (tekstkort ≈ 1.500 — bevares, Ø4).
+- Bredde: `GRID_RULES` i `catalog.ts` har standard/min/maks pr. type, men **målt med demodata** (korte navne, få rækker). Derfor står fx `PersonNetwork` (min = ½) klemt med afkortede navne og overlappende årstal, mens `PersonRoles`/lister (maks = fuld) strækkes ud med tom plads. Der findes intet begreb for "trives smalt", og mindstebredden afhænger ikke af indholdet (antal rækker, navnelængde, tidsakse, antal serier).
 - Ingen eval: vi ved ikke, hvor godt spørgsmål → side rammer i dag.
 
 ---
@@ -78,6 +80,9 @@ Rækkefølge og roller. "Gate" = `npm run typecheck && npm test && npm run build
 | A7 | Udfyld registeret for alle 53 typer ud fra A5+A6 (inkl. de 2 manglende poster) | Sonnet | nej | Tekst efter tjekliste; Fable reviewer "bedstTil" |
 | A8 | Dækningstest: fejler hvis en type mangler registerpost, vej ind, `resolve`-case — eller hvis de faste værktøjstekster overstiger token-loftet (loft = dagens niveau + 10 %) | Sonnet | nej | Testkode |
 | A9 | Generator: `docs/komponenter.md` genereres fra registeret (npm-script + test på at den er ajour) | Sonnet | nej | Script |
+| A11 | Bredde-profil (Ø13): definér klasserne *bred* (kræver ≥ ⅔: tidsakser, flere kolonner, lange navne), *smal* (bedst ≤ ½: nøgle/værdi-lister, kontakt, ejer-/rollelister; må ikke strækkes til fuld, medmindre alene i båndet) og *fleksibel*; og hvilke indholdsmål der styrer mindstebredden (antal rækker pr. post, længste navn, tidsakse, antal serier). Registerfelt `bredde: { profil, std, min, max, indholdsstyret }` | Fable | ja | Former pakkeren og alle sider |
+| A12 | Udtræk nuværende `GRID_RULES` + målte højder pr. type/bredde til en tabel; markér typer, hvor min < ½ eller max = fuld | Haiku | nej | Mekanisk |
+| A13 | Mål alle 53 typer i galleriet med *realistiske* data (lange selskabsnavne, 5+ rækker, 3 selskaber pr. person, 10 år på aksen) i hver tilladt bredde; registrér afkortning, overlap og tom plads; foreslå ny std/min/max pr. type efter A11 | Sonnet | nej | Måling efter tjekliste; Fable godkender forslagene |
 | A10 | Godkendelse af Fase A, push `staging` | Fable → Jakob | ja | Port |
 
 ### Fase B — Kernen: spørgsmål → modulside (målet)
@@ -89,6 +94,8 @@ Rækkefølge og roller. "Gate" = `npm run typecheck && npm test && npm run build
 | B4 | Fokus-sider bruger flere komponenter automatisk inden for højdebudgettet: risiko → RiskObservations; historik → Announcements/Mergers/Publications/ChangeFeed; økonomi → KeyFigureGauge/Summary; regnskab → FinancialStatements; kontakt/overblik → Map (m. P-enheder)/Registration; person → PersonStats | Opus | nej | Grid/budget-samspil |
 | B5 | Kør eval igen. Port: træfprocent ≥ A2-mål og ingen regressioner på de 32 eksisterende | Sonnet kører, Fable dømmer | ja | Beviset for at produktet blev bedre |
 | B6 | *Kun hvis B5 viser, at modellen vælger forkert værktøj pga. katalogstørrelse:* flyt kataloget til opslag (`get_catalog`/ressource). Ellers udsat (Ø8) | Fable beslutter | ja | Ø1-betingelse |
+| B8 | Bredde i pakkeren (Ø13): nye `GRID_RULES` fra A13; indholdsstyret mindstebredde (et element med lange navne/mange rækker/tidsakse kræver mere end sin type-min); *smal*-profil strækkes aldrig til fuld, medmindre den står alene i båndet; *bred*-profil pakkes aldrig under sin mindstebredde — hellere udelades (højdebudget) eller får eget bånd. Mobil/tablet-brudpunkter respekterer det samme | Opus | nej | Grid-algoritme, samspil med højdebudget |
+| B9 | Layout-test i eval: for hver eval-side fejler testen, hvis et element står under sin mindstebredde, en *smal* står i fuld bredde ved siden af andre, eller galleri-screenshots viser afkortning/overlap (fx årstal på tidsaksen) | Sonnet | nej | Testkode; bruger galleriets måleværktøj |
 | B7 | Godkendelse af Fase B, push `staging` | Fable → Jakob | ja | Port |
 
 ### Fase C — Datahuller
@@ -119,7 +126,7 @@ Rækkefølge og roller. "Gate" = `npm run typecheck && npm test && npm run build
 | E2 | Samlet review: mål opfyldt? alle 53 i spil? dokumentation ajour? token-loft holdt? | Fable | ja | Samlet kvalitet |
 | E3 | Prod-deploy (`staging → main` på GitHub) | Jakob | ja | Irreversibel (Ø11) |
 
-**Rækkefølge:** A1 → (A2, A5, A6 parallelt) → A3 → (A4, A7 parallelt) → (A8, A9) → A10 → B1 → (B2, B3, B4 parallelt) → B5 → B6? → B7 → (C1, C4 parallelt) → C2 → (C3, C5, C6 parallelt) → C7 → (D1, D3 parallelt) → (D2, D4 parallelt) → D5 → D6 → E1 → E2 → E3.
+**Rækkefølge:** A1 → (A2, A5, A6, A11, A12 parallelt) → (A3, A13) → (A4, A7 parallelt) → (A8, A9) → A10 → B1 → (B2, B3, B4, B8 parallelt) → (B5, B9) → B6? → B7 → (C1, C4 parallelt) → C2 → (C3, C5, C6 parallelt) → C7 → (D1, D3 parallelt) → (D2, D4 parallelt) → D5 → D6 → E1 → E2 → E3.
 Fase C og D kan køre parallelt med hinanden efter B7, hvis kapaciteten er der.
 
 **Udsat (ikke i denne plan):** portal-opgaverne (Ø9); katalog-udflytning (B6, betinget); "hvert modul ejer sit indhold" (A4, afventer eval).
@@ -137,6 +144,7 @@ Fase C og D kan køre parallelt med hinanden efter B7, hvis kapaciteten er der.
 7. Creditsafe kaldes aldrig uden abonnement; låst tilstand viser abonnementskravet (Ø6).
 8. `search_persons` og `compare_companies` findes og er dokumenteret (Ø7).
 9. Alt leveret gate-grønt på `staging`; ejeren har promoveret til prod.
+10. Bredde (Ø13): hver af de 53 typer har en bredde-profil i registeret; layout-testen (B9) er grøn — intet element under sin indholdsstyrede mindstebredde, ingen *smal* strakt til fuld ved siden af andre, ingen afkortning/overlap i galleriets screenshots med realistiske data.
 
 ---
 
