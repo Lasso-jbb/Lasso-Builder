@@ -274,7 +274,131 @@ function PersonPage({ ds }: { ds: Dataset }) {
   );
 }
 
+/* ---------- 24, 25 og 26g: eksempelsiderne som i Paper ---------- */
+
+/** 24.1: skinnen på virksomhedssiden (Værktøjer, Firmaer = gemte lister, Personer sammenfoldet); intet punkt er aktivt. */
+const paperRailCompany = (): RailGroup[] => [
+  {
+    id: "vaerktoejer",
+    label: "Værktøjer",
+    items: [
+      { id: "udtraek", label: "Dataudtræk", icon: <ShellIcon name="download" /> },
+      { id: "ejendomme", label: "Ejendomme", icon: <ShellIcon name="home" /> },
+      { id: "maalgruppe", label: "Målgruppesøgning", icon: <ShellIcon name="target" /> },
+      { id: "overvaagning", label: "Overvågning", icon: <ShellIcon name="bell" /> },
+      { id: "risiko", label: "Risikovurdering", icon: <ShellIcon name="alert" /> },
+      { id: "flere", label: "Flere", icon: <ShellIcon name="chevron-down" /> },
+    ],
+  },
+  {
+    id: "firmaer",
+    label: "Firmaer",
+    items: [
+      { id: "overvaager", label: "Overvåger", icon: "letter" },
+      { id: "advisory", label: "Advisory Board", icon: "letter" },
+      { id: "kunder", label: "Kunder", icon: "letter" },
+      { id: "salgspartnere", label: "Salgspartnere", icon: "letter" },
+      { id: "flere", label: "Flere", icon: <ShellIcon name="chevron-down" /> },
+    ],
+    footer: { label: "Opret ny liste", icon: "plus" },
+  },
+  { id: "personer", label: "Personer", collapsed: true, items: [] },
+];
+
+/** 25.2: personsidens skinne er sektionerne (Overblik aktiv) med Lasso-bundlinje. */
+const paperRailPerson = (): RailGroup[] => [
+  {
+    id: "sektioner",
+    label: "Sektioner",
+    items: ["Overblik", "Roller over tid", "Selskaber", "Ejerskab", "Netværk", "Risiko", "Historik"].map((l, i) => ({ id: `s${i}`, label: l, active: i === 0 })),
+  },
+];
+
+/** 24.3: modulbjælkens handlinger, siden er gemt (fyldt koral bogmærke) og kan overvåges. */
+const paperModuleActions = (): ModuleAction[] => [
+  { id: "eksport", label: "Eksportér", items: [{ id: "pdf", label: "PDF-rapport", icon: <ShellIcon name="download" size={16} />, onSelect: noop }, { id: "csv", label: "Tal som CSV", icon: <ShellIcon name="download" size={16} />, onSelect: noop }] },
+  { id: "gem", label: "Gemt", icon: <ShellIcon name="bookmark" filled />, tone: "accent", onSelect: noop },
+  { id: "overvaag", label: "Overvåg", icon: <ShellIcon name="rss" />, tone: "accent", onSelect: noop },
+];
+
+/** Hovedet i Paper har Overvåg, Gem, Eksportér og Flere (24.4, 25.3). */
+const paperHost = (): HostCapabilities => ({ ...entityHost(), savePage: true, monitor: true });
+
+function PaperShell({ kind, title, company, children }: { kind: "company" | "person"; title: string; company: string; children: ReactNode }) {
+  const [focus, setFocus] = useState("overblik");
+  const tabs: StripTab[] =
+    kind === "company"
+      ? [
+          { id: "c", label: company, icon: <ShellIcon name="company" />, active: true },
+          { id: "s", label: "Søgning", icon: <ShellIcon name="search" /> },
+          { id: "o", label: "Overvågning", icon: <ShellIcon name="bell" /> },
+        ]
+      : [
+          { id: "c", label: company, icon: <ShellIcon name="company" /> },
+          { id: "p", label: title, icon: <ShellIcon name="user" />, active: true },
+          { id: "s", label: "Søgning", icon: <ShellIcon name="search" /> },
+        ];
+  const mobile: AppShellMobile = {
+    title,
+    sections: kind === "company" ? COMPANY_MODULES : PERSON_MODULES,
+    activeSection: focus,
+    onSelectSection: setFocus,
+    onBell: noop,
+    moreItems: [{ id: "share", label: "Del link", icon: <ShellIcon name="copy" size={16} />, onSelect: noop }],
+    nav: [
+      { id: "soeg", label: "Søg", icon: <ShellIcon name="search" size={20} />, active: true },
+      { id: "lister", label: "Lister", icon: <ShellIcon name="list" size={20} /> },
+      { id: "overvaagning", label: "Overvågning", icon: <ShellIcon name="bell" size={20} /> },
+      { id: "konto", label: "Konto", icon: <ShellIcon name="user" size={20} /> },
+    ],
+  };
+  return (
+    <div className="lasso-root lasso-portal e-portal" data-theme="light">
+      <style>{PORTAL_CSS}</style>
+      <AppShell
+        rail={
+          kind === "company"
+            ? { groups: paperRailCompany(), onToggleGroup: noop, onLogo: noop }
+            : { groups: paperRailPerson(), onToggleGroup: noop, logo: false, bottom: { source: "Data fra CVR, Erhvervsstyrelsen og Creditsafe" } }
+        }
+        tabs={{ tabs, onSelect: noop, onBell: noop, onAccount: noop }}
+        mobile={mobile}
+      >
+        {kind === "company" ? <ModuleBar id="e-mod" modules={COMPANY_MODULES} value={focus} onChange={setFocus} actions={paperModuleActions()} maxVisible={8} ariaLabel="Moduler" /> : null}
+        {children}
+      </AppShell>
+    </div>
+  );
+}
+
+function PaperCompanyPage({ ds }: { ds: Dataset }) {
+  const name = ds.companies[C]?.name ?? "Eksempel Byg A/S";
+  return (
+    <PaperShell kind="company" title={name} company={name}>
+      <LassoView spec={companySpec(ds)} dataset={ds} host={paperHost()} onAction={noop} theme="light" frameless />
+    </PaperShell>
+  );
+}
+
+function PaperPersonPage({ ds }: { ds: Dataset }) {
+  return (
+    <PaperShell kind="person" title={ds.persons[P]?.name ?? "Bo Eksempel"} company={ds.companies[C]?.name ?? "Eksempel Byg A/S"}>
+      <LassoView spec={personSpec(ds)} dataset={ds} host={paperHost()} onAction={noop} theme="light" frameless />
+    </PaperShell>
+  );
+}
+
+/** Probe med risikoobservationerne, så hovedets observationslinje ("Se risiko", 24.4) har data. */
+const paperCompanyProbe = (): ViewSpec => {
+  const p = composeProbe(C, "overblik");
+  return { ...p, components: [...p.components, { type: "LassoRiskObservations", company: C }].slice(0, 12) as ViewSpec["components"] };
+};
+
 const companyProbe = () => composeProbe(C, "overblik");
+const PAPER_COMPANY_NOTE =
+  "Rammen som i Paper (skinne med Værktøjer/Firmaer/Personer, faner uden luk/+/badge, modulbjælke med 7 moduler + Flere og Gemt/Overvåg, hoved med fire ikonknapper og observationslinje) om show_company-kompositionen (composeCompany, overblik) for Eksempel Byg A/S. Sidens moduler bestemmes af compose.ts (se rapporten).";
+const PAPER_PERSON_NOTE =
+  "Rammen som i Paper (faner uden luk/+/badge, skinne med sektioner og Lasso-bundlinje, ingen modulbjælke, hoved med fire ikonknapper) om show_person-kompositionen (composePerson, overblik) for Bo Eksempel. Sidens moduler bestemmes af composePerson.ts (se rapporten).";
 const personProbe = () => composePersonProbe(P, "overblik");
 
 const COMPANY_PAGE_NOTE =
@@ -330,9 +454,9 @@ const pages: GalleryEntry[] = [
     node: "JT5-0",
     only: "desktop",
     desktopWidth: 1440,
-    note: COMPANY_PAGE_NOTE,
-    probe: companyProbe(),
-    draw: (ds) => <CompanyPage ds={ds} />,
+    note: PAPER_COMPANY_NOTE,
+    probe: paperCompanyProbe(),
+    draw: (ds) => <PaperCompanyPage ds={ds} />,
   }),
   dataEntry({
     nr: "25.1–25.6",
@@ -340,9 +464,9 @@ const pages: GalleryEntry[] = [
     node: "D3A-0",
     only: "desktop",
     desktopWidth: 1440,
-    note: PERSON_PAGE_NOTE,
+    note: PAPER_PERSON_NOTE,
     probe: personProbe(),
-    draw: (ds) => <PersonPage ds={ds} />,
+    draw: (ds) => <PaperPersonPage ds={ds} />,
   }),
 ];
 
@@ -654,8 +778,8 @@ const tablet: GalleryEntry[] = [
 /* ---------- 26g Mobil: eksempelskærme ---------- */
 
 const mobilePages: GalleryEntry[] = [
-  dataEntry({ nr: "26g.1", title: "Virksomhedsoverblik, mobil (eksempel)", node: "FJ3-0", only: "mobile", note: COMPANY_PAGE_NOTE, probe: companyProbe(), draw: (ds) => <CompanyPage ds={ds} /> }),
-  dataEntry({ nr: "26g.2", title: "Personside, mobil (eksempel)", node: "FOV-0", only: "mobile", note: PERSON_PAGE_NOTE, probe: personProbe(), draw: (ds) => <PersonPage ds={ds} /> }),
+  dataEntry({ nr: "26g.1", title: "Virksomhedsoverblik, mobil (eksempel)", node: "FJ3-0", only: "mobile", note: PAPER_COMPANY_NOTE, probe: paperCompanyProbe(), draw: (ds) => <PaperCompanyPage ds={ds} /> }),
+  dataEntry({ nr: "26g.2", title: "Personside, mobil (eksempel)", node: "FOV-0", only: "mobile", note: PAPER_PERSON_NOTE, probe: personProbe(), draw: (ds) => <PaperPersonPage ds={ds} /> }),
 ];
 
 /* ---------- 26h Mobil: tilstande og småelementer ---------- */
