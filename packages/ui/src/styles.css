@@ -1044,7 +1044,7 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-timeline__body { flex: 1; min-width: 0; padding-bottom: 18px; }
 .lasso-timeline__title { font-size: var(--lasso-fs); line-height: 18px; font-weight: 500; color: var(--lasso-text); }
 .lasso-timeline__change { display: flex; align-items: center; gap: 8px; font-size: var(--lasso-fs-sm); color: var(--lasso-muted); margin-top: 3px; }
-.lasso-timeline__from { text-decoration: line-through; }
+.lasso-timeline__from--struck { text-decoration: line-through; }
 .lasso-timeline__to { color: var(--lasso-text); font-weight: 500; }
 .lasso-timeline__meta { font-size: 12px; line-height: 16px; color: var(--lasso-muted); margin-top: 3px; }
 /* 26c.10: mobil som ren lodret liste: dato 12 muted øverst, titel 14/400, detalje 13 muted; ingen
