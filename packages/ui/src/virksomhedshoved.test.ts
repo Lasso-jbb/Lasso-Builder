@@ -57,6 +57,35 @@ test("08.1: konkurs med dato i mørk rød; intet binavn og ingen faktalinje (G9,
   assert.doesNotMatch(out, /kurator: Advokat Eksempel/);
 });
 
+test("Runde 6: status i hovedet kun ved afvigelse (Aktiv/Normal = navnet alene), i farvegruppen, i alle varianter", () => {
+  const variants = ["full", "compact", "line"] as const;
+  for (const variant of variants) {
+    for (const status of ["Aktiv", "Normal", "NORMAL"]) {
+      const out = html(h(CompanyHead, { company: { ...byg, status }, variant }));
+      assert.doesNotMatch(out, /lasso-company__status|lasso-headcompact__status/, `${variant}/${status}: navnet står alene`);
+    }
+    const cases: [string, string][] = [
+      ["Under konkurs", "warning"],
+      ["Tvangsopløst", "warning"],
+      ["Under frivillig likvidation", "liquidation"],
+      ["Fremtid", "liquidation"],
+      ["Ophørt", "inactive"],
+      ["Slettet", "inactive"],
+    ];
+    for (const [status, tone] of cases) {
+      const out = html(h(CompanyHead, { company: { ...byg, status, statusKind: undefined }, variant }));
+      assert.match(out, new RegExp(`lasso-company__status--${tone}">${status}<`), `${variant}/${status}`);
+      // Status efter navnet.
+      assert.ok(out.indexOf(status) > out.indexOf("Eksempel Byg A/S"));
+    }
+  }
+  // Personhovedet har ingen status (kun navnet) i alle varianter.
+  for (const variant of variants) {
+    const out = html(h(PersonHead, { person: { id: "CVR-3-1", name: "Bo Eksempel", roles: [] } as unknown as PersonVM, variant }));
+    assert.doesNotMatch(out, /Aktiv|__status/);
+  }
+});
+
 test("08.1: ophørt har ingen Overvåg; handlingen er 'Se historik'", () => {
   const out = html(h(CompanyHead, { company: cafe, actions: { monitor: { monitoring: false, onClick: noop }, save: { saved: false, onClick: noop } }, onHistory: noop }));
   assert.doesNotMatch(out, /lasso-headbtn--monitor/);

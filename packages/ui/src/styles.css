@@ -304,7 +304,8 @@
 
 /* ---------- Virksomhedshoved (08) ---------- */
 /* 08.1/08.8/16.1 (Jakob 29.09): ingen skillestreg under hovedet i nogen variant. */
-.lasso-company { display: flex; flex-direction: column; gap: 6px; padding-bottom: var(--lasso-space-5); }
+/* HOVED-LUFT (Jakob runde 6): ingen ekstra luft under hovedet; afstanden til næste element er sektionsmellemrummet. */
+.lasso-company { display: flex; flex-direction: column; gap: 6px; padding-bottom: 0; }
 .lasso-company__title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
 .lasso-company__name { margin: 0; font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: var(--lasso-tracking-tight); color: var(--lasso-text); overflow-wrap: anywhere; }
 .lasso-company__status { font-size: var(--lasso-fs); line-height: 18px; font-weight: 500; color: var(--lasso-text-2); }
@@ -3038,7 +3039,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-company, .lasso-personhead.lasso-company { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--lasso-space-4); row-gap: 6px; align-items: start; }
 .lasso-company > * { grid-column: 1 / -1; min-width: 0; }
 .lasso-company > .lasso-company__title { grid-column: 1; }
-.lasso-company > .lasso-company__actions { grid-column: 2; grid-row: 1; align-self: start; margin-top: 2px; }
+.lasso-company > .lasso-company__actions { grid-column: 2; grid-row: 1; align-self: center; margin-top: 0; } /* runde 6: navn, status og knapper på én linje, lodret centreret */
+.lasso-company > .lasso-company__title { align-self: center; }
 .lasso-company__alias { font-size: var(--lasso-fs); line-height: 18px; font-weight: 400; color: var(--lasso-muted); }
 .lasso-personhead.lasso-company .lasso-personhead__kind { font-size: var(--lasso-fs); font-weight: 500; color: var(--lasso-text-3); }
 .lasso-headactions { display: flex; align-items: center; justify-content: flex-end; gap: var(--lasso-space-2); }
@@ -3063,7 +3065,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-root .lasso-headrisk__link:hover { text-decoration: underline; }
 .lasso-root .lasso-headrisk__link:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: 2px; border-radius: var(--lasso-radius-sm); }
 /* 08.2: sektionsfaner lige under hovedet (niveau 1, 48 px). */
-.lasso-company > .lasso-headtabs { margin-top: var(--lasso-space-3); margin-bottom: calc(-1 * var(--lasso-space-5)); }
+.lasso-company > .lasso-headtabs { margin-top: var(--lasso-space-3); margin-bottom: 0; }
 /* Kompakt, 56 px: navn 15/600, én faktalinje i muted, Overvåg eller "Se historik" til højre. */
 .lasso-headcompact { display: flex; align-items: center; gap: var(--lasso-space-3); min-height: 56px; padding: 8px 0; }
 /* 08.8: den kompakte variants klokke er neutral (grå kant, ink ikon); koral kun i "Overvåger"-tilstand. */
@@ -3071,7 +3073,9 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-headcompact__main { flex: 1; min-width: 0; }
 .lasso-headcompact__title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; }
 .lasso-headcompact__name { margin: 0; font-size: 16px; line-height: 22px; font-weight: 600; color: var(--lasso-text); }
-.lasso-headcompact__status { font-size: var(--lasso-fs-sm); line-height: 18px; font-weight: 500; color: var(--lasso-text-3); }
+/* Runde 6: farven følger statusgruppen (lasso-company__status--*); kun ved afvigelse. */
+.lasso-headcompact__status { font-size: var(--lasso-fs-sm); line-height: 18px; font-weight: 500; }
+.lasso-headcompact__status:not([class*="lasso-company__status--"]) { color: var(--lasso-text-2); }
 .lasso-headcompact__facts { margin: 2px 0 0; font-size: var(--lasso-fs-sm); line-height: 18px; font-weight: 400; color: var(--lasso-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lasso-headcompact.is-ceased .lasso-headcompact__name, .lasso-headline.is-ceased .lasso-headline__name { color: var(--lasso-text-3); }
 .lasso-headcompact.is-ceased .lasso-headcompact__status { font-weight: 400; color: var(--lasso-muted); }
@@ -3081,13 +3085,14 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-headline .lasso-company__status, .lasso-headline .lasso-personhead__kind { flex: none; font-size: var(--lasso-fs-sm); }
 .lasso-headline__facts { min-width: 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @container lasso (max-width: 560px) {
-  /* 26a: navn 20/600, fakta på to linjer, fire 40 px ikonknapper højrestillet under faktalinjen. */
+  /* 26a (HOVED-KNAPPER, Jakob runde 6): navn 20/600 (+ afvigende status) øverst, de 40 px ikonknapper
+     venstrestillet på linjen under med kompakt luft (8 px). Intet kort om hovedet. */
   .lasso-company, .lasso-personhead.lasso-company { display: flex; flex-direction: column; gap: 6px; }
   .lasso-company__name, .lasso-personhead.lasso-company .lasso-company__name { font-size: 20px; line-height: 28px; }
   .lasso-company__status { font-size: var(--lasso-fs-sm); }
-  .lasso-company__status:not(.lasso-company__status--warning):not(.lasso-company__status--inactive):not(.lasso-company__status--liquidation) { font-weight: 400; color: var(--lasso-muted); } /* 26a.4: "Aktiv" 13/400 muted efter navnet */
   .lasso-company__facts { order: 1; font-size: var(--lasso-fs-sm); line-height: 18px; }
-  .lasso-company > .lasso-company__actions { order: 2; align-self: flex-end; margin-top: 6px; }
+  .lasso-company > .lasso-company__actions { order: 2; align-self: flex-start; margin-top: 2px; }
+  .lasso-company > .lasso-company__actions.lasso-headactions { justify-content: flex-start; }
   /* 26a.4/26g.1: mobilhovedet har kun navn, fakta og ikonknapper; observationslinjen står kun på desktop (24.4). */
   .lasso-company > .lasso-headrisk { display: none; }
   .lasso-company > .lasso-headtabs { order: 4; }
@@ -4852,7 +4857,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 @container lasso (max-width: 560px) {
   /* Mobil: kort med 1 px kant, navn 20/600, "Person, f. 1978" muted, tællerlinje 13 ink, fire 40 px knapper
      (Overvåg, Netværk, Gem, Flere) højrestillet. Ingen observationslinje. */
-  .lasso-personhead.lasso-company { padding: var(--lasso-space-4); border: 1px solid var(--lasso-border); border-radius: 12px; gap: 4px; }
+  /* Runde 6 (HOVED-KNAPPER): intet kort om personhovedet; samme form som virksomhedshovedet. */
+  .lasso-personhead.lasso-company { padding: 0; border: 0; border-radius: 0; gap: 6px; }
   .lasso-personhead .lasso-personhead__kind, .lasso-personhead .lasso-personhead__obs, .lasso-personhead .lasso-personhead__facts, .lasso-personhead > .lasso-headrisk { display: none; }
   .lasso-personhead__mobsub { display: block; order: 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-muted); }
   .lasso-personhead__counts { display: block; order: 1; margin-top: 4px; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text); }

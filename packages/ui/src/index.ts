@@ -207,7 +207,7 @@ export { HeadActions, hasHeadActions } from "./components/HeadActions.js";
 export type { HeadActionsProps } from "./components/HeadActions.js";
 export { HeadRiskLine, companyRiskSummary, personRiskSummary } from "./components/HeadRisk.js";
 export type { HeadRiskSummary } from "./components/HeadRisk.js";
-export { companyFactsLine, companyStatusText } from "./components/CompanyHead.js";
+export { companyFactsLine, companyStatusText, headStatusText } from "./components/CompanyHead.js";
 export type { CompanyHeadProps } from "./components/CompanyHead.js";
 export { personFactsLine } from "./components/PersonHead.js";
 export type { PersonHeadProps } from "./components/PersonHead.js";

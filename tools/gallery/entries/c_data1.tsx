@@ -189,6 +189,18 @@ function SectionTabs() {
   return <CompanyHead company={BYG} actions={headActions(false)} below={<Tabs level={1} items={items} value={value} onChange={setValue} ariaLabel="Sektioner" className="lasso-headtabs" />} />;
 }
 
+/** 08.1 (Paper I4C-0 + variantrække MOR-0): navnet alene ved Aktiv; afvigende status efter navnet i farvegruppen. */
+function CompanyHeads() {
+  return (
+    <Stack>
+      <CompanyHead company={BYG} actions={headActions(false)} />
+      <Labelled label="Variant: status er ikke Aktiv/Normal: status efter navnet i sin farvegruppe">
+        <CompanyHead company={{ ...BYG, status: "Under konkurs", statusKind: "warning", statusDate: undefined }} actions={headActions(false)} />
+      </Labelled>
+    </Stack>
+  );
+}
+
 function LiveNumberStates() {
   const now = Date.now();
   const base: ContactVM = { lassoId: B, phone: "86123456", email: "kontakt@eksempelbyg.dk", website: "https://eksempelbyg.dk", source: "CVR", updated: "2026-09-28" };
@@ -369,7 +381,7 @@ function Sparklines() {
 
 export const entries: GalleryEntry[] = [
   // 08 Virksomhed
-  { nr: "08.1", title: "Virksomhedshoved", node: "I4C-0", spec: co("Eksempel Byg A/S", [{ type: "LassoCompanyHead", company: B }]) },
+  { nr: "08.1", title: "Virksomhedshoved", node: "I4C-0", render: () => <CompanyHeads />, note: "Runde 6: navnet står alene ved Aktiv/Normal; ved alle andre statusser står statussen efter navnet (14/500, 12 px) i sin farvegruppe (05.7). Navn, status og ikonknapper på én linje, lodret centreret; ingen ekstra luft under hovedet (sektionsmellemrummet følger)." },
   { nr: "08.2", title: "Sektionsfaner", node: "9S7-0", render: () => <SectionTabs />, note: "Fanerne leveres af værten (LassoView.headTabs); her tegnet med CompanyHead + Tabs niveau 1 med 8 faner." },
   { nr: "08.3", title: "Kontaktblok", node: "9SV-0", spec: co("Eksempel Byg A/S", [{ type: "LassoContact", company: B }]) },
   { nr: "08.4", title: "Genveje", node: "9TL-0", spec: co("Eksempel Byg A/S", [{ type: "LassoShortcuts", company: B }]) },
