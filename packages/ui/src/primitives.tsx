@@ -341,33 +341,71 @@ export function Skeleton({ lines = 3, height }: { lines?: number; height?: numbe
   );
 }
 
-export function Sparkline({ values, tone = "neutral", bare = false }: { values: readonly number[]; tone?: "neutral" | "accent"; bare?: boolean }) {
+/**
+ * Sparkline (13.9, 26b.7): altid koral ved `tone="accent"`, prik på seneste værdi. Krydser serien 0,
+ * tegnes en stiplet nullinje. `kind="bars"` giver sparsøjler (fx ansatte pr. kvartal) med seneste søjle
+ * i koral. Under 3 datapunkter tegnes ingen sparkline, kun "—".
+ */
+export function Sparkline({
+  values,
+  tone = "neutral",
+  bare = false,
+  kind = "line",
+  width = 72,
+  height = 22,
+}: {
+  values: readonly number[];
+  tone?: "neutral" | "accent";
+  bare?: boolean;
+  kind?: "line" | "bars";
+  width?: number;
+  height?: number;
+}) {
   const pct = percentChange(values);
-  if (values.length < 2) return <Missing />;
-  const w = 72;
-  const h = 22;
-  // 13.9: y-aksen spænder mindst 20 % af tallenes størrelse, så en næsten flad serie (+0,8 %)
-  // tegnes flad og midt i feltet i stedet for som en zigzag fra top til bund.
+  if (values.length < 3) return <Missing />;
+  const w = width;
+  const h = height;
   const lo = Math.min(...values);
   const hi = Math.max(...values);
-  const span = Math.max(hi - lo, 0.2 * Math.max(Math.abs(lo), Math.abs(hi))) || 1;
-  const min = (lo + hi) / 2 - span / 2;
-  const pts = values.map((v, i) => [(i / (values.length - 1)) * (w - 4) + 2, h - 3 - ((v - min) / span) * (h - 6)] as const);
-  const d = pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-  const last = pts[pts.length - 1]!;
+  const crosses = lo < 0 && hi > 0;
+  let body: ReactNode;
+  if (kind === "bars") {
+    const top = Math.max(hi, 0);
+    const bottom = Math.min(lo, 0);
+    const range = top - bottom || 1;
+    const gap = 2;
+    const bw = (w - gap * (values.length - 1)) / values.length;
+    const y0 = ((top - 0) / range) * h;
+    body = values.map((v, i) => {
+      const yv = ((top - v) / range) * h;
+      return <rect key={i} className={`lasso-spark__bar${i === values.length - 1 ? " is-last" : ""}`} x={i * (bw + gap)} y={Math.min(y0, yv)} width={bw} height={Math.max(1, Math.abs(y0 - yv))} rx="1" />;
+    });
+  } else {
+    // 13.9: y-aksen spænder mindst 20 % af tallenes størrelse, så en næsten flad serie (+0,8 %)
+    // tegnes flad og midt i feltet i stedet for som en zigzag fra top til bund.
+    const span = Math.max(hi - lo, 0.2 * Math.max(Math.abs(lo), Math.abs(hi))) || 1;
+    const min = (lo + hi) / 2 - span / 2;
+    const yOf = (v: number) => h - 3 - ((v - min) / span) * (h - 6);
+    const pts = values.map((v, i) => [(i / (values.length - 1)) * (w - 6) + 3, yOf(v)] as const);
+    const d = pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+    const last = pts[pts.length - 1]!;
+    body = (
+      <>
+        {crosses ? <line className="lasso-spark__zero" x1="0" x2={w} y1={yOf(0)} y2={yOf(0)} /> : null}
+        <path d={d} />
+        <circle cx={last[0]} cy={last[1]} r="2.2" />
+      </>
+    );
+  }
   const svg = (
-    <svg className={`lasso-spark lasso-spark--${tone}`} viewBox={`0 0 ${w} ${h}`} aria-hidden="true">
-      <path d={d} />
-      <circle cx={last[0]} cy={last[1]} r="2.2" />
+    <svg className={`lasso-spark lasso-spark--${tone}${kind === "bars" ? " lasso-spark--bars" : ""}`} width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden="true">
+      {body}
     </svg>
   );
   if (bare) return svg;
   return (
     <span className="lasso-trend" title={pct !== null ? `${formatPercent(pct)} over perioden` : undefined}>
-      <svg className={`lasso-spark lasso-spark--${tone}`} viewBox={`0 0 ${w} ${h}`} aria-hidden="true">
-        <path d={d} />
-        <circle cx={last[0]} cy={last[1]} r="2.2" />
-      </svg>
+      {svg}
       <span className={`lasso-trend__pct ${pct !== null && pct < 0 ? "lasso-down" : "lasso-up"}`}>{formatPercent(pct)}</span>
     </span>
   );

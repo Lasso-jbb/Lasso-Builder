@@ -410,6 +410,10 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-spark { width: 72px; height: 22px; }
 .lasso-spark path { fill: none; stroke: var(--lasso-text-3); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
 .lasso-spark circle { fill: var(--lasso-text-3); }
+.lasso-spark { overflow: visible; }
+.lasso-spark .lasso-spark__zero { stroke: var(--lasso-chart-axis); stroke-width: 1; stroke-dasharray: 2 2; }
+.lasso-spark .lasso-spark__bar { fill: var(--lasso-chart-4); }
+.lasso-spark .lasso-spark__bar.is-last { fill: var(--lasso-chart-1); }
 .lasso-table-footer { padding: 14px 16px; border-top: 1px solid var(--lasso-border); font-size: var(--lasso-fs-sm); color: var(--lasso-muted); display: flex; justify-content: space-between; gap: var(--lasso-space-3); flex-wrap: wrap; }
 
 /* ---------- Tilstande ---------- */

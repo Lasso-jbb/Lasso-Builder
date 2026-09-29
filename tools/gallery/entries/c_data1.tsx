@@ -9,6 +9,7 @@ import {
   LassoContact,
   LassoContactPersons,
   ScoreGauge,
+  Section,
   SidePanel,
   SidePanelList,
   Sparkline,
@@ -230,43 +231,76 @@ function NumberFormats() {
   );
 }
 
+/**
+ * 13.1: fem seriefarver med brugsbeskrivelse og et sjette felt "Semantik" (grøn/gul/rød i ét felt),
+ * som kun bruges til vurdering, aldrig som serie. Øvrige-grå hører til 13.8 (surface-muted), ikke her.
+ */
 function Palette() {
-  const sw = [
-    ["--lasso-chart-1", "Serie 1, koral (virksomheden, seneste år)"],
-    ["--lasso-chart-2", "Serie 2, mørk blå"],
-    ["--lasso-chart-3", "Serie 3, lys blå"],
-    ["--lasso-chart-4", "Serie 4, lys koral (tidligere år)"],
-    ["--lasso-chart-5", "Serie 5, neutral (branche/benchmark)"],
-    ["--lasso-chart-6", "Serie 6, lys grå (øvrige)"],
+  const sw: [string, string, string][] = [
+    ["--lasso-chart-1", "Serie 1, koral", "virksomheden selv, seneste år"],
+    ["--lasso-chart-2", "Serie 2, dyb blå", "sammenligningsvirksomhed, sekundær post"],
+    ["--lasso-chart-3", "Serie 3, lys blå", "tredje serie, kortfristet gæld"],
+    ["--lasso-chart-4", "Serie 4, lys koral", "tidligere år, spænd i intervaller"],
+    ["--lasso-chart-5", "Serie 5, neutral", "branche og benchmark, andre virksomheder"],
   ];
+  const swatch = { height: 56, borderRadius: 8, border: "1px solid var(--lasso-border)" };
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 16 }}>
-      {sw.map(([v, name]) => (
-        <div key={v} style={{ display: "grid", gap: 6 }}>
-          <div style={{ height: 56, borderRadius: 8, background: `var(${v})`, border: "1px solid var(--lasso-border)" }} />
-          <div style={{ fontSize: 13, fontWeight: 600 }}>{name}</div>
-          <code className="lasso-small" style={{ color: "var(--lasso-text-muted)" }}>{v}</code>
+      {sw.map(([v, name, use]) => (
+        <div key={v} style={{ display: "grid", gap: 4, alignContent: "start" }}>
+          <div style={{ ...swatch, background: `var(${v})` }} />
+          <div style={{ fontSize: 13, fontWeight: 600, marginTop: 4 }}>{name}</div>
+          <div className="lasso-small" style={{ color: "var(--lasso-muted)" }}>{use}</div>
         </div>
       ))}
+      <div style={{ display: "grid", gap: 4, alignContent: "start" }}>
+        <div style={{ ...swatch, display: "flex", overflow: "hidden" }}>
+          <span style={{ flex: 1, background: "var(--lasso-positive)" }} />
+          <span style={{ flex: 1, background: "var(--lasso-warning)" }} />
+          <span style={{ flex: 1, background: "var(--lasso-negative)" }} />
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 600, marginTop: 4 }}>Semantik</div>
+        <div className="lasso-small" style={{ color: "var(--lasso-muted)" }}>kun til vurdering, aldrig som serie</div>
+      </div>
     </div>
   );
 }
 
-function Sparklines() {
-  const cases: [string, number[], "accent" | "neutral"][] = [
-    ["Stigende", [21, 23.5, 25.1, 28.3], "accent"],
-    ["Faldende", [9.4, 8.1, 6.2, 5.0], "accent"],
-    ["Flad", [12, 12.2, 11.9, 12.1], "neutral"],
-    ["Svingende", [3.1, 3.9, 2.8, 4.2, 3.6], "neutral"],
-  ];
+/**
+ * 13.9 og 26b.7: sparkline-tilstandene som 44 px rækker med etiket, sparkline og værdi til højre.
+ * Sparklinen er altid koral; krydser værdierne 0, står en stiplet nullinje; sparsøjler til
+ * kvartalstal; under 3 datapunkter står "—" i stedet for en sparkline.
+ */
+export function SparkList({ title, rows }: { title?: string; rows: { label: string; values: number[]; value: string; kind?: "line" | "bars"; negative?: boolean }[] }) {
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 40 }}>
-      {cases.map(([label, values, tone]) => (
-        <Labelled key={label} label={label}>
-          <Sparkline values={values} tone={tone} />
-        </Labelled>
-      ))}
-    </div>
+    <Section title={title}>
+      <ul className="lasso-rows">
+        {rows.map((r) => (
+          <li key={r.label} className="lasso-row" style={{ minHeight: 44, padding: "6px 0" }}>
+            <div className="lasso-row__main">
+              <div className="lasso-row__name lasso-row__name--regular">{r.label}</div>
+            </div>
+            <div style={{ flex: "none", display: "flex", alignItems: "center" }}>
+              <Sparkline values={r.values} tone="accent" kind={r.kind} bare />
+            </div>
+            <div className="lasso-row__value" style={{ minWidth: 56, color: r.negative ? "var(--lasso-negative)" : undefined }}>{r.value}</div>
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+}
+
+function Sparklines() {
+  return (
+    <SparkList
+      rows={[
+        { label: "Stigende", values: [7.9, 15.5, 17.7, 17.5, 18.8], value: "18,8" },
+        { label: "Krydser nul", values: [120, 64, -40, -210, -338], value: "−338", negative: true },
+        { label: "Sparsøjler (ansatte pr. kvartal)", values: [14, 15, 15, 16, 17, 17, 18, 19], value: "19", kind: "bars" },
+        { label: "Under 3 datapunkter — ingen sparkline", values: [4.2, 4.7], value: "4,7" },
+      ]}
+    />
   );
 }
 

@@ -59,6 +59,7 @@ import {
   type StripTab,
   type TabItem,
 } from "@lasso/ui";
+import { SparkList } from "./c_data1.js";
 import type { GalleryEntry } from "../types.js";
 
 /* ---------- Fælles ---------- */
@@ -669,27 +670,16 @@ const mobileNav: GalleryEntry[] = [
 const one = (title: string, component: Record<string, unknown>, kind = "company") => ({ kind, title, components: [component] });
 
 function SparkRows() {
-  const rows: [string, number[]][] = [
-    ["Bruttofortjeneste", [7.9, 15.5, 17.7, 17.5, 18.8]],
-    ["Resultat efter skat", [1.2, 2.4, 1.1, 0.4, -0.2]],
-    ["Egenkapital", [2.1, 3.3, 3.9, 3.4, 3.2]],
-    ["Ansatte", [9, 12, 15, 16, 17]],
-  ];
   return (
-    <Section title="Udvikling, 5 år">
-      <ul className="lasso-rows">
-        {rows.map(([label, values]) => (
-          <li key={label} className="lasso-row">
-            <div className="lasso-row__main">
-              <div className="lasso-row__name lasso-row__name--regular">{label}</div>
-            </div>
-            <div className="lasso-row__value">
-              <Sparkline values={values} tone="accent" />
-            </div>
-          </li>
-        ))}
-      </ul>
-    </Section>
+    <SparkList
+      title="Nøgletal med tendens"
+      rows={[
+        { label: "Bruttofortjeneste", values: [7.9, 15.5, 17.7, 17.5, 18.8], value: "18,8" },
+        { label: "Resultat", values: [120, 64, -40, -210, -338], value: "−338", negative: true },
+        { label: "Egenkapital", values: [2.1, 3.3, 3.9, 3.4, 3.2], value: "3,2" },
+        { label: "Ansatte pr. kvartal", values: [14, 15, 15, 16, 17, 17, 18, 19], value: "19", kind: "bars" },
+      ]}
+    />
   );
 }
 
