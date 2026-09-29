@@ -85,21 +85,39 @@ function rows(m) {
   return [main, ...extra.map((s) => [s])].filter((r) => r.length);
 }
 
-function pagesFor(m) {
+async function pagesFor(m) {
   const noteLines = m.note ? Math.ceil(m.note.length / 160) : 0;
   const avail = PAGE_H - HEAD_H - noteLines * NOTE_LINE - (noteLines ? 2 : 0) - CAP_H;
   const out = [];
   for (const row of rows(m)) {
-    const imgs = row.map((s) => ({ ...s, ...png(s.file) }));
+    const imgs = [];
+    for (const s of row) {
+      const p = png(s.file);
+      imgs.push({ ...s, ...p, blank: await blankRows(p.src) });
+    }
     const totalW = imgs.reduce((a, i) => a + i.w, 0);
     // Samme målestok for alle; kun hvis rækken er bredere end siden, skaleres den ned.
     let scale = Math.min(SCALE, (PAGE_W - GAP * (imgs.length - 1)) / totalW);
     const tallest = Math.max(...imgs.map((i) => i.h));
     if (tallest * scale > avail && tallest * scale * MIN_FIT <= avail) scale = avail / tallest;
     const slicePx = Math.floor(avail / scale);
+    // Delingen lægges i en ensfarvet pixelrække (luft mellem kort/rækker), højst 30 % over sidens bund,
+    // så tekst og kort ikke skæres midt over.
     const slices = (i) => {
-      const n = Math.max(1, Math.ceil(i.h / slicePx));
-      return Array.from({ length: n }, (_, k) => ({ i, k, n, top: k * slicePx, hPx: Math.min(slicePx, i.h - k * slicePx), w: i.w * scale }));
+      const cuts = [];
+      let top = 0;
+      while (top < i.h) {
+        let end = Math.min(i.h, top + slicePx);
+        if (end < i.h) {
+          const floor = top + Math.floor(slicePx * 0.7);
+          let c = end;
+          while (c > floor && !i.blank[c]) c--;
+          if (c > floor) end = c;
+        }
+        cuts.push({ top, hPx: end - top });
+        top = end;
+      }
+      return cuts.map((c, k) => ({ i, k, n: cuts.length, top: c.top, hPx: c.hPx, w: i.w * scale }));
     };
     // Første billede (desktop) står fast til venstre, én del pr. side; de øvrige (mobil) flyder som
     // spalter i den ledige bredde, så et højt mobilbillede ikke giver en side pr. 160 mm.
@@ -128,10 +146,41 @@ function pagesFor(m) {
   return out.map((p, i, all) => ({ ...p, part: all.length > 1 ? `side ${i + 1} af ${all.length}` : "" }));
 }
 
-const pages = sel
-  .filter((m) => m.shots.length)
-  .flatMap((m) =>
-    pagesFor(m).map(
+// Ensfarvede pixelrækker pr. billede (til delingen af høje billeder), målt i en browserside.
+const probe = await b.newPage();
+async function blankRows(src) {
+  return probe.evaluate(async (url) => {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const c = document.createElement("canvas");
+    c.width = img.width;
+    c.height = img.height;
+    const ctx = c.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+    const d = ctx.getImageData(0, 0, c.width, c.height).data;
+    const out = new Array(c.height).fill(false);
+    // Kun den midterste del af bredden tæller (kantlinjer i siderne må gerne løbe igennem).
+    const x0 = Math.floor(c.width * 0.04), x1 = Math.ceil(c.width * 0.96);
+    for (let y = 0; y < c.height; y++) {
+      const r = y * c.width * 4;
+      const a = r + x0 * 4;
+      let same = true;
+      for (let x = x0; x < x1 && same; x++) {
+        const o = r + x * 4;
+        if (Math.abs(d[o] - d[a]) + Math.abs(d[o + 1] - d[a + 1]) + Math.abs(d[o + 2] - d[a + 2]) > 6) same = false;
+      }
+      out[y] = same;
+    }
+    return out;
+  }, src);
+}
+const pageSets = [];
+for (const m of sel.filter((x) => x.shots.length)) pageSets.push([m, await pagesFor(m)]);
+await probe.close();
+const pages = pageSets
+  .flatMap(([m, list]) =>
+    list.map(
       (p) => `<section class="pg"><header><span class="nr">${esc(m.nr)}</span><span class="t">${esc(m.title)}${p.part ? `<span class="cont">${esc(p.part)}</span>` : ""}</span><span class="meta">${m.node ? "Paper " + esc(m.node) + ", " : ""}${m.kind === "spec" ? "visning med demodata" : "UI-komponent"}${m.gridWidth ? `, bredde ${m.gridWidth} px` : ""}</span></header>
 ${m.note ? `<p class="note">${esc(m.note)}</p>` : ""}<div class="row">${p.figs}</div></section>`,
     ),

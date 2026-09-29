@@ -711,12 +711,11 @@ const tablet: GalleryEntry[] = [
   { nr: "26f.5", extraWidths: [834, 1024], title: "Sammenligning, tablet", node: "FGO-0", only: "desktop", desktopWidth: 768, spec: one("Sammenligning", { type: "LassoCompareTable", companies: [C, "CVR-1-99000005", "CVR-1-99000008"] }, "custom") },
 ];
 
-/* ---------- 26g Mobil: eksempelskærme ---------- */
-
-const mobilePages: GalleryEntry[] = [
-  dataEntry({ nr: "26g.1", title: "Virksomhedsoverblik, mobil (eksempel)", node: "FJ3-0", only: "mobile", note: PAPER_COMPANY_NOTE, probe: paperCompanyProbe(), draw: (ds) => <PaperCompanyPage ds={ds} /> }),
-  dataEntry({ nr: "26g.2", title: "Personside, mobil (eksempel)", node: "FOV-0", only: "mobile", note: PAPER_PERSON_NOTE, probe: personProbe(), draw: (ds) => <PaperPersonPage ds={ds} /> }),
-];
+/* ---------- 26g Mobil: eksempelskærme ----------
+   26g.1/26g.2 er taget ud af galleriet (runde 5): de tegner Papers gamle mobilsider (PaperCompanyPage/
+   PaperPersonPage stablet), ikke gridmodellens foldning (bånd -> én kolonne i stakkens rækkefølge: hoved,
+   nøgletal, profil, oplysninger, relationer, graf, kontakt, historik, nyheder, genveje). De afventer
+   redesign i Paper (spor 1) sammen med 24/25. */
 
 /* ---------- 26h Mobil: tilstande og småelementer ---------- */
 
@@ -1618,7 +1617,6 @@ export const entries: GalleryEntry[] = [
   ...mobilePerson,
   ...mobileUnits,
   ...tablet,
-  ...mobilePages,
   ...mobileStates,
   ...report,
   ...datatypes,
