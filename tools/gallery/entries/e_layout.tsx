@@ -258,7 +258,7 @@ function CompanyPage({ ds }: { ds: Dataset }) {
   const spec = companySpec(ds);
   return (
     <Shell kind="company" title={ds.companies[C]?.name ?? "Eksempel Byg A/S"} modules={COMPANY_MODULES} value="overblik">
-      <LassoView spec={spec} dataset={ds} host={entityHost()} onAction={noop} theme="light" />
+      <LassoView spec={spec} dataset={ds} host={entityHost()} onAction={noop} theme="light" embedded />
     </Shell>
   );
 }
@@ -267,7 +267,7 @@ function PersonPage({ ds }: { ds: Dataset }) {
   const spec = personSpec(ds);
   return (
     <Shell kind="person" title={ds.persons[P]?.name ?? "Bo Eksempel"} modules={PERSON_MODULES} value="overblik">
-      <LassoView spec={spec} dataset={ds} host={entityHost()} onAction={noop} theme="light" />
+      <LassoView spec={spec} dataset={ds} host={entityHost()} onAction={noop} theme="light" embedded />
     </Shell>
   );
 }

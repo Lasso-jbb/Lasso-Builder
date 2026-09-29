@@ -71,5 +71,11 @@ export interface LassoViewProps {
    * Katalog 08.2: sektionsfaner (niveau 1, 48 px) lige under virksomheds-/personhovedet, der skifter
    * sidens indhold. Uden prop'en tegnes ingen faner (portalen har dem i modulbjælken).
    */
+  /**
+   * Katalog 24/25/26g: visningen står i portalens sideskabelon (AppShell med skinne, fanebjælke og
+   * modulbjælke). Så tegnes hverken rammens egen header (logo, "Virksomhedsprofil", datastempel) eller
+   * handlingslinjen nederst på virksomheds- og personsider; sidens hoved bærer Gem, Eksportér og "…".
+   */
+  embedded?: boolean;
   headTabs?: { items: readonly { id: string; label: string; disabled?: boolean; disabledReason?: string }[]; value: string; onChange: (id: string) => void; ariaLabel?: string };
 }

@@ -202,4 +202,11 @@ test("LassoView: hver oplysning om identiteten står én gang på overblik, kont
   const overblik = renderToStaticMarkup(createElement(LassoView, { spec: composeCompany(ID, ds, { followUps: false }), dataset: ds, host: {}, onAction: () => {} }));
   assert.equal(count(text(overblik), "eksempelbyg.dk"), 2, "e-mail og web, hver én gang");
   assert.equal(count(overblik, "Kilde: Lasso regnskabsanalyse"), 1);
+  // 24/25/26g: i portalens sideskabelon (embedded) ingen rammeheader og ingen handlingslinje nederst.
+  const spec = composeCompany(ID, ds, { followUps: false });
+  const framed = renderToStaticMarkup(createElement(LassoView, { spec, dataset: ds, host: { save: true }, onAction: () => {} }));
+  assert.match(framed, /lasso-frame__header/);
+  const embedded = renderToStaticMarkup(createElement(LassoView, { spec, dataset: ds, host: { save: true }, onAction: () => {}, embedded: true }));
+  assert.doesNotMatch(embedded, /lasso-frame__header|lasso-frame__eyebrow|lasso-badge--demo/);
+  assert.doesNotMatch(embedded, /lasso-actionbar|Gem visning/);
 });

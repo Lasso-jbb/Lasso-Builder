@@ -251,6 +251,7 @@ export function EntityPage({
             host={entityHost(shellWidth)}
             savePrefix={savePrefix}
             onAction={onAction}
+            embedded
           />
         ) : null}
       </TabPanel>
