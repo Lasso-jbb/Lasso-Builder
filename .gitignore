@@ -33,3 +33,6 @@ venv/
 # Lokale værktøjer
 .claude/routing-log.json
 .claude/
+
+# Eval (seneste kørsel; docs/eval-baseline.json er frosset og checkes ind)
+docs/eval-latest.json

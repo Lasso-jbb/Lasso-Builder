@@ -32,6 +32,8 @@ export interface FinancialStatementsProps {
   statement?: StatementKind;
   /** År side om side på desktop (2–5, standard 5). Tablet viser 3, mobil ét år + Δ. */
   years?: number;
+  /** Regnskabsåret, periodevælgeren starter på; findes det ikke, vises seneste år. */
+  year?: number;
   title?: string;
   error?: string;
   /** PDF-linket åbnes via værten, når den findes; ellers et almindeligt link. */
@@ -169,13 +171,13 @@ function MobileCashFlow({ s, year, scale }: { s: FinancialStatementsVM; year: nu
  * "Resultat | Balance | Pengestrøm" i fuld bredde, valgt år + Δ, balancen som to kort og pengestrømmen
  * med retningsbjælker. Formen skifter med container queries, ingen separat mobilkomponent.
  */
-export function FinancialStatements({ statements, company, statement = "income", years = 2, title, error, onAction }: FinancialStatementsProps) {
+export function FinancialStatements({ statements, company, statement = "income", years = 2, year: startYear, title, error, onAction }: FinancialStatementsProps) {
   const heading = title ?? "Regnskab";
   const [tab, setTab] = useState<StatementKind>(statement);
   const [pairSel, setPair] = useState<"balance" | "cashflow">(statement === "cashflow" ? "cashflow" : "balance");
   const [scopeSel, setScope] = useState<Scope | null>(null);
   const [unit, setUnit] = useState<Unit>("t");
-  const [yearSel, setYear] = useState<number | null>(null);
+  const [yearSel, setYear] = useState<number | null>(startYear ?? null);
 
   if (!statements) {
     return (

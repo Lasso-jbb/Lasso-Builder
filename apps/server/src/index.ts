@@ -300,14 +300,14 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
    * Virksomhedssiden. metric udeladt = hovednøgletallet (som show_company). Med spørgsmålet (q i et
    * /k/-link) samme spørgsmålsprofil som i chatten: læst uden virksomhedens navn, med modellens nøgletal.
    */
-  async function renderCompanyPage(req: Request, res: Response, html: string, lassoId: string, opts: { focus: Focus; years: number; metric?: Metric; question?: string; metrics?: Metric[] }) {
+  async function renderCompanyPage(req: Request, res: Response, html: string, lassoId: string, opts: { focus: Focus; years: number; metric?: Metric; question?: string; metrics?: Metric[]; topic?: string }) {
     let name: string;
     try {
       name = (await provider.company(lassoId)).name;
     } catch (err) {
       return failPage(res, html, 404, `Virksomheden kunne ikke hentes: ${errorMessage(err)}`);
     }
-    const ask = opts.question ? parseAsk(opts.question, "company", { metrics: opts.metrics, name: companyNameHints(name) }) : undefined;
+    const ask = opts.question ? parseAsk(opts.question, "company", { metrics: opts.metrics, name: companyNameHints(name), topic: opts.topic }) : undefined;
     const dataset = await resolveSpec(composeProbe(lassoId, opts.focus, ask), provider);
     const metric = opts.metric ?? mainMetric(dataset.financials[lassoId]?.years ?? []);
     const spec = composeCompany(lassoId, dataset, { focus: opts.focus, years: opts.years, chartMetric: metric, name, followUps: false, ask });
@@ -315,10 +315,10 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
   }
 
   /** Personsiden (katalog 16) med personfokus (standard overblik) og evt. spørgsmålet fra /p/-linket. */
-  async function renderPersonPage(req: Request, res: Response, html: string, lassoId: string, focus: PersonFocus = "overblik", question?: string) {
+  async function renderPersonPage(req: Request, res: Response, html: string, lassoId: string, focus: PersonFocus = "overblik", question?: string, topic?: string) {
     // Spørgsmålet læses uden personens navn (som i chatten); navnet hentes først (samme opslag som hovedet).
     const official = question ? await provider.person(lassoId).then((x) => x.name).catch(() => undefined) : undefined;
-    const ask = question ? parseAsk(question, "person", { name: official }) : undefined;
+    const ask = question ? parseAsk(question, "person", { name: official, topic }) : undefined;
     const dataset = await resolveSpec(composePersonProbe(lassoId, focus, ask), provider);
     const person = dataset.persons[lassoId];
     if (!person) return failPage(res, html, 404, `Personen kunne ikke hentes: ${dataset.errors[`person:${lassoId}`] ?? "ukendt fejl"}`);
@@ -340,6 +340,7 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
       metric: check.link.metric,
       question: check.link.question,
       metrics: check.link.metrics,
+      topic: check.link.topic,
     });
   });
 
@@ -350,7 +351,7 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
       const f = linkFailure(check.reason, ASK_AGAIN("personen"));
       return failPage(res, html, f.status, f.message);
     }
-    await renderPersonPage(req, res, html, check.lassoId, check.focus, check.question);
+    await renderPersonPage(req, res, html, check.lassoId, check.focus, check.question, check.topic);
   });
 
   // Gem-laget: én side pr. entitet (virksomhed CVR-1-…, person CVR-3-/CVR-4-…), fra gemte sider og send-til-Lasso.

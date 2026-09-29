@@ -82,7 +82,10 @@ export interface CaseResult {
 
 /** Bedøm én side (liste af komponenter) mod forventningen. */
 export function scoreComponents(c: EvalCase, level: "side" | "plan", components: readonly { type: ComponentType }[]): CaseResult {
-  const lead = leadOf(components);
+  // Forventes et strukturelt element (fx LassoPersonStats under personhovedet) som svar, må det stå
+  // blandt de første fire; ellers gælder det første ikke-strukturelle element.
+  const structuralWanted = ["LassoCompanyHead", "LassoPersonHead", "LassoKeyFigureCards", "LassoPersonStats"].includes(c.expected.lead);
+  const lead = structuralWanted ? components.slice(0, 4).find((x) => x.type === c.expected.lead) ?? leadOf(components) : leadOf(components);
   const hit = !!lead && lead.type === c.expected.lead && propsMatch(lead as Record<string, unknown>, c.expected.leadProps);
   const types = new Set(components.map((x) => x.type));
   return {

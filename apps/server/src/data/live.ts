@@ -87,6 +87,9 @@ export const CREDIT_BUDGET_MS = 12_000;
  */
 export const OBSERVATIONS_BUDGET_MS = 14_000;
 
+/** Katalog 21, én virksomhed: højst så mange sider (á 100) af delta-listen læses til fokus historik. */
+export const COMPANY_FEED_PAGES = 5;
+
 /** Venter højst `ms` på et løfte; derefter undefined (løftet kører videre og fylder klientens cache). */
 async function withinBudget<T>(p: Promise<T | undefined>, ms: number): Promise<T | undefined> {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -669,7 +672,30 @@ export class LiveProvider implements DataProvider {
    * overvågede. Findes ingen overvågningsliste, er det en tom tilstand med forklaring, ikke en fejl.
    */
   async changeFeed(opts: ChangeFeedOptions): Promise<ChangeFeedVM> {
+    if (opts.companies?.length) return this.companyChanges(opts);
     return this.monitoredChanges(opts, 90);
+  }
+
+  /**
+   * Katalog 21 for ÉN virksomhed (fokus historik, B4): samme delta-liste som overvågningen, filtreret til
+   * `companies` uden overvågningsjob. Delta-listen dækker alle ændrede virksomheder i perioden, så højst
+   * COMPANY_FEED_PAGES sider læses (fokus-siden må ikke vente på 20 sider); en ændring længere nede i
+   * listen kommer derfor ikke med. Et opslag pr. virksomhed ville kræve et endpoint, vi ikke kender endnu.
+   */
+  private async companyChanges(opts: ChangeFeedOptions): Promise<ChangeFeedVM> {
+    const days = Math.max(1, Math.min(90, opts.days));
+    const now = new Date();
+    const since = new Date(now.getTime() - days * 86_400_000).toISOString();
+    const results: unknown[] = [];
+    let cToken: string | undefined;
+    for (let page = 0; page < COMPANY_FEED_PAGES; page++) {
+      const raw = (await this.client.companyUpdates({ since, pageSize: 100, cToken })) as { results?: unknown[]; continuationToken?: string; hasNextPage?: boolean };
+      results.push(...(raw.results ?? []));
+      cToken = raw.continuationToken;
+      if (!raw.hasNextPage || !cToken) break;
+    }
+    const feed = adaptChangeFeed(results, { days, types: opts.types, monitored: new Set(opts.companies), now });
+    return feed.entries.length ? feed : { ...feed, emptyReason: `Ingen ændringer i virksomheden de seneste ${days} dage.` };
   }
 
   /** Fælles for ændringsfeedet (maks 90 dage) og heatmappet (13.11, op til 24 måneder). */

@@ -953,8 +953,8 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     type: "LassoChangeFeed",
     title: "Ændringsfeed, overvågede virksomheder",
     description:
-      "Brug til: hvad der er sket i de virksomheder, brugeren overvåger – ændringer på tværs af en overvågningsliste grupperet pr. dag med filter på type (regnskab, ledelse, ejerskab, status, stamdata; Kredit-typen udgår) – 'hvad er der sket i mine kunder', 'ændringer i min overvågning', 'nyt i listen Kunder'. Brug ikke når: det gælder én virksomheds egen historik (LassoTimeline) eller nyheder i medierne (LassoNews). Kræver: list? (listens navn, fx 'Kunder'), days? (standard 7, 1–90), types? (delmængde af ændringstyper); ingen ændringer i perioden giver tom tilstand, og uden overvågningsliste forklarer komponenten hvorfor. Dækkes ikke af show_company. Eksempel: 'Hvad er der sket i mine overvågede kunder den seneste uge?' → render_view med LassoChangeFeed { list: 'Kunder', days: 7 }.",
-    props: `list?, days? (1–90, standard 7), types? (delmængde af ${CHANGE_TYPES.join(" | ")}), title?`,
+      "Brug til: hvad der er sket i de virksomheder, brugeren overvåger – ændringer på tværs af en overvågningsliste grupperet pr. dag med filter på type (regnskab, ledelse, ejerskab, status, stamdata; Kredit-typen udgår) – 'hvad er der sket i mine kunder', 'ændringer i min overvågning', 'nyt i listen Kunder'. Med company: de seneste ændringer i ÉN virksomhed (standard 30 dage) – 'hvad er ændret i X de sidste 30 dage', 'seneste ændringer i X'; show_company focus historik viser den selv, når der er ændringer og plads. Brug ikke når: det gælder én virksomheds hele historik over år (LassoTimeline) eller nyheder i medierne (LassoNews). Kræver: list? (listens navn, fx 'Kunder') ELLER company?, days? (1–90; standard 7 for en liste, 30 for én virksomhed), types? (delmængde af ændringstyper); ingen ændringer i perioden giver tom tilstand, og uden overvågningsliste forklarer komponenten hvorfor. Eksempel: 'Hvad er der sket i mine overvågede kunder den seneste uge?' → render_view med LassoChangeFeed { list: 'Kunder', days: 7 }. / 'Hvad er ændret i X de sidste 30 dage?' → show_company med spørgsmålet.",
+    props: `list? ELLER company?, days? (1–90, standard 7 for en liste og 30 for én virksomhed), types? (delmængde af ${CHANGE_TYPES.join(" | ")}), title?`,
     register: {
       formaal: "Ændringer i overvågede virksomheder de seneste dage.",
       bedstTil: ["hvad er ændret i mine kunder", "ændringer i overvågningslisten"],
@@ -962,7 +962,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["changeFeeds"],
       live: "naar-data",
       liveNote: "Der overvåges ingen virksomheder endnu.",
-      veje: ["render_view"],
+      veje: ["focus", "ask", "render_view"],
       bredde: { profil: "bred", drivere: { longestLabel: 40 } },
     },
   },

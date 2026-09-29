@@ -87,7 +87,7 @@ export interface DataProvider {
   personSearch(query: string, limit: number): Promise<PersonSearchResultVM>;
   /** Katalog 28.2/28.6/28.8: fusioner/spaltninger, Statstidende-bekendtgørelser og regnskabspublicering. Live ubekræftet. */
   companyEvents(lassoId: string): Promise<CompanyEventsVM>;
-  /** Katalog 21: ændringer i de overvågede virksomheder de seneste `days` dage. Live-endpoint ubekræftet. */
+  /** Katalog 21: ændringer i de overvågede virksomheder (eller i `companies`) de seneste `days` dage. Live-endpoint ubekræftet. */
   changeFeed(opts: ChangeFeedOptions): Promise<ChangeFeedVM>;
   /** Katalog 18.2: scorehistorik (én hentning = ét punkt). Ingen live datakilde endnu; tom med årsag. */
   scoreHistory(lassoId: string): Promise<ScoreHistoryVM>;
@@ -106,8 +106,10 @@ export interface ActivityHeatmapOptions {
 }
 
 export interface ChangeFeedOptions {
-  /** Overvågningslistens navn; udeladt = alle overvågede. */
+  /** Overvågningslistens navn; udeladt = alle overvågede. Ignoreres, når `companies` er sat. */
   list?: string;
+  /** Kun disse virksomheder (Lasso-ID'er), uden overvågningsliste: ændringsfeedet for én virksomhed (fokus historik). */
+  companies?: readonly string[];
   days: number;
   types?: readonly ChangeType[];
 }

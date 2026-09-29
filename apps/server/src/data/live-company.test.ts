@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { composeProbe } from "@lasso/spec";
 import { loadConfig } from "../config.js";
 import { LassoApiError, type LassoClient } from "../lasso/client.js";
-import { CONTACT_BUDGET_MS, LiveProvider, OBSERVATIONS_BUDGET_MS } from "./live.js";
+import { COMPANY_FEED_PAGES, CONTACT_BUDGET_MS, LiveProvider, OBSERVATIONS_BUDGET_MS } from "./live.js";
 import { resolveSpec } from "./resolve.js";
 
 /** Falsk klient, der logger kald og kan gøre kontaktendpoints langsomme. */
@@ -187,4 +187,34 @@ test("observations(): related-entiteter (personer OG selskaber) navngives case-i
   assert.equal(byId.get("CVR-1-24257630")!.name, "Et Konkursramt ApS");
   // company() slås op med den kanoniske (store bogstaver) form, ikke det rå ID fra relatedObservations.
   assert.deepEqual(calls.sort(), ["CVR-1-24257630", "CVR-3-4000002550"]);
+});
+
+test("B4: changeFeed for én virksomhed læser delta-listen uden overvågningsjob, højst COMPANY_FEED_PAGES sider, kun virksomheden", async () => {
+  const calls: string[] = [];
+  const now = new Date().toISOString();
+  const client = {
+    async monitoringJobs() {
+      calls.push("jobs");
+      return [];
+    },
+    async companyUpdates(p: { cToken?: string }) {
+      calls.push(`updates:${p.cToken ?? ""}`);
+      const page = Number(p.cToken ?? 0);
+      return {
+        results: [
+          { lassoId: "CVR-1-34580820", name: "Lasso X A/S", changes: [{ type: "ledelse", description: `Ny direktør (side ${page})`, date: now }] },
+          { lassoId: "CVR-1-11111111", name: "Anden A/S", changes: [{ type: "status", date: now }] },
+        ],
+        continuationToken: String(page + 1),
+        hasNextPage: true,
+      };
+    },
+  } as unknown as LassoClient;
+  const feed = await new LiveProvider(client, loadConfig({})).changeFeed({ companies: ["CVR-1-34580820"], days: 30 });
+  assert.ok(!calls.includes("jobs"), "intet overvågningsjob");
+  assert.equal(calls.filter((c) => c.startsWith("updates")).length, COMPANY_FEED_PAGES);
+  assert.equal(feed.entries.length, COMPANY_FEED_PAGES);
+  assert.ok(feed.entries.every((e) => e.lassoId === "CVR-1-34580820"));
+  assert.equal(feed.listName, undefined);
+  assert.equal(feed.days, 30);
 });

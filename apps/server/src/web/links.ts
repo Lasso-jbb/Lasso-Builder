@@ -18,27 +18,41 @@ export interface CompanyLink {
   question?: string;
   /** Nøgletal, modellen genkendte i spørgsmålet (qm=, kun med q): samme spørgsmålsprofil på siden. */
   metrics?: Metric[];
+  /** Emnet, den kaldende AI aflæste (t=, kun med q): samme spørgsmålsprofil som i chatten. */
+  topic?: string;
 }
 
 /** Et spørgsmål i et link er 1–300 tegn (som show_company/show_person's question). */
 export const LINK_QUESTION_MAX = 300;
+/** Et emne-hint i et link er 1–40 tegn (som show_company/show_person's topic). */
+export const LINK_TOPIC_MAX = 40;
+
+const cleanTopic = (t?: string) => t?.trim().slice(0, LINK_TOPIC_MAX) || undefined;
 
 /**
  * Spørgsmålet i den signerede payload. Uden spørgsmål er payloaden præcis som før, så ældre links
  * (uden q) stadig verificeres. URI-kodet, så punktummer i spørgsmålet ikke kan flytte felterne.
  */
-const askPayload = (question?: string, metrics?: readonly Metric[]) =>
-  question ? `.q=${encodeURIComponent(question)}${metrics?.length ? `.qm=${metrics.join(",")}` : ""}` : "";
+const askPayload = (question?: string, metrics?: readonly Metric[], topic?: string) =>
+  question ? `.q=${encodeURIComponent(question)}${metrics?.length ? `.qm=${metrics.join(",")}` : ""}${topic ? `.t=${encodeURIComponent(topic)}` : ""}` : "";
 
 /** q og qm fra en adresse: tomt uden q; null, når de er ugyldige (for langt, tomt, ukendt nøgletal). */
-function readQuestion(query: Record<string, unknown>): { question?: string; metrics?: Metric[] } | null {
-  if (query.q === undefined) return query.qm === undefined ? {} : null;
+function readQuestion(query: Record<string, unknown>): { question?: string; metrics?: Metric[]; topic?: string } | null {
+  if (query.q === undefined) return query.qm === undefined && query.t === undefined ? {} : null;
   const question = String(query.q);
   if (!question.trim() || question.length > LINK_QUESTION_MAX) return null;
-  if (query.qm === undefined) return { question };
-  const metrics = String(query.qm).split(",");
-  if (metrics.length > 5 || metrics.some((m) => !(METRICS as readonly string[]).includes(m))) return null;
-  return { question, metrics: metrics as Metric[] };
+  const out: { question: string; metrics?: Metric[]; topic?: string } = { question };
+  if (query.qm !== undefined) {
+    const metrics = String(query.qm).split(",");
+    if (metrics.length > 5 || metrics.some((m) => !(METRICS as readonly string[]).includes(m))) return null;
+    out.metrics = metrics as Metric[];
+  }
+  if (query.t !== undefined) {
+    const topic = String(query.t);
+    if (!topic.trim() || topic.length > LINK_TOPIC_MAX) return null;
+    out.topic = topic;
+  }
+  return out;
 }
 
 /** Hemmeligheden bag alle signaturer (links og portal-sessioner). Tom lokalt uden nøgler. */
@@ -54,17 +68,18 @@ function secret(config: Config): string {
 }
 
 const payload = (l: CompanyLink, exp: number) =>
-  `k1.${l.cvr}.${l.metric}.${l.years}.${exp}${l.focus && l.focus !== "overblik" ? `.${l.focus}` : ""}${askPayload(l.question, l.metrics)}`;
+  `k1.${l.cvr}.${l.metric}.${l.years}.${exp}${l.focus && l.focus !== "overblik" ? `.${l.focus}` : ""}${askPayload(l.question, l.metrics, l.topic)}`;
 const sign = (key: string, text: string) => createHmac("sha256", key).update(text).digest("base64url").slice(0, 22);
 
 export function companyLink(config: Config, input: CompanyLink, now = Date.now()): string {
   const exp = Math.floor(now / 1000) + config.LINK_TTL_DAYS * 86_400;
   const question = input.question?.trim().slice(0, LINK_QUESTION_MAX) || undefined;
-  const link: CompanyLink = { ...input, question, metrics: question && input.metrics?.length ? input.metrics.slice(0, 5) : undefined };
+  const link: CompanyLink = { ...input, question, metrics: question && input.metrics?.length ? input.metrics.slice(0, 5) : undefined, topic: question ? cleanTopic(input.topic) : undefined };
   const query = new URLSearchParams({ m: link.metric, y: String(link.years), e: exp.toString(36) });
   if (link.focus && link.focus !== "overblik") query.set("f", link.focus);
   if (link.question) query.set("q", link.question);
   if (link.metrics?.length) query.set("qm", link.metrics.join(","));
+  if (link.topic) query.set("t", link.topic);
   const key = secret(config);
   if (key) query.set("s", sign(key, payload(link, exp)));
   return `${config.publicBaseUrl}/k/${link.cvr}?${query}`;
@@ -99,12 +114,12 @@ export function verifyCompanyLink(config: Config, cvr: string, query: Record<str
  * f = personfokus (fx "risiko"), udeladt for overblik; q = brugerens spørgsmål. Begge indgår i
  * signaturen, og links uden f og q fra før personfokus og spørgsmål har samme signatur som nu.
  */
-const personPayload = (lassoId: string, exp: number, focus?: PersonFocus, question?: string) =>
-  `p1.${lassoId}.${exp}${focus && focus !== "overblik" ? `.${focus}` : ""}${askPayload(question)}`;
+const personPayload = (lassoId: string, exp: number, focus?: PersonFocus, question?: string, topic?: string) =>
+  `p1.${lassoId}.${exp}${focus && focus !== "overblik" ? `.${focus}` : ""}${askPayload(question, undefined, topic)}`;
 
 export function personLink(config: Config, lassoId: string, focus?: PersonFocus, now?: number): string;
-export function personLink(config: Config, lassoId: string, focus: PersonFocus | undefined, question: string | undefined, now?: number): string;
-export function personLink(config: Config, lassoId: string, focus?: PersonFocus, questionOrNow?: string | number, later?: number): string {
+export function personLink(config: Config, lassoId: string, focus: PersonFocus | undefined, question: string | undefined, now?: number, topic?: string): string;
+export function personLink(config: Config, lassoId: string, focus?: PersonFocus, questionOrNow?: string | number, later?: number, topicHint?: string): string {
   // Ældre kald giver tidspunktet som fjerde parameter.
   const now = typeof questionOrNow === "number" ? questionOrNow : (later ?? Date.now());
   const question = typeof questionOrNow === "string" ? questionOrNow.trim().slice(0, LINK_QUESTION_MAX) || undefined : undefined;
@@ -112,13 +127,15 @@ export function personLink(config: Config, lassoId: string, focus?: PersonFocus,
   const f = focus && focus !== "overblik" ? focus : undefined;
   const query = new URLSearchParams({ e: exp.toString(36) });
   if (f) query.set("f", f);
+  const topic = question ? cleanTopic(topicHint) : undefined;
   if (question) query.set("q", question);
+  if (topic) query.set("t", topic);
   const key = secret(config);
-  if (key) query.set("s", sign(key, personPayload(lassoId, exp, f, question)));
+  if (key) query.set("s", sign(key, personPayload(lassoId, exp, f, question, topic)));
   return `${config.publicBaseUrl}/p/${encodeURIComponent(lassoId)}?${query}`;
 }
 
-export type PersonLinkCheck = { ok: true; lassoId: string; focus?: PersonFocus; question?: string } | { ok: false; reason: "invalid" | "expired" };
+export type PersonLinkCheck = { ok: true; lassoId: string; focus?: PersonFocus; question?: string; topic?: string } | { ok: false; reason: "invalid" | "expired" };
 
 export function verifyPersonLink(config: Config, lassoId: string, query: Record<string, unknown>, now = Date.now()): PersonLinkCheck {
   const exp = parseInt(String(query.e ?? ""), 36);
@@ -130,12 +147,12 @@ export function verifyPersonLink(config: Config, lassoId: string, query: Record<
   if (!ask || ask.metrics) return { ok: false, reason: "invalid" };
   const key = secret(config);
   if (key) {
-    const expected = Buffer.from(sign(key, personPayload(lassoId, exp, focus, ask.question)));
+    const expected = Buffer.from(sign(key, personPayload(lassoId, exp, focus, ask.question, ask.topic)));
     const given = Buffer.from(String(query.s ?? ""));
     if (given.length !== expected.length || !timingSafeEqual(given, expected)) return { ok: false, reason: "invalid" };
   }
   if (exp * 1000 < now) return { ok: false, reason: "expired" };
-  return { ok: true, lassoId, ...(focus ? { focus } : {}), ...(ask.question ? { question: ask.question } : {}) };
+  return { ok: true, lassoId, ...(focus ? { focus } : {}), ...(ask.question ? { question: ask.question } : {}), ...(ask.topic ? { topic: ask.topic } : {}) };
 }
 
 /* ---------------------------------------------------------------------------------------

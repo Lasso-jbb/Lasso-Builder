@@ -104,9 +104,9 @@ test("columnBands: et lavere kolonnenummer starter et nyt bånd, og bredderne gi
   assert.deepEqual(
     bands.map((b) => (b.kind === "full" ? b.item.c.type : b.columns.map((col) => col.map((x) => x.c.type).join("+")).join(" | "))),
     // Overblikket: roller | stamoplysninger, derefter de halve to og to efter vægt (de mest lige bånd).
-    ["LassoPersonHead", "LassoPersonRoles | LassoPersonFacts", "LassoPersonNetwork | LassoOwnershipDiagram", "LassoPersonRisk | LassoTimeline"],
+    ["LassoPersonHead", "LassoPersonStats", "LassoPersonRoles | LassoPersonFacts", "LassoPersonNetwork | LassoOwnershipDiagram", "LassoPersonRisk | LassoTimeline"],
   );
-  const [, rolesBand, netBand] = bands;
+  const [, , rolesBand, netBand] = bands; // B4: persontallene står i eget fuldbånd under hovedet
   assert.equal(rolesBand?.kind === "columns" && bandTemplate(rolesBand.columns), "minmax(0, 9fr) minmax(0, 3fr)");
   assert.equal(netBand?.kind === "columns" && bandTemplate(netBand.columns), undefined);
   // Virksomhedssidens kolonner (stigende kolonnenumre uden bredder) er stadig ét bånd.

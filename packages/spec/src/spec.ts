@@ -530,6 +530,7 @@ export const financialStatementsSchema = z.object({
   company: companyRef,
   statement: z.enum(["income", "balance", "cashflow"]).optional().describe("Opgørelsen, der vises først: 'income' (standard), 'balance' eller 'cashflow'."),
   years: z.number().int().min(2).max(5).default(2).describe("År side om side i resultatopgørelsen på desktop, standard 2 + ændring (19.1). Tablet viser 3, mobil ét år + ændring."),
+  year: z.number().int().min(1990).max(2100).optional().describe("Regnskabsåret, periodevælgeren starter på (fx spurgt 'regnskabet for 2023'). Findes året ikke, vises seneste år. Udeladt: seneste år."),
   title: z.string().max(80).optional(),
 }).describe("Fuldt regnskab med værktøjslinje (selskab/koncern, periode, enhed, revisorpåtegning, Hent PDF); desktop viser resultat, balance og pengestrøm samlet, mobil skifter med segment.");
 
@@ -712,12 +713,17 @@ export const personFactsSchema = z
   })
   .describe("Stamoplysninger om personen som nøgle-værdi (¼): bopæl (postnummer og by, aldrig gade), kommune, enhedsnummer, roller, ejerskaber, første registrering og seneste ændring.");
 
-/** Katalog 21: ændringsfeed på tværs af de overvågede virksomheder. Live-endpoint ubekræftet (docs/lasso-endpoints.md). */
+/**
+ * Katalog 21: ændringsfeed på tværs af de overvågede virksomheder, eller for ÉN virksomhed (company; fokus
+ * historik og "hvad er ændret i X de sidste 30 dage"). Live-endpoint ubekræftet (docs/lasso-endpoints.md).
+ * `days` er valgfri, så standarden kan afhænge af formen: changeFeedDays (7 for en liste, 30 for én virksomhed).
+ */
 export const changeFeedSchema = z
   .object({
     type: z.literal("LassoChangeFeed"),
     list: z.string().max(80).optional().describe("Navnet på overvågningslisten, fx 'Kunder'. Udeladt = alle overvågede virksomheder."),
-    days: z.number().int().min(1).max(90).default(7).describe("Antal dage tilbage, standard 7 (1–90)."),
+    company: companyRef.optional().describe("Kun ændringerne i denne ene virksomhed (Lasso-ID eller CVR-nummer); list udelades da."),
+    days: z.number().int().min(1).max(90).optional().describe("Antal dage tilbage (1–90). Standard 7 for en overvågningsliste og 30 for én virksomhed (company)."),
     types: z.array(z.enum(CHANGE_TYPES)).min(1).optional().describe("Delmængde af ændringstyper; udeladt = alle."),
     title: z.string().max(80).optional(),
   })

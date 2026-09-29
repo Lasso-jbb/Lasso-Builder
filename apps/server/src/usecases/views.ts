@@ -130,6 +130,8 @@ export interface ShowCompanyInput {
   question?: string;
   /** Nøgletal, modellen har genkendt i spørgsmålet (lægges forrest i spørgsmålsprofilen). */
   metrics?: Metric[];
+  /** Emnet, den kaldende AI har aflæst (B1-ordbogen); kanonisk værdi eller alias. */
+  topic?: string;
   /** "Vis alt om X" (brugervalg): alle elementer i fuld form, også ud over højdebudgettet (23.3). */
   show_all?: boolean;
 }
@@ -173,7 +175,7 @@ export async function showCompany(ctx: UseCaseCtx, input: ShowCompanyInput): Pro
   // CVR-nummer hentes navnet først (samme cachede opslag som hovedet), som på den delte side /k/.
   const question = sections?.length ? undefined : input.question?.trim() || undefined;
   if (question && !official) official = await provider.company(lassoId).then((c) => c.name).catch(() => undefined);
-  const ask = question ? parseAsk(question, "company", { metrics: input.metrics, name: companyNameHints(official) }) : undefined;
+  const ask = question ? parseAsk(question, "company", { metrics: input.metrics, name: companyNameHints(official), topic: input.topic }) : undefined;
   // Et generelt spørgsmål uden focus giver fokus-siden for spørgsmålets fokus ("hvordan går det" → oekonomi).
   const focus = input.focus ?? (ask?.generic ? askFocus(ask) : undefined);
   const dataset: Dataset = await resolveSpec(
@@ -197,7 +199,7 @@ export async function showCompany(ctx: UseCaseCtx, input: ShowCompanyInput): Pro
         metric: chart_metric ?? mainMetric(dataset.financials[lassoId]?.years ?? []),
         years: years ?? (focus === "oekonomi" ? 10 : 5),
         focus: sections?.length ? undefined : focus,
-        ...(ask ? { question: ask.question, ...(input.metrics?.length ? { metrics: input.metrics } : {}) } : {}),
+        ...(ask ? { question: ask.question, ...(input.metrics?.length ? { metrics: input.metrics } : {}), ...(input.topic ? { topic: input.topic } : {}) } : {}),
       })
     : undefined;
   return { spec, dataset, ...(note ? { note } : {}), lassoId, ...(link ? { link } : {}), ...(ask && !ask.generic ? { ask } : {}) };
@@ -221,6 +223,8 @@ export interface ShowPersonInput {
   focus?: PersonFocus;
   /** Brugerens spørgsmål ordret (højst 300 tegn): serveren vælger elementer og data efter det. */
   question?: string;
+  /** Emnet, den kaldende AI har aflæst (B1-ordbogen). */
+  topic?: string;
   /** "Vis alt om X" (brugervalg): alle elementer i fuld form, også ud over højdebudgettet. */
   show_all?: boolean;
 }
@@ -249,7 +253,7 @@ export async function showPerson(ctx: UseCaseCtx, input: ShowPersonInput): Promi
   // Spørgsmålet læses uden personens navn; ved et ID hentes navnet først (samme opslag som hovedet).
   const question = input.question?.trim() || undefined;
   if (question && !official) official = await provider.person(lassoId).then((x) => x.name).catch(() => undefined);
-  const ask = question ? parseAsk(question, "person", { name: official }) : undefined;
+  const ask = question ? parseAsk(question, "person", { name: official, topic: input.topic }) : undefined;
   const focus = input.focus ?? (ask?.generic ? askPersonFocus(ask) : undefined) ?? "overblik";
   // Kun det, fokus (eller spørgsmålet) viser, hentes (fx nyheder kun på historik, ejerdiagrammet kun på overblik og ejerskab).
   const dataset = await resolveSpec(composePersonProbe(lassoId, focus, ask), provider, extrasOf(ctx));
@@ -257,7 +261,7 @@ export async function showPerson(ctx: UseCaseCtx, input: ShowPersonInput): Promi
   if (!p) return fail(404, `Kunne ikke hente personen ${lassoId}: ${dataset.errors[`person:${lassoId}`] ?? "ukendt fejl"}.`);
   const spec = composePerson(lassoId, dataset, { focus, name: p.name, ask, ...(input.show_all ? { showAll: true } : {}) });
   // Linket åbner samme fokus og samme svar som i chatten.
-  return { spec, dataset, ...(note ? { note } : {}), lassoId, link: personLink(config, lassoId, focus, ask?.question), ...(ask && !ask.generic ? { ask } : {}) };
+  return { spec, dataset, ...(note ? { note } : {}), lassoId, link: personLink(config, lassoId, focus, ask?.question, undefined, input.topic), ...(ask && !ask.generic ? { ask } : {}) };
 }
 
 /* --- render_view -------------------------------------------------------------------------- */

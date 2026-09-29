@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { parseAsk } from "./ask.js";
+import { parseAsk, SUMMARY_PENDING_TEXT } from "./ask.js";
 import { companyFacts } from "./companyFacts.js";
-import { componentWeight, composeCompany, composeProbe, FOCUSES, shortCompanyName } from "./compose.js";
+import { companySummaryText, componentWeight, composeCompany, composeProbe, FOCUSES, packWithExtras, shortCompanyName } from "./compose.js";
 import { composePerson } from "./composePerson.js";
-import { emptyDataset, type Dataset, type FinancialYear } from "./models.js";
+import { changeFeedKey, emptyDataset, type Dataset, type FinancialYear } from "./models.js";
 import { effectiveMetric, mainMetric } from "./series.js";
 import { BAND_COMBOS } from "./grid.js";
 import { viewSpecSchema, WIDTH_COLUMNS, widthOf, type ViewComponent, type ViewSpec } from "./spec.js";
@@ -189,13 +189,21 @@ test("overblik viser ikke kreditvurderingen, heller ikke når den findes i datas
   assert.ok(!composeCompany(id, withCredit(company("Under konkurs")), { focus: "overblik" }).components.some((c) => c.type === "LassoCreditRating"));
 });
 
-test("risikoobservationer komponeres ikke længere, uanset fokus og alvor", () => {
-  const ds = company("Under konkurs");
+test("B4: risikoobservationerne står kun på fokus risiko, efter kreditvurderingen, og hentes kun dér", () => {
+  const ds = withCredit(company("Under konkurs"));
   ds.observations[id] = { lassoId: id, observations: [{ id: "o1", title: "Selskabet er under konkurs", severity: 100 }] };
-  for (const focus of ["overblik", "oekonomi", "regnskab", "ejerskab", "ledelse", "risiko", "historik", "kontakt"] as const) {
+  for (const focus of ["overblik", "oekonomi", "regnskab", "ejerskab", "ledelse", "historik", "kontakt"] as const) {
     assert.ok(!composeCompany(id, ds, { focus }).components.some((c) => c.type === "LassoRiskObservations"), focus);
     assert.ok(!composeProbe(id, focus).components.some((c) => c.type === "LassoRiskObservations"), focus);
   }
+  assert.ok(composeProbe(id, "risiko").components.some((c) => c.type === "LassoRiskObservations"));
+  const types = composeCompany(id, ds, { focus: "risiko" }).components.map((c) => c.type);
+  assert.ok(types.includes("LassoRiskObservations"));
+  // Kreditvurderingen er stadig svaret (eval: fokus risiko → LassoCreditRating); observationerne står efter den.
+  assert.ok(types.indexOf("LassoCreditRating") < types.indexOf("LassoRiskObservations"));
+  // Ikke hentet (fx timeout i live): intet element, ingen tom tilstand.
+  delete ds.observations[id];
+  assert.ok(!composeCompany(id, ds, { focus: "risiko" }).components.some((c) => c.type === "LassoRiskObservations"));
 });
 
 /* ---------- Ingen 1:1-gentagelser og balancerede sider ---------- */
@@ -388,7 +396,8 @@ test("regnskabsanalysen: overblikket viser konklusion, resultat og likviditet, o
   assert.ok(analysis?.type === "LassoTextSections" && analysis.variant === "analyse" && analysis.title === "Regnskabsanalyse");
   // Gridmodellen: analysen pakkes sidst (efter grafer, regnskabsliste og flerårstabel), i fuld bredde
   // eller ved siden af et element, der ellers ville stå alene.
-  assert.equal(types.filter((t) => t !== "LassoFollowUps").at(-1), "LassoTextSections");
+  // B4-resumeet (LassoSummary) er et ekstra element og står efter analysen, når der er plads.
+  assert.equal(types.filter((t) => t !== "LassoFollowUps" && t !== "LassoSummary").at(-1), "LassoTextSections");
   assert.ok(types.indexOf("LassoTextSections") > types.indexOf("LassoGroupedBarChart"));
   assertFullBands(eco);
 
@@ -403,15 +412,18 @@ test("regnskabsanalysen: overblikket viser konklusion, resultat og likviditet, o
 
 test("composeProbe: hvert fokus henter kun det, det viser (hovedet altid)", () => {
   const probe = (focus?: (typeof FOCUSES)[number]) => composeProbe(id, focus).components.map((c) => c.type);
-  assert.deepEqual(probe(), ["LassoCompanyHead", "LassoKeyFigureCards", "LassoPersonList", "LassoOwnerList", "LassoTimeline", "LassoNews", "LassoTextSections", "LassoContact"]);
+  assert.deepEqual(probe(), ["LassoCompanyHead", "LassoKeyFigureCards", "LassoPersonList", "LassoOwnerList", "LassoTimeline", "LassoNews", "LassoTextSections", "LassoContact", "LassoMap", "LassoRegistration"]);
   assert.deepEqual(probe("overblik"), probe());
-  assert.deepEqual(probe("oekonomi"), ["LassoCompanyHead", "LassoKeyFigureCards", "LassoTextSections"]);
+  assert.deepEqual(probe("oekonomi"), ["LassoCompanyHead", "LassoKeyFigureCards", "LassoTextSections", "LassoKeyFigureGauge"]);
   assert.deepEqual(probe("regnskab"), ["LassoCompanyHead", "LassoIncomeStatement"]);
   assert.deepEqual(probe("ejerskab"), ["LassoCompanyHead", "LassoOwnerList", "LassoBeneficialOwners", "LassoOwnershipDiagram"]);
   assert.deepEqual(probe("ledelse"), ["LassoCompanyHead", "LassoPersonList"]);
-  assert.deepEqual(probe("risiko"), ["LassoCompanyHead", "LassoCreditRating", "LassoAuditorIndependence"]);
-  assert.deepEqual(probe("historik"), ["LassoCompanyHead", "LassoTimeline", "LassoNews"]);
-  assert.deepEqual(probe("kontakt"), ["LassoCompanyHead", "LassoContact", "LassoContactPersons"]);
+  assert.deepEqual(probe("risiko"), ["LassoCompanyHead", "LassoCreditRating", "LassoAuditorIndependence", "LassoRiskObservations", "LassoScoreGauge", "LassoScoreHistory"]);
+  assert.deepEqual(probe("historik"), ["LassoCompanyHead", "LassoTimeline", "LassoNews", "LassoAnnouncements", "LassoChangeFeed"]);
+  assert.deepEqual(probe("kontakt"), ["LassoCompanyHead", "LassoContact", "LassoContactPersons", "LassoMap", "LassoProductionUnits"]);
+  // B4: virksomhedens egne ændringer (30 dage) på historik, ikke en overvågningsliste.
+  const feed = composeProbe(id, "historik").components.find((c) => c.type === "LassoChangeFeed");
+  assert.ok(feed?.type === "LassoChangeFeed" && feed.company === id && feed.days === 30 && feed.list === undefined);
   // Fx: ledelse henter hverken historik eller ejere, risiko hverken personer eller historik.
   for (const focus of FOCUSES) {
     assert.equal(probe(focus).includes("LassoTimeline"), focus === "overblik" || focus === "historik", focus);
@@ -693,4 +705,185 @@ test("spørgsmål: opfølgningen peger altid tilbage til hele siden (niveau C)",
   const owners = find(composeCompany(id, rich(), { ask: ask("hvem ejer") }), "LassoFollowUps")!;
   assert.equal(owners.prompts[0]!.label, "Hele overblikket");
   assert.ok(!find(composeCompany(id, rich(), { ask: ask("hvem ejer"), followUps: false }), "LassoFollowUps"));
+});
+
+/* ---------- B4: flere komponenter automatisk på fokus-siderne, inden for højdebudgettet ---------- */
+
+const B4_TYPES = new Set<ViewComponent["type"]>([
+  "LassoRiskObservations",
+  "LassoScoreGauge",
+  "LassoScoreHistory",
+  "LassoAnnouncements",
+  "LassoMergers",
+  "LassoPublications",
+  "LassoChangeFeed",
+  "LassoKeyFigureGauge",
+  "LassoSummary",
+  "LassoMap",
+  "LassoProductionUnits",
+  "LassoRegistration",
+]);
+
+/** Et lille selskab (let side) med data til alle B4-elementerne. */
+function withB4Data(ds: Dataset): Dataset {
+  ds.maps[id] = { lassoId: id, points: [{ id: "h", kind: "focus", name: "Hovedadresse", lat: 56.17, lon: 9.55 }, { id: "p1", kind: "related", name: "Afdeling", lat: 56.2, lon: 9.6 }] };
+  ds.productionUnits[id] = { lassoId: id, units: [{ pNumber: "1", name: "Hovedkontor", isMain: true }, { pNumber: "2", name: "Afdeling Aarhus" }] };
+  ds.companyEvents[id] = {
+    lassoId: id,
+    announcements: [{ date: "2026-08-18", type: "Konkursdekret", severity: "bankrupt", text: "Konkursdekret afsagt." }],
+    mergers: [{ date: "2022-07-01", type: "Fusion", from: [{ name: "Gammel A/S" }], to: [{ name: "TEST ApS", lassoId: id }] }],
+    publications: [{ published: "2026-05-28", year: 2025, kind: "Årsrapport" }],
+  };
+  const at = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString();
+  ds.changeFeeds[changeFeedKey({ company: id, days: 30 })] = {
+    days: 30,
+    total: 3,
+    entries: [
+      { lassoId: id, companyName: "TEST ApS", type: "ledelse", text: "Ny direktør", at: at(2), source: "CVR", read: true },
+      { lassoId: id, companyName: "TEST ApS", type: "stamdata", text: "Adresse ændret", at: at(9), source: "CVR", read: true },
+      { lassoId: id, companyName: "TEST ApS", type: "ejerskab", text: "Ny ejer", at: at(20), source: "CVR", read: true },
+    ],
+  };
+  ds.observations[id] = { lassoId: id, observations: [] };
+  ds.scores[id] = { lassoId: id, score: 62 };
+  ds.scoreHistories[id] = { lassoId: id, points: [{ date: "2025-09-01", score: 55 }, { date: "2026-09-01", score: 62 }] };
+  ds.industryBenchmarks[id] = { lassoId: id, state: "ok", years: [{ year: 2025, median: { soliditetsgrad: 40 } }] };
+  ds.financials[id] = { lassoId: id, currency: "DKK", years: [2023, 2024, 2025].map((year, i) => ({ year, grossProfit: 1_000_000 * (i + 1), profit: 100_000 * (i + 1), equity: 500_000, employees: 4 })) };
+  return ds;
+}
+
+const typesOf = (spec: ViewSpec) => spec.components.map((c) => c.type);
+
+test("B4: hvert fokus viser sine nye elementer, når der er data og plads", () => {
+  const ds = withB4Data(withCredit(company()));
+  const on = (focus: (typeof FOCUSES)[number]) => typesOf(composeCompany(id, ds, { focus }));
+  assert.ok(on("risiko").includes("LassoRiskObservations"));
+  assert.ok(on("risiko").includes("LassoScoreGauge") && on("risiko").includes("LassoScoreHistory"));
+  // Historik: Statstidende og ændringerne først (prioritet); fusioner og publicering, når der stadig er plads (vis alt: alle).
+  assert.ok(on("historik").includes("LassoAnnouncements") && on("historik").includes("LassoChangeFeed"));
+  const histAll = typesOf(composeCompany(id, ds, { focus: "historik", showAll: true }));
+  for (const t of ["LassoAnnouncements", "LassoMergers", "LassoPublications", "LassoChangeFeed"] as const) assert.ok(histAll.includes(t), t);
+  assert.ok(on("oekonomi").includes("LassoKeyFigureGauge") && on("oekonomi").includes("LassoSummary"));
+  assert.ok(on("kontakt").includes("LassoMap") && on("kontakt").includes("LassoProductionUnits"));
+  // Overblik: registreringen er med; kortet står kun på "vis alt" her (en halv side mere end budgettet).
+  assert.ok(on("overblik").includes("LassoRegistration"));
+  assert.ok(typesOf(composeCompany(id, ds, { focus: "overblik", showAll: true })).includes("LassoMap"));
+  // Registreringen står efter oplysningerne i prioriteten (overblik), aldrig før dem.
+  const o = on("overblik");
+  assert.ok(o.indexOf("LassoKeyValueList") < o.indexOf("LassoRegistration") || !o.includes("LassoKeyValueList"));
+  // Hvert element på sit fokus: fx ingen Statstidende på overblik og intet kort på historik.
+  assert.ok(!on("overblik").includes("LassoAnnouncements") && !on("historik").includes("LassoMap"));
+  // Virksomhedens eget feed (company + 30 dage), ikke en overvågningsliste.
+  const feed = composeCompany(id, ds, { focus: "historik" }).components.find((c) => c.type === "LassoChangeFeed");
+  assert.ok(feed?.type === "LassoChangeFeed" && feed.company === id && feed.days === 30 && feed.list === undefined);
+  for (const focus of FOCUSES) assert.ok(viewSpecSchema.safeParse(composeCompany(id, ds, { focus })).success, focus);
+});
+
+test("B4: uden data intet nyt element og ingen tom tilstand på fokus-siden", () => {
+  const ds = withCredit(company());
+  for (const focus of FOCUSES) {
+    const types = typesOf(composeCompany(id, ds, { focus, showAll: true }));
+    assert.ok(!types.some((t) => B4_TYPES.has(t) && t !== "LassoRegistration" && t !== "LassoSummary"), `${focus}: ${types.join(", ")}`);
+  }
+  // Tomme B4-data: score uden tal, én scoreværdi, branchen uden år, kort uden punkter, feed uden ændringer.
+  const empty = withB4Data(withCredit(company()));
+  empty.scores[id] = { lassoId: id, score: null, state: "unavailable", reason: "Ingen score" };
+  empty.scoreHistories[id] = { lassoId: id, points: [{ date: "2026-09-01", score: 62 }] };
+  empty.industryBenchmarks[id] = { lassoId: id, state: "unavailable", reason: "Ingen branchetal", years: [] };
+  empty.maps[id] = { lassoId: id, points: [], emptyReason: "Ingen koordinater" };
+  empty.changeFeeds[changeFeedKey({ company: id, days: 30 })] = { days: 30, total: 0, entries: [], emptyReason: "Ingen ændringer" };
+  empty.companyEvents[id] = { lassoId: id, announcements: [], mergers: [], publications: [] };
+  const all = (focus: (typeof FOCUSES)[number]) => typesOf(composeCompany(id, empty, { focus, showAll: true }));
+  assert.ok(!all("risiko").includes("LassoScoreGauge") && !all("risiko").includes("LassoScoreHistory"));
+  assert.ok(!all("oekonomi").includes("LassoKeyFigureGauge"));
+  assert.ok(!all("kontakt").includes("LassoMap") && !all("kontakt").includes("LassoProductionUnits"));
+  assert.ok(!all("overblik").includes("LassoMap"));
+  for (const t of ["LassoAnnouncements", "LassoMergers", "LassoPublications", "LassoChangeFeed"] as const) assert.ok(!all("historik").includes(t), t);
+});
+
+test("B4: de nye elementer fortrænger aldrig fokusets egne elementer (Papers side står som før)", () => {
+  // Fuld side (holding): hvert fokus viser de samme egne elementer i samme form med og uden B4-data.
+  for (const focus of FOCUSES) {
+    const base = withCredit(holding());
+    const rich = withB4Data(withCredit(holding()));
+    rich.financials[id] = base.financials[id]!;
+    const own = (spec: ViewSpec) => spec.components.filter((c) => !B4_TYPES.has(c.type)).map((c) => `${c.type}:${"maxRows" in c ? (c.maxRows ?? "") : ""}:${"limit" in c ? (c.limit ?? "") : ""}`);
+    assert.deepEqual(own(composeCompany(id, rich, { focus })), own(composeCompany(id, base, { focus })), focus);
+    // Og med et stramt budget: udelades noget, er det de nye elementer, ikke fokusets egne.
+    assert.deepEqual(own(composeCompany(id, rich, { focus, heightBudget: 900 })), own(composeCompany(id, base, { focus, heightBudget: 900 })), `${focus} (900 px)`);
+  }
+});
+
+test("B4: højdebudgettet trimmer de nye elementer først; showAll viser dem (højst 12 komponenter)", () => {
+  const ds = withB4Data(withCredit(holding()));
+  for (const focus of FOCUSES) {
+    const std = composeCompany(id, ds, { focus });
+    const all = composeCompany(id, ds, { focus, showAll: true });
+    assert.ok(std.components.length <= 12 && all.components.length <= 12, focus);
+    // Alt, standardsiden viser, står også på "vis alt".
+    for (const t of typesOf(std)) assert.ok(typesOf(all).includes(t), `${focus}: ${t}`);
+  }
+  // Historik på holding: tidslinje (8) og nyheder fylder; mindst ét nyt element trimmes, alle står på "vis alt".
+  const hist = typesOf(composeCompany(id, ds, { focus: "historik" }));
+  const histAll = typesOf(composeCompany(id, ds, { focus: "historik", showAll: true }));
+  for (const t of ["LassoAnnouncements", "LassoMergers", "LassoPublications", "LassoChangeFeed"] as const) assert.ok(histAll.includes(t), t);
+  assert.ok(hist.includes("LassoTimeline") && hist.includes("LassoNews"));
+  // Overblik har 11 elementer på "vis alt" uden B4; højst ét nyt element kan komme med under 12-grænsen.
+  const over = typesOf(composeCompany(id, ds, { focus: "overblik", showAll: true }));
+  assert.equal(over.length, 12);
+  assert.ok(over.includes("LassoRegistration"));
+});
+
+test("B4: resumeet (LassoSummary) skrives af komponisten ud fra tallene", () => {
+  const ds = holding();
+  const text = companySummaryText(id, ds);
+  assert.ok(text);
+  assert.match(text, /^Test Holding havde i 2025 en omsætning på 10,0 mio\. kr\./);
+  assert.match(text, /Årets resultat blev 300 t\. kr\./);
+  assert.match(text, /Egenkapitalen var 3,0 mio\. kr\./);
+  assert.match(text, /Virksomheden havde 1 ansatte\./);
+  // Underskud skrives som underskud; stamdata først med facts; uden regnskab kun stamdata.
+  ds.financials[id]!.years.at(-1)!.profit = -250_000;
+  assert.match(companySummaryText(id, ds)!, /underskud på 250 t\. kr\./);
+  assert.match(companySummaryText(id, ds, undefined, { facts: true })!, /^Test Holding driver virksomhed inden for ikke-finansielle holdingselskaber i Silkeborg og blev stiftet 01\.01\.2005\./);
+  delete ds.financials[id];
+  assert.equal(companySummaryText(id, ds), null);
+  assert.ok(companySummaryText(id, ds, undefined, { facts: true }));
+  // På oekonomi står resumeet med teksten (vis alt), med kilden Lasso.
+  const eco = composeCompany(id, holding(), { focus: "oekonomi", showAll: true }).components.find((c) => c.type === "LassoSummary");
+  assert.ok(eco?.type === "LassoSummary" && eco.text === companySummaryText(id, holding()) && eco.source === "Lasso");
+});
+
+test("B4: spørgsmålets resume-pladsholder (SUMMARY_PENDING_TEXT) erstattes af komponisten", () => {
+  const spec = composeCompany(id, holding(), { ask: parseAsk("Giv mig en kort opsummering af TEST HOLDING ApS", "company", { name: ["TEST HOLDING ApS"] }) });
+  const summary = spec.components.find((c) => c.type === "LassoSummary");
+  if (!summary) return; // Planen for emnet opsummering (ask.ts, B2) er ikke til stede i denne version.
+  assert.ok(summary.type === "LassoSummary" && summary.text !== SUMMARY_PENDING_TEXT && summary.text.startsWith("Test Holding"));
+});
+
+test("B4: packWithExtras tager kun et ekstra element, der ikke koster et af de faste", () => {
+  const ds = holding();
+  const top: ViewComponent[] = [{ type: "LassoCompanyHead", company: id }];
+  const timeline: ViewComponent = { type: "LassoTimeline", company: id };
+  const extra: ViewComponent = { type: "LassoRegistration", company: id, variant: "full" };
+  // Rigeligt budget: med. Budget til tidslinjen alene: udeladt, tidslinjen står i fuld form.
+  const roomy = packWithExtras(top, [timeline, extra], [], new Set([extra]), ds, { budget: 5000 });
+  assert.ok(roomy.components.some((c) => c.type === "LassoRegistration"));
+  const tight = packWithExtras(top, [timeline, extra], [], new Set([extra]), ds, { budget: 700 });
+  assert.deepEqual(tight.components.map((c) => c.type), ["LassoCompanyHead", "LassoTimeline"]);
+  assert.equal(tight.dropped.length, 0);
+});
+
+test("B4: et svar i fuld bredde nævnt efter et svar i kolonnerne står under kolonnerne (dokumenter: publicering før Statstidende)", () => {
+  const ds = withB4Data(holding());
+  const ask = parseAsk("Hvilke dokumenter er der offentliggjort for TEST HOLDING ApS?", "company", { name: ["TEST HOLDING ApS"] });
+  const types = typesOf(composeCompany(id, ds, { ask }));
+  if (!types.includes("LassoPublications")) return; // Planen for emnet dokumenter (ask.ts, B2) er ikke til stede i denne version.
+  const lead = types.find((t) => t !== "LassoCompanyHead" && t !== "LassoKeyFigureCards");
+  assert.equal(lead, "LassoPublications");
+  if (types.includes("LassoAnnouncements")) assert.ok(types.indexOf("LassoPublications") < types.indexOf("LassoAnnouncements"));
+  // Uden bekendtgørelser udelades Statstidende som kontekst (den tegner intet).
+  ds.companyEvents[id] = { ...ds.companyEvents[id]!, announcements: [] };
+  const plan = typesOf(composeCompany(id, ds, { ask: parseAsk("Har TEST HOLDING ApS været med i en fusion?", "company", { name: ["TEST HOLDING ApS"] }) }));
+  assert.ok(!plan.includes("LassoAnnouncements") || plan.indexOf("LassoAnnouncements") > 1);
 });

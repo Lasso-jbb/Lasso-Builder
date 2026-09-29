@@ -1278,7 +1278,7 @@ En test fejler, hvis filen ikke er ajour.
 - ændringer for én virksomhed (LassoTimeline)
 - overblik pr. måned (LassoHeatmap)
 
-**Veje ind.** render_view
+**Veje ind.** focus, ask (spørgsmål), render_view
 
 **Kræver data (Dataset).** `changeFeeds`
 
@@ -1286,7 +1286,7 @@ En test fejler, hvis filen ikke er ajour.
 
 **Bredde.** profil bred; std 1/1, min ½, maks 1/1; drivere: længste etiket 40 tegn
 
-**Props.** `list?, days? (1–90, standard 7), types? (delmængde af regnskab | ledelse | ejerskab | status | stamdata | kredit), title?`
+**Props.** `list? ELLER company?, days? (1–90, standard 7 for en liste og 30 for én virksomhed), types? (delmængde af regnskab | ledelse | ejerskab | status | stamdata | kredit), title?`
 
 <a id="LassoHeatmap"></a>
 ## Heatmap, aktivitet pr. måned (`LassoHeatmap`)
@@ -1407,7 +1407,7 @@ En test fejler, hvis filen ikke er ajour.
 | `LassoPersonRisk` | fleksibel | ½ / ⅓ / 1/1 | når data findes | person, ask, render_view |
 | `LassoPersonStats` | fleksibel | 1/1 / ½ / 1/1 | når data findes | render_view |
 | `LassoPersonFacts` | smal | ⅓ / ¼ / ½ | når data findes | person, ask, render_view |
-| `LassoChangeFeed` | bred | 1/1 / ½ / 1/1 | når data findes | render_view |
+| `LassoChangeFeed` | bred | 1/1 / ½ / 1/1 | når data findes | focus, ask, render_view |
 | `LassoHeatmap` | bred | ½ / ⅓ / 1/1 | når data findes | render_view |
 | `LassoSavedPages` | fleksibel | 1/1 / 1/1 / 1/1 | når data findes | saved, render_view |
 | `LassoFollowUps` | fleksibel | 1/1 / 1/1 / 1/1 | altid | person, render_view |

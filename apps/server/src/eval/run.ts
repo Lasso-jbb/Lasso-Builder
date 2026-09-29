@@ -54,6 +54,10 @@ export interface EvalReport {
   misses: Miss[];
 }
 
+/** `--no-topic`: kør uden topic-hintet (til før/efter-sammenligning af hintets virkning). */
+const NO_TOPIC = process.argv.includes("--no-topic");
+const hintTopic = (c: EvalCase): string | undefined => (NO_TOPIC ? undefined : c.hints?.topic);
+
 const QUESTIONS = new URL("../../../../packages/spec/src/eval/questions.json", import.meta.url);
 
 const stat = (results: CaseResult[]): GroupStat => {
@@ -67,6 +71,7 @@ async function sideComponents(c: EvalCase, provider: DemoProvider): Promise<{ ty
     const official = await provider.company(id).then((x) => x.name).catch(() => undefined);
     const a = parseAsk(c.question, "company", {
       metrics: c.hints?.metrics,
+      topic: hintTopic(c),
       name: official ? [official, shortCompanyName(official)] : undefined,
     });
     const focus = c.hints?.focus ?? (a.generic ? askFocus(a) : undefined);
@@ -76,7 +81,7 @@ async function sideComponents(c: EvalCase, provider: DemoProvider): Promise<{ ty
     return spec.components as never;
   }
   const official = await provider.person(id).then((x) => x.name).catch(() => undefined);
-  const a = parseAsk(c.question, "person", { name: official });
+  const a = parseAsk(c.question, "person", { name: official, topic: hintTopic(c) });
   const focus = (c.hints?.focus as never) ?? (a.generic ? askPersonFocus(a) : undefined) ?? "overblik";
   const dataset = await resolveSpec(composePersonProbe(id, focus, a), provider);
   const spec = composePerson(id, dataset, { focus, name: dataset.persons[id]?.name, ask: a, ...(c.hints?.show_all ? { showAll: true } : {}) });
@@ -86,6 +91,7 @@ async function sideComponents(c: EvalCase, provider: DemoProvider): Promise<{ ty
 function planResult(c: EvalCase, official: string | undefined): CaseResult {
   const a = parseAsk(c.question, c.kind, {
     ...(c.kind === "company" ? { metrics: c.hints?.metrics } : {}),
+    topic: hintTopic(c),
     name: c.kind === "company" ? (official ? [official, shortCompanyName(official)] : undefined) : (official as never),
   });
   if (c.expected.focus) {
@@ -150,5 +156,8 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
   const { writeFileSync } = await import("node:fs");
   const report = await runEval();
   console.log(formatReport(report));
-  writeFileSync(new URL("../../../../docs/eval-baseline.json", import.meta.url), JSON.stringify(report, null, 2) + "\n");
+  // eval-latest.json er gitignoreret; eval-baseline.json er frosset og skrives kun med --baseline.
+  const file = process.argv.includes("--baseline") ? "eval-baseline.json" : "eval-latest.json";
+  writeFileSync(new URL(`../../../../docs/${file}`, import.meta.url), JSON.stringify(report, null, 2) + "\n");
+  console.log(`\nSkrev docs/${file}`);
 }

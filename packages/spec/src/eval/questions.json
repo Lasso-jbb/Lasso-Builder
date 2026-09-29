@@ -108,7 +108,7 @@
       "entity": "CVR-1-99000001",
       "question": "Er der røde flag ved Eksempel Byg A/S?",
       "hints": {
-        "topic": "risiko"
+        "topic": "roede-flag"
       },
       "expected": {
         "lead": "LassoRiskObservations",
@@ -128,7 +128,7 @@
       "entity": "CVR-1-99000012",
       "question": "Har Eksempel Ejendomme ApS været med i en fusion eller spaltning?",
       "hints": {
-        "topic": "fusioner"
+        "topic": "fusion"
       },
       "expected": {
         "lead": "LassoMergers"
@@ -145,7 +145,7 @@
       "entity": "CVR-1-99000001",
       "question": "Hvad har Eksempel Byg A/S offentliggjort for nylig?",
       "hints": {
-        "topic": "offentliggoerelser"
+        "topic": "meddelelser"
       },
       "expected": {
         "lead": "LassoAnnouncements"
@@ -179,7 +179,7 @@
       "entity": "CVR-1-99000004",
       "question": "Hvordan klarer Eksempel Transport A/S sig i forhold til branchen?",
       "hints": {
-        "topic": "branche"
+        "topic": "branchesammenligning"
       },
       "expected": {
         "lead": "LassoKeyFigureGauge"
@@ -219,7 +219,7 @@
       "entity": "CVR-1-99000001",
       "question": "Vis hele regnskabet for Eksempel Byg A/S",
       "hints": {
-        "topic": "regnskab"
+        "topic": "heleregnskab"
       },
       "expected": {
         "lead": "LassoFinancialStatements"

@@ -229,6 +229,99 @@ function companyAnswer(spec: ViewSpec, ds: Dataset, ask: Ask): string[] {
         }
         break;
       }
+      case "observationer": {
+        const o = ds.observations[id];
+        const rows = (o?.observations ?? []).filter((x) => !x.notAvailable && x.severity > 0);
+        const sev = (v: number) => (v >= 100 ? "vigtig" : v >= 50 ? "mulig vigtig" : "info");
+        out.push(
+          sentence(`Røde flag: ${!o ? "ikke hentet" : rows.length ? `${rows.length} ${rows.length === 1 ? "observation" : "observationer"} (${list(rows.map((x) => `${x.title}, ${sev(x.severity)}`), 3)})` : "ingen observationer"}`),
+        );
+        // "Er der røde flag" skal give kreditvurderingen med (den lå før under kredit).
+        if (!has("kredit")) out.push(sentence(`Kreditvurdering: ${ds.creditRatings?.[id] ? creditRatingText(ds.creditRatings[id]!) : "ikke hentet"}`));
+        break;
+      }
+      case "fusioner": {
+        const m = ds.companyEvents[id]?.mergers ?? [];
+        out.push(sentence(`Fusioner og spaltninger: ${m.length ? list(m.map((x) => `${x.type.toLowerCase()}${x.date ? ` ${formatDate(x.date)}` : ""}: ${x.from.map((p) => p.name).join(" + ")} → ${x.to.map((p) => p.name).join(" + ")}`), 2) : "ingen registreret"}`));
+        break;
+      }
+      case "meddelelser": {
+        const a = ds.companyEvents[id]?.announcements ?? [];
+        out.push(sentence(`Statstidende: ${a.length ? `${a.length} ${a.length === 1 ? "meddelelse" : "meddelelser"} (${list(a.map((x) => `${x.date ? `${formatDate(x.date)} ` : ""}${x.type}`), 3)})` : "ingen meddelelser"}`));
+        break;
+      }
+      case "dokumenter": {
+        const pub = ds.companyEvents[id]?.publications ?? [];
+        out.push(sentence(`Offentliggjorte regnskaber: ${pub.length ? `${pub.length} (${list(pub.map((x) => `${x.kind.toLowerCase()} ${x.year ?? (x.published ? formatDate(x.published) : "")}`.trim()), 3)})` : "ingen offentliggjort"}`));
+        break;
+      }
+      case "branchesammenligning": {
+        const b = ds.industryBenchmarks[id];
+        if (!b || b.state !== "ok" || !b.years.length) {
+          out.push(sentence(`Branchesammenligning: ${(b?.reason ?? "ikke beregnet endnu").replace(/\.$/, "")}`));
+          break;
+        }
+        const by = b.years.at(-1)!;
+        const wanted = (ask.metrics.length ? ask.metrics : (["soliditetsgrad", "overskudsgrad", "likviditetsgrad"] as Metric[])).slice(0, 3);
+        const own = years.find((y) => y.year === by.year) ?? years.at(-1);
+        const bits = wanted.map((m) => {
+          const v = own?.[METRIC_FIELD[m]] as number | null | undefined;
+          return `${METRIC_LABELS[m]} ${own?.year ?? by.year}: ${formatMetricValue(m, v, own?.currency ?? f?.currency)} mod branchemedian ${formatMetricValue(m, by.median[m], own?.currency ?? f?.currency)}`;
+        });
+        out.push(sentence(`${bits.join("; ")}${b.peers ? ` (${formatNumber(b.peers)} virksomheder i branchen)` : ""}`));
+        break;
+      }
+      case "placering": {
+        const m = ds.maps[id];
+        out.push(sentence(`Placering: ${m?.points.length ? `${m.points.length} ${m.points.length === 1 ? "adresse" : "adresser"} på kortet${m.missing ? `, ${m.missing} uden koordinater` : ""}` : (m?.emptyReason ?? "ingen adresser med koordinater").replace(/\.$/, "")}`));
+        if (has("enheder")) {
+          const u = ds.productionUnits[id]?.units ?? [];
+          out.push(sentence(`Produktionsenheder: ${u.length ? `${u.length}, heraf ${u.filter((x) => x.statusKind !== "inactive").length} aktive` : "ingen ud over hovedenheden"}`));
+        }
+        break;
+      }
+      case "heleregnskab": {
+        const s = ds.financialStatements[id];
+        if (!s || hasNoStatements(s)) {
+          out.push(sentence("Hele regnskabet: intet offentliggjort regnskab"));
+          break;
+        }
+        const money = (v: number | null | undefined) => (v == null ? "—" : formatAmount(v, currencyUnit(s.currency)));
+        const inc = (ask.year !== undefined ? s.incomeStatement.find((x) => x.year === ask.year) : undefined) ?? s.incomeStatement.at(-1);
+        const bal = (inc ? s.balanceSheet.find((x) => x.year === inc.year) : undefined) ?? s.balanceSheet.at(-1);
+        const span = s.incomeStatement.length ? `${s.incomeStatement[0]!.year}–${s.incomeStatement.at(-1)!.year}` : "";
+        out.push(sentence(`Hele regnskabet ${inc?.year ?? bal?.year ?? ""}${span ? ` (regnskabsår ${span})` : ""}: ${[inc && `årets resultat ${money(inc.profit)}`, bal && `aktiver i alt ${money(bal.assetsTotal)}`, bal && `egenkapital ${money(bal.equityTotal)}`].filter(Boolean).join(", ")}`));
+        break;
+      }
+      case "registrering": {
+        const bits = [
+          co?.form,
+          co?.registeredCapital ? `selskabskapital ${formatNumber(co.registeredCapital.amount)} ${co.registeredCapital.currency ?? "DKK"}` : undefined,
+          co?.accountingClass ? `regnskabsklasse ${co.accountingClass}` : undefined,
+          co?.statutesChanged ? `vedtægter senest ændret ${formatDate(co.statutesChanged)}` : undefined,
+          co?.auditExempt ? "revision fravalgt" : undefined,
+        ].filter(Boolean);
+        out.push(sentence(`Registrering: ${bits.length ? bits.join(", ") : "ingen registreringsoplysninger"}`));
+        break;
+      }
+      case "opsummering": {
+        const y = years.at(-1);
+        const bits = [
+          co?.form,
+          co?.status,
+          co?.founded ? `stiftet ${formatDate(co.founded)}` : undefined,
+          co?.industryText,
+          co?.employees != null ? `${formatNumber(co.employees)} ansatte` : undefined,
+          y ? `${METRIC_LABELS[mainMetric(years)]} ${y.year}: ${formatMetricValue(mainMetric(years), y[METRIC_FIELD[mainMetric(years)]] as number | null | undefined, y.currency ?? f?.currency)}` : undefined,
+        ].filter(Boolean);
+        out.push(sentence(`Opsummering: ${bits.length ? bits.join(", ") : "ingen oplysninger"}`));
+        break;
+      }
+      case "aendringer": {
+        const feed = Object.entries(ds.changeFeeds).find(([k]) => k.startsWith(`company:${id}|`))?.[1];
+        out.push(sentence(`Ændringer${feed ? ` seneste ${feed.days} dage` : ""}: ${feed?.entries.length ? `${feed.total} (${list(feed.entries.map((e) => e.text), 3)})` : (feed?.emptyReason ?? "ingen registrerede ændringer").replace(/\.$/, "")}`));
+        break;
+      }
     }
   }
   return out;
@@ -287,6 +380,13 @@ function personAnswer(spec: ViewSpec, ds: Dataset, ask: Ask): string[] {
         const owned = g.edges.filter((e) => e.from === id && !e.until).map((e) => `${name(e.to)}${e.share ? ` ${formatShare(e.share)}` : ""}`);
         const below = g.edges.filter((e) => e.from !== id && !e.until).length;
         out.push(sentence(`Ejerstruktur: ${owned.length ? `ejer ${list(owned, 4)}` : "ejer ingen selskaber i CVR"}${below ? `; de ejede selskaber ejer ${below} ${below === 1 ? "selskab" : "selskaber"}` : ""}`));
+        break;
+      }
+      case "persontal": {
+        const cs = personCompanies(p);
+        const active = cs.filter((c) => c.active).length;
+        const r = personRisk(p);
+        out.push(sentence(`Roller: ${cs.length} ${cs.length === 1 ? "selskab" : "selskaber"}, heraf ${active} aktive og ${cs.length - active} ophørte; konkurser ${r.bankruptcies.length}, tvangsopløsninger ${r.dissolutions.length}`));
         break;
       }
     }

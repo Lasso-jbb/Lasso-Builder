@@ -99,3 +99,40 @@ test("et spørgsmål over 300 tegn (eller tomt) afvises; linket selv klipper det
   assert.deepEqual(verifyPersonLink(config, "CVR-3-4000000002", { ...p, q: long }, NOW), { ok: false, reason: "invalid" });
   assert.deepEqual(verifyPersonLink(config, "CVR-3-4000000002", { ...p, qm: "resultat" }, NOW), { ok: false, reason: "invalid" });
 });
+
+test("linket bærer emne-hintet (t), det er signeret, og læses til samme spørgsmålsprofil som i chatten", async () => {
+  const { parseAsk } = await import("@lasso/spec");
+  const q = "Hvordan ser de ud?";
+  const url = companyLink(config, { cvr: "34580820", metric: "omsaetning", years: 5, question: q, topic: "opsummering" }, NOW);
+  const qs = query(url);
+  assert.equal(qs.t, "opsummering");
+  const check = verifyCompanyLink(config, "34580820", qs, NOW);
+  assert.ok(check.ok);
+  if (!check.ok) return;
+  assert.equal(check.link.topic, "opsummering");
+  assert.deepEqual(parseAsk(check.link.question!, "company", { topic: check.link.topic }), parseAsk(q, "company", { topic: "opsummering" }));
+  // Signeret: fjernes, ændres eller sættes t bagefter, afvises. t uden q er ugyldigt.
+  assert.deepEqual(verifyCompanyLink(config, "34580820", { ...qs, t: "fusion" }, NOW), { ok: false, reason: "invalid" });
+  assert.deepEqual(verifyCompanyLink(config, "34580820", { ...qs, t: undefined }, NOW), { ok: false, reason: "invalid" });
+  const noQ = query(companyLink(config, { cvr: "34580820", metric: "omsaetning", years: 5 }, NOW));
+  assert.deepEqual(verifyCompanyLink(config, "34580820", { ...noQ, t: "fusion" }, NOW), { ok: false, reason: "invalid" });
+  // Uden emne: som før (ingen t, ingen topic i resultatet).
+  const plain = query(companyLink(config, { cvr: "34580820", metric: "omsaetning", years: 5, question: q }, NOW));
+  assert.equal(plain.t, undefined);
+  const plainCheck = verifyCompanyLink(config, "34580820", plain, NOW);
+  assert.ok(plainCheck.ok && !("topic" in plainCheck.link));
+  // For langt emne afvises.
+  assert.deepEqual(verifyCompanyLink(config, "34580820", { ...qs, t: "x".repeat(41) }, NOW), { ok: false, reason: "invalid" });
+});
+
+test("personlinket /p/ bærer emne-hintet (t) signeret; uden t er det som før", () => {
+  const id = "CVR-3-4000000001";
+  const url = personLink(config, id, undefined, "Hvor mange roller har hun?", NOW, "persontal");
+  const qs = query(url);
+  assert.equal(qs.t, "persontal");
+  assert.deepEqual(verifyPersonLink(config, id, qs, NOW), { ok: true, lassoId: id, question: "Hvor mange roller har hun?", topic: "persontal" });
+  assert.deepEqual(verifyPersonLink(config, id, { ...qs, t: "roller" }, NOW), { ok: false, reason: "invalid" });
+  const plain = personLink(config, id, undefined, "Hvor mange roller har hun?", NOW);
+  assert.equal(query(plain).t, undefined);
+  assert.deepEqual(verifyPersonLink(config, id, query(plain), NOW), { ok: true, lassoId: id, question: "Hvor mange roller har hun?" });
+});

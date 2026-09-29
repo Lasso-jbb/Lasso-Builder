@@ -70,3 +70,10 @@ Eval-sættets `hints.topic` normaliseres til kanoniske værdier (B3): `risiko→
 - Alle 24 "manglende"-tilfælde i eval får det forventede lead på **plan-niveau** (askPlan.lead[0]); de 16 med `dataInDemo=true` også på **side-niveau** efter B4.
 - Ingen regression: de 36 "eksisterende" holder ≥ 88,9 % på side, og ingen af de tidligere træf bliver miss.
 - Nye regler har hver mindst 3 unit-tests i `ask.test.ts` (træf, ikke-træf, forrang mod den brede regel).
+
+## 6. Afgørelser efter B2 (Fable, 29.09)
+- **Registreringens variant:** `'profile'` kun når formålet nævnes *uden* kapital-, vedtægts- eller tegningsord; ellers `'full'` (svarer til spec.ts, hvor kapital og vedtægter hører til `'full'`). Godkendt.
+- **"tegne"** hører til `registrering` sammen med tegningsreglen (ellers blev "hvem kan tegne selskabet" generelt). Godkendt.
+- **Branchesammenligning** rangerer før nøgletalssvaret, så måleren med de spurgte nøgletal er svaret. Godkendt.
+- **`branche` som emne nr. 2** ved branchesammenligning er acceptabelt (profilen som kontekst). Evt. `cleanTopics`-regel udsat.
+- **Eval-scoreren:** et strukturelt element (LassoPersonStats) må stå blandt de første fire, når det er det forventede svar (schema.ts). Eval-hints er normaliseret til kanoniske emner.

@@ -742,7 +742,7 @@ const CONTACT_PERSONS: Record<string, ContactPersonVM[]> = {
 const DEMO_LIST = "Kunder";
 function changeFeedFor(opts: ChangeFeedOptions): ChangeFeedVM {
   const days = Math.max(1, Math.min(90, opts.days));
-  if (opts.list && opts.list.trim().toLowerCase() !== DEMO_LIST.toLowerCase()) {
+  if (!opts.companies?.length && opts.list && opts.list.trim().toLowerCase() !== DEMO_LIST.toLowerCase()) {
     return { listName: opts.list, days, entries: [], total: 0, emptyReason: `Der er ingen overvågningsliste med navnet "${opts.list}" i demodata (kun "${DEMO_LIST}").` };
   }
   const at = (daysAgo: number, hhmm: string) => {
@@ -769,7 +769,28 @@ function changeFeedFor(opts: ChangeFeedOptions): ChangeFeedVM {
     E("99000010", "stamdata", "Adresse ændret fra Prøvevej 1 til Prøvevej 3, 8600 Silkeborg", 2, "10:45", true),
   ];
   const cutoff = Date.now() - days * 86_400_000;
-  const inPeriod = all.filter((e) => new Date(e.at).getTime() >= cutoff && (!opts.types || opts.types.includes(e.type)));
+  const wanted = (e: ChangeEntryVM) => new Date(e.at).getTime() >= cutoff && (!opts.types || opts.types.includes(e.type));
+  if (opts.companies?.length) {
+    // Én virksomhed (fokus historik, B4): overvågningslistens ændringer i virksomheden plus dens egne ældre
+    // ændringer (inden for 90 dage), uden liste. Kun her, så listen "Kunder" og heatmappet er uændrede.
+    const own = new Set(opts.companies);
+    const older: ChangeEntryVM[] = [
+      E("99000001", "stamdata", "Telefonnummer ændret til 86 12 34 56", 9, "08:30", true),
+      E("99000001", "stamdata", "Formål ændret: opførelse af bygninger og totalentrepriser", 23, "10:12", true),
+      E("99000001", "ejerskab", "Anne Eksempel har øget sin ejerandel til 10–14,99 %", 41, "13:05", true),
+      E("99000001", "ledelse", "Bestyrelsen har konstitueret sig med Carla Prøve som næstformand", 67, "09:00", true),
+    ];
+    const mine = [...all, ...older].filter((e) => e.lassoId !== undefined && own.has(e.lassoId) && wanted(e));
+    return {
+      days,
+      entries: foldChangeEntries(mine),
+      total: mine.length,
+      source: "Eksempeldata",
+      updated: new Date().toISOString().slice(0, 10),
+      ...(mine.length ? {} : { emptyReason: `Ingen ændringer i virksomheden de seneste ${days} dage.` }),
+    };
+  }
+  const inPeriod = all.filter(wanted);
   return { listName: DEMO_LIST, days, entries: foldChangeEntries(inPeriod), total: inPeriod.length, source: "Eksempeldata", updated: new Date().toISOString().slice(0, 10) };
 }
 

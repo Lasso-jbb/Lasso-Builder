@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { composeCompany } from "./compose.js";
 import { emptyDataset, type Dataset } from "./models.js";
+import { parseViewSpec } from "./spec.js";
 import { hasNoStatements, hasReportingDuty, NO_STATEMENTS_REASON, noStatementsReason } from "./statements.js";
 
 const id = "CVR-1-43811983";
@@ -102,4 +103,30 @@ test("hasReportingDuty: personligt ejede virksomheder har ingen regnskabspligt",
   assert.equal(hasReportingDuty("Enkeltmandsvirksomhed"), false);
   assert.equal(hasReportingDuty("ApS"), true);
   assert.equal(hasReportingDuty(undefined), true);
+});
+
+test("B4: fokus regnskab beholder de tre opgørelser (også over budgettet); LassoFinancialStatements erstatter dem ikke", () => {
+  const ds = enk();
+  const years = [2023, 2024, 2025];
+  ds.financialStatements[id] = {
+    lassoId: id,
+    currency: "DKK",
+    incomeStatement: years.map((year) => ({ year, revenue: 1_000_000, profit: 100_000 })),
+    balanceSheet: years.map((year) => ({ year, assetsTotal: 500_000, liabilitiesAndEquityTotal: 500_000 })),
+    cashFlow: years.map((year) => ({ year, operating: 10_000 })),
+  };
+  // Resultat, balance og pengestrøm (ca. 1.900 px) er over de 1.300 px, men står alle, i regnskabets rækkefølge:
+  // eval-sættet (c-regnskab-01/02) forventer resultatopgørelsen som svar, og tekstkortet viser alle tre.
+  const types = composeCompany(id, ds, { focus: "regnskab" }).components.map((c) => c.type);
+  assert.deepEqual(types.filter((t) => t !== "LassoCompanyHead" && t !== "LassoFollowUps"), ["LassoIncomeStatement", "LassoBalanceSheet", "LassoCashFlow"]);
+  assert.ok(!types.includes("LassoFinancialStatements"));
+  assert.deepEqual(composeCompany(id, ds, { focus: "regnskab", showAll: true }).components.map((c) => c.type), types);
+});
+
+test("B4: LassoFinancialStatements kan åbne på et bestemt regnskabsår (year)", () => {
+  const c = parseViewSpec({ title: "x", components: [{ type: "LassoFinancialStatements", company: id, year: 2023 }] }).components[0]!;
+  assert.ok(c.type === "LassoFinancialStatements" && c.year === 2023 && c.years === 2);
+  const none = parseViewSpec({ title: "x", components: [{ type: "LassoFinancialStatements", company: id }] }).components[0]!;
+  assert.ok(none.type === "LassoFinancialStatements" && none.year === undefined);
+  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoFinancialStatements", company: id, year: 1800 }] }));
 });

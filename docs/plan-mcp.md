@@ -45,6 +45,7 @@ Samlet fra hele forløbet 29.09.2026. Ændres kun af ejeren.
 - Fast token-last pr. samtale ≈ 20.000 (heraf ≈ 14.200 = komponentkataloget i `render_view`-beskrivelsen). Pr. kald ≈ 2.000 (tekstkort ≈ 1.500 — bevares, Ø4).
 - Bredde: `GRID_RULES` i `catalog.ts` har standard/min/maks pr. type, men **målt med demodata** (korte navne, få rækker). Derfor står fx `PersonNetwork` (min = ½) klemt med afkortede navne og overlappende årstal, mens `PersonRoles`/lister (maks = fuld) strækkes ud med tom plads. Der findes intet begreb for "trives smalt", og mindstebredden afhænger ikke af indholdet (antal rækker, navnelængde, tidsakse, antal serier).
 - Ingen eval: vi ved ikke, hvor godt spørgsmål → side rammer i dag.
+- **B5-resultat (29.09.2026, efter B2–B4): side 92,3 % (48/52), plan 96,7 %; eksisterende 88,9 % (uændret), manglende 100 % (16/16). Mål ≥ 90 % nået; B6 (katalog ud af render_view) udsat — ingen målt gevinst (Ø8).**
 - Baseline (A4, 29.09.2026): side 61,5 % (52 tilfælde), plan 56,7 % (60 tilfælde; svar-element 25,0 % (8/32), fokus 92,9 % (26/28)); eksisterende 88,9 % (side) / 94,4 % (plan), manglende 0 % / 0 %.
 
 ---
@@ -130,7 +131,9 @@ Rækkefølge og roller. "Gate" = `npm run typecheck && npm test && npm run build
 **Rækkefølge:** A1 → (A2, A5, A6, A11, A12 parallelt) → (A3, A13) → (A4, A7 parallelt) → (A8, A9) → A10 → B1 → (B2, B3, B4, B8 parallelt) → (B5, B9) → B6? → B7 → (C1, C4 parallelt) → C2 → (C3, C5, C6 parallelt) → C7 → (D1, D3 parallelt) → (D2, D4 parallelt) → D5 → D6 → E1 → E2 → E3.
 Fase C og D kan køre parallelt med hinanden efter B7, hvis kapaciteten er der.
 
-**Udsat (ikke i denne plan):** portal-opgaverne (Ø9); katalog-udflytning (B6, betinget); "hvert modul ejer sit indhold" (A4, afventer eval).
+**Udsat (ikke i denne plan):** portal-opgaverne (Ø9); katalog-udflytning (B6, betinget — ikke udløst efter B5); "hvert modul ejer sit indhold" (A4, afventer eval).
+
+**Åbne punkter efter Fase B (Fable):** (1) `LassoChangeFeed` for én virksomhed dækker live kun de seneste 500 CVR-ændringer; fuldt feed kræver et endpoint pr. virksomhed hos Lasso — afklares i Fase C. (2) Forældede katalogtekster ("Dækkes ikke af show_company" m.fl. på RiskObservations, Map, Registration, Mergers, Announcements, Publications, FinancialStatements, ScoreHistory) rettes i B8. (3) RiskObservations står efter Kreditvurderingen på fokus risiko (Papers default, Ø12) og som svar-element nr. 1 ved spørgsmål om røde flag. (4) Fokus regnskab beholder de tre opgørelser; hele regnskabet nås via spørgsmål/`heleregnskab`.
 
 ---
 

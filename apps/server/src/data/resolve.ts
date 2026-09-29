@@ -1,5 +1,6 @@
 import {
   activityHeatmapKey,
+  changeFeedDays,
   changeFeedKey,
   emptyDataset,
   entityRefOf,
@@ -375,13 +376,17 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
     });
   }
 
-  // Katalog 21: ét feed pr. (liste, dage, typer); nøglen er changeFeedKey, fejlnøglen "changeFeed:<key>".
+  // Katalog 21: ét feed pr. (liste eller virksomhed, dage, typer); nøglen er changeFeedKey, fejlnøglen
+  // "changeFeed:<key>". Med company er det ændringerne i den ene virksomhed (fokus historik), uden liste.
   const feedKeys = new Set<string>();
   for (const f of feeds) {
     const key = changeFeedKey(f);
     if (feedKeys.has(key)) continue;
     feedKeys.add(key);
-    run(`changeFeed:${key}`, async () => void (ds.changeFeeds[key] = await provider.changeFeed({ list: f.list, days: f.days, types: f.types })));
+    const days = changeFeedDays(f);
+    run(`changeFeed:${key}`, async () =>
+      void (ds.changeFeeds[key] = await provider.changeFeed(f.company ? { companies: [f.company], days, types: f.types } : { list: f.list, days, types: f.types })),
+    );
   }
 
   // Katalog 13.11: ét heatmap pr. (liste, måneder, typer); nøglen er activityHeatmapKey, fejlnøglen "activityHeatmap:<key>".

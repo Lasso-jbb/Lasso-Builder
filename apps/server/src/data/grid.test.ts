@@ -12,6 +12,10 @@ import { resolveSpec } from "./resolve.js";
  */
 const BYG = "CVR-1-99000001";
 const BO = "CVR-3-4000000002";
+/** B4-elementer, overblikket viser, når der er plads (og altid på "vis alt"). */
+const B4_OVERBLIK = ["LassoRegistration", "LassoMap"];
+/** Default-sidens elementer i komponistens prioriterede rækkefølge (23.3). */
+const PAPER_ORDER = ["LassoCompanyHead", "LassoKeyFigureCards", "LassoTextSections", "LassoKeyValueList", "LassoRelations", "LassoBarChart", "LassoContact", "LassoTimeline", "LassoNews", "LassoShortcuts"];
 const PAD = 48;
 
 /** Sidens delte bånd som stakke ud fra kolonne og width (som LassoView.columnBands). */
@@ -60,7 +64,8 @@ test("gridmodel 23.3: default-siden (overblik uden spørgsmål) har den faste r�
   const spec = composeCompany(BYG, ds, { focus: "overblik", followUps: false, showAll: true });
   const order = spec.components.map((c) => c.type);
   const expected = ["LassoCompanyHead", "LassoKeyFigureCards", "LassoTextSections", "LassoKeyValueList", "LassoContact", "LassoRelations", "LassoBarChart", "LassoTimeline", "LassoNews", "LassoShortcuts"];
-  assert.deepEqual([...order].sort(), [...expected].sort());
+  // B4: "vis alt" viser også registreringen og kortet (demodata har koordinater), højst 12 komponenter.
+  assert.deepEqual([...order].sort(), [...expected, ...B4_OVERBLIK].sort());
   assert.deepEqual(order.slice(0, 3), expected.slice(0, 3));
   for (const band of bandsOf(spec)) assert.equal(band.reduce((s, st) => s + WIDTH_COLUMNS[st[0]!.width!], 0), 12);
 });
@@ -94,7 +99,10 @@ test("højdebudget 23.3: default-siden er ca. 1/2–2/3 af den fulde side og hol
   const ds = await resolveSpec(composeProbe(BYG, "overblik"), new DemoProvider());
   const all = composeCompany(BYG, ds, { focus: "overblik", followUps: false, showAll: true });
   const page = composeCompany(BYG, ds, { focus: "overblik", followUps: false });
-  const hAll = pageHeightOf(all, ds);
+  // Forholdet (Paper 23.3) gælder Papers elementer: den fulde side uden B4-elementerne (registrering, kort),
+  // som packPage pakker dem i prioriteret rækkefølge.
+  const paper = packPage(PAPER_ORDER.flatMap((t) => all.components.filter((c) => c.type === t).map((c) => ({ ...c, column: undefined, width: undefined }) as ViewComponent)), ds);
+  const hAll = pageHeightOf({ ...all, components: paper.components }, ds);
   const h = pageHeightOf(page, ds);
   assert.ok(h <= PAGE_HEIGHT_BUDGET, `${h} > ${PAGE_HEIGHT_BUDGET}`);
   assert.ok(h >= hAll / 2 && h <= (hAll * 2) / 3 + 1, `${h} af ${hAll}`);

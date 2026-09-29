@@ -458,7 +458,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoPublications":
       return <Publications key={key} events={empty.companyEvents?.[c.company]} title={c.title} limit={c.limit} error={err(`companyEvents:${c.company}`)} />;
     case "LassoFinancialStatements":
-      return <FinancialStatements key={key} statements={empty.financialStatements[c.company]} company={empty.companies[c.company]} statement={c.statement} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} onAction={act} />;
+      return <FinancialStatements key={key} statements={empty.financialStatements[c.company]} company={empty.companies[c.company]} statement={c.statement} years={c.years} year={c.year} title={c.title} error={err(`financialStatements:${c.company}`)} onAction={act} />;
     case "LassoScoreGauge":
       return (
         <ScoreGauge

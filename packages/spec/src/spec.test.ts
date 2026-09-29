@@ -4,6 +4,7 @@ import {
   amountScale,
   personSearchKey,
   personTableRow,
+  changeFeedDays,
   changeFeedKey,
   CHANGE_TYPES,
   COMPONENT_CATALOG,
@@ -367,7 +368,7 @@ test("LassoChangeFeed (katalog 21): schema, standardværdier, bredde og katalog"
   const spec = parseViewSpec({ title: "Overvågning", components: [{ type: "LassoChangeFeed", list: "Kunder" }] });
   const c = spec.components[0]!;
   if (c.type !== "LassoChangeFeed") throw new Error("forkert type");
-  assert.equal(c.days, 7);
+  assert.equal(changeFeedDays(c), 7);
   assert.equal(c.list, "Kunder");
   assert.equal(c.types, undefined);
   assert.equal(widthOf(c, "dashboard"), "full");
@@ -375,6 +376,13 @@ test("LassoChangeFeed (katalog 21): schema, standardværdier, bredde og katalog"
   const typed = parseViewSpec({ title: "x", components: [{ type: "LassoChangeFeed", days: 30, types: ["status", "regnskab"] }] }).components[0]!;
   if (typed.type !== "LassoChangeFeed") throw new Error("forkert type");
   assert.equal(changeFeedKey(typed), "|30|status,regnskab");
+  // Én virksomhed (fokus historik, B4): standard 30 dage og en nøgle, der ikke blandes med en liste.
+  const one = parseViewSpec({ title: "x", components: [{ type: "LassoChangeFeed", company: "CVR-1-99000001" }] }).components[0]!;
+  if (one.type !== "LassoChangeFeed") throw new Error("forkert type");
+  assert.equal(one.company, "CVR-1-99000001");
+  assert.equal(changeFeedDays(one), 30);
+  assert.equal(changeFeedKey(one), "company:CVR-1-99000001|30|");
+  assert.equal(changeFeedKey({ company: "CVR-1-99000001", days: 90 }), "company:CVR-1-99000001|90|");
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoChangeFeed", days: 0 }] }));
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoChangeFeed", days: 91 }] }));
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoChangeFeed", types: ["nyheder"] }] }));

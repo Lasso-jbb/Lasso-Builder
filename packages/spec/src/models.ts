@@ -1008,9 +1008,14 @@ export interface ChangeFeedVM {
   emptyReason?: string;
 }
 
-/** Stabil nøgle for et ændringsfeed, så UI og server finder samme data. */
-export function changeFeedKey(c: { list?: string; days?: number; types?: readonly ChangeType[] }): string {
-  return `${c.list ?? ""}|${c.days ?? 7}|${(c.types ?? []).join(",")}`;
+/** Dage i et ændringsfeed: det angivne antal, ellers 30 for én virksomhed og 7 for en overvågningsliste. */
+export function changeFeedDays(c: { company?: string; days?: number }): number {
+  return c.days ?? (c.company ? 30 : 7);
+}
+
+/** Stabil nøgle for et ændringsfeed, så UI og server finder samme data (én virksomhed: "company:<id>|…"). */
+export function changeFeedKey(c: { list?: string; company?: string; days?: number; types?: readonly ChangeType[] }): string {
+  return `${c.company ? `company:${c.company}` : (c.list ?? "")}|${changeFeedDays(c)}|${(c.types ?? []).join(",")}`;
 }
 
 /**

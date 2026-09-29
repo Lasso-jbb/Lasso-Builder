@@ -158,6 +158,9 @@ export function personComponentWeight(c: ViewComponent, ds: Dataset, page: reado
       const limit = c.limit ?? 5;
       return TITLE + 2.5 * Math.max(1, Math.min(n, limit)) + more(n, limit) + SOURCE;
     }
+    case "LassoPersonStats":
+      // Tre små tal-kort i én række (målt 90 px i alle bredder).
+      return TITLE + 1.25;
     case "LassoPersonFacts": {
       const p = ds.persons[c.person];
       return TITLE + 1.6 * (p ? factRows(p, personFactOptions(page, c.person).hideCounts) : 7) + SOURCE;
@@ -331,6 +334,7 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
     halves = list;
   };
   const facts: ViewComponent = { type: "LassoPersonFacts", person: id };
+  const stats: ViewComponent = { type: "LassoPersonStats", person: id };
   // ¾ + ¼ i ét bånd (hovedelementet og stamoplysningerne); uden hovedelement står stamoplysningerne alene.
   const withFacts = (main: ViewComponent | null) => {
     if (!main) return void components.push(facts);
@@ -373,7 +377,9 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
       break;
     }
     default: {
-      // Overblik. Alvorlig risiko (personen var med, da det skete) står lige under hovedet.
+      // Overblik. B4: persontallene (netværk, konkurser, tvangsopløsninger) lige under hovedet i fuld bredde,
+      // når budgettet giver plads (se nedenfor). Alvorlig risiko (personen var med, da det skete) står derunder.
+      if (hasRoles) components.push(stats);
       const serious = hasRoles && cases.some((c) => c.involved);
       if (serious) components.push({ type: "LassoPersonRisk", person: id });
       // De aktive roller som kort liste (¾) + stamoplysninger (¼); uden aktive roller de ophørte.
@@ -407,42 +413,51 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
   // (ejerskab, historik, risiko, netværk). Til sidst får kompakte elementer den fulde form tilbage i
   // prioriteret rækkefølge, når siden stadig holder budgettet. "Vis alt" (showAll) slår budgettet fra.
   const budget = options.showAll ? Number.POSITIVE_INFINITY : (options.heightBudget ?? PERSON_PAGE_BUDGET);
-  const mains = [...components];
-  const layout = (hs: readonly ViewComponent[], compacted: ReadonlySet<ViewComponent>) => {
-    const form = (c: ViewComponent) => (compacted.has(c) ? (compactPersonItem(c) ?? c) : c);
-    const m = mains.map(form);
-    const h = hs.map(form);
-    const page = [...m, ...h];
-    return [...m, ...pairByWeight(h, (c) => personComponentWeight(c, ds, page, { half: true }))];
-  };
   // Opfølgningen står altid nederst (fuldbånd); den tæller med i højden.
   const foot = options.followUps !== false ? personItemHeight({ type: "LassoFollowUps", prompts: [{ label: "-", prompt: "-" }] } as ViewComponent, "full", ds, []) : 0;
   const fits = (list: readonly ViewComponent[]) => personPageHeight(list, ds) + foot <= budget;
-  let kept = halves;
-  let compacted = new Set<ViewComponent>();
-  let chosen = layout(kept, compacted);
-  if (!fits(chosen)) {
-    // Svar-elementet (første element efter hovedet) står altid i fuld form.
-    const answer = mains[1];
-    compacted = new Set([...mains, ...halves].filter((c) => c !== answer && compactPersonItem(c) !== null));
-    chosen = layout(kept, compacted);
-    while (!fits(chosen) && droppable && kept.length > 0) {
-      kept = kept.slice(0, -1);
+  const fit = (mains: readonly ViewComponent[]) => {
+    const layout = (hs: readonly ViewComponent[], compacted: ReadonlySet<ViewComponent>) => {
+      const form = (c: ViewComponent) => (compacted.has(c) ? (compactPersonItem(c) ?? c) : c);
+      const m = mains.map(form);
+      const h = hs.map(form);
+      const page = [...m, ...h];
+      return [...m, ...pairByWeight(h, (c) => personComponentWeight(c, ds, page, { half: true }))];
+    };
+    let kept = halves;
+    let compacted = new Set<ViewComponent>();
+    let chosen = layout(kept, compacted);
+    if (!fits(chosen)) {
+      // Svar-elementet (første element efter hovedet og persontallene) står altid i fuld form.
+      const answer = mains.find((c, i) => i > 0 && c !== stats);
+      compacted = new Set([...mains, ...halves].filter((c) => c !== answer && compactPersonItem(c) !== null));
       chosen = layout(kept, compacted);
-    }
-    for (const c of [...mains, ...kept]) {
-      if (!compacted.has(c)) continue;
-      const without = new Set(compacted);
-      without.delete(c);
-      const trial = layout(kept, without);
-      if (fits(trial)) {
-        compacted = without;
-        chosen = trial;
+      while (!fits(chosen) && droppable && kept.length > 0) {
+        kept = kept.slice(0, -1);
+        chosen = layout(kept, compacted);
+      }
+      for (const c of [...mains, ...kept]) {
+        if (!compacted.has(c)) continue;
+        const without = new Set(compacted);
+        without.delete(c);
+        const trial = layout(kept, without);
+        if (fits(trial)) {
+          compacted = without;
+          chosen = trial;
+        }
       }
     }
+    return { chosen, kept: kept.length, compacted: compacted.size };
+  };
+  // B4: persontallene kommer kun med, når de ikke koster et af overblikkets halve eller en kompakt form
+  // (Papers side står som før); "vis alt" viser dem altid.
+  let result = fit(components);
+  if (components.includes(stats)) {
+    const without = fit(components.filter((c) => c !== stats));
+    if (!(result.kept === without.kept && result.compacted <= without.compacted)) result = without;
   }
   components.length = 0;
-  components.push(...chosen);
+  components.push(...result.chosen);
 
   const name = options.name ?? person.name;
   const data = { roles: hasRoles, network: network.length > 0, owns: person.roles.some((r) => r.active && r.kind === "owner") };
