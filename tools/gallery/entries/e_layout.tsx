@@ -46,6 +46,7 @@ import {
   statusTone,
   TabPanel,
   Tabs,
+  ValueRow,
   ToastProvider,
   Toasts,
   type AppShellMobile,
@@ -1233,13 +1234,30 @@ const datatypes: GalleryEntry[] = [
     ),
   },
   { nr: "28.6", title: "Fusioner og spaltninger", node: "HCC-0", spec: one("Fusioner og spaltninger", { type: "LassoMergers", company: C }) },
-  {
+  dataEntry({
     nr: "28.7",
     title: "Regnskabsoplysninger, bibrancher, kapital, tegningsregel og formål",
     node: "HDZ-0",
-    note: "LassoRegistration: to kort (regnskabsoplysninger, kapital og vedtægter). Paper viser desuden en eksempelrække for et B-selskab med fravalgt revision; den tilstand ses hos virksomheder uden revisor i demodata.",
-    spec: one("Oplysninger", { type: "LassoRegistration", company: C }),
-  },
+    note: "LassoRegistration: to kort (regnskabsoplysninger, kapital og vedtægter), tegningsregel og formål foldet til to linjer. Under: Papers eksempelrække for et B-selskab med fravalgt revision (samme ValueRow og warning-tekst som komponenten).",
+    probe: one("Oplysninger", { type: "LassoRegistration", company: C }),
+    draw: (ds) => (
+      <div className="lasso-root" data-theme="light" style={stack(16)}>
+        <LassoView spec={parseViewSpec(one("Oplysninger", { type: "LassoRegistration", company: C }))} dataset={ds} host={{}} onAction={noop} theme="light" frameless />
+        <div className="lasso-reg lasso-span-full" style={{ padding: "0 24px" }}>
+          <Section title="Revision, eksempel B-selskab" card>
+            <div className="lasso-reg__rows">
+              <ValueRow label="Revision">
+                <span>
+                  <span className="lasso-reg__warn">Fravalgt</span>
+                  <span className="lasso-reg__muted">, siden regnskabsåret 2024</span>
+                </span>
+              </ValueRow>
+            </div>
+          </Section>
+        </div>
+      </div>
+    ),
+  }),
   { nr: "28.8", title: "Statstidende, seneste bekendtgørelser", node: "HGH-0", spec: one("Statstidende", { type: "LassoAnnouncements", company: "CVR-1-99000011" }) },
   {
     nr: "28.9",
