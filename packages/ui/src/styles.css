@@ -3811,3 +3811,16 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-root .lasso-personhead .lasso-headbtn--export { display: none; }
   .lasso-root .lasso-personhead .lasso-headbtn--monitor { background: var(--lasso-accent-soft); border-color: var(--lasso-accent-border); color: var(--lasso-accent); }
 }
+
+/* ---------- 26d.4 Aktive roller på mobil (fix2 G4): antal i hovedet, 60 px rækker med status og chevron ---------- */
+.lasso-personrolelist__count, .lasso-personrolelist__msub, .lasso-personrolelist__mstatus, .lasso-personrolelist__chev { display: none; }
+@container lasso (max-width: 560px) {
+  .lasso-personrolelist__count { display: inline; font-size: var(--lasso-fs-sm); color: var(--lasso-muted); }
+  .lasso-personrolelist .lasso-row { display: grid; grid-template-columns: minmax(0, 1fr) auto 16px; column-gap: var(--lasso-space-2); align-items: center; min-height: 60px; }
+  .lasso-personrolelist .lasso-row__main { grid-column: 1; grid-row: 1; }
+  .lasso-personrolelist .lasso-row__sub, .lasso-personrolelist .lasso-row__side, .lasso-personrolelist .lasso-source { display: none; }
+  .lasso-personrolelist__msub { display: block; grid-column: 1; grid-row: 2; font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+  .lasso-personrolelist__mstatus { display: block; grid-column: 2; grid-row: 1 / span 2; font-size: var(--lasso-fs-sm); font-weight: 600; color: var(--lasso-text); white-space: nowrap; }
+  .lasso-personrolelist__mstatus.is-warning { color: var(--lasso-bankrupt); }
+  .lasso-personrolelist__chev { display: block; grid-column: 3; grid-row: 1 / span 2; color: var(--lasso-icon); }
+}

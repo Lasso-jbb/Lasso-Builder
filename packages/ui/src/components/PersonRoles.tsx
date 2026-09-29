@@ -64,6 +64,16 @@ function RowCompany({ row, onOpen }: { row: PersonRoleRowVM; onOpen?: (a: ViewAc
   return <>{row.companyName}</>;
 }
 
+/** "MM.ÅÅÅÅ" fra en ISO-dato. */
+const monthYear = (d?: string) => (d && d.length >= 7 ? `${d.slice(5, 7)}.${d.slice(0, 4)}` : year(d));
+
+/** Mobilens undertekst (26d.4): rollerne og "siden 03.2015" (aktive) eller perioden (ophørte). */
+function mobileSub(r: PersonRoleRowVM, show: Exclude<PersonRolesShow, "all">): string {
+  if (show === "ended") return [r.text, r.period].filter(Boolean).join(", ");
+  const first = r.roles.map((x) => x.from).filter((f): f is string => Boolean(f)).sort()[0];
+  return first ? `${r.text}, siden ${monthYear(first)}` : r.text;
+}
+
 const LIST_EMPTY: Record<Exclude<PersonRolesShow, "all">, string> = {
   current: "Personen har ingen aktive roller i selskaber i CVR.",
   ended: "Personen har ingen ophørte roller i CVR.",
@@ -102,7 +112,7 @@ function PersonRoleList({
   }
   const visible = expanded ? rows : rows.slice(0, limit);
   return (
-    <Section title={heading} className="lasso-personrolelist">
+    <Section title={heading} className="lasso-personrolelist" action={<span className="lasso-personrolelist__count">{rows.length}</span>}>
       <ul className="lasso-rows">
         {visible.map((r) => (
           <li key={r.key} className="lasso-row">
@@ -122,6 +132,12 @@ function PersonRoleList({
               </div>
             </div>
             {r.period ? <div className="lasso-row__side">{r.period}</div> : null}
+            {/* 26d.4 mobil: "Direktør, siden 03.2015" under navnet, status som tekst og chevron til højre. */}
+            <div className="lasso-personrolelist__msub">{mobileSub(r, show)}</div>
+            <span className={`lasso-personrolelist__mstatus${r.companyStatus ? " is-warning" : ""}`}>{r.companyStatus ?? (show === "ended" ? "Ophørt" : "Aktiv")}</span>
+            <svg className="lasso-personrolelist__chev" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </li>
         ))}
       </ul>
