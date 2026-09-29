@@ -2921,8 +2921,9 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-contact__act { display: inline-flex; }
   .lasso-contact-section .lasso-contact { gap: 0; }
   .lasso-contact-section .lasso-contact__row { align-items: center; min-height: 48px; padding: 4px 0; }
-  .lasso-contact__value--multiline { flex-direction: row; flex-wrap: wrap; column-gap: 0.3em; }
-  .lasso-contact__value--multiline > span:not(:last-child)::after { content: ","; }
+  /* 08.3/26a.6: adressen på én linje ("Toldbodgade 37B, 1253 København K"); samme specificitet som reglen ovenfor. */
+  .lasso-contact__value .lasso-contact__value--multiline, .lasso-contact__value--multiline { flex-direction: row; flex-wrap: wrap; column-gap: 0.3em; }
+  .lasso-contact__value--multiline > span:not(:last-child)::after { content: ","; margin-right: 0; }
   .lasso-root .lasso-contact__call { width: 40px; height: 40px; border: 0; border-radius: var(--lasso-radius); background: var(--lasso-accent-soft); color: var(--lasso-accent-text); }
 }
 
