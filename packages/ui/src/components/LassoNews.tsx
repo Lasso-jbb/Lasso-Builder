@@ -146,8 +146,9 @@ function SourceMark({ source, url }: { source: string; url?: string }) {
 }
 
 function NewsRow({ item, mention, ...opts }: { item: NewsItemVM; mention?: string } & SegmentOpts) {
-  // Typeetiket og tidspunkt er ren tekst, komma-adskilt (regel 6: ingen midterprikker).
-  const meta = [item.typeLabel, relativeOrDate(item.time), item.language].filter(Boolean).join(", ");
+  // 12.4: kildelinjen er "Kilde, for 3 dage siden" / "Kilde, dd.mm.åååå, engelsk", komma-adskilt
+  // (regel 6), uden nyhedstypen.
+  const meta = [relativeOrDate(item.time), item.language].filter(Boolean).join(", ");
   // Rækken er ikke selv et link (links og knapper må ikke ligge i hinanden): overskriften linker til
   // artiklen, og navne med Lasso-ID i overskrift og uddrag åbner virksomheden eller personen.
   return (

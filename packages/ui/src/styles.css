@@ -933,6 +933,15 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-timeline__from { text-decoration: line-through; }
 .lasso-timeline__to { color: var(--lasso-text); font-weight: 500; }
 .lasso-timeline__meta { font-size: 12px; line-height: 16px; color: var(--lasso-muted); margin-top: 3px; }
+/* 26c.10: mobil som ren lodret liste: dato 12 muted øverst, titel 14/400, detalje 13 muted; ingen
+   årsoverskrifter, typevælger eller kategori; seneste prik som koral ring. */
+@container lasso (max-width: 560px) {
+  .lasso-timeline__year, .lasso-timeline__cat, .lasso-section__action:has(> .lasso-timeline__picker) { display: none; }
+  .lasso-timeline__body { display: flex; flex-direction: column; }
+  .lasso-timeline__meta { order: -1; margin: 0 0 2px; }
+  .lasso-timeline__title { font-weight: 400; line-height: 20px; }
+  .lasso-timeline__dot--latest { background: var(--lasso-surface); border-color: var(--lasso-accent); }
+}
 .lasso-select--sm { height: 32px; padding: 0 30px 0 11px; font-size: var(--lasso-fs-sm); width: auto; }
 
 /* ---------- Nyheder (12, node AAG-0): kildemærke = favicon, ingen tone-mærker ---------- */
@@ -953,6 +962,14 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-news__source { font-size: 12px; font-weight: 600; color: var(--lasso-text); }
 .lasso-news__time { font-size: 12px; color: var(--lasso-muted); }
 .lasso-news__headline { font-size: 15px; line-height: 20px; font-weight: 600; color: var(--lasso-text); }
+/* 26c.9: mobil som kompakt liste, overskrift 14/400 først (højst to linjer), kildelinjen med favicon under, intet uddrag. */
+@container lasso (max-width: 560px) {
+  .lasso-news__row { display: flex; flex-direction: column; gap: 6px; padding: 12px 0; }
+  .lasso-news__headline { order: 1; font-size: var(--lasso-fs); line-height: 20px; font-weight: 400; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .lasso-news__head { order: 2; margin-bottom: 0; }
+  .lasso-news__row > .lasso-row__sub { display: none; }
+  .lasso-news__source { font-weight: 400; color: var(--lasso-muted); }
+}
 @container lasso (max-width: 560px) {
   .lasso-timeline__meta { overflow-wrap: anywhere; }
 }

@@ -141,7 +141,7 @@ export function LassoTimeline({
   const picker =
     !filterColumn && categories.length > 1 ? (
       <select
-        className="lasso-select lasso-select--sm"
+        className="lasso-select lasso-select--sm lasso-timeline__picker"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         aria-label="Vis type"
@@ -234,7 +234,8 @@ export function LassoTimeline({
                         <div className="lasso-row__sub">{e.detail}</div>
                       ) : null}
                       <div className="lasso-timeline__meta">
-                        {formatDate(e.date)}, {e.category}
+                        {formatDate(e.date)}
+                        <span className="lasso-timeline__cat">, {e.category}</span>
                       </div>
                     </div>
                   </div>
