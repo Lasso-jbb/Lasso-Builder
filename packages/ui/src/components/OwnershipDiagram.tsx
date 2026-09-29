@@ -212,9 +212,10 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
   // Tilpas: hele bredden skal kunne ses; høje strukturer skaleres højst ned til 80 % og panoreres.
   // Der holdes 56 px fri i begge sider, så zoomknapperne i hjørnet ikke dækker noder eller baner.
   const canvasMax = tablet ? TABLET_CANVAS_H : CANVAS_MAX;
-  const foot = canvasW >= 720 && canvasW - LEGEND_RIGHT - 16 < 860 ? CANVAS_FOOT_NARROW : CANVAS_FOOT;
+  // 26f.4 tablet: kun hjælpechippen står under noderne (ingen legende), så foden er 44 px.
+  const foot = tablet ? 44 : canvasW >= 720 && canvasW - LEGEND_RIGHT - 16 < 860 ? CANVAS_FOOT_NARROW : CANVAS_FOOT;
   // 14.4: desktop tegner 100 %, så noderne står i 196 × 64; kun en struktur, der ikke kan være i bredden, skaleres ned.
-  const fitZoom = layout ? Math.max(0.25, Math.min(1, (canvasW - 32) / layout.width, tablet ? Math.max(0.6, (canvasMax - foot) / layout.height) : 1)) : 1;
+  const fitZoom = layout ? Math.max(0.25, Math.min(1, (canvasW - 32) / layout.width, tablet ? Math.max(0.4, (canvasMax - foot - 8) / layout.height) : 1)) : 1; // 26f.4: alle noder inden for lærredet, hjælpechippen under noderne
   const z = zoom ?? fitZoom;
   // Desktop: lærredet vokser med strukturen (100 %), højst til CANVAS_TALL; derover panoreres.
   const canvasH = layout ? (tablet ? TABLET_CANVAS_H : Math.round(Math.min(CANVAS_TALL, Math.max(CANVAS_MIN, layout.height * fitZoom + foot)))) : CANVAS_MIN;

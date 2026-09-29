@@ -3995,6 +3995,9 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-fs__tablet .lasso-stmt__row--subtotal { background: transparent; }
   .lasso-fs__tablet .lasso-stmt__row--bottom { border-top: 2px solid var(--lasso-text); font-weight: 700; }
   .lasso-fs__tablet .lasso-stmt__row--line .lasso-stmt__label { padding-left: 8px; }
+  /* 26f.3: kun sumlinjerne står i 600; underposternes nyeste år er 400. Elementet står i en kortramme (1 px, radius 12). */
+  .lasso-fs__tablet .lasso-stmt__row--line .lasso-stmt__year--last { font-weight: 400; }
+  .lasso-root .lasso-section.lasso-fs { padding: var(--lasso-space-5); border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-card); }
 }
 @container lasso (max-width: 560px) {
   /* Mobil (26d.8): "Regnskab 2025" + periode og 36 px årsdropdown; segment "Resultat | Balance | Pengestrøm"
