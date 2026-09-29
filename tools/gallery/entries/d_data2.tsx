@@ -172,6 +172,24 @@ const NOTIFICATIONS: NotificationVM[] = [
   { id: "n6", kind: "konto", text: "Du har 12 kreditter tilbage", source: "Konto", at: "2026-09-26T09:00:00+02:00", read: true },
 ];
 
+/** 14.4: Papers layoutregler for ejerdiagrammet (B2Y-0), tre spalter brødtekst 13/20. */
+function OwnershipLayoutRules() {
+  const col = { flex: "1 1 0", minWidth: 240, margin: 0, fontSize: 13, lineHeight: "20px", color: "var(--lasso-text)" } as const;
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 40 }}>
+      <p style={col}>
+        Ejere står over, ejede under; fokusvirksomheden centreres vandret i sit lag. Lagafstand 90 px (bund til top), nodeafstand 14 px. Kanter samles i én vandret “bus” 52 px under laget, så flere ejere deler én pil ned i den ejede. Labels lægges på den lodrette del, aldrig på bussen.
+      </p>
+      <p style={col}>
+        Standarddybde er 2 lag op og 1 ned; “Udvid alle” henter op til 10/10 (API: ingoingDepth/outgoingDepth). Over 5 noder i et lag foldes de mindste andele sammen til “N flere ejere” med den samlede ejerandel på kanten - fokusvirksomhedens direkte ejere foldes aldrig. “Pr. dato” tegner grafen som den så ud på datoen (API: onDate); ophørte relationer får stiplet kant og muted node.
+      </p>
+      <p style={col}>
+        Skift mellem “Legale ejere” (registreret) og “Reelle ejere” (personer bag, beregnet indirekte andel). Klik på en node åbner detaljepanelet oven på diagrammet; dobbeltklik gør noden til nyt fokus. Minikortet viser hele grafen med viewport-ramme; zoom 25–200 % i trin, “Tilpas” centrerer. Eksport: PNG/PDF af hele grafen inkl. signaturforklaring og dato.
+      </p>
+    </div>
+  );
+}
+
 export const entries: GalleryEntry[] = [
   /* ---------- 14 Ejerdiagram ---------- */
   {
@@ -204,11 +222,19 @@ export const entries: GalleryEntry[] = [
     nr: "14.4",
     title: "Layoutregler (ejerdiagram)",
     node: "B2Y-0",
+    note: "Papers regeltekst (B2Y-0) i tre spalter. Tilpasset Jakobs noter til 14.1: detaljepanelet ligger oven på diagrammet, sammenklappet node hedder 'N flere ejere', bindestreg i stedet for tankestreg (G7). Koden følger reglerne: ownershipLayout.ts LAYER_GAP 90, NODE_GAP 14, BUS_OFFSET 52, LAYER_CAP 5, standarddybde 2 op/1 ned, direkte ejere foldes aldrig.",
+    render: () => <OwnershipLayoutRules />,
+  },
+  {
+    nr: "14.4",
+    title: "Layoutregler, eksempler (standardlayout med foldning og Pr. dato)",
+    node: "B2Y-0",
+    gridWidth: 760,
     spec: company("Eksempel Holding ApS", [
       { type: "LassoOwnershipDiagram", company: HOLDING, ingoingDepth: 1, outgoingDepth: 2, title: "Ejere over, ejede under, +N flere over 5 i et lag" },
       { type: "LassoOwnershipDiagram", company: HOLDING, ingoingDepth: 1, outgoingDepth: 1, onDate: "2024-01-01", title: "Pr. dato 01.01.2024: ophørt relation stiplet" },
     ]),
-    note: "Reglerne vist som to diagrammer: standardlayout med foldning og 'Pr. dato'. Regelteksten fra Paper findes ikke som komponent.",
+    note: "Reglerne fra 14.4 vist på demokoncernen: standardlayout med foldning og 'Pr. dato' (ophørt relation stiplet).",
   },
   {
     nr: "14b.1",
@@ -299,8 +325,8 @@ export const entries: GalleryEntry[] = [
   /* ---------- 16 Personside ---------- */
   { nr: "16.1", title: "Personhoved", node: "BNF-0", spec: person("Bo Eksempel", [{ type: "LassoPersonHead", person: BO }]) },
   { nr: "16.2", title: "Roller som tidsbånd", node: "BOH-0", spec: person("Bo Eksempel", [{ type: "LassoPersonRoles", person: BO, show: "all", limit: 8 }]) },
-  { nr: "16.3", title: "Netværk (personer med fælles selskaber)", node: "BQV-0", spec: person("Bo Eksempel", [{ type: "LassoPersonNetwork", person: BO, limit: 5, width: "full" }]) },
-  { nr: "16.4", title: "Personrisiko", node: "BR1-0", spec: person("Bo Eksempel", [{ type: "LassoPersonRisk", person: BO, width: "full" }]) },
+  { nr: "16.3", title: "Netværk (personer med fælles selskaber)", node: "BQV-0", spec: person("Bo Eksempel", [{ type: "LassoPersonNetwork", person: BO, limit: 5 }]) },
+  { nr: "16.4", title: "Personrisiko", node: "BR1-0", spec: person("Bo Eksempel", [{ type: "LassoPersonRisk", person: BO }]) },
 
   /* ---------- 17 Risikoobservationer ---------- */
   {
@@ -341,7 +367,6 @@ export const entries: GalleryEntry[] = [
       />
     ),
   },
-  { nr: "18.2", title: "Scorehistorik (trinlinje)", node: "BY5-0", spec: company("Eksempel Byg A/S", [{ type: "LassoScoreHistory", company: BYG, compare: false, width: "full" }]) },
   {
     nr: "18.3",
     title: "Bekræft hentning (dialog)",
@@ -374,7 +399,7 @@ export const entries: GalleryEntry[] = [
     nr: "20.4–20.5",
     title: "CHR-besætninger + Veterinære hændelser",
     node: "C8C-0",
-    spec: company("Eksempel Landbrug", [{ type: "LassoLivestock", company: LANDBRUG, width: "full" }]),
+    spec: company("Eksempel Landbrug", [{ type: "LassoLivestock", company: LANDBRUG }]),
     note: "20.4 (C8C-0) og 20.5 (C9H-0) er én komponent (LassoLivestock).",
   },
 
@@ -444,5 +469,4 @@ export const entries: GalleryEntry[] = [
       components: [{ type: "LassoCompareTable", companies: [BYG, "CVR-1-99000004", "CVR-1-99000008"], metrics: ["omsaetning", "bruttofortjeneste", "resultat", "egenkapital", "ansatte"] }],
     },
   },
-  { nr: "22.2", title: "Revisoruafhængighed (relationstabel)", node: "CI4-0", spec: company("Eksempel Byg A/S", [{ type: "LassoAuditorIndependence", company: BYG }]) },
 ];

@@ -30,4 +30,15 @@ export interface GalleryEntry {
   card?: boolean;
   /** Kort note til reviewet, fx hvad der ikke kan vises statisk. */
   note?: string;
+  /**
+   * G6: elementets egen bredde på 1200-gitteret (indholdsbredde i px: 270, 368, 564, 760, 858 eller 1152).
+   * Desktopbilledet tegnes i en 1200-visning (samme containerbredde som på siden), men elementet står i
+   * denne bredde, og billedet beskæres til den. Udelades den på en spec med én elementtype, bruges
+   * typens standardbredde fra gridmodellen (grid.ts); ellers fuld bredde.
+   */
+  gridWidth?: number;
+  /** Ekstra desktopbredder (fx tablet 834 og 1024), hver på sin egen side i PDF'en. */
+  extraWidths?: number[];
+  /** Placering i rækkefølgen, når elementet står ved et andet afsnit end sit nummer (fx mobil-only ved 06/07). */
+  sortAs?: string;
 }

@@ -15,7 +15,6 @@ import {
   parseViewSpec,
   STATUS_GROUPS,
   statusKind,
-  type ContactVM,
   type Dataset,
   type Metric,
   type ViewSpec,
@@ -23,21 +22,14 @@ import {
 import {
   AppShell,
   CreditConfirmDialog,
-  LassoContact,
-  DataState,
   EntityUpdates,
-  FilterSheet,
   LassoBeneficialOwners,
   LassoView,
-  LiveNumber,
   Menu,
   ModuleBar,
   ModuleToolbar,
-  MonitorSettings,
-  NotificationPanel,
   PersonSearchResults,
   PushBanner,
-  QualityFlag,
   LineChart,
   MultiYearTable,
   ReportA4,
@@ -45,8 +37,6 @@ import {
   Section,
   ShellIcon,
   SnapshotPicker,
-  SourceList,
-  Sparkline,
   statusTone,
   TabPanel,
   Tabs,
@@ -62,9 +52,8 @@ import {
 } from "@lasso/ui";
 import { MobileFilterSheet, MobileForm } from "./felter_mobil.js";
 
-import { SparkList } from "./c_data1.js";
 import type { GalleryEntry } from "../types.js";
-import { CoverageTable, DatatypeTable, LookupTable, MappingTable, OrderSteps, StatesAndFormat, WidthAndPaper, WidthTable, ZoneSketch } from "./e_guide.js";
+import { DatatypeTable, LookupTable, OrderSteps, StatesAndFormat, WidthAndPaper, WidthTable, ZoneSketch } from "./e_guide.js";
 
 /* ---------- Fælles ---------- */
 
@@ -488,8 +477,6 @@ const guide: GalleryEntry[] = [
   { nr: "23.4", title: "Trin 4: Datatype → element (mappingtabel)", node: "CNC-0", only: "desktop", note: "Papers opslagstabel Datatype | Element | Artboard.", render: () => <DatatypeTable /> },
   { nr: "23.5", title: "Trin 5: Tjek tilstande og talformat", node: "CPU-0", only: "desktop", note: "Papers tre kort: fem tilstande, talformat (ægte minus) og tjeklisten 'Aflever aldrig uden' (21 punkter).", render: () => <StatesAndFormat /> },
   { nr: "23.6", title: "Trin 6: Tænk bredden og papiret med", node: "DT7-0", only: "desktop", note: "Papers to kort Responsiv (26) og Eksport og print (27).", render: () => <WidthAndPaper /> },
-  { nr: "23.7", title: "Trin 7: Mapping pr. element desktop → tablet → mobil", node: "G67-0", only: "desktop", note: "Papers mappingtabel desktop/tablet/mobil + kortene 'Touch-mål og afstande' og 'Sådan bygger du en mobilskærm'.", render: () => <MappingTable /> },
-  { nr: "23.8", title: "Trin 8: Dækningstabel mod API", node: "HJ0-0", only: "desktop", note: "Papers dækningstabel mod docs.lassox.com/api med gruppeoverskrifter og kildelinje.", render: () => <CoverageTable /> },
 ];
 
 /* ---------- 24 og 25: eksempelsider ---------- */
@@ -581,23 +568,6 @@ function MobileFrame({ sheetOpen, children }: { sheetOpen?: boolean; children?: 
   );
 }
 
-function MobileContact() {
-  const now = Date.now();
-  return (
-    <LassoContact
-      now={now}
-      onCopy={noop}
-      contact={{
-        lassoId: C,
-        address: { street: "Toldbodgade 37B", zip: "1253", city: "København K" },
-        phone: "71747812",
-        email: "kontakt@lasso.dk",
-        verifiedAt: new Date(now - 5_000).toISOString(),
-        verifiedNumbers: [{ phoneNumber: "71747812", callable: true, sources: ["CVR"], score: 98 }],
-      } as ContactVM}
-    />
-  );
-}
 
 function TabsDemo({ level, items, value, ariaLabel, maxVisible }: { level: 1 | 2 | 3; items: readonly TabItem[]; value: string; ariaLabel: string; maxVisible?: number }) {
   const [v, setV] = useState(value);
@@ -626,29 +596,11 @@ function OpenMenu() {
 }
 
 const mobileNav: GalleryEntry[] = [
-  { nr: "26a.1", title: "Topbjælke (mobil)", node: "DTS-0", only: "mobile", note: "AppShell under 560 px: topbjælke med burger, titel + undertitel, klokke og '…'.", render: () => <MobileFrame /> },
-  { nr: "26a.2", title: "Sektionsark (mobil)", node: "DUB-0", only: "mobile", note: "AppShell med sheetOpen: sektionsarket fra burgeren, aktiv i koral-soft.", render: () => <MobileFrame sheetOpen /> },
-  { nr: "26a.3", title: "Bundnavigation (mobil)", node: "DUY-0", only: "mobile", note: "Bundnavigationen står nederst i AppShell (samme ramme som 26a.1).", render: () => <MobileFrame /> },
-  { nr: "26a.4", title: "Virksomhedshoved (mobil)", node: "DW4-0", only: "mobile", spec: { kind: "company", title: "Eksempel Byg A/S", components: [{ type: "LassoCompanyHead", company: C }] } },
-  {
-    nr: "26a.5",
-    title: "Sektionsfaner (mobil)",
-    node: "DWK-0",
-    only: "mobile",
-    note: "Tabs niveau 1 med virksomhedens fokus; ruller vandret med fade.",
-    render: () => <TabsDemo level={1} items={COMPANY_MODULES} value="overblik" ariaLabel="Sektioner" />,
-  },
-  {
-    nr: "26a.6",
-    title: "Kontaktblok (mobil)",
-    node: "DWQ-0",
-    only: "mobile",
-    note: "LassoContact med Papers tre rækker (adresse, verificeret telefon, e-mail); overlinje, adresse på én linje og ring-knap er mobilformen.",
-    render: () => <MobileContact />,
-  },
-  { nr: "26a.7", title: "Genveje (mobil)", node: "DXD-0", only: "mobile", spec: { kind: "company", title: "Genveje", components: [{ type: "LassoShortcuts", company: C }] } },
+  { nr: "26a.1", sortAs: "06.4", title: "Topbjælke og bundnavigation (mobil, 26a.1 + 26a.3)", node: "DTS-0", only: "mobile", note: "Kun mobil (intet desktop-modstykke), derfor ved 06. AppShell under 560 px: topbjælke med burger, titel + undertitel, klokke og '…' øverst; bundnavigationen (26a.3, DUY-0) nederst i samme ramme.", render: () => <MobileFrame /> },
+  { nr: "26a.2", sortAs: "06.4", title: "Sektionsark (mobil)", node: "DUB-0", only: "mobile", note: "Kun mobil, derfor ved 06. AppShell med sheetOpen: sektionsarket fra burgeren, aktiv i koral-soft.", render: () => <MobileFrame sheetOpen /> },
   {
     nr: "26a.8",
+    sortAs: "07.7",
     title: "Formularfelter (mobil)",
     node: "DXR-0",
     only: "mobile",
@@ -657,6 +609,7 @@ const mobileNav: GalleryEntry[] = [
   },
   {
     nr: "26a.9",
+    sortAs: "07.2",
     title: "Bundark (dialog på mobil)",
     node: "DZI-0",
     only: "mobile",
@@ -667,9 +620,10 @@ const mobileNav: GalleryEntry[] = [
       </div>
     ),
   },
-  { nr: "26a.10", title: "Handlingsark (menu på mobil)", node: "E05-0", only: "mobile", note: "Menu med defaultOpen og kontekst.", render: () => <OpenMenu /> },
+  { nr: "26a.10", sortAs: "07.3", title: "Handlingsark (menu på mobil)", node: "E05-0", only: "mobile", note: "Menu med defaultOpen og kontekst.", render: () => <OpenMenu /> },
   {
     nr: "26a.11",
+    sortAs: "07.5",
     title: "Besked / toast (mobil)",
     node: "E0W-0",
     only: "mobile",
@@ -692,50 +646,18 @@ const mobileNav: GalleryEntry[] = [
 
 const one = (title: string, component: Record<string, unknown>, kind = "company") => ({ kind, title, components: [component] });
 
-function SparkRows() {
-  return (
-    <SparkList
-      title="Nøgletal med tendens"
-      rows={[
-        { label: "Bruttofortjeneste", values: [7.9, 15.5, 17.7, 17.5, 18.8], value: "18,8" },
-        { label: "Resultat", values: [120, 64, -40, -210, -338], value: "−338", negative: true },
-        { label: "Egenkapital", values: [2.1, 3.3, 3.9, 3.4, 3.2], value: "3,2" },
-        { label: "Ansatte pr. kvartal", values: [14, 15, 15, 16, 17, 17, 18, 19], value: "19", kind: "bars" },
-      ]}
-    />
-  );
-}
 
 const mobileCharts: GalleryEntry[] = [
-  { nr: "26b.1", title: "Søjlegraf (mobil)", node: "E2T-0", only: "mobile", spec: one("Søjlegraf", { type: "LassoBarChart", company: C }) },
-  { nr: "26b.2", title: "Grupperede søjler (mobil)", node: "E3K-0", only: "mobile", spec: one("Grupperede søjler", { type: "LassoGroupedBarChart", company: C, metrics: ["omsaetning", "bruttofortjeneste"] }) },
-  { nr: "26b.3", title: "Stablede søjler / balance (mobil)", node: "E49-0", only: "mobile", spec: one("Balance", { type: "LassoStackedBarChart", company: C }) },
-  { nr: "26b.4", title: "Linjegraf (mobil)", node: "E5A-0", only: "mobile", spec: one("Linjegraf", { type: "LassoLineChart", company: C, benchmark: "CVR-1-99000006" }) },
-  { nr: "26b.5", title: "Vandfald (mobil)", node: "E62-0", only: "mobile", spec: one("Vandfald", { type: "LassoWaterfallChart", company: C }) },
-  { nr: "26b.6", title: "Fordeling / donut (mobil)", node: "E77-0", only: "mobile", spec: one("Fordeling", { type: "LassoShareBars", company: C, variant: "ejerkreds" }) },
-  {
-    nr: "26b.7",
-    title: "Sparklines (mobil)",
-    node: "E88-0",
-    only: "mobile",
-    note: "Sparkline-primitivet i rækker (bruges ellers i nøgletalskort og tabelkolonnen 'Udvikling'); der findes ingen selvstændig sparkline-liste i kataloget.",
-    render: () => <SparkRows />,
-  },
-  { nr: "26b.8", title: "Nøgletalsmålere (mobil)", node: "E8Z-0", only: "mobile", spec: one("Nøgletalsmålere", { type: "LassoKeyFigureGauge", company: C }) },
-  { nr: "26b.9", title: "Scoremåler (mobil)", node: "E9F-0", only: "mobile", spec: one("Score", { type: "LassoScoreGauge", company: C }) },
-  { nr: "26b.10", title: "Heatmap (mobil)", node: "E9X-0", only: "mobile", spec: one("Heatmap", { type: "LassoHeatmap", list: "Kunder" }, "custom") },
-  { nr: "26b.11", title: "Kort (mobil)", node: "EAY-0", only: "mobile", spec: one("Kort", { type: "LassoMap", company: C }) },
 ];
 
 const mobileLists: GalleryEntry[] = [
-  { nr: "26c.1", title: "Nøgletalskort / KPI 2×2 (mobil)", node: "EC5-0", only: "mobile", spec: one("Nøgletal", { type: "LassoKeyFigureCards", company: C }) },
-  { nr: "26c.2", title: "Nøgle-værdi-liste (mobil)", node: "ECP-0", only: "mobile", spec: one("Stamdata", { type: "LassoKeyValueList", company: C, variant: "company", title: "Stamdata" }) },
   {
     nr: "26c.3",
+    sortAs: "10.2",
     title: "Flerårstabel (mobil), variant A og B",
     node: "ED8-0",
     only: "mobile",
-    note: "Variant A (ED8-0) øverst, variant B (EEO-0) under.",
+    note: "Mobilvarianterne af flerårstabellen (10.2): variant A (ED8-0) øverst, variant B (EEO-0, kort pr. nøgletal) under. B findes kun på mobil.",
     spec: {
       kind: "company",
       title: "Flerårsoversigt",
@@ -745,109 +667,33 @@ const mobileLists: GalleryEntry[] = [
       ],
     },
   },
-  { nr: "26c.4", title: "Personliste (mobil)", node: "EG1-0", only: "mobile", spec: one("Ledelse", { type: "LassoPersonList", company: C }) },
-  { nr: "26c.5", title: "Ejerliste (mobil)", node: "EH3-0", only: "mobile", spec: one("Ejere", { type: "LassoOwnerList", company: C }) },
-  { nr: "26c.6", title: "Ejerdiagram (mobil)", node: "EHX-0", only: "mobile", spec: one("Ejerdiagram", { type: "LassoOwnershipDiagram", company: C }) },
-  {
-    nr: "26c.7",
-    title: "Kortliste (tabel på mobil)",
-    node: "EJQ-0",
-    only: "mobile",
-    spec: {
-      kind: "list",
-      title: "Kunder",
-      criteria: [
-        { field: "status", operator: "eq", value: "Aktiv" },
-        { field: "region", operator: "eq", value: "Midtjylland" },
-      ],
-      components: [
-        {
-          type: "LassoCompanyTable",
-          title: "Kunder",
-          source: "search",
-          search: {
-            query: "",
-            criteria: [
-              { field: "status", operator: "eq", value: "Aktiv" },
-              { field: "region", operator: "eq", value: "Midtjylland" },
-            ],
-            sort: { field: "navn", direction: "asc" },
-            limit: 6,
-          },
-        },
-      ],
-    },
-  },
   {
     nr: "26c.8",
+    sortAs: "07.7",
     title: "Filterark (mobil)",
     node: "EM6-0",
     only: "mobile",
     note: "FilterSheet åben som bundark (åbnes fra tabellens værktøjslinje): valgchips, rækker med værdi og chevron, kontakt og “Vis N virksomheder”.",
     render: () => <MobileFilterSheet />,
   },
-  { nr: "26c.9", title: "Nyhedsliste (mobil)", node: "EN9-0", only: "mobile", spec: one("Nyheder", { type: "LassoNews", company: C, limit: 3 }) },
-  { nr: "26c.10", title: "Tidslinje (mobil)", node: "ENM-0", only: "mobile", spec: one("Tidslinje", { type: "LassoTimeline", company: C, title: "Tidslinje" }) },
 ];
-
-const PERSON_TABS: TabItem[] = ["Roller", "Netværk", "Risiko", "Historik", "Nyheder"].map((l) => ({ id: l.toLowerCase(), label: l }));
 
 const mobilePerson: GalleryEntry[] = [
-  { nr: "26d.1", title: "Personhoved (mobil)", node: "EON-0", only: "mobile", spec: one("Bo Eksempel", { type: "LassoPersonHead", person: P }, "person") },
-  { nr: "26d.2", title: "Personfaner (mobil)", node: "EPB-0", only: "mobile", note: "Tabs niveau 1 med personens faner.", render: () => <TabsDemo level={1} items={PERSON_TABS} value="roller" ariaLabel="Personfaner" /> },
-  { nr: "26d.3", title: "Tidsbånd (mobil)", node: "EPM-0", only: "mobile", spec: one("Roller", { type: "LassoPersonRoles", person: P, show: "all" }, "person") },
-  { nr: "26d.4", title: "Aktive roller (mobil)", node: "EQZ-0", only: "mobile", spec: one("Aktive roller", { type: "LassoPersonRoles", person: P, show: "current" }, "person") },
-  { nr: "26d.5", title: "Netværkstal-kort (mobil)", node: "ERR-0", only: "mobile", spec: one("Netværkstal", { type: "LassoPersonStats", person: P }, "person") },
-  { nr: "26d.6", title: "Risikoobservationer (mobil)", node: "ES9-0", only: "mobile", spec: one("Risiko", { type: "LassoRiskObservations", company: C }) },
-  {
-    nr: "26d.7",
-    title: "Kreditvurdering (mobil)",
-    node: "ET9-0",
-    only: "mobile",
-    note: "Paper 26d.7 er 0–100-scoren (LassoScoreGauge) med zonebjælke, udvikling og seneste ændringer, ikke Creditsafes A–E (LassoCreditRating, 17).",
-    spec: one("Kreditvurdering", { type: "LassoScoreGauge", company: C, title: "Kreditvurdering", detail: true }),
-  },
-  { nr: "26d.8", title: "Regnskab: år og segmentkontrol (mobil)", node: "EVK-0", only: "mobile", spec: one("Regnskab", { type: "LassoFinancialStatements", company: C }) },
-  { nr: "26d.9", title: "Resultatopgørelse (mobil)", node: "EVR-0", only: "mobile", spec: one("Resultatopgørelse", { type: "LassoFinancialStatements", company: C, statement: "income" }) },
-  { nr: "26d.10", title: "Balance (mobil)", node: "EX7-0", only: "mobile", spec: one("Balance", { type: "LassoFinancialStatements", company: C, statement: "balance" }) },
-  { nr: "26d.11", title: "Pengestrøm (mobil)", node: "EXU-0", only: "mobile", spec: one("Pengestrøm", { type: "LassoFinancialStatements", company: C, statement: "cashflow" }) },
-];
-
-const NOTIFS = [
-  { id: "1", kind: "overvaagning" as const, title: "Nyt regnskab 2025", text: "LASSO X A/S, bruttofortjeneste 18,8 mio. (+7,5 %), resultat \u2212201 t. kr.", category: "Regnskab", source: 'Overvågning "Kunder"', at: "2026-09-29T08:10:00Z", read: false },
-  { id: "2", kind: "overvaagning" as const, title: "Konkursdekret afsagt", text: "Data Eksempel A/S (eksempeldata), Sø- og Handelsretten", category: "Status", source: 'Overvågning "Kunder"', at: "2026-09-28T15:40:00Z", read: false, important: true },
-  { id: "3", kind: "overvaagning" as const, title: "Nyt bestyrelsesmedlem", text: "Nordisk Eksempel ApS (eksempeldata), Mette Eksempel tiltrådt", category: "Ledelse", source: 'Overvågning "Kunder"', at: "2026-03-11T09:00:00Z", read: true },
+  { nr: "26d.4", sortAs: "16.2", title: "Aktive roller (mobil)", node: "EQZ-0", only: "mobile", note: "Kun mobil (aktive roller som liste); desktop-modstykket er tidsbåndene i 16.2.", spec: one("Aktive roller", { type: "LassoPersonRoles", person: P, show: "current" }, "person") },
+  { nr: "26d.5", sortAs: "16.1", title: "Netværkstal-kort (mobil)", node: "ERR-0", only: "mobile", note: "Kun mobil; LassoPersonStats har ingen desktop-indgang i galleriet.", spec: one("Netværkstal", { type: "LassoPersonStats", person: P }, "person") },
 ];
 
 const mobileUnits: GalleryEntry[] = [
-  { nr: "26e.1", title: "Produktionsenheder (mobil)", node: "EYU-0", only: "mobile", spec: one("Produktionsenheder", { type: "LassoProductionUnits", company: C }) },
-  { nr: "26e.2", title: "Ejendom, BBR (mobil)", node: "EZI-0", only: "mobile", spec: one("Ejendomme", { type: "LassoProperties", company: "CVR-1-99000012" }) },
-  { nr: "26e.3", title: "Besætninger, CHR (mobil)", node: "F09-0", only: "mobile", note: "Tom tilstand ('Ikke relevant') for en virksomhed uden CHR.", spec: one("Besætninger", { type: "LassoLivestock", company: C }) },
-  {
-    nr: "26e.4",
-    title: "Overvågningsindstillinger (mobil)",
-    node: "F0N-0",
-    only: "mobile",
-    render: () => (
-      <MonitorSettings companyName="LASSO X A/S" monitoring listName="Kunder" since="2026-03-03" frequency="dagligt" delivery="Push + e-mail dagligt" settings={{ status: true, regnskab: true, ledelse: true, stamdata: false, kredit: false }} onToggle={noop} onStop={noop} onDelivery={noop} />
-    ),
-  },
-  { nr: "26e.5", title: "Notifikationsliste (mobil)", node: "F1V-0", only: "mobile", render: () => (
-      <div>
-        <NotificationPanel items={NOTIFS} now={new Date("2026-09-29T10:00:00Z")} onMarkAllRead={noop} onClose={noop} inline />
-      </div>
-    ) },
-  { nr: "26e.6", title: "Push-notifikation (systembanner)", node: "F2X-0", only: "mobile", render: () => <PushBanner event="Konkurs" company="Eksempel Energi A/S" time="nu" /> },
-  { nr: "26e.7", title: "Sammenligning (mobil)", node: "F3C-0", only: "mobile", spec: one("Sammenligning", { type: "LassoCompareTable", companies: [C, "CVR-1-99000005", "CVR-1-99000008"] }, "custom") },
-  { nr: "26e.8", title: "Revisor og uafhængighed (mobil)", node: "F52-0", only: "mobile", spec: one("Revisor", { type: "LassoAuditorIndependence", company: C }) },
+  { nr: "26e.6", sortAs: "21.3", title: "Push-notifikation (systembanner)", node: "F2X-0", only: "mobile", render: () => <PushBanner event="Konkurs" company="Eksempel Energi A/S" time="nu" /> },
 ];
 
 /* ---------- 26f Tablet 768 ---------- */
 
 const tablet: GalleryEntry[] = [
-  dataEntry({ nr: "26f.1", title: "Sideskabelon, tablet 768", node: "F6K-0", only: "desktop", desktopWidth: 768, note: COMPANY_PAGE_NOTE, probe: companyProbe(), draw: (ds) => <CompanyPage ds={ds} /> }),
+  dataEntry({ nr: "26f.1", title: "Sideskabelon, tablet 768", node: "F6K-0", only: "desktop", desktopWidth: 768, extraWidths: [834, 1024], note: COMPANY_PAGE_NOTE, probe: companyProbe(), draw: (ds) => <CompanyPage ds={ds} /> }),
   {
     nr: "26f.2",
+    extraWidths: [834, 1024],
     title: "Tabel, tablet",
     node: "FAA-0",
     only: "desktop",
@@ -860,9 +706,9 @@ const tablet: GalleryEntry[] = [
       components: [{ type: "LassoCompanyTable", title: "Kunder", source: "search", search: { query: "", criteria: [{ field: "ansatte", operator: "gte", value: 1 }, { field: "status", operator: "eq", value: "aktiv" }], limit: 8 }, columns: ["navn", "status", "bruttofortjeneste", "resultat", "ansatte", "score"] }],
     },
   },
-  { nr: "26f.3", title: "Regnskab, tablet", node: "FCA-0", only: "desktop", desktopWidth: 768, spec: one("Regnskab", { type: "LassoFinancialStatements", company: C }) },
-  { nr: "26f.4", title: "Ejerdiagram, tablet", node: "FFB-0", only: "desktop", desktopWidth: 768, spec: one("Ejerdiagram", { type: "LassoOwnershipDiagram", company: C }) },
-  { nr: "26f.5", title: "Sammenligning, tablet", node: "FGO-0", only: "desktop", desktopWidth: 768, spec: one("Sammenligning", { type: "LassoCompareTable", companies: [C, "CVR-1-99000005", "CVR-1-99000008"] }, "custom") },
+  { nr: "26f.3", extraWidths: [834, 1024], title: "Regnskab, tablet", node: "FCA-0", only: "desktop", desktopWidth: 768, spec: one("Regnskab", { type: "LassoFinancialStatements", company: C }) },
+  { nr: "26f.4", extraWidths: [834, 1024], title: "Ejerdiagram, tablet", node: "FFB-0", only: "desktop", desktopWidth: 768, spec: one("Ejerdiagram", { type: "LassoOwnershipDiagram", company: C }) },
+  { nr: "26f.5", extraWidths: [834, 1024], title: "Sammenligning, tablet", node: "FGO-0", only: "desktop", desktopWidth: 768, spec: one("Sammenligning", { type: "LassoCompareTable", companies: [C, "CVR-1-99000005", "CVR-1-99000008"] }, "custom") },
 ];
 
 /* ---------- 26g Mobil: eksempelskærme ---------- */
@@ -874,173 +720,16 @@ const mobilePages: GalleryEntry[] = [
 
 /* ---------- 26h Mobil: tilstande og småelementer ---------- */
 
-function FlagDemo() {
-  const [v, setV] = useState("selskab");
-  const reason = "Mulig fejl i tallet: værdien er 1.000 gange højere end de øvrige poster og kan være indberettet i kr. i stedet for t. kr. Kilde: XBRL, Erhvervsstyrelsen. (Tooltip, vises ved tap på ikonet)";
-  return (
-    <div style={{ border: "1px solid var(--lasso-border)", borderRadius: "var(--lasso-radius-card)", padding: 16 }}>
-      <Section
-        title="Resultat 2025"
-        action={
-          <Tabs
-            level={3}
-            compact
-            items={[
-              { id: "selskab", label: "Selskab" },
-              { id: "koncern", label: "Koncern" },
-            ]}
-            value={v}
-            onChange={setV}
-            ariaLabel="Selskab eller koncern"
-          />
-        }
-      >
-        <ul className="lasso-rows">
-          <li className="lasso-row">
-            <div className="lasso-row__main">
-              <div className="lasso-row__name lasso-row__name--regular">Bruttofortjeneste</div>
-            </div>
-            <div className="lasso-row__value">18.834</div>
-          </li>
-          <li className="lasso-row">
-            <div className="lasso-row__main">
-              <div className="lasso-row__name lasso-row__name--regular">
-                Varelager (eksempel)
-                <QualityFlag text={reason} />
-              </div>
-            </div>
-            <div className="lasso-row__value">1.204.000</div>
-          </li>
-        </ul>
-        {/* Tooltippen åbner ved tap; her vist statisk som mørkt kort under rækken. */}
-        <p style={{ margin: "8px 0 0", padding: "10px 12px", borderRadius: "var(--lasso-radius)", background: "var(--lasso-tooltip)", color: "var(--lasso-bg)", fontSize: 12, lineHeight: "18px" }}>{reason}</p>
-      </Section>
-    </div>
-  );
-}
 
 const mobileStates: GalleryEntry[] = [
   {
-    nr: "26h.1",
-    title: "Tværgående tilstande (mobil)",
-    node: "GAV-0",
-    only: "mobile",
-    note: "De fem tilstande stablet som kort; ventetilstanden for 'På forespørgsel' står under knappen, som i Paper.",
-    render: () => {
-      const card: CSSProperties = { border: "1px solid var(--lasso-border)", borderRadius: "var(--lasso-radius-card)", padding: 16, background: "var(--lasso-surface)" };
-      const sk = (w: string, h: number, r = 7): CSSProperties => ({ width: w, height: h, borderRadius: r });
-      return (
-        <div style={{ ...stack(12), ...card, padding: 12 }}>
-          <DataState state="empty" solid title="Ingen nyheder endnu" reason="Vi har ikke fundet omtale af LASSO X A/S. Sidst tjekket 25.09.2026 09:41." action={{ label: "Overvåg nyheder", onClick: noop }} />
-          <div style={card} aria-busy="true">
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-              <div className="lasso-skeleton" style={sk("40%", 12)} />
-              <div className="lasso-skeleton" style={sk("18%", 12)} />
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-              <div className="lasso-skeleton" style={sk("100%", 64, 10)} />
-              <div className="lasso-skeleton" style={sk("100%", 64, 10)} />
-            </div>
-            <div className="lasso-skeleton" style={sk("100%", 110, 10)} />
-            <p className="lasso-small" style={{ margin: "12px 0 0", textAlign: "center", color: "var(--lasso-muted)" }}>
-              Indlæser, skelet i samme mål som indholdet, ingen spinner
-            </p>
-          </div>
-          <DataState
-            state="error"
-            title="Regnskab kunne ikke hentes"
-            reason="Erhvervsstyrelsen svarer ikke lige nu. Dine øvrige data er opdaterede."
-            onRetry={noop}
-            secondaryAction={{ label: "Rapportér", onClick: noop }}
-          />
-          <div style={card}>
-            <Section title="Reelle ejere">
-              <DataState state="locked" reason="Reelle ejere kræver Lasso Pro. Du kan se legale ejere og ejerdiagram uden opgradering." action={{ label: "Se planer", onClick: noop }} />
-            </Section>
-          </div>
-          <div style={card}>
-            <Section title="Kreditvurdering" action={<span className="lasso-section__meta">Creditsafe, 1 kredit</span>}>
-              <div style={stack(12)}>
-                <DataState state="onrequest" reason="Ikke hentet for LASSO X A/S. Vurderingen tager 5–45 sekunder og koster 1 kredit (du har 14)." action={{ label: "Hent kreditvurdering", onClick: noop }} />
-                <DataState state="onrequest" pending={{ title: "Henter vurdering …", detail: "ca. 20 sek. Du kan fortsætte imens, vi giver besked" }} />
-              </div>
-            </Section>
-          </div>
-        </div>
-      );
-    },
-  },
-  { nr: "26h.2", title: "Kvalitetsflag + koncern/selskab-segment (mobil)", node: "GCN-0", only: "mobile", note: "Tooltippen åbner ved tap; her vist statisk som mørkt kort under rækken.", render: () => <FlagDemo /> },
-  { nr: "26h.3", title: "Regnskabsanalyse (mobil)", node: "GD8-0", only: "mobile", spec: one("Regnskabsanalyse", { type: "LassoTextSections", company: C, variant: "analyse" }) },
-  {
-    nr: "26h.4",
-    title: "Kilder og opdatering (mobil)",
-    node: "GDK-0",
-    only: "mobile",
-    render: () => (
-      <SourceList
-        sources={[
-          { name: "CVR, Erhvervsstyrelsen", updated: "i dag 06:10" },
-          { name: "Regnskaber, XBRL", updated: "2026-06-02" },
-          { name: "Creditsafe", updated: "2026-09-12" },
-          { name: "Nyheder, Paqle", updated: "for 2 timer siden" },
-          { name: "BBR, eksempeldata", updated: "2026-09-18" },
-        ]}
-        pdf={{ label: "Hent årsrapport 2025 (PDF)", url: "https://example.com/aarsrapport.pdf" }}
-      />
-    ),
-  },
-  {
     nr: "26h.5",
+    sortAs: "14.4",
     title: "Historik-/snapshot-skifter (mobil)",
     node: "GE5-0",
     only: "mobile",
     render: () => <SnapshotPicker subject="Ejerdiagram" what="ejerskab" date="2023-12-31" today="2026-09-29" onChange={noop} />,
   },
-  {
-    nr: "26h.6",
-    title: "Nyhed med fremhævning (mobil)",
-    node: "IK2-0",
-    only: "mobile",
-    note: "Paper viser en Paqle-artikel (Børsen); demodata har kun Lasso News-eksempler, så artiklen lægges ind her.",
-    spec: one("Nyheder", { type: "LassoNews", company: C, limit: 1 }),
-    mutate: (ds) => {
-      const n = ds.news[C];
-      if (!n) return;
-      n.items = [{
-        source: "Børsen",
-        url: "https://borsen.dk/",
-        time: new Date(Date.now() - 2 * 3_600_000).toISOString(),
-        headline: "Eksempel Byg udvider med ejendomsdata fra BBR",
-        language: "eksempeloverskrift",
-        excerpt: "datavirksomheden Eksempel Byg A/S oplyser, at BBR-data nu indgår i virksomhedsoverblikket for alle danske",
-        extractSegments: [{ text: "datavirksomheden " }, { text: "Eksempel Byg A/S", highlight: true }, { text: " oplyser, at BBR-data nu indgår i virksomhedsoverblikket for alle danske" }],
-        provider: "Paqle",
-        note: "Eksempeldata",
-      }];
-    },
-  },
-  { nr: "26h.7", title: "Live-nummer (mobil)", node: "GF8-0", only: "mobile", render: () => (
-      <div style={{ border: "1px solid var(--lasso-border)", borderRadius: "var(--lasso-radius-card)", padding: 16 }}>
-        <Section title="Telefon">
-          <LiveNumber number="71747812" />
-        </Section>
-      </div>
-    ) },
-  {
-    nr: "26h.8",
-    title: "Fusioner og spaltninger (mobil)",
-    node: "GFQ-0",
-    only: "mobile",
-    note: "Som Paper: kun fusionen med ét ophørende selskab (demodata har også en spaltning og to ophørte, se 28.6).",
-    spec: one("Fusioner", { type: "LassoMergers", company: C }),
-    mutate: (ds) => {
-      const ev = ds.companyEvents?.[C];
-      const fusion = ev?.mergers.find((m) => m.type === "Fusion");
-      if (ev && fusion) ev.mergers = [{ ...fusion, from: fusion.from.filter((p) => p.name === "Data Eksempel A/S") }];
-    },
-  },
-  { nr: "26h.9", title: "Bibrancher og formål (mobil)", node: "GG7-0", only: "mobile", spec: one("Profil", { type: "LassoRegistration", company: C, variant: "profile" }) },
 ];
 
 /* ---------- 27 A4-rapport ---------- */

@@ -355,7 +355,7 @@ export const entries: GalleryEntry[] = [
 
   // 09 Nøgletal
   { nr: "09.1", title: "Nøgletalskort", node: "9UM-0", spec: co("Eksempel Byg A/S", [{ type: "LassoKeyFigureCards", company: B }]) },
-  { nr: "09.2", title: "Nøgle-værdi-liste", node: "9VU-0", spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "company", width: "full" }]) },
+  { nr: "09.2", title: "Nøgle-værdi-liste", node: "9VU-0", spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "company" }]) },
   { nr: "09.3", title: "Talformat", node: "9XW-0", render: () => <NumberFormats />, note: "Tegnet med formatAmount/formatPercent/formatNumber/formatDate fra @lasso/spec." },
   {
     nr: "09.4",
@@ -379,7 +379,7 @@ export const entries: GalleryEntry[] = [
     nr: "09.5",
     title: "Nøgle-værdi-liste med årsvælger",
     node: "9WR-0",
-    spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "financials", width: "full" }]),
+    spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "financials" }]),
     note: "Med årsrapportens PDF-link i datasættet (rækken 'PDF-regnskab').",
     mutate: (ds) => {
       ds.financialStatements[B] = { lassoId: B, currency: "DKK", incomeStatement: [], balanceSheet: [], cashFlow: [], pdfUrl: "https://example.com/aarsrapport.pdf" };
@@ -426,9 +426,9 @@ export const entries: GalleryEntry[] = [
       ds.productionUnits[B] = { lassoId: B, units: [], total: 1 };
     },
   },
-  { nr: "11.2", title: "Personliste, udfoldet", node: "A4F-0", spec: co("Eksempel Byg A/S", [{ type: "LassoPersonList", company: B, show: "all", width: "full" }]) },
-  { nr: "11.3", title: "Ejerliste", node: "A5X-0", spec: co("Eksempel Byg A/S", [{ type: "LassoOwnerList", company: B, width: "full" }]) },
-  { nr: "11.4", title: "Reelle ejere", node: "B33-0", spec: co("Eksempel Byg A/S", [{ type: "LassoBeneficialOwners", company: B, width: "full" }]) },
+  { nr: "11.2", title: "Personliste, udfoldet", node: "A4F-0", gridWidth: 564, spec: co("Eksempel Byg A/S", [{ type: "LassoPersonList", company: B, show: "all" }]) },
+  { nr: "11.3", title: "Ejerliste", node: "A5X-0", spec: co("Eksempel Byg A/S", [{ type: "LassoOwnerList", company: B }]) },
+  { nr: "11.4", title: "Reelle ejere", node: "B33-0", spec: co("Eksempel Byg A/S", [{ type: "LassoBeneficialOwners", company: B }]) },
 
   // 12 Tekst og historik
   { nr: "12.1", title: "Tekstsektioner", node: "A83-0", spec: co("Eksempel Byg A/S", [{ type: "LassoTextSections", company: B }]) },

@@ -11,6 +11,7 @@ import { parseViewSpec, type Dataset } from "@lasso/spec";
 import { DemoProvider } from "../../apps/server/src/data/demo.js";
 import { resolveSpec } from "../../apps/server/src/data/resolve.js";
 import { ENTRIES } from "./entries/index.js";
+import { entryGridWidth } from "./grid.js";
 
 const out = process.argv[2];
 if (!out) throw new Error("Angiv en ud-mappe");
@@ -56,7 +57,7 @@ const html = `<!doctype html><html lang="da"><head><meta charset="utf-8"><meta n
 <style>${fonts}\n${css}\nhtml,body{margin:0;padding:0;background:#fff}#stage{min-height:40px}</style></head>
 <body><div id="stage"></div><script>window.__GALLERY_DATA__=${JSON.stringify(data).replace(/</g, "\\u003c")}</script><script>${js.replace(/<\/script/g, "<\\/script")}</script></body></html>`;
 writeFileSync(join(out, "gallery.html"), html);
-const manifest = ENTRIES.map((e, i) => ({ id: i, nr: e.nr, title: e.title, node: e.node, only: e.only, desktopWidth: e.desktopWidth, note: e.note, kind: e.spec ? "spec" : "ui" }));
+const manifest = ENTRIES.map((e, i) => ({ id: i, nr: e.nr, title: e.title, node: e.node, only: e.only, desktopWidth: e.desktopWidth, gridWidth: entryGridWidth(e), extraWidths: e.extraWidths, note: e.note, kind: e.spec ? "spec" : "ui" }));
 writeFileSync(join(out, "manifest.json"), JSON.stringify(manifest, null, 1));
 console.log(`${ENTRIES.length} elementer -> ${join(out, "gallery.html")}`);
 if (problems.length) console.log("Problemer:\n" + problems.join("\n"));

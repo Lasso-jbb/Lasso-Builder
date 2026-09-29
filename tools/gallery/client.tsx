@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { parseViewSpec, type Dataset } from "@lasso/spec";
 import { LassoView, ToastProvider, Toasts, type HostCapabilities } from "@lasso/ui";
 import { ENTRIES } from "./entries/index.js";
+import { entryGridWidth } from "./grid.js";
 
 declare global {
   interface Window {
@@ -38,19 +39,38 @@ function CardFrame({ children, inset = true }: { children: React.ReactNode; inse
   );
 }
 
+/**
+ * G6: elementet står i sin egen gitterbredde. Visningen (containeren) er stadig 1200 bred som på siden,
+ * så komponenten ser ud som i sin celle; kun cellen gøres smal. Mobil (≤ 560) tegnes uændret.
+ */
+function GridWidthStyle({ width }: { width: number }) {
+  const css = `@media (min-width: 561px){#stage .lasso-frame--bare>.lasso-content{display:flex!important;flex-direction:column;align-items:flex-start;row-gap:40px}#stage .lasso-frame--bare>.lasso-content>*{width:${width}px!important;max-width:${width}px}}`;
+  return <style>{css}</style>;
+}
+
 function Stage({ id }: { id: number }) {
   const entry = ENTRIES[id];
   if (!entry) return <div>Ukendt element {id}</div>;
+  const gw = entryGridWidth(entry);
+  const narrow = gw !== undefined && window.innerWidth > 560;
   if (entry.spec) {
     const spec = parseViewSpec(entry.spec);
     // Elementerne står i Paper uden visningens egen ramme (logo, "Data hentet …", Gem visning).
     const view = <LassoView spec={spec} dataset={window.__GALLERY_DATA__[String(id)] ?? null} host={HOST} onAction={() => undefined} frameless />;
-    return entry.card ? <CardFrame inset={false}>{view}</CardFrame> : view;
+    if (entry.card) return <CardFrame inset={false}>{view}</CardFrame>;
+    return narrow ? (
+      <>
+        <GridWidthStyle width={gw} />
+        {view}
+      </>
+    ) : (
+      view
+    );
   }
   if (entry.card) return <CardFrame>{entry.render?.()}</CardFrame>;
   return (
     <div className="lasso-root" style={{ padding: 24, background: "var(--lasso-surface, #fff)" }}>
-      {entry.render?.()}
+      {narrow ? <div style={{ width: gw }}>{entry.render?.()}</div> : entry.render?.()}
       <Toasts />
     </div>
   );
