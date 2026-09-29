@@ -1575,7 +1575,7 @@ const layout: GalleryEntry[] = [
     nr: "30.3",
     title: "Svarniveau C, Side",
     node: "J5G-0",
-    note: "Niveau C som i chatten: fuldt hoved med modulbjælken (niveau 1, første modul åbent) og Lasso-bundlinjen (answer.logo). Sektionerne er show_company-kompositionen (compose.ts) inden for højdebudgettet (23.3: ca. 1½ skærm; kontakt, historik og nyheder udelades på demodata).",
+    note: "Niveau C som i chatten: fuldt hoved med modulbjælken (niveau 1, første modul åbent) og Lasso-bundlinjen (answer.logo). Sektionerne er show_company-kompositionen (compose.ts) inden for højdebudgettet (23.3: ca. 1½ skærm; genveje, nyheder og historik udelades på demodata, kontakten står ved relationer og graf, 3+6+3).",
     probe: paperCompanyProbe(),
     draw: (ds) => <AnswerC ds={ds} />,
   }),
