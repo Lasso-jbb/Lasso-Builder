@@ -887,9 +887,9 @@ export const entries: GalleryEntry[] = [
     title: "Modulbjælke",
     node: "JQO-0",
     desktopWidth: 1440,
-    note: "Tegnet i 1440 px, så bjælken har samme bredde som i en 1440-side (under 1200 px bliver handlingerne til ikonknapper).",
+    note: "Tegnet i Papers bredde (1106 px, midten af en 1440-side), så modulerne ud over pladsen samles bag \"Flere ▾\" (under 1200 px bliver handlingerne til ikonknapper).",
     render: () => (
-      <div style={{ border: "1px solid var(--lasso-border)", borderRadius: 10, overflow: "hidden" }}>
+      <div style={{ width: 1108, boxSizing: "border-box", border: "1px solid var(--lasso-border)", borderRadius: 10, overflow: "hidden" }}>
         <Modules />
       </div>
     ),

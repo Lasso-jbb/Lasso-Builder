@@ -967,6 +967,10 @@ div.lasso-relations__count { cursor: default; }
 .lasso-relations__countn { font-weight: 500; color: var(--lasso-accent-text); }
 .lasso-relations__count .lasso-icon { color: var(--lasso-icon); }
 button.lasso-relations__name:hover { text-decoration: underline; }
+/* 06.1 sideskabelonen (tre kolonner): navnene står i tekstfarve 500 og bliver koral + understregning kun ved hover (02c.13/01.7).
+   Rollelisten alene (11.1) beholder de korale links. */
+.lasso-root .lasso-content--columns .lasso-relations__name { font-weight: 500; color: var(--lasso-text); }
+.lasso-root .lasso-content--columns button.lasso-relations__name:hover { color: var(--lasso-accent-text); }
 
 /* ---------- Reelle ejere (11, node B33-0) ---------- */
 /* Genbruger .lasso-rows/.lasso-row fra ejerlisten (samme rækkemønster). */
@@ -2155,11 +2159,12 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 /* "Flere": pilen står lige efter ordet (06.4), ikke i en fast bredde */
 .lasso-modulebar .lasso-tab--more { padding-right: 18px; }
 .lasso-modulebar__actions { flex: none; display: flex; align-items: stretch; }
-.lasso-modulebar__action { display: inline-flex; align-items: center; gap: 8px; padding: 0 22px; border: 0; border-left: 1px solid var(--lasso-border); background: none; cursor: pointer; color: var(--lasso-text-2); font-size: var(--lasso-fs); line-height: 18px; font-weight: 500; white-space: nowrap; }
+.lasso-modulebar__action { display: inline-flex; align-items: center; gap: 6px; padding: 0 16px; /* 06.4: padding 16, gap 6 */ border: 0; border-left: 1px solid var(--lasso-border); background: none; cursor: pointer; color: var(--lasso-text-2); font-size: var(--lasso-fs); line-height: 18px; font-weight: 500; white-space: nowrap; }
 .lasso-modulebar__action:hover { background: var(--lasso-surface-2); color: var(--lasso-text); }
 .lasso-modulebar__action:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: -1px; }
-.lasso-modulebar__action--accent { color: var(--lasso-accent-text); }
-.lasso-modulebar__action--accent:hover { color: var(--lasso-accent-text); }
+/* 06.4: Gemt og Overvåg i koral tekst (primary-text); ".lasso-root" foran, så farven vinder over ".lasso-root button { color: inherit }" */
+.lasso-modulebar__action--accent, .lasso-root .lasso-modulebar__action--accent { color: var(--lasso-accent-text); }
+.lasso-modulebar__action--accent:hover, .lasso-root .lasso-modulebar__action--accent:hover { color: var(--lasso-accent-text); }
 .lasso-modulebar__action--accent .lasso-modulebar__action-icon { color: var(--lasso-accent); }
 .lasso-modulebar__action-icon { display: inline-flex; }
 .lasso-modulebar__caret { color: var(--lasso-text-3); margin-left: -2px; }
