@@ -24,7 +24,7 @@ const render = (props: CreditRatingProps) => renderToStaticMarkup(createElement(
 /** Synlig tekst uden tags og skjult skærmlæsertekst. */
 const text = (html: string) => html.replace(/<span class="lasso-credit__sr">[^<]*<\/span>/g, "").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ");
 
-test("fyldt: bogstav + ord, kreditmaksimum, lokal score, forrige vurdering, PDF, forbehold og kildelinje", () => {
+test("fyldt: bogstav + ord, kreditmaksimum, lokal score, seneste ændring (ingen forrige), PDF, forbehold og kildelinje", () => {
   const html = render({ rating: OK, onAction: () => {} });
   const t = text(html);
   assert.match(html, /<h3 class="lasso-section__title">Kreditvurdering<\/h3>/);
@@ -34,9 +34,9 @@ test("fyldt: bogstav + ord, kreditmaksimum, lokal score, forrige vurdering, PDF,
   assert.match(html, /<span class="lasso-credit__sr">B, <\/span>Lav risiko/, "skærmlæser: 'B, Lav risiko'");
   assert.match(t, /Kreditmaksimum250 t\. kr\./);
   assert.match(t, /Lokal score62, Lav risiko/);
-  // 18.1: forrige og nu side om side, ændringen som pil + ord imellem.
-  assert.match(html, /class="lasso-scorecmp[ "]/);
-  assert.match(t, /ForrigeC[^]*Moderat risiko[^]*▼ 1 trin, mindre risiko[^]*Nu, 15\.04\.2026B[^]*Lav risiko/);
+  // 18.1 (Jakob 29.09): kun den aktuelle vurdering; ingen forrige, ingen pil/ændring.
+  assert.doesNotMatch(html, /lasso-scorecmp|Forrige|mindre risiko/);
+  assert.match(t, /Seneste ændring15\.04\.2026/);
   assert.match(html, /<button type="button" class="lasso-link lasso-credit__action">Hent kreditrapport \(PDF\)<\/button>/);
   assert.match(t, /Ny beregning hos Creditsafe koster en kredit og tager 5–45 sekunder; vurderingen gemmes 24 timer\./);
   assert.doesNotMatch(t, /Kilde:/, "G3: ingen kildelinje");
@@ -66,9 +66,9 @@ test("tonen står aldrig som farve alene: hver toneklasse bærer ikon og ord", (
     const m = new RegExp(`<span class="lasso-credit__word lasso-credit__tone--${tone}"><svg[^]*?</svg><span class="lasso-credit__sr">${letter}, </span>${word}</span>`).exec(html);
     assert.ok(m, `${letter}: ikon + ord i tone ${tone}`);
   }
-  // Forrige vurdering: pil + ord, farven kun som forstærkning.
+  // 18.1: ingen forrige vurdering vises, heller ikke når data har en.
   const worse = render({ rating: { ...OK, current: { internationalScore: "D" }, previous: { internationalScore: "B" } } });
-  assert.match(worse, /lasso-scorecmp__change--worse[^]*▲ 2 trin, mere risiko</);
+  assert.doesNotMatch(worse, /lasso-scorecmp|mere risiko/);
   // Ingen farvet flade, pille eller banner i komponenten.
   assert.doesNotMatch(worse, /style="[^"]*background|lasso-badge|lasso-notice/);
 });

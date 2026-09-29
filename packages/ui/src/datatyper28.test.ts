@@ -56,7 +56,8 @@ test("28.3: opdateringer med person/virksomhed som hoved, typen i muted og kun '
     }),
   );
   assert.match(html, /lasso-entupd__type lasso-entupd__type--removed">P-enhed fjernet/);
-  assert.match(html, /lasso-entupd__type">Person, ledelse/);
+  // 28.3 (Jakob 29.09): intet efter personnavnet.
+  assert.doesNotMatch(html, /lasso-entupd__type">Person, /);
   assert.match(html, /Rolle: Bestyrelsesmedlem → Formand/);
 });
 

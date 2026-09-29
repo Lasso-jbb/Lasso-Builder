@@ -3,7 +3,6 @@ import {
   CREDIT_LOCKED_REASON,
   CREDIT_PENDING_REASON,
   CREDIT_SCORES,
-  creditChange,
   creditDescription,
   creditScoreWord,
   creditTone,
@@ -17,7 +16,6 @@ import { useState, type ReactNode } from "react";
 import { DataState, Missing, Section, SourceLine, stateForError } from "../primitives.js";
 import type { ViewAction } from "../types.js";
 import { CreditConfirmDialog } from "./CreditConfirmDialog.js";
-import { ScoreCompare } from "./ScoreCompare.js";
 
 /**
  * Kreditvurdering fra Creditsafe (katalog 17, datatyper del B afsnit 5). Creditsafes egen skala:
@@ -153,9 +151,6 @@ export function CreditRating({ rating, title, error, onAction }: CreditRatingPro
   const score = current.internationalScore;
   const tone = score ? creditTone(score) : undefined;
   const word = score ? creditScoreWord(score, current.internationalDescription) : undefined;
-  const prev = rating.previous;
-  const prevScore = prev?.internationalScore;
-  const change = creditChange(score, prevScore);
   const local = typeof current.localScore === "number" ? `${formatNumber(current.localScore)}${current.localDescription ? `, ${creditDescription(current.localDescription)}` : ""}` : creditDescription(current.localDescription);
 
   return (
@@ -195,28 +190,17 @@ export function CreditRating({ rating, title, error, onAction }: CreditRatingPro
         </p>
       )}
 
-      {prevScore && score && change ? (
-        // 18.1 (node BX9-0): forrige og nu side om side, ændringen som pil, handling til højre.
-        <ScoreCompare
-          previous={{ value: prevScore, word: creditScoreWord(prevScore, prev?.internationalDescription), tone: creditTone(prevScore), icon: <CreditToneIcon tone={creditTone(prevScore)} /> }}
-          current={{ value: score, word: word, tone: tone, icon: tone ? <CreditToneIcon tone={tone} /> : undefined, date: rating.latestChange }}
-          direction={change.direction}
-          amount={change.direction === "same" ? undefined : `${Math.abs(CREDIT_SCORES.indexOf(score) - CREDIT_SCORES.indexOf(prevScore))} trin`}
-          action={onAction && typeof rating.creditBalance === "number" ? { label: "Hent ny vurdering", onClick: () => setConfirm(true) } : undefined}
-        />
+      {/* 18.1 (Jakob 29.09): ingen historik; kun den aktuelle score. Ingen "forrige" og ingen ændring. */}
+      {onAction && typeof rating.creditBalance === "number" ? (
+        <button type="button" className="lasso-btn lasso-credit__refresh" onClick={() => setConfirm(true)}>
+          Hent ny vurdering
+        </button>
       ) : null}
 
       <dl className="lasso-credit__facts">
         <Fact label="Kreditmaksimum">{typeof current.creditMax === "number" ? formatCreditMax(current) : <Missing />}</Fact>
         <Fact label="Lokal score">{local ?? <Missing />}</Fact>
-        {prevScore && !(score && change) ? (
-          <Fact label="Forrige vurdering">
-            {prevScore} ({creditScoreWord(prevScore, prev?.internationalDescription)})
-            {rating.latestChange ? `, ændret ${formatDate(rating.latestChange)}` : ""}
-          </Fact>
-        ) : rating.latestChange && !(prevScore && score && change) ? (
-          <Fact label="Seneste ændring">{formatDate(rating.latestChange)}</Fact>
-        ) : null}
+        {rating.latestChange ? <Fact label="Seneste ændring">{formatDate(rating.latestChange)}</Fact> : null}
       </dl>
       {onAction && typeof rating.creditBalance === "number" ? (
         <CreditConfirmDialog

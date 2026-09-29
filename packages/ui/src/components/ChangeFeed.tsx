@@ -1,12 +1,18 @@
 import { useMemo, useState } from "react";
 import { CHANGE_TYPES, CHANGE_TYPE_LABELS, formatDate, formatNumber, type ChangeEntryVM, type ChangeFeedVM, type ChangeType } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
-import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { DataState, Section, stateForError } from "../primitives.js";
 
 /** Rækker vist før "Se alle N ændringer" (regel 9). */
 const COLLAPSED_ROWS = 8;
 /** Foldes først, når der er mere end to rækker at spare (som PersonList), så "Se alle 9" aldrig skjuler én række. */
 const FOLD_FROM = COLLAPSED_ROWS + 2;
+
+/**
+ * 21.1 (Jakob 29.09): ændringstypen "Kredit" forudsætter scorehistorik, som ikke findes (18.2 udgår).
+ * Afklaret (Jakob 15:41): typen udgår og vises hverken i feedet, filtervalget, heatmap eller overvågningsindstillingerne.
+ */
+export const HIDDEN_CHANGE_TYPES: readonly ChangeType[] = ["kredit"];
 
 const WEEKDAYS = ["søndag", "mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag"];
 
@@ -83,9 +89,8 @@ function ChangeRow({ entry, firstUnread, onOpen }: { entry: ChangeEntryVM; first
           </div>
         )}
         {folded && showAll && entry.companies?.length ? <div className="lasso-feed__companies">{entry.companies.join(", ")}</div> : null}
-        <div className="lasso-feed__meta">
-          {entry.source}, {clockText(entry.at)}
-        </div>
+        {/* 21.1 (Jakob): kun klokkeslættet; kildetypen ("CVR", "Kredit") står ikke i tredje linje. */}
+        <div className="lasso-feed__meta">{clockText(entry.at)}</div>
       </div>
       {entry.read ? <span className="lasso-feed__dotspace" aria-hidden="true" /> : <span className="lasso-feed__dot" role="img" aria-label="Ulæst" />}
     </li>
@@ -110,10 +115,10 @@ export function ChangeFeed({ feed, title, types, error, now, onOpen }: { feed?: 
   const inPeriod = useMemo(() => {
     if (!feed) return [];
     const cutoff = clock.getTime() - shownDays * 86_400_000;
-    return feed.entries.filter((e) => new Date(e.at).getTime() >= cutoff);
+    return feed.entries.filter((e) => !HIDDEN_CHANGE_TYPES.includes(e.type) && new Date(e.at).getTime() >= cutoff);
   }, [feed, shownDays, clock]);
 
-  const typeList = types ?? CHANGE_TYPES;
+  const typeList = (types ?? CHANGE_TYPES).filter((t) => !HIDDEN_CHANGE_TYPES.includes(t));
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
     for (const e of inPeriod) c[e.type] = (c[e.type] ?? 0) + (e.count ?? 1);
@@ -195,7 +200,6 @@ export function ChangeFeed({ feed, title, types, error, now, onOpen }: { feed?: 
           {expanded ? "Vis færre" : `Se alle ${formatNumber(matching.length)} ændringer`}
         </button>
       ) : null}
-      {feed.source ? <SourceLine source={feed.source} updated={feed.updated} /> : null}
     </Section>
   );
 }

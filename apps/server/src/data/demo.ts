@@ -340,16 +340,26 @@ function financialStatementsFor(c: DemoCompany): FinancialStatementsVM {
     const tax = profit >= 0 ? -Math.round(profit * 0.22) : Math.round(-profit * 0.29);
     const profitBeforeTax = profit - tax;
     const financialItemsNet = profitBeforeTax - (ebitda + depreciation);
+    // 19.1: alle poster i resultatopgørelsen (eksempeldata): vareforbrug = omsætning − bruttofortjeneste,
+    // EBIT = EBITDA + af- og nedskrivninger, finansielle poster opdelt i indtægter og omkostninger.
+    const externalCosts = typeof y.revenue === "number" ? gp - y.revenue : null;
+    const ebit = ebitda + depreciation;
+    const financialIncome = Math.round(Math.abs(financialItemsNet) * 0.18 + 40_000 + (seed % 4) * 15_000);
+    const financialExpenses = financialItemsNet - financialIncome;
     incomeStatement.push({
       year: y.year,
       periodStart: y.periodStart,
       periodEnd: y.periodEnd,
       revenue: y.revenue,
+      externalCosts,
       grossProfit: gp,
       staffCosts,
       otherOperatingCosts,
       ebitda,
       depreciation,
+      ebit,
+      financialIncome,
+      financialExpenses,
       financialItemsNet,
       profitBeforeTax,
       tax,
@@ -359,11 +369,14 @@ function financialStatementsFor(c: DemoCompany): FinancialStatementsVM {
     const equityTotal = y.equity ?? 0;
     const liabilitiesTotal = y.liabilities ?? 0;
     const assetsTotal = equityTotal + liabilitiesTotal;
-    const longTermLiabilities = Math.round(liabilitiesTotal * 0.45);
-    const shortTermLiabilities = liabilitiesTotal - longTermLiabilities;
+    // 19.1: hensatte forpligtelser står for sig; "gæld i alt" er lang- plus kortfristet gæld.
+    const provisions = Math.round(liabilitiesTotal * 0.04);
+    const longTermLiabilities = Math.round(liabilitiesTotal * 0.42);
+    const shortTermLiabilities = liabilitiesTotal - provisions - longTermLiabilities;
     const fixedAssetsTotal = Math.round(assetsTotal * 0.36);
-    const intangibleAssets = Math.round(fixedAssetsTotal * 0.65);
-    const tangibleAssets = fixedAssetsTotal - intangibleAssets;
+    const intangibleAssets = Math.round(fixedAssetsTotal * 0.6);
+    const financialFixedAssets = Math.round(fixedAssetsTotal * 0.08);
+    const tangibleAssets = fixedAssetsTotal - intangibleAssets - financialFixedAssets;
     const currentAssetsTotal = assetsTotal - fixedAssetsTotal;
     const shareCapital = Math.min(equityTotal, Math.round(assetsTotal * 0.06) || 1000);
     const retainedEarnings = equityTotal - shareCapital;
@@ -401,15 +414,18 @@ function financialStatementsFor(c: DemoCompany): FinancialStatementsVM {
     } else {
       cash = Math.round(currentAssetsTotal * 0.28);
     }
-    const tradeReceivables = Math.max(0, Math.round((currentAssetsTotal - cash) * 0.6));
-    const otherReceivables = Math.max(0, currentAssetsTotal - cash - tradeReceivables);
+    const inventories = Math.max(0, Math.round((currentAssetsTotal - cash) * 0.12));
+    const tradeReceivables = Math.max(0, Math.round((currentAssetsTotal - cash) * 0.52));
+    const otherReceivables = Math.max(0, currentAssetsTotal - cash - inventories - tradeReceivables);
 
     balanceSheet.push({
       year: y.year,
       periodEnd: y.periodEnd,
       intangibleAssets,
       tangibleAssets,
+      financialFixedAssets,
       fixedAssetsTotal,
+      inventories,
       tradeReceivables,
       otherReceivables,
       cash,
@@ -418,9 +434,10 @@ function financialStatementsFor(c: DemoCompany): FinancialStatementsVM {
       shareCapital,
       retainedEarnings,
       equityTotal,
+      provisions,
       longTermLiabilities,
       shortTermLiabilities,
-      liabilitiesTotal,
+      liabilitiesTotal: longTermLiabilities + shortTermLiabilities,
       liabilitiesAndEquityTotal: assetsTotal,
     });
   });
@@ -874,25 +891,15 @@ export class DemoProvider implements DataProvider {
   /** Katalog 10.1: eksempelscore og -hentetilstande, da der endnu ikke findes en live datakilde (se demoScore). */
   async score(lassoId: string): Promise<ScoreVM> {
     const c = get(lassoId);
-    const base = demoScore(c, creditRatingFor(c));
-    if (typeof base.score !== "number") return base;
-    const score = base.score;
-    // Katalog 26d.7: seks målinger over 24 måneder og tre ændringer med årsag (eksempeldata).
-    const steps = [-3, -1, -4, -1, -3, 0].map((d, i) => Math.max(1, Math.min(99, score + d - (i === 4 ? 2 : 0))));
-    const dates = ["2024-09-01", "2025-01-01", "2025-05-01", "2025-09-01", "2026-01-01", "2026-09-01"];
-    const history = dates.map((date, i) => ({ date, score: i === dates.length - 1 ? score : steps[i]! }));
-    const changes = [
-      { date: "2026-06-06", label: "Regnskab 2025 indlæst", delta: 5 },
-      { date: "2026-01-01", label: "Alder på selskab, eksempeldata", delta: 2 },
-      { date: "2025-05-20", label: "Betalingsanmærkning, eksempeldata", delta: -4 },
-    ];
-    return { ...base, history, changes, historyNote: "eksempeldata før 09.2026" };
+    const base = demoScore(c);
+    // Jakob 29.09: kun den aktuelle score; der findes ingen scorehistorik (18.2 udgår).
+    return base;
   }
 
   /** Katalog 18.2: eksempelhistorik, der ender i den aktuelle demoscore. */
   async scoreHistory(lassoId: string) {
     const c = get(lassoId);
-    return demoScoreHistory(c, demoScore(c, creditRatingFor(c)));
+    return demoScoreHistory(c, demoScore(c));
   }
 
   /** Katalog 13.6/13.10: eksempel-branchetal afledt af virksomhedens egne nøgletal. */

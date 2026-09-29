@@ -469,7 +469,10 @@ export const scoreGaugeSchema = z.object({
   detail: z.boolean().optional().describe("Udviklingen over 24 måneder og seneste ændringer under måleren (26d.7). Standard: fra."),
 });
 
-/** Katalog 18.2: scorehistorik som trinlinje (hver hentning et punkt). Ingen live datakilde endnu, som LassoScoreGauge. */
+/**
+ * UDGÅET (Jakob 29.09): 18.2 Scorehistorik. Der kan ikke laves historik, og typen er fjernet fra kataloget
+ * (COMPONENT_CATALOG), så AI'en vælger den ikke. Skemaet står kun, så gemte specs stadig kan læses.
+ */
 export const scoreHistorySchema = z.object({
   type: z.literal("LassoScoreHistory"),
   company: companyRef,
@@ -533,6 +536,10 @@ export const propertiesSchema = z.object({
   title: z.string().max(80).optional(),
 });
 
+/**
+ * UDGÅET (Jakob 29.09): 22.2 Revisoruafhængighed kan ikke laves. Fjernet fra kataloget; skemaet står kun,
+ * fordi compose.ts endnu bygger elementet på risikosiden (skal fjernes af compose-ejeren) og for gemte specs.
+ */
 export const auditorIndependenceSchema = z.object({
   type: z.literal("LassoAuditorIndependence"),
   company: companyRef,

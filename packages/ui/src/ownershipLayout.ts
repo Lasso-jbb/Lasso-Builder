@@ -339,13 +339,16 @@ function entityNode(n: OwnershipNodeVM, weight: number): WNode {
   return { id: n.id, kind: n.kind, entity: n, title: n.name, subtitle: entitySubtitle(n), weight };
 }
 
-/** Undertekst under navnet: "CVR 32343554, ApS", "Person", "Udenlandsk, Norge", "Ophørt". */
+/**
+ * Undertekst under navnet: "CVR 32343554", "Udenlandsk, Norge", "Ophørt". 14.1 (Jakob): ingen
+ * selskabsform efter CVR-nummeret, og personer har ingen undertekst (tom streng; ikke "Person").
+ */
 export function entitySubtitle(n: OwnershipNodeVM): string {
-  if (n.kind === "person") return "Person";
+  if (n.kind === "person") return "";
   // 14.2/14b: "Udenlandsk, Norge" eller registreringsnummeret med landets betegnelse ("Org.nr. 000 000 002, Norge", "HRB 000000, Tyskland").
   if (n.country && n.country.toUpperCase() !== "DK") return [n.registrationNo ? registrationText(n.country, n.registrationNo) : "Udenlandsk", countryName(n.country)].join(", ");
   if (isCeased(n)) return n.status ?? "Ophørt";
-  return [n.cvr ? `CVR ${n.cvr}` : undefined, n.form].filter(Boolean).join(", ") || (n.status ?? "Virksomhed");
+  return n.cvr ? `CVR ${n.cvr}` : (n.status ?? "Virksomhed");
 }
 
 /** Registreringsnummer med landets betegnelse: Norge og Sverige "Org.nr.", Tyskland som "HRB …" uændret. */
@@ -709,8 +712,11 @@ function capLayers(
         subtitle: sign < 0 ? `${subtitle ?? "Andele ikke oplyst"}, fold ud` : subtitle,
         weight: -2,
       });
+      // 14.1 (Jakob): på ejersiden viser linjen de sammenklappede ejeres samlede, udregnede andel
+      // (summen af intervallerne, højst 100 %), fx "40–66,66 %", ikke "6 ejere".
+      const total: [number, number] = [Math.min(100, shares.reduce((a, s) => a + s[0], 0)), Math.min(100, shares.reduce((a, s) => a + s[1], 0))];
       const lines: LabelLine[] | undefined = shares.length
-        ? [{ text: same ? `${fold.length} × ${formatShare(shares[0])}` : sign < 0 ? `${fold.length} ejere` : `${fold.length} selskaber`, tone: "share" }]
+        ? [{ text: sign < 0 ? formatShare(total) : same ? `${fold.length} × ${formatShare(shares[0])}` : `${fold.length} selskaber`, tone: "share" }]
         : undefined;
       for (const n of fold) work.delete(n);
       edges = edges.filter((e) => !foldSet.has(e.from) && !foldSet.has(e.to));

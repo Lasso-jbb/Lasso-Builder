@@ -419,7 +419,6 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           detail={c.detail}
           error={err(`score:${c.company}`)}
           onFetch={props.host.refresh ? () => act({ kind: "refresh" }) : undefined}
-          onReport={props.host.prompt ? () => act({ kind: "prompt", prompt: `Hent kreditrapporten for ${empty.companies[c.company]?.name ?? c.company}` }) : undefined}
         />
       );
     case "LassoRiskObservations":

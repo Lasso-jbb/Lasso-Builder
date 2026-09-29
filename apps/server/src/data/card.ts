@@ -918,7 +918,7 @@ function personTableCard(spec: ViewSpec, ds: Dataset): string | null {
     const roles = r.roles.slice(0, 2).map((x) => `${x.role}, ${x.companyName}`);
     const more = r.roles.length > 2 ? ` og ${moreText(r.roles.length - 2)}` : "";
     if (roles.length) for (const l of wrap(roles.join("; ") + more, W - 4)) card.raw(`    ${l}`);
-    // 15.3 (Jakob 29.09): intet fødselsår eller by efter navnet; kun konkurser.
+    // 15.3 (Jakob): kun navnet; ingen fødselsår eller by.
     const facts = [r.bankruptcies > 0 ? `${r.bankruptcies} konkurs${r.bankruptcies === 1 ? "" : "er"}` : null].filter(Boolean).join(", ");
     if (facts) for (const l of wrap(facts, W - 4)) card.raw(`    ${l}`);
   });
@@ -926,7 +926,7 @@ function personTableCard(spec: ViewSpec, ds: Dataset): string | null {
   return card.toString();
 }
 
-/** Katalog 21: ændringsfeedet som tekst. Navn, type; beskrivelse (status som "fra -> til"); kilde, klokkeslæt. 3 + "Se N flere". */
+/** Katalog 21: ændringsfeedet som tekst. Navn, type; beskrivelse (status som "fra -> til"); klokkeslæt (21.1: ingen kilde). 3 + "Se N flere". Kredit-typen udgår (Jakob 15:41). */
 function changeFeedCard(spec: ViewSpec, ds: Dataset): string | null {
   const c = spec.components.find((x) => x.type === "LassoChangeFeed");
   if (!c || c.type !== "LassoChangeFeed") return null;
@@ -945,7 +945,8 @@ function changeFeedCard(spec: ViewSpec, ds: Dataset): string | null {
   };
   let lastDay = "";
   let shown = 0;
-  for (const e of feed.entries.slice(0, 3)) {
+  const entries = feed.entries.filter((e) => e.type !== "kredit");
+  for (const e of entries.slice(0, 3)) {
     const day = e.at.slice(0, 10);
     if (day !== lastDay) {
       card.text(formatDate(day));
@@ -955,10 +956,10 @@ function changeFeedCard(spec: ViewSpec, ds: Dataset): string | null {
     card.text(`${who}, ${CHANGE_TYPE_LABELS[e.type].toLowerCase()}`);
     const body = e.type === "status" && (e.from || e.to) ? `${e.from ?? ""} -> ${e.to ?? ""}`.trim() : e.text;
     for (const l of wrap(`${body}${e.read ? "" : ", ulæst"}`, W - 2)) card.raw(`  ${l}`);
-    for (const l of wrap(`${e.source}, ${clock(e.at)}`, W - 2)) card.raw(`  ${l}`);
+    card.raw(`  ${clock(e.at)}`);
     shown++;
   }
-  if (feed.entries.length > shown) card.text(`Se ${moreText(feed.entries.length - shown)}`);
+  if (entries.length > shown) card.text(`Se ${moreText(entries.length - shown)}`);
   return card.toString();
 }
 

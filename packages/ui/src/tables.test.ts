@@ -125,7 +125,7 @@ test("Persontabel (15.3): navn alene, 2 rolleord + +n, selskaber, konkurser kun 
   assert.equal(personSub(persons.rows[0]!), "Født 1978, København");
   const html = renderToStaticMarkup(createElement(PersonTable, { result: persons, onAction: noop, canDrillDown: true }));
   assert.match(html, /Mette Eksempel/);
-  assert.doesNotMatch(html, /Født 1978|lasso-table__sub|lasso-ccard__sub/, "15.3: kun navnet, ingen undertekst");
+  assert.doesNotMatch(html, /Født 1978|lasso-table__sub|lasso-ccard__sub/, "15.3: kun navnet i personcellen");
   assert.match(html, /lasso-ptable__bankrupt">1</);
   assert.match(html, />Roller, aktive<[^]*>Selskaber<[^]*>Konkurser<[^]*>Seneste ændring</);
   assert.match(html, /Direktør, bestyrelsesmedlem<span class="lasso-ptable__more"> \+1</);

@@ -516,7 +516,8 @@ test("ændringsfeedet (katalog 21) som tekstkort: samme bredde, ingen midterprik
   assert.match(card, /25\.09\.2026/);
   assert.match(card, /Cloud Eksempel A\/S, status/);
   assert.match(card, /Aktiv -> Under konkurs, ulæst/);
-  assert.match(card, /CVR, kl\. 09\.14/);
+  assert.match(card, / kl\. 09\.14/);
+  assert.doesNotMatch(card, /CVR, kl\./, "21.1: ingen kildetype");
   assert.match(card, /5 virksomheder, stamdata/);
   assert.match(card, /Se 1 mere/);
   assert.ok(!card.includes("Prøve ApS"), "kun 3 rækker vises");
@@ -601,7 +602,8 @@ test("tekstkort for persontabellen (15.3): roller, fødselsår, by og konkurser"
   const card = textCard(spec, ds)!;
   for (const l of card.split("\n")) assert.equal([...l].length, 38);
   assert.ok(card.includes("Mette Eksempel"));
+  // 15.3: kun navnet; ingen fødselsår eller by.
   assert.ok(card.includes("1 konkurs"));
-  assert.ok(!card.includes("f. 1978") && !card.includes("København"), "15.3: intet fødselsår eller by");
+  assert.doesNotMatch(card, /f\. 1978|København/);
   assert.doesNotMatch(card, /·/);
 });

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { CHANGE_TYPE_LABELS, formatNumber, type ActivityHeatmapVM } from "@lasso/spec";
-import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { DataState, Section, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
 
 const MONTHS = ["jan.", "feb.", "mar.", "apr.", "maj", "jun.", "jul.", "aug.", "sep.", "okt.", "nov.", "dec."];
@@ -22,15 +22,25 @@ export function heatStep(count: number, max: number): 1 | 2 | 3 | 4 | 5 {
   return (Math.min(4, Math.max(1, Math.ceil((count / max) * 4))) + 1) as 2 | 3 | 4 | 5;
 }
 
+/** Rækken "Kredit" og dens antal tages ud (21.1). */
+function hideCredit(h: ActivityHeatmapVM): ActivityHeatmapVM {
+  const hidden = h.rows.filter((r) => r.type === "kredit");
+  if (!hidden.length) return h;
+  const removed = hidden.reduce((n, r) => n + r.counts.reduce((a, b) => a + b, 0), 0);
+  return { ...h, rows: h.rows.filter((r) => r.type !== "kredit"), total: Math.max(0, h.total - removed) };
+}
+
 /**
  * Heatmap, aktivitet pr. måned i en overvåget liste (katalog 13.11, node AKQ-0). Sekventiel skala i 5
  * trin fra surface-muted til koral, celle 34×18 med 4 px imellem, månedsetiketter under gitteret
  * (seneste måned 600). Hover, fokus og tryk: 1 px ink-ramme og tallet inde i cellen. Legende
- * "Færre … Flere" under.
+ * "Færre … Flere" under; ingen kildelinje (13.11, G3).
  * Mobil (26b.10): kvadratiske 24 px celler, 6 måneder synlige (swipe for flere, de nyeste i syne), den
  * valgte celle med ink-ramme og tallet; ingen legende eller kildelinje.
  */
-export function Heatmap({ heatmap, title, error }: { heatmap?: ActivityHeatmapVM; title?: string; error?: string }) {
+export function Heatmap({ heatmap: raw, title, error }: { heatmap?: ActivityHeatmapVM; title?: string; error?: string }) {
+  // 21.1 (Jakob 29.09): ændringstypen Kredit udgår (afklaret 15:41; ingen scorehistorik).
+  const heatmap = raw ? hideCredit(raw) : undefined;
   const scroller = useRef<HTMLDivElement>(null);
   const [ref, W] = useWidth<HTMLDivElement>(1048);
   const compact = W <= 560;
@@ -139,7 +149,6 @@ export function Heatmap({ heatmap, title, error }: { heatmap?: ActivityHeatmapVM
             ))}
             <span>Flere</span>
           </div>
-          {heatmap.source ? <SourceLine source={heatmap.source} updated={heatmap.updated} /> : null}
         </>
       )}
     </Section>

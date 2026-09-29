@@ -1,12 +1,10 @@
 import {
   buildActivityHeatmap,
   CHANGE_TYPES,
-  formatAmount,
   type ActivityHeatmapVM,
   type Address,
   type ChangeEntryVM,
   type ChangeType,
-  type CreditRatingVM,
   type FinancialsVM,
   type IndustryBenchmarkVM,
   type MapPointVM,
@@ -38,22 +36,18 @@ const seedOf = (c: DemoLike) => Number(c.cvr?.slice(-2) ?? "0");
 /**
  * 10.1: eksempler på alle hente-tilstande. Eksempel Revision Nord: ikke hentet (koster 1 kredit);
  * Eksempel Tømrer: henter (60 %); Eksempel Holding: kan ikke hentes (holdingselskab uden drift).
- * De øvrige aktive har en score med Kreditmaksimum og International score under måleren.
+ * De øvrige aktive har en score. Lassos risikoscore 0-100, hvor 100 = høj risiko (Jakob 29.09); ingen
+ * Creditsafe-fakta (kreditmaksimum, international score) under måleren.
  */
-export function demoScore(c: DemoLike, credit: CreditRatingVM | undefined): ScoreVM {
+export function demoScore(c: DemoLike): ScoreVM {
   const lassoId = c.lassoId;
   if (c.cvr === "99000003") return { lassoId, score: null, state: "notfetched", cost: "1 kredit", reason: "Scoren er ikke hentet for virksomheden endnu. Den beregnes, når du beder om den." };
-  if (c.cvr === "99000006") return { lassoId, score: null, state: "fetching", progress: 0.6, reason: "Beregner scoren ud fra regnskab, ledelse og betalingsdata. Det tager 5–45 sekunder." };
+  if (c.cvr === "99000006") return { lassoId, score: null, state: "fetching", progress: 0.6, reason: "Beregner scoren ud fra regnskabsnøgletal, status og observationer. Det tager 5-45 sekunder." };
   if (c.cvr === "99000010") return { lassoId, score: null, state: "unavailable", reason: "Holdingselskaber uden egen drift får ingen score, fordi der ikke er driftstal at vurdere." };
   if (c.status !== "Aktiv") return { lassoId, score: null, state: "unavailable", reason: `Virksomheden er ${c.status?.toLowerCase() ?? "ikke aktiv"}, og der beregnes ikke score for ophørte virksomheder.` };
   const seed = seedOf(c);
   const score = Math.max(5, Math.min(95, 22 + ((seed * 13) % 70)));
-  const cur = credit?.state === "ok" ? credit.current : undefined;
-  const facts = [
-    ...(typeof cur?.creditMax === "number" ? [{ label: "Kreditmaksimum", value: formatAmount(cur.creditMax) }] : []),
-    ...(cur?.internationalScore ? [{ label: "International score", value: cur.internationalScore }] : []),
-  ];
-  return { lassoId, score, state: "ok", source: "Eksempeldata", updated: "2026-09-12", ...(facts.length ? { facts } : {}) };
+  return { lassoId, score, state: "ok", source: "Eksempeldata", updated: "2026-09-12" };
 }
 
 /**

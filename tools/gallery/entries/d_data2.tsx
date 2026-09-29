@@ -166,7 +166,7 @@ const NOW = new Date("2026-09-29T10:00:00+02:00");
 const NOTIFICATIONS: NotificationVM[] = [
   { id: "n1", kind: "overvaagning", text: "Eksempel Energi A/S er under konkurs", category: "Status og konkurs", source: 'Overvågning "Kunder"', at: "2026-09-29T09:12:00+02:00", read: false, important: true },
   { id: "n2", kind: "overvaagning", text: "Eksempel Byg A/S har offentliggjort årsrapport 2025", category: "Nyt regnskab", source: 'Overvågning "Kunder"', at: "2026-09-29T08:40:00+02:00", read: false },
-  { id: "n3", kind: "kredit", text: "Ny kreditvurdering af Eksempel Transport ApS er klar", source: "Kredit, Creditsafe", at: "2026-09-28T15:05:00+02:00", read: false, action: { label: "Se" } },
+  // 21.2 (Jakob 29.09): Creditsafe-notifikationen er fjernet; Creditsafe bruges ikke.
   { id: "n4", kind: "eksport", text: "Eksport af 1.243 virksomheder er klar", source: "Eksport, Excel", at: "2026-09-28T11:30:00+02:00", read: true, action: { label: "Hent" } },
   { id: "n5", kind: "overvaagning", text: "Ny direktør i Eksempel Software ApS", category: "Ledelse og ejere", source: 'Overvågning "Leverandører"', at: "2026-09-27T13:20:00+02:00", read: true },
   { id: "n6", kind: "konto", text: "Du har 12 kreditter tilbage", source: "Konto", at: "2026-09-26T09:00:00+02:00", read: true },
@@ -354,19 +354,14 @@ export const entries: GalleryEntry[] = [
   /* ---------- 18 Kreditvurdering over tid ---------- */
   {
     nr: "18.1",
-    title: "Forrige vs. nu (kreditscore)",
+    title: "Aktuel score",
     node: "BX9-0",
     render: () => (
-      <ScoreCompare
-        previous={{ value: "47", of: "af 100", word: "Lav risiko", tone: "ok", date: "2026-03-14", detail: "Kreditmaks 0,9 mio. kr." }}
-        current={{ value: "52", of: "af 100", word: "Lav risiko", tone: "ok", date: "2026-09-12", detail: "Kreditmaks 1,25 mio. kr., international score B. Kilde: Creditsafe" }}
-        direction="worse"
-        delta="+5"
-        period="6 mdr."
-        action={{ label: "Hent ny, 1 kredit", onClick: noop, primary: true, note: "Du har 38 kreditter, seneste hentning for 13 dage siden" }}
-      />
+      <ScoreCompare current={{ value: "52", of: "af 100", word: "Lav risiko", tone: "ok", date: "2026-09-12" }} />
     ),
+    note: "Jakob 29.09: kun den aktuelle score (ingen forrige, pil eller ændring; ingen Creditsafe). Lassos risikoscore 0-100, hvor 100 = høj risiko (52 = lav). Paper BX9-0 redesignes af Fable.",
   },
+  // 18.2 Scorehistorik udgår (Jakob 29.09): der kan ikke laves historik.
   {
     nr: "18.3",
     title: "Bekræft hentning (dialog)",
@@ -376,12 +371,12 @@ export const entries: GalleryEntry[] = [
         <CreditConfirmDialog open onClose={noop} onConfirm={noop} balance={38} price={1} description="LASSO X A/S, seneste vurdering er 13 dage gammel." />
       </div>
     ),
-    note: "Kun tilstanden med nok kreditter vises (dialogen er en overlay). Ved 0 kreditter bliver knappen 'Køb kreditter' og prisen rød (balance=0).",
+    note: "Afklaret (Jakob 15:41): dialogen beholdes og vises, når man klikker på en Creditsafe-rapport (koster kreditter); kun Pris og Saldo efter, ingen ventetid. Kun tilstanden med nok kreditter vises (dialogen er en overlay). Ved 0 kreditter bliver knappen 'Køb kreditter' og prisen rød (balance=0).",
   },
 
   /* ---------- 19 Regnskabsdetaljer ---------- */
-  { nr: "19.1", title: "Regnskabsværktøjslinje", node: "C0Z-0", spec: company("Eksempel Byg A/S", [{ type: "LassoFinancialStatements", company: BYG }]) },
-  { nr: "19.2", title: "Resultatopgørelse", node: "C1X-0", spec: company("Eksempel Byg A/S", [{ type: "LassoIncomeStatement", company: BYG }]) },
+  { nr: "19.1", title: "Regnskabsværktøjslinje", node: "C0Z-0", spec: company("Eksempel Byg A/S", [{ type: "LassoFinancialStatements", company: BYG, years: 5 }]), note: "Fuld bredde: værktøjslinje og 5 år. Kun årsregnskaber (ingen År/Halvår/Kvartal); alle poster, som regnskabet indeholder; kvalitetsflaget står foran tallet." },
+  { nr: "19.2", title: "Resultatopgørelse", node: "C1X-0", spec: company("Eksempel Byg A/S", [{ type: "LassoIncomeStatement", company: BYG }]), note: "Kompakt (2 år + ændring): bruges, når elementet ikke står i fuld bredde; i fuld bredde bruges 19.1." },
   { nr: "19.3", title: "Regnskabsanalyse", node: "C3M-0", spec: company("Eksempel Byg A/S", [{ type: "LassoTextSections", company: BYG, variant: "analyse", width: "full" }]) },
   { nr: "19.4", title: "Balance", node: "DA9-0", spec: company("Eksempel Byg A/S", [{ type: "LassoBalanceSheet", company: BYG }]) },
   { nr: "19.5", title: "Pengestrømsopgørelse", node: "DC9-0", spec: company("Eksempel Byg A/S", [{ type: "LassoCashFlow", company: BYG }]) },
@@ -469,4 +464,5 @@ export const entries: GalleryEntry[] = [
       components: [{ type: "LassoCompareTable", companies: [BYG, "CVR-1-99000004", "CVR-1-99000008"], metrics: ["omsaetning", "bruttofortjeneste", "resultat", "egenkapital", "ansatte"] }],
     },
   },
+  // 22.2 Revisoruafhængighed udgår (Jakob 29.09); revisoren står i nøgle-værdi-listen (09.2).
 ];

@@ -1070,16 +1070,12 @@ button.lasso-relations__name:hover { text-decoration: underline; }
   .lasso-analysis__gen { font-size: 11px; line-height: 16px; color: var(--lasso-muted); text-align: right; }
 }
 
-/* ---------- Resumé (12, node A8H-0): foldet med hvid toning ---------- */
-.lasso-summary { position: relative; overflow: hidden; }
-/* 12.2: brødtekst 15/25 i læsebredde (højst ca. 72 tegn pr. linje), afsnit med 12 px luft, foldet til 5 linjer. */
+/* ---------- Resumé (12, node A8H-0): klippet rent efter 5 linjer (ingen toning) ---------- */
+.lasso-summary { position: relative; }
+/* 12.2: brødtekst 15/25 i læsebredde (højst ca. 72 tegn pr. linje), afsnit med 12 px luft. */
 .lasso-summary__body { margin: 0; max-width: 72ch; font-size: 15px; line-height: 25px; color: var(--lasso-text-2); overflow-wrap: anywhere; }
 .lasso-summary__body + .lasso-summary__body { margin-top: 12px; }
-.lasso-summary--folded { max-height: 125px; }
-.lasso-summary--folded::after {
-  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 64px;
-  background: linear-gradient(180deg, transparent 0%, var(--lasso-surface) 90%);
-}
+.lasso-summary__body--clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; line-clamp: 5; overflow: hidden; }
 
 /* ---------- Tidslinje (12, node A8Z-0) ---------- */
 .lasso-timeline { display: flex; flex-direction: column; }
@@ -1132,7 +1128,8 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-news__lasso { display: block; width: 16px; height: 16px; color: var(--lasso-text); }
 .lasso-news__source { font-size: 12px; font-weight: 600; color: var(--lasso-text); }
 .lasso-news__time { font-size: 12px; color: var(--lasso-muted); }
-.lasso-news__headline { font-size: 15px; line-height: 20px; font-weight: 600; color: var(--lasso-text); }
+/* 12.4 (Jakob): samme typografi som historikkens begivenhedsoverskrift (12.3: fs/18/500). */
+.lasso-news__headline { font-size: var(--lasso-fs); line-height: 18px; font-weight: 500; color: var(--lasso-text); }
 /* 26c.9: mobil som kompakt liste, overskrift 14/400 først (højst to linjer), kildelinjen med favicon under, intet uddrag. */
 @container lasso (max-width: 560px) {
   .lasso-news__row { display: flex; flex-direction: column; gap: 6px; padding: 12px 0; }
@@ -1297,8 +1294,6 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-livestock__title { font-size: var(--lasso-fs-lg); line-height: 24px; font-weight: 600; color: var(--lasso-text); }
 .lasso-table--herds td { height: 48px; border-bottom: 1px solid var(--lasso-divider-subtle); }
 .lasso-table--herds tbody tr:last-child td { border-bottom: 0; }
-.lasso-livestock__icon-cell { width: 32px; }
-.lasso-livestock__icon { color: var(--lasso-text-2); }
 .lasso-livestock__health { color: var(--lasso-text); font-weight: 500; }
 .lasso-livestock__unit { color: var(--lasso-muted); }
 .lasso-livestock__timeline { list-style: none; margin: 0; padding: 0; }
@@ -1366,7 +1361,6 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-odiagram__node.is-ceased .lasso-odiagram__name { fill: var(--lasso-muted); }
 .lasso-odiagram__node--unknown .lasso-odiagram__name { fill: var(--lasso-text-3); }
 .lasso-odiagram__node--group .lasso-odiagram__name, .lasso-odiagram__node--chain .lasso-odiagram__name { fill: var(--lasso-accent-text); }
-.lasso-odiagram__plus { fill: var(--lasso-accent-text); font-size: 12px; font-weight: 600; }
 .lasso-odiagram__cc { fill: var(--lasso-text-2); font-size: 10px; font-weight: 600; }
 
 /* Kanter: 1,5 px, stiplet 5/4 for historisk/ukendt, koral 4/3 for cirkulært, ink 2 px ved fokus. */
@@ -2889,6 +2883,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-score--high .lasso-score__meta { color: var(--lasso-danger); }
 /* 02c.16 Kvalitetsflag: 14 px, warning, 6 px efter tallet; linje ved tryk på mobil */
 .lasso-qflag { display: inline-flex; flex-wrap: wrap; align-items: center; margin-left: 6px; vertical-align: -2px; }
+/* 19.1 (Jakob): i regnskabstabellerne står flaget foran tallet. */
+.lasso-stmt__year .lasso-qflag, .lasso-fs-m__value .lasso-qflag { margin-left: 0; margin-right: 6px; }
 .lasso-root .lasso-qflag__btn { display: grid; place-items: center; width: 16px; height: 16px; padding: 0; border: 1px solid transparent; border-radius: var(--lasso-radius-sm); background: transparent; color: var(--lasso-warning); cursor: help; }
 .lasso-root .lasso-qflag__btn:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
 .lasso-qflag__line { display: none; }
@@ -3453,6 +3449,9 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 /* ---------- 18.1 Forrige vs. nu, to scorer side om side, ændring som pil (node BX9-0) ---------- */
 .lasso-scorecmp { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, auto) minmax(0, 1fr) minmax(0, 1fr); border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-card); overflow: hidden; margin-bottom: var(--lasso-space-4); background: var(--lasso-surface); }
 .lasso-scorecmp--noact { grid-template-columns: minmax(0, 1fr) minmax(120px, auto) minmax(0, 1fr); }
+/* 18.1 (Jakob): kun den aktuelle score; med handling står den til højre. */
+.lasso-scorecmp.lasso-scorecmp--single { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.lasso-scorecmp.lasso-scorecmp--single.lasso-scorecmp--noact { grid-template-columns: minmax(0, 1fr); }
 .lasso-scorecmp__cell { display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; padding: var(--lasso-space-4) var(--lasso-space-5); border-left: 1px solid var(--lasso-border); }
 .lasso-scorecmp__cell:first-child { border-left: 0; }
 .lasso-scorecmp__side:not(.is-current) { background: var(--lasso-surface-2); }
@@ -3573,6 +3572,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-map > .lasso-map__card { margin-top: var(--lasso-space-3); box-shadow: none; }
   /* 18.1 på mobil: de to scorer står side om side, handlingen under i fuld bredde */
   .lasso-scorecmp, .lasso-scorecmp--noact { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .lasso-scorecmp.lasso-scorecmp--single { grid-template-columns: minmax(0, 1fr); }
   .lasso-scorecmp__cell { padding: var(--lasso-space-3); }
   .lasso-scorecmp__change { grid-column: 1 / -1; order: 3; flex-direction: row; justify-content: flex-start; gap: var(--lasso-space-2); border-left: 0; border-top: 1px solid var(--lasso-border); }
   .lasso-scorecmp__act { order: 4; }

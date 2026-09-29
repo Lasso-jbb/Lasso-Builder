@@ -32,7 +32,7 @@ test("19.1: LassoFinancialStatements henter det fulde regnskab; demo har koncern
   assert.match(textCard(spec, ds)!, /Revideret af/);
 });
 
-test("26d.5/26d.7: personens netværkstal og scorens historik i demodata", async () => {
+test("26d.5/26d.7: personens netværkstal; scoren uden historik (18.2 udgår)", async () => {
   const p = new DemoProvider();
   const person = "CVR-3-4000000001";
   const spec = parseViewSpec({ title: "x", kind: "person", components: [{ type: "LassoPersonHead", person }, { type: "LassoPersonStats", person }] });
@@ -40,9 +40,9 @@ test("26d.5/26d.7: personens netværkstal og scorens historik i demodata", async
   assert.ok(ds.persons[person] && ds.personNetworks[person]);
   assert.match(textCard(spec, ds)!, /NETVÆRKSTAL[^]*Konkurser/);
   const score = await p.score(BYG);
-  assert.ok((score.history?.length ?? 0) <= 6 && (score.history?.length ?? 0) >= 2);
-  assert.equal(score.history?.at(-1)?.score, score.score);
-  assert.equal(score.changes?.length, 3);
+  assert.equal(typeof score.score, "number");
+  assert.equal(score.history, undefined);
+  assert.equal(score.changes, undefined);
 });
 
 test("28.2/28.6/28.8: companyEvents hentes for de tre komponenter, og tekstkortet nævner dem", async () => {

@@ -18,12 +18,14 @@ const s: FinancialStatementsVM = {
   cashFlow: years.map((year) => ({ year, operatingCashFlow: 3_410_000, investingCashFlow: -2_620_000, financingCashFlow: -900_000, netCashFlow: -110_000 })),
 };
 
-test("19.1: værktøjslinje med selskab/koncern, periode, enhed, påtegning og Hent PDF", () => {
+test("19.1: værktøjslinje med selskab/koncern, periode, enhed, påtegning og Hent PDF (ingen År/Halvår/Kvartal)", () => {
   const html = renderToStaticMarkup(createElement(FinancialStatements, { statements: s }));
   assert.match(html, /role="toolbar" aria-label="Regnskabets værktøjslinje"/);
   // Intet koncernregnskab: Koncern dæmpet med forklaring
   // 29.2 (Jakob 29.09): faner uden data (Koncern uden koncernregnskab, Halvår, Kvartal) vises ikke.
   assert.doesNotMatch(html, />Koncern<|>Halvår<|>Kvartal</);
+  // 19.1 (Jakob 29.09): kun årsregnskaber, ingen periodevælger.
+  assert.doesNotMatch(html, /aria-label="Periode"/);
   // Selskab først, periode-dropdown "2025, 01.01–31.12", enhed "t. kr." uden synlig etiket
   assert.doesNotMatch(html, />Selskab</, "G1: segmentkontrol med ét valg tegnes ikke");
   assert.match(html, /<option value="2025"[^>]*>2025, 01\.01–31\.12<\/option>/);
@@ -72,4 +74,22 @@ test("26h.2: kvalitetsflag er en knap med tooltip (tap), tallet i normal farve",
   const html = renderToStaticMarkup(createElement(QualityFlag, { reason: "Mulig fejl i tallet." }));
   assert.match(html, /<button type="button" class="lasso-qflag__btn" aria-label="Mulig fejl: Mulig fejl i tallet\." aria-expanded="false"/);
   assert.match(html, /role="tooltip"[^>]*>Mulig fejl i tallet\.</);
+});
+
+test("19.1: fuldstændige opgørelser (poster uden tal udelades) og kvalitetsflaget foran tallet", async () => {
+  const { incomeRows, balanceSections, cashFlowRows } = await import("./components/statementRows.js");
+  const y = (year: number, extra: object) => ({ year, revenue: 100, externalCosts: -40, grossProfit: 60, staffCosts: -30, otherOperatingCosts: year === 2025 ? -50 : -2, ebitda: 28, depreciation: -8, ebit: 20, financialIncome: 2, financialExpenses: -4, profitBeforeTax: 18, tax: -4, profit: 14, ...extra });
+  const inc = incomeRows([y(2024, {}), y(2025, {})]);
+  assert.deepEqual(inc.map((r) => r.label), ["Omsætning", "Vareforbrug og eksterne omkostninger", "Bruttofortjeneste", "Personaleomkostninger", "Andre driftsomkostninger", "EBITDA", "Af- og nedskrivninger", "Resultat af primær drift (EBIT)", "Finansielle indtægter", "Finansielle omkostninger", "Resultat før skat", "Skat af årets resultat", "Årets resultat"]);
+  // Mangler en post i data, udelades rækken.
+  const lean = incomeRows([{ year: 2025, grossProfit: 60, profit: 14 }]);
+  assert.deepEqual(lean.map((r) => r.label), ["Bruttofortjeneste", "Årets resultat"]);
+  const bal = balanceSections([{ year: 2025, intangibleAssets: 1, tangibleAssets: 2, financialFixedAssets: 3, fixedAssetsTotal: 6, inventories: 1, cash: 2, currentAssetsTotal: 3, assetsTotal: 9, equityTotal: 4, provisions: 1, longTermLiabilities: 2, shortTermLiabilities: 2, liabilitiesAndEquityTotal: 9 }]);
+  assert.deepEqual(bal[0]!.rows.map((r) => r.label), ["Immaterielle anlægsaktiver", "Materielle anlægsaktiver", "Finansielle anlægsaktiver", "Anlægsaktiver i alt", "Varebeholdninger", "Likvide beholdninger", "Omsætningsaktiver i alt", "Aktiver i alt"]);
+  assert.deepEqual(bal[1]!.rows.map((r) => r.label), ["Egenkapital i alt", "Hensatte forpligtelser", "Langfristet gæld", "Kortfristet gæld", "Passiver i alt"]);
+  const cf = cashFlowRows([{ year: 2025, operatingCashFlow: 1, investingCashFlow: -1, financingCashFlow: 0, netCashFlow: 0, cashEnding: 2 }], { balanceSheet: [] });
+  assert.deepEqual(cf.map((r) => r.label), ["Pengestrøm fra drift", "Pengestrøm fra investering", "Pengestrøm fra finansiering", "Årets ændring i likvider", "Likvider ultimo"]);
+  // Kvalitetsflaget (> 10× fra året før) står foran tallet.
+  const html = renderToStaticMarkup(createElement(FinancialStatements, { statements: { ...s, incomeStatement: [y(2024, {}), y(2025, {})] } }));
+  assert.match(html, /lasso-stmt__year--last[^"]*"><span class="lasso-qflag/);
 });

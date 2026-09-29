@@ -9,8 +9,10 @@ import { resolveSpec } from "./resolve.js";
 const demo = new DemoProvider();
 const ID = "CVR-1-99000001";
 
-test("nye katalogtyper (13.10, 13.11, 13.12, 18.2) har schema og katalogtekst uden midterprik", () => {
-  for (const type of ["LassoKeyFigureGauge", "LassoHeatmap", "LassoMap", "LassoScoreHistory"] as const) {
+test("nye katalogtyper (13.10, 13.11, 13.12) har schema og katalogtekst uden midterprik; 18.2/22.2 er udgået af kataloget", () => {
+  // 18.2 Scorehistorik og 22.2 Revisoruafhængighed udgår (Jakob 29.09): skemaet læses stadig, men AI'en ser dem ikke.
+  for (const type of ["LassoScoreHistory", "LassoAuditorIndependence"]) assert.ok(!COMPONENT_CATALOG.some((e) => e.type === type), type);
+  for (const type of ["LassoKeyFigureGauge", "LassoHeatmap", "LassoMap"] as const) {
     const entry = COMPONENT_CATALOG.find((e) => e.type === type);
     assert.ok(entry, type);
     assert.match(entry.description, /Brug til:[^]*Brug ikke når:[^]*Kræver:[^]*Eksempel/);
@@ -64,7 +66,7 @@ test("resolveSpec henter branchetal, historik, kort, heatmap og det fulde regnsk
   for (const line of card.split("\n")) assert.equal([...line].length, 38, `samme bredde: ${line}`);
 });
 
-test("demo: scoremålerens hente-tilstande og nøgle-værdi-linjer (10.1)", async () => {
+test("demo: scoremålerens hente-tilstande; Lassos risikoscore uden Creditsafe-fakta og historik (10.1)", async () => {
   assert.equal((await demo.score("CVR-1-99000003")).state, "notfetched");
   assert.equal((await demo.score("CVR-1-99000006")).state, "fetching");
   const off = await demo.score("CVR-1-99000010");
@@ -72,7 +74,9 @@ test("demo: scoremålerens hente-tilstande og nøgle-værdi-linjer (10.1)", asyn
   assert.ok(off.reason, "ikke tilgængelig har altid en årsag");
   const ok = await demo.score(ID);
   assert.equal(typeof ok.score, "number");
-  assert.deepEqual(ok.facts?.map((f) => f.label), ["Kreditmaksimum", "International score"]);
+  assert.ok(ok.score! >= 0 && ok.score! <= 100, "0-100, hvor 100 = høj risiko");
+  assert.equal(ok.facts, undefined, "ingen Kreditmaksimum/International score (Creditsafe bruges ikke)");
+  assert.equal(ok.history, undefined, "ingen scorehistorik (18.2 udgår)");
 });
 
 test("heatmap: tæller foldede ændringer med deres antal og udelader tomme typer", () => {

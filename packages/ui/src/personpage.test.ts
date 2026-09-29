@@ -143,9 +143,10 @@ test("personsiden, overblik: aktive roller som liste ¾ + stamoplysninger ¼ (ud
   assert.match(html, /Se alle 6 begivenheder/);
   // Ingen nyheder på overblikket.
   assert.doesNotMatch(html, /Carla Prøve indtræder i bestyrelsen/);
-  // Ejerdiagram med personen som rod: "Fokusperson", ingen retningsvalg (en person har ingen ejere).
+  // Ejerdiagram med personen som rod: ingen retningsvalg (en person har ingen ejere); 14.1: legenden
+  // forklarer ikke fokus, virksomhed eller person.
   assert.match(html, /Ejerskab/);
-  assert.match(html, /Fokusperson/);
+  assert.doesNotMatch(html, /Fokusperson/);
   assert.doesNotMatch(html, /Kun ejere/);
   assert.match(html, /aria-label="Eksempel Holding ApS, CVR 99000010/);
   assert.match(html, /100 %/);

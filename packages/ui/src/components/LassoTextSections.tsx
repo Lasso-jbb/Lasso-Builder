@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { analysisSource, formatDate, isAnalysisSection, isPersonId, textSectionsFor, type TextSectionItem, type TextSectionsVariant, type TextSectionsVM, type TextSegment } from "@lasso/spec";
+import { formatDate, isAnalysisSection, isPersonId, textSectionsFor, type TextSectionItem, type TextSectionsVariant, type TextSectionsVM, type TextSegment } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
-import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { DataState, Section, stateForError } from "../primitives.js";
 
 const TRUNCATE_AT = 220;
 
@@ -51,7 +51,7 @@ function Runs({ segments, onOpen }: { segments: readonly TextSegment[]; onOpen?:
 
 /**
  * Brødteksten (segmenter, når kilden har navne med Lasso-ID), skåret ved `limit` tegn. Med
- * `toggle` får et langt afsnit sin egen "Vis hele"; ellers folder elementet det ud samlet.
+ * `toggle` får et langt afsnit sin egen "Vis mere"; ellers folder elementet det ud samlet.
  */
 function TextBody({ item, limit, toggle, onOpen }: { item: TextSectionItem; limit: number; toggle: boolean; onOpen?: (a: ViewAction) => void }) {
   const [expanded, setExpanded] = useState(false);
@@ -66,7 +66,7 @@ function TextBody({ item, limit, toggle, onOpen }: { item: TextSectionItem; limi
       </p>
       {long && toggle ? (
         <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-          {expanded ? "Vis mindre" : "Vis hele"}
+          {expanded ? "Vis mindre" : "Vis mere"}
         </button>
       ) : null}
     </>
@@ -97,7 +97,7 @@ function Item({
 }
 
 /**
- * Variant "profil" (12.1): lange afsnit foldes hver for sig, men ét "Vis hele" (koral) til sidst folder
+ * Variant "profil" (12.1): lange afsnit foldes hver for sig, men ét "Vis mere" (koral) til sidst folder
  * hele sektionen ud på én gang, i stedet for et link efter hvert afsnit.
  */
 function Profile({ items, onOpen }: { items: TextSectionItem[]; onOpen?: (a: ViewAction) => void }) {
@@ -110,7 +110,7 @@ function Profile({ items, onOpen }: { items: TextSectionItem[]; onOpen?: (a: Vie
       ))}
       {long ? (
         <button type="button" className="lasso-link lasso-more" aria-expanded={open} onClick={() => setOpen(!open)}>
-          {open ? "Vis mindre" : "Vis hele"}
+          {open ? "Vis mindre" : "Vis mere"}
         </button>
       ) : null}
     </>
@@ -229,9 +229,8 @@ function AnalysisSection({ heading, v, items, onOpen, folded = false }: { headin
 /**
  * Tekstsektioner (katalog 12, "Tekstsektioner"). Variant "profil" (overblik): formål og
  * tegningsregler fra CVR plus regnskabsanalysens konklusion, resultat og likviditet, hvert
- * afsnit foldet med "Vis hele". Branche står i hovedet og gentages ikke. Variant "analyse"
- * (oekonomi): hele regnskabsanalysen, foldet efter konklusionen. Analysens kildelinje står én
- * gang pr. element. Navne med Lasso-ID kan åbnes, når værten har drill-down (`onOpen`).
+ * afsnit foldet med "Vis mere". Branche står i hovedet og gentages ikke. Variant "analyse"
+ * (oekonomi): hele regnskabsanalysen, foldet efter konklusionen. Ingen kildelinje (G3). Navne med Lasso-ID kan åbnes, når værten har drill-down (`onOpen`).
  */
 export function LassoTextSections({
   sections,
@@ -267,7 +266,6 @@ export function LassoTextSections({
       </Section>
     );
   }
-  const hasAnalysis = shown.some(isAnalysisSection);
   if (analysis) {
     return (
       <AnalysisSection heading={heading} v={sections} items={shown} onOpen={onOpen} folded={folded} />
@@ -275,8 +273,8 @@ export function LassoTextSections({
   }
   return (
     <Section title={heading} span={span} className="lasso-textsections">
+      {/* 12.1: ingen kildelinje (G3). */}
       <Profile items={shown} onOpen={onOpen} />
-      {hasAnalysis ? <SourceLine source={analysisSource(shown)} updated={sections.analysisGenerated} verb="genereret" /> : null}
     </Section>
   );
 }

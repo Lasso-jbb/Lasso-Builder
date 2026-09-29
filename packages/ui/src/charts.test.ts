@@ -114,6 +114,10 @@ test("13.12: kortet klynger relaterede adresser tæt på hinanden, aldrig hoveda
 test("18.1/18.2: forrige vs. nu og trinlinje; en stigning er mere risiko i warning-tekst", () => {
   const cmp = html(createElement(ScoreCompare, { previous: { value: "47" }, current: { value: "52" }, direction: "worse", amount: "5 point" }));
   assert.match(cmp, /lasso-scorecmp__change--worse[^]*▲ 5 point, mere risiko/);
+  // 18.1 (Jakob 29.09): uden forrige kun den aktuelle score, ingen ændring.
+  const single = html(createElement(ScoreCompare, { current: { value: "52", of: "af 100" } }));
+  assert.match(single, /lasso-scorecmp--single[^]*Aktuel score[^]*52/);
+  assert.doesNotMatch(single, /Forrige|lasso-scorecmp__change/);
   const h = html(createElement(ScoreHistory, { history: { lassoId: ID, points: [{ date: "2025-01-01", score: 40 }, { date: "2026-06-01", score: 65 }], source: "Eksempeldata" } }));
   assert.match(h, /lasso-scorehist__zone--low[^]*lasso-scorehist__zone--mid[^]*lasso-scorehist__zone--high/);
   assert.match(text(h), /Forrige, 01\.01\.2025 40 af 100[^]*\+25, mere risiko[^]*Nu, 01\.06\.2026 65 af 100/);
@@ -121,9 +125,10 @@ test("18.1/18.2: forrige vs. nu og trinlinje; en stigning er mere risiko i warni
   assert.match(empty, /Ingen historik endnu\./);
 });
 
-test("18.3: bekræft hentning viser pris, saldo efter og ventetid; ved 0 kreditter 'Køb kreditter' og rød pris", () => {
+test("18.3: bekræft hentning viser pris og saldo efter (ingen ventetid); ved 0 kreditter 'Køb kreditter' og rød pris", () => {
   const ok = text(html(createElement(CreditConfirmDialog, { open: true, onClose: () => {}, onConfirm: () => {}, balance: 12 })));
-  assert.match(ok, /Pris 1 kredit Saldo efter 11 kreditter Ventetid typisk 5–45 sek\./);
+  assert.match(ok, /Pris 1 kredit Saldo efter 11 kreditter/);
+  assert.doesNotMatch(ok, /Ventetid/);
   assert.match(ok, /Hent, 1 kredit/, "prisen gentages i knappen");
   const zero = html(createElement(CreditConfirmDialog, { open: true, onClose: () => {}, onConfirm: () => {}, onBuy: () => {}, balance: 0 }));
   assert.match(zero, /lasso-creditconfirm__price--short">1 kredit/);

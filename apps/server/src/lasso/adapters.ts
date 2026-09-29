@@ -892,9 +892,11 @@ export function adaptFinancialStatements(lassoId: string, raw: Json): FinancialS
         signed(false, "otheroperatingincomeexpense"),
       );
     const depreciation = signed(true, ...CONCEPTS.depreciation);
+    // 19.1: finansielle indtægter og omkostninger hver for sig (ubekræftede begreber, læses defensivt).
+    const financialIncome = signed(false, "otherfinanceincome", "financeincome", "financialincome", "otherfinancialincome");
+    const financialExpenses = signed(true, "otherfinanceexpenses", "financecosts", "financialexpenses", "otherfinancialexpenses");
     const financialItemsNet =
-      g("financialincomeandexpenses", "netfinancials", "financialitemsnet", "financeincomecost") ??
-      sum(signed(false, "otherfinanceincome", "financeincome", "financialincome", "otherfinancialincome"), signed(true, "otherfinanceexpenses", "financecosts", "financialexpenses", "otherfinancialexpenses"));
+      g("financialincomeandexpenses", "netfinancials", "financialitemsnet", "financeincomecost") ?? sum(financialIncome, financialExpenses);
     const profitBeforeTax = signed(false, "profitlossfromordinaryactivitiesbeforetax", "profitlossbeforetax", "profitbeforetax");
     const tax = signed(true, "taxexpenseonordinaryactivities", "taxexpense", "incometaxexpensecontinuingoperations", "incometaxexpense", "tax");
     const profit = signed(false, ...CONCEPTS.profit);
@@ -906,7 +908,11 @@ export function adaptFinancialStatements(lassoId: string, raw: Json): FinancialS
         return typeof ebit === "number" && typeof depreciation === "number" ? ebit + Math.abs(depreciation) : null;
       })() ??
       (typeof grossProfit === "number" && typeof staffCosts === "number" && typeof otherOperatingCosts === "number" ? grossProfit + staffCosts + otherOperatingCosts : null);
-    incomeStatement.push({ year, periodStart, periodEnd, revenue, grossProfit, staffCosts, otherOperatingCosts, ebitda, depreciation, financialItemsNet, profitBeforeTax, tax, profit });
+    // 19.1: vareforbrug og eksterne omkostninger = bruttofortjeneste − omsætning (når begge er oplyst);
+    // EBIT som begreb, ellers EBITDA + af- og nedskrivninger.
+    const externalCosts = typeof revenue === "number" && typeof grossProfit === "number" && revenue !== grossProfit ? grossProfit - revenue : null;
+    const ebit = g(...CONCEPTS.ebit) ?? (typeof ebitda === "number" && typeof depreciation === "number" ? ebitda + depreciation : null);
+    incomeStatement.push({ year, periodStart, periodEnd, revenue, externalCosts, grossProfit, staffCosts, otherOperatingCosts, ebitda, depreciation, ebit, financialIncome, financialExpenses, financialItemsNet, profitBeforeTax, tax, profit });
 
     const equityTotal = g(...CONCEPTS.equity);
     // IFRS: current/noncurrent liabilities; ÅRL: …OtherThanProvisions (hensatte står for sig).
@@ -919,7 +925,10 @@ export function adaptFinancialStatements(lassoId: string, raw: Json): FinancialS
       periodEnd,
       intangibleAssets: g("intangibleassets", "intangibleassetsotherthangoodwill", "intangibleassetsandgoodwill"),
       tangibleAssets: g("propertyplantandequipment", "tangibleassets"),
+      // 19.1: ubekræftede begreber (ÅRL/IFRS), læses defensivt; mangler de, udelades rækken.
+      financialFixedAssets: g("longterminvestmentsandreceivables", "noncurrentfinancialassets", "financialfixedassets", "investmentsinsubsidiariesjointventuresandassociates"),
       fixedAssetsTotal: g("fixedassets", "noncurrentassets"),
+      inventories: g("inventories", "inventory"),
       tradeReceivables: g("shorttermtradereceivables", "tradereceivables", "tradeandothercurrentreceivables", "currenttradereceivables", "shorttermreceivablesfromsales"),
       otherReceivables: g("othershorttermreceivables", "othercurrentreceivables", "prepayments"),
       cash: g("cashandcashequivalents", "cash"),
@@ -928,6 +937,7 @@ export function adaptFinancialStatements(lassoId: string, raw: Json): FinancialS
       shareCapital: g("contributedcapital", "issuedcapital", "sharecapital"),
       retainedEarnings: g("retainedearnings"),
       equityTotal,
+      provisions: g("provisions", "noncurrentprovisions"),
       longTermLiabilities,
       shortTermLiabilities,
       liabilitiesTotal,

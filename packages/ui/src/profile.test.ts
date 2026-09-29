@@ -94,13 +94,13 @@ const SECTIONS: TextSectionsVM = {
 };
 const headings = (html: string) => [...html.matchAll(/lasso-textsection__heading">([^<]*)</g)].map((m) => m[1]);
 
-test("Virksomhedsprofil (overblik): CVR-tekster uden branche plus konklusion, resultat og likviditet, én kildelinje", () => {
+test("Virksomhedsprofil (overblik): CVR-tekster uden branche plus konklusion, resultat og likviditet, ingen kildelinje (12.1)", () => {
   const html = renderToStaticMarkup(createElement(LassoTextSections, { sections: SECTIONS }));
   assert.deepEqual(headings(html), ["Formål", "Tegningsregler", "Regnskabsanalyse: konklusion", "Resultat", "Likviditet"]);
-  assert.equal(count(html, "Kilde: Lasso regnskabsanalyse"), 0);
+  assert.doesNotMatch(html, /Kilde:/);
   assert.doesNotMatch(html, /NACE 412000/);
-  // 12.1: lange afsnit foldes hver for sig, men der er ét "Vis hele" for hele sektionen.
-  assert.equal(count(html, ">Vis hele<"), 1);
+  // 12.1: lange afsnit foldes hver for sig, men der er ét "Vis mere" for hele sektionen.
+  assert.equal(count(html, ">Vis mere<"), 1);
   assert.doesNotMatch(html, /Se hele regnskabsanalysen/);
   // Kun CVR-tekster: ingen analysekilde.
   const cvr = renderToStaticMarkup(createElement(LassoTextSections, { sections: { ...SECTIONS, sections: SECTIONS.sections.slice(0, 3) } }));
@@ -204,7 +204,7 @@ test("LassoView: hver oplysning om identiteten står én gang på overblik, kont
   // Overblikket: telefonen står i kontaktblokken, ikke også i listen, og analysens kilde én gang.
   const overblik = renderToStaticMarkup(createElement(LassoView, { spec: composeCompany(ID, ds, { followUps: false }), dataset: ds, host: {}, onAction: () => {} }));
   assert.equal(count(text(overblik), "eksempelbyg.dk"), 2, "e-mail og web, hver én gang");
-  assert.equal(count(overblik, "Kilde: Lasso regnskabsanalyse"), 0);
+  assert.equal(count(overblik, "Kilde: Lasso regnskabsanalyse"), 0, "12.1: ingen kildelinje");
   // 24/25/26g: i portalens sideskabelon (embedded) ingen rammeheader og ingen handlingslinje nederst.
   const spec = composeCompany(ID, ds, { followUps: false });
   const framed = renderToStaticMarkup(createElement(LassoView, { spec, dataset: ds, host: { save: true }, onAction: () => {} }));

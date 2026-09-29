@@ -12,7 +12,7 @@ export interface CreditConfirmDialogProps {
   balance: number;
   /** Pris i kreditter, standard 1. */
   price?: number;
-  /** Ventetid som tekst, standard "typisk 5–45 sek." (Creditsafe). */
+  /** UDGÅET (18.3, Jakob 29.09): rækken "Ventetid" vises ikke længere; prop'en ignoreres. */
   wait?: string;
   /** Hvad der hentes, fx "kreditvurderingen for Eksempel Byg A/S". */
   what?: string;
@@ -24,12 +24,12 @@ export interface CreditConfirmDialogProps {
 const credits = (n: number) => `${formatNumber(n)} ${n === 1 ? "kredit" : "kreditter"}`;
 
 /**
- * Bekræft hentning (katalog 18.3, node BYX-0): dialogen fra 07 med tre nøgle-værdi-linjer (pris,
- * saldo efter, ventetid), uden ×-lukkeknap og med "Annuller" som tekstknap. Prisen gentages i knappen
+ * Bekræft hentning (katalog 18.3, node BYX-0): bruges, når man klikker på en Creditsafe-rapport, der koster kreditter (Jakob 29.09); dialogen fra 07 med nøgle-værdi-linjer (pris,
+ * saldo efter; 18.3: ingen ventetid), uden ×-lukkeknap og med "Annuller" som tekstknap. Prisen gentages i knappen
  * ("Hent, 1 kredit"), så man aldrig er i tvivl. Ved 0 kreditter
  * erstattes knappen af "Køb kreditter", og prisen står med rød tekst. Mobil: bundark (07/26a).
  */
-export function CreditConfirmDialog({ open, onClose, onConfirm, onBuy, balance, price = 1, wait = "typisk 5–45 sek.", what, title, description }: CreditConfirmDialogProps) {
+export function CreditConfirmDialog({ open, onClose, onConfirm, onBuy, balance, price = 1, what, title, description }: CreditConfirmDialogProps) {
   const enough = balance >= price;
   const after = balance - price;
   return (
@@ -54,10 +54,6 @@ export function CreditConfirmDialog({ open, onClose, onConfirm, onBuy, balance, 
         <div className="lasso-creditconfirm__fact">
           <dt>Saldo efter</dt>
           <dd>{enough ? credits(after) : `${credits(balance)}, ikke nok`}</dd>
-        </div>
-        <div className="lasso-creditconfirm__fact">
-          <dt>Ventetid</dt>
-          <dd>{wait}</dd>
         </div>
       </dl>
     </Dialog>

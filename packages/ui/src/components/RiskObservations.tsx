@@ -183,7 +183,7 @@ export function RiskUnavailable({ reason, checkedAt, detail, onSeePackages }: Ri
     (reason === "none"
       ? "Lasso har gennemgået virksomheden og fandt intet at bemærke."
       : reason === "cannot"
-        ? "Virksomheden er under 1 år gammel og har endnu ikke offentliggjort et regnskab."
+        ? "Virksomheden er under 1 år gammel og har ikke aflagt regnskab. Vi begynder efter første regnskab."
         : "Risikoobservationer er en del af Lasso Risiko.");
   return (
     <div className={`lasso-riskna lasso-riskna--${reason}`}>
