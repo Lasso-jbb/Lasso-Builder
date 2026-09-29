@@ -275,7 +275,8 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
         want(c.company, "contact");
         break;
       case "LassoContactPersons":
-        want(c.company, "contactPersons");
+        // 08.7: "Se alle"-panelets første kolonne viser virksomheden og dens kontaktoplysninger.
+        want(c.company, "contactPersons", "company", "contact");
         break;
       case "LassoMultiYearTable":
         want(c.company, "financials");

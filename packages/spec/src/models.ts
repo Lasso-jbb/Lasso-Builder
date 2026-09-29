@@ -98,6 +98,8 @@ export interface ContactVM {
    * inden for 60 sek. giver "Verificeret nu" (katalog 08.5), ellers "Verificeret for N dage siden".
    */
   verifiedAt?: string;
+  /** Katalog 08.7: flere e-mailadresser end `email` (fx kontakt@ og contact@), vist under "Emailadresser". */
+  emails?: string[];
 }
 
 /** Katalog 08, én kontaktperson (rolle/afdeling, telefon og/eller e-mail). */

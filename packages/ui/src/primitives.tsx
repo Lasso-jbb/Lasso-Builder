@@ -24,6 +24,7 @@ export function Section({
   span = "full",
   inlineSubtitle = false,
   card = false,
+  frame = false,
 }: {
   title?: ReactNode;
   subtitle?: ReactNode;
@@ -35,9 +36,14 @@ export function Section({
   span?: "quarter" | "half" | "three-quarters" | "full";
   /** Kort (katalog 28): 1 px kant, radius 12 og overskrift 15/600, fx datatyperne fra API'et. */
   card?: boolean;
+  /**
+   * Elementramme (10b regel 1, Paper LDP-0): 1 px kant, radius 10, hvid flade, 20 px luft og
+   * overskrift 18/600; indholdet (fx en tilstand) fylder resten af højden.
+   */
+  frame?: boolean;
 }) {
   return (
-    <section className={`lasso-section lasso-span-${span}${card ? " lasso-section--card" : ""} ${className}`}>
+    <section className={`lasso-section lasso-span-${span}${card ? " lasso-section--card" : ""}${frame ? " lasso-section--frame" : ""} ${className}`}>
       {title || action ? (
         <div className="lasso-section__head">
           <div className={`lasso-section__titles ${inlineSubtitle ? "lasso-section__titles--inline" : ""}`}>
@@ -86,7 +92,7 @@ export function Badge({ children, tone = "plain" }: { children: ReactNode; tone?
  * De fem tilstande fra kataloget + de to adgangstilstande fra 26h ("låst", "på forespørgsel").
  * "filled" tegnes af komponenten selv; de øvrige tegnes her, så alle elementer ser ens ud.
  */
-export type DataStateKind = "loading" | "empty" | "notreported" | "error" | "ondemand" | "locked" | "onrequest";
+export type DataStateKind = "loading" | "empty" | "notreported" | "error" | "ondemand" | "locked" | "onrequest" | "unavailable";
 
 export interface DataStateAction {
   label: string;
@@ -133,9 +139,36 @@ export interface DataStateProps {
   look?: "panel";
   /** Henter (10.3): skelettet i et kort med 1 px kant. Standard: skeletlinjer uden ramme. */
   framed?: boolean;
+  /**
+   * Henter (10b, Paper LDP-0): skelettet i indholdets form, med shimmer 1,4 s (stille ved
+   * prefers-reduced-motion): "keyvalue" (nøgle-værdi-liste, 10.3), "gauge" (scoremåler, 10.4) eller
+   * "card" (mobilkort, 26c.7). Standard: skeletlinjer.
+   */
+  shape?: SkeletonShapeKind;
+  /** Henter: kort note under skelettet, fx "Tager typisk et par sekunder. Du kan fortsætte på siden." */
+  note?: string;
+  /** Fejl (10b regel 5): fejl-id som tekst ved siden af "Prøv igen", fx "4F2A". */
+  errorId?: string;
 }
 
-function StateIcon({ kind }: { kind: "doc" | "check" | "alert" | "lock" | "info" }) {
+function StateIcon({ kind }: { kind: "doc" | "check" | "alert" | "lock" | "info" | "ban" | "danger" }) {
+  // 10b (Paper LE7-0): tom/ikke tilgængelig = 24 px ikon i faint; fejl = 24 px advarselstrekant i danger.
+  if (kind === "ban") {
+    return (
+      <svg className="lasso-state__icon" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+        <path d="M5.6 5.6l12.8 12.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (kind === "danger") {
+    return (
+      <svg className="lasso-state__icon lasso-state__icon--alert" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M10.3 3.9L2.6 17.5A2 2 0 004.3 20.5h15.4a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M12 9v4.5M12 16.8v.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
   if (kind === "info") {
     return (
       <svg className="lasso-state__icon lasso-state__icon--info" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -146,7 +179,7 @@ function StateIcon({ kind }: { kind: "doc" | "check" | "alert" | "lock" | "info"
   }
   if (kind === "check") {
     return (
-      <svg className="lasso-state__icon lasso-state__icon--check" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <svg className="lasso-state__icon lasso-state__icon--check" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
         <path d="M8 12.5l2.7 2.7L16 9.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
@@ -169,9 +202,9 @@ function StateIcon({ kind }: { kind: "doc" | "check" | "alert" | "lock" | "info"
     );
   }
   return (
-    <svg className="lasso-state__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="4" y="5" width="16" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M8 10h8M8 14h5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    <svg className="lasso-state__icon" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M7 3h7l5 5v13H7z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M14 3v5h5M10 13h6M10 17h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }
@@ -181,30 +214,42 @@ export function PendingRing() {
   return <span className="lasso-ring" aria-hidden="true" />;
 }
 
-export function DataState({ state, reason, title, checkedAt, positive, onRetry, action, secondaryAction, pending, children, height, lines = 3, actionLabel, onAction, cost, look, framed, inline, solid }: DataStateProps) {
+export function DataState({ state, reason, title, checkedAt, positive, onRetry, action, secondaryAction, pending, children, height, lines = 3, actionLabel, onAction, cost, look, framed, inline, solid, shape, note, errorId }: DataStateProps) {
   if (state === "loading") {
-    return framed ? (
-      <div className="lasso-state-frame">
-        <Skeleton lines={lines} height={height} />
+    const body = shape ? (
+      <div className="lasso-state-loading" aria-busy="true" aria-label="Henter data" style={height ? { minHeight: height } : undefined}>
+        <SkeletonShape shape={shape} />
+        {note ? <div className="lasso-state-loading__note">{note}</div> : null}
       </div>
     ) : (
       <Skeleton lines={lines} height={height} />
     );
+    return framed ? <div className="lasso-state-frame">{body}</div> : body;
   }
   if (state === "ondemand") {
-    // 10.3 (node A2I-0): stiplet ramme som "tom", venstrestillet, med årsag og en tonet koral handling
-    // (✧-ikon), der starter beregningen.
+    // 10b/10.3 (Paper LET-0): venstrestillet, uden ramme: titel 14/600, én linje årsag og én primær
+    // handling med ✧-ikon, der starter beregningen.
     return (
       <div className="lasso-state lasso-state--ondemand" style={height ? { minHeight: height } : undefined}>
-        <div className="lasso-state__title">Beregnes på forespørgsel</div>
+        <div className="lasso-state__title">{title ?? "Ikke beregnet endnu"}</div>
         <div className="lasso-small">{reason ?? "Tallet beregnes først, når du beder om det."}</div>
         {cost ? <div className="lasso-state__cost">{cost}</div> : null}
         {onAction ? (
-          <button type="button" className="lasso-btn lasso-btn--sm lasso-btn--tint lasso-state__retry" onClick={onAction}>
-            <Icon name="sparkle" size={14} />
+          <button type="button" className="lasso-btn lasso-btn--primary lasso-state__cta" onClick={onAction}>
+            <Icon name="sparkle" size={16} />
             {actionLabel ?? "Beregn nu"}
           </button>
         ) : null}
+      </div>
+    );
+  }
+  if (state === "unavailable") {
+    // 10b (Paper LH1-0): ikke tilgængelig = ikon, titel og årsag; ingen handling, ingen stiplet ramme.
+    return (
+      <div className="lasso-state lasso-state--unavailable" style={height ? { minHeight: height } : undefined}>
+        <StateIcon kind="ban" />
+        <div className="lasso-state__title">{title ?? "Ikke tilgængelig"}</div>
+        {reason ? <div className="lasso-small">{reason}</div> : null}
       </div>
     );
   }
@@ -308,28 +353,28 @@ export function DataState({ state, reason, title, checkedAt, positive, onRetry, 
       </div>
     );
   }
-  // Fejl (26h.1): rød kant, årsag og "Prøv igen" som primær. Kun ved teknisk fejl.
+  // Fejl (10b regel 5): samme opbygning som tom, men ikon i danger, "Prøv igen" som primær og fejl-id
+  // som tekst. Rammen er uændret (ingen rød kant). Kun ved teknisk fejl.
   return (
     <div className="lasso-state lasso-state--error" role="alert" style={height ? { minHeight: height } : undefined}>
-      <StateIcon kind="alert" />
-      <div className="lasso-state__body">
-        <div className="lasso-state__title">{title ?? "Data kunne ikke hentes"}</div>
-        {reason ? <div className="lasso-small">{reason}</div> : null}
-        {onRetry || secondaryAction?.onClick ? (
-          <div className="lasso-state__actions">
-            {onRetry ? (
-              <button type="button" className="lasso-btn lasso-btn--primary lasso-btn--sm lasso-state__retry" onClick={onRetry}>
-                Prøv igen
-              </button>
-            ) : null}
-            {secondaryAction?.onClick ? (
-              <button type="button" className="lasso-btn lasso-btn--ghost lasso-btn--sm" onClick={secondaryAction.onClick}>
-                {secondaryAction.label}
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+      <StateIcon kind="danger" />
+      <div className="lasso-state__title">{title ?? "Data kunne ikke hentes"}</div>
+      {reason ? <div className="lasso-small">{reason}</div> : null}
+      {onRetry || secondaryAction?.onClick || errorId ? (
+        <div className="lasso-state__actions">
+          {onRetry ? (
+            <button type="button" className="lasso-btn lasso-btn--primary lasso-state__retry" onClick={onRetry}>
+              Prøv igen
+            </button>
+          ) : null}
+          {secondaryAction?.onClick ? (
+            <button type="button" className="lasso-btn lasso-state__secondary" onClick={secondaryAction.onClick}>
+              {secondaryAction.label}
+            </button>
+          ) : null}
+          {errorId ? <span className="lasso-state__errid">Fejl-id {errorId}</span> : null}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -361,6 +406,91 @@ export function StateBox({ kind, message }: { kind: StateKind; message?: string 
 export function stateForError(message: string | undefined): StateKind {
   if (!message) return "error";
   return /adgang|401|403/i.test(message) ? "noaccess" : "error";
+}
+
+/** Skelettets former (10b, Paper LDP-0). */
+export type SkeletonShapeKind = "keyvalue" | "gauge" | "card";
+
+/** Én skeletstreg (10b regel 2): 12 px, radius 4, divider-subtle, shimmer 1,4 s. `block` = større flade (tal). */
+export function SkelBar({ w, h = 12, block = false, grow = false }: { w?: number | string; h?: number; block?: boolean; grow?: boolean }) {
+  return <span className={`lasso-skel${block ? " lasso-skel--block" : ""}`} style={{ width: grow ? undefined : w, height: h, flex: grow ? "1 1 auto" : undefined }} />;
+}
+
+/**
+ * Skelet i indholdets form (10b regel 2-3): streger på 12 px med 10-14 px mellemrum, samme højde som
+ * det fyldte indhold, og et lyst bånd, der glider fra venstre mod højre (1,4 s, lineært, uendeligt).
+ */
+export function SkeletonShape({ shape }: { shape: SkeletonShapeKind }) {
+  const pair = (a: number, b: number, top = false) => (
+    <div className={`lasso-skelshape__pair${top ? " lasso-skelshape__pair--top" : ""}`}>
+      <SkelBar w={a} />
+      <SkelBar w={b} />
+    </div>
+  );
+  if (shape === "card") {
+    const fig = (a: number, b: number) => (
+      <div className="lasso-skelshape__fig">
+        <SkelBar w={a} h={8} />
+        <SkelBar w={b} />
+      </div>
+    );
+    return (
+      <div className="lasso-skelshape lasso-skelshape--card" aria-hidden="true">
+        <div className="lasso-skelshape__pair lasso-skelshape__pair--center">
+          <SkelBar w={140} h={14} block />
+          <SkelBar w={40} h={10} />
+        </div>
+        <SkelBar w={200} h={10} />
+        <span className="lasso-skelshape__rule" />
+        <div className="lasso-skelshape__pair">
+          <div className="lasso-skelshape__figs">
+            {fig(52, 44)}
+            {fig(52, 48)}
+            {fig(48, 24)}
+          </div>
+          <div className="lasso-skelshape__fig lasso-skelshape__fig--end">
+            <SkelBar w={36} h={8} />
+            <SkelBar w={24} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (shape === "gauge") {
+    return (
+      <div className="lasso-skelshape" aria-hidden="true">
+        <div className="lasso-skelshape__lead">
+          <SkelBar w={56} h={36} block />
+          <SkelBar w={40} />
+          <SkelBar w={64} />
+        </div>
+        <div className="lasso-skelshape__track">
+          <span className="lasso-skel" style={{ flexGrow: 60, height: 6 }} />
+          <span className="lasso-skel" style={{ flexGrow: 20, height: 6 }} />
+          <span className="lasso-skel" style={{ flexGrow: 20, height: 6 }} />
+        </div>
+        <div className="lasso-skelshape__pair">
+          <SkelBar w={56} h={10} />
+          <SkelBar w={72} h={10} />
+        </div>
+        {pair(110, 60, true)}
+        {pair(130, 24)}
+      </div>
+    );
+  }
+  return (
+    <div className="lasso-skelshape" aria-hidden="true">
+      <div className="lasso-skelshape__lead">
+        <SkelBar w={64} h={28} block />
+        <SkelBar w={48} />
+        <SkelBar w={72} />
+      </div>
+      <SkelBar w="100%" h={8} />
+      {pair(120, 64, true)}
+      {pair(100, 40)}
+      {pair(140, 56)}
+    </div>
+  );
 }
 
 export function Skeleton({ lines = 3, height }: { lines?: number; height?: number }) {

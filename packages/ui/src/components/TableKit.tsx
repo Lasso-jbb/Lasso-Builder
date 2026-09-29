@@ -1,6 +1,8 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { formatNumber } from "@lasso/spec";
 import { CloseIcon } from "./Layer.js";
+import { Menu } from "./Menu.js";
+import { Icon } from "./Icon.js";
 
 /**
  * Fælles dele til tabellerne i katalog 15 (virksomhedstabel 15.1, massehandlinger 15.2,
@@ -118,6 +120,10 @@ export interface BulkAction {
   reason?: string;
   /** 16 px ikon før ordet (15.2: "+ Føj til liste", klokke ved "Overvåg", ⤓ ved "Eksportér"). */
   icon?: ReactNode;
+  /** 15.2 mobil: kort ord under ikonet i bundbjælken, fx "Til liste" for "Føj til liste". */
+  short?: string;
+  /** 15.2 mobil: ikon i "Flere"-arket for en handling uden ikon i bjælken (fx Sammenlign). */
+  sheetIcon?: ReactNode;
 }
 
 export function PlusIcon() {
@@ -201,6 +207,89 @@ export function BulkBar({
         ))}
       </div>
       <button type="button" className="lasso-bulkbar__close" aria-label="Ryd markering" onClick={onClear}>
+        <CloseIcon />
+      </button>
+    </div>
+  );
+}
+
+/** Højst to handlinger med ikon og ord i mobilens bundbjælke; resten står i "Flere"-arket. */
+const MOBILE_BULK_VISIBLE = 2;
+
+/**
+ * Massehandlinger på mobil (15.2, runde 5, Paper LOA-0): fast bundbjælke over bundnavigationen
+ * (LPJ-0) med markeringsikon og "2 markeret", to handlinger som ikon + ord, "Flere" og × til højre.
+ * "Flere" åbner handlingsarket (26a.10, LT2-0) med antal og navne som kontekst, de øvrige handlinger,
+ * "Vælg alle N" og den destruktive handling i rødt nederst; Annuller-kortet tegner arket selv.
+ */
+export function MobileBulkBar({
+  count,
+  total,
+  allSelected,
+  onSelectAll,
+  actions,
+  onClear,
+  names = [],
+  noun = "virksomheder",
+  defaultMoreOpen,
+}: {
+  count: number;
+  total: number;
+  allSelected: boolean;
+  onSelectAll: () => void;
+  actions: readonly BulkAction[];
+  onClear: () => void;
+  /** De markerede navne til arkets kontekst (de første tre, "og N flere"). */
+  names?: readonly string[];
+  noun?: string;
+  /** Statisk forhåndsvisning (15.2 skærm B): "Flere"-arket åbent fra start. */
+  defaultMoreOpen?: boolean;
+}) {
+  // Handlinger med ikon (Til liste, Overvåg, Eksportér) står i bjælken; resten i "Flere".
+  const plain = [...actions.filter((a) => !a.destructive && a.icon), ...actions.filter((a) => !a.destructive && !a.icon)];
+  const shown = plain.slice(0, MOBILE_BULK_VISIBLE);
+  const rest = [...plain.slice(MOBILE_BULK_VISIBLE)];
+  const danger = actions.filter((a) => a.destructive);
+  const canAll = !allSelected && total > count;
+  const shownNames = names.slice(0, 3).join(", ");
+  const subtitle = names.length > 3 ? `${shownNames} og ${names.length - 3} flere` : shownNames || undefined;
+  const moreItems = [
+    ...rest.map((a) => ({ id: a.id, label: a.label, icon: a.icon ?? a.sheetIcon, disabled: a.disabled, onSelect: a.onSelect })),
+    ...(canAll ? [{ id: "select-all", label: `Vælg alle ${formatNumber(total)} ${noun}`, icon: <Icon name="check" size={16} />, onSelect: onSelectAll }] : []),
+    ...danger.map((a) => ({ id: a.id, label: a.label, icon: a.icon ?? <Icon name="trash" size={16} />, destructive: true, disabled: a.disabled, onSelect: a.onSelect })),
+  ];
+  return (
+    <div className="lasso-mbulk" role="toolbar" aria-label="Handlinger for markerede">
+      <div className="lasso-mbulk__count" aria-live="polite">
+        <BulkCheckIcon all={allSelected || count >= total} />
+        <span>{formatNumber(count)} markeret</span>
+      </div>
+      <div className="lasso-mbulk__actions">
+        {shown.map((a) => (
+          <button key={a.id} type="button" className="lasso-mbulk__btn" onClick={a.onSelect} disabled={a.disabled} title={a.disabled ? a.reason : undefined}>
+            {a.icon ?? null}
+            <span>{a.short ?? a.label}</span>
+          </button>
+        ))}
+        {moreItems.length ? (
+          <Menu
+            trigger={
+              <>
+                <Icon name="more" size={16} />
+                <span>Flere</span>
+              </>
+            }
+            triggerClassName="lasso-mbulk__btn"
+            triggerLabel="Flere handlinger"
+            label="Flere handlinger"
+            align="end"
+            context={{ title: `${formatNumber(count)} markeret`, subtitle }}
+            items={moreItems}
+            defaultOpen={defaultMoreOpen}
+          />
+        ) : null}
+      </div>
+      <button type="button" className="lasso-mbulk__close" aria-label="Ryd markering" onClick={onClear}>
         <CloseIcon />
       </button>
     </div>
@@ -338,17 +427,15 @@ export function TableStateBox({ state }: { state: Exclude<TableState, { kind: "l
       <WarnIcon />
       <div className="lasso-tstate__title">{state.title ?? "Data kunne ikke hentes"}</div>
       {state.reason ? <div className="lasso-tstate__text">{state.reason}</div> : null}
-      {state.onRetry ? (
-        <button type="button" className="lasso-btn lasso-btn--primary lasso-tstate__retry" onClick={state.onRetry}>
-          Prøv igen
-        </button>
-      ) : null}
-      {state.errorId ? (
-        <div className="lasso-tstate__errid">
-          {`Fejl-id ${state.errorId}, `}
-          <button type="button" className="lasso-link lasso-tstate__copy" onClick={() => void globalThis.navigator?.clipboard?.writeText(state.errorId!)}>
-            kopiér
-          </button>
+      {state.onRetry || state.errorId ? (
+        <div className="lasso-tstate__actions">
+          {state.onRetry ? (
+            <button type="button" className="lasso-btn lasso-btn--primary lasso-tstate__retry" onClick={state.onRetry}>
+              Prøv igen
+            </button>
+          ) : null}
+          {/* 10b regel 5: fejl-id som tekst ved siden af "Prøv igen" (ingen kopiér-link). */}
+          {state.errorId ? <span className="lasso-tstate__errid">{`Fejl-id ${state.errorId}`}</span> : null}
         </div>
       ) : null}
     </div>

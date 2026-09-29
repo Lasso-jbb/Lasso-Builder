@@ -1,16 +1,17 @@
-import { useState } from "react";
-import { contactPersonGroup, formatPhone, groupContactPersons, type ContactPersonVM, type ContactPersonsVM } from "@lasso/spec";
+import { useEffect, useState } from "react";
+import { contactPersonGroup, formatNumber, formatPhone, groupContactPersons, type CompanyVM, type ContactPersonVM, type ContactPersonsVM, type ContactVM } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { ShellIcon } from "./ShellIcons.js";
 import { SidePanel, SidePanelList } from "./SidePanel.js";
+import type { ShortcutItem } from "./Shortcuts.js";
 
 /** Regel 9: blokken viser 3 + "Se N kontaktpersoner"; resten står i "Se alle"-panelet (08.7). */
 const BLOCK_ROWS = 3;
 
 const prettyPhone = (v: string): string => formatPhone(v) ?? v;
 
-/** G2 (Jakob 29.09): telefon-/mailikon kun, når personen har telefon/mail; ingen dæmpede ikoner. */
-function Channels({ person }: { person: ContactPersonVM }) {
+/** G2 (Jakob 29.09): telefon-/mailikon kun, når personen har telefon/mail; ingen dæmpede ikoner (blokken 08.6). */
+function BlockChannels({ person }: { person: ContactPersonVM }) {
   if (!person.phone && !person.email) return null;
   return (
     <span className="lasso-contactpersons__actions" aria-hidden="true">
@@ -32,101 +33,211 @@ export interface LassoContactPersonsProps {
   data?: ContactPersonsVM;
   title?: string;
   error?: string;
-  /** Virksomhedens navn til panelets undertitel og detaljens rollelinje. */
+  /** Virksomhedens navn (fallback for panelets første kolonne, når `company` mangler). */
   companyName?: string;
-  /** "Kopiér telefonnummer"/"Kopiér e-mail" (værten kopierer og viser en besked). Uden: linkene skjules. */
+  /** 08.7: virksomheden i panelets første kolonne (navn, adresse, CVR, stiftet, ansatte). */
+  company?: CompanyVM;
+  /** 08.7: kontaktoplysningerne i første kolonne (web, Live Nummer, telefonnumre, e-mailadresser). */
+  contact?: ContactVM;
+  /** 08.7: genveje nederst i første kolonne (fx Tvillinger, Nyheder). Kun dem, der har en funktion (G1). */
+  shortcuts?: readonly ShortcutItem[];
+  /** 08.7: "Se detaljer" under Live Nummer (åbner live-nummeret, 08.5). Uden: linket vises ikke (G1). */
+  onLiveDetails?: () => void;
+  /** "Kopiér telefonnummer"/"Kopiér e-mailadresse" (værten kopierer og viser en besked). Uden: kun værdien. */
   onCopy?: (text: string, what: "phone" | "email") => void;
-  /** Åbn et eksternt link (LinkedIn, kilde). Uden: almindeligt link i nyt vindue. */
+  /** Åbn et eksternt link (kilde, web). Uden: almindeligt link i nyt vindue. */
   onOpenLink?: (url: string) => void;
   /** Statisk forhåndsvisning og tests: panelet åbent med denne person valgt (indeks i den sorterede liste). */
   defaultOpen?: number;
+  /** Med defaultOpen: hvilken side af mobilarket der vises først (standard "detail"; "list" = 08.10). */
+  defaultView?: "list" | "detail";
 }
 
-function Detail({ person, companyName, updated, onCopy, onOpenLink }: { person: ContactPersonVM; companyName?: string; updated?: string; onCopy?: LassoContactPersonsProps["onCopy"]; onOpenLink?: (url: string) => void }) {
-  const role = [roleLine(person), companyName].filter(Boolean).join(", ");
-  const link = (url: string, label: string, cls = "lasso-cpdetail__action") =>
-    onOpenLink ? (
-      <button type="button" className={cls} onClick={() => onOpenLink(url)}>
-        {label}
+/** Sand på skærme ≥ 1200 px (08.7's brede panel); falsk på serveren og i tablet/mobil. */
+function useWide(): boolean {
+  const q = "(min-width: 1200px)";
+  const [wide, setWide] = useState(() => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia(q).matches);
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const m = window.matchMedia(q);
+    const on = () => setWide(m.matches);
+    on();
+    m.addEventListener?.("change", on);
+    return () => m.removeEventListener?.("change", on);
+  }, []);
+  return wide;
+}
+
+function ExtLink({ url, label, className, onOpenLink }: { url: string; label: string; className: string; onOpenLink?: (url: string) => void }) {
+  return onOpenLink ? (
+    <button type="button" className={className} onClick={() => onOpenLink(url)}>
+      {label}
+    </button>
+  ) : (
+    <a className={className} href={url} target="_blank" rel="noreferrer">
+      {label}
+    </a>
+  );
+}
+
+/** "https://www.lassox.com/" -> "lassox.com" til visning. */
+function prettyUrl(v: string): string {
+  try {
+    return new URL(v).hostname.replace(/^www\./, "");
+  } catch {
+    return v.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  }
+}
+/** "https://lassox.com/om-os/lasso-x" -> "lassox.com/om-os/lasso-x" (kildelinket i 08.7). */
+function prettyLink(v: string): string {
+  return v.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
+}
+const digits = (v: string): string => {
+  const d = v.replace(/\D/g, "");
+  return d.length === 10 && d.startsWith("45") ? d.slice(2) : d;
+};
+
+/**
+ * 08.7, kolonne 2 (Paper L8Z-0): stilling pr. række, telefon-/mailikon kun ved data (G2); den
+ * valgte i koral (primary-text/500). Afdelingerne adskilles af overlinje med skillelinje og luft.
+ */
+function Channels({ person }: { person: ContactPersonVM }) {
+  if (!person.phone && !person.email) return null;
+  return (
+    <span className="lasso-contactpersons__actions" aria-hidden="true">
+      {person.phone ? <ShellIcon name="phone" size={14} className="lasso-contactpersons__icon" /> : null}
+      {person.email ? <ShellIcon name="mail" size={14} className="lasso-contactpersons__icon" /> : null}
+    </span>
+  );
+}
+
+/** 08.7, kolonne 3 (Paper LCJ-0): navn 20/600, stilling, kopiér-handlinger med værdien, "Kilder" med link. */
+function Detail({ person, onCopy, onOpenLink }: { person: ContactPersonVM; onCopy?: LassoContactPersonsProps["onCopy"]; onOpenLink?: (url: string) => void }) {
+  // 08.11 (Jakob 29.09): kilder kun som overskriften "Kilder" med selve kildelinket; ingen
+  // kildebeskrivelse, dato, CVR-linje eller "Opdateret …" (G3). Ingen Ring/Skriv/LinkedIn (Paper).
+  const linked = (person.sources ?? []).filter((x): x is typeof x & { url: string } => Boolean(x.url));
+  const copy = (value: string, shown: string, what: "phone" | "email", label: string) =>
+    onCopy ? (
+      <button type="button" className="lasso-cpdetail__copy" onClick={() => onCopy(value, what)}>
+        <ShellIcon name="copy" size={16} className="lasso-cpdetail__copyicon" />
+        <span className="lasso-cpdetail__copytext">
+          <span className="lasso-cpdetail__copylabel">{label}</span>
+          <span className="lasso-cpdetail__copyvalue">{shown}</span>
+        </span>
       </button>
     ) : (
-      <a className={cls} href={url} target="_blank" rel="noreferrer">
-        {label}
-      </a>
+      <div className="lasso-cpdetail__plain">
+        <span className="lasso-cpdetail__copylabel">{what === "phone" ? "Telefon" : "E-mail"}</span>
+        <span className="lasso-cpdetail__copyvalue">{shown}</span>
+      </div>
     );
-  // 08.11 (Jakob 29.09): kilder kun som overskriften "Kilder" med selve kildelinket; ingen
-  // kildebeskrivelse, dato, CVR-linje eller "Opdateret …" (G3).
-  const linked = (person.sources ?? []).filter((x): x is typeof x & { url: string } => Boolean(x.url));
-  void updated;
   return (
     <div className="lasso-cpdetail">
-      <h3 className="lasso-cpdetail__name">{person.name}</h3>
-      {role ? <p className="lasso-cpdetail__role">{role}</p> : null}
-      <ul className="lasso-cpdetail__channels">
-        {person.phone ? (
-          <li className="lasso-cpdetail__channel">
-            <ShellIcon name="phone" size={16} className="lasso-cpdetail__icon" />
-            <span className="lasso-cpdetail__main">
-              <span className="lasso-cpdetail__label">Telefon</span>
-              <span className="lasso-cpdetail__value">{prettyPhone(person.phone)}</span>
-              {person.phoneNote ? <span className="lasso-cpdetail__note">{person.phoneNote}</span> : null}
-            </span>
-            <span className="lasso-cpdetail__actions">
-              <a className="lasso-cpdetail__action lasso-cpdetail__action--mobile" href={`tel:${person.phone.replace(/\s+/g, "")}`}>
-                Ring
-              </a>
-              {onCopy ? (
-                <button type="button" className="lasso-cpdetail__action" onClick={() => onCopy(person.phone!, "phone")}>
-                  Kopiér<span className="lasso-cpdetail__long"> telefonnummer</span>
-                </button>
-              ) : null}
-            </span>
-          </li>
-        ) : null}
-        {person.email ? (
-          <li className="lasso-cpdetail__channel">
-            <ShellIcon name="mail" size={16} className="lasso-cpdetail__icon" />
-            <span className="lasso-cpdetail__main">
-              <span className="lasso-cpdetail__label">E-mail</span>
-              <span className="lasso-cpdetail__value">{person.email}</span>
-              {person.emailNote ? <span className="lasso-cpdetail__note">{person.emailNote}</span> : null}
-            </span>
-            <span className="lasso-cpdetail__actions">
-              <a className="lasso-cpdetail__action lasso-cpdetail__action--mobile" href={`mailto:${person.email}`}>
-                Skriv
-              </a>
-              {onCopy ? (
-                <button type="button" className="lasso-cpdetail__action" onClick={() => onCopy(person.email!, "email")}>
-                  Kopiér<span className="lasso-cpdetail__long"> e-mail</span>
-                </button>
-              ) : null}
-            </span>
-          </li>
-        ) : null}
-        {person.linkedin ? (
-          <li className="lasso-cpdetail__channel lasso-cpdetail__channel--linkedin">
-            <ShellIcon name="linkedin" size={16} className="lasso-cpdetail__icon" />
-            <span className="lasso-cpdetail__main">
-              <span className="lasso-cpdetail__label">LinkedIn</span>
-              <span className="lasso-cpdetail__value lasso-cpdetail__value--desktop">LinkedIn-profil</span>
-            </span>
-            {/* 08.11: på mobil hedder handlingen "Åbn profil". */}
-            <span className="lasso-cpdetail__actions">{link(person.linkedin, "Åbn")}</span>
-            <span className="lasso-cpdetail__actions lasso-cpdetail__actions--mobile">{link(person.linkedin, "Åbn profil", "lasso-cpdetail__action lasso-cpdetail__action--mobile")}</span>
-          </li>
-        ) : null}
-        {!person.phone && !person.email && !person.linkedin ? (
-          <li className="lasso-cpdetail__channel lasso-cpdetail__channel--none">Der er ikke fundet telefon, e-mail eller LinkedIn for personen.</li>
-        ) : null}
-      </ul>
+      <div className="lasso-cpdetail__head">
+        <h3 className="lasso-cpdetail__name">{person.name}</h3>
+        {person.role ? <p className="lasso-cpdetail__role">{person.role}</p> : null}
+      </div>
+      {person.phone || person.email ? (
+        <div className="lasso-cpdetail__copies">
+          {person.phone ? copy(person.phone, prettyPhone(person.phone), "phone", "Kopiér telefonnummer") : null}
+          {person.email ? copy(person.email, person.email, "email", "Kopiér e-mailadresse") : null}
+        </div>
+      ) : (
+        <p className="lasso-cpdetail__none">Der er ikke fundet telefon eller e-mail for personen.</p>
+      )}
       {linked.length ? (
         <div className="lasso-cpdetail__sources">
-          <div className="lasso-cpdetail__overline">Kilder</div>
+          <div className="lasso-cpdetail__sourcestitle">Kilder</div>
           <ul>
             {linked.map((s, i) => (
-              <li key={i}>{link(s.url, s.label, "lasso-cpdetail__source")}</li>
+              <li key={i}>
+                <ExtLink url={s.url} label={prettyLink(s.url)} className="lasso-cpdetail__source" onOpenLink={onOpenLink} />
+              </li>
             ))}
           </ul>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** 08.7, kolonne 1 (Paper L7H-0): virksomheden, Live Nummer, telefonnumre, e-mailadresser og genveje. */
+export function CompanyColumn({ company, contact, name, shortcuts, onLiveDetails, onOpenLink }: { company?: CompanyVM; contact?: ContactVM; name?: string; shortcuts?: readonly ShortcutItem[]; onLiveDetails?: () => void; onOpenLink?: (url: string) => void }) {
+  const address = contact?.address ?? company?.address;
+  const cityLine = address ? [address.zip, address.city].filter(Boolean).join(" ") : "";
+  const live = (contact?.verifiedNumbers ?? []).filter((n) => !n.expired)[0];
+  const verified = new Set((contact?.verifiedNumbers ?? []).filter((n) => !n.expired).map((n) => digits(n.phoneNumber)));
+  const phones = [contact?.phone].filter((x): x is string => Boolean(x));
+  const emails = [contact?.email, ...(contact?.emails ?? [])].filter((x, i, a): x is string => Boolean(x) && a.indexOf(x) === i);
+  const shield = <ShellIcon name="shield-check" size={14} className="lasso-cpcompany__shield" />;
+  const founded = company?.founded ? company.founded.slice(0, 4) : undefined;
+  return (
+    <div className="lasso-cpcompany">
+      <div className="lasso-cpcompany__facts">
+        <div className="lasso-cpcompany__name">{company?.name ?? name}</div>
+        {address?.street || cityLine ? (
+          <div className="lasso-cpcompany__lines">
+            {address?.street ? <span>{address.street}</span> : null}
+            {cityLine ? <span>{cityLine}</span> : null}
+          </div>
+        ) : null}
+        {company?.cvr || founded ? (
+          <div className="lasso-cpcompany__lines">
+            {company?.cvr ? <span>CVR {company.cvr}</span> : null}
+            {founded ? <span>Stiftet {founded}</span> : null}
+          </div>
+        ) : null}
+        {typeof company?.employees === "number" && company.employees > 0 ? <div className="lasso-cpcompany__line">{formatNumber(company.employees)} ansatte</div> : null}
+        {contact?.website ? <ExtLink url={contact.website} label={prettyUrl(contact.website)} className="lasso-cpcompany__web" onOpenLink={onOpenLink} /> : null}
+        {live ? (
+          <div className="lasso-cpcompany__group">
+            <div className="lasso-cpcompany__label">
+              Live Nummer
+              <span className="lasso-cpcompany__info" title="Nummeret er verificeret i realtid af Lasso" aria-label="Nummeret er verificeret i realtid af Lasso" role="img">
+                <ShellIcon name="info" size={14} />
+              </span>
+            </div>
+            <div className="lasso-cpcompany__value">
+              <span>{prettyPhone(live.phoneNumber)}</span>
+              {shield}
+            </div>
+            {onLiveDetails ? (
+              <button type="button" className="lasso-cpcompany__more" onClick={onLiveDetails}>
+                Se detaljer
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+        {phones.length ? (
+          <div className="lasso-cpcompany__group">
+            <div className="lasso-cpcompany__label">Telefonnumre</div>
+            {phones.map((p) => (
+              <div key={p} className="lasso-cpcompany__value">
+                <span>{prettyPhone(p)}</span>
+                {verified.has(digits(p)) ? shield : null}
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {emails.length ? (
+          <div className="lasso-cpcompany__group">
+            <div className="lasso-cpcompany__label">Emailadresser</div>
+            {emails.map((e) => (
+              <div key={e} className="lasso-cpcompany__value">
+                {e}
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
+      {shortcuts?.length ? (
+        <div className="lasso-cpcompany__shortcuts">
+          {shortcuts.map((s) => (
+            <button key={s.id} type="button" className="lasso-btn lasso-cpcompany__shortcut" onClick={s.onSelect}>
+              <ShellIcon name={s.icon} size={16} />
+              <span>{s.label}</span>
+            </button>
+          ))}
         </div>
       ) : null}
     </div>
@@ -139,11 +250,12 @@ function Detail({ person, companyName, updated, onCopy, onOpenLink }: { person: 
  * kanalen findes (G2). Klik på række, ikon eller "Se N kontaktpersoner" åbner "Se alle"-panelet fra
  * højre (08.7) med personen valgt. Ingen initial-cirkler (regel 5).
  */
-export function LassoContactPersons({ data, title, error, companyName, onCopy, onOpenLink, defaultOpen }: LassoContactPersonsProps) {
+export function LassoContactPersons({ data, title, error, companyName, company, contact, shortcuts, onLiveDetails, onCopy, onOpenLink, defaultOpen, defaultView }: LassoContactPersonsProps) {
   const heading = title ?? "Kontaktpersoner";
   const [open, setOpen] = useState(defaultOpen !== undefined);
   const [selected, setSelected] = useState<number>(defaultOpen ?? 0);
-  const [view, setView] = useState<"list" | "detail">(defaultOpen !== undefined ? "detail" : "list");
+  const [view, setView] = useState<"list" | "detail">(defaultOpen !== undefined ? (defaultView ?? "detail") : "list");
+  const wide = useWide();
 
   if (!data) {
     return (
@@ -182,7 +294,7 @@ export function LassoContactPersons({ data, title, error, companyName, onCopy, o
                 <span className="lasso-row__name">{p.name}</span>
                 {roleLine(p) ? <span className="lasso-row__sub">{roleLine(p)}</span> : null}
               </span>
-              <Channels person={p} />
+              <BlockChannels person={p} />
             </button>
           </li>
         ))}
@@ -195,15 +307,19 @@ export function LassoContactPersons({ data, title, error, companyName, onCopy, o
       {/* 08.6: ingen kildelinje under blokken; kilderne står pr. person i panelet ("KILDER"). */}
       <SidePanel
         open={open}
+        variant="seeall"
         title={heading}
-        subtitle={[companyName, `${sorted.length} ${sorted.length === 1 ? "person" : "personer"}`].filter(Boolean).join(", ")}
+        subtitle={`${sorted.length} ${sorted.length === 1 ? "person" : "personer"}`}
         onClose={() => setOpen(false)}
         view={view}
         onBack={() => setView("list")}
-        detailTitle="Kontaktperson"
+        detailTitle={heading}
+        aside={wide ? <CompanyColumn company={company} contact={contact} name={companyName} shortcuts={shortcuts} onLiveDetails={onLiveDetails} onOpenLink={onOpenLink} /> : undefined}
         list={
           <SidePanelList
             ariaLabel={heading}
+            // 08.7: på desktop står alle; tablet/mobil (08.9/08.10) viser 6 + "Vis N flere".
+            limit={wide ? Infinity : 6}
             selected={String(sorted.indexOf(current))}
             onSelect={(id) => {
               setSelected(Number(id));
@@ -211,11 +327,12 @@ export function LassoContactPersons({ data, title, error, companyName, onCopy, o
             }}
             groups={groups.map((g) => ({
               label: g.group,
-              items: g.people.map((p) => ({ id: String(sorted.indexOf(p)), title: p.name, sub: p.role, trailing: <Channels person={p} /> })),
+              // 08.7 (Paper L8Z-0): stillingen står i listen; navnet i detaljen (uden stilling: navnet).
+              items: g.people.map((p) => ({ id: String(sorted.indexOf(p)), title: p.role ?? p.name, trailing: <Channels person={p} /> })),
             }))}
           />
         }
-        detail={<Detail person={current} companyName={companyName} updated={data.updated} onCopy={onCopy} onOpenLink={onOpenLink} />}
+        detail={<Detail person={current} onCopy={onCopy} onOpenLink={onOpenLink} />}
       />
     </Section>
   );

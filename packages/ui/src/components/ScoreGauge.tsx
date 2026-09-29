@@ -194,56 +194,41 @@ export function ScoreGauge({
   }
   const state = requested && score.state === "notfetched" ? "fetching" : (score.state ?? (score.score === null ? undefined : "ok"));
 
+  // 10.4 (runde 5, Paper LG2-0): tilstandene i det fælles tilstandssprog (10b): samme overskrift, kun
+  // indholdet skifter. Ikke beregnet = titel, årsag og "Beregn score" (primær, ✧); henter = skelet af
+  // måleren med shimmer; ikke tilgængelig = ikon, titel og årsag uden handling. Ingen kreditpris.
   if (state === "notfetched") {
-    const cost = score.cost ?? "1 kredit";
     return (
       <Section title={heading} span="half" className="lasso-gauge-section">
-        <div className="lasso-gauge-state lasso-gauge-state--idle">
-          <div className="lasso-gauge-state__body">
-            <div className="lasso-gauge-state__title">Vurderingen er ikke hentet</div>
-            <p className="lasso-gauge-state__text">{score.reason ?? "Hent vurderingen for at se scoren og skalaen."}</p>
-            {onFetch ? null : <p className="lasso-gauge-state__cost">Koster {cost} at hente.</p>}
-          </div>
-          {onFetch ? (
-            <button
-              type="button"
-              className="lasso-btn lasso-btn--primary lasso-btn--sm lasso-gauge-state__fetch"
-              onClick={() => {
-                setRequested(true);
-                onFetch();
-              }}
-            >
-              Hent vurdering, {cost}
-            </button>
-          ) : null}
-        </div>
+        <DataState
+          state="ondemand"
+          title="Ikke beregnet endnu"
+          reason={score.reason ?? "Scoren beregnes ud fra seneste regnskab, status og observationer."}
+          actionLabel="Beregn score"
+          onAction={
+            onFetch
+              ? () => {
+                  setRequested(true);
+                  onFetch();
+                }
+              : undefined
+          }
+          height={140}
+        />
       </Section>
     );
   }
   if (state === "fetching") {
-    const p = typeof score.progress === "number" ? Math.max(0, Math.min(1, score.progress)) : null;
     return (
       <Section title={heading} span="half" className="lasso-gauge-section">
-        <div className="lasso-gauge-state lasso-gauge-state--busy" aria-busy="true">
-          <div className="lasso-gauge-state__row">
-            <span className="lasso-spinner" aria-hidden="true" />
-            <span className="lasso-gauge-state__title">Henter vurdering</span>
-          </div>
-          <p className="lasso-gauge-state__text">{score.reason ?? "Det kan tage op til 45 sekunder."}</p>
-          <div className={`lasso-gauge-state__progress${p === null ? " is-indeterminate" : ""}`} role="progressbar" aria-label="Henter vurdering" aria-valuemin={0} aria-valuemax={100} aria-valuenow={p === null ? undefined : Math.round(p * 100)}>
-            <span style={p === null ? undefined : { width: `${p * 100}%` }} />
-          </div>
-        </div>
+        <DataState state="loading" shape="gauge" note={score.reason ?? "Tager typisk et par sekunder. Du kan fortsætte på siden."} />
       </Section>
     );
   }
   if (state === "unavailable") {
     return (
       <Section title={heading} span="half" className="lasso-gauge-section">
-        <div className="lasso-gauge-state lasso-gauge-state--off">
-          <div className="lasso-gauge-state__title">Vurderingen kan ikke hentes</div>
-          <p className="lasso-gauge-state__text">{score.reason ?? "Der er ingen score for virksomheden."}</p>
-        </div>
+        <DataState state="unavailable" title="Score ikke tilgængelig" reason={score.reason ?? "Der beregnes ikke en score for virksomheden."} height={140} />
       </Section>
     );
   }

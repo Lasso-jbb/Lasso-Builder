@@ -112,33 +112,71 @@ const PERSONS: ContactPersonVM[] = [
 ] as ContactPersonVM[];
 const PERSONS_DATA = { lassoId: B, people: PERSONS, source: "Eksempeldata", updated: "2026-09-20" };
 
-function SeeAllPanel() {
-  return (
-    <div style={{ minHeight: 740 }}>
-      <NoAnim />
-      <LassoContactPersons data={PERSONS_DATA} companyName="Eksempel Byg A/S" defaultOpen={0} onCopy={noop} onOpenLink={noop} />
-    </div>
-  );
-}
+/* 08.7–08.11: Papers eksempel (L75-0): LASSO X A/S med 16 kontaktpersoner i seks afdelinger. */
+const LASSO_X: CompanyVM = {
+  lassoId: "CVR-1-34580820",
+  cvr: "34580820",
+  name: "LASSO X A/S",
+  status: "Aktiv",
+  statusKind: "active",
+  form: "A/S",
+  address: { street: "Toldbodgade 37B", zip: "1253", city: "København K" },
+  founded: "2012-07-01",
+  employees: 16,
+};
+const LASSO_X_CONTACT: ContactVM = {
+  lassoId: "CVR-1-34580820",
+  phone: "71747812",
+  email: "kontakt@lasso.dk",
+  emails: ["contact@lassox.com"],
+  website: "https://lassox.com",
+  address: LASSO_X.address,
+  verifiedNumbers: [{ phoneNumber: "71747812", score: 95, callable: true, sources: ["Website"] }],
+  verifiedAt: "2026-09-20",
+};
+const src = [{ label: "lassox.com", url: "https://lassox.com/om-os/lasso-x" }];
+const LX_PEOPLE: ContactPersonVM[] = [
+  { name: "Jakob Bech Benediktson", role: "CEO", group: "Direktion", phone: "60409090", email: "jbb@lassox.com", sources: src },
+  { name: "Anders Eksempel", role: "COO", group: "Direktion", phone: "60409091", email: "ae@lassox.com", sources: src },
+  { name: "Jeppe Eksempel", role: "CTO", group: "Direktion", email: "je@lassox.com", sources: src },
+  { name: "Mette Eksempel", role: "Markedschef for B2B", group: "Ledelse", phone: "60409092", email: "me@lassox.com" },
+  { name: "Sara Eksempel", role: "Customer Success Manager", group: "Salg", email: "se@lassox.com" },
+  { name: "Emil Eksempel", role: "Customer Success Manager", group: "Salg", phone: "60409093", email: "em@lassox.com" },
+  { name: "Christian Eksempel", role: "Markedschef", group: "Salg", phone: "60409094", email: "ce@lassox.com" },
+  { name: "Abed Eksempel", role: "Sales Lead", group: "Salg", phone: "60409095", email: "ab@lassox.com" },
+  { name: "Bo Eksempel", role: "Back-End Udvikler", group: "IT-udvikling", email: "bo@lassox.com" },
+  { name: "Cecilie Eksempel", role: "Front-End Udvikler", group: "IT-udvikling", email: "cc@lassox.com" },
+  { name: "Dennis Eksempel", role: "Lead Developer", group: "IT-udvikling", email: "de@lassox.com" },
+  { name: "Freja Eksempel", role: "Senior Front-End Udvikler", group: "IT-udvikling", email: "fe@lassox.com" },
+  { name: "Gorm Eksempel", role: "Sales Consultant", group: "Konsulenter", email: "ge@lassox.com" },
+  { name: "Hans Eksempel", role: "Sales Consultant", group: "Konsulenter", email: "he@lassox.com" },
+  { name: "Ida Eksempel", role: "Sales Consultant", group: "Konsulenter", email: "ie@lassox.com" },
+  { name: "Karin Eksempel", role: "Office Manager", group: "Øvrige", email: "ke@lassox.com" },
+];
+const LX_DATA = { lassoId: "CVR-1-34580820", people: LX_PEOPLE };
+const LX_SHORTCUTS = [
+  { id: "tvillinger", label: "Tvillinger", icon: "users" as const, onSelect: noop },
+  { id: "nyheder", label: "Nyheder", icon: "news" as const, onSelect: noop },
+];
 
-/** Mobil liste (08.10): arket med listen, ingen person valgt endnu. */
-function SeeAllMobileList() {
-  const groups = groupContactPersons(PERSONS.map((p, i) => ({ ...p, _i: i }))).map((g) => ({
-    label: g.group,
-    // 08.10: telefon-ikon til højre, når personen har et nummer (chevronen tegner listen selv).
-    items: g.people.map((p) => ({ id: String(p._i), title: p.name, sub: p.role, trailing: p.phone ? <Icon name="phone" size={15} /> : undefined })),
-  }));
+function SeeAllPanel({ view = "detail", minHeight = 940 }: { view?: "list" | "detail"; minHeight?: number }) {
+  // Præsentation: laget følger galleriets højde (ikke skærmbilledets 800 px), og fokusrammen fra
+  // åbningen (fokus på den valgte række) tegnes ikke på det statiske billede.
   return (
-    <div style={{ minHeight: 740 }}>
+    <div style={{ minHeight }}>
       <NoAnim />
-      <SidePanel
-        open
-        title="Kontaktpersoner"
-        subtitle="Eksempel Byg A/S, 8 personer"
-        onClose={noop}
-        view="list"
-        list={<SidePanelList groups={groups} onSelect={noop} ariaLabel="Kontaktpersoner" />}
-        detail={<div />}
+      <style>{`.lasso-layer{position:absolute!important;height:${minHeight}px!important}.lasso-sidepanel-wrap{position:absolute!important}.lasso-panellist__row:focus-visible{outline:none!important}`}</style>
+      <LassoContactPersons
+        data={LX_DATA}
+        companyName="LASSO X A/S"
+        company={LASSO_X}
+        contact={LASSO_X_CONTACT}
+        shortcuts={LX_SHORTCUTS}
+        onLiveDetails={noop}
+        defaultOpen={0}
+        defaultView={view}
+        onCopy={noop}
+        onOpenLink={noop}
       />
     </div>
   );
@@ -198,20 +236,29 @@ const FIN_MISSING: FinancialsVM = {
   years: [Y(2023, null, 19_800_000, 2_100_000, 6_000_000, 38), Y(2024, null, 21_000_000, 2_600_000, 7_400_000, 41)],
 } as FinancialsVM;
 
+/** 10b: tre tilstandskort side om side (Paper: 352 px, samme højde). */
+function StateRow({ children, height }: { children: ReactNode; height: number }) {
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "stretch", gap: 24 }}>
+      {(Array.isArray(children) ? children : [children]).map((c, i) => (
+        <div key={i} style={{ display: "flex", width: 352, minHeight: height }}>
+          {c}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ScoreStates() {
   const s = (x: Partial<ScoreVM>): ScoreVM => ({ lassoId: B, score: null, source: "Lasso", ...x }) as ScoreVM;
+  // Scoremåleren tegner sin egen sektion; rammen (10b regel 1) er galleriets kort om hver tilstand.
+  const card = (node: ReactNode) => <div className="lasso-framewrap" style={{ flex: 1 }}>{node}</div>;
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24 }}>
-      <Labelled label="Ikke hentet (stiplet ramme, handling koster)">
-        <div className="lasso-grid"><ScoreGauge score={s({ state: "notfetched", cost: "1 kredit", reason: "Hent vurderingen for at se scoren og skalaen." })} onFetch={noop} /></div>
-      </Labelled>
-      <Labelled label="Henter (fuld ramme, spinner, 4 px fremdrift)">
-        <div className="lasso-grid"><ScoreGauge score={s({ state: "fetching", progress: 0.45 })} /></div>
-      </Labelled>
-      <Labelled label="Ikke tilgængelig (grå flade, årsag)">
-        <div className="lasso-grid"><ScoreGauge score={s({ state: "unavailable", reason: "Scoren kan ikke beregnes for virksomheder under konkurs." })} /></div>
-      </Labelled>
-    </div>
+    <StateRow height={232}>
+      {card(<ScoreGauge score={s({ state: "notfetched" })} onFetch={noop} />)}
+      {card(<ScoreGauge score={s({ state: "fetching" })} />)}
+      {card(<ScoreGauge score={s({ state: "unavailable", reason: "Virksomheden er under konkurs. Der beregnes ikke en score for virksomheder under konkurs eller tvangsopløsning." })} />)}
+    </StateRow>
   );
 }
 
@@ -327,7 +374,14 @@ export const entries: GalleryEntry[] = [
   { nr: "08.4", title: "Genveje", node: "9TL-0", spec: co("Eksempel Byg A/S", [{ type: "LassoShortcuts", company: B }]) },
   { nr: "08.5", title: "Live-nummer (kontaktblok med realtidsverifikation)", node: "BJJ-0", render: () => <LiveNumberStates /> },
   { nr: "08.6", title: "Kontaktpersoner, blok på siden", node: "I6B-0", spec: co("Eksempel Byg A/S", [{ type: "LassoContactPersons", company: B }]) },
-  { nr: "08.7", title: "Se alle-panel (fra højre)", node: "I7B-0", render: () => <SeeAllPanel />, only: "desktop" },
+  {
+    nr: "08.7",
+    title: "Se alle-panel",
+    node: "L75-0",
+    render: () => <SeeAllPanel />,
+    only: "desktop",
+    note: "Paper L75-0: tre kolonner i portalens ramme (virksomheden | stillinger pr. afdeling | valgt person). Tvillinger/Nyheder og 'Se detaljer' vises kun, når værten kan åbne dem (G1).",
+  },
   {
     nr: "08.8",
     title: "Hovedvarianter (status og overvåger-tilstand)",
@@ -349,9 +403,9 @@ export const entries: GalleryEntry[] = [
       </Stack>
     ),
   },
-  { nr: "08.9", title: "Se alle-panel, tablet 768", node: "IAX-0", render: () => <SeeAllPanel />, only: "desktop", desktopWidth: 768 },
-  { nr: "08.10", title: "Se alle-ark, mobil liste", node: "IC4-0", render: () => <SeeAllMobileList />, only: "mobile" },
-  { nr: "08.11", title: "Se alle-ark, mobil detalje", node: "IDG-0", render: () => <SeeAllPanel />, only: "mobile" },
+  { nr: "08.9", title: "Se alle-panel, tablet 768", node: "MCE-0", render: () => <SeeAllPanel minHeight={760} />, only: "desktop", desktopWidth: 768 },
+  { nr: "08.10", title: "Se alle-ark, mobil liste", node: "MES-0", render: () => <SeeAllPanel view="list" minHeight={760} />, only: "mobile" },
+  { nr: "08.11", title: "Se alle-ark, mobil detalje", node: "MGT-0", render: () => <SeeAllPanel minHeight={760} />, only: "mobile" },
 
   // 09 Nøgletal
   { nr: "09.1", title: "Nøgletalskort", node: "9UM-0", spec: co("Eksempel Byg A/S", [{ type: "LassoKeyFigureCards", company: B }]) },
@@ -392,23 +446,24 @@ export const entries: GalleryEntry[] = [
   { nr: "10.2", title: "Flerårstabel", node: "A0Q-0", spec: co("Eksempel Byg A/S", [{ type: "LassoMultiYearTable", company: B, metrics: ["omsaetning", "bruttofortjeneste", "resultat", "egenkapital"], years: 5 }]) },
   {
     nr: "10.3",
-    title: "Datatilstande",
-    node: "A2H-0",
+    title: "Datatilstande (fælles tilstandssprog, 10b)",
+    node: "LEQ-0",
+    note: "10b (Paper LDP-0): samme ramme og overskrift i alle tilstande. Henter: skelet af nøgle-værdi-listen med shimmer (1,4 s, lineært, uendeligt; stille ved prefers-reduced-motion); billedet her er statisk.",
     render: () => (
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24 }}>
-        <Labelled label="Beregnes på forespørgsel">
-          <DataState state="ondemand" reason="Risikovurderingen beregnes, når du beder om den." cost="Koster 1 kredit, tager 5–45 sekunder" actionLabel="Beregn risiko" onAction={noop} />
-        </Labelled>
-        <Labelled label="Henter, skelet">
-          <DataState state="loading" lines={4} height={140} framed />
-        </Labelled>
-        <Labelled label="Ingen data">
-          <DataState state="empty" look="panel" title="Ingen nyheder endnu" reason="Der er ikke fundet artikler om virksomheden." checkedAt="2026-09-28" action={{ label: "Overvåg og få besked", onClick: noop }} />
-        </Labelled>
-      </div>
+      <StateRow height={264}>
+        <Section title="Risikovurdering" frame>
+          <DataState state="ondemand" reason="Lassos egen vurdering ud fra regnskab, ledelse og ejerskab. Tager et par sekunder." actionLabel="Beregn risiko" onAction={noop} />
+        </Section>
+        <Section title="Risikovurdering" frame>
+          <DataState state="loading" shape="keyvalue" note="Shimmer: lyst bånd glider venstre→højre, 1,4 s, uendeligt. Statisk ved prefers-reduced-motion." />
+        </Section>
+        <Section title="Risikovurdering" frame>
+          <DataState state="empty" title="Ingen regnskaber endnu" reason="Virksomheden er stiftet for under et år siden. Første regnskab forventes 30.06.2027." action={{ label: "Overvåg og få besked", onClick: noop }} />
+        </Section>
+      </StateRow>
     ),
   },
-  { nr: "10.4", title: "Scoremåler, tilstande", node: "BGZ-0", render: () => <ScoreStates /> },
+  { nr: "10.4", title: "Scoremåler, tilstande (10b)", node: "LG2-0", note: "10b: ikke beregnet, henter (skelet af måleren med shimmer), ikke tilgængelig. Lassos risikoscore, ingen Creditsafe.", render: () => <ScoreStates /> },
 
   // 11 Personer og ejere
   {
@@ -449,7 +504,40 @@ export const entries: GalleryEntry[] = [
     ]),
   },
   { nr: "12.3", title: "Tidslinje (CVR-ændringer)", node: "A8Z-0", spec: co("Eksempel Byg A/S", [{ type: "LassoTimeline", company: B }]) },
-  { nr: "12.4", title: "Nyhedsliste", node: "AAG-0", spec: co("Eksempel Byg A/S", [{ type: "LassoNews", company: B, limit: 3 }]) },
+  {
+    nr: "12.4",
+    title: "Nyhedsliste",
+    node: "LMF-0",
+    spec: co("Eksempel Byg A/S", [{ type: "LassoNews", company: B, limit: 3 }]),
+    note: "Paper LMF-0 (runde 5): kildelinje 12/16 muted, overskrift 14/500/18 som historikkens begivenhed (12.3), uddrag 13/18 klippet efter 2 linjer, virksomheden i fed i uddraget, 'Vis flere' nederst. Papers eksempeltekster.",
+    mutate: (ds) => {
+      const ago = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString();
+      ds.news[B] = {
+        lassoId: B,
+        items: [
+          {
+            source: "Børsen",
+            url: "https://borsen.dk/nyheder/eksempel",
+            time: ago(3),
+            headline: "Datavirksomhed lander aftale med finanssektoren",
+            excerpt: "Aftalen giver bankerne adgang til opdaterede virksomhedsdata, oplyser Lasso X i en pressemeddelelse. Selskabet kalder aftalen en milepæl",
+            extractSegments: [{ text: "Aftalen giver bankerne adgang til opdaterede virksomhedsdata, oplyser " }, { text: "Lasso X", highlight: true }, { text: " i en pressemeddelelse. Selskabet kalder aftalen en milepæl" }],
+          },
+          { source: "Lasso News", time: "2026-04-15", headline: "Ny årsrapport: bruttofortjenesten stiger 7,5 %", excerpt: "Skrevet ud fra regnskabet for 2025. Resultat efter skat -201 t. kr., egenkapital 3,2 mio. kr." },
+          {
+            source: "Tech.eu",
+            url: "https://tech.eu/eksempel",
+            time: "2026-01-12",
+            language: "engelsk",
+            headline: "Nordic data startups to watch in 2026",
+            excerpt: "among the Copenhagen names, Lasso X stands out for its CVR-based risk tooling",
+            extractSegments: [{ text: "among the Copenhagen names, " }, { text: "Lasso X", highlight: true }, { text: " stands out for its CVR-based risk tooling" }],
+          },
+          { source: "Lasso News", time: "2025-11-02", headline: "Ny direktør tiltræder", excerpt: "Skrevet ud fra CVR-registreringen." },
+        ],
+      };
+    },
+  },
 
   // 13 Grafer
   { nr: "13.1", title: "Seriefarver (palet)", node: "ABI-0", render: () => <Palette /> },

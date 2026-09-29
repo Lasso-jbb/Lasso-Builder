@@ -131,6 +131,19 @@ function sectionAction(
   return undefined;
 }
 
+/** 08.7 (Paper L8F-0): genvejene Tvillinger og Nyheder i "Se alle"-panelets første kolonne, kun når værten kan åbne dem (G1). */
+function contactPanelShortcuts(props: LassoViewProps, act: (a: ViewAction) => void, lassoId: string, name: string) {
+  return (
+    [
+      { id: "tvillinger", label: "Tvillinger", icon: "users" as const },
+      { id: "nyheder", label: "Nyheder", icon: "news" as const },
+    ] as const
+  ).flatMap((t) => {
+    const run = sectionAction(props, act, { lassoId, pageKind: "company", section: t.id, name, label: t.label });
+    return run ? [{ id: t.id, label: t.label, icon: t.icon, onSelect: run }] : [];
+  });
+}
+
 /** 09.2/09.5: "Se alle" (hele regnskabet) som link med ikon under regnskabslisten, når værten kan åbne det. */
 function statementsLink(company: string, ds: Dataset, props: LassoViewProps, act: (a: ViewAction) => void) {
   if (props.spec.components.some((x) => x.type === "LassoIncomeStatement")) return undefined;
@@ -373,6 +386,10 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           title={c.title}
           error={err(`contactPersons:${c.company}`)}
           companyName={empty.companies[c.company]?.name}
+          company={empty.companies[c.company]}
+          contact={empty.contact[c.company]}
+          shortcuts={contactPanelShortcuts(props, act, c.company, empty.companies[c.company]?.name ?? c.company)}
+          onLiveDetails={sectionAction(props, act, { lassoId: c.company, pageKind: "company", section: "kontakt", name: empty.companies[c.company]?.name ?? c.company, label: "Kontakt" })}
           onCopy={frame.copy}
           onOpenLink={(url) => act({ kind: "open-link", url })}
         />

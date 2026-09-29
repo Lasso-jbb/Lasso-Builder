@@ -7,6 +7,7 @@ import { CompanyHead } from "./components/CompanyHead.js";
 import { PersonHead } from "./components/PersonHead.js";
 import { HeadActions } from "./components/HeadActions.js";
 import { SidePanel, SidePanelList } from "./components/SidePanel.js";
+import { CompanyColumn } from "./components/LassoContactPersons.js";
 import { LassoContactPersons } from "./components/LassoContactPersons.js";
 import { LassoContact, liveState } from "./components/LassoContact.js";
 import { Shortcuts } from "./components/Shortcuts.js";
@@ -211,18 +212,39 @@ test("08.6: blokken viser 3 (Direktion først) + 'Se N kontaktpersoner', der åb
   assert.doesNotMatch(out, /lasso-contactpersons__icon--muted/, "G2: intet ikon, når kanalen mangler");
 });
 
-test("08.7: panelet grupperer, markerer den valgte og viser Kopiér-links, LinkedIn og kilder", () => {
+test("08.7: panelet grupperer stillinger pr. afdeling, markerer den valgte og viser kopiér-handlinger og kilder", () => {
   const out = html(h(LassoContactPersons, { data: people, companyName: "Eksempel Byg A/S", onCopy: noop, defaultOpen: 0 }));
   assert.match(out, /role="dialog" aria-modal="true"/);
-  assert.match(out, /Eksempel Byg A\/S, 5 personer/);
+  assert.match(out, /lasso-sidepanel--seeall/);
+  assert.match(out, /lasso-sidepanel__subtitle">5 personer</);
   const groups = [...out.matchAll(/lasso-panellist__label">([^<]+)</g)].map((m) => m[1]);
   assert.deepEqual(groups, ["Direktion", "Ledelse", "Salg", "IT-udvikling"]);
+  // Listen viser stillingen (Paper L8Z-0); navnet står i detaljen.
+  const rows = [...out.matchAll(/lasso-panellist__name">([^<]+)</g)].map((m) => m[1]);
+  assert.deepEqual(rows.slice(0, 2), ["CEO", "Økonomichef"]);
   assert.match(out, /lasso-panellist__row is-selected" aria-current="true"/);
-  assert.match(out, /Kopiér<span class="lasso-cpdetail__long"> telefonnummer<\/span>/);
-  assert.match(out, /LinkedIn-profil/);
-  // 08.11 (Jakob 29.09): kilder kun som link under "Kilder"; ingen kildebeskrivelse, CVR-linje eller "Opdateret".
-  assert.doesNotMatch(out, /registreret direktør|lasso-cpdetail__updated|lasso-cpdetail__sourcetext/);
+  assert.match(out, /Kopiér telefonnummer/);
+  assert.match(out, /Kopiér e-mailadresse/);
+  // Ingen Ring/Skriv/LinkedIn og ingen kildebeskrivelse, CVR-linje eller "Opdateret" (08.11, G3).
+  assert.doesNotMatch(out, /LinkedIn|>Ring<|>Skriv<|registreret direktør|lasso-cpdetail__updated|lasso-cpdetail__sourcetext/);
   assert.match(out, /lasso-sidepanel__close" aria-label="Luk"/);
+  // Uden kopiér-handling (G1): kun værdien, ingen knap.
+  const plain = html(h(LassoContactPersons, { data: people, defaultOpen: 0 }));
+  assert.doesNotMatch(plain, /lasso-cpdetail__copy"/);
+  assert.match(plain, /lasso-cpdetail__plain/);
+});
+
+test("08.7: virksomhedskolonnen med Live Nummer, telefonnumre, e-mailadresser og genveje kun med funktion", () => {
+  const contact = { lassoId: byg.lassoId, phone: "71747812", email: "kontakt@lasso.dk", emails: ["contact@lassox.com"], website: "https://lassox.com", verifiedNumbers: [{ phoneNumber: "71747812", score: 95, callable: true, sources: ["Website"] }] };
+  const out = html(h(CompanyColumn, { company: byg, contact, shortcuts: [{ id: "nyheder", label: "Nyheder", icon: "news", onSelect: noop }] }));
+  assert.match(out, /Live Nummer/);
+  assert.match(out, />Telefonnumre</);
+  assert.match(out, /kontakt@lasso\.dk.*contact@lassox\.com/s);
+  assert.match(out, />Nyheder</);
+  assert.doesNotMatch(out, /Se detaljer/, "G1: uden handling intet link");
+  assert.match(html(h(CompanyColumn, { company: byg, contact, onLiveDetails: noop })), /Se detaljer/);
+  const panel = html(h(SidePanel, { open: true, variant: "seeall", title: "Kontaktpersoner", onClose: noop, list: "liste", aside: "Virksomhed" }));
+  assert.match(panel, /lasso-sidepanel--seeall lasso-sidepanel--aside/);
 });
 
 test("SidePanel: lukket tegnes intet; kun liste uden detalje; 'Vis N flere' efter grænsen", () => {

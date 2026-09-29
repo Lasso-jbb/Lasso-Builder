@@ -17,13 +17,14 @@ import {
   type TableColumn,
 } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
-import { Section, Sparkline, stateForError, statusTone } from "../primitives.js";
+import { Section, SkeletonShape, Sparkline, stateForError, statusTone } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
 import { rowsToCsv } from "../csv.js";
 import { FilterSheet } from "./FilterSheet.js";
 import { Menu } from "./Menu.js";
-import { BulkBar, CheckMark, Checkbox, ColumnsIcon, DownloadIcon, FilterIcon, Pagination, PlusIcon, TableLoadingLine, TableSearch, TableStateBox, TableStateRows, TableToolbar, slugFile, type BulkAction, type TableState } from "./TableKit.js";
+import { BulkBar, CheckMark, Checkbox, MobileBulkBar, ColumnsIcon, DownloadIcon, FilterIcon, Pagination, PlusIcon, TableSearch, TableStateBox, TableStateRows, TableToolbar, slugFile, type BulkAction, type TableState } from "./TableKit.js";
 import { XIcon } from "./FilterSheet.js";
+import { Icon } from "./Icon.js";
 
 const NUMERIC: ReadonlySet<TableColumn> = new Set(["ansatte", "omsaetning", "bruttofortjeneste", "resultat", "udvikling", "score"]);
 const SORTABLE: ReadonlySet<TableColumn> = new Set(["navn", "by", "region", "branche", "ansatte", "omsaetning", "bruttofortjeneste", "resultat", "score"]);
@@ -163,8 +164,10 @@ export interface CompanyTableProps {
   onSaveList?: () => void;
   /** 15.4 hentende: det forventede antal i "Henter 1.243 virksomheder …". */
   loadingTotal?: number;
-  /** 15.4 fejl: "Fejl-id 4F2A, kopiér". */
+  /** 15.4 fejl: "Fejl-id 4F2A" som tekst ved "Prøv igen". */
   errorId?: string;
+  /** Statisk forhåndsvisning og tests (15.2): markerede rækker fra start og mobilens "Flere"-ark åbent. */
+  preview?: { selected?: readonly string[]; moreOpen?: boolean };
 }
 
 /**
@@ -192,6 +195,7 @@ export function CompanyTable({
   onSaveList,
   loadingTotal,
   errorId,
+  preview,
 }: CompanyTableProps) {
   const initialCols = columns?.length ? columns : DEFAULT_TABLE_COLUMNS;
   const [cols, setCols] = useState<readonly TableColumn[]>(initialCols);
@@ -205,7 +209,7 @@ export function CompanyTable({
   const tablet = !mobile && frameWidth < 1024;
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
-  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set(preview?.selected ?? []));
   const [allSelected, setAllSelected] = useState(false);
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -275,6 +279,7 @@ export function CompanyTable({
     bulkActions.push({
       id: "compare",
       label: "Sammenlign",
+      sheetIcon: <Icon name="chart" size={16} />,
       disabled: !ok,
       reason: "Markér 2–6 virksomheder for at sammenligne",
       onSelect: () => onAction({ kind: "prompt", prompt: `Sammenlign ${selectedRows.map((r) => `${r.name} (${r.lassoId})`).join(", ")} på nøgletal.` }),
@@ -284,6 +289,7 @@ export function CompanyTable({
     bulkActions.push({
       id: "save",
       label: "Føj til liste",
+      short: "Til liste",
       icon: <PlusIcon />,
       disabled: selCount > 50,
       reason: "Højst 50 ad gangen",
@@ -380,8 +386,9 @@ export function CompanyTable({
     />
   );
 
+  // 15.2 mobil (runde 5): værktøjslinjen bliver stående; massehandlingerne står i bundbjælken (MobileBulkBar).
   const toolbar =
-    selCount > 0 ? (
+    selCount > 0 && !mobile ? (
       <BulkBar count={selCount} total={total} allSelected={allSelected} onSelectAll={() => setAllSelected(true)} actions={bulkActions} onClear={clearSelection} />
     ) : (
       tablet ? (
@@ -465,7 +472,9 @@ export function CompanyTable({
       )
     );
 
-  const countText = result ? `${formatNumber(total)} virksomhed${total === 1 ? "" : "er"}` : undefined;
+  // 15.4 (10b regel 1): tælleren bliver stående i alle tilstande; mens der hentes, det forventede antal.
+  const countTotal = result ? total : loadingTotal;
+  const countText = countTotal !== undefined ? `${formatNumber(countTotal)} virksomhed${countTotal === 1 ? "" : "er"}` : undefined;
 
   return (
     <Section title={tablet ? undefined : title} action={countText && !tablet ? <span className="lasso-ctable__count">{countText}</span> : undefined} span="full" className="lasso-ctable">
@@ -578,14 +587,13 @@ export function CompanyTable({
         {state ? (
           <div className="lasso-ccards-state">
             {state.kind === "loading" ? (
-              <>
-                <div className="lasso-skeleton-group" aria-busy="true" aria-label="Henter data">
-                  {[0, 1, 2].map((i) => (
-                    <div key={i} className="lasso-skeleton lasso-ccards-state__skel" />
-                  ))}
-                </div>
-                {state.label ? <TableLoadingLine label={state.label} /> : null}
-              </>
+              // 15.4 mobil (runde 5, Paper LHD-0): tre skeletkort formet som mobilkortene (26c.7) med
+              // shimmer; "Henter 1.243 …"-teksten udgår, skelettet er selv signalet.
+              <div className="lasso-ccards-state__skels" aria-busy="true" aria-label="Henter data">
+                {[0, 1, 2].map((i) => (
+                  <SkeletonShape key={i} shape="card" />
+                ))}
+              </div>
             ) : (
               <TableStateBox state={state} />
             )}
@@ -598,11 +606,24 @@ export function CompanyTable({
                 r={r}
                 figures={cardFigures(cols)}
                 selected={allSelected || selected.has(r.lassoId)}
+                onToggle={selectable ? (on) => toggleRow(r.lassoId, on) : undefined}
                 onOpen={canDrillDown ? () => onAction({ kind: "open-company", lassoId: r.lassoId, name: r.name }) : undefined}
               />
             ))}
           </ul>
         )}
+        {mobile && selCount > 0 ? (
+          <MobileBulkBar
+            count={selCount}
+            total={total}
+            allSelected={allSelected}
+            onSelectAll={() => setAllSelected(true)}
+            actions={bulkActions}
+            onClear={clearSelection}
+            names={selectedRows.map((r) => r.name)}
+            defaultMoreOpen={preview?.moreOpen}
+          />
+        ) : null}
         {result && !state ? (
           <Pagination
             page={current}
@@ -640,10 +661,16 @@ function figureValue(r: CompanyRowVM, c: TableColumn) {
  * rød, "Ny" koral), "CVR …, by" muted, tynd linje og fire nøgletal som etiket over værdi. Ingen
  * afkrydsning på kortet (markering sker i tabellen på større flader).
  */
-function CompanyCard({ r, figures, selected, onOpen }: { r: CompanyRowVM; figures: readonly TableColumn[]; selected: boolean; onOpen?: () => void }) {
+function CompanyCard({ r, figures, selected, onOpen, onToggle }: { r: CompanyRowVM; figures: readonly TableColumn[]; selected: boolean; onOpen?: () => void; onToggle?: (on: boolean) => void }) {
+  // 15.2 mobil (Jakob 29.09): kun afkrydsningsboksen viser valget; kortet får ingen flade eller kant.
   return (
     <li className={`lasso-ccard ${selected ? "is-selected" : ""} ${r.statusKind === "inactive" ? "is-ended" : ""}`} data-clickable={Boolean(onOpen)} onClick={onOpen}>
       <div className="lasso-ccard__top">
+        {onToggle ? (
+          <span className="lasso-ccard__check" onClick={(e) => e.stopPropagation()}>
+            <Checkbox checked={selected} onChange={onToggle} label={`Markér ${r.name}`} />
+          </span>
+        ) : null}
         <div className="lasso-ccard__id">
           <span className="lasso-ccard__name">{r.name}</span>
           <span className="lasso-ccard__sub">{[r.cvr ? `CVR ${r.cvr}` : null, r.city].filter(Boolean).join(", ") || "Ikke oplyst"}</span>

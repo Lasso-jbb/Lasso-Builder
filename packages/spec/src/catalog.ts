@@ -172,7 +172,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
   {
     type: "LassoContactPersons",
     title: "Kontaktpersoner",
-    description: `Brug til: navngivne kontaktpersoner fra virksomhedens hjemmeside med rolle/afdeling, telefon og e-mail – 'hvem kan jeg kontakte hos X', 'kontaktpersoner'. Brug ikke når: det gælder direktion/bestyrelse i CVR (LassoPersonList) eller virksomhedens hovednumre (LassoContact). Kræver: company; listen er tom, når hjemmesiden er ukendt eller ingen personer er fundet. ${F("kontakt")} Eksempel: 'Hvem er kontaktpersonerne hos Lasso X?' → show_company focus kontakt.`,
+    description: `Brug til: navngivne kontaktpersoner fra virksomhedens hjemmeside med rolle/afdeling, telefon og e-mail – 'hvem kan jeg kontakte hos X', 'kontaktpersoner'. Brug ikke når: det gælder direktion/bestyrelse i CVR (LassoPersonList) eller virksomhedens hovednumre (LassoContact). Kræver: company; listen er tom, når hjemmesiden er ukendt eller ingen personer er fundet. Blokken viser 3 personer; 'Se N kontaktpersoner' åbner 'Se alle'-panelet (08.7): på desktop tre kolonner (virksomheden med adresse, CVR, Live Nummer, telefonnumre og e-mailadresser | stillinger pr. afdeling | valgt person med 'Kopiér telefonnummer'/'Kopiér e-mailadresse' og 'Kilder'), på tablet og mobil liste + detalje; intet kan rettes eller gemmes i panelet. ${F("kontakt")} Eksempel: 'Hvem er kontaktpersonerne hos Lasso X?' → show_company focus kontakt.`,
     props: "company, title?",
   },
   {
@@ -447,7 +447,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     type: "LassoPersonNetwork",
     title: "Personnetværk",
     description:
-      "Brug til: hvem personen sidder sammen med i selskaber, sorteret efter år sammen (den længste sammenhængende periode i fælles selskaber, ikke summen) –'hvem arbejder X sammen med', 'X's netværk'. Brug ikke når: det gælder personens egne roller (LassoPersonRoles) eller konkurser (LassoPersonRisk). Kræver: person. Dækkes af show_person (focus netvaerk). Eksempel: 'Hvem er X i bestyrelse med?' → show_person focus netvaerk.",
+      "Brug til: hvem personen sidder sammen med i selskaber, sorteret efter år sammen (den længste sammenhængende periode i fælles selskaber, ikke summen) –'hvem arbejder X sammen med', 'X's netværk'. Tegnes som tidsbånd i samme sprog som LassoPersonRoles (16.3): ét bånd pr. fælles selskab for perioden, de sad sammen, med 'Selskab, rolle, periode' over båndet; afsluttede stiplede og dæmpede, konkurs med rød markør og ordet; på mobil ét kort pr. person. Giv den gerne width 'two-thirds' eller 'full' på en side, hvor netværket er svaret. Brug ikke når: det gælder personens egne roller (LassoPersonRoles) eller konkurser (LassoPersonRisk). Kræver: person. Dækkes af show_person (focus netvaerk). Eksempel: 'Hvem er X i bestyrelse med?' → show_person focus netvaerk.",
     props: "person, limit? (standard 3), title?",
   },
   {

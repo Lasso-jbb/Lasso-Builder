@@ -190,6 +190,12 @@ function OwnershipLayoutRules() {
   );
 }
 
+/** 15.4: samme kriterier i alle tre tilstande (Paper LHA-0: Status: Aktiv, Region: Hovedstaden). */
+const CRIT154 = [
+  { field: "status", operator: "eq", value: "Aktiv" },
+  { field: "region", operator: "eq", value: "Hovedstaden" },
+] as const;
+
 export const entries: GalleryEntry[] = [
   /* ---------- 14 Ejerdiagram ---------- */
   {
@@ -268,6 +274,8 @@ export const entries: GalleryEntry[] = [
     nr: "15.2",
     title: "Massehandlinger (handlingsbjælke)",
     node: "BA7-0",
+    only: "desktop",
+    note: "Mobil: se de to 15.2-mobilindgange (bundbjælke og Flere-ark, Paper LOA-0).",
     render: () => (
       <Stack
         items={[
@@ -311,12 +319,13 @@ export const entries: GalleryEntry[] = [
     nr: "15.4",
     title: "Tabeltilstande (tom, hentende, fejlende)",
     node: "BB0-0",
+    note: "Mobil efter 10b (Paper LHA-0): værktøjslinje (søg + Filter m. tæller), filterchips og tælleren bliver stående i alle tilstande; Henter = tre skeletkort som 26c.7 med shimmer (1,4 s, stille ved prefers-reduced-motion; billedet er statisk); tom og fejl i samme kortramme.",
     render: () => (
       <Stack
         items={[
-          ["Tom", <CompanyTable key="e" result={{ key: "tom", total: 0, rows: [] }} criteria={[{ field: "region", operator: "eq", value: "Hovedstaden" }, { field: "ansatte", operator: "gte", value: 10 }]} onApplyCriteria={noop} onAction={noop} canDrillDown={false} />],
-          ["Hentende", <CompanyTable key="l" loadingTotal={1243} onAction={noop} canDrillDown={false} />],
-          ["Fejlende", <CompanyTable key="f" error="Lasso svarede ikke inden for 15 sekunder." errorId="4F2A" onRetry={noop} onAction={noop} canDrillDown={false} />],
+          ["Tom", <CompanyTable key="e" title="Kunder" result={{ key: "tom", total: 0, rows: [] }} criteria={CRIT154} onApplyCriteria={noop} onAction={noop} canDrillDown={false} />],
+          ["Hentende", <CompanyTable key="l" title="Kunder" loadingTotal={1248} criteria={CRIT154} onApplyCriteria={noop} onAction={noop} canDrillDown={false} />],
+          ["Fejlende", <CompanyTable key="f" title="Kunder" error="Forbindelsen til CVR svarede ikke. Dine kriterier er gemt, prøv igen om et øjeblik." errorId="4F2A" loadingTotal={1248} criteria={CRIT154} onApplyCriteria={noop} onRetry={noop} onAction={noop} canDrillDown={false} />],
         ]}
       />
     ),
@@ -325,7 +334,36 @@ export const entries: GalleryEntry[] = [
   /* ---------- 16 Personside ---------- */
   { nr: "16.1", title: "Personhoved", node: "BNF-0", spec: person("Bo Eksempel", [{ type: "LassoPersonHead", person: BO }]) },
   { nr: "16.2", title: "Roller som tidsbånd", node: "BOH-0", spec: person("Bo Eksempel", [{ type: "LassoPersonRoles", person: BO, show: "all", limit: 8 }]) },
-  { nr: "16.3", title: "Netværk (personer med fælles selskaber)", node: "BQV-0", spec: person("Bo Eksempel", [{ type: "LassoPersonNetwork", person: BO, limit: 5 }]) },
+  {
+    nr: "16.3",
+    title: "Netværk som tidsbånd (personer med fælles selskaber)",
+    node: "LTP-0",
+    gridWidth: 1152,
+    note: "Paper LTP-0 (desktop, fuld bredde som i Paper) og LVN-0 (mobil): samme akse og navnekolonne som 16.2; bånd = perioden, de sad sammen.",
+    spec: person("Bo Eksempel", [{ type: "LassoPersonNetwork", person: BO, limit: 3, width: "full" }]),
+    // Papers eksempel (LTP-0): to fælles selskaber, et nyere samarbejde og et afsluttet i et selskab under konkurs.
+    mutate: (ds) => {
+      const extra = Array.from({ length: 6 }, (_, i) => ({ name: `Eksempel Person ${i + 1}`, overlapYears: 3 - (i % 3), active: false, companies: [{ companyName: "Eksempel Invest ApS", role: "bestyrelse", from: "2018-01-01", to: "2021-01-01" }] }));
+      ds.personNetworks[BO] = {
+        lassoId: BO,
+        people: [
+          {
+            name: "Søren Krogh Eksempel",
+            overlapYears: 14,
+            active: true,
+            since: "2016-03-01",
+            companies: [
+              { companyName: "Data Eksempel A/S", role: "bestyrelse", from: "2016-03-01" },
+              { companyName: "Nordisk Datacenter A/S", role: "bestyrelse", from: "2019-05-01", to: "2023-06-30" },
+            ],
+          },
+          { name: "Anna Nørgaard Eksempel", overlapYears: 5, active: true, since: "2021-02-01", companies: [{ companyName: "Data Eksempel A/S", role: "direktion", from: "2021-02-01" }] },
+          { name: "Peter Lund Eksempel", overlapYears: 4, active: false, until: "2018-06-30", companies: [{ companyName: "Cloud Eksempel A/S", role: "bestyrelse", from: "2014-04-01", to: "2018-06-30", status: "Under konkurs", statusKind: "warning" }] },
+          ...extra,
+        ],
+      };
+    },
+  },
   { nr: "16.4", title: "Personrisiko", node: "BR1-0", spec: person("Bo Eksempel", [{ type: "LassoPersonRisk", person: BO }]) },
 
   /* ---------- 17 Risikoobservationer ---------- */
