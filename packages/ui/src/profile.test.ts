@@ -108,15 +108,17 @@ test("Virksomhedsprofil (overblik): CVR-tekster uden branche plus konklusion, re
   assert.doesNotMatch(cvr, /Kilde:/);
 });
 
-test("Regnskabsanalyse (oekonomi): konklusionen og ét link til hele analysen, én kildelinje, ingen CVR-tekster", () => {
-  const html = renderToStaticMarkup(createElement(LassoTextSections, { sections: SECTIONS, variant: "analyse" }));
-  assert.match(html, /<h3 class="lasso-section__title">Regnskabsanalyse<\/h3>/);
-  assert.deepEqual(headings(html), ["Konklusion"]);
-  assert.match(html, /aria-expanded="false"[^>]*>Se hele regnskabsanalysen \(7 afsnit\)<\/button>/);
-  assert.equal(count(html, "Kilde: Lasso regnskabsanalyse"), 1);
+test("Regnskabsanalyse (19.3/26h.3): genereringslinje under titlen, konklusion, forbehold, Vis kilder og feedback; ingen CVR-tekster", () => {
+  const v = { ...SECTIONS, analysisGenerated: "2026-09-25T08:00:00Z", analysisBasis: "2021–2025", analysisHeadline: "Vækst i toplinjen", analysisSources: ["A", "B", "C", "D"] };
+  const html = renderToStaticMarkup(createElement(LassoTextSections, { sections: v, variant: "analyse" }));
+  assert.match(html, /<h3 class="lasso-section__title">Regnskabsanalyse<\/h3><p class="lasso-section__subtitle"><span class="lasso-analysis__sub">Genereret af Lasso ud fra regnskab 2021–2025, 25\.09\.2026</);
+  assert.match(html, /lasso-analysis__headline">Vækst i toplinjen</);
+  assert.match(html, /lasso-analysis__disclaimer">Forbehold: /);
+  assert.match(html, />Vis kilder \(4\)<[^]*Var det brugbart\?/);
+  // Mobil: "Læs hele analysen" folder resten ud; kildelinjen står ikke også nederst.
+  assert.match(html, /aria-expanded="false"[^>]*>Læs hele analysen<\/button><span class="lasso-analysis__gen">Genereret af Lasso, 25\.09\.2026</);
+  assert.doesNotMatch(html, /lasso-source/);
   assert.doesNotMatch(html, /Formål|Tegningsregler|Branchestatistik/);
-  // Ét link: konklusionen har ikke sit eget "Vis hele" ved siden af.
-  assert.doesNotMatch(html, />Vis hele</);
   // Uden analyse: tom tilstand, der siger hvorfor.
   const none = renderToStaticMarkup(createElement(LassoTextSections, { sections: { ...SECTIONS, sections: SECTIONS.sections.slice(0, 3) }, variant: "analyse" }));
   assert.match(none, /ingen regnskabsanalyse/);

@@ -16,7 +16,7 @@ import type { ViewAction } from "../types.js";
 import { ShellIcon } from "./ShellIcons.js";
 import { Tabs } from "./Tabs.js";
 import { QualityFlag, StatementTable, type StatementRow, type StatementSection } from "./statementTable.js";
-import { balanceSections, cashFlowRows, incomeRows } from "./statementRows.js";
+import { balanceRowsCompact, balanceSections, cashFlowRows, incomeRows, incomeRowsCompact } from "./statementRows.js";
 
 export type StatementKind = "income" | "balance" | "cashflow";
 type Scope = "Koncern" | "Selskab";
@@ -60,26 +60,18 @@ function periodText(start?: string, end?: string): string | undefined {
   return `${s.slice(0, 5)}–${e}`;
 }
 
-function CheckIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M8 12.5l2.7 2.7L16 9.8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-/** Δ mod året før: "+7,5 %", "—" ved fortegnsskift eller manglende tal. */
-function deltaText(prev: number | null | undefined, cur: number | null | undefined): { text: string; tone: "up" | "down" | "" } {
-  if (typeof prev !== "number" || typeof cur !== "number" || prev === 0 || Math.sign(prev) !== Math.sign(cur)) return { text: "—", tone: "" };
-  const pct = percentChange([prev, cur]);
+/** Δ mod året før: "+7,5 %"; underposter som ændring i størrelse ("+9,1 %"), "—" ved fortegnsskift, kvalitetsflag eller manglende tal (26d.9). */
+function deltaText(prev: number | null | undefined, cur: number | null | undefined, line = false, flagged = false): { text: string; tone: "up" | "down" | "" } {
+  if (flagged || typeof prev !== "number" || typeof cur !== "number" || prev === 0 || Math.sign(prev) !== Math.sign(cur)) return { text: "—", tone: "" };
+  const pct = line ? ((Math.abs(cur) - Math.abs(prev)) / Math.abs(prev)) * 100 : percentChange([prev, cur]);
   if (pct === null) return { text: "—", tone: "" };
   return { text: formatPercent(pct), tone: pct < 0 ? "down" : "up" };
 }
 
 /**
- * Mobilens resultatopgørelse (26d.8): to talkolonner maks (valgt år + Δ), sumlinjer 600,
- * tynd ink-streg over årets resultat, aldrig fyld. Negative tal i rødt med ægte minus.
+ * Mobilens resultatopgørelse (26d.9): to talkolonner maks (valgt år + Δ), sumlinjer 600,
+ * 2 px ink-streg over årets resultat, aldrig fyld. Negative sumtal i rødt med ægte minus. Kun
+ * toplinjens positive Δ er grøn; øvrige Δ er muted.
  */
 function MobileRows({ rows, year, prevYear, scale }: { rows: StatementRow[]; year: number; prevYear?: number; scale: AmountScale }) {
   return (
@@ -91,7 +83,7 @@ function MobileRows({ rows, year, prevYear, scale }: { rows: StatementRow[]; yea
       </div>
       {rows.map((r) => {
         const cur = r.values.at(-1);
-        const d = deltaText(r.values.length > 1 ? r.values.at(-2) : undefined, cur);
+        const d = deltaText(r.values.length > 1 ? r.values.at(-2) : undefined, cur, (r.kind ?? "line") === "line", Boolean(r.flag));
         return (
           <div key={r.key} className={`lasso-fs-m__row lasso-fs-m__row--${r.kind ?? "line"}`}>
             <span className="lasso-fs-m__label">{r.label}</span>
@@ -99,7 +91,7 @@ function MobileRows({ rows, year, prevYear, scale }: { rows: StatementRow[]; yea
               {typeof cur === "number" ? formatScaled(cur, scale) : <span className="lasso-notreported">—</span>}
               {r.flag ? <QualityFlag reason={r.flag} /> : null}
             </span>
-            <span className={`lasso-fs-m__delta${r.kind === "subtotal" && d.tone === "up" ? " lasso-up" : ""}`}>{d.text}</span>
+            <span className={`lasso-fs-m__delta${r.key === "top" && d.tone === "up" ? " lasso-up" : ""}`}>{d.text}</span>
           </div>
         );
       })}
@@ -152,7 +144,7 @@ function MobileCashFlow({ s, year, scale }: { s: FinancialStatementsVM; year: nu
         <div key={r.key} className="lasso-fs-cf__row">
           <span className="lasso-fs-cf__label">{r.label}</span>
           <span className="lasso-fs-cf__track" aria-hidden="true">
-            {typeof r.v === "number" && r.v !== 0 ? <span className={`lasso-fs-cf__bar lasso-fs-cf__bar--${r.v < 0 ? "neg" : "pos"}`} style={{ width: `${Math.max(6, (Math.abs(r.v) / max) * 100)}%` }} /> : null}
+            {typeof r.v === "number" && r.v !== 0 ? <span className={`lasso-fs-cf__bar lasso-fs-cf__bar--${r.v < 0 ? "neg" : "pos"}`} style={{ width: `max(16px, ${(Math.abs(r.v) / max) * 100}%)` }} /> : null}
           </span>
           <span className={`lasso-fs-cf__value${typeof r.v === "number" && r.v < 0 ? " lasso-down" : ""}`}>{typeof r.v === "number" ? formatScaled(r.v, scale) : "—"}</span>
         </div>
@@ -167,20 +159,23 @@ function MobileCashFlow({ s, year, scale }: { s: FinancialStatementsVM; year: nu
 
 /**
  * Regnskabsdetaljer med værktøjslinje (katalog 19.1, mobil 26d.8–26d.11, tablet 26f.3, 26h.2).
- * Værktøjslinjen: koncern/selskab og periode (år, halvår, kvartal) som segmentkontroller
- * (niveau 3, valgt = 1 px ink-kant og 600, aldrig fyld), enhed, revisorpåtegning som tekst med
- * flueben (aldrig badge) og "Hent PDF". Halvår/kvartal er dæmpet 45 % med tooltip, når selskabet
- * kun indberetter årsregnskab. Opgørelsen vælges med en segmentkontrol (Resultat, Balance,
- * Pengestrøm). Desktop: én opgørelse med op til 5 år. Tablet: to opgørelser side om side med 3 år
- * (pengestrøm skiftes ind). Mobil: ét år (dropdown) + Δ, balancen som to kort og pengestrømmen
+ * Desktop: værktøjslinjen i en kortramme (56 px): [Selskab | Koncern], [År | Halvår | Kvartal]
+ * (niveau 3, valgt = 1 px ink-kant og 600), periode-dropdown "2025, 01.01–31.12", enheds-dropdown
+ * "t. kr." uden etiket, revisorpåtegningen som muted tekst og "Hent PDF" yderst til højre. Halvår/
+ * kvartal er dæmpet 45 % med tooltip, når selskabet kun indberetter årsregnskab. Under linjen står
+ * resultatopgørelsen (2 år + ændring) og balance og pengestrøm side om side (2 år, uden ændring).
+ * Tablet: titel + "t. kr., 3 år synlige" og segment "Resultat + balance | Pengestrøm"; to opgørelser
+ * side om side med 3 år, nyeste først. Mobil: titel + periode og 36 px årsdropdown, segment
+ * "Resultat | Balance | Pengestrøm" i fuld bredde, valgt år + Δ, balancen som to kort og pengestrømmen
  * med retningsbjælker. Formen skifter med container queries, ingen separat mobilkomponent.
  */
-export function FinancialStatements({ statements, company, statement = "income", years = 5, title, error, onAction }: FinancialStatementsProps) {
+export function FinancialStatements({ statements, company, statement = "income", years = 2, title, error, onAction }: FinancialStatementsProps) {
   const heading = title ?? "Regnskab";
   const [tab, setTab] = useState<StatementKind>(statement);
+  const [pairSel, setPair] = useState<"balance" | "cashflow">(statement === "cashflow" ? "cashflow" : "balance");
   const [scopeSel, setScope] = useState<Scope | null>(null);
   const [period, setPeriod] = useState("year");
-  const [unit, setUnit] = useState<Unit>("auto");
+  const [unit, setUnit] = useState<Unit>("t");
   const [yearSel, setYear] = useState<number | null>(null);
 
   if (!statements) {
@@ -219,25 +214,27 @@ export function FinancialStatements({ statements, company, statement = "income",
     const idx = allYears.indexOf(year);
     return new Set(allYears.slice(Math.max(0, idx - n + 1), idx + 1));
   };
-  const tableFor = (kind: StatementKind, n: number, key: string) => {
+  /** Én opgørelse som tabel. `tablet`: nyeste år først, korte etiketter, uden ændringskolonne (26f.3). */
+  const tableFor = (kind: StatementKind, n: number, key: string, tablet = false) => {
     const keep = upTo(n);
+    const common = { bare: true, unit: scale.label, scale, newestFirst: tablet, short: tablet } as const;
     if (kind === "income") {
       const shown = s.incomeStatement.filter((y) => keep.has(y.year));
       if (!shown.length) return <StatementTable key={key} bare unit={scale.label} years={[]} sections={[]} prefix="lasso-income" emptyReason={noStatementsReason(company)} />;
-      return <StatementTable key={key} bare unit={scale.label} scale={scale} years={shown.map((y) => y.year)} sections={[{ rows: incomeRows(shown) }]} prefix="lasso-income" />;
+      return <StatementTable key={key} {...common} headLabel={tablet ? HEADING.income : undefined} showDelta={!tablet} years={shown.map((y) => y.year)} sections={[{ rows: tablet ? incomeRowsCompact(shown) : incomeRows(shown) }]} prefix="lasso-income" />;
     }
     if (kind === "balance") {
       const shown = s.balanceSheet.filter((y) => keep.has(y.year));
       if (!shown.length) return <StatementTable key={key} bare unit={scale.label} years={[]} sections={[]} prefix="lasso-balance" emptyReason={noStatementsReason(company)} />;
-      const sections: StatementSection[] = balanceSections(shown);
-      return <StatementTable key={key} bare unit={scale.label} scale={scale} years={shown.map((y) => y.year)} sections={sections} prefix="lasso-balance" />;
+      const sections: StatementSection[] = tablet ? [{ rows: balanceRowsCompact(shown) }] : balanceSections(shown);
+      return <StatementTable key={key} {...common} headLabel={tablet ? "Balance 31.12" : undefined} unitSuffix=", 31.12" showDelta={false} years={shown.map((y) => y.year)} sections={sections} prefix="lasso-balance" />;
     }
     const shown = s.cashFlow.filter((y) => keep.has(y.year));
     if (!shown.length) return <StatementTable key={key} bare unit={scale.label} years={[]} sections={[]} prefix="lasso-cashflow" emptyReason="Pengestrømsopgørelse er ikke indberettet." />;
-    return <StatementTable key={key} bare unit={scale.label} scale={scale} years={shown.map((y) => y.year)} sections={[{ rows: cashFlowRows(shown, s) }]} prefix="lasso-cashflow" />;
+    return <StatementTable key={key} {...common} headLabel={tablet ? HEADING.cashflow : undefined} showDelta={false} years={shown.map((y) => y.year)} sections={[{ rows: cashFlowRows(shown, s) }]} prefix="lasso-cashflow" />;
   };
-  const pair: StatementKind = tab === "cashflow" ? "cashflow" : "balance";
   const mobileIncome = s.incomeStatement.filter((y) => y.year === prevYear || y.year === year);
+  const span = Math.max(2, Math.min(5, years));
 
   const pdf = s.pdfUrl;
   const pdfButton = pdf ? (
@@ -254,6 +251,15 @@ export function FinancialStatements({ statements, company, statement = "income",
     )
   ) : null;
 
+  const periodOf = (y: number) => {
+    const inc = s.incomeStatement.find((r) => r.year === y);
+    const end = inc?.periodEnd ?? s.balanceSheet.find((r) => r.year === y)?.periodEnd;
+    const p = periodText(inc?.periodStart, end);
+    // "2025, 01.01–31.12" (19.1): perioden uden år, da året står først.
+    return p && p.length > 10 ? `${y}, ${p.slice(0, 11)}` : String(y);
+  };
+
+  // Mobil (26d.8): 36 px årsdropdown i sektionens hoved.
   const yearSelect = (
     <label className="lasso-fs__yearsel">
       <span className="lasso-sr">Vælg regnskabsår</span>
@@ -266,16 +272,43 @@ export function FinancialStatements({ statements, company, statement = "income",
       </select>
     </label>
   );
+  // Tablet (26f.3): "Resultat + balance | Pengestrøm" i sektionens hoved.
+  const tabletSegment = (
+    <Tabs
+      level={3}
+      ariaLabel="Opgørelser side om side"
+      items={[
+        { id: "balance", label: "Resultat + balance" },
+        { id: "cashflow", label: "Pengestrøm", disabled: s.cashFlow.length === 0, disabledReason: "Pengestrømsopgørelse er ikke indberettet" },
+      ]}
+      value={pairSel}
+      onChange={(id) => setPair(id as "balance" | "cashflow")}
+      className="lasso-fs__pairseg"
+    />
+  );
+  const tabletYears = Math.min(3, allYears.indexOf(year) + 1);
 
   return (
-    <Section title={`${heading} ${year}`} subtitle={sub} span="full" className="lasso-fs" action={yearSelect}>
+    <Section
+      title={`${heading} ${year}`}
+      subtitle={<span className="lasso-fs__sub"><span className="lasso-fs__sub-m">{sub}</span><span className="lasso-fs__sub-t">{`${scale.label}, ${tabletYears} år synlige`}</span></span>}
+      span="full"
+      className="lasso-fs"
+      action={
+        <>
+          {yearSelect}
+          {tabletSegment}
+        </>
+      }
+    >
+      {/* Desktop (19.1): værktøjslinjen i en kortramme. */}
       <div className="lasso-fs__toolbar" role="toolbar" aria-label="Regnskabets værktøjslinje">
         <Tabs
           level={3}
-          ariaLabel="Koncern eller selskab"
+          ariaLabel="Selskab eller koncern"
           items={[
-            { id: "Koncern", label: "Koncern", disabled: baseScope !== "Koncern" && !hasOther, disabledReason: "Intet koncernregnskab indberettet" },
             { id: "Selskab", label: "Selskab", disabled: baseScope !== "Selskab" && !hasOther, disabledReason: "Kun koncernregnskab hentet" },
+            { id: "Koncern", label: "Koncern", disabled: baseScope !== "Koncern" && !hasOther, disabledReason: "Intet koncernregnskab indberettet" },
           ]}
           value={scope}
           onChange={(id) => setScope(id as Scope)}
@@ -293,55 +326,67 @@ export function FinancialStatements({ statements, company, statement = "income",
           onChange={setPeriod}
           className="lasso-fs__period"
         />
-        <label className="lasso-fs__unit">
-          <span className="lasso-fs__unit-label">Enhed</span>
+        <label className="lasso-fs__select lasso-fs__periodsel">
+          <span className="lasso-sr">Regnskabsperiode</span>
+          <select value={year} onChange={(e) => setYear(Number(e.target.value))}>
+            {[...allYears].reverse().map((y) => (
+              <option key={y} value={y}>
+                {periodOf(y)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="lasso-fs__select lasso-fs__unit">
+          <span className="lasso-sr">Enhed</span>
           <select value={unit} onChange={(e) => setUnit(e.target.value as Unit)}>
-            <option value="auto">{unit === "auto" ? scale.label : "Automatisk"}</option>
             <option value="t">t. kr.</option>
             <option value="mio">mio. kr.</option>
+            <option value="auto">Automatisk</option>
           </select>
         </label>
         <span className="lasso-fs__spacer" />
-        {s.auditorOpinion ? (
-          <span className="lasso-fs__opinion">
-            <CheckIcon />
-            {s.auditorOpinion}
-          </span>
-        ) : null}
+        {s.auditorOpinion ? <span className="lasso-fs__opinion">{s.auditorOpinion}</span> : null}
         {pdfButton}
       </div>
 
-      <Tabs
-        level={3}
-        ariaLabel="Opgørelse"
-        items={(["income", "balance", "cashflow"] as const).map((k) => ({
-          id: k,
-          label: TAB_LABEL[k],
-          disabled: k === "cashflow" && s.cashFlow.length === 0,
-          disabledReason: "Pengestrømsopgørelse er ikke indberettet",
-        }))}
-        value={tab}
-        onChange={(id) => setTab(id as StatementKind)}
-        className="lasso-fs__tabs"
-      />
-
-      {/* Desktop: den valgte opgørelse med op til 5 år. */}
-      <div className="lasso-fs__wide">{tableFor(tab, Math.max(2, Math.min(5, years)), "wide")}</div>
-
-      {/* Tablet (26f.3): to opgørelser side om side med 3 år; pengestrøm skiftes ind med segmentet. */}
-      <div className="lasso-fs__tablet">
-        <div className="lasso-fs__col">
-          <h4 className="lasso-fs__colhead">{HEADING.income}</h4>
-          {tableFor("income", 3, "t-income")}
-        </div>
-        <div className="lasso-fs__col">
-          <h4 className="lasso-fs__colhead">{HEADING[pair]}</h4>
-          {tableFor(pair, 3, `t-${pair}`)}
+      {/* Desktop (19): resultatopgørelsen (2 år + ændring), balance og pengestrøm side om side under. */}
+      <div className="lasso-fs__wide">
+        <div className="lasso-fs__block">{tableFor("income", span, "w-income")}</div>
+        <div className="lasso-fs__pair">
+          <div className="lasso-fs__col">
+            <h4 className="lasso-fs__colhead">{HEADING.balance}</h4>
+            {tableFor("balance", 2, "w-balance")}
+          </div>
+          {s.cashFlow.length ? (
+            <div className="lasso-fs__col">
+              <h4 className="lasso-fs__colhead">{HEADING.cashflow}</h4>
+              {tableFor("cashflow", 2, "w-cashflow")}
+            </div>
+          ) : null}
         </div>
       </div>
 
-      {/* Mobil (26d.8–26d.11): én opgørelse ad gangen, valgt år + Δ. */}
+      {/* Tablet (26f.3): to opgørelser side om side med 3 år, nyeste først; pengestrøm skiftes ind med segmentet. */}
+      <div className="lasso-fs__tablet">
+        <div className="lasso-fs__col">{tableFor("income", 3, "t-income", true)}</div>
+        <div className="lasso-fs__col">{tableFor(pairSel, 3, `t-${pairSel}`, true)}</div>
+      </div>
+
+      {/* Mobil (26d.8–26d.11): én opgørelse ad gangen via segment i fuld bredde, valgt år + Δ. */}
       <div className="lasso-fs__mobile">
+        <Tabs
+          level={3}
+          ariaLabel="Opgørelse"
+          items={(["income", "balance", "cashflow"] as const).map((k) => ({
+            id: k,
+            label: TAB_LABEL[k],
+            disabled: k === "cashflow" && s.cashFlow.length === 0,
+            disabledReason: "Pengestrømsopgørelse er ikke indberettet",
+          }))}
+          value={tab}
+          onChange={(id) => setTab(id as StatementKind)}
+          className="lasso-fs__tabs"
+        />
         {tab === "income" ? (
           mobileIncome.length ? <MobileRows rows={incomeRows(mobileIncome)} year={year} prevYear={mobileIncome.length > 1 ? prevYear : undefined} scale={scale} /> : <DataState state="empty" reason={noStatementsReason(company)} />
         ) : tab === "balance" ? (
@@ -350,6 +395,7 @@ export function FinancialStatements({ statements, company, statement = "income",
           <MobileCashFlow s={s} year={year} scale={scale} />
         )}
       </div>
+      {s.note ? <p className="lasso-fs__note">{s.note}</p> : null}
     </Section>
   );
 }

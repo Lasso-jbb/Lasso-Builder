@@ -413,9 +413,9 @@ export const financialStatementsSchema = z.object({
   type: z.literal("LassoFinancialStatements"),
   company: companyRef,
   statement: z.enum(["income", "balance", "cashflow"]).optional().describe("Opgørelsen, der vises først: 'income' (standard), 'balance' eller 'cashflow'."),
-  years: z.number().int().min(2).max(5).default(5).describe("År side om side på desktop, standard 5. Tablet viser 3, mobil ét år + ændring."),
+  years: z.number().int().min(2).max(5).default(2).describe("År side om side i resultatopgørelsen på desktop, standard 2 + ændring (19.1). Tablet viser 3, mobil ét år + ændring."),
   title: z.string().max(80).optional(),
-}).describe("Fuldt regnskab med værktøjslinje (koncern/selskab, periode, enhed, revisorpåtegning, Hent PDF) og segmentskift mellem resultat, balance og pengestrøm.");
+}).describe("Fuldt regnskab med værktøjslinje (selskab/koncern, periode, enhed, revisorpåtegning, Hent PDF); desktop viser resultat, balance og pengestrøm samlet, mobil skifter med segment.");
 
 /** Katalog 28.6 (mobil 26h.8): fusioner og spaltninger som "fra → til". Live-felter ubekræftede. */
 export const mergersSchema = z.object({

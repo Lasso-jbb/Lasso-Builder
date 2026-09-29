@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { analysisSource, isAnalysisSection, isPersonId, textSectionsFor, type TextSectionItem, type TextSectionsVariant, type TextSectionsVM, type TextSegment } from "@lasso/spec";
+import { analysisSource, formatDate, isAnalysisSection, isPersonId, textSectionsFor, type TextSectionItem, type TextSectionsVariant, type TextSectionsVM, type TextSegment } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
 
@@ -96,32 +96,47 @@ function Item({
   );
 }
 
-/** 19.3: fast forbehold under regnskabsanalysen. */
-export const ANALYSIS_DISCLAIMER = "Analysen er skrevet automatisk ud fra de offentliggjorte regnskaber og tallene i tabellerne. Den kan indeholde fejl og er ikke rådgivning.";
+/** 19.3: fast afsluttende linje under regnskabsanalysen. */
+export const ANALYSIS_DISCLAIMER = "Forbehold: analysen er skrevet automatisk ud fra de offentliggjorte regnskaber og tallene i tabellerne. Den kan indeholde fejl og er ikke rådgivning.";
 
-/** Konklusionen i fuld bredde: ca. 6 linjer, før resten står bag linket. */
-const ANALYSIS_LEAD_AT = 600;
-
-/**
- * Under elementets titel "Regnskabsanalyse" er "Regnskabsanalyse: konklusion" bare "Konklusion";
- * hele analysen som ét afsnit ("Regnskabsanalyse") får ingen overskrift ud over titlen.
- */
+/** Under elementets titel "Regnskabsanalyse" er "Regnskabsanalyse: konklusion" bare "Konklusion". */
 function analysisHeading(heading: string): string {
   const rest = heading.replace(/^Regnskabsanalyse:?\s*/i, "");
   return rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : "";
 }
 
+/** "Genereret af Lasso ud fra regnskab 2021–2025, 12.09.2026" (19.3). */
+function generatedLine(v: TextSectionsVM, short = false): string {
+  return `Genereret af Lasso${v.analysisBasis && !short ? ` ud fra regnskab ${v.analysisBasis}` : ""}${v.analysisGenerated ? `, ${formatDate(v.analysisGenerated)}` : ""}`;
+}
+
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ transform: open ? undefined : "rotate(-90deg)" }}>
+      <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 /**
- * Hele regnskabsanalysen (variant "analyse"): konklusionen først og ét link, der folder resten
- * ud på stedet ("Vis mindre" folder igen). Foldet ud står alle afsnit i fuld længde.
+ * Regnskabsanalysen (variant "analyse", 19.3 / mobil 26h.3). Desktop: overskrift 17/600, konklusionen
+ * som brødtekst 15/25, den faste linje "Forbehold: …" og handlingslinjen "Vis kilder (N)" + "Var det
+ * brugbart? Ja / Nej". Kildelinjen står under titlen. Mobil: kortet kan foldes med chevron, teksten er
+ * foldet til 4 linjer, og nederst står "Læs hele analysen" til venstre og genereringslinjen til højre.
  */
-function Analysis({ items, onOpen }: { items: TextSectionItem[]; onOpen?: (a: ViewAction) => void }) {
+function Analysis({ v, items, onOpen }: { v: TextSectionsVM; items: TextSectionItem[]; onOpen?: (a: ViewAction) => void }) {
   const [open, setOpen] = useState(false);
+  const [sources, setSources] = useState(false);
+  const [vote, setVote] = useState<"ja" | "nej" | null>(null);
   const [first, ...rest] = items;
-  const leadLong = (first!.segments?.length ? first!.segments.reduce((n, s) => n + s.text.length, 0) : first!.body.length) > ANALYSIS_LEAD_AT;
+  const segments: readonly TextSegment[] = first!.segments?.length ? first!.segments : [{ text: first!.body }];
+  const list = v.analysisSources ?? [];
   return (
     <>
-      <Item item={first!} heading={analysisHeading(first!.heading)} limit={open ? Number.POSITIVE_INFINITY : ANALYSIS_LEAD_AT} toggle={false} onOpen={onOpen} />
+      {v.analysisHeadline ? <p className="lasso-analysis__headline">{v.analysisHeadline}</p> : null}
+      <p className={`lasso-analysis__body${open ? " is-open" : ""}`}>
+        <Runs segments={segments} onOpen={onOpen} />
+      </p>
       {open && rest.length > 0 ? (
         <div className="lasso-textsections__rest">
           {rest.map((s, i) => (
@@ -129,12 +144,64 @@ function Analysis({ items, onOpen }: { items: TextSectionItem[]; onOpen?: (a: Vi
           ))}
         </div>
       ) : null}
-      {rest.length > 0 || leadLong ? (
-        <button type="button" className="lasso-link lasso-more" aria-expanded={open} onClick={() => setOpen(!open)}>
-          {open ? "Vis mindre" : rest.length > 0 ? `Se hele regnskabsanalysen (${items.length} afsnit)` : "Vis hele"}
-        </button>
+      <p className="lasso-analysis__disclaimer">{ANALYSIS_DISCLAIMER}</p>
+      <div className="lasso-analysis__actions">
+        {list.length ? (
+          <button type="button" className="lasso-link lasso-analysis__sources-btn" aria-expanded={sources} onClick={() => setSources(!sources)}>
+            {sources ? "Skjul kilder" : `Vis kilder (${list.length})`}
+          </button>
+        ) : null}
+        <span className="lasso-analysis__feedback">
+          {vote ? (
+            "Tak for svaret"
+          ) : (
+            <>
+              Var det brugbart?{" "}
+              <button type="button" className="lasso-analysis__vote" onClick={() => setVote("ja")}>
+                Ja
+              </button>
+              {" / "}
+              <button type="button" className="lasso-analysis__vote" onClick={() => setVote("nej")}>
+                Nej
+              </button>
+            </>
+          )}
+        </span>
+      </div>
+      {sources && list.length ? (
+        <ul className="lasso-analysis__sources">
+          {list.map((x) => (
+            <li key={x}>{x}</li>
+          ))}
+        </ul>
       ) : null}
+      <div className="lasso-analysis__foot">
+        <button type="button" className="lasso-link lasso-analysis__more" aria-expanded={open} onClick={() => setOpen(!open)}>
+          {open ? "Vis mindre" : "Læs hele analysen"}
+        </button>
+        <span className="lasso-analysis__gen">{generatedLine(v, true)}</span>
+      </div>
     </>
+  );
+}
+
+/** Analysens sektion: kildelinjen under titlen (desktop) og chevron, der folder kortet (mobil). */
+function AnalysisSection({ heading, v, items, onOpen }: { heading: string; v: TextSectionsVM; items: TextSectionItem[]; onOpen?: (a: ViewAction) => void }) {
+  const [collapsed, setCollapsed] = useState(false);
+  return (
+    <Section
+      title={heading}
+      subtitle={<span className="lasso-analysis__sub">{generatedLine(v)}</span>}
+      span="full"
+      className={`lasso-textsections lasso-textsections--analysis${collapsed ? " is-collapsed" : ""}`}
+      action={
+        <button type="button" className="lasso-iconbtn lasso-analysis__toggle" aria-expanded={!collapsed} aria-label={collapsed ? "Vis analysen" : "Fold analysen sammen"} onClick={() => setCollapsed(!collapsed)}>
+          <Chevron open={!collapsed} />
+        </button>
+      }
+    >
+      {collapsed ? null : <Analysis v={v} items={items} onOpen={onOpen} />}
+    </Section>
   );
 }
 
@@ -177,11 +244,14 @@ export function LassoTextSections({
     );
   }
   const hasAnalysis = shown.some(isAnalysisSection);
+  if (analysis) {
+    return (
+      <AnalysisSection heading={heading} v={sections} items={shown} onOpen={onOpen} />
+    );
+  }
   return (
-    <Section title={heading} span={span} className={`lasso-textsections${analysis ? " lasso-textsections--analysis" : ""}`}>
-      {analysis ? <Analysis items={shown} onOpen={onOpen} /> : shown.map((s, i) => <Item key={i} item={s} onOpen={onOpen} />)}
-      {/* 19.3: forbeholdet er en fast afsluttende linje (også når analysen er foldet), og kildelinjen har genereringsdatoen. */}
-      {analysis && hasAnalysis ? <p className="lasso-textsections__disclaimer">{ANALYSIS_DISCLAIMER}</p> : null}
+    <Section title={heading} span={span} className="lasso-textsections">
+      {shown.map((s, i) => <Item key={i} item={s} onOpen={onOpen} />)}
       {hasAnalysis ? <SourceLine source={analysisSource(shown)} updated={sections.analysisGenerated} verb="genereret" /> : null}
     </Section>
   );

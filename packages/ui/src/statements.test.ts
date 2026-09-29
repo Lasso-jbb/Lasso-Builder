@@ -30,3 +30,12 @@ test("Regnskabstabeller uden regnskab: tom tilstand, der siger hvorfor (ikke en 
   // Uden virksomhedens stamdata: den almindelige forklaring.
   assert.match(renderToStaticMarkup(createElement(LassoIncomeStatement, { statements: none, years: 3 })), /ikke offentliggjort regnskaber endnu/);
 });
+
+test("19.2: ændringskolonnen farver kun subtotaler; underposter som muted procent, fortegnsskift som pil eller —", async () => {
+  const { changeText } = await import("./components/statementTable.js");
+  assert.deepEqual(changeText(17481, 18792, "subtotal"), { text: "▲ 7,5 %", tone: "up" });
+  assert.deepEqual(changeText(-12104, -14890, "line"), { text: "+23,0 %", tone: "" });
+  assert.deepEqual(changeText(1084, -338, "subtotal"), { text: "▼", tone: "down" });
+  assert.deepEqual(changeText(-239, 137, "line"), { text: "", tone: "" });
+  assert.deepEqual(changeText(-612, -6702, "line", true), { text: "", tone: "" });
+});

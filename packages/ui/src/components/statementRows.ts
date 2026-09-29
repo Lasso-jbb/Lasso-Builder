@@ -18,11 +18,11 @@ export function incomeRows(shown: readonly IncomeStatementYear[]): StatementRow[
   const revenueTop = shown.some((y) => y.revenue != null);
   return [
     { key: "top", label: revenueTop ? "Omsætning" : "Bruttofortjeneste", values: shown.map((y) => (revenueTop ? y.revenue : y.grossProfit)), kind: "subtotal" },
-    { key: "staff", label: "Personaleomkostninger", values: shown.map((y) => y.staffCosts) },
-    { key: "other", label: "Andre driftsomkostninger", values: shown.map((y) => y.otherOperatingCosts), flag: bigJumpFlag(shown.at(-2)?.otherOperatingCosts, shown.at(-1)?.otherOperatingCosts) },
+    { key: "staff", label: "Personaleomkostninger", short: "Personaleomk.", values: shown.map((y) => y.staffCosts) },
+    { key: "other", label: "Andre driftsomkostninger", short: "Andre driftsomk.", values: shown.map((y) => y.otherOperatingCosts), flag: bigJumpFlag(shown.at(-2)?.otherOperatingCosts, shown.at(-1)?.otherOperatingCosts) },
     { key: "ebitda", label: "EBITDA", values: shown.map((y) => y.ebitda), kind: "subtotal" },
-    { key: "depreciation", label: "Af- og nedskrivninger", values: shown.map((y) => y.depreciation) },
-    { key: "financial", label: "Finansielle poster, netto", values: shown.map((y) => y.financialItemsNet) },
+    { key: "depreciation", label: "Af- og nedskrivninger", short: "Af- og nedskr.", values: shown.map((y) => y.depreciation) },
+    { key: "financial", label: "Finansielle poster, netto", short: "Finansielle poster", values: shown.map((y) => y.financialItemsNet) },
     { key: "pretax", label: "Resultat før skat", values: shown.map((y) => y.profitBeforeTax), kind: "subtotal" },
     { key: "tax", label: "Skat af årets resultat", values: shown.map((y) => y.tax) },
     { key: "profit", label: "Årets resultat", values: shown.map((y) => y.profit), kind: "bottom" },
@@ -83,6 +83,25 @@ export function cashFlowRows(shown: readonly CashFlowYear[], statements: Pick<Fi
     { key: "financing", label: "Pengestrøm fra finansiering", values: shown.map((y) => y.financingCashFlow), kind: "subtotal" },
     { key: "netCashFlow", label: "Årets pengestrøm", values: shown.map((y) => y.netCashFlow), kind: "bottom" },
     { key: "cashBeginning", label: "Likvider primo", values: shown.map((y) => y.cashBeginning) },
-    { key: "cashEnding", label: "Likvider ultimo", values: shown.map((y) => y.cashEnding), flag: mismatch },
+    { key: "cashEnding", label: "Likvider ultimo", values: shown.map((y) => y.cashEnding), kind: "total", flag: mismatch },
+  ];
+}
+
+/** Tablet (26f.3): resultatopgørelsen i syv linjer med korte etiketter (uden andre driftsomk. og skat). */
+export function incomeRowsCompact(shown: readonly IncomeStatementYear[]): StatementRow[] {
+  const keep = new Set(["top", "staff", "ebitda", "depreciation", "financial", "pretax", "profit"]);
+  return incomeRows(shown).filter((r) => keep.has(r.key));
+}
+
+/** Tablet (26f.3): balancen i syv linjer uden grupper: anlæg, omsætning, aktiver i alt, egenkapital, gæld, passiver i alt. */
+export function balanceRowsCompact(shown: readonly BalanceSheetYear[]): StatementRow[] {
+  return [
+    { key: "fixedTotal", label: "Anlægsaktiver", values: shown.map((y) => y.fixedAssetsTotal) },
+    { key: "currentTotal", label: "Omsætningsaktiver", values: shown.map((y) => y.currentAssetsTotal) },
+    { key: "assetsTotal", label: "Aktiver i alt", values: shown.map((y) => y.assetsTotal), kind: "total" },
+    { key: "equityTotal", label: "Egenkapital", values: shown.map((y) => y.equityTotal), kind: "total" },
+    { key: "longTerm", label: "Langfristet gæld", values: shown.map((y) => y.longTermLiabilities) },
+    { key: "shortTerm", label: "Kortfristet gæld", values: shown.map((y) => y.shortTermLiabilities) },
+    { key: "liabAndEquityTotal", label: "Passiver i alt", values: shown.map((y) => y.liabilitiesAndEquityTotal ?? y.assetsTotal), kind: "bottom" },
   ];
 }

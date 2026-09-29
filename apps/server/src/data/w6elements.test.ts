@@ -29,7 +29,7 @@ test("19.1: LassoFinancialStatements henter det fulde regnskab; demo har koncern
   assert.equal(s.scope, "Selskab");
   assert.equal(s.alternate?.scope, "Koncern");
   assert.deepEqual(s.periods, ["year"]);
-  assert.match(textCard(spec, ds)!, /Revisionspåtegning uden forbehold/);
+  assert.match(textCard(spec, ds)!, /Revideret af/);
 });
 
 test("26d.5/26d.7: personens netværkstal og scorens historik i demodata", async () => {

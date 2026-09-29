@@ -1,5 +1,5 @@
 import { noStatementsReason, type CompanyVM, type FinancialStatementsVM } from "@lasso/spec";
-import { StatementTable } from "./statementTable.js";
+import { StatementTable, thousands } from "./statementTable.js";
 import { incomeRows } from "./statementRows.js";
 
 /**
@@ -21,5 +21,5 @@ export function LassoIncomeStatement({ statements, company, years, title, error 
   const yearsShown = shown.map((y) => y.year);
   const rows = incomeRows(shown);
 
-  return <StatementTable title={heading} unit="t. kr." years={yearsShown} currency={statements.currency} sections={[{ rows }]} prefix="lasso-income" />;
+  return <StatementTable title={heading} unit="t. kr." years={yearsShown} currency={statements.currency} scale={thousands(statements.currency)} sections={[{ rows }]} prefix="lasso-income" />;
 }

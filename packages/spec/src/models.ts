@@ -255,6 +255,8 @@ export interface FinancialStatementsVM {
   auditorOpinion?: string;
   /** Katalog 19.1: link til årsrapporten som PDF (kun http/https). Ubekræftet i live. */
   pdfUrl?: string;
+  /** Katalog 26d.9/26f.3: fodnote under opgørelserne, fx hvilke tal der er eksempeldata. */
+  note?: string;
 }
 
 export interface PersonRowVM {
@@ -362,6 +364,12 @@ export interface TextSectionsVM {
   sections: TextSectionItem[];
   /** 19.3: hvornår regnskabsanalysen blev genereret (ISO); står i analysens kildelinje. */
   analysisGenerated?: string;
+  /** 19.3: regnskabsårene, analysen bygger på, fx "2021–2025" ("Genereret af Lasso ud fra regnskab 2021–2025"). */
+  analysisBasis?: string;
+  /** 19.3: analysens overskrift 17/600, fx "Vækst i toplinjen, men omkostningerne løber hurtigere". */
+  analysisHeadline?: string;
+  /** 19.3: kilderne bag analysen ("Vis kilder (4)"), fx "Årsrapport 2025". */
+  analysisSources?: string[];
 }
 
 /** Begivenhed i virksomhedens historik (katalog 12, "Tidslinje"). */

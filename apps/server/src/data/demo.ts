@@ -176,7 +176,15 @@ function textSectionsFor(c: DemoCompany): TextSectionsVM {
   // live-svaret: ét afsnit pr. felt, med navne som segmenter med Lasso-ID. Kun for to eksempler.
   if (c.lassoId === "CVR-1-99000001" || c.lassoId === "CVR-1-99000010") {
     sections.push(...analysisFor(c));
-    return { lassoId: c.lassoId, title: "Virksomhedsprofil", sections, analysisGenerated: "2026-09-12T08:00:00Z" };
+    return {
+      lassoId: c.lassoId,
+      title: "Virksomhedsprofil",
+      sections,
+      analysisGenerated: "2026-09-12T08:00:00Z",
+      analysisBasis: "2021–2025",
+      analysisHeadline: "Vækst i toplinjen, men omkostningerne løber hurtigere (eksempeltekst)",
+      analysisSources: ["Årsrapport 2025, Erhvervsstyrelsen", "Årsrapport 2024, Erhvervsstyrelsen", "Årsrapport 2023, Erhvervsstyrelsen", "CVR, ledelse og ejere"],
+    };
   }
   return { lassoId: c.lassoId, title: "Virksomhedsprofil", sections };
 }
@@ -410,8 +418,9 @@ function financialStatementsFor(c: DemoCompany): FinancialStatementsVM {
       liabilitiesAndEquityTotal: assetsTotal,
     });
   });
-  const opinion = c.auditor && c.auditor !== "Ingen" ? "Revisionspåtegning uden forbehold (eksempeldata)" : undefined;
-  const base: FinancialStatementsVM = { lassoId: c.lassoId, currency: "DKK", incomeStatement, balanceSheet, cashFlow, scope: "Selskab", periods: ["year"], ...(opinion ? { auditorOpinion: opinion } : {}) };
+  const opinion = c.auditor && c.auditor !== "Ingen" ? `Revideret af ${c.auditor}, udgivet 15.04.2026` : undefined;
+  const note = "Underposter og tidligere år er eksempeldata.";
+  const base: FinancialStatementsVM = { lassoId: c.lassoId, currency: "DKK", incomeStatement, balanceSheet, cashFlow, scope: "Selskab", periods: ["year"], note, pdfUrl: `https://regnskaber.virk.dk/eksempel/${c.cvr}.pdf`, ...(opinion ? { auditorOpinion: opinion } : {}) };
   // Katalog 19.1: eksempelvirksomheden aflægger også koncernregnskab (selskabets tal × 1,35, eksempeldata).
   if (c.cvr === "99000001") {
     const k = <T extends object>(rows: T[]): T[] => rows.map((r) => Object.fromEntries(Object.entries(r).map(([key, v]) => [key, typeof v === "number" && key !== "year" ? Math.round(v * 1.35) : v])) as T);

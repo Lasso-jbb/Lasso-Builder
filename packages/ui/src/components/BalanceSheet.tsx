@@ -1,5 +1,5 @@
 import { noStatementsReason, type CompanyVM, type FinancialStatementsVM } from "@lasso/spec";
-import { StatementTable } from "./statementTable.js";
+import { StatementTable, thousands } from "./statementTable.js";
 import { balanceSections } from "./statementRows.js";
 
 /**
@@ -9,15 +9,15 @@ import { balanceSections } from "./statementRows.js";
  */
 export function LassoBalanceSheet({ statements, company, years, title, error }: { statements?: FinancialStatementsVM; company?: CompanyVM; years: number; title?: string; error?: string }) {
   const heading = title ?? "Balance";
-  if (!statements) return <StatementTable title={heading} unit="t. kr., 31.12" years={[]} sections={[]} prefix="lasso-balance" error={error} loading={!error} />;
+  if (!statements) return <StatementTable title={heading} unit="t. kr." years={[]} sections={[]} prefix="lasso-balance" error={error} loading={!error} />;
   const all = statements.balanceSheet;
   if (all.length === 0) {
-    return <StatementTable title={heading} unit="t. kr., 31.12" years={[]} sections={[]} prefix="lasso-balance" emptyReason={noStatementsReason(company)} />;
+    return <StatementTable title={heading} unit="t. kr." years={[]} sections={[]} prefix="lasso-balance" emptyReason={noStatementsReason(company)} />;
   }
   const span = Math.max(2, Math.min(3, years));
   const shown = all.slice(-span);
   const yearsShown = shown.map((y) => y.year);
   const sections = balanceSections(shown);
 
-  return <StatementTable title={heading} unit="t. kr., 31.12" years={yearsShown} currency={statements.currency} sections={sections} prefix="lasso-balance" />;
+  return <StatementTable title={heading} unit="t. kr." years={yearsShown} currency={statements.currency} scale={thousands(statements.currency)} unitSuffix=", 31.12" showDelta={false} sections={sections} prefix="lasso-balance" />;
 }
