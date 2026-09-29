@@ -55,7 +55,14 @@ export type IconName =
   | "network"
   | "chart"
   | "minus"
-  | "alert";
+  | "alert"
+  | "document"
+  | "trend"
+  | "book"
+  | "sparkle"
+  | "clock"
+  | "linkedin"
+  | "lock";
 
 /** Danske navne på katalogets 20 ikoner, i katalogets rækkefølge (til aria-label og oversigter). */
 export const ICON_LABELS: Record<CatalogIconName, string> = {
@@ -123,6 +130,13 @@ const PATHS: Record<IconName, string> = {
   chart: "M4 20h16M7 16v-5M12 16V6M17 16v-8",
   minus: "M5 12h14",
   alert: "M12 7v6M12 16.5h.01",
+  document: "M7 3.5h7l4 4v13H7zM14 3.5v4h4M10 12h5M10 15.5h5",
+  trend: "M4 16l5-5 3.5 3.5L20 7M15 7h5v5",
+  book: "M5 5.5A2.5 2.5 0 017.5 3H19v15H7.5A2.5 2.5 0 005 20.5zM5 20.5A2.5 2.5 0 007.5 23H19v-5",
+  sparkle: "M12 3.5l1.8 5.2 5.2 1.8-5.2 1.8L12 17.5l-1.8-5.2L5 10.5l5.2-1.8zM18.5 16l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z",
+  clock: "M12 21a9 9 0 100-18 9 9 0 000 18zM12 7.5V12l3 2",
+  linkedin: "M4.5 4.5h15v15h-15zM8.5 10.5v5M8.5 8v.5M11.5 15.5v-5M11.5 12.5a2 2 0 014 0v3",
+  lock: "M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 017 0v3",
 };
 
 export interface IconProps {

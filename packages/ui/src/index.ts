@@ -82,14 +82,14 @@ export {
   DatePicker,
   DateInput,
   DateField,
-  TreePicker,
+  TreePicker as IndustryTreePicker,
   IndustryField,
   PersonaField,
   TechnologyField,
 } from "./components/Fields.js";
 export type { FieldRowProps, Option, MultiSelectProps, TagInputProps, AmountFieldValue, PersonaValue, PersonaFieldProps, TechMode, TechValue } from "./components/Fields.js";
 export { DB07_EXCERPT, leafCodes, treeLabels } from "./components/industries.js";
-export type { TreeNode } from "./components/industries.js";
+export type { TreeNode as IndustryTreeNode } from "./components/industries.js";
 // Felter med data (02c)
 export {
   ValueRow,
@@ -150,3 +150,23 @@ export { specToCsv } from "./csv.js";
 export type { ActionResult, HostCapabilities, LassoViewProps, ViewAction, Visibility } from "./types.js";
 export { CardGrid, Accordion } from "./components/Layout.js";
 export type { AccordionItem, AccordionProps } from "./components/Layout.js";
+export { HeadActions, hasHeadActions } from "./components/HeadActions.js";
+export type { HeadActionsProps } from "./components/HeadActions.js";
+export { HeadRiskLine, companyRiskSummary, personRiskSummary } from "./components/HeadRisk.js";
+export type { HeadRiskSummary } from "./components/HeadRisk.js";
+export { companyFactsLine, companyStatusText } from "./components/CompanyHead.js";
+export type { CompanyHeadProps } from "./components/CompanyHead.js";
+export { personFactsLine } from "./components/PersonHead.js";
+export type { PersonHeadProps } from "./components/PersonHead.js";
+export { SidePanel, SidePanelList } from "./components/SidePanel.js";
+export type { SidePanelProps, SidePanelListProps, SidePanelListItem } from "./components/SidePanel.js";
+export { Shortcuts, SHORTCUT_LABELS, MAX_SHORTCUTS } from "./components/Shortcuts.js";
+export type { ShortcutItem } from "./components/Shortcuts.js";
+export { InfoHint } from "./components/QualityFlag.js";
+export { KV_CONCEPTS } from "./components/KeyValueList.js";
+export type { KeyValueLink } from "./components/KeyValueList.js";
+export { liveState, VERIFY_TIMEOUT } from "./components/LassoContact.js";
+export type { LiveState, LassoContactProps } from "./components/LassoContact.js";
+export type { LassoContactPersonsProps } from "./components/LassoContactPersons.js";
+export { hasFullHead } from "./LassoView.js";
+export type { FrameTools } from "./LassoView.js";

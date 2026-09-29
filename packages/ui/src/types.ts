@@ -22,6 +22,15 @@ export type ViewAction =
   | { kind: "open-link"; url: string }
   | { kind: "export"; filename: string; csv: string }
   | { kind: "fullscreen" }
+  /**
+   * Katalog 08/16: "Overvåg" i hovedet. `monitoring` er tilstanden FØR klikket: falsk = start
+   * overvågning, sand = åbn overvågningsindstillingerne (aldrig slå fra med ét klik).
+   */
+  | { kind: "monitor"; lassoId: string; pageKind: "company" | "person"; name: string; monitoring: boolean }
+  /** Katalog 08/24: åbn en sektion/et fokus på siden, fx "Se risiko", "Se historik" eller en genvej (08.4). */
+  | { kind: "open-section"; lassoId: string; pageKind: "company" | "person"; section: string; name?: string }
+  /** Katalog 08.5: bed værten verificere virksomhedens telefonnumre/e-mail nu (live number). Værten opdaterer datasættet. */
+  | { kind: "verify-contact"; lassoId: string }
   | { kind: "back" };
 
 export type ActionResult = { ok: true; url?: string; message?: string } | { ok: false; error: string };
@@ -38,6 +47,12 @@ export interface HostCapabilities {
   back?: boolean;
   refresh?: boolean;
   export?: boolean;
+  /** Katalog 08/16: værten kan starte overvågning og åbne overvågningsindstillinger ("Overvåg"/"Overvåger"). */
+  monitor?: boolean;
+  /** Katalog 08/24: værten kan skifte til en sektion/et fokus ("Se risiko", "Se historik", genveje). */
+  openSection?: boolean;
+  /** Katalog 08.5: værten kan verificere kontaktoplysninger i realtid (live number). */
+  verifyContact?: boolean;
 }
 
 export interface LassoViewProps {
@@ -52,4 +67,9 @@ export interface LassoViewProps {
   loading?: boolean;
   /** Basis-URL til "gem"-dialogens adressevisning, fx "lassox.com/v/revisorhuset/". */
   savePrefix?: string;
+  /**
+   * Katalog 08.2: sektionsfaner (niveau 1, 48 px) lige under virksomheds-/personhovedet, der skifter
+   * sidens indhold. Uden prop'en tegnes ingen faner (portalen har dem i modulbjælken).
+   */
+  headTabs?: { items: readonly { id: string; label: string; disabled?: boolean; disabledReason?: string }[]; value: string; onChange: (id: string) => void; ariaLabel?: string };
 }

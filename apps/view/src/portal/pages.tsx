@@ -5,8 +5,10 @@ import {
   ModuleBar,
   ModuleToolbar,
   ShellIcon,
+  specToCsv,
   TabPanel,
   type ActionResult,
+  type MenuItem,
   type HostCapabilities,
   type ModuleAction,
   type TabItem,
@@ -171,6 +173,8 @@ export function EntityPage({
   onShare,
   onRetry,
   onAction,
+  onMonitor,
+  monitoring = false,
 }: {
   tab: PortalTab;
   route: EntityRoute;
@@ -188,16 +192,28 @@ export function EntityPage({
   onShare: () => void;
   onRetry: () => void;
   onAction: OnAction;
+  /** 24.3: Overvåg i modulbjælken; udeladt, indtil portalen har et overvågnings-API. */
+  onMonitor?: () => void;
+  monitoring?: boolean;
 }) {
   const state = viewState(route, data);
   const company = route.kind === "company";
   const panel = `portal-${tab.id}`;
   const value = route.focus;
   const label = company ? FOCUS_LABELS[route.focus] : PERSON_FOCUS_LABELS[route.focus];
+  // 24.3: "Eksportér ▾" (link og tal som CSV), Gem/Gemt og Overvåg, når portalen kan overvåge.
+  const csv = data?.result ? specToCsv(data.result.spec, data.result.dataset) : null;
+  const exportItems: MenuItem[] = [
+    { id: "del", label: "Del link", icon: <ShellIcon name="copy" size={16} />, onSelect: onShare },
+    ...(csv && data?.result
+      ? [{ id: "csv", label: "Tal som CSV", icon: <ShellIcon name="download" size={16} />, onSelect: () => void onAction({ kind: "export", filename: `${data.result!.spec.title.replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase()}.csv`, csv }) }]
+      : []),
+  ];
   const actions: ModuleAction[] = canAct
     ? [
+        { id: "eksport", label: "Eksportér", items: exportItems },
         { id: "gem", label: saved ? "Gemt" : "Gem", icon: <ShellIcon name="bookmark" filled={saved} />, tone: saved ? "accent" : undefined, onSelect: onToggleSaved },
-        { id: "del", label: "Del link", onSelect: onShare },
+        ...(onMonitor ? [{ id: "overvaag", label: monitoring ? "Overvåger" : "Overvåg", icon: <ShellIcon name="rss" />, tone: "accent" as const, onSelect: onMonitor }] : []),
       ]
     : [];
   const waiting = state === "loading" || state === "error";

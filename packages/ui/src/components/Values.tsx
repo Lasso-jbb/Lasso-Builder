@@ -259,27 +259,7 @@ export function ScoreValue({ score, max = 100 }: { score: number | null | undefi
   );
 }
 
-/**
- * 02c.16 Kvalitetsflag (mulig fejl): 14 px udråbstegn-i-cirkel i warning-farve 6 px efter tallet.
- * Tooltip ved mouseover (ink, radius 8, maks. 260 px). På mobil, uden hover, vises forklaringen
- * som en linje under feltet ved tryk.
- */
-export function QualityFlag({ reason }: { reason: string }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <span className="lasso-qflag">
-      <Tooltip text={reason} className="lasso-tip--narrow">
-        <button type="button" className="lasso-qflag__btn" aria-label={`Mulig fejl: ${reason}`} aria-expanded={open} onClick={() => setOpen(!open)}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
-            <path d="M12 7v6M12 16.5v.5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-          </svg>
-        </button>
-      </Tooltip>
-      {open ? <span className="lasso-qflag__line">{reason}</span> : null}
-    </span>
-  );
-}
+export { QualityFlag } from "./QualityFlag.js";
 
 /**
  * 02c.18 Låst værdi: feltet beholder plads og label. 14 px låseikon i muted, derefter en sløret

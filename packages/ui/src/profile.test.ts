@@ -34,7 +34,7 @@ const FINANCIALS: FinancialsVM = {
 };
 
 /** Nøgle-kolonnen i en nøgle-værdi-liste. */
-const labels = (html: string) => [...html.matchAll(/lasso-kv-row__label">([^<]*)</g)].map((m) => m[1]);
+const labels = (html: string) => [...html.matchAll(/lasso-kv-row__labeltext">([^<]*)</g)].map((m) => m[1]);
 /** Synlig tekst uden tags. */
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").replace(/\s+/g, " ");
 const count = (haystack: string, needle: string) => haystack.split(needle).length - 1;

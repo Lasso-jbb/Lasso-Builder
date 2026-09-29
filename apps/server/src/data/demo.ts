@@ -80,11 +80,11 @@ const RAW: Omit<DemoCompany, "lassoId" | "statusKind">[] = [
     people: [P("Nina Prøve", "Direktør", "2021-01-01"), P("Ole Eksempel", "Bestyrelsesformand", "2002-01-01")], owners: [{ name: "Ole Eksempel", share: "90-100 %", kind: "person" }], auditor: "Eksempel Revision Nord ApS" },
   { cvr: "99000008", name: "Eksempel Maskinfabrik A/S", status: "Aktiv", form: "A/S", industryCode: "282900", industryText: "Fremstilling af maskiner", address: { street: "Smedevej 15", zip: "7400", city: "Herning", municipality: "Herning", region: "Midtjylland" }, founded: "1974-05-01", employees: 210, base: 96_000_000, growth: 0.01,
     people: [P("Per Eksempel", "Direktør", "2016-01-01"), P("Rikke Prøve", "Bestyrelsesformand", "2024-06-01"), P("Søren Eksempel", "Bestyrelsesformand", "2010-01-01", "2024-06-01")], owners: [{ name: "Eksempel Holding ApS", share: "50-66,66 %", kind: "company", lassoId: "CVR-1-99000010" }], auditor: "Eksempel Revision Nord ApS" },
-  { cvr: "99000009", name: "Eksempel Café I/S", status: "Ophørt", form: "I/S", industryCode: "563000", industryText: "Caféer og barer", address: { street: "Torvet 1", zip: "8660", city: "Skanderborg", municipality: "Skanderborg", region: "Midtjylland" }, founded: "2015-05-01", employees: 0, base: 1_200_000, growth: -0.3,
+  { cvr: "99000009", name: "Eksempel Café I/S", status: "Ophørt", statusDate: "2024-09-30", form: "I/S", industryCode: "563000", industryText: "Caféer og barer", address: { street: "Torvet 1", zip: "8660", city: "Skanderborg", municipality: "Skanderborg", region: "Midtjylland" }, founded: "2015-05-01", employees: 0, base: 1_200_000, growth: -0.3,
     people: [P("Tina Prøve", "Interessent", "2015-05-01", "2023-12-31")], owners: [{ name: "Tina Prøve", share: "50-66,66 %", kind: "person" }], auditor: "Ingen" },
   { cvr: "99000010", name: "Eksempel Holding ApS", status: "Aktiv", form: "ApS", industryCode: "642020", industryText: "Ikke-finansielle holdingselskaber", address: { street: "Prøvevej 1", zip: "8600", city: "Silkeborg", municipality: "Silkeborg", region: "Midtjylland" }, founded: "2005-01-01", employees: 1, base: 3_000_000, growth: 0.1,
     people: [P("Bo Eksempel", "Direktør", "2005-01-01")], owners: [{ name: "Bo Eksempel", share: "100 %", kind: "person" }], auditor: "Eksempel Revision Midt ApS" },
-  { cvr: "99000011", name: "Eksempel Energi A/S", status: "Under konkurs", form: "A/S", industryCode: "351100", industryText: "Produktion af elektricitet", address: { street: "Vindvej 9", zip: "6700", city: "Esbjerg", municipality: "Esbjerg", region: "Syddanmark" }, founded: "2012-08-01", employees: 8, base: 9_000_000, growth: -0.18,
+  { cvr: "99000011", name: "Eksempel Energi A/S", status: "Under konkurs", statusDate: "2026-06-03", curator: "Advokat Eksempel & Co.", secondaryNames: ["Eksempel Vind"], form: "A/S", industryCode: "351100", industryText: "Produktion af elektricitet", address: { street: "Vindvej 9", zip: "6700", city: "Esbjerg", municipality: "Esbjerg", region: "Syddanmark" }, founded: "2012-08-01", employees: 8, base: 9_000_000, growth: -0.18,
     people: [P("Uffe Prøve", "Direktør", "2012-08-01"), P("Bo Eksempel", "Bestyrelsesmedlem", "2014-03-01", "2018-06-30")], owners: [{ name: "Uffe Prøve", share: "100 %", kind: "person" }], auditor: "Eksempel Revision Nord ApS" },
   { cvr: "99000012", name: "Eksempel Ejendomme ApS", status: "Aktiv", form: "ApS", industryCode: "682040", industryText: "Udlejning af erhvervsejendomme", address: { street: "Murervej 5", zip: "8700", city: "Horsens", municipality: "Horsens", region: "Midtjylland" }, founded: "2013-10-01", employees: 3, base: 7_500_000, growth: 0.06,
     people: [P("Vera Eksempel", "Direktør", "2013-10-01"), P("Bo Eksempel", "Bestyrelsesmedlem", "2013-10-01")], owners: [{ name: "Eksempel Holding ApS", share: "100 %", kind: "company", lassoId: "CVR-1-99000010" }], auditor: "Eksempel Revision Midt ApS" },
@@ -237,9 +237,21 @@ const PERSON_IDS = demoPersonIds(COMPANIES);
 
 const YEARS = [2020, 2021, 2022, 2023, 2024, 2025];
 
+/** Katalog 09.1: branchetal og kvalitetsflag til nøgletalskortene, kun for første demovirksomhed. */
+const FINANCIAL_EXTRAS: Record<string, Pick<FinancialsVM, "benchmark" | "quality">> = {
+  "CVR-1-99000001": {
+    benchmark: { label: "branche", change: { bruttofortjeneste: 3.1, omsaetning: 2.4, resultat: -1.8, egenkapital: 4.2 } },
+    quality: { ansatte: "Ansatte i regnskabet afviger fra CVR's tal. Regnskabet tæller koncernen (eksempel)." },
+  },
+};
+
 function financialsFor(c: DemoCompany): FinancialsVM {
   // Ingen regnskaber: personligt ejede virksomheder (ENK, PMV) indsender ikke årsregnskab.
   if (c.base <= 0) return { lassoId: c.lassoId, currency: "DKK", years: [] };
+  return { ...financialYearsFor(c), ...FINANCIAL_EXTRAS[c.lassoId] };
+}
+
+function financialYearsFor(c: DemoCompany): FinancialsVM {
   // Deterministisk "støj", så graferne ikke er helt glatte.
   const seed = Number(c.cvr!.slice(-2));
   return {
@@ -595,12 +607,27 @@ const LIVESTOCK: Record<string, LivestockVM> = {
 /** Katalog 08: kontaktpersoner. Kun sat for det første eksempel, med nok rækker til at vise "Se N flere". */
 const CONTACT_PERSONS: Record<string, ContactPersonVM[]> = {
   "CVR-1-99000001": [
-    { name: "Anne Eksempel", role: "Direktør", phone: "86123456", email: "anne@eksempelbyg.dk" },
-    { name: "Bo Eksempel", role: "Bestyrelsesformand", phone: "86123457" },
+    // Katalog 08.6/08.7: grupper, noter, LinkedIn og kilder til "Se alle"-panelet (alle værdier er eksempler).
+    {
+      name: "Anne Eksempel",
+      role: "Direktør",
+      phone: "86123456",
+      email: "anne@eksempelbyg.dk",
+      phoneNote: "Direkte, eksempelnummer",
+      emailNote: "Eksempeladresse",
+      linkedin: "https://www.linkedin.com/in/eksempel",
+      sources: [
+        { label: "eksempelbyg.dk/om-os", url: "https://eksempelbyg.dk/om-os", text: "rolle og navn", date: "2026-09-20" },
+        { label: "CVR", text: "registreret direktør", date: "2015-01-01" },
+      ],
+    },
+    { name: "Bo Eksempel", role: "Bestyrelsesformand", phone: "86123457", sources: [{ label: "CVR", text: "registreret bestyrelsesformand", date: "2012-05-01" }] },
     { name: "Carla Prøve", role: "Bestyrelsesmedlem", email: "carla@eksempelbyg.dk" },
     { name: "Dan Prøve", role: "Salgschef" },
     { name: "Eva Prøve", role: "Økonomichef", phone: "86123458", email: "eva@eksempelbyg.dk" },
     { name: "Frank Eksempel", role: "Projektleder", phone: "86123459", email: "frank@eksempelbyg.dk" },
+    { name: "Gustav Prøve", role: "Key Account Manager", phone: "86123460", email: "gustav@eksempelbyg.dk" },
+    { name: "Hanne Eksempel", role: "CTO", group: "IT-udvikling", email: "hanne@eksempelbyg.dk" },
   ],
 };
 
@@ -648,6 +675,8 @@ const VERIFIED_NUMBERS: Record<string, { verifiedNumbers: NonNullable<ContactVM[
     verifiedNumbers: [
       { phoneNumber: "86123456", score: 91, explanation: "Bekræftet fra flere kilder (eksempel)", callable: true, sources: ["CVR", "Website"] },
       { phoneNumber: "20304050", score: 62, explanation: "Fundet på hjemmesiden (eksempel)", callable: true, sources: ["Website"] },
+      // Katalog 08.5: et udgået eksempelnummer (gennemstreget, beholdes).
+      { phoneNumber: "33123456", score: 20, explanation: "Nummeret er ikke længere i brug (eksempel)", callable: false, sources: ["Website"], expired: "2026-08-12" },
     ],
     isRobinson: true,
     verifiedAt: "2026-09-20",

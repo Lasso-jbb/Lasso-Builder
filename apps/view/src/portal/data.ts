@@ -13,7 +13,7 @@ export const SHELL_MOBILE_MAX = 560;
  * er slået fra; på mobil er modulbjælkens handlinger skjult, så hovedets knap er slået til.
  */
 export function entityHost(shellWidth: number): HostCapabilities {
-  return { savePage: shellWidth <= SHELL_MOBILE_MAX, save: true, refine: false, drillDown: true, refresh: true, export: true, back: false };
+  return { savePage: shellWidth <= SHELL_MOBILE_MAX, save: true, refine: false, drillDown: true, refresh: true, export: true, back: false, openSection: true };
 }
 
 /** Den virksomhed eller person, en side handler om (til fanens navn, Gem/Gemt og Del link). */

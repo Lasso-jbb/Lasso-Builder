@@ -45,6 +45,18 @@ export interface PersonVM {
   roles: PersonRoleVM[];
   /** Hvornår Lasso sidst opdaterede personen (kildelinjen). */
   updated?: string;
+  /**
+   * Katalog 16.4: PEP-opslag (politisk eksponeret person) mod Finanstilsynets liste. Udeladt, når
+   * opslaget ikke er foretaget; så står rækken som "Ikke tjekket" (aldrig "Nej").
+   */
+  pep?: { match: boolean; checkedAt?: string; detail?: string };
+  /**
+   * Katalog 16.4: stråmandsindikator, et mønster i rollerne (fx direktør i flere nystiftede selskaber
+   * uden ejerskab). "possible" = mulig vigtig; udeladt = ikke beregnet.
+   */
+  strawman?: { level: "none" | "possible"; detail?: string };
+  /** Katalog 16.4: sanktionslister. `available: false` = ikke i kundens pakke (låst række). */
+  sanctions?: { available: boolean; match?: boolean; checkedAt?: string };
 }
 
 export interface PersonNetworkCompanyVM {

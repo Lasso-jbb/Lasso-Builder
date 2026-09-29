@@ -4,6 +4,7 @@
  * at kende Lassos API, og serverlaget kan skiftes (fx ved flytning til Azure).
  */
 import type { PersonNetworkVM, PersonVM } from "./person.js";
+import type { Metric } from "./spec.js";
 
 export interface Address {
   street?: string;
@@ -29,6 +30,12 @@ export interface CompanyVM {
   website?: string;
   email?: string;
   phone?: string;
+  /** Katalog 08.1: binavne fra CVR; det første vises i muted efter status ("Binavn: …"). */
+  secondaryNames?: string[];
+  /** Katalog 08.1: dato for den nuværende status, fx konkursdekret ("Under konkurs, siden 03.06.2026") eller ophør. */
+  statusDate?: string;
+  /** Katalog 08.1: kurator ved konkurs/likvidation (likvidator), vist i faktalinjen. */
+  curator?: string;
 }
 
 /**
@@ -43,6 +50,11 @@ export interface VerifiedPhoneNumberVM {
   callable: boolean;
   /** Fx "CVR", "Website". */
   sources: string[];
+  /**
+   * Katalog 08.5: nummeret er udgået (ikke længere i brug) siden denne dato. Værdien beholdes
+   * gennemstreget med "Udgået, DD.MM.ÅÅÅÅ"; den slettes aldrig fra blokken.
+   */
+  expired?: string;
 }
 
 /**
@@ -63,7 +75,10 @@ export interface ContactVM {
   verifiedNumbers?: VerifiedPhoneNumberVM[];
   /** Tilmeldt Robinsonlisten (må ikke kontaktes med markedsføring). */
   isRobinson?: boolean;
-  /** Hvornår live number-opslaget er opdateret. */
+  /**
+   * Hvornår live number-opslaget er opdateret. Dato (ÅÅÅÅ-MM-DD) eller ISO-tidspunkt; et tidspunkt
+   * inden for 60 sek. giver "Verificeret nu" (katalog 08.5), ellers "Verificeret for N dage siden".
+   */
   verifiedAt?: string;
 }
 
@@ -73,6 +88,19 @@ export interface ContactPersonVM {
   role?: string;
   phone?: string;
   email?: string;
+  /**
+   * Katalog 08.7: afdeling/gruppe i "Se alle"-panelet (Direktion, Ledelse, Salg, IT-udvikling,
+   * Konsulenter, Øvrige). Mangler den, afledes den af rollen (contactPersonGroup).
+   */
+  group?: string;
+  /** Profil-URL på LinkedIn (panelets detalje: "LinkedIn-profil, Åbn"). */
+  linkedin?: string;
+  /** Muted tekst under telefonnummeret, fx "Direkte" eller "Omstilling". */
+  phoneNote?: string;
+  /** Muted tekst under e-mailen, fx "Personlig" eller "Fælles". */
+  emailNote?: string;
+  /** Kilder til personen i panelet: navn (link, når url er sat), hvad kilden siger og dato. */
+  sources?: { label: string; url?: string; text?: string; date?: string }[];
 }
 
 export interface ContactPersonsVM {
@@ -127,6 +155,16 @@ export interface FinancialsVM {
   currency: string;
   /** Sorteret stigende efter år. */
   years: FinancialYear[];
+  /**
+   * Katalog 09.1: branchens udvikling pr. nøgletal i seneste år (procent, fx 3.1 = +3,1 %), vist som
+   * tekst efter ændringen ("branche ▲ 3,1 %"), aldrig som et ekstra tal. `label` er fx "branche 6201".
+   */
+  benchmark?: { label?: string; change: Partial<Record<Metric, number>> };
+  /**
+   * Katalog 09.1: kvalitetsflag pr. nøgletal i seneste år: forklaringen vises i tooltip ved det gule
+   * udråbstegn, fx "Ansatte i regnskabet afviger fra CVR (17)".
+   */
+  quality?: Partial<Record<Metric, string>>;
 }
 
 /**
@@ -816,6 +854,8 @@ export interface Dataset {
   savedPages: Record<string, SavedPagesVM>;
   /** Gem-laget: hvilke Lasso-ID'er i visningen brugeren allerede har gemt (til Gem/Gemt-knappen). */
   savedIds?: string[];
+  /** Katalog 08/16: hvilke Lasso-ID'er i visningen brugeren allerede overvåger ("Overvåger"). Sættes af værten. */
+  monitoredIds?: string[];
   /** Fejl pr. nøgle, fx "company:CVR-1-12345678" -> "Ingen adgang". */
   errors: Record<string, string>;
 }

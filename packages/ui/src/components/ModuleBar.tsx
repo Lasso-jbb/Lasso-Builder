@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useWidth } from "../useWidth.js";
+import { Menu, type MenuItem } from "./Menu.js";
 import { ShellIcon } from "./ShellIcons.js";
 import { Tabs, type TabItem } from "./Tabs.js";
 
@@ -20,6 +21,8 @@ export interface ModuleAction {
   tone?: "accent";
   /** Åbner en menu: viser en pil efter navnet og aria-haspopup. */
   menu?: boolean;
+  /** Menuens punkter (24.3: "Eksportér ▾" med PDF, CSV og link). Sat: knappen åbner selv menuen. */
+  items?: readonly MenuItem[];
   onSelect?: () => void;
 }
 
@@ -44,13 +47,30 @@ export function ModuleBar({ modules, value, onChange, actions = [], ariaLabel = 
       <Tabs level={1} id={id} items={modules} value={value} onChange={onChange} ariaLabel={ariaLabel} maxVisible={maxVisible} className="lasso-modulebar__tabs" />
       {actions.length > 0 ? (
         <div className="lasso-modulebar__actions">
-          {actions.map((a) => (
+          {actions.map((a) =>
+            a.items?.length ? (
+              <Menu
+                key={a.id}
+                trigger={
+                  <>
+                    {a.icon ? <span className="lasso-modulebar__action-icon">{a.icon}</span> : null}
+                    <span>{a.label}</span>
+                    <ShellIcon name="chevron-down" size={13} className="lasso-modulebar__caret" />
+                  </>
+                }
+                triggerClassName={`lasso-modulebar__action ${a.tone === "accent" ? "lasso-modulebar__action--accent" : ""}`}
+                items={a.items}
+                align="end"
+                label={a.label}
+              />
+            ) : (
             <button key={a.id} type="button" className={`lasso-modulebar__action ${a.tone === "accent" ? "lasso-modulebar__action--accent" : ""}`} aria-haspopup={a.menu ? "menu" : undefined} title={a.label} onClick={a.onSelect}>
               {a.icon ? <span className="lasso-modulebar__action-icon">{a.icon}</span> : null}
               <span>{a.label}</span>
               {a.menu ? <ShellIcon name="chevron-down" size={13} className="lasso-modulebar__caret" /> : null}
             </button>
-          ))}
+            ),
+          )}
         </div>
       ) : null}
     </div>

@@ -67,6 +67,20 @@ function companyRole(c: DemoPersonSource, patch: Partial<PersonRoleVM> & Pick<Pe
   };
 }
 
+/**
+ * Katalog 16.4: eksempler på PEP-opslag, stråmandsindikator og sanktionslister (LiveProvider har intet
+ * bekræftet endpoint). Bo Eksempel viser en mulig stråmandsindikator og ingen PEP-match; Anne Eksempel
+ * alle opslag uden fund; resten "Ikke tjekket".
+ */
+const RISK_SIGNALS: Record<string, Pick<PersonVM, "pep" | "strawman" | "sanctions">> = {
+  "Bo Eksempel": {
+    pep: { match: false, checkedAt: "2026-09-25" },
+    strawman: { level: "possible", detail: "Direktør eller bestyrelse i 3 selskaber uden ejerskab, heraf ét stiftet inden for 4 måneder (eksempel)." },
+    sanctions: { available: false },
+  },
+  "Anne Eksempel": { pep: { match: false, checkedAt: "2026-09-25" }, strawman: { level: "none" }, sanctions: { available: false } },
+};
+
 export function demoPerson(companies: readonly DemoPersonSource[], id: string): PersonVM {
   const name = nameFor(companies, id);
   const roles: PersonRoleVM[] = [];
@@ -83,8 +97,9 @@ export function demoPerson(companies: readonly DemoPersonSource[], id: string): 
     }
   }
   const unitNumber = /^CVR-3-(\d+)$/.exec(id)?.[1];
-  if (PROTECTED_ADDRESS.has(name)) return { lassoId: id, name, addressProtected: true, unitNumber, roles, updated: "2026-09-12" };
-  return { lassoId: id, name, city: home?.city, zip: home?.zip, municipality: home?.municipality, unitNumber, roles, updated: "2026-09-12" };
+  const signals = RISK_SIGNALS[name] ?? {};
+  if (PROTECTED_ADDRESS.has(name)) return { lassoId: id, name, addressProtected: true, unitNumber, roles, updated: "2026-09-12", ...signals };
+  return { lassoId: id, name, city: home?.city, zip: home?.zip, municipality: home?.municipality, unitNumber, roles, updated: "2026-09-12", ...signals };
 }
 
 const later = (a?: string, b?: string) => (!a ? b : !b ? a : a > b ? a : b);

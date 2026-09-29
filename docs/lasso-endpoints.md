@@ -412,3 +412,27 @@ det er ikke koblet til "Overvåg"/"Stop overvågning" endnu.
 - **Ejendomme/BBR** (`GET /data/ejf/{lassoId}/ownerships/current`, katalog 20): ejf's overordnede
   svarform er slet ikke set; kun BBR-summary-endpointets sti/parameter er bekræftet.
 - **Tinglysning** (`GET /data/tinglysning/{lassoId}`): dokumenteret, men ingen komponent kalder den.
+
+## Ubekræftet: virksomheds- og personhovedet, live-nummer og personrisiko (katalog 08, 09, 16)
+
+Tilføjet med W3 (08.1, 08.5, 08.7, 09.1, 16.4). Ingen af felterne er set i et rigtigt svar endnu; LiveProvider
+læser dem defensivt og udelader dem, når de mangler, så siden ser ud som før.
+
+- **`GET /{lassoId}` (CVR-stamdata)**: binavne (`secondaryNames`/`alternativeNames`/`binavne`, strenge eller
+  `{ name }`), dato for nuværende status ved konkurs/likvidation/ophør (`statusDate`, `status.date`,
+  `statusValidFrom`, `lifecycle.statusDate`, `bankruptcyDate`, `lifeTime.to`) og kurator/likvidator
+  (`curator`, `curator.name`, `receiver.name`, `liquidator.name`). Adapter: `companyHeadExtras` i
+  `apps/server/src/lasso/adapters.ts`.
+- **Live-nummer i realtid (08.5)**: `ViewAction { kind: "verify-contact", lassoId }` beder værten slå numrene
+  op igen; værten opdaterer `ContactVM.verifiedAt` (ISO-tidspunkt) og `VerifiedPhoneNumberVM.expired`
+  (dato, nummeret ikke længere er i brug). Endpoint og svarform for et udgået nummer kendes ikke.
+- **Kontaktpersoner (08.7)**: gruppe, LinkedIn, noter og kilder pr. person (`ContactPersonVM.group`,
+  `linkedin`, `phoneNote`, `emailNote`, `sources`) kommer kun fra demodata; `/apps/contacts/{lassoId}/data`
+  er ikke læst for dem. Uden gruppe afledes den af rollen (`contactPersonGroup`).
+- **Branchetal og kvalitetsflag (09.1)**: `FinancialsVM.benchmark` og `FinancialsVM.quality` har ingen
+  kilde endnu (demodata for CVR-1-99000001).
+- **Personrisiko (16.4)**: PEP-opslag, stråmandsindikator og sanktionslister (`PersonVM.pep`, `strawman`,
+  `sanctions`) har intet endpoint; uden data står rækkerne som "Ikke tjekket"/"Ikke beregnet"/"Ikke
+  tilgængelig endnu", aldrig som "Nej".
+- **Overvågning (08.1)**: `ViewAction { kind: "monitor" }` og `Dataset.monitoredIds` sættes af værten; at
+  tilføje en virksomhed til et overvågningsjob (skrivning) er ikke bekræftet (kun `GET /apps/monitoring/jobs`).

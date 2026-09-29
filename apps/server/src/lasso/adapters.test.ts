@@ -1034,3 +1034,12 @@ test("adaptChangeFeed: delta-liste -> feed, kun overvågede, kun i perioden, sta
   // Uden monitored-sæt tages alt med
   assert.ok(adaptChangeFeed(raw, { days: 7, now }).entries.some((e) => e.companyName === "Fremmed A/S"));
 });
+
+test("adaptCompany (08.1, ubekræftet): binavne, statusdato og kurator læses defensivt og udelades, når de mangler", () => {
+  const vm = adaptCompany("CVR-1-11111111", { name: "Eksempel A/S", status: "Under konkurs", statusDate: "2026-06-03T00:00:00", secondaryNames: ["Eksempel A/S", { name: "Eksempel Vind" }], curator: { name: "Advokat Eksempel" } });
+  assert.deepEqual(vm.secondaryNames, ["Eksempel Vind"]);
+  assert.equal(vm.statusDate, "2026-06-03");
+  assert.equal(vm.curator, "Advokat Eksempel");
+  const plain = adaptCompany("CVR-1-11111111", { name: "Eksempel A/S", status: "Normal" });
+  assert.equal("secondaryNames" in plain || "statusDate" in plain || "curator" in plain, false);
+});

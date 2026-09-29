@@ -157,9 +157,21 @@ export const searchQuerySchema = z
   .describe("En virksomhedssøgning.");
 export type SearchQuery = z.infer<typeof searchQuerySchema>;
 
+/** Katalog 08.1 og 30: fuldt hoved (side), kompakt 56 px (sidepanel, sammenligning) og linje 40 px (svarniveau A/B). */
+export const HEAD_VARIANTS = ["full", "compact", "line"] as const;
+export type HeadVariant = (typeof HEAD_VARIANTS)[number];
+
 export const companyHeaderSchema = z.object({
   type: z.literal("LassoCompanyHead"),
   company: companyRef,
+  variant: z
+    .enum(HEAD_VARIANTS)
+    .optional()
+    .describe("'full' (standard): navn 28, status, faktalinje og handlinger. 'compact': 56 px med navn og én faktalinje (sidepanel, sammenligning). 'line': én linje på 40 px over et enkelt element (svarniveau A/B)."),
+  risk: z
+    .boolean()
+    .optional()
+    .describe("Hent risikoobservationer og vis 'Se risiko'-linjen under faktalinjen ved mindst én observation på 50+. Tager 10–14 s; brug kun, når spørgsmålet handler om risiko."),
 });
 
 export const keyFiguresSchema = z.object({
@@ -325,6 +337,21 @@ export const contactSchema = z.object({
   title: z.string().max(80).optional(),
 }).describe("Kontaktblok: telefon, e-mail, web og adresse, klikbare.");
 
+/** Katalog 08.4: Lasso-værktøjer, en genvej kan åbne på virksomheden (i den rækkefølge, de vises). */
+export const SHORTCUT_TOOLS = ["ejerdiagram", "regnskabsanalyse", "noegletal", "ejendomme", "tinglysning", "firmaindsigt", "ledelse", "kontakt", "historik", "risiko"] as const;
+export type ShortcutTool = (typeof SHORTCUT_TOOLS)[number];
+/** Standardgenvejene (Paper 08.4): de seks Lasso-værktøjer i katalogets rækkefølge. */
+export const DEFAULT_SHORTCUT_TOOLS: readonly ShortcutTool[] = ["ejerdiagram", "regnskabsanalyse", "noegletal", "ejendomme", "tinglysning", "firmaindsigt"];
+
+export const shortcutsSchema = z
+  .object({
+    type: z.literal("LassoShortcuts"),
+    company: companyRef,
+    tools: z.array(z.enum(SHORTCUT_TOOLS)).min(1).max(10).optional().describe("Standard: ejerdiagram, regnskabsanalyse, noegletal, ejendomme, tinglysning, firmaindsigt. Over 6 samles resten under 'Flere'."),
+    title: z.string().max(80).optional(),
+  })
+  .describe("Genveje: sekundære knapper med koral ikon, der åbner et Lasso-værktøj på virksomheden.");
+
 export const contactPersonsSchema = z.object({
   type: z.literal("LassoContactPersons"),
   company: companyRef,
@@ -409,6 +436,7 @@ export const livestockSchema = z.object({
 export const personHeadSchema = z.object({
   type: z.literal("LassoPersonHead"),
   person: personRef,
+  variant: z.enum(HEAD_VARIANTS).optional().describe("'full' (standard), 'compact' (56 px) eller 'line' (40 px), som LassoCompanyHead."),
 });
 
 export const personRolesSchema = z.object({
@@ -543,6 +571,7 @@ export const componentSchema = z.discriminatedUnion("type", [
   w(keyValueListSchema),
   w(contactSchema),
   w(contactPersonsSchema),
+  w(shortcutsSchema),
   w(multiYearTableSchema),
   w(incomeStatementSchema),
   w(balanceSheetSchema),
@@ -619,6 +648,7 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoKeyValueList: "half",
   LassoContact: "half",
   LassoContactPersons: "half",
+  LassoShortcuts: "half",
   LassoMultiYearTable: "full",
   LassoIncomeStatement: "full",
   LassoBalanceSheet: "full",

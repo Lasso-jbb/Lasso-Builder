@@ -1,4 +1,6 @@
 import {
+  companyRiskSummary,
+  personRiskSummary,
   hasNoStatements,
   noStatementsReason,
   amountScale,
@@ -334,7 +336,13 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
   const co = ds.companies[lassoId];
   if (co) {
     card.text(co.name);
-    card.text([co.status, co.form, co.address?.city].filter(Boolean).join(", "));
+    // 08.1: status med dato ("Under konkurs, siden 03.06.2026"), binavn og kurator som i hovedet.
+    const status = co.status && co.statusDate ? (co.statusKind === "warning" ? `${co.status}, siden ${formatDate(co.statusDate)}` : `${co.status} ${formatDate(co.statusDate)}`) : co.status;
+    const alias = co.secondaryNames?.find((n) => n && n !== co.name);
+    card.text([status, co.form, co.address?.city, alias ? `binavn ${alias}` : undefined].filter(Boolean).join(", "));
+    if (co.curator) card.text(`${/likvidation/i.test(co.status ?? "") ? "Likvidator" : "Kurator"}: ${co.curator}`);
+    const risk = companyRiskSummary(ds.observations[lassoId]);
+    if (risk) card.text(`Risiko: ${risk.text}`);
     card.section("Stamoplysninger");
     const a = co.address;
     card.row("CVR", co.cvr);
@@ -583,6 +591,9 @@ function personCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | null
         card.text(p.name);
         card.text(["Person", p.city].filter(Boolean).join(", "));
         card.text(`${pl(n.activeRoles, "aktiv rolle", "aktive roller")} i ${pl(n.activeCompanies, "selskab", "selskaber")}${n.endedRoles ? `, ${pl(n.endedRoles, "ophørt", "ophørte")}` : ""}`);
+        // 16.1: observationerne som én linje, som på siden.
+        const risk = personRiskSummary(p);
+        if (risk) card.text(`Risiko: ${risk.text}`);
         break;
       }
       case "LassoPersonRoles": {
@@ -654,6 +665,9 @@ function personCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | null
         const risk = personRisk(p);
         card.section(c.title ?? "Risiko");
         const word = (cases: typeof risk.bankruptcies) => (cases.length === 0 ? "Ingen" : cases.some((x) => x.involved) ? "Mulig vigtig" : "Info");
+        // 16.4: PEP og stråmandsindikator, når opslaget findes; ellers som på siden.
+        card.row("PEP", p.pep ? (p.pep.match ? "Ja, mulig vigtig" : "Nej") : "Ikke tjekket");
+        card.row("Stråmand", p.strawman ? (p.strawman.level === "possible" ? "Mulig" : "Nej") : "Ikke beregnet");
         card.row("Konkurser", `${risk.bankruptcies.length}, ${word(risk.bankruptcies)}`);
         card.row("Tvangsopl.", `${risk.dissolutions.length}, ${word(risk.dissolutions)}`);
         for (const x of [...risk.bankruptcies, ...risk.dissolutions]) {
