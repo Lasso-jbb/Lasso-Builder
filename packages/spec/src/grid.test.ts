@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { GRID_RULES, gridRuleOf } from "./catalog.js";
-import { allowsWidth, BAND_COMBOS, BAND_MAX_DEVIATION, compactOf, measuredHeight, MEASURED_HEIGHTS, packBands, packWithinBudget, pageHeight, PAGE_HEIGHT_BUDGET, type PackedBand } from "./grid.js";
+import { allowsWidth, BAND_COMBOS, BAND_MAX_DEVIATION, compactOf, GRID_GAP, measuredHeight, MEASURED_HEIGHTS, packBands, packWithinBudget, pageHeight, PAGE_HEIGHT_BUDGET, type PackedBand } from "./grid.js";
 import { DEFAULT_WIDTH, WIDTH_COLUMNS, WIDTHS, type ComponentType, type ViewComponent, type Width } from "./spec.js";
 
 const COMPONENT_TYPES = Object.keys(DEFAULT_WIDTH) as ComponentType[];
@@ -147,10 +147,41 @@ test("højdebudget (23.3): de mindst relevante udelades bagfra, hoved og nøglet
 
 test("højdebudget: kompakte former (færre rækker/afsnit) og standardbudgettet", () => {
   assert.equal(PAGE_HEIGHT_BUDGET, 1300);
-  assert.deepEqual(compactOf(c("LassoKeyValueList", { variant: "company" })), c("LassoKeyValueList", { variant: "company", rows: 8 }));
+  assert.deepEqual(compactOf(c("LassoKeyValueList", { variant: "company" })), c("LassoKeyValueList", { variant: "company", rows: 6 }));
   assert.deepEqual(compactOf(c("LassoTextSections", { variant: "profil" })), c("LassoTextSections", { variant: "profil", limit: 3 }));
   assert.equal(compactOf(c("LassoTextSections", { variant: "analyse" })), null);
   assert.equal((compactOf(c("LassoTimeline")) as { limit?: number }).limit, 3);
   assert.equal(compactOf(c("LassoTimeline", { limit: 3 })), null);
   assert.equal(compactOf(c("LassoBarChart")), null);
+});
+
+test("højdebudget (Paper 23.3): genveje, nyheder og historik udelades før kontakt, og kontakt står som ekstra stak (3+6+3)", () => {
+  const items = [
+    c("LassoCompanyHead"),
+    c("LassoKeyFigureCards"),
+    c("LassoTextSections", { variant: "profil" }),
+    c("LassoKeyValueList", { variant: "company" }),
+    c("LassoRelations"),
+    c("LassoBarChart", { metric: "omsaetning", years: 5 }),
+    c("LassoContact"),
+    c("LassoTimeline", { limit: 3 }),
+    c("LassoNews", { limit: 3 }),
+    c("LassoShortcuts"),
+  ];
+  // Paper-højderne (gridmodel.md afsnit 5, Overblik): profil kompakt 320 → 360, oplysninger rows 6 360, relationer 267, graf 300, kontakt 261.
+  const H: Partial<Record<ViewComponent["type"], number>> = { LassoCompanyHead: 87, LassoKeyFigureCards: 138, LassoRelations: 267, LassoBarChart: 300, LassoContact: 261, LassoTimeline: 514, LassoNews: 292, LassoShortcuts: 40 };
+  const h = (x: ViewComponent) => {
+    if (x.type === "LassoTextSections") return (x as { limit?: number }).limit ? 360 : 506;
+    if (x.type === "LassoKeyValueList") return (x as { rows?: number }).rows ? 360 : 626;
+    return H[x.type] ?? 300;
+  };
+  const r = packWithinBudget(items, h, { budget: 1000, keep: new Set([items[0]!, items[1]!]) });
+  const shapeOf = (bands: PackedBand[]) => bands.map((b) => b.stacks.map((s) => `${WIDTH_COLUMNS[s.width]}:${s.items.map((i) => i.type.replace("Lasso", "")).join("/")}`).join(" | "));
+  assert.deepEqual(shapeOf(r.bands), ["12:CompanyHead", "12:KeyFigureCards", "6:TextSections | 6:KeyValueList", "3:Relations | 6:BarChart | 3:Contact"]);
+  assert.deepEqual(r.dropped.map((d) => d.type), ["LassoTimeline", "LassoNews", "LassoShortcuts"]);
+  assert.equal(r.height, 87 + 138 + 360 + 300 + 3 * GRID_GAP);
+  // Kompakt: oplysninger 6 rækker og profil 3 afsnit (fuld form kommer ikke tilbage, når noget er udeladt).
+  const shown = r.bands.flatMap((b) => b.stacks.flatMap((s) => s.items));
+  assert.equal((shown.find((x) => x.type === "LassoKeyValueList") as { rows?: number }).rows, 6);
+  assert.equal((shown.find((x) => x.type === "LassoTextSections") as { limit?: number }).limit, 3);
 });

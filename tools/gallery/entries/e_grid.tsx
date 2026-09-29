@@ -346,7 +346,7 @@ const ALGO: { t: string; d: string }[] = [
   { t: "Fuldbånd", d: "Hoved, nøgletalskort/persontal, opfølgning og alle elementer med minimum 1/1 (fuldt regnskab, virksomhedstabel, persontabel) får hvert sit fuldbånd i rækkefølgen." },
   { t: "Anker og restbredde", d: "Det første element i restlisten er anker i sin standardbredde; H = h(anker). Hver lovlig kombination med ankerets bredde fyldes: hver ledig stak tager den første delmængde af restlisten (i prioritet), der tillader stakkens bredde og lander mellem 0,85 × H og H / 0,85." },
   { t: "Vælg kombinationen", d: "Afvigelse ≤ 15 % først, så færrest elementer med nedsat rækkeloft (flex rækker: rows/limit sættes ned, kun når ellers intet passer), færrest kolonner uden for standardbredderne, lavest afvigelse, færrest stakke, flest elementer brugt og rækkefølgen tættest på prioriteten. Kan det første element ikke bære et bånd, bliver det næste høje element (højst 3 frem) anker, og det første stables ved siden af." },
-  { t: "Højdebudget", d: `Siden må højst være ${PAGE_HEIGHT_BUDGET} px ved 1200 (ca. 1½ skærm; 23.3). Hoved, nøgletalskort og svar-elementet er altid med. Er siden længere, vises lister og profil kompakt (færre rækker/afsnit med 'Se alle'/'Vis mere'), og de mindst relevante elementer udelades bagfra; et element, der står gratis som stakfyld, bliver. Til sidst får udeladte og kompakte elementer pladsen tilbage i prioritet, hvis budgettet holder. 'Vis alt om X' (showAll) slår budgettet fra.` },
+  { t: "Højdebudget", d: `Siden må højst være ${PAGE_HEIGHT_BUDGET} px ved 1200 (ca. 1½ skærm; 23.3). Hoved, nøgletalskort og svar-elementet er altid med. Er siden længere, vises lister og profil kompakt (færre rækker/afsnit med 'Se alle'/'Vis mere'), og de mindst relevante elementer udelades: først genveje, nyheder og historik (også som stakfyld), så bagfra. Et element, der ellers står alene i et fuldbånd (kontakt), lægges som ekstra stak i nabobåndet (6+6 → 3+6+3). Til sidst får udeladte elementer pladsen tilbage i prioritet (til det første, der ikke kan), og kompakte deres fulde form, hvis budgettet holder og båndene står som før. 'Vis alt om X' (showAll) slår budgettet fra.` },
   { t: "Gentag, afslut, fold", d: "Næste bånd starter med det næste element i restlisten. Sidste bånd er opfølgning (fuld). Under 1200 bliver 9+3 og 8+4 til 12+12, 4+4+4 til 6+6+12, 6+6 holder til 768; mobil er én kolonne. Rækkefølgen ændres aldrig, kun foldningen." },
 ];
 
@@ -506,13 +506,13 @@ export function ElementTable() {
 const ORDER: { t: string; d: string }[] = [
   { t: "Hvem er de? Virksomhedshoved (08), fuld", d: "Kun navnet (+ status) og sidens handlinger med funktion (Overvåg, Gem, Eksportér); ingen faktalinje (G9). Altid første bånd." },
   { t: "Hvor store er de, og går det godt? Nøgletalskort (09), fuld", d: "Omsætning eller bruttofortjeneste, resultat, egenkapital, ansatte med ændring mod året før. Udelades uden regnskab." },
-  { t: "Hvad laver de? Virksomhedsprofil (12), 1/2", d: "Formål og tegningsregler fra CVR plus analysens korte afsnit, klippet efter 6 linjer med 'Vis mere'. Flex: linjer." },
-  { t: "Stamdata og revisor? Virksomhedsoplysninger (09), 1/2", d: "Revisor, seneste revisorskift, regnskabsperiode, branchekode, kommune, region. Uden det, hovedet og kontaktblokken allerede viser. Høj mod høj (regel a)." },
-  { t: "Hvem står bag? Relationer (11), 1/4", d: "Direktion, bestyrelse og ejere som én kompakt liste. Står ejerlisten på siden, udelades ejerne her." },
-  { t: "Hvordan går det over tid? Søjlegraf (13), 1/2", d: "Hovednøgletallet over 5 år. Under 3 år bliver grafen til regnskabslisten med årsvælger (compose.ts)." },
-  { t: "Hvordan kontakter jeg dem? Kontaktblok (08), 1/3", d: "Telefon, e-mail, web klikbare. Udelades uden kontaktoplysninger; så tager genveje pladsen i stakken." },
-  { t: "Hvad er der sket? Historik (12) og Nyheder (12), 1/2", d: "3 begivenheder + 'Se alle N' og 3 artikler." },
-  { t: "Hvor kommer jeg videre? Genveje (08), stakfyld", d: "Ejerdiagram, regnskabsanalyse, nøgletal, ejendomme. Stakfyld under nyhederne, ellers et lavt fuldbånd. Ingen kildelinjer på siden." },
+  { t: "Hvad laver de? Virksomhedsprofil (12), 1/2, kompakt", d: "Formål og tegningsregler fra CVR plus analysens korte afsnit, kompakt (3 afsnit) med 'Vis mere'. Flex: linjer." },
+  { t: "Stamdata og revisor? Virksomhedsoplysninger (09), 1/2, 6 rækker", d: "De første 6 rækker (revisor, seneste revisorskift, regnskabsperiode …) og 'Se alle oplysninger' under. Uden det, kontaktblokken allerede viser. Høj mod høj med profilen (B3 6+6)." },
+  { t: "Hvem står bag? Relationer (11), 1/4", d: "Direktion, bestyrelse og ejere som én kompakt liste. Står ejerlisten på siden, udelades ejerne her. B4 venstre." },
+  { t: "Hvordan går det over tid? Søjlegraf (13), 1/2", d: "Hovednøgletallet over 5 år, B4 midt. Under 3 år bliver grafen til regnskabslisten med årsvælger (compose.ts)." },
+  { t: "Hvordan kontakter jeg dem? Kontaktblok (08), 1/4", d: "Adresse, telefon, e-mail, web klikbare. B4 højre (3+6+3). Udelades uden kontaktoplysninger." },
+  { t: "Hvad er der sket? Historik (12) og Nyheder (12), 1/2", d: "Udeladt efter budget (efter genvejene, før kontakt): nås via faner, 'Se alle' og spørgsmål. Med plads: 3 begivenheder + 'Se alle N' og 3 artikler." },
+  { t: "Hvor kommer jeg videre? Genveje (08), stakfyld", d: "Laveste relevans: udelades først efter budget. Med plads (vis alt): ejerdiagram, regnskabsanalyse, nøgletal, ejendomme som stakfyld eller lavt fuldbånd. Ingen kildelinjer på siden." },
 ];
 
 const PRINCIPLE: { t: string; d: string }[] = [
@@ -591,7 +591,7 @@ export function DefaultPageGuide({ ds, company }: { ds: Dataset; company: string
           </div>
           <div style={{ ...card, gap: 6 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: "var(--lasso-text)" }}>Højdebudgettet: ikke alle elementer på ét skærmbillede</div>
-            <p style={note}>{`Systemet kender alle kombinationer, men fylder ikke alle elementer ud. Siden må højst være ${PAGE_HEIGHT_BUDGET} px ved 1200 px bredde: en typisk skærm viser 800–900 px, så budgettet er ca. 1½ skærm og ca. 60 % af den fulde side. Hoved og nøgletalskort (og på et spørgsmål svar-elementet) er altid med. Derefter tages elementerne i rækkefølgen nedenfor: først vises lister og profil kompakt (oplysninger 8 rækker, profil 3 afsnit, historik og nyheder 3), så udelades de mindst relevante bagfra, og til sidst får elementer pladsen tilbage i prioritet, hvis budgettet holder. Siden er stadig fyldt: båndene summerer til 12, og stakkene strækkes, så der er 0 huller. Beder brugeren om alt ('vis alt om X'), slår showAll budgettet fra.`}</p>
+            <p style={note}>{`Systemet kender alle kombinationer, men fylder ikke alle elementer ud. Siden må højst være ${PAGE_HEIGHT_BUDGET} px ved 1200 px bredde: en typisk skærm viser 800–900 px, så budgettet er ca. 1½ skærm og ca. 60 % af den fulde side. Hoved og nøgletalskort (og på et spørgsmål svar-elementet) er altid med. Derefter tages elementerne i rækkefølgen nedenfor: først vises lister og profil kompakt (oplysninger 6 rækker, profil 3 afsnit, historik og nyheder 3), så udelades de mindst relevante: genveje, nyheder og historik før kontakt. Kontakten står som ekstra stak ved relationer og graf (3+6+3). Til sidst får elementer pladsen tilbage i prioritet, hvis budgettet holder. Siden er stadig fyldt: båndene summerer til 12, og stakkene strækkes, så der er 0 huller. Beder brugeren om alt ('vis alt om X'), slår showAll budgettet fra.`}</p>
           </div>
         </div>
         <div style={col(4)}>

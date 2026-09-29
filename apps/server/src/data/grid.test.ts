@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { BAND_COMBOS, BAND_MAX_DEVIATION, PAGE_HEIGHT_BUDGET, composeCompany, composePerson, composePersonProbe, composeProbe, gridHeight, packPage, WIDTH_COLUMNS, type Dataset, type ViewComponent, type ViewSpec } from "@lasso/spec";
+import { ABSORB_MAX_DEVIATION, BAND_COMBOS, BAND_MAX_DEVIATION, PAGE_HEIGHT_BUDGET, composeCompany, composePerson, composePersonProbe, composeProbe, gridHeight, packPage, WIDTH_COLUMNS, type Dataset, type ViewComponent, type ViewSpec } from "@lasso/spec";
 import { DemoProvider } from "./demo.js";
 import { resolveSpec } from "./resolve.js";
 
@@ -32,7 +32,7 @@ function bandsOf(spec: ViewSpec): ViewComponent[][][] {
   return bands;
 }
 
-function check(spec: ViewSpec, ds: Dataset, label: string) {
+function check(spec: ViewSpec, ds: Dataset, label: string, maxDev = BAND_MAX_DEVIATION) {
   const legal = BAND_COMBOS.map((x) => x.join("+"));
   const bands = bandsOf(spec);
   assert.ok(bands.length > 0, `${label}: ingen delte bånd`);
@@ -41,7 +41,7 @@ function check(spec: ViewSpec, ds: Dataset, label: string) {
     assert.ok(legal.includes(cols.join("+")), `${label}: ulovligt bånd ${cols.join("+")}`);
     const hs = band.map((st) => st.reduce((sum, c) => sum + gridHeight(c, st[0]!.width!, ds, spec.components) + PAD, 0));
     const dev = (Math.max(...hs) - Math.min(...hs)) / Math.max(...hs);
-    assert.ok(dev <= BAND_MAX_DEVIATION, `${label}: ${band.map((st) => st.map((c) => c.type).join("+")).join(" | ")} = ${hs.join(" | ")} (${Math.round(dev * 100)} %)`);
+    assert.ok(dev <= maxDev + 1e-9, `${label}: ${band.map((st) => st.map((c) => c.type).join("+")).join(" | ")} = ${hs.join(" | ")} (${Math.round(dev * 100)} %)`);
   }
 }
 
@@ -49,7 +49,8 @@ test("gridmodel: virksomhedens overblik, økonomi og ejerskab er lovlige bånd m
   const p = new DemoProvider();
   for (const focus of ["overblik", "oekonomi", "ejerskab"] as const) {
     const ds = await resolveSpec(composeProbe(BYG, focus), p);
-    check(composeCompany(BYG, ds, { focus, name: ds.companies[BYG]?.name }), ds, focus);
+    // Overblikket står inden for højdebudgettet med kontakt som ekstra stak (3+6+3, skønnet op til ABSORB_MAX_DEVIATION).
+    check(composeCompany(BYG, ds, { focus, name: ds.companies[BYG]?.name }), ds, focus, focus === "overblik" ? ABSORB_MAX_DEVIATION : BAND_MAX_DEVIATION);
   }
 });
 
@@ -101,7 +102,12 @@ test("højdebudget 23.3: default-siden er ca. 1/2–2/3 af den fulde side og hol
   const types = page.components.map((c) => c.type);
   for (const t of ["LassoCompanyHead", "LassoKeyFigureCards", "LassoTextSections", "LassoKeyValueList"] as const) assert.ok(types.includes(t), t);
   assert.ok(page.components.length < all.components.length);
-  check(page, ds, "overblik med budget");
+  check(page, ds, "overblik med budget", ABSORB_MAX_DEVIATION);
+  // Paper 23.3 (Fable r5, L29-0/MMN-0): B1 hoved, B2 nøgletalskort, B3 6+6 profil kompakt | oplysninger 6
+  // rækker, B4 3+6+3 relationer | søjlegraf | kontakt. Genveje, nyheder og historik er udeladt (laveste
+  // relevans først), kontakt er med.
+  const shape = page.components.map((c) => `${c.type}${c.column ? `@${c.column}/${c.width}` : ""}${(c as { rows?: number }).rows ? `:${(c as { rows?: number }).rows}` : ""}${(c as { limit?: number }).limit ? `:${(c as { limit?: number }).limit}` : ""}`);
+  assert.deepEqual(shape, ["LassoCompanyHead", "LassoKeyFigureCards", "LassoTextSections@1/half:3", "LassoKeyValueList@2/half:6", "LassoRelations@1/quarter", "LassoBarChart@2/half", "LassoContact@3/quarter"]);
   for (const band of bandsOf(page)) assert.equal(band.reduce((s, st) => s + WIDTH_COLUMNS[st[0]!.width!], 0), 12);
   // Et større budget giver plads til mere.
   assert.ok(composeCompany(BYG, ds, { focus: "overblik", followUps: false, heightBudget: 5000 }).components.length === all.components.length);

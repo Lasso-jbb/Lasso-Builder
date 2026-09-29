@@ -199,8 +199,10 @@ test("LassoView: hver oplysning om identiteten står én gang på overblik, kont
     const t = text(html);
     assert.equal(count(t, "Prøvevej 1"), 1, `${focus}: adressen`);
     assert.equal(count(t, "99000001"), 1, `${focus}: CVR-nummeret`);
-    assert.equal(count(t, "Opførelse af bygninger"), 1, `${focus}: branchen`);
-    assert.equal(count(t, "01.04.1998"), 1, `${focus}: stiftelsesdatoen`);
+    // Overblikket viser oplysninger kompakt (rows 6, Paper 23.3 B3); rækkerne efter de 6 står under "Se alle oplysninger".
+    const once = (n: number, what: string) => (focus === "overblik" ? assert.ok(n <= 1, `${focus}: ${what} ${n} gange`) : assert.equal(n, 1, `${focus}: ${what}`));
+    once(count(t, "Opførelse af bygninger"), "branchen");
+    once(count(t, "01.04.1998"), "stiftelsesdatoen");
     // G9 (Jakob 29.09): hovedet viser kun navnet; identiteten står i nøgle-værdi-listen, adressen én gang.
     assert.doesNotMatch(html, /lasso-company__facts/, focus);
   }

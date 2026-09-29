@@ -486,11 +486,13 @@ export function bandsToComponents(bands: readonly PackedBand[]): ViewComponent[]
 export const PAGE_HEIGHT_BUDGET = 1300;
 
 /**
- * Kompakt form af et element, når siden er over budgettet: lister med færre rækker og profilen med
+ * Kompakt form af et element, når siden er over budgettet: oplysninger 6 rækker, regnskabsliste 6, profil
+ * 3 afsnit, historik og nyheder 3 – lister med færre rækker og profilen med
  * færre afsnit ("Se alle"/"Vis mere" under). null = elementet har ingen kompakt form (eller er allerede kompakt).
  */
 export function compactOf(c: ViewComponent): ViewComponent | null {
-  if (c.type === "LassoKeyValueList" && c.variant !== "financials" && (c.rows ?? 99) > 8) return { ...c, rows: 8 };
+  // Oplysninger rows 6 (Paper 23.3 B3: revisor, revisorskift, regnskabsperiode, branchekode, kommune, region + "Se alle oplysninger").
+  if (c.type === "LassoKeyValueList" && c.variant !== "financials" && (c.rows ?? 99) > 6) return { ...c, rows: 6 };
   if (c.type === "LassoKeyValueList" && c.variant === "financials" && (c.rows ?? 99) > 6) return { ...c, rows: 6 };
   if (c.type === "LassoTextSections" && c.variant !== "analyse" && (c.limit ?? 99) > 3) return { ...c, limit: 3 };
   if (c.type === "LassoTimeline" && !c.filterColumn && (c.limit ?? 5) > 3) return { ...c, limit: 3 };
@@ -524,21 +526,30 @@ export function pageHeight(bands: readonly PackedBand[], gap = GRID_GAP): number
 }
 
 /**
- * Båndpakning inden for et højdebudget (23.3). Input i prioriteret rækkefølge. Deterministisk:
+ * Båndpakning inden for et højdebudget (23.3, Paper L29-0 / gridmodel.md afsnit 4 trin 3). Input i
+ * prioriteret rækkefølge = relevans (det sidste er mindst relevant). Deterministisk:
  * 1. Holder siden budgettet med alle elementer, pakkes den som før (packBands).
  * 2. Ellers vises alle elementer, der kan, i kompakt form (compactOf) – undtagen dem i `keep`.
- * 3. Er siden stadig over budgettet, udelades det mindst relevante element (bagfra), hvis fjernelse gør
- *    siden lavere (et element, der står gratis som stakfyld, bliver); gentages, til siden holder budgettet.
- * 4. Udeladte elementer prøves igen i prioritet (plads kan være frigjort), og kompakte elementer får
- *    deres fulde form tilbage i prioritet, så længe siden holder budgettet.
+ * 3. Er siden stadig over budgettet, udelades først genveje, så nyheder, så historik (LOW_RELEVANCE,
+ *    også som stakfyld), derefter de mindst relevante elementer bagfra (blandt de 2 mindst relevante
+ *    foretrækkes en udeladelse, der holder båndene inden for 15 %), til siden holder budgettet.
+ * 4. Udeladte elementer prøves igen i prioritet, til det første, der ikke kan komme med: et mindre
+ *    relevant element (genveje, nyheder, historik) kommer aldrig tilbage, mens et mere relevant (kontakt)
+ *    er udeladt. Kompakte elementer får deres fulde form tilbage i prioritet, når siden holder budgettet
+ *    og båndene står som før (samme elementer i de samme stakke).
+ * Fra trin 2 pakkes siden med "ekstra stak" (absorbAlone): et element, der ellers står alene i et
+ * fuldbånd (fx kontakt efter relationer | graf), lægges som ekstra stak i et tidligere delt bånd
+ * (6+6 → 3+6+3), når det holder siden inden for budgettet. Stakkene strækkes, så der er 0 huller.
  * Hoved, nøgletalskort og svar-elementet er altid med i fuld form, også hvis de alene er over budgettet.
- * Båndene er stadig fulde (summen er 12), og stakkene strækkes, så der aldrig er huller.
  */
 export function packWithinBudget(items: readonly ViewComponent[], h: HeightFn, options: BudgetOptions = {}): BudgetResult {
   const gap = options.gap ?? GRID_GAP;
   const budget = options.budget ?? Number.POSITIVE_INFINITY;
+  // Først uden ekstra stak (holder siden budgettet, pakkes den som før); derefter med (absorbAlone).
+  let absorb = false;
   const pack = (list: readonly ViewComponent[]) => {
-    const bands = packBands(list, h, options);
+    let bands = packBands(list, h, options);
+    if (absorb) bands = absorbAlone(bands, list, h, gap);
     return { bands, height: pageHeight(bands, gap), deviation: Math.max(0, ...bands.map((b) => b.deviation)) };
   };
   // En ændring må ikke gøre båndene skæve: højst 15 % afvigelse, eller ikke værre end før.
@@ -546,13 +557,24 @@ export function packWithinBudget(items: readonly ViewComponent[], h: HeightFn, o
   let best = pack(items);
   if (!(best.height > budget)) return { bands: best.bands, height: best.height, dropped: [], compacted: [] };
 
+  absorb = true;
   const keep = options.keep ?? defaultKeep(items);
   // Arbejdslisten: [original, vist element] i prioriteret rækkefølge; null = udeladt.
   const slots: { orig: ViewComponent; shown: ViewComponent | null }[] = items.map((c) => ({ orig: c, shown: keep.has(c) ? c : (compactOf(c) ?? c) }));
   const listOf = (s: typeof slots) => s.flatMap((x) => (x.shown ? [x.shown] : []));
   best = pack(listOf(slots));
 
-  // 3. Udelad bagfra, til siden holder budgettet. Først prøves de STRICT_WINDOW mindst relevante
+  // 3a. Laveste relevans først (Paper 23.3): genveje, så nyheder, så historik udelades, før noget andet
+  // element (fx kontakt) overvejes – også når genvejene kunne stå som stakfyld.
+  for (const type of LOW_RELEVANCE) {
+    if (!(best.height > budget)) break;
+    slots.forEach((x, k) => {
+      if (x.shown && x.orig.type === type && !keep.has(x.orig)) slots[k] = { ...x, shown: null };
+    });
+    best = pack(listOf(slots));
+  }
+
+  // 3b. Udelad bagfra, til siden holder budgettet. Først prøves de STRICT_WINDOW mindst relevante
   // elementer, og kun udeladelser, der holder båndene lige (højst 15 % afvigelse); findes ingen, den
   // mindst relevante, der gør siden lavere. Vinduet sikrer, at et vigtigt element aldrig ofres for et
   // mindre vigtigt bare for at få pænere bånd.
@@ -577,23 +599,31 @@ export function packWithinBudget(items: readonly ViewComponent[], h: HeightFn, o
     if (!removed) break;
   }
 
-  // 4a. Udeladte elementer tilbage i prioritet, hvis siden stadig holder budgettet.
-  slots.forEach((s, i) => {
-    if (s.shown || keep.has(s.orig)) return;
+  // 4a. Udeladte elementer tilbage i prioritet, til det første, der ikke kan komme med (så et mindre
+  // relevant element aldrig står på siden, mens et mere relevant er udeladt).
+  for (let i = 0; i < slots.length; i++) {
+    const s = slots[i]!;
+    if (s.shown || keep.has(s.orig)) continue;
     const shown = compactOf(s.orig) ?? s.orig;
     const trial = slots.map((x, k) => (k === i ? { ...x, shown } : x));
     const t = pack(listOf(trial));
-    if (t.height <= budget && even(t, best)) {
-      slots[i] = trial[i]!;
-      best = t;
-    }
-  });
-  // 4b. Fuld form tilbage i prioritet.
+    if (!(t.height <= budget && even(t, best))) break;
+    slots[i] = trial[i]!;
+    best = t;
+  }
+  // 4b. Fuld form tilbage i prioritet, når siden holder budgettet og båndene står som før (samme
+  // elementer i de samme stakke): en længere liste må ikke flytte rundt på siden (Paper 23.3: profil
+  // kompakt | oplysninger 6 rækker bliver stående, i stedet for at oplysningerne skubber relationerne op).
+  const structure = (bands: readonly PackedBand[], list: readonly (typeof slots)[number][]) => {
+    const slotOf = new Map<ViewComponent, number>();
+    list.forEach((x, k) => x.shown && slotOf.set(x.shown, k));
+    return bands.map((b) => b.stacks.map((st) => `${st.width}:${st.items.map((c) => slotOf.get(originOf(c)) ?? slotOf.get(c) ?? -1).join(",")}`).join("|")).join("/");
+  };
   slots.forEach((s, i) => {
     if (!s.shown || s.shown === s.orig) return;
     const trial = slots.map((x, k) => (k === i ? { ...x, shown: x.orig } : x));
     const t = pack(listOf(trial));
-    if (t.height <= budget && even(t, best)) {
+    if (t.height <= budget && even(t, best) && structure(t.bands, trial) === structure(best.bands, slots)) {
       slots[i] = trial[i]!;
       best = t;
     }
@@ -606,8 +636,65 @@ export function packWithinBudget(items: readonly ViewComponent[], h: HeightFn, o
   };
 }
 
+/** Laveste relevans (Paper 23.3 "udeladt efter budget"): udelades i denne rækkefølge før alt andet. */
+const LOW_RELEVANCE: readonly ViewComponent["type"][] = ["LassoShortcuts", "LassoNews", "LassoTimeline"];
+
 /** Så mange af de mindst relevante elementer må springes over for at holde båndene lige (trin 3). */
 const STRICT_WINDOW = 2;
+
+/**
+ * Største skønnede afvigelse for en ekstra stak (absorbAlone). Højere end de 15 %, fordi alternativet er
+ * at udelade et mere relevant element (eller et fuldbånd med ét lille element); stakkene strækkes, så
+ * siden stadig er uden huller (gridmodel 4e: er alle over 15 %, tages den laveste).
+ */
+export const ABSORB_MAX_DEVIATION = 0.25;
+
+/**
+ * Ekstra stak (højdebudget): et element, der står alene i et fuldbånd uden at være et fuldbåndselement
+ * (hoved, nøgletal, tabeller), lægges i et delt nabobånd (først det foregående, så det næste), hvis båndets
+ * elementer + elementet kan stå i én lovlig kombination (fx relationer ½ | graf ½ + kontakt → 3+6+3) og
+ * båndet ikke bliver højere end før plus elementet alene. Prioriteten bestemmer stakkenes rækkefølge.
+ */
+function absorbAlone(bands: PackedBand[], list: readonly ViewComponent[], h: HeightFn, gap: number): PackedBand[] {
+  const out = [...bands];
+  const rank = (c: ViewComponent) => list.indexOf(originOf(c));
+  for (let i = 0; i < out.length; i++) {
+    const b = out[i]!;
+    if (b.stacks.length !== 1 || b.stacks[0]!.items.length !== 1) continue;
+    const c = b.stacks[0]!.items[0]!;
+    if (isFullBand(c)) continue;
+    // Nabobåndene: først det foregående delte bånd, så det næste.
+    let pick: { j: number; cand: Candidate; height: number } | null = null;
+    for (const j of [i - 1, i + 1]) {
+      const nb = out[j];
+      if (!nb || nb.stacks.length < 2 || pick) continue;
+      const subset = [...nb.stacks.flatMap((s) => s.items.map(originOf)), c].sort((x, z) => rank(x) - rank(z));
+      let cand: Candidate | null = null;
+      // Alle kombinationer med alle elementerne (ikke kun bestBand's bedste, der foretrækker ≤ 15 % med færre elementer).
+      subset.forEach((a, k) => {
+        const explicit = a.width && a.width !== "full" ? a.width : undefined;
+        const widths = new Set((explicit ? [explicit] : WIDTHS.filter((w) => w !== "full" && allowsWidth(gridRuleOf(a), w))).map((w) => WIDTH_COLUMNS[w]));
+        BAND_COMBOS.forEach((combo, comboIndex) => {
+          if (combo.length < nb.stacks.length) return;
+          combo.forEach((cols, slot) => {
+            if (!widths.has(cols)) return;
+            const x = fillBand(combo, comboIndex, slot, subset, k, h, gap);
+            if (x && x.used.size === subset.length && (!cand || better(x, cand))) cand = x;
+          });
+        });
+      });
+      const chosen = cand as Candidate | null;
+      if (!chosen || chosen.deviation > ABSORB_MAX_DEVIATION + 1e-9) continue;
+      const height = Math.max(...chosen.stacks.map((s) => s.height));
+      if (height < nb.height + b.height) pick = { j, cand: chosen, height };
+    }
+    if (!pick) continue;
+    out[pick.j] = { stacks: pick.cand.stacks, height: pick.height, deviation: pick.cand.deviation };
+    out.splice(i, 1);
+    i--;
+  }
+  return out;
+}
 
 /** Standard for `keep`: fuldbåndstyperne (hoved, nøgletalskort, persontal, opfølgning) og det første øvrige element (svaret). */
 function defaultKeep(items: readonly ViewComponent[]): Set<ViewComponent> {
