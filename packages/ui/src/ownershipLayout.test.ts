@@ -183,6 +183,16 @@ test("ukendt ejer: summen af registrerede andele under 100 % giver én stiplet n
   assert.ok(!layoutOwnership(graph("R", [co("R"), co("A")], [own("A", "R")])).nodes.some((n) => n.kind === "unknown"));
 });
 
+test("ukendt < 5 %: CVR-intervaller der kan nå 100 %, men kun med en rest på højst 5 %", () => {
+  const g = graph("R", [co("R"), co("A"), co("B")], [own("A", "R", 50, 66.66), own("B", "R", 45, 49.99)]);
+  const l = layoutOwnership(g);
+  const u = l.nodes.find((n) => n.kind === "unknown")!;
+  assert.ok(u);
+  assert.equal(l.edges.find((x) => x.from === u.id)!.label?.lines[0]?.text, "< 5 %");
+  // Rest over 5 % med intervaller der kan nå 100 %: ingen ukendt ejer.
+  assert.ok(!layoutOwnership(graph("R", [co("R"), co("A"), co("B")], [own("A", "R", 66.67, 89.99), own("B", "R", 10, 14.99)])).nodes.some((n) => n.kind === "unknown"));
+});
+
 test("loft over hele strukturen: nærmeste lag først og antal skjulte", () => {
   const nodes = [co("R")];
   const edges: OwnershipEdgeVM[] = [];

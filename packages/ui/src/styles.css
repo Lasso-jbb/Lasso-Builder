@@ -3474,3 +3474,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-psearch__row { flex-direction: column; align-items: flex-start; gap: 2px; }
   .lasso-psearch__via { text-align: left; }
 }
+/* 14.2: status i nodens anden linje som ren tekst i vægt 500 (under konkurs mørk rød, likvidation warning). */
+.lasso-odiagram__status { font-weight: 500; fill: var(--lasso-text-2); }
+.lasso-odiagram__status--warning { fill: var(--lasso-bankrupt); }
+.lasso-odiagram__status--liquidation { fill: var(--lasso-status-liquidation); }

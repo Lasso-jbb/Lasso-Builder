@@ -73,9 +73,9 @@ function addForeignOwner(ds: Dataset) {
   if (!g) return;
   if (!g.nodes.some((n) => n.id === "SE-5560001234")) {
     g.nodes.push({ id: "SE-5560001234", name: "Prøve Industri AB", kind: "company", form: "AB", country: "SE", registrationNo: "556000-1234", status: "Aktiv", statusKind: "active" });
-    // Faste andele (ikke CVR-intervaller), så den uregistrerede rest bliver ≤ 5 %.
-    for (const x of g.edges) if (x.to === MASKIN) x.share = [50, 50];
-    g.edges.push({ from: "SE-5560001234", to: MASKIN, share: [45, 45], since: "2019-02-01" });
+    // CVR-intervaller: 50–66,66 + 45–49,99, så den uregistrerede rest er højst 5 %.
+    for (const x of g.edges) if (x.to === MASKIN) x.share = [50, 66.66];
+    g.edges.push({ from: "SE-5560001234", to: MASKIN, share: [45, 49.99], since: "2019-02-01" });
   }
 }
 
@@ -101,6 +101,29 @@ const NODE_GRAPH: OwnershipGraphVM = {
     { from: BYG, to: "CVR-1-99000103", share: [100, 100], since: "2012-05-14" },
     { from: BYG, to: "CVR-1-99000011", share: [50, 66.66], votes: [66.67, 89.99], since: "2018-03-01" },
     { from: BYG, to: "NO-999000104", share: [33.34, 49.99], since: "2020-06-01" },
+  ],
+};
+
+/* 14.1: demokoncernen omkring Eksempel Byg A/S, 2 lag op og 1 ned. */
+const FULL_GRAPH: OwnershipGraphVM = {
+  rootId: BYG,
+  ingoingDepth: 2,
+  outgoingDepth: 1,
+  fetchedAt: "2026-09-29T08:00:00Z",
+  nodes: [
+    { id: BYG, name: "Eksempel Byg A/S", kind: "company", cvr: "99000001", form: "A/S", status: "Aktiv", statusKind: "active", root: true },
+    { id: HOLDING, name: "Eksempel Holding ApS", kind: "company", cvr: "99000010", form: "ApS", status: "Aktiv", statusKind: "active", equity: 41200000 },
+    { id: BO, name: "Bo Eksempel", kind: "person" },
+    { id: ANNE, name: "Anne Eksempel", kind: "person" },
+    { id: "CVR-1-99000106", name: "Eksempel Byg Drift ApS", kind: "company", cvr: "99000106", form: "ApS", status: "Aktiv", statusKind: "active" },
+    { id: "CVR-1-99000101", name: "Eksempel Byg Invest ApS", kind: "company", cvr: "99000101", form: "ApS", status: "Aktiv", statusKind: "active" },
+  ],
+  edges: [
+    { from: BO, to: HOLDING, share: [100, 100], since: "2009-02-01" },
+    { from: HOLDING, to: BYG, share: [66.67, 89.99], since: "2012-05-14" },
+    { from: ANNE, to: BYG, share: [10, 14.99], since: "2015-01-01" },
+    { from: BYG, to: "CVR-1-99000106", share: [100, 100], since: "2012-05-14" },
+    { from: BYG, to: "CVR-1-99000101", share: [100, 100], since: "2016-08-01" },
   ],
 };
 
@@ -146,7 +169,8 @@ export const entries: GalleryEntry[] = [
     nr: "14.1",
     title: "Ejerdiagram, fuld visning",
     node: "AQF-0",
-    spec: company("Eksempel Byg A/S", [{ type: "LassoOwnershipDiagram", company: BYG }]),
+    render: () => <OwnershipDiagram graph={FULL_GRAPH} defaultSelected={HOLDING} canDrillDown canPrompt onAction={noop} />,
+    note: "Detaljepanelet (AY0-0) står åbent for Eksempel Holding ApS (defaultSelected); i brug åbnes det ved klik på en node.",
   },
   {
     nr: "14.2",
