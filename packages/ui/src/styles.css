@@ -997,7 +997,7 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 
 /* ---------- Revisoruafhængighed (22): sammenfatning og relationstabel ---------- */
 /* Vurderingskolonnen bruger alvorsskalaen fra 17 som ord alene, uden ikon (regel 7: ordet bærer betydningen). */
-.lasso-assessment { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--lasso-text-2); white-space: nowrap; }
+.lasso-assessment { display: inline-flex; align-items: center; gap: 6px; font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-text-3); white-space: nowrap; }
 .lasso-assessment--50 { color: var(--lasso-warning); }
 .lasso-assessment--100 { color: var(--lasso-danger); }
 /* Afsluttede relationer dæmpes, men vises altid. */
@@ -3158,6 +3158,32 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 }
 
 /* ---------- 22.2 Revisoruafhængighed (node CI4-0): værktøjslinje med eksport til PDF og Excel ---------- */
+/* 22.2 desktop / 26e.8 mobil */
+.lasso-audit__m, .lasso-audit__mtitle, .lasso-audit__m-block { display: none; }
+.lasso-audit__export { display: inline-flex; gap: var(--lasso-space-2); }
+.lasso-audit__summary { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px var(--lasso-space-4); margin: 0 0 var(--lasso-space-3); }
+.lasso-audit__summary-text { display: inline-flex; align-items: center; gap: 10px; margin: 0; font-size: 15px; line-height: 22px; color: var(--lasso-text); }
+.lasso-audit__warn { flex: none; color: var(--lasso-warning); }
+.lasso-audit__basis { font-size: var(--lasso-fs-sm); color: var(--lasso-muted); }
+.lasso-audit__table thead th { background: var(--lasso-surface-2); }
+.lasso-audit__auditor { display: flex; align-items: center; gap: var(--lasso-space-3); padding: 12px; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); color: var(--lasso-icon); }
+.lasso-audit__auditor-main { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lasso-audit__auditor-name { font-size: var(--lasso-fs); line-height: 20px; font-weight: 600; color: var(--lasso-text); }
+.lasso-audit__auditor-sub { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+.lasso-audit__checks-title { margin: var(--lasso-space-4) 0 0; font-size: var(--lasso-fs); font-weight: 600; color: var(--lasso-text); }
+.lasso-audit__checks { list-style: none; margin: 8px 0 0; padding: 0; border-top: 1px solid var(--lasso-divider-subtle); }
+.lasso-audit__checkrow { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 0; border-bottom: 1px solid var(--lasso-divider-subtle); }
+.lasso-audit__check { flex: none; display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; }
+.lasso-audit__check--ok { background: var(--lasso-positive-soft); color: var(--lasso-positive); }
+.lasso-audit__check--warn { background: var(--lasso-warning-soft); color: var(--lasso-warning); }
+.lasso-audit__checktext { display: flex; flex-direction: column; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text); }
+.lasso-audit__checksub { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+@container lasso (max-width: 560px) {
+  .lasso-audit > .lasso-section__head, .lasso-audit__d-block { display: none; }
+  .lasso-audit__mtitle { display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 var(--lasso-space-3); font-size: 17px; line-height: 24px; font-weight: 600; color: var(--lasso-text); }
+  .lasso-audit__mreport { font-size: 12px; font-weight: 400; color: var(--lasso-muted); }
+  .lasso-audit__m-block { display: block; }
+}
 .lasso-audit__meta { min-width: 0; font-size: var(--lasso-fs-sm); color: var(--lasso-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lasso-audit__printhead { margin: 0 0 var(--lasso-space-3); font-size: var(--lasso-fs-sm); color: var(--lasso-muted); }
 @container lasso (max-width: 560px) {

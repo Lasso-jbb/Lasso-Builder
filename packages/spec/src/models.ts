@@ -691,6 +691,14 @@ export interface AuditorIndependenceVM {
   unavailableReason?: string;
   /** Katalog 22/26e.8: revisorhistorik, ældste først; perioder som ÅÅÅÅ-MM-DD. Kun demodata indtil videre. */
   history?: { name: string; from?: string; to?: string }[];
+  /** 22.2: hvad tjekket bygger på, fx "Baseret på CVR-roller og ejerskab, 3 led". */
+  basis?: string;
+  /** 26e.8: revisors påtegning, fx "Revisionspåtegning, uden forbehold". */
+  opinion?: string;
+  /** 26e.8: regnskabet, revisor er hentet fra, fx "Årsrapport 2025". */
+  report?: string;
+  /** 26e.8: uafhængighed som tjeklinjer (ok = grønt flueben, ellers gult "!"). Uden dem bruges relationerne. */
+  checks?: { label: string; sub?: string; ok: boolean }[];
 }
 
 export interface SearchResultVM {

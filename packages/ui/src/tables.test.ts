@@ -147,7 +147,7 @@ test("Sammenligning (22.1): tilføj-slot til og med 5, 'Ikke hentet' mod 'Ikke o
   assert.doesNotMatch(full, /Tilføj virksomhed/);
 });
 
-test("Revisoruafhængighed (22.2): værktøjslinje med PDF og Excel, CSV til arbejdspapirer", () => {
+test("Revisoruafhængighed (22.2): titel med revisor og dato, Eksportér PDF og Excel i hovedet, ord uden ikon, CSV til arbejdspapirer", () => {
   const data = {
     lassoId: "CVR-1-1",
     auditorName: "Eksempel Revision ApS",
@@ -157,11 +157,12 @@ test("Revisoruafhængighed (22.2): værktøjslinje med PDF og Excel, CSV til arb
       { id: "b", assessment: 50 as const, name: "Eksempel Partner", relation: "Bestyrelsesmedlem", via: "Eksempel Invest ApS", from: "2022-01-01" },
     ],
   };
-  const html = renderToStaticMarkup(createElement(AuditorIndependence, { data, onAction: noop, canExport: true }));
-  assert.match(html, /role="toolbar"/);
-  assert.match(html, />PDF</);
-  assert.match(html, />Excel</);
-  assert.match(html, /2 relationer, tjekket 25\.09\.2026/);
+  const html = renderToStaticMarkup(createElement(AuditorIndependence, { data, companyName: "LASSO X A/S", onAction: noop, canExport: true }));
+  assert.match(html, /lasso-section__title">Uafhængighedstjek, LASSO X A\/S</);
+  assert.match(html, /Revisor: Eksempel Revision ApS, tjekket 25\.09\.2026/);
+  assert.match(html, /lasso-section__action"><span class="lasso-audit__export">[^]*Eksportér PDF[^]*>Excel</);
+  assert.match(html, /lasso-audit__warn[^]*1 relation kræver vurdering/);
+  assert.match(html, /lasso-assessment lasso-assessment--50">Vurdér</);
   const lines = auditorCsv(data).split("\r\n");
   assert.equal(lines.length, 3);
   assert.match(lines[1]!, /^Vurdér;Eksempel Partner;/);

@@ -390,7 +390,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoCreditRating":
       return <CreditRating key={key} rating={empty.creditRatings?.[c.company]} title={c.title} error={err(`creditRating:${c.company}`)} onAction={act} />;
     case "LassoAuditorIndependence":
-      return <AuditorIndependence key={key} data={empty.auditorIndependence[c.company]} error={err(`auditorIndependence:${c.company}`)} title={c.title} onAction={act} canExport={Boolean(props.host.export)} />;
+      return <AuditorIndependence key={key} data={empty.auditorIndependence[c.company]} companyName={empty.companies[c.company]?.name} error={err(`auditorIndependence:${c.company}`)} title={c.title} onAction={act} canExport={Boolean(props.host.export)} />;
     case "LassoProductionUnits":
       return <ProductionUnits key={key} units={empty.productionUnits[c.company]} error={err(`productionUnits:${c.company}`)} />;
     case "LassoProperties":

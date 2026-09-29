@@ -247,6 +247,7 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
         break;
       case "LassoAuditorIndependence":
         want(c.company, "auditorIndependence");
+        want(c.company, "company"); // 22.2: "Uafhængighedstjek, <navn>"
         break;
       case "LassoProductionUnits":
         want(c.company, "productionUnits");

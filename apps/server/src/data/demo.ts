@@ -553,6 +553,17 @@ function auditorIndependenceFor(c: DemoCompany): AuditorIndependenceVM {
     checkedAt: "2026-09-25",
     relations,
     unavailableReason: relations.length ? undefined : "Der er ikke fundet kendte relationer mellem revisor, kunden og personer i demodata.",
+    basis: "Baseret på CVR-roller og ejerskab, 3 led",
+    opinion: "Revisionspåtegning, uden forbehold (eksempeldata)",
+    report: "Årsrapport 2025",
+    checks: relations.length
+      ? [
+          { label: "Ingen fælles ledelse med revisor", ok: true },
+          { label: "Ingen ejerrelation til revisor", ok: true },
+          { label: "Samme revisor i 9 år", sub: "Rotation anbefales efter 7 år for PIE-selskaber", ok: false },
+          { label: "Revisor har ikke revideret ejerselskaber", ok: true },
+        ]
+      : undefined,
     // Katalog 26e.8: revisorhistorik som proportional bjælke (eksempeldata).
     history: [
       { name: "Eksempel Revision", from: "2012-01-01", to: "2016-12-31" },
