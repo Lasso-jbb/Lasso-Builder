@@ -3794,3 +3794,20 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-bulkbar__close { order: 2; }
   .lasso-bulkbar__actions { order: 3; flex-basis: 100%; flex-wrap: wrap; overflow: visible; }
 }
+
+/* ---------- 16.1 / 26d.1 Personhoved (fix2 G4) ---------- */
+/* Desktop: observationer som koral link lige efter "Person"; faktalinjen begynder med "Født 1978, By". */
+.lasso-root .lasso-personhead__obs { font-size: var(--lasso-fs); line-height: 20px; font-weight: 500; color: var(--lasso-accent-text); }
+.lasso-personhead__mobsub, .lasso-personhead__counts { display: none; margin: 0; }
+.lasso-root .lasso-headbtn--network { display: none; }
+@container lasso (max-width: 560px) {
+  /* Mobil: kort med 1 px kant, navn 20/600, "Person, f. 1978" muted, tællerlinje 13 ink, fire 40 px knapper
+     (Overvåg, Netværk, Gem, Flere) højrestillet. Ingen observationslinje. */
+  .lasso-personhead.lasso-company { padding: var(--lasso-space-4); border: 1px solid var(--lasso-border); border-radius: 12px; gap: 4px; }
+  .lasso-personhead .lasso-personhead__kind, .lasso-personhead .lasso-personhead__obs, .lasso-personhead .lasso-personhead__facts { display: none; }
+  .lasso-personhead__mobsub { display: block; order: 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-muted); }
+  .lasso-personhead__counts { display: block; order: 1; margin-top: 4px; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text); }
+  .lasso-root .lasso-personhead .lasso-headbtn--network { display: inline-flex; }
+  .lasso-root .lasso-personhead .lasso-headbtn--export { display: none; }
+  .lasso-root .lasso-personhead .lasso-headbtn--monitor { background: var(--lasso-accent-soft); border-color: var(--lasso-accent-border); color: var(--lasso-accent); }
+}

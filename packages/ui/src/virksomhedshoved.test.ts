@@ -106,7 +106,7 @@ test("LassoView: Overvåg og Eksportér i hovedet efter værtens kapabiliteter",
   const all = html(h(LassoView, { spec, dataset: ds, host: { monitor: true, savePage: true, export: true, refresh: true }, onAction: noop }));
   assert.match(all, /lasso-headbtn--monitor is-on" aria-pressed="true"/);
   // Ét eksportformat (PDF-rapporten): direkte knap; flere formater giver menuen "Eksportér".
-  assert.match(all, /class="lasso-headbtn" aria-label="Virksomhedsrapport \(PDF\)"/);
+  assert.match(all, /class="lasso-headbtn lasso-headbtn--export" aria-label="Virksomhedsrapport \(PDF\)"/);
   // Opdatér flytter ind under "…" i hovedet; rammens footer gentager den ikke.
   assert.doesNotMatch(all.slice(all.indexOf('<footer class="lasso-actionbar"')), /Opdatér/);
 });
@@ -126,7 +126,9 @@ test("16.1: 'Person' som ren tekst, ingen initial-cirkel, handlinger og én roli
   const out = html(h(PersonHead, { person: bo, actions: { monitor: { monitoring: false, onClick: noop }, save: { saved: false, onClick: noop } }, onSeeRisk: noop }));
   assert.match(out, /lasso-personhead__kind">Person</);
   assert.match(out, /lasso-headbtn--monitor/);
-  assert.match(out, /1 mulig vigtig observation: stråmandsindikator\. Ingen PEP-match\./);
+  // 16.1: observationer som koral link lige efter "Person"; faktalinjen begynder med fødselsåret
+  assert.match(out, /lasso-personhead__kind">Person<\/span><button[^>]*lasso-personhead__obs[^>]*title="1 mulig vigtig observation: stråmandsindikator\. Ingen PEP-match\."[^>]*>1 observation</);
+  assert.doesNotMatch(out, /lasso-headrisk/);
   assert.doesNotMatch(out, /initial|avatar/);
 });
 

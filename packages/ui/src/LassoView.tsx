@@ -179,7 +179,13 @@ function PersonHeadBridge({ c, ds, props, act, frame }: { c: Extract<ViewCompone
       person={person}
       error={ds.errors[`person:${c.person}`]}
       variant={variant}
-      actions={full ? headActionsFor(c.person, name, frame) : frame.monitor?.id === c.person ? { monitor: { monitoring: frame.monitor.monitoring, busy: frame.monitor.busy, onClick: frame.monitor.toggle } } : undefined}
+      actions={
+        full
+          ? { ...headActionsFor(c.person, name, frame), network: sectionAction(props, act, { lassoId: c.person, pageKind: "person", section: "netvaerk", name, label: "Netværk" }) }
+          : frame.monitor?.id === c.person
+            ? { monitor: { monitoring: frame.monitor.monitoring, busy: frame.monitor.busy, onClick: frame.monitor.toggle } }
+            : undefined
+      }
       onSeeRisk={sectionAction(props, act, { lassoId: c.person, pageKind: "person", section: "risiko", name, label: "Risiko" })}
       below={full ? headTabsOf(props) : undefined}
     />
