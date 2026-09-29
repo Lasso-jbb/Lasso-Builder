@@ -96,6 +96,27 @@ function Item({
   );
 }
 
+/**
+ * Variant "profil" (12.1): lange afsnit foldes hver for sig, men ét "Vis hele" (koral) til sidst folder
+ * hele sektionen ud på én gang, i stedet for et link efter hvert afsnit.
+ */
+function Profile({ items, onOpen }: { items: TextSectionItem[]; onOpen?: (a: ViewAction) => void }) {
+  const [open, setOpen] = useState(false);
+  const long = items.some((it) => (it.segments?.length ? it.segments.reduce((n, s) => n + s.text.length, 0) : it.body.length) > TRUNCATE_AT);
+  return (
+    <>
+      {items.map((s, i) => (
+        <Item key={i} item={s} limit={open ? Number.POSITIVE_INFINITY : TRUNCATE_AT} toggle={false} onOpen={onOpen} />
+      ))}
+      {long ? (
+        <button type="button" className="lasso-link lasso-more" aria-expanded={open} onClick={() => setOpen(!open)}>
+          {open ? "Vis mindre" : "Vis hele"}
+        </button>
+      ) : null}
+    </>
+  );
+}
+
 /** 19.3: fast forbehold under regnskabsanalysen. */
 export const ANALYSIS_DISCLAIMER = "Analysen er skrevet automatisk ud fra de offentliggjorte regnskaber og tallene i tabellerne. Den kan indeholde fejl og er ikke rådgivning.";
 
@@ -179,7 +200,7 @@ export function LassoTextSections({
   const hasAnalysis = shown.some(isAnalysisSection);
   return (
     <Section title={heading} span={span} className={`lasso-textsections${analysis ? " lasso-textsections--analysis" : ""}`}>
-      {analysis ? <Analysis items={shown} onOpen={onOpen} /> : shown.map((s, i) => <Item key={i} item={s} onOpen={onOpen} />)}
+      {analysis ? <Analysis items={shown} onOpen={onOpen} /> : <Profile items={shown} onOpen={onOpen} />}
       {/* 19.3: forbeholdet er en fast afsluttende linje (også når analysen er foldet), og kildelinjen har genereringsdatoen. */}
       {analysis && hasAnalysis ? <p className="lasso-textsections__disclaimer">{ANALYSIS_DISCLAIMER}</p> : null}
       {hasAnalysis ? <SourceLine source={analysisSource(shown)} updated={sections.analysisGenerated} verb="genereret" /> : null}

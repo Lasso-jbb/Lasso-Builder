@@ -30,13 +30,12 @@ test("09.4: valgte nøgletal uden tal vises som 'Ikke oplyst' med årsag, aldrig
   assert.ok(out.indexOf("Bruttofortjeneste") < out.indexOf("Ikke oplyst"));
 });
 
-test("12.2: afsnit bevares, og foldet tekst har 'Vis mere'", () => {
+test("12.2: afsnit bevares, og foldet tekst har 'Læs mere' med chevron", () => {
   assert.deepEqual(paragraphs("Et.\n\nTo\nlinjer."), ["Et.", "To linjer."]);
   const long = `${"Første afsnit er langt. ".repeat(12)}\n\n${"Andet afsnit. ".repeat(10)}`;
   const out = html(h(LassoSummary, { text: long }));
   assert.equal(out.match(/<p class="lasso-summary__body">/g)?.length, 2);
-  assert.match(out, />Vis mere</);
-  assert.doesNotMatch(out, /Læs mere/);
+  assert.match(out, />Læs mere<svg/);
 });
 
 test("13.3: tallet står lige efter bjælken (i samme spor), ingen medianrække", () => {

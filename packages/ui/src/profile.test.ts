@@ -99,8 +99,8 @@ test("Virksomhedsprofil (overblik): CVR-tekster uden branche plus konklusion, re
   assert.deepEqual(headings(html), ["Formål", "Tegningsregler", "Regnskabsanalyse: konklusion", "Resultat", "Likviditet"]);
   assert.equal(count(html, "Kilde: Lasso regnskabsanalyse"), 1);
   assert.doesNotMatch(html, /NACE 412000/);
-  // Lange afsnit foldes hver for sig som før.
-  assert.match(html, /Vis hele/);
+  // 12.1: lange afsnit foldes hver for sig, men der er ét "Vis hele" for hele sektionen.
+  assert.equal(count(html, ">Vis hele<"), 1);
   assert.doesNotMatch(html, /Se hele regnskabsanalysen/);
   // Kun CVR-tekster: ingen analysekilde.
   const cvr = renderToStaticMarkup(createElement(LassoTextSections, { sections: { ...SECTIONS, sections: SECTIONS.sections.slice(0, 3) } }));

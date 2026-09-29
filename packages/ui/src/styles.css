@@ -594,6 +594,7 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
   }
 }
 .lasso-more { margin-top: var(--lasso-space-3); color: var(--lasso-accent-text); font-weight: 500; font-size: var(--lasso-fs-sm); }
+.lasso-more--chevron { display: inline-flex; align-items: center; gap: 4px; }
 .lasso-kv-line { display: flex; gap: var(--lasso-space-4); margin: var(--lasso-space-4) 0 0; font-size: var(--lasso-fs); color: var(--lasso-text); }
 .lasso-kv-line__key { flex: none; width: 120px; font-size: var(--lasso-fs-sm); color: var(--lasso-muted); }
 /* ---------- 29 Fanebjælke, tre niveauer (node IWE-0) ---------- */
