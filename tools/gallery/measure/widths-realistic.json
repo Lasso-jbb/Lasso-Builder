@@ -1,0 +1,8295 @@
+{
+ "cellWidths": {
+  "quarter": 270,
+  "third": 368,
+  "half": 564,
+  "two-thirds": 760,
+  "three-quarters": 858,
+  "full": 1152
+ },
+ "generated": "2026-09-29",
+ "types": {
+  "LassoCompanyHead": {
+   "type": "LassoCompanyHead",
+   "drivers": {
+    "longestLabel": 44
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 34,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 43,
+     "gapPct": 43,
+     "p75EmptyPct": 43,
+     "coverEmptyPct": 43,
+     "rightEmptyPct": 43,
+     "textBoxes": 1
+    },
+    "third": {
+     "h": 34,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 43,
+     "gapPct": 43,
+     "p75EmptyPct": 43,
+     "coverEmptyPct": 43,
+     "rightEmptyPct": 43,
+     "textBoxes": 1
+    },
+    "half": {
+     "h": 34,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 43,
+     "gapPct": 43,
+     "p75EmptyPct": 43,
+     "coverEmptyPct": 43,
+     "rightEmptyPct": 43,
+     "textBoxes": 1
+    },
+    "two-thirds": {
+     "h": 34,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 43,
+     "gapPct": 43,
+     "p75EmptyPct": 43,
+     "coverEmptyPct": 43,
+     "rightEmptyPct": 43,
+     "textBoxes": 1
+    },
+    "three-quarters": {
+     "h": 34,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 43,
+     "gapPct": 43,
+     "p75EmptyPct": 43,
+     "coverEmptyPct": 43,
+     "rightEmptyPct": 43,
+     "textBoxes": 1
+    },
+    "full": {
+     "h": 34,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 43,
+     "gapPct": 43,
+     "p75EmptyPct": 43,
+     "coverEmptyPct": 43,
+     "rightEmptyPct": 43,
+     "textBoxes": 1
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "full",
+     "min": "full",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "proposed": {
+     "std": "full",
+     "min": "full",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "full",
+    "reasons": [
+     "Fast bredde (min = max = 1/1); ingen forslag."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 43,
+     "emptyCoverAtMax": 43,
+     "issuesInHalf": true
+    }
+   }
+  },
+  "LassoKeyFigureCards": {
+   "type": "LassoKeyFigureCards",
+   "drivers": {
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 478,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 56,
+     "gapPct": 59,
+     "p75EmptyPct": 56,
+     "coverEmptyPct": 46,
+     "rightEmptyPct": 7,
+     "textBoxes": 23
+    },
+    "third": {
+     "h": 188,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 40,
+     "gapPct": 40,
+     "p75EmptyPct": 52,
+     "coverEmptyPct": 32,
+     "rightEmptyPct": 0,
+     "textBoxes": 27
+    },
+    "half": {
+     "h": 170,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 42,
+     "gapPct": 42,
+     "p75EmptyPct": 66,
+     "coverEmptyPct": 54,
+     "rightEmptyPct": 0,
+     "textBoxes": 24
+    },
+    "two-thirds": {
+     "h": 152,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 49,
+     "gapPct": 78,
+     "p75EmptyPct": 49,
+     "coverEmptyPct": 41,
+     "rightEmptyPct": 3,
+     "textBoxes": 23
+    },
+    "three-quarters": {
+     "h": 138,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 15,
+     "gapPct": 15,
+     "p75EmptyPct": 48,
+     "coverEmptyPct": 42,
+     "rightEmptyPct": 3,
+     "textBoxes": 23
+    },
+    "full": {
+     "h": 138,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 19,
+     "gapPct": 19,
+     "p75EmptyPct": 62,
+     "coverEmptyPct": 57,
+     "rightEmptyPct": 2,
+     "textBoxes": 23
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "full",
+     "min": "half",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "proposed": {
+     "std": "full",
+     "min": "third",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "half",
+    "reasons": [
+     "Ren helt ned til ¼, men højden er da 478 px mod 170 px i ½ (2.8×); min sænkes kun til ⅓.",
+     "Fleksibel bekræftet: ren fra ⅓; tom plads i ⅔+ er 49 %.",
+     "Målt ren allerede i ⅓; nuværende min (½) er strammere end nødvendigt (min ændres kun, hvis B8 vil bruge det).",
+     "contentMinWidth (fleksibel, nuværende drivere) giver ½, målingen giver ⅓."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 19,
+     "emptyCoverAtMax": 57,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoKeyValueList": {
+   "type": "LassoKeyValueList",
+   "drivers": {
+    "longestLabel": 45
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 1100,
+     "w": 282,
+     "truncated": 2,
+     "truncatedSample": [
+      "Seneste revisorskiftDato for seneste skift af revi",
+      "RegnskabsperiodeDet tidsrum, regnskabet dækker. Of"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 60,
+     "gapPct": 73,
+     "p75EmptyPct": 60,
+     "coverEmptyPct": 18,
+     "rightEmptyPct": 0,
+     "textBoxes": 59
+    },
+    "third": {
+     "h": 884,
+     "w": 376,
+     "truncated": 2,
+     "truncatedSample": [
+      "Seneste revisorskiftDato for seneste skift af revi",
+      "RegnskabsperiodeDet tidsrum, regnskabet dækker. Of"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 55,
+     "gapPct": 55,
+     "p75EmptyPct": 58,
+     "coverEmptyPct": 38,
+     "rightEmptyPct": 1,
+     "textBoxes": 48
+    },
+    "half": {
+     "h": 701,
+     "w": 564,
+     "truncated": 2,
+     "truncatedSample": [
+      "Seneste revisorskiftDato for seneste skift af revi",
+      "RegnskabsperiodeDet tidsrum, regnskabet dækker. Of"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 50,
+     "gapPct": 50,
+     "p75EmptyPct": 54,
+     "coverEmptyPct": 26,
+     "rightEmptyPct": 2,
+     "textBoxes": 36
+    },
+    "two-thirds": {
+     "h": 701,
+     "w": 752,
+     "truncated": 2,
+     "truncatedSample": [
+      "Seneste revisorskiftDato for seneste skift af revi",
+      "RegnskabsperiodeDet tidsrum, regnskabet dækker. Of"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 62,
+     "gapPct": 62,
+     "p75EmptyPct": 69,
+     "coverEmptyPct": 24,
+     "rightEmptyPct": 2,
+     "textBoxes": 36
+    },
+    "three-quarters": {
+     "h": 683,
+     "w": 846,
+     "truncated": 2,
+     "truncatedSample": [
+      "Seneste revisorskiftDato for seneste skift af revi",
+      "RegnskabsperiodeDet tidsrum, regnskabet dækker. Of"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 67,
+     "gapPct": 67,
+     "p75EmptyPct": 73,
+     "coverEmptyPct": 18,
+     "rightEmptyPct": 1,
+     "textBoxes": 35
+    },
+    "full": {
+     "h": 665,
+     "w": 1152,
+     "truncated": 2,
+     "truncatedSample": [
+      "Seneste revisorskiftDato for seneste skift af revi",
+      "RegnskabsperiodeDet tidsrum, regnskabet dækker. Of"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 76,
+     "gapPct": 76,
+     "p75EmptyPct": 80,
+     "coverEmptyPct": 36,
+     "rightEmptyPct": 22,
+     "textBoxes": 34
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "half",
+     "max": "full",
+     "profile": "smal"
+    },
+    "proposed": {
+     "std": "half",
+     "min": "half",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "half",
+    "reasons": [
+     "Også i fuld bredde er der 2 afkortede felter og 0 overlap (afkortning er en del af designet, fx linje-klip af uddrag); min måles derfor relativt til fuld bredde.",
+     "Ren helt ned til ¼, men højden er da 1100 px mod 701 px i ½ (1.6×); min sænkes kun til ½.",
+     "Smal bekræftet: ren i ½; tom plads i ⅔+ er 76 %.",
+     "Smal profil: max ≤ ½ (tom plads 76 % i ⅔+)."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 76,
+     "emptyCoverAtMax": 36,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoKeyValueList (financials)": {
+   "type": "LassoKeyValueList",
+   "variant": "financials",
+   "drivers": {
+    "timeAxis": false,
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 535,
+     "w": 282,
+     "truncated": 14,
+     "truncatedSample": [
+      "RegnskabsperiodeDet tidsrum, regnskabet dækker. Of",
+      "01.01 – 31.12",
+      "70,5 mio. kr.",
+      "509,3 mio. kr."
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 1,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 46,
+     "gapPct": 49,
+     "p75EmptyPct": 46,
+     "coverEmptyPct": 24,
+     "rightEmptyPct": 0,
+     "textBoxes": 36
+    },
+    "third": {
+     "h": 535,
+     "w": 376,
+     "truncated": 8,
+     "truncatedSample": [
+      "RegnskabsperiodeDet tidsrum, regnskabet dækker. Of",
+      "Ansatte i regnskabet afviger fra CVR's tal. Regnsk",
+      "EBITDAResultat før renter, skat, af- og nedskrivni",
+      "SoliditetsgradEgenkapitalen i procent af balancesu"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 1,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 55,
+     "gapPct": 60,
+     "p75EmptyPct": 55,
+     "coverEmptyPct": 34,
+     "rightEmptyPct": 0,
+     "textBoxes": 31
+    },
+    "half": {
+     "h": 535,
+     "w": 564,
+     "truncated": 8,
+     "truncatedSample": [
+      "RegnskabsperiodeDet tidsrum, regnskabet dækker. Of",
+      "Ansatte i regnskabet afviger fra CVR's tal. Regnsk",
+      "EBITDAResultat før renter, skat, af- og nedskrivni",
+      "SoliditetsgradEgenkapitalen i procent af balancesu"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 70,
+     "gapPct": 73,
+     "p75EmptyPct": 70,
+     "coverEmptyPct": 55,
+     "rightEmptyPct": 0,
+     "textBoxes": 31
+    },
+    "two-thirds": {
+     "h": 535,
+     "w": 752,
+     "truncated": 8,
+     "truncatedSample": [
+      "RegnskabsperiodeDet tidsrum, regnskabet dækker. Of",
+      "Ansatte i regnskabet afviger fra CVR's tal. Regnsk",
+      "EBITDAResultat før renter, skat, af- og nedskrivni",
+      "SoliditetsgradEgenkapitalen i procent af balancesu"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 77,
+     "gapPct": 80,
+     "p75EmptyPct": 77,
+     "coverEmptyPct": 67,
+     "rightEmptyPct": 0,
+     "textBoxes": 31
+    },
+    "three-quarters": {
+     "h": 535,
+     "w": 846,
+     "truncated": 8,
+     "truncatedSample": [
+      "RegnskabsperiodeDet tidsrum, regnskabet dækker. Of",
+      "Ansatte i regnskabet afviger fra CVR's tal. Regnsk",
+      "EBITDAResultat før renter, skat, af- og nedskrivni",
+      "SoliditetsgradEgenkapitalen i procent af balancesu"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 80,
+     "gapPct": 82,
+     "p75EmptyPct": 80,
+     "coverEmptyPct": 70,
+     "rightEmptyPct": 0,
+     "textBoxes": 31
+    },
+    "full": {
+     "h": 535,
+     "w": 1152,
+     "truncated": 8,
+     "truncatedSample": [
+      "RegnskabsperiodeDet tidsrum, regnskabet dækker. Of",
+      "Ansatte i regnskabet afviger fra CVR's tal. Regnsk",
+      "EBITDAResultat før renter, skat, af- og nedskrivni",
+      "SoliditetsgradEgenkapitalen i procent af balancesu"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 85,
+     "gapPct": 87,
+     "p75EmptyPct": 85,
+     "coverEmptyPct": 78,
+     "rightEmptyPct": 0,
+     "textBoxes": 31
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "half",
+     "max": "full",
+     "profile": "smal"
+    },
+    "proposed": {
+     "std": "half",
+     "min": "half",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "half",
+    "reasons": [
+     "Også i fuld bredde er der 8 afkortede felter og 0 overlap (afkortning er en del af designet, fx linje-klip af uddrag); min måles derfor relativt til fuld bredde.",
+     "Smal bekræftet: ren i ½; tom plads i ⅔+ er 85 %.",
+     "Smal profil: max ≤ ½ (tom plads 85 % i ⅔+)."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 85,
+     "emptyCoverAtMax": 78,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoContact": {
+   "type": "LassoContact",
+   "drivers": {
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 176,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 54,
+     "gapPct": 66,
+     "p75EmptyPct": 54,
+     "coverEmptyPct": 24,
+     "rightEmptyPct": 0,
+     "textBoxes": 6
+    },
+    "third": {
+     "h": 176,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 66,
+     "gapPct": 75,
+     "p75EmptyPct": 66,
+     "coverEmptyPct": 43,
+     "rightEmptyPct": 0,
+     "textBoxes": 6
+    },
+    "half": {
+     "h": 176,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 77,
+     "gapPct": 83,
+     "p75EmptyPct": 77,
+     "coverEmptyPct": 62,
+     "rightEmptyPct": 0,
+     "textBoxes": 6
+    },
+    "two-thirds": {
+     "h": 176,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 83,
+     "gapPct": 87,
+     "p75EmptyPct": 83,
+     "coverEmptyPct": 72,
+     "rightEmptyPct": 0,
+     "textBoxes": 6
+    },
+    "three-quarters": {
+     "h": 176,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 85,
+     "gapPct": 89,
+     "p75EmptyPct": 85,
+     "coverEmptyPct": 75,
+     "rightEmptyPct": 0,
+     "textBoxes": 6
+    },
+    "full": {
+     "h": 176,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 89,
+     "gapPct": 92,
+     "p75EmptyPct": 89,
+     "coverEmptyPct": 82,
+     "rightEmptyPct": 0,
+     "textBoxes": 6
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "third",
+     "min": "quarter",
+     "max": "half",
+     "profile": "smal"
+    },
+    "proposed": {
+     "std": "third",
+     "min": "quarter",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "quarter",
+    "reasons": [
+     "Smal bekræftet: ren i ½; tom plads i ⅔+ er 89 %."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 77,
+     "emptyCoverAtMax": 62,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoContactPersons": {
+   "type": "LassoContactPersons",
+   "drivers": {
+    "rowsPerItem": 3,
+    "longestLabel": 44
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 294,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 30,
+     "gapPct": 44,
+     "p75EmptyPct": 30,
+     "coverEmptyPct": 12,
+     "rightEmptyPct": 0,
+     "textBoxes": 13
+    },
+    "third": {
+     "h": 236,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 34,
+     "gapPct": 45,
+     "p75EmptyPct": 34,
+     "coverEmptyPct": 32,
+     "rightEmptyPct": 0,
+     "textBoxes": 10
+    },
+    "half": {
+     "h": 236,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 56,
+     "gapPct": 63,
+     "p75EmptyPct": 56,
+     "coverEmptyPct": 54,
+     "rightEmptyPct": 0,
+     "textBoxes": 10
+    },
+    "two-thirds": {
+     "h": 236,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 67,
+     "gapPct": 72,
+     "p75EmptyPct": 67,
+     "coverEmptyPct": 66,
+     "rightEmptyPct": 0,
+     "textBoxes": 10
+    },
+    "three-quarters": {
+     "h": 236,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 71,
+     "gapPct": 76,
+     "p75EmptyPct": 71,
+     "coverEmptyPct": 70,
+     "rightEmptyPct": 0,
+     "textBoxes": 10
+    },
+    "full": {
+     "h": 236,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 79,
+     "gapPct": 82,
+     "p75EmptyPct": 79,
+     "coverEmptyPct": 78,
+     "rightEmptyPct": 0,
+     "textBoxes": 10
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "third",
+     "min": "quarter",
+     "max": "half",
+     "profile": "smal"
+    },
+    "proposed": {
+     "std": "third",
+     "min": "quarter",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "quarter",
+    "reasons": [
+     "Smal bekræftet: ren i ½; tom plads i ⅔+ er 79 %."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 56,
+     "emptyCoverAtMax": 54,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoShortcuts": {
+   "type": "LassoShortcuts",
+   "drivers": {
+    "longestLabel": 44
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 232,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 57,
+     "gapPct": 57,
+     "p75EmptyPct": 63,
+     "coverEmptyPct": 36,
+     "rightEmptyPct": 12,
+     "textBoxes": 6
+    },
+    "third": {
+     "h": 136,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 52,
+     "gapPct": 52,
+     "p75EmptyPct": 52,
+     "coverEmptyPct": 31,
+     "rightEmptyPct": 13,
+     "textBoxes": 6
+    },
+    "half": {
+     "h": 88,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 33,
+     "gapPct": 33,
+     "p75EmptyPct": 46,
+     "coverEmptyPct": 40,
+     "rightEmptyPct": 20,
+     "textBoxes": 6
+    },
+    "two-thirds": {
+     "h": 88,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 64,
+     "gapPct": 64,
+     "p75EmptyPct": 73,
+     "coverEmptyPct": 42,
+     "rightEmptyPct": 20,
+     "textBoxes": 6
+    },
+    "three-quarters": {
+     "h": 88,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 85,
+     "gapPct": 85,
+     "p75EmptyPct": 88,
+     "coverEmptyPct": 37,
+     "rightEmptyPct": 12,
+     "textBoxes": 6
+    },
+    "full": {
+     "h": 40,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 31,
+     "gapPct": 31,
+     "p75EmptyPct": 92,
+     "coverEmptyPct": 44,
+     "rightEmptyPct": 22,
+     "textBoxes": 6
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "quarter",
+     "max": "full",
+     "profile": "smal"
+    },
+    "proposed": {
+     "std": "half",
+     "min": "quarter",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "quarter",
+    "reasons": [
+     "Smal bekræftet: ren i ½; tom plads i ⅔+ er 85 %.",
+     "Smal profil: max ≤ ½ (tom plads 85 % i ⅔+)."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 31,
+     "emptyCoverAtMax": 44,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoTextSections": {
+   "type": "LassoTextSections",
+   "drivers": {
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 838,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 5,
+     "gapPct": 17,
+     "p75EmptyPct": 5,
+     "coverEmptyPct": 2,
+     "rightEmptyPct": 2,
+     "textBoxes": 36
+    },
+    "third": {
+     "h": 712,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 9,
+     "gapPct": 19,
+     "p75EmptyPct": 9,
+     "coverEmptyPct": 3,
+     "rightEmptyPct": 3,
+     "textBoxes": 30
+    },
+    "half": {
+     "h": 544,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 12,
+     "gapPct": 15,
+     "p75EmptyPct": 12,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 22
+    },
+    "two-thirds": {
+     "h": 544,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 9,
+     "gapPct": 71,
+     "p75EmptyPct": 9,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 22
+    },
+    "three-quarters": {
+     "h": 481,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 9,
+     "gapPct": 75,
+     "p75EmptyPct": 9,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 19
+    },
+    "full": {
+     "h": 439,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 16,
+     "gapPct": 67,
+     "p75EmptyPct": 16,
+     "coverEmptyPct": 1,
+     "rightEmptyPct": 1,
+     "textBoxes": 17
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "half",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "proposed": {
+     "std": "half",
+     "min": "half",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "half",
+    "reasons": [
+     "Ren helt ned til ¼, men højden er da 838 px mod 544 px i ½ (1.5×); min sænkes kun til ½.",
+     "Fleksibel bekræftet: ren fra ½; tom plads i ⅔+ er 16 %."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 16,
+     "emptyCoverAtMax": 1,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoSummary": {
+   "type": "LassoSummary",
+   "drivers": {
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 195,
+     "w": 282,
+     "truncated": 1,
+     "truncatedSample": [
+      "Nordjysk Entreprenør- og Ejendomsselskab ApS er en"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 11,
+     "gapPct": 28,
+     "p75EmptyPct": 11,
+     "coverEmptyPct": 3,
+     "rightEmptyPct": 3,
+     "textBoxes": 7
+    },
+    "third": {
+     "h": 195,
+     "w": 376,
+     "truncated": 1,
+     "truncatedSample": [
+      "Nordjysk Entreprenør- og Ejendomsselskab ApS er en"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 5,
+     "gapPct": 18,
+     "p75EmptyPct": 5,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 7
+    },
+    "half": {
+     "h": 195,
+     "w": 564,
+     "truncated": 1,
+     "truncatedSample": [
+      "Nordjysk Entreprenør- og Ejendomsselskab ApS er en"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 14,
+     "gapPct": 15,
+     "p75EmptyPct": 14,
+     "coverEmptyPct": 2,
+     "rightEmptyPct": 2,
+     "textBoxes": 7
+    },
+    "two-thirds": {
+     "h": 195,
+     "w": 752,
+     "truncated": 1,
+     "truncatedSample": [
+      "Nordjysk Entreprenør- og Ejendomsselskab ApS er en"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 18,
+     "gapPct": 18,
+     "p75EmptyPct": 18,
+     "coverEmptyPct": 14,
+     "rightEmptyPct": 14,
+     "textBoxes": 7
+    },
+    "three-quarters": {
+     "h": 195,
+     "w": 846,
+     "truncated": 1,
+     "truncatedSample": [
+      "Nordjysk Entreprenør- og Ejendomsselskab ApS er en"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 27,
+     "gapPct": 28,
+     "p75EmptyPct": 27,
+     "coverEmptyPct": 24,
+     "rightEmptyPct": 24,
+     "textBoxes": 7
+    },
+    "full": {
+     "h": 195,
+     "w": 1152,
+     "truncated": 1,
+     "truncatedSample": [
+      "Nordjysk Entreprenør- og Ejendomsselskab ApS er en"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 46,
+     "gapPct": 47,
+     "p75EmptyPct": 46,
+     "coverEmptyPct": 44,
+     "rightEmptyPct": 44,
+     "textBoxes": 7
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "full",
+     "min": "half",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "proposed": {
+     "std": "three-quarters",
+     "min": "quarter",
+     "max": "three-quarters",
+     "profile": "fleksibel"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "half",
+    "reasons": [
+     "Også i fuld bredde er der 1 afkortede felter og 0 overlap (afkortning er en del af designet, fx linje-klip af uddrag); min måles derfor relativt til fuld bredde.",
+     "Fleksibel bekræftet: ren fra ¼; tom plads i ⅔+ er 46 %.",
+     "46 % tom plads  i 1/1; max sænkes til ¾ (27 %).",
+     "Målt ren allerede i ¼; nuværende min (½) er strammere end nødvendigt (min ændres kun, hvis B8 vil bruge det).",
+     "contentMinWidth (fleksibel, nuværende drivere) giver ½, målingen giver ¼."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 46,
+     "emptyCoverAtMax": 44,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoTimeline": {
+   "type": "LassoTimeline",
+   "drivers": {
+    "rowsPerItem": 2,
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 1035,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 39,
+     "gapPct": 44,
+     "p75EmptyPct": 39,
+     "coverEmptyPct": 17,
+     "rightEmptyPct": 2,
+     "textBoxes": 58
+    },
+    "third": {
+     "h": 1035,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 54,
+     "gapPct": 56,
+     "p75EmptyPct": 54,
+     "coverEmptyPct": 38,
+     "rightEmptyPct": 13,
+     "textBoxes": 58
+    },
+    "half": {
+     "h": 1018,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 70,
+     "gapPct": 72,
+     "p75EmptyPct": 70,
+     "coverEmptyPct": 35,
+     "rightEmptyPct": 27,
+     "textBoxes": 56
+    },
+    "two-thirds": {
+     "h": 1018,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 77,
+     "gapPct": 79,
+     "p75EmptyPct": 77,
+     "coverEmptyPct": 51,
+     "rightEmptyPct": 45,
+     "textBoxes": 56
+    },
+    "three-quarters": {
+     "h": 1018,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 80,
+     "gapPct": 81,
+     "p75EmptyPct": 80,
+     "coverEmptyPct": 56,
+     "rightEmptyPct": 51,
+     "textBoxes": 56
+    },
+    "full": {
+     "h": 1018,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 85,
+     "gapPct": 86,
+     "p75EmptyPct": 85,
+     "coverEmptyPct": 68,
+     "rightEmptyPct": 64,
+     "textBoxes": 56
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "third",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "third",
+     "min": "quarter",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "two-thirds",
+    "reasons": [
+     "Bred-profil, men ren helt ned til ¼, og der er mindst 77 % tom plads i alle bredder fra ⅔ og op: smal.",
+     "Smal profil: max ≤ ½ (tom plads 85 % i ⅔+).",
+     "Målt ren allerede i ¼; nuværende min (⅓) er strammere end nødvendigt (min ændres kun, hvis B8 vil bruge det).",
+     "contentMinWidth (bred, nuværende drivere) giver ⅔, målingen giver ¼."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 85,
+     "emptyCoverAtMax": 68,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoNews": {
+   "type": "LassoNews",
+   "drivers": {
+    "rowsPerItem": 3,
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 845,
+     "w": 282,
+     "truncated": 5,
+     "truncatedSample": [
+      "Selskabet har i dag offentliggjort en aftale med e",
+      "Selskabet har i dag offentliggjort en aftale med e",
+      "Selskabet har i dag offentliggjort en aftale med e",
+      "Selskabet har i dag offentliggjort en aftale med e"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 7,
+     "gapPct": 34,
+     "p75EmptyPct": 7,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 50
+    },
+    "third": {
+     "h": 755,
+     "w": 376,
+     "truncated": 5,
+     "truncatedSample": [
+      "Selskabet har i dag offentliggjort en aftale med e",
+      "Selskabet har i dag offentliggjort en aftale med e",
+      "Selskabet har i dag offentliggjort en aftale med e",
+      "Selskabet har i dag offentliggjort en aftale med e"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 6,
+     "gapPct": 13,
+     "p75EmptyPct": 6,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 45
+    },
+    "half": {
+     "h": 701,
+     "w": 564,
+     "truncated": 5,
+     "truncatedSample": [
+      "Selskabet har i dag offentliggjort en aftale med e",
+      "Selskabet har i dag offentliggjort en aftale med e",
+      "Selskabet har i dag offentliggjort en aftale med e",
+      "Selskabet har i dag offentliggjort en aftale med e"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 2,
+     "gapPct": 37,
+     "p75EmptyPct": 2,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 42
+    },
+    "two-thirds": {
+     "h": 647,
+     "w": 752,
+     "truncated": 5,
+     "truncatedSample": [
+      "Selskabet har i dag offentliggjort en aftale med e",
+      "Selskabet har i dag offentliggjort en aftale med e",
+      "Selskabet har i dag offentliggjort en aftale med e",
+      "Selskabet har i dag offentliggjort en aftale med e"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 6,
+     "gapPct": 78,
+     "p75EmptyPct": 6,
+     "coverEmptyPct": 1,
+     "rightEmptyPct": 1,
+     "textBoxes": 44
+    },
+    "three-quarters": {
+     "h": 611,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 12,
+     "gapPct": 24,
+     "p75EmptyPct": 12,
+     "coverEmptyPct": 2,
+     "rightEmptyPct": 2,
+     "textBoxes": 32
+    },
+    "full": {
+     "h": 611,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 35,
+     "gapPct": 69,
+     "p75EmptyPct": 35,
+     "coverEmptyPct": 3,
+     "rightEmptyPct": 3,
+     "textBoxes": 32
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "third",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "proposed": {
+     "std": "three-quarters",
+     "min": "three-quarters",
+     "max": "full",
+     "profile": "bred"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "half",
+    "reasons": [
+     "Fleksibel, men afkortning/overlap i ½ (5 afkortet, 0 overlap); ren først fra ¾: bred.",
+     "Nuværende min (⅓) har afkortning/overlap/klipning (5 afkortet, 0 overlap, 0 klippet); ren fra ¾.",
+     "contentMinWidth (fleksibel, nuværende drivere) giver ½, målingen giver ¾."
+    ],
+    "flags": {
+     "issuesAtMin": true,
+     "emptyAtMax": 35,
+     "emptyCoverAtMax": 3,
+     "issuesInHalf": true
+    }
+   }
+  },
+  "LassoBarChart": {
+   "type": "LassoBarChart",
+   "drivers": {
+    "timeAxis": true,
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 336,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 21
+    },
+    "third": {
+     "h": 336,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 21
+    },
+    "half": {
+     "h": 300,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 17
+    },
+    "two-thirds": {
+     "h": 300,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 17
+    },
+    "three-quarters": {
+     "h": 300,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 17
+    },
+    "full": {
+     "h": 300,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 17
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "third",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "half",
+     "min": "quarter",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "three-quarters",
+    "reasons": [
+     "Bred-profil, men ren helt ned til ¼ med 10 år på tidsaksen: målingen bærer ikke min ≥ ⅔; fleksibel.",
+     "Målt ren allerede i ¼; nuværende min (⅓) er strammere end nødvendigt (min ændres kun, hvis B8 vil bruge det).",
+     "contentMinWidth (bred, nuværende drivere) giver ¾, målingen giver ¼."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 0,
+     "emptyCoverAtMax": 0,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoGroupedBarChart": {
+   "type": "LassoGroupedBarChart",
+   "drivers": {
+    "timeAxis": true,
+    "series": 3,
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 324,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 13
+    },
+    "third": {
+     "h": 324,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 13
+    },
+    "half": {
+     "h": 300,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 13
+    },
+    "two-thirds": {
+     "h": 300,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 13
+    },
+    "three-quarters": {
+     "h": 300,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 13
+    },
+    "full": {
+     "h": 300,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 13
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "third",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "half",
+     "min": "quarter",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "three-quarters",
+    "reasons": [
+     "Bred-profil, men ren helt ned til ¼ med 10 år på tidsaksen: målingen bærer ikke min ≥ ⅔; fleksibel.",
+     "Målt ren allerede i ¼; nuværende min (⅓) er strammere end nødvendigt (min ændres kun, hvis B8 vil bruge det).",
+     "contentMinWidth (bred, nuværende drivere) giver ¾, målingen giver ¼."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 0,
+     "emptyCoverAtMax": 0,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoLineChart": {
+   "type": "LassoLineChart",
+   "drivers": {
+    "timeAxis": true,
+    "series": 2,
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 356,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 17
+    },
+    "third": {
+     "h": 356,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 17
+    },
+    "half": {
+     "h": 300,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 13
+    },
+    "two-thirds": {
+     "h": 300,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 13
+    },
+    "three-quarters": {
+     "h": 300,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 13
+    },
+    "full": {
+     "h": 300,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 13
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "third",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "half",
+     "min": "quarter",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "three-quarters",
+    "reasons": [
+     "Bred-profil, men ren helt ned til ¼ med 10 år på tidsaksen: målingen bærer ikke min ≥ ⅔; fleksibel.",
+     "Målt ren allerede i ¼; nuværende min (⅓) er strammere end nødvendigt (min ændres kun, hvis B8 vil bruge det).",
+     "contentMinWidth (bred, nuværende drivere) giver ¾, målingen giver ¼."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 0,
+     "emptyCoverAtMax": 0,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoStackedBarChart": {
+   "type": "LassoStackedBarChart",
+   "drivers": {
+    "timeAxis": true,
+    "series": 4,
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 232,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 37,
+     "gapPct": 37,
+     "p75EmptyPct": 47,
+     "coverEmptyPct": 24,
+     "rightEmptyPct": 0,
+     "textBoxes": 17
+    },
+    "third": {
+     "h": 212,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 47,
+     "gapPct": 47,
+     "p75EmptyPct": 53,
+     "coverEmptyPct": 22,
+     "rightEmptyPct": 0,
+     "textBoxes": 17
+    },
+    "half": {
+     "h": 300,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 18
+    },
+    "two-thirds": {
+     "h": 300,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 18
+    },
+    "three-quarters": {
+     "h": 300,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 18
+    },
+    "full": {
+     "h": 300,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 18
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "third",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "half",
+     "min": "quarter",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "three-quarters",
+    "reasons": [
+     "Bred-profil, men ren helt ned til ¼ med 10 år på tidsaksen: målingen bærer ikke min ≥ ⅔; fleksibel.",
+     "Målt ren allerede i ¼; nuværende min (⅓) er strammere end nødvendigt (min ændres kun, hvis B8 vil bruge det).",
+     "contentMinWidth (bred, nuværende drivere) giver ¾, målingen giver ¼."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 0,
+     "emptyCoverAtMax": 0,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoWaterfallChart": {
+   "type": "LassoWaterfallChart",
+   "drivers": {
+    "series": 8,
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 348,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 45,
+     "gapPct": 45,
+     "p75EmptyPct": 52,
+     "coverEmptyPct": 7,
+     "rightEmptyPct": 0,
+     "textBoxes": 15
+    },
+    "third": {
+     "h": 324,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 48,
+     "gapPct": 48,
+     "p75EmptyPct": 60,
+     "coverEmptyPct": 22,
+     "rightEmptyPct": 0,
+     "textBoxes": 14
+    },
+    "half": {
+     "h": 300,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 19
+    },
+    "two-thirds": {
+     "h": 300,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 19
+    },
+    "three-quarters": {
+     "h": 300,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 19
+    },
+    "full": {
+     "h": 300,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 19
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "third",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "half",
+     "min": "quarter",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "three-quarters",
+    "reasons": [
+     "Bred-profil, men ren helt ned til ¼ med det realistiske indhold: målingen bærer ikke min ≥ ⅔; fleksibel.",
+     "Målt ren allerede i ¼; nuværende min (⅓) er strammere end nødvendigt (min ændres kun, hvis B8 vil bruge det).",
+     "contentMinWidth (bred, nuværende drivere) giver ¾, målingen giver ¼."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 0,
+     "emptyCoverAtMax": 0,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoShareBars": {
+   "type": "LassoShareBars",
+   "drivers": {
+    "series": 4,
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 200,
+     "w": 282,
+     "truncated": 1,
+     "truncatedSample": [
+      "Egenkapital"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 50,
+     "gapPct": 50,
+     "p75EmptyPct": 50,
+     "coverEmptyPct": 14,
+     "rightEmptyPct": 0,
+     "textBoxes": 11
+    },
+    "third": {
+     "h": 200,
+     "w": 376,
+     "truncated": 1,
+     "truncatedSample": [
+      "Egenkapital"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 63,
+     "gapPct": 63,
+     "p75EmptyPct": 63,
+     "coverEmptyPct": 18,
+     "rightEmptyPct": 0,
+     "textBoxes": 11
+    },
+    "half": {
+     "h": 200,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 75,
+     "gapPct": 75,
+     "p75EmptyPct": 75,
+     "coverEmptyPct": 23,
+     "rightEmptyPct": 0,
+     "textBoxes": 10
+    },
+    "two-thirds": {
+     "h": 200,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 81,
+     "gapPct": 81,
+     "p75EmptyPct": 81,
+     "coverEmptyPct": 29,
+     "rightEmptyPct": 0,
+     "textBoxes": 10
+    },
+    "three-quarters": {
+     "h": 200,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 83,
+     "gapPct": 83,
+     "p75EmptyPct": 83,
+     "coverEmptyPct": 31,
+     "rightEmptyPct": 0,
+     "textBoxes": 10
+    },
+    "full": {
+     "h": 200,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 88,
+     "gapPct": 88,
+     "p75EmptyPct": 88,
+     "coverEmptyPct": 35,
+     "rightEmptyPct": 0,
+     "textBoxes": 10
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "quarter",
+     "max": "half",
+     "profile": "smal"
+    },
+    "proposed": {
+     "std": "half",
+     "min": "half",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "quarter",
+    "reasons": [
+     "Smal bekræftet: ren i ½; tom plads i ⅔+ er 88 %.",
+     "Nuværende min (¼) har afkortning/overlap/klipning (1 afkortet, 0 overlap, 0 klippet); ren fra ½.",
+     "contentMinWidth (smal, nuværende drivere) giver ¼, målingen giver ½."
+    ],
+    "flags": {
+     "issuesAtMin": true,
+     "emptyAtMax": 75,
+     "emptyCoverAtMax": 23,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoKeyFigureGauge": {
+   "type": "LassoKeyFigureGauge",
+   "drivers": {
+    "series": 3,
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 185,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 10,
+     "gapPct": 21,
+     "p75EmptyPct": 10,
+     "coverEmptyPct": 7,
+     "rightEmptyPct": 0,
+     "textBoxes": 8
+    },
+    "third": {
+     "h": 185,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 32,
+     "gapPct": 41,
+     "p75EmptyPct": 32,
+     "coverEmptyPct": 31,
+     "rightEmptyPct": 0,
+     "textBoxes": 8
+    },
+    "half": {
+     "h": 185,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 54,
+     "gapPct": 56,
+     "p75EmptyPct": 54,
+     "coverEmptyPct": 44,
+     "rightEmptyPct": 0,
+     "textBoxes": 8
+    },
+    "two-thirds": {
+     "h": 185,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 65,
+     "gapPct": 66,
+     "p75EmptyPct": 65,
+     "coverEmptyPct": 44,
+     "rightEmptyPct": 0,
+     "textBoxes": 8
+    },
+    "three-quarters": {
+     "h": 185,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 69,
+     "gapPct": 70,
+     "p75EmptyPct": 69,
+     "coverEmptyPct": 44,
+     "rightEmptyPct": 0,
+     "textBoxes": 8
+    },
+    "full": {
+     "h": 185,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 72,
+     "gapPct": 78,
+     "p75EmptyPct": 72,
+     "coverEmptyPct": 44,
+     "rightEmptyPct": 0,
+     "textBoxes": 8
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "third",
+     "min": "quarter",
+     "max": "half",
+     "profile": "smal"
+    },
+    "proposed": {
+     "std": "third",
+     "min": "quarter",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "quarter",
+    "reasons": [
+     "Smal bekræftet: ren i ½; tom plads i ⅔+ er 72 %."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 54,
+     "emptyCoverAtMax": 44,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoMultiYearTable": {
+   "type": "LassoMultiYearTable",
+   "drivers": {
+    "timeAxis": true,
+    "series": 10,
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 320,
+     "w": 282,
+     "truncated": 2,
+     "truncatedSample": [
+      "Bruttofortjeneste",
+      "Årets resultat"
+     ],
+     "hscroll": 1,
+     "hscrollNeed": 404,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 28
+    },
+    "third": {
+     "h": 320,
+     "w": 376,
+     "truncated": 2,
+     "truncatedSample": [
+      "Bruttofortjeneste",
+      "Årets resultat"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 36
+    },
+    "half": {
+     "h": 296,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 1,
+     "hscrollNeed": 720,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 27,
+     "gapPct": 27,
+     "p75EmptyPct": 69,
+     "coverEmptyPct": 62,
+     "rightEmptyPct": 4,
+     "textBoxes": 31
+    },
+    "two-thirds": {
+     "h": 296,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 70,
+     "gapPct": 90,
+     "p75EmptyPct": 70,
+     "coverEmptyPct": 62,
+     "rightEmptyPct": 0,
+     "textBoxes": 44
+    },
+    "three-quarters": {
+     "h": 296,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 66,
+     "gapPct": 87,
+     "p75EmptyPct": 66,
+     "coverEmptyPct": 61,
+     "rightEmptyPct": 0,
+     "textBoxes": 44
+    },
+    "full": {
+     "h": 296,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 75,
+     "gapPct": 90,
+     "p75EmptyPct": 75,
+     "coverEmptyPct": 72,
+     "rightEmptyPct": 0,
+     "textBoxes": 44
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "half",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "two-thirds",
+     "min": "two-thirds",
+     "max": "two-thirds",
+     "profile": "bred"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "three-quarters",
+    "reasons": [
+     "Bred bekræftet: afkortning/overlap i ½ (0 afkortet, 0 overlap, vandret rulning); ren først fra ⅔.",
+     "75 % tom plads  i 1/1; max sænkes til ½ (27 %).",
+     "Nuværende min (½) har afkortning/overlap/klipning (0 afkortet, 0 overlap, 0 klippet); ren fra ⅔.",
+     "contentMinWidth (bred, nuværende drivere) giver ¾, målingen giver ⅔."
+    ],
+    "flags": {
+     "issuesAtMin": true,
+     "emptyAtMax": 75,
+     "emptyCoverAtMax": 72,
+     "issuesInHalf": true
+    }
+   }
+  },
+  "LassoIncomeStatement": {
+   "type": "LassoIncomeStatement",
+   "drivers": {
+    "timeAxis": true,
+    "series": 5,
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 740,
+     "w": 282,
+     "truncated": 13,
+     "truncatedSample": [
+      "Omsætning",
+      "Vareforbrug og eksterne omkostninger",
+      "Bruttofortjeneste",
+      "Personaleomkostninger"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 51,
+     "gapPct": 77,
+     "p75EmptyPct": 51,
+     "coverEmptyPct": 24,
+     "rightEmptyPct": 0,
+     "textBoxes": 105
+    },
+    "third": {
+     "h": 631,
+     "w": 376,
+     "truncated": 3,
+     "truncatedSample": [
+      "Bruttofortjeneste",
+      "Personaleomkostninger",
+      "Andre driftsomkostninger"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 57,
+     "gapPct": 66,
+     "p75EmptyPct": 57,
+     "coverEmptyPct": 28,
+     "rightEmptyPct": 0,
+     "textBoxes": 70
+    },
+    "half": {
+     "h": 604,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 38,
+     "gapPct": 38,
+     "p75EmptyPct": 48,
+     "coverEmptyPct": 25,
+     "rightEmptyPct": 0,
+     "textBoxes": 57
+    },
+    "two-thirds": {
+     "h": 604,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 48,
+     "gapPct": 48,
+     "p75EmptyPct": 61,
+     "coverEmptyPct": 44,
+     "rightEmptyPct": 0,
+     "textBoxes": 57
+    },
+    "three-quarters": {
+     "h": 604,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 54,
+     "gapPct": 54,
+     "p75EmptyPct": 65,
+     "coverEmptyPct": 50,
+     "rightEmptyPct": 0,
+     "textBoxes": 57
+    },
+    "full": {
+     "h": 604,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 66,
+     "gapPct": 66,
+     "p75EmptyPct": 75,
+     "coverEmptyPct": 63,
+     "rightEmptyPct": 0,
+     "textBoxes": 57
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "half",
+     "max": "three-quarters",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "half",
+     "min": "half",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "three-quarters",
+    "reasons": [
+     "Bred-profil, men ren helt ned til ½, og der er mindst 48 % tom plads i alle bredder fra ⅔ og op: smal.",
+     "Smal profil: max ≤ ½ (tom plads 66 % i ⅔+).",
+     "contentMinWidth (bred, nuværende drivere) giver ¾, målingen giver ½."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 54,
+     "emptyCoverAtMax": 50,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoBalanceSheet": {
+   "type": "LassoBalanceSheet",
+   "drivers": {
+    "timeAxis": true,
+    "series": 5,
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 889,
+     "w": 282,
+     "truncated": 10,
+     "truncatedSample": [
+      "Immaterielle anlægsaktiver",
+      "Materielle anlægsaktiver",
+      "Finansielle anlægsaktiver",
+      "Anlægsaktiver i alt"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 63,
+     "gapPct": 63,
+     "p75EmptyPct": 64,
+     "coverEmptyPct": 29,
+     "rightEmptyPct": 0,
+     "textBoxes": 87
+    },
+    "third": {
+     "h": 861,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 38,
+     "gapPct": 38,
+     "p75EmptyPct": 44,
+     "coverEmptyPct": 20,
+     "rightEmptyPct": 0,
+     "textBoxes": 62
+    },
+    "half": {
+     "h": 861,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 55,
+     "gapPct": 55,
+     "p75EmptyPct": 56,
+     "coverEmptyPct": 41,
+     "rightEmptyPct": 0,
+     "textBoxes": 60
+    },
+    "two-thirds": {
+     "h": 861,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 63,
+     "gapPct": 63,
+     "p75EmptyPct": 67,
+     "coverEmptyPct": 56,
+     "rightEmptyPct": 0,
+     "textBoxes": 60
+    },
+    "three-quarters": {
+     "h": 861,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 67,
+     "gapPct": 67,
+     "p75EmptyPct": 71,
+     "coverEmptyPct": 61,
+     "rightEmptyPct": 0,
+     "textBoxes": 60
+    },
+    "full": {
+     "h": 861,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 76,
+     "gapPct": 76,
+     "p75EmptyPct": 79,
+     "coverEmptyPct": 71,
+     "rightEmptyPct": 0,
+     "textBoxes": 60
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "half",
+     "max": "three-quarters",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "third",
+     "min": "third",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "three-quarters",
+    "reasons": [
+     "Bred-profil, men ren helt ned til ⅓, og der er mindst 63 % tom plads i alle bredder fra ⅔ og op: smal.",
+     "Smal profil: max ≤ ½ (tom plads 76 % i ⅔+).",
+     "Målt ren allerede i ⅓; nuværende min (½) er strammere end nødvendigt (min ændres kun, hvis B8 vil bruge det).",
+     "contentMinWidth (bred, nuværende drivere) giver ¾, målingen giver ⅓."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 67,
+     "emptyCoverAtMax": 61,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoCashFlow": {
+   "type": "LassoCashFlow",
+   "drivers": {
+    "timeAxis": true,
+    "series": 5,
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 618,
+     "w": 282,
+     "truncated": 2,
+     "truncatedSample": [
+      "Af- og nedskrivninger",
+      "Kapitalforhøjelse"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 58,
+     "gapPct": 67,
+     "p75EmptyPct": 58,
+     "coverEmptyPct": 23,
+     "rightEmptyPct": 0,
+     "textBoxes": 59
+    },
+    "third": {
+     "h": 564,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 41,
+     "gapPct": 41,
+     "p75EmptyPct": 41,
+     "coverEmptyPct": 25,
+     "rightEmptyPct": 0,
+     "textBoxes": 42
+    },
+    "half": {
+     "h": 564,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 50,
+     "gapPct": 50,
+     "p75EmptyPct": 53,
+     "coverEmptyPct": 45,
+     "rightEmptyPct": 0,
+     "textBoxes": 40
+    },
+    "two-thirds": {
+     "h": 564,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 60,
+     "gapPct": 60,
+     "p75EmptyPct": 65,
+     "coverEmptyPct": 59,
+     "rightEmptyPct": 0,
+     "textBoxes": 40
+    },
+    "three-quarters": {
+     "h": 564,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 64,
+     "gapPct": 64,
+     "p75EmptyPct": 69,
+     "coverEmptyPct": 63,
+     "rightEmptyPct": 0,
+     "textBoxes": 40
+    },
+    "full": {
+     "h": 564,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 74,
+     "gapPct": 74,
+     "p75EmptyPct": 77,
+     "coverEmptyPct": 73,
+     "rightEmptyPct": 0,
+     "textBoxes": 40
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "half",
+     "max": "three-quarters",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "third",
+     "min": "third",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "three-quarters",
+    "reasons": [
+     "Bred-profil, men ren helt ned til ⅓, og der er mindst 60 % tom plads i alle bredder fra ⅔ og op: smal.",
+     "Smal profil: max ≤ ½ (tom plads 74 % i ⅔+).",
+     "Målt ren allerede i ⅓; nuværende min (½) er strammere end nødvendigt (min ændres kun, hvis B8 vil bruge det).",
+     "contentMinWidth (bred, nuværende drivere) giver ¾, målingen giver ⅓."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 64,
+     "emptyCoverAtMax": 63,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoFinancialStatements": {
+   "type": "LassoFinancialStatements",
+   "drivers": {
+    "timeAxis": true,
+    "series": 5,
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 1757,
+     "w": 282,
+     "truncated": 45,
+     "truncatedSample": [
+      "Omsætning",
+      "Vareforbrug og eksterne omkostninger",
+      "Bruttofortjeneste",
+      "Personaleomkostninger"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 1,
+     "overlaps": 1,
+     "overlapSample": [
+      "Pengestrøm fra finansier | Årets ændring i likvider"
+     ],
+     "emptyPct": 60,
+     "gapPct": 60,
+     "p75EmptyPct": 80,
+     "coverEmptyPct": 24,
+     "rightEmptyPct": 0,
+     "textBoxes": 226
+    },
+    "third": {
+     "h": 1648,
+     "w": 376,
+     "truncated": 35,
+     "truncatedSample": [
+      "Bruttofortjeneste",
+      "Personaleomkostninger",
+      "Andre driftsomkostninger",
+      "T. KR., 31.12"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 1,
+     "overlaps": 1,
+     "overlapSample": [
+      "Pengestrøm fra finansier | Årets ændring i likvider"
+     ],
+     "emptyPct": 57,
+     "gapPct": 57,
+     "p75EmptyPct": 76,
+     "coverEmptyPct": 28,
+     "rightEmptyPct": 0,
+     "textBoxes": 216
+    },
+    "half": {
+     "h": 1547,
+     "w": 564,
+     "truncated": 22,
+     "truncatedSample": [
+      "Immaterielle anlægsaktiver",
+      "Materielle anlægsaktiver",
+      "Finansielle anlægsaktiver",
+      "Anlægsaktiver i alt"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 1,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 52,
+     "gapPct": 52,
+     "p75EmptyPct": 73,
+     "coverEmptyPct": 25,
+     "rightEmptyPct": 0,
+     "textBoxes": 223
+    },
+    "two-thirds": {
+     "h": 1530,
+     "w": 752,
+     "truncated": 1,
+     "truncatedSample": [
+      "Revideret af Eksempel Revision Midt ApS, udgivet 1"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 1,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 52,
+     "gapPct": 52,
+     "p75EmptyPct": 64,
+     "coverEmptyPct": 44,
+     "rightEmptyPct": 0,
+     "textBoxes": 174
+    },
+    "three-quarters": {
+     "h": 1519,
+     "w": 846,
+     "truncated": 1,
+     "truncatedSample": [
+      "Revideret af Eksempel Revision Midt ApS, udgivet 1"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 1,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 51,
+     "gapPct": 51,
+     "p75EmptyPct": 68,
+     "coverEmptyPct": 50,
+     "rightEmptyPct": 0,
+     "textBoxes": 162
+    },
+    "full": {
+     "h": 1519,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 1,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 51,
+     "gapPct": 51,
+     "p75EmptyPct": 76,
+     "coverEmptyPct": 50,
+     "rightEmptyPct": 0,
+     "textBoxes": 160
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "full",
+     "min": "full",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "full",
+     "min": "full",
+     "max": "full",
+     "profile": "bred"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "full",
+    "reasons": [
+     "Fast bredde (min = max = 1/1); ingen forslag."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 51,
+     "emptyCoverAtMax": 50,
+     "issuesInHalf": true
+    }
+   }
+  },
+  "LassoPersonList": {
+   "type": "LassoPersonList",
+   "drivers": {
+    "rowsPerItem": 2,
+    "longestLabel": 34
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 620,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 57,
+     "gapPct": 62,
+     "p75EmptyPct": 57,
+     "coverEmptyPct": 9,
+     "rightEmptyPct": 0,
+     "textBoxes": 34
+    },
+    "third": {
+     "h": 505,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 51,
+     "gapPct": 65,
+     "p75EmptyPct": 51,
+     "coverEmptyPct": 34,
+     "rightEmptyPct": 0,
+     "textBoxes": 28
+    },
+    "half": {
+     "h": 409,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 58,
+     "gapPct": 74,
+     "p75EmptyPct": 58,
+     "coverEmptyPct": 45,
+     "rightEmptyPct": 0,
+     "textBoxes": 24
+    },
+    "two-thirds": {
+     "h": 409,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 68,
+     "gapPct": 80,
+     "p75EmptyPct": 68,
+     "coverEmptyPct": 59,
+     "rightEmptyPct": 0,
+     "textBoxes": 24
+    },
+    "three-quarters": {
+     "h": 409,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 72,
+     "gapPct": 83,
+     "p75EmptyPct": 72,
+     "coverEmptyPct": 63,
+     "rightEmptyPct": 0,
+     "textBoxes": 24
+    },
+    "full": {
+     "h": 409,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 79,
+     "gapPct": 87,
+     "p75EmptyPct": 79,
+     "coverEmptyPct": 73,
+     "rightEmptyPct": 0,
+     "textBoxes": 24
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "third",
+     "min": "quarter",
+     "max": "half",
+     "profile": "smal"
+    },
+    "proposed": {
+     "std": "third",
+     "min": "quarter",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "quarter",
+    "reasons": [
+     "Smal bekræftet: ren i ½; tom plads i ⅔+ er 79 %."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 58,
+     "emptyCoverAtMax": 45,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoOwnerList": {
+   "type": "LassoOwnerList",
+   "drivers": {
+    "rowsPerItem": 2,
+    "longestLabel": 45
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 565,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 48,
+     "gapPct": 63,
+     "p75EmptyPct": 48,
+     "coverEmptyPct": 10,
+     "rightEmptyPct": 0,
+     "textBoxes": 23
+    },
+    "third": {
+     "h": 525,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 37,
+     "gapPct": 80,
+     "p75EmptyPct": 37,
+     "coverEmptyPct": 8,
+     "rightEmptyPct": 0,
+     "textBoxes": 21
+    },
+    "half": {
+     "h": 421,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 47,
+     "gapPct": 58,
+     "p75EmptyPct": 47,
+     "coverEmptyPct": 29,
+     "rightEmptyPct": 0,
+     "textBoxes": 18
+    },
+    "two-thirds": {
+     "h": 401,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 51,
+     "gapPct": 65,
+     "p75EmptyPct": 51,
+     "coverEmptyPct": 43,
+     "rightEmptyPct": 0,
+     "textBoxes": 16
+    },
+    "three-quarters": {
+     "h": 401,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 56,
+     "gapPct": 69,
+     "p75EmptyPct": 56,
+     "coverEmptyPct": 49,
+     "rightEmptyPct": 0,
+     "textBoxes": 16
+    },
+    "full": {
+     "h": 401,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 68,
+     "gapPct": 77,
+     "p75EmptyPct": 68,
+     "coverEmptyPct": 62,
+     "rightEmptyPct": 0,
+     "textBoxes": 16
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "third",
+     "min": "quarter",
+     "max": "half",
+     "profile": "smal"
+    },
+    "proposed": {
+     "std": "third",
+     "min": "quarter",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "quarter",
+    "reasons": [
+     "Smal bekræftet: ren i ½; tom plads i ⅔+ er 68 %."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 47,
+     "emptyCoverAtMax": 29,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoBeneficialOwners": {
+   "type": "LassoBeneficialOwners",
+   "drivers": {
+    "rowsPerItem": 2,
+    "longestLabel": 30
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 631,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 58,
+     "gapPct": 61,
+     "p75EmptyPct": 58,
+     "coverEmptyPct": 26,
+     "rightEmptyPct": 0,
+     "textBoxes": 32
+    },
+    "third": {
+     "h": 463,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 44,
+     "gapPct": 52,
+     "p75EmptyPct": 44,
+     "coverEmptyPct": 9,
+     "rightEmptyPct": 0,
+     "textBoxes": 23
+    },
+    "half": {
+     "h": 392,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 59,
+     "gapPct": 68,
+     "p75EmptyPct": 59,
+     "coverEmptyPct": 4,
+     "rightEmptyPct": 0,
+     "textBoxes": 19
+    },
+    "two-thirds": {
+     "h": 341,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 44,
+     "gapPct": 59,
+     "p75EmptyPct": 44,
+     "coverEmptyPct": 36,
+     "rightEmptyPct": 0,
+     "textBoxes": 16
+    },
+    "three-quarters": {
+     "h": 341,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 50,
+     "gapPct": 63,
+     "p75EmptyPct": 50,
+     "coverEmptyPct": 43,
+     "rightEmptyPct": 0,
+     "textBoxes": 16
+    },
+    "full": {
+     "h": 341,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 64,
+     "gapPct": 73,
+     "p75EmptyPct": 64,
+     "coverEmptyPct": 58,
+     "rightEmptyPct": 0,
+     "textBoxes": 16
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "third",
+     "min": "quarter",
+     "max": "half",
+     "profile": "smal"
+    },
+    "proposed": {
+     "std": "third",
+     "min": "quarter",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "quarter",
+    "reasons": [
+     "Smal bekræftet: ren i ½; tom plads i ⅔+ er 64 %."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 59,
+     "emptyCoverAtMax": 4,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoOwnershipDiagram": {
+   "type": "LassoOwnershipDiagram",
+   "drivers": {
+    "longestLabel": 45
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 359,
+     "w": 282,
+     "truncated": 5,
+     "truncatedSample": [
+      "Vestjysk Maskin- og Anlægsservice Holding ApS",
+      "Sønderjysk Fødevare- og Logistikgruppe A/S",
+      "Aarhus Erhvervsbyg og Totalentreprise A/S",
+      "Danske Landbrugs- og Havebrugsmaskiner A/S"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 1,
+     "overlapSample": [
+      "Ejerstruktur | Underniveauer er eksempe"
+     ],
+     "emptyPct": 20,
+     "gapPct": 20,
+     "p75EmptyPct": 26,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 21
+    },
+    "third": {
+     "h": 359,
+     "w": 376,
+     "truncated": 5,
+     "truncatedSample": [
+      "Vestjysk Maskin- og Anlægsservice Holding ApS",
+      "Sønderjysk Fødevare- og Logistikgruppe A/S",
+      "Aarhus Erhvervsbyg og Totalentreprise A/S",
+      "Danske Landbrugs- og Havebrugsmaskiner A/S"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 20,
+     "gapPct": 20,
+     "p75EmptyPct": 20,
+     "coverEmptyPct": 11,
+     "rightEmptyPct": 0,
+     "textBoxes": 21
+    },
+    "half": {
+     "h": 569,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 3,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 31
+    },
+    "two-thirds": {
+     "h": 569,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 31
+    },
+    "three-quarters": {
+     "h": 553,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 30
+    },
+    "full": {
+     "h": 740,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 48
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "two-thirds",
+     "min": "half",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "two-thirds",
+     "min": "two-thirds",
+     "max": "full",
+     "profile": "bred"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "three-quarters",
+    "reasons": [
+     "Bred bekræftet: afkortning/overlap i ½ (0 afkortet, 0 overlap); ren først fra ⅔.",
+     "Nuværende min (½) har afkortning/overlap/klipning (0 afkortet, 0 overlap, 3 klippet); ren fra ⅔.",
+     "contentMinWidth (bred, nuværende drivere) giver ¾, målingen giver ⅔."
+    ],
+    "flags": {
+     "issuesAtMin": true,
+     "emptyAtMax": 0,
+     "emptyCoverAtMax": 0,
+     "issuesInHalf": true
+    }
+   }
+  },
+  "LassoRelations": {
+   "type": "LassoRelations",
+   "drivers": {
+    "rowsPerItem": 2,
+    "longestLabel": 45
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 428,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 18,
+     "gapPct": 66,
+     "p75EmptyPct": 18,
+     "coverEmptyPct": 13,
+     "rightEmptyPct": 13,
+     "textBoxes": 17
+    },
+    "third": {
+     "h": 370,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 37,
+     "gapPct": 40,
+     "p75EmptyPct": 37,
+     "coverEmptyPct": 12,
+     "rightEmptyPct": 13,
+     "textBoxes": 15
+    },
+    "half": {
+     "h": 370,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 58,
+     "gapPct": 60,
+     "p75EmptyPct": 58,
+     "coverEmptyPct": 42,
+     "rightEmptyPct": 42,
+     "textBoxes": 15
+    },
+    "two-thirds": {
+     "h": 370,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 69,
+     "gapPct": 70,
+     "p75EmptyPct": 69,
+     "coverEmptyPct": 56,
+     "rightEmptyPct": 56,
+     "textBoxes": 15
+    },
+    "three-quarters": {
+     "h": 370,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 72,
+     "gapPct": 73,
+     "p75EmptyPct": 72,
+     "coverEmptyPct": 61,
+     "rightEmptyPct": 61,
+     "textBoxes": 15
+    },
+    "full": {
+     "h": 370,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 80,
+     "gapPct": 80,
+     "p75EmptyPct": 80,
+     "coverEmptyPct": 71,
+     "rightEmptyPct": 71,
+     "textBoxes": 15
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "quarter",
+     "min": "quarter",
+     "max": "half",
+     "profile": "smal"
+    },
+    "proposed": {
+     "std": "quarter",
+     "min": "quarter",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "quarter",
+    "reasons": [
+     "Smal bekræftet: ren i ½; tom plads i ⅔+ er 80 %."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 58,
+     "emptyCoverAtMax": 42,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoRiskObservations": {
+   "type": "LassoRiskObservations",
+   "drivers": {
+    "rowsPerItem": 2,
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 2319,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 50,
+     "gapPct": 50,
+     "p75EmptyPct": 65,
+     "coverEmptyPct": 13,
+     "rightEmptyPct": 0,
+     "textBoxes": 116
+    },
+    "third": {
+     "h": 1007,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 38,
+     "gapPct": 51,
+     "p75EmptyPct": 38,
+     "coverEmptyPct": 11,
+     "rightEmptyPct": 0,
+     "textBoxes": 46
+    },
+    "half": {
+     "h": 787,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 49,
+     "gapPct": 55,
+     "p75EmptyPct": 49,
+     "coverEmptyPct": 8,
+     "rightEmptyPct": 0,
+     "textBoxes": 34
+    },
+    "two-thirds": {
+     "h": 714,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 51,
+     "gapPct": 73,
+     "p75EmptyPct": 51,
+     "coverEmptyPct": 9,
+     "rightEmptyPct": 0,
+     "textBoxes": 30
+    },
+    "three-quarters": {
+     "h": 674,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 56,
+     "gapPct": 70,
+     "p75EmptyPct": 56,
+     "coverEmptyPct": 11,
+     "rightEmptyPct": 0,
+     "textBoxes": 28
+    },
+    "full": {
+     "h": 674,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 68,
+     "gapPct": 78,
+     "p75EmptyPct": 68,
+     "coverEmptyPct": 34,
+     "rightEmptyPct": 0,
+     "textBoxes": 28
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "third",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "proposed": {
+     "std": "third",
+     "min": "third",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "third",
+    "reasons": [
+     "Ren helt ned til ¼, men højden er da 2319 px mod 1007 px i ⅓ (2.3×); min sænkes kun til ⅓.",
+     "Fleksibel, men mindst 51 % tom plads i alle bredder fra ⅔ og op, og ren i ½: smal.",
+     "Smal profil: max ≤ ½ (tom plads 68 % i ⅔+)."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 68,
+     "emptyCoverAtMax": 34,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoScoreGauge": {
+   "type": "LassoScoreGauge",
+   "drivers": {
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 276,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 39,
+     "gapPct": 39,
+     "p75EmptyPct": 51,
+     "coverEmptyPct": 17,
+     "rightEmptyPct": 7,
+     "textBoxes": 11
+    },
+    "third": {
+     "h": 276,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 55,
+     "gapPct": 55,
+     "p75EmptyPct": 63,
+     "coverEmptyPct": 13,
+     "rightEmptyPct": 6,
+     "textBoxes": 11
+    },
+    "half": {
+     "h": 208,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 54,
+     "gapPct": 54,
+     "p75EmptyPct": 73,
+     "coverEmptyPct": 20,
+     "rightEmptyPct": 9,
+     "textBoxes": 12
+    },
+    "two-thirds": {
+     "h": 208,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 58,
+     "gapPct": 58,
+     "p75EmptyPct": 80,
+     "coverEmptyPct": 40,
+     "rightEmptyPct": 32,
+     "textBoxes": 12
+    },
+    "three-quarters": {
+     "h": 208,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 63,
+     "gapPct": 63,
+     "p75EmptyPct": 82,
+     "coverEmptyPct": 46,
+     "rightEmptyPct": 39,
+     "textBoxes": 12
+    },
+    "full": {
+     "h": 208,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 73,
+     "gapPct": 73,
+     "p75EmptyPct": 87,
+     "coverEmptyPct": 61,
+     "rightEmptyPct": 56,
+     "textBoxes": 12
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "quarter",
+     "min": "quarter",
+     "max": "half",
+     "profile": "smal"
+    },
+    "proposed": {
+     "std": "quarter",
+     "min": "quarter",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "quarter",
+    "reasons": [
+     "Smal bekræftet: ren i ½; tom plads i ⅔+ er 73 %."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 54,
+     "emptyCoverAtMax": 20,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoScoreHistory": {
+   "type": "LassoScoreHistory",
+   "drivers": {
+    "timeAxis": true,
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 592,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 2,
+     "overlaps": 1,
+     "overlapSample": [
+      "af 100 | −2, mindre risiko"
+     ],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 35
+    },
+    "third": {
+     "h": 574,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 36
+    },
+    "half": {
+     "h": 417,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 26
+    },
+    "two-thirds": {
+     "h": 417,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 26
+    },
+    "three-quarters": {
+     "h": 417,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 26
+    },
+    "full": {
+     "h": 417,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 26
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "third",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "half",
+     "min": "third",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "three-quarters",
+    "reasons": [
+     "Bred-profil, men ren helt ned til ⅓ med 10 år på tidsaksen: målingen bærer ikke min ≥ ⅔; fleksibel.",
+     "contentMinWidth (bred, nuværende drivere) giver ¾, målingen giver ⅓."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 0,
+     "emptyCoverAtMax": 0,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoCreditRating": {
+   "type": "LassoCreditRating",
+   "drivers": {
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 429,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 34,
+     "gapPct": 48,
+     "p75EmptyPct": 34,
+     "coverEmptyPct": 5,
+     "rightEmptyPct": 0,
+     "textBoxes": 25
+    },
+    "third": {
+     "h": 412,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 52,
+     "gapPct": 54,
+     "p75EmptyPct": 52,
+     "coverEmptyPct": 3,
+     "rightEmptyPct": 0,
+     "textBoxes": 24
+    },
+    "half": {
+     "h": 395,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 68,
+     "gapPct": 69,
+     "p75EmptyPct": 68,
+     "coverEmptyPct": 1,
+     "rightEmptyPct": 0,
+     "textBoxes": 23
+    },
+    "two-thirds": {
+     "h": 395,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 80,
+     "gapPct": 80,
+     "p75EmptyPct": 80,
+     "coverEmptyPct": 3,
+     "rightEmptyPct": 0,
+     "textBoxes": 23
+    },
+    "three-quarters": {
+     "h": 378,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 79,
+     "gapPct": 79,
+     "p75EmptyPct": 79,
+     "coverEmptyPct": 6,
+     "rightEmptyPct": 0,
+     "textBoxes": 22
+    },
+    "full": {
+     "h": 378,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 84,
+     "gapPct": 85,
+     "p75EmptyPct": 84,
+     "coverEmptyPct": 31,
+     "rightEmptyPct": 0,
+     "textBoxes": 22
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "third",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "proposed": {
+     "std": "third",
+     "min": "quarter",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "third",
+    "reasons": [
+     "Fleksibel, men mindst 79 % tom plads i alle bredder fra ⅔ og op, og ren i ½: smal.",
+     "Smal profil: max ≤ ½ (tom plads 84 % i ⅔+).",
+     "Målt ren allerede i ¼; nuværende min (⅓) er strammere end nødvendigt (min ændres kun, hvis B8 vil bruge det).",
+     "contentMinWidth (fleksibel, nuværende drivere) giver ⅓, målingen giver ¼."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 84,
+     "emptyCoverAtMax": 31,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoAuditorIndependence": {
+   "type": "LassoAuditorIndependence",
+   "drivers": {
+    "series": 4,
+    "longestLabel": 44
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 748,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 1,
+     "hscrollNeed": 637,
+     "clipped": 0,
+     "overlaps": 1,
+     "overlapSample": [
+      "Uafhængighedstjek, Nordj | Eksportér PDF"
+     ],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 1,
+     "coverEmptyPct": 1,
+     "rightEmptyPct": 0,
+     "textBoxes": 39
+    },
+    "third": {
+     "h": 630,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 1,
+     "hscrollNeed": 637,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 1,
+     "coverEmptyPct": 1,
+     "rightEmptyPct": 0,
+     "textBoxes": 46
+    },
+    "half": {
+     "h": 564,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 50
+    },
+    "two-thirds": {
+     "h": 441,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 45
+    },
+    "three-quarters": {
+     "h": 423,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 43
+    },
+    "full": {
+     "h": 317,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 35
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "full",
+     "min": "half",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "full",
+     "min": "half",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "three-quarters",
+    "reasons": [
+     "Bred-profil, men ren helt ned til ½ med det realistiske indhold: målingen bærer ikke min ≥ ⅔; fleksibel.",
+     "contentMinWidth (bred, nuværende drivere) giver ¾, målingen giver ½."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 0,
+     "emptyCoverAtMax": 0,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoProductionUnits": {
+   "type": "LassoProductionUnits",
+   "drivers": {
+    "series": 5,
+    "longestLabel": 54
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 1538,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 7,
+     "overlaps": 3,
+     "overlapSample": [
+      "Produktionsenheder | 5 aktive, 1 ophørt",
+      "Enhed, adresse og kontak | Branche",
+      "Enhed, adresse og kontak | Branche"
+     ],
+     "emptyPct": 54,
+     "gapPct": 54,
+     "p75EmptyPct": 60,
+     "coverEmptyPct": 27,
+     "rightEmptyPct": 0,
+     "textBoxes": 43
+    },
+    "third": {
+     "h": 1538,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 2,
+     "overlapSample": [
+      "Enhed, adresse og kontak | Branche",
+      "Enhed, adresse og kontak | Branche"
+     ],
+     "emptyPct": 55,
+     "gapPct": 55,
+     "p75EmptyPct": 70,
+     "coverEmptyPct": 29,
+     "rightEmptyPct": 0,
+     "textBoxes": 43
+    },
+    "half": {
+     "h": 1538,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 2,
+     "overlaps": 2,
+     "overlapSample": [
+      "Enhed, adresse og kontak | Branche",
+      "Enhed, adresse og kontak | Branche"
+     ],
+     "emptyPct": 68,
+     "gapPct": 68,
+     "p75EmptyPct": 79,
+     "coverEmptyPct": 51,
+     "rightEmptyPct": 0,
+     "textBoxes": 52
+    },
+    "two-thirds": {
+     "h": 831,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 2,
+     "overlapSample": [
+      "Midtjysk Tømrer- og Sned | Opførelse af bygninger",
+      "Kristensen & Sønner Vogn | Oplagring"
+     ],
+     "emptyPct": 69,
+     "gapPct": 69,
+     "p75EmptyPct": 79,
+     "coverEmptyPct": 46,
+     "rightEmptyPct": 0,
+     "textBoxes": 89
+    },
+    "three-quarters": {
+     "h": 618,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 63,
+     "gapPct": 63,
+     "p75EmptyPct": 78,
+     "coverEmptyPct": 41,
+     "rightEmptyPct": 0,
+     "textBoxes": 75
+    },
+    "full": {
+     "h": 538,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 56,
+     "gapPct": 56,
+     "p75EmptyPct": 67,
+     "coverEmptyPct": 42,
+     "rightEmptyPct": 0,
+     "textBoxes": 63
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "full",
+     "min": "two-thirds",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "full",
+     "min": "three-quarters",
+     "max": "full",
+     "profile": "bred"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "three-quarters",
+    "reasons": [
+     "Bred bekræftet: afkortning/overlap i ½ (0 afkortet, 2 overlap); ren først fra ¾.",
+     "56 % tom plads i 1/1, men ingen smallere bredde er under 40 %; max beholdes.",
+     "Nuværende min (⅔) har afkortning/overlap/klipning (0 afkortet, 2 overlap, 0 klippet); ren fra ¾."
+    ],
+    "flags": {
+     "issuesAtMin": true,
+     "emptyAtMax": 56,
+     "emptyCoverAtMax": 42,
+     "issuesInHalf": true
+    }
+   }
+  },
+  "LassoProperties": {
+   "type": "LassoProperties",
+   "drivers": {
+    "rowsPerItem": 2,
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 2354,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 3,
+     "hscrollNeed": 480,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 1,
+     "coverEmptyPct": 1,
+     "rightEmptyPct": 0,
+     "textBoxes": 129
+    },
+    "third": {
+     "h": 2285,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 3,
+     "hscrollNeed": 480,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 1,
+     "coverEmptyPct": 1,
+     "rightEmptyPct": 0,
+     "textBoxes": 137
+    },
+    "half": {
+     "h": 2206,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 143
+    },
+    "two-thirds": {
+     "h": 2206,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 152
+    },
+    "three-quarters": {
+     "h": 2206,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 152
+    },
+    "full": {
+     "h": 1287,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 2,
+     "gapPct": 14,
+     "p75EmptyPct": 2,
+     "coverEmptyPct": 2,
+     "rightEmptyPct": 0,
+     "textBoxes": 152
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "third",
+     "max": "full",
+     "profile": "smal"
+    },
+    "proposed": {
+     "std": "half",
+     "min": "half",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "third",
+    "reasons": [
+     "Smal-profil, men kun 2 % tom plads i ⅔+: kan strækkes; fleksibel.",
+     "Nuværende min (⅓) har afkortning/overlap/klipning (0 afkortet, 0 overlap, 0 klippet); ren fra ½.",
+     "contentMinWidth (smal, nuværende drivere) giver ⅓, målingen giver ½."
+    ],
+    "flags": {
+     "issuesAtMin": true,
+     "emptyAtMax": 2,
+     "emptyCoverAtMax": 2,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoMap": {
+   "type": "LassoMap",
+   "drivers": {
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 222,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 1,
+     "coverEmptyPct": 1,
+     "rightEmptyPct": 0,
+     "textBoxes": 8
+    },
+    "third": {
+     "h": 222,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 1,
+     "coverEmptyPct": 1,
+     "rightEmptyPct": 0,
+     "textBoxes": 8
+    },
+    "half": {
+     "h": 370,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 8
+    },
+    "two-thirds": {
+     "h": 370,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 8
+    },
+    "three-quarters": {
+     "h": 370,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 8
+    },
+    "full": {
+     "h": 370,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 8
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "third",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "half",
+     "min": "quarter",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "two-thirds",
+    "reasons": [
+     "Bred-profil, men ren helt ned til ¼ med det realistiske indhold: målingen bærer ikke min ≥ ⅔; fleksibel.",
+     "Målt ren allerede i ¼; nuværende min (⅓) er strammere end nødvendigt (min ændres kun, hvis B8 vil bruge det).",
+     "contentMinWidth (bred, nuværende drivere) giver ⅔, målingen giver ¼."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 0,
+     "emptyCoverAtMax": 0,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoRegistration": {
+   "type": "LassoRegistration",
+   "drivers": {
+    "series": 4,
+    "longestLabel": 45
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 3169,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 1,
+     "overlapSample": [
+      "Regnskabsoplysninger | Kapital og vedtægter"
+     ],
+     "emptyPct": 67,
+     "gapPct": 100,
+     "p75EmptyPct": 67,
+     "coverEmptyPct": 18,
+     "rightEmptyPct": 0,
+     "textBoxes": 40
+    },
+    "third": {
+     "h": 3169,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 76,
+     "gapPct": 100,
+     "p75EmptyPct": 76,
+     "coverEmptyPct": 29,
+     "rightEmptyPct": 0,
+     "textBoxes": 40
+    },
+    "half": {
+     "h": 1423,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 54,
+     "gapPct": 54,
+     "p75EmptyPct": 93,
+     "coverEmptyPct": 36,
+     "rightEmptyPct": 3,
+     "textBoxes": 139
+    },
+    "two-thirds": {
+     "h": 541,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 54,
+     "gapPct": 54,
+     "p75EmptyPct": 76,
+     "coverEmptyPct": 52,
+     "rightEmptyPct": 3,
+     "textBoxes": 54
+    },
+    "three-quarters": {
+     "h": 476,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 56,
+     "gapPct": 56,
+     "p75EmptyPct": 70,
+     "coverEmptyPct": 33,
+     "rightEmptyPct": 2,
+     "textBoxes": 46
+    },
+    "full": {
+     "h": 440,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 52,
+     "gapPct": 52,
+     "p75EmptyPct": 73,
+     "coverEmptyPct": 52,
+     "rightEmptyPct": 3,
+     "textBoxes": 41
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "full",
+     "min": "two-thirds",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "full",
+     "min": "two-thirds",
+     "max": "full",
+     "profile": "bred"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "three-quarters",
+    "reasons": [
+     "Ren helt ned til ⅓, men højden er da 3169 px mod 541 px i ⅔ (5.9×); min sænkes kun til ⅔.",
+     "Bred bekræftet: afkortning/overlap i ½ (0 afkortet, 0 overlap); ren først fra ⅔.",
+     "52 % tom plads i 1/1, men ingen smallere bredde er under 40 %; max beholdes.",
+     "contentMinWidth (bred, nuværende drivere) giver ¾, målingen giver ⅔."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 52,
+     "emptyCoverAtMax": 52,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoMergers": {
+   "type": "LassoMergers",
+   "drivers": {
+    "rowsPerItem": 3,
+    "longestLabel": 44
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 1750,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 66,
+     "gapPct": 66,
+     "p75EmptyPct": 77,
+     "coverEmptyPct": 29,
+     "rightEmptyPct": 0,
+     "textBoxes": 86
+    },
+    "third": {
+     "h": 1119,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 49,
+     "gapPct": 49,
+     "p75EmptyPct": 60,
+     "coverEmptyPct": 20,
+     "rightEmptyPct": 8,
+     "textBoxes": 49
+    },
+    "half": {
+     "h": 764,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 37,
+     "gapPct": 37,
+     "p75EmptyPct": 46,
+     "coverEmptyPct": 42,
+     "rightEmptyPct": 8,
+     "textBoxes": 30
+    },
+    "two-thirds": {
+     "h": 649,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 47,
+     "gapPct": 47,
+     "p75EmptyPct": 56,
+     "coverEmptyPct": 51,
+     "rightEmptyPct": 24,
+     "textBoxes": 27
+    },
+    "three-quarters": {
+     "h": 649,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 53,
+     "gapPct": 53,
+     "p75EmptyPct": 61,
+     "coverEmptyPct": 56,
+     "rightEmptyPct": 32,
+     "textBoxes": 27
+    },
+    "full": {
+     "h": 452,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 55,
+     "gapPct": 55,
+     "p75EmptyPct": 71,
+     "coverEmptyPct": 38,
+     "rightEmptyPct": 20,
+     "textBoxes": 27
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "half",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "half",
+     "min": "half",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "three-quarters",
+    "reasons": [
+     "Ren helt ned til ¼, men højden er da 1750 px mod 764 px i ½ (2.3×); min sænkes kun til ½.",
+     "Bred-profil, men ren helt ned til ½, og der er mindst 47 % tom plads i alle bredder fra ⅔ og op: smal.",
+     "Smal profil: max ≤ ½ (tom plads 55 % i ⅔+).",
+     "contentMinWidth (bred, nuværende drivere) giver ¾, målingen giver ½."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 55,
+     "emptyCoverAtMax": 38,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoAnnouncements": {
+   "type": "LassoAnnouncements",
+   "drivers": {
+    "rowsPerItem": 3,
+    "longestLabel": 44
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 518,
+     "w": 282,
+     "truncated": 3,
+     "truncatedSample": [
+      "Skifteretten i København har afsagt konkursdekret ",
+      "Rekonstruktionsbehandling indledt med rekonstruktø",
+      "Beslutning om nedsættelse af selskabskapitalen, op"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 3,
+     "overlapSample": [
+      "Skifteretten i København | Åbn i Statstidende",
+      "Rekonstruktionsbehandlin | Åbn i Statstidende",
+      "Beslutning om nedsættels | Åbn i Statstidende"
+     ],
+     "emptyPct": 62,
+     "gapPct": 100,
+     "p75EmptyPct": 62,
+     "coverEmptyPct": 12,
+     "rightEmptyPct": 0,
+     "textBoxes": 34
+    },
+    "third": {
+     "h": 518,
+     "w": 376,
+     "truncated": 3,
+     "truncatedSample": [
+      "Skifteretten i København har afsagt konkursdekret ",
+      "Rekonstruktionsbehandling indledt med rekonstruktø",
+      "Beslutning om nedsættelse af selskabskapitalen, op"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 3,
+     "overlapSample": [
+      "Skifteretten i København | Åbn i Statstidende",
+      "Rekonstruktionsbehandlin | Åbn i Statstidende",
+      "Beslutning om nedsættels | Åbn i Statstidende"
+     ],
+     "emptyPct": 74,
+     "gapPct": 86,
+     "p75EmptyPct": 74,
+     "coverEmptyPct": 16,
+     "rightEmptyPct": 0,
+     "textBoxes": 34
+    },
+    "half": {
+     "h": 500,
+     "w": 564,
+     "truncated": 3,
+     "truncatedSample": [
+      "Skifteretten i København har afsagt konkursdekret ",
+      "Rekonstruktionsbehandling indledt med rekonstruktø",
+      "Beslutning om nedsættelse af selskabskapitalen, op"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 1,
+     "overlapSample": [
+      "Rekonstruktionsbehandlin | Åbn i Statstidende"
+     ],
+     "emptyPct": 58,
+     "gapPct": 58,
+     "p75EmptyPct": 76,
+     "coverEmptyPct": 22,
+     "rightEmptyPct": 3,
+     "textBoxes": 33
+    },
+    "two-thirds": {
+     "h": 404,
+     "w": 752,
+     "truncated": 3,
+     "truncatedSample": [
+      "Skifteretten i København har afsagt konkursdekret ",
+      "Rekonstruktionsbehandling indledt med rekonstruktø",
+      "Beslutning om nedsættelse af selskabskapitalen, op"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 43,
+     "gapPct": 43,
+     "p75EmptyPct": 65,
+     "coverEmptyPct": 20,
+     "rightEmptyPct": 2,
+     "textBoxes": 28
+    },
+    "three-quarters": {
+     "h": 356,
+     "w": 846,
+     "truncated": 2,
+     "truncatedSample": [
+      "Skifteretten i København har afsagt konkursdekret ",
+      "Beslutning om nedsættelse af selskabskapitalen, op"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 38,
+     "gapPct": 38,
+     "p75EmptyPct": 57,
+     "coverEmptyPct": 18,
+     "rightEmptyPct": 2,
+     "textBoxes": 24
+    },
+    "full": {
+     "h": 356,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 40,
+     "gapPct": 40,
+     "p75EmptyPct": 50,
+     "coverEmptyPct": 18,
+     "rightEmptyPct": 1,
+     "textBoxes": 21
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "full",
+     "min": "half",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "proposed": {
+     "std": "full",
+     "min": "full",
+     "max": "full",
+     "profile": "bred"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "two-thirds",
+    "reasons": [
+     "Fleksibel, men afkortning/overlap i ½ (3 afkortet, 1 overlap); ren først fra 1/1: bred.",
+     "Nuværende min (½) har afkortning/overlap/klipning (3 afkortet, 1 overlap, 0 klippet); ren fra 1/1.",
+     "contentMinWidth (fleksibel, nuværende drivere) giver ⅔, målingen giver 1/1."
+    ],
+    "flags": {
+     "issuesAtMin": true,
+     "emptyAtMax": 40,
+     "emptyCoverAtMax": 18,
+     "issuesInHalf": true
+    }
+   }
+  },
+  "LassoPublications": {
+   "type": "LassoPublications",
+   "drivers": {
+    "timeAxis": true,
+    "series": 4,
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 425,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 1,
+     "hscrollNeed": 498,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 6,
+     "gapPct": 6,
+     "p75EmptyPct": 12,
+     "coverEmptyPct": 12,
+     "rightEmptyPct": 6,
+     "textBoxes": 18
+    },
+    "third": {
+     "h": 425,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 1,
+     "hscrollNeed": 498,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 5,
+     "gapPct": 5,
+     "p75EmptyPct": 9,
+     "coverEmptyPct": 9,
+     "rightEmptyPct": 5,
+     "textBoxes": 26
+    },
+    "half": {
+     "h": 405,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 3,
+     "gapPct": 3,
+     "p75EmptyPct": 6,
+     "coverEmptyPct": 6,
+     "rightEmptyPct": 3,
+     "textBoxes": 30
+    },
+    "two-thirds": {
+     "h": 405,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 2,
+     "gapPct": 2,
+     "p75EmptyPct": 5,
+     "coverEmptyPct": 5,
+     "rightEmptyPct": 2,
+     "textBoxes": 36
+    },
+    "three-quarters": {
+     "h": 405,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 2,
+     "gapPct": 2,
+     "p75EmptyPct": 4,
+     "coverEmptyPct": 4,
+     "rightEmptyPct": 2,
+     "textBoxes": 36
+    },
+    "full": {
+     "h": 405,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 1,
+     "gapPct": 1,
+     "p75EmptyPct": 3,
+     "coverEmptyPct": 3,
+     "rightEmptyPct": 1,
+     "textBoxes": 36
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "half",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "proposed": {
+     "std": "half",
+     "min": "half",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "two-thirds",
+    "reasons": [
+     "Fleksibel bekræftet: ren fra ½; tom plads i ⅔+ er 2 %.",
+     "contentMinWidth (fleksibel, nuværende drivere) giver ⅔, målingen giver ½."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 1,
+     "emptyCoverAtMax": 3,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoLivestock": {
+   "type": "LassoLivestock",
+   "drivers": {
+    "series": 3,
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 742,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 8,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 46
+    },
+    "third": {
+     "h": 700,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 1,
+     "coverEmptyPct": 1,
+     "rightEmptyPct": 0,
+     "textBoxes": 42
+    },
+    "half": {
+     "h": 653,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 40
+    },
+    "two-thirds": {
+     "h": 653,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 40
+    },
+    "three-quarters": {
+     "h": 430,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 36,
+     "gapPct": 36,
+     "p75EmptyPct": 36,
+     "coverEmptyPct": 8,
+     "rightEmptyPct": 2,
+     "textBoxes": 43
+    },
+    "full": {
+     "h": 430,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 53,
+     "gapPct": 53,
+     "p75EmptyPct": 53,
+     "coverEmptyPct": 29,
+     "rightEmptyPct": 0,
+     "textBoxes": 40
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "half",
+     "max": "full",
+     "profile": "smal"
+    },
+    "proposed": {
+     "std": "half",
+     "min": "third",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "half",
+    "reasons": [
+     "Smal bekræftet: ren i ½; tom plads i ⅔+ er 53 %.",
+     "Smal profil: max ≤ ½ (tom plads 53 % i ⅔+).",
+     "Målt ren allerede i ⅓; nuværende min (½) er strammere end nødvendigt (min ændres kun, hvis B8 vil bruge det).",
+     "contentMinWidth (smal, nuværende drivere) giver ½, målingen giver ⅓."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 53,
+     "emptyCoverAtMax": 29,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoCompareTable": {
+   "type": "LassoCompareTable",
+   "drivers": {
+    "series": 6,
+    "longestLabel": 45
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 311,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 1,
+     "hscrollNeed": 2378,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 1,
+     "coverEmptyPct": 1,
+     "rightEmptyPct": 0,
+     "textBoxes": 13
+    },
+    "third": {
+     "h": 311,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 1,
+     "hscrollNeed": 2378,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 1,
+     "coverEmptyPct": 1,
+     "rightEmptyPct": 0,
+     "textBoxes": 13
+    },
+    "half": {
+     "h": 311,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 1,
+     "hscrollNeed": 2378,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 18
+    },
+    "two-thirds": {
+     "h": 311,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 1,
+     "hscrollNeed": 2378,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 19
+    },
+    "three-quarters": {
+     "h": 311,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 1,
+     "hscrollNeed": 2378,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 19
+    },
+    "full": {
+     "h": 311,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 1,
+     "hscrollNeed": 2378,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 25
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "full",
+     "min": "two-thirds",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "full",
+     "min": "two-thirds",
+     "max": "full",
+     "profile": "bred"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "three-quarters",
+    "reasons": [
+     "KRÆVER KOMPONENTÆNDRING: indholdet kræver 2378 px og ruller vandret selv i fuld bredde (1152 px); bredde alene løser det ikke (færre/smallere kolonner, afkortede kolonnenavne eller færre poster).",
+     "Bred: kan ikke gøres ren i nogen bredde; min og max fastholdes indtil komponenten er ændret.",
+     "contentMinWidth (bred, nuværende drivere) giver ¾, målingen giver ⅔."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 0,
+     "emptyCoverAtMax": 0,
+     "issuesInHalf": true
+    }
+   }
+  },
+  "LassoRanking": {
+   "type": "LassoRanking",
+   "drivers": {
+    "series": 6,
+    "longestLabel": 45
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 377,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 43,
+     "gapPct": 43,
+     "p75EmptyPct": 46,
+     "coverEmptyPct": 20,
+     "rightEmptyPct": 6,
+     "textBoxes": 27
+    },
+    "third": {
+     "h": 353,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 49,
+     "gapPct": 52,
+     "p75EmptyPct": 49,
+     "coverEmptyPct": 17,
+     "rightEmptyPct": 15,
+     "textBoxes": 26
+    },
+    "half": {
+     "h": 353,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 47,
+     "gapPct": 48,
+     "p75EmptyPct": 47,
+     "coverEmptyPct": 26,
+     "rightEmptyPct": 10,
+     "textBoxes": 26
+    },
+    "two-thirds": {
+     "h": 353,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 48,
+     "gapPct": 58,
+     "p75EmptyPct": 48,
+     "coverEmptyPct": 20,
+     "rightEmptyPct": 7,
+     "textBoxes": 26
+    },
+    "three-quarters": {
+     "h": 353,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 48,
+     "gapPct": 63,
+     "p75EmptyPct": 48,
+     "coverEmptyPct": 17,
+     "rightEmptyPct": 7,
+     "textBoxes": 26
+    },
+    "full": {
+     "h": 353,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 49,
+     "gapPct": 70,
+     "p75EmptyPct": 49,
+     "coverEmptyPct": 13,
+     "rightEmptyPct": 5,
+     "textBoxes": 26
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "third",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "half",
+     "min": "quarter",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "three-quarters",
+    "reasons": [
+     "Bred-profil, men ren helt ned til ¼ med det realistiske indhold: målingen bærer ikke min ≥ ⅔; fleksibel.",
+     "49 % tom plads i 1/1, men ingen smallere bredde er under 40 %; max beholdes.",
+     "Målt ren allerede i ¼; nuværende min (⅓) er strammere end nødvendigt (min ændres kun, hvis B8 vil bruge det).",
+     "contentMinWidth (bred, nuværende drivere) giver ¾, målingen giver ¼."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 49,
+     "emptyCoverAtMax": 13,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoCompanyTable": {
+   "type": "LassoCompanyTable",
+   "drivers": {
+    "series": 8,
+    "longestLabel": 45
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 904,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 1,
+     "hscrollNeed": 1134,
+     "clipped": 1,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 1,
+     "coverEmptyPct": 1,
+     "rightEmptyPct": 0,
+     "textBoxes": 41
+    },
+    "third": {
+     "h": 904,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 1,
+     "hscrollNeed": 1134,
+     "clipped": 1,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 1,
+     "coverEmptyPct": 1,
+     "rightEmptyPct": 0,
+     "textBoxes": 41
+    },
+    "half": {
+     "h": 871,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 1,
+     "hscrollNeed": 1134,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 84
+    },
+    "two-thirds": {
+     "h": 871,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 1,
+     "hscrollNeed": 1134,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 95
+    },
+    "three-quarters": {
+     "h": 871,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 1,
+     "hscrollNeed": 1134,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 99
+    },
+    "full": {
+     "h": 904,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 119
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "full",
+     "min": "full",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "full",
+     "min": "full",
+     "max": "full",
+     "profile": "bred"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "full",
+    "reasons": [
+     "Fast bredde (min = max = 1/1); ingen forslag."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 0,
+     "emptyCoverAtMax": 0,
+     "issuesInHalf": true
+    }
+   }
+  },
+  "LassoPersonTable": {
+   "type": "LassoPersonTable",
+   "drivers": {
+    "series": 6,
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 730,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 1,
+     "hscrollNeed": 881,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 1,
+     "coverEmptyPct": 1,
+     "rightEmptyPct": 0,
+     "textBoxes": 19
+    },
+    "third": {
+     "h": 730,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 1,
+     "hscrollNeed": 881,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 1,
+     "coverEmptyPct": 1,
+     "rightEmptyPct": 0,
+     "textBoxes": 35
+    },
+    "half": {
+     "h": 730,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 1,
+     "hscrollNeed": 881,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 37
+    },
+    "two-thirds": {
+     "h": 730,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 1,
+     "hscrollNeed": 881,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 58
+    },
+    "three-quarters": {
+     "h": 730,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 1,
+     "hscrollNeed": 881,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 68
+    },
+    "full": {
+     "h": 708,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 0,
+     "gapPct": 0,
+     "p75EmptyPct": 0,
+     "coverEmptyPct": 0,
+     "rightEmptyPct": 0,
+     "textBoxes": 64
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "full",
+     "min": "full",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "full",
+     "min": "full",
+     "max": "full",
+     "profile": "bred"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "full",
+    "reasons": [
+     "Fast bredde (min = max = 1/1); ingen forslag."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 0,
+     "emptyCoverAtMax": 0,
+     "issuesInHalf": true
+    }
+   }
+  },
+  "LassoSavedPages": {
+   "type": "LassoSavedPages",
+   "drivers": {
+    "series": 5,
+    "longestLabel": 45
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 1157,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 1,
+     "overlapSample": [
+      "Midtjysk Tømrer- og Sned | gemt"
+     ],
+     "emptyPct": 60,
+     "gapPct": 64,
+     "p75EmptyPct": 60,
+     "coverEmptyPct": 6,
+     "rightEmptyPct": 0,
+     "textBoxes": 74
+    },
+    "third": {
+     "h": 693,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 51,
+     "gapPct": 52,
+     "p75EmptyPct": 51,
+     "coverEmptyPct": 11,
+     "rightEmptyPct": 0,
+     "textBoxes": 50
+    },
+    "half": {
+     "h": 541,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 19,
+     "gapPct": 68,
+     "p75EmptyPct": 19,
+     "coverEmptyPct": 13,
+     "rightEmptyPct": 0,
+     "textBoxes": 42
+    },
+    "two-thirds": {
+     "h": 541,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 39,
+     "gapPct": 76,
+     "p75EmptyPct": 39,
+     "coverEmptyPct": 35,
+     "rightEmptyPct": 0,
+     "textBoxes": 42
+    },
+    "three-quarters": {
+     "h": 541,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 46,
+     "gapPct": 79,
+     "p75EmptyPct": 46,
+     "coverEmptyPct": 42,
+     "rightEmptyPct": 0,
+     "textBoxes": 42
+    },
+    "full": {
+     "h": 541,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 60,
+     "gapPct": 84,
+     "p75EmptyPct": 60,
+     "coverEmptyPct": 58,
+     "rightEmptyPct": 0,
+     "textBoxes": 42
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "full",
+     "min": "full",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "proposed": {
+     "std": "full",
+     "min": "full",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "full",
+    "reasons": [
+     "Ren helt ned til ⅓, men højden er da 693 px mod 541 px i 1/1 (1.3×); min sænkes kun til ½.",
+     "Fast bredde (min = max = 1/1); ingen forslag."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 60,
+     "emptyCoverAtMax": 58,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoFollowUps": {
+   "type": "LassoFollowUps",
+   "drivers": {
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 124,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 5,
+     "gapPct": 5,
+     "p75EmptyPct": 5,
+     "coverEmptyPct": 5,
+     "rightEmptyPct": 0,
+     "textBoxes": 6
+    },
+    "third": {
+     "h": 124,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 4,
+     "gapPct": 4,
+     "p75EmptyPct": 7,
+     "coverEmptyPct": 4,
+     "rightEmptyPct": 0,
+     "textBoxes": 6
+    },
+    "half": {
+     "h": 124,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 36,
+     "gapPct": 36,
+     "p75EmptyPct": 38,
+     "coverEmptyPct": 19,
+     "rightEmptyPct": 16,
+     "textBoxes": 6
+    },
+    "two-thirds": {
+     "h": 80,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 37,
+     "gapPct": 37,
+     "p75EmptyPct": 39,
+     "coverEmptyPct": 18,
+     "rightEmptyPct": 11,
+     "textBoxes": 6
+    },
+    "three-quarters": {
+     "h": 80,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 57,
+     "gapPct": 57,
+     "p75EmptyPct": 59,
+     "coverEmptyPct": 14,
+     "rightEmptyPct": 8,
+     "textBoxes": 6
+    },
+    "full": {
+     "h": 80,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 68,
+     "gapPct": 68,
+     "p75EmptyPct": 70,
+     "coverEmptyPct": 37,
+     "rightEmptyPct": 32,
+     "textBoxes": 6
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "full",
+     "min": "full",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "proposed": {
+     "std": "full",
+     "min": "full",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "full",
+    "reasons": [
+     "Ren helt ned til ¼, men højden er da 124 px mod 80 px i 1/1 (1.6×); min sænkes kun til ⅔.",
+     "Fast bredde (min = max = 1/1); ingen forslag."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 68,
+     "emptyCoverAtMax": 37,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoPersonHead": {
+   "type": "LassoPersonHead",
+   "drivers": {
+    "longestLabel": 45
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 34,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 59,
+     "gapPct": 59,
+     "p75EmptyPct": 59,
+     "coverEmptyPct": 59,
+     "rightEmptyPct": 59,
+     "textBoxes": 1
+    },
+    "third": {
+     "h": 34,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 59,
+     "gapPct": 59,
+     "p75EmptyPct": 59,
+     "coverEmptyPct": 59,
+     "rightEmptyPct": 59,
+     "textBoxes": 1
+    },
+    "half": {
+     "h": 34,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 59,
+     "gapPct": 59,
+     "p75EmptyPct": 59,
+     "coverEmptyPct": 59,
+     "rightEmptyPct": 59,
+     "textBoxes": 1
+    },
+    "two-thirds": {
+     "h": 34,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 59,
+     "gapPct": 59,
+     "p75EmptyPct": 59,
+     "coverEmptyPct": 59,
+     "rightEmptyPct": 59,
+     "textBoxes": 1
+    },
+    "three-quarters": {
+     "h": 34,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 59,
+     "gapPct": 59,
+     "p75EmptyPct": 59,
+     "coverEmptyPct": 59,
+     "rightEmptyPct": 59,
+     "textBoxes": 1
+    },
+    "full": {
+     "h": 34,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 59,
+     "gapPct": 59,
+     "p75EmptyPct": 59,
+     "coverEmptyPct": 59,
+     "rightEmptyPct": 59,
+     "textBoxes": 1
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "full",
+     "min": "full",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "proposed": {
+     "std": "full",
+     "min": "full",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "full",
+    "reasons": [
+     "Fast bredde (min = max = 1/1); ingen forslag."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 59,
+     "emptyCoverAtMax": 59,
+     "issuesInHalf": true
+    }
+   }
+  },
+  "LassoPersonStats": {
+   "type": "LassoPersonStats",
+   "drivers": {
+    "longestLabel": 45
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 90,
+     "w": 282,
+     "truncated": 1,
+     "truncatedSample": [
+      "Tvangsopl."
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 17,
+     "gapPct": 17,
+     "p75EmptyPct": 38,
+     "coverEmptyPct": 12,
+     "rightEmptyPct": 0,
+     "textBoxes": 10
+    },
+    "third": {
+     "h": 90,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 21,
+     "gapPct": 21,
+     "p75EmptyPct": 53,
+     "coverEmptyPct": 28,
+     "rightEmptyPct": 3,
+     "textBoxes": 9
+    },
+    "half": {
+     "h": 90,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 25,
+     "gapPct": 25,
+     "p75EmptyPct": 69,
+     "coverEmptyPct": 52,
+     "rightEmptyPct": 13,
+     "textBoxes": 9
+    },
+    "two-thirds": {
+     "h": 90,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 27,
+     "gapPct": 27,
+     "p75EmptyPct": 76,
+     "coverEmptyPct": 64,
+     "rightEmptyPct": 18,
+     "textBoxes": 9
+    },
+    "three-quarters": {
+     "h": 90,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 28,
+     "gapPct": 28,
+     "p75EmptyPct": 79,
+     "coverEmptyPct": 68,
+     "rightEmptyPct": 20,
+     "textBoxes": 9
+    },
+    "full": {
+     "h": 90,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 29,
+     "gapPct": 29,
+     "p75EmptyPct": 85,
+     "coverEmptyPct": 77,
+     "rightEmptyPct": 23,
+     "textBoxes": 9
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "full",
+     "min": "half",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "proposed": {
+     "std": "full",
+     "min": "third",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "two-thirds",
+    "reasons": [
+     "Fleksibel bekræftet: ren fra ⅓; tom plads i ⅔+ er 29 %.",
+     "Målt ren allerede i ⅓; nuværende min (½) er strammere end nødvendigt (min ændres kun, hvis B8 vil bruge det).",
+     "contentMinWidth (fleksibel, nuværende drivere) giver ⅔, målingen giver ⅓."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 29,
+     "emptyCoverAtMax": 77,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoPersonRoles": {
+   "type": "LassoPersonRoles",
+   "drivers": {
+    "rowsPerItem": 2,
+    "timeAxis": true,
+    "bars": true,
+    "longestLabel": 45
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 322,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 15,
+     "overlapSample": [
+      "2005 | 2009",
+      "2005 | 2013",
+      "2005 | 2017",
+      "2005 | 2021"
+     ],
+     "emptyPct": 42,
+     "gapPct": 51,
+     "p75EmptyPct": 42,
+     "coverEmptyPct": 24,
+     "rightEmptyPct": 0,
+     "textBoxes": 25
+    },
+    "third": {
+     "h": 322,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 3,
+     "overlapSample": [
+      "2005 | 2009",
+      "2009 | 2013",
+      "2021 | 2026"
+     ],
+     "emptyPct": 44,
+     "gapPct": 56,
+     "p75EmptyPct": 44,
+     "coverEmptyPct": 18,
+     "rightEmptyPct": 0,
+     "textBoxes": 25
+    },
+    "half": {
+     "h": 298,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 59,
+     "gapPct": 64,
+     "p75EmptyPct": 59,
+     "coverEmptyPct": 12,
+     "rightEmptyPct": 0,
+     "textBoxes": 25
+    },
+    "two-thirds": {
+     "h": 298,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 60,
+     "gapPct": 60,
+     "p75EmptyPct": 67,
+     "coverEmptyPct": 9,
+     "rightEmptyPct": 0,
+     "textBoxes": 25
+    },
+    "three-quarters": {
+     "h": 298,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 58,
+     "gapPct": 58,
+     "p75EmptyPct": 71,
+     "coverEmptyPct": 8,
+     "rightEmptyPct": 0,
+     "textBoxes": 25
+    },
+    "full": {
+     "h": 298,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 68,
+     "gapPct": 68,
+     "p75EmptyPct": 78,
+     "coverEmptyPct": 6,
+     "rightEmptyPct": 0,
+     "textBoxes": 25
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "two-thirds",
+     "min": "half",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "two-thirds",
+     "min": "half",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "three-quarters",
+    "reasons": [
+     "Bred-profil, men ren helt ned til ½ med 10 år på tidsaksen: målingen bærer ikke min ≥ ⅔; fleksibel.",
+     "68 % tom plads i 1/1, men ingen smallere bredde er under 40 %; max beholdes.",
+     "contentMinWidth (bred, nuværende drivere) giver ¾, målingen giver ½."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 68,
+     "emptyCoverAtMax": 6,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoPersonRoles (show: current)": {
+   "type": "LassoPersonRoles",
+   "drivers": {
+    "rowsPerItem": 2,
+    "longestLabel": 45
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 496,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 40,
+     "gapPct": 53,
+     "p75EmptyPct": 40,
+     "coverEmptyPct": 15,
+     "rightEmptyPct": 0,
+     "textBoxes": 24
+    },
+    "third": {
+     "h": 436,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 40,
+     "gapPct": 65,
+     "p75EmptyPct": 40,
+     "coverEmptyPct": 22,
+     "rightEmptyPct": 0,
+     "textBoxes": 21
+    },
+    "half": {
+     "h": 341,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 26,
+     "gapPct": 77,
+     "p75EmptyPct": 26,
+     "coverEmptyPct": 25,
+     "rightEmptyPct": 0,
+     "textBoxes": 16
+    },
+    "two-thirds": {
+     "h": 341,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 45,
+     "gapPct": 82,
+     "p75EmptyPct": 45,
+     "coverEmptyPct": 44,
+     "rightEmptyPct": 0,
+     "textBoxes": 16
+    },
+    "three-quarters": {
+     "h": 341,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 51,
+     "gapPct": 84,
+     "p75EmptyPct": 51,
+     "coverEmptyPct": 50,
+     "rightEmptyPct": 0,
+     "textBoxes": 16
+    },
+    "full": {
+     "h": 341,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 64,
+     "gapPct": 89,
+     "p75EmptyPct": 64,
+     "coverEmptyPct": 63,
+     "rightEmptyPct": 0,
+     "textBoxes": 16
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "two-thirds",
+     "min": "half",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "half",
+     "min": "half",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "three-quarters",
+    "reasons": [
+     "Ren helt ned til ¼, men højden er da 496 px mod 341 px i ½ (1.5×); min sænkes kun til ½.",
+     "Bred-profil, men ren helt ned til ½, og der er mindst 45 % tom plads i alle bredder fra ⅔ og op: smal.",
+     "Smal profil: max ≤ ½ (tom plads 64 % i ⅔+).",
+     "contentMinWidth (bred, nuværende drivere) giver ¾, målingen giver ½."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 64,
+     "emptyCoverAtMax": 63,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoPersonRoles (show: ended)": {
+   "type": "LassoPersonRoles",
+   "drivers": {
+    "rowsPerItem": 2,
+    "longestLabel": 45
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 217,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 34,
+     "gapPct": 53,
+     "p75EmptyPct": 34,
+     "coverEmptyPct": 21,
+     "rightEmptyPct": 0,
+     "textBoxes": 12
+    },
+    "third": {
+     "h": 199,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 51,
+     "gapPct": 64,
+     "p75EmptyPct": 51,
+     "coverEmptyPct": 29,
+     "rightEmptyPct": 0,
+     "textBoxes": 12
+    },
+    "half": {
+     "h": 161,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 31,
+     "gapPct": 53,
+     "p75EmptyPct": 31,
+     "coverEmptyPct": 27,
+     "rightEmptyPct": 0,
+     "textBoxes": 10
+    },
+    "two-thirds": {
+     "h": 161,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 48,
+     "gapPct": 64,
+     "p75EmptyPct": 48,
+     "coverEmptyPct": 45,
+     "rightEmptyPct": 0,
+     "textBoxes": 10
+    },
+    "three-quarters": {
+     "h": 161,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 54,
+     "gapPct": 68,
+     "p75EmptyPct": 54,
+     "coverEmptyPct": 51,
+     "rightEmptyPct": 0,
+     "textBoxes": 10
+    },
+    "full": {
+     "h": 161,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 66,
+     "gapPct": 77,
+     "p75EmptyPct": 66,
+     "coverEmptyPct": 64,
+     "rightEmptyPct": 0,
+     "textBoxes": 10
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "two-thirds",
+     "min": "half",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "half",
+     "min": "third",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "three-quarters",
+    "reasons": [
+     "Ren helt ned til ¼, men højden er da 217 px mod 161 px i ½ (1.3×); min sænkes kun til ⅓.",
+     "Bred-profil, men ren helt ned til ⅓, og der er mindst 48 % tom plads i alle bredder fra ⅔ og op: smal.",
+     "Smal profil: max ≤ ½ (tom plads 66 % i ⅔+).",
+     "Målt ren allerede i ⅓; nuværende min (½) er strammere end nødvendigt (min ændres kun, hvis B8 vil bruge det).",
+     "contentMinWidth (bred, nuværende drivere) giver ¾, målingen giver ⅓."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 66,
+     "emptyCoverAtMax": 64,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoPersonRoles (show: owner)": {
+   "type": "LassoPersonRoles",
+   "drivers": {
+    "rowsPerItem": 2,
+    "longestLabel": 45
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 239,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 48,
+     "gapPct": 66,
+     "p75EmptyPct": 48,
+     "coverEmptyPct": 15,
+     "rightEmptyPct": 0,
+     "textBoxes": 11
+    },
+    "third": {
+     "h": 199,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 59,
+     "gapPct": 74,
+     "p75EmptyPct": 59,
+     "coverEmptyPct": 31,
+     "rightEmptyPct": 0,
+     "textBoxes": 9
+    },
+    "half": {
+     "h": 161,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 26,
+     "gapPct": 82,
+     "p75EmptyPct": 26,
+     "coverEmptyPct": 25,
+     "rightEmptyPct": 0,
+     "textBoxes": 7
+    },
+    "two-thirds": {
+     "h": 161,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 44,
+     "gapPct": 86,
+     "p75EmptyPct": 44,
+     "coverEmptyPct": 44,
+     "rightEmptyPct": 0,
+     "textBoxes": 7
+    },
+    "three-quarters": {
+     "h": 161,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 51,
+     "gapPct": 88,
+     "p75EmptyPct": 51,
+     "coverEmptyPct": 50,
+     "rightEmptyPct": 0,
+     "textBoxes": 7
+    },
+    "full": {
+     "h": 161,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 64,
+     "gapPct": 91,
+     "p75EmptyPct": 64,
+     "coverEmptyPct": 63,
+     "rightEmptyPct": 0,
+     "textBoxes": 7
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "two-thirds",
+     "min": "half",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "half",
+     "min": "third",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "three-quarters",
+    "reasons": [
+     "Ren helt ned til ¼, men højden er da 239 px mod 161 px i ½ (1.5×); min sænkes kun til ⅓.",
+     "Bred-profil, men ren helt ned til ⅓, og der er mindst 44 % tom plads i alle bredder fra ⅔ og op: smal.",
+     "Smal profil: max ≤ ½ (tom plads 64 % i ⅔+).",
+     "Målt ren allerede i ⅓; nuværende min (½) er strammere end nødvendigt (min ændres kun, hvis B8 vil bruge det).",
+     "contentMinWidth (bred, nuværende drivere) giver ¾, målingen giver ⅓."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 64,
+     "emptyCoverAtMax": 63,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoPersonNetwork": {
+   "type": "LassoPersonNetwork",
+   "drivers": {
+    "rowsPerItem": 3,
+    "timeAxis": true,
+    "bars": true,
+    "longestLabel": 45
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 399,
+     "w": 282,
+     "truncated": 9,
+     "truncatedSample": [
+      "Nordjysk Entreprenør- og Ejendomsselskab ApS, dire",
+      "Vestjysk Maskin- og Anlægsservice Holding ApS, bes",
+      "Sønderjysk Fødevare- og Logistikgruppe A/S, bestyr",
+      "Østerbro Ejendoms- og Administrations ApS, bestyre"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 2,
+     "overlapSample": [
+      "2017 | 2026",
+      "2023 | 2026"
+     ],
+     "emptyPct": 50,
+     "gapPct": 63,
+     "p75EmptyPct": 50,
+     "coverEmptyPct": 31,
+     "rightEmptyPct": 0,
+     "textBoxes": 44
+    },
+    "third": {
+     "h": 399,
+     "w": 376,
+     "truncated": 9,
+     "truncatedSample": [
+      "Nordjysk Entreprenør- og Ejendomsselskab ApS, dire",
+      "Vestjysk Maskin- og Anlægsservice Holding ApS, bes",
+      "Sønderjysk Fødevare- og Logistikgruppe A/S, bestyr",
+      "Østerbro Ejendoms- og Administrations ApS, bestyre"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 1,
+     "overlapSample": [
+      "2023 | 2026"
+     ],
+     "emptyPct": 51,
+     "gapPct": 57,
+     "p75EmptyPct": 51,
+     "coverEmptyPct": 25,
+     "rightEmptyPct": 0,
+     "textBoxes": 44
+    },
+    "half": {
+     "h": 375,
+     "w": 564,
+     "truncated": 8,
+     "truncatedSample": [
+      "Vestjysk Maskin- og Anlægsservice Holding ApS, bes",
+      "Sønderjysk Fødevare- og Logistikgruppe A/S, bestyr",
+      "Østerbro Ejendoms- og Administrations ApS, bestyre",
+      "Midtjysk Tømrer- og Snedkerforretning I/S, bestyre"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 46,
+     "gapPct": 46,
+     "p75EmptyPct": 46,
+     "coverEmptyPct": 17,
+     "rightEmptyPct": 0,
+     "textBoxes": 43
+    },
+    "two-thirds": {
+     "h": 375,
+     "w": 752,
+     "truncated": 6,
+     "truncatedSample": [
+      "Vestjysk Maskin- og Anlægsservice Holding ApS, bes",
+      "Sønderjysk Fødevare- og Logistikgruppe A/S, bestyr",
+      "Midtjysk Tømrer- og Snedkerforretning I/S, bestyre",
+      "Aarhus Erhvervsbyg og Totalentreprise A/S, direktø"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 45,
+     "gapPct": 51,
+     "p75EmptyPct": 45,
+     "coverEmptyPct": 18,
+     "rightEmptyPct": 0,
+     "textBoxes": 42
+    },
+    "three-quarters": {
+     "h": 375,
+     "w": 846,
+     "truncated": 4,
+     "truncatedSample": [
+      "Sønderjysk Fødevare- og Logistikgruppe A/S, bestyr",
+      "Midtjysk Tømrer- og Snedkerforretning I/S, bestyre",
+      "Aarhus Erhvervsbyg og Totalentreprise A/S, direktø",
+      "Kristensen & Sønner Vognmandsforretning ApS, direk"
+     ],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 48,
+     "gapPct": 48,
+     "p75EmptyPct": 49,
+     "coverEmptyPct": 16,
+     "rightEmptyPct": 0,
+     "textBoxes": 39
+    },
+    "full": {
+     "h": 375,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 45,
+     "gapPct": 45,
+     "p75EmptyPct": 57,
+     "coverEmptyPct": 12,
+     "rightEmptyPct": 0,
+     "textBoxes": 35
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "two-thirds",
+     "min": "half",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "full",
+     "min": "full",
+     "max": "full",
+     "profile": "bred"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "three-quarters",
+    "reasons": [
+     "Bred bekræftet: afkortning/overlap i ½ (8 afkortet, 0 overlap); ren først fra 1/1.",
+     "45 % tom plads i 1/1, men ingen smallere bredde er under 40 %; max beholdes.",
+     "Nuværende min (½) har afkortning/overlap/klipning (8 afkortet, 0 overlap, 0 klippet); ren fra 1/1.",
+     "contentMinWidth (bred, nuværende drivere) giver ¾, målingen giver 1/1."
+    ],
+    "flags": {
+     "issuesAtMin": true,
+     "emptyAtMax": 45,
+     "emptyCoverAtMax": 12,
+     "issuesInHalf": true
+    }
+   }
+  },
+  "LassoPersonRisk": {
+   "type": "LassoPersonRisk",
+   "drivers": {
+    "rowsPerItem": 2,
+    "longestLabel": 45
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 678,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 41,
+     "gapPct": 41,
+     "p75EmptyPct": 52,
+     "coverEmptyPct": 22,
+     "rightEmptyPct": 6,
+     "textBoxes": 32
+    },
+    "third": {
+     "h": 494,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 39,
+     "gapPct": 40,
+     "p75EmptyPct": 39,
+     "coverEmptyPct": 30,
+     "rightEmptyPct": 5,
+     "textBoxes": 23
+    },
+    "half": {
+     "h": 404,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 49,
+     "gapPct": 49,
+     "p75EmptyPct": 53,
+     "coverEmptyPct": 23,
+     "rightEmptyPct": 3,
+     "textBoxes": 19
+    },
+    "two-thirds": {
+     "h": 404,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 63,
+     "gapPct": 63,
+     "p75EmptyPct": 65,
+     "coverEmptyPct": 20,
+     "rightEmptyPct": 2,
+     "textBoxes": 19
+    },
+    "three-quarters": {
+     "h": 368,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 71,
+     "gapPct": 72,
+     "p75EmptyPct": 71,
+     "coverEmptyPct": 23,
+     "rightEmptyPct": 2,
+     "textBoxes": 17
+    },
+    "full": {
+     "h": 368,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 79,
+     "gapPct": 79,
+     "p75EmptyPct": 79,
+     "coverEmptyPct": 43,
+     "rightEmptyPct": 1,
+     "textBoxes": 17
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "third",
+     "max": "full",
+     "profile": "fleksibel"
+    },
+    "proposed": {
+     "std": "third",
+     "min": "third",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "half",
+    "reasons": [
+     "Ren helt ned til ¼, men højden er da 678 px mod 494 px i ⅓ (1.4×); min sænkes kun til ⅓.",
+     "Fleksibel, men mindst 63 % tom plads i alle bredder fra ⅔ og op, og ren i ½: smal.",
+     "Smal profil: max ≤ ½ (tom plads 79 % i ⅔+).",
+     "contentMinWidth (fleksibel, nuværende drivere) giver ½, målingen giver ⅓."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 79,
+     "emptyCoverAtMax": 43,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoPersonFacts": {
+   "type": "LassoPersonFacts",
+   "drivers": {
+    "longestLabel": 45
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 307,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 39,
+     "gapPct": 40,
+     "p75EmptyPct": 39,
+     "coverEmptyPct": 31,
+     "rightEmptyPct": 8,
+     "textBoxes": 15
+    },
+    "third": {
+     "h": 307,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 43,
+     "gapPct": 43,
+     "p75EmptyPct": 54,
+     "coverEmptyPct": 48,
+     "rightEmptyPct": 19,
+     "textBoxes": 15
+    },
+    "half": {
+     "h": 307,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 51,
+     "gapPct": 51,
+     "p75EmptyPct": 69,
+     "coverEmptyPct": 66,
+     "rightEmptyPct": 45,
+     "textBoxes": 15
+    },
+    "two-thirds": {
+     "h": 307,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 63,
+     "gapPct": 63,
+     "p75EmptyPct": 77,
+     "coverEmptyPct": 74,
+     "rightEmptyPct": 59,
+     "textBoxes": 15
+    },
+    "three-quarters": {
+     "h": 307,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 67,
+     "gapPct": 67,
+     "p75EmptyPct": 80,
+     "coverEmptyPct": 77,
+     "rightEmptyPct": 64,
+     "textBoxes": 15
+    },
+    "full": {
+     "h": 307,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 76,
+     "gapPct": 76,
+     "p75EmptyPct": 85,
+     "coverEmptyPct": 83,
+     "rightEmptyPct": 73,
+     "textBoxes": 15
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "third",
+     "min": "quarter",
+     "max": "half",
+     "profile": "smal"
+    },
+    "proposed": {
+     "std": "third",
+     "min": "quarter",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "bekræftet",
+    "contentMin": "quarter",
+    "reasons": [
+     "Smal bekræftet: ren i ½; tom plads i ⅔+ er 76 %."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 51,
+     "emptyCoverAtMax": 66,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoChangeFeed": {
+   "type": "LassoChangeFeed",
+   "drivers": {
+    "rowsPerItem": 2,
+    "longestLabel": 45
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 1645,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 37,
+     "gapPct": 42,
+     "p75EmptyPct": 37,
+     "coverEmptyPct": 20,
+     "rightEmptyPct": 4,
+     "textBoxes": 94
+    },
+    "third": {
+     "h": 1433,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 22,
+     "gapPct": 65,
+     "p75EmptyPct": 22,
+     "coverEmptyPct": 13,
+     "rightEmptyPct": 3,
+     "textBoxes": 84
+    },
+    "half": {
+     "h": 1066,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 33,
+     "gapPct": 59,
+     "p75EmptyPct": 33,
+     "coverEmptyPct": 21,
+     "rightEmptyPct": 2,
+     "textBoxes": 73
+    },
+    "two-thirds": {
+     "h": 1030,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 51,
+     "gapPct": 68,
+     "p75EmptyPct": 51,
+     "coverEmptyPct": 37,
+     "rightEmptyPct": 2,
+     "textBoxes": 73
+    },
+    "three-quarters": {
+     "h": 1030,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 57,
+     "gapPct": 71,
+     "p75EmptyPct": 57,
+     "coverEmptyPct": 44,
+     "rightEmptyPct": 1,
+     "textBoxes": 73
+    },
+    "full": {
+     "h": 1030,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 68,
+     "gapPct": 79,
+     "p75EmptyPct": 68,
+     "coverEmptyPct": 59,
+     "rightEmptyPct": 1,
+     "textBoxes": 73
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "full",
+     "min": "half",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "half",
+     "min": "half",
+     "max": "half",
+     "profile": "smal"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "three-quarters",
+    "reasons": [
+     "Ren helt ned til ¼, men højden er da 1645 px mod 1066 px i ½ (1.5×); min sænkes kun til ½.",
+     "Bred-profil, men ren helt ned til ½, og der er mindst 51 % tom plads i alle bredder fra ⅔ og op: smal.",
+     "Smal profil: max ≤ ½ (tom plads 68 % i ⅔+).",
+     "contentMinWidth (bred, nuværende drivere) giver ¾, målingen giver ½."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 68,
+     "emptyCoverAtMax": 59,
+     "issuesInHalf": false
+    }
+   }
+  },
+  "LassoHeatmap": {
+   "type": "LassoHeatmap",
+   "drivers": {
+    "timeAxis": true,
+    "series": 12,
+    "longestLabel": 0
+   },
+   "errors": [],
+   "widths": {
+    "quarter": {
+     "h": 170,
+     "w": 282,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 20,
+     "gapPct": 27,
+     "p75EmptyPct": 20,
+     "coverEmptyPct": 13,
+     "rightEmptyPct": 1,
+     "textBoxes": 12
+    },
+    "third": {
+     "h": 170,
+     "w": 376,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 16,
+     "gapPct": 20,
+     "p75EmptyPct": 16,
+     "coverEmptyPct": 11,
+     "rightEmptyPct": 0,
+     "textBoxes": 14
+    },
+    "half": {
+     "h": 218,
+     "w": 564,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 14,
+     "gapPct": 14,
+     "p75EmptyPct": 21,
+     "coverEmptyPct": 16,
+     "rightEmptyPct": 6,
+     "textBoxes": 21
+    },
+    "two-thirds": {
+     "h": 218,
+     "w": 752,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 30,
+     "gapPct": 30,
+     "p75EmptyPct": 40,
+     "coverEmptyPct": 37,
+     "rightEmptyPct": 30,
+     "textBoxes": 21
+    },
+    "three-quarters": {
+     "h": 218,
+     "w": 846,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 37,
+     "gapPct": 37,
+     "p75EmptyPct": 47,
+     "coverEmptyPct": 44,
+     "rightEmptyPct": 37,
+     "textBoxes": 21
+    },
+    "full": {
+     "h": 218,
+     "w": 1152,
+     "truncated": 0,
+     "truncatedSample": [],
+     "hscroll": 0,
+     "hscrollNeed": 0,
+     "clipped": 0,
+     "overlaps": 0,
+     "overlapSample": [],
+     "emptyPct": 54,
+     "gapPct": 54,
+     "p75EmptyPct": 61,
+     "coverEmptyPct": 59,
+     "rightEmptyPct": 54,
+     "textBoxes": 21
+    }
+   },
+   "analysis": {
+    "cur": {
+     "std": "half",
+     "min": "third",
+     "max": "full",
+     "profile": "bred"
+    },
+    "proposed": {
+     "std": "half",
+     "min": "quarter",
+     "max": "three-quarters",
+     "profile": "fleksibel"
+    },
+    "profileVerdict": "foreslået ændret",
+    "contentMin": "three-quarters",
+    "reasons": [
+     "Bred-profil, men ren helt ned til ¼ med 10 år på tidsaksen: målingen bærer ikke min ≥ ⅔; fleksibel.",
+     "54 % tom plads  i 1/1; max sænkes til ¾ (37 %).",
+     "Målt ren allerede i ¼; nuværende min (⅓) er strammere end nødvendigt (min ændres kun, hvis B8 vil bruge det).",
+     "contentMinWidth (bred, nuværende drivere) giver ¾, målingen giver ¼."
+    ],
+    "flags": {
+     "issuesAtMin": false,
+     "emptyAtMax": 54,
+     "emptyCoverAtMax": 59,
+     "issuesInHalf": false
+    }
+   }
+  }
+ }
+}
