@@ -264,7 +264,7 @@ export function fillContactInfo(co: CompanyVM, websitesRaw: Json | undefined, co
 
 /**
  * Kontaktblok (katalog 08, "Kontaktblok"): samme kilder som `fillContactInfo`, men altid
- * hentet (uafhængigt af `LassoCompanyHead`/`LassoKeyValueList`) og med en kildelinje, så
+ * hentet (uafhængigt af `LassoCompanyHead`/`LassoKeyValueList`) og med en kildevisning, så
  * `LassoContact` kan stå alene. "CVR" når CVR-svaret selv havde telefon eller e-mail,
  * ellers "Virksomhedens hjemmeside" når kontaktendpointet gav noget.
  */

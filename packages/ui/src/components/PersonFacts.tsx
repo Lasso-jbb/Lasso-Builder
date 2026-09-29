@@ -1,5 +1,5 @@
 import { formatDate, personFacts, type PersonVM } from "@lasso/spec";
-import { DataState, Missing, Section, SourceLine, stateForError } from "../primitives.js";
+import { DataState, Missing, Section, stateForError } from "../primitives.js";
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
@@ -70,7 +70,7 @@ export function PersonFacts({ person, title, hideCounts, error }: { person?: Per
   }
   return (
     <Section title={heading} span="quarter" className="lasso-personfacts">
-      <div className="lasso-kv-list">
+      <div className="lasso-kv-list lasso-kv-list--twocol">
         {personFactRows(person, { hideCounts }).map((r) => (
           // Et langt ord (fx "Adressebeskyttet") står under nøglen i en smal kolonne i stedet for at blive delt midt i ordet.
           <div className={`lasso-kv-row${r.value && !/\s/.test(r.value) && r.value.length > 12 ? " lasso-kv-row--long" : ""}`} key={r.label}>
@@ -81,7 +81,6 @@ export function PersonFacts({ person, title, hideCounts, error }: { person?: Per
           </div>
         ))}
       </div>
-      <SourceLine source="CVR via Lasso" updated={person.updated} />
     </Section>
   );
 }

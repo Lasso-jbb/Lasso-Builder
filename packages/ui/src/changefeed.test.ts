@@ -60,7 +60,7 @@ test("Ændringsfeed (21): overskrift med antal, chips med antal, dagsgrupper, ul
   // Foldet række
   assert.match(html, /5 virksomheder/);
   assert.match(html, /Vis alle/);
-  // 21.1 (Jakob): kun klokkeslættet i tredje linje (ingen kildetype), ingen kildelinje (G3)
+  // 21.1 (Jakob): kun klokkeslættet i tredje linje (ingen kildetype), ingen kildevisning (G3)
   assert.match(html, /lasso-feed__meta">kl\. 09\.14</);
   assert.doesNotMatch(html, /·/);
   assert.doesNotMatch(html, /Kilde:/);

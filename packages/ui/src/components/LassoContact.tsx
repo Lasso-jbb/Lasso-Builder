@@ -188,7 +188,7 @@ export interface LassoContactProps {
  * kilden svarede inden for 60 sek.), "Tjekker …" (spinner, højst 10 sek.), "Udgået, dato" (gul,
  * værdien gennemstreget men beholdt) og "Verificeret for N dage siden" (muted). Nummeret vises
  * altid; verifikationen er et tillæg, aldrig en forudsætning. Robinsonliste-linje i muted og én
- * kildelinje for begge kilder (regel 8).
+ * kildevisning for begge kilder (regel 8).
  */
 export function LassoContact({ contact, title, error, omitAddress = false, onCopy, onOpenLink, onVerify, now, foldExtra = true }: LassoContactProps) {
   const heading = title ?? "Kontakt";
@@ -312,7 +312,7 @@ export function LassoContact({ contact, title, error, omitAddress = false, onCop
           );
         })}
       </div>
-      {/* 08.3 (Jakob 29.09): ingen Robinson-linje og ingen kildelinje (G3) under kontaktrækkerne. */}
+      {/* 08.3 (Jakob 29.09): ingen Robinson-linje og ingen kildevisning (G3) under kontaktrækkerne. */}
     </Section>
   );
 }

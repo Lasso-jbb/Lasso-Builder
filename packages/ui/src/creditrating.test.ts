@@ -24,7 +24,7 @@ const render = (props: CreditRatingProps) => renderToStaticMarkup(createElement(
 /** Synlig tekst uden tags og skjult skærmlæsertekst. */
 const text = (html: string) => html.replace(/<span class="lasso-credit__sr">[^<]*<\/span>/g, "").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ");
 
-test("fyldt: bogstav + ord, kreditmaksimum, lokal score, seneste ændring (ingen forrige), PDF, forbehold og kildelinje", () => {
+test("fyldt: bogstav + ord, kreditmaksimum, lokal score, seneste ændring (ingen forrige), PDF, forbehold og kildevisning", () => {
   const html = render({ rating: OK, onAction: () => {} });
   const t = text(html);
   assert.match(html, /<h3 class="lasso-section__title">Kreditvurdering<\/h3>/);
@@ -39,7 +39,7 @@ test("fyldt: bogstav + ord, kreditmaksimum, lokal score, seneste ændring (ingen
   assert.match(t, /Seneste ændring15\.04\.2026/);
   assert.match(html, /<button type="button" class="lasso-link lasso-credit__action">Hent kreditrapport \(PDF\)<\/button>/);
   assert.match(t, /Ny beregning hos Creditsafe koster en kredit og tager 5–45 sekunder; vurderingen gemmes 24 timer\./);
-  assert.doesNotMatch(t, /Kilde:/, "G3: ingen kildelinje");
+  assert.doesNotMatch(t, /Kilde:/, "G3: ingen kildevisning");
   // Egen skala: ingen 0–100-måler eller observationernes alvorsord.
   assert.doesNotMatch(html, /lasso-gauge|af 100|lasso-sev-/);
   assert.doesNotMatch(t, /·/, "regel 6: ingen midterprik");

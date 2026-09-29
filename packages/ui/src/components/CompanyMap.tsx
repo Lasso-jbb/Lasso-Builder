@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { moreText, formatNumber, type MapPointVM, type MapVM } from "@lasso/spec";
-import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { DataState, Section, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
 import { isCompact } from "../chartPick.js";
 import type { ViewAction } from "../types.js";
@@ -296,7 +296,6 @@ export function CompanyMap({ map, title, error, onAction }: { map?: MapVM; title
     return (
       <Section title={heading} span="half" className="lasso-map">
         <DataState state="empty" reason={map.emptyReason ?? "Adresserne har ingen koordinater, så de kan ikke vises på kort."} height={160} />
-        {map.source ? <SourceLine source={map.source} updated={map.updated} /> : null}
       </Section>
     );
   }
@@ -357,7 +356,6 @@ export function CompanyMap({ map, title, error, onAction }: { map?: MapVM; title
         ) : null}
       </div>
       <Legend />
-      {map.source ? <SourceLine source={map.source} updated={map.updated} /> : null}
     </Section>
   );
 }

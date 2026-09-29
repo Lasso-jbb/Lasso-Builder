@@ -77,7 +77,7 @@ export interface VerifiedPhoneNumberVM {
 
 /**
  * Kontaktoplysninger (katalog 08, "Kontaktblok"). Samme felter som CompanyVM's
- * telefon/e-mail/web/adresse, men med en kildelinje, fordi værdierne her kan
+ * telefon/e-mail/web/adresse, men med en kildevisning, fordi værdierne her kan
  * stamme fra virksomhedens hjemmeside (websites()/contacts()) og ikke kun CVR.
  */
 export interface ContactVM {
@@ -395,7 +395,7 @@ export interface TextSectionsVM {
   lassoId: string;
   title?: string;
   sections: TextSectionItem[];
-  /** 19.3: hvornår regnskabsanalysen blev genereret (ISO); står i analysens kildelinje. */
+  /** 19.3: hvornår regnskabsanalysen blev genereret (ISO); står i analysens kildevisning. */
   analysisGenerated?: string;
   /** 19.3: regnskabsårene, analysen bygger på, fx "2021–2025" ("Genereret af Lasso ud fra regnskab 2021–2025"). */
   analysisBasis?: string;
@@ -457,9 +457,9 @@ export interface NewsItemVM {
 export interface NewsVM {
   lassoId: string;
   items: NewsItemVM[];
-  /** Hvilke af de to kilder (Lasso News, Paqle) der faktisk bidrog, til sektionens kildelinje. */
+  /** Hvilke af de to kilder (Lasso News, Paqle) der faktisk bidrog, til sektionens kildevisning. */
   sources?: string[];
-  /** Nyeste posts tidsstempel på tværs af kilder, til kildelinjens "opdateret …". */
+  /** Nyeste posts tidsstempel på tværs af kilder, til kildevisningns "opdateret …". */
   updatedAt?: string;
 }
 
@@ -693,7 +693,7 @@ export interface ObservationsVM {
   observations: ObservationRowVM[];
   /** Hvornår Lasso sidst gennemgik virksomheden (også når listen er tom, katalog 17). */
   checkedAt?: string;
-  /** Datakilder til kildelinjen, fx ["CVR", "regnskab", "ledelse"]. */
+  /** Datakilder til kildevisningn, fx ["CVR", "regnskab", "ledelse"]. */
   sources?: string[];
   /**
    * Indirekte observationer (fx konkursrelationer), der egentlig måler en tilknyttet person
@@ -1117,7 +1117,7 @@ export interface AnnouncementVM {
   text?: string;
   /** Link til bekendtgørelsen (kun http/https). */
   url?: string;
-  /** 28.8: kildelinje pr. bekendtgørelse, fx "Statstidende, sagsnr. 1234, kreditorinformation vedlagt". */
+  /** 28.8: kildevisning pr. bekendtgørelse, fx "Statstidende, sagsnr. 1234, kreditorinformation vedlagt". */
   source?: string;
 }
 
@@ -1145,7 +1145,7 @@ export interface CompanyEventsVM {
   mergers: MergerEventVM[];
   announcements: AnnouncementVM[];
   publications: PublicationVM[];
-  /** Hvornår Lasso hentede oplysningerne (kildelinjen). */
+  /** Hvornår Lasso hentede oplysningerne (kildevisningn). */
   updated?: string;
 }
 

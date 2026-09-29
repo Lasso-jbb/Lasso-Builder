@@ -170,7 +170,7 @@ test("tekstkortet viser reelle ejere, tekstsektioner, historik og nyheder, når 
   assert.match(card, /Ejer\s+Anne Eksempel/);
 });
 
-test("resumeet skrives som en sektion uden kildelinje (G3) og uden AI-mærke", () => {
+test("resumeet skrives som en sektion uden kildevisning (G3) og uden AI-mærke", () => {
   const spec = {
     version: 2 as const,
     kind: "custom" as const,

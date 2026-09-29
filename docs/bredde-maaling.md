@@ -1253,6 +1253,8 @@ B8 har ført forslagene ind i `GRID_RULES` og registeret (`packages/spec/src/cat
 | LassoPersonFacts | ⅓ / ¼ / ½ (uændret) | ½ (max) | 0 | 0 | 0 | 51 % | ≤ 30 % tom | nej: ingen bredde giver ≤ 30 % (¼ 39 %, ⅓ 43 %); kræver en komponentændring |
 | LassoCompareTable (6 × 40–45 tegn) | 1/1 / ⅔ / 1/1 | 1/1 | 0 | 0 | 0 (før: 2378 px, rullede) | 0 % | ingen vandret rulning i fuld bredde | ja; ren fra ⅔ (højde 471 px i ⅔, 371 px i 1/1); i ½ og smallere ruller den stadig (598 px) |
 
+**C6 (PersonFacts i to kolonner, målt 29.09):** nøgle/værdi-rækkerne fordeles i to kolonner, når komponenten er mindst 480 px bred (container query `personfacts`; ¼ og ⅓ er uændrede). Tom plads i ½ falder fra 51 % til 20 % (højde 307 px til 193 px); ⅔ 63 % til 21 %, ¾ 67 % til 20 %, 1/1 76 % til 28 %. Kravet "≤ 30 % tom i max" er opfyldt uden ændret GRID_RULES; ¼ (39 %) og ⅓ (43 %) er som før.
+
 ### GRID_RULES og profiler, før og efter (kun ændrede)
 
 | Type | før std / min / max | efter std / min / max | profil før | profil efter |
@@ -1313,3 +1315,12 @@ Afvigelser fra forslagstabellen (eskaleret): **LassoBarChart og LassoMap beholde
 - **Historik:** nyhederne står i eget bånd (bred, min ¾); ændringsfeedet (smal ½, meget højt) viger inden for budgettet hos Eksempel Byg for fusionerne; publiceringerne udelades hos 8 af 14, og Statstidende hos Eksempel Energi (alle står på "vis alt").
 - **Ejerskab:** ejerdiagrammet står i ¾ ved lange knudenavne (≥ 24 tegn), fx Eksempel Maskinfabrik.
 - **Personsiderne** er uændrede: `composePerson` lægger selv ¾ + ¼ og ½ + ½ og bruger ikke pakkeren (se rapporten til Fable).
+
+## Efter B10 (29.09.2026)
+
+Personsiderne (`composePerson`, `composeAskPerson`) og kolonnerne i `composeAskCompany` pakkes nu med gridmodellen og den indholdsstyrede mindstebredde (`contentMinWidthFn`), ikke længere med håndlagte ¾ + ¼ og ½ + ½.
+
+- **Personsiden:** grupperne pakkes i Papers rækkefølge (`packPersonPage`): hoved, persontal, svar-elementet med stamoplysningerne, derefter resten. Aktive roller (smal) + stamoplysninger står ½ + ½; netværket (min 1/1) står altid i eget fuldbånd; kræver svaret fuld bredde, går stamoplysningerne med konteksten. Resten (3–5 elementer) pakkes i den rækkefølge, der giver den laveste side (en smal komponent alene i fuld bredde tæller med halvdelen af sin højde oveni).
+- **Højdebudgettet** vælger elementerne og deres form som Papers side (26g: ¾ + ¼ og "to og to", `pairByWeight`), så pakningen kun ombryder siden og aldrig koster et element eller en linje i tekstkortet (Ø4). Den ombrudte side kan være højere end budgettet: overblikket for CVR-3-4000000001 1247 → 1523 px, Bo Eksempel (CVR-3-4000000002) 1296 → 1591 px og CVR-3-4000000020 1242 → 1451 px (de øvrige 135 personsider holder 1300). Eskaleret til Fable.
+- **Spørgsmålssiderne:** svar-elementet står altid først (`leadFirst`); et element, der ellers ville stå alene i fuld bredde, sættes ved siden af et af de næste (`packBandsPaired`). Nyhederne som svar står fx i ¾ (før ⅓ i en af tre kolonner).
+- Testene: `apps/server/src/data/grid.test.ts` tjekker nu personsiderne som komponeret (alle demopersoner og fokus) og spørgsmålssiderne for eval-sættets 60 spørgsmål; `packages/spec/src/person.test.ts` har B10 (a)–(d).

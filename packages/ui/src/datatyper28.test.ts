@@ -34,7 +34,7 @@ test("28.6/26h.8: fusion som 'fra → til', fokus med koral kant, ophørt i mute
 test("28.8: Statstidende med alvorsfarvet type; udelades helt uden bekendtgørelser", () => {
   const html = renderToStaticMarkup(createElement(Announcements, { events: ev }));
   assert.match(html, /lasso-announce__type--bankrupt">Dekret om konkurs</);
-  assert.doesNotMatch(html, /lasso-source/, "kildelinjen står pr. bekendtgørelse, ikke samlet");
+  assert.doesNotMatch(html, /lasso-sour/, "ingen kildevisning");
   assert.equal(renderToStaticMarkup(createElement(Announcements, { events: { ...ev, announcements: [] } })), "");
 });
 
@@ -112,7 +112,7 @@ test("28.9: reelle ejere i tre særlige tilstande og 'via rolle' i den almindeli
   assert.doesNotMatch(exempt, /lasso-state/);
   const unid = r({ lassoId: "x", owners: [], special: { kind: "unidentified", reason: "Registreret i CVR." }, gaps: [{ reason: "dublet" }] });
   assert.match(unid, /lasso-bo__alert[^]*Registreret i CVR\.[^]*Indgår som observation i risikovurderingen/);
-  assert.doesNotMatch(unid, /Kilde:/, "G3: ingen kildelinje");
+  assert.doesNotMatch(unid, /Kilde:/, "G3: ingen kildevisning");
   assert.doesNotMatch(unid, /dublet/);
   const via = r({ lassoId: "x", owners: [{ name: "Bo", throughRole: true, share: "25 %" }] });
   assert.match(via, /Bo<span class="lasso-bo__via">, via rolle<\/span>/);

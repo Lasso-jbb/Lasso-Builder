@@ -19,7 +19,7 @@ import type { ViewAction } from "../types.js";
 import { printElement } from "../print.js";
 import { downloadPng, svgForExport } from "../ownershipExport.js";
 import { Menu } from "./Menu.js";
-import { DataState, Section, SourceLine, stateForError, statusTone } from "../primitives.js";
+import { DataState, Section, stateForError, statusTone } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
 import { Tabs } from "./Tabs.js";
 import {
@@ -258,7 +258,6 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
   const personRoot = root?.kind === "person";
   const open = (n: OwnershipNodeVM | undefined) =>
     onAction && canDrillDown && n && n.kind === "company" && n.id.startsWith("CVR-1-") ? () => onAction({ kind: "open-company", lassoId: n.id, name: n.name }) : undefined;
-  const source = <SourceLine source="CVR via Lasso" updated={graph.fetchedAt} />;
 
   /* ---------- Mobil: indrykket liste ---------- */
   if (W < LIST_BELOW) {
@@ -366,7 +365,6 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
           title: `${beneficial ? "Reelle ejere" : "Ejerstruktur"}, ${rootName}`,
           dateLine: dateText,
           legend: legendLines,
-          source: `Kilde: CVR via Lasso${graph.fetchedAt ? `, opdateret ${formatDate(graph.fetchedAt)}` : ""}`,
         })
       : null;
 
@@ -788,7 +786,6 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
             {t}
           </p>
         ))}
-        {source}
       </div>
       </div>
     </Section>

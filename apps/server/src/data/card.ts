@@ -919,7 +919,7 @@ function summaryCard(spec: ViewSpec): string | null {
   const card = new Card();
   card.section(s.title ?? "Resumé");
   card.text(s.text);
-  // G3 (Jakob 29.09): ingen kildelinje, heller ikke i tekstkortet.
+  // G3 (Jakob 29.09): ingen kildevisning, heller ikke i tekstkortet.
   return card.toString();
 }
 
@@ -1074,6 +1074,55 @@ function savedPagesCard(spec: ViewSpec, ds: Dataset): string | null {
   return [card.toString(), ...links].join("\n");
 }
 
+/** Seneste regnskabsårs værdi for nøgletallet (som CompareTable og Ranking: years.at(-1)). */
+function latest(ds: Dataset, id: string, m: Metric): { value: number | null; year?: number; currency?: string } {
+  const f = ds.financials[id];
+  const y = f?.years.at(-1);
+  const v = y?.[METRIC_FIELD[m]];
+  return { value: typeof v === "number" ? v : null, year: y?.year, currency: y?.currency ?? f?.currency };
+}
+
+/**
+ * compare_companies (plan D3): rangeringen som "1. Navn: værdi" (højeste først, som LassoRanking) og
+ * sammenligningstabellen med én blok pr. virksomhed: navnet og nøgletallene for seneste år.
+ */
+function compareCard(spec: ViewSpec, ds: Dataset): string | null {
+  const ranking = spec.components.find((c) => c.type === "LassoRanking");
+  const table = spec.components.find((c) => c.type === "LassoCompareTable");
+  if (ranking?.type !== "LassoRanking" && table?.type !== "LassoCompareTable") return null;
+  const card = new Card();
+  const nameOf = (id: string) => ds.companies[id]?.name ?? id;
+  if (ranking?.type === "LassoRanking") {
+    const m = ranking.metric;
+    card.section(ranking.title ?? `${METRIC_LABELS[m]}, rangliste`);
+    const rows = ranking.companies
+      .map((id) => ({ id, ...latest(ds, id, m) }))
+      .filter((r): r is typeof r & { value: number } => r.value !== null)
+      .sort((a, b) => b.value - a.value);
+    if (rows.length === 0) card.text(`Ingen af virksomhederne har oplyst ${METRIC_LABELS[m].toLowerCase()}.`);
+    rows.forEach((r, i) => {
+      const line = `${nameOf(r.id)}: ${short(r.value, m, r.currency)}${r.year ? ` (${r.year})` : ""}`;
+      wrap(line, W - 4).forEach((l, j) => card.raw(`${pad(j === 0 ? `${i + 1}.` : "", 3)} ${l}`));
+    });
+    const missing = ranking.companies.filter((id) => !rows.some((r) => r.id === id));
+    if (rows.length && missing.length) card.text(`Uden ${METRIC_LABELS[m].toLowerCase()}: ${missing.map(nameOf).join(", ")}`);
+  }
+  if (table?.type === "LassoCompareTable") {
+    card.section(table.title ?? "Sammenligning, seneste år");
+    table.companies.forEach((id, i) => {
+      wrap(nameOf(id), W - 4).forEach((l, j) => card.raw(`${pad(j === 0 ? `${i + 1}.` : "", 3)} ${l}`));
+      const cells = table.metrics.map((m) => {
+        const x = latest(ds, id, m);
+        return `${SHORT_METRIC_LABEL[m]} ${x.value === null ? "-" : short(x.value, m, x.currency)}`;
+      });
+      const year = ds.financials[id]?.years.at(-1)?.year;
+      const text = ds.financials[id]?.years.length ? `${year ? `${year}: ` : ""}${cells.join(", ")}` : (ds.errors[`financials:${id}`] ?? "Ingen regnskabstal");
+      for (const l of wrap(text, W - 4)) card.raw(`    ${l}`);
+    });
+  }
+  return card.toString();
+}
+
 /** Tekstkort for visningen, eller null når den ikke har noget, der kan vises som tekst. */
 export function textCard(spec: ViewSpec, ds: Dataset, opts: { ask?: Ask } = {}): string | null {
   // Tidslinje, nyheder og ejerdiagram har enten company eller person.
@@ -1081,9 +1130,12 @@ export function textCard(spec: ViewSpec, ds: Dataset, opts: { ask?: Ask } = {}):
   const persons = [...new Set(spec.components.flatMap((c) => ("person" in c && typeof c.person === "string" ? [c.person] : [])))];
   // Et spørgsmål med et emne: kortet svarer først (samme tekst som resuméets "Svar:").
   const answer = answerText(spec, ds, opts.ask);
+  const compare = compareCard(spec, ds);
   const cards = [
-    ...(companies.length === 1 ? [companyCard(spec, ds, companies[0]!, answer)] : []),
+    // En sammenligning (linjegrafen har én company + benchmark) får sammenligningskortet, ikke et virksomhedskort.
+    ...(companies.length === 1 && !compare ? [companyCard(spec, ds, companies[0]!, answer)] : []),
     ...(persons.length === 1 ? [personCard(spec, ds, persons[0]!, answer)] : []),
+    compare,
     listCard(spec, ds),
     personTableCard(spec, ds),
     changeFeedCard(spec, ds),

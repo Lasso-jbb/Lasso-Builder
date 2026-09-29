@@ -13,7 +13,7 @@ import {
   type CreditTone,
 } from "@lasso/spec";
 import { useState, type ReactNode } from "react";
-import { DataState, Missing, Section, SourceLine, stateForError } from "../primitives.js";
+import { DataState, Missing, Section, stateForError } from "../primitives.js";
 import type { ViewAction } from "../types.js";
 import { CreditConfirmDialog } from "./CreditConfirmDialog.js";
 
@@ -143,7 +143,6 @@ export function CreditRating({ rating, title, error, onAction }: CreditRatingPro
     return (
       <Section title={heading} span="half" className="lasso-credit">
         <DataState state="notreported" />
-        <SourceLine source={rating.source} updated={rating.updated} />
       </Section>
     );
   }
@@ -231,7 +230,6 @@ export function CreditRating({ rating, title, error, onAction }: CreditRatingPro
         {CREDIT_COST_NOTE}
         {rating.cachedUntil ? ` Gemt hos Lasso til ${formatDate(rating.cachedUntil)}.` : ""}
       </p>
-      <SourceLine source={rating.source} updated={rating.updated} />
     </Section>
   );
 }

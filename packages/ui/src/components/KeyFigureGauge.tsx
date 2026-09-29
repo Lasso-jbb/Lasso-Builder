@@ -1,5 +1,6 @@
 import { formatPercent, GAUGE_METRICS, METRIC_FIELD, METRIC_LABELS, type FinancialsVM, type IndustryBenchmarkVM, type Metric } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
+import { NO_BENCHMARK_REASON } from "../unavailableReasons.js";
 
 /** Nøgletal, måleren kan vise (GAUGE_METRICS i spec.ts): procent-nøgletal, hvor højere er bedre. */
 type GaugeMetric = (typeof GAUGE_METRICS)[number];
@@ -50,6 +51,14 @@ export function KeyFigureGauge({
     return (
       <Section title={heading} span="half" className="lasso-kfg">
         {e ? <DataState state={stateForError(e) === "noaccess" ? "empty" : "error"} reason={e} /> : <DataState state="loading" lines={3} height={180} />}
+      </Section>
+    );
+  }
+  if (industry?.state === "unavailable" && !industryError) {
+    // Branchetal mangler (ingen branchetal for branchen, eller ingen registreret branchekode): ikke tilgængelig med årsagen.
+    return (
+      <Section title={heading} span="half" className="lasso-kfg">
+        <DataState state="unavailable" title="Branchetal ikke tilgængelige" reason={industry.reason ?? NO_BENCHMARK_REASON} height={140} />
       </Section>
     );
   }

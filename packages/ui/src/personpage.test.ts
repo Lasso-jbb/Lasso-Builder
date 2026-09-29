@@ -83,7 +83,7 @@ test("PersonFacts: bopæl som postnummer og by, kommune, enhedsnummer og tal afl
   assert.match(html, /Ejer af.*1 selskab</);
   assert.match(html, /Første registrering.*2005/);
   assert.match(html, /Seneste ændring.*30\.06\.2018/);
-  assert.doesNotMatch(html, /Kilde:/, "G3: ingen kildelinje");
+  assert.doesNotMatch(html, /Kilde:/, "G3: ingen kildevisning");
   assert.doesNotMatch(html, />0</, "aldrig et nul, kun 'Ingen'");
 });
 
@@ -103,12 +103,14 @@ test("columnBands: et lavere kolonnenummer starter et nyt bånd, og bredderne gi
   const bands = columnBands(spec.components);
   assert.deepEqual(
     bands.map((b) => (b.kind === "full" ? b.item.c.type : b.columns.map((col) => col.map((x) => x.c.type).join("+")).join(" | "))),
-    // Overblikket: roller | stamoplysninger, derefter de halve to og to efter vægt (de mest lige bånd).
-    ["LassoPersonHead", "LassoPersonStats", "LassoPersonRoles | LassoPersonFacts", "LassoPersonNetwork | LassoOwnershipDiagram", "LassoPersonRisk | LassoTimeline"],
+    // Overblikket (Ø13/B10, gridmodellen): roller | stamoplysninger (½ + ½), netværket i eget fuldbånd,
+    // historik ⅓ | ejerskab ⅔ (den laveste side) og risikoen alene.
+    ["LassoPersonHead", "LassoPersonStats", "LassoPersonRoles | LassoPersonFacts", "LassoPersonNetwork", "LassoTimeline | LassoOwnershipDiagram", "LassoPersonRisk"],
   );
-  const [, , rolesBand, netBand] = bands; // B4: persontallene står i eget fuldbånd under hovedet
-  assert.equal(rolesBand?.kind === "columns" && bandTemplate(rolesBand.columns), "minmax(0, 9fr) minmax(0, 3fr)");
-  assert.equal(netBand?.kind === "columns" && bandTemplate(netBand.columns), undefined);
+  const [, , rolesBand, netBand, historyBand] = bands; // B4: persontallene står i eget fuldbånd under hovedet
+  assert.equal(rolesBand?.kind === "columns" && bandTemplate(rolesBand.columns), "minmax(0, 6fr) minmax(0, 6fr)");
+  assert.equal(netBand?.kind, "full");
+  assert.equal(historyBand?.kind === "columns" && bandTemplate(historyBand.columns), "minmax(0, 4fr) minmax(0, 8fr)");
   // Virksomhedssidens kolonner (stigende kolonnenumre uden bredder) er stadig ét bånd.
   const company = parseViewSpec({
     kind: "company",
@@ -125,10 +127,10 @@ test("columnBands: et lavere kolonnenummer starter et nyt bånd, og bredderne gi
   assert.deepEqual(columnBands(company.components).map((b) => b.kind), ["full", "columns"]);
 });
 
-test("personsiden, overblik: aktive roller som liste ¾ + stamoplysninger ¼ (uden hovedets tal), historik (3) og ejerdiagram, ingen nyheder", () => {
+test("personsiden, overblik: aktive roller som liste ½ + stamoplysninger ½ (uden hovedets tal), historik (3) og ejerdiagram, ingen nyheder", () => {
   const spec = composePerson(ID, dataset(), { followUps: false });
   const html = render(spec, dataset(), { drillDown: true });
-  assert.match(html, /lasso-columns--ratio lasso-band" style="--lasso-columns-template:minmax\(0, 9fr\) minmax\(0, 3fr\)"/);
+  assert.match(html, /lasso-columns--ratio lasso-band" style="--lasso-columns-template:minmax\(0, 6fr\) minmax\(0, 6fr\)"/);
   // Aktive roller: én række pr. selskab med rollerne under og "siden" til højre; navnet kan åbnes.
   assert.match(html, /class="lasso-section__title">Aktive roller</);
   assert.match(html, /<button type="button" class="lasso-link lasso-row__open">Eksempel Holding ApS<\/button><\/div><div class="lasso-row__sub">Direktør, ejer 100 %<\/div><\/div><div class="lasso-row__side">siden 2005</);
@@ -211,14 +213,14 @@ test("nyheder og historik om en person har egne tomme tilstande", () => {
 
 const roles = (props: Partial<Parameters<typeof PersonRoles>[0]>) => renderToStaticMarkup(createElement(PersonRoles, { person: bo, ...props }));
 
-test("PersonRoles show 'current': de aktive roller pr. selskab, limit + 'Se alle N selskaber', kildelinje", () => {
+test("PersonRoles show 'current': de aktive roller pr. selskab, limit + 'Se alle N selskaber', kildevisning", () => {
   const html = roles({ show: "current" });
   assert.match(html, /class="lasso-section__title">Aktive roller</);
   assert.equal((html.match(/<li class="lasso-row"/g) ?? []).length, 2);
   assert.match(html, /Eksempel Byg A\/S<\/div><div class="lasso-row__sub">Bestyrelsesformand<\/div><\/div><div class="lasso-row__side">siden 2012</);
   assert.doesNotMatch(html, /Eksempel Energi/);
   assert.doesNotMatch(html, /Se alle/);
-  assert.doesNotMatch(html, /Kilde:/, "G3: ingen kildelinje");
+  assert.doesNotMatch(html, /Kilde:/, "G3: ingen kildevisning");
   // limit 1: én række + "Se alle 2 selskaber".
   const one = roles({ show: "current", limit: 1 });
   assert.equal((one.match(/<li class="lasso-row"/g) ?? []).length, 1);

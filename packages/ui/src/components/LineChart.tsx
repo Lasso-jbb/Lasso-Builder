@@ -1,5 +1,5 @@
 import { chartSeries, currencyUnit, formatNumber, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, type FinancialsVM, type IndustryBenchmarkVM, type Metric } from "@lasso/spec";
-import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { DataState, Section, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
 import { CHART_AXIS_W, CHART_BOTTOM, CHART_H, CHART_TOP, labelFor, makeYScale, niceTicks, yearRange } from "../charts.js";
 import { ChartReadout, ChartTooltip, changeText, isCompact, shortSeriesName, useChartPick, type PickRow } from "../chartPick.js";
@@ -288,9 +288,6 @@ export function LineChart({
         {t !== null && W > 0 ? <ChartTooltip x={x(t)} y={Math.min(y(values[t]!), benchValues[t] !== null ? y(benchValues[t]!) : Infinity)} width={W} title={points[t]!.year} rows={rowsFor(t)} /> : null}
       </div>
       {pick.readout !== null ? <ChartReadout inline title={points[pick.readout]!.year} rows={rowsFor(pick.readout)} /> : null}
-      {indexMode && industry?.state === "ok" && industry.source ? (
-        <SourceLine source={`${industry.source}${industry.peers ? `, median af ${formatNumber(industry.peers)} virksomheder` : ""}`} updated={industry.updated} />
-      ) : null}
     </Section>
   );
 }

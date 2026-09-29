@@ -217,8 +217,8 @@ const DATA_RULES: string[] = [
   "Status er ren tekst i vægt 500: Aktiv i tekstfarve, Ophørt i grå, Under konkurs i mørk rød (#B42318), Under frivillig likvidation i warning-tekst. Ingen piller, prikker eller farvede baggrunde.",
   "Ingen dekorative piller: Positiv, Lav risiko, Ny og lignende skrives som tekst eller udelades. Tællere står kun i overskrifter og tekst, aldrig på faner. Kun filter-chips (valgbare) må have kant.",
   "Ingen ink (sort) baggrund på rækker eller flader. Bundlinjer i tabeller markeres med vægt 700 og en 1 px linje over, ikke fyld. Kun tooltips er ink.",
-  "Ingen farvede bannerbokse. Sammenfatninger, risikonoter og AI-analyser er almindelige sektioner på hvid flade: overskrift og brødtekst, ingen kildelinje. Et lille farvet ikon foran en tekstlinje er nok.",
-  "\"Skrevet af AI\" eller lignende mærker vises ikke, og der er ingen kildelinje (\"Kilde: …, opdateret …\") på elementerne; ingen \"Vis kilder (N)\" og ingen \"Kilder\" med link, heller ikke i Se alle-panelet (08.7). Nyhedens egen kilde (favicon, navn, tid) er ikke en kildelinje.",
+  "Ingen farvede bannerbokse. Sammenfatninger, risikonoter og AI-analyser er almindelige sektioner på hvid flade: overskrift og brødtekst, ingen kildevisning. Et lille farvet ikon foran en tekstlinje er nok.",
+  "\"Skrevet af AI\" eller lignende mærker vises ikke, og der vises ingen kilder på elementerne, hverken som linje, tæller eller link, heller ikke i Se alle-panelet (08.7). Nyhedens egen kilde (favicon, navn, tid) er en del af nyheden, ikke en kildevisning.",
   "Virksomheds- og personnavne står alene i lister, tabeller, hoveder, netværk, kontaktpersoner og diagrammer. Ingen ikonkasse og ingen rund initial-cirkel (\"JB\", \"?\") foran navnet. Person vs. selskab skelnes med tekst (rolle, \"Person\") og i diagrammet med form (pille / kasse); fratrådt og ukendt skrives som tekst, aldrig som stiplet cirkel.",
   "Nyhedskilder vises med sidens favicon som 16 px mærke (radius 3) foran kildenavnet. Ingen bogstavskasser.",
   "Mulig fejl i data: 14 px udråbstegn-ikon i warning-farve FORAN tallet, forklaring i tooltip ved mouseover. Ingen mærke, pille eller stiplet understregning.",
@@ -229,7 +229,7 @@ const DATA_RULES: string[] = [
   "Flere værdier end formen kan vise: vis de første 3 og \"Se N …\", som åbner et panel fra højre over siden (08 Kontaktpersoner). Gælder kontaktpersoner, telefonnumre, e-mails, P-enheder, bibrancher og ejere.",
   "Én grå til al hjælpetekst: metatekst, feltforklaringer og overlinjer bruger samme token (--color-text-muted = --color-text-secondary, #5B6068). Den lysere grå (#8A9099) er kun til ikoner og dekoration, aldrig til tekst der skal læses - på desktop, tablet og mobil.",
   "Aktive elementer har aldrig mørkt fyld. Aktiv side i paginering = ink-tekst i vægt 600 med tynd understregning; aktive segmenter, chips og trin markeres med tekstvægt, tynd kant eller koral-soft, aldrig en sort kasse.",
-  "Logo: kun de to mastere i 01b (ikon og navnelogo) i ink, klonet, aldrig tegnet som tekst eller farvet kasse. Logoet er diskret og står aldrig i topbjælken ved siden af entitetens navn: navnelogo 14 px dæmpet (55 %) som bundlinje nederst i sideskinnen på desktop og nederst på mobilskærme (uden kildelinje), ikon 24 px i tabletskinnen, 16 px som Lasso News-kilde, 28/14/12 px på rapportforside og i sidehoved/-fod (27).",
+  "Logo: kun de to mastere i 01b (ikon og navnelogo) i ink, klonet, aldrig tegnet som tekst eller farvet kasse. Logoet er diskret og står aldrig i topbjælken ved siden af entitetens navn: navnelogo 14 px dæmpet (55 %) som bundlinje nederst i sideskinnen på desktop og nederst på mobilskærme (uden kildevisning), ikon 24 px i tabletskinnen, 16 px som Lasso News-kilde, 28/14/12 px på rapportforside og i sidehoved/-fod (27).",
   "Nyheder: én kilde pr. nyhed (favicon 16 px, navn, tid), ingen billeder, ingen tone-mærker, ingen samlede historier eller favicon-stakke. Virksomhedsnavnet i uddraget står i fed (ink, 600), aldrig i koral eller på farvet baggrund.",
   "Korte ikon + værdi-lister (kontaktblok, genveje, maks 5 rækker) adskilles med luft, ikke skillelinjer. Linjer bruges kun i tabeller, nøgle-værdi-lister og lange lister.",
   "Risikoskalaen går fra 0 = lav risiko til 100 = høj risiko. Målere og skalaer har grøn til venstre/nederst (0–60), gul i midten (60–80) og rød til højre/øverst (80–100); en stigning i score er mere risiko og vises i warning- eller danger-tekst, aldrig grøn. Scoren er Lassos egen risikoscore; Creditsafe bruges ikke.",
@@ -299,7 +299,7 @@ function LogoMasters() {
 }
 
 const LOGO_USE =
-  "Diskret: navnelogo 14 px dæmpet (55 %) nederst i sideskinnen på desktop og nederst på mobilskærme, uden kildelinje. Aldrig i topbjælken ved siden af virksomheds- eller personnavnet. Ikon 24 px i tabletskinnen, 16 px som favicon og Lasso News-kilde. PDF: navnelogo 28 px på forsiden, 14 px i sidehovedet, ikon 12 px i sidefoden. Aldrig i koral, aldrig på farvet flade, aldrig strakt, aldrig med skygge eller ramme.";
+  "Diskret: navnelogo 14 px dæmpet (55 %) nederst i sideskinnen på desktop og nederst på mobilskærme, uden kildevisning. Aldrig i topbjælken ved siden af virksomheds- eller personnavnet. Ikon 24 px i tabletskinnen, 16 px som favicon og Lasso News-kilde. PDF: navnelogo 28 px på forsiden, 14 px i sidehovedet, ikon 12 px i sidefoden. Aldrig i koral, aldrig på farvet flade, aldrig strakt, aldrig med skygge eller ramme.";
 
 function LogoSizes() {
   const mark: [number, string][] = [[16, "favicon, kilde"], [20, "app-ikon"], [24, "skinne"], [32, "tom tilstand"]];

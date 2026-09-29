@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { moreText, formatDate, type ObservationRowVM, type ObservationsVM, type Severity } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
-import { DataState, Section, SeverityIcon, SourceLine, severityWord, stateForError } from "../primitives.js";
+import { DataState, Section, SeverityIcon, severityWord, stateForError } from "../primitives.js";
 
 /**
  * Alvorsniveau (bruges i A4-rapporten): høj, middel, info. Mobilens filterchips bruger desktopordene (vigtig, mulig, info). Neutrale fakta (0) er ikke et
@@ -208,7 +208,7 @@ export interface RiskObservationsProps {
   compact?: boolean;
   /** Markér hele listen som eksempeldata i hovedet ("3, eksempeldata"). */
   demo?: boolean;
-  /** "Se regnskab" i observationens kildelinje (open-section). */
+  /** "Se regnskab" i observationens kildevisning (open-section). */
   onAction?: (a: ViewAction) => void;
 }
 
@@ -242,7 +242,6 @@ export function RiskObservations({ data, error, title, compact = false, demo = f
 
   const rows = sortObservations(data.observations);
   const findings = rows.filter((r) => !r.notAvailable && r.severity >= 25);
-  const source = data.sources?.length ? `Lasso (${data.sources.join(", ")})` : "Lasso";
 
   if (findings.length === 0 && !(data.related ?? []).some((p) => p.rows.some((r) => r.severity >= 25))) {
     // Positiv tom tilstand (17.3): "Ingen observationer" og hvornår der blev tjekket.
@@ -262,7 +261,6 @@ export function RiskObservations({ data, error, title, compact = false, demo = f
             ))}
           </ul>
         ) : null}
-        {data.checkedAt ? <SourceLine source={source} updated={data.checkedAt} /> : null}
       </Section>
     );
   }
@@ -352,11 +350,6 @@ export function RiskObservations({ data, error, title, compact = false, demo = f
             </div>
           ))}
           {related.length > 3 ? <p className="lasso-row__sub">{`Se ${moreText(related.length - 3, "relateret", "relaterede")} i Lasso.`}</p> : null}
-        </div>
-      ) : null}
-      {data.checkedAt ? (
-        <div className="lasso-obs__desk">
-          <SourceLine source={source} updated={data.checkedAt} />
         </div>
       ) : null}
     </Section>

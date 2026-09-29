@@ -34,9 +34,9 @@ function hideCredit(h: ActivityHeatmapVM): ActivityHeatmapVM {
  * Heatmap, aktivitet pr. måned i en overvåget liste (katalog 13.11, node AKQ-0). Sekventiel skala i 5
  * trin fra surface-muted til koral, celle 34×18 med 4 px imellem, månedsetiketter under gitteret
  * (seneste måned 600). Hover, fokus og tryk: 1 px ink-ramme og tallet inde i cellen. Legende
- * "Færre … Flere" under; ingen kildelinje (13.11, G3).
+ * "Færre … Flere" under; ingen kildevisning (13.11, G3).
  * Mobil (26b.10): kvadratiske 24 px celler, 6 måneder synlige (swipe for flere, de nyeste i syne), den
- * valgte celle med ink-ramme og tallet; ingen legende eller kildelinje.
+ * valgte celle med ink-ramme og tallet; ingen legende eller kildevisning.
  */
 export function Heatmap({ heatmap: raw, title, error }: { heatmap?: ActivityHeatmapVM; title?: string; error?: string }) {
   // 21.1 (Jakob 29.09): ændringstypen Kredit udgår (afklaret 15:41; ingen scorehistorik).

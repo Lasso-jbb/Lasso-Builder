@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FOCUS_LABELS, formatDate, formatNumber, PERSON_FOCUS_LABELS, type SavedPageKind, type SavedPageVM, type SavedPagesVM } from "@lasso/spec";
 import type { ActionResult, ViewAction } from "../types.js";
-import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { DataState, Section, stateForError } from "../primitives.js";
 import { Tabs } from "./Tabs.js";
 import { useToast } from "./Toast.js";
 import { usePrintMode } from "../print.js";
@@ -155,7 +155,6 @@ export function SavedPages({ list, title, error, onAction, canDrillDown, canRemo
           {expanded ? "Vis færre" : `Se alle ${formatNumber(rows.length)}`}
         </button>
       ) : null}
-      <SourceLine source="Gemt i Lasso" />
     </Section>
   );
 }

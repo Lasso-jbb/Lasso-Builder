@@ -350,7 +350,7 @@ const REPORT_ANALYSIS_SOURCE = "Kilde: Lasso regnskabsanalyse";
  * `TextSectionItem` i den bekræftede rækkefølge (tomme felter udelades); ellers falder den
  * tilbage til `text` som én samlet sektion. HTML'et konverteres til ren tekst med `htmlToText`.
  * Tomt/ukendt svar giver en tom liste (sektionerne udelades da helt - katalogregel 4/5: ingen
- * AI-mærke, ingen bannerboks, blot almindelige sektioner med kildelinje).
+ * AI-mærke, ingen bannerboks, blot almindelige sektioner med kildevisning).
  *
  * Hver sektion starter i kilden med sin egen overskrift ("<b>Revisoroplysninger</b><br>…"), som
  * fjernes, så brødteksten starter med den første sætning (overskriften står allerede over den).

@@ -8,6 +8,10 @@ import {
   Delta,
   Icon,
   KeyFigureCards,
+  KeyFigureGauge,
+  Livestock,
+  PersonFacts,
+  ScoreHistory,
   LassoContact,
   LassoContactPersons,
   ScoreGauge,
@@ -275,6 +279,23 @@ function ScoreStates() {
   );
 }
 
+/** C6 (Ø6): låste tilstande (abonnement/modul) og ikke tilgængelige branchetal; tekster fra register.liveNote. */
+function LockedStates() {
+  const wrap = (node: ReactNode) => <div className="lasso-framewrap" style={{ flex: 1 }}>{node}</div>;
+  const SUB = "Kræver Creditsafe-abonnement. Score og kreditvurdering vises, når Creditsafe er tilføjet Lasso-abonnementet.";
+  const fin = { lassoId: B, years: [] } as unknown as FinancialsVM;
+  return (
+    <Stack>
+      <StateRow height={200}>
+        {wrap(<ScoreGauge score={{ lassoId: B, score: null, state: "unavailable", reason: SUB }} onFetch={noop} />)}
+        {wrap(<ScoreHistory history={{ lassoId: B, points: [], reason: SUB }} onFetch={noop} />)}
+        {wrap(<KeyFigureGauge financials={fin} industry={{ lassoId: B, state: "unavailable", reason: "Lasso har ingen branchetal for virksomhedens branche endnu.", years: [] }} />)}
+      </StateRow>
+      {wrap(<Livestock livestock={{ lassoId: B, herds: [], events: [], unavailableReason: "Kræver Ejendomme-modulet i Lasso-abonnementet" }} />)}
+    </Stack>
+  );
+}
+
 function NumberFormats() {
   const rows: [string, string][] = [
     ["Beløb, mio.", formatAmount(140_500_000)],
@@ -477,6 +498,18 @@ export const entries: GalleryEntry[] = [
     ),
   },
   { nr: "10.4", title: "Scoremåler, tilstande (10b)", node: "LG2-0", note: "10b: ikke beregnet, henter (skelet af måleren med shimmer), ikke tilgængelig. Lassos risikoscore, ingen Creditsafe.", render: () => <ScoreStates /> },
+  { nr: "10.5", title: "Låst og ikke tilgængelig med årsag (C6)", note: "Ø6: score og scorehistorik låst uden Creditsafe-abonnement (ingen knap), CHR låst uden Ejendomme-modulet, branchetal ikke tilgængelige med årsag.", render: () => <LockedStates /> },
+  {
+    nr: "16.6",
+    title: "Stamoplysninger i ½ (to kolonner)",
+    note: "C6/Ø13: fra ½ fordeles nøgle/værdi-rækkerne i to kolonner (container query).",
+    gridWidth: 564,
+    render: () => (
+      <div style={{ width: 564 }}>
+        <PersonFacts person={{ lassoId: "CVR-3-4000000001", name: "Mette Nielsen", zip: "8600", city: "Silkeborg", municipality: "Viborg", roles: [] } as never} />
+      </div>
+    ),
+  },
 
   // 11 Personer og ejere
   {
@@ -522,7 +555,7 @@ export const entries: GalleryEntry[] = [
     title: "Nyhedsliste",
     node: "LMF-0",
     spec: co("Eksempel Byg A/S", [{ type: "LassoNews", company: B, limit: 3 }]),
-    note: "Paper LMF-0 (runde 5): kildelinje 12/16 muted, overskrift 14/500/18 som historikkens begivenhed (12.3), uddrag 13/18 klippet efter 2 linjer, virksomheden i fed i uddraget, 'Vis flere' nederst. Papers eksempeltekster.",
+    note: "Paper LMF-0 (runde 5): kildevisning 12/16 muted, overskrift 14/500/18 som historikkens begivenhed (12.3), uddrag 13/18 klippet efter 2 linjer, virksomheden i fed i uddraget, 'Vis flere' nederst. Papers eksempeltekster.",
     mutate: (ds) => {
       const ago = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString();
       ds.news[B] = {

@@ -1,6 +1,6 @@
 import { shareText, type BeneficialOwnershipVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
-import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { DataState, Section, stateForError } from "../primitives.js";
 import { ShellIcon } from "./ShellIcons.js";
 
 /**
@@ -9,7 +9,7 @@ import { ShellIcon } from "./ShellIcons.js";
  * (ingen initial-cirkel), kæden i én grå linje, den beregnede andel til højre.
  * Tre særlige tilstande (28.9): ledelsen som reelle ejere (årsag + de indsatte personer med rolle),
  * fritaget (årsag + forbehold i muted) og kunne ikke identificeres (udråbstegn-ikon + "Indgår som
- * observation i risikovurderingen"). De særlige tilstande står som kort (28.9) uden kildelinje (G3);
+ * observation i risikovurderingen"). De særlige tilstande står som kort (28.9) uden kildevisning (G3);
  * ledelsestilstanden har forklaringen øverst på alle bredder (intet ekstra link på mobil). "throughRole" vises som ", via rolle" i
  * muted efter navnet.
  */
@@ -18,15 +18,12 @@ export function LassoBeneficialOwners({
   error,
   onOpen,
   onDiagram,
-  source = "CVR",
 }: {
   ownership?: BeneficialOwnershipVM;
   error?: string;
   onOpen?: (a: ViewAction) => void;
   /** 11.4: "Åbn ejerdiagram →" som koral link ved sektionstitlen. */
   onDiagram?: () => void;
-  /** Kildelinjen i de særlige tilstande (28.9). */
-  source?: string;
 }) {
   const title = "Reelle ejere";
   const diagram = onDiagram ? (
@@ -64,7 +61,6 @@ export function LassoBeneficialOwners({
             <p className="lasso-bo__caveat">Indgår som observation i risikovurderingen.</p>
           </div>
         </div>
-        <SourceLine source={source} />
       </Section>
     );
   }
@@ -76,7 +72,6 @@ export function LassoBeneficialOwners({
           <p className="lasso-bo__reason">{special.reason}</p>
           {special.caveat ? <p className="lasso-bo__caveat">{special.caveat}</p> : null}
         </div>
-        <SourceLine source={source} />
       </Section>
     );
   }
@@ -111,12 +106,6 @@ export function LassoBeneficialOwners({
           </li>
         ))}
       </ul>
-      {mgmt ? (
-        <>
-          {/* Kontrol r5 (28.9): intet mobil-link "Hvorfor ledelsen?"; forklaringen står øverst på alle bredder, som på desktop. */}
-          <SourceLine source={source} />
-        </>
-      ) : null}
     </Section>
   );
 }

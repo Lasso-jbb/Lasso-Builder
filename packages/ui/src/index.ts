@@ -4,7 +4,7 @@ export { ReportA4, StatementsReportA4, AnalysisReportA4, PersonReportA4 } from "
 export type { ReportA4Props, PersonReportA4Props } from "./components/ReportA4.js";
 // "Gem som PDF": knappen i hovedet og print-tilstanden, serverens Chromium tegner (docs/design/README.md, 27).
 export { PdfButton, runPdf, PDF_LABEL, PDF_BUSY_LABEL } from "./PdfButton.js";
-export { PrintMode, usePrintMode, pageTemplates, pageScale, printSources, printStamp, A4_WIDTH_PX, PAGE_MARGIN_MM } from "./print.js";
+export { PrintMode, usePrintMode, pageTemplates, pageScale, printStamp, A4_WIDTH_PX, PAGE_MARGIN_MM } from "./print.js";
 export type { PageTemplateInput } from "./print.js";
 export { CompanyHead } from "./components/CompanyHead.js";
 export { KeyFigureCards } from "./components/KeyFigureCards.js";
@@ -59,8 +59,6 @@ export { ReportBatches } from "./components/ReportBatches.js";
 export type { ReportBatchVM, ReportBatchesProps, BatchStatus } from "./components/ReportBatches.js";
 export { PersonSearchResults } from "./components/PersonSearchResults.js";
 export type { PersonSearchResultVM } from "./components/PersonSearchResults.js";
-export { SourceList } from "./components/SourceList.js";
-export type { SourceListProps, SourceListItem } from "./components/SourceList.js";
 export { SnapshotPicker } from "./components/SnapshotPicker.js";
 export type { SnapshotPickerProps } from "./components/SnapshotPicker.js";
 export { LiveNumber } from "./components/LassoContact.js";
@@ -200,7 +198,7 @@ export { TreePicker, TreePickerDialog, expandSelection, compactSelection } from 
 export type { TreeNode, TreePickerProps, TreePickerDialogProps } from "./components/TreePicker.js";
 export { useWidth } from "./useWidth.js";
 export type { ShellIconName } from "./components/ShellIcons.js";
-export { StateBox, Skeleton, Sparkline, Badge, StatusBadge, statusTone, DataState, Missing, SourceLine, Section, Delta, SeverityIcon, severityWord, SkeletonShape, SkelBar } from "./primitives.js";
+export { StateBox, Skeleton, Sparkline, Badge, StatusBadge, statusTone, DataState, Missing, Section, Delta, SeverityIcon, severityWord, SkeletonShape, SkelBar } from "./primitives.js";
 export type { StatusTone } from "./primitives.js";
 export type { DataStateKind, DataStateProps, SkeletonShapeKind } from "./primitives.js";
 export { specToCsv, rowsToCsv, tableToCsv, personRolesCsv } from "./csv.js";

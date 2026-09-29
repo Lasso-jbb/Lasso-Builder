@@ -43,7 +43,7 @@ export interface PersonVM {
   /** CVR's enhedsnummer for personen (personer har ikke CVR-nummer). */
   unitNumber?: string;
   roles: PersonRoleVM[];
-  /** Hvornår Lasso sidst opdaterede personen (kildelinjen). */
+  /** Hvornår Lasso sidst opdaterede personen (kildevisningn). */
   updated?: string;
   /**
    * Katalog 16.4: PEP-opslag (politisk eksponeret person) mod Finanstilsynets liste. Udeladt, når

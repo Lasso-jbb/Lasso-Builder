@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { emptyDataset, listTemplate, parseViewSpec, searchKey, searchQuerySchema, type Dataset, type ViewSpec } from "@lasso/spec";
 import { LassoView } from "./LassoView.js";
 import { PDF_BUSY_LABEL, PDF_LABEL, runPdf } from "./PdfButton.js";
-import { pageScale, pageTemplates, printSources, printStamp } from "./print.js";
+import { pageScale, pageTemplates, printStamp } from "./print.js";
 import type { ToastOptions } from "./components/Toast.js";
 import type { ActionResult, HostCapabilities, ViewAction } from "./types.js";
 
@@ -168,16 +168,16 @@ test("print-tilstand: faner står som overskrift (den viste fane), ikke som fane
   assert.match(html(companySpec(), {}), /role="tablist"/);
 });
 
-test("sidehoved og sidefod: mærke, navn, datastempel i dansk tid, kilder og 'side x af n'", () => {
-  const { headerTemplate, footerTemplate } = pageTemplates({ title: "Bo <Eksempel>", generatedAt: "2026-09-28T10:02:00.000Z", sources: printSources(dataset()) });
+test("sidehoved og sidefod: mærke, navn, datastempel i dansk tid (ingen kilder) og 'side x af n'", () => {
+  const { headerTemplate, footerTemplate } = pageTemplates({ title: "Bo <Eksempel>", generatedAt: "2026-09-28T10:02:00.000Z" });
   assert.match(headerTemplate, /<svg viewBox="0 0 117 97"/);
   assert.match(headerTemplate, /Bo &lt;Eksempel&gt;/);
   assert.match(headerTemplate, /Data hentet 28\.09\.2026 kl\. 12\.02/);
-  assert.match(footerTemplate, /Kilder: CVR, Erhvervsstyrelsen \(regnskaber\), Lasso News, eksempeldata\. Data pr\. 28\.09\.2026/);
+  assert.doesNotMatch(footerTemplate, /Kilder/);
+  assert.match(footerTemplate, /Data pr\. 28\.09\.2026/);
   assert.match(footerTemplate, /side <span class="pageNumber"><\/span> af <span class="totalPages"><\/span>/);
   assert.match(headerTemplate + footerTemplate, /padding:0 14mm/);
   assert.deepEqual(printStamp("2026-12-31T23:30:00Z"), { date: "01.01.2027", time: "00.30" });
-  assert.deepEqual(printSources(null), ["CVR"]);
   // 794 px bred visning mellem 14 mm margener.
   assert.ok(Math.abs(pageScale() - 0.8667) < 0.001, String(pageScale()));
 });

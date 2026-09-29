@@ -2,6 +2,7 @@ import { useState } from "react";
 import { formatDate, type ScoreVM } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { ShellIcon } from "./ShellIcons.js";
+import { isScoreSubscriptionReason, SCORE_SUBSCRIPTION_REASON } from "../unavailableReasons.js";
 import { useWidth } from "../useWidth.js";
 
 /** "09.2026" fra en ISO-dato. */
@@ -140,7 +141,7 @@ export function BandIcon({ index }: { index: 0 | 1 | 2 }) {
  * Scoremåler (katalog 10.1, node 9ZT-0): Lassos risikoscore 0-100, hvor 100 = HØJ risiko (Jakob 29.09).
  * Titel "Risikoscore", tal 40/700 + "af 100" + vurderingen som farvet ord, bånd i grøn/gul/rød (0-60 lav,
  * 60-80 moderat, 80-100 høj = rød) med en 2 px ink-markør ved scoren, akselabels "0, lav" og "100, høj".
- * Kun den aktuelle score: ingen forrige måling, kreditmaks eller Creditsafe, og ingen kildelinje (G3).
+ * Kun den aktuelle score: ingen forrige måling, kreditmaks eller Creditsafe, og ingen kildevisning (G3).
  * `detail` giver den fulde form med 60/80-mærker (26d.7-formen); udvikling og ændringer vises kun, hvis data har dem.
  *
  * Hente-tilstande (10.4, node BGZ-0): stiplet ramme = kan hentes (primær knap med prisen højrestillet
@@ -171,7 +172,7 @@ export function ScoreGauge({
   /** 18.1: "Se observationer" (open-section risiko). Uden den vises linket ikke (G1). */
   onObservations?: () => void;
 }) {
-  // Lassos risikoscore (Jakob 29.09): 0-100, hvor 100 = høj risiko. Ikke Creditsafe; ingen kildelinje (G3).
+  // Lassos risikoscore (Jakob 29.09): 0-100, hvor 100 = høj risiko. Ikke Creditsafe; ingen kildevisning (G3).
   const heading = title ?? "Risikoscore";
   const [requested, setRequested] = useState(false);
   if (!score) {
@@ -211,6 +212,14 @@ export function ScoreGauge({
     return (
       <Section title={heading} span="half" className="lasso-gauge-section">
         <DataState state="loading" shape="gauge" note={score.reason ?? "Tager typisk et par sekunder. Du kan fortsætte på siden."} />
+      </Section>
+    );
+  }
+  if (state === "unavailable" && isScoreSubscriptionReason(score.reason)) {
+    // Ø6: uden Creditsafe-abonnement er scoren låst; ingen knap og intet opslag.
+    return (
+      <Section title={heading} span="half" className="lasso-gauge-section">
+        <DataState state="locked" reason={SCORE_SUBSCRIPTION_REASON} lines={3} />
       </Section>
     );
   }

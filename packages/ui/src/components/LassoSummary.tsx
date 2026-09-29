@@ -14,7 +14,7 @@ export function paragraphs(text: string): string[] {
 
 /**
  * Resumé (katalog 12, "Resumé"). Teksten kommer fra specen (modellen skriver
- * den); komponenten henter ikke selv data. Almindelig sektion uden kildelinje (G3) og
+ * den); komponenten henter ikke selv data. Almindelig sektion uden kildevisning (G3) og
  * uden "Skrevet af AI"-mærke (regel 4). Brødtekst 15/25 i læsebredde; lange resuméer klippes rent
  * efter 5 linjer (ingen toning) med "Vis mere" under, som i 12.1 (12.2).
  * `source`/`updated` modtages stadig fra ældre specs, men vises ikke.

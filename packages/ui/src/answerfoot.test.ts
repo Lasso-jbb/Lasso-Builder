@@ -7,7 +7,7 @@ import { LassoView } from "./LassoView.js";
 
 const ID = "CVR-1-99000001";
 
-test("30.1: svarets bundlinje har ét koral link videre og ingen kildelinje (G3); uden answer ingen bundlinje", () => {
+test("30.1: svarets bundlinje har ét koral link videre og ingen kildevisning (G3); uden answer ingen bundlinje", () => {
   const ds = emptyDataset("demo");
   ds.companies[ID] = { lassoId: ID, cvr: "99000001", name: "Eksempel Byg A/S" };
   const spec = parseViewSpec({

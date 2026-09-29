@@ -1,8 +1,9 @@
 import { entityRefOf, ownershipGraphKey, type Dataset } from "./models.js";
 import { askLabel, askPersonFocus, askPlan, type Ask, type AskItem } from "./ask.js";
 import { personCompanies, personFactOptions, personRisk, personRoleRows, personWithRole, riskTimeline, type PersonVM } from "./person.js";
-import { askComponent, askProbe, componentWeight, FOCUSES, gridHeight, ITEM_PADDING, type Focus } from "./compose.js";
-import { compactOf, measuredHeight, pageHeight, PAGE_HEIGHT_BUDGET } from "./grid.js";
+import { askComponent, askProbe, componentWeight, contentMinWidthFn, FOCUSES, gridHeight, ITEM_PADDING, type Focus } from "./compose.js";
+import { bandsToComponents, compactOf, measuredHeight, originOf, packBandsPaired, pageHeight, PAGE_HEIGHT_BUDGET, type PackedBand } from "./grid.js";
+import { widthProfileOf } from "./catalog.js";
 import { viewSpecSchema, type ViewComponent, type ViewSpec, type Width } from "./spec.js";
 
 /**
@@ -10,10 +11,13 @@ import { viewSpecSchema, type ViewComponent, type ViewSpec, type Width } from ".
  * faner) vælger kun fokus, data hentes først (composePersonProbe, kun det fokus viser), og
  * skærmbilledet vælges derefter ud fra datas form. Hovedet står på alle fokus.
  *
- * Layout 'columns' i bånd: komponenter uden kolonne står i fuld bredde; to halve side om side i ét
- * bånd (kolonne 1 og 2). En halv, der står alene, får fuld bredde, så der aldrig er et hul ved
- * siden af. Tomme sektioner udelades, undtagen på fokus, der handler om netop dem (fx "Personen
- * ejer ikke selskaber i CVR." på ejerskab), hvor den tomme tilstand er svaret.
+ * Layout 'columns' i bånd, pakket med gridmodellen (packPersonPage, Ø13/B10): hver komponents
+ * bredde følger reglen (gridRuleOf), profilen (widthProfileOf) og indholdet (contentWidthOf), så
+ * netværket med reelle data står i eget fuldbånd, en smal liste (aktive roller, stamoplysninger)
+ * højst i ½ ved siden af andre, og intet bredt element står under sin mindstebredde. Et element,
+ * der står alene i et bånd, får fuld bredde, så der aldrig er et hul ved siden af. Tomme sektioner
+ * udelades, undtagen på fokus, der handler om netop dem (fx "Personen ejer ikke selskaber i CVR."
+ * på ejerskab), hvor den tomme tilstand er svaret.
  *
  * Ingen 1:1-gentagelser på samme side (docs/portal.md, "Personfokus og elementer"): hovedet ejer
  * antallet af roller, ejerskaber og første registrering, så stamoplysningerne udelader dem
@@ -207,8 +211,9 @@ export function personComponentWeight(c: ViewComponent, ds: Dataset, page: reado
 }
 
 /**
- * De halve i den rækkefølge, fokus foretrækker, sat sammen to og to, så båndene bliver så lige
- * høje som muligt (mindst samlet forskel; ved lige forskel den foretrukne rækkefølge). Ved et ulige
+ * Papers "to og to" (katalog 16/26g), som højdebudgettet regner med (B10: kun til budgettet; selve
+ * siden pakkes efter bredderne med packPersonPage). De halve i den rækkefølge, fokus foretrækker, sat
+ * sammen to og to, så båndene bliver så lige høje som muligt (mindst samlet forskel; ved lige forskel den foretrukne rækkefølge). Ved et ulige
  * antal står den, der er tilovers, til sidst i fuld bredde. Hvert par står i den foretrukne
  * rækkefølge (lavest først i kolonne 1), og parrene i rækkefølge efter deres første element.
  */
@@ -266,20 +271,95 @@ export function personItemHeight(c: ViewComponent, width: Width, ds: Dataset, pa
 }
 
 /**
- * Personsidens højde (px) i layout 'columns': en kolonne 1 efterfulgt af en kolonne 2 er ét bånd
- * (den højeste stak), alt andet står i eget fuldbånd. Samme enhed som packPage (gap 0).
+ * Personsidens højde (px) i layout 'columns', læst som LassoView.columnBands: komponenter uden kolonne
+ * står i eget fuldbånd; komponenter med kolonne samles i ét bånd (et lavere kolonnenummer starter et nyt),
+ * og båndet er så højt som den højeste stak. Samme enhed som packPage (gap 0).
  */
 export function personPageHeight(components: readonly ViewComponent[], ds: Dataset): number {
-  const bands: { height: number }[] = [];
-  for (let i = 0; i < components.length; i++) {
-    const c = components[i]!;
-    const next = components[i + 1];
-    if (c.column === 1 && next?.column === 2) {
-      bands.push({ height: Math.max(personItemHeight(c, c.width ?? "half", ds, components), personItemHeight(next, next.width ?? "half", ds, components)) });
-      i++;
-    } else bands.push({ height: personItemHeight(c, c.width ?? "full", ds, components) });
+  let total = 0;
+  let band: number[] = [];
+  let last = 0;
+  const flush = () => {
+    if (band.length) total += Math.max(...band);
+    band = [];
+  };
+  for (const c of components) {
+    if (!c.column) {
+      flush();
+      total += personItemHeight(c, c.width ?? "full", ds, components);
+      last = 0;
+      continue;
+    }
+    if (last === 0 || c.column < last) flush();
+    while (band.length < c.column) band.push(0);
+    band[c.column - 1]! += personItemHeight(c, c.width ?? "half", ds, components);
+    last = c.column;
   }
-  return pageHeight(bands as never, 0);
+  flush();
+  return total;
+}
+
+/**
+ * Personsidens pakning (Ø13, B10): grupperne pakkes i rækkefølge, hver for sig, med gridmodellen
+ * (packBands) og den indholdsstyrede mindstebredde (contentMinWidthFn), så Papers rækkefølge holder
+ * (hoved, persontal, svar-elementet med stamoplysningerne, derefter resten). Højderne er personsidens
+ * (personItemHeight). Deterministisk.
+ *
+ * To elementer, der ellers ville stå i hvert sit fuldbånd, sættes side om side, når det kan lade sig gøre
+ * (packBandsPaired, som personsidens "to og to" hidtil). En gruppe med to elementer (svaret og
+ * stamoplysningerne), der stadig ikke kan dele bånd (svaret kræver fuld bredde, fx netværket), sender det
+ * andet videre til næste gruppe, så stamoplysningerne står ved siden af noget i stedet for alene.
+ */
+export function packPersonPage(groups: readonly (readonly ViewComponent[])[], ds: Dataset): { bands: PackedBand[]; components: ViewComponent[]; height: number } {
+  const page = groups.flat();
+  const h = (c: ViewComponent, width: Width) => personItemHeight(c, width, ds, page);
+  const options = { gap: 0, minWidth: contentMinWidthFn(ds) };
+  // Resten (3–5 elementer) pakkes i den rækkefølge, der giver den laveste side (som Papers "to og to" valgte
+  // de mest lige bånd). En smal komponent alene i fuld bredde (lovlig, men med tom plads, Ø13) tæller med
+  // halvdelen af sin højde oveni. Ved lige værdi den rækkefølge, der ligger tættest på prioriteten. Deterministisk.
+  const pack = (list: readonly ViewComponent[]): PackedBand[] => {
+    if (list.length < 3 || list.length > 5) return packBandsPaired(list, h, options);
+    let best: { bands: PackedBand[]; height: number; inversions: number } | null = null;
+    for (const order of permutations(list.length)) {
+      const bands = packBandsPaired(order.map((i) => list[i]!), h, options);
+      const stretched = bands.reduce((sum, b) => {
+        const only = b.stacks.length === 1 && b.stacks[0]!.items.length === 1 ? b.stacks[0]!.items[0]! : undefined;
+        return sum + (only && widthProfileOf(only).profil === "smal" ? b.height / 2 : 0);
+      }, 0);
+      const height = pageHeight(bands, 0) + stretched;
+      const read = bands.flatMap((b) => b.stacks.flatMap((st) => st.items.map((c) => list.indexOf(originOf(c)))));
+      let inversions = 0;
+      for (let a = 0; a < read.length; a++) for (let b = a + 1; b < read.length; b++) if (read[a]! > read[b]!) inversions++;
+      if (!best || height < best.height || (height === best.height && inversions < best.inversions)) best = { bands, height, inversions };
+    }
+    return best!.bands;
+  };
+  const bands: PackedBand[] = [];
+  let carry: ViewComponent[] = [];
+  groups.forEach((group, i) => {
+    const list = [...carry, ...group];
+    carry = [];
+    if (list.length === 0) return;
+    let packed = pack(list);
+    if (list.length === 2 && packed.length === 2 && i < groups.length - 1) {
+      carry = [list[1]!];
+      packed = packed.slice(0, 1);
+    }
+    bands.push(...packed);
+  });
+  if (carry.length) bands.push(...pack(carry));
+  return { bands, components: bandsToComponents(bands), height: pageHeight(bands, 0) };
+}
+
+/** Alle ombytninger af 0..n-1 i leksikografisk rækkefølge (identiteten først). */
+function permutations(n: number): number[][] {
+  const out: number[][] = [];
+  const walk = (prefix: number[], rest: number[]) => {
+    if (rest.length === 0) return void out.push(prefix);
+    rest.forEach((x, i) => walk([...prefix, x], [...rest.slice(0, i), ...rest.slice(i + 1)]));
+  };
+  walk([], Array.from({ length: n }, (_, i) => i));
+  return out;
 }
 
 /**
@@ -326,8 +406,8 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
     const structure = graph ? graph.edges.some((e) => owned.has(e.from) && !e.until) : opts.showError && Boolean(ds.errors[`graph:${key}`]) && ownsByRoles;
     return structure ? { type: "LassoOwnershipDiagram", person: id, ...PERSON_GRAPH_DEPTH, ...(opts.title ? { title: opts.title } : {}) } : null;
   };
-  // To halve side om side i ét bånd; står den ene alene, får den fuld bredde. Parringen sker efter
-  // højdebudgettet (nedenfor), så udeladte og kompakte elementer parres, som de faktisk står.
+  // Resten af siden (efter hovedet og svar-elementet) pakkes som én gruppe (packPersonPage). Pakningen
+  // sker efter højdebudgettet (nedenfor), så udeladte og kompakte elementer pakkes, som de faktisk står.
   let halves: ViewComponent[] = [];
   let droppable = false;
   const pair = (list: ViewComponent[]) => {
@@ -335,10 +415,15 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
   };
   const facts: ViewComponent = { type: "LassoPersonFacts", person: id };
   const stats: ViewComponent = { type: "LassoPersonStats", person: id };
-  // ¾ + ¼ i ét bånd (hovedelementet og stamoplysningerne); uden hovedelement står stamoplysningerne alene.
+  // Hovedelementet og stamoplysningerne pakkes sammen (én gruppe): bredderne følger reglerne (Ø13), fx
+  // aktive roller ½ + stamoplysninger ½; uden hovedelement står stamoplysningerne alene.
+  let withFactsMain: ViewComponent | null = null;
   const withFacts = (main: ViewComponent | null) => {
-    if (!main) return void components.push(facts);
-    components.push({ ...main, column: 1, width: "three-quarters" } as ViewComponent, { ...facts, column: 2, width: "quarter" } as ViewComponent);
+    if (main) {
+      withFactsMain = main;
+      components.push(main);
+    }
+    components.push(facts);
   };
 
   switch (focus) {
@@ -382,7 +467,7 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
       if (hasRoles) components.push(stats);
       const serious = hasRoles && cases.some((c) => c.involved);
       if (serious) components.push({ type: "LassoPersonRisk", person: id });
-      // De aktive roller som kort liste (¾) + stamoplysninger (¼); uden aktive roller de ophørte.
+      // De aktive roller som kort liste + stamoplysninger (½ + ½, smal højst ½); uden aktive roller de ophørte.
       const current = personRoleRows(person, "current").length > 0;
       const ended = personRoleRows(person, "ended").length > 0;
       // Smagsprøverne på fanerne: "Se alle … i Roller/Netværk/Historik" åbner fanen (more).
@@ -393,7 +478,7 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
             ? { type: "LassoPersonRoles", person: id, show: "ended", limit: OVERVIEW_ROLES, more: "roller" }
             : null,
       );
-      // Netværk, risiko, historik og ejerskab to og to; ingen nyheder på overblikket (de står på historik).
+      // Netværk (fuld bredde), risiko, historik og ejerskab pakket efter bredderne; ingen nyheder på overblikket (de står på historik).
       const halves: ViewComponent[] = [];
       if (network.length > 0) halves.push({ type: "LassoPersonNetwork", person: id, limit: OVERVIEW_NETWORK, more: "netvaerk" });
       // Risiko står altid, når personen har roller: "ingen konkurser" er også et svar.
@@ -415,14 +500,35 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
   const budget = options.showAll ? Number.POSITIVE_INFINITY : (options.heightBudget ?? PERSON_PAGE_BUDGET);
   // Opfølgningen står altid nederst (fuldbånd); den tæller med i højden.
   const foot = options.followUps !== false ? personItemHeight({ type: "LassoFollowUps", prompts: [{ label: "-", prompt: "-" }] } as ViewComponent, "full", ds, []) : 0;
+  // B10: budgettet (hvilke elementer der står, og i hvilken form) regnes som Papers personside (26g):
+  // hovedelementet ¾ + stamoplysninger ¼ og de halve to og to (pairByWeight). Selve siden pakkes bagefter
+  // efter bredderne (packPersonPage, Ø13), så den nye pakning kun ombryder siden og aldrig koster et
+  // element (eller en linje i tekstkortet, Ø4). Den ombrudte side kan derfor være højere end budgettet.
   const fits = (list: readonly ViewComponent[]) => personPageHeight(list, ds) + foot <= budget;
   const fit = (mains: readonly ViewComponent[]) => {
     const layout = (hs: readonly ViewComponent[], compacted: ReadonlySet<ViewComponent>) => {
       const form = (c: ViewComponent) => (compacted.has(c) ? (compactPersonItem(c) ?? c) : c);
-      const m = mains.map(form);
+      const m = mains.map((c, i) =>
+        c === withFactsMain && mains[i + 1] === facts
+          ? ({ ...form(c), column: 1, width: "three-quarters" } as ViewComponent)
+          : c === facts && mains[i - 1] === withFactsMain
+            ? ({ ...form(c), column: 2, width: "quarter" } as ViewComponent)
+            : form(c),
+      );
       const h = hs.map(form);
       const page = [...m, ...h];
       return [...m, ...pairByWeight(h, (c) => personComponentWeight(c, ds, page, { half: true }))];
+    };
+    // Siden, som den tegnes: hvert af de første elementer i eget bånd, hovedelementet med stamoplysningerne.
+    const pack = (hs: readonly ViewComponent[], compacted: ReadonlySet<ViewComponent>) => {
+      const form = (c: ViewComponent) => (compacted.has(c) ? (compactPersonItem(c) ?? c) : c);
+      const groups: ViewComponent[][] = [];
+      mains.forEach((c, i) => {
+        if (c === facts && mains[i - 1] === withFactsMain) groups.at(-1)!.push(form(c));
+        else groups.push([form(c)]);
+      });
+      groups.push(hs.map(form));
+      return packPersonPage(groups, ds).components;
     };
     let kept = halves;
     let compacted = new Set<ViewComponent>();
@@ -447,7 +553,7 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
         }
       }
     }
-    return { chosen, kept: kept.length, compacted: compacted.size };
+    return { chosen: pack(kept, compacted), kept: kept.length, compacted: compacted.size };
   };
   // B4: persontallene kommer kun med, når de ikke koster et af overblikkets halve eller en kompakt form
   // (Papers side står som før); "vis alt" viser dem altid.
@@ -493,9 +599,11 @@ function diagramShowsStructure(ds: Dataset, id: string): boolean {
 const ASK_MAX_PERSON = 11;
 
 /**
- * Personsiden for et spørgsmål (askPlan): hovedet, svar-elementet først (¾ med stamoplysningerne
- * ¼ ved siden af, eller i fuld bredde: bopæl og ejerstruktur), derefter de øvrige svar og
- * kontekstmodulerne i rangorden to og to (½ + ½, pairByWeight). Tomme kontekstmoduler udelades.
+ * Personsiden for et spørgsmål (askPlan): hovedet, svar-elementet først (med stamoplysningerne ved
+ * siden af, eller i fuld bredde: bopæl og ejerstruktur), derefter de øvrige svar og kontekstmodulerne
+ * i rangorden. Bredderne følger gridmodellen (packPersonPage, Ø13/B10): et svar, der kræver fuld
+ * bredde (netværket), står i eget bånd, og stamoplysningerne går så med konteksten; en smal liste står
+ * højst i ½ ved siden af andre. Tomme kontekstmoduler udelades.
  */
 function composeAskPerson(lassoId: string, ds: Dataset, ask: Ask, options: ComposePersonOptions): ViewSpec {
   const id = lassoId;
@@ -545,20 +653,22 @@ function composeAskPerson(lassoId: string, ds: Dataset, ask: Ask, options: Compo
   const leads = plan.lead.map((i) => adapt(i, true)).filter(take);
   const halves: ViewComponent[] = [];
   const [first, ...rest] = leads;
-  if (first && (first.type === "LassoPersonFacts" || first.type === "LassoOwnershipDiagram")) components.push(first);
+  // Svaret og stamoplysningerne pakkes sammen (som på roller-fanen); bopæl og ejerstruktur står alene.
+  const answer: ViewComponent[] = [];
+  if (first && (first.type === "LassoPersonFacts" || first.type === "LassoOwnershipDiagram")) answer.push(first);
   else if (first) {
-    // Svaret (¾) med stamoplysningerne (¼) ved siden af, som på roller-fanen.
     seen.add("LassoPersonFacts");
-    components.push({ ...first, column: 1, width: "three-quarters" } as ViewComponent, { type: "LassoPersonFacts", person: id, column: 2, width: "quarter" });
+    answer.push(first, { type: "LassoPersonFacts", person: id });
   }
   halves.push(...rest);
   for (const i of plan.context) {
-    if (components.length + halves.length >= ASK_MAX_PERSON) break;
+    if (components.length + answer.length + halves.length >= ASK_MAX_PERSON) break;
     const c = adapt(i, false);
     if (take(c)) halves.push(c);
   }
-  const page = [...components, ...halves];
-  components.push(...pairByWeight(halves, (c) => personComponentWeight(c, ds, page, { half: true })));
+  const packed = packPersonPage([components.slice(), answer, halves], ds);
+  components.length = 0;
+  components.push(...packed.components);
 
   const focus = askPersonFocus(ask) ?? "overblik";
   const name = options.name ?? person.name;

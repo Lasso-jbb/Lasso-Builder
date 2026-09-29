@@ -154,7 +154,7 @@ test("htmlToText tåler tomt eller manglende input", () => {
   assert.equal(htmlToText(""), "");
 });
 
-test("adaptReportAnalysisSections bygger sektioner i den bekræftede rækkefølge, med danske titler og kildelinje, og udelader tomme felter", () => {
+test("adaptReportAnalysisSections bygger sektioner i den bekræftede rækkefølge, med danske titler og kildevisning, og udelader tomme felter", () => {
   const sections = adaptReportAnalysisSections(REPORT_ANALYSIS_RESPONSE);
   assert.deepEqual(
     sections.map((s) => s.heading),

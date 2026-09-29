@@ -5,7 +5,7 @@ import { companyFactOptions, companyFacts, sameAddress } from "./companyFacts.js
 import type { Dataset, FinancialYear } from "./models.js";
 import { hasNoStatements } from "./statements.js";
 import { effectiveMetric, mainMetric } from "./series.js";
-import { bandsToComponents, elementMinWidth, measuredHeight, packWithinBudget, PAGE_HEIGHT_BUDGET, type MinWidthFn, type PackedBand } from "./grid.js";
+import { bandsToComponents, elementMinWidth, leadFirst, measuredHeight, packBandsPaired, packWithinBudget, PAGE_HEIGHT_BUDGET, type MinWidthFn, type PackedBand } from "./grid.js";
 import { personCompanies } from "./person.js";
 import type { ContentWidthDrivers } from "./register.js";
 import {
@@ -962,9 +962,12 @@ export function askCardMetrics(years: readonly FinancialYear[], candidates: read
 
 /**
  * Virksomhedssiden for et spørgsmål (askPlan): hovedet og evt. kortene i fuld bredde øverst, svar-
- * elementerne først (i kolonne 1, 2, 3 i nævnt rækkefølge, eller i fuld bredde over kolonnerne), og
- * kontekstmodulerne i rangorden i den kolonne, der vejer mindst, til hver kolonne er fuld. Tomme
- * kontekstmoduler udelades (svar-elementet står også tomt), intet står 1:1 to gange, højst én graf.
+ * elementerne først (i kolonnerne i nævnt rækkefølge, eller i fuld bredde over kolonnerne), og
+ * kontekstmodulerne i rangorden, til hver kolonne er fuld (kolonnerne vejes som hidtil for at vælge,
+ * hvor meget kontekst der er plads til). Selve kolonnelayoutet pakkes med gridmodellen (packBands) og
+ * den indholdsstyrede mindstebredde (Ø13/B10): et bredt svar står aldrig under sin mindstebredde (hellere
+ * eget bånd), en smal liste højst i ½ ved siden af andre, og svar-elementet står først (leadFirst).
+ * Tomme kontekstmoduler udelades (svar-elementet står også tomt), intet står 1:1 to gange, højst én graf.
  */
 function composeAskCompany(lassoId: string, ds: Dataset, ask: Ask, options: ComposeOptions): ViewSpec {
   const id = lassoId;
@@ -1148,6 +1151,8 @@ function composeAskCompany(lassoId: string, ds: Dataset, ask: Ask, options: Comp
     return s.indexOf(Math.min(...s));
   };
   let halves = 0;
+  // Kolonne-elementerne i prioriteret rækkefølge (svarene i nævnt rækkefølge, så konteksten i rangorden) til pakningen.
+  const columnItems: ViewComponent[] = [];
   for (const i of leads) {
     const c = adapt(i, true);
     if (!c || blocked(c)) continue;
@@ -1156,6 +1161,7 @@ function composeAskCompany(lassoId: string, ds: Dataset, ask: Ask, options: Comp
       // Svarene øverst i hver sin kolonne i nævnt rækkefølge (første i kolonne 1).
       const k = halves < 3 ? halves : lightest();
       cols[k]!.push({ ...c, column: k + 1 } as ViewComponent);
+      columnItems.push(c);
       halves++;
     }
   }
@@ -1167,18 +1173,16 @@ function composeAskCompany(lassoId: string, ds: Dataset, ask: Ask, options: Comp
     else {
       const k = lightest();
       cols[k]!.push({ ...c, column: k + 1 } as ViewComponent);
+      columnItems.push(c);
     }
   }
 
-  // Tomme kolonner rykkes sammen; står kun én kolonne, får dens elementer fuld bredde (en halv står aldrig alene).
-  const filled = cols.filter((c) => c.length > 0);
-  const colComponents =
-    filled.length === 1
-      ? filled[0]!.map((x) => {
-          const { column: _one, ...rest } = x;
-          return rest as ViewComponent;
-        })
-      : filled.flatMap((c, i) => c.map((x) => ({ ...x, column: i + 1 }) as ViewComponent));
+  // Kolonnerne pakkes i bånd (gridmodellen, Ø13): bredderne følger reglerne og indholdet; et element, der
+  // står alene i et bånd, får fuld bredde (en halv står aldrig alene). Svar-elementet står først.
+  const all = page();
+  const bands = packBandsPaired(columnItems, (c, width) => gridHeight(c, width, ds, all) + ITEM_PADDING, { gap: 0, minWidth: contentMinWidthFn(ds) });
+  if (columnItems[0]) leadFirst(bands, columnItems[0]);
+  const colComponents = bandsToComponents(bands);
 
   const focus = askFocus(ask) ?? "overblik";
   const name = shortCompanyName(options.name ?? co?.name ?? lassoId);
@@ -1203,7 +1207,7 @@ function composeAskCompany(lassoId: string, ds: Dataset, ask: Ask, options: Comp
     title: options.name ?? lassoId,
     subtitle: askLabel(ask, "company"),
     layout: "columns",
-    columns: Math.max(2, Math.min(3, filled.length)),
+    columns: columnsOf(bands),
     components: [...top, ...above, ...colComponents, ...belowLeads, ...bottom, ...tail],
   });
 }

@@ -523,12 +523,12 @@ test("spørgsmål: 'hvad er soliditetsgraden' giver kort med soliditetsgraden f�
   assertPageRules(spec, "soliditet");
   assert.equal(spec.subtitle, "Soliditetsgrad");
   assert.equal(spec.layout, "columns");
-  assert.equal(spec.columns, 3);
+  // Kolonnerne pakkes i bånd efter bredderne (Ø13/B10): grafen ⅔ (fleksibel) først, historikken ⅓ ved siden af.
   assert.deepEqual(where(spec).slice(0, 3), ["LassoCompanyHead", "LassoKeyFigureCards", "LassoLineChart@1"]);
   assert.deepEqual(find(spec, "LassoKeyFigureCards")!.metrics!.slice(0, 3), ["soliditetsgrad", "egenkapital", "gaeld"]);
   assert.equal(find(spec, "LassoLineChart")!.metric, "soliditetsgrad");
-  // Siden er fuld: hver kolonne har kontekst, og balancen (som nøgletallet hører til) står nederst.
-  assert.ok(where(spec).some((w) => w.endsWith("@2")) && where(spec).some((w) => w.endsWith("@3")));
+  // Siden er fuld: flere delte bånd med kontekst, og balancen (som nøgletallet hører til) står nederst.
+  assert.ok(spec.components.filter((c) => c.column === 1).length >= 3 && spec.components.filter((c) => c.column === 2).length >= 3);
   assert.ok(spec.components.some((c) => c.type === "LassoShareBars"));
   assert.ok(spec.components.some((c) => c.type === "LassoBalanceSheet" && !c.column));
   assert.ok(spec.components.length >= 8, `${spec.components.length} elementer`);
@@ -584,7 +584,8 @@ test("spørgsmål: et tomt svar-element står (den tomme tilstand er svaret); to
   const spec = composeCompany(id, ds, { ask: ask("hvem sidder i bestyrelsen") });
   assertPageRules(spec, "tom bestyrelse");
   assert.equal(find(spec, "LassoPersonList")?.roles, "bestyrelse");
-  assert.equal(find(spec, "LassoPersonList")?.column, 1);
+  // Svaret står først (den tomme tilstand alene i sit bånd, konteksten i båndene under).
+  assert.equal(spec.components[1]?.type, "LassoPersonList");
   assert.ok(!spec.components.some((c) => c.type === "LassoNews" || c.type === "LassoContactPersons"));
 });
 

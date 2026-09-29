@@ -29,7 +29,7 @@ export const ANALYSIS_HEADINGS = [
  */
 const PROFILE_ANALYSIS: ReadonlySet<string> = new Set(["Regnskabsanalyse: konklusion", "Regnskabsanalyse", "Resultat", "Likviditet"]);
 
-/** Kilden i analysens kildelinje, når afsnittet ikke selv har en. */
+/** Kilden i analysens kildevisning, når afsnittet ikke selv har en. */
 export const ANALYSIS_SOURCE = "Lasso regnskabsanalyse";
 
 /** Afsnittet kommer fra Lassos regnskabsanalyse (overskrift eller kildenote), ikke fra CVR. */
@@ -48,7 +48,7 @@ export function textSectionsFor(sections: readonly TextSectionItem[], variant: T
   return sections.filter((s) => !isIndustry(s) && (!isAnalysisSection(s) || PROFILE_ANALYSIS.has(s.heading)));
 }
 
-/** Kildelinjens tekst for analysen: afsnittets egen note uden "Kilde: " (fx med dato), ellers standardkilden. */
+/** Kildevisningns tekst for analysen: afsnittets egen note uden "Kilde: " (fx med dato), ellers standardkilden. */
 export function analysisSource(sections: readonly TextSectionItem[]): string {
   const note = sections.find((s) => isAnalysisSection(s) && s.note)?.note;
   return note ? note.replace(/^Kilde:\s*/i, "").trim() || ANALYSIS_SOURCE : ANALYSIS_SOURCE;

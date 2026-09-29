@@ -29,6 +29,7 @@ import { loadViewHtml, viewVersion } from "../web/page.js";
 import {
   listSavedPages,
   removeSavedPage,
+  compareCompanies,
   renderView,
   resolveView,
   savePage,
@@ -66,12 +67,13 @@ Vælg værktøj:
 - "Vis alt om X", "vis det hele": show_company/show_person med show_all: true (siden må så gå ud over højdebudgettet). Ellers udelades show_all.
 - Lister og målgrupper ("revisorer i Region Midt med mindst 10 ansatte"): search_companies med brugerens formulering som query.
 - Personer på navn ('find Mette Holm', flere med samme navn): search_persons, derefter show_person med Lasso-ID.
-- Flere navngivne virksomheder (sammenligning, rangering) eller elementer, ingen focus dækker: render_view med en spec fra kataloget i dens beskrivelse. Navne må bruges i stedet for CVR-numre.
+- Flere navngivne virksomheder → compare_companies (sammenligning, rangering, "hvem er størst"). Navne må bruges i stedet for CVR-numre.
+- Elementer, ingen focus dækker: render_view med en spec fra kataloget i dens beskrivelse.
 - "Gem virksomheden/personen", "husk", "bogmærk", "sæt på min liste": save_page. "Mine gemte", "hvad har jeg gemt", "min liste": list_saved_pages. "Fjern fra listen": remove_saved_page. save_view er kun til et delbart link til en visning.
 - "Giv mig en URL", "del": save_view.
 
 Regler:
-- Én visning pr. svar: kald højst ét af show_company, show_person, search_companies, search_persons og render_view pr. brugerbesked, og kun én gang. Aldrig show_company og render_view efter hinanden.
+- Én visning pr. svar: kald højst ét af show_company, show_person, search_companies, search_persons, compare_companies og render_view pr. brugerbesked, og kun én gang. Aldrig show_company og render_view efter hinanden.
 - Tegn altid med det samme. Spørg aldrig "vil du se det grafisk?".
 - Kan din app vise den interaktive Lasso-visning: vis kun den, og skriv aldrig tekstkortet. Kan den ikke (fx Claude Code eller en terminal): vis tekstkortet fra værktøjssvaret uændret i en kodeblok med linket til den interaktive visning som klikbart link lige under, fx [Åbn LASSO X A/S i Lasso](url).
 - Brugeren ser visningen. Svar kort (1–3 sætninger) med det vigtigste, og gentag ikke tallene som tabel. Skriv aldrig HTML/CSS.
@@ -179,11 +181,36 @@ export function createMcpServer(ctx: McpContext): McpServer {
 
   registerAppTool(
     server,
+    "compare_companies",
+    {
+      title: "Sammenlign virksomheder",
+      description:
+        "Sammenlign 2–10 navngivne virksomheder på nøgletal: tabel (2–6, flere nøgletal), rangering (ét nøgletal, 'hvem er størst') og udvikling over tid for de to første. Send virksomhederne som navne eller CVR-numre og brugerens spørgsmål i question. Brug ikke til én virksomhed (show_company) eller til at finde virksomheder efter kriterier (search_companies).",
+      inputSchema: z.object({
+        companies: z.array(z.string().min(1).max(120)).min(2).max(10).describe("2–10 virksomheder: navne, CVR-numre eller Lasso-ID'er."),
+        metrics: z.array(z.enum(METRICS)).min(1).max(5).optional().describe("Nøgletal i tabellen. Standard: omsætning, bruttofortjeneste, resultat, ansatte."),
+        metric: z.enum(METRICS).optional().describe("Ét nøgletal at rangere efter."),
+        years: z.number().int().min(2).max(10).optional().describe("År i linjegrafen. Standard 5."),
+        question: z.string().max(300).optional().describe("Brugerens spørgsmål ordret."),
+        title: z.string().max(120).optional().describe("Overskrift."),
+      }),
+      annotations: { title: "Sammenlign virksomheder", ...readOnly },
+      _meta: ui,
+    },
+    async (input): Promise<CallToolResult> => {
+      const r = await compareCompanies(ctx, input);
+      if ("error" in r) return toolError(r.error);
+      return viewResult(r.spec, r.dataset, { note: r.note, pdfLink: mcpPdfLink(ctx.config, r) });
+    },
+  );
+
+  registerAppTool(
+    server,
     "show_company",
     {
       title: "Vis virksomhed",
       description:
-        "Vis én dansk virksomhed som ét skærmbillede, der tilpasser sig spørgsmålet og virksomhedens data. Send brugerens spørgsmål ordret i question: serveren afleder, hvad der spørges om, og bygger en hel side i Lassos portal-layout, hvor svar-elementet står først med data afgrænset til spørgsmålet (fx soliditetsgraden først på kortene og som linjegraf, kun direktionen i personlisten, regnskabet for det nævnte år, kun ledelsesændringerne i historikken), og resten af siden er kontekst fra hele komponentkataloget. Samme spørgsmål giver altid samme side. Kald det kun én gang pr. svar, og kald ikke render_view bagefter. Brug til alle spørgsmål om én bestemt virksomhed. focus bruges kun ved et generelt spørgsmål ('fortæl om X', 'hvordan går det'): 'overblik' (standard), 'oekonomi', 'ejerskab', 'ledelse', 'risiko' (kreditvurdering fra Creditsafe), 'historik', 'regnskab', 'kontakt'. Tager CVR-nummer, Lasso-ID eller navn; ved navn vælger serveren det bedste match og nævner alternativerne. Brug kun render_view, når brugeren beder om noget, show_company ikke dækker (fx sammenligning af flere virksomheder). Siden holdes inden for et højdebudget (de mest relevante elementer); beder brugeren om at se alt/det hele om virksomheden, så sæt show_all: true.",
+        "Vis én dansk virksomhed som ét skærmbillede, der tilpasser sig spørgsmålet og virksomhedens data. Send brugerens spørgsmål ordret i question: serveren afleder, hvad der spørges om, og bygger en hel side i Lassos portal-layout, hvor svar-elementet står først med data afgrænset til spørgsmålet (fx soliditetsgraden først på kortene og som linjegraf, kun direktionen i personlisten, regnskabet for det nævnte år, kun ledelsesændringerne i historikken), og resten af siden er kontekst fra hele komponentkataloget. Samme spørgsmål giver altid samme side. Kald det kun én gang pr. svar, og kald ikke render_view bagefter. Brug til alle spørgsmål om én bestemt virksomhed. focus bruges kun ved et generelt spørgsmål ('fortæl om X', 'hvordan går det'): 'overblik' (standard), 'oekonomi', 'ejerskab', 'ledelse', 'risiko' (kreditvurdering fra Creditsafe), 'historik', 'regnskab', 'kontakt'. Tager CVR-nummer, Lasso-ID eller navn; ved navn vælger serveren det bedste match og nævner alternativerne. Flere navngivne virksomheder → compare_companies; personer → show_person/search_persons; render_view kun til elementer, ingen af de andre værktøjer dækker. Siden holdes inden for et højdebudget (de mest relevante elementer); beder brugeren om at se alt/det hele om virksomheden, så sæt show_all: true.",
       inputSchema: z.object({
         company: z.string().min(1).describe("8-cifret CVR-nummer, Lasso-ID (fx CVR-1-12345678) eller virksomhedens navn."),
         question: z.string().max(300).optional().describe("Brugerens spørgsmål ordret. Serveren vælger niveau, elementer og data (nøgletal, roller, år) efter spørgsmålet."),
@@ -234,7 +261,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     "render_view",
     {
       title: "Vis oversigt",
-      description: `Fri komposition til sammenligninger, oversigter og analyser, der ikke passer i show_company eller search_companies. Send en JSON-spec; Lassos kode henter data og tegner i Lassos design. Virksomheder angives med CVR-nummer, Lasso-ID eller navn (navne slås op, og valget står i svaret). Skriv aldrig HTML/CSS. Brug 1–12 komponenter i ét dashboard. Kald render_view én gang pr. svar.\n\n${COMPOSITION_RULES}
+      description: `Fri komposition til oversigter og analyser, der ikke passer i show_company, show_person, search_companies, search_persons eller compare_companies (sammenligninger bygges med compare_companies, ikke her). Send en JSON-spec; Lassos kode henter data og tegner i Lassos design. Virksomheder angives med CVR-nummer, Lasso-ID eller navn (navne slås op, og valget står i svaret). Skriv aldrig HTML/CSS. Brug 1–12 komponenter i ét dashboard. Kald render_view én gang pr. svar.\n\n${COMPOSITION_RULES}
 
 ${LAYOUT_RULES}\n\nKomponentkatalog (hver linje: Brug til / Brug ikke når / Kræver / Eksempel):\n${catalogAsText()}\n\nEksempel (ét dashboard): {"title":"Byg vs. Transport","components":[{"type":"LassoCompareTable","companies":["12345678","87654321"]},{"type":"LassoLineChart","company":"12345678","metric":"omsaetning","years":5,"benchmark":"87654321"}]}`,
       inputSchema: viewSpecSchema.omit({ version: true, kind: true }),

@@ -13,7 +13,7 @@ import {
   type PersonVM,
 } from "@lasso/spec";
 import type { MoreInTab, ViewAction } from "../types.js";
-import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { DataState, Section, stateForError } from "../primitives.js";
 import { usePrintMode } from "../print.js";
 
 /** Regel 9: tre selskaber i tidsbåndene og fem i listerne, resten under "Se alle N" (limit kan ændre det). */
@@ -167,7 +167,6 @@ function PersonRoleList({
           {expanded ? "Vis færre" : `Se alle ${rows.length} selskaber`}
         </button>
       ) : null}
-      <SourceLine source="CVR via Lasso" updated={person.updated} />
     </Section>
   );
 }
@@ -334,7 +333,6 @@ export function PersonRoles({
           </button>
         )
       ) : null}
-      <SourceLine source="CVR via Lasso" updated={person.updated} />
       </div>
       <MobileBands person={person} title={title} onOpen={onOpen} />
     </Section>

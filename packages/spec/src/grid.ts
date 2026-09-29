@@ -528,6 +528,53 @@ function stakfyld(band: PackedBand, c: ViewComponent, h: HeightFn, gap: number, 
 }
 
 /**
+ * Svar-elementet først (Ø13/B10, spørgsmåls- og personsiderne): står `lead` i et delt bånd, flyttes dens
+ * stak til venstre og elementet øverst i stakken, så det er det første, der læses (bandsToComponents).
+ * Bredde-kombinationen bliver lovlig (alle ombytninger af en kombination i BAND_COMBOS findes), og
+ * højderne ændres ikke. Ændrer båndene på stedet.
+ */
+export function leadFirst(bands: PackedBand[], lead: ViewComponent): PackedBand[] {
+  for (const b of bands) {
+    const k = b.stacks.findIndex((s) => s.items.some((c) => originOf(c) === lead || c === lead));
+    if (k < 0) continue;
+    const stack = b.stacks[k]!;
+    const i = stack.items.findIndex((c) => originOf(c) === lead || c === lead);
+    if (i > 0) stack.items = [stack.items[i]!, ...stack.items.filter((_, j) => j !== i)];
+    if (k > 0) b.stacks = [stack, ...b.stacks.filter((_, j) => j !== k)];
+    break;
+  }
+  return bands;
+}
+
+/**
+ * packBands for sider, hvor elementerne før stod "to og to" (person- og spørgsmålssiderne, Ø13/B10): et
+ * element, som pakkeren lægger alene i et fuldbånd, fordi intet andet kan stå ved siden af det inden for
+ * 15 % (fx et kort svar over for høje kontekstmoduler), sættes side om side med det første af de næste
+ * (højst ANCHOR_LOOKAHEAD) elementer, det kan dele bånd med; det står til venstre (leadFirst), og resten
+ * pakkes derefter igen. Så står en smal liste ikke strakt alene i fuld bredde med tom plads, når den kunne
+ * dele bånd. Bredderne følger de samme regler (mindstebredde, smal højst ½ ved deling); et element med
+ * mindstebredde 1/1 står stadig alene. Deterministisk.
+ */
+export function packBandsPaired(items: readonly ViewComponent[], h: HeightFn, options: PackOptions = {}): PackedBand[] {
+  const bands = packBands(items, h, options);
+  for (let i = 0; i < bands.length; i++) {
+    const b = bands[i]!;
+    if (b.stacks.length !== 1 || b.stacks[0]!.items.length !== 1) continue;
+    const a = originOf(b.stacks[0]!.items[0]!);
+    const rest = bands.slice(i + 1).flatMap((x) => x.stacks.flatMap((st) => st.items.map(originOf)));
+    const ordered = items.filter((c) => rest.includes(c));
+    for (const partner of ordered.slice(0, ANCHOR_LOOKAHEAD)) {
+      const shared = (p: PackedBand[]) => p.length === 1 && p[0]!.stacks.length > 1;
+      let joined = packBands([a, partner], h, options);
+      if (!shared(joined)) joined = packBands([partner, a], h, options);
+      if (!shared(joined)) continue;
+      return [...bands.slice(0, i), leadFirst(joined, a)[0]!, ...packBandsPaired(ordered.filter((c) => c !== partner), h, options)];
+    }
+  }
+  return bands;
+}
+
+/**
  * Båndene som komponenter til layout 'columns': et fuldbånd er en komponent uden kolonne; et delt
  * bånd giver hver stak sit kolonnenummer (1–4) og sin bredde, så LassoView kan tegne båndet
  * (columnBands starter et nyt bånd, når kolonnenummeret falder).

@@ -512,7 +512,7 @@ const ORDER: { t: string; d: string }[] = [
   { t: "Hvordan går det over tid? Søjlegraf (13), 1/2", d: "Hovednøgletallet over 5 år, B4 midt. Under 3 år bliver grafen til regnskabslisten med årsvælger (compose.ts)." },
   { t: "Hvordan kontakter jeg dem? Kontaktblok (08), 1/4", d: "Adresse, telefon, e-mail, web klikbare. B4 højre (3+6+3). Udelades uden kontaktoplysninger." },
   { t: "Hvad er der sket? Historik (12) og Nyheder (12), 1/2", d: "Udeladt efter budget (efter genvejene, før kontakt): nås via faner, 'Se alle' og spørgsmål. Med plads: 3 begivenheder + 'Se alle N' og 3 artikler." },
-  { t: "Hvor kommer jeg videre? Genveje (08), stakfyld", d: "Laveste relevans: udelades først efter budget. Med plads (vis alt): ejerdiagram, regnskabsanalyse, nøgletal, ejendomme som stakfyld eller lavt fuldbånd. Ingen kildelinjer på siden." },
+  { t: "Hvor kommer jeg videre? Genveje (08), stakfyld", d: "Laveste relevans: udelades først efter budget. Med plads (vis alt): ejerdiagram, regnskabsanalyse, nøgletal, ejendomme som stakfyld eller lavt fuldbånd. Ingen kildevisningr på siden." },
 ];
 
 const PRINCIPLE: { t: string; d: string }[] = [

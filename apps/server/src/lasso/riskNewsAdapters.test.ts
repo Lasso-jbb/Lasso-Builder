@@ -275,7 +275,7 @@ test("mergeNews fletter efter tid (nyeste først), skærer til limit og lister b
   assert.equal(merged.updatedAt, "2026-09-20");
 });
 
-test("mergeNews skærer til limit og udelader en kilde uden poster fra kildelinjen", () => {
+test("mergeNews skærer til limit og udelader en kilde uden poster fra kildevisningn", () => {
   const lasso = adaptLassoNews(LASSO_NEWS_FIXTURE);
   const merged = mergeNews(
     "CVR-1-24256790",

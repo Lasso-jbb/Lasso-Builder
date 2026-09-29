@@ -3,19 +3,8 @@ import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { companyFacts } from "@lasso/spec";
-import { SourceList } from "./components/SourceList.js";
 import { SnapshotPicker } from "./components/SnapshotPicker.js";
 import { LiveNumber } from "./components/LassoContact.js";
-
-test("26h.4: kildeliste med tidsstempel pr. kilde og PDF som række med hent-ikon", () => {
-  const html = renderToStaticMarkup(
-    createElement(SourceList, { sources: [{ name: "CVR, Erhvervsstyrelsen", updated: "i dag 06:10" }, { name: "Regnskaber, XBRL", updated: "2026-06-02" }], pdf: { label: "Hent årsrapport 2025 (PDF)", url: "https://example.com/a.pdf" } }),
-  );
-  assert.match(html, /Kilder og opdatering/);
-  assert.match(html, /CVR, Erhvervsstyrelsen<\/span><span class="lasso-sourcelist__time">i dag 06:10/);
-  assert.match(html, /Regnskaber, XBRL<\/span><span class="lasso-sourcelist__time">02\.06\.2026/);
-  assert.match(html, /href="https:\/\/example\.com\/a\.pdf"[^>]*><span>Hent årsrapport 2025 \(PDF\)<\/span><svg/);
-});
 
 test("26h.5: snapshot-skifter med native datovælger, I dag og ur-linje kun ved aktivt snapshot", () => {
   const on = renderToStaticMarkup(createElement(SnapshotPicker, { subject: "Ejerdiagram", what: "ejerskab", date: "2023-12-31", today: "2026-09-29", onChange: () => {} }));

@@ -834,7 +834,7 @@ function A4Only({ n, children }: { n: number; children: ReactNode }) {
   );
 }
 
-const A4_NOTE = "Samme A4-mekanisme i portal og chat (LassoView-overlay med Print, værtskapaciteten export). Ingen kildelinje (G3); 'Data pr.' i sidefoden.";
+const A4_NOTE = "Samme A4-mekanisme i portal og chat (LassoView-overlay med Print, værtskapaciteten export). Ingen kildevisning (G3); 'Data pr.' i sidefoden.";
 
 const report: GalleryEntry[] = [
   dataEntry({
@@ -1423,7 +1423,7 @@ const ANSWER_B = [
   { type: "LassoTextSections", company: C, variant: "analyse", width: "full" },
 ];
 
-/** 30.2 og 30.13: niveau B slutter med ét link til hele siden (G3: ingen kildelinje). */
+/** 30.2 og 30.13: niveau B slutter med ét link til hele siden (G3: ingen kildevisning). */
 const ANSWER_B_FOOT = { next: { label: "Åbn Eksempel Byg A/S i Lasso", prompt: "Fortæl om Eksempel Byg A/S" } };
 
 /** 30.3: niveau C i chatten = fuldt hoved med modulbjælken (niveau 1) under, første modul åbent, og Lasso-bundlinje. */

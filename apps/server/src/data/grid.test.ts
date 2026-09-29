@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { ABSORB_MAX_DEVIATION, BAND_COMBOS, BAND_MAX_DEVIATION, FOCUSES, PAGE_HEIGHT_BUDGET, WIDTHS, composeCompany, contentWidthOf, gridRuleOf, widthProfileOf, composePerson, composePersonProbe, composeProbe, gridHeight, packPage, WIDTH_COLUMNS, type Dataset, type ViewComponent, type ViewSpec } from "@lasso/spec";
+import { ABSORB_MAX_DEVIATION, BAND_COMBOS, BAND_MAX_DEVIATION, FOCUSES, PAGE_HEIGHT_BUDGET, PERSON_FOCUSES, WIDTHS, askFocus, askPersonFocus, parseAsk, shortCompanyName, composeCompany, contentWidthOf, gridRuleOf, widthProfileOf, composePerson, composePersonProbe, composeProbe, gridHeight, packPage, WIDTH_COLUMNS, type Dataset, type ViewComponent, type ViewSpec } from "@lasso/spec";
 import { DemoProvider } from "./demo.js";
 import { resolveSpec } from "./resolve.js";
 
@@ -121,7 +122,7 @@ test("højdebudget 23.3: default-siden er ca. 1/2–2/3 af den fulde side og hol
   assert.ok(composeCompany(BYG, ds, { focus: "overblik", followUps: false, heightBudget: 5000 }).components.length === all.components.length);
 });
 
-test("gridmodel: personsidens elementer pakket med samme model holder 15 % (composePerson bruger den endnu ikke)", async () => {
+test("gridmodel: personsidens elementer pakket med packPage (virksomhedssidens højder) holder 15 %", async () => {
   const ds = await resolveSpec(composePersonProbe(BO, "overblik"), new DemoProvider());
   const spec = composePerson(BO, ds, { focus: "overblik" });
   const items = spec.components.map(({ column: _c, width: _w, ...c }) => c as ViewComponent);
@@ -170,5 +171,55 @@ test("Ø13/B8: personsidens elementer pakket med packPage: netværket står i fu
     assertWidthRules({ ...spec, components: packed.components }, ds, `${person} overblik`);
     const net = packed.components.find((c) => c.type === "LassoPersonNetwork");
     if (net) assert.equal(net.column, undefined, "netværket står i eget fuldbånd");
+  }
+});
+
+/**
+ * Ø13/B10: personsiderne, som composePerson KOMPONERER dem (ikke kun pakket med packPage): alle demopersoner,
+ * alle fokus, med og uden budget. Intet element under sin indholdsstyrede mindstebredde, ingen smal over ½
+ * ved siden af andre, og netværket med reelle data står altid i eget fuldbånd.
+ */
+test("Ø13/B10: personsiderne (komponeret, alle demopersoner og fokus) klemmer aldrig et bredt element og strækker aldrig et smalt", async () => {
+  const p = new DemoProvider();
+  let people = 0;
+  for (let i = 1; i <= 99; i++) {
+    const id = `CVR-3-${4000000000 + i}`;
+    if (!(await p.person(id).catch(() => undefined))) break;
+    people++;
+    for (const focus of PERSON_FOCUSES) {
+      const ds = await resolveSpec(composePersonProbe(id, focus), p);
+      for (const showAll of [false, true]) {
+        const spec = composePerson(id, ds, { focus, showAll });
+        assertWidthRules(spec, ds, `${id} ${focus}${showAll ? " vis alt" : ""}`);
+        const net = spec.components.find((c) => c.type === "LassoPersonNetwork");
+        if (net && (ds.personNetworks[id]?.people.length ?? 0) > 0) assert.equal(net.column, undefined, `${id} ${focus}: netværket i eget fuldbånd`);
+      }
+    }
+  }
+  assert.ok(people >= 2, `${people} demopersoner`);
+});
+
+/** Ø13/B10: spørgsmålssiderne (composeAskCompany og composeAskPerson) for de 60 eval-spørgsmål, komponeret som eval-løberen gør. */
+test("Ø13/B10: spørgsmålssiderne for eval-sættets 60 spørgsmål overholder bredde-reglerne", async () => {
+  const file = JSON.parse(readFileSync(new URL("../../../../packages/spec/src/eval/questions.json", import.meta.url), "utf8")) as {
+    cases: { id: string; kind: "company" | "person"; entity: string; question: string; hints?: { metrics?: never; topic?: string; focus?: string; show_all?: boolean } }[];
+  };
+  assert.equal(file.cases.length, 60);
+  const p = new DemoProvider();
+  for (const c of file.cases) {
+    const id = c.entity;
+    if (c.kind === "company") {
+      const official = await p.company(id).then((x) => x.name).catch(() => undefined);
+      const a = parseAsk(c.question, "company", { metrics: c.hints?.metrics, topic: c.hints?.topic, name: official ? [official, shortCompanyName(official)] : undefined });
+      const focus = (c.hints?.focus ?? (a.generic ? askFocus(a) : undefined)) as never;
+      const ds = await resolveSpec(composeProbe(id, focus, a), p);
+      assertWidthRules(composeCompany(id, ds, { focus, name: ds.companies[id]?.name, ask: a, showAll: c.hints?.show_all }), ds, c.id);
+    } else {
+      const official = await p.person(id).then((x) => x.name).catch(() => undefined);
+      const a = parseAsk(c.question, "person", { name: official, topic: c.hints?.topic });
+      const focus = ((c.hints?.focus as never) ?? (a.generic ? askPersonFocus(a) : undefined) ?? "overblik") as never;
+      const ds = await resolveSpec(composePersonProbe(id, focus, a), p);
+      assertWidthRules(composePerson(id, ds, { focus, name: ds.persons[id]?.name, ask: a, showAll: c.hints?.show_all }), ds, c.id);
+    }
   }
 });

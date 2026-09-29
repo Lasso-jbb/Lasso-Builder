@@ -733,7 +733,7 @@ export const entries: GalleryEntry[] = [
       </KV>
     ),
   },
-  // 02c.19 "Kilde og opdateret" UDGÅR (Jakob 29.09, G3): ingen kildelinje i nogen elementer.
+  // 02c.19 "Kilde og opdateret" UDGÅR (Jakob 29.09, G3): ingen kildevisning i nogen elementer.
 
   /* ---------- 04 Sidehoved ---------- */
   { nr: "04.1", title: "Sidehoved (kort med titel og handlinger)", node: "495-0", note: "Tilstand 1: i ro, gemt, intet ændret.", render: () => <Head /> },

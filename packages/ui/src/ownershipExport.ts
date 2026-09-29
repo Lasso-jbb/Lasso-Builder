@@ -13,7 +13,6 @@ export interface ExportMeta {
   dateLine: string;
   /** Legendens punkter som tekst (ikon + ord, regel 7). */
   legend: readonly string[];
-  source: string;
 }
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -67,7 +66,6 @@ export function svgForExport(svg: SVGSVGElement, size: { width: number; height: 
     `<text x="24" y="46" style="font-size:12px;fill:${muted};font-family:Poppins,system-ui,sans-serif">${esc(meta.dateLine)}</text>`,
     clone.outerHTML,
     legend,
-    `<text x="24" y="${H - 14}" style="font-size:11px;fill:${muted};font-family:Poppins,system-ui,sans-serif">${esc(meta.source)}</text>`,
     `</svg>`,
   ].join("");
 }

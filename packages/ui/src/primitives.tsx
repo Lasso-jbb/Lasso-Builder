@@ -384,14 +384,6 @@ export function Missing() {
   return <span className="lasso-notreported">{MISSING}</span>;
 }
 
-/**
- * Kildelinjen ("Kilde: Navn, opdateret DD.MM.ÅÅÅÅ") er UDGÅET (Jakob 29.09, G3): den vises ikke i
- * noget element. Komponenten beholdes, så eksisterende kald stadig kompilerer, men tegner intet.
- * Ingen anden kildevisning heller (Jakob runde 6): ingen "Vis kilder (N)" og ingen "Kilder" + link.
- */
-export function SourceLine(_props: { source: string; updated?: string | null; verb?: string }) {
-  return null;
-}
 
 export type StateKind = "empty" | "loading" | "noaccess" | "error";
 

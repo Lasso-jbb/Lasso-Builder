@@ -66,7 +66,7 @@ test("health svarer", async () => {
 test("tools og UI-ressource er registreret", async () => {
   const { tools } = await client.listTools();
   const names = tools.map((t) => t.name).sort();
-  assert.deepEqual(names, ["list_saved_pages", "remove_saved_page", "render_view", "resolve_view", "save_page", "save_view", "search_companies", "search_persons", "show_company", "show_person"]);
+  assert.deepEqual(names, ["compare_companies", "list_saved_pages", "remove_saved_page", "render_view", "resolve_view", "save_page", "save_view", "search_companies", "search_persons", "show_company", "show_person"]);
   const show = tools.find((t) => t.name === "show_company")!;
   const uri = (show._meta as { ui?: { resourceUri?: string } }).ui?.resourceUri ?? "";
   // Adressen bærer app-versionen, så værten ikke genbruger en gemt, forældet render-app.
@@ -198,15 +198,16 @@ test("show_person (katalog 16) finder en person på navn og komponerer personsid
   assert.equal(sc.spec.kind, "person");
   assert.deepEqual(
     sc.spec.components.map((c) => `${c.type}${c.column ? `@${c.column}` : ""}${c.width ? `/${c.width}` : ""}`),
-    // Overblik (standard): aktive roller ¾ + stamoplysninger ¼, netværk | risiko, historik | ejerskab.
+    // Overblik (standard, Ø13/B10): Papers elementer, pakket efter bredderne: aktive roller ½ + stamoplysninger ½,
+    // netværket i eget fuldbånd, historik ⅓ | ejerskab ⅔ og risikoen alene.
     [
       "LassoPersonHead",
-      "LassoPersonRoles@1/three-quarters",
-      "LassoPersonFacts@2/quarter",
-      "LassoPersonNetwork@1",
-      "LassoPersonRisk@2",
-      "LassoTimeline@1",
-      "LassoOwnershipDiagram@2",
+      "LassoPersonRoles@1/half",
+      "LassoPersonFacts@2/half",
+      "LassoPersonNetwork",
+      "LassoTimeline@1/third",
+      "LassoOwnershipDiagram@2/two-thirds",
+      "LassoPersonRisk",
       "LassoFollowUps",
     ],
   );
@@ -469,7 +470,8 @@ test("show_person 'sidder X i bestyrelser': kun bestyrelsesposterne; linket /p/ 
   assert.ok(!res.isError, JSON.stringify(res.content));
   const sc = res.structuredContent as { spec: ViewSpec; link: string };
   const roles = sc.spec.components[1];
-  assert.ok(roles?.type === "LassoPersonRoles" && roles.role === "bestyrelse" && roles.width === "three-quarters");
+  // Smal liste ved siden af stamoplysningerne: højst ½ (Ø13/B10).
+  assert.ok(roles?.type === "LassoPersonRoles" && roles.role === "bestyrelse" && roles.width === "half");
   assert.equal(sc.spec.subtitle, "Bestyrelsesposter");
   assert.match(texts(res)[0]!, /Svar: Bestyrelsesposter: .*Eksempel/);
   assert.match(sc.link, /\/p\/CVR-3-\d+\?.*q=/);

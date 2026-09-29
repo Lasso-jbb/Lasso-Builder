@@ -31,7 +31,7 @@ test("09.4: valgte nøgletal uden tal vises som 'Ikke oplyst' med årsag, aldrig
   assert.ok(out.indexOf("Bruttofortjeneste") < out.indexOf("Ikke oplyst"));
 });
 
-test("12.2: afsnit bevares; foldet tekst klippes rent (ingen toning) med 'Vis mere', ingen kildelinje", () => {
+test("12.2: afsnit bevares; foldet tekst klippes rent (ingen toning) med 'Vis mere', ingen kildevisning", () => {
   assert.deepEqual(paragraphs("Et.\n\nTo\nlinjer."), ["Et.", "To linjer."]);
   const long = `${"Første afsnit er langt. ".repeat(12)}\n\n${"Andet afsnit. ".repeat(10)}`;
   const out = html(h(LassoSummary, { text: long, source: "Lasso", updated: "2026-09-28" }));
