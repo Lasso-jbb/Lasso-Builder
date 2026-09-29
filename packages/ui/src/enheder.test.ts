@@ -21,7 +21,7 @@ test("26e.5: notifikationspanelet har filterchips Alle/Ulæste/Vigtige og rød p
     { id: "2", kind: "overvaagning" as const, text: "Nyt regnskab", at: "2026-09-29T10:00:00", read: false },
   ];
   const html = renderToStaticMarkup(createElement(NotificationPanel, { items, now: new Date("2026-09-29T12:00:00") }));
-  assert.match(html, /aria-label="Filtrér notifikationer"[^]*>Alle<[^]*aria-pressed="true"[^>]*>Ulæste<[^]*>Vigtige</);
+  assert.match(html, /aria-label="Filtrér notifikationer"[^]*aria-pressed="true"[^>]*>Alle<[^]*>Ulæste<[^]*>Vigtige</, "Alle er valgt fra start på mobil");
   assert.match(html, /lasso-notif__dot lasso-notif__dot--important" role="img" aria-label="Ulæst, vigtig"/);
 });
 

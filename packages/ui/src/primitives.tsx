@@ -90,6 +90,8 @@ export interface DataStateProps {
   checkedAt?: string;
   /** Tom som positiv information ("intet fundet", katalog 17): flueben i stedet for dokumentikonet. */
   positive?: boolean;
+  /** Tom, venstrestillet med ⓘ-ikon foran teksten (26e.3). Standard: centreret. */
+  inline?: boolean;
   /** Fejl: kun teknisk fejl. Giver en "Prøv igen"-knap (primær), når den er sat. */
   onRetry?: () => void;
   /** Tom/låst/på forespørgsel: én handling ("Overvåg nyheder", "Se planer", "Hent kreditvurdering"). */
@@ -111,7 +113,15 @@ export interface DataStateProps {
   cost?: string;
 }
 
-function StateIcon({ kind }: { kind: "doc" | "check" | "alert" | "lock" }) {
+function StateIcon({ kind }: { kind: "doc" | "check" | "alert" | "lock" | "info" }) {
+  if (kind === "info") {
+    return (
+      <svg className="lasso-state__icon lasso-state__icon--info" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
+        <path d="M12 11v5.5M12 7.8v.3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    );
+  }
   if (kind === "check") {
     return (
       <svg className="lasso-state__icon lasso-state__icon--check" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -149,7 +159,7 @@ export function PendingRing() {
   return <span className="lasso-ring" aria-hidden="true" />;
 }
 
-export function DataState({ state, reason, title, checkedAt, positive, onRetry, action, secondaryAction, pending, children, height, lines = 3, actionLabel, onAction, cost }: DataStateProps) {
+export function DataState({ state, reason, title, checkedAt, positive, inline, onRetry, action, secondaryAction, pending, children, height, lines = 3, actionLabel, onAction, cost }: DataStateProps) {
   if (state === "loading") return <Skeleton lines={lines} height={height} />;
   if (state === "ondemand") {
     // 10.3 (node A2I-0): stiplet ramme som "tom", men med årsag og en handling, der starter beregningen.
@@ -167,6 +177,18 @@ export function DataState({ state, reason, title, checkedAt, positive, onRetry, 
     );
   }
   if (state === "notreported") return <span className="lasso-notreported">Ikke oplyst</span>;
+  if (state === "empty" && inline) {
+    return (
+      <div className="lasso-state lasso-state--inline" style={height ? { minHeight: height } : undefined}>
+        <StateIcon kind="info" />
+        <div className="lasso-small">
+          {title ? <div className="lasso-state__title">{title}</div> : null}
+          {reason ?? "Der er ingen data at vise."}
+          {checkedAt ? ` Sidst tjekket ${formatDate(checkedAt)}.` : ""}
+        </div>
+      </div>
+    );
+  }
   if (state === "empty") {
     // Tom (26h.1): ikon, én linje årsag, tidsstempel og højst én handling. Stiplet ramme, aldrig grå fyld.
     return (

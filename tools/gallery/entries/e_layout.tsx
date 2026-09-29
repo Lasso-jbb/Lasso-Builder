@@ -766,10 +766,9 @@ const mobilePerson: GalleryEntry[] = [
 ];
 
 const NOTIFS = [
-  { id: "1", kind: "overvaagning" as const, text: "Eksempel Energi A/S er erklæret konkurs", source: 'Overvågning "Kunder"', at: "2026-09-29T08:10:00Z", read: false, important: true },
-  { id: "2", kind: "overvaagning" as const, text: "Ny direktør i Eksempel Byg A/S", source: 'Overvågning "Kunder"', at: "2026-09-29T06:40:00Z", read: false },
-  { id: "3", kind: "eksport" as const, text: "Eksporten 'Store IT-selskaber' er klar", at: "2026-09-28T15:02:00Z", read: true, action: { label: "Hent" } },
-  { id: "4", kind: "kredit" as const, text: "Kreditvurderingen for Eksempel Transport ApS er opdateret", at: "2026-09-27T11:00:00Z", read: true },
+  { id: "1", kind: "overvaagning" as const, title: "Nyt regnskab 2025", text: "LASSO X A/S, bruttofortjeneste 18,8 mio. (+7,5 %), resultat \u2212201 t. kr.", category: "Regnskab", source: 'Overvågning "Kunder"', at: "2026-09-29T08:10:00Z", read: false },
+  { id: "2", kind: "overvaagning" as const, title: "Konkursdekret afsagt", text: "Data Eksempel A/S (eksempeldata), Sø- og Handelsretten", category: "Status", source: 'Overvågning "Kunder"', at: "2026-09-28T15:40:00Z", read: false, important: true },
+  { id: "3", kind: "overvaagning" as const, title: "Nyt bestyrelsesmedlem", text: "Nordisk Eksempel ApS (eksempeldata), Mette Eksempel tiltrådt", category: "Ledelse", source: 'Overvågning "Kunder"', at: "2026-03-11T09:00:00Z", read: true },
 ];
 
 const mobileUnits: GalleryEntry[] = [
@@ -782,12 +781,12 @@ const mobileUnits: GalleryEntry[] = [
     node: "F0N-0",
     only: "mobile",
     render: () => (
-      <MonitorSettings companyName="Eksempel Byg A/S" monitoring listName="Kunder" since="2025-03-03" frequency="dagligt" settings={{ status: true, regnskab: true, ledelse: true, stamdata: false, kredit: false }} onToggle={noop} onStop={noop} />
+      <MonitorSettings companyName="LASSO X A/S" monitoring listName="Kunder" since="2026-03-03" frequency="dagligt" delivery="Push + e-mail dagligt" settings={{ status: true, regnskab: true, ledelse: true, stamdata: false, kredit: false }} onToggle={noop} onStop={noop} onDelivery={noop} />
     ),
   },
   { nr: "26e.5", title: "Notifikationsliste (mobil)", node: "F1V-0", only: "mobile", render: () => (
-      <div style={{ minHeight: 800 }}>
-        <NotificationPanel items={NOTIFS} now={new Date("2026-09-29T10:00:00Z")} onMarkAllRead={noop} onSeeAll={noop} onClose={noop} />
+      <div>
+        <NotificationPanel items={NOTIFS} now={new Date("2026-09-29T10:00:00Z")} onMarkAllRead={noop} onClose={noop} inline />
       </div>
     ) },
   { nr: "26e.6", title: "Push-notifikation (systembanner)", node: "F2X-0", only: "mobile", render: () => <PushBanner event="Konkurs" company="Eksempel Energi A/S" time="nu" /> },
@@ -809,7 +808,7 @@ const tablet: GalleryEntry[] = [
   },
   { nr: "26f.3", title: "Regnskab, tablet", node: "FCA-0", only: "desktop", desktopWidth: 768, spec: one("Regnskab", { type: "LassoFinancialStatements", company: C }) },
   { nr: "26f.4", title: "Ejerdiagram, tablet", node: "FFB-0", only: "desktop", desktopWidth: 768, spec: one("Ejerdiagram", { type: "LassoOwnershipDiagram", company: C }) },
-  { nr: "26f.5", title: "Sammenligning, tablet", node: "FGO-0", only: "desktop", desktopWidth: 768, spec: one("Sammenligning", { type: "LassoCompareTable", companies: [C, "CVR-1-99000005", "CVR-1-99000008", "CVR-1-99000004"] }, "custom") },
+  { nr: "26f.5", title: "Sammenligning, tablet", node: "FGO-0", only: "desktop", desktopWidth: 768, spec: one("Sammenligning", { type: "LassoCompareTable", companies: [C, "CVR-1-99000005", "CVR-1-99000008"] }, "custom") },
 ];
 
 /* ---------- 26g Mobil: eksempelskærme ---------- */

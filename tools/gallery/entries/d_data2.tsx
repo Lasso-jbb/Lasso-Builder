@@ -404,14 +404,22 @@ export const entries: GalleryEntry[] = [
     nr: "21.3",
     title: "Klokke-tilstande",
     node: "CDW-0",
+    note: "Klokken har aldrig badge: ulæste giver koral klokke, vigtig ændring (status/konkurs) mørk rød; antallet står i skærmlæserteksten og i panelets hoved.",
     render: () => (
-      <Row
-        items={[
-          ["Ingen ulæste", <MonitorBell key="0" unread={0} />],
-          ["Koral badge med antal", <MonitorBell key="3" unread={3} />],
-          ["Rød badge (status/konkurs)", <MonitorBell key="i" unread={4} important />],
-        ]}
-      />
+      <div style={{ display: "grid", gap: 8, maxWidth: 300 }}>
+        {(
+          [
+            ["Ingen ulæste", <MonitorBell key="0" unread={0} />],
+            ["3 ulæste, koral klokke", <MonitorBell key="3" unread={3} />],
+            ["Vigtig ændring, mørk rød klokke", <MonitorBell key="i" unread={4} important />],
+          ] as const
+        ).map(([label, bell]) => (
+          <div key={label} style={{ display: "flex", alignItems: "center", gap: 12, height: 48, padding: "0 12px", border: "1px solid var(--lasso-border)", borderRadius: "var(--lasso-radius-lg)", fontSize: "var(--lasso-fs-sm)", color: "var(--lasso-text-2)" }}>
+            {bell}
+            {label}
+          </div>
+        ))}
+      </div>
     ),
   },
   {
