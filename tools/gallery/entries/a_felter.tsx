@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { Operator } from "@lasso/spec";
 import {
   AmountField,
@@ -23,10 +23,12 @@ import {
   SelectField,
   TagInput,
   TechnologyField,
+  TechnologyRow,
   Toggle,
   ToastItem,
   Tooltip,
   UnitInput,
+  XIcon,
   YesNoChips,
   type AmountFieldValue,
   type Option,
@@ -278,10 +280,9 @@ function AmountDemo({ openOp = false }: { openOp?: boolean }) {
     <Grid>
       {openOp ? (
         <St label="Operatoren åben (liste)">
-          <div style={{ minHeight: 200 }}>
+          <div style={{ minHeight: 260 }}>
             <FieldRow label="Omsætning">
-              <OperatorOpen />
-              <UnitInput value="" onChange={noop} unit="% ændring" placeholder="Procent" />
+              <AmountField amount={{ operator: "gte", values: [""] }} change={{ operator: "gte", values: [""] }} operators={["gte", "lte", "between"]} onAmount={noop} onChange={noop} defaultOpenChange />
             </FieldRow>
           </div>
         </St>
@@ -301,24 +302,6 @@ function AmountDemo({ openOp = false }: { openOp?: boolean }) {
         </Grid>
       </St>
     </Grid>
-  );
-}
-
-/** Operatoren som åben liste: Picker har defaultOpen, OperatorSelect sender det ikke videre. */
-function OperatorOpen() {
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => {
-      const btn = document.querySelector<HTMLButtonElement>(".gal-opopen .lasso-select--op");
-      btn?.click();
-      setOpen(true);
-    }, 50);
-    return () => clearTimeout(t);
-  }, []);
-  return (
-    <span className="gal-opopen" data-open={open}>
-      <OperatorSelect value="gte" operators={["gte", "lte", "between"]} labels={{ gte: "er steget mindst", lte: "er faldet mindst", between: "er mellem" }} onChange={noop} />
-    </span>
   );
 }
 
@@ -384,14 +367,14 @@ function TagsDemo() {
           <span className="lasso-chip">
             Aarhus
             <button type="button" className="lasso-chip__remove" aria-label="Fjern Aarhus">
-              <Icon name="close" size={11} />
+              <XIcon />
             </button>
           </span>
-          <style>{".gal-hover.lasso-chip{background:var(--lasso-tag-hover)}.gal-hover .lasso-chip__remove{color:var(--lasso-accent-text)}"}</style>
+          <style>{".gal-hover.lasso-chip{background:var(--lasso-tag-hover)}.gal-hover .lasso-chip__remove{color:var(--lasso-accent)}"}</style>
           <span className="lasso-chip gal-hover">
             Odense
             <button type="button" className="lasso-chip__remove" aria-label="Fjern Odense">
-              <Icon name="close" size={11} />
+              <XIcon />
             </button>
           </span>
         </div>
@@ -611,14 +594,7 @@ function InfoDemo() {
 
 function RequiredDemo() {
   return (
-    <FieldRow
-      label={
-        <>
-          Kommune <span className="lasso-required">*</span>
-        </>
-      }
-      error="Vælg mindst én kommune."
-    >
+    <FieldRow label="Kommune" required error="Vælg mindst én kommune.">
       <OperatorSelect value="in" operators={["in", "not_in"]} onChange={noop} />
       <TagInput values={[]} suggestions={KOMMUNER} invalid onChange={noop} />
     </FieldRow>
@@ -682,15 +658,10 @@ function DateOpen() {
 }
 
 function DateOpenField() {
-  // DateInput har defaultOpen, men DateField sender det ikke videre; derfor klikkes kalenderikonet.
-  useEffect(() => {
-    const t = setTimeout(() => document.querySelector<HTMLButtonElement>(".gal-dateopen .lasso-dateinput__btn")?.click(), 50);
-    return () => clearTimeout(t);
-  }, []);
   const [vals, setVals] = useState<string[]>(["14.09.2026"]);
   return (
-    <div className="gal-dateopen" style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-      <DateField operator="after" operators={["after", "before", "eq", "between"]} values={vals} onOperator={noop} onChange={setVals} />
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+      <DateField operator="after" operators={["after", "before", "eq", "between"]} values={vals} onOperator={noop} onChange={setVals} defaultOpen today={new Date(2026, 8, 29)} />
     </div>
   );
 }
@@ -776,7 +747,7 @@ function RulesDemo() {
 
 function FieldStates() {
   const [open, setOpen] = useState(false);
-  const [a, setA] = useState<string[]>(["2100", "2200", "8000"]);
+  const [a, setA] = useState<string[]>([]);
   const [b, setB] = useState<string[]>(["Aarhus", "Odense"]);
   return (
     <Grid gap={32}>
@@ -789,7 +760,7 @@ function FieldStates() {
         <FieldRow label="Postnummer" layout="stacked" collapsible open active onToggle={noop} pending={{ mode: "add", onCancel: noop, onConfirm: noop }}>
           <OperatorSelect value="in" operators={["in", "not_in"]} onChange={noop} />
           <div className="gal-focus" style={{ flex: 1, display: "flex" }}>
-            <TagInput values={a} suggestions={POSTNUMRE} onChange={setA} />
+            <TagInput values={a} suggestions={POSTNUMRE} onChange={setA} defaultText="2100, 2200, 8000" />
           </div>
         </FieldRow>
         <style>{".gal-focus .lasso-tagfield{border-color:var(--lasso-focus-border);flex:1;min-width:0}"}</style>
@@ -809,9 +780,7 @@ function FieldStates() {
 function TechRow({ label, init, pending }: { label: string; init: TechValue; pending?: boolean }) {
   const [v, setV] = useState<TechValue>(init);
   return (
-    <FieldRow label={label} onClear={v.on ? noop : undefined} active={pending} pending={pending ? { mode: "add", delta: -402310, onCancel: noop, onConfirm: noop } : undefined}>
-      <TechnologyField label={label} value={v} onChange={setV} suggestions={TECH} />
-    </FieldRow>
+    <TechnologyRow label={label} value={v} onChange={setV} onClear={noop} suggestions={TECH} active={pending} pending={pending ? { mode: "add", delta: -402310, onCancel: noop, onConfirm: noop } : undefined} />
   );
 }
 
@@ -845,7 +814,7 @@ export const entries: GalleryEntry[] = [
   { nr: "02a.1", title: "Fritekst", node: "4BF-0", render: () => <FreeText /> },
   { nr: "02a.2", title: "Tal", node: "4BU-0", render: () => <NumberDemo /> },
   { nr: "02a.3", title: "Tal, mellem", node: "4CA-0", render: () => <NumberDemo between /> },
-  { nr: "02a.4", title: "Beløb + ændring", node: "4SC-0", render: () => <AmountDemo openOp />, note: "Operatorlisten åbnes ved et klik i galleriet (OperatorSelect har ingen defaultOpen)." },
+  { nr: "02a.4", title: "Beløb + ændring", node: "4SC-0", render: () => <AmountDemo openOp /> },
   { nr: "02a.5", title: "Procent", node: "4DE-0", render: () => <PercentDemo /> },
   { nr: "02a.6", title: "Dato", node: "4DT-0", render: () => <DateDemo /> },
   { nr: "02a.7", title: "Enkeltvalg", node: "4EC-0", render: () => <SingleDemo /> },
@@ -861,11 +830,11 @@ export const entries: GalleryEntry[] = [
   { nr: "02b.3", title: "Til / fra-kontakt", node: "4JT-0", render: () => <ToggleDemo /> },
   { nr: "02b.4", title: "Sektionens brødtekst", node: "4KA-0", render: () => <SectionIntroDemo /> },
   { nr: "02b.5", title: "Info-ikon med forklaring", node: "4KF-0", render: () => <InfoDemo /> },
-  { nr: "02b.6", title: "Påkrævet felt uden værdi", node: "4KR-0", render: () => <RequiredDemo />, note: "FieldRow har ingen required-prop; stjernen er sat med .lasso-required i label." },
+  { nr: "02b.6", title: "Påkrævet felt uden værdi", node: "4KR-0", render: () => <RequiredDemo /> },
   { nr: "02b.7", title: "Dropdown, åben", node: "4LZ-0", render: () => <DropdownOpen /> },
   { nr: "02b.8", title: "Segmenteret ja/nej", node: "4MS-0", render: () => <SegmentDemo /> },
   { nr: "02b.9", title: "Indsæt liste", node: "4NA-0", render: () => <PasteDemo /> },
-  { nr: "02b.10", title: "Datovælger, åben", node: "4NS-0", render: () => <DateOpen />, note: "Kalenderen i feltet åbnes ved et klik i galleriet (DateField sender ikke defaultOpen videre)." },
+  { nr: "02b.10", title: "Datovælger, åben", node: "4NS-0", render: () => <DateOpen /> },
   { nr: "02b.11", title: "Chips med antal", node: "4PD-0", render: () => <ChipsCountDemo /> },
   { nr: "02b.12", title: "Liste med antal", node: "4Q1-0", render: () => <ListCountDemo /> },
   { nr: "02b.13", title: "Direkte redigering (filtergruppe udfoldet)", node: "5G6-0", render: () => <DirectEdit />, note: "Fokuskanten er sat statisk (ingen fokus i skærmbilledet); toasten er tegnet inline med ToastItem." },

@@ -94,6 +94,7 @@ export type { FilterPanelProps } from "./components/FilterPanel.js";
 // Felt-familien (02a, 02b, 03)
 export {
   FieldRow,
+  XIcon,
   FieldSection,
   SectionIntro,
   InfoTip,
@@ -123,6 +124,7 @@ export {
   IndustryField,
   PersonaField,
   TechnologyField,
+  TechnologyRow,
 } from "./components/Fields.js";
 export type { FieldRowProps, Option, MultiSelectProps, TagInputProps, AmountFieldValue, PersonaValue, PersonaFieldProps, TechMode, TechValue } from "./components/Fields.js";
 export { DB07_EXCERPT, leafCodes, treeLabels } from "./components/industries.js";

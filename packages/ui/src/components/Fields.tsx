@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { formatNumber, operatorLabel, type Operator } from "@lasso/spec";
 import { Dialog } from "./Dialog.js";
 import { CheckIcon } from "./Layer.js";
@@ -21,10 +21,11 @@ import { leafCodes, treeLabels, type TreeNode } from "./industries.js";
 
 // ---------- Ikoner ----------
 
-export function XIcon({ size = 11 }: { size?: number }) {
+/** Krydset i tags (02a.8): tynd streg (01: 1,8 i 24-grid, lidt kraftigere i de små størrelser), gråt i hvile. */
+export function XIcon({ size = 11, stroke = 2.2 }: { size?: number; stroke?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" />
+      <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" />
     </svg>
   );
 }
@@ -154,10 +155,12 @@ export interface FieldRowProps {
   onToggle?: () => void;
   /** Aktiv = redigeres nu (koral kant om kontrollen). */
   active?: boolean;
+  /** 02b.6 Påkrævet: rød stjerne efter navnet (kun når feltet skal udfyldes, før der kan søges). */
+  required?: boolean;
 }
 
 /** 02b.13 / 03.1: ét filterfelt, navn til venstre og kontrol til højre, med tre tilstande. */
-export function FieldRow({ label, info, children, onClear, pending, error, layout = "inline", collapsible, open = true, onToggle, active }: FieldRowProps) {
+export function FieldRow({ label, info, children, onClear, pending, error, layout = "inline", collapsible, open = true, onToggle, active, required }: FieldRowProps) {
   const id = useId();
   const shown = !collapsible || open;
   return (
@@ -170,7 +173,14 @@ export function FieldRow({ label, info, children, onClear, pending, error, layou
           </button>
         ) : (
           <>
-            <span>{label}</span>
+            <span>
+              {label}
+              {required ? (
+                <span className="lasso-required" aria-label="påkrævet">
+                  {" *"}
+                </span>
+              ) : null}
+            </span>
             {info ? <InfoTip text={info} label={`Om ${typeof label === "string" ? label : "feltet"}`} /> : null}
           </>
         )}
@@ -204,7 +214,7 @@ export interface Option {
 const toOptions = (opts: readonly (string | Option)[]): Option[] => opts.map((o) => (typeof o === "string" ? { id: o, label: o } : o));
 
 /** Operatoren først i feltet (02a): Lassos dropdown (Picker, 07), aldrig browserens select. */
-export function OperatorSelect({ value, operators, fieldType, onChange, labels }: { value: Operator; operators: readonly Operator[]; fieldType?: string; onChange: (op: Operator) => void; /** Egne ord, fx "benytter"/"benytter ikke". */ labels?: Partial<Record<Operator, string>> }) {
+export function OperatorSelect({ value, operators, fieldType, onChange, labels, defaultOpen }: { value: Operator; operators: readonly Operator[]; fieldType?: string; onChange: (op: Operator) => void; /** Egne ord, fx "benytter"/"benytter ikke". */ labels?: Partial<Record<Operator, string>>; /** Listen åben fra start (statisk forhåndsvisning og tests). */ defaultOpen?: boolean }) {
   const text = (op: Operator) => labels?.[op] ?? operatorLabel(op, fieldType);
   return (
     <Picker
@@ -214,6 +224,7 @@ export function OperatorSelect({ value, operators, fieldType, onChange, labels }
       groups={[{ items: operators.map((op) => ({ id: op, label: text(op) })) }]}
       value={value}
       onChange={(id) => onChange(id as Operator)}
+      defaultOpen={defaultOpen}
     />
   );
 }
@@ -234,10 +245,11 @@ export function SelectField({ options, value, onChange, placeholder = "Vælg", l
   );
 }
 
-/** Tekst i et lukket felt med flere valg: to navne og "og N flere". */
+/** Tekst i et lukket felt med flere valg: to navne og "og N flere" ("og 1 mere" ved én). */
 export function summarize(labels: readonly string[], max = 2): string {
   if (labels.length <= max) return labels.join(", ");
-  return `${labels.slice(0, max).join(", ")} og ${labels.length - max} flere`;
+  const rest = labels.length - max;
+  return `${labels.slice(0, max).join(", ")} og ${rest} ${rest === 1 ? "mere" : "flere"}`;
 }
 
 export interface MultiSelectProps {
@@ -370,14 +382,16 @@ export interface TagInputProps {
   /** Kun værdier fra forslagslisten (rolletyper). */
   strict?: boolean;
   label?: string;
+  /** Tekst, der står i feltet fra start og endnu ikke er blevet til tags (03.1 "i redigering"). */
+  defaultText?: string;
 }
 
 /**
  * Tags i felt (05.5, 30 px) med søgbare forslag. Accepterer en indsat liste adskilt med komma,
  * semikolon eller linjeskift. Backspace i tomt felt fjerner seneste tag.
  */
-export function TagInput({ values, onChange, suggestions, placeholder = "Søg, eller indsæt en liste — fx 2100, 8000", invalid, max, strict, label }: TagInputProps) {
-  const [text, setText] = useState("");
+export function TagInput({ values, onChange, suggestions, placeholder = "Søg, eller indsæt en liste — fx 2100, 8000", invalid, max, strict, label, defaultText = "" }: TagInputProps) {
+  const [text, setText] = useState(defaultText);
   const [focus, setFocus] = useState(false);
   const [hi, setHi] = useState(0);
   const id = useId();
@@ -514,7 +528,7 @@ export function ListField({ values, onChange, suggestions, placeholder, invalid,
         <div className="lasso-listfield__area">
           <textarea className="lasso-textarea" rows={4} value={text} placeholder={"Kommasepareret eller én pr. linje\n2100, 2200, 8000"} aria-label="Indsæt liste" onChange={(e) => setText(e.target.value)} />
           <div className="lasso-listfield__actions">
-            <span className="lasso-field__help">{text.trim() ? `${splitList(text).length} værdier` : "Kommasepareret eller én pr. linje."}</span>
+            <span className="lasso-field__help">{text.trim() ? `${splitList(text).length} værdier` : ""}</span>
             <button type="button" className="lasso-btn lasso-btn--text" onClick={() => (setText(""), setPaste(false))}>
               Annuller
             </button>
@@ -609,9 +623,11 @@ export function SegmentYesNo({ value, onChange, label }: { value: boolean | null
 // ---------- Tal, beløb, procent (02a.4, 02a.5) ----------
 
 /** Talfelt med enhed efter feltet ("kr.", "%", "% ændring"). */
-export function UnitInput({ value, onChange, unit, placeholder, invalid, short = true, label }: { value: string; onChange: (v: string) => void; unit?: string; placeholder?: string; invalid?: boolean; short?: boolean; label?: string }) {
+export function UnitInput({ value, onChange, unit, placeholder, invalid, short = true, label, lead }: { value: string; onChange: (v: string) => void; unit?: string; placeholder?: string; invalid?: boolean; short?: boolean; label?: string; /** Ord foran feltet i samme gruppe ("og"), så det aldrig ombrydes alene. */ lead?: string }) {
+  // Feltet og enheden (og evt. "og" foran) står i én gruppe, så enheden aldrig ombrydes alene (02a.3, 02a.4).
   return (
-    <>
+    <span className={`lasso-inputunit ${short ? "" : "lasso-inputunit--grow"}`}>
+      {lead ? <span className="lasso-unit">{lead}</span> : null}
       <input
         className={`lasso-input ${short ? "lasso-input--short" : ""} ${invalid ? "lasso-input--invalid" : ""}`}
         value={value}
@@ -621,7 +637,7 @@ export function UnitInput({ value, onChange, unit, placeholder, invalid, short =
         onChange={(e) => onChange(e.target.value)}
       />
       {unit ? <span className="lasso-unit">{unit}</span> : null}
-    </>
+    </span>
   );
 }
 
@@ -631,8 +647,7 @@ export function RangeInputs({ operator, values, onChange, unit, placeholder, inv
     return (
       <>
         <UnitInput value={values[0] ?? ""} placeholder={placeholder} invalid={invalid} label="Fra" onChange={(v) => onChange([v, values[1] ?? ""])} />
-        <span className="lasso-unit">og</span>
-        <UnitInput value={values[1] ?? ""} placeholder={placeholder} invalid={invalid} label="Til" unit={unit} onChange={(v) => onChange([values[0] ?? "", v])} />
+        <UnitInput value={values[1] ?? ""} placeholder={placeholder} invalid={invalid} label="Til" unit={unit} lead="og" onChange={(v) => onChange([values[0] ?? "", v])} />
       </>
     );
   }
@@ -652,7 +667,7 @@ export interface AmountFieldValue {
  * 02a.4 Beløb + ændring: ingen overskrift, enheden skiller rækkerne: "kr." er beløbet,
  * "% ændring" er udviklingen. Begge kan bruges alene. `change` udelades, når feltet ikke har en.
  */
-export function AmountField({ amount, change, operators, onAmount, onChange, invalid }: { amount: AmountFieldValue; change?: AmountFieldValue; operators: readonly Operator[]; onAmount: (v: AmountFieldValue) => void; onChange?: (v: AmountFieldValue) => void; invalid?: boolean }) {
+export function AmountField({ amount, change, operators, onAmount, onChange, invalid, defaultOpenChange }: { amount: AmountFieldValue; change?: AmountFieldValue; operators: readonly Operator[]; onAmount: (v: AmountFieldValue) => void; onChange?: (v: AmountFieldValue) => void; invalid?: boolean; /** Ændringens operatorliste åben fra start (statisk forhåndsvisning). */ defaultOpenChange?: boolean }) {
   return (
     <div className="lasso-amountfield">
       <div className="lasso-amountfield__row">
@@ -661,7 +676,7 @@ export function AmountField({ amount, change, operators, onAmount, onChange, inv
       </div>
       {change && onChange ? (
         <div className="lasso-amountfield__row">
-          <OperatorSelect value={change.operator} operators={CHANGE_OPERATORS} labels={CHANGE_LABELS} onChange={(operator) => onChange({ operator, values: operator === "between" ? change.values : change.values.slice(0, 1) })} />
+          <OperatorSelect value={change.operator} operators={CHANGE_OPERATORS} labels={CHANGE_LABELS} defaultOpen={defaultOpenChange} onChange={(operator) => onChange({ operator, values: operator === "between" ? change.values : change.values.slice(0, 1) })} />
           <RangeInputs operator={change.operator} values={change.values} unit="% ændring" placeholder="Procent" onChange={(values) => onChange({ ...change, values })} />
         </div>
       ) : null}
@@ -756,6 +771,18 @@ export function DatePicker({ value, onSelect, today = new Date(), minYear = 1900
 export function DateInput({ value, onChange, invalid, label = "Dato", defaultOpen = false, today }: { value: string; onChange: (text: string) => void; invalid?: boolean; label?: string; defaultOpen?: boolean; today?: Date }) {
   const [open, setOpen] = useState(defaultOpen);
   const wrap = useRef<HTMLDivElement>(null);
+  const pop = useRef<HTMLDivElement>(null);
+  const [shift, setShift] = useState(0);
+  // 02b.10 mobil: kalenderen holdes inden for skærmen (skubbes mod venstre, aldrig ud over kanten).
+  useLayoutEffect(() => {
+    if (!open || !pop.current || typeof window === "undefined") return setShift(0);
+    const r = pop.current.getBoundingClientRect();
+    const vw = document.documentElement.clientWidth || window.innerWidth;
+    const left = r.left - shift;
+    const over = left + r.width - (vw - 8);
+    setShift(over > 0 ? -Math.min(over, Math.max(0, left - 8)) : 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
@@ -776,7 +803,7 @@ export function DateInput({ value, onChange, invalid, label = "Dato", defaultOpe
         <CalendarIcon />
       </button>
       {open ? (
-        <div className="lasso-dateinput__pop">
+        <div className="lasso-dateinput__pop" ref={pop} style={shift ? { left: shift } : undefined}>
           <DatePicker
             value={textToIso(value)}
             today={today}
@@ -792,16 +819,16 @@ export function DateInput({ value, onChange, invalid, label = "Dato", defaultOpe
 }
 
 /** 02a.6 Dato: operator (efter den, før den, præcis den, mellem) + ét eller to datofelter. */
-export function DateField({ operator, operators, values, onOperator, onChange, invalid }: { operator: Operator; operators: readonly Operator[]; values: readonly string[]; onOperator: (op: Operator) => void; onChange: (v: string[]) => void; invalid?: boolean }) {
+export function DateField({ operator, operators, values, onOperator, onChange, invalid, defaultOpen, today }: { operator: Operator; operators: readonly Operator[]; values: readonly string[]; onOperator: (op: Operator) => void; onChange: (v: string[]) => void; invalid?: boolean; /** Kalenderen i første datofelt åben fra start (02b.10, statisk forhåndsvisning). */ defaultOpen?: boolean; today?: Date }) {
   return (
     <>
       <OperatorSelect value={operator} operators={operators} fieldType="date" onChange={onOperator} />
-      <DateInput value={values[0] ?? ""} invalid={invalid} label={operator === "between" ? "Fra dato" : "Dato"} onChange={(v) => onChange(operator === "between" ? [v, values[1] ?? ""] : [v])} />
+      <DateInput value={values[0] ?? ""} invalid={invalid} defaultOpen={defaultOpen} today={today} label={operator === "between" ? "Fra dato" : "Dato"} onChange={(v) => onChange(operator === "between" ? [v, values[1] ?? ""] : [v])} />
       {operator === "between" ? (
-        <>
+        <span className="lasso-inputunit lasso-inputunit--date">
           <span className="lasso-unit">og</span>
-          <DateInput value={values[1] ?? ""} invalid={invalid} label="Til dato" onChange={(v) => onChange([values[0] ?? "", v])} />
-        </>
+          <DateInput value={values[1] ?? ""} invalid={invalid} today={today} label="Til dato" onChange={(v) => onChange([values[0] ?? "", v])} />
+        </span>
       ) : null}
     </>
   );
@@ -1047,5 +1074,17 @@ export function TechnologyField({ label, value, onChange, suggestions, variant =
         </>
       ) : null}
     </>
+  );
+}
+
+/**
+ * 03.2–03.4 Teknologifeltet i sin række: FieldRow + TechnologyField. "Ryd" vises kun, når
+ * kontakten er til (03.4: kontakt fra = kun kontakten, intet at rydde).
+ */
+export function TechnologyRow({ label, value, onChange, onClear, suggestions, pending, active }: { label: string; value: TechValue; onChange: (v: TechValue) => void; onClear?: () => void; suggestions?: readonly string[]; pending?: FieldRowProps["pending"]; active?: boolean }) {
+  return (
+    <FieldRow label={label} onClear={value.on ? onClear : undefined} pending={pending} active={active}>
+      <TechnologyField label={label} value={value} onChange={onChange} suggestions={suggestions} />
+    </FieldRow>
   );
 }

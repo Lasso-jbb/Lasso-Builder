@@ -14,8 +14,11 @@ import {
   MultiSelect,
   PersonaField,
   SegmentYesNo,
+  summarize,
   TagInput,
   TechnologyField,
+  TechnologyRow,
+  DateField,
   TreePicker,
   YesNoChips,
 } from "./components/Fields.js";
@@ -91,7 +94,7 @@ test("02a.12 Branchevælger: to navne og N flere, tomt = Vælg brancher, træ me
   const empty = render(h(IndustryField, { tree: DB07_EXCERPT, values: [], onChange: noop }));
   assert.match(empty, /Vælg brancher/);
   const some = render(h(IndustryField, { tree: DB07_EXCERPT, values: ["692000", "691000", "620100"], onChange: noop }));
-  assert.match(some, /Bogføring og revision; skatterådgivning, Juridisk bistand og 1 flere/);
+  assert.match(some, /Bogføring og revision; skatterådgivning, Juridisk bistand og 1 mere/);
   const tree = render(h(TreePicker, { tree: DB07_EXCERPT, values: ["692000"], onChange: noop }));
   assert.match(tree, /role="tree"/);
   assert.match(tree, /Videnservice/);
@@ -154,3 +157,34 @@ test("FilterPanel: procent- og Ja/Nej-felter fra et udvidet katalog", () => {
   assert.match(html, /role="switch" aria-checked="true"/);
 });
 
+
+test("02b.1 summarize: \"og 1 mere\" ved én, \"og N flere\" ved flere", () => {
+  assert.equal(summarize(["A", "B"]), "A, B");
+  assert.equal(summarize(["A", "B", "C"]), "A, B og 1 mere");
+  assert.equal(summarize(["A", "B", "C", "D"]), "A, B og 2 flere");
+});
+
+test("02b.6 FieldRow required: rød stjerne efter navnet", () => {
+  const html = render(h(FieldRow, { label: "Kommune", required: true, error: "Vælg mindst én kommune.", children: "x" }));
+  assert.match(html, /Kommune<span class="lasso-required" aria-label="påkrævet"> \*<\/span>/);
+  assert.doesNotMatch(render(h(FieldRow, { label: "Kommune", children: "x" })), /lasso-required/);
+});
+
+test("03.4 TechnologyRow: Ryd kun når kontakten er til", () => {
+  const off = render(h(TechnologyRow, { label: "Live chat", value: { on: false, mode: "any", values: [] }, onChange: noop, onClear: noop }));
+  assert.doesNotMatch(off, />Ryd</);
+  const on = render(h(TechnologyRow, { label: "E-commerce", value: { on: true, mode: "any", values: [] }, onChange: noop, onClear: noop }));
+  assert.match(on, />Ryd</);
+  assert.match(on, /Firmaer der benytter/);
+});
+
+test("02a.3/02a.6 enheden og \"og\" står i gruppe med feltet; DateField kan åbne kalenderen", () => {
+  const html = render(h(DateField, { operator: "between", operators: ["after", "between"], values: ["01.01.2015", "31.12.2020"], onOperator: noop, onChange: noop, defaultOpen: true }));
+  assert.match(html, /class="lasso-inputunit lasso-inputunit--date"><span class="lasso-unit">og<\/span>/);
+  assert.match(html, /lasso-dateinput__pop/);
+});
+
+test("03.1 TagInput defaultText: indtastet tekst før den bliver til tags", () => {
+  const html = render(h(TagInput, { values: [], onChange: noop, defaultText: "2100, 2200, 8000" }));
+  assert.match(html, /value="2100, 2200, 8000"/);
+});
