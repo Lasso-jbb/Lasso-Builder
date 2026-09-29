@@ -333,7 +333,7 @@ export const entries: GalleryEntry[] = [
     render: () => (
       <ScoreCompare current={{ value: "52", of: "af 100", word: "Lav risiko", tone: "ok", date: "2026-09-12" }} />
     ),
-    note: "Jakob 29.09: kun den aktuelle score (ingen forrige, pil eller ændring; ingen Creditsafe). Scoregrundlag og skala afventer Jakob/Jeppe; Paper BX9-0 redesignes af Fable.",
+    note: "Jakob 29.09: kun den aktuelle score (ingen forrige, pil eller ændring; ingen Creditsafe). Lassos risikoscore 0-100, hvor 100 = høj risiko (52 = lav). Paper BX9-0 redesignes af Fable.",
   },
   // 18.2 Scorehistorik udgår (Jakob 29.09): der kan ikke laves historik.
   {
@@ -345,7 +345,7 @@ export const entries: GalleryEntry[] = [
         <CreditConfirmDialog open onClose={noop} onConfirm={noop} balance={38} price={1} description="LASSO X A/S, seneste vurdering er 13 dage gammel." />
       </div>
     ),
-    note: "Kun tilstanden med nok kreditter vises (dialogen er en overlay). Ved 0 kreditter bliver knappen 'Køb kreditter' og prisen rød (balance=0).",
+    note: "Afklaret (Jakob 15:41): dialogen beholdes og vises, når man klikker på en Creditsafe-rapport (koster kreditter); kun Pris og Saldo efter, ingen ventetid. Kun tilstanden med nok kreditter vises (dialogen er en overlay). Ved 0 kreditter bliver knappen 'Køb kreditter' og prisen rød (balance=0).",
   },
 
   /* ---------- 19 Regnskabsdetaljer ---------- */

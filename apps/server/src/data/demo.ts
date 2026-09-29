@@ -891,25 +891,15 @@ export class DemoProvider implements DataProvider {
   /** Katalog 10.1: eksempelscore og -hentetilstande, da der endnu ikke findes en live datakilde (se demoScore). */
   async score(lassoId: string): Promise<ScoreVM> {
     const c = get(lassoId);
-    const base = demoScore(c, creditRatingFor(c));
-    if (typeof base.score !== "number") return base;
-    const score = base.score;
-    // Katalog 26d.7: seks målinger over 24 måneder og tre ændringer med årsag (eksempeldata).
-    const steps = [-3, -1, -4, -1, -3, 0].map((d, i) => Math.max(1, Math.min(99, score + d - (i === 4 ? 2 : 0))));
-    const dates = ["2024-09-01", "2025-01-01", "2025-05-01", "2025-09-01", "2026-01-01", "2026-09-01"];
-    const history = dates.map((date, i) => ({ date, score: i === dates.length - 1 ? score : steps[i]! }));
-    const changes = [
-      { date: "2026-06-06", label: "Regnskab 2025 indlæst", delta: 5 },
-      { date: "2026-01-01", label: "Alder på selskab, eksempeldata", delta: 2 },
-      { date: "2025-05-20", label: "Betalingsanmærkning, eksempeldata", delta: -4 },
-    ];
-    return { ...base, history, changes, historyNote: "eksempeldata før 09.2026" };
+    const base = demoScore(c);
+    // Jakob 29.09: kun den aktuelle score; der findes ingen scorehistorik (18.2 udgår).
+    return base;
   }
 
   /** Katalog 18.2: eksempelhistorik, der ender i den aktuelle demoscore. */
   async scoreHistory(lassoId: string) {
     const c = get(lassoId);
-    return demoScoreHistory(c, demoScore(c, creditRatingFor(c)));
+    return demoScoreHistory(c, demoScore(c));
   }
 
   /** Katalog 13.6/13.10: eksempel-branchetal afledt af virksomhedens egne nøgletal. */

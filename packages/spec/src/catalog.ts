@@ -288,7 +288,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     type: "LassoScoreGauge",
     title: "Scoremåler (kun demo)",
     description:
-      "Brug til: KUN demovisninger. Der er ingen live datakilde for en 0–100 score; for rigtige virksomheder viser måleren 'Ikke oplyst'. Vælg den aldrig til en kunde, der spørger om risiko, score eller kreditvurdering (show_company focus risiko). Kræver: company, title? (standard 'Kreditvurdering'), detail? (true tilføjer udviklingen over 24 måneder og seneste ændringer). Eksempel: intet kundespørgsmål fører hertil.",
+      "Brug til: KUN demovisninger. Der er ingen live datakilde for Lassos 0-100 risikoscore endnu; for rigtige virksomheder viser måleren 'Ikke oplyst'. Vælg den aldrig til en kunde, der spørger om risiko, score eller kreditvurdering (show_company focus risiko). Skalaen er Lassos risikoscore 0-100, hvor 100 = HØJ risiko (0-60 lav/grøn, 60-80 moderat/gul, 80-100 høj/rød); kun den aktuelle score, ingen historik, ikke Creditsafe (brug LassoCreditRating til Creditsafe). Kræver: company, title? (standard 'Risikoscore'), detail? (true giver den fulde form med 60/80-mærker). Eksempel: intet kundespørgsmål fører hertil.",
     props: "company, title?, detail?",
   },
 

@@ -24,7 +24,7 @@ export interface CreditConfirmDialogProps {
 const credits = (n: number) => `${formatNumber(n)} ${n === 1 ? "kredit" : "kreditter"}`;
 
 /**
- * Bekræft hentning (katalog 18.3, node BYX-0): dialogen fra 07 med tre nøgle-værdi-linjer (pris,
+ * Bekræft hentning (katalog 18.3, node BYX-0): bruges, når man klikker på en Creditsafe-rapport, der koster kreditter (Jakob 29.09); dialogen fra 07 med nøgle-værdi-linjer (pris,
  * saldo efter; 18.3: ingen ventetid), uden ×-lukkeknap og med "Annuller" som tekstknap. Prisen gentages i knappen
  * ("Hent, 1 kredit"), så man aldrig er i tvivl. Ved 0 kreditter
  * erstattes knappen af "Køb kreditter", og prisen står med rød tekst. Mobil: bundark (07/26a).

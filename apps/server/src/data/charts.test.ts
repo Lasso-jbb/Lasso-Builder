@@ -66,7 +66,7 @@ test("resolveSpec henter branchetal, historik, kort, heatmap og det fulde regnsk
   for (const line of card.split("\n")) assert.equal([...line].length, 38, `samme bredde: ${line}`);
 });
 
-test("demo: scoremålerens hente-tilstande og nøgle-værdi-linjer (10.1)", async () => {
+test("demo: scoremålerens hente-tilstande; Lassos risikoscore uden Creditsafe-fakta og historik (10.1)", async () => {
   assert.equal((await demo.score("CVR-1-99000003")).state, "notfetched");
   assert.equal((await demo.score("CVR-1-99000006")).state, "fetching");
   const off = await demo.score("CVR-1-99000010");
@@ -74,7 +74,9 @@ test("demo: scoremålerens hente-tilstande og nøgle-værdi-linjer (10.1)", asyn
   assert.ok(off.reason, "ikke tilgængelig har altid en årsag");
   const ok = await demo.score(ID);
   assert.equal(typeof ok.score, "number");
-  assert.deepEqual(ok.facts?.map((f) => f.label), ["Kreditmaksimum", "International score"]);
+  assert.ok(ok.score! >= 0 && ok.score! <= 100, "0-100, hvor 100 = høj risiko");
+  assert.equal(ok.facts, undefined, "ingen Kreditmaksimum/International score (Creditsafe bruges ikke)");
+  assert.equal(ok.history, undefined, "ingen scorehistorik (18.2 udgår)");
 });
 
 test("heatmap: tæller foldede ændringer med deres antal og udelader tomme typer", () => {

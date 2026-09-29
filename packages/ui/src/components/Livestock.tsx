@@ -49,7 +49,7 @@ export function Livestock({ livestock, error }: { livestock?: LivestockVM; error
                     <td className="lasso-cell--name">{[h.species, h.category].filter(Boolean).join(", ")}</td>
                     {/* 20.4: antal højrestillet med enheden i muted i samme celle. */}
                     <td className="lasso-num">
-                      <span className="lasso-property__strong">{h.count != null ? formatNumber(h.count) : "—"}</span>
+                      <span className="lasso-property__strong">{h.count != null ? formatNumber(h.count) : "-"}</span>
                       {h.unit ? <span className="lasso-livestock__unit"> {h.unit}</span> : null}
                     </td>
                   </tr>
@@ -59,7 +59,7 @@ export function Livestock({ livestock, error }: { livestock?: LivestockVM; error
                     {livestock.herds.length} besætning{livestock.herds.length === 1 ? "" : "er"}, {speciesCount} dyreart{speciesCount === 1 ? "" : "er"}
                   </td>
                   <td className="lasso-num lasso-muted">
-                    Sundhedsstatus {livestock.healthStatus ? <span className="lasso-livestock__health">{livestock.healthStatus}</span> : "—"}
+                    Sundhedsstatus {livestock.healthStatus ? <span className="lasso-livestock__health">{livestock.healthStatus}</span> : "-"}
                   </td>
                 </tr>
               </tbody>

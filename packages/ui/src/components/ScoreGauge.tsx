@@ -151,11 +151,11 @@ function Facts({ facts }: { facts?: ScoreVM["facts"] }) {
 }
 
 /**
- * Scoremåler (katalog 10.1, node 9ZT-0): titel "Kreditvurdering" med kildelinjen lige under titlen,
- * tal 40/700 + "af 100" + vurderingen som farvet ord, bånd i grøn/gul/rød (0–60 lav, 60–80 moderat,
- * 80–100 høj) med en 2 px ink-markør ved scoren, akselabels "0, lav" og "100, høj", nøgle-værdi-linjer
- * (fx Kreditmaksimum, International score) og en sekundær knap "Hent kreditrapport".
- * `detail` tilføjer udviklingen over 24 måneder og seneste ændringer (26d.7-formen).
+ * Scoremåler (katalog 10.1, node 9ZT-0): Lassos risikoscore 0-100, hvor 100 = HØJ risiko (Jakob 29.09).
+ * Titel "Risikoscore", tal 40/700 + "af 100" + vurderingen som farvet ord, bånd i grøn/gul/rød (0-60 lav,
+ * 60-80 moderat, 80-100 høj = rød) med en 2 px ink-markør ved scoren, akselabels "0, lav" og "100, høj".
+ * Kun den aktuelle score: ingen forrige måling, kreditmaks eller Creditsafe, og ingen kildelinje (G3).
+ * `detail` giver den fulde form med 60/80-mærker (26d.7-formen); udvikling og ændringer vises kun, hvis data har dem.
  *
  * Hente-tilstande (10.4, node BGZ-0): stiplet ramme = kan hentes (primær knap med prisen højrestillet
  * ved teksten), fuld ramme + spinner og 4 px fremdriftsbjælke under teksten = henter, grå flade = kan
@@ -177,14 +177,14 @@ export function ScoreGauge({
   title?: string;
   error?: string;
   onFetch?: () => void;
-  /** "Hent kreditrapport" (10.1). Uden den vises knappen ikke. */
+  /** "Hent rapport". Uden den vises knappen ikke (G1); Creditsafe-rapporten hører ikke til Lassos score (29.09). */
   onReport?: () => void;
   /** Udvikling over 24 måneder og seneste ændringer under måleren (26d.7). */
   detail?: boolean;
 }) {
-  const heading = title ?? "Kreditvurdering";
+  // Lassos risikoscore (Jakob 29.09): 0-100, hvor 100 = høj risiko. Ikke Creditsafe; ingen kildelinje (G3).
+  const heading = title ?? "Risikoscore";
   const [requested, setRequested] = useState(false);
-  const sourceLine = score?.source ? `Kilde: ${score.source}${score.updated ? `, opdateret ${formatDate(score.updated)}` : ""}` : undefined;
   if (!score) {
     return (
       <Section title={heading} span="half" className="lasso-gauge-section">
@@ -249,7 +249,7 @@ export function ScoreGauge({
   }
   if (score.score === null) {
     return (
-      <Section title={heading} subtitle={sourceLine} span="half" className="lasso-gauge-section">
+      <Section title={heading} span="half" className="lasso-gauge-section">
         <DataState state="notreported" />
       </Section>
     );
@@ -257,19 +257,17 @@ export function ScoreGauge({
   const value = Math.max(0, Math.min(100, score.score));
   const { label, index } = scoreBand(value);
   if (detail) {
-    // 26d.7: fuld form. Kilde og dato til højre for titlen, vurderingsordet med kreditmaks under ved siden af tallet,
-    // zonebjælke med 60/80-mærker, udvikling over 24 måneder og seneste ændringer.
-    const creditMax = score.facts?.find((f) => f.label.startsWith("Kreditmaks"));
-    const src = score.source ? `${score.source}${score.updated ? `, ${formatDate(score.updated)}` : ""}` : undefined;
+    // 26d.7: fuld form. Vurderingsordet ved siden af tallet og zonebjælke med 60/80-mærker. Ingen kilde (G3)
+    // og ingen udvikling/ændringer: der findes ingen scorehistorik (18.2 udgår, Jakob 29.09); de vises kun,
+    // hvis data en dag leverer dem.
     return (
-      <Section title={heading} action={src ? <span className="lasso-gauge__source">{src}</span> : undefined} span="half" className="lasso-gauge-section lasso-gauge-section--detail">
+      <Section title={heading} span="half" className="lasso-gauge-section lasso-gauge-section--detail">
         <div className="lasso-gauge lasso-gauge--detail">
           <div className="lasso-gauge__value">
             <span className="lasso-gauge__number">{Math.round(value)}</span>
             <span className="lasso-gauge__of">af 100</span>
             <span className="lasso-gauge__side">
               <span className={`lasso-gauge__label lasso-gauge__label--${index}`}>{label}</span>
-              {creditMax ? <span className="lasso-gauge__max">{`Kreditmaks ${creditMax.value}`}</span> : null}
             </span>
           </div>
           <div className="lasso-gauge__bar">
@@ -292,19 +290,9 @@ export function ScoreGauge({
       </Section>
     );
   }
-  // 26b.9 mobil: kilden kort til højre i hovedet, og under bjælken én linje "Forrige 47, +5" | "Kreditmaks …".
-  const prevScore = score.history && score.history.length >= 2 ? score.history[score.history.length - 2]!.score : undefined;
-  const diff = prevScore === undefined ? undefined : Math.round(value) - Math.round(prevScore);
-  const maxFact = score.facts?.find((f) => /kreditmaks/i.test(f.label));
-  const shortSource = score.source ? [score.source.replace(/^Kilde:\s*/i, ""), score.updated ? formatDate(score.updated) : undefined].filter(Boolean).join(", ") : undefined;
+  // 18.1/10.1 (Jakob 29.09): kun den aktuelle score; ingen "Forrige", kreditmaks eller kilde.
   return (
-    <Section
-      title={heading}
-      subtitle={sourceLine}
-      span="half"
-      className="lasso-gauge-section"
-      action={shortSource ? <span className="lasso-gauge__srcshort">{shortSource}</span> : undefined}
-    >
+    <Section title={heading} span="half" className="lasso-gauge-section">
       <div className="lasso-gauge">
         <div className="lasso-gauge__value">
           <span className="lasso-gauge__number">{Math.round(value)}</span>
@@ -324,16 +312,10 @@ export function ScoreGauge({
           <span>100, høj</span>
         </div>
         <Facts facts={score.facts} />
-        {prevScore !== undefined || maxFact ? (
-          <p className="lasso-gauge__mobline">
-            <span>{prevScore !== undefined ? `Forrige ${Math.round(prevScore)}, ${diff! > 0 ? "+" : diff! < 0 ? "\u2212" : "±"}${Math.abs(diff!)}` : ""}</span>
-            {maxFact ? <span>{`Kreditmaks ${maxFact.value}`}</span> : null}
-          </p>
-        ) : null}
         {onReport ? (
           <button type="button" className="lasso-btn lasso-btn--sm lasso-gauge__report" onClick={onReport}>
             <ShellIcon name="document" size={15} />
-            Hent kreditrapport
+            Hent rapport
           </button>
         ) : null}
       </div>
