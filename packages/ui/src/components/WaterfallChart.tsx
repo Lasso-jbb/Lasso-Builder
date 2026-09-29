@@ -10,19 +10,26 @@ export interface WaterfallStep {
   kind: "start" | "delta" | "end";
 }
 
-/** Korte etiketter, når søjlerne bliver for smalle til de fulde ord. */
-const SHORT_LABEL: Record<string, string> = {
-  Omsætning: "Oms.",
-  Bruttofortjeneste: "Brutto",
-  "Vareforbrug mv.": "Varefb.",
-  Personaleomkostninger: "Personale",
-  "Andre driftsomkostninger": "Andre",
-  "Af- og nedskrivninger": "Afskr.",
-  "Finansielle poster": "Finans",
-  Skat: "Skat",
-  "Øvrige poster": "Øvrige",
-  "Årets resultat": "Resultat",
+/**
+ * Aksens etiketter (13.7): fulde navne på højst to linjer ("Brutto-" / "fortjeneste", "Andre" /
+ * "driftsomk."), aldrig forkortet til ét ord.
+ */
+const AXIS_LABEL: Record<string, [string, string?]> = {
+  Omsætning: ["Omsætning"],
+  Bruttofortjeneste: ["Brutto-", "fortjeneste"],
+  "Vareforbrug mv.": ["Vareforbrug", "mv."],
+  Personaleomkostninger: ["Personale"],
+  "Andre driftsomkostninger": ["Andre", "driftsomk."],
+  "Af- og nedskrivninger": ["Af- og", "nedskr."],
+  "Finans og skat": ["Finans", "og skat"],
+  "Finansielle poster": ["Finansielle", "poster"],
+  Skat: ["Skat"],
+  "Øvrige poster": ["Øvrige", "poster"],
+  "Årets resultat": ["Årets", "resultat"],
 };
+
+/** Etiketten på én linje (mobil): "Brutto-" + "fortjeneste" -> "Bruttofortjeneste". */
+const oneLine = (label: string) => (AXIS_LABEL[label] ?? [label]).filter((l): l is string => Boolean(l)).reduce((a, l) => (a.endsWith("-") ? a.slice(0, -1) + l : a ? `${a} ${l}` : l), "");
 
 const num = (v: number | null | undefined): v is number => typeof v === "number" && Number.isFinite(v);
 
@@ -44,8 +51,8 @@ export function waterfallSteps(financials: FinancialsVM | undefined, statements?
     ["Personaleomkostninger", inc?.staffCosts],
     ["Andre driftsomkostninger", inc?.otherOperatingCosts],
     ["Af- og nedskrivninger", inc?.depreciation],
-    ["Finansielle poster", inc?.financialItemsNet],
-    ["Skat", inc?.tax],
+    // 13.7/26b.5: finansielle poster og skat står som ét trin, "Finans og skat".
+    ["Finans og skat", num(inc?.financialItemsNet) || num(inc?.tax) ? (inc?.financialItemsNet ?? 0) + (inc?.tax ?? 0) : undefined],
   ];
   const known = subs.filter((s): s is [string, number] => num(s[1]) && s[1] !== 0);
   if (num(gross) && num(profit) && known.length >= 2) {
@@ -153,7 +160,7 @@ export function WaterfallChart({ financials, statements, error }: { financials?:
               const width = Math.max(pos(Math.max(b.from, b.to)) - left, 0.8);
               return (
                 <li key={b.label} className={`lasso-hwf__row lasso-hwf__row--${b.kind}`}>
-                  <span className="lasso-hwf__label">{b.label}</span>
+                  <span className="lasso-hwf__label">{oneLine(b.label)}</span>
                   <span className="lasso-hwf__track">
                     {lo < 0 ? <span className="lasso-hwf__zero" style={{ left: `${pos(0)}%` }} aria-hidden="true" /> : null}
                     <span className={`lasso-hwf__bar ${cls(b)}`} style={{ left: `${left}%`, width: `${width}%` }} aria-hidden="true" />
@@ -171,12 +178,12 @@ export function WaterfallChart({ financials, statements, error }: { financials?:
   const ticks = niceTicks(lo, hi);
   const tMin = ticks[0]!;
   const tMax = ticks.at(-1)!;
-  const plotH = CHART_H - CHART_TOP - CHART_BOTTOM;
+  // To linjer etiket under søjlerne (13.7).
+  const plotH = CHART_H - CHART_TOP - CHART_BOTTOM - 16;
   const plotW = Math.max(0, W - CHART_AXIS_W);
   const y = makeYScale(tMin, tMax, CHART_TOP, plotH);
   const slot = plotW / bars.length;
   const barW = Math.min(64, slot * 0.62);
-  const useShort = slot < 96;
   const t = pick.tooltip;
 
   return (
@@ -204,8 +211,12 @@ export function WaterfallChart({ financials, statements, error }: { financials?:
                   <text className={`lasso-chart__value${b.kind !== "delta" ? " lasso-chart__value--last" : ""}`} x={x + barW / 2} y={up ? rectY - 7 : rectY + h + 15} textAnchor="middle">
                     {label(b.value)}
                   </text>
-                  <text className={`lasso-chart__label${slot < 80 ? " lasso-chart__label--small" : ""}`} x={x + barW / 2} y={CHART_H - 6} textAnchor="middle">
-                    {useShort ? (SHORT_LABEL[b.label] ?? b.label) : b.label}
+                  <text className={`lasso-chart__label${slot < 80 ? " lasso-chart__label--small" : ""}`} x={x + barW / 2} y={CHART_H - (AXIS_LABEL[b.label]?.[1] ? 22 : 6)} textAnchor="middle">
+                    {(AXIS_LABEL[b.label] ?? [b.label]).filter(Boolean).map((line, li) => (
+                      <tspan key={li} x={x + barW / 2} dy={li === 0 ? 0 : 16}>
+                        {line}
+                      </tspan>
+                    ))}
                   </text>
                   {next ? <line className="lasso-chart__connector" x1={x + barW} x2={x + slot} y1={y(b.to)} y2={y(b.to)} /> : null}
                   <rect className="lasso-chart__hit" x={CHART_AXIS_W + i * slot} y={0} width={slot} height={CHART_H} onMouseEnter={() => pick.enter(i)} onClick={() => pick.pick(i)} />

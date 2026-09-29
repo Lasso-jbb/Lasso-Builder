@@ -64,7 +64,7 @@ test("13.5/13.7: balance som aktiver og passiver, vandfald fra bruttofortjeneste
   assert.deepEqual(last.liabilities.map((s) => s.tone), ["s1", "s2", "s3"], "egenkapital koral, gæld blå");
   assert.equal(last.total, 8_000_000);
   const wf = waterfallSteps(FIN, { lassoId: ID, currency: "DKK", balanceSheet: [], cashFlow: [], incomeStatement: [{ year: 2023, grossProfit: 12_000_000, staffCosts: -8_000_000, depreciation: -1_000_000, tax: -300_000, profit: 1_100_000 }] })!;
-  assert.deepEqual(wf.steps.map((s) => s.label), ["Bruttofortjeneste", "Personaleomkostninger", "Af- og nedskrivninger", "Skat", "Øvrige poster", "Årets resultat"]);
+  assert.deepEqual(wf.steps.map((s) => s.label), ["Bruttofortjeneste", "Personaleomkostninger", "Af- og nedskrivninger", "Finans og skat", "Øvrige poster", "Årets resultat"]);
 });
 
 test("13.8: donut + andelsbjælker; ejerkreds med CVR-intervaller som tekst, bjælken tegner maks", () => {
