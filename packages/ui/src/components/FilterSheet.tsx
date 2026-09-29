@@ -213,12 +213,13 @@ export function FilterEditor({
 }
 
 /**
- * Filterarket (26c.8): filtrene i et bundark (Dialog; på desktop en dialog på 520 px).
+ * Filterarket (26c.8/26a.8): filtrene i et bundark (Dialog; på desktop en dialog på 520 px) med titlen
+ * "Kriterier (N)". Arket er højst 90 % af skærmen; felterne ruller, og Anvend/Annuller står fast nederst.
  * Bruges af tabellens "Filtre"-knap og af FilterPanel under 560 px.
  */
 export function FilterSheet({ open, criteria, onApply, onClose }: { open: boolean; criteria: readonly Criterion[]; onApply: (c: Criterion[]) => void; onClose: () => void }) {
   return (
-    <Dialog open={open} title="Filtre" description={criteria.length ? `${criteria.length} aktive` : "Ingen aktive filtre"} onClose={onClose} className="lasso-dialog--filters">
+    <Dialog open={open} title={criteria.length ? `Kriterier (${criteria.length})` : "Kriterier"} description={criteria.length ? undefined : "Ingen aktive filtre"} onClose={onClose} className="lasso-dialog--filters">
       {open ? (
         <FilterEditor
           layout="sheet"
