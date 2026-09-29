@@ -30,7 +30,7 @@ test("10.1: scoremålerens hente-tilstande: stiplet med pris i knappen, henter m
   const base: ScoreVM = { lassoId: ID, score: null };
   const idle = html(createElement(ScoreGauge, { score: { ...base, state: "notfetched", cost: "1 kredit" }, onFetch: () => {} }));
   assert.match(idle, /lasso-gauge-state--idle/);
-  assert.match(idle, />Hent score, 1 kredit<\/button>/);
+  assert.match(idle, />Hent vurdering, 1 kredit<\/button>/);
   assert.doesNotMatch(idle, /af 100|lasso-gauge__track/);
   const busy = html(createElement(ScoreGauge, { score: { ...base, state: "fetching", progress: 0.4 } }));
   assert.match(busy, /lasso-gauge-state--busy[^]*lasso-spinner[^]*role="progressbar"[^]*aria-valuenow="40"/);
@@ -64,7 +64,7 @@ test("13.5/13.7: balance som aktiver og passiver, vandfald fra bruttofortjeneste
   assert.deepEqual(last.liabilities.map((s) => s.tone), ["s1", "s2", "s3"], "egenkapital koral, gæld blå");
   assert.equal(last.total, 8_000_000);
   const wf = waterfallSteps(FIN, { lassoId: ID, currency: "DKK", balanceSheet: [], cashFlow: [], incomeStatement: [{ year: 2023, grossProfit: 12_000_000, staffCosts: -8_000_000, depreciation: -1_000_000, tax: -300_000, profit: 1_100_000 }] })!;
-  assert.deepEqual(wf.steps.map((s) => s.label), ["Bruttofortjeneste", "Personaleomkostninger", "Af- og nedskrivninger", "Skat", "Øvrige poster", "Årets resultat"]);
+  assert.deepEqual(wf.steps.map((s) => s.label), ["Bruttofortjeneste", "Personaleomkostninger", "Af- og nedskrivninger", "Finans og skat", "Øvrige poster", "Årets resultat"]);
 });
 
 test("13.8: donut + andelsbjælker; ejerkreds med CVR-intervaller som tekst, bjælken tegner maks", () => {
@@ -77,14 +77,16 @@ test("13.8: donut + andelsbjælker; ejerkreds med CVR-intervaller som tekst, bj�
   assert.doesNotMatch(h, /·/);
 });
 
-test("13.10: nøgletalsmåler med branchemærke: grøn/gul/rød altid med ikon + ord", () => {
+test("13.10: nøgletalsmåler med branchemærke: to linjer (etiket, værdi + branche), farvet bjælke med ordet i aria-label", () => {
   assert.equal(assessAgainstMedian(12, 10)!.index, 0);
   assert.equal(assessAgainstMedian(7, 10)!.index, 1);
   assert.equal(assessAgainstMedian(3, 10)!.index, 2);
   const industry: IndustryBenchmarkVM = { lassoId: ID, state: "ok", industryText: "Prøvebranche", years: [{ year: 2023, median: { soliditetsgrad: 40, overskudsgrad: 10 } }], source: "Eksempeldata" };
   const h = html(createElement(KeyFigureGauge, { financials: FIN, industry }));
   assert.match(h, /lasso-kfg__fill lasso-kfg__fill--0" style="width:65%"/, "52 % på skalaen 0–80 %");
-  assert.match(h, /lasso-kfg__word lasso-kfg__word--2"><svg[^]*?<\/svg>Klart under branchen/);
+  assert.match(h, /lasso-kfg__value">52,0 %, branche 40,0 %</);
+  assert.match(h, /aria-label="Overskudsgrad [^"]*klart under branchen"/);
+  assert.doesNotMatch(h, /lasso-kfg__word|lasso-kfg__legend/);
   assert.match(h, /lasso-kfg__mark/);
   const none = html(createElement(KeyFigureGauge, { financials: FIN, industry: { lassoId: ID, state: "unavailable", reason: "Ingen branchetal.", years: [] } }));
   assert.match(none, /Ingen branchetal\./);

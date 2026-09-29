@@ -128,15 +128,15 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
   },
   {
     type: "LassoStackedBarChart",
-    title: "Stablede søjler, balance pr. år",
+    title: "Stablede søjler, balance",
     description:
-      "Brug til: egenkapital og gæld som dele af balancen pr. år over 2–10 år. Brug ikke når: kun seneste år (LassoShareBars), udvikling i ét nøgletal (LassoBarChart med metric 'egenkapital', 'gaeld' eller 'soliditetsgrad'), eller frit valgte nøgletal (LassoGroupedBarChart). Kræver: company, years; mangler gæld i regnskaberne, vises tom tilstand. Dækkes ikke af show_company. Eksempel: 'Hvordan har forholdet mellem egenkapital og gæld udviklet sig hos X?'",
+      "Brug til: balancen på seneste balancedag som to stablede søjler, aktiver (anlæg, omsætning) mod passiver (egenkapital, langfristet og kortfristet gæld), med værdierne i segmenterne – 'hvordan ser balancen ud', 'hvad er aktiverne finansieret med'. years afgør, hvor langt tilbage der ledes efter seneste balance. Brug ikke når: egenkapitalens andel som procent (LassoShareBars), udvikling i ét nøgletal (LassoBarChart med metric 'egenkapital', 'gaeld' eller 'soliditetsgrad'), flere år side om side (LassoMultiYearTable), eller frit valgte nøgletal (LassoGroupedBarChart). Kræver: company, years; mangler gæld i regnskaberne, vises tom tilstand. Dækkes ikke af show_company. Eksempel: 'Hvordan er balancen skruet sammen hos X?'",
     props: "company, years (2–10, standard 5)",
   },
   {
     type: "LassoShareBars",
     title: "Andelsbjælker, balance seneste år",
-    description: `Brug til: dele af en helhed som donut med total i midten + andelsbjælker. variant 'balance' (standard): egenkapital og gæld som andele i procent af balancen for seneste regnskabsår. variant 'ejerkreds': ejerkredsen som andele med CVR's intervaller som tekst ('hvordan er ejerskabet fordelt'). Brug ikke når: flere år (LassoStackedBarChart), soliditetsgraden som tal med ændring (LassoKeyFigureCards metrics ['soliditetsgrad']), eller ejernes navne og roller (LassoOwnerList). Kræver: company, variant?; mangler gæld i regnskabet eller ejerandele i CVR, vises tom tilstand. ${F("oekonomi (balance)")} Eksempel: 'Hvor stor en del af balancen er egenkapital hos X?' → show_company focus oekonomi.`,
+    description: `Brug til: dele af en helhed som donut med total i midten + andelsbjælker. variant 'balance' (standard): egenkapital og gæld som andele i procent af balancen for seneste regnskabsår. variant 'ejerkreds': ejerkredsen som andele med CVR's intervaller som tekst ('hvordan er ejerskabet fordelt'). Brug ikke når: flere år (LassoMultiYearTable), aktiver mod passiver (LassoStackedBarChart), soliditetsgraden som tal med ændring (LassoKeyFigureCards metrics ['soliditetsgrad']), eller ejernes navne og roller (LassoOwnerList). Kræver: company, variant?; mangler gæld i regnskabet eller ejerandele i CVR, vises tom tilstand. ${F("oekonomi (balance)")} Eksempel: 'Hvor stor en del af balancen er egenkapital hos X?' → show_company focus oekonomi.`,
     props: "company, variant? (balance | ejerkreds)",
   },
   {
@@ -154,8 +154,8 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
   {
     type: "LassoMultiYearTable",
     title: "Flerårstabel",
-    description: `Brug til: nøgletal × år som TAL med ændring og tendens pr. række – præcise tal for 1–6 nøgletal over 2–10 år, eller 4+ nøgletal over tid. Brug ikke når: ét nøgletal som graf (LassoBarChart), 2–3 nøgletal som graf (LassoGroupedBarChart), kun ét år (LassoKeyValueList variant 'financials'), eller alle regnskabslinjer (LassoIncomeStatement). Kræver: company, metrics?, years. ${F("oekonomi")} Eksempel: 'Giv mig omsætning, bruttofortjeneste, resultat og egenkapital for X for hvert af de sidste 5 år i en tabel.'`,
-    props: `company, metrics? (1–6 af ${METRICS.join(" | ")}), years (2–10, standard 5), title?`,
+    description: `Brug til: nøgletal × år som TAL med ændring og tendens pr. række – præcise tal for 1–6 nøgletal over 2–10 år, eller 4+ nøgletal over tid. Brug ikke når: ét nøgletal som graf (LassoBarChart), 2–3 nøgletal som graf (LassoGroupedBarChart), kun ét år (LassoKeyValueList variant 'financials'), eller alle regnskabslinjer (LassoIncomeStatement). Kræver: company, metrics?, years, variant? (kun mobil: 'A' = nøgletal i rækker med fast navnekolonne og vandret rul til ældre år, når brugeren skal sammenligne på tværs af nøgletal; 'B' = ét kort pr. nøgletal med årene som kolonner, når der er få nøgletal og mange år; standard B ved 1–2 nøgletal). ${F("oekonomi")} Eksempel: 'Giv mig omsætning, bruttofortjeneste, resultat og egenkapital for X for hvert af de sidste 5 år i en tabel.'; 'udviklingen i ansatte over 5 år på mobil' → metrics ['ansatte'], variant 'B'.`,
+    props: `company, metrics? (1–6 af ${METRICS.join(" | ")}), years (2–10, standard 5), title?, variant? (A | B)`,
   },
   {
     type: "LassoIncomeStatement",
@@ -287,16 +287,16 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     type: "LassoScoreGauge",
     title: "Scoremåler (kun demo)",
     description:
-      "Brug til: KUN demovisninger. Der er ingen live datakilde for en 0–100 score; for rigtige virksomheder viser måleren 'Ikke oplyst'. Vælg den aldrig til en kunde, der spørger om risiko, score eller kreditvurdering (show_company focus risiko). Kræver: company. Eksempel: intet kundespørgsmål fører hertil.",
-    props: "company, title?",
+      "Brug til: KUN demovisninger. Der er ingen live datakilde for en 0–100 score; for rigtige virksomheder viser måleren 'Ikke oplyst'. Vælg den aldrig til en kunde, der spørger om risiko, score eller kreditvurdering (show_company focus risiko). Kræver: company, title? (standard 'Kreditvurdering'), detail? (true tilføjer udviklingen over 24 måneder og seneste ændringer). Eksempel: intet kundespørgsmål fører hertil.",
+    props: "company, title?, detail?",
   },
 
   {
     type: "LassoScoreHistory",
     title: "Scorehistorik (kun demo)",
     description:
-      "Brug til: KUN demovisninger. Lassos 0–100-score over tid som trinlinje med zonerne lav/moderat/høj og forrige vs. nu; der er ingen live datakilde, så rigtige virksomheder viser tom tilstand. Vælg den aldrig til en kunde, der spørger om risiko eller kreditvurdering (show_company focus risiko). Brug ikke når: det gælder Creditsafes vurdering (LassoCreditRating). Kræver: company. Eksempel: intet kundespørgsmål fører hertil.",
-    props: "company, title?",
+      "Brug til: KUN demovisninger. Lassos 0–100-score over tid som trinlinje med zonerne lav/moderat/høj og forrige vs. nu; der er ingen live datakilde, så rigtige virksomheder viser tom tilstand. Vælg den aldrig til en kunde, der spørger om risiko eller kreditvurdering (show_company focus risiko). Brug ikke når: det gælder Creditsafes vurdering (LassoCreditRating). Kræver: company, title? (standard 'Kreditvurdering'), detail? (true tilføjer udviklingen over 24 måneder og seneste ændringer). Eksempel: intet kundespørgsmål fører hertil.",
+    props: "company, title?, detail?",
   },
 
   // (f) Fysiske enheder --------------------------------------------------------

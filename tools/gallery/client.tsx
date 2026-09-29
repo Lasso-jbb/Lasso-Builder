@@ -1,3 +1,4 @@
+import type React from "react";
 import { createRoot } from "react-dom/client";
 import { parseViewSpec, type Dataset } from "@lasso/spec";
 import { LassoView, ToastProvider, Toasts, type HostCapabilities } from "@lasso/ui";
@@ -24,14 +25,27 @@ const HOST: HostCapabilities = {
   refresh: true,
 };
 
+/** Papers mobilkort (26b–26h): 1 px kant, radius 12, padding 16 på hvid flade, 16 px sidemargen. */
+function CardFrame({ children, inset = true }: { children: React.ReactNode; inset?: boolean }) {
+  // LassoView frameless har selv 16 px luft på mobil; en ren komponent får luften her.
+  return (
+    <div className="lasso-root" style={{ padding: 16, background: "var(--lasso-surface)" }}>
+      <div style={{ border: "1px solid var(--lasso-border)", borderRadius: 12, padding: inset ? 16 : 0, overflow: "hidden" }}>{children}</div>
+      <Toasts />
+    </div>
+  );
+}
+
 function Stage({ id }: { id: number }) {
   const entry = ENTRIES[id];
   if (!entry) return <div>Ukendt element {id}</div>;
   if (entry.spec) {
     const spec = parseViewSpec(entry.spec);
     // Elementerne står i Paper uden visningens egen ramme (logo, "Data hentet …", Gem visning).
-    return <LassoView spec={spec} dataset={window.__GALLERY_DATA__[String(id)] ?? null} host={HOST} onAction={() => undefined} frameless />;
+    const view = <LassoView spec={spec} dataset={window.__GALLERY_DATA__[String(id)] ?? null} host={HOST} onAction={() => undefined} frameless />;
+    return entry.card ? <CardFrame inset={false}>{view}</CardFrame> : view;
   }
+  if (entry.card) return <CardFrame>{entry.render?.()}</CardFrame>;
   return (
     <div className="lasso-root" style={{ padding: 24, background: "var(--lasso-surface, #fff)" }}>
       {entry.render?.()}

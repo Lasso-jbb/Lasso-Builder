@@ -198,7 +198,7 @@ export const stackedBarChartSchema = z.object({
   type: z.literal("LassoStackedBarChart"),
   company: companyRef,
   years: z.number().int().min(2).max(10).default(5),
-}).describe("Egenkapital og gæld som dele af balancen, pr. år.");
+}).describe("Balancen på seneste balancedag: aktiver mod passiver som to stablede søjler.");
 
 export const lineChartSchema = z.object({
   type: z.literal("LassoLineChart"),
@@ -385,6 +385,7 @@ export const multiYearTableSchema = z.object({
   metrics: z.array(metric).min(1).max(6).optional().describe("Standard: bruttofortjeneste/omsætning, resultat, egenkapital, ansatte."),
   years: z.number().int().min(2).max(10).default(5),
   title: z.string().max(80).optional(),
+  variant: z.enum(["A", "B"]).optional().describe("Kun mobil (26c.3): A = nøgletal i rækker med fast kolonne og vandret rul; B = ét kort pr. nøgletal med årene som kolonner. Standard: B ved 1–2 nøgletal, ellers A."),
 });
 
 export const incomeStatementSchema = z.object({
@@ -443,7 +444,8 @@ export const publicationsSchema = z.object({
 export const scoreGaugeSchema = z.object({
   type: z.literal("LassoScoreGauge"),
   company: companyRef,
-  title: z.string().max(80).optional().describe("Standard: 'Score'."),
+  title: z.string().max(80).optional().describe("Standard: 'Kreditvurdering'."),
+  detail: z.boolean().optional().describe("Udviklingen over 24 måneder og seneste ændringer under måleren (26d.7). Standard: fra."),
 });
 
 /** Katalog 18.2: scorehistorik som trinlinje (hver hentning et punkt). Ingen live datakilde endnu, som LassoScoreGauge. */

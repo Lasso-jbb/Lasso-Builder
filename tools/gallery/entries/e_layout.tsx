@@ -61,6 +61,8 @@ import {
   type TabItem,
 } from "@lasso/ui";
 import { MobileFilterSheet, MobileForm } from "./felter_mobil.js";
+
+import { SparkList } from "./c_data1.js";
 import type { GalleryEntry } from "../types.js";
 
 /* ---------- Fælles ---------- */
@@ -685,27 +687,16 @@ const mobileNav: GalleryEntry[] = [
 const one = (title: string, component: Record<string, unknown>, kind = "company") => ({ kind, title, components: [component] });
 
 function SparkRows() {
-  const rows: [string, number[]][] = [
-    ["Bruttofortjeneste", [7.9, 15.5, 17.7, 17.5, 18.8]],
-    ["Resultat efter skat", [1.2, 2.4, 1.1, 0.4, -0.2]],
-    ["Egenkapital", [2.1, 3.3, 3.9, 3.4, 3.2]],
-    ["Ansatte", [9, 12, 15, 16, 17]],
-  ];
   return (
-    <Section title="Udvikling, 5 år">
-      <ul className="lasso-rows">
-        {rows.map(([label, values]) => (
-          <li key={label} className="lasso-row">
-            <div className="lasso-row__main">
-              <div className="lasso-row__name lasso-row__name--regular">{label}</div>
-            </div>
-            <div className="lasso-row__value">
-              <Sparkline values={values} tone="accent" />
-            </div>
-          </li>
-        ))}
-      </ul>
-    </Section>
+    <SparkList
+      title="Nøgletal med tendens"
+      rows={[
+        { label: "Bruttofortjeneste", values: [7.9, 15.5, 17.7, 17.5, 18.8], value: "18,8" },
+        { label: "Resultat", values: [120, 64, -40, -210, -338], value: "−338", negative: true },
+        { label: "Egenkapital", values: [2.1, 3.3, 3.9, 3.4, 3.2], value: "3,2" },
+        { label: "Ansatte pr. kvartal", values: [14, 15, 15, 16, 17, 17, 18, 19], value: "19", kind: "bars" },
+      ]}
+    />
   );
 }
 
@@ -715,7 +706,7 @@ const mobileCharts: GalleryEntry[] = [
   { nr: "26b.3", title: "Stablede søjler / balance (mobil)", node: "E49-0", only: "mobile", spec: one("Balance", { type: "LassoStackedBarChart", company: C }) },
   { nr: "26b.4", title: "Linjegraf (mobil)", node: "E5A-0", only: "mobile", spec: one("Linjegraf", { type: "LassoLineChart", company: C, benchmark: "CVR-1-99000006" }) },
   { nr: "26b.5", title: "Vandfald (mobil)", node: "E62-0", only: "mobile", spec: one("Vandfald", { type: "LassoWaterfallChart", company: C }) },
-  { nr: "26b.6", title: "Fordeling / donut (mobil)", node: "E77-0", only: "mobile", spec: one("Fordeling", { type: "LassoShareBars", company: C }) },
+  { nr: "26b.6", title: "Fordeling / donut (mobil)", node: "E77-0", only: "mobile", spec: one("Fordeling", { type: "LassoShareBars", company: C, variant: "ejerkreds" }) },
   {
     nr: "26b.7",
     title: "Sparklines (mobil)",
@@ -732,8 +723,22 @@ const mobileCharts: GalleryEntry[] = [
 
 const mobileLists: GalleryEntry[] = [
   { nr: "26c.1", title: "Nøgletalskort / KPI 2×2 (mobil)", node: "EC5-0", only: "mobile", spec: one("Nøgletal", { type: "LassoKeyFigureCards", company: C }) },
-  { nr: "26c.2", title: "Nøgle-værdi-liste (mobil)", node: "ECP-0", only: "mobile", spec: one("Virksomhedsoplysninger", { type: "LassoKeyValueList", company: C, variant: "company", title: "Virksomhedsoplysninger" }) },
-  { nr: "26c.3", title: "Flerårstabel (mobil)", node: "ED8-0", only: "mobile", spec: one("Flerårstabel", { type: "LassoMultiYearTable", company: C }) },
+  { nr: "26c.2", title: "Nøgle-værdi-liste (mobil)", node: "ECP-0", only: "mobile", spec: one("Stamdata", { type: "LassoKeyValueList", company: C, variant: "company", title: "Stamdata" }) },
+  {
+    nr: "26c.3",
+    title: "Flerårstabel (mobil), variant A og B",
+    node: "ED8-0",
+    only: "mobile",
+    note: "Variant A (ED8-0) øverst, variant B (EEO-0) under.",
+    spec: {
+      kind: "company",
+      title: "Flerårsoversigt",
+      components: [
+        { type: "LassoMultiYearTable", company: C, title: "Flerårsoversigt", metrics: ["omsaetning", "bruttofortjeneste", "resultat", "egenkapital"], variant: "A" },
+        { type: "LassoMultiYearTable", company: C, title: "Flerårsoversigt, kort pr. nøgletal", metrics: ["bruttofortjeneste", "resultat"], variant: "B" },
+      ],
+    },
+  },
   { nr: "26c.4", title: "Personliste (mobil)", node: "EG1-0", only: "mobile", spec: one("Ledelse", { type: "LassoPersonList", company: C }) },
   { nr: "26c.5", title: "Ejerliste (mobil)", node: "EH3-0", only: "mobile", spec: one("Ejere", { type: "LassoOwnerList", company: C }) },
   { nr: "26c.6", title: "Ejerdiagram (mobil)", node: "EHX-0", only: "mobile", spec: one("Ejerdiagram", { type: "LassoOwnershipDiagram", company: C }) },
@@ -758,7 +763,7 @@ const mobileLists: GalleryEntry[] = [
     render: () => <MobileFilterSheet />,
   },
   { nr: "26c.9", title: "Nyhedsliste (mobil)", node: "EN9-0", only: "mobile", spec: one("Nyheder", { type: "LassoNews", company: C, limit: 3 }) },
-  { nr: "26c.10", title: "Tidslinje (mobil)", node: "ENM-0", only: "mobile", spec: one("Tidslinje", { type: "LassoTimeline", company: C }) },
+  { nr: "26c.10", title: "Tidslinje (mobil)", node: "ENM-0", only: "mobile", spec: one("Tidslinje", { type: "LassoTimeline", company: C, title: "Tidslinje" }) },
 ];
 
 const PERSON_TABS: TabItem[] = ["Roller", "Netværk", "Risiko", "Historik", "Nyheder"].map((l) => ({ id: l.toLowerCase(), label: l }));
@@ -1552,8 +1557,8 @@ export const entries: GalleryEntry[] = [
   ...pages,
   ...responsive,
   ...mobileNav,
-  ...mobileCharts,
-  ...mobileLists,
+  ...mobileCharts.map((e) => ({ ...e, card: true })),
+  ...mobileLists.map((e) => ({ ...e, card: true })),
   ...mobilePerson,
   ...mobileUnits,
   ...tablet,

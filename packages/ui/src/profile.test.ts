@@ -41,7 +41,7 @@ const count = (haystack: string, needle: string) => haystack.split(needle).lengt
 
 test("Virksomhedsoplysninger under hovedet: ingen stiftet, form, branche, ansatte eller adresse, men branchekode, kommune og region", () => {
   const html = renderToStaticMarkup(createElement(KeyValueList, { company: COMPANY, ownership: OWNERSHIP, financials: FINANCIALS, variant: "company", hideIdentity: true, hideContact: true }));
-  assert.deepEqual(labels(html), ["Revisor", "Seneste revisorskift", "Regnskabsperiode", "Branchekode", "Kommune", "Region"]);
+  assert.deepEqual(labels(html), ["Revisor", "Seneste revisorskift", "Regnskabsperiode", "Branchekode", "Ansatte", "Kommune", "Region"]);
   assert.match(html, /412000/);
   // Uden kontaktblok på siden står telefon, e-mail og web stadig her (adressen står i hovedet).
   const noContact = renderToStaticMarkup(createElement(KeyValueList, { company: COMPANY, ownership: OWNERSHIP, financials: FINANCIALS, variant: "company", hideIdentity: true }));
@@ -49,7 +49,7 @@ test("Virksomhedsoplysninger under hovedet: ingen stiftet, form, branche, ansatt
   assert.ok(!labels(noContact).includes("Adresse"));
   // Ejerlisten på siden viser revisoren: listen gentager den ikke.
   const withOwners = renderToStaticMarkup(createElement(KeyValueList, { company: COMPANY, ownership: OWNERSHIP, financials: FINANCIALS, variant: "company", hideIdentity: true, hideContact: true, hideAuditor: true }));
-  assert.deepEqual(labels(withOwners), ["Regnskabsperiode", "Branchekode", "Kommune", "Region"]);
+  assert.deepEqual(labels(withOwners), ["Regnskabsperiode", "Branchekode", "Ansatte", "Kommune", "Region"]);
   // Uden hoved (fx en render_view-spec uden LassoCompanyHead) står identiteten i listen.
   const alone = renderToStaticMarkup(createElement(KeyValueList, { company: COMPANY, ownership: OWNERSHIP, financials: FINANCIALS, variant: "company" }));
   for (const l of ["Stiftet", "Virksomhedsform", "Branche", "Ansatte", "Adresse"]) assert.ok(labels(alone).includes(l), l);
@@ -99,8 +99,8 @@ test("Virksomhedsprofil (overblik): CVR-tekster uden branche plus konklusion, re
   assert.deepEqual(headings(html), ["Formål", "Tegningsregler", "Regnskabsanalyse: konklusion", "Resultat", "Likviditet"]);
   assert.equal(count(html, "Kilde: Lasso regnskabsanalyse"), 1);
   assert.doesNotMatch(html, /NACE 412000/);
-  // Lange afsnit foldes hver for sig som før.
-  assert.match(html, /Vis hele/);
+  // 12.1: lange afsnit foldes hver for sig, men der er ét "Vis hele" for hele sektionen.
+  assert.equal(count(html, ">Vis hele<"), 1);
   assert.doesNotMatch(html, /Se hele regnskabsanalysen/);
   // Kun CVR-tekster: ingen analysekilde.
   const cvr = renderToStaticMarkup(createElement(LassoTextSections, { sections: { ...SECTIONS, sections: SECTIONS.sections.slice(0, 3) } }));
@@ -154,7 +154,7 @@ test("Kontaktblok: adressen udelades, når hovedet viser den; et verificeret CVR
       { phoneNumber: "20 30 40 50", callable: true, sources: ["Website"] },
     ],
   };
-  const html = renderToStaticMarkup(createElement(LassoContact, { contact, omitAddress: true }));
+  const html = renderToStaticMarkup(createElement(LassoContact, { contact, omitAddress: true, foldExtra: false }));
   assert.doesNotMatch(html, /Prøvevej 1/);
   assert.equal(count(html, "86 12 34 56"), 1);
   assert.match(html, /20 30 40 50/);
@@ -196,7 +196,8 @@ test("LassoView: hver oplysning om identiteten står én gang på overblik, kont
     assert.equal(count(t, "99000001"), 1, `${focus}: CVR-nummeret`);
     assert.equal(count(t, "Opførelse af bygninger"), 1, `${focus}: branchen`);
     assert.equal(count(t, "01.04.1998"), 1, `${focus}: stiftelsesdatoen`);
-    assert.ok(!labels(html).some((l) => ["Stiftet", "Virksomhedsform", "Branche", "Ansatte", "Adresse"].includes(l!)), focus);
+    // 08.1: ansatte står ikke i hovedet, men i listen.
+    assert.ok(!labels(html).some((l) => ["Stiftet", "Virksomhedsform", "Branche", "Adresse"].includes(l!)), focus);
   }
   // Overblikket: telefonen står i kontaktblokken, ikke også i listen, og analysens kilde én gang.
   const overblik = renderToStaticMarkup(createElement(LassoView, { spec: composeCompany(ID, ds, { followUps: false }), dataset: ds, host: {}, onAction: () => {} }));

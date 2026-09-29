@@ -85,7 +85,7 @@ import { SavedPages } from "./components/SavedPages.js";
 import { ShellIcon } from "./components/ShellIcons.js";
 import { ReportA4 } from "./components/ReportA4.js";
 import { personRolesCsv, specToCsv } from "./csv.js";
-import { Badge, Skeleton } from "./primitives.js";
+import { Badge, Skeleton, stateForError } from "./primitives.js";
 import { Accordion, CardGrid } from "./components/Layout.js";
 import { ModuleToolbar } from "./components/ModuleToolbar.js";
 import { SaveDialog } from "./SaveDialog.js";
@@ -324,6 +324,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           exclude={c.exclude}
           onOpen={props.host.drillDown ? act : undefined}
           links={c.variant === "financials" ? statementsLink(c.company, empty, props, act) : undefined}
+          onPdf={c.variant === "financials" && empty.financialStatements[c.company]?.pdfUrl ? () => act({ kind: "open-link", url: empty.financialStatements[c.company]!.pdfUrl! }) : undefined}
         />
       );
     }
@@ -367,7 +368,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return <Shortcuts key={key} items={items} title={c.title} />;
     }
     case "LassoMultiYearTable":
-      return <MultiYearTable key={key} financials={empty.financials[c.company]} metrics={c.metrics} years={c.years} title={c.title} error={err(`financials:${c.company}`)} />;
+      return <MultiYearTable key={key} financials={empty.financials[c.company]} metrics={c.metrics} years={c.years} title={c.title} variant={c.variant} error={err(`financials:${c.company}`)} />;
     case "LassoIncomeStatement":
       return <LassoIncomeStatement key={key} statements={empty.financialStatements[c.company]} company={empty.companies[c.company]} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} />;
     case "LassoBalanceSheet":
@@ -383,7 +384,17 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoFinancialStatements":
       return <FinancialStatements key={key} statements={empty.financialStatements[c.company]} company={empty.companies[c.company]} statement={c.statement} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} onAction={act} />;
     case "LassoScoreGauge":
-      return <ScoreGauge key={key} score={empty.scores[c.company]} title={c.title} error={err(`score:${c.company}`)} onFetch={props.host.refresh ? () => act({ kind: "refresh" }) : undefined} />;
+      return (
+        <ScoreGauge
+          key={key}
+          score={empty.scores[c.company]}
+          title={c.title}
+          detail={c.detail}
+          error={err(`score:${c.company}`)}
+          onFetch={props.host.refresh ? () => act({ kind: "refresh" }) : undefined}
+          onReport={props.host.prompt ? () => act({ kind: "prompt", prompt: `Hent kreditrapporten for ${empty.companies[c.company]?.name ?? c.company}` }) : undefined}
+        />
+      );
     case "LassoRiskObservations":
       // Katalog 17.2: komponeres ikke automatisk (observationskaldet tager 10–14 s), men vises, når en spec beder om den.
       return <RiskObservations key={key} data={empty.observations[c.company]} error={err(`observations:${c.company}`)} title={c.title} compact={c.compact} demo={empty.source === "demo"} />;
@@ -409,6 +420,11 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           peopleError={err(`people:${c.company}`)}
           ownershipError={err(`ownership:${c.company}`)}
           onOpen={props.host.drillDown ? act : undefined}
+          // 11.1: låst række, når reelle ejere kræver adgang; tællerrække, når produktionsenhederne er hentet.
+          beneficialLocked={Boolean(err(`beneficialOwnership:${c.company}`)) && stateForError(err(`beneficialOwnership:${c.company}`)) === "noaccess"}
+          onBeneficialInfo={props.host.prompt ? () => act({ kind: "prompt", prompt: "Hvad kræver det at se reelle ejere i Lasso?" }) : undefined}
+          productionUnits={empty.productionUnits[c.company] ? (empty.productionUnits[c.company]!.total ?? empty.productionUnits[c.company]!.units.length) : undefined}
+          onProductionUnits={props.host.prompt ? () => act({ kind: "prompt", prompt: `Vis produktionsenhederne for ${empty.companies[c.company]?.name ?? c.company}` }) : undefined}
         />
       );
     case "LassoBeneficialOwners":
@@ -418,6 +434,11 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           ownership={empty.beneficialOwnership[c.company]}
           error={err(`beneficialOwnership:${c.company}`)}
           onOpen={props.host.drillDown ? act : undefined}
+          onDiagram={
+            props.spec.components.some((x) => x.type === "LassoOwnershipDiagram")
+              ? undefined
+              : sectionAction(props, act, { lassoId: c.company, pageKind: "company", section: "ejerskab", name: empty.companies[c.company]?.name ?? c.company, label: "Ejerdiagram" })
+          }
         />
       );
     case "LassoTextSections":

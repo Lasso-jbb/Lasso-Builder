@@ -5,10 +5,13 @@ import { formatAmount, formatDate, formatNumber, formatPercent, groupContactPers
 import {
   CompanyHead,
   DataState,
+  Delta,
+  Icon,
   KeyFigureCards,
   LassoContact,
   LassoContactPersons,
   ScoreGauge,
+  Section,
   SidePanel,
   SidePanelList,
   Sparkline,
@@ -122,7 +125,8 @@ function SeeAllPanel() {
 function SeeAllMobileList() {
   const groups = groupContactPersons(PERSONS.map((p, i) => ({ ...p, _i: i }))).map((g) => ({
     label: g.group,
-    items: g.people.map((p) => ({ id: String(p._i), title: p.name, sub: p.role })),
+    // 08.10: telefon-ikon til højre, når personen har et nummer (chevronen tegner listen selv).
+    items: g.people.map((p) => ({ id: String(p._i), title: p.name, sub: p.role, trailing: p.phone ? <Icon name="phone" size={15} /> : undefined })),
   }));
   return (
     <div style={{ minHeight: 740 }}>
@@ -163,17 +167,20 @@ function LiveNumberStates() {
     verifiedNumbers: [{ phoneNumber: "86123456", callable: true, sources: ["CVR"], score: 90 }],
   } as ContactVM;
   return (
+    // Blokken står i kontaktkolonnens bredde (ca. 380 px), som i Paper.
+    <div style={{ maxWidth: 380 }}>
     <Stack>
       <Labelled label="Verificeret nu + Udgået (gennemstreget)">
-        <LassoContact contact={withNumbers} now={now} onCopy={noop} />
+        <LassoContact contact={withNumbers} now={now} onCopy={noop} foldExtra={false} />
       </Labelled>
       <Labelled label="Tjekker … (opslag i gang, højst 10 sek.)">
-        <LassoContact contact={stale} now={now} onVerify={() => new Promise(() => undefined)} onCopy={noop} />
+        <LassoContact contact={stale} now={now} onVerify={() => new Promise(() => undefined)} onCopy={noop} foldExtra={false} />
       </Labelled>
       <Labelled label="Tidsstempel (verificeret for N dage siden)">
-        <LassoContact contact={stale} now={now} onCopy={noop} />
+        <LassoContact contact={stale} now={now} onCopy={noop} foldExtra={false} />
       </Labelled>
     </Stack>
+    </div>
   );
 }
 
@@ -196,7 +203,7 @@ function ScoreStates() {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24 }}>
       <Labelled label="Ikke hentet (stiplet ramme, handling koster)">
-        <div className="lasso-grid"><ScoreGauge score={s({ state: "notfetched", cost: "1 kredit", reason: "Hent scoren for at se vurderingen og skalaen." })} onFetch={noop} /></div>
+        <div className="lasso-grid"><ScoreGauge score={s({ state: "notfetched", cost: "1 kredit", reason: "Hent vurderingen for at se scoren og skalaen." })} onFetch={noop} /></div>
       </Labelled>
       <Labelled label="Henter (fuld ramme, spinner, 4 px fremdrift)">
         <div className="lasso-grid"><ScoreGauge score={s({ state: "fetching", progress: 0.45 })} /></div>
@@ -215,8 +222,10 @@ function NumberFormats() {
     ["Negativt beløb (ægte minus)", formatAmount(-2_300_000)],
     ["Procent med fortegn", formatPercent(7.3)],
     ["Negativ procent", formatPercent(-1.4)],
+    ["Beløb, mia.", formatAmount(2_400_000_000)],
     ["Antal", formatNumber(1_234)],
     ["Dato", formatDate("2026-09-29")],
+    ["Relativ tid (under 7 dage)", "for 3 dage siden"],
   ];
   return (
     <dl style={{ display: "grid", gridTemplateColumns: "220px auto", gap: "10px 24px", margin: 0 }}>
@@ -226,47 +235,85 @@ function NumberFormats() {
           <dd style={{ margin: 0, fontVariantNumeric: "tabular-nums", fontWeight: 500 }}>{v}</dd>
         </div>
       ))}
+      <dt className="lasso-small" style={{ color: "var(--lasso-text-muted)" }}>Udvikling (▲ grøn, ▼ rød)</dt>
+      <dd style={{ margin: 0, fontVariantNumeric: "tabular-nums", fontWeight: 500, display: "flex", gap: 16 }}>
+        <Delta from={100} to={107.5} />
+        <Delta from={100} to={96.6} />
+      </dd>
     </dl>
   );
 }
 
+/**
+ * 13.1: fem seriefarver med brugsbeskrivelse og et sjette felt "Semantik" (grøn/gul/rød i ét felt),
+ * som kun bruges til vurdering, aldrig som serie. Øvrige-grå hører til 13.8 (surface-muted), ikke her.
+ */
 function Palette() {
-  const sw = [
-    ["--lasso-chart-1", "Serie 1, koral (virksomheden, seneste år)"],
-    ["--lasso-chart-2", "Serie 2, mørk blå"],
-    ["--lasso-chart-3", "Serie 3, lys blå"],
-    ["--lasso-chart-4", "Serie 4, lys koral (tidligere år)"],
-    ["--lasso-chart-5", "Serie 5, neutral (branche/benchmark)"],
-    ["--lasso-chart-6", "Serie 6, lys grå (øvrige)"],
+  const sw: [string, string, string][] = [
+    ["--lasso-chart-1", "Serie 1, koral", "virksomheden selv, seneste år"],
+    ["--lasso-chart-2", "Serie 2, dyb blå", "sammenligningsvirksomhed, sekundær post"],
+    ["--lasso-chart-3", "Serie 3, lys blå", "tredje serie, kortfristet gæld"],
+    ["--lasso-chart-4", "Serie 4, lys koral", "tidligere år, spænd i intervaller"],
+    ["--lasso-chart-5", "Serie 5, neutral", "branche og benchmark, andre virksomheder"],
   ];
+  const swatch = { height: 56, borderRadius: 8, border: "1px solid var(--lasso-border)" };
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 16 }}>
-      {sw.map(([v, name]) => (
-        <div key={v} style={{ display: "grid", gap: 6 }}>
-          <div style={{ height: 56, borderRadius: 8, background: `var(${v})`, border: "1px solid var(--lasso-border)" }} />
-          <div style={{ fontSize: 13, fontWeight: 600 }}>{name}</div>
-          <code className="lasso-small" style={{ color: "var(--lasso-text-muted)" }}>{v}</code>
+      {sw.map(([v, name, use]) => (
+        <div key={v} style={{ display: "grid", gap: 4, alignContent: "start" }}>
+          <div style={{ ...swatch, background: `var(${v})` }} />
+          <div style={{ fontSize: 13, fontWeight: 600, marginTop: 4 }}>{name}</div>
+          <div className="lasso-small" style={{ color: "var(--lasso-muted)" }}>{use}</div>
         </div>
       ))}
+      <div style={{ display: "grid", gap: 4, alignContent: "start" }}>
+        <div style={{ ...swatch, display: "flex", overflow: "hidden" }}>
+          <span style={{ flex: 1, background: "var(--lasso-positive)" }} />
+          <span style={{ flex: 1, background: "var(--lasso-warning)" }} />
+          <span style={{ flex: 1, background: "var(--lasso-negative)" }} />
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 600, marginTop: 4 }}>Semantik</div>
+        <div className="lasso-small" style={{ color: "var(--lasso-muted)" }}>kun til vurdering, aldrig som serie</div>
+      </div>
     </div>
   );
 }
 
-function Sparklines() {
-  const cases: [string, number[], "accent" | "neutral"][] = [
-    ["Stigende", [21, 23.5, 25.1, 28.3], "accent"],
-    ["Faldende", [9.4, 8.1, 6.2, 5.0], "accent"],
-    ["Flad", [12, 12.2, 11.9, 12.1], "neutral"],
-    ["Svingende", [3.1, 3.9, 2.8, 4.2, 3.6], "neutral"],
-  ];
+/**
+ * 13.9 og 26b.7: sparkline-tilstandene som 44 px rækker med etiket, sparkline og værdi til højre.
+ * Sparklinen er altid koral; krydser værdierne 0, står en stiplet nullinje; sparsøjler til
+ * kvartalstal; under 3 datapunkter står "—" i stedet for en sparkline.
+ */
+export function SparkList({ title, rows }: { title?: string; rows: { label: string; values: number[]; value: string; kind?: "line" | "bars"; negative?: boolean }[] }) {
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 40 }}>
-      {cases.map(([label, values, tone]) => (
-        <Labelled key={label} label={label}>
-          <Sparkline values={values} tone={tone} />
-        </Labelled>
-      ))}
-    </div>
+    <Section title={title}>
+      <ul className="lasso-rows">
+        {rows.map((r) => (
+          <li key={r.label} className="lasso-row" style={{ minHeight: 44, padding: "6px 0" }}>
+            <div className="lasso-row__main">
+              <div className="lasso-row__name lasso-row__name--regular">{r.label}</div>
+            </div>
+            <div style={{ flex: "none", display: "flex", alignItems: "center" }}>
+              <Sparkline values={r.values} tone="accent" kind={r.kind} bare />
+            </div>
+            <div className="lasso-row__value" style={{ minWidth: 56, color: r.negative ? "var(--lasso-negative)" : undefined }}>{r.value}</div>
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+}
+
+function Sparklines() {
+  return (
+    <SparkList
+      rows={[
+        { label: "Stigende", values: [7.9, 15.5, 17.7, 17.5, 18.8], value: "18,8" },
+        { label: "Krydser nul", values: [120, 64, -40, -210, -338], value: "−338", negative: true },
+        { label: "Sparsøjler (ansatte pr. kvartal)", values: [14, 15, 15, 16, 17, 17, 18, 19], value: "19", kind: "bars" },
+        { label: "Under 3 datapunkter — ingen sparkline", values: [4.2, 4.7], value: "4,7" },
+      ]}
+    />
   );
 }
 
@@ -296,8 +343,8 @@ export const entries: GalleryEntry[] = [
         <Labelled label="Kompakt (56 px)">
           <CompanyHead company={BYG} variant="compact" actions={headActions(false)} />
         </Labelled>
-        <Labelled label="Ophørt">
-          <CompanyHead company={CAFE} actions={headActions(false)} onHistory={noop} />
+        <Labelled label="Ophørt (kompakt række)">
+          <CompanyHead company={CAFE} variant="compact" actions={headActions(false)} onHistory={noop} />
         </Labelled>
       </Stack>
     ),
@@ -328,10 +375,19 @@ export const entries: GalleryEntry[] = [
       </Stack>
     ),
   },
-  { nr: "09.5", title: "Nøgle-værdi-liste med årsvælger", node: "9WR-0", spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "financials", width: "full" }]) },
+  {
+    nr: "09.5",
+    title: "Nøgle-værdi-liste med årsvælger",
+    node: "9WR-0",
+    spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "financials", width: "full" }]),
+    note: "Med årsrapportens PDF-link i datasættet (rækken 'PDF-regnskab').",
+    mutate: (ds) => {
+      ds.financialStatements[B] = { lassoId: B, currency: "DKK", incomeStatement: [], balanceSheet: [], cashFlow: [], pdfUrl: "https://example.com/aarsrapport.pdf" };
+    },
+  },
 
   // 10 Score og tabeller
-  { nr: "10.1", title: "Scoremåler", node: "9ZT-0", spec: co("Eksempel Byg A/S", [{ type: "LassoScoreGauge", company: B }]) },
+  { nr: "10.1", title: "Scoremåler", node: "9ZT-0", spec: co("Eksempel Byg A/S", [{ type: "LassoScoreGauge", company: B, width: "half" }]), note: "Måleren i en ½-kolonne som i Paper (ca. 540 px)." },
   { nr: "10.2", title: "Flerårstabel", node: "A0Q-0", spec: co("Eksempel Byg A/S", [{ type: "LassoMultiYearTable", company: B, metrics: ["omsaetning", "bruttofortjeneste", "resultat", "egenkapital"], years: 5 }]) },
   {
     nr: "10.3",
@@ -340,13 +396,13 @@ export const entries: GalleryEntry[] = [
     render: () => (
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24 }}>
         <Labelled label="Beregnes på forespørgsel">
-          <DataState state="ondemand" reason="Branchesammenligningen beregnes, når du beder om den." cost="Koster 1 kredit, tager 5–45 sekunder" actionLabel="Beregn nu" onAction={noop} />
+          <DataState state="ondemand" reason="Risikovurderingen beregnes, når du beder om den." cost="Koster 1 kredit, tager 5–45 sekunder" actionLabel="Beregn risiko" onAction={noop} />
         </Labelled>
         <Labelled label="Henter, skelet">
-          <DataState state="loading" lines={4} height={140} />
+          <DataState state="loading" lines={4} height={140} framed />
         </Labelled>
         <Labelled label="Ingen data">
-          <DataState state="empty" title="Ingen nyheder endnu" reason="Der er ikke fundet artikler om virksomheden." checkedAt="2026-09-28" action={{ label: "Overvåg nyheder", onClick: noop }} />
+          <DataState state="empty" look="panel" title="Ingen nyheder endnu" reason="Der er ikke fundet artikler om virksomheden." checkedAt="2026-09-28" action={{ label: "Overvåg og få besked", onClick: noop }} />
         </Labelled>
       </div>
     ),
@@ -354,7 +410,22 @@ export const entries: GalleryEntry[] = [
   { nr: "10.4", title: "Scoremåler, tilstande", node: "BGZ-0", render: () => <ScoreStates /> },
 
   // 11 Personer og ejere
-  { nr: "11.1", title: "Rolleliste, kompakt", node: "A3I-0", spec: co("Eksempel Byg A/S", [{ type: "LassoRelations", company: B }]) },
+  {
+    nr: "11.1",
+    title: "Rolleliste, kompakt",
+    node: "A3I-0",
+    spec: co("Eksempel Byg A/S", [{ type: "LassoRelations", company: B }]),
+    note: "Eksempel: flere ejere end tre, reelle ejere uden adgang og én produktionsenhed (tilstandene i Paper).",
+    mutate: (ds) => {
+      const own = ds.ownership[B];
+      if (own) {
+        const base = own.owners[0]!;
+        own.owners = [...own.owners, ...["Prøve Invest ApS", "Carla Prøve", "Dan Prøve", "Eva Prøve"].map((name) => ({ ...base, name, lassoId: undefined }))];
+      }
+      ds.errors[`beneficialOwnership:${B}`] = "Reelle ejere kræver adgang (403).";
+      ds.productionUnits[B] = { lassoId: B, units: [], total: 1 };
+    },
+  },
   { nr: "11.2", title: "Personliste, udfoldet", node: "A4F-0", spec: co("Eksempel Byg A/S", [{ type: "LassoPersonList", company: B, show: "all", width: "full" }]) },
   { nr: "11.3", title: "Ejerliste", node: "A5X-0", spec: co("Eksempel Byg A/S", [{ type: "LassoOwnerList", company: B, width: "full" }]) },
   { nr: "11.4", title: "Reelle ejere", node: "B33-0", spec: co("Eksempel Byg A/S", [{ type: "LassoBeneficialOwners", company: B, width: "full" }]) },

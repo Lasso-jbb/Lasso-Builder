@@ -32,12 +32,12 @@ export interface ShortcutItem {
  * det eneste sted koral bruges på et ikon i hvile, fordi det signalerer "åbner et Lasso-værktøj".
  * Maks seks; resten under "Flere". Mobil (26a): én vandret række, der ruller.
  */
-export function Shortcuts({ items, title = "Genveje", bare = false }: { items: readonly ShortcutItem[]; title?: string; /** Uden sektionsoverskrift (står i en anden sektion). */ bare?: boolean }) {
+export function Shortcuts({ items, title, bare = false }: { items: readonly ShortcutItem[]; title?: string; /** Uden sektionsoverskrift (står i en anden sektion). */ bare?: boolean }) {
   if (items.length === 0) return null;
   const shown = items.slice(0, MAX_SHORTCUTS);
   const rest = items.slice(shown.length);
   const row = (
-    <div className="lasso-shortcuts" role="group" aria-label={title}>
+    <div className="lasso-shortcuts" role="group" aria-label={title ?? "Genveje"}>
       {shown.map((s) => (
         <button key={s.id} type="button" className="lasso-shortcut" onClick={s.onSelect}>
           <ShellIcon name={s.icon} size={15} className="lasso-shortcut__icon" />
@@ -62,7 +62,9 @@ export function Shortcuts({ items, title = "Genveje", bare = false }: { items: r
   );
   if (bare) return row;
   return (
-    <Section title={title} span="half" className="lasso-shortcuts-section lasso-section--overline-mobile">
+    // 08.4: ingen sektionstitel over knapperne på desktop; på mobil overlinjen "GENVEJE" (26a.7).
+    <Section title={title} span="half" className="lasso-shortcuts-section">
+      {title ? null : <div className="lasso-contact__overline">Genveje</div>}
       {row}
     </Section>
   );

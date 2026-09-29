@@ -194,6 +194,12 @@ function timelineFor(c: DemoCompany): TimelineVM {
     );
     events.push({ date: `${y.year}-04-15`, title: `Årsrapport ${y.year} offentliggjort`, detail: bits.join(", ") || undefined, category: "Regnskab" });
   }
+  // Katalog 12.3: ændringer vises som "fra → til" (gammel adresse gennemstreget, kapital før og efter).
+  const a = c.address;
+  if (c.status === "Aktiv" && c.founded && c.founded < "2020-01-01" && a) {
+    events.push({ date: "2024-06-01", title: "Kapitalforhøjelse (eksempel)", from: "1,0 mio. kr.", to: "1,2 mio. kr.", category: "Kapital" });
+    events.push({ date: "2023-09-01", title: "Adresse ændret (eksempel)", from: `Gammelvej 2, ${a.zip} ${a.city}`, to: `${a.street}, ${a.zip} ${a.city}`, category: "Stamdata" });
+  }
   events.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   return { lassoId: c.lassoId, events };
 }

@@ -57,7 +57,7 @@ function Links({ links }: { links?: readonly KeyValueLink[] }) {
   );
 }
 
-/** "2025-01-01" -> "01.01" (dag.måned, uden år, katalog 09: "01.01–31.12"). */
+/** "2025-01-01" -> "01.01" (dag.måned, uden år, katalog 09: "01.01 – 31.12"). */
 function dayMonth(value: string | undefined): string | undefined {
   const m = value ? /^\d{4}-(\d{2})-(\d{2})/.exec(value) : null;
   return m ? `${m[2]}.${m[1]}` : undefined;
@@ -95,7 +95,7 @@ const FINANCIALS_ROW_METRICS: Metric[] = ["resultat", "egenkapital", "ansatte", 
 
 function financialsRows(year: FinancialsVM["years"][number], currency?: string, exclude: readonly Metric[] = [], quality?: FinancialsVM["quality"]): Row[] {
   const cur = year.currency ?? currency;
-  const period = dayMonth(year.periodStart) && dayMonth(year.periodEnd) ? `${dayMonth(year.periodStart)}–${dayMonth(year.periodEnd)}` : undefined;
+  const period = dayMonth(year.periodStart) && dayMonth(year.periodEnd) ? `${dayMonth(year.periodStart)} – ${dayMonth(year.periodEnd)}` : undefined;
   const rows: Row[] = [
     { label: "Regnskabsperiode", value: period },
     { label: "Regnskab udgivet", value: year.published ? formatDate(year.published) : undefined },
@@ -135,6 +135,8 @@ function Value({ value, lassoId, onOpen }: { value: string; lassoId?: string; on
   return <>{value}</>;
 }
 
+const SHORT_PAIR = ["Stiftet", "Virksomhedsform"] as const;
+
 /** Handling for en klikbar række (02c.13): åbner virksomheden eller personen, når værten kan. */
 function rowOpener(r: Row, onOpen?: (a: ViewAction) => void): (() => void) | undefined {
   if (!onOpen || !r.value || !r.lassoId) return undefined;
@@ -164,6 +166,7 @@ export function KeyValueList({
   exclude,
   info = true,
   links,
+  onPdf,
 }: {
   company?: CompanyVM;
   ownership?: OwnershipVM;
@@ -185,6 +188,8 @@ export function KeyValueList({
   info?: boolean;
   /** Handlinger under listen som link med ikon (09.2), fx "Se hele regnskabet". */
   links?: readonly KeyValueLink[];
+  /** Variant "financials" (09.5): rækken "PDF-regnskab" med "Hent ÅÅÅÅ ⤓" højrestillet i koral. */
+  onPdf?: (year: number) => void;
 }) {
   const heading = title ?? (variant === "financials" ? "Regnskab" : "Virksomhedsoplysninger");
   const ready = variant === "financials" ? Boolean(financials) : Boolean(company);
@@ -219,7 +224,7 @@ export function KeyValueList({
           options.length > 1 ? (
             // Årsvælger = niveau 3-faner (29). Over 3 år på mobil bliver den en dropdown (29, mobil).
             <div className="lasso-kv-years">
-              <Tabs level={3} ariaLabel="Vælg regnskabsår" items={options.map((y) => ({ id: String(y.year), label: String(y.year) }))} value={String(selected.year)} onChange={(id) => setYear(Number(id))} />
+              <Tabs level={3} className="lasso-seg-panel" ariaLabel="Vælg regnskabsår" items={options.map((y) => ({ id: String(y.year), label: String(y.year) }))} value={String(selected.year)} onChange={(id) => setYear(Number(id))} />
             </div>
           ) : undefined
         }
@@ -235,6 +240,17 @@ export function KeyValueList({
               </div>
             </div>
           ))}
+          {onPdf ? (
+            <div className="lasso-kv-row">
+              <Label text="PDF-regnskab" info={false} />
+              <div className="lasso-kv-row__value">
+                <button type="button" className="lasso-kv-link lasso-kv-link--end" onClick={() => onPdf(selected.year)}>
+                  <span>Hent {selected.year}</span>
+                  <ShellIcon name="download" size={15} />
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
         <Links links={links} />
       </Section>
@@ -252,14 +268,17 @@ export function KeyValueList({
       </Section>
     );
   }
+  // 26c.2: to korte felter (Stiftet, Virksomhedsform) deler én række på mobil, når de står efter hinanden.
+  const pairAt = rows.findIndex((r, i) => SHORT_PAIR[0] === r.label && rows[i + 1]?.label === SHORT_PAIR[1] && r.value && rows[i + 1]?.value);
   return (
     <Section title={heading} span="half">
       <div className="lasso-kv-list">
-        {rows.map((r) => {
+        {rows.map((r, i) => {
           const open = rowOpener(r, onOpen);
+          const half = pairAt >= 0 && (i === pairAt || i === pairAt + 1) ? (i === pairAt ? " lasso-kv-row--half" : " lasso-kv-row--half lasso-kv-row--half-end") : "";
           return (
             // 02c.13: har værdien et Lasso-ID, er hele rækken klikbar (navnet er stadig knappen for tastatur).
-            <div className={`lasso-kv-row ${open ? "lasso-kv-row--link" : ""}`} key={r.label} onClick={open}>
+            <div className={`lasso-kv-row ${open ? "lasso-kv-row--link" : ""}${half}`} key={r.label} onClick={open}>
               <Label text={r.label} info={info} />
               <div className={`lasso-kv-row__value lasso-kv-row__value--wrap${r.tone === "warning" ? " lasso-kv-row__value--warning" : ""}`}>
                 {r.code ? (

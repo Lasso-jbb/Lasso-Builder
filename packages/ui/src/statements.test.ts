@@ -15,8 +15,10 @@ test("Virksomhedshoved: ansatte kun som tal, aldrig '— ansatte' når det ikke 
   const html = renderToStaticMarkup(createElement(CompanyHead, { company: { ...enk, employees: null as unknown as number } }));
   assert.ok(!html.includes("ansatte"), html);
   assert.match(html, /CVR-1-43811983|ENK, stiftet 30\.01\.2023, Computerkonsulentbistand/);
-  assert.match(renderToStaticMarkup(createElement(CompanyHead, { company: { ...enk, employees: 64 } })), /64 ansatte \(CVR\)/);
-  assert.match(renderToStaticMarkup(createElement(CompanyHead, { company: { ...enk, employees: 0 } })), /0 ansatte \(CVR\)/);
+  // 08.1: sidens hoved viser ikke ansatte; den kompakte variant viser tallet (også 0).
+  assert.ok(!renderToStaticMarkup(createElement(CompanyHead, { company: { ...enk, employees: 64 } })).includes("ansatte"));
+  assert.match(renderToStaticMarkup(createElement(CompanyHead, { company: { ...enk, employees: 64 }, variant: "compact" })), /64 ansatte/);
+  assert.match(renderToStaticMarkup(createElement(CompanyHead, { company: { ...enk, employees: 0 }, variant: "compact" })), /0 ansatte/);
 });
 
 test("Regnskabstabeller uden regnskab: tom tilstand, der siger hvorfor (ikke en fejl)", () => {

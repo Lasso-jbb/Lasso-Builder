@@ -85,7 +85,7 @@ test("26d.7: scoremåler med udvikling (maks 6 punkter), fast valgfelt og senest
   const { ScoreGauge } = await import("./components/ScoreGauge.js");
   const history = ["2024-01-01", "2024-05-01", "2024-09-01", "2025-01-01", "2025-05-01", "2025-09-01", "2026-09-01"].map((date, i) => ({ date, score: 40 + i * 2 }));
   const html = renderToStaticMarkup(
-    createElement(ScoreGauge, { score: { lassoId: "x", score: 52, history, changes: [{ date: "2026-06-06", label: "Regnskab 2025 indlæst", delta: 5 }, { date: "2025-05-20", label: "Betalingsanmærkning", delta: -4 }] } }),
+    createElement(ScoreGauge, { detail: true, score: { lassoId: "x", score: 52, history, changes: [{ date: "2026-06-06", label: "Regnskab 2025 indlæst", delta: 5 }, { date: "2025-05-20", label: "Betalingsanmærkning", delta: -4 }] } }),
   );
   assert.equal((html.match(/lasso-gauge-history__(dot|last)"/g) ?? []).length, 6);
   assert.match(html, /09\.2026<\/span><span>52, lav risiko, \+10 siden 05\.2024/);

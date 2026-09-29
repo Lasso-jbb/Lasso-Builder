@@ -18,7 +18,25 @@ function splitUnit(text: string): [string, string] {
  * Mangler tallet: "Ikke oplyst" med årsagen under, aldrig "0".
  */
 /** Ansatte i regnskabet (ofte koncern) afviger fra CVR's tal i hovedet; etiketten siger hvilket. */
-const label = (m: Metric) => (m === "ansatte" ? "Ansatte (regnskab)" : METRIC_LABELS[m]);
+const label = (m: Metric) =>
+  m === "ansatte" ? (
+    <>
+      Ansatte<span className="lasso-kpi__label-extra"> (regnskab)</span>
+    </>
+  ) : (
+    METRIC_LABELS[m]
+  );
+
+/** "mio. kr." -> "mio." + " kr." (på mobil står kun "mio." i samme størrelse som tallet, 26c.1). */
+function Unit({ unit }: { unit: string }) {
+  const m = /^(.+?)(\s(?:kr\.|DKK|EUR|USD|SEK|NOK))$/.exec(unit);
+  return (
+    <span className="lasso-kpi__unit">
+      {m ? m[1] : unit}
+      {m ? <span className="lasso-kpi__unit-cur">{m[2]}</span> : null}
+    </span>
+  );
+}
 
 export function KeyFigureCards({ financials, metrics, error }: { financials?: FinancialsVM; metrics?: readonly Metric[]; error?: string }) {
   if (!financials) {
@@ -68,11 +86,14 @@ export function KeyFigureCards({ financials, metrics, error }: { financials?: Fi
   const bench = (m: Metric) => {
     const v = financials.benchmark?.change[m];
     if (typeof v !== "number") return null;
-    return <span className="lasso-kpi__bench">{`${financials.benchmark?.label ?? "branche"} ${formatPercent(v)}`}</span>;
+    // 09.1: "▲ 7,5 % fra 2024, branche +2,1 %" på én linje, uden branchekode.
+    return <span className="lasso-kpi__bench">{`branche ${formatPercent(v)}`}</span>;
   };
 
   return (
     <div className="lasso-kpis lasso-span-full" style={{ ["--lasso-kpi-count" as string]: chosen.length }}>
+      {/* 26c.1: på mobil står titlen "Nøgletal ÅÅÅÅ" over de fire kort; på desktop er kortene selv overskriften. */}
+      <h3 className="lasso-section__title lasso-kpis__title">Nøgletal {last.year}</h3>
       {chosen.map((m) => {
         const field = METRIC_FIELD[m];
         const value = last[field] as number | null | undefined;
@@ -92,18 +113,21 @@ export function KeyFigureCards({ financials, metrics, error }: { financials?: Fi
         const [num, unit] = splitUnit(formatMetric(m, value, last.currency ?? financials.currency));
         return (
           <div className="lasso-kpi" key={m}>
-            <div className="lasso-kpi__label">{label(m)}</div>
+            <div className="lasso-kpi__label">
+              {label(m)}
+              {/* 09.4 (Paper live): kvalitetsflaget står efter etiketten. */}
+              {financials.quality?.[m] ? <QualityFlag text={financials.quality[m]!} /> : null}
+            </div>
             <div className="lasso-kpi__row">
               <div className="lasso-kpi__value">
                 {num}
-                {unit ? <span className="lasso-kpi__unit">{unit}</span> : null}
-                {financials.quality?.[m] ? <QualityFlag text={financials.quality[m]!} /> : null}
+                {unit ? <Unit unit={unit} /> : null}
               </div>
               {series.length >= 3 ? <Sparkline values={series} tone="accent" bare /> : null}
             </div>
             <div className="lasso-kpi__delta">
               {before === value ? <span className="lasso-muted">Uændret</span> : <Delta from={before} to={value} />}
-              {prev ? <span className="lasso-kpi__year">fra {prev.year}</span> : null}
+              {prev ? <span className="lasso-kpi__year">fra {prev.year}{bench(m) ? "," : ""}</span> : null}
               {bench(m)}
             </div>
           </div>

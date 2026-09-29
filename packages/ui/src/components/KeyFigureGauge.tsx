@@ -1,6 +1,5 @@
 import { formatPercent, GAUGE_METRICS, METRIC_FIELD, METRIC_LABELS, type FinancialsVM, type IndustryBenchmarkVM, type Metric } from "@lasso/spec";
-import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
-import { BandIcon } from "./ScoreGauge.js";
+import { DataState, Section, stateForError } from "../primitives.js";
 
 /** Nøgletal, måleren kan vise (GAUGE_METRICS i spec.ts): procent-nøgletal, hvor højere er bedre. */
 type GaugeMetric = (typeof GAUGE_METRICS)[number];
@@ -24,10 +23,11 @@ export function assessAgainstMedian(value: number, median: number): GaugeAssessm
 }
 
 /**
- * Nøgletalsmåler, interval med branchemærke (katalog 13.10, node AJY-0). Bjælke 6 px, hvis farve er
- * vurderingen (grøn/gul/rød) — den eneste graf ud over scoren, hvor semantiske farver bruges, og altid
- * med ikon + ord. Branchemedianen er et 2 px ink-mærke; skalaen går fra 0 til 2 × branchen, så mærket
- * altid står midt på. Mobil (26b.8): fuld bredde, branchemærke som ink-streg.
+ * Nøgletalsmåler, interval med branchemærke (katalog 13.10, node AJY-0). Hver måler er to linjer:
+ * etiket til venstre og "17,3 %, branche 34 %" til højre, derunder en 6 px bjælke, hvis farve er
+ * vurderingen (grøn/gul/rød; ordet står i tooltip og aria-label), med branchemedianen som 2 px
+ * ink-mærke. Skalaen går fra 0 til 2 × branchen, så mærket altid står midt på.
+ * Mobil (26b.8): fuld bredde, samme to linjer.
  */
 export function KeyFigureGauge({
   financials,
@@ -86,30 +86,19 @@ export function KeyFigureGauge({
           const pct = Math.max(0, Math.min(100, (v / max) * 100));
           return (
             <li className="lasso-kfg__row" key={m}>
+              {/* 13.10/26b.8: to linjer, etiket 13 og "17,3 %, branche 34 %" 14/600, derunder bjælken. */}
               <div className="lasso-kfg__head">
                 <span className="lasso-kfg__label">{METRIC_LABELS[m]}</span>
-                <span className="lasso-kfg__value">{formatPercent(v, false)}</span>
+                <span className="lasso-kfg__value">{`${formatPercent(v, false)}, branche ${formatPercent(med, false)}`}</span>
               </div>
-              <div className="lasso-kfg__bar" role="img" aria-label={`${METRIC_LABELS[m]} ${formatPercent(v, false)}, branchen ${formatPercent(med, false)}, ${a.word.toLowerCase()}`}>
+              <div className="lasso-kfg__bar" role="img" aria-label={`${METRIC_LABELS[m]} ${formatPercent(v, false)}, branchen ${formatPercent(med, false)}, ${a.word.toLowerCase()}`} title={a.word}>
                 <span className={`lasso-kfg__fill lasso-kfg__fill--${a.index}`} style={{ width: `${pct}%` }} />
                 <span className="lasso-kfg__mark" aria-hidden="true" />
-              </div>
-              <div className="lasso-kfg__meta">
-                <span className={`lasso-kfg__word lasso-kfg__word--${a.index}`}>
-                  <BandIcon index={a.index} />
-                  {a.word}
-                </span>
-                <span className="lasso-kfg__median">Branche {formatPercent(med, false)}</span>
               </div>
             </li>
           );
         })}
       </ul>
-      <p className="lasso-kfg__legend">
-        <span className="lasso-kfg__legend-mark" aria-hidden="true" />
-        Branchemedian, skalaen går fra 0 til 2 × branchen
-      </p>
-      {industry.source ? <SourceLine source={`${industry.source}${industry.peers ? `, median af ${industry.peers} virksomheder` : ""}`} updated={industry.updated} /> : null}
     </Section>
   );
 }

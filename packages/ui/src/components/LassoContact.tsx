@@ -114,8 +114,8 @@ function LiveMark({ state }: { state: LiveState }) {
 }
 
 /** Én række: ikon, værdi (klikbar) og til højre enten live-tilstanden eller en handling (Kort, Ring, Kopiér). */
-function Row({ icon, href, children, aside, struck = false, onLink }: { icon: ReactNode; href?: string; children: ReactNode; aside?: ReactNode; struck?: boolean; onLink?: (url: string) => void }) {
-  const cls = `lasso-contact__value${struck ? " lasso-contact__value--struck" : ""}`;
+function Row({ icon, href, children, aside, struck = false, onLink, accent = false }: { icon: ReactNode; href?: string; children: ReactNode; aside?: ReactNode; struck?: boolean; onLink?: (url: string) => void; accent?: boolean }) {
+  const cls = `lasso-contact__value${struck ? " lasso-contact__value--struck" : ""}${accent ? " lasso-contact__value--accent" : ""}`;
   return (
     <div className="lasso-contact__row">
       {icon}
@@ -169,6 +169,11 @@ export interface LassoContactProps {
   onVerify?: () => Promise<unknown> | void;
   /** Tidspunktet "nu" i ms (tests og statisk forhåndsvisning). */
   now?: number;
+  /**
+   * 08.3: flere telefonnumre end det første foldes bag "Se N telefonnumre" (regel 9). false viser alle
+   * numre enkeltvis med deres live-tilstand (08.5).
+   */
+  foldExtra?: boolean;
 }
 
 /**
@@ -184,9 +189,10 @@ export interface LassoContactProps {
  * altid; verifikationen er et tillæg, aldrig en forudsætning. Robinsonliste-linje i muted og én
  * kildelinje for begge kilder (regel 8).
  */
-export function LassoContact({ contact, title, error, omitAddress = false, onCopy, onOpenLink, onVerify, now }: LassoContactProps) {
+export function LassoContact({ contact, title, error, omitAddress = false, onCopy, onOpenLink, onVerify, now, foldExtra = true }: LassoContactProps) {
   const heading = title ?? "Kontakt";
   const [checking, setChecking] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const lassoId = contact?.lassoId;
   useEffect(() => {
     if (!onVerify || !lassoId) return;
@@ -241,15 +247,24 @@ export function LassoContact({ contact, title, error, omitAddress = false, onCop
   const sources = [contact.source, hasVerified ? "Lasso live number" : undefined].filter((x): x is string => Boolean(x));
   const sameDate = !hasVerified || !contact.source || !contact.updated || !contact.verifiedAt || contact.updated === contact.verifiedAt.slice(0, 10);
   const phoneState = stateOf(phoneMatch);
+  // 08.3: ét nummer ad gangen; resten (også udgåede) bag "Se N telefonnumre" i muted til højre.
+  const folded = foldExtra && !showAll && otherVerified.length > 0;
+  const extraLabel = `Se ${otherVerified.length} ${otherVerified.length === 1 ? "telefonnummer" : "telefonnumre"}`;
+  const tel = contact.phone ? `tel:${contact.phone.replace(/\s+/g, "")}` : undefined;
+  // Handlingerne (Kort, Ring, Kopiér) står kun på mobil (26a.6); desktop viser værdierne alene (08.3).
+  const act = (node: ReactNode) => <span className="lasso-contact__act">{node}</span>;
+  const more = (label: string, onClick: () => void) => (
+    <button type="button" className="lasso-contact__more" onClick={onClick}>
+      {label}
+    </button>
+  );
 
   return (
-    <Section title={heading} span="half" className="lasso-section--overline-mobile">
+    <Section title={title} span="half" className="lasso-contact-section">
+      {title ? null : <div className="lasso-contact__overline">Kontakt</div>}
       <div className="lasso-contact">
         {hasAddress ? (
-          <Row
-            icon={<PinIcon />}
-            aside={mapUrl ? <ActionLink label="Kort" href={mapUrl} onClick={onOpenLink ? () => onOpenLink(mapUrl) : undefined} /> : undefined}
-          >
+          <Row icon={<PinIcon />} aside={mapUrl ? act(<ActionLink label="Kort" href={mapUrl} onClick={onOpenLink ? () => onOpenLink(mapUrl) : undefined} />) : undefined}>
             <span className="lasso-contact__value--multiline">
               {addressLine1 ? <span>{addressLine1}</span> : null}
               {addressLine2 ? <span>{addressLine2}</span> : null}
@@ -259,22 +274,17 @@ export function LassoContact({ contact, title, error, omitAddress = false, onCop
         {contact.phone ? (
           <Row
             icon={<PhoneIcon />}
-            href={`tel:${contact.phone.replace(/\s+/g, "")}`}
+            href={tel}
             struck={phoneState?.kind === "expired"}
             aside={
-              phoneState ? (
-                <>
-                  <LiveMark state={phoneState} />
-                  {/* 26a.6: på mobil står en 40 px ring-knap (koral-soft) efter verificeringen. */}
-                  {phoneState.kind !== "expired" ? (
-                    <a className="lasso-contact__call" href={`tel:${contact.phone.replace(/\s+/g, "")}`} aria-label="Ring op" title="Ring op">
-                      <Icon name="phone" size={16} />
-                    </a>
-                  ) : null}
-                </>
-              ) : (
-                <ActionLink label="Ring" href={`tel:${contact.phone.replace(/\s+/g, "")}`} />
-              )
+              <>
+                {folded ? more(extraLabel, () => setShowAll(true)) : phoneState ? <LiveMark state={phoneState} /> : null}
+                {phoneState?.kind === "expired" ? null : act(
+                  <a className="lasso-contact__call" href={tel} aria-label="Ring" title="Ring">
+                    <Icon name="phone" size={16} />
+                  </a>,
+                )}
+              </>
             }
           >
             {prettyPhone(contact.phone)}
@@ -284,17 +294,17 @@ export function LassoContact({ contact, title, error, omitAddress = false, onCop
           <Row
             icon={<MailIcon />}
             href={`mailto:${contact.email}`}
-            aside={checking ? <LiveMark state={{ kind: "checking" }} /> : onCopy ? <ActionLink label="Kopiér" onClick={() => onCopy(contact.email!, "email")} /> : undefined}
+            aside={checking ? <LiveMark state={{ kind: "checking" }} /> : onCopy ? act(<ActionLink label="Kopiér" onClick={() => onCopy(contact.email!, "email")} />) : undefined}
           >
             {contact.email}
           </Row>
         ) : null}
         {contact.website ? (
-          <Row icon={<GlobeIcon />} href={contact.website} onLink={onOpenLink}>
+          <Row icon={<GlobeIcon />} href={contact.website} onLink={onOpenLink} accent>
             {prettyUrl(contact.website)}
           </Row>
         ) : null}
-        {otherVerified.map((n, i) => {
+        {(folded ? [] : otherVerified).map((n, i) => {
           const st = stateOf(n);
           const callable = n.callable && st?.kind !== "expired";
           return (
@@ -307,7 +317,7 @@ export function LassoContact({ contact, title, error, omitAddress = false, onCop
       {contact.isRobinson ? (
         <p className="lasso-small lasso-muted">Tilmeldt Robinsonlisten, må ikke kontaktes med markedsføring</p>
       ) : null}
-      {sources.length === 0 ? null : sameDate ? (
+      {sources.length === 0 || foldExtra ? null : sameDate ? (
         <SourceLine source={sources.join(" og ")} updated={contact.updated ?? contact.verifiedAt} />
       ) : (
         <p className="lasso-source">

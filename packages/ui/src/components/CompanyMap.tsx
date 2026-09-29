@@ -15,13 +15,15 @@ export interface MapMarker {
 }
 
 const CLUSTER_PX = 28;
+/** Markeringen "hovedadressen" (før markørerne er lagt ud). */
+const FOCUS = "__focus__";
 
 /**
  * Projektion og klynger (ren funktion, testbar): punkterne passes ind i W×H med `pad` luft (lige-
  * afstands-projektion med cos(breddegrad), fint på Danmarks skala). Hovedadressen (focus) klynges
  * aldrig; relaterede adresser nærmere end 28 px slås sammen til en koral klynge med antal.
  */
-export function layoutMap(points: readonly MapPointVM[], W: number, H: number, pad = 34): MapMarker[] {
+export function layoutMap(points: readonly MapPointVM[], W: number, H: number, pad = 34, zoom = 1): MapMarker[] {
   if (points.length === 0 || W <= 0 || H <= 0) return [];
   const meanLat = points.reduce((s, p) => s + p.lat, 0) / points.length;
   const kx = Math.cos((meanLat * Math.PI) / 180);
@@ -34,9 +36,11 @@ export function layoutMap(points: readonly MapPointVM[], W: number, H: number, p
   // Mindst ca. 1 km på tværs, så ét punkt ikke zoomes uendeligt ind.
   const spanX = Math.max(maxX - minX, 0.012);
   const spanY = Math.max(maxY - minY, 0.008);
-  const s = Math.min((W - pad * 2) / spanX, (H - pad * 2) / spanY);
-  const cx = (minX + maxX) / 2;
-  const cy = (minY + maxY) / 2;
+  const s = Math.min((W - pad * 2) / spanX, (H - pad * 2) / spanY) * zoom;
+  // Zoomet ind centreres om hovedadressen, så den bliver på kortet.
+  const f = zoom > 1 ? points.find((p) => p.kind === "focus") : undefined;
+  const cx = f ? f.lon * kx : (minX + maxX) / 2;
+  const cy = f ? f.lat : (minY + maxY) / 2;
   const proj = (p: MapPointVM) => ({ x: W / 2 + (p.lon * kx - cx) * s, y: H / 2 + 8 - (p.lat - cy) * s });
   const markers: MapMarker[] = [];
   for (const p of points) {
@@ -106,7 +110,38 @@ function Pin({ m, active, onPick }: { m: MapMarker; active: boolean; onPick: (m:
   );
 }
 
-/** Kort-popup: et almindeligt hvidt kort med radius 8 (13.12); på mobil markørkortet under kortet. */
+/** "Prøvevej 1, 8600 Silkeborg" -> ["Prøvevej 1", "Silkeborg"]. */
+function splitAddress(address: string | undefined): [string | undefined, string | undefined] {
+  if (!address) return [undefined, undefined];
+  const i = address.indexOf(",");
+  if (i < 0) return [address, undefined];
+  const rest = address.slice(i + 1).trim().replace(/^\d{4}\s+/, "");
+  return [address.slice(0, i).trim(), rest || undefined];
+}
+
+/**
+ * Hovedadressens kort (13.12 popup, 26b.11 markørkort): desktop "Toldbodgade 37B" / "Hovedadresse,
+ * København K"; mobil navnet 600 over "Hovedadresse, København K" med "Rute" i koral til højre.
+ */
+function FocusCard({ p, mobile, onRoute }: { p: MapPointVM; mobile?: boolean; onRoute?: (p: MapPointVM) => void }) {
+  const [street, city] = splitAddress(p.address);
+  const kind = p.meta ?? "Hovedadresse";
+  return (
+    <div className={`lasso-map__card lasso-map__card--focus${mobile ? " lasso-map__card--overlay" : ""}`}>
+      <div className="lasso-map__card-item">
+        <span className="lasso-map__card-name">{mobile ? p.name : (street ?? p.name)}</span>
+        <span className="lasso-map__card-sub">{[kind, city].filter(Boolean).join(", ")}</span>
+      </div>
+      {mobile && onRoute ? (
+        <button type="button" className="lasso-link lasso-map__route" onClick={(e) => { e.stopPropagation(); onRoute(p); }}>
+          Rute
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+/** Kort-popup: et almindeligt hvidt kort med radius 8 (13.12). */
 function PointCard({ m, onOpen, onClose }: { m: MapMarker; onOpen?: (p: MapPointVM) => void; onClose?: () => void }) {
   const shown = m.points.slice(0, 3);
   return (
@@ -157,6 +192,25 @@ function MapCanvas({ markers, W, H, active, onPick }: { markers: readonly MapMar
   );
 }
 
+/** 13.12: zoom-knapper (+/−) øverst til højre på kortet. */
+function ZoomControls({ zoom, onZoom }: { zoom: number; onZoom: (z: number) => void }) {
+  return (
+    <div className="lasso-map__zoom" onClick={(e) => e.stopPropagation()}>
+      <button type="button" className="lasso-map__zoom-btn" aria-label="Zoom ind" disabled={zoom >= MAX_ZOOM} onClick={() => onZoom(Math.min(MAX_ZOOM, zoom * 1.6))}>
+        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+          <path d="M6 1.5v9M1.5 6h9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
+      </button>
+      <button type="button" className="lasso-map__zoom-btn" aria-label="Zoom ud" disabled={zoom <= 1} onClick={() => onZoom(Math.max(1, zoom / 1.6))}>
+        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+          <path d="M1.5 6h9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+const MAX_ZOOM = 1.6 ** 4;
+
 function Legend() {
   return (
     <div className="lasso-map__legend">
@@ -170,13 +224,13 @@ function Legend() {
         <svg width="16" height="16" viewBox="-8 -8 16 16" aria-hidden="true">
           <circle className="lasso-map__ring" r="5.5" />
         </svg>
-        P-enheder og relaterede adresser
+        P-enhed / ejendom
       </span>
       <span className="lasso-map__legend-item">
         <svg width="16" height="16" viewBox="-8 -8 16 16" aria-hidden="true">
           <circle className="lasso-map__cluster" r="7" />
         </svg>
-        Flere adresser tæt på hinanden
+        Klynge (tal = antal)
       </span>
     </div>
   );
@@ -192,7 +246,9 @@ function Legend() {
 export function CompanyMap({ map, title, error, onAction }: { map?: MapVM; title?: string; error?: string; onAction?: (a: ViewAction) => void }) {
   const [ref, W] = useWidth<HTMLDivElement>();
   const compact = isCompact(W);
-  const [active, setActive] = useState<string | null>(null);
+  // 13.12: hovedadressens popup står åben fra start; klik på kortet lukker den.
+  const [active, setActive] = useState<string | null>(FOCUS);
+  const [zoom, setZoom] = useState(1);
   const [full, setFull] = useState(false);
   const [fullW, setFullW] = useState(0);
   useEffect(() => {
@@ -225,10 +281,11 @@ export function CompanyMap({ map, title, error, onAction }: { map?: MapVM; title
     );
   }
   const H = compact ? 160 : 280;
-  const markers = layoutMap(map.points, W, H);
+  const markers = layoutMap(map.points, W, H, 34, compact ? 1 : zoom);
   const focus = markers.find((m) => m.kind === "focus") ?? markers[0]!;
-  const current = markers.find((m) => m.key === active) ?? null;
+  const current = markers.find((m) => m.key === (active === FOCUS ? focus.key : active)) ?? null;
   const onOpen = onAction ? (p: MapPointVM) => p.lassoId && onAction({ kind: "open-company", lassoId: p.lassoId, name: p.name }) : undefined;
+  const onRoute = onAction ? (p: MapPointVM) => onAction({ kind: "open-link", url: `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}` }) : undefined;
   const related = map.points.filter((p) => p.kind === "related").length;
   const subtitle = `${related ? `Hovedadresse og ${formatNumber(related)} ${related === 1 ? "anden adresse" : "andre adresser"}` : "Hovedadresse"}${map.missing ? `, ${formatNumber(map.missing)} uden koordinater` : ""}`;
 
@@ -236,17 +293,14 @@ export function CompanyMap({ map, title, error, onAction }: { map?: MapVM; title
     const fullH = typeof window !== "undefined" ? Math.max(320, window.innerHeight - 120) : 640;
     const fullMarkers = full && fullW > 0 ? layoutMap(map.points, fullW, fullH, 40) : [];
     const fullCurrent = fullMarkers.find((m) => m.key === active) ?? fullMarkers.find((m) => m.kind === "focus") ?? fullMarkers[0];
+    const focusPoint = focus.points[0]!;
+    // 26b.11: kortet er 160 px med hovedadressens markørkort lagt oven på kortets bund; tryk åbner fuld skærm.
     return (
       <Section title={heading} subtitle={subtitle} span="half" className="lasso-map">
         <div ref={ref} className="lasso-map__frame lasso-map__frame--compact" role="button" tabIndex={0} aria-label="Åbn kortet i fuld skærm" onClick={() => setFull(true)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setFull(true)}>
-          {W > 0 ? <MapCanvas markers={markers} W={W} H={H} active={focus.key} onPick={() => setFull(true)} /> : null}
-          <span className="lasso-map__expand" aria-hidden="true">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <path d="M10 2h4v4M6 14H2v-4M14 2l-5 5M2 14l5-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
+          {W > 0 ? <MapCanvas markers={layoutMap(map.points, W, H - 56, 28)} W={W} H={H} active={focus.key} onPick={() => setFull(true)} /> : null}
+          {focus.kind === "focus" ? <FocusCard p={focusPoint} mobile onRoute={onRoute} /> : null}
         </div>
-        <PointCard m={current ?? focus} onOpen={onOpen} />
         {full ? (
           <div className="lasso-map-full" role="dialog" aria-modal="true" aria-label={heading}>
             <div className="lasso-map-full__head">
@@ -259,7 +313,6 @@ export function CompanyMap({ map, title, error, onAction }: { map?: MapVM; title
             {fullCurrent ? <PointCard m={fullCurrent} onOpen={onOpen} /> : null}
           </div>
         ) : null}
-        {map.source ? <SourceLine source={map.source} updated={map.updated} /> : null}
       </Section>
     );
   }
@@ -267,10 +320,19 @@ export function CompanyMap({ map, title, error, onAction }: { map?: MapVM; title
   return (
     <Section title={heading} subtitle={subtitle} span="half" className="lasso-map">
       <div ref={ref} className="lasso-map__frame" onClick={() => setActive(null)}>
-        {W > 0 ? <MapCanvas markers={markers} W={W} H={H} active={active} onPick={(m) => setActive(m.key === active ? null : m.key)} /> : null}
+        {W > 0 ? <MapCanvas markers={markers} W={W} H={H} active={current?.key ?? null} onPick={(m) => setActive(m.key === current?.key ? null : m.key)} /> : null}
+        <ZoomControls zoom={zoom} onZoom={setZoom} />
         {current ? (
-          <div className="lasso-map__popup" style={{ left: Math.min(Math.max(8, current.x - 120), Math.max(8, W - 248)), top: current.y + (current.y > H / 2 ? -12 : 16), transform: current.y > H / 2 ? "translateY(-100%)" : undefined }} onClick={(e) => e.stopPropagation()}>
-            <PointCard m={current} onOpen={onOpen} onClose={() => setActive(null)} />
+          <div
+            className={`lasso-map__popup${current.kind === "focus" ? " lasso-map__popup--focus" : ""}`}
+            style={
+              current.kind === "focus"
+                ? { left: Math.min(Math.max(8, current.x + 14), Math.max(8, W - 268)), top: Math.max(8, current.y - 40) }
+                : { left: Math.min(Math.max(8, current.x - 120), Math.max(8, W - 248)), top: current.y + (current.y > H / 2 ? -12 : 16), transform: current.y > H / 2 ? "translateY(-100%)" : undefined }
+            }
+            onClick={(e) => e.stopPropagation()}
+          >
+            {current.kind === "focus" ? <FocusCard p={current.points[0]!} /> : <PointCard m={current} onOpen={onOpen} onClose={() => setActive(null)} />}
           </div>
         ) : null}
       </div>

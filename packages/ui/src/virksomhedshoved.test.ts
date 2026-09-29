@@ -37,7 +37,7 @@ test("08.1: handlinger som 32 px ikonknapper i rækkefølgen Overvåg, Gem, Eksp
   assert.deepEqual(order, ["Overvåg", "Gem på din liste", "Virksomhedsrapport (PDF)", "Flere handlinger"]);
   assert.match(out, /class="lasso-headbtn lasso-headbtn--monitor" aria-pressed="false"/);
   assert.doesNotMatch(out, /lasso-btn--primary/);
-  assert.match(out, /CVR 99000001, A\/S, stiftet 01\.04\.1998, Prøvevej 1, 8600 Silkeborg, 64 ansatte \(CVR\), Opførelse af bygninger/);
+  assert.match(out, /CVR 99000001, A\/S, stiftet 01\.04\.1998, Prøvevej 1, 8600 Silkeborg, Opførelse af bygninger/);
   assert.doesNotMatch(out, /·/);
 });
 
@@ -170,15 +170,17 @@ test("08.5: live-tilstande: nu (60 sek.), N dage siden, udgået; nummeret vises 
       { phoneNumber: "33123456", callable: false, sources: ["Website"], expired: "2026-08-12" },
     ],
   };
-  const out = html(h(LassoContact, { contact, now, onCopy: noop }));
+  const out = html(h(LassoContact, { contact, now, onCopy: noop, foldExtra: false }));
   assert.match(out, /Verificeret nu/);
   assert.match(out, /lasso-contact__value--struck">33 12 34 56</);
   assert.match(out, /Udgået, 12\.08\.2026/);
   assert.match(out, />Kopiér</);
-  const stale = html(h(LassoContact, { contact: { ...contact, verifiedAt: "2026-09-26" }, now }));
+  const stale = html(h(LassoContact, { contact: { ...contact, verifiedAt: "2026-09-26" }, now, foldExtra: false }));
+  // 08.3 (standard): ekstra numre foldes bag "Se N telefonnumre".
+  assert.match(html(h(LassoContact, { contact, now })), />Se 1 telefonnummer</);
   assert.match(stale, /Verificeret for 3 dage siden/);
   // Uden verifikation: handlingen "Ring" i stedet for en tilstand.
-  assert.match(html(h(LassoContact, { contact: { lassoId: byg.lassoId, phone: "71747812" }, now })), />Ring</);
+  assert.match(html(h(LassoContact, { contact: { lassoId: byg.lassoId, phone: "71747812" }, now })), /aria-label="Ring"/);
 });
 
 /* ---------- 08.6/08.7 Kontaktpersoner og "Se alle"-panelet ---------- */

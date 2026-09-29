@@ -243,16 +243,17 @@ test("virksomhedsoplysninger gentager ikke hovedet, kontaktblokken eller ejerlis
   const co = ds.companies[id]!;
   const last = ds.financials[id]!.years.at(-1);
   const labels = (o: Parameters<typeof companyFacts>[3]) => companyFacts(co, ds.ownership[id], last, o).map((r) => r.label);
-  assert.deepEqual(labels({ hideIdentity: true, hideContact: true }), ["Revisor", "Seneste revisorskift", "Regnskabsperiode", "Branchekode", "Kommune", "Region"]);
-  assert.deepEqual(labels({ hideIdentity: true }), ["Revisor", "Seneste revisorskift", "Regnskabsperiode", "Branchekode", "Kommune", "Region", "Telefon"]);
-  assert.deepEqual(labels({ hideIdentity: true, hideContact: true, hideAuditor: true }), ["Regnskabsperiode", "Branchekode", "Kommune", "Region"]);
+  // 08.1: ansatte står ikke i hovedet, så listen har dem også under hovedet.
+  assert.deepEqual(labels({ hideIdentity: true, hideContact: true }), ["Revisor", "Seneste revisorskift", "Regnskabsperiode", "Branchekode", "Ansatte", "Kommune", "Region"]);
+  assert.deepEqual(labels({ hideIdentity: true }), ["Revisor", "Seneste revisorskift", "Regnskabsperiode", "Branchekode", "Ansatte", "Kommune", "Region", "Telefon"]);
+  assert.deepEqual(labels({ hideIdentity: true, hideContact: true, hideAuditor: true }), ["Regnskabsperiode", "Branchekode", "Ansatte", "Kommune", "Region"]);
   // Uden hoved på siden (fx en render_view-spec) står identiteten i listen som før.
   assert.deepEqual(labels({}).slice(3, 8), ["Stiftet", "Virksomhedsform", "Branche", "Ansatte", "Adresse"]);
   assert.equal(companyFacts(co, ds.ownership[id], last, { hideIdentity: true }).find((r) => r.label === "Revisor")?.lassoId, "CVR-1-99000002");
 
   // Kun én ny oplysning (branchekoden): listen udelades på alle fokus.
   const thin = holding();
-  thin.companies[id] = { ...co, address: { street: "Prøvevej 1", zip: "8600", city: "Silkeborg" }, phone: undefined };
+  thin.companies[id] = { ...co, address: { street: "Prøvevej 1", zip: "8600", city: "Silkeborg" }, phone: undefined, employees: undefined };
   thin.ownership[id] = { lassoId: id, owners: [] };
   thin.financials[id] = { lassoId: id, currency: "DKK", years: [] };
   for (const focus of FOCUSES) {

@@ -192,7 +192,7 @@ export { TreePicker, TreePickerDialog, expandSelection, compactSelection } from 
 export type { TreeNode, TreePickerProps, TreePickerDialogProps } from "./components/TreePicker.js";
 export { useWidth } from "./useWidth.js";
 export type { ShellIconName } from "./components/ShellIcons.js";
-export { StateBox, Skeleton, Sparkline, Badge, StatusBadge, statusTone, DataState, Missing, SourceLine, Section, SeverityIcon, severityWord } from "./primitives.js";
+export { StateBox, Skeleton, Sparkline, Badge, StatusBadge, statusTone, DataState, Missing, SourceLine, Section, Delta, SeverityIcon, severityWord } from "./primitives.js";
 export type { StatusTone } from "./primitives.js";
 export type { DataStateKind, DataStateProps } from "./primitives.js";
 export { specToCsv, rowsToCsv, tableToCsv, personRolesCsv } from "./csv.js";

@@ -124,8 +124,35 @@ export function ChartTooltip({ x, y, width, title, rows, note }: { x: number; y:
   );
 }
 
-/** Mobil (26b): det valgte år i et fast felt under grafen (erstatter tooltip). */
-export function ChartReadout({ title, rows, note, hint = "Tryk på et år for at se tallene" }: { title: ReactNode; rows: readonly PickRow[]; note?: ReactNode; hint?: string }) {
+/**
+ * Mobil (26b): det valgte år i et fast felt under grafen (erstatter tooltip).
+ * `inline` (26b.1/26b.4): én 44 px linje med divider over, året 600 til venstre og værdierne til højre,
+ * fx "2025 | 18,8 mio. kr., ▲ 7,5 %" eller "2024 | LASSO X 221, branche 133".
+ */
+export function ChartReadout({ title, rows, note, hint = "Tryk på et år for at se tallene", inline = false }: { title: ReactNode; rows: readonly PickRow[]; note?: ReactNode; hint?: string; inline?: boolean }) {
+  if (inline) {
+    const one = rows.length === 1;
+    return (
+      <div className="lasso-pick lasso-pick--line" aria-live="polite">
+        <span className="lasso-pick__title">{title}</span>
+        <span className="lasso-pick__line">
+          {rows.map((r, i) => (
+            <span key={i}>
+              {i > 0 ? ", " : null}
+              {one ? null : `${r.label} `}
+              <span className="lasso-pick__value">{r.value}</span>
+              {one && r.change ? (
+                <>
+                  {", "}
+                  <span className={`lasso-pick__change lasso-pick__change--${r.change.dir}`}>{r.change.text}</span>
+                </>
+              ) : null}
+            </span>
+          ))}
+        </span>
+      </div>
+    );
+  }
   return (
     <div className="lasso-pick lasso-pick--readout" aria-live="polite">
       <div className="lasso-pick__head">
