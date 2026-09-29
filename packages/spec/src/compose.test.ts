@@ -166,9 +166,10 @@ test("risiko viser kreditvurderingen øverst i første bånd (ved siden af oplys
   // Med oplysninger står de først og kreditvurderingen ved siden af.
   const withList = withCredit(holding());
   const s2 = composeCompany(id, withList, { focus: "risiko" });
-  const first = bandsOf(s2)[0]!;
-  assert.equal(first[0]![0]!.type, "LassoKeyValueList");
-  assert.ok(first.slice(1).some((st) => st[0]!.type === "LassoCreditRating"));
+  // Gridmodellen vælger det bånd, der holder 15 % (23.1 4c); kreditvurderingen står øverst i en stak i de to første bånd.
+  const [first, second] = bandsOf(s2);
+  assert.equal(first![0]![0]!.type, "LassoKeyValueList");
+  assert.ok([...first!, ...(second ?? [])].some((st) => st[0]!.type === "LassoCreditRating"));
   // En hentningsfejl vises også (fejltilstand med "Prøv igen"), men uden data eller fejl står den ikke.
   const failed = company();
   failed.errors[`creditRating:${id}`] = "Lasso API svarede ikke i tide";

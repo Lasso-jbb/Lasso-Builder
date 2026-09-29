@@ -187,10 +187,12 @@ export function componentWeight(c: ViewComponent, ds: Dataset, page: readonly Vi
     }
     case "LassoKeyValueList": {
       // Regnskabslisten har 12 rækker (periode, udgivet, omsætning/bruttofortjeneste og 9 nøgletal).
-      if (c.variant === "financials") return TITLE + 1.6 * (12 - (c.exclude?.length ?? 0));
+      // rows viser kun de første N rækker og en linje "Se N oplysninger" under (flex rækker, 23.1).
+      const shown = (n: number) => (c.rows && c.rows < n ? 1.6 * c.rows + 1.5 : 1.6 * n);
+      if (c.variant === "financials") return TITLE + shown(12 - (c.exclude?.length ?? 0));
       const co = ds.companies[c.company];
       const rows = co ? companyFacts(co, ds.ownership[c.company], ds.financials[c.company]?.years.at(-1), companyFactOptions(page, c.company)).length : 6;
-      return TITLE + 1.6 * rows;
+      return TITLE + shown(rows);
     }
     case "LassoBarChart":
     case "LassoGroupedBarChart":

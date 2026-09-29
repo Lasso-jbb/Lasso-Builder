@@ -4899,7 +4899,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 
 /* 30.10 Mønster 7, Fortælling: nøgletalskort i en smal celle (¼-kolonnen) stables lodret, ét tal pr. række.
    Containeren sidder på cellen/kolonne-elementet omkring kortene, så komponenten selv er uændret. */
-.lasso-column__item:has(> .lasso-kpis), .lasso-cell:has(> .lasso-kpis) { container: lasso-kpicell / inline-size; }
+.lasso-column__item:has(> .lasso-kpis), .lasso-cell:has(> .lasso-kpis), .lasso-dstack__item:has(> .lasso-kpis) { container: lasso-kpicell / inline-size; }
 @container lasso-kpicell (max-width: 320px) {
   .lasso-kpis { grid-template-columns: minmax(0, 1fr); }
   .lasso-kpis > .lasso-kpi { padding: 16px 20px; border-left: 0; border-top: 0; }

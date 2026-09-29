@@ -19,6 +19,7 @@ import {
   gridHeight,
   measuredHeight,
   packBands,
+  originOf,
   type Dataset,
   type Focus,
   type PersonFocus,
@@ -857,9 +858,9 @@ export function dashboardBands(components: readonly ViewComponent[], ds: Dataset
     for (const b of packBands(items, h, { gap: DASHBOARD_GAP })) {
       if (b.stacks.length === 1 && b.stacks[0]!.items.length === 1) {
         const c = b.stacks[0]!.items[0]!;
-        out.push({ kind: "run", run: { kind: "one", item: { c, i: index.get(c)! } } });
+        out.push({ kind: "run", run: { kind: "one", item: { c, i: index.get(originOf(c))! } } });
       } else {
-        out.push({ kind: "band", stacks: b.stacks.map((st) => ({ width: st.width, items: st.items.map((c) => ({ c: { ...c, width: st.width } as ViewComponent, i: index.get(c)! })) })) });
+        out.push({ kind: "band", stacks: b.stacks.map((st) => ({ width: st.width, items: st.items.map((c) => ({ c: { ...c, width: st.width } as ViewComponent, i: index.get(originOf(c))! })) })) });
       }
     }
     pending = [];
@@ -1167,8 +1168,9 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
                 ? dashboardBands(spec.components, dataset).map((b) => {
                     if (b.kind === "run") {
                       const run = b.run;
+                      // Et element alene i sit bånd står i fuld bredde (23.1 4d: aldrig en ½ alene, ingen huller).
                       return run.kind === "one" ? (
-                        <div key={run.item.i} className={`lasso-cell lasso-cell--${widthOf(run.item.c, spec.layout)}`}>
+                        <div key={run.item.i} className="lasso-cell lasso-cell--full">
                           {renderComponent(run.item.c, dataset, props, act, run.item.i, frame)}
                         </div>
                       ) : (

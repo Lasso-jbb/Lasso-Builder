@@ -1748,7 +1748,7 @@ const layout: GalleryEntry[] = [
     nr: "30.4",
     title: "Mønster 1, Overblik",
     node: "J6C-0",
-    note: "Nøgletalskort fuld, graf ½ + nøgle-værdi-liste ½, lister to og to.",
+    note: "Nøgletalskort fuld, graf ½ + nøgle-værdi-liste ½, listerne i deres standardbredde; gridmodellen (23.1) stabler dem, så båndene fylder uden huller.",
     spec: {
       kind: "company",
       title: "Mønster 1, Overblik",
@@ -1757,8 +1757,8 @@ const layout: GalleryEntry[] = [
         { type: "LassoKeyFigureCards", company: C, width: "full" },
         { type: "LassoBarChart", company: C, width: "half" },
         { type: "LassoKeyValueList", company: C, variant: "company", width: "half" },
-        { type: "LassoPersonList", company: C, width: "half" },
-        { type: "LassoOwnerList", company: C, width: "half" },
+        { type: "LassoPersonList", company: C },
+        { type: "LassoOwnerList", company: C },
       ],
     },
   },
@@ -1766,11 +1766,16 @@ const layout: GalleryEntry[] = [
     nr: "30.5",
     title: "Mønster 2, Fokus",
     node: "J82-0",
-    note: "Ejerdiagram ¾ + LassoRelations ¼ (LAYOUT_RULES: 'LassoRelations er ¼-elementet').",
+    note: "Ejerdiagram ¾ + fakta ¼ (LassoRelations og reelle ejere stablet i ¼-stakken, gridmodel 23.1: lave elementer stables ved siden af et højt anker, til stakken når 85 % af dets højde).",
     spec: {
       kind: "company",
       title: "Mønster 2, Fokus",
-      components: [head("compact"), { type: "LassoOwnershipDiagram", company: C, width: "three-quarters" }, { type: "LassoRelations", company: C, width: "quarter" }],
+      components: [
+        head("compact"),
+        { type: "LassoOwnershipDiagram", company: C, width: "three-quarters" },
+        { type: "LassoRelations", company: C, width: "quarter" },
+        { type: "LassoBeneficialOwners", company: C, width: "quarter" },
+      ],
     },
   },
   {

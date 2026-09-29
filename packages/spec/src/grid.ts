@@ -166,10 +166,62 @@ interface Candidate {
   deviation: number;
   /** Σ |kolonner − standardkolonner|: elementer uden for standardbredden koster. */
   widthPenalty: number;
+  /** Elementer, der har fået færre rækker for at passe (flex rækker bruges kun, når det er nødvendigt). */
+  shrunk: number;
   /** Stakke i omvendt prioritet fra venstre mod højre (efter stakkens vigtigste element). */
   stackInversions: number;
   /** Par af elementer i omvendt prioritet, læst stak for stak fra venstre, oppefra og ned. */
   inversions: number;
+}
+
+/** Et element, som det lægges i en stak: evt. en kopi med færre rækker, og dens højde. */
+interface Fitted {
+  c: ViewComponent;
+  h: number;
+}
+
+/** Kopier med færre rækker peger tilbage på det oprindelige element (originOf). */
+const origins = new WeakMap<ViewComponent, ViewComponent>();
+/** Det element, som pakningen fik ind, for et element i et bånd (samme objekt, eller originalen til en kopi med færre rækker). */
+export function originOf(c: ViewComponent): ViewComponent {
+  let o = c;
+  for (let next = origins.get(o); next && next !== o; next = origins.get(o)) o = next;
+  return o;
+}
+
+/** Færreste rækker, et flex-element (rækker) skæres ned til, før det hellere står i et andet bånd. */
+const MIN_ROWS = 3;
+
+/**
+ * Flex rækker (23.1): nøgle-værdi-listen (rows), tidslinjen og nyhederne (limit) kan vise færre rækker
+ * med "Se alle" under, så de passer i en stak. Returnerer en kopi med n rækker, eller null for typer
+ * uden et rækkeloft.
+ */
+export function withRows(c: ViewComponent, n: number): ViewComponent | null {
+  if (c.type === "LassoKeyValueList") return { ...c, rows: n };
+  if (c.type === "LassoTimeline" && !c.filterColumn) return { ...c, limit: n };
+  if (c.type === "LassoNews") return { ...c, limit: n };
+  return null;
+}
+function currentRows(c: ViewComponent): number {
+  if (c.type === "LassoKeyValueList") return c.rows ?? 12;
+  if (c.type === "LassoTimeline") return c.limit ?? 5;
+  if (c.type === "LassoNews") return c.limit ?? 5;
+  return 0;
+}
+
+/** Elementet i bredden, hvis det højst fylder `room` px, ellers med færre rækker (højst ned til MIN_ROWS), ellers null. */
+function fitRows(c: ViewComponent, width: Width, room: number, h: HeightFn): Fitted | null {
+  const full = h(c, width);
+  if (full <= room) return { c, h: full };
+  if (gridRuleOf(c).flex !== "rows") return null;
+  for (let n = currentRows(c) - 1; n >= MIN_ROWS; n--) {
+    const v = withRows(c, n);
+    if (!v) return null;
+    const hv = h(v, width);
+    if (hv <= room && hv < full) return { c: v, h: hv };
+  }
+  return null;
 }
 
 /** Højst så mange kandidater og så mange ekstra elementer pr. stak i søgningen (holder pakningen hurtig). */
@@ -204,16 +256,18 @@ function fillBand(combo: readonly number[], comboIndex: number, slot: number, re
       const c = rest[k]!;
       if (!used.has(k) && !isFullBand(c) && fitsWidth(c, s.width)) eligible.push(k);
     }
-    const heightOf = (k: number) => h(rest[k]!, s.width);
     const gap = (n: number) => (s.items.length + n > 0 ? GAP : 0);
-    let found: number[] | null = null;
-    const walk = (from: number, picked: number[], sum: number): void => {
+    // Elementet i stakkens bredde, evt. med færre rækker (flex rækker), så det højst fylder `room`.
+    const fit = (k: number, room: number): Fitted | null => fitRows(rest[k]!, s.width, room, h);
+    let found: { k: number; f: Fitted }[] | null = null;
+    const walk = (from: number, picked: { k: number; f: Fitted }[], sum: number): void => {
       if (found || picked.length >= MAX_STACK_ADD) return;
       for (let e = from; e < eligible.length && !found; e++) {
         const k = eligible[e]!;
-        const next = sum + gap(picked.length) + heightOf(k);
-        if (next > limit) continue;
-        const chosen = [...picked, k];
+        const f = fit(k, limit - sum - gap(picked.length));
+        if (!f) continue;
+        const next = sum + gap(picked.length) + f.h;
+        const chosen = [...picked, { k, f }];
         if (next >= floor) {
           found = chosen;
           return;
@@ -222,20 +276,21 @@ function fillBand(combo: readonly number[], comboIndex: number, slot: number, re
       }
     };
     walk(0, [], s.height);
-    const pick: number[] = found ?? [];
+    const pick: { k: number; f: Fitted }[] = found ?? [];
     if (!found) {
       let sum = s.height;
       for (const k of eligible) {
         if (sum >= floor) break;
-        const next = sum + gap(pick.length) + heightOf(k);
-        if (next > limit) continue;
-        pick.push(k);
-        sum = next;
+        const f = fit(k, limit - sum - gap(pick.length));
+        if (!f) continue;
+        pick.push({ k, f });
+        sum += gap(pick.length - 1) + f.h;
       }
     }
-    for (const k of pick) {
-      s.height += (s.items.length > 0 ? GAP : 0) + heightOf(k);
-      s.items.push(rest[k]!);
+    for (const { k, f } of pick) {
+      s.height += (s.items.length > 0 ? GAP : 0) + f.h;
+      s.items.push(f.c);
+      origins.set(f.c, rest[k]!);
       used.add(k);
     }
   };
@@ -249,16 +304,19 @@ function fillBand(combo: readonly number[], comboIndex: number, slot: number, re
   const max = Math.max(...heights);
   const deviation = max > 0 ? (max - Math.min(...heights)) / max : 0;
   const widthPenalty = stacks.reduce((sum, s) => sum + s.items.reduce((a, c) => a + Math.abs(WIDTH_COLUMNS[s.width] - WIDTH_COLUMNS[c.width ?? gridRuleOf(c).std]), 0), 0);
-  const rank = (c: ViewComponent) => rest.indexOf(c);
+  const rank = (c: ViewComponent) => rest.indexOf(originOf(c));
   const stackInversions = inversionsOf(stacks.map((s) => Math.min(...s.items.map(rank))));
   const inversions = inversionsOf(stacks.flatMap((s) => s.items.map(rank)));
-  return { comboIndex, stacks, used, deviation, widthPenalty, stackInversions, inversions };
+  const shrunk = stacks.reduce((n, s) => n + s.items.filter((c) => originOf(c) !== c).length, 0);
+  return { comboIndex, stacks, used, deviation, widthPenalty, shrunk, stackInversions, inversions };
 }
 
 function better(a: Candidate, b: Candidate): boolean {
   const okA = a.deviation <= BAND_MAX_DEVIATION;
   const okB = b.deviation <= BAND_MAX_DEVIATION;
   if (okA !== okB) return okA;
+  // Hellere alle rækker end færre (flex rækker er en nødløsning), derefter standardbredderne.
+  if (a.shrunk !== b.shrunk) return a.shrunk < b.shrunk;
   if (a.widthPenalty !== b.widthPenalty) return a.widthPenalty < b.widthPenalty;
   if (Math.abs(a.deviation - b.deviation) > 1e-9) return a.deviation < b.deviation;
   if (a.stacks.length !== b.stacks.length) return a.stacks.length < b.stacks.length;
@@ -329,7 +387,8 @@ export function packBands(items: readonly ViewComponent[], h: HeightFn, options:
       continue;
     }
     let chosen = bestBand(rest, 0, h, gap);
-    if (!chosen || chosen.deviation > BAND_MAX_DEVIATION) {
+    // Også når båndet kun holder 15 % ved at skære rækker væk: et højt anker længere fremme kan give et bånd uden.
+    if (!chosen || chosen.deviation > BAND_MAX_DEVIATION || chosen.shrunk > 0) {
       for (let k = 1; k < rest.length && k <= ANCHOR_LOOKAHEAD; k++) {
         const c = rest[k]!;
         if (isFullBand(c) || !TALL.has(gridRuleOf(c).height)) continue;
@@ -348,7 +407,9 @@ export function packBands(items: readonly ViewComponent[], h: HeightFn, options:
       continue;
     }
     rest = rest.slice(1);
-    if (rule.max !== "full") {
+    // Smalle elementer og lave elementer (fx genveje, der "fylder rest i en stak") lægges i forrige
+    // bånds korteste stak, når det holder båndet inden for 15 %; ellers står de i fuld bredde.
+    if (rule.max !== "full" || rule.height === "low") {
       const prev = bands.at(-1);
       if (prev && prev.stacks.length > 1 && stakfyld(prev, first, h, gap)) continue;
     }
@@ -361,7 +422,8 @@ export function packBands(items: readonly ViewComponent[], h: HeightFn, options:
  * Stakfyld (gridmodel 4d): et element, der ikke kan bære et bånd, lægges i forrige bånd. Prøver hver
  * stak, hvis bredde elementet tillader, og desuden at flytte ét andet element (ikke stakkens første)
  * fra den stak til en anden stak, hvis bredde det tillader; den placering med lavest afvigelse vinder.
- * Returnerer false, hvis ingen stak tillader elementets bredde.
+ * Returnerer false, hvis ingen stak tillader elementets bredde, eller hvis båndet ville afvige mere end
+ * 15 % (og mere end før).
  */
 function stakfyld(band: PackedBand, c: ViewComponent, h: HeightFn, gap: number): boolean {
   const heightOf = (items: readonly ViewComponent[], w: Width) => items.reduce((sum, x, i) => sum + (i > 0 ? gap : 0) + h(x, w), 0);
@@ -384,7 +446,9 @@ function stakfyld(band: PackedBand, c: ViewComponent, h: HeightFn, gap: number):
     });
   });
   const chosen = best as { stacks: ViewComponent[][]; deviation: number } | null;
-  if (!chosen) return false;
+  // Stakfyld må ikke gøre båndet skævt: ender det over 15 % (og over båndets egen afvigelse), står
+  // elementet hellere alene i fuld bredde.
+  if (!chosen || chosen.deviation > Math.max(BAND_MAX_DEVIATION, band.deviation) + 1e-9) return false;
   band.stacks.forEach((s, i) => {
     s.items = chosen.stacks[i]!;
     s.height = heightOf(s.items, s.width);
