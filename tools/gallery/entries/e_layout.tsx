@@ -305,7 +305,7 @@ const paperRailCompany = (): RailGroup[] => [
     id: "firmaer",
     label: "Firmaer",
     items: [
-      { id: "overvaager", label: "Overvåger", icon: "letter" },
+      { id: "overvaager", label: "Overvåger", icon: <ShellIcon name="rss" /> },
       { id: "advisory", label: "Advisory Board", icon: "letter" },
       { id: "kunder", label: "Kunder", icon: "letter" },
       { id: "salgspartnere", label: "Salgspartnere", icon: "letter" },
