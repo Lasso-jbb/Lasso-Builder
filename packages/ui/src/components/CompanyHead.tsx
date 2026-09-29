@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { formatDate, formatNumber, type CompanyVM, type HeadVariant, type ObservationsVM } from "@lasso/spec";
+import { formatDate, formatNumber, statusGroup, type CompanyVM, type HeadVariant, type ObservationsVM } from "@lasso/spec";
 import { DataState, stateForError, statusTone } from "../primitives.js";
 import { HeadActions, hasHeadActions, type HeadActionsProps } from "./HeadActions.js";
 
@@ -13,6 +13,19 @@ export function companyStatusText(c: CompanyVM): string | undefined {
   if (!c.status) return undefined;
   if (!c.statusDate) return c.status;
   return c.statusKind === "warning" ? `${c.status}, siden ${formatDate(c.statusDate)}` : `${c.status} ${formatDate(c.statusDate)}`;
+}
+
+/**
+ * Status i hovedet (Jakob runde 6, Paper 08.1 MOR-0): Aktiv/Normal (gruppen "active") vises ikke; navnet
+ * står alene. Alle andre statusser står efter navnet i deres farvegruppe (status.ts). En ukendt status
+ * vises, medmindre virksomheden er i drift (statusKind "active").
+ */
+export function headStatusText(c: CompanyVM): string | undefined {
+  if (!c.status) return undefined;
+  const g = statusGroup(c.status);
+  if (g === "active") return undefined;
+  if (!g && (c.statusKind ?? "active") === "active") return undefined;
+  return companyStatusText(c);
 }
 
 /**
@@ -57,9 +70,9 @@ export interface CompanyHeadProps {
 }
 
 /**
- * Virksomhedshoved (katalog 08.1). Ingen kortramme og ingen skillestreg under (08.8). Navn 28/600,
- * status som ren tekst 14/500 lige efter navnet (konkurs/likvidation i mørk rød med dato, ophørt navn
- * i text-secondary). Ingen binavn (faktalinje-indhold, kontrol r5 08.8) og ingen faktalinje under navnet (G9). Handlinger som
+ * Virksomhedshoved (katalog 08.1). Ingen kortramme og ingen skillestreg under (08.8). Navn 28/600;
+ * ved Aktiv/Normal står navnet alene, ellers status som ren tekst 14/500 lige efter navnet i sin
+ * farvegruppe (runde 6; konkurs/tvangsopløsning mørk rød, likvidation warning, ophørt muted). Ingen binavn (faktalinje-indhold, kontrol r5 08.8) og ingen faktalinje under navnet (G9). Handlinger som
  * 32 px ikonknapper øverst til højre, kun med funktion (G1). Ingen observationslinje (G9).
  */
 export function CompanyHead({ company, error, variant = "full", actions, onHistory, below }: CompanyHeadProps) {
@@ -81,7 +94,8 @@ export function CompanyHead({ company, error, variant = "full", actions, onHisto
   const acts: HeadActionsProps | undefined = ceased
     ? { context: actions?.context, history: onHistory ?? actions?.history }
     : actions;
-  const status = companyStatusText(company);
+  // Jakob runde 6: navnet alene ved Aktiv/Normal; ellers status efter navnet i farvegruppen.
+  const status = headStatusText(company);
   // G9 (Jakob 29.09): navnet står alene i alle hovedvarianter; faktalinjen (CVR, form, stiftet,
   // adresse, ansatte, branche) tegnes ikke længere. companyFactsLine bruges stadig af tekstkort o.l.
 
@@ -101,7 +115,7 @@ export function CompanyHead({ company, error, variant = "full", actions, onHisto
         <div className="lasso-headcompact__main">
           <div className="lasso-headcompact__title">
             <h2 className="lasso-headcompact__name">{company.name}</h2>
-            {status && kind !== "active" ? <span className={`lasso-headcompact__status lasso-company__status--${tone}`}>{status}</span> : null}
+            {status ? <span className={`lasso-headcompact__status lasso-company__status--${tone}`}>{status}</span> : null}
           </div>
         </div>
         {hasHeadActions(compactActs) ? <HeadActions {...compactActs!} /> : null}

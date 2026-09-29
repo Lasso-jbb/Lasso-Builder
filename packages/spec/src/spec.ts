@@ -958,7 +958,7 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoNews: "half",
   LassoPersonHead: "full",
   LassoPersonRoles: "two-thirds",
-  LassoPersonNetwork: "half",
+  LassoPersonNetwork: "two-thirds", // 16.3 (Fable runde 6): ⅔ som 16.2; ½ kun med etiketten "Selskab, rolle"
   LassoPersonRisk: "half",
   LassoPersonFacts: "third",
   LassoPersonStats: "full",

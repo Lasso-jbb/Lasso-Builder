@@ -13,7 +13,7 @@ Tokens står i `packages/ui/src/styles.css`. Komponenterne bruger kun CSS-variab
 5. Navne står alene: ingen initial-cirkler eller ikonkasser.
 6. Ingen midterprik nogen steder. Brug komma.
 7. Ikon + ord ved enhver farvekodning, aldrig kun farve.
-8. UDGÅET (Jakob 29.09, G3): ingen kildelinje ("Kilde: …, opdateret …") i nogen elementer. `SourceLine` tegner intet og bruges ikke. Kilder vises højst som i Se alle-panelet (08.7): overskriften "Kilder" med selve kildelinket.
+8. UDGÅET (Jakob 29.09, G3): ingen kildelinje ("Kilde: …, opdateret …") i nogen elementer. `SourceLine` tegner intet og bruges ikke. Heller ingen anden kildevisning (Jakob runde 6): ingen "Vis kilder (N)" (19.3, 30.2) og ingen "Kilder" + link (08.7, 08.9-08.11).
 9. Flere værdier end formen kan vise: vis 3 + "Se N …".
 10. Risikoskala 0 (lav) til 100 (høj). Fire trin: 0 neutral, 25 info, 50 mulig vigtig, 100 vigtig.
 

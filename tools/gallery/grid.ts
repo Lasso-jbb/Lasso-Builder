@@ -50,7 +50,7 @@ const STD: Record<string, number> = {
   LassoPersonHead: GRID.full,
   LassoPersonStats: GRID.full,
   LassoPersonRoles: GRID.twoThirds,
-  LassoPersonNetwork: GRID.half,
+  LassoPersonNetwork: GRID.twoThirds,
   LassoPersonRisk: GRID.half,
   LassoPersonFacts: GRID.third,
   LassoChangeFeed: GRID.full,

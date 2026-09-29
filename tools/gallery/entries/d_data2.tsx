@@ -376,9 +376,9 @@ export const entries: GalleryEntry[] = [
     nr: "16.3",
     title: "Netværk som tidsbånd (personer med fælles selskaber)",
     node: "LTP-0",
-    gridWidth: 1152,
-    note: "Paper LTP-0 (desktop, fuld bredde som i Paper) og LVN-0 (mobil): samme akse og navnekolonne som 16.2; bånd = perioden, de sad sammen.",
-    spec: person("Bo Eksempel", [{ type: "LassoPersonNetwork", person: BO, limit: 3, width: "full" }]),
+    gridWidth: 760,
+    note: "Paper LTP-0 (desktop) og LVN-0 (mobil), Fable runde 6: standardbredde ⅔ (som 16.2); samme akse og navnekolonne som 16.2; bånd = perioden, de sad sammen. Fælles selskab under konkurs: båndet rødt (fyldt ved løbende rolle, stiplet ved afsluttet) og ', under konkurs' sidst i etiketten i rødt; ingen konkursmarkør. Legende Sidder sammen nu / Afsluttet / Under konkurs. Under ⅔ (½ og mobil) kun etiketten 'Selskab, rolle'.",
+    spec: person("Bo Eksempel", [{ type: "LassoPersonNetwork", person: BO, limit: 3 }]),
     // Papers eksempel (LTP-0): to fælles selskaber, et nyere samarbejde og et afsluttet i et selskab under konkurs.
     mutate: (ds) => {
       const extra = Array.from({ length: 6 }, (_, i) => ({ name: `Eksempel Person ${i + 1}`, overlapYears: 3 - (i % 3), active: false, companies: [{ companyName: "Eksempel Invest ApS", role: "bestyrelse", from: "2018-01-01", to: "2021-01-01" }] }));

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { moreText,
+  statusGroup,
   currencyUnit,
   formatAmount,
   formatDate,
@@ -483,7 +484,8 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
   const total = pages.length + 1;
   const tocRows: { title: string; page: number }[] = pages.flatMap((p, i) => p.toc.map((title) => ({ title, page: i + 2 })));
   const facts = [
-    [cvr ? `CVR ${cvr}` : null, c?.form, c?.status].filter(Boolean).join(", "),
+    // Runde 6: status kun ved afvigelse (ikke Aktiv/Normal).
+    [cvr ? `CVR ${cvr}` : null, c?.form, statusGroup(c?.status) === "active" ? null : c?.status].filter(Boolean).join(", "),
     c?.address ? [c.address.street, [c.address.zip, c.address.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") : "",
     [c?.industryCode, c?.industryText].filter(Boolean).join(" "),
   ].filter(Boolean);

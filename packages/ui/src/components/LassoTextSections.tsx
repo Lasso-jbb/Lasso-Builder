@@ -139,17 +139,15 @@ function Chevron({ open }: { open: boolean }) {
 
 /**
  * Regnskabsanalysen (variant "analyse", 19.3 / mobil 26h.3). Desktop: overskrift 17/600, konklusionen
- * som brødtekst 15/25, den faste linje "Forbehold: …" og handlingslinjen "Vis kilder (N)" + "Var det
- * brugbart? Ja / Nej". Kildelinjen står under titlen. Mobil: kortet kan foldes med chevron, teksten er
+ * som brødtekst 15/25, den faste linje "Forbehold: …" og "Var det brugbart? Ja / Nej" (ingen kildevisning,
+ * Jakob runde 6). Mobil: kortet kan foldes med chevron, teksten er
  * foldet til 4 linjer, og nederst står "Læs hele analysen" til venstre og genereringslinjen til højre.
  */
 function Analysis({ v, items, onOpen, folded = false }: { v: TextSectionsVM; items: TextSectionItem[]; onOpen?: (a: ViewAction) => void; folded?: boolean }) {
   const [open, setOpen] = useState(usePrintMode());
-  const [sources, setSources] = useState(false);
   const [vote, setVote] = useState<"ja" | "nej" | null>(null);
   const [first, ...rest] = items;
   const segments: readonly TextSegment[] = first!.segments?.length ? first!.segments : [{ text: first!.body }];
-  const list = v.analysisSources ?? [];
   return (
     <>
       {v.analysisHeadline ? <p className="lasso-analysis__headline">{v.analysisHeadline}</p> : null}
@@ -165,11 +163,6 @@ function Analysis({ v, items, onOpen, folded = false }: { v: TextSectionsVM; ite
       ) : null}
       <p className="lasso-analysis__disclaimer">{ANALYSIS_DISCLAIMER}</p>
       <div className="lasso-analysis__actions">
-        {list.length ? (
-          <button type="button" className="lasso-link lasso-analysis__sources-btn" aria-expanded={sources} onClick={() => setSources(!sources)}>
-            {sources ? "Skjul kilder" : `Vis kilder (${list.length})`}
-          </button>
-        ) : null}
         <span className="lasso-analysis__feedback">
           {vote ? (
             "Tak for svaret"
@@ -187,13 +180,6 @@ function Analysis({ v, items, onOpen, folded = false }: { v: TextSectionsVM; ite
           )}
         </span>
       </div>
-      {sources && list.length ? (
-        <ul className="lasso-analysis__sources">
-          {list.map((x) => (
-            <li key={x}>{x}</li>
-          ))}
-        </ul>
-      ) : null}
       <div className="lasso-analysis__foot">
         <button type="button" className="lasso-link lasso-analysis__more" aria-expanded={open} onClick={() => setOpen(!open)}>
           {open ? "Vis mindre" : folded ? "Vis mere" : "Læs hele analysen"}
@@ -203,7 +189,7 @@ function Analysis({ v, items, onOpen, folded = false }: { v: TextSectionsVM; ite
   );
 }
 
-/** Analysens sektion: kildelinjen under titlen (desktop) og chevron, der folder kortet (mobil). */
+/** Analysens sektion: chevron, der folder kortet (mobil). */
 function AnalysisSection({ heading, v, items, onOpen, folded = false }: { heading: string; v: TextSectionsVM; items: TextSectionItem[]; onOpen?: (a: ViewAction) => void; folded?: boolean }) {
   const [collapsed, setCollapsed] = useState(false);
   return (
@@ -241,15 +227,13 @@ function DownloadGlyph() {
  * Regnskabsanalysen (katalog 19.3, Paper LYO-0): almindelig sektion på hvid flade med overskriften 18/600 og
  * "Hent som PDF" (sekundær 32 px-knap med download-ikon og ord, LYT-0) i hovedet, når værten kan eksportere
  * (G1). Afsnittene er foldbare rækker (44 px, overskrift 14/600, chevron), første afsnit åbent (brødtekst
- * 14/22); forbeholdet er en fast afsluttende linje, og "Vis kilder (N)" + "Var det brugbart? Ja / Nej" står
- * under. Ingen genereringsdato eller kildelinje (G3). "Hent som PDF" laver en A4 af HELE analysen med alle
+ * 14/22); forbeholdet er en fast afsluttende linje, og "Var det brugbart? Ja / Nej" står alene under (ingen
+ * "Vis kilder", Jakob runde 6). Ingen genereringsdato eller kildelinje (G3). "Hent som PDF" laver en A4 af HELE analysen med alle
  * afsnit foldet ud (19.6, AnalysisReportA4) med samme mekanisme som rapporten (27).
  */
 function AnalysisRows({ heading, v, items, onOpen, onPdf }: { heading: string; v: TextSectionsVM; items: TextSectionItem[]; onOpen?: (a: ViewAction) => void; onPdf?: () => void }) {
   const [open, setOpen] = useState<ReadonlySet<number>>(() => new Set([0]));
-  const [sources, setSources] = useState(false);
   const [vote, setVote] = useState<"ja" | "nej" | null>(null);
-  const list = v.analysisSources ?? [];
   const toggle = (i: number) =>
     setOpen((prev) => {
       const next = new Set(prev);
@@ -295,11 +279,6 @@ function AnalysisRows({ heading, v, items, onOpen, onPdf }: { heading: string; v
       </div>
       <p className="lasso-analysis19__disclaimer">{ANALYSIS_DISCLAIMER}</p>
       <div className="lasso-analysis19__actions">
-        {list.length ? (
-          <button type="button" className="lasso-analysis19__sources" aria-expanded={sources} onClick={() => setSources(!sources)}>
-            {sources ? "Skjul kilder" : `Vis kilder (${list.length})`}
-          </button>
-        ) : null}
         <span className="lasso-analysis19__feedback">
           {vote ? (
             "Tak for svaret"
@@ -317,13 +296,6 @@ function AnalysisRows({ heading, v, items, onOpen, onPdf }: { heading: string; v
           )}
         </span>
       </div>
-      {sources && list.length ? (
-        <ul className="lasso-analysis__sources">
-          {list.map((x) => (
-            <li key={x}>{x}</li>
-          ))}
-        </ul>
-      ) : null}
     </Section>
   );
 }
