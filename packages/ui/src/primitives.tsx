@@ -304,9 +304,12 @@ export function Sparkline({ values, tone = "neutral", bare = false }: { values: 
   if (values.length < 2) return <Missing />;
   const w = 72;
   const h = 22;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = max - min || 1;
+  // 13.9: y-aksen spænder mindst 20 % af tallenes størrelse, så en næsten flad serie (+0,8 %)
+  // tegnes flad og midt i feltet i stedet for som en zigzag fra top til bund.
+  const lo = Math.min(...values);
+  const hi = Math.max(...values);
+  const span = Math.max(hi - lo, 0.2 * Math.max(Math.abs(lo), Math.abs(hi))) || 1;
+  const min = (lo + hi) / 2 - span / 2;
   const pts = values.map((v, i) => [(i / (values.length - 1)) * (w - 4) + 2, h - 3 - ((v - min) / span) * (h - 6)] as const);
   const d = pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
   const last = pts[pts.length - 1]!;

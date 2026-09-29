@@ -28,6 +28,7 @@ export function LineChart({
   benchmarkError,
   industry,
   industryError,
+  companyName,
 }: {
   financials?: FinancialsVM;
   metric: Metric;
@@ -39,6 +40,8 @@ export function LineChart({
   /** Branchens median pr. år (13.6, indeks-visning). */
   industry?: IndustryBenchmarkVM;
   industryError?: string;
+  /** Virksomhedens navn i legenden og aflæsningen (13.6); uden står "Virksomheden". */
+  companyName?: string;
 }) {
   const [ref, W] = useWidth<HTMLDivElement>();
   const compact = isCompact(W);
@@ -141,7 +144,7 @@ export function LineChart({
     const prev = idx > 0 ? allPoints[idx - 1] : undefined;
     const rows: PickRow[] = [
       {
-        label: indexMode ? "Virksomheden" : METRIC_LABELS[shown],
+        label: indexMode || hasBenchmark ? (companyName ?? "Virksomheden") : METRIC_LABELS[shown],
         value: canIndex ? `${indexLabel(values[i]!)} (${unitLabel(p.value)})` : unitLabel(p.value),
         swatch: "s1",
         change: changeText(prev?.value, p.value),
@@ -169,9 +172,10 @@ export function LineChart({
       action={
         hasBenchmark ? (
           <div className="lasso-chart__legend lasso-chart__legend--right">
-            <span className="lasso-chart__legend-item">
+            {/* 13.6: legenden bruger linjemarkører (fuld koral og stiplet neutral) og virksomhedens navn. */}
+            <span className="lasso-chart__legend-item lasso-chart__legend-item--line">
               <span className="lasso-chart__swatch lasso-chart__swatch--s1" aria-hidden="true" />
-              Virksomheden
+              {companyName ?? "Virksomheden"}
             </span>
             <span className="lasso-chart__legend-item lasso-chart__legend-item--dashed">
               <span className="lasso-chart__swatch lasso-chart__swatch--s5" aria-hidden="true" />

@@ -11,7 +11,8 @@ export interface RankingRow {
 /**
  * Rangliste: vandrette søjler, virksomheden selv i koral blandt lignende
  * virksomheder på ét nøgletal (katalog 13, række 0). Første virksomhed i
- * listen er den, der fremhæves; resten (og en median) tegnes i neutral (chart-5).
+ * listen er den, der fremhæves; resten tegnes i neutral (chart-5). Navn i fast kolonne 170 px,
+ * bjælke 18 px med radius 3, tallet lige til højre for bjælken, plads-nummer som overlinje til venstre.
  */
 export function Ranking({ rows, metric, title }: { rows: RankingRow[]; metric: Metric; title?: string }) {
   const heading = title ?? `${METRIC_LABELS[metric]} blandt lignende`;
@@ -50,9 +51,6 @@ export function Ranking({ rows, metric, title }: { rows: RankingRow[]; metric: M
   const scale = kind === "amount" && !mixed ? amountScale(values, [...units][0] ?? "kr.") : null;
   const label = (v: number, unit?: string) => (kind === "percent" ? formatPercent(v, false) : scale ? formatScaled(v, scale) : mixed ? formatAmount(v, unit ?? "") : formatNumber(v));
   const maxAbs = Math.max(...values.map((v) => Math.abs(v)), 1);
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  const median = sorted.length % 2 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
   const subtitle = `${scale ? `${scale.label}, ` : ""}${mixed ? "forskellige valutaer, ikke direkte sammenlignelige, " : ""}top ${entries.length}`;
 
   return (
@@ -65,21 +63,14 @@ export function Ranking({ rows, metric, title }: { rows: RankingRow[]; metric: M
             <li className={`lasso-ranking__row ${isOrigin ? "lasso-ranking__row--origin" : ""}`} key={e.lassoId}>
               <span className="lasso-ranking__rank">{i + 1}</span>
               <span className="lasso-ranking__name">{e.name}</span>
-              <span className="lasso-ranking__track">
-                <span className={`lasso-ranking__fill ${isOrigin ? "lasso-ranking__fill--origin" : ""}`} style={{ width: `${pct}%` }} />
+              {/* 13.3: tallet står altid lige til højre for bjælken, aldrig inde i den eller i egen kolonne. */}
+              <span className="lasso-ranking__track" style={{ ["--lasso-rank-p" as string]: pct / 100 }}>
+                <span className={`lasso-ranking__fill ${isOrigin ? "lasso-ranking__fill--origin" : ""}`} />
+                <span className="lasso-ranking__value">{label(e.value, e.unit)}</span>
               </span>
-              <span className="lasso-ranking__value">{label(e.value, e.unit)}</span>
             </li>
           );
         })}
-        {mixed ? null : (
-          <li className="lasso-ranking__row lasso-ranking__row--median">
-            <span className="lasso-ranking__rank" aria-hidden="true" />
-            <span className="lasso-ranking__name">Median</span>
-            <span className="lasso-ranking__track" aria-hidden="true" />
-            <span className="lasso-ranking__value">{label(median)}</span>
-          </li>
-        )}
       </ol>
     </Section>
   );

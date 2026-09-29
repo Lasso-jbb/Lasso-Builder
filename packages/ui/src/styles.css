@@ -379,7 +379,7 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-status--liquidation { color: var(--lasso-status-liquidation); }
 .lasso-status--new { color: var(--lasso-status-new); }
 .lasso-trend { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; }
-.lasso-trend__pct { font-weight: 500; font-size: var(--lasso-fs-sm); }
+.lasso-trend__pct { font-weight: 500; font-size: var(--lasso-fs-sm); min-width: 56px; text-align: right; font-variant-numeric: tabular-nums; }
 .lasso-spark { width: 72px; height: 22px; }
 .lasso-spark path { fill: none; stroke: var(--lasso-text-3); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
 .lasso-spark circle { fill: var(--lasso-text-3); }
@@ -642,7 +642,8 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-myt__unit { flex: 1 1 220px; min-width: 160px; font-size: var(--lasso-fs-label); font-weight: 600; letter-spacing: var(--lasso-ls-label); color: var(--lasso-muted); }
 .lasso-myt__label { flex: 1 1 220px; min-width: 160px; font-size: var(--lasso-fs); font-weight: 500; color: var(--lasso-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lasso-myt__year { flex: none; width: 96px; text-align: right; font-size: var(--lasso-fs); color: var(--lasso-text-2); }
-.lasso-myt__year--head { font-size: 12px; font-weight: 600; color: var(--lasso-muted); }
+/* 10.2: hele tabelhovedet (år, Ændring, Tendens) er samme 11/600-overlinje som enheden. */
+.lasso-myt__year--head, .lasso-myt__head .lasso-myt__delta, .lasso-myt__head .lasso-myt__trend { font-size: var(--lasso-fs-label); font-weight: 600; letter-spacing: var(--lasso-ls-label); text-transform: uppercase; color: var(--lasso-muted); }
 .lasso-myt__year--last { font-weight: 600; color: var(--lasso-text); }
 .lasso-myt__delta { flex: none; width: 80px; text-align: right; font-size: var(--lasso-fs-sm); font-weight: 500; white-space: nowrap; }
 .lasso-myt__trend { flex: none; width: 96px; padding-left: 20px; }
@@ -716,7 +717,8 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-chart__swatch--s2 { background: var(--lasso-chart-2); }
 .lasso-chart__swatch--s3 { background: var(--lasso-chart-3); }
 .lasso-chart__swatch--s5 { background: var(--lasso-chart-5); }
-.lasso-chart__legend-item--dashed .lasso-chart__swatch { background: none; border-top: 2px dashed var(--lasso-chart-5); border-radius: 0; height: 0; }
+.lasso-chart__legend-item--dashed .lasso-chart__swatch { background: none; border-top: 2px dashed var(--lasso-chart-5); border-radius: 0; height: 0; width: 16px; }
+.lasso-chart__legend-item--line .lasso-chart__swatch { background: none; border-top: 2.5px solid var(--lasso-chart-1); border-radius: 0; height: 0; width: 16px; }
 
 /* Grupperede søjler (ACE-0): fast rækkefølge, serie 2 aldrig uden serie 1. */
 .lasso-chart__bar--s1 { fill: var(--lasso-chart-1); }
@@ -754,25 +756,22 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 
 /* Rangliste (BFK-0): navn i fast kolonne, bjælke, virksomheden selv i koral, andre i neutral (chart-5). */
 .lasso-ranking-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.lasso-ranking__row { display: grid; grid-template-columns: 20px 170px 1fr auto; align-items: center; gap: var(--lasso-space-3); min-height: 40px; padding: 6px 0; border-bottom: 1px solid var(--lasso-border); }
+.lasso-ranking__row { display: grid; grid-template-columns: 20px 170px 1fr; align-items: center; gap: var(--lasso-space-3); min-height: 40px; padding: 6px 0; border-bottom: 1px solid var(--lasso-border); }
 .lasso-ranking__row:last-child { border-bottom: 0; }
-.lasso-ranking__rank { font-size: var(--lasso-fs-sm); color: var(--lasso-muted); text-align: right; }
+/* 13.3: plads-nummer som overlinje (11/600) til venstre. */
+.lasso-ranking__rank { font-size: var(--lasso-fs-label); font-weight: 600; letter-spacing: var(--lasso-ls-label); color: var(--lasso-muted); text-align: right; }
 .lasso-ranking__name { font-size: var(--lasso-fs-sm); color: var(--lasso-text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lasso-ranking__row--origin .lasso-ranking__name { color: var(--lasso-text); font-weight: 600; }
-.lasso-ranking__track { position: relative; height: 18px; border-radius: 3px; background: var(--lasso-surface-muted); overflow: hidden; }
-.lasso-ranking__fill { position: absolute; inset: 0 auto 0 0; height: 100%; border-radius: 3px; background: var(--lasso-chart-5); }
+/* Bjælken (18 px, radius 3, ingen baggrundsbane) og tallet lige efter den; plads til tallet fratrækkes bjælkens længde. */
+.lasso-ranking__track { display: flex; align-items: center; gap: var(--lasso-space-2); min-width: 0; }
+.lasso-ranking__fill { flex: none; width: calc((100% - 80px) * var(--lasso-rank-p, 0)); min-width: 2px; height: 18px; border-radius: 3px; background: var(--lasso-chart-5); }
 .lasso-ranking__fill--origin { background: var(--lasso-chart-1); }
-.lasso-ranking__value { font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-text); white-space: nowrap; text-align: right; min-width: 64px; }
-.lasso-ranking__row--median { color: var(--lasso-muted); }
-.lasso-ranking__row--median .lasso-ranking__name { color: var(--lasso-muted); font-weight: 400; }
-.lasso-ranking__row--median .lasso-ranking__track { background: none; }
-.lasso-ranking__row--median .lasso-ranking__track::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 2px dashed var(--lasso-chart-axis); }
+.lasso-ranking__value { flex: none; font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-text); white-space: nowrap; }
 
 @container lasso (max-width: 560px) {
-  .lasso-ranking__row { grid-template-columns: 16px 1fr auto; grid-template-areas: "rank name value" "rank track track"; row-gap: 4px; }
+  .lasso-ranking__row { grid-template-columns: 16px 1fr; grid-template-areas: "rank name" "rank track"; row-gap: 4px; }
   .lasso-ranking__rank { grid-area: rank; }
   .lasso-ranking__name { grid-area: name; white-space: normal; }
-  .lasso-ranking__value { grid-area: value; }
   .lasso-ranking__track { grid-area: track; }
   .lasso-sharebar { grid-template-columns: 10px 1fr auto; grid-template-areas: "dot label label" "dot track pct"; row-gap: 4px; }
   .lasso-sharebar__label { grid-area: label; }
@@ -813,8 +812,10 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 
 /* ---------- Resumé (12, node A8H-0): foldet med hvid toning ---------- */
 .lasso-summary { position: relative; overflow: hidden; }
-.lasso-summary__body { margin: 0; font-size: 15px; line-height: 25px; color: var(--lasso-text-2); overflow-wrap: anywhere; }
-.lasso-summary--folded { max-height: 128px; }
+/* 12.2: brødtekst 15/25 i læsebredde (højst ca. 72 tegn pr. linje), afsnit med 12 px luft, foldet til 5 linjer. */
+.lasso-summary__body { margin: 0; max-width: 72ch; font-size: 15px; line-height: 25px; color: var(--lasso-text-2); overflow-wrap: anywhere; }
+.lasso-summary__body + .lasso-summary__body { margin-top: 12px; }
+.lasso-summary--folded { max-height: 125px; }
 .lasso-summary--folded::after {
   content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 64px;
   background: linear-gradient(180deg, transparent 0%, var(--lasso-surface) 90%);
@@ -850,6 +851,7 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-news__head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; color: var(--lasso-muted); }
 .lasso-news__mark { display: inline-flex; align-items: center; gap: 8px; color: var(--lasso-icon); }
 .lasso-news__mark img { border-radius: 3px; display: block; }
+.lasso-news__lasso { display: block; width: 16px; height: 16px; color: var(--lasso-text); }
 .lasso-news__source { font-size: 12px; font-weight: 600; color: var(--lasso-text); }
 .lasso-news__time { font-size: 12px; color: var(--lasso-muted); }
 .lasso-news__headline { font-size: 15px; line-height: 20px; font-weight: 600; color: var(--lasso-text); }
@@ -2832,7 +2834,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   /* 26b.7: sparklines beholdes, 60×20 i 44 px rækker */
   .lasso-spark { display: block; width: 60px; height: 20px; }
   .lasso-table--fold td.lasso-cell--trend .lasso-trend { min-height: var(--lasso-touch-h); }
-  .lasso-myt__trend { display: flex; align-items: center; width: 72px; padding-left: 12px; }
+  /* 26c.3: flerårstabellen (variant A) viser kun årene på mobil; ændring og tendens er skjult (10.2), så intet klippes. */
   .lasso-myt__row { min-height: var(--lasso-touch-h); }
   /* 26b.8: nøgletalsmålere i fuld bredde, branchemærke som ink-streg */
   .lasso-kfg__row { padding-bottom: var(--lasso-space-3); border-bottom: 1px solid var(--lasso-divider-subtle); }
@@ -3132,6 +3134,12 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 /* ---------- 26d.7 Kreditvurdering (mobil): zonebjælke, udvikling 24 måneder og seneste ændringer (node ET9-0) ---------- */
 .lasso-gauge__scale { position: relative; }
 .lasso-gauge__tick { position: absolute; transform: translateX(-50%); }
+/* 10.1: skalaen må aldrig skrive tal oven i hinanden. Er måleren smal (fx ¼ kolonne), står
+   "0, lav" og "100, høj" uden "risiko", så "80" og "100, høj" har plads. */
+.lasso-gauge { container: lasso-gauge / inline-size; }
+@container lasso-gauge (max-width: 440px) {
+  .lasso-gauge__long { display: none; }
+}
 .lasso-gauge-history { margin-top: var(--lasso-space-5); display: flex; flex-direction: column; gap: var(--lasso-space-2); }
 .lasso-gauge-history__head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--lasso-space-3); }
 .lasso-gauge-history__title, .lasso-gauge-changes__title { margin: 0; font-size: var(--lasso-fs); font-weight: 600; color: var(--lasso-text); }
@@ -3158,7 +3166,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-gauge-changes__delta--down { color: var(--lasso-positive); }
 .lasso-gauge-changes__delta--flat { color: var(--lasso-muted); }
 @container lasso (max-width: 560px) {
-  .lasso-gauge__number { font-size: 40px; line-height: 44px; }
+  /* 26b.9: scoremåleren som kort med 36 px tal. */
+  .lasso-gauge__number { font-size: 36px; line-height: 40px; }
   .lasso-gauge-changes__row { min-height: var(--lasso-touch-h); }
   .lasso-gauge__long { display: none; }
 }

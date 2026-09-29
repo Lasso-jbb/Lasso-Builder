@@ -9,7 +9,7 @@ const SERIES_CLASS = ["lasso-chart__bar--s1", "lasso-chart__bar--s2", "lasso-cha
 
 /**
  * Grupperede søjler: 2–3 nøgletal side om side pr. år (katalog 13.4, node ACE-0).
- * Maks 3 serier, søjler 30 px, 4 px imellem. Hover fremhæver hele året med 4 % ink og viser én mørk
+ * Maks 3 serier, søjler 30 px, 4 px imellem, 40 px mellem grupperne (de ældste år falder fra, når bredden ikke rækker). Hover fremhæver hele året med 4 % ink og viser én mørk
  * tooltip (ink, radius 8) med alle serier. Legenden står øverst til højre, aldrig under grafen.
  * Mobil (26b.2): maks 2 serier og 5 år, søjler op til 40 px, 3. serie i en tabel under grafen,
  * valgt år i et fast felt (tryk vælger).
@@ -42,7 +42,10 @@ export function GroupedBarChart({
     : [];
   const shownMetrics = compact ? effective.slice(0, 2) : effective;
   const extraMetrics = compact ? effective.slice(2) : [];
-  const points = compact ? allRows.slice(-5) : allRows;
+  // 13.4: søjler 30 px, 4 px imellem og 40 px mellem grupper. Er der ikke plads til alle år i den
+  // bredde, grafen har (fx ½ kolonne med 3 serier), falder de ældste år fra (mindst 3), før søjlerne krymper.
+  const desktopGroups = Math.max(3, Math.floor((Math.max(0, W - CHART_AXIS_W) + 40) / (effective.length * 30 + (effective.length - 1) * 4 + 40)));
+  const points = compact ? allRows.slice(-5) : allRows.slice(-desktopGroups);
   const pick = useChartPick(points.length, compact);
 
   if (!financials) {
@@ -81,7 +84,7 @@ export function GroupedBarChart({
   const innerGap = 4;
   const target = compact ? 40 : 30;
   // Katalog: 40 px mellem grupper; søjlerne krymper først, når der ikke er plads til det.
-  const room = compact ? groupSlot * 0.8 : Math.min(groupSlot - 40, groupSlot * 0.82);
+  const room = compact ? groupSlot * 0.8 : Math.min((plotW - (points.length - 1) * 40) / points.length, groupSlot * 0.82);
   const desired = n * target + (n - 1) * innerGap;
   const barW = desired <= room ? target : Math.max(6, (room - (n - 1) * innerGap) / n);
   const groupW = n * barW + (n - 1) * innerGap;

@@ -192,6 +192,8 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
         break;
       case "LassoLineChart":
         want(c.company, "financials");
+        // 13.6: med sammenligning står virksomhedens navn i legenden, så stamdata hentes også.
+        if (c.industry || c.benchmark) want(c.company, "company");
         if (c.industry) want(c.company, "industryBenchmark");
         else if (c.benchmark) want(c.benchmark, "company", "financials");
         break;
