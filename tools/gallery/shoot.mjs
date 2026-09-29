@@ -22,7 +22,7 @@ const sel = manifest.filter((m) => !filter || m.nr.startsWith(filter));
 const errors = [];
 const STAGE_PAD = 24; // luften om elementet i galleriet (lasso-frame--bare / render-rammen)
 
-/** Højden (px) af siden, hvis et fast placeret, synligt ark/scrim dækker viewporten; ellers 0. */
+/** Viewportens højde (px), hvis et fast placeret, synligt ark/scrim dækker viewporten; ellers 0. */
 async function openSheetHeight(p) {
   return p.evaluate(() => {
     const vw = window.innerWidth, vh = window.innerHeight;
@@ -30,7 +30,7 @@ async function openSheetHeight(p) {
       const cs = getComputedStyle(el);
       if (cs.display === "none" || cs.visibility === "hidden" || cs.position !== "fixed") continue;
       const r = el.getBoundingClientRect();
-      if (r.width >= vw * 0.9 && r.height >= vh * 0.6) return Math.ceil(document.documentElement.scrollHeight);
+      if (r.width >= vw * 0.9 && r.height >= vh * 0.6) return vh; // arket og scrimmen dækker præcis viewporten (26c.8: intet under)
     }
     return 0;
   });
@@ -62,8 +62,8 @@ async function shootOne(m) {
         // Mobil med åbent ark (handlingsark, bundark): arket og scrimmen er fast placeret i viewporten,
         // så et billede af #stage alene viser kun scrimmen (02b.2, 04.3) eller klipper arket (02a.4, 18.3).
         // Billedet tages af hele viewporten; derefter lukkes arket, og feltet/elementet tages lukket.
-        const h = Math.max(await openSheetHeight(p), 800);
-        await p.screenshot({ path: file, fullPage: true, animations: "disabled", clip: { x: 0, y: 0, width: w, height: h }, timeout: 20000 });
+        const h = await openSheetHeight(p);
+        await p.screenshot({ path: file, animations: "disabled", clip: { x: 0, y: 0, width: w, height: h }, timeout: 20000 });
         m.shots.push({ w, file, extra: false, variant: "med åbent ark" });
         await p.keyboard.press("Escape");
         await p.mouse.click(w - 2, 2);

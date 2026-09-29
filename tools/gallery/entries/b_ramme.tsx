@@ -893,6 +893,8 @@ export const entries: GalleryEntry[] = [
     title: "Modulbjælke",
     node: "JQO-0",
     desktopWidth: 1440,
+    // Kontrol r5: billedet beskæres til bjælkens egen bredde, så mobilbilledet får plads ved siden af på siden.
+    gridWidth: 1108,
     note: "Tegnet i Papers bredde (1106 px, midten af en 1440-side), så modulerne ud over pladsen samles bag \"Flere ▾\" (under 1200 px bliver handlingerne til ikonknapper).",
     render: () => (
       <div style={{ width: 1108, boxSizing: "border-box", border: "1px solid var(--lasso-border)", borderRadius: 10, overflow: "hidden" }}>
