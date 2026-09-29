@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { shareText, type BeneficialOwnershipVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
-import { DataState, Section, stateForError } from "../primitives.js";
+import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
 import { ShellIcon } from "./ShellIcons.js";
 
 /**
@@ -8,11 +9,14 @@ import { ShellIcon } from "./ShellIcons.js";
  * indirekte andel og kæden gennem mellemliggende selskaber. Navnet står alene
  * (ingen initial-cirkel), kæden i én grå linje, den beregnede andel til højre.
  * Tre særlige tilstande (28.9): ledelsen som reelle ejere (årsag + de indsatte personer med rolle),
- * fritaget (årsag + forbehold i muted) og kunne ikke identificeres (udråbstegn-ikon). "throughRole"
- * vises som ", via rolle" i muted efter navnet.
+ * fritaget (årsag + forbehold i muted) og kunne ikke identificeres (udråbstegn-ikon + "Indgår som
+ * observation i risikovurderingen"). De særlige tilstande står som kort (28.9) med kildelinje; på
+ * mobil har ledelsestilstanden linket "Hvorfor ledelsen?". "throughRole" vises som ", via rolle" i
+ * muted efter navnet.
  */
-export function LassoBeneficialOwners({ ownership, error, onOpen }: { ownership?: BeneficialOwnershipVM; error?: string; onOpen?: (a: ViewAction) => void }) {
+export function LassoBeneficialOwners({ ownership, error, onOpen, source = "CVR" }: { ownership?: BeneficialOwnershipVM; error?: string; onOpen?: (a: ViewAction) => void; /** Kildelinjen i de særlige tilstande (28.9). */ source?: string }) {
   const title = "Reelle ejere";
+  const [why, setWhy] = useState(false);
   if (!ownership) {
     return (
       <Section title={title} span="half">
@@ -33,42 +37,43 @@ export function LassoBeneficialOwners({ ownership, error, onOpen }: { ownership?
   if (special?.kind === "unidentified") {
     // 28.9 (3): en observation, derfor udråbstegn-ikonet; aldrig farvet boks.
     return (
-      <Section title={title} span="half">
-        <ul className="lasso-rows">
-          <li className="lasso-row lasso-row--bo-special">
-            <span className="lasso-bo__alert" aria-hidden="true">
-              <ShellIcon name="alert" size={16} />
-            </span>
-            <div className="lasso-row__main">
-              <div className="lasso-row__name lasso-row__name--regular">Virksomheden kunne ikke identificere sine reelle ejere</div>
-              <div className="lasso-row__sub">{special.reason}</div>
-            </div>
-          </li>
-        </ul>
+      <Section title={title} span="half" card className="lasso-bo">
+        <div className="lasso-bo__special">
+          <span className="lasso-bo__alert" role="img" aria-label="Observation">
+            <ShellIcon name="info" size={16} />
+          </span>
+          <div className="lasso-bo__body">
+            <p className="lasso-bo__reason">{special.reason}</p>
+            <p className="lasso-bo__caveat">Indgår som observation i risikovurderingen.</p>
+          </div>
+        </div>
+        <SourceLine source={source} />
       </Section>
     );
   }
   if (special?.kind === "exempt") {
     // 28.9 (2): fritaget, forbeholdet i muted.
     return (
-      <Section title={title} span="half">
+      <Section title={title} span="half" card className="lasso-bo">
         <div className="lasso-bo__note">
           <p className="lasso-bo__reason">{special.reason}</p>
           {special.caveat ? <p className="lasso-bo__caveat">{special.caveat}</p> : null}
         </div>
+        <SourceLine source={source} />
       </Section>
     );
   }
+  const mgmt = special?.kind === "management";
   return (
-    <Section title={title} span="half">
-      {special?.kind === "management" ? <p className="lasso-bo__reason lasso-bo__reason--lead">{special.reason}</p> : null}
+    <Section title={title} span="half" card={mgmt} className={mgmt ? "lasso-bo lasso-bo--mgmt" : undefined}>
+      {mgmt ? <p className="lasso-bo__reason lasso-bo__reason--lead">{special!.reason}</p> : null}
       <ul className="lasso-rows">
         {owners.map((o, i) => {
           const click = open(o.lassoId, o.name);
           return (
             <li key={`${o.name}-${i}`} className="lasso-row lasso-row--owner">
               <div className="lasso-row__main">
-                <div className="lasso-row__name lasso-row__name--regular">
+                <div className={`lasso-row__name${mgmt ? "" : " lasso-row__name--regular"}`}>
                   {click ? <button type="button" className="lasso-link" onClick={click}>{o.name}</button> : o.name}
                   {o.throughRole ? <span className="lasso-bo__via">, via rolle</span> : null}
                 </div>
@@ -89,6 +94,15 @@ export function LassoBeneficialOwners({ ownership, error, onOpen }: { ownership?
           </li>
         ))}
       </ul>
+      {mgmt ? (
+        <>
+          <button type="button" className="lasso-link lasso-bo__why" aria-expanded={why} onClick={() => setWhy(!why)}>
+            Hvorfor ledelsen?
+          </button>
+          {why ? <p className="lasso-bo__caveat lasso-bo__whytext">Når ingen ejer mere end 25 % af kapitalen eller stemmerne, skal virksomheden registrere ledelsen som reelle ejere.</p> : null}
+          <SourceLine source={source} />
+        </>
+      ) : null}
     </Section>
   );
 }

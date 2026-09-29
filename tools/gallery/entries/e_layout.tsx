@@ -31,6 +31,7 @@ import {
   DataState,
   EntityUpdates,
   FilterSheet,
+  LassoBeneficialOwners,
   LassoView,
   LiveNumber,
   Menu,
@@ -1122,7 +1123,6 @@ function Enumerations() {
   );
 }
 
-const BO_STATES = ["CVR-1-99000002", "CVR-1-99000003", "CVR-1-99000004"];
 
 const datatypes: GalleryEntry[] = [
   {
@@ -1199,38 +1199,44 @@ const datatypes: GalleryEntry[] = [
     nr: "28.9",
     title: "Reelle ejere: fritagelse, ledelsen som reelle ejere, kunne ikke identificeres",
     node: "HHS-0",
-    note: "Tre tilstande: ledelsen som reelle ejere (årsag + indsatte personer), fritaget (forbehold i muted) og kunne ikke identificeres (udråbstegn). Fjerde: almindelig liste med \"via rolle\".",
-    spec: {
-      kind: "custom",
-      title: "Reelle ejere",
-      components: [...BO_STATES, C].map((company) => ({ type: "LassoBeneficialOwners", company, width: "full" })),
-    },
-    mutate: (ds) => {
-      ds.beneficialOwnership[BO_STATES[0]!] = {
-        lassoId: BO_STATES[0]!,
-        special: { kind: "management", fallback: "management", reason: "Virksomheden har ikke reelle ejere, og ledelsen er indsat som reelle ejere." },
-        owners: [
-          { name: "Anne Eksempel", lassoId: "CVR-3-4000000001", role: "Direktør" },
-          { name: "Bo Eksempel", lassoId: "CVR-3-4000000002", role: "Direktør" },
-        ],
-      };
-      ds.beneficialOwnership[BO_STATES[1]!] = {
-        lassoId: BO_STATES[1]!,
-        owners: [],
-        special: {
-          kind: "exempt",
-          reason: "Virksomheden er undtaget kravet om at registrere reelle ejere.",
-          caveat: "Undtagelsen er vurderet ud fra virksomhedsform, branche og øvrige forhold i CVR og kan i særlige tilfælde være forkert.",
-        },
-      };
-      ds.beneficialOwnership[BO_STATES[2]!] = {
-        lassoId: BO_STATES[2]!,
-        owners: [],
-        special: { kind: "unidentified", reason: "Virksomheden har registreret i CVR, at den ikke kan identificere sine reelle ejere." },
-      };
-      const base = ds.beneficialOwnership[C];
-      if (base) ds.beneficialOwnership[C] = { ...base, owners: [...base.owners, { name: "Carla Prøve", lassoId: "CVR-3-4000000003", throughRole: true }] };
-    },
+    note: "Tre kort side om side som i Paper (ét pr. særlig tilstand); den almindelige liste med 'via rolle' står i 11.",
+    render: () => (
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, alignItems: "start" }}>
+        <div>
+        <LassoBeneficialOwners
+          source="CVR, Fokus Eksempel A/S, eksempeldata"
+          ownership={{
+            lassoId: "CVR-1-1",
+            special: { kind: "management", fallback: "management", reason: "Ingen reelle ejere er registreret. Ledelsen er indsat som reelle ejere, fordi ingen ejer over 25 % af kapital eller stemmer." },
+            owners: [
+              { name: "Anne Eksempel", lassoId: "CVR-3-4000000001", role: "Adm. direktør" },
+              { name: "Peter Eksempel", lassoId: "CVR-3-4000000002", role: "Direktør" },
+            ],
+          }}
+        />
+        </div>
+        <div>
+        <LassoBeneficialOwners
+          source="CVR, Fritaget Eksempel A/S, eksempeldata"
+          ownership={{
+            lassoId: "CVR-1-2",
+            owners: [],
+            special: {
+              kind: "exempt",
+              reason: "Selskabet er fritaget for at registrere reelle ejere, fordi det er børsnoteret på et reguleret marked.",
+              caveat: "Fritagelsen er registreret i CVR; Lasso kontrollerer ikke grundlaget.",
+            },
+          }}
+        />
+        </div>
+        <div>
+        <LassoBeneficialOwners
+          source="CVR, Ukendt Eksempel ApS, eksempeldata"
+          ownership={{ lassoId: "CVR-1-3", owners: [], special: { kind: "unidentified", reason: "Selskabet har oplyst, at det ikke kan identificere sine reelle ejere, og at ledelsen derfor er registreret." } }}
+        />
+        </div>
+      </div>
+    ),
   },
 ];
 

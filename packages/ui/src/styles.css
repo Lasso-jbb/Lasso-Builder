@@ -3888,7 +3888,16 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 /* 28.9 Reelle ejere: særlige tilstande. Ren tekst og tynde linjer, aldrig farvet boks. */
 .lasso-bo__reason { margin: 0; font-size: var(--lasso-fs); line-height: 20px; color: var(--lasso-text); }
 .lasso-bo__reason--lead { padding-bottom: var(--lasso-space-3); }
-.lasso-bo__note { display: flex; flex-direction: column; gap: var(--lasso-space-1); padding: var(--lasso-space-3) 0; border-top: 1px solid var(--lasso-border); border-bottom: 1px solid var(--lasso-border); }
+.lasso-bo__note { display: flex; flex-direction: column; gap: var(--lasso-space-1); padding: 0; }
+.lasso-bo__special { display: flex; align-items: flex-start; gap: var(--lasso-space-3); }
+.lasso-bo__body { display: flex; flex-direction: column; gap: var(--lasso-space-1); min-width: 0; }
+.lasso-bo--mgmt .lasso-rows { border-top: 0; }
+.lasso-bo--mgmt .lasso-row { min-height: 40px; padding: 6px 0; }
+.lasso-bo--mgmt .lasso-row:last-child { border-bottom: 0; }
+.lasso-bo--mgmt .lasso-row__name { font-weight: 600; }
+.lasso-root .lasso-bo__why { display: none; align-self: flex-start; font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-accent-text); }
+.lasso-bo__whytext { margin-top: 4px; }
+@container lasso (max-width: 560px) { .lasso-root .lasso-bo__why { display: inline; } }
 .lasso-bo__caveat { margin: 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-muted); }
 .lasso-bo__via { color: var(--lasso-muted); font-weight: 400; }
 .lasso-bo__role { color: var(--lasso-muted); font-weight: 400; }
