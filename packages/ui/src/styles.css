@@ -3725,3 +3725,67 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-tl-filters__list { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   .lasso-tl-filters__item { flex: none; }
 }
+
+/* ---------- 15.1–15.4 / 26c.7 (fix2 G4): værktøjslinje med kriterie-chips, sortering, rækkemenu, tilstande ---------- */
+/* Aktive kriterier som koral-soft chips med ×, "+ Kriterie" som koral link, primær "Gem som liste" yderst til højre. */
+.lasso-ctable__chips { display: flex; align-items: center; gap: var(--lasso-space-2); min-width: 0; flex-wrap: nowrap; overflow: hidden; padding: 0; }
+.lasso-cchip { display: inline-flex; align-items: center; gap: 6px; height: var(--lasso-tag-h); padding: 0 8px 0 10px; border-radius: var(--lasso-radius); background: var(--lasso-accent-soft); color: var(--lasso-accent-text); font-size: var(--lasso-fs-sm); font-weight: 500; white-space: nowrap; flex: none; }
+.lasso-cchip__remove { display: grid; place-items: center; width: 18px; height: 18px; padding: 0; border: 1px solid transparent; border-radius: 4px; background: transparent; color: inherit; cursor: pointer; }
+.lasso-cchip__remove:hover { background: var(--lasso-accent-border); }
+.lasso-cchip__remove:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
+.lasso-root .lasso-ctable__addcrit { flex: none; font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-accent-text); white-space: nowrap; padding: 0 4px; }
+.lasso-root .lasso-ctable__savelist { color: var(--lasso-on-accent); font-weight: 600; }
+/* Sorteret kolonne: hovedet i ink 600 med chevron, tallene 600 (15.1). */
+.lasso-table th.is-sorted, .lasso-table th.is-sorted button { font-weight: 700; }
+.lasso-table th button .lasso-sortchev { margin-left: 4px; vertical-align: -1px; }
+/* Status "Aktiv" som ren tekst 13/400 i tekstfarve; konkurs og "Ikke oplyst" beholder deres tone. */
+.lasso-ctable__table .lasso-status--active { font-size: var(--lasso-fs-sm); font-weight: 400; color: var(--lasso-text-2); }
+/* "…"-menu yderst til højre i hver række. */
+.lasso-table th.lasso-cell--menu, .lasso-table td.lasso-cell--menu { width: 44px; padding-left: 0; padding-right: 8px; text-align: right; }
+.lasso-root .lasso-rowmenu { width: 28px; min-width: 28px; height: 28px; padding: 0; border-color: transparent; background: transparent; color: var(--lasso-icon); }
+.lasso-root .lasso-rowmenu:hover { color: var(--lasso-text); background: var(--lasso-surface-muted); }
+/* Paginering: "Viser 1–25 af 1.243   25 pr. side ⌄". */
+.lasso-pager__info { display: inline-flex; align-items: center; gap: var(--lasso-space-4); flex-wrap: wrap; }
+.lasso-pager__size { position: relative; display: inline-flex; align-items: center; gap: 4px; color: var(--lasso-text-2); }
+.lasso-pager__select { appearance: none; border: 0; background: transparent; padding: 0 16px 0 0; font: inherit; font-size: var(--lasso-fs-sm); color: var(--lasso-text-2); cursor: pointer; }
+.lasso-pager__size svg { position: absolute; right: 0; pointer-events: none; color: var(--lasso-icon); }
+.lasso-pager__select:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: 2px; }
+/* 15.2 handlingsbjælke: koralt afkrydsningsikon, ikoner i knapperne, destruktiv som rød tekst i outline-knap. */
+.lasso-bulkbar__check { flex: none; color: var(--lasso-accent); }
+.lasso-bulkbar .lasso-tbtn svg { color: var(--lasso-text-2); }
+.lasso-bulkbar .lasso-bulkbar__danger { border-color: var(--lasso-border-strong); }
+/* 15.4 tilstande: ikon + titel 16/600 + forklaring + handling; hentende med ring og tekst; fejl med primær "Prøv igen" og fejl-id. */
+.lasso-tstate__icon { color: var(--lasso-icon); }
+.lasso-tstate__icon--warn { color: var(--lasso-danger); }
+.lasso-tstate__box .lasso-tstate__title { font-size: 16px; line-height: 22px; }
+.lasso-tstate__box .lasso-tstate__retry { margin-top: 4px; }
+.lasso-tstate__errid { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+.lasso-root .lasso-tstate__copy { font-size: 12px; color: var(--lasso-accent-text); }
+.lasso-tstate__loading { display: flex; align-items: center; justify-content: center; gap: var(--lasso-space-2); padding: var(--lasso-space-4); font-size: var(--lasso-fs-sm); color: var(--lasso-muted); }
+.lasso-ccards-state { display: none; }
+@container lasso (max-width: 560px) {
+  /* 26c.7: søgefelt + "Filter" med koral tæller, chips under og "Sortér: Navn". */
+  .lasso-ctable__chips--mobile { flex-wrap: wrap; overflow: visible; padding: 0 0 var(--lasso-space-3); }
+  .lasso-ctable__sortnote { font-size: var(--lasso-fs-sm); color: var(--lasso-text-2); white-space: nowrap; }
+  .lasso-root .lasso-ctable .lasso-ctable__filter { width: auto; padding: 0 12px; gap: 6px; }
+  .lasso-ctable__filtercount { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--lasso-accent); color: var(--lasso-on-accent); font-size: 11px; line-height: 1; font-weight: 600; }
+  .lasso-ccards-state { display: block; }
+  .lasso-ccards-state__skel { height: 112px; width: 100%; border-radius: var(--lasso-radius-lg); }
+  .lasso-ccards-state .lasso-tstate__box { border: 1px dashed var(--lasso-border-strong); border-radius: var(--lasso-radius-lg); padding: var(--lasso-space-5) var(--lasso-space-4); }
+  .lasso-ccards-state [role="alert"].lasso-tstate__box { border-style: solid; }
+  .lasso-ccards-state .lasso-tstate__box .lasso-btn { width: 100%; height: var(--lasso-touch-h); }
+  .lasso-ccard { padding: 14px 16px; }
+  .lasso-ccard__name { font-size: 16px; line-height: 22px; font-weight: 600; }
+  .lasso-ccard__status { font-size: var(--lasso-fs-sm); line-height: 22px; }
+  .lasso-ccard__status.lasso-status--active { font-weight: 400; color: var(--lasso-muted); }
+  .lasso-ccard__figs { grid-template-columns: 1.15fr 1.15fr 0.85fr 0.7fr; }
+  .lasso-ccard__figs > div:last-child { text-align: right; }
+  .lasso-ctable .lasso-pager__range { display: none; }
+  .lasso-ccard__figs dt { font-size: 12px; line-height: 16px; }
+  .lasso-ccard__figs dd { font-size: var(--lasso-fs); line-height: 20px; }
+  /* 15.2 på mobil: bjælken ombrydes, så intet klippes. */
+  .lasso-bulkbar { flex-wrap: wrap; row-gap: var(--lasso-space-2); }
+  .lasso-bulkbar__count { flex: 1 1 0; white-space: normal; }
+  .lasso-bulkbar__close { order: 2; }
+  .lasso-bulkbar__actions { order: 3; flex-basis: 100%; flex-wrap: wrap; overflow: visible; }
+}

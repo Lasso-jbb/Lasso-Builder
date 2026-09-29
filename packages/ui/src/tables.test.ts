@@ -32,8 +32,11 @@ test("Virksomhedstabel (15.1): værktøjslinje, afkrydsning, 25 rækker og pagin
     createElement(CompanyTable, { result, columns: ["navn", "status", "ansatte"], onAction: noop, canDrillDown: true, canExport: true, criteria: [{ field: "region", operator: "eq", value: "Region Midtjylland" }], onApplyCriteria: noop }),
   );
   assert.match(html, /role="toolbar"/);
-  assert.match(html, /Søg i resultatet/);
-  assert.match(html, /Filtre \(1\)/);
+  assert.match(html, /Søg i 1\.243 virksomheder/);
+  // 15.1: aktive kriterier som koral-soft chips med ×, "+ Kriterie" som link
+  assert.match(html, /lasso-cchip">Region: Region Midtjylland<button[^>]*aria-label="Fjern Region/);
+  assert.match(html, /lasso-ctable__addcrit[^>]*>\+ Kriterie</);
+  assert.match(html, /lasso-rowmenu/);
   assert.match(html, /Kolonner/);
   assert.match(html, /Eksportér/);
   assert.equal((html.match(/<tr[^>]*data-clickable/g) ?? []).length, 25);
@@ -48,8 +51,11 @@ test("Virksomhedstabel (15.1): værktøjslinje, afkrydsning, 25 rækker og pagin
   // Mobilkort: navn, CVR og by, tre nøgletal og score
   assert.match(html, /lasso-ccard__sub">CVR 10000000, Aarhus C/);
   assert.match(html, /<dt>Score<\/dt><dd>42<\/dd>/);
-  // Aktive filtre som fjernbare chips (mobil)
-  assert.match(html, /aria-label="Fjern Region/);
+  // Sortering fra spec'en: aktiv kolonne med chevron
+  const sorted = renderToStaticMarkup(createElement(CompanyTable, { result, columns: ["navn", "bruttofortjeneste"], initialSort: { field: "bruttofortjeneste", direction: "desc" }, onAction: noop, canDrillDown: false, onSaveList: noop }));
+  assert.match(sorted, /class="lasso-num is-sorted"[^>]*aria-sort="descending"[^]*lasso-sortchev/);
+  assert.match(sorted, /lasso-btn--primary[^"]*lasso-ctable__savelist">Gem som liste</);
+  assert.match(sorted, /25 pr\. side/);
 });
 
 test("Tilstande står inde i tabelrammen, og hovedet bliver stående", () => {
@@ -60,10 +66,10 @@ test("Tilstande står inde i tabelrammen, og hovedet bliver stående", () => {
     assert.doesNotMatch(html, /lasso-pager/);
   }
   const err = renderToStaticMarkup(createElement(CompanyTable, { error: "Lasso svarer ikke", onAction: noop, canDrillDown: false, onRetry: noop }));
-  assert.match(err, /Data kunne ikke hentes/);
+  assert.match(err, /Listen kunne ikke hentes[^]*lasso-btn--primary[^>]*>Prøv igen/);
   assert.match(err, /Prøv igen/);
   const empty = renderToStaticMarkup(createElement(CompanyTable, { result: { key: "k", rows: [] }, onAction: noop, canDrillDown: false }));
-  assert.match(empty, /Ingen virksomheder matcher kriterierne/);
+  assert.match(empty, /lasso-tstate__title">Ingen virksomheder matcher</);
 });
 
 test("Massehandlinger (15.2): antal, vælg alle, handlinger og luk", () => {
@@ -88,7 +94,7 @@ test("Paginering: første, sidste og siderne omkring den aktive", () => {
 test("Hjælpere: statustone, mobilkortets tal og CSV", () => {
   assert.equal(statusTone("Under likvidation", "warning"), "liquidation");
   assert.equal(statusTone("Aktiv", "active"), "active");
-  assert.deepEqual(cardFigures(["navn", "omsaetning", "udvikling"]), ["omsaetning", "bruttofortjeneste", "resultat"]);
+  assert.deepEqual(cardFigures(["navn", "omsaetning", "udvikling"]), ["bruttofortjeneste", "resultat", "omsaetning"]);
   const csv = rowsToCsv(rows.slice(0, 1), ["navn", "cvr", "udvikling"]);
   assert.equal(csv.split("\r\n")[0], "﻿Lasso-ID;Navn;CVR");
 });

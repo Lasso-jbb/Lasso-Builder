@@ -2,19 +2,22 @@ import type { ReactNode } from "react";
 import { ownershipGraphKey, type Dataset, type OwnershipGraphVM } from "@lasso/spec";
 import {
   BandIcon,
+  BellIcon,
   BulkBar,
+  CompanyTable,
+  DownloadIcon,
   CreditConfirmDialog,
   MonitorBell,
   MonitorSettings,
   NotificationPanel,
   OwnershipDiagram,
+  PlusIcon,
   ScoreCompare,
   RiskUnavailable,
   Section,
   SeverityScale,
-  TableStateRows,
+  type BulkAction,
   type NotificationVM,
-  type TableState,
 } from "@lasso/ui";
 import type { GalleryEntry } from "../types.js";
 
@@ -38,7 +41,7 @@ function Label({ children }: { children: ReactNode }) {
 
 function Stack({ items }: { items: [string, ReactNode][] }) {
   return (
-    <div style={{ display: "grid", gap: 24 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 24 }}>
       {items.map(([label, node]) => (
         <div key={label}>
           <Label>{label}</Label>
@@ -126,29 +129,13 @@ const FULL_GRAPH: OwnershipGraphVM = {
   ],
 };
 
-/* 15.4: tabeltilstande inde i tabelrammen, hovedet bliver stående. */
-function StateTable({ state }: { state: TableState }) {
-  return (
-    <div className="lasso-table-frame">
-      <div className="lasso-table-wrap">
-        <table className="lasso-table">
-          <thead>
-            <tr>
-              <th>Navn</th>
-              <th>By</th>
-              <th>Branche</th>
-              <th style={{ textAlign: "right" }}>Ansatte</th>
-              <th style={{ textAlign: "right" }}>Bruttofortjeneste</th>
-            </tr>
-          </thead>
-          <tbody>
-            <TableStateRows state={state} colSpan={5} />
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
+/* 15.2: handlingerne som i Paper, med ikoner. */
+const bulkActions = (): BulkAction[] => [
+  { id: "list", label: "Føj til liste", icon: <PlusIcon />, onSelect: noop },
+  { id: "monitor", label: "Overvåg", icon: <BellIcon />, onSelect: noop },
+  { id: "export", label: "Eksportér", icon: <DownloadIcon />, onSelect: noop },
+  { id: "remove", label: "Fjern fra liste", onSelect: noop, destructive: true },
+];
 
 const NOW = new Date("2026-09-29T10:00:00+02:00");
 const NOTIFICATIONS: NotificationVM[] = [
@@ -211,7 +198,11 @@ export const entries: GalleryEntry[] = [
     nr: "15.1",
     title: "Virksomhedstabel",
     node: "B4A-0",
-    spec: { title: "Virksomheder", components: [{ type: "LassoCompanyTable", source: "search", search: { query: "", criteria: [], sort: { field: "bruttofortjeneste", direction: "desc" } }, columns: ["navn", "by", "branche", "status", "ansatte", "bruttofortjeneste", "udvikling"] }] },
+    spec: {
+      title: "Virksomheder",
+      criteria: [{ field: "ansatte", operator: "gte", value: 10 }],
+      components: [{ type: "LassoCompanyTable", source: "search", search: { query: "", criteria: [{ field: "ansatte", operator: "gte", value: 10 }], sort: { field: "bruttofortjeneste", direction: "desc" } }, columns: ["navn", "by", "branche", "status", "ansatte", "bruttofortjeneste", "udvikling"] }],
+    },
   },
   {
     nr: "15.2",
@@ -229,12 +220,7 @@ export const entries: GalleryEntry[] = [
                 allSelected={false}
                 onSelectAll={noop}
                 onClear={noop}
-                actions={[
-                  { id: "list", label: "Tilføj til liste", onSelect: noop },
-                  { id: "monitor", label: "Overvåg", onSelect: noop },
-                  { id: "export", label: "Eksportér", onSelect: noop },
-                  { id: "remove", label: "Fjern", onSelect: noop, destructive: true },
-                ]}
+                actions={bulkActions()}
               />
             </div>,
           ],
@@ -247,12 +233,7 @@ export const entries: GalleryEntry[] = [
                 allSelected
                 onSelectAll={noop}
                 onClear={noop}
-                actions={[
-                  { id: "list", label: "Tilføj til liste", onSelect: noop },
-                  { id: "monitor", label: "Overvåg", onSelect: noop },
-                  { id: "export", label: "Eksportér", onSelect: noop },
-                  { id: "remove", label: "Fjern", onSelect: noop, destructive: true },
-                ]}
+                actions={bulkActions()}
               />
             </div>,
           ],
@@ -273,9 +254,9 @@ export const entries: GalleryEntry[] = [
     render: () => (
       <Stack
         items={[
-          ["Tom", <StateTable key="e" state={{ kind: "empty", reason: "Ingen virksomheder matcher kriterierne. Fjern et kriterie for at få flere resultater." }} />],
-          ["Hentende", <StateTable key="l" state={{ kind: "loading", rows: 3 }} />],
-          ["Fejlende", <StateTable key="f" state={{ kind: "error", reason: "Lasso svarede ikke. Prøv igen om lidt.", onRetry: noop }} />],
+          ["Tom", <CompanyTable key="e" result={{ key: "tom", total: 0, rows: [] }} criteria={[{ field: "region", operator: "eq", value: "Hovedstaden" }, { field: "ansatte", operator: "gte", value: 10 }]} onApplyCriteria={noop} onAction={noop} canDrillDown={false} />],
+          ["Hentende", <CompanyTable key="l" loadingTotal={1243} onAction={noop} canDrillDown={false} />],
+          ["Fejlende", <CompanyTable key="f" error="Lasso svarede ikke inden for 15 sekunder." errorId="4F2A" onRetry={noop} onAction={noop} canDrillDown={false} />],
         ]}
       />
     ),

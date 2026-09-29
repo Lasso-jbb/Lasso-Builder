@@ -107,6 +107,8 @@ export interface FrameTools {
   monitor?: { id: string; monitoring: boolean; busy: boolean; toggle: () => void };
   exportItems: MenuItem[];
   more: MenuItem[];
+  /** 15.1 "Gem som liste": åbner gem-dialogen, når værten kan gemme visninger. */
+  saveList?: () => void;
 }
 
 /**
@@ -276,6 +278,8 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           canPrompt={Boolean(props.host.prompt)}
           canSavePage={Boolean(props.host.savePage)}
           onRetry={props.host.refresh ? () => act({ kind: "refresh" }) : undefined}
+          initialSort={c.search.sort}
+          onSaveList={frame.saveList}
         />
       );
     }
@@ -914,6 +918,7 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
             : []),
         ]
       : [],
+    saveList: host.save ? () => setSaving(true) : undefined,
     more: headActions
       ? [
           ...(shareUrl ? [{ id: "link", label: "Kopiér link", icon: <ShellIcon name="copy" size={16} />, onSelect: () => void copy(shareUrl) }] : []),

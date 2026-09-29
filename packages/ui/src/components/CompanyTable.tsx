@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import {
   currencyUnit,
+  FIELD_BY_KEY,
+  formatCriterion,
+  formatCriterionValue,
   DEFAULT_TABLE_COLUMNS,
   formatAmount,
   formatNumber,
@@ -15,10 +18,12 @@ import {
 } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { Section, Sparkline, stateForError, statusTone } from "../primitives.js";
+import { useWidth } from "../useWidth.js";
 import { rowsToCsv } from "../csv.js";
-import { CriteriaChips, FilterSheet } from "./FilterSheet.js";
+import { FilterSheet } from "./FilterSheet.js";
 import { Menu } from "./Menu.js";
-import { BulkBar, CheckMark, Checkbox, ColumnsIcon, DownloadIcon, FilterButton, Pagination, TableSearch, TableStateRows, TableToolbar, slugFile, type BulkAction, type TableState } from "./TableKit.js";
+import { BulkBar, CheckMark, Checkbox, ColumnsIcon, DownloadIcon, FilterIcon, Pagination, PlusIcon, TableLoadingLine, TableSearch, TableStateBox, TableStateRows, TableToolbar, slugFile, type BulkAction, type TableState } from "./TableKit.js";
+import { XIcon } from "./FilterSheet.js";
 
 const NUMERIC: ReadonlySet<TableColumn> = new Set(["ansatte", "omsaetning", "bruttofortjeneste", "resultat", "udvikling"]);
 const SORTABLE: ReadonlySet<TableColumn> = new Set(["navn", "by", "region", "branche", "ansatte", "omsaetning", "bruttofortjeneste", "resultat"]);
@@ -83,7 +88,38 @@ export function cardFigures(cols: readonly TableColumn[]): TableColumn[] {
   const fill: TableColumn[] = ["bruttofortjeneste", "resultat", "ansatte", "omsaetning"];
   const out = [...numeric];
   for (const f of fill) if (out.length < 3 && !out.includes(f)) out.push(f);
-  return out.slice(0, 3);
+  // 26c.7: fast rækkefølge Bruttofortj., Resultat, Ansatte (omsætning sidst), så kortene ligner hinanden.
+  const rank = (c: TableColumn) => (fill.indexOf(c) === -1 ? 99 : fill.indexOf(c));
+  return out.slice(0, 3).sort((a, b) => rank(a) - rank(b));
+}
+
+const OP_SYMBOL: Partial<Record<Criterion["operator"], string>> = { gte: "≥", lte: "≤", gt: ">", lt: "<" };
+
+/** Kort chip-tekst (15.1, 26c.7): "Ansatte ≥ 10", "Region: Hovedstaden"; ellers som filterpanelet. */
+export function criterionChip(c: Criterion): string {
+  const field = FIELD_BY_KEY.get(c.field);
+  const sym = OP_SYMBOL[c.operator];
+  if (sym && !Array.isArray(c.value) && field?.type !== "date") return `${field?.label ?? c.field} ${sym} ${formatCriterionValue(field, c.value)}`;
+  return formatCriterion(c);
+}
+
+/** Sorteringspilen i hovedet (15.1): chevron ned ved faldende, op ved stigende. */
+function SortChevron({ dir }: { dir: 1 | -1 }) {
+  return (
+    <svg className="lasso-sortchev" width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d={dir === -1 ? "M6 9l6 6 6-6" : "M6 15l6-6 6 6"} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function DotsIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <circle cx="5.5" cy="12" r="1.6" />
+      <circle cx="12" cy="12" r="1.6" />
+      <circle cx="18.5" cy="12" r="1.6" />
+    </svg>
+  );
 }
 
 const SHORT_LABEL: Partial<Record<TableColumn, string>> = { bruttofortjeneste: "Bruttofortj.", omsaetning: "Omsætning" };
@@ -117,6 +153,14 @@ export interface CompanyTableProps {
   /** Fejl: "Prøv igen" (host.refresh). */
   onRetry?: () => void;
   pageSize?: number;
+  /** Søgningens sortering fra spec'en: vises som aktiv kolonne i hovedet (15.1). "relevans" = ingen. */
+  initialSort?: { field: string; direction: "asc" | "desc" };
+  /** Primær "Gem som liste" i værktøjslinjen (15.1), når værten kan gemme. */
+  onSaveList?: () => void;
+  /** 15.4 hentende: det forventede antal i "Henter 1.243 virksomheder …". */
+  loadingTotal?: number;
+  /** 15.4 fejl: "Fejl-id 4F2A, kopiér". */
+  errorId?: string;
 }
 
 /**
@@ -139,11 +183,20 @@ export function CompanyTable({
   canPrompt = false,
   canSavePage = false,
   onRetry,
-  pageSize = PAGE_SIZE,
+  pageSize: initialPageSize = PAGE_SIZE,
+  initialSort,
+  onSaveList,
+  loadingTotal,
+  errorId,
 }: CompanyTableProps) {
   const initialCols = columns?.length ? columns : DEFAULT_TABLE_COLUMNS;
   const [cols, setCols] = useState<readonly TableColumn[]>(initialCols);
-  const [sort, setSort] = useState<{ col: TableColumn; dir: 1 | -1 } | null>(null);
+  const [sort, setSort] = useState<{ col: TableColumn; dir: 1 | -1 } | null>(() =>
+    initialSort && SORTABLE.has(initialSort.field as TableColumn) ? { col: initialSort.field as TableColumn, dir: initialSort.direction === "asc" ? 1 : -1 } : null,
+  );
+  const [pageSize, setPageSize] = useState(initialPageSize);
+  const [frameRef, frameWidth] = useWidth<HTMLDivElement>(1200);
+  const mobile = frameWidth <= 560;
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
@@ -208,7 +261,7 @@ export function CompanyTable({
   const showCvrUnderName = !cols.includes("cvr");
   // 15.1: uden statuskolonne står en status, der ikke er "Aktiv", som ren tekst i navnets anden linje.
   const statusUnderName = !cols.includes("status");
-  const colSpan = cols.length + (selectable ? 1 : 0);
+  const colSpan = cols.length + (selectable ? 1 : 0) + 1;
 
   const bulkActions: BulkAction[] = [];
   if (canPrompt) {
@@ -224,16 +277,17 @@ export function CompanyTable({
   if (canSavePage) {
     bulkActions.push({
       id: "save",
-      label: "Gem",
+      label: "Føj til liste",
+      icon: <PlusIcon />,
       disabled: selCount > 50,
       reason: "Højst 50 ad gangen",
       onSelect: () => selectedRows.slice(0, 50).forEach((r) => onAction({ kind: "save-page", lassoId: r.lassoId, pageKind: "company", name: r.name })),
     });
   }
-  if (canExport) bulkActions.push({ id: "export", label: "Eksportér", onSelect: () => exportRows(selectedRows) });
+  if (canExport) bulkActions.push({ id: "export", label: "Eksportér", icon: <DownloadIcon />, onSelect: () => exportRows(selectedRows) });
   bulkActions.push({
     id: "remove",
-    label: "Fjern fra visningen",
+    label: "Fjern fra liste",
     destructive: true,
     onSelect: () => {
       setHidden(new Set([...hidden, ...selectedRows.map((r) => r.lassoId)]));
@@ -245,16 +299,17 @@ export function CompanyTable({
     ? error
       ? stateForError(error) === "noaccess"
         ? { kind: "empty", reason: error }
-        : { kind: "error", reason: error, onRetry }
-      : { kind: "loading", rows: 5 }
+        : { kind: "error", title: "Listen kunne ikke hentes", reason: error, onRetry, errorId }
+      : { kind: "loading", rows: 5, label: `Henter ${loadingTotal ? `${formatNumber(loadingTotal)} ` : ""}virksomheder …` }
     : result.rows.length === 0
       ? {
           kind: "empty",
-          reason: "Ingen virksomheder matcher kriterierne. Prøv at fjerne et kriterium eller søge bredere.",
+          title: "Ingen virksomheder matcher",
+          reason: "Prøv at fjerne et kriterie eller søge bredere.",
           action:
             onApplyCriteria && criteria.length ? (
               <button type="button" className="lasso-btn" onClick={() => onApplyCriteria([])}>
-                Ryd filtre
+                Ryd kriterier
               </button>
             ) : undefined,
         }
@@ -277,6 +332,23 @@ export function CompanyTable({
           }
         : null;
 
+  const removeCriterion = onApplyCriteria ? (i: number) => onApplyCriteria(criteria.filter((_, j) => j !== i)) : undefined;
+  const chips = criteria.length ? (
+    <div className={`lasso-ctable__chips${mobile ? " lasso-ctable__chips--mobile" : ""}`} aria-label="Aktive kriterier">
+      {criteria.map((c, i) => (
+        <span key={i} className="lasso-cchip">
+          {criterionChip(c)}
+          {removeCriterion ? (
+            <button type="button" className="lasso-cchip__remove" aria-label={`Fjern ${criterionChip(c)}`} onClick={() => removeCriterion(i)}>
+              <XIcon />
+            </button>
+          ) : null}
+        </span>
+      ))}
+      {mobile && sort ? <span className="lasso-ctable__sortnote">{`Sortér: ${sort.col === "navn" ? "Navn" : TABLE_COLUMN_LABELS[sort.col]}`}</span> : null}
+    </div>
+  ) : null;
+
   const toolbar =
     selCount > 0 ? (
       <BulkBar count={selCount} total={total} allSelected={allSelected} onSelectAll={() => setAllSelected(true)} actions={bulkActions} onClear={clearSelection} />
@@ -286,13 +358,30 @@ export function CompanyTable({
           <>
             <TableSearch
               value={query}
-              placeholder="Søg i resultatet"
+              placeholder={mobile || !result || total === 0 ? "Søg i listen" : `Søg i ${formatNumber(total)} virksomheder`}
               onChange={(v) => {
                 setQuery(v);
                 setPage(1);
               }}
             />
-            {onApplyCriteria ? <FilterButton count={criteria.length} onClick={() => setFiltersOpen(true)} /> : null}
+            {mobile ? (
+              onApplyCriteria ? (
+                <button type="button" className="lasso-btn lasso-tbtn lasso-ctable__filter" onClick={() => setFiltersOpen(true)} aria-haspopup="dialog">
+                  <FilterIcon />
+                  <span>Filter</span>
+                  {criteria.length ? <span className="lasso-ctable__filtercount" aria-label={`${criteria.length} aktive`}>{criteria.length}</span> : null}
+                </button>
+              ) : null
+            ) : (
+              <>
+                {chips}
+                {onApplyCriteria ? (
+                  <button type="button" className="lasso-link lasso-ctable__addcrit" onClick={() => setFiltersOpen(true)} aria-haspopup="dialog">
+                    + Kriterie
+                  </button>
+                ) : null}
+              </>
+            )}
           </>
         }
         right={
@@ -317,10 +406,15 @@ export function CompanyTable({
                 onSelect: () => toggleCol(c),
               }))}
             />
-            {canExport ? (
+            {canExport && !mobile ? (
               <button type="button" className="lasso-btn lasso-tbtn" onClick={() => exportRows(rows)} disabled={!result || rows.length === 0}>
                 <DownloadIcon />
                 <span className="lasso-tbtn__label">Eksportér</span>
+              </button>
+            ) : null}
+            {onSaveList && !mobile ? (
+              <button type="button" className="lasso-btn lasso-btn--primary lasso-tbtn lasso-ctable__savelist" onClick={onSaveList}>
+                Gem som liste
               </button>
             ) : null}
           </>
@@ -332,9 +426,9 @@ export function CompanyTable({
 
   return (
     <Section title={title} action={countText ? <span className="lasso-ctable__count">{countText}</span> : undefined} span="full" className="lasso-ctable">
-      <div className="lasso-table-frame lasso-ctable__frame">
+      <div className="lasso-table-frame lasso-ctable__frame" ref={frameRef}>
         {toolbar}
-        {criteria.length ? <CriteriaChips className="lasso-ctable__chips" criteria={criteria} onApply={onApplyCriteria} /> : null}
+        {mobile ? chips : null}
         <div className="lasso-table-wrap">
           <table className={`lasso-table lasso-ctable__table ${cols.length >= 7 ? "lasso-ctable__table--dense" : ""}`}>
             <thead>
@@ -349,13 +443,16 @@ export function CompanyTable({
                     {SORTABLE.has(c) ? (
                       <button type="button" onClick={() => toggleSort(c)}>
                         {c === "navn" ? "Virksomhed" : TABLE_COLUMN_LABELS[c]}
-                        {sort?.col === c ? <span aria-hidden="true">{sort.dir === 1 ? "↑" : "↓"}</span> : null}
+                        {sort?.col === c ? <SortChevron dir={sort.dir} /> : null}
                       </button>
                     ) : (
                       TABLE_COLUMN_LABELS[c]
                     )}
                   </th>
                 ))}
+                <th scope="col" className="lasso-cell--menu">
+                  <span className="lasso-sr">Handlinger</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -411,6 +508,20 @@ export function CompanyTable({
                           )}
                         </td>
                       ))}
+                      <td className="lasso-cell--menu" onClick={(e) => e.stopPropagation()}>
+                        <Menu
+                          trigger={<DotsIcon />}
+                          triggerClassName="lasso-iconbtn lasso-rowmenu"
+                          triggerLabel={`Handlinger for ${r.name}`}
+                          align="end"
+                          label={r.name}
+                          items={[
+                            ...(canDrillDown ? [{ id: "open", label: "Åbn virksomhed", onSelect: () => onAction({ kind: "open-company", lassoId: r.lassoId, name: r.name }) }] : []),
+                            ...(canSavePage ? [{ id: "save", label: "Føj til liste", onSelect: () => onAction({ kind: "save-page", lassoId: r.lassoId, pageKind: "company", name: r.name }) }] : []),
+                            { id: "remove", label: "Fjern fra liste", destructive: true, onSelect: () => setHidden(new Set([...hidden, r.lassoId])) },
+                          ]}
+                        />
+                      </td>
                     </tr>
                   );
                 })
@@ -419,7 +530,22 @@ export function CompanyTable({
           </table>
         </div>
         {/* Mobil (26c): kortliste. Navn + status, CVR og by, tynd linje, tre nøgletal og score. */}
-        {state ? null : (
+        {state ? (
+          <div className="lasso-ccards-state">
+            {state.kind === "loading" ? (
+              <>
+                <div className="lasso-skeleton-group" aria-busy="true" aria-label="Henter data">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="lasso-skeleton lasso-ccards-state__skel" />
+                  ))}
+                </div>
+                {state.label ? <TableLoadingLine label={state.label} /> : null}
+              </>
+            ) : (
+              <TableStateBox state={state} />
+            )}
+          </div>
+        ) : (
           <ul className="lasso-ccards" aria-label={title ?? "Virksomheder"}>
             {pageRows.map((r) => (
               <CompanyCard
@@ -427,13 +553,28 @@ export function CompanyTable({
                 r={r}
                 figures={cardFigures(cols)}
                 selected={allSelected || selected.has(r.lassoId)}
-                onSelect={(v) => toggleRow(r.lassoId, v)}
                 onOpen={canDrillDown ? () => onAction({ kind: "open-company", lassoId: r.lassoId, name: r.name }) : undefined}
               />
             ))}
           </ul>
         )}
-        {result && !state ? <Pagination page={current} pageSize={pageSize} count={rows.length} total={total} onPage={setPage} /> : null}
+        {result && !state ? (
+          <Pagination
+            page={current}
+            pageSize={pageSize}
+            count={rows.length}
+            total={total}
+            onPage={setPage}
+            onPageSize={
+              mobile
+                ? undefined
+                : (n) => {
+                    setPageSize(n);
+                    setPage(1);
+                  }
+            }
+          />
+        ) : null}
       </div>
       {onApplyCriteria ? <FilterSheet open={filtersOpen} criteria={criteria} onApply={onApplyCriteria} onClose={() => setFiltersOpen(false)} /> : null}
     </Section>
@@ -444,16 +585,20 @@ function figureValue(r: CompanyRowVM, c: TableColumn) {
   const v = sortValue(r, c);
   if (v == null) return <span className="lasso-notreported">—</span>;
   if (c === "ansatte") return formatNumber(v as number);
-  return <span className={typeof v === "number" && v < 0 ? "lasso-down" : undefined}>{formatAmount(v as number, currencyUnit(r.currency))}</span>;
+  // 26c.7: kortene viser beløb uden "kr." ("18,8 mio.", "−201 t."), så fire tal står på én linje.
+  const unit = currencyUnit(r.currency);
+  return <span className={typeof v === "number" && v < 0 ? "lasso-down" : undefined}>{formatAmount(v as number, unit === "kr." ? "" : unit)}</span>;
 }
 
-function CompanyCard({ r, figures, selected, onSelect, onOpen }: { r: CompanyRowVM; figures: readonly TableColumn[]; selected: boolean; onSelect: (on: boolean) => void; onOpen?: () => void }) {
+/**
+ * Mobilkort (26c.7): navn 16/600 og status som ren tekst til højre ("Aktiv" muted, "Under konkurs"
+ * rød, "Ny" koral), "CVR …, by" muted, tynd linje og fire nøgletal som etiket over værdi. Ingen
+ * afkrydsning på kortet (markering sker i tabellen på større flader).
+ */
+function CompanyCard({ r, figures, selected, onOpen }: { r: CompanyRowVM; figures: readonly TableColumn[]; selected: boolean; onOpen?: () => void }) {
   return (
     <li className={`lasso-ccard ${selected ? "is-selected" : ""} ${r.statusKind === "inactive" ? "is-ended" : ""}`} data-clickable={Boolean(onOpen)} onClick={onOpen}>
       <div className="lasso-ccard__top">
-        <span className="lasso-ccard__check" onClick={(e) => e.stopPropagation()}>
-          <Checkbox checked={selected} onChange={onSelect} label={`Markér ${r.name}`} />
-        </span>
         <div className="lasso-ccard__id">
           <span className="lasso-ccard__name">{r.name}</span>
           <span className="lasso-ccard__sub">{[r.cvr ? `CVR ${r.cvr}` : null, r.city].filter(Boolean).join(", ") || "Ikke oplyst"}</span>
