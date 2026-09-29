@@ -3380,7 +3380,10 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-snapshot__field { display: flex; align-items: center; gap: var(--lasso-space-2); height: var(--lasso-field-h); padding: 0 var(--lasso-space-3); border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius); background: var(--lasso-surface); }
 .lasso-snapshot__field:focus-within { border-color: var(--lasso-focus-border); }
 .lasso-snapshot__icon { color: var(--lasso-icon); flex: none; }
-.lasso-snapshot__input { flex: 1 1 0; min-width: 0; border: 0; background: transparent; font: inherit; font-size: var(--lasso-fs); color: var(--lasso-text); outline: none; }
+.lasso-snapshot__pick { position: relative; flex: 1 1 0; min-width: 0; align-self: stretch; display: flex; align-items: center; gap: var(--lasso-space-2); cursor: pointer; }
+.lasso-snapshot__value { flex: 1 1 0; min-width: 0; font-size: var(--lasso-fs); color: var(--lasso-text); font-variant-numeric: tabular-nums; }
+/* Det native datofelt ligger usynligt over hele feltet, så teksten altid står i dansk format. */
+.lasso-snapshot__input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; opacity: 0; cursor: pointer; font: inherit; }
 .lasso-snapshot__today { flex: none; color: var(--lasso-accent-text); font-size: var(--lasso-fs-sm); font-weight: 500; }
 .lasso-snapshot__today:disabled { color: var(--lasso-disabled); cursor: default; text-decoration: none; }
 .lasso-snapshot__note { display: flex; gap: var(--lasso-space-2); align-items: flex-start; margin: 0; font-size: 12px; line-height: 16px; color: var(--lasso-text-3); }
