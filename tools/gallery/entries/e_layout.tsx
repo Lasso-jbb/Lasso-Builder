@@ -2,6 +2,7 @@
 // øvrige datatyper (28), fanebjælker (29) og layout (30).
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import {
+  formatAmount,
   FOCUSES,
   FOCUS_LABELS,
   PERSON_FOCUSES,
