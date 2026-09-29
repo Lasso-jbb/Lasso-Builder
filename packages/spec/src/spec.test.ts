@@ -85,8 +85,8 @@ test("companyTemplate er ét cockpit i guidens rækkefølge og respekterer secti
     "LassoOwnerList",
     "LassoFollowUps",
   ]);
-  // Graf og stamdata står side om side, ledelse og ejere ligeså.
-  assert.deepEqual(full.components.map((c) => widthOf(c, full.layout)), ["full", "full", "half", "half", "half", "half", "full"]);
+  // Graf og stamdata står side om side; ledelse og ejere har standardbredden ⅓ og pakkes i bånd (23.1).
+  assert.deepEqual(full.components.map((c) => widthOf(c, full.layout)), ["full", "full", "half", "half", "third", "third", "full"]);
   const small = companyTemplate("CVR-1-12345678", { sections: ["graf", "noegletal"] });
   assert.deepEqual(small.components.map((c) => c.type), ["LassoCompanyHead", "LassoKeyFigureCards", "LassoBarChart"]);
   // Uden stamdata står grafen ikke alene i en halv række.
@@ -98,7 +98,7 @@ test("width er valgfri på alle komponenter, og stack giver altid fuld bredde", 
   assert.equal(spec.layout, "dashboard");
   assert.deepEqual(spec.components.map((c) => widthOf(c, spec.layout)), ["quarter", "three-quarters"]);
   assert.deepEqual(spec.components.map((c) => widthOf(c, "stack")), ["full", "full"]);
-  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoRelations", company: "CVR-1-1", width: "third" }] }));
+  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoRelations", company: "CVR-1-1", width: "sixth" }] }));
 });
 
 test("group (30, mønster 8/9) er valgfri, og pattern skal være cards eller accordion", () => {
@@ -115,7 +115,7 @@ test("group (30, mønster 8/9) er valgfri, og pattern skal være cards eller acc
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoNews", company: "CVR-1-1", group: { id: "", pattern: "cards" } }] }));
 });
 
-test("LassoContact og LassoContactPersons parses med standardbredde half", () => {
+test("LassoContact og LassoContactPersons parses med standardbredde ⅓ (23.2)", () => {
   const spec = parseViewSpec({
     title: "Kontakt",
     components: [
@@ -124,7 +124,7 @@ test("LassoContact og LassoContactPersons parses med standardbredde half", () =>
     ],
   });
   assert.deepEqual(spec.components.map((c) => c.type), ["LassoContact", "LassoContactPersons"]);
-  assert.deepEqual(spec.components.map((c) => widthOf(c, spec.layout)), ["half", "half"]);
+  assert.deepEqual(spec.components.map((c) => widthOf(c, spec.layout)), ["third", "third"]);
 });
 
 test("listTemplate lægger kriterier i rammen og tabellen", () => {
@@ -262,7 +262,7 @@ test("parseViewSpec accepterer katalog 19 (LassoIncomeStatement, LassoBalanceShe
   assert.deepEqual(income, { type: "LassoIncomeStatement", company: "CVR-1-12345678", years: 2 });
   assert.deepEqual(balance, { type: "LassoBalanceSheet", company: "CVR-1-12345678", years: 3 });
   assert.deepEqual(cashFlow, { type: "LassoCashFlow", company: "CVR-1-12345678", years: 2, title: "Pengestrøm" });
-  assert.deepEqual(spec.components.map((c) => widthOf(c, spec.layout)), ["full", "full", "full"]);
+  assert.deepEqual(spec.components.map((c) => widthOf(c, spec.layout)), ["half", "half", "half"]); // 19.2: kompakt i ½–¾; fuld bredde = LassoFinancialStatements
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoIncomeStatement", company: "CVR-1-1", years: 4 }] }));
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoBalanceSheet", company: "CVR-1-1", years: 1 }] }));
 });
