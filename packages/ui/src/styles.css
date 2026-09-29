@@ -4657,3 +4657,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-pick--line .lasso-pick__item { display: inline-flex; min-width: 0; flex: 0 1 auto; }
 .lasso-pick--line .lasso-pick__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .lasso-pick--line .lasso-pick__value, .lasso-pick--line .lasso-pick__sep, .lasso-pick--line .lasso-pick__change { flex: none; }
+
+/* 22.1: tilføj-slotten har en tydelig stiplet kant i hele kolonnens højde, og rækkelinjerne fortsætter igennem. */
+.lasso-table.lasso-compare .lasso-compare__slot { border-left: 1px dashed var(--lasso-faint); }
+.lasso-table.lasso-compare tbody td.lasso-compare__slot { border-bottom-color: var(--lasso-border); }
+.lasso-table.lasso-compare tbody tr:last-child td.lasso-compare__slot { border-bottom-color: transparent; }
