@@ -5259,7 +5259,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-ccard__check { flex: none; display: inline-flex; padding-top: 2px; }
 .lasso-ccard__check .lasso-check { width: 18px; height: 18px; }
 .lasso-root .lasso-ccard.is-selected { border-color: var(--lasso-border); background: var(--lasso-surface); }
-.lasso-root .lasso-mbulk { position: fixed; left: 0; right: 0; bottom: calc(var(--lasso-mbulk-offset, 0px) + env(safe-area-inset-bottom, 0px)); z-index: 20; display: flex; align-items: center; gap: 8px; min-height: 64px; padding: 8px 8px 8px 16px; border-top: 1px solid var(--lasso-border); background: var(--lasso-surface); box-shadow: 0 -6px 18px rgb(16 18 24 / 0.08); }
+.lasso-root .lasso-mbulk { position: fixed; left: 0; right: 0; bottom: calc(var(--lasso-mbulk-offset, 0px) + env(safe-area-inset-bottom, 0px)); z-index: 20; display: flex; align-items: center; gap: 8px; min-height: 56px; padding: 0 8px 0 16px; border-top: 1px solid var(--lasso-text); background: var(--lasso-surface); }
 .lasso-root:has(.lasso-bottomnav) .lasso-mbulk { --lasso-mbulk-offset: 56px; }
 .lasso-mbulk__count { flex: 1 1 auto; min-width: 0; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; line-height: 18px; font-weight: 600; color: var(--lasso-text); white-space: nowrap; }
 .lasso-mbulk__actions { flex: none; display: flex; align-items: stretch; gap: 2px; }
@@ -5269,5 +5269,6 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-root .lasso-mbulk__btn:disabled { opacity: 0.5; cursor: default; }
 .lasso-root .lasso-mbulk__btn:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: -1px; }
 .lasso-mbulk__btn svg { color: var(--lasso-text-2); }
-.lasso-root .lasso-mbulk__close { flex: none; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius); background: var(--lasso-surface); color: var(--lasso-text-2); cursor: pointer; }
+.lasso-root .lasso-mbulk__close { flex: none; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid transparent; border-radius: var(--lasso-radius); background: none; color: var(--lasso-text-2); cursor: pointer; }
+.lasso-root .lasso-mbulk__close:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
 .lasso-ccards:has(~ .lasso-mbulk) { padding-bottom: 72px; }

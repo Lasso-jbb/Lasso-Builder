@@ -122,6 +122,8 @@ export interface BulkAction {
   icon?: ReactNode;
   /** 15.2 mobil: kort ord under ikonet i bundbjælken, fx "Til liste" for "Føj til liste". */
   short?: string;
+  /** 15.2 mobil: ikon i "Flere"-arket for en handling uden ikon i bjælken (fx Sammenlign). */
+  sheetIcon?: ReactNode;
 }
 
 export function PlusIcon() {
@@ -252,7 +254,7 @@ export function MobileBulkBar({
   const shownNames = names.slice(0, 3).join(", ");
   const subtitle = names.length > 3 ? `${shownNames} og ${names.length - 3} flere` : shownNames || undefined;
   const moreItems = [
-    ...rest.map((a) => ({ id: a.id, label: a.label, icon: a.icon, disabled: a.disabled, onSelect: a.onSelect })),
+    ...rest.map((a) => ({ id: a.id, label: a.label, icon: a.icon ?? a.sheetIcon, disabled: a.disabled, onSelect: a.onSelect })),
     ...(canAll ? [{ id: "select-all", label: `Vælg alle ${formatNumber(total)} ${noun}`, icon: <Icon name="check" size={16} />, onSelect: onSelectAll }] : []),
     ...danger.map((a) => ({ id: a.id, label: a.label, icon: a.icon ?? <Icon name="trash" size={16} />, destructive: true, disabled: a.disabled, onSelect: a.onSelect })),
   ];

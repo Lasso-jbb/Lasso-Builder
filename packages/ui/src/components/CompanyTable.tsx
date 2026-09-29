@@ -24,6 +24,7 @@ import { FilterSheet } from "./FilterSheet.js";
 import { Menu } from "./Menu.js";
 import { BulkBar, CheckMark, Checkbox, MobileBulkBar, ColumnsIcon, DownloadIcon, FilterIcon, Pagination, PlusIcon, TableSearch, TableStateBox, TableStateRows, TableToolbar, slugFile, type BulkAction, type TableState } from "./TableKit.js";
 import { XIcon } from "./FilterSheet.js";
+import { Icon } from "./Icon.js";
 
 const NUMERIC: ReadonlySet<TableColumn> = new Set(["ansatte", "omsaetning", "bruttofortjeneste", "resultat", "udvikling", "score"]);
 const SORTABLE: ReadonlySet<TableColumn> = new Set(["navn", "by", "region", "branche", "ansatte", "omsaetning", "bruttofortjeneste", "resultat", "score"]);
@@ -278,6 +279,7 @@ export function CompanyTable({
     bulkActions.push({
       id: "compare",
       label: "Sammenlign",
+      sheetIcon: <Icon name="chart" size={16} />,
       disabled: !ok,
       reason: "Markér 2–6 virksomheder for at sammenligne",
       onSelect: () => onAction({ kind: "prompt", prompt: `Sammenlign ${selectedRows.map((r) => `${r.name} (${r.lassoId})`).join(", ")} på nøgletal.` }),
