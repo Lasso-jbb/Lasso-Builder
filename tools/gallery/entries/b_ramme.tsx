@@ -40,6 +40,7 @@ import {
   SourceLine,
   StatusBadge,
   TabStrip,
+  TopBar,
   TagInput,
   ToastItem,
   Tooltip,
@@ -146,8 +147,14 @@ const MODULE_ACTIONS = [
   { id: "monitor", label: "Overvåg", tone: "accent" as const, icon: <Icon name="rss" size={15} /> },
 ];
 
+/** 06.3: fanebjælken på desktop; på mobil (26a.1) topbjælken med burger, titel + undertitel, klokke og "…". */
 function Strip() {
-  return <TabStrip tabs={STRIP_TABS} onSelect={noop} onClose={noop} onAdd={noop} unread={3} onBell={noop} onFeedback={noop} onAccount={noop} />;
+  return (
+    <TopBar
+      tabs={{ tabs: STRIP_TABS, onSelect: noop, onClose: noop, onAdd: noop, unread: 3, onBell: noop, onFeedback: noop, onAccount: noop }}
+      mobile={{ title: "Eksempel Byg A/S", subtitle: "Overblik", sections: MODULES, activeSection: "overblik", onBell: noop, moreItems: [{ id: "export", label: "Eksportér" }, { id: "save", label: "Gem" }] }}
+    />
+  );
 }
 
 function Modules() {
@@ -921,6 +928,7 @@ export const entries: GalleryEntry[] = [
           defaultOpen
           width={240}
           highlight="rename"
+          context={{ title: "Store IT-selskaber", subtitle: "Gemt liste, 1.243 virksomheder" }}
           items={[
             { id: "rename", label: "Omdøb", icon: <Icon name="edit" /> },
             { id: "export", label: "Eksportér", icon: <Icon name="export" /> },

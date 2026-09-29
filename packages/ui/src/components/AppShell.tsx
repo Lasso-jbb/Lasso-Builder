@@ -121,7 +121,6 @@ export function AppShell({ rail, tabs, mobile, tablet, children, panel, panelLab
   const activeTab = tabs.tabs.find((t) => t.active);
   const title = mobile?.title ?? activeTab?.label ?? "Lasso";
   const nav: readonly MobileNavItem[] = mobile?.nav ?? DEFAULT_NAV.map((n) => ({ id: n.id, label: n.label, icon: <ShellIcon name={n.icon} size={20} /> }));
-  const actions = (mobile?.actions ?? []).slice(0, 2);
   const hasSections = !!mobile?.sections?.length;
   const activeNav = nav.find((n) => n.active)?.id;
   const tabletNav: readonly MobileNavItem[] = tablet?.nav ?? DEFAULT_TABLET_NAV.map((n) => ({ id: n.id, label: n.label, icon: <ShellIcon name={n.icon} size={20} />, active: n.id === activeNav, onSelect: nav.find((m) => m.id === n.id)?.onSelect }));
@@ -159,42 +158,7 @@ export function AppShell({ rail, tabs, mobile, tablet, children, panel, panelLab
         ))}
       </nav>
 
-      <header className="lasso-mobilebar">
-        {hasSections ? (
-          <button type="button" className="lasso-mobilebar__btn" aria-label="Sektioner" aria-expanded={sheetOpen} aria-controls="lasso-sheet-sections" onClick={() => setSheet(!sheetOpen)}>
-            <ShellIcon name="menu" size={20} />
-          </button>
-        ) : (
-          <span className="lasso-mobilebar__btn lasso-mobilebar__btn--empty" aria-hidden="true" />
-        )}
-        <div className="lasso-mobilebar__titles">
-          <div className="lasso-mobilebar__title">{title}</div>
-          {mobile?.subtitle ? <div className="lasso-mobilebar__subtitle">{mobile.subtitle}</div> : null}
-        </div>
-        <div className="lasso-mobilebar__tools">
-          {mobile?.onBell ? <MonitorBell unread={mobile.unread ?? 0} important={mobile.important} onClick={mobile.onBell} /> : null}
-          {actions.map((a) => (
-            <button key={a.id} type="button" className="lasso-mobilebar__btn" aria-label={a.label} title={a.label} onClick={a.onSelect}>
-              {a.icon}
-            </button>
-          ))}
-          {mobile?.moreItems?.length ? (
-            <Menu
-              trigger={<ShellIcon name="more" size={20} />}
-              triggerClassName="lasso-mobilebar__btn"
-              triggerLabel="Flere handlinger"
-              label="Flere handlinger"
-              align="end"
-              items={mobile.moreItems}
-              context={{ title, subtitle: mobile.subtitle }}
-            />
-          ) : mobile?.onMore ? (
-            <button type="button" className="lasso-mobilebar__btn" aria-label="Flere handlinger" onClick={mobile.onMore}>
-              <ShellIcon name="more" size={20} />
-            </button>
-          ) : null}
-        </div>
-      </header>
+      <MobileBar mobile={mobile} title={title} hasSections={hasSections} sheetOpen={sheetOpen} onToggleSheet={setSheet} />
 
       {panel ? (
         <div className="lasso-page lasso-page--panel">
@@ -253,6 +217,68 @@ export function AppShell({ rail, tabs, mobile, tablet, children, panel, panelLab
           </button>
         ))}
       </nav>
+    </div>
+  );
+}
+
+
+/**
+ * Mobilens topbjælke (26a.1, 52 px): burger (når siden har sektioner), titel 14/600 + undertitel 11,
+ * klokke og "…". AppShell tegner den under 768 px; står også alene i `TopBar`.
+ */
+export function MobileBar({ mobile, title, hasSections, sheetOpen = false, onToggleSheet }: { mobile?: AppShellMobile; title: string; hasSections?: boolean; sheetOpen?: boolean; onToggleSheet?: (open: boolean) => void }) {
+  const actions = (mobile?.actions ?? []).slice(0, 2);
+  const setSheet = (open: boolean) => onToggleSheet?.(open);
+  return (
+    <header className="lasso-mobilebar">
+      {hasSections ? (
+        <button type="button" className="lasso-mobilebar__btn" aria-label="Sektioner" aria-expanded={sheetOpen} aria-controls="lasso-sheet-sections" onClick={() => setSheet(!sheetOpen)}>
+          <ShellIcon name="menu" size={20} />
+        </button>
+      ) : (
+        <span className="lasso-mobilebar__btn lasso-mobilebar__btn--empty" aria-hidden="true" />
+      )}
+      <div className="lasso-mobilebar__titles">
+        <div className="lasso-mobilebar__title">{title}</div>
+        {mobile?.subtitle ? <div className="lasso-mobilebar__subtitle">{mobile.subtitle}</div> : null}
+      </div>
+      <div className="lasso-mobilebar__tools">
+        {mobile?.onBell ? <MonitorBell unread={mobile.unread ?? 0} important={mobile.important} onClick={mobile.onBell} /> : null}
+        {actions.map((a) => (
+          <button key={a.id} type="button" className="lasso-mobilebar__btn" aria-label={a.label} title={a.label} onClick={a.onSelect}>
+            {a.icon}
+          </button>
+        ))}
+        {mobile?.moreItems?.length ? (
+          <Menu
+            trigger={<ShellIcon name="more" size={20} />}
+            triggerClassName="lasso-mobilebar__btn"
+            triggerLabel="Flere handlinger"
+            label="Flere handlinger"
+            align="end"
+            items={mobile.moreItems}
+            context={{ title, subtitle: mobile.subtitle }}
+          />
+        ) : mobile?.onMore ? (
+          <button type="button" className="lasso-mobilebar__btn" aria-label="Flere handlinger" onClick={mobile.onMore}>
+            <ShellIcon name="more" size={20} />
+          </button>
+        ) : null}
+      </div>
+    </header>
+  );
+}
+
+/**
+ * Sidens topbjælke uden resten af skabelonen (06.3): fanebjælken på desktop og mobilens topbjælke
+ * (26a.1) under 768 px, med samme brudpunkt som AppShell.
+ */
+export function TopBar({ tabs, mobile }: { tabs: TabStripProps; mobile?: AppShellMobile }) {
+  const title = mobile?.title ?? tabs.tabs.find((t) => t.active)?.label ?? "Lasso";
+  return (
+    <div className="lasso-topbar">
+      <TabStrip {...tabs} />
+      <MobileBar mobile={mobile} title={title} hasSections={!!mobile?.sections?.length} />
     </div>
   );
 }

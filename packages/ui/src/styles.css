@@ -2058,11 +2058,13 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
   .lasso-menu__context-title { font-size: var(--lasso-fs); font-weight: 600; color: var(--lasso-text); }
   .lasso-menu__context-sub { font-size: var(--lasso-fs-sm); color: var(--lasso-muted); }
   .lasso-menu__list { background: var(--lasso-surface); border-radius: var(--lasso-radius-xl); overflow: hidden; }
-  .lasso-menu__context + .lasso-menu__list { border-radius: 0 0 var(--lasso-radius-xl) var(--lasso-radius-xl); }
+  .lasso-menu__context + .lasso-menu__list { margin-top: -10px; border-radius: 0 0 var(--lasso-radius-xl) var(--lasso-radius-xl); } /* 26a.10: konteksten hænger sammen med listen i ét kort */
   .lasso-menu__group + .lasso-menu__group { margin: 0; padding: 0; border-top: 0; }
   .lasso-menu__heading { padding: 12px 16px 4px; }
   .lasso-menu__item { min-height: 52px; padding: 0 16px; border-radius: 0; border: 0; border-bottom: 1px solid var(--lasso-border); }
   .lasso-menu__group:last-child .lasso-menu__item:last-child { border-bottom: 0; }
+  /* 07.3/26a.10: handlingsarket har ingen hover; forhåndsvisningens fremhævning (highlight) vises ikke på mobil */
+  .lasso-menu__list .lasso-menu__item.is-hi:not(:focus-visible) { background: transparent; }
   .lasso-menu__item:not(.lasso-menu__item--danger) + .lasso-menu__item--danger { margin-top: 0; }
   .lasso-menu__item:not(.lasso-menu__item--danger) + .lasso-menu__item--danger::before { display: none; }
   .lasso-menu__cancel { display: block; height: 56px; border: 0; border-radius: var(--lasso-radius-xl); background: var(--lasso-surface); color: var(--lasso-text); font-size: 16px; font-weight: 600; cursor: pointer; } /* 26a.10: Annuller 16/600 */
@@ -2234,6 +2236,8 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
   .lasso-shell { display: flex; flex-direction: column; background: var(--lasso-surface); }
   .lasso-shell > .lasso-rail, .lasso-shell > .lasso-strip { display: none; }
   .lasso-mobilebar { display: flex; flex: none; position: sticky; top: 0; z-index: 2; }
+  /* 06.3 TopBar alene: fanebjælken bliver til mobilens topbjælke (26a.1) */
+  .lasso-topbar > .lasso-strip { display: none; }
   .lasso-page { flex: 1; border-radius: 0; }
   /* Modulerne ruller vandret med fade (26.3/26a.5) og ligger også i "Sektioner"-arket bag burgeren; sidens handlinger ligger bag "…" */
   .lasso-modulebar { padding-left: 16px; }

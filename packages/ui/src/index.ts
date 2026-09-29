@@ -171,7 +171,7 @@ export type { ToastOptions, ToastEntry } from "./components/Toast.js";
 export { Tooltip } from "./components/Tooltip.js";
 export { SaveDialog } from "./SaveDialog.js";
 export type { TabItem, TabLevel, TabsProps, TabPanelProps } from "./components/Tabs.js";
-export { AppShell, Columns, Column } from "./components/AppShell.js";
+export { AppShell, Columns, Column, MobileBar, TopBar } from "./components/AppShell.js";
 export type { AppShellProps, AppShellMobile, MobileNavItem, MobileAction } from "./components/AppShell.js";
 export { Rail } from "./components/Rail.js";
 export type { RailProps, RailGroup, RailItem } from "./components/Rail.js";
