@@ -2850,29 +2850,29 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 /* ---------- 13.11 Heatmap, aktivitet pr. måned (node AKQ-0): 5 trin, celle 34×18, 4 px imellem ---------- */
 .lasso-heat__frame { display: flex; align-items: flex-start; gap: var(--lasso-space-3); }
 .lasso-heat__labels { flex: none; display: flex; flex-direction: column; }
-.lasso-heat__corner { height: 32px; }
+.lasso-heat__corner { height: 20px; }
 .lasso-heat__rowlabel { height: 22px; display: flex; align-items: center; font-size: 12px; color: var(--lasso-text-2); white-space: nowrap; }
 .lasso-heat__scroll { min-width: 0; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: thin; }
 .lasso-heat__grid { border-collapse: separate; border-spacing: 4px 4px; margin: -4px; }
 .lasso-heat__grid td, .lasso-heat__grid th { padding: 0; }
-.lasso-heat__month { height: 24px; min-width: 34px; font-size: 11px; line-height: 12px; font-weight: 400; color: var(--lasso-muted); text-align: left; vertical-align: bottom; white-space: nowrap; scroll-snap-align: start; }
+.lasso-heat__month { height: 16px; min-width: 34px; font-size: 11px; line-height: 12px; font-weight: 400; color: var(--lasso-muted); text-align: center; vertical-align: top; white-space: nowrap; scroll-snap-align: start; }
+.lasso-heat__month.is-current { font-weight: 600; color: var(--lasso-text); }
 .lasso-heat__month > span { display: block; }
 .lasso-heat__year { color: var(--lasso-text-2); font-weight: 600; }
-.lasso-heat__cell { position: relative; display: block; width: 34px; height: 18px; border-radius: 3px; outline: none; cursor: default; }
+.lasso-heat__cell { position: relative; display: block; width: 34px; height: 18px; border-radius: 3px; outline: none; cursor: pointer; }
 .lasso-heat__cell--1 { background: var(--lasso-chart-seq-1); }
 .lasso-heat__cell--2 { background: var(--lasso-chart-seq-2); }
 .lasso-heat__cell--3 { background: var(--lasso-chart-seq-3); }
 .lasso-heat__cell--4 { background: var(--lasso-chart-seq-4); }
 .lasso-heat__cell--5 { background: var(--lasso-chart-seq-5); }
 /* Hover/fokus: 1,5 px ink-ramme og tallet inde i cellen */
-.lasso-heat__cell:hover, .lasso-heat__cell:focus-visible { box-shadow: inset 0 0 0 1.5px var(--lasso-chart-ink); }
-.lasso-heat__cell:hover::after, .lasso-heat__cell:focus-visible::after { content: attr(data-n); position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--lasso-chart-ink); }
-.lasso-heat__cell--5:hover::after, .lasso-heat__cell--5:focus-visible::after { color: var(--lasso-on-accent); }
+.lasso-heat__cell:hover, .lasso-heat__cell:focus-visible, .lasso-heat__cell.is-selected { box-shadow: inset 0 0 0 1px var(--lasso-chart-ink); }
+.lasso-heat__cell:hover::after, .lasso-heat__cell:focus-visible::after, .lasso-heat__cell.is-selected::after { content: attr(data-n); position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--lasso-chart-ink); }
+.lasso-heat__cell--5:hover::after, .lasso-heat__cell--5:focus-visible::after, .lasso-heat__cell--5.is-selected::after { color: var(--lasso-on-accent); }
 .lasso-heat__legend { display: flex; align-items: center; gap: 4px; margin-top: var(--lasso-space-3); font-size: 12px; color: var(--lasso-muted); }
 .lasso-heat__legend > span:first-child { margin-right: 4px; }
 .lasso-heat__legend > span:nth-child(7) { margin-left: 4px; }
 .lasso-heat__swatch { display: inline-block; width: 16px; height: 10px; border-radius: 2px; }
-.lasso-heat__swipe { display: none; margin-left: auto; }
 
 /* ---------- 13.12 Kort, adresse, P-enheder og klynger (node AMO-0) ---------- */
 .lasso-map__frame { position: relative; border-radius: var(--lasso-radius-lg); overflow: hidden; border: 1px solid var(--lasso-border); }
@@ -3023,9 +3023,9 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-kfg__meta { flex-wrap: wrap; row-gap: 2px; }
   /* 26b.10: heatmap med 6 måneder synlige, swipe for flere, 24 px celler */
   .lasso-heat__rowlabel { height: 28px; }
-  .lasso-heat__cell { width: calc((100cqw - 104px) / 6); min-width: 24px; height: 24px; }
-  .lasso-heat__month { min-width: calc((100cqw - 104px) / 6); }
-  .lasso-heat__swipe { display: inline; }
+  .lasso-heat__cell { width: 24px; height: 24px; }
+  .lasso-heat__month { min-width: 24px; }
+  .lasso-heat__scroll { max-width: calc(6 * 28px + 4px); }
   /* 26b.11: kort 160 px med markørkort nederst, fuld skærm ved tryk */
   .lasso-map__frame--compact { cursor: zoom-in; }
   .lasso-map > .lasso-map__card { margin-top: var(--lasso-space-3); box-shadow: none; }
