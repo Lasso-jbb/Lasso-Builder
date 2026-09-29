@@ -335,7 +335,9 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           hideAuditor={page.hideAuditor}
           exclude={c.exclude}
           onOpen={props.host.drillDown ? act : undefined}
-          links={c.variant === "financials" ? statementsLink(c.company, empty, props, act) : undefined}
+          links={c.variant === "financials" && !c.rows ? statementsLink(c.company, empty, props, act) : undefined}
+          years={c.years}
+          maxRows={c.rows}
           onPdf={c.variant === "financials" && empty.financialStatements[c.company]?.pdfUrl ? () => act({ kind: "open-link", url: empty.financialStatements[c.company]!.pdfUrl! }) : undefined}
         />
       );
@@ -467,7 +469,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
         />
       );
     case "LassoTextSections":
-      return <LassoTextSections key={key} sections={empty.textSections[c.company]} title={c.title} variant={c.variant} error={err(`textSections:${c.company}`)} onOpen={props.host.drillDown ? act : undefined} />;
+      return <LassoTextSections key={key} sections={empty.textSections[c.company]} title={c.title} variant={c.variant} folded={c.folded} error={err(`textSections:${c.company}`)} onOpen={props.host.drillDown ? act : undefined} />;
     case "LassoSummary":
       return <LassoSummary key={key} text={c.text} title={c.title} source={c.source} updated={c.updated} />;
     case "LassoTimeline": {

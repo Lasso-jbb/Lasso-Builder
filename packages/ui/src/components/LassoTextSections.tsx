@@ -145,7 +145,7 @@ function Chevron({ open }: { open: boolean }) {
  * brugbart? Ja / Nej". Kildelinjen står under titlen. Mobil: kortet kan foldes med chevron, teksten er
  * foldet til 4 linjer, og nederst står "Læs hele analysen" til venstre og genereringslinjen til højre.
  */
-function Analysis({ v, items, onOpen }: { v: TextSectionsVM; items: TextSectionItem[]; onOpen?: (a: ViewAction) => void }) {
+function Analysis({ v, items, onOpen, folded = false }: { v: TextSectionsVM; items: TextSectionItem[]; onOpen?: (a: ViewAction) => void; folded?: boolean }) {
   const [open, setOpen] = useState(false);
   const [sources, setSources] = useState(false);
   const [vote, setVote] = useState<"ja" | "nej" | null>(null);
@@ -198,7 +198,7 @@ function Analysis({ v, items, onOpen }: { v: TextSectionsVM; items: TextSectionI
       ) : null}
       <div className="lasso-analysis__foot">
         <button type="button" className="lasso-link lasso-analysis__more" aria-expanded={open} onClick={() => setOpen(!open)}>
-          {open ? "Vis mindre" : "Læs hele analysen"}
+          {open ? "Vis mindre" : folded ? "Vis mere" : "Læs hele analysen"}
         </button>
         <span className="lasso-analysis__gen">{generatedLine(v, true)}</span>
       </div>
@@ -207,21 +207,21 @@ function Analysis({ v, items, onOpen }: { v: TextSectionsVM; items: TextSectionI
 }
 
 /** Analysens sektion: kildelinjen under titlen (desktop) og chevron, der folder kortet (mobil). */
-function AnalysisSection({ heading, v, items, onOpen }: { heading: string; v: TextSectionsVM; items: TextSectionItem[]; onOpen?: (a: ViewAction) => void }) {
+function AnalysisSection({ heading, v, items, onOpen, folded = false }: { heading: string; v: TextSectionsVM; items: TextSectionItem[]; onOpen?: (a: ViewAction) => void; folded?: boolean }) {
   const [collapsed, setCollapsed] = useState(false);
   return (
     <Section
       title={heading}
       subtitle={<span className="lasso-analysis__sub">{generatedLine(v)}</span>}
       span="full"
-      className={`lasso-textsections lasso-textsections--analysis${collapsed ? " is-collapsed" : ""}`}
+      className={`lasso-textsections lasso-textsections--analysis${folded ? " lasso-textsections--folded" : ""}${collapsed ? " is-collapsed" : ""}`}
       action={
         <button type="button" className="lasso-iconbtn lasso-analysis__toggle" aria-expanded={!collapsed} aria-label={collapsed ? "Vis analysen" : "Fold analysen sammen"} onClick={() => setCollapsed(!collapsed)}>
           <Chevron open={!collapsed} />
         </button>
       }
     >
-      {collapsed ? null : <Analysis v={v} items={items} onOpen={onOpen} />}
+      {collapsed ? null : <Analysis v={v} items={items} onOpen={onOpen} folded={folded} />}
     </Section>
   );
 }
@@ -239,10 +239,13 @@ export function LassoTextSections({
   variant = "profil",
   error,
   onOpen,
+  folded = false,
 }: {
   sections?: TextSectionsVM;
   title?: string;
   variant?: TextSectionsVariant;
+  /** Variant "analyse": foldet til 3 linjer med "Vis mere" på alle bredder (30.13). */
+  folded?: boolean;
   error?: string;
   onOpen?: (a: ViewAction) => void;
 }) {
@@ -267,7 +270,7 @@ export function LassoTextSections({
   const hasAnalysis = shown.some(isAnalysisSection);
   if (analysis) {
     return (
-      <AnalysisSection heading={heading} v={sections} items={shown} onOpen={onOpen} />
+      <AnalysisSection heading={heading} v={sections} items={shown} onOpen={onOpen} folded={folded} />
     );
   }
   return (

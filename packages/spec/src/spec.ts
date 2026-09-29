@@ -271,6 +271,7 @@ export const textSectionsSchema = z.object({
     .default("profil")
     .describe("'profil' (standard): formål og tegningsregler fra CVR plus regnskabsanalysens konklusion, resultat og likviditet. 'analyse': hele regnskabsanalysen (alle afsnit), foldet efter konklusionen."),
   title: z.string().max(80).optional(),
+  folded: z.boolean().optional().describe("Kun variant 'analyse': analysen foldet til 3 linjer med 'Vis mere' på alle bredder (30.13, svar i chatten). Udeladt: foldet kun på mobil."),
 });
 
 export const summarySchema = z.object({
@@ -360,6 +361,8 @@ export const keyValueListSchema = z.object({
     .max(METRICS.length)
     .optional()
     .describe("Kun variant 'financials': nøgletal, der allerede står på siden (fx i LassoKeyFigureCards), og som listen derfor udelader."),
+  years: z.number().int().min(2).max(5).optional().describe("Kun variant 'financials': antal år i årsvælgeren (standard 5). 2 giver segmentet '2025 | 2024' i fuld bredde på mobil (30.13)."),
+  rows: z.number().int().min(1).max(20).optional().describe("Vis kun de første N rækker; resten bag 'Se N oplysninger' (30.13, svarniveau B). Udeladt: alle rækker."),
 });
 
 export const contactSchema = z.object({

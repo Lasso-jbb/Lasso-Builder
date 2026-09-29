@@ -363,11 +363,12 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 }
 /* 24.5/30.13 plain: 1 px linje over og under, lodrette skillelinjer, ingen ydre ramme; første felt flugter med kolonnen. */
 .lasso-root .lasso-kpis--plain { border: 0; border-top: 1px solid var(--lasso-border); border-bottom: 1px solid var(--lasso-border); border-radius: 0; background: transparent; }
-@container lasso (min-width: 1024px) { .lasso-kpis--plain > .lasso-kpi { padding: 22px 24px 20px; } }
-@container lasso (min-width: 1024px) { .lasso-kpis--plain > .lasso-kpis__title + .lasso-kpi { padding-left: 0; } }
+@container lasso (min-width: 801px) { .lasso-kpis--plain > .lasso-kpi { padding: 22px 24px 20px; } }
+@container lasso (min-width: 801px) { .lasso-kpis--plain > .lasso-kpis__title + .lasso-kpi { padding-left: 0; } }
 .lasso-kpis--plain .lasso-kpi__unit--note { font-weight: 400; }
-/* 26f.1 tablet: fire selvstændige kort (1 px kant, radius 12, 12 px mellemrum), etiket 13, tal 24. */
-@container lasso (max-width: 1023px) and (min-width: 561px) {
+/* 26f.1 tablet (sidens midte under 800 px): fire selvstændige kort (1 px kant, radius 12, 12 px mellemrum), etiket 13, tal 24.
+   Chatbredden 880 (30.13) beholder den rolige form med lodrette linjer. */
+@container lasso (max-width: 800px) and (min-width: 561px) {
   .lasso-root .lasso-kpis--plain { gap: 12px; border: 0; }
   .lasso-root .lasso-kpis--plain > .lasso-kpi, .lasso-root .lasso-kpis--plain > .lasso-kpis__title + .lasso-kpi { border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-card); padding: 14px 14px 12px; gap: 4px; }
   .lasso-kpis--plain .lasso-kpi__label { font-size: var(--lasso-fs-sm); }
@@ -1022,6 +1023,12 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-root .lasso-analysis__vote:hover { color: var(--lasso-text); text-decoration: underline; }
 .lasso-analysis__sources { margin: 0; padding-left: 18px; font-size: var(--lasso-fs-sm); line-height: 20px; color: var(--lasso-text-3); }
 .lasso-analysis__foot { display: none; }
+/* 30.13 (folded): analysen foldet til 3 linjer med "Vis mere" også på desktop; overskrift, forbehold og kilder står i den åbne analyse. */
+.lasso-textsections--folded .lasso-analysis__body:not(.is-open) { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.lasso-textsections--folded:not(:has(.lasso-analysis__body.is-open)) :is(.lasso-analysis__headline, .lasso-analysis__disclaimer, .lasso-analysis__actions, .lasso-analysis__sources) { display: none; }
+.lasso-textsections--folded .lasso-analysis__foot { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--lasso-space-3); }
+.lasso-root .lasso-textsections--folded .lasso-analysis__more { color: var(--lasso-accent-text); font-weight: 500; font-size: var(--lasso-fs-sm); flex: none; }
+.lasso-textsections--folded .lasso-analysis__gen { font-size: 11px; line-height: 16px; color: var(--lasso-muted); text-align: right; }
 @container lasso (max-width: 560px) {
   /* 26h.3: chevron i hovedet, tekst foldet til 4 linjer, "Læs hele analysen" + genereringslinje nederst. */
   .lasso-root .lasso-iconbtn.lasso-analysis__toggle { display: inline-flex; }

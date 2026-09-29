@@ -1871,7 +1871,19 @@ const layout: GalleryEntry[] = [
     node: "JEU-0",
     desktopWidth: 880,
     note: "Svarniveau B, mønster 1 ('Hvordan går det med X?') i chatbredde 880 og mobil 390.",
-    spec: { kind: "company", title: "Økonomi", answer: ANSWER_B_FOOT, components: ANSWER_B },
+    // 30.13: nøgletal i den rolige form, "Virksomhedsoplysninger" med 2025 | 2024 og 4 rækker, analysen foldet til 3 linjer.
+    spec: {
+      kind: "company",
+      title: "Økonomi",
+      answer: ANSWER_B_FOOT,
+      components: [
+        head("compact"),
+        { type: "LassoKeyFigureCards", company: C, variant: "plain", width: "full" },
+        { type: "LassoBarChart", company: C, width: "half" },
+        { type: "LassoKeyValueList", company: C, variant: "financials", title: "Virksomhedsoplysninger", years: 2, rows: 4, exclude: ["omsaetning", "resultat", "egenkapital", "ansatte"], width: "half" },
+        { type: "LassoTextSections", company: C, variant: "analyse", folded: true, width: "full" },
+      ],
+    },
   },
 ];
 
