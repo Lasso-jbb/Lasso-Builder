@@ -410,8 +410,10 @@ export const entries: GalleryEntry[] = [
     nr: "21.2",
     title: "Notifikationspanel",
     node: "CAY-0",
+    note: "På mobil (390) fylder panelet skærmen som ark (fast placeret); i portalen lukkes det med Luk.",
     render: () => (
-      <div style={{ maxWidth: 400 }}>
+      // På mobil er panelet et fast ark i fuld skærm (position: fixed); højden giver billedet plads til det.
+      <div style={{ maxWidth: 400, minHeight: 620 }}>
         <NotificationPanel items={NOTIFICATIONS} now={NOW} onMarkAllRead={noop} onSeeAll={noop} onClose={noop} onAction={noop} onOpen={noop} />
       </div>
     ),

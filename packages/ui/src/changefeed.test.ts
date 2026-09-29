@@ -151,3 +151,11 @@ test("Overvåger-indstillinger (21): knap i koral-soft, fakta, Stop overvågning
   assert.doesNotMatch(off, /role="switch"/);
   assert.doesNotMatch(off, /Stop overvågning/);
 });
+
+test("21.3/21.4: kontakterne står i samme rækkefølge som feedets typefilter", async () => {
+  const { MONITOR_TYPES } = await import("./components/MonitorSettings.js");
+  const { CHANGE_TYPES } = await import("@lasso/spec");
+  const pos = MONITOR_TYPES.map((t) => (CHANGE_TYPES as readonly string[]).indexOf(t));
+  assert.ok(pos.every((p) => p >= 0));
+  assert.deepEqual([...pos].sort((a, b) => a - b), pos);
+});
