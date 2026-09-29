@@ -339,31 +339,13 @@ export const entries: GalleryEntry[] = [
     title: "Forrige vs. nu (kreditscore)",
     node: "BX9-0",
     render: () => (
-      <Stack
-        items={[
-          [
-            "Stigning = mere risiko",
-            <ScoreCompare
-              key="w"
-              previous={{ value: "48", word: "Lav risiko", tone: "ok", icon: <BandIcon index={0} />, date: "2026-03-12" }}
-              current={{ value: "64", word: "Moderat risiko", tone: "warning", icon: <BandIcon index={1} />, date: "2026-09-25" }}
-              direction="worse"
-              amount="16 point"
-              action={{ label: "Hent ny score", onClick: noop }}
-            />,
-          ],
-          [
-            "Fald = mindre risiko",
-            <ScoreCompare
-              key="b"
-              previous={{ value: "72", word: "Moderat risiko", tone: "warning", icon: <BandIcon index={1} />, date: "2026-03-12" }}
-              current={{ value: "55", word: "Lav risiko", tone: "ok", icon: <BandIcon index={0} />, date: "2026-09-25" }}
-              direction="better"
-              amount="17 point"
-              action={{ label: "Hent ny score", onClick: noop }}
-            />,
-          ],
-        ]}
+      <ScoreCompare
+        previous={{ value: "47", of: "af 100", word: "Lav risiko", tone: "ok", icon: <BandIcon index={0} />, date: "2026-03-14", detail: "Kreditmaks 0,9 mio. kr." }}
+        current={{ value: "52", of: "af 100", word: "Lav risiko", tone: "ok", icon: <BandIcon index={0} />, date: "2026-09-12", detail: "Kreditmaks 1,25 mio. kr., international score B. Kilde: Creditsafe" }}
+        direction="worse"
+        delta="+5"
+        period="6 mdr."
+        action={{ label: "Hent ny, 1 kredit", onClick: noop, primary: true, note: "Du har 38 kreditter, seneste hentning for 13 dage siden" }}
       />
     ),
   },
@@ -374,7 +356,7 @@ export const entries: GalleryEntry[] = [
     node: "BYX-0",
     render: () => (
       <div style={{ minHeight: 560 }}>
-        <CreditConfirmDialog open onClose={noop} onConfirm={noop} balance={12} price={1} what="kreditvurdering af Eksempel Byg A/S" />
+        <CreditConfirmDialog open onClose={noop} onConfirm={noop} balance={38} price={1} description="LASSO X A/S, seneste vurdering er 13 dage gammel." />
       </div>
     ),
     note: "Kun tilstanden med nok kreditter vises (dialogen er en overlay). Ved 0 kreditter bliver knappen 'Køb kreditter' og prisen rød (balance=0).",

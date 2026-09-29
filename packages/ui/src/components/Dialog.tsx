@@ -21,6 +21,8 @@ export interface DialogAction {
   destructive?: boolean;
   /** Ikon før teksten, fx "plus" på "Tilføj" (07.7). */
   icon?: IconName;
+  /** Sekundær som tekstknap uden kant (fx "Annuller" i 18.3). Standard: outline-knap. */
+  text?: boolean;
 }
 
 export interface DialogProps {
@@ -40,10 +42,12 @@ export interface DialogProps {
   footNote?: ReactNode;
   /** Skærmlæsertekst på luk-krydset. */
   closeLabel?: string;
+  /** Uden ×-lukkeknap (fx 18.3, hvor "Annuller" lukker); Esc og overlay lukker stadig. */
+  hideClose?: boolean;
   className?: string;
 }
 
-export function Dialog({ open, title, description, onClose, children, actions, size = "md", footNote, closeLabel = "Luk", className = "" }: DialogProps) {
+export function Dialog({ open, title, description, onClose, children, actions, size = "md", footNote, closeLabel = "Luk", hideClose = false, className = "" }: DialogProps) {
   const layer = useLayer();
   const panel = useRef<HTMLDivElement>(null);
   const id = useId();
@@ -110,9 +114,11 @@ export function Dialog({ open, title, description, onClose, children, actions, s
               </p>
             ) : null}
           </div>
-          <button type="button" className="lasso-dialog__close" onClick={onClose} aria-label={closeLabel}>
-            <CloseIcon />
-          </button>
+          {hideClose ? null : (
+            <button type="button" className="lasso-dialog__close" onClick={onClose} aria-label={closeLabel}>
+              <CloseIcon />
+            </button>
+          )}
         </header>
         {children ? <div className="lasso-dialog__body">{children}</div> : null}
         {hasFoot ? (
@@ -125,7 +131,7 @@ export function Dialog({ open, title, description, onClose, children, actions, s
             {footNote ? <span className="lasso-dialog__note">{footNote}</span> : null}
             <span className="lasso-dialog__spacer" />
             {secondary ? (
-              <button type="button" className="lasso-btn lasso-dialog__secondary" onClick={secondary.onClick} disabled={secondary.disabled}>
+              <button type="button" className={`lasso-btn${secondary.text ? " lasso-btn--text" : ""} lasso-dialog__secondary`} onClick={secondary.onClick} disabled={secondary.disabled}>
                 {secondary.label}
               </button>
             ) : null}

@@ -35,8 +35,8 @@ test("fyldt: bogstav + ord, kreditmaksimum, lokal score, forrige vurdering, PDF,
   assert.match(t, /Kreditmaksimum250 t\. kr\./);
   assert.match(t, /Lokal score62, Lav risiko/);
   // 18.1: forrige og nu side om side, ændringen som pil + ord imellem.
-  assert.match(html, /class="lasso-scorecmp"/);
-  assert.match(t, /ForrigeC[^]*Moderat risiko[^]*▼ 1 trin, mindre risiko[^]*NuB[^]*Lav risiko15\.04\.2026/);
+  assert.match(html, /class="lasso-scorecmp[ "]/);
+  assert.match(t, /ForrigeC[^]*Moderat risiko[^]*▼ 1 trin, mindre risiko[^]*Nu, 15\.04\.2026B[^]*Lav risiko/);
   assert.match(html, /<button type="button" class="lasso-link lasso-credit__action">Hent kreditrapport \(PDF\)<\/button>/);
   assert.match(t, /Ny beregning hos Creditsafe koster en kredit og tager 5–45 sekunder; vurderingen gemmes 24 timer\./);
   assert.match(t, /Kilde: Creditsafe via Lasso, opdateret 25\.09\.2026/);

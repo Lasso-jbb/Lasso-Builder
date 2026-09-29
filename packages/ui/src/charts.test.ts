@@ -113,15 +113,15 @@ test("18.1/18.2: forrige vs. nu og trinlinje; en stigning er mere risiko i warni
   assert.match(cmp, /lasso-scorecmp__change--worse[^]*▲ 5 point, mere risiko/);
   const h = html(createElement(ScoreHistory, { history: { lassoId: ID, points: [{ date: "2025-01-01", score: 40 }, { date: "2026-06-01", score: 65 }], source: "Eksempeldata" } }));
   assert.match(h, /lasso-scorehist__zone--low[^]*lasso-scorehist__zone--mid[^]*lasso-scorehist__zone--high/);
-  assert.match(text(h), /Forrige 40[^]*Nu 65/);
+  assert.match(text(h), /Forrige, 01\.01\.2025 40 af 100[^]*\+25, mere risiko[^]*Nu, 01\.06\.2026 65 af 100/);
   const empty = html(createElement(ScoreHistory, { history: { lassoId: ID, points: [], reason: "Ingen historik endnu." } }));
   assert.match(empty, /Ingen historik endnu\./);
 });
 
 test("18.3: bekræft hentning viser pris, saldo efter og ventetid; ved 0 kreditter 'Køb kreditter' og rød pris", () => {
   const ok = text(html(createElement(CreditConfirmDialog, { open: true, onClose: () => {}, onConfirm: () => {}, balance: 12 })));
-  assert.match(ok, /Pris 1 kredit Saldo efter 11 kreditter Ventetid 5–45 sekunder/);
-  assert.match(ok, /Hent for 1 kredit/, "prisen gentages i knappen");
+  assert.match(ok, /Pris 1 kredit Saldo efter 11 kreditter Ventetid typisk 5–45 sek\./);
+  assert.match(ok, /Hent, 1 kredit/, "prisen gentages i knappen");
   const zero = html(createElement(CreditConfirmDialog, { open: true, onClose: () => {}, onConfirm: () => {}, onBuy: () => {}, balance: 0 }));
   assert.match(zero, /lasso-creditconfirm__price--short">1 kredit/);
   assert.match(zero, />Køb kreditter<\/button>/);
