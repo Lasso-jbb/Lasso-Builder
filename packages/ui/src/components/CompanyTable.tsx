@@ -206,6 +206,8 @@ export function CompanyTable({
     onAction({ kind: "export", filename: slugFile(title ?? "virksomheder", "csv"), csv: rowsToCsv(list, cols) });
 
   const showCvrUnderName = !cols.includes("cvr");
+  // 15.1: uden statuskolonne står en status, der ikke er "Aktiv", som ren tekst i navnets anden linje.
+  const statusUnderName = !cols.includes("status");
   const colSpan = cols.length + (selectable ? 1 : 0);
 
   const bulkActions: BulkAction[] = [];
@@ -334,7 +336,7 @@ export function CompanyTable({
         {toolbar}
         {criteria.length ? <CriteriaChips className="lasso-ctable__chips" criteria={criteria} onApply={onApplyCriteria} /> : null}
         <div className="lasso-table-wrap">
-          <table className="lasso-table lasso-ctable__table">
+          <table className={`lasso-table lasso-ctable__table ${cols.length >= 7 ? "lasso-ctable__table--dense" : ""}`}>
             <thead>
               <tr>
                 {selectable ? (
@@ -343,7 +345,7 @@ export function CompanyTable({
                   </th>
                 ) : null}
                 {cols.map((c) => (
-                  <th key={c} className={[NUMERIC.has(c) ? "lasso-num" : "", sort?.col === c ? "is-sorted" : ""].join(" ").trim() || undefined} scope="col" aria-sort={sort?.col === c ? (sort.dir === 1 ? "ascending" : "descending") : undefined}>
+                  <th key={c} data-col={c} className={[NUMERIC.has(c) ? "lasso-num" : "", sort?.col === c ? "is-sorted" : ""].join(" ").trim() || undefined} scope="col" aria-sort={sort?.col === c ? (sort.dir === 1 ? "ascending" : "descending") : undefined}>
                     {SORTABLE.has(c) ? (
                       <button type="button" onClick={() => toggleSort(c)}>
                         {c === "navn" ? "Virksomhed" : TABLE_COLUMN_LABELS[c]}
@@ -377,13 +379,26 @@ export function CompanyTable({
                       {cols.map((c) => (
                         <td
                           key={c}
+                          data-col={c}
                           data-label={TABLE_COLUMN_LABELS[c]}
                           className={[NUMERIC.has(c) ? "lasso-num" : "", sort?.col === c ? "is-sorted" : "", c === "navn" ? "lasso-cell--name" : "", c === "udvikling" ? "lasso-cell--trend" : "", c === "branche" ? "lasso-cell--wrap" : "", c === "by" ? "lasso-cell--nowrap" : ""].join(" ").trim() || undefined}
                         >
                           {c === "navn" ? (
                             <>
                               <span className="lasso-table__name">{r.name}</span>
-                              {showCvrUnderName && r.cvr ? <span className="lasso-table__sub">CVR {r.cvr}</span> : null}
+                              {(showCvrUnderName && r.cvr) || (statusUnderName && r.status && r.statusKind && r.statusKind !== "active") || (cols.includes("by") && r.city) ? (
+                                <span className="lasso-table__sub">
+                                  {showCvrUnderName && r.cvr ? <span>CVR {r.cvr}</span> : null}
+                                  {/* 26f.2: på tablet flytter byen ind under navnet (kolonnen skjules). */}
+                                  {cols.includes("by") && r.city ? <span className="lasso-ctable__subcity">{showCvrUnderName && r.cvr ? ", " : ""}{r.city}</span> : null}
+                                  {statusUnderName && r.status && r.statusKind && r.statusKind !== "active" ? (
+                                    <>
+                                      {showCvrUnderName && r.cvr ? ", " : ""}
+                                      <span className={`lasso-status lasso-status--${statusTone(r.status, r.statusKind)}`}>{r.status}</span>
+                                    </>
+                                  ) : null}
+                                </span>
+                              ) : null}
                             </>
                           ) : c === "status" ? (
                             r.status ? <span className={`lasso-status lasso-status--${statusTone(r.status!, r.statusKind ?? "active")}`}>{r.status}</span> : <span className="lasso-notreported">Ikke oplyst</span>

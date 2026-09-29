@@ -3478,3 +3478,29 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-odiagram__status { font-weight: 500; fill: var(--lasso-text-2); }
 .lasso-odiagram__status--warning { fill: var(--lasso-bankrupt); }
 .lasso-odiagram__status--liquidation { fill: var(--lasso-status-liquidation); }
+
+/* ---------- 15.1 / 26f.2 Virksomhedstabel: bredde og filtre ---------- */
+/* Filtrene står i tabellens værktøjslinje (én "Filtre"-knap med tæller + chips), aldrig som link over tabellen. */
+.lasso-frame__filters--table { display: none; }
+@container lasso (min-width: 561px) { .lasso-ctable__chips { display: flex; padding: var(--lasso-space-3) 16px 0; } }
+.lasso-ctable__subcity { display: none; }
+/* 7+ kolonner: tættere celler og navne/brancher må ombrydes, så tabellen holder sig inden for 1200 px. */
+.lasso-ctable__table--dense th, .lasso-ctable__table--dense td { padding-left: 12px; padding-right: 12px; }
+.lasso-ctable__table--dense .lasso-table__name { white-space: normal; }
+.lasso-ctable__table--dense .lasso-cell--name { min-width: 180px; }
+.lasso-ctable__table--dense td.lasso-cell--wrap { max-width: 200px; }
+.lasso-ctable__table td.lasso-cell--wrap { overflow-wrap: normal; word-break: normal; hyphens: manual; }
+@container lasso (min-width: 561px) and (max-width: 960px) {
+  /* 26f.2 tablet: maks 6 kolonner; by (og CVR) under navnet, rækker 48 px, søgefelt 220 px. */
+  .lasso-ctable__table th[data-col="by"], .lasso-ctable__table td[data-col="by"] { display: none; }
+  .lasso-ctable__subcity { display: inline; }
+  .lasso-ctable__table td { height: 48px; padding-top: 6px; padding-bottom: 6px; }
+  .lasso-ctable__table th, .lasso-ctable__table td { padding-left: 12px; padding-right: 12px; }
+  .lasso-ctable__table .lasso-table__name { white-space: normal; }
+  .lasso-ctable__table .lasso-cell--name { min-width: 150px; }
+  .lasso-ctable__table td.lasso-cell--wrap { max-width: 150px; }
+  .lasso-ctable__table td.lasso-cell--trend .lasso-spark { width: 44px; }
+  .lasso-ctable__table td.lasso-cell--trend .lasso-trend { gap: 6px; }
+  .lasso-ctable .lasso-tsearch { flex: 0 1 220px; width: 220px; }
+  .lasso-ctable .lasso-pager__page, .lasso-ctable .lasso-pager__step { min-width: 36px; height: 36px; }
+}
