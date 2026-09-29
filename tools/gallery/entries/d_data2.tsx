@@ -73,12 +73,40 @@ function addForeignOwner(ds: Dataset) {
   const key = ownershipGraphKey({ company: MASKIN, ingoingDepth: 1, outgoingDepth: 0 });
   const g = ds.ownershipGraphs[key];
   if (!g) return;
-  if (!g.nodes.some((n) => n.id === "SE-5560001234")) {
-    g.nodes.push({ id: "SE-5560001234", name: "Prøve Industri AB", kind: "company", form: "AB", country: "SE", registrationNo: "556000-1234", status: "Aktiv", statusKind: "active" });
-    // CVR-intervaller: 50–66,66 + 45–49,99, så den uregistrerede rest er højst 5 %.
-    for (const x of g.edges) if (x.to === MASKIN) x.share = [50, 66.66];
-    g.edges.push({ from: "SE-5560001234", to: MASKIN, share: [45, 49.99], since: "2019-02-01" });
+  if (!g.nodes.some((n) => n.id === "NO-000000002")) {
+    // 14b: udenlandske ejere med registreringsnummer og land; registrerede andele 40 + 20 + 15, så 25 % er ukendt.
+    g.nodes.push(
+      { id: "NO-000000002", name: "Nordic Eksempel AS", kind: "company", form: "AS", country: "NO", registrationNo: "000 000 002", status: "Aktiv", statusKind: "active" },
+      { id: "DE-HRB000000", name: "Beispiel Holding GmbH", kind: "company", form: "GmbH", country: "DE", registrationNo: "HRB 000000", status: "Aktiv", statusKind: "active" },
+    );
+    for (const x of g.edges) if (x.to === MASKIN) x.share = [40, 40];
+    g.edges.push({ from: "NO-000000002", to: MASKIN, share: [20, 20], since: "2019-02-01" }, { from: "DE-HRB000000", to: MASKIN, share: [15, 15], since: "2020-06-01" });
   }
+}
+
+const TRANSPORT = "CVR-1-99000004";
+
+/* 14b: cirkulært ejerskab over tre led (Alfa -> Beta -> fokus -> Alfa), som Paper-eksemplet. */
+function addThreeCycle(ds: Dataset) {
+  const key = ownershipGraphKey({ company: TRANSPORT, ingoingDepth: 2, outgoingDepth: 1 });
+  const alfa = "CVR-1-99000201";
+  const beta = "CVR-1-99000202";
+  ds.ownershipGraphs[key] = {
+    rootId: TRANSPORT,
+    ingoingDepth: 2,
+    outgoingDepth: 1,
+    fetchedAt: "2026-09-29T08:00:00Z",
+    nodes: [
+      { id: TRANSPORT, name: "Eksempel Transport A/S", kind: "company", cvr: "99000004", form: "A/S", status: "Aktiv", statusKind: "active", root: true },
+      { id: alfa, name: "Alfa Eksempel ApS", kind: "company", cvr: "99000201", form: "ApS", status: "Aktiv", statusKind: "active" },
+      { id: beta, name: "Beta Eksempel ApS", kind: "company", cvr: "99000202", form: "ApS", status: "Aktiv", statusKind: "active" },
+    ],
+    edges: [
+      { from: alfa, to: beta, share: [60, 60], since: "2015-01-01" },
+      { from: beta, to: TRANSPORT, share: [100, 100], since: "2015-01-01" },
+      { from: TRANSPORT, to: alfa, share: [30, 30], since: "2018-01-01" },
+    ],
+  };
 }
 
 /* 14.2: alle nodetilstande i én lille graf. */
@@ -93,15 +121,13 @@ const NODE_GRAPH: OwnershipGraphVM = {
     { id: ANNE, name: "Anne Eksempel", kind: "person" },
     { id: "CVR-1-99000106", name: "Eksempel Byg Drift ApS", kind: "company", cvr: "99000106", form: "ApS", status: "Aktiv", statusKind: "active" },
     { id: "CVR-1-99000103", name: "Eksempel Udvikling ApS", kind: "company", cvr: "99000103", form: "ApS", status: "Ophørt", statusKind: "inactive" },
-    { id: "CVR-1-99000011", name: "Eksempel Energi A/S", kind: "company", cvr: "99000011", form: "A/S", status: "Under konkurs", statusKind: "warning" },
-    { id: "NO-999000104", name: "Eksempel Nordic AS", kind: "company", form: "AS", country: "NO", registrationNo: "999 000 104", status: "Aktiv", statusKind: "active" },
+    { id: "NO-999000104", name: "Nordic Eksempel AS", kind: "company", form: "AS", country: "NO", status: "Aktiv", statusKind: "active" },
   ],
   edges: [
     { from: HOLDING, to: BYG, share: [60, 66.66], since: "2012-05-14" },
     { from: ANNE, to: BYG, share: [10, 14.99], since: "2015-01-01" },
     { from: BYG, to: "CVR-1-99000106", share: [100, 100], since: "2012-05-14" },
     { from: BYG, to: "CVR-1-99000103", share: [100, 100], since: "2012-05-14" },
-    { from: BYG, to: "CVR-1-99000011", share: [50, 66.66], votes: [66.67, 89.99], since: "2018-03-01" },
     { from: BYG, to: "NO-999000104", share: [33.34, 49.99], since: "2020-06-01" },
   ],
 };
@@ -153,7 +179,7 @@ export const entries: GalleryEntry[] = [
     nr: "14.1",
     title: "Ejerdiagram, fuld visning",
     node: "AQF-0",
-    render: () => <OwnershipDiagram graph={FULL_GRAPH} defaultSelected={HOLDING} canDrillDown canPrompt onAction={noop} />,
+    render: () => <OwnershipDiagram graph={FULL_GRAPH} defaultSelected={HOLDING} canDrillDown canPrompt canFullscreen onAction={noop} />,
     note: "Detaljepanelet (AY0-0) står åbent for Eksempel Holding ApS (defaultSelected); i brug åbnes det ved klik på en node.",
   },
   {
@@ -161,7 +187,7 @@ export const entries: GalleryEntry[] = [
     title: "Ejerdiagram-noder (nodetilstande)",
     node: "AZK-0",
     render: () => <OwnershipDiagram graph={NODE_GRAPH} title="Nodetilstande" />,
-    note: "Nodetilstandene i én graf: fokus, virksomhed, person, ophørt, under konkurs, udenlandsk, ukendt ejer (< 100 % registreret). 'Valgt' (klik) og hover kan ikke vises statisk; folde-noden '+N flere' ses i 14.4.",
+    note: "Nodetilstandene i én graf: fokus, virksomhed, person, ophørt, udenlandsk og ukendt ejerskab (< 100 % registreret, under fokus). 'Valgt' (klik) og hover kan ikke vises statisk; folde-noden '+N flere' ses i 14.4.",
   },
   {
     nr: "14.3",
@@ -185,12 +211,15 @@ export const entries: GalleryEntry[] = [
     node: "DDU-0",
     spec: company("Særlige tilstande", [
       { type: "LassoOwnershipDiagram", company: EJENDOMME, ingoingDepth: 0, outgoingDepth: 7, title: "Dyb kæde, 7 lag foldes" },
-      { type: "LassoOwnershipDiagram", company: BYG, ingoingDepth: 2, outgoingDepth: 1, title: "Cirkulært ejerskab over flere led" },
+      { type: "LassoOwnershipDiagram", company: TRANSPORT, ingoingDepth: 2, outgoingDepth: 1, title: "Cirkulært ejerskab over flere led" },
       { type: "LassoOwnershipDiagram", company: MASKIN, ingoingDepth: 1, outgoingDepth: 0, title: "Udenlandske ejere og ukendt < 5 %" },
       { type: "LassoOwnershipDiagram", company: KONSULENT, ingoingDepth: 2, outgoingDepth: 1, title: "Tom tilstand, ingen registrerede ejere" },
     ]),
-    mutate: addForeignOwner,
-    note: "Udenlandsk ejer (Prøve Industri AB) er tilføjet med mutate; resten er demokoncernen.",
+    mutate: (ds) => {
+      addForeignOwner(ds);
+      addThreeCycle(ds);
+    },
+    note: "Udenlandske ejere og den cirkulære kæde over tre led er tilføjet med mutate; resten er demokoncernen. Paper-undertitlen 'ejer 60 % af Beta' findes ikke i modellen (noder har CVR-undertitel).",
   },
 
   /* ---------- 15 Tabeller og lister ---------- */

@@ -47,13 +47,17 @@ const PANEL_BESIDE_FROM = 900;
 const ZOOM_STEPS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.9, 1, 1.25, 1.5, 2];
 const CANVAS_MIN = 360;
 const CANVAS_MAX = 720;
+/** 14b: en dyb kæde tegnes i 100 %, så lærredet må blive højere end standardhøjden. */
+const CANVAS_TALL = 1200;
 /** 26f.4: tablet indlejrer diagrammet i 340 px højde og samler over 4 noder pr. lag i "+N". */
 const TABLET_CANVAS_H = 340;
 const TABLET_LAYER_CAP = 4;
 /** Luft i bunden af lærredet til legende og zoomknapper. */
 const CANVAS_FOOT = 88;
 /** Smalt lærred (fx med detaljepanelet ved siden af): legenden fylder tre linjer. */
-const CANVAS_FOOT_NARROW = 112;
+const CANVAS_FOOT_NARROW = 136;
+/** 14.1: mini-kortet står nederst til højre ved zoomknapperne; legenden holder sig til venstre for det. */
+const LEGEND_RIGHT = 260;
 
 export interface OwnershipDiagramProps {
   graph?: OwnershipGraphVM;
@@ -65,6 +69,10 @@ export interface OwnershipDiagramProps {
   canFullscreen?: boolean;
   /** Node, hvis detaljepanel står åbent fra start (statisk forhåndsvisning, 14.1). */
   defaultSelected?: string;
+  /** Start i reelle-ejere-visningen (14.3: "Reelt 22 %"). */
+  defaultOwners?: "legal" | "beneficial";
+  /** Demodata: mobilens hoved siger "Underniveauer er eksempeldata" (26c.6). */
+  demo?: boolean;
 }
 
 /* ---------- Tekstmåling til afkortning af navne i SVG ---------- */
@@ -126,9 +134,11 @@ const BUILDING_CEASED = "M3 21h18M5 21V5l8-2v18M13 9l6 2v10";
  * selskaber kasser med et lille linjeikon. Kanter med andel som tekst; cirkulært ejerskab
  * føres udenom i koral stiplet. Under 560 px bliver strukturen en indrykket liste.
  */
-export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, canDrillDown, canPrompt, canFullscreen, defaultSelected }: OwnershipDiagramProps) {
+export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, canDrillDown, canPrompt, canFullscreen, defaultSelected, defaultOwners, demo }: OwnershipDiagramProps) {
   const [ref, W] = useWidth<HTMLDivElement>(900);
+  // 14.1: på desktop intet titelhoved over værktøjslinjen, medmindre specen giver en titel; mobilen (26c.6) har "Ejerstruktur".
   const heading = title ?? "Ejerstruktur";
+  const deskHeading = title;
   const [direction, setDirection] = useState<Direction>("both");
   const [depthUp, setDepthUp] = useState<number | null>(null);
   const [depthDown, setDepthDown] = useState<number | null>(null);
@@ -138,11 +148,22 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
   const [showHistoric, setShowHistoric] = useState(false);
   const [selected, setSelected] = useState<string | null>(defaultSelected ?? null);
   const [hovered, setHovered] = useState<string | null>(null);
+  // Navnene måles med Poppins; tegn igen, når skriften er hentet, så målingen ikke bruger en bredere reserveskrift.
+  const [, setFontsReady] = useState(0);
+  useEffect(() => {
+    let live = true;
+    void (typeof document !== "undefined" ? document.fonts?.ready : undefined)?.then(() => {
+      if (live) setFontsReady((n) => n + 1);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
   const [zoom, setZoom] = useState<number | null>(null);
   const [pan, setPan] = useState<{ x: number; y: number } | null>(null);
   const drag = useRef<{ x: number; y: number; px: number; py: number; moved: boolean } | null>(null);
   // Layoutregel 3 (14.4): legale/reelle ejere, dobbeltklik = nyt fokus, pr. dato, mini-kort og eksport.
-  const [owners, setOwners] = useState<"legal" | "beneficial">("legal");
+  const [owners, setOwners] = useState<"legal" | "beneficial">(defaultOwners ?? "legal");
   const [focus, setFocus] = useState<string | null>(null);
   const [onDate, setOnDate] = useState<string | undefined>(undefined);
   const [printSvg, setPrintSvg] = useState<string | null>(null);
@@ -189,10 +210,12 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
   // Tilpas: hele bredden skal kunne ses; høje strukturer skaleres højst ned til 80 % og panoreres.
   // Der holdes 56 px fri i begge sider, så zoomknapperne i hjørnet ikke dækker noder eller baner.
   const canvasMax = tablet ? TABLET_CANVAS_H : CANVAS_MAX;
-  const foot = canvasW >= 720 && canvasW < 900 ? CANVAS_FOOT_NARROW : CANVAS_FOOT;
-  const fitZoom = layout ? Math.max(0.25, Math.min(1, (canvasW - 112) / layout.width, Math.max(tablet ? 0.6 : 0.8, (canvasMax - foot) / layout.height))) : 1;
+  const foot = canvasW >= 720 && canvasW - LEGEND_RIGHT - 16 < 860 ? CANVAS_FOOT_NARROW : CANVAS_FOOT;
+  // 14.4: desktop tegner 100 %, så noderne står i 196 × 64; kun en struktur, der ikke kan være i bredden, skaleres ned.
+  const fitZoom = layout ? Math.max(0.25, Math.min(1, (canvasW - 32) / layout.width, tablet ? Math.max(0.6, (canvasMax - foot) / layout.height) : 1)) : 1;
   const z = zoom ?? fitZoom;
-  const canvasH = layout ? (tablet ? TABLET_CANVAS_H : Math.round(Math.min(CANVAS_MAX, Math.max(CANVAS_MIN, layout.height * fitZoom + foot)))) : CANVAS_MIN;
+  // Desktop: lærredet vokser med strukturen (100 %), højst til CANVAS_TALL; derover panoreres.
+  const canvasH = layout ? (tablet ? TABLET_CANVAS_H : Math.round(Math.min(CANVAS_TALL, Math.max(CANVAS_MIN, layout.height * fitZoom + foot)))) : CANVAS_MIN;
   const defaultPan = layout ? { x: Math.round((canvasW - layout.width * z) / 2), y: Math.round(Math.max(8, (canvasH - foot - layout.height * z) / 2)) } : { x: 0, y: 0 };
   const p = pan ?? defaultPan;
 
@@ -224,7 +247,7 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
   /* ---------- Mobil: indrykket liste ---------- */
   if (W < LIST_BELOW) {
     return (
-      <Section title={heading} className="lasso-odiagram">
+      <Section title={heading} action={demo ? <span className="lasso-odiagram__demo">Underniveauer er eksempeldata</span> : undefined} className="lasso-odiagram lasso-odiagram--list">
         <div ref={ref}>
           <OwnershipList graph={graph} depthUp={up} depthDown={down} open={open} personRoot={personRoot} />
           {canFullscreen && onAction && layout && layout.nodes.length > 1 ? (
@@ -236,7 +259,6 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
             </button>
           ) : null}
           {graph.note ? <p className="lasso-odiagram__note">{graph.note}</p> : null}
-          {source}
         </div>
       </Section>
     );
@@ -365,17 +387,17 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
   const toolbarParts = [
     personRoot ? 0 : segW(["Legale ejere", "Reelle ejere"]),
     personRoot || beneficial ? 0 : segW(["Begge veje", "Kun ejere", "Kun datterselskaber"]),
-    chipW(`Pr. dato: ${date ? formatDate(date) : "i dag"}`, 30),
+    chipW(date ? `Pr. ${formatDate(date)}` : "Pr. dato", 24),
     onDate ? chipW("I dag") : 0,
     focus ? chipW(`Tilbage til ${origin?.name ?? ""}`) : 0,
-    beneficial ? 0 : chipW(`Dybde: ${curUp} op, ${curDown} ned`, 20),
+    beneficial ? 0 : chipW("Dybde", 20),
     chipW("Eksportér", 22),
     canFullscreen && onAction ? 36 : 0,
   ].filter((w) => w > 0);
   const optional = [hasHistoric ? chipW("Vis historik") : 0, chipW(expandAll ? "Fold sammen" : "Udvid alle")].filter((w) => w > 0);
   const gap = 8;
   const sumW = (ws: number[]) => ws.reduce((a, b) => a + b, 0) + gap * Math.max(0, ws.length - 1);
-  const overflow = sumW([...toolbarParts, ...optional]) + 24 > W;
+  const overflow = sumW([...toolbarParts, ...optional]) > W;
   const historyButton = hasHistoric ? (
     <button type="button" className={`lasso-odiagram__chip ${showHistoric ? "is-on" : ""}`} aria-pressed={showHistoric} onClick={() => setShowHistoric(!showHistoric)}>
       Vis historik
@@ -401,6 +423,22 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
 
   const toolbar = (
     <div className="lasso-odiagram__toolbar lasso-noprint" role="toolbar" aria-label="Ejerdiagram">
+      {/* En person har ingen ejere, så retningsvalget giver kun mening for et selskab. */}
+      {personRoot || beneficial ? null : (
+        <div className="lasso-odiagram__seg" role="radiogroup" aria-label="Retning">
+          {(
+            [
+              ["both", "Begge veje"],
+              ["up", "Kun ejere"],
+              ["down", "Kun datterselskaber"],
+            ] as const
+          ).map(([k, label]) => (
+            <button key={k} type="button" role="radio" aria-checked={direction === k} className={direction === k ? "is-on" : ""} onClick={() => setDirection(k)} disabled={noData}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
       {personRoot ? null : (
         <div className="lasso-odiagram__seg" role="radiogroup" aria-label="Ejere">
           {(
@@ -426,24 +464,8 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
           ))}
         </div>
       )}
-      {/* En person har ingen ejere, så retningsvalget giver kun mening for et selskab. */}
-      {personRoot || beneficial ? null : (
-        <div className="lasso-odiagram__seg" role="radiogroup" aria-label="Retning">
-          {(
-            [
-              ["both", "Begge veje"],
-              ["up", "Kun ejere"],
-              ["down", "Kun datterselskaber"],
-            ] as const
-          ).map(([k, label]) => (
-            <button key={k} type="button" role="radio" aria-checked={direction === k} className={direction === k ? "is-on" : ""} onClick={() => setDirection(k)} disabled={noData}>
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
       <label className="lasso-odiagram__chip lasso-odiagram__date">
-        <span>Pr. dato:</span>
+        <span>{date ? "Pr." : "Pr. dato"}</span>
         <input
           type="date"
           value={date ?? ""}
@@ -451,7 +473,7 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
           aria-label="Vis ejerskab pr. dato"
           onChange={(ev) => setOnDate(ev.target.value || undefined)}
         />
-        <span className="lasso-odiagram__today">{date ? formatDate(date) : "i dag"}</span>
+        {date ? <span className="lasso-odiagram__today">{formatDate(date)}</span> : null}
       </label>
       {onDate ? (
         <button type="button" className="lasso-odiagram__chip" onClick={() => setOnDate(undefined)}>
@@ -465,8 +487,12 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
       ) : null}
       {beneficial ? null : (
       <label className={`lasso-odiagram__chip lasso-odiagram__select ${noData ? "is-dim" : ""}`}>
-        <span className="lasso-odiagram__sr">Dybde</span>
+        {/* 14.1: knappen hedder "Dybde"; det valgte (fx "2 op, 1 ned") står i listen og som title. */}
+        <span className="lasso-odiagram__depthlabel" aria-hidden="true">Dybde</span>
         <select
+          className="lasso-odiagram__depthselect"
+          title={`Dybde: ${curUp} op, ${curDown} ned`}
+          aria-label="Dybde"
           value={`${curUp}:${curDown}`}
           disabled={noData || depthOptions.length < 2}
           onChange={(ev) => {
@@ -486,6 +512,7 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
       )}
       {overflow ? null : historyButton}
       <span className="lasso-odiagram__spacer" />
+      {overflow ? moreMenu : expandButton}
       <Menu
         trigger={
           <>
@@ -517,7 +544,6 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
           },
         ]}
       />
-      {overflow ? moreMenu : expandButton}
       {canFullscreen && onAction ? (
         <button type="button" className="lasso-odiagram__chip lasso-odiagram__icon" aria-label="Fuld skærm" onClick={() => onAction({ kind: "fullscreen" })}>
           <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
@@ -579,6 +605,25 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
                 {personRoot ? `${rootName} ejer ingen selskaber i CVR (legale ejerandele over 5 %).` : `${rootName} har ingen legale ejere over 5 % i CVR og ejer ikke andre selskaber.`} Sidst tjekket{" "}
                 {formatDate(graph.fetchedAt ?? new Date().toISOString())}.
               </p>
+              {personRoot ? null : (
+                <div className="lasso-odiagram__empty-actions">
+                  <button
+                    type="button"
+                    className="lasso-btn lasso-btn--sm"
+                    onClick={() => {
+                      setOwners("beneficial");
+                      setSelected(null);
+                    }}
+                  >
+                    Vis reelle ejere
+                  </button>
+                  {onAction ? (
+                    <button type="button" className="lasso-link lasso-odiagram__empty-link" onClick={() => onAction({ kind: "open-section", lassoId: graph.rootId, pageKind: "company", section: "historik", name: rootName })}>
+                      Se historik
+                    </button>
+                  ) : null}
+                </div>
+              )}
             </>
           ) : (
             <>
@@ -617,7 +662,7 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
   );
 
   return (
-    <Section title={heading} subtitle={rootName} className="lasso-odiagram">
+    <Section title={deskHeading} className="lasso-odiagram">
       <div ref={ref}>
       <div ref={printRef}>
         {toolbar}
@@ -648,6 +693,12 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
             </button>
           </p>
         ) : null}
+        {layout.nodes.some((n) => n.kind === "chain") ? (
+          <div className="lasso-odiagram__info">
+            <p className="lasso-odiagram__info-title">Fold ud lag for lag</p>
+            <p className="lasso-odiagram__info-text">Lange kæder med én ejer pr. led foldes, så de nærmeste og de yderste led står fremme. Klik på den foldede node for at se mellemleddene.</p>
+          </div>
+        ) : null}
         {notes.map((t) => (
           <p key={t} className="lasso-odiagram__note">
             {t}
@@ -668,10 +719,12 @@ function NodeShape({ n, selected, onClick, onDoubleClick, onHover }: { n: Layout
   const folded = n.kind === "chain" || n.kind === "group";
   const foreign = n.entity?.country;
   const hasIcon = n.kind === "company" || folded;
-  const padL = n.root ? 14 : person ? 16 : 10;
-  const textX = n.x + padL + (hasIcon ? 28 : 0);
-  const maxText = n.w - (textX - n.x) - 10;
-  const nameSize = n.root ? 14 : 13;
+  const padL = n.root ? 14 : person ? 16 : 8;
+  // 14.1: ikonet (14 px) og 6 px luft, så navnet (14/600) får plads på én linje i 196 px.
+  const textX = n.x + padL + (hasIcon ? 22 : 0);
+  const maxText = n.w - (textX - n.x) - 6;
+  // 14.1: navnet står i 14/600 på én linje; et navn, der ikke kan være, sættes i 13 før det afkortes.
+  const nameSize = textWidth(n.title, 14, 600) <= maxText ? 14 : 13;
   const cy = n.y + n.h / 2;
   const cls = [
     "lasso-odiagram__node",
@@ -690,7 +743,8 @@ function NodeShape({ n, selected, onClick, onDoubleClick, onHover }: { n: Layout
   const label = folded ? `${n.title}. ${n.subtitle ?? ""}. Klik for at folde ud.` : `${n.title}, ${subtitle ?? ""}`;
   // Navne afkortes ikke hårdt: et langt navn ombrydes til to linjer ved et mellemrum, først derefter "…".
   const rawTitle = n.kind === "group" && textWidth(n.title, nameSize, 600) > maxText ? n.title.replace("datterselskaber", "selskaber") : n.title;
-  const nameLines = splitName(rawTitle, maxText, nameSize, 600, !folded);
+  // 14.1: navnet står på én linje (14/600), så noden holder 196 × 64; for langt afkortes med "…".
+  const nameLines = splitName(rawTitle, maxText, nameSize, 600, false);
   const lineH = nameSize + 3;
   const top = cy - 3 - ((nameLines.length - 1) * lineH) / 2 - (nameLines.length > 1 ? 3 : 0);
   const subY = top + (nameLines.length - 1) * lineH + 15;
@@ -772,7 +826,9 @@ function NodeShape({ n, selected, onClick, onDoubleClick, onHover }: { n: Layout
 function EdgePath({ e, focus, dim }: { e: LayoutEdge; focus: boolean; dim: boolean }) {
   const cls = ["lasso-odiagram__edge", `lasso-odiagram__edge--${e.style}`, focus ? "is-focus" : "", dim ? "is-dim" : ""].filter(Boolean).join(" ");
   const marker = focus ? "lasso-od-arrow-focus" : e.style === "cycle" ? "lasso-od-arrow-cycle" : "lasso-od-arrow";
-  return <path className={cls} d={roundedPath(e.points)} markerEnd={`url(#${marker})`} />;
+  // 14b: den ukendte rest under fokus er ikke en ejer, der ejes; ingen pil.
+  const toUnknown = e.to.startsWith("unknown:");
+  return <path className={cls} d={roundedPath(e.points)} markerEnd={toUnknown ? undefined : `url(#${marker})`} />;
 }
 
 function EdgeLabel({ e, dim }: { e: LayoutEdge; dim: boolean }) {
@@ -1006,7 +1062,6 @@ function OwnershipList({
   const [openRows, setOpenRows] = useState<ReadonlySet<string>>(new Set());
   const tree = useMemo(() => ownershipTree(graph, { depthUp, depthDown }), [graph, depthUp, depthDown]);
   const root = graph.nodes.find((n) => n.id === graph.rootId);
-  const both = tree.owners.length > 0 && tree.subsidiaries.length > 0;
   const toggle = (key: string) => {
     const next = new Set(openRows);
     if (next.has(key)) next.delete(key);
@@ -1062,12 +1117,11 @@ function OwnershipList({
     <>
       <ul className="lasso-odlist" aria-label="Ejerstruktur som liste">
         <li className="lasso-odlist__row lasso-odlist__row--root">
+          <span className="lasso-odlist__dot" aria-hidden="true" />
           <span className="lasso-odlist__name">{root?.name ?? graph.rootId}</span>
           <span className="lasso-odlist__tag">Emne</span>
         </li>
-        {both && tree.owners.length ? <li className="lasso-odlist__group">Ejere</li> : null}
         {rows(tree.owners, 1, "o", "ejere")}
-        {both && tree.subsidiaries.length ? <li className="lasso-odlist__group">Datterselskaber</li> : null}
         {rows(tree.subsidiaries, 1, "s", personRoot ? "selskaber" : "datterselskaber")}
       </ul>
       {emptyAll ? (

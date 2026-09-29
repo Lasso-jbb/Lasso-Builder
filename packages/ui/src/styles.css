@@ -3157,8 +3157,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-odiagram__date input { width: 118px; height: 100%; padding: 0; border: 0; background: transparent; font: inherit; font-size: var(--lasso-fs-sm); color: var(--lasso-text); }
 .lasso-odiagram__date input:focus, .lasso-odiagram__date input:focus-visible { outline: none; }
 .lasso-odiagram__date input::-webkit-calendar-picker-indicator { opacity: 0.55; cursor: pointer; }
-.lasso-odiagram__date:has(.lasso-odiagram__today) input { width: 22px; color: transparent; }
-.lasso-odiagram__date:has(.lasso-odiagram__today) input::-webkit-datetime-edit { display: none; }
+.lasso-odiagram__date input { width: 22px; color: transparent; }
+.lasso-odiagram__date input::-webkit-datetime-edit { display: none; }
 .lasso-odiagram__date:focus-within { border-color: var(--lasso-focus-border); }
 .lasso-odiagram__today { margin-left: -4px; }
 /* Mini-kortet: øverst til højre på lærredet, hvid flade, noder i divider-grå, fokus i koral, udsnittet som 1,5 px ink-ramme */
@@ -3859,3 +3859,26 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-ownerlist .lasso-rows--owners:not(.is-all) .is-extra { display: none; }
   .lasso-root .lasso-ownerlist__all { display: flex; align-items: center; justify-content: center; width: 100%; min-height: var(--lasso-touch-h); font-size: var(--lasso-fs); font-weight: 500; color: var(--lasso-accent-text); }
 }
+
+/* ---------- 14 / 14b / 26c.6 Ejerdiagram (fix2 G4) ---------- */
+/* 14.1: mini-kortet nederst til højre ved zoomknapperne. */
+.lasso-odiagram__minimap { top: auto; bottom: 16px; right: 64px; }
+.lasso-odiagram__legend { right: 260px; }
+.lasso-odiagram__legend-row { row-gap: 4px; }
+/* 14b: tom tilstand med "Vis reelle ejere" og "Se historik"; infokort ved foldet kæde. */
+.lasso-odiagram__empty-actions { display: flex; align-items: center; justify-content: center; gap: var(--lasso-space-4); margin-top: var(--lasso-space-3); }
+.lasso-root .lasso-odiagram__empty-link { font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-accent-text); }
+.lasso-odiagram__info { margin-top: var(--lasso-space-3); padding: 12px 16px; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); }
+.lasso-odiagram__info-title { margin: 0; font-size: var(--lasso-fs); line-height: 20px; font-weight: 600; color: var(--lasso-text); }
+.lasso-odiagram__info-text { margin: 2px 0 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-3); }
+/* 26c.6: koral prik foran emnet, ingen gruppeoverlinjer, "Underniveauer er eksempeldata" i hovedet. */
+.lasso-odlist__dot { flex: none; width: 8px; height: 8px; border-radius: 4px; background: var(--lasso-accent); }
+.lasso-odiagram__demo { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+.lasso-odiagram--list .lasso-section__head { align-items: baseline; flex-wrap: nowrap; }
+.lasso-odlist__row { font-size: var(--lasso-fs); line-height: 18px; }
+.lasso-odlist__share { font-size: var(--lasso-fs-sm); }
+
+/* 14.1: "Dybde ⌄" som knap; den skjulte select ligger over og viser valgene. */
+.lasso-odiagram__select { position: relative; }
+.lasso-root .lasso-odiagram__select .lasso-odiagram__depthselect { position: absolute; inset: 0; width: 100%; margin: 0; padding: 0; opacity: 0; }
+.lasso-odiagram__depthlabel { margin-right: 2px; }
