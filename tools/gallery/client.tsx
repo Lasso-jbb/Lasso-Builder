@@ -29,7 +29,8 @@ function Stage({ id }: { id: number }) {
   if (!entry) return <div>Ukendt element {id}</div>;
   if (entry.spec) {
     const spec = parseViewSpec(entry.spec);
-    return <LassoView spec={spec} dataset={window.__GALLERY_DATA__[String(id)] ?? null} host={HOST} onAction={() => undefined} />;
+    // Elementerne står i Paper uden visningens egen ramme (logo, "Data hentet …", Gem visning).
+    return <LassoView spec={spec} dataset={window.__GALLERY_DATA__[String(id)] ?? null} host={HOST} onAction={() => undefined} frameless />;
   }
   return (
     <div className="lasso-root" style={{ padding: 24, background: "var(--lasso-surface, #fff)" }}>
