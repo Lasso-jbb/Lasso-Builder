@@ -120,12 +120,15 @@ const persons: PersonSearchResultVM = {
   ],
 };
 
-test("Persontabel (15.3): navn alene, 2 roller + 'og n flere', konkurser kun > 0", () => {
-  assert.equal(rolesText(persons.rows[0]!), "Direktør, Data Eksempel A/S og bestyrelsesmedlem, Nordisk Eksempel ApS og 1 flere");
-  assert.equal(personSub(persons.rows[0]!), "f. 1978, København");
+test("Persontabel (15.3): navn alene, 2 rolleord + +n, selskaber, konkurser kun > 0, seneste ændring", () => {
+  assert.equal(rolesText(persons.rows[0]!), "Direktør, bestyrelsesmedlem +1");
+  assert.equal(personSub(persons.rows[0]!), "Født 1978, København");
   const html = renderToStaticMarkup(createElement(PersonTable, { result: persons, onAction: noop, canDrillDown: true }));
   assert.match(html, /Mette Eksempel/);
   assert.match(html, /lasso-ptable__bankrupt">1</);
+  assert.match(html, />Roller, aktive<[^]*>Selskaber<[^]*>Konkurser<[^]*>Seneste ændring</);
+  assert.match(html, /Direktør, bestyrelsesmedlem<span class="lasso-ptable__more"> \+1</);
+  assert.match(html, /lasso-rowmenu/);
   assert.match(html, /Ingen aktive roller/);
   assert.match(html, /Viser 1–2 af 2 personer/);
   assert.doesNotMatch(html, /lasso-avatar|initial/);

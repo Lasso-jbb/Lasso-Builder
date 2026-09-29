@@ -3029,7 +3029,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-bulkbar__close:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
 
 /* ---------- 15.3 Persontabel (node BD5-0): samme tabel, navn alene, roller som tekst ---------- */
-.lasso-ptable__table th:nth-child(3), .lasso-ptable__table td:nth-child(3) { width: 120px; }
+.lasso-ptable__table th.lasso-num, .lasso-ptable__table td.lasso-num { width: 120px; white-space: nowrap; }
+.lasso-ptable__more { color: var(--lasso-muted); }
 .lasso-ptable__roles { font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-2); }
 .lasso-ptable__bankrupt { font-weight: 600; color: var(--lasso-bankrupt); }
 .lasso-pcard__roles { margin: 8px 0 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-2); }
