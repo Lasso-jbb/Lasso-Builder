@@ -44,6 +44,8 @@ export interface TabsProps {
   className?: string;
   /** Niveau 1: mere end 8 faner samles bag "Flere" (kataloget). Sæt for at slå sammenfoldningen fra. */
   maxVisible?: number;
+  /** Niveau 3: bliver 32 px og kompakt på samme linje som overskriften, også på mobil (26h.2). */
+  compact?: boolean;
 }
 
 /** Stabilt id-par for fane og panel, så Tabs og TabPanel kan bindes sammen. */
@@ -54,7 +56,7 @@ export function panelId(base: string, item: string): string {
   return `${base}-panel-${item}`;
 }
 
-export function Tabs({ level, items, value, onChange, ariaLabel, id, className = "", maxVisible }: TabsProps) {
+export function Tabs({ level, items, value, onChange, ariaLabel, id, className = "", maxVisible, compact = false }: TabsProps) {
   const autoId = useId();
   const base = id ?? autoId;
   const listRef = useRef<HTMLDivElement>(null);
@@ -105,7 +107,7 @@ export function Tabs({ level, items, value, onChange, ariaLabel, id, className =
     ) : null;
 
   return (
-    <div className={`lasso-tabs-wrap lasso-tabs-wrap--l${level} ${mobileSelect ? "lasso-tabs-wrap--many" : ""} ${className}`}>
+    <div className={`lasso-tabs-wrap lasso-tabs-wrap--l${level} ${mobileSelect ? "lasso-tabs-wrap--many" : ""}${compact ? " lasso-tabs-wrap--compact" : ""} ${className}`}>
     {mobileSelect}
     <div ref={listRef} role="tablist" aria-label={ariaLabel} className={`lasso-tabs lasso-tabs--l${level}`}>
       {visible.map((t) => {

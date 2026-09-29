@@ -47,7 +47,7 @@ import {
   SnapshotPicker,
   SourceList,
   Sparkline,
-  StatusBadge,
+  statusTone,
   TabPanel,
   Tabs,
   ToastProvider,
@@ -822,39 +822,46 @@ const mobilePages: GalleryEntry[] = [
 
 function FlagDemo() {
   const [v, setV] = useState("selskab");
+  const reason = "Mulig fejl i tallet: værdien er 1.000 gange højere end de øvrige poster og kan være indberettet i kr. i stedet for t. kr. Kilde: XBRL, Erhvervsstyrelsen. (Tooltip, vises ved tap på ikonet)";
   return (
-    <Section
-      title="Resultat 2025"
-      action={
-        <Tabs
-          level={3}
-          items={[
-            { id: "selskab", label: "Selskab" },
-            { id: "koncern", label: "Koncern" },
-          ]}
-          value={v}
-          onChange={setV}
-          ariaLabel="Selskab eller koncern"
-        />
-      }
-    >
-      <ul className="lasso-rows">
-        <li className="lasso-row">
-          <div className="lasso-row__main">
-            <div className="lasso-row__name lasso-row__name--regular">Resultat efter skat</div>
-          </div>
-          <div className="lasso-row__value">
-            −201 t. kr. <QualityFlag text="Resultatet afviger fra summen af posterne i årsrapporten." />
-          </div>
-        </li>
-        <li className="lasso-row">
-          <div className="lasso-row__main">
-            <div className="lasso-row__name lasso-row__name--regular">Egenkapital</div>
-          </div>
-          <div className="lasso-row__value">3,2 mio. kr.</div>
-        </li>
-      </ul>
-    </Section>
+    <div style={{ border: "1px solid var(--lasso-border)", borderRadius: "var(--lasso-radius-card)", padding: 16 }}>
+      <Section
+        title="Resultat 2025"
+        action={
+          <Tabs
+            level={3}
+            compact
+            items={[
+              { id: "selskab", label: "Selskab" },
+              { id: "koncern", label: "Koncern" },
+            ]}
+            value={v}
+            onChange={setV}
+            ariaLabel="Selskab eller koncern"
+          />
+        }
+      >
+        <ul className="lasso-rows">
+          <li className="lasso-row">
+            <div className="lasso-row__main">
+              <div className="lasso-row__name lasso-row__name--regular">Bruttofortjeneste</div>
+            </div>
+            <div className="lasso-row__value">18.834</div>
+          </li>
+          <li className="lasso-row">
+            <div className="lasso-row__main">
+              <div className="lasso-row__name lasso-row__name--regular">
+                Varelager (eksempel)
+                <QualityFlag text={reason} />
+              </div>
+            </div>
+            <div className="lasso-row__value">1.204.000</div>
+          </li>
+        </ul>
+        {/* Tooltippen åbner ved tap; her vist statisk som mørkt kort under rækken. */}
+        <p style={{ margin: "8px 0 0", padding: "10px 12px", borderRadius: "var(--lasso-radius)", background: "var(--lasso-tooltip)", color: "var(--lasso-bg)", fontSize: 12, lineHeight: "18px" }}>{reason}</p>
+      </Section>
+    </div>
   );
 }
 
@@ -864,22 +871,52 @@ const mobileStates: GalleryEntry[] = [
     title: "Tværgående tilstande (mobil)",
     node: "GAV-0",
     only: "mobile",
-    render: () => (
-      <div style={stack(16)}>
-        {caption("Tom")}
-        <DataState state="empty" title="Ingen nyheder endnu" reason="Der er ikke skrevet om virksomheden de seneste 12 måneder." checkedAt="2026-09-29" action={{ label: "Overvåg nyheder", onClick: noop }} />
-        {caption("Indlæser")}
-        <DataState state="loading" lines={3} height={96} />
-        {caption("Fejl")}
-        <DataState state="error" title="Regnskab kunne ikke hentes" reason="Erhvervsstyrelsen svarede ikke. Prøv igen om lidt." onRetry={noop} />
-        {caption("Låst")}
-        <DataState state="locked" title="Reelle ejere kræver Lasso Pro" reason="Se hvem der i sidste ende ejer og kontrollerer virksomheden." action={{ label: "Se planer", onClick: noop }} />
-        {caption("På forespørgsel")}
-        <DataState state="onrequest" title="Kreditvurdering" reason="Hentes fra Creditsafe. Koster 1 kredit og tager typisk 5–45 sekunder." action={{ label: "Hent kreditvurdering, 1 kredit", onClick: noop }} />
-      </div>
-    ),
+    note: "De fem tilstande stablet som kort; ventetilstanden for 'På forespørgsel' står under knappen, som i Paper.",
+    render: () => {
+      const card: CSSProperties = { border: "1px solid var(--lasso-border)", borderRadius: "var(--lasso-radius-card)", padding: 16, background: "var(--lasso-surface)" };
+      const sk = (w: string, h: number, r = 7): CSSProperties => ({ width: w, height: h, borderRadius: r });
+      return (
+        <div style={{ ...stack(12), ...card, padding: 12 }}>
+          <DataState state="empty" solid title="Ingen nyheder endnu" reason="Vi har ikke fundet omtale af LASSO X A/S. Sidst tjekket 25.09.2026 09:41." action={{ label: "Overvåg nyheder", onClick: noop }} />
+          <div style={card} aria-busy="true">
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+              <div className="lasso-skeleton" style={sk("40%", 12)} />
+              <div className="lasso-skeleton" style={sk("18%", 12)} />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+              <div className="lasso-skeleton" style={sk("100%", 64, 10)} />
+              <div className="lasso-skeleton" style={sk("100%", 64, 10)} />
+            </div>
+            <div className="lasso-skeleton" style={sk("100%", 110, 10)} />
+            <p className="lasso-small" style={{ margin: "12px 0 0", textAlign: "center", color: "var(--lasso-muted)" }}>
+              Indlæser, skelet i samme mål som indholdet, ingen spinner
+            </p>
+          </div>
+          <DataState
+            state="error"
+            title="Regnskab kunne ikke hentes"
+            reason="Erhvervsstyrelsen svarer ikke lige nu. Dine øvrige data er opdaterede."
+            onRetry={noop}
+            secondaryAction={{ label: "Rapportér", onClick: noop }}
+          />
+          <div style={card}>
+            <Section title="Reelle ejere">
+              <DataState state="locked" reason="Reelle ejere kræver Lasso Pro. Du kan se legale ejere og ejerdiagram uden opgradering." action={{ label: "Se planer", onClick: noop }} />
+            </Section>
+          </div>
+          <div style={card}>
+            <Section title="Kreditvurdering" action={<span className="lasso-section__meta">Creditsafe, 1 kredit</span>}>
+              <div style={stack(12)}>
+                <DataState state="onrequest" reason="Ikke hentet for LASSO X A/S. Vurderingen tager 5–45 sekunder og koster 1 kredit (du har 14)." action={{ label: "Hent kreditvurdering", onClick: noop }} />
+                <DataState state="onrequest" pending={{ title: "Henter vurdering …", detail: "ca. 20 sek. Du kan fortsætte imens, vi giver besked" }} />
+              </div>
+            </Section>
+          </div>
+        </div>
+      );
+    },
   },
-  { nr: "26h.2", title: "Kvalitetsflag + koncern/selskab-segment (mobil)", node: "GCN-0", only: "mobile", note: "Tooltippen åbner ved tap og kan ikke vises statisk.", render: () => <FlagDemo /> },
+  { nr: "26h.2", title: "Kvalitetsflag + koncern/selskab-segment (mobil)", node: "GCN-0", only: "mobile", note: "Tooltippen åbner ved tap; her vist statisk som mørkt kort under rækken.", render: () => <FlagDemo /> },
   { nr: "26h.3", title: "Regnskabsanalyse (mobil)", node: "GD8-0", only: "mobile", spec: one("Regnskabsanalyse", { type: "LassoTextSections", company: C, variant: "analyse" }) },
   {
     nr: "26h.4",
@@ -891,7 +928,9 @@ const mobileStates: GalleryEntry[] = [
         sources={[
           { name: "CVR, Erhvervsstyrelsen", updated: "i dag 06:10" },
           { name: "Regnskaber, XBRL", updated: "2026-06-02" },
-          { name: "Lasso News", updated: "i dag 07:45" },
+          { name: "Creditsafe", updated: "2026-09-12" },
+          { name: "Nyheder, Paqle", updated: "for 2 timer siden" },
+          { name: "BBR, eksempeldata", updated: "2026-09-18" },
         ]}
         pdf={{ label: "Hent årsrapport 2025 (PDF)", url: "https://example.com/aarsrapport.pdf" }}
       />
@@ -904,8 +943,35 @@ const mobileStates: GalleryEntry[] = [
     only: "mobile",
     render: () => <SnapshotPicker subject="Ejerdiagram" what="ejerskab" date="2023-12-31" today="2026-09-29" onChange={noop} />,
   },
-  { nr: "26h.6", title: "Nyhed med fremhævning (mobil)", node: "IK2-0", only: "mobile", spec: one("Nyheder", { type: "LassoNews", company: C, limit: 1 }) },
-  { nr: "26h.7", title: "Live-nummer (mobil)", node: "GF8-0", only: "mobile", render: () => <LiveNumber number="71747812" verifiedAt="2026-09-29" /> },
+  {
+    nr: "26h.6",
+    title: "Nyhed med fremhævning (mobil)",
+    node: "IK2-0",
+    only: "mobile",
+    note: "Paper viser en Paqle-artikel (Børsen); demodata har kun Lasso News-eksempler, så artiklen lægges ind her.",
+    spec: one("Nyheder", { type: "LassoNews", company: C, limit: 1 }),
+    mutate: (ds) => {
+      const n = ds.news[C];
+      if (!n) return;
+      n.items = [{
+        source: "Børsen",
+        url: "https://borsen.dk/",
+        time: new Date(Date.now() - 2 * 3_600_000).toISOString(),
+        headline: "Eksempel Byg udvider med ejendomsdata fra BBR (eksempeloverskrift)",
+        excerpt: "datavirksomheden Eksempel Byg A/S oplyser, at BBR-data nu indgår i virksomhedsoverblikket for alle danske",
+        extractSegments: [{ text: "datavirksomheden " }, { text: "Eksempel Byg A/S", highlight: true }, { text: " oplyser, at BBR-data nu indgår i virksomhedsoverblikket for alle danske" }],
+        provider: "Paqle",
+        note: "Eksempeldata",
+      }];
+    },
+  },
+  { nr: "26h.7", title: "Live-nummer (mobil)", node: "GF8-0", only: "mobile", render: () => (
+      <div style={{ border: "1px solid var(--lasso-border)", borderRadius: "var(--lasso-radius-card)", padding: 16 }}>
+        <Section title="Telefon">
+          <LiveNumber number="71747812" />
+        </Section>
+      </div>
+    ) },
   { nr: "26h.8", title: "Fusioner og spaltninger (mobil)", node: "GFQ-0", only: "mobile", spec: one("Fusioner", { type: "LassoMergers", company: C }) },
   { nr: "26h.9", title: "Bibrancher og formål (mobil)", node: "GG7-0", only: "mobile", spec: one("Profil", { type: "LassoTextSections", company: C, variant: "profil" }) },
 ];
@@ -950,27 +1016,97 @@ const report: GalleryEntry[] = [
 
 /* ---------- 28 Øvrige datatyper ---------- */
 
+/* 28.1: værdilisterne tegnes som Paper-dokumentationen: fire paneler og et mobilt filterark. */
+const ENUM_CARD: CSSProperties = { border: "1px solid var(--lasso-border)", borderRadius: "var(--lasso-radius-card)", padding: 16, background: "var(--lasso-surface)", minWidth: 0 };
+const ENUM_OVERLINE: CSSProperties = { margin: "0 0 8px", fontSize: "var(--lasso-fs-label)", lineHeight: "14px", fontWeight: 600, letterSpacing: "var(--lasso-ls-label)", textTransform: "uppercase", color: "var(--lasso-muted)" };
+const ENUM_ROW: CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, minHeight: 30, borderBottom: "1px solid var(--lasso-divider-subtle)", fontSize: "var(--lasso-fs-sm)" };
+const ENUM_GROUP: CSSProperties = { margin: "10px 0 2px", fontSize: 12, fontWeight: 600, color: "var(--lasso-text-3)" };
+
 function Enumerations() {
-  // Samme klassificering som live-data og demodata (packages/spec/src/status.ts).
-  const kindOf = statusKind;
-  const statuses = ["Normal", "Aktiv", "Ny", "Under reassumering", "Under frivillig likvidation", "Under rekonstruktion", "Under konkurs", "Opløst efter konkurs", "Tvangsopløst", "Ophørt"].map(
-    (st) => [st, kindOf(st)] as const,
-  );
+  // Status: tekst fra værdilisten, farve fra gruppen (packages/spec/src/status.ts + statusTone).
+  const active = ["Aktiv", "Normal", "Fremtid"];
+  const inactive = ["Under konkurs", "Under tvangsopløsning", "Under likvidation", "Under rekonstruktion", "Opløst efter konkurs", "Ophørt"];
+  const toneWord: Record<string, string> = { active: "tekstfarve", warning: "mørk rød", liquidation: "warning-tekst", inactive: "muted", new: "koral" };
+  const statusRow = (st: string) => {
+    const kind = statusKind(st) ?? "active";
+    const tone = statusTone(st, kind);
+    return (
+      <div key={st} style={ENUM_ROW}>
+        <span className={`lasso-status lasso-status--${tone}`}>{st}</span>
+        <span style={{ fontSize: 12, color: "var(--lasso-muted)" }}>{toneWord[tone]}</span>
+      </div>
+    );
+  };
+  const forms: [string, string, string][] = [
+    ["ENK", "Enkeltmandsvirksomhed", "34,8 %"],
+    ["ApS", "Anpartsselskab", "33,9 %"],
+    ["A/S", "Aktieselskab", "4,2 %"],
+    ["I/S", "Interessentskab", "1,1 %"],
+  ];
+  const filter: [string, boolean][] = [
+    ["Aktiv (1.243.501)", true],
+    ["Under konkurs (eksempel)", false],
+    ["Ophørt (eksempel)", false],
+  ];
   return (
-    <Section title="Status (værdiliste)">
-      <ul className="lasso-rows">
-        {statuses.map(([s, k]) => (
-          <li key={s} className="lasso-row">
-            <div className="lasso-row__main">
-              <div className="lasso-row__name lasso-row__name--regular">{s}</div>
-            </div>
-            <div className="lasso-row__value">
-              <StatusBadge status={s} kind={k} />
-            </div>
-          </li>
+    <div className="lasso-enums" style={{ display: "grid", gap: 16 }}>
+      <div className="lasso-enums__desk" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, alignItems: "start" }}>
+        <div style={ENUM_CARD}>
+          <p style={ENUM_OVERLINE}>Status (18 værdier, 2 grupper)</p>
+          <p style={ENUM_GROUP}>Aktive</p>
+          {active.map(statusRow)}
+          <p style={ENUM_GROUP}>Inaktive</p>
+          {inactive.map(statusRow)}
+          <p className="lasso-more" style={{ margin: "10px 0 0" }}>Vis alle 18</p>
+        </div>
+        <div style={{ ...ENUM_CARD, display: "grid", gap: 16 }}>
+          <div>
+            <p style={ENUM_OVERLINE}>Virksomhedsform (40+, kode og andel)</p>
+            {forms.map(([code, name, share]) => (
+              <div key={code} style={ENUM_ROW}>
+                <span>
+                  <span style={{ display: "inline-block", width: 40, color: "var(--lasso-muted)" }}>{code}</span>
+                  {name}
+                </span>
+                <span style={{ color: "var(--lasso-muted)" }}>{share}</span>
+              </div>
+            ))}
+            <p className="lasso-more" style={{ margin: "10px 0 0" }}>Vis alle former</p>
+          </div>
+          <div>
+            <p style={ENUM_OVERLINE}>Ansatte-interval (11)</p>
+            <p style={{ margin: 0, fontSize: "var(--lasso-fs-sm)", lineHeight: "20px", color: "var(--lasso-text)" }}>0, 1, 2–4, 5–9, 10–19, 20–49, 50–99, 100–199, 200–499, 500–999, 1.000+</p>
+          </div>
+          <div>
+            <p style={ENUM_OVERLINE}>Enhedstype (4)</p>
+            <p style={{ margin: 0, fontSize: "var(--lasso-fs-sm)", lineHeight: "20px", color: "var(--lasso-text)" }}>Person, Virksomhed, Produktionsenhed, Anden enhed (fx udenlandsk)</p>
+          </div>
+        </div>
+        <div style={ENUM_CARD}>
+          <p style={ENUM_OVERLINE}>Brug i filtre (02)</p>
+          <p style={{ margin: "0 0 6px", fontSize: "var(--lasso-fs)", fontWeight: 600, color: "var(--lasso-text)" }}>Status</p>
+          {filter.map(([label, on]) => (
+            <label key={label} style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 32, fontSize: "var(--lasso-fs-sm)", color: "var(--lasso-text)" }}>
+              <input type="checkbox" defaultChecked={on} style={{ accentColor: "var(--lasso-accent)" }} />
+              {label}
+            </label>
+          ))}
+          <p className="lasso-more" style={{ margin: "8px 0 0" }}>Vis alle 18 statusser</p>
+        </div>
+      </div>
+      {/* Mobil: filterark med rækker og koral flueben ved det valgte. */}
+      <div className="lasso-enums__mob" style={{ ...ENUM_CARD, maxWidth: 360 }}>
+        <p style={{ margin: "0 0 2px", fontSize: 12, color: "var(--lasso-muted)" }}>Mobil, filterark</p>
+        <p style={{ margin: "0 0 6px", fontSize: 17, fontWeight: 600, color: "var(--lasso-text)" }}>Status</p>
+        {["Aktiv", "Under konkurs", "Ophørt"].map((st, i) => (
+          <div key={st} style={{ ...ENUM_ROW, minHeight: 44, alignItems: "center", fontSize: "var(--lasso-fs)" }}>
+            <span>{st}</span>
+            {i === 0 ? <span style={{ color: "var(--lasso-accent)", fontWeight: 600 }} aria-label="valgt">✓</span> : null}
+          </div>
         ))}
-      </ul>
-    </Section>
+        <p className="lasso-more" style={{ margin: "10px 0 0" }}>Vis alle 18</p>
+      </div>
+    </div>
   );
 }
 
@@ -981,7 +1117,7 @@ const datatypes: GalleryEntry[] = [
     nr: "28.1",
     title: "Værdilister (enumerations)",
     node: "H0N-0",
-    note: "Status med tekst og farve via StatusBadge/statusTone. Værdilisterne hentes ikke fra API'et i koden; de øvrige lister (virksomhedsform, roller m.fl.) vises ikke.",
+    note: "Dokumentation som i Paper: status i to grupper med farve fra statusTone (konkurs mørk rød, likvidation/rekonstruktion warning), virksomhedsform, ansatte-interval, enhedstype, brug i filtre og mobilt filterark.",
     render: () => <Enumerations />,
   },
   { nr: "28.2", title: "Regnskabspublicering (nyt/korrigeret regnskab)", node: "H3L-0", spec: one("Regnskabspublicering", { type: "LassoPublications", company: C }) },

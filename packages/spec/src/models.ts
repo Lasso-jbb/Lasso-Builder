@@ -415,6 +415,10 @@ export interface NewsItemVM {
    */
   headlineSegments?: TextSegment[];
   extractSegments?: TextSegment[];
+  /** 26h.6: nyhedstjenesten bag artiklen ("Paqle" eller "Lasso News"), til kortets bundlinje "kilde Paqle". */
+  provider?: string;
+  /** 26h.6: kort note forrest i bundlinjen, fx "Eksempeldata". */
+  note?: string;
 }
 
 export interface NewsVM {

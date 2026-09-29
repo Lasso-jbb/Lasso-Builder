@@ -46,15 +46,15 @@ export function Section({
 }
 
 /**
- * Statusens tone (katalog 05.7): Aktiv i tekstfarve, konkurs/tvangsopløsning mørk rød,
- * likvidation samme mørke røde (02c.8), ophørt muted, "Ny" koral tekst. Likvidation har ikke egen statusKind
- * i modellen (den er "warning" ligesom konkurs), så den skelnes på ordet.
+ * Statusens tone (katalog 05.7, 28.1): Aktiv i tekstfarve, konkurs/tvangsopløsning mørk rød,
+ * likvidation og rekonstruktion i warning-tekst, ophørt muted, "Ny" koral tekst. Likvidation og
+ * rekonstruktion har ikke egen statusKind i modellen (de er "warning" ligesom konkurs), så de skelnes på ordet.
  */
 export type StatusTone = "active" | "warning" | "liquidation" | "inactive" | "new";
 
 export function statusTone(status: string | undefined, kind: CompanyVM["statusKind"] | "new" | undefined): StatusTone {
   if (kind === "new" || (status && /^ny$/i.test(status.trim()))) return "new";
-  if (status && /likvidation/i.test(status) && !/konkurs|tvangs/i.test(status)) return "liquidation";
+  if (status && kind !== "inactive" && /likvidation|rekonstruktion/i.test(status) && !/konkurs|tvangs/i.test(status)) return "liquidation";
   return kind ?? "inactive";
 }
 
@@ -92,6 +92,8 @@ export interface DataStateProps {
   positive?: boolean;
   /** Tom, venstrestillet med ⓘ-ikon foran teksten (26e.3). Standard: centreret. */
   inline?: boolean;
+  /** Tom med 1 px fuld kant i stedet for stiplet (26h.1, når elementet selv er et kort). */
+  solid?: boolean;
   /** Fejl: kun teknisk fejl. Giver en "Prøv igen"-knap (primær), når den er sat. */
   onRetry?: () => void;
   /** Tom/låst/på forespørgsel: én handling ("Overvåg nyheder", "Se planer", "Hent kreditvurdering"). */
@@ -159,7 +161,7 @@ export function PendingRing() {
   return <span className="lasso-ring" aria-hidden="true" />;
 }
 
-export function DataState({ state, reason, title, checkedAt, positive, inline, onRetry, action, secondaryAction, pending, children, height, lines = 3, actionLabel, onAction, cost }: DataStateProps) {
+export function DataState({ state, reason, title, checkedAt, positive, inline, solid, onRetry, action, secondaryAction, pending, children, height, lines = 3, actionLabel, onAction, cost }: DataStateProps) {
   if (state === "loading") return <Skeleton lines={lines} height={height} />;
   if (state === "ondemand") {
     // 10.3 (node A2I-0): stiplet ramme som "tom", men med årsag og en handling, der starter beregningen.
@@ -192,7 +194,7 @@ export function DataState({ state, reason, title, checkedAt, positive, inline, o
   if (state === "empty") {
     // Tom (26h.1): ikon, én linje årsag, tidsstempel og højst én handling. Stiplet ramme, aldrig grå fyld.
     return (
-      <div className={`lasso-state${positive ? " lasso-state--positive" : ""}`} style={height ? { minHeight: height } : undefined}>
+      <div className={`lasso-state${positive ? " lasso-state--positive" : ""}${solid ? " lasso-state--solid" : ""}`} style={height ? { minHeight: height } : undefined}>
         {title || positive ? <StateIcon kind={positive ? "check" : "doc"} /> : null}
         {title ? <div className="lasso-state__title">{title}</div> : null}
         <div className="lasso-small">

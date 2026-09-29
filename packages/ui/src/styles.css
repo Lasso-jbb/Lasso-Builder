@@ -23,7 +23,7 @@
   --lasso-iconbtn-sm: 32px;
   --lasso-label-h: 28px;            /* etiket, kun visning (05.6) */
   --lasso-status-new: var(--lasso-accent-text);  /* "Ny" som ren tekst (05.7) */
-  --lasso-status-liquidation: var(--lasso-bankrupt); /* 02c.8/05.7: likvidation mørk rød som konkurs */
+  --lasso-status-liquidation: var(--lasso-warning); /* 28.1: likvidation og rekonstruktion i warning-tekst; konkurs mørk rød */
 
   /* Koral: den eneste accentfarve */
   --lasso-accent: #ff6b35;          /* primary */
@@ -403,6 +403,7 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-root .lasso-state--inline .lasso-state__icon { flex: none; margin: 1px 0 0; color: var(--lasso-icon); }
 .lasso-section__meta { font-size: var(--lasso-fs-sm); color: var(--lasso-muted); font-weight: 400; }
 .lasso-state__title { font-size: var(--lasso-fs); font-weight: 600; color: var(--lasso-text); margin-bottom: 4px; }
+.lasso-state.lasso-state--solid { border-style: solid; border-color: var(--lasso-border); }
 .lasso-state--error { border-style: solid; border-color: var(--lasso-border-strong); background: var(--lasso-surface-2); }
 .lasso-skeleton { border-radius: 7px; background: var(--lasso-skeleton); animation: lasso-pulse 1.4s ease-in-out infinite; height: 14px; }
 @keyframes lasso-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
@@ -623,6 +624,11 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
   .lasso-section__head:has(.lasso-tabs--l3) { flex-wrap: wrap; }
   .lasso-section__action:has(.lasso-tabs--l3) { flex-basis: 100%; }
   .lasso-kv-years { overflow: visible; }
+  /* 26h.2: kompakt segment (32 px) bliver på overskriftens linje. */
+  .lasso-section__head:has(.lasso-tabs-wrap--compact) { flex-wrap: nowrap; align-items: center; }
+  .lasso-section__action:has(.lasso-tabs-wrap--compact) { flex-basis: auto; }
+  .lasso-tabs-wrap--compact, .lasso-tabs-wrap--compact .lasso-tabs--l3 { display: inline-flex; width: auto; height: 32px; }
+  .lasso-tabs-wrap--compact .lasso-tabs--l3 .lasso-tab { flex: none; height: 30px; font-size: 12px; line-height: 16px; }
 }
 /* Ældre alias for niveau 3 (segmentkontrol), så eksisterende markup ser ens ud */
 .lasso-segment { display: inline-flex; align-items: stretch; height: 32px; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius); overflow: hidden; }
@@ -923,6 +929,18 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-news__source { font-size: 12px; font-weight: 600; color: var(--lasso-text); }
 .lasso-news__time { font-size: 12px; color: var(--lasso-muted); }
 .lasso-news__headline { font-size: 15px; line-height: 20px; font-weight: 600; color: var(--lasso-text); }
+.lasso-news__foot { display: none; }
+@container lasso (max-width: 560px) {
+  /* 26h.6: nyheden som kort med 1 px kant, overskrift 16/600, uddrag med "…" i begge ender og bundlinje. */
+  .lasso-news__row, .lasso-news__row:first-child { padding: 12px; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); }
+  .lasso-news { gap: var(--lasso-space-2); }
+  .lasso-news__headline { font-size: 16px; line-height: 22px; margin-bottom: 4px; }
+  .lasso-news__snippet::before { content: "… "; }
+  .lasso-news__snippet::after { content: " …"; }
+  .lasso-news__foot { display: flex; justify-content: space-between; align-items: center; gap: var(--lasso-space-3); margin-top: 10px; }
+  .lasso-news__provider { font-size: 12px; color: var(--lasso-muted); }
+  .lasso-root .lasso-news__open { font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-accent-text); text-decoration: none; }
+}
 @container lasso (max-width: 560px) {
   .lasso-timeline__meta { overflow-wrap: anywhere; }
 }
