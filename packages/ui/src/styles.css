@@ -226,6 +226,12 @@
 /* ---------- Ramme ---------- */
 .lasso-frame { display: flex; flex-direction: column; gap: var(--lasso-space-3); padding: var(--lasso-space-4); }
 .lasso-frame__header { display: flex; align-items: flex-start; gap: var(--lasso-space-3); }
+/* 06.1/24/25: visningen i portalens ramme (LassoView frameless). Ingen egen header/fod; kroppen går direkte
+   under modulbjælken med 24 px sideluft, og kolonnerne starter 40 px under bjælken uden ekstra linje. */
+.lasso-frame.lasso-frame--bare { gap: 0; padding: var(--lasso-space-5) var(--lasso-space-5) var(--lasso-space-10); }
+.lasso-frame--bare > .lasso-content--columns:has(> .lasso-columns:first-child) { margin-top: calc(-1 * var(--lasso-space-5)); }
+.lasso-frame--bare > .lasso-content--columns > .lasso-columns:first-child { border-top: 0; }
+.lasso-frame--bare > .lasso-content--columns > .lasso-columns:first-child > .lasso-column > .lasso-column__item:first-child { padding-top: var(--lasso-space-10); }
 /* Ikon alene (01B, "hvor pladsen er under 100 px"): ink på hvid, ingen flise bagved (fundament, regel 20). */
 .lasso-logo { flex: none; width: 24px; height: 20px; color: var(--lasso-text); margin-top: 2px; }
 .lasso-frame__titles { flex: 1; min-width: 0; }
@@ -423,6 +429,9 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 /* ---------- Mobil (~380 px): samme spec, andre regler ---------- */
 @container lasso (max-width: 560px) {
   .lasso-frame { padding: var(--lasso-space-3); }
+  .lasso-frame.lasso-frame--bare { padding: var(--lasso-space-4) var(--lasso-space-4) var(--lasso-space-7); }
+  .lasso-frame--bare > .lasso-content--columns:has(> .lasso-columns:first-child) { margin-top: 0; }
+  .lasso-frame--bare > .lasso-content--columns > .lasso-columns:first-child > .lasso-column > .lasso-column__item:first-child { padding-top: var(--lasso-space-5); }
   .lasso-content--grid-2 { grid-template-columns: minmax(0, 1fr); }
   .lasso-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lasso-kpi:nth-child(odd) { border-left: 0; }
@@ -535,6 +544,17 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-share { position: relative; flex: none; width: 200px; /* 02c.14: 200 × 6 */ height: 6px; border-radius: 3px; background: var(--lasso-divider-subtle); overflow: hidden; }
 .lasso-share__min { position: absolute; left: 0; top: 0; bottom: 0; background: var(--lasso-chart-1); }
 .lasso-share__span { position: absolute; top: 0; bottom: 0; background: var(--lasso-chart-4); }
+/* 06.1/24.10: ejerlisten i en smal kolonne (⅓ af kroppen). Navnet får hele linjen ved siden af andelen,
+   og bjælken står under i fuld bredde, så navnet aldrig brydes bogstav for bogstav eller dækkes af bjælken. */
+.lasso-rows--owners { container: owners / inline-size; }
+@container lasso (min-width: 561px) {
+  @container owners (max-width: 440px) {
+    .lasso-row--owner { flex-wrap: wrap; row-gap: 8px; }
+    .lasso-row--owner .lasso-row__main { flex: 1 1 0; }
+    .lasso-row--owner .lasso-row__value { order: 2; min-width: 0; }
+    .lasso-row--owner .lasso-share { order: 3; flex: 1 1 100%; width: 100%; }
+  }
+}
 .lasso-more { margin-top: var(--lasso-space-3); color: var(--lasso-accent-text); font-weight: 500; font-size: var(--lasso-fs-sm); }
 .lasso-kv-line { display: flex; gap: var(--lasso-space-4); margin: var(--lasso-space-4) 0 0; font-size: var(--lasso-fs); color: var(--lasso-text); }
 .lasso-kv-line__key { flex: none; width: 120px; font-size: var(--lasso-fs-sm); color: var(--lasso-muted); }
@@ -1778,7 +1798,8 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 .lasso-modulebar__tabs { flex: 1; min-width: 0; align-self: stretch; }
 .lasso-modulebar .lasso-tabs--l1 { height: 56px; border-bottom: 0; box-shadow: none; gap: 28px; }
 .lasso-modulebar .lasso-tabs--l1 .lasso-tab { height: 56px; margin-bottom: 0; }
-.lasso-modulebar .lasso-tab--more { width: 66px; }
+/* "Flere": pilen står lige efter ordet (06.4), ikke i en fast bredde */
+.lasso-modulebar .lasso-tab--more { padding-right: 18px; }
 .lasso-modulebar__actions { flex: none; display: flex; align-items: stretch; }
 .lasso-modulebar__action { display: inline-flex; align-items: center; gap: 8px; padding: 0 22px; border: 0; border-left: 1px solid var(--lasso-border); background: none; cursor: pointer; color: var(--lasso-text-2); font-size: var(--lasso-fs); line-height: 18px; font-weight: 500; white-space: nowrap; }
 .lasso-modulebar__action:hover { background: var(--lasso-surface-2); color: var(--lasso-text); }

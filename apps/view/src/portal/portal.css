@@ -11,9 +11,9 @@
 
 /* Tom, henter og fejl står med samme luft som visningerne */
 .lasso-portal-body { padding: var(--lasso-space-5); }
-.lasso-portal .lasso-page .lasso-frame { padding: var(--lasso-space-5); }
+.lasso-portal .lasso-page .lasso-frame:not(.lasso-frame--bare) { padding: var(--lasso-space-5); }
 
 @container lasso (max-width: 560px) {
   .lasso-portal-body { padding: var(--lasso-space-4); }
-  .lasso-portal .lasso-page .lasso-frame { padding: var(--lasso-space-4); }
+  .lasso-portal .lasso-page .lasso-frame:not(.lasso-frame--bare) { padding: var(--lasso-space-4); }
 }

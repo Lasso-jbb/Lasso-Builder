@@ -37,7 +37,7 @@ export function OwnerList({ ownership, error, onOpen }: { ownership?: OwnershipV
   return (
     <Section title={title} span="half">
       {owners.length > 0 ? (
-        <ul className="lasso-rows">
+        <ul className="lasso-rows lasso-rows--owners">
           {owners.map((o, i) => {
             const click = open(o.lassoId, o.name);
             const range = parseShare(o.share);

@@ -211,7 +211,7 @@ function PageBody() {
       </Columns>
     );
   }
-  return <LassoView spec={spec} dataset={ds} host={HOST} onAction={noop} />;
+  return <LassoView spec={spec} dataset={ds} host={HOST} onAction={noop} frameless />;
 }
 
 function FullPage() {

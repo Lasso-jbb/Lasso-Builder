@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppShell, Column, Columns } from "./components/AppShell.js";
-import { ModuleBar } from "./components/ModuleBar.js";
+import { ModuleBar, fitModules } from "./components/ModuleBar.js";
 import { ModuleToolbar } from "./components/ModuleToolbar.js";
 import { Rail } from "./components/Rail.js";
 import { TabStrip } from "./components/TabStrip.js";
@@ -81,6 +81,19 @@ test("Modulbjælken (06): Tabs niveau 1 med role=tablist, handlinger til højre 
   assert.ok(tabsAt > 0 && actionsAt > tabsAt, "handlingerne står efter fanerne");
   assert.match(html, /aria-haspopup="menu"[^>]*>[^]*?Eksportér/);
   assert.match(html, /lasso-modulebar__action--accent[^>]*>[^]*?Gemt/);
+});
+
+test("Modulbjælken (06.1/06.4): så mange moduler som der er plads til, resten bag Flere", () => {
+  const labels = ["Overblik", "Salg", "Stamoplysninger", "Nøgletal", "Ejerdiagram", "Nyheder", "Historik", "Tvilling", "Rating", "Regnskab", "Ejendomme"];
+  const px = (l: string) => l.length * 7;
+  // Alle kan stå: ingen Flere
+  assert.equal(fitModules(labels, 2000, px), labels.length);
+  // 9 moduler + Flere: 9 labels (75 tegn = 525 px) + 9 mellemrum (252) + Flere (54) = 831 px
+  assert.equal(fitModules(labels, 835, px), 10);
+  assert.equal(fitModules(labels, 828, px), 9);
+  const html = renderToStaticMarkup(createElement(ModuleBar, { modules: labels.map((label) => ({ id: label, label })), value: "Overblik", onChange: () => {}, maxVisible: 10 }));
+  assert.equal((html.match(/role="tab"/g) ?? []).length, 9);
+  assert.match(html, /lasso-tab--more[^>]*>Flere</);
 });
 
 test("Modulværktøjslinjen: udelades helt uden handlinger, ellers primær til venstre og visningsvalg til højre", () => {

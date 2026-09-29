@@ -72,4 +72,11 @@ export interface LassoViewProps {
    * sidens indhold. Uden prop'en tegnes ingen faner (portalen har dem i modulbjælken).
    */
   headTabs?: { items: readonly { id: string; label: string; disabled?: boolean; disabledReason?: string }[]; value: string; onChange: (id: string) => void; ariaLabel?: string };
+  /**
+   * Katalog 06.1/24/25: visningen står i portalens ramme (AppShell med fanebjælke og modulbjælke).
+   * Så udelades visningens egen ramme: headeren (logo, "Virksomhedsprofil", "Data hentet …", Gem)
+   * og foden (Eksportér, Del link, "Gem visning"). Kroppen går direkte under modulbjælken, og
+   * værten står selv for sidens handlinger (modulbjælkens Eksportér, Gem, Overvåg).
+   */
+  frameless?: boolean;
 }
