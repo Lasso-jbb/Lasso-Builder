@@ -5285,7 +5285,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-personnet--bands .lasso-section__head { flex-wrap: wrap; row-gap: var(--lasso-space-2); }
 .lasso-personnet__swatch { display: inline-block; width: 12px; height: 6px; border-radius: 3px; flex: none; background: var(--lasso-chart-2); }
 .lasso-personnet__swatch--ended { width: 16px; background: var(--lasso-surface-muted); border: 1px dashed var(--lasso-faint); box-sizing: border-box; }
-.lasso-personnet__swatch--bankrupt { width: 1px; height: 12px; border-radius: 0; background: var(--lasso-danger); }
+/* Runde 6: "Under konkurs" = rød stiplet swatch 14×6 (Paper LU1-0). */
+.lasso-personnet__swatch--bankrupt { width: 14px; height: 6px; background: var(--lasso-danger-soft); border: 1px dashed var(--lasso-bankrupt); box-sizing: border-box; }
 .lasso-personnet__brow { min-height: 56px; padding: 2px 0; }
 .lasso-personnet__who { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; padding-right: 16px; }
 .lasso-personnet__ov { flex: none; display: flex; flex-direction: column; align-items: flex-end; }
@@ -5301,7 +5302,11 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-personnet__bandlabel { position: absolute; top: 0; overflow: hidden; text-overflow: ellipsis; font-size: 11px; line-height: 14px; font-weight: 400; color: var(--lasso-text-3); white-space: nowrap; }
 .lasso-personnet__band { position: absolute; top: 16px; height: 6px; border-radius: 3px; box-sizing: border-box; background: var(--lasso-chart-2); }
 .lasso-personnet__band--ended { background: var(--lasso-surface-muted); border: 1px dashed var(--lasso-faint); }
-.lasso-personnet__marker { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--lasso-danger); }
+/* Runde 6: problemstatus bæres af båndet (fyldt rødt ved løbende rolle, stiplet rødt med danger-soft flade ved afsluttet) og ordet sidst i etiketten. */
+.lasso-personnet__band--problem { background: var(--lasso-bankrupt); }
+.lasso-personnet__band--problem.lasso-personnet__band--ended { background: var(--lasso-danger-soft); border: 1px dashed var(--lasso-bankrupt); }
+.lasso-personnet__bandstatus { color: var(--lasso-bankrupt); }
+.lasso-personnet__label--short { display: none; }
 .lasso-root .lasso-personnet__more { display: inline-flex; align-items: center; gap: 4px; margin-top: 12px; font-size: 14px; line-height: 18px; font-weight: 500; color: var(--lasso-accent-text); }
 .lasso-personnet__mob { display: none; }
 .lasso-personnet__maxis { display: flex; justify-content: space-between; padding-bottom: 4px; border-bottom: 1px solid var(--lasso-chart-axis); }
@@ -5318,6 +5323,11 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 }
 /* 16.3 i en ½-kolonne: smallere navnekolonne, så båndene har plads. */
 .lasso-personnet--bands { container: personnet / inline-size; }
+/* ½-bredden (under ⅔) og mobil: kun "Selskab, rolle" over båndet (Fable runde 6). */
+@container personnet (max-width: 640px) {
+  .lasso-personnet__label--long { display: none; }
+  .lasso-personnet__label--short { display: inline; }
+}
 @container personnet (max-width: 720px) {
   .lasso-personnet--bands .lasso-personroles__axis, .lasso-personnet--bands .lasso-personroles__row { grid-template-columns: 200px minmax(0, 1fr); }
   .lasso-personnet--bands .lasso-personroles__tick.is-minor { display: none; }

@@ -15,6 +15,9 @@ import {
   parseViewSpec,
   PAGE_FOCUSES,
   pairByWeight,
+  PERSON_PAGE_BUDGET,
+  compactPersonItem,
+  personPageHeight,
   PERSON_FOCUS_LABELS,
   PERSON_FOCUSES,
   PERSON_GRAPH_DEPTH,
@@ -58,7 +61,7 @@ test("person-komponenterne valideres og har deres standardbredder", () => {
     ],
   });
   assert.equal(spec.kind, "person");
-  assert.deepEqual(spec.components.map((c) => widthOf(c, "dashboard")), ["full", "two-thirds", "half", "half"]);
+  assert.deepEqual(spec.components.map((c) => widthOf(c, "dashboard")), ["full", "two-thirds", "two-thirds", "half"]);
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoPersonHead" }] }));
 });
 
@@ -157,6 +160,28 @@ test("composePerson overblik: aktive roller (liste) ¾ + stamoplysninger ¼; net
   // Stamoplysningerne gentager ikke hovedets tal på samme side.
   assert.deepEqual(personFactOptions(spec.components, ID), { hideCounts: true });
   assert.deepEqual(personFactOptions([{ type: "LassoPersonFacts", person: ID }], ID), { hideCounts: false });
+});
+
+test("composePerson højdebudget (runde 6): kompakt før udeladelse, hoved og svar-element altid med; showAll viser alt", () => {
+  const ds = fullDataset();
+  const all = composePerson(ID, ds, { showAll: true });
+  const std = composePerson(ID, ds);
+  // Demodatasættet holder budgettet: standard = vis alt.
+  assert.deepEqual(std.components.map(shape), all.components.map(shape));
+  assert.ok(personPageHeight(all.components, ds) <= PERSON_PAGE_BUDGET); // inkl. opfølgningen
+  // Et stramt budget: først kompakte former, så udelades de mindst relevante halve bagfra.
+  const tight = composePerson(ID, ds, { heightBudget: 700, followUps: false });
+  const types = tight.components.map((c) => c.type);
+  assert.equal(types[0], "LassoPersonHead");
+  assert.equal(shape(tight.components[1]!), "LassoPersonRoles@1/three-quarters[current,#5]", "svar-elementet i fuld form");
+  assert.ok(tight.components.length < composePerson(ID, ds, { showAll: true, followUps: false }).components.length, "noget er udeladt");
+  assert.ok(!types.includes("LassoTimeline") || types.includes("LassoPersonNetwork"), "historik udelades før netværk");
+  // Kompakte former: roller 3, netværk 2, historik 3; ejerlisten (show owner) har ingen.
+  assert.equal((compactPersonItem({ type: "LassoPersonRoles", person: ID, show: "current", limit: 5 }) as { limit?: number }).limit, 3);
+  assert.equal((compactPersonItem({ type: "LassoPersonNetwork", person: ID, limit: 3 }) as { limit?: number }).limit, 2);
+  assert.equal(compactPersonItem({ type: "LassoPersonRoles", person: ID, show: "owner" }), null);
+  ds.personNetworks[ID] = { lassoId: ID, people: Array.from({ length: 6 }, (_, i) => ({ name: `Person ${i}`, companies: [{ companyName: "Data Eksempel A/S" }], overlapYears: 10 - i, active: true })) };
+  assert.ok(composePerson(ID, ds, { showAll: true, heightBudget: 10 }).components.some((c) => c.type === "LassoPersonNetwork" && c.limit === 3), "showAll ignorerer budgettet");
 });
 
 test("composePerson overblik: tomme sektioner udelades; en halv til overs står i fuld bredde; kun ophørte roller giver ophørt-listen", () => {

@@ -117,7 +117,7 @@ export const GRID_RULES: Record<ComponentType, GridRule> = {
   LassoPersonHead: g("full", "full", "full", "low", "fixed"),
   LassoPersonStats: g("full", "half", "full", "low", "fixed"),
   LassoPersonRoles: g("two-thirds", "half", "full", "medium", "growing", "plot"),
-  LassoPersonNetwork: g("half", "third", "full", "medium", "growing", "plot"),
+  LassoPersonNetwork: g("two-thirds", "half", "full", "medium", "growing", "plot"),
   LassoPersonRisk: g("half", "third", "full", "high", "growing", "rows"),
   LassoPersonFacts: g("third", "quarter", "half", "high", "growing", "rows"),
   LassoChangeFeed: g("full", "half", "full", "very-high", "growing", "rows"),
@@ -448,7 +448,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     type: "LassoPersonNetwork",
     title: "Personnetværk",
     description:
-      "Brug til: hvem personen sidder sammen med i selskaber, sorteret efter år sammen (den længste sammenhængende periode i fælles selskaber, ikke summen) –'hvem arbejder X sammen med', 'X's netværk'. Tegnes som tidsbånd i samme sprog som LassoPersonRoles (16.3): ét bånd pr. fælles selskab for perioden, de sad sammen, med 'Selskab, rolle, periode' over båndet; afsluttede stiplede og dæmpede, konkurs med rød markør og ordet; på mobil ét kort pr. person. Giv den gerne width 'two-thirds' eller 'full' på en side, hvor netværket er svaret. Brug ikke når: det gælder personens egne roller (LassoPersonRoles) eller konkurser (LassoPersonRisk). Kræver: person. Dækkes af show_person (focus netvaerk). Eksempel: 'Hvem er X i bestyrelse med?' → show_person focus netvaerk.",
+      "Brug til: hvem personen sidder sammen med i selskaber, sorteret efter år sammen (den længste sammenhængende periode i fælles selskaber, ikke summen) –'hvem arbejder X sammen med', 'X's netværk'. Tegnes som tidsbånd i samme sprog som LassoPersonRoles (16.3): ét bånd pr. fælles selskab for perioden, de sad sammen, med 'Selskab, rolle, periode' over båndet; afsluttede stiplede og dæmpede; er det fælles selskab under konkurs (eller anden problemstatus), er båndet rødt (fyldt ved løbende rolle, stiplet ved afsluttet) og etiketten slutter med ', under konkurs' i rødt (ingen markør); legende Sidder sammen nu / Afsluttet / Under konkurs; på mobil ét kort pr. person. Standardbredde ⅔ (width 'two-thirds'); 'full', når netværket er svaret; ½ kun med den korte etiket 'Selskab, rolle' (vælges automatisk under ⅔). Brug ikke når: det gælder personens egne roller (LassoPersonRoles) eller konkurser (LassoPersonRisk). Kræver: person. Dækkes af show_person (focus netvaerk). Eksempel: 'Hvem er X i bestyrelse med?' → show_person focus netvaerk.",
     props: "person, limit? (standard 3), title?",
   },
   {

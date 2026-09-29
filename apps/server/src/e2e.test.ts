@@ -131,6 +131,25 @@ test("show_company komponerer ét skærmbillede ud fra data og hensigt", async (
   assert.ok(ecoSpec.components.some((c) => c.type === "LassoMultiYearTable"), "4+ år giver flerårstabel");
 });
 
+test("show_all (vis alt om X, brugervalg): show_company og show_person går ud over højdebudgettet", async () => {
+  const { tools } = await client.listTools();
+  for (const name of ["show_company", "show_person"]) {
+    const t = tools.find((x) => x.name === name)!;
+    const prop = (t.inputSchema.properties as Record<string, { type?: string; description?: string }>).show_all;
+    assert.equal(prop?.type, "boolean", name);
+    assert.match(prop!.description ?? "", /alt\/det hele/);
+    assert.ok(!(t.inputSchema.required ?? []).includes("show_all"), "valgfri");
+  }
+  const types = (r: Awaited<ReturnType<typeof client.callTool>>) => (r.structuredContent as { spec: ViewSpec }).spec.components.map((c) => c.type);
+  const std = types(await client.callTool({ name: "show_company", arguments: { company: "99000001" } }));
+  const all = types(await client.callTool({ name: "show_company", arguments: { company: "99000001", show_all: true } }));
+  assert.ok(all.length > std.length, `vis alt viser flere elementer: ${std.join(",")} -> ${all.join(",")}`);
+  for (const t of std) assert.ok(all.includes(t), `${t} står også med vis alt`);
+  const person = await client.callTool({ name: "show_person", arguments: { person: "CVR-3-4000000002", show_all: true } });
+  assert.ok(!person.isError, JSON.stringify(person.content));
+  assert.ok(client.getInstructions()?.includes("show_all: true"));
+});
+
 test("show_company tager et navn og siger, hvad den valgte", async () => {
   const res = await client.callTool({
     name: "show_company",

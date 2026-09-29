@@ -121,6 +121,8 @@ export interface ShowCompanyInput {
   chart_metric?: Metric;
   /** Forældet: fast skabelon i stedet for komponisten. */
   sections?: CompanySection[];
+  /** "Vis alt om X" (brugervalg): alle elementer i fuld form, også ud over højdebudgettet (23.3). */
+  show_all?: boolean;
 }
 
 export interface CompanyView extends ViewData {
@@ -133,7 +135,7 @@ export interface CompanyView extends ViewData {
 /** Én virksomhed som ét skærmbillede, komponeret ud fra hensigt (focus) og virksomhedens data. */
 export async function showCompany(ctx: UseCaseCtx, input: ShowCompanyInput): Promise<CompanyView | UseCaseError> {
   const { config, provider } = ctx;
-  const { company, focus, sections, chart_metric, years } = input;
+  const { company, focus, sections, chart_metric, years, show_all } = input;
   let lassoId = toLassoId(company, config.LASSO_COMPANY_ID_PREFIX);
   let note: string | undefined;
   if (!isCompanyRef(company)) {
@@ -162,7 +164,7 @@ export async function showCompany(ctx: UseCaseCtx, input: ShowCompanyInput): Pro
   // Ældre kald med faste sektioner får skabelonen; ellers komponeres ud fra datas form.
   const spec: ViewSpec = sections?.length
     ? companyTemplate(lassoId, { sections, chartMetric: chart_metric, years, name })
-    : composeCompany(lassoId, dataset, { focus, years, chartMetric: chart_metric, name });
+    : composeCompany(lassoId, dataset, { focus, years, chartMetric: chart_metric, name, ...(show_all ? { showAll: true } : {}) });
   const cvr = cvrFromLassoId(lassoId);
   // Linket åbner samme visning (focus) med samme hovednøgletal som i chatten (review P2-7).
   const link = cvr
@@ -185,6 +187,8 @@ export interface ShowPersonInput {
   person: string;
   /** Personfokus (overblik, roller, netvaerk, ejerskab, risiko, historik). Standard: overblik. */
   focus?: PersonFocus;
+  /** "Vis alt om X" (brugervalg): alle elementer i fuld form, også ud over højdebudgettet. */
+  show_all?: boolean;
 }
 
 /** Én person fra CVR som ét skærmbillede (katalog 16), komponeret ud fra hensigt (focus) og personens data. Tager navn eller person-ID. */
@@ -211,7 +215,7 @@ export async function showPerson(ctx: UseCaseCtx, input: ShowPersonInput): Promi
   const dataset = await resolveSpec(composePersonProbe(lassoId, focus), provider, extrasOf(ctx));
   const p = dataset.persons[lassoId];
   if (!p) return fail(404, `Kunne ikke hente personen ${lassoId}: ${dataset.errors[`person:${lassoId}`] ?? "ukendt fejl"}.`);
-  const spec = composePerson(lassoId, dataset, { focus, name: p.name });
+  const spec = composePerson(lassoId, dataset, { focus, name: p.name, ...(input.show_all ? { showAll: true } : {}) });
   // Linket åbner samme fokus som i chatten.
   return { spec, dataset, ...(note ? { note } : {}), lassoId, link: personLink(config, lassoId, focus) };
 }

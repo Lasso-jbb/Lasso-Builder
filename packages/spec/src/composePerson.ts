@@ -1,7 +1,8 @@
 import { entityRefOf, ownershipGraphKey, type Dataset } from "./models.js";
 import { personCompanies, personFactOptions, personRisk, personRoleRows, riskTimeline, type PersonVM } from "./person.js";
-import { componentWeight, FOCUSES, type Focus } from "./compose.js";
-import { viewSpecSchema, type ViewComponent, type ViewSpec } from "./spec.js";
+import { componentWeight, FOCUSES, gridHeight, ITEM_PADDING, type Focus } from "./compose.js";
+import { compactOf, measuredHeight, pageHeight, PAGE_HEIGHT_BUDGET } from "./grid.js";
+import { viewSpecSchema, type ViewComponent, type ViewSpec, type Width } from "./spec.js";
 
 /**
  * Komponisten for personsiden (katalog 16), samme idé som composeCompany: modellen (eller portalens
@@ -54,6 +55,9 @@ export function isFocusFor(kind: "company" | "person", value: unknown): value is
  */
 export const PERSON_GRAPH_DEPTH = { ingoingDepth: 0, outgoingDepth: 2 } as const;
 
+/** Personsidens højdebudget (px ved 1200), samme som virksomhedssiden (23.3). */
+export const PERSON_PAGE_BUDGET = PAGE_HEIGHT_BUDGET;
+
 /** Regel 9 pr. fokus: overblikket viser få og "Se alle N"; fanen for emnet viser flere. */
 const OVERVIEW_ROLES = 5;
 const OVERVIEW_NETWORK = 3;
@@ -79,6 +83,10 @@ export interface ComposePersonOptions {
   name?: string;
   /** Opfølgningsknapper sender en besked til modellen; slå fra på websiden uden chat. */
   followUps?: boolean;
+  /** "Vis alt om X" (brugervalg): alle elementer i fuld form, også ud over højdebudgettet. */
+  showAll?: boolean;
+  /** Højdebudget i px ved 1200 (standard PAGE_HEIGHT_BUDGET, som virksomhedssiden). Ignoreres med showAll. */
+  heightBudget?: number;
 }
 
 interface FollowUpRule {
@@ -215,6 +223,53 @@ export function pairByWeight(halves: readonly ViewComponent[], weigh: (c: ViewCo
   return out;
 }
 
+/** Linjer -> px for personsidens egne sektioner (titel 60 px + ca. 24 px pr. linje i personComponentWeight). */
+const PERSON_TITLE_PX = 60;
+const PERSON_LINE_PX = 24;
+
+/**
+ * Højde (px, som packPage: elementet + 48 px luft) af én sektion i bredden. Personsidens egne typer
+ * (roller, stamoplysninger, netværk, risiko, personens ejerdiagram) regnes ud fra personComponentWeight,
+ * så en kortere liste (kompakt form) også giver en lavere side; resten som på virksomhedssiden (gridHeight).
+ */
+export function personItemHeight(c: ViewComponent, width: Width, ds: Dataset, page: readonly ViewComponent[]): number {
+  const own = c.type.startsWith("LassoPerson") && c.type !== "LassoPersonHead";
+  if (own || (c.type === "LassoOwnershipDiagram" && "person" in c && c.person)) {
+    const half = width !== "full";
+    const w = personComponentWeight(c, ds, page, { half });
+    const lines = PERSON_TITLE_PX + Math.max(0, w - 3) * PERSON_LINE_PX;
+    return Math.round(c.type === "LassoOwnershipDiagram" && !half ? Math.max(lines, measuredHeight(c, width)) : lines) + ITEM_PADDING;
+  }
+  return gridHeight(c, width, ds, page) + ITEM_PADDING;
+}
+
+/**
+ * Personsidens højde (px) i layout 'columns': en kolonne 1 efterfulgt af en kolonne 2 er ét bånd
+ * (den højeste stak), alt andet står i eget fuldbånd. Samme enhed som packPage (gap 0).
+ */
+export function personPageHeight(components: readonly ViewComponent[], ds: Dataset): number {
+  const bands: { height: number }[] = [];
+  for (let i = 0; i < components.length; i++) {
+    const c = components[i]!;
+    const next = components[i + 1];
+    if (c.column === 1 && next?.column === 2) {
+      bands.push({ height: Math.max(personItemHeight(c, c.width ?? "half", ds, components), personItemHeight(next, next.width ?? "half", ds, components)) });
+      i++;
+    } else bands.push({ height: personItemHeight(c, c.width ?? "full", ds, components) });
+  }
+  return pageHeight(bands as never, 0);
+}
+
+/**
+ * Kompakt form på personsiden (højdebudgettet): kortere lister med "Se alle N" (regel 9). Roller 3,
+ * netværk 2, historik og nyheder 3 (compactOf). Null = ingen kompakt form.
+ */
+export function compactPersonItem(c: ViewComponent): ViewComponent | null {
+  if (c.type === "LassoPersonRoles" && (c.show ?? "all") !== "owner" && (c.limit ?? 5) > 3) return { ...c, limit: 3 };
+  if (c.type === "LassoPersonNetwork" && (c.limit ?? 3) > 2) return { ...c, limit: 2 };
+  return compactOf(c);
+}
+
 export function composePerson(lassoId: string, ds: Dataset, options: ComposePersonOptions = {}): ViewSpec {
   const focus = options.focus ?? "overblik";
   const id = lassoId;
@@ -247,10 +302,12 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
     const structure = graph ? graph.edges.some((e) => owned.has(e.from) && !e.until) : opts.showError && Boolean(ds.errors[`graph:${key}`]) && ownsByRoles;
     return structure ? { type: "LassoOwnershipDiagram", person: id, ...PERSON_GRAPH_DEPTH, ...(opts.title ? { title: opts.title } : {}) } : null;
   };
-  // To halve side om side i ét bånd; står den ene alene, får den fuld bredde.
-  const pair = (halves: ViewComponent[]) => {
-    const page = [...components, ...halves];
-    components.push(...pairByWeight(halves, (c) => personComponentWeight(c, ds, page, { half: true })));
+  // To halve side om side i ét bånd; står den ene alene, får den fuld bredde. Parringen sker efter
+  // højdebudgettet (nedenfor), så udeladte og kompakte elementer parres, som de faktisk står.
+  let halves: ViewComponent[] = [];
+  let droppable = false;
+  const pair = (list: ViewComponent[]) => {
+    halves = list;
   };
   const facts: ViewComponent = { type: "LassoPersonFacts", person: id };
   // ¾ + ¼ i ét bånd (hovedelementet og stamoplysningerne); uden hovedelement står stamoplysningerne alene.
@@ -321,8 +378,53 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
       const d = diagram({ title: "Ejerskab", showError: false });
       if (d) halves.push(d);
       pair(halves);
+      // Overblikket har intet svar-element ud over hovedet og hovedelementet: de halve kan udelades.
+      droppable = true;
     }
   }
+
+  // Højdebudget (23.3, som composeCompany/packWithinBudget): hoved, svar-elementet (det første efter
+  // hovedet) og opfølgning er altid med. Er siden over budgettet, vises først alt med en kompakt form
+  // kompakt; er den stadig for lang (kun overblikket), udelades de mindst relevante halve bagfra
+  // (ejerskab, historik, risiko, netværk). Til sidst får kompakte elementer den fulde form tilbage i
+  // prioriteret rækkefølge, når siden stadig holder budgettet. "Vis alt" (showAll) slår budgettet fra.
+  const budget = options.showAll ? Number.POSITIVE_INFINITY : (options.heightBudget ?? PERSON_PAGE_BUDGET);
+  const mains = [...components];
+  const layout = (hs: readonly ViewComponent[], compacted: ReadonlySet<ViewComponent>) => {
+    const form = (c: ViewComponent) => (compacted.has(c) ? (compactPersonItem(c) ?? c) : c);
+    const m = mains.map(form);
+    const h = hs.map(form);
+    const page = [...m, ...h];
+    return [...m, ...pairByWeight(h, (c) => personComponentWeight(c, ds, page, { half: true }))];
+  };
+  // Opfølgningen står altid nederst (fuldbånd); den tæller med i højden.
+  const foot = options.followUps !== false ? personItemHeight({ type: "LassoFollowUps", prompts: [{ label: "-", prompt: "-" }] } as ViewComponent, "full", ds, []) : 0;
+  const fits = (list: readonly ViewComponent[]) => personPageHeight(list, ds) + foot <= budget;
+  let kept = halves;
+  let compacted = new Set<ViewComponent>();
+  let chosen = layout(kept, compacted);
+  if (!fits(chosen)) {
+    // Svar-elementet (første element efter hovedet) står altid i fuld form.
+    const answer = mains[1];
+    compacted = new Set([...mains, ...halves].filter((c) => c !== answer && compactPersonItem(c) !== null));
+    chosen = layout(kept, compacted);
+    while (!fits(chosen) && droppable && kept.length > 0) {
+      kept = kept.slice(0, -1);
+      chosen = layout(kept, compacted);
+    }
+    for (const c of [...mains, ...kept]) {
+      if (!compacted.has(c)) continue;
+      const without = new Set(compacted);
+      without.delete(c);
+      const trial = layout(kept, without);
+      if (fits(trial)) {
+        compacted = without;
+        chosen = trial;
+      }
+    }
+  }
+  components.length = 0;
+  components.push(...chosen);
 
   const name = options.name ?? person.name;
   const data = { roles: hasRoles, network: network.length > 0, owns: person.roles.some((r) => r.active && r.kind === "owner") };
