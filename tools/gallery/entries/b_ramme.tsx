@@ -668,16 +668,18 @@ export const entries: GalleryEntry[] = [
     nr: "02c.16",
     title: "Kvalitetsflag (mulig fejl)",
     node: "GV0-0",
-    note: "Forklaringen er tegnet åben (QualityFlag defaultOpen): tooltip til højre på desktop, linje under feltet på mobil.",
+    note: "Flaget står FORAN tallet (Jakob, 19.1), som i regnskabet. Forklaringen er tegnet åben (QualityFlag defaultOpen): tooltip over flaget på desktop, linje under feltet på mobil.",
     render: () => (
+      <div style={{ paddingTop: 72 }}>
       <KV>
         <ValueRow label="Ansatte (2024)">
-          <span>
+          <span className="lasso-qvalue">
+            <QualityFlag text="Antallet er 12 gange højere end sidste år. Vi viser tallet fra regnskabet." defaultOpen placement="top" />
             <NumberValue value={1243} />
-            <QualityFlag text="Antallet er 12 gange højere end sidste år. Vi viser tallet fra regnskabet." defaultOpen />
           </span>
         </ValueRow>
       </KV>
+      </div>
     ),
   },
   {

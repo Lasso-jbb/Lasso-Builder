@@ -50,7 +50,8 @@ export interface RailProps {
    * Bundlinje nederst i skinnen (25.2): dæmpet navnelogo + kildelinje, fx "Data fra CVR, Erhvervsstyrelsen
    * og Creditsafe" (regel 15: logoet i bundlinjen med kildelinje). Skjules i den smalle ikonskinne.
    */
-  bottom?: { source: string };
+  /** Bundlinjen med navnelogoet. source udgår (G3: ingen kildelinje) og vises kun, hvis den gives. */
+  bottom?: { source?: string };
   className?: string;
 }
 
@@ -127,7 +128,7 @@ export function Rail({ groups, activeItem, onToggleGroup, onLogo, logo = true, b
       {bottom ? (
         <div className="lasso-rail__bottom">
           <LassoWordmark className="lasso-rail__bottom-mark" />
-          <span className="lasso-rail__bottom-source">{bottom.source}</span>
+          {bottom.source ? <span className="lasso-rail__bottom-source">{bottom.source}</span> : null}
         </div>
       ) : null}
     </nav>

@@ -2924,7 +2924,11 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-field__actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-left: 0; }
   .lasso-field__actions .lasso-btn, .lasso-field__foot--compact .lasso-field__actions .lasso-btn { width: 100%; height: 48px; }
   .lasso-root .lasso-field__actions .lasso-btn--text { border-color: var(--lasso-border-strong); background: var(--lasso-surface); font-weight: 500; }
-  .lasso-infotip.lasso-tip--right .lasso-tip__bubble { max-width: 200px; }
+  /* Kontrol r5 (02b.5 mobil): ingen plads til højre for ikonet; forklaringen står under ikonet, højrejusteret mod det */
+  .lasso-field__name:has(> .lasso-infotip) { position: relative; }
+  .lasso-field__name > .lasso-infotip.lasso-tip--right { position: static; }
+  .lasso-field__name > .lasso-infotip.lasso-tip--right .lasso-tip__bubble { left: 0; right: 0; top: calc(100% + 6px); bottom: auto; width: auto; max-width: none; transform: none; }
+  .lasso-field__name > .lasso-infotip.lasso-tip--right .lasso-tip__bubble::before { display: none; }
   .lasso-dateinput { flex: 1 1 140px; width: auto; }
   .lasso-field .lasso-input--short { width: 96px; }
   /* Feltet i gruppen krymper, så enheden bliver på linjen (02a.3/02a.4 mobil) */
@@ -2989,7 +2993,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 /* 02c.16 Kvalitetsflag: 14 px, warning, 6 px efter tallet; linje ved tryk på mobil */
 .lasso-qflag { display: inline-flex; flex-wrap: wrap; align-items: center; margin-left: 6px; vertical-align: -2px; }
 /* 19.1 (Jakob): i regnskabstabellerne står flaget foran tallet. */
-.lasso-stmt__year .lasso-qflag, .lasso-fs-m__value .lasso-qflag { margin-left: 0; margin-right: 6px; }
+.lasso-stmt__year .lasso-qflag, .lasso-fs-m__value .lasso-qflag, .lasso-kv-row__value > .lasso-qflag, .lasso-qvalue > .lasso-qflag { margin-left: 0; margin-right: 6px; } /* 19.1: flaget FORAN tallet */
 .lasso-root .lasso-qflag__btn { display: grid; place-items: center; width: 16px; height: 16px; padding: 0; border: 1px solid transparent; border-radius: var(--lasso-radius-sm); background: transparent; color: var(--lasso-warning); cursor: help; }
 .lasso-root .lasso-qflag__btn:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
 .lasso-qflag__line { display: none; }
@@ -3005,7 +3009,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-vlist__desk { display: none; }
   .lasso-vlist__mob { display: inline; }
   .lasso-industry { flex-direction: column-reverse; align-items: flex-start; gap: 0; }
-  .lasso-entity__sub { display: none; }
+  /* Kontrol r5 (02c.13): personens "Siden <dato>" vises også på mobil (J5) */
   .lasso-sharevalue__bar { display: none; }
   .lasso-sharevalue { display: inline-flex; }
   .lasso-qflag-tip .lasso-tip__bubble { display: none; }
@@ -3287,6 +3291,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-root .lasso-infohint:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: 1px; }
 /* Flaget står ofte yderst til højre (højrestillede tal): boblen flugter med ikonets højre kant, så den aldrig giver vandret scroll. */
 .lasso-qflag-tip .lasso-tip__bubble { left: auto; right: -6px; transform: none; }
+.lasso-qflag-tip.lasso-tip--top .lasso-tip__bubble { left: -6px; right: auto; } /* flaget foran tallet: boblen løber mod højre over tallet */
 .lasso-kpi__value .lasso-qflag-tip { vertical-align: middle; letter-spacing: 0; font-size: var(--lasso-fs-sm); font-weight: 400; }
 
 /* ---------- 09.2 Nøgle-værdi-liste: info-ikon, kvalitetsflag og handlingslinks (node 9VU-0, 9WR-0) ---------- */

@@ -259,8 +259,9 @@ export function KeyValueList({
             <div className="lasso-kv-row" key={r.label}>
               <Label text={r.label} info={info} />
               <div className={`lasso-kv-row__value ${r.danger ? "lasso-down" : ""}`}>
-                {r.value ?? <NotReported />}
+                {/* 19.1 (Jakob): kvalitetsflaget står FORAN tallet */}
                 {r.flag && r.value ? <QualityFlag text={r.flag} /> : null}
+                {r.value ?? <NotReported />}
               </div>
             </div>
           ))}
@@ -298,12 +299,14 @@ export function KeyValueList({
                 {r.code ? (
                   <IndustryValue code={r.code} text={r.value} />
                 ) : r.value ? (
-                  r.lassoId && onOpen ? <Value value={r.value} lassoId={r.lassoId} onOpen={onOpen} /> : <FoldText text={r.value} />
+                  <>
+                  {r.flag ? <QualityFlag text={r.flag} /> : null}
+                  {r.lassoId && onOpen ? <Value value={r.value} lassoId={r.lassoId} onOpen={onOpen} /> : <FoldText text={r.value} />}
+                  </>
                 ) : (
                   // 02c.17: felter siger "Ikke registreret", når kilden er tom; tabeller beholder "-".
                   <NotReported kind="registered" />
                 )}
-                {r.flag && r.value ? <QualityFlag text={r.flag} /> : null}
               </div>
             </div>
           );

@@ -371,7 +371,7 @@ function PaperShell({ kind, title, company, children }: { kind: "company" | "per
         rail={
           kind === "company"
             ? { groups: paperRailCompany(), onToggleGroup: noop, onLogo: noop }
-            : { groups: paperRailPerson(), onToggleGroup: noop, logo: false, bottom: { source: "Data fra CVR, Erhvervsstyrelsen og Creditsafe" } }
+            : { groups: paperRailPerson(), onToggleGroup: noop, logo: false, bottom: {} }
         }
         tabs={{ tabs, onSelect: noop, onBell: noop, onAccount: noop }}
         mobile={mobile}
@@ -543,7 +543,7 @@ const responsive: GalleryEntry[] = [
             ["Bredder pr. element (23.2)", "Standard- og minimumsbredde pr. type: ¼ 270, ⅓ 368, ½ 564, ⅔ 760, ¾ 858, 1/1 1152; aldrig under minimum", "Minimum følger med: elementer med min ½ står i ½ (348 px) eller fuld; min ⅔ og 1/1 står altid fuld", "Alle elementer fuld bredde; høje elementer får loft (rows/limit) og \"Se alle\""],
             ["Kontaktblok og genveje (08)", "Kontakt ⅓ (261) i stak ved siden af højt element; genveje ½, fylder rest i en stak", "Kontakt ½ eller fuld; genveje som vandret række, wrap til 2 linjer", "Kontakt som 48 px rækker med handling til højre (Kort, Ring, Kopiér); genveje som vandret scroll af sekundære knapper"],
             ["Tekstsektioner og resumé (12)", "½ (590) eller fuld; klip efter N linjer + \"Vis mere\"", "½ eller fuld; samme klip", "Fuld bredde, klip efter 5 linjer, \"Vis mere\" som 44 px tekstknap"],
-            ["Tidslinje og nyheder (12)", "½ standard, limit 3–5 med \"Se alle\"", "½ side om side (6+6) eller fuld", "Fuld bredde, limit 3, kildelinje 12 px, \"Vis flere\" nederst"],
+            ["Tidslinje og nyheder (12)", "½ standard, limit 3–5 med \"Se alle\"", "½ side om side (6+6) eller fuld", "Fuld bredde, limit 3, kilde og tid 12 px, \"Vis flere\" nederst"],
             ["Regnskab (19)", "Kompakt (2 år + ændring) i ½–¾; fuldt regnskab (5 år + værktøjslinje) kun i 1/1", "Kompakt i ½ eller fuld; fuldt regnskab 3 år synlige, resten vandret scroll", "Segmentkontrol Resultat / Balance / Pengestrøm, år i dropdown, 2 talkolonner (år + Δ), kvalitetsflag foran tallet"],
             ["Personside (16)", "Personhoved fuld (kun navn); roller som tidsbånd ⅔; netværk ½; risiko ½", "Tidsbånd fuld, færre etiketter; netværk og risiko 6+6", "Én kolonne: hoved, faner, tidsbånd (én 10 px bjælke pr. rolle), roller som 60 px rækker, netværk som kort"],
             ["Dialoger og menuer (07)", "Dialog 480–560 centreret; menu ved knappen", "Dialog 560 centreret; menu ved knappen", "Dialog bliver bundark med greb; menu bliver handlingsark; luk altid × (G8)"],
@@ -1419,13 +1419,13 @@ const ANSWER_B = [
   { type: "LassoTextSections", company: C, variant: "analyse", width: "full" },
 ];
 
-/** 30.2 og 30.13: niveau B slutter med kildelinje og link til hele siden. */
-const ANSWER_B_FOOT = { source: "Kilde: CVR og årsrapport 2025, opdateret 25.09.2026", next: { label: "Åbn Eksempel Byg A/S i Lasso", prompt: "Fortæl om Eksempel Byg A/S" } };
+/** 30.2 og 30.13: niveau B slutter med ét link til hele siden (G3: ingen kildelinje). */
+const ANSWER_B_FOOT = { next: { label: "Åbn Eksempel Byg A/S i Lasso", prompt: "Fortæl om Eksempel Byg A/S" } };
 
 /** 30.3: niveau C i chatten = fuldt hoved med modulbjælken (niveau 1) under, første modul åbent, og Lasso-bundlinje. */
 function AnswerC({ ds }: { ds: Dataset }) {
   const [focus, setFocus] = useState("overblik");
-  const spec: ViewSpec = { ...companySpec(ds, false), answer: { logo: true, source: "data fra CVR og Creditsafe" } };
+  const spec: ViewSpec = { ...companySpec(ds, false), answer: { logo: true } };
   return (
     <LassoView
       spec={spec}
