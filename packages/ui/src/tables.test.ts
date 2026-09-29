@@ -237,3 +237,19 @@ test("15.2 mobil: markerede kort viser kun afkrydsningsboksen (ingen flade eller
   assert.match(h, /lasso-ccard__check/);
   assert.match(h, /aria-label="Markér A ApS"[^>]*checked=""|checked=""[^>]*aria-label="Markér A ApS"/);
 });
+
+test("Ranking: order asc viser laveste først og fremhæver den første viste", async () => {
+  const { Ranking } = await import("./components/Ranking.js");
+  const mk = (id: string, name: string, gross: number) => ({
+    lassoId: id,
+    company: { lassoId: id, name } as never,
+    financials: { lassoId: id, currency: "DKK", years: [{ year: 2025, grossProfit: gross }] } as never,
+  });
+  const rows = [mk("CVR-1-1", "Mellem", 20_000_000), mk("CVR-1-2", "Høj", 30_000_000), mk("CVR-1-3", "Lav", 10_000_000)];
+  const names = (order?: "asc" | "desc") =>
+    [...renderToStaticMarkup(createElement(Ranking, { rows, metric: "bruttofortjeneste", order })).matchAll(/lasso-ranking__name">([^<]+)</g)].map((m) => m[1]);
+  assert.deepEqual(names("asc"), ["Lav", "Mellem", "Høj"]);
+  assert.deepEqual(names(), ["Høj", "Mellem", "Lav"]);
+  const asc = renderToStaticMarkup(createElement(Ranking, { rows, metric: "bruttofortjeneste", order: "asc" }));
+  assert.match(asc, /lasso-ranking__row--origin[^>]*><span class="lasso-ranking__rank">1<\/span><span class="lasso-ranking__name">Lav/);
+});

@@ -301,6 +301,7 @@ export const rankingSchema = z.object({
   type: z.literal("LassoRanking"),
   companies: z.array(companyRef).min(2).max(10).describe("Første virksomhed er den, der fremhæves i koral."),
   metric: metric.default("bruttofortjeneste"),
+  order: z.enum(["desc", "asc"]).default("desc").describe("'desc' (standard): højeste værdi først. 'asc': laveste først, til 'hvem har lavest/mindst/færrest'. Den første i den viste rækkefølge fremhæves."),
   title: z.string().max(80).optional(),
 });
 

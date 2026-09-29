@@ -1324,3 +1324,26 @@ Personsiderne (`composePerson`, `composeAskPerson`) og kolonnerne i `composeAskC
 - **Højdebudgettet** vælger elementerne og deres form som Papers side (26g: ¾ + ¼ og "to og to", `pairByWeight`), så pakningen kun ombryder siden og aldrig koster et element eller en linje i tekstkortet (Ø4). Den ombrudte side kan være højere end budgettet: overblikket for CVR-3-4000000001 1247 → 1523 px, Bo Eksempel (CVR-3-4000000002) 1296 → 1591 px og CVR-3-4000000020 1242 → 1451 px (de øvrige 135 personsider holder 1300). Eskaleret til Fable.
 - **Spørgsmålssiderne:** svar-elementet står altid først (`leadFirst`); et element, der ellers ville stå alene i fuld bredde, sættes ved siden af et af de næste (`packBandsPaired`). Nyhederne som svar står fx i ¾ (før ⅓ i en af tre kolonner).
 - Testene: `apps/server/src/data/grid.test.ts` tjekker nu personsiderne som komponeret (alle demopersoner og fokus) og spørgsmålssiderne for eval-sættets 60 spørgsmål; `packages/spec/src/person.test.ts` har B10 (a)–(d).
+
+## B9 layout-tjek (2026-09-29)
+
+Layout-testen er en del af eval-kørslen (`npm run eval -w @lasso/server`, linjen "layout: N/60 ok") og af `npm test` (`apps/server/src/eval/layout.test.ts`). Screenshot-tjekket (`PLAYWRIGHT_MODULE=… node tools/gallery/measure/layout-check.mjs`) tegner 14 komponerede sider i 1200 px og måler afkortede tekster (ellipsis/line-clamp aktiv: scrollWidth > clientWidth), overlappende årstal på tidsakserne og vandret sideoverløb. Rå tal: `tools/gallery/measure/layout-check.json`.
+
+| Side | afkortede | overlap (årstal) | synlige årstal på netværksaksen | sideoverløb px |
+|---|---|---|---|---|
+| CVR-3-4000000002 overblik | 0 | 0 | 5 | 0 |
+| CVR-3-4000000002 netvaerk | 0 | 0 | 5 | 0 |
+| CVR-1-99000001 overblik | 2 ("Seneste revisorskiftDato for s", "RegnskabsperiodeDet tidsrum, r") | 0 | - | 142 |
+| CVR-1-99000001 risiko | 0 | 0 | - | 0 |
+| CVR-1-99000001 historik | 0 | 0 | - | 0 |
+| CVR-1-99000004 overblik | 2 ("Seneste revisorskiftDato for s", "RegnskabsperiodeDet tidsrum, r") | 0 | - | 0 |
+| CVR-1-99000004 risiko | 0 | 0 | - | 0 |
+| CVR-1-99000004 historik | 0 | 0 | - | 0 |
+| c-offentliggoerelser-01 | 0 | 0 | - | 0 |
+| p-netvaerk-02 | 0 | 0 | 7 | 0 |
+| c-soliditet-01 | 0 | 0 | - | 0 |
+| c-ejere-01 | 0 | 0 | - | 0 |
+| p-roller-01 | 0 | 0 | - | 0 |
+| c-historik-02 | 0 | 0 | - | 0 |
+
+I alt: 4 afkortede tekster, 0 overlappende årstal.

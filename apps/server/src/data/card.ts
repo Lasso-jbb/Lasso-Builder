@@ -1083,7 +1083,7 @@ function latest(ds: Dataset, id: string, m: Metric): { value: number | null; yea
 }
 
 /**
- * compare_companies (plan D3): rangeringen som "1. Navn: værdi" (højeste først, som LassoRanking) og
+ * compare_companies (plan D3): rangeringen som "1. Navn: værdi" (højeste først, laveste først ved order "asc", som LassoRanking) og
  * sammenligningstabellen med én blok pr. virksomhed: navnet og nøgletallene for seneste år.
  */
 function compareCard(spec: ViewSpec, ds: Dataset): string | null {
@@ -1098,7 +1098,7 @@ function compareCard(spec: ViewSpec, ds: Dataset): string | null {
     const rows = ranking.companies
       .map((id) => ({ id, ...latest(ds, id, m) }))
       .filter((r): r is typeof r & { value: number } => r.value !== null)
-      .sort((a, b) => b.value - a.value);
+      .sort((a, b) => (ranking.order === "asc" ? a.value - b.value : b.value - a.value));
     if (rows.length === 0) card.text(`Ingen af virksomhederne har oplyst ${METRIC_LABELS[m].toLowerCase()}.`);
     rows.forEach((r, i) => {
       const line = `${nameOf(r.id)}: ${short(r.value, m, r.currency)}${r.year ? ` (${r.year})` : ""}`;

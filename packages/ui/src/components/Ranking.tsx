@@ -11,10 +11,10 @@ export interface RankingRow {
 /**
  * Rangliste: vandrette søjler, virksomheden selv i koral blandt lignende
  * virksomheder på ét nøgletal (katalog 13, række 0). Første virksomhed i
- * listen er den, der fremhæves; resten tegnes i neutral (chart-5). Navn i fast kolonne 170 px,
+ * listen er den, der fremhæves (order "asc" sorterer laveste først); resten tegnes i neutral (chart-5). Navn i fast kolonne 170 px,
  * bjælke 18 px med radius 3, tallet lige til højre for bjælken, plads-nummer som overlinje til venstre.
  */
-export function Ranking({ rows, metric, title }: { rows: RankingRow[]; metric: Metric; title?: string }) {
+export function Ranking({ rows, metric, title, order = "desc" }: { rows: RankingRow[]; metric: Metric; title?: string; order?: "desc" | "asc" }) {
   const heading = title ?? `${METRIC_LABELS[metric]} blandt lignende`;
   const originId = rows[0]?.lassoId;
   const errors = rows.filter((r) => r.error && !r.financials);
@@ -34,7 +34,7 @@ export function Ranking({ rows, metric, title }: { rows: RankingRow[]; metric: M
       return { lassoId: r.lassoId, name: r.company?.name ?? r.lassoId, value: typeof v === "number" ? v : null, unit };
     })
     .filter((r): r is { lassoId: string; name: string; value: number; unit: string } => r.value !== null)
-    .sort((a, b) => b.value - a.value);
+    .sort((a, b) => (order === "asc" ? a.value - b.value : b.value - a.value));
 
   if (entries.length < 2) {
     return (
@@ -57,7 +57,7 @@ export function Ranking({ rows, metric, title }: { rows: RankingRow[]; metric: M
     <Section title={heading} subtitle={subtitle} span="half" className="lasso-ranking">
       <ol className="lasso-ranking-list">
         {entries.map((e, i) => {
-          const isOrigin = e.lassoId === originId;
+          const isOrigin = e.lassoId === (order === "asc" ? entries[0]?.lassoId : originId);
           const pct = (Math.abs(e.value) / maxAbs) * 100;
           return (
             <li className={`lasso-ranking__row ${isOrigin ? "lasso-ranking__row--origin" : ""}`} key={e.lassoId}>

@@ -740,3 +740,18 @@ test("B3: de nye spørgsmålstyper har hver en svarsætning, også som tom tilst
   const pask = parseAsk("Hvor mange roller har hun?", "person", { name: "Mette Holm" });
   assert.match(answerText(pspec, ds, pask) ?? "", /Roller: 2 selskaber, heraf 1 aktive og 1 ophørte; konkurser 0, tvangsopløsninger 0/);
 });
+
+test("compareCard: rangeringen står i samme rækkefølge som LassoRanking (asc: laveste som nr. 1)", () => {
+  const ds = emptyDataset("live");
+  const ids = ["CVR-1-1", "CVR-1-2", "CVR-1-3"];
+  const gross = [20_000_000, 30_000_000, 10_000_000];
+  ids.forEach((id, i) => {
+    ds.companies[id] = { lassoId: id, cvr: String(i), name: `Firma${i}`, status: "Normal", statusKind: "active" } as never;
+    ds.financials[id] = { lassoId: id, currency: "DKK", years: [{ year: 2025, grossProfit: gross[i] }] } as never;
+  });
+  const build = (order: "asc" | "desc") =>
+    parseViewSpec({ kind: "custom", title: "t", layout: "dashboard", components: [{ type: "LassoRanking", companies: ids, metric: "bruttofortjeneste", order }] });
+  const first = (o: "asc" | "desc") => textCard(build(o), ds)!.match(/1\.\s+(Firma\d)/)?.[1];
+  assert.equal(first("asc"), "Firma2");
+  assert.equal(first("desc"), "Firma1");
+});

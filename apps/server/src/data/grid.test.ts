@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { ABSORB_MAX_DEVIATION, BAND_COMBOS, BAND_MAX_DEVIATION, FOCUSES, PAGE_HEIGHT_BUDGET, PERSON_FOCUSES, WIDTHS, askFocus, askPersonFocus, parseAsk, shortCompanyName, composeCompany, contentWidthOf, gridRuleOf, widthProfileOf, composePerson, composePersonProbe, composeProbe, gridHeight, packPage, WIDTH_COLUMNS, type Dataset, type ViewComponent, type ViewSpec } from "@lasso/spec";
+import { ABSORB_MAX_DEVIATION, BAND_COMBOS, BAND_MAX_DEVIATION, FOCUSES, PAGE_HEIGHT_BUDGET, PERSON_FOCUSES, askFocus, askPersonFocus, parseAsk, shortCompanyName, composeCompany, composePerson, composePersonProbe, composeProbe, gridHeight, packPage, WIDTH_COLUMNS, type Dataset, type ViewComponent, type ViewSpec } from "@lasso/spec";
 import { DemoProvider } from "./demo.js";
 import { resolveSpec } from "./resolve.js";
+import { bandsOf, describeViolation, layoutViolations } from "./layoutRules.js";
 
 /**
  * Gridmodellen (23.1) på rigtige sider: demodata (Eksempel Byg A/S og Bo Eksempel), højder fra
@@ -18,24 +19,6 @@ const B4_OVERBLIK = ["LassoRegistration", "LassoMap"];
 /** Default-sidens elementer i komponistens prioriterede rækkefølge (23.3). */
 const PAPER_ORDER = ["LassoCompanyHead", "LassoKeyFigureCards", "LassoTextSections", "LassoKeyValueList", "LassoRelations", "LassoBarChart", "LassoContact", "LassoTimeline", "LassoNews", "LassoShortcuts"];
 const PAD = 48;
-
-/** Sidens delte bånd som stakke ud fra kolonne og width (som LassoView.columnBands). */
-function bandsOf(spec: ViewSpec): ViewComponent[][][] {
-  const bands: ViewComponent[][][] = [];
-  let last = 0;
-  for (const c of spec.components) {
-    if (!c.column) {
-      last = 0;
-      continue;
-    }
-    if (last === 0 || c.column < last) bands.push([]);
-    const band = bands.at(-1)!;
-    while (band.length < c.column) band.push([]);
-    band[c.column - 1]!.push(c);
-    last = c.column;
-  }
-  return bands;
-}
 
 function check(spec: ViewSpec, ds: Dataset, label: string, maxDev = BAND_MAX_DEVIATION) {
   const legal = BAND_COMBOS.map((x) => x.join("+"));
@@ -136,17 +119,8 @@ test("gridmodel: personsidens elementer pakket med packPage (virksomhedssidens h
  * kolonne) må en smal komponent fylde bredden. Alle demovirksomheder, alle fokus, med og uden budget.
  */
 function assertWidthRules(spec: ViewSpec, ds: Dataset, label: string) {
-  const idx = (w: string) => WIDTHS.indexOf(w as never);
-  for (const band of bandsOf(spec)) {
-    if (band.length < 2) continue;
-    for (const st of band)
-      for (const c of st) {
-        const w = c.width!;
-        assert.ok(idx(w) >= idx(contentWidthOf(c, ds)), `${label}: ${c.type} i ${w} under mindstebredden ${contentWidthOf(c, ds)}`);
-        assert.ok(idx(w) <= idx(gridRuleOf(c).max), `${label}: ${c.type} i ${w} over max`);
-        if (widthProfileOf(c).profil === "smal") assert.ok(idx(w) <= idx("half"), `${label}: smal ${c.type} strakt til ${w} ved siden af andre`);
-      }
-  }
+  const v = layoutViolations(spec, ds);
+  assert.deepEqual(v.map((x) => `${label}: ${describeViolation(x)}`), []);
 }
 
 test("Ø13/B8: virksomhedssiderne (alle demovirksomheder og fokus) klemmer aldrig et bredt element og strækker aldrig et smalt", async () => {

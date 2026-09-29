@@ -25,7 +25,10 @@ export const COMPARE_DEFAULT_METRICS: readonly Metric[] = ["omsaetning", "brutto
 export const COMPARE_TABLE_NOTE = `Sammenligningstabellen viser højst ${COMPARE_TABLE_MAX}; de ${COMPARE_TABLE_MAX} største er valgt.`;
 
 /** Rangeringsord fra spørgsmålet (foldet tekst): størst, bedst, højest, lavest, flest, mindst. */
-const RANKING_WORDS = /\b(?:stoerst\w*|bedst\w*|hoejest\w*|lavest\w*|flest\w*|mindst\w*)\b/;
+/** Stigende rangering (laveste først): lavest, mindst, færrest, dårligst (foldet tekst). */
+const ASC_WORDS = /\b(?:lavest\w*|mindst\w*|faerrest\w*|daarligst\w*)\b/;
+
+const RANKING_WORDS = /\b(?:stoerst\w*|bedst\w*|hoejest\w*|lavest\w*|flest\w*|faerrest\w*|daarligst\w*|mindst\w*)\b/;
 
 export interface CompareOptions {
   /** Nøgletal i tabellen (1–5). */
@@ -88,6 +91,7 @@ export function composeCompare(refs: readonly string[], options: CompareOptions 
   const asked = ask?.metrics ?? [];
   const years = Math.min(Math.max(Math.trunc(options.years ?? ask?.years ?? 5), 2), 10);
   const ranking = Boolean(options.metric) || isRankingQuestion(ask?.question);
+  const order = ASC_WORDS.test(foldText(options.question ?? "")) ? ("asc" as const) : undefined;
   const title = compareTitle(all, options);
 
   let components: ViewSpecInput["components"];
@@ -95,7 +99,7 @@ export function composeCompare(refs: readonly string[], options: CompareOptions 
     const metric = options.metric ?? asked[0] ?? options.metrics?.[0] ?? sizeMetric(all, options);
     const tableMetrics = withRelated([metric, ...(options.metrics ?? []), ...asked], 3);
     components = [
-      { type: "LassoRanking", companies: all, metric, title: clip(`${METRIC_LABELS[metric]}, rangliste`, 80) },
+      { type: "LassoRanking", companies: all, metric, ...(order ? { order } : {}), title: clip(`${METRIC_LABELS[metric]}, rangliste`, 80) },
       { type: "LassoCompareTable", companies: largest(all, metric, COMPARE_TABLE_MAX, options), metrics: tableMetrics },
     ];
   } else if (all.length > COMPARE_TABLE_MAX) {

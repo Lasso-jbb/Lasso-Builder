@@ -15,6 +15,8 @@ import {
   composeProbe,
   parseAsk,
   shortCompanyName,
+  type Dataset,
+  type ViewSpec,
 } from "@lasso/spec";
 import {
   scoreComponents,
@@ -24,6 +26,7 @@ import {
 } from "../../../../packages/spec/src/eval/schema.js";
 import { DemoProvider } from "../data/demo.js";
 import { resolveSpec } from "../data/resolve.js";
+import { describeViolation, layoutViolations, type LayoutViolation } from "../data/layoutRules.js";
 
 export type { CaseResult, EvalCase, EvalFile };
 
@@ -52,6 +55,8 @@ export interface EvalReport {
   planFocus: GroupStat;
   byGroup: Record<"eksisterende" | "manglende", { side: GroupStat; plan: GroupStat }>;
   misses: Miss[];
+  /** B9: layout-reglerne (mindstebredde, smal ikke strakt, ikke over max) på hver eval-side (alle tilfælde, også dataInDemo=false). */
+  layout: { ok: number; total: number; violations: { id: string; type: string; width: string; rule: string; limit: string }[] };
 }
 
 /** `--no-topic`: kør uden topic-hintet (til før/efter-sammenligning af hintets virkning). */
@@ -65,7 +70,7 @@ const stat = (results: CaseResult[]): GroupStat => {
   return { hits, total: results.length, pct: results.length ? Math.round((hits / results.length) * 1000) / 10 : 0 };
 };
 
-async function sideComponents(c: EvalCase, provider: DemoProvider): Promise<{ type: never }[]> {
+export async function sideSpec(c: EvalCase, provider: DemoProvider): Promise<{ spec: ViewSpec; dataset: Dataset }> {
   const id = c.entity;
   if (c.kind === "company") {
     const official = await provider.company(id).then((x) => x.name).catch(() => undefined);
@@ -78,14 +83,14 @@ async function sideComponents(c: EvalCase, provider: DemoProvider): Promise<{ ty
     const dataset = await resolveSpec(composeProbe(id, focus as never, a), provider);
     const name = dataset.companies[id]?.name;
     const spec = composeCompany(id, dataset, { focus: focus as never, name, ask: a, ...(c.hints?.show_all ? { showAll: true } : {}) });
-    return spec.components as never;
+    return { spec, dataset };
   }
   const official = await provider.person(id).then((x) => x.name).catch(() => undefined);
   const a = parseAsk(c.question, "person", { name: official, topic: hintTopic(c) });
   const focus = (c.hints?.focus as never) ?? (a.generic ? askPersonFocus(a) : undefined) ?? "overblik";
   const dataset = await resolveSpec(composePersonProbe(id, focus, a), provider);
   const spec = composePerson(id, dataset, { focus, name: dataset.persons[id]?.name, ask: a, ...(c.hints?.show_all ? { showAll: true } : {}) });
-  return spec.components as never;
+  return { spec, dataset };
 }
 
 function planResult(c: EvalCase, official: string | undefined): CaseResult {
@@ -107,11 +112,17 @@ export async function runEval(): Promise<EvalReport> {
   const provider = new DemoProvider();
   const results: CaseResult[] = [];
   const byCase = new Map<string, EvalCase>();
+  let layoutOk = 0;
+  const layoutViolationsAll: EvalReport["layout"]["violations"] = [];
   for (const c of file.cases) {
     byCase.set(c.id, c);
     const official = await (c.kind === "company" ? provider.company(c.entity) : provider.person(c.entity)).then((x) => x.name).catch(() => undefined);
     results.push(planResult(c, official));
-    if (c.dataInDemo) results.push(scoreComponents(c, "side", await sideComponents(c, provider)));
+    const { spec, dataset } = await sideSpec(c, provider);
+    if (c.dataInDemo) results.push(scoreComponents(c, "side", spec.components as never));
+    const v: LayoutViolation[] = layoutViolations(spec, dataset);
+    if (v.length === 0) layoutOk++;
+    for (const x of v) layoutViolationsAll.push({ id: c.id, ...x });
   }
   const of = (level: "side" | "plan", group?: "eksisterende" | "manglende") =>
     results.filter((r) => r.level === level && (!group || byCase.get(r.id)?.group === group));
@@ -130,6 +141,7 @@ export async function runEval(): Promise<EvalReport> {
     planFocus: stat(of("plan").filter((r) => !!byCase.get(r.id)?.expected.focus)),
     byGroup,
     misses: results.filter((r) => !r.hit).map((r) => ({ id: r.id, level: r.level, want: r.want, got: r.got })),
+    layout: { ok: layoutOk, total: file.cases.length, violations: layoutViolationsAll },
   };
 }
 
@@ -145,6 +157,8 @@ export function formatReport(r: EvalReport): string {
     row("side, manglende", r.byGroup.manglende.side),
     row("plan, eksisterende", r.byGroup.eksisterende.plan),
     row("plan, manglende", r.byGroup.manglende.plan),
+    `layout: ${r.layout.ok}/${r.layout.total} ok`,
+    ...(r.layout.violations.length ? [`Layout-overtrædelser (${r.layout.violations.length}):`, ...r.layout.violations.map((v) => `- ${v.id} ${describeViolation(v as LayoutViolation)}`)] : []),
     "",
     `Misses (${r.misses.length}):`,
     ...r.misses.map((m) => `- ${m.id} [${m.level}] want ${m.want} | got ${(m.got ?? "intet").slice(0, 110)}`),

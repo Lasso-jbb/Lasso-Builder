@@ -178,7 +178,7 @@ test("parseViewSpec accepterer de nye graftyper i katalog 13 med deres standardv
   assert.deepEqual(lineWithBench, { type: "LassoLineChart", company: "CVR-1-12345678", metric: "bruttofortjeneste", years: 5, benchmark: "CVR-1-99999999" });
   assert.deepEqual(waterfall, { type: "LassoWaterfallChart", company: "CVR-1-12345678" });
   assert.deepEqual(shareBars, { type: "LassoShareBars", company: "CVR-1-12345678" });
-  assert.deepEqual(ranking, { type: "LassoRanking", companies: ["CVR-1-12345678", "CVR-1-87654321"], metric: "bruttofortjeneste" });
+  assert.deepEqual(ranking, { type: "LassoRanking", companies: ["CVR-1-12345678", "CVR-1-87654321"], metric: "bruttofortjeneste", order: "desc" });
 });
 
 test("LassoGroupedBarChart kræver 2–3 nøgletal og LassoRanking mindst 2 virksomheder", () => {

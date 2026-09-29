@@ -96,3 +96,13 @@ test("composeCompare: dubletter fjernes, og under 2 afvises", () => {
   const [a] = ids(1) as [string];
   assert.throws(() => composeCompare([a, a]));
 });
+
+test("composeCompare: lavest/mindst giver order asc; størst giver standard (desc)", () => {
+  const refs = ids(4);
+  const lav = of(composeCompare(refs, { question: "Hvem har lavest soliditet?" }).components, "LassoRanking");
+  assert.equal(lav.order, "asc");
+  assert.equal(lav.metric, "soliditetsgrad");
+  assert.equal(of(composeCompare(refs, { question: "Hvem har mindst omsætning?" }).components, "LassoRanking").order, "asc");
+  assert.equal(of(composeCompare(refs, { question: "Hvem har færrest ansatte?" }).components, "LassoRanking").order, "asc");
+  assert.equal(of(composeCompare(refs, { question: "Hvem er størst?" }).components, "LassoRanking").order, "desc");
+});
