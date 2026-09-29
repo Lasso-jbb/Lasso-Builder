@@ -222,11 +222,9 @@ export function StackedBarChart({ financials, statements, years, error }: { fina
               return (
                 <g key={c.title}>
                   {stack(c.segments, x)}
-                  <text className="lasso-chart__label" x={cx} y={y(0) + 18} textAnchor="middle">
-                    {c.title}
-                  </text>
-                  <text className="lasso-chart__value lasso-chart__value--last" x={cx} y={y(0) + 36} textAnchor="middle">
-                    {label(c.total)}
+                  {/* 13.5: navn og total på én linje under søjlen, "Aktiver · 62,8" i 600. */}
+                  <text className="lasso-chart__value lasso-chart__value--last" x={cx} y={y(0) + 20} textAnchor="middle">
+                    {`${c.title} \u00b7 ${label(c.total)}`}
                   </text>
                 </g>
               );
