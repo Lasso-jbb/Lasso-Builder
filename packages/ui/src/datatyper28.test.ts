@@ -25,7 +25,7 @@ test("28.6/26h.8: fusion som 'fra → til', fokus med koral kant, ophørt i mute
   assert.match(html, /01\.07\.2022[^]*Fusion/);
   assert.match(html, /is-ceased[^]*Data Eksempel A\/S[^]*ophørt ved fusionen/);
   assert.match(html, /is-focus[^]*Eksempel A\/S/);
-  assert.match(html, /Data Eksempel A\/S \(ophørende\) fusioneret ind i denne virksomhed/);
+  assert.match(html, /Data Eksempel A\/S \(ophørende\) fusioneret ind i Eksempel A\/S/); // 28.6: navnene, ikke "denne virksomhed"
   assert.match(html, /14\.05\.2012[^]*Stiftet/);
   const none = renderToStaticMarkup(createElement(Mergers, { events: { ...ev, mergers: [] } }));
   assert.match(none, /ingen registrerede fusioner eller spaltninger/);

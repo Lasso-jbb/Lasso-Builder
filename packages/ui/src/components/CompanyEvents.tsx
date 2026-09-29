@@ -49,9 +49,11 @@ export function Mergers({ events, company, title, error, demo, onOpen }: { event
   const focusId = events.lassoId;
   const sentence = (m: (typeof list)[number]) => {
     const ceased = m.from.filter((p) => p.ceased);
+    // 28.6 mobil: selskabernes navne ("Data Eksempel A/S (ophørende) fusioneret ind i …"); over to ophørte: "3 selskaber".
     const names = (ps: MergerPartyVM[]) =>
-      ceased.length > 1 && ps === m.from ? `${ceased.length} selskaber` : ps.map((p) => (p.lassoId === focusId ? "denne virksomhed" : `${p.name}${p.ceased ? " (ophørende)" : ""}`)).join(", ");
-    return m.type === "Fusion" ? `${names(m.from)} fusioneret ind i ${names(m.to)}` : `${names(m.from)} spaltet til ${names(m.to)}`;
+      ceased.length > 2 && ps === m.from ? `${ceased.length} selskaber` : ps.map((p) => `${p.name}${p.ceased ? " (ophørende)" : ""}`).join(" og ");
+    const text = m.type === "Fusion" ? `${names(m.from)} fusioneret ind i ${names(m.to)}` : `${names(m.to)} udspaltet fra ${names(m.from)}`;
+    return text.charAt(0).toUpperCase() + text.slice(1);
   };
   const subtitle = `${list.length} ${list.length === 1 ? "hændelse" : "hændelser"}${demo ? ", alle selskaber er eksempeldata" : ""}`;
   return (
@@ -137,21 +139,26 @@ export function Announcements({ events, company, demo, title, error }: { events?
             <span className="lasso-announce__date">{a.date ? formatDate(a.date) : "—"}</span>
             <span className={`lasso-announce__type lasso-announce__type--${a.severity}`}>{a.type}</span>
             <span className="lasso-announce__body">
-              {a.text ? <span className={`lasso-announce__text${open.has(i) ? " is-open" : ""}`}>{a.text}</span> : null}
-              {a.text && a.text.length > 120 ? (
-                <button
-                  type="button"
-                  className="lasso-link lasso-announce__more"
-                  aria-expanded={open.has(i)}
-                  onClick={() => {
-                    const next = new Set(open);
-                    if (next.has(i)) next.delete(i);
-                    else next.add(i);
-                    setOpen(next);
-                  }}
-                >
-                  {open.has(i) ? "Skjul" : "Vis"}
-                </button>
+              {/* 28.8: brødteksten er foldet til to linjer uden "Vis"-link; et klik (eller Enter) på teksten folder den ud og ind. */}
+              {a.text ? (
+                a.text.length > 120 ? (
+                  <button
+                    type="button"
+                    className={`lasso-announce__text lasso-announce__text--toggle${open.has(i) ? " is-open" : ""}`}
+                    aria-expanded={open.has(i)}
+                    title={open.has(i) ? "Fold sammen" : "Vis hele teksten"}
+                    onClick={() => {
+                      const next = new Set(open);
+                      if (next.has(i)) next.delete(i);
+                      else next.add(i);
+                      setOpen(next);
+                    }}
+                  >
+                    {a.text}
+                  </button>
+                ) : (
+                  <span className="lasso-announce__text">{a.text}</span>
+                )
               ) : null}
               {a.source ? <span className="lasso-announce__source">{a.source}</span> : null}
             </span>
