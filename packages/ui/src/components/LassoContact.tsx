@@ -243,7 +243,7 @@ export function LassoContact({ contact, title, error, omitAddress = false, onCop
   const phoneState = stateOf(phoneMatch);
 
   return (
-    <Section title={heading} span="half">
+    <Section title={heading} span="half" className="lasso-section--overline-mobile">
       <div className="lasso-contact">
         {hasAddress ? (
           <Row
@@ -261,7 +261,21 @@ export function LassoContact({ contact, title, error, omitAddress = false, onCop
             icon={<PhoneIcon />}
             href={`tel:${contact.phone.replace(/\s+/g, "")}`}
             struck={phoneState?.kind === "expired"}
-            aside={phoneState ? <LiveMark state={phoneState} /> : <ActionLink label="Ring" href={`tel:${contact.phone.replace(/\s+/g, "")}`} />}
+            aside={
+              phoneState ? (
+                <>
+                  <LiveMark state={phoneState} />
+                  {/* 26a.6: på mobil står en 40 px ring-knap (koral-soft) efter verificeringen. */}
+                  {phoneState.kind !== "expired" ? (
+                    <a className="lasso-contact__call" href={`tel:${contact.phone.replace(/\s+/g, "")}`} aria-label="Ring op" title="Ring op">
+                      <Icon name="phone" size={16} />
+                    </a>
+                  ) : null}
+                </>
+              ) : (
+                <ActionLink label="Ring" href={`tel:${contact.phone.replace(/\s+/g, "")}`} />
+              )
+            }
           >
             {prettyPhone(contact.phone)}
           </Row>

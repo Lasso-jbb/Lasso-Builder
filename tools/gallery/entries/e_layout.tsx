@@ -22,12 +22,14 @@ import {
   formatPercent,
   mainMetric,
   statusKind,
+  type ContactVM,
   type Dataset,
   type ViewSpec,
 } from "@lasso/spec";
 import {
   AppShell,
   CreditConfirmDialog,
+  LassoContact,
   DataState,
   EntityUpdates,
   FilterSheet,
@@ -571,6 +573,24 @@ function MobileFrame({ sheetOpen, children }: { sheetOpen?: boolean; children?: 
   );
 }
 
+function MobileContact() {
+  const now = Date.now();
+  return (
+    <LassoContact
+      now={now}
+      onCopy={noop}
+      contact={{
+        lassoId: C,
+        address: { street: "Toldbodgade 37B", zip: "1253", city: "København K" },
+        phone: "71747812",
+        email: "kontakt@lasso.dk",
+        verifiedAt: new Date(now - 5_000).toISOString(),
+        verifiedNumbers: [{ phoneNumber: "71747812", callable: true, sources: ["CVR"], score: 98 }],
+      } as ContactVM}
+    />
+  );
+}
+
 function TabsDemo({ level, items, value, ariaLabel, maxVisible }: { level: 1 | 2 | 3; items: readonly TabItem[]; value: string; ariaLabel: string; maxVisible?: number }) {
   const [v, setV] = useState(value);
   return <Tabs level={level} items={items} value={v} onChange={setV} ariaLabel={ariaLabel} maxVisible={maxVisible} />;
@@ -581,6 +601,7 @@ function OpenMenu() {
     <div style={{ minHeight: 800 }}>
       <Menu
         trigger={<ShellIcon name="more" size={20} />}
+        triggerClassName="lasso-sr-only"
         triggerLabel="Flere handlinger"
         label="Handlinger"
         defaultOpen
@@ -617,7 +638,14 @@ const mobileNav: GalleryEntry[] = [
     note: "Tabs niveau 1 med virksomhedens fokus; ruller vandret med fade.",
     render: () => <TabsDemo level={1} items={COMPANY_MODULES} value="overblik" ariaLabel="Sektioner" />,
   },
-  { nr: "26a.6", title: "Kontaktblok (mobil)", node: "DWQ-0", only: "mobile", spec: { kind: "company", title: "Kontakt", components: [{ type: "LassoContact", company: C }] } },
+  {
+    nr: "26a.6",
+    title: "Kontaktblok (mobil)",
+    node: "DWQ-0",
+    only: "mobile",
+    note: "LassoContact med Papers tre rækker (adresse, verificeret telefon, e-mail); overlinje, adresse på én linje og ring-knap er mobilformen.",
+    render: () => <MobileContact />,
+  },
   { nr: "26a.7", title: "Genveje (mobil)", node: "DXD-0", only: "mobile", spec: { kind: "company", title: "Genveje", components: [{ type: "LassoShortcuts", company: C }] } },
   {
     nr: "26a.8",
@@ -639,7 +667,7 @@ const mobileNav: GalleryEntry[] = [
     note: "CreditConfirmDialog åben; under 600 px bliver dialogen bundark.",
     render: () => (
       <div style={{ minHeight: 800 }}>
-        <CreditConfirmDialog open balance={38} onClose={noop} onConfirm={noop} what="kreditvurderingen for Eksempel Byg A/S" title="Hent ny kreditvurdering?" />
+        <CreditConfirmDialog open balance={38} onClose={noop} onConfirm={noop} description="LASSO X A/S, seneste vurdering er 13 dage gammel." title="Hent ny kreditvurdering?" />
       </div>
     ),
   },

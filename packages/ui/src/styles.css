@@ -1782,7 +1782,7 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
   .lasso-dialog__spacer { display: none; }
   .lasso-dialog__primary { order: -1; width: 100%; height: 48px; }
   .lasso-dialog .lasso-dialog__secondary, .lasso-dialog .lasso-dialog__destructive { width: 100%; height: 44px; border-color: transparent; background: transparent; }
-  .lasso-dialog__secondary { color: var(--lasso-text-2); }
+  .lasso-dialog__secondary, .lasso-root .lasso-dialog__secondary { color: var(--lasso-muted); font-weight: 400; } /* 26a.9: Annuller 14/400 muted */
 
   .lasso-menu__scrim { display: block; position: fixed; inset: 0; z-index: 50; background: var(--lasso-scrim); }
   .lasso-menu__pop, .lasso-menu__pop--layer { position: fixed; top: auto; bottom: 12px; left: 12px; right: 12px; z-index: 51; min-width: 0; max-width: none; width: auto; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; transform: none; display: flex; flex-direction: column; gap: 10px; }
@@ -1799,7 +1799,7 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
   .lasso-menu__group:last-child .lasso-menu__item:last-child { border-bottom: 0; }
   .lasso-menu__item:not(.lasso-menu__item--danger) + .lasso-menu__item--danger { margin-top: 0; }
   .lasso-menu__item:not(.lasso-menu__item--danger) + .lasso-menu__item--danger::before { display: none; }
-  .lasso-menu__cancel { display: block; height: 56px; border: 0; border-radius: var(--lasso-radius-xl); background: var(--lasso-surface); color: var(--lasso-text); font-size: var(--lasso-fs); font-weight: 600; cursor: pointer; }
+  .lasso-menu__cancel { display: block; height: 56px; border: 0; border-radius: var(--lasso-radius-xl); background: var(--lasso-surface); color: var(--lasso-text); font-size: 16px; font-weight: 600; cursor: pointer; } /* 26a.10: Annuller 16/600 */
 
   .lasso-toasts { left: 12px; right: 12px; bottom: 12px; transform: none; max-width: none; align-items: stretch; }
   .lasso-toast { min-width: 0; }
@@ -2189,6 +2189,15 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 .lasso-contact__action { flex: none; padding: 0; border: 0; background: none; cursor: pointer; font: inherit; font-size: var(--lasso-fs-sm); font-weight: var(--lasso-fw-medium); color: var(--lasso-accent-text); text-decoration: none; }
 .lasso-root button.lasso-contact__action { color: var(--lasso-accent-text); }
 .lasso-contact__call { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius); background: var(--lasso-surface); color: var(--lasso-accent); }
+.lasso-contact__aside .lasso-contact__call { display: none; }
+/* 26a.6/26a.7 mobil: sektionens titel bliver en overlinje (11/600 versaler, muted); adressen står på én linje; ring-knap 40 px koral-soft. */
+@container lasso (max-width: 560px) {
+  .lasso-section--overline-mobile > .lasso-section__head .lasso-section__title { font-size: var(--lasso-fs-label); line-height: var(--lasso-lh-label); font-weight: 600; letter-spacing: var(--lasso-ls-label); text-transform: uppercase; color: var(--lasso-muted); }
+  .lasso-contact__value--multiline { display: inline; }
+  .lasso-contact__value--multiline > span:not(:last-child)::after { content: ","; margin-right: 0.3em; }
+  .lasso-contact__aside { gap: var(--lasso-space-3); }
+  .lasso-contact__aside .lasso-contact__call { display: inline-flex; border-color: var(--lasso-accent-border); background: var(--lasso-accent-soft); color: var(--lasso-accent-text); }
+}
 .lasso-contact__action:focus-visible, .lasso-contact__call:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: 2px; }
 @container lasso (max-width: 560px) {
   .lasso-contact { gap: 0; }
@@ -2501,6 +2510,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-company, .lasso-personhead.lasso-company { display: flex; flex-direction: column; gap: 6px; }
   .lasso-company__name, .lasso-personhead.lasso-company .lasso-company__name { font-size: 20px; line-height: 28px; }
   .lasso-company__status { font-size: var(--lasso-fs-sm); }
+  .lasso-company__status:not(.lasso-company__status--warning):not(.lasso-company__status--inactive) { font-weight: 400; color: var(--lasso-muted); } /* 26a.4: "Aktiv" 13/400 muted efter navnet */
   .lasso-company__facts { order: 1; font-size: var(--lasso-fs-sm); line-height: 18px; }
   .lasso-company > .lasso-company__actions { order: 2; align-self: flex-end; margin-top: 6px; }
   .lasso-company > .lasso-headrisk { order: 3; }
@@ -2914,7 +2924,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-creditconfirm__fact { display: flex; justify-content: space-between; gap: var(--lasso-space-4); padding: 10px 0; border-bottom: 1px solid var(--lasso-divider-subtle); font-size: var(--lasso-fs); line-height: 18px; }
 .lasso-creditconfirm__fact:last-child { border-bottom: 0; }
 .lasso-creditconfirm__fact dt { color: var(--lasso-text-3); }
-.lasso-creditconfirm__fact dd { margin: 0; font-weight: 500; color: var(--lasso-text); text-align: right; }
+.lasso-creditconfirm__fact dd { margin: 0; font-weight: 400; color: var(--lasso-text); text-align: right; }
+.lasso-creditconfirm__fact:first-child dd { font-weight: 600; } /* 26a.9/18.3: kun prisen i 600 */
 .lasso-creditconfirm__fact dd.lasso-creditconfirm__price--short { color: var(--lasso-danger); }
 
 /* ---------- 26b Mobil, grafer og målere (node E2J-0) ---------- */

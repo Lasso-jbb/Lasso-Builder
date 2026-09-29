@@ -62,7 +62,7 @@ export function Shortcuts({ items, title = "Genveje", bare = false }: { items: r
   );
   if (bare) return row;
   return (
-    <Section title={title} span="half" className="lasso-shortcuts-section">
+    <Section title={title} span="half" className="lasso-shortcuts-section lasso-section--overline-mobile">
       {row}
     </Section>
   );
