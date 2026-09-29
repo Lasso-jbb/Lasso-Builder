@@ -143,7 +143,7 @@ const MODULES: TabItem[] = [
 const MODULE_ACTIONS = [
   { id: "export", label: "Eksportér", items: [{ id: "pdf", label: "PDF" }, { id: "csv", label: "CSV" }, { id: "link", label: "Kopiér link" }] },
   { id: "saved", label: "Gemt", tone: "accent" as const, icon: <Icon name="saved" size={15} filled /> },
-  { id: "monitor", label: "Overvåg", tone: "accent" as const, icon: <Icon name="bell" size={15} /> },
+  { id: "monitor", label: "Overvåg", tone: "accent" as const, icon: <Icon name="rss" size={15} /> },
 ];
 
 function Strip() {
@@ -859,7 +859,7 @@ export const entries: GalleryEntry[] = [
     desktopWidth: 1440,
     note: "Kun desktop: under 1200 px bliver skinnen 64 px med ikoner, og på mobil skjules den (bundnavigation, 26a).",
     render: () => (
-      <div style={{ width: 260, background: "var(--lasso-chrome)", paddingTop: 12, borderRadius: 10 }}>
+      <div style={{ width: 236, background: "var(--lasso-chrome)", paddingTop: 12, borderRadius: 10 }}>
         <Rail groups={RAIL_GROUPS} />
       </div>
     ),
@@ -879,6 +879,8 @@ export const entries: GalleryEntry[] = [
     nr: "06.4",
     title: "Modulbjælke",
     node: "JQO-0",
+    desktopWidth: 1440,
+    note: "Tegnet i 1440 px, så bjælken har samme bredde som i en 1440-side (under 1200 px bliver handlingerne til ikonknapper).",
     render: () => (
       <div style={{ border: "1px solid var(--lasso-border)", borderRadius: 10, overflow: "hidden" }}>
         <Modules />

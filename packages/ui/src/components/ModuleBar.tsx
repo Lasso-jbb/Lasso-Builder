@@ -9,7 +9,8 @@ import { Tabs, type TabItem } from "./Tabs.js";
  * modul (Overblik, Salg, Stamoplysninger, Nøgletal, Ejerdiagram …), tegnet med Tabs niveau 1
  * (ink 600 + 2 px koral streg). Der vises så mange moduler, som der er plads til mellem venstre kant og
  * handlingerne (06.1: ved fuld bredde 8–9); resten samles bag "Flere" med pilen lige efter ordet.
- * På tablet (bjælken under 900 px) højst 4 + Flere.
+ * På tablet (bjælken under 900 px) højst 4 + Flere. På mobil (under 560 px) ruller alle moduler vandret
+ * med fade i højre kant, og sidens handlinger ligger bag "…" i topbjælken.
  *
  * Sidens handlinger står yderst til højre adskilt af 1 px lodrette linjer: "Eksportér ▾" (menu),
  * "Gemt" (koral bogmærke + koral tekst, tone "accent") og "Overvåg" (koral ikon + tekst).
@@ -84,7 +85,8 @@ export function ModuleBar({ modules, value, onChange, actions = [], ariaLabel = 
   }, []);
   const room = width - PAD_LEFT - (actions.length > 0 ? actionsWidth + BAR_GAP : 0);
   const fit = fitModules(modules.map((m) => m.label), room, (l) => labelWidth(l, modules.find((m) => m.label === l)?.id === value));
-  const maxVisible = fixed ?? (width < 900 ? Math.min(5, fit) : fit);
+  // Mobil (< 560, 06.4/26.3): alle moduler i én vandret rullebar række med 40 px fade, ingen "Flere".
+  const maxVisible = fixed ?? (width < 560 ? modules.length : width < 900 ? Math.min(5, fit) : fit);
   return (
     <div ref={ref} className={`lasso-modulebar ${className}`}>
       <Tabs level={1} id={id} items={modules} value={value} onChange={onChange} ariaLabel={ariaLabel} maxVisible={maxVisible} className="lasso-modulebar__tabs" />

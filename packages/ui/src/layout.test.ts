@@ -107,10 +107,10 @@ test("Layout 'columns': grupper virker både i fuld bredde og inde i en kolonne"
   assert.equal(groupItemLabel(spec.components[1]!), "Ledelse");
 });
 
-test("Brudpunkter (26.1, 30): tablet (midte ≤ 960) holder ½ + ½ og folder ¼/¾, skinnen skjules ved 960, skallen er mobil under 768", () => {
+test("Brudpunkter (26.1, 26f.1, 30): tablet (midte ≤ 960) holder ½ + ½ og folder ¼/¾, tablet 768–1023 har topbjælke + 64 px skinne, skallen er mobil under 768", () => {
   const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
   assert.match(css, /@container lasso \(max-width: 960px\) \{\n  \.lasso-content--dashboard, \.lasso-content--grid-2 \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); column-gap: var\(--lasso-space-4\); \}\n  \.lasso-cell--half \{ grid-column: span 1; \}/);
-  assert.match(css, /@container lasso \(max-width: 960px\) \{\n  \.lasso-shell \{ grid-template-columns: minmax\(0, 1fr\);[^}]*\}\n  \.lasso-shell > \.lasso-rail \{ display: none; \}/);
+  assert.match(css, /@container lasso \(max-width: 1023px\) and \(min-width: 768px\) \{\n  \.lasso-shell \{ grid-template-columns: 64px minmax\(0, 1fr\);[^}]*\}\n  \.lasso-shell > \.lasso-rail, \.lasso-shell > \.lasso-strip \{ display: none; \}\n  \.lasso-shell > \.lasso-tabletbar \{ display: flex;/);
   assert.match(css, /@container lasso \(max-width: 767px\) \{\n  \.lasso-shell \{ display: flex;/);
   assert.match(css, /\.lasso-page__panel \{[^}]*width: var\(--lasso-panel-w\)/);
 });

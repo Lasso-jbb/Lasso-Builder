@@ -221,13 +221,13 @@ function Shell({
     onSelectSection: setFocus,
     sheetOpen,
     onBell: noop,
-    unread: 3,
+    unread: 0,
     moreItems: [
       { id: "save", label: "Gem på din liste", icon: <ShellIcon name="bookmark" size={16} />, onSelect: noop },
       { id: "share", label: "Del link", icon: <ShellIcon name="copy" size={16} />, onSelect: noop },
     ],
     nav: [
-      { id: "soeg", label: "Søg", icon: <ShellIcon name="search" size={20} />, active: kind === "search" },
+      { id: "soeg", label: "Søg", icon: <ShellIcon name="search" size={20} />, active: true },
       { id: "lister", label: "Lister", icon: <ShellIcon name="list" size={20} /> },
       { id: "overvaagning", label: "Overvågning", icon: <ShellIcon name="bell" size={20} /> },
       { id: "konto", label: "Konto", icon: <ShellIcon name="user" size={20} /> },
