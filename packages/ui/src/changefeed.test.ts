@@ -140,8 +140,10 @@ test("Overvåger-indstillinger (21): knap i koral-soft, fakta, Stop overvågning
   assert.match(html, /LASSO X A\/S overvåges</);
   assert.match(html, /I listen &quot;Kunder&quot;, siden 03\.03\.2025, besked pr\. e-mail dagligt/);
   assert.match(html, /class="lasso-link lasso-monitor__stop"[^>]*>Stop overvågning</);
-  assert.equal((html.match(/role="switch"/g) ?? []).length, 5);
-  assert.equal((html.match(/aria-checked="true"/g) ?? []).length, 3);
+  // 5 typekontakter + mobilens statuskontakt (26e.4, skjult på desktop).
+  assert.equal((html.match(/role="switch"/g) ?? []).length, 6);
+  assert.equal((html.match(/aria-checked="true"/g) ?? []).length, 4);
+  assert.match(html, /lasso-monitor__mstatus/);
   assert.match(html, /Status og konkurs/);
   assert.match(html, /Kreditscore ændrer sig ≥ 5 point/);
   assert.doesNotMatch(html, /·/);
