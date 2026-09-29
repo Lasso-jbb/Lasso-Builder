@@ -689,7 +689,7 @@ const mobileCharts: GalleryEntry[] = [
   { nr: "26b.3", title: "Stablede søjler / balance (mobil)", node: "E49-0", only: "mobile", spec: one("Balance", { type: "LassoStackedBarChart", company: C }) },
   { nr: "26b.4", title: "Linjegraf (mobil)", node: "E5A-0", only: "mobile", spec: one("Linjegraf", { type: "LassoLineChart", company: C, benchmark: "CVR-1-99000006" }) },
   { nr: "26b.5", title: "Vandfald (mobil)", node: "E62-0", only: "mobile", spec: one("Vandfald", { type: "LassoWaterfallChart", company: C }) },
-  { nr: "26b.6", title: "Fordeling / donut (mobil)", node: "E77-0", only: "mobile", spec: one("Fordeling", { type: "LassoShareBars", company: C }) },
+  { nr: "26b.6", title: "Fordeling / donut (mobil)", node: "E77-0", only: "mobile", spec: one("Fordeling", { type: "LassoShareBars", company: C, variant: "ejerkreds" }) },
   {
     nr: "26b.7",
     title: "Sparklines (mobil)",
