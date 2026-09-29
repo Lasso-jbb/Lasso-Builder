@@ -16,6 +16,9 @@ import {
   personSearchKey,
   widthOf,
   WIDTH_COLUMNS,
+  gridHeight,
+  measuredHeight,
+  packBands,
   type Dataset,
   type Focus,
   type PersonFocus,
@@ -818,6 +821,60 @@ export function tabletSpans(cols: readonly number[]): number[] {
   return spans;
 }
 
+/** Lodret afstand mellem elementer i en stak i layout 'dashboard' (px, --lasso-space-10). */
+const DASHBOARD_GAP = 40;
+
+/**
+ * Layout 'dashboard' i gridmodellen (23.1): sammenhængende komponenter pakkes i bånd og stakke
+ * (packBands) i stedet for at stå hver i sin celle, så en kort komponent aldrig efterlader et hul
+ * ved siden af en lang. En eksplicit width låser bredden (render_view); uden width vælger pakningen
+ * inden for elementets min/max. Grupper (mønster 8/9) står i eget fuldbånd som hidtil.
+ */
+export type DashboardBand =
+  | { kind: "run"; run: Run }
+  | { kind: "band"; stacks: { width: Width; items: Indexed[] }[] };
+export function dashboardBands(components: readonly ViewComponent[], ds: Dataset | null): DashboardBand[] {
+  const out: DashboardBand[] = [];
+  let pending: Indexed[] = [];
+  const flush = () => {
+    if (pending.length === 0) return;
+    const index = new Map<ViewComponent, number>();
+    const items = pending.map(({ c, i }) => {
+      // 30.9 og 30.11: tidslinjen med filterkolonne og nyhedernes kortgitter står i fuld bredde (widthOf).
+      const w = widthOf(c, "dashboard");
+      const x = !c.width && w === "full" && (c.type === "LassoTimeline" || c.type === "LassoNews") ? ({ ...c, width: "full" } as ViewComponent) : c;
+      index.set(x, i);
+      return x;
+    });
+    const h = (c: ViewComponent, width: Width) => {
+      if (!ds) return measuredHeight(c, width);
+      try {
+        return gridHeight(c, width, ds, items);
+      } catch {
+        return measuredHeight(c, width);
+      }
+    };
+    for (const b of packBands(items, h, { gap: DASHBOARD_GAP })) {
+      if (b.stacks.length === 1 && b.stacks[0]!.items.length === 1) {
+        const c = b.stacks[0]!.items[0]!;
+        out.push({ kind: "run", run: { kind: "one", item: { c, i: index.get(c)! } } });
+      } else {
+        out.push({ kind: "band", stacks: b.stacks.map((st) => ({ width: st.width, items: st.items.map((c) => ({ c: { ...c, width: st.width } as ViewComponent, i: index.get(c)! })) })) });
+      }
+    }
+    pending = [];
+  };
+  for (const run of groupRuns(components.map((c, i) => ({ c, i })))) {
+    if (run.kind === "one") pending.push(run.item);
+    else {
+      flush();
+      out.push({ kind: "run", run });
+    }
+  }
+  flush();
+  return out;
+}
+
 type SaveTarget = Extract<ViewAction, { kind: "save-page" }>;
 
 /**
@@ -1106,17 +1163,48 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
                     </div>
                   ),
                 )
-              : groupRuns(spec.components.map((c, i) => ({ c, i }))).map((run) =>
-                  run.kind === "one" ? (
-                    <div key={run.item.i} className={`lasso-cell lasso-cell--${widthOf(run.item.c, spec.layout)}`}>
-                      {renderComponent(run.item.c, dataset, props, act, run.item.i, frame)}
-                    </div>
-                  ) : (
-                    <div key={run.items[0]!.i} className={`lasso-cell lasso-cell--${groupWidth(run.items, spec.layout)}`}>
-                      {renderGroup(run.group, run.items, dataset, props, act, frame)}
-                    </div>
-                  ),
-                )}
+              : spec.layout === "dashboard"
+                ? dashboardBands(spec.components, dataset).map((b) => {
+                    if (b.kind === "run") {
+                      const run = b.run;
+                      return run.kind === "one" ? (
+                        <div key={run.item.i} className={`lasso-cell lasso-cell--${widthOf(run.item.c, spec.layout)}`}>
+                          {renderComponent(run.item.c, dataset, props, act, run.item.i, frame)}
+                        </div>
+                      ) : (
+                        <div key={run.items[0]!.i} className={`lasso-cell lasso-cell--${groupWidth(run.items, spec.layout)}`}>
+                          {renderGroup(run.group, run.items, dataset, props, act, frame)}
+                        </div>
+                      );
+                    }
+                    // Et bånd i gridmodellen: stakkene strækkes til båndets højde (ingen huller); tablet folder efter tabletSpans.
+                    const cols = b.stacks.map((st) => WIDTH_COLUMNS[st.width]);
+                    const spans = tabletSpans(cols);
+                    return (
+                      <div key={`d${b.stacks[0]!.items[0]!.i}`} className="lasso-cell lasso-cell--full lasso-dband" style={{ ["--lasso-dband-template" as string]: cols.map((n) => `minmax(0, ${n}fr)`).join(" ") }}>
+                        {b.stacks.map((st, k) => (
+                          <div key={k} className={`lasso-dstack lasso-dstack--${st.width}`} style={{ ["--lasso-span-t" as string]: spans[k] }}>
+                            {st.items.map(({ c, i }) => (
+                              <div key={i} className="lasso-dstack__item">
+                                {renderComponent(c, dataset, props, act, i, frame)}
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })
+                : groupRuns(spec.components.map((c, i) => ({ c, i }))).map((run) =>
+                    run.kind === "one" ? (
+                      <div key={run.item.i} className={`lasso-cell lasso-cell--${widthOf(run.item.c, spec.layout)}`}>
+                        {renderComponent(run.item.c, dataset, props, act, run.item.i, frame)}
+                      </div>
+                    ) : (
+                      <div key={run.items[0]!.i} className={`lasso-cell lasso-cell--${groupWidth(run.items, spec.layout)}`}>
+                        {renderGroup(run.group, run.items, dataset, props, act, frame)}
+                      </div>
+                    ),
+                  )}
           </main>
         )}
         {spec.answer && (spec.answer.source || spec.answer.next || spec.answer.logo) ? (

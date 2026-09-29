@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { readFileSync } from "node:fs";
 import { emptyDataset, parseViewSpec } from "@lasso/spec";
 import { Accordion, CardGrid } from "./components/Layout.js";
-import { bandTemplate, columnBands, gridBandColumns, groupItemLabel, groupRuns, LassoView, mergeFullGroups, tabletSpans } from "./LassoView.js";
+import { bandTemplate, columnBands, dashboardBands, gridBandColumns, groupItemLabel, groupRuns, LassoView, mergeFullGroups, tabletSpans } from "./LassoView.js";
 
 test("Harmonika (30, mønster 9): aria-expanded, skjult panel og meta som ren tekst", () => {
   const html = renderToStaticMarkup(
@@ -187,4 +187,51 @@ test("gridmodel 23.1: bånd på 12 kolonner tegnes med bredderne, strækkes uden
   const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
   assert.match(css, /\.lasso-columns \{ display: grid; gap: 0; align-items: stretch;/);
   assert.match(css, /\.lasso-columns > \.lasso-column > \.lasso-column__item:last-child \{ flex: 1 0 auto; \}/);
+});
+
+test("gridmodel 23.1 i layout 'dashboard': komponenterne pakkes i bånd på 12 kolonner, en eksplicit width låses, og ingen ½ står alene", () => {
+  const C = "CVR-1-1";
+  const spec = parseViewSpec({
+    kind: "company",
+    title: "Mønster 1",
+    components: [
+      { type: "LassoCompanyHead", company: C, variant: "compact" },
+      { type: "LassoKeyFigureCards", company: C, width: "full" },
+      { type: "LassoBarChart", company: C, width: "half" },
+      { type: "LassoKeyValueList", company: C, variant: "company", width: "half" },
+      { type: "LassoPersonList", company: C, width: "half" },
+      { type: "LassoOwnerList", company: C, width: "half" },
+      { type: "LassoNews", company: C, group: { id: "g", pattern: "cards" } },
+      { type: "LassoContact", company: C, group: { id: "g", pattern: "cards" } },
+    ],
+  });
+  const bands = dashboardBands(spec.components, null);
+  const shape = bands.map((b) => (b.kind === "run" ? (b.run.kind === "one" ? b.run.item.c.type : "group") : b.stacks.map((s) => `${s.width}:${s.items.map((x) => x.c.type).join("+")}`)));
+  assert.deepEqual(shape.slice(0, 2), ["LassoCompanyHead", "LassoKeyFigureCards"]);
+  assert.equal(shape.at(-1), "group");
+  const split = bands.filter((b) => b.kind === "band");
+  assert.ok(split.length >= 1);
+  for (const b of split) {
+    if (b.kind !== "band") continue;
+    const cols = { quarter: 3, third: 4, half: 6, "two-thirds": 8, "three-quarters": 9, full: 12 } as const;
+    assert.equal(b.stacks.reduce((n, s) => n + cols[s.width], 0), 12);
+    for (const s of b.stacks) for (const it of s.items) assert.equal(it.c.width, "half", "de eksplicitte ½ beholder bredden");
+  }
+  // Alle fire halve står i bånd (ingen alene): graf, oplysninger, ledelse og ejere.
+  assert.equal(split.flatMap((b) => (b.kind === "band" ? b.stacks.flatMap((s) => s.items) : [])).length, 4);
+  const html = renderToStaticMarkup(createElement(LassoView, { spec, dataset: emptyDataset("demo"), host: {}, onAction: () => undefined }));
+  assert.match(html, /class="lasso-cell lasso-cell--full lasso-dband" style="--lasso-dband-template:minmax\(0, 6fr\) minmax\(0, 6fr\)"/);
+  const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+  assert.match(css, /\.lasso-dband \{ display: grid; grid-template-columns: var\(--lasso-dband-template\);[^}]*align-items: stretch; \}/);
+  assert.match(css, /\.lasso-dstack__item:last-child \{ flex: 1 0 auto;/);
+});
+
+test("26f: tablet går op til skærm 1199: foldningen gælder også, når midten er bredere end 960 (portalen 1024–1199)", () => {
+  const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+  const container = css.match(/@container lasso [^{]*960px\)/g) ?? [];
+  const media = css.match(/@media \(max-width: 1199px\)/g) ?? [];
+  // Hver tabletregel ved midte ≤ 960 har en tvilling for skærm < 1200.
+  assert.ok(container.length >= 10);
+  assert.equal(media.length, container.length);
+  assert.match(css, /@media \(max-width: 1199px\) \{\n  \.lasso-content--dashboard, \.lasso-content--grid-2 \{ column-gap: var\(--lasso-space-4\); \}\n  \.lasso-cell--half, \.lasso-cell--third \{ grid-column: span 6; \}/);
 });

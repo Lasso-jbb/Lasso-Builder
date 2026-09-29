@@ -40,7 +40,21 @@ test("23.2: hver komponenttype har en gitterregel med std inden for min–max", 
     const r = GRID_RULES[t];
     assert.ok(r, t);
     assert.ok(WIDTHS.indexOf(r.min) <= WIDTHS.indexOf(r.std) && WIDTHS.indexOf(r.std) <= WIDTHS.indexOf(r.max), t);
+    assert.equal(DEFAULT_WIDTH[t], r.std, `DEFAULT_WIDTH og elementtabellen er ens for ${t}`);
   }
+});
+
+test("23.1: en eksplicit width låser bredden i pakningen (mønster 7: analyse ¾ + nøgletal ¼)", () => {
+  const items: ViewComponent[] = [
+    { type: "LassoSummary", text: "x", width: "three-quarters" } as ViewComponent,
+    { type: "LassoKeyFigureCards", company: "C", width: "quarter" } as ViewComponent,
+    { type: "LassoBarChart", company: "C", width: "full" } as ViewComponent,
+  ];
+  const bands = packBands(items, (c, w) => measuredHeight(c, w));
+  assert.deepEqual(bands.map((b) => b.stacks.map((s) => [s.width, s.items.map((c) => c.type)])), [
+    [["three-quarters", ["LassoSummary"]], ["quarter", ["LassoKeyFigureCards"]]],
+    [["full", ["LassoBarChart"]]],
+  ]);
 });
 
 test("23.1 F: pakningen gengiver gridmodellens tre verificerede sider (overblik, økonomi, ejerskab)", () => {

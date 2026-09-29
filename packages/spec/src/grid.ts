@@ -146,9 +146,16 @@ export type HeightFn = (c: ViewComponent, width: Width) => number;
 const FULL_BAND_TYPES = new Set<ViewComponent["type"]>(["LassoCompanyHead", "LassoPersonHead", "LassoKeyFigureCards", "LassoPersonStats", "LassoFollowUps"]);
 
 function isFullBand(c: ViewComponent): boolean {
+  // En eksplicit bredde vinder (render_view, fx mønster 7: analyse ¾ + nøgletal ¼).
+  if (c.width) return c.width === "full";
   if (FULL_BAND_TYPES.has(c.type)) return true;
-  if (c.width === "full") return true;
   return gridRuleOf(c).min === "full";
+}
+
+/** Må elementet stå i bredden? En eksplicit width låser bredden; ellers gælder elementets min/max. */
+export function fitsWidth(c: ViewComponent, width: Width): boolean {
+  if (c.width) return c.width === width;
+  return allowsWidth(gridRuleOf(c), width);
 }
 
 interface Candidate {
@@ -195,7 +202,7 @@ function fillBand(combo: readonly number[], comboIndex: number, slot: number, re
     const eligible: number[] = [];
     for (let k = 0; k < rest.length && eligible.length < MAX_ELIGIBLE; k++) {
       const c = rest[k]!;
-      if (!used.has(k) && !isFullBand(c) && allowsWidth(gridRuleOf(c), s.width)) eligible.push(k);
+      if (!used.has(k) && !isFullBand(c) && fitsWidth(c, s.width)) eligible.push(k);
     }
     const heightOf = (k: number) => h(rest[k]!, s.width);
     const gap = (n: number) => (s.items.length + n > 0 ? GAP : 0);
@@ -241,7 +248,7 @@ function fillBand(combo: readonly number[], comboIndex: number, slot: number, re
   const heights = stacks.map((s) => s.height);
   const max = Math.max(...heights);
   const deviation = max > 0 ? (max - Math.min(...heights)) / max : 0;
-  const widthPenalty = stacks.reduce((sum, s) => sum + s.items.reduce((a, c) => a + Math.abs(WIDTH_COLUMNS[s.width] - WIDTH_COLUMNS[gridRuleOf(c).std]), 0), 0);
+  const widthPenalty = stacks.reduce((sum, s) => sum + s.items.reduce((a, c) => a + Math.abs(WIDTH_COLUMNS[s.width] - WIDTH_COLUMNS[c.width ?? gridRuleOf(c).std]), 0), 0);
   const rank = (c: ViewComponent) => rest.indexOf(c);
   const stackInversions = inversionsOf(stacks.map((s) => Math.min(...s.items.map(rank))));
   const inversions = inversionsOf(stacks.flatMap((s) => s.items.map(rank)));
@@ -267,7 +274,7 @@ function bestBand(rest: readonly ViewComponent[], anchorIndex: number, h: Height
   const rule = gridRuleOf(anchor);
   // Ankeret prøves i sin standardbredde (eller sin eksplicitte width) og i de øvrige tilladte bredder;
   // widthPenalty gør, at standardbredden vinder, når den giver et bånd inden for 15 %.
-  const explicit = anchor.width && allowsWidth(rule, anchor.width) ? anchor.width : undefined;
+  const explicit = anchor.width && anchor.width !== "full" ? anchor.width : undefined;
   const widths = new Set((explicit ? [explicit] : WIDTHS.filter((w) => w !== "full" && allowsWidth(rule, w))).map((w) => WIDTH_COLUMNS[w]));
   let best: Candidate | null = null;
   BAND_COMBOS.forEach((combo, comboIndex) => {
@@ -357,7 +364,6 @@ export function packBands(items: readonly ViewComponent[], h: HeightFn, options:
  * Returnerer false, hvis ingen stak tillader elementets bredde.
  */
 function stakfyld(band: PackedBand, c: ViewComponent, h: HeightFn, gap: number): boolean {
-  const rule = gridRuleOf(c);
   const heightOf = (items: readonly ViewComponent[], w: Width) => items.reduce((sum, x, i) => sum + (i > 0 ? gap : 0) + h(x, w), 0);
   let best: { stacks: ViewComponent[][]; deviation: number } | null = null;
   const consider = (stacks: ViewComponent[][]) => {
@@ -367,12 +373,12 @@ function stakfyld(band: PackedBand, c: ViewComponent, h: HeightFn, gap: number):
     if (!best || deviation < best.deviation - 1e-9) best = { stacks, deviation };
   };
   band.stacks.forEach((s, i) => {
-    if (!allowsWidth(rule, s.width)) return;
+    if (!fitsWidth(c, s.width)) return;
     consider(band.stacks.map((x, k) => (k === i ? [...x.items, c] : [...x.items])));
     s.items.forEach((y, yi) => {
       if (yi === 0) return;
       band.stacks.forEach((t, j) => {
-        if (j === i || !allowsWidth(gridRuleOf(y), t.width)) return;
+        if (j === i || !fitsWidth(y, t.width)) return;
         consider(band.stacks.map((x, k) => (k === i ? [...x.items.filter((z) => z !== y), c] : k === j ? [...x.items, y] : [...x.items])));
       });
     });

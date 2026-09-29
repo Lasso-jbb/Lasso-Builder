@@ -58,7 +58,7 @@ test("person-komponenterne valideres og har deres standardbredder", () => {
     ],
   });
   assert.equal(spec.kind, "person");
-  assert.deepEqual(spec.components.map((c) => widthOf(c, "dashboard")), ["full", "full", "half", "half"]);
+  assert.deepEqual(spec.components.map((c) => widthOf(c, "dashboard")), ["full", "two-thirds", "half", "half"]);
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoPersonHead" }] }));
 });
 
@@ -392,7 +392,7 @@ test("tidslinje, nyheder og ejerdiagram tager company ELLER person, præcis én"
     assert.throws(() => parseViewSpec({ title: "x", components: [{ type, company: "12345678", person: ID }] }), /præcis én/, type);
   }
   const spec = parseViewSpec({ title: "x", components: [{ type: "LassoPersonFacts", person: ID }, { type: "LassoNews", person: ID }] });
-  assert.equal(widthOf(spec.components[0]!, "dashboard"), "quarter");
+  assert.equal(widthOf(spec.components[0]!, "dashboard"), "third");
   assert.equal(entityRefOf(spec.components[1] as { person?: string }), ID);
   assert.equal(ownershipGraphKey({ person: ID, ingoingDepth: 0, outgoingDepth: 2 }), `${ID}|0|2|`);
   assert.equal(ownershipGraphKey({ company: "CVR-1-1", ingoingDepth: 2, outgoingDepth: 1 }), "CVR-1-1|2|1|");
