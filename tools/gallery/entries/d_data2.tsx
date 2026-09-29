@@ -194,6 +194,12 @@ export const entries: GalleryEntry[] = [
     title: "Kanter og labels",
     node: "B1S-0",
     spec: company("Eksempel Byg A/S", [{ type: "LassoOwnershipDiagram", company: BYG, ingoingDepth: 1, outgoingDepth: 1, title: "Andele som labels, bus-kanter og cirkulært ejerskab" }]),
+    // 14.3: aktieklasser som i Paper ("A, B: 66,67–89,99 %") på holdingens andel.
+    mutate: (ds) => {
+      const g = ds.ownershipGraphs[ownershipGraphKey({ company: BYG, ingoingDepth: 1, outgoingDepth: 1 })];
+      for (const e of g?.edges ?? []) if (e.from === HOLDING && e.to === BYG) e.classes = "A, B";
+    },
+    note: "Fremhævet sti (ink 2 px, øvrige dæmpet til 40 %) vises ved hover/valg. 'Reelt 22 %' ses ved skift til Reelle ejere.",
   },
   {
     nr: "14.4",
