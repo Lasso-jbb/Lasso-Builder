@@ -647,8 +647,8 @@ function get(lassoId: string): DemoCompany {
 /** Katalog 20: Produktionsenheder ud over hovedenheden. Kun sat for virksomheder, hvor eksemplet skal vise flere P-numre. */
 const PRODUCTION_UNITS: Record<string, ProductionUnitsVM["units"]> = {
   "CVR-1-99000001": [
-    { pNumber: "1000000020", name: "Eksempel Byg A/S", address: { street: "Prøvevej 1", zip: "8600", city: "Silkeborg", municipality: "Silkeborg", region: "Midtjylland" }, isMain: true, industryCode: "412000", industryText: "Opførelse af bygninger", employees: 64, status: "Aktiv", statusKind: "active", created: "1998-04-01" },
-    { pNumber: "1000000021", name: "Eksempel Byg, Aarhus (eksempel)", address: { street: "Eksempelvej 12", zip: "8000", city: "Aarhus C", municipality: "Aarhus", region: "Midtjylland" }, industryCode: "412000", industryText: "Opførelse af bygninger", employees: 8, status: "Aktiv", statusKind: "active", created: "2015-03-01" },
+    { pNumber: "1000000020", name: "Eksempel Byg A/S", address: { street: "Prøvevej 1", zip: "8600", city: "Silkeborg", municipality: "Silkeborg", region: "Midtjylland" }, isMain: true, industryCode: "412000", industryText: "Opførelse af bygninger", employees: 64, status: "Aktiv", statusKind: "active", created: "1998-04-01", phone: "86 12 34 56", email: "kontakt@eksempelbyg.dk" },
+    { pNumber: "1000000021", name: "Eksempel Byg, Aarhus (eksempel)", address: { street: "Eksempelvej 12", zip: "8000", city: "Aarhus C", municipality: "Aarhus", region: "Midtjylland" }, industryCode: "412000", industryText: "Opførelse af bygninger", employees: 8, status: "Aktiv", statusKind: "active", created: "2015-03-01", phone: "86 00 00 00" },
     // 13.12: to enheder mere i Aarhus, så kortet viser en koral klynge med antal.
     { pNumber: "1000000023", name: "Eksempel Byg, Aarhus Nord (eksempel)", address: { street: "Prøvegade 3", zip: "8000", city: "Aarhus C", municipality: "Aarhus", region: "Midtjylland" }, industryCode: "412000", industryText: "Opførelse af bygninger", employees: 5, status: "Aktiv", statusKind: "active", created: "2019-08-01" },
     { pNumber: "1000000024", name: "Eksempel Byg, Værksted Aarhus (eksempel)", address: { street: "Testvej 21", zip: "8000", city: "Aarhus C", municipality: "Aarhus", region: "Midtjylland" }, industryCode: "433200", industryText: "Tømrer- og bygningssnedkervirksomhed", employees: 3, status: "Aktiv", statusKind: "active", created: "2021-02-01" },
@@ -819,6 +819,9 @@ function defaultUnit(c: DemoCompany): ProductionUnitsVM["units"][number] {
     status: c.status,
     statusKind: c.statusKind,
     created: c.founded,
+    // 20.1: P-enhedens kontakt fra CVR (eksempel: virksomhedens egne oplysninger).
+    ...(c.phone ? { phone: c.phone } : {}),
+    ...(c.email ? { email: c.email } : {}),
   };
 }
 

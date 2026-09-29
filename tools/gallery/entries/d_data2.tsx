@@ -407,7 +407,7 @@ export const entries: GalleryEntry[] = [
   { nr: "19.5", title: "Pengestrømsopgørelse", node: "DC9-0", spec: company("Eksempel Byg A/S", [{ type: "LassoCashFlow", company: BYG }]) },
 
   /* ---------- 20 P-enheder, ejendomme og CHR ---------- */
-  { nr: "20.1", title: "Produktionsenheder (tabel)", node: "C4D-0", spec: company("Eksempel Byg A/S", [{ type: "LassoProductionUnits", company: BYG }]) },
+  { nr: "20.1", title: "Produktionsenheder med telefon og e-mail", node: "M1G-0", spec: company("Eksempel Byg A/S", [{ type: "LassoProductionUnits", company: BYG }]), note: "Paper M1G-0 (desktop) og 26e.1 M3A-0 (mobilbilledet 390): P-NR. | ENHED, ADRESSE OG KONTAKT (telefon og e-mail fra CVR pr. P-enhed, ikon kun ved data, G2) | BRANCHE (tekst, kode muted) | ANSATTE | OPRETTET OG STATUS. Ingen undertitel. Ophørt dæmpet. Mobil uden chevron (rækken åbner ikke noget, G1)." },
   {
     nr: "20.2–20.3",
     title: "Ejendomskort (BBR) + Bygningstabel og arealfordeling (BBR)",

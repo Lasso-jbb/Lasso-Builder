@@ -477,6 +477,10 @@ export interface ProductionUnitVM {
   /** Ophørsår, når enheden er ophørt (vises i status: "Ophørt 2024"). */
   endedYear?: number;
   created?: string;
+  /** Katalog 20.1: P-enhedens telefonnummer fra CVR (nuværende). Udeladt, når CVR ikke har et. */
+  phone?: string;
+  /** Katalog 20.1: P-enhedens e-mail fra CVR (nuværende). Udeladt, når CVR ikke har en. */
+  email?: string;
 }
 
 export interface ProductionUnitsVM {

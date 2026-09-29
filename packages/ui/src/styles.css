@@ -5123,3 +5123,39 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 @container lasso (max-width: 560px) {
   .lasso-analysis19__head { min-height: var(--lasso-touch-h); }
 }
+
+/* ---------- 20.1 Produktionsenheder (Paper M1G-0) og 26e.1 mobil (M3A-0) ---------- */
+.lasso-units20__frame { border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); overflow: hidden; background: var(--lasso-surface); }
+.lasso-units20__row { display: flex; align-items: center; min-height: 76px; padding: 0 16px; border-bottom: 1px solid var(--lasso-divider-subtle); font-size: 13px; line-height: 16px; color: var(--lasso-text-2); }
+.lasso-units20__row:last-child { border-bottom: 0; }
+.lasso-units20__row--head { min-height: 40px; background: var(--lasso-surface-2); border-bottom: 1px solid var(--lasso-border); font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: var(--lasso-ls-label); text-transform: uppercase; color: var(--lasso-muted); }
+.lasso-units20__pnr { flex: none; width: 120px; display: flex; flex-direction: column; }
+.lasso-units20 .lasso-units__main { font-size: 11px; line-height: 14px; letter-spacing: 0; }
+.lasso-units20__row--head .lasso-units20__state { white-space: nowrap; }
+.lasso-units20__unit { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding-right: 16px; }
+.lasso-units20__name { font-size: 14px; line-height: 18px; color: var(--lasso-text); }
+.lasso-units20__address { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+.lasso-units20__contact { display: flex; flex-wrap: wrap; align-items: center; column-gap: 14px; row-gap: 2px; font-size: 12px; line-height: 16px; color: var(--lasso-text-2); }
+.lasso-units20__contact-item { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
+.lasso-units20__contact-item .lasso-icon { flex: none; color: var(--lasso-text-3); }
+.lasso-units20__industry { flex: none; width: 220px; display: flex; flex-direction: column; padding-right: 16px; }
+.lasso-units20__code { font-size: 11px; line-height: 14px; color: var(--lasso-muted); }
+.lasso-units20__emp { flex: none; box-sizing: border-box; width: 106px; padding-right: 16px; text-align: right; white-space: nowrap; }
+.lasso-units20__state { flex: none; width: 150px; display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+.lasso-units20__row--head .lasso-units20__state, .lasso-units20__row--head .lasso-units20__emp { align-items: flex-end; }
+.lasso-units20__status { font-size: 12px; line-height: 16px; font-weight: 500; }
+.lasso-units20__status.lasso-status--active { color: var(--lasso-text-2); }
+.lasso-units20__status.lasso-status--inactive { color: var(--lasso-text-3); }
+.lasso-units20__faint { color: var(--lasso-faint); }
+.lasso-units20__row.is-ended, .lasso-units20__row.is-ended .lasso-units20__name, .lasso-units20__row.is-ended .lasso-units20__date { color: var(--lasso-muted); }
+.lasso-units20-m { display: none; list-style: none; margin: 0; padding: 0; }
+.lasso-units20-m__row { display: flex; flex-direction: column; gap: 2px; padding: 12px 0; border-top: 1px solid var(--lasso-divider-subtle); }
+.lasso-units20-m__top { display: flex; align-items: baseline; gap: 6px; }
+.lasso-units20-m__name { font-size: 14px; line-height: 18px; font-weight: 500; color: var(--lasso-text); min-width: 0; }
+.lasso-units20-m__row.is-ended .lasso-units20-m__name { color: var(--lasso-muted); }
+.lasso-units20-m__status { margin-left: auto; flex: none; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--lasso-text-3); }
+.lasso-units20-m__meta { font-size: 11px; line-height: 16px; color: var(--lasso-muted); }
+@container lasso (max-width: 560px) {
+  .lasso-units20-m { display: block; }
+  .lasso-units20 .lasso-units20__frame { display: none; }
+}
