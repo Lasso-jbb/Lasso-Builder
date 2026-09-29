@@ -150,7 +150,8 @@ test("Overvåger-indstillinger (21): knap i koral-soft, fakta, Stop overvågning
   // Ikke overvåget: kun "Overvåg"-knappen, ingen toggles
   const off = renderToStaticMarkup(createElement(MonitorSettings, { companyName: "Prøve ApS", monitoring: false, settings: {}, onStart: () => {} }));
   assert.match(off, />Overvåg<\/button>/);
-  assert.doesNotMatch(off, /role="switch"/);
+  // Ingen typekontakter, når virksomheden ikke overvåges (kun mobilens statuskontakt).
+  assert.equal((off.match(/role="switch"/g) ?? []).length, 1);
   assert.doesNotMatch(off, /Stop overvågning/);
 });
 
