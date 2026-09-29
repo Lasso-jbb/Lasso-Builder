@@ -49,7 +49,7 @@ export function allowsWidth(rule: GridRule, width: Width): boolean {
  * ¼, ⅓, ½, ⅔, ¾, 1/1. Nøglen er typen, for regnskabslisten "LassoKeyValueList (financials)".
  */
 export const MEASURED_HEIGHTS: Readonly<Record<string, readonly [number, number, number, number, number, number]>> = {
-  LassoCompanyHead: [113, 95, 107, 87, 87, 87],
+  LassoCompanyHead: [34, 34, 34, 34, 34, 34], // Fable runde 6 (I4Y-0): hovedet er én række på 34 px (navnets linjehøjde)
   LassoKeyFigureCards: [481, 230, 166, 148, 133, 138],
   LassoKeyValueList: [964, 924, 662, 662, 644, 626],
   "LassoKeyValueList (financials)": [814, 814, 535, 535, 535, 535],
@@ -89,7 +89,7 @@ export const MEASURED_HEIGHTS: Readonly<Record<string, readonly [number, number,
   LassoCompareTable: [489, 489, 427, 407, 407, 327],
   LassoRanking: [269, 269, 220, 220, 220, 220],
   LassoCompanyTable: [1317, 1229, 545, 545, 545, 604],
-  LassoPersonHead: [128, 110, 107, 107, 87, 87],
+  LassoPersonHead: [34, 34, 34, 34, 34, 34], // som LassoCompanyHead (runde 6)
   LassoPersonRoles: [362, 362, 295, 295, 295, 295],
   LassoPersonNetwork: [468, 351, 317, 317, 317, 317],
   LassoPersonRisk: [622, 474, 404, 386, 368, 368],
