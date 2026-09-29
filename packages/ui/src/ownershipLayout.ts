@@ -447,7 +447,7 @@ export function layoutOwnership(graph: OwnershipGraphVM, options: LayoutOptions 
         // 14b: én stiplet node UNDER fokus: "Ukendt ejerskab, resterende 25 %", ingen pil eller label.
         const lo = Math.max(0, 100 - sumMax);
         const hi = Math.max(0, 100 - sumMin);
-        const rest = sumMax >= 99.99 ? "under 5 %" : formatShare([lo, hi]);
+        const rest = sumMax >= 99.99 ? "under 5 %" : hi - lo < 0.005 ? formatShare([lo, lo]) : `op til ${formatShare([hi, hi])}`;
         const id = "unknown:owners";
         work.set(id, { id, kind: "unknown", title: `Ukendt ejerskab, resterende ${rest}`, subtitle: "Andele under 5 % registreres ikke i CVR", weight: -1 });
         layer.set(id, 1);
