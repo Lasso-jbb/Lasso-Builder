@@ -122,16 +122,14 @@ const bo: PersonVM = {
   strawman: { level: "possible", detail: "Direktør i 3 selskaber uden ejerskab (eksempel)." },
 };
 
-test("16.1 (Jakob 29.09): kun navnet; intet 'Person', ingen faktalinje, observationslinje eller initial-cirkel", () => {
-  const out = html(h(PersonHead, { person: bo, actions: { monitor: { monitoring: false, onClick: noop }, save: { saved: false, onClick: noop } }, onSeeRisk: noop, riskLine: true }));
-  assert.match(out, /<h2 class="lasso-company__name">Bo Eksempel<\/h2>/);
+test("16.1: 'Person' som ren tekst, ingen initial-cirkel, handlinger og én rolig observationslinje", () => {
+  const out = html(h(PersonHead, { person: bo, actions: { monitor: { monitoring: false, onClick: noop }, save: { saved: false, onClick: noop } }, onSeeRisk: noop }));
+  assert.match(out, /lasso-personhead__kind">Person</);
   assert.match(out, /lasso-headbtn--monitor/);
-  assert.doesNotMatch(out, /lasso-personhead__(kind|obs|facts|counts|mobsub)|>Person<|observation|Silkeborg|lasso-headrisk/);
+  // 16.1: observationer som koral link lige efter "Person"; faktalinjen begynder med fødselsåret
+  assert.match(out, /lasso-personhead__kind">Person<\/span><button[^>]*lasso-personhead__obs[^>]*title="1 mulig vigtig observation: stråmandsindikator\. Ingen PEP-match\."[^>]*>1 observation</);
+  assert.doesNotMatch(out, /lasso-headrisk/);
   assert.doesNotMatch(out, /initial|avatar/);
-  for (const variant of ["compact", "line"] as const) {
-    const v = html(h(PersonHead, { person: bo, variant }));
-    assert.doesNotMatch(v, />Person<|Silkeborg|aktive? roller?/, variant);
-  }
 });
 
 test("16.4: personrisiko som fire fliser: PEP, stråmand, konkurser i netværket, sanktionslister", () => {

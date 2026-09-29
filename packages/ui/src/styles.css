@@ -1720,9 +1720,7 @@ button.lasso-feed__more { font-size: var(--lasso-fs-sm); color: var(--lasso-acce
 .lasso-notif__head { display: flex; align-items: center; justify-content: space-between; gap: var(--lasso-space-2); height: 52px; padding: 0 16px; border-bottom: 1px solid var(--lasso-border); flex: none; }
 .lasso-notif__title { margin: 0; font-size: 15px; line-height: 18px; font-weight: 600; color: var(--lasso-text); }
 .lasso-notif__headactions { display: flex; align-items: center; gap: 14px; }
-.lasso-root button.lasso-notif__close { display: none; flex: none; width: 32px; height: 32px; padding: 0; place-items: center; border: 1px solid transparent; border-radius: var(--lasso-radius); background: transparent; color: var(--lasso-text-3); cursor: pointer; }
-.lasso-root button.lasso-notif__close:hover { background: var(--lasso-surface-muted); color: var(--lasso-text); }
-.lasso-root button.lasso-notif__close:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
+button.lasso-notif__close { display: none; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--lasso-text-3); }
 button.lasso-notif__markall { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--lasso-accent-text); white-space: nowrap; }
 .lasso-notif__tabs { padding: 0 16px; border-bottom: 1px solid var(--lasso-border); flex: none; }
 .lasso-notif__tabs .lasso-tabs--l2 { gap: 16px; height: 40px; border-bottom: 0; box-shadow: none; }
@@ -1819,7 +1817,7 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
   /* Panelet fylder skærmen (26a: dialoger bliver bundark/fuld skærm); værten lukker det med onClose */
   .lasso-notif { position: fixed; inset: 0; z-index: 30; width: auto; max-width: none; height: 100dvh; border-radius: 0; border: 0; box-shadow: none; }
   .lasso-notif--inline { position: static; height: auto; }
-  .lasso-root button.lasso-notif__close { display: grid; }
+  button.lasso-notif__close { display: inline; }
   .lasso-notif__row { min-height: var(--lasso-touch-h); }
   button.lasso-notif__all { height: 48px; }
   /* 26e.4: statusrækken (52 px, koral-soft) med kontakt erstatter knap + titel; emner som 48 px rækker. */
@@ -4834,6 +4832,3 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-contact__row .lasso-contact__value[href^="tel:"] { flex: none; }
   .lasso-contact__value[href^="tel:"] + .lasso-contact__aside { flex: 1 1 auto; justify-content: flex-end; text-align: right; }
 }
-
-/* 16.1/25.3/26d.1 (Jakob 29.09, G9): personhovedet er kun navnet, uden skillelinje under. */
-.lasso-personhead--nameonly, .lasso-root .lasso-personhead--nameonly.lasso-company { border-bottom: 0; }

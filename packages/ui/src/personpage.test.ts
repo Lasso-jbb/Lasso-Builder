@@ -137,8 +137,7 @@ test("personsiden, overblik: aktive roller som liste ¾ + stamoplysninger ¼ (ud
   assert.match(html, /Stamoplysninger/);
   assert.match(html, /Enhedsnummer/);
   assert.doesNotMatch(html, /lasso-kv-row__label">Aktive roller|lasso-kv-row__label">Ejer af|lasso-kv-row__label">Første registrering/);
-  // 16.1 (Jakob 29.09): hovedet er kun navnet, så faktalinjen ("første registrering 2005") står ikke længere.
-  assert.doesNotMatch(html, /første registrering 2005/);
+  assert.match(html, /første registrering 2005/, "hovedet viser den");
   // Historik: nyeste først (konkursen), selskabsnavnet som knap, 3 + "Se alle".
   assert.match(html, /<button type="button" class="lasso-link lasso-timeline__entity">Eksempel Energi A\/S<\/button><span> kom under konkurs<\/span>/);
   assert.match(html, /Se alle 6 begivenheder/);
