@@ -20,6 +20,7 @@ import {
   gridHeight,
   measuredHeight,
   packBands,
+  contentMinWidthFn,
   originOf,
   type Dataset,
   type Focus,
@@ -924,7 +925,9 @@ export function dashboardBands(components: readonly ViewComponent[], ds: Dataset
         return measuredHeight(c, width);
       }
     };
-    for (const b of packBands(items, h, { gap: DASHBOARD_GAP })) {
+    // Ø13/B8: mindstebredden efter indholdet (lange navne, rækker pr. post, tidsakse), når data findes.
+    const minWidth = ds ? contentMinWidthFn(ds) : undefined;
+    for (const b of packBands(items, h, { gap: DASHBOARD_GAP, minWidth })) {
       if (b.stacks.length === 1 && b.stacks[0]!.items.length === 1) {
         const c = b.stacks[0]!.items[0]!;
         out.push({ kind: "run", run: { kind: "one", item: { c, i: index.get(originOf(c))! } } });

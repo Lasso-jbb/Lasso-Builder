@@ -55,3 +55,9 @@ CREATE INDEX IF NOT EXISTS score_points_lasso_idx ON score_points (lasso_id, obs
 3. Tests: mapping for alle seks tilstande (ok/lokal, ok/intl, ok/tom, locked, unavailable, error) med fixture fra creditAdapters.test.ts; store-tests mod memory-laget; ingen Creditsafe-kald ved `locked` ud over det ene, `creditRating` selv laver.
 4. Register (`catalog.ts`): LassoScoreGauge/LassoScoreHistory `live:"abonnement"`, liveNote = abonnementsteksten (rettes fra `ikke-endnu`); LassoCreditRating uændret. Regenerér docs/komponenter.md.
 5. Typecheck/test/build grønne; eval uændret (score-tilfældene er plan-niveau).
+
+## Afgørelser efter C3 (Fable, 29.09)
+- `CreditAssessment` har ingen dato i den dokumenterede form → **(c)**: opslagsdatoen bruges som `observed_at`, forrige vurdering indsættes kun med dato. Revurderes efter E1 mod et rigtigt Creditsafe-svar.
+- International score A–E lægges i `ScoreVM.facts` ("International score: Creditsafe C") — ingen ny `label` på ScoreVM.
+- Deling af ét Creditsafe-kald pr. side ligger i `LiveProvider.creditRating` (30 s), ikke i resolve — godkendt.
+- Register (`live:"abonnement"` + abonnementstekst) sættes af Fable efter B8 (samme fil).

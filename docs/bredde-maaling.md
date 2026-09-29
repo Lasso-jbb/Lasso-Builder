@@ -1236,3 +1236,80 @@ Eksempler: afkortet i ¼: "Nordjysk Entreprenør- og Ejendomsselskab ApS, dire";
 | ⅔ | 752 | 218 | 0 | 0 | 0 | 0 | 30 % | 37 % | 40 % | 30 % | 30 % |
 | ¾ | 846 | 218 | 0 | 0 | 0 | 0 | 37 % | 44 % | 47 % | 37 % | 37 % |
 | 1/1 | 1152 | 218 | 0 | 0 | 0 | 0 | 54 % | 59 % | 61 % | 54 % | 54 % |
+
+
+## Efter B8 (29.09.2026)
+
+B8 har ført forslagene ind i `GRID_RULES` og registeret (`packages/spec/src/catalog.ts`) og i pakkeren (`grid.ts`, `packPage` i `compose.ts`). Målingen er kørt igen med samme kommandoer (`PLAYWRIGHT_MODULE=/opt/node22/lib/node_modules/playwright/index.mjs`); måleren sætter selv bredden (eksplicit width), så kun komponentændringer flytter tallene. Eneste ændrede type er LassoCompareTable (kolonnenavnene ombrydes). `widths-realistic.json` er A13's rå tal; B8-tallene står herunder.
+
+### Acceptkriterier, målt efter B8
+
+| Type | ny std / min / max | målt i | afkortet | overlap | vandret rulning | tom plads | krav | opfyldt |
+|---|---|---|---|---|---|---|---|---|
+| LassoPersonNetwork | 1/1 / 1/1 / 1/1 | 1/1 (ny min) | 0 | 0 | 0 | 45 % | 0 afkortede navne | ja |
+| LassoPersonRoles (show: current) | ½ / ½ / ½ | ½ (ny max) | 0 | 0 | 0 | 26 % | ≤ 30 % tom | ja |
+| LassoPersonRoles (show: ended) | ½ / ⅓ / ½ | ½ (ny max) | 0 | 0 | 0 | 31 % | ≤ 30 % tom | nej (1 point over; ⅓ giver 51 %) |
+| LassoPersonRoles (show: owner) | ½ / ⅓ / ½ | ½ (ny max) | 0 | 0 | 0 | 26 % | ≤ 30 % tom | ja |
+| LassoPersonFacts | ⅓ / ¼ / ½ (uændret) | ½ (max) | 0 | 0 | 0 | 51 % | ≤ 30 % tom | nej: ingen bredde giver ≤ 30 % (¼ 39 %, ⅓ 43 %); kræver en komponentændring |
+| LassoCompareTable (6 × 40–45 tegn) | 1/1 / ⅔ / 1/1 | 1/1 | 0 | 0 | 0 (før: 2378 px, rullede) | 0 % | ingen vandret rulning i fuld bredde | ja; ren fra ⅔ (højde 471 px i ⅔, 371 px i 1/1); i ½ og smallere ruller den stadig (598 px) |
+
+### GRID_RULES og profiler, før og efter (kun ændrede)
+
+| Type | før std / min / max | efter std / min / max | profil før | profil efter |
+|---|---|---|---|---|
+| LassoKeyValueList | ½ / ½ / 1/1 | ½ / ½ / ½ | smal | smal |
+| LassoShortcuts | ½ / ¼ / 1/1 | ½ / ¼ / ½ | smal | smal |
+| LassoSummary | 1/1 / ½ / 1/1 | ¾ / ¼ / ¾ | fleksibel | fleksibel |
+| LassoTimeline | ½ / ⅓ / 1/1 | ⅓ / ¼ / ½ | bred | smal |
+| LassoNews | ½ / ⅓ / 1/1 | ¾ / ¾ / 1/1 | fleksibel | bred |
+| LassoKeyFigureCards | 1/1 / ½ / 1/1 | 1/1 / ⅓ / 1/1 | fleksibel | fleksibel |
+| LassoBarChart | ½ / ⅓ / 1/1 | ½ / ⅓ / 1/1 | bred | fleksibel |
+| LassoGroupedBarChart | ½ / ⅓ / 1/1 | ½ / ¼ / 1/1 | bred | fleksibel |
+| LassoLineChart | ½ / ⅓ / 1/1 | ½ / ¼ / 1/1 | bred | fleksibel |
+| LassoStackedBarChart | ½ / ⅓ / 1/1 | ½ / ¼ / 1/1 | bred | fleksibel |
+| LassoShareBars | ½ / ¼ / ½ | ½ / ½ / ½ | smal | smal |
+| LassoWaterfallChart | ½ / ⅓ / 1/1 | ½ / ¼ / 1/1 | bred | fleksibel |
+| LassoMultiYearTable | ½ / ½ / 1/1 | ⅔ / ⅔ / ⅔ | bred | bred |
+| LassoIncomeStatement | ½ / ½ / ¾ | ½ / ½ / ½ | bred | smal |
+| LassoBalanceSheet | ½ / ½ / ¾ | ⅓ / ⅓ / ½ | bred | smal |
+| LassoCashFlow | ½ / ½ / ¾ | ⅓ / ⅓ / ½ | bred | smal |
+| LassoMergers | ½ / ½ / 1/1 | ½ / ½ / ½ | bred | smal |
+| LassoAnnouncements | 1/1 / ½ / 1/1 | 1/1 / 1/1 / 1/1 | fleksibel | bred |
+| LassoOwnershipDiagram | ⅔ / ½ / 1/1 | ⅔ / ⅔ / 1/1 | bred | bred |
+| LassoRanking | ½ / ⅓ / 1/1 | ½ / ¼ / 1/1 | bred | fleksibel |
+| LassoCreditRating | ½ / ⅓ / 1/1 | ⅓ / ¼ / ½ | fleksibel | smal |
+| LassoRiskObservations | ½ / ⅓ / 1/1 | ⅓ / ⅓ / ½ | fleksibel | smal |
+| LassoAuditorIndependence | 1/1 / ½ / 1/1 | 1/1 / ½ / 1/1 | bred | fleksibel |
+| LassoScoreHistory | ½ / ⅓ / 1/1 | ½ / ⅓ / 1/1 | bred | fleksibel |
+| LassoProductionUnits | 1/1 / ⅔ / 1/1 | 1/1 / ¾ / 1/1 | bred | bred |
+| LassoProperties | ½ / ⅓ / 1/1 | ½ / ½ / 1/1 | smal | fleksibel |
+| LassoMap | ½ / ⅓ / 1/1 | ½ / ⅓ / 1/1 | bred | fleksibel |
+| LassoLivestock | ½ / ½ / 1/1 | ½ / ⅓ / ½ | smal | smal |
+| LassoPersonRoles | ⅔ / ½ / 1/1 | ⅔ / ½ / 1/1 | bred | fleksibel |
+| LassoPersonNetwork | ⅔ / ½ / 1/1 | 1/1 / 1/1 / 1/1 | bred | bred |
+| LassoPersonRisk | ½ / ⅓ / 1/1 | ⅓ / ⅓ / ½ | fleksibel | smal |
+| LassoPersonStats | 1/1 / ½ / 1/1 | 1/1 / ⅓ / 1/1 | fleksibel | fleksibel |
+| LassoChangeFeed | 1/1 / ½ / 1/1 | ½ / ½ / ½ | bred | smal |
+| LassoHeatmap | ½ / ⅓ / 1/1 | ½ / ¼ / ¾ | bred | fleksibel |
+| LassoKeyValueList variant:financials | ½ / ½ / 1/1 | ½ / ½ / ½ | smal | smal |
+| LassoPersonRoles show:current | ⅔ / ½ / 1/1 | ½ / ½ / ½ | bred | smal |
+| LassoPersonRoles show:ended | ⅔ / ½ / 1/1 | ½ / ⅓ / ½ | bred | smal |
+| LassoPersonRoles show:owner | ⅔ / ½ / 1/1 | ½ / ⅓ / ½ | bred | smal |
+
+Afvigelser fra forslagstabellen (eskaleret): **LassoBarChart og LassoMap beholder min ⅓** (forslaget var ¼). Med min ¼ ændrer Papers default-side (23.3) elementer for demovirksomhederne: grafen i ¼ giver plads til historikken (Eksempel Revision Nord, Tømrer, Energi, Landbrug: + LassoTimeline), og kortet i ¼ kommer med ved siden af relationerne (Eksempel Transport, Rådgivning, Maskinfabrik, Ejendomme: + LassoMap). Profilen (fleksibel) er ført ind.
+
+### Pakkeren
+
+- **Mindstebredde efter indhold:** `packPage` (og dashboardet i LassoView) giver pakkeren `contentWidthOf(c, ds)` = `contentMinWidth(profil, typens min, driversOf(c, ds))` inden for typens min–max. `driversOf` regner driverne ud fra Dataset: netværk (selskaber pr. person, længste selskab + rolle, år fra første fælles selskab), roller (roller pr. selskab, selskabsnavne, tidsakse kun for tidsbåndet), ejerdiagram (længste knudenavn), grafer og flerårstabel (år > 5 = tidsakse, serier), sammenligning og rangering (antal virksomheder, længste navn), nyheder (uddrag = 3 rækker), P-enheder og revisoruafhængighed (længste navn). Uden data bruges profilen alene (`defaultMinWidth`). Et element med mindstebredde 1/1 står i eget bånd; hæver contentMinWidth over typens max (flerårstabellen), er max grænsen.
+- **Smal ved siden af andre:** højst `sharedMaxWidth` (½) i et delt bånd; alene i et bånd står den i fuld bredde som hidtil (23.1).
+- **Bred under mindstebredden:** aldrig; elementet får eget bånd eller udelades af højdebudgettet (LOW_RELEVANCE og budgetlogikken er uændret).
+- **Tablet og mobil (26.1):** `tabletSpans` giver aldrig en stak færre kolonner end på desktop, og en stak over ½ står alene i sin række (test i `layout.test.ts`); mobil er altid fuld bredde.
+
+### Følger for siderne (demodata, før → efter)
+
+- Default-siden (overblik med budget) har de samme elementer for alle 14 demovirksomheder; kun placeringen af graf/relationer/historik er ændret for Eksempel Revision Midt, Software og Café.
+- **Økonomi:** flerårstabellen (10 år, kun ⅔) står ikke længere inden for budgettet ved siden af regnskabslisten og udelades; andelsbjælkerne (og branchemåleren) tager pladsen. "Vis alt" viser den.
+- **Risiko:** oplysningerne står ikke længere i ⅔ ved siden af kreditvurderingen (smal højst ½); revisoruafhængigheden (nederst) udelades af budgettet, og observationer/score/scorehistorik (B4-ekstra) kommer med.
+- **Historik:** nyhederne står i eget bånd (bred, min ¾); ændringsfeedet (smal ½, meget højt) viger inden for budgettet hos Eksempel Byg for fusionerne; publiceringerne udelades hos 8 af 14, og Statstidende hos Eksempel Energi (alle står på "vis alt").
+- **Ejerskab:** ejerdiagrammet står i ¾ ved lange knudenavne (≥ 24 tegn), fx Eksempel Maskinfabrik.
+- **Personsiderne** er uændrede: `composePerson` lægger selv ¾ + ¼ og ½ + ½ og bruger ikke pakkeren (se rapporten til Fable).

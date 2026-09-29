@@ -20,6 +20,7 @@ import {
   type Dataset,
   type ViewSpec,
 } from "@lasso/spec";
+import { PERSON_SEARCH_ROLES } from "../usecases/views.js";
 import { textCard } from "../data/card.js";
 import { mcpPdfLink } from "../pdf/routes.js";
 import { summarizeView } from "../data/summary.js";
@@ -33,6 +34,7 @@ import {
   savePage,
   saveView,
   searchCompanies,
+  searchPersons,
   showCompany,
   showPerson,
   type UseCaseCtx,
@@ -63,12 +65,13 @@ Vælg værktøj:
 - Send altid brugerens spørgsmål ordret i question.
 - "Vis alt om X", "vis det hele": show_company/show_person med show_all: true (siden må så gå ud over højdebudgettet). Ellers udelades show_all.
 - Lister og målgrupper ("revisorer i Region Midt med mindst 10 ansatte"): search_companies med brugerens formulering som query.
+- Personer på navn ('find Mette Holm', flere med samme navn): search_persons, derefter show_person med Lasso-ID.
 - Flere navngivne virksomheder (sammenligning, rangering) eller elementer, ingen focus dækker: render_view med en spec fra kataloget i dens beskrivelse. Navne må bruges i stedet for CVR-numre.
 - "Gem virksomheden/personen", "husk", "bogmærk", "sæt på min liste": save_page. "Mine gemte", "hvad har jeg gemt", "min liste": list_saved_pages. "Fjern fra listen": remove_saved_page. save_view er kun til et delbart link til en visning.
 - "Giv mig en URL", "del": save_view.
 
 Regler:
-- Én visning pr. svar: kald højst ét af show_company, show_person, search_companies og render_view pr. brugerbesked, og kun én gang. Aldrig show_company og render_view efter hinanden.
+- Én visning pr. svar: kald højst ét af show_company, show_person, search_companies, search_persons og render_view pr. brugerbesked, og kun én gang. Aldrig show_company og render_view efter hinanden.
 - Tegn altid med det samme. Spørg aldrig "vil du se det grafisk?".
 - Kan din app vise den interaktive Lasso-visning: vis kun den, og skriv aldrig tekstkortet. Kan den ikke (fx Claude Code eller en terminal): vis tekstkortet fra værktøjssvaret uændret i en kodeblok med linket til den interaktive visning som klikbart link lige under, fx [Åbn LASSO X A/S i Lasso](url).
 - Brugeren ser visningen. Svar kort (1–3 sætninger) med det vigtigste, og gentag ikke tallene som tabel. Skriv aldrig HTML/CSS.
@@ -145,6 +148,30 @@ export function createMcpServer(ctx: McpContext): McpServer {
     },
     async (input): Promise<CallToolResult> => {
       const r = await searchCompanies(ctx, input);
+      if ("error" in r) return toolError(r.error);
+      return viewResult(r.spec, r.dataset, { note: r.note, pdfLink: mcpPdfLink(ctx.config, r) });
+    },
+  );
+
+  registerAppTool(
+    server,
+    "search_persons",
+    {
+      title: "Søg personer",
+      description:
+        "Søg personer i CVR på navn (og evt. rolle eller by) og vis dem som en Lasso-tabel med aktive roller. Brug til 'find Mette Holm', 'hvem hedder … og sidder i bestyrelser', når navnet er tvetydigt, eller når brugeren vil se flere personer. Kald derefter show_person med personens Lasso-ID (CVR-3-…). Brug ikke til én kendt person (show_person) eller til virksomheder (search_companies).",
+      inputSchema: z.object({
+        query: z.string().min(2).max(120).describe("Navnet eller en del af det, fx 'Mette Holm'."),
+        limit: z.number().int().min(1).max(50).optional().describe("Højst så mange personer. Standard 25."),
+        role: z.enum(PERSON_SEARCH_ROLES).optional().describe("Kun personer med aktive roller af denne type. Standard: alle."),
+        city: z.string().max(60).optional().describe("Kun personer bosat i denne by."),
+        title: z.string().max(80).optional().describe("Overskrift på tabellen."),
+      }),
+      annotations: { title: "Søg personer", ...readOnly },
+      _meta: ui,
+    },
+    async (input): Promise<CallToolResult> => {
+      const r = await searchPersons(ctx, input);
       if ("error" in r) return toolError(r.error);
       return viewResult(r.spec, r.dataset, { note: r.note, pdfLink: mcpPdfLink(ctx.config, r) });
     },

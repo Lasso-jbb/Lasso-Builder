@@ -17,7 +17,7 @@ Fables beslutning (plan D1/D3, docs/plan-mcp.md, Ø7). Begge værktøjer er *rea
 
 **Beskrivelse (til modellen, dansk):** "Søg personer i CVR på navn (og evt. rolle eller by) og vis dem som en Lasso-tabel med aktive roller. Brug til 'find Mette Holm', 'hvem hedder … og sidder i bestyrelser', når navnet er tvetydigt, eller når brugeren vil se flere personer. Kald derefter show_person med personens Lasso-ID (CVR-3-…). Brug ikke til én kendt person (show_person) eller til virksomheder (search_companies)."
 
-**Tekstkort:** én linje pr. person: "Navn, by — N aktive roller (seneste: Selskab, rolle)". Mindst 5, højst `limit`.
+**Tekstkort:** det eksisterende PersonTable-kort beholdes uændret (Jakob 15.3: ingen by/fødselsår; Ø4). Afgjort af Fable efter D2.
 
 **Tests:** use case med demo-provider: query med flere træf, med `role`-filter, 0 træf (note, ingen fejl), 1 præcist træf (summary nævner show_person). Tool-registrering i server.ts: schema afviser query < 2 tegn. Token-loft grønt.
 

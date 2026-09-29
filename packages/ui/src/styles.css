@@ -501,7 +501,11 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-compare__company { border-left: 1px solid var(--lasso-border); text-transform: none; letter-spacing: 0; vertical-align: bottom; }
 .lasso-compare__company.is-origin { box-shadow: inset 0 3px 0 var(--lasso-chart-1); }
 .lasso-compare__name { font-size: var(--lasso-fs); line-height: 20px; font-weight: 600; color: var(--lasso-text); }
-.lasso-compare__name .lasso-link { font-weight: 600; }
+.lasso-compare__name .lasso-link { font-weight: 600; text-align: left; }
+/* Ø13/B8 (A13): lange selskabsnavne (40–45 tegn) gjorde hver kolonne 350–390 px, så 6 virksomheder rullede vandret
+   selv i fuld bredde. Navnet ombrydes nu på højst 2 linjer (derefter "…", fuldt navn i title), og kolonnen er højst ca. 170 px bred. */
+.lasso-table th.lasso-compare__company { white-space: normal; }
+.lasso-compare__name { max-width: 170px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
 .lasso-compare__sub { font-size: 12px; line-height: 16px; font-weight: 400; color: var(--lasso-muted); }
 .lasso-compare__corner { vertical-align: bottom; }
 .lasso-compare td { border-left: 1px solid var(--lasso-border); }

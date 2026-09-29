@@ -3,7 +3,7 @@
  * i hånden. Kilder: COMPONENT_CATALOG (titel, props, register) og GRID_RULES (std/min/max).
  * Kommando: npm run docs:komponenter -w @lasso/spec
  */
-import { COMPONENT_CATALOG, GRID_RULES, GRID_WIDTH_LABEL, type CatalogEntry } from "./catalog.js";
+import { COMPONENT_CATALOG, GRID_RULES, GRID_VARIANT_RULES, GRID_WIDTH_LABEL, type CatalogEntry } from "./catalog.js";
 import { DEFAULT_WIDTH, type ComponentType } from "./spec.js";
 import type { LiveAvailability, Route, WidthProfile, ContentWidthDrivers } from "./register.js";
 
@@ -54,6 +54,18 @@ function drivers(d: ContentWidthDrivers | undefined): string {
   return parts.length ? parts.join(", ") : "ingen";
 }
 
+/** Varianter med egen profil og egen række i elementtabellen (fx PersonRoles som liste), Ø13/B8. */
+function variantLines(e: CatalogEntry): string[] {
+  const v = e.register?.bredde.varianter;
+  if (!v) return [];
+  const rows = Object.entries(v).map(([key, b]) => {
+    const r = GRID_VARIANT_RULES[`${e.type} ${key}`];
+    const w = r ? `; std ${GRID_WIDTH_LABEL[r.std]}, min ${GRID_WIDTH_LABEL[r.min]}, maks ${GRID_WIDTH_LABEL[r.max]}` : "";
+    return `- \`${key}\`: profil ${PROFILE_LABEL[b.profil]}${w}; drivere: ${drivers(b.drivere)}`;
+  });
+  return ["**Bredde pr. variant.**", ...rows, ""];
+}
+
 function section(e: CatalogEntry): string {
   const reg = e.register;
   const out: string[] = [`<a id="${e.type}"></a>`, `## ${e.title} (\`${e.type}\`)`, ""];
@@ -69,6 +81,7 @@ function section(e: CatalogEntry): string {
   out.push(
     `**Bredde.** ${reg ? `profil ${PROFILE_LABEL[reg.bredde.profil]}; ` : `profil ${MISSING}; `}std ${GRID_WIDTH_LABEL[r.std]}, min ${GRID_WIDTH_LABEL[r.min]}, maks ${GRID_WIDTH_LABEL[r.max]}${reg ? `; drivere: ${drivers(reg.bredde.drivere)}` : ""}`,
     "",
+    ...variantLines(e),
     `**Props.** \`${e.props}\``,
     "",
   );
@@ -78,7 +91,8 @@ function section(e: CatalogEntry): string {
 function overview(): string {
   const rows = entries().map((e) => {
     const reg = e.register;
-    return `| \`${e.type}\` | ${reg ? PROFILE_LABEL[reg.bredde.profil] : MISSING} | ${widthTriple(e)} | ${reg ? LIVE_LABEL[reg.live] : MISSING} | ${reg ? cell(reg.veje.join(", ")) : MISSING} |`;
+    const variants = reg?.bredde.varianter ? ` (${Object.entries(reg.bredde.varianter).map(([k, b]) => `${k}: ${PROFILE_LABEL[b.profil]}`).join(", ")})` : "";
+    return `| \`${e.type}\` | ${reg ? PROFILE_LABEL[reg.bredde.profil] + variants : MISSING} | ${widthTriple(e)} | ${reg ? LIVE_LABEL[reg.live] : MISSING} | ${reg ? cell(reg.veje.join(", ")) : MISSING} |`;
   });
   return ["## Oversigt", "", "| Type | Profil | std/min/max | Live | Veje |", "|---|---|---|---|---|", ...rows, ""].join("\n");
 }

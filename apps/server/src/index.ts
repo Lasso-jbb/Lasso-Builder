@@ -41,6 +41,7 @@ import { adaptPeople, adaptSearch, at, participantFieldNames } from "./lasso/ada
 import { describeShape, LassoApiError, LassoClient, probeAuthVariants, type Query } from "./lasso/client.js";
 import { createMcpServer } from "./mcp/server.js";
 import { companyNameHints } from "./usecases/index.js";
+import { createScoreStore } from "./scores/store.js";
 import { createViewStore, SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "./views/store.js";
 import { entityLink, focusLinks, isEntityId, sendToLassoLink, verifyCompanyLink, verifyEntityLink, verifyPersonLink, verifySendToLassoLink } from "./web/links.js";
 import { injectBoot, loadViewHtml } from "./web/page.js";
@@ -658,9 +659,10 @@ export async function probeEndpointShapes(client: LassoClient, lassoId: string, 
 async function main() {
   const config = loadConfig();
   const client = new LassoClient(config);
-  const provider = createProvider(config, client);
-  // Én pool deles af gemte visninger og gemte sider; uden DATABASE_URL holdes begge i hukommelsen.
+  // Én pool deles af gemte visninger, gemte sider og rating-historik; uden DATABASE_URL holdes de i hukommelsen.
   const pool = createPool(config.DATABASE_URL);
+  const scores = createScoreStore(pool ?? "");
+  const provider = createProvider(config, client, scores);
   const store = createViewStore(pool ?? "");
   const pages = createSavedPageStore(pool ?? "");
 
@@ -671,6 +673,7 @@ async function main() {
       try {
         await store.migrate();
         await pages.migrate();
+        await scores.migrate();
         if (attempt > 1) console.log(`[db] migreret (forsøg ${attempt})`);
         return;
       } catch (err) {
@@ -692,7 +695,7 @@ async function main() {
   const shutdown = () => {
     console.log("[lasso-mcp] lukker ned");
     server.close(() => {
-      void Promise.all([store.close(), pages.close(), pdf.close()])
+      void Promise.all([store.close(), pages.close(), scores.close(), pdf.close()])
         .then(() => pool?.end())
         .finally(() => process.exit(0));
     });

@@ -127,7 +127,8 @@ test("B4: LassoChangeFeed for én virksomhed: resolveSpec henter changeFeed({ co
   assert.equal(none.entries.length, 0);
   assert.match(none.emptyReason ?? "", /Ingen ændringer i virksomheden/);
   assert.equal((await demo.changeFeed({ list: "Kunder", days: 7 })).listName, "Kunder");
-  // Fokus historik henter feedet (probe) og viser det for Eksempel Byg.
+  // Fokus historik henter feedet (probe) og viser det for Eksempel Byg ("vis alt": Ø13/B8 gør feedet smalt og højt,
+  // så det inden for højdebudgettet kan vige for Statstidende/fusioner).
   const hist = await resolveSpec(composeProbe(ID, "historik"), demo);
-  assert.ok(composeCompany(ID, hist, { focus: "historik" }).components.some((c) => c.type === "LassoChangeFeed" && c.company === ID));
+  assert.ok(composeCompany(ID, hist, { focus: "historik", showAll: true }).components.some((c) => c.type === "LassoChangeFeed" && c.company === ID));
 });

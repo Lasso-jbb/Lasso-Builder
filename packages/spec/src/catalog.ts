@@ -1,4 +1,4 @@
-import type { Register } from "./register.js";
+import type { ContentWidthDrivers, Register, WidthProfile } from "./register.js";
 import { OPERATORS, type Criterion } from "./criteria.js";
 import { FIELDS, FIELD_BY_KEY, OPERATORS_BY_TYPE } from "./fields.js";
 import { COMPANY_FACT_KEYS } from "./companyFacts.js";
@@ -76,68 +76,105 @@ const g = (std: Width, min: Width, max: Width, height: HeightClass, behavior: He
  */
 export const GRID_RULES: Record<ComponentType, GridRule> = {
   LassoCompanyHead: g("full", "full", "full", "low", "fixed"),
-  LassoKeyFigureCards: g("full", "half", "full", "low", "fixed"),
-  LassoKeyValueList: g("half", "half", "full", "very-high", "growing", "rows"),
+  LassoKeyFigureCards: g("full", "third", "full", "low", "fixed"),
+  LassoKeyValueList: g("half", "half", "half", "very-high", "growing", "rows"),
   LassoContact: g("third", "quarter", "half", "medium", "fixed"),
   LassoContactPersons: g("third", "quarter", "half", "medium", "growing", "rows"),
-  LassoShortcuts: g("half", "quarter", "full", "low", "fixed"),
+  LassoShortcuts: g("half", "quarter", "half", "low", "fixed"),
   LassoTextSections: g("half", "half", "full", "high", "growing", "lines"),
-  LassoSummary: g("full", "half", "full", "high", "growing", "lines"),
-  LassoTimeline: g("half", "third", "full", "high", "growing", "rows"),
-  LassoNews: g("half", "third", "full", "medium", "growing", "rows"),
+  LassoSummary: g("three-quarters", "quarter", "three-quarters", "high", "growing", "lines"),
+  LassoTimeline: g("third", "quarter", "half", "high", "growing", "rows"),
+  LassoNews: g("three-quarters", "three-quarters", "full", "medium", "growing", "rows"),
   LassoBarChart: g("half", "third", "full", "medium", "fixed", "plot"),
-  LassoGroupedBarChart: g("half", "third", "full", "medium", "fixed", "plot"),
-  LassoLineChart: g("half", "third", "full", "medium", "fixed", "plot"),
-  LassoStackedBarChart: g("half", "third", "full", "medium", "fixed", "plot"),
-  LassoWaterfallChart: g("half", "third", "full", "medium", "fixed", "plot"),
-  LassoShareBars: g("half", "quarter", "half", "medium", "fixed"),
+  LassoGroupedBarChart: g("half", "quarter", "full", "medium", "fixed", "plot"),
+  LassoLineChart: g("half", "quarter", "full", "medium", "fixed", "plot"),
+  LassoStackedBarChart: g("half", "quarter", "full", "medium", "fixed", "plot"),
+  LassoWaterfallChart: g("half", "quarter", "full", "medium", "fixed", "plot"),
+  LassoShareBars: g("half", "half", "half", "medium", "fixed"),
   LassoKeyFigureGauge: g("third", "quarter", "half", "medium", "fixed"),
-  LassoMultiYearTable: g("half", "half", "full", "medium", "growing"),
-  LassoIncomeStatement: g("half", "half", "three-quarters", "high", "growing"),
-  LassoBalanceSheet: g("half", "half", "three-quarters", "very-high", "growing"),
-  LassoCashFlow: g("half", "half", "three-quarters", "high", "growing"),
+  LassoMultiYearTable: g("two-thirds", "two-thirds", "two-thirds", "medium", "growing"),
+  LassoIncomeStatement: g("half", "half", "half", "high", "growing"),
+  LassoBalanceSheet: g("third", "third", "half", "very-high", "growing"),
+  LassoCashFlow: g("third", "third", "half", "high", "growing"),
   LassoFinancialStatements: g("full", "full", "full", "very-high", "growing"),
   LassoPersonList: g("third", "quarter", "half", "medium", "growing", "rows"),
   LassoOwnerList: g("third", "quarter", "half", "low", "growing", "rows"),
   LassoBeneficialOwners: g("third", "quarter", "half", "low", "growing", "rows"),
-  LassoOwnershipDiagram: g("two-thirds", "half", "full", "high", "growing", "plot"),
+  LassoOwnershipDiagram: g("two-thirds", "two-thirds", "full", "high", "growing", "plot"),
   LassoRelations: g("quarter", "quarter", "half", "medium", "growing"),
-  LassoRiskObservations: g("half", "third", "full", "high", "growing", "rows"),
+  LassoRiskObservations: g("third", "third", "half", "high", "growing", "rows"),
   LassoScoreGauge: g("quarter", "quarter", "half", "medium", "fixed"),
   LassoScoreHistory: g("half", "third", "full", "medium", "fixed", "plot"),
-  LassoCreditRating: g("half", "third", "full", "high", "fixed"),
+  LassoCreditRating: g("third", "quarter", "half", "high", "fixed"),
   LassoAuditorIndependence: g("full", "half", "full", "high", "growing"),
-  LassoProductionUnits: g("full", "two-thirds", "full", "high", "growing"),
-  LassoProperties: g("half", "third", "full", "low", "growing"),
+  LassoProductionUnits: g("full", "three-quarters", "full", "high", "growing"),
+  LassoProperties: g("half", "half", "full", "low", "growing"),
   LassoMap: g("half", "third", "full", "high", "fixed", "plot"),
   LassoRegistration: g("full", "two-thirds", "full", "high", "growing"),
-  LassoMergers: g("half", "half", "full", "high", "growing"),
-  LassoAnnouncements: g("full", "half", "full", "low", "growing", "rows"),
+  LassoMergers: g("half", "half", "half", "high", "growing"),
+  LassoAnnouncements: g("full", "full", "full", "low", "growing", "rows"),
   LassoPublications: g("half", "half", "full", "high", "growing", "rows"),
-  LassoLivestock: g("half", "half", "full", "high", "growing"),
+  LassoLivestock: g("half", "third", "half", "high", "growing"),
   LassoCompareTable: g("full", "two-thirds", "full", "high", "growing"),
-  LassoRanking: g("half", "third", "full", "medium", "growing", "rows"),
+  LassoRanking: g("half", "quarter", "full", "medium", "growing", "rows"),
   LassoCompanyTable: g("full", "full", "full", "high", "growing", "rows"),
   LassoPersonTable: g("full", "full", "full", "high", "growing", "rows"),
   LassoPersonHead: g("full", "full", "full", "low", "fixed"),
-  LassoPersonStats: g("full", "half", "full", "low", "fixed"),
+  LassoPersonStats: g("full", "third", "full", "low", "fixed"),
   LassoPersonRoles: g("two-thirds", "half", "full", "medium", "growing", "plot"),
-  LassoPersonNetwork: g("two-thirds", "half", "full", "medium", "growing", "plot"),
-  LassoPersonRisk: g("half", "third", "full", "high", "growing", "rows"),
+  LassoPersonNetwork: g("full", "full", "full", "medium", "growing", "plot"),
+  LassoPersonRisk: g("third", "third", "half", "high", "growing", "rows"),
   LassoPersonFacts: g("third", "quarter", "half", "high", "growing", "rows"),
-  LassoChangeFeed: g("full", "half", "full", "very-high", "growing", "rows"),
-  LassoHeatmap: g("half", "third", "full", "medium", "fixed"),
+  LassoChangeFeed: g("half", "half", "half", "very-high", "growing", "rows"),
+  LassoHeatmap: g("half", "quarter", "three-quarters", "medium", "fixed"),
   LassoFollowUps: g("full", "full", "full", "low", "fixed"),
   LassoSavedPages: g("full", "full", "full", "high", "growing"),
 };
 
 /** Regnskabslisten (09, variant 'financials') har 12 faste rækker: høj og fast, ikke meget høj og voksende. */
-const FINANCIALS_LIST_RULE: GridRule = g("half", "half", "full", "high", "fixed", "rows");
+const FINANCIALS_LIST_RULE: GridRule = g("half", "half", "half", "high", "fixed", "rows");
+
+/**
+ * PersonRoles som liste (show current | ended | owner, "Aktive roller"): smal, højst ½ (A13: 64–66 % tom
+ * plads i fuld bredde, 26–31 % i ½). Tidsbåndet (show 'all') følger GRID_RULES.LassoPersonRoles.
+ */
+const PERSON_ROLES_LIST_RULES: Record<"current" | "ended" | "owner", GridRule> = {
+  current: g("half", "half", "half", "medium", "growing"),
+  ended: g("half", "third", "half", "medium", "growing"),
+  owner: g("half", "third", "half", "medium", "growing"),
+};
+
+/** Variant-nøglen, en komponent har sin egen række i elementtabellen og registeret under (bredde.varianter), ellers undefined. */
+export function gridVariantOf(c: Pick<ViewComponent, "type"> & { variant?: unknown; show?: unknown }): string | undefined {
+  if (c.type === "LassoKeyValueList" && c.variant === "financials") return "variant:financials";
+  if (c.type === "LassoPersonRoles" && (c.show === "current" || c.show === "ended" || c.show === "owner")) return `show:${c.show}`;
+  return undefined;
+}
 
 /** Gitterreglen for en konkret komponent (varianter kan have deres egen række i elementtabellen). */
-export function gridRuleOf(c: Pick<ViewComponent, "type"> & { variant?: unknown }): GridRule {
+export function gridRuleOf(c: Pick<ViewComponent, "type"> & { variant?: unknown; show?: unknown }): GridRule {
   if (c.type === "LassoKeyValueList" && c.variant === "financials") return FINANCIALS_LIST_RULE;
+  if (c.type === "LassoPersonRoles" && (c.show === "current" || c.show === "ended" || c.show === "owner")) return PERSON_ROLES_LIST_RULES[c.show];
   return GRID_RULES[c.type];
+}
+
+/** Gitterreglerne for varianterne (nøgle som gridVariantOf), til dokumentationen. */
+export const GRID_VARIANT_RULES: Readonly<Record<string, GridRule>> = {
+  "LassoKeyValueList variant:financials": FINANCIALS_LIST_RULE,
+  "LassoPersonRoles show:current": PERSON_ROLES_LIST_RULES.current,
+  "LassoPersonRoles show:ended": PERSON_ROLES_LIST_RULES.ended,
+  "LassoPersonRoles show:owner": PERSON_ROLES_LIST_RULES.owner,
+};
+
+/**
+ * Bredde-profilen (Ø13) for en konkret komponent: registerets profil, eller variantens (bredde.varianter),
+ * når komponenten har sin egen række (fx PersonRoles som liste = smal, tidsbåndet = fleksibel).
+ */
+export function widthProfileOf(c: Pick<ViewComponent, "type"> & { variant?: unknown; show?: unknown }): { profil: WidthProfile; drivere?: ContentWidthDrivers } {
+  const reg = REGISTER_BY_TYPE.get(c.type);
+  if (!reg) return { profil: "fleksibel" };
+  const v = gridVariantOf(c);
+  return (v && reg.bredde.varianter?.[v]) || reg.bredde;
 }
 
 const WIDTH_LABEL: Record<Width, string> = { quarter: "¼", third: "⅓", half: "½", "two-thirds": "⅔", "three-quarters": "¾", full: "1/1" };
@@ -169,7 +206,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["companies", "observations"],
       live: "altid",
       veje: ["render_view"],
-      bredde: { profil: "fleksibel" },
+      bredde: { profil: "fleksibel", drivere: { longestLabel: 44 } },
     },
   },
   {
@@ -184,7 +221,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["companies", "ownership", "financials"],
       live: "altid",
       veje: ["focus", "ask", "render_view"],
-      bredde: { profil: "smal" },
+      bredde: { profil: "smal", drivere: { longestLabel: 45 }, varianter: { "variant:financials": { profil: "smal" } } },
     },
   },
   {
@@ -215,7 +252,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       live: "naar-data",
       liveNote: "Virksomheden har ingen hjemmeside, Lasso kan hente kontaktpersoner fra.",
       veje: ["focus", "ask", "render_view"],
-      bredde: { profil: "smal" },
+      bredde: { profil: "smal", drivere: { rowsPerItem: 3, longestLabel: 44 } },
     },
   },
   {
@@ -230,7 +267,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["companies"],
       live: "altid",
       veje: ["focus", "render_view"],
-      bredde: { profil: "smal" },
+      bredde: { profil: "smal", drivere: { longestLabel: 44 } },
     },
   },
   {
@@ -276,7 +313,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["timeline"],
       live: "naar-data",
       veje: ["focus", "person", "ask", "render_view"],
-      bredde: { profil: "bred", drivere: { longestLabel: 40 } },
+      bredde: { profil: "smal", drivere: { rowsPerItem: 2 } },
     },
   },
   {
@@ -291,7 +328,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["news"],
       live: "naar-data",
       veje: ["focus", "person", "ask", "render_view"],
-      bredde: { profil: "fleksibel" },
+      bredde: { profil: "bred", drivere: { rowsPerItem: 3 } },
     },
   },
 
@@ -323,7 +360,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["financials"],
       live: "naar-data",
       veje: ["focus", "ask", "render_view"],
-      bredde: { profil: "bred", drivere: { timeAxis: true } },
+      bredde: { profil: "fleksibel", drivere: { timeAxis: true } },
     },
   },
   {
@@ -338,7 +375,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["financials"],
       live: "naar-data",
       veje: ["focus", "ask", "render_view"],
-      bredde: { profil: "bred", drivere: { timeAxis: true, series: 2 } },
+      bredde: { profil: "fleksibel", drivere: { timeAxis: true, series: 3 } },
     },
   },
   {
@@ -354,7 +391,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["financials", "companies", "industryBenchmarks"],
       live: "naar-data",
       veje: ["ask", "render_view"],
-      bredde: { profil: "bred", drivere: { timeAxis: true } },
+      bredde: { profil: "fleksibel", drivere: { timeAxis: true, series: 2 } },
     },
   },
   {
@@ -370,7 +407,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["financials", "financialStatements"],
       live: "naar-data",
       veje: ["ask", "render_view"],
-      bredde: { profil: "bred", drivere: { timeAxis: true } },
+      bredde: { profil: "fleksibel", drivere: { timeAxis: true, series: 4 } },
     },
   },
   {
@@ -385,7 +422,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["financials", "ownership"],
       live: "naar-data",
       veje: ["focus", "ask", "render_view"],
-      bredde: { profil: "smal" },
+      bredde: { profil: "smal", drivere: { series: 4 } },
     },
   },
   {
@@ -400,7 +437,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["financials", "financialStatements"],
       live: "naar-data",
       veje: ["focus", "ask", "render_view"],
-      bredde: { profil: "bred", drivere: { timeAxis: true } },
+      bredde: { profil: "fleksibel", drivere: { series: 8 } },
     },
   },
   {
@@ -416,7 +453,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       live: "ikke-endnu",
       liveNote: "Lasso har ingen branchetal for virksomhedens branche endnu.",
       veje: ["render_view"],
-      bredde: { profil: "smal" },
+      bredde: { profil: "smal", drivere: { series: 3 } },
     },
   },
   {
@@ -431,7 +468,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["financials"],
       live: "naar-data",
       veje: ["focus", "ask", "render_view"],
-      bredde: { profil: "bred", drivere: { series: 5 } },
+      bredde: { profil: "bred", drivere: { timeAxis: true, series: 10 } },
     },
   },
   {
@@ -446,7 +483,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["financials", "financialStatements"],
       live: "naar-data",
       veje: ["focus", "ask", "render_view"],
-      bredde: { profil: "bred", drivere: { series: 3 } },
+      bredde: { profil: "smal", drivere: { timeAxis: true, series: 5 } },
     },
   },
   {
@@ -461,7 +498,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["financials", "financialStatements"],
       live: "naar-data",
       veje: ["focus", "ask", "render_view"],
-      bredde: { profil: "bred", drivere: { series: 3 } },
+      bredde: { profil: "smal", drivere: { timeAxis: true, series: 5 } },
     },
   },
   {
@@ -476,14 +513,14 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["financials", "financialStatements"],
       live: "naar-data",
       veje: ["focus", "ask", "render_view"],
-      bredde: { profil: "bred", drivere: { series: 3 } },
+      bredde: { profil: "smal", drivere: { timeAxis: true, series: 5 } },
     },
   },
 
   {
     type: "LassoFinancialStatements",
     title: "Regnskabsdetaljer med værktøjslinje",
-    description: `Brug til: det fulde regnskab som ÉT element i FULD bredde: værktøjslinje (selskab/koncern, regnskabsår, enhed, revisorpåtegning og 'Hent PDF'; kun årsregnskaber), på desktop den fuldstændige resultatopgørelse med balance og pengestrøm under, på mobil én opgørelse ad gangen – 'vis hele regnskabet', 'regnskabet med koncerntal', 'hent årsrapporten'. Brug ikke når: elementet står i ½ eller ¾ bredde (brug LassoIncomeStatement/LassoBalanceSheet/LassoCashFlow, kompakt med 2 år + ændring), kun én opgørelse er bestilt eller nøgletal over år (LassoMultiYearTable). Kræver: company, statement? (income | balance | cashflow, den der vises først på mobil), years? (2–5; brug 5 i fuld bredde); poster uden tal udelades. Dækkes ikke af show_company endnu. Eksempel: 'Vis hele regnskabet for Lasso X med koncerntal' → render_view med LassoCompanyHead og LassoFinancialStatements.`,
+    description: `Brug til: det fulde regnskab som ÉT element i FULD bredde: værktøjslinje (selskab/koncern, regnskabsår, enhed, revisorpåtegning og 'Hent PDF'; kun årsregnskaber), på desktop den fuldstændige resultatopgørelse med balance og pengestrøm under, på mobil én opgørelse ad gangen – 'vis hele regnskabet', 'regnskabet med koncerntal', 'hent årsrapporten'. Brug ikke når: elementet står i ½ eller ¾ bredde (brug LassoIncomeStatement/LassoBalanceSheet/LassoCashFlow, kompakt med 2 år + ændring), kun én opgørelse er bestilt eller nøgletal over år (LassoMultiYearTable). Kræver: company, statement? (income | balance | cashflow, den der vises først på mobil), years? (2–5; brug 5 i fuld bredde); poster uden tal udelades. Nås fra show_company som svar-element på spørgsmål om hele regnskabet ('alle poster', 'vælg regnskabsår'); focus regnskab viser de tre kompakte opgørelser. Eksempel: 'Vis hele regnskabet for Lasso X med koncerntal' → show_company med spørgsmålet.`,
     props: "company, statement? (income | balance | cashflow), years? (2–5, standard 2), title?",
     register: {
       formaal: "Det fulde regnskab som ét element i fuld bredde med værktøjslinje.",
@@ -491,15 +528,15 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       undgaaNaar: ["½ eller ¾ bredde (LassoIncomeStatement/LassoBalanceSheet/LassoCashFlow)", "kun én opgørelse eller nøgletal over år (LassoMultiYearTable)"],
       kraeverData: ["financials", "financialStatements"],
       live: "naar-data",
-      veje: ["render_view"],
-      bredde: { profil: "bred", drivere: { series: 3 } },
+      veje: ["ask", "render_view"],
+      bredde: { profil: "bred", drivere: { timeAxis: true, series: 5 } },
     },
   },
 
   {
     type: "LassoMergers",
     title: "Fusioner og spaltninger",
-    description: `Brug til: virksomhedens fusioner og spaltninger som 'fra → til' med dato og type – 'har X fusioneret', 'hvilke selskaber er fusioneret ind i X', 'spaltning'. Brug ikke når: det gælder ejerskifte (LassoOwnerList/LassoOwnershipDiagram) eller hele historikken (LassoTimeline). Kræver: company; ingen hændelser giver en tom tilstand, der siger det. Dækkes ikke af show_company. Eksempel: 'Er Lasso X fusioneret med andre selskaber?' → render_view med LassoCompanyHead og LassoMergers.`,
+    description: `Brug til: virksomhedens fusioner og spaltninger som 'fra → til' med dato og type – 'har X fusioneret', 'hvilke selskaber er fusioneret ind i X', 'spaltning'. Brug ikke når: det gælder ejerskifte (LassoOwnerList/LassoOwnershipDiagram) eller hele historikken (LassoTimeline). Kræver: company; ingen hændelser giver en tom tilstand, der siger det. Nås fra show_company: focus historik (når der er data og plads) og svar-element på spørgsmål om fusioner og spaltninger. Eksempel: 'Er Lasso X fusioneret med andre selskaber?' → show_company med spørgsmålet.`,
     props: "company, title?",
     register: {
       formaal: "Fusioner og spaltninger som 'fra → til' med dato og type.",
@@ -507,14 +544,14 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       undgaaNaar: ["ejerskifte (LassoOwnerList/LassoOwnershipDiagram)", "hele historikken (LassoTimeline)"],
       kraeverData: ["companies", "companyEvents"],
       live: "naar-data",
-      veje: ["render_view"],
-      bredde: { profil: "bred", drivere: { longestLabel: 30 } },
+      veje: ["ask", "focus", "render_view"],
+      bredde: { profil: "smal", drivere: { rowsPerItem: 3, longestLabel: 44 } },
     },
   },
   {
     type: "LassoRegistration",
     title: "Regnskabsoplysninger og kapital",
-    description: `Brug til: registreringsdetaljer fra CVR – revision (revideret eller fravalgt), regnskabsår, nuværende og første regnskabsperiode, regnskabsklasse, bibrancher, registreret kapital og kapitalklasser, vedtægter, tegningsregel, formål, reklamebeskyttelse og børsnotering – 'er revisionen fravalgt', 'hvilken regnskabsklasse', 'hvad er kapitalen', 'hvad er formålet', 'bibrancher'. Brug ikke når: kun revisor, stiftelse, form eller branche (LassoKeyValueList variant 'company'), eller hele virksomhedsprofilen med regnskabsanalyse (LassoTextSections). Kræver: company, variant? ('full' standard = to kort; 'profile' = bibrancher og formål, en smal blok); felter uden værdi udelades, og alt ud over formål og tegningsregel er ubekræftet i live-data. Dækkes ikke af show_company. Eksempel: 'Har Lasso X fravalgt revision, og hvad er kapitalen?' → render_view med LassoCompanyHead og LassoRegistration.`,
+    description: `Brug til: registreringsdetaljer fra CVR – revision (revideret eller fravalgt), regnskabsår, nuværende og første regnskabsperiode, regnskabsklasse, bibrancher, registreret kapital og kapitalklasser, vedtægter, tegningsregel, formål, reklamebeskyttelse og børsnotering – 'er revisionen fravalgt', 'hvilken regnskabsklasse', 'hvad er kapitalen', 'hvad er formålet', 'bibrancher'. Brug ikke når: kun revisor, stiftelse, form eller branche (LassoKeyValueList variant 'company'), eller hele virksomhedsprofilen med regnskabsanalyse (LassoTextSections). Kræver: company, variant? ('full' standard = to kort; 'profile' = bibrancher og formål, en smal blok); felter uden værdi udelades, og alt ud over formål og tegningsregel er ubekræftet i live-data. Nås fra show_company: overblik (efter oplysningerne, når der er plads) og svar-element på spørgsmål om kapital, vedtægter, tegningsregel og regnskabsklasse. Eksempel: 'Har Lasso X fravalgt revision, og hvad er kapitalen?' → show_company med spørgsmålet.`,
     props: "company, variant? (full | profile), title?",
     register: {
       formaal: "Registreringsdetaljer fra CVR: revision, regnskabsår, kapital, vedtægter og tegningsregel.",
@@ -522,15 +559,15 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       undgaaNaar: ["kun revisor, stiftelse, form eller branche (LassoKeyValueList variant 'company')", "hele profilen med regnskabsanalyse (LassoTextSections)"],
       kraeverData: ["companies", "ownership", "financials", "textSections"],
       live: "naar-data",
-      veje: ["render_view"],
-      bredde: { profil: "bred" },
+      veje: ["ask", "focus", "render_view"],
+      bredde: { profil: "bred", drivere: { longestLabel: 45, series: 4 } },
     },
   },
 
   {
     type: "LassoAnnouncements",
     title: "Statstidende",
-    description: `Brug til: seneste bekendtgørelser i Statstidende (konkursdekret, rekonstruktion, likvidation, indkaldelse af kreditorer) – 'står X i Statstidende', 'er der bekendtgjort konkurs'. Brug ikke når: det gælder CVR-status alene (LassoCompanyHead) eller Creditsafe (LassoCreditRating). Kræver: company; komponenten udelades helt, når der ingen bekendtgørelser er. Dækkes ikke af show_company. Eksempel: 'Har X bekendtgørelser i Statstidende?' → render_view med LassoCompanyHead og LassoAnnouncements.`,
+    description: `Brug til: seneste bekendtgørelser i Statstidende (konkursdekret, rekonstruktion, likvidation, indkaldelse af kreditorer) – 'står X i Statstidende', 'er der bekendtgjort konkurs'. Brug ikke når: det gælder CVR-status alene (LassoCompanyHead) eller Creditsafe (LassoCreditRating). Kræver: company; komponenten udelades helt, når der ingen bekendtgørelser er. Nås fra show_company: focus historik (når der er data og plads) og svar-element på spørgsmål om Statstidende og bekendtgørelser. Eksempel: 'Har X bekendtgørelser i Statstidende?' → show_company med spørgsmålet.`,
     props: "company, title?",
     register: {
       formaal: "Seneste bekendtgørelser i Statstidende (konkurs, rekonstruktion, likvidation).",
@@ -538,14 +575,14 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       undgaaNaar: ["CVR-status alene (LassoCompanyHead)", "Creditsafe (LassoCreditRating)"],
       kraeverData: ["companies", "companyEvents"],
       live: "naar-data",
-      veje: ["render_view"],
-      bredde: { profil: "fleksibel" },
+      veje: ["ask", "focus", "render_view"],
+      bredde: { profil: "bred", drivere: { rowsPerItem: 3, longestLabel: 44 } },
     },
   },
   {
     type: "LassoPublications",
     title: "Regnskabspublicering",
-    description: `Brug til: listen over offentliggjorte regnskaber med dato, type (årsrapport, halvår, kvartal; ny eller korrigeret) og hovedtal – 'hvornår kom regnskabet', 'er regnskabet korrigeret'. Brug ikke når: tallene selv skal ses (LassoFinancialStatements/LassoMultiYearTable). Kræver: company, limit? (standard 5). Dækkes ikke af show_company. Eksempel: 'Hvornår har X offentliggjort sine regnskaber?' → render_view med LassoCompanyHead og LassoPublications.`,
+    description: `Brug til: listen over offentliggjorte regnskaber med dato, type (årsrapport, halvår, kvartal; ny eller korrigeret) og hovedtal – 'hvornår kom regnskabet', 'er regnskabet korrigeret'. Brug ikke når: tallene selv skal ses (LassoFinancialStatements/LassoMultiYearTable). Kræver: company, limit? (standard 5). Nås fra show_company: focus historik (når der er data og plads) og svar-element på spørgsmål om offentliggjorte regnskaber og dokumenter. Eksempel: 'Hvornår har X offentliggjort sine regnskaber?' → show_company med spørgsmålet.`,
     props: "company, limit?, title?",
     register: {
       formaal: "Liste over offentliggjorte regnskaber med dato, type og hovedtal.",
@@ -553,8 +590,8 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       undgaaNaar: ["tallene selv skal ses (LassoFinancialStatements/LassoMultiYearTable)"],
       kraeverData: ["companyEvents"],
       live: "naar-data",
-      veje: ["render_view"],
-      bredde: { profil: "fleksibel" },
+      veje: ["ask", "focus", "render_view"],
+      bredde: { profil: "fleksibel", drivere: { timeAxis: true, series: 4 } },
     },
   },
 
@@ -571,7 +608,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["people"],
       live: "naar-data",
       veje: ["focus", "ask", "render_view"],
-      bredde: { profil: "smal" },
+      bredde: { profil: "smal", drivere: { rowsPerItem: 2, longestLabel: 34 } },
     },
   },
   {
@@ -586,7 +623,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["ownership"],
       live: "naar-data",
       veje: ["focus", "ask", "render_view"],
-      bredde: { profil: "smal" },
+      bredde: { profil: "smal", drivere: { rowsPerItem: 2, longestLabel: 45 } },
     },
   },
   {
@@ -601,7 +638,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["beneficialOwnership"],
       live: "naar-data",
       veje: ["focus", "ask", "render_view"],
-      bredde: { profil: "smal" },
+      bredde: { profil: "smal", drivere: { rowsPerItem: 2, longestLabel: 30 } },
     },
   },
   {
@@ -616,7 +653,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["ownershipGraphs"],
       live: "naar-data",
       veje: ["focus", "person", "ask", "render_view"],
-      bredde: { profil: "bred", drivere: { longestLabel: 30 } },
+      bredde: { profil: "bred", drivere: { longestLabel: 45 } },
     },
   },
   {
@@ -631,7 +668,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["people", "ownership"],
       live: "naar-data",
       veje: ["focus", "ask", "render_view"],
-      bredde: { profil: "smal" },
+      bredde: { profil: "smal", drivere: { rowsPerItem: 2, longestLabel: 45 } },
     },
   },
 
@@ -649,7 +686,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["companies", "financials"],
       live: "naar-data",
       veje: ["compare_companies", "render_view"],
-      bredde: { profil: "bred", drivere: { series: 6 } },
+      bredde: { profil: "bred", drivere: { longestLabel: 45, series: 6 } },
     },
   },
   {
@@ -665,7 +702,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["companies", "financials"],
       live: "naar-data",
       veje: ["compare_companies", "render_view"],
-      bredde: { profil: "bred", drivere: { longestLabel: 30 } },
+      bredde: { profil: "fleksibel", drivere: { longestLabel: 45, series: 6 } },
     },
   },
   {
@@ -681,7 +718,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["searches"],
       live: "naar-data",
       veje: ["search_companies", "render_view"],
-      bredde: { profil: "bred", drivere: { series: 6 } },
+      bredde: { profil: "bred", drivere: { longestLabel: 45, series: 8 } },
     },
   },
   {
@@ -697,7 +734,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["personSearches"],
       live: "naar-data",
       veje: ["search_persons", "render_view"],
-      bredde: { profil: "bred", drivere: { series: 4 } },
+      bredde: { profil: "bred", drivere: { series: 6 } },
     },
   },
 
@@ -715,13 +752,13 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       live: "abonnement",
       liveNote: "Kræver Creditsafe-abonnement",
       veje: ["focus", "ask", "render_view"],
-      bredde: { profil: "fleksibel" },
+      bredde: { profil: "smal" },
     },
   },
   {
     type: "LassoRiskObservations",
     title: "Risikoobservationer",
-    description: `Brug til: Lassos risikoobservationer for én virksomhed som liste – sammenfatning øverst som filtre (høj, middel, info) og observationerne sorteret efter alvor – når brugeren beder om 'risikoobservationer', 'røde flag i detaljer' eller 'alle observationer'. Brug ikke når: spørgsmålet er bredt om risiko eller kredit (show_company focus risiko), eller det gælder Creditsafe (LassoCreditRating). Kræver: company; opslaget tager 10–14 sekunder, så brug den kun, når brugeren beder om listen. Tom liste er positiv information ('intet at bemærke, tjekket DATO'). Dækkes ikke af show_company. Eksempel: 'Vis alle risikoobservationer for Lasso X' → render_view med LassoCompanyHead og LassoRiskObservations.`,
+    description: `Brug til: Lassos risikoobservationer for én virksomhed som liste – sammenfatning øverst som filtre (høj, middel, info) og observationerne sorteret efter alvor – når brugeren beder om 'risikoobservationer', 'røde flag i detaljer' eller 'alle observationer'. Brug ikke når: spørgsmålet er bredt om risiko eller kredit (show_company focus risiko), eller det gælder Creditsafe (LassoCreditRating). Kræver: company; opslaget tager 10–14 sekunder. Tom liste er positiv information ('intet at bemærke, tjekket DATO'). Nås fra show_company: focus risiko (efter kreditvurderingen, når der er plads) og som svar-element nr. 1 på spørgsmål om røde flag og observationer. Eksempel: 'Er der røde flag hos Lasso X?' → show_company med spørgsmålet.`,
     props: "company, title?, compact?",
     register: {
       formaal: "Lassos risikoobservationer som liste sorteret efter alvor, med filtre.",
@@ -729,8 +766,8 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       undgaaNaar: ["bredt risikospørgsmål (show_company focus risiko)", "Creditsafe (LassoCreditRating)"],
       kraeverData: ["observations"],
       live: "naar-data",
-      veje: ["render_view"],
-      bredde: { profil: "fleksibel" },
+      veje: ["ask", "focus", "render_view"],
+      bredde: { profil: "smal", drivere: { rowsPerItem: 2 } },
     },
   },
   {
@@ -744,8 +781,8 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       bedstTil: ["score", "risikoscore"],
       undgaaNaar: ["kundespørgsmål om risiko eller kredit (show_company focus risiko)", "Creditsafe (LassoCreditRating)"],
       kraeverData: ["scores"],
-      live: "ikke-endnu",
-      liveNote: "Ingen score-kilde endnu; bygges på Creditsafe-rating med abonnement (plan C1/C2).",
+      live: "abonnement",
+      liveNote: "Kræver Creditsafe-abonnement. Score og kreditvurdering vises, når Creditsafe er tilføjet Lasso-abonnementet.",
       veje: ["ask", "render_view"],
       bredde: { profil: "smal" },
     },
@@ -764,23 +801,23 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       live: "naar-data",
       liveNote: "Virksomheden har ikke en registreret revisor i CVR.",
       veje: ["focus", "ask", "render_view"],
-      bredde: { profil: "bred", drivere: { longestLabel: 30 } },
+      bredde: { profil: "fleksibel", drivere: { longestLabel: 44, series: 4 } },
     },
   },
   {
     type: "LassoScoreHistory",
     title: "Scorehistorik, Creditsafe",
-    description: `Brug til: kreditscoren over tid som graf (forrige mod nu) – 'hvordan har scoren udviklet sig', 'kreditscore over tid'. Brug ikke når: det gælder den aktuelle kreditvurdering (LassoCreditRating), Lassos aktuelle 0–100-score (LassoScoreGauge) eller udviklingen i regnskabstal (LassoBarChart). Kræver: company; kræver Creditsafe-abonnement, og uden en score er der ingen historik at vise (tom tilstand med årsag). Dækkes ikke af show_company. Eksempel: 'Hvordan har kreditscoren for Lasso X udviklet sig?' → render_view med LassoCompanyHead og LassoScoreHistory.`,
+    description: `Brug til: kreditscoren over tid som graf (forrige mod nu) – 'hvordan har scoren udviklet sig', 'kreditscore over tid'. Brug ikke når: det gælder den aktuelle kreditvurdering (LassoCreditRating), Lassos aktuelle 0–100-score (LassoScoreGauge) eller udviklingen i regnskabstal (LassoBarChart). Kræver: company; kræver Creditsafe-abonnement, og uden en score er der ingen historik at vise (tom tilstand med årsag). Nås fra show_company: focus risiko (fra 2 målinger, når der er plads) og svar-element på spørgsmål om scoren over tid. Eksempel: 'Hvordan har kreditscoren for Lasso X udviklet sig?' → show_company med spørgsmålet.`,
     props: "company, title?, compare?",
     register: {
       formaal: "Kreditscoren over tid som graf (kun med Creditsafe).",
       bedstTil: ["score over tid", "kreditscore udvikling"],
       undgaaNaar: ["den aktuelle vurdering (LassoCreditRating)", "den aktuelle score (LassoScoreGauge)"],
       kraeverData: ["scoreHistories"],
-      live: "ikke-endnu",
-      liveNote: "Ingen scorehistorik endnu; bygges op af rating-opslag med abonnement (plan C2).",
-      veje: ["render_view"],
-      bredde: { profil: "bred", drivere: { timeAxis: true } },
+      live: "abonnement",
+      liveNote: "Kræver Creditsafe-abonnement. Score og kreditvurdering vises, når Creditsafe er tilføjet Lasso-abonnementet.",
+      veje: ["ask", "focus", "render_view"],
+      bredde: { profil: "fleksibel", drivere: { timeAxis: true } },
     },
   },
   // (f) Fysiske enheder --------------------------------------------------------
@@ -797,7 +834,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["productionUnits"],
       live: "naar-data",
       veje: ["ask", "render_view"],
-      bredde: { profil: "bred", drivere: { longestLabel: 30 } },
+      bredde: { profil: "bred", drivere: { longestLabel: 54, series: 5 } },
     },
   },
   {
@@ -813,14 +850,14 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["properties"],
       live: "naar-data",
       veje: ["ask", "render_view"],
-      bredde: { profil: "smal" },
+      bredde: { profil: "fleksibel", drivere: { rowsPerItem: 2 } },
     },
   },
   {
     type: "LassoMap",
     title: "Kort, adresser og P-enheder",
     description:
-      "Brug til: virksomhedens hovedadresse og P-enheder på et kort, med klynger hvor mange ligger tæt – 'hvor ligger afdelingerne', 'vis på kort'. Brug ikke når: adresserne som liste med ansatte og status (LassoProductionUnits), ejendomme og bygninger (LassoProperties) eller kun hovedadressen som tekst (LassoCompanyHead). Kræver: company; koordinater er ikke bekræftet i Lassos data, så kortet kan være tomt med en forklaring. Dækkes ikke af show_company. Eksempel: 'Vis X's afdelinger på et kort.'",
+      "Brug til: virksomhedens hovedadresse og P-enheder på et kort, med klynger hvor mange ligger tæt – 'hvor ligger afdelingerne', 'vis på kort'. Brug ikke når: adresserne som liste med ansatte og status (LassoProductionUnits), ejendomme og bygninger (LassoProperties) eller kun hovedadressen som tekst (LassoCompanyHead). Kræver: company; koordinater er ikke bekræftet i Lassos data, så kortet kan være tomt med en forklaring. Nås fra show_company: focus kontakt og overblik (når kortet har punkter og der er plads) og svar-element på spørgsmål om placering ('hvor ligger afdelingerne', 'på et kort'). Eksempel: 'Vis X's afdelinger på et kort.' → show_company med spørgsmålet.",
     props: "company, title?",
     register: {
       formaal: "Kort med virksomhedens adresse og enheder.",
@@ -828,8 +865,8 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       undgaaNaar: ["kun adressen som tekst (LassoContact)", "liste over enheder (LassoProductionUnits)"],
       kraeverData: ["maps"],
       live: "naar-data",
-      veje: ["render_view"],
-      bredde: { profil: "bred" },
+      veje: ["ask", "focus", "render_view"],
+      bredde: { profil: "fleksibel" },
     },
   },
   {
@@ -846,7 +883,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       live: "modul",
       liveNote: "Kræver Ejendomme-modulet i Lasso-abonnementet",
       veje: ["ask", "render_view"],
-      bredde: { profil: "smal" },
+      bredde: { profil: "smal", drivere: { series: 3 } },
     },
   },
 
@@ -864,7 +901,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["persons"],
       live: "altid",
       veje: ["person", "render_view"],
-      bredde: { profil: "fleksibel" },
+      bredde: { profil: "fleksibel", drivere: { longestLabel: 45 } },
     },
   },
   {
@@ -880,7 +917,15 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["persons"],
       live: "naar-data",
       veje: ["person", "ask", "render_view"],
-      bredde: { profil: "bred", drivere: { timeAxis: true, longestLabel: 30 } },
+      bredde: {
+        profil: "fleksibel",
+        drivere: { rowsPerItem: 2, longestLabel: 45, timeAxis: true },
+        varianter: {
+          "show:current": { profil: "smal", drivere: { rowsPerItem: 2, longestLabel: 45 } },
+          "show:ended": { profil: "smal", drivere: { rowsPerItem: 2, longestLabel: 45 } },
+          "show:owner": { profil: "smal", drivere: { rowsPerItem: 2, longestLabel: 45 } },
+        },
+      },
     },
   },
   {
@@ -896,7 +941,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["personNetworks"],
       live: "naar-data",
       veje: ["person", "ask", "render_view"],
-      bredde: { profil: "bred", drivere: { rowsPerItem: 3, timeAxis: true, longestLabel: 30 } },
+      bredde: { profil: "bred", drivere: { rowsPerItem: 3, longestLabel: 45, timeAxis: true } },
     },
   },
   {
@@ -912,7 +957,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["persons"],
       live: "naar-data",
       veje: ["person", "ask", "render_view"],
-      bredde: { profil: "fleksibel" },
+      bredde: { profil: "smal", drivere: { rowsPerItem: 2, longestLabel: 45 } },
     },
   },
   {
@@ -928,7 +973,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["persons", "personNetworks"],
       live: "naar-data",
       veje: ["render_view"],
-      bredde: { profil: "fleksibel" },
+      bredde: { profil: "fleksibel", drivere: { longestLabel: 45 } },
     },
   },
   {
@@ -944,7 +989,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       kraeverData: ["persons"],
       live: "naar-data",
       veje: ["person", "ask", "render_view"],
-      bredde: { profil: "smal" },
+      bredde: { profil: "smal", drivere: { longestLabel: 45 } },
     },
   },
 
@@ -963,7 +1008,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       live: "naar-data",
       liveNote: "Der overvåges ingen virksomheder endnu.",
       veje: ["focus", "ask", "render_view"],
-      bredde: { profil: "bred", drivere: { longestLabel: 40 } },
+      bredde: { profil: "smal", drivere: { rowsPerItem: 2, longestLabel: 45 } },
     },
   },
 
@@ -981,7 +1026,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       live: "naar-data",
       liveNote: "Der overvåges ingen virksomheder endnu.",
       veje: ["render_view"],
-      bredde: { profil: "bred", drivere: { timeAxis: true } },
+      bredde: { profil: "fleksibel", drivere: { timeAxis: true, series: 12 } },
     },
   },
 
@@ -1000,7 +1045,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
       live: "naar-data",
       liveNote: "Der er ingen gemte sider endnu.",
       veje: ["saved", "render_view"],
-      bredde: { profil: "fleksibel" },
+      bredde: { profil: "fleksibel", drivere: { longestLabel: 45, series: 5 } },
     },
   },
 
@@ -1022,6 +1067,8 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     },
   },
 ];
+
+const REGISTER_BY_TYPE: ReadonlyMap<ComponentType, Register> = new Map(COMPONENT_CATALOG.flatMap((e) => (e.register ? [[e.type, e.register] as const] : [])));
 
 export function catalogAsText(): string {
   return COMPONENT_CATALOG.map((c) => `- ${c.type} (${c.title}): ${c.description} Props: ${c.props}. ${gridRuleText(GRID_RULES[c.type])}`).join("\n");

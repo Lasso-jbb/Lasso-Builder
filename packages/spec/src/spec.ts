@@ -610,8 +610,8 @@ export const mapSchema = z.object({
 
 /**
  * Katalog 17.2: observationsliste med sammenfatning (filterchips høj/middel/info) og kort sorteret
- * efter alvor. Komponeres ikke automatisk af compose (observationskaldet tager 10–14 s); vises kun,
- * når en spec beder om den.
+ * efter alvor. Observationskaldet tager 10–14 s. Komponisten lægger den på focus risiko (efter
+ * kreditvurderingen, når budgettet giver plads) og som svar-element på spørgsmål om røde flag (ask.ts).
  */
 export const riskObservationsSchema = z.object({
   type: z.literal("LassoRiskObservations"),
@@ -940,17 +940,17 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoContact: "third",
   LassoContactPersons: "third",
   LassoShortcuts: "half",
-  LassoMultiYearTable: "half",
+  LassoMultiYearTable: "two-thirds",
   LassoIncomeStatement: "half",
-  LassoBalanceSheet: "half",
-  LassoCashFlow: "half",
+  LassoBalanceSheet: "third",
+  LassoCashFlow: "third",
   LassoScoreGauge: "quarter",
   LassoScoreHistory: "half",
   LassoKeyFigureGauge: "third",
   LassoHeatmap: "half",
   LassoMap: "half",
-  LassoRiskObservations: "half",
-  LassoCreditRating: "half",
+  LassoRiskObservations: "third",
+  LassoCreditRating: "third",
   LassoAuditorIndependence: "full",
   LassoProductionUnits: "full",
   LassoProperties: "half",
@@ -959,13 +959,13 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoRelations: "quarter",
   LassoBeneficialOwners: "third",
   LassoTextSections: "half",
-  LassoSummary: "full",
-  LassoTimeline: "half",
-  LassoNews: "half",
+  LassoSummary: "three-quarters",
+  LassoTimeline: "third",
+  LassoNews: "three-quarters",
   LassoPersonHead: "full",
   LassoPersonRoles: "two-thirds",
-  LassoPersonNetwork: "two-thirds", // 16.3 (Fable runde 6): ⅔ som 16.2; ½ kun med etiketten "Selskab, rolle"
-  LassoPersonRisk: "half",
+  LassoPersonNetwork: "full", // Ø13/B8 (A13-måling): lange selskabsnavne, 3 rækker pr. person og tidsakse er først rene i fuld bredde
+  LassoPersonRisk: "third",
   LassoPersonFacts: "third",
   LassoPersonStats: "full",
   LassoFinancialStatements: "full",
@@ -973,7 +973,7 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoRegistration: "full",
   LassoAnnouncements: "full",
   LassoPublications: "half",
-  LassoChangeFeed: "full",
+  LassoChangeFeed: "half",
   LassoSavedPages: "full",
 };
 

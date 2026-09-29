@@ -63,7 +63,7 @@ test("person-komponenterne valideres og har deres standardbredder", () => {
     ],
   });
   assert.equal(spec.kind, "person");
-  assert.deepEqual(spec.components.map((c) => widthOf(c, "dashboard")), ["full", "two-thirds", "two-thirds", "half"]);
+  assert.deepEqual(spec.components.map((c) => widthOf(c, "dashboard")), ["full", "two-thirds", "full", "third"]); // Ø13/B8: netværket fuld (A13), risiko smal ⅓
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoPersonHead" }] }));
 });
 

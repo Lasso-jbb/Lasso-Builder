@@ -235,3 +235,13 @@ test("26f: tablet går op til skærm 1199: foldningen gælder også, når midten
   assert.equal(media.length, container.length);
   assert.match(css, /@media \(max-width: 1199px\) \{\n  \.lasso-content--dashboard, \.lasso-content--grid-2 \{ column-gap: var\(--lasso-space-4\); \}\n  \.lasso-cell--half, \.lasso-cell--third \{ grid-column: span 6; \}/);
 });
+
+test("Ø13/B8: tablet-foldningen (26.1) giver aldrig et element færre kolonner end på desktop, og en stak over ½ står alene i sin række", () => {
+  const legal = [[12], [6, 6], [8, 4], [4, 8], [9, 3], [3, 9], [4, 4, 4], [3, 3, 6], [3, 6, 3], [6, 3, 3], [3, 3, 3, 3]];
+  for (const cols of legal) {
+    const spans = tabletSpans(cols);
+    cols.forEach((c, i) => assert.ok(spans[i]! >= c, `${cols.join("+")}: ${c} -> ${spans[i]}`));
+    // Et smalt element (højst ½) bliver kun bredere end ½ på tablet, når det står alene i rækken (12).
+    spans.forEach((s) => assert.ok(s === 6 || s === 12, `${cols.join("+")}: ${s}`));
+  }
+});

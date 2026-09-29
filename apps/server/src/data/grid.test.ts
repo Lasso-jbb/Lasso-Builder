@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ABSORB_MAX_DEVIATION, BAND_COMBOS, BAND_MAX_DEVIATION, PAGE_HEIGHT_BUDGET, composeCompany, composePerson, composePersonProbe, composeProbe, gridHeight, packPage, WIDTH_COLUMNS, type Dataset, type ViewComponent, type ViewSpec } from "@lasso/spec";
+import { ABSORB_MAX_DEVIATION, BAND_COMBOS, BAND_MAX_DEVIATION, FOCUSES, PAGE_HEIGHT_BUDGET, WIDTHS, composeCompany, contentWidthOf, gridRuleOf, widthProfileOf, composePerson, composePersonProbe, composeProbe, gridHeight, packPage, WIDTH_COLUMNS, type Dataset, type ViewComponent, type ViewSpec } from "@lasso/spec";
 import { DemoProvider } from "./demo.js";
 import { resolveSpec } from "./resolve.js";
 
@@ -127,4 +127,48 @@ test("gridmodel: personsidens elementer pakket med samme model holder 15 % (comp
   const items = spec.components.map(({ column: _c, width: _w, ...c }) => c as ViewComponent);
   const packed = packPage(items, ds);
   check({ ...spec, components: packed.components }, ds, "person overblik");
+});
+
+/**
+ * Ø13/B8 på rigtige sider: i et delt bånd står intet element under sin indholdsstyrede mindstebredde
+ * (contentWidthOf, driverne fra Dataset), og en smal komponent står højst i ½. Alene i et bånd (uden
+ * kolonne) må en smal komponent fylde bredden. Alle demovirksomheder, alle fokus, med og uden budget.
+ */
+function assertWidthRules(spec: ViewSpec, ds: Dataset, label: string) {
+  const idx = (w: string) => WIDTHS.indexOf(w as never);
+  for (const band of bandsOf(spec)) {
+    if (band.length < 2) continue;
+    for (const st of band)
+      for (const c of st) {
+        const w = c.width!;
+        assert.ok(idx(w) >= idx(contentWidthOf(c, ds)), `${label}: ${c.type} i ${w} under mindstebredden ${contentWidthOf(c, ds)}`);
+        assert.ok(idx(w) <= idx(gridRuleOf(c).max), `${label}: ${c.type} i ${w} over max`);
+        if (widthProfileOf(c).profil === "smal") assert.ok(idx(w) <= idx("half"), `${label}: smal ${c.type} strakt til ${w} ved siden af andre`);
+      }
+  }
+}
+
+test("Ø13/B8: virksomhedssiderne (alle demovirksomheder og fokus) klemmer aldrig et bredt element og strækker aldrig et smalt", async () => {
+  const p = new DemoProvider();
+  for (let i = 1; i <= 14; i++) {
+    const id = `CVR-1-990000${String(i).padStart(2, "0")}`;
+    for (const focus of FOCUSES) {
+      const ds = await resolveSpec(composeProbe(id, focus), p);
+      assertWidthRules(composeCompany(id, ds, { focus }), ds, `${id} ${focus}`);
+      assertWidthRules(composeCompany(id, ds, { focus, showAll: true }), ds, `${id} ${focus} vis alt`);
+    }
+  }
+});
+
+test("Ø13/B8: personsidens elementer pakket med packPage: netværket står i fuld bredde, roller som liste højst ½", async () => {
+  const p = new DemoProvider();
+  for (const person of [BO, "CVR-3-4000000001"]) {
+    const ds = await resolveSpec(composePersonProbe(person, "overblik"), p);
+    const spec = composePerson(person, ds, { focus: "overblik" });
+    const items = spec.components.map(({ column: _c, width: _w, ...c }) => c as ViewComponent);
+    const packed = packPage(items, ds, { budget: Number.POSITIVE_INFINITY });
+    assertWidthRules({ ...spec, components: packed.components }, ds, `${person} overblik`);
+    const net = packed.components.find((c) => c.type === "LassoPersonNetwork");
+    if (net) assert.equal(net.column, undefined, "netværket står i eget fuldbånd");
+  }
 });

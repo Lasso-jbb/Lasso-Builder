@@ -759,8 +759,9 @@ test("B4: hvert fokus viser sine nye elementer, når der er data og plads", () =
   const on = (focus: (typeof FOCUSES)[number]) => typesOf(composeCompany(id, ds, { focus }));
   assert.ok(on("risiko").includes("LassoRiskObservations"));
   assert.ok(on("risiko").includes("LassoScoreGauge") && on("risiko").includes("LassoScoreHistory"));
-  // Historik: Statstidende og ændringerne først (prioritet); fusioner og publicering, når der stadig er plads (vis alt: alle).
-  assert.ok(on("historik").includes("LassoAnnouncements") && on("historik").includes("LassoChangeFeed"));
+  // Historik: Statstidende først (prioritet); ændringer, fusioner og publicering, når der stadig er plads (vis alt: alle).
+  // Ø13/B8: ændringsfeedet er smal (højst ½) og meget højt; står det ikke inden for budgettet, udelades det hellere end at blive strakt.
+  assert.ok(on("historik").includes("LassoAnnouncements") && ["LassoChangeFeed", "LassoMergers", "LassoPublications"].some((t) => on("historik").includes(t as never)));
   const histAll = typesOf(composeCompany(id, ds, { focus: "historik", showAll: true }));
   for (const t of ["LassoAnnouncements", "LassoMergers", "LassoPublications", "LassoChangeFeed"] as const) assert.ok(histAll.includes(t), t);
   assert.ok(on("oekonomi").includes("LassoKeyFigureGauge") && on("oekonomi").includes("LassoSummary"));
@@ -774,7 +775,7 @@ test("B4: hvert fokus viser sine nye elementer, når der er data og plads", () =
   // Hvert element på sit fokus: fx ingen Statstidende på overblik og intet kort på historik.
   assert.ok(!on("overblik").includes("LassoAnnouncements") && !on("historik").includes("LassoMap"));
   // Virksomhedens eget feed (company + 30 dage), ikke en overvågningsliste.
-  const feed = composeCompany(id, ds, { focus: "historik" }).components.find((c) => c.type === "LassoChangeFeed");
+  const feed = composeCompany(id, ds, { focus: "historik", showAll: true }).components.find((c) => c.type === "LassoChangeFeed");
   assert.ok(feed?.type === "LassoChangeFeed" && feed.company === id && feed.days === 30 && feed.list === undefined);
   for (const focus of FOCUSES) assert.ok(viewSpecSchema.safeParse(composeCompany(id, ds, { focus })).success, focus);
 });
@@ -864,7 +865,8 @@ test("B4: spørgsmålets resume-pladsholder (SUMMARY_PENDING_TEXT) erstattes af 
 test("B4: packWithExtras tager kun et ekstra element, der ikke koster et af de faste", () => {
   const ds = holding();
   const top: ViewComponent[] = [{ type: "LassoCompanyHead", company: id }];
-  const timeline: ViewComponent = { type: "LassoTimeline", company: id };
+  // Tidslinjen i fuld bredde (eksplicit), så registreringen ikke kan stå ved siden af den (Ø13: tidslinjen er smal, ¼ | ¾ er ellers lovligt).
+  const timeline: ViewComponent = { type: "LassoTimeline", company: id, width: "full" };
   const extra: ViewComponent = { type: "LassoRegistration", company: id, variant: "full" };
   // Rigeligt budget: med. Budget til tidslinjen alene: udeladt, tidslinjen står i fuld form.
   const roomy = packWithExtras(top, [timeline, extra], [], new Set([extra]), ds, { budget: 5000 });

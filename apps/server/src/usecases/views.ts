@@ -12,6 +12,8 @@ import {
   listTemplate,
   mainMetric,
   parseAsk,
+  personSearchKey,
+  roleKind,
   shortCompanyName,
   toLassoId,
   validateCriteria,
@@ -22,6 +24,8 @@ import {
   type Focus,
   type Metric,
   type PersonFocus,
+  type PersonRoleKind,
+  type PersonSearchResultVM,
   type SearchQuery,
   type TableColumn,
   type ViewComponent,
@@ -113,6 +117,74 @@ export async function searchCompanies(ctx: UseCaseCtx, input: SearchInput): Prom
   }
   const spec = listTemplate(search, { title: title ?? (interpreted ? capitalize(text) : undefined), columns });
   const dataset = await resolveSpec(spec, ctx.provider);
+  return { spec, dataset, ...(note ? { note } : {}) };
+}
+
+/* --- search_persons ------------------------------------------------------------------------ */
+
+export const PERSON_SEARCH_ROLES = ["direktoer", "bestyrelse", "ejer", "alle"] as const;
+export type PersonSearchRole = (typeof PERSON_SEARCH_ROLES)[number];
+
+export interface SearchPersonsInput {
+  /** Navnet eller en del af det (2-120 tegn). */
+  query: string;
+  /** Højst så mange personer (1-50, standard 25). */
+  limit?: number;
+  /** Filter på personens aktive roller (standard alle). */
+  role?: PersonSearchRole;
+  /** By-filter (bopæl), delstreng uden hensyn til store/små bogstaver. */
+  city?: string;
+  /** Overskrift på tabellen. */
+  title?: string;
+}
+
+const ROLE_KINDS: Record<Exclude<PersonSearchRole, "alle">, PersonRoleKind> = { direktoer: "direction", bestyrelse: "board", ejer: "owner" };
+
+/** Antal personer, der hentes, når role/city filtrerer bagefter, så filteret ikke tømmer en kort liste. */
+const FILTER_FETCH_LIMIT = 50;
+
+/**
+ * Personsøgning som Lasso-tabel (LassoPersonTable). role og city filtreres her i use case-laget på
+ * de rækker, personSearch leverer (aktive roller som tekst, by på bopæl). Ingen træf er aldrig en fejl.
+ */
+export async function searchPersons(ctx: UseCaseCtx, input: SearchPersonsInput): Promise<ViewData | UseCaseError> {
+  const query = input.query.trim();
+  if (query.length < 2) return fail(400, "Skriv mindst 2 tegn af personens navn.");
+  const limit = Math.min(Math.max(Math.trunc(input.limit ?? 25), 1), 50);
+  const role = input.role && input.role !== "alle" ? input.role : undefined;
+  const city = input.city?.trim().toLowerCase() || undefined;
+  const filtered = Boolean(role || city);
+  const title = input.title ?? `Personer, "${query}"`;
+  const spec = viewSpecSchema.parse({ kind: "list", title, layout: "stack", components: [{ type: "LassoPersonTable", query, limit, title }] });
+
+  // Med filter hentes flere, så der er noget at filtrere i; resultatet gemmes under specens egen nøgle.
+  const fetchSpec = filtered ? viewSpecSchema.parse({ ...spec, components: [{ type: "LassoPersonTable", query, limit: FILTER_FETCH_LIMIT, title }] }) : spec;
+  const dataset = await resolveSpec(fetchSpec, ctx.provider);
+  const fetchedKey = personSearchKey({ query, limit: filtered ? FILTER_FETCH_LIMIT : limit });
+  const key = personSearchKey({ query, limit });
+  const fetched = dataset.personSearches?.[fetchedKey];
+  let result: PersonSearchResultVM | undefined = fetched;
+  if (fetched) {
+    const rows = fetched.rows
+      .filter((r) => !role || r.roles.some((x) => roleKind(x.role) === ROLE_KINDS[role]))
+      .filter((r) => !city || (r.city ?? "").toLowerCase().includes(city))
+      .slice(0, limit);
+    result = { ...fetched, key, rows, total: filtered ? rows.length : fetched.total ?? rows.length };
+    dataset.personSearches = { [key]: result };
+  }
+
+  const roleText = role ? ` med rollen ${role}` : "";
+  const cityText = city ? ` i ${input.city!.trim()}` : "";
+  let note: string | undefined;
+  if (result && result.rows.length === 0) {
+    note = `Ingen personer fundet på "${query}"${roleText}${cityText}. Prøv et kortere navn${filtered ? " eller uden filter" : ""}.`;
+  } else if (result) {
+    const exact = result.rows.filter((r) => r.name.trim().toLowerCase() === query.toLowerCase());
+    const one = result.rows.length === 1 ? result.rows[0] : exact.length === 1 ? exact[0] : undefined;
+    note = one
+      ? `Ét præcist match: ${one.name} (${one.lassoId}). Kald show_person direkte med Lasso-ID'et ${one.lassoId}, hvis brugeren vil se personen.`
+      : `${result.rows.length} personer fundet. Vælg den rigtige og kald show_person med personens Lasso-ID (CVR-3-…).`;
+  }
   return { spec, dataset, ...(note ? { note } : {}) };
 }
 

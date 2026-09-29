@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { emptyDataset, type CompanyRowVM, type PersonSearchResultVM, type SearchResultVM } from "@lasso/spec";
@@ -155,6 +156,24 @@ test("Sammenligning (22.1): tilføj-slot til og med 5, 'Ikke hentet' mod 'Ikke o
   const six = Array.from({ length: 6 }, (_, i) => `CVR-1-${i + 1}`);
   const full = renderToStaticMarkup(createElement(CompareTable, { companies: six, metrics: ["bruttofortjeneste"], dataset: ds, onAction: noop, canDrillDown: false, canAdd: true }));
   assert.doesNotMatch(full, /Tilføj virksomhed/);
+});
+
+test("Sammenligning (Ø13/B8): 6 virksomheder med 45-tegns navne ombrydes på 2 linjer med fuldt navn i title (ingen vandret rulning i fuld bredde)", () => {
+  const ds = emptyDataset("demo");
+  const names = ["Nordjysk Entreprenør- og Ejendomsselskab ApS", "Vestjysk Maskin- og Anlægsservice Holding ApS", "Midtjysk Tømrer- og Snedkerforretning A/S", "Sydsjællands Transport- og Logistikcenter ApS", "Fynsk Rådgivende Ingeniør- og Planlægning A/S", "Københavnske Ejendoms- og Byudviklingsselskab"];
+  const six = names.map((_, i) => `CVR-1-${i + 1}`);
+  six.forEach((id, i) => (ds.companies[id] = { lassoId: id, name: names[i]! }));
+  const html = renderToStaticMarkup(createElement(CompareTable, { companies: six, metrics: ["bruttofortjeneste"], dataset: ds, onAction: noop, canDrillDown: true }));
+  for (const n of names) assert.ok(html.includes(`class="lasso-compare__name" title="${n}"`), n);
+  // Stilarket: navnet ombrydes (højst 2 linjer, derefter afkortning) og kolonnen er smal nok til 6 i fuld bredde.
+  const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+  const rule = /\.lasso-compare__name \{([^}]*)\}/g;
+  const decl = [...css.matchAll(rule)].map((m) => m[1]!).join(";");
+  assert.match(decl, /-webkit-line-clamp: 2/);
+  assert.match(decl, /max-width: 170px/);
+  assert.match(css, /\.lasso-table th\.lasso-compare__company \{ white-space: normal; \}/);
+  // 6 × (170 px navn + 32 px luft) + nøgletalskolonnen (ca. 194 px) < 1400; kolonnerne kan krympe til ombrudte navne (overflow-wrap).
+  assert.match(decl, /overflow-wrap: anywhere/);
 });
 
 test("Revisoruafhængighed (22.2): titel med revisor og dato, Eksportér PDF og Excel i hovedet, ord uden ikon, CSV til arbejdspapirer", () => {

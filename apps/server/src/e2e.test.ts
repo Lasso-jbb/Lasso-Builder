@@ -66,7 +66,7 @@ test("health svarer", async () => {
 test("tools og UI-ressource er registreret", async () => {
   const { tools } = await client.listTools();
   const names = tools.map((t) => t.name).sort();
-  assert.deepEqual(names, ["list_saved_pages", "remove_saved_page", "render_view", "resolve_view", "save_page", "save_view", "search_companies", "show_company", "show_person"]);
+  assert.deepEqual(names, ["list_saved_pages", "remove_saved_page", "render_view", "resolve_view", "save_page", "save_view", "search_companies", "search_persons", "show_company", "show_person"]);
   const show = tools.find((t) => t.name === "show_company")!;
   const uri = (show._meta as { ui?: { resourceUri?: string } }).ui?.resourceUri ?? "";
   // Adressen bærer app-versionen, så værten ikke genbruger en gemt, forældet render-app.
@@ -128,7 +128,12 @@ test("show_company komponerer ét skærmbillede ud fra data og hensigt", async (
   const eco = await client.callTool({ name: "show_company", arguments: { company: "99000001", focus: "oekonomi" } });
   const ecoSpec = (eco.structuredContent as { spec: ViewSpec }).spec;
   assert.ok(ecoSpec.components.some((c) => c.type === "LassoGroupedBarChart" || c.type === "LassoBarChart"), "mange år giver en graf");
-  assert.ok(ecoSpec.components.some((c) => c.type === "LassoMultiYearTable"), "4+ år giver flerårstabel");
+  // Ø13/B8 (A13): flerårstabellen med 10 år findes kun i ⅔ (vandret rulning i ½) og står ikke længere inden for
+  // højdebudgettet ved siden af regnskabslisten; "vis alt" (show_all) viser den.
+  const mt = ecoSpec.components.find((c) => c.type === "LassoMultiYearTable");
+  assert.ok(!mt?.width || mt.width === "two-thirds" || mt.width === "full", `flerårstabellen står aldrig under ⅔: ${mt?.width}`);
+  const ecoAll = await client.callTool({ name: "show_company", arguments: { company: "99000001", focus: "oekonomi", show_all: true } });
+  assert.ok((ecoAll.structuredContent as { spec: ViewSpec }).spec.components.some((c) => c.type === "LassoMultiYearTable"), "4+ år giver flerårstabel (vis alt)");
 });
 
 test("show_all (vis alt om X, brugervalg): show_company og show_person går ud over højdebudgettet", async () => {

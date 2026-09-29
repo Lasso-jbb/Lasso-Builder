@@ -59,7 +59,13 @@ export interface Register {
   liveNote?: string;
   /** Veje ind: hvor komponenten faktisk udsendes eller kan vælges. */
   veje: Route[];
-  bredde: { profil: WidthProfile; drivere?: ContentWidthDrivers };
+  /**
+   * Bredde-profil og typiske indholdsdrivere (A13-målingen med realistiske data). Pakkeren (B8) regner
+   * driverne for det konkrete element ud fra Dataset (driversOf i compose.ts); drivere her er det typiske
+   * indhold og dokumentation. `varianter` giver en variant sin egen profil (nøgle som gridVariantOf i
+   * catalog.ts, fx "show:current" for PersonRoles som liste), ligesom den har sin egen række i elementtabellen.
+   */
+  bredde: { profil: WidthProfile; drivere?: ContentWidthDrivers; varianter?: Record<string, { profil: WidthProfile; drivere?: ContentWidthDrivers }> };
 }
 
 /* ---------- A11: indholdsstyret mindstebredde ---------- */
@@ -72,14 +78,14 @@ export const WIDTH_THRESHOLDS = {
   /** Rækker pr. post, hvorfra et element regnes for "tæt" og får ét trin mere. */
   rowsPerItem: 3,
   /** Etiketlængde (tegn), hvorfra et element får ét trin mere. */
-  longestLabel: 24,
+  longestLabel: 32,
   /** Serier/kolonner side om side, hvorfra et element får ét trin mere. */
   series: 3,
 } as const;
 
 /**
  * Mindstebredden for et konkret element: typens min (GRID_RULES) hævet efter profil og indhold.
- *  - bred: aldrig under ⅔; tidsakse eller tæt indhold giver ét trin mere (op til fuld).
+ *  - bred: aldrig under ⅔; tidsakse OG tæt indhold giver ét trin mere (op til fuld). Justeret efter A13/B8: A13 målte fx OwnershipDiagram rent i ⅔ med lange navne.
  *  - smal: typens min (indholdet er kort); ingen hævning.
  *  - fleksibel: typens min, hævet ét trin ved tæt indhold eller tidsakse.
  * Pakkeren (B8) må aldrig lægge elementet smallere end dette; hellere udelade (højdebudget) eller give eget bånd.
@@ -92,7 +98,7 @@ export function contentMinWidth(profile: WidthProfile, typeMin: Width, d: Conten
   if (profile === "smal") return typeMin;
   if (profile === "bred") {
     const base = wider(typeMin, "two-thirds");
-    return dense || d.timeAxis ? step(base, 1) : base;
+    return dense && d.timeAxis ? step(base, 1) : base;
   }
   return dense || d.timeAxis ? step(typeMin, 1) : typeMin;
 }

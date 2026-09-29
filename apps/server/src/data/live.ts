@@ -5,6 +5,7 @@ import {
   type ActivityHeatmapVM,
   type IndustryBenchmarkVM,
   type MapVM,
+  type CreditRatingVM,
   type ScoreHistoryVM,
   type AuditorIndependenceVM,
   type ChangeFeedVM,
@@ -66,6 +67,8 @@ import { adaptPerson, adaptPersonNetwork, adaptPersonSearch, graphFromPersonRole
 import { adaptIndustryBenchmark, adaptMapPoints } from "../lasso/chartAdapters.js";
 import { adaptChrLivestock, adaptLiveNumber, adaptReportAnalysisSections, buildProductionUnits } from "../lasso/unitAdapters.js";
 import { loadCreditRating } from "../lasso/creditAdapters.js";
+import { historyFromCredit, pointsFromCredit, scoreFromCredit } from "../lasso/scoreAdapters.js";
+import type { ScoreStore } from "../scores/store.js";
 import { criteriaToFilters, DEFAULT_ACTIVE_STATUS_FILTER, filtersToCriteria, SERVER_SORT, type LassoFilter } from "../lasso/searchFilters.js";
 import { applyCriteria, needsFinancials, sortRows } from "./criteria-eval.js";
 import { searchPersonsTable, mapLimit, type ActivityHeatmapOptions, type ChangeFeedOptions, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
@@ -78,6 +81,9 @@ export const TEXT_SECTIONS_BUDGET_MS = 8_000;
 
 /** Så længe venter kreditvurderingen på Creditsafe (5–45 s ved live beregning), før "beregner stadig" vises. */
 export const CREDIT_BUDGET_MS = 12_000;
+
+/** Så længe et færdigt kreditsvar deles mellem komponenterne på samme side (score, historik, kreditvurdering). */
+export const CREDIT_SHARE_MS = 30_000;
 
 /**
  * Så længe venter en visning på risikoobservationer, før resten hellere må vises uden. Målt
@@ -129,7 +135,17 @@ export class LiveProvider implements DataProvider {
   constructor(
     private readonly client: LassoClient,
     private readonly config: Config,
+    /** Rating-historik (C2). Uden lager afledes historikken kun af det aktuelle opslag. */
+    private readonly scores?: ScoreStore,
   ) {}
+
+  /**
+   * Ét kreditopslag pr. virksomhed ad gangen: score, scorehistorik og kreditvurdering på samme side
+   * (resolve.ts henter dem parallelt) deler samme løfte, så Creditsafe aldrig kaldes for scorens skyld.
+   * Færdige svar huskes kort (CREDIT_SHARE_MS), så også en side, der henter dem efter hinanden, deler det.
+   * "Beregner stadig" huskes ikke, så "Hent igen" straks prøver på ny.
+   */
+  private readonly creditShared = new Map<string, { promise: Promise<CreditRatingVM> }>();
 
   /** Sikrer at CHR-svarets form kun logges én gang pr. kørende server, ikke pr. opslag. */
   private chrShapeLogged = false;
@@ -359,9 +375,12 @@ export class LiveProvider implements DataProvider {
     return adaptOwnership(lassoId, await companyRaw);
   }
 
-  /** Katalog 10: der er endnu ingen bekræftet Lasso-kilde til en 0–100 score. "Ikke oplyst", ikke en fejl. */
+  /**
+   * Katalog 10 / C1 (docs/plan-c1-c2-score.md): scoren afledes af Creditsafe-ratingen (kun med abonnement) og
+   * bruger samme delte opslag som creditRating(); aldrig et kald for scorens skyld. Kaster aldrig.
+   */
   async score(lassoId: string): Promise<ScoreVM> {
-    return { lassoId, score: null };
+    return scoreFromCredit(lassoId, await this.creditRating(lassoId));
   }
 
   async beneficialOwnership(lassoId: string) {
@@ -463,7 +482,20 @@ export class LiveProvider implements DataProvider {
    * Katalog 17: Creditsafe via Lasso (docs/endpoints-creditsafe.md). Aldrig skipCache: Lassos 24-timers cache og
    * klientens egen cache bruges altid. 401/403 = låst, 404/tomt = ikke beregnet, timeout = beregner stadig.
    */
-  async creditRating(lassoId: string) {
+  creditRating(lassoId: string): Promise<CreditRatingVM> {
+    const hit = this.creditShared.get(lassoId);
+    if (hit) return hit.promise;
+    const entry = { promise: this.fetchCreditRating(lassoId) };
+    this.creditShared.set(lassoId, entry);
+    void entry.promise.then((r) => {
+      if (r.state === "unavailable" && r.reason === CREDIT_PENDING_REASON) {
+        if (this.creditShared.get(lassoId) === entry) this.creditShared.delete(lassoId);
+      } else setTimeout(() => this.creditShared.get(lassoId) === entry && this.creditShared.delete(lassoId), CREDIT_SHARE_MS).unref();
+    });
+    return entry.promise;
+  }
+
+  private async fetchCreditRating(lassoId: string): Promise<CreditRatingVM> {
     // Creditsafe kan tage 5–45 s, når vurderingen beregnes live. Visningen venter højst CREDIT_BUDGET_MS;
     // derefter vises "beregner stadig" med "Hent igen", mens kaldet kører færdigt og lander i klientens cache.
     const rating = await withinBudget(loadCreditRating(lassoId, (cvr) => this.client.creditsafeRating(cvr)), CREDIT_BUDGET_MS);
@@ -732,9 +764,25 @@ export class LiveProvider implements DataProvider {
     const feed = adaptChangeFeed(results, { listName: job.name ?? opts.list, days, types: opts.types, monitored, now });
     return feed.entries.length ? feed : { ...feed, emptyReason: `Ingen ændringer i "${feed.listName ?? "overvågningen"}" de seneste ${days} dage.` };
   }
-  /** Katalog 18.2: ingen bekræftet Lasso-kilde til en 0–100 score, derfor heller ingen historik. Tom med årsag, ikke en fejl. */
+  /**
+   * Katalog 18.2 / C2: historikken bygges af de vurderinger, vi har set (score_points). Bruger det delte
+   * kreditopslag (intet ekstra Creditsafe-kald); uden abonnement er den tom og intet skrives. Skrivningen sker
+   * efter svaret (fire-and-forget), så siden ikke venter på databasen; det friske punkt lægges i svaret alligevel.
+   */
   async scoreHistory(lassoId: string): Promise<ScoreHistoryVM> {
-    return { lassoId, points: [], reason: "Lasso har endnu ingen score for virksomheden, så der er ingen historik at vise." };
+    const rating = await this.creditRating(lassoId);
+    let stored: Awaited<ReturnType<ScoreStore["history"]>> = [];
+    if (rating.state === "ok" && this.scores) {
+      const store = this.scores;
+      const fresh = pointsFromCredit(lassoId, rating);
+      if (fresh.length > 0) void store.record(fresh).catch((err: unknown) => console.warn(`[scores] kunne ikke gemme score for ${lassoId}: ${err instanceof Error ? err.message : String(err)}`));
+      try {
+        stored = await store.history(lassoId);
+      } catch (err) {
+        console.warn(`[scores] kunne ikke læse historik for ${lassoId}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+    return historyFromCredit(lassoId, rating, stored);
   }
 
   /**

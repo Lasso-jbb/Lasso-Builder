@@ -11,6 +11,7 @@ export {
   resolveView,
   saveView,
   searchCompanies,
+  searchPersons,
   showCompany,
   showPerson,
   type CompanyView,
@@ -18,6 +19,7 @@ export {
   type SavedViewResult,
   type SaveViewInput,
   type SearchInput,
+  type SearchPersonsInput,
   type ShowCompanyInput,
 } from "./views.js";
 export {

@@ -1,4 +1,5 @@
-import { gridRuleOf, type GridRule } from "./catalog.js";
+import { gridRuleOf, widthProfileOf, type GridRule } from "./catalog.js";
+import { contentMinWidth, sharedMaxWidth } from "./register.js";
 import { WIDTH_COLUMNS, WIDTHS, type ViewComponent, type Width } from "./spec.js";
 
 /**
@@ -145,17 +146,74 @@ export type HeightFn = (c: ViewComponent, width: Width) => number;
 /** Typer, der altid står i eget fuldbånd (ud over dem med min = 1/1): hoved, nøgletalskort, persontal, opfølgning. */
 const FULL_BAND_TYPES = new Set<ViewComponent["type"]>(["LassoCompanyHead", "LassoPersonHead", "LassoKeyFigureCards", "LassoPersonStats", "LassoFollowUps"]);
 
-function isFullBand(c: ViewComponent): boolean {
+/* ---------- Bredde pr. element (Ø13, B8) ---------- */
+
+/**
+ * Mindstebredden for et konkret element (Ø13): typens min hævet efter profil og indhold
+ * (contentMinWidth). Komponisten (packPage) regner den med driverne fra Dataset (driversOf);
+ * uden data bruges profilen alene (defaultMinWidth).
+ */
+export type MinWidthFn = (c: ViewComponent) => Width;
+
+const widthIndex = (w: Width) => WIDTHS.indexOf(w);
+const clampWidth = (w: Width, lo: Width, hi: Width): Width => (widthIndex(w) < widthIndex(lo) ? lo : widthIndex(w) > widthIndex(hi) ? hi : w);
+
+/**
+ * Mindstebredden med indholdsdriverne `drivers` (fx fra driversOf), altid inden for typens min–max:
+ * hæver contentMinWidth over typens max (fx flerårstabellen, der kun findes i ⅔), er max grænsen.
+ */
+export function elementMinWidth(c: ViewComponent, drivers: Parameters<typeof contentMinWidth>[2] = {}): Width {
+  const r = gridRuleOf(c);
+  return clampWidth(contentMinWidth(widthProfileOf(c).profil, r.min, drivers), r.min, r.max);
+}
+
+/** Mindstebredden uden kendskab til indholdet: profilen og typens min (bred aldrig under ⅔). */
+export const defaultMinWidth: MinWidthFn = (c) => elementMinWidth(c);
+
+/**
+ * Elementets tilladte bredder i pakningen: [mindstebredde; max], hvor max for et element, der deler bånd
+ * med andre (alle stakke i et delt bånd), er sharedMaxWidth: smal højst ½. En eksplicit width låser bredden.
+ */
+interface Widths {
+  min: MinWidthFn;
+}
+
+function minOf(ws: Widths, c: ViewComponent): Width {
+  const r = gridRuleOf(c);
+  return clampWidth(ws.min(c), r.min, r.max);
+}
+
+function sharedMaxOf(ws: Widths, c: ViewComponent): Width {
+  const r = gridRuleOf(c);
+  const max = sharedMaxWidth(widthProfileOf(c).profil, r.max, false);
+  const min = minOf(ws, c);
+  return widthIndex(max) < widthIndex(min) ? min : max;
+}
+
+function isFullBand(c: ViewComponent, ws: Widths): boolean {
   // En eksplicit bredde vinder (render_view, fx mønster 7: analyse ¾ + nøgletal ¼).
   if (c.width) return c.width === "full";
   if (FULL_BAND_TYPES.has(c.type)) return true;
-  return gridRuleOf(c).min === "full";
+  // Min 1/1 efter indholdet (fx netværket med lange navne, tre rækker pr. person og tidsakse): eget bånd.
+  return minOf(ws, c) === "full";
 }
 
-/** Må elementet stå i bredden? En eksplicit width låser bredden; ellers gælder elementets min/max. */
-export function fitsWidth(c: ViewComponent, width: Width): boolean {
+/** Standardbredden inden for elementets tilladte bredder i et delt bånd (til widthPenalty). */
+function sharedStdOf(ws: Widths, c: ViewComponent): Width {
+  return clampWidth(gridRuleOf(c).std, minOf(ws, c), sharedMaxOf(ws, c));
+}
+
+/**
+ * Må elementet stå i bredden i et delt bånd? En eksplicit width låser bredden; ellers gælder elementets
+ * mindstebredde (min, som standard defaultMinWidth) og max ved deling (smal højst ½).
+ */
+export function fitsWidth(c: ViewComponent, width: Width, min: MinWidthFn = defaultMinWidth): boolean {
+  return fits(c, width, { min });
+}
+function fits(c: ViewComponent, width: Width, ws: Widths): boolean {
   if (c.width) return c.width === width;
-  return allowsWidth(gridRuleOf(c), width);
+  const i = widthIndex(width);
+  return i >= widthIndex(minOf(ws, c)) && i <= widthIndex(sharedMaxOf(ws, c));
 }
 
 interface Candidate {
@@ -242,7 +300,7 @@ function inversionsOf(seq: readonly number[]): number {
  * fyldes stakken grådigt så langt, den kan. Er en stak blevet højere end ankeret, fyldes de korte
  * stakke (også ankerets) op mod den i en anden runde.
  */
-function fillBand(combo: readonly number[], comboIndex: number, slot: number, rest: readonly ViewComponent[], anchorIndex: number, h: HeightFn, GAP: number): Candidate | null {
+function fillBand(combo: readonly number[], comboIndex: number, slot: number, rest: readonly ViewComponent[], anchorIndex: number, h: HeightFn, GAP: number, ws: Widths): Candidate | null {
   const anchor = rest[anchorIndex]!;
   const stacks: PackedStack[] = combo.map((cols) => ({ width: widthOfColumns(cols), items: [], height: 0 }));
   const H = h(anchor, stacks[slot]!.width);
@@ -254,7 +312,7 @@ function fillBand(combo: readonly number[], comboIndex: number, slot: number, re
     const eligible: number[] = [];
     for (let k = 0; k < rest.length && eligible.length < MAX_ELIGIBLE; k++) {
       const c = rest[k]!;
-      if (!used.has(k) && !isFullBand(c) && fitsWidth(c, s.width)) eligible.push(k);
+      if (!used.has(k) && !isFullBand(c, ws) && fits(c, s.width, ws)) eligible.push(k);
     }
     const gap = (n: number) => (s.items.length + n > 0 ? GAP : 0);
     // Elementet i stakkens bredde, evt. med færre rækker (flex rækker), så det højst fylder `room`.
@@ -303,7 +361,7 @@ function fillBand(combo: readonly number[], comboIndex: number, slot: number, re
   const heights = stacks.map((s) => s.height);
   const max = Math.max(...heights);
   const deviation = max > 0 ? (max - Math.min(...heights)) / max : 0;
-  const widthPenalty = stacks.reduce((sum, s) => sum + s.items.reduce((a, c) => a + Math.abs(WIDTH_COLUMNS[s.width] - WIDTH_COLUMNS[c.width ?? gridRuleOf(c).std]), 0), 0);
+  const widthPenalty = stacks.reduce((sum, s) => sum + s.items.reduce((a, c) => a + Math.abs(WIDTH_COLUMNS[s.width] - WIDTH_COLUMNS[c.width ?? sharedStdOf(ws, originOf(c))]), 0), 0);
   const rank = (c: ViewComponent) => rest.indexOf(originOf(c));
   const stackInversions = inversionsOf(stacks.map((s) => Math.min(...s.items.map(rank))));
   const inversions = inversionsOf(stacks.flatMap((s) => s.items.map(rank)));
@@ -327,23 +385,27 @@ function better(a: Candidate, b: Candidate): boolean {
 }
 
 /** Bedste delte bånd med rest[anchorIndex] som anker i sin bredde, eller null, hvis ingen kombination kan fyldes. */
-function bestBand(rest: readonly ViewComponent[], anchorIndex: number, h: HeightFn, gap: number): Candidate | null {
+function bestBand(rest: readonly ViewComponent[], anchorIndex: number, h: HeightFn, gap: number, ws: Widths): Candidate | null {
   const anchor = rest[anchorIndex]!;
-  const rule = gridRuleOf(anchor);
   // Ankeret prøves i sin standardbredde (eller sin eksplicitte width) og i de øvrige tilladte bredder;
   // widthPenalty gør, at standardbredden vinder, når den giver et bånd inden for 15 %.
-  const explicit = anchor.width && anchor.width !== "full" ? anchor.width : undefined;
-  const widths = new Set((explicit ? [explicit] : WIDTHS.filter((w) => w !== "full" && allowsWidth(rule, w))).map((w) => WIDTH_COLUMNS[w]));
+  const widths = sharedWidthsOf(anchor, ws);
   let best: Candidate | null = null;
   BAND_COMBOS.forEach((combo, comboIndex) => {
     if (combo.length < 2) return;
     combo.forEach((c, slot) => {
       if (!widths.has(c)) return;
-      const cand = fillBand(combo, comboIndex, slot, rest, anchorIndex, h, gap);
+      const cand = fillBand(combo, comboIndex, slot, rest, anchorIndex, h, gap, ws);
       if (cand && (!best || better(cand, best))) best = cand;
     });
   });
   return best;
+}
+
+/** Kolonnetallene, et element må stå i som stak i et delt bånd (eksplicit width, ellers min–max ved deling). */
+function sharedWidthsOf(c: ViewComponent, ws: Widths): Set<number> {
+  const explicit = c.width && c.width !== "full" ? c.width : undefined;
+  return new Set((explicit ? [explicit] : WIDTHS.filter((w) => w !== "full" && fits(c, w, ws))).map((w) => WIDTH_COLUMNS[w]));
 }
 
 /** Så mange elementer frem ledes der efter et højt anker, når det første element ikke kan bære et bånd. */
@@ -373,26 +435,33 @@ const TALL = new Set<GridRule["height"]>(["high", "very-high"]);
 export interface PackOptions {
   /** Lodret afstand mellem elementer i en stak (standard GRID_GAP = 24). Layout 'columns' bruger 0 og lægger luften i elementhøjden. */
   gap?: number;
+  /**
+   * Elementets mindstebredde (Ø13). Komponisten giver den indholdsstyrede (packPage: driversOf fra Dataset);
+   * standard er defaultMinWidth (profil og typens min). Et element lægges aldrig smallere: hellere eget
+   * bånd (min 1/1) eller udeladt af højdebudgettet.
+   */
+  minWidth?: MinWidthFn;
 }
 
 export function packBands(items: readonly ViewComponent[], h: HeightFn, options: PackOptions = {}): PackedBand[] {
   const gap = options.gap ?? GRID_GAP;
+  const ws: Widths = { min: options.minWidth ?? defaultMinWidth };
   const bands: PackedBand[] = [];
   let rest = [...items];
   while (rest.length > 0) {
     const first = rest[0]!;
-    if (isFullBand(first)) {
+    if (isFullBand(first, ws)) {
       bands.push(fullBand(first, h));
       rest = rest.slice(1);
       continue;
     }
-    let chosen = bestBand(rest, 0, h, gap);
+    let chosen = bestBand(rest, 0, h, gap, ws);
     // Også når båndet kun holder 15 % ved at skære rækker væk: et højt anker længere fremme kan give et bånd uden.
     if (!chosen || chosen.deviation > BAND_MAX_DEVIATION || chosen.shrunk > 0) {
       for (let k = 1; k < rest.length && k <= ANCHOR_LOOKAHEAD; k++) {
         const c = rest[k]!;
-        if (isFullBand(c) || !TALL.has(gridRuleOf(c).height)) continue;
-        const alt = bestBand(rest, k, h, gap);
+        if (isFullBand(c, ws) || !TALL.has(gridRuleOf(c).height)) continue;
+        const alt = bestBand(rest, k, h, gap, ws);
         if (alt && alt.used.has(0) && alt.deviation <= BAND_MAX_DEVIATION && (!chosen || better(alt, chosen))) chosen = alt;
         break;
       }
@@ -411,7 +480,7 @@ export function packBands(items: readonly ViewComponent[], h: HeightFn, options:
     // bånds korteste stak, når det holder båndet inden for 15 %; ellers står de i fuld bredde.
     if (rule.max !== "full" || rule.height === "low") {
       const prev = bands.at(-1);
-      if (prev && prev.stacks.length > 1 && stakfyld(prev, first, h, gap)) continue;
+      if (prev && prev.stacks.length > 1 && stakfyld(prev, first, h, gap, ws)) continue;
     }
     bands.push(fullBand(first, h));
   }
@@ -425,7 +494,7 @@ export function packBands(items: readonly ViewComponent[], h: HeightFn, options:
  * Returnerer false, hvis ingen stak tillader elementets bredde, eller hvis båndet ville afvige mere end
  * 15 % (og mere end før).
  */
-function stakfyld(band: PackedBand, c: ViewComponent, h: HeightFn, gap: number): boolean {
+function stakfyld(band: PackedBand, c: ViewComponent, h: HeightFn, gap: number, ws: Widths): boolean {
   const heightOf = (items: readonly ViewComponent[], w: Width) => items.reduce((sum, x, i) => sum + (i > 0 ? gap : 0) + h(x, w), 0);
   let best: { stacks: ViewComponent[][]; deviation: number } | null = null;
   const consider = (stacks: ViewComponent[][]) => {
@@ -435,12 +504,12 @@ function stakfyld(band: PackedBand, c: ViewComponent, h: HeightFn, gap: number):
     if (!best || deviation < best.deviation - 1e-9) best = { stacks, deviation };
   };
   band.stacks.forEach((s, i) => {
-    if (!fitsWidth(c, s.width)) return;
+    if (!fits(c, s.width, ws)) return;
     consider(band.stacks.map((x, k) => (k === i ? [...x.items, c] : [...x.items])));
     s.items.forEach((y, yi) => {
       if (yi === 0) return;
       band.stacks.forEach((t, j) => {
-        if (j === i || !fitsWidth(y, t.width)) return;
+        if (j === i || !fits(originOf(y), t.width, ws)) return;
         consider(band.stacks.map((x, k) => (k === i ? [...x.items.filter((z) => z !== y), c] : k === j ? [...x.items, y] : [...x.items])));
       });
     });
@@ -549,7 +618,7 @@ export function packWithinBudget(items: readonly ViewComponent[], h: HeightFn, o
   let absorb = false;
   const pack = (list: readonly ViewComponent[]) => {
     let bands = packBands(list, h, options);
-    if (absorb) bands = absorbAlone(bands, list, h, gap);
+    if (absorb) bands = absorbAlone(bands, list, h, gap, { min: options.minWidth ?? defaultMinWidth });
     return { bands, height: pageHeight(bands, gap), deviation: Math.max(0, ...bands.map((b) => b.deviation)) };
   };
   // En ændring må ikke gøre båndene skæve: højst 15 % afvigelse, eller ikke værre end før.
@@ -655,14 +724,14 @@ export const ABSORB_MAX_DEVIATION = 0.25;
  * elementer + elementet kan stå i én lovlig kombination (fx relationer ½ | graf ½ + kontakt → 3+6+3) og
  * båndet ikke bliver højere end før plus elementet alene. Prioriteten bestemmer stakkenes rækkefølge.
  */
-function absorbAlone(bands: PackedBand[], list: readonly ViewComponent[], h: HeightFn, gap: number): PackedBand[] {
+function absorbAlone(bands: PackedBand[], list: readonly ViewComponent[], h: HeightFn, gap: number, ws: Widths): PackedBand[] {
   const out = [...bands];
   const rank = (c: ViewComponent) => list.indexOf(originOf(c));
   for (let i = 0; i < out.length; i++) {
     const b = out[i]!;
     if (b.stacks.length !== 1 || b.stacks[0]!.items.length !== 1) continue;
     const c = b.stacks[0]!.items[0]!;
-    if (isFullBand(c)) continue;
+    if (isFullBand(c, ws)) continue;
     // Nabobåndene: først det foregående delte bånd, så det næste.
     let pick: { j: number; cand: Candidate; height: number } | null = null;
     for (const j of [i - 1, i + 1]) {
@@ -672,13 +741,12 @@ function absorbAlone(bands: PackedBand[], list: readonly ViewComponent[], h: Hei
       let cand: Candidate | null = null;
       // Alle kombinationer med alle elementerne (ikke kun bestBand's bedste, der foretrækker ≤ 15 % med færre elementer).
       subset.forEach((a, k) => {
-        const explicit = a.width && a.width !== "full" ? a.width : undefined;
-        const widths = new Set((explicit ? [explicit] : WIDTHS.filter((w) => w !== "full" && allowsWidth(gridRuleOf(a), w))).map((w) => WIDTH_COLUMNS[w]));
+        const widths = sharedWidthsOf(a, ws);
         BAND_COMBOS.forEach((combo, comboIndex) => {
           if (combo.length < nb.stacks.length) return;
           combo.forEach((cols, slot) => {
             if (!widths.has(cols)) return;
-            const x = fillBand(combo, comboIndex, slot, subset, k, h, gap);
+            const x = fillBand(combo, comboIndex, slot, subset, k, h, gap, ws);
             if (x && x.used.size === subset.length && (!cand || better(x, cand))) cand = x;
           });
         });

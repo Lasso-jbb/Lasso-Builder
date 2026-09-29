@@ -1,11 +1,13 @@
-import { changeFeedKey, entityRefOf } from "./models.js";
+import { changeFeedKey, entityRefOf, ownershipGraphKey } from "./models.js";
 import { changePercent, formatDate, formatNumber, formatPercent, percentChange } from "./format.js";
 import { askFocus, askLabel, askPlan, SUMMARY_PENDING_TEXT, withRelated, type Ask, type AskItem } from "./ask.js";
 import { companyFactOptions, companyFacts, sameAddress } from "./companyFacts.js";
 import type { Dataset, FinancialYear } from "./models.js";
 import { hasNoStatements } from "./statements.js";
 import { effectiveMetric, mainMetric } from "./series.js";
-import { bandsToComponents, measuredHeight, packWithinBudget, PAGE_HEIGHT_BUDGET, type PackedBand } from "./grid.js";
+import { bandsToComponents, elementMinWidth, measuredHeight, packWithinBudget, PAGE_HEIGHT_BUDGET, type MinWidthFn, type PackedBand } from "./grid.js";
+import { personCompanies } from "./person.js";
+import type { ContentWidthDrivers } from "./register.js";
 import {
   componentSchema,
   formatMetricValue,
@@ -397,6 +399,104 @@ export function gridHeight(c: ViewComponent, width: Width, ds: Dataset, page: re
   return Math.max(TITLE_PX, Math.round(base + (w - std) * perUnit));
 }
 
+/* ---------- Ø13: indholdsstyret mindstebredde (B8) ---------- */
+
+const yearOf = (d?: string): number | undefined => {
+  const y = d ? Number(d.slice(0, 4)) : NaN;
+  return Number.isFinite(y) ? y : undefined;
+};
+/** Årsspænd fra første til sidste år (til: i dag, når en periode er åben). */
+function yearSpan(periods: readonly { from?: string; to?: string }[]): number {
+  const now = new Date().getFullYear();
+  const froms = periods.map((p) => yearOf(p.from)).filter((y): y is number => y !== undefined);
+  if (froms.length === 0) return 0;
+  const tos = periods.map((p) => yearOf(p.to) ?? now);
+  return Math.max(...tos) - Math.min(...froms);
+}
+const longest = (names: readonly (string | undefined)[]): number | undefined => {
+  const n = Math.max(0, ...names.map((x) => x?.length ?? 0));
+  return n > 0 ? n : undefined;
+};
+/** Tidsakse = mere end 5 år på aksen (A13: grafer viser højst 5 år; tidsbånd fra år til år). */
+const TIME_AXIS_YEARS = 5;
+
+/**
+ * Indholdsdriverne (register.ContentWidthDrivers) for et konkret element ud fra det, det faktisk viser i
+ * Dataset: rækker pr. post, længste navn, tidsakse (år > 5) og serier/kolonner side om side. Kun de
+ * drivere, der følger af data; typer uden data-afhængig bredde giver {} (typens min og profil gælder).
+ * Bruges af pakkeren (packPage) gennem contentMinWidth.
+ */
+export function driversOf(c: ViewComponent, ds: Dataset): ContentWidthDrivers {
+  switch (c.type) {
+    case "LassoPersonNetwork": {
+      // "Sidder sammen med": op til 3 selskaber (rækker) pr. person, selskab og rolle på linjen, tidsakse fra første til seneste år.
+      const people = (ds.personNetworks[c.person]?.people ?? []).slice(0, c.limit ?? 3);
+      const companies = people.flatMap((p) => p.companies.slice(0, 3));
+      return {
+        rowsPerItem: Math.max(0, ...people.map((p) => Math.min(3, p.companies.length))) || undefined,
+        longestLabel: longest([...people.map((p) => p.name), ...companies.map((x) => `${x.companyName}${x.role ? `, ${x.role}` : ""}`)]),
+        timeAxis: yearSpan(companies) > TIME_AXIS_YEARS || undefined,
+      };
+    }
+    case "LassoPersonRoles": {
+      const p = ds.persons[c.person];
+      if (!p) return {};
+      const companies = personCompanies(p);
+      return {
+        rowsPerItem: Math.max(0, ...companies.map((x) => x.roles.length)) || undefined,
+        longestLabel: longest(companies.map((x) => x.companyName)),
+        // Tidsbåndet (show 'all') har en tidsakse; listerne har ingen.
+        timeAxis: ((c.show ?? "all") === "all" && yearSpan(p.roles) > TIME_AXIS_YEARS) || undefined,
+      };
+    }
+    case "LassoOwnershipDiagram": {
+      const g = ds.ownershipGraphs[ownershipGraphKey(c)];
+      return { longestLabel: longest(g?.nodes.map((n) => n.name) ?? []) };
+    }
+    case "LassoBarChart":
+    case "LassoGroupedBarChart":
+    case "LassoLineChart":
+    case "LassoStackedBarChart":
+    case "LassoMultiYearTable": {
+      const company = "company" in c && typeof c.company === "string" ? c.company : undefined;
+      const years = company ? (ds.financials[company]?.years.length ?? 0) : 0;
+      const shown = Math.min(years, "years" in c && typeof c.years === "number" ? c.years : 5);
+      const series = c.type === "LassoGroupedBarChart" ? c.metrics?.length : c.type === "LassoMultiYearTable" ? shown : undefined;
+      return { timeAxis: shown > TIME_AXIS_YEARS || undefined, series: series || undefined };
+    }
+    case "LassoCompareTable":
+      return { series: c.companies.length, longestLabel: longest(c.companies.map((id) => ds.companies[id]?.name)) };
+    case "LassoRanking":
+      return { series: c.companies.length, longestLabel: longest(c.companies.map((id) => ds.companies[id]?.name)) };
+    case "LassoNews": {
+      // Overskrift, uddrag og kilde/tid: tre rækker pr. artikel, når der er uddrag.
+      const items = ds.news[entityRefOf(c) ?? ""]?.items ?? [];
+      return { rowsPerItem: items.length ? (items.some((i) => i.excerpt) ? 3 : 2) : undefined };
+    }
+    case "LassoProductionUnits":
+      return { longestLabel: longest((ds.productionUnits[c.company]?.units ?? []).map((u) => u.name)) };
+    case "LassoAuditorIndependence":
+      return { longestLabel: longest((ds.auditorIndependence?.[c.company]?.relations ?? []).map((r) => r.name)) };
+    default:
+      return {};
+  }
+}
+
+/** Mindstebredden for et element på siden (Ø13): typens min hævet efter profil og indhold (driversOf), inden for typens max. */
+export function contentWidthOf(c: ViewComponent, ds: Dataset): Width {
+  let drivers: ContentWidthDrivers = {};
+  try {
+    drivers = driversOf(c, ds);
+  } catch {
+    // Ufuldstændige data (fx en visning uden hentede data): typens min og profil gælder.
+  }
+  return elementMinWidth(c, drivers);
+}
+/** contentWidthOf som pakkerens minWidth (PackOptions). */
+export function contentMinWidthFn(ds: Dataset): MinWidthFn {
+  return (c) => contentWidthOf(c, ds);
+}
+
 /**
  * I layout 'columns' har hvert element 24 px luft over og under (.lasso-column__item) i stedet for et
  * gap på 24 mellem kort; en stak med n elementer er derfor Σh + 48·n høj. Pakningen regner med gap 0
@@ -421,7 +521,9 @@ export function packPage(
   options: PackPageOptions = {},
 ): { bands: PackedBand[]; components: ViewComponent[]; height: number; dropped: ViewComponent[]; compacted: ViewComponent[] } {
   // Højderne regnes med hele sidens elementer (page), så de tager hensyn til, hvad andre elementer viser.
-  const r = packWithinBudget(items, (c, width) => gridHeight(c, width, ds, items) + ITEM_PADDING, { gap: 0, budget: options.budget, keep: options.keep });
+  // Mindstebredden efter indholdet (Ø13): et bredt element med lange navne, mange rækker eller tidsakse
+  // lægges aldrig smallere; hellere eget bånd eller udeladt af højdebudgettet.
+  const r = packWithinBudget(items, (c, width) => gridHeight(c, width, ds, items) + ITEM_PADDING, { gap: 0, budget: options.budget, keep: options.keep, minWidth: contentMinWidthFn(ds) });
   return { ...r, components: bandsToComponents(r.bands) };
 }
 
