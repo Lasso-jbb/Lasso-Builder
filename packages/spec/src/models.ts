@@ -119,7 +119,7 @@ export interface ContactPersonVM {
   phoneNote?: string;
   /** Muted tekst under e-mailen, fx "Personlig" eller "Fælles". */
   emailNote?: string;
-  /** Kilder til personen i panelet: navn (link, når url er sat), hvad kilden siger og dato. */
+  /** Kilder til personen. Vises ikke (Jakob runde 6: ingen kildevisning, heller ikke i 08.7-panelet). */
   sources?: { label: string; url?: string; text?: string; date?: string }[];
 }
 
@@ -401,7 +401,7 @@ export interface TextSectionsVM {
   analysisBasis?: string;
   /** 19.3: analysens overskrift 17/600, fx "Vækst i toplinjen, men omkostningerne løber hurtigere". */
   analysisHeadline?: string;
-  /** 19.3: kilderne bag analysen ("Vis kilder (4)"), fx "Årsrapport 2025". */
+  /** Kilderne bag analysen, fx "Årsrapport 2025". Vises ikke (Jakob runde 6: ingen kildevisning); beholdt for bagudkompatibilitet. */
   analysisSources?: string[];
 }
 

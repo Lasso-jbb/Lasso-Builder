@@ -262,10 +262,17 @@ test("PersonNetwork (16.3): tidsbånd pr. fælles selskab, limit 3 som standard 
   assert.match(net(), /lasso-personnet__band"/);
   assert.match(net(), /Eksempel Byg A\/S, bestyrelse, siden 2012/);
   assert.doesNotMatch(net(), /Vis som graf/);
-  // Afsluttet = stiplet bånd; konkurs = rød markør og ordet.
+  // Afsluttet = stiplet bånd; konkurs (runde 6) = rødt bånd og ", under konkurs" sidst i etiketten; ingen markør.
   const ended = renderToStaticMarkup(createElement(PersonNetwork, { network: { lassoId: ID, people: [{ name: "Peter Eksempel", overlapYears: 4, active: false, companies: [{ companyName: "Eksempel Energi A/S", role: "direktør", from: "2014-01-01", to: "2018-01-01", status: "Under konkurs", statusKind: "warning" }] }] } }));
-  assert.match(ended, /lasso-personnet__band lasso-personnet__band--ended/);
-  assert.match(ended, /lasso-personnet__marker[^>]*aria-label="Eksempel Energi A\/S, under konkurs"/);
+  assert.match(ended, /lasso-personnet__band lasso-personnet__band--ended lasso-personnet__band--problem/);
+  assert.doesNotMatch(ended, /lasso-personnet__marker/);
+  assert.match(ended, /Eksempel Energi A\/S, direktør, 2014–2018<\/span><span class="lasso-personnet__label--short">Eksempel Energi A\/S, direktør<\/span><span class="lasso-personnet__bandstatus">, under konkurs<\/span>/);
+  assert.match(ended, /lasso-personnet__swatch--bankrupt"><\/span>Under konkurs</);
+  // Løbende rolle i et selskab under konkurs: fyldt rødt bånd (ikke stiplet).
+  const running = renderToStaticMarkup(createElement(PersonNetwork, { network: { lassoId: ID, people: [{ name: "Peter Eksempel", overlapYears: 4, active: true, companies: [{ companyName: "Eksempel Energi A/S", role: "direktør", from: "2014-01-01", status: "Under konkurs", statusKind: "warning" }] }] } }));
+  assert.match(running, /class="lasso-personnet__band lasso-personnet__band--problem"/);
+  // Uden problemstatus: intet rødt og ingen "Under konkurs" i legenden.
+  assert.doesNotMatch(net(), /band--problem|Under konkurs/);
   assert.match(ended, /1 fælles selskab, afsluttet/);
   assert.match(ended, />tidligere</);
 });

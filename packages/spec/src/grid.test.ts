@@ -63,7 +63,7 @@ test("23.1 F: pakningen gengiver gridmodellens tre verificerede sider (overblik,
     docHeight,
   );
   assert.deepEqual(shape(overblik), ["12:CompanyHead", "12:KeyFigureCards", "6:TextSections | 6:KeyValueList", "3:Relations | 6:BarChart | 3:Contact", "6:Timeline | 6:News+Shortcuts"]);
-  assert.deepEqual(overblik.map((b) => b.height), [87, 138, 662, 300, 338]);
+  assert.deepEqual(overblik.map((b) => b.height), [34, 138, 662, 300, 338]); // hoved 34 (Fable runde 6, I4Y-0)
 
   const oekonomi = packBands(
     [c("LassoCompanyHead"), c("LassoKeyFigureCards"), c("LassoGroupedBarChart"), c("LassoWaterfallChart"), c("LassoKeyValueList", { variant: "financials" }), c("LassoShareBars"), c("LassoMultiYearTable"), c("LassoTextSections", { variant: "analyse", width: "full" })],

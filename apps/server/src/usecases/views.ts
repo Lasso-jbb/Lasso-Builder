@@ -130,6 +130,8 @@ export interface ShowCompanyInput {
   question?: string;
   /** Nøgletal, modellen har genkendt i spørgsmålet (lægges forrest i spørgsmålsprofilen). */
   metrics?: Metric[];
+  /** "Vis alt om X" (brugervalg): alle elementer i fuld form, også ud over højdebudgettet (23.3). */
+  show_all?: boolean;
 }
 
 export interface CompanyView extends ViewData {
@@ -150,7 +152,7 @@ export const companyNameHints = (name: string | undefined) => (name ? [name, sho
  */
 export async function showCompany(ctx: UseCaseCtx, input: ShowCompanyInput): Promise<CompanyView | UseCaseError> {
   const { config, provider } = ctx;
-  const { company, sections, chart_metric, years } = input;
+  const { company, sections, chart_metric, years, show_all } = input;
   let lassoId = toLassoId(company, config.LASSO_COMPANY_ID_PREFIX);
   let note: string | undefined;
   let official: string | undefined;
@@ -186,7 +188,7 @@ export async function showCompany(ctx: UseCaseCtx, input: ShowCompanyInput): Pro
   // Ældre kald med faste sektioner får skabelonen; ellers komponeres ud fra datas form.
   const spec: ViewSpec = sections?.length
     ? companyTemplate(lassoId, { sections, chartMetric: chart_metric, years, name })
-    : composeCompany(lassoId, dataset, { focus, years, chartMetric: chart_metric, name, ask });
+    : composeCompany(lassoId, dataset, { focus, years, chartMetric: chart_metric, name, ask, ...(show_all ? { showAll: true } : {}) });
   const cvr = cvrFromLassoId(lassoId);
   // Linket åbner samme visning (focus og spørgsmål) med samme hovednøgletal som i chatten (review P2-7).
   const link = cvr
@@ -219,6 +221,8 @@ export interface ShowPersonInput {
   focus?: PersonFocus;
   /** Brugerens spørgsmål ordret (højst 300 tegn): serveren vælger elementer og data efter det. */
   question?: string;
+  /** "Vis alt om X" (brugervalg): alle elementer i fuld form, også ud over højdebudgettet. */
+  show_all?: boolean;
 }
 
 /** Én person fra CVR som ét skærmbillede (katalog 16), komponeret ud fra hensigt (focus) og personens data. Tager navn eller person-ID. */
@@ -251,7 +255,7 @@ export async function showPerson(ctx: UseCaseCtx, input: ShowPersonInput): Promi
   const dataset = await resolveSpec(composePersonProbe(lassoId, focus, ask), provider, extrasOf(ctx));
   const p = dataset.persons[lassoId];
   if (!p) return fail(404, `Kunne ikke hente personen ${lassoId}: ${dataset.errors[`person:${lassoId}`] ?? "ukendt fejl"}.`);
-  const spec = composePerson(lassoId, dataset, { focus, name: p.name, ask });
+  const spec = composePerson(lassoId, dataset, { focus, name: p.name, ask, ...(input.show_all ? { showAll: true } : {}) });
   // Linket åbner samme fokus og samme svar som i chatten.
   return { spec, dataset, ...(note ? { note } : {}), lassoId, link: personLink(config, lassoId, focus, ask?.question), ...(ask && !ask.generic ? { ask } : {}) };
 }

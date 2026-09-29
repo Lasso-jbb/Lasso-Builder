@@ -88,10 +88,6 @@ function prettyUrl(v: string): string {
     return v.replace(/^https?:\/\//, "").replace(/\/$/, "");
   }
 }
-/** "https://lassox.com/om-os/lasso-x" -> "lassox.com/om-os/lasso-x" (kildelinket i 08.7). */
-function prettyLink(v: string): string {
-  return v.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
-}
 const digits = (v: string): string => {
   const d = v.replace(/\D/g, "");
   return d.length === 10 && d.startsWith("45") ? d.slice(2) : d;
@@ -111,11 +107,9 @@ function Channels({ person }: { person: ContactPersonVM }) {
   );
 }
 
-/** 08.7, kolonne 3 (Paper LCJ-0): navn 20/600, stilling, kopiér-handlinger med værdien, "Kilder" med link. */
-function Detail({ person, onCopy, onOpenLink }: { person: ContactPersonVM; onCopy?: LassoContactPersonsProps["onCopy"]; onOpenLink?: (url: string) => void }) {
-  // 08.11 (Jakob 29.09): kilder kun som overskriften "Kilder" med selve kildelinket; ingen
-  // kildebeskrivelse, dato, CVR-linje eller "Opdateret …" (G3). Ingen Ring/Skriv/LinkedIn (Paper).
-  const linked = (person.sources ?? []).filter((x): x is typeof x & { url: string } => Boolean(x.url));
+/** 08.7, kolonne 3 (Paper LCJ-0): navn 20/600, stilling, kopiér-handlinger med værdien (ingen kilder, Jakob runde 6). */
+function Detail({ person, onCopy }: { person: ContactPersonVM; onCopy?: LassoContactPersonsProps["onCopy"] }) {
+  // Jakob runde 6: ingen kildevisning (heller ikke "Kilder" + link). Ingen Ring/Skriv/LinkedIn (Paper).
   const copy = (value: string, shown: string, what: "phone" | "email", label: string) =>
     onCopy ? (
       <button type="button" className="lasso-cpdetail__copy" onClick={() => onCopy(value, what)}>
@@ -145,18 +139,6 @@ function Detail({ person, onCopy, onOpenLink }: { person: ContactPersonVM; onCop
       ) : (
         <p className="lasso-cpdetail__none">Der er ikke fundet telefon eller e-mail for personen.</p>
       )}
-      {linked.length ? (
-        <div className="lasso-cpdetail__sources">
-          <div className="lasso-cpdetail__sourcestitle">Kilder</div>
-          <ul>
-            {linked.map((s, i) => (
-              <li key={i}>
-                <ExtLink url={s.url} label={prettyLink(s.url)} className="lasso-cpdetail__source" onOpenLink={onOpenLink} />
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -332,7 +314,7 @@ export function LassoContactPersons({ data, title, error, companyName, company, 
             }))}
           />
         }
-        detail={<Detail person={current} onCopy={onCopy} onOpenLink={onOpenLink} />}
+        detail={<Detail person={current} onCopy={onCopy} />}
       />
     </Section>
   );

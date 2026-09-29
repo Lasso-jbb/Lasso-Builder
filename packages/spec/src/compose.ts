@@ -342,7 +342,7 @@ export function gridHeight(c: ViewComponent, width: Width, ds: Dataset, page: re
  * gap på 24 mellem kort; en stak med n elementer er derfor Σh + 48·n høj. Pakningen regner med gap 0
  * og 48 px pr. element, så afvigelsen regnes på det, der faktisk tegnes.
  */
-const ITEM_PADDING = 48;
+export const ITEM_PADDING = 48;
 
 /**
  * Pakker sidens komponenter i bånd (gridmodellen) og returnerer dem i layout 'columns'-form.
