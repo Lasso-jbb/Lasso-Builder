@@ -66,6 +66,10 @@ export function CompareTable({
   const slot = canAdd && cols.length < 6;
   const missing = (i: number) => <span className="lasso-notreported">{cols[i]!.fetched ? "Ikke oplyst" : "Ikke hentet"}</span>;
   const firstAmount = metrics.find((m) => METRIC_KIND[m] === "amount");
+  // 22.1: højeste vækst er entydigt bedst og står i vægt 600 som de andre rækker.
+  const growth = firstAmount ? cols.map((c) => percentChange([c.prev?.[METRIC_FIELD[firstAmount]] as number | undefined, c.last?.[METRIC_FIELD[firstAmount]] as number | undefined])) : [];
+  const growthPresent = growth.filter((v): v is number => v !== null);
+  const bestGrowth = growthPresent.length > 1 ? Math.max(...growthPresent) : null;
 
   return (
     <Section title={heading} span="full" className="lasso-comparesec">
@@ -77,7 +81,8 @@ export function CompareTable({
           <span className="lasso-compare__hint">swipe for næste par</span>
         </div>
       ) : null}
-      <div className="lasso-table-frame">
+      {/* 26f.5: fra 4 virksomheder ruller kolonnerne vandret bag en 28 px fade; udgangsvirksomheden står fast. */}
+      <div className={`lasso-table-frame${cols.length >= 4 ? " lasso-compare-frame--many" : ""}`}>
         <div
           className="lasso-table-wrap"
           onTouchStart={(e) => (swipe.current = e.touches[0]?.clientX ?? null)}
@@ -145,9 +150,9 @@ export function CompareTable({
                 <tr>
                   <th scope="row">Udvikling i {METRIC_LABELS[firstAmount].toLowerCase()}, %</th>
                   {cols.map((c, i) => {
-                    const pct = percentChange([c.prev?.[METRIC_FIELD[firstAmount]] as number | undefined, c.last?.[METRIC_FIELD[firstAmount]] as number | undefined]);
+                    const pct = growth[i] ?? null;
                     return (
-                      <td key={c.id} className={`lasso-num ${pct === null ? "" : pct < 0 ? "lasso-down" : "lasso-up"} ${off(i)}`}>
+                      <td key={c.id} className={`lasso-num ${pct !== null && pct === bestGrowth ? "lasso-best" : ""} ${pct === null ? "" : pct < 0 ? "lasso-down" : "lasso-up"} ${off(i)}`}>
                         {pct === null ? missing(i) : formatPercent(pct).replace(" %", "")}
                       </td>
                     );

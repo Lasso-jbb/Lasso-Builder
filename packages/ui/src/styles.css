@@ -919,9 +919,9 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 
 /* ---------- Revisoruafhængighed (22): sammenfatning og relationstabel ---------- */
 /* Vurderingskolonnen bruger alvorsskalaen fra 17 som ord alene, uden ikon (regel 7: ordet bærer betydningen). */
-.lasso-assessment { font-size: 12px; font-weight: 500; color: var(--lasso-text-2); }
-.lasso-assessment--50 { color: var(--lasso-warning); font-weight: 600; }
-.lasso-assessment--100 { color: var(--lasso-danger); font-weight: 600; }
+.lasso-assessment { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--lasso-text-2); white-space: nowrap; }
+.lasso-assessment--50 { color: var(--lasso-warning); }
+.lasso-assessment--100 { color: var(--lasso-danger); }
 /* Afsluttede relationer dæmpes, men vises altid. */
 .lasso-audit__table tbody tr.is-ended td { color: var(--lasso-muted); }
 .lasso-audit__table tbody tr.is-ended .lasso-table__name { color: var(--lasso-text-3); font-weight: 400; }
@@ -3362,7 +3362,11 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-audhist { margin-top: var(--lasso-space-4); display: flex; flex-direction: column; gap: var(--lasso-space-2); }
 .lasso-audhist__title { margin: 0; font-size: var(--lasso-fs); font-weight: 600; color: var(--lasso-text); }
 .lasso-audhist__bar { display: flex; gap: 2px; height: 24px; }
-.lasso-audhist__seg { flex-basis: 0; min-width: 0; display: flex; align-items: center; justify-content: center; padding: 0 6px; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-sm); background: var(--lasso-surface-muted); font-size: 11px; line-height: 14px; color: var(--lasso-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lasso-audhist__seg { flex-basis: 0; min-width: 0; display: block; line-height: 22px; text-align: center; padding: 0 6px; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-sm); background: var(--lasso-surface-muted); font-size: 11px; line-height: 14px; color: var(--lasso-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lasso-audhist__label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lasso-audhist__legend { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+.lasso-audhist__name { color: var(--lasso-text-2); font-weight: 500; }
+.lasso-audhist__legend .is-current .lasso-audhist__name { color: var(--lasso-accent-text); }
 .lasso-audhist__seg.is-current { background: var(--lasso-accent-soft); border-color: var(--lasso-accent-border); color: var(--lasso-accent-text); font-weight: 600; }
 @container lasso (max-width: 1023px) {
   .lasso-compare__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { formatDate, type AuditorIndependenceVM, type AuditorRelationVM, type RelationAssessment } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
-import { DataState, Section, SourceLine, severityWord, stateForError } from "../primitives.js";
+import { DataState, Section, SeverityIcon, SourceLine, severityWord, stateForError } from "../primitives.js";
 import { tableToCsv } from "../csv.js";
 import { printElement } from "../print.js";
 import { DownloadIcon, TableToolbar, slugFile } from "./TableKit.js";
@@ -53,11 +53,19 @@ export function AuditorHistory({ history, now = new Date() }: { history: NonNull
           const label = `${p.name} ${p.a}–${p.b ? String(p.b).slice(2) : ""}`;
           return (
             <span key={`${p.name}-${i}`} className={`lasso-audhist__seg${p.b ? "" : " is-current"}`} style={{ flexGrow: span(p) }} title={label}>
-              {label}
+              <span className="lasso-audhist__label">{p.b ? `${p.a}–${String(p.b).slice(2)}` : `${p.a}–`}</span>
             </span>
           );
         })}
       </div>
+      {/* 26e.8: navnene står under bjælken, så de aldrig klippes i en kort del. */}
+      <ul className="lasso-audhist__legend">
+        {parts.map((p, i) => (
+          <li key={`${p.name}-${i}`} className={p.b ? undefined : "is-current"}>
+            <span className="lasso-audhist__name">{p.name}</span>, {p.a}–{p.b ?? "i dag"}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -143,7 +151,11 @@ export function AuditorIndependence({ data, error, title, onAction, canExport = 
               {rows.map((r) => (
                 <tr key={r.id} className={r.to ? "is-ended" : undefined}>
                   <td data-label="Vurdering">
-                    <span className={`lasso-assessment lasso-assessment--${r.assessment}`}>{severityWord(r.assessment as RelationAssessment, "assessment")}</span>
+                    {/* 22.2: alvorsskalaen fra 17, ikon + ord. */}
+                    <span className={`lasso-assessment lasso-assessment--${r.assessment}`}>
+                      <SeverityIcon severity={r.assessment as RelationAssessment} />
+                      {severityWord(r.assessment as RelationAssessment, "assessment")}
+                    </span>
                   </td>
                   <td data-label="Person/selskab" className="lasso-cell--name">
                     <span className="lasso-table__name">{r.name}</span>
