@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { MISSING, formatDate, formatPercent, percentChange, type CompanyVM, type Severity } from "@lasso/spec";
+import { Icon } from "./components/Icon.js";
 
 export function Card({ title, children, className = "" }: { title?: ReactNode; children: ReactNode; className?: string }) {
   return (
@@ -109,6 +110,13 @@ export interface DataStateProps {
   onAction?: () => void;
   /** Beregnes på forespørgsel: prisen/ventetiden, fx "Koster 1 kredit, tager 5–45 sekunder". */
   cost?: string;
+  /**
+   * Tom, 10.3-formen ("Ingen data"): grå panel-flade uden kant, venstrestillet titel 16/600, forklaring
+   * og handlingen som koral tekst, intet ikon. Standard er 26h.1-formen (stiplet ramme med ikon).
+   */
+  look?: "panel";
+  /** Henter (10.3): skelettet i et kort med 1 px kant. Standard: skeletlinjer uden ramme. */
+  framed?: boolean;
 }
 
 function StateIcon({ kind }: { kind: "doc" | "check" | "alert" | "lock" }) {
@@ -149,17 +157,27 @@ export function PendingRing() {
   return <span className="lasso-ring" aria-hidden="true" />;
 }
 
-export function DataState({ state, reason, title, checkedAt, positive, onRetry, action, secondaryAction, pending, children, height, lines = 3, actionLabel, onAction, cost }: DataStateProps) {
-  if (state === "loading") return <Skeleton lines={lines} height={height} />;
+export function DataState({ state, reason, title, checkedAt, positive, onRetry, action, secondaryAction, pending, children, height, lines = 3, actionLabel, onAction, cost, look, framed }: DataStateProps) {
+  if (state === "loading") {
+    return framed ? (
+      <div className="lasso-state-frame">
+        <Skeleton lines={lines} height={height} />
+      </div>
+    ) : (
+      <Skeleton lines={lines} height={height} />
+    );
+  }
   if (state === "ondemand") {
-    // 10.3 (node A2I-0): stiplet ramme som "tom", men med årsag og en handling, der starter beregningen.
+    // 10.3 (node A2I-0): stiplet ramme som "tom", venstrestillet, med årsag og en tonet koral handling
+    // (✧-ikon), der starter beregningen.
     return (
       <div className="lasso-state lasso-state--ondemand" style={height ? { minHeight: height } : undefined}>
         <div className="lasso-state__title">Beregnes på forespørgsel</div>
         <div className="lasso-small">{reason ?? "Tallet beregnes først, når du beder om det."}</div>
         {cost ? <div className="lasso-state__cost">{cost}</div> : null}
         {onAction ? (
-          <button type="button" className="lasso-btn lasso-btn--sm lasso-state__retry" onClick={onAction}>
+          <button type="button" className="lasso-btn lasso-btn--sm lasso-btn--tint lasso-state__retry" onClick={onAction}>
+            <Icon name="sparkle" size={14} />
             {actionLabel ?? "Beregn nu"}
           </button>
         ) : null}
@@ -167,6 +185,22 @@ export function DataState({ state, reason, title, checkedAt, positive, onRetry, 
     );
   }
   if (state === "notreported") return <span className="lasso-notreported">Ikke oplyst</span>;
+  if (state === "empty" && look === "panel") {
+    return (
+      <div className="lasso-state-panel" style={height ? { minHeight: height } : undefined}>
+        {title ? <div className="lasso-state-panel__title">{title}</div> : null}
+        <p className="lasso-state-panel__text">
+          {reason ?? "Der er ingen data at vise."}
+          {checkedAt ? ` Sidst tjekket ${formatDate(checkedAt)}.` : ""}
+        </p>
+        {action ? (
+          <button type="button" className="lasso-link lasso-state-panel__action" onClick={action.onClick} disabled={!action.onClick}>
+            {action.label}
+          </button>
+        ) : null}
+      </div>
+    );
+  }
   if (state === "empty") {
     // Tom (26h.1): ikon, én linje årsag, tidsstempel og højst én handling. Stiplet ramme, aldrig grå fyld.
     return (

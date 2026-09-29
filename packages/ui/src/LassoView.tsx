@@ -383,7 +383,17 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoFinancialStatements":
       return <FinancialStatements key={key} statements={empty.financialStatements[c.company]} company={empty.companies[c.company]} statement={c.statement} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} onAction={act} />;
     case "LassoScoreGauge":
-      return <ScoreGauge key={key} score={empty.scores[c.company]} title={c.title} error={err(`score:${c.company}`)} onFetch={props.host.refresh ? () => act({ kind: "refresh" }) : undefined} />;
+      return (
+        <ScoreGauge
+          key={key}
+          score={empty.scores[c.company]}
+          title={c.title}
+          detail={c.detail}
+          error={err(`score:${c.company}`)}
+          onFetch={props.host.refresh ? () => act({ kind: "refresh" }) : undefined}
+          onReport={props.host.prompt ? () => act({ kind: "prompt", prompt: `Hent kreditrapporten for ${empty.companies[c.company]?.name ?? c.company}` }) : undefined}
+        />
+      );
     case "LassoRiskObservations":
       // Katalog 17.2: komponeres ikke automatisk (observationskaldet tager 10–14 s), men vises, når en spec beder om den.
       return <RiskObservations key={key} data={empty.observations[c.company]} error={err(`observations:${c.company}`)} title={c.title} compact={c.compact} demo={empty.source === "demo"} />;

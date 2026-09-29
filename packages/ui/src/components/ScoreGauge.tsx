@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { formatDate, type ScoreVM } from "@lasso/spec";
-import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { DataState, Section, stateForError } from "../primitives.js";
+import { ShellIcon } from "./ShellIcons.js";
 import { useWidth } from "../useWidth.js";
 
 /** "09.2026" fra en ISO-dato. */
@@ -147,21 +148,40 @@ function Facts({ facts }: { facts?: ScoreVM["facts"] }) {
 }
 
 /**
- * Scoremåler (katalog 10.1, node 9ZT-0): tal 0–100, vurdering som ikon + ord, bånd i grøn/gul/rød
- * (0–60 lav, 60–80 moderat, 80–100 høj) og en lodret markør ved scoren; nøgle-værdi-linjer under
- * (fx Kreditmaksimum, International score).
+ * Scoremåler (katalog 10.1, node 9ZT-0): titel "Kreditvurdering" med kildelinjen lige under titlen,
+ * tal 40/700 + "af 100" + vurderingen som farvet ord, bånd i grøn/gul/rød (0–60 lav, 60–80 moderat,
+ * 80–100 høj) med en 2 px ink-markør ved scoren, akselabels "0, lav" og "100, høj", nøgle-værdi-linjer
+ * (fx Kreditmaksimum, International score) og en sekundær knap "Hent kreditrapport".
+ * `detail` tilføjer udviklingen over 24 måneder og seneste ændringer (26d.7-formen).
  *
- * Hente-tilstande (node BGZ-0): stiplet ramme = kan hentes (handlingen koster, prisen står i knappen),
- * fuld ramme + spinner og 4 px fremdriftsbjælke = henter, grå flade = kan ikke hentes (altid med
- * årsag). Tallet og skalaen vises først, når scoren er hentet.
- * Mobil (26b): scoremåleren som kort med 36 px tal.
+ * Hente-tilstande (10.4, node BGZ-0): stiplet ramme = kan hentes (primær knap med prisen højrestillet
+ * ved teksten), fuld ramme + spinner og 4 px fremdriftsbjælke under teksten = henter, grå flade = kan
+ * ikke hentes (altid med årsag). Tallet og skalaen vises først, når scoren er hentet.
+ * Mobil (26b.9): kompakt kort med 36 px tal, vurderingen til højre og faktaene på én linje.
  *
  * Ingen bekræftet live datakilde (se catalog.ts): DemoProvider giver eksempelscorer og -tilstande,
  * LiveProvider giver "ikke oplyst".
  */
-export function ScoreGauge({ score, title, error, onFetch }: { score?: ScoreVM; title?: string; error?: string; onFetch?: () => void }) {
-  const heading = title ?? "Score";
+export function ScoreGauge({
+  score,
+  title,
+  error,
+  onFetch,
+  onReport,
+  detail = false,
+}: {
+  score?: ScoreVM;
+  title?: string;
+  error?: string;
+  onFetch?: () => void;
+  /** "Hent kreditrapport" (10.1). Uden den vises knappen ikke. */
+  onReport?: () => void;
+  /** Udvikling over 24 måneder og seneste ændringer under måleren (26d.7). */
+  detail?: boolean;
+}) {
+  const heading = title ?? "Kreditvurdering";
   const [requested, setRequested] = useState(false);
+  const sourceLine = score?.source ? `Kilde: ${score.source}${score.updated ? `, opdateret ${formatDate(score.updated)}` : ""}` : undefined;
   if (!score) {
     return (
       <Section title={heading} span="half" className="lasso-gauge-section">
@@ -176,22 +196,23 @@ export function ScoreGauge({ score, title, error, onFetch }: { score?: ScoreVM; 
     return (
       <Section title={heading} span="half" className="lasso-gauge-section">
         <div className="lasso-gauge-state lasso-gauge-state--idle">
-          <div className="lasso-gauge-state__title">Scoren er ikke hentet</div>
-          <p className="lasso-gauge-state__text">{score.reason ?? "Hent scoren for at se vurderingen og skalaen."}</p>
+          <div className="lasso-gauge-state__body">
+            <div className="lasso-gauge-state__title">Vurderingen er ikke hentet</div>
+            <p className="lasso-gauge-state__text">{score.reason ?? "Hent vurderingen for at se scoren og skalaen."}</p>
+            {onFetch ? null : <p className="lasso-gauge-state__cost">Koster {cost} at hente.</p>}
+          </div>
           {onFetch ? (
             <button
               type="button"
-              className="lasso-btn lasso-btn--sm"
+              className="lasso-btn lasso-btn--primary lasso-btn--sm lasso-gauge-state__fetch"
               onClick={() => {
                 setRequested(true);
                 onFetch();
               }}
             >
-              Hent score, {cost}
+              Hent vurdering, {cost}
             </button>
-          ) : (
-            <p className="lasso-gauge-state__cost">Koster {cost} at hente.</p>
-          )}
+          ) : null}
         </div>
       </Section>
     );
@@ -203,10 +224,10 @@ export function ScoreGauge({ score, title, error, onFetch }: { score?: ScoreVM; 
         <div className="lasso-gauge-state lasso-gauge-state--busy" aria-busy="true">
           <div className="lasso-gauge-state__row">
             <span className="lasso-spinner" aria-hidden="true" />
-            <span className="lasso-gauge-state__title">Henter score</span>
+            <span className="lasso-gauge-state__title">Henter vurdering</span>
           </div>
           <p className="lasso-gauge-state__text">{score.reason ?? "Det kan tage op til 45 sekunder."}</p>
-          <div className={`lasso-gauge-state__progress${p === null ? " is-indeterminate" : ""}`} role="progressbar" aria-label="Henter score" aria-valuemin={0} aria-valuemax={100} aria-valuenow={p === null ? undefined : Math.round(p * 100)}>
+          <div className={`lasso-gauge-state__progress${p === null ? " is-indeterminate" : ""}`} role="progressbar" aria-label="Henter vurdering" aria-valuemin={0} aria-valuemax={100} aria-valuenow={p === null ? undefined : Math.round(p * 100)}>
             <span style={p === null ? undefined : { width: `${p * 100}%` }} />
           </div>
         </div>
@@ -217,7 +238,7 @@ export function ScoreGauge({ score, title, error, onFetch }: { score?: ScoreVM; 
     return (
       <Section title={heading} span="half" className="lasso-gauge-section">
         <div className="lasso-gauge-state lasso-gauge-state--off">
-          <div className="lasso-gauge-state__title">Scoren kan ikke hentes</div>
+          <div className="lasso-gauge-state__title">Vurderingen kan ikke hentes</div>
           <p className="lasso-gauge-state__text">{score.reason ?? "Der er ingen score for virksomheden."}</p>
         </div>
       </Section>
@@ -225,7 +246,7 @@ export function ScoreGauge({ score, title, error, onFetch }: { score?: ScoreVM; 
   }
   if (score.score === null) {
     return (
-      <Section title={heading} span="half" className="lasso-gauge-section">
+      <Section title={heading} subtitle={sourceLine} span="half" className="lasso-gauge-section">
         <DataState state="notreported" />
       </Section>
     );
@@ -233,15 +254,12 @@ export function ScoreGauge({ score, title, error, onFetch }: { score?: ScoreVM; 
   const value = Math.max(0, Math.min(100, score.score));
   const { label, index } = scoreBand(value);
   return (
-    <Section title={heading} span="half" className="lasso-gauge-section">
+    <Section title={heading} subtitle={sourceLine} span="half" className="lasso-gauge-section">
       <div className="lasso-gauge">
         <div className="lasso-gauge__value">
           <span className="lasso-gauge__number">{Math.round(value)}</span>
           <span className="lasso-gauge__of">af 100</span>
-          <span className={`lasso-gauge__label lasso-gauge__label--${index}`}>
-            <BandIcon index={index} />
-            {label}
-          </span>
+          <span className={`lasso-gauge__label lasso-gauge__label--${index}`}>{label}</span>
         </div>
         <div className="lasso-gauge__bar">
           <div className="lasso-gauge__track" aria-hidden="true">
@@ -249,27 +267,22 @@ export function ScoreGauge({ score, title, error, onFetch }: { score?: ScoreVM; 
             <span className="lasso-gauge__seg lasso-gauge__seg--1" style={{ flexGrow: 20 }} />
             <span className="lasso-gauge__seg lasso-gauge__seg--2" style={{ flexGrow: 20 }} />
           </div>
-          <span className="lasso-gauge__pointer" style={{ left: `calc(${value}% - 1.5px)` }} aria-hidden="true" />
+          <span className="lasso-gauge__pointer" style={{ left: `calc(${value}% - 1px)` }} aria-hidden="true" />
         </div>
         <div className="lasso-gauge__scale">
-          <span>
-            0, lav<span className="lasso-gauge__long"> risiko</span>
-          </span>
-          <span className="lasso-gauge__tick" style={{ left: "60%" }}>
-            60
-          </span>
-          <span className="lasso-gauge__tick" style={{ left: "80%" }}>
-            80
-          </span>
-          <span>
-            100, høj<span className="lasso-gauge__long"> risiko</span>
-          </span>
+          <span>0, lav</span>
+          <span>100, høj</span>
         </div>
         <Facts facts={score.facts} />
+        {onReport ? (
+          <button type="button" className="lasso-btn lasso-btn--sm lasso-gauge__report" onClick={onReport}>
+            <ShellIcon name="document" size={15} />
+            Hent kreditrapport
+          </button>
+        ) : null}
       </div>
-      {score.history?.length ? <ScoreHistory history={score.history} /> : null}
-      {score.changes?.length ? <ScoreChanges changes={score.changes} /> : null}
-      {score.source ? <SourceLine source={score.source} updated={score.updated} /> : null}
+      {detail && score.history?.length ? <ScoreHistory history={score.history} /> : null}
+      {detail && score.changes?.length ? <ScoreChanges changes={score.changes} /> : null}
     </Section>
   );
 }

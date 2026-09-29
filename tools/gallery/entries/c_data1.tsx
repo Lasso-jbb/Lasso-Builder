@@ -196,7 +196,7 @@ function ScoreStates() {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24 }}>
       <Labelled label="Ikke hentet (stiplet ramme, handling koster)">
-        <div className="lasso-grid"><ScoreGauge score={s({ state: "notfetched", cost: "1 kredit", reason: "Hent scoren for at se vurderingen og skalaen." })} onFetch={noop} /></div>
+        <div className="lasso-grid"><ScoreGauge score={s({ state: "notfetched", cost: "1 kredit", reason: "Hent vurderingen for at se scoren og skalaen." })} onFetch={noop} /></div>
       </Labelled>
       <Labelled label="Henter (fuld ramme, spinner, 4 px fremdrift)">
         <div className="lasso-grid"><ScoreGauge score={s({ state: "fetching", progress: 0.45 })} /></div>
@@ -331,7 +331,7 @@ export const entries: GalleryEntry[] = [
   { nr: "09.5", title: "Nøgle-værdi-liste med årsvælger", node: "9WR-0", spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "financials", width: "full" }]) },
 
   // 10 Score og tabeller
-  { nr: "10.1", title: "Scoremåler", node: "9ZT-0", spec: co("Eksempel Byg A/S", [{ type: "LassoScoreGauge", company: B }]) },
+  { nr: "10.1", title: "Scoremåler", node: "9ZT-0", spec: co("Eksempel Byg A/S", [{ type: "LassoScoreGauge", company: B, width: "half" }]), note: "Måleren i en ½-kolonne som i Paper (ca. 540 px)." },
   { nr: "10.2", title: "Flerårstabel", node: "A0Q-0", spec: co("Eksempel Byg A/S", [{ type: "LassoMultiYearTable", company: B, metrics: ["omsaetning", "bruttofortjeneste", "resultat", "egenkapital"], years: 5 }]) },
   {
     nr: "10.3",
@@ -340,13 +340,13 @@ export const entries: GalleryEntry[] = [
     render: () => (
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24 }}>
         <Labelled label="Beregnes på forespørgsel">
-          <DataState state="ondemand" reason="Branchesammenligningen beregnes, når du beder om den." cost="Koster 1 kredit, tager 5–45 sekunder" actionLabel="Beregn nu" onAction={noop} />
+          <DataState state="ondemand" reason="Risikovurderingen beregnes, når du beder om den." cost="Koster 1 kredit, tager 5–45 sekunder" actionLabel="Beregn risiko" onAction={noop} />
         </Labelled>
         <Labelled label="Henter, skelet">
-          <DataState state="loading" lines={4} height={140} />
+          <DataState state="loading" lines={4} height={140} framed />
         </Labelled>
         <Labelled label="Ingen data">
-          <DataState state="empty" title="Ingen nyheder endnu" reason="Der er ikke fundet artikler om virksomheden." checkedAt="2026-09-28" action={{ label: "Overvåg nyheder", onClick: noop }} />
+          <DataState state="empty" look="panel" title="Ingen nyheder endnu" reason="Der er ikke fundet artikler om virksomheden." checkedAt="2026-09-28" action={{ label: "Overvåg og få besked", onClick: noop }} />
         </Labelled>
       </div>
     ),

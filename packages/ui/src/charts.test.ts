@@ -30,7 +30,7 @@ test("10.1: scoremålerens hente-tilstande: stiplet med pris i knappen, henter m
   const base: ScoreVM = { lassoId: ID, score: null };
   const idle = html(createElement(ScoreGauge, { score: { ...base, state: "notfetched", cost: "1 kredit" }, onFetch: () => {} }));
   assert.match(idle, /lasso-gauge-state--idle/);
-  assert.match(idle, />Hent score, 1 kredit<\/button>/);
+  assert.match(idle, />Hent vurdering, 1 kredit<\/button>/);
   assert.doesNotMatch(idle, /af 100|lasso-gauge__track/);
   const busy = html(createElement(ScoreGauge, { score: { ...base, state: "fetching", progress: 0.4 } }));
   assert.match(busy, /lasso-gauge-state--busy[^]*lasso-spinner[^]*role="progressbar"[^]*aria-valuenow="40"/);

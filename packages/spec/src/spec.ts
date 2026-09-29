@@ -444,7 +444,8 @@ export const publicationsSchema = z.object({
 export const scoreGaugeSchema = z.object({
   type: z.literal("LassoScoreGauge"),
   company: companyRef,
-  title: z.string().max(80).optional().describe("Standard: 'Score'."),
+  title: z.string().max(80).optional().describe("Standard: 'Kreditvurdering'."),
+  detail: z.boolean().optional().describe("Udviklingen over 24 måneder og seneste ændringer under måleren (26d.7). Standard: fra."),
 });
 
 /** Katalog 18.2: scorehistorik som trinlinje (hver hentning et punkt). Ingen live datakilde endnu, som LassoScoreGauge. */

@@ -287,16 +287,16 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     type: "LassoScoreGauge",
     title: "Scoremåler (kun demo)",
     description:
-      "Brug til: KUN demovisninger. Der er ingen live datakilde for en 0–100 score; for rigtige virksomheder viser måleren 'Ikke oplyst'. Vælg den aldrig til en kunde, der spørger om risiko, score eller kreditvurdering (show_company focus risiko). Kræver: company. Eksempel: intet kundespørgsmål fører hertil.",
-    props: "company, title?",
+      "Brug til: KUN demovisninger. Der er ingen live datakilde for en 0–100 score; for rigtige virksomheder viser måleren 'Ikke oplyst'. Vælg den aldrig til en kunde, der spørger om risiko, score eller kreditvurdering (show_company focus risiko). Kræver: company, title? (standard 'Kreditvurdering'), detail? (true tilføjer udviklingen over 24 måneder og seneste ændringer). Eksempel: intet kundespørgsmål fører hertil.",
+    props: "company, title?, detail?",
   },
 
   {
     type: "LassoScoreHistory",
     title: "Scorehistorik (kun demo)",
     description:
-      "Brug til: KUN demovisninger. Lassos 0–100-score over tid som trinlinje med zonerne lav/moderat/høj og forrige vs. nu; der er ingen live datakilde, så rigtige virksomheder viser tom tilstand. Vælg den aldrig til en kunde, der spørger om risiko eller kreditvurdering (show_company focus risiko). Brug ikke når: det gælder Creditsafes vurdering (LassoCreditRating). Kræver: company. Eksempel: intet kundespørgsmål fører hertil.",
-    props: "company, title?",
+      "Brug til: KUN demovisninger. Lassos 0–100-score over tid som trinlinje med zonerne lav/moderat/høj og forrige vs. nu; der er ingen live datakilde, så rigtige virksomheder viser tom tilstand. Vælg den aldrig til en kunde, der spørger om risiko eller kreditvurdering (show_company focus risiko). Brug ikke når: det gælder Creditsafes vurdering (LassoCreditRating). Kræver: company, title? (standard 'Kreditvurdering'), detail? (true tilføjer udviklingen over 24 måneder og seneste ændringer). Eksempel: intet kundespørgsmål fører hertil.",
+    props: "company, title?, detail?",
   },
 
   // (f) Fysiske enheder --------------------------------------------------------

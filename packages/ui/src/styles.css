@@ -778,7 +778,7 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 /* ---------- 10 Scoremåler ---------- */
 .lasso-gauge { display: flex; flex-direction: column; gap: 6px; }
 .lasso-gauge__value { display: flex; align-items: baseline; gap: 10px; padding-top: 8px; flex-wrap: wrap; }
-.lasso-gauge__number { font-size: 40px; line-height: 44px; font-weight: 600; letter-spacing: -0.03em; color: var(--lasso-text); }
+.lasso-gauge__number { font-size: 40px; line-height: 44px; font-weight: 700; letter-spacing: -0.03em; color: var(--lasso-text); }
 .lasso-gauge__of { font-size: var(--lasso-fs); color: var(--lasso-muted); }
 .lasso-gauge__label { font-size: 12px; font-weight: 500; margin-left: 6px; }
 .lasso-gauge__label--0 { color: var(--lasso-positive); }
@@ -790,7 +790,7 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-gauge__seg--0 { background: var(--lasso-gauge-low); border-radius: 3px 0 0 3px; }
 .lasso-gauge__seg--1 { background: var(--lasso-gauge-mid); }
 .lasso-gauge__seg--2 { background: var(--lasso-gauge-high); border-radius: 0 3px 3px 0; }
-.lasso-gauge__pointer { position: absolute; top: 0; height: 18px; width: 3px; border-radius: 2px; background: var(--lasso-text); box-shadow: 0 0 0 2px var(--lasso-surface); }
+.lasso-gauge__pointer { position: absolute; top: 0; height: 18px; width: 2px; border-radius: 1px; background: var(--lasso-text); box-shadow: 0 0 0 2px var(--lasso-surface); }
 .lasso-gauge__scale { display: flex; justify-content: space-between; font-size: 11px; color: var(--lasso-muted); }
 @container lasso (max-width: 560px) {
   .lasso-gauge__number { font-size: 36px; line-height: 40px; }
@@ -2706,7 +2706,24 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-gauge-state__text { margin: 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-3); }
 .lasso-gauge-state__cost { margin: 0; font-size: 12px; color: var(--lasso-muted); }
 .lasso-gauge-state .lasso-btn { margin-top: auto; }
-.lasso-gauge-state__progress { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--lasso-divider-subtle); overflow: hidden; }
+/* 10.4 "Ikke hentet": tekst til venstre, primær knap med prisen højrestillet ved siden af. */
+.lasso-gauge-state--idle { flex-direction: row; align-items: center; justify-content: space-between; gap: var(--lasso-space-4); min-height: 0; }
+.lasso-gauge-state__body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.lasso-gauge-state--idle .lasso-btn.lasso-gauge-state__fetch { flex: none; margin-top: 0; }
+.lasso-gauge-state--busy, .lasso-gauge-state--off { min-height: 0; }
+/* 10.1: sekundær knap "Hent kreditrapport" med dokument-ikon under nøgle-værdi-rækkerne. */
+.lasso-root .lasso-gauge__report { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; margin-top: var(--lasso-space-3); }
+/* 26b.9: kompakt mobilkort, vurderingen til højre, ingen skala-etiketter, faktaene på én linje. */
+@container lasso (max-width: 560px) {
+  .lasso-gauge__value .lasso-gauge__label { margin-left: auto; }
+  .lasso-gauge__scale { display: none; }
+  .lasso-gauge__facts { display: flex; flex-wrap: wrap; align-items: baseline; margin-top: var(--lasso-space-2); padding-top: var(--lasso-space-2); font-size: var(--lasso-fs-sm); }
+  .lasso-gauge__fact { display: inline-flex; gap: 4px; padding: 0; border: 0; font-size: var(--lasso-fs-sm); }
+  .lasso-gauge__fact + .lasso-gauge__fact::before { content: "|"; margin: 0 8px; color: var(--lasso-faint); }
+  .lasso-gauge__fact dd { font-weight: 500; }
+  .lasso-gauge-state--idle { flex-direction: column; align-items: flex-start; }
+}
+.lasso-gauge-state__progress { position: relative; align-self: stretch; margin-top: var(--lasso-space-2); height: 4px; border-radius: 2px; background: var(--lasso-divider-subtle); overflow: hidden; }
 .lasso-gauge-state__progress > span { display: block; height: 100%; background: var(--lasso-chart-1); transition: width 300ms ease; }
 .lasso-gauge-state__progress.is-indeterminate > span { width: 35%; animation: lasso-indeterminate 1.3s ease-in-out infinite; }
 @keyframes lasso-indeterminate { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
@@ -2714,7 +2731,17 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 @keyframes lasso-spin { to { transform: rotate(360deg); } }
 
 /* ---------- 10.3 Datatilstande: beregnes på forespørgsel (node A2I-0) ---------- */
-.lasso-state--ondemand { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.lasso-root .lasso-state--ondemand { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left; }
+/* Tonet koral knap (10.3 "✧ Beregn risiko"): koral-soft flade, koral kant og tekst. */
+.lasso-root .lasso-btn--tint { display: inline-flex; align-items: center; gap: 6px; background: var(--lasso-accent-soft); border-color: var(--lasso-accent-border); color: var(--lasso-accent-text); font-weight: 500; }
+.lasso-root .lasso-btn--tint:hover { background: var(--lasso-accent-soft); border-color: var(--lasso-accent); }
+/* 10.3 "Ingen data": grå panel-flade uden kant, venstrestillet, handlingen som koral tekst. */
+.lasso-state-panel { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: var(--lasso-space-4); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface-muted); }
+.lasso-state-panel__title { font-size: 16px; line-height: 22px; font-weight: 600; color: var(--lasso-text); }
+.lasso-state-panel__text { margin: 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-2); }
+.lasso-root .lasso-state-panel__action { margin-top: var(--lasso-space-2); font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-accent-text); }
+/* 10.3 "Henter" i et kort med 1 px kant. */
+.lasso-state-frame { padding: var(--lasso-space-4); border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); }
 .lasso-state__cost { font-size: 12px; color: var(--lasso-muted); }
 .lasso-state--ondemand .lasso-state__retry { margin-top: var(--lasso-space-2); }
 
