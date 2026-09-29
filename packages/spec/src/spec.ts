@@ -369,6 +369,28 @@ export const financialStatementsSchema = z.object({
   title: z.string().max(80).optional(),
 }).describe("Fuldt regnskab med værktøjslinje (koncern/selskab, periode, enhed, revisorpåtegning, Hent PDF) og segmentskift mellem resultat, balance og pengestrøm.");
 
+/** Katalog 28.6 (mobil 26h.8): fusioner og spaltninger som "fra → til". Live-felter ubekræftede. */
+export const mergersSchema = z.object({
+  type: z.literal("LassoMergers"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
+}).describe("Fusioner og spaltninger: dato og type, 'fra → til' med selskabskort; ophørte selskaber i muted.");
+
+/** Katalog 28.8: Statstidende, seneste bekendtgørelser. Udelades helt uden bekendtgørelser. */
+export const announcementsSchema = z.object({
+  type: z.literal("LassoAnnouncements"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
+}).describe("Statstidende: bekendtgørelser med type farvet efter alvor (konkurs, rekonstruktion/likvidation) og teksten foldet.");
+
+/** Katalog 28.2: offentliggjorte regnskaber (ny/korrigeret) sorteret efter offentliggørelsesdato. */
+export const publicationsSchema = z.object({
+  type: z.literal("LassoPublications"),
+  company: companyRef,
+  limit: z.number().int().min(1).max(20).optional().describe("Rækker før 'Se alle', standard 5."),
+  title: z.string().max(80).optional(),
+}).describe("Regnskabspublicering: offentliggjort, type (Årsrapport/Halvår/Kvartal, ny/korrigeret), periode og hovedtal.");
+
 /** Ingen live datakilde endnu (se resolve.ts og LiveProvider.score); demodata i DemoProvider, "ikke oplyst" i live. */
 export const scoreGaugeSchema = z.object({
   type: z.literal("LassoScoreGauge"),
@@ -569,6 +591,9 @@ export const componentSchema = z.discriminatedUnion("type", [
   w(personFactsSchema),
   w(personStatsSchema),
   w(financialStatementsSchema),
+  w(mergersSchema),
+  w(announcementsSchema),
+  w(publicationsSchema),
   w(changeFeedSchema),
   w(savedPagesSchema),
 ]);
@@ -647,6 +672,9 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoPersonFacts: "quarter",
   LassoPersonStats: "full",
   LassoFinancialStatements: "full",
+  LassoMergers: "full",
+  LassoAnnouncements: "full",
+  LassoPublications: "full",
   LassoChangeFeed: "full",
   LassoSavedPages: "full",
 };

@@ -810,6 +810,61 @@ export function savedPagesKey(c: { kind?: SavedPageKind | "all"; limit?: number 
   return `${c.kind ?? "all"}|${c.limit ?? 20}`;
 }
 
+/* ---------- Katalog 28: øvrige datatyper (fusioner, Statstidende, regnskabspublicering) ---------- */
+
+/** Ét selskab i en fusion/spaltning (28.6). */
+export interface MergerPartyVM {
+  name: string;
+  lassoId?: string;
+  /** Ophørte ved fusionen/spaltningen (vises i muted med "ophørt ved fusionen"). */
+  ceased?: boolean;
+}
+
+/** Katalog 28.6: én fusion eller spaltning, "fra → til". */
+export interface MergerEventVM {
+  date?: string;
+  type: "Fusion" | "Spaltning";
+  from: MergerPartyVM[];
+  to: MergerPartyVM[];
+}
+
+/** Katalog 28.8: én bekendtgørelse i Statstidende. */
+export interface AnnouncementVM {
+  date?: string;
+  /** Fx "Dekret om konkurs", "Rekonstruktion", "Likvidation", "Indkaldelse af kreditorer". */
+  type: string;
+  /** Alvor, der styrer farven: konkurs mørk rød, rekonstruktion/likvidation warning, øvrige tekst. */
+  severity: "bankrupt" | "warning" | "neutral";
+  /** Statstidendes egen tekst (foldes til to linjer). */
+  text?: string;
+  /** Link til bekendtgørelsen (kun http/https). */
+  url?: string;
+}
+
+/** Katalog 28.2: ét offentliggjort regnskab. */
+export interface PublicationVM {
+  /** Offentliggørelsesdato (ÅÅÅÅ-MM-DD). */
+  published?: string;
+  /** Periodens slut, så klik kan åbne 19 med perioden valgt. */
+  periodEnd?: string;
+  year?: number;
+  kind: "Årsrapport" | "Halvår" | "Kvartal";
+  /** Korrigeret regnskab: udråbstegn-ikon og den tidligere værdi som "før …". */
+  corrected?: boolean;
+  /** Hovedtallet (bruttofortjeneste/omsætning) og dets tidligere værdi ved korrektion. */
+  figure?: { label: string; value: number | null; previous?: number | null };
+}
+
+/** Katalog 28.2/28.6/28.8: begivenheder for én virksomhed ud over CVR-tidslinjen. */
+export interface CompanyEventsVM {
+  lassoId: string;
+  mergers: MergerEventVM[];
+  announcements: AnnouncementVM[];
+  publications: PublicationVM[];
+  /** Hvornår Lasso hentede oplysningerne (kildelinjen). */
+  updated?: string;
+}
+
 /** Alt det data, én visning skal bruge, slået op på nøgle. */
 export interface Dataset {
   source: DataSourceKind;
@@ -844,6 +899,8 @@ export interface Dataset {
   personNetworks: Record<string, PersonNetworkVM>;
   /** Katalog 21: ændringsfeed pr. changeFeedKey. */
   changeFeeds: Record<string, ChangeFeedVM>;
+  /** Katalog 28.2/28.6/28.8: fusioner, Statstidende og regnskabspublicering pr. Lasso-ID. */
+  companyEvents: Record<string, CompanyEventsVM>;
   /** Gem-laget: gemte sider pr. savedPagesKey (LassoSavedPages). Fejlnøgle "savedPages:<key>". */
   savedPages: Record<string, SavedPagesVM>;
   /** Gem-laget: hvilke Lasso-ID'er i visningen brugeren allerede har gemt (til Gem/Gemt-knappen). */
@@ -878,6 +935,7 @@ export function emptyDataset(source: DataSourceKind): Dataset {
     ownershipGraphs: {},
     persons: {},
     personNetworks: {},
+    companyEvents: {},
     changeFeeds: {},
     savedPages: {},
     errors: {},

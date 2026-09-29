@@ -522,6 +522,27 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
   }
 
 
+  // Katalog 28.2/28.6/28.8: fusioner, Statstidende og publicering.
+  const events = ds.companyEvents?.[lassoId];
+  if (events && types.has("LassoMergers")) {
+    card.section("Fusioner og spaltninger");
+    if (events.mergers.length === 0) card.text("Ingen registrerede fusioner eller spaltninger");
+    for (const m of events.mergers.slice(0, 3)) {
+      const names = (ps: typeof m.from) => ps.map((p) => (p.lassoId === lassoId ? "denne virksomhed" : p.name)).join(", ");
+      card.text(`${m.date ? `${formatDate(m.date)}, ` : ""}${m.type.toLowerCase()}: ${names(m.from)} → ${names(m.to)}`);
+    }
+  }
+  if (events && types.has("LassoAnnouncements") && events.announcements.length) {
+    card.section("Statstidende");
+    for (const a of events.announcements.slice(0, 3)) card.text(`${a.date ? `${formatDate(a.date)}, ` : ""}${a.type}`);
+    if (events.announcements.length > 3) card.text(`Se ${events.announcements.length - 3} flere`);
+  }
+  if (events && types.has("LassoPublications")) {
+    card.section("Regnskabspublicering");
+    if (events.publications.length === 0) card.text("Ingen offentliggjorte regnskaber");
+    for (const p of events.publications.slice(0, 3)) card.text(`${p.published ? formatDate(p.published) : "—"}, ${p.kind}${p.year ? ` ${p.year}` : ""}, ${p.corrected ? "korrigeret" : "ny"}`);
+  }
+
   // Katalog 17.2: observationerne sorteret efter alvor, 3 + "Se N flere"; tom liste er positiv information.
   if (types.has("LassoRiskObservations")) {
     const obs = ds.observations[lassoId];

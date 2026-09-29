@@ -7,6 +7,7 @@ import {
   type ChangeEntryVM,
   type ChangeFeedVM,
   foldChangeEntries,
+  type CompanyEventsVM,
   type CompanyRowVM,
   type CompanyVM,
   type ContactPersonVM,
@@ -35,6 +36,7 @@ import {
   hasReportingDuty,
   isPersonId,
 } from "@lasso/spec";
+import { publicationsFromYears } from "../lasso/eventAdapters.js";
 import { CREDIT_NONE_REASON } from "../lasso/creditAdapters.js";
 import { applyCriteria, sortRows } from "./criteria-eval.js";
 import { demoOwnershipGraph, demoPersonOwnershipGraph } from "./demoGraph.js";
@@ -827,6 +829,28 @@ export class DemoProvider implements DataProvider {
   /** Katalog 17: eksempler på alle tilstande (fuld, låst, ikke beregnet); se creditRatingFor. */
   async creditRating(lassoId: string): Promise<CreditRatingVM> {
     return creditRatingFor(get(lassoId));
+  }
+
+  /** Katalog 28.2/28.6/28.8 (eksempeldata): én fusion hos eksempelvirksomheden, konkursdekret hos konkursboet, publicering fra regnskabsårene. */
+  async companyEvents(lassoId: string): Promise<CompanyEventsVM> {
+    const c = get(lassoId);
+    const years = financialsFor(c).years;
+    const publications = publicationsFromYears(years.map((y) => ({ ...y, published: y.published ?? (y.periodEnd ? `${Number(y.periodEnd.slice(0, 4)) + 1}-05-28` : undefined) })));
+    if (c.cvr === "99000001" && publications[1]?.figure) {
+      // Eksempel på et korrigeret regnskab: den tidligere værdi står som "før …".
+      publications[1] = { ...publications[1], corrected: true, published: publications[1].published?.replace(/-05-28$/, "-08-14"), figure: { ...publications[1].figure, previous: Math.round((publications[1].figure.value ?? 0) * 1.08) } };
+    }
+    const mergers: CompanyEventsVM["mergers"] =
+      c.cvr === "99000001"
+        ? [{ date: "2022-07-01", type: "Fusion", from: [{ name: "Data Eksempel A/S", ceased: true }], to: [{ name: c.name, lassoId: c.lassoId }] }]
+        : [];
+    const announcements: CompanyEventsVM["announcements"] = /konkurs/i.test(c.status ?? "")
+      ? [
+          { date: "2026-08-12", type: "Dekret om konkurs", severity: "bankrupt", text: `${c.name} (eksempeldata) er erklæret konkurs ved skifterettens dekret. Kurator er advokat Eksempel Prøvesen. Fristen for anmeldelse af krav er fire uger fra bekendtgørelsen.` },
+          { date: "2026-08-20", type: "Indkaldelse af kreditorer", severity: "neutral", text: "Kreditorer indkaldes til skiftesamling (eksempeldata)." },
+        ].sort((a, b) => b.date.localeCompare(a.date)) as CompanyEventsVM["announcements"]
+      : [];
+    return { lassoId, mergers, announcements, publications, updated: "2026-09-25" };
   }
 
   async auditorIndependence(lassoId: string): Promise<AuditorIndependenceVM> {

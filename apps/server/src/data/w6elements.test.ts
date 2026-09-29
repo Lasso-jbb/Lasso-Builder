@@ -44,3 +44,17 @@ test("26d.5/26d.7: personens netværkstal og scorens historik i demodata", async
   assert.equal(score.history?.at(-1)?.score, score.score);
   assert.equal(score.changes?.length, 3);
 });
+
+test("28.2/28.6/28.8: companyEvents hentes for de tre komponenter, og tekstkortet nævner dem", async () => {
+  const p = new DemoProvider();
+  const spec = parseViewSpec({ title: "x", components: [{ type: "LassoCompanyHead", company: BYG }, { type: "LassoMergers", company: BYG }, { type: "LassoPublications", company: BYG }] });
+  const ds = await resolveSpec(spec, p);
+  assert.equal(ds.companyEvents[BYG]?.mergers.length, 1);
+  assert.ok(ds.companyEvents[BYG]?.publications.some((x) => x.corrected));
+  const card = textCard(spec, ds)!;
+  assert.match(card, /FUSIONER OG SPALTNINGER/);
+  assert.match(card, /REGNSKABSPUBLICERING/);
+  const bankrupt = await p.companyEvents("CVR-1-99000011");
+  assert.equal(bankrupt.announcements[0]?.severity, "neutral");
+  assert.ok(bankrupt.announcements.some((a) => a.severity === "bankrupt"));
+});

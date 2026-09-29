@@ -46,6 +46,7 @@ import { LassoIncomeStatement } from "./components/IncomeStatement.js";
 import { LassoBalanceSheet } from "./components/BalanceSheet.js";
 import { LassoCashFlow } from "./components/CashFlow.js";
 import { FinancialStatements } from "./components/FinancialStatements.js";
+import { Announcements, Mergers, Publications } from "./components/CompanyEvents.js";
 import { OwnerList } from "./components/OwnerList.js";
 import { OwnershipDiagram } from "./components/OwnershipDiagram.js";
 import { PersonList } from "./components/PersonList.js";
@@ -184,6 +185,12 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return <LassoBalanceSheet key={key} statements={empty.financialStatements[c.company]} company={empty.companies[c.company]} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} />;
     case "LassoCashFlow":
       return <LassoCashFlow key={key} statements={empty.financialStatements[c.company]} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} />;
+    case "LassoMergers":
+      return <Mergers key={key} events={empty.companyEvents?.[c.company]} company={empty.companies[c.company]} title={c.title} error={err(`companyEvents:${c.company}`)} demo={empty.source === "demo"} onOpen={props.host.drillDown ? act : undefined} />;
+    case "LassoAnnouncements":
+      return <Announcements key={key} events={empty.companyEvents?.[c.company]} title={c.title} error={err(`companyEvents:${c.company}`)} />;
+    case "LassoPublications":
+      return <Publications key={key} events={empty.companyEvents?.[c.company]} title={c.title} limit={c.limit} error={err(`companyEvents:${c.company}`)} />;
     case "LassoFinancialStatements":
       return <FinancialStatements key={key} statements={empty.financialStatements[c.company]} company={empty.companies[c.company]} statement={c.statement} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} onAction={act} />;
     case "LassoScoreGauge":

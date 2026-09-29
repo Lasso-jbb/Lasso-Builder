@@ -178,7 +178,7 @@ export function KeyValueList({
         {rows.map((r) => (
           <div className="lasso-kv-row" key={r.label}>
             <div className="lasso-kv-row__label">{r.label}</div>
-            <div className={`lasso-kv-row__value${r.tone === "warning" ? " lasso-kv-row__value--warning" : ""}`} title={r.value}>
+            <div className={`lasso-kv-row__value${r.tone === "warning" ? " lasso-kv-row__value--warning" : ""}${r.label === "Bibrancher" || r.label === "Kapital" ? " lasso-kv-row__value--wrap" : ""}`} title={r.value}>
               {r.value ? <Value value={r.value} lassoId={r.lassoId} onOpen={onOpen} /> : <Missing />}
             </div>
           </div>

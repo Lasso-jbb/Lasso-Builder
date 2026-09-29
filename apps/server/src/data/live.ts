@@ -56,6 +56,7 @@ import {
 import { describeShape, LassoApiError, type LassoClient } from "../lasso/client.js";
 import { adaptOwnershipLegal } from "../lasso/ownershipAdapters.js";
 import { adaptLassoNews, mergeNews } from "../lasso/riskNewsAdapters.js";
+import { adaptCompanyEvents } from "../lasso/eventAdapters.js";
 import { adaptPerson, adaptPersonNetwork, adaptPersonSearch, graphFromPersonRoles } from "../lasso/personAdapters.js";
 import { adaptChrLivestock, adaptLiveNumber, adaptReportAnalysisSections, buildProductionUnits } from "../lasso/unitAdapters.js";
 import { loadCreditRating } from "../lasso/creditAdapters.js";
@@ -371,6 +372,12 @@ export class LiveProvider implements DataProvider {
     ]);
     const analysisSections = analysisRaw === undefined ? [] : adaptReportAnalysisSections(analysisRaw);
     return analysisSections.length ? { ...base, sections: [...base.sections, ...analysisSections] } : base;
+  }
+
+  /** Katalog 28.2/28.6/28.8: fra virksomhedens fulde svar og regnskabsårene. Feltnavne ubekræftede (eventAdapters.ts). */
+  async companyEvents(lassoId: string) {
+    const [raw, financials] = await Promise.all([this.client.company(lassoId), this.financials(lassoId)]);
+    return adaptCompanyEvents(lassoId, raw, financials.years);
   }
 
   async timeline(lassoId: string) {

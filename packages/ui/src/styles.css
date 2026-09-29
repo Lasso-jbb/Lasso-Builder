@@ -2150,6 +2150,7 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 
 /* ---------- 28.7 / 26h.9 Bibrancher, revision og kapital som nøgle-værdi (node HDZ-0, GG7-0) ---------- */
 .lasso-kv-row__value--warning { color: var(--lasso-warning); font-weight: 500; }
+.lasso-kv-row__value--wrap { white-space: normal; overflow: visible; }
 
 /* ---------- 26h.4 Kilder og opdatering: kildeliste med tidsstempel og PDF-række (node GDK-0) ---------- */
 .lasso-sourcelist { display: flex; flex-direction: column; gap: var(--lasso-space-3); }
@@ -2177,3 +2178,88 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
   .lasso-snapshot__field { height: var(--lasso-touch-h); }
 }
 .lasso-root a.lasso-sourcelist__pdf { color: var(--lasso-text); }
+
+/* ---------- 28.6 Fusioner og spaltninger (node HCC-0); mobil 26h.8 mini-tidslinje (node GFQ-0) ---------- */
+.lasso-mergers__meta { font-size: 12px; color: var(--lasso-muted); font-weight: 400; }
+.lasso-mergers__rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--lasso-border); }
+.lasso-merger { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: var(--lasso-space-4); align-items: center; padding: var(--lasso-space-3) 0; border-bottom: 1px solid var(--lasso-divider-subtle); }
+.lasso-merger__when { display: flex; flex-direction: column; gap: 2px; }
+.lasso-merger__date { font-size: var(--lasso-fs-sm); color: var(--lasso-text); font-variant-numeric: tabular-nums; }
+.lasso-merger__type { font-size: 12px; color: var(--lasso-muted); }
+.lasso-merger__flow { display: flex; align-items: center; gap: var(--lasso-space-3); flex-wrap: wrap; min-width: 0; }
+.lasso-merger__side { display: flex; flex-direction: column; gap: var(--lasso-space-2); min-width: 0; }
+.lasso-merger__arrow { color: var(--lasso-muted); font-size: var(--lasso-fs); }
+.lasso-merger__party { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius); background: var(--lasso-surface); min-width: 0; }
+.lasso-merger__party.is-focus { border-color: var(--lasso-accent); }
+.lasso-merger__name { font-size: var(--lasso-fs); font-weight: 500; color: var(--lasso-text); }
+.lasso-merger__party.is-ceased .lasso-merger__name { color: var(--lasso-muted); font-weight: 400; }
+.lasso-merger__note { font-size: 12px; color: var(--lasso-muted); }
+.lasso-merger__sentence { display: none; }
+.lasso-merger--founded { display: none; }
+@container lasso (max-width: 560px) {
+  /* Mini-tidslinje: koral prik pr. hændelse, grå ring ved "Stiftet", lodret linje imellem. */
+  .lasso-mergers__rows { border-top: 0; }
+  .lasso-merger, .lasso-merger--founded { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; position: relative; padding: 0 0 var(--lasso-space-4) 28px; border-bottom: 0; }
+  .lasso-merger::before { content: ""; position: absolute; left: 4px; top: 4px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--lasso-accent); background: var(--lasso-surface); box-shadow: inset 0 0 0 2px var(--lasso-surface), inset 0 0 0 5px var(--lasso-accent); }
+  .lasso-merger:not(:last-child)::after { content: ""; position: absolute; left: 10px; top: 20px; bottom: 2px; width: 1px; background: var(--lasso-border-strong); }
+  .lasso-merger--founded::before { border-color: var(--lasso-icon); box-shadow: none; }
+  .lasso-merger__when { flex-direction: row; gap: 0; }
+  .lasso-merger__date, .lasso-merger__type { font-size: 12px; color: var(--lasso-muted); }
+  .lasso-merger__type::before { content: ", "; }
+  .lasso-merger__flow { display: none; }
+  .lasso-merger__sentence { display: block; font-size: var(--lasso-fs); line-height: 20px; color: var(--lasso-text); }
+}
+
+/* ---------- 28.8 Statstidende, seneste bekendtgørelser (node HGH-0) ---------- */
+.lasso-announce__rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--lasso-border); }
+.lasso-announce__row { display: grid; grid-template-columns: 96px 200px minmax(0, 1fr); gap: var(--lasso-space-4); padding: var(--lasso-space-3) 0; border-bottom: 1px solid var(--lasso-divider-subtle); font-size: var(--lasso-fs-sm); align-items: start; }
+.lasso-announce__date { color: var(--lasso-muted); font-variant-numeric: tabular-nums; }
+.lasso-announce__type { font-weight: 500; color: var(--lasso-text); }
+.lasso-announce__type--bankrupt { color: var(--lasso-bankrupt); }
+.lasso-announce__type--warning { color: var(--lasso-warning); }
+.lasso-announce__body { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
+.lasso-announce__text { color: var(--lasso-text-2); line-height: 18px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.lasso-announce__text.is-open { display: block; }
+.lasso-announce__more { color: var(--lasso-accent-text); font-size: var(--lasso-fs-sm); font-weight: 500; }
+@container lasso (max-width: 560px) {
+  .lasso-announce__row { grid-template-columns: minmax(0, 1fr) auto; gap: 2px var(--lasso-space-3); }
+  .lasso-announce__type { grid-column: 1; grid-row: 1; }
+  .lasso-announce__date { grid-column: 2; grid-row: 1; font-size: 12px; }
+  .lasso-announce__body { grid-column: 1 / -1; }
+}
+
+/* ---------- 28.2 Regnskabspublicering, ny/korrigeret (node H3L-0) ---------- */
+.lasso-publications__type { display: inline-flex; align-items: center; gap: 6px; }
+.lasso-publications__figure { display: inline-flex; flex-direction: column; align-items: flex-end; }
+.lasso-publications__before { font-size: 12px; line-height: 16px; color: var(--lasso-muted); font-weight: 400; }
+
+/* ---------- 28.3 Opdateringer på personer og P-enheder (node H5N-0) ---------- */
+.lasso-entupd, .lasso-batches { display: flex; flex-direction: column; gap: var(--lasso-space-3); }
+.lasso-entupd__title, .lasso-batches__title { margin: 0; font-size: var(--lasso-fs-lg); line-height: 24px; font-weight: 600; color: var(--lasso-text); }
+.lasso-entupd__rows, .lasso-psearch { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--lasso-border); }
+.lasso-entupd__row { display: flex; flex-direction: column; gap: 2px; padding: var(--lasso-space-3) 0; min-height: 44px; border-bottom: 1px solid var(--lasso-divider-subtle); }
+.lasso-entupd__head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.lasso-entupd__subject { font-size: var(--lasso-fs); font-weight: 600; color: var(--lasso-text); }
+.lasso-entupd__type { font-size: var(--lasso-fs-sm); color: var(--lasso-muted); }
+.lasso-entupd__type--removed { color: var(--lasso-bankrupt); font-weight: 500; }
+.lasso-entupd__date { margin-left: auto; font-size: 12px; color: var(--lasso-muted); }
+.lasso-entupd__text { font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-2); }
+
+/* ---------- 28.4 Rapportbestilling og batchstatus (node H7M-0) ---------- */
+.lasso-batches__status { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; color: var(--lasso-text); }
+.lasso-batches__status--planned { color: var(--lasso-muted); }
+.lasso-batches__status--failed svg { color: var(--lasso-warning); }
+.lasso-batches__progress { display: block; height: 4px; margin-top: 6px; border-radius: 2px; background: var(--lasso-divider-subtle); overflow: hidden; max-width: 160px; }
+.lasso-batches__progress > span { display: block; height: 100%; background: var(--lasso-accent); }
+.lasso-batches__action { color: var(--lasso-accent-text); font-weight: 500; }
+
+/* ---------- 28.5 Personsøgning, resultat med "fundet via" (node HAL-0) ---------- */
+.lasso-psearch__row { display: flex; align-items: center; justify-content: space-between; gap: var(--lasso-space-3); min-height: 56px; padding: 8px 0; border-bottom: 1px solid var(--lasso-divider-subtle); }
+.lasso-psearch__main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lasso-psearch__name { font-size: var(--lasso-fs); font-weight: 600; color: var(--lasso-text); }
+.lasso-psearch__meta { font-size: var(--lasso-fs-sm); color: var(--lasso-muted); }
+.lasso-psearch__via { flex: none; font-size: 12px; color: var(--lasso-muted); text-align: right; }
+@container lasso (max-width: 560px) {
+  .lasso-psearch__row { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .lasso-psearch__via { text-align: left; }
+}

@@ -46,6 +46,7 @@ const FETCHERS: Record<string, (ds: Dataset, p: DataProvider, id: string) => Pro
   livestock: async (ds, p, id) => void (ds.livestock[id] = await p.livestock(id)),
   person: async (ds, p, id) => void (ds.persons[id] = await p.person(id)),
   personNetwork: async (ds, p, id) => void (ds.personNetworks[id] = await p.personNetwork(id)),
+  companyEvents: async (ds, p, id) => void (ds.companyEvents[id] = await p.companyEvents(id)),
 };
 
 /**
@@ -264,6 +265,14 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
         break;
       case "LassoPersonNetwork":
         want(c.person, "personNetwork");
+        break;
+      case "LassoMergers":
+        want(c.company, "company");
+        want(c.company, "companyEvents");
+        break;
+      case "LassoAnnouncements":
+      case "LassoPublications":
+        want(c.company, "companyEvents");
         break;
       case "LassoPersonStats":
         want(c.person, "person");

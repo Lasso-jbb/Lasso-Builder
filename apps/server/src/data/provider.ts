@@ -1,6 +1,7 @@
 import type {
   BeneficialOwnershipVM,
   ChangeFeedVM,
+  CompanyEventsVM,
   ChangeType,
   AuditorIndependenceVM,
   CompanyRowVM,
@@ -76,6 +77,8 @@ export interface DataProvider {
   personNetwork(lassoId: string): Promise<PersonNetworkVM>;
   /** Navneopslag på personer (til show_person med et navn). */
   findPersons(name: string, limit: number): Promise<PersonSearchRowVM[]>;
+  /** Katalog 28.2/28.6/28.8: fusioner/spaltninger, Statstidende-bekendtgørelser og regnskabspublicering. Live ubekræftet. */
+  companyEvents(lassoId: string): Promise<CompanyEventsVM>;
   /** Katalog 21: ændringer i de overvågede virksomheder de seneste `days` dage. Live-endpoint ubekræftet. */
   changeFeed(opts: ChangeFeedOptions): Promise<ChangeFeedVM>;
 }
