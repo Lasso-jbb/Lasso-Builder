@@ -1563,9 +1563,11 @@ const MODULES_PROBE = {
     { type: "LassoRelations", company: C },
     { type: "LassoNews", company: C, limit: 4 },
     { type: "LassoTimeline", company: C, limit: 6 },
+    { type: "LassoKeyValueList", company: C, variant: "company" },
+    { type: "LassoPersonList", company: C },
     { type: "LassoScoreGauge", company: C },
-    { type: "LassoIncomeStatement", company: C },
-    { type: "LassoBalanceSheet", company: C },
+    { type: "LassoLineChart", company: C, metric: "bruttofortjeneste", industry: true },
+    { type: "LassoRiskObservations", company: C },
   ],
 };
 
@@ -1599,24 +1601,32 @@ function FiveModules({ ds }: { ds: Dataset }) {
   );
   return (
     <div className="lasso-root" data-theme="light" style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-      <ModuleExample title="Nøgletal" pattern="mønster 1 + 4" text="Nøgletalskort i fuld bredde og flerårstabellen under. Print til venstre; Vend graf og Selskab/Koncern som visningsvalg til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Print" }} controls={<>{ghost("Vend")}<Seg items={["Selskab", "Koncern"]} /></>} />}>
-        {view([{ type: "LassoKeyFigureCards", company: C, width: "full" }, { type: "LassoMultiYearTable", company: C, width: "full" }])}
+      <ModuleExample title="Nøgletal" pattern="mønster 1 + 4: graf fuld, flerårstabel fuld" text="Linjegrafen i fuld bredde og flerårstabellen (5 år) under. Print til venstre; Vend graf og Selskab/Koncern som visningsvalg til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Print" }} controls={<>{ghost("Vend")}<Seg items={["Selskab", "Koncern"]} /></>} />}>
+        {view([{ type: "LassoLineChart", company: C, metric: "bruttofortjeneste", industry: true, width: "full" }, { type: "LassoMultiYearTable", company: C, width: "full" }])}
       </ModuleExample>
       <ModuleExample title="Ejerdiagram" pattern="mønster 2" text="Diagrammet ¾ med relationerne ¼ ved siden. Udskriv og Gem til venstre; Layout og Rediger til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Udskriv" }} secondary={[{ label: "Gem" }]} controls={<>{ghost("Layout")}{ghost("Rediger")}</>} />}>
         {view([{ type: "LassoOwnershipDiagram", company: C, width: "three-quarters" }, { type: "LassoRelations", company: C, width: "quarter" }])}
       </ModuleExample>
       <ModuleExample title="Nyheder" pattern="mønster 8" text="Faner niveau 2 over kildernes strømme, artiklerne som kortgitter. Filtre yderst til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" field={<Seg level={2} items={["Lasso", "Artikler", "Ritzau", "Statstidende"]} />} controls={ghost("Filtre")} />}>
-        {view([{ type: "LassoNews", company: C, limit: 4, group: { id: "nyheder", pattern: "cards" } }, { type: "LassoContact", company: C, group: { id: "nyheder", pattern: "cards" } }])}
+        {view([{ type: "LassoNews", company: C, limit: 4, layout: "grid" }])}
       </ModuleExample>
-      <ModuleExample title="Historik" pattern="mønster 6, spejlet" text="Den kronologiske strøm med filtrene i en smal kolonne. Print til venstre; Vælg dato og Filtrer til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Print" }} controls={<>{ghost("Vælg dato")}{ghost("Filtrer")}</>} />}>
-        {view([{ type: "LassoTimeline", company: C, limit: 6, filterColumn: true }])}
+      <ModuleExample title="Historik" pattern="mønster 6, spejlet: øjebliksbillede ⅓, tidslinje ⅔" text="Datoen styrer venstre side: oplysningerne pr. dato (adresse, ledelse, ejere, revisor). Til højre tidslinjen med årsmarkører og ændringer som før → efter. Print til venstre; Vælg dato og Filtrer til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Print" }} controls={<>{ghost("Vælg dato")}{ghost("Filtrer")}</>} />}>
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr)", alignItems: "start" }}>
+          <div style={{ display: "grid", gap: 12 }}>
+            <SnapshotPicker subject="Oplysninger" what="oplysninger" date="2024-06-01" today="2026-09-29" onChange={noop} />
+            {view([{ type: "LassoKeyValueList", company: C, variant: "company", title: "Oplysninger pr. 01.06.2024" }, { type: "LassoPersonList", company: C }])}
+          </div>
+          <div style={{ borderLeft: "1px solid var(--lasso-border)" }}>{view([{ type: "LassoTimeline", company: C, limit: 6 }])}</div>
+        </div>
       </ModuleExample>
       <ModuleExample title="Firmaindsigt" pattern="mønster 9" text="Hoved med score og sektionerne som harmonika, første række åben. Udskriv til venstre; Ejerdiagram til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Udskriv" }} controls={ghost("Ejerdiagram")} />}>
         {view([
-          { type: "LassoKeyFigureCards", company: C, metrics: ["bruttofortjeneste", "resultat", "egenkapital"], width: "three-quarters" },
+          { type: "LassoCompanyHead", company: C, variant: "compact", width: "half" },
           { type: "LassoScoreGauge", company: C, width: "quarter" },
-          { type: "LassoIncomeStatement", company: C, title: "Resultatopgørelse", group: { id: "fi", pattern: "accordion" } },
-          { type: "LassoBalanceSheet", company: C, title: "Balance", group: { id: "fi", pattern: "accordion" } },
+          { type: "LassoKeyFigureCards", company: C, metrics: ["bruttofortjeneste", "resultat", "egenkapital"], width: "quarter" },
+          { type: "LassoRiskObservations", company: C, title: "Observationer", group: { id: "fi", pattern: "accordion" } },
+          { type: "LassoKeyFigureCards", company: C, group: { id: "fi", pattern: "accordion" } },
+          { type: "LassoMultiYearTable", company: C, title: "Flerårstabel", group: { id: "fi", pattern: "accordion" } },
         ])}
       </ModuleExample>
     </div>

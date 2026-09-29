@@ -500,6 +500,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           key={key}
           news={empty.news[k]}
           limit={c.limit}
+          layout={c.layout}
           companyName={mention}
           companyId={k}
           error={err(`news:${k}`)}

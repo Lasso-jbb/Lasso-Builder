@@ -96,8 +96,8 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
   {
     type: "LassoNews",
     title: "Nyheder",
-    description: `Brug til: medieomtale – nyhedsartikler om virksomheden (eller med person: om personen, fra Lasso News) med kilde, tidspunkt og uddrag – 'nyheder', 'omtale', 'seneste nyt'. Brug ikke når: det gælder registrerede ændringer i CVR (LassoTimeline). Kræver: company ELLER person (præcis én), limit? (standard 5); ingen artikler giver tom tilstand. ${F("historik (og overblik)")} Personens nyheder dækkes af show_person. Eksempel: 'Har X været i nyhederne?' → show_company focus historik.`,
-    props: "company | person, limit? (1–10, standard 5)",
+    description: `Brug til: medieomtale – nyhedsartikler om virksomheden (eller med person: om personen, fra Lasso News) med kilde, tidspunkt og uddrag – 'nyheder', 'omtale', 'seneste nyt'. Brug ikke når: det gælder registrerede ændringer i CVR (LassoTimeline). Kræver: company ELLER person (præcis én), limit? (standard 5); ingen artikler giver tom tilstand. ${F("historik (og overblik)")} Personens nyheder dækkes af show_person. layout 'grid' (mønster 8) stiller artiklerne som kortgitter i to kolonner i fuld bredde, fx i et nyhedsmodul under faner; brug det ikke i en ½-kolonne. Eksempel: 'Har X været i nyhederne?' → show_company focus historik.`,
+    props: "company | person, limit? (1–10, standard 5), layout? ('grid')",
   },
 
   // (a) Tal og grafer ------------------------------------------------------------

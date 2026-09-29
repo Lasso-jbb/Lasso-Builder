@@ -204,8 +204,11 @@ export function LassoNews({
   error,
   onOpen,
   emptyReason,
+  layout,
 }: {
   news?: NewsVM;
+  /** "grid" (mønster 8, 30.11): artiklerne som kortgitter i to kolonner i fuld bredde. */
+  layout?: "grid";
   companyName?: string;
   /** Virksomheden, siden handler om: dens navn i nyhederne står i fed og linker ikke til sig selv. */
   companyId?: string;
@@ -236,8 +239,8 @@ export function LassoNews({
   const max = limit ?? 5;
   const items = expanded ? news.items : news.items.slice(0, max);
   return (
-    <Section title={title} span="half">
-      <div className="lasso-news">
+    <Section title={title} span={layout === "grid" ? "full" : "half"}>
+      <div className={`lasso-news${layout === "grid" ? " lasso-news--grid" : ""}`}>
         {items.map((n, i) => (
           <NewsRow key={i} item={n} mention={companyName} selfId={companyId} onOpen={onOpen} />
         ))}

@@ -304,6 +304,10 @@ export const newsSchema = z
     type: z.literal("LassoNews"),
     ...companyOrPerson,
     limit: z.number().int().min(1).max(10).default(5),
+    layout: z
+      .enum(["grid"])
+      .optional()
+      .describe("'grid' (mønster 8, 30.11): artiklerne som kortgitter i to kolonner i fuld bredde (én kolonne på mobil). Udeladt: liste i ½."),
   })
   .refine(exactlyOneEntity, EXACTLY_ONE_ENTITY);
 
@@ -849,5 +853,7 @@ export function widthOf(c: ViewComponent, layout: ViewSpec["layout"]): Width {
   if (layout === "stack") return "full";
   // 30.9: tidslinjen med filterkolonne (¼ + ¾) fylder altid hele bredden.
   if (c.type === "LassoTimeline" && c.filterColumn) return "full";
+  // 30.11 mønster 8: nyhedernes kortgitter står i fuld bredde.
+  if (c.type === "LassoNews" && c.layout === "grid" && !c.width) return "full";
   return c.width ?? DEFAULT_WIDTH[c.type];
 }

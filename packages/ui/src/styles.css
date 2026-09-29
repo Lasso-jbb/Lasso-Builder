@@ -1075,6 +1075,10 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 
 /* ---------- Nyheder (12, node AAG-0): kildemærke = favicon, ingen tone-mærker ---------- */
 .lasso-news { display: flex; flex-direction: column; }
+/* 30.11/30.14 mønster 8: artiklerne som kortgitter, to kolonner med luft og 1 px kant, aldrig skygge; én kolonne på mobil. */
+.lasso-news.lasso-news--grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--lasso-space-4); align-items: start; }
+.lasso-root .lasso-news--grid > .lasso-news__row, .lasso-root .lasso-news--grid > .lasso-news__row:first-child { padding: var(--lasso-space-4); border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-card); }
+@container lasso (max-width: 560px) { .lasso-news.lasso-news--grid { grid-template-columns: minmax(0, 1fr); gap: var(--lasso-space-3); } }
 .lasso-news__row { display: block; padding: 14px 0; border-top: 1px solid var(--lasso-border); color: inherit; text-decoration: none; }
 .lasso-news__row:first-child { border-top: 0; padding-top: 0; }
 /* Overskriften er selv linket til artiklen (rækken er en article, så navne i teksten kan være knapper). */
@@ -1485,12 +1489,13 @@ button.lasso-relations__name:hover { text-decoration: underline; }
   /* 26.3/26g.1: på mobil står nøglen over værdien også i sidens kolonner (26c.2-formen). */
   .lasso-column .lasso-kv-row__label { width: 100%; }
   /* 26g.1/26g.2 (LassoView sectionCards): hver sektion er et kort med 1 px kant og radius 12; kort adskilles af 12 px luft, ikke dividere. */
-  .lasso-frame--cards .lasso-column__item, .lasso-frame--cards .lasso-column + .lasso-column .lasso-column__item { border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-card); padding: var(--lasso-space-4); margin-top: var(--lasso-space-3); background: var(--lasso-surface); }
-  .lasso-frame--cards .lasso-column__item + .lasso-column__item { border-top: 1px solid var(--lasso-border); }
-  .lasso-frame--cards > .lasso-content--columns > .lasso-columns:first-child > .lasso-column > .lasso-column__item:first-child { padding-top: var(--lasso-space-4); }
+  .lasso-root .lasso-frame--cards .lasso-column .lasso-column__item:not(:has(> .lasso-company, > .lasso-personhead)) { border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-card); padding: var(--lasso-space-4); margin-top: var(--lasso-space-3); background: var(--lasso-surface); }
+  .lasso-root .lasso-frame--cards .lasso-column .lasso-column__item:has(> .lasso-company, > .lasso-personhead) { border: 0; padding: 0; }
   .lasso-frame--cards .lasso-company > .lasso-headtabs, .lasso-frame--cards .lasso-personhead > .lasso-headtabs { margin-left: calc(-1 * var(--lasso-space-4)); margin-right: calc(-1 * var(--lasso-space-4)); padding-left: var(--lasso-space-4); }
   .lasso-frame--cards .lasso-company > .lasso-headtabs { margin-bottom: 0; }
   .lasso-frame--cards .lasso-company:has(> .lasso-headtabs) { border-bottom: 0; padding-bottom: 0; }
+  /* 26g.2: på den sammensatte personside er hovedet ikke et kort (26d.1 er elementets egen form). */
+  .lasso-root .lasso-frame--cards .lasso-personhead.lasso-company { padding: 0; border: 0; border-radius: 0; }
 }
 
 /* ---------- 16 Personside (node BN9-0; mobil 26d EOD-0) ---------- */
