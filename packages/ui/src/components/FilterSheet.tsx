@@ -7,6 +7,8 @@ import {
   FIELD_BY_KEY,
   FIELDS,
   formatCriterion,
+  formatCriterionValue,
+  formatNumber,
   operatorLabel,
   OPERATORS_BY_TYPE,
   validateCriteria,
@@ -15,6 +17,7 @@ import {
   type Operator,
 } from "@lasso/spec";
 import { Dialog } from "./Dialog.js";
+import { ChoiceChips, Toggle } from "./Fields.js";
 
 /**
  * Filterpanelet over et resultat: viser det, AI'en forstod, som tags og lader
@@ -212,26 +215,226 @@ export function FilterEditor({
   );
 }
 
+/** Et felt i filterarket (26c.8): valgchips (36 px), række med værdi og chevron (48 px) eller kontakt. */
+export interface SheetField {
+  key: string;
+  as?: "chips" | "row" | "toggle";
+  /** Egen tekst, fx "Kun med risikoobservationer" på en kontakt. */
+  label?: string;
+  /** Egen feltdefinition, når feltet ikke står i FIELDS (fx en kontakt, der styres af appen). */
+  def?: FieldDef;
+  /** Valgchipsenes rækkefølge, når den afviger fra feltets. */
+  options?: readonly string[];
+}
+
+/** Standardfelterne i filterarket (26c.8): status som valgchips, region og bruttofortjeneste som rækker. */
+export const SHEET_FIELDS: readonly SheetField[] = [
+  { key: "status", as: "chips", options: ["aktiv", "under konkurs", "under likvidation", "ophørt"] },
+  { key: "region", as: "row" },
+  { key: "bruttofortjeneste", as: "row" },
+];
+
+const cap = (t: string) => (t ? t[0]!.toLocaleUpperCase("da-DK") + t.slice(1) : t);
+
+/** Værdien i en række uden feltnavnet: "Hovedstaden", "Er mindst 5 mio. kr.". Intet kriterie = "Alle". */
+export function criterionSummary(c: Criterion | undefined, def?: FieldDef): string {
+  if (!c) return "Alle";
+  const f = def ?? FIELD_BY_KEY.get(c.field);
+  if ((c.operator === "eq" && f?.type !== "date") || c.operator === "in") return cap(formatCriterionValue(f, c.value));
+  const label = f?.label ?? c.field;
+  const text = formatCriterion(c);
+  return cap(text.startsWith(`${label} `) ? text.slice(label.length + 1) : text);
+}
+
+function chipValues(c: Criterion | undefined): string[] {
+  if (!c) return [];
+  const raw = Array.isArray(c.value) ? c.value : [c.value];
+  return raw.map((v) => String(v));
+}
+
 /**
- * Filterarket (26c.8/26a.8): filtrene i et bundark (Dialog; på desktop en dialog på 520 px) med titlen
- * "Kriterier (N)". Arket er højst 90 % af skærmen; felterne ruller, og Anvend/Annuller står fast nederst.
+ * Filterarket (26c.8, node EM6-0): bundark (Dialog; på desktop en dialog på 520 px) med "Nulstil" i
+ * koral til venstre og titlen "Filtre" centreret. Felterne er valgchips (36 px), 48 px rækker med
+ * værdien og en chevron ("Region — Hovedstaden ›", tap åbner feltet) og kontakter (44×26). Den primære
+ * knap i fuld bredde nederst viser antallet: "Vis 312 virksomheder". Intet ændres, før den trykkes.
  * Bruges af tabellens "Filtre"-knap og af FilterPanel under 560 px.
  */
-export function FilterSheet({ open, criteria, onApply, onClose }: { open: boolean; criteria: readonly Criterion[]; onApply: (c: Criterion[]) => void; onClose: () => void }) {
+export function FilterSheet({
+  open,
+  criteria,
+  onApply,
+  onClose,
+  fields = SHEET_FIELDS,
+  count,
+  title = "Filtre",
+  defaultEdit,
+}: {
+  open: boolean;
+  criteria: readonly Criterion[];
+  onApply: (c: Criterion[]) => void;
+  onClose: () => void;
+  /** Felterne i arket; aktive kriterier på andre felter vises som rækker under dem. */
+  fields?: readonly SheetField[];
+  /** Antal virksomheder for kladden ("Vis 312 virksomheder"); null/udeladt = "Vis virksomheder". */
+  count?: number | ((c: readonly Criterion[]) => number | null | undefined);
+  title?: string;
+  /** Åbn ét felt fra start (statisk forhåndsvisning). */
+  defaultEdit?: string;
+}) {
   return (
-    <Dialog open={open} title={criteria.length ? `Kriterier (${criteria.length})` : "Kriterier"} description={criteria.length ? undefined : "Ingen aktive filtre"} onClose={onClose} className="lasso-dialog--filters">
-      {open ? (
-        <FilterEditor
-          layout="sheet"
-          criteria={criteria}
-          onCancel={onClose}
-          onApply={(c) => {
-            onApply(c);
-            onClose();
-          }}
-        />
-      ) : null}
+    <Dialog open={open} title={title} onClose={onClose} className="lasso-dialog--filters lasso-dialog--fsheet">
+      {open ? <FilterSheetBody criteria={criteria} fields={fields} count={count} title={title} defaultEdit={defaultEdit} onClose={onClose} onApply={(c) => (onApply(c), onClose())} /> : null}
     </Dialog>
+  );
+}
+
+function FilterSheetBody({
+  criteria,
+  fields,
+  count,
+  title,
+  defaultEdit,
+  onApply,
+  onClose,
+}: {
+  criteria: readonly Criterion[];
+  fields: readonly SheetField[];
+  count?: number | ((c: readonly Criterion[]) => number | null | undefined);
+  title: string;
+  defaultEdit?: string;
+  onApply: (c: Criterion[]) => void;
+  onClose: () => void;
+}) {
+  const defs = new Map<string, FieldDef | undefined>(fields.map((f) => [f.key, f.def ?? FIELD_BY_KEY.get(f.key)]));
+  const draftFor = (key: string, cs: readonly Criterion[]): Draft => {
+    const f = defs.get(key) ?? FIELD_BY_KEY.get(key);
+    const c = cs.find((x) => x.field === key);
+    return c ? toDraft(c) : { id: nextId++, field: key, operator: (f?.type === "enum" ? "in" : f ? OPERATORS_BY_TYPE[f.type][0]! : "eq") as Operator, values: [], isNew: true };
+  };
+  const [crit, setCrit] = useState<Criterion[]>(() => [...criteria]);
+  // defaultEdit: ét felt åbent fra start (statisk forhåndsvisning).
+  const [editing, setEditing] = useState<{ key: string; draft: Draft } | null>(() => (defaultEdit ? { key: defaultEdit, draft: draftFor(defaultEdit, criteria) } : null));
+  const [error, setError] = useState<string | null>(null);
+  const all: SheetField[] = [...fields, ...crit.filter((c) => !fields.some((f) => f.key === c.field)).map((c) => ({ key: c.field, as: "row" as const }))];
+  const defOf = (key: string) => defs.get(key) ?? FIELD_BY_KEY.get(key);
+  const find = (key: string) => crit.find((c) => c.field === key);
+  const set = (key: string, c: Criterion | null) => setCrit((cs) => (c ? (cs.some((x) => x.field === key) ? cs.map((x) => (x.field === key ? c : x)) : [...cs, c]) : cs.filter((x) => x.field !== key)));
+  const n = typeof count === "function" ? count(crit) : count;
+
+  const startEdit = (key: string) => {
+    setError(null);
+    setEditing({ key, draft: draftFor(key, crit) });
+  };
+
+  const back = () => {
+    if (!editing) return;
+    const d = editing.draft;
+    if (d.values.every((v) => !v.trim())) {
+      set(editing.key, null);
+      setEditing(null);
+      return;
+    }
+    const r = fromDraft(d);
+    if (r.error || !r.criterion) return setError(r.error ?? "Ugyldig værdi");
+    set(editing.key, r.criterion);
+    setEditing(null);
+  };
+
+  const apply = () => onApply(crit);
+  const cta = typeof n === "number" ? `Vis ${formatNumber(n)} ${n === 1 ? "virksomhed" : "virksomheder"}` : "Vis virksomheder";
+
+  if (editing) {
+    const f = defOf(editing.key);
+    return (
+      <div className="lasso-fsheet">
+        <div className="lasso-fsheet__head">
+          <button type="button" className="lasso-fsheet__back" onClick={back}>
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M14.5 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+            </svg>
+            {title}
+          </button>
+          <span className="lasso-fsheet__title">{f?.label ?? editing.key}</span>
+          <span className="lasso-fsheet__spacer" />
+        </div>
+        <div className="lasso-filters lasso-filters--sheet lasso-fsheet__edit">
+          <div className="lasso-filter-row__control">
+            <FieldControl draft={editing.draft} field={f} invalid={Boolean(error)} onChange={(patch) => setEditing({ ...editing, draft: { ...editing.draft, ...patch } })} />
+          </div>
+          {error ? <div className="lasso-field__error">{error}</div> : null}
+        </div>
+        <div className="lasso-fsheet__foot">
+          <button type="button" className="lasso-btn lasso-btn--primary lasso-fsheet__cta" onClick={back}>
+            Færdig
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="lasso-fsheet">
+      <button type="button" className="lasso-sr" onClick={onClose}>
+        Luk filtre
+      </button>
+      <div className="lasso-fsheet__head">
+        <button type="button" className="lasso-fsheet__reset" onClick={() => setCrit([])} disabled={crit.length === 0}>
+          Nulstil
+        </button>
+        <span className="lasso-fsheet__title" aria-hidden="true">
+          {title}
+        </span>
+        <span className="lasso-fsheet__spacer" />
+      </div>
+      <div className="lasso-fsheet__list">
+        {all.map((sf) => {
+          const f = defOf(sf.key);
+          const label = sf.label ?? f?.label ?? sf.key;
+          const c = find(sf.key);
+          const as = sf.as ?? (f?.type === "boolean" ? "toggle" : isChipField(f) ? "chips" : "row");
+          const opts = sf.options ?? f?.options;
+          if (as === "chips" && opts) {
+            const values = chipValues(c);
+            return (
+              <div key={sf.key} className="lasso-fsheet__chips">
+                <div className="lasso-fsheet__label">{label}</div>
+                <ChoiceChips
+                  label={label}
+                  options={opts.map((o) => ({ id: o, label: cap(o) }))}
+                  values={values}
+                  onChange={(v) => set(sf.key, v.length === 0 ? null : v.length === 1 ? { field: sf.key, operator: "eq", value: v[0]! } : { field: sf.key, operator: "in", value: v })}
+                />
+              </div>
+            );
+          }
+          if (as === "toggle") {
+            const on = c ? c.value === true || c.value === "true" : false;
+            return (
+              <div key={sf.key} className="lasso-fsheet__row lasso-fsheet__row--toggle">
+                <span className="lasso-fsheet__rowlabel" id={`fs-${sf.key}`}>
+                  {label}
+                </span>
+                <Toggle on={on} label={label} onChange={(v) => set(sf.key, v ? { field: sf.key, operator: "eq", value: true } : null)} />
+              </div>
+            );
+          }
+          return (
+            <button key={sf.key} type="button" className="lasso-fsheet__row" onClick={() => startEdit(sf.key)}>
+              <span className="lasso-fsheet__rowlabel">{label}</span>
+              <span className={`lasso-fsheet__value ${c ? "is-set" : ""}`}>{criterionSummary(c, f)}</span>
+              <svg className="lasso-fsheet__chev" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9.5 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+              </svg>
+            </button>
+          );
+        })}
+      </div>
+      <div className="lasso-fsheet__foot">
+        <button type="button" className="lasso-btn lasso-btn--primary lasso-fsheet__cta" onClick={apply}>
+          {cta}
+        </button>
+      </div>
+    </div>
   );
 }
 

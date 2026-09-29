@@ -16,6 +16,8 @@ export interface ToastOptions {
   action?: { label: string; onClick: () => void };
   /** Millisekunder før beskeden forsvinder (standard 5000). */
   ttl?: number;
+  /** "added" = kvittering for et tilføjet filter (02b.13): flueben i 24 px koral-lys cirkel og 1 px lodret skillelinje før handlingen. */
+  variant?: "added";
 }
 
 export interface ToastEntry extends ToastOptions {
@@ -122,7 +124,7 @@ export function ToastItem({ toast, onDismiss }: { toast: ToastEntry; onDismiss?:
   const style: CSSProperties | undefined = dy > 0 ? { transform: `translateY(${dy}px)`, opacity: Math.max(0.3, 1 - dy / 120) } : undefined;
   return (
     <div
-      className={dy > 0 ? `lasso-toast lasso-toast--${tone} is-dragging` : `lasso-toast lasso-toast--${tone}`}
+      className={["lasso-toast", `lasso-toast--${tone}`, toast.variant ? `lasso-toast--${toast.variant}` : "", dy > 0 ? "is-dragging" : ""].filter(Boolean).join(" ")}
       role={tone === "error" ? "alert" : undefined}
       style={style}
       onTouchStart={(e) => {

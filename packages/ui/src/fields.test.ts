@@ -21,7 +21,10 @@ import {
   DateField,
   TreePicker,
   YesNoChips,
+  ToggleField,
+  FormPage,
 } from "./components/Fields.js";
+import { criterionSummary } from "./components/FilterSheet.js";
 import { DB07_EXCERPT } from "./components/industries.js";
 
 const noop = () => {};
@@ -43,10 +46,13 @@ test("03.1 Handlingslinjen: effekt, Annuller og + Tilføj / Opdater", () => {
   assert.match(rest, />Ryd</);
 });
 
-test("02a.9/02b.11 Chips: valgt har flueben og aria-pressed, antal efter navnet", () => {
-  const html = render(h(ChoiceChips, { options: [{ id: "Direktør", label: "Direktør", count: 1204 }, { id: "Økonomichef", label: "Økonomichef", count: 312 }], values: ["Direktør"], onChange: noop }));
-  assert.match(html, /class="lasso-choice__chip is-on" aria-pressed="true"><svg/);
-  assert.match(html, /lasso-choice__count">1\.204</);
+test("02a.9/02b.11 Chips: valgt har flueben og aria-pressed; med antal uden flueben, antal efter navnet", () => {
+  const plain = render(h(ChoiceChips, { options: ["Hovedstaden", "Sjælland"], values: ["Sjælland"], onChange: noop }));
+  assert.match(plain, /class="lasso-choice__chip is-on" aria-pressed="true"><svg/);
+  const html = render(h(ChoiceChips, { options: [{ id: "Direktør", label: "Direktør", count: 122856 }, { id: "Økonomichef", label: "Økonomichef", count: 312 }], values: ["Direktør"], onChange: noop }));
+  assert.match(html, /lasso-choice--count/);
+  assert.match(html, /class="lasso-choice__chip is-on" aria-pressed="true">Direktør</);
+  assert.match(html, /lasso-choice__count">122\.856</);
 });
 
 test("02a.10 Ja/Nej som to chips, intet valgt = ingen aria-pressed true", () => {
@@ -74,36 +80,47 @@ test("02a.13 Multivalg med loft: tæller 3 / 3 og Loftet er nået", () => {
   assert.match(html, /disabled=""/);
 });
 
-test("02b.9 Indsæt liste: tekstområde med Annuller/Tilføj", () => {
-  const html = render(h(ListField, { values: ["2100"], onChange: noop, defaultPasteOpen: true }));
-  assert.match(html, /<textarea/);
-  assert.match(html, />Annuller<.*>Tilføj</);
+test("02b.9 Indsæt liste: operator, tekstområde og Vælg fra listen stablet, ingen knapper", () => {
+  const html = render(h(ListField, { values: [], onChange: noop }));
+  assert.match(html, />er en af</);
+  assert.match(html, /<textarea[^>]*placeholder="Indsæt liste, fx 2100, 8000, 5000"/);
+  assert.match(html, /Vælg fra listen/);
+  assert.doesNotMatch(html, />Tilføj</);
+  const old = render(h(ListField, { values: ["2100"], onChange: noop, defaultPasteOpen: true, variant: "inline" }));
+  assert.match(old, />Annuller<.*>Tilføj</);
 });
 
-test("02b.10 Datovælger: mandag først, i dag markeret, måned og år som dropdown", () => {
+test("02b.10 Datovælger: ét bogstav pr. ugedag, i dag markeret, kort måned og år som dropdown", () => {
   const html = render(h(DatePicker, { value: "2026-09-15", today: new Date(2026, 8, 29), onSelect: noop }));
-  assert.match(html, /role="columnheader">Ma</);
+  assert.match(html, /role="columnheader" aria-label="mandag">M</);
   assert.match(html, /aria-current="date"[^>]*>29</);
   assert.match(html, /aria-selected="true"[^>]*>15</);
-  assert.match(html, /september/);
-  // september 2026 starter en tirsdag: én tom celle før den 1.
-  assert.equal((html.match(/lasso-cal__empty/g) ?? []).length >= 1, true);
+  assert.match(html, /sep\./);
+  // september 2026 starter en tirsdag: 31. august står først i faint.
+  assert.match(html, /lasso-cal__day is-out[^>]*>31</);
 });
 
 test("02a.12 Branchevælger: to navne og N flere, tomt = Vælg brancher, træ med koder", () => {
   const empty = render(h(IndustryField, { tree: DB07_EXCERPT, values: [], onChange: noop }));
   assert.match(empty, /Vælg brancher/);
   const some = render(h(IndustryField, { tree: DB07_EXCERPT, values: ["692000", "691000", "620100"], onChange: noop }));
-  assert.match(some, /Bogføring og revision; skatterådgivning, Juridisk bistand og 1 mere/);
+  assert.match(some, /69\.20 Bogføring og revision; skatterådgivning, 69\.10 Juridisk bistand og 1 mere/);
+  assert.match(some, /lasso-industryfield__icon/);
   const tree = render(h(TreePicker, { tree: DB07_EXCERPT, values: ["692000"], onChange: noop }));
   assert.match(tree, /role="tree"/);
   assert.match(tree, /Videnservice/);
 });
 
 test("02b.1 Persona og 03.2 Teknologi", () => {
-  const p = render(h(PersonaField, { value: { roles: ["dir"], departments: [] }, roles: [{ id: "dir", label: "Direktør", count: 10 }], departments: [{ id: "it", label: "IT", count: 4 }], onChange: noop }));
-  assert.match(p, /Direktør, alle afdelinger/);
+  const roles = [{ id: "dir", label: "Direktør", count: 10 }, { id: "head", label: "Head of", count: 4 }];
+  const p = render(h(PersonaField, { value: { roles: ["dir", "head"], departments: [], directPhone: true }, roles, departments: [{ id: "it", label: "IT", count: 4 }], onChange: noop, onRemove: noop, onAdd: noop }));
+  assert.match(p, /lasso-personacard__title">Direktør eller Head of</);
+  assert.match(p, /Alle afdelinger, skal have direkte telefonnummer/);
   assert.match(p, />Redigér</);
+  assert.match(p, /aria-label="Fjern persona"/);
+  assert.match(p, /Tilføj persona/);
+  const f = render(h(PersonaField, { value: { roles: ["dir"], departments: [] }, roles, departments: [], onChange: noop, variant: "field" }));
+  assert.match(f, /Direktør, alle afdelinger/);
   const t = render(h(TechnologyField, { label: "CMS", value: { on: true, mode: "any", values: [] }, onChange: noop }));
   assert.match(t, /role="switch" aria-checked="true"/);
   assert.match(t, /Firmaer der benytter/);
@@ -187,4 +204,34 @@ test("02a.3/02a.6 enheden og \"og\" står i gruppe med feltet; DateField kan åb
 test("03.1 TagInput defaultText: indtastet tekst før den bliver til tags", () => {
   const html = render(h(TagInput, { values: [], onChange: noop, defaultText: "2100, 2200, 8000" }));
   assert.match(html, /value="2100, 2200, 8000"/);
+});
+
+test("02a/02b.14 Formularfelt: feltnavn over, hjælpetekst under, sammenklappet viser værdien", () => {
+  const html = render(h(FieldRow, { label: "Navn", layout: "form", help: "Operatorer: indeholder", children: h("input", { className: "lasso-input" }) }));
+  assert.match(html, /lasso-field--form/);
+  assert.match(html, /lasso-field__helpline">Operatorer: indeholder</);
+  const closed = render(h(FieldRow, { label: "Kommune", collapsible: true, open: false, summary: "Aarhus, Odense og 3 flere", children: h("span") }));
+  assert.match(closed, /lasso-field__summary">Aarhus, Odense og 3 flere</);
+});
+
+test("02a.13/02a.8/02a.11 TagInput: Vælg N mere…, dropdown-chevron, søgeikon", () => {
+  assert.match(render(h(TagInput, { values: ["A", "B"], max: 3, onChange: noop })), /placeholder="Vælg 1 mere…"/);
+  assert.match(render(h(TagInput, { values: ["A"], dropdown: true, morePlaceholder: "Tilføj flere…", onChange: noop })), /placeholder="Tilføj flere…"[^]*lasso-tagfield__chevron/);
+  const empty = render(h(TagInput, { values: [], searchIcon: true, onChange: noop }));
+  assert.match(empty, /lasso-tagfield__icon/);
+  assert.match(empty, /placeholder="Søg, eller indsæt en liste — fx 2100, 8000, 5000"/);
+});
+
+test("02b.3 ToggleField og 26a.8 FormPage", () => {
+  const t = render(h(ToggleField, { label: "Skal have direkte telefonnummer", on: true, onChange: noop, help: "Slukket = tæller ikke med." }));
+  assert.match(t, /lasso-togglefield__card/);
+  assert.match(t, /role="switch" aria-checked="true"/);
+  const p = render(h(FormPage, { title: "Kriterier (5)", action: { label: "Vis 1.243", onClick: noop }, children: h("div") }));
+  assert.match(p, /Kriterier \(5\)/);
+  assert.match(p, /lasso-formpage__action">Vis 1\.243</);
+});
+
+test("26c.8 Filterark: rækkens værdi uden feltnavn, Alle når tom", () => {
+  assert.equal(criterionSummary(undefined), "Alle");
+  assert.equal(criterionSummary({ field: "region", operator: "in", value: ["Hovedstaden"] }), "Hovedstaden");
 });

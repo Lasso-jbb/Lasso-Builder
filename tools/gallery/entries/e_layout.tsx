@@ -30,7 +30,6 @@ import {
   CreditConfirmDialog,
   DataState,
   EntityUpdates,
-  FilterSheet,
   LassoView,
   LiveNumber,
   Menu,
@@ -59,6 +58,7 @@ import {
   type StripTab,
   type TabItem,
 } from "@lasso/ui";
+import { MobileFilterSheet, MobileForm } from "./felter_mobil.js";
 import type { GalleryEntry } from "../types.js";
 
 /* ---------- Fælles ---------- */
@@ -596,14 +596,6 @@ function OpenMenu() {
   );
 }
 
-const FORM_CRITERIA = [
-  { field: "kommune", operator: "in" as const, value: ["Aarhus", "Odense"] },
-  { field: "ansatte", operator: "gte" as const, value: 10 },
-  { field: "stiftet", operator: "after" as const, value: "2015-01-01" },
-  { field: "status", operator: "eq" as const, value: "Aktiv" },
-  { field: "region", operator: "in" as const, value: ["Hovedstaden"] },
-];
-
 const mobileNav: GalleryEntry[] = [
   { nr: "26a.1", title: "Topbjælke (mobil)", node: "DTS-0", only: "mobile", note: "AppShell under 560 px: topbjælke med burger, titel + undertitel, klokke og '…'.", render: () => <MobileFrame /> },
   { nr: "26a.2", title: "Sektionsark (mobil)", node: "DUB-0", only: "mobile", note: "AppShell med sheetOpen: sektionsarket fra burgeren, aktiv i koral-soft.", render: () => <MobileFrame sheetOpen /> },
@@ -624,12 +616,8 @@ const mobileNav: GalleryEntry[] = [
     title: "Formularfelter (mobil)",
     node: "DXR-0",
     only: "mobile",
-    note: "FilterSheet åben (bundark med FilterEditor): feltnavn over feltet, operator + værdi, valgchips.",
-    render: () => (
-      <div style={{ minHeight: 800 }}>
-        <FilterSheet open criteria={FORM_CRITERIA} onApply={noop} onClose={noop} />
-      </div>
-    ),
+    note: "FormPage med felterne (feltnavn over feltet, 48 px), kontakt, valgchips og effektpanelet med to knapper.",
+    render: () => <MobileForm />,
   },
   {
     nr: "26a.9",
@@ -738,12 +726,8 @@ const mobileLists: GalleryEntry[] = [
     title: "Filterark (mobil)",
     node: "EM6-0",
     only: "mobile",
-    note: "FilterSheet åben som bundark (åbnes fra tabellens værktøjslinje).",
-    render: () => (
-      <div style={{ minHeight: 800 }}>
-        <FilterSheet open criteria={FORM_CRITERIA.slice(0, 3)} onApply={noop} onClose={noop} />
-      </div>
-    ),
+    note: "FilterSheet åben som bundark (åbnes fra tabellens værktøjslinje): valgchips, rækker med værdi og chevron, kontakt og “Vis N virksomheder”.",
+    render: () => <MobileFilterSheet />,
   },
   { nr: "26c.9", title: "Nyhedsliste (mobil)", node: "EN9-0", only: "mobile", spec: one("Nyheder", { type: "LassoNews", company: C, limit: 3 }) },
   { nr: "26c.10", title: "Tidslinje (mobil)", node: "ENM-0", only: "mobile", spec: one("Tidslinje", { type: "LassoTimeline", company: C }) },

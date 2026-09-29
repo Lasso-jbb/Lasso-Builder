@@ -435,7 +435,7 @@ export function CompanyTable({
         )}
         {result && !state ? <Pagination page={current} pageSize={pageSize} count={rows.length} total={total} onPage={setPage} /> : null}
       </div>
-      {onApplyCriteria ? <FilterSheet open={filtersOpen} criteria={criteria} onApply={onApplyCriteria} onClose={() => setFiltersOpen(false)} /> : null}
+      {onApplyCriteria ? <FilterSheet open={filtersOpen} criteria={criteria} onApply={onApplyCriteria} onClose={() => setFiltersOpen(false)} count={(c) => (result && JSON.stringify(c) === JSON.stringify(criteria) ? total : null)} /> : null}
     </Section>
   );
 }

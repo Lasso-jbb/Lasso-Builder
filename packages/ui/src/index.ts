@@ -89,11 +89,13 @@ export type { NotificationVM, NotificationKind, NotificationPanelProps } from ".
 export { MonitorSettings, MonitorBell, MONITOR_TYPES, MONITOR_TYPE_LABELS } from "./components/MonitorSettings.js";
 export type { MonitorType, MonitorSettingsProps, MonitorBellProps } from "./components/MonitorSettings.js";
 export { FilterPanel, parseAmount, parseDate } from "./components/FilterPanel.js";
-export { FilterEditor, FilterSheet, CriteriaChips } from "./components/FilterSheet.js";
+export { FilterEditor, FilterSheet, CriteriaChips, SHEET_FIELDS, criterionSummary } from "./components/FilterSheet.js";
+export type { SheetField } from "./components/FilterSheet.js";
 export type { FilterPanelProps } from "./components/FilterPanel.js";
 // Felt-familien (02a, 02b, 03)
 export {
   FieldRow,
+  FormPage,
   XIcon,
   FieldSection,
   SectionIntro,
@@ -111,18 +113,22 @@ export {
   ChoiceChips,
   YesNoChips,
   Toggle,
+  ToggleField,
   SegmentYesNo,
   UnitInput,
   RangeInputs,
   AmountField,
   CHANGE_OPERATORS,
   CHANGE_LABELS,
+  AMOUNT_LABELS,
   DatePicker,
   DateInput,
   DateField,
   TreePicker as IndustryTreePicker,
   IndustryField,
+  formatIndustryCode,
   PersonaField,
+  personaTitle,
   TechnologyField,
   TechnologyRow,
 } from "./components/Fields.js";

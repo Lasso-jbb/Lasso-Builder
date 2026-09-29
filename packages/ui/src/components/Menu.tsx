@@ -51,11 +51,13 @@ export interface MenuProps {
   className?: string;
   /** Åben fra start (statisk forhåndsvisning og tests). */
   defaultOpen?: boolean;
+  /** Ekstra klasse på listen, fx "lasso-menu__pop--field" (feltets åbne liste, 02a.4/02b.7: 42 px punkter i fuld bredde). */
+  popClassName?: string;
 }
 
 type Pos = { x: number; y: number; up: boolean };
 
-export function Menu({ trigger, triggerClassName = "lasso-btn lasso-btn--ghost", triggerLabel, items, groups, value, align = "start", context, label, cancelLabel = "Annuller", className = "", defaultOpen = false }: MenuProps) {
+export function Menu({ trigger, triggerClassName = "lasso-btn lasso-btn--ghost", triggerLabel, items, groups, value, align = "start", context, label, cancelLabel = "Annuller", className = "", defaultOpen = false, popClassName = "" }: MenuProps) {
   const layer = useLayer();
   const id = useId();
   const listId = `${id}-menu`;
@@ -157,7 +159,7 @@ export function Menu({ trigger, triggerClassName = "lasso-btn lasso-btn--ghost",
         <div
           ref={list}
           id={listId}
-          className={`lasso-menu__pop ${picker ? "lasso-menu__pop--picker" : ""} ${layer.ready ? "lasso-menu__pop--layer" : ""} ${pos?.up ? "lasso-menu__pop--up" : ""} ${align === "end" ? "lasso-menu__pop--end" : ""} ${flat.length > 0 ? "" : "is-empty"}`}
+          className={`lasso-menu__pop ${picker ? "lasso-menu__pop--picker" : ""} ${layer.ready ? "lasso-menu__pop--layer" : ""} ${pos?.up ? "lasso-menu__pop--up" : ""} ${align === "end" ? "lasso-menu__pop--end" : ""} ${flat.length > 0 ? "" : "is-empty"} ${popClassName}`}
           hidden={!open}
           style={style}
         >
