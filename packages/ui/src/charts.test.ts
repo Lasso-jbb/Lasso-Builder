@@ -77,14 +77,16 @@ test("13.8: donut + andelsbjælker; ejerkreds med CVR-intervaller som tekst, bj�
   assert.doesNotMatch(h, /·/);
 });
 
-test("13.10: nøgletalsmåler med branchemærke: grøn/gul/rød altid med ikon + ord", () => {
+test("13.10: nøgletalsmåler med branchemærke: to linjer (etiket, værdi + branche), farvet bjælke med ordet i aria-label", () => {
   assert.equal(assessAgainstMedian(12, 10)!.index, 0);
   assert.equal(assessAgainstMedian(7, 10)!.index, 1);
   assert.equal(assessAgainstMedian(3, 10)!.index, 2);
   const industry: IndustryBenchmarkVM = { lassoId: ID, state: "ok", industryText: "Prøvebranche", years: [{ year: 2023, median: { soliditetsgrad: 40, overskudsgrad: 10 } }], source: "Eksempeldata" };
   const h = html(createElement(KeyFigureGauge, { financials: FIN, industry }));
   assert.match(h, /lasso-kfg__fill lasso-kfg__fill--0" style="width:65%"/, "52 % på skalaen 0–80 %");
-  assert.match(h, /lasso-kfg__word lasso-kfg__word--2"><svg[^]*?<\/svg>Klart under branchen/);
+  assert.match(h, /lasso-kfg__value">52,0 %, branche 40,0 %</);
+  assert.match(h, /aria-label="Overskudsgrad [^"]*klart under branchen"/);
+  assert.doesNotMatch(h, /lasso-kfg__word|lasso-kfg__legend/);
   assert.match(h, /lasso-kfg__mark/);
   const none = html(createElement(KeyFigureGauge, { financials: FIN, industry: { lassoId: ID, state: "unavailable", reason: "Ingen branchetal.", years: [] } }));
   assert.match(none, /Ingen branchetal\./);
