@@ -1080,7 +1080,7 @@ const report: GalleryEntry[] = [
 const ENUM_CARD: CSSProperties = { border: "1px solid var(--lasso-border)", borderRadius: "var(--lasso-radius-card)", padding: 16, background: "var(--lasso-surface)", minWidth: 0 };
 const ENUM_OVERLINE: CSSProperties = { margin: "0 0 8px", fontSize: "var(--lasso-fs-label)", lineHeight: "14px", fontWeight: 600, letterSpacing: "var(--lasso-ls-label)", textTransform: "uppercase", color: "var(--lasso-muted)" };
 const ENUM_ROW: CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, minHeight: 30, borderBottom: "1px solid var(--lasso-divider-subtle)", fontSize: "var(--lasso-fs-sm)" };
-const ENUM_GROUP: CSSProperties = { margin: "10px 0 2px", fontSize: 12, fontWeight: 600, color: "var(--lasso-text-3)" };
+const ENUM_GROUP: CSSProperties = { margin: "10px 0 2px", fontSize: 12, fontWeight: 400, color: "var(--lasso-muted)" };
 
 function Enumerations() {
   // Status: tekst fra værdilisten, farve fra gruppen (packages/spec/src/status.ts + statusTone).

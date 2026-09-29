@@ -71,7 +71,7 @@ test("28.4: batchstatus som ren tekst, fremdriftsbjælke ved kørsel og ét teks
       onAction: () => {},
     }),
   );
-  assert.match(html, /Kører, 25,0 %, 120 af 480/);
+  assert.match(html, /Kører, 25 %, 120 af 480/); // 28.4: hele procent som i Paper
   assert.match(html, /role="progressbar"/);
   assert.match(html, /Færdig med fejl[^]*se 1 fejl/);
   assert.match(html, /lasso-batches__status--planned">Planlagt/);
