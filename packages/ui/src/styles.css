@@ -1306,6 +1306,31 @@ button.lasso-relations__name:hover { text-decoration: underline; }
   .lasso-personroles__row { grid-template-columns: minmax(0, 1fr); row-gap: 6px; padding: 12px 0; }
 }
 
+/* 26d.3 Tidsbånd på mobil: begge former tegnes, containerbredden vælger. */
+.lasso-personroles__mob { display: none; }
+.lasso-personroles__mob .lasso-section__head { flex-wrap: nowrap; align-items: baseline; }
+.lasso-personroles__range { font-size: var(--lasso-fs-sm); color: var(--lasso-muted); }
+.lasso-mbands__axis { position: relative; height: 16px; margin-bottom: var(--lasso-space-2); }
+.lasso-mbands__tick { position: absolute; top: 0; font-size: 11px; line-height: 14px; font-weight: 500; color: var(--lasso-muted); white-space: nowrap; }
+.lasso-mbands__tick--now { right: 0; color: var(--lasso-text); }
+.lasso-mbands__rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--lasso-space-3); }
+.lasso-mbands__row { display: flex; flex-direction: column; gap: 6px; min-height: var(--lasso-touch-h); justify-content: center; }
+.lasso-mbands__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--lasso-space-3); }
+.lasso-mbands__label { font-size: var(--lasso-fs); line-height: 20px; color: var(--lasso-text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lasso-mbands__row--bankrupt .lasso-mbands__label { color: var(--lasso-muted); }
+.lasso-mbands__period { flex: none; font-size: var(--lasso-fs-sm); color: var(--lasso-muted); }
+.lasso-mbands__track { position: relative; display: block; height: 10px; border-radius: 5px; background: var(--lasso-surface-muted); }
+.lasso-mbands__bar { position: absolute; top: 0; height: 10px; border-radius: 5px; box-sizing: border-box; }
+.lasso-mbands__bar--mgmt { background: var(--lasso-chart-1); }
+.lasso-mbands__bar--owner { background: var(--lasso-chart-2); }
+.lasso-mbands__bar--bankrupt { background: var(--lasso-surface); border: 1.5px solid var(--lasso-chart-1); }
+.lasso-mbands__legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: var(--lasso-space-4); }
+.lasso-mbands__swatch { position: static; display: inline-block; width: 16px; height: 10px; border-radius: 3px; flex: none; }
+@container lasso (max-width: 560px) {
+  .lasso-personroles__desk { display: none; }
+  .lasso-personroles__mob { display: block; }
+}
+
 /* Netværk: "Sidder sammen med". År som stort tal til højre, afsluttede dæmpet. */
 .lasso-personnet__rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--lasso-border); }
 .lasso-personnet__row { display: flex; align-items: flex-start; gap: var(--lasso-space-4); padding: 14px 0; border-bottom: 1px solid var(--lasso-border); }
@@ -1343,7 +1368,7 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-personrisk__word--50 { color: var(--lasso-warning); }
 .lasso-personroles .lasso-section__head { flex-wrap: wrap; row-gap: var(--lasso-space-2); }
 @container lasso (max-width: 560px) {
-  .lasso-personroles .lasso-section__action { flex-basis: 100%; }
+  .lasso-personroles__desk .lasso-section__action { flex-basis: 100%; }
 }
 /* PersonList: navnet som link til personsiden (16) beholder rækkens vægt. */
 .lasso-row__open { font-weight: inherit; color: inherit; }
