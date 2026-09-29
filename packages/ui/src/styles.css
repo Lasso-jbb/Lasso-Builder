@@ -1783,6 +1783,9 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 .lasso-toolbar__controls { flex: none; display: flex; align-items: center; gap: 8px; }
 /* Felt før den primære handling (portalens søgning): feltet fylder linjen, knappen står lige efter */
 .lasso-toolbar--field .lasso-toolbar__actions { flex: 1; }
+/* 30.11: modulværktøjslinjen inde i et modul i visningen (chat/MCP): samme 56 px linje uden sidepadding. */
+.lasso-toolbar--module { padding: 0; margin-bottom: var(--lasso-space-3); }
+.lasso-toolbar--module + .lasso-accordion { border-top: 0; margin-top: calc(-1 * var(--lasso-space-3)); }
 .lasso-toolbar__field { flex: 1; min-width: 0; max-width: 640px; }
 .lasso-toolbar__field .lasso-input { height: var(--lasso-btn-h); }
 /* Kroppen: lige brede kolonner adskilt af 1 px linjer, padding 40/24, sektioner med overskrift 22/600 */
@@ -3487,3 +3490,19 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-bo__role { color: var(--lasso-muted); font-weight: 400; }
 .lasso-row--bo-special { align-items: flex-start; gap: var(--lasso-space-3); }
 .lasso-bo__alert { flex: none; display: inline-flex; margin-top: 1px; color: var(--lasso-warning); }
+
+/* 30.9 Mønster 6, Tidslinje: filtre ¼ + kronologisk strøm ¾ (gap 24). Under 960 px container: chips over strømmen. */
+.lasso-tl-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 3fr); gap: 24px; align-items: start; }
+.lasso-tl-filters { display: flex; flex-direction: column; gap: var(--lasso-space-2); }
+.lasso-tl-filters__label { font-size: var(--lasso-fs-label); line-height: 14px; font-weight: 600; letter-spacing: var(--lasso-ls-label); text-transform: uppercase; color: var(--lasso-muted); }
+.lasso-tl-filters__list { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.lasso-tl-layout__stream { min-width: 0; }
+@container lasso (max-width: 960px) {
+  .lasso-tl-layout { grid-template-columns: minmax(0, 1fr); gap: var(--lasso-space-3); }
+  .lasso-tl-filters__label { display: none; }
+  .lasso-tl-filters__list { flex-direction: row; flex-wrap: wrap; }
+}
+@container lasso (max-width: 560px) {
+  .lasso-tl-filters__list { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .lasso-tl-filters__item { flex: none; }
+}

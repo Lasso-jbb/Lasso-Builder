@@ -114,3 +114,37 @@ test("Brudpunkter (26.1, 30): tablet (midte ≤ 960) holder ½ + ½ og folder ¼
   assert.match(css, /@container lasso \(max-width: 767px\) \{\n  \.lasso-shell \{ display: flex;/);
   assert.match(css, /\.lasso-page__panel \{[^}]*width: var\(--lasso-panel-w\)/);
 });
+
+test("30.9: tidslinjen med filterColumn har filtre ¼ i egen kolonne og ingen typevælger i hovedet", async () => {
+  const { LassoTimeline } = await import("./components/LassoTimeline.js");
+  const { renderToStaticMarkup: r } = await import("react-dom/server");
+  const { createElement: h } = await import("react");
+  const timeline = {
+    lassoId: "CVR-1-1",
+    events: [
+      { date: "2025-04-15", title: "Årsrapport 2025", category: "Regnskab" },
+      { date: "2024-03-15", title: "Anne indtrådt", category: "Ledelse" },
+    ],
+  };
+  const col = r(h(LassoTimeline, { timeline, filterColumn: true }));
+  assert.match(col, /lasso-tl-layout[^]*lasso-tl-filters[^]*Alle typer[^]*Regnskab[^]*Ledelse[^]*lasso-tl-layout__stream/);
+  assert.doesNotMatch(col, /<select/);
+  const plain = r(h(LassoTimeline, { timeline }));
+  assert.match(plain, /<select/);
+  assert.doesNotMatch(plain, /lasso-tl-layout/);
+});
+
+test("30.11: group.toolbar giver modulværktøjslinjen med primær handling og tekstknapper; uden toolbar ingen linje", () => {
+  const spec = parseViewSpec({
+    kind: "custom",
+    title: "T",
+    components: [
+      { type: "LassoSummary", text: "a", title: "A", group: { id: "g", pattern: "accordion", title: "Modul", toolbar: { primary: { label: "Eksportér", prompt: "eksportér" }, actions: [{ label: "Del", prompt: "del" }] } } },
+      { type: "LassoSummary", text: "b", title: "B", group: { id: "g", pattern: "accordion" } },
+    ],
+  });
+  const html = renderToStaticMarkup(createElement(LassoView, { spec, dataset: emptyDataset("demo"), host: {}, onAction: () => {} }));
+  assert.match(html, /lasso-toolbar lasso-toolbar--module[^]*lasso-toolbar__primary[^>]*>Eksportér<[^]*lasso-btn--ghost[^>]*>Del</);
+  const plain = parseViewSpec({ kind: "custom", title: "T", components: [{ type: "LassoSummary", text: "a", title: "A", group: { id: "g", pattern: "accordion" } }, { type: "LassoSummary", text: "b", title: "B", group: { id: "g", pattern: "accordion" } }] });
+  assert.doesNotMatch(renderToStaticMarkup(createElement(LassoView, { spec: plain, dataset: emptyDataset("demo"), host: {}, onAction: () => {} })), /lasso-toolbar/);
+});
