@@ -12,6 +12,7 @@ import {
   listTemplate,
   parseViewSpec,
   searchKey,
+  personSearchKey,
   searchQuerySchema,
   type Dataset,
   ownershipGraphKey,
@@ -583,4 +584,23 @@ test("08.1/16.1: tekstkortet viser status med dato, binavn, kurator og risikolin
   assert.ok(flat.includes("Kurator: Advokat Eksempel"), card);
   assert.ok(flat.includes("Risiko: 1 vigtig observation"), card);
   assert.ok(!card.includes("·"));
+});
+
+test("tekstkort for persontabellen (15.3): roller, fødselsår, by og konkurser", () => {
+  const spec = parseViewSpec({ title: "Personer", components: [{ type: "LassoPersonTable", query: "Mette Eksempel" }] });
+  const ds = emptyDataset("demo");
+  const key = personSearchKey({ query: "Mette Eksempel", limit: 25 });
+  ds.personSearches = {
+    [key]: {
+      key,
+      query: "Mette Eksempel",
+      total: 1,
+      rows: [{ lassoId: "CVR-3-1", name: "Mette Eksempel", birthYear: 1978, city: "København", bankruptcies: 1, roles: [{ companyName: "Data Eksempel A/S", role: "direktør" }] }],
+    },
+  };
+  const card = textCard(spec, ds)!;
+  for (const l of card.split("\n")) assert.equal([...l].length, 38);
+  assert.ok(card.includes("Mette Eksempel"));
+  assert.ok(card.includes("f. 1978, København, 1 konkurs"));
+  assert.doesNotMatch(card, /·/);
 });

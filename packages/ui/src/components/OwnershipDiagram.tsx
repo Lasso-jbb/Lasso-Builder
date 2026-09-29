@@ -16,11 +16,18 @@ import {
   type OwnershipNodeVM,
 } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
+import { printElement } from "../print.js";
+import { downloadPng, svgForExport } from "../ownershipExport.js";
+import { Menu } from "./Menu.js";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
 import {
   DEFAULT_MAX_NODES,
+  beneficialGraph,
   entitySubtitle,
+  graphOnDate,
+  minimapFrame,
+  refocusGraph,
   indirectShare,
   labelHeight,
   labelWidth,
@@ -96,7 +103,7 @@ const BUILDING_CEASED = "M3 21h18M5 21V5l8-2v18M13 9l6 2v10";
  * selskaber kasser med et lille linjeikon. Kanter med andel som tekst; cirkulært ejerskab
  * føres udenom i koral stiplet. Under 560 px bliver strukturen en indrykket liste.
  */
-export function OwnershipDiagram({ graph, error, title, onAction, canDrillDown, canPrompt, canFullscreen }: OwnershipDiagramProps) {
+export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, canDrillDown, canPrompt, canFullscreen }: OwnershipDiagramProps) {
   const [ref, W] = useWidth<HTMLDivElement>(900);
   const heading = title ?? "Ejerstruktur";
   const [direction, setDirection] = useState<Direction>("both");
@@ -111,23 +118,43 @@ export function OwnershipDiagram({ graph, error, title, onAction, canDrillDown, 
   const [zoom, setZoom] = useState<number | null>(null);
   const [pan, setPan] = useState<{ x: number; y: number } | null>(null);
   const drag = useRef<{ x: number; y: number; px: number; py: number; moved: boolean } | null>(null);
+  // Layoutregel 3 (14.4): legale/reelle ejere, dobbeltklik = nyt fokus, pr. dato, mini-kort og eksport.
+  const [owners, setOwners] = useState<"legal" | "beneficial">("legal");
+  const [focus, setFocus] = useState<string | null>(null);
+  const [onDate, setOnDate] = useState<string | undefined>(undefined);
+  const [printSvg, setPrintSvg] = useState<string | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const printRef = useRef<HTMLDivElement>(null);
+  const graph = useMemo(() => {
+    if (!sourceGraph) return undefined;
+    const dated = graphOnDate(focus ? refocusGraph(sourceGraph, focus) : sourceGraph, onDate ?? sourceGraph.onDate);
+    return owners === "beneficial" ? beneficialGraph(dated, onDate) : dated;
+  }, [sourceGraph, focus, onDate, owners]);
+  const beneficial = owners === "beneficial";
+  useEffect(() => {
+    if (!printSvg) return;
+    printElement(printRef.current);
+    const t = setTimeout(() => setPrintSvg(null), 1500);
+    return () => clearTimeout(t);
+  }, [printSvg]);
 
-  const up = depthUp ?? graph?.ingoingDepth ?? 2;
-  const down = depthDown ?? graph?.outgoingDepth ?? 1;
+  const up = beneficial ? 1 : (depthUp ?? graph?.ingoingDepth ?? 2);
+  const down = beneficial ? 0 : (depthDown ?? graph?.outgoingDepth ?? 1);
   const layout = useMemo(
     () =>
       graph
         ? layoutOwnership(graph, {
-            direction,
+            direction: beneficial ? "up" : direction,
             depthUp: up,
             depthDown: down,
             expanded,
             expandAll,
             maxNodes: showAll || expandAll ? Infinity : DEFAULT_MAX_NODES,
             showHistoric,
+            onDate,
           })
         : null,
-    [graph, direction, up, down, expanded, expandAll, showAll, showHistoric],
+    [graph, direction, up, down, expanded, expandAll, showAll, showHistoric, onDate, beneficial],
   );
 
   const panelBeside = W >= PANEL_BESIDE_FROM;
@@ -158,6 +185,7 @@ export function OwnershipDiagram({ graph, error, title, onAction, canDrillDown, 
   }
 
   const root = graph.nodes.find((n) => n.id === graph.rootId);
+  const origin = sourceGraph!.nodes.find((n) => n.id === sourceGraph!.rootId);
   const rootName = root?.name ?? graph.rootId;
   // Personsiden (katalog 16): roden er en person (pille); pilene går til de selskaber, personen ejer.
   const personRoot = root?.kind === "person";
@@ -246,6 +274,37 @@ export function OwnershipDiagram({ graph, error, title, onAction, canDrillDown, 
     setSelected(selected === n.id ? null : n.id);
   };
 
+  const refocus = (n: LayoutNode) => {
+    if (!n.entity || n.root || beneficial) return;
+    setFocus(n.entity.id === sourceGraph!.rootId ? null : n.entity.id);
+    setSelected(null);
+    setHovered(null);
+    setExpanded(new Set());
+  };
+  const today = new Date().toISOString().slice(0, 10);
+  const dateText = onDate ? `Pr. ${formatDate(onDate)}` : graph.onDate ? `Pr. ${formatDate(graph.onDate)}` : `Pr. i dag, ${formatDate(today)}`;
+  const legendLines = [
+    personRoot ? "Fokusperson (koral kant)" : "Fokusvirksomhed (koral kant)",
+    "Virksomhed (kasse)",
+    "Person (pille)",
+    "Ophørt (grå flade)",
+    "Ukendt / sammenklappet (stiplet kasse)",
+    "Ejerskab: pil mod det ejede",
+    "Historisk / ukendt: stiplet linje",
+    "Cirkulært ejerskab: koral stiplet",
+    beneficial ? "Reelle ejere: beregnet indirekte andel" : "Legale ejere: registreret andel",
+  ];
+  const exportFile = `ejerstruktur-${rootName.replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase()}-${(onDate ?? graph.onDate ?? today).slice(0, 10)}`;
+  const exportSvg = () =>
+    svgRef.current && layout
+      ? svgForExport(svgRef.current, { width: layout.width, height: layout.height }, {
+          title: `${beneficial ? "Reelle ejere" : "Ejerstruktur"}, ${rootName}`,
+          dateLine: dateText,
+          legend: legendLines,
+          source: `Kilde: CVR via Lasso${graph.fetchedAt ? `, opdateret ${formatDate(graph.fetchedAt)}` : ""}`,
+        })
+      : null;
+
   const focusId = hovered ?? selected;
   const touches = (e: LayoutEdge) => focusId !== null && (e.from === focusId || e.to === focusId);
 
@@ -265,11 +324,39 @@ export function OwnershipDiagram({ graph, error, title, onAction, canDrillDown, 
   }
   if (layout.onlyPersons && !empty) notes.push(`Kun personer ejer ${rootName}, og selskabet ejer ingen andre selskaber.`);
   if (graph.note) notes.push(graph.note);
+  if (beneficial) notes.push("Reelle ejere er beregnet ud fra de legale ejerandele gennem mellemliggende selskaber (indirekte andel). De registrerede reelle ejere i CVR kan afvige.");
+  if (onDate) notes.push(`Viser ejerskab pr. ${formatDate(onDate)} ud fra registreringsdatoerne; ejerskaber registreret senere er udeladt, og ophørte er stiplede.`);
+  if (focus && !empty) notes.push(`Fokus er flyttet til ${rootName}. Dobbeltklik på en anden node for at flytte fokus igen.`);
 
   const toolbar = (
-    <div className="lasso-odiagram__toolbar" role="toolbar" aria-label="Ejerdiagram">
-      {/* En person har ingen ejere, så retningsvalget giver kun mening for et selskab. */}
+    <div className="lasso-odiagram__toolbar lasso-noprint" role="toolbar" aria-label="Ejerdiagram">
       {personRoot ? null : (
+        <div className="lasso-odiagram__seg" role="radiogroup" aria-label="Ejere">
+          {(
+            [
+              ["legal", "Legale ejere"],
+              ["beneficial", "Reelle ejere"],
+            ] as const
+          ).map(([k, label]) => (
+            <button
+              key={k}
+              type="button"
+              role="radio"
+              aria-checked={owners === k}
+              className={owners === k ? "is-on" : ""}
+              onClick={() => {
+                setOwners(k);
+                setSelected(null);
+              }}
+              disabled={noData && k === "beneficial"}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      {/* En person har ingen ejere, så retningsvalget giver kun mening for et selskab. */}
+      {personRoot || beneficial ? null : (
         <div className="lasso-odiagram__seg" role="radiogroup" aria-label="Retning">
           {(
             [
@@ -284,13 +371,28 @@ export function OwnershipDiagram({ graph, error, title, onAction, canDrillDown, 
           ))}
         </div>
       )}
-      <span className="lasso-odiagram__chip lasso-odiagram__chip--static">
-        <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-          <rect x="3" y="5" width="18" height="16" rx="2" />
-          <path d="M3 10h18M8 3v4M16 3v4" />
-        </svg>
-        Pr. dato: {graph.onDate ? formatDate(graph.onDate) : "i dag"}
-      </span>
+      <label className="lasso-odiagram__chip lasso-odiagram__date">
+        <span>Pr. dato:</span>
+        <input
+          type="date"
+          value={onDate ?? graph.onDate ?? ""}
+          max={today}
+          aria-label="Vis ejerskab pr. dato"
+          onChange={(ev) => setOnDate(ev.target.value || undefined)}
+        />
+        {onDate ? null : <span className="lasso-odiagram__today">i dag</span>}
+      </label>
+      {onDate ? (
+        <button type="button" className="lasso-odiagram__chip" onClick={() => setOnDate(undefined)}>
+          I dag
+        </button>
+      ) : null}
+      {focus ? (
+        <button type="button" className="lasso-odiagram__chip" onClick={() => setFocus(null)} title="Dobbeltklik på en node gør den til nyt fokus">
+          Tilbage til {origin?.name ?? sourceGraph!.rootId}
+        </button>
+      ) : null}
+      {beneficial ? null : (
       <label className={`lasso-odiagram__chip lasso-odiagram__select ${noData ? "is-dim" : ""}`}>
         <span className="lasso-odiagram__sr">Dybde</span>
         <select
@@ -310,12 +412,44 @@ export function OwnershipDiagram({ graph, error, title, onAction, canDrillDown, 
           <path d="M6 9l6 6 6-6" />
         </svg>
       </label>
+      )}
       {hasHistoric ? (
         <button type="button" className={`lasso-odiagram__chip ${showHistoric ? "is-on" : ""}`} aria-pressed={showHistoric} onClick={() => setShowHistoric(!showHistoric)}>
           Vis historik
         </button>
       ) : null}
       <span className="lasso-odiagram__spacer" />
+      <Menu
+        trigger={
+          <>
+            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 4v11M7 10.5l5 5 5-5M5 20h14" />
+            </svg>
+            Eksportér
+          </>
+        }
+        triggerClassName="lasso-odiagram__chip"
+        align="end"
+        label="Eksportér ejerdiagram"
+        context={{ title: "Eksportér ejerdiagram", subtitle: "Hele grafen med legende og dato" }}
+        items={[
+          {
+            id: "png",
+            label: "PNG-billede",
+            disabled: empty,
+            onSelect: () => {
+              const svg = exportSvg();
+              if (svg) void downloadPng(svg, `${exportFile}.png`);
+            },
+          },
+          {
+            id: "pdf",
+            label: "PDF (udskriv)",
+            disabled: empty,
+            onSelect: () => setPrintSvg(exportSvg()),
+          },
+        ]}
+      />
       <button type="button" className="lasso-odiagram__chip" aria-pressed={expandAll} onClick={() => setExpandAll(!expandAll)} disabled={empty}>
         {expandAll ? "Fold sammen" : "Udvid alle"}
       </button>
@@ -341,7 +475,7 @@ export function OwnershipDiagram({ graph, error, title, onAction, canDrillDown, 
       onPointerUp={onPointerUp}
       onPointerCancel={() => (drag.current = null)}
     >
-      <svg className="lasso-odiagram__svg" width={canvasW} height={canvasH} role="img" aria-label={`Ejerstruktur for ${rootName}`}>
+      <svg ref={svgRef} className="lasso-odiagram__svg" width={canvasW} height={canvasH} role="img" aria-label={`Ejerstruktur for ${rootName}`}>
         <defs>
           <marker id="lasso-od-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
             <path d="M0,0 L8,4 L0,8 z" className="lasso-odiagram__arrow" />
@@ -353,7 +487,7 @@ export function OwnershipDiagram({ graph, error, title, onAction, canDrillDown, 
             <path d="M0,0 L8,4 L0,8 z" className="lasso-odiagram__arrow lasso-odiagram__arrow--focus" />
           </marker>
         </defs>
-        <g transform={`translate(${p.x},${p.y}) scale(${z})`}>
+        <g data-od-graph="" transform={`translate(${p.x},${p.y}) scale(${z})`}>
           {layout.edges.map((e) => (
             <EdgePath key={e.id} e={e} focus={touches(e)} dim={focusId !== null && !touches(e)} />
           ))}
@@ -364,6 +498,7 @@ export function OwnershipDiagram({ graph, error, title, onAction, canDrillDown, 
               selected={n.id === selected}
               dim={false}
               onClick={() => clickNode(n)}
+              onDoubleClick={() => refocus(n)}
               onHover={(on) => setHovered(on ? n.id : null)}
             />
           ))}
@@ -389,6 +524,13 @@ export function OwnershipDiagram({ graph, error, title, onAction, canDrillDown, 
         </div>
       ) : null}
       {!empty && canvasW >= 720 ? <Legend personRoot={personRoot} /> : null}
+      {!empty && canvasW >= 720 ? (
+        <Minimap
+          layout={layout}
+          view={{ x: p.x, y: p.y, zoom: z, width: canvasW, height: canvasH }}
+          onMove={(lx, ly) => setPan({ x: Math.round(canvasW / 2 - lx * z), y: Math.round((canvasH - CANVAS_FOOT) / 2 - ly * z) })}
+        />
+      ) : null}
       <div className="lasso-odiagram__zoom" role="group" aria-label="Zoom">
         <button type="button" aria-label="Zoom ind" onClick={() => setZoomStep(1)} disabled={z >= 2}>
           +
@@ -412,8 +554,10 @@ export function OwnershipDiagram({ graph, error, title, onAction, canDrillDown, 
   return (
     <Section title={heading} subtitle={rootName} className="lasso-odiagram">
       <div ref={ref}>
+      <div ref={printRef}>
         {toolbar}
-        <div className={`lasso-odiagram__body ${selectedNode && panelBeside ? "has-panel" : ""}`}>
+        {printSvg ? <div className="lasso-printonly lasso-odiagram__print" dangerouslySetInnerHTML={{ __html: printSvg }} /> : null}
+        <div className={`lasso-odiagram__body lasso-noprint ${selectedNode && panelBeside ? "has-panel" : ""}`}>
           {canvas}
           {selectedNode ? (
             <DetailPanel
@@ -446,13 +590,15 @@ export function OwnershipDiagram({ graph, error, title, onAction, canDrillDown, 
         ))}
         {source}
       </div>
+      </div>
     </Section>
   );
 }
 
 /* ---------- Noder ---------- */
 
-function NodeShape({ n, selected, onClick, onHover }: { n: LayoutNode; selected: boolean; dim: boolean; onClick: () => void; onHover: (on: boolean) => void }) {
+function NodeShape({ n, selected, onClick, onDoubleClick, onHover }: { n: LayoutNode; selected: boolean; dim: boolean; onClick: () => void; onDoubleClick?: () => void; onHover: (on: boolean) => void }) {
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const person = n.kind === "person";
   const folded = n.kind === "chain" || n.kind === "group";
   const foreign = n.entity?.country;
@@ -482,7 +628,13 @@ function NodeShape({ n, selected, onClick, onHover }: { n: LayoutNode; selected:
       aria-pressed={folded ? undefined : selected}
       onClick={(ev) => {
         ev.stopPropagation();
-        onClick();
+        // Enkeltklik venter kort, så et dobbeltklik (nyt fokus) ikke først åbner panelet og flytter noderne.
+        if (!onDoubleClick) return onClick();
+        if (clickTimer.current) clearTimeout(clickTimer.current);
+        clickTimer.current = setTimeout(() => {
+          clickTimer.current = null;
+          onClick();
+        }, 220);
       }}
       onKeyDown={(ev) => {
         if (ev.key === "Enter" || ev.key === " ") {
@@ -490,6 +642,12 @@ function NodeShape({ n, selected, onClick, onHover }: { n: LayoutNode; selected:
           ev.stopPropagation();
           onClick();
         }
+      }}
+      onDoubleClick={(ev) => {
+        ev.stopPropagation();
+        if (clickTimer.current) clearTimeout(clickTimer.current);
+        clickTimer.current = null;
+        onDoubleClick?.();
       }}
       onPointerEnter={() => onHover(true)}
       onPointerLeave={() => onHover(false)}
@@ -553,6 +711,28 @@ function EdgeLabel({ e, dim }: { e: LayoutEdge; dim: boolean }) {
         </text>
       ))}
     </g>
+  );
+}
+
+/** Mini-kort (14.1): hele grafen i lille målestok med viewport-rammen; klik flytter udsnittet dertil. */
+function Minimap({ layout, view, onMove }: { layout: { width: number; height: number; nodes: LayoutNode[] }; view: { x: number; y: number; zoom: number; width: number; height: number }; onMove: (x: number, y: number) => void }) {
+  const m = minimapFrame(layout, { ...view, height: view.height - CANVAS_FOOT });
+  return (
+    <div className="lasso-odiagram__minimap" aria-label="Mini-kort over hele strukturen">
+      <svg
+        width={m.width}
+        height={m.height}
+        onClick={(ev) => {
+          const r = (ev.currentTarget as SVGSVGElement).getBoundingClientRect();
+          onMove((ev.clientX - r.left) / m.scale, (ev.clientY - r.top) / m.scale);
+        }}
+      >
+        {layout.nodes.map((n) => (
+          <rect key={n.id} className={`lasso-odiagram__mininode ${n.root ? "is-root" : ""}`} x={n.x * m.scale} y={n.y * m.scale} width={Math.max(2, n.w * m.scale)} height={Math.max(2, n.h * m.scale)} rx={1.5} />
+        ))}
+        <rect className="lasso-odiagram__miniframe" x={m.frame.x} y={m.frame.y} width={m.frame.w} height={m.frame.h} />
+      </svg>
+    </div>
   );
 }
 

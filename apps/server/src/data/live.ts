@@ -67,7 +67,7 @@ import { adaptChrLivestock, adaptLiveNumber, adaptReportAnalysisSections, buildP
 import { loadCreditRating } from "../lasso/creditAdapters.js";
 import { criteriaToFilters, DEFAULT_ACTIVE_STATUS_FILTER, filtersToCriteria, SERVER_SORT, type LassoFilter } from "../lasso/searchFilters.js";
 import { applyCriteria, needsFinancials, sortRows } from "./criteria-eval.js";
-import { mapLimit, type ActivityHeatmapOptions, type ChangeFeedOptions, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
+import { searchPersonsTable, mapLimit, type ActivityHeatmapOptions, type ChangeFeedOptions, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
 
 /** Så længe venter kontaktblokken på hjemmesidens telefon/e-mail, før den vises uden. */
 export const CONTACT_BUDGET_MS = 2_500;
@@ -636,6 +636,10 @@ export class LiveProvider implements DataProvider {
 
   async personNetwork(lassoId: string) {
     return adaptPersonNetwork(lassoId, await this.client.personNetwork(lassoId));
+  }
+
+  async personSearch(query: string, limit: number) {
+    return searchPersonsTable(this, query, limit);
   }
 
   async findPersons(name: string, limit: number) {

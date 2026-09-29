@@ -26,6 +26,7 @@ import {
   personFacts,
   personRisk,
   personRoleRows,
+  personSearchKey,
   riskTimeline,
   savedPagesKey,
   METRIC_FIELD,
@@ -826,6 +827,40 @@ function listCard(spec: ViewSpec, ds: Dataset): string | null {
   return card.toString();
 }
 
+/**
+ * Katalog 15.3: persontabellen som tekst. Navn alene; roller (højst 2 + "og n flere"),
+ * fødselsår og by; konkurser kun når der er nogen. Aldrig CPR eller adresse.
+ */
+function personTableCard(spec: ViewSpec, ds: Dataset): string | null {
+  const c = spec.components.find((x) => x.type === "LassoPersonTable");
+  if (!c || c.type !== "LassoPersonTable") return null;
+  const key = personSearchKey(c);
+  const result = ds.personSearches?.[key];
+  const card = new Card();
+  const title = c.title ?? `Personer, "${c.query}"`;
+  if (!result) {
+    card.section(title);
+    card.text(ds.errors[`personSearch:${key}`] ?? "Henter personer");
+    return card.toString();
+  }
+  card.section(`${title} (${formatNumber(result.total ?? result.rows.length)})`);
+  if (result.rows.length === 0) {
+    card.text(`Ingen personer matcher "${c.query}".`);
+    return card.toString();
+  }
+  result.rows.slice(0, 20).forEach((r, i) => {
+    const n = `${i + 1}.`;
+    wrap(r.name, W - 4).forEach((l, j) => card.raw(`${pad(j === 0 ? n : "", 3)} ${l}`));
+    const roles = r.roles.slice(0, 2).map((x) => `${x.role}, ${x.companyName}`);
+    const more = r.roles.length > 2 ? ` og ${r.roles.length - 2} flere` : "";
+    if (roles.length) for (const l of wrap(roles.join("; ") + more, W - 4)) card.raw(`    ${l}`);
+    const facts = [r.birthYear ? `f. ${r.birthYear}` : null, r.city, r.bankruptcies > 0 ? `${r.bankruptcies} konkurs${r.bankruptcies === 1 ? "" : "er"}` : null].filter(Boolean).join(", ");
+    if (facts) for (const l of wrap(facts, W - 4)) card.raw(`    ${l}`);
+  });
+  if (result.rows.length > 20) card.text(`og ${formatNumber(result.rows.length - 20)} flere`);
+  return card.toString();
+}
+
 /** Katalog 21: ændringsfeedet som tekst. Navn, type; beskrivelse (status som "fra -> til"); kilde, klokkeslæt. 3 + "Se N flere". */
 function changeFeedCard(spec: ViewSpec, ds: Dataset): string | null {
   const c = spec.components.find((x) => x.type === "LassoChangeFeed");
@@ -926,6 +961,7 @@ export function textCard(spec: ViewSpec, ds: Dataset): string | null {
     ...(companies.length === 1 ? [companyCard(spec, ds, companies[0]!)] : []),
     ...(persons.length === 1 ? [personCard(spec, ds, persons[0]!)] : []),
     listCard(spec, ds),
+    personTableCard(spec, ds),
     changeFeedCard(spec, ds),
     heatmapCard(spec, ds),
     savedPagesCard(spec, ds),

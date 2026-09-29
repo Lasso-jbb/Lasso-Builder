@@ -17,8 +17,12 @@ export { PersonList } from "./components/PersonList.js";
 export { OwnerList } from "./components/OwnerList.js";
 export { OwnershipDiagram } from "./components/OwnershipDiagram.js";
 export { layoutOwnership, ownershipTree, indirectShare } from "./ownershipLayout.js";
-export { CompanyTable } from "./components/CompanyTable.js";
+export { CompanyTable, cardFigures } from "./components/CompanyTable.js";
+export type { CompanyTableProps } from "./components/CompanyTable.js";
 export { CompareTable } from "./components/CompareTable.js";
+export { PersonTable, rolesText, personSub } from "./components/PersonTable.js";
+export { Checkbox, TableToolbar, TableSearch, FilterButton, BulkBar, Pagination, TableStateRows, pageItems } from "./components/TableKit.js";
+export type { BulkAction, TableState } from "./components/TableKit.js";
 export { KeyValueList } from "./components/KeyValueList.js";
 export { LassoContact } from "./components/LassoContact.js";
 export { LassoContactPersons } from "./components/LassoContactPersons.js";
@@ -40,7 +44,8 @@ export { ChartTooltip, ChartReadout, useChartPick, changeText, isCompact, COMPAC
 export type { PickRow, ChangeText } from "./chartPick.js";
 export { CreditRating } from "./components/CreditRating.js";
 export type { CreditRatingProps } from "./components/CreditRating.js";
-export { AuditorIndependence } from "./components/AuditorIndependence.js";
+export { AuditorIndependence, auditorCsv } from "./components/AuditorIndependence.js";
+export { printElement } from "./print.js";
 export { ProductionUnits } from "./components/ProductionUnits.js";
 export { Properties } from "./components/Properties.js";
 export { Livestock } from "./components/Livestock.js";
@@ -64,6 +69,7 @@ export type { NotificationVM, NotificationKind, NotificationPanelProps } from ".
 export { MonitorSettings, MonitorBell, MONITOR_TYPES, MONITOR_TYPE_LABELS } from "./components/MonitorSettings.js";
 export type { MonitorType, MonitorSettingsProps, MonitorBellProps } from "./components/MonitorSettings.js";
 export { FilterPanel, parseAmount, parseDate } from "./components/FilterPanel.js";
+export { FilterEditor, FilterSheet, CriteriaChips } from "./components/FilterSheet.js";
 export type { FilterPanelProps } from "./components/FilterPanel.js";
 // Felt-familien (02a, 02b, 03)
 export {
@@ -157,7 +163,7 @@ export type { ShellIconName } from "./components/ShellIcons.js";
 export { StateBox, Skeleton, Sparkline, Badge, StatusBadge, statusTone, DataState, Missing, SourceLine, Section, SeverityIcon, severityWord } from "./primitives.js";
 export type { StatusTone } from "./primitives.js";
 export type { DataStateKind, DataStateProps } from "./primitives.js";
-export { specToCsv } from "./csv.js";
+export { specToCsv, rowsToCsv, tableToCsv } from "./csv.js";
 export type { ActionResult, HostCapabilities, LassoViewProps, ViewAction, Visibility } from "./types.js";
 export { CardGrid, Accordion } from "./components/Layout.js";
 export type { AccordionItem, AccordionProps } from "./components/Layout.js";

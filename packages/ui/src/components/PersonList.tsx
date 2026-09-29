@@ -55,7 +55,7 @@ export function PersonList({ people, show, title, error, onOpen }: { people?: Pe
   const visible = foldable && !expanded ? rows.slice(0, COLLAPSED_ROWS) : rows;
   return (
     <Section title={heading} action={toggle} span="half">
-      <ul className="lasso-rows">
+      <ul className="lasso-rows lasso-personlist">
         {visible.map((p, i) => {
           const { role, chair } = splitChair(p.role);
           const period = p.to ? `${p.from ? p.from.slice(0, 4) : ""} – ${p.to.slice(0, 4)}`.trim() : p.from ? `siden ${formatDate(p.from)}` : "";
@@ -80,8 +80,8 @@ export function PersonList({ people, show, title, error, onOpen }: { people?: Pe
         })}
       </ul>
       {foldable ? (
-        <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-          {expanded ? "Vis færre" : `Se alle ${rows.length}`}
+        <button type="button" className="lasso-link lasso-more lasso-rowmore" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+          {expanded ? "Vis færre" : `Vis alle ${rows.length}`}
         </button>
       ) : null}
     </Section>

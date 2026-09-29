@@ -98,8 +98,10 @@ export function demoPerson(companies: readonly DemoPersonSource[], id: string): 
   }
   const unitNumber = /^CVR-3-(\d+)$/.exec(id)?.[1];
   const signals = RISK_SIGNALS[name] ?? {};
+  // Eksempelfødselsår (1950–1989) ud fra ID'et; kun året, aldrig fuld dato.
+  const birthYear = unitNumber ? 1950 + (Number(unitNumber.slice(-3)) * 7) % 40 : undefined;
   if (PROTECTED_ADDRESS.has(name)) return { lassoId: id, name, addressProtected: true, unitNumber, roles, updated: "2026-09-12", ...signals };
-  return { lassoId: id, name, city: home?.city, zip: home?.zip, municipality: home?.municipality, unitNumber, roles, updated: "2026-09-12", ...signals };
+  return { lassoId: id, name, city: home?.city, zip: home?.zip, municipality: home?.municipality, unitNumber, roles, updated: "2026-09-12", birthYear, ...signals };
 }
 
 const later = (a?: string, b?: string) => (!a ? b : !b ? a : a > b ? a : b);

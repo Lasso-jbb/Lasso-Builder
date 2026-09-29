@@ -3,7 +3,7 @@
  * former, og UI-pakken kender kun dem. Derfor kan UI'en bygges og testes uden
  * at kende Lassos API, og serverlaget kan skiftes (fx ved flytning til Azure).
  */
-import type { PersonNetworkVM, PersonVM } from "./person.js";
+import type { PersonNetworkVM, PersonSearchResultVM, PersonVM } from "./person.js";
 import type { Metric } from "./spec.js";
 
 export interface Address {
@@ -563,6 +563,8 @@ export interface CompanyRowVM {
   currency?: string;
   /** Bruttofortjeneste over tid, ældste først, til sparklines. */
   trend?: number[];
+  /** Lassos score 0 (lav risiko) til 100 (høj), når kilden har den (katalog 10). Mobilkortet viser den som fjerde tal. */
+  score?: number | null;
 }
 
 /** Alvorsskala (katalog 17, guide 23 regel 10): 0 neutral, 25 info, 50 mulig vigtig, 100 vigtig. */
@@ -990,6 +992,8 @@ export interface Dataset {
   /** Katalog 16: personer (Lasso-ID "CVR-3-…") og deres netværk. */
   persons: Record<string, PersonVM>;
   personNetworks: Record<string, PersonNetworkVM>;
+  /** Katalog 15.3: personsøgninger (LassoPersonTable) pr. personSearchKey. Fejlnøgle "personSearch:<key>". */
+  personSearches?: Record<string, PersonSearchResultVM>;
   /** Katalog 21: ændringsfeed pr. changeFeedKey. */
   changeFeeds: Record<string, ChangeFeedVM>;
   /** Gem-laget: gemte sider pr. savedPagesKey (LassoSavedPages). Fejlnøgle "savedPages:<key>". */
@@ -1032,6 +1036,7 @@ export function emptyDataset(source: DataSourceKind): Dataset {
     ownershipGraphs: {},
     persons: {},
     personNetworks: {},
+    personSearches: {},
     changeFeeds: {},
     savedPages: {},
     errors: {},

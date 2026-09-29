@@ -39,7 +39,7 @@ import { CREDIT_NONE_REASON } from "../lasso/creditAdapters.js";
 import { applyCriteria, sortRows } from "./criteria-eval.js";
 import { demoOwnershipGraph, demoPersonOwnershipGraph } from "./demoGraph.js";
 import { demoFindPersons, demoPerson, demoPersonIds, demoPersonNetwork, demoPersonNews } from "./demoPeople.js";
-import { NotFoundError, type ActivityHeatmapOptions, type ChangeFeedOptions, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
+import { NotFoundError, searchPersonsTable, type ActivityHeatmapOptions, type ChangeFeedOptions, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
 import { demoHeatmap, demoIndustry, demoMap, demoScore, demoScoreHistory } from "./demoCharts.js";
 
 /**
@@ -424,7 +424,15 @@ function toRow(c: DemoCompany): CompanyRowVM {
     grossProfit: last?.grossProfit ?? null,
     profit: last?.profit ?? null,
     trend: f.years.slice(-5).map((y) => y.grossProfit ?? 0),
+    score: demoRowScore(c),
   };
+}
+
+/** Eksempelscore 0–100 (samme tal som scoremåleren); ophørte og konkursramte har ingen. */
+function demoRowScore(c: DemoCompany): number | null {
+  if (c.status !== "Aktiv" || !c.cvr) return null;
+  const seed = Number(c.cvr.slice(-2));
+  return Math.max(5, Math.min(95, 22 + ((seed * 13) % 70)));
 }
 
 function strip(c: DemoCompany): CompanyVM {
@@ -875,6 +883,10 @@ export class DemoProvider implements DataProvider {
 
   async personNetwork(lassoId: string) {
     return demoPersonNetwork(COMPANIES, lassoId);
+  }
+
+  async personSearch(query: string, limit: number) {
+    return searchPersonsTable(this, query, limit);
   }
 
   async findPersons(name: string, limit: number) {

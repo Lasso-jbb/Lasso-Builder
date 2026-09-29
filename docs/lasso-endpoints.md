@@ -454,3 +454,7 @@ læser dem defensivt og udelader dem, når de mangler, så siden ser ud som før
   tilgængelig endnu", aldrig som "Nej".
 - **Overvågning (08.1)**: `ViewAction { kind: "monitor" }` og `Dataset.monitoredIds` sættes af værten; at
   tilføje en virksomhed til et overvågningsjob (skrivning) er ikke bekræftet (kun `GET /apps/monitoring/jobs`).
+
+## Ubekræftet: persontabel (katalog 15.3, LassoPersonTable)
+
+Personsøgningen bruger den bekræftede navnesøgning (`search` med `type: "person"`) og beriger hver række med personopslaget (`GET /{lassoId}` + historik), højst 5 samtidige kald. Fødselsår (`PersonVM.birthYear`) er ikke fundet i personsvaret og udfyldes kun i demodata; live står rækken med by alene, indtil feltet er bekræftet. CPR og fuld adresse hentes eller vises aldrig.

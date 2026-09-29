@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { amountScale, currencyUnit, formatNumber, formatPercent, formatScaled, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, percentChange, type FinancialsVM, type Metric } from "@lasso/spec";
 import { DataState, Missing, Section, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
@@ -53,9 +54,24 @@ function changeText(prev: number | undefined, last: number | undefined): { text:
  * antal). Seneste år fremhævet (600). Viser de seneste år, bredden kan bære, så
  * det nyeste år altid er synligt uden scroll. Mobil: tendens/ændring skjules (26c).
  */
-export function MultiYearTable({ financials, metrics, years, title, error }: { financials?: FinancialsVM; metrics?: readonly Metric[]; years?: number; title?: string; error?: string }) {
+/** Mobil (26c.3): variant A (nøgletal i rækker) højst 4 rækker, før resten foldes. */
+export const MOBILE_A_ROWS = 4;
+
+/**
+ * Mobilvariant (26c.3): A (nøgletal i rækker, år i kolonner) når brugeren skal sammenligne
+ * på tværs af nøgletal; B (år i rækker, nøgletal i kolonner) når der er få nøgletal (1–2)
+ * og mange år. Over 560 px altid A.
+ */
+export function multiYearVariant(width: number, metricCount: number, variant?: "A" | "B"): "A" | "B" {
+  if (width > 560) return "A";
+  if (variant) return variant;
+  return metricCount <= 2 ? "B" : "A";
+}
+
+export function MultiYearTable({ financials, metrics, years, title, error, variant }: { financials?: FinancialsVM; metrics?: readonly Metric[]; years?: number; title?: string; error?: string; variant?: "A" | "B" }) {
   const heading = title ?? "Flerårstabel";
   const [ref, W] = useWidth<HTMLDivElement>(1048);
+  const [allRows, setAllRows] = useState(false);
   if (!financials) {
     return (
       <Section title={heading} span="full">
@@ -71,9 +87,11 @@ export function MultiYearTable({ financials, metrics, years, title, error }: { f
       </Section>
     );
   }
-  const span = Math.max(2, Math.min(10, years ?? 5, yearsThatFit(W)));
+  const chosen: Metric[] = (metrics?.length ? [...metrics] : all.at(-1)?.revenue != null ? ["omsaetning", ...DEFAULT_METRICS] : DEFAULT_METRICS).slice(0, 6) as Metric[];
+  const mode = multiYearVariant(W, chosen.length, variant);
+  // Variant B har årene i rækker, så bredden begrænser ikke antallet af år.
+  const span = Math.max(2, Math.min(10, years ?? 5, mode === "B" ? 10 : yearsThatFit(W)));
   const shown = all.slice(-span);
-  const chosen: Metric[] = (metrics?.length ? [...metrics] : shown.at(-1)?.revenue != null ? ["omsaetning", ...DEFAULT_METRICS] : DEFAULT_METRICS).slice(0, 6) as Metric[];
   const amountMetrics = chosen.filter((m) => METRIC_KIND[m] === "amount");
   const scale = amountMetrics.length ? amountScale(shown.flatMap((y) => amountMetrics.map((m) => (y[METRIC_FIELD[m]] as number | null) ?? 0)), currencyUnit(financials.currency)) : null;
   const fmt = (m: Metric, v: number | null | undefined) => {
@@ -83,10 +101,50 @@ export function MultiYearTable({ financials, metrics, years, title, error }: { f
     return kind === "amount" && scale ? formatScaled(v, scale) : formatNumber(v);
   };
 
+  if (mode === "B") {
+    return (
+      <Section title={heading} span="full">
+        <div className="lasso-table-wrap" ref={ref}>
+          <table className="lasso-myt-b" data-variant="B">
+            <thead>
+              <tr>
+                <th scope="col">År</th>
+                {chosen.map((m) => (
+                  <th key={m} scope="col" className="lasso-num">
+                    {METRIC_LABELS[m]}
+                    {METRIC_KIND[m] === "amount" && scale ? `, ${scale.label}` : ""}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {[...shown].reverse().map((y, i) => (
+                <tr key={y.year} className={i === 0 ? "is-last" : undefined}>
+                  <th scope="row">{y.year}</th>
+                  {chosen.map((m) => {
+                    const v = y[METRIC_FIELD[m]] as number | null | undefined;
+                    return (
+                      <td key={m} className={`lasso-num ${typeof v === "number" && v < 0 ? "lasso-down" : ""}`}>
+                        {fmt(m, v) ?? <Missing />}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Section>
+    );
+  }
+
+  const foldRows = W <= 560 && chosen.length > MOBILE_A_ROWS && !allRows;
+  const rowsShown = foldRows ? chosen.slice(0, MOBILE_A_ROWS) : chosen;
+
   return (
     <Section title={heading} span="full">
       <div className="lasso-table-wrap" ref={ref}>
-        <div className="lasso-myt">
+        <div className="lasso-myt" data-variant="A">
           <div className="lasso-myt__head">
             <div className="lasso-myt__unit">{scale ? scale.label.toUpperCase() : ""}</div>
             {shown.map((y, i) => (
@@ -97,7 +155,7 @@ export function MultiYearTable({ financials, metrics, years, title, error }: { f
             <div className="lasso-myt__delta">Ændring</div>
             <div className="lasso-myt__trend">Tendens</div>
           </div>
-          {chosen.map((m) => {
+          {rowsShown.map((m) => {
             const values = shown.map((y) => y[METRIC_FIELD[m]] as number | null | undefined);
             const series = values.filter((v): v is number => typeof v === "number");
             const change = changeText(values.at(-2) ?? undefined, values.at(-1) ?? undefined);
@@ -116,6 +174,11 @@ export function MultiYearTable({ financials, metrics, years, title, error }: { f
           })}
         </div>
       </div>
+      {W <= 560 && chosen.length > MOBILE_A_ROWS ? (
+        <button type="button" className="lasso-rowmore" aria-expanded={allRows} onClick={() => setAllRows(!allRows)}>
+          {allRows ? "Vis færre" : `Vis alle ${chosen.length} nøgletal`}
+        </button>
+      ) : null}
     </Section>
   );
 }
