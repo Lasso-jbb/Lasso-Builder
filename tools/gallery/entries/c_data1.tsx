@@ -5,6 +5,7 @@ import { formatAmount, formatDate, formatNumber, formatPercent, groupContactPers
 import {
   CompanyHead,
   DataState,
+  Icon,
   KeyFigureCards,
   LassoContact,
   LassoContactPersons,
@@ -123,7 +124,8 @@ function SeeAllPanel() {
 function SeeAllMobileList() {
   const groups = groupContactPersons(PERSONS.map((p, i) => ({ ...p, _i: i }))).map((g) => ({
     label: g.group,
-    items: g.people.map((p) => ({ id: String(p._i), title: p.name, sub: p.role })),
+    // 08.10: telefon-ikon til højre, når personen har et nummer (chevronen tegner listen selv).
+    items: g.people.map((p) => ({ id: String(p._i), title: p.name, sub: p.role, trailing: p.phone ? <Icon name="phone" size={15} /> : undefined })),
   }));
   return (
     <div style={{ minHeight: 740 }}>

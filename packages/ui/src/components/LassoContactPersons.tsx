@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { contactPersonGroup, formatDate, formatPhone, groupContactPersons, type ContactPersonVM, type ContactPersonsVM } from "@lasso/spec";
-import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { DataState, Section, stateForError } from "../primitives.js";
 import { ShellIcon } from "./ShellIcons.js";
 import { SidePanel, SidePanelList } from "./SidePanel.js";
 
@@ -100,13 +100,15 @@ function Detail({ person, companyName, updated, onCopy, onOpenLink }: { person: 
           </li>
         ) : null}
         {person.linkedin ? (
-          <li className="lasso-cpdetail__channel">
+          <li className="lasso-cpdetail__channel lasso-cpdetail__channel--linkedin">
             <ShellIcon name="linkedin" size={16} className="lasso-cpdetail__icon" />
             <span className="lasso-cpdetail__main">
               <span className="lasso-cpdetail__label">LinkedIn</span>
               <span className="lasso-cpdetail__value lasso-cpdetail__value--desktop">LinkedIn-profil</span>
             </span>
+            {/* 08.11: på mobil hedder handlingen "Åbn profil". */}
             <span className="lasso-cpdetail__actions">{link(person.linkedin, "Åbn")}</span>
+            <span className="lasso-cpdetail__actions lasso-cpdetail__actions--mobile">{link(person.linkedin, "Åbn profil", "lasso-cpdetail__action lasso-cpdetail__action--mobile")}</span>
           </li>
         ) : null}
         {!person.phone && !person.email && !person.linkedin ? (
@@ -190,7 +192,7 @@ export function LassoContactPersons({ data, title, error, companyName, onCopy, o
           Se {sorted.length} kontaktpersoner
         </button>
       ) : null}
-      {data.source ? <SourceLine source={data.source} updated={data.updated} /> : null}
+      {/* 08.6: ingen kildelinje under blokken; kilderne står pr. person i panelet ("KILDER"). */}
       <SidePanel
         open={open}
         title={heading}
