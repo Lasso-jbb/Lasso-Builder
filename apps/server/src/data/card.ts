@@ -918,7 +918,8 @@ function personTableCard(spec: ViewSpec, ds: Dataset): string | null {
     const roles = r.roles.slice(0, 2).map((x) => `${x.role}, ${x.companyName}`);
     const more = r.roles.length > 2 ? ` og ${moreText(r.roles.length - 2)}` : "";
     if (roles.length) for (const l of wrap(roles.join("; ") + more, W - 4)) card.raw(`    ${l}`);
-    const facts = [r.birthYear ? `f. ${r.birthYear}` : null, r.city, r.bankruptcies > 0 ? `${r.bankruptcies} konkurs${r.bankruptcies === 1 ? "" : "er"}` : null].filter(Boolean).join(", ");
+    // 15.3 (Jakob 29.09): intet fødselsår eller by efter navnet; kun konkurser.
+    const facts = [r.bankruptcies > 0 ? `${r.bankruptcies} konkurs${r.bankruptcies === 1 ? "" : "er"}` : null].filter(Boolean).join(", ");
     if (facts) for (const l of wrap(facts, W - 4)) card.raw(`    ${l}`);
   });
   if (result.rows.length > 20) card.text(`og ${moreText(result.rows.length - 20)}`);

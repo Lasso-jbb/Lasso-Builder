@@ -63,6 +63,7 @@
   --lasso-icon: #9aa0a8;
   --lasso-disabled: #c9cdd3;
   --lasso-skeleton: #eeeff2;
+  --lasso-skeleton-shine: #f8f8fa;
   --lasso-tooltip: #16181d;
 
   /* Semantik: kun til status og risiko, altid med ikon eller ord */
@@ -190,6 +191,7 @@
   --lasso-icon: #7d838c;
   --lasso-disabled: #4a4f57;
   --lasso-skeleton: #262a30;
+  --lasso-skeleton-shine: #32373e;
   --lasso-tooltip: #f2f3f5;
   --lasso-neutral-soft: #2a2d33;
   --lasso-positive: #5cc28c;
@@ -465,9 +467,12 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-state__title { font-size: var(--lasso-fs); font-weight: 600; color: var(--lasso-text); margin-bottom: 4px; }
 .lasso-state.lasso-state--solid { border-style: solid; border-color: var(--lasso-border); }
 .lasso-state--error { border-style: solid; border-color: var(--lasso-border-strong); background: var(--lasso-surface-2); }
-.lasso-skeleton { border-radius: 7px; background: var(--lasso-skeleton); animation: lasso-pulse 1.4s ease-in-out infinite; height: 14px; }
+/* 09.4/29.4 (Jakob 29.09): skeletter er i bevægelse, når der hentes: et lyst skær glider fra venstre
+   mod højre over den grå flade (shimmer). prefers-reduced-motion: stille flade. */
+.lasso-skeleton { border-radius: 7px; background-color: var(--lasso-skeleton); background-image: linear-gradient(90deg, transparent 0%, transparent 40%, var(--lasso-skeleton-shine) 50%, transparent 60%, transparent 100%); background-size: 300% 100%; background-repeat: no-repeat; animation: lasso-shimmer 1.6s linear infinite; height: 14px; }
+@keyframes lasso-shimmer { from { background-position: 100% 0; } to { background-position: 0% 0; } }
 @keyframes lasso-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
-@media (prefers-reduced-motion: reduce) { .lasso-skeleton { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .lasso-skeleton { animation: none; background-image: none; } }
 
 /* ---------- Felter (02/03) og "Visningen er gemt". Selve gem-dialogen er en Dialog (07). ---------- */
 .lasso-save__fields { display: grid; gap: var(--lasso-space-4); }
@@ -579,7 +584,7 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 /* ---------- Fem tilstande, kildelinje (katalog 03, 10, guide 23) ---------- */
 .lasso-notreported { color: var(--lasso-faint); }
 .lasso-notreported--text { color: var(--lasso-muted); } /* 02c.17: "Ikke oplyst"/"Ikke registreret" i muted */
-.lasso-skeleton-group { display: grid; gap: 10px; align-content: start; }
+.lasso-skeleton-group { display: grid; gap: 14px; align-content: start; }
 .lasso-state__retry { margin-top: var(--lasso-space-3); }
 .lasso-source { margin: var(--lasso-space-3) 0 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-muted); }
 
@@ -698,11 +703,13 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-row__chevron { flex: none; color: var(--lasso-icon); }
 /* Panel: skelet i samme højde mens data hentes; fanen selv får ingen markering */
 .lasso-tabpanel { min-width: 0; }
+.lasso-tabpanel[aria-busy="true"] > .lasso-skeleton-group { padding-top: var(--lasso-space-7); }
 .lasso-tabpanel__loading { margin: var(--lasso-space-3) 0 0; font-size: var(--lasso-fs-sm); color: var(--lasso-faint); }
 /* 29.4: skelettet i det fyldte indholds mål: tre nøgletalskolonner, divider, søjlegraf med 5 søjler. */
-.lasso-tabskel { display: grid; gap: var(--lasso-space-5); padding-top: var(--lasso-space-7); }
+/* 29.1/29.4/29.5 (Jakob 29.09): loaderen står med luft til fanebjælken og luft mellem skeletlinjerne. */
+.lasso-tabskel { display: grid; gap: var(--lasso-space-5); padding-top: var(--lasso-space-10); }
 .lasso-tabskel__kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--lasso-space-5); padding-bottom: var(--lasso-space-7); border-bottom: 1px solid var(--lasso-border); }
-.lasso-tabskel__kpi { display: grid; gap: 10px; }
+.lasso-tabskel__kpi { display: grid; gap: 14px; }
 .lasso-tabskel__l1 { width: 45%; height: 10px; }
 .lasso-tabskel__l2 { width: 60%; height: 20px; }
 .lasso-tabskel__l3 { width: 33%; height: 10px; }
@@ -3170,6 +3177,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-root .lasso-infohint { flex: none; display: inline-flex; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--lasso-icon); cursor: help; }
 .lasso-root .lasso-infohint:hover { color: var(--lasso-text-3); }
 .lasso-kv-links { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: var(--lasso-space-3); }
+.lasso-kv-top { display: flex; margin-bottom: var(--lasso-space-3); }
 .lasso-root .lasso-kv-link { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; font: inherit; font-size: var(--lasso-fs-sm); line-height: 18px; font-weight: 500; color: var(--lasso-accent-text); cursor: pointer; }
 .lasso-root .lasso-kv-link:hover { text-decoration: underline; }
 .lasso-root .lasso-kv-link--end { margin-left: auto; font-size: var(--lasso-fs); }
@@ -3848,7 +3856,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-state-locked__lock { position: absolute; top: -34px; right: 0; color: var(--lasso-placeholder); display: inline-flex; }
 .lasso-section__head + .lasso-state-locked .lasso-state-locked__lock { top: -40px; }
 .lasso-state-locked__content { opacity: 0.35; pointer-events: none; user-select: none; }
-.lasso-skeleton-group--static .lasso-skeleton { animation: none; }
+.lasso-skeleton-group--static .lasso-skeleton { animation: none; background-image: none; }
 .lasso-state-locked__card { border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); padding: var(--lasso-space-3); display: flex; flex-direction: column; gap: var(--lasso-space-3); }
 .lasso-state-locked__text, .lasso-state-request__text { margin: 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-2); }
 .lasso-state__wide { align-self: flex-start; height: var(--lasso-btn-h); font-size: var(--lasso-fs-sm); }

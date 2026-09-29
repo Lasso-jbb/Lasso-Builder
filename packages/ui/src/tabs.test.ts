@@ -10,16 +10,16 @@ const items = [
   { id: "risiko", label: "Risiko", disabled: true, disabledReason: "Ingen observationer" },
 ];
 
-test("Fanebjælke (29): roller, valgt fane og deaktiveret fane", () => {
+test("Fanebjælke (29): roller, valgt fane; en fane uden data (disabled) vises ikke (29.2)", () => {
   const html = renderToStaticMarkup(createElement(Tabs, { level: 1, id: "t", items, value: "oekonomi", ariaLabel: "Sider", onChange: () => {} }));
   assert.match(html, /role="tablist"/);
   assert.match(html, /aria-label="Sider"/);
-  assert.equal((html.match(/role="tab"/g) ?? []).length, 3);
+  assert.equal((html.match(/role="tab"/g) ?? []).length, 2);
   assert.match(html, /id="t-tab-oekonomi"[^>]*aria-selected="true"/);
   assert.match(html, /aria-selected="false"[^>]*>Overblik/);
   // Kun den valgte fane er i tab-rækkefølgen
   assert.match(html, /aria-selected="true"[^>]*tabindex="0"/);
-  assert.match(html, /disabled=""[^>]*title="Ingen observationer"/);
+  assert.doesNotMatch(html, /Risiko|Ingen observationer/);
   // Kun navnet på fanen: ingen tal eller badges
   assert.doesNotMatch(html, /\(\d+\)/);
   assert.match(html, /class="lasso-tabs lasso-tabs--l1"/);

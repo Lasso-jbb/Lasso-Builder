@@ -9,13 +9,25 @@ Tokens står i `packages/ui/src/styles.css`. Komponenterne bruger kun CSS-variab
 1. Status er ren tekst i vægt 500. Ingen piller, prikker eller farvede flader. Farven følger ordet (se "Status" nedenfor).
 2. Ingen dekorative piller eller badges. Tællere står aldrig på faner.
 3. Hvid flade overalt. Opdel med tynde linjer og luft, aldrig hvide kort på grå baggrund.
-4. Ingen farvede bannerbokse. AI-analyser er almindelige sektioner med kildelinje og intet "Skrevet af AI"-mærke.
+4. Ingen farvede bannerbokse. AI-analyser er almindelige sektioner uden kildelinje og uden "Skrevet af AI"-mærke.
 5. Navne står alene: ingen initial-cirkler eller ikonkasser.
 6. Ingen midterprik nogen steder. Brug komma.
 7. Ikon + ord ved enhver farvekodning, aldrig kun farve.
-8. Kildelinje én gang pr. sektion: "Kilde: Navn, opdateret DD.MM.ÅÅÅÅ" (`SourceLine`).
+8. UDGÅET (Jakob 29.09, G3): ingen kildelinje ("Kilde: …, opdateret …") i nogen elementer. `SourceLine` tegner intet og bruges ikke. Kilder vises højst som i Se alle-panelet (08.7): overskriften "Kilder" med selve kildelinket.
 9. Flere værdier end formen kan vise: vis 3 + "Se N …".
 10. Risikoskala 0 (lav) til 100 (høj). Fire trin: 0 neutral, 25 info, 50 mulig vigtig, 100 vigtig.
+
+## Generelle regler fra Jakobs gennemgang (29.09.2026)
+
+- G1: Knapper vises kun, når de har en funktion (værtens kapabilitet eller handler findes). En segmentkontrol med ét valg tegnes ikke.
+- G2: Ikoner ved en værdi (telefon, e-mail) vises kun, når der er data; ingen dæmpede ikoner for manglende kanaler.
+- G3: Ingen kildelinje nogen steder (se regel 8).
+- G5: Ingen "Gem", "Gem visning" eller "Opdatér" på elementer; data kommer i realtid. Gem hører kun til sidens hoved (gem-laget).
+- G7: Tankestreg "—" som skilletegn i tekst erstattes af bindestreg "-". Intervaller (66,67–89,99 %) beholder tankestreg; "—" for manglende værdi i tabeller afventer Jakob.
+- G8: Luk er altid et ×-ikon (ikonknap med aria-label "Luk"), aldrig ordet "Luk".
+- G9: Hoveder viser kun navnet (virksomhed: med status og binavn). Ingen faktalinje (CVR, adresse, ansatte …) under navnet og ingen skillestreg under hovedet. Identiteten står i nøgle-værdi-listen, adressen i kontaktblokken.
+- Faner: kun faner, der har data, vises (ingen deaktiverede faner, alle niveauer).
+- Skeletter er i bevægelse (shimmer), når der hentes; stille ved prefers-reduced-motion.
 
 ## Fem tilstande
 

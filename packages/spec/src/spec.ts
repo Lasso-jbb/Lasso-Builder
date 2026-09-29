@@ -780,7 +780,7 @@ export const viewSpecSchema = z.object({
   answer: answerFootSchema
     .optional()
     .describe(
-      "Svarets bundlinje (Paper 30.1–30.3): source = kildelinjen til venstre ('Kilde: CVR, opdateret 25.09.2026'), next = ét koral link videre til næste niveau ({ label: 'Se hele økonomien', prompt }), logo = dæmpet Lasso-navnelogo foran kilden (niveau C). Udelad i portalen.",
+      "Svarets bundlinje (Paper 30.1–30.3): source vises ikke længere (ingen kildelinje, Jakob 29.09; feltet accepteres bagudkompatibelt), next = ét koral link videre til næste niveau ({ label: 'Se hele økonomien', prompt }), logo = dæmpet Lasso-navnelogo (niveau C). Udelad i portalen.",
     ),
   components: z.array(componentSchema).min(1).max(12),
 });

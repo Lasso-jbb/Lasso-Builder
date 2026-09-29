@@ -191,7 +191,7 @@ export function PersonTable({
                       </td>
                       <td className="lasso-cell--name">
                         <span className="lasso-table__name">{r.name}</span>
-                        {personSub(r) ? <span className="lasso-table__sub">{personSub(r)}</span> : null}
+                        {/* 15.3 (Jakob 29.09): kun navnet; intet fødselsår og ingen by under. */}
                       </td>
                       <td className="lasso-ptable__roles">
                         {r.roles.length ? (
@@ -233,7 +233,6 @@ export function PersonTable({
                 <div className="lasso-ccard__top">
                   <div className="lasso-ccard__id">
                     <span className="lasso-ccard__name">{r.name}</span>
-                    {personSub(r) ? <span className="lasso-ccard__sub">{personSub(r)}</span> : null}
                   </div>
                   {r.bankruptcies > 0 ? (
                     <span className="lasso-ccard__status lasso-ptable__bankrupt">

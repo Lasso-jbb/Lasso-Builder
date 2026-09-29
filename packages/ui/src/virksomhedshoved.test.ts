@@ -208,7 +208,7 @@ test("08.6: blokken viser 3 (Direktion først) + 'Se N kontaktpersoner', der åb
   assert.deepEqual(names, ["Jakob Eksempel", "Camilla Eksempel", "Sofie Eksempel"]);
   assert.match(out, /aria-haspopup="dialog"[^>]*>Se 5 kontaktpersoner</);
   assert.doesNotMatch(out, /aria-expanded/);
-  assert.match(out, /lasso-contactpersons__icon--muted/, "faint ikon, når kanalen mangler");
+  assert.doesNotMatch(out, /lasso-contactpersons__icon--muted/, "G2: intet ikon, når kanalen mangler");
 });
 
 test("08.7: panelet grupperer, markerer den valgte og viser Kopiér-links, LinkedIn og kilder", () => {
@@ -220,7 +220,8 @@ test("08.7: panelet grupperer, markerer den valgte og viser Kopiér-links, Linke
   assert.match(out, /lasso-panellist__row is-selected" aria-current="true"/);
   assert.match(out, /Kopiér<span class="lasso-cpdetail__long"> telefonnummer<\/span>/);
   assert.match(out, /LinkedIn-profil/);
-  assert.match(out, /registreret direktør, 14\.05\.2012/);
+  // 08.11 (Jakob 29.09): kilder kun som link under "Kilder"; ingen kildebeskrivelse, CVR-linje eller "Opdateret".
+  assert.doesNotMatch(out, /registreret direktør|lasso-cpdetail__updated|lasso-cpdetail__sourcetext/);
   assert.match(out, /lasso-sidepanel__close" aria-label="Luk"/);
 });
 

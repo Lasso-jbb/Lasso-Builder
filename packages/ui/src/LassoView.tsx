@@ -126,11 +126,12 @@ function sectionAction(
   return undefined;
 }
 
-/** 09.2: "Se hele regnskabet" som link med ikon under regnskabslisten, når værten kan åbne det. */
+/** 09.2/09.5: "Se alle" (hele regnskabet) som link med ikon under regnskabslisten, når værten kan åbne det. */
 function statementsLink(company: string, ds: Dataset, props: LassoViewProps, act: (a: ViewAction) => void) {
   if (props.spec.components.some((x) => x.type === "LassoIncomeStatement")) return undefined;
   const run = sectionAction(props, act, { lassoId: company, pageKind: "company", section: "regnskab", name: ds.companies[company]?.name ?? company, label: "Regnskab" });
-  return run ? [{ label: "Se hele regnskabet", icon: "document" as const, onClick: run }] : undefined;
+  // 09.5 (Jakob 29.09): linket hedder "Se alle".
+  return run ? [{ label: "Se alle", icon: "document" as const, onClick: run }] : undefined;
 }
 
 /** Hovedets handlinger for én entitet: Gem og Overvåg kun for sidens egen virksomhed/person. */

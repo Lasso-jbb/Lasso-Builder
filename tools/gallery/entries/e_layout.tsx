@@ -394,6 +394,7 @@ const PAPER_PERSON_TABS: readonly TabItem[] = [
   { id: "risiko", label: "Risiko" },
   { id: "historik", label: "Historik" },
   { id: "nyheder", label: "Nyheder" },
+  { id: "tvilling", label: "Tvilling" },
 ];
 
 function PaperCompanyPage({ ds }: { ds: Dataset }) {
@@ -1321,7 +1322,6 @@ const L1: TabItem[] = [
   { id: "regnskab", label: "Regnskab" },
   { id: "ejerskab", label: "Ejerskab" },
   { id: "ledelse", label: "Ledelse" },
-  { id: "risiko", label: "Risiko", disabled: true, disabledReason: "Ingen regnskaber indberettet" },
   { id: "historik", label: "Historik" },
   { id: "kontakt", label: "Kontakt" },
   { id: "nyheder", label: "Nyheder" },
@@ -1347,12 +1347,12 @@ const KEY_ROWS: [string, string][] = [
   ["Egenkapital", formatAmount(3_214_000)],
 ];
 
-/** 29.1: tilstandsrækken - valgt, hvile, hover (Regnskab), fokus (Ejerskab), deaktiveret (Risiko), "Flere". */
+/** 29.1: tilstandsrækken - valgt, hvile, hover (Regnskab), fokus (Ejerskab), "Flere". Faner uden data vises ikke (29.2). */
 function Level1() {
   const [v, setV] = useState("overblik");
   return (
     <div>
-      {caption("Niveau 1, sideniveau, 48 px: valgt, hvile, hover (Regnskab), fokus (Ejerskab), deaktiveret (Risiko) og 'Flere' ved mere end 8 faner")}
+      {caption("Niveau 1, sideniveau, 48 px: valgt, hvile, hover (Regnskab), fokus (Ejerskab) og 'Flere' ved mere end 8 faner")}
       <Tabs level={1} items={L1} value={v} onChange={setV} ariaLabel="Sider" hoverId="regnskab" focusId="ejerskab" />
       {/* Papers forklaringer under rækken (IWK-0). */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 24, marginTop: 16 }}>
@@ -1361,7 +1361,7 @@ function Level1() {
           ["Hvile", "Text-secondary 400, ingen streg"],
           ["Hover", "Tekst bliver ink, 2 px divider-streg, ingen baggrund"],
           ["Fokus", "1 px koral kant (primary-border) omkring navnet, radius 6, kun ved tastatur"],
-          ["Deaktiveret", "45 % opacitet, tooltip siger hvorfor, fx \"Ingen regnskaber indberettet\""],
+          ["Uden data", "Fanen vises ikke. Kun faner, der har data, står i bjælken (alle niveauer)"],
           ["Flere", "Ved mere end 8 faner: \"Flere\" med pil åbner menu (07)"],
         ].map(([t, d]) => (
           <div key={t}>
@@ -1377,7 +1377,7 @@ function Level1() {
   );
 }
 
-/** 29.2: sektionsoverskrift med enhed på samme linje; valgt, hvile, hover (Pengestrøm), fokus (Nøgletal), deaktiveret (Koncern). */
+/** 29.2: sektionsoverskrift med enhed på samme linje; valgt, hvile, hover (Pengestrøm), fokus (Nøgletal). Kun faner med data. */
 function Level2() {
   const [v, setV] = useState("resultat");
   return (
@@ -1389,7 +1389,6 @@ function Level2() {
           { id: "balance", label: "Balance" },
           { id: "pengestroem", label: "Pengestrøm" },
           { id: "noegletal", label: "Nøgletal" },
-          { id: "koncern", label: "Koncern", disabled: true, disabledReason: "Kun årsregnskab indberettet" },
         ]}
         value={v}
         onChange={setV}
@@ -1448,15 +1447,16 @@ function Level3() {
           ariaLabel="Selskab eller koncern"
           focusId="koncern"
         />
+        {/* 29.3 (Jakob 29.09): ikke År/Halvår/Kvartal (kun årsregnskaber, 19.1), men opgørelsen. */}
         <TabsDemo
           level={3}
           items={[
-            { id: "aar", label: "År" },
-            { id: "halvaar", label: "Halvår", disabled: true, disabledReason: "Kun årsregnskab indberettet" },
-            { id: "kvartal", label: "Kvartal", disabled: true, disabledReason: "Kun årsregnskab indberettet" },
+            { id: "resultat", label: "Resultat" },
+            { id: "balance", label: "Balance" },
+            { id: "pengestroem", label: "Pengestrøm" },
           ]}
-          value="aar"
-          ariaLabel="Periode"
+          value="resultat"
+          ariaLabel="Opgørelse"
         />
       </div>
     </div>
@@ -1507,11 +1507,11 @@ function PhoneTabs() {
         </div>
       </header>
       <div style={{ padding: "16px 16px 0" }}>
+        {/* G9 (Jakob 29.09): kun navnet i hovedet, ingen faktalinje under. */}
         <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
           <span style={{ fontSize: 20, lineHeight: "26px", fontWeight: 600, color: "var(--lasso-text)" }}>LASSO X A/S</span>
           <span className="lasso-small lasso-muted">Aktiv</span>
         </div>
-        <div className="lasso-small lasso-muted" style={{ marginTop: 4 }}>CVR 34580820, A/S, stiftet 14.05.2012</div>
       </div>
       <div style={{ padding: "8px 0 0 16px" }}>
         <Tabs level={1} items={L1.slice(0, 6)} value={l1} onChange={setL1} ariaLabel="Sider" />
@@ -1545,7 +1545,7 @@ const PHONE_NOTES: [string, string][] = [
   ["Niveau 1 på mobil", "Samme 48 px og 14 px tekst. Rækken ruller vandret uden synlig scrollbar, 40 px hvid fade i højre kant så længe der er mere, gap 24, første fane 16 px fra kanten. Den valgte fane rulles ind i syne ved sideskift. Ingen \"Flere\"-menu på mobil; alle faner ligger i rullen."],
   ["Niveau 2 på mobil", "Samme 36 px og 13 px tekst, ruller vandret med fade som niveau 1. Touch-målet er hele 44 px-højden inkl. 4 px luft over rækken."],
   ["Niveau 3 på mobil", "Segmentkontrollen flytter ned under elementets overskrift, fylder hele bredden med lige brede segmenter, højde 44 og tekst 14. Ved mere end 3 segmenter bliver den til en 44 px dropdown der åbner som handlingsark (26a)."],
-  ["Tastatur og tilgængelighed", "Fanebjælken er role=\"tablist\" med aria-label, hver fane role=\"tab\" med aria-selected og aria-controls, panelet role=\"tabpanel\" med aria-labelledby. Kun den valgte fane er i tab-rækkefølgen; pil venstre/højre flytter og vælger, Home/End går til første/sidste, Tab går videre ind i panelet. Deaktiverede faner springes over. Gælder alle tre niveauer, også segmentkontrollen."],
+  ["Tastatur og tilgængelighed", "Fanebjælken er role=\"tablist\" med aria-label, hver fane role=\"tab\" med aria-selected og aria-controls, panelet role=\"tabpanel\" med aria-labelledby. Kun den valgte fane er i tab-rækkefølgen; pil venstre/højre flytter og vælger, Home/End går til første/sidste, Tab går videre ind i panelet. Faner uden data vises ikke. Gælder alle tre niveauer, også segmentkontrollen."],
   ["Kodenavn", "Én komponent, LassoTabs, med level 1, 2 eller 3, styret udefra (value + onChange) så indholdet kan hentes ved skift. Årsvælgeren (09), Nuværende/Alle (11, 24) og segmentet i 19 bruger niveau 3 fremover."],
 ];
 
@@ -1569,9 +1569,9 @@ function Phone29() {
 
 const tabs: GalleryEntry[] = [
   { nr: "29.1", title: "Fanebjælke niveau 1 (sideniveau)", node: "IWK-0", note: "Hover (Regnskab) og fokus (Ejerskab) er tegnet statisk med Tabs hoverId/focusId.", render: () => <Level1 /> },
-  { nr: "29.2", title: "Fanebjælke niveau 2 (sektionsniveau)", node: "IXR-0", note: "Hover (Pengestrøm) og fokus (Nøgletal) er tegnet statisk med Tabs hoverId/focusId.", render: () => <Level2 /> },
-  { nr: "29.3", title: "Segmentkontrol niveau 3 (i et element)", node: "IYR-0", note: "Fokus på Koncern er tegnet statisk med focusId.", render: () => <Level3 /> },
-  { nr: "29.4", title: "Fanebjælke, henter (skelet)", node: "J0D-0", note: "TabPanel loadingShape=\"overview\"; til højre niveau 3, hvor etiketterne står og kun værdierne er skelet.", render: () => <Loading /> },
+  { nr: "29.2", title: "Fanebjælke niveau 2 (sektionsniveau)", node: "IXR-0", note: "Hover (Pengestrøm) og fokus (Nøgletal) er tegnet statisk med Tabs hoverId/focusId. Kun faner, der har data, vises (ingen deaktiverede faner, alle niveauer).", render: () => <Level2 /> },
+  { nr: "29.3", title: "Segmentkontrol niveau 3 (i et element)", node: "IYR-0", note: "Fokus på Koncern er tegnet statisk med focusId. Eksemplet År/Halvår/Kvartal er erstattet af Resultat/Balance/Pengestrøm (kun årsregnskaber, 19.1).", render: () => <Level3 /> },
+  { nr: "29.4", title: "Fanebjælke, henter (skelet)", node: "J0D-0", note: "Skeletterne er i bevægelse (et lyst skær glider fra venstre mod højre, 1,6 s; stille ved prefers-reduced-motion); billedet her er statisk. TabPanel loadingShape=\"overview\" med luft til fanebjælken; til højre niveau 3, hvor etiketterne står og kun værdierne er skelet.", render: () => <Loading /> },
   { nr: "29.5", title: "Fanebjælke, mobil 390", node: "J1Z-0", only: "mobile", note: "Telefonramme med niveau 1 og 2 (vandret rul med fade) og niveau 3 i fuld bredde; forklaringerne står under rammen.", render: () => <Phone29 /> },
 ];
 

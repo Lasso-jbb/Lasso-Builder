@@ -26,7 +26,7 @@ export const KV_CONCEPTS: Record<string, string> = {
   "Seneste revisorskift": "Dato for seneste skift af revisor i CVR. Hyppige skift kan være et opmærksomhedspunkt.",
 };
 
-/** Katalog 09.2: handlinger under listen som link med ikon, fx "Se hele regnskabet". */
+/** Katalog 09.2: handlinger under listen som link med ikon, fx "Se alle". */
 export interface KeyValueLink {
   label: string;
   icon?: ShellIconName;
@@ -188,9 +188,9 @@ export function KeyValueList({
   exclude?: readonly Metric[];
   /** Info-ikon med begrebsforklaring ved nøglen (KV_CONCEPTS). Standard til. */
   info?: boolean;
-  /** Handlinger under listen som link med ikon (09.2), fx "Se hele regnskabet". */
+  /** Handlinger under listen som link med ikon (09.2), fx "Se alle". */
   links?: readonly KeyValueLink[];
-  /** Variant "financials" (09.5): rækken "PDF-regnskab" med "Hent ÅÅÅÅ ⤓" højrestillet i koral. */
+  /** Variant "financials" (09.5): "⤓ Hent regnskabet ÅÅÅÅ" som link øverst i elementet (Jakob 29.09). */
   onPdf?: (year: number) => void;
   /** Variant "financials": antal år i årsvælgeren (30.13: 2 → "2025 | 2024"). */
   years?: number;
@@ -245,6 +245,15 @@ export function KeyValueList({
         }
         span="half"
       >
+        {/* 09.5 (Jakob 29.09): handlingen "Hent regnskabet" står øverst i elementet, ikke som række nederst. */}
+        {onPdf ? (
+          <div className="lasso-kv-top">
+            <button type="button" className="lasso-kv-link" onClick={() => onPdf(selected.year)}>
+              <ShellIcon name="download" size={15} />
+              <span>Hent regnskabet {selected.year}</span>
+            </button>
+          </div>
+        ) : null}
         <div className="lasso-kv-list lasso-kv-list--financials">
           {cut(rows).map((r) => (
             <div className="lasso-kv-row" key={r.label}>
@@ -255,17 +264,6 @@ export function KeyValueList({
               </div>
             </div>
           ))}
-          {onPdf ? (
-            <div className="lasso-kv-row">
-              <Label text="PDF-regnskab" info={false} />
-              <div className="lasso-kv-row__value">
-                <button type="button" className="lasso-kv-link lasso-kv-link--end" onClick={() => onPdf(selected.year)}>
-                  <span>Hent {selected.year}</span>
-                  <ShellIcon name="download" size={15} />
-                </button>
-              </div>
-            </div>
-          ) : null}
         </div>
         {moreRows(rows.length)}
         <Links links={links} />

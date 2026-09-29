@@ -380,7 +380,7 @@ export const entries: GalleryEntry[] = [
     title: "Nøgle-værdi-liste med årsvælger",
     node: "9WR-0",
     spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "financials", width: "full" }]),
-    note: "Med årsrapportens PDF-link i datasættet (rækken 'PDF-regnskab').",
+    note: "Med årsrapportens PDF-link i datasættet: 'Hent regnskabet' øverst i elementet og 'Se alle' under listen (Jakob 29.09).",
     mutate: (ds) => {
       ds.financialStatements[B] = { lassoId: B, currency: "DKK", incomeStatement: [], balanceSheet: [], cashFlow: [], pdfUrl: "https://example.com/aarsrapport.pdf" };
     },
