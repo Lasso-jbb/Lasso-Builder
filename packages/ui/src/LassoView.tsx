@@ -148,7 +148,7 @@ function headActionsFor(id: string, name: string, frame: FrameTools): HeadAction
 function headTabsOf(props: LassoViewProps) {
   const t = props.headTabs;
   if (!t) return undefined;
-  return <Tabs level={1} items={t.items} value={t.value} onChange={t.onChange} ariaLabel={t.ariaLabel ?? "Sektioner"} className="lasso-headtabs" />;
+  return <Tabs level={1} items={t.items} value={t.value} onChange={t.onChange} ariaLabel={t.ariaLabel ?? "Sektioner"} maxVisible={t.maxVisible} moreLabel={t.moreLabel} className="lasso-headtabs" />;
 }
 
 function CompanyHeadBridge({ c, ds, props, act, frame }: { c: Extract<ViewComponent, { type: "LassoCompanyHead" }>; ds: Dataset; props: LassoViewProps; act: (a: ViewAction) => void; frame: FrameTools }) {
@@ -200,7 +200,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoCompanyHead":
       return <CompanyHeadBridge key={key} c={c} ds={empty} props={props} act={act} frame={frame} />;
     case "LassoKeyFigureCards":
-      return <KeyFigureCards key={key} financials={empty.financials[c.company]} metrics={c.metrics} error={err(`financials:${c.company}`)} />;
+      return <KeyFigureCards key={key} financials={empty.financials[c.company]} metrics={c.metrics} plain={c.variant === "plain" || Boolean(props.frameless || props.embedded)} error={err(`financials:${c.company}`)} />;
     case "LassoBarChart":
       return <BarChart key={key} financials={empty.financials[c.company]} metric={c.metric} years={c.years} error={err(`financials:${c.company}`)} />;
     case "LassoGroupedBarChart":
@@ -981,7 +981,7 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
 
   return (
     <div className="lasso-root" data-theme={theme ?? "light"}>
-      <div className={`lasso-frame ${frameless ? "lasso-frame--bare" : ""}`}>
+      <div className={`lasso-frame ${frameless ? "lasso-frame--bare" : ""}${frameless && props.sectionCards ? " lasso-frame--cards" : ""}`}>
         {frameless ? null : (
         <header className="lasso-frame__header">
           {host.back ? (

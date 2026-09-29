@@ -200,6 +200,7 @@ function Shell({
   panel,
   sheetOpen,
   screen,
+  moduleBar = true,
 }: {
   kind: "company" | "person" | "search";
   title: string;
@@ -210,6 +211,8 @@ function Shell({
   sheetOpen?: boolean;
   /** Fylder hele skærmen (ark og faste lag kommer med i billedet). */
   screen?: boolean;
+  /** Modulbjælken over siden (standard). Under 1024 px står modulerne i stedet under hovedet (26f.1/26.3). */
+  moduleBar?: boolean;
 }) {
   const [focus, setFocus] = useState(value ?? "overblik");
   const mobile: AppShellMobile = {
@@ -237,11 +240,11 @@ function Shell({
       <style>{PORTAL_CSS}</style>
       <AppShell
         rail={{ groups: railGroups(kind === "company" ? C : kind === "person" ? P : "search"), onToggleGroup: noop, onLogo: noop }}
-        tabs={{ tabs: stripTabs(kind, kind === "company" ? title : undefined, kind === "person" ? title : undefined), onSelect: noop, onClose: noop, onAdd: noop, onBell: noop, unread: 3, onFeedback: noop, onAccount: noop }}
+        tabs={{ tabs: stripTabs(kind, kind === "company" ? title : undefined, kind === "person" ? title : undefined), onSelect: noop, onClose: noop, onAdd: noop, onBell: noop, unread: isNarrow() ? 0 : 3, onFeedback: noop, onAccount: noop }}
         mobile={mobile}
         panel={panel}
       >
-        {modules ? <ModuleBar id="e-mod" modules={modules} value={focus} onChange={setFocus} actions={moduleActions()} ariaLabel="Fokus" /> : null}
+        {modules && moduleBar ? <ModuleBar id="e-mod" modules={modules} value={focus} onChange={setFocus} actions={moduleActions()} ariaLabel="Fokus" /> : null}
         {children}
       </AppShell>
     </div>
@@ -255,11 +258,27 @@ function personSpec(ds: Dataset, followUps = false): ViewSpec {
   return composePerson(P, ds, { focus: "overblik", name: ds.persons[P]?.name, followUps });
 }
 
+/** Under 1024 px (tablet 26f.1, mobil 26.3): ingen modulbjælke; modulerne som faner under hovedet (tablet 5 + "Mere"). */
+const isNarrow = () => typeof window !== "undefined" && window.innerWidth < 1024;
+function narrowTabs(items: readonly TabItem[], value: string, onChange: (id: string) => void) {
+  return isMobile() ? { items, value, onChange, ariaLabel: "Moduler", maxVisible: items.length } : { items, value, onChange, ariaLabel: "Moduler", maxVisible: 6, moreLabel: "Mere" };
+}
+
 function CompanyPage({ ds }: { ds: Dataset }) {
   const spec = companySpec(ds);
+  const [focus, setFocus] = useState("overblik");
+  const narrow = isNarrow();
   return (
-    <Shell kind="company" title={ds.companies[C]?.name ?? "Eksempel Byg A/S"} modules={COMPANY_MODULES} value="overblik">
-      <LassoView spec={spec} dataset={ds} host={entityHost()} onAction={noop} theme="light" frameless />
+    <Shell kind="company" title={ds.companies[C]?.name ?? "Eksempel Byg A/S"} modules={COMPANY_MODULES} value="overblik" moduleBar={!narrow}>
+      <LassoView
+        spec={spec}
+        dataset={ds}
+        host={narrow ? { ...entityHost(), savePage: true, monitor: true } : entityHost()}
+        headTabs={narrow ? narrowTabs(COMPANY_MODULES, focus, setFocus) : undefined}
+        onAction={noop}
+        theme="light"
+        frameless
+      />
     </Shell>
   );
 }
@@ -334,8 +353,8 @@ function PaperShell({ kind, title, company, children }: { kind: "company" | "per
     sections: kind === "company" ? COMPANY_MODULES : PERSON_MODULES,
     activeSection: focus,
     onSelectSection: setFocus,
-    onBell: noop,
-    moreItems: [{ id: "share", label: "Del link", icon: <ShellIcon name="copy" size={16} />, onSelect: noop }],
+    // 26g.1/26g.2: entitetssiden har "‹ Navn" med del-ikon og burger i topbjælken.
+    back: { onBack: noop, onShare: noop },
     nav: [
       { id: "soeg", label: "Søg", icon: <ShellIcon name="search" size={20} />, active: true },
       { id: "lister", label: "Lister", icon: <ShellIcon name="list" size={20} /> },
@@ -355,26 +374,56 @@ function PaperShell({ kind, title, company, children }: { kind: "company" | "per
         tabs={{ tabs, onSelect: noop, onBell: noop, onAccount: noop }}
         mobile={mobile}
       >
-        {kind === "company" ? <ModuleBar id="e-mod" modules={COMPANY_MODULES} value={focus} onChange={setFocus} actions={paperModuleActions()} maxVisible={8} ariaLabel="Moduler" /> : null}
+        {kind === "company" && !isNarrow() ? <ModuleBar id="e-mod" modules={COMPANY_MODULES} value={focus} onChange={setFocus} actions={paperModuleActions()} maxVisible={8} ariaLabel="Moduler" /> : null}
         {children}
       </AppShell>
     </div>
   );
 }
 
+/** 26g.2: personfanerne under hovedet på mobil (Paper EPB-0/FOV-0). */
+const PAPER_PERSON_TABS: readonly TabItem[] = [
+  { id: "roller", label: "Roller" },
+  { id: "netvaerk", label: "Netværk" },
+  { id: "risiko", label: "Risiko" },
+  { id: "historik", label: "Historik" },
+  { id: "nyheder", label: "Nyheder" },
+];
+
 function PaperCompanyPage({ ds }: { ds: Dataset }) {
   const name = ds.companies[C]?.name ?? "Eksempel Byg A/S";
+  const [focus, setFocus] = useState("overblik");
+  const narrow = isNarrow();
   return (
     <PaperShell kind="company" title={name} company={name}>
-      <LassoView spec={companySpec(ds)} dataset={ds} host={paperHost()} onAction={noop} theme="light" frameless />
+      <LassoView
+        spec={companySpec(ds)}
+        dataset={ds}
+        host={paperHost()}
+        headTabs={narrow ? narrowTabs(COMPANY_MODULES, focus, setFocus) : undefined}
+        sectionCards
+        onAction={noop}
+        theme="light"
+        frameless
+      />
     </PaperShell>
   );
 }
 
 function PaperPersonPage({ ds }: { ds: Dataset }) {
+  const [tab, setTab] = useState("roller");
   return (
     <PaperShell kind="person" title={ds.persons[P]?.name ?? "Bo Eksempel"} company={ds.companies[C]?.name ?? "Eksempel Byg A/S"}>
-      <LassoView spec={personSpec(ds)} dataset={ds} host={paperHost()} onAction={noop} theme="light" frameless />
+      <LassoView
+        spec={personSpec(ds)}
+        dataset={ds}
+        host={paperHost()}
+        headTabs={isMobile() ? { items: PAPER_PERSON_TABS, value: tab, onChange: setTab, ariaLabel: "Personfaner", maxVisible: PAPER_PERSON_TABS.length } : undefined}
+        sectionCards
+        onAction={noop}
+        theme="light"
+        frameless
+      />
     </PaperShell>
   );
 }
@@ -795,7 +844,13 @@ const tablet: GalleryEntry[] = [
     node: "FAA-0",
     only: "desktop",
     desktopWidth: 768,
-    spec: { kind: "list", title: "Kunder", components: [{ type: "LassoCompanyTable", title: "Kunder", source: "search", search: { query: "", criteria: [], limit: 8 }, columns: ["navn", "status", "bruttofortjeneste", "resultat", "ansatte", "score"] }] },
+    // 26f.2: to aktive kriterier giver "Filter (2)" i kortets hoved.
+    spec: {
+      kind: "list",
+      title: "Kunder",
+      criteria: [{ field: "ansatte", operator: "gte", value: 1 }, { field: "status", operator: "eq", value: "aktiv" }],
+      components: [{ type: "LassoCompanyTable", title: "Kunder", source: "search", search: { query: "", criteria: [{ field: "ansatte", operator: "gte", value: 1 }, { field: "status", operator: "eq", value: "aktiv" }], limit: 8 }, columns: ["navn", "status", "bruttofortjeneste", "resultat", "ansatte", "score"] }],
+    },
   },
   { nr: "26f.3", title: "Regnskab, tablet", node: "FCA-0", only: "desktop", desktopWidth: 768, spec: one("Regnskab", { type: "LassoFinancialStatements", company: C }) },
   { nr: "26f.4", title: "Ejerdiagram, tablet", node: "FFB-0", only: "desktop", desktopWidth: 768, spec: one("Ejerdiagram", { type: "LassoOwnershipDiagram", company: C }) },

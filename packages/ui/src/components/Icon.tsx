@@ -62,7 +62,8 @@ export type IconName =
   | "sparkle"
   | "clock"
   | "linkedin"
-  | "lock";
+  | "lock"
+  | "share";
 
 /** Danske navne på katalogets 20 ikoner, i katalogets rækkefølge (til aria-label og oversigter). */
 export const ICON_LABELS: Record<CatalogIconName, string> = {
@@ -137,6 +138,7 @@ const PATHS: Record<IconName, string> = {
   clock: "M12 21a9 9 0 100-18 9 9 0 000 18zM12 7.5V12l3 2",
   linkedin: "M4.5 4.5h15v15h-15zM8.5 10.5v5M8.5 8v.5M11.5 15.5v-5M11.5 12.5a2 2 0 014 0v3",
   lock: "M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 017 0v3",
+  share: "M17.5 8a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM6.5 14.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM17.5 21a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM8.7 10.8l6.6-3.6M8.7 13.2l6.6 3.6", /* 26g.1: del-ikon i tilbage-topbjælken */
 };
 
 export interface IconProps {

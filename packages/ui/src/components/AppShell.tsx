@@ -66,6 +66,11 @@ export interface AppShellMobile {
   onBell?: () => void;
   /** Bundnavigationens fire punkter. Udeladt = Søg, Lister, Overvågning, Konto uden handlinger. */
   nav?: readonly MobileNavItem[];
+  /**
+   * Entitetsside (26g.1/26g.2): topbjælken bliver "‹ Navn" med tilbagepil til venstre og del-ikon +
+   * burger (sektionsarket) til højre; klokke og "…" vises ikke. Undertitlen udelades.
+   */
+  back?: { label?: string; onBack?: () => void; onShare?: () => void };
   /** Styret åbning af sektionsarket (ellers intern tilstand). */
   sheetOpen?: boolean;
   onToggleSheet?: (open: boolean) => void;
@@ -159,42 +164,65 @@ export function AppShell({ rail, tabs, mobile, tablet, children, panel, panelLab
         ))}
       </nav>
 
-      <header className="lasso-mobilebar">
-        {hasSections ? (
-          <button type="button" className="lasso-mobilebar__btn" aria-label="Sektioner" aria-expanded={sheetOpen} aria-controls="lasso-sheet-sections" onClick={() => setSheet(!sheetOpen)}>
-            <ShellIcon name="menu" size={20} />
+      {mobile?.back ? (
+        <header className="lasso-mobilebar lasso-mobilebar--back">
+          <button type="button" className="lasso-mobilebar__btn" aria-label={mobile.back.label ?? "Tilbage"} onClick={mobile.back.onBack}>
+            <ShellIcon name="chevron-left" size={20} />
           </button>
-        ) : (
-          <span className="lasso-mobilebar__btn lasso-mobilebar__btn--empty" aria-hidden="true" />
-        )}
-        <div className="lasso-mobilebar__titles">
-          <div className="lasso-mobilebar__title">{title}</div>
-          {mobile?.subtitle ? <div className="lasso-mobilebar__subtitle">{mobile.subtitle}</div> : null}
-        </div>
-        <div className="lasso-mobilebar__tools">
-          {mobile?.onBell ? <MonitorBell unread={mobile.unread ?? 0} important={mobile.important} onClick={mobile.onBell} /> : null}
-          {actions.map((a) => (
-            <button key={a.id} type="button" className="lasso-mobilebar__btn" aria-label={a.label} title={a.label} onClick={a.onSelect}>
-              {a.icon}
+          <div className="lasso-mobilebar__titles">
+            <div className="lasso-mobilebar__title">{title}</div>
+          </div>
+          <div className="lasso-mobilebar__tools">
+            {mobile.back.onShare ? (
+              <button type="button" className="lasso-mobilebar__btn" aria-label="Del" title="Del" onClick={mobile.back.onShare}>
+                <ShellIcon name="share" size={20} />
+              </button>
+            ) : null}
+            {hasSections ? (
+              <button type="button" className="lasso-mobilebar__btn" aria-label="Sektioner" aria-expanded={sheetOpen} aria-controls="lasso-sheet-sections" onClick={() => setSheet(!sheetOpen)}>
+                <ShellIcon name="menu" size={20} />
+              </button>
+            ) : null}
+          </div>
+        </header>
+      ) : (
+        <header className="lasso-mobilebar">
+          {hasSections ? (
+            <button type="button" className="lasso-mobilebar__btn" aria-label="Sektioner" aria-expanded={sheetOpen} aria-controls="lasso-sheet-sections" onClick={() => setSheet(!sheetOpen)}>
+              <ShellIcon name="menu" size={20} />
             </button>
-          ))}
-          {mobile?.moreItems?.length ? (
-            <Menu
-              trigger={<ShellIcon name="more" size={20} />}
-              triggerClassName="lasso-mobilebar__btn"
-              triggerLabel="Flere handlinger"
-              label="Flere handlinger"
-              align="end"
-              items={mobile.moreItems}
-              context={{ title, subtitle: mobile.subtitle }}
-            />
-          ) : mobile?.onMore ? (
-            <button type="button" className="lasso-mobilebar__btn" aria-label="Flere handlinger" onClick={mobile.onMore}>
-              <ShellIcon name="more" size={20} />
-            </button>
-          ) : null}
-        </div>
-      </header>
+          ) : (
+            <span className="lasso-mobilebar__btn lasso-mobilebar__btn--empty" aria-hidden="true" />
+          )}
+          <div className="lasso-mobilebar__titles">
+            <div className="lasso-mobilebar__title">{title}</div>
+            {mobile?.subtitle ? <div className="lasso-mobilebar__subtitle">{mobile.subtitle}</div> : null}
+          </div>
+          <div className="lasso-mobilebar__tools">
+            {mobile?.onBell ? <MonitorBell unread={mobile.unread ?? 0} important={mobile.important} onClick={mobile.onBell} /> : null}
+            {actions.map((a) => (
+              <button key={a.id} type="button" className="lasso-mobilebar__btn" aria-label={a.label} title={a.label} onClick={a.onSelect}>
+                {a.icon}
+              </button>
+            ))}
+            {mobile?.moreItems?.length ? (
+              <Menu
+                trigger={<ShellIcon name="more" size={20} />}
+                triggerClassName="lasso-mobilebar__btn"
+                triggerLabel="Flere handlinger"
+                label="Flere handlinger"
+                align="end"
+                items={mobile.moreItems}
+                context={{ title, subtitle: mobile.subtitle }}
+              />
+            ) : mobile?.onMore ? (
+              <button type="button" className="lasso-mobilebar__btn" aria-label="Flere handlinger" onClick={mobile.onMore}>
+                <ShellIcon name="more" size={20} />
+              </button>
+            ) : null}
+          </div>
+        </header>
+      )}
 
       {panel ? (
         <div className="lasso-page lasso-page--panel">

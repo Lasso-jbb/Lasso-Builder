@@ -180,6 +180,10 @@ export const keyFiguresSchema = z.object({
   type: z.literal("LassoKeyFigureCards"),
   company: companyRef,
   metrics: z.array(metric).min(1).max(6).optional().describe("Standard: omsætning/bruttofortjeneste, resultat, egenkapital, ansatte."),
+  variant: z
+    .enum(["plain"])
+    .optional()
+    .describe("'plain' (24.5/30.13): felter adskilt af 1 px lodrette linjer uden ydre ramme, ingen sparkline og ingen branchelinje; kun én udviklingslinje. Portalens sider bruger altid denne form."),
 });
 
 export const financialChartSchema = z.object({

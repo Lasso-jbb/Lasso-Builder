@@ -8,12 +8,20 @@ import type { HostCapabilities } from "@lasso/ui";
 export const SHELL_MOBILE_MAX = 560;
 
 /**
- * Hvad LassoView må på en virksomheds- eller personside (docs/portal.md). Præcis én synlig
- * Gem-knap: på desktop og tablet står Gem/Gemt i modulbjælken, så hovedets knap (host.savePage)
- * er slået fra; på mobil er modulbjælkens handlinger skjult, så hovedets knap er slået til.
+ * Tablet-/mobilgrænsen (26f.1, 26.3): under 1024 px har siden ingen modulbjælke; modulerne står som
+ * sektionsfaner under hovedet (LassoView.headTabs), og hovedet har alle fire ikonknapper.
  */
-export function entityHost(shellWidth: number): HostCapabilities {
-  return { savePage: shellWidth <= SHELL_MOBILE_MAX, save: true, refine: false, drillDown: true, refresh: true, export: true, back: false, openSection: true };
+export const SHELL_TABLET_MAX = 1023;
+
+/**
+ * Hvad LassoView må på en virksomheds- eller personside (docs/portal.md). Præcis én synlig
+ * Gem-knap: på desktop (≥ 1024) står Gem/Gemt i modulbjælken, så hovedets knap (host.savePage)
+ * er slået fra; på tablet og mobil er der ingen modulbjælke, så hovedets knap er slået til (og
+ * Overvåg, når portalen kan overvåge).
+ */
+export function entityHost(shellWidth: number, canMonitor = false): HostCapabilities {
+  const narrow = shellWidth <= SHELL_TABLET_MAX;
+  return { savePage: narrow, save: true, refine: false, drillDown: true, refresh: true, export: true, back: false, openSection: true, ...(narrow && canMonitor ? { monitor: true } : {}) };
 }
 
 /** Den virksomhed eller person, en side handler om (til fanens navn, Gem/Gemt og Del link). */

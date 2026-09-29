@@ -50,6 +50,8 @@ export interface TabsProps {
   focusId?: string;
   /** Niveau 3: bliver 32 px og kompakt på samme linje som overskriften, også på mobil (26h.2). */
   compact?: boolean;
+  /** Ordet på overløbsfanen (standard "Flere"; tablet 26f.1: "Mere"). */
+  moreLabel?: string;
 }
 
 /** Stabilt id-par for fane og panel, så Tabs og TabPanel kan bindes sammen. */
@@ -60,7 +62,7 @@ export function panelId(base: string, item: string): string {
   return `${base}-panel-${item}`;
 }
 
-export function Tabs({ level, items, value, onChange, ariaLabel, id, className = "", maxVisible, hoverId, focusId, compact = false }: TabsProps) {
+export function Tabs({ level, items, value, onChange, ariaLabel, id, className = "", maxVisible, hoverId, focusId, compact = false, moreLabel = "Flere" }: TabsProps) {
   const autoId = useId();
   const base = id ?? autoId;
   const listRef = useRef<HTMLDivElement>(null);
@@ -150,7 +152,7 @@ export function Tabs({ level, items, value, onChange, ariaLabel, id, className =
       })}
       {hidden.length > 0 ? (
         <Menu
-          trigger="Flere"
+          trigger={moreLabel}
           triggerClassName="lasso-tab lasso-tab--more"
           label="Flere faner"
           align="end"
