@@ -25,7 +25,7 @@ function signed(n: number): string {
  * Udvikling, 24 måneder (26d.7): linje med maks 6 punkter over de tre risikobånd, seneste punkt
  * som ring, og et fast valgfelt under grafen med dato, score, tolkning og ændring. Ingen hover.
  */
-function ScoreHistory({ history }: { history: NonNullable<ScoreVM["history"]> }) {
+function ScoreHistory({ history, note }: { history: NonNullable<ScoreVM["history"]>; note?: string }) {
   const [ref, width] = useWidth<HTMLDivElement>(356);
   const pts = history.slice(-6);
   if (pts.length < 2) return null;
@@ -40,11 +40,14 @@ function ScoreHistory({ history }: { history: NonNullable<ScoreVM["history"]> })
   const d = pts.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.score).toFixed(1)}`).join(" ");
   const last = pts.at(-1)!;
   const first = pts[0]!;
-  const delta = last.score - first.score;
+  // Paper 26d.7: ændringen siden forrige måling ("+5 siden 01.2026").
+  const prev = pts.at(-2)!;
+  const delta = last.score - prev.score;
   return (
     <div className="lasso-gauge-history">
       <div className="lasso-gauge-history__head">
         <span className="lasso-gauge-history__title">Udvikling, 24 måneder</span>
+        {note ? <span className="lasso-gauge-history__note">{note}</span> : null}
       </div>
       <div ref={ref} className="lasso-gauge-history__chart">
         <svg width={width} height={h} viewBox={`0 0 ${width} ${h}`} role="img" aria-label={`Score fra ${first.score} i ${monthYear(first.date)} til ${last.score} i ${monthYear(last.date)}`}>
@@ -73,7 +76,7 @@ function ScoreHistory({ history }: { history: NonNullable<ScoreVM["history"]> })
       </div>
       <div className="lasso-gauge-history__readout">
         <span className="lasso-gauge-history__date">{monthYear(last.date)}</span>
-        <span>{`${last.score}, ${scoreBand(last.score).label.toLowerCase()}, ${signed(delta)} siden ${monthYear(first.date)}`}</span>
+        <span>{`${last.score}, ${scoreBand(last.score).label.toLowerCase()}, ${signed(delta)} siden ${monthYear(prev.date)}`}</span>
       </div>
     </div>
   );
@@ -253,6 +256,42 @@ export function ScoreGauge({
   }
   const value = Math.max(0, Math.min(100, score.score));
   const { label, index } = scoreBand(value);
+  if (detail) {
+    // 26d.7: fuld form. Kilde og dato til højre for titlen, vurderingsordet med kreditmaks under ved siden af tallet,
+    // zonebjælke med 60/80-mærker, udvikling over 24 måneder og seneste ændringer.
+    const creditMax = score.facts?.find((f) => f.label.startsWith("Kreditmaks"));
+    const src = score.source ? `${score.source}${score.updated ? `, ${formatDate(score.updated)}` : ""}` : undefined;
+    return (
+      <Section title={heading} action={src ? <span className="lasso-gauge__source">{src}</span> : undefined} span="half" className="lasso-gauge-section lasso-gauge-section--detail">
+        <div className="lasso-gauge lasso-gauge--detail">
+          <div className="lasso-gauge__value">
+            <span className="lasso-gauge__number">{Math.round(value)}</span>
+            <span className="lasso-gauge__of">af 100</span>
+            <span className="lasso-gauge__side">
+              <span className={`lasso-gauge__label lasso-gauge__label--${index}`}>{label}</span>
+              {creditMax ? <span className="lasso-gauge__max">{`Kreditmaks ${creditMax.value}`}</span> : null}
+            </span>
+          </div>
+          <div className="lasso-gauge__bar">
+            <div className="lasso-gauge__track" aria-hidden="true">
+              <span className="lasso-gauge__seg lasso-gauge__seg--0" style={{ flexGrow: 60 }} />
+              <span className="lasso-gauge__seg lasso-gauge__seg--1" style={{ flexGrow: 20 }} />
+              <span className="lasso-gauge__seg lasso-gauge__seg--2" style={{ flexGrow: 20 }} />
+            </div>
+            <span className="lasso-gauge__pointer" style={{ left: `calc(${value}% - 1px)` }} aria-hidden="true" />
+          </div>
+          <div className="lasso-gauge__scale lasso-gauge__scale--ticks">
+            <span>0, lav</span>
+            <span>60</span>
+            <span>80</span>
+            <span>100, høj</span>
+          </div>
+        </div>
+        {score.history?.length ? <ScoreHistory history={score.history} note={score.historyNote} /> : null}
+        {score.changes?.length ? <ScoreChanges changes={score.changes} /> : null}
+      </Section>
+    );
+  }
   return (
     <Section title={heading} subtitle={sourceLine} span="half" className="lasso-gauge-section">
       <div className="lasso-gauge">
@@ -281,8 +320,6 @@ export function ScoreGauge({
           </button>
         ) : null}
       </div>
-      {detail && score.history?.length ? <ScoreHistory history={score.history} /> : null}
-      {detail && score.changes?.length ? <ScoreChanges changes={score.changes} /> : null}
     </Section>
   );
 }

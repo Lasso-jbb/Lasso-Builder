@@ -4605,3 +4605,24 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-answerfoot { flex-direction: column; align-items: stretch; gap: var(--lasso-space-3); }
   .lasso-root .lasso-answerfoot__next { height: var(--lasso-touch-h, 44px); border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius); background: var(--lasso-surface); text-align: center; }
 }
+
+/* ---------- 26d.7 Kreditvurdering, fuld form (ScoreGauge detail) ---------- */
+.lasso-gauge__source { font-size: 12px; line-height: 16px; color: var(--lasso-muted); white-space: nowrap; }
+.lasso-gauge--detail { gap: 4px; }
+.lasso-gauge--detail .lasso-gauge__value { align-items: flex-end; gap: 4px; flex-wrap: nowrap; }
+.lasso-gauge--detail .lasso-gauge__number { font-size: 40px; line-height: 44px; }
+.lasso-gauge--detail .lasso-gauge__of { font-size: var(--lasso-fs-sm); line-height: 16px; padding-bottom: 6px; }
+.lasso-gauge__side { display: flex; flex-direction: column; gap: 4px; margin-left: 8px; padding-bottom: 6px; min-width: 0; }
+.lasso-gauge--detail .lasso-gauge__label, .lasso-gauge--detail .lasso-gauge__value .lasso-gauge__label { margin-left: 0; font-size: 12px; line-height: 16px; font-weight: 600; }
+.lasso-gauge__max { font-size: 12px; line-height: 16px; color: var(--lasso-text-2); }
+.lasso-gauge--detail .lasso-gauge__scale--ticks { display: flex; justify-content: space-between; font-size: 10px; line-height: 16px; }
+.lasso-gauge-history__note { font-size: 11px; line-height: 16px; color: var(--lasso-muted); }
+.lasso-gauge-section--detail .lasso-gauge-history { margin-top: var(--lasso-space-3); }
+.lasso-gauge-section--detail .lasso-gauge-history__title, .lasso-gauge-section--detail .lasso-gauge-changes__title { font-size: var(--lasso-fs-sm); }
+.lasso-gauge-section--detail .lasso-gauge-changes__row { min-height: 40px; border-bottom: 0; border-top: 1px solid var(--lasso-divider-subtle); }
+.lasso-gauge-section--detail .lasso-gauge-changes__list { border-top: 0; }
+.lasso-gauge-section--detail .lasso-gauge-changes__label { color: var(--lasso-text); }
+.lasso-gauge-section--detail .lasso-gauge-changes__delta { font-size: 12px; }
+.lasso-gauge-section--detail .lasso-gauge-changes__date { font-size: 12px; }
+.lasso-gauge-section--detail .lasso-gauge-history__readout span:last-child { color: var(--lasso-text); font-size: var(--lasso-fs-sm); }
+.lasso-gauge-section--detail .lasso-gauge-history__date { font-size: 12px; }

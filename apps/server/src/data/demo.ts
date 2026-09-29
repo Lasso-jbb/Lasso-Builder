@@ -881,7 +881,7 @@ export class DemoProvider implements DataProvider {
       { date: "2026-01-01", label: "Alder på selskab, eksempeldata", delta: 2 },
       { date: "2025-05-20", label: "Betalingsanmærkning, eksempeldata", delta: -4 },
     ];
-    return { ...base, history, changes };
+    return { ...base, history, changes, historyNote: "eksempeldata før 09.2026" };
   }
 
   /** Katalog 18.2: eksempelhistorik, der ender i den aktuelle demoscore. */

@@ -760,6 +760,8 @@ export interface ScoreVM {
   history?: { date: string; score: number }[];
   /** Katalog 26d.7: seneste ændringer i scoren med årsag, nyeste først. `delta` i point (+ = højere risiko). */
   changes?: { date: string; label: string; delta: number }[];
+  /** Katalog 26d.7: kort note til højre for "Udvikling, 24 måneder", fx "eksempeldata før 09.2026". */
+  historyNote?: string;
 }
 
 /* ---------- Katalog 18.2: scorehistorik (én hentning = ét punkt) ---------- */

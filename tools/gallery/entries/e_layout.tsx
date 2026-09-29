@@ -748,7 +748,7 @@ const mobilePerson: GalleryEntry[] = [
     node: "ET9-0",
     only: "mobile",
     note: "Paper 26d.7 er 0–100-scoren (LassoScoreGauge) med zonebjælke, udvikling og seneste ændringer, ikke Creditsafes A–E (LassoCreditRating, 17).",
-    spec: one("Kreditvurdering", { type: "LassoScoreGauge", company: C, title: "Kreditvurdering" }),
+    spec: one("Kreditvurdering", { type: "LassoScoreGauge", company: C, title: "Kreditvurdering", detail: true }),
   },
   { nr: "26d.8", title: "Regnskab: år og segmentkontrol (mobil)", node: "EVK-0", only: "mobile", spec: one("Regnskab", { type: "LassoFinancialStatements", company: C }) },
   { nr: "26d.9", title: "Resultatopgørelse (mobil)", node: "EVR-0", only: "mobile", spec: one("Resultatopgørelse", { type: "LassoFinancialStatements", company: C, statement: "income" }) },
