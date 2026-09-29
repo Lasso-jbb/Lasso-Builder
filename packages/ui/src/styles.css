@@ -5272,3 +5272,160 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-root .lasso-mbulk__close { flex: none; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid transparent; border-radius: var(--lasso-radius); background: none; color: var(--lasso-text-2); cursor: pointer; }
 .lasso-root .lasso-mbulk__close:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
 .lasso-ccards:has(~ .lasso-mbulk) { padding-bottom: 72px; }
+
+/* ---------- 18.1 Aktuel risikoscore (Paper LWU-0: ¼-kort LWV-0, ½-kort LXL-0) ---------- */
+.lasso-riskscore { border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); padding: 20px; background: var(--lasso-surface); }
+.lasso-riskscore > .lasso-section__head { margin-bottom: 14px; }
+.lasso-riskscore > .lasso-section__head .lasso-section__title { font-size: 18px; line-height: 22px; letter-spacing: -0.01em; }
+.lasso-riskscore__body { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.lasso-riskscore__cols { display: flex; align-items: flex-start; gap: 24px; }
+.lasso-riskscore__main { flex: none; width: 260px; display: flex; flex-direction: column; gap: 14px; }
+.lasso-riskscore__value { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.lasso-riskscore__number { font-size: 32px; line-height: 40px; font-weight: 700; letter-spacing: -0.02em; color: var(--lasso-text); }
+.lasso-riskscore__of { font-size: 13px; line-height: 18px; color: var(--lasso-muted); }
+.lasso-riskscore__word { font-size: 13px; line-height: 18px; font-weight: 500; }
+.lasso-riskscore__word--0 { color: var(--lasso-positive); }
+.lasso-riskscore__word--1 { color: var(--lasso-warning); }
+.lasso-riskscore__word--2 { color: var(--lasso-danger); }
+.lasso-riskscore__meter { display: flex; flex-direction: column; gap: 6px; }
+.lasso-riskscore__track { position: relative; display: flex; gap: 3px; height: 6px; }
+.lasso-riskscore__seg { display: block; border-radius: 3px; }
+.lasso-riskscore__seg--0 { background: var(--lasso-gauge-low); }
+.lasso-riskscore__seg--1 { background: var(--lasso-gauge-mid); }
+.lasso-riskscore__seg--2 { background: var(--lasso-gauge-high); }
+.lasso-riskscore__marker { position: absolute; top: -4px; width: 2px; height: 14px; border-radius: 1px; background: var(--lasso-text); }
+.lasso-riskscore__scale { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; line-height: 14px; color: var(--lasso-muted); }
+.lasso-riskscore__rows { display: flex; flex-direction: column; margin: 0; }
+.lasso-riskscore__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; border-top: 1px solid var(--lasso-divider-subtle); font-size: 13px; line-height: 16px; }
+.lasso-riskscore__row dt { color: var(--lasso-text-2); }
+.lasso-riskscore__row dd { margin: 0; font-weight: 500; color: var(--lasso-text); text-align: right; }
+.lasso-root .lasso-riskscore__link { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--lasso-accent-text); cursor: pointer; border-radius: var(--lasso-radius-sm); }
+.lasso-root .lasso-riskscore__link:hover { text-decoration: underline; }
+.lasso-riskscore__link:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: 2px; }
+.lasso-riskscore__factors { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.lasso-riskscore__factors ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.lasso-riskscore__overline { margin: 0; font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--lasso-muted); }
+.lasso-riskscore__factor { display: flex; align-items: center; gap: 8px; font-size: 13px; line-height: 18px; color: var(--lasso-text-2); }
+.lasso-riskscore__dot { flex: none; width: 8px; height: 8px; border-radius: 4px; background: var(--lasso-positive); }
+.lasso-riskscore__dot--warning { background: var(--lasso-warning); }
+.lasso-riskscore__dot--danger { background: var(--lasso-danger); }
+@container lasso (max-width: 560px) {
+  .lasso-riskscore { padding: 16px; }
+}
+
+/* ---------- 27 Rapporter og PDF (runde 5, Paper DO8-0): 27.2-båndet MIT-0, 27.4 personrapport, 19.6 analysen ---------- */
+.lasso-a4-kpi__sub { font-size: 11px; line-height: 14px; color: var(--lasso-muted); }
+.lasso-a4-kpis--person .lasso-a4-kpi__value { font-size: 20px; line-height: 24px; }
+.lasso-a4-kv { display: flex; flex-direction: column; border-bottom: 1px solid var(--lasso-divider-subtle); }
+.lasso-a4-kv__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 26px; border-top: 1px solid var(--lasso-divider-subtle); font-size: 12px; line-height: 16px; }
+.lasso-a4-kv__label { color: var(--lasso-text-3); }
+.lasso-a4-kv__value { color: var(--lasso-text); text-align: right; }
+.lasso-a4-kv--risk .lasso-a4-kv__row { min-height: 30px; }
+.lasso-a4-kv--risk .lasso-a4-kv__label { color: var(--lasso-text); }
+.lasso-a4-kv--risk .lasso-a4-kv__value { font-weight: 600; color: var(--lasso-text-2); }
+.lasso-a4-kv__value--ok { color: var(--lasso-positive) !important; }
+.lasso-a4-kv__value--warning { color: var(--lasso-warning) !important; }
+.lasso-a4-kv__value--danger { color: var(--lasso-danger) !important; }
+.lasso-a4-kv__value--muted { color: var(--lasso-muted) !important; font-weight: 400 !important; }
+.lasso-a4-kv--doc .lasso-a4-kv__row { font-size: 12px; }
+.lasso-a4-kv--doc .lasso-a4-kv__label { color: var(--lasso-text-2); }
+.lasso-a4-kv--doc .lasso-a4-kv__value { font-weight: 500; }
+.lasso-a4-risk { gap: 8px; }
+.lasso-a4-risk__score { display: flex; align-items: baseline; gap: 8px; }
+.lasso-a4-risk__number { font-size: 26px; line-height: 30px; font-weight: 700; color: var(--lasso-text); }
+.lasso-a4-risk__of { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+.lasso-a4-risk__band { font-size: 12px; line-height: 16px; font-weight: 600; }
+.lasso-a4-risk .lasso-a4-scale__track { height: 6px; gap: 3px; }
+.lasso-a4-risk .lasso-a4-scale__seg { height: 6px; border-radius: 3px; }
+.lasso-a4-risk .lasso-a4-scale__marker { top: -3px; height: 12px; }
+.lasso-a4-risk .lasso-a4-scale__labels { font-size: 10px; line-height: 12px; }
+.lasso-a4-obs--compact { margin-top: 4px; }
+.lasso-a4-obs--compact .lasso-a4-obs__row { gap: 8px; padding: 6px 0; }
+.lasso-a4-obs--compact .lasso-a4-obs__dot { width: 6px; height: 6px; margin-top: 5px; }
+.lasso-a4-obs--compact .lasso-a4-obs__detail { font-size: 11px; line-height: 14px; }
+.lasso-a4-obs__dot--info { background: var(--lasso-chart-2); }
+.lasso-a4-row--muted .lasso-a4-row__name, .lasso-a4-row--muted .lasso-a4-row__side { color: var(--lasso-muted); }
+/* 19.6 og 27.4: overlinje, navn 28/700, undertekst og afsnit som et dokument */
+.lasso-a4-doc__intro { display: flex; flex-direction: column; gap: 8px; }
+.lasso-a4-page--flow .lasso-a4-doc__intro { padding-bottom: 24px; border-bottom: 1px solid var(--lasso-border); margin-top: 16px; }
+.lasso-a4-doc__title { font-size: 28px; line-height: 34px; font-weight: 700; letter-spacing: var(--lasso-tracking-tight); color: var(--lasso-text); }
+.lasso-a4-doc__sub { font-size: 13px; line-height: 18px; color: var(--lasso-text-2); }
+.lasso-a4-doc__sections { display: flex; flex-direction: column; gap: 20px; }
+.lasso-a4-doc__section { display: flex; flex-direction: column; gap: 6px; break-inside: avoid; }
+.lasso-a4-doc__h { font-size: 15px; line-height: 20px; font-weight: 500; color: var(--lasso-text); }
+.lasso-a4-doc__body { font-size: 12px; line-height: 19px; color: var(--lasso-text-2); white-space: pre-line; }
+.lasso-a4-doc__disclaimer { font-size: 11px; line-height: 16px; color: var(--lasso-text-3); }
+/* Lange analyser: siden vokser på skærmen; ved udskrift fortsætter teksten på næste A4 */
+.lasso-a4-page--flow { height: auto; min-height: 1123px; }
+/* 27.4: rolletabel (selskab, rolle, siden, status) */
+.lasso-a4-roles { display: flex; flex-direction: column; }
+.lasso-a4-roles__row { display: flex; align-items: center; gap: 12px; min-height: 32px; border-bottom: 1px solid var(--lasso-divider-subtle); font-size: 12px; line-height: 16px; color: var(--lasso-text-2); }
+.lasso-a4-roles__row--head { min-height: 26px; font-size: 10px; line-height: 12px; font-weight: 600; letter-spacing: var(--lasso-ls-label); text-transform: uppercase; color: var(--lasso-muted); border-bottom-color: var(--lasso-border); }
+.lasso-a4-roles__company { flex: none; width: 238px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lasso-a4-roles__role { flex: 1 1 0; min-width: 0; }
+.lasso-a4-roles__since { flex: none; width: 110px; }
+.lasso-a4-roles__status { flex: none; width: 140px; text-align: right; }
+.lasso-a4-roles:not(.lasso-a4-roles--past) .lasso-a4-roles__company { font-size: 13px; font-weight: 500; color: var(--lasso-text); }
+.lasso-a4-roles:not(.lasso-a4-roles--past) .lasso-a4-roles__status { font-weight: 600; color: var(--lasso-text); }
+.lasso-a4-roles--past .lasso-a4-roles__row { color: var(--lasso-muted); }
+.lasso-a4-roles--past .lasso-a4-roles__status.lasso-a4__neg { color: var(--lasso-danger); font-weight: 500; }
+.lasso-a4-page--person { gap: 20px; }
+
+/* ---------- 19.3 Regnskabsanalyse (Paper LYO-0): foldbare afsnit og "Hent som PDF" (LYT-0) ---------- */
+.lasso-analysis19 > .lasso-section__head { align-items: center; margin-bottom: 8px; }
+.lasso-analysis19 > .lasso-section__head .lasso-section__title { font-size: 18px; line-height: 22px; letter-spacing: -0.01em; }
+.lasso-root .lasso-analysis19__pdf { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 14px 0 12px; font-size: 13px; line-height: 18px; font-weight: 500; }
+.lasso-analysis19__pdf svg { flex: none; color: var(--lasso-text-2); }
+.lasso-analysis19__rows { display: flex; flex-direction: column; border-bottom: 1px solid var(--lasso-divider-subtle); }
+.lasso-analysis19__row { border-top: 1px solid var(--lasso-divider-subtle); }
+.lasso-analysis19__row.is-open { padding-bottom: 12px; }
+.lasso-root .lasso-analysis19__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; padding: 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; color: var(--lasso-text); border-radius: var(--lasso-radius-sm); }
+.lasso-analysis19__row.is-open .lasso-analysis19__head { min-height: 0; padding-top: 12px; padding-bottom: 8px; }
+.lasso-analysis19__head:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: 2px; }
+.lasso-analysis19__title { font-size: 14px; line-height: 18px; font-weight: 600; color: var(--lasso-text); }
+.lasso-analysis19__chevron { flex: none; color: var(--lasso-text-3); }
+.lasso-analysis19__body { margin: 0; font-size: 14px; line-height: 22px; color: var(--lasso-text-2); white-space: pre-line; }
+.lasso-analysis19__disclaimer { margin: 12px 0 0; font-size: 12px; line-height: 17px; color: var(--lasso-text-3); }
+.lasso-analysis19__actions { display: flex; align-items: center; gap: 16px; padding-top: 4px; font-size: 12px; line-height: 16px; color: var(--lasso-muted); flex-wrap: wrap; }
+.lasso-root .lasso-analysis19__sources { padding: 0; border: 0; background: none; font: inherit; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--lasso-accent-text); cursor: pointer; border-radius: var(--lasso-radius-sm); }
+.lasso-analysis19__sources:hover { text-decoration: underline; }
+.lasso-analysis19__feedback { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+@container lasso (max-width: 560px) {
+  .lasso-analysis19__head { min-height: var(--lasso-touch-h); }
+}
+
+/* ---------- 20.1 Produktionsenheder (Paper M1G-0) og 26e.1 mobil (M3A-0) ---------- */
+.lasso-units20__frame { border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); overflow: hidden; background: var(--lasso-surface); }
+.lasso-units20__row { display: flex; align-items: center; min-height: 76px; padding: 0 16px; border-bottom: 1px solid var(--lasso-divider-subtle); font-size: 13px; line-height: 16px; color: var(--lasso-text-2); }
+.lasso-units20__row:last-child { border-bottom: 0; }
+.lasso-units20__row--head { min-height: 40px; background: var(--lasso-surface-2); border-bottom: 1px solid var(--lasso-border); font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: var(--lasso-ls-label); text-transform: uppercase; color: var(--lasso-muted); }
+.lasso-units20__pnr { flex: none; width: 120px; display: flex; flex-direction: column; }
+.lasso-units20 .lasso-units__main { font-size: 11px; line-height: 14px; letter-spacing: 0; }
+.lasso-units20__row--head .lasso-units20__state { white-space: nowrap; }
+.lasso-units20__unit { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding-right: 16px; }
+.lasso-units20__name { font-size: 14px; line-height: 18px; color: var(--lasso-text); }
+.lasso-units20__address { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+.lasso-units20__contact { display: flex; flex-wrap: wrap; align-items: center; column-gap: 14px; row-gap: 2px; font-size: 12px; line-height: 16px; color: var(--lasso-text-2); }
+.lasso-units20__contact-item { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
+.lasso-units20__contact-item .lasso-icon { flex: none; color: var(--lasso-text-3); }
+.lasso-units20__industry { flex: none; width: 220px; display: flex; flex-direction: column; padding-right: 16px; }
+.lasso-units20__code { font-size: 11px; line-height: 14px; color: var(--lasso-muted); }
+.lasso-units20__emp { flex: none; box-sizing: border-box; width: 106px; padding-right: 16px; text-align: right; white-space: nowrap; }
+.lasso-units20__state { flex: none; width: 150px; display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+.lasso-units20__row--head .lasso-units20__state, .lasso-units20__row--head .lasso-units20__emp { align-items: flex-end; }
+.lasso-units20__status { font-size: 12px; line-height: 16px; font-weight: 500; }
+.lasso-units20__status.lasso-status--active { color: var(--lasso-text-2); }
+.lasso-units20__status.lasso-status--inactive { color: var(--lasso-text-3); }
+.lasso-units20__faint { color: var(--lasso-faint); }
+.lasso-units20__row.is-ended, .lasso-units20__row.is-ended .lasso-units20__name, .lasso-units20__row.is-ended .lasso-units20__date { color: var(--lasso-muted); }
+.lasso-units20-m { display: none; list-style: none; margin: 0; padding: 0; }
+.lasso-units20-m__row { display: flex; flex-direction: column; gap: 2px; padding: 12px 0; border-top: 1px solid var(--lasso-divider-subtle); }
+.lasso-units20-m__top { display: flex; align-items: baseline; gap: 6px; }
+.lasso-units20-m__name { font-size: 14px; line-height: 18px; font-weight: 500; color: var(--lasso-text); min-width: 0; }
+.lasso-units20-m__row.is-ended .lasso-units20-m__name { color: var(--lasso-muted); }
+.lasso-units20-m__status { margin-left: auto; flex: none; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--lasso-text-3); }
+.lasso-units20-m__meta { font-size: 11px; line-height: 16px; color: var(--lasso-muted); }
+@container lasso (max-width: 560px) {
+  .lasso-units20-m { display: block; }
+  .lasso-units20 .lasso-units20__frame { display: none; }
+}

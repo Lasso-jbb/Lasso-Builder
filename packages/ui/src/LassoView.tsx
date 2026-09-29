@@ -72,7 +72,7 @@ import { Heatmap } from "./components/Heatmap.js";
 import { CompanyMap } from "./components/CompanyMap.js";
 import { LassoRelations } from "./components/LassoRelations.js";
 import { LassoBeneficialOwners } from "./components/LassoBeneficialOwners.js";
-import { LassoTextSections } from "./components/LassoTextSections.js";
+import { ANALYSIS_DISCLAIMER, LassoTextSections } from "./components/LassoTextSections.js";
 import { LassoSummary } from "./components/LassoSummary.js";
 import { LassoTimeline } from "./components/LassoTimeline.js";
 import { LassoNews } from "./components/LassoNews.js";
@@ -89,7 +89,7 @@ import { ChangeFeed } from "./components/ChangeFeed.js";
 import { SavedPages } from "./components/SavedPages.js";
 import { ShellIcon } from "./components/ShellIcons.js";
 import { Icon } from "./components/Icon.js";
-import { ReportA4 } from "./components/ReportA4.js";
+import { AnalysisReportA4, PersonReportA4, ReportA4 } from "./components/ReportA4.js";
 import { personRolesCsv, specToCsv } from "./csv.js";
 import { Badge, Skeleton, stateForError } from "./primitives.js";
 import { Accordion, CardGrid } from "./components/Layout.js";
@@ -115,6 +115,15 @@ export interface FrameTools {
   more: MenuItem[];
   /** 15.1 "Gem som liste": åbner gem-dialogen, når værten kan gemme visninger. */
   saveList?: () => void;
+  /** 19.3 "Hent som PDF": åbner regnskabsanalysen som A4 (19.6) i rapportoverlayet, når værten kan eksportere. */
+  analysisPdf?: (company: string) => void;
+}
+
+/** Hvad rapportoverlayet viser (27): standard virksomhedsrapport, regnskabsanalysen (19.6) eller personrapporten (27.4). */
+type ReportRequest = { kind: "company" } | { kind: "analysis"; company: string } | { kind: "person"; person: string };
+
+function reportTitle(r: ReportRequest): string {
+  return r.kind === "analysis" ? "Regnskabsanalyse" : r.kind === "person" ? "Personrapport" : "Virksomhedsrapport";
 }
 
 /**
@@ -441,6 +450,8 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           detail={c.detail}
           error={err(`score:${c.company}`)}
           onFetch={props.host.refresh ? () => act({ kind: "refresh" }) : undefined}
+          // 18.1: "Se observationer" åbner risikosektionen, når værten kan (G1: ellers intet link).
+          onObservations={sectionAction(props, act, { lassoId: c.company, pageKind: "company", section: "risiko", name: empty.companies[c.company]?.name ?? c.company, label: "Risikoobservationer" })}
         />
       );
     case "LassoRiskObservations":
@@ -490,7 +501,19 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
         />
       );
     case "LassoTextSections":
-      return <LassoTextSections key={key} sections={empty.textSections[c.company]} title={c.title} variant={c.variant} folded={c.folded} error={err(`textSections:${c.company}`)} onOpen={props.host.drillDown ? act : undefined} />;
+      return (
+        <LassoTextSections
+          key={key}
+          sections={empty.textSections[c.company]}
+          title={c.title}
+          variant={c.variant}
+          folded={c.folded}
+          error={err(`textSections:${c.company}`)}
+          onOpen={props.host.drillDown ? act : undefined}
+          // 19.3: "Hent som PDF" (19.6) kun, når værten kan eksportere (G1).
+          onPdf={frame.analysisPdf ? () => frame.analysisPdf!(c.company) : undefined}
+        />
+      );
     case "LassoSummary":
       return <LassoSummary key={key} text={c.text} title={c.title} source={c.source} updated={c.updated} />;
     case "LassoTimeline": {
@@ -1051,7 +1074,9 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
   const shareUrl = savedUrl ?? url;
 
   // Katalog 27: "Eksportér PDF" på en virksomhedsside viser A4-rapporten i en overlay med "Print" og "Luk".
-  const [reportOpen, setReportOpen] = useState(false);
+  // 19.6/27.4: samme overlay viser også regnskabsanalysen ("Hent som PDF") og personrapporten.
+  const [report, setReport] = useState<ReportRequest | null>(null);
+  const setReportOpen = (open: boolean) => setReport(open ? { kind: "company" } : null);
   const reportCompany = spec.kind === "company" ? spec.components.map((c) => ("company" in c && typeof c.company === "string" ? c.company : undefined)).find(Boolean) : undefined;
   const canReport = Boolean(host.export && dataset && reportCompany && dataset.companies[reportCompany]);
 
@@ -1089,6 +1114,10 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
     exportItems: headActions
       ? [
           ...(canReport ? [{ id: "pdf", label: "Virksomhedsrapport (PDF)", icon: <ShellIcon name="document" size={16} />, onSelect: () => setReportOpen(true) }] : []),
+          // 27.4: standard personrapport (A4) på personsiden.
+          ...(host.export && entity?.pageKind === "person" && dataset?.persons[entity.lassoId]
+            ? [{ id: "person-pdf", label: "Personrapport (PDF)", icon: <ShellIcon name="document" size={16} />, onSelect: () => setReport({ kind: "person", person: entity.lassoId }) }]
+            : []),
           ...(host.export && csv ? [{ id: "csv", label: "Tal som CSV", icon: <ShellIcon name="download" size={16} />, onSelect: () => act({ kind: "export", filename: csvName, csv }) }] : []),
           // 16.1: personhovedet har også Eksportér (rollerne som CSV).
           ...(host.export && entity?.pageKind === "person" && dataset?.persons[entity.lassoId]
@@ -1097,6 +1126,7 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
         ]
       : [],
     saveList: host.save ? () => setSaving(true) : undefined,
+    analysisPdf: host.export && dataset ? (company) => setReport({ kind: "analysis", company }) : undefined,
     more: headActions
       ? [
           ...(shareUrl ? [{ id: "link", label: "Kopiér link", icon: <ShellIcon name="copy" size={16} />, onSelect: () => void copy(shareUrl) }] : []),
@@ -1296,19 +1326,27 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
 
         {props.ownToasts ? <Toasts /> : null}
 
-        {reportOpen && dataset && reportCompany ? (
-          <div className="lasso-a4-overlay" role="dialog" aria-label="Virksomhedsrapport">
+        {report && dataset && (report.kind !== "company" || reportCompany) ? (
+          <div className="lasso-a4-overlay" role="dialog" aria-label={reportTitle(report)}>
             <div className="lasso-a4-toolbar">
-              <span className="lasso-a4-toolbar__title">Virksomhedsrapport, {dataset.companies[reportCompany]?.name}</span>
+              <span className="lasso-a4-toolbar__title">
+                {reportTitle(report)}, {report.kind === "person" ? dataset.persons[report.person]?.name : (dataset.companies[report.kind === "analysis" ? report.company : reportCompany!]?.name ?? spec.title)}
+              </span>
               <button className="lasso-btn lasso-btn--primary" onClick={() => window.print()}>
                 Print
               </button>
               {/* G8: luk er altid et ×-ikon med aria-label "Luk". */}
-              <button type="button" className="lasso-iconbtn lasso-iconbtn--sq lasso-iconbtn--38" onClick={() => setReportOpen(false)} aria-label="Luk" title="Luk">
+              <button type="button" className="lasso-iconbtn lasso-iconbtn--sq lasso-iconbtn--38" onClick={() => setReport(null)} aria-label="Luk" title="Luk">
                 <Icon name="close" size={18} />
               </button>
             </div>
-            <ReportA4 company={reportCompany} dataset={dataset} />
+            {report.kind === "analysis" ? (
+              <AnalysisReportA4 company={report.company} dataset={dataset} disclaimer={ANALYSIS_DISCLAIMER} name={spec.title} />
+            ) : report.kind === "person" ? (
+              <PersonReportA4 person={report.person} dataset={dataset} />
+            ) : (
+              <ReportA4 company={reportCompany!} dataset={dataset} />
+            )}
           </div>
         ) : null}
       </div>

@@ -61,7 +61,25 @@ export function adaptProductionUnitDetail(ref: ProductionUnitRef, raw: Json): Pr
     statusKind: statusKind(status),
     endedYear: endedRaw ? Number(endedRaw.slice(0, 4)) : undefined,
     created: dateStr(raw, "creationDate", "lifeTime.from"),
+    ...contactOf(raw),
   };
+}
+
+/**
+ * Katalog 20.1: P-enhedens telefon og e-mail. Nuværende form (GET /{CVR-2-…}): `phone`/`email` som tekst;
+ * historikformen (/history): lister af { value, current }. Læses defensivt; tomme felter udelades (G2).
+ */
+export function contactOf(raw: Json): { phone?: string; email?: string } {
+  const current = (key: string): string | undefined => {
+    const direct = str(raw, key);
+    if (direct) return direct;
+    const list = arr(raw, key);
+    const hit = list.find((x) => isObj(x) && pick(x, "current") === true) ?? list.find((x) => isObj(x) && !pick(x, "to"));
+    return hit ? str(hit, "value") : undefined;
+  };
+  const phone = current("phone");
+  const email = current("email");
+  return { ...(phone ? { phone } : {}), ...(email ? { email } : {}) };
 }
 
 function normAddrPart(s: string | undefined): string {

@@ -77,7 +77,7 @@ export const MEASURED_HEIGHTS: Readonly<Record<string, readonly [number, number,
   LassoOwnershipDiagram: [357, 357, 541, 541, 541, 770],
   LassoRelations: [267, 267, 269, 269, 269, 269],
   LassoRiskObservations: [468, 430, 493, 475, 475, 475],
-  LassoScoreGauge: [140, 140, 302, 302, 302, 302],
+  LassoScoreGauge: [292, 292, 224, 224, 224, 224], // 18.1 (runde 5): ¼-kort med Beregnet/Grundlag/link; ½ med faktorer
   LassoProductionUnits: [395, 355, 604, 604, 567, 370],
   LassoProperties: [139, 122, 124, 107, 107, 107],
   LassoMap: [220, 220, 400, 400, 400, 400],

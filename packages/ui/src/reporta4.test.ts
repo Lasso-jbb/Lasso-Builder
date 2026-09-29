@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { emptyDataset, type Dataset, type FinancialYear } from "@lasso/spec";
-import { ReportA4 } from "./components/ReportA4.js";
+import { AnalysisReportA4, PersonReportA4, ReportA4, StatementsReportA4 } from "./components/ReportA4.js";
 
 const ID = "CVR-1-99000001";
 
@@ -77,62 +77,61 @@ function render(ds: Dataset): string {
   return renderToStaticMarkup(createElement(ReportA4, { company: ID, dataset: ds }));
 }
 
-test("rapporten har fire sider med sidehoved, sidefod og sidetal 'x af 4'", () => {
+test("27.1-27.2: standardrapporten har to sider med sidehoved, sidefod og sidetal 'x af 2'", () => {
   const html = render(dataset({ score: 52 }));
   const pages = html.match(/<section class="lasso-a4-page/g) ?? [];
-  assert.equal(pages.length, 4);
-  assert.equal((html.match(/lasso-a4__head/g) ?? []).length >= 4, true);
-  for (let i = 1; i <= 4; i++) assert.match(html, new RegExp(`side ${i} af 4`));
-  assert.match(html, /1 af 4/);
-  // Sidehoved på hver side bærer virksomheden (side 2–4) eller navnelogoet (forsiden).
-  assert.equal((html.match(/Eksempel Byg A\/S,/g) ?? []).length, 3);
-  assert.equal((html.match(/aria-label="Lasso"/g) ?? []).length >= 4, true);
+  assert.equal(pages.length, 2);
+  for (let i = 1; i <= 2; i++) assert.match(html, new RegExp(`side ${i} af 2`));
+  // Sidehovedet på side 2 bærer virksomheden; forsiden kun navnelogoet.
+  assert.equal((html.match(/Eksempel Byg A\/S,/g) ?? []).length, 1);
+  assert.equal((html.match(/aria-label="Lasso"/g) ?? []).length >= 2, true);
 });
 
-test("ingen knapper eller interaktion i rapporten", () => {
+test("ingen knapper, ingen interaktion og ingen kildelinje (G3) i rapporten", () => {
   const html = render(dataset({ score: 52 }));
   assert.doesNotMatch(html, /<button/);
   assert.doesNotMatch(html, /<title>/);
+  assert.doesNotMatch(html, /Kilder?:/);
+  assert.match(html, /Data pr\. 25\.09\.2026/);
 });
 
 test("negative tal vises med ægte minus og tusindtalspunktum", () => {
   const html = render(dataset({ score: 52 }));
   assert.match(html, /−201/);
-  assert.match(html, /−20\.000/);
-  assert.doesNotMatch(html, />-\d/);
+  const stmt = renderToStaticMarkup(createElement(StatementsReportA4, { company: ID, dataset: dataset({ score: 52 }) }));
+  assert.match(stmt, /−20\.000/);
+  assert.doesNotMatch(stmt, />-\d/);
 });
 
-test("kreditscore og 'Ikke oplyst', når scoren mangler", () => {
-  assert.match(render(dataset({ score: 52 })), /52, lav risiko/);
+test("risikoscore og 'Ikke oplyst', når scoren mangler", () => {
+  assert.match(render(dataset({ score: 52 })), /52 af 100, lav/);
   assert.match(render(dataset({ score: 52 })), /0, lav risiko/);
   const without = render(dataset({ score: null }));
   assert.match(without, /Ikke oplyst/);
   assert.doesNotMatch(without, /af 100/);
   const none = render(dataset());
-  assert.match(none, /Kreditscore<\/span><span class="lasso-a4-cover__value lasso-a4__faint">Ikke oplyst/);
+  assert.match(none, /Risikoscore<\/span><span class="lasso-a4-cover__value lasso-a4__faint">Ikke oplyst/);
 });
 
-test("sider uden data udelades og sidetal beregnes derefter", () => {
+test("blokke uden data udelades", () => {
   const html = render(dataset({ financials: false }));
   const pages = html.match(/<section class="lasso-a4-page/g) ?? [];
-  assert.equal(pages.length, 3);
-  assert.match(html, /side 3 af 3/);
-  assert.doesNotMatch(html, /Regnskab 20/);
-  assert.doesNotMatch(html, /af 4/);
+  assert.equal(pages.length, 2);
+  assert.doesNotMatch(html, /Nøgletal 20/);
+  assert.doesNotMatch(html, /Nøgletal og udvikling/);
 });
 
-test("indholdsfortegnelsen peger på de rigtige sider", () => {
+test("indholdsfortegnelsen peger på side 2 (27.1)", () => {
   const html = render(dataset({ score: 52 }));
   assert.match(html, /Nøgletal og udvikling<\/span><span class="lasso-a4-toc__page">2/);
-  assert.match(html, /Regnskab 2021–2025<\/span><span class="lasso-a4-toc__page">3/);
-  assert.match(html, /Kreditvurdering og risiko<\/span><span class="lasso-a4-toc__page">4/);
+  assert.match(html, /Ledelse, ejere og revisor<\/span><span class="lasso-a4-toc__page">2/);
+  assert.match(html, /Risiko og observationer<\/span><span class="lasso-a4-toc__page">2/);
 });
 
-test("27.4: side 4 viser risikoobservationerne med farvet prik og titel uden alvorsord (Paper), ordet kun for skærmlæsere", () => {
+test("27.2: båndet Risiko viser de vigtigste observationer med alvorsord og farvet prik", () => {
   const html = render(dataset({ score: 52 }));
-  assert.match(html, /<h2 class="lasso-a4__h2">Risikoobservationer<\/h2>/);
-  assert.match(html, /lasso-a4-obs__dot--middel" role="img" aria-label="alvor middel"[^]*>Revisor skiftet</);
-  assert.doesNotMatch(html, /Middel, Revisor skiftet/);
+  assert.match(html, /<h3 class="lasso-a4__h3">Risiko<\/h3>/);
+  assert.match(html, /lasso-a4-obs__dot--middel"[^]*>Mulig vigtig: Revisor skiftet</);
 });
 
 test("27.2: grafens søjler er ca. 40 px brede som i Paper (Fable-review R3)", () => {
@@ -140,4 +139,51 @@ test("27.2: grafens søjler er ca. 40 px brede som i Paper (Fable-review R3)", (
   const bars = [...html.matchAll(/<rect class="lasso-a4-chart__bar[^"]*"[^>]*width="(\d+(?:\.\d+)?)"/g)].map((m) => Number(m[1]));
   assert.ok(bars.length > 0);
   for (const w of bars) assert.equal(w, 40, `søjle ${w} px`);
+});
+
+test("27.3: Regnskab-fanen som PDF har 'Regnskab, hentet …' og side 1 af 1", () => {
+  const html = renderToStaticMarkup(createElement(StatementsReportA4, { company: ID, dataset: dataset() }));
+  assert.match(html, /Regnskab, hentet 25\.09\.2026/);
+  assert.match(html, /side 1 af 1/);
+  assert.match(html, /Regnskab 2021–2025/);
+});
+
+test("19.6: regnskabsanalysen som PDF har alle afsnit foldet ud, tallene og forbeholdet til sidst", () => {
+  const ds = dataset();
+  ds.textSections[ID] = {
+    lassoId: ID,
+    sections: [
+      { heading: "Regnskabsanalyse: konklusion", body: "Konklusionstekst." },
+      { heading: "Likviditet", body: "Likviditetstekst." },
+    ],
+    analysisHeadline: "Vækst i toplinjen",
+  };
+  const html = renderToStaticMarkup(createElement(AnalysisReportA4, { company: ID, dataset: ds, disclaimer: "Forbehold: test." }));
+  assert.match(html, /Vækst i toplinjen[^]*Konklusionstekst[^]*Likviditet[^]*Likviditetstekst/);
+  assert.match(html, /Tal der indgår i analysen/);
+  assert.match(html, /Forbehold: test\.[^]*lasso-a4__foot/);
+  assert.match(html, /CVR 99000001, regnskabsår 2025/);
+  assert.doesNotMatch(html, /<button/);
+});
+
+test("27.4: personrapporten har navnet alene i hovedet, persontal og rolletabeller", () => {
+  const ds = emptyDataset("demo");
+  ds.generatedAt = "2026-09-25T14:02:00";
+  const P = "CVR-3-4000000009";
+  ds.persons[P] = {
+    lassoId: P,
+    name: "Mette Holm Eksempel",
+    roles: [
+      { companyName: "Data Eksempel A/S", kind: "direction", role: "Adm. direktør", from: "2012-05-14", active: true, companyStatus: "Aktiv" },
+      { companyName: "Cloud Eksempel A/S", kind: "board", role: "Bestyrelsesmedlem", from: "2014-01-01", to: "2018-01-01", active: false, companyStatus: "Under konkurs", companyEnded: "2026-02-01" },
+    ],
+    pep: { match: false, checkedAt: "2026-09-25" },
+  };
+  const html = renderToStaticMarkup(createElement(PersonReportA4, { person: P, dataset: ds }));
+  assert.match(html, /Personrapport, 25\.09\.2026/);
+  assert.match(html, /Aktive roller[^]*Data Eksempel A\/S[^]*Adm\. direktør/);
+  assert.match(html, /Tidligere roller[^]*Cloud Eksempel A\/S[^]*2014–2018[^]*Under konkurs 2026/);
+  assert.match(html, /PEP, politisk eksponeret[^]*Nej/);
+  assert.doesNotMatch(html, /CVR /);
+  assert.match(html, /side 1 af 1/);
 });
