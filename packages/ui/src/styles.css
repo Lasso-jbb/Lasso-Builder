@@ -1081,16 +1081,17 @@ button.lasso-relations__name:hover { text-decoration: underline; }
   .lasso-news__head { order: 2; margin-bottom: 0; }
   .lasso-news__row > .lasso-row__sub { display: none; }
   .lasso-news__source { font-weight: 400; color: var(--lasso-muted); }
-
+}
 .lasso-news__foot { display: none; }
 @container lasso (max-width: 560px) {
   /* 26h.6: nyheden som kort med 1 px kant, overskrift 16/600, uddrag med "…" i begge ender og bundlinje. */
-  .lasso-news__row, .lasso-news__row:first-child { padding: 12px; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); }
-  .lasso-news { gap: var(--lasso-space-2); }
-  .lasso-news__headline { font-size: 16px; line-height: 22px; margin-bottom: 4px; }
-  .lasso-news__snippet::before { content: "… "; }
-  .lasso-news__snippet::after { content: " …"; }
-  .lasso-news__foot { display: flex; justify-content: space-between; align-items: center; gap: var(--lasso-space-3); margin-top: 10px; }
+  .lasso-news__row--featured, .lasso-news__row--featured:first-child { display: block; padding: 12px; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); }
+  .lasso-news:has(.lasso-news__row--featured) { gap: var(--lasso-space-2); }
+  .lasso-news__row--featured .lasso-news__headline { font-size: 16px; line-height: 22px; font-weight: 600; margin-bottom: 4px; -webkit-line-clamp: unset; }
+  .lasso-news__row--featured > .lasso-row__sub { display: block; }
+  .lasso-news__row--featured .lasso-news__snippet::before { content: "… "; }
+  .lasso-news__row--featured .lasso-news__snippet::after { content: " …"; }
+  .lasso-news__row--featured .lasso-news__foot { display: flex; justify-content: space-between; align-items: center; gap: var(--lasso-space-3); margin-top: 10px; }
   .lasso-news__provider { font-size: 12px; color: var(--lasso-muted); }
   .lasso-root .lasso-news__open { font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-accent-text); text-decoration: none; }
 }
@@ -4580,6 +4581,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-root .lasso-reg__more { align-self: flex-start; font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-accent-text); }
 @container lasso (max-width: 760px) {
   .lasso-reg { grid-template-columns: minmax(0, 1fr); }
+}
 
 /* 30.10 Mønster 7, Fortælling: nøgletalskort i en smal celle (¼-kolonnen) stables lodret, ét tal pr. række.
    Containeren sidder på cellen/kolonne-elementet omkring kortene, så komponenten selv er uændret. */

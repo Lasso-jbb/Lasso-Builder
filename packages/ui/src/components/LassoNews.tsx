@@ -159,7 +159,9 @@ function NewsRow({ item, mention, ...opts }: { item: NewsItemVM; mention?: strin
   // Rækken er ikke selv et link (links og knapper må ikke ligge i hinanden): overskriften linker til
   // artiklen, og navne med Lasso-ID i overskrift og uddrag åbner virksomheden eller personen.
   return (
-    <article className="lasso-news__row">
+    // 26h.6: en artikel med Paqle-fremhævning (firmanavnet udpeget i uddraget) står som kort på mobil;
+    // almindelige nyheder står som kompakt liste (26c.9).
+    <article className={`lasso-news__row${item.extractSegments?.some((x) => x.highlight) ? " lasso-news__row--featured" : ""}`}>
       <div className="lasso-news__head">
         <SourceMark source={item.source} url={item.url} />
         <span className="lasso-news__time">{meta}</span>
