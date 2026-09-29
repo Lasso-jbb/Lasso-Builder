@@ -12,7 +12,8 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "test": "node --import tsx --test src/*.test.ts"
+    "test": "node --import tsx --test src/*.test.ts",
+    "docs:komponenter": "tsx scripts/komponenter.ts"
   },
   "dependencies": {
     "zod": "^4.2.0"

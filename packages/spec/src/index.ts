@@ -19,3 +19,4 @@ export * from "./contactPersons.js";
 export * from "./headRisk.js";
 export * from "./status.js";
 export * from "./grid.js";
+export * from "./register.js";

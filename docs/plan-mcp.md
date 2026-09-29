@@ -38,13 +38,14 @@ Samlet fra hele forløbet 29.09.2026. Ændres kun af ejeren.
 
 ## 2. Udgangspunkt (målt 29.09.2026 på `staging` @ `5247389`)
 
-- 53 komponenttyper i spec; alle kan tegnes; alle har data-opslag i `resolve.ts`.
+- 54 komponenttyper i spec (A8 talte 54, ikke 53); alle kan tegnes; alle har data-opslag i `resolve.ts`.
 - `ask.ts` (spørgsmål → side) kender **32 af 53**. De 21 øvrige kan aldrig blive svar-elementet på et spørgsmål.
 - 15 typer bruges *kun* hvis modellen selv vælger dem i `render_view`; 2 mangler katalogpost (`AuditorIndependence`, `ScoreHistory`).
 - Score: `score()` returnerer altid `null`, `scoreHistory()` altid tom → `ScoreGauge`/`ScoreHistory` er altid tomme live.
 - Fast token-last pr. samtale ≈ 20.000 (heraf ≈ 14.200 = komponentkataloget i `render_view`-beskrivelsen). Pr. kald ≈ 2.000 (tekstkort ≈ 1.500 — bevares, Ø4).
 - Bredde: `GRID_RULES` i `catalog.ts` har standard/min/maks pr. type, men **målt med demodata** (korte navne, få rækker). Derfor står fx `PersonNetwork` (min = ½) klemt med afkortede navne og overlappende årstal, mens `PersonRoles`/lister (maks = fuld) strækkes ud med tom plads. Der findes intet begreb for "trives smalt", og mindstebredden afhænger ikke af indholdet (antal rækker, navnelængde, tidsakse, antal serier).
 - Ingen eval: vi ved ikke, hvor godt spørgsmål → side rammer i dag.
+- Baseline (A4, 29.09.2026): side 61,5 % (52 tilfælde), plan 56,7 % (60 tilfælde; svar-element 25,0 % (8/32), fokus 92,9 % (26/28)); eksisterende 88,9 % (side) / 94,4 % (plan), manglende 0 % / 0 %.
 
 ---
 

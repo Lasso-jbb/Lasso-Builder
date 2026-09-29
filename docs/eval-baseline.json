@@ -1,0 +1,1325 @@
+{
+  "date": "2026-09-29",
+  "target": 90,
+  "cases": 60,
+  "results": [
+    {
+      "id": "c-ejere-01",
+      "level": "plan",
+      "hit": true,
+      "got": "LassoOwnerList{\"type\":\"LassoOwnerList\"}",
+      "want": "LassoOwnerList",
+      "alsoMissing": [
+        "LassoOwnershipDiagram"
+      ],
+      "absentFound": []
+    },
+    {
+      "id": "c-ejere-01",
+      "level": "side",
+      "hit": true,
+      "got": "LassoOwnerList{\"type\":\"LassoOwnerList\",\"company\":\"CVR-1-99000001\",\"column\":1}",
+      "want": "LassoOwnerList",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-soliditet-01",
+      "level": "plan",
+      "hit": true,
+      "got": "LassoLineChart{\"type\":\"LassoLineChart\",\"metric\":\"soliditetsgrad\",\"years\":5}",
+      "want": "LassoLineChart{\"metric\":\"soliditetsgrad\"}",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-soliditet-01",
+      "level": "side",
+      "hit": true,
+      "got": "LassoLineChart{\"type\":\"LassoLineChart\",\"company\":\"CVR-1-99000001\",\"metric\":\"soliditetsgrad\",\"years\":5,\"column\":1}",
+      "want": "LassoLineChart{\"metric\":\"soliditetsgrad\"}",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-direktion-01",
+      "level": "plan",
+      "hit": true,
+      "got": "LassoPersonList{\"type\":\"LassoPersonList\",\"roles\":\"direktion\",\"show\":\"current\",\"title\":\"Direktion\"}",
+      "want": "LassoPersonList",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-direktion-01",
+      "level": "side",
+      "hit": true,
+      "got": "LassoPersonList{\"type\":\"LassoPersonList\",\"company\":\"CVR-1-99000004\",\"show\":\"current\",\"roles\":\"direktion\",\"title\":\"Direktion\",\"column\":1}",
+      "want": "LassoPersonList",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-revisor-01",
+      "level": "plan",
+      "hit": true,
+      "got": "LassoKeyValueList{\"type\":\"LassoKeyValueList\",\"variant\":\"company\",\"rows\":[\"revisor\",\"revisorskift\",\"regnskabsperiode\"],\"title\":\"Revisor\"}",
+      "want": "LassoKeyValueList",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-revisor-01",
+      "level": "side",
+      "hit": true,
+      "got": "LassoKeyValueList{\"type\":\"LassoKeyValueList\",\"company\":\"CVR-1-99000001\",\"variant\":\"company\",\"title\":\"Revisor\",\"rows\":[\"revisor\",\"revisorskift\",\"regnskabsperiode\"],\"column\":1}",
+      "want": "LassoKeyValueList",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-generisk-01",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:overblik",
+      "want": "focus:overblik",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-generisk-01",
+      "level": "side",
+      "hit": true,
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"company\":\"CVR-1-99000005\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\",\"width\":\"half\",\"column\":1}",
+      "want": "LassoTextSections{\"variant\":\"profil\"}",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-konkurs-01",
+      "level": "plan",
+      "hit": true,
+      "got": "LassoPersonRisk{\"type\":\"LassoPersonRisk\"}",
+      "want": "LassoPersonRisk",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-konkurs-01",
+      "level": "side",
+      "hit": true,
+      "got": "LassoPersonRisk{\"type\":\"LassoPersonRisk\",\"person\":\"CVR-3-4000000001\",\"width\":\"three-quarters\",\"column\":1}",
+      "want": "LassoPersonRisk",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-roedeflag-01",
+      "level": "plan",
+      "hit": false,
+      "got": "LassoCreditRating{\"type\":\"LassoCreditRating\"}",
+      "want": "LassoRiskObservations",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-roedeflag-01",
+      "level": "side",
+      "hit": false,
+      "got": "LassoCreditRating{\"type\":\"LassoCreditRating\",\"company\":\"CVR-1-99000001\",\"column\":1}",
+      "want": "LassoRiskObservations",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-fusion-01",
+      "level": "plan",
+      "hit": false,
+      "want": "LassoMergers",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-fusion-01",
+      "level": "side",
+      "hit": false,
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"company\":\"CVR-1-99000012\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\",\"width\":\"two-thirds\",\"column\":1}",
+      "want": "LassoMergers",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-offentliggoerelser-01",
+      "level": "plan",
+      "hit": false,
+      "want": "LassoAnnouncements",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-offentliggoerelser-01",
+      "level": "side",
+      "hit": false,
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"company\":\"CVR-1-99000001\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\",\"limit\":3,\"width\":\"half\",\"column\":1}",
+      "want": "LassoAnnouncements",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-dokumenter-01",
+      "level": "plan",
+      "hit": false,
+      "want": "LassoPublications",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-dokumenter-01",
+      "level": "side",
+      "hit": false,
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"company\":\"CVR-1-99000002\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\",\"width\":\"half\",\"column\":1}",
+      "want": "LassoPublications",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-branche-01",
+      "level": "plan",
+      "hit": false,
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\"}",
+      "want": "LassoKeyFigureGauge",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-placering-01",
+      "level": "plan",
+      "hit": false,
+      "got": "LassoContact{\"type\":\"LassoContact\"}",
+      "want": "LassoMap",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-heleregnskab-01",
+      "level": "plan",
+      "hit": false,
+      "got": "LassoIncomeStatement{\"type\":\"LassoIncomeStatement\",\"years\":3}",
+      "want": "LassoFinancialStatements",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-heleregnskab-01",
+      "level": "side",
+      "hit": false,
+      "got": "LassoIncomeStatement{\"type\":\"LassoIncomeStatement\",\"company\":\"CVR-1-99000001\",\"years\":3}",
+      "want": "LassoFinancialStatements",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-registrering-01",
+      "level": "plan",
+      "hit": false,
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\"}",
+      "want": "LassoRegistration",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-registrering-01",
+      "level": "side",
+      "hit": false,
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"company\":\"CVR-1-99000001\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\",\"column\":1}",
+      "want": "LassoRegistration",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-scorehistorik-01",
+      "level": "plan",
+      "hit": false,
+      "got": "LassoCreditRating{\"type\":\"LassoCreditRating\"}",
+      "want": "LassoScoreHistory",
+      "alsoMissing": [
+        "LassoScoreGauge"
+      ],
+      "absentFound": []
+    },
+    {
+      "id": "c-opsummering-01",
+      "level": "plan",
+      "hit": false,
+      "want": "LassoSummary",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-opsummering-01",
+      "level": "side",
+      "hit": false,
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"company\":\"CVR-1-99000001\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\",\"limit\":3,\"width\":\"half\",\"column\":1}",
+      "want": "LassoSummary",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-aendringer-01",
+      "level": "plan",
+      "hit": false,
+      "got": "LassoTimeline{\"type\":\"LassoTimeline\",\"limit\":8}",
+      "want": "LassoChangeFeed",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-persontal-01",
+      "level": "plan",
+      "hit": false,
+      "got": "LassoPersonRoles{\"type\":\"LassoPersonRoles\",\"role\":\"ejer\",\"show\":\"current\",\"limit\":8}",
+      "want": "LassoPersonStats",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-persontal-01",
+      "level": "side",
+      "hit": false,
+      "got": "LassoPersonRoles{\"type\":\"LassoPersonRoles\",\"person\":\"CVR-3-4000000001\",\"show\":\"current\",\"limit\":8,\"role\":\"ejer\",\"width\":\"three-quarters\",\"column\":1}",
+      "want": "LassoPersonStats",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-generisk-02",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:overblik",
+      "want": "focus:overblik",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-generisk-02",
+      "level": "side",
+      "hit": true,
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"company\":\"CVR-1-99000008\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\",\"width\":\"two-thirds\",\"column\":1}",
+      "want": "LassoTextSections{\"variant\":\"profil\"}",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-oekonomi-01",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:oekonomi",
+      "want": "focus:oekonomi",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-oekonomi-01",
+      "level": "side",
+      "hit": true,
+      "got": "LassoGroupedBarChart{\"type\":\"LassoGroupedBarChart\",\"company\":\"CVR-1-99000004\",\"metrics\":[\"omsaetning\",\"resultat\"],\"years\":10,\"width\":\"half\",\"column\":1}",
+      "want": "LassoGroupedBarChart",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-oekonomi-02",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:oekonomi",
+      "want": "focus:oekonomi",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-oekonomi-02",
+      "level": "side",
+      "hit": true,
+      "got": "LassoGroupedBarChart{\"type\":\"LassoGroupedBarChart\",\"company\":\"CVR-1-99000008\",\"metrics\":[\"omsaetning\",\"resultat\"],\"years\":10,\"width\":\"half\",\"column\":1}",
+      "want": "LassoGroupedBarChart",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-regnskab-01",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:regnskab",
+      "want": "focus:regnskab",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-regnskab-01",
+      "level": "side",
+      "hit": true,
+      "got": "LassoIncomeStatement{\"type\":\"LassoIncomeStatement\",\"company\":\"CVR-1-99000001\",\"years\":3,\"width\":\"full\"}",
+      "want": "LassoIncomeStatement",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-regnskab-02",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:regnskab",
+      "want": "focus:regnskab",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-regnskab-02",
+      "level": "side",
+      "hit": true,
+      "got": "LassoIncomeStatement{\"type\":\"LassoIncomeStatement\",\"company\":\"CVR-1-99000005\",\"years\":3,\"width\":\"full\"}",
+      "want": "LassoIncomeStatement",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-ejerskab-01",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:ejerskab",
+      "want": "focus:ejerskab",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-ejerskab-01",
+      "level": "side",
+      "hit": true,
+      "got": "LassoOwnershipDiagram{\"type\":\"LassoOwnershipDiagram\",\"company\":\"CVR-1-99000004\",\"ingoingDepth\":3,\"outgoingDepth\":2,\"width\":\"two-thirds\",\"column\":1}",
+      "want": "LassoOwnershipDiagram",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-ejerskab-02",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:ejerskab",
+      "want": "focus:ejerskab",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-ejerskab-02",
+      "level": "side",
+      "hit": true,
+      "got": "LassoOwnershipDiagram{\"type\":\"LassoOwnershipDiagram\",\"company\":\"CVR-1-99000012\",\"ingoingDepth\":3,\"outgoingDepth\":2,\"width\":\"two-thirds\",\"column\":1}",
+      "want": "LassoOwnershipDiagram",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-ledelse-01",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:ledelse",
+      "want": "focus:ledelse",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-ledelse-01",
+      "level": "side",
+      "hit": true,
+      "got": "LassoPersonList{\"type\":\"LassoPersonList\",\"company\":\"CVR-1-99000001\",\"show\":\"all\"}",
+      "want": "LassoPersonList",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-ledelse-02",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:ledelse",
+      "want": "focus:ledelse",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-ledelse-02",
+      "level": "side",
+      "hit": true,
+      "got": "LassoPersonList{\"type\":\"LassoPersonList\",\"company\":\"CVR-1-99000006\",\"show\":\"current\",\"title\":\"Ledelse\",\"column\":1}",
+      "want": "LassoPersonList",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-risiko-01",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:risiko",
+      "want": "focus:risiko",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-risiko-01",
+      "level": "side",
+      "hit": false,
+      "got": "LassoKeyValueList{\"type\":\"LassoKeyValueList\",\"company\":\"CVR-1-99000001\",\"variant\":\"company\",\"title\":\"Virksomhedsoplysninger\",\"width\":\"half\",\"column\":1}",
+      "want": "LassoCreditRating",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-risiko-02",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:risiko",
+      "want": "focus:risiko",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-risiko-02",
+      "level": "side",
+      "hit": true,
+      "got": "LassoCreditRating{\"type\":\"LassoCreditRating\",\"company\":\"CVR-1-99000011\",\"column\":1}",
+      "want": "LassoCreditRating",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-historik-01",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:historik",
+      "want": "focus:historik",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-historik-01",
+      "level": "side",
+      "hit": true,
+      "got": "LassoTimeline{\"type\":\"LassoTimeline\",\"company\":\"CVR-1-99000001\",\"width\":\"half\",\"column\":1}",
+      "want": "LassoTimeline",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-historik-02",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:historik",
+      "want": "focus:historik",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-historik-02",
+      "level": "side",
+      "hit": true,
+      "got": "LassoTimeline{\"type\":\"LassoTimeline\",\"company\":\"CVR-1-99000014\",\"width\":\"two-thirds\",\"column\":1}",
+      "want": "LassoTimeline",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-kontakt-01",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:kontakt",
+      "want": "focus:kontakt",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-kontakt-01",
+      "level": "side",
+      "hit": false,
+      "got": "LassoKeyValueList{\"type\":\"LassoKeyValueList\",\"company\":\"CVR-1-99000007\",\"variant\":\"company\",\"title\":\"Virksomhedsoplysninger\",\"width\":\"two-thirds\",\"column\":1}",
+      "want": "LassoContact",
+      "alsoMissing": [
+        "LassoContactPersons"
+      ],
+      "absentFound": []
+    },
+    {
+      "id": "c-kontakt-02",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:kontakt",
+      "want": "focus:kontakt",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-kontakt-02",
+      "level": "side",
+      "hit": false,
+      "got": "LassoKeyValueList{\"type\":\"LassoKeyValueList\",\"company\":\"CVR-1-99000005\",\"variant\":\"company\",\"title\":\"Virksomhedsoplysninger\",\"width\":\"two-thirds\",\"column\":1}",
+      "want": "LassoContact",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-overblik-01",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:overblik",
+      "want": "focus:overblik",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-overblik-01",
+      "level": "side",
+      "hit": true,
+      "got": "LassoPersonRoles{\"type\":\"LassoPersonRoles\",\"person\":\"CVR-3-4000000001\",\"show\":\"current\",\"limit\":5,\"more\":\"roller\",\"width\":\"three-quarters\",\"column\":1}",
+      "want": "LassoPersonRoles",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-overblik-02",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:overblik",
+      "want": "focus:overblik",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-overblik-02",
+      "level": "side",
+      "hit": true,
+      "got": "LassoPersonRoles{\"type\":\"LassoPersonRoles\",\"person\":\"CVR-3-4000000001\",\"show\":\"current\",\"limit\":5,\"more\":\"roller\",\"width\":\"three-quarters\",\"column\":1}",
+      "want": "LassoPersonRoles",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-roller-01",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:roller",
+      "want": "focus:roller",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-roller-01",
+      "level": "side",
+      "hit": true,
+      "got": "LassoPersonRoles{\"type\":\"LassoPersonRoles\",\"person\":\"CVR-3-4000000001\",\"limit\":8,\"width\":\"three-quarters\",\"column\":1}",
+      "want": "LassoPersonRoles",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-roller-02",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:roller",
+      "want": "focus:roller",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-roller-02",
+      "level": "side",
+      "hit": true,
+      "got": "LassoPersonRoles{\"type\":\"LassoPersonRoles\",\"person\":\"CVR-3-4000000001\",\"limit\":8,\"width\":\"three-quarters\",\"column\":1}",
+      "want": "LassoPersonRoles",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-netvaerk-01",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:netvaerk",
+      "want": "focus:netvaerk",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-netvaerk-01",
+      "level": "side",
+      "hit": true,
+      "got": "LassoPersonNetwork{\"type\":\"LassoPersonNetwork\",\"person\":\"CVR-3-4000000001\",\"limit\":8}",
+      "want": "LassoPersonNetwork",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-netvaerk-02",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:netvaerk",
+      "want": "focus:netvaerk",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-netvaerk-02",
+      "level": "side",
+      "hit": true,
+      "got": "LassoPersonNetwork{\"type\":\"LassoPersonNetwork\",\"person\":\"CVR-3-4000000001\",\"limit\":8,\"width\":\"three-quarters\",\"column\":1}",
+      "want": "LassoPersonNetwork",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-ejerskab-01",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:ejerskab",
+      "want": "focus:ejerskab",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-ejerskab-01",
+      "level": "side",
+      "hit": true,
+      "got": "LassoPersonRoles{\"type\":\"LassoPersonRoles\",\"person\":\"CVR-3-4000000001\",\"show\":\"owner\"}",
+      "want": "LassoPersonRoles{\"show\":\"owner\"}",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-ejerskab-02",
+      "level": "plan",
+      "hit": false,
+      "got": "focus:roller",
+      "want": "focus:ejerskab",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-ejerskab-02",
+      "level": "side",
+      "hit": false,
+      "got": "LassoPersonRoles{\"type\":\"LassoPersonRoles\",\"person\":\"CVR-3-4000000001\",\"show\":\"current\",\"limit\":8,\"role\":\"ejer\",\"width\":\"three-quarters\",\"column\":1}",
+      "want": "LassoPersonRoles{\"show\":\"owner\"}",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-risiko-01",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:risiko",
+      "want": "focus:risiko",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-risiko-01",
+      "level": "side",
+      "hit": true,
+      "got": "LassoPersonRisk{\"type\":\"LassoPersonRisk\",\"person\":\"CVR-3-4000000001\"}",
+      "want": "LassoPersonRisk",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-risiko-02",
+      "level": "plan",
+      "hit": false,
+      "got": "focus:overblik",
+      "want": "focus:risiko",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-risiko-02",
+      "level": "side",
+      "hit": true,
+      "got": "LassoPersonRisk{\"type\":\"LassoPersonRisk\",\"person\":\"CVR-3-4000000001\"}",
+      "want": "LassoPersonRisk",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-historik-01",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:historik",
+      "want": "focus:historik",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-historik-01",
+      "level": "side",
+      "hit": true,
+      "got": "LassoTimeline{\"type\":\"LassoTimeline\",\"person\":\"CVR-3-4000000001\",\"column\":1}",
+      "want": "LassoTimeline",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-historik-02",
+      "level": "plan",
+      "hit": true,
+      "got": "focus:historik",
+      "want": "focus:historik",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-historik-02",
+      "level": "side",
+      "hit": true,
+      "got": "LassoTimeline{\"type\":\"LassoTimeline\",\"person\":\"CVR-3-4000000001\",\"limit\":8,\"width\":\"three-quarters\",\"column\":1}",
+      "want": "LassoTimeline",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-roedeflag-02",
+      "level": "plan",
+      "hit": false,
+      "got": "LassoCreditRating{\"type\":\"LassoCreditRating\"}",
+      "want": "LassoRiskObservations",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-roedeflag-02",
+      "level": "side",
+      "hit": false,
+      "got": "LassoCreditRating{\"type\":\"LassoCreditRating\",\"company\":\"CVR-1-99000011\",\"column\":1}",
+      "want": "LassoRiskObservations",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-fusion-02",
+      "level": "plan",
+      "hit": false,
+      "want": "LassoMergers",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-fusion-02",
+      "level": "side",
+      "hit": false,
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"company\":\"CVR-1-99000012\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\",\"width\":\"two-thirds\",\"column\":1}",
+      "want": "LassoMergers",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-offentliggoerelser-02",
+      "level": "plan",
+      "hit": false,
+      "want": "LassoAnnouncements",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-offentliggoerelser-02",
+      "level": "side",
+      "hit": false,
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"company\":\"CVR-1-99000005\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\",\"width\":\"half\",\"column\":1}",
+      "want": "LassoAnnouncements",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-dokumenter-02",
+      "level": "plan",
+      "hit": false,
+      "want": "LassoPublications",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-dokumenter-02",
+      "level": "side",
+      "hit": false,
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"company\":\"CVR-1-99000005\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\",\"width\":\"half\",\"column\":1}",
+      "want": "LassoPublications",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-branche-02",
+      "level": "plan",
+      "hit": false,
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\"}",
+      "want": "LassoKeyFigureGauge",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-placering-02",
+      "level": "plan",
+      "hit": false,
+      "got": "LassoContact{\"type\":\"LassoContact\"}",
+      "want": "LassoMap",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-heleregnskab-02",
+      "level": "plan",
+      "hit": false,
+      "got": "LassoIncomeStatement{\"type\":\"LassoIncomeStatement\",\"years\":3}",
+      "want": "LassoFinancialStatements",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-heleregnskab-02",
+      "level": "side",
+      "hit": false,
+      "got": "LassoIncomeStatement{\"type\":\"LassoIncomeStatement\",\"company\":\"CVR-1-99000004\",\"years\":3}",
+      "want": "LassoFinancialStatements",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-registrering-02",
+      "level": "plan",
+      "hit": false,
+      "want": "LassoRegistration",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-registrering-02",
+      "level": "side",
+      "hit": false,
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"company\":\"CVR-1-99000010\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\",\"limit\":3,\"width\":\"half\",\"column\":1}",
+      "want": "LassoRegistration",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-scorehistorik-02",
+      "level": "plan",
+      "hit": false,
+      "got": "LassoScoreGauge{\"type\":\"LassoScoreGauge\"}",
+      "want": "LassoScoreHistory",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-opsummering-02",
+      "level": "plan",
+      "hit": false,
+      "want": "LassoSummary",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-opsummering-02",
+      "level": "side",
+      "hit": false,
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"company\":\"CVR-1-99000007\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\",\"width\":\"two-thirds\",\"column\":1}",
+      "want": "LassoSummary",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-aendringer-02",
+      "level": "plan",
+      "hit": false,
+      "got": "LassoTimeline{\"type\":\"LassoTimeline\",\"limit\":8}",
+      "want": "LassoChangeFeed",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-persontal-02",
+      "level": "plan",
+      "hit": false,
+      "want": "LassoPersonStats",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "p-persontal-02",
+      "level": "side",
+      "hit": false,
+      "got": "LassoPersonRoles{\"type\":\"LassoPersonRoles\",\"person\":\"CVR-3-4000000001\",\"show\":\"current\",\"limit\":5,\"more\":\"roller\",\"width\":\"three-quarters\",\"column\":1}",
+      "want": "LassoPersonStats",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-reelle-ejere-01",
+      "level": "plan",
+      "hit": true,
+      "got": "LassoBeneficialOwners{\"type\":\"LassoBeneficialOwners\"}",
+      "want": "LassoBeneficialOwners",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-reelle-ejere-01",
+      "level": "side",
+      "hit": true,
+      "got": "LassoBeneficialOwners{\"type\":\"LassoBeneficialOwners\",\"company\":\"CVR-1-99000001\",\"column\":1}",
+      "want": "LassoBeneficialOwners",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-besaetning-01",
+      "level": "plan",
+      "hit": true,
+      "got": "LassoLivestock{\"type\":\"LassoLivestock\"}",
+      "want": "LassoLivestock",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-besaetning-01",
+      "level": "side",
+      "hit": true,
+      "got": "LassoLivestock{\"type\":\"LassoLivestock\",\"company\":\"CVR-1-99000013\"}",
+      "want": "LassoLivestock",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-ejendomme-01",
+      "level": "plan",
+      "hit": true,
+      "got": "LassoProperties{\"type\":\"LassoProperties\"}",
+      "want": "LassoProperties",
+      "alsoMissing": [],
+      "absentFound": []
+    },
+    {
+      "id": "c-ejendomme-01",
+      "level": "side",
+      "hit": true,
+      "got": "LassoProperties{\"type\":\"LassoProperties\",\"company\":\"CVR-1-99000012\"}",
+      "want": "LassoProperties",
+      "alsoMissing": [],
+      "absentFound": []
+    }
+  ],
+  "side": {
+    "hits": 32,
+    "total": 52,
+    "pct": 61.5
+  },
+  "plan": {
+    "hits": 34,
+    "total": 60,
+    "pct": 56.7
+  },
+  "planLead": {
+    "hits": 8,
+    "total": 32,
+    "pct": 25
+  },
+  "planFocus": {
+    "hits": 26,
+    "total": 28,
+    "pct": 92.9
+  },
+  "byGroup": {
+    "eksisterende": {
+      "side": {
+        "hits": 32,
+        "total": 36,
+        "pct": 88.9
+      },
+      "plan": {
+        "hits": 34,
+        "total": 36,
+        "pct": 94.4
+      }
+    },
+    "manglende": {
+      "side": {
+        "hits": 0,
+        "total": 16,
+        "pct": 0
+      },
+      "plan": {
+        "hits": 0,
+        "total": 24,
+        "pct": 0
+      }
+    }
+  },
+  "misses": [
+    {
+      "id": "c-roedeflag-01",
+      "level": "plan",
+      "want": "LassoRiskObservations",
+      "got": "LassoCreditRating{\"type\":\"LassoCreditRating\"}"
+    },
+    {
+      "id": "c-roedeflag-01",
+      "level": "side",
+      "want": "LassoRiskObservations",
+      "got": "LassoCreditRating{\"type\":\"LassoCreditRating\",\"company\":\"CVR-1-99000001\",\"column\":1}"
+    },
+    {
+      "id": "c-fusion-01",
+      "level": "plan",
+      "want": "LassoMergers"
+    },
+    {
+      "id": "c-fusion-01",
+      "level": "side",
+      "want": "LassoMergers",
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"company\":\"CVR-1-99000012\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\",\"width\":\"two-thirds\",\"column\":1}"
+    },
+    {
+      "id": "c-offentliggoerelser-01",
+      "level": "plan",
+      "want": "LassoAnnouncements"
+    },
+    {
+      "id": "c-offentliggoerelser-01",
+      "level": "side",
+      "want": "LassoAnnouncements",
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"company\":\"CVR-1-99000001\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\",\"limit\":3,\"width\":\"half\",\"column\":1}"
+    },
+    {
+      "id": "c-dokumenter-01",
+      "level": "plan",
+      "want": "LassoPublications"
+    },
+    {
+      "id": "c-dokumenter-01",
+      "level": "side",
+      "want": "LassoPublications",
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"company\":\"CVR-1-99000002\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\",\"width\":\"half\",\"column\":1}"
+    },
+    {
+      "id": "c-branche-01",
+      "level": "plan",
+      "want": "LassoKeyFigureGauge",
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\"}"
+    },
+    {
+      "id": "c-placering-01",
+      "level": "plan",
+      "want": "LassoMap",
+      "got": "LassoContact{\"type\":\"LassoContact\"}"
+    },
+    {
+      "id": "c-heleregnskab-01",
+      "level": "plan",
+      "want": "LassoFinancialStatements",
+      "got": "LassoIncomeStatement{\"type\":\"LassoIncomeStatement\",\"years\":3}"
+    },
+    {
+      "id": "c-heleregnskab-01",
+      "level": "side",
+      "want": "LassoFinancialStatements",
+      "got": "LassoIncomeStatement{\"type\":\"LassoIncomeStatement\",\"company\":\"CVR-1-99000001\",\"years\":3}"
+    },
+    {
+      "id": "c-registrering-01",
+      "level": "plan",
+      "want": "LassoRegistration",
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\"}"
+    },
+    {
+      "id": "c-registrering-01",
+      "level": "side",
+      "want": "LassoRegistration",
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"company\":\"CVR-1-99000001\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\",\"column\":1}"
+    },
+    {
+      "id": "c-scorehistorik-01",
+      "level": "plan",
+      "want": "LassoScoreHistory",
+      "got": "LassoCreditRating{\"type\":\"LassoCreditRating\"}"
+    },
+    {
+      "id": "c-opsummering-01",
+      "level": "plan",
+      "want": "LassoSummary"
+    },
+    {
+      "id": "c-opsummering-01",
+      "level": "side",
+      "want": "LassoSummary",
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"company\":\"CVR-1-99000001\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\",\"limit\":3,\"width\":\"half\",\"column\":1}"
+    },
+    {
+      "id": "c-aendringer-01",
+      "level": "plan",
+      "want": "LassoChangeFeed",
+      "got": "LassoTimeline{\"type\":\"LassoTimeline\",\"limit\":8}"
+    },
+    {
+      "id": "p-persontal-01",
+      "level": "plan",
+      "want": "LassoPersonStats",
+      "got": "LassoPersonRoles{\"type\":\"LassoPersonRoles\",\"role\":\"ejer\",\"show\":\"current\",\"limit\":8}"
+    },
+    {
+      "id": "p-persontal-01",
+      "level": "side",
+      "want": "LassoPersonStats",
+      "got": "LassoPersonRoles{\"type\":\"LassoPersonRoles\",\"person\":\"CVR-3-4000000001\",\"show\":\"current\",\"limit\":8,\"role\":\"ejer\",\"width\":\"three-quarters\",\"column\":1}"
+    },
+    {
+      "id": "c-risiko-01",
+      "level": "side",
+      "want": "LassoCreditRating",
+      "got": "LassoKeyValueList{\"type\":\"LassoKeyValueList\",\"company\":\"CVR-1-99000001\",\"variant\":\"company\",\"title\":\"Virksomhedsoplysninger\",\"width\":\"half\",\"column\":1}"
+    },
+    {
+      "id": "c-kontakt-01",
+      "level": "side",
+      "want": "LassoContact",
+      "got": "LassoKeyValueList{\"type\":\"LassoKeyValueList\",\"company\":\"CVR-1-99000007\",\"variant\":\"company\",\"title\":\"Virksomhedsoplysninger\",\"width\":\"two-thirds\",\"column\":1}"
+    },
+    {
+      "id": "c-kontakt-02",
+      "level": "side",
+      "want": "LassoContact",
+      "got": "LassoKeyValueList{\"type\":\"LassoKeyValueList\",\"company\":\"CVR-1-99000005\",\"variant\":\"company\",\"title\":\"Virksomhedsoplysninger\",\"width\":\"two-thirds\",\"column\":1}"
+    },
+    {
+      "id": "p-ejerskab-02",
+      "level": "plan",
+      "want": "focus:ejerskab",
+      "got": "focus:roller"
+    },
+    {
+      "id": "p-ejerskab-02",
+      "level": "side",
+      "want": "LassoPersonRoles{\"show\":\"owner\"}",
+      "got": "LassoPersonRoles{\"type\":\"LassoPersonRoles\",\"person\":\"CVR-3-4000000001\",\"show\":\"current\",\"limit\":8,\"role\":\"ejer\",\"width\":\"three-quarters\",\"column\":1}"
+    },
+    {
+      "id": "p-risiko-02",
+      "level": "plan",
+      "want": "focus:risiko",
+      "got": "focus:overblik"
+    },
+    {
+      "id": "c-roedeflag-02",
+      "level": "plan",
+      "want": "LassoRiskObservations",
+      "got": "LassoCreditRating{\"type\":\"LassoCreditRating\"}"
+    },
+    {
+      "id": "c-roedeflag-02",
+      "level": "side",
+      "want": "LassoRiskObservations",
+      "got": "LassoCreditRating{\"type\":\"LassoCreditRating\",\"company\":\"CVR-1-99000011\",\"column\":1}"
+    },
+    {
+      "id": "c-fusion-02",
+      "level": "plan",
+      "want": "LassoMergers"
+    },
+    {
+      "id": "c-fusion-02",
+      "level": "side",
+      "want": "LassoMergers",
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"company\":\"CVR-1-99000012\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\",\"width\":\"two-thirds\",\"column\":1}"
+    },
+    {
+      "id": "c-offentliggoerelser-02",
+      "level": "plan",
+      "want": "LassoAnnouncements"
+    },
+    {
+      "id": "c-offentliggoerelser-02",
+      "level": "side",
+      "want": "LassoAnnouncements",
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"company\":\"CVR-1-99000005\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\",\"width\":\"half\",\"column\":1}"
+    },
+    {
+      "id": "c-dokumenter-02",
+      "level": "plan",
+      "want": "LassoPublications"
+    },
+    {
+      "id": "c-dokumenter-02",
+      "level": "side",
+      "want": "LassoPublications",
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"company\":\"CVR-1-99000005\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\",\"width\":\"half\",\"column\":1}"
+    },
+    {
+      "id": "c-branche-02",
+      "level": "plan",
+      "want": "LassoKeyFigureGauge",
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\"}"
+    },
+    {
+      "id": "c-placering-02",
+      "level": "plan",
+      "want": "LassoMap",
+      "got": "LassoContact{\"type\":\"LassoContact\"}"
+    },
+    {
+      "id": "c-heleregnskab-02",
+      "level": "plan",
+      "want": "LassoFinancialStatements",
+      "got": "LassoIncomeStatement{\"type\":\"LassoIncomeStatement\",\"years\":3}"
+    },
+    {
+      "id": "c-heleregnskab-02",
+      "level": "side",
+      "want": "LassoFinancialStatements",
+      "got": "LassoIncomeStatement{\"type\":\"LassoIncomeStatement\",\"company\":\"CVR-1-99000004\",\"years\":3}"
+    },
+    {
+      "id": "c-registrering-02",
+      "level": "plan",
+      "want": "LassoRegistration"
+    },
+    {
+      "id": "c-registrering-02",
+      "level": "side",
+      "want": "LassoRegistration",
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"company\":\"CVR-1-99000010\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\",\"limit\":3,\"width\":\"half\",\"column\":1}"
+    },
+    {
+      "id": "c-scorehistorik-02",
+      "level": "plan",
+      "want": "LassoScoreHistory",
+      "got": "LassoScoreGauge{\"type\":\"LassoScoreGauge\"}"
+    },
+    {
+      "id": "c-opsummering-02",
+      "level": "plan",
+      "want": "LassoSummary"
+    },
+    {
+      "id": "c-opsummering-02",
+      "level": "side",
+      "want": "LassoSummary",
+      "got": "LassoTextSections{\"type\":\"LassoTextSections\",\"company\":\"CVR-1-99000007\",\"variant\":\"profil\",\"title\":\"Virksomhedsprofil\",\"width\":\"two-thirds\",\"column\":1}"
+    },
+    {
+      "id": "c-aendringer-02",
+      "level": "plan",
+      "want": "LassoChangeFeed",
+      "got": "LassoTimeline{\"type\":\"LassoTimeline\",\"limit\":8}"
+    },
+    {
+      "id": "p-persontal-02",
+      "level": "plan",
+      "want": "LassoPersonStats"
+    },
+    {
+      "id": "p-persontal-02",
+      "level": "side",
+      "want": "LassoPersonStats",
+      "got": "LassoPersonRoles{\"type\":\"LassoPersonRoles\",\"person\":\"CVR-3-4000000001\",\"show\":\"current\",\"limit\":5,\"more\":\"roller\",\"width\":\"three-quarters\",\"column\":1}"
+    }
+  ]
+}

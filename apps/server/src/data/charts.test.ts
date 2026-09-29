@@ -9,9 +9,9 @@ import { resolveSpec } from "./resolve.js";
 const demo = new DemoProvider();
 const ID = "CVR-1-99000001";
 
-test("nye katalogtyper (13.10, 13.11, 13.12) har schema og katalogtekst uden midterprik; 18.2/22.2 er udgået af kataloget", () => {
-  // 18.2 Scorehistorik og 22.2 Revisoruafhængighed udgår (Jakob 29.09): skemaet læses stadig, men AI'en ser dem ikke.
-  for (const type of ["LassoScoreHistory", "LassoAuditorIndependence"]) assert.ok(!COMPONENT_CATALOG.some((e) => e.type === type), type);
+test("nye katalogtyper (13.10, 13.11, 13.12) har schema og katalogtekst uden midterprik; 18.2/22.2 er tilbage i kataloget (plan Ø2)", () => {
+  // 18.2 Scorehistorik og 22.2 Revisoruafhængighed var udgået 29.09, men er tilbage (docs/plan-mcp.md Ø2: alle komponenter skal kunne komme i spil).
+  for (const type of ["LassoScoreHistory", "LassoAuditorIndependence"]) assert.ok(COMPONENT_CATALOG.some((e) => e.type === type), type);
   for (const type of ["LassoKeyFigureGauge", "LassoHeatmap", "LassoMap"] as const) {
     const entry = COMPONENT_CATALOG.find((e) => e.type === type);
     assert.ok(entry, type);

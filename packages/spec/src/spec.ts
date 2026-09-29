@@ -572,7 +572,7 @@ export const scoreGaugeSchema = z.object({
 });
 
 /**
- * UDGÅET (Jakob 29.09): 18.2 Scorehistorik. Der kan ikke laves historik, og typen er fjernet fra kataloget
+ * 18.2 Scorehistorik: var udgået 29.09, men er tilbage i kataloget (plan Ø2); historikken bygges op i plan C2
  * (COMPONENT_CATALOG), så AI'en vælger den ikke. Skemaet står kun, så gemte specs stadig kan læses.
  */
 export const scoreHistorySchema = z.object({
@@ -639,7 +639,7 @@ export const propertiesSchema = z.object({
 });
 
 /**
- * UDGÅET (Jakob 29.09): 22.2 Revisoruafhængighed kan ikke laves. Fjernet fra kataloget; skemaet står kun,
+ * 22.2 Revisoruafhængighed: var udgået 29.09, men er tilbage i kataloget (plan Ø2); live delvist koblet på,
  * fordi compose.ts endnu bygger elementet på risikosiden (skal fjernes af compose-ejeren) og for gemte specs.
  */
 export const auditorIndependenceSchema = z.object({
