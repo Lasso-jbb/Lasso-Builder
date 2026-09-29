@@ -109,6 +109,7 @@
 
   /* Hjørner: felter og knapper 8, menupunkter 9, faner og kort 10, dialoger 14 */
   --lasso-radius-sm: var(--lasso-radius);  /* alias: Paper har kun 8/9/10/14 (+ pille til kontakten) */
+  --lasso-radius-xs: 6px;           /* 01.4: tags og etiketter (05.5/05.6) */
   --lasso-radius: 8px;
   --lasso-radius-menu: 9px;
   --lasso-radius-lg: 10px;

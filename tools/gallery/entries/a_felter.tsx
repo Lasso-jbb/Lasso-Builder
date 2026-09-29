@@ -55,61 +55,82 @@ function Grid({ children, cols, gap = 24, minHeight }: { children: ReactNode; co
   return <div style={{ display: "grid", gap, gridTemplateColumns: cols, alignItems: "start", minHeight }}>{children}</div>;
 }
 
-const Swatch = ({ v }: { v: string }) => (
-  <div style={{ display: "grid", gap: 6 }}>
-    <div style={{ height: 44, borderRadius: "var(--lasso-radius)", background: `var(${v})`, border: "1px solid var(--lasso-border)" }} />
-    <code style={{ fontSize: 11, color: "var(--lasso-muted)" }}>{v.replace("--lasso-", "")}</code>
-  </div>
-);
-
-function Swatches({ vars }: { vars: string[] }) {
+/** 01.1: én farveflise med navn 14/600, hex og brug (13 muted) under. */
+function Tile({ v, name, hex, use, w, h }: { v: string; name: string; hex: string; use?: string; w: number; h: number }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 12 }}>
-      {vars.map((v) => (
-        <Swatch key={v} v={v} />
-      ))}
+    <div style={{ display: "grid", gap: 8, width: w, alignContent: "start" }}>
+      <div style={{ height: h, borderRadius: "var(--lasso-radius-lg)", background: `var(${v})`, border: "1px solid var(--lasso-border)" }} />
+      <div>
+        <div style={{ fontSize: "var(--lasso-fs)", lineHeight: "var(--lasso-lh)", fontWeight: 600, color: "var(--lasso-text)" }}>{name}</div>
+        <div className="lasso-small lasso-muted">{use ? `${hex}, ${use}` : hex}</div>
+      </div>
     </div>
   );
 }
 
 // ---------- 01 Fundament ----------
 
+const CORAL: [string, string, string, string][] = [
+  ["--lasso-accent", "Koral", "primary, #FF6B35", "primær knap, aktiv"],
+  ["--lasso-accent-soft", "Koral lys", "primary-soft, #FFF2EB", "valgt, fokus"],
+  ["--lasso-accent-border", "Koral kant", "primary-border, #FFCFB6", ""],
+  ["--lasso-accent-text", "Koral mørk", "primary-text, #B2450F", "tekst, flueben"],
+];
+const TEXTS: [string, string, string, string][] = [
+  ["--lasso-text", "ink", "#16181D", "overskrift"],
+  ["--lasso-text-2", "text", "#3F444B", "brødtekst"],
+  ["--lasso-text-3", "text-secondary", "#5B6068", "ikoner"],
+  ["--lasso-placeholder", "text-muted", "#8A9099", "hjælpetekst"],
+  ["--lasso-icon", "icon", "#9AA0A8", "chevrons"],
+  ["--lasso-faint", "text-faint", "#B9BEC5", "tællere"],
+  ["--lasso-danger", "danger", "#D92D20", "fejl, slet"],
+  ["--lasso-positive", "success", "#1F8A4C", "kvittering"],
+];
+const SURFACES: [string, string, string, string][] = [
+  ["--lasso-surface", "surface", "#FFFFFF", ""],
+  ["--lasso-surface-2", "surface-panel", "#FCFCFD", "højre panel"],
+  ["--lasso-surface-muted", "surface-muted", "#F4F4F5", "tags, hover"],
+  ["--lasso-chrome", "chrome", "#F1F2F4", "topbjælke"],
+  ["--lasso-border-strong", "border", "#E4E4E7", "felter"],
+  ["--lasso-border", "divider", "#E6E7EB", "områder"],
+  ["--lasso-divider-subtle", "divider-subtle", "#F1F1F3", "rækker"],
+  ["--lasso-overlay", "overlay", "#43464D", "bag dialog"],
+];
+
 function Colors() {
+  const row = (list: [string, string, string, string][], w: number, h: number) => (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+      {list.map(([v, n, hex, use]) => (
+        <Tile key={v} v={v} name={n} hex={hex} use={use} w={w} h={h} />
+      ))}
+    </div>
+  );
   return (
-    <Grid>
-      <St label="Koral (4)">
-        <Swatches vars={["--lasso-accent", "--lasso-accent-text", "--lasso-accent-soft", "--lasso-accent-border"]} />
-      </St>
-      <St label="Tekst (8)">
-        <Swatches vars={["--lasso-text", "--lasso-text-2", "--lasso-text-3", "--lasso-placeholder", "--lasso-icon", "--lasso-faint", "--lasso-danger", "--lasso-positive"]} />
-      </St>
-      <St label="Flader og linjer (8)">
-        <Swatches vars={["--lasso-bg", "--lasso-surface-2", "--lasso-surface-muted", "--lasso-chrome", "--lasso-border", "--lasso-border-strong", "--lasso-divider-subtle", "--lasso-overlay"]} />
-      </St>
-      <St label="Status">
-        <Swatches vars={["--lasso-danger", "--lasso-danger-soft", "--lasso-positive", "--lasso-positive-soft", "--lasso-warning", "--lasso-warning-soft", "--lasso-bankrupt"]} />
-      </St>
-    </Grid>
+    <div style={{ display: "grid", gap: 24 }}>
+      {row(CORAL, 256, 90)}
+      {row(TEXTS, 120, 54)}
+      {row(SURFACES, 120, 54)}
+    </div>
   );
 }
 
 const TYPE_ROWS: { name: string; fs: string; lh: string; fw: string; extra?: React.CSSProperties; text: string }[] = [
-  { name: "Display 32/40/700", fs: "--lasso-fs-display", lh: "--lasso-lh-display", fw: "700", text: "Eksempel Byg A/S" },
-  { name: "Titel 24/32/600", fs: "--lasso-fs-xl", lh: "--lasso-lh-xl", fw: "var(--lasso-fw-semibold)", text: "Regnskab 2025" },
-  { name: "Sidetitel 18/24/600", fs: "--lasso-fs-lg", lh: "--lasso-lh-lg", fw: "var(--lasso-fw-semibold)", text: "Nøgletal" },
-  { name: "Feltnavn 14/18/600", fs: "--lasso-fs", lh: "--lasso-lh", fw: "var(--lasso-fw-semibold)", text: "Postnummer" },
-  { name: "Knap/værdi 14/18/500", fs: "--lasso-fs", lh: "--lasso-lh", fw: "var(--lasso-fw-medium)", text: "18,4 mio. kr." },
-  { name: "Brødtekst 14/18/400", fs: "--lasso-fs", lh: "--lasso-lh", fw: "var(--lasso-fw-regular)", text: "Virksomheden driver entreprenørvirksomhed i Region Midtjylland." },
-  { name: "Lille 13/18/400", fs: "--lasso-fs-sm", lh: "--lasso-lh-sm", fw: "var(--lasso-fw-regular)", text: "Kilde: CVR, Erhvervsstyrelsen" },
-  { name: "Overlinje 11/14/600 +8 %", fs: "--lasso-fs-label", lh: "--lasso-lh-label", fw: "var(--lasso-fw-semibold)", extra: { letterSpacing: "var(--lasso-ls-label)", textTransform: "uppercase", color: "var(--lasso-muted)" }, text: "Stamoplysninger" },
+  { name: "Display 32/40/700", fs: "--lasso-fs-display", lh: "--lasso-lh-display", fw: "700", text: "Beskriv det du leder efter" },
+  { name: "Titel 24/32/600", fs: "--lasso-fs-xl", lh: "--lasso-lh-xl", fw: "var(--lasso-fw-semibold)", text: "Novo Nordisk Denmark A/S" },
+  { name: "Sidetitel 18/24/600", fs: "--lasso-fs-lg", lh: "--lasso-lh-lg", fw: "var(--lasso-fw-semibold)", text: "Store IT-selskaber" },
+  { name: "Feltnavn 14/18/600", fs: "--lasso-fs", lh: "--lasso-lh", fw: "var(--lasso-fw-semibold)", text: "Antal ansatte" },
+  { name: "Knap/værdi 14/18/500", fs: "--lasso-fs", lh: "--lasso-lh", fw: "var(--lasso-fw-medium)", text: "er mindst" },
+  { name: "Brødtekst 14/18/400", fs: "--lasso-fs", lh: "--lasso-lh", fw: "var(--lasso-fw-regular)", text: "Aarhus Datacenter A/S, Normal / aktiv, 62.01 Computerprogrammering" },
+  { name: "Lille 13/18/400", fs: "--lasso-fs-sm", lh: "--lasso-lh-sm", fw: "var(--lasso-fw-regular)", extra: { color: "var(--lasso-muted)" }, text: "5 kriterier, 1 uden værdi, af 1.243.501 danske virksomheder" },
+  { name: "Overlinje 11/14/600 +8 %", fs: "--lasso-fs-label", lh: "--lasso-lh-label", fw: "var(--lasso-fw-semibold)", extra: { letterSpacing: "var(--lasso-ls-label)", textTransform: "uppercase", color: "var(--lasso-muted)" }, text: "Eksempler" },
 ];
 
 function Typography() {
   return (
     <div style={{ display: "grid", gap: 0 }}>
       {TYPE_ROWS.map((r) => (
-        <div key={r.name} style={{ display: "flex", flexWrap: "wrap", columnGap: 20, rowGap: 4, alignItems: "baseline", padding: "12px 0", borderBottom: "1px solid var(--lasso-border)" }}>
-          <span className="lasso-small lasso-muted" style={{ flex: "0 0 220px" }}>{r.name}</span>
+        <div key={r.name} style={{ display: "flex", flexWrap: "wrap", columnGap: 0, rowGap: 4, alignItems: "baseline", padding: "14px 0", borderBottom: "1px solid var(--lasso-border)" }}>
+          <span className="lasso-small lasso-muted" style={{ flex: "0 0 205px" }}>{r.name}</span>
           <span style={{ flex: "1 1 240px", minWidth: 0, fontSize: `var(${r.fs})`, lineHeight: `var(${r.lh})`, fontWeight: r.fw as never, color: "var(--lasso-text)", ...r.extra }}>{r.text}</span>
         </div>
       ))}
@@ -117,77 +138,116 @@ function Typography() {
   );
 }
 
+/** 01.3: 8 koral kvadrater i stigende størrelse på en bundlinje, tallet under. */
 function Spacing() {
   const steps = ["--lasso-space-1", "--lasso-space-2", "--lasso-space-3", "--lasso-space-4", "--lasso-space-row", "--lasso-space-5", "--lasso-space-7", "--lasso-space-10"];
   const px = ["4", "8", "12", "16", "20", "24", "28", "40"];
   return (
-    <div style={{ display: "grid", gap: 10 }}>
+    <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
       {steps.map((s, i) => (
-        <div key={s} style={{ display: "grid", gridTemplateColumns: "180px 1fr", alignItems: "center", gap: 16 }}>
-          <code style={{ fontSize: 12, color: "var(--lasso-muted)" }}>{s.replace("--lasso-", "")}, {px[i]} px</code>
-          <div style={{ width: `var(${s})`, height: 16, background: "var(--lasso-accent-soft)", border: "1px solid var(--lasso-accent-border)" }} />
+        <div key={s} style={{ display: "grid", justifyItems: "center", gap: 6 }}>
+          <div style={{ width: `var(${s})`, height: `var(${s})`, background: "var(--lasso-accent)" }} />
+          <span className="lasso-small lasso-muted">{px[i]}</span>
         </div>
       ))}
     </div>
   );
 }
 
+/** 01.4: 5 kvadrater 60×60 med 1,5 px ink-kant: 6, 8, 10, 14 og rund. */
 function Radii() {
   const r: [string, string][] = [
-    ["--lasso-radius", "Felter og knapper"],
-    ["--lasso-radius-menu", "Menupunkter"],
-    ["--lasso-radius-lg", "Faner og kort"],
-    ["--lasso-radius-xl", "Dialoger"],
-    ["--lasso-radius-pill", "Kontakt/pille"],
+    ["--lasso-radius-xs", "6"],
+    ["--lasso-radius", "8"],
+    ["--lasso-radius-lg", "10"],
+    ["--lasso-radius-xl", "14"],
+    ["--lasso-radius-pill", "rund"],
   ];
   return (
-    <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+    <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
       {r.map(([v, t]) => (
-        <div key={v} style={{ display: "grid", gap: 8, justifyItems: "start" }}>
-          <div style={{ width: 96, height: 64, borderRadius: `var(${v})`, border: "1px solid var(--lasso-border-strong)", background: "var(--lasso-surface-2)" }} />
-          <code style={{ fontSize: 11, color: "var(--lasso-muted)" }}>{v.replace("--lasso-", "")}</code>
-          <span className="lasso-small">{t}</span>
+        <div key={v} style={{ display: "grid", gap: 8, justifyItems: "center" }}>
+          <div style={{ width: 60, height: 60, borderRadius: `var(${v})`, border: "1.5px solid var(--lasso-text)", background: "var(--lasso-surface)" }} />
+          <span className="lasso-small lasso-muted">{t}</span>
         </div>
       ))}
     </div>
   );
 }
 
+/** 01.5: menu (radius 10, blød skygge), dialog (radius 14, skygge) og fokus (1 px koral kant, radius 8), 66×50 uden tekst. */
 function Shadows() {
-  const box: React.CSSProperties = { width: 240, height: 110, borderRadius: "var(--lasso-radius-lg)", border: "1px solid var(--lasso-border)", background: "var(--lasso-surface)", padding: 16, boxSizing: "border-box" };
+  const box: React.CSSProperties = { width: 66, height: 50, background: "var(--lasso-surface)" };
+  const items: [string, React.CSSProperties][] = [
+    ["menu", { ...box, borderRadius: "var(--lasso-radius-lg)", boxShadow: "var(--lasso-shadow-pop)" }],
+    ["dialog", { ...box, borderRadius: "var(--lasso-radius-xl)", boxShadow: "var(--lasso-shadow-pop)" }],
+    ["fokus", { ...box, borderRadius: "var(--lasso-radius)", border: "1px solid var(--lasso-focus-border)" }],
+  ];
   return (
-    <div style={{ display: "flex", gap: 32, flexWrap: "wrap", alignItems: "flex-start", paddingBottom: 24 }}>
-      <St label="Kort, ingen skygge">
-        <div style={{ ...box, boxShadow: "var(--lasso-shadow)" }} className="lasso-small">--lasso-shadow: none</div>
-      </St>
-      <St label="Svævende (menu, dialog)">
-        <div style={{ ...box, boxShadow: "var(--lasso-shadow-pop)", borderRadius: "var(--lasso-radius-xl)" }} className="lasso-small">--lasso-shadow-pop</div>
-      </St>
-      <St label="Fokus, 1 px koral kant">
-        <input className="lasso-input" defaultValue="2100, 2200" style={{ borderColor: "var(--lasso-focus-border)", width: 240 }} aria-label="Fokus" />
-      </St>
+    <div style={{ display: "flex", gap: 16, padding: "8px 8px 32px" }}>
+      {items.map(([t, st]) => (
+        <div key={t} style={{ display: "grid", gap: 10, justifyItems: "center" }}>
+          <div style={st} />
+          <span className="lasso-small lasso-muted">{t}</span>
+        </div>
+      ))}
     </div>
   );
 }
 
+const ICON_NAMES_PAPER = ["søg", "chevron", "videre", "valgt", "luk", "tilføj", "eksportér", "redigér", "flere", "info", "slet", "fortryd", "gemt", "liste", "oversigt", "sidepanel", "notifikation", "bruger", "AI", "virksomhed"];
+
+/** 01.6: 20 ikoner i 2 × 10, 18 px ink, navne med små bogstaver. */
 function Icons() {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))", gap: 16 }}>
-      {CATALOG_ICONS.map((n) => (
-        <div key={n} style={{ display: "grid", justifyItems: "center", gap: 8, padding: "12px 4px", color: "var(--lasso-text)" }}>
-          <Icon name={n} size={24} />
-          <span className="lasso-small lasso-muted">{ICON_LABELS[n]}</span>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(10, 92px)", gap: 10 }}>
+      {CATALOG_ICONS.map((n, i) => (
+        <div key={n} style={{ display: "grid", justifyItems: "center", alignContent: "center", gap: 8, height: 74, borderRadius: "var(--lasso-radius-lg)", background: "var(--lasso-surface-muted)", color: "var(--lasso-text)" }}>
+          <Icon name={n} size={18} label={ICON_LABELS[n]} />
+          <span className="lasso-small lasso-muted" style={{ fontSize: 11 }}>{ICON_NAMES_PAPER[i]}</span>
         </div>
       ))}
-      <div style={{ gridColumn: "1 / -1", display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center", color: "var(--lasso-text-2)" }}>
-        <span className="lasso-small lasso-muted">Størrelser:</span>
-        {[14, 16, 18, 20].map((s) => (
-          <span key={s} style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
-            <Icon name="search" size={s} />
-            <span className="lasso-small" style={{ whiteSpace: "nowrap" }}>{s} px</span>
-          </span>
-        ))}
-      </div>
+    </div>
+  );
+}
+
+/** 01.7: Papers faste regler for datavisning, nummereret i to kolonner. */
+const DATA_RULES: string[] = [
+  "Status er ren tekst i vægt 500: Aktiv i tekstfarve, Ophørt i grå, Under konkurs i mørk rød (#B42318), Under likvidation i warning-tekst. Ingen piller, prikker eller farvede baggrunde.",
+  "Ingen dekorative piller: Positiv, Lav risiko, Ny og lignende skrives som tekst eller udelades. Tællere står kun i overskrifter og tekst, aldrig på faner. Kun filter-chips (valgbare) må have kant.",
+  "Ingen ink (sort) baggrund på rækker eller flader. Bundlinjer i tabeller markeres med vægt 700 og en 1 px linje over, ikke fyld. Kun tooltips er ink.",
+  "Ingen farvede bannerbokse. Sammenfatninger, risikonoter og AI-analyser er almindelige sektioner på hvid flade: overskrift, brødtekst, diskret kildelink. Et lille farvet ikon foran en tekstlinje er nok.",
+  "\"Skrevet af AI\" eller lignende mærker vises ikke. Kilden angives i stedet i kildelinjen.",
+  "Virksomheds- og personnavne står alene i lister og tabeller. Ingen grå ikonkasse med bygnings- eller personikon foran navnet.",
+  "Nyhedskilder vises med sidens favicon som 16 px mærke (radius 3) foran kildenavnet. Ingen bogstavskasser.",
+  "Mulig fejl i data: 14 px udråbstegn-ikon i warning-farve efter tallet, forklaring i tooltip ved mouseover. Ingen mærke, pille eller stiplet understregning.",
+  "Separator i nøglefakta-, metadata- og kildelinjer er komma: \"CVR 34580820, A/S, København K\". Midterprik og lodret streg bruges aldrig, hverken i produktet eller i katalogets egne noter, overlinjer og specifikationer.",
+  "Reglerne gælder uændret på tablet og mobil. Mobil kompakterer med label over værdi, aldrig med piller eller ikoner som erstatning for tekst.",
+  "Faner viser kun navnet: ingen antal, badges eller prikker på sektionsfaner, segmentkontroller, sidepanelets sektioner eller bundnavigationen. Antal hører til i sektionens overskrift eller i teksten.",
+  "Hvid flade overalt, også på tablet og mobil. Sektioner adskilles med 1 px linjer og luft, aldrig hvide kort på grå baggrund. Muted tekst er mindst #667085 (4,5:1); faint bruges kun til dekoration.",
+  "Flere værdier end formen kan vise: vis de første 3 og \"Se N …\", som åbner et panel fra højre over siden (08 Kontaktpersoner). Gælder kontaktpersoner, telefonnumre, e-mails, P-enheder, bibrancher og ejere.",
+  "Én grå til al hjælpetekst: metatekst, kildelinjer, feltforklaringer og overlinjer bruger samme token (text-muted = text-secondary, #5B6068). Den lysere grå (#8A9099) er kun til ikoner og dekoration, aldrig til tekst der skal læses, på desktop, tablet og mobil.",
+  "Aktive elementer har aldrig mørkt fyld. Aktiv side i paginering = ink-tekst i vægt 600 med tynd understregning; aktive segmenter, chips og trin markeres med tekstvægt, tynd kant eller koral-soft, aldrig en sort kasse.",
+  "Logo: kun de to mastere i 01b (ikon og navnelogo) i ink på hvid, klonet, aldrig tegnet som tekst eller farvet kasse. Navnelogo 18 px i fanebjælken, ikon 20 px i mobil-topbjælke og tabletskinne, 16 px som Lasso News-kilde, 28/14 px på rapportforside og i sidehoved/-fod.",
+  "Nyheder: én kilde pr. nyhed (favicon 16 px, navn, tid), ingen billeder, ingen tone-mærker, ingen samlede historier eller favicon-stakke. Virksomhedsnavnet i uddraget står i fed (ink, 600), aldrig i koral eller på farvet baggrund.",
+  "Korte ikon + værdi-lister (kontaktblok, genveje, maks 5 rækker) adskilles med luft, ikke skillelinjer. Linjer bruges kun i tabeller, nøgle-værdi-lister og lange lister.",
+];
+
+function DataRules({ split = 9 }: { split?: number }) {
+  const col = (from: number, to: number) => (
+    <ol style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 14, alignContent: "start" }}>
+      {DATA_RULES.slice(from, to).map((t, i) => (
+        <li key={i} style={{ display: "grid", gridTemplateColumns: "28px 1fr", fontSize: "var(--lasso-fs-sm)", lineHeight: "var(--lasso-lh-body)", color: "var(--lasso-text-2)" }}>
+          <span style={{ color: "var(--lasso-accent-text)", fontWeight: 600 }}>{from + i + 1}</span>
+          <span>{t}</span>
+        </li>
+      ))}
+    </ol>
+  );
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "14px 56px" }}>
+      {col(0, split)}
+      {col(split, DATA_RULES.length)}
     </div>
   );
 }
@@ -195,40 +255,50 @@ function Icons() {
 // ---------- 01b Logo ----------
 
 function LogoMasters() {
-  const card: React.CSSProperties = { display: "grid", placeItems: "center", height: 120, border: "1px solid var(--lasso-border)", borderRadius: "var(--lasso-radius-lg)", color: "var(--lasso-text)" };
+  const card: React.CSSProperties = { display: "grid", placeItems: "center", height: 118, border: "1px solid var(--lasso-border)", borderRadius: "var(--lasso-radius-lg)", color: "var(--lasso-text)" };
+  const note: React.CSSProperties = { margin: 0, fontSize: "var(--lasso-fs-sm)", lineHeight: "var(--lasso-lh-body)", color: "var(--lasso-text-2)" };
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 32, alignItems: "start" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "180px 280px 180px minmax(200px, 1fr)", gap: 32, alignItems: "start" }}>
+      <style>{".gal-mark{width:76px;height:auto}.gal-word{width:150px;height:auto}.gal-mark48{width:58px;height:48px;display:block}"}</style>
       <St label="Master, ikon">
-        <div style={card}>
-          <LassoMark className="gal-mark" />
+        <div style={{ display: "grid", gap: 12 }}>
+          <div style={card}>
+            <LassoMark className="gal-mark" />
+          </div>
+          <p style={note}>Viewbox 117×97, forhold 1,2:1. Ikon alene i topbjælke, skinne, favicon og hvor pladsen er under 100 px.</p>
         </div>
-        <style>{".gal-mark{width:76px;height:auto}.gal-word{width:150px;height:auto}"}</style>
       </St>
       <St label="Master, navnelogo">
-        <div style={card}>
-          <LassoWordmark className="gal-word" />
+        <div style={{ display: "grid", gap: 12 }}>
+          <div style={card}>
+            <LassoWordmark className="gal-word" />
+          </div>
+          <p style={note}>Viewbox 453×132, forhold 3,4:1. Navnelogo i fanebjælke (desktop), rapportforside, login og tomme tilstande.</p>
         </div>
       </St>
       <St label="Frizone">
-        <div style={card}>
-          <div style={{ padding: 12, outline: "1px dashed var(--lasso-accent-border)" }}>
-            <LassoMark className="gal-mark48" />
+        <div style={{ display: "grid", gap: 12 }}>
+          <div style={card}>
+            <div style={{ padding: 12, border: "1px dashed var(--lasso-accent-border)" }}>
+              <LassoMark className="gal-mark48" />
+            </div>
           </div>
-          <style>{".gal-mark48{width:58px;height:48px;display:block}"}</style>
+          <p style={note}>Frizone = ¼ af logoets højde hele vejen rundt (ikon 48 px → 12 px). Intet andet element inden for zonen.</p>
         </div>
       </St>
       <St label="Brug">
-        <p className="lasso-small" style={{ margin: 0, color: "var(--lasso-text-2)" }}>
-          Tegnet med LassoMark og LassoWordmark (currentColor = ink). Brugsreglerne står kun i Paper; koden har ingen frizone-token.
-        </p>
+        <p style={note}>{LOGO_USE}</p>
       </St>
     </div>
   );
 }
 
+const LOGO_USE =
+  "Ikon 20 px i topbjælken og i tabletskinnen, 16 px som favicon og som Lasso News-kilde (radius 3, samme mønster som andre favicons). Navnelogo 18 px høj i fanebjælken og mobil-topbjælken, 28 px på rapportforsiden, 14 px i sidehoved/-fod på PDF. Aldrig i koral, aldrig på farvet flade, aldrig strakt, aldrig med skygge eller ramme. Minimum: ikon 12 px, navnelogo 12 px høj.";
+
 function LogoSizes() {
-  const mark: [number, string][] = [[16, "favicon, kilde"], [20, "app-ikon"], [24, "skinne"], [32, "tom tilstand"]];
-  const word: [number, string][] = [[14, "bundlinje, PDF hoved"], [18, "login, tomme tilstande"], [28, "forside, login"]];
+  const mark: [number, string][] = [[16, "favicon, kilde"], [20, "topbjælke"], [24, "skinne"], [32, "tom tilstand"]];
+  const word: [number, string][] = [[14, "PDF hoved/fod"], [18, "fanebjælke, mobil"], [28, "forside, login"]];
   return (
     <div style={{ display: "flex", gap: 40, alignItems: "flex-end", flexWrap: "wrap", color: "var(--lasso-text)", padding: "16px 0", borderTop: "1px solid var(--lasso-border)", borderBottom: "1px solid var(--lasso-border)" }}>
       <style>{mark.map(([h]) => `.gal-m${h}{height:${h}px;width:${(h * 117) / 97}px;display:block}`).join("") + word.map(([h]) => `.gal-w${h}{height:${h}px;width:${(h * 453) / 132}px;display:block}`).join("")}</style>
@@ -793,21 +863,7 @@ export const entries: GalleryEntry[] = [
   { nr: "01.4", title: "Hjørner", node: "9AC-0", render: () => <Radii /> },
   { nr: "01.5", title: "Skygger og fokus", node: "9AV-0", render: () => <Shadows /> },
   { nr: "01.6", title: "Ikoner", node: "9B9-0", render: () => <Icons /> },
-  {
-    nr: "01.7",
-    title: "Datavisning, faste regler",
-    node: "GY5-0",
-    spec: {
-      kind: "company",
-      title: "Eksempel Byg A/S",
-      components: [
-        { type: "LassoKeyFigureCards", company: "CVR-1-99000001" },
-        { type: "LassoKeyValueList", company: "CVR-1-99000001" },
-        { type: "LassoKeyValueList", company: "CVR-1-99000001", variant: "financials" },
-      ],
-    },
-    note: "Reglerne er tekst i Paper; her vist anvendt på demodata (danske tal, mio. kr. med én decimal, “Ikke oplyst”, nøgle-værdi-rækker).",
-  },
+  { nr: "01.7", title: "Datavisning, faste regler", node: "GY5-0", note: "Reglerne tegnet som i Paper (nummereret, to kolonner).", render: () => <DataRules /> },
   { nr: "01b.1", title: "Logo, mastere (ikon, navnelogo, frizone, brug)", node: "IFD-0", render: () => <LogoMasters /> },
   { nr: "01b.2", title: "Logostørrelser", node: "IG6-0", render: () => <LogoSizes />, note: "Paper viser 8 eksempler (4 ikon, 3–4 navnelogo); her 4 + 3 størrelser tegnet med samme komponenter." },
 
