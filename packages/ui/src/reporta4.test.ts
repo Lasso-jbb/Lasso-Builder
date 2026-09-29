@@ -133,3 +133,10 @@ test("27.4: side 4 viser risikoobservationerne med alvorsord, når de er hentet"
   assert.match(html, /<h2 class="lasso-a4__h2">Risikoobservationer<\/h2>/);
   assert.match(html, /lasso-a4-obs__dot--middel[^]*Middel, Revisor skiftet/);
 });
+
+test("27.2: grafens søjler er højst 24 px brede (print-regel: ingen fyldte flader over 24 px)", () => {
+  const html = render(dataset({ score: 52 }));
+  const bars = [...html.matchAll(/<rect class="lasso-a4-chart__bar[^"]*"[^>]*width="(\d+(?:\.\d+)?)"/g)].map((m) => Number(m[1]));
+  assert.ok(bars.length > 0);
+  for (const w of bars) assert.ok(w <= 24, `søjle ${w} px`);
+});

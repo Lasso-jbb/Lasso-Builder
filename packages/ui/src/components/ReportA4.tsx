@@ -280,7 +280,8 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
         const yOf = (v: number) => plotH - (v / tMax) * plotH;
         const W = 640;
         const slot = W / Math.max(points.length, 1);
-        const barW = 48;
+        // Print-regel (27): ingen fyldte farveflader bredere end 24 px (blæk), tallet står som tekst over søjlen.
+        const barW = 24;
         return (
           <section className="lasso-a4-page" key="p2">
             <PageHead name={name} cvr={cvr} stamp={stamp} />
@@ -334,7 +335,7 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
                         const h = Math.max(1, y0 - yv);
                         return (
                           <g key={p.year}>
-                            <rect className={`lasso-a4-chart__bar ${isLast ? "lasso-a4-chart__bar--last" : ""}`} x={x} y={yv} width={barW} height={h} rx={4} />
+                            <rect className={`lasso-a4-chart__bar ${isLast ? "lasso-a4-chart__bar--last" : ""}`} x={x} y={yv} width={barW} height={h} rx={3} />
                             <text className={`lasso-a4-chart__value ${isLast ? "lasso-a4-chart__value--last" : ""}`} x={x + barW / 2} y={yv - 6} textAnchor="middle">
                               {scale.fmt(p.value)}
                             </text>

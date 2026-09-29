@@ -28,19 +28,32 @@ export function SnapshotPicker({ subject, date, onChange, what = "data", min, to
         {active ? <span className="lasso-snapshot__tag">snapshot</span> : null}
       </div>
       <div className="lasso-snapshot__field">
-        <svg className="lasso-snapshot__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <rect x="4" y="5.5" width="16" height="14" rx="2" stroke="currentColor" strokeWidth="1.7" />
-          <path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-        </svg>
-        <input
-          type="date"
-          className="lasso-snapshot__input"
-          aria-label={`${subject} pr. dato`}
-          value={date ?? today}
-          min={min}
-          max={today}
-          onChange={(e) => onChange(e.target.value && e.target.value < today ? e.target.value : undefined)}
-        />
+        <label className="lasso-snapshot__pick">
+          <svg className="lasso-snapshot__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="4" y="5.5" width="16" height="14" rx="2" stroke="currentColor" strokeWidth="1.7" />
+            <path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+          </svg>
+          {/* Datoen skrives altid dansk (DD.MM.ÅÅÅÅ) uanset browserens sprog; det native felt ligger usynligt ovenpå og åbner datovælgeren. */}
+          <span className="lasso-snapshot__value" aria-hidden="true">
+            {formatDate(date ?? today)}
+          </span>
+          <input
+            type="date"
+            className="lasso-snapshot__input"
+            aria-label={`${subject} pr. dato`}
+            value={date ?? today}
+            min={min}
+            max={today}
+            onClick={(e) => {
+              try {
+                e.currentTarget.showPicker?.();
+              } catch {
+                /* ældre browsere åbner selv vælgeren */
+              }
+            }}
+            onChange={(e) => onChange(e.target.value && e.target.value < today ? e.target.value : undefined)}
+          />
+        </label>
         <button type="button" className="lasso-link lasso-snapshot__today" onClick={() => onChange(undefined)} disabled={!active}>
           I dag
         </button>

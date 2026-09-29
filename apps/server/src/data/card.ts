@@ -536,12 +536,15 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     const b = ds.beneficialOwnership[lassoId];
     if (b) {
       card.section("Reelle ejere");
-      if (b.owners.length === 0 && !b.gaps?.length) card.text("Ingen registreret reel ejer");
+      // 28.9: særlig tilstand forklarer altid, hvorfor listen ser ud, som den gør.
+      if (b.special) card.text(b.special.kind === "unidentified" ? `Kunne ikke identificeres. ${b.special.reason}` : b.special.reason);
+      if (b.special?.caveat) card.text(b.special.caveat);
+      if (b.owners.length === 0 && !b.gaps?.length && !b.special) card.text("Ingen registreret reel ejer");
       for (const o of b.owners.slice(0, 3)) {
-        card.row("Ejer", o.name);
-        card.row("", o.share ? `Reelt ${o.share}` : undefined);
+        card.row(o.role ? "Indsat" : "Ejer", o.throughRole ? `${o.name}, via rolle` : o.name);
+        card.row("", o.role ?? (o.share ? `Reelt ${o.share}` : undefined));
       }
-      for (const g of b.gaps ?? []) card.text(`Ingen reel ejer for ${g.share ?? "en del"}`);
+      if (!b.special) for (const g of b.gaps ?? []) card.text(`Ingen reel ejer for ${g.share ?? "en del"}`);
     }
   }
 

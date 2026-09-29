@@ -285,6 +285,10 @@ export const timelineSchema = z
       .enum(TIMELINE_FILTERS)
       .optional()
       .describe("Kun med person: 'risiko' viser kun forløbet i de selskaber, der er gået konkurs eller tvangsopløst (roller ind og ud og selskabets status)."),
+    filterColumn: z
+      .boolean()
+      .optional()
+      .describe("Mønster 6, Tidslinje (30.9): typefiltrene i en kolonne ¼ ved siden af strømmen ¾; fylder hele bredden. Under 960 px bliver filtrene chips over strømmen. Standard: typevælger i sektionens hoved."),
   })
   .refine(exactlyOneEntity, EXACTLY_ONE_ENTITY)
   .describe("Virksomhed: stiftelse, ledelsesskift og regnskaber. Person: indtrådt/udtrådt som X i selskaber og selskabernes konkurser/tvangsopløsninger.");
@@ -617,10 +621,26 @@ export type Width = (typeof WIDTHS)[number];
  */
 export const GROUP_PATTERNS = ["cards", "accordion"] as const;
 export type GroupPattern = (typeof GROUP_PATTERNS)[number];
+/**
+ * Modulværktøjslinjen (Paper 30.11, ModuleToolbar): 56 px under modulets overskrift, primær handling
+ * som sekundær knap yderst til venstre, evt. flere handlinger som tekstknapper. Hver handling er et
+ * opfølgende spørgsmål til Claude (prompt). Udelades, når modulet ingen handlinger har.
+ */
+export const toolbarActionSchema = z.object({
+  label: z.string().min(1).max(40),
+  prompt: z.string().min(1).max(400).describe("Opfølgende spørgsmål, der sendes til Claude ved klik, fx 'Eksportér nøgletallene for X som CSV'."),
+});
 export const groupSchema = z.object({
   id: z.string().min(1).max(40),
   pattern: z.enum(GROUP_PATTERNS),
   title: z.string().max(80).optional(),
+  toolbar: z
+    .object({
+      primary: toolbarActionSchema.optional(),
+      actions: z.array(toolbarActionSchema).max(3).optional(),
+    })
+    .optional()
+    .describe("Modulværktøjslinjen (30.11): primary = modulets primære handling (sekundær knap yderst til venstre), actions = op til 3 tekstknapper efter den. Udelad, når modulet ingen handlinger har."),
 });
 export type ComponentGroup = z.infer<typeof groupSchema>;
 
@@ -638,7 +658,7 @@ const widthShape = {
   group: groupSchema
     .optional()
     .describe(
-      "Mønster 8/9 (Paper 30): sammenhængende komponenter med samme group.id tegnes samlet, pattern 'cards' som kortgitter (to kolonner, én på mobil) eller 'accordion' som harmonika (en række pr. komponent, første åben). title = gruppens overskrift. Udelad for almindelig placering.",
+      "Mønster 8/9 (Paper 30): sammenhængende komponenter med samme group.id tegnes samlet, pattern 'cards' som kortgitter (to kolonner, én på mobil) eller 'accordion' som harmonika (en række pr. komponent, første åben). title = gruppens overskrift. toolbar = modulværktøjslinjen (30.11) med handlinger som opfølgende spørgsmål. Udelad for almindelig placering.",
     ),
 };
 function w<S extends z.ZodRawShape>(schema: z.ZodObject<S>) {
@@ -791,5 +811,7 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
 /** Den bredde, en komponent får i visningen. 'stack' giver altid fuld bredde. */
 export function widthOf(c: ViewComponent, layout: ViewSpec["layout"]): Width {
   if (layout === "stack") return "full";
+  // 30.9: tidslinjen med filterkolonne (¼ + ¾) fylder altid hele bredden.
+  if (c.type === "LassoTimeline" && c.filterColumn) return "full";
   return c.width ?? DEFAULT_WIDTH[c.type];
 }

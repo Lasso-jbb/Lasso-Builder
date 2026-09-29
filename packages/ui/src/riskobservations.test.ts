@@ -49,6 +49,10 @@ test("26h.1: DataState låst, på forespørgsel, tom med handling og fejl med r�
   const locked = renderToStaticMarkup(createElement(DataState, { state: "locked", reason: "Reelle ejere kræver Lasso Pro.", action: { label: "Se planer", onClick: () => {} } }));
   assert.match(locked, /lasso-state-locked__content/);
   assert.match(locked, /Reelle ejere kræver Lasso Pro\.[^]*lasso-btn--primary[^>]*>Se planer</);
+  const titled = renderToStaticMarkup(createElement(DataState, { state: "locked", title: "Reelle ejere kræver Lasso Pro", reason: "Se hvem der ejer.", action: { label: "Se planer" } }));
+  assert.match(titled, /lasso-state__title">Reelle ejere kræver Lasso Pro<[^]*Se hvem der ejer\./);
+  const reqTitled = renderToStaticMarkup(createElement(DataState, { state: "onrequest", title: "Kreditvurdering", reason: "Koster 1 kredit." }));
+  assert.match(reqTitled, /lasso-state__title">Kreditvurdering<[^]*Koster 1 kredit\./);
   const req = renderToStaticMarkup(createElement(DataState, { state: "onrequest", reason: "Tager 5–45 sekunder og koster 1 kredit.", action: { label: "Hent kreditvurdering", onClick: () => {} } }));
   assert.match(req, /koster 1 kredit\.[^]*Hent kreditvurdering/);
   const pending = renderToStaticMarkup(createElement(DataState, { state: "onrequest", reason: "x", pending: { title: "Henter vurdering …", detail: "ca. 20 sek." } }));

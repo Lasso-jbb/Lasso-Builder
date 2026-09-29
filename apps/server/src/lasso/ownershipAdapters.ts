@@ -1,4 +1,5 @@
-import type { BeneficialOwnerGapVM, BeneficialOwnershipVM, BeneficialOwnerVM, OwnershipGraphVM, OwnershipVM, OwnerVM } from "@lasso/spec";
+import { roleKind, type PersonRowVM } from "@lasso/spec";
+import type { BeneficialOwnerGapVM, BeneficialOwnershipSpecialVM, BeneficialOwnershipVM, BeneficialOwnerVM, OwnershipGraphVM, OwnershipVM, OwnerVM } from "@lasso/spec";
 import { at, isObj, num, participantKind, participantLassoId, percentFormat, pick, shareFloor, shareText, str, type Json } from "./adapters.js";
 
 /**
@@ -42,7 +43,8 @@ export function adaptBeneficialOwnershipDocumented(lassoId: string, raw: Json): 
       name,
       lassoId: participantLassoId(o),
       share: preciseShareText(num(o, "ownership")),
-      chain: throughRole ? "Via en rolle (fx ledelse), ikke et direkte kapitalejerskab" : undefined,
+      // 28.9: vises som ", via rolle" i muted efter navnet.
+      throughRole: throughRole || undefined,
     });
   }
   owners.sort((a, b) => shareFloor(b.share) - shareFloor(a.share));
@@ -52,7 +54,53 @@ export function adaptBeneficialOwnershipDocumented(lassoId: string, raw: Json): 
     const reason = explainEmptyBeneficialOwners(raw);
     if (reason) gaps.push({ reason });
   }
-  return { lassoId, owners, gaps: gaps.length ? gaps : undefined };
+  const special = owners.length === 0 ? specialBeneficialState(raw) : undefined;
+  return { lassoId, owners, gaps: gaps.length ? gaps : undefined, ...(special ? { special } : {}) };
+}
+
+/**
+ * Katalog 28.9 (1): ledelsen som reelle ejere. /owners/beneficial navngiver ikke de indsatte
+ * personer, så de hentes fra virksomhedens aktive roller (direktion eller bestyrelse, efter
+ * fallback-typen) og står som rækker med rollen til højre.
+ */
+export function withFallbackPeople(bo: BeneficialOwnershipVM, people: PersonRowVM[]): BeneficialOwnershipVM {
+  if (bo.special?.kind !== "management" || bo.owners.length > 0) return bo;
+  const want = bo.special.fallback === "board" ? "board" : "direction";
+  const seen = new Set<string>();
+  const owners: BeneficialOwnerVM[] = [];
+  for (const p of people) {
+    if (p.to || roleKind(p.role) !== want || /suppleant/i.test(p.role)) continue;
+    const key = p.lassoId ?? p.name;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    owners.push({ name: p.name, lassoId: p.lassoId, role: p.role });
+  }
+  return owners.length ? { ...bo, owners } : bo;
+}
+
+/**
+ * Katalog 28.9: de tre særlige tilstande, når owners er tom. Rækkefølge: kunne ikke identificere
+ * (virksomhedens egen registrering) > fritaget (exemptionStatus "EXEMPT") > ledelsen indsat
+ * (effectiveFallbackType/fallbackType). Ellers ingen særlig tilstand (gaps bærer forklaringen).
+ */
+function specialBeneficialState(raw: Json): BeneficialOwnershipSpecialVM | undefined {
+  const description = str(raw, "effectiveFallbackDescription", "fallbackDescription");
+  if (at(raw, "couldNotIdentify") === true) {
+    return { kind: "unidentified", reason: description ?? "Virksomheden har registreret i CVR, at den ikke kan identificere sine reelle ejere." };
+  }
+  if (str(raw, "exemptionStatus") === "EXEMPT") {
+    return {
+      kind: "exempt",
+      reason: "Virksomheden er undtaget kravet om at registrere reelle ejere.",
+      caveat: "Undtagelsen er vurderet ud fra virksomhedsform, branche og øvrige forhold i CVR og kan i særlige tilfælde være forkert.",
+    };
+  }
+  const type = str(raw, "effectiveFallbackType", "fallbackType")?.toUpperCase();
+  const fallback = type === "MANAGEMENT" ? "management" : type === "DAILY MANAGEMENT" ? "daily-management" : type === "BOARD" ? "board" : undefined;
+  if (fallback) {
+    return { kind: "management", fallback, reason: description ?? `Virksomheden har ikke registreret reelle ejere, og ${fallback === "board" ? "bestyrelsen" : fallback === "daily-management" ? "den daglige ledelse" : "ledelsen"} er indsat som reelle ejere.` };
+  }
+  return undefined;
 }
 
 /**

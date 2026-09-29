@@ -74,7 +74,7 @@ test("Modulværktøjslinjen: søgefelt før den primære handling (portalens sø
   const html = renderToStaticMarkup(
     createElement(ModuleToolbar, { field: createElement("input", { className: "lasso-input", "aria-label": "Søg" }), primary: { label: "Søg" } }),
   );
-  assert.match(html, /class="lasso-toolbar lasso-toolbar--field /);
+  assert.match(html, /class="lasso-toolbar lasso-toolbar--field"/);
   assert.ok(html.indexOf("lasso-toolbar__field") < html.indexOf("lasso-toolbar__primary"), "feltet står før knappen");
   assert.match(html, /<div class="lasso-toolbar__field"><input class="lasso-input" aria-label="Søg"\/><\/div>/);
   // Et felt alene er nok til at tegne linjen

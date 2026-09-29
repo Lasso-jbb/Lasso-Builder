@@ -21,6 +21,7 @@ import {
   formatNumber,
   formatPercent,
   mainMetric,
+  statusKind,
   type Dataset,
   type ViewSpec,
 } from "@lasso/spec";
@@ -873,7 +874,7 @@ const mobileStates: GalleryEntry[] = [
         {caption("Fejl")}
         <DataState state="error" title="Regnskab kunne ikke hentes" reason="Erhvervsstyrelsen svarede ikke. Prøv igen om lidt." onRetry={noop} />
         {caption("Låst")}
-        <DataState state="locked" reason="Reelle ejere kræver Lasso Pro." action={{ label: "Se planer", onClick: noop }} />
+        <DataState state="locked" title="Reelle ejere kræver Lasso Pro" reason="Se hvem der i sidste ende ejer og kontrollerer virksomheden." action={{ label: "Se planer", onClick: noop }} />
         {caption("På forespørgsel")}
         <DataState state="onrequest" title="Kreditvurdering" reason="Hentes fra Creditsafe. Koster 1 kredit og tager typisk 5–45 sekunder." action={{ label: "Hent kreditvurdering, 1 kredit", onClick: noop }} />
       </div>
@@ -951,8 +952,8 @@ const report: GalleryEntry[] = [
 /* ---------- 28 Øvrige datatyper ---------- */
 
 function Enumerations() {
-  // Samme klassificering som demodatasættet (apps/server/src/data/demo.ts statusKindOf).
-  const kindOf = (st: string) => (/konkurs|likvid/i.test(st) ? "warning" : /ophørt/i.test(st) ? "inactive" : "active");
+  // Samme klassificering som live-data og demodata (packages/spec/src/status.ts).
+  const kindOf = statusKind;
   const statuses = ["Normal", "Aktiv", "Ny", "Under reassumering", "Under frivillig likvidation", "Under rekonstruktion", "Under konkurs", "Opløst efter konkurs", "Tvangsopløst", "Ophørt"].map(
     (st) => [st, kindOf(st)] as const,
   );
@@ -1047,22 +1048,37 @@ const datatypes: GalleryEntry[] = [
     nr: "28.9",
     title: "Reelle ejere: fritagelse, ledelsen som reelle ejere, kunne ikke identificeres",
     node: "HHS-0",
-    note: "LassoBeneficialOwners kender kun ejere, udækkede andele (gaps) og tom tilstand. De tre særlige tilstande (fallback til ledelsen, fritaget, kunne ikke identificeres) er ikke bygget; her vist med de tilstande, komponenten har.",
+    note: "Tre tilstande: ledelsen som reelle ejere (årsag + indsatte personer), fritaget (forbehold i muted) og kunne ikke identificeres (udråbstegn). Fjerde: almindelig liste med \"via rolle\".",
     spec: {
       kind: "custom",
       title: "Reelle ejere",
-      components: BO_STATES.map((company) => ({ type: "LassoBeneficialOwners", company, width: "full" })),
+      components: [...BO_STATES, C].map((company) => ({ type: "LassoBeneficialOwners", company, width: "full" })),
     },
     mutate: (ds) => {
       ds.beneficialOwnership[BO_STATES[0]!] = {
         lassoId: BO_STATES[0]!,
+        special: { kind: "management", fallback: "management", reason: "Virksomheden har ikke reelle ejere, og ledelsen er indsat som reelle ejere." },
         owners: [
-          { name: "Anne Eksempel", lassoId: "CVR-3-4000000001", chain: "Ledelsen er registreret som reelle ejere" },
-          { name: "Bo Eksempel", lassoId: "CVR-3-4000000002", chain: "Ledelsen er registreret som reelle ejere" },
+          { name: "Anne Eksempel", lassoId: "CVR-3-4000000001", role: "Direktør" },
+          { name: "Bo Eksempel", lassoId: "CVR-3-4000000002", role: "Direktør" },
         ],
       };
-      ds.beneficialOwnership[BO_STATES[1]!] = { lassoId: BO_STATES[1]!, owners: [] };
-      ds.beneficialOwnership[BO_STATES[2]!] = { lassoId: BO_STATES[2]!, owners: [], gaps: [{ share: "100 %", reason: "Den reelle ejer kunne ikke identificeres." }] };
+      ds.beneficialOwnership[BO_STATES[1]!] = {
+        lassoId: BO_STATES[1]!,
+        owners: [],
+        special: {
+          kind: "exempt",
+          reason: "Virksomheden er undtaget kravet om at registrere reelle ejere.",
+          caveat: "Undtagelsen er vurderet ud fra virksomhedsform, branche og øvrige forhold i CVR og kan i særlige tilfælde være forkert.",
+        },
+      };
+      ds.beneficialOwnership[BO_STATES[2]!] = {
+        lassoId: BO_STATES[2]!,
+        owners: [],
+        special: { kind: "unidentified", reason: "Virksomheden har registreret i CVR, at den ikke kan identificere sine reelle ejere." },
+      };
+      const base = ds.beneficialOwnership[C];
+      if (base) ds.beneficialOwnership[C] = { ...base, owners: [...base.owners, { name: "Carla Prøve", lassoId: "CVR-3-4000000003", throughRole: true }] };
     },
   },
 ];
@@ -1306,11 +1322,11 @@ const layout: GalleryEntry[] = [
     nr: "30.9",
     title: "Mønster 6, Tidslinje",
     node: "JB7-0",
-    note: "Kronologisk strøm ¾. Filterkolonnen ¼ fra Paper findes ikke som komponent; pladsen står tom.",
+    note: "LassoTimeline med filterColumn: filtre ¼ + kronologisk strøm ¾; på mobil chips over strømmen.",
     spec: {
       kind: "company",
       title: "Mønster 6, Tidslinje",
-      components: [head("compact"), { type: "LassoTimeline", company: C, limit: 10, width: "three-quarters" }],
+      components: [head("compact"), { type: "LassoTimeline", company: C, limit: 10, filterColumn: true }],
     },
   },
   {
@@ -1340,17 +1356,17 @@ const layout: GalleryEntry[] = [
     nr: "30.11",
     title: "Moduler sættes sammen forskelligt (inkl. mønster 8 kortgitter og 9 harmonika)",
     node: "JV3-0",
-    note: "group.pattern 'cards' (kortgitter, to kolonner) og 'accordion' (harmonika, første række åben). Modulværktøjslinjen (ModuleToolbar) er ikke med her.",
+    note: "group.pattern 'cards' (kortgitter, to kolonner) og 'accordion' (harmonika, første række åben), begge med modulværktøjslinjen (group.toolbar, 56 px).",
     spec: {
       kind: "company",
       title: "Mønster 8 og 9",
       components: [
         head("compact"),
-        { type: "LassoContact", company: C, group: { id: "kort", pattern: "cards", title: "Mønster 8, Kortgitter" } },
+        { type: "LassoContact", company: C, group: { id: "kort", pattern: "cards", title: "Mønster 8, Kortgitter", toolbar: { primary: { label: "Overvåg", prompt: "Overvåg Eksempel Byg A/S" }, actions: [{ label: "Eksportér", prompt: "Eksportér oplysningerne om Eksempel Byg A/S som CSV" }] } } },
         { type: "LassoKeyValueList", company: C, variant: "company", group: { id: "kort", pattern: "cards" } },
         { type: "LassoPersonList", company: C, group: { id: "kort", pattern: "cards" } },
         { type: "LassoOwnerList", company: C, group: { id: "kort", pattern: "cards" } },
-        { type: "LassoIncomeStatement", company: C, title: "Resultatopgørelse", group: { id: "harm", pattern: "accordion", title: "Mønster 9, Harmonika" } },
+        { type: "LassoIncomeStatement", company: C, title: "Resultatopgørelse", group: { id: "harm", pattern: "accordion", title: "Mønster 9, Harmonika", toolbar: { primary: { label: "Hent årsrapport", prompt: "Hent årsrapporten for Eksempel Byg A/S som PDF" } } } },
         { type: "LassoBalanceSheet", company: C, title: "Balance", group: { id: "harm", pattern: "accordion" } },
         { type: "LassoCashFlow", company: C, title: "Pengestrøm", group: { id: "harm", pattern: "accordion" } },
         { type: "LassoTextSections", company: C, variant: "analyse", title: "Regnskabsanalyse", group: { id: "harm", pattern: "accordion" } },

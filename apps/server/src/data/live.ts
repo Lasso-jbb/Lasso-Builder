@@ -59,7 +59,7 @@ import {
   participantNames,
 } from "../lasso/adapters.js";
 import { describeShape, LassoApiError, type LassoClient } from "../lasso/client.js";
-import { adaptOwnershipLegal } from "../lasso/ownershipAdapters.js";
+import { adaptOwnershipLegal, withFallbackPeople } from "../lasso/ownershipAdapters.js";
 import { adaptLassoNews, mergeNews } from "../lasso/riskNewsAdapters.js";
 import { adaptCompanyEvents } from "../lasso/eventAdapters.js";
 import { adaptPerson, adaptPersonNetwork, adaptPersonSearch, graphFromPersonRoles } from "../lasso/personAdapters.js";
@@ -362,7 +362,14 @@ export class LiveProvider implements DataProvider {
   }
 
   async beneficialOwnership(lassoId: string) {
-    return adaptBeneficialOwnership(lassoId, await this.client.ownersBeneficial(lassoId));
+    const bo = adaptBeneficialOwnership(lassoId, await this.client.ownersBeneficial(lassoId));
+    // 28.9: ledelsen som reelle ejere -> de indsatte personer hentes fra virksomhedens roller.
+    if (bo.special?.kind !== "management" || bo.owners.length > 0) return bo;
+    try {
+      return withFallbackPeople(bo, adaptPeople(await this.client.company(lassoId)));
+    } catch {
+      return bo;
+    }
   }
 
   /**

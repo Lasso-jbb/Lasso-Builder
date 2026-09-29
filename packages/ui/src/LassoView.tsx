@@ -87,6 +87,7 @@ import { ReportA4 } from "./components/ReportA4.js";
 import { personRolesCsv, specToCsv } from "./csv.js";
 import { Badge, Skeleton } from "./primitives.js";
 import { Accordion, CardGrid } from "./components/Layout.js";
+import { ModuleToolbar } from "./components/ModuleToolbar.js";
 import { SaveDialog } from "./SaveDialog.js";
 import { ToastProvider, Toasts, useHasToastProvider, useToast, type ToastOptions } from "./components/Toast.js";
 import type { ActionResult, LassoViewProps, ViewAction } from "./types.js";
@@ -436,6 +437,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           timeline={risk && all ? (person ? riskTimeline(all, person) : undefined) : all}
           title={c.title}
           limit={c.limit}
+          filterColumn={c.filterColumn}
           error={err(`timeline:${k}`) ?? (risk && c.person ? err(`person:${c.person}`) : undefined)}
           onOpen={props.host.drillDown ? act : undefined}
           emptyReason={
@@ -657,6 +659,14 @@ function renderGroup(group: ComponentGroup, items: readonly Indexed[], ds: Datas
           </div>
         </div>
       ) : null}
+      {group.toolbar ? (
+        // 30.11: modulværktøjslinjen under modulets overskrift; handlingerne er opfølgende spørgsmål.
+        <ModuleToolbar
+          className="lasso-toolbar--module"
+          primary={group.toolbar.primary ? { label: group.toolbar.primary.label, onClick: () => act({ kind: "prompt", prompt: group.toolbar!.primary!.prompt }) } : undefined}
+          secondary={(group.toolbar.actions ?? []).map((a) => ({ label: a.label, onClick: () => act({ kind: "prompt", prompt: a.prompt }) }))}
+        />
+      ) : null}
       {body}
     </section>
   );
@@ -843,7 +853,9 @@ export function LassoView(props: LassoViewProps) {
 }
 
 function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
-  const { spec, dataset, host, onAction, url, theme, loading, savePrefix, frameless = false } = props;
+  const { spec, dataset, host, onAction, url, theme, loading, savePrefix, frameless: framelessProp = false } = props;
+  // `embedded` er et ældre navn for det samme (portalens ramme har selv header og handlinger).
+  const frameless = framelessProp || Boolean(props.embedded);
   const toast = useToast();
   const [saving, setSaving] = useState(false);
   const [savedUrl, setSavedUrl] = useState<string | undefined>(url);

@@ -34,7 +34,7 @@ import type {
   PropertyVM,
   VetEventVM,
 } from "@lasso/spec";
-import { currencyUnit, foldChangeEntries, formatAmount, formatDate } from "@lasso/spec";
+import { currencyUnit, foldChangeEntries, formatAmount, formatDate, statusKind as specStatusKind } from "@lasso/spec";
 import { adaptBeneficialOwnershipDocumented, markUnknownOwnershipNodes } from "./ownershipAdapters.js";
 
 /**
@@ -142,21 +142,8 @@ export function regionFromZip(zip: string | number | undefined): string | undefi
   return "Nordjylland";
 }
 
-/**
- * CVR-status -> badge. Afsluttede forløb ("Opløst efter konkurs", "Opløst efter frivillig
- * likvidation", "Ophørt", "Slettet") er inaktive og testes FØRST, fordi de også indeholder
- * ord som "konkurs" og "likvidation". Igangværende forløb ("Under konkurs", "Under frivillig
- * likvidation", "Under tvangsopløsning", "Tvangsopløst", "Under reassumering") er advarsler.
- */
-export function statusKind(status: string | undefined): CompanyVM["statusKind"] {
-  if (!status) return undefined;
-  const s = status.toLowerCase().trim();
-  if (/^(opløst|ophør|slettet|lukket|ceased|dissolved|inactive|closed)/.test(s)) return "inactive";
-  if (/konkurs|likvid|tvangs|rekonstruktion|reassum|bankrupt|liquidat|insolv|under /.test(s)) return "warning";
-  if (/opløst|ophør|ceased|dissolved|slettet/.test(s)) return "inactive";
-  if (/aktiv|normal|active/.test(s)) return "active";
-  return undefined;
-}
+/** CVR-status -> farvegruppe. Delt med demodata; se packages/spec/src/status.ts. */
+export const statusKind = specStatusKind;
 
 /** CVR skriver kommuner med versaler: "GLADSAXE" -> "Gladsaxe", "LYNGBY-TAARBÆK" -> "Lyngby-Taarbæk". */
 export function titleCase(s: string | undefined): string | undefined {

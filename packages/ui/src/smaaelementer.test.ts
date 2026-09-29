@@ -22,9 +22,12 @@ test("26h.5: snapshot-skifter med native datovælger, I dag og ur-linje kun ved 
   assert.match(on, /Ejerdiagram, historik/);
   assert.match(on, /type="date"[^>]*value="2023-12-31"/);
   assert.match(on, />I dag</);
+  // Dansk datoformat uanset browserens sprog (det native felt er usynligt ovenpå).
+  assert.match(on, /lasso-snapshot__value[^>]*>31\.12\.2023</);
   assert.match(on, /Du ser ejerskab pr\. 31\.12\.2023\. Ændringer efter denne dato vises ikke\./);
   const off = renderToStaticMarkup(createElement(SnapshotPicker, { subject: "Ejerdiagram", today: "2026-09-29", onChange: () => {} }));
   assert.doesNotMatch(off, /Du ser/);
+  assert.match(off, /lasso-snapshot__value[^>]*>29\.09\.2026</);
 });
 
 test("26h.7: live-nummer med verificeret-linje, kopiér- og ring-knap", () => {

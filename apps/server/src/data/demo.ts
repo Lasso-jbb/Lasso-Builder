@@ -35,6 +35,7 @@ import {
   type TimelineVM,
   hasReportingDuty,
   isPersonId,
+  statusKind,
 } from "@lasso/spec";
 import { publicationsFromYears } from "../lasso/eventAdapters.js";
 import { CREDIT_NONE_REASON } from "../lasso/creditAdapters.js";
@@ -230,12 +231,8 @@ function newsFor(c: DemoCompany, limit: number): NewsVM {
   return { lassoId: c.lassoId, items };
 }
 
-function statusKindOf(s: string | undefined): CompanyVM["statusKind"] {
-  if (!s) return undefined;
-  if (/konkurs|likvid/i.test(s)) return "warning";
-  if (/ophørt/i.test(s)) return "inactive";
-  return "active";
-}
+/** Katalog 28.1: samme klassificering som live-data (fx "Tvangsopløst" og "Under rekonstruktion" er advarsler, aldrig aktive). */
+const statusKindOf = statusKind;
 
 const COMPANIES: DemoCompany[] = RAW.map((c) => ({ ...c, lassoId: `CVR-1-${c.cvr}`, statusKind: statusKindOf(c.status) }));
 const BY_ID = new Map(COMPANIES.map((c) => [c.lassoId, c]));
