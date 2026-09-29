@@ -153,14 +153,14 @@ function PropertyBlock({ property }: { property: PropertyVM }) {
                     </tr>
                   ))}
                   <tr className="lasso-table__total">
-                    <td />
-                    <td className="lasso-property__strong">
+                    <td className="lasso-cell--blank" />
+                    <td className="lasso-property__strong lasso-cell--total">
                       I alt, {buildings.length} bygning{buildings.length === 1 ? "" : "er"}
                     </td>
-                    <td />
-                    <td />
-                    <td className="lasso-num lasso-property__strong">{formatNumber(totalArea)}</td>
-                    <td className="lasso-num lasso-property__strong">{totalUnits > 0 ? formatNumber(totalUnits) : <Missing />}</td>
+                    <td className="lasso-cell--blank" />
+                    <td className="lasso-cell--blank" />
+                    <td data-label="Samlet m²" className="lasso-num lasso-property__strong">{formatNumber(totalArea)}</td>
+                    <td data-label="Enheder" className="lasso-num lasso-property__strong">{totalUnits > 0 ? formatNumber(totalUnits) : <Missing />}</td>
                   </tr>
                 </tbody>
               </table>
