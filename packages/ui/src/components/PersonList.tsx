@@ -33,7 +33,7 @@ export function PersonList({ people, show, title, error, onOpen }: { people?: Pe
   const hasEnded = people.some((p) => p.to);
   const rows = (mode === "all" ? people : people.filter((p) => !p.to)).slice().sort((a, b) => Number(Boolean(a.to)) - Number(Boolean(b.to)));
   // Niveau 3-faner (29): skifter kun elementets egen visning.
-  const toggle = hasEnded ? (
+  const segment = hasEnded ? (
     <Tabs
       level={3}
       className="lasso-seg-pill"
@@ -46,6 +46,13 @@ export function PersonList({ people, show, title, error, onOpen }: { people?: Pe
       onChange={(id) => setMode(id as "current" | "all")}
     />
   ) : null;
+  // 26c.4 mobil: intet segment, men antallet ("5 personer") til højre for titlen.
+  const toggle = (
+    <>
+      {segment ? <span className="lasso-personlist__segment">{segment}</span> : null}
+      <span className="lasso-personlist__count">{`${people.length} ${people.length === 1 ? "person" : "personer"}`}</span>
+    </>
+  );
   if (rows.length === 0) {
     return (
       <Section title={heading} action={toggle} span="half">
@@ -86,6 +93,11 @@ export function PersonList({ people, show, title, error, onOpen }: { people?: Pe
       {foldable ? (
         <button type="button" className="lasso-link lasso-more lasso-rowmore" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
           {expanded ? "Vis færre" : `Vis alle ${rows.length}`}
+        </button>
+      ) : null}
+      {hasEnded && mode === "current" ? (
+        <button type="button" className="lasso-link lasso-personlist__all" onClick={() => setMode("all")}>
+          {`Vis alle ${people.length}, inkl. fratrådte`}
         </button>
       ) : null}
     </Section>

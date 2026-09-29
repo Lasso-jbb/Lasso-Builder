@@ -113,6 +113,10 @@ export interface PersonTableRowVM {
   bankruptcies: number;
   birthYear?: number;
   city?: string;
+  /** 15.3 "Selskaber": antal forskellige selskaber, personen har eller har haft en rolle i. */
+  companies?: number;
+  /** 15.3 "Seneste ændring": nyeste til- eller fratrædelsesdato (ISO). */
+  lastChange?: string;
 }
 
 export interface PersonSearchResultVM {
@@ -142,6 +146,8 @@ export function personTableRow(p: PersonVM): PersonTableRowVM {
     bankruptcies: personRisk(p).bankruptcies.length,
     birthYear: p.birthYear,
     city: p.addressProtected ? undefined : p.city,
+    companies: new Set(p.roles.map((r) => r.companyId ?? r.companyName)).size,
+    lastChange: p.roles.flatMap((r) => [r.from, r.to]).filter((d): d is string => Boolean(d)).sort().at(-1),
   };
 }
 

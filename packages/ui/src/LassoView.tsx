@@ -107,6 +107,8 @@ export interface FrameTools {
   monitor?: { id: string; monitoring: boolean; busy: boolean; toggle: () => void };
   exportItems: MenuItem[];
   more: MenuItem[];
+  /** 15.1 "Gem som liste": åbner gem-dialogen, når værten kan gemme visninger. */
+  saveList?: () => void;
 }
 
 /**
@@ -177,7 +179,13 @@ function PersonHeadBridge({ c, ds, props, act, frame }: { c: Extract<ViewCompone
       person={person}
       error={ds.errors[`person:${c.person}`]}
       variant={variant}
-      actions={full ? headActionsFor(c.person, name, frame) : frame.monitor?.id === c.person ? { monitor: { monitoring: frame.monitor.monitoring, busy: frame.monitor.busy, onClick: frame.monitor.toggle } } : undefined}
+      actions={
+        full
+          ? { ...headActionsFor(c.person, name, frame), network: sectionAction(props, act, { lassoId: c.person, pageKind: "person", section: "netvaerk", name, label: "Netværk" }) }
+          : frame.monitor?.id === c.person
+            ? { monitor: { monitoring: frame.monitor.monitoring, busy: frame.monitor.busy, onClick: frame.monitor.toggle } }
+            : undefined
+      }
       onSeeRisk={sectionAction(props, act, { lassoId: c.person, pageKind: "person", section: "risiko", name, label: "Risiko" })}
       below={full ? headTabsOf(props) : undefined}
     />
@@ -257,7 +265,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return <OwnerList key={key} ownership={empty.ownership[c.company]} error={err(`ownership:${c.company}`)} onOpen={props.host.drillDown ? act : undefined} />;
     case "LassoOwnershipDiagram": {
       const k = ownershipGraphKey(c);
-      return <OwnershipDiagram key={key} graph={empty.ownershipGraphs?.[k]} error={err(`graph:${k}`)} title={c.title} onAction={act} canDrillDown={Boolean(props.host.drillDown)} canPrompt={Boolean(props.host.prompt)} canFullscreen={Boolean(props.host.fullscreen)} />;
+      return <OwnershipDiagram key={key} graph={empty.ownershipGraphs?.[k]} error={err(`graph:${k}`)} title={c.title} onAction={act} canDrillDown={Boolean(props.host.drillDown)} canPrompt={Boolean(props.host.prompt)} canFullscreen={Boolean(props.host.fullscreen)} demo={empty.source === "demo"} />;
     }
     case "LassoCompanyTable": {
       const k = searchKey(c.search);
@@ -276,6 +284,8 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           canPrompt={Boolean(props.host.prompt)}
           canSavePage={Boolean(props.host.savePage)}
           onRetry={props.host.refresh ? () => act({ kind: "refresh" }) : undefined}
+          initialSort={c.search.sort}
+          onSaveList={frame.saveList}
         />
       );
     }
@@ -397,7 +407,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       );
     case "LassoRiskObservations":
       // Katalog 17.2: komponeres ikke automatisk (observationskaldet tager 10–14 s), men vises, når en spec beder om den.
-      return <RiskObservations key={key} data={empty.observations[c.company]} error={err(`observations:${c.company}`)} title={c.title} compact={c.compact} demo={empty.source === "demo"} />;
+      return <RiskObservations key={key} data={empty.observations[c.company]} error={err(`observations:${c.company}`)} title={c.title} compact={c.compact} demo={empty.source === "demo"} onAction={act} />;
     case "LassoCreditRating":
       return <CreditRating key={key} rating={empty.creditRatings?.[c.company]} title={c.title} error={err(`creditRating:${c.company}`)} onAction={act} />;
     case "LassoAuditorIndependence":
@@ -502,7 +512,16 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoPersonNetwork":
       return <PersonNetwork key={key} network={empty.personNetworks[c.person]} title={c.title} limit={c.limit} error={err(`personNetwork:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} />;
     case "LassoPersonRisk":
-      return <PersonRisk key={key} person={empty.persons[c.person]} title={c.title} error={err(`person:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} />;
+      return (
+        <PersonRisk
+          key={key}
+          person={empty.persons[c.person]}
+          title={c.title}
+          error={err(`person:${c.person}`)}
+          onOpen={props.host.drillDown ? act : undefined}
+          onUpgrade={props.host.prompt ? () => act({ kind: "prompt", prompt: "Hvilke Lasso-pakker giver adgang til tjek mod sanktionslister?" }) : undefined}
+        />
+      );
     case "LassoPersonStats":
       return <PersonStats key={key} person={empty.persons[c.person]} network={empty.personNetworks[c.person]} error={err(`person:${c.person}`)} networkError={err(`personNetwork:${c.person}`)} />;
     case "LassoPersonFacts":
@@ -935,6 +954,7 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
             : []),
         ]
       : [],
+    saveList: host.save ? () => setSaving(true) : undefined,
     more: headActions
       ? [
           ...(shareUrl ? [{ id: "link", label: "Kopiér link", icon: <ShellIcon name="copy" size={16} />, onSelect: () => void copy(shareUrl) }] : []),

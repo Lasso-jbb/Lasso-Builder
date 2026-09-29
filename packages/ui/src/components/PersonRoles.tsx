@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { personCompanies, personRoleRows, type PersonCompanyVM, type PersonRoleRowVM, type PersonRoleVM, type PersonRolesShow, type PersonVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
@@ -64,6 +64,16 @@ function RowCompany({ row, onOpen }: { row: PersonRoleRowVM; onOpen?: (a: ViewAc
   return <>{row.companyName}</>;
 }
 
+/** "MM.ÅÅÅÅ" fra en ISO-dato. */
+const monthYear = (d?: string) => (d && d.length >= 7 ? `${d.slice(5, 7)}.${d.slice(0, 4)}` : year(d));
+
+/** Mobilens undertekst (26d.4): rollerne og "siden 03.2015" (aktive) eller perioden (ophørte). */
+function mobileSub(r: PersonRoleRowVM, show: Exclude<PersonRolesShow, "all">): string {
+  if (show === "ended") return [r.text, r.period].filter(Boolean).join(", ");
+  const first = r.roles.map((x) => x.from).filter((f): f is string => Boolean(f)).sort()[0];
+  return first ? `${r.text}, siden ${monthYear(first)}` : r.text;
+}
+
 const LIST_EMPTY: Record<Exclude<PersonRolesShow, "all">, string> = {
   current: "Personen har ingen aktive roller i selskaber i CVR.",
   ended: "Personen har ingen ophørte roller i CVR.",
@@ -102,7 +112,7 @@ function PersonRoleList({
   }
   const visible = expanded ? rows : rows.slice(0, limit);
   return (
-    <Section title={heading} className="lasso-personrolelist">
+    <Section title={heading} className="lasso-personrolelist" action={<span className="lasso-personrolelist__count">{rows.length}</span>}>
       <ul className="lasso-rows">
         {visible.map((r) => (
           <li key={r.key} className="lasso-row">
@@ -122,6 +132,12 @@ function PersonRoleList({
               </div>
             </div>
             {r.period ? <div className="lasso-row__side">{r.period}</div> : null}
+            {/* 26d.4 mobil: "Direktør, siden 03.2015" under navnet, status som tekst og chevron til højre. */}
+            <div className="lasso-personrolelist__msub">{mobileSub(r, show)}</div>
+            <span className={`lasso-personrolelist__mstatus${r.companyStatus ? " is-warning" : ""}`}>{r.companyStatus ?? (show === "ended" ? "Ophørt" : "Aktiv")}</span>
+            <svg className="lasso-personrolelist__chev" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </li>
         ))}
       </ul>
@@ -223,7 +239,9 @@ export function PersonRoles({
   );
 
   return (
-    <Section title={heading} action={legendNode} className="lasso-personroles">
+    <Section className="lasso-personroles">
+      <div className="lasso-personroles__desk">
+      <SectionHead title={heading} action={legendNode} />
       <div className="lasso-personroles__axis" aria-hidden="true">
         <div className="lasso-personroles__spacer" />
         <div className="lasso-personroles__ticks">
@@ -285,6 +303,114 @@ export function PersonRoles({
         </button>
       ) : null}
       <SourceLine source="CVR via Lasso" updated={person.updated} />
+      </div>
+      <MobileBands person={person} title={title} onOpen={onOpen} />
     </Section>
+  );
+}
+
+function SectionHead({ title, action }: { title: string; action?: ReactNode }) {
+  return (
+    <div className="lasso-section__head">
+      <div className="lasso-section__titles">
+        <h3 className="lasso-section__title">{title}</h3>
+      </div>
+      {action ? <div className="lasso-section__action">{action}</div> : null}
+    </div>
+  );
+}
+
+/** Mobil (26d.3): højst seks rækker før "Vis alle". */
+const MOBILE_ROWS = 6;
+
+/**
+ * Tidsbånd på mobil (26d.3, container ≤ 560): én række pr. rolle med etiketten "Selskab, rolle"
+ * 14 ink over en 10 px bjælke på en grå bane i fuld bredde og perioden ("2015–") muted til højre.
+ * Aksen 2012/2016/…/nu over rækkerne, legenden nederst (Ledelse koral, Ejerskab mørkeblå, Endt i
+ * konkurs hul). En rolle i et selskab, der endte i konkurs, er en hul koral-kantet bjælke med muted etiket.
+ */
+function MobileBands({ person, title, onOpen }: { person: PersonVM; title?: string; onOpen?: (a: ViewAction) => void }) {
+  const [all, setAll] = useState(false);
+  const now = Date.now();
+  const thisYear = new Date(now).getFullYear();
+  const froms = person.roles.map((r) => r.from).filter((d): d is string => Boolean(d)).map((d) => Number(d.slice(0, 4))).filter(Number.isFinite);
+  const startYear = Math.min(thisYear - 4, ...froms);
+  const start = Date.UTC(startYear, 0, 1);
+  const span = Math.max(DAY, now - start);
+  const pos = (d: string | undefined, fallback: number) => {
+    const t = d ? Date.parse(d) : fallback;
+    return Math.max(0, Math.min(100, (((Number.isFinite(t) ? t : fallback) - start) / span) * 100));
+  };
+  const ticks: number[] = [];
+  for (let y = startYear; y <= thisYear - 3; y += 4) ticks.push(y);
+  const bankrupt = (r: PersonRoleVM) => r.companyStatusKind === "warning" || /konkurs/i.test(r.companyStatus ?? "");
+  const rows = [...person.roles].sort((a, b) => Number(b.active) - Number(a.active) || (a.from ?? "").localeCompare(b.from ?? ""));
+  const shown = all ? rows : rows.slice(0, MOBILE_ROWS);
+  const hasOwner = rows.some((r) => r.kind === "owner");
+  const hasMgmt = rows.some((r) => r.kind !== "owner");
+  const hasBankrupt = rows.some(bankrupt);
+  return (
+    <div className="lasso-personroles__mob">
+      <SectionHead title={title ?? "Tidsbånd"} action={<span className="lasso-personroles__range">{`${startYear}–${thisYear}`}</span>} />
+      <div className="lasso-mbands__axis" aria-hidden="true">
+        {ticks.map((y) => (
+          <span key={y} className="lasso-mbands__tick" style={{ left: `${pos(`${y}-01-01`, now)}%` }}>
+            {y}
+          </span>
+        ))}
+        <span className="lasso-mbands__tick lasso-mbands__tick--now">nu</span>
+      </div>
+      <ul className="lasso-mbands__rows">
+        {shown.map((r, i) => {
+          const left = pos(r.from, start);
+          const right = pos(r.to ?? (bankrupt(r) ? r.companyEnded : undefined), now);
+          const period = `${year(r.from)}–${r.to ? year(r.to) : ""}`;
+          const label = `${r.companyName}, ${r.role.toLowerCase()}${r.share ? ` ${r.share}` : ""}`;
+          const tone = bankrupt(r) ? "bankrupt" : r.kind === "owner" ? "owner" : "mgmt";
+          return (
+            <li key={`${r.companyName}-${r.role}-${i}`} className={`lasso-mbands__row lasso-mbands__row--${tone}`}>
+              <span className="lasso-mbands__head">
+                {onOpen && r.companyId?.startsWith("CVR-1-") ? (
+                  <button type="button" className="lasso-link lasso-mbands__label" onClick={() => onOpen({ kind: "open-company", lassoId: r.companyId!, name: r.companyName })}>
+                    {label}
+                  </button>
+                ) : (
+                  <span className="lasso-mbands__label">{label}</span>
+                )}
+                <span className="lasso-mbands__period">{period}</span>
+              </span>
+              <span className="lasso-mbands__track" aria-hidden="true">
+                <span className={`lasso-mbands__bar lasso-mbands__bar--${tone}`} style={{ left: `${left}%`, width: `${Math.max(1.5, right - left)}%` }} />
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      {rows.length > MOBILE_ROWS ? (
+        <button type="button" className="lasso-link lasso-more" aria-expanded={all} onClick={() => setAll(!all)}>
+          {all ? "Vis færre" : `Vis alle ${rows.length} roller`}
+        </button>
+      ) : null}
+      <div className="lasso-mbands__legend" aria-hidden="true">
+        {hasMgmt ? (
+          <span className="lasso-personroles__key">
+            <span className="lasso-mbands__swatch lasso-mbands__bar--mgmt" />
+            Ledelse
+          </span>
+        ) : null}
+        {hasOwner ? (
+          <span className="lasso-personroles__key">
+            <span className="lasso-mbands__swatch lasso-mbands__bar--owner" />
+            Ejerskab
+          </span>
+        ) : null}
+        {hasBankrupt ? (
+          <span className="lasso-personroles__key">
+            <span className="lasso-mbands__swatch lasso-mbands__bar--bankrupt" />
+            Endt i konkurs
+          </span>
+        ) : null}
+      </div>
+    </div>
   );
 }

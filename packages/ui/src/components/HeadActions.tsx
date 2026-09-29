@@ -20,6 +20,8 @@ export interface HeadActionsProps {
   save?: { saved: boolean; busy?: boolean; onClick: () => void };
   exportItems?: readonly MenuItem[];
   more?: readonly MenuItem[];
+  /** 26d.1: netværksknap (personens netværk); vises kun på mobil i personhovedet. */
+  network?: () => void;
   /** Ophørt: "Se historik" som tekstlink i stedet for Overvåg. */
   history?: () => void;
   /** Ord ved ikonerne (variant med ord), ellers kun ikoner med aria-label og title. */
@@ -74,7 +76,7 @@ function SaveButton({ save, labels }: { save: NonNullable<HeadActionsProps["save
 }
 
 function ExportButton({ items, labels, context }: { items: readonly MenuItem[]; labels: boolean; context?: HeadActionsProps["context"] }) {
-  const cls = `lasso-headbtn${labels ? " lasso-headbtn--label" : ""}`;
+  const cls = `lasso-headbtn lasso-headbtn--export${labels ? " lasso-headbtn--label" : ""}`;
   const face = (
     <>
       <ShellIcon name="download" size={16} />
@@ -92,7 +94,7 @@ function ExportButton({ items, labels, context }: { items: readonly MenuItem[]; 
   return <Menu trigger={face} triggerClassName={cls} triggerLabel={labels ? undefined : "Eksportér"} items={items} align="end" context={context} label="Eksportér" />;
 }
 
-export function HeadActions({ monitor, save, exportItems, more, history, labels = false, context, className = "" }: HeadActionsProps) {
+export function HeadActions({ monitor, save, exportItems, more, history, network, labels = false, context, className = "" }: HeadActionsProps) {
   if (!hasHeadActions({ monitor, save, exportItems, more, history })) return null;
   const moreMenu = more?.length ? (
     <Menu trigger={<ShellIcon name="more" size={18} />} triggerClassName="lasso-headbtn lasso-headbtn--more" triggerLabel="Flere handlinger" items={more} align="end" context={context} label="Flere handlinger" />
@@ -105,6 +107,11 @@ export function HeadActions({ monitor, save, exportItems, more, history, labels 
   const mon = monitor && !history ? <MonitorButton monitor={monitor} labels={labels} /> : null;
   const sv = save ? <SaveButton save={save} labels={labels} /> : null;
   const ex = exportItems?.length ? <ExportButton items={exportItems} labels={labels} context={context} /> : null;
+  const net = network ? (
+    <button type="button" className="lasso-headbtn lasso-headbtn--network" aria-label="Netværk" title="Netværk" onClick={network}>
+      <ShellIcon name="network" size={16} />
+    </button>
+  ) : null;
   return (
     <div className={`lasso-headactions${labels ? " lasso-headactions--labels" : ""} ${className}`} role="group" aria-label="Handlinger">
       {labels ? (
@@ -119,6 +126,7 @@ export function HeadActions({ monitor, save, exportItems, more, history, labels 
         <>
           {historyLink}
           {mon}
+          {net}
           {sv}
           {ex}
           {moreMenu}

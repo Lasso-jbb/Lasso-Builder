@@ -171,14 +171,16 @@ test("loft pr. lag i anden række: '3 × 5–9,99 %' og 'hver' når andelene er 
   assert.equal(e.label?.lines[0]?.text, "3 × 5–9,99 %");
 });
 
-test("ukendt ejer: summen af registrerede andele under 100 % giver én stiplet node", () => {
+test("ukendt ejer (14b): summen af registrerede andele under 100 % giver én stiplet node under fokus", () => {
   const g = graph("R", [co("R"), co("A"), co("B")], [own("A", "R", 40), own("B", "R", 35)]);
   const l = layoutOwnership(g);
   const u = l.nodes.find((n) => n.kind === "unknown")!;
-  assert.equal(u.layer, -1);
-  const e = l.edges.find((x) => x.from === u.id)!;
+  assert.equal(u.layer, 1);
+  assert.equal(u.title, "Ukendt ejerskab, resterende 25 %");
+  assert.equal(u.subtitle, "Andele under 5 % registreres ikke i CVR");
+  const e = l.edges.find((x) => x.to === u.id)!;
   assert.equal(e.style, "dashed");
-  assert.equal(e.label?.lines[0]?.text, "≤ 25 %");
+  assert.equal(e.label, undefined);
   // 100 % ejet: ingen ukendt.
   assert.ok(!layoutOwnership(graph("R", [co("R"), co("A")], [own("A", "R")])).nodes.some((n) => n.kind === "unknown"));
 });
@@ -188,7 +190,7 @@ test("ukendt < 5 %: CVR-intervaller der kan nå 100 %, men kun med en rest på h
   const l = layoutOwnership(g);
   const u = l.nodes.find((n) => n.kind === "unknown")!;
   assert.ok(u);
-  assert.equal(l.edges.find((x) => x.from === u.id)!.label?.lines[0]?.text, "< 5 %");
+  assert.equal(u.title, "Ukendt ejerskab, resterende under 5 %");
   // Rest over 5 % med intervaller der kan nå 100 %: ingen ukendt ejer.
   assert.ok(!layoutOwnership(graph("R", [co("R"), co("A"), co("B")], [own("A", "R", 66.67, 89.99), own("B", "R", 10, 14.99)])).nodes.some((n) => n.kind === "unknown"));
 });

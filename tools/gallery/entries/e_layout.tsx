@@ -749,9 +749,27 @@ const mobileLists: GalleryEntry[] = [
     only: "mobile",
     spec: {
       kind: "list",
-      title: "Virksomheder",
-      criteria: [{ field: "ansatte", operator: "gte", value: 5 }],
-      components: [{ type: "LassoCompanyTable", source: "search", search: { query: "", criteria: [{ field: "ansatte", operator: "gte", value: 5 }], limit: 6 } }],
+      title: "Kunder",
+      criteria: [
+        { field: "status", operator: "eq", value: "Aktiv" },
+        { field: "region", operator: "eq", value: "Midtjylland" },
+      ],
+      components: [
+        {
+          type: "LassoCompanyTable",
+          title: "Kunder",
+          source: "search",
+          search: {
+            query: "",
+            criteria: [
+              { field: "status", operator: "eq", value: "Aktiv" },
+              { field: "region", operator: "eq", value: "Midtjylland" },
+            ],
+            sort: { field: "navn", direction: "asc" },
+            limit: 6,
+          },
+        },
+      ],
     },
   },
   {

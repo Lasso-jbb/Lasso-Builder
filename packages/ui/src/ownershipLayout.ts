@@ -324,7 +324,7 @@ interface WEdge {
 function shareLines(e: OwnershipEdgeVM | undefined, historic: boolean): LabelLine[] | undefined {
   if (!e?.share && !e?.votes) return undefined;
   const share = e.share ? formatShare(e.share) : undefined;
-  const prefix = e.classes ? `${e.classes}: ` : "";
+  const prefix = e.beneficial ? "Reelt " : e.classes ? `${e.classes}: ` : "";
   const suffix = historic && e.until ? `, til ${e.until.slice(0, 4)}` : "";
   if (e.votes && share && !sameShare(e.share, e.votes)) {
     return [
@@ -342,9 +342,17 @@ function entityNode(n: OwnershipNodeVM, weight: number): WNode {
 /** Undertekst under navnet: "CVR 32343554, ApS", "Person", "Udenlandsk, Norge", "Ophørt". */
 export function entitySubtitle(n: OwnershipNodeVM): string {
   if (n.kind === "person") return "Person";
-  if (n.country && n.country.toUpperCase() !== "DK") return [n.registrationNo ? `Reg.nr. ${n.registrationNo}` : "Udenlandsk", countryName(n.country)].join(", ");
+  // 14.2/14b: "Udenlandsk, Norge" eller registreringsnummeret med landets betegnelse ("Org.nr. 000 000 002, Norge", "HRB 000000, Tyskland").
+  if (n.country && n.country.toUpperCase() !== "DK") return [n.registrationNo ? registrationText(n.country, n.registrationNo) : "Udenlandsk", countryName(n.country)].join(", ");
   if (isCeased(n)) return n.status ?? "Ophørt";
   return [n.cvr ? `CVR ${n.cvr}` : undefined, n.form].filter(Boolean).join(", ") || (n.status ?? "Virksomhed");
+}
+
+/** Registreringsnummer med landets betegnelse: Norge og Sverige "Org.nr.", Tyskland som "HRB …" uændret. */
+function registrationText(country: string, no: string): string {
+  if (/^[A-Z]{2,4}\s/.test(no)) return no;
+  const c = country.toUpperCase();
+  return `${c === "NO" || c === "SE" || c === "FI" ? "Org.nr." : "Reg.nr."} ${no}`;
 }
 
 const COUNTRIES: Record<string, string> = { NO: "Norge", SE: "Sverige", DE: "Tyskland", FI: "Finland", GB: "Storbritannien", UK: "Storbritannien", NL: "Holland", US: "USA", FR: "Frankrig", CH: "Schweiz", LU: "Luxembourg", IS: "Island", PL: "Polen", BE: "Belgien", ES: "Spanien", IE: "Irland" };
@@ -402,8 +410,16 @@ export function layoutOwnership(graph: OwnershipGraphVM, options: LayoutOptions 
 
   // 4. Foldning af lange kæder med én ejer pr. led.
   if (!expandAll) {
+    const layer0 = new Map(layer);
     const folded = foldChains(work, wedges, layer, rootId, expanded, isTree);
     if (folded) {
+      // 14b: i en foldet kæde siger de viste led, hvilket lag de står i ("Lag 1, 100 %", "Lag 6, 100 %").
+      for (const [id, w] of work) {
+        const L = layer0.get(id);
+        if (!w.entity || id === rootId || L === undefined || L === 0) continue;
+        const e = folded.edges.find((x) => (L > 0 ? x.to === id : x.from === id) && x.edge?.share);
+        w.subtitle = `Lag ${Math.abs(L)}${e?.edge?.share ? `, ${formatShare(e.edge.share)}` : ""}`;
+      }
       wedges = folded.edges;
       layer = relayer(rootId, work, wedges);
     }
@@ -428,11 +444,14 @@ export function layoutOwnership(graph: OwnershipGraphVM, options: LayoutOptions 
       // højst 5 % er ejere under registreringsgrænsen (14b: "ukendt < 5 %").
       const small = 100 - sumMin > 0.01 && 100 - sumMin <= 5.01;
       if ((sumMax < 99.99 && sumMin < 100) || small) {
-        const rest = Math.max(0, 100 - sumMin);
+        // 14b: én stiplet node UNDER fokus: "Ukendt ejerskab, resterende 25 %", ingen pil eller label.
+        const lo = Math.max(0, 100 - sumMax);
+        const hi = Math.max(0, 100 - sumMin);
+        const rest = sumMax >= 99.99 ? "under 5 %" : hi - lo < 0.005 ? formatShare([lo, lo]) : `op til ${formatShare([hi, hi])}`;
         const id = "unknown:owners";
-        work.set(id, { id, kind: "unknown", title: "Ukendt ejer", subtitle: "Ikke registreret", weight: -1 });
-        layer.set(id, -1);
-        wedges.push({ id: `${id}>${rootId}`, from: id, to: rootId, dashed: true, lines: [{ text: sumMax >= 99.99 ? "< 5 %" : `≤ ${formatShare([rest, rest])}`, tone: "muted" }], cycleSize: 0 });
+        work.set(id, { id, kind: "unknown", title: `Ukendt ejerskab, resterende ${rest}`, subtitle: "Andele under 5 % registreres ikke i CVR", weight: -1 });
+        layer.set(id, 1);
+        wedges.push({ id: `${rootId}>${id}`, from: rootId, to: id, dashed: true, cycleSize: 0 });
       }
     }
   }
@@ -784,8 +803,12 @@ export function countCrossings(layout: Pick<OwnershipLayout, "nodes" | "edges">)
 /* 8. Koordinater                                                      */
 /* ------------------------------------------------------------------ */
 
+/** 14b: den ukendte rest er bredere, så "Ukendt ejerskab, resterende 25 %" står på én linje. */
+export const UNKNOWN_W = 280;
+
 function sizeOf(n: WNode, root: boolean): [number, number] {
   if (root) return [ROOT_W, ROOT_H];
+  if (n.kind === "unknown") return [UNKNOWN_W, NODE_H];
   if (n.kind === "person") return [NODE_W, PERSON_H];
   return [NODE_W, NODE_H];
 }
@@ -1164,7 +1187,7 @@ export function beneficialGraph(graph: OwnershipGraphVM, onDate?: string): Owner
   const edges: OwnershipEdgeVM[] = [];
   for (const id of people) {
     const share = indirectShare(graph, id, rootId);
-    if (share && share[1] > 0) edges.push({ from: id, to: rootId, share });
+    if (share && share[1] > 0) edges.push({ from: id, to: rootId, share, beneficial: true });
   }
   const keep = new Set([rootId, ...edges.map((e) => e.from)]);
   return { ...graph, nodes: graph.nodes.filter((n) => keep.has(n.id)), edges, ingoingDepth: 1, outgoingDepth: 0 };

@@ -18,26 +18,37 @@ const data: ObservationsVM = {
   ],
 };
 
-test("17.2: sammenfatning som filterchips og kort sorteret efter alvor", () => {
-  const html = renderToStaticMarkup(createElement(RiskObservations, { data, demo: true }));
+test("17.2 / 26d.6: sammenfatningskort på desktop, filterchips og kort på mobil", () => {
+  const html = renderToStaticMarkup(createElement(RiskObservations, { data, demo: true, onAction: () => {} }));
+  // Desktop (17.2): sammenfatning med skalaens ord og alvorsbjælke, observationer med overlinje
+  assert.match(html, /lasso-obs-summary__head">1 vigtig, 1 mulig, 2 til orientering</);
+  assert.match(html, /Seneste observation 02\.06\.2026, baseret på CVR og regnskab/);
+  assert.equal((html.match(/lasso-obs-summary__seg /g) ?? []).length, 4);
+  assert.match(html, /lasso-obsrow--100[^]*lasso-obsrow__word">Vigtig<[^]*Regnskab, 02\.06\.2026\.[^]*>Se regnskab</);
+  assert.match(html, /lasso-obsrow--50[^]*lasso-obsrow__word">Mulig vigtig</);
+  assert.match(html, /lasso-obsrow--25 lasso-obsrow--compact/);
+  // Mobil (26d.6): tal i hovedet, chips og kun fund (neutrale fakta vises ikke)
   assert.match(html, /3, eksempeldata/);
   assert.match(html, /aria-pressed="false"[^>]*>1 høj</);
   assert.match(html, />1 middel</);
   assert.match(html, />1 info</);
-  const order = ["Negativ egenkapital", "Adresse deles", "Revisor skiftet", "Nyt medlem"].map((t) => html.indexOf(t));
+  const mob = html.slice(html.indexOf('lasso-obs__mob"><div class="lasso-obs__filters'));
+  const order = ["Negativ egenkapital", "Adresse deles", "Revisor skiftet"].map((t) => mob.indexOf(t));
   assert.deepEqual([...order].sort((a, b) => a - b), order);
-  // Regel 7: alvorsordet står ved farvekanten
-  assert.match(html, /lasso-obs-card--høj[^]*Høj, Regnskab, 02\.06\.2026/);
+  assert.doesNotMatch(mob.slice(0, mob.indexOf("Kilde:") > 0 ? mob.indexOf("Kilde:") : undefined), /lasso-obs-card--neutral/);
+  assert.match(mob, /lasso-obs-card--høj[^]*lasso-sr">Høj: <[^]*lasso-obs-card__meta">Regnskab, 02\.06\.2026</);
   assert.doesNotMatch(html, /·/);
   assert.match(html, /Kilde: Lasso \(CVR, regnskab\), opdateret 25\.09\.2026/);
 });
 
-test("17.2: tom liste er positiv information med dato, stiplet ramme og ingen fejl", () => {
+test("17.3: tom liste er positiv information med dato, stiplet ramme og ingen fejl", () => {
   const html = renderToStaticMarkup(createElement(RiskObservations, { data: { lassoId: "x", observations: [], checkedAt: "2026-09-25" } }));
-  assert.match(html, /class="lasso-state lasso-state--positive"/);
-  assert.match(html, /Intet at bemærke/);
-  assert.match(html, /Sidst tjekket 25\.09\.2026/);
+  assert.match(html, /class="lasso-riskna lasso-riskna--none"/);
+  assert.match(html, /Ingen observationer/);
+  assert.match(html, /Tjekket 25\.09\.2026/);
   assert.doesNotMatch(html, /lasso-state--error|role="alert"/);
+  const noAccess = renderToStaticMarkup(createElement(RiskObservations, { error: "403 ingen adgang" }));
+  assert.match(noAccess, /Ikke i din pakke[^]*Lasso Risiko[^]*Se pakker →/);
 });
 
 test("17.2: sammenfatning og sortering", () => {

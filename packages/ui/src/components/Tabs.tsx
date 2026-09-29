@@ -69,6 +69,18 @@ export function Tabs({ level, items, value, onChange, ariaLabel, id, className =
     el?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
   }, [value]);
 
+  // Mobil (26d.2): fade i højre kant kun, når fanerne faktisk ruller; passer de, står alle skarpt.
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const update = () => el.toggleAttribute("data-scrolls", el.scrollWidth > el.clientWidth + 1);
+    update();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [items]);
+
   const enabled = items.filter((t) => !t.disabled);
   const move = (from: string, step: 1 | -1 | "first" | "last") => {
     if (enabled.length === 0) return;

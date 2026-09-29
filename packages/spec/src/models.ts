@@ -563,6 +563,8 @@ export interface OwnershipEdgeVM {
   votes?: [number, number];
   /** Aktieklasser, fx "A, B", præcis som CVR leverer dem. */
   classes?: string;
+  /** 14.3: beregnet indirekte andel i reelle-ejere-visningen; labelen skrives "Reelt 22 %". */
+  beneficial?: boolean;
   since?: string;
   /** Slutdato for et ophørt ejerskab. */
   until?: string;
