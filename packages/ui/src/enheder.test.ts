@@ -47,13 +47,30 @@ test("20.2: ejendomskortet tegner matrikelpolygon og valgt bygning fra geometri;
   assert.match(none, /Intet matrikelkort tilgængeligt/);
 });
 
-test("26e.1: produktionsenheder som tre-linjers rækker på mobil med antal aktive i hovedet", () => {
+test("20.1/26e.1: produktionsenheder med kontakt pr. P-enhed (kun ved data, G2), antal i hovedet og ingen undertitel", () => {
   const html = renderToStaticMarkup(
     createElement(ProductionUnits, {
-      units: { lassoId: "x", units: [{ pNumber: "1000000020", name: "Eksempel A/S", isMain: true, employees: 17, address: { street: "Prøvevej 1", zip: "1253", city: "København K" }, statusKind: "active" as const }] },
+      units: {
+        lassoId: "x",
+        units: [
+          { pNumber: "1000000020", name: "Eksempel A/S", isMain: true, employees: 17, address: { street: "Prøvevej 1", zip: "1253", city: "København K" }, statusKind: "active" as const, status: "Aktiv", industryCode: "631000", industryText: "IT-infrastruktur og hosting", created: "2012-05-14", phone: "71 74 78 12", email: "kontakt@lasso.dk" },
+          { pNumber: "1000000022", name: "Lager", statusKind: "inactive" as const, status: "Ophørt", endedYear: 2024, employees: null },
+        ],
+      },
     }),
   );
-  assert.match(html, /lasso-units__count">1 aktive</);
-  assert.match(html, /lasso-units-m__name">Eksempel A\/S, hovedenhed<[^]*Prøvevej 1, 1253 København K[^]*P-nr\. 1000000020, 17 ansatte/);
+  assert.match(html, /lasso-units__count">1 aktiv, 1 ophørt</);
+  assert.doesNotMatch(html, /lasso-section__subtitle/);
+  // Desktop (M1G-0): kolonnerne og kontaktlinjen med ikoner.
+  assert.match(html, />Enhed, adresse og kontakt</);
+  assert.match(html, />Oprettet og status</);
+  assert.match(html, /lasso-units20__name">Eksempel A\/S<[^]*Prøvevej 1, 1253 København K[^]*71 74 78 12[^]*kontakt@lasso\.dk/);
+  assert.match(html, /lasso-units20__industry-text">IT-infrastruktur og hosting<\/span><span class="lasso-units20__code">631000</);
+  assert.match(html, /14\.05\.2012<\/span><span class="lasso-units20__status[^"]*">Aktiv</);
+  assert.match(html, /is-ended[^]*Ophørt 2024/);
+  // Kontaktlinjen kun ved data (G2): lagret har hverken telefon eller e-mail.
+  assert.equal((html.match(/lasso-units20__contact"/g) ?? []).length, 2, "én i tabellen og én i mobillisten for hovedenheden");
+  // Mobil (M3A-0): meta-linjen med P-nr., branche, ansatte og oprettet.
+  assert.match(html, /lasso-units20-m__meta">P-nr\. 1000000020, IT-infrastruktur og hosting, 17 ansatte, oprettet 14\.05\.2012</);
 });
 
