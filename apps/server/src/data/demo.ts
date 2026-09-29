@@ -314,10 +314,13 @@ function financialStatementsFor(c: DemoCompany): FinancialStatementsVM {
   const balanceSheet: FinancialStatementsVM["balanceSheet"] = [];
   const cashFlow: FinancialStatementsVM["cashFlow"] = [];
   let cashCursor = Math.round((f.years[0]?.liabilities ?? 2_000_000) * 0.18);
-  f.years.forEach((y) => {
+  f.years.forEach((y, idx) => {
     const gp = y.grossProfit ?? 0;
-    const staffCosts = -Math.round(gp * 0.62);
-    const otherOperatingCosts = -Math.round(gp * 0.045);
+    // Andelene svinger lidt fra år til år, så underposterne ikke har samme ændring som hovedtallet (19.2).
+    const staffCosts = -Math.round(gp * (0.62 + (((idx + seed) % 3) - 1) * 0.012));
+    // Katalog 19.2: kvalitetsflaget (> 10× fra året før) på "Andre driftsomkostninger" for Eksempel Byg A/S.
+    const flagged = c.cvr === "99000001" && idx === f.years.length - 2;
+    const otherOperatingCosts = -Math.round(gp * (flagged ? 0.003 : 0.045 + ((idx + seed) % 2) * 0.006));
     const ebitda = gp + staffCosts + otherOperatingCosts;
     const depreciation = -Math.round(Math.abs(ebitda) * 0.3 + 150 + (seed % 7) * 20);
     const profit = y.profit ?? 0;
