@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  activityHeatmapKey,
   changeFeedKey,
   companyFactOptions,
   emptyDataset,
@@ -56,6 +57,10 @@ import { OwnerList } from "./components/OwnerList.js";
 import { OwnershipDiagram } from "./components/OwnershipDiagram.js";
 import { PersonList } from "./components/PersonList.js";
 import { ScoreGauge } from "./components/ScoreGauge.js";
+import { ScoreHistory } from "./components/ScoreHistory.js";
+import { KeyFigureGauge } from "./components/KeyFigureGauge.js";
+import { Heatmap } from "./components/Heatmap.js";
+import { CompanyMap } from "./components/CompanyMap.js";
 import { LassoRelations } from "./components/LassoRelations.js";
 import { LassoBeneficialOwners } from "./components/LassoBeneficialOwners.js";
 import { LassoTextSections } from "./components/LassoTextSections.js";
@@ -185,7 +190,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoGroupedBarChart":
       return <GroupedBarChart key={key} financials={empty.financials[c.company]} metrics={c.metrics} years={c.years} error={err(`financials:${c.company}`)} />;
     case "LassoStackedBarChart":
-      return <StackedBarChart key={key} financials={empty.financials[c.company]} years={c.years} error={err(`financials:${c.company}`)} />;
+      return <StackedBarChart key={key} financials={empty.financials[c.company]} statements={empty.financialStatements[c.company]} years={c.years} error={err(`financials:${c.company}`)} />;
     case "LassoLineChart":
       return (
         <LineChart
@@ -194,15 +199,41 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           metric={c.metric}
           years={c.years}
           error={err(`financials:${c.company}`)}
-          benchmarkFinancials={c.benchmark ? empty.financials[c.benchmark] : undefined}
+          benchmarkFinancials={c.benchmark && !c.industry ? empty.financials[c.benchmark] : undefined}
           benchmarkName={c.benchmark ? empty.companies[c.benchmark]?.name : undefined}
-          benchmarkError={c.benchmark ? err(`financials:${c.benchmark}`) : undefined}
+          benchmarkError={c.benchmark && !c.industry ? err(`financials:${c.benchmark}`) : undefined}
+          industry={c.industry ? empty.industryBenchmarks?.[c.company] : undefined}
+          industryError={c.industry ? err(`industryBenchmark:${c.company}`) : undefined}
         />
       );
     case "LassoWaterfallChart":
-      return <WaterfallChart key={key} financials={empty.financials[c.company]} error={err(`financials:${c.company}`)} />;
+      return <WaterfallChart key={key} financials={empty.financials[c.company]} statements={empty.financialStatements[c.company]} error={err(`financials:${c.company}`)} />;
     case "LassoShareBars":
-      return <ShareBars key={key} financials={empty.financials[c.company]} error={err(`financials:${c.company}`)} />;
+      return c.variant === "ejerkreds" ? (
+        <ShareBars key={key} variant="ejerkreds" ownership={empty.ownership[c.company]} error={err(`ownership:${c.company}`)} />
+      ) : (
+        <ShareBars key={key} financials={empty.financials[c.company]} error={err(`financials:${c.company}`)} />
+      );
+    case "LassoKeyFigureGauge":
+      return (
+        <KeyFigureGauge
+          key={key}
+          financials={empty.financials[c.company]}
+          industry={empty.industryBenchmarks?.[c.company]}
+          metrics={c.metrics}
+          title={c.title}
+          error={err(`financials:${c.company}`)}
+          industryError={err(`industryBenchmark:${c.company}`)}
+        />
+      );
+    case "LassoHeatmap": {
+      const k = activityHeatmapKey(c);
+      return <Heatmap key={key} heatmap={empty.activityHeatmaps?.[k]} title={c.title} error={err(`activityHeatmap:${k}`)} />;
+    }
+    case "LassoMap":
+      return <CompanyMap key={key} map={empty.maps?.[c.company]} title={c.title} error={err(`mapPoints:${c.company}`)} onAction={props.host.drillDown ? act : undefined} />;
+    case "LassoScoreHistory":
+      return <ScoreHistory key={key} history={empty.scoreHistories?.[c.company]} title={c.title} error={err(`scoreHistory:${c.company}`)} />;
     case "LassoRanking":
       return (
         <Ranking
@@ -295,7 +326,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoCashFlow":
       return <LassoCashFlow key={key} statements={empty.financialStatements[c.company]} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} />;
     case "LassoScoreGauge":
-      return <ScoreGauge key={key} score={empty.scores[c.company]} title={c.title} error={err(`score:${c.company}`)} />;
+      return <ScoreGauge key={key} score={empty.scores[c.company]} title={c.title} error={err(`score:${c.company}`)} onFetch={props.host.refresh ? () => act({ kind: "refresh" }) : undefined} />;
     case "LassoRiskObservations":
       // Fjernet fra visningerne 27.09.2026; ældre gemte visninger med komponenten viser den ikke.
       return null;
@@ -434,6 +465,9 @@ const MOBILE_ORDER: Partial<Record<ViewComponent["type"], number>> = {
   LassoShortcuts: 17,
   LassoKeyValueList: 20,
   LassoShareBars: 22,
+  LassoKeyFigureGauge: 11,
+  LassoScoreHistory: 9,
+  LassoMap: 36,
   LassoTextSections: 25,
   LassoPersonList: 30,
   LassoOwnerList: 31,

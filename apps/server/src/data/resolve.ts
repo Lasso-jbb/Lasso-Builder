@@ -1,4 +1,5 @@
 import {
+  activityHeatmapKey,
   changeFeedKey,
   emptyDataset,
   entityRefOf,
@@ -34,6 +35,9 @@ const FETCHERS: Record<string, (ds: Dataset, p: DataProvider, id: string) => Pro
   people: async (ds, p, id) => void (ds.people[id] = await p.people(id)),
   ownership: async (ds, p, id) => void (ds.ownership[id] = await p.ownership(id)),
   score: async (ds, p, id) => void (ds.scores[id] = await p.score(id)),
+  scoreHistory: async (ds, p, id) => void (ds.scoreHistories[id] = await p.scoreHistory(id)),
+  industryBenchmark: async (ds, p, id) => void (ds.industryBenchmarks[id] = await p.industryBenchmark(id)),
+  mapPoints: async (ds, p, id) => void (ds.maps[id] = await p.mapPoints(id)),
   beneficialOwnership: async (ds, p, id) => void (ds.beneficialOwnership[id] = await p.beneficialOwnership(id)),
   textSections: async (ds, p, id) => void (ds.textSections[id] = await p.textSections(id)),
   // Katalog 16: personens historik afledes af rollerne (samme cachede personopslag som hovedet).
@@ -157,6 +161,7 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
   const graphs: Extract<ViewComponent, { type: "LassoOwnershipDiagram" }>[] = [];
   const feeds: Extract<ViewComponent, { type: "LassoChangeFeed" }>[] = [];
   const savedLists: Extract<ViewComponent, { type: "LassoSavedPages" }>[] = [];
+  const heatmaps: Extract<ViewComponent, { type: "LassoHeatmap" }>[] = [];
 
   for (const c of spec.components) {
     switch (c.type) {
@@ -172,14 +177,32 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
       case "LassoKeyFigureCards":
       case "LassoBarChart":
       case "LassoGroupedBarChart":
+        want(c.company, "financials");
+        break;
       case "LassoStackedBarChart":
       case "LassoWaterfallChart":
+        // 13.5/13.7: balancens og resultatopgørelsens underposter fra det fulde regnskab, når de findes.
+        want(c.company, "financials", "financialStatements");
+        break;
       case "LassoShareBars":
-        want(c.company, "financials");
+        want(c.company, c.variant === "ejerkreds" ? "ownership" : "financials");
         break;
       case "LassoLineChart":
         want(c.company, "financials");
-        if (c.benchmark) want(c.benchmark, "company", "financials");
+        if (c.industry) want(c.company, "industryBenchmark");
+        else if (c.benchmark) want(c.benchmark, "company", "financials");
+        break;
+      case "LassoKeyFigureGauge":
+        want(c.company, "financials", "industryBenchmark");
+        break;
+      case "LassoScoreHistory":
+        want(c.company, "scoreHistory");
+        break;
+      case "LassoMap":
+        want(c.company, "mapPoints");
+        break;
+      case "LassoHeatmap":
+        heatmaps.push(c);
         break;
       case "LassoRanking":
         c.companies.forEach((id) => want(id, "company", "financials"));
@@ -318,6 +341,15 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
     if (feedKeys.has(key)) continue;
     feedKeys.add(key);
     run(`changeFeed:${key}`, async () => void (ds.changeFeeds[key] = await provider.changeFeed({ list: f.list, days: f.days, types: f.types })));
+  }
+
+  // Katalog 13.11: ét heatmap pr. (liste, måneder, typer); nøglen er activityHeatmapKey, fejlnøglen "activityHeatmap:<key>".
+  const heatKeys = new Set<string>();
+  for (const h of heatmaps) {
+    const key = activityHeatmapKey(h);
+    if (heatKeys.has(key)) continue;
+    heatKeys.add(key);
+    run(`activityHeatmap:${key}`, async () => void (ds.activityHeatmaps[key] = await provider.activityHeatmap({ list: h.list, months: h.months, types: h.types })));
   }
 
   // Gem-laget: én liste pr. (slags, antal); nøglen er savedPagesKey, fejlnøglen "savedPages:<key>".

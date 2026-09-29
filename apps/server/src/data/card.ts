@@ -1,6 +1,8 @@
 import {
   companyRiskSummary,
   personRiskSummary,
+  activityHeatmapKey,
+  GAUGE_METRICS,
   hasNoStatements,
   noStatementsReason,
   amountScale,
@@ -133,6 +135,9 @@ function delta(from: number | null | undefined, to: number | null | undefined): 
   const text = new Intl.NumberFormat("da-DK", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Math.abs(pct));
   return `${pct >= 0 ? "▲" : "▼"} ${padStart(text, 4)} %`;
 }
+
+/** 0–60 lav, 60–80 moderat, 80–100 høj (10.1, 18.2). */
+const scoreWord = (v: number) => (v < 60 ? "Lav risiko" : v < 80 ? "Moderat risiko" : "Høj risiko");
 
 function chart(card: Card, f: FinancialsVM, wanted: Metric, years: number) {
   const { metric, points } = chartSeries(f, wanted, years);
@@ -434,7 +439,15 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
     if (f && c.type === "LassoGroupedBarChart" && c.company === lassoId) for (const m of c.metrics) chart(card, f, m, c.years);
     if (f && c.type === "LassoStackedBarChart" && c.company === lassoId) stackedText(card, f, c.years);
     if (f && c.type === "LassoWaterfallChart" && c.company === lassoId) waterfallText(card, f);
-    if (f && c.type === "LassoShareBars" && c.company === lassoId) shareBarsText(card, f);
+    if (f && c.type === "LassoShareBars" && c.company === lassoId && c.variant !== "ejerkreds") shareBarsText(card, f);
+    if (c.type === "LassoShareBars" && c.company === lassoId && c.variant === "ejerkreds") {
+      const o = ds.ownership[lassoId];
+      if (o) {
+        card.section("Ejerkreds");
+        for (const x of o.owners.slice(0, 3)) card.row(x.share ?? "—", x.name);
+        if (o.owners.length > 3) card.row("", `og ${o.owners.length - 3} flere`);
+      }
+    }
     const stmt = ds.financialStatements[lassoId];
     if (stmt && c.type === "LassoIncomeStatement" && c.company === lassoId) {
       // Intet offentliggjort regnskab: tekstkortet siger hvorfor, som visningen (én gang, ikke pr. tabel).
@@ -453,7 +466,56 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string): string | nul
   const score = types.has("LassoScoreGauge") ? ds.scores[lassoId] : undefined;
   if (score) {
     card.section("Score");
-    card.raw(score.score != null ? `${padStart(String(Math.round(score.score)), 3)} af 100` : "Ikke oplyst");
+    // 10.1: hente-tilstandene som tekst (tallet først, når scoren er hentet).
+    if (score.state === "notfetched") card.text(`Ikke hentet, koster ${score.cost ?? "1 kredit"} at hente`);
+    else if (score.state === "fetching") card.text("Henter scoren");
+    else if (score.state === "unavailable") card.text(`Kan ikke hentes. ${score.reason ?? ""}`.trim());
+    else card.raw(score.score != null ? `${padStart(String(Math.round(score.score)), 3)} af 100, ${scoreWord(score.score).toLowerCase()}` : "Ikke oplyst");
+    for (const f of score.facts ?? []) card.row(f.label, f.value);
+  }
+
+  // 18.2: scorehistorik, forrige og nu (18.1) og de seneste hentninger.
+  const hist = types.has("LassoScoreHistory") ? ds.scoreHistories?.[lassoId] : undefined;
+  if (hist) {
+    card.section("Score over tid");
+    if (hist.points.length === 0) card.text(hist.reason ?? "Ingen historik");
+    const last = hist.points.at(-1);
+    const prev = hist.points.at(-2);
+    if (last && prev) {
+      const d = Math.round(last.score - prev.score);
+      card.text(`Forrige ${Math.round(prev.score)}, nu ${Math.round(last.score)}: ${d === 0 ? "uændret" : `${d > 0 ? "▲" : "▼"} ${Math.abs(d)} point, ${d > 0 ? "mere" : "mindre"} risiko`}`);
+    }
+    for (const p of hist.points.slice(-4).reverse()) card.row(formatDate(p.date), `${Math.round(p.score)}, ${(p.label ?? scoreWord(p.score)).toLowerCase()}`);
+  }
+
+  // 13.10: nøgletalsmåler mod branchen.
+  const gauge = spec.components.find((c) => c.type === "LassoKeyFigureGauge" && c.company === lassoId);
+  const industry = ds.industryBenchmarks?.[lassoId];
+  if (gauge && gauge.type === "LassoKeyFigureGauge" && f && industry) {
+    card.section("Nøgletal mod branchen");
+    if (industry.state !== "ok") card.text(industry.reason ?? "Ingen branchetal");
+    else {
+      const lastY = f.years.at(-1);
+      const bench = industry.years.at(-1);
+      for (const m of gauge.metrics ?? GAUGE_METRICS) {
+        const v = lastY?.[METRIC_FIELD[m]];
+        const med = bench?.median[m];
+        if (typeof v !== "number" || typeof med !== "number" || med <= 0) continue;
+        const r = v / med;
+        card.row(METRIC_LABELS[m], `${formatPercent(v, false)}, branche ${formatPercent(med, false)}`);
+        card.row("", r >= 1 ? "✓ på eller over branchen" : r >= 0.6 ? "! under branchen" : "!! klart under branchen");
+      }
+    }
+  }
+
+  // 13.12: adresserne på kortet som liste.
+  const map = types.has("LassoMap") ? ds.maps?.[lassoId] : undefined;
+  if (map) {
+    card.section("Adresser på kort");
+    if (map.points.length === 0) card.text(map.emptyReason ?? "Ingen koordinater");
+    const pts = [...map.points].sort((a, b) => (a.kind === "focus" ? -1 : b.kind === "focus" ? 1 : 0));
+    for (const p of pts.slice(0, 3)) card.row(p.kind === "focus" ? "Hoved" : "Adresse", [p.name, p.address].filter(Boolean).join(", "));
+    if (pts.length > 3) card.row("", `og ${pts.length - 3} flere`);
   }
 
   if (types.has("LassoBeneficialOwners")) {
@@ -800,6 +862,26 @@ function changeFeedCard(spec: ViewSpec, ds: Dataset): string | null {
   return card.toString();
 }
 
+/** Katalog 13.11: heatmappet som tekst: pr. type antal i perioden og den travleste måned. */
+function heatmapCard(spec: ViewSpec, ds: Dataset): string | null {
+  const c = spec.components.find((x) => x.type === "LassoHeatmap");
+  if (!c || c.type !== "LassoHeatmap") return null;
+  const h = ds.activityHeatmaps?.[activityHeatmapKey(c)];
+  if (!h) return null;
+  const card = new Card();
+  card.section(`${c.title ?? (h.listName ? `Aktivitet i "${h.listName}"` : "Aktivitet pr. måned")} (${formatNumber(h.total)})`);
+  if (h.total === 0 || h.rows.length === 0) {
+    card.text(h.emptyReason ?? "Ingen ændringer i perioden");
+    return card.toString();
+  }
+  for (const r of h.rows) {
+    const sum = r.counts.reduce((a, b) => a + b, 0);
+    const top = r.counts.indexOf(Math.max(...r.counts));
+    card.row(CHANGE_TYPE_LABELS[r.type], sum ? `${formatNumber(sum)}, flest ${h.months[top]!.split("-").reverse().join(".")}` : "0");
+  }
+  return card.toString();
+}
+
 const SAVED_TITLE = { all: "Mine gemte sider", company: "Mine gemte virksomheder", person: "Mine gemte personer" } as const;
 
 /**
@@ -845,6 +927,7 @@ export function textCard(spec: ViewSpec, ds: Dataset): string | null {
     ...(persons.length === 1 ? [personCard(spec, ds, persons[0]!)] : []),
     listCard(spec, ds),
     changeFeedCard(spec, ds),
+    heatmapCard(spec, ds),
     savedPagesCard(spec, ds),
     summaryCard(spec),
   ].filter((c): c is string => Boolean(c));

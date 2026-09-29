@@ -1,4 +1,5 @@
 import type {
+  ActivityHeatmapVM,
   BeneficialOwnershipVM,
   ChangeFeedVM,
   ChangeType,
@@ -12,6 +13,8 @@ import type {
   DataSourceKind,
   FinancialsVM,
   FinancialStatementsVM,
+  IndustryBenchmarkVM,
+  MapVM,
   NewsVM,
   ObservationsVM,
   OwnershipGraphVM,
@@ -21,6 +24,7 @@ import type {
   PersonSearchRowVM,
   PersonVM,
   ScoreVM,
+  ScoreHistoryVM,
   LivestockVM,
   PropertiesVM,
   ProductionUnitsVM,
@@ -78,6 +82,20 @@ export interface DataProvider {
   findPersons(name: string, limit: number): Promise<PersonSearchRowVM[]>;
   /** Katalog 21: ændringer i de overvågede virksomheder de seneste `days` dage. Live-endpoint ubekræftet. */
   changeFeed(opts: ChangeFeedOptions): Promise<ChangeFeedVM>;
+  /** Katalog 18.2: scorehistorik (én hentning = ét punkt). Ingen live datakilde endnu; tom med årsag. */
+  scoreHistory(lassoId: string): Promise<ScoreHistoryVM>;
+  /** Katalog 13.6/13.10: branchens median pr. år. Live-endpoint ubekræftet; "unavailable" med årsag. */
+  industryBenchmark(lassoId: string): Promise<IndustryBenchmarkVM>;
+  /** Katalog 13.11: ændringer pr. måned og type i en overvågningsliste. Samme ubekræftede kilde som changeFeed. */
+  activityHeatmap(opts: ActivityHeatmapOptions): Promise<ActivityHeatmapVM>;
+  /** Katalog 13.12: hovedadresse og P-enheder med koordinater. Koordinater ubekræftede i live. */
+  mapPoints(lassoId: string): Promise<MapVM>;
+}
+
+export interface ActivityHeatmapOptions {
+  list?: string;
+  months: number;
+  types?: readonly ChangeType[];
 }
 
 export interface ChangeFeedOptions {

@@ -34,7 +34,9 @@ test("fyldt: bogstav + ord, kreditmaksimum, lokal score, forrige vurdering, PDF,
   assert.match(html, /<span class="lasso-credit__sr">B, <\/span>Lav risiko/, "skærmlæser: 'B, Lav risiko'");
   assert.match(t, /Kreditmaksimum250 t\. kr\./);
   assert.match(t, /Lokal score62, Lav risiko/);
-  assert.match(t, /Forrige vurderingC \(Moderat risiko\), ændret 15\.04\.2026, ▼\u00a0bedre/);
+  // 18.1: forrige og nu side om side, ændringen som pil + ord imellem.
+  assert.match(html, /class="lasso-scorecmp"/);
+  assert.match(t, /ForrigeC[^]*Moderat risiko[^]*▼ 1 trin, mindre risiko[^]*NuB[^]*Lav risiko15\.04\.2026/);
   assert.match(html, /<button type="button" class="lasso-link lasso-credit__action">Hent kreditrapport \(PDF\)<\/button>/);
   assert.match(t, /Ny beregning hos Creditsafe koster en kredit og tager 5–45 sekunder; vurderingen gemmes 24 timer\./);
   assert.match(t, /Kilde: Creditsafe via Lasso, opdateret 25\.09\.2026/);
@@ -66,7 +68,7 @@ test("tonen står aldrig som farve alene: hver toneklasse bærer ikon og ord", (
   }
   // Forrige vurdering: pil + ord, farven kun som forstærkning.
   const worse = render({ rating: { ...OK, current: { internationalScore: "D" }, previous: { internationalScore: "B" } } });
-  assert.match(worse, /lasso-credit__change--worse">, <span aria-hidden="true">▲\u00a0<\/span>dårligere</);
+  assert.match(worse, /lasso-scorecmp__change--worse[^]*▲ 2 trin, mere risiko</);
   // Ingen farvet flade, pille eller banner i komponenten.
   assert.doesNotMatch(worse, /style="[^"]*background|lasso-badge|lasso-notice/);
 });

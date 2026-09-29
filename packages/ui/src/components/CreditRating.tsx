@@ -13,9 +13,11 @@ import {
   type CreditRatingVM,
   type CreditTone,
 } from "@lasso/spec";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { DataState, Missing, Section, SourceLine, stateForError } from "../primitives.js";
 import type { ViewAction } from "../types.js";
+import { CreditConfirmDialog } from "./CreditConfirmDialog.js";
+import { ScoreCompare } from "./ScoreCompare.js";
 
 /**
  * Kreditvurdering fra Creditsafe (katalog 17, datatyper del B afsnit 5). Creditsafes egen skala:
@@ -76,6 +78,7 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
 export function CreditRating({ rating, title, error, onAction }: CreditRatingProps) {
   const heading = title ?? "Kreditvurdering";
   const retry = onAction ? () => onAction({ kind: "refresh" }) : undefined;
+  const [confirm, setConfirm] = useState(false);
 
   if (!rating) {
     if (error) {
@@ -179,25 +182,41 @@ export function CreditRating({ rating, title, error, onAction }: CreditRatingPro
         </p>
       )}
 
+      {prevScore && score && change ? (
+        // 18.1 (node BX9-0): forrige og nu side om side, ændringen som pil, handling til højre.
+        <ScoreCompare
+          previous={{ value: prevScore, word: creditScoreWord(prevScore, prev?.internationalDescription), tone: creditTone(prevScore), icon: <CreditToneIcon tone={creditTone(prevScore)} /> }}
+          current={{ value: score, word: word, tone: tone, icon: tone ? <CreditToneIcon tone={tone} /> : undefined, date: rating.latestChange }}
+          direction={change.direction}
+          amount={change.direction === "same" ? undefined : `${Math.abs(CREDIT_SCORES.indexOf(score) - CREDIT_SCORES.indexOf(prevScore))} trin`}
+          action={onAction && typeof rating.creditBalance === "number" ? { label: "Hent ny vurdering", onClick: () => setConfirm(true) } : undefined}
+        />
+      ) : null}
+
       <dl className="lasso-credit__facts">
         <Fact label="Kreditmaksimum">{typeof current.creditMax === "number" ? formatCreditMax(current) : <Missing />}</Fact>
         <Fact label="Lokal score">{local ?? <Missing />}</Fact>
-        {prevScore ? (
+        {prevScore && !(score && change) ? (
           <Fact label="Forrige vurdering">
             {prevScore} ({creditScoreWord(prevScore, prev?.internationalDescription)})
             {rating.latestChange ? `, ændret ${formatDate(rating.latestChange)}` : ""}
-            {change ? (
-              <span className={`lasso-credit__change lasso-credit__change--${change.direction}`}>
-                {", "}
-                {change.arrow ? <span aria-hidden="true">{`${change.arrow}\u00a0`}</span> : null}
-                {change.word}
-              </span>
-            ) : null}
           </Fact>
-        ) : rating.latestChange ? (
+        ) : rating.latestChange && !(prevScore && score && change) ? (
           <Fact label="Seneste ændring">{formatDate(rating.latestChange)}</Fact>
         ) : null}
       </dl>
+      {onAction && typeof rating.creditBalance === "number" ? (
+        <CreditConfirmDialog
+          open={confirm}
+          onClose={() => setConfirm(false)}
+          onConfirm={() => {
+            setConfirm(false);
+            onAction({ kind: "refresh" });
+          }}
+          balance={rating.creditBalance}
+          what={`kreditvurderingen hos ${rating.source}`}
+        />
+      ) : null}
 
       {rating.pdfUrl ? (
         onAction ? (

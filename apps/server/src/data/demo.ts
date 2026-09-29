@@ -39,7 +39,8 @@ import { CREDIT_NONE_REASON } from "../lasso/creditAdapters.js";
 import { applyCriteria, sortRows } from "./criteria-eval.js";
 import { demoOwnershipGraph, demoPersonOwnershipGraph } from "./demoGraph.js";
 import { demoFindPersons, demoPerson, demoPersonIds, demoPersonNetwork, demoPersonNews } from "./demoPeople.js";
-import { NotFoundError, type ChangeFeedOptions, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
+import { NotFoundError, type ActivityHeatmapOptions, type ChangeFeedOptions, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
+import { demoHeatmap, demoIndustry, demoMap, demoScore, demoScoreHistory } from "./demoCharts.js";
 
 /**
  * Opdigtede demodata, så UI og MCP-flow kan bygges og testes uden adgang til
@@ -533,7 +534,7 @@ function creditRatingFor(c: DemoCompany): CreditRatingVM {
     case "99000009":
       return { lassoId: c.lassoId, cvr: c.cvr, source: CREDIT_SOURCE, state: "unavailable", reason: CREDIT_NONE_REASON };
     case "99000001":
-      return { ...base, state: "ok", current: a("A", 4_500_000, 91, "Very Low"), previous: a("B", 3_750_000, 68, "Low"), latestChange: "2026-04-15", pdfUrl: pdf(c.cvr) };
+      return { ...base, state: "ok", current: a("A", 4_500_000, 91, "Very Low"), previous: a("B", 3_750_000, 68, "Low"), latestChange: "2026-04-15", pdfUrl: pdf(c.cvr), creditBalance: 12 };
     case "99000004":
       return { ...base, state: "ok", current: a("D", 150_000, 21, "High"), previous: a("C", 400_000, 38, "Moderate"), latestChange: "2026-08-02", pdfUrl: pdf(c.cvr) };
     case "99000011":
@@ -779,13 +780,35 @@ export class DemoProvider implements DataProvider {
     };
   }
 
-  /** Katalog 10: eksempelscore, da der endnu ikke findes en live datakilde. */
+  /** Katalog 10.1: eksempelscore og -hentetilstande, da der endnu ikke findes en live datakilde (se demoScore). */
   async score(lassoId: string): Promise<ScoreVM> {
     const c = get(lassoId);
-    const seed = Number(c.cvr!.slice(-2));
-    if (c.status !== "Aktiv") return { lassoId, score: null };
-    const score = Math.max(5, Math.min(95, 22 + ((seed * 13) % 70)));
-    return { lassoId, score, source: "Eksempeldata", updated: "2026-09-12" };
+    return demoScore(c, creditRatingFor(c));
+  }
+
+  /** Katalog 18.2: eksempelhistorik, der ender i den aktuelle demoscore. */
+  async scoreHistory(lassoId: string) {
+    const c = get(lassoId);
+    return demoScoreHistory(c, demoScore(c, creditRatingFor(c)));
+  }
+
+  /** Katalog 13.6/13.10: eksempel-branchetal afledt af virksomhedens egne nøgletal. */
+  async industryBenchmark(lassoId: string) {
+    const c = get(lassoId);
+    return demoIndustry(c, financialsFor(c));
+  }
+
+  /** Katalog 13.11: heatmap for demolisten "Kunder". */
+  async activityHeatmap(opts: ActivityHeatmapOptions) {
+    return demoHeatmap(opts, DEMO_LIST);
+  }
+
+  /** Katalog 13.12: hovedadresse, P-enheder og koncernens øvrige selskaber (samme ejer) på kort. */
+  async mapPoints(lassoId: string) {
+    const c = get(lassoId);
+    const ownerIds = new Set(c.owners.flatMap((o) => (o.lassoId ? [o.lassoId] : [])));
+    const group = COMPANIES.filter((x) => x.lassoId !== c.lassoId && x.status === "Aktiv" && (ownerIds.has(x.lassoId) || x.owners.some((o) => o.lassoId && (ownerIds.has(o.lassoId) || o.lassoId === c.lassoId))));
+    return demoMap(c, PRODUCTION_UNITS[lassoId] ?? [defaultUnit(c)], group);
   }
 
   async beneficialOwnership(lassoId: string) {

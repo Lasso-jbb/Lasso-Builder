@@ -206,6 +206,10 @@ export const lineChartSchema = z.object({
   metric: metric.default("bruttofortjeneste"),
   years: z.number().int().min(2).max(10).default(5),
   benchmark: companyRef.optional().describe("Valgfri sammenligningsvirksomhed, vist som stiplet benchmark-linje (chart-5)."),
+  industry: z
+    .boolean()
+    .optional()
+    .describe("true: sammenlign med branchens median i stedet for en virksomhed; begge serier vises som indeks med første år = 100 (13.6). Udelukker benchmark."),
 });
 
 export const waterfallChartSchema = z.object({
@@ -213,10 +217,15 @@ export const waterfallChartSchema = z.object({
   company: companyRef,
 }).describe("Fra omsætning/bruttofortjeneste til årets resultat for seneste regnskabsår.");
 
+export const SHARE_BARS_VARIANTS = ["balance", "ejerkreds"] as const;
 export const shareBarsSchema = z.object({
   type: z.literal("LassoShareBars"),
   company: companyRef,
-}).describe("Egenkapital og gæld som andele af balancen for seneste regnskabsår.");
+  variant: z
+    .enum(SHARE_BARS_VARIANTS)
+    .optional()
+    .describe("'balance' (standard, også når udeladt): egenkapital og gæld som andele af balancen. 'ejerkreds': de legale ejere med CVR's ejerandelsintervaller."),
+}).describe("Fordeling: donut med tal i midten + andelsbjælker (13.8).");
 
 export const rankingSchema = z.object({
   type: z.literal("LassoRanking"),
@@ -392,6 +401,38 @@ export const scoreGaugeSchema = z.object({
   type: z.literal("LassoScoreGauge"),
   company: companyRef,
   title: z.string().max(80).optional().describe("Standard: 'Score'."),
+});
+
+/** Katalog 18.2: scorehistorik som trinlinje (hver hentning et punkt). Ingen live datakilde endnu, som LassoScoreGauge. */
+export const scoreHistorySchema = z.object({
+  type: z.literal("LassoScoreHistory"),
+  company: companyRef,
+  title: z.string().max(80).optional().describe("Standard: 'Score over tid'."),
+});
+
+/** Katalog 13.10: nøgletalsmåler med branchemærke. Branchetal er ubekræftede i live (docs/lasso-endpoints.md). */
+export const GAUGE_METRICS = ["soliditetsgrad", "overskudsgrad", "likviditetsgrad"] as const;
+export const keyFigureGaugeSchema = z.object({
+  type: z.literal("LassoKeyFigureGauge"),
+  company: companyRef,
+  metrics: z.array(z.enum(GAUGE_METRICS)).min(1).max(3).optional().describe("Standard: alle tre (soliditetsgrad, overskudsgrad, likviditetsgrad)."),
+  title: z.string().max(80).optional(),
+});
+
+/** Katalog 13.11: heatmap over ændringer pr. måned i en overvågningsliste. Samme ubekræftede kilde som LassoChangeFeed. */
+export const heatmapSchema = z.object({
+  type: z.literal("LassoHeatmap"),
+  list: z.string().max(80).optional().describe("Overvågningslistens navn, fx 'Kunder'. Udeladt = alle overvågede virksomheder."),
+  months: z.number().int().min(3).max(24).default(12).describe("Antal måneder tilbage, standard 12 (3–24)."),
+  types: z.array(z.enum(CHANGE_TYPES)).min(1).optional().describe("Delmængde af ændringstyper (rækkerne); udeladt = alle."),
+  title: z.string().max(80).optional(),
+});
+
+/** Katalog 13.12: kort med hovedadresse, P-enheder og klynger. Koordinater er ubekræftede i live. */
+export const mapSchema = z.object({
+  type: z.literal("LassoMap"),
+  company: companyRef,
+  title: z.string().max(80).optional(),
 });
 
 /** Fjernet fra visningerne 27.09.2026. Skemaet bliver, så ældre gemte visninger stadig kan læses; komponenten vises og hentes ikke. */
@@ -577,6 +618,10 @@ export const componentSchema = z.discriminatedUnion("type", [
   w(balanceSheetSchema),
   w(cashFlowSchema),
   w(scoreGaugeSchema),
+  w(scoreHistorySchema),
+  w(keyFigureGaugeSchema),
+  w(heatmapSchema),
+  w(mapSchema),
   w(riskObservationsSchema),
   w(creditRatingSchema),
   w(auditorIndependenceSchema),
@@ -654,6 +699,10 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoBalanceSheet: "full",
   LassoCashFlow: "full",
   LassoScoreGauge: "quarter",
+  LassoScoreHistory: "half",
+  LassoKeyFigureGauge: "half",
+  LassoHeatmap: "full",
+  LassoMap: "half",
   LassoRiskObservations: "full",
   LassoCreditRating: "half",
   LassoAuditorIndependence: "full",

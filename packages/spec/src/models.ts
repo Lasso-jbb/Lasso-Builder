@@ -651,6 +651,138 @@ export interface ScoreVM {
   score: number | null;
   source?: string;
   updated?: string;
+  /**
+   * Katalog 10.1, hente-tilstande: "notfetched" = kan hentes (handling koster, stiplet ramme),
+   * "fetching" = henter (fuld ramme, spinner, 4 px fremdriftsbjælke), "unavailable" = kan ikke hentes
+   * (grå flade, altid med årsag). Udeladt = "ok", når score er sat, ellers "ikke oplyst".
+   */
+  state?: "ok" | "notfetched" | "fetching" | "unavailable";
+  /** Årsagen i "unavailable" (og forklaringen i "notfetched"). */
+  reason?: string;
+  /** Prisen for at hente, fx "1 kredit". Vises i "notfetched". */
+  cost?: string;
+  /** Fremdrift 0–1 i "fetching"; udeladt = ubestemt (bjælken glider). */
+  progress?: number;
+  /** Nøgle-værdi-linjer under måleren, fx Kreditmaksimum og International score. */
+  facts?: { label: string; value: string }[];
+}
+
+/* ---------- Katalog 18.2: scorehistorik (én hentning = ét punkt) ---------- */
+
+/** Én hentning af scoren. `date` er ÅÅÅÅ-MM-DD; `label` er kildens egen vurderingstekst (lav/moderat/høj). */
+export interface ScorePointVM {
+  date: string;
+  score: number;
+  label?: string;
+}
+
+/**
+ * Scorehistorik (18.2): hver hentning er et punkt, sorteret stigende efter dato. Skalaen er 0 = lav
+ * risiko til 100 = høj risiko. Tom `points` med `reason` = ingen historik (fx ingen live datakilde).
+ */
+export interface ScoreHistoryVM {
+  lassoId: string;
+  points: ScorePointVM[];
+  reason?: string;
+  source?: string;
+  updated?: string;
+}
+
+/* ---------- Katalog 13.6 og 13.10: branchetal (median pr. år) ---------- */
+
+/**
+ * Branchens median pr. år for virksomhedens hovedbranche (DB07). Bruges af linjegrafen som indeks
+ * (13.6) og af nøgletalsmåleren som branchemærke (13.10). Live-kilden er UBEKRÆFTET
+ * (docs/lasso-endpoints.md, "Ubekræftet: branchetal"); "unavailable" med årsag, når den mangler.
+ */
+export interface IndustryBenchmarkVM {
+  lassoId: string;
+  state: "ok" | "unavailable";
+  reason?: string;
+  industryCode?: string;
+  industryText?: string;
+  /** Antal virksomheder i medianen. */
+  peers?: number;
+  /** Stigende efter år; nøglerne er nøgletallene (Metric). */
+  years: { year: number; median: Partial<Record<Metric, number | null>> }[];
+  source?: string;
+  updated?: string;
+}
+
+/* ---------- Katalog 13.11: heatmap, aktivitet pr. måned i en overvågningsliste ---------- */
+
+export interface ActivityHeatmapVM {
+  listName?: string;
+  /** Månederne som "ÅÅÅÅ-MM", ældste først. */
+  months: string[];
+  /** Én række pr. ændringstype; `counts[i]` hører til `months[i]`. */
+  rows: { type: ChangeType; counts: number[] }[];
+  total: number;
+  source?: string;
+  updated?: string;
+  emptyReason?: string;
+}
+
+/** Stabil nøgle for et heatmap (liste, antal måneder, typer). */
+export function activityHeatmapKey(c: { list?: string; months?: number; types?: readonly ChangeType[] }): string {
+  return `${c.list ?? ""}|${c.months ?? 12}|${(c.types ?? []).join(",")}`;
+}
+
+/**
+ * Heatmap fra ændringer (13.11): tæller ændringer pr. måned og type for de seneste `months` måneder til
+ * og med `now`s måned. Foldede rækker ("5 virksomheder") tæller med deres antal. Rækker uden ændringer
+ * i hele perioden udelades, medmindre `types` er givet.
+ */
+export function buildActivityHeatmap(
+  entries: readonly Pick<ChangeEntryVM, "type" | "at" | "count">[],
+  opts: { months: number; now?: Date; types?: readonly ChangeType[]; listName?: string; source?: string; updated?: string; emptyReason?: string },
+): ActivityHeatmapVM {
+  const now = opts.now ?? new Date();
+  const months: string[] = [];
+  for (let i = opts.months - 1; i >= 0; i--) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    months.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`);
+  }
+  const index = new Map(months.map((m, i) => [m, i]));
+  const types = opts.types ?? CHANGE_TYPES;
+  const counts = new Map<ChangeType, number[]>(types.map((t) => [t, months.map(() => 0)]));
+  let total = 0;
+  for (const e of entries) {
+    const row = counts.get(e.type);
+    const i = index.get(e.at.slice(0, 7));
+    if (!row || i === undefined) continue;
+    const n = e.count ?? 1;
+    row[i]! += n;
+    total += n;
+  }
+  const rows = types.map((type) => ({ type, counts: counts.get(type)! })).filter((r) => opts.types || r.counts.some((n) => n > 0));
+  return { listName: opts.listName, months, rows, total, source: opts.source, updated: opts.updated, ...(opts.emptyReason ? { emptyReason: opts.emptyReason } : {}) };
+}
+
+/* ---------- Katalog 13.12: kort med adresse, P-enheder og klynger ---------- */
+
+/** Ét punkt på kortet. "focus" = virksomhedens adresse (ink-nål), "related" = P-enheder og relaterede adresser (blå ring). */
+export interface MapPointVM {
+  id: string;
+  kind: "focus" | "related";
+  name: string;
+  address?: string;
+  /** WGS84. */
+  lat: number;
+  lon: number;
+  /** Fx "P-nr. 1000000021" eller "8 ansatte". */
+  meta?: string;
+  lassoId?: string;
+}
+
+export interface MapVM {
+  lassoId: string;
+  points: MapPointVM[];
+  /** Adresser uden koordinater (vises som tekst under kortet). */
+  missing?: number;
+  emptyReason?: string;
+  source?: string;
+  updated?: string;
 }
 
 /* ---------- Katalog 17: kreditvurdering fra Creditsafe (egen skala A–E, blandes aldrig med 0–100) ---------- */
@@ -693,6 +825,8 @@ export interface CreditRatingVM {
   updated?: string;
   /** Cache hos Lasso: 24 timer pr. organisation; ny beregning koster en kredit og tager 5–45 s. */
   cachedUntil?: string;
+  /** Kreditter tilbage på kontoen (18.3, bekræft hentning). Ubekræftet i Lassos API; udeladt = ingen "Hent ny vurdering". */
+  creditBalance?: number;
 }
 
 /* ---------- Katalog 21: overvågning og notifikationer ---------- */
@@ -835,6 +969,14 @@ export interface Dataset {
   news: Record<string, NewsVM>;
   searches: Record<string, SearchResultVM>;
   scores: Record<string, ScoreVM>;
+  /** Katalog 18.2: scorehistorik pr. Lasso-ID. */
+  scoreHistories: Record<string, ScoreHistoryVM>;
+  /** Katalog 13.6/13.10: branchetal pr. Lasso-ID (virksomhedens hovedbranche). */
+  industryBenchmarks: Record<string, IndustryBenchmarkVM>;
+  /** Katalog 13.11: heatmap pr. activityHeatmapKey. */
+  activityHeatmaps: Record<string, ActivityHeatmapVM>;
+  /** Katalog 13.12: kortpunkter pr. Lasso-ID. */
+  maps: Record<string, MapVM>;
   observations: Record<string, ObservationsVM>;
   /** Katalog 17: kreditvurdering fra Creditsafe pr. Lasso-ID. */
   creditRatings: Record<string, CreditRatingVM>;
@@ -877,6 +1019,10 @@ export function emptyDataset(source: DataSourceKind): Dataset {
     news: {},
     searches: {},
     scores: {},
+    scoreHistories: {},
+    industryBenchmarks: {},
+    activityHeatmaps: {},
+    maps: {},
     observations: {},
     creditRatings: {},
     auditorIndependence: {},
