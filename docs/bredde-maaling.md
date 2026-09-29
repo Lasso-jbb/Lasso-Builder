@@ -1333,10 +1333,10 @@ Layout-testen er en del af eval-kørslen (`npm run eval -w @lasso/server`, linje
 |---|---|---|---|---|
 | CVR-3-4000000002 overblik | 0 | 0 | 5 | 0 |
 | CVR-3-4000000002 netvaerk | 0 | 0 | 5 | 0 |
-| CVR-1-99000001 overblik | 2 ("Seneste revisorskiftDato for s", "RegnskabsperiodeDet tidsrum, r") | 0 | - | 142 |
+| CVR-1-99000001 overblik | 0 | 0 | - | 0 |
 | CVR-1-99000001 risiko | 0 | 0 | - | 0 |
 | CVR-1-99000001 historik | 0 | 0 | - | 0 |
-| CVR-1-99000004 overblik | 2 ("Seneste revisorskiftDato for s", "RegnskabsperiodeDet tidsrum, r") | 0 | - | 0 |
+| CVR-1-99000004 overblik | 0 | 0 | - | 0 |
 | CVR-1-99000004 risiko | 0 | 0 | - | 0 |
 | CVR-1-99000004 historik | 0 | 0 | - | 0 |
 | c-offentliggoerelser-01 | 0 | 0 | - | 0 |
@@ -1346,4 +1346,4 @@ Layout-testen er en del af eval-kørslen (`npm run eval -w @lasso/server`, linje
 | p-roller-01 | 0 | 0 | - | 0 |
 | c-historik-02 | 0 | 0 | - | 0 |
 
-I alt: 4 afkortede tekster, 0 overlappende årstal.
+I alt: 0 afkortede tekster, 0 overlappende årstal.

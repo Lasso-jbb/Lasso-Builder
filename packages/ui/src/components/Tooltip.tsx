@@ -1,4 +1,4 @@
-import { cloneElement, isValidElement, useEffect, useId, useRef, useState, type ReactElement, type ReactNode } from "react";
+import { cloneElement, isValidElement, useEffect, useLayoutEffect, useId, useRef, useState, type ReactElement, type ReactNode } from "react";
 
 /**
  * Tooltip (katalog 07, node 9L1-0): maks 280 bred, mørk flade (--lasso-tooltip) med lys tekst 13,
@@ -21,6 +21,18 @@ export function Tooltip({ text, children, placement = "top", className = "", ope
     timer.current = null;
     setOpen(false);
   };
+  const bubble = useRef<HTMLSpanElement | null>(null);
+  // E0: boblen holdes inden for viewporten; skubbes vandret, hvis den ellers stikker ud til højre eller venstre.
+  useLayoutEffect(() => {
+    const el = bubble.current;
+    if (!el) return;
+    el.style.translate = "";
+    if (!open) return;
+    const r = el.getBoundingClientRect();
+    const vw = document.documentElement.clientWidth;
+    const dx = r.right > vw - 8 ? vw - 8 - r.right : r.left < 8 ? 8 - r.left : 0;
+    if (dx) el.style.translate = `${dx}px 0`;
+  }, [open]);
   useEffect(() => () => {
     if (timer.current) clearTimeout(timer.current);
   }, []);
@@ -39,7 +51,7 @@ export function Tooltip({ text, children, placement = "top", className = "", ope
       }}
     >
       {child}
-      <span role="tooltip" id={tipId} className="lasso-tip__bubble">
+      <span role="tooltip" ref={bubble} id={tipId} className="lasso-tip__bubble">
         {text}
       </span>
     </span>

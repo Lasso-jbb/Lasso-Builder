@@ -3,7 +3,7 @@
     "date": "2026-09-29",
     "width": 1200,
     "pages": 14,
-    "truncated": 4,
+    "truncated": 0,
     "overlap": 0
   },
   "results": [
@@ -52,15 +52,12 @@
         "LassoContact",
         "LassoFollowUps"
       ],
-      "truncated": 2,
-      "truncatedSample": [
-        "Seneste revisorskiftDato for seneste skift af revisor i CVR.",
-        "RegnskabsperiodeDet tidsrum, regnskabet dækker. Oftest kalen"
-      ],
+      "truncated": 0,
+      "truncatedSample": [],
       "overlap": 0,
       "overlapSample": [],
       "netTicks": 0,
-      "pageOverflow": 142
+      "pageOverflow": 0
     },
     {
       "id": "CVR-1-99000001 risiko",
@@ -105,11 +102,8 @@
         "LassoBarChart",
         "LassoFollowUps"
       ],
-      "truncated": 2,
-      "truncatedSample": [
-        "Seneste revisorskiftDato for seneste skift af revisor i CVR.",
-        "RegnskabsperiodeDet tidsrum, regnskabet dækker. Oftest kalen"
-      ],
+      "truncated": 0,
+      "truncatedSample": [],
       "overlap": 0,
       "overlapSample": [],
       "netTicks": 0,

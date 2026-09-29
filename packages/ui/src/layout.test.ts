@@ -245,3 +245,14 @@ test("Ø13/B8: tablet-foldningen (26.1) giver aldrig et element færre kolonner 
     spans.forEach((s) => assert.ok(s === 6 || s === 12, `${cols.join("+")}: ${s}`));
   }
 });
+
+test("E0: etiketter ombrydes (ingen ellipsis) og skjult hjælpeboble har display:none", () => {
+  const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+  for (const m of css.matchAll(/([^{}\n]*\.lasso-kv-row__label(?:text)?\b[^{}]*)\{([^}]*)\}/g)) {
+    assert.doesNotMatch(m[2] ?? "", /text-overflow:\s*ellipsis/, `ellipsis på ${m[1]}`);
+  }
+  const base = /^\.lasso-tip__bubble \{([^}]*)\}/m.exec(css)?.[1] ?? "";
+  assert.match(base, /visibility:\s*hidden/);
+  assert.match(base, /display:\s*none/);
+  assert.match(css, /\.lasso-tip\.is-open \.lasso-tip__bubble \{[^}]*display:\s*block/);
+});

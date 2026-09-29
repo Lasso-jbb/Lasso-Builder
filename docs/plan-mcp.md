@@ -160,3 +160,44 @@ Fase C og D kan køre parallelt med hinanden efter B7, hvis kapaciteten er der.
 - Ingen commit uden grøn gate. Ingen push til andet end `staging`. Prod er ejerens.
 - Log hver godkendelse i `.claude/startprojekt-log.json`.
 - Ændr aldrig Ø1–Ø12 uden ejerens ord.
+
+---
+
+## 7. E2 — Samlet review og aflevering (Fable, 29.09.2026, natkørsel)
+
+Status: **alle faser leveret på `staging`.** Prod-deploy (E3) er ejerens: `staging → main` på GitHub (https://github.com/Lasso-jbb/Lasso-Builder/compare/main...staging).
+
+### Acceptkriterier (afsnit 5)
+| # | Kriterie | Resultat |
+|---|---|---|
+| 1 | Eval ≥ 90 % og > baseline | **Side 92,3 %** (48/52) mod baseline 61,5 %; plan 96,7 %; manglende 16/16; ingen regression (eksisterende 88,9 % uændret) ✅ |
+| 2 | Dækningstest grøn: alle typer har registerpost, vej ind og data-opslag | 54/54 ✅ (`packages/spec/src/coverage.test.ts`, `apps/server/src/data/coverage.test.ts`) |
+| 3 | `docs/komponenter.md` genereret og ajour | ✅ (`npm run docs:komponenter -w @lasso/spec`, test) |
+| 4 | Faste værktøjstekster ≤ loft | 21.243 / 22.000 tokens ✅ (`staticText.test.ts`) |
+| 5 | Tekstkortet uændret/udvidet (Ø4) | ✅ 11 nye sætninger for de nye spørgsmålstyper; intet fjernet |
+| 6 | Ingen kilde-spor (Ø5) | ✅ SourceList/SourceLine/printSources fjernet, PDF-sidefod uden "Kilder" |
+| 7 | Creditsafe kun med abonnement (Ø6) | ✅ ét opslag pr. side; låst tilstand "Kræver Creditsafe-abonnement"; rating-historik i `score_points` |
+| 8 | `search_persons` + `compare_companies` (Ø7) | ✅ registreret, testet, dokumenteret |
+| 9 | Gate grøn på `staging` | ✅ typecheck 0, **911 tests**, build ok (sidste commit) |
+| 10 | Bredde (Ø13) | ✅ layout 60/60, 0 overlappende årstal, 0 afkortede, 0 overløb; netværk fuld bredde, roller/stamoplysninger ½+½ |
+
+### Verificeret live mod staging-MCP'en (E1)
+- "Er der røde flag ved Novo Nordisk?" → `LassoRiskObservations` først; kort med observationer + kreditvurdering. Creditsafe svarede med abonnement: rating A, lokal score 71 → Lasso-score 29 (lav risiko) — **skalaen `100 − localScore` er hermed set mod ét rigtigt svar og stemmer** (A = lav risiko).
+- "Hvem sidder Lars Rebien Sørensen sammen med?" → netværket i fuld bredde som egen række, stamoplysninger/nyheder under.
+- De nye værktøjer (`search_persons`, `compare_companies`) og `topic`-parameteren ses først i Claude, når **connectoren gen-connectes** (værktøjslisten hentes ved forbindelse). Serverens e2e-tests dækker dem.
+
+### Ejeren skal
+1. Gen-connecte Lasso Builder-connectoren (nye værktøjer/parametre).
+2. Teste på staging: et spørgsmål pr. ny type (røde flag, fusion, offentliggørelser, dokumenter, branche, placering, hele regnskabet, registrering, opsummering, ændringer, persontal), "vis alt om X", `search_persons`, `compare_companies` ("sammenlign A og B", "hvem har lavest soliditet af …").
+3. Merge `staging → main` på GitHub (E3).
+
+### Åbne punkter (udsat, ikke blokerende)
+- `LassoChangeFeed` for én virksomhed dækker live kun de seneste 500 CVR-ændringer; fuldt feed kræver endpoint pr. virksomhed hos Lasso.
+- Portal-komponenterne (Ø9) afventer ejeren.
+- Katalog ud af `render_view` (B6): ikke udløst — ingen målt gevinst.
+- `reasonKind` på Score/Livestock-VM'er (UI matcher i dag på tekst).
+- 3 af 138 personoverblik overskrider højdebudgettet (op til 1591 px) for at holde netværket i fuld bredde uden at tabe elementer (Fables valg).
+- Rating-historikkens `observed_at` bruger opslagsdatoen, indtil Creditsafe-svarets form er kendt.
+
+### Rollemodel i praksis
+Fable: plan, 9 kritiske delopgaver (A1, A5/A11, B1, B5/B6, C1/C2, D1/D3, D5, E2) og alle godkendelser. Opus: B2, B4, B8, B10, D4 (regelmotor, composere, grid). Sonnet: A2, A4, A7, A8, A9, A13, B3, B9, C3, C5, C6, D2, D4b, E0. Haiku: A3-format (inkl. i A2), A6, A12, C4. Beslutningslog: `.claude/startprojekt-log.json` (lokal, gitignoreret).
