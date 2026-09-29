@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { ownershipGraphKey, type Dataset, type OwnershipGraphVM } from "@lasso/spec";
 import {
-  BandIcon,
   BellIcon,
   BulkBar,
   CompanyTable,
@@ -333,8 +332,8 @@ export const entries: GalleryEntry[] = [
     node: "BX9-0",
     render: () => (
       <ScoreCompare
-        previous={{ value: "47", of: "af 100", word: "Lav risiko", tone: "ok", icon: <BandIcon index={0} />, date: "2026-03-14", detail: "Kreditmaks 0,9 mio. kr." }}
-        current={{ value: "52", of: "af 100", word: "Lav risiko", tone: "ok", icon: <BandIcon index={0} />, date: "2026-09-12", detail: "Kreditmaks 1,25 mio. kr., international score B. Kilde: Creditsafe" }}
+        previous={{ value: "47", of: "af 100", word: "Lav risiko", tone: "ok", date: "2026-03-14", detail: "Kreditmaks 0,9 mio. kr." }}
+        current={{ value: "52", of: "af 100", word: "Lav risiko", tone: "ok", date: "2026-09-12", detail: "Kreditmaks 1,25 mio. kr., international score B. Kilde: Creditsafe" }}
         direction="worse"
         delta="+5"
         period="6 mdr."

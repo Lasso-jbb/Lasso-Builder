@@ -4636,3 +4636,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-root .lasso-personrisk__upgrade { display: inline; padding: 0; font-size: inherit; line-height: inherit; }
 .lasso-root .lasso-personrisk__upgrade { color: var(--lasso-accent-text); }
 .lasso-root .lasso-link.lasso-personnet__graph { color: var(--lasso-accent-text); font-size: var(--lasso-fs-sm); font-weight: 500; white-space: nowrap; }
+
+/* ---------- 18.1 Forrige vs. nu: forrige tal dæmpet, handlingen centreret ---------- */
+.lasso-scorecmp__side:not(.is-current) .lasso-scorecmp__value { color: var(--lasso-text-2); }
+.lasso-scorecmp__act { align-items: stretch; text-align: center; }
+.lasso-scorecmp__detail { color: var(--lasso-text-2); }
