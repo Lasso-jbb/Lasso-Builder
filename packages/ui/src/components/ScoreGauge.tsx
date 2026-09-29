@@ -136,20 +136,6 @@ export function BandIcon({ index }: { index: 0 | 1 | 2 }) {
   );
 }
 
-function Facts({ facts }: { facts?: ScoreVM["facts"] }) {
-  if (!facts?.length) return null;
-  return (
-    <dl className="lasso-gauge__facts">
-      {facts.map((f) => (
-        <div className="lasso-gauge__fact" key={f.label}>
-          <dt>{f.label}</dt>
-          <dd>{f.value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
 /**
  * Scoremåler (katalog 10.1, node 9ZT-0): Lassos risikoscore 0-100, hvor 100 = HØJ risiko (Jakob 29.09).
  * Titel "Risikoscore", tal 40/700 + "af 100" + vurderingen som farvet ord, bånd i grøn/gul/rød (0-60 lav,
@@ -172,6 +158,7 @@ export function ScoreGauge({
   onFetch,
   onReport,
   detail = false,
+  onObservations,
 }: {
   score?: ScoreVM;
   title?: string;
@@ -181,6 +168,8 @@ export function ScoreGauge({
   onReport?: () => void;
   /** Udvikling over 24 måneder og seneste ændringer under måleren (26d.7). */
   detail?: boolean;
+  /** 18.1: "Se observationer" (open-section risiko). Uden den vises linket ikke (G1). */
+  onObservations?: () => void;
 }) {
   // Lassos risikoscore (Jakob 29.09): 0-100, hvor 100 = høj risiko. Ikke Creditsafe; ingen kildelinje (G3).
   const heading = title ?? "Risikoscore";
@@ -290,28 +279,101 @@ export function ScoreGauge({
       </Section>
     );
   }
-  // 18.1/10.1 (Jakob 29.09): kun den aktuelle score; ingen "Forrige", kreditmaks eller kilde.
+  // 18.1/10.1 (Jakob 29.09; Paper LWU-0): kun den aktuelle score; ingen "Forrige", kreditmaks, kilde eller Hent-knap.
+  return <RiskScoreCard heading={heading} value={value} score={score} onObservations={onObservations} onReport={onReport} />;
+}
+
+/** "12.09.2026" eller undefined. */
+function computed(score: ScoreVM): string | undefined {
+  return score.updated ? formatDate(score.updated) : undefined;
+}
+
+/**
+ * Aktuel risikoscore (katalog 18.1, Paper LWU-0). ¼-kortet (LWV-0): titel 18/600, tal 32/700 + "af 100" +
+ * vurderingen som farvet ord, måler med tre zoner (60/20/20, 3 px mellemrum) og 2 px ink-markør, akselabels
+ * "0, lav risiko" og "Høj risiko, 100", 36 px rækker "Beregnet" og "Grundlag", og "Se observationer" (G1: kun
+ * med en handling). ½-kortet (LXL-0) bruges, når elementet står bredt (>= 480 px) OG scoremodellen leverer
+ * forklarende faktorer: tal, måler og "Beregnet" i en 260 px kolonne til venstre og "Hvad trækker scoren" (op
+ * til 4 faktorer med prik i success/warning/danger) til højre. Uden faktorer vises ¼-formen i alle bredder.
+ */
+function RiskScoreCard({ heading, value, score, onObservations, onReport }: { heading: string; value: number; score: ScoreVM; onObservations?: () => void; onReport?: () => void }) {
+  const [ref, width] = useWidth<HTMLDivElement>(270);
+  const { label, index } = scoreBand(value);
+  const factors = (score.factors ?? []).slice(0, 4);
+  const wide = factors.length > 0 && width >= 480;
+  const date = computed(score);
+  const main = (
+    <>
+      <div className="lasso-riskscore__value">
+        <span className="lasso-riskscore__number">{Math.round(value)}</span>
+        <span className="lasso-riskscore__of">af 100</span>
+        <span className={`lasso-riskscore__word lasso-riskscore__word--${index}`}>{label}</span>
+      </div>
+      <div className="lasso-riskscore__meter">
+        <div className="lasso-riskscore__track" role="img" aria-label={`Score ${Math.round(value)} på en skala fra 0, lav risiko, til 100, høj risiko`}>
+          <span className="lasso-riskscore__seg lasso-riskscore__seg--0" style={{ flexGrow: 6 }} />
+          <span className="lasso-riskscore__seg lasso-riskscore__seg--1" style={{ flexGrow: 2 }} />
+          <span className="lasso-riskscore__seg lasso-riskscore__seg--2" style={{ flexGrow: 2 }} />
+          <span className="lasso-riskscore__marker" style={{ left: `calc(${value}% - 1px)` }} />
+        </div>
+        <div className="lasso-riskscore__scale">
+          <span>0, lav risiko</span>
+          <span>Høj risiko, 100</span>
+        </div>
+      </div>
+    </>
+  );
+  const rows = [
+    ...(date ? [{ label: "Beregnet", value: date }] : []),
+    ...(!wide && score.basis ? [{ label: "Grundlag", value: score.basis }] : []),
+    ...(score.facts ?? []),
+  ];
+  const facts = rows.length ? (
+    <dl className="lasso-riskscore__rows">
+      {rows.map((r) => (
+        <div key={r.label} className="lasso-riskscore__row">
+          <dt>{r.label}</dt>
+          <dd>{r.value}</dd>
+        </div>
+      ))}
+    </dl>
+  ) : null;
   return (
-    <Section title={heading} span="half" className="lasso-gauge-section">
-      <div className="lasso-gauge">
-        <div className="lasso-gauge__value">
-          <span className="lasso-gauge__number">{Math.round(value)}</span>
-          <span className="lasso-gauge__of">af 100</span>
-          <span className={`lasso-gauge__label lasso-gauge__label--${index}`}>{label}</span>
-        </div>
-        <div className="lasso-gauge__bar">
-          <div className="lasso-gauge__track" aria-hidden="true">
-            <span className="lasso-gauge__seg lasso-gauge__seg--0" style={{ flexGrow: 60 }} />
-            <span className="lasso-gauge__seg lasso-gauge__seg--1" style={{ flexGrow: 20 }} />
-            <span className="lasso-gauge__seg lasso-gauge__seg--2" style={{ flexGrow: 20 }} />
+    <Section title={heading} span="half" className={`lasso-gauge-section lasso-riskscore${wide ? " lasso-riskscore--wide" : ""}`}>
+      <div ref={ref} className="lasso-riskscore__body">
+        {wide ? (
+          <div className="lasso-riskscore__cols">
+            <div className="lasso-riskscore__main">
+              {main}
+              {facts}
+            </div>
+            <div className="lasso-riskscore__factors">
+              <p className="lasso-riskscore__overline">Hvad trækker scoren</p>
+              <ul>
+                {factors.map((f) => (
+                  <li key={f.label} className="lasso-riskscore__factor">
+                    <span className={`lasso-riskscore__dot lasso-riskscore__dot--${f.tone}`} aria-hidden="true" />
+                    <span>{f.label}</span>
+                    <span className="lasso-sr-only">{f.tone === "ok" ? ", trækker mod lav risiko" : ", trækker mod højere risiko"}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
-          <span className="lasso-gauge__pointer" style={{ left: `calc(${value}% - 1px)` }} aria-hidden="true" />
-        </div>
-        <div className="lasso-gauge__scale">
-          <span>0, lav</span>
-          <span>100, høj</span>
-        </div>
-        <Facts facts={score.facts} />
+        ) : (
+          <>
+            {main}
+            {facts}
+            {onObservations ? (
+              <button type="button" className="lasso-riskscore__link" onClick={onObservations}>
+                Se observationer
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M9.5 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            ) : null}
+          </>
+        )}
         {onReport ? (
           <button type="button" className="lasso-btn lasso-btn--sm lasso-gauge__report" onClick={onReport}>
             <ShellIcon name="document" size={15} />

@@ -893,7 +893,18 @@ export class DemoProvider implements DataProvider {
     const c = get(lassoId);
     const base = demoScore(c);
     // Jakob 29.09: kun den aktuelle score; der findes ingen scorehistorik (18.2 udgår).
-    return base;
+    if (base.state !== "ok" || base.score === null) return base;
+    // 18.1 (Paper LWU-0): grundlag og "Hvad trækker scoren" (eksempeldata afledt af demoregnskabet).
+    const years = financialsFor(c).years;
+    const last = years.at(-1);
+    const eqYears = years.slice(-3);
+    const obs = observationsFor(c, financialsFor(c)).observations.filter((o) => !o.notAvailable);
+    const factors: NonNullable<ScoreVM["factors"]> = [];
+    if (eqYears.length === 3 && eqYears.every((y) => typeof y.equity === "number" && y.equity > 0)) factors.push({ label: "Positiv egenkapital 3 år i træk", tone: "ok" });
+    if (obs.length === 0) factors.push({ label: "Ingen registrerede observationer", tone: "ok" });
+    if (typeof last?.profit === "number") factors.push(last.profit < 0 ? { label: "Underskud i seneste regnskab", tone: "warning" } : { label: "Overskud i seneste regnskab", tone: "ok" });
+    if (obs.length > 0) factors.push({ label: obs.length === 1 ? "1 risikoobservation" : `${obs.length} risikoobservationer`, tone: "warning" });
+    return { ...base, basis: last ? `Regnskab ${last.year}, status` : "Status", factors: factors.slice(0, 4) };
   }
 
   /** Katalog 18.2: eksempelhistorik, der ender i den aktuelle demoscore. */

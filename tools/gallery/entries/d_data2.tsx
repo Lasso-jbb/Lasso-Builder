@@ -11,7 +11,6 @@ import {
   NotificationPanel,
   OwnershipDiagram,
   PlusIcon,
-  ScoreCompare,
   RiskUnavailable,
   Section,
   SeverityScale,
@@ -33,6 +32,23 @@ const ANNE = "CVR-3-4000000001";
 const BO = "CVR-3-4000000002";
 
 const noop = () => undefined;
+
+/* 18.1: Papers eksempeltal (52, lav risiko, beregnet 12.09.2026) og faktorer. */
+function paperScore(ds: Dataset) {
+  ds.scores[BYG] = {
+    lassoId: BYG,
+    score: 52,
+    state: "ok",
+    updated: "2026-09-12",
+    basis: "Regnskab 2025, status",
+    factors: [
+      { label: "Positiv egenkapital 3 år i træk", tone: "ok" },
+      { label: "Ingen registrerede observationer", tone: "ok" },
+      { label: "Underskud i seneste regnskab", tone: "warning" },
+      { label: "Revisorskift 2025", tone: "warning" },
+    ],
+  };
+}
 
 function Label({ children }: { children: ReactNode }) {
   return <p className="lasso-small" style={{ margin: "0 0 8px", color: "var(--lasso-text-muted)" }}>{children}</p>;
@@ -354,12 +370,21 @@ export const entries: GalleryEntry[] = [
   /* ---------- 18 Kreditvurdering over tid ---------- */
   {
     nr: "18.1",
-    title: "Aktuel score",
-    node: "BX9-0",
-    render: () => (
-      <ScoreCompare current={{ value: "52", of: "af 100", word: "Lav risiko", tone: "ok", date: "2026-09-12" }} />
-    ),
-    note: "Jakob 29.09: kun den aktuelle score (ingen forrige, pil eller ændring; ingen Creditsafe). Lassos risikoscore 0-100, hvor 100 = høj risiko (52 = lav). Paper BX9-0 redesignes af Fable.",
+    title: "Aktuel risikoscore, ¼-kort",
+    node: "LWV-0",
+    spec: company("Eksempel Byg A/S", [{ type: "LassoScoreGauge", company: BYG, width: "quarter" }]),
+    mutate: paperScore,
+    gridWidth: 270,
+    note: "Paper LWU-0/LWV-0: kun den aktuelle score (ingen forrige, pil, kreditter, Hent-knap eller Creditsafe). Lassos risikoscore 0-100, hvor 100 = høj risiko; zoner 0-59/60-79/80-100. 'Se observationer' vises kun, når værten kan åbne risikosektionen (G1). Eksempeltal som i Paper (52, 12.09.2026).",
+  },
+  {
+    nr: "18.1",
+    title: "Aktuel risikoscore, ½-kort med \"Hvad trækker scoren\"",
+    node: "LXL-0",
+    spec: company("Eksempel Byg A/S", [{ type: "LassoScoreGauge", company: BYG, width: "half" }]),
+    mutate: paperScore,
+    gridWidth: 564,
+    note: "Paper LXL-0: ½-formen vises kun, når scoremodellen leverer forklarende faktorer (ScoreVM.factors); ellers står ¼-formen i alle bredder. Live har endnu ingen scorekilde (LiveProvider.score = ikke oplyst), så faktorerne er eksempeldata.",
   },
   // 18.2 Scorehistorik udgår (Jakob 29.09): der kan ikke laves historik.
   {

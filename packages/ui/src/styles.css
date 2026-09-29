@@ -5002,3 +5002,43 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-contact__row .lasso-contact__value[href^="tel:"] { flex: none; }
   .lasso-contact__value[href^="tel:"] + .lasso-contact__aside { flex: 1 1 auto; justify-content: flex-end; text-align: right; }
 }
+
+/* ---------- 18.1 Aktuel risikoscore (Paper LWU-0: ¼-kort LWV-0, ½-kort LXL-0) ---------- */
+.lasso-riskscore { border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); padding: 20px; background: var(--lasso-surface); }
+.lasso-riskscore > .lasso-section__head { margin-bottom: 14px; }
+.lasso-riskscore > .lasso-section__head .lasso-section__title { font-size: 18px; line-height: 22px; letter-spacing: -0.01em; }
+.lasso-riskscore__body { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.lasso-riskscore__cols { display: flex; align-items: flex-start; gap: 24px; }
+.lasso-riskscore__main { flex: none; width: 260px; display: flex; flex-direction: column; gap: 14px; }
+.lasso-riskscore__value { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.lasso-riskscore__number { font-size: 32px; line-height: 40px; font-weight: 700; letter-spacing: -0.02em; color: var(--lasso-text); }
+.lasso-riskscore__of { font-size: 13px; line-height: 18px; color: var(--lasso-muted); }
+.lasso-riskscore__word { font-size: 13px; line-height: 18px; font-weight: 500; }
+.lasso-riskscore__word--0 { color: var(--lasso-positive); }
+.lasso-riskscore__word--1 { color: var(--lasso-warning); }
+.lasso-riskscore__word--2 { color: var(--lasso-danger); }
+.lasso-riskscore__meter { display: flex; flex-direction: column; gap: 6px; }
+.lasso-riskscore__track { position: relative; display: flex; gap: 3px; height: 6px; }
+.lasso-riskscore__seg { display: block; border-radius: 3px; }
+.lasso-riskscore__seg--0 { background: var(--lasso-gauge-low); }
+.lasso-riskscore__seg--1 { background: var(--lasso-gauge-mid); }
+.lasso-riskscore__seg--2 { background: var(--lasso-gauge-high); }
+.lasso-riskscore__marker { position: absolute; top: -4px; width: 2px; height: 14px; border-radius: 1px; background: var(--lasso-text); }
+.lasso-riskscore__scale { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; line-height: 14px; color: var(--lasso-muted); }
+.lasso-riskscore__rows { display: flex; flex-direction: column; margin: 0; }
+.lasso-riskscore__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; border-top: 1px solid var(--lasso-divider-subtle); font-size: 13px; line-height: 16px; }
+.lasso-riskscore__row dt { color: var(--lasso-text-2); }
+.lasso-riskscore__row dd { margin: 0; font-weight: 500; color: var(--lasso-text); text-align: right; }
+.lasso-root .lasso-riskscore__link { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--lasso-accent-text); cursor: pointer; border-radius: var(--lasso-radius-sm); }
+.lasso-root .lasso-riskscore__link:hover { text-decoration: underline; }
+.lasso-riskscore__link:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: 2px; }
+.lasso-riskscore__factors { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.lasso-riskscore__factors ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.lasso-riskscore__overline { margin: 0; font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--lasso-muted); }
+.lasso-riskscore__factor { display: flex; align-items: center; gap: 8px; font-size: 13px; line-height: 18px; color: var(--lasso-text-2); }
+.lasso-riskscore__dot { flex: none; width: 8px; height: 8px; border-radius: 4px; background: var(--lasso-positive); }
+.lasso-riskscore__dot--warning { background: var(--lasso-warning); }
+.lasso-riskscore__dot--danger { background: var(--lasso-danger); }
+@container lasso (max-width: 560px) {
+  .lasso-riskscore { padding: 16px; }
+}

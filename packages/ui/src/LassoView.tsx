@@ -424,6 +424,8 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           detail={c.detail}
           error={err(`score:${c.company}`)}
           onFetch={props.host.refresh ? () => act({ kind: "refresh" }) : undefined}
+          // 18.1: "Se observationer" åbner risikosektionen, når værten kan (G1: ellers intet link).
+          onObservations={sectionAction(props, act, { lassoId: c.company, pageKind: "company", section: "risiko", name: empty.companies[c.company]?.name ?? c.company, label: "Risikoobservationer" })}
         />
       );
     case "LassoRiskObservations":

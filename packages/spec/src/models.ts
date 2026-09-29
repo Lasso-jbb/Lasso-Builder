@@ -775,6 +775,13 @@ export interface ScoreVM {
   progress?: number;
   /** Nøgle-værdi-linjer under måleren, fx Kreditmaksimum og International score. */
   facts?: { label: string; value: string }[];
+  /** Katalog 18.1 (LWV-0): "Grundlag" under "Beregnet", fx "Regnskab 2025, status". Udelades, når ukendt. */
+  basis?: string;
+  /**
+   * Katalog 18.1 (LXL-0): "Hvad trækker scoren", op til 4 forklarende faktorer med tone (ok = trækker ned mod lav
+   * risiko, warning/danger = trækker op). Kun når scoremodellen leverer dem; ellers vises kun ¼-kortet.
+   */
+  factors?: { label: string; tone: "ok" | "warning" | "danger" }[];
   /** Katalog 26d.7: scoren over de seneste 24 måneder, ældste først (datoer ÅÅÅÅ-MM-DD). Kun demodata. */
   history?: { date: string; score: number }[];
   /** Katalog 26d.7: seneste ændringer i scoren med årsag, nyeste først. `delta` i point (+ = højere risiko). */
