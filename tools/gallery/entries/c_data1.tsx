@@ -5,6 +5,7 @@ import { formatAmount, formatDate, formatNumber, formatPercent, groupContactPers
 import {
   CompanyHead,
   DataState,
+  Delta,
   Icon,
   KeyFigureCards,
   LassoContact,
@@ -221,8 +222,10 @@ function NumberFormats() {
     ["Negativt beløb (ægte minus)", formatAmount(-2_300_000)],
     ["Procent med fortegn", formatPercent(7.3)],
     ["Negativ procent", formatPercent(-1.4)],
+    ["Beløb, mia.", formatAmount(2_400_000_000)],
     ["Antal", formatNumber(1_234)],
     ["Dato", formatDate("2026-09-29")],
+    ["Relativ tid (under 7 dage)", "for 3 dage siden"],
   ];
   return (
     <dl style={{ display: "grid", gridTemplateColumns: "220px auto", gap: "10px 24px", margin: 0 }}>
@@ -232,6 +235,11 @@ function NumberFormats() {
           <dd style={{ margin: 0, fontVariantNumeric: "tabular-nums", fontWeight: 500 }}>{v}</dd>
         </div>
       ))}
+      <dt className="lasso-small" style={{ color: "var(--lasso-text-muted)" }}>Udvikling (▲ grøn, ▼ rød)</dt>
+      <dd style={{ margin: 0, fontVariantNumeric: "tabular-nums", fontWeight: 500, display: "flex", gap: 16 }}>
+        <Delta from={100} to={107.5} />
+        <Delta from={100} to={96.6} />
+      </dd>
     </dl>
   );
 }
