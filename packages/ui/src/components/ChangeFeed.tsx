@@ -100,7 +100,7 @@ function ChangeRow({ entry, firstUnread, onOpen }: { entry: ChangeEntryVM; first
 /**
  * Ændringsfeed (katalog 21, node CA3-0): ændringer på tværs af de overvågede virksomheder,
  * grupperet pr. dag med dagsoverskrift som overlinje og filter-chips pr. ændringstype (med antal).
- * Ulæst = koral prik til højre + 3 px koral venstrekant; første ulæste får også koral-soft flade.
+ * Ulæst = koral prik til højre + 3 px koral venstrekant (ingen farvet flade, kontrol r5).
  * Ændringstypen står som ren tekst i muted, kun Status i mørk rød. Statusændringer vises som
  * "fra → til" som i tidslinjen (12). Mange små ændringer af samme type samme dag er foldet til
  * én række ("5 virksomheder") af serveren.

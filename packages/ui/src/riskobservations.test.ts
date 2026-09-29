@@ -29,7 +29,7 @@ test("17.2 / 26d.6: sammenfatningskort på desktop, filterchips og kort på mobi
   assert.match(html, /lasso-obsrow--25 lasso-obsrow--compact/);
   // Mobil (26d.6): tal i hovedet, chips og kun fund (neutrale fakta vises ikke)
   assert.match(html, /3, eksempeldata/);
-  assert.match(html, /aria-pressed="false"[^>]*>1 høj</);
+  assert.match(html, /aria-pressed="false"[^>]*>1 vigtig</);
   assert.match(html, />1 middel</);
   assert.match(html, />1 info</);
   const mob = html.slice(html.indexOf('lasso-obs__mob"><div class="lasso-obs__filters'));
@@ -53,7 +53,7 @@ test("17.3: tom liste er positiv information med dato, stiplet ramme og ingen fe
 });
 
 test("17.2: sammenfatning og sortering", () => {
-  assert.equal(observationSummary(data.observations), "1 høj, 1 middel, 1 info og 1 neutral");
+  assert.equal(observationSummary(data.observations), "1 vigtig, 1 mulig, 1 info og 1 neutral");
   assert.deepEqual(sortObservations(data.observations).map((o) => o.id), ["b", "c", "a", "d"]);
 });
 
