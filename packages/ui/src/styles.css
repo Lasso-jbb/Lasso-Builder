@@ -3651,3 +3651,13 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-tl-filters__list { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   .lasso-tl-filters__item { flex: none; }
 }
+
+/* 30.10 Mønster 7, Fortælling: nøgletalskort i en smal celle (¼-kolonnen) stables lodret, ét tal pr. række.
+   Containeren sidder på cellen/kolonne-elementet omkring kortene, så komponenten selv er uændret. */
+.lasso-column__item:has(> .lasso-kpis), .lasso-cell:has(> .lasso-kpis) { container: lasso-kpicell / inline-size; }
+@container lasso-kpicell (max-width: 420px) {
+  .lasso-kpis { grid-template-columns: minmax(0, 1fr); }
+  .lasso-kpis > .lasso-kpi { padding: 16px 20px; border-left: 0; border-top: 0; }
+  .lasso-kpis > .lasso-kpi + .lasso-kpi { border-left: 0; border-top: 1px solid var(--lasso-border); }
+  .lasso-kpis .lasso-kpi__value { font-size: var(--lasso-fs-xl); line-height: 32px; }
+}

@@ -60,6 +60,7 @@ import {
   type TabItem,
 } from "@lasso/ui";
 import type { GalleryEntry } from "../types.js";
+import { CoverageTable, DatatypeTable, LookupTable, MappingTable, OrderSteps, StatesAndFormat, WidthAndPaper, WidthTable, ZoneSketch } from "./e_guide.js";
 
 /* ---------- Fælles ---------- */
 
@@ -116,7 +117,6 @@ const placeholder = (label: string, height = 120): ReactNode => (
     {label}
   </div>
 );
-const notBuilt = () => <p className="lasso-small">Ikke bygget i koden</p>;
 
 /* ---------- Portalens ramme (AppShell) med en komponeret side ---------- */
 
@@ -310,176 +310,15 @@ function Table({ head, rows }: { head: readonly string[]; rows: readonly (readon
   );
 }
 
-const WIDTH_LABEL: Record<string, string> = { quarter: "¼", half: "½", "three-quarters": "¾", full: "Fuld" };
-
-function OrderList({ ds }: { ds: Dataset }) {
-  const spec = companySpec(ds, true);
-  const title = (t: string) => COMPONENT_CATALOG.find((c) => c.type === t)?.title ?? t;
-  return (
-    <Section title="Rækkefølge på en side (composeCompany, overblik)">
-      <ol style={{ margin: 0, paddingLeft: 20, display: "grid", gap: 6 }}>
-        {spec.components.map((c, i) => (
-          <li key={i}>
-            <strong>{title(c.type)}</strong>{" "}
-            <span className="lasso-small" style={muted}>
-              {c.type}
-              {c.column ? `, kolonne ${c.column}` : ", fuld bredde"}
-            </span>
-          </li>
-        ))}
-      </ol>
-    </Section>
-  );
-}
-
-function RulesText({ text }: { text: string }) {
-  return (
-    <ul style={{ margin: 0, paddingLeft: 20, display: "grid", gap: 8 }} className="lasso-small">
-      {text
-        .split("\n")
-        .slice(1)
-        .map((l, i) => (
-          <li key={i}>{l.replace(/^- /, "")}</li>
-        ))}
-    </ul>
-  );
-}
-
-const WIDTHS_SPEC = {
-  kind: "company",
-  title: "Kolonnebredder ved 1440 px",
-  components: [
-    { type: "LassoKeyFigureCards", company: C, width: "full" },
-    { type: "LassoBarChart", company: C, width: "half" },
-    { type: "LassoKeyValueList", company: C, variant: "financials", width: "half" },
-    { type: "LassoOwnershipDiagram", company: C, width: "three-quarters" },
-    { type: "LassoRelations", company: C, width: "quarter" },
-    { type: "LassoScoreGauge", company: C, width: "quarter" },
-    { type: "LassoLineChart", company: C, width: "three-quarters" },
-    { type: "LassoMultiYearTable", company: C, width: "full" },
-  ],
-};
-
 const guide: GalleryEntry[] = [
-  {
-    nr: "23.1",
-    title: "Trin 1: Sideskabelon",
-    node: "CK9-0",
-    only: "desktop",
-    desktopWidth: 1440,
-    note: "AppShell med de tre zoner: skinne (navigation), midte (modulbjælke + indhold) og højre panel 336 px (sammendrag og handlinger). Pladsholdere i stedet for indhold.",
-    render: () => (
-      <Shell kind="company" title="Eksempel Byg A/S" modules={COMPANY_MODULES} value="overblik" panel={<div style={{ padding: 24 }}>{placeholder("Panel: sammendrag og handlinger", 480)}</div>}>
-        <div className="e-portal-body" style={stack(16)}>
-          {placeholder("Midte: det eneste, der skifter indhold", 200)}
-          {placeholder("Midte, sektion 2", 160)}
-        </div>
-      </Shell>
-    ),
-  },
-  {
-    nr: "23.2",
-    title: "Trin 2: Kolonnebredder ved 1440 px",
-    node: "CL1-0",
-    desktopWidth: 1440,
-    note: "LassoView-spec med de fire bredder (¼, ½, ¾, fuld) fra WIDTHS i packages/spec/src/spec.ts. Mobil: alt i én kolonne.",
-    spec: WIDTHS_SPEC,
-  },
-  dataEntry({
-    nr: "23.3",
-    title: "Trin 3: Rækkefølge på en side",
-    node: "CM3-0",
-    only: "desktop",
-    note: "Rækkefølgen, som serverens komponist faktisk bygger for virksomhedsoverblikket (composeCompany). Paper beskriver 7 trin i tekst; koden har ingen separat trinliste.",
-    probe: companyProbe(),
-    draw: (ds) => <OrderList ds={ds} />,
-  }),
-  {
-    nr: "23.4",
-    title: "Trin 4: Datatype → element (mappingtabel)",
-    node: "CNC-0",
-    only: "desktop",
-    note: "Komponentkataloget (COMPONENT_CATALOG i packages/spec/src/catalog.ts) med standardbredde (DEFAULT_WIDTH). Paper har 25 rækker ordnet efter datatype; koden ordner efter komponent.",
-    render: () => (
-      <Table
-        head={["Element", "Komponent", "Standardbredde", "Props"]}
-        rows={COMPONENT_CATALOG.map((c) => [c.title, <code key="t">{c.type}</code>, WIDTH_LABEL[DEFAULT_WIDTH[c.type]] ?? DEFAULT_WIDTH[c.type], <span key="p" className="lasso-small">{c.props}</span>])}
-      />
-    ),
-  },
-  {
-    nr: "23.5",
-    title: "Trin 5: Tjek tilstande og talformat",
-    node: "CPU-0",
-    only: "desktop",
-    note: "Tilstandene fra DataState (primitives.tsx) og talformatet fra packages/spec/src/format.ts. Tjeklisten 'Aflever aldrig uden' (21 punkter) findes ikke i koden.",
-    render: () => (
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-        <div style={stack(16)}>
-          {caption("Tom")}
-          <DataState state="empty" title="Ingen nyheder endnu" reason="Der er ikke skrevet om virksomheden de seneste 12 måneder." checkedAt="2026-09-29" />
-          {caption("Henter")}
-          <DataState state="loading" lines={3} height={96} />
-          {caption("Fejl")}
-          <DataState state="error" title="Regnskab kunne ikke hentes" reason="Erhvervsstyrelsen svarede ikke." onRetry={noop} />
-          {caption("Ikke oplyst")}
-          <DataState state="notreported" reason="Virksomheden har ikke oplyst antal ansatte." />
-        </div>
-        <Table
-          head={["Værdi", "Format"]}
-          rows={[
-            ["18.800.000 kr.", formatAmount(18_800_000)],
-            ["\u2212201.000 kr.", formatAmount(-201_000)],
-            ["34.000.000 kr.", formatAmount(34_000_000)],
-            ["3.200.000 kr.", formatAmount(3_200_000)],
-            ["1243 (antal)", formatNumber(1243)],
-            ["7,5 % (ændring)", formatPercent(7.5)],
-            ["2012-05-14 (dato)", formatDate("2012-05-14")],
-            ["10 til 19 (interval)", formatRange(10, 19)],
-            ["2025-01-01 til 2025-12-31 (periode)", formatPeriod("2025-01-01", "2025-12-31")],
-            ["null", formatAmount(null)],
-          ]}
-        />
-      </div>
-    ),
-  },
-  {
-    nr: "23.6",
-    title: "Trin 6: Tænk bredden og papiret med",
-    node: "DT7-0",
-    only: "desktop",
-    note: "Reglen står i koden som foldereglerne i LAYOUT_RULES (catalog.ts); bredderne ses i 26/26f/26g og papiret i 27 (ReportA4).",
-    render: () => (
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-        <Section title="Responsiv (26)">
-          <p className="lasso-small" style={{ margin: 0 }}>
-            {LAYOUT_RULES.split("\n").find((l) => l.startsWith("Foldning"))}
-          </p>
-        </Section>
-        <Section title="Eksport og print (27)">
-          <p className="lasso-small" style={{ margin: 0 }}>
-            ReportA4 (packages/ui/src/components/ReportA4.tsx): fire A4-sider 794 × 1123 med sidehoved, kildelinje og sidetal. Se 27.1–27.4.
-          </p>
-        </Section>
-      </div>
-    ),
-  },
-  {
-    nr: "23.7",
-    title: "Trin 7: Mapping pr. element desktop → tablet → mobil",
-    node: "G67-0",
-    only: "desktop",
-    note: "Mappingtabellen er dokumentation; koden har ingen tabel over desktop/tablet/mobil pr. element (formerne ligger i CSS'ens container-forespørgsler, se 26a–26f).",
-    render: notBuilt,
-  },
-  {
-    nr: "23.8",
-    title: "Trin 8: Dækningstabel mod API",
-    node: "HJ0-0",
-    only: "desktop",
-    note: "Dækningstabellen mod de 25 API-endpoints findes kun som dokumentation (docs/lasso-endpoints.md), ikke i koden.",
-    render: notBuilt,
-  },
+  { nr: "23.1", title: "Trin 1: Sideskabelon", node: "CK9-0", only: "desktop", desktopWidth: 1440, note: "Papers skitse af zonerne med mål og artboard-henvisninger, tegnet med tokens (e_guide.tsx).", render: () => <ZoneSketch /> },
+  { nr: "23.2", title: "Trin 2: Kolonnebredder ved 1440 px", node: "CL1-0", only: "desktop", note: "Papers tabel over kolonnebredder (tekst fra Paper).", render: () => <WidthTable /> },
+  { nr: "23.3", title: "Trin 3: Rækkefølge på en side", node: "CM3-0", only: "desktop", note: "Papers 7 trin (1–6 + P) med cirkel-numre og forklaring.", render: () => <OrderSteps /> },
+  { nr: "23.4", title: "Trin 4: Datatype → element (mappingtabel)", node: "CNC-0", only: "desktop", note: "Papers opslagstabel Datatype | Element | Artboard.", render: () => <DatatypeTable /> },
+  { nr: "23.5", title: "Trin 5: Tjek tilstande og talformat", node: "CPU-0", only: "desktop", note: "Papers tre kort: fem tilstande, talformat (ægte minus) og tjeklisten 'Aflever aldrig uden' (21 punkter).", render: () => <StatesAndFormat /> },
+  { nr: "23.6", title: "Trin 6: Tænk bredden og papiret med", node: "DT7-0", only: "desktop", note: "Papers to kort Responsiv (26) og Eksport og print (27).", render: () => <WidthAndPaper /> },
+  { nr: "23.7", title: "Trin 7: Mapping pr. element desktop → tablet → mobil", node: "G67-0", only: "desktop", note: "Papers mappingtabel desktop/tablet/mobil + kortene 'Touch-mål og afstande' og 'Sådan bygger du en mobilskærm'.", render: () => <MappingTable /> },
+  { nr: "23.8", title: "Trin 8: Dækningstabel mod API", node: "HJ0-0", only: "desktop", note: "Papers dækningstabel mod docs.lassox.com/api med gruppeoverskrifter og kildelinje.", render: () => <CoverageTable /> },
 ];
 
 /* ---------- 24 og 25: eksempelsider ---------- */
@@ -1410,17 +1249,8 @@ const layout: GalleryEntry[] = [
     title: "Fra spørgsmål til layout (opslagstabel)",
     node: "JCJ-0",
     only: "desktop",
-    note: "Opslagstabellen findes i koden som regeltekst til modellen (LAYOUT_RULES og COMPOSITION_RULES i catalog.ts), ikke som tabel.",
-    render: () => (
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-        <Section title="LAYOUT_RULES">
-          <RulesText text={"x\n" + LAYOUT_RULES.split("\n").slice(1).join("\n")} />
-        </Section>
-        <Section title="COMPOSITION_RULES">
-          <RulesText text={COMPOSITION_RULES} />
-        </Section>
-      </div>
-    ),
+    note: "Papers opslagstabel (12 rækker) og de fire regler. Samme regler står til modellen i LAYOUT_RULES/COMPOSITION_RULES (catalog.ts).",
+    render: () => <LookupTable />,
   },
   {
     nr: "30.13",
