@@ -519,12 +519,10 @@ export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
                         const level = observationLevel(o.severity);
                         return (
                           <div key={o.id} className="lasso-a4-obs__row">
-                            <span className={`lasso-a4-obs__dot lasso-a4-obs__dot--${level}`} aria-hidden="true" />
+                            {/* 27.4: prikkens farve er alvorsmarkeringen på papiret (Paper); ordet står kun for skærmlæsere. */}
+                            <span className={`lasso-a4-obs__dot lasso-a4-obs__dot--${level}`} role="img" aria-label={level === "neutral" ? "neutral" : `alvor ${level}`} />
                             <span className="lasso-a4-obs__main">
-                              <span className="lasso-a4-obs__title">
-                                {level === "neutral" ? "" : `${level[0]!.toUpperCase()}${level.slice(1)}, `}
-                                {o.title}
-                              </span>
+                              <span className="lasso-a4-obs__title">{o.title}</span>
                               {o.detail ? <span className="lasso-a4-obs__detail">{o.detail}</span> : null}
                               {o.source || o.date ? <span className="lasso-a4-obs__meta">{[o.source, o.date ? formatDate(o.date) : null].filter(Boolean).join(", ")}</span> : null}
                             </span>

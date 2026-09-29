@@ -4325,6 +4325,18 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-publications__type { display: inline-flex; align-items: center; gap: 6px; }
 .lasso-publications__figure { display: inline-flex; flex-direction: column; align-items: flex-end; }
 .lasso-publications__before { font-size: 12px; line-height: 16px; color: var(--lasso-muted); font-weight: 400; }
+.lasso-publications__feed { display: none; list-style: none; margin: 0; padding: 0; }
+@container lasso (max-width: 560px) {
+  /* 28.2 mobil: ændringsfeed-rækker i stedet for den foldede tabel. */
+  .lasso-publications .lasso-table-wrap { display: none; }
+  .lasso-publications__feed { display: flex; flex-direction: column; }
+  .lasso-publications__item { display: flex; flex-direction: column; gap: 2px; padding: 12px 0; border-top: 1px solid var(--lasso-divider-subtle); }
+  .lasso-publications__item:first-child { border-top: 0; padding-top: 0; }
+  .lasso-publications__kicker { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+  .lasso-publications__name { display: inline-flex; align-items: center; gap: 6px; font-size: var(--lasso-fs); line-height: 20px; font-weight: 600; color: var(--lasso-text); }
+  .lasso-publications__change { font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-2); }
+  .lasso-publications__meta { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+}
 
 /* ---------- 28.3 Opdateringer på personer og P-enheder (node H5N-0) ---------- */
 .lasso-entupd, .lasso-batches { display: flex; flex-direction: column; gap: var(--lasso-space-3); }
