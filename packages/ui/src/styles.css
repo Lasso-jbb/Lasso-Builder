@@ -3660,7 +3660,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-tl-filters__list { flex-direction: row; flex-wrap: wrap; }
 }
 @container lasso (max-width: 560px) {
-  .lasso-tl-filters__list { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .lasso-tl-filters__list { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-right: 40px; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
   .lasso-tl-filters__item { flex: none; }
 }
 

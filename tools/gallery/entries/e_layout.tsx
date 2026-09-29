@@ -1373,13 +1373,12 @@ const layout: GalleryEntry[] = [
     nr: "30.8",
     title: "Mønster 5, Sammenligning",
     node: "JAC-0",
-    note: "Én kolonne pr. virksomhed (LassoCompareTable) + rangering.",
+    note: "Etiketkolonne + én kolonne pr. virksomhed (LassoCompareTable), bedste værdi 600.",
     spec: {
       kind: "custom",
       title: "Mønster 5, Sammenligning",
       components: [
         { type: "LassoCompareTable", companies: [C, "CVR-1-99000005", "CVR-1-99000008"], width: "full" },
-        { type: "LassoRanking", companies: [C, "CVR-1-99000005", "CVR-1-99000008", "CVR-1-99000004"], width: "half" },
       ],
     },
   },
