@@ -3824,3 +3824,38 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-personrolelist__mstatus.is-warning { color: var(--lasso-bankrupt); }
   .lasso-personrolelist__chev { display: block; grid-column: 3; grid-row: 1 / span 2; color: var(--lasso-icon); }
 }
+
+/* ---------- 26c.4 Personliste på mobil (fix2 G4): antal i hovedet, 56 px rækker med chevron, "Vis alle" som koral række ---------- */
+.lasso-personlist__count, .lasso-personlist__chev, .lasso-personlist__all { display: none; }
+@container lasso (max-width: 560px) {
+  .lasso-personlist__segment { display: none; }
+  .lasso-personlist__count { display: inline; font-size: var(--lasso-fs-sm); color: var(--lasso-muted); white-space: nowrap; }
+  .lasso-personlist .lasso-row { flex-wrap: nowrap; min-height: 56px; }
+  .lasso-personlist .lasso-row__side { display: none; }
+  .lasso-personlist .lasso-row__sub { font-size: 12px; line-height: 16px; }
+  .lasso-personlist__chev { display: block; flex: none; margin-left: auto; color: var(--lasso-icon); }
+  .lasso-root .lasso-personlist__all { display: flex; align-items: center; justify-content: center; width: 100%; min-height: var(--lasso-touch-h); font-size: var(--lasso-fs); font-weight: 500; color: var(--lasso-accent-text); text-align: center; }
+  .lasso-section__head:has(.lasso-personlist__count) { flex-wrap: nowrap; align-items: baseline; }
+  .lasso-section__action:has(.lasso-personlist__count) { flex-basis: auto; }
+}
+
+/* ---------- 26c.5 Ejerliste på mobil (fix2 G4): "Legale ejere" + "Ejerandel", 6 px bjælke under navnet i rækkens farve ---------- */
+.lasso-ownerlist__mob, .lasso-ownerlist__all { display: none; }
+@container lasso (max-width: 560px) {
+  .lasso-ownerlist__desk, .lasso-ownerlist__auditor { display: none; }
+  .lasso-ownerlist__mob { display: inline; }
+  .lasso-ownerlist__col { font-size: var(--lasso-fs-sm); color: var(--lasso-muted); }
+  .lasso-ownerlist .lasso-section__head { flex-wrap: nowrap; align-items: baseline; }
+  .lasso-ownerlist .lasso-row--owner { flex-wrap: wrap; row-gap: 8px; min-height: 56px; }
+  .lasso-ownerlist .lasso-row--owner .lasso-row__main { flex: 1 1 0; min-width: 0; }
+  .lasso-ownerlist .lasso-row--owner .lasso-row__value { order: 2; font-weight: 600; }
+  .lasso-ownerlist .lasso-row--owner .lasso-share { order: 3; flex: 1 1 100%; width: 100%; height: 6px; }
+  .lasso-ownerlist .lasso-row--c1 .lasso-share__min { background: var(--lasso-chart-2); }
+  .lasso-ownerlist .lasso-row--c2 .lasso-share__min { background: var(--lasso-chart-3); }
+  .lasso-ownerlist .lasso-row--c3 .lasso-share__min { background: var(--lasso-chart-4); }
+  .lasso-ownerlist .lasso-row--c1 .lasso-share__span { background: color-mix(in srgb, var(--lasso-chart-2) 45%, var(--lasso-surface)); }
+  .lasso-ownerlist .lasso-row--c2 .lasso-share__span { background: color-mix(in srgb, var(--lasso-chart-3) 45%, var(--lasso-surface)); }
+  .lasso-ownerlist .lasso-row--c3 .lasso-share__span { background: color-mix(in srgb, var(--lasso-chart-4) 45%, var(--lasso-surface)); }
+  .lasso-ownerlist .lasso-rows--owners:not(.is-all) .is-extra { display: none; }
+  .lasso-root .lasso-ownerlist__all { display: flex; align-items: center; justify-content: center; width: 100%; min-height: var(--lasso-touch-h); font-size: var(--lasso-fs); font-weight: 500; color: var(--lasso-accent-text); }
+}

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { formatDate, shareText, type OwnershipVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
@@ -15,8 +16,12 @@ export function parseShare(share: string | undefined): [number, number] | null {
  * fuld koral = sikker minimumsandel, lys koral = intervallets spænd.
  * Navnet står alene uden ikonkasse eller initialer. Revisor som sidste linje.
  */
+/** Mobil (26c.5): højst fire ejere før "Vis alle N ejere". */
+const MOBILE_OWNERS = 4;
+
 export function OwnerList({ ownership, error, onOpen }: { ownership?: OwnershipVM; error?: string; onOpen?: (a: ViewAction) => void }) {
   const title = "Ejere";
+  const [all, setAll] = useState(false);
   if (!ownership) {
     return (
       <Section title={title} span="half">
@@ -35,14 +40,24 @@ export function OwnerList({ ownership, error, onOpen }: { ownership?: OwnershipV
   const open = (lassoId?: string, name?: string) =>
     onOpen && lassoId?.startsWith("CVR-1-") ? () => onOpen({ kind: "open-company", lassoId, name }) : undefined;
   return (
-    <Section title={title} span="half">
+    <Section
+      title={
+        <>
+          <span className="lasso-ownerlist__desk">{title}</span>
+          <span className="lasso-ownerlist__mob">Legale ejere</span>
+        </>
+      }
+      action={owners.length > 0 ? <span className="lasso-ownerlist__mob lasso-ownerlist__col">Ejerandel</span> : undefined}
+      span="half"
+      className="lasso-ownerlist"
+    >
       {owners.length > 0 ? (
-        <ul className="lasso-rows lasso-rows--owners">
+        <ul className={`lasso-rows lasso-rows--owners${all ? " is-all" : ""}`}>
           {owners.map((o, i) => {
             const click = open(o.lassoId, o.name);
             const range = parseShare(o.share);
             return (
-              <li key={`${o.name}-${i}`} className="lasso-row lasso-row--owner">
+              <li key={`${o.name}-${i}`} className={`lasso-row lasso-row--owner lasso-row--c${i % 4}${i >= MOBILE_OWNERS ? " is-extra" : ""}`}>
                 <div className="lasso-row__main">
                   <div className="lasso-row__name lasso-row__name--regular">
                     {click ? <button type="button" className="lasso-link" onClick={click}>{o.name}</button> : o.name}
@@ -65,11 +80,16 @@ export function OwnerList({ ownership, error, onOpen }: { ownership?: OwnershipV
       ) : (
         <DataState state="empty" reason="Der er ingen registrerede legale ejere i CVR." />
       )}
+      {owners.length > MOBILE_OWNERS && !all ? (
+        <button type="button" className="lasso-link lasso-ownerlist__all" onClick={() => setAll(true)}>
+          {`Vis alle ${owners.length} ejere`}
+        </button>
+      ) : null}
       {hasOwnersUnderFivePercent ? (
         <p className="lasso-kv-line lasso-muted">Der er ejere under 5 %, som ikke er registreret enkeltvis.</p>
       ) : null}
       {auditor ? (
-        <p className="lasso-kv-line">
+        <p className="lasso-kv-line lasso-ownerlist__auditor">
           <span className="lasso-kv-line__key">Revisor</span>
           <span>
             {open(auditor.lassoId, auditor.name) ? <button type="button" className="lasso-link" onClick={open(auditor.lassoId, auditor.name)}>{auditor.name}</button> : auditor.name}
