@@ -98,7 +98,7 @@ test("width er valgfri på alle komponenter, og stack giver altid fuld bredde", 
   assert.equal(spec.layout, "dashboard");
   assert.deepEqual(spec.components.map((c) => widthOf(c, spec.layout)), ["quarter", "three-quarters"]);
   assert.deepEqual(spec.components.map((c) => widthOf(c, "stack")), ["full", "full"]);
-  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoRelations", company: "CVR-1-1", width: "third" }] }));
+  assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoRelations", company: "CVR-1-1", width: "sixth" }] }));
 });
 
 test("group (30, mønster 8/9) er valgfri, og pattern skal være cards eller accordion", () => {

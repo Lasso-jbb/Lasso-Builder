@@ -15,6 +15,7 @@ import {
   searchKey,
   personSearchKey,
   widthOf,
+  WIDTH_COLUMNS,
   type Dataset,
   type Focus,
   type PersonFocus,
@@ -768,16 +769,53 @@ export function mergeFullGroups(bands: readonly Band[]): ColumnsBand[] {
   return out;
 }
 
-const WIDTH_FR: Record<Width, number> = { quarter: 1, half: 2, "three-quarters": 3, full: 4 };
-
 /**
- * Kolonnernes forhold i et bånd ud fra bredden på første sektion i hver kolonne (fx ¾ + ¼ giver
- * 3fr 1fr). Mangler en bredde, eller er alle ens, deles båndet ligeligt som hidtil (undefined).
+ * Kolonnernes forhold i et bånd ud fra bredden på første sektion i hver kolonne, i 12-kolonne-
+ * gitterets enheder (fx ¾ + ¼ giver 9fr 3fr). Mangler en bredde, deles båndet ligeligt som hidtil
+ * (undefined); det gør det også, når alle bredder er ens og ikke udgør et helt bånd (gamle visninger).
  */
 export function bandTemplate(columns: readonly Indexed[][]): string | undefined {
   const widths = columns.map((col) => col[0]?.c.width);
-  if (widths.length < 2 || widths.some((w) => !w) || widths.every((w) => w === widths[0])) return undefined;
-  return widths.map((w) => `minmax(0, ${WIDTH_FR[w!]}fr)`).join(" ");
+  if (widths.length < 2 || widths.some((w) => !w)) return undefined;
+  if (!gridBandColumns(columns) && widths.every((w) => w === widths[0])) return undefined;
+  return widths.map((w) => `minmax(0, ${WIDTH_COLUMNS[w!]}fr)`).join(" ");
+}
+
+/** Stakkenes kolonner (3, 4, 6, 8, 9), når båndet er et helt bånd i gridmodellen (summen er 12), ellers undefined. */
+export function gridBandColumns(columns: readonly Indexed[][]): number[] | undefined {
+  const widths = columns.map((col) => col[0]?.c.width);
+  if (widths.length < 2 || widths.some((w) => !w)) return undefined;
+  const cols = widths.map((w) => WIDTH_COLUMNS[w!]);
+  return cols.reduce((a, b) => a + b, 0) === 12 ? cols : undefined;
+}
+
+/** Stakkens plads på tablet: første i en række (ingen venstrelinje), sidst i en række, og om den står i en ny række. */
+function bandStackClass(spans: readonly number[], k: number): string {
+  let used = 0;
+  let row = 0;
+  let start = false;
+  for (let i = 0; i <= k; i++) {
+    if (used + spans[i]! > 12) {
+      used = 0;
+      row++;
+    }
+    start = used === 0;
+    used += spans[i]!;
+  }
+  const end = used === 12 || k === spans.length - 1;
+  return ["lasso-stack", start ? "lasso-stack--start-t" : "", end ? "lasso-stack--end-t" : "", row > 0 ? "lasso-stack--wrap-t" : ""].filter(Boolean).join(" ");
+}
+
+/**
+ * Foldningen af et bånd på tablet (midten ≤ 960, skærm < 1200), gridmodel 4.5: ⅔+⅓ og ¾+¼ bliver
+ * fuld + fuld, ½+½ holder, ⅓+⅓+⅓ bliver ½+½+fuld, og bånd med ¼ og ½ bliver halve, hvor en stak
+ * alene i sidste række står i fuld bredde. Returnerer stakkenes spænd i 12 kolonner.
+ */
+export function tabletSpans(cols: readonly number[]): number[] {
+  if (cols.some((c) => c > 6)) return cols.map(() => 12);
+  const spans = cols.map(() => 6);
+  if (spans.length % 2 === 1) spans[spans.length - 1] = 12;
+  return spans;
 }
 
 type SaveTarget = Extract<ViewAction, { kind: "save-page" }>;
@@ -1047,11 +1085,11 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
                   ) : (
                     <div
                       key={`b${b}`}
-                      className={`lasso-cell lasso-cell--full lasso-columns lasso-columns--${spec.columns ?? 3}${bandTemplate(band.columns) ? " lasso-columns--ratio" : ""}`}
+                      className={`lasso-cell lasso-cell--full lasso-columns lasso-columns--${spec.columns ?? 3}${bandTemplate(band.columns) ? " lasso-columns--ratio" : ""}${gridBandColumns(band.columns) ? " lasso-band" : ""}`}
                       style={bandTemplate(band.columns) ? { ["--lasso-columns-template" as string]: bandTemplate(band.columns) } : undefined}
                     >
                       {band.columns.map((col, k) => (
-                        <div key={k} className="lasso-column">
+                        <div key={k} className={`lasso-column${gridBandColumns(band.columns) ? ` ${bandStackClass(tabletSpans(gridBandColumns(band.columns)!), k)}` : ""}`} style={gridBandColumns(band.columns) ? { ["--lasso-span-t" as string]: tabletSpans(gridBandColumns(band.columns)!)[k] } : undefined}>
                           {groupRuns(col).map((run) =>
                             run.kind === "one" ? (
                               <div key={run.item.i} className="lasso-column__item" style={{ ["--lasso-mobile-order" as string]: mobileOrder(run.item.c) }}>

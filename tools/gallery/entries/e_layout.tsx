@@ -61,10 +61,11 @@ import {
   type TabItem,
 } from "@lasso/ui";
 import { MobileFilterSheet, MobileForm } from "./felter_mobil.js";
+import { DefaultPageGuide, ElementTable, GridModel } from "./e_grid.js";
 
 import { SparkList } from "./c_data1.js";
 import type { GalleryEntry } from "../types.js";
-import { CoverageTable, DatatypeTable, LookupTable, MappingTable, OrderSteps, StatesAndFormat, WidthAndPaper, WidthTable, ZoneSketch } from "./e_guide.js";
+import { CoverageTable, DatatypeTable, LookupTable, MappingTable, StatesAndFormat, WidthAndPaper } from "./e_guide.js";
 
 /* ---------- Fælles ---------- */
 
@@ -482,9 +483,9 @@ function Table({ head, rows }: { head: readonly string[]; rows: readonly (readon
 }
 
 const guide: GalleryEntry[] = [
-  { nr: "23.1", title: "Trin 1: Sideskabelon", node: "CK9-0", only: "desktop", desktopWidth: 1440, note: "Papers skitse af zonerne med mål og artboard-henvisninger, tegnet med tokens (e_guide.tsx).", render: () => <ZoneSketch /> },
-  { nr: "23.2", title: "Trin 2: Kolonnebredder ved 1440 px", node: "CL1-0", only: "desktop", note: "Papers tabel over kolonnebredder (tekst fra Paper).", render: () => <WidthTable /> },
-  { nr: "23.3", title: "Trin 3: Rækkefølge på en side", node: "CM3-0", only: "desktop", note: "Papers 7 trin (1–6 + P) med cirkel-numre og forklaring.", render: () => <OrderSteps /> },
+  { nr: "23.1", title: "Trin 1: Gridmodel – bånd og stakke på 12 kolonner", node: "KA2-0", only: "desktop", desktopWidth: 1440, note: "Gitter, højdeklasser, bånd/stakke, pakkealgoritme, udligning og verifikation. Skitserne tegnes af packBands (packages/spec/src/grid.ts) med de målte højder (e_grid.tsx).", render: () => <GridModel /> },
+  { nr: "23.2", title: "Trin 2: Elementtabel", node: "KA5-0", only: "desktop", desktopWidth: 1440, note: "Én række pr. komponenttype fra GRID_RULES (catalog.ts) og MEASURED_HEIGHTS (grid.ts = measure/heights.json).", render: () => <ElementTable /> },
+  dataEntry({ nr: "23.3", title: "Trin 3: Default-side og spørgsmål", node: "L26-0", only: "desktop", desktopWidth: 1440, note: "A default-siden som skitse (packBands) og B spørgsmålets princip med tre eksempler; C default-siden tegnet af composeCompany + LassoView med demodata.", probe: companyProbe(), draw: (ds) => <DefaultPageGuide ds={ds} company={C} /> }),
   { nr: "23.4", title: "Trin 4: Datatype → element (mappingtabel)", node: "CNC-0", only: "desktop", note: "Papers opslagstabel Datatype | Element | Artboard.", render: () => <DatatypeTable /> },
   { nr: "23.5", title: "Trin 5: Tjek tilstande og talformat", node: "CPU-0", only: "desktop", note: "Papers tre kort: fem tilstande, talformat (ægte minus) og tjeklisten 'Aflever aldrig uden' (21 punkter).", render: () => <StatesAndFormat /> },
   { nr: "23.6", title: "Trin 6: Tænk bredden og papiret med", node: "DT7-0", only: "desktop", note: "Papers to kort Responsiv (26) og Eksport og print (27).", render: () => <WidthAndPaper /> },

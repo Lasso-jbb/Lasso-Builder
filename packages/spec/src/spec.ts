@@ -632,11 +632,14 @@ export const actionsSchema = z.object({
 });
 
 /**
- * Bredde i 4-kolonne-grid'et (guide 23: kun ¼, ½, ¾ og fuld). Udeladt = komponentens
- * standardbredde (DEFAULT_WIDTH). På tablet og mobil lægger elementerne sig under hinanden.
+ * Bredde i 12-kolonne-gitteret (gridmodellen 23.1): ¼ = 3, ⅓ = 4, ½ = 6, ⅔ = 8, ¾ = 9 og fuld = 12
+ * kolonner, ingen andre. Udeladt = komponentens standardbredde (DEFAULT_WIDTH). På tablet og mobil
+ * folder båndene (se LAYOUT_RULES).
  */
-export const WIDTHS = ["quarter", "half", "three-quarters", "full"] as const;
+export const WIDTHS = ["quarter", "third", "half", "two-thirds", "three-quarters", "full"] as const;
 export type Width = (typeof WIDTHS)[number];
+/** Kolonner i 12-kolonne-gitteret pr. bredde. */
+export const WIDTH_COLUMNS: Record<Width, number> = { quarter: 3, third: 4, half: 6, "two-thirds": 8, "three-quarters": 9, full: 12 };
 /**
  * Layoutmønster 8 (Kortgitter) og 9 (Harmonika) fra Paper 30 (node JV3-0). Sammenhængende
  * komponenter med samme group.id tegnes samlet: 'cards' i et kortgitter (to kolonner, én på
@@ -669,15 +672,15 @@ export const groupSchema = z.object({
 export type ComponentGroup = z.infer<typeof groupSchema>;
 
 const widthShape = {
-  width: z.enum(WIDTHS).optional().describe("Bredde i dashboardet: quarter (¼), half (½), three-quarters (¾) eller full. Udelad for standardbredden."),
+  width: z.enum(WIDTHS).optional().describe("Bredde i 12-kolonne-gitteret: quarter (¼), third (⅓), half (½), two-thirds (⅔), three-quarters (¾) eller full. Udelad for standardbredden."),
   column: z
     .number()
     .int()
     .min(1)
-    .max(3)
+    .max(4)
     .optional()
     .describe(
-      "Kun layout 'columns': hvilken kolonne komponenten stables i. Udeladt = fuld bredde over eller under kolonnerne. Et lavere kolonnenummer end forrige komponents starter et nyt bånd af kolonner; står width på båndets komponenter, bestemmer den kolonnernes forhold (fx ¾ + ¼).",
+      "Kun layout 'columns': hvilken kolonne (stak) komponenten stables i, 1–4. Et bånd med bredder, der summerer til 12, er et bånd i gridmodellen (23.1). Udeladt = fuld bredde over eller under kolonnerne. Et lavere kolonnenummer end forrige komponents starter et nyt bånd af kolonner; står width på båndets komponenter, bestemmer den kolonnernes forhold (fx ¾ + ¼).",
     ),
   group: groupSchema
     .optional()

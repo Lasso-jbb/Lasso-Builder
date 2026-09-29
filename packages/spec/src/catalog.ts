@@ -1,7 +1,7 @@
 import { OPERATORS, type Criterion } from "./criteria.js";
 import { FIELDS, FIELD_BY_KEY, OPERATORS_BY_TYPE } from "./fields.js";
 import { CHANGE_TYPES } from "./models.js";
-import { METRICS, TABLE_COLUMNS, type ComponentType } from "./spec.js";
+import { METRICS, TABLE_COLUMNS, type ComponentType, type ViewComponent, type Width } from "./spec.js";
 
 /**
  * Komponentkataloget, som modellen læser. ChatGPT læser ikke resources, så
@@ -25,7 +25,7 @@ export const COMPOSITION_RULES = `Komposition (guide 23):
 - Flere virksomheder → render_view: LassoCompareTable (2–6 navngivne, flere nøgletal), LassoRanking (2–10 navngivne, ét nøgletal) eller LassoLineChart (2 virksomheder, ét nøgletal over tid); mange fundet med kriterier → search_companies eller LassoCompanyTable. Aldrig én enkeltvisning pr. virksomhed.
 - render_view til én virksomhed kun, når brugeren beder om elementer, ingen focus dækker (fx LassoStackedBarChart, LassoProductionUnits, LassoProperties, en egen vurdering i LassoSummary), eller om en kombination på tværs af focus (fx ejere + revisor, resultatopgørelse + ejere). Læg da ALT i én spec: LassoCompanyHead først, dernæst det bestilte, og LassoSummary som sidste sektion.
 - ÉN visning pr. svar: kald højst ét af show_company, show_person, search_companies og render_view pr. brugerbesked, og kun én gang. Aldrig show_company og render_view efter hinanden.
-- render_view er ét dashboard (layout 'dashboard', standard): 4 kolonner, hver komponent i sin bredde (width: quarter ¼, half ½, three-quarters ¾, full). Udelad width for standardbredden. Hoved, nøgletal, tabeller og fulde regnskaber står i fuld bredde; to halve (fx graf + LassoKeyValueList, LassoPersonList + LassoOwnerList) står side om side, så læg dem efter hinanden. Efterlad aldrig en halv alene i en række: giv den width 'full' eller en makker. En ¼ (fx LassoRelations) står ved siden af en ¾.
+- render_view er ét dashboard (layout 'dashboard', standard): 12-kolonne-gitter, hver komponent i sin bredde (width: quarter ¼, third ⅓, half ½, two-thirds ⅔, three-quarters ¾, full). Udelad width for standardbredden. Rækkens bredder summerer til 12 (fx ½+½, ⅔+⅓, ¾+¼, ⅓+⅓+⅓, ¼+¼+½). Hoved, nøgletal, tabeller og fulde regnskaber står i fuld bredde; to halve (fx graf + LassoKeyValueList, LassoPersonList + LassoOwnerList) står side om side, så læg dem efter hinanden. Efterlad aldrig en halv alene i en række: giv den width 'full' eller en makker. En ¼ (fx LassoRelations) står ved siden af en ¾.
 - Højst én graf pr. visning. Flere grafer stables aldrig; vælg den ene, spørgsmålet peger på (1 nøgletal → LassoBarChart, 2–3 → LassoGroupedBarChart, 4+ eller "tabel" → LassoMultiYearTable).`;
 
 /**
@@ -35,9 +35,115 @@ export const COMPOSITION_RULES = `Komposition (guide 23):
  */
 export const LAYOUT_RULES = `Layout (Paper 30): vælg først svarniveau, så mønster, så elementer.
 Svarniveauer: A Element = ét spørgsmål, ét element (fx "hvad er omsætningen" → LassoKeyFigureCards med ét metric; "hvem er revisor" → LassoKeyValueList), aldrig to A-svar under hinanden. B Sektion = ét emne, 2–4 elementer i ét mønster; standardsvaret i chatten ("hvordan går det" → mønster 1; "hvem ejer" → mønster 2; "kan vi handle med" → mønster 7; "hvad er der sket" → mønster 6). C Side = det hele ("fortæl om X", "hvem er Y", "sammenlign", målgrupper) → show_company/show_person/search_companies, som bygger hele siden med moduler. Vælg det laveste niveau, der svarer fuldt; svaret vokser via links, aldrig omvendt. Hvert svar starter med identiteten (LassoCompanyHead/LassoPersonHead) og slutter med kildelinje. Brug til: answer { source, next { label, prompt } } på spec'en giver svarets bundlinje (30.1–30.2): kildelinje til venstre og ét koral link videre til næste niveau, fx niveau A 'Hvad er omsætningen?' → answer { source: 'Kilde: CVR og årsrapport 2025', next: { label: 'Se hele økonomien', prompt: 'Hvordan går det med X?' } }; niveau B → next 'Åbn X i Lasso'. Brug ikke når: visningen er en hel side i portalen (niveau C har logo: true og ingen next). Kræver: intet; alle felter er valgfri.
-Mønstre på 4-kolonne-griddet: 1 Overblik = nøgletalskort fuld, graf ½ + nøgle-værdi-liste ½, lister to og to. 2 Fokus = ét stort element ¾ + fakta ¼ (ejerdiagram + ejerliste, scoremåler + forklaring; LassoRelations er ¼-elementet). 3 Ligeværdige = ½ + ½ med samme vægt (LassoPersonList + LassoOwnerList, LassoIncomeStatement + LassoBalanceSheet i hver sin fane). 4 Liste først = tabel i fuld bredde (LassoCompanyTable) med detaljer ved klik. 5 Sammenligning = én kolonne pr. virksomhed (LassoCompareTable, LassoRanking). 6 Tidslinje = filtre ¼ + kronologisk strøm ¾ (LassoTimeline med filterColumn: true; LassoNews); på tablet og mobil bliver filtrene chips over strømmen. 7 Fortælling = analyse ¾ (LassoSummary) + 3 tal ¼ (LassoKeyFigureCards). 8 Kortgitter = artikler i to kolonner (LassoNews). 9 Harmonika = mange lange sektioner i ét modul. Et modul må kombinere to mønstre over hinanden (graf fuld + tabel fuld), aldrig blande dem i én række.
+Mønstre på 12-kolonne-gitteret: 1 Overblik = nøgletalskort fuld, graf ½ + nøgle-værdi-liste ½, lister to og to. 2 Fokus = ét stort element ¾ + fakta ¼ (ejerdiagram + ejerliste, scoremåler + forklaring; LassoRelations er ¼-elementet). 3 Ligeværdige = ½ + ½ med samme vægt (LassoPersonList + LassoOwnerList, LassoIncomeStatement + LassoBalanceSheet i hver sin fane). 4 Liste først = tabel i fuld bredde (LassoCompanyTable) med detaljer ved klik. 5 Sammenligning = én kolonne pr. virksomhed (LassoCompareTable, LassoRanking). 6 Tidslinje = filtre ¼ + kronologisk strøm ¾ (LassoTimeline med filterColumn: true; LassoNews); på tablet og mobil bliver filtrene chips over strømmen. 7 Fortælling = analyse ¾ (LassoSummary) + 3 tal ¼ (LassoKeyFigureCards). 8 Kortgitter = artikler i to kolonner (LassoNews). 9 Harmonika = mange lange sektioner i ét modul. Et modul må kombinere to mønstre over hinanden (graf fuld + tabel fuld), aldrig blande dem i én række.
 Mønster 8 og 9 i render_view: giv sammenhængende komponenter samme group { id, pattern, title? }. pattern 'cards' = kortgitter (fx flere korte elementer eller nyheder side om side, to kolonner, én på mobil); pattern 'accordion' = harmonika, når ét svar samler 3+ lange sektioner (fx LassoIncomeStatement, LassoBalanceSheet, LassoCashFlow, LassoTextSections variant 'analyse'), én række pr. komponent med komponentens title som rækkenavn, første række åben. title er gruppens overskrift. toolbar? { primary?: { label, prompt }, actions?: [{ label, prompt }] } giver modulværktøjslinjen (56 px under overskriften, 30.11): primær handling yderst til venstre og op til 3 tekstknapper, hver et opfølgende spørgsmål (fx { label: 'Eksportér', prompt: 'Eksportér nøgletallene for X som CSV' }); udelad den, når modulet ingen handlinger har. Brug ikke group til 1 komponent eller til at blande mønstre i én række.
-Foldning: ¾+¼ bliver fuld+fuld under 1200; ½+½ holder til 768 og stabler under; nøgletalskort bliver 2×2 under 768; tabeller bliver kortlister under 768; grafer viser maks 5 punkter. Chatten bruger tablet-reglerne (640–900 px); kun Claude på mobil bruger mobilreglerne. Variationen ligger i valget af mønster og elementer, ikke i nye former: samme spørgsmål giver samme mønster hver gang.`;
+Gitter (23.1, gridmodel): siden består af bånd, der altid spænder 12 kolonner; et bånd har 1–4 stakke, og en stak stabler 1–n elementer i samme bredde. Tilladte bånd: 12 | 6+6 | 8+4 | 4+8 | 9+3 | 3+9 | 4+4+4 | 3+3+6 | 3+6+3 | 6+3+3 | 3+3+3+3 (⅔+¼ og ¾+⅓ er ulovlige). Hvert element har standardbredde, min/max-bredde, højdeklasse (lav ≤176 px, mellem 177–320, høj 321–640, meget høj >640) og højdeadfærd (fast, voksende; flex = kan fylde restplads med flere rækker, linjer eller et højere plot); se 'Gitter:' i kataloget. Regler: hoved, nøgletalskort/persontal og elementer med min 1/1 står i eget fuldbånd; et højt element er anker, og lave/mellem elementer stables i en smal stak ved siden af (fx ejerdiagram ⅔ | ejerliste + reelle ejere + ledelse ⅓), til stakken er mindst 85 % af ankerets højde; to høje elementer står ½+½; stakkene i et bånd må højst afvige 15 % i højde, og den korteste stak strækkes, så der aldrig er huller; aldrig en ½ alene i et bånd (giv den en makker eller fuld bredde); et element står aldrig smallere end sit minimum. show_company og show_person pakker selv båndene; i render_view vælger du bredderne efter samme regler.
+Foldning: ¾+¼ og ⅔+⅓ bliver fuld+fuld under 1200; ⅓+⅓+⅓ bliver ½+½+fuld under 1200; ½+½ holder til 768 og stabler under; nøgletalskort bliver 2×2 under 768; tabeller bliver kortlister under 768; grafer viser maks 5 punkter. Chatten bruger tablet-reglerne (640–900 px); kun Claude på mobil bruger mobilreglerne. Variationen ligger i valget af mønster og elementer, ikke i nye former: samme spørgsmål giver samme mønster hver gang.`;
+
+/** Højdeklasse i elementets standardbredde (23.1): lav ≤ 176 px, mellem 177–320, høj 321–640, meget høj > 640. */
+export type HeightClass = "low" | "medium" | "high" | "very-high";
+/** Højdeadfærd (23.1): fast = højden bestemmes af elementet; voksende = højden følger data (med loft og "Se alle"). */
+export type HeightBehavior = "fixed" | "growing";
+/** Flex (23.1): elementet kan fylde restplads i sin stak med flere rækker, flere linjer eller et højere plot. */
+export type FlexKind = "rows" | "lines" | "plot";
+
+/** Et elements plads i 12-kolonne-gitteret (gridmodellen, Paper 23.1/23.2). */
+export interface GridRule {
+  /** Standardbredde (den bredde, elementet lægges i, når intet andet tvinger). */
+  std: Width;
+  /** Hård minimumsbredde: smallere gør tekst-, nøgle-værdi- og tabelelementer 30–100 % højere. */
+  min: Width;
+  max: Width;
+  height: HeightClass;
+  behavior: HeightBehavior;
+  flex?: FlexKind;
+}
+
+const g = (std: Width, min: Width, max: Width, height: HeightClass, behavior: HeightBehavior, flex?: FlexKind): GridRule => ({ std, min, max, height, behavior, ...(flex ? { flex } : {}) });
+
+/**
+ * Elementtabellen (Paper 23.2, scratchpad/gridmodel.md afsnit 6): standard-, min- og maksbredde,
+ * højdeklasse og højdeadfærd pr. komponenttype, målt med demodata på 1200-gitteret.
+ * LassoKeyValueList variant 'financials' har sin egen række (gridRuleOf).
+ * Udgåede typer (ScoreHistory, AuditorIndependence, CreditRating) har en regel, så gamle visninger pakkes.
+ */
+export const GRID_RULES: Record<ComponentType, GridRule> = {
+  LassoCompanyHead: g("full", "full", "full", "low", "fixed"),
+  LassoKeyFigureCards: g("full", "half", "full", "low", "fixed"),
+  LassoKeyValueList: g("half", "half", "full", "very-high", "growing", "rows"),
+  LassoContact: g("third", "quarter", "half", "medium", "fixed"),
+  LassoContactPersons: g("third", "quarter", "half", "medium", "growing", "rows"),
+  LassoShortcuts: g("half", "quarter", "full", "low", "fixed"),
+  LassoTextSections: g("half", "half", "full", "high", "growing", "lines"),
+  LassoSummary: g("full", "half", "full", "high", "growing", "lines"),
+  LassoTimeline: g("half", "third", "full", "high", "growing", "rows"),
+  LassoNews: g("half", "third", "full", "medium", "growing", "rows"),
+  LassoBarChart: g("half", "third", "full", "medium", "fixed", "plot"),
+  LassoGroupedBarChart: g("half", "third", "full", "medium", "fixed", "plot"),
+  LassoLineChart: g("half", "third", "full", "medium", "fixed", "plot"),
+  LassoStackedBarChart: g("half", "third", "full", "medium", "fixed", "plot"),
+  LassoWaterfallChart: g("half", "third", "full", "medium", "fixed", "plot"),
+  LassoShareBars: g("half", "quarter", "half", "medium", "fixed"),
+  LassoKeyFigureGauge: g("third", "quarter", "half", "medium", "fixed"),
+  LassoMultiYearTable: g("half", "half", "full", "medium", "growing"),
+  LassoIncomeStatement: g("half", "half", "three-quarters", "high", "growing"),
+  LassoBalanceSheet: g("half", "half", "three-quarters", "very-high", "growing"),
+  LassoCashFlow: g("half", "half", "three-quarters", "high", "growing"),
+  LassoFinancialStatements: g("full", "full", "full", "very-high", "growing"),
+  LassoPersonList: g("third", "quarter", "half", "medium", "growing", "rows"),
+  LassoOwnerList: g("third", "quarter", "half", "low", "growing", "rows"),
+  LassoBeneficialOwners: g("third", "quarter", "half", "low", "growing", "rows"),
+  LassoOwnershipDiagram: g("two-thirds", "half", "full", "high", "growing", "plot"),
+  LassoRelations: g("quarter", "quarter", "half", "medium", "growing"),
+  LassoRiskObservations: g("half", "third", "full", "high", "growing", "rows"),
+  LassoScoreGauge: g("quarter", "quarter", "half", "low", "fixed"),
+  LassoScoreHistory: g("half", "third", "full", "medium", "fixed", "plot"),
+  LassoCreditRating: g("half", "third", "full", "high", "fixed"),
+  LassoAuditorIndependence: g("full", "half", "full", "high", "growing"),
+  LassoProductionUnits: g("full", "two-thirds", "full", "high", "growing"),
+  LassoProperties: g("half", "third", "full", "low", "growing"),
+  LassoMap: g("half", "third", "full", "high", "fixed", "plot"),
+  LassoRegistration: g("full", "two-thirds", "full", "high", "growing"),
+  LassoMergers: g("half", "half", "full", "high", "growing"),
+  LassoAnnouncements: g("full", "half", "full", "low", "growing", "rows"),
+  LassoPublications: g("half", "half", "full", "high", "growing", "rows"),
+  LassoLivestock: g("half", "half", "full", "high", "growing"),
+  LassoCompareTable: g("full", "two-thirds", "full", "high", "growing"),
+  LassoRanking: g("half", "third", "full", "medium", "growing", "rows"),
+  LassoCompanyTable: g("full", "full", "full", "high", "growing", "rows"),
+  LassoPersonTable: g("full", "full", "full", "high", "growing", "rows"),
+  LassoPersonHead: g("full", "full", "full", "low", "fixed"),
+  LassoPersonStats: g("full", "half", "full", "low", "fixed"),
+  LassoPersonRoles: g("two-thirds", "half", "full", "medium", "growing", "plot"),
+  LassoPersonNetwork: g("half", "third", "full", "medium", "growing", "plot"),
+  LassoPersonRisk: g("half", "third", "full", "high", "growing", "rows"),
+  LassoPersonFacts: g("third", "quarter", "half", "high", "growing", "rows"),
+  LassoChangeFeed: g("full", "half", "full", "very-high", "growing", "rows"),
+  LassoHeatmap: g("half", "third", "full", "medium", "fixed"),
+  LassoFollowUps: g("full", "full", "full", "low", "fixed"),
+  LassoSavedPages: g("full", "full", "full", "high", "growing"),
+};
+
+/** Regnskabslisten (09, variant 'financials') har 12 faste rækker: høj og fast, ikke meget høj og voksende. */
+const FINANCIALS_LIST_RULE: GridRule = g("half", "half", "full", "high", "fixed", "rows");
+
+/** Gitterreglen for en konkret komponent (varianter kan have deres egen række i elementtabellen). */
+export function gridRuleOf(c: Pick<ViewComponent, "type"> & { variant?: unknown }): GridRule {
+  if (c.type === "LassoKeyValueList" && c.variant === "financials") return FINANCIALS_LIST_RULE;
+  return GRID_RULES[c.type];
+}
+
+const WIDTH_LABEL: Record<Width, string> = { quarter: "¼", third: "⅓", half: "½", "two-thirds": "⅔", "three-quarters": "¾", full: "1/1" };
+const HEIGHT_LABEL: Record<HeightClass, string> = { low: "lav", medium: "mellem", high: "høj", "very-high": "meget høj" };
+const BEHAVIOR_LABEL: Record<HeightBehavior, string> = { fixed: "fast", growing: "voksende" };
+const FLEX_LABEL: Record<FlexKind, string> = { rows: "rækker", lines: "linjer", plot: "plot" };
+
+/** Gitterlinjen i kataloget: "Gitter: ½ (⅓–1/1), mellem, voksende, flex rækker." */
+export function gridRuleText(r: GridRule): string {
+  const range = r.min === r.max ? "kun" : `${WIDTH_LABEL[r.min]}–${WIDTH_LABEL[r.max]}`;
+  return `Gitter: ${WIDTH_LABEL[r.std]} (${range === "kun" ? `kun ${WIDTH_LABEL[r.std]}` : range}), ${HEIGHT_LABEL[r.height]}, ${BEHAVIOR_LABEL[r.behavior]}${r.flex ? `, flex ${FLEX_LABEL[r.flex]}` : ""}.`;
+}
+export { WIDTH_LABEL as GRID_WIDTH_LABEL, HEIGHT_LABEL as GRID_HEIGHT_LABEL, BEHAVIOR_LABEL as GRID_BEHAVIOR_LABEL, FLEX_LABEL as GRID_FLEX_LABEL };
 
 /** Kort note pr. komponent: hvilken show_company-focus viser den allerede. */
 const F = (focus: string) => `Dækkes af show_company focus ${focus}; byg kun selv i render_view sammen med andet.`;
@@ -416,7 +522,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
 ];
 
 export function catalogAsText(): string {
-  return COMPONENT_CATALOG.map((c) => `- ${c.type} (${c.title}): ${c.description} Props: ${c.props}.`).join("\n");
+  return COMPONENT_CATALOG.map((c) => `- ${c.type} (${c.title}): ${c.description} Props: ${c.props}. ${gridRuleText(GRID_RULES[c.type])}`).join("\n");
 }
 
 export function fieldsAsText(): string {

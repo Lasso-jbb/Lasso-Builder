@@ -107,7 +107,7 @@ test("columnBands: et lavere kolonnenummer starter et nyt bånd, og bredderne gi
     ["LassoPersonHead", "LassoPersonRoles | LassoPersonFacts", "LassoPersonNetwork | LassoOwnershipDiagram", "LassoPersonRisk | LassoTimeline"],
   );
   const [, rolesBand, netBand] = bands;
-  assert.equal(rolesBand?.kind === "columns" && bandTemplate(rolesBand.columns), "minmax(0, 3fr) minmax(0, 1fr)");
+  assert.equal(rolesBand?.kind === "columns" && bandTemplate(rolesBand.columns), "minmax(0, 9fr) minmax(0, 3fr)");
   assert.equal(netBand?.kind === "columns" && bandTemplate(netBand.columns), undefined);
   // Virksomhedssidens kolonner (stigende kolonnenumre uden bredder) er stadig ét bånd.
   const company = parseViewSpec({
@@ -128,7 +128,7 @@ test("columnBands: et lavere kolonnenummer starter et nyt bånd, og bredderne gi
 test("personsiden, overblik: aktive roller som liste ¾ + stamoplysninger ¼ (uden hovedets tal), historik (3) og ejerdiagram, ingen nyheder", () => {
   const spec = composePerson(ID, dataset(), { followUps: false });
   const html = render(spec, dataset(), { drillDown: true });
-  assert.match(html, /lasso-columns--ratio" style="--lasso-columns-template:minmax\(0, 3fr\) minmax\(0, 1fr\)"/);
+  assert.match(html, /lasso-columns--ratio lasso-band" style="--lasso-columns-template:minmax\(0, 9fr\) minmax\(0, 3fr\)"/);
   // Aktive roller: én række pr. selskab med rollerne under og "siden" til højre; navnet kan åbnes.
   assert.match(html, /class="lasso-section__title">Aktive roller</);
   assert.match(html, /<button type="button" class="lasso-link lasso-row__open">Eksempel Holding ApS<\/button><\/div><div class="lasso-row__sub">Direktør, ejer 100 %<\/div><\/div><div class="lasso-row__side">siden 2005</);

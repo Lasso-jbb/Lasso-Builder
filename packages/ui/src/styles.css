@@ -1456,18 +1456,21 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-odlist__more svg { fill: none; stroke: var(--lasso-placeholder); stroke-width: 1.5; }
 
 /* ---------- Dashboard (guide 23): hvert element står i sin celle i 4-kolonne-grid'et ---------- */
-.lasso-content--dashboard, .lasso-content--grid-2 { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: var(--lasso-space-5); row-gap: var(--lasso-space-10); align-items: start; }
+/* 12-kolonne-gitteret (gridmodellen 23.1): ¼ = 3, ⅓ = 4, ½ = 6, ⅔ = 8, ¾ = 9 kolonner. */
+.lasso-content--dashboard, .lasso-content--grid-2 { grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--lasso-space-5); row-gap: var(--lasso-space-10); align-items: start; }
 .lasso-cell { min-width: 0; }
-.lasso-cell--quarter { grid-column: span 1; }
-.lasso-cell--half { grid-column: span 2; }
-.lasso-cell--three-quarters { grid-column: span 3; }
+.lasso-cell--quarter { grid-column: span 3; }
+.lasso-cell--third { grid-column: span 4; }
+.lasso-cell--half { grid-column: span 6; }
+.lasso-cell--two-thirds { grid-column: span 8; }
+.lasso-cell--three-quarters { grid-column: span 9; }
 .lasso-cell--full { grid-column: 1 / -1; }
 .lasso-cell > * { grid-column: auto; }
-/* Foldning (30): tablet (midten ≤ 960, svarer til skærm < 1200) to kolonner; ½ + ½ holder (chatten 640–900 px), ¼ + ¾ bliver fuld + fuld */
+/* Foldning (30): tablet (midten ≤ 960, svarer til skærm < 1200); ½ + ½ holder (chatten 640–900 px), ⅓ bliver ½, ¼/⅔/¾ bliver fuld */
 @container lasso (max-width: 960px) {
-  .lasso-content--dashboard, .lasso-content--grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--lasso-space-4); }
-  .lasso-cell--half { grid-column: span 1; }
-  .lasso-cell--quarter, .lasso-cell--three-quarters { grid-column: 1 / -1; }
+  .lasso-content--dashboard, .lasso-content--grid-2 { column-gap: var(--lasso-space-4); }
+  .lasso-cell--half, .lasso-cell--third { grid-column: span 6; }
+  .lasso-cell--quarter, .lasso-cell--two-thirds, .lasso-cell--three-quarters { grid-column: 1 / -1; }
 }
 @container lasso (max-width: 560px) {
   .lasso-content--dashboard, .lasso-content--grid-2 { grid-template-columns: minmax(0, 1fr); column-gap: var(--lasso-space-3); row-gap: var(--lasso-space-7); }
@@ -1476,7 +1479,9 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 
 /* ---------- Kolonner (portalens virksomhedsside, guide 23): hver kolonne stabler sine sektioner ---------- */
 .lasso-content--columns { grid-template-columns: minmax(0, 1fr); row-gap: var(--lasso-space-7); }
-.lasso-columns { display: grid; gap: 0; align-items: start; border-top: 1px solid var(--lasso-border); }
+/* Kolonnerne strækkes til båndets højde (gridmodellen 23.1): ingen huller under en kort kolonne. */
+.lasso-columns { display: grid; gap: 0; align-items: stretch; border-top: 1px solid var(--lasso-border); }
+.lasso-columns > .lasso-column > .lasso-column__item:last-child { flex: 1 0 auto; }
 .lasso-columns--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .lasso-columns--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .lasso-column { min-width: 0; display: flex; flex-direction: column; }
@@ -1496,6 +1501,24 @@ button.lasso-relations__name:hover { text-decoration: underline; }
   .lasso-columns--ratio { grid-template-columns: minmax(0, 1fr); }
   .lasso-columns--ratio > .lasso-column + .lasso-column { border-left: 0; border-top: 1px solid var(--lasso-border); }
   .lasso-columns--ratio .lasso-column__item { padding-left: 0; padding-right: 0; }
+}
+/* Gridmodellen (23.1): et bånd spænder 12 kolonner (bredderne summerer til 12). Stakkene strækkes til
+   båndets højde, og det sidste element i hver stak fylder resten, så kolonnelinjerne altid når båndets
+   bund og der aldrig er huller. Tablet (midten ≤ 960): ⅔+⅓ og ¾+¼ bliver fuld+fuld, ½+½ holder,
+   ⅓+⅓+⅓ bliver ½+½+fuld (--lasso-span-t fra LassoView.tabletSpans); mobil: én kolonne. */
+@container lasso (max-width: 960px) {
+  .lasso-columns--ratio.lasso-band { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  .lasso-band > .lasso-column { grid-column: span var(--lasso-span-t, 12); }
+  .lasso-columns--ratio.lasso-band > .lasso-column + .lasso-column { border-left: 1px solid var(--lasso-border); border-top: 0; }
+  .lasso-columns--ratio.lasso-band > .lasso-column.lasso-stack--start-t { border-left: 0; }
+  .lasso-columns--ratio.lasso-band > .lasso-column.lasso-stack--wrap-t { border-top: 1px solid var(--lasso-border); }
+  .lasso-columns--ratio.lasso-band .lasso-column__item { padding-left: var(--lasso-space-6); padding-right: var(--lasso-space-6); }
+  .lasso-columns--ratio.lasso-band > .lasso-stack--start-t .lasso-column__item { padding-left: 0; }
+  .lasso-columns--ratio.lasso-band > .lasso-stack--end-t .lasso-column__item { padding-right: 0; }
+}
+@container lasso (max-width: 560px) {
+  .lasso-columns--ratio.lasso-band { display: flex; flex-direction: column; align-items: stretch; border-top: 0; }
+  .lasso-columns--ratio.lasso-band .lasso-column__item { padding: var(--lasso-space-5) 0; }
 }
 @container lasso (max-width: 960px) {
   .lasso-columns--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
