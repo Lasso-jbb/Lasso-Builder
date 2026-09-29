@@ -2,6 +2,7 @@ import { useState } from "react";
 import { isPersonId, statusGroup, type PersonNetworkCompanyVM, type PersonNetworkRowVM, type PersonNetworkVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
+import { Icon } from "./Icon.js";
 
 const COLLAPSED = 3;
 /** Højst tre bånd (fælles selskaber) pr. person; resten står i undertitlen som antal. */
@@ -55,22 +56,34 @@ function PersonName({ p, onOpen, className }: { p: PersonNetworkRowVM; onOpen?: 
   );
 }
 
-/** Ét tidsbånd med etiket over: aktivt = chart-2, afsluttet = stiplet omrids, konkurs = 1 px rød markør. */
-function Band({ c, pos, start, now, compact = false }: { c: PersonNetworkCompanyVM; pos: (d: string | undefined, f: number) => number; start: number; now: number; compact?: boolean }) {
+/** Ét tidsbånd med etiket over (Paper LUE-0): aktivt = chart-2, afsluttet = stiplet omrids på surface-muted. */
+function Band({ c, pos, start, now, top, short = false }: { c: PersonNetworkCompanyVM; pos: (d: string | undefined, f: number) => number; start: number; now: number; top: number; short?: boolean }) {
   const left = pos(c.from, start);
   const right = pos(c.to, now);
-  const width = Math.max(compact ? 1.5 : 0.8, right - left);
+  const width = Math.max(1, right - left);
   // Etiketter nær højre kant højrestilles, så de ikke løber ud af banen.
   const anchorRight = left > 55;
-  const bankrupt = isBankrupt(c);
+  const label = short ? [c.companyName, c.role].filter(Boolean).join(", ") : bandLabel(c);
   return (
-    <div className="lasso-personnet__lane" title={bandLabel(c)}>
+    <div className="lasso-personnet__lane" style={{ top }} title={bandLabel(c)}>
       <span className="lasso-personnet__bandlabel" style={anchorRight ? { right: `${Math.max(0, 100 - right)}%`, textAlign: "right", maxWidth: `${Math.max(40, right)}%` } : { left: `${left}%`, maxWidth: `${100 - left}%` }}>
-        {bandLabel(c)}
-        {bankrupt && c.status ? <span className="lasso-personnet__bankrupt">{`, ${c.status.toLowerCase()}`}</span> : null}
+        {label}
       </span>
       <span className={`lasso-personnet__band${c.to ? " lasso-personnet__band--ended" : ""}`} style={{ left: `${left}%`, width: `${width}%` }} />
-      {bankrupt ? <span className="lasso-personnet__marker" style={{ left: `calc(${right}% - 0.5px)` }} title={c.status ?? "Konkurs"} /> : null}
+    </div>
+  );
+}
+
+/** Banerne for én person: 30 px pr. fælles selskab og en 1 px rød markør ved konkurs (status nu, derfor ved i dag). */
+function Track({ p, pos, start, now, short = false }: { p: PersonNetworkRowVM; pos: (d: string | undefined, f: number) => number; start: number; now: number; short?: boolean }) {
+  const list = p.companies.slice(0, MAX_BANDS);
+  const bankrupt = list.find(isBankrupt);
+  return (
+    <div className="lasso-personnet__track" style={{ height: list.length * 30 }}>
+      {list.map((c, j) => (
+        <Band key={j} c={c} pos={pos} start={start} now={now} top={j * 30 + 4} short={short} />
+      ))}
+      {bankrupt ? <span className="lasso-personnet__marker" style={{ left: `calc(${pos(undefined, now)}% - 1px)` }} title={`${bankrupt.companyName}: ${bankrupt.status ?? "konkurs"}`} role="img" aria-label={`${bankrupt.companyName}, ${(bankrupt.status ?? "konkurs").toLowerCase()}`} /> : null}
     </div>
   );
 }
@@ -148,12 +161,13 @@ export function PersonNetwork({
   );
   const sub = (p: PersonNetworkRowVM) => {
     const n = p.companies.length;
-    return [`${overlapText(p)} sammen`, `${n} ${n === 1 ? "fælles selskab" : "fælles selskaber"}`].join(", ");
+    return `${n} ${n === 1 ? "fælles selskab" : "fælles selskaber"}${p.active ? "" : ", afsluttet"}`;
   };
   const more =
     network.people.length > limit ? (
-      <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+      <button type="button" className="lasso-link lasso-personnet__more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
         {expanded ? "Vis færre" : `Vis alle ${network.people.length}`}
+        <Icon name={expanded ? "chevron-up" : "chevron-right"} size={14} />
       </button>
     ) : null;
   return (
@@ -175,41 +189,38 @@ export function PersonNetwork({
         <ul className="lasso-personroles__rows">
           {rows.map((p, i) => (
             <li key={`${p.name}-${i}`} className={`lasso-personroles__row lasso-personnet__brow ${p.active ? "" : "is-ended"}`}>
-              <div className="lasso-personroles__label">
-                <PersonName p={p} onOpen={onOpen} className="lasso-personnet__bname" />
-                <div className="lasso-personroles__sub">{sub(p)}</div>
+              <div className="lasso-personnet__who">
+                <div className="lasso-personroles__label">
+                  <PersonName p={p} onOpen={onOpen} className="lasso-personnet__bname" />
+                  <div className="lasso-personroles__sub">{sub(p)}</div>
+                </div>
+                <div className="lasso-personnet__ov">
+                  <span className="lasso-personnet__ovn">{overlapText(p)}</span>
+                  <span className="lasso-personnet__ovu">{p.active ? "overlap" : "tidligere"}</span>
+                </div>
               </div>
-              <div className="lasso-personroles__track">
-                {p.companies.slice(0, MAX_BANDS).map((c, j) => (
-                  <Band key={j} c={c} pos={pos} start={start} now={now} />
-                ))}
-              </div>
+              <Track p={p} pos={pos} start={start} now={now} />
             </li>
           ))}
         </ul>
         {more}
       </div>
       <div className="lasso-personnet__mob">
-        <ul className="lasso-personnet__cards">
+        <div className="lasso-personnet__maxis" aria-hidden="true">
+          {[...mticks, thisYear].map((y, i) => (
+            <span key={`${y}-${i}`} className={i === 3 ? "is-now" : undefined}>
+              {y}
+            </span>
+          ))}
+        </div>
+        <ul className="lasso-personnet__mrows">
           {rows.map((p, i) => (
-            <li key={`${p.name}-${i}`} className={`lasso-personnet__card ${p.active ? "" : "is-ended"}`}>
-              <div className="lasso-personnet__cardhead">
+            <li key={`${p.name}-${i}`} className={`lasso-personnet__mrow ${p.active ? "" : "is-ended"}`}>
+              <div className="lasso-personnet__mhead">
                 <PersonName p={p} onOpen={onOpen} className="lasso-personnet__bname" />
-                <span className="lasso-personnet__overlap">{overlapText(p)}</span>
+                <span className="lasso-personnet__mov">{p.active ? `${overlapText(p)} overlap` : `${overlapText(p)}, tidligere`}</span>
               </div>
-              <div className="lasso-personnet__mtrack">
-                {p.companies.slice(0, MAX_BANDS).map((c, j) => (
-                  <Band key={j} c={c} pos={pos} start={start} now={now} compact />
-                ))}
-              </div>
-              <div className="lasso-personnet__maxis" aria-hidden="true">
-                {mticks.map((y) => (
-                  <span key={y} style={{ left: `${pos(`${y}-01-01`, now)}%` }}>
-                    {y}
-                  </span>
-                ))}
-                <span className="is-now">{thisYear}</span>
-              </div>
+              <Track p={p} pos={pos} start={start} now={now} short />
             </li>
           ))}
         </ul>

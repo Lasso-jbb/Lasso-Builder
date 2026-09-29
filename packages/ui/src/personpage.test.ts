@@ -265,8 +265,9 @@ test("PersonNetwork (16.3): tidsbånd pr. fælles selskab, limit 3 som standard 
   // Afsluttet = stiplet bånd; konkurs = rød markør og ordet.
   const ended = renderToStaticMarkup(createElement(PersonNetwork, { network: { lassoId: ID, people: [{ name: "Peter Eksempel", overlapYears: 4, active: false, companies: [{ companyName: "Eksempel Energi A/S", role: "direktør", from: "2014-01-01", to: "2018-01-01", status: "Under konkurs", statusKind: "warning" }] }] } }));
   assert.match(ended, /lasso-personnet__band lasso-personnet__band--ended/);
-  assert.match(ended, /lasso-personnet__marker/);
-  assert.match(ended, /, under konkurs/);
+  assert.match(ended, /lasso-personnet__marker[^>]*aria-label="Eksempel Energi A\/S, under konkurs"/);
+  assert.match(ended, /1 fælles selskab, afsluttet/);
+  assert.match(ended, />tidligere</);
 });
 
 test("LassoView: tidslinjen med filter 'risiko' viser kun forløbet i selskaberne med konkurs", () => {
