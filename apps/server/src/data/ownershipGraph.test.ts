@@ -48,7 +48,7 @@ test("demokoncernen har holding, lag, kæde, cirkulært ejerskab og en person me
   const holding = await demo.ownershipGraph("CVR-1-99000010", { ingoingDepth: 2, outgoingDepth: 8 });
   assert.ok(holding.nodes.every((n) => /Eksempel|Prøve/.test(n.name)), "alle navne er eksempeldata");
   assert.ok(holding.edges.filter((e) => e.from === "CVR-1-99000010").length > 5, "over 5 datterselskaber i ét lag");
-  assert.ok(holding.nodes.some((n) => n.name === "Eksempel Ejendom Grund ApS"), "den lange kæde er med");
+  assert.ok(holding.nodes.some((n) => n.name === "Ejendom Grund ApS"), "den lange kæde er med");
   const byg = await demo.ownershipGraph("CVR-1-99000001", { ingoingDepth: 2, outgoingDepth: 1 });
   assert.ok(byg.edges.some((e) => e.from === "CVR-1-99000101" && e.to === "CVR-1-99000001"), "cirkulært ejerskab");
   assert.ok(byg.edges.some((e) => e.from === "CVR-3-99100002" && e.share?.[0] === 10), "person med andel");

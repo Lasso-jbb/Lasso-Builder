@@ -198,7 +198,8 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
             expanded,
             expandAll,
             maxNodes: showAll || expandAll ? Infinity : DEFAULT_MAX_NODES,
-            showHistoric,
+            // 14.4: "Pr. dato" viser også relationer, der var ophørt på datoen, stiplet og muted.
+            showHistoric: showHistoric || Boolean(onDate ?? graph.onDate),
             onDate: onDate ?? graph.onDate,
             ...(tablet ? { layerCap: TABLET_LAYER_CAP } : {}),
           })
@@ -389,17 +390,18 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
   const toolbarParts = [
     personRoot ? 0 : segW(["Legale ejere", "Reelle ejere"]),
     personRoot || beneficial ? 0 : segW(["Begge veje", "Kun ejere", "Kun datterselskaber"]),
-    chipW(date ? `Pr. ${formatDate(date)}` : "Pr. dato", 24),
+    chipW(`Pr. dato: ${date ? formatDate(date) : "i dag"}`, 24),
     onDate ? chipW("I dag") : 0,
     focus ? chipW(`Tilbage til ${origin?.name ?? ""}`) : 0,
-    beneficial ? 0 : chipW("Dybde", 20),
+    beneficial ? 0 : chipW(`Dybde: ${curUp} op, ${curDown} ned`, 20),
     chipW("Eksportér", 22),
     canFullscreen && onAction ? 36 : 0,
   ].filter((w) => w > 0);
   const optional = [hasHistoric ? chipW("Vis historik") : 0, chipW(expandAll ? "Fold sammen" : "Udvid alle")].filter((w) => w > 0);
   const gap = 8;
   const sumW = (ws: number[]) => ws.reduce((a, b) => a + b, 0) + gap * Math.max(0, ws.length - 1);
-  const overflow = sumW([...toolbarParts, ...optional]) > W;
+  // Sikkerhedsmargen: målingen rammer ikke chevron/ikon-afstande præcist, og knapperne må aldrig ombrydes (14.1).
+  const overflow = sumW([...toolbarParts, ...optional]) > W - 48;
   const historyButton = hasHistoric ? (
     <button type="button" className={`lasso-odiagram__chip ${showHistoric ? "is-on" : ""}`} aria-pressed={showHistoric} onClick={() => setShowHistoric(!showHistoric)}>
       Vis historik
@@ -467,7 +469,7 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
         </div>
       )}
       <label className="lasso-odiagram__chip lasso-odiagram__date">
-        <span>{date ? "Pr." : "Pr. dato"}</span>
+        {/* 14.1: kalenderikon først, og knappen viser den valgte dato ("Pr. dato: i dag"). */}
         <input
           type="date"
           value={date ?? ""}
@@ -475,7 +477,7 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
           aria-label="Vis ejerskab pr. dato"
           onChange={(ev) => setOnDate(ev.target.value || undefined)}
         />
-        {date ? <span className="lasso-odiagram__today">{formatDate(date)}</span> : null}
+        <span>{`Pr. dato: ${date ? formatDate(date) : "i dag"}`}</span>
       </label>
       {onDate ? (
         <button type="button" className="lasso-odiagram__chip" onClick={() => setOnDate(undefined)}>
@@ -489,8 +491,8 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
       ) : null}
       {beneficial ? null : (
       <label className={`lasso-odiagram__chip lasso-odiagram__select ${noData ? "is-dim" : ""}`}>
-        {/* 14.1: knappen hedder "Dybde"; det valgte (fx "2 op, 1 ned") står i listen og som title. */}
-        <span className="lasso-odiagram__depthlabel" aria-hidden="true">Dybde</span>
+        {/* 14.1: knappen viser det valgte, fx "Dybde: 2 op, 1 ned". */}
+        <span className="lasso-odiagram__depthlabel" aria-hidden="true">{`Dybde: ${curUp} op, ${curDown} ned`}</span>
         <select
           className="lasso-odiagram__depthselect"
           title={`Dybde: ${curUp} op, ${curDown} ned`}

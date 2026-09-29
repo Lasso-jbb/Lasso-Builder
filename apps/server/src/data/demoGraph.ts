@@ -36,12 +36,12 @@ const EXTRA: Extra[] = [
   company("99000105", "Eksempel Energi Invest ApS", "ApS"),
   company("99000106", "Eksempel Byg Drift ApS", "ApS"),
   company("99000107", "Eksempel Maskin Service ApS", "ApS"),
-  company("99000110", "Eksempel Ejendom Drift ApS", "ApS"),
-  company("99000111", "Eksempel Ejendom Projekt I ApS", "ApS"),
-  company("99000112", "Eksempel Ejendom Projekt II ApS", "ApS"),
-  company("99000113", "Eksempel Ejendom Projekt III ApS", "ApS"),
-  company("99000114", "Eksempel Ejendom Projekt IV ApS", "ApS"),
-  company("99000115", "Eksempel Ejendom Grund ApS", "ApS"),
+  company("99000110", "Ejendom Drift ApS", "ApS"),
+  company("99000111", "Ejendom Projekt I ApS", "ApS"),
+  company("99000112", "Ejendom Projekt II ApS", "ApS"),
+  company("99000113", "Ejendom Projekt III ApS", "ApS"),
+  company("99000114", "Ejendom Projekt IV ApS", "ApS"),
+  company("99000115", "Ejendom Grund ApS", "ApS"),
 ];
 
 const e = (from: string, to: string, lo: number, hi = lo, extra: Partial<OwnershipEdgeVM> = {}): OwnershipEdgeVM => ({ from, to, share: [lo, hi], since: "2012-05-14", ...extra });
