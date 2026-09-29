@@ -367,7 +367,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return <Shortcuts key={key} items={items} title={c.title} />;
     }
     case "LassoMultiYearTable":
-      return <MultiYearTable key={key} financials={empty.financials[c.company]} metrics={c.metrics} years={c.years} title={c.title} error={err(`financials:${c.company}`)} />;
+      return <MultiYearTable key={key} financials={empty.financials[c.company]} metrics={c.metrics} years={c.years} title={c.title} variant={c.variant} error={err(`financials:${c.company}`)} />;
     case "LassoIncomeStatement":
       return <LassoIncomeStatement key={key} statements={empty.financialStatements[c.company]} company={empty.companies[c.company]} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} />;
     case "LassoBalanceSheet":

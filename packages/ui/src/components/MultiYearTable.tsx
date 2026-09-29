@@ -18,21 +18,31 @@ export function yearsThatFit(width: number): number {
 
 const DEFAULT_METRICS: Metric[] = ["bruttofortjeneste", "resultat", "egenkapital", "ansatte"];
 
-/** Tendens-sparkline 72×22 (katalog 09/10) med stiplet nullinje, når værdier krydser 0. */
+/**
+ * Tendens-sparkline 72×22 (katalog 09/10): skaleret til seriens eget spænd, så kurven er tydelig,
+ * prik på seneste værdi (inden for rammen) og stiplet nullinje, når værdierne krydser 0.
+ */
+export function trendPoints(values: readonly number[], w = 72, h = 22, pad = 3): (readonly [number, number])[] {
+  const crossesZero = Math.min(...values) < 0 && Math.max(...values) > 0;
+  const min = crossesZero ? Math.min(...values, 0) : Math.min(...values);
+  const max = crossesZero ? Math.max(...values, 0) : Math.max(...values);
+  const span = max - min;
+  const y = (v: number) => (span === 0 ? h / 2 : h - pad - ((v - min) / span) * (h - 2 * pad));
+  return values.map((v, i) => [pad + (values.length > 1 ? i / (values.length - 1) : 0) * (w - 2 * pad), y(v)] as const);
+}
 function Trend({ values }: { values: readonly number[] }) {
   const w = 72;
   const h = 22;
-  const min = Math.min(...values, 0);
-  const max = Math.max(...values, 0);
-  const span = max - min || 1;
-  const y = (v: number) => h - 3 - ((v - min) / span) * (h - 6);
-  const pts = values.map((v, i) => [(i / (values.length - 1)) * (w - 4) + 2, y(v)] as const);
+  const pts = trendPoints(values, w, h);
   const d = pts.map(([x, py], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${py.toFixed(1)}`).join(" ");
   const last = pts[pts.length - 1]!;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
   const crossesZero = min < 0 && max > 0;
+  const zeroY = crossesZero ? h - 3 - ((0 - min) / (max - min)) * (h - 6) : 0;
   return (
-    <svg className="lasso-spark lasso-spark--accent" viewBox={`0 0 ${w} ${h}`} aria-hidden="true">
-      {crossesZero ? <line className="lasso-myt__zero" x1="0" y1={y(0)} x2={w} y2={y(0)} /> : null}
+    <svg className="lasso-spark lasso-spark--accent lasso-myt__spark" width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden="true">
+      {crossesZero ? <line className="lasso-myt__zero" x1="0" y1={zeroY} x2={w} y2={zeroY} /> : null}
       <path d={d} />
       <circle cx={last[0]} cy={last[1]} r="2.5" />
     </svg>
@@ -68,6 +78,11 @@ export function multiYearVariant(width: number, metricCount: number, variant?: "
   return metricCount <= 2 ? "B" : "A";
 }
 
+/** "2022 og 2021", "2023, 2022 og 2021". */
+function joinYears(ys: readonly number[]): string {
+  return ys.length < 2 ? ys.join("") : `${ys.slice(0, -1).join(", ")} og ${ys.at(-1)}`;
+}
+
 export function MultiYearTable({ financials, metrics, years, title, error, variant }: { financials?: FinancialsVM; metrics?: readonly Metric[]; years?: number; title?: string; error?: string; variant?: "A" | "B" }) {
   const heading = title ?? "Flerårstabel";
   const [ref, W] = useWidth<HTMLDivElement>(1048);
@@ -89,8 +104,9 @@ export function MultiYearTable({ financials, metrics, years, title, error, varia
   }
   const chosen: Metric[] = (metrics?.length ? [...metrics] : all.at(-1)?.revenue != null ? ["omsaetning", ...DEFAULT_METRICS] : DEFAULT_METRICS).slice(0, 6) as Metric[];
   const mode = multiYearVariant(W, chosen.length, variant);
-  // Variant B har årene i rækker, så bredden begrænser ikke antallet af år.
-  const span = Math.max(2, Math.min(10, years ?? 5, mode === "B" ? 10 : yearsThatFit(W)));
+  const mobile = W <= 560;
+  // Mobil (26c.3) ruller vandret til de ældre år, så alle ønskede år tegnes; desktop viser dem, bredden kan bære.
+  const span = Math.max(2, Math.min(10, years ?? 5, mobile ? 10 : yearsThatFit(W)));
   const shown = all.slice(-span);
   const amountMetrics = chosen.filter((m) => METRIC_KIND[m] === "amount");
   const scale = amountMetrics.length ? amountScale(shown.flatMap((y) => amountMetrics.map((m) => (y[METRIC_FIELD[m]] as number | null) ?? 0)), currencyUnit(financials.currency)) : null;
@@ -100,31 +116,67 @@ export function MultiYearTable({ financials, metrics, years, title, error, varia
     if (kind === "percent") return formatPercent(v, false);
     return kind === "amount" && scale ? formatScaled(v, scale) : formatNumber(v);
   };
+  const unitOf = (m: Metric) => (METRIC_KIND[m] === "amount" && scale ? scale.label : METRIC_KIND[m] === "percent" ? "%" : "antal");
 
-  if (mode === "B") {
+  if (mobile && mode === "B") {
+    // 26c.3 variant B (EEO-0): ét kort pr. nøgletal, titel 600 + enhed muted, år som kolonner, seneste år i en grå boks.
     return (
       <Section title={heading} span="full">
-        <div className="lasso-table-wrap" ref={ref}>
-          <table className="lasso-myt-b" data-variant="B">
+        <div className="lasso-myt-cards" data-variant="B" ref={ref}>
+          {chosen.map((m) => (
+            <div key={m} className="lasso-myt-card">
+              <div className="lasso-myt-card__head">
+                <span className="lasso-myt-card__title">{METRIC_LABELS[m]}</span>
+                <span className="lasso-myt-card__unit">{unitOf(m)}</span>
+              </div>
+              <div className="lasso-myt-card__years" style={{ gridTemplateColumns: `repeat(${shown.length}, minmax(0, 1fr))` }}>
+                {shown.map((y, i) => {
+                  const v = y[METRIC_FIELD[m]] as number | null | undefined;
+                  const last = i === shown.length - 1;
+                  return (
+                    <div key={y.year} className={`lasso-myt-card__year ${last ? "is-last" : ""}`}>
+                      <span className="lasso-myt-card__yr">{y.year}</span>
+                      <span className={`lasso-myt-card__val ${typeof v === "number" && v < 0 ? "lasso-down" : ""}`}>{fmt(m, v) ?? <Missing />}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Section>
+    );
+  }
+
+  if (mobile) {
+    // 26c.3 variant A (ED8-0): fast navnekolonne med lodret kant, hovedrække på grå flade, nyeste år først
+    // (600), vandret rul til de ældre år med en hjælpetekst under tabellen. Højst 4 rækker, før resten foldes.
+    const newestFirst = [...shown].reverse();
+    const visibleYears = Math.max(1, Math.floor((W - 120) / 72));
+    const hidden = newestFirst.slice(visibleYears).map((y) => y.year);
+    const mRows = chosen.length > MOBILE_A_ROWS && !allRows ? chosen.slice(0, MOBILE_A_ROWS) : chosen;
+    return (
+      <Section title={heading} subtitle={scale ? scale.label : undefined} span="full">
+        <div className="lasso-myt-m" ref={ref}>
+          <table className="lasso-myt-m__table" data-variant="A">
             <thead>
               <tr>
-                <th scope="col">År</th>
-                {chosen.map((m) => (
-                  <th key={m} scope="col" className="lasso-num">
-                    {METRIC_LABELS[m]}
-                    {METRIC_KIND[m] === "amount" && scale ? `, ${scale.label}` : ""}
+                <th scope="col" className="lasso-myt-m__name">Nøgletal</th>
+                {newestFirst.map((y, i) => (
+                  <th key={y.year} scope="col" className={`lasso-num ${i === 0 ? "is-last" : ""}`}>
+                    {y.year}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {[...shown].reverse().map((y, i) => (
-                <tr key={y.year} className={i === 0 ? "is-last" : undefined}>
-                  <th scope="row">{y.year}</th>
-                  {chosen.map((m) => {
+              {mRows.map((m) => (
+                <tr key={m}>
+                  <th scope="row" className="lasso-myt-m__name">{METRIC_LABELS[m]}</th>
+                  {newestFirst.map((y, i) => {
                     const v = y[METRIC_FIELD[m]] as number | null | undefined;
                     return (
-                      <td key={m} className={`lasso-num ${typeof v === "number" && v < 0 ? "lasso-down" : ""}`}>
+                      <td key={y.year} className={`lasso-num ${i === 0 ? "is-last" : ""} ${typeof v === "number" && v < 0 ? "lasso-down" : ""}`}>
                         {fmt(m, v) ?? <Missing />}
                       </td>
                     );
@@ -134,12 +186,17 @@ export function MultiYearTable({ financials, metrics, years, title, error, varia
             </tbody>
           </table>
         </div>
+        {hidden.length ? <p className="lasso-myt-m__note">Rul vandret for {joinYears(hidden)}.</p> : null}
+        {chosen.length > MOBILE_A_ROWS ? (
+          <button type="button" className="lasso-rowmore" aria-expanded={allRows} onClick={() => setAllRows(!allRows)}>
+            {allRows ? "Vis færre" : `Vis alle ${chosen.length} nøgletal`}
+          </button>
+        ) : null}
       </Section>
     );
   }
 
-  const foldRows = W <= 560 && chosen.length > MOBILE_A_ROWS && !allRows;
-  const rowsShown = foldRows ? chosen.slice(0, MOBILE_A_ROWS) : chosen;
+  const rowsShown = chosen;
 
   return (
     <Section title={heading} span="full">
@@ -152,8 +209,8 @@ export function MultiYearTable({ financials, metrics, years, title, error, varia
                 {y.year}
               </div>
             ))}
-            <div className="lasso-myt__delta">Ændring</div>
-            <div className="lasso-myt__trend">Tendens</div>
+            <div className="lasso-myt__delta lasso-myt__colhead">Ændring</div>
+            <div className="lasso-myt__trend lasso-myt__colhead">Tendens</div>
           </div>
           {rowsShown.map((m) => {
             const values = shown.map((y) => y[METRIC_FIELD[m]] as number | null | undefined);
@@ -174,11 +231,6 @@ export function MultiYearTable({ financials, metrics, years, title, error, varia
           })}
         </div>
       </div>
-      {W <= 560 && chosen.length > MOBILE_A_ROWS ? (
-        <button type="button" className="lasso-rowmore" aria-expanded={allRows} onClick={() => setAllRows(!allRows)}>
-          {allRows ? "Vis færre" : `Vis alle ${chosen.length} nøgletal`}
-        </button>
-      ) : null}
     </Section>
   );
 }

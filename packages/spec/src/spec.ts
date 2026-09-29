@@ -385,6 +385,7 @@ export const multiYearTableSchema = z.object({
   metrics: z.array(metric).min(1).max(6).optional().describe("Standard: bruttofortjeneste/omsætning, resultat, egenkapital, ansatte."),
   years: z.number().int().min(2).max(10).default(5),
   title: z.string().max(80).optional(),
+  variant: z.enum(["A", "B"]).optional().describe("Kun mobil (26c.3): A = nøgletal i rækker med fast kolonne og vandret rul; B = ét kort pr. nøgletal med årene som kolonner. Standard: B ved 1–2 nøgletal, ellers A."),
 });
 
 export const incomeStatementSchema = z.object({

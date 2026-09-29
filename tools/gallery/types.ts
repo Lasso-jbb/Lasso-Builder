@@ -23,6 +23,11 @@ export interface GalleryEntry {
   only?: "desktop" | "mobile";
   /** Bredde på desktop-billedet (standard 1200). */
   desktopWidth?: number;
+  /**
+   * Mobilelementerne i Paper 26b–26h er tegnet som ét kort (1 px kant, radius 12, padding 16).
+   * Rammen er præsentation (som Papers artboard), ikke en del af komponenten.
+   */
+  card?: boolean;
   /** Kort note til reviewet, fx hvad der ikke kan vises statisk. */
   note?: string;
 }

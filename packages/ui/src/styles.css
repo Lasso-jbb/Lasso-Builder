@@ -525,6 +525,10 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-section__subtitle { margin: 2px 0 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-muted); }
 .lasso-section__action { flex: none; font-size: var(--lasso-fs-sm); }
 .lasso-section__action a, .lasso-section__action button.lasso-link { color: var(--lasso-accent-text); font-weight: 500; }
+/* 26b–26h: på mobil er elementets titel 16/600. */
+@container lasso (max-width: 560px) {
+  .lasso-section__title { font-size: 16px; line-height: 22px; }
+}
 .lasso-span-quarter { grid-column: span 1; }
 .lasso-span-half { grid-column: span 2; }
 .lasso-span-three-quarters { grid-column: span 3; }
@@ -672,15 +676,42 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-myt__unit { flex: 1 1 220px; min-width: 160px; font-size: var(--lasso-fs-label); font-weight: 600; letter-spacing: var(--lasso-ls-label); color: var(--lasso-muted); }
 .lasso-myt__label { flex: 1 1 220px; min-width: 160px; font-size: var(--lasso-fs); font-weight: 500; color: var(--lasso-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lasso-myt__year { flex: none; width: 96px; text-align: right; font-size: var(--lasso-fs); color: var(--lasso-text-2); }
-/* 10.2: hele tabelhovedet (år, Ændring, Tendens) er samme 11/600-overlinje som enheden. */
-.lasso-myt__year--head, .lasso-myt__head .lasso-myt__delta, .lasso-myt__head .lasso-myt__trend { font-size: var(--lasso-fs-label); font-weight: 600; letter-spacing: var(--lasso-ls-label); text-transform: uppercase; color: var(--lasso-muted); }
+/* 10.2: kun enheden ("T. KR.") er overlinje; årstal og "Ændring"/"Tendens" står i normal skrift 13/500 muted, seneste år 600. */
+.lasso-myt__year--head, .lasso-myt__head .lasso-myt__colhead { font-size: var(--lasso-fs-sm); font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--lasso-muted); }
 .lasso-myt__year--last { font-weight: 600; color: var(--lasso-text); }
+.lasso-myt__year--head.lasso-myt__year--last { font-weight: 600; color: var(--lasso-text); }
+.lasso-myt__spark { display: block; overflow: visible; }
 .lasso-myt__delta { flex: none; width: 80px; text-align: right; font-size: var(--lasso-fs-sm); font-weight: 500; white-space: nowrap; }
 .lasso-myt__trend { flex: none; width: 96px; padding-left: 20px; }
 .lasso-myt__zero { stroke: var(--lasso-chart-axis); stroke-dasharray: 2 2; }
 @container lasso (max-width: 768px) {
   .lasso-myt__delta, .lasso-myt__trend { display: none; }
 }
+/* 26c.3 A: mobil med fast navnekolonne (1 px lodret kant), hovedrække på grå flade, vandret rul til ældre år. */
+.lasso-myt-m { overflow-x: auto; overscroll-behavior-x: contain; }
+.lasso-myt-m__table { border-collapse: separate; border-spacing: 0; min-width: 100%; font-size: var(--lasso-fs); font-variant-numeric: tabular-nums; }
+.lasso-myt-m__table th, .lasso-myt-m__table td { height: 44px; padding: 0 12px; white-space: nowrap; border-bottom: 1px solid var(--lasso-divider-subtle); text-align: right; color: var(--lasso-text-2); font-weight: 400; background: var(--lasso-surface); }
+.lasso-myt-m__table thead th { height: 36px; background: var(--lasso-surface-muted); border-bottom: 1px solid var(--lasso-border); font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-muted); }
+.lasso-myt-m__table .lasso-myt-m__name { position: sticky; left: 0; z-index: 1; width: 120px; min-width: 120px; max-width: 140px; text-align: left; white-space: normal; line-height: 18px; font-weight: 500; color: var(--lasso-text); border-right: 1px solid var(--lasso-border); }
+.lasso-myt-m__table thead .lasso-myt-m__name { color: var(--lasso-muted); font-weight: 500; background: var(--lasso-surface-muted); }
+.lasso-myt-m__table .is-last { font-weight: 600; color: var(--lasso-text); }
+.lasso-myt-m__table thead .is-last { color: var(--lasso-text); }
+.lasso-myt-m__table td.lasso-down { color: var(--lasso-negative); }
+.lasso-myt-m__table tbody tr:last-child th, .lasso-myt-m__table tbody tr:last-child td { border-bottom: 0; }
+.lasso-myt-m__note { margin: var(--lasso-space-2) 0 0; font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+/* 26c.3 B: ét kort pr. nøgletal. */
+.lasso-myt-cards { display: grid; gap: var(--lasso-space-3); }
+.lasso-myt-card { border: 1px solid var(--lasso-border); border-radius: 10px; padding: 12px; }
+.lasso-myt-card__head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.lasso-myt-card__title { font-size: var(--lasso-fs); font-weight: 600; color: var(--lasso-text); }
+.lasso-myt-card__unit { font-size: 12px; color: var(--lasso-muted); }
+.lasso-myt-card__years { display: grid; gap: 4px; }
+.lasso-myt-card__year { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-radius: 6px; font-variant-numeric: tabular-nums; }
+.lasso-myt-card__year.is-last { background: var(--lasso-surface-muted); }
+.lasso-myt-card__yr { font-size: 12px; color: var(--lasso-muted); }
+.lasso-myt-card__val { font-size: var(--lasso-fs-sm); color: var(--lasso-text-2); }
+.lasso-myt-card__year.is-last .lasso-myt-card__yr, .lasso-myt-card__year.is-last .lasso-myt-card__val { font-weight: 600; color: var(--lasso-text); }
+.lasso-myt-card__val.lasso-down { color: var(--lasso-negative); }
 @container lasso (max-width: 560px) {
   .lasso-myt { min-width: 0; }
   .lasso-table-wrap:has(> .lasso-myt) { padding: 0; overflow: hidden; }
@@ -3102,17 +3133,6 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 
 /* ---------- 26c.3 Flerårstabel på mobil (node ED8-0): variant A og B ---------- */
 /* B: år i rækker, nøgletal i kolonner (få nøgletal, mange år). Nyeste år øverst i vægt 600. */
-.lasso-myt-b { width: 100%; border-collapse: collapse; font-size: var(--lasso-fs); font-variant-numeric: tabular-nums; }
-.lasso-myt-b th, .lasso-myt-b td { height: 44px; padding: 0 8px; border-bottom: 1px solid var(--lasso-divider-subtle); text-align: left; }
-.lasso-myt-b thead th { height: 36px; border-bottom: 1px solid var(--lasso-border); font-size: 12px; font-weight: 600; color: var(--lasso-muted); white-space: normal; line-height: 14px; }
-.lasso-myt-b tbody th { width: 64px; font-weight: 500; color: var(--lasso-text); }
-.lasso-myt-b td { color: var(--lasso-text-2); }
-.lasso-myt-b .lasso-num { text-align: right; }
-.lasso-myt-b tr.is-last td, .lasso-myt-b tr.is-last th { font-weight: 600; color: var(--lasso-text); }
-.lasso-myt-b tr.is-last td.lasso-down { color: var(--lasso-negative); }
-.lasso-myt-b th:first-child, .lasso-myt-b td:first-child { padding-left: 0; }
-.lasso-myt-b th:last-child, .lasso-myt-b td:last-child { padding-right: 0; }
-.lasso-myt-b tbody tr:last-child th, .lasso-myt-b tbody tr:last-child td { border-bottom: 0; }
 
 /* ---------- 26c.4 Personliste på mobil (node EG1-0): 56 px rækker, "Vis alle" som 44 px række ---------- */
 @container lasso (max-width: 560px) {

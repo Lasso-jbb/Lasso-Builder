@@ -717,7 +717,21 @@ const mobileCharts: GalleryEntry[] = [
 const mobileLists: GalleryEntry[] = [
   { nr: "26c.1", title: "Nøgletalskort / KPI 2×2 (mobil)", node: "EC5-0", only: "mobile", spec: one("Nøgletal", { type: "LassoKeyFigureCards", company: C }) },
   { nr: "26c.2", title: "Nøgle-værdi-liste (mobil)", node: "ECP-0", only: "mobile", spec: one("Virksomhedsoplysninger", { type: "LassoKeyValueList", company: C, variant: "company", title: "Virksomhedsoplysninger" }) },
-  { nr: "26c.3", title: "Flerårstabel (mobil)", node: "ED8-0", only: "mobile", spec: one("Flerårstabel", { type: "LassoMultiYearTable", company: C }) },
+  {
+    nr: "26c.3",
+    title: "Flerårstabel (mobil), variant A og B",
+    node: "ED8-0",
+    only: "mobile",
+    note: "Variant A (ED8-0) øverst, variant B (EEO-0) under.",
+    spec: {
+      kind: "company",
+      title: "Flerårsoversigt",
+      components: [
+        { type: "LassoMultiYearTable", company: C, title: "Flerårsoversigt", metrics: ["omsaetning", "bruttofortjeneste", "resultat", "egenkapital"], variant: "A" },
+        { type: "LassoMultiYearTable", company: C, title: "Flerårsoversigt, kort pr. nøgletal", metrics: ["bruttofortjeneste", "resultat"], variant: "B" },
+      ],
+    },
+  },
   { nr: "26c.4", title: "Personliste (mobil)", node: "EG1-0", only: "mobile", spec: one("Ledelse", { type: "LassoPersonList", company: C }) },
   { nr: "26c.5", title: "Ejerliste (mobil)", node: "EH3-0", only: "mobile", spec: one("Ejere", { type: "LassoOwnerList", company: C }) },
   { nr: "26c.6", title: "Ejerdiagram (mobil)", node: "EHX-0", only: "mobile", spec: one("Ejerdiagram", { type: "LassoOwnershipDiagram", company: C }) },
@@ -1437,8 +1451,8 @@ export const entries: GalleryEntry[] = [
   ...pages,
   ...responsive,
   ...mobileNav,
-  ...mobileCharts,
-  ...mobileLists,
+  ...mobileCharts.map((e) => ({ ...e, card: true })),
+  ...mobileLists.map((e) => ({ ...e, card: true })),
   ...mobilePerson,
   ...mobileUnits,
   ...tablet,
