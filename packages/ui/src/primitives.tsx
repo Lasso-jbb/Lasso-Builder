@@ -21,9 +21,12 @@ export function Section({
   children,
   className = "",
   span = "full",
+  inlineSubtitle = false,
 }: {
   title?: ReactNode;
   subtitle?: ReactNode;
+  /** 29.2: undertitlen (fx enheden "t. kr., årsrapport 2025") står muted på samme linje efter titlen. */
+  inlineSubtitle?: boolean;
   action?: ReactNode;
   children: ReactNode;
   className?: string;
@@ -33,7 +36,7 @@ export function Section({
     <section className={`lasso-section lasso-span-${span} ${className}`}>
       {title || action ? (
         <div className="lasso-section__head">
-          <div className="lasso-section__titles">
+          <div className={`lasso-section__titles ${inlineSubtitle ? "lasso-section__titles--inline" : ""}`}>
             {title ? <h3 className="lasso-section__title">{title}</h3> : null}
             {subtitle ? <p className="lasso-section__subtitle">{subtitle}</p> : null}
           </div>
@@ -47,7 +50,7 @@ export function Section({
 
 /**
  * Statusens tone (katalog 05.7): Aktiv i tekstfarve, konkurs/tvangsopløsning mørk rød,
- * likvidation samme mørke røde (02c.8), ophørt muted, "Ny" koral tekst. Likvidation har ikke egen statusKind
+ * likvidation i warning-tekst (02c.8/05.7), ophørt muted, "Ny" koral tekst. Likvidation har ikke egen statusKind
  * i modellen (den er "warning" ligesom konkurs), så den skelnes på ordet.
  */
 export type StatusTone = "active" | "warning" | "liquidation" | "inactive" | "new";

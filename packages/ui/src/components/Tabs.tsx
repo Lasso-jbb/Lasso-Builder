@@ -44,6 +44,10 @@ export interface TabsProps {
   className?: string;
   /** Niveau 1: mere end 8 faner samles bag "Flere" (kataloget). Sæt for at slå sammenfoldningen fra. */
   maxVisible?: number;
+  /** Statisk forhåndsvisning (29): fane tegnet i hover-tilstand. */
+  hoverId?: string;
+  /** Statisk forhåndsvisning (29): fane tegnet med fokuskant (som ved tastatur). */
+  focusId?: string;
 }
 
 /** Stabilt id-par for fane og panel, så Tabs og TabPanel kan bindes sammen. */
@@ -54,7 +58,7 @@ export function panelId(base: string, item: string): string {
   return `${base}-panel-${item}`;
 }
 
-export function Tabs({ level, items, value, onChange, ariaLabel, id, className = "", maxVisible }: TabsProps) {
+export function Tabs({ level, items, value, onChange, ariaLabel, id, className = "", maxVisible, hoverId, focusId }: TabsProps) {
   const autoId = useId();
   const base = id ?? autoId;
   const listRef = useRef<HTMLDivElement>(null);
@@ -122,7 +126,7 @@ export function Tabs({ level, items, value, onChange, ariaLabel, id, className =
             disabled={t.disabled}
             title={t.disabled ? t.disabledReason : undefined}
             tabIndex={on ? 0 : -1}
-            className={`lasso-tab ${on ? "is-on" : ""}`}
+            className={["lasso-tab", on ? "is-on" : "", hoverId === t.id ? "is-hover" : "", focusId === t.id ? "is-focus" : ""].filter(Boolean).join(" ")}
             onClick={() => !t.disabled && onChange(t.id)}
             onKeyDown={(e) => onKeyDown(e, t.id)}
           >
@@ -155,17 +159,40 @@ export interface TabPanelProps {
   loadingLines?: number;
   /** Etiket der står under skelettet, fx fanens navn: "Henter Økonomi …". */
   loadingLabel?: string;
+  /** Skelettets form: "lines" (standard) eller "overview" = tre nøgletalskolonner à 3 linjer, divider og søjlegraf med 5 søjler (29.4). */
+  loadingShape?: "lines" | "overview";
   children?: ReactNode;
   className?: string;
 }
 
 /** Panelet under en fanebjælke. Fanen skifter straks; kun panelet viser henter-tilstanden. */
-export function TabPanel({ id, tab, loading, loadingHeight, loadingLines, loadingLabel, children, className = "" }: TabPanelProps) {
+function OverviewSkeleton() {
+  return (
+    <div className="lasso-tabskel" aria-hidden="true">
+      <div className="lasso-tabskel__kpis">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="lasso-tabskel__kpi">
+            <span className="lasso-skeleton lasso-tabskel__l1" />
+            <span className="lasso-skeleton lasso-tabskel__l2" />
+            <span className="lasso-skeleton lasso-tabskel__l3" />
+          </div>
+        ))}
+      </div>
+      <div className="lasso-tabskel__bars">
+        {[40, 65, 78, 76, 90].map((h, i) => (
+          <span key={i} className="lasso-skeleton lasso-tabskel__bar" style={{ height: `${h}%` }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function TabPanel({ id, tab, loading, loadingHeight, loadingLines, loadingLabel, loadingShape = "lines", children, className = "" }: TabPanelProps) {
   return (
     <div role="tabpanel" id={panelId(id, tab)} aria-labelledby={tabId(id, tab)} aria-busy={loading || undefined} className={`lasso-tabpanel ${className}`}>
       {loading ? (
         <>
-          <DataState state="loading" height={loadingHeight} lines={loadingLines ?? 4} />
+          {loadingShape === "overview" ? <OverviewSkeleton /> : <DataState state="loading" height={loadingHeight} lines={loadingLines ?? 4} />}
           {loadingLabel ? <p className="lasso-tabpanel__loading">Henter {loadingLabel} …</p> : null}
         </>
       ) : (
