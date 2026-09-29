@@ -526,6 +526,8 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-section { min-width: 0; }
 .lasso-section__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--lasso-space-4); margin-bottom: var(--lasso-space-4); }
 .lasso-section__titles { min-width: 0; }
+.lasso-section--card { border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-card); padding: var(--lasso-space-4); background: var(--lasso-surface); }
+.lasso-section--card > .lasso-section__head .lasso-section__title { font-size: 15px; line-height: 22px; }
 .lasso-section__title { margin: 0; font-size: var(--lasso-fs-lg); line-height: 24px; font-weight: 600; color: var(--lasso-text); }
 .lasso-section__subtitle { margin: 2px 0 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-muted); }
 .lasso-section__action { flex: none; font-size: var(--lasso-fs-sm); }
@@ -3713,7 +3715,9 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-merger__name { font-size: var(--lasso-fs); font-weight: 500; color: var(--lasso-text); }
 .lasso-merger__party.is-ceased .lasso-merger__name { color: var(--lasso-muted); font-weight: 400; }
 .lasso-merger__note { font-size: 12px; color: var(--lasso-muted); }
-.lasso-merger__sentence { display: none; }
+.lasso-merger__sentence, .lasso-merger__ceased, .lasso-mergers__meta { display: none; }
+.lasso-mergers .lasso-mergers__rows { border-top: 0; }
+.lasso-merger__party.is-focus { background: var(--lasso-surface); }
 .lasso-merger--founded { display: none; }
 @container lasso (max-width: 560px) {
   /* Mini-tidslinje: koral prik pr. hændelse, grå ring ved "Stiftet", lodret linje imellem. */
@@ -3727,6 +3731,13 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-merger__type::before { content: ", "; }
   .lasso-merger__flow { display: none; }
   .lasso-merger__sentence { display: block; font-size: var(--lasso-fs); line-height: 20px; color: var(--lasso-text); }
+  /* 26h.8: "eksempeldata" til højre i stedet for undertitlen, typen med småt ("fusion"), ingen kildelinje. */
+  .lasso-mergers__meta { display: inline; }
+  .lasso-mergers .lasso-section__subtitle:has(.lasso-mergers__sub), .lasso-mergers__source { display: none; }
+  .lasso-merger__type { text-transform: lowercase; }
+  .lasso-merger__ceased { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
+  .lasso-root .lasso-merger__ceased-btn { font-size: var(--lasso-fs-sm); color: var(--lasso-accent-text); }
+  .lasso-merger__ceased-list { font-size: 12px; color: var(--lasso-muted); }
 }
 
 /* ---------- 28.8 Statstidende, seneste bekendtgørelser (node HGH-0) ---------- */
@@ -3844,4 +3855,25 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 @container lasso (max-width: 560px) {
   .lasso-tl-filters__list { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   .lasso-tl-filters__item { flex: none; }
+}
+
+/* ---------- 28.7 Regnskabsoplysninger og kapital (node HDZ-0); 26h.9 bibrancher og formål (GG7-0) ---------- */
+.lasso-reg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--lasso-space-4); align-items: start; }
+.lasso-reg > .lasso-section { grid-column: auto; min-width: 0; }
+.lasso-reg .lasso-kv-row__label { width: 200px; white-space: normal; }
+.lasso-reg .lasso-kv-row { align-items: flex-start; }
+.lasso-reg__rows .lasso-kv-row:last-child { border-bottom: 0; }
+.lasso-reg__warn { font-weight: 500; color: var(--lasso-warning); }
+.lasso-reg__muted { color: var(--lasso-muted); }
+.lasso-reg__code { display: inline-block; min-width: 56px; margin-right: 8px; color: var(--lasso-muted); font-variant-numeric: tabular-nums; }
+.lasso-reg__lines { display: flex; flex-direction: column; gap: 2px; }
+.lasso-reg--profile { display: flex; flex-direction: column; gap: var(--lasso-space-3); }
+.lasso-reg__chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--lasso-space-2); }
+.lasso-reg__chip { display: inline-flex; align-items: center; height: 32px; padding: 0 10px; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-pill); background: var(--lasso-surface-muted); font-size: var(--lasso-fs-sm); color: var(--lasso-text); }
+.lasso-reg__purpose { display: flex; flex-direction: column; gap: 2px; }
+.lasso-reg__label { font-size: 12px; color: var(--lasso-muted); }
+.lasso-reg__purpose-text { margin: 0; font-size: var(--lasso-fs); line-height: 20px; color: var(--lasso-text); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.lasso-root .lasso-reg__more { align-self: flex-start; font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-accent-text); }
+@container lasso (max-width: 760px) {
+  .lasso-reg { grid-template-columns: minmax(0, 1fr); }
 }

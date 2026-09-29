@@ -307,6 +307,9 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
         want(c.company, "company");
         want(c.company, "companyEvents");
         break;
+      case "LassoRegistration":
+        want(c.company, "company", "ownership", "financials", "textSections");
+        break;
       case "LassoAnnouncements":
       case "LassoPublications":
         want(c.company, "companyEvents");

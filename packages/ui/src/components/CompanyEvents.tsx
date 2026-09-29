@@ -23,16 +23,17 @@ function PartyCard({ p, focusId, onOpen }: { p: MergerPartyVM; focusId?: string;
       ) : (
         <span className="lasso-merger__name">{p.name}</span>
       )}
-      {p.ceased ? <span className="lasso-merger__note">ophørt ved fusionen</span> : focus ? <span className="lasso-merger__note">denne virksomhed</span> : null}
+      <span className="lasso-merger__note">{[p.cvr ? `CVR ${p.cvr}` : null, p.ceased ? "ophørt ved fusionen" : (p.role ?? (focus ? "denne virksomhed" : null))].filter(Boolean).join(", ")}</span>
     </span>
   );
 }
 
 /**
- * Fusioner og spaltninger (katalog 28.6, mobil 26h.8). Desktop: dato og type i venstre kolonne,
- * hændelsen som "fra → til" med selskabskort i 1 px kant; fokusvirksomheden får koral kant, ophørte
- * selskaber står i muted med "ophørt ved fusionen". Mobil: mini-tidslinje med koral prik pr.
- * hændelse og "Stiftet" nederst. Ingen hændelser: tom tilstand, der siger hvorfor.
+ * Fusioner og spaltninger (katalog 28.6, mobil 26h.8). Kort med "N hændelser" under titlen. Desktop:
+ * dato og type i venstre kolonne, hændelsen som "fra → til" med selskabskort i 1 px kant (navn + "CVR …,
+ * rolle"); fokusvirksomheden får koral kant, ophørte selskaber står i muted med "ophørt ved fusionen".
+ * Mobil: mini-tidslinje med koral prik pr. hændelse ("01.07.2022, fusion"), "Se de N ophørte selskaber"
+ * ved flere ophørte og "Stiftet" nederst. Ingen hændelser: tom tilstand, der siger hvorfor.
  */
 export function Mergers({ events, company, title, error, demo, onOpen }: { events?: CompanyEventsVM; company?: CompanyVM; title?: string; error?: string; demo?: boolean; onOpen?: (a: ViewAction) => void }) {
   const heading = title ?? "Fusioner og spaltninger";
@@ -47,11 +48,14 @@ export function Mergers({ events, company, title, error, demo, onOpen }: { event
   }
   const focusId = events.lassoId;
   const sentence = (m: (typeof list)[number]) => {
-    const names = (ps: MergerPartyVM[]) => ps.map((p) => (p.lassoId === focusId ? "denne virksomhed" : `${p.name}${p.ceased ? " (ophørende)" : ""}`)).join(", ");
+    const ceased = m.from.filter((p) => p.ceased);
+    const names = (ps: MergerPartyVM[]) =>
+      ceased.length > 1 && ps === m.from ? `${ceased.length} selskaber` : ps.map((p) => (p.lassoId === focusId ? "denne virksomhed" : `${p.name}${p.ceased ? " (ophørende)" : ""}`)).join(", ");
     return m.type === "Fusion" ? `${names(m.from)} fusioneret ind i ${names(m.to)}` : `${names(m.from)} spaltet til ${names(m.to)}`;
   };
+  const subtitle = `${list.length} ${list.length === 1 ? "hændelse" : "hændelser"}${demo ? ", alle selskaber er eksempeldata" : ""}`;
   return (
-    <Section title={heading} span="full" className="lasso-mergers" action={demo ? <span className="lasso-mergers__meta">eksempeldata</span> : undefined}>
+    <Section title={heading} subtitle={<span className="lasso-mergers__sub">{subtitle}</span>} span="full" card className="lasso-mergers" action={demo ? <span className="lasso-mergers__meta">eksempeldata</span> : undefined}>
       <ul className="lasso-mergers__rows">
         {list.map((m, i) => (
           <li key={`${m.date}-${i}`} className="lasso-merger">
@@ -75,6 +79,7 @@ export function Mergers({ events, company, title, error, demo, onOpen }: { event
               </span>
             </span>
             <span className="lasso-merger__sentence">{sentence(m)}</span>
+            {m.from.filter((p) => p.ceased).length > 1 ? <CeasedToggle parties={m.from.filter((p) => p.ceased)} /> : null}
           </li>
         ))}
         {company?.founded ? (
@@ -86,8 +91,23 @@ export function Mergers({ events, company, title, error, demo, onOpen }: { event
           </li>
         ) : null}
       </ul>
-      <SourceLine source="CVR via Lasso" updated={events.updated} />
+      <div className="lasso-mergers__source">
+        <SourceLine source="CVR via Lasso" updated={events.updated} />
+      </div>
     </Section>
+  );
+}
+
+/** Mobil (26h.8): "Se de N ophørte selskaber" folder navnene ud under sætningen. */
+function CeasedToggle({ parties }: { parties: MergerPartyVM[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="lasso-merger__ceased">
+      <button type="button" className="lasso-link lasso-merger__ceased-btn" aria-expanded={open} onClick={() => setOpen(!open)}>
+        {open ? "Skjul ophørte selskaber" : `Se de ${parties.length} ophørte selskaber`}
+      </button>
+      {open ? <span className="lasso-merger__ceased-list">{parties.map((p) => p.name).join(", ")}</span> : null}
+    </span>
   );
 }
 

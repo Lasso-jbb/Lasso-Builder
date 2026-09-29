@@ -42,6 +42,18 @@ export interface CompanyVM {
   auditExempt?: boolean;
   /** Katalog 28.7: registreret kapital med valutakode og kapitalklasser. Ubekræftet. */
   registeredCapital?: { amount: number; currency?: string; classes?: string[] };
+  /** Katalog 28.7: revision fravalgt siden dette regnskabsår. Ubekræftet. */
+  auditExemptSince?: number;
+  /** Katalog 28.7: regnskabsklasse (A, B, C, D). Ubekræftet. */
+  accountingClass?: string;
+  /** Katalog 28.7: første regnskabsperiode (ÅÅÅÅ-MM-DD). Ubekræftet. */
+  firstPeriod?: { start?: string; end?: string };
+  /** Katalog 28.7: vedtægter senest ændret (ÅÅÅÅ-MM-DD). Ubekræftet. */
+  statutesChanged?: string;
+  /** Katalog 28.7: reklamebeskyttet i CVR. Ubekræftet. */
+  advertisingProtected?: boolean;
+  /** Katalog 28.7: børsnoteret. Ubekræftet. */
+  listed?: boolean;
 }
 
 /**
@@ -1039,6 +1051,10 @@ export interface MergerPartyVM {
   lassoId?: string;
   /** Ophørte ved fusionen/spaltningen (vises i muted med "ophørt ved fusionen"). */
   ceased?: boolean;
+  /** 28.6: CVR-nummeret under navnet ("CVR …, ophørt ved fusionen"). */
+  cvr?: string;
+  /** 28.6: selskabets rolle i hændelsen, fx "fortsættende selskab", "afgivende selskab", "modtagende, nystiftet". */
+  role?: string;
 }
 
 /** Katalog 28.6: én fusion eller spaltning, "fra → til". */

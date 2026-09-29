@@ -49,7 +49,7 @@ test("28.2/28.6/28.8: companyEvents hentes for de tre komponenter, og tekstkorte
   const p = new DemoProvider();
   const spec = parseViewSpec({ title: "x", components: [{ type: "LassoCompanyHead", company: BYG }, { type: "LassoMergers", company: BYG }, { type: "LassoPublications", company: BYG }] });
   const ds = await resolveSpec(spec, p);
-  assert.equal(ds.companyEvents[BYG]?.mergers.length, 1);
+  assert.deepEqual(ds.companyEvents[BYG]?.mergers.map((m) => m.type), ["Fusion", "Spaltning"]);
   assert.ok(ds.companyEvents[BYG]?.publications.some((x) => x.corrected));
   const card = textCard(spec, ds)!;
   assert.match(card, /FUSIONER OG SPALTNINGER/);

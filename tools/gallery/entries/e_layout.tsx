@@ -972,8 +972,20 @@ const mobileStates: GalleryEntry[] = [
         </Section>
       </div>
     ) },
-  { nr: "26h.8", title: "Fusioner og spaltninger (mobil)", node: "GFQ-0", only: "mobile", spec: one("Fusioner", { type: "LassoMergers", company: C }) },
-  { nr: "26h.9", title: "Bibrancher og formål (mobil)", node: "GG7-0", only: "mobile", spec: one("Profil", { type: "LassoTextSections", company: C, variant: "profil" }) },
+  {
+    nr: "26h.8",
+    title: "Fusioner og spaltninger (mobil)",
+    node: "GFQ-0",
+    only: "mobile",
+    note: "Som Paper: kun fusionen med ét ophørende selskab (demodata har også en spaltning og to ophørte, se 28.6).",
+    spec: one("Fusioner", { type: "LassoMergers", company: C }),
+    mutate: (ds) => {
+      const ev = ds.companyEvents?.[C];
+      const fusion = ev?.mergers.find((m) => m.type === "Fusion");
+      if (ev && fusion) ev.mergers = [{ ...fusion, from: fusion.from.filter((p) => p.name === "Data Eksempel A/S") }];
+    },
+  },
+  { nr: "26h.9", title: "Bibrancher og formål (mobil)", node: "GG7-0", only: "mobile", spec: one("Profil", { type: "LassoRegistration", company: C, variant: "profile" }) },
 ];
 
 /* ---------- 27 A4-rapport ---------- */
@@ -1168,15 +1180,8 @@ const datatypes: GalleryEntry[] = [
     nr: "28.7",
     title: "Regnskabsoplysninger, bibrancher, kapital, tegningsregel og formål",
     node: "HDZ-0",
-    note: "Nøgle-værdi-listen (company) + tekstsektionerne (profil) side om side.",
-    spec: {
-      kind: "company",
-      title: "Oplysninger",
-      components: [
-        { type: "LassoKeyValueList", company: C, variant: "company", title: "Regnskabsoplysninger og kapital", width: "half" },
-        { type: "LassoTextSections", company: C, variant: "profil", width: "half" },
-      ],
-    },
+    note: "LassoRegistration: to kort (regnskabsoplysninger, kapital og vedtægter). Paper viser desuden en eksempelrække for et B-selskab med fravalgt revision; den tilstand ses hos virksomheder uden revisor i demodata.",
+    spec: one("Oplysninger", { type: "LassoRegistration", company: C }),
   },
   { nr: "28.8", title: "Statstidende, seneste bekendtgørelser", node: "HGH-0", spec: one("Statstidende", { type: "LassoAnnouncements", company: "CVR-1-99000011" }) },
   {

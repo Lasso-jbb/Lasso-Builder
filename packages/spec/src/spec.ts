@@ -426,6 +426,14 @@ export const mergersSchema = z.object({
   title: z.string().max(80).optional(),
 }).describe("Fusioner og spaltninger: dato og type, 'fra → til' med selskabskort; ophørte selskaber i muted.");
 
+/** Katalog 28.7 (mobil 26h.9): regnskabsoplysninger og kapital/vedtægter; 'profile' = bibrancher og formål. Felter ud over CVR-teksterne er ubekræftede. */
+export const registrationSchema = z.object({
+  type: z.literal("LassoRegistration"),
+  company: companyRef,
+  variant: z.enum(["full", "profile"]).default("full").describe("'full' (standard) = to kort: regnskabsoplysninger og kapital og vedtægter. 'profile' = bibrancher og formål."),
+  title: z.string().max(80).optional(),
+}).describe("Regnskabsoplysninger (revision, regnskabsår og -perioder, regnskabsklasse, bibrancher) og kapital og vedtægter (kapital, kapitalklasser, vedtægter, tegningsregel, formål, reklamebeskyttet, børsnoteret).");
+
 /** Katalog 28.8: Statstidende, seneste bekendtgørelser. Udelades helt uden bekendtgørelser. */
 export const announcementsSchema = z.object({
   type: z.literal("LassoAnnouncements"),
@@ -717,6 +725,7 @@ export const componentSchema = z.discriminatedUnion("type", [
   w(personStatsSchema),
   w(financialStatementsSchema),
   w(mergersSchema),
+  w(registrationSchema),
   w(announcementsSchema),
   w(publicationsSchema),
   w(changeFeedSchema),
@@ -804,6 +813,7 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoPersonStats: "full",
   LassoFinancialStatements: "full",
   LassoMergers: "full",
+  LassoRegistration: "full",
   LassoAnnouncements: "full",
   LassoPublications: "full",
   LassoChangeFeed: "full",

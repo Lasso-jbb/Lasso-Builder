@@ -113,3 +113,29 @@ test("28.9: reelle ejere i tre særlige tilstande og 'via rolle' i den almindeli
   const via = r({ lassoId: "x", owners: [{ name: "Bo", throughRole: true, share: "25 %" }] });
   assert.match(via, /Bo<span class="lasso-bo__via">, via rolle<\/span>/);
 });
+
+test("28.7/26h.9: regnskabsoplysninger og kapital som to kort; fravalgt revision i warning; profil med branchechips og formål", async () => {
+  const { Registration } = await import("./components/Registration.js");
+  const company = {
+    lassoId: "CVR-1-1",
+    name: "Prøve A/S",
+    industryCode: "631000",
+    industryText: "Databehandling",
+    auditExempt: true,
+    auditExemptSince: 2024,
+    accountingClass: "B",
+    altIndustries: [{ code: "620200", text: "It-rådgivning" }],
+    registeredCapital: { amount: 500000, currency: "DKK", classes: ["A-aktier 400.000 DKK", "B-aktier 100.000 DKK"] },
+    listed: false,
+  };
+  const texts = { lassoId: "CVR-1-1", sections: [{ heading: "Formål", body: "At drive it-virksomhed." }, { heading: "Tegningsregler", body: "Direktøren alene." }] };
+  const html = renderToStaticMarkup(createElement(Registration, { company, texts }));
+  assert.match(html, /lasso-section__title">Regnskabsoplysninger<[^]*lasso-section__title">Kapital og vedtægter</);
+  assert.match(html, /lasso-reg__warn">Fravalgt<\/span><span class="lasso-reg__muted">, siden regnskabsåret 2024</);
+  assert.match(html, />A-aktier 400\.000 DKK<\/span><span>B-aktier 100\.000 DKK</);
+  assert.match(html, /Børsnoteret[^]*Nej/);
+  const profile = renderToStaticMarkup(createElement(Registration, { company, texts, variant: "profile" }));
+  assert.match(profile, /lasso-reg__chip">631000 Databehandling, hoved</);
+  assert.match(profile, /Formål[^]*At drive it-virksomhed\./);
+  assert.match(profile, />Vis tegningsregel og vedtægter</);
+});

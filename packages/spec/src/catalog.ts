@@ -188,7 +188,13 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     title: "Fusioner og spaltninger",
     description: `Brug til: virksomhedens fusioner og spaltninger som 'fra → til' med dato og type – 'har X fusioneret', 'hvilke selskaber er fusioneret ind i X', 'spaltning'. Brug ikke når: det gælder ejerskifte (LassoOwnerList/LassoOwnershipDiagram) eller hele historikken (LassoTimeline). Kræver: company; ingen hændelser giver en tom tilstand, der siger det. Dækkes ikke af show_company. Eksempel: 'Er Lasso X fusioneret med andre selskaber?' → render_view med LassoCompanyHead og LassoMergers.`,
     props: "company, title?",
+  },  {
+    type: "LassoRegistration",
+    title: "Regnskabsoplysninger og kapital",
+    description: `Brug til: registreringsdetaljer fra CVR – revision (revideret eller fravalgt), regnskabsår, nuværende og første regnskabsperiode, regnskabsklasse, bibrancher, registreret kapital og kapitalklasser, vedtægter, tegningsregel, formål, reklamebeskyttelse og børsnotering – 'er revisionen fravalgt', 'hvilken regnskabsklasse', 'hvad er kapitalen', 'hvad er formålet', 'bibrancher'. Brug ikke når: kun revisor, stiftelse, form eller branche (LassoKeyValueList variant 'company'), eller hele virksomhedsprofilen med regnskabsanalyse (LassoTextSections). Kræver: company, variant? ('full' standard = to kort; 'profile' = bibrancher og formål, en smal blok); felter uden værdi udelades, og alt ud over formål og tegningsregel er ubekræftet i live-data. Dækkes ikke af show_company. Eksempel: 'Har Lasso X fravalgt revision, og hvad er kapitalen?' → render_view med LassoCompanyHead og LassoRegistration.`,
+    props: "company, variant? (full | profile), title?",
   },
+
   {
     type: "LassoAnnouncements",
     title: "Statstidende",

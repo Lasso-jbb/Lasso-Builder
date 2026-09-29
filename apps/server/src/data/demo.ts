@@ -462,9 +462,18 @@ function strip(c: DemoCompany): CompanyVM {
   const { base: _b, growth: _g, people: _p, owners: _o, auditor: _a, ...vm } = c;
   // Katalog 28.7/26h.9: eksempelvirksomheden har bibrancher og registreret kapital (eksempeldata).
   if (c.cvr === "99000001") {
-    return { ...vm, altIndustries: [{ code: "433200", text: "Tømrer- og bygningssnedkervirksomhed" }, { code: "711200", text: "Rådgivende ingeniørvirksomhed" }], registeredCapital: { amount: 2_000_000, currency: "DKK", classes: ["A-aktier 1.500.000 DKK", "B-aktier 500.000 DKK"] } };
+    return {
+      ...vm,
+      altIndustries: [{ code: "433200", text: "Tømrer- og bygningssnedkervirksomhed" }, { code: "711200", text: "Rådgivende ingeniørvirksomhed" }],
+      registeredCapital: { amount: 2_000_000, currency: "DKK", classes: ["A-aktier 1.500.000 DKK, 10 stemmer pr. aktie", "B-aktier 500.000 DKK, 1 stemme pr. aktie"] },
+      accountingClass: "B",
+      firstPeriod: { start: "1998-04-01", end: "1999-12-31" },
+      statutesChanged: "2024-03-12",
+      advertisingProtected: false,
+      listed: false,
+    };
   }
-  if (c.auditor === "Ingen" && c.form !== "Enkeltmandsvirksomhed" && c.form !== "I/S") return { ...vm, auditExempt: true };
+  if (c.auditor === "Ingen" && c.form !== "Enkeltmandsvirksomhed" && c.form !== "I/S") return { ...vm, auditExempt: true, auditExemptSince: 2024 };
   return vm;
 }
 
@@ -933,7 +942,23 @@ export class DemoProvider implements DataProvider {
     }
     const mergers: CompanyEventsVM["mergers"] =
       c.cvr === "99000001"
-        ? [{ date: "2022-07-01", type: "Fusion", from: [{ name: "Data Eksempel A/S", ceased: true }], to: [{ name: c.name, lassoId: c.lassoId }] }]
+        ? [
+            {
+              date: "2022-07-01",
+              type: "Fusion",
+              from: [
+                { name: "Cloud Eksempel A/S", cvr: "10000001", ceased: true },
+                { name: "Data Eksempel A/S", cvr: "10000002", ceased: true },
+              ],
+              to: [{ name: c.name, lassoId: c.lassoId, cvr: c.cvr, role: "fortsættende selskab" }],
+            },
+            {
+              date: "2019-03-15",
+              type: "Spaltning",
+              from: [{ name: c.name, lassoId: c.lassoId, cvr: c.cvr, role: "afgivende selskab" }],
+              to: [{ name: "Eksempel Ejendomme ApS", lassoId: "CVR-1-99000012", role: "modtagende, nystiftet" }],
+            },
+          ]
         : [];
     const announcements: CompanyEventsVM["announcements"] = /konkurs/i.test(c.status ?? "")
       ? [

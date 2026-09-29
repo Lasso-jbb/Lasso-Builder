@@ -21,6 +21,7 @@ export function Section({
   children,
   className = "",
   span = "full",
+  card = false,
 }: {
   title?: ReactNode;
   subtitle?: ReactNode;
@@ -28,9 +29,11 @@ export function Section({
   children: ReactNode;
   className?: string;
   span?: "quarter" | "half" | "three-quarters" | "full";
+  /** Kort (katalog 28): 1 px kant, radius 12 og overskrift 15/600, fx datatyperne fra API'et. */
+  card?: boolean;
 }) {
   return (
-    <section className={`lasso-section lasso-span-${span} ${className}`}>
+    <section className={`lasso-section lasso-span-${span}${card ? " lasso-section--card" : ""} ${className}`}>
       {title || action ? (
         <div className="lasso-section__head">
           <div className="lasso-section__titles">
