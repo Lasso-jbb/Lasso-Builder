@@ -124,7 +124,7 @@ function Spacing() {
     <div style={{ display: "grid", gap: 10 }}>
       {steps.map((s, i) => (
         <div key={s} style={{ display: "grid", gridTemplateColumns: "180px 1fr", alignItems: "center", gap: 16 }}>
-          <code style={{ fontSize: 12, color: "var(--lasso-muted)" }}>{s.replace("--lasso-", "")} · {px[i]} px</code>
+          <code style={{ fontSize: 12, color: "var(--lasso-muted)" }}>{s.replace("--lasso-", "")}, {px[i]} px</code>
           <div style={{ width: `var(${s})`, height: 16, background: "var(--lasso-accent-soft)", border: "1px solid var(--lasso-accent-border)" }} />
         </div>
       ))}
