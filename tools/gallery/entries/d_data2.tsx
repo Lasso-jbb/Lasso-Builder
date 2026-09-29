@@ -332,7 +332,14 @@ export const entries: GalleryEntry[] = [
   /* ---------- 16 Personside ---------- */
   { nr: "16.1", title: "Personhoved", node: "BNF-0", spec: person("Bo Eksempel", [{ type: "LassoPersonHead", person: BO }]) },
   { nr: "16.2", title: "Roller som tidsbånd", node: "BOH-0", spec: person("Bo Eksempel", [{ type: "LassoPersonRoles", person: BO, show: "all", limit: 8 }]) },
-  { nr: "16.3", title: "Netværk (personer med fælles selskaber)", node: "BQV-0", spec: person("Bo Eksempel", [{ type: "LassoPersonNetwork", person: BO, limit: 5 }]) },
+  {
+    nr: "16.3",
+    title: "Netværk som tidsbånd (personer med fælles selskaber)",
+    node: "LTP-0",
+    gridWidth: 1152,
+    note: "Paper LTP-0 (desktop, fuld bredde som i Paper) og LVN-0 (mobil): samme akse og navnekolonne som 16.2; bånd = perioden, de sad sammen.",
+    spec: person("Bo Eksempel", [{ type: "LassoPersonNetwork", person: BO, limit: 3, width: "full" }]),
+  },
   { nr: "16.4", title: "Personrisiko", node: "BR1-0", spec: person("Bo Eksempel", [{ type: "LassoPersonRisk", person: BO }]) },
 
   /* ---------- 17 Risikoobservationer ---------- */

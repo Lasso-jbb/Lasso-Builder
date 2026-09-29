@@ -5204,3 +5204,43 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-root .lasso-odiagram__body.has-overlay .lasso-odiagram__panel-actions { position: sticky; bottom: 0; z-index: 1; background: var(--lasso-surface); padding: 14px 16px 16px; }
 .lasso-root .lasso-odiagram__body.has-overlay .lasso-odiagram__panel-actions .lasso-btn { min-width: 0; height: 40px; padding: 0 10px; font-size: 13px; }
 .lasso-root .lasso-odiagram__body.has-overlay .lasso-odiagram__panel-head, .lasso-root .lasso-odiagram__body.has-overlay .lasso-odiagram__panel-sec { padding-left: 16px; padding-right: 16px; }
+
+/* ---------- 16.3 Netværk som tidsbånd (runde 5, Paper LTP-0; mobil LVN-0) ----------
+   Samme akse, rækker og 240 px navnekolonne som 16.2 (lasso-personroles__*). Bånd = perioden, de sad
+   sammen: nu = chart-2, afsluttet = stiplet omrids, konkurs = 1 px rød markør. */
+.lasso-personnet--bands .lasso-section__head { flex-wrap: wrap; row-gap: var(--lasso-space-2); }
+.lasso-personnet__swatch { display: inline-block; width: 12px; height: 8px; border-radius: 2px; flex: none; background: var(--lasso-chart-2); }
+.lasso-personnet__swatch--ended { background: var(--lasso-surface); border: 1px dashed var(--lasso-faint); box-sizing: border-box; }
+.lasso-personnet__swatch--bankrupt { width: 1px; height: 12px; border-radius: 0; background: var(--lasso-danger); }
+.lasso-personnet__bname { font-size: 14px; line-height: 18px; font-weight: 500; color: var(--lasso-text); text-align: left; }
+.lasso-root .lasso-link.lasso-personnet__bname { color: var(--lasso-text); }
+.lasso-root .lasso-link.lasso-personnet__bname:hover { color: var(--lasso-accent-text); }
+.lasso-personnet__brow.is-ended .lasso-personnet__bname, .lasso-personnet__card.is-ended .lasso-personnet__bname { color: var(--lasso-text-3); font-weight: 400; }
+.lasso-personnet__lane { position: relative; height: 22px; }
+.lasso-personnet__bandlabel { position: absolute; top: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: 11px; line-height: 14px; font-weight: 500; color: var(--lasso-text-2); white-space: nowrap; }
+.lasso-personnet__bankrupt { color: var(--lasso-bankrupt); }
+.lasso-personnet__band { position: absolute; top: 15px; height: 6px; border-radius: 3px; box-sizing: border-box; background: var(--lasso-chart-2); }
+.lasso-personnet__band--ended { background: var(--lasso-surface); border: 1px dashed var(--lasso-faint); }
+.lasso-personnet__lane:has(.lasso-personnet__band--ended) .lasso-personnet__bandlabel { color: var(--lasso-text-3); }
+.lasso-personnet__marker { position: absolute; top: 12px; width: 1px; height: 12px; background: var(--lasso-danger); }
+.lasso-personnet__mob { display: none; }
+.lasso-personnet__cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.lasso-personnet__card { display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); }
+.lasso-personnet__cardhead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.lasso-personnet__overlap { flex: none; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--lasso-text); }
+.lasso-personnet__card.is-ended .lasso-personnet__overlap { color: var(--lasso-text-3); font-weight: 500; }
+.lasso-personnet__mtrack { display: flex; flex-direction: column; gap: 4px; }
+.lasso-personnet__maxis { position: relative; height: 14px; border-top: 1px solid var(--lasso-chart-axis); padding-top: 2px; }
+.lasso-personnet__maxis span { position: absolute; top: 3px; font-size: 11px; line-height: 14px; font-weight: 500; color: var(--lasso-muted); white-space: nowrap; }
+.lasso-personnet__maxis span.is-now { right: 0; color: var(--lasso-text); }
+@container lasso (max-width: 560px) {
+  .lasso-personnet__desk { display: none; }
+  .lasso-personnet__mob { display: block; }
+  .lasso-personnet--bands > .lasso-section__head .lasso-section__action { flex-basis: 100%; }
+}
+/* 16.3 i en ½-kolonne: smallere navnekolonne, så båndene har plads. */
+.lasso-personnet--bands { container: personnet / inline-size; }
+@container personnet (max-width: 720px) {
+  .lasso-personnet--bands .lasso-personroles__axis, .lasso-personnet--bands .lasso-personroles__row { grid-template-columns: 170px minmax(0, 1fr); }
+  .lasso-personnet--bands .lasso-personroles__tick.is-minor { display: none; }
+}

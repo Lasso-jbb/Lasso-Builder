@@ -252,13 +252,21 @@ test("PersonRoles show 'all' (tidsbånd): limit bestemmer, hvor mange selskaber 
   assert.match(two, /aria-expanded="false"[^>]*>Se alle 3 selskaber</);
 });
 
-test("PersonNetwork limit: 3 som standard, flere på fanen Netværk", () => {
-  const people = Array.from({ length: 10 }, (_, i) => ({ name: `Person ${i} Eksempel`, companies: [{ companyName: "Eksempel Byg A/S" }], overlapYears: 10 - i, active: true }));
-  const net = (limit?: number) => renderToStaticMarkup(createElement(PersonNetwork, { network: { lassoId: ID, people }, limit }));
-  assert.equal((net().match(/<li class="lasso-personnet__row/g) ?? []).length, 3);
-  assert.match(net(), /Se alle 10/);
-  assert.equal((net(8).match(/<li class="lasso-personnet__row/g) ?? []).length, 8);
-  assert.match(net(8), /Se alle 10/);
+test("PersonNetwork (16.3): tidsbånd pr. fælles selskab, limit 3 som standard + 'Vis alle N', ingen 'Vis som graf'", () => {
+  const people = Array.from({ length: 10 }, (_, i) => ({ name: `Person ${i} Eksempel`, companies: [{ companyName: "Eksempel Byg A/S", role: "bestyrelse", from: "2012-01-01" }], overlapYears: 10 - i, active: true }));
+  const net = (limit?: number) => renderToStaticMarkup(createElement(PersonNetwork, { network: { lassoId: ID, people }, limit, onGraph: () => {} }));
+  const desk = (h: string) => (h.split("lasso-personnet__mob")[0]!.match(/<li class="lasso-personroles__row lasso-personnet__brow/g) ?? []).length;
+  assert.equal(desk(net()), 3);
+  assert.match(net(), /Vis alle 10/);
+  assert.equal(desk(net(8)), 8);
+  assert.match(net(), /lasso-personnet__band"/);
+  assert.match(net(), /Eksempel Byg A\/S, bestyrelse, siden 2012/);
+  assert.doesNotMatch(net(), /Vis som graf/);
+  // Afsluttet = stiplet bånd; konkurs = rød markør og ordet.
+  const ended = renderToStaticMarkup(createElement(PersonNetwork, { network: { lassoId: ID, people: [{ name: "Peter Eksempel", overlapYears: 4, active: false, companies: [{ companyName: "Eksempel Energi A/S", role: "direktør", from: "2014-01-01", to: "2018-01-01", status: "Under konkurs", statusKind: "warning" }] }] } }));
+  assert.match(ended, /lasso-personnet__band lasso-personnet__band--ended/);
+  assert.match(ended, /lasso-personnet__marker/);
+  assert.match(ended, /, under konkurs/);
 });
 
 test("LassoView: tidslinjen med filter 'risiko' viser kun forløbet i selskaberne med konkurs", () => {
