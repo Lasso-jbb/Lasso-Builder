@@ -4651,3 +4651,9 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 /* 15.2: handlingsbjælkens 1 px ink-kant må ikke klippes af tabelrammen (bjælken ligger -1 px over rammens kant). */
 .lasso-table-frame:has(> .lasso-bulkbar) { overflow: clip; overflow-clip-margin: 1px; }
 .lasso-table-frame > .lasso-bulkbar:last-child { margin-bottom: -1px; border-radius: var(--lasso-radius-lg); }
+
+/* 13.6: det faste felt på mobil står på én linje; seriernes navne afkortes før tallene. */
+.lasso-pick--line .lasso-pick__line { display: flex; justify-content: flex-end; flex-wrap: nowrap; white-space: nowrap; overflow: hidden; }
+.lasso-pick--line .lasso-pick__item { display: inline-flex; min-width: 0; flex: 0 1 auto; }
+.lasso-pick--line .lasso-pick__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.lasso-pick--line .lasso-pick__value, .lasso-pick--line .lasso-pick__sep, .lasso-pick--line .lasso-pick__change { flex: none; }
