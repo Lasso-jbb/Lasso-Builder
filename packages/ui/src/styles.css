@@ -4834,3 +4834,6 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-contact__row .lasso-contact__value[href^="tel:"] { flex: none; }
   .lasso-contact__value[href^="tel:"] + .lasso-contact__aside { flex: 1 1 auto; justify-content: flex-end; text-align: right; }
 }
+
+/* 16.1/25.3/26d.1 (Jakob 29.09, G9): personhovedet er kun navnet, uden skillelinje under. */
+.lasso-personhead--nameonly, .lasso-root .lasso-personhead--nameonly.lasso-company { border-bottom: 0; }
