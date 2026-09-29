@@ -39,7 +39,6 @@ import {
   ShareValue,
   SourceLine,
   StatusBadge,
-  TabStrip,
   TopBar,
   TagInput,
   ToastItem,
