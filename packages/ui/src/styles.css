@@ -2021,3 +2021,20 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
   .lasso-root .lasso-rowmore { display: flex; align-items: center; width: 100%; min-height: var(--lasso-touch-h); margin: 0; padding: 0; border: 0; border-bottom: 1px solid var(--lasso-border); border-radius: 0; background: transparent; font-size: var(--lasso-fs); font-weight: 500; color: var(--lasso-accent-text); text-align: left; }
   .lasso-root .lasso-rowmore:hover { text-decoration: none; background: var(--lasso-surface-2); }
 }
+
+/* ---------- 14.1 Ejerdiagram, fuld visning (node AQF-0): legale/reelle, pr. dato, mini-kort, eksport ---------- */
+.lasso-odiagram__date { cursor: default; }
+.lasso-odiagram__date input { width: 118px; height: 100%; padding: 0; border: 0; background: transparent; font: inherit; font-size: var(--lasso-fs-sm); color: var(--lasso-text); }
+.lasso-odiagram__date input:focus, .lasso-odiagram__date input:focus-visible { outline: none; }
+.lasso-odiagram__date input::-webkit-calendar-picker-indicator { opacity: 0.55; cursor: pointer; }
+.lasso-odiagram__date:has(.lasso-odiagram__today) input { width: 22px; color: transparent; }
+.lasso-odiagram__date:has(.lasso-odiagram__today) input::-webkit-datetime-edit { display: none; }
+.lasso-odiagram__date:focus-within { border-color: var(--lasso-focus-border); }
+.lasso-odiagram__today { margin-left: -4px; }
+/* Mini-kortet: øverst til højre på lærredet, hvid flade, noder i divider-grå, fokus i koral, udsnittet som 1,5 px ink-ramme */
+.lasso-odiagram__minimap { position: absolute; top: 12px; right: 12px; padding: 6px; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius); background: var(--lasso-surface); cursor: pointer; line-height: 0; }
+.lasso-odiagram__minimap svg { display: block; }
+.lasso-odiagram__mininode { fill: var(--lasso-border-strong); }
+.lasso-odiagram__mininode.is-root { fill: var(--lasso-accent); }
+.lasso-odiagram__miniframe { fill: none; stroke: var(--lasso-text); stroke-width: 1.5; }
+.lasso-odiagram__print svg { max-width: 100%; height: auto; }

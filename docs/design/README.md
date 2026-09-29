@@ -126,3 +126,9 @@ Spec-komponent `LassoChangeFeed { list?, days? (7), types?, title? }` → `Chang
 ### A4-eksport (27, node `DO8-0`)
 
 `ReportA4({ company, dataset, generatedAt? })` tegner op til fire A4-sider (forside, nøgletal + graf + ledelse/ejere, regnskab 5 år, kreditvurdering/risiko/reelle ejere/revisor) uden interaktion; `@media print` giver ét ark pr. side. `LassoView` viser knappen "Eksportér PDF" (host.export, spec.kind "company") med Print og Luk. Preview: `npx tsx apps/server/src/dev/render-preview.ts <mappe> --report CVR-1-99000001`.
+
+## Tabeller, massehandlinger og persontabel (15, mobil 26c)
+
+`CompanyTable` har værktøjslinjen (søg i resultatet, `Filtre (n)` der åbner `FilterSheet`, kolonnevalg, eksport), afkrydsning med `BulkBar` (15.2: "N markeret, vælg alle", handlinger, luk; destruktiv som rød tekst), 25 rækker pr. side med `Pagination` (aktiv side ink 600 + 2 px streg) og tilstande inde i rammen (`TableStateRows`, hovedet står). Under 560 px bliver den en kortliste (navn + status, CVR og by, tynd linje, tre nøgletal + score) med fjernbare filterchips. `LassoPersonTable { query, limit? }` (15.3) er samme tabel med personer: navn alene, fødselsår og by, 2 roller + "og n flere", konkurser kun > 0. Delene ligger i `components/TableKit.tsx`.
+
+Ejerdiagrammet (14, layoutregel 3) har Legale/Reelle ejere, datovælger (klientsidet ud fra registreringsdatoer), dobbeltklik for nyt fokus, mini-kort med viewport-ramme og eksport til PNG/PDF af hele grafen med legende og dato (`ownershipExport.ts`, `print.ts`).

@@ -1114,3 +1114,74 @@ export function ownershipTree(graph: OwnershipGraphVM, opts: { depthUp?: number;
   const owners = build(graph.rootId, true);
   return { owners, subsidiaries: build(graph.rootId, false) };
 }
+
+/* ------------------------------------------------------------------ */
+/* Afsnit 3 i layoutreglerne (14.4): nyt fokus, reelle ejere, pr. dato  */
+/* ------------------------------------------------------------------ */
+
+/** Samme graf med `id` som fokus (dobbeltklik på en node). Dybden regnes derefter fra den nye rod. */
+export function refocusGraph(graph: OwnershipGraphVM, id: string): OwnershipGraphVM {
+  if (id === graph.rootId || !graph.nodes.some((n) => n.id === id)) return graph;
+  return { ...graph, rootId: id, nodes: graph.nodes.map((n) => ({ ...n, root: n.id === id })) };
+}
+
+/**
+ * Grafen, som den så ud på datoen (ÅÅÅÅ-MM-DD): ejerskaber registreret efter datoen udelades.
+ * Ophørte ejerskaber beholdes; layoutet tegner dem stiplet, når de var ophørt på datoen.
+ * Tilnærmelse på klienten ud fra since/until; API'et kan hente et præcist øjebliksbillede (onDate).
+ */
+export function graphOnDate(graph: OwnershipGraphVM, date: string | undefined): OwnershipGraphVM {
+  if (!date) return graph;
+  const edges = graph.edges.filter((e) => !e.since || e.since.slice(0, 10) <= date);
+  return { ...graph, edges, onDate: date };
+}
+
+/**
+ * "Reelle ejere" (14.1): personerne bag ejerkæderne med deres beregnede indirekte andel i
+ * roden (indirectShare), tegnet som direkte kanter person → rod. Mellemliggende selskaber
+ * udelades. Tom liste af kanter, når ingen personer kan findes i de hentede lag.
+ */
+export function beneficialGraph(graph: OwnershipGraphVM, onDate?: string): OwnershipGraphVM {
+  const { nodes, inn } = normalizeGraph(graph, { onDate });
+  const rootId = graph.rootId;
+  const people = new Set<string>();
+  const seen = new Set([rootId]);
+  const stack = [rootId];
+  while (stack.length) {
+    const id = stack.pop()!;
+    for (const e of inn.get(id) ?? []) {
+      if (seen.has(e.from)) continue;
+      seen.add(e.from);
+      const n = nodes.get(e.from);
+      if (!n) continue;
+      if (n.kind === "person") people.add(n.id);
+      else stack.push(n.id);
+    }
+  }
+  const edges: OwnershipEdgeVM[] = [];
+  for (const id of people) {
+    const share = indirectShare(graph, id, rootId);
+    if (share && share[1] > 0) edges.push({ from: id, to: rootId, share });
+  }
+  const keep = new Set([rootId, ...edges.map((e) => e.from)]);
+  return { ...graph, nodes: graph.nodes.filter((n) => keep.has(n.id)), edges, ingoingDepth: 1, outgoingDepth: 0 };
+}
+
+/** Mini-kortets geometri: målestok, der får hele grafen ind i boksen, og viewport-rammen i kortets koordinater. */
+export function minimapFrame(
+  layout: { width: number; height: number },
+  view: { x: number; y: number; zoom: number; width: number; height: number },
+  box: { width: number; height: number } = { width: 168, height: 104 },
+): { scale: number; width: number; height: number; frame: { x: number; y: number; w: number; h: number } } {
+  const scale = Math.min(box.width / layout.width, box.height / layout.height);
+  const width = Math.round(layout.width * scale);
+  const height = Math.round(layout.height * scale);
+  const x0 = (-view.x / view.zoom) * scale;
+  const y0 = (-view.y / view.zoom) * scale;
+  const w = (view.width / view.zoom) * scale;
+  const h = (view.height / view.zoom) * scale;
+  // Rammen klippes til kortet, så den altid kan ses.
+  const cx = Math.max(0, Math.min(width, x0));
+  const cy = Math.max(0, Math.min(height, y0));
+  return { scale, width, height, frame: { x: cx, y: cy, w: Math.max(4, Math.min(width, x0 + w) - cx), h: Math.max(4, Math.min(height, y0 + h) - cy) } };
+}
