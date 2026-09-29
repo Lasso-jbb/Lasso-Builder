@@ -2663,6 +2663,9 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-field--form .lasso-field__helpline, .lasso-field--form .lasso-field__error, .lasso-field--form .lasso-field__foot { grid-column: 1 / -1; }
 .lasso-root .lasso-field--form .lasso-field__clear, .lasso-root .lasso-field--stacked .lasso-field__clear { height: auto; align-self: center; }
 .lasso-field--stacked .lasso-field__name { min-height: 0; }
+/* 02b.6: feltnavn og felt på samme linje (navn til venstre, gap 24), ingen bundlinje */
+.lasso-field--side { grid-template-columns: auto auto; justify-content: start; column-gap: var(--lasso-space-5); align-items: center; padding: 0; border-bottom: 0; }
+.lasso-field--side .lasso-field__name { min-height: 0; }
 .lasso-field__helpline { grid-column: 2 / -1; margin-top: 0; }
 .lasso-field--stacked .lasso-field__helpline, .lasso-field--collapsible .lasso-field__helpline { grid-column: 1 / -1; }
 /* 02b.14: sammenklappet felt viser værdien som rolig grå tekst til højre for navnet */
@@ -2721,6 +2724,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-togglefield__card { min-height: 48px; padding: 0; border: 0; background: transparent; }
   /* 02a.8/26a.8 mobil: tag-feltet står alene i fuld bredde (operatoren på linjen over) */
   .lasso-field__control > .lasso-tagfield { flex-basis: 100%; }
+  /* 02a.8/26a.8 mobil: tags og placeholder/markør på samme linje; inputtet krymper i stedet for at ombryde */
+  .lasso-tagfield__input { flex: 1 1 40px; min-width: 40px; text-overflow: ellipsis; }
   /* 03.1/26a.8 mobil: effekt og handlinger i et gråt panel under feltet; Annuller/Opdater som to knapper i fuld bredde (48 px), effekten over */
   .lasso-field__foot, .lasso-field--stacked .lasso-field__foot, .lasso-field--collapsible .lasso-field__foot { margin-top: 2px; padding: 12px; gap: 12px; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius); background: var(--lasso-surface-2); }
   .lasso-field__effect { flex-basis: 100%; }
@@ -2808,6 +2813,9 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-sharevalue__bar { display: none; }
   .lasso-sharevalue { display: inline-flex; }
   .lasso-qflag-tip .lasso-tip__bubble { display: none; }
+  /* 02c.16/26h.2 mobil: "17 ⓘ" på samme linje, forklaringen som linje under */
+  .lasso-qflag { display: inline; }
+  .lasso-qflag > .lasso-qflag-tip { display: inline-flex; vertical-align: -2px; }
   .lasso-qflag__line { display: block; flex-basis: 100%; margin-top: 4px; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-3); }
 }
 

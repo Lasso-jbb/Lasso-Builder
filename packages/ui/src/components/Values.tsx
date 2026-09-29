@@ -336,12 +336,11 @@ export function LockedValue({ count, noun, linkLabel, onUpgrade, href, blur = fa
   const label = linkLabel ?? (hasCount ? "Se med Lasso Pro" : "Kræver Lasso Pro");
   return (
     <span className="lasso-locked">
-      {hasCount ? null : (
-        <svg className="lasso-locked__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.8" />
-          <path d="M8 11V8a4 4 0 018 0v3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-        </svg>
-      )}
+      {/* 02c.18: låseikonet står foran begge former ("Kræver Lasso Pro" og "3 personer  Se med Lasso Pro"). */}
+      <svg className="lasso-locked__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.8" />
+        <path d="M8 11V8a4 4 0 018 0v3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
       {hasCount ? (
         <span className="lasso-locked__count">{`${formatNumber(count)}${noun ? ` ${noun}` : ""}`}</span>
       ) : blur ? (

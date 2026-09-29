@@ -29,7 +29,7 @@ test("02c Felter med data", () => {
   assert.match(locked, /lasso-locked__icon/);
   assert.match(locked, />Kræver Lasso Pro</);
   const lockedCount = render(h(LockedValue, { count: 3, noun: "personer", onUpgrade: noop }));
-  assert.match(lockedCount, />3 personer<\/span>.*>Se med Lasso Pro</);
+  assert.match(lockedCount, /lasso-locked__icon[^]*>3 personer<\/span>.*>Se med Lasso Pro</);
   assert.match(render(h(AmountValue, { value: 18_834_000, previous: 17_520_000, since: "2024" })), /▲7,5 % fra 2024/);
   assert.match(render(h(AmountValue, { value: -201_000, previous: 318_000, since: "2024" })), /\u2212201 t\. kr\.[^]*▼underskud, fra 318 t\. kr\./);
   assert.match(render(h(ScoreValue, { score: 52 })), /52<\/span><span class="lasso-score__meta"> af 100, lav risiko/);

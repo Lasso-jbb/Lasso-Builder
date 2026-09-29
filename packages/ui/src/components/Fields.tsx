@@ -175,8 +175,8 @@ export interface FieldRowProps {
   /** Handlingslinjen under feltet: vises kun, når feltet er ændret. */
   pending?: { mode: "add" | "update"; delta?: number | null; onCancel: () => void; onConfirm: () => void; disabled?: boolean; /** 36 px knapper i stedet for 42 (03.1 opdater). */ compact?: boolean };
   error?: string;
-  /** "stacked" = navnet over kontrollen (smalle paneler, 03.1 venstre). "form" = formularfelt (02a): navnet over, hjælpetekst under, ingen bundlinje. Mobil er altid navnet over. */
-  layout?: "inline" | "stacked" | "form";
+  /** "stacked" = navnet over kontrollen (smalle paneler, 03.1 venstre). "form" = formularfelt (02a): navnet over, hjælpetekst under, ingen bundlinje. "side" = navnet til venstre på samme linje som feltet (gap 24), ingen bundlinje (02b.6). Mobil er altid navnet over. */
+  layout?: "inline" | "stacked" | "form" | "side";
   /** Foldbar række (03.1 "i ro"): kun navnet og en pil; `open` viser kontrollen. */
   collapsible?: boolean;
   open?: boolean;

@@ -585,7 +585,8 @@ function InfoDemo() {
   return (
     <div style={{ minHeight: 90 }}>
       <div className="lasso-field lasso-field--form" role="group">
-        <div className="lasso-field__name">
+        {/* Hover-tilstanden tegnet statisk som i Paper: rækken er så høj som boblen, så den står centreret på ikonet og hjælpeteksten under er fri. */}
+        <div className="lasso-field__name" style={{ minHeight: 80 }}>
           <span>Familiedrevet virksomhed</span>
           <Tooltip text="To eller flere direktions- og bestyrelsesmedlemmer med samme efternavn" className="lasso-infotip" placement="right" open>
             <button type="button" className="lasso-infotip__btn" aria-label="Om Familiedrevet virksomhed">
@@ -602,7 +603,7 @@ function InfoDemo() {
 function RequiredDemo() {
   const [v, setV] = useState("2100, 2200");
   return (
-    <FieldRow label="Postnummer" layout="form" required active>
+    <FieldRow label="Postnummer" layout="side" required active>
       <input className="lasso-input" style={{ width: 300, flex: "none" }} value={v} onChange={(e) => setV(e.target.value)} aria-label="Postnummer" />
     </FieldRow>
   );
