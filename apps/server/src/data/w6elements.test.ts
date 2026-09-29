@@ -55,5 +55,5 @@ test("28.2/28.6/28.8: companyEvents hentes for de tre komponenter, og tekstkorte
   assert.match(card, /FUSIONER OG SPALTNINGER/);
   assert.match(card, /REGNSKABSPUBLICERING/);
   const bankrupt = await p.companyEvents("CVR-1-99000011");
-  assert.deepEqual(bankrupt.announcements.map((a) => a.severity), ["bankrupt", "warning", "neutral"]);
+  assert.deepEqual(bankrupt.announcements.map((a) => a.severity), ["bankrupt", "bankrupt", "neutral"]);
 });

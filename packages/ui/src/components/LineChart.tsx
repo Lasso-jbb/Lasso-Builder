@@ -28,6 +28,8 @@ export function LineChart({
   industry,
   industryError,
   companyName,
+  extraMetrics,
+  title: titleOverride,
 }: {
   financials?: FinancialsVM;
   metric: Metric;
@@ -41,6 +43,13 @@ export function LineChart({
   industryError?: string;
   /** Virksomhedens navn i legenden og aflæsningen (13.6); uden står "Virksomheden". */
   companyName?: string;
+  /**
+   * 30.11: flere nøgletal som ekstra serier i samme graf (fx styret af afkrydsningen i flerårstabellen).
+   * Kun nøgletal af samme slags som `metric` (beløb med beløb) og kun uden benchmark/branche.
+   */
+  extraMetrics?: readonly Metric[];
+  /** Overskrift i stedet for nøgletallets navn (fx "Udvikling" ved flere serier). */
+  title?: string;
 }) {
   const [ref, W] = useWidth<HTMLDivElement>();
   const compact = isCompact(W);
@@ -80,6 +89,16 @@ export function LineChart({
     }
   }
   const hasBenchmark = points.some((p) => benchByYear.has(p.year));
+  // 30.11: ekstra serier (s2, s3, …) på samme skala; aldrig sammen med benchmark eller indeks.
+  const extras = indexMode || hasBenchmark ? [] : (extraMetrics ?? []).filter((m, i, arr) => m !== shown && METRIC_KIND[m] === METRIC_KIND[shown] && arr.indexOf(m) === i).slice(0, 4);
+  const extraByYear = extras.map((m) => {
+    const map = new Map<number, number>();
+    for (const yv of financials.years) {
+      const v = yv[METRIC_FIELD[m]];
+      if (typeof v === "number") map.set(yv.year, v);
+    }
+    return map;
+  });
   const benchLabel = indexMode ? (industry?.industryText ? `Branchen, ${industry.industryText.toLowerCase()}` : "Branchen") : (benchmarkName ?? "Sammenligning");
 
   // Indeks: første viste år = 100 for begge serier (kun når første værdi er positiv, ellers giver indekset ingen mening).
@@ -91,7 +110,7 @@ export function LineChart({
   const toIndex = (v: number, base: number | undefined) => (base && base > 0 ? (v / base) * 100 : null);
 
   const { scale, label } = labelFor(
-    [...points.map((p) => p.value), ...points.filter((p) => benchByYear.has(p.year)).map((p) => benchByYear.get(p.year)!)],
+    [...points.map((p) => p.value), ...points.filter((p) => benchByYear.has(p.year)).map((p) => benchByYear.get(p.year)!), ...extraByYear.flatMap((mp) => points.filter((p) => mp.has(p.year)).map((p) => mp.get(p.year)!))],
     METRIC_KIND[shown],
     currencyUnit(financials.currency),
   );
@@ -102,6 +121,7 @@ export function LineChart({
     if (v === undefined) return null;
     return canIndex ? toIndex(v, baseBench) : scale ? v / scale.divisor : v;
   });
+  const extraValues = extraByYear.map((mp) => points.map((p) => (mp.has(p.year) ? (scale ? mp.get(p.year)! / scale.divisor : mp.get(p.year)!) : null)));
   const shortLabel = (i: number, bench = false) => {
     const v = bench ? benchValues[i] : values[i];
     if (v === null || v === undefined) return "";
@@ -110,9 +130,9 @@ export function LineChart({
   const first = points[0]!.year;
   const last = points.at(-1)!.year;
   const subtitle = canIndex ? `Indeks ${baseYear} = 100, ${yearRange(first, last)}` : `${scale ? `${scale.label}, ` : ""}${yearRange(first, last)}`;
-  const title = indexMode ? `${METRIC_LABELS[shown]} mod branchen` : METRIC_LABELS[shown];
+  const title = titleOverride ?? (indexMode ? `${METRIC_LABELS[shown]} mod branchen` : METRIC_LABELS[shown]);
 
-  const flat = [...values, ...benchValues.filter((v): v is number => v !== null)];
+  const flat = [...values, ...benchValues.filter((v): v is number => v !== null), ...extraValues.flat().filter((v): v is number => v !== null)];
   const ticks = canIndex ? niceTicks(Math.min(100, ...flat), Math.max(100, ...flat)) : niceTicks(Math.min(0, ...flat), Math.max(0, ...flat));
   const tMin = ticks[0]!;
   const tMax = ticks.at(-1)!;
@@ -137,6 +157,20 @@ export function LineChart({
     seg.push(`${seg.length === 0 ? "M" : "L"}${x(i)},${y(v)}`);
   });
   if (seg.length > 1) benchSegments.push(seg.join(" "));
+  const extraPaths = extraValues.map((vals) => {
+    const parts: string[] = [];
+    let cur: string[] = [];
+    vals.forEach((v, i) => {
+      if (v === null) {
+        if (cur.length > 1) parts.push(cur.join(" "));
+        cur = [];
+        return;
+      }
+      cur.push(`${cur.length === 0 ? "M" : "L"}${x(i)},${y(v)}`);
+    });
+    if (cur.length > 1) parts.push(cur.join(" "));
+    return parts;
+  });
 
   const rowsFor = (i: number): PickRow[] => {
     const p = points[i]!;
@@ -151,6 +185,11 @@ export function LineChart({
         change: changeText(prev?.value, p.value),
       },
     ];
+    extras.forEach((m, k) => {
+      const raw = extraByYear[k]!.get(p.year);
+      if (raw === undefined) return;
+      rows.push({ label: METRIC_LABELS[m], value: unitLabel(raw), swatch: `s${k + 2}`, change: changeText(extraByYear[k]!.get(prev?.year ?? -1), raw) });
+    });
     const bv = benchValues[i];
     if (bv !== null && bv !== undefined) {
       const raw = benchByYear.get(p.year)!;
@@ -171,7 +210,16 @@ export function LineChart({
       span="half"
       className="lasso-chart"
       action={
-        hasBenchmark ? (
+        extras.length ? (
+          <div className="lasso-chart__legend lasso-chart__legend--right">
+            {[shown, ...extras].map((m, k) => (
+              <span key={m} className="lasso-chart__legend-item lasso-chart__legend-item--line">
+                <span className={`lasso-chart__swatch lasso-chart__swatch--s${k + 1}`} aria-hidden="true" />
+                {METRIC_LABELS[m]}
+              </span>
+            ))}
+          </div>
+        ) : hasBenchmark ? (
           <div className="lasso-chart__legend lasso-chart__legend--right">
             {/* 13.6: legenden bruger linjemarkører (fuld koral og stiplet neutral) og virksomhedens navn. */}
             <span className="lasso-chart__legend-item lasso-chart__legend-item--line">
@@ -198,7 +246,10 @@ export function LineChart({
               </g>
             ))}
             {canIndex && !ticks.includes(100) ? <line className="lasso-chart__axis" x1={CHART_AXIS_W} x2={W} y1={y(100)} y2={y(100)} /> : null}
-            <path className="lasso-chart__area" d={areaPath} />
+            {extras.length ? null : <path className="lasso-chart__area" d={areaPath} />}
+            {extraPaths.map((parts, k) =>
+              parts.map((d, j) => <path key={`${k}-${j}`} className={`lasso-chart__line lasso-chart__line--s${k + 2}`} d={d} />),
+            )}
             {benchSegments.map((d, i) => (
               <path key={i} className="lasso-chart__line lasso-chart__line--bench" d={d} />
             ))}

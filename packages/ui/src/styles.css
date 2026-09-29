@@ -25,7 +25,7 @@
   --lasso-status-new: var(--lasso-accent-text);  /* "Ny" som ren tekst (05.7) */
   --lasso-status-liquidation: var(--lasso-warning); /* 02c.8/05.7: likvidation i warning-tekst, konkurs i mørk rød (#B42318) */
 
-  --lasso-status-liquidation: var(--lasso-warning); /* 28.1: likvidation og rekonstruktion i warning-tekst; konkurs mørk rød */
+  --lasso-status-liquidation: var(--lasso-warning); /* 28.1: midlertidig (fx frivillig likvidation) i warning-tekst; problem (konkurs, rekonstruktion) mørk rød */
 
   /* Koral: den eneste accentfarve */
   --lasso-accent: #ff6b35;          /* primary */
@@ -290,6 +290,7 @@
 .lasso-badge--liquidation { color: var(--lasso-status-liquidation); }
 .lasso-badge--new { color: var(--lasso-status-new); font-weight: 600; } /* 05.7: "Ny" koral tekst 600 */
 .lasso-badge--demo, .lasso-badge--plain { color: var(--lasso-muted); font-weight: 400; }
+.lasso-badge--sm { font-size: 12px; line-height: 16px; } /* 05.7: 12/500 */
 
 /* ---------- Kort ---------- */
 .lasso-card { background: var(--lasso-surface); border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); padding: 18px; box-shadow: var(--lasso-shadow); min-width: 0; }
@@ -363,6 +364,8 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
   .lasso-kpi__delta { font-size: 12px; line-height: 16px; }
   /* 26c.1/26c.2: ingen info-ikoner ved nøgletal og nøgle-værdi på mobil (Paper); flaget findes på desktop og i 26h.2-rækkerne. */
   .lasso-root .lasso-kpi__label .lasso-qflag, .lasso-root .lasso-kv-row .lasso-qflag { display: none; }
+  /* 02c.16/26h.2: et åbnet kvalitetsflag ("17 ⓘ" + forklaringen som linje under) vises også i nøgle-værdi-rækker. */
+  .lasso-root .lasso-kv-row .lasso-qflag.lasso-qflag--open { display: inline; }
 }
 /* 24.5/30.13 plain: 1 px linje over og under, lodrette skillelinjer, ingen ydre ramme; første felt flugter med kolonnen. */
 .lasso-root .lasso-kpis--plain { border: 0; border-top: 1px solid var(--lasso-border); border-bottom: 1px solid var(--lasso-border); border-radius: 0; background: transparent; }
@@ -924,6 +927,15 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-chart__area { fill: var(--lasso-chart-1); opacity: 0.08; stroke: none; }
 .lasso-chart__line { fill: none; stroke: var(--lasso-chart-1); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
 .lasso-chart__line--bench { stroke: var(--lasso-chart-5); stroke-width: 2; stroke-dasharray: 5 4; }
+/* 30.11: ekstra nøgletal som serier i samme linjegraf (farve pr. serie, samme som legenden). */
+.lasso-chart__line--s2 { stroke: var(--lasso-chart-2); stroke-width: 2; }
+.lasso-chart__line--s3 { stroke: var(--lasso-chart-3); stroke-width: 2; }
+.lasso-chart__line--s4 { stroke: var(--lasso-chart-4); stroke-width: 2; }
+.lasso-chart__line--s5 { stroke: var(--lasso-chart-5); stroke-width: 2; }
+.lasso-myt__pick { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.lasso-chart__legend-item--line .lasso-chart__swatch--s2 { border-top-color: var(--lasso-chart-2); }
+.lasso-chart__legend-item--line .lasso-chart__swatch--s3 { border-top-color: var(--lasso-chart-3); }
+.lasso-chart__legend-item--line .lasso-chart__swatch--s4 { border-top-color: var(--lasso-chart-4); }
 .lasso-chart__dot { fill: var(--lasso-surface); stroke: var(--lasso-chart-1); stroke-width: 2; }
 .lasso-chart__dot--last { fill: var(--lasso-chart-1); }
 .lasso-chart__dot--bench { fill: var(--lasso-surface); stroke: var(--lasso-chart-5); stroke-width: 2; }
@@ -1596,6 +1608,7 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 
 /* Netværk: "Sidder sammen med". År som stort tal til højre, afsluttede dæmpet. */
 .lasso-personnet__rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--lasso-border); }
+.lasso-personnet__foot { margin: var(--lasso-space-3) 0 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-muted); } /* 25.5 */
 .lasso-personnet__row { display: flex; align-items: flex-start; gap: var(--lasso-space-4); padding: 14px 0; border-bottom: 1px solid var(--lasso-border); }
 .lasso-personnet__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .lasso-personnet__head { font-size: var(--lasso-fs); line-height: 20px; }
@@ -2834,6 +2847,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-amount__value { font-variant-numeric: tabular-nums; border-radius: var(--lasso-radius-sm); }
 .lasso-amount__value:focus-visible { outline: 1px solid var(--lasso-focus-border); }
 .lasso-amount__change { font-size: var(--lasso-fs-sm); }
+/* 02c.4: tydeligt mellemrum mellem pil og procent ("▲ 12,4 %", Paper GMY-0); Poppins' mellemrum alene er for smalt ved 12 px. */
+.lasso-arrow { margin-right: 2px; }
 /* 02c.9 Liste af værdier: "og N flere" er et link; desktop 2 navne, mobil 1 */
 .lasso-vlist__mob { display: none; }
 .lasso-root .lasso-link.lasso-link--more { color: var(--lasso-accent-text); font-weight: 500; }
@@ -2848,7 +2863,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 /* 02c.12: telefon, e-mail og web i link-farve, understregning kun ved hover. */
 .lasso-root .lasso-contactvalue a.lasso-link { color: var(--lasso-accent-text); }
 /* 02c.13 Reference: navnet 500, koral + understregning ved hover, hele rækken klikbar */
-.lasso-entity { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 8px; min-width: 0; }
+/* 02c.13 (Paper K2N-0): personreferencen har "Siden <dato>" under navnet (to linjer). */
+.lasso-entity { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
 .lasso-entity__name, .lasso-link.lasso-entity__name, .lasso-kv-row--link .lasso-link { font-weight: 500; color: var(--lasso-text); }
 .lasso-entity__sub { font-size: var(--lasso-fs-sm); color: var(--lasso-muted); font-variant-numeric: tabular-nums; }
 .lasso-kv-row--link { cursor: pointer; }
@@ -2943,7 +2959,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-company__status:not(.lasso-company__status--warning):not(.lasso-company__status--inactive):not(.lasso-company__status--liquidation) { font-weight: 400; color: var(--lasso-muted); } /* 26a.4: "Aktiv" 13/400 muted efter navnet */
   .lasso-company__facts { order: 1; font-size: var(--lasso-fs-sm); line-height: 18px; }
   .lasso-company > .lasso-company__actions { order: 2; align-self: flex-end; margin-top: 6px; }
-  .lasso-company > .lasso-headrisk { order: 3; }
+  /* 26a.4/26g.1: mobilhovedet har kun navn, fakta og ikonknapper; observationslinjen står kun på desktop (24.4). */
+  .lasso-company > .lasso-headrisk { display: none; }
   .lasso-company > .lasso-headtabs { order: 4; }
   .lasso-root .lasso-headbtn { height: 40px; min-width: 40px; }
   .lasso-headrisk { flex-wrap: wrap; font-size: var(--lasso-fs-sm); line-height: 18px; }
@@ -4191,8 +4208,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-compare__company:nth-child(2n) { scroll-snap-align: start; }
   .lasso-compare__company.is-origin { box-shadow: none; background: var(--lasso-accent-soft); }
   .lasso-compare__sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  /* 26e.7: navnet på én linje med ellipsis, så hovedrækken er ca. 56 px (navn + undertekst). */
-  .lasso-compare__name, .lasso-compare__name .lasso-link { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* 26e.7 (Paper to-linjers hoved): navnet ombrydes til højst 2 linjer, så virksomhederne kan skelnes; først derefter ellipsis. */
+  .lasso-compare__name, .lasso-compare__name .lasso-link { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; max-width: 100%; overflow: hidden; white-space: normal; overflow-wrap: break-word; text-align: left; }
   .lasso-compare__action { height: var(--lasso-touch-h); }
 }
 
@@ -4688,6 +4705,10 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-odiagram--list .lasso-section__head { align-items: baseline; flex-wrap: nowrap; }
 .lasso-odlist__row { font-size: var(--lasso-fs); line-height: 18px; }
 .lasso-odlist__share { font-size: var(--lasso-fs-sm); }
+/* 26c.6: navnene står fuldt på én linje; tættere indrykning og mellemrum giver plads ved siden af andels-intervallet. */
+.lasso-odlist__row { gap: 8px; padding-right: 10px; }
+.lasso-odlist__dash { width: 10px; }
+.lasso-odlist__share { white-space: nowrap; }
 
 /* 14.1: "Dybde ⌄" som knap; den skjulte select ligger over og viser valgene. */
 .lasso-odiagram__select { position: relative; }
@@ -4730,6 +4751,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-kpis > .lasso-kpi { padding: 16px 20px; border-left: 0; border-top: 0; }
   .lasso-kpis > .lasso-kpi + .lasso-kpi { border-left: 0; border-top: 1px solid var(--lasso-border); }
   .lasso-kpis .lasso-kpi__value { font-size: var(--lasso-fs-xl); line-height: 32px; }
+  /* 30.11: den rolige form (plain) stablet i ¼-kolonnen flugter til venstre med kolonnen, ét tal pr. række. */
+  .lasso-root .lasso-kpis--plain > .lasso-kpi, .lasso-root .lasso-kpis--plain > .lasso-kpis__title + .lasso-kpi { padding: 16px 0; }
 }
 
 /* 30.1–30.3 og 30.13: svarets bundlinje. Kildelinje til venstre (12 muted), ét koral link videre til højre;
@@ -4793,6 +4816,9 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-pick--line .lasso-pick__item { display: inline-flex; min-width: 0; flex: 0 1 auto; }
 .lasso-pick--line .lasso-pick__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .lasso-pick--line .lasso-pick__value, .lasso-pick--line .lasso-pick__sep, .lasso-pick--line .lasso-pick__change { flex: none; }
+/* 13.6 mobil: virksomhedens eget navn står fuldt; kun benchmark-navnet (de efterfølgende serier) afkortes. */
+.lasso-pick--line .lasso-pick__item:first-child { flex: none; }
+.lasso-pick--line .lasso-pick__item:first-child .lasso-pick__label { overflow: visible; }
 
 /* 22.1: tilføj-slotten har en tydelig stiplet kant i hele kolonnens højde, og rækkelinjerne fortsætter igennem. */
 .lasso-table.lasso-compare .lasso-compare__slot { border-left: 1px dashed var(--lasso-faint); }

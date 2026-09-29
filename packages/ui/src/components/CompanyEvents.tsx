@@ -117,7 +117,7 @@ const ANNOUNCEMENTS_SHOWN = 3;
 
 /**
  * Statstidende, seneste bekendtgørelser (katalog 28.8). Kort med "<virksomhed>" under titlen. Rækker:
- * dato | type farvet efter alvor som status (konkurs mørk rød, rekonstruktion/likvidation warning,
+ * dato | type farvet efter alvor som status (problem som konkurs og rekonstruktion mørk rød, frivillig likvidation warning,
  * øvrige tekstfarve), altid med ordet | Statstidendes egen tekst foldet til to linjer med "Vis" og en
  * kildelinje pr. bekendtgørelse | "Åbn i Statstidende". Mobil: 60 px rækker med chevron. Sektionen
  * udelades helt, når der ingen bekendtgørelser er (ikke tom tilstand).

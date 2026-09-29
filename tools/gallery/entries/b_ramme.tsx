@@ -88,7 +88,7 @@ function KV({ children }: { children: ReactNode }) {
  * 02c.8/05.7 (Jakob 29.09.2026): alle 19 CVR-statusser i de fire farvegrupper. Ren tekst i vægt
  * 500, ingen pille; farven følger ordet (statusTone), og ordet bærer betydningen (regel 7).
  */
-function StatusGroups({ kv = false }: { kv?: boolean }) {
+function StatusGroups({ kv = false, size }: { kv?: boolean; size?: "sm" }) {
   if (kv) {
     return (
       <>
@@ -111,7 +111,7 @@ function StatusGroups({ kv = false }: { kv?: boolean }) {
           <Cap>{g.title}</Cap>
           <Row gap={16}>
             {g.statuses.map((st) => (
-              <StatusBadge key={st} status={st} kind={statusKind(st)} />
+              <StatusBadge key={st} status={st} kind={statusKind(st)} size={size} />
             ))}
           </Row>
         </div>
@@ -811,15 +811,9 @@ export const entries: GalleryEntry[] = [
     nr: "05.7",
     title: "Status som ren tekst",
     node: "9HM-0",
-    note: "Jakob 29.09.2026: alle 19 CVR-statusser grupperet i de fire farvegrupper; \"Ny\" (koral) er ikke en CVR-status.",
+    note: "Jakob 29.09.2026: alle 19 CVR-statusser grupperet i de fire farvegrupper, 12/500 ren tekst. \"Ny\" er ikke en CVR-status og vises ikke.",
     render: () => (
-      <Stack gap={20}>
-        <StatusGroups />
-        <div>
-          <Cap>Ikke CVR-status</Cap>
-          <StatusBadge status="Ny" kind="new" />
-        </div>
-      </Stack>
+      <StatusGroups size="sm" />
     ),
   },
   {

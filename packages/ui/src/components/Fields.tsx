@@ -269,7 +269,7 @@ export function OperatorSelect({ value, operators, fieldType, onChange, labels, 
 }
 
 /** 02a.7 Enkeltvalg: operator + dropdown (Picker med flueben). */
-export function SelectField({ options, value, onChange, placeholder = "Vælg", label, invalid, grow = true }: { options: readonly (string | Option)[]; value: string | null | undefined; onChange: (id: string) => void; placeholder?: string; label?: string; invalid?: boolean; /** false = kun så bred som teksten (dropdown midt i en række, 03.2). */ grow?: boolean }) {
+export function SelectField({ options, value, onChange, placeholder = "Vælg", label, invalid, grow = true, defaultOpen }: { options: readonly (string | Option)[]; value: string | null | undefined; onChange: (id: string) => void; placeholder?: string; label?: string; invalid?: boolean; /** false = kun så bred som teksten (dropdown midt i en række, 03.2). */ grow?: boolean; /** Åben fra start (statisk forhåndsvisning og tests). */ defaultOpen?: boolean }) {
   const opts = toOptions(options);
   const current = opts.find((o) => o.id === value);
   return (
@@ -281,6 +281,7 @@ export function SelectField({ options, value, onChange, placeholder = "Vælg", l
       groups={[{ items: opts.map((o) => ({ id: o.id, label: o.label, sub: o.count !== undefined ? formatNumber(o.count) : undefined })) }]}
       value={value ?? ""}
       onChange={onChange}
+      defaultOpen={defaultOpen}
     />
   );
 }
@@ -1342,7 +1343,7 @@ export function techAnyLabel(type: string): string {
  * - "Inkluder kun følgende" / "Ekskluder følgende": produkt-tags + "Søg efter flere…".
  * Kontakt fra = kun kontakten. `variant` er bevaret for gamle kald; begge varianter tegnes ens.
  */
-export function TechnologyField({ label, value, onChange, suggestions }: { label: string; value: TechValue; onChange: (v: TechValue) => void; suggestions?: readonly string[]; /** @deprecated 02b.2 og 03.3/03.4 er afstemt: samme felt. */ variant?: "row" | "operator" }) {
+export function TechnologyField({ label, value, onChange, suggestions, defaultOpen }: { label: string; value: TechValue; onChange: (v: TechValue) => void; suggestions?: readonly string[]; /** @deprecated 02b.2 og 03.3/03.4 er afstemt: samme felt. */ variant?: "row" | "operator"; /** Operator-dropdown'en åben fra start (statisk forhåndsvisning, 02b.2). */ defaultOpen?: boolean }) {
   return (
     <>
       <Toggle on={value.on} label={label} onChange={(on) => onChange({ ...value, on })} />
@@ -1353,6 +1354,7 @@ export function TechnologyField({ label, value, onChange, suggestions }: { label
             value={value.mode}
             grow={false}
             label={`${label}, valg`}
+            defaultOpen={defaultOpen}
             onChange={(id) => onChange({ ...value, mode: id as TechMode, values: id === "any" ? [] : value.values })}
           />
           {value.mode !== "any" ? <TagInput values={value.values} suggestions={suggestions} placeholder="Søg efter flere…" morePlaceholder="Søg efter flere…" onChange={(values) => onChange({ ...value, values })} /> : null}
@@ -1366,10 +1368,10 @@ export function TechnologyField({ label, value, onChange, suggestions }: { label
  * 03.2–03.4 Teknologifeltet i sin række: FieldRow + TechnologyField. "Ryd" vises kun, når
  * kontakten er til (03.4: kontakt fra = kun kontakten, intet at rydde).
  */
-export function TechnologyRow({ label, value, onChange, onClear, suggestions, pending, active }: { label: string; value: TechValue; onChange: (v: TechValue) => void; onClear?: () => void; suggestions?: readonly string[]; pending?: FieldRowProps["pending"]; active?: boolean }) {
+export function TechnologyRow({ label, value, onChange, onClear, suggestions, pending, active, defaultOpen }: { label: string; value: TechValue; onChange: (v: TechValue) => void; onClear?: () => void; suggestions?: readonly string[]; pending?: FieldRowProps["pending"]; active?: boolean; /** Operator-dropdown'en åben fra start (02b.2). */ defaultOpen?: boolean }) {
   return (
     <FieldRow label={label} onClear={value.on ? onClear : undefined} pending={pending} active={active}>
-      <TechnologyField label={label} value={value} onChange={onChange} suggestions={suggestions} />
+      <TechnologyField label={label} value={value} onChange={onChange} suggestions={suggestions} defaultOpen={defaultOpen} />
     </FieldRow>
   );
 }

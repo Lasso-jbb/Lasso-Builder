@@ -72,9 +72,9 @@ export function statusTone(status: string | undefined, kind: CompanyVM["statusKi
 }
 
 /** Regel 1: status er ren tekst i vægt 500 — ingen pille, prik eller farvet flade. */
-export function StatusBadge({ status, kind }: { status?: string; kind?: CompanyVM["statusKind"] | "new" }) {
+export function StatusBadge({ status, kind, size }: { status?: string; kind?: CompanyVM["statusKind"] | "new"; /** "sm": 12 px (05.7, status stående alene); standard arver størrelsen fra omgivelsen. */ size?: "sm" }) {
   if (!status) return null;
-  return <span className={`lasso-badge lasso-badge--${statusTone(status, kind)}`}>{status}</span>;
+  return <span className={`lasso-badge lasso-badge--${statusTone(status, kind)}${size === "sm" ? " lasso-badge--sm" : ""}`}>{status}</span>;
 }
 
 /** Regel 2: ingen dekorative badges. Bevaret som ren tekst, så eksisterende kald virker. */
@@ -457,7 +457,7 @@ export function Delta({ from, to }: { from?: number | null; to?: number | null }
   if (pct === null) return null;
   return (
     <span className={pct < 0 ? "lasso-down" : "lasso-up"}>
-      {pct < 0 ? "▼" : "▲"} {formatPercent(Math.abs(pct), false)}
+      <span className="lasso-arrow">{pct < 0 ? "▼" : "▲"}</span> {formatPercent(Math.abs(pct), false)}
     </span>
   );
 }

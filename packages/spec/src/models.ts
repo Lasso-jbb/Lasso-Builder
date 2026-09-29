@@ -1079,7 +1079,7 @@ export interface AnnouncementVM {
   date?: string;
   /** Fx "Dekret om konkurs", "Rekonstruktion", "Likvidation", "Indkaldelse af kreditorer". */
   type: string;
-  /** Alvor, der styrer farven: konkurs mørk rød, rekonstruktion/likvidation warning, øvrige tekst. */
+  /** Alvor, der styrer farven (statusgrupperne, Jakob 29.09.2026): problem (konkurs, rekonstruktion, tvangsopløsning) "bankrupt" i mørk rød, midlertidig (frivillig likvidation) "warning", øvrige tekst. */
   severity: "bankrupt" | "warning" | "neutral";
   /** Statstidendes egen tekst (foldes til to linjer). */
   text?: string;

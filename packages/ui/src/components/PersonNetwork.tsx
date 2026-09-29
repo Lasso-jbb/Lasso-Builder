@@ -120,6 +120,8 @@ export function PersonNetwork({
           {expanded ? "Vis færre" : `Se alle ${network.people.length}`}
         </button>
       ) : null}
+      {/* 25.5: fodnote under listen om sorteringen (og evt. forbehold som "Eksempeldata"). */}
+      <p className="lasso-personnet__foot">{[network.note, "Sorteret efter overlap, afsluttede relationer nederst."].filter(Boolean).join(". ")}</p>
     </Section>
   );
 }

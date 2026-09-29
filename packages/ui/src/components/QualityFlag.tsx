@@ -12,7 +12,7 @@ export function QualityFlag({ text, reason, defaultOpen = false }: { text?: stri
   const msg = text ?? reason ?? "";
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <span className="lasso-qflag">
+    <span className={open ? "lasso-qflag lasso-qflag--open" : "lasso-qflag"}>
       <Tooltip text={msg} className="lasso-qflag-tip lasso-tip--narrow" placement="right" open={defaultOpen ? true : undefined}>
         <button type="button" className="lasso-qflag__btn" aria-label={`Mulig fejl: ${msg}`} aria-expanded={open} onClick={() => setOpen(!open)}>
           <ShellIcon name="alert" size={14} />

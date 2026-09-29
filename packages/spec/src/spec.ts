@@ -451,7 +451,7 @@ export const announcementsSchema = z.object({
   type: z.literal("LassoAnnouncements"),
   company: companyRef,
   title: z.string().max(80).optional(),
-}).describe("Statstidende: bekendtgørelser med type farvet efter alvor (konkurs, rekonstruktion/likvidation) og teksten foldet.");
+}).describe("Statstidende: bekendtgørelser med type farvet efter alvor (konkurs og rekonstruktion rød, likvidation gul) og teksten foldet.");
 
 /** Katalog 28.2: offentliggjorte regnskaber (ny/korrigeret) sorteret efter offentliggørelsesdato. */
 export const publicationsSchema = z.object({

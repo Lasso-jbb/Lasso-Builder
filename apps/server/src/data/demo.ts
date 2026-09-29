@@ -975,7 +975,7 @@ export class DemoProvider implements DataProvider {
     const announcements: CompanyEventsVM["announcements"] = /konkurs/i.test(c.status ?? "")
       ? ([
           { date: "2026-08-18", type: "Konkursdekret", severity: "bankrupt", url: "https://www.statstidende.dk/", source: src, text: `Skifteretten i København har afsagt konkursdekret over ${c.name} (eksempeldata). Kurator: advokat Eksempel Prøvesen. Anmeldelse af krav senest fire uger efter bekendtgørelsen.` },
-          { date: "2026-06-02", type: "Rekonstruktion indledt", severity: "warning", url: "https://www.statstidende.dk/", source: src, text: "Rekonstruktionsbehandling indledt med rekonstruktør og regnskabskyndig tillidsmand (eksempeldata)." },
+          { date: "2026-06-02", type: "Rekonstruktion indledt", severity: "bankrupt", url: "https://www.statstidende.dk/", source: src, text: "Rekonstruktionsbehandling indledt med rekonstruktør og regnskabskyndig tillidsmand (eksempeldata)." },
           { date: "2026-01-11", type: "Kapitalnedsættelse", severity: "neutral", url: "https://www.statstidende.dk/", source: src, text: "Beslutning om nedsættelse af selskabskapitalen, opfordring til kreditorer om at anmelde krav (eksempeldata)." },
         ] as CompanyEventsVM["announcements"]).sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""))
       : [];
@@ -1017,7 +1017,8 @@ export class DemoProvider implements DataProvider {
   }
 
   async personNetwork(lassoId: string) {
-    return demoPersonNetwork(COMPANIES, lassoId);
+    // 25.5: demo-netværket er markeret som eksempeldata i fodnoten.
+    return { ...demoPersonNetwork(COMPANIES, lassoId), note: "Eksempeldata" };
   }
 
   async personSearch(query: string, limit: number) {

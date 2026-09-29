@@ -53,6 +53,9 @@ const CANVAS_TALL = 1200;
 /** 26f.4: tablet indlejrer diagrammet i 340 px højde og samler over 4 noder pr. lag i "+N". */
 const TABLET_CANVAS_H = 340;
 const TABLET_LAYER_CAP = 4;
+/** 26f.4: noderne tegnes aldrig under 150 px bredde på tablet (læsbar tekst); lærredet vokser i stedet højst til 560 px. */
+const TABLET_MIN_ZOOM = 150 / 196;
+const TABLET_CANVAS_MAX = 560;
 /** Luft i bunden af lærredet til legende og zoomknapper. */
 const CANVAS_FOOT = 88;
 /** Smalt lærred (fx med detaljepanelet ved siden af): legenden fylder tre linjer. */
@@ -216,10 +219,15 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
   // 26f.4 tablet: kun hjælpechippen står under noderne (ingen legende), så foden er 44 px.
   const foot = tablet ? 44 : canvasW >= 720 && canvasW - LEGEND_RIGHT - 16 < 860 ? CANVAS_FOOT_NARROW : CANVAS_FOOT;
   // 14.4: desktop tegner 100 %, så noderne står i 196 × 64; kun en struktur, der ikke kan være i bredden, skaleres ned.
-  const fitZoom = layout ? Math.max(0.25, Math.min(1, (canvasW - 32) / layout.width, tablet ? Math.max(0.4, (canvasMax - foot - 8) / layout.height) : 1)) : 1; // 26f.4: alle noder inden for lærredet, hjælpechippen under noderne
+  const fitZoom = layout
+    ? tablet
+      ? // 26f.4: højst 100 %, aldrig under 150 px-noder (TABLET_MIN_ZOOM); lærredet vokser i højden i stedet for at skalere teksten ulæselig.
+        Math.max(TABLET_MIN_ZOOM, Math.min(1, (canvasW - 32) / layout.width, (canvasMax - foot - 8) / layout.height))
+      : Math.max(0.25, Math.min(1, (canvasW - 32) / layout.width))
+    : 1;
   const z = zoom ?? fitZoom;
   // Desktop: lærredet vokser med strukturen (100 %), højst til CANVAS_TALL; derover panoreres.
-  const canvasH = layout ? (tablet ? TABLET_CANVAS_H : Math.round(Math.min(CANVAS_TALL, Math.max(CANVAS_MIN, layout.height * fitZoom + foot)))) : CANVAS_MIN;
+  const canvasH = layout ? (tablet ? Math.round(Math.min(TABLET_CANVAS_MAX, Math.max(TABLET_CANVAS_H, layout.height * fitZoom + foot + 16))) : Math.round(Math.min(CANVAS_TALL, Math.max(CANVAS_MIN, layout.height * fitZoom + foot)))) : CANVAS_MIN;
   const defaultPan = layout ? { x: Math.round((canvasW - layout.width * z) / 2), y: Math.round(Math.max(8, (canvasH - foot - layout.height * z) / 2)) } : { x: 0, y: 0 };
   const p = pan ?? defaultPan;
 
@@ -395,14 +403,18 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
     onDate ? chipW("I dag") : 0,
     focus ? chipW(`Tilbage til ${origin?.name ?? ""}`) : 0,
     beneficial ? 0 : chipW(`Dybde: ${curUp} op, ${curDown} ned`, 20),
-    chipW("Eksportér", 22),
     canFullscreen && onAction ? 36 : 0,
   ].filter((w) => w > 0);
-  const optional = [hasHistoric ? chipW("Vis historik") : 0, chipW(expandAll ? "Fold sammen" : "Udvid alle")].filter((w) => w > 0);
+  const exportW = chipW("Eksportér", 22);
+  const expandW = chipW(expandAll ? "Fold sammen" : "Udvid alle");
+  const optional = [hasHistoric ? chipW("Vis historik") : 0, expandW].filter((w) => w > 0);
   const gap = 8;
   const sumW = (ws: number[]) => ws.reduce((a, b) => a + b, 0) + gap * Math.max(0, ws.length - 1);
   // Sikkerhedsmargen: målingen rammer ikke chevron/ikon-afstande præcist, og knapperne må aldrig ombrydes (14.1).
-  const overflow = sumW([...toolbarParts, ...optional]) > W - 48;
+  const overflow = sumW([...toolbarParts, exportW, ...optional]) > W - 48;
+  // 14.1: er der ikke plads til alt, prioriteres "Udvid alle" over "Eksportér": historik og eksport
+  // flyttes først ind under "Flere"; kun hvis heller ikke det er nok, ryger "Udvid alle" også med.
+  const exportInMore = overflow && sumW([...toolbarParts, expandW, chipW("Flere")]) <= W - 48;
   const historyButton = hasHistoric ? (
     <button type="button" className={`lasso-odiagram__chip ${showHistoric ? "is-on" : ""}`} aria-pressed={showHistoric} onClick={() => setShowHistoric(!showHistoric)}>
       Vis historik
@@ -413,6 +425,23 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
       {expandAll ? "Fold sammen" : "Udvid alle"}
     </button>
   );
+  const exportItems = [
+    {
+      id: "png",
+      label: "PNG-billede",
+      disabled: empty,
+      onSelect: () => {
+        const svg = exportSvg();
+        if (svg) void downloadPng(svg, `${exportFile}.png`);
+      },
+    },
+    {
+      id: "pdf",
+      label: "PDF (udskriv)",
+      disabled: empty,
+      onSelect: () => setPrintSvg(exportSvg()),
+    },
+  ];
   const moreMenu = (
     <Menu
       trigger={<>Flere</>}
@@ -421,7 +450,9 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
       label="Flere valg for ejerdiagrammet"
       items={[
         ...(hasHistoric ? [{ id: "historik", label: showHistoric ? "Skjul historik" : "Vis historik", onSelect: () => setShowHistoric(!showHistoric) }] : []),
-        { id: "udvid", label: expandAll ? "Fold sammen" : "Udvid alle", disabled: empty, onSelect: () => setExpandAll(!expandAll) },
+        ...(exportInMore
+          ? exportItems.map((it) => ({ ...it, label: `Eksportér som ${it.label}` }))
+          : [{ id: "udvid", label: expandAll ? "Fold sammen" : "Udvid alle", disabled: empty, onSelect: () => setExpandAll(!expandAll) }]),
       ]}
     />
   );
@@ -517,7 +548,9 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
       )}
       {overflow ? null : historyButton}
       <span className="lasso-odiagram__spacer" />
+      {exportInMore ? expandButton : null}
       {overflow ? moreMenu : expandButton}
+      {exportInMore ? null : (
       <Menu
         trigger={
           <>
@@ -531,24 +564,9 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
         align="end"
         label="Eksportér ejerdiagram"
         context={{ title: "Eksportér ejerdiagram", subtitle: "Hele grafen med legende og dato" }}
-        items={[
-          {
-            id: "png",
-            label: "PNG-billede",
-            disabled: empty,
-            onSelect: () => {
-              const svg = exportSvg();
-              if (svg) void downloadPng(svg, `${exportFile}.png`);
-            },
-          },
-          {
-            id: "pdf",
-            label: "PDF (udskriv)",
-            disabled: empty,
-            onSelect: () => setPrintSvg(exportSvg()),
-          },
-        ]}
+        items={exportItems}
       />
+      )}
       {canFullscreen && onAction ? (
         <button type="button" className="lasso-odiagram__chip lasso-odiagram__icon" aria-label="Fuld skærm" onClick={() => onAction({ kind: "fullscreen" })}>
           <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
@@ -1145,7 +1163,7 @@ function OwnershipList({
       const node = graph.nodes.find((n) => n.id === it.id);
       const click = it.repeat ? undefined : open(node);
       out.push(
-        <li key={key} className={`lasso-odlist__row ${level > 1 ? "is-deep" : ""} ${it.ceased ? "is-ceased" : ""}`} style={{ paddingLeft: 8 + 20 * Math.min(level, 4) }}>
+        <li key={key} className={`lasso-odlist__row ${level > 1 ? "is-deep" : ""} ${it.ceased ? "is-ceased" : ""}`} style={{ paddingLeft: 8 + 14 * Math.min(level, 4) }}>
           <span className="lasso-odlist__dash" aria-hidden="true" />
           <span className="lasso-odlist__name">
             {click ? (
@@ -1165,7 +1183,7 @@ function OwnershipList({
     }
     if (shown.length < items.length) {
       out.push(
-        <li key={`${parentKey}/more`} className="lasso-odlist__row lasso-odlist__row--more" style={{ paddingLeft: 8 + 20 * Math.min(level, 4) }}>
+        <li key={`${parentKey}/more`} className="lasso-odlist__row lasso-odlist__row--more" style={{ paddingLeft: 8 + 14 * Math.min(level, 4) }}>
           <span className="lasso-odlist__dash" aria-hidden="true" />
           <button type="button" className="lasso-odlist__more" onClick={() => toggle(parentKey)} aria-expanded={false}>
             <span>+ {items.length - shown.length} {noun}</span>

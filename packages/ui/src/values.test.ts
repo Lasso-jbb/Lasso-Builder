@@ -13,7 +13,7 @@ test("02c Felter med data", () => {
   const amount = render(h(AmountValue, { value: 18_812_400, previous: 16_740_000 }));
   assert.match(amount, /18,8 mio\. kr\./);
   assert.match(amount, /role="tooltip"[^>]*>18\.812\.400 kr\./);
-  assert.match(amount, />▲ 12,4 %<\/span>/);
+  assert.match(amount, /><span class="lasso-arrow">▲<\/span> 12,4 %<\/span>/);
   assert.doesNotMatch(amount, /stigning<|fald<|fra 20/);
   const list = render(h(ValueList, { values: ["Anna Eksempel", "Bo Prøve", "Carl Eksempel"], onShowAll: noop }));
   assert.match(list, /Anna Eksempel, Bo Prøve og <button[^>]*>1 mere<\/button>/);
@@ -31,8 +31,8 @@ test("02c Felter med data", () => {
   assert.match(locked, />Kræver Lasso Pro</);
   const lockedCount = render(h(LockedValue, { count: 3, noun: "personer", onUpgrade: noop }));
   assert.match(lockedCount, /lasso-locked__icon[^]*>3 personer<\/span>.*>Se med Lasso Pro</);
-  assert.match(render(h(AmountValue, { value: 18_834_000, previous: 17_520_000, since: "2024" })), /lasso-up[^>]*>▲ 7,5 %<\/span>/);
-  assert.match(render(h(AmountValue, { value: -201_000, previous: 318_000, since: "2024" })), /\u2212201 t\. kr\.[^]*lasso-down[^>]*>▼ 163,2 %<\/span>/);
+  assert.match(render(h(AmountValue, { value: 18_834_000, previous: 17_520_000, since: "2024" })), /lasso-up[^>]*><span class="lasso-arrow">▲<\/span> 7,5 %<\/span>/);
+  assert.match(render(h(AmountValue, { value: -201_000, previous: 318_000, since: "2024" })), /\u2212201 t\. kr\.[^]*lasso-down[^>]*><span class="lasso-arrow">▼<\/span> 163,2 %<\/span>/);
   assert.doesNotMatch(render(h(AmountValue, { value: 5, previous: 0 })), /▲|▼/);
   assert.doesNotMatch(render(h(AmountValue, { value: 5 })), /▲|▼/);
   assert.match(render(h(ScoreValue, { score: 52 })), /52<\/span><span class="lasso-score__meta"> af 100, lav risiko/);

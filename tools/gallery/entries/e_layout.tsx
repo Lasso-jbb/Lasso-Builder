@@ -13,9 +13,11 @@ import {
   composeProbe,
   mainMetric,
   parseViewSpec,
+  STATUS_GROUPS,
   statusKind,
   type ContactVM,
   type Dataset,
+  type Metric,
   type ViewSpec,
 } from "@lasso/spec";
 import {
@@ -36,6 +38,8 @@ import {
   PersonSearchResults,
   PushBanner,
   QualityFlag,
+  LineChart,
+  MultiYearTable,
   ReportA4,
   ReportBatches,
   Section,
@@ -1088,8 +1092,8 @@ const ENUM_GROUP: CSSProperties = { margin: "10px 0 2px", fontSize: 12, fontWeig
 
 function Enumerations() {
   // Status: tekst fra værdilisten, farve fra gruppen (packages/spec/src/status.ts + statusTone).
-  const active = ["Aktiv", "Normal", "Fremtid"];
-  const inactive = ["Under konkurs", "Under tvangsopløsning", "Under likvidation", "Under rekonstruktion", "Opløst efter konkurs", "Ophørt"];
+  // 28.1 (Jakob 29.09.2026): alle 19 statusser i de fire farvegrupper fra STATUS_GROUPS.
+  const groupTitle: Record<string, string> = { active: "Aktiv", temporary: "Midlertidig", problem: "Problem", inactive: "Inaktiv" };
   const toneWord: Record<string, string> = { active: "tekstfarve", warning: "mørk rød", liquidation: "warning-tekst", inactive: "muted", new: "koral" };
   const statusRow = (st: string) => {
     const kind = statusKind(st) ?? "active";
@@ -1116,12 +1120,13 @@ function Enumerations() {
     <div className="lasso-enums" style={{ display: "grid", gap: 16 }}>
       <div className="lasso-enums__desk" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, alignItems: "start" }}>
         <div style={ENUM_CARD}>
-          <p style={ENUM_OVERLINE}>Status (18 værdier, 2 grupper)</p>
-          <p style={ENUM_GROUP}>Aktive</p>
-          {active.map(statusRow)}
-          <p style={ENUM_GROUP}>Inaktive</p>
-          {inactive.map(statusRow)}
-          <p className="lasso-more" style={{ margin: "10px 0 0" }}>Vis alle 18</p>
+          <p style={ENUM_OVERLINE}>Status (19 værdier, 4 farvegrupper)</p>
+          {STATUS_GROUPS.map((g) => (
+            <div key={g.group}>
+              <p style={ENUM_GROUP}>{groupTitle[g.group]}</p>
+              {g.statuses.map(statusRow)}
+            </div>
+          ))}
         </div>
         <div style={{ ...ENUM_CARD, display: "grid", gap: 16 }}>
           <div>
@@ -1155,7 +1160,7 @@ function Enumerations() {
               {label}
             </label>
           ))}
-          <p className="lasso-more" style={{ margin: "8px 0 0" }}>Vis alle 18 statusser</p>
+          <p className="lasso-more" style={{ margin: "8px 0 0" }}>Vis alle 19 statusser</p>
         </div>
       </div>
       {/* Mobil: filterark med rækker og koral flueben ved det valgte. */}
@@ -1168,7 +1173,7 @@ function Enumerations() {
             {i === 0 ? <span style={{ color: "var(--lasso-accent)", fontWeight: 600 }} aria-label="valgt">✓</span> : null}
           </div>
         ))}
-        <p className="lasso-more" style={{ margin: "10px 0 0" }}>Vis alle 18</p>
+        <p className="lasso-more" style={{ margin: "10px 0 0" }}>Vis alle 19</p>
       </div>
     </div>
   );
@@ -1180,7 +1185,7 @@ const datatypes: GalleryEntry[] = [
     nr: "28.1",
     title: "Værdilister (enumerations)",
     node: "H0N-0",
-    note: "Dokumentation som i Paper: status i to grupper med farve fra statusTone (fire farvegrupper, se 02c.8: midlertidig warning, problem mørk rød, inaktiv muted), virksomhedsform, ansatte-interval, enhedstype, brug i filtre og mobilt filterark.",
+    note: "Dokumentation som i Paper (Jakob 29.09.2026): status med 19 værdier i fire farvegrupper fra statusTone (aktiv tekstfarve, midlertidig warning, problem mørk rød, inaktiv muted, se 02c.8), virksomhedsform, ansatte-interval, enhedstype, brug i filtre og mobilt filterark.",
     render: () => <Enumerations />,
   },
   { nr: "28.2", title: "Regnskabspublicering (nyt/korrigeret regnskab)", node: "H3L-0", spec: one("Regnskabspublicering", { type: "LassoPublications", company: C }) },
@@ -1648,14 +1653,36 @@ function ModuleExample({ title, pattern, text, toolbar, children }: { title: str
   );
 }
 
+/**
+ * 30.11 Nøgletal (Paper JV3-0): linjegrafen viser de nøgletal, der er krydset af i flerårstabellen
+ * (her tre serier fra start); afkrydsningen styrer grafen (LineChart extraMetrics + MultiYearTable onChartToggle).
+ */
+function KeyFigureModule({ ds }: { ds: Dataset }) {
+  const [picked, setPicked] = useState<Metric[]>(["bruttofortjeneste", "resultat", "egenkapital"]);
+  const fin = ds.financials[C];
+  const [first, ...rest] = picked.length ? picked : (["bruttofortjeneste"] as Metric[]);
+  return (
+    <div className="lasso-root" data-theme="light">
+      <main className="lasso-content lasso-content--grid-4">
+        <div className="lasso-cell lasso-cell--full">
+          <LineChart financials={fin} metric={first!} extraMetrics={rest} years={5} title="Udvikling" companyName={ds.companies[C]?.name} />
+        </div>
+        <div className="lasso-cell lasso-cell--full">
+          <MultiYearTable financials={fin} years={5} chartMetrics={picked} onChartToggle={(m, on) => setPicked((cur) => (on ? [...cur.filter((x) => x !== m), m] : cur.filter((x) => x !== m)))} />
+        </div>
+      </main>
+    </div>
+  );
+}
+
 function FiveModules({ ds }: { ds: Dataset }) {
   const view = (components: Record<string, unknown>[]) => (
-    <LassoView spec={parseViewSpec({ kind: "company", title: "Modul", components })} dataset={ds} host={{ drillDown: true }} onAction={noop} theme="light" frameless />
+    <LassoView spec={parseViewSpec({ kind: "company", title: "Modul", ...(components.some((c) => c.column) ? { layout: "columns", columns: 3 } : {}), components })} dataset={ds} host={{ drillDown: true }} onAction={noop} theme="light" frameless />
   );
   return (
     <div className="lasso-root" data-theme="light" style={{ display: "flex", flexDirection: "column", gap: 32 }}>
       <ModuleExample title="Nøgletal" pattern="mønster 1 + 4: graf fuld, flerårstabel fuld" text="Linjegrafen i fuld bredde og flerårstabellen (5 år) under. Print til venstre; Vend graf og Selskab/Koncern som visningsvalg til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Print" }} controls={<>{ghost("Vend")}<Seg items={["Selskab", "Koncern"]} /></>} />}>
-        {view([{ type: "LassoLineChart", company: C, metric: "bruttofortjeneste", industry: true, width: "full" }, { type: "LassoMultiYearTable", company: C, width: "full" }])}
+        <KeyFigureModule ds={ds} />
       </ModuleExample>
       <ModuleExample title="Ejerdiagram" pattern="mønster 2" text="Diagrammet ¾ med relationerne ¼ ved siden. Udskriv og Gem til venstre; Layout og Rediger til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Udskriv" }} secondary={[{ label: "Gem" }]} controls={<>{ghost("Layout")}{ghost("Rediger")}</>} />}>
         {view([{ type: "LassoOwnershipDiagram", company: C, width: "three-quarters" }, { type: "LassoRelations", company: C, width: "quarter" }])}
@@ -1673,10 +1700,12 @@ function FiveModules({ ds }: { ds: Dataset }) {
         </div>
       </ModuleExample>
       <ModuleExample title="Firmaindsigt" pattern="mønster 9" text="Hoved med score og sektionerne som harmonika, første række åben. Udskriv til venstre; Ejerdiagram til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Udskriv" }} controls={ghost("Ejerdiagram")} />}>
+        {/* 30.11: identitet-cellen (hoved + nøgleoplysninger) er lige så høj som score og tal; nøgletalskortene i den rolige form (variant 'plain', ingen sparkline). */}
         {view([
-          { type: "LassoCompanyHead", company: C, variant: "compact", width: "half" },
-          { type: "LassoScoreGauge", company: C, width: "quarter" },
-          { type: "LassoKeyFigureCards", company: C, metrics: ["bruttofortjeneste", "resultat", "egenkapital"], width: "quarter" },
+          { type: "LassoCompanyHead", company: C, variant: "compact", width: "half", column: 1 },
+          { type: "LassoKeyValueList", company: C, variant: "company", title: "Nøgleoplysninger", rows: 5, width: "half", column: 1 },
+          { type: "LassoScoreGauge", company: C, width: "quarter", column: 2 },
+          { type: "LassoKeyFigureCards", company: C, metrics: ["bruttofortjeneste", "resultat", "egenkapital"], variant: "plain", width: "quarter", column: 3 },
           { type: "LassoRiskObservations", company: C, title: "Observationer", group: { id: "fi", pattern: "accordion" } },
           { type: "LassoKeyFigureCards", company: C, group: { id: "fi", pattern: "accordion" } },
           { type: "LassoMultiYearTable", company: C, title: "Flerårstabel", group: { id: "fi", pattern: "accordion" } },

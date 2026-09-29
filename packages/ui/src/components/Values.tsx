@@ -108,7 +108,7 @@ export function AmountValue({ value, previous, unit = "kr.", since }: { value: n
       </Tooltip>
       {change ? (
         <span className={`lasso-amount__change ${change.tone === "down" ? "lasso-down" : "lasso-up"}`} aria-label={`${change.tone === "down" ? "Fald" : "Stigning"} på ${change.text}${since ? ` siden ${since}` : ""}`}>
-          {`${change.arrow} ${change.text}`}
+          <span className="lasso-arrow">{change.arrow}</span> {change.text}
         </span>
       ) : null}
     </span>

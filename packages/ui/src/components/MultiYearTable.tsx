@@ -2,6 +2,7 @@ import { useState } from "react";
 import { amountScale, currencyUnit, formatNumber, formatPercent, formatScaled, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, changePercent, type FinancialsVM, type Metric } from "@lasso/spec";
 import { DataState, Missing, Section, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
+import { Checkbox } from "./TableKit.js";
 
 /**
  * Hvor mange årskolonner bredden kan bære uden vandret scroll (review P1-2): etiket +
@@ -84,7 +85,11 @@ function joinYears(ys: readonly number[]): string {
   return ys.length < 2 ? ys.join("") : `${ys.slice(0, -1).join(", ")} og ${ys.at(-1)}`;
 }
 
-export function MultiYearTable({ financials, metrics, years, title, error, variant }: { financials?: FinancialsVM; metrics?: readonly Metric[]; years?: number; title?: string; error?: string; variant?: "A" | "B" }) {
+/**
+ * `chartMetrics` + `onChartToggle` (30.11): afkrydsning foran hver post, der styrer, hvilke nøgletal
+ * en tilhørende linjegraf viser (LineChart extraMetrics). Uden `onChartToggle` ingen afkrydsning.
+ */
+export function MultiYearTable({ financials, metrics, years, title, error, variant, chartMetrics, onChartToggle }: { financials?: FinancialsVM; metrics?: readonly Metric[]; years?: number; title?: string; error?: string; variant?: "A" | "B"; /** Nøgletal, der står i grafen (afkrydset). */ chartMetrics?: readonly Metric[]; /** Afkrydsning ændret: vis/skjul nøgletallet i grafen. */ onChartToggle?: (metric: Metric, on: boolean) => void }) {
   const heading = title ?? "Flerårstabel";
   const [ref, W] = useWidth<HTMLDivElement>(1048);
   const [allRows, setAllRows] = useState(false);
@@ -219,7 +224,16 @@ export function MultiYearTable({ financials, metrics, years, title, error, varia
             const change = changeText(values.at(-2) ?? undefined, values.at(-1) ?? undefined);
             return (
               <div className="lasso-myt__row" key={m}>
-                <div className="lasso-myt__label">{METRIC_LABELS[m]}</div>
+                <div className="lasso-myt__label">
+                  {onChartToggle ? (
+                    <label className="lasso-myt__pick">
+                      <Checkbox checked={chartMetrics?.includes(m) ?? false} label={`Vis ${METRIC_LABELS[m].toLowerCase()} i grafen`} onChange={(on) => onChartToggle(m, on)} />
+                      {METRIC_LABELS[m]}
+                    </label>
+                  ) : (
+                    METRIC_LABELS[m]
+                  )}
+                </div>
                 {values.map((v, i) => (
                   <div key={shown[i]!.year} className={`lasso-myt__year ${i === values.length - 1 ? "lasso-myt__year--last" : ""} ${typeof v === "number" && v < 0 ? "lasso-down" : ""}`}>
                     {fmt(m, v) ?? <Missing />}

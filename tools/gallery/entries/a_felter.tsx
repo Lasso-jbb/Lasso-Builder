@@ -212,7 +212,7 @@ function Icons() {
 
 /** 01.7: Papers faste regler for datavisning, nummereret i to kolonner. */
 const DATA_RULES: string[] = [
-  "Status er ren tekst i vægt 500: Aktiv i tekstfarve, Ophørt i grå, Under konkurs i mørk rød (#B42318), Under likvidation i warning-tekst. Ingen piller, prikker eller farvede baggrunde.",
+  "Status er ren tekst i vægt 500: Aktiv i tekstfarve, Ophørt i grå, Under konkurs i mørk rød (#B42318), Under frivillig likvidation i warning-tekst. Ingen piller, prikker eller farvede baggrunde.",
   "Ingen dekorative piller: Positiv, Lav risiko, Ny og lignende skrives som tekst eller udelades. Tællere står kun i overskrifter og tekst, aldrig på faner. Kun filter-chips (valgbare) må have kant.",
   "Ingen ink (sort) baggrund på rækker eller flader. Bundlinjer i tabeller markeres med vægt 700 og en 1 px linje over, ikke fyld. Kun tooltips er ink.",
   "Ingen farvede bannerbokse. Sammenfatninger, risikonoter og AI-analyser er almindelige sektioner på hvid flade: overskrift, brødtekst, diskret kildelink. Et lille farvet ikon foran en tekstlinje er nok.",
@@ -395,16 +395,17 @@ function PercentDemo() {
 }
 
 function DateDemo() {
-  const [op, setOp] = useState<Operator>("between");
-  const [vals, setVals] = useState<string[]>(["01.01.2015", "31.12.2020"]);
+  const [op, setOp] = useState<Operator>("after");
+  const [vals, setVals] = useState<string[]>([""]);
+  const [op2, setOp2] = useState<Operator>("between");
   const [bad, setBad] = useState<string[]>(["01.01.2020", "31.12.2019"]);
   return (
     <div style={{ display: "grid", gap: 24 }}>
-      <FieldRow label="Stiftelsesdato" layout="form" help="Operatorer: efter den, før den, præcis den, mellem (fra-dato og til-dato; til-datoen kan ikke være før fra-datoen)">
+      <FieldRow label="Stiftelsesdato" layout="form" help="Operatorer: efter den, før den, præcis den, mellem (viser to datofelter)">
         <DateField operator={op} operators={["after", "before", "eq", "between"]} values={vals} onOperator={setOp} onChange={setVals} />
       </FieldRow>
-      <FieldRow label="Stiftelsesdato, til-dato før fra-dato" layout="form">
-        <DateField operator="between" operators={["after", "before", "eq", "between"]} values={bad} onOperator={noop} onChange={setBad} />
+      <FieldRow label="Mellem, fra og til" layout="form">
+        <DateField operator={op2} operators={["after", "before", "eq", "between"]} values={bad} onOperator={setOp2} onChange={setBad} />
       </FieldRow>
     </div>
   );
@@ -425,7 +426,7 @@ function SingleDemo() {
 
 const KOMMUNER = ["Aarhus", "Odense", "Aalborg", "Esbjerg", "Randers", "Kolding", "Horsens", "Vejle", "Roskilde", "Herning", "Silkeborg", "København", "Frederiksberg"];
 
-const STATUS_TAGS = ["Normal / aktiv", "Ophørt", "Under konkurs", "Under likvidation", "Tvangsopløst", "Slettet"];
+const STATUS_TAGS = ["Normal / aktiv", "Ophørt", "Under konkurs", "Under frivillig likvidation", "Tvangsopløst", "Slettet"];
 
 function TagsDemo() {
   const [v, setV] = useState<string[]>(["Normal / aktiv", "Ophørt"]);
@@ -569,14 +570,11 @@ function PersonaModal() {
  * (kun typen, intet søgefelt), "Inkluder kun følgende" og "Ekskluder følgende" (tags + søg).
  */
 function TechOperatorDemo() {
-  const [a, setA] = useState<TechValue>({ on: true, mode: "include", values: ["Google Ads"] });
-  const [b, setB] = useState<TechValue>({ on: true, mode: "exclude", values: ["HubSpot"] });
+  // Paper (efter Jakob): ét eksempel, "Live chat" med kontakt og dropdown'en ÅBEN, så de tre valg ses.
   const [c, setC] = useState<TechValue>({ on: true, mode: "any", values: [] });
   return (
-    <div>
-      <TechnologyRow label="Digital marketing" value={a} onChange={setA} onClear={noop} suggestions={["Google Ads", "Meta Ads", "LinkedIn Ads"]} />
-      <TechnologyRow label="CRM-system" value={b} onChange={setB} onClear={noop} suggestions={["HubSpot", "Salesforce", "Pipedrive"]} />
-      <TechnologyRow label="Live chat" value={c} onChange={setC} onClear={noop} suggestions={["Intercom", "Zendesk", "LiveChat"]} />
+    <div style={{ minHeight: 200 }}>
+      <TechnologyRow label="Live chat" value={c} onChange={setC} onClear={noop} suggestions={["Intercom", "Zendesk", "LiveChat"]} defaultOpen />
     </div>
   );
 }
@@ -664,10 +662,14 @@ function DateOpen() {
           <DateField operator="after" operators={["after", "before", "eq", "between"]} labels={{ after: "Efter", before: "Før", eq: "Præcis", between: "Mellem" }} placeholder="Vælg dato" values={vals} onOperator={noop} onChange={setVals} defaultOpen today={new Date(2026, 8, 4)} />
         </FieldRow>
       </div>
-      <div style={{ minHeight: 360 }}>
-        <FieldRow label="Stiftelsesdato, mellem (til-dato åben)" layout="form" help="Dagene før fra-datoen (10.09.2026) er deaktiverede i kalenderen.">
-          <DateField operator="between" operators={["after", "before", "eq", "between"]} labels={{ after: "Efter", before: "Før", eq: "Præcis", between: "Mellem" }} placeholder="Vælg dato" values={range} onOperator={noop} onChange={setRange} defaultOpenTo today={new Date(2026, 8, 4)} />
-        </FieldRow>
+      <div>
+        <div style={{ minHeight: 340 }}>
+          <FieldRow label="Stiftelsesdato, mellem (til-dato åben)" layout="form">
+            <DateField operator="between" operators={["after", "before", "eq", "between"]} labels={{ after: "Efter", before: "Før", eq: "Præcis", between: "Mellem" }} placeholder="Vælg dato" values={range} onOperator={noop} onChange={setRange} defaultOpenTo today={new Date(2026, 8, 4)} />
+          </FieldRow>
+        </div>
+        {/* Paper K4Q-0: noten står under kalenderen, så den åbne kalender ikke dækker den. */}
+        <div className="lasso-field__help">Dagene før fra-datoen (10.09.2026) er deaktiverede i kalenderen.</div>
       </div>
     </div>
   );

@@ -91,6 +91,8 @@ export interface PersonNetworkRowVM {
 export interface PersonNetworkVM {
   lassoId: string;
   people: PersonNetworkRowVM[];
+  /** Forbehold foran fodnoten (25.5), fx "Eksempeldata" for demodata. */
+  note?: string;
 }
 
 /**
