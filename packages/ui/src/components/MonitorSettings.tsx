@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { formatDate, formatNumber } from "@lasso/spec";
 import { DataState } from "../primitives.js";
 import { Icon } from "./Icon.js";
+import { HIDDEN_CHANGE_TYPES } from "./ChangeFeed.js";
 
 /**
  * Ændringstyper, man kan slå til og fra pr. virksomhed (katalog 21.4): Status og konkurs, Nyt regnskab,
@@ -66,7 +67,7 @@ export interface MonitorSettingsProps {
   companyName: string;
   /** Om virksomheden overvåges. false = kun "Overvåg"-knappen vises. */
   monitoring: boolean;
-  /** Listen, virksomheden ligger i, fx "Kunder". */
+  /** Listen, virksomheden ligger i, fx "Kunder". 21.4: vises ikke længere under titlen. */
   listName?: string;
   /** Overvåget siden (ÅÅÅÅ-MM-DD). */
   since?: string;
@@ -95,7 +96,7 @@ export interface MonitorSettingsProps {
  * Mobil (26e.4): hoved "Overvågning" + navn, fremhævet 52 px række "Overvåger" + "siden 03.2026, 3 emner"
  * med kontakt, fire 48 px emnerækker med undertekst og en "Levering"-række nederst.
  */
-export function MonitorSettings({ companyName, monitoring, listName, since, frequency, settings, onToggle, onStart, onStop, delivery, onDelivery, loading, error, onRetry }: MonitorSettingsProps) {
+export function MonitorSettings({ companyName, monitoring, since, frequency, settings, onToggle, onStart, onStop, delivery, onDelivery, loading, error, onRetry }: MonitorSettingsProps) {
   if (loading || error) {
     return (
       <div className="lasso-monitor">
@@ -103,8 +104,9 @@ export function MonitorSettings({ companyName, monitoring, listName, since, freq
       </div>
     );
   }
-  const mobileOn = MONITOR_TYPES.filter((t) => MOBILE[t] && settings[t]).length;
-  const facts = [listName ? `I listen "${listName}"` : null, since ? `siden ${formatDate(since)}` : null, `besked pr. e-mail ${frequency ?? "dagligt"}`].filter(Boolean).join(", ");
+  // 21.1/21.4 (Jakob 29.09): rækken "Kreditscore ændrer sig" udgår (afklaret 15:41).
+  const types = MONITOR_TYPES.filter((t) => !(HIDDEN_CHANGE_TYPES as readonly string[]).includes(t));
+  const mobileOn = types.filter((t) => MOBILE[t] && settings[t]).length;
   return (
     <div className={`lasso-monitor ${monitoring ? "lasso-monitor--on" : ""}`}>
       {/* 26e.4 mobil: hoved, overvågningsstatus som fremhævet 52 px række med kontakt. */}
@@ -134,7 +136,8 @@ export function MonitorSettings({ companyName, monitoring, listName, since, freq
         </button>
         <div className="lasso-monitor__titles">
           <div className="lasso-monitor__title">{monitoring ? `${companyName} overvåges` : `${companyName} overvåges ikke`}</div>
-          <div className="lasso-monitor__sub">{monitoring ? facts : "Få besked, når status, regnskab, ledelse eller stamdata ændrer sig."}</div>
+          {/* 21.4 (Jakob): overvåget står kun titlen (ingen "I listen …, siden …, besked pr. e-mail …"). */}
+          {monitoring ? null : <div className="lasso-monitor__sub">Få besked, når status, regnskab, ledelse eller stamdata ændrer sig.</div>}
         </div>
         {monitoring && onStop ? (
           <button type="button" className="lasso-link lasso-monitor__stop" onClick={onStop}>
@@ -144,7 +147,7 @@ export function MonitorSettings({ companyName, monitoring, listName, since, freq
       </div>
       {monitoring ? (
         <ul className="lasso-monitor__rows">
-          {MONITOR_TYPES.map((t) => {
+          {types.map((t) => {
             const m = MOBILE[t];
             return (
               <li key={t} className={`lasso-monitor__row${m ? "" : " lasso-monitor__row--desktop"}`} style={m ? ({ "--lasso-monitor-order": m.order } as CSSProperties) : undefined}>

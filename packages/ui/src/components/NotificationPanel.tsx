@@ -2,6 +2,7 @@ import { useState } from "react";
 import { formatDate, formatNumber } from "@lasso/spec";
 import { DataState } from "../primitives.js";
 import { Tabs } from "./Tabs.js";
+import { Icon } from "./Icon.js";
 import { clockText } from "./ChangeFeed.js";
 
 /** Hvor notifikationen kommer fra; står altid i anden linje (katalog 21). */
@@ -84,7 +85,7 @@ export function shortTime(iso: string, now: Date = new Date()): string {
  * "Notifikationer (N ulæste)" + "Markér alle som læst", faner niveau 2 (Ulæste, Alle, Overvågning),
  * rækker med koral prik for ulæst, tekst, kilde + tid i anden linje og evt. handling til højre,
  * "Se alle notifikationer" nederst. Blander overvågning, kredit, eksport og konto; kilden står altid
- * i anden linje. "Luk" står kun på mobil, hvor panelet fylder skærmen (eller står på siden med `inline`).
+ * i anden linje. ×-knappen (Luk) står kun på mobil, hvor panelet fylder skærmen (eller står på siden med `inline`).
  * Mobil (26e.5): chips Alle (valgt fra start), Ulæste, Vigtige; rækker med 8 px prik (koral, rød ved
  * vigtig), titel 14 ink med kort tid til højre, kildetekst 13 muted og kategori 12 muted.
  */
@@ -173,8 +174,9 @@ export function NotificationPanel({ items, onMarkAllRead, onAction, onSeeAll, on
             </button>
           ) : null}
           {onClose && !inline ? (
-            <button type="button" className="lasso-link lasso-notif__close" onClick={onClose} aria-label="Luk notifikationer">
-              Luk
+            // 21.2/G8: luk er altid et ×-ikon med aria-label "Luk", aldrig ordet som tekstknap.
+            <button type="button" className="lasso-notif__close" onClick={onClose} aria-label="Luk">
+              <Icon name="close" size={16} />
             </button>
           ) : null}
         </div>

@@ -166,7 +166,7 @@ const NOW = new Date("2026-09-29T10:00:00+02:00");
 const NOTIFICATIONS: NotificationVM[] = [
   { id: "n1", kind: "overvaagning", text: "Eksempel Energi A/S er under konkurs", category: "Status og konkurs", source: 'Overvågning "Kunder"', at: "2026-09-29T09:12:00+02:00", read: false, important: true },
   { id: "n2", kind: "overvaagning", text: "Eksempel Byg A/S har offentliggjort årsrapport 2025", category: "Nyt regnskab", source: 'Overvågning "Kunder"', at: "2026-09-29T08:40:00+02:00", read: false },
-  { id: "n3", kind: "kredit", text: "Ny kreditvurdering af Eksempel Transport ApS er klar", source: "Kredit, Creditsafe", at: "2026-09-28T15:05:00+02:00", read: false, action: { label: "Se" } },
+  // 21.2 (Jakob 29.09): Creditsafe-notifikationen er fjernet; Creditsafe bruges ikke.
   { id: "n4", kind: "eksport", text: "Eksport af 1.243 virksomheder er klar", source: "Eksport, Excel", at: "2026-09-28T11:30:00+02:00", read: true, action: { label: "Hent" } },
   { id: "n5", kind: "overvaagning", text: "Ny direktør i Eksempel Software ApS", category: "Ledelse og ejere", source: 'Overvågning "Leverandører"', at: "2026-09-27T13:20:00+02:00", read: true },
   { id: "n6", kind: "konto", text: "Du har 12 kreditter tilbage", source: "Konto", at: "2026-09-26T09:00:00+02:00", read: true },
