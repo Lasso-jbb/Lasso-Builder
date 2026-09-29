@@ -16,13 +16,13 @@ export const WIDTH_NOTE =
 
 /** 23.3: rækkefølge på en side. */
 export const ORDER_STEPS: readonly (readonly [string, string, string])[] = [
-  ["1", "Hvem — hoved", "Virksomhedshoved (08) eller personhoved (16) med status, nøglefakta og handlinger. Altid først, altid fuld bredde."],
-  ["2", "Pas på — risiko", 'Sammenfatning af observationer (17) hvis der er noget på 50+. Ellers udelades blokken helt — ingen tom "alt er fint"-boks over folden.'],
-  ["3", "Hvor stor — nøgletal", "3–5 nøgletalskort (09) med udvikling. Kreditscore (10) hører til her, ikke under risiko."],
-  ["4", "Hvordan går det — udvikling", "Én graf (13) ved siden af nøgle-værdi-listen (09). Flere grafer = hver sin fane, aldrig stablet på overblikket."],
-  ["5", "Hvem står bag — personer og ejere", "Rolleliste og ejerliste (11). Diagrammet (14) ligger i sin egen fane."],
-  ["6", "Hvad er der sket — historik og nyheder", "Tidslinje og nyhedsliste (12) nederst. Det er langt og foldes til 4–5 poster."],
-  ["P", "Panel — kontakt og genveje", 'Kontaktblok, genveje (08) og "Overvåger"-status (21). Panelet gentager aldrig tal fra midten.'],
+  ["1", "Hvem - hoved", "Virksomhedshoved (08) eller personhoved (16) med status, nøglefakta og handlinger. Altid først, altid fuld bredde."],
+  ["2", "Pas på - risiko", 'Sammenfatning af observationer (17) hvis der er noget på 50+. Ellers udelades blokken helt - ingen tom "alt er fint"-boks over folden.'],
+  ["3", "Hvor stor - nøgletal", "3–5 nøgletalskort (09) med udvikling. Kreditscore (10) hører til her, ikke under risiko."],
+  ["4", "Hvordan går det - udvikling", "Én graf (13) ved siden af nøgle-værdi-listen (09). Flere grafer = hver sin fane, aldrig stablet på overblikket."],
+  ["5", "Hvem står bag - personer og ejere", "Rolleliste og ejerliste (11). Diagrammet (14) ligger i sin egen fane."],
+  ["6", "Hvad er der sket - historik og nyheder", "Tidslinje og nyhedsliste (12) nederst. Det er langt og foldes til 4–5 poster."],
+  ["P", "Panel - kontakt og genveje", 'Kontaktblok, genveje (08) og "Overvåger"-status (21). Panelet gentager aldrig tal fra midten.'],
 ];
 
 /** 23.4: datatype → element → artboard. */
@@ -36,7 +36,7 @@ export const DATATYPE_ROWS: readonly (readonly [string, string, string])[] = [
   ["Dele af en helhed", "Stablede søjler (balance), donut + andelsbjælker, stablet bjælke (areal)", "13, 20"],
   ["Fra A til B (resultat)", "Vandfald", "13"],
   ["Placering blandt lignende", "Rangliste (vandrette søjler), sammenligning i kolonner", "13, 22"],
-  ["Score / vurdering 0–100", "Scoremåler, nøgletalsmåler mod branche, score over tid", "10, 13, 18"],
+  ["Score / vurdering 0–100", "Scoremåler, nøgletalsmåler mod branche", "10, 13"],
   ["Risiko og observationer", "Alvorsskala + observationsliste, personrisiko", "17, 16"],
   ["Personer og roller", "Rolleliste, personliste, roller som tidsbånd, netværk", "11, 15, 16"],
   ["Ejerskab", "Ejerliste med interval-bjælke, reelle ejere, ejerdiagram", "11, 14"],
@@ -46,7 +46,6 @@ export const DATATYPE_ROWS: readonly (readonly [string, string, string])[] = [
   ["Adresser og steder", "Kontaktblok (+ live-verificering), kort, P-enheder, ejendomskort", "08, 13, 20"],
   ["Aktivitet pr. periode", "Heatmap", "13"],
   ["Data der koster / tager tid", 'Bekræft-dialog med pris, henter-tilstand med fremdrift, "ikke tilgængelig"', "18, 10"],
-  ["Relationer der skal dokumenteres", "Relationstabel med vurdering + eksport", "22"],
   ["Balance og pengestrøm", "Balance med aktiver/passiver-subtotaler, pengestrømsopgørelse", "19"],
   ["Ejerskab, særlige tilfælde", "Dyb kæde foldet, cirkulært over flere led, udenlandsk, ukendt < 5 %, ingen ejere", "14"],
   ["Samme skærm på tablet / mobil", "Brudpunktsregler, tablet 768, mobil 390 (kortliste, ejerliste)", "26"],
@@ -181,17 +180,17 @@ export const COVERAGE_SOURCE =
 
 /** 23.1: zonernes note. */
 export const ZONE_NOTE =
-  "Midten er det eneste der skifter indhold. Skinnen er navigation eller kriterier — aldrig data. Panelet er sammendrag og handlinger — aldrig primært indhold. Lister og søgeresultater (15) bruger skabelonen uden panel.";
+  "Midten er det eneste der skifter indhold. Skinnen er navigation eller kriterier - aldrig data. Panelet er sammendrag og handlinger - aldrig primært indhold. Lister og søgeresultater (15) bruger skabelonen uden panel.";
 
 /** 23.6: to kort. */
 export const WIDTH_PAPER_CARDS: readonly (readonly [string, string])[] = [
   [
     "Responsiv (26)",
-    "Tegn 1440 først, men kontrollér mod brudpunkterne i 26 før aflevering: 1024–1199 mister højre panel, 768–1023 får skinne-navigation og to kolonner (26f), under 768 stables alt i én kolonne med topbar + bundnav (26a). Hvert element har én mobilform — den står i mappingtabellen i trin 7 og er tegnet i 26a–26e. Touch-mål: 44 px for rækker og ikonknapper, 48 px for felter og primære knapper på mobil; 36 px på tablet.",
+    "Tegn 1440 først, men kontrollér mod brudpunkterne i 26 før aflevering: 1024–1199 mister højre panel, 768–1023 får skinne-navigation og to kolonner (26f), under 768 stables alt i én kolonne med topbar + bundnav (26a). Hvert element har én mobilform; den vises ved siden af desktopformen i elementet (390 px). Touch-mål: 44 px for rækker og ikonknapper, 48 px for felter og primære knapper på mobil; 36 px på tablet.",
   ],
   [
     "Eksport og print (27)",
-    "Alt der kan eksporteres skal kunne stå på A4 uden interaktion: værdier der kun findes i hover eller tooltip skal have en tekstform. Sidehoved med virksomhed, sidefod med kilde, datastempel og sidetal på hver side. Ingen farveflader større end 24 px, grafer som vektor med tal i tekst.",
+    "Alt der kan eksporteres skal kunne stå på A4 uden interaktion: værdier der kun findes i hover eller tooltip skal have en tekstform. Sidehoved med virksomhed, sidefod med datastempel og sidetal på hver side. Ingen farveflader større end 24 px, grafer som vektor med tal i tekst.",
   ],
 ];
 

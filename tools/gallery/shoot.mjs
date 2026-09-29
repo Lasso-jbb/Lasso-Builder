@@ -86,7 +86,7 @@ function rows(m) {
 }
 
 function pagesFor(m) {
-  const noteLines = m.note ? Math.ceil(m.note.length / 190) : 0;
+  const noteLines = m.note ? Math.ceil(m.note.length / 160) : 0;
   const avail = PAGE_H - HEAD_H - noteLines * NOTE_LINE - (noteLines ? 2 : 0) - CAP_H;
   const out = [];
   for (const row of rows(m)) {
@@ -97,16 +97,30 @@ function pagesFor(m) {
     const tallest = Math.max(...imgs.map((i) => i.h));
     if (tallest * scale > avail && tallest * scale * MIN_FIT <= avail) scale = avail / tallest;
     const slicePx = Math.floor(avail / scale);
-    const n = Math.max(1, Math.ceil(tallest / slicePx));
-    for (let k = 0; k < n; k++) {
-      const figs = imgs
-        .map((i) => {
-          const top = k * slicePx;
-          if (top >= i.h) return "";
-          const hPx = Math.min(slicePx, i.h - top);
-          const w = i.w * scale;
-          return `<figure style="width:${w.toFixed(2)}mm"><figcaption>${esc(label(i))}${n > 1 ? `, del ${k + 1} af ${n}` : ""}</figcaption><div class="clip" style="width:${w.toFixed(2)}mm;height:${(hPx * scale).toFixed(2)}mm"><img src="${i.src}" style="width:${w.toFixed(2)}mm;margin-top:${(-top * scale).toFixed(2)}mm"></div></figure>`;
-        })
+    const slices = (i) => {
+      const n = Math.max(1, Math.ceil(i.h / slicePx));
+      return Array.from({ length: n }, (_, k) => ({ i, k, n, top: k * slicePx, hPx: Math.min(slicePx, i.h - k * slicePx), w: i.w * scale }));
+    };
+    // Første billede (desktop) står fast til venstre, én del pr. side; de øvrige (mobil) flyder som
+    // spalter i den ledige bredde, så et højt mobilbillede ikke giver en side pr. 160 mm.
+    const fixed = imgs.length > 1 ? slices(imgs[0]) : [];
+    const flow = (imgs.length > 1 ? imgs.slice(1) : imgs).flatMap(slices);
+    while (fixed.length || flow.length) {
+      const parts = [];
+      let used = 0;
+      if (fixed.length) {
+        const f = fixed.shift();
+        parts.push(f);
+        used = f.w;
+      }
+      while (flow.length && used + (used ? GAP : 0) + flow[0].w <= PAGE_W + 0.01) {
+        const g = flow.shift();
+        used += (used ? GAP : 0) + g.w;
+        parts.push(g);
+      }
+      if (!parts.length) parts.push(flow.shift());
+      const figs = parts
+        .map(({ i, k, n, top, hPx, w }) => `<figure style="width:${w.toFixed(2)}mm"><figcaption>${esc(label(i))}${n > 1 ? `, del ${k + 1} af ${n}` : ""}</figcaption><div class="clip" style="width:${w.toFixed(2)}mm;height:${(hPx * scale).toFixed(2)}mm"><img src="${i.src}" style="width:${w.toFixed(2)}mm;margin-top:${(-top * scale).toFixed(2)}mm"></div></figure>`)
         .join("");
       out.push({ figs });
     }
