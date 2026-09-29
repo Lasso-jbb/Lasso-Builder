@@ -853,7 +853,12 @@ export class DemoProvider implements DataProvider {
   }
 
   async people(lassoId: string) {
-    return get(lassoId).people.map((p) => ({ ...p, lassoId: p.lassoId ?? PERSON_IDS.get(p.name) }));
+    // 11.2: "også i N andre selskaber" = andre demovirksomheder, hvor personen har en aktiv rolle.
+    const others = (name: string) => COMPANIES.filter((x) => x.lassoId !== lassoId && x.people.some((q) => q.name === name && !q.to)).length;
+    return get(lassoId).people.map((p) => {
+      const n = others(p.name);
+      return { ...p, lassoId: p.lassoId ?? PERSON_IDS.get(p.name), ...(n ? { otherCompanies: n } : {}) };
+    });
   }
 
   async ownership(lassoId: string): Promise<OwnershipVM> {
@@ -881,7 +886,7 @@ export class DemoProvider implements DataProvider {
       { date: "2026-01-01", label: "Alder på selskab, eksempeldata", delta: 2 },
       { date: "2025-05-20", label: "Betalingsanmærkning, eksempeldata", delta: -4 },
     ];
-    return { ...base, history, changes };
+    return { ...base, history, changes, historyNote: "eksempeldata før 09.2026" };
   }
 
   /** Katalog 18.2: eksempelhistorik, der ender i den aktuelle demoscore. */

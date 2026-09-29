@@ -1052,3 +1052,9 @@ test("28.7: companyDetailsExtras læser bibrancher, fravalgt revision og kapital
   assert.deepEqual(out.registeredCapital, { amount: 400000, currency: "DKK" });
   assert.deepEqual(companyDetailsExtras({ name: "x" }), {});
 });
+
+test("adaptPeople læser antal andre selskaber defensivt (11.2) og udelader det ellers", () => {
+  const rows = adaptPeople({ management: { ceo: { name: "Anne Eksempel", otherCompaniesCount: 3 } }, board: { members: [{ name: "Bo Eksempel" }] } });
+  assert.equal(rows.find((r) => r.name === "Anne Eksempel")?.otherCompanies, 3);
+  assert.equal(rows.find((r) => r.name === "Bo Eksempel")?.otherCompanies, undefined);
+});

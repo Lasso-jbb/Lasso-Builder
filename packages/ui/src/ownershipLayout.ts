@@ -808,7 +808,8 @@ export const UNKNOWN_W = 280;
 
 function sizeOf(n: WNode, root: boolean): [number, number] {
   if (root) return [ROOT_W, ROOT_H];
-  if (n.kind === "unknown") return [UNKNOWN_W, NODE_H];
+  // 14.2/14b: titlen står altid på én linje; lange intervaller ("resterende op til 30,01 %") gør noden bredere.
+  if (n.kind === "unknown") return [Math.max(UNKNOWN_W, Math.ceil(n.title.length * 8.4) + 36), NODE_H];
   if (n.kind === "person") return [NODE_W, PERSON_H];
   return [NODE_W, NODE_H];
 }

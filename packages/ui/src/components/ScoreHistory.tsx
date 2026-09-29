@@ -2,7 +2,7 @@ import { formatDate, formatNumber, type ScoreHistoryVM } from "@lasso/spec";
 import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
 import { ChartReadout, ChartTooltip, isCompact, useChartPick, type PickRow } from "../chartPick.js";
-import { BandIcon, scoreBand } from "./ScoreGauge.js";
+import { scoreBand } from "./ScoreGauge.js";
 import { ScoreCompare } from "./ScoreCompare.js";
 
 const DAY = 86_400_000;
@@ -31,15 +31,31 @@ function delta(prev: number, cur: number): PickRow["change"] {
  * flader bag linjen. X-aksen er reel tid, så lange huller mellem hentninger er synlige. Sidste punkt er
  * fyldt og har tallet over, forrige punkt har sit tal under. Linjen og punkterne er koral (2 px, hule
  * punkter). Y-aksen har kun zonegrænserne 0/60/80/100; x-aksen har start og slut som "jan 23"/"sep 26"
- * (slut 600) og årsskifterne imellem. Over grafen: forrige vs. nu (18.1).
+ * (slut 600) og årsskifterne imellem. Titel "Kreditscore 2023–2026" + "0–100, N hentninger". Over grafen: forrige vs. nu
+ * (18.1), medmindre `compare` er fra.
  * Mobil: tryk vælger en hentning, som står i et fast felt under grafen.
  */
-export function ScoreHistory({ history, title, error, onFetch }: { history?: ScoreHistoryVM; title?: string; error?: string; onFetch?: () => void }) {
+export function ScoreHistory({
+  history,
+  title,
+  error,
+  onFetch,
+  compare = true,
+}: {
+  history?: ScoreHistoryVM;
+  title?: string;
+  error?: string;
+  onFetch?: () => void;
+  /** Forrige vs. nu (18.1) over grafen. Fra = grafen alene, som katalog 18.2. Standard: til. */
+  compare?: boolean;
+}) {
   const [ref, W] = useWidth<HTMLDivElement>();
   const compact = isCompact(W);
   const points = history?.points ?? [];
   const pick = useChartPick(points.length, compact);
-  const heading = title ?? "Score over tid";
+  // 18.2: "Kreditscore 2023–2026" (første og sidste hentnings år).
+  const years = points.length ? [points[0]!.date.slice(0, 4), points.at(-1)!.date.slice(0, 4)] : [];
+  const heading = title ?? (years.length ? `Kreditscore ${years[0] === years[1] ? years[0] : `${years[0]}\u2013${years[1]}`}` : "Kreditscore");
   if (!history) {
     return (
       <Section title={heading} span="half" className="lasso-chart lasso-scorehist">
@@ -89,17 +105,17 @@ export function ScoreHistory({ history, title, error, onFetch }: { history?: Sco
   };
   const tip = pick.tooltip;
   const zones = [
-    { from: 0, to: 60, cls: "low", label: "Lav" },
-    { from: 60, to: 80, cls: "mid", label: "Moderat" },
-    { from: 80, to: 100, cls: "high", label: "Høj" },
+    { from: 0, to: 60, cls: "low", label: "lav" },
+    { from: 60, to: 80, cls: "mid", label: "moderat" },
+    { from: 80, to: 100, cls: "high", label: "høj" },
   ];
 
   return (
-    <Section title={heading} subtitle={`${formatNumber(points.length)} ${points.length === 1 ? "hentning" : "hentninger"}, ${formatDate(points[0]!.date)}–${formatDate(last.date)}`} span="half" className="lasso-chart lasso-scorehist">
-      {prev ? (
+    <Section title={heading} subtitle={`0\u2013100, ${formatNumber(points.length)} ${points.length === 1 ? "hentning" : "hentninger"}`} span="half" className="lasso-chart lasso-scorehist">
+      {prev && compare ? (
         <ScoreCompare
-          previous={{ value: formatNumber(Math.round(prev.score)), of: "af 100", word: prev.label ?? scoreBand(prev.score).label, tone: TONE[scoreBand(prev.score).index], icon: <BandIcon index={scoreBand(prev.score).index} />, date: prev.date }}
-          current={{ value: formatNumber(Math.round(last.score)), of: "af 100", word: last.label ?? lastBand.label, tone: TONE[lastBand.index], icon: <BandIcon index={lastBand.index} />, date: last.date }}
+          previous={{ value: formatNumber(Math.round(prev.score)), of: "af 100", word: prev.label ?? scoreBand(prev.score).label, tone: TONE[scoreBand(prev.score).index], date: prev.date }}
+          current={{ value: formatNumber(Math.round(last.score)), of: "af 100", word: last.label ?? lastBand.label, tone: TONE[lastBand.index], date: last.date }}
           direction={last.score > prev.score ? "worse" : last.score < prev.score ? "better" : "same"}
           delta={last.score !== prev.score ? `${last.score > prev.score ? "+" : "\u2212"}${formatNumber(Math.abs(Math.round(last.score - prev.score)))}` : undefined}
           period={monthsBetween(prev.date, last.date)}

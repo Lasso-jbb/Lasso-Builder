@@ -137,9 +137,15 @@ export function ChartReadout({ title, rows, note, hint = "Tryk på et år for at
         <span className="lasso-pick__title">{title}</span>
         <span className="lasso-pick__line">
           {rows.map((r, i) => (
-            <span key={i}>
-              {i > 0 ? ", " : null}
-              {one ? null : `${r.label} `}
+            <span key={i} className="lasso-pick__item">
+              {i > 0 ? <span className="lasso-pick__sep">,&nbsp;</span> : null}
+              {/* 13.6: feltet står altid på én linje; lange navne afkortes, tallet står altid. */}
+              {one ? null : (
+                <span className="lasso-pick__label" title={r.label}>
+                  {r.label}
+                </span>
+              )}
+              {one ? null : "\u00a0"}
               <span className="lasso-pick__value">{r.value}</span>
               {one && r.change ? (
                 <>

@@ -81,7 +81,11 @@ export function PersonList({ people, show, title, error, onOpen }: { people?: Pe
                   )}
                   {chair ? <span className="lasso-row__note">(formand)</span> : null}
                 </div>
-                <div className="lasso-row__sub">{p.to ? `${role}, fratrådt` : role}</div>
+                <div className="lasso-row__sub">
+                  {p.to ? `${role}, fratrådt` : role}
+                  {/* 11.2: "også i N andre selskaber" efter rollen, når kilden leverer tallet. */}
+                  {!p.to && p.otherCompanies ? `, også i ${p.otherCompanies} ${p.otherCompanies === 1 ? "andet selskab" : "andre selskaber"}` : null}
+                </div>
               </div>
               <div className="lasso-row__side">{period}</div>
               {/* 11.2: chevron yderst til højre, når personen kan åbnes. */}

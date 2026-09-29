@@ -345,7 +345,7 @@ export function FinancialStatements({ statements, company, statement = "income",
           </select>
         </label>
         <span className="lasso-fs__spacer" />
-        {s.auditorOpinion ? <span className="lasso-fs__opinion">{s.auditorOpinion}</span> : null}
+        {s.auditorOpinion ? <span className="lasso-fs__opinion" title={s.auditorOpinion}>{s.auditorOpinion}</span> : null}
         {pdfButton}
       </div>
 

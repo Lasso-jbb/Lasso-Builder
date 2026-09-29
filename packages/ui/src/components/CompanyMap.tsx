@@ -237,6 +237,26 @@ function Legend() {
 }
 
 /**
+ * 13.12: hovedadressens popup (ca. 260 × 60) står til højre for nålen, men flyttes (venstre, under, over),
+ * hvis den ellers dækker en anden markør, så klynger og P-enheder altid er synlige.
+ */
+export function focusPopupPos(f: MapMarker, markers: readonly MapMarker[], W: number, H: number): { left: number; top: number } {
+  const PW = 260;
+  const PH = 60;
+  const clampX = (x: number) => Math.min(Math.max(8, x), Math.max(8, W - PW - 8));
+  const clampY = (y: number) => Math.min(Math.max(8, y), Math.max(8, H - PH - 8));
+  const candidates = [
+    { left: clampX(f.x + 14), top: clampY(f.y - 40) },
+    { left: clampX(f.x - 14 - PW), top: clampY(f.y - 40) },
+    { left: clampX(f.x - PW / 2), top: clampY(f.y + 14) },
+    { left: clampX(f.x - PW / 2), top: clampY(f.y - 40 - PH) },
+  ];
+  const others = markers.filter((m) => m.kind !== "focus");
+  const hits = (c: { left: number; top: number }) => others.filter((m) => m.x > c.left - 14 && m.x < c.left + PW + 14 && m.y > c.top - 14 && m.y < c.top + PH + 14).length;
+  return candidates.reduce((best, c) => (hits(c) < hits(best) ? c : best), candidates[0]!);
+}
+
+/**
  * Kort, adresse, P-enheder og klynger (katalog 13.12, node AMO-0). Kølige flader (land #EEF0F2, vand
  * #F7F7F8, hvide veje) så koral kun bruges til markører: ink-nål = fokus (hovedadressen), blå ring =
  * relaterede adresser (P-enheder), koral klynge med antal. Klik på en markør åbner en popup, som er et
@@ -327,7 +347,7 @@ export function CompanyMap({ map, title, error, onAction }: { map?: MapVM; title
             className={`lasso-map__popup${current.kind === "focus" ? " lasso-map__popup--focus" : ""}`}
             style={
               current.kind === "focus"
-                ? { left: Math.min(Math.max(8, current.x + 14), Math.max(8, W - 268)), top: Math.max(8, current.y - 40) }
+                ? focusPopupPos(current, markers, W, H)
                 : { left: Math.min(Math.max(8, current.x - 120), Math.max(8, W - 248)), top: current.y + (current.y > H / 2 ? -12 : 16), transform: current.y > H / 2 ? "translateY(-100%)" : undefined }
             }
             onClick={(e) => e.stopPropagation()}

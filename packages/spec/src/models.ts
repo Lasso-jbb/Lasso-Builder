@@ -277,6 +277,11 @@ export interface PersonRowVM {
   role: string;
   from?: string;
   to?: string;
+  /**
+   * Katalog 11.2: antal andre selskaber, personen har en aktiv rolle i ("også i 3 andre selskaber").
+   * Udeladt, når kilden ikke leverer tallet (feltet er ikke dokumenteret i Lasso-API'et; læses defensivt).
+   */
+  otherCompanies?: number;
 }
 
 export interface OwnerVM {
@@ -760,6 +765,8 @@ export interface ScoreVM {
   history?: { date: string; score: number }[];
   /** Katalog 26d.7: seneste ændringer i scoren med årsag, nyeste først. `delta` i point (+ = højere risiko). */
   changes?: { date: string; label: string; delta: number }[];
+  /** Katalog 26d.7: kort note til højre for "Udvikling, 24 måneder", fx "eksempeldata før 09.2026". */
+  historyNote?: string;
 }
 
 /* ---------- Katalog 18.2: scorehistorik (én hentning = ét punkt) ---------- */

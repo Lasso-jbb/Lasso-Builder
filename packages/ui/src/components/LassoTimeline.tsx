@@ -221,7 +221,8 @@ export function LassoTimeline({
                       {e.from || e.to ? (
                         <div className="lasso-timeline__change">
                           {e.from ? (
-                            <span className="lasso-timeline__from">
+                            // 12.3: kun en gammel adresse gennemstreges; fx kapital skrives "1,0 mio. kr. → 1,2 mio. kr.".
+                            <span className={`lasso-timeline__from${/adresse/i.test(`${e.category} ${e.title}`) ? " lasso-timeline__from--struck" : ""}`}>
                               {e.from}
                             </span>
                           ) : null}

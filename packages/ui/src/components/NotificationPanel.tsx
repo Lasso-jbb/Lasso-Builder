@@ -138,7 +138,12 @@ export function NotificationPanel({ items, onMarkAllRead, onAction, onSeeAll, on
                   <span className="lasso-notif__time">{shortTime(n.at, clock)}</span>
                 </div>
                 <div className="lasso-notif__src">{n.title ? n.text : (n.source ?? NOTIFICATION_KIND_LABELS[n.kind])}</div>
-                <div className={`lasso-notif__cat${n.important ? " lasso-notif__cat--important" : ""}`}>{n.category ?? NOTIFICATION_KIND_LABELS[n.kind]}</div>
+                {/* 26e.5/21.2: kategorien står én gang; gentager kildeteksten allerede typen ("Konto"), udelades linjen. */}
+                {(() => {
+                  const src = n.title ? n.text : (n.source ?? NOTIFICATION_KIND_LABELS[n.kind]);
+                  const cat = n.category ?? NOTIFICATION_KIND_LABELS[n.kind];
+                  return n.category || !src.toLowerCase().startsWith(cat.toLowerCase()) ? <div className={`lasso-notif__cat${n.important ? " lasso-notif__cat--important" : ""}`}>{cat}</div> : null;
+                })()}
               </div>
             ) : (
               <div className="lasso-notif__main">

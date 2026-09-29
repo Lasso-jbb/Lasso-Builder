@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { ownershipGraphKey, type Dataset, type OwnershipGraphVM } from "@lasso/spec";
 import {
-  BandIcon,
   BellIcon,
   BulkBar,
   CompanyTable,
@@ -165,11 +164,11 @@ const bulkActions = (): BulkAction[] => [
 
 const NOW = new Date("2026-09-29T10:00:00+02:00");
 const NOTIFICATIONS: NotificationVM[] = [
-  { id: "n1", kind: "overvaagning", text: "Eksempel Energi A/S er under konkurs", source: 'Overvågning "Kunder"', at: "2026-09-29T09:12:00+02:00", read: false, important: true },
-  { id: "n2", kind: "overvaagning", text: "Eksempel Byg A/S har offentliggjort årsrapport 2025", source: 'Overvågning "Kunder"', at: "2026-09-29T08:40:00+02:00", read: false },
+  { id: "n1", kind: "overvaagning", text: "Eksempel Energi A/S er under konkurs", category: "Status og konkurs", source: 'Overvågning "Kunder"', at: "2026-09-29T09:12:00+02:00", read: false, important: true },
+  { id: "n2", kind: "overvaagning", text: "Eksempel Byg A/S har offentliggjort årsrapport 2025", category: "Nyt regnskab", source: 'Overvågning "Kunder"', at: "2026-09-29T08:40:00+02:00", read: false },
   { id: "n3", kind: "kredit", text: "Ny kreditvurdering af Eksempel Transport ApS er klar", source: "Kredit, Creditsafe", at: "2026-09-28T15:05:00+02:00", read: false, action: { label: "Se" } },
   { id: "n4", kind: "eksport", text: "Eksport af 1.243 virksomheder er klar", source: "Eksport, Excel", at: "2026-09-28T11:30:00+02:00", read: true, action: { label: "Hent" } },
-  { id: "n5", kind: "overvaagning", text: "Ny direktør i Eksempel Software ApS", source: 'Overvågning "Leverandører"', at: "2026-09-27T13:20:00+02:00", read: true },
+  { id: "n5", kind: "overvaagning", text: "Ny direktør i Eksempel Software ApS", category: "Ledelse og ejere", source: 'Overvågning "Leverandører"', at: "2026-09-27T13:20:00+02:00", read: true },
   { id: "n6", kind: "konto", text: "Du har 12 kreditter tilbage", source: "Konto", at: "2026-09-26T09:00:00+02:00", read: true },
 ];
 
@@ -300,7 +299,7 @@ export const entries: GalleryEntry[] = [
   /* ---------- 16 Personside ---------- */
   { nr: "16.1", title: "Personhoved", node: "BNF-0", spec: person("Bo Eksempel", [{ type: "LassoPersonHead", person: BO }]) },
   { nr: "16.2", title: "Roller som tidsbånd", node: "BOH-0", spec: person("Bo Eksempel", [{ type: "LassoPersonRoles", person: BO, show: "all", limit: 8 }]) },
-  { nr: "16.3", title: "Netværk (personer med fælles selskaber)", node: "BQV-0", spec: person("Bo Eksempel", [{ type: "LassoPersonNetwork", person: BO, limit: 4, width: "full" }]) },
+  { nr: "16.3", title: "Netværk (personer med fælles selskaber)", node: "BQV-0", spec: person("Bo Eksempel", [{ type: "LassoPersonNetwork", person: BO, limit: 5, width: "full" }]) },
   { nr: "16.4", title: "Personrisiko", node: "BR1-0", spec: person("Bo Eksempel", [{ type: "LassoPersonRisk", person: BO, width: "full" }]) },
 
   /* ---------- 17 Risikoobservationer ---------- */
@@ -333,8 +332,8 @@ export const entries: GalleryEntry[] = [
     node: "BX9-0",
     render: () => (
       <ScoreCompare
-        previous={{ value: "47", of: "af 100", word: "Lav risiko", tone: "ok", icon: <BandIcon index={0} />, date: "2026-03-14", detail: "Kreditmaks 0,9 mio. kr." }}
-        current={{ value: "52", of: "af 100", word: "Lav risiko", tone: "ok", icon: <BandIcon index={0} />, date: "2026-09-12", detail: "Kreditmaks 1,25 mio. kr., international score B. Kilde: Creditsafe" }}
+        previous={{ value: "47", of: "af 100", word: "Lav risiko", tone: "ok", date: "2026-03-14", detail: "Kreditmaks 0,9 mio. kr." }}
+        current={{ value: "52", of: "af 100", word: "Lav risiko", tone: "ok", date: "2026-09-12", detail: "Kreditmaks 1,25 mio. kr., international score B. Kilde: Creditsafe" }}
         direction="worse"
         delta="+5"
         period="6 mdr."
@@ -342,7 +341,7 @@ export const entries: GalleryEntry[] = [
       />
     ),
   },
-  { nr: "18.2", title: "Scorehistorik (trinlinje)", node: "BY5-0", spec: company("Eksempel Byg A/S", [{ type: "LassoScoreHistory", company: BYG, width: "full" }]) },
+  { nr: "18.2", title: "Scorehistorik (trinlinje)", node: "BY5-0", spec: company("Eksempel Byg A/S", [{ type: "LassoScoreHistory", company: BYG, compare: false, width: "full" }]) },
   {
     nr: "18.3",
     title: "Bekræft hentning (dialog)",

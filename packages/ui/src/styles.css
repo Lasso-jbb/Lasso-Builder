@@ -84,6 +84,7 @@
   /* Grafserier: fast rækkefølge, serie 2 aldrig uden serie 1 */
   --lasso-chart-1: #ff6b35;
   --lasso-chart-2: #2f5d8a;
+  --lasso-info-soft: #eaf1f8;       /* 17.1: flade bag info-ikonet */
   --lasso-chart-3: #8fb8de;
   --lasso-chart-4: #ffc1a3;         /* tidligere år */
   --lasso-chart-5: #9aa0a8;         /* branche/benchmark */
@@ -200,6 +201,7 @@
   --lasso-chart-bar: #7a3b1f;
   --lasso-chart-bar-strong: #ff7a4a;
   --lasso-chart-bar-neg: #6b2c26;
+  --lasso-info-soft: #1c2a38;
   --lasso-gauge-low: #2f5d43;
   --lasso-gauge-mid: #6b5730;
   --lasso-gauge-high: #6b3330;
@@ -1046,7 +1048,7 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-timeline__body { flex: 1; min-width: 0; padding-bottom: 18px; }
 .lasso-timeline__title { font-size: var(--lasso-fs); line-height: 18px; font-weight: 500; color: var(--lasso-text); }
 .lasso-timeline__change { display: flex; align-items: center; gap: 8px; font-size: var(--lasso-fs-sm); color: var(--lasso-muted); margin-top: 3px; }
-.lasso-timeline__from { text-decoration: line-through; }
+.lasso-timeline__from--struck { text-decoration: line-through; }
 .lasso-timeline__to { color: var(--lasso-text); font-weight: 500; }
 .lasso-timeline__meta { font-size: 12px; line-height: 16px; color: var(--lasso-muted); margin-top: 3px; }
 /* 26c.10: mobil som ren lodret liste: dato 12 muted øverst, titel 14/400, detalje 13 muted; ingen
@@ -1110,7 +1112,8 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-sev-icon--25 { color: var(--lasso-chart-2); }
 .lasso-sev-icon--50 { color: var(--lasso-warning); }
 .lasso-sev-icon--100 { color: var(--lasso-danger); }
-/* 17.1: mulig vigtig og vigtig står på en let flade i egen tone (gul, rød); info og neutral uden flade. */
+/* 17.1: info, mulig vigtig og vigtig står på en let flade i egen tone (blå, gul, rød); neutral uden flade. */
+.lasso-sev-icon-wrap--25 { background: var(--lasso-info-soft); }
 .lasso-sev-icon-wrap--50 { background: var(--lasso-warning-soft); }
 .lasso-sev-icon-wrap--100 { background: var(--lasso-danger-soft); }
 
@@ -2942,8 +2945,9 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-contact__act { display: inline-flex; }
   .lasso-contact-section .lasso-contact { gap: 0; }
   .lasso-contact-section .lasso-contact__row { align-items: center; min-height: 48px; padding: 4px 0; }
-  .lasso-contact__value--multiline { flex-direction: row; flex-wrap: wrap; column-gap: 0.3em; }
-  .lasso-contact__value--multiline > span:not(:last-child)::after { content: ","; }
+  /* 08.3/26a.6: adressen på én linje ("Toldbodgade 37B, 1253 København K"); samme specificitet som reglen ovenfor. */
+  .lasso-contact__value .lasso-contact__value--multiline, .lasso-contact__value--multiline { flex-direction: row; flex-wrap: wrap; column-gap: 0.3em; }
+  .lasso-contact__value--multiline > span:not(:last-child)::after { content: ","; margin-right: 0; }
   .lasso-root .lasso-contact__call { width: 40px; height: 40px; border: 0; border-radius: var(--lasso-radius); background: var(--lasso-accent-soft); color: var(--lasso-accent-text); }
 }
 
@@ -4628,4 +4632,66 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 @container lasso (max-width: 560px) {
   .lasso-answerfoot { flex-direction: column; align-items: stretch; gap: var(--lasso-space-3); }
   .lasso-root .lasso-answerfoot__next { height: var(--lasso-touch-h, 44px); border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius); background: var(--lasso-surface); text-align: center; }
+}
+
+/* ---------- 26d.7 Kreditvurdering, fuld form (ScoreGauge detail) ---------- */
+.lasso-gauge__source { font-size: 12px; line-height: 16px; color: var(--lasso-muted); white-space: nowrap; }
+.lasso-gauge--detail { gap: 4px; }
+.lasso-gauge--detail .lasso-gauge__value { align-items: flex-end; gap: 4px; flex-wrap: nowrap; }
+.lasso-gauge--detail .lasso-gauge__number { font-size: 40px; line-height: 44px; }
+.lasso-gauge--detail .lasso-gauge__of { font-size: var(--lasso-fs-sm); line-height: 16px; padding-bottom: 6px; }
+.lasso-gauge__side { display: flex; flex-direction: column; gap: 4px; margin-left: 8px; padding-bottom: 6px; min-width: 0; }
+.lasso-gauge--detail .lasso-gauge__label, .lasso-gauge--detail .lasso-gauge__value .lasso-gauge__label { margin-left: 0; font-size: 12px; line-height: 16px; font-weight: 600; }
+.lasso-gauge__max { font-size: 12px; line-height: 16px; color: var(--lasso-text-2); }
+.lasso-gauge--detail .lasso-gauge__scale--ticks { display: flex; justify-content: space-between; font-size: 10px; line-height: 16px; }
+.lasso-gauge-history__note { font-size: 11px; line-height: 16px; color: var(--lasso-muted); }
+.lasso-gauge-section--detail .lasso-gauge-history { margin-top: var(--lasso-space-3); }
+.lasso-gauge-section--detail .lasso-gauge-history__title, .lasso-gauge-section--detail .lasso-gauge-changes__title { font-size: var(--lasso-fs-sm); }
+.lasso-gauge-section--detail .lasso-gauge-changes__row { min-height: 40px; border-bottom: 0; border-top: 1px solid var(--lasso-divider-subtle); }
+.lasso-gauge-section--detail .lasso-gauge-changes__list { border-top: 0; }
+.lasso-gauge-section--detail .lasso-gauge-changes__label { color: var(--lasso-text); }
+.lasso-gauge-section--detail .lasso-gauge-changes__delta { font-size: 12px; }
+.lasso-gauge-section--detail .lasso-gauge-changes__date { font-size: 12px; }
+.lasso-gauge-section--detail .lasso-gauge-history__readout span:last-child { color: var(--lasso-text); font-size: var(--lasso-fs-sm); }
+.lasso-gauge-section--detail .lasso-gauge-history__date { font-size: 12px; }
+
+/* ---------- 16.4 Personrisiko: antal i ikonpladsen, "Opgrader" som tekstlink ---------- */
+.lasso-personrisk__icon:has(.lasso-personrisk__count) { width: 32px; height: 32px; margin: -6px 0 -6px -6px; }
+.lasso-personrisk__count { display: inline-grid; place-items: center; width: 32px; height: 32px; min-width: 0; padding: 0; border-radius: 50%; background: var(--lasso-surface-muted); color: var(--lasso-text); font-size: var(--lasso-fs-sm); line-height: 16px; font-weight: 700; }
+.lasso-root .lasso-personrisk__upgrade { display: inline; padding: 0; font-size: inherit; line-height: inherit; }
+.lasso-root .lasso-personrisk__upgrade { color: var(--lasso-accent-text); }
+.lasso-root .lasso-link.lasso-personnet__graph { color: var(--lasso-accent-text); font-size: var(--lasso-fs-sm); font-weight: 500; white-space: nowrap; }
+
+/* ---------- 18.1 Forrige vs. nu: forrige tal dæmpet, handlingen centreret ---------- */
+.lasso-scorecmp__side:not(.is-current) .lasso-scorecmp__value { color: var(--lasso-text-2); }
+.lasso-scorecmp__act { align-items: stretch; text-align: center; }
+.lasso-scorecmp__detail { color: var(--lasso-text-2); }
+
+/* 19.1: værktøjslinjen er altid én 56 px-række; påtegningen afkortes, knapperne ombrydes aldrig. */
+.lasso-fs__toolbar { flex-wrap: nowrap; }
+.lasso-fs__toolbar > * { flex-shrink: 0; }
+.lasso-fs__toolbar > .lasso-fs__spacer { flex: 0 0 0; }
+.lasso-fs__toolbar > .lasso-fs__opinion { flex: 1 1 0; min-width: 0; text-align: right; }
+
+/* 15.2: handlingsbjælkens 1 px ink-kant må ikke klippes af tabelrammen (bjælken ligger -1 px over rammens kant). */
+.lasso-table-frame:has(> .lasso-bulkbar) { overflow: clip; overflow-clip-margin: 1px; }
+.lasso-table-frame > .lasso-bulkbar:last-child { margin-bottom: -1px; border-radius: var(--lasso-radius-lg); }
+
+/* 13.6: det faste felt på mobil står på én linje; seriernes navne afkortes før tallene. */
+.lasso-pick--line .lasso-pick__line { display: flex; justify-content: flex-end; flex-wrap: nowrap; white-space: nowrap; overflow: hidden; }
+.lasso-pick--line .lasso-pick__item { display: inline-flex; min-width: 0; flex: 0 1 auto; }
+.lasso-pick--line .lasso-pick__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.lasso-pick--line .lasso-pick__value, .lasso-pick--line .lasso-pick__sep, .lasso-pick--line .lasso-pick__change { flex: none; }
+
+/* 22.1: tilføj-slotten har en tydelig stiplet kant i hele kolonnens højde, og rækkelinjerne fortsætter igennem. */
+.lasso-table.lasso-compare .lasso-compare__slot { border-left: 1px dashed var(--lasso-faint); }
+.lasso-table.lasso-compare tbody td.lasso-compare__slot { border-bottom-color: var(--lasso-border); }
+.lasso-table.lasso-compare tbody tr:last-child td.lasso-compare__slot { border-bottom-color: transparent; }
+
+/* 08.5/26h.7: telefonnummeret står altid på én linje; en lang status ved siden af ombrydes i stedet. */
+.lasso-contact__value[href^="tel:"], .lasso-contact__value--struck { white-space: nowrap; flex: none; }
+.lasso-contact__aside { min-width: 0; }
+@container lasso (max-width: 560px) {
+  .lasso-contact__row .lasso-contact__value[href^="tel:"] { flex: none; }
+  .lasso-contact__value[href^="tel:"] + .lasso-contact__aside { flex: 1 1 auto; justify-content: flex-end; text-align: right; }
 }

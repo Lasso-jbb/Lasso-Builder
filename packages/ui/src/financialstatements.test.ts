@@ -29,7 +29,7 @@ test("19.1: værktøjslinje med selskab/koncern, periode, enhed, påtegning og H
   assert.match(html, />Selskab<[^]*>Koncern</);
   assert.match(html, /<option value="2025"[^>]*>2025, 01\.01–31\.12<\/option>/);
   assert.match(html, /lasso-sr">Enhed<\/span><select[^>]*><option value="t"[^>]*>t\. kr\.</);
-  assert.match(html, /lasso-fs__opinion">Revisionspåtegning uden forbehold</);
+  assert.match(html, /lasso-fs__opinion"[^>]*>Revisionspåtegning uden forbehold</);
   assert.match(html, /href="https:\/\/example\.com\/aarsrapport\.pdf"[^>]*>[^]*Hent PDF/);
   // Segment Resultat/Balance/Pengestrøm (niveau 3) kun i mobilformen, aldrig badge
   assert.match(html, /lasso-fs__mobile[^]*aria-label="Opgørelse"[^]*>Resultat<[^]*>Balance<[^]*>Pengestrøm</);

@@ -99,7 +99,7 @@ test("26d.7: scoremåler med udvikling (maks 6 punkter), fast valgfelt og senest
     createElement(ScoreGauge, { detail: true, score: { lassoId: "x", score: 52, history, changes: [{ date: "2026-06-06", label: "Regnskab 2025 indlæst", delta: 5 }, { date: "2025-05-20", label: "Betalingsanmærkning", delta: -4 }] } }),
   );
   assert.equal((html.match(/lasso-gauge-history__(dot|last)"/g) ?? []).length, 6);
-  assert.match(html, /09\.2026<\/span><span>52, lav risiko, \+10 siden 05\.2024/);
+  assert.match(html, /09\.2026<\/span><span>52, lav risiko, \+2 siden 09\.2025/);
   assert.match(html, /Regnskab 2025 indlæst[^]*06\.2026[^]*lasso-gauge-changes__delta--up[^>]*>\+5</);
   assert.match(html, /lasso-gauge-changes__delta--down[^>]*>−4</);
 });

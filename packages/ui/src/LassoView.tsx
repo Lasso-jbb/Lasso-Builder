@@ -250,7 +250,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoMap":
       return <CompanyMap key={key} map={empty.maps?.[c.company]} title={c.title} error={err(`mapPoints:${c.company}`)} onAction={props.host.drillDown ? act : undefined} />;
     case "LassoScoreHistory":
-      return <ScoreHistory key={key} history={empty.scoreHistories?.[c.company]} title={c.title} error={err(`scoreHistory:${c.company}`)} />;
+      return <ScoreHistory key={key} history={empty.scoreHistories?.[c.company]} title={c.title} compare={c.compare} error={err(`scoreHistory:${c.company}`)} />;
     case "LassoRanking":
       return (
         <Ranking
@@ -524,7 +524,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
         />
       );
     case "LassoPersonNetwork":
-      return <PersonNetwork key={key} network={empty.personNetworks[c.person]} title={c.title} limit={c.limit} error={err(`personNetwork:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} />;
+      return <PersonNetwork key={key} network={empty.personNetworks[c.person]} title={c.title} limit={c.limit} error={err(`personNetwork:${c.person}`)} onOpen={props.host.drillDown ? act : undefined} onGraph={props.host.prompt ? () => act({ kind: "prompt", prompt: `Vis netværket for ${empty.persons?.[c.person]?.name ?? c.person} som graf` }) : undefined} />;
     case "LassoPersonRisk":
       return (
         <PersonRisk
