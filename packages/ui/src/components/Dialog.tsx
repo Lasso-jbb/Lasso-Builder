@@ -116,7 +116,7 @@ export function Dialog({ open, title, description, onClose, children, actions, s
         </header>
         {children ? <div className="lasso-dialog__body">{children}</div> : null}
         {hasFoot ? (
-          <footer className="lasso-dialog__foot">
+          <footer className={`lasso-dialog__foot ${children ? "lasso-dialog__foot--ruled" : ""}`}>
             {destructive ? (
               <button type="button" className="lasso-btn lasso-btn--text lasso-btn--danger lasso-dialog__destructive" onClick={destructive.onClick} disabled={destructive.disabled}>
                 {destructive.label}

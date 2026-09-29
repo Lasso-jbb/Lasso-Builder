@@ -23,7 +23,7 @@
   --lasso-iconbtn-sm: 32px;
   --lasso-label-h: 28px;            /* etiket, kun visning (05.6) */
   --lasso-status-new: var(--lasso-accent-text);  /* "Ny" som ren tekst (05.7) */
-  --lasso-status-liquidation: var(--lasso-warning);
+  --lasso-status-liquidation: var(--lasso-bankrupt); /* 02c.8/05.7: likvidation mørk rød som konkurs */
 
   /* Koral: den eneste accentfarve */
   --lasso-accent: #ff6b35;          /* primary */
@@ -1618,7 +1618,9 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 .lasso-dialog__close:hover { background: var(--lasso-surface-muted); color: var(--lasso-text); }
 .lasso-dialog__close:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
 .lasso-dialog__body { margin-top: var(--lasso-space-5); min-height: 0; overflow: auto; }
-.lasso-dialog__foot { display: flex; align-items: center; gap: var(--lasso-space-2); margin-top: var(--lasso-space-5); padding-top: var(--lasso-space-5); border-top: 1px solid var(--lasso-border); }
+.lasso-dialog__foot { display: flex; align-items: center; gap: var(--lasso-space-2); margin-top: var(--lasso-space-5); }
+/* 07.1/07.2: stregen over knapperne kun i formulardialogen (med indhold); bekræftelsesdialogen har ingen */
+.lasso-dialog__foot--ruled { padding-top: var(--lasso-space-5); border-top: 1px solid var(--lasso-border); }
 .lasso-dialog__spacer { flex: 1; }
 .lasso-dialog .lasso-btn { height: var(--lasso-btn-h-lg); padding: 0 18px; font-size: var(--lasso-fs); }
 .lasso-dialog__destructive { border-color: var(--lasso-border-strong); }
@@ -1643,7 +1645,7 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 .lasso-menu__item:focus-visible { border-color: var(--lasso-focus-border); }
 .lasso-menu__item:disabled { color: var(--lasso-disabled); cursor: default; }
 .lasso-menu__item.is-on { background: var(--lasso-accent-soft); color: var(--lasso-text); }
-.lasso-menu__item--danger { color: var(--lasso-danger); }
+.lasso-menu__item--danger, .lasso-root .lasso-menu__item--danger { color: var(--lasso-danger); } /* 26a.10: skal slå ".lasso-root button { color: inherit }" */
 .lasso-menu__item--danger:hover:not(:disabled) { background: var(--lasso-danger-soft); }
 /* Destruktivt punkt nederst, adskilt af en linje */
 .lasso-menu__item:not(.lasso-menu__item--danger) + .lasso-menu__item--danger { margin-top: 13px; }
@@ -1692,6 +1694,8 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 
   .lasso-menu__scrim { display: block; position: fixed; inset: 0; z-index: 50; background: color-mix(in srgb, var(--lasso-overlay) 36%, transparent); }
   .lasso-menu__pop, .lasso-menu__pop--layer { position: fixed; top: auto; bottom: 12px; left: 12px; right: 12px; z-index: 51; min-width: 0; max-width: none; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; transform: none; display: flex; flex-direction: column; gap: 10px; }
+  /* 04.3: arket står altid mellem kanterne, også når menuen er højre- eller opadrettet på desktop */
+  .lasso-menu__pop--layer.lasso-menu__pop--end, .lasso-menu__pop--layer.lasso-menu__pop--up, .lasso-menu__pop--layer.lasso-menu__pop--up.lasso-menu__pop--end { left: 12px; right: 12px; transform: none; }
   .lasso-menu__context { display: grid; gap: 2px; padding: 12px 16px; border-bottom: 1px solid var(--lasso-border); background: var(--lasso-surface); border-radius: var(--lasso-radius-xl) var(--lasso-radius-xl) 0 0; }
   .lasso-menu__context-title { font-size: var(--lasso-fs); font-weight: 600; color: var(--lasso-text); }
   .lasso-menu__context-sub { font-size: var(--lasso-fs-sm); color: var(--lasso-muted); }
@@ -1725,6 +1729,10 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 .lasso-rail__group.is-collapsed { padding-bottom: 4px; }
 .lasso-rail__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; height: 40px; padding: 0 12px; border: 0; border-radius: var(--lasso-radius); background: none; cursor: pointer; color: var(--lasso-muted); font-size: var(--lasso-fs-label); line-height: 14px; font-weight: 600; letter-spacing: var(--lasso-ls-label); text-transform: uppercase; text-align: left; }
 .lasso-rail__head:hover { color: var(--lasso-text); }
+/* Overlinjen 11/14/600 +8 %: ".lasso-root" foran, så den vinder over ".lasso-root button { font: inherit }" (ellers 14/400) */
+.lasso-root .lasso-rail__head { font-size: var(--lasso-fs-label); line-height: var(--lasso-lh-label); font-weight: 600; color: var(--lasso-muted); }
+.lasso-root .lasso-rail__head:hover { color: var(--lasso-text); }
+.lasso-rail__head-label { white-space: nowrap; }
 .lasso-rail__head:focus-visible, .lasso-rail__item:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: -1px; }
 .lasso-rail__chevron { flex: none; color: var(--lasso-accent); }
 .lasso-rail__list { list-style: none; margin: 0; padding: 0; }
@@ -2874,7 +2882,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-check:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: 2px; }
 .lasso-table th.lasso-cell--check, .lasso-table td.lasso-cell--check { width: 48px; padding-right: 0; }
 .lasso-table tbody tr.is-selected { background: var(--lasso-surface-2); }
-.lasso-status--liquidation { color: var(--lasso-warning); }
+/* Virksomhedstabellen (12): "Under likvidation" i warning-tekst, jf. tabelnoten */
+.lasso-ctable .lasso-status--liquidation { color: var(--lasso-warning); }
 /* Tilstande inde i rammen: hovedet står, rækkerne erstattes */
 .lasso-table tr.lasso-tstate td, .lasso-table tr.lasso-tstate__skel td { height: auto; padding: 0; }
 .lasso-tstate__skelrow { display: flex; align-items: center; gap: 24px; height: var(--lasso-row-h); padding: 0 16px; border-bottom: 1px solid var(--lasso-border); }
