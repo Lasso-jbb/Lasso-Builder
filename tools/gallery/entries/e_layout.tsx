@@ -19,6 +19,7 @@ import {
   formatNumber,
   formatPercent,
   mainMetric,
+  statusKind,
   type Dataset,
   type ViewSpec,
 } from "@lasso/spec";
@@ -868,7 +869,7 @@ const mobileStates: GalleryEntry[] = [
         {caption("Fejl")}
         <DataState state="error" title="Regnskab kunne ikke hentes" reason="Erhvervsstyrelsen svarede ikke. Prøv igen om lidt." onRetry={noop} />
         {caption("Låst")}
-        <DataState state="locked" reason="Reelle ejere kræver Lasso Pro." action={{ label: "Se planer", onClick: noop }} />
+        <DataState state="locked" title="Reelle ejere kræver Lasso Pro" reason="Se hvem der i sidste ende ejer og kontrollerer virksomheden." action={{ label: "Se planer", onClick: noop }} />
         {caption("På forespørgsel")}
         <DataState state="onrequest" title="Kreditvurdering" reason="Hentes fra Creditsafe. Koster 1 kredit og tager typisk 5–45 sekunder." action={{ label: "Hent kreditvurdering, 1 kredit", onClick: noop }} />
       </div>
@@ -946,8 +947,8 @@ const report: GalleryEntry[] = [
 /* ---------- 28 Øvrige datatyper ---------- */
 
 function Enumerations() {
-  // Samme klassificering som demodatasættet (apps/server/src/data/demo.ts statusKindOf).
-  const kindOf = (st: string) => (/konkurs|likvid/i.test(st) ? "warning" : /ophørt/i.test(st) ? "inactive" : "active");
+  // Samme klassificering som live-data og demodata (packages/spec/src/status.ts).
+  const kindOf = statusKind;
   const statuses = ["Normal", "Aktiv", "Ny", "Under reassumering", "Under frivillig likvidation", "Under rekonstruktion", "Under konkurs", "Opløst efter konkurs", "Tvangsopløst", "Ophørt"].map(
     (st) => [st, kindOf(st)] as const,
   );

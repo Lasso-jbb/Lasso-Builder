@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { CompanyEventsVM } from "@lasso/spec";
+import { statusKind, type CompanyEventsVM } from "@lasso/spec";
+import { statusTone } from "./primitives.js";
 import { Announcements, Mergers, Publications } from "./components/CompanyEvents.js";
 import { EntityUpdates } from "./components/EntityUpdates.js";
 import { ReportBatches } from "./components/ReportBatches.js";
@@ -82,4 +83,17 @@ test("28.5: personresultat med by, to selskaber, 'og N flere' og 'Fundet via'", 
   assert.match(html, /København, Data Eksempel A\/S, Nordisk Eksempel ApS og 3 flere/);
   assert.match(html, /Fundet via binavn/);
   assert.doesNotMatch(html, /score|relevans/i);
+});
+
+test("28.1: status-værdilisten klassificeres ens for live- og demodata", () => {
+  assert.equal(statusKind("Normal"), "active");
+  assert.equal(statusKind("Aktiv"), "active");
+  assert.equal(statusKind("Tvangsopløst"), "warning");
+  assert.equal(statusKind("Under reassumering"), "warning");
+  assert.equal(statusKind("Under rekonstruktion"), "warning");
+  assert.equal(statusKind("Under konkurs"), "warning");
+  assert.equal(statusKind("Opløst efter konkurs"), "inactive");
+  assert.equal(statusKind("Ophørt"), "inactive");
+  assert.equal(statusTone("Under frivillig likvidation", statusKind("Under frivillig likvidation")), "liquidation");
+  assert.equal(statusTone("Ny", statusKind("Ny")), "new");
 });
