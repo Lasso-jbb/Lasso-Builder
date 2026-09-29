@@ -362,7 +362,16 @@ export const entries: GalleryEntry[] = [
       </Stack>
     ),
   },
-  { nr: "09.5", title: "Nøgle-værdi-liste med årsvælger", node: "9WR-0", spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "financials", width: "full" }]) },
+  {
+    nr: "09.5",
+    title: "Nøgle-værdi-liste med årsvælger",
+    node: "9WR-0",
+    spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "financials", width: "full" }]),
+    note: "Med årsrapportens PDF-link i datasættet (rækken 'PDF-regnskab').",
+    mutate: (ds) => {
+      ds.financialStatements[B] = { lassoId: B, currency: "DKK", incomeStatement: [], balanceSheet: [], cashFlow: [], pdfUrl: "https://example.com/aarsrapport.pdf" };
+    },
+  },
 
   // 10 Score og tabeller
   { nr: "10.1", title: "Scoremåler", node: "9ZT-0", spec: co("Eksempel Byg A/S", [{ type: "LassoScoreGauge", company: B, width: "half" }]), note: "Måleren i en ½-kolonne som i Paper (ca. 540 px)." },

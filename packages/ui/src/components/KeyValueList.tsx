@@ -166,6 +166,7 @@ export function KeyValueList({
   exclude,
   info = true,
   links,
+  onPdf,
 }: {
   company?: CompanyVM;
   ownership?: OwnershipVM;
@@ -187,6 +188,8 @@ export function KeyValueList({
   info?: boolean;
   /** Handlinger under listen som link med ikon (09.2), fx "Se hele regnskabet". */
   links?: readonly KeyValueLink[];
+  /** Variant "financials" (09.5): rækken "PDF-regnskab" med "Hent ÅÅÅÅ ⤓" højrestillet i koral. */
+  onPdf?: (year: number) => void;
 }) {
   const heading = title ?? (variant === "financials" ? "Regnskab" : "Virksomhedsoplysninger");
   const ready = variant === "financials" ? Boolean(financials) : Boolean(company);
@@ -237,6 +240,17 @@ export function KeyValueList({
               </div>
             </div>
           ))}
+          {onPdf ? (
+            <div className="lasso-kv-row">
+              <Label text="PDF-regnskab" info={false} />
+              <div className="lasso-kv-row__value">
+                <button type="button" className="lasso-kv-link lasso-kv-link--end" onClick={() => onPdf(selected.year)}>
+                  <span>Hent {selected.year}</span>
+                  <ShellIcon name="download" size={15} />
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
         <Links links={links} />
       </Section>

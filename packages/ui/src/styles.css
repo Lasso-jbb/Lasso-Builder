@@ -2718,6 +2718,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-kv-links { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: var(--lasso-space-3); }
 .lasso-root .lasso-kv-link { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; font: inherit; font-size: var(--lasso-fs-sm); line-height: 18px; font-weight: 500; color: var(--lasso-accent-text); cursor: pointer; }
 .lasso-root .lasso-kv-link:hover { text-decoration: underline; }
+.lasso-root .lasso-kv-link--end { margin-left: auto; font-size: var(--lasso-fs); }
+.lasso-kv-row__value:has(> .lasso-kv-link--end) { display: flex; justify-content: flex-end; }
 .lasso-root .lasso-kv-link:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: 2px; border-radius: var(--lasso-radius-sm); }
 @container lasso (max-width: 560px) {
   .lasso-kv-links { flex-direction: column; gap: 0; }

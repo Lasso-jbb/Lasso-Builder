@@ -324,6 +324,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           exclude={c.exclude}
           onOpen={props.host.drillDown ? act : undefined}
           links={c.variant === "financials" ? statementsLink(c.company, empty, props, act) : undefined}
+          onPdf={c.variant === "financials" && empty.financialStatements[c.company]?.pdfUrl ? () => act({ kind: "open-link", url: empty.financialStatements[c.company]!.pdfUrl! }) : undefined}
         />
       );
     }
