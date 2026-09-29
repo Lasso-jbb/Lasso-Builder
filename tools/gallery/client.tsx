@@ -20,6 +20,8 @@ const HOST: HostCapabilities = {
   monitor: true,
   openSection: true,
   verifyContact: true,
+  // Som MCP-værten (apps/view/src/mcp.tsx): "Opdatér" giver hovedets "Flere" (08.1, 16.1).
+  refresh: true,
 };
 
 function Stage({ id }: { id: number }) {

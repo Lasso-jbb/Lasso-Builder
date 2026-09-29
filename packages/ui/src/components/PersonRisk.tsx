@@ -33,9 +33,12 @@ function Item({ label, noun, cases, companies, onOpen }: { label: string; noun: 
       : `Ingen af personens ${companies} selskaber er ${noun}.`;
   return (
     <li className="lasso-personrisk__item">
-      <span className="lasso-personrisk__icon">{tone === "none" ? <CheckIcon /> : <SeverityIcon severity={tone === "50" ? 50 : 25} />}</span>
+      <div className="lasso-personrisk__title">{label}</div>
+      <div className="lasso-personrisk__value">
+        <span className="lasso-personrisk__icon">{tone === "none" ? <CheckIcon /> : <SeverityIcon severity={tone === "50" ? 50 : 25} />}</span>
+        <span className={`lasso-personrisk__word lasso-personrisk__word--${tone}`}>{word}</span>
+      </div>
       <div className="lasso-personrisk__main">
-        <div className="lasso-personrisk__title">{label}</div>
         <div className="lasso-personrisk__desc">{desc}</div>
         {cases.length ? (
           <ul className="lasso-personrisk__cases">
@@ -54,7 +57,6 @@ function Item({ label, noun, cases, companies, onOpen }: { label: string; noun: 
           </ul>
         ) : null}
       </div>
-      <span className={`lasso-personrisk__word lasso-personrisk__word--${tone}`}>{word}</span>
     </li>
   );
 }
@@ -75,12 +77,14 @@ function Signal({ label, desc, word, tone }: { label: string; desc: string; word
     );
   return (
     <li className={`lasso-personrisk__item${tone === "locked" ? " lasso-personrisk__item--locked" : ""}`}>
-      <span className="lasso-personrisk__icon">{icon}</span>
+      <div className="lasso-personrisk__title">{label}</div>
+      <div className="lasso-personrisk__value">
+        <span className="lasso-personrisk__icon">{icon}</span>
+        <span className={`lasso-personrisk__word lasso-personrisk__word--${tone}`}>{word ?? "Låst"}</span>
+      </div>
       <div className="lasso-personrisk__main">
-        <div className="lasso-personrisk__title">{label}</div>
         <div className="lasso-personrisk__desc">{desc}</div>
       </div>
-      {word ? <span className={`lasso-personrisk__word lasso-personrisk__word--${tone}`}>{word}</span> : null}
     </li>
   );
 }
@@ -109,7 +113,7 @@ function SanctionsRow({ person }: { person: PersonVM }) {
 /**
  * Personrisiko (katalog 16.4): fem rækker, PEP, stråmandsindikator, konkurser og tvangsopløsninger
  * blandt de selskaber, personen har eller har haft en rolle i, og sanktionslister (låst uden adgang).
- * Mangler et opslag, står rækken som "Ikke tjekket"/"Ikke beregnet", aldrig som "Nej". Rækker adskilt med linjer, ikke tonede fliser; alvoren står som
+ * Mangler et opslag, står rækken som "Ikke tjekket"/"Ikke beregnet", aldrig som "Nej". Fem fliser (hvid flade, 1 px kant, aldrig tonet fyld); alvoren står som
  * ord i vægt 500 med ikon (regel 1 og 7), skalaen følger 17. Kun ud fra selskabernes CVR-status.
  */
 export function PersonRisk({ person, title, error, onOpen }: { person?: PersonVM; title?: string; error?: string; onOpen?: (a: ViewAction) => void }) {
