@@ -3510,3 +3510,5 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-ctable .lasso-tsearch { flex: 0 1 220px; width: 220px; }
   .lasso-ctable .lasso-pager__page, .lasso-ctable .lasso-pager__step { min-width: 36px; height: 36px; }
 }
+/* 19.3: fast forbeholdslinje under regnskabsanalysen, ren tekst i muted (ingen flade eller mærke). */
+.lasso-textsections__disclaimer { margin: var(--lasso-space-3) 0 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-muted); }

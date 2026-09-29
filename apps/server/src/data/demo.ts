@@ -172,7 +172,10 @@ function textSectionsFor(c: DemoCompany): TextSectionsVM {
   ];
   // Katalog 12/19: eksempel på regnskabsanalysen (POST /modules/reportanalysis) i samme form som
   // live-svaret: ét afsnit pr. felt, med navne som segmenter med Lasso-ID. Kun for to eksempler.
-  if (c.lassoId === "CVR-1-99000001" || c.lassoId === "CVR-1-99000010") sections.push(...analysisFor(c));
+  if (c.lassoId === "CVR-1-99000001" || c.lassoId === "CVR-1-99000010") {
+    sections.push(...analysisFor(c));
+    return { lassoId: c.lassoId, title: "Virksomhedsprofil", sections, analysisGenerated: "2026-09-12T08:00:00Z" };
+  }
   return { lassoId: c.lassoId, title: "Virksomhedsprofil", sections };
 }
 

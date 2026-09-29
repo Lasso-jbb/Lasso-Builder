@@ -335,6 +335,8 @@ export interface TextSectionsVM {
   lassoId: string;
   title?: string;
   sections: TextSectionItem[];
+  /** 19.3: hvornår regnskabsanalysen blev genereret (ISO); står i analysens kildelinje. */
+  analysisGenerated?: string;
 }
 
 /** Begivenhed i virksomhedens historik (katalog 12, "Tidslinje"). */

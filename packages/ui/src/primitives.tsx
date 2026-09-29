@@ -266,11 +266,11 @@ export function Missing() {
 }
 
 /** Regel 8: kildelinje én gang pr. sektion, "Kilde: Navn, opdateret DD.MM.ÅÅÅÅ". */
-export function SourceLine({ source, updated }: { source: string; updated?: string | null }) {
+export function SourceLine({ source, updated, verb = "opdateret" }: { source: string; updated?: string | null; verb?: string }) {
   return (
     <p className="lasso-source">
       Kilde: {source}
-      {updated ? `, opdateret ${formatDate(updated)}` : ""}
+      {updated ? `, ${verb} ${formatDate(updated)}` : ""}
     </p>
   );
 }

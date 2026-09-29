@@ -377,7 +377,8 @@ export class LiveProvider implements DataProvider {
       withinBudget(safe(() => this.client.reportAnalysis(lassoId)), TEXT_SECTIONS_BUDGET_MS),
     ]);
     const analysisSections = analysisRaw === undefined ? [] : adaptReportAnalysisSections(analysisRaw);
-    return analysisSections.length ? { ...base, sections: [...base.sections, ...analysisSections] } : base;
+    // Analysen genereres ved opslaget (POST), så genereringsdatoen er tidspunktet for svaret.
+    return analysisSections.length ? { ...base, sections: [...base.sections, ...analysisSections], analysisGenerated: new Date().toISOString() } : base;
   }
 
   /** Katalog 28.2/28.6/28.8: fra virksomhedens fulde svar og regnskabsårene. Feltnavne ubekræftede (eventAdapters.ts). */
