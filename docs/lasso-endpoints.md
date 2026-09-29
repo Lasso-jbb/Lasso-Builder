@@ -425,3 +425,10 @@ Ingen af felterne er set i et rigtigt svar. Mangler de, viser værktøjslinjen h
 Det andet scope (`alternate`, fx koncernregnskabet ved siden af selskabets) og periodetyperne (`periods`: halvår,
 kvartal) findes kun i demodata; i live er "Koncern"/"Selskab" dæmpet med forklaring, og halvår/kvartal er dæmpet
 med "Kun årsregnskab indberettet".
+
+## Ubekræftet: matrikelgeometri og revisorhistorik (katalog 20.2, 22/26e.8)
+
+`PropertyVM.geometry` (matrikelpolygon og bygningsomrids i lokale meter) og `AuditorIndependenceVM.history`
+(revisorer over tid) findes kun i demodata. En live-kilde (Datafordeleren MAT/BBR for geometri, CVR-historik
+for revisorskift) er ikke bekræftet; uden data viser ejendomskortet "Intet matrikelkort tilgængeligt", og
+revisorhistorikken udelades.

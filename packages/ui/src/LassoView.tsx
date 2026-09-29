@@ -134,7 +134,19 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return <CompanyTable key={key} result={empty.searches[k]} columns={c.columns} title={c.title} error={err(`search:${k}`)} onAction={act} canDrillDown={Boolean(props.host.drillDown)} />;
     }
     case "LassoCompareTable":
-      return <CompareTable key={key} companies={c.companies} metrics={c.metrics} title={c.title} dataset={empty} onAction={act} canDrillDown={Boolean(props.host.drillDown)} />;
+      return (
+        <CompareTable
+          key={key}
+          companies={c.companies}
+          metrics={c.metrics}
+          title={c.title}
+          dataset={empty}
+          onAction={act}
+          canDrillDown={Boolean(props.host.drillDown)}
+          onAddCompany={props.host.prompt ? () => act({ kind: "prompt", prompt: "Tilføj en virksomhed til sammenligningen" }) : undefined}
+          onChooseMetrics={props.host.prompt ? () => act({ kind: "prompt", prompt: "Vælg andre nøgletal i sammenligningen" }) : undefined}
+        />
+      );
     case "LassoKeyValueList": {
       // Det, hovedet, kontaktblokken og ejerlisten viser på samme side, gentages ikke (companyFacts).
       const page = companyFactOptions(props.spec.components, c.company);

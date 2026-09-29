@@ -1,6 +1,8 @@
+import { useState, type CSSProperties } from "react";
 import { amountScale, currencyUnit, formatAmount, formatNumber, formatPercent, formatScaled, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, percentChange, type Dataset, type Metric } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section } from "../primitives.js";
+import { useWidth } from "../useWidth.js";
 
 /** "Bedst" er kun entydigt for beløb (og ratio-nøgletal, hvor højere er bedre); aldrig for ansatte, gæld eller balancesum (katalog 22). */
 const BEST_IS_HIGHEST: ReadonlySet<Metric> = new Set(["omsaetning", "bruttofortjeneste", "resultat", "egenkapital", "ebitda", "soliditetsgrad", "overskudsgrad", "likviditetsgrad"]);
@@ -17,6 +19,8 @@ export function CompareTable({
   dataset,
   onAction,
   canDrillDown,
+  onAddCompany,
+  onChooseMetrics,
 }: {
   companies: readonly string[];
   metrics: readonly Metric[];
@@ -24,7 +28,14 @@ export function CompareTable({
   dataset: Dataset;
   onAction: (a: ViewAction) => void;
   canDrillDown: boolean;
+  /** 26e.7: "+ Tilføj virksomhed" under tabellen (værten spørger videre). */
+  onAddCompany?: () => void;
+  /** 26e.7: "Vælg nøgletal" under tabellen. */
+  onChooseMetrics?: () => void;
 }) {
+  // 26e.7: på mobil ses to virksomheder ad gangen; swipe skifter par, og sideindikatoren følger med.
+  const [page, setPage] = useState(0);
+  const [wrapRef, wrapWidth] = useWidth<HTMLDivElement>(358);
   const cols = companies.map((id) => {
     const co = dataset.companies[id];
     const years = dataset.financials[id]?.years ?? [];
@@ -51,11 +62,32 @@ export function CompareTable({
   const year = cols.map((c) => c.last?.year).find((y) => y !== undefined);
   const firstAmount = metrics.find((m) => METRIC_KIND[m] === "amount");
 
+  const pages = Math.ceil(cols.length / 2);
   return (
-    <Section title={heading} span="full">
-      <div className="lasso-table-frame">
-        <div className="lasso-table-wrap">
-          <table className="lasso-table lasso-compare">
+    <Section title={heading} span="full" className="lasso-compare-section">
+      {pages > 1 ? (
+        <div className="lasso-compare__pager" aria-hidden="true">
+          <span className="lasso-compare__dots">
+            {Array.from({ length: pages }, (_, i) => (
+              <span key={i} className={`lasso-compare__dot${i === page ? " is-on" : ""}`} />
+            ))}
+          </span>
+          <span className="lasso-compare__hint">swipe for næste par</span>
+        </div>
+      ) : null}
+      <div className={`lasso-table-frame lasso-compare-frame${cols.length > 3 ? " lasso-compare-frame--many" : ""}`}>
+        <div
+          ref={wrapRef}
+          className="lasso-table-wrap lasso-compare-wrap"
+          style={{ "--lasso-compare-pair": `${Math.max(100, Math.floor((wrapWidth - 118) / 2))}px` } as CSSProperties}
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            const first = el.querySelector<HTMLElement>(".lasso-compare__company");
+            const colW = first?.offsetWidth ?? 0;
+            if (colW > 0) setPage(Math.min(pages - 1, Math.round(el.scrollLeft / (colW * 2))));
+          }}
+        >
+          <table className={`lasso-table lasso-compare lasso-compare--n${Math.min(cols.length, 6)}`}>
             <thead>
               <tr>
                 <th scope="col" className="lasso-compare__corner">Nøgletal{year ? `, ${year}` : ""}</th>
@@ -92,7 +124,7 @@ export function CompareTable({
                       {scale ? `, ${scale.label}` : ""}
                     </th>
                     {values.map((v, i) => (
-                      <td key={cols[i]!.id} className={`lasso-num ${v !== null && v === best ? "lasso-best" : ""} ${v !== null && v < 0 && m === "resultat" ? "lasso-down" : ""}`}>
+                      <td key={cols[i]!.id} className={`lasso-num ${i === 0 ? "is-origin" : ""} ${v !== null && v === best ? "lasso-best" : ""} ${v !== null && v < 0 ? "lasso-down" : ""}`}>
                         {v === null ? <span className="lasso-notreported">Ikke oplyst</span> : kind === "percent" ? formatPercent(v, false) : scale ? formatScaled(v, scale) : mixed ? formatAmount(v, cols[i]!.unit) : formatNumber(v)}
                       </td>
                     ))}
@@ -102,10 +134,10 @@ export function CompareTable({
               {firstAmount ? (
                 <tr>
                   <th scope="row">Udvikling i {METRIC_LABELS[firstAmount].toLowerCase()}, %</th>
-                  {cols.map((c) => {
+                  {cols.map((c, i) => {
                     const pct = percentChange([c.prev?.[METRIC_FIELD[firstAmount]] as number | undefined, c.last?.[METRIC_FIELD[firstAmount]] as number | undefined]);
                     return (
-                      <td key={c.id} className={`lasso-num ${pct === null ? "" : pct < 0 ? "lasso-down" : "lasso-up"}`}>
+                      <td key={c.id} className={`lasso-num ${i === 0 ? "is-origin" : ""} ${pct === null ? "" : pct < 0 ? "lasso-down" : "lasso-up"}`}>
                         {pct === null ? <span className="lasso-notreported">Ikke oplyst</span> : formatPercent(pct).replace(" %", "")}
                       </td>
                     );
@@ -116,6 +148,20 @@ export function CompareTable({
           </table>
         </div>
       </div>
+      {onAddCompany || onChooseMetrics ? (
+        <div className="lasso-compare__actions">
+          {onAddCompany ? (
+            <button type="button" className="lasso-btn lasso-compare__action" onClick={onAddCompany}>
+              + Tilføj virksomhed
+            </button>
+          ) : null}
+          {onChooseMetrics ? (
+            <button type="button" className="lasso-btn lasso-compare__action" onClick={onChooseMetrics}>
+              Vælg nøgletal
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </Section>
   );
 }

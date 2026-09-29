@@ -400,6 +400,16 @@ export interface PropertyVM {
   buildings: BuildingVM[];
   /** Sat, når vi har en reel matrikelgeometri at tegne; ellers vises kortet med tom-tilstand. */
   hasGeometry?: boolean;
+  /**
+   * Katalog 20.2: matrikelpolygon og bygningsomrids i et lokalt, metrisk koordinatsystem (x mod øst,
+   * y mod nord), så kortet kan tegnes i målestok. `selected` er bygningsnummeret med koral kant.
+   * Live-kilde (Datafordeleren/MAT og BBR) er ubekræftet; uden geometri vises tom tilstand.
+   */
+  geometry?: {
+    parcel: [number, number][];
+    buildings?: { number?: number; polygon: [number, number][] }[];
+    selected?: number;
+  };
 }
 
 export interface PropertiesVM {
@@ -598,6 +608,8 @@ export interface AuditorIndependenceVM {
   relations: AuditorRelationVM[];
   /** Sat når data mangler eller er ufuldstændige (ny datamodel, ingen bekræftet kilde endnu). */
   unavailableReason?: string;
+  /** Katalog 22/26e.8: revisorhistorik, ældste først; perioder som ÅÅÅÅ-MM-DD. Kun demodata indtil videre. */
+  history?: { name: string; from?: string; to?: string }[];
 }
 
 export interface SearchResultVM {

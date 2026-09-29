@@ -2043,3 +2043,87 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 .lasso-fs-cf__value { width: 72px; flex: none; text-align: right; font-weight: 600; color: var(--lasso-text); font-variant-numeric: tabular-nums; }
 .lasso-fs-cf__row--total { border-top: 1px solid var(--lasso-text); border-bottom: 0; font-weight: 600; min-height: 48px; }
 .lasso-fs-cf__value.lasso-down, .lasso-fs-m__row:not(.lasso-fs-m__row--line) .lasso-fs-m__value.lasso-down { color: var(--lasso-negative); }
+
+/* ---------- 20.2 Ejendomskort (BBR) med matrikelpolygon (node C5V-0); mobil 26e: 120 px kortudsnit og nøgle-værdi i to kolonner ---------- */
+.lasso-property-map__parcel { fill: var(--lasso-map-fill); fill-opacity: 0.45; stroke: var(--lasso-accent); stroke-width: 1; stroke-dasharray: 4 3; }
+.lasso-property-map__label { box-shadow: var(--lasso-shadow-pop); }
+@container lasso (max-width: 560px) {
+  .lasso-property-map { height: 120px; }
+  .lasso-property__kv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--lasso-space-4); }
+  .lasso-property__row { height: auto; min-height: 44px; flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; padding: 6px 0; }
+  .lasso-property__row > span:first-child { font-size: 12px; line-height: 16px; }
+}
+
+/* ---------- 26e.1 Produktionsenheder (mobil): rækker i tre linjer (node EYU-0) ---------- */
+.lasso-units__count { font-size: var(--lasso-fs-sm); color: var(--lasso-muted); font-weight: 400; }
+.lasso-units-m { display: none; list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--lasso-border); }
+.lasso-units-m__row { display: flex; flex-direction: column; gap: 2px; min-height: 60px; justify-content: center; padding: 10px 0; border-bottom: 1px solid var(--lasso-divider-subtle); }
+.lasso-units-m__row.is-ended { opacity: 0.7; }
+.lasso-units-m__name { font-size: var(--lasso-fs); line-height: 20px; font-weight: 500; color: var(--lasso-text); }
+.lasso-units-m__address { font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-2); }
+.lasso-units-m__meta { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+@container lasso (max-width: 560px) {
+  .lasso-units-m { display: block; }
+  .lasso-units .lasso-units__table { display: none; }
+  .lasso-units .lasso-section__subtitle { display: none; }
+}
+
+/* ---------- 26e.5 Notifikationsliste (mobil): filterchips Alle/Ulæste/Vigtige (node F1V-0) ---------- */
+.lasso-notif__chips { display: none; gap: var(--lasso-space-2); padding: var(--lasso-space-3) var(--lasso-space-4) var(--lasso-space-2); }
+.lasso-notif__chip { height: 32px; padding: 0 12px; border-radius: var(--lasso-radius-pill); border: 1px solid var(--lasso-border-strong); background: var(--lasso-surface); font: inherit; font-size: var(--lasso-fs-sm); color: var(--lasso-text-2); cursor: pointer; }
+.lasso-notif__chip.is-selected { border-color: var(--lasso-text); color: var(--lasso-text); font-weight: 600; }
+.lasso-notif__chip:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
+.lasso-notif__dot--important { background: var(--lasso-danger); }
+@container lasso (max-width: 560px) {
+  .lasso-notif__chips { display: flex; }
+  .lasso-notif .lasso-notif__tabs { display: none; }
+}
+
+/* ---------- 26e.6 Push-notifikation, systemets banner (node F2X-0) ---------- */
+.lasso-push { display: flex; align-items: flex-start; gap: var(--lasso-space-3); max-width: 380px; padding: var(--lasso-space-3) var(--lasso-space-4) var(--lasso-space-3) var(--lasso-space-3); border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-xl); background: var(--lasso-surface); box-shadow: var(--lasso-shadow-pop); }
+.lasso-push__icon { flex: none; width: 36px; height: 36px; border-radius: var(--lasso-radius); border: 1px solid var(--lasso-border); display: grid; place-items: center; color: var(--lasso-text); }
+.lasso-push__icon svg { width: 22px; height: auto; }
+.lasso-push__main { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lasso-push__head { display: flex; justify-content: space-between; gap: var(--lasso-space-2); }
+.lasso-push__app { font-size: var(--lasso-fs-sm); font-weight: 600; color: var(--lasso-text); }
+.lasso-push__time { font-size: 12px; color: var(--lasso-muted); }
+.lasso-push__text { font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-2); }
+
+/* ---------- 26e.7 Sammenligning (mobil): fast 118 px nøgletalskolonne, to virksomheder, swipe pr. par (node F3C-0) ---------- */
+.lasso-compare__pager { display: none; align-items: center; justify-content: center; gap: var(--lasso-space-2); margin-bottom: var(--lasso-space-3); font-size: 12px; color: var(--lasso-muted); }
+.lasso-compare__dots { display: inline-flex; gap: 4px; }
+.lasso-compare__dot { width: 6px; height: 6px; border-radius: 3px; background: var(--lasso-border-strong); }
+.lasso-compare__dot.is-on { width: 16px; background: var(--lasso-text); }
+.lasso-compare__actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--lasso-space-2); margin-top: var(--lasso-space-3); }
+.lasso-compare__action { height: var(--lasso-btn-h-lg); color: var(--lasso-text); }
+@container lasso (max-width: 560px) {
+  .lasso-compare__pager { display: flex; }
+  .lasso-table-frame:has(.lasso-compare) .lasso-table-wrap.lasso-compare-wrap { padding: 0; scroll-snap-type: x mandatory; scroll-padding-left: 118px; }
+  .lasso-table.lasso-compare { table-layout: fixed; width: max-content; min-width: 0; }
+  .lasso-compare th:first-child, .lasso-compare td:first-child { width: 118px; min-width: 118px; max-width: 118px; white-space: normal; }
+  .lasso-compare__company, .lasso-compare td:not(:first-child) { width: var(--lasso-compare-pair, 120px); min-width: var(--lasso-compare-pair, 120px); max-width: var(--lasso-compare-pair, 120px); }
+  .lasso-compare__company:nth-child(2n) { scroll-snap-align: start; }
+  .lasso-compare__company.is-origin { box-shadow: none; background: var(--lasso-accent-soft); }
+  .lasso-compare__sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lasso-compare__action { height: var(--lasso-touch-h); }
+}
+
+/* ---------- 26f.5 Sammenligning, tablet: 180 + 3 × 196 px, 28 px fade, emnevirksomheden fast som anden kolonne (node FGO-0) ---------- */
+@container lasso (max-width: 1023px) and (min-width: 561px) {
+  .lasso-table.lasso-compare { table-layout: fixed; width: max-content; min-width: 0; }
+  .lasso-compare th:first-child, .lasso-compare td:first-child { width: 180px; min-width: 180px; max-width: 180px; white-space: normal; }
+  .lasso-compare__company, .lasso-compare td:not(:first-child) { width: 196px; min-width: 196px; max-width: 196px; }
+  .lasso-compare-frame--many .lasso-compare .is-origin { position: sticky; left: 180px; z-index: 1; background: var(--lasso-surface); }
+  .lasso-compare-frame--many { position: relative; }
+  .lasso-compare-frame--many::after { content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 28px; pointer-events: none; background: linear-gradient(to right, transparent, var(--lasso-surface)); }
+}
+
+/* ---------- 26e.8 Revisorhistorik som proportional bjælke (node F52-0) ---------- */
+.lasso-audhist { margin-top: var(--lasso-space-4); display: flex; flex-direction: column; gap: var(--lasso-space-2); }
+.lasso-audhist__title { margin: 0; font-size: var(--lasso-fs); font-weight: 600; color: var(--lasso-text); }
+.lasso-audhist__bar { display: flex; gap: 2px; height: 24px; }
+.lasso-audhist__seg { flex-basis: 0; min-width: 0; display: flex; align-items: center; justify-content: center; padding: 0 6px; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-sm); background: var(--lasso-surface-muted); font-size: 11px; line-height: 14px; color: var(--lasso-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lasso-audhist__seg.is-current { background: var(--lasso-accent-soft); border-color: var(--lasso-accent-border); color: var(--lasso-accent-text); font-weight: 600; }
+@container lasso (max-width: 1023px) {
+  .lasso-compare__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}

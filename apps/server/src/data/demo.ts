@@ -511,6 +511,11 @@ function auditorIndependenceFor(c: DemoCompany): AuditorIndependenceVM {
     checkedAt: "2026-09-25",
     relations,
     unavailableReason: relations.length ? undefined : "Der er ikke fundet kendte relationer mellem revisor, kunden og personer i demodata.",
+    // Katalog 26e.8: revisorhistorik som proportional bjælke (eksempeldata).
+    history: [
+      { name: "Eksempel Revision", from: "2012-01-01", to: "2016-12-31" },
+      { name: c.auditor ?? "Nuværende revisor", from: "2017-01-01" },
+    ],
   };
 }
 
@@ -576,7 +581,16 @@ const PROPERTIES: Record<string, PropertiesVM["properties"]> = {
       builtAreaM2: 1450,
       publicValuation: { amount: 18_500_000, year: 2024 },
       encumbrances: 1,
-      hasGeometry: false,
+      hasGeometry: true,
+      // Eksempelgeometri (meter, lokalt): skæv matrikel med to bygninger; bygning 1 er valgt.
+      geometry: {
+        parcel: [[0, 0], [78, 4], [74, 46], [4, 42]],
+        buildings: [
+          { number: 1, polygon: [[10, 10], [40, 12], [39, 30], [9, 28]] },
+          { number: 2, polygon: [[48, 14], [68, 15], [67, 36], [47, 35]] },
+        ],
+        selected: 1,
+      },
       buildings: [
         { number: 1, usage: "Kontor og administration", builtYear: 2001, floors: 2, areaM2: 900, units: 4 },
         { number: 2, usage: "Lager og produktion", builtYear: 2001, floors: 1, areaM2: 550, units: 1 },
