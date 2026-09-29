@@ -5190,9 +5190,11 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-root .lasso-news__row { gap: 6px; padding: 12px 0; }
   .lasso-root .lasso-news__row:first-child { padding-top: 0; }
   .lasso-root .lasso-news__headline { font-weight: 400; line-height: 20px; }
-  .lasso-root .lasso-news__row--featured, .lasso-root .lasso-news__row--featured:first-child { padding: 12px; border: 1px solid var(--lasso-border); }
+  .lasso-root .lasso-news__row > .lasso-news__excerpt { display: none; }
+  .lasso-root .lasso-news__row--featured, .lasso-root .lasso-news__row--featured:first-child { display: block; padding: 12px; border: 1px solid var(--lasso-border); }
+  .lasso-root .lasso-news__row--featured .lasso-news__head { margin-bottom: 6px; }
   .lasso-root .lasso-news__row--featured .lasso-news__headline { font-size: 16px; line-height: 22px; font-weight: 600; }
-  .lasso-root .lasso-news__row--featured .lasso-news__excerpt { -webkit-line-clamp: unset; display: block; }
+  .lasso-root .lasso-news__row--featured > .lasso-news__excerpt { -webkit-line-clamp: unset; display: block; }
 }
 
 /* 14.1 (runde 5, Paper AY0-0): detaljepanelet som overlay oven på diagramlærredet: højre 16, top 16,
