@@ -4801,12 +4801,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 
 /* ---------- 16.4 Personrisiko: antal i ikonpladsen, "Opgrader" som tekstlink ---------- */
 /* 16.4 (Jakob): fast ikon-kolonne (32 px), så titler og tekster flugter i alle rækker, og
-   vurderingsordet i en fælles højre kolonne (subgrid), der aldrig klipper ordet. */
-.lasso-personrisk__items { display: grid; grid-template-columns: 32px minmax(0, 1fr) max-content; column-gap: var(--lasso-space-3); }
-.lasso-personrisk__item { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; column-gap: var(--lasso-space-3); }
-@supports not (grid-template-columns: subgrid) {
-  .lasso-personrisk__item { grid-template-columns: 32px minmax(0, 1fr) minmax(96px, max-content); }
-}
+   vurderingsordet højrestillet i sin egen kolonne (auto), så det aldrig klippes. */
+.lasso-personrisk__item { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; column-gap: var(--lasso-space-3); }
 .lasso-personrisk__icon { width: 32px; height: 20px; }
 .lasso-personrisk__icon:has(.lasso-personrisk__count) { height: 32px; margin: -6px 0; }
 .lasso-personrisk__item--locked .lasso-personrisk__main { grid-column: 2 / -1; }

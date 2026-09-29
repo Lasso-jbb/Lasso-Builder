@@ -1684,7 +1684,7 @@ function FiveModules({ ds }: { ds: Dataset }) {
       <ModuleExample title="Nøgletal" pattern="mønster 1 + 4: graf fuld, flerårstabel fuld" text="Linjegrafen i fuld bredde og flerårstabellen (5 år) under. Print til venstre; Vend graf og Selskab/Koncern som visningsvalg til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Print" }} controls={<>{ghost("Vend")}<Seg items={["Selskab", "Koncern"]} /></>} />}>
         <KeyFigureModule ds={ds} />
       </ModuleExample>
-      <ModuleExample title="Ejerdiagram" pattern="mønster 2" text="Diagrammet ¾ med relationerne ¼ ved siden. Udskriv og Gem til venstre; Layout og Rediger til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Udskriv" }} secondary={[{ label: "Gem" }]} controls={<>{ghost("Layout")}{ghost("Rediger")}</>} />}>
+      <ModuleExample title="Ejerdiagram" pattern="mønster 2" text="Diagrammet ¾ med relationerne ¼ ved siden. Udskriv til venstre; Layout til højre. Ingen Gem eller Rediger (G5: data kommer i realtid og kan ikke gemmes eller rettes)." toolbar={<ModuleToolbar className="lasso-toolbar--module" primary={{ label: "Udskriv" }} controls={ghost("Layout")} />}>
         {view([{ type: "LassoOwnershipDiagram", company: C, width: "three-quarters" }, { type: "LassoRelations", company: C, width: "quarter" }])}
       </ModuleExample>
       <ModuleExample title="Nyheder" pattern="mønster 8" text="Faner niveau 2 over kildernes strømme, artiklerne som kortgitter. Filtre yderst til højre." toolbar={<ModuleToolbar className="lasso-toolbar--module" field={<Seg level={2} items={["Lasso", "Artikler", "Ritzau", "Statstidende"]} />} controls={ghost("Filtre")} />}>
