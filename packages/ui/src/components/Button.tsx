@@ -127,10 +127,12 @@ export interface ActionRowProps {
   moreAlign?: "start" | "end";
   /** "…"-menuen åben fra start (statisk forhåndsvisning og tests). */
   defaultMoreOpen?: boolean;
+  /** Punkt i den åbne "…"-menu tegnet i hover-tilstand (statisk forhåndsvisning). */
+  moreHighlight?: string;
   className?: string;
 }
 
-export function ActionRow({ more, moreLabel = "Flere handlinger", moreContext, secondary = [], primary, size = 36, spread = false, defaultMoreOpen = false, moreAlign = "start", className = "" }: ActionRowProps) {
+export function ActionRow({ more, moreLabel = "Flere handlinger", moreContext, secondary = [], primary, size = 36, spread = false, defaultMoreOpen = false, moreHighlight, moreAlign = "start", className = "" }: ActionRowProps) {
   const iconSize: IconButtonSize = size === 32 ? 32 : size === 42 ? 38 : 36;
   return (
     <div className={`lasso-actionrow lasso-actionrow--${size} ${spread ? "lasso-actionrow--spread" : ""} ${className}`}>
@@ -143,6 +145,7 @@ export function ActionRow({ more, moreLabel = "Flere handlinger", moreContext, s
           items={more}
           context={moreContext}
           defaultOpen={defaultMoreOpen}
+          highlight={moreHighlight}
           align={moreAlign}
         />
       ) : null}

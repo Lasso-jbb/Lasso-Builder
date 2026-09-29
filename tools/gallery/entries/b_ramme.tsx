@@ -232,25 +232,29 @@ function FullPage() {
 /* ---------------------------------------------------------------- 04 sidehoved */
 
 const HEAD_MENU: MenuItem[] = [
-  { id: "export", label: "Eksportér", icon: <Icon name="export" /> },
-  { id: "monitor", label: "Overvåg listen", icon: <Icon name="bell" /> },
+  { id: "duplicate", label: "Dublér", icon: <Icon name="copy" /> },
   { id: "delete", label: "Slet", icon: <Icon name="trash" />, destructive: true },
 ];
 
-function Head(p: { dirty?: boolean; menu?: boolean; renaming?: boolean }) {
+/** 04: sidehovedet som hvidt kort (904, radius 10, uden kant) på chrome-grå baggrund. */
+function Head(p: { dirty?: boolean; menu?: boolean; renaming?: boolean; minHeight?: number }) {
   return (
-    <div className="lasso-card" style={{ maxWidth: 760 }}>
-      <PageHeader
-        title="Store IT-selskaber"
-        subtitle="Gemt liste, 1.243 virksomheder"
-        dirty={p.dirty}
-        onSave={noop}
-        secondary={{ label: "Gem som ny", onClick: noop }}
-        onRename={noop}
-        menuItems={HEAD_MENU}
-        defaultMenuOpen={p.menu}
-        defaultRenaming={p.renaming}
-      />
+    <div style={{ background: "var(--lasso-chrome)", padding: 24, margin: -24, minHeight: p.minHeight }}>
+      <div style={{ maxWidth: 904, background: "var(--lasso-surface)", borderRadius: "var(--lasso-radius-lg)", paddingBottom: 24, overflow: "visible" }}>
+        <PageHeader
+          title="Store IT-selskaber"
+          subtitle="5 filtre, 1 uden værdi"
+          dirty={p.dirty}
+          dirtyLabel="5 filtre, ændringer ikke gemt"
+          onSave={noop}
+          secondary={{ label: "Gem som ny", onClick: noop }}
+          onRename={noop}
+          menuItems={HEAD_MENU}
+          defaultMenuOpen={p.menu}
+          menuHighlight={p.menu ? "rename" : undefined}
+          defaultRenaming={p.renaming}
+        />
+      </div>
     </div>
   );
 }
@@ -276,7 +280,6 @@ const TREE: TreeNode[] = [
           { id: "01.4", code: "01.4", label: "Husdyravl", count: 9, children: [{ id: "014100", code: "014100", label: "Hold af malkekvæg", count: 9 }] },
         ],
       },
-      { id: "02", code: "02", label: "Skovbrug og skovning", count: 9, children: [{ id: "021000", code: "021000", label: "Skovdrift", count: 9 }] },
     ],
   },
   { id: "B", code: "B", label: "Råstofindvinding", count: 15, children: [{ id: "08", code: "08", label: "Anden råstofindvinding", count: 15 }] },
@@ -299,6 +302,7 @@ function TreeDialog() {
         searchPlaceholder="Søg branche eller NACE-kode"
         extra={{ label: "Søg også i bibrancher", checked: false, onChange: noop }}
         effect="Reducerer resultatet med 1.782"
+        initialFocus="panel"
         onClose={noop}
         onConfirm={noop}
       />
@@ -729,7 +733,7 @@ export const entries: GalleryEntry[] = [
   /* ---------- 04 Sidehoved ---------- */
   { nr: "04.1", title: "Sidehoved (kort med titel og handlinger)", node: "495-0", note: "Tilstand 1: i ro, gemt, intet ændret.", render: () => <Head /> },
   { nr: "04.2", title: "Sidehoved, ændret — ikke gemt", node: "49K-0", render: () => <Head dirty /> },
-  { nr: "04.3", title: "Sidehoved, menu åben (omdøb)", node: "4A3-0", render: () => <Room h={800}><Head menu /></Room> },
+  { nr: "04.3", title: "Sidehoved, menu åben (omdøb)", node: "4A3-0", render: () => <Head menu minHeight={300} /> },
   { nr: "04.4", title: "Sidehoved, omdøber", node: "4AX-0", render: () => <Head renaming /> },
 
   /* ---------- 05 Knapper og etiketter ---------- */
@@ -739,10 +743,16 @@ export const entries: GalleryEntry[] = [
     node: "9EM-0",
     render: () => (
       <Row>
-        <Button variant="primary">Gem liste</Button>
-        <Button>Eksportér</Button>
-        <Button variant="text">Annuller</Button>
-        <Button variant="danger">Slet liste</Button>
+        <Button variant="primary" size={42} icon="plus">
+          Gem liste
+        </Button>
+        <Button size={42}>Eksportér</Button>
+        <Button variant="text" size={42}>
+          Annuller
+        </Button>
+        <Button variant="danger" size={42}>
+          Slet liste
+        </Button>
         <Button variant="link">Se alle</Button>
       </Row>
     ),
@@ -752,35 +762,19 @@ export const entries: GalleryEntry[] = [
     title: "Ikonknapper",
     node: "9FU-0",
     render: () => (
-      <Stack gap={20}>
-        <div>
-          <Cap>38 px</Cap>
-          <Row>
-            <IconButton icon="more" label="Flere handlinger" />
-            <IconButton icon="saved" label="Gemt" pressed filled />
-            <IconButton icon="edit" label="Redigér" variant="subtle" />
-            <IconButton icon="close" label="Luk" variant="bare" />
-          </Row>
-        </div>
-        <div>
-          <Cap>32 px</Cap>
-          <Row>
-            <IconButton icon="more" label="Flere handlinger" size={32} />
-            <IconButton icon="saved" label="Gemt" size={32} pressed filled />
-            <IconButton icon="edit" label="Redigér" size={32} variant="subtle" />
-            <IconButton icon="close" label="Luk" size={32} variant="bare" />
-          </Row>
-        </div>
-      </Stack>
+      <Row>
+        <IconButton icon="more" label="Flere handlinger" />
+        <IconButton icon="more" label="Flere handlinger, aktiv" variant="active" />
+        <IconButton icon="edit" label="Redigér" size={32} variant="subtle" />
+        <IconButton icon="close" label="Luk" size={32} variant="bare" />
+      </Row>
     ),
   },
   {
     nr: "05.3",
     title: "Handlingsrække",
     node: "9GD-0",
-    render: () => (
-      <ActionRow more={HEAD_MENU} secondary={[{ label: "Eksportér", onClick: noop }]} primary={{ label: "Gem", onClick: noop }} />
-    ),
+    render: () => <ActionRow size={42} more={HEAD_MENU} secondary={[{ label: "Gem som ny", onClick: noop }]} primary={{ label: "Gem", onClick: noop }} />,
   },
   { nr: "05.4", title: "Valg-chips", node: "9GS-0", render: () => <ChoiceDemo /> },
   { nr: "05.5", title: "Tag i felt", node: "9H4-0", render: () => <TagDemo /> },
@@ -800,13 +794,15 @@ export const entries: GalleryEntry[] = [
     title: "Status som ren tekst",
     node: "9HM-0",
     render: () => (
-      <Row gap={24}>
-        <StatusBadge status="Aktiv" kind="active" />
-        <StatusBadge status="Konkurs" kind="warning" />
-        <StatusBadge status="Likvidation" />
-        <StatusBadge status="Ophørt" kind="inactive" />
-        <StatusBadge status="Ny" kind="new" />
-      </Row>
+      <div style={{ fontSize: 12 }}>
+        <Row gap={24}>
+          <StatusBadge status="Aktiv" kind="active" />
+          <StatusBadge status="Under konkurs" kind="warning" />
+          <StatusBadge status="Ophørt" kind="inactive" />
+          <StatusBadge status="Under likvidation" />
+          <StatusBadge status="Ny" kind="new" />
+        </Row>
+      </div>
     ),
   },
   {
@@ -840,23 +836,31 @@ export const entries: GalleryEntry[] = [
     nr: "05.9",
     title: "Knaptilstande, primær",
     node: "9FE-0",
-    note: "Hover og fokus kan ikke vises statisk; kun standard, gemmer (loading) og deaktiveret er tegnet.",
+    note: "Hover er tegnet statisk med klassen is-hover (samme farve som :hover).",
     render: () => (
       <Row gap={16}>
         <div>
-          <Cap>Standard</Cap>
-          <Button variant="primary">Gem</Button>
+          <Cap>Hvile</Cap>
+          <Button variant="primary" size={42}>
+            Gem liste
+          </Button>
         </div>
         <div>
-          <Cap>Gemmer</Cap>
-          <Button variant="primary" loading>
-            Gemmer…
+          <Cap>Hover</Cap>
+          <Button variant="primary" size={42} className="is-hover">
+            Gem liste
           </Button>
         </div>
         <div>
           <Cap>Deaktiveret</Cap>
-          <Button variant="primary" disabled>
-            Gem
+          <Button variant="primary" size={42} disabled>
+            Gem liste
+          </Button>
+        </div>
+        <div>
+          <Cap>Gemmer…</Cap>
+          <Button variant="primary" size={42} loading>
+            Gemmer…
           </Button>
         </div>
       </Row>
@@ -919,8 +923,9 @@ export const entries: GalleryEntry[] = [
         <Dialog
           open
           title="Gem ændringer først?"
-          description="Du har ændret Store IT-selskaber uden at gemme. Går du videre nu, går ændringerne tabt."
+          description="Du har ændret “Store IT-selskaber” uden at gemme. Går du videre nu, går ændringerne tabt."
           onClose={noop}
+          hideClose
           actions={{ destructive: { label: "Kassér", onClick: noop }, secondary: { label: "Annuller", onClick: noop }, primary: { label: "Gem og gå videre", onClick: noop } }}
         />
       </Room>
@@ -938,6 +943,8 @@ export const entries: GalleryEntry[] = [
           triggerLabel="Flere handlinger"
           label="Flere handlinger"
           defaultOpen
+          width={240}
+          highlight="rename"
           items={[
             { id: "rename", label: "Omdøb", icon: <Icon name="edit" /> },
             { id: "export", label: "Eksportér", icon: <Icon name="export" /> },
@@ -956,9 +963,10 @@ export const entries: GalleryEntry[] = [
       <Room h={800}>
         <Picker
           trigger={<span>Store IT-selskaber</span>}
-          triggerClassName="lasso-select lasso-select--auto"
+          triggerClassName="lasso-sr-only"
           label="Gemte søgninger"
           defaultOpen
+          width={290}
           value="store"
           groups={[
             { items: [{ id: "ny", label: "Ny", sub: "Start forfra", icon: <Icon name="plus" /> }] },
@@ -982,7 +990,7 @@ export const entries: GalleryEntry[] = [
     note: "Tegnet statisk med ToastItem; i brug står beskeden nederst i midten og forsvinder efter 5 sekunder.",
     render: () => (
       <div style={{ display: "grid", gap: 12, justifyItems: "start" }}>
-        <ToastItem toast={{ id: 1, text: "Store IT-selskaber er gemt", tone: "ok", action: { label: "Fortryd", onClick: noop } }} />
+        <ToastItem toast={{ id: 1, text: "“Store IT-selskaber” er gemt", tone: "ok", action: { label: "Fortryd", onClick: noop } }} />
         <ToastItem toast={{ id: 2, text: "Eksporten kunne ikke hentes", tone: "error", action: { label: "Prøv igen", onClick: noop } }} />
       </div>
     ),

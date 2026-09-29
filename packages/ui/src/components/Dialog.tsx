@@ -40,10 +40,14 @@ export interface DialogProps {
   footNote?: ReactNode;
   /** Skærmlæsertekst på luk-krydset. */
   closeLabel?: string;
+  /** Uden luk-kryds (07.2: bekræftelsesdialogen lukkes med Annuller, Esc eller klik udenfor). */
+  hideClose?: boolean;
+  /** Hvor fokus lander ved åbning: "first" = første felt/knap (standard), "panel" = selve dialogen. */
+  initialFocus?: "first" | "panel";
   className?: string;
 }
 
-export function Dialog({ open, title, description, onClose, children, actions, size = "md", footNote, closeLabel = "Luk", className = "" }: DialogProps) {
+export function Dialog({ open, title, description, onClose, children, actions, size = "md", footNote, closeLabel = "Luk", hideClose = false, initialFocus = "first", className = "" }: DialogProps) {
   const layer = useLayer();
   const panel = useRef<HTMLDivElement>(null);
   const id = useId();
@@ -54,10 +58,10 @@ export function Dialog({ open, title, description, onClose, children, actions, s
   useEffect(() => {
     if (!open || !layer.ready) return;
     const previous = typeof document !== "undefined" ? (document.activeElement as HTMLElement | null) : null;
-    const first = focusables(panel.current).find((el) => !el.classList.contains("lasso-dialog__close")) ?? panel.current;
+    const first = initialFocus === "panel" ? panel.current : (focusables(panel.current).find((el) => !el.classList.contains("lasso-dialog__close")) ?? panel.current);
     first?.focus();
     return () => previous?.focus?.();
-  }, [open, layer.ready]);
+  }, [open, layer.ready, initialFocus]);
 
   if (!open) return null;
 
@@ -110,9 +114,11 @@ export function Dialog({ open, title, description, onClose, children, actions, s
               </p>
             ) : null}
           </div>
-          <button type="button" className="lasso-dialog__close" onClick={onClose} aria-label={closeLabel}>
-            <CloseIcon />
-          </button>
+          {hideClose ? null : (
+            <button type="button" className="lasso-dialog__close" onClick={onClose} aria-label={closeLabel}>
+              <CloseIcon />
+            </button>
+          )}
         </header>
         {children ? <div className="lasso-dialog__body">{children}</div> : null}
         {hasFoot ? (

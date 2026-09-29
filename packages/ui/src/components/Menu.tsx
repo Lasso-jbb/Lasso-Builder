@@ -49,13 +49,17 @@ export interface MenuProps {
   label?: string;
   cancelLabel?: string;
   className?: string;
-  /** Åben fra start (statisk forhåndsvisning og tests). */
+  /** Åben fra start (statisk forhåndsvisning og tests). Fokus flyttes da ikke ind i listen. */
   defaultOpen?: boolean;
+  /** Fast bredde på listen i px (fx 240 i 07.3, 290 i vælgerlisten 07.4). Udeladt = efter indhold, mindst 216. */
+  width?: number;
+  /** Id på et punkt, der tegnes i hover-tilstand (surface-muted), kun til statisk forhåndsvisning. */
+  highlight?: string;
 }
 
 type Pos = { x: number; y: number; up: boolean };
 
-export function Menu({ trigger, triggerClassName = "lasso-btn lasso-btn--ghost", triggerLabel, items, groups, value, align = "start", context, label, cancelLabel = "Annuller", className = "", defaultOpen = false }: MenuProps) {
+export function Menu({ trigger, triggerClassName = "lasso-btn lasso-btn--ghost", triggerLabel, items, groups, value, align = "start", context, label, cancelLabel = "Annuller", className = "", defaultOpen = false, width, highlight }: MenuProps) {
   const layer = useLayer();
   const id = useId();
   const listId = `${id}-menu`;
@@ -63,6 +67,8 @@ export function Menu({ trigger, triggerClassName = "lasso-btn lasso-btn--ghost",
   const list = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(defaultOpen);
   const [pos, setPos] = useState<Pos | null>(null);
+  // Åbnet af brugeren (klik/tast) = fokus på første punkt. defaultOpen (forhåndsvisning) lader fokus være.
+  const userOpened = useRef(false);
 
   const allGroups: readonly MenuGroup[] = groups ?? [{ items: items ?? [] }];
   const picker = groups !== undefined || value !== undefined;
@@ -89,8 +95,10 @@ export function Menu({ trigger, triggerClassName = "lasso-btn lasso-btn--ghost",
   useEffect(() => {
     if (!open || !layer.ready) return;
     place();
-    const first = list.current?.querySelector<HTMLElement>('[role^="menuitem"]:not([disabled])');
-    first?.focus();
+    if (userOpened.current) {
+      const first = list.current?.querySelector<HTMLElement>('[role^="menuitem"]:not([disabled])');
+      first?.focus();
+    }
     const onDown = (e: MouseEvent | TouchEvent) => {
       const t = e.target as Node;
       if (list.current?.contains(t) || button.current?.contains(t)) return;
@@ -133,9 +141,10 @@ export function Menu({ trigger, triggerClassName = "lasso-btn lasso-btn--ghost",
     item.onSelect?.();
   };
 
-  const style = pos
-    ? ({ "--lasso-menu-x": `${Math.round(pos.x)}px`, "--lasso-menu-y": `${Math.round(pos.y)}px` } as CSSProperties)
-    : undefined;
+  const style = {
+    ...(pos ? { "--lasso-menu-x": `${Math.round(pos.x)}px`, "--lasso-menu-y": `${Math.round(pos.y)}px` } : {}),
+    ...(width ? { "--lasso-menu-w": `${width}px` } : {}),
+  } as CSSProperties;
 
   return (
     <span className={`lasso-menu ${className}`}>
@@ -147,7 +156,11 @@ export function Menu({ trigger, triggerClassName = "lasso-btn lasso-btn--ghost",
         aria-expanded={open}
         aria-controls={listId}
         aria-label={triggerLabel}
-        onClick={() => (open ? close() : setOpen(true))}
+        onClick={() => {
+          if (open) return close();
+          userOpened.current = true;
+          setOpen(true);
+        }}
       >
         {trigger}
       </button>
@@ -181,7 +194,7 @@ export function Menu({ trigger, triggerClassName = "lasso-btn lasso-btn--ghost",
                       aria-checked={picker ? on : undefined}
                       disabled={item.disabled}
                       tabIndex={-1}
-                      className={`lasso-menu__item ${item.destructive ? "lasso-menu__item--danger" : ""} ${on ? "is-on" : ""}`}
+                      className={`lasso-menu__item ${item.destructive ? "lasso-menu__item--danger" : ""} ${on ? "is-on" : ""} ${highlight === item.id ? "is-hi" : ""}`}
                       onClick={() => select(item)}
                     >
                       {item.icon ? <span className="lasso-menu__icon">{item.icon}</span> : null}
