@@ -113,7 +113,7 @@ function Track({ p, pos, start, now }: { p: PersonNetworkRowVM; pos: (d: string 
  * etiketten (runde 6, ingen markør). Standardbredde ⅔; ½ kun med etiketten "Selskab, rolle". Samme akse og 240 px navnekolonne
  * som 16.2; overlappet ("14 år") står under navnet. Sorteret efter overlap; tre + "Vis alle N".
  * Mobil: ét kort pr. person med navn og overlap øverst, båndene under og en akse med fire årstal.
- * Ingen kildelinje (G3) og ingen "Vis som graf".
+ * Ingen kildevisning (G3) og ingen "Vis som graf".
  */
 export function PersonNetwork({
   network,

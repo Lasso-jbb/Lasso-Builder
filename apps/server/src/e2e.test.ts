@@ -66,7 +66,7 @@ test("health svarer", async () => {
 test("tools og UI-ressource er registreret", async () => {
   const { tools } = await client.listTools();
   const names = tools.map((t) => t.name).sort();
-  assert.deepEqual(names, ["list_saved_pages", "remove_saved_page", "render_view", "resolve_view", "save_page", "save_view", "search_companies", "show_company", "show_person"]);
+  assert.deepEqual(names, ["compare_companies", "describe_components", "list_saved_pages", "remove_saved_page", "render_view", "resolve_view", "save_page", "save_view", "search_companies", "search_persons", "show_company", "show_person"]);
   const show = tools.find((t) => t.name === "show_company")!;
   const uri = (show._meta as { ui?: { resourceUri?: string } }).ui?.resourceUri ?? "";
   // Adressen bærer app-versionen, så værten ikke genbruger en gemt, forældet render-app.
@@ -128,7 +128,12 @@ test("show_company komponerer ét skærmbillede ud fra data og hensigt", async (
   const eco = await client.callTool({ name: "show_company", arguments: { company: "99000001", focus: "oekonomi" } });
   const ecoSpec = (eco.structuredContent as { spec: ViewSpec }).spec;
   assert.ok(ecoSpec.components.some((c) => c.type === "LassoGroupedBarChart" || c.type === "LassoBarChart"), "mange år giver en graf");
-  assert.ok(ecoSpec.components.some((c) => c.type === "LassoMultiYearTable"), "4+ år giver flerårstabel");
+  // Ø13/B8 (A13): flerårstabellen med 10 år findes kun i ⅔ (vandret rulning i ½) og står ikke længere inden for
+  // højdebudgettet ved siden af regnskabslisten; "vis alt" (show_all) viser den.
+  const mt = ecoSpec.components.find((c) => c.type === "LassoMultiYearTable");
+  assert.ok(!mt?.width || mt.width === "two-thirds" || mt.width === "full", `flerårstabellen står aldrig under ⅔: ${mt?.width}`);
+  const ecoAll = await client.callTool({ name: "show_company", arguments: { company: "99000001", focus: "oekonomi", show_all: true } });
+  assert.ok((ecoAll.structuredContent as { spec: ViewSpec }).spec.components.some((c) => c.type === "LassoMultiYearTable"), "4+ år giver flerårstabel (vis alt)");
 });
 
 test("show_all (vis alt om X, brugervalg): show_company og show_person går ud over højdebudgettet", async () => {
@@ -193,15 +198,16 @@ test("show_person (katalog 16) finder en person på navn og komponerer personsid
   assert.equal(sc.spec.kind, "person");
   assert.deepEqual(
     sc.spec.components.map((c) => `${c.type}${c.column ? `@${c.column}` : ""}${c.width ? `/${c.width}` : ""}`),
-    // Overblik (standard): aktive roller ¾ + stamoplysninger ¼, netværk | risiko, historik | ejerskab.
+    // Overblik (standard, Ø13/B10): Papers elementer, pakket efter bredderne: aktive roller ½ + stamoplysninger ½,
+    // netværket i eget fuldbånd, historik ⅓ | ejerskab ⅔ og risikoen alene.
     [
       "LassoPersonHead",
-      "LassoPersonRoles@1/three-quarters",
-      "LassoPersonFacts@2/quarter",
-      "LassoPersonNetwork@1",
-      "LassoPersonRisk@2",
-      "LassoTimeline@1",
-      "LassoOwnershipDiagram@2",
+      "LassoPersonRoles@1/half",
+      "LassoPersonFacts@2/half",
+      "LassoPersonNetwork",
+      "LassoTimeline@1/third",
+      "LassoOwnershipDiagram@2/two-thirds",
+      "LassoPersonRisk",
       "LassoFollowUps",
     ],
   );
@@ -333,11 +339,11 @@ test("instruktionerne er korte og uden dubletter af katalog og søgefelter (revi
   assert.match(instr, /show_person med navn eller person-ID \(CVR-3-…\)\. Vælg focus/);
   const person = (await client.listTools()).tools.find((t) => t.name === "show_person")!;
   assert.deepEqual((person.inputSchema.properties as Record<string, { enum?: string[] }>).focus?.enum, ["overblik", "roller", "netvaerk", "ejerskab", "risiko", "historik"]);
-  assert.doesNotMatch(instr, /Komponentkatalog/);
+  assert.doesNotMatch(instr, /Komponentindeks/);
   const { tools } = await client.listTools();
   const summary = (await client.callTool({ name: "show_company", arguments: { company: "99000001" } })).content as { text: string }[];
   assert.doesNotMatch(summary[0]!.text, /ved en virksomhed altid/);
-  assert.ok(tools.find((t) => t.name === "render_view")!.description!.includes("Komponentkatalog"));
+  assert.ok(tools.find((t) => t.name === "render_view")!.description!.includes("Komponentindeks"));
 });
 
 test("save_view gemmer, opdaterer samme adresse og viser siden med friske data", async () => {
@@ -464,7 +470,8 @@ test("show_person 'sidder X i bestyrelser': kun bestyrelsesposterne; linket /p/ 
   assert.ok(!res.isError, JSON.stringify(res.content));
   const sc = res.structuredContent as { spec: ViewSpec; link: string };
   const roles = sc.spec.components[1];
-  assert.ok(roles?.type === "LassoPersonRoles" && roles.role === "bestyrelse" && roles.width === "three-quarters");
+  // Smal liste ved siden af stamoplysningerne: højst ½ (Ø13/B10).
+  assert.ok(roles?.type === "LassoPersonRoles" && roles.role === "bestyrelse" && roles.width === "half");
   assert.equal(sc.spec.subtitle, "Bestyrelsesposter");
   assert.match(texts(res)[0]!, /Svar: Bestyrelsesposter: .*Eksempel/);
   assert.match(sc.link, /\/p\/CVR-3-\d+\?.*q=/);

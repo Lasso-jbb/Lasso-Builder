@@ -733,7 +733,7 @@ export const entries: GalleryEntry[] = [
       </KV>
     ),
   },
-  // 02c.19 "Kilde og opdateret" UDGÅR (Jakob 29.09, G3): ingen kildelinje i nogen elementer.
+  // 02c.19 "Kilde og opdateret" UDGÅR (Jakob 29.09, G3): ingen kildevisning i nogen elementer.
 
   /* ---------- 04 Sidehoved ---------- */
   { nr: "04.1", title: "Sidehoved (kort med titel og handlinger)", node: "495-0", note: "Tilstand 1: i ro, gemt, intet ændret.", render: () => <Head /> },
@@ -901,6 +901,27 @@ export const entries: GalleryEntry[] = [
         <Modules />
       </div>
     ),
+  },
+  {
+    nr: "06.5",
+    title: "Lasso-side (layout 'page', kolonner 2:3:4)",
+    desktopWidth: 1440,
+    extraWidths: [1024],
+    note: "Jakob 30.09.2026: portalens side som genbrugelig sideform til nye sider og MCP-visninger. Tre kolonner i forholdet 2:3:4 (column 1-3), sideluft der vokser med bredden (--lasso-page-x/-y/-top), tre trin: >= 1320 px 2:3:4, 660-1319 px 2:3 + tredje kolonne i fuld bredde under, < 660 px én kolonne. Den brede kolonne har tre gange luft mellem nøgle og værdi. Se docs/design/README.md, 'Lasso-side'.",
+    spec: {
+      kind: "company",
+      title: "Eksempel Byg A/S",
+      layout: "page",
+      components: [
+        { type: "LassoKeyValueList", company: CVR, variant: "company", look: "card", rows: ["adresse", "cvr", "stiftet", "ansatte", "web", "telefon", "email"], column: 1 },
+        { type: "LassoShortcuts", company: CVR, column: 1 },
+        { type: "LassoScoreGauge", company: CVR, column: 1 },
+        { type: "LassoRelations", company: CVR, column: 2 },
+        { type: "LassoTextSections", company: CVR, variant: "cvr", title: "Virksomhedsprofil", column: 2 },
+        { type: "LassoKeyValueList", company: CVR, variant: "company", rows: ["revisor", "revisorskift", "regnskabsperiode", "boersnoteret"], column: 3 },
+        { type: "LassoKeyValueList", company: CVR, variant: "financials", title: "Regnskabsoplysninger", fields: ["udgivet", "periode", "bruttofortjeneste", "egenkapital", "resultat", "soliditetsgrad", "pdf"], column: 3 },
+      ],
+    },
   },
 
   /* ---------- 07 Dialoger, menuer og beskeder ---------- */

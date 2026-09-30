@@ -2,6 +2,7 @@ import { useState } from "react";
 import { formatDate, type ScoreVM } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { ShellIcon } from "./ShellIcons.js";
+import { isScoreSubscriptionReason, SCORE_SUBSCRIPTION_REASON } from "../unavailableReasons.js";
 import { useWidth } from "../useWidth.js";
 
 /** "09.2026" fra en ISO-dato. */
@@ -140,7 +141,7 @@ export function BandIcon({ index }: { index: 0 | 1 | 2 }) {
  * Scoremåler (katalog 10.1, node 9ZT-0): Lassos risikoscore 0-100, hvor 100 = HØJ risiko (Jakob 29.09).
  * Titel "Risikoscore", tal 40/700 + "af 100" + vurderingen som farvet ord, bånd i grøn/gul/rød (0-60 lav,
  * 60-80 moderat, 80-100 høj = rød) med en 2 px ink-markør ved scoren, akselabels "0, lav" og "100, høj".
- * Kun den aktuelle score: ingen forrige måling, kreditmaks eller Creditsafe, og ingen kildelinje (G3).
+ * Kun den aktuelle score: ingen forrige måling, kreditmaks eller Creditsafe, og ingen kildevisning (G3).
  * `detail` giver den fulde form med 60/80-mærker (26d.7-formen); udvikling og ændringer vises kun, hvis data har dem.
  *
  * Hente-tilstande (10.4, node BGZ-0): stiplet ramme = kan hentes (primær knap med prisen højrestillet
@@ -171,7 +172,7 @@ export function ScoreGauge({
   /** 18.1: "Se observationer" (open-section risiko). Uden den vises linket ikke (G1). */
   onObservations?: () => void;
 }) {
-  // Lassos risikoscore (Jakob 29.09): 0-100, hvor 100 = høj risiko. Ikke Creditsafe; ingen kildelinje (G3).
+  // Lassos risikoscore (Jakob 29.09): 0-100, hvor 100 = høj risiko. Ikke Creditsafe; ingen kildevisning (G3).
   const heading = title ?? "Risikoscore";
   const [requested, setRequested] = useState(false);
   if (!score) {
@@ -211,6 +212,14 @@ export function ScoreGauge({
     return (
       <Section title={heading} span="half" className="lasso-gauge-section">
         <DataState state="loading" shape="gauge" note={score.reason ?? "Tager typisk et par sekunder. Du kan fortsætte på siden."} />
+      </Section>
+    );
+  }
+  if (state === "unavailable" && isScoreSubscriptionReason(score.reason)) {
+    // Ø6: uden Creditsafe-abonnement er scoren låst; ingen knap og intet opslag.
+    return (
+      <Section title={heading} span="half" className="lasso-gauge-section">
+        <DataState state="locked" reason={SCORE_SUBSCRIPTION_REASON} lines={3} />
       </Section>
     );
   }
@@ -276,7 +285,7 @@ function computed(score: ScoreVM): string | undefined {
 /**
  * Aktuel risikoscore (katalog 18.1, Paper LWU-0). ¼-kortet (LWV-0): titel 18/600, tal 32/700 + "af 100" +
  * vurderingen som farvet ord, måler med tre zoner (60/20/20, 3 px mellemrum) og 2 px ink-markør, akselabels
- * "0, lav risiko" og "Høj risiko, 100", 36 px rækker "Beregnet" og "Grundlag", og "Se observationer" (G1: kun
+ * "0, lav risiko" og "Høj risiko, 100", 36 px række "Beregnet" (grundlaget vises ikke, Jakob 30.09), og "Se observationer" (G1: kun
  * med en handling). ½-kortet (LXL-0) bruges, når elementet står bredt (>= 480 px) OG scoremodellen leverer
  * forklarende faktorer: tal, måler og "Beregnet" i en 260 px kolonne til venstre og "Hvad trækker scoren" (op
  * til 4 faktorer med prik i success/warning/danger) til højre. Uden faktorer vises ¼-formen i alle bredder.
@@ -310,13 +319,14 @@ function RiskScoreCard({ heading, value, score, onObservations, onReport }: { he
   );
   const rows = [
     ...(date ? [{ label: "Beregnet", value: date }] : []),
-    ...(!wide && score.basis ? [{ label: "Grundlag", value: score.basis }] : []),
     ...(score.facts ?? []),
   ];
   const facts = rows.length ? (
     <dl className="lasso-riskscore__rows">
       {rows.map((r) => (
-        <div key={r.label} className="lasso-riskscore__row">
+        // En lang værdi (fx grundlaget "Creditsafe-rating B, lokal score 52/100, …") brydes ikke i en smal højrestillet
+        // spalte: nøglen står over værdien, og værdien løber venstrestillet i hele kortets bredde.
+        <div key={r.label} className={`lasso-riskscore__row${typeof r.value === "string" && r.value.length > 22 ? " lasso-riskscore__row--stack" : ""}`}>
           <dt>{r.label}</dt>
           <dd>{r.value}</dd>
         </div>

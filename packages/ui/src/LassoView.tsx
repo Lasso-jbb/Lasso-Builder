@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import {
   activityHeatmapKey,
+  businessResume,
+  type TextSectionsVM,
   changeFeedKey,
   companyFactOptions,
   emptyDataset,
@@ -20,6 +22,7 @@ import {
   gridHeight,
   measuredHeight,
   packBands,
+  contentMinWidthFn,
   originOf,
   type Dataset,
   type Focus,
@@ -63,6 +66,7 @@ import { LassoBalanceSheet } from "./components/BalanceSheet.js";
 import { LassoCashFlow } from "./components/CashFlow.js";
 import { FinancialStatements } from "./components/FinancialStatements.js";
 import { Announcements, Mergers, Publications } from "./components/CompanyEvents.js";
+import { CompanyHistory, RelationsTable } from "./components/CompanyHistory.js";
 import { Registration } from "./components/Registration.js";
 import { OwnerList } from "./components/OwnerList.js";
 import { OwnershipDiagram } from "./components/OwnershipDiagram.js";
@@ -168,6 +172,28 @@ function contactPanelShortcuts(props: LassoViewProps, act: (a: ViewAction) => vo
 }
 
 /** 09.2/09.5: "Se alle" (hele regnskabet) som link med ikon under regnskabslisten, når værten kan åbne det. */
+/** Portalens "Erhvervsresume" (TextSections variant "resume"): én tekst ud fra stamdata, historik, ledelse og regnskab. */
+function resumeSections(company: string, ds: Dataset): TextSectionsVM | undefined {
+  const co = ds.companies[company];
+  if (!co) return undefined;
+  const names = ds.companyHistories?.[company]?.fields.find((f) => f.key === "navn")?.entries ?? [];
+  const firstName = names.length > 1 ? [...names].sort((a, b) => (a.from ?? "").localeCompare(b.from ?? ""))[0]?.value : undefined;
+  const ceo = (ds.people[company] ?? []).find((p) => !p.to && /adm|direkt/i.test(p.role))?.name;
+  const last = ds.financials[company]?.years.at(-1);
+  const body = businessResume({
+    name: co.name,
+    founded: co.founded,
+    city: co.address?.city,
+    industryText: co.industryText,
+    purpose: co.purpose,
+    employees: co.employees,
+    firstName,
+    ceo,
+    lastYear: last ? { year: last.year, grossProfit: last.grossProfit, revenue: last.revenue, profit: last.profit } : undefined,
+  });
+  return { lassoId: company, sections: body ? [{ heading: "", body }] : [] };
+}
+
 function statementsLink(company: string, ds: Dataset, props: LassoViewProps, act: (a: ViewAction) => void) {
   if (props.spec.components.some((x) => x.type === "LassoIncomeStatement")) return undefined;
   const run = sectionAction(props, act, { lassoId: company, pageKind: "company", section: "regnskab", name: ds.companies[company]?.name ?? company, label: "Regnskab" });
@@ -301,6 +327,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           key={key}
           rows={c.companies.map((id) => ({ lassoId: id, company: empty.companies[id], financials: empty.financials[id], error: err(`financials:${id}`) }))}
           metric={c.metric}
+          order={c.order}
           title={c.title}
         />
       );
@@ -384,7 +411,12 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           links={c.variant === "financials" && !c.maxRows ? statementsLink(c.company, empty, props, act) : undefined}
           years={c.years}
           maxRows={c.maxRows}
-          onPdf={c.variant === "financials" && empty.financialStatements[c.company]?.pdfUrl ? () => act({ kind: "open-link", url: empty.financialStatements[c.company]!.pdfUrl! }) : undefined}
+          look={c.look}
+          contact={empty.contact[c.company]}
+          fields={c.fields}
+          statements={empty.financialStatements[c.company]}
+          onLink={(url) => act({ kind: "open-link", url })}
+          onPdf={c.variant === "financials" && !c.fields?.includes("pdf") && empty.financialStatements[c.company]?.pdfUrl ? () => act({ kind: "open-link", url: empty.financialStatements[c.company]!.pdfUrl! }) : undefined}
         />
       );
     }
@@ -453,12 +485,16 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           error={err(`company:${c.company}`)}
         />
       );
+    case "LassoRelationsTable":
+      return <RelationsTable key={key} history={empty.companyHistories?.[c.company]} beneficial={empty.beneficialOwnership[c.company]} show={c.show} groups={c.groups} title={c.title} error={err(`companyHistory:${c.company}`)} onOpen={props.host.drillDown ? act : undefined} />;
+    case "LassoCompanyHistory":
+      return <CompanyHistory key={key} history={empty.companyHistories?.[c.company]} fields={c.fields} limit={c.limit} title={c.title} error={err(`companyHistory:${c.company}`)} />;
     case "LassoAnnouncements":
       return <Announcements key={key} events={empty.companyEvents?.[c.company]} company={empty.companies[c.company]} demo={empty.source === "demo"} title={c.title} error={err(`companyEvents:${c.company}`)} />;
     case "LassoPublications":
       return <Publications key={key} events={empty.companyEvents?.[c.company]} title={c.title} limit={c.limit} error={err(`companyEvents:${c.company}`)} />;
     case "LassoFinancialStatements":
-      return <FinancialStatements key={key} statements={empty.financialStatements[c.company]} company={empty.companies[c.company]} statement={c.statement} years={c.years} title={c.title} error={err(`financialStatements:${c.company}`)} onAction={act} />;
+      return <FinancialStatements key={key} statements={empty.financialStatements[c.company]} company={empty.companies[c.company]} statement={c.statement} years={c.years} year={c.year} title={c.title} error={err(`financialStatements:${c.company}`)} onAction={act} />;
     case "LassoScoreGauge":
       return (
         <ScoreGauge
@@ -522,7 +558,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return (
         <LassoTextSections
           key={key}
-          sections={empty.textSections[c.company]}
+          sections={c.variant === "resume" ? resumeSections(c.company, empty) : empty.textSections[c.company]}
           title={c.title}
           variant={c.variant}
           folded={c.folded}
@@ -924,7 +960,9 @@ export function dashboardBands(components: readonly ViewComponent[], ds: Dataset
         return measuredHeight(c, width);
       }
     };
-    for (const b of packBands(items, h, { gap: DASHBOARD_GAP })) {
+    // Ø13/B8: mindstebredden efter indholdet (lange navne, rækker pr. post, tidsakse), når data findes.
+    const minWidth = ds ? contentMinWidthFn(ds) : undefined;
+    for (const b of packBands(items, h, { gap: DASHBOARD_GAP, minWidth })) {
       if (b.stacks.length === 1 && b.stacks[0]!.items.length === 1) {
         const c = b.stacks[0]!.items[0]!;
         out.push({ kind: "run", run: { kind: "one", item: { c, i: index.get(originOf(c))! } } });
@@ -1219,7 +1257,32 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
           <Skeleton lines={4} height={240} />
         ) : (
           <main className={`lasso-content lasso-content--grid-4 lasso-content--${spec.layout}`}>
-            {spec.layout === "columns"
+            {spec.layout === "page"
+              ? // Lasso-siden (docs/design/README.md, "Lasso-side"): kolonnerne 2:3:4, fuld bredde uden column.
+                mergeFullGroups(columnBands(spec.components)).map((band, b) =>
+                  band.kind === "group" ? (
+                    <div key={`b${b}`} className="lasso-lpage__full">
+                      {renderGroup(band.group, band.items, dataset, props, act, frame)}
+                    </div>
+                  ) : band.kind === "full" ? (
+                    <div key={`b${b}`} className="lasso-lpage__full">
+                      {renderComponent(band.item.c, dataset, props, act, band.item.i, frame)}
+                    </div>
+                  ) : (
+                    <div key={`b${b}`} className={`lasso-lpage lasso-lpage--${Math.min(band.columns.length, 3)}`}>
+                      {band.columns.map((col, k) => (
+                        <div key={k} className="lasso-lpage__col">
+                          {groupRuns(col).map((run) => (
+                            <div key={run.kind === "one" ? run.item.i : run.items[0]!.i} className="lasso-lpage__item">
+                              {run.kind === "one" ? renderComponent(run.item.c, dataset, props, act, run.item.i, frame) : renderGroup(run.group, run.items, dataset, props, act, frame)}
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  ),
+                )
+              : spec.layout === "columns"
               ? mergeFullGroups(columnBands(spec.components)).map((band, b) =>
                   band.kind === "group" ? (
                     <div key={`b${b}`} className="lasso-cell lasso-cell--full">

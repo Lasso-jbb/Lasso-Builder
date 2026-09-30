@@ -221,7 +221,8 @@ test("company: focus oekonomi giver økonomivisningen, og linket åbner samme fo
   const body = await json<ViewBody>(await api("/company/CVR-1-99000001?focus=oekonomi&years=10&metric=omsaetning"));
   assert.equal(body.spec.subtitle, "Økonomi");
   assert.ok(body.spec.components.some((c) => c.type === "LassoGroupedBarChart" || c.type === "LassoBarChart"), "mange år giver en graf");
-  assert.ok(body.spec.components.some((c) => c.type === "LassoMultiYearTable"));
+  // Ø13/B8 (A13): flerårstabellen (10 år) står aldrig under ⅔; inden for højdebudgettet er den derfor udeladt her (vis alt viser den).
+  assert.ok(body.spec.components.every((c) => c.type !== "LassoMultiYearTable" || !c.width || c.width === "two-thirds" || c.width === "full"));
   assert.deepEqual(verifyEntityLink(config, "CVR-1-99000001", query(body.link!)), { ok: true, lassoId: "CVR-1-99000001", focus: "oekonomi" });
   const page = await fetch(local(body.link!));
   assert.equal(page.status, 200);

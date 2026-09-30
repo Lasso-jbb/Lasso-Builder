@@ -7,6 +7,7 @@ import { loadFonts } from "./fonts.js";
 import { McpView } from "./mcp.js";
 import { PortalApp } from "./portal/PortalApp.js";
 import { PrintView } from "./print.js";
+import { ShowcaseView } from "./showcase.js";
 import { WebView } from "./web.js";
 
 declare global {
@@ -26,6 +27,7 @@ function Root() {
   if (!boot) return <McpView />;
   if (boot.mode === "portal") return <PortalApp boot={boot} />;
   if (boot.mode === "print") return <PrintView boot={boot} />;
+  if (boot.mode === "showcase") return <ShowcaseView boot={boot} />;
   return <WebView boot={boot} />;
 }
 

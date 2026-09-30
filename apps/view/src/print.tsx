@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { LassoView, PAGE_MARGIN_MM, pageScale, pageTemplates, printSources, ReportA4 } from "@lasso/ui";
+import { LassoView, PAGE_MARGIN_MM, pageScale, pageTemplates, ReportA4 } from "@lasso/ui";
 import type { ViewSpec } from "@lasso/spec";
 import type { PrintBoot } from "./boot.js";
 import { fontFaceCss } from "./fonts.js";
@@ -24,7 +24,7 @@ export function reportCompany(spec: ViewSpec): string | undefined {
 
 /** Sidehoved og sidefod med sidens navn, datastempel og kilder (print.tsx i @lasso/ui). */
 export function printTemplatesFor(boot: PrintBoot): PrintTemplates {
-  return { ...pageTemplates({ title: boot.name, generatedAt: boot.generatedAt, sources: printSources(boot.dataset), fontFaces: fontFaceCss() }), scale: pageScale() };
+  return { ...pageTemplates({ title: boot.name, generatedAt: boot.generatedAt, fontFaces: fontFaceCss() }), scale: pageScale() };
 }
 
 /**

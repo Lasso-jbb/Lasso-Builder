@@ -35,8 +35,8 @@ export function updateTime(iso: string, now: Date = new Date()): string {
 /**
  * Opdateringer på personer og P-enheder (katalog 28.3, node H5N-0): kort med samme feed-mønster som
  * 21, tid i venstre kolonne ("I dag, 09.14"), rækkens hoved er personen eller den ejende virksomhed
- * (navn 15); ved P-enheder står typen som muted tekst efter (28.3: intet efter personnavnet), teksten og en kildelinje ("CVR, gældende fra …").
- * Mobil: ingen tidskolonne; tiden står i kildelinjen.
+ * (navn 15); ved P-enheder står typen som muted tekst efter (28.3: intet efter personnavnet), teksten og en kildevisning ("CVR, gældende fra …").
+ * Mobil: ingen tidskolonne; tiden står i kildevisningn.
  * Kun "P-enhed fjernet" farves (mørk rød, med ordet). Fra → til skrives i teksten med pil. Rækken
  * linker til personsiden (16) eller P-enhedslisten (20) via `onOpen`. Kilder (people-updates,
  * production-unit-updates, webhooks pUnitAdded/Updated/Removed) er ubekræftede; ren UI-komponent.

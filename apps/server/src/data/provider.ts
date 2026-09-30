@@ -3,6 +3,7 @@ import type {
   BeneficialOwnershipVM,
   ChangeFeedVM,
   CompanyEventsVM,
+  CompanyHistoryVM,
   ChangeType,
   AuditorIndependenceVM,
   CompanyRowVM,
@@ -50,7 +51,7 @@ export interface DataProvider {
   /** Hurtigt navneopslag uden regnskabsberigelse (til show_company med et navn). */
   findCompanies(name: string, limit: number): Promise<CompanyRowVM[]>;
   company(lassoId: string): Promise<CompanyVM>;
-  /** Katalog 08: kontaktblok (telefon/e-mail/web/adresse, med kildelinje). */
+  /** Katalog 08: kontaktblok (telefon/e-mail/web/adresse, med kildevisning). */
   contact(lassoId: string): Promise<ContactVM>;
   /** Katalog 08: kontaktpersoner. */
   contactPersons(lassoId: string): Promise<ContactPersonsVM>;
@@ -87,7 +88,9 @@ export interface DataProvider {
   personSearch(query: string, limit: number): Promise<PersonSearchResultVM>;
   /** Katalog 28.2/28.6/28.8: fusioner/spaltninger, Statstidende-bekendtgørelser og regnskabspublicering. Live ubekræftet. */
   companyEvents(lassoId: string): Promise<CompanyEventsVM>;
-  /** Katalog 21: ændringer i de overvågede virksomheder de seneste `days` dage. Live-endpoint ubekræftet. */
+  /** Relationer og stamdata over tid (portalens Stamoplysninger). Live ubekræftet; falder tilbage til de nuværende roller og ejere. */
+  companyHistory(lassoId: string): Promise<CompanyHistoryVM>;
+  /** Katalog 21: ændringer i de overvågede virksomheder (eller i `companies`) de seneste `days` dage. Live-endpoint ubekræftet. */
   changeFeed(opts: ChangeFeedOptions): Promise<ChangeFeedVM>;
   /** Katalog 18.2: scorehistorik (én hentning = ét punkt). Ingen live datakilde endnu; tom med årsag. */
   scoreHistory(lassoId: string): Promise<ScoreHistoryVM>;
@@ -106,8 +109,10 @@ export interface ActivityHeatmapOptions {
 }
 
 export interface ChangeFeedOptions {
-  /** Overvågningslistens navn; udeladt = alle overvågede. */
+  /** Overvågningslistens navn; udeladt = alle overvågede. Ignoreres, når `companies` er sat. */
   list?: string;
+  /** Kun disse virksomheder (Lasso-ID'er), uden overvågningsliste: ændringsfeedet for én virksomhed (fokus historik). */
+  companies?: readonly string[];
   days: number;
   types?: readonly ChangeType[];
 }

@@ -22,33 +22,33 @@ const OK: CreditRatingVM = {
 
 const render = (props: CreditRatingProps) => renderToStaticMarkup(createElement(CreditRating, props));
 /** Synlig tekst uden tags og skjult skærmlæsertekst. */
-const text = (html: string) => html.replace(/<span class="lasso-credit__sr">[^<]*<\/span>/g, "").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ");
+const text = (html: string) => html.replace(/<span class="lasso-sr-only">[^<]*<\/span>/g, "").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ");
 
-test("fyldt: bogstav + ord, kreditmaksimum, lokal score, seneste ændring (ingen forrige), PDF, forbehold og kildelinje", () => {
+test("fyldt: bogstav + ord, kreditmaksimum, lokal score, seneste ændring (ingen forrige), PDF, forbehold og kildevisning", () => {
   const html = render({ rating: OK, onAction: () => {} });
   const t = text(html);
   assert.match(html, /<h3 class="lasso-section__title">Kreditvurdering<\/h3>/);
-  assert.match(html, /class="lasso-section lasso-span-half lasso-credit"/);
-  assert.match(html, /class="lasso-credit__letter" aria-hidden="true">B</);
+  assert.match(html, /class="lasso-section lasso-span-half lasso-riskscore lasso-credit"/, "samme kort som risikoscoren (18.1)");
+  assert.match(html, /class="lasso-riskscore__number" aria-hidden="true">B</);
   assert.match(t, /BLav risiko/, "bogstavet efterfulgt af ordet");
-  assert.match(html, /<span class="lasso-credit__sr">B, <\/span>Lav risiko/, "skærmlæser: 'B, Lav risiko'");
+  assert.match(html, /<span class="lasso-sr-only">B, <\/span>Lav risiko/, "skærmlæser: 'B, Lav risiko'");
   assert.match(t, /Kreditmaksimum250 t\. kr\./);
   assert.match(t, /Lokal score62, Lav risiko/);
   // 18.1 (Jakob 29.09): kun den aktuelle vurdering; ingen forrige, ingen pil/ændring.
   assert.doesNotMatch(html, /lasso-scorecmp|Forrige|mindre risiko/);
   assert.match(t, /Seneste ændring15\.04\.2026/);
-  assert.match(html, /<button type="button" class="lasso-link lasso-credit__action">Hent kreditrapport \(PDF\)<\/button>/);
+  assert.match(html, /<button type="button" class="lasso-riskscore__link"><svg[^]*?<\/svg>Hent kreditrapport \(PDF\)<\/button>/, "link med download-ikon foran");
   assert.match(t, /Ny beregning hos Creditsafe koster en kredit og tager 5–45 sekunder; vurderingen gemmes 24 timer\./);
-  assert.doesNotMatch(t, /Kilde:/, "G3: ingen kildelinje");
+  assert.doesNotMatch(t, /Kilde:/, "G3: ingen kildevisning");
   // Egen skala: ingen 0–100-måler eller observationernes alvorsord.
-  assert.doesNotMatch(html, /lasso-gauge|af 100|lasso-sev-/);
+  assert.doesNotMatch(html, /lasso-gauge|lasso-riskscore__track|af 100|lasso-sev-/);
   assert.doesNotMatch(t, /·/, "regel 6: ingen midterprik");
 });
 
-test("A–E-skalaen markerer det aktuelle bogstav med kant alene (ingen fyld) og kun ét", () => {
+test("A–E-skalaen: fem lige felter, kun det aktuelle i tonens farve og med aria-current", () => {
   for (const letter of ["A", "C", "E"] as const) {
     const html = render({ rating: { ...OK, current: { ...OK.current, internationalScore: letter, internationalDescription: undefined } } });
-    const steps = [...html.matchAll(/<li class="lasso-credit__step( is-current)?"( aria-current="true")?[^>]*>([A-E])<\/li>/g)];
+    const steps = [...html.matchAll(/<li class="lasso-credit__step( is-current lasso-credit__step--[012])?"( aria-current="true")?[^>]*><span class="lasso-credit__bar" aria-hidden="true"><\/span><span>([A-E])<\/span><\/li>/g)];
     assert.deepEqual(steps.map((m) => m[3]), ["A", "B", "C", "D", "E"], "fem positioner, lav risiko til venstre");
     assert.deepEqual(steps.filter((m) => m[1]).map((m) => m[3]), [letter]);
     assert.deepEqual(steps.filter((m) => m[2]).map((m) => m[3]), [letter], "aria-current på samme bogstav");
@@ -63,7 +63,8 @@ test("tonen står aldrig som farve alene: hver toneklasse bærer ikon og ord", (
   ] as const;
   for (const [letter, tone, word] of cases) {
     const html = render({ rating: { ...OK, current: { internationalScore: letter } } });
-    const m = new RegExp(`<span class="lasso-credit__word lasso-credit__tone--${tone}"><svg[^]*?</svg><span class="lasso-credit__sr">${letter}, </span>${word}</span>`).exec(html);
+    const idx = { ok: 0, warning: 1, danger: 2 }[tone];
+    const m = new RegExp(`<span class="lasso-riskscore__word lasso-riskscore__word--${idx} lasso-credit__word"><svg[^]*?</svg><span class="lasso-sr-only">${letter}, </span>${word}</span>`).exec(html);
     assert.ok(m, `${letter}: ikon + ord i tone ${tone}`);
   }
   // 18.1: ingen forrige vurdering vises, heller ikke når data har en.
@@ -99,7 +100,7 @@ test("låst, ikke beregnet, fejl, ingen vurdering og henter", () => {
 });
 
 test("PDF-linket går gennem værten (open-link), og uden vært er det et almindeligt link", () => {
-  assert.match(render({ rating: OK }), /<a class="lasso-link lasso-credit__action" href="https:\/\/example\.com\/eksempel-kreditrapport\.pdf" target="_blank" rel="noopener noreferrer">/);
+  assert.match(render({ rating: OK }), /<a class="lasso-riskscore__link" href="https:\/\/example\.com\/eksempel-kreditrapport\.pdf" target="_blank" rel="noopener noreferrer">/);
   assert.doesNotMatch(render({ rating: { ...OK, pdfUrl: undefined } }), /Hent kreditrapport/);
 });
 
@@ -108,7 +109,7 @@ test("LassoView tegner LassoCreditRating fra datasættet og slår fejlnøglen cr
   const ds = emptyDataset("demo");
   ds.creditRatings[ID] = OK;
   const html = renderToStaticMarkup(createElement(LassoView, { spec, dataset: ds, host: {}, onAction: () => {} }));
-  assert.match(html, /lasso-credit__letter[^>]*>B</);
+  assert.match(html, /lasso-riskscore__number[^>]*>B</);
   const failed = emptyDataset("demo");
   failed.errors[`creditRating:${ID}`] = "Virksomheden blev ikke fundet";
   assert.match(renderToStaticMarkup(createElement(LassoView, { spec, dataset: failed, host: {}, onAction: () => {} })), /Virksomheden blev ikke fundet/);

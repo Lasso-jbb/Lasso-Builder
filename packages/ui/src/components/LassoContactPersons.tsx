@@ -109,7 +109,7 @@ function Channels({ person }: { person: ContactPersonVM }) {
 
 /** 08.7, kolonne 3 (Paper LCJ-0): navn 20/600, stilling, kopiér-handlinger med værdien (ingen kilder, Jakob runde 6). */
 function Detail({ person, onCopy }: { person: ContactPersonVM; onCopy?: LassoContactPersonsProps["onCopy"] }) {
-  // Jakob runde 6: ingen kildevisning (heller ikke "Kilder" + link). Ingen Ring/Skriv/LinkedIn (Paper).
+  // Ingen kildevisning. Ingen Ring/Skriv/LinkedIn (Paper).
   const copy = (value: string, shown: string, what: "phone" | "email", label: string) =>
     onCopy ? (
       <button type="button" className="lasso-cpdetail__copy" onClick={() => onCopy(value, what)}>
@@ -286,7 +286,7 @@ export function LassoContactPersons({ data, title, error, companyName, company, 
           Se {sorted.length} kontaktpersoner
         </button>
       ) : null}
-      {/* 08.6: ingen kildelinje under blokken; kilderne står pr. person i panelet ("KILDER"). */}
+      {/* 08.6: ingen kildevisning under blokken; kilderne står pr. person i panelet ("KILDER"). */}
       <SidePanel
         open={open}
         variant="seeall"

@@ -87,7 +87,7 @@ test("27.1-27.2: standardrapporten har to sider med sidehoved, sidefod og sideta
   assert.equal((html.match(/aria-label="Lasso"/g) ?? []).length >= 2, true);
 });
 
-test("ingen knapper, ingen interaktion og ingen kildelinje (G3) i rapporten", () => {
+test("ingen knapper, ingen interaktion og ingen kildevisning (G3) i rapporten", () => {
   const html = render(dataset({ score: 52 }));
   assert.doesNotMatch(html, /<button/);
   assert.doesNotMatch(html, /<title>/);

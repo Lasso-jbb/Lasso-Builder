@@ -254,13 +254,13 @@ export function adaptNews(lassoId: string, raw: Json, limit: number): NewsVM {
 
 export interface NewsSourceInput {
   items: readonly NewsItemVM[];
-  /** Etiket til sektionens kildelinje (regel 8), fx "Lasso News" eller "Paqle". */
+  /** Etiket til sektionens kildevisning (regel 8), fx "Lasso News" eller "Paqle". */
   label: string;
 }
 
 /**
  * Fletter flere nyhedskilder efter tid (nyeste først) og skærer til `limit`. Poster uden
- * tidsstempel havner sidst, i den rækkefølge kilden leverede dem (stabil sortering). Kildelinjen
+ * tidsstempel havner sidst, i den rækkefølge kilden leverede dem (stabil sortering). Kildevisningn
  * nævner kun de kilder, der faktisk bidrog med mindst én nyhed; `updatedAt` er den nyeste post
  * på tværs af kilder.
  */

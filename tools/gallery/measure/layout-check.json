@@ -1,0 +1,259 @@
+{
+  "summary": {
+    "date": "2026-09-29",
+    "width": 1200,
+    "pages": 14,
+    "truncated": 0,
+    "overlap": 0
+  },
+  "results": [
+    {
+      "id": "CVR-3-4000000002 overblik",
+      "types": [
+        "LassoPersonHead",
+        "LassoPersonRoles",
+        "LassoPersonFacts",
+        "LassoPersonNetwork",
+        "LassoTimeline",
+        "LassoOwnershipDiagram",
+        "LassoPersonRisk",
+        "LassoFollowUps"
+      ],
+      "truncated": 0,
+      "truncatedSample": [],
+      "overlap": 0,
+      "overlapSample": [],
+      "netTicks": 5,
+      "pageOverflow": 0
+    },
+    {
+      "id": "CVR-3-4000000002 netvaerk",
+      "types": [
+        "LassoPersonHead",
+        "LassoPersonNetwork",
+        "LassoFollowUps"
+      ],
+      "truncated": 0,
+      "truncatedSample": [],
+      "overlap": 0,
+      "overlapSample": [],
+      "netTicks": 5,
+      "pageOverflow": 0
+    },
+    {
+      "id": "CVR-1-99000001 overblik",
+      "types": [
+        "LassoCompanyHead",
+        "LassoKeyFigureCards",
+        "LassoTextSections",
+        "LassoKeyValueList",
+        "LassoRelations",
+        "LassoBarChart",
+        "LassoContact",
+        "LassoFollowUps"
+      ],
+      "truncated": 0,
+      "truncatedSample": [],
+      "overlap": 0,
+      "overlapSample": [],
+      "netTicks": 0,
+      "pageOverflow": 0
+    },
+    {
+      "id": "CVR-1-99000001 risiko",
+      "types": [
+        "LassoCompanyHead",
+        "LassoKeyValueList",
+        "LassoCreditRating",
+        "LassoAuditorIndependence",
+        "LassoFollowUps"
+      ],
+      "truncated": 0,
+      "truncatedSample": [],
+      "overlap": 0,
+      "overlapSample": [],
+      "netTicks": 0,
+      "pageOverflow": 0
+    },
+    {
+      "id": "CVR-1-99000001 historik",
+      "types": [
+        "LassoCompanyHead",
+        "LassoTimeline",
+        "LassoMergers",
+        "LassoNews",
+        "LassoFollowUps"
+      ],
+      "truncated": 0,
+      "truncatedSample": [],
+      "overlap": 0,
+      "overlapSample": [],
+      "netTicks": 0,
+      "pageOverflow": 0
+    },
+    {
+      "id": "CVR-1-99000004 overblik",
+      "types": [
+        "LassoCompanyHead",
+        "LassoKeyFigureCards",
+        "LassoTextSections",
+        "LassoRelations",
+        "LassoKeyValueList",
+        "LassoBarChart",
+        "LassoFollowUps"
+      ],
+      "truncated": 0,
+      "truncatedSample": [],
+      "overlap": 0,
+      "overlapSample": [],
+      "netTicks": 0,
+      "pageOverflow": 0
+    },
+    {
+      "id": "CVR-1-99000004 risiko",
+      "types": [
+        "LassoCompanyHead",
+        "LassoKeyValueList",
+        "LassoScoreGauge",
+        "LassoCreditRating",
+        "LassoRiskObservations",
+        "LassoScoreHistory",
+        "LassoFollowUps"
+      ],
+      "truncated": 0,
+      "truncatedSample": [],
+      "overlap": 0,
+      "overlapSample": [],
+      "netTicks": 0,
+      "pageOverflow": 0
+    },
+    {
+      "id": "CVR-1-99000004 historik",
+      "types": [
+        "LassoCompanyHead",
+        "LassoTimeline",
+        "LassoChangeFeed",
+        "LassoNews",
+        "LassoFollowUps"
+      ],
+      "truncated": 0,
+      "truncatedSample": [],
+      "overlap": 0,
+      "overlapSample": [],
+      "netTicks": 0,
+      "pageOverflow": 0
+    },
+    {
+      "id": "c-offentliggoerelser-01",
+      "types": [
+        "LassoCompanyHead",
+        "LassoAnnouncements",
+        "LassoTimeline",
+        "LassoBarChart",
+        "LassoKeyValueList",
+        "LassoNews",
+        "LassoRelations",
+        "LassoTextSections",
+        "LassoFollowUps"
+      ],
+      "truncated": 0,
+      "truncatedSample": [],
+      "overlap": 0,
+      "overlapSample": [],
+      "netTicks": 0,
+      "pageOverflow": 0
+    },
+    {
+      "id": "p-netvaerk-02",
+      "types": [
+        "LassoPersonHead",
+        "LassoPersonNetwork",
+        "LassoPersonRoles",
+        "LassoPersonFacts",
+        "LassoPersonRisk",
+        "LassoTimeline",
+        "LassoNews",
+        "LassoFollowUps"
+      ],
+      "truncated": 0,
+      "truncatedSample": [],
+      "overlap": 0,
+      "overlapSample": [],
+      "netTicks": 7,
+      "pageOverflow": 0
+    },
+    {
+      "id": "c-soliditet-01",
+      "types": [
+        "LassoCompanyHead",
+        "LassoKeyFigureCards",
+        "LassoLineChart",
+        "LassoTimeline",
+        "LassoRelations",
+        "LassoShareBars",
+        "LassoTextSections",
+        "LassoKeyValueList",
+        "LassoNews",
+        "LassoMultiYearTable",
+        "LassoBalanceSheet",
+        "LassoFollowUps"
+      ],
+      "truncated": 0,
+      "truncatedSample": [],
+      "overlap": 0,
+      "overlapSample": [],
+      "netTicks": 0,
+      "pageOverflow": 0
+    },
+    {
+      "id": "c-ejere-01",
+      "types": [
+        "LassoCompanyHead",
+        "LassoOwnerList",
+        "LassoBeneficialOwners",
+        "LassoPersonList",
+        "LassoNews",
+        "LassoTimeline",
+        "LassoTextSections",
+        "LassoOwnershipDiagram",
+        "LassoFollowUps"
+      ],
+      "truncated": 0,
+      "truncatedSample": [],
+      "overlap": 0,
+      "overlapSample": [],
+      "netTicks": 0,
+      "pageOverflow": 0
+    },
+    {
+      "id": "p-roller-01",
+      "types": [
+        "LassoPersonHead",
+        "LassoPersonRoles",
+        "LassoPersonFacts",
+        "LassoFollowUps"
+      ],
+      "truncated": 0,
+      "truncatedSample": [],
+      "overlap": 0,
+      "overlapSample": [],
+      "netTicks": 0,
+      "pageOverflow": 0
+    },
+    {
+      "id": "c-historik-02",
+      "types": [
+        "LassoCompanyHead",
+        "LassoTimeline",
+        "LassoNews",
+        "LassoFollowUps"
+      ],
+      "truncated": 0,
+      "truncatedSample": [],
+      "overlap": 0,
+      "overlapSample": [],
+      "netTicks": 0,
+      "pageOverflow": 0
+    }
+  ]
+}

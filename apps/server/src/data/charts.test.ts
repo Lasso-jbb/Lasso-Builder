@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { activityHeatmapKey, buildActivityHeatmap, COMPONENT_CATALOG, parseViewSpec } from "@lasso/spec";
+import { activityHeatmapKey, buildActivityHeatmap, changeFeedKey, COMPONENT_CATALOG, composeCompany, composeProbe, parseViewSpec } from "@lasso/spec";
 import { adaptIndustryBenchmark, adaptMapPoints, coordinatesOf } from "../lasso/chartAdapters.js";
 import { textCard } from "./card.js";
 import { DemoProvider } from "./demo.js";
@@ -9,9 +9,9 @@ import { resolveSpec } from "./resolve.js";
 const demo = new DemoProvider();
 const ID = "CVR-1-99000001";
 
-test("nye katalogtyper (13.10, 13.11, 13.12) har schema og katalogtekst uden midterprik; 18.2/22.2 er udgået af kataloget", () => {
-  // 18.2 Scorehistorik og 22.2 Revisoruafhængighed udgår (Jakob 29.09): skemaet læses stadig, men AI'en ser dem ikke.
-  for (const type of ["LassoScoreHistory", "LassoAuditorIndependence"]) assert.ok(!COMPONENT_CATALOG.some((e) => e.type === type), type);
+test("nye katalogtyper (13.10, 13.11, 13.12) har schema og katalogtekst uden midterprik; 18.2/22.2 er tilbage i kataloget (plan Ø2)", () => {
+  // 18.2 Scorehistorik og 22.2 Revisoruafhængighed var udgået 29.09, men er tilbage (docs/plan-mcp.md Ø2: alle komponenter skal kunne komme i spil).
+  for (const type of ["LassoScoreHistory", "LassoAuditorIndependence"]) assert.ok(COMPONENT_CATALOG.some((e) => e.type === type), type);
   for (const type of ["LassoKeyFigureGauge", "LassoHeatmap", "LassoMap"] as const) {
     const entry = COMPONENT_CATALOG.find((e) => e.type === type);
     assert.ok(entry, type);
@@ -109,4 +109,26 @@ test("live-adaptere er defensive: ukendt form giver unavailable/tom, aldrig en f
   const one = adaptMapPoints("CVR-1-1", { name: "Prøve A/S", address: { latitude: 56.1, longitude: 9.5 } }, [{ pNumber: "1", address: {} }]);
   assert.equal(one.points.length, 1);
   assert.equal(one.missing, 1);
+});
+
+test("B4: LassoChangeFeed for én virksomhed: resolveSpec henter changeFeed({ companies: [id], days }) (demo: mindst 3 ændringer inden for 90 dage)", async () => {
+  const spec = parseViewSpec({ title: "x", components: [{ type: "LassoChangeFeed", company: ID }] });
+  const ds = await resolveSpec(spec, demo);
+  const feed = ds.changeFeeds[changeFeedKey({ company: ID, days: 30 })];
+  assert.ok(feed, Object.keys(ds.changeFeeds).join(", "));
+  assert.equal(feed.days, 30);
+  assert.equal(feed.listName, undefined);
+  assert.ok(feed.entries.length >= 3, `${feed.entries.length}`);
+  assert.ok(feed.entries.every((e) => e.lassoId === ID));
+  const ninety = await demo.changeFeed({ companies: [ID], days: 90 });
+  assert.ok(ninety.total >= 5 && ninety.entries.every((e) => e.lassoId === ID));
+  // En virksomhed uden ændringer: tom tilstand med årsag, ingen liste; listen "Kunder" er uændret.
+  const none = await demo.changeFeed({ companies: ["CVR-1-99000009"], days: 30 });
+  assert.equal(none.entries.length, 0);
+  assert.match(none.emptyReason ?? "", /Ingen ændringer i virksomheden/);
+  assert.equal((await demo.changeFeed({ list: "Kunder", days: 7 })).listName, "Kunder");
+  // Fokus historik henter feedet (probe) og viser det for Eksempel Byg ("vis alt": Ø13/B8 gør feedet smalt og højt,
+  // så det inden for højdebudgettet kan vige for Statstidende/fusioner).
+  const hist = await resolveSpec(composeProbe(ID, "historik"), demo);
+  assert.ok(composeCompany(ID, hist, { focus: "historik", showAll: true }).components.some((c) => c.type === "LassoChangeFeed" && c.company === ID));
 });

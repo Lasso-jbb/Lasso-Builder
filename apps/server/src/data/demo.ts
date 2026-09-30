@@ -8,6 +8,10 @@ import {
   type ChangeFeedVM,
   foldChangeEntries,
   type CompanyEventsVM,
+  type CompanyHistoryVM,
+  type HistoryFieldVM,
+  type RelationEntryVM,
+  relationsFromCurrent,
   type CompanyRowVM,
   type CompanyVM,
   type ContactPersonVM,
@@ -443,7 +447,9 @@ function financialStatementsFor(c: DemoCompany): FinancialStatementsVM {
   });
   const opinion = c.auditor && c.auditor !== "Ingen" ? `Revideret af ${c.auditor}, udgivet 15.04.2026` : undefined;
   const note = "Underposter og tidligere år er eksempeldata.";
-  const base: FinancialStatementsVM = { lassoId: c.lassoId, currency: "DKK", incomeStatement, balanceSheet, cashFlow, scope: "Selskab", periods: ["year"], note, pdfUrl: `https://regnskaber.virk.dk/eksempel/${c.cvr}.pdf`, ...(opinion ? { auditorOpinion: opinion } : {}) };
+  // Portalens regnskabsoplysninger (eksempeldata): erklæring fra revisor, fremhævelser og going concern pr. år.
+  const audits = incomeStatement.map((y) => ({ year: y.year, type: c.auditor && c.auditor !== "Ingen" ? "Revision" : "Ingen", emphasis: false, goingConcern: /konkurs/i.test(c.status ?? ""), pdfUrl: `https://regnskaber.virk.dk/eksempel/${c.cvr}-${y.year}.pdf` }));
+  const base: FinancialStatementsVM = { lassoId: c.lassoId, currency: "DKK", incomeStatement, balanceSheet, cashFlow, scope: "Selskab", periods: ["year"], note, audits, pdfUrl: `https://regnskaber.virk.dk/eksempel/${c.cvr}.pdf`, ...(opinion ? { auditorOpinion: opinion } : {}) };
   // Katalog 19.1: eksempelvirksomheden aflægger også koncernregnskab (selskabets tal × 1,35, eksempeldata).
   if (c.cvr === "99000001") {
     const k = <T extends object>(rows: T[]): T[] => rows.map((r) => Object.fromEntries(Object.entries(r).map(([key, v]) => [key, typeof v === "number" && key !== "year" ? Math.round(v * 1.35) : v])) as T);
@@ -494,6 +500,10 @@ function strip(c: DemoCompany): CompanyVM {
       statutesChanged: "2024-03-12",
       advertisingProtected: false,
       listed: false,
+      secondaryNames: ["Eksempel Entreprise A/S", "Prøvebyg A/S"],
+      purpose: "Selskabets formål er at drive virksomhed med entreprise, byggeri og dermed beslægtet virksomhed (eksempeldata).",
+      signingRule: "Selskabet tegnes af et bestyrelsesmedlem i forening med en direktør eller af to direktører i forening (eksempeldata).",
+      signingAuditor: "Eksempel Revisorsen (mne00001)",
     };
   }
   if (c.auditor === "Ingen" && c.form !== "Enkeltmandsvirksomhed" && c.form !== "I/S") return { ...vm, auditExempt: true, auditExemptSince: 2024 };
@@ -742,7 +752,7 @@ const CONTACT_PERSONS: Record<string, ContactPersonVM[]> = {
 const DEMO_LIST = "Kunder";
 function changeFeedFor(opts: ChangeFeedOptions): ChangeFeedVM {
   const days = Math.max(1, Math.min(90, opts.days));
-  if (opts.list && opts.list.trim().toLowerCase() !== DEMO_LIST.toLowerCase()) {
+  if (!opts.companies?.length && opts.list && opts.list.trim().toLowerCase() !== DEMO_LIST.toLowerCase()) {
     return { listName: opts.list, days, entries: [], total: 0, emptyReason: `Der er ingen overvågningsliste med navnet "${opts.list}" i demodata (kun "${DEMO_LIST}").` };
   }
   const at = (daysAgo: number, hhmm: string) => {
@@ -769,7 +779,28 @@ function changeFeedFor(opts: ChangeFeedOptions): ChangeFeedVM {
     E("99000010", "stamdata", "Adresse ændret fra Prøvevej 1 til Prøvevej 3, 8600 Silkeborg", 2, "10:45", true),
   ];
   const cutoff = Date.now() - days * 86_400_000;
-  const inPeriod = all.filter((e) => new Date(e.at).getTime() >= cutoff && (!opts.types || opts.types.includes(e.type)));
+  const wanted = (e: ChangeEntryVM) => new Date(e.at).getTime() >= cutoff && (!opts.types || opts.types.includes(e.type));
+  if (opts.companies?.length) {
+    // Én virksomhed (fokus historik, B4): overvågningslistens ændringer i virksomheden plus dens egne ældre
+    // ændringer (inden for 90 dage), uden liste. Kun her, så listen "Kunder" og heatmappet er uændrede.
+    const own = new Set(opts.companies);
+    const older: ChangeEntryVM[] = [
+      E("99000001", "stamdata", "Telefonnummer ændret til 86 12 34 56", 9, "08:30", true),
+      E("99000001", "stamdata", "Formål ændret: opførelse af bygninger og totalentrepriser", 23, "10:12", true),
+      E("99000001", "ejerskab", "Anne Eksempel har øget sin ejerandel til 10–14,99 %", 41, "13:05", true),
+      E("99000001", "ledelse", "Bestyrelsen har konstitueret sig med Carla Prøve som næstformand", 67, "09:00", true),
+    ];
+    const mine = [...all, ...older].filter((e) => e.lassoId !== undefined && own.has(e.lassoId) && wanted(e));
+    return {
+      days,
+      entries: foldChangeEntries(mine),
+      total: mine.length,
+      source: "Eksempeldata",
+      updated: new Date().toISOString().slice(0, 10),
+      ...(mine.length ? {} : { emptyReason: `Ingen ændringer i virksomheden de seneste ${days} dage.` }),
+    };
+  }
+  const inPeriod = all.filter(wanted);
   return { listName: DEMO_LIST, days, entries: foldChangeEntries(inPeriod), total: inPeriod.length, source: "Eksempeldata", updated: new Date().toISOString().slice(0, 10) };
 }
 
@@ -889,6 +920,40 @@ export class DemoProvider implements DataProvider {
       owners: c.owners.map((o) => (o.kind === "person" && !o.lassoId ? { ...o, lassoId: PERSON_IDS.get(o.name) } : o)),
       auditor: c.auditor === "Ingen" ? undefined : { name: c.auditor, lassoId: auditor?.lassoId, from: "2019-01-01" },
     };
+  }
+
+  /**
+   * Portalens Stamoplysninger (eksempeldata): relationer med fra–til (nuværende roller og ejere, en
+   * stifter og en tidligere ejer) og stamdata over tid (navn, adresse, ansatte, branche, kapital, kontakt).
+   */
+  async companyHistory(lassoId: string): Promise<CompanyHistoryVM> {
+    const c = get(lassoId);
+    const vm = strip(c);
+    const people = await this.people(lassoId);
+    const own = await this.ownership(lassoId);
+    const founded = c.founded ?? "2000-01-01";
+    const relations: RelationEntryVM[] = [
+      ...relationsFromCurrent(people, own).map((r) => (r.group === "legale-ejere" ? { ...r, from: "2019-07-13" } : r)),
+      ...(people[0] ? [{ group: "stiftere" as const, name: people[0].name, lassoId: people[0].lassoId, from: founded, current: true }] : []),
+      { group: "legale-ejere", name: "Eksempel Invest ApS", share: "20–24,99 %", votes: "20–24,99 %", from: founded, to: "2019-07-12", current: false },
+    ];
+    const addr = vm.address;
+    const plusYears = (d: string, n: number) => `${Number(d.slice(0, 4)) + n}${d.slice(4)}`;
+    const fields: HistoryFieldVM[] = [
+      { key: "navn", label: "Navn", entries: [vm.name, ...(vm.secondaryNames ?? [])].map((value, i) => ({ value, from: i === 0 ? plusYears(founded, 6) : founded, ...(i === 0 ? {} : { to: plusYears(founded, 6) }) })) },
+      { key: "adresse", label: "Adresse", entries: [
+        { value: [addr?.street, [addr?.zip, addr?.city].filter(Boolean).join(" ")].filter(Boolean).join(", "), from: plusYears(founded, 8) },
+        { value: `Gammelvej 3, ${[addr?.zip, addr?.city].filter(Boolean).join(" ")}`, from: founded, to: plusYears(founded, 8) },
+      ] },
+      { key: "ansatte-maaned", label: "Ansatte - månedligt", entries: [0, 1, 2, 3, 4].map((i) => ({ value: String(Math.max(1, (vm.employees ?? 5) - i)), from: `2026-0${7 - i}-01`, ...(i ? { to: `2026-0${8 - i}-01` } : {}) })) },
+      { key: "branche", label: "Branche", entries: [
+        { value: `${vm.industryCode}: ${vm.industryText}`, from: plusYears(founded, 3) },
+        { value: "749990: Andre liberale, videnskabelige og tekniske tjenesteydelser", from: founded, to: plusYears(founded, 3) },
+      ] },
+      ...(vm.registeredCapital ? [{ key: "kapital", label: "Selskabskapital", entries: [{ value: `${vm.registeredCapital.amount.toLocaleString("da-DK")} DKK`, from: "2019-07-15" }, { value: "500.000 DKK", from: founded, to: "2019-07-14" }] }] : []),
+      ...(vm.phone ? [{ key: "telefon", label: "Telefon", entries: [{ value: vm.phone, from: plusYears(founded, 4) }] }] : []),
+    ];
+    return { lassoId, relations, fields, source: "history" };
   }
 
   /** Katalog 10.1: eksempelscore og -hentetilstande, da der endnu ikke findes en live datakilde (se demoScore). */

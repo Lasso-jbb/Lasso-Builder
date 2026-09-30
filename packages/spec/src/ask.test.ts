@@ -1,6 +1,21 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { askFocus, askLabel, askPersonFocus, askPlan, companyAskTypes, foldText, parseAsk, personAskTypes, withRelated, type Ask } from "./ask.js";
+import {
+  ASK_TOPICS,
+  askFocus,
+  askLabel,
+  askPersonFocus,
+  askPlan,
+  changeDays,
+  companyAskTypes,
+  foldText,
+  normalizeTopic,
+  parseAsk,
+  personAskTypes,
+  SUMMARY_PENDING_TEXT,
+  withRelated,
+  type Ask,
+} from "./ask.js";
 
 /** Fast dato, så "i år" og "siden 2019" er deterministiske. */
 const today = new Date("2026-09-28T12:00:00Z");
@@ -81,7 +96,7 @@ const TOPIC_CASES: [string, Ask["topics"]][] = [
   ["hvad laver de", ["branche"]],
   ["hvad beskæftiger de sig med", ["branche"]],
   ["hvad er formålet", ["formaal"]],
-  ["hvem kan tegne selskabet", ["formaal"]],
+  ["hvem kan tegne selskabet", ["registrering"]],
   ["hvor ligger de", ["adresse"]],
   ["hvad er telefonnummeret", ["telefon"]],
   ["hvad er deres mail", ["email"]],
@@ -92,7 +107,7 @@ const TOPIC_CASES: [string, Ask["topics"]][] = [
   ["er de gået konkurs", ["konkurs"]],
   ["er selskabet tvangsopløst", ["konkurs"]],
   ["kan vi handle med dem", ["kredit"]],
-  ["er der røde flag", ["kredit"]],
+  ["er der røde flag", ["roede-flag"]],
   ["hvad er deres score", ["score"]],
   ["vis årsrapporten", ["regnskab"]],
   ["hvordan er pengestrømmen", ["pengestroem"]],
@@ -273,4 +288,235 @@ test("beslægtede nøgletal: spurgt først, så de nærmeste, uden dubletter", (
 
 test("foldText: æøå som ae/oe/aa, små bogstaver og uden accenter", () => {
   assert.equal(foldText("Årsværk ØKONOMI Café"), "aarsvaerk oekonomi cafe");
+});
+
+/* ---------- B1-ordbogen (docs/plan-b1-ordbog.md): de manglende komponenter ---------- */
+
+/** Svar-elementernes typer (og props) i planen. */
+const leads = (a: Ask, kind: "company" | "person" = "company") => askPlan(a, kind).lead.map((i) => i.type);
+const lead0 = (a: Ask, kind: "company" | "person" = "company") => askPlan(a, kind).lead[0];
+
+test("B1 røde flag: træf, ikke-træf og forrang for kreditten", () => {
+  assert.deepEqual(company("Er der røde flag ved Eksempel Byg?").topics, ["roede-flag"]);
+  assert.deepEqual(company("hvilke advarsler og observationer er der").topics, ["roede-flag"]);
+  assert.deepEqual(company("er der noget galt").topics, ["roede-flag"]);
+  assert.deepEqual(leads(company("er der røde flag")), ["LassoRiskObservations"]);
+  // Ikke-træf: kreditspørgsmålet er stadig kreditvurderingen.
+  assert.deepEqual(company("kan vi handle med dem").topics, ["kredit"]);
+  assert.equal(lead0(company("hvad er deres kreditvurdering"))!.type, "LassoCreditRating");
+  // Forrang: "roede flag" hører ikke længere til kreditten; med kredit står kreditvurderingen som lead nr. 2.
+  const both = company("kan vi handle med dem, er der røde flag");
+  assert.deepEqual(both.topics, ["kredit", "roede-flag"]);
+  assert.deepEqual(companyAskTypes(both), ["observationer", "kredit"]);
+  assert.deepEqual(leads(both), ["LassoRiskObservations", "LassoCreditRating"]);
+  assert.equal(askFocus(both), "risiko");
+});
+
+test("B1 fusion: træf, ikke-træf og forrang for historikken", () => {
+  assert.deepEqual(company("har de været med i en fusion eller spaltning").topics, ["fusion"]);
+  assert.deepEqual(company("er de blevet fusioneret med nogen eller delt op").topics, ["fusion"]);
+  assert.deepEqual(company("hvem er de overtaget af").topics, ["fusion"]);
+  assert.deepEqual(leads(company("har de været med i en fusion")), ["LassoMergers"]);
+  // Ikke-træf: "hvad er der sket" er historikken.
+  assert.deepEqual(company("hvad er der sket").topics, ["historik"]);
+  // Forrang: fusionsordet bruges før historikken.
+  assert.deepEqual(company("vis fusionshistorikken").topics, ["fusion"]);
+});
+
+test("B1 meddelelser: træf, ikke-træf og forrang for nyheder og historik", () => {
+  assert.deepEqual(company("hvad har de offentliggjort for nylig").topics, ["meddelelser"]);
+  assert.deepEqual(company("er der nye offentliggørelser i Statstidende").topics, ["meddelelser"]);
+  assert.deepEqual(leads(company("er der bekendtgørelser om dem")), ["LassoAnnouncements"]);
+  // Ikke-træf: nyhederne er stadig nyhederne.
+  assert.deepEqual(company("har de været i nyhederne").topics, ["nyheder"]);
+  // Forrang: "statstidende" og "meddelelser" er ikke nyheder; dokumenterne først, når de nævnes først.
+  assert.deepEqual(company("nyheder og meddelelser").topics, ["nyheder", "meddelelser"]);
+  const docs = company("hvilke dokumenter er der offentliggjort");
+  assert.deepEqual(docs.topics, ["dokumenter", "meddelelser"]);
+  assert.equal(lead0(docs)!.type, "LassoPublications");
+});
+
+test("B1 dokumenter: træf, ikke-træf og forrang for regnskabet", () => {
+  assert.deepEqual(company("hvilke dokumenter og filer ligger der hos Erhvervsstyrelsen").topics, ["dokumenter"]);
+  assert.deepEqual(company("hvilke bilag er indsendt").topics, ["dokumenter"]);
+  assert.deepEqual(leads(company("vis publikationerne")), ["LassoPublications"]);
+  // Ikke-træf: årsrapporten er regnskabet.
+  assert.deepEqual(company("vis årsrapporten").topics, ["regnskab"]);
+  // Forrang: dokumenterne før regnskabet, når de nævnes først.
+  const a = company("vis dokumenterne med regnskabet");
+  assert.deepEqual(companyAskTypes(a), ["dokumenter", "regnskab"]);
+  assert.equal(lead0(a)!.type, "LassoPublications");
+});
+
+test("B1 branchesammenligning: træf, ikke-træf og forrang for branchen", () => {
+  // "klarer … sig i forhold til" bruges af sammenligningen; "branchen" bliver tilbage til branchen (forrang afgør).
+  assert.deepEqual(company("hvordan klarer de sig i forhold til branchen").topics, ["branchesammenligning", "branche"]);
+  assert.deepEqual(company("hvordan klarer Eksempel Transport A/S sig i forhold til branchen", "Eksempel Transport A/S").topics, ["branchesammenligning"]);
+  assert.deepEqual(company("hvad er branchegennemsnittet").topics, ["branchesammenligning"]);
+  const gauge = lead0(company("hvordan klarer de sig i forhold til branchen"))!;
+  assert.deepEqual([gauge.type, gauge.props], ["LassoKeyFigureGauge", { metrics: ["soliditetsgrad", "overskudsgrad", "likviditetsgrad"] }]);
+  // Spurgte nøgletal, som måleren kender, afgrænser måleren (andre springes over); måleren før grafen.
+  const m = company("er omsætningen og soliditeten bedre end branchen");
+  assert.deepEqual(companyAskTypes(m), ["branchesammenligning", "noegletal"]);
+  assert.deepEqual(lead0(m)!.props, { metrics: ["soliditetsgrad"] });
+  // Ikke-træf: "hvilken branche" er stamdata.
+  assert.deepEqual(company("hvilken branche er de i").topics, ["branche"]);
+  // Forrang: branchesammenligningen før branchen ("bedre end gennemsnittet i sin branche").
+  const b = company("er de bedre end gennemsnittet i sin branche");
+  assert.equal(b.topics[0], "branchesammenligning");
+  assert.equal(lead0(b)!.type, "LassoKeyFigureGauge");
+});
+
+test("B1 placering: træf, ikke-træf og forrang for adresse og enheder", () => {
+  assert.deepEqual(company("hvor ligger deres afdelinger").topics, ["placering"]);
+  assert.deepEqual(company("hvor har de sine adresser på et kort").topics, ["placering"]);
+  assert.deepEqual(leads(company("vis dem på kortet")), ["LassoMap"]);
+  // Ikke-træf: "hvor ligger de" er adressen, "hvor mange afdelinger" er enhederne.
+  assert.deepEqual(company("hvor ligger de").topics, ["adresse"]);
+  assert.deepEqual(company("hvor mange afdelinger har de").topics, ["enheder"]);
+  assert.equal(lead0(company("hvor mange afdelinger har de"))!.type, "LassoProductionUnits");
+  // Forrang: kortet først, enhederne som lead nr. 2, også når afdelingerne nævnes først.
+  const both = company("hvilke afdelinger har de, vis dem på et kort");
+  assert.deepEqual(both.topics, ["enheder", "placering"]);
+  assert.deepEqual(leads(both), ["LassoMap", "LassoProductionUnits"]);
+});
+
+test("B1 hele regnskabet: træf, ikke-træf og forrang for regnskab og regnskabsår", () => {
+  assert.deepEqual(company("vis hele regnskabet").topics, ["heleregnskab"]);
+  assert.deepEqual(company("jeg vil se det komplette regnskab med alle poster og kunne skifte år").topics, ["heleregnskab"]);
+  assert.deepEqual(leads(company("vis hele regnskabet")), ["LassoFinancialStatements"]);
+  // Ikke-træf: "vis regnskabet" er resultatopgørelse og balance.
+  assert.deepEqual(company("vis regnskabet").topics, ["regnskab"]);
+  assert.equal(lead0(company("vis regnskabet"))!.type, "LassoIncomeStatement");
+  // Forrang: vinder over regnskabstypen; et regnskabsår er en prop, ikke et nøgletalssvar.
+  assert.deepEqual(companyAskTypes(company("vis hele regnskabet og balancen")), ["heleregnskab"]);
+  const y = company("vis hele regnskabet for 2023");
+  assert.deepEqual(companyAskTypes(y), ["heleregnskab"]);
+  assert.deepEqual(lead0(y)!.props, { year: 2023 });
+});
+
+test("B1 registrering: træf, ikke-træf, forrang for formålet og variant", () => {
+  assert.deepEqual(company("hvilken selskabskapital og hvilke vedtægter har de").topics, ["registrering"]);
+  assert.deepEqual(company("hvad er de registreret med af kapital og tegningsregel").topics, ["registrering"]);
+  assert.deepEqual(company("hvem kan tegne selskabet").topics, ["registrering"]);
+  const full = lead0(company("hvad er selskabskapitalen"))!;
+  assert.deepEqual([full.type, full.props], ["LassoRegistration", { variant: "full" }]);
+  // Ikke-træf: formålet alene er stadig profilen; "kapitalandel" er ikke kapitalen.
+  assert.deepEqual(company("hvad er formålet").topics, ["formaal"]);
+  assert.deepEqual(company("hvad er deres kapitalandel").topics, []);
+  // Forrang: tegningsreglen er flyttet fra formålet; formålet ved registreringen er profil-varianten.
+  const both = company("vedtægter og formål");
+  assert.deepEqual(both.topics, ["registrering", "formaal"]);
+  assert.equal(lead0(both)!.type, "LassoRegistration");
+  const purpose = askPlan(company("hvad er formålet ifølge registreringen"), "company").lead;
+  assert.deepEqual(purpose.map((i) => i.type), ["LassoTextSections", "LassoRegistration"]);
+  assert.deepEqual(purpose[1]!.props, { variant: "profile" });
+});
+
+test("B1 opsummering: træf, ikke-træf og forrang for de brede emner", () => {
+  assert.deepEqual(company("giv mig en kort opsummering").topics, ["opsummering"]);
+  assert.deepEqual(company("giv mig en tl;dr").topics, ["opsummering"]);
+  assert.deepEqual(company("kort fortalt, hvad er det").topics, ["opsummering"]);
+  const s = lead0(company("giv mig et resumé"))!;
+  assert.deepEqual([s.type, s.props], ["LassoSummary", { text: SUMMARY_PENDING_TEXT }]);
+  // Ikke-træf: "fortæl om" er stadig generelt (fokus-siden).
+  assert.equal(company("fortæl om Eksempel Byg", "Eksempel Byg").generic, true);
+  // Forrang: opsummeringen først, når den nævnes først.
+  const a = company("opsummer regnskabet");
+  assert.deepEqual(companyAskTypes(a), ["opsummering", "regnskab"]);
+  assert.equal(lead0(a)!.type, "LassoSummary");
+});
+
+test("B1 ændringer: træf, ikke-træf, forrang for historikken og perioden", () => {
+  assert.deepEqual(company("hvad er der ændret de sidste 90 dage").topics, ["aendringer"]);
+  assert.deepEqual(company("vis ændringsfeedet").topics, ["aendringer"]);
+  assert.deepEqual(lead0(company("hvad er sket de seneste 2 uger"))!.props, { days: 14 });
+  assert.deepEqual(lead0(company("vis ændringsfeedet"))!, { type: "LassoChangeFeed", props: { days: 30 }, full: true });
+  // Ikke-træf: ændringer uden periode er historikken.
+  assert.deepEqual(company("hvad er der ændret").topics, ["historik"]);
+  assert.equal(lead0(company("hvad er der ændret"))!.type, "LassoTimeline");
+  // Forrang: perioden gør det til ændringsfeedet, ikke historikken.
+  assert.deepEqual(company("hvad er der sket de sidste 3 måneder").topics, ["aendringer"]);
+  assert.equal(changeDays("de sidste 3 måneder"), 90);
+  assert.equal(changeDays("de sidste 6 måneder"), 90);
+  assert.equal(changeDays("de sidste 14 dage"), 14);
+  assert.equal(changeDays("hvad er nyt"), 30);
+});
+
+test("B1 score: kreditscoren er scoren; udviklingen giver historikken først", () => {
+  assert.deepEqual(company("hvordan har kreditscoren udviklet sig over tid").topics, ["score"]);
+  assert.deepEqual(leads(company("hvordan har kreditscoren udviklet sig over tid")), ["LassoScoreHistory", "LassoScoreGauge"]);
+  assert.deepEqual(leads(company("gik scoren op eller ned det seneste år")), ["LassoScoreHistory", "LassoScoreGauge"]);
+  // Ikke-træf: uden udvikling som i dag.
+  assert.deepEqual(leads(company("hvad er deres score")), ["LassoScoreGauge"]);
+  // Forrang: kreditvurdering og score er stadig to emner.
+  assert.deepEqual(company("kreditvurdering og score").topics, ["kredit", "score"]);
+});
+
+test("B1 persontal: træf, ikke-træf og forrang for roller (kun person)", () => {
+  assert.deepEqual(person("hvor mange roller og ejerskaber har hun haft i alt").topics, ["persontal", "ejere"]);
+  assert.deepEqual(person("hvor mange selskaber har hun siddet i, og hvor mange er ophørt").topics, ["persontal"]);
+  assert.deepEqual(leads(person("hvor mange roller har hun"), "person"), ["LassoPersonStats"]);
+  assert.equal(askPersonFocus(person("hvor mange roller har hun")), "roller");
+  // Ikke-træf: "hvilke roller" er rollelisten; en virksomhedsside kender ikke persontal.
+  assert.deepEqual(person("hvilke roller har hun").topics, ["roller"]);
+  assert.equal(company("hvor mange ansatte er der i alt").topics.includes("persontal"), false);
+  // Forrang: "hvor mange bestyrelser" er tallene, ikke bestyrelsesposterne.
+  assert.deepEqual(person("hvor mange bestyrelser sidder hun i").topics, ["persontal"]);
+  assert.deepEqual(personAskTypes(person("hvor mange roller og ejerskaber har hun")), ["persontal", "roller"]);
+});
+
+test("B1 topic-hint: forrest i emnerne, ikke generelt, ukendte og forkerte slags ignoreres", () => {
+  const hinted = parseAsk("hvad med dem", "company", { today, topic: "risiko" });
+  assert.deepEqual(hinted.topics, ["roede-flag"]);
+  assert.equal(hinted.generic, false);
+  assert.equal(lead0(hinted)!.type, "LassoRiskObservations");
+  // Hintet rangerer før nøgletal og emner i teksten; ingen dubletter.
+  const first = parseAsk("hvad er omsætningen og revisor", "company", { today, topic: "opsummering" });
+  assert.deepEqual(first.topics, ["opsummering", "revisor"]);
+  assert.equal(companyAskTypes(first)[0], "opsummering");
+  assert.deepEqual(parseAsk("vis hele regnskabet", "company", { today, topic: "heleregnskab" }).topics, ["heleregnskab"]);
+  // "regnskab" som hint ved hele regnskabet: hele regnskabet vinder stadig.
+  assert.equal(lead0(parseAsk("Vis hele regnskabet", "company", { today, topic: "regnskab" }))!.type, "LassoFinancialStatements");
+  // Ukendt værdi og emne for den anden slags side: ignoreres.
+  assert.equal(parseAsk("fortæl om dem", "company", { today, topic: "vejret" }).generic, true);
+  assert.equal(parseAsk("fortæl om dem", "company", { today, topic: "persontal" }).generic, true);
+  assert.deepEqual(parseAsk("hvem er hun", "person", { today, topic: "stats" }).topics, ["persontal"]);
+});
+
+test("B1 normalizeTopic: kanoniske værdier og aliaserne fra ordbogens afsnit 4", () => {
+  for (const t of ASK_TOPICS) assert.equal(normalizeTopic(t), t, t);
+  const aliases: [string, string][] = [
+    ["risiko", "roede-flag"], ["roede_flag", "roede-flag"], ["red_flags", "roede-flag"], ["advarsler", "roede-flag"],
+    ["fusioner", "fusion"], ["spaltning", "fusion"], ["mergers", "fusion"],
+    ["offentliggoerelser", "meddelelser"], ["statstidende", "meddelelser"], ["announcements", "meddelelser"],
+    ["publikationer", "dokumenter"], ["filer", "dokumenter"], ["documents", "dokumenter"],
+    ["branche_sammenligning", "branchesammenligning"], ["benchmark", "branchesammenligning"], ["branchetal", "branchesammenligning"],
+    ["kort", "placering"], ["map", "placering"], ["adresser", "placering"], ["afdelinger", "placering"],
+    ["hele_regnskabet", "heleregnskab"], ["fuldt_regnskab", "heleregnskab"], ["statements", "heleregnskab"],
+    ["kapital", "registrering"], ["vedtaegter", "registrering"], ["registration", "registrering"],
+    ["resume", "opsummering"], ["summary", "opsummering"], ["tldr", "opsummering"],
+    ["changes", "aendringer"], ["aendringsfeed", "aendringer"], ["seneste_aendringer", "aendringer"],
+    ["kreditscore", "score"], ["rating_history", "score"],
+    ["antal_roller", "persontal"], ["stats", "persontal"],
+    ["kredit", "kredit"], ["kreditvurdering", "kredit"], ["creditsafe", "kredit"],
+  ];
+  for (const [alias, t] of aliases) assert.equal(normalizeTopic(alias), t, alias);
+  // Store bogstaver, æøå, mellemrum og bindestreger er ligegyldige.
+  assert.equal(normalizeTopic("Røde flag"), "roede-flag");
+  assert.equal(normalizeTopic("Red Flags"), "roede-flag");
+  assert.equal(normalizeTopic(" Vedtægter "), "registrering");
+  assert.equal(normalizeTopic("reelle_ejere"), "reelle-ejere");
+  // Ukendt: undefined.
+  assert.equal(normalizeTopic("vejret"), undefined);
+  assert.equal(normalizeTopic(""), undefined);
+  assert.equal(normalizeTopic("toString"), undefined);
+});
+
+test("B1 etiketter og fokus for de nye emner", () => {
+  assert.equal(askLabel(company("er der røde flag"), "company"), "Røde flag");
+  assert.equal(askLabel(company("hvor mange roller har hun"), "company"), undefined);
+  assert.equal(askLabel(person("hvor mange roller har hun"), "person"), "Antal roller og selskaber");
+  assert.equal(askFocus(company("har de været med i en fusion")), "historik");
+  assert.equal(askFocus(company("vis hele regnskabet")), "regnskab");
 });

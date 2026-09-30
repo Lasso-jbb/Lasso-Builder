@@ -3,6 +3,7 @@ import { DATE_RANGE_ERROR, moreText, formatNumber, operatorLabel, type Operator 
 import { Dialog } from "./Dialog.js";
 import { CheckIcon } from "./Layer.js";
 import { Picker } from "./Menu.js";
+import { Icon } from "./Icon.js";
 import { Tooltip } from "./Tooltip.js";
 import { leafCodes, treeLabels, type TreeNode } from "./industries.js";
 
@@ -71,10 +72,8 @@ export function InfoTip({ text, label = "Forklaring" }: { text: string; label?: 
   return (
     <Tooltip text={text} className="lasso-infotip" placement="right">
       <button type="button" className="lasso-infotip__btn" aria-label={label}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
-          <path d="M12 11v5M12 8v.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-        </svg>
+        {/* 02b.5 (Paper 4KF-0): katalogets "Info"-ikon i 14 px, som galleriet tegner det. */}
+        <Icon name="info" size={14} />
       </button>
     </Tooltip>
   );

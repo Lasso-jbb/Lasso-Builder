@@ -1,8 +1,13 @@
 import {
   askFocus,
   askPersonFocus,
+  COMPARE_MAX,
+  COMPARE_TABLE_MAX,
+  COMPARE_TABLE_NOTE,
   companyTemplate,
   composeCompany,
+  composeCompare,
+  METRIC_FIELD,
   composePerson,
   composePersonProbe,
   composeProbe,
@@ -12,6 +17,8 @@ import {
   listTemplate,
   mainMetric,
   parseAsk,
+  personSearchKey,
+  roleKind,
   shortCompanyName,
   toLassoId,
   validateCriteria,
@@ -22,6 +29,8 @@ import {
   type Focus,
   type Metric,
   type PersonFocus,
+  type PersonRoleKind,
+  type PersonSearchResultVM,
   type SearchQuery,
   type TableColumn,
   type ViewComponent,
@@ -116,6 +125,74 @@ export async function searchCompanies(ctx: UseCaseCtx, input: SearchInput): Prom
   return { spec, dataset, ...(note ? { note } : {}) };
 }
 
+/* --- search_persons ------------------------------------------------------------------------ */
+
+export const PERSON_SEARCH_ROLES = ["direktoer", "bestyrelse", "ejer", "alle"] as const;
+export type PersonSearchRole = (typeof PERSON_SEARCH_ROLES)[number];
+
+export interface SearchPersonsInput {
+  /** Navnet eller en del af det (2-120 tegn). */
+  query: string;
+  /** Højst så mange personer (1-50, standard 25). */
+  limit?: number;
+  /** Filter på personens aktive roller (standard alle). */
+  role?: PersonSearchRole;
+  /** By-filter (bopæl), delstreng uden hensyn til store/små bogstaver. */
+  city?: string;
+  /** Overskrift på tabellen. */
+  title?: string;
+}
+
+const ROLE_KINDS: Record<Exclude<PersonSearchRole, "alle">, PersonRoleKind> = { direktoer: "direction", bestyrelse: "board", ejer: "owner" };
+
+/** Antal personer, der hentes, når role/city filtrerer bagefter, så filteret ikke tømmer en kort liste. */
+const FILTER_FETCH_LIMIT = 50;
+
+/**
+ * Personsøgning som Lasso-tabel (LassoPersonTable). role og city filtreres her i use case-laget på
+ * de rækker, personSearch leverer (aktive roller som tekst, by på bopæl). Ingen træf er aldrig en fejl.
+ */
+export async function searchPersons(ctx: UseCaseCtx, input: SearchPersonsInput): Promise<ViewData | UseCaseError> {
+  const query = input.query.trim();
+  if (query.length < 2) return fail(400, "Skriv mindst 2 tegn af personens navn.");
+  const limit = Math.min(Math.max(Math.trunc(input.limit ?? 25), 1), 50);
+  const role = input.role && input.role !== "alle" ? input.role : undefined;
+  const city = input.city?.trim().toLowerCase() || undefined;
+  const filtered = Boolean(role || city);
+  const title = input.title ?? `Personer, "${query}"`;
+  const spec = viewSpecSchema.parse({ kind: "list", title, layout: "stack", components: [{ type: "LassoPersonTable", query, limit, title }] });
+
+  // Med filter hentes flere, så der er noget at filtrere i; resultatet gemmes under specens egen nøgle.
+  const fetchSpec = filtered ? viewSpecSchema.parse({ ...spec, components: [{ type: "LassoPersonTable", query, limit: FILTER_FETCH_LIMIT, title }] }) : spec;
+  const dataset = await resolveSpec(fetchSpec, ctx.provider);
+  const fetchedKey = personSearchKey({ query, limit: filtered ? FILTER_FETCH_LIMIT : limit });
+  const key = personSearchKey({ query, limit });
+  const fetched = dataset.personSearches?.[fetchedKey];
+  let result: PersonSearchResultVM | undefined = fetched;
+  if (fetched) {
+    const rows = fetched.rows
+      .filter((r) => !role || r.roles.some((x) => roleKind(x.role) === ROLE_KINDS[role]))
+      .filter((r) => !city || (r.city ?? "").toLowerCase().includes(city))
+      .slice(0, limit);
+    result = { ...fetched, key, rows, total: filtered ? rows.length : fetched.total ?? rows.length };
+    dataset.personSearches = { [key]: result };
+  }
+
+  const roleText = role ? ` med rollen ${role}` : "";
+  const cityText = city ? ` i ${input.city!.trim()}` : "";
+  let note: string | undefined;
+  if (result && result.rows.length === 0) {
+    note = `Ingen personer fundet på "${query}"${roleText}${cityText}. Prøv et kortere navn${filtered ? " eller uden filter" : ""}.`;
+  } else if (result) {
+    const exact = result.rows.filter((r) => r.name.trim().toLowerCase() === query.toLowerCase());
+    const one = result.rows.length === 1 ? result.rows[0] : exact.length === 1 ? exact[0] : undefined;
+    note = one
+      ? `Ét præcist match: ${one.name} (${one.lassoId}). Kald show_person direkte med Lasso-ID'et ${one.lassoId}, hvis brugeren vil se personen.`
+      : `${result.rows.length} personer fundet. Vælg den rigtige og kald show_person med personens Lasso-ID (CVR-3-…).`;
+  }
+  return { spec, dataset, ...(note ? { note } : {}) };
+}
+
 /* --- show_company / GET /api/portal/company/:ref ------------------------------------------ */
 
 export interface ShowCompanyInput {
@@ -130,6 +207,8 @@ export interface ShowCompanyInput {
   question?: string;
   /** Nøgletal, modellen har genkendt i spørgsmålet (lægges forrest i spørgsmålsprofilen). */
   metrics?: Metric[];
+  /** Emnet, den kaldende AI har aflæst (B1-ordbogen); kanonisk værdi eller alias. */
+  topic?: string;
   /** "Vis alt om X" (brugervalg): alle elementer i fuld form, også ud over højdebudgettet (23.3). */
   show_all?: boolean;
 }
@@ -173,7 +252,7 @@ export async function showCompany(ctx: UseCaseCtx, input: ShowCompanyInput): Pro
   // CVR-nummer hentes navnet først (samme cachede opslag som hovedet), som på den delte side /k/.
   const question = sections?.length ? undefined : input.question?.trim() || undefined;
   if (question && !official) official = await provider.company(lassoId).then((c) => c.name).catch(() => undefined);
-  const ask = question ? parseAsk(question, "company", { metrics: input.metrics, name: companyNameHints(official) }) : undefined;
+  const ask = question ? parseAsk(question, "company", { metrics: input.metrics, name: companyNameHints(official), topic: input.topic }) : undefined;
   // Et generelt spørgsmål uden focus giver fokus-siden for spørgsmålets fokus ("hvordan går det" → oekonomi).
   const focus = input.focus ?? (ask?.generic ? askFocus(ask) : undefined);
   const dataset: Dataset = await resolveSpec(
@@ -197,7 +276,7 @@ export async function showCompany(ctx: UseCaseCtx, input: ShowCompanyInput): Pro
         metric: chart_metric ?? mainMetric(dataset.financials[lassoId]?.years ?? []),
         years: years ?? (focus === "oekonomi" ? 10 : 5),
         focus: sections?.length ? undefined : focus,
-        ...(ask ? { question: ask.question, ...(input.metrics?.length ? { metrics: input.metrics } : {}) } : {}),
+        ...(ask ? { question: ask.question, ...(input.metrics?.length ? { metrics: input.metrics } : {}), ...(input.topic ? { topic: input.topic } : {}) } : {}),
       })
     : undefined;
   return { spec, dataset, ...(note ? { note } : {}), lassoId, ...(link ? { link } : {}), ...(ask && !ask.generic ? { ask } : {}) };
@@ -221,6 +300,8 @@ export interface ShowPersonInput {
   focus?: PersonFocus;
   /** Brugerens spørgsmål ordret (højst 300 tegn): serveren vælger elementer og data efter det. */
   question?: string;
+  /** Emnet, den kaldende AI har aflæst (B1-ordbogen). */
+  topic?: string;
   /** "Vis alt om X" (brugervalg): alle elementer i fuld form, også ud over højdebudgettet. */
   show_all?: boolean;
 }
@@ -249,7 +330,7 @@ export async function showPerson(ctx: UseCaseCtx, input: ShowPersonInput): Promi
   // Spørgsmålet læses uden personens navn; ved et ID hentes navnet først (samme opslag som hovedet).
   const question = input.question?.trim() || undefined;
   if (question && !official) official = await provider.person(lassoId).then((x) => x.name).catch(() => undefined);
-  const ask = question ? parseAsk(question, "person", { name: official }) : undefined;
+  const ask = question ? parseAsk(question, "person", { name: official, topic: input.topic }) : undefined;
   const focus = input.focus ?? (ask?.generic ? askPersonFocus(ask) : undefined) ?? "overblik";
   // Kun det, fokus (eller spørgsmålet) viser, hentes (fx nyheder kun på historik, ejerdiagrammet kun på overblik og ejerskab).
   const dataset = await resolveSpec(composePersonProbe(lassoId, focus, ask), provider, extrasOf(ctx));
@@ -257,7 +338,74 @@ export async function showPerson(ctx: UseCaseCtx, input: ShowPersonInput): Promi
   if (!p) return fail(404, `Kunne ikke hente personen ${lassoId}: ${dataset.errors[`person:${lassoId}`] ?? "ukendt fejl"}.`);
   const spec = composePerson(lassoId, dataset, { focus, name: p.name, ask, ...(input.show_all ? { showAll: true } : {}) });
   // Linket åbner samme fokus og samme svar som i chatten.
-  return { spec, dataset, ...(note ? { note } : {}), lassoId, link: personLink(config, lassoId, focus, ask?.question), ...(ask && !ask.generic ? { ask } : {}) };
+  return { spec, dataset, ...(note ? { note } : {}), lassoId, link: personLink(config, lassoId, focus, ask?.question, undefined, input.topic), ...(ask && !ask.generic ? { ask } : {}) };
+}
+
+/* --- compare_companies -------------------------------------------------------------------- */
+
+export interface CompareCompaniesInput {
+  /** 2–10 navne, CVR-numre eller Lasso-ID'er. */
+  companies: string[];
+  /** Nøgletal i tabellen (1–5). */
+  metrics?: Metric[];
+  /** Ét nøgletal: rangering. */
+  metric?: Metric;
+  /** År i linjegrafen (2–10, standard 5). */
+  years?: number;
+  /** Brugerens spørgsmål ordret: vælger rangering vs. tabel og nøgletal. */
+  question?: string;
+  title?: string;
+}
+
+/**
+ * Sammenligning af 2–10 virksomheder (plan D3). Navne slås op som i show_company (bedste match,
+ * alternativerne i noten); et navn uden match udelades med en note. Virksomhedernes stamdata og
+ * regnskaber hentes én gang (en rangering over dem alle), og komponisten vælger ud fra dem.
+ */
+export async function compareCompanies(ctx: UseCaseCtx, input: CompareCompaniesInput): Promise<ViewData | UseCaseError> {
+  const { config, provider } = ctx;
+  const refs = input.companies.map((c) => c.trim()).filter(Boolean);
+  if (refs.length < 2 || refs.length > COMPARE_MAX) return fail(400, `Angiv 2–${COMPARE_MAX} virksomheder (fik ${refs.length}).`);
+  const notes: string[] = [];
+  const found = await Promise.all(
+    refs.map(async (ref): Promise<string | null> => {
+      if (isCompanyRef(ref)) return toLassoId(ref, config.LASSO_COMPANY_ID_PREFIX);
+      try {
+        const hit = await findCompany(provider, ref);
+        if (!hit) {
+          notes.push(`Fandt ingen virksomhed, der hedder "${ref}"; den er udeladt.`);
+          return null;
+        }
+        const alt = hit.alternatives.slice(0, 3).map((r) => `${r.name} (${r.cvr ?? r.lassoId})`).join("; ");
+        notes.push(`"${ref}" = ${hit.pick.name} (${hit.pick.cvr ?? hit.pick.lassoId}).${alt ? ` Andre match: ${alt}.` : ""}`);
+        return hit.pick.lassoId;
+      } catch (err) {
+        notes.push(`Kunne ikke slå "${ref}" op: ${errorMessage(err)}.`);
+        return null;
+      }
+    }),
+  );
+  const ids = [...new Set(found.filter((x): x is string => Boolean(x)))];
+  const doubles = found.filter(Boolean).length - ids.length;
+  if (doubles > 0) notes.push(`${doubles === 1 ? "Én virksomhed" : `${doubles} virksomheder`} var nævnt to gange og vises én gang.`);
+  const ambiguous = notes.some((n) => n.includes("Andre match"));
+  const lookupNote = notes.length ? `Navneopslag: ${notes.join(" ")}${ambiguous ? " Mente brugeren en anden, så kald compare_companies igen med CVR-numrene." : ""}` : undefined;
+  if (ids.length < 2) return fail(404, `${lookupNote ? `${lookupNote} ` : ""}Der skal mindst 2 virksomheder til en sammenligning. Prøv med CVR-numre.`);
+
+  // Én hentning: stamdata og regnskaber for alle (rangeringen henter netop det, og tabel og graf bruger det samme).
+  const probe = viewSpecSchema.parse({ kind: "custom", title: "Sammenligning", components: [{ type: "LassoRanking", companies: ids, metric: "omsaetning" }] });
+  const dataset = await resolveSpec(probe, provider, extrasOf(ctx));
+  const names: Record<string, string | undefined> = {};
+  const values: Record<string, Partial<Record<Metric, number | null>>> = {};
+  for (const id of ids) {
+    names[id] = dataset.companies[id]?.name;
+    const last = dataset.financials[id]?.years.at(-1);
+    if (last) values[id] = Object.fromEntries(Object.entries(METRIC_FIELD).map(([m, f]) => [m, typeof last[f] === "number" ? (last[f] as number) : null]));
+  }
+  const composed = composeCompare(ids, { metrics: input.metrics, metric: input.metric, years: input.years, question: input.question, title: input.title, names, values });
+  const spec = normalizeSpec(composed, config.LASSO_COMPANY_ID_PREFIX);
+  const note = [lookupNote, ids.length > COMPARE_TABLE_MAX ? COMPARE_TABLE_NOTE : undefined].filter(Boolean).join("\n") || undefined;
+  return { spec, dataset, ...(note ? { note } : {}) };
 }
 
 /* --- render_view -------------------------------------------------------------------------- */

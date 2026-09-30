@@ -235,3 +235,47 @@ test("26f: tablet går op til skærm 1199: foldningen gælder også, når midten
   assert.equal(media.length, container.length);
   assert.match(css, /@media \(max-width: 1199px\) \{\n  \.lasso-content--dashboard, \.lasso-content--grid-2 \{ column-gap: var\(--lasso-space-4\); \}\n  \.lasso-cell--half, \.lasso-cell--third \{ grid-column: span 6; \}/);
 });
+
+test("Ø13/B8: tablet-foldningen (26.1) giver aldrig et element færre kolonner end på desktop, og en stak over ½ står alene i sin række", () => {
+  const legal = [[12], [6, 6], [8, 4], [4, 8], [9, 3], [3, 9], [4, 4, 4], [3, 3, 6], [3, 6, 3], [6, 3, 3], [3, 3, 3, 3]];
+  for (const cols of legal) {
+    const spans = tabletSpans(cols);
+    cols.forEach((c, i) => assert.ok(spans[i]! >= c, `${cols.join("+")}: ${c} -> ${spans[i]}`));
+    // Et smalt element (højst ½) bliver kun bredere end ½ på tablet, når det står alene i rækken (12).
+    spans.forEach((s) => assert.ok(s === 6 || s === 12, `${cols.join("+")}: ${s}`));
+  }
+});
+
+test("E0: etiketter ombrydes (ingen ellipsis) og skjult hjælpeboble har display:none", () => {
+  const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+  for (const m of css.matchAll(/([^{}\n]*\.lasso-kv-row__label(?:text)?\b[^{}]*)\{([^}]*)\}/g)) {
+    assert.doesNotMatch(m[2] ?? "", /text-overflow:\s*ellipsis/, `ellipsis på ${m[1]}`);
+  }
+  const base = /^\.lasso-tip__bubble \{([^}]*)\}/m.exec(css)?.[1] ?? "";
+  assert.match(base, /visibility:\s*hidden/);
+  assert.match(base, /display:\s*none/);
+  assert.match(css, /\.lasso-tip\.is-open \.lasso-tip__bubble \{[^}]*display:\s*block/);
+});
+
+test("Lasso-side (layout 'page', 06.5): kolonne 1-3 i lasso-lpage--3, uden column i fuld bredde; CSS'en har 2:3:4, trinnene og sideluften", () => {
+  const spec = parseViewSpec({
+    kind: "company",
+    title: "X",
+    layout: "page",
+    components: [
+      { type: "LassoKeyValueList", company: "CVR-1-1" },
+      { type: "LassoShortcuts", company: "CVR-1-1", column: 1 },
+      { type: "LassoRelations", company: "CVR-1-1", column: 2 },
+      { type: "LassoKeyValueList", company: "CVR-1-1", variant: "financials", column: 3 },
+    ],
+  });
+  const html = renderToStaticMarkup(createElement(LassoView, { spec, dataset: emptyDataset("demo"), host: { prompt: true }, onAction: () => {}, frameless: true }));
+  assert.match(html, /class="lasso-content lasso-content--grid-4 lasso-content--page"/);
+  assert.equal((html.match(/class="lasso-lpage__full"/g) ?? []).length, 1);
+  assert.match(html, /class="lasso-lpage lasso-lpage--3"/);
+  assert.equal((html.match(/class="lasso-lpage__col"/g) ?? []).length, 3);
+  const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+  assert.match(css, /--lasso-page-x: clamp\(24px, 3\.2cqi, 88px\)/);
+  assert.match(css, /@container lasso \(min-width: 660px\) \{\s*\.lasso-lpage--2, \.lasso-lpage--3 \{ grid-template-columns: minmax\(0, 2fr\) minmax\(0, 3fr\); \}/);
+  assert.match(css, /@container lasso \(min-width: 1320px\) \{\s*\.lasso-lpage--3 \{ grid-template-columns: minmax\(0, 2fr\) minmax\(0, 3fr\) minmax\(0, 4fr\); \}/);
+});

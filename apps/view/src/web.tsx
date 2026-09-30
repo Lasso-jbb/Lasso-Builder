@@ -13,7 +13,7 @@ function downloadCsv(filename: string, csv: string) {
 }
 
 /** Følger værtens tema: data-theme på <html>, når en indlejrende side sætter det, ellers systemets indstilling. */
-function usePrefersDark(): boolean {
+export function usePrefersDark(): boolean {
   const read = () => {
     const forced = document.documentElement.getAttribute("data-theme");
     if (forced === "dark" || forced === "light") return forced === "dark";

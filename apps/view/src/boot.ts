@@ -1,4 +1,4 @@
-import type { Dataset, ViewSpec } from "@lasso/spec";
+import type { Dataset, PortalPage, ShowcaseAlternatives, ShowcaseTab, ViewSpec } from "@lasso/spec";
 
 /**
  * window.__LASSO_BOOT__, som serveren indsætter i render-appens HTML. Uden boot kører appen som
@@ -61,4 +61,15 @@ export interface PrintBoot {
   generatedAt: string;
 }
 
-export type Boot = WebBoot | PortalBoot | PrintBoot;
+/** Komponentudstillingen (/komponenter): alle komponenter på én virksomhed og én person, to faner. */
+export interface ShowcaseBoot {
+  mode: "showcase";
+  generatedAt: string;
+  /** Kort commit-hash for den udrullede kode ("lokal" uden Railway). */
+  version?: string;
+  tabs: (ShowcaseTab & { dataset: Dataset })[];
+  alt: ShowcaseAlternatives & { dataset: Dataset };
+  portal: { company: string; name: string; pages: (PortalPage & { dataset: Dataset })[] };
+}
+
+export type Boot = WebBoot | PortalBoot | PrintBoot | ShowcaseBoot;

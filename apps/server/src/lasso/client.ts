@@ -241,6 +241,10 @@ export class LassoClient {
   personHistory(lassoId: string) {
     return this.get(`${enc(lassoId)}/history`);
   }
+  /** Virksomhedens historik: relationer og stamdata med fra–til (samme sti som personhistorikken). Ubekræftet for virksomheder. */
+  companyHistory(lassoId: string) {
+    return this.get(`${enc(lassoId)}/history`);
+  }
   /** Personens netværk: personer med fælles selskaber (docs.lassox.com/api/people/cvrnetwork). Ubekræftet. */
   personNetwork(lassoId: string) {
     return this.get(`modules/network/${enc(lassoId)}`);

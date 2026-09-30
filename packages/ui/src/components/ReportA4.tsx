@@ -27,7 +27,7 @@ import { severityWord } from "../primitives.js";
  * standardrapporter (virksomhed 27.1-27.2, person 27.4) og "det man står i" (27.3, fx regnskabsanalysen
  * 19.6). A4 (794×1123 px ved 96 dpi, margen 56), samme typografi og elementer som skærmen, men uden
  * interaktion. Ingen knapper, ingen hover, tal altid som tekst, grafer som vektor. Sidehoved og sidefod
- * gentages på alle sider; sidefoden bærer "Data pr. …" og sidetal "x af n" (ingen kildelinje, G3).
+ * gentages på alle sider; sidefoden bærer "Data pr. …" og sidetal "x af n" (ingen kildevisning, G3).
  * Sider og blokke uden data udelades, og sidetallene beregnes derefter.
  *
  * Print-regler (katalog 27): alt i sort/grå + koral, ingen fyldte farveflader større end
@@ -170,7 +170,7 @@ function PageHead({ cover, label, name, cvr }: { cover?: boolean; label: string;
   );
 }
 
-/** Sidefod (27): "Data pr. …" til venstre (ingen kildelinje, G3), Lasso-ikon og "side x af n" til højre. */
+/** Sidefod (27): "Data pr. …" til venstre (ingen kildevisning, G3), Lasso-ikon og "side x af n" til højre. */
 function PageFoot({ date, page, total, left }: { date: string; page: number; total: number; left?: string }) {
   return (
     <footer className="lasso-a4__foot">
@@ -242,7 +242,7 @@ function companyStamp(dataset: Dataset, generatedAt?: string) {
  * år (pil + procent), grafen for hovedtallet over 5 år, ledelse og legale ejere, og båndet MIT-0 med
  * Risiko (score, måler og de to vigtigste observationer) og Kontakt og oplysninger. A4 794×1123 px ved
  * 96 dpi, margen 56, samme typografi som skærmen, uden interaktion; sidefoden bærer kun "Data pr. …" og
- * sidetal (G3: ingen kildelinje). Blokke uden data udelades. "Eksempeldata" indgår kun i demo.
+ * sidetal (G3: ingen kildevisning). Blokke uden data udelades. "Eksempeldata" indgår kun i demo.
  * Rapport "af det man står i" (27.3): se StatementsReportA4 og AnalysisReportA4.
  */
 export function ReportA4({ company, dataset, generatedAt }: ReportA4Props) {
@@ -630,7 +630,7 @@ export function StatementsReportA4({ company, dataset, generatedAt }: ReportA4Pr
  * Regnskabsanalysen som A4-PDF (katalog 19.6, Paper LZM-0/LZP-0): det, "Hent som PDF" i 19.3 laver.
  * Sidehoved som 27.1 (navnelogo + "Regnskabsanalyse, genereret …"), overlinje REGNSKABSANALYSE, navnet
  * 28/700, "CVR …, regnskabsår … (periode), sammenlignet med …", ALLE afsnit foldet ud, "Tal der indgår i
- * analysen" som nøgle-værdi-liste og forbeholdet som sidste linje. Ingen kildelinje (G3); "genereret"
+ * analysen" som nøgle-værdi-liste og forbeholdet som sidste linje. Ingen kildevisning (G3); "genereret"
  * står kun i sidehovedet. Sidefod: navn, CVR og "regnskabsanalyse <år>" til venstre, sidetal til højre.
  * Ved lange analyser fortsætter teksten på næste side (samme hoved/fod) via print-CSS (break-inside).
  */
@@ -706,7 +706,7 @@ const yearOf = (d?: string) => (d ? d.slice(0, 4) : "");
  * 28/700; persontal MK4-0/MK7-0 (aktive roller, tidligere roller, ejerskab, netværk 1. led, konkurser);
  * aktive roller som tabel (selskab, rolle, siden, status, MKS-0); tidligere roller dæmpet (MLF-0, konkurs i
  * rødt); "Sidder sammen med" (de 3 med længst fælles periode) og "Risiko" (PEP, stråmand, konkurser,
- * tvangsopløsninger) side om side (MLS-0). Ingen CPR, adresse eller kildelinje.
+ * tvangsopløsninger) side om side (MLS-0). Ingen CPR, adresse eller kildevisning.
  */
 export function PersonReportA4({ person, dataset, generatedAt }: PersonReportA4Props) {
   const p = dataset.persons[person];

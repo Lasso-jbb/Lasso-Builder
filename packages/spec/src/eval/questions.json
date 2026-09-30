@@ -1,0 +1,997 @@
+{
+  "version": 1,
+  "target": 90,
+  "cases": [
+    {
+      "id": "c-ejere-01",
+      "kind": "company",
+      "entity": "CVR-1-99000001",
+      "question": "Hvem ejer Eksempel Byg A/S?",
+      "expected": {
+        "lead": "LassoOwnerList",
+        "alsoPresent": [
+          "LassoOwnershipDiagram"
+        ]
+      },
+      "covers": [
+        "LassoOwnerList"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "c-soliditet-01",
+      "kind": "company",
+      "entity": "CVR-1-99000001",
+      "question": "Hvordan har soliditetsgraden udviklet sig i Eksempel Byg A/S de sidste 5 år?",
+      "hints": {
+        "metrics": [
+          "soliditetsgrad"
+        ]
+      },
+      "expected": {
+        "lead": "LassoLineChart",
+        "leadProps": {
+          "metric": "soliditetsgrad"
+        }
+      },
+      "covers": [
+        "LassoLineChart"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "c-direktion-01",
+      "kind": "company",
+      "entity": "CVR-1-99000004",
+      "question": "Hvem sidder i direktionen i Eksempel Transport A/S?",
+      "expected": {
+        "lead": "LassoPersonList"
+      },
+      "covers": [
+        "LassoPersonList"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "c-revisor-01",
+      "kind": "company",
+      "entity": "CVR-1-99000001",
+      "question": "Hvem er revisor for Eksempel Byg A/S?",
+      "expected": {
+        "lead": "LassoKeyValueList"
+      },
+      "covers": [
+        "LassoKeyValueList"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "c-generisk-01",
+      "kind": "company",
+      "entity": "CVR-1-99000005",
+      "question": "Fortæl om Eksempel Software ApS",
+      "expected": {
+        "lead": "LassoTextSections",
+        "leadProps": {
+          "variant": "profil"
+        },
+        "focus": "overblik"
+      },
+      "covers": [
+        "LassoTextSections"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende",
+      "note": "Generisk spørgsmål: skal lande på Papers default-side (profil først)."
+    },
+    {
+      "id": "p-konkurs-01",
+      "kind": "person",
+      "entity": "CVR-3-4000000001",
+      "question": "Har Mette Holm været involveret i konkurser?",
+      "expected": {
+        "lead": "LassoPersonRisk"
+      },
+      "covers": [
+        "LassoPersonRisk"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "c-roedeflag-01",
+      "kind": "company",
+      "entity": "CVR-1-99000001",
+      "question": "Er der røde flag ved Eksempel Byg A/S?",
+      "hints": {
+        "topic": "roede-flag"
+      },
+      "expected": {
+        "lead": "LassoRiskObservations",
+        "alsoPresent": [
+          "LassoCreditRating"
+        ]
+      },
+      "covers": [
+        "LassoRiskObservations"
+      ],
+      "dataInDemo": true,
+      "group": "manglende"
+    },
+    {
+      "id": "c-fusion-01",
+      "kind": "company",
+      "entity": "CVR-1-99000012",
+      "question": "Har Eksempel Ejendomme ApS været med i en fusion eller spaltning?",
+      "hints": {
+        "topic": "fusion"
+      },
+      "expected": {
+        "lead": "LassoMergers"
+      },
+      "covers": [
+        "LassoMergers"
+      ],
+      "dataInDemo": true,
+      "group": "manglende"
+    },
+    {
+      "id": "c-offentliggoerelser-01",
+      "kind": "company",
+      "entity": "CVR-1-99000001",
+      "question": "Hvad har Eksempel Byg A/S offentliggjort for nylig?",
+      "hints": {
+        "topic": "meddelelser"
+      },
+      "expected": {
+        "lead": "LassoAnnouncements"
+      },
+      "covers": [
+        "LassoAnnouncements"
+      ],
+      "dataInDemo": true,
+      "group": "manglende"
+    },
+    {
+      "id": "c-dokumenter-01",
+      "kind": "company",
+      "entity": "CVR-1-99000002",
+      "question": "Hvilke dokumenter er der offentliggjort for Eksempel Revision Midt ApS?",
+      "hints": {
+        "topic": "dokumenter"
+      },
+      "expected": {
+        "lead": "LassoPublications"
+      },
+      "covers": [
+        "LassoPublications"
+      ],
+      "dataInDemo": true,
+      "group": "manglende"
+    },
+    {
+      "id": "c-branche-01",
+      "kind": "company",
+      "entity": "CVR-1-99000004",
+      "question": "Hvordan klarer Eksempel Transport A/S sig i forhold til branchen?",
+      "hints": {
+        "topic": "branchesammenligning"
+      },
+      "expected": {
+        "lead": "LassoKeyFigureGauge"
+      },
+      "covers": [
+        "LassoKeyFigureGauge"
+      ],
+      "dataInDemo": false,
+      "group": "manglende",
+      "note": "Demodata har ingen branchetal; tæller kun på plan-niveau."
+    },
+    {
+      "id": "c-placering-01",
+      "kind": "company",
+      "entity": "CVR-1-99000004",
+      "question": "Hvor ligger Eksempel Transport A/S' afdelinger?",
+      "hints": {
+        "topic": "placering"
+      },
+      "expected": {
+        "lead": "LassoMap",
+        "alsoPresent": [
+          "LassoProductionUnits"
+        ]
+      },
+      "covers": [
+        "LassoMap",
+        "LassoProductionUnits"
+      ],
+      "dataInDemo": false,
+      "group": "manglende",
+      "note": "Demodata har ingen kortpunkter; tæller kun på plan-niveau."
+    },
+    {
+      "id": "c-heleregnskab-01",
+      "kind": "company",
+      "entity": "CVR-1-99000001",
+      "question": "Vis hele regnskabet for Eksempel Byg A/S",
+      "hints": {
+        "topic": "heleregnskab"
+      },
+      "expected": {
+        "lead": "LassoFinancialStatements"
+      },
+      "covers": [
+        "LassoFinancialStatements"
+      ],
+      "dataInDemo": true,
+      "group": "manglende"
+    },
+    {
+      "id": "c-registrering-01",
+      "kind": "company",
+      "entity": "CVR-1-99000001",
+      "question": "Hvad er Eksempel Byg A/S registreret med af kapital, vedtægter og tegningsregel?",
+      "hints": {
+        "topic": "registrering"
+      },
+      "expected": {
+        "lead": "LassoRegistration"
+      },
+      "covers": [
+        "LassoRegistration"
+      ],
+      "dataInDemo": true,
+      "group": "manglende"
+    },
+    {
+      "id": "c-scorehistorik-01",
+      "kind": "company",
+      "entity": "CVR-1-99000001",
+      "question": "Hvordan har kreditscoren for Eksempel Byg A/S udviklet sig over tid?",
+      "hints": {
+        "topic": "score"
+      },
+      "expected": {
+        "lead": "LassoScoreHistory",
+        "alsoPresent": [
+          "LassoScoreGauge"
+        ]
+      },
+      "covers": [
+        "LassoScoreHistory",
+        "LassoScoreGauge"
+      ],
+      "dataInDemo": false,
+      "group": "manglende",
+      "note": "Demodata har ingen score; tæller kun på plan-niveau. Live kræver Creditsafe-abonnement (Ø6)."
+    },
+    {
+      "id": "c-opsummering-01",
+      "kind": "company",
+      "entity": "CVR-1-99000001",
+      "question": "Giv mig en kort opsummering af Eksempel Byg A/S",
+      "hints": {
+        "topic": "opsummering"
+      },
+      "expected": {
+        "lead": "LassoSummary"
+      },
+      "covers": [
+        "LassoSummary"
+      ],
+      "dataInDemo": true,
+      "group": "manglende"
+    },
+    {
+      "id": "c-aendringer-01",
+      "kind": "company",
+      "entity": "CVR-1-99000001",
+      "question": "Hvad er der ændret i Eksempel Byg A/S de sidste 90 dage?",
+      "hints": {
+        "topic": "aendringer"
+      },
+      "expected": {
+        "lead": "LassoChangeFeed",
+        "alsoPresent": [
+          "LassoTimeline"
+        ]
+      },
+      "covers": [
+        "LassoChangeFeed"
+      ],
+      "dataInDemo": false,
+      "group": "manglende",
+      "note": "Ændringsfeedet er i dag kun for overvågede virksomheder; skal kunne bruges for én virksomhed."
+    },
+    {
+      "id": "p-persontal-01",
+      "kind": "person",
+      "entity": "CVR-3-4000000001",
+      "question": "Hvor mange roller og ejerskaber har Mette Holm haft i alt?",
+      "hints": {
+        "topic": "persontal"
+      },
+      "expected": {
+        "lead": "LassoPersonStats",
+        "alsoPresent": [
+          "LassoPersonRoles"
+        ]
+      },
+      "covers": [
+        "LassoPersonStats"
+      ],
+      "dataInDemo": true,
+      "group": "manglende"
+    },
+    {
+      "id": "c-generisk-02",
+      "kind": "company",
+      "entity": "CVR-1-99000008",
+      "question": "Hvad er det for et firma, Eksempel Maskinfabrik A/S?",
+      "expected": {
+        "lead": "LassoTextSections",
+        "leadProps": {
+          "variant": "profil"
+        },
+        "focus": "overblik"
+      },
+      "covers": [
+        "LassoTextSections"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende",
+      "note": "Generisk spoergsmaal i talesprog; skal lande paa overblik."
+    },
+    {
+      "id": "c-oekonomi-01",
+      "kind": "company",
+      "entity": "CVR-1-99000004",
+      "question": "Hvordan går det i Eksempel Transport A/S?",
+      "expected": {
+        "lead": "LassoGroupedBarChart",
+        "focus": "oekonomi"
+      },
+      "covers": [
+        "LassoGroupedBarChart"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende",
+      "note": "Generisk oekonomi-spoergsmaal; lead efter compose.ts (finance() paa oekonomi med >=3 aar og resultat)."
+    },
+    {
+      "id": "c-oekonomi-02",
+      "kind": "company",
+      "entity": "CVR-1-99000008",
+      "question": "hvordan ser oekonomien ud hos Eksempel Maskinfabrik A/S",
+      "expected": {
+        "lead": "LassoGroupedBarChart",
+        "focus": "oekonomi"
+      },
+      "covers": [
+        "LassoGroupedBarChart"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "c-regnskab-01",
+      "kind": "company",
+      "entity": "CVR-1-99000001",
+      "question": "Vis regnskab for Eksempel Byg A/S",
+      "expected": {
+        "lead": "LassoIncomeStatement",
+        "focus": "regnskab"
+      },
+      "covers": [
+        "LassoIncomeStatement"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende",
+      "note": "Fanekommando: generisk fokus regnskab."
+    },
+    {
+      "id": "c-regnskab-02",
+      "kind": "company",
+      "entity": "CVR-1-99000005",
+      "question": "Vis regnskabet for Eksempel Software ApS",
+      "expected": {
+        "lead": "LassoIncomeStatement",
+        "focus": "regnskab"
+      },
+      "covers": [
+        "LassoIncomeStatement"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "c-ejerskab-01",
+      "kind": "company",
+      "entity": "CVR-1-99000004",
+      "question": "Vis ejerskab for Eksempel Transport A/S",
+      "expected": {
+        "lead": "LassoOwnershipDiagram",
+        "alsoPresent": [
+          "LassoOwnerList"
+        ],
+        "focus": "ejerskab"
+      },
+      "covers": [
+        "LassoOwnershipDiagram"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "c-ejerskab-02",
+      "kind": "company",
+      "entity": "CVR-1-99000012",
+      "question": "vis ejerskab for Eksempel Ejendomme ApS",
+      "expected": {
+        "lead": "LassoOwnershipDiagram",
+        "alsoPresent": [
+          "LassoOwnerList"
+        ],
+        "focus": "ejerskab"
+      },
+      "covers": [
+        "LassoOwnershipDiagram"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "c-ledelse-01",
+      "kind": "company",
+      "entity": "CVR-1-99000001",
+      "question": "Vis ledelse for Eksempel Byg A/S",
+      "expected": {
+        "lead": "LassoPersonList",
+        "focus": "ledelse"
+      },
+      "covers": [
+        "LassoPersonList"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "c-ledelse-02",
+      "kind": "company",
+      "entity": "CVR-1-99000006",
+      "question": "Hvem staar bag Eksempel Tømrer ApS?",
+      "hints": {
+        "focus": "ledelse"
+      },
+      "expected": {
+        "lead": "LassoPersonList",
+        "focus": "ledelse"
+      },
+      "covers": [
+        "LassoPersonList"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende",
+      "note": "Talesprog uden æøå; 'hvem staar bag' er ledelse-emnet i ask.ts."
+    },
+    {
+      "id": "c-risiko-01",
+      "kind": "company",
+      "entity": "CVR-1-99000001",
+      "question": "Vis risiko for Eksempel Byg A/S",
+      "expected": {
+        "lead": "LassoCreditRating",
+        "focus": "risiko"
+      },
+      "covers": [
+        "LassoCreditRating"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende",
+      "note": "Lead efter composeProbe (kreditvurdering foerst); compose.ts risiko-siden kan have oplysninger foer. Skal afgoeres af Fable."
+    },
+    {
+      "id": "c-risiko-02",
+      "kind": "company",
+      "entity": "CVR-1-99000011",
+      "question": "Er det sikkert at handle med Eksempel Energi A/S?",
+      "hints": {
+        "focus": "risiko"
+      },
+      "expected": {
+        "lead": "LassoCreditRating",
+        "focus": "risiko"
+      },
+      "covers": [
+        "LassoCreditRating"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende",
+      "note": "Talesprog; 'handle med' er kredit-emnet. Konkursbo i demodata."
+    },
+    {
+      "id": "c-historik-01",
+      "kind": "company",
+      "entity": "CVR-1-99000001",
+      "question": "Vis historik for Eksempel Byg A/S",
+      "expected": {
+        "lead": "LassoTimeline",
+        "alsoPresent": [
+          "LassoNews"
+        ],
+        "focus": "historik"
+      },
+      "covers": [
+        "LassoTimeline"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "c-historik-02",
+      "kind": "company",
+      "entity": "CVR-1-99000014",
+      "question": "Hvad sker der hos Eksempel Konsulent?",
+      "expected": {
+        "lead": "LassoTimeline",
+        "focus": "historik"
+      },
+      "covers": [
+        "LassoTimeline"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende",
+      "note": "'hvad sker der' er generisk historik."
+    },
+    {
+      "id": "c-kontakt-01",
+      "kind": "company",
+      "entity": "CVR-1-99000007",
+      "question": "Hvordan faar jeg fat i Eksempel Rådgivning A/S?",
+      "expected": {
+        "lead": "LassoContact",
+        "alsoPresent": [
+          "LassoContactPersons"
+        ],
+        "focus": "kontakt"
+      },
+      "covers": [
+        "LassoContact"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende",
+      "note": "Talesprog; 'fat i' er generisk kontakt. Lead efter composeProbe; compose.ts kan have oplysninger foer."
+    },
+    {
+      "id": "c-kontakt-02",
+      "kind": "company",
+      "entity": "CVR-1-99000005",
+      "question": "Vis kontakt for Eksempel Software ApS",
+      "expected": {
+        "lead": "LassoContact",
+        "focus": "kontakt"
+      },
+      "covers": [
+        "LassoContact"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "p-overblik-01",
+      "kind": "person",
+      "entity": "CVR-3-4000000001",
+      "question": "Hvem er Mette Holm?",
+      "expected": {
+        "lead": "LassoPersonRoles",
+        "focus": "overblik"
+      },
+      "covers": [
+        "LassoPersonRoles"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "p-overblik-02",
+      "kind": "person",
+      "entity": "CVR-3-4000000001",
+      "question": "Fortæl om Mette Holm",
+      "expected": {
+        "lead": "LassoPersonRoles",
+        "focus": "overblik"
+      },
+      "covers": [
+        "LassoPersonRoles"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "p-roller-01",
+      "kind": "person",
+      "entity": "CVR-3-4000000001",
+      "question": "Vis roller for Mette Holm",
+      "expected": {
+        "lead": "LassoPersonRoles",
+        "focus": "roller"
+      },
+      "covers": [
+        "LassoPersonRoles"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "p-roller-02",
+      "kind": "person",
+      "entity": "CVR-3-4000000001",
+      "question": "Hvad laver Mette Holm?",
+      "expected": {
+        "lead": "LassoPersonRoles",
+        "focus": "roller"
+      },
+      "covers": [
+        "LassoPersonRoles"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende",
+      "note": "Generisk: 'hvad laver' giver roller."
+    },
+    {
+      "id": "p-netvaerk-01",
+      "kind": "person",
+      "entity": "CVR-3-4000000001",
+      "question": "Vis netvaerk for Mette Holm",
+      "expected": {
+        "lead": "LassoPersonNetwork",
+        "focus": "netvaerk"
+      },
+      "covers": [
+        "LassoPersonNetwork"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "p-netvaerk-02",
+      "kind": "person",
+      "entity": "CVR-3-4000000001",
+      "question": "Hvem sidder Mette Holm sammen med?",
+      "expected": {
+        "lead": "LassoPersonNetwork",
+        "focus": "netvaerk"
+      },
+      "covers": [
+        "LassoPersonNetwork"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "p-ejerskab-01",
+      "kind": "person",
+      "entity": "CVR-3-4000000001",
+      "question": "Vis ejerskab for Mette Holm",
+      "expected": {
+        "lead": "LassoPersonRoles",
+        "leadProps": {
+          "show": "owner"
+        },
+        "focus": "ejerskab"
+      },
+      "covers": [
+        "LassoPersonRoles"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "p-ejerskab-02",
+      "kind": "person",
+      "entity": "CVR-3-4000000001",
+      "question": "Hvilke selskaber ejer Mette Holm?",
+      "hints": {
+        "focus": "ejerskab"
+      },
+      "expected": {
+        "lead": "LassoPersonRoles",
+        "leadProps": {
+          "show": "owner"
+        },
+        "focus": "ejerskab"
+      },
+      "covers": [
+        "LassoPersonRoles"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "p-risiko-01",
+      "kind": "person",
+      "entity": "CVR-3-4000000001",
+      "question": "Vis risiko for Mette Holm",
+      "expected": {
+        "lead": "LassoPersonRisk",
+        "focus": "risiko"
+      },
+      "covers": [
+        "LassoPersonRisk"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "p-risiko-02",
+      "kind": "person",
+      "entity": "CVR-3-4000000001",
+      "question": "Er Mette Holm en risiko at samarbejde med?",
+      "hints": {
+        "focus": "risiko"
+      },
+      "expected": {
+        "lead": "LassoPersonRisk",
+        "focus": "risiko"
+      },
+      "covers": [
+        "LassoPersonRisk"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "p-historik-01",
+      "kind": "person",
+      "entity": "CVR-3-4000000001",
+      "question": "Vis historik for Mette Holm",
+      "expected": {
+        "lead": "LassoTimeline",
+        "focus": "historik"
+      },
+      "covers": [
+        "LassoTimeline"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "p-historik-02",
+      "kind": "person",
+      "entity": "CVR-3-4000000001",
+      "question": "Hvad er der sket med Mette Holm?",
+      "expected": {
+        "lead": "LassoTimeline",
+        "focus": "historik"
+      },
+      "covers": [
+        "LassoTimeline"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "c-roedeflag-02",
+      "kind": "company",
+      "entity": "CVR-1-99000011",
+      "question": "Hvilke advarsler og roede flag er der paa Eksempel Energi A/S?",
+      "expected": {
+        "lead": "LassoRiskObservations"
+      },
+      "covers": [
+        "LassoRiskObservations"
+      ],
+      "dataInDemo": true,
+      "group": "manglende"
+    },
+    {
+      "id": "c-fusion-02",
+      "kind": "company",
+      "entity": "CVR-1-99000012",
+      "question": "Er Eksempel Ejendomme ApS blevet fusioneret med nogen eller delt op?",
+      "expected": {
+        "lead": "LassoMergers"
+      },
+      "covers": [
+        "LassoMergers"
+      ],
+      "dataInDemo": true,
+      "group": "manglende"
+    },
+    {
+      "id": "c-offentliggoerelser-02",
+      "kind": "company",
+      "entity": "CVR-1-99000005",
+      "question": "Er der kommet nye offentliggoerelser i Statstidende om Eksempel Software ApS?",
+      "expected": {
+        "lead": "LassoAnnouncements"
+      },
+      "covers": [
+        "LassoAnnouncements"
+      ],
+      "dataInDemo": true,
+      "group": "manglende",
+      "note": "Kan forveksles med LassoPublications; 'Statstidende' peger paa meddelelser."
+    },
+    {
+      "id": "c-dokumenter-02",
+      "kind": "company",
+      "entity": "CVR-1-99000005",
+      "question": "Hvilke dokumenter og filer ligger der hos Erhvervsstyrelsen for Eksempel Software ApS?",
+      "expected": {
+        "lead": "LassoPublications"
+      },
+      "covers": [
+        "LassoPublications"
+      ],
+      "dataInDemo": true,
+      "group": "manglende"
+    },
+    {
+      "id": "c-branche-02",
+      "kind": "company",
+      "entity": "CVR-1-99000008",
+      "question": "Er Eksempel Maskinfabrik A/S bedre end gennemsnittet i sin branche?",
+      "expected": {
+        "lead": "LassoKeyFigureGauge"
+      },
+      "covers": [
+        "LassoKeyFigureGauge"
+      ],
+      "dataInDemo": false,
+      "group": "manglende",
+      "note": "Demodata har ingen branchetal; tæller kun paa plan-niveau."
+    },
+    {
+      "id": "c-placering-02",
+      "kind": "company",
+      "entity": "CVR-1-99000008",
+      "question": "Hvor har Eksempel Maskinfabrik A/S sine adresser paa et kort?",
+      "expected": {
+        "lead": "LassoMap"
+      },
+      "covers": [
+        "LassoMap"
+      ],
+      "dataInDemo": false,
+      "group": "manglende",
+      "note": "Demodata har ingen kortpunkter; tæller kun paa plan-niveau."
+    },
+    {
+      "id": "c-heleregnskab-02",
+      "kind": "company",
+      "entity": "CVR-1-99000004",
+      "question": "Jeg vil se det komplette regnskab med alle poster for Eksempel Transport A/S og kunne skifte aar",
+      "expected": {
+        "lead": "LassoFinancialStatements"
+      },
+      "covers": [
+        "LassoFinancialStatements"
+      ],
+      "dataInDemo": true,
+      "group": "manglende",
+      "note": "Aarsvaelger peger paa FinancialStatements; kan forveksles med IncomeStatement/BalanceSheet."
+    },
+    {
+      "id": "c-registrering-02",
+      "kind": "company",
+      "entity": "CVR-1-99000010",
+      "question": "Hvilken selskabskapital og hvilke vedtaegter har Eksempel Holding ApS registreret?",
+      "expected": {
+        "lead": "LassoRegistration"
+      },
+      "covers": [
+        "LassoRegistration"
+      ],
+      "dataInDemo": true,
+      "group": "manglende"
+    },
+    {
+      "id": "c-scorehistorik-02",
+      "kind": "company",
+      "entity": "CVR-1-99000004",
+      "question": "Gik scoren op eller ned for Eksempel Transport A/S det seneste aar?",
+      "expected": {
+        "lead": "LassoScoreHistory"
+      },
+      "covers": [
+        "LassoScoreHistory"
+      ],
+      "dataInDemo": false,
+      "group": "manglende",
+      "note": "Demodata har ingen score; kraever Creditsafe-abonnement (Ø6)."
+    },
+    {
+      "id": "c-opsummering-02",
+      "kind": "company",
+      "entity": "CVR-1-99000007",
+      "question": "Giv mig en tl;dr om Eksempel Rådgivning A/S",
+      "expected": {
+        "lead": "LassoSummary"
+      },
+      "covers": [
+        "LassoSummary"
+      ],
+      "dataInDemo": true,
+      "group": "manglende",
+      "note": "Kan forveksles med generisk overblik."
+    },
+    {
+      "id": "c-aendringer-02",
+      "kind": "company",
+      "entity": "CVR-1-99000005",
+      "question": "Vis aendringsfeedet for Eksempel Software ApS de seneste 30 dage",
+      "hints": {
+        "topic": "aendringer"
+      },
+      "expected": {
+        "lead": "LassoChangeFeed"
+      },
+      "covers": [
+        "LassoChangeFeed"
+      ],
+      "dataInDemo": false,
+      "group": "manglende"
+    },
+    {
+      "id": "p-persontal-02",
+      "kind": "person",
+      "entity": "CVR-3-4000000001",
+      "question": "Hvor mange selskaber har Mette Holm siddet i, og hvor mange er ophoert?",
+      "expected": {
+        "lead": "LassoPersonStats"
+      },
+      "covers": [
+        "LassoPersonStats"
+      ],
+      "dataInDemo": true,
+      "group": "manglende"
+    },
+    {
+      "id": "c-reelle-ejere-01",
+      "kind": "company",
+      "entity": "CVR-1-99000001",
+      "question": "Hvem er de reelle ejere af Eksempel Byg A/S?",
+      "expected": {
+        "lead": "LassoBeneficialOwners"
+      },
+      "covers": [
+        "LassoBeneficialOwners"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "c-besaetning-01",
+      "kind": "company",
+      "entity": "CVR-1-99000013",
+      "question": "Hvor mange svin og koeer har Eksempel Landbrug I/S?",
+      "expected": {
+        "lead": "LassoLivestock"
+      },
+      "covers": [
+        "LassoLivestock"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    },
+    {
+      "id": "c-ejendomme-01",
+      "kind": "company",
+      "entity": "CVR-1-99000012",
+      "question": "Hvilke matrikler og BBR-oplysninger har Eksempel Ejendomme ApS?",
+      "expected": {
+        "lead": "LassoProperties"
+      },
+      "covers": [
+        "LassoProperties"
+      ],
+      "dataInDemo": true,
+      "group": "eksisterende"
+    }
+  ]
+}

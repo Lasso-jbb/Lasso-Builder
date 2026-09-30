@@ -18,6 +18,7 @@ import {
   type Dataset,
   ownershipGraphKey,
 } from "@lasso/spec";
+import { answerText } from "./answer.js";
 import { textCard } from "./card.js";
 
 // Opdigtede tal i samme form som Lassos rigtige svar.
@@ -169,7 +170,7 @@ test("tekstkortet viser reelle ejere, tekstsektioner, historik og nyheder, når 
   assert.match(card, /Ejer\s+Anne Eksempel/);
 });
 
-test("resumeet skrives som en sektion uden kildelinje (G3) og uden AI-mærke", () => {
+test("resumeet skrives som en sektion uden kildevisning (G3) og uden AI-mærke", () => {
   const spec = {
     version: 2 as const,
     kind: "custom" as const,
@@ -663,4 +664,94 @@ test("tekstkort for persontabellen (15.3): roller, fødselsår, by og konkurser"
   assert.ok(card.includes("1 konkurs"));
   assert.doesNotMatch(card, /f\. 1978|København/);
   assert.doesNotMatch(card, /·/);
+});
+
+/* ---------- B3: svarsætninger for de nye spørgsmålstyper (Ø4: tekstkortet må ikke blive kortere) ---------- */
+
+test("B3: 'Er der røde flag' giver både observations- og kreditsætningen på tekstkortet", () => {
+  const ds = dataset();
+  ds.observations[ID] = {
+    lassoId: ID,
+    observations: [
+      { id: "o1", severity: 100, title: "Konkursramt selskab i ledelsen" },
+      { id: "o2", severity: 0, title: "Ingen bemærkninger" },
+    ],
+  };
+  ds.creditRatings = { [ID]: { lassoId: ID, state: "locked" } as never };
+  const ask = parseAsk("Er der røde flag ved Testfirma?", "company", { name: "TESTFIRMA A/S", topic: "roede-flag" });
+  const spec = composeCompany(ID, ds, { ask, name: "TESTFIRMA A/S" });
+  const card = textCard(spec, ds, { ask })!;
+  const flat = card.replace(/[│\n]/g, " ").replace(/\s+/g, " ");
+  assert.match(flat, /Røde flag: 1 observation \(Konkursramt selskab i ledelsen, vigtig\)/);
+  assert.match(flat, /Kreditvurdering: låst/);
+  // Nævner spørgsmålet også kredit, står kreditsætningen kun én gang.
+  const both = parseAsk("Er der røde flag, og kan vi handle med dem på kredit?", "company", { name: "TESTFIRMA A/S" });
+  const bothCard = textCard(composeCompany(ID, ds, { ask: both, name: "TESTFIRMA A/S" }), ds, { ask: both })!;
+  const bothFlat = bothCard.replace(/[│\n]/g, " ").replace(/\s+/g, " ");
+  assert.equal((bothFlat.match(/Kreditvurdering:/g) ?? []).length, 1, bothCard);
+  assert.match(bothFlat, /Røde flag:/);
+});
+
+test("B3: de nye spørgsmålstyper har hver en svarsætning, også som tom tilstand", () => {
+  const ds = dataset();
+  const spec = composeCompany(ID, ds, {});
+  const answer = (q: string, topic?: string) => {
+    const ask = parseAsk(q, "company", { name: "TESTFIRMA A/S", topic });
+    return answerText(spec, ds, ask) ?? "";
+  };
+  // Tom tilstand først (ingen data i datasættet).
+  assert.match(answer("Er der røde flag?"), /Røde flag: ikke hentet/);
+  assert.match(answer("Har der været fusioner?"), /Fusioner og spaltninger: ingen registreret/);
+  assert.match(answer("Hvilke meddelelser er der i Statstidende?"), /Statstidende: ingen meddelelser/);
+  assert.match(answer("Vis de offentliggjorte dokumenter", "dokumenter"), /Offentliggjorte regnskaber: ingen offentliggjort/);
+  assert.match(answer("Hvordan klarer de sig i forhold til branchen?"), /Branchesammenligning: ikke beregnet endnu/);
+  assert.match(answer("Vis dem på et kort"), /Placering: ingen adresser med koordinater/);
+  assert.match(answer("Vis hele regnskabet"), /Hele regnskabet: intet offentliggjort regnskab/);
+  assert.match(answer("Hvad er selskabskapitalen?"), /Registrering: A\/S/);
+  assert.match(answer("Giv mig en kort opsummering"), /^Opsummering: A\/S, Normal/);
+  assert.match(answer("Hvad er der sket de sidste 30 dage?"), /Ændringer: ingen registrerede ændringer/);
+
+  // Med data.
+  ds.companyEvents[ID] = {
+    lassoId: ID,
+    mergers: [{ type: "Fusion", date: "2024-01-01", from: [{ name: "A ApS" }], to: [{ name: "B A/S" }] }],
+    announcements: [{ date: "2025-03-01", type: "Rekonstruktion", severity: "bankrupt" }],
+    publications: [{ kind: "Årsrapport", year: 2025 }],
+  };
+  ds.maps[ID] = { lassoId: ID, points: [{ id: "p", kind: "focus", name: "Hoved", lat: 55, lon: 12 }], missing: 1 };
+  ds.changeFeeds[`company:${ID}|30|`] = { days: 30, total: 2, entries: [{ companyName: "TESTFIRMA A/S", type: "status", text: "Status ændret", at: "2025-05-01T10:00:00Z", source: "CVR", read: false }] };
+  assert.match(answer("Har der været fusioner?"), /Fusioner og spaltninger: fusion 01\.01\.2024: A ApS → B A\/S/);
+  assert.match(answer("Hvilke meddelelser er der i Statstidende?"), /Statstidende: 1 meddelelse \(01\.03\.2025 Rekonstruktion\)/);
+  assert.match(answer("Vis de offentliggjorte dokumenter", "dokumenter"), /Offentliggjorte regnskaber: 1 \(årsrapport 2025\)/);
+  assert.match(answer("Vis dem på et kort"), /Placering: 1 adresse på kortet, 1 uden koordinater/);
+  assert.match(answer("Hvad er der sket de sidste 30 dage?"), /Ændringer seneste 30 dage: 2 \(Status ændret\)/);
+
+  // Personen: antal roller.
+  const pid = "CVR-3-4000000001";
+  ds.persons[pid] = {
+    lassoId: pid,
+    name: "Mette Holm",
+    roles: [
+      { companyId: "CVR-1-1", companyName: "Et ApS", role: "Direktør", kind: "direction", active: true },
+      { companyId: "CVR-1-2", companyName: "To ApS", role: "Bestyrelsesmedlem", kind: "board", active: false },
+    ] as never,
+  };
+  const pspec = composePerson(pid, ds, { focus: "overblik" });
+  const pask = parseAsk("Hvor mange roller har hun?", "person", { name: "Mette Holm" });
+  assert.match(answerText(pspec, ds, pask) ?? "", /Roller: 2 selskaber, heraf 1 aktive og 1 ophørte; konkurser 0, tvangsopløsninger 0/);
+});
+
+test("compareCard: rangeringen står i samme rækkefølge som LassoRanking (asc: laveste som nr. 1)", () => {
+  const ds = emptyDataset("live");
+  const ids = ["CVR-1-1", "CVR-1-2", "CVR-1-3"];
+  const gross = [20_000_000, 30_000_000, 10_000_000];
+  ids.forEach((id, i) => {
+    ds.companies[id] = { lassoId: id, cvr: String(i), name: `Firma${i}`, status: "Normal", statusKind: "active" } as never;
+    ds.financials[id] = { lassoId: id, currency: "DKK", years: [{ year: 2025, grossProfit: gross[i] }] } as never;
+  });
+  const build = (order: "asc" | "desc") =>
+    parseViewSpec({ kind: "custom", title: "t", layout: "dashboard", components: [{ type: "LassoRanking", companies: ids, metric: "bruttofortjeneste", order }] });
+  const first = (o: "asc" | "desc") => textCard(build(o), ds)!.match(/1\.\s+(Firma\d)/)?.[1];
+  assert.equal(first("asc"), "Firma2");
+  assert.equal(first("desc"), "Firma1");
 });

@@ -47,10 +47,10 @@ export interface RailProps {
   /** Logoet øverst i skinnen (standard). false, når logoet står i bundlinjen (fx personsiden, 25.2). */
   logo?: boolean;
   /**
-   * Bundlinje nederst i skinnen (25.2): dæmpet navnelogo + kildelinje, fx "Data fra CVR, Erhvervsstyrelsen
-   * og Creditsafe" (regel 15: logoet i bundlinjen med kildelinje). Skjules i den smalle ikonskinne.
+   * Bundlinje nederst i skinnen (25.2): dæmpet navnelogo + kildevisning, fx "Data fra CVR, Erhvervsstyrelsen
+   * og Creditsafe" (regel 15: logoet i bundlinjen med kildevisning). Skjules i den smalle ikonskinne.
    */
-  /** Bundlinjen med navnelogoet. source udgår (G3: ingen kildelinje) og vises kun, hvis den gives. */
+  /** Bundlinjen med navnelogoet. source udgår (G3: ingen kildevisning) og vises kun, hvis den gives. */
   bottom?: { source?: string };
   className?: string;
 }

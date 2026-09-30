@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { GRID_RULES, gridRuleOf } from "./catalog.js";
-import { allowsWidth, BAND_COMBOS, BAND_MAX_DEVIATION, compactOf, GRID_GAP, measuredHeight, MEASURED_HEIGHTS, packBands, packWithinBudget, pageHeight, PAGE_HEIGHT_BUDGET, type PackedBand } from "./grid.js";
+import { GRID_RULES, gridRuleOf, widthProfileOf } from "./catalog.js";
+import { contentWidthOf, driversOf, packPage } from "./compose.js";
+import { emptyDataset } from "./models.js";
+import { contentMinWidth } from "./register.js";
+import { allowsWidth, BAND_COMBOS, defaultMinWidth, elementMinWidth, originOf, type MinWidthFn, BAND_MAX_DEVIATION, compactOf, GRID_GAP, measuredHeight, MEASURED_HEIGHTS, packBands, packWithinBudget, pageHeight, PAGE_HEIGHT_BUDGET, type PackedBand } from "./grid.js";
 import { DEFAULT_WIDTH, WIDTH_COLUMNS, WIDTHS, type ComponentType, type ViewComponent, type Width } from "./spec.js";
 
 const COMPONENT_TYPES = Object.keys(DEFAULT_WIDTH) as ComponentType[];
@@ -62,14 +65,19 @@ test("23.1 F: pakningen gengiver gridmodellens tre verificerede sider (overblik,
     [c("LassoCompanyHead"), c("LassoKeyFigureCards"), c("LassoTextSections", { variant: "profil" }), c("LassoKeyValueList"), c("LassoRelations"), c("LassoBarChart", { metric: "omsaetning" }), c("LassoContact"), c("LassoTimeline", { limit: 3 }), c("LassoNews", { limit: 3 }), c("LassoShortcuts")],
     docHeight,
   );
-  assert.deepEqual(shape(overblik), ["12:CompanyHead", "12:KeyFigureCards", "6:TextSections | 6:KeyValueList", "3:Relations | 6:BarChart | 3:Contact", "6:Timeline | 6:News+Shortcuts"]);
-  assert.deepEqual(overblik.map((b) => b.height), [34, 138, 662, 300, 338]); // hoved 34 (Fable runde 6, I4Y-0)
+  // Ø13/B8 (A13): nyhederne er brede (min ¾) og står i eget bånd; historikken er smal (⅓) og står ved relationer og kontakt;
+  // grafen får kun de smalle genveje (højst ½) som makker, og det skæve bånd tages efter gridmodel 4e (laveste afvigelse,
+  // stakken strækkes). (Paper 23.1 havde 3+6+3 og 6 | 6 med nyheder + genveje.) Default-siden (23.3, med budget) er uændret.
+  assert.deepEqual(shape(overblik), ["12:CompanyHead", "12:KeyFigureCards", "6:TextSections | 6:KeyValueList", "4:Relations | 4:Contact | 4:Timeline", "6:BarChart | 6:Shortcuts", "12:News"]);
+  assert.deepEqual(overblik.map((b) => b.height), [34, 138, 662, 267, 300, 196]); // hoved 34 (Fable runde 6, I4Y-0)
 
   const oekonomi = packBands(
     [c("LassoCompanyHead"), c("LassoKeyFigureCards"), c("LassoGroupedBarChart"), c("LassoWaterfallChart"), c("LassoKeyValueList", { variant: "financials" }), c("LassoShareBars"), c("LassoMultiYearTable"), c("LassoTextSections", { variant: "analyse", width: "full" })],
     docHeight,
   );
-  assert.deepEqual(shape(oekonomi), ["12:CompanyHead", "12:KeyFigureCards", "6:GroupedBarChart | 6:WaterfallChart", "6:KeyValueList | 6:ShareBars+MultiYearTable", "12:TextSections"]);
+  // Ø13/B8 (A13): flerårstabellen findes kun i ⅔ (vandret rulning i ½ med 10 år) og står ikke længere under andelsbjælkerne;
+  // regnskabslisten og andelsbjælkerne er begge ½ (smal/min ½), så båndet er skævt (strækkes) i denne syntetiske side.
+  assert.deepEqual(shape(oekonomi), ["12:CompanyHead", "12:KeyFigureCards", "6:GroupedBarChart | 6:WaterfallChart", "6:KeyValueList | 6:ShareBars", "12:MultiYearTable", "12:TextSections"]);
   assert.equal(oekonomi[3]!.height, 535);
 
   const ejerskab = packBands(
@@ -81,7 +89,8 @@ test("23.1 F: pakningen gengiver gridmodellens tre verificerede sider (overblik,
 
   for (const bands of [overblik, oekonomi, ejerskab]) {
     assertLegal(bands);
-    for (const b of bands) assert.ok(b.deviation <= BAND_MAX_DEVIATION, `afvigelse ${b.deviation}`);
+    // Undtagelser (Ø13/B8, gridmodel 4e): graf | genveje og regnskabsliste | andelsbjælker har ingen lovlig makker inden for 15 %.
+    for (const b of bands) if (!(bands === oekonomi && b === oekonomi[3]) && !(bands === overblik && b === overblik[4])) assert.ok(b.deviation <= BAND_MAX_DEVIATION, `afvigelse ${b.deviation}`);
   }
 });
 
@@ -184,4 +193,116 @@ test("højdebudget (Paper 23.3): genveje, nyheder og historik udelades før kont
   const shown = r.bands.flatMap((b) => b.stacks.flatMap((s) => s.items));
   assert.equal((shown.find((x) => x.type === "LassoKeyValueList") as { maxRows?: number }).maxRows, 6);
   assert.equal((shown.find((x) => x.type === "LassoTextSections") as { limit?: number }).limit, 3);
+});
+
+/* ---------- Ø13 / B8: bredde efter indhold ---------- */
+
+const idx = (w: Width) => WIDTHS.indexOf(w);
+/** Ø13-reglerne for et pakket bånd: ingen under mindstebredden, ingen smal over ½ ved siden af andre. */
+function assertWidthRules(bands: readonly PackedBand[], min: MinWidthFn, label = "") {
+  for (const b of bands) {
+    if (b.stacks.length < 2) continue;
+    for (const s of b.stacks)
+      for (const i of s.items) {
+        const o = originOf(i);
+        if (o.width) continue; // en eksplicit width (render_view) låser bredden
+        assert.ok(idx(s.width) >= idx(min(o)), `${label}${o.type} i ${s.width} under mindstebredden ${min(o)}`);
+        if (widthProfileOf(o).profil === "smal") assert.ok(idx(s.width) <= idx("half"), `${label}smal ${o.type} strakt til ${s.width} ved siden af andre`);
+      }
+  }
+}
+
+function randomPages(n: number, extra: (k: number) => Record<string, unknown> = () => ({})): ViewComponent[][] {
+  const types = COMPONENT_TYPES.filter((t) => !["LassoFollowUps", "LassoSavedPages", "LassoCompanyTable", "LassoPersonTable", "LassoCompareTable", "LassoRanking"].includes(t));
+  let seed = 11;
+  const next = () => (seed = (seed * 1103515245 + 12345) % 2147483648);
+  return Array.from({ length: n }, () => Array.from({ length: 3 + (next() % 7) }, (_, k) => c(types[next() % types.length]!, extra(k))));
+}
+
+test("Ø13: en smal komponent strækkes aldrig over ½ ved siden af andre; alene i båndet står den i fuld bredde", () => {
+  for (const items of randomPages(200)) assertWidthRules(packBands(items, measuredHeight), defaultMinWidth);
+  // Oplysninger (smal) ved siden af kontakt og genveje: højst ½, aldrig ⅔ eller ¾ som før.
+  const bands = packBands([c("LassoKeyValueList"), c("LassoContact"), c("LassoRelations"), c("LassoShortcuts")], measuredHeight);
+  const kvl = bands.flatMap((b) => b.stacks).find((s) => s.items.some((i) => i.type === "LassoKeyValueList"))!;
+  assert.ok(idx(kvl.width) <= idx("half"), kvl.width);
+  // Alene (ingen makker): eget bånd i fuld bredde, så der aldrig er et hul (23.1).
+  assert.deepEqual(shape(packBands([c("LassoKeyValueList")], measuredHeight)), ["12:KeyValueList"]);
+  // Budgetpakningen (ekstra stak, stakfyld) holder samme regler.
+  for (const items of randomPages(60)) assertWidthRules(packWithinBudget(items, measuredHeight, { budget: 900 }).bands, defaultMinWidth, "budget: ");
+});
+
+test("Ø13: en bred komponent lægges aldrig under sin indholdsstyrede mindstebredde (contentMinWidth)", () => {
+  // Tæt indhold overalt (3 rækker pr. post, lange navne, tidsakse): mindstebredden hæves efter profilen.
+  const dense: MinWidthFn = (x) => elementMinWidth(x, { rowsPerItem: 3, longestLabel: 45, timeAxis: true, series: 6 });
+  for (const items of randomPages(200)) {
+    const bands = packBands(items, measuredHeight, { minWidth: dense });
+    assertWidthRules(bands, dense);
+    assert.equal(bands.flatMap((b) => b.stacks.flatMap((s) => s.items)).length, items.length);
+    // Deterministisk.
+    assert.deepEqual(shape(bands), shape(packBands(items, measuredHeight, { minWidth: dense })));
+  }
+  // Ejerdiagrammet med 45-tegns navne står i ⅔ (A13 målte det rent i ⅔); først tæt indhold OG tidsakse giver ¾.
+  const d = [c("LassoOwnershipDiagram"), c("LassoOwnerList"), c("LassoBeneficialOwners"), c("LassoPersonList")];
+  const withNames = packBands(d, measuredHeight, { minWidth: (x) => elementMinWidth(x, x.type === "LassoOwnershipDiagram" ? { longestLabel: 45 } : {}) });
+  const diagramWidth = withNames.flatMap((b) => b.stacks).find((s) => s.items[0]!.type === "LassoOwnershipDiagram")!.width;
+  assert.ok(diagramWidth === "two-thirds" || diagramWidth === "three-quarters" || diagramWidth === "full", diagramWidth);
+  const withAxis = packBands(d, measuredHeight, { minWidth: (x) => elementMinWidth(x, x.type === "LassoOwnershipDiagram" ? { longestLabel: 45, timeAxis: true } : {}) });
+  const axisWidth = withAxis.flatMap((b) => b.stacks).find((s) => s.items[0]!.type === "LassoOwnershipDiagram")!.width;
+  assert.ok(axisWidth === "three-quarters" || axisWidth === "full", axisWidth);
+  assert.equal(packBands(d, measuredHeight)[0]!.stacks[0]!.width, "two-thirds");
+  // Hæver indholdet over typens max, er max grænsen (flerårstabellen findes kun i ⅔).
+  assert.equal(elementMinWidth(c("LassoMultiYearTable"), { timeAxis: true, series: 10 }), "two-thirds");
+  assert.equal(contentMinWidth("bred", "two-thirds", { timeAxis: true }), "two-thirds");
+  assert.equal(contentMinWidth("bred", "two-thirds", { timeAxis: true, longestLabel: 45 }), "three-quarters");
+  // Smal: indholdet hæver ikke mindstebredden.
+  assert.equal(elementMinWidth(c("LassoOwnerList"), { rowsPerItem: 3, longestLabel: 45 }), "quarter");
+});
+
+/** Et netværk med 3 personer à 3 fælles selskaber med lange navne fra 2011 (A13's realistiske data). */
+function networkDataset(person: string) {
+  const ds = emptyDataset("demo");
+  const long = ["Nordjysk Entreprenør- og Ejendomsselskab ApS", "Vestjysk Maskin- og Anlægsservice Holding ApS", "Midtjysk Tømrer- og Snedkerforretning A/S"];
+  ds.personNetworks[person] = {
+    lassoId: person,
+    people: ["Anne-Marie Kristensen Østergaard", "Hans Christian Bach Møller", "Birgitte Louise Frandsen"].map((name) => ({
+      name,
+      companies: long.map((companyName, k) => ({ companyName, role: "bestyrelse", from: `${2011 + k}-01-01` })),
+      overlapYears: 15,
+      since: "2011-01-01",
+      active: true,
+    })),
+  };
+  return ds;
+}
+
+test("Ø13: PersonNetwork med 3 rækker pr. person, lange navne og tidsakse står i fuld bredde", () => {
+  const P = "CVR-3-4000000009";
+  const ds = networkDataset(P);
+  const net = { type: "LassoPersonNetwork", person: P } as ViewComponent;
+  const d = driversOf(net, ds);
+  assert.equal(d.rowsPerItem, 3);
+  assert.ok((d.longestLabel ?? 0) >= 45, `${d.longestLabel}`);
+  assert.equal(d.timeAxis, true);
+  // Selv med den gamle min (½) kræver indholdet mere end ⅔; A13's regel (min 1/1) giver fuld bredde.
+  assert.equal(contentMinWidth("bred", "half", d), "three-quarters");
+  assert.equal(contentWidthOf(net, ds), "full");
+  const page = packPage([{ type: "LassoPersonHead", person: P } as ViewComponent, net, { type: "LassoPersonRisk", person: P } as ViewComponent, { type: "LassoPersonFacts", person: P } as ViewComponent], ds);
+  const placed = page.components.find((x) => x.type === "LassoPersonNetwork")!;
+  assert.equal(placed.column, undefined, "netværket står i eget fuldbånd");
+});
+
+test("Ø13: PersonRoles som liste (Aktive roller) er smal og står højst i ½ i et delt bånd; tidsbåndet er fleksibelt", () => {
+  for (const show of ["current", "ended", "owner"] as const) {
+    const roles = c("LassoPersonRoles", { person: "CVR-3-1", show });
+    assert.equal(widthProfileOf(roles).profil, "smal", show);
+    assert.equal(gridRuleOf(roles).max, "half", show);
+    const bands = packBands([roles, c("LassoPersonFacts", { person: "CVR-3-1" }), c("LassoPersonRisk", { person: "CVR-3-1" }), c("LassoRelations")], measuredHeight);
+    const st = bands.flatMap((b) => (b.stacks.length > 1 ? b.stacks : [])).find((s) => s.items.some((i) => i.type === "LassoPersonRoles"));
+    if (st) assert.ok(idx(st.width) <= idx("half"), `${show} i ${st.width}`);
+    assertWidthRules(bands, defaultMinWidth);
+  }
+  const all = c("LassoPersonRoles", { person: "CVR-3-1" });
+  assert.equal(widthProfileOf(all).profil, "fleksibel");
+  assert.equal(gridRuleOf(all).max, "full");
+  assert.equal(gridRuleOf(all).std, "two-thirds");
 });

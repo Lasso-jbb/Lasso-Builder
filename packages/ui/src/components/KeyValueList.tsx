@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   companyFacts,
   currencyUnit,
@@ -8,8 +8,15 @@ import {
   isPersonId,
   METRIC_FIELD,
   METRIC_LABELS,
+  formatEmail,
+  formatNumber,
+  formatPhone,
+  formatWeb,
   type CompanyFactKey,
   type CompanyVM,
+  type ContactVM,
+  type FinancialFieldKey,
+  type FinancialStatementsVM,
   type FinancialsVM,
   type Metric,
   type OwnershipVM,
@@ -138,6 +145,47 @@ function financialsRows(year: FinancialsVM["years"][number], currency?: string, 
   return rows;
 }
 
+const yesNo = (v: boolean | undefined) => (v === undefined ? undefined : v ? "Ja" : "Nej");
+
+/**
+ * Regnskabsoplysninger med valgte felter (`fields`, portalens liste, Jakob 30.09). Resultat før skat og
+ * afkastningsgrad kommer fra det fulde regnskab; erklæring, fremhævelser, going concern og PDF fra
+ * revisionsoplysningerne for året.
+ */
+function fieldRows(year: FinancialsVM["years"][number], currency: string | undefined, fields: readonly FinancialFieldKey[], statements?: FinancialStatementsVM, quality?: FinancialsVM["quality"]): (Row & { pdf?: string })[] {
+  const cur = year.currency ?? currency;
+  const inc = statements?.incomeStatement.find((y) => y.year === year.year);
+  const bal = statements?.balanceSheet.find((y) => y.year === year.year);
+  const audit = statements?.audits?.find((a) => a.year === year.year);
+  const period = dayMonth(year.periodStart) && dayMonth(year.periodEnd) ? `${dayMonth(year.periodStart)} – ${dayMonth(year.periodEnd)}` : undefined;
+  const roa = typeof inc?.ebit === "number" && typeof bal?.assetsTotal === "number" && bal.assetsTotal !== 0 ? (inc.ebit / bal.assetsTotal) * 100 : undefined;
+  return fields.map((f): Row & { pdf?: string } => {
+    switch (f) {
+      case "udgivet":
+        return { label: "Regnskab udgivet", value: year.published ? formatDate(year.published) : undefined };
+      case "periode":
+        return { label: "Regnskabsperiode", value: period };
+      case "erklaering":
+        return { label: "Erklæring fra revisor", value: audit?.type };
+      case "fremhaevelser":
+        return { label: "Fremhævelser", value: yesNo(audit?.emphasis) };
+      case "goingconcern":
+        return { label: "Usikkerhed om going concern", value: yesNo(audit?.goingConcern), danger: audit?.goingConcern === true };
+      case "resultatfoerskat":
+        return { label: "Resultat før skat", value: typeof inc?.profitBeforeTax === "number" ? formatAmount(inc.profitBeforeTax, currencyUnit(cur)) : undefined, danger: typeof inc?.profitBeforeTax === "number" && inc.profitBeforeTax < 0 };
+      case "afkastningsgrad":
+        return { label: "Afkastningsgrad", value: roa !== undefined ? `${roa.toLocaleString("da-DK", { maximumFractionDigits: 2 })} %` : undefined, danger: roa !== undefined && roa < 0 };
+      case "pdf":
+        // Ingen række: URL'en bliver til "Hent regnskabet ÅÅÅÅ" øverst i elementet (09.5).
+        return { label: "PDF", pdf: audit?.pdfUrl ?? statements?.pdfUrl };
+      case "resultat":
+        return { ...metricRow(year, f, cur, quality), label: "Resultat efter skat" };
+      default:
+        return metricRow(year, f, cur, quality);
+    }
+  });
+}
+
 /** Værdien som link (lasso-link), når den har et Lasso-ID og værten kan åbne det; ellers ren tekst. */
 function Value({ value, lassoId, onOpen }: { value: string; lassoId?: string; onOpen?: (a: ViewAction) => void }) {
   if (onOpen && lassoId?.startsWith("CVR-1-")) {
@@ -167,6 +215,95 @@ function rowOpener(r: Row, onOpen?: (a: ViewAction) => void): (() => void) | und
   return undefined;
 }
 
+/** Standardlinjerne i virksomhedskortet (portalens venstre kolonne). */
+const CARD_ROWS: readonly CompanyFactKey[] = ["adresse", "cvr", "stiftet", "ansatte", "web", "telefon", "email"];
+
+/**
+ * Virksomhedskortet (look "card", Lassos portal): navnet som overskrift, adresse, CVR og stiftet,
+ * ansatte og web som linjer uden nøgle; telefon og e-mail med overskrift, én pr. linje. Rækkerne
+ * vælges og ordnes med `rows` som i listen.
+ */
+/**
+ * Virksomhedskortet (look 'card'): samme opbygning og typografi som virksomhedskortet i "Se alle"-panelet
+ * (08.7, `lasso-cpcompany`): adresse, CVR og stiftet, ansatte i tekst-2, web som koralt link, telefonnumre
+ * (verificerede med skjold) og e-mailadresser under et gruppenavn i 600.
+ */
+function CompanyCard({ company, contact, rows = CARD_ROWS, title, onLink }: { company: CompanyVM; contact?: ContactVM; rows?: readonly CompanyFactKey[]; title?: string; onLink?: (url: string) => void }) {
+  const a = company.address;
+  const digits = (v: string) => v.replace(/\D/g, "").replace(/^45(?=\d{8}$)/, "");
+  const verified = new Set((contact?.verifiedNumbers ?? []).filter((n) => !n.expired).map((n) => digits(n.phoneNumber)));
+  const rawPhones = [company.phone, contact?.phone, ...(contact?.verifiedNumbers ?? []).map((n) => n.phoneNumber)].filter((x): x is string => Boolean(x));
+  const phones = [...new Map(rawPhones.map((x) => [digits(x), formatPhone(x) ?? x])).entries()];
+  const emails = [...new Set([company.email, contact?.email, ...(contact?.emails ?? [])].filter((x): x is string => Boolean(x)).map((x) => formatEmail(x) ?? x))];
+  const site = company.website ?? contact?.website;
+  const web = formatWeb(site);
+  const href = site ? (/^https?:\/\//i.test(site) ? site : `https://${site}`) : undefined;
+  const blocks: ReactNode[] = [];
+  const lines = (k: string, ...xs: (string | undefined)[]) => {
+    const v = xs.filter(Boolean);
+    if (v.length) blocks.push(<div key={k} className="lasso-cpcompany__lines">{v.map((x, i) => <span key={i}>{x}</span>)}</div>);
+  };
+  // CVR og stiftet står i samme afsnit (08.7).
+  const idLines: (string | undefined)[] = [];
+  const flushId = () => {
+    if (idLines.length) lines(`id${blocks.length}`, ...idLines.splice(0));
+  };
+  for (const k of rows) {
+    if (k === "cvr") idLines.push(company.cvr ? `CVR ${company.cvr}` : undefined);
+    else if (k === "stiftet") idLines.push(company.founded ? `Stiftet ${company.founded.slice(0, 4)}` : undefined);
+    else {
+      flushId();
+      if (k === "adresse") lines(k, a?.street, [a?.zip, a?.city].filter(Boolean).join(" ") || undefined);
+      else if (k === "ansatte") lines(k, company.employees != null ? `${formatNumber(company.employees)} ansatte` : undefined);
+      else if (k === "web" && web && href)
+        blocks.push(
+          onLink ? (
+            <button key={k} type="button" className="lasso-cpcompany__web" onClick={() => onLink(href)}>
+              {web}
+            </button>
+          ) : (
+            <a key={k} className="lasso-cpcompany__web" href={href} target="_blank" rel="noreferrer">
+              {web}
+            </a>
+          ),
+        );
+      else if (k === "telefon" && phones.length)
+        blocks.push(
+          <div key={k} className="lasso-cpcompany__group">
+            <div className="lasso-cpcompany__label">Telefonnumre</div>
+            {phones.map(([d, p]) => (
+              <div key={d} className="lasso-cpcompany__value">
+                <span>{p}</span>
+                {verified.has(d) ? <ShellIcon name="shield-check" size={14} className="lasso-cpcompany__shield" /> : null}
+              </div>
+            ))}
+          </div>,
+        );
+      else if (k === "email" && emails.length)
+        blocks.push(
+          <div key={k} className="lasso-cpcompany__group">
+            <div className="lasso-cpcompany__label">Emailadresser</div>
+            {emails.map((e) => (
+              <div key={e} className="lasso-cpcompany__value">
+                {e}
+              </div>
+            ))}
+          </div>,
+        );
+      else if (k === "firmanavn") lines(k, company.name);
+      else if (k === "kommune") lines(k, a?.municipality);
+      else if (k === "form") lines(k, company.form);
+      else if (k === "branche" || k === "brancher") lines(k, company.industryText);
+    }
+  }
+  flushId();
+  return (
+    <Section title={title ?? company.name} span="half">
+      <div className="lasso-cpcompany__facts">{blocks}</div>
+    </Section>
+  );
+}
+
 /**
  * Nøgle-værdi-liste (katalog 09). To varianter: "company" (stamdata, venstrestillet
  * værdi) og "financials" (regnskabstal med årsvælger, seneste regnskab valgt som
@@ -194,6 +331,11 @@ export function KeyValueList({
   onPdf,
   years: yearCount = 5,
   maxRows,
+  look = "list",
+  contact,
+  fields,
+  statements,
+  onLink,
 }: {
   company?: CompanyVM;
   ownership?: OwnershipVM;
@@ -227,6 +369,16 @@ export function KeyValueList({
   years?: number;
   /** Kun de første N rækker; resten bag "Se N oplysninger" (30.13). */
   maxRows?: number;
+  /** Variant "company": 'card' = portalens virksomhedskort (CompanyCard). */
+  look?: "list" | "card";
+  /** Kontaktdata (flere telefonnumre og e-mails) til virksomhedskortet. */
+  contact?: ContactVM;
+  /** Variant "financials": rækkerne i denne rækkefølge (fieldRows). */
+  fields?: readonly FinancialFieldKey[];
+  /** Det fulde regnskab (resultat før skat, afkastningsgrad, revisionsoplysninger), når `fields` beder om dem. */
+  statements?: FinancialStatementsVM;
+  /** Åbner et link (regnskabets PDF, når `fields` beder om "pdf"). */
+  onLink?: (url: string) => void;
 }) {
   const heading = title ?? (variant === "financials" ? "Regnskab" : "Virksomhedsoplysninger");
   const ready = variant === "financials" ? Boolean(financials) : Boolean(company);
@@ -265,7 +417,13 @@ export function KeyValueList({
     const options = (asked && !recent.includes(asked) ? [asked, ...recent] : recent).reverse();
     const selected = years.find((y) => y.year === year) ?? asked ?? last;
     // Kvalitetsflaggene gælder seneste regnskab.
-    const rows = financialsRows(selected, financials!.currency, exclude, only, selected === last ? financials!.quality : undefined);
+    const all: (Row & { pdf?: string })[] = fields
+      ? fieldRows(selected, financials!.currency, fields, statements, selected === last ? financials!.quality : undefined)
+      : financialsRows(selected, financials!.currency, exclude, only, selected === last ? financials!.quality : undefined);
+    // 09.5: regnskabets PDF er handlingen "Hent regnskabet ÅÅÅÅ" øverst i elementet, aldrig en række i listen.
+    const pdfUrl = all.find((r) => r.pdf)?.pdf;
+    const rows = all.filter((r) => !("pdf" in r));
+    const pdf = onPdf ? () => onPdf(selected.year) : pdfUrl && onLink ? () => onLink(pdfUrl) : undefined;
     const missingYear = startYear !== undefined && !asked;
     return (
       <Section
@@ -274,16 +432,16 @@ export function KeyValueList({
           options.length > 1 ? (
             // Årsvælger = niveau 3-faner (29). Over 3 år på mobil bliver den en dropdown (29, mobil).
             <div className="lasso-kv-years">
-              <Tabs level={3} className="lasso-seg-panel" ariaLabel="Vælg regnskabsår" items={options.map((y) => ({ id: String(y.year), label: String(y.year) }))} value={String(selected.year)} onChange={(id) => setYear(Number(id))} />
+              <Tabs level={3} className="lasso-seg-accent" ariaLabel="Vælg regnskabsår" items={options.map((y) => ({ id: String(y.year), label: String(y.year) }))} value={String(selected.year)} onChange={(id) => setYear(Number(id))} />
             </div>
           ) : undefined
         }
         span="half"
       >
         {/* 09.5 (Jakob 29.09): handlingen "Hent regnskabet" står øverst i elementet, ikke som række nederst. */}
-        {onPdf ? (
+        {pdf ? (
           <div className="lasso-kv-top">
-            <button type="button" className="lasso-kv-link" onClick={() => onPdf(selected.year)}>
+            <button type="button" className="lasso-kv-link" onClick={pdf}>
               <ShellIcon name="download" size={15} />
               <span>Hent regnskabet {selected.year}</span>
             </button>
@@ -308,6 +466,7 @@ export function KeyValueList({
     );
   }
 
+  if (look === "card") return <CompanyCard company={company!} contact={contact} rows={rowKeys} title={title} onLink={onLink} />;
   const ansatteFlag = financials?.quality?.ansatte;
   const rows = companyRows(company!, ownership, financials?.years.at(-1), { identity: hideIdentity, contact: hideContact, auditor: hideAuditor }, rowKeys).map((r): Row =>
     r.label === "Ansatte" && ansatteFlag ? { ...r, flag: ansatteFlag } : r,

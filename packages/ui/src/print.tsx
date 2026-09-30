@@ -1,5 +1,4 @@
 import { createContext, useContext, type ReactNode } from "react";
-import type { Dataset } from "@lasso/spec";
 import { LASSO_MARK_PATH } from "./LassoMark.js";
 
 /**
@@ -50,21 +49,6 @@ export function printStamp(iso: string): { date: string; time: string } {
   return { date: `${get("day")}.${get("month")}.${get("year")}`, time: `${get("hour")}.${get("minute")}` };
 }
 
-/**
- * Kilderne bag siden, til sidefoden (katalog 27: "Kilder: …"): CVR altid; regnskaber, nyhedskilder,
- * score og Creditsafe, når siden viser dem. Demodata siger det.
- */
-export function printSources(ds: Dataset | null): string[] {
-  const out = ["CVR"];
-  if (!ds) return out;
-  if (Object.values(ds.financials).some((f) => f.years.length > 0) || Object.keys(ds.financialStatements).length > 0) out.push("Erhvervsstyrelsen (regnskaber)");
-  for (const n of Object.values(ds.news)) for (const s of n.sources ?? []) out.push(s);
-  for (const s of Object.values(ds.scores)) if (s.source && s.score !== null) out.push(s.source);
-  if (Object.values(ds.creditRatings ?? {}).some((c) => c.state === "ok")) out.push("Creditsafe");
-  if (ds.source === "demo") out.push("eksempeldata");
-  return out.filter((s, i, a) => a.indexOf(s) === i);
-}
-
 const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]!);
 
 export interface PageTemplateInput {
@@ -72,7 +56,6 @@ export interface PageTemplateInput {
   title: string;
   /** Datasættets tidsstempel. */
   generatedAt: string;
-  sources: readonly string[];
   /** @font-face-regler (Poppins indlejret som data-URL), så sidehovedet har samme skrift som siden. */
   fontFaces?: string;
 }
@@ -80,10 +63,10 @@ export interface PageTemplateInput {
 /**
  * Sidehoved og sidefod til side-PDF'en (Chromiums headerTemplate/footerTemplate): de står i
  * margenen på hvert ark og kan ikke bruge sidens stylesheet, så alt er inline. Samme opbygning som
- * rapporten (katalog 27): Lasso-mærket, navnet og datastemplet øverst; kilder, "Udarbejdet i Lasso"
+ * rapporten (katalog 27): Lasso-mærket, navnet og datastemplet øverst; "Udarbejdet i Lasso"
  * og "side x af n" nederst. pageNumber og totalPages udfyldes af Chromium.
  */
-export function pageTemplates({ title, generatedAt, sources, fontFaces = "" }: PageTemplateInput): { headerTemplate: string; footerTemplate: string } {
+export function pageTemplates({ title, generatedAt, fontFaces = "" }: PageTemplateInput): { headerTemplate: string; footerTemplate: string } {
   const stamp = printStamp(generatedAt);
   // Chromium tegner skabelonerne i margenen (14 mm) i fuld arkbredde med 4 mm luft over sidehovedet og
   // under sidefoden, så linjerne står 3 mm fra indholdet.
@@ -101,7 +84,7 @@ export function pageTemplates({ title, generatedAt, sources, fontFaces = "" }: P
   const footerTemplate =
     `${style}<div style="box-sizing:border-box;width:100%;padding:0 ${PAGE_MARGIN_MM}mm;${font}">` +
     `<div style="${row}padding-top:2mm;border-top:1px solid #e6e7eb;">` +
-    `<span style="min-width:0;">Kilder: ${escapeHtml(sources.join(", "))}. Data pr. ${stamp.date}</span>` +
+    `<span style="min-width:0;">Data pr. ${stamp.date}</span>` +
     `<span style="display:flex;align-items:center;gap:6px;white-space:nowrap;">${mark(12, 10)}<span>Udarbejdet i Lasso, lassox.com, side <span class="pageNumber"></span> af <span class="totalPages"></span></span></span>` +
     `</div></div>`;
   return { headerTemplate, footerTemplate };

@@ -1,16 +1,15 @@
-# Opskrift: én ny komponent fra Paper
+# Opskrift: én ny komponent
 
 Gælder alle nye komponenter. Mønstret er sat af de otte første: `packages/ui/src/components/CompanyHead.tsx`, `KeyFigureCards.tsx`, `BarChart.tsx`, `PersonList.tsx`, `OwnerList.tsx`, `CompanyTable.tsx`, `CompareTable.tsx`. Læs mindst to af dem, før du begynder.
 
-## 0. Designet kommer KUN fra Paper
+## 0. Designet kommer fra koden
 
-Der er ingen PDF. Filen er **"Lasso Portal - Designguide"**, `fileId` = `01M1GZGSTYBM43XSSD4JHQ0ADG`, siden **Designkatalog**. Værktøjerne hedder `mcp__remote-devices__Paper__*` (indlæs dem med ToolSearch).
+Designet er komplet i koden (Jakob 30.09.2026); Paper bruges ikke, når nye moduler og komponenter udvikles.
 
-1. `get_tree_summary` (depth 2–3) på artboardet finder elementerne og deres node-id'er. Artboard-id'er:
-   08 `9R4-0`, 09 `9UH-0`, 10 `9YC-0`, 11 `A3C-0`, 12 `A7X-0`, 13 `ABC-0`, 14 `AQA-0`, 14b `G5W-0`, 15 `B45-0`, 16 `BN9-0`, 17 `BTG-0`, 18 `BX4-0`, 19 `C0U-0`, 20 `C48-0`, 21 `CA3-0`, 22 `CFC-0`, 23 guide `CK3-0`, 26b mobil grafer `E2J-0`, 26c mobil lister `EBV-0`, 26d mobil person/risiko/regnskab `EOD-0`, 26e mobil enheder/sammenligning `EYK-0`, 28 øvrige `H0G-0`, 06 navigation og sideskabelon `9I4-0`, 07 dialoger og menuer `9L1-0`, 21 overvågning `CA3-0`, 27 A4-eksport `DO8-0`, 29 fanebjælke tre niveauer `IWE-0`, 30 layout, fra spørgsmål til skærm `J48-0`.
-2. `get_screenshot` på hvert element. Læs noten under elementet: den indeholder mål og regler.
-3. `get_jsx` (format `inline-styles`) eller `get_computed_styles`, når mål, farver eller skriftstørrelser skal aflæses præcist.
-4. Tokens står allerede i `packages/ui/src/styles.css`. Brug KUN CSS-variablerne derfra. Mangler en farve, så find den i tokens, aldrig hex i komponenten.
+1. Find det nærmeste element i galleriet (`tools/gallery/entries/*.tsx`, mærket med katalognummer, fx 09.5) og i `docs/design/README.md`. Byg videre på de eksisterende komponenter og deres klasser; en ny variant bruger samme typografi og mønstre som et eksisterende element (fx virksomhedskortet 08.7, "Hent regnskabet" og "Se alle" i 09.5).
+2. Tegn galleriet (`npx tsx tools/gallery/build.ts <ud-mappe>`, `node tools/gallery/shoot.mjs <ud-mappe> <nr>`) og sammenlign dit element med det.
+3. Tokens står i `packages/ui/src/styles.css`. Brug KUN CSS-variablerne derfra; aldrig hex i komponenten.
+4. Et nyt element får sin egen indgang i galleriet med katalognummer, så designet forbliver komplet i koden.
 
 ## 1. Faste regler (bryd dem aldrig)
 
@@ -56,5 +55,5 @@ Du har ikke API-nøglen. Bekræftede svarformer står i `docs/lasso-endpoints.md
 ## 6. Færdig betyder
 
 - `npm run typecheck` grøn, `npm run build` grøn, `npm test` grøn.
-- Visuelt sammenlignet med Paper-skærmbilledet på 1200 og 390 px (render demodata med Playwright; se hvordan i `docs/design/VISUEL-TEST.md`).
+- Visuelt sammenlignet med galleriet på 1200 og 390 px (render demodata med Playwright; se hvordan i `docs/design/VISUEL-TEST.md`).
 - Ét commit pr. komponentgruppe med dansk commit-besked, der nævner artboard-numrene.

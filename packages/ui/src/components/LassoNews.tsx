@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { formatDate, isPersonId, type NewsItemVM, type NewsVM, type TextSegment } from "@lasso/spec";
 import type { MoreInTab, ViewAction } from "../types.js";
-import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { DataState, Section, stateForError } from "../primitives.js";
 import { usePrintMode } from "../print.js";
 import { Icon } from "./Icon.js";
 import { LassoMark } from "../LassoMark.js";
@@ -161,7 +161,7 @@ function footText(item: NewsItemVM): string {
 }
 
 function NewsRow({ item, mention, ...opts }: { item: NewsItemVM; mention?: string } & SegmentOpts) {
-  // 12.4: kildelinjen er "Kilde, for 3 dage siden" / "Kilde, dd.mm.åååå, engelsk", komma-adskilt
+  // 12.4: kildevisningn er "Kilde, for 3 dage siden" / "Kilde, dd.mm.åååå, engelsk", komma-adskilt
   // (regel 6), uden nyhedstypen.
   const meta = [relativeOrDate(item.time), item.language].filter(Boolean).join(", ");
   // Rækken er ikke selv et link (links og knapper må ikke ligge i hinanden): overskriften linker til
@@ -269,7 +269,6 @@ export function LassoNews({
           </button>
         )
       ) : null}
-      {news.sources?.length ? <SourceLine source={news.sources.join(" og ")} updated={news.updatedAt} /> : null}
     </Section>
   );
 }

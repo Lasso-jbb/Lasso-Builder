@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { formatAmount, formatDate, type CompanyEventsVM, type CompanyVM, type MergerPartyVM } from "@lasso/spec";
-import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { DataState, Section, stateForError } from "../primitives.js";
 import type { ViewAction } from "../types.js";
 
 function Loading({ title, error, lines = 3 }: { title: string; error?: string; lines?: number }) {
@@ -93,9 +93,6 @@ export function Mergers({ events, company, title, error, demo, onOpen }: { event
           </li>
         ) : null}
       </ul>
-      <div className="lasso-mergers__source">
-        <SourceLine source="CVR via Lasso" updated={events.updated} />
-      </div>
     </Section>
   );
 }
@@ -119,7 +116,7 @@ const ANNOUNCEMENTS_SHOWN = 3;
  * Statstidende, seneste bekendtgørelser (katalog 28.8). Kort med "<virksomhed>" under titlen. Rækker:
  * dato | type farvet efter alvor som status (problem som konkurs og rekonstruktion mørk rød, frivillig likvidation warning,
  * øvrige tekstfarve), altid med ordet | Statstidendes egen tekst foldet til to linjer med "Vis" og en
- * kildelinje pr. bekendtgørelse | "Åbn i Statstidende". Mobil: 60 px rækker med chevron. Sektionen
+ * kildevisning pr. bekendtgørelse | "Åbn i Statstidende". Mobil: 60 px rækker med chevron. Sektionen
  * udelades helt, når der ingen bekendtgørelser er (ikke tom tilstand).
  */
 export function Announcements({ events, company, demo, title, error }: { events?: CompanyEventsVM; company?: CompanyVM; demo?: boolean; title?: string; error?: string }) {

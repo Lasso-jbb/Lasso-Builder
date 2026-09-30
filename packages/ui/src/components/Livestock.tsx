@@ -1,5 +1,6 @@
 import { formatDate, formatNumber, type LivestockVM } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
+import { isModuleReason, LIVESTOCK_MODULE_REASON } from "../unavailableReasons.js";
 
 /**
  * CHR (katalog 20): besætninger pr. dyretype + veterinære hændelser. 20.4 (Jakob): ingen dyreikoner i rækkerne.
@@ -15,6 +16,13 @@ export function Livestock({ livestock, error }: { livestock?: LivestockVM; error
     return (
       <Section title={title} span="full">
         {error ? <DataState state={stateForError(error) === "noaccess" ? "empty" : "error"} reason={error} /> : <DataState state="loading" lines={4} height={228} />}
+      </Section>
+    );
+  }
+  if ((!livestock.chrNumber || livestock.herds.length === 0) && isModuleReason(livestock.unavailableReason)) {
+    return (
+      <Section title={title} span="full">
+        <DataState state="locked" reason={LIVESTOCK_MODULE_REASON} lines={3} />
       </Section>
     );
   }
@@ -38,7 +46,7 @@ export function Livestock({ livestock, error }: { livestock?: LivestockVM; error
           <div className="lasso-livestock__head">
             <span className="lasso-livestock__title">Besætninger, CHR {livestock.chrNumber}</span>
             <span className="lasso-small lasso-muted">
-              {/* G3: ingen "opdateret"-kildelinje; kun ejeren */}
+              {/* G3: ingen "opdateret"-kildevisning; kun ejeren */}
               {livestock.ownerName}
             </span>
           </div>

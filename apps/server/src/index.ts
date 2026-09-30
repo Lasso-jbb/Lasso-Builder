@@ -41,11 +41,13 @@ import { adaptPeople, adaptSearch, at, participantFieldNames } from "./lasso/ada
 import { describeShape, LassoApiError, LassoClient, probeAuthVariants, type Query } from "./lasso/client.js";
 import { createMcpServer } from "./mcp/server.js";
 import { companyNameHints } from "./usecases/index.js";
+import { createScoreStore } from "./scores/store.js";
 import { createViewStore, SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "./views/store.js";
 import { entityLink, focusLinks, isEntityId, sendToLassoLink, verifyCompanyLink, verifyEntityLink, verifyPersonLink, verifySendToLassoLink } from "./web/links.js";
 import { injectBoot, loadViewHtml } from "./web/page.js";
 import { ASK_AGAIN, failPage, FROM_LIST, linkFailure, VIEW_MISSING, VIEW_OUTDATED } from "./web/linkErrors.js";
 import { portalApi, portalErrorHandler } from "./web/portalApi.js";
+import { DEPLOYED_VERSION, showcaseHandler } from "./web/showcase.js";
 import { pdfAvailable, pdfRendererFor, type PdfRenderer } from "./pdf/renderer.js";
 import { pdfBoot, pdfRoutes, portalPdfRoutes } from "./pdf/routes.js";
 
@@ -134,6 +136,7 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
     res.json({
       name: "lasso-mcp",
       version: VERSION,
+      commit: DEPLOYED_VERSION,
       env: config.APP_ENV,
       mcp: `${config.publicBaseUrl}/mcp`,
       portal: `${config.publicBaseUrl}/portal`,
@@ -178,6 +181,7 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
     res.json({
       status: dbOk ? "ok" : "degraded",
       version: VERSION,
+      commit: DEPLOYED_VERSION,
       env: config.APP_ENV,
       dataSource: provider.kind,
       lassoCredentials: hasLassoCredentials(config),
@@ -256,6 +260,9 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
   // "Gem som PDF": /k/, /p/, /e/, /v/ med .pdf (før HTML-siderne), /x/<token>.pdf og print-siden.
   app.use(pdfRoutes({ config, provider, store, pdf }));
 
+  // Komponentudstillingen: alle komponenter på LASSO X og Jakob Bech Benediktson (web/showcase.ts).
+  app.get("/komponenter", showcaseHandler(config, provider));
+
   // --- Delt side: specen hentes, data hentes friskt, render-appen tegner -----
   app.get("/v/:org/:slug", async (req, res) => {
     const view = await store.get(req.params.org, req.params.slug);
@@ -300,14 +307,14 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
    * Virksomhedssiden. metric udeladt = hovednøgletallet (som show_company). Med spørgsmålet (q i et
    * /k/-link) samme spørgsmålsprofil som i chatten: læst uden virksomhedens navn, med modellens nøgletal.
    */
-  async function renderCompanyPage(req: Request, res: Response, html: string, lassoId: string, opts: { focus: Focus; years: number; metric?: Metric; question?: string; metrics?: Metric[] }) {
+  async function renderCompanyPage(req: Request, res: Response, html: string, lassoId: string, opts: { focus: Focus; years: number; metric?: Metric; question?: string; metrics?: Metric[]; topic?: string }) {
     let name: string;
     try {
       name = (await provider.company(lassoId)).name;
     } catch (err) {
       return failPage(res, html, 404, `Virksomheden kunne ikke hentes: ${errorMessage(err)}`);
     }
-    const ask = opts.question ? parseAsk(opts.question, "company", { metrics: opts.metrics, name: companyNameHints(name) }) : undefined;
+    const ask = opts.question ? parseAsk(opts.question, "company", { metrics: opts.metrics, name: companyNameHints(name), topic: opts.topic }) : undefined;
     const dataset = await resolveSpec(composeProbe(lassoId, opts.focus, ask), provider);
     const metric = opts.metric ?? mainMetric(dataset.financials[lassoId]?.years ?? []);
     const spec = composeCompany(lassoId, dataset, { focus: opts.focus, years: opts.years, chartMetric: metric, name, followUps: false, ask });
@@ -315,10 +322,10 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
   }
 
   /** Personsiden (katalog 16) med personfokus (standard overblik) og evt. spørgsmålet fra /p/-linket. */
-  async function renderPersonPage(req: Request, res: Response, html: string, lassoId: string, focus: PersonFocus = "overblik", question?: string) {
+  async function renderPersonPage(req: Request, res: Response, html: string, lassoId: string, focus: PersonFocus = "overblik", question?: string, topic?: string) {
     // Spørgsmålet læses uden personens navn (som i chatten); navnet hentes først (samme opslag som hovedet).
     const official = question ? await provider.person(lassoId).then((x) => x.name).catch(() => undefined) : undefined;
-    const ask = question ? parseAsk(question, "person", { name: official }) : undefined;
+    const ask = question ? parseAsk(question, "person", { name: official, topic }) : undefined;
     const dataset = await resolveSpec(composePersonProbe(lassoId, focus, ask), provider);
     const person = dataset.persons[lassoId];
     if (!person) return failPage(res, html, 404, `Personen kunne ikke hentes: ${dataset.errors[`person:${lassoId}`] ?? "ukendt fejl"}`);
@@ -340,6 +347,7 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
       metric: check.link.metric,
       question: check.link.question,
       metrics: check.link.metrics,
+      topic: check.link.topic,
     });
   });
 
@@ -350,7 +358,7 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
       const f = linkFailure(check.reason, ASK_AGAIN("personen"));
       return failPage(res, html, f.status, f.message);
     }
-    await renderPersonPage(req, res, html, check.lassoId, check.focus, check.question);
+    await renderPersonPage(req, res, html, check.lassoId, check.focus, check.question, check.topic);
   });
 
   // Gem-laget: én side pr. entitet (virksomhed CVR-1-…, person CVR-3-/CVR-4-…), fra gemte sider og send-til-Lasso.
@@ -657,9 +665,10 @@ export async function probeEndpointShapes(client: LassoClient, lassoId: string, 
 async function main() {
   const config = loadConfig();
   const client = new LassoClient(config);
-  const provider = createProvider(config, client);
-  // Én pool deles af gemte visninger og gemte sider; uden DATABASE_URL holdes begge i hukommelsen.
+  // Én pool deles af gemte visninger, gemte sider og rating-historik; uden DATABASE_URL holdes de i hukommelsen.
   const pool = createPool(config.DATABASE_URL);
+  const scores = createScoreStore(pool ?? "");
+  const provider = createProvider(config, client, scores);
   const store = createViewStore(pool ?? "");
   const pages = createSavedPageStore(pool ?? "");
 
@@ -670,6 +679,7 @@ async function main() {
       try {
         await store.migrate();
         await pages.migrate();
+        await scores.migrate();
         if (attempt > 1) console.log(`[db] migreret (forsøg ${attempt})`);
         return;
       } catch (err) {
@@ -691,7 +701,7 @@ async function main() {
   const shutdown = () => {
     console.log("[lasso-mcp] lukker ned");
     server.close(() => {
-      void Promise.all([store.close(), pages.close(), pdf.close()])
+      void Promise.all([store.close(), pages.close(), scores.close(), pdf.close()])
         .then(() => pool?.end())
         .finally(() => process.exit(0));
     });

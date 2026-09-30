@@ -74,7 +74,7 @@ export const NUMBER_DEFS: readonly (readonly [string, string])[] = [
 /** 23.5: tjeklisten "Aflever aldrig uden". */
 export const CHECKLIST: readonly string[] = [
   "Alle fem tilstande for hvert nyt element",
-  "Ingen kildelinje (\"Kilde: …, opdateret …\") på elementerne; ingen \"Vis kilder (N)\" og ingen \"Kilder\" med link nogen steder (heller ikke 08.7)",
+  "Ingen kildevisning på elementerne, hverken som linje, tæller eller link, nogen steder (heller ikke 08.7)",
   "Genereret tekst uden AI-mærke og uden farvet boks",
   "Ikon + ord ved enhver farvekodning",
   "Fokus = 1 px koral kant, ingen ring",
@@ -87,7 +87,7 @@ export const CHECKLIST: readonly string[] = [
   'Én grå til al læsbar hjælpetekst, metatekst og overlinjer: --color-text-muted (#5B6068, samme som overlinjen "EKSEMPLER"); #8A9099 kun til ikoner og dekoration',
   'Ingen midterprik nogen steder, heller ikke i katalogets egne noter, overlinjer, specifikationer ("13/18, 400"): brug komma; tankestreg (—) erstattes af bindestreg (-). Søg på midterprik-tegnet (find_nodes) før aflevering, resultatet skal være 0',
   "Intet mørkt fyld på aktive elementer: aktiv side = ink 600 + tynd understregning, aktive segmenter/chips/trin med vægt, tynd kant eller koral-soft",
-  "Logo som klon af masterne i 01b, diskret: dæmpet navnelogo i bundlinjen (sideskinne på desktop, nederst på mobil) uden kildelinje, aldrig i topbjælken ved entitetsnavnet; ikon kun i tabletskinne, som Lasso News-kilde og i PDF",
+  "Logo som klon af masterne i 01b, diskret: dæmpet navnelogo i bundlinjen (sideskinne på desktop, nederst på mobil) uden kildevisning, aldrig i topbjælken ved entitetsnavnet; ikon kun i tabletskinne, som Lasso News-kilde og i PDF",
   "Nyheder: én kilde pr. nyhed, ingen billeder, tone-mærker, samlede historier eller favicon-stakke; virksomhedsnavn i uddraget i fed, ikke koral",
   "Kontaktblok og andre korte ikon + værdi-lister uden skillelinjer, adskilt med luft",
   "Risikoskala 0 = lav (grøn, venstre/nederst) til 100 = høj (rød, højre/øverst); markør, zoner, historik og ændringstal følger samme retning",
@@ -210,4 +210,4 @@ export const LOOKUP_ROWS: readonly (readonly [string, string, string, string, st
   ['"Find revisorer i Region Midt med over 10 ansatte", målgrupper', "C", "4, Liste først", "Værktøjslinje med kriterie-chips (02/03), tabel med paginering (15), panel fra højre med kompakt overblik (08)", "Gem liste, Eksportér"],
 ];
 export const LOOKUP_RULES =
-  "Fire regler der giver produktfølelse: (1) Start altid med identiteten, hovedet i den størrelse niveauet kræver. (2) Det vigtigste står øverst til venstre; en AI må omordne elementer inden for et mønster efter hvad spørgsmålet handler om, og et modul må kombinere to mønstre over hinanden (fx graf fuld + tabel fuld), men aldrig blande dem i én række. (3) Hvert svar slutter med ét link (ingen kildelinje), der fører til næste niveau; svaret vokser ved klik, det gentages ikke. (4) Variationen ligger i valget af mønster, værktøjslinje og elementer, ikke i nye former: to moduler må gerne se forskellige ud, men de er bygget af de samme dele efter de samme regler.";
+  "Fire regler der giver produktfølelse: (1) Start altid med identiteten, hovedet i den størrelse niveauet kræver. (2) Det vigtigste står øverst til venstre; en AI må omordne elementer inden for et mønster efter hvad spørgsmålet handler om, og et modul må kombinere to mønstre over hinanden (fx graf fuld + tabel fuld), men aldrig blande dem i én række. (3) Hvert svar slutter med ét link (ingen kildevisning), der fører til næste niveau; svaret vokser ved klik, det gentages ikke. (4) Variationen ligger i valget af mønster, værktøjslinje og elementer, ikke i nye former: to moduler må gerne se forskellige ud, men de er bygget af de samme dele efter de samme regler.";

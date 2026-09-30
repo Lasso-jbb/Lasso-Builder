@@ -94,7 +94,7 @@ const SECTIONS: TextSectionsVM = {
 };
 const headings = (html: string) => [...html.matchAll(/lasso-textsection__heading">([^<]*)</g)].map((m) => m[1]);
 
-test("Virksomhedsprofil (overblik): CVR-tekster uden branche plus konklusion, resultat og likviditet, ingen kildelinje (12.1)", () => {
+test("Virksomhedsprofil (overblik): CVR-tekster uden branche plus konklusion, resultat og likviditet, ingen kildevisning (12.1)", () => {
   const html = renderToStaticMarkup(createElement(LassoTextSections, { sections: SECTIONS }));
   assert.deepEqual(headings(html), ["Formål", "Tegningsregler", "Regnskabsanalyse: konklusion", "Resultat", "Likviditet"]);
   assert.doesNotMatch(html, /Kilde:/);
@@ -108,7 +108,7 @@ test("Virksomhedsprofil (overblik): CVR-tekster uden branche plus konklusion, re
   assert.doesNotMatch(cvr, /Kilde:/);
 });
 
-test("Regnskabsanalyse (19.3, LYO-0): foldbare afsnit med det første åbent, forbehold og feedback uden Vis kilder (runde 6); ingen genereringslinje (G3) og ingen CVR-tekster", () => {
+test("Regnskabsanalyse (19.3, LYO-0): foldbare afsnit med det første åbent, forbehold og feedback uden kildevisning (runde 6); ingen genereringslinje (G3) og ingen CVR-tekster", () => {
   const v = { ...SECTIONS, analysisGenerated: "2026-09-25T08:00:00Z", analysisBasis: "2021–2025", analysisHeadline: "Vækst i toplinjen", analysisSources: ["A", "B", "C", "D"] };
   const html = renderToStaticMarkup(createElement(LassoTextSections, { sections: v, variant: "analyse" }));
   assert.match(html, /<h3 class="lasso-section__title">Regnskabsanalyse<\/h3>/);
@@ -117,11 +117,11 @@ test("Regnskabsanalyse (19.3, LYO-0): foldbare afsnit med det første åbent, fo
   assert.match(html, /aria-expanded="false"/);
   assert.match(html, /lasso-analysis19__disclaimer">Forbehold: /);
   assert.match(html, /Var det brugbart\?/);
-  assert.doesNotMatch(html, /Vis kilder|Skjul kilder/);
+  assert.doesNotMatch(html, /Vis kild|Skjul kild/);
   // "Hent som PDF" kun med en handling (G1).
   assert.doesNotMatch(html, /Hent som PDF/);
   assert.match(renderToStaticMarkup(createElement(LassoTextSections, { sections: v, variant: "analyse", onPdf: () => {} })), /lasso-analysis19__pdf[^]*Hent som PDF/);
-  assert.doesNotMatch(html, /lasso-source/);
+  assert.doesNotMatch(html, /lasso-sour/);
   assert.doesNotMatch(html, /Formål|Tegningsregler/);
   // Uden analyse: tom tilstand, der siger hvorfor.
   const none = renderToStaticMarkup(createElement(LassoTextSections, { sections: { ...SECTIONS, sections: SECTIONS.sections.slice(0, 3) }, variant: "analyse" }));
@@ -145,7 +145,7 @@ test("Navne med Lasso-ID i analysen er links med drill-down og ren tekst uden", 
   assert.match(profile, / …<\/p>/);
 });
 
-test("Kontaktblok: adressen udelades, når hovedet viser den; et verificeret CVR-nummer står én gang; én kildelinje", () => {
+test("Kontaktblok: adressen udelades, når hovedet viser den; et verificeret CVR-nummer står én gang; én kildevisning", () => {
   const contact: ContactVM = {
     lassoId: ID,
     phone: "86123456",
@@ -165,7 +165,7 @@ test("Kontaktblok: adressen udelades, når hovedet viser den; et verificeret CVR
   assert.equal(count(html, "86 12 34 56"), 1);
   assert.match(html, /20 30 40 50/);
   assert.equal(count(html, "Kilde:"), 0);
-  assert.doesNotMatch(text(html), /Kilde:/, "G3: ingen kildelinje");
+  assert.doesNotMatch(text(html), /Kilde:/, "G3: ingen kildevisning");
   // Uden hoved (alene i en render_view-spec) står adressen.
   assert.match(renderToStaticMarkup(createElement(LassoContact, { contact })), /Prøvevej 1/);
 });
@@ -210,7 +210,7 @@ test("LassoView: hver oplysning om identiteten står én gang på overblik, kont
   // Overblikket: telefonen står i kontaktblokken, ikke også i listen, og analysens kilde én gang.
   const overblik = renderToStaticMarkup(createElement(LassoView, { spec: composeCompany(ID, ds, { followUps: false }), dataset: ds, host: {}, onAction: () => {} }));
   assert.equal(count(text(overblik), "eksempelbyg.dk"), 2, "e-mail og web, hver én gang");
-  assert.equal(count(overblik, "Kilde: Lasso regnskabsanalyse"), 0, "12.1: ingen kildelinje");
+  assert.equal(count(overblik, "Kilde: Lasso regnskabsanalyse"), 0, "12.1: ingen kildevisning");
   // 24/25/26g: i portalens sideskabelon (embedded) ingen rammeheader og ingen handlingslinje nederst.
   const spec = composeCompany(ID, ds, { followUps: false });
   const framed = renderToStaticMarkup(createElement(LassoView, { spec, dataset: ds, host: { save: true }, onAction: () => {} }));

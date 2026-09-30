@@ -4,6 +4,7 @@ import {
   amountScale,
   personSearchKey,
   personTableRow,
+  changeFeedDays,
   changeFeedKey,
   CHANGE_TYPES,
   COMPONENT_CATALOG,
@@ -177,7 +178,7 @@ test("parseViewSpec accepterer de nye graftyper i katalog 13 med deres standardv
   assert.deepEqual(lineWithBench, { type: "LassoLineChart", company: "CVR-1-12345678", metric: "bruttofortjeneste", years: 5, benchmark: "CVR-1-99999999" });
   assert.deepEqual(waterfall, { type: "LassoWaterfallChart", company: "CVR-1-12345678" });
   assert.deepEqual(shareBars, { type: "LassoShareBars", company: "CVR-1-12345678" });
-  assert.deepEqual(ranking, { type: "LassoRanking", companies: ["CVR-1-12345678", "CVR-1-87654321"], metric: "bruttofortjeneste" });
+  assert.deepEqual(ranking, { type: "LassoRanking", companies: ["CVR-1-12345678", "CVR-1-87654321"], metric: "bruttofortjeneste", order: "desc" });
 });
 
 test("LassoGroupedBarChart kræver 2–3 nøgletal og LassoRanking mindst 2 virksomheder", () => {
@@ -262,7 +263,7 @@ test("parseViewSpec accepterer katalog 19 (LassoIncomeStatement, LassoBalanceShe
   assert.deepEqual(income, { type: "LassoIncomeStatement", company: "CVR-1-12345678", years: 2 });
   assert.deepEqual(balance, { type: "LassoBalanceSheet", company: "CVR-1-12345678", years: 3 });
   assert.deepEqual(cashFlow, { type: "LassoCashFlow", company: "CVR-1-12345678", years: 2, title: "Pengestrøm" });
-  assert.deepEqual(spec.components.map((c) => widthOf(c, spec.layout)), ["half", "half", "half"]); // 19.2: kompakt i ½–¾; fuld bredde = LassoFinancialStatements
+  assert.deepEqual(spec.components.map((c) => widthOf(c, spec.layout)), ["half", "third", "third"]); // 19.2: kompakt i ⅓–½ (Ø13/B8, A13: smal); fuld bredde = LassoFinancialStatements
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoIncomeStatement", company: "CVR-1-1", years: 4 }] }));
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoBalanceSheet", company: "CVR-1-1", years: 1 }] }));
 });
@@ -367,14 +368,22 @@ test("LassoChangeFeed (katalog 21): schema, standardværdier, bredde og katalog"
   const spec = parseViewSpec({ title: "Overvågning", components: [{ type: "LassoChangeFeed", list: "Kunder" }] });
   const c = spec.components[0]!;
   if (c.type !== "LassoChangeFeed") throw new Error("forkert type");
-  assert.equal(c.days, 7);
+  assert.equal(changeFeedDays(c), 7);
   assert.equal(c.list, "Kunder");
   assert.equal(c.types, undefined);
-  assert.equal(widthOf(c, "dashboard"), "full");
+  // Ø13/B8 (A13): smal, standard ½; alene i et dashboard-bånd står den i fuld bredde (packBands).
+  assert.equal(widthOf(c, "dashboard"), "half");
   assert.equal(changeFeedKey(c), "Kunder|7|");
   const typed = parseViewSpec({ title: "x", components: [{ type: "LassoChangeFeed", days: 30, types: ["status", "regnskab"] }] }).components[0]!;
   if (typed.type !== "LassoChangeFeed") throw new Error("forkert type");
   assert.equal(changeFeedKey(typed), "|30|status,regnskab");
+  // Én virksomhed (fokus historik, B4): standard 30 dage og en nøgle, der ikke blandes med en liste.
+  const one = parseViewSpec({ title: "x", components: [{ type: "LassoChangeFeed", company: "CVR-1-99000001" }] }).components[0]!;
+  if (one.type !== "LassoChangeFeed") throw new Error("forkert type");
+  assert.equal(one.company, "CVR-1-99000001");
+  assert.equal(changeFeedDays(one), 30);
+  assert.equal(changeFeedKey(one), "company:CVR-1-99000001|30|");
+  assert.equal(changeFeedKey({ company: "CVR-1-99000001", days: 90 }), "company:CVR-1-99000001|90|");
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoChangeFeed", days: 0 }] }));
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoChangeFeed", days: 91 }] }));
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoChangeFeed", types: ["nyheder"] }] }));
@@ -406,11 +415,11 @@ test("foldChangeEntries folder kun små ændringer (stamdata/kredit) af samme ty
   assert.equal(foldChangeEntries([]).length, 0);
 });
 
-test("LassoCreditRating (katalog 17): schema, bredde ½ og katalogtekst efter skabelonen", () => {
+test("LassoCreditRating (katalog 17): schema, bredde ⅓ (smal, Ø13/B8) og katalogtekst efter skabelonen", () => {
   const spec = parseViewSpec({ title: "Kredit", components: [{ type: "LassoCreditRating", company: "CVR-1-12345678" }] });
   const c = spec.components[0]!;
   assert.equal(c.type, "LassoCreditRating");
-  assert.equal(widthOf(c, "dashboard"), "half");
+  assert.equal(widthOf(c, "dashboard"), "third");
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoCreditRating" }] }), "company er påkrævet");
   const entry = COMPONENT_CATALOG.find((e) => e.type === "LassoCreditRating");
   assert.ok(entry);
@@ -456,7 +465,7 @@ test("nye parametre: roles, only, year, rows, kinds og role valideres og filtrer
   for (const bad of [
     { type: "LassoPersonList", company: id, roles: "ejere" },
     { type: "LassoKeyValueList", company: id, only: ["omsaetning", "salg"] },
-    { type: "LassoKeyValueList", company: id, rows: ["cvr"] },
+    { type: "LassoKeyValueList", company: id, rows: ["momsnummer"] },
     { type: "LassoTimeline", company: id, kinds: ["nyheder"] },
     { type: "LassoPersonRoles", person: "CVR-3-4000000001", role: "revisor" },
   ]) {

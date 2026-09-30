@@ -1,5 +1,6 @@
 import { formatDate, formatNumber, type ScoreHistoryVM } from "@lasso/spec";
-import { DataState, Section, SourceLine, stateForError } from "../primitives.js";
+import { DataState, Section, stateForError } from "../primitives.js";
+import { isScoreSubscriptionReason, SCORE_SUBSCRIPTION_REASON } from "../unavailableReasons.js";
 import { useWidth } from "../useWidth.js";
 import { ChartReadout, ChartTooltip, isCompact, useChartPick, type PickRow } from "../chartPick.js";
 import { scoreBand } from "./ScoreGauge.js";
@@ -60,6 +61,13 @@ export function ScoreHistory({
     return (
       <Section title={heading} span="half" className="lasso-chart lasso-scorehist">
         {error ? <DataState state={stateForError(error) === "noaccess" ? "empty" : "error"} reason={error} /> : <DataState state="loading" lines={4} height={260} />}
+      </Section>
+    );
+  }
+  if (points.length === 0 && isScoreSubscriptionReason(history.reason)) {
+    return (
+      <Section title={heading} span="half" className="lasso-chart lasso-scorehist">
+        <DataState state="locked" reason={SCORE_SUBSCRIPTION_REASON} lines={3} />
       </Section>
     );
   }
@@ -187,7 +195,6 @@ export function ScoreHistory({
         {tip !== null && W > 0 ? <ChartTooltip x={x(points[tip]!.date)} y={y(points[tip]!.score)} width={W} title={formatDate(points[tip]!.date)} rows={rowsFor(tip)} /> : null}
       </div>
       {pick.readout !== null ? <ChartReadout title={formatDate(points[pick.readout]!.date)} rows={rowsFor(pick.readout)} hint="Tryk på et punkt for at se hentningen" /> : null}
-      {history.source ? <SourceLine source={history.source} updated={history.updated} /> : null}
     </Section>
   );
 }

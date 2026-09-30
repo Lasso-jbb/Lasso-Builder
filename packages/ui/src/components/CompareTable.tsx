@@ -136,7 +136,8 @@ export function CompareTable({
                 </th>
                 {cols.map((c, i) => (
                   <th key={c.id} scope="col" className={`lasso-compare__company ${i === 0 ? "is-origin" : ""} ${off(i)}`}>
-                    <div className="lasso-compare__name">
+                    {/* Ø13/B8: navnet ombrydes på højst 2 linjer og afkortes derefter; det fulde navn står i title (tooltip). */}
+                    <div className="lasso-compare__name" title={c.name}>
                       {canDrillDown ? (
                         <button type="button" className="lasso-link" onClick={() => onAction({ kind: "open-company", lassoId: c.id, name: c.name })}>
                           {c.name}

@@ -1,5 +1,6 @@
 import {
   activityHeatmapKey,
+  changeFeedDays,
   changeFeedKey,
   emptyDataset,
   entityRefOf,
@@ -52,6 +53,7 @@ const FETCHERS: Record<string, (ds: Dataset, p: DataProvider, id: string) => Pro
   person: async (ds, p, id) => void (ds.persons[id] = await p.person(id)),
   personNetwork: async (ds, p, id) => void (ds.personNetworks[id] = await p.personNetwork(id)),
   companyEvents: async (ds, p, id) => void (ds.companyEvents[id] = await p.companyEvents(id)),
+  companyHistory: async (ds, p, id) => void (ds.companyHistories[id] = await p.companyHistory(id)),
 };
 
 /**
@@ -219,13 +221,15 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
         want(c.company, "ownership");
         break;
       case "LassoRelations":
-        want(c.company, "people", "ownership");
+        want(c.company, "people", "ownership", ...(c.full ? (["beneficialOwnership", "productionUnits"] as const) : []));
         break;
       case "LassoBeneficialOwners":
         want(c.company, "beneficialOwnership");
         break;
       case "LassoTextSections":
-        want(c.company, "textSections");
+        // "resume" skrives ud fra stamdata, historik (første navn), ledelse og regnskab.
+        if (c.variant === "resume") want(c.company, "company", "financials", "companyHistory", "people");
+        else want(c.company, "textSections");
         break;
       case "LassoTimeline":
         // Virksomhed eller person; nøglen i ds.timeline og fejlnøglen er entitetens ID.
@@ -268,8 +272,14 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
         personSearches.push(c);
         break;
       case "LassoKeyValueList":
-        if (c.variant === "financials") want(c.company, "financials");
-        else want(c.company, "company", "ownership", "financials");
+        if (c.variant === "financials") want(c.company, "financials", ...(c.fields ? (["financialStatements"] as const) : []));
+        else want(c.company, "company", "ownership", "financials", ...(c.look === "card" ? (["contact"] as const) : []));
+        break;
+      case "LassoRelationsTable":
+        want(c.company, "companyHistory", "beneficialOwnership");
+        break;
+      case "LassoCompanyHistory":
+        want(c.company, "companyHistory");
         break;
       case "LassoContact":
         want(c.company, "contact");
@@ -375,13 +385,17 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
     });
   }
 
-  // Katalog 21: ét feed pr. (liste, dage, typer); nøglen er changeFeedKey, fejlnøglen "changeFeed:<key>".
+  // Katalog 21: ét feed pr. (liste eller virksomhed, dage, typer); nøglen er changeFeedKey, fejlnøglen
+  // "changeFeed:<key>". Med company er det ændringerne i den ene virksomhed (fokus historik), uden liste.
   const feedKeys = new Set<string>();
   for (const f of feeds) {
     const key = changeFeedKey(f);
     if (feedKeys.has(key)) continue;
     feedKeys.add(key);
-    run(`changeFeed:${key}`, async () => void (ds.changeFeeds[key] = await provider.changeFeed({ list: f.list, days: f.days, types: f.types })));
+    const days = changeFeedDays(f);
+    run(`changeFeed:${key}`, async () =>
+      void (ds.changeFeeds[key] = await provider.changeFeed(f.company ? { companies: [f.company], days, types: f.types } : { list: f.list, days, types: f.types })),
+    );
   }
 
   // Katalog 13.11: ét heatmap pr. (liste, måneder, typer); nøglen er activityHeatmapKey, fejlnøglen "activityHeatmap:<key>".

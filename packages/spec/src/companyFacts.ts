@@ -29,8 +29,31 @@ export const COMPANY_FACT_KEYS = [
   "telefon",
   "email",
   "web",
+  // Stamoplysninger (portalens liste, Jakob 30.09): kun med når `rows` beder om dem, så brugeren
+  // selv kan vælge felter og rækkefølge.
+  "firmanavn",
+  "cvr",
+  "binavne",
+  "status",
+  "reklamebeskyttet",
+  "vedtaegtsaendring",
+  "regnskabsaar",
+  "senesteregnskab",
+  "selskabskapital",
+  "boersnoteret",
+  "underskriverrevisor",
+  "formaal",
+  "tegningsregel",
+  "brancher",
 ] as const;
 export type CompanyFactKey = (typeof COMPANY_FACT_KEYS)[number];
+
+/** Portalens stamoplysninger i portalens rækkefølge (Lassos fane "Stamoplysninger"). Standard for en fuld stamdataliste. */
+export const STAMDATA_ROWS: readonly CompanyFactKey[] = [
+  "firmanavn", "adresse", "kommune", "reklamebeskyttet", "telefon", "email", "web", "cvr", "binavne", "status", "stiftet", "form",
+  "vedtaegtsaendring", "regnskabsaar", "senesteregnskab", "selskabskapital", "boersnoteret", "revisor", "underskriverrevisor",
+  "formaal", "tegningsregel", "ansatte", "brancher",
+];
 
 export interface CompanyFact {
   /** Rækkens nøgle, når den svarer til en CompanyFactKey (så `rows` kan vælge den). Nye Paper-rækker (CVR-nummer, bibrancher, revision, kapital) er uden nøgle. */
@@ -96,7 +119,7 @@ export function companyFacts(company: CompanyVM, ownership: OwnershipVM | undefi
   rows.push({ key: "regnskabsperiode", label: "Regnskabsperiode", value: accountingPeriod(lastYear) });
   if (!options.hideIdentity) {
     rows.push(
-      { label: "CVR-nummer", value: company.cvr },
+      { key: "cvr", label: "CVR-nummer", value: company.cvr },
       { key: "stiftet", label: "Stiftet", value: company.founded ? formatDate(company.founded) : undefined },
       { key: "form", label: "Virksomhedsform", value: company.form },
       { key: "branche", label: "Branche", value: company.industryText, code: company.industryText ? company.industryCode : undefined },
@@ -126,8 +149,35 @@ export function companyFacts(company: CompanyVM, ownership: OwnershipVM | undefi
   }
   const shown = rows.filter((r) => r.value !== undefined || r.key === "revisor");
   if (!options.rows) return shown;
+  shown.push(...stamdataRows(company, lastYear).filter((r) => r.value !== undefined && options.rows!.includes(r.key!)));
   // Kun de rækker, elementet er bedt om, i den bedte rækkefølge.
   return options.rows.flatMap((k) => shown.filter((r) => r.key === k));
+}
+
+const yesNo = (v: boolean | undefined) => (v === undefined ? undefined : v ? "Ja" : "Nej");
+
+/**
+ * Portalens stamoplysninger (Jakob 30.09): rækker, der kun vises, når `rows` beder om dem. Lister
+ * (binavne, brancher) står én pr. linje.
+ */
+function stamdataRows(company: CompanyVM, lastYear: FinancialYear | undefined): CompanyFact[] {
+  const cap = company.registeredCapital;
+  const industries = [company.industryText ? `${company.industryCode ? `${company.industryCode}: ` : ""}${company.industryText}` : undefined, ...(company.altIndustries ?? []).map((b) => [b.code, b.text].filter(Boolean).join(": "))].filter(Boolean);
+  return [
+    { key: "firmanavn", label: "Firmanavn", value: company.name },
+    { key: "binavne", label: "Binavne", value: company.secondaryNames?.length ? company.secondaryNames.join("\n") : undefined },
+    { key: "status", label: "Status", value: company.status },
+    { key: "reklamebeskyttet", label: "Reklamebeskyttet", value: yesNo(company.advertisingProtected) },
+    { key: "vedtaegtsaendring", label: "Seneste vedtægtsændring", value: company.statutesChanged ? formatDate(company.statutesChanged) : undefined },
+    { key: "regnskabsaar", label: "Regnskabsår", value: accountingPeriod(lastYear) },
+    { key: "senesteregnskab", label: "Seneste regnskab udgivet", value: lastYear?.published ? formatDate(lastYear.published) : undefined },
+    { key: "selskabskapital", label: "Selskabskapital", value: cap ? `${formatNumber(cap.amount)} ${cap.currency ?? "DKK"}` : undefined },
+    { key: "boersnoteret", label: "Børsnoteret", value: yesNo(company.listed) },
+    { key: "underskriverrevisor", label: "Underskrivende revisor", value: company.signingAuditor },
+    { key: "formaal", label: "Formål", value: company.purpose },
+    { key: "tegningsregel", label: "Tegningsregler", value: company.signingRule },
+    { key: "brancher", label: "Branche", value: industries.length ? industries.join("\n") : undefined },
+  ];
 }
 
 /** Hvad der ellers står på siden for virksomheden, afledt af specen (samme regel i komponisten og i LassoView). */

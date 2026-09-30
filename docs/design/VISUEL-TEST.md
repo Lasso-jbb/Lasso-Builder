@@ -1,4 +1,4 @@
-# Visuel test mod Paper
+# Visuel test mod galleriet
 
 1. `npm run build` (visningen skal være bygget).
 2. Skriv en spec for din komponent i en JSON-fil, fx `/tmp/min.json`:
@@ -17,4 +17,4 @@
    }
    await b.close();
    ```
-5. Læs PNG'erne med Read og sammenlign med `get_screenshot` af elementet i Paper. Ret til det matcher.
+5. Læs PNG'erne med Read og sammenlign med elementets billede i galleriet (`npx tsx tools/gallery/build.ts <ud-mappe>` og `node tools/gallery/shoot.mjs <ud-mappe> <nr>`). Galleriet er facit, ikke Paper (se README). Ret til det matcher.

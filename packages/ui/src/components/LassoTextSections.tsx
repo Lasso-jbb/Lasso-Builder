@@ -101,15 +101,15 @@ function Item({
  * Variant "profil" (12.1): lange afsnit foldes hver for sig, men ét "Vis mere" (koral) til sidst folder
  * hele sektionen ud på én gang, i stedet for et link efter hvert afsnit.
  */
-function Profile({ items, onOpen, limit }: { items: TextSectionItem[]; onOpen?: (a: ViewAction) => void; limit?: number }) {
+function Profile({ items, onOpen, limit, full = false }: { items: TextSectionItem[]; onOpen?: (a: ViewAction) => void; limit?: number; /** Erhvervsresumeet (variant "resume") står helt, som i portalen. */ full?: boolean }) {
   const [open, setOpen] = useState(false);
   // Kompakt profil (højdebudgettet, 23.3): kun de første `limit` afsnit, til "Vis mere" folder resten ud.
   const clipped = limit !== undefined && items.length > limit;
-  const long = clipped || items.some((it) => (it.segments?.length ? it.segments.reduce((n, s) => n + s.text.length, 0) : it.body.length) > TRUNCATE_AT);
+  const long = !full && (clipped || items.some((it) => (it.segments?.length ? it.segments.reduce((n, s) => n + s.text.length, 0) : it.body.length) > TRUNCATE_AT));
   return (
     <>
       {(clipped && !open ? items.slice(0, limit) : items).map((s, i) => (
-        <Item key={i} item={s} limit={open ? Number.POSITIVE_INFINITY : TRUNCATE_AT} toggle={false} onOpen={onOpen} />
+        <Item key={i} item={s} limit={open || full ? Number.POSITIVE_INFINITY : TRUNCATE_AT} toggle={false} onOpen={onOpen} />
       ))}
       {long ? (
         <button type="button" className="lasso-link lasso-more" aria-expanded={open} onClick={() => setOpen(!open)}>
@@ -228,7 +228,7 @@ function DownloadGlyph() {
  * "Hent som PDF" (sekundær 32 px-knap med download-ikon og ord, LYT-0) i hovedet, når værten kan eksportere
  * (G1). Afsnittene er foldbare rækker (44 px, overskrift 14/600, chevron), første afsnit åbent (brødtekst
  * 14/22); forbeholdet er en fast afsluttende linje, og "Var det brugbart? Ja / Nej" står alene under (ingen
- * "Vis kilder", Jakob runde 6). Ingen genereringsdato eller kildelinje (G3). "Hent som PDF" laver en A4 af HELE analysen med alle
+ * kildevisning). Ingen genereringsdato eller kildevisning (G3). "Hent som PDF" laver en A4 af HELE analysen med alle
  * afsnit foldet ud (19.6, AnalysisReportA4) med samme mekanisme som rapporten (27).
  */
 function AnalysisRows({ heading, v, items, onOpen, onPdf }: { heading: string; v: TextSectionsVM; items: TextSectionItem[]; onOpen?: (a: ViewAction) => void; onPdf?: () => void }) {
@@ -304,7 +304,7 @@ function AnalysisRows({ heading, v, items, onOpen, onPdf }: { heading: string; v
  * Tekstsektioner (katalog 12, "Tekstsektioner"). Variant "profil" (overblik): formål og
  * tegningsregler fra CVR plus regnskabsanalysens konklusion, resultat og likviditet, hvert
  * afsnit foldet med "Vis mere". Branche står i hovedet og gentages ikke. Variant "analyse"
- * (oekonomi): hele regnskabsanalysen, foldet efter konklusionen. Ingen kildelinje (G3). Navne med Lasso-ID kan åbnes, når værten har drill-down (`onOpen`).
+ * (oekonomi): hele regnskabsanalysen, foldet efter konklusionen. Ingen kildevisning (G3). Navne med Lasso-ID kan åbnes, når værten har drill-down (`onOpen`).
  */
 export function LassoTextSections({
   sections,
@@ -353,8 +353,8 @@ export function LassoTextSections({
   }
   return (
     <Section title={heading} span={span} className="lasso-textsections">
-      {/* 12.1: ingen kildelinje (G3). */}
-      <Profile items={shown} onOpen={onOpen} limit={limit} />
+      {/* 12.1: ingen kildevisning (G3). */}
+      <Profile items={shown} onOpen={onOpen} limit={limit} full={variant === "resume"} />
     </Section>
   );
 }
