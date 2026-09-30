@@ -16,6 +16,7 @@ Tokens står i `packages/ui/src/styles.css`. Komponenterne bruger kun CSS-variab
 8. UDGÅET (Jakob 29.09, G3): ingen kildelinje ("Kilde: …, opdateret …") i nogen elementer. `SourceLine` tegner intet og bruges ikke. Heller ingen anden kildevisning (Jakob runde 6): ingen "Vis kilder (N)" (19.3, 30.2) og ingen "Kilder" + link (08.7, 08.9-08.11).
 9. Flere værdier end formen kan vise: vis 3 + "Se N …".
 10. Risikoskala 0 (lav) til 100 (høj). Fire trin: 0 neutral, 25 info, 50 mulig vigtig, 100 vigtig.
+11. Grupperede navnelister (personer og virksomheder under et gruppenavn, fx Direktion, Bestyrelse, Legale ejere, Reelle ejere; 11.1): gruppenavnet i 13/600 tekstfarve, hvert navn på sin egen linje i 14/400 tekstfarve (aldrig 500 eller koral i hvile; koral og understregning kun ved hover og fokus, når navnet kan åbnes), note efter navnet ("(formand)") og "og N flere" i 13/400 muted. Gælder overalt, også i sideskabelonens tre kolonner (Jakob 30.09.2026).
 
 ## Generelle regler fra Jakobs gennemgang (29.09.2026)
 

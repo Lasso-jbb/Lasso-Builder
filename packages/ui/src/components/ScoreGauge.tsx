@@ -325,7 +325,9 @@ function RiskScoreCard({ heading, value, score, onObservations, onReport }: { he
   const facts = rows.length ? (
     <dl className="lasso-riskscore__rows">
       {rows.map((r) => (
-        <div key={r.label} className="lasso-riskscore__row">
+        // En lang værdi (fx grundlaget "Creditsafe-rating B, lokal score 52/100, …") brydes ikke i en smal højrestillet
+        // spalte: nøglen står over værdien, og værdien løber venstrestillet i hele kortets bredde.
+        <div key={r.label} className={`lasso-riskscore__row${typeof r.value === "string" && r.value.length > 22 ? " lasso-riskscore__row--stack" : ""}`}>
           <dt>{r.label}</dt>
           <dd>{r.value}</dd>
         </div>

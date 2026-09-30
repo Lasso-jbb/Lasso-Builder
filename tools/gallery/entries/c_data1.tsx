@@ -517,7 +517,7 @@ export const entries: GalleryEntry[] = [
     title: "Rolleliste, kompakt",
     node: "A3I-0",
     spec: co("Eksempel Byg A/S", [{ type: "LassoRelations", company: B }]),
-    note: "Eksempel: flere ejere end tre, reelle ejere uden adgang og én produktionsenhed (tilstandene i Paper).",
+    note: "Eksempel: flere ejere end tre, reelle ejere uden adgang og én produktionsenhed. Typografi (regel 11, Jakob 30.09): gruppenavn 13/600, navne 14/400 i tekstfarve (også i sideskabelonens kolonner), '(formand)' og 'og N flere' 13/400 muted.",
     mutate: (ds) => {
       const own = ds.ownership[B];
       if (own) {

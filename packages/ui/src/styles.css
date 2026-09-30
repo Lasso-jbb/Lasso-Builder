@@ -1032,7 +1032,8 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-relations { display: flex; flex-direction: column; gap: var(--lasso-space-4); }
 .lasso-relations__group { display: flex; flex-direction: column; gap: 6px; }
 .lasso-relations__label { font-size: var(--lasso-fs-sm); font-weight: 600; color: var(--lasso-text); }
-/* 11.1 (Jakob): navnene står i almindelig tekstfarve (14/400); linkfarven kun ved hover og tastaturfokus.
+/* Grupperet navneliste (11.1, gælder overalt, også i sideskabelonens kolonner, Jakob 30.09): gruppenavn 13/600 i tekstfarve,
+   personer og virksomheder 14/400 i tekstfarve, note ("(formand)") og "og N flere" 13/400 muted. Linkfarven kun ved hover og tastaturfokus.
    ".lasso-root" foran, så farven vinder over ".lasso-root button { color: inherit }". */
 .lasso-root .lasso-relations__name { font-size: var(--lasso-fs); line-height: 20px; font-weight: 400; color: var(--lasso-text); }
 .lasso-root button.lasso-relations__name:hover, .lasso-root button.lasso-relations__name:focus-visible { color: var(--lasso-accent-text); }
@@ -1043,10 +1044,6 @@ div.lasso-relations__count { cursor: default; }
 .lasso-relations__countn { font-weight: 500; color: var(--lasso-accent-text); }
 .lasso-relations__count .lasso-icon { color: var(--lasso-icon); }
 button.lasso-relations__name:hover { text-decoration: underline; }
-/* 06.1 sideskabelonen (tre kolonner): navnene står i tekstfarve 500 og bliver koral + understregning kun ved hover (02c.13/01.7).
-   Rollelisten alene (11.1) beholder de korale links. */
-.lasso-root .lasso-content--columns .lasso-relations__name { font-weight: 500; color: var(--lasso-text); }
-.lasso-root .lasso-content--columns button.lasso-relations__name:hover { color: var(--lasso-accent-text); }
 
 /* ---------- Reelle ejere (11, node B33-0) ---------- */
 /* Genbruger .lasso-rows/.lasso-row fra ejerlisten (samme rækkemønster). */
@@ -5428,6 +5425,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-riskscore__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; border-top: 1px solid var(--lasso-divider-subtle); font-size: 13px; line-height: 16px; }
 .lasso-riskscore__row dt { color: var(--lasso-text-2); }
 .lasso-riskscore__row dd { margin: 0; font-weight: 500; color: var(--lasso-text); text-align: right; }
+.lasso-riskscore__row--stack { flex-direction: column; align-items: flex-start; justify-content: center; gap: 4px; padding: 10px 0; }
+.lasso-riskscore__row--stack dd { font-weight: 400; line-height: 18px; text-align: left; }
 .lasso-root .lasso-riskscore__link { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--lasso-accent-text); cursor: pointer; border-radius: var(--lasso-radius-sm); }
 .lasso-root .lasso-riskscore__link:hover { text-decoration: underline; }
 .lasso-riskscore__link:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: 2px; }
