@@ -11,6 +11,7 @@ import { composeCompany, composePerson, composePersonProbe, composeProbe, compon
 import { DemoProvider } from "../data/demo.js";
 import type { DataProvider } from "../data/index.js";
 import { errorMessage, resolveSpec } from "../data/resolve.js";
+import { cleanCommentInput, cleanCommentPatch, commentsMarkdown, COMMENT_STATUSES, type CommentStatus, type CommentStore } from "../comments/store.js";
 import { injectBoot, loadDesignguideHtml } from "./page.js";
 import { DEPLOYED_VERSION, getShowcase, SHOWCASE, SHOWCASE_DEMO, type ShowcaseBoot } from "./showcase.js";
 
@@ -28,6 +29,8 @@ export interface DesignguideBoot {
    * data til det (fx Statstidende, BBR, CHR, gemte sider). Altid demodata, også når serveren kører live.
    */
   fictive: FictiveData;
+  /** Kommentarer: om skrivning kræver en nøgle (DESIGNGUIDE_KEY eller ADMIN_API_KEY). */
+  comments: { keyRequired: boolean };
 }
 
 export interface FictiveData {
@@ -118,7 +121,7 @@ async function buildPage(provider: DataProvider, kind: "company" | "person", foc
   return { spec, dataset };
 }
 
-export function designguideHandlers(provider: DataProvider) {
+export function designguideHandlers(provider: DataProvider, comments: CommentStore, opts: { keyRequired: boolean; baseUrl: string }) {
   const page = async (req: Request, res: Response) => {
     const boot: DesignguideBoot = {
       mode: "designguide",
@@ -127,6 +130,7 @@ export function designguideHandlers(provider: DataProvider) {
       showcase: await getShowcase(provider, req.query.frisk === "1", idsFor(provider)),
       focuses: { company: FOCUSES, person: PERSON_FOCUSES },
       fictive: await fictiveData(),
+      comments: { keyRequired: opts.keyRequired },
     };
     const html = await loadDesignguideHtml();
     res.type("html").set("Cache-Control", "no-store").set("X-Robots-Tag", "noindex").send(injectBoot(html, boot, "Designguide"));
@@ -145,5 +149,45 @@ export function designguideHandlers(provider: DataProvider) {
       res.status(502).json({ error: errorMessage(err) });
     }
   };
-  return { page, side };
+  const fail = (res: Response, err: unknown, status = 400) => void res.status(status).json({ error: errorMessage(err) });
+  const listComments = async (_req: Request, res: Response) => {
+    try {
+      res.set("Cache-Control", "no-store").json(await comments.list());
+    } catch (err) {
+      fail(res, err, 500);
+    }
+  };
+  const commentsMd = async (req: Request, res: Response) => {
+    const status = String(req.query.status ?? "aaben");
+    const pick: CommentStatus | "alle" = status === "alle" ? "alle" : COMMENT_STATUSES.includes(status as CommentStatus) ? (status as CommentStatus) : "aaben";
+    try {
+      res.type("text/markdown; charset=utf-8").set("Cache-Control", "no-store").send(commentsMarkdown(await comments.list(), opts.baseUrl, pick));
+    } catch (err) {
+      fail(res, err, 500);
+    }
+  };
+  const addComment = async (req: Request, res: Response) => {
+    try {
+      res.status(201).json(await comments.add(cleanCommentInput(req.body)));
+    } catch (err) {
+      fail(res, err);
+    }
+  };
+  const updateComment = async (req: Request, res: Response) => {
+    try {
+      const c = await comments.update(String(req.params.id), cleanCommentPatch(req.body));
+      if (!c) return void res.status(404).json({ error: "Kommentaren findes ikke" });
+      res.json(c);
+    } catch (err) {
+      fail(res, err);
+    }
+  };
+  const removeComment = async (req: Request, res: Response) => {
+    try {
+      res.status((await comments.remove(String(req.params.id))) ? 204 : 404).end();
+    } catch (err) {
+      fail(res, err, 500);
+    }
+  };
+  return { page, side, listComments, commentsMarkdown: commentsMd, addComment, updateComment, removeComment };
 }

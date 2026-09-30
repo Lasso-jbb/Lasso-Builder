@@ -13,6 +13,8 @@ import { LivePagesPage } from "./pages/LivePages.js";
 import { TextsPage } from "./pages/Texts.js";
 import { ValidationPage } from "./pages/Validation.js";
 import { DocPage } from "./pages/Doc.js";
+import { CommentsPage } from "./pages/Comments.js";
+import { CommentButton, CommentsProvider, useComments } from "./comments.js";
 import type { ComponentType } from "@lasso/spec";
 
 export type Theme = "light" | "dark";
@@ -79,7 +81,7 @@ function navTree(modules: Map<ComponentType, ModuleInfo>): { title: string; item
     },
     ...GALLERY_SECTIONS.map((s) => ({ title: s.label, items: [...boardItems(s.boards), ...(s.id === "moenstre" ? [{ path: "sider", label: "Hele sider med live-data" }] : [])] })),
     ...(otherBoards.length ? [{ title: "Øvrige tavler", items: otherBoards.map((x) => ({ path: `galleri/${x}`, label: `${x} ${BOARD_TITLES[x] ?? ""}`.trim() })) }] : []),
-    { title: "Indhold og kvalitet", items: [{ path: "tekster", label: "Tekster", count: SOURCE.texts.length }, { path: "validering", label: "Validering" }] },
+    { title: "Indhold og kvalitet", items: [{ path: "tekster", label: "Tekster", count: SOURCE.texts.length }, { path: "validering", label: "Validering" }, { path: "kommentarer", label: "Kommentarer" }] },
   ];
 }
 
@@ -256,10 +258,12 @@ export function App({ boot }: { boot: DesignguideBoot }) {
   } else if (path === "sider") page = <LivePagesPage ctx={ctx} kind={query.get("type") === "person" ? "person" : "company"} focus={query.get("fokus") ?? "overblik"} />;
   else if (path === "tekster") page = <TextsPage ctx={ctx} query={query.get("q") ?? ""} file={query.get("fil") ?? ""} />;
   else if (path === "validering") page = <ValidationPage ctx={ctx} />;
+  else if (path === "kommentarer") page = <CommentsPage ctx={ctx} />;
   else page = <NotFound />;
 
   const when = new Date(boot.showcase.generatedAt).toLocaleString("da-DK", { dateStyle: "medium", timeStyle: "short" });
   return (
+    <CommentsProvider keyRequired={boot.comments?.keyRequired ?? false} theme={theme}>
     <ReportsProvider>
       <div className="dg lasso-root" data-theme={theme}>
         <header className="dg-top">
@@ -275,6 +279,7 @@ export function App({ boot }: { boot: DesignguideBoot }) {
           </a>
           <Search modules={modules} go={go} />
           <div className="dg-top__right">
+            <CommentToggle />
             <span className={`dg-source dg-source--${boot.source}`} title={`Data hentet ${when}`}>
               <span className="dg-source__dot" aria-hidden="true" />
               {boot.source === "live" ? "Live-data" : "Demodata"}
@@ -297,11 +302,30 @@ export function App({ boot }: { boot: DesignguideBoot }) {
             </div>
           </aside>
           <main className="dg-main" key={path}>
+            <div className="dg-pagecomment">
+              <CommentButton target={{ target: `sti:${path}${path === "fundament/tokens" || path === "tekster" ? "" : query.toString() ? `?${query}` : ""}`, label: `Siden #/${path || ""}${path ? "" : " (oversigten)"}`, context: { kind: "sti", ref: `#/${path}` } }} />
+            </div>
             {page}
           </main>
         </div>
       </div>
     </ReportsProvider>
+    </CommentsProvider>
+  );
+}
+
+/** Kommentartilstand: klik på en ramme sætter en nål. Viser antallet af åbne kommentarer. */
+function CommentToggle() {
+  const { mode, setMode, comments } = useComments();
+  const open = comments.filter((c) => c.status === "aaben").length;
+  return (
+    <button className={`dg-ctoggle${mode ? " is-on" : ""}`} aria-pressed={mode} onClick={() => setMode(!mode)} title={mode ? "Slå kommentering fra" : "Klik på moduler, elementer og sider for at kommentere"}>
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+        <path d="M5 5h14v10H10l-4 4v-4H5z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      </svg>
+      {mode ? "Kommenterer" : "Kommentér"}
+      {open ? <span className="dg-ctoggle__n">{open}</span> : null}
+    </button>
   );
 }
 

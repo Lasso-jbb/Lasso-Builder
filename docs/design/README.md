@@ -16,6 +16,10 @@ Designguiden på `/designguide` er den samlede, levende udgave af alt det her. D
 - **Validering**: alle moduler i alle bredder på én gang, med resultatet i en matrix.
 - **Regler**: denne fil og de andre filer i `docs/design`.
 
+### Kommentarer
+
+Alt i designguiden kan kommenteres: slå **Kommentér** til i topbjælken og klik i et modul, et element eller en hel side for at sætte en nål; tokens, tekster og hver side har en kommentarknap. En kommentar gemmer, hvad den handler om (modultype, bredde, skærm, tilstand, data, tema og elementet under nålen), så den kan findes i koden. De åbne kommentarer er arbejdslisten på `/designguide/kommentarer.md`; når en kommentar er rettet, sættes den til **Rettet** med et svar og commit (`PATCH /designguide/api/kommentarer/:id` med `{ status, reply, commit }`), og svaret står ved nålen. Skrivning kræver `DESIGNGUIDE_KEY` (ellers `ADMIN_API_KEY`); kommentarerne gemmes i Postgres (`designguide_comments`).
+
 Kildeudtrækket laves af `apps/view/scripts/designguide-source.ts` (tokens, tekster, kildefiler pr. modul, dokumenter og galleriets demodata). Et nyt modul i kataloget, en ny tavle i galleriet, et nyt token eller en ny tekst kommer med af sig selv; kun gruppen i menuen (`apps/view/src/designguide/structure.ts`) sættes i hånden, ellers står det under "Øvrige". Uden Lasso-nøgler bruger guiden demovirksomhederne (`SHOWCASE_DEMO`).
 
 ## Faste regler (01, guide 23)

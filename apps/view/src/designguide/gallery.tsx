@@ -4,6 +4,7 @@ import { LassoView, ToastProvider, Toasts } from "@lasso/ui";
 import { ENTRIES } from "../../../../tools/gallery/entries/index.js";
 import { entryGridWidth } from "../../../../tools/gallery/grid.js";
 import type { GalleryEntry } from "../../../../tools/gallery/types.js";
+import { CommentButton, type CommentTarget } from "./comments.js";
 import { Frame } from "./Frame.js";
 import { HOST } from "./modules.js";
 import { SOURCE } from "./source.js";
@@ -87,8 +88,11 @@ export function GalleryItem({ entry, index, theme, mobile = true }: { entry: Gal
       <div className="dg-gitem__frames">
         {widths.map((w) => (
           <figure key={w.vw} className={`dg-gframe${w.vw <= 420 ? " dg-gframe--mobile" : ""}`}>
-            <figcaption>{w.label}</figcaption>
-            <Frame vw={w.vw} cropContent={!entry.spec && w.vw > 560} cropBox={gw && w.vw === desktopW && w.vw > 560 ? { left: 0, width: gw + 48 } : undefined} label={`${entry.nr} ${entry.title}, ${w.label}`}>
+            <figcaption>
+              <span>{w.label}</span>
+              <CommentButton small target={elementTarget(entry, w.vw, w.label)} />
+            </figcaption>
+            <Frame vw={w.vw} comment={elementTarget(entry, w.vw, w.label)} cropContent={!entry.spec && w.vw > 560} cropBox={gw && w.vw === desktopW && w.vw > 560 ? { left: 0, width: gw + 48 } : undefined} label={`${entry.nr} ${entry.title}, ${w.label}`}>
               {gw && w.vw === desktopW && w.vw > 560 ? <GridWidthStyle width={gw} /> : null}
               <EntryBody entry={entry} index={index} theme={theme} />
             </Frame>
@@ -98,6 +102,12 @@ export function GalleryItem({ entry, index, theme, mobile = true }: { entry: Gal
     </article>
   );
 }
+
+const elementTarget = (entry: GalleryEntry, vw: number, label: string): CommentTarget => ({
+  target: `element:${entry.nr}:${entry.title}:${vw}`,
+  label: `${entry.nr} ${entry.title}, ${label}`,
+  context: { kind: "element", ref: entry.nr, vw, viewport: vw <= 420 ? "mobil" : "desktop", data: entry.spec ? "demodata" : "eksempelprops" },
+});
 
 /** G6 (galleriet): elementet står i sin egen gitterbredde i en 1200-visning; kun cellen gøres smal. */
 function GridWidthStyle({ width }: { width: number }) {

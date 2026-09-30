@@ -56,6 +56,8 @@ export interface DesignguideBoot {
   focuses: { company: readonly string[]; person: readonly string[] };
   /** Fiktive data til alle moduler (demodata), til moduler uden rigtige data. */
   fictive?: { items: { type: ComponentType; label: string; component: ViewComponent }[]; dataset: Dataset };
+  /** Om det kræver en nøgle at skrive kommentarer. */
+  comments?: { keyRequired: boolean };
 }
 
 export interface LivePage {

@@ -9,6 +9,7 @@ import { dataSlice } from "../../showcase.js";
 import { SOURCE } from "../source.js";
 import { allowedWidths, slugOf, VIEWPORTS, WIDTH_LABEL, WIDTH_NAME, WIDTH_PX, type Viewport } from "../structure.js";
 import { Chip, PageHead, ReportChip, Seg, SourceRef, Tabs, Toggle } from "../ui.js";
+import { CommentButton, type CommentTarget } from "../comments.js";
 import { LIVE_LABEL, PROFILE_LABEL } from "./Modules.js";
 
 type TabId = "bredder" | "tilstande" | "tekster" | "brug" | "data";
@@ -44,6 +45,12 @@ function ModuleFrame({
   const key = reportKey(m.type, vp.id, width ?? GRID_RULES[m.type]?.std ?? "full", option.id, mode);
   const dataset = useMemo(() => stateDataset(option.dataset, option.component, m.item, mode), [option, m.item, mode]);
   const report = reports[key];
+  const w = width ?? GRID_RULES[m.type]?.std ?? "full";
+  const comment: CommentTarget = {
+    target: `modul:${m.type}:${vp.id}:${w}:${mode}`,
+    label: `${m.n} ${m.title}, ${vp.label} ${vp.vw}, ${WIDTH_LABEL[w]} (${report?.cellWidth ?? WIDTH_PX[w]} px), ${STATE_LABEL[mode].toLowerCase()}`,
+    context: { kind: "modul", ref: m.type, viewport: vp.id, vw: vp.vw, width: w, mode, data: option.label },
+  };
   return (
     <figure className={`dg-mframe${report?.verdict === "problem" ? " is-problem" : ""}`}>
       <figcaption className="dg-mframe__cap">
@@ -52,8 +59,9 @@ function ModuleFrame({
         <span className="dg-mframe__grow" />
         {report ? <span className="dg-meta">{report.cellWidth} px</span> : null}
         <ReportChip report={report} />
+        <CommentButton target={comment} small />
       </figcaption>
-      <Frame vw={vp.vw} crop=".lasso-cell" mark={mark} fit={fit} onReport={(r: Report) => put(key, r)} label={`${m.title}, ${vp.label} ${vp.vw}${width ? `, ${WIDTH_NAME[width]}` : ""}`}>
+      <Frame vw={vp.vw} crop=".lasso-cell" mark={mark} fit={fit} comment={comment} onReport={(r: Report) => put(key, r)} label={`${m.title}, ${vp.label} ${vp.vw}${width ? `, ${WIDTH_NAME[width]}` : ""}`}>
         <ModuleView component={option.component} dataset={dataset} title={m.title} width={width} theme={theme} />
       </Frame>
       {report && report.findings.some((f) => f.kind !== "state") ? (
@@ -199,6 +207,7 @@ export function TextList({ texts }: { texts: typeof SOURCE.texts }) {
                 <span className="dg-text__meta">
                   {t.a ? <code>{t.a}</code> : <span>{KIND_LABEL[t.k]}</span>}
                   <span>linje {t.l}</span>
+                  <CommentButton small target={{ target: `tekst:${t.f}:${t.l}:${t.t.slice(0, 80)}`, label: `Tekst "${t.t.slice(0, 80)}" (${t.f.split("/").pop()}:${t.l})`, context: { kind: "tekst", ref: `${t.f}:${t.l}` } }} />
                 </span>
               </li>
             ))}

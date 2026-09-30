@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { fontFaceCss } from "../fonts.js";
+import { PinLayer, type CommentTarget } from "./comments.js";
 import { inspect, type Report } from "./inspect.js";
 
 /**
@@ -23,6 +24,7 @@ export function Frame({
   eager = false,
   label,
   fit = true,
+  comment,
 }: {
   vw: number;
   children: ReactNode;
@@ -42,6 +44,8 @@ export function Frame({
   label?: string;
   /** Skalér ned, så rammen passer i bredden (standard); false = faktisk størrelse med vandret rulning. */
   fit?: boolean;
+  /** Rammen kan kommenteres med nåle (kommentartilstand i designguiden). */
+  comment?: CommentTarget;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLIFrameElement>(null);
@@ -157,6 +161,7 @@ export function Frame({
   const scale = fit && avail > 0 ? Math.min(maxScale, avail / size.width) : 1;
   return (
     <div ref={host} className={`dg-frame${fit ? "" : " dg-frame--actual"}`} aria-label={label}>
+      <div className="dg-frame__stage" style={{ width: size.width * scale, height: size.h * scale }}>
       <div className="dg-frame__clip" style={{ width: size.width * scale, height: size.h * scale }}>
         {visible ? (
           <iframe
@@ -167,6 +172,8 @@ export function Frame({
             style={{ width: vw, height: size.h, transform: `scale(${scale}) translateX(${-size.left}px)`, transformOrigin: "0 0" }}
           />
         ) : null}
+      </div>
+      {comment && ready ? <PinLayer target={comment} scale={scale} left={size.left} getDoc={() => frame.current?.contentDocument} /> : null}
       </div>
     </div>
   );

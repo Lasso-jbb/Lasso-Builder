@@ -5,6 +5,7 @@ import { ENTRIES, GalleryItem } from "../gallery.js";
 import { SOURCE, type Token } from "../source.js";
 import { FOUNDATION } from "../structure.js";
 import { Chip, PageHead, SourceRef } from "../ui.js";
+import { CommentButton } from "../comments.js";
 
 /** Tokenets endelige værdi i lys og mørk tilstand (var(--…) opløst af browseren). */
 function useResolved(tokens: Token[]): Record<string, { light: string; dark: string }> {
@@ -106,6 +107,7 @@ export function TokenTable({ tokens, showContrast = false }: { tokens: Token[]; 
                       {t.name}
                     </button>
                     {copied === t.name ? <span className="dg-copied">Kopieret</span> : null}
+                    <CommentButton small target={{ target: `token:${t.name}`, label: `Token ${t.name}`, context: { kind: "token", ref: `${t.name} (styles.css:${t.line})` } }} />
                   </span>
                   <span role="cell" className="dg-tokens__val">
                     {colorish ? <span className="dg-swatch" style={{ background: r.light }} /> : null}

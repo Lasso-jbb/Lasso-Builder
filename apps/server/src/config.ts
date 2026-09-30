@@ -31,6 +31,8 @@ const schema = z.object({
    * udelades; org = DEMO_ORG). Tom = kun MCP_ACCESS_KEY, og alle kald er demobrugeren.
    */
   MCP_USER_KEYS: z.string().default(""),
+  /** Nøglen til at skrive og rette kommentarer i designguiden (/designguide). Tom = ADMIN_API_KEY; begge tomme = åben (kun lokalt). */
+  DESIGNGUIDE_KEY: z.string().default(""),
   /** Server-til-server-nøgle til POST /api/send-to-lasso. Tom = ADMIN_API_KEY. */
   SEND_TO_LASSO_KEY: z.string().default(""),
   /** true = /e/<lassoId> kan åbnes uden signeret link (offentlige entitetssider = gratis opslag på servernøglen). */
