@@ -5,10 +5,12 @@
   "type": "module",
   "description": "Render-appen: én HTML-fil, der kører som MCP App (ui://) og som delt side (/v/:org/:slug).",
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && npm run build:designguide",
     "dev": "vite",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "node --import tsx --test 'src/**/*.test.ts'"
+    "test": "node --import tsx --test 'src/**/*.test.ts'",
+    "build:designguide": "tsx scripts/designguide-source.ts && vite build -c vite.designguide.config.ts",
+    "dev:designguide": "tsx scripts/designguide-source.ts && vite -c vite.designguide.config.ts"
   },
   "dependencies": {
     "@fontsource/poppins": "^5.3.0",

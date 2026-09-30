@@ -1,12 +1,11 @@
 import { useState, type ReactNode } from "react";
 import type { GalleryEntry } from "../types.js";
 import type { CompanyVM, ContactPersonVM, ContactVM, FinancialsVM, ScoreVM } from "@lasso/spec";
-import { formatAmount, formatDate, formatNumber, formatPercent, groupContactPersons } from "@lasso/spec";
+import { formatAmount, formatDate, formatNumber, formatPercent } from "@lasso/spec";
 import {
   CompanyHead,
   DataState,
   Delta,
-  Icon,
   KeyFigureCards,
   KeyFigureGauge,
   Livestock,
@@ -16,8 +15,6 @@ import {
   LassoContactPersons,
   ScoreGauge,
   Section,
-  SidePanel,
-  SidePanelList,
   Sparkline,
   Tabs,
 } from "@lasso/ui";
@@ -92,29 +89,6 @@ const headActions = (monitoring: boolean) => ({
   more: [{ id: "share", label: "Del link", onSelect: noop }],
 });
 
-const PERSONS: ContactPersonVM[] = [
-  {
-    name: "Anne Eksempel",
-    role: "Direktør",
-    phone: "86123456",
-    email: "anne@eksempelbyg.dk",
-    phoneNote: "Direkte, eksempelnummer",
-    emailNote: "Eksempeladresse",
-    linkedin: "https://www.linkedin.com/in/eksempel",
-    sources: [
-      { label: "eksempelbyg.dk/om-os", url: "https://eksempelbyg.dk/om-os", text: "rolle og navn", date: "2026-09-20" },
-      { label: "CVR", text: "registreret direktør", date: "2015-01-01" },
-    ],
-  },
-  { name: "Bo Eksempel", role: "Bestyrelsesformand", phone: "86123457", sources: [{ label: "CVR", text: "registreret bestyrelsesformand", date: "2012-05-01" }] },
-  { name: "Carla Prøve", role: "Bestyrelsesmedlem", email: "carla@eksempelbyg.dk" },
-  { name: "Dan Prøve", role: "Salgschef" },
-  { name: "Eva Prøve", role: "Økonomichef", phone: "86123458", email: "eva@eksempelbyg.dk" },
-  { name: "Frank Eksempel", role: "Projektleder", phone: "86123459", email: "frank@eksempelbyg.dk" },
-  { name: "Gustav Prøve", role: "Key Account Manager", phone: "86123460", email: "gustav@eksempelbyg.dk" },
-  { name: "Hanne Eksempel", role: "CTO", group: "IT-udvikling", email: "hanne@eksempelbyg.dk" },
-] as ContactPersonVM[];
-const PERSONS_DATA = { lassoId: B, people: PERSONS, source: "Eksempeldata", updated: "2026-09-20" };
 
 /* 08.7–08.11: Papers eksempel (L75-0): LASSO X A/S med 16 kontaktpersoner i seks afdelinger. */
 const LASSO_X: CompanyVM = {

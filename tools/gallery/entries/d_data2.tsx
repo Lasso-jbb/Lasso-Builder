@@ -66,19 +66,6 @@ function Stack({ items }: { items: [string, ReactNode][] }) {
   );
 }
 
-function Row({ items }: { items: [string, ReactNode][] }) {
-  return (
-    <div style={{ display: "flex", gap: 40, alignItems: "flex-start", flexWrap: "wrap" }}>
-      {items.map(([label, node]) => (
-        <div key={label}>
-          <Label>{label}</Label>
-          {node}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 const company = (title: string, components: Record<string, unknown>[], extra: Record<string, unknown> = {}) => ({ kind: "company", title, components, ...extra });
 const person = (title: string, components: Record<string, unknown>[]) => ({ kind: "person", title, components });
 

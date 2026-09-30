@@ -35,8 +35,21 @@ export interface ShowcaseBoot {
   portal: { company: string; name: string; pages: (PortalPage & { dataset: Dataset })[] };
 }
 
+/**
+ * Uden Lasso-nøgler (demodata) kendes de rigtige virksomheder ikke; designguiden bruger så demovirksomhederne,
+ * så den også kan bruges lokalt og i test. Samme roller: hovedvirksomhed, person, to til sammenligning,
+ * tre alternativer og tre til sammenligningstabellen.
+ */
+export const SHOWCASE_DEMO: typeof SHOWCASE = {
+  company: "CVR-1-99000001", // Eksempel Byg A/S
+  person: "CVR-3-4000000001", // første demoperson (demoPersonIds)
+  peers: ["CVR-1-99000004", "CVR-1-99000005"],
+  alternatives: ["CVR-1-99000002", "CVR-1-99000006", "CVR-1-99000010"],
+  compare: ["CVR-1-99000001", "CVR-1-99000004", "CVR-1-99000005"],
+};
+
 const TTL_MS = 10 * 60 * 1000;
-let cache: { at: number; boot: ShowcaseBoot } | undefined;
+const caches = new Map<string, { at: number; boot: ShowcaseBoot }>();
 
 /** Alle komponenter på én fane i én spec, så data hentes samlet (højdebudget og 12-grænsen gælder ikke her). */
 const specOf = (t: ShowcaseTab): ViewSpec => ({ version: 2, kind: "custom", title: t.label, layout: "stack", criteria: [], components: t.items.map((x) => x.component) }) as ViewSpec;
@@ -67,11 +80,19 @@ export async function buildShowcase(provider: DataProvider, ids: typeof SHOWCASE
   };
 }
 
+/** Udstillingens data fra cachen (10 min), delt med designguiden (web/designguide.ts); `fresh` henter igen. */
+export async function getShowcase(provider: DataProvider, fresh = false, ids: typeof SHOWCASE = SHOWCASE): Promise<ShowcaseBoot> {
+  const hit = caches.get(ids.company);
+  if (!fresh && hit && Date.now() - hit.at < TTL_MS) return hit.boot;
+  const boot = await buildShowcase(provider, ids);
+  caches.set(ids.company, { at: Date.now(), boot });
+  return boot;
+}
+
 export function showcaseHandler(_config: Config, provider: DataProvider) {
   return async (req: Request, res: Response) => {
-    const fresh = req.query.frisk === "1";
-    if (fresh || !cache || Date.now() - cache.at > TTL_MS) cache = { at: Date.now(), boot: await buildShowcase(provider) };
+    const boot = await getShowcase(provider, req.query.frisk === "1");
     const html = await loadViewHtml();
-    res.type("html").set("Cache-Control", "no-store").set("X-Robots-Tag", "noindex").send(injectBoot(html, cache.boot, "Komponenter"));
+    res.type("html").set("Cache-Control", "no-store").set("X-Robots-Tag", "noindex").send(injectBoot(html, boot, "Komponenter"));
   };
 }

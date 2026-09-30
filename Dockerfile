@@ -12,6 +12,9 @@ RUN npm ci --no-audit --no-fund
 COPY tsconfig.base.json ./
 COPY packages packages
 COPY apps apps
+# Designguiden (/designguide) læser galleriet og designreglerne ved build.
+COPY tools tools
+COPY docs/design docs/design
 RUN npm run build
 
 FROM node:22-slim AS deps

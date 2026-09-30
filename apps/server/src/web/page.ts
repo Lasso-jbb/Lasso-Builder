@@ -39,10 +39,32 @@ export async function loadViewHtml(): Promise<string> {
   return cached;
 }
 
+const GUIDE_CANDIDATES = [
+  process.env.DESIGNGUIDE_HTML_PATH,
+  path.join(HERE, "designguide.html"),
+  path.join(HERE, "../../view/dist/designguide.html"), // fra apps/server/dist
+  path.join(HERE, "../../../view/dist/designguide.html"), // fra apps/server/src/web (udvikling)
+].filter((p): p is string => Boolean(p));
+let guideCached: string | null = null;
+
+/** Designguiden (/designguide) er sin egen HTML-fil, så MCP-appen ikke får kildeudtrækket med. */
+export async function loadDesignguideHtml(): Promise<string> {
+  if (guideCached && process.env.NODE_ENV === "production") return guideCached;
+  const file = GUIDE_CANDIDATES.find((p) => existsSync(p));
+  if (!file) {
+    return `<!doctype html><html lang="da"><head><meta charset="utf-8"><title>Designguide</title></head><body style="font-family:system-ui;padding:24px"><h1>Designguiden er ikke bygget</h1><p>Kør <code>npm run build -w @lasso/view</code>.</p></body></html>`;
+  }
+  guideCached = await readFile(file, "utf8");
+  return guideCached;
+}
+
 /** Indsætter startdata til web-tilstand (delte links). JSON escapes, så den ikke kan bryde ud af <script>. */
 export function injectBoot(html: string, boot: unknown, title: string): string {
   const json = JSON.stringify(boot).replace(/</g, "\\u003c").replaceAll(String.fromCharCode(0x2028), "\\u2028").replaceAll(String.fromCharCode(0x2029), "\\u2029");
   const safeTitle = title.replace(/[<>&"]/g, (ch) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[ch]!);
   const withTitle = html.replace(/<title>[^<]*<\/title>/, `<title>${safeTitle}, Lasso</title>`);
-  return withTitle.replace("</head>", `<script>window.__LASSO_BOOT__=${json};</script></head>`);
+  // Det sidste </head>: den indlejrede app står selv i <head> og kan indeholde teksten "</head>".
+  const at = withTitle.lastIndexOf("</head>");
+  if (at < 0) return withTitle.replace("<body", `<script>window.__LASSO_BOOT__=${json};</script><body`);
+  return `${withTitle.slice(0, at)}<script>window.__LASSO_BOOT__=${json};</script>${withTitle.slice(at)}`;
 }

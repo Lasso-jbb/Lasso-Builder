@@ -31,3 +31,11 @@ if (existsSync(view)) {
 } else {
   console.warn("ADVARSEL: ../view/dist/view.html findes ikke. Byg @lasso/view først.");
 }
+
+const guide = "../view/dist/designguide.html";
+if (existsSync(guide)) {
+  await copyFile(guide, "dist/designguide.html");
+  console.log("kopierede designguide.html til dist/");
+} else {
+  console.warn("ADVARSEL: ../view/dist/designguide.html findes ikke (designguiden på /designguide).");
+}

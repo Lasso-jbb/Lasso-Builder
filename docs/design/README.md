@@ -4,6 +4,20 @@ Facit er koden: komponenterne i `packages/ui`, tokens i `packages/ui/src/styles.
 
 Tokens står i `packages/ui/src/styles.css`. Komponenterne bruger kun CSS-variablerne derfra.
 
+## Designguiden (/designguide)
+
+Designguiden på `/designguide` er den samlede, levende udgave af alt det her. Den bygges fra koden ved hver build (`npm run build -w @lasso/view`), så den altid viser det, der kører:
+
+- **Fundament**: alle tokens fra `styles.css` med lys og mørk værdi, kontrast mod fladen og linjen i filen, plus galleriets tavle 01 og 01b.
+- **Moduler**: hver komponent i kataloget med rigtige data, tegnet i hver bredde, gitteret tillader (min til maks i `GRID_RULES`), og i standardbredden på portal 1440, desktop 1200, chat 760, tablet 834 og mobil 390. Hver bredde tegnes i en rigtig skærmbredde (iframe), så container- og media-queries er dem, modulet får. Hver ramme tjekkes automatisk for overløb, vandret rulning og afkortet tekst. Faner for tilstande (henter, fejl, ingen adgang og de andre virksomheders data), tekster, brug og props.
+- **Galleriet**: alle elementer fra `tools/gallery` med katalognummer, på desktop og mobil.
+- **Hele sider**: `show_company` og `show_person` for hvert fokus med live-data på hver skærm.
+- **Tekster**: al brugervendt tekst i `packages/ui` og de brugervendte filer i `packages/spec`, med fil og linje.
+- **Validering**: alle moduler i alle bredder på én gang, med resultatet i en matrix.
+- **Regler**: denne fil og de andre filer i `docs/design`.
+
+Kildeudtrækket laves af `apps/view/scripts/designguide-source.ts` (tokens, tekster, kildefiler pr. modul, dokumenter og galleriets demodata). Et nyt modul i kataloget, en ny tavle i galleriet, et nyt token eller en ny tekst kommer med af sig selv; kun gruppen i menuen (`apps/view/src/designguide/structure.ts`) sættes i hånden, ellers står det under "Øvrige". Uden Lasso-nøgler bruger guiden demovirksomhederne (`SHOWCASE_DEMO`).
+
 ## Faste regler (01, guide 23)
 
 1. Status er ren tekst i vægt 500. Ingen piller, prikker eller farvede flader. Farven følger ordet (se "Status" nedenfor).
