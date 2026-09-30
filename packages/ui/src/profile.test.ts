@@ -214,7 +214,9 @@ test("LassoView: hver oplysning om identiteten står én gang på overblik, kont
   // 24/25/26g: i portalens sideskabelon (embedded) ingen rammeheader og ingen handlingslinje nederst.
   const spec = composeCompany(ID, ds, { followUps: false });
   const framed = renderToStaticMarkup(createElement(LassoView, { spec, dataset: ds, host: { save: true }, onAction: () => {} }));
-  assert.match(framed, /lasso-frame__header/);
+  // MCP-rammen (Jakob 30.09): virksomhedens navn i hovedet er øverst; rammens eget hoved (logo, område, datastempel) er væk.
+  assert.doesNotMatch(framed, /lasso-frame__header|lasso-frame__eyebrow|Data hentet/);
+  assert.match(framed, /<h2 class="lasso-company__name">/);
   const embedded = renderToStaticMarkup(createElement(LassoView, { spec, dataset: ds, host: { save: true }, onAction: () => {}, embedded: true }));
   assert.doesNotMatch(embedded, /lasso-frame__header|lasso-frame__eyebrow|lasso-badge--demo/);
   assert.doesNotMatch(embedded, /lasso-actionbar|Gem visning/);

@@ -303,29 +303,33 @@ test("composePerson historik: historik (5 + 'Se alle') ¼ | nyheder (5) ¾ (bred
   assert.deepEqual(composePerson(ID, ds, { focus: "historik", followUps: false }).components.map(shape), ["LassoPersonHead", "LassoTimeline"]);
 });
 
-test("composePerson: opfølgning pr. fokus peger på de andre personfokus med spørgsmål til show_person", () => {
+test("composePerson: op til seks forskellige spørgsmål pr. fokus, aldrig fokusets eget emne, med personens selskab", () => {
   const ds = fullDataset();
   const followUps = (focus: PersonFocus) => {
     const f = composePerson(ID, ds, { focus }).components.find((c) => c.type === "LassoFollowUps");
     return f?.type === "LassoFollowUps" ? f.prompts : [];
   };
-  assert.deepEqual(followUps("overblik").map((p) => p.label), ["Roller", "Netværk", "Risiko"]);
-  assert.deepEqual(followUps("roller").map((p) => p.label), ["Netværk", "Ejerskab", "Risiko"]);
-  assert.deepEqual(followUps("netvaerk").map((p) => p.label), ["Roller", "Risiko", "Historik"]);
-  assert.deepEqual(followUps("ejerskab").map((p) => p.label), ["Roller", "Netværk", "Risiko"]);
-  assert.deepEqual(followUps("risiko").map((p) => p.label), ["Roller", "Historik", "Netværk"]);
-  assert.deepEqual(followUps("historik").map((p) => p.label), ["Roller", "Risiko", "Netværk"]);
+  const own: Record<PersonFocus, string> = {
+    overblik: "Hvem er Mette?",
+    roller: "Hvor sidder Mette i bestyrelser?",
+    netvaerk: "Hvem sidder Mette sammen med?",
+    ejerskab: "Hvilke selskaber ejer Mette?",
+    risiko: "Er der konkurser i historikken?",
+    historik: "Hvad er der sket for nylig?",
+  };
   for (const focus of PERSON_FOCUSES) {
-    const labels = followUps(focus).map((p) => p.label);
-    assert.ok(!labels.includes(PERSON_FOCUS_LABELS[focus]), `${focus} peger ikke på sig selv`);
-    for (const p of followUps(focus)) assert.match(p.prompt, /Mette Holm Eksempel/);
+    const f = followUps(focus);
+    assert.ok(f.length >= 4 && f.length <= 6, `${focus}: ${f.length}`);
+    assert.equal(new Set(f.map((p) => p.prompt)).size, f.length, `${focus}: ingen dubletter`);
+    assert.ok(!f.some((p) => p.label === own[focus]), `${focus} peger ikke på sig selv`);
+    assert.ok(f.some((p) => /^Hvordan går det i /.test(p.label)), `${focus}: personens selskab`);
   }
-  assert.equal(followUps("netvaerk")[0]!.prompt, "Hvilke roller har Mette Holm Eksempel i selskaber?");
-  assert.equal(followUps("overblik")[1]!.prompt, "Hvem sidder Mette Holm Eksempel sammen med i selskaber?");
+  assert.ok(followUps("overblik").some((p) => p.prompt === "Hvem sidder Mette Holm Eksempel sammen med i selskaber?"));
   // Uden netværk og ejerskab springes de over.
   ds.personNetworks[ID] = { lassoId: ID, people: [] };
   ds.persons[ID] = { ...person, roles: person.roles.filter((r) => r.kind !== "owner") };
-  assert.deepEqual(followUps("roller").map((p) => p.label), ["Risiko"]);
+  const roller = followUps("roller").map((p) => p.label);
+  assert.ok(!roller.includes("Hvem sidder Mette sammen med?") && !roller.includes("Hvilke selskaber ejer Mette?"), roller.join(" | "));
   assert.equal(composePerson(ID, ds, { followUps: false }).components.some((c) => c.type === "LassoFollowUps"), false);
 });
 
@@ -556,7 +560,7 @@ test("composePerson spørgsmål: generelt spørgsmål giver fokus-siden; opfølg
   const ds = fullDataset();
   assert.deepEqual(composePerson(ID, ds, { ask: personAsk("hvem er Mette Holm Eksempel") }), composePerson(ID, ds));
   const f = composePerson(ID, ds, { ask: personAsk("sidder Mette i bestyrelser") }).components.find((c) => c.type === "LassoFollowUps");
-  assert.ok(f?.type === "LassoFollowUps" && f.prompts[0]!.label === "Hele overblikket" && /Hvem er Mette Holm Eksempel\?/.test(f.prompts[0]!.prompt));
+  assert.ok(f?.type === "LassoFollowUps" && f.prompts[0]!.label === "Vis hele personsiden" && /Hvem er Mette Holm Eksempel\?/.test(f.prompts[0]!.prompt));
 });
 
 test("composePersonProbe spørgsmål: henter alt i planen med personsidens ejerdiagram; uden emne som fokus", () => {

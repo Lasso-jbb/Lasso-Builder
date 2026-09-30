@@ -47,7 +47,9 @@ test("regnskab uden offentliggjort regnskab: én tom tilstand på nøgletallenes
   assert.ok(!types.includes("LassoBalanceSheet"));
   const follow = spec.components.find((c) => c.type === "LassoFollowUps");
   assert.ok(follow && follow.type === "LassoFollowUps");
-  assert.deepEqual(follow.prompts.map((p) => p.label), ["Risiko", "Kreditvurdering", "Ledelse"]);
+  const labels = follow.prompts.map((p) => p.label);
+  assert.ok(!labels.some((l) => /udviklet|regnskabet|økonomisk/.test(l)), labels.join(" | "));
+  assert.ok(labels.includes("Er der røde flag?"));
 });
 
 test("regnskab uden offentliggjort regnskab og uden oplysninger ud over hovedet: ledelse og ejere side om side", () => {

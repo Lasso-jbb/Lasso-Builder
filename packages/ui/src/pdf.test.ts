@@ -82,22 +82,21 @@ function buttonHandler(element: ReactElement, label: string): () => void {
   return found!;
 }
 
-test("'Gem som PDF' står i hovedet med host.pdf og mangler uden", () => {
-  for (const spec of [companySpec(), listSpec()]) {
-    const on = html(spec, { pdf: true });
-    const header = /<header class="lasso-frame__header">([^]*?)<\/header>/.exec(on)![1]!;
-    assert.match(header, /<div class="lasso-frame__actions"><button type="button" class="lasso-iconbtn lasso-frame__pdf" aria-label="Gem som PDF"/);
-    assert.match(header, /<span class="lasso-frame__pdf-label">Gem som PDF<\/span>/);
-    const off = html(spec, { export: true });
-    assert.doesNotMatch(off, /Gem som PDF/);
-  }
+test("'Gem som PDF' står helt til højre i hovedet med host.pdf og mangler uden", () => {
+  // Liste: rammens hoved (navnet øverst, PDF til højre); virksomhedsside: virksomhedshovedet efter ikonerne.
+  const list = html(listSpec(), { pdf: true });
+  const header = /<header class="lasso-frame__header lasso-frame__header--bar">([^]*?)<\/header>/.exec(list)![1]!;
+  assert.match(header, /<div class="lasso-frame__actions"><button type="button" class="lasso-iconbtn lasso-frame__pdf" aria-label="Gem som PDF"/);
+  assert.match(header, /<span class="lasso-frame__pdf-label">Gem som PDF<\/span><\/button><\/div>$/);
+  const company = html(companySpec(), { pdf: true });
+  assert.doesNotMatch(company, /lasso-frame__header/, "virksomhedssiden: navnet i virksomhedshovedet er øverst");
+  assert.match(company, /<div class="lasso-headactions lasso-company__actions"[^>]*>[^]*<button type="button" class="lasso-iconbtn lasso-frame__pdf" aria-label="Gem som PDF"[^]*?<\/button><\/div><\/header>/);
+  for (const spec of [companySpec(), listSpec()]) assert.doesNotMatch(html(spec, { export: true }), /Gem som PDF/);
 });
 
-test("'Gem som PDF' står ved siden af Gem/Gemt", () => {
+test("'Gem som PDF' står efter Gem/Gemt, helt til højre", () => {
   const on = html(companySpec(), { pdf: true, savePage: true });
-  // Paper (08.1): på en virksomhedsside står Gem/Gemt i hovedet (headActions); 'Gem som PDF' står i rammens hoved.
-  assert.match(on, /<div class="lasso-frame__actions"><button type="button" class="lasso-iconbtn lasso-frame__pdf" aria-label="Gem som PDF"/);
-  assert.match(on, /lasso-headbtn--save/);
+  assert.match(on, /lasso-headbtn--save[^]*lasso-frame__pdf/);
 });
 
 test("den gamle 'Eksportér PDF' med Print/Luk er væk; 'Eksportér CSV' bliver", () => {
@@ -114,7 +113,7 @@ test("den gamle 'Eksportér PDF' med Print/Luk er væk; 'Eksportér CSV' bliver"
 test("klik på 'Gem som PDF' beder værten om { kind: 'pdf' }", async () => {
   const actions: ViewAction[] = [];
   const click = buttonHandler(
-    createElement(LassoView, { spec: companySpec(), dataset: dataset(), host: { pdf: true }, onAction: (a: ViewAction) => void actions.push(a) }),
+    createElement(LassoView, { spec: listSpec(), dataset: dataset(), host: { pdf: true }, onAction: (a: ViewAction) => void actions.push(a) }),
     PDF_LABEL,
   );
   click();

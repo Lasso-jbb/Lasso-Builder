@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Menu, type MenuItem } from "./Menu.js";
 import { ShellIcon } from "./ShellIcons.js";
 
@@ -29,11 +30,15 @@ export interface HeadActionsProps {
   /** Mobil: kontekst øverst i handlingsarket ("…"), fx virksomhedens navn. */
   context?: { title: string; subtitle?: string };
   className?: string;
+  /** MCP-rammen: "Vis i fuld skærm" midt i hovedet (hovedet tegner den; HeadActions ignorerer den). */
+  center?: ReactNode;
+  /** MCP-rammen: "Gem som PDF" helt til højre, efter ikonerne. */
+  end?: ReactNode;
 }
 
 export function hasHeadActions(p: HeadActionsProps | undefined): boolean {
   if (!p) return false;
-  return Boolean(p.monitor || p.save || p.exportItems?.length || p.more?.length || p.history);
+  return Boolean(p.monitor || p.save || p.exportItems?.length || p.more?.length || p.history || p.end || p.center);
 }
 
 function MonitorButton({ monitor, labels }: { monitor: NonNullable<HeadActionsProps["monitor"]>; labels: boolean }) {
@@ -94,8 +99,8 @@ function ExportButton({ items, labels, context }: { items: readonly MenuItem[]; 
   return <Menu trigger={face} triggerClassName={cls} triggerLabel={labels ? undefined : "Eksportér"} items={items} align="end" context={context} label="Eksportér" />;
 }
 
-export function HeadActions({ monitor, save, exportItems, more, history, network, labels = false, context, className = "" }: HeadActionsProps) {
-  if (!hasHeadActions({ monitor, save, exportItems, more, history })) return null;
+export function HeadActions({ monitor, save, exportItems, more, history, network, labels = false, context, className = "", end }: HeadActionsProps) {
+  if (!hasHeadActions({ monitor, save, exportItems, more, history, end })) return null;
   const moreMenu = more?.length ? (
     <Menu trigger={<ShellIcon name="more" size={18} />} triggerClassName="lasso-headbtn lasso-headbtn--more" triggerLabel="Flere handlinger" items={more} align="end" context={context} label="Flere handlinger" />
   ) : null;
@@ -121,6 +126,7 @@ export function HeadActions({ monitor, save, exportItems, more, history, network
           {sv}
           {mon}
           {moreMenu}
+          {end}
         </>
       ) : (
         <>
@@ -130,6 +136,7 @@ export function HeadActions({ monitor, save, exportItems, more, history, network
           {sv}
           {ex}
           {moreMenu}
+          {end}
         </>
       )}
     </div>

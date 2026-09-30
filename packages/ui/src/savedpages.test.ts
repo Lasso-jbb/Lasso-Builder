@@ -134,7 +134,7 @@ function data(saved: string[] | undefined): Dataset {
 
 const view = (s: ReturnType<typeof spec>, ds: Dataset | null, host: HostCapabilities) => renderToStaticMarkup(createElement(LassoView, { spec: s, dataset: ds, host, onAction: noop }));
 
-const headerOf = (html: string) => html.slice(html.indexOf("<header class=\"lasso-frame__header\""), html.indexOf("</header>") + 9);
+const headerOf = (html: string) => html.slice(html.indexOf("<header class=\"lasso-frame__header"), html.indexOf("</header>") + 9);
 
 /** Virksomheds-/personhovedet (katalog 08.1): Gem er en 32 px ikonknap blandt hovedets handlinger. */
 const headOf = (html: string) => {
@@ -215,7 +215,8 @@ test("frameless (06.1/24/25): i portalens ramme udelades visningens egen header 
   const s = spec({ components: [{ type: "LassoCompanyHead", company: COMPANY }] });
   const host: HostCapabilities = { savePage: true, save: true, export: true, refresh: true };
   const framed = view(s, data([]), host);
-  assert.match(framed, /lasso-frame__header/);
+  // Med virksomhedshovedet står navnet øverst (MCP-rammen, Jakob 30.09); rammens eget hoved tegnes ikke.
+  assert.doesNotMatch(framed, /lasso-frame__header/);
   assert.match(framed, /<footer class="lasso-actionbar"/);
   const bare = renderToStaticMarkup(createElement(LassoView, { spec: s, dataset: data([]), host, onAction: noop, frameless: true }));
   assert.match(bare, /class="lasso-frame lasso-frame--bare"/);

@@ -74,7 +74,8 @@ export type IconName =
   /* 08.7 Se alle-panel (Paper L7H-0): genvejene Tvillinger og Nyheder og det grønne verificeret-skjold. */
   | "users"
   | "news"
-  | "shield-check";
+  | "shield-check"
+  | "expand";
 
 /** Danske navne på katalogets 20 ikoner, i katalogets rækkefølge (til aria-label og oversigter). */
 export const ICON_LABELS: Record<CatalogIconName, string> = {
@@ -160,6 +161,7 @@ const PATHS: Record<IconName, string> = {
   users: "M9 11.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM3 19c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5M15.5 5a3.5 3.5 0 010 6.5M17 13.7c2.4.6 4 2.5 4 5.3",
   news: "M4 5h11a3 3 0 013 3v11H7a3 3 0 01-3-3zM18 8h2v9a2 2 0 01-2 2M8 9h6M8 12.5h6M8 16h4",
   "shield-check": "M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6zM9 12l2 2 4-4",
+  expand: "M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7", /* Vis i fuld skærm (MCP-rammen) */
 };
 
 export interface IconProps {

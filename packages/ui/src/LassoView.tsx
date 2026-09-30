@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   activityHeatmapKey,
   businessResume,
@@ -40,7 +40,7 @@ import type { MenuItem } from "./components/Menu.js";
 import { Shortcuts, SHORTCUT_LABELS } from "./components/Shortcuts.js";
 import { Tabs } from "./components/Tabs.js";
 import { FollowUps } from "./components/FollowUps.js";
-import { LassoMark, LassoWordmark } from "./LassoMark.js";
+import { LassoWordmark } from "./LassoMark.js";
 import { CompanyHead } from "./components/CompanyHead.js";
 import { CompanyTable } from "./components/CompanyTable.js";
 import { CompareTable } from "./components/CompareTable.js";
@@ -106,12 +106,6 @@ import { SaveDialog } from "./SaveDialog.js";
 import { ToastProvider, Toasts, useHasToastProvider, useToast, type ToastOptions } from "./components/Toast.js";
 import type { ActionResult, LassoViewProps, MoreInTab, ViewAction } from "./types.js";
 
-function formatStamp(iso: string | undefined): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  return `Data hentet ${d.toLocaleDateString("da-DK", { day: "numeric", month: "short", year: "numeric" })} kl. ${d.toLocaleTimeString("da-DK", { hour: "2-digit", minute: "2-digit" })}`;
-}
-
 /**
  * Smagsprøvens "Se alle … i <fane>" (specens `more`): åbner fanen via værten (open-focus), når den
  * kan skifte fane. Ellers (eller med 'expand') undefined, og "Se alle" folder ud på stedet.
@@ -135,6 +129,10 @@ export interface FrameTools {
   saveList?: () => void;
   /** 19.3 "Hent som PDF": åbner regnskabsanalysen som A4 (19.6) i rapportoverlayet, når værten kan eksportere. */
   analysisPdf?: (company: string) => void;
+  /** MCP-rammen: "Vis i fuld skærm" midt i sidens hoved (skjult i fuld skærm). */
+  fullscreenTop?: ReactNode;
+  /** MCP-rammen: "Gem som PDF" helt til højre i sidens hoved. */
+  pdfButton?: ReactNode;
 }
 
 /** Hvad rapportoverlayet viser (27): standard virksomhedsrapport, regnskabsanalysen (19.6) eller personrapporten (27.4). */
@@ -209,6 +207,8 @@ function headActionsFor(id: string, name: string, frame: FrameTools): HeadAction
     exportItems: frame.exportItems,
     more: frame.more,
     context: { title: name },
+    center: frame.fullscreenTop,
+    end: frame.pdfButton,
   };
 }
 
@@ -1178,6 +1178,15 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
   const entityLoaded = Boolean(entity && (entity.pageKind === "company" ? dataset?.companies[entity.lassoId] : dataset?.persons[entity.lassoId]));
   // Print (PDF): hovedet står uden handlingsknapper (Gem, Eksportér, Overvåg, "…").
   const headActions = entityLoaded && hasFullHead(spec, entity?.lassoId) && !print;
+  // MCP-rammen (Jakob 30.09): navnet øverst, "Vis i fuld skærm" i midten med farve (væk i fuld skærm), "Gem som PDF" til højre.
+  const canFullscreen = Boolean(host.fullscreen) && !host.fullscreenActive && !print;
+  const fullscreenTop = canFullscreen ? (
+    <button type="button" className="lasso-btn lasso-btn--primary lasso-fsbtn" onClick={() => act({ kind: "fullscreen" })}>
+      <ShellIcon name="expand" size={15} />
+      Vis i fuld skærm
+    </button>
+  ) : null;
+  const pdfButton = pdf ? <PdfButton onAction={onAction} notify={notify} /> : null;
   const csvName = `${spec.title.replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase()}.csv`;
   const frame: FrameTools = {
     copy: (text, what) => {
@@ -1206,40 +1215,37 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
     more: headActions
       ? [
           ...(shareUrl ? [{ id: "link", label: "Kopiér link", icon: <ShellIcon name="copy" size={16} />, onSelect: () => void copy(shareUrl) }] : []),
-          // G5 (Jakob 29.09): intet "Opdatér"; data kommer i realtid.
-          ...(host.fullscreen ? [{ id: "fullscreen", label: "Fuld skærm", onSelect: () => act({ kind: "fullscreen" }) }] : []),
+          // G5 (Jakob 29.09): intet "Opdatér"; data kommer i realtid. Fuld skærm er en knap i hovedet og i bunden.
         ]
       : [],
+    // Kun i rammen (MCP); uden ramme (portal, delte sider) har værten sin egen PDF-knap.
+    fullscreenTop: headActions && !frameless ? fullscreenTop : undefined,
+    pdfButton: headActions && !frameless ? pdfButton : undefined,
   };
 
   return (
     <div className={print ? "lasso-root lasso-root--print" : "lasso-root"} data-theme={print ? "light" : (theme ?? "light")}>
       <div className={`lasso-frame ${frameless ? "lasso-frame--bare" : ""}${frameless && props.sectionCards ? " lasso-frame--cards" : ""}`}>
-        {frameless || print ? null : (
-        <header className="lasso-frame__header">
+        {frameless || print || headActions ? null : (
+        // Rammens hoved (MCP): kun navnet øverst; ingen logo, intet område og intet datastempel (Jakob 30.09).
+        <header className={`lasso-frame__header lasso-frame__header--bar${fullscreenTop ? " lasso-frame__header--center" : ""}`}>
           {host.back && !print ? (
             <button className="lasso-btn lasso-btn--ghost lasso-frame__back" onClick={() => act({ kind: "back" })} aria-label="Tilbage">
               ←
             </button>
-          ) : (
-            <LassoMark className="lasso-logo" />
-          )}
+          ) : null}
           <div className="lasso-frame__titles">
-            {spec.kind === "company" || spec.kind === "person" ? (
-              <div className="lasso-frame__eyebrow">{spec.kind === "person" ? "Personprofil" : "Virksomhedsprofil"}</div>
-            ) : (
-              <h1 className="lasso-frame__title">{spec.title}</h1>
-            )}
-            <div className="lasso-frame__meta">
-              {spec.subtitle ? <span>{spec.subtitle}</span> : null}
-              <span>{loading ? "Henter data…" : formatStamp(dataset?.generatedAt)}</span>
+            <h1 className="lasso-frame__title">
+              {spec.title}
               {dataset?.source === "demo" ? <Badge tone="demo">Demodata</Badge> : null}
-            </div>
+            </h1>
+            {spec.subtitle && spec.kind !== "company" && spec.kind !== "person" ? <div className="lasso-frame__meta">{spec.subtitle}</div> : null}
           </div>
-          {pdf || (target && dataset && !headActions) ? (
+          {fullscreenTop ? <div className="lasso-frame__center">{fullscreenTop}</div> : null}
+          {pdfButton || (target && dataset) ? (
             <div className="lasso-frame__actions">
-              {pdf ? <PdfButton onAction={onAction} notify={notify} /> : null}
-              {target && dataset && !headActions ? <SavePageButton save={save} /> : null}
+              {target && dataset ? <SavePageButton save={save} /> : null}
+              {pdfButton}
             </div>
           ) : null}
         </header>
@@ -1403,11 +1409,6 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
           notice ? <div className="lasso-small lasso-muted" role="status">{notice}</div> : null
         ) : (
         <footer className="lasso-actionbar">
-          {host.fullscreen && !headActions ? (
-            <button className="lasso-btn lasso-btn--ghost" onClick={() => act({ kind: "fullscreen" })} aria-label="Fuld skærm">
-              ⤢<span className="lasso-btn__label--optional"> Fuld skærm</span>
-            </button>
-          ) : null}
           <span className="lasso-actionbar__spacer" />
           {notice ? <span className="lasso-small lasso-muted" role="status">{notice}</span> : null}
           {host.export && csv && !headActions ? (
@@ -1423,6 +1424,13 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
           {shareUrl && !headActions ? (
             <button className="lasso-btn" onClick={() => void copy(shareUrl)}>
               Del link
+            </button>
+          ) : null}
+          {/* Jakob 30.09: "Fuld skærm" helt til højre i bunden (væk, når visningen står i fuld skærm). */}
+          {canFullscreen ? (
+            <button type="button" className="lasso-btn lasso-actionbar__fullscreen" onClick={() => act({ kind: "fullscreen" })}>
+              <ShellIcon name="expand" size={15} />
+              Fuld skærm
             </button>
           ) : null}
           {/* G5 (Jakob 29.09): ingen "Gem visning" på visningen; et element kan ikke gemmes, og data kommer i
