@@ -183,12 +183,20 @@ const CSS = `
 .sc-alt-why{font-size:13px;color:var(--mute);margin-top:4px}
 .sc-alt-label{margin:14px 16px 0;font-size:13px;font-weight:600;color:var(--accent)}
 .sc-alt-none{margin:14px 16px;padding:10px 12px;border-radius:8px;background:var(--bg);color:var(--mute);font-size:13px}
-.sc-portal{margin:16px;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.sc-portal{margin:16px auto;max-width:1760px;width:calc(100% - 32px);background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
 .sc-portal__bar{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);padding:0 8px}
 .sc-portal__mod{border:0;background:none;font:inherit;font-size:14px;font-weight:600;color:var(--ink);padding:16px 12px;border-bottom:2px solid transparent;white-space:nowrap;cursor:pointer}
 .sc-portal__mod[aria-current=page]{color:var(--accent);border-bottom-color:var(--accent)}
 .sc-portal__mod:disabled{color:var(--mute);opacity:.55;cursor:default}
 .sc-portal__page{padding:8px 0}
+/* Lasso-siden (Jakob 30.09): mere luft fra tekst til kolonnernes kanter i begge sider (40 px i stedet for 24/0). */
+.sc-portal__page .lasso-columns > .lasso-column > .lasso-column__item{padding-left:40px;padding-right:40px}
+.sc-portal__page{padding-left:0;padding-right:0}
+/* Højre kolonne: værdien står tæt på nøglen (fast nøglekolonne, venstrestillet tal) i stedet for yderst til højre. */
+.sc-portal__page .lasso-column:last-child .lasso-kv-row__label{width:200px;flex:none}
+.sc-portal__page .lasso-column:last-child .lasso-kv-list--financials .lasso-kv-row__value{text-align:left;flex:1}
+/* Samme vægt på navnene i Relationer som på al anden brødtekst på siden (06.1-reglen gav 500). */
+.sc-portal__page .lasso-content--columns .lasso-relations__name{font-weight:400}
 .sc-wait{color:var(--mute);font-size:14px;padding:16px}
 .sc-index{display:flex;flex-wrap:wrap;gap:6px;padding:12px 16px 0}
 .sc-index a{font-size:12px;color:var(--mute);text-decoration:none;border:1px solid var(--line);border-radius:10px;padding:2px 8px}
@@ -316,7 +324,6 @@ export function ShowcaseView({ boot }: { boot: ShowcaseBoot }) {
               ))}
             </main>
           ))}
-          {tab === "lasso-side" ? <PortalView portal={boot.portal} /> : null}
           {tab === "ikke-i-brug" ? (
             <div className="sc-unused">
               {measured < allItems ? <div className="sc-wait">Tjekker komponenterne …</div> : null}
@@ -362,6 +369,8 @@ export function ShowcaseView({ boot }: { boot: ShowcaseBoot }) {
             </div>
           ) : null}
         </div>
+        {/* Lasso-siden bruger hele skærmbredden som portalen (ikke sidens 1232 px), så tre kolonner får plads. */}
+        {tab === "lasso-side" ? <PortalView portal={boot.portal} /> : null}
         <Toasts />
       </div>
     </ToastProvider>
