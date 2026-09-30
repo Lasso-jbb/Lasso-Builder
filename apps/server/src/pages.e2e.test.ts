@@ -263,8 +263,9 @@ test("/e/<lassoId> viser virksomheds- og personsider fra gyldige links, ellers 4
   assert.equal(risk.status, 200);
   const riskBoot = boot(await risk.text());
   assert.match(riskBoot, /"subtitle":"Risiko"/);
-  assert.match(riskBoot, /"LassoPersonRisk"/);
-  assert.doesNotMatch(riskBoot, /"LassoPersonFacts"/);
+  // Risikosektionen og stamoplysningerne er udgået: fokus risiko viser forløbet i selskaberne.
+  assert.match(riskBoot, /"filter":"risiko"/);
+  assert.doesNotMatch(riskBoot, /"LassoPersonRisk"|"LassoPersonFacts"/);
 
   const forged = await fetch(entityLink(config, "CVR-1-99000001").replace("CVR-1-99000001", "CVR-1-99000002"));
   assert.equal(forged.status, 403);

@@ -5,6 +5,9 @@ import type { CallToolResult } from "@modelcontextprotocol/client";
 import { LassoView, LassoMark, type ActionResult, type ViewAction } from "@lasso/ui";
 import { composeCompany, composePerson, composeProbe, composePersonProbe, DATASET_META_KEY, formatCriterion, type Dataset, type ViewSpec } from "@lasso/spec";
 import { focusPrompt } from "./focusPrompt.js";
+
+/** Handlinger, der først skifter visningen til fuld skærm (se ensureFullscreen). */
+const FULLSCREEN_FIRST = new Set<ViewAction["kind"]>(["prompt", "open-focus", "open-section", "open-company", "open-person", "set-criteria"]);
 import { downloadPdfInHost } from "./pdfDownload.js";
 
 interface Screen {
@@ -113,8 +116,22 @@ export function McpView() {
   const patchSaved = (lassoId: string, saved: boolean) =>
     setStack((st) => st.map((s) => (s.dataset ? { ...s, dataset: withSaved(s.dataset, lassoId, saved) } : s)));
 
+  // Jakob 30.09: brugeren skal over i fuld skærm. Et klik, der viser noget nyt (spørgsmål, fane, virksomhed,
+  // person, filtre), skifter først til fuld skærm og udfører derefter handlingen. Downloads, links og gem gør ikke.
+  const ensureFullscreen = async () => {
+    if (!app || ctx?.displayMode === "fullscreen" || !ctx?.availableDisplayModes?.includes("fullscreen")) return;
+    try {
+      const res = await app.requestDisplayMode({ mode: "fullscreen" });
+      const mode = (res as { mode?: McpUiHostContext["displayMode"] } | undefined)?.mode ?? "fullscreen";
+      setCtx((prev) => ({ ...prev, displayMode: mode }));
+    } catch {
+      // Afviser værten fuld skærm, udføres handlingen alligevel.
+    }
+  };
+
   const onAction = async (a: ViewAction): Promise<ActionResult | void> => {
     if (!app) return { ok: false, error: "Ikke forbundet" };
+    if (FULLSCREEN_FIRST.has(a.kind)) await ensureFullscreen();
     try {
       switch (a.kind) {
         case "prompt": {

@@ -17,6 +17,7 @@ Tokens står i `packages/ui/src/styles.css`. Komponenterne bruger kun CSS-variab
 9. Flere værdier end formen kan vise: vis 3 + "Se N …".
 10. Risikoskala 0 (lav) til 100 (høj). Fire trin: 0 neutral, 25 info, 50 mulig vigtig, 100 vigtig.
 11. Grupperede navnelister (personer og virksomheder under et gruppenavn, fx Direktion, Bestyrelse, Legale ejere, Reelle ejere; 11.1): gruppenavnet i 13/600 tekstfarve, hvert navn på sin egen linje i 14/400 tekstfarve (aldrig 500 eller koral i hvile; koral og understregning kun ved hover og fokus, når navnet kan åbnes), note efter navnet ("(formand)") og "og N flere" i 13/400 muted. Gælder overalt, også i sideskabelonens tre kolonner (Jakob 30.09.2026).
+12. To former for "mere" (Jakob 30.09.2026): en liste eller folder, der folder sig ud på stedet, får linket "Vis alle N ›" (koralt, 14/500, pil til højre; "Vis færre" med pil op, når den er foldet ud; `ExpandLink`). Åbner handlingen en ny prompt eller en anden visning (fane, fokus, spørgsmål til Claude), er den en knap med kant og "→" som de opfølgende spørgsmål (`PromptLink`, `LassoFollowUps`). Ingen "og N flere", "Se N oplysninger" eller "Vis flere" som udfoldning.
 
 ## Generelle regler fra Jakobs gennemgang (29.09.2026)
 

@@ -109,13 +109,13 @@ test("virksomhedens overblik: 'Se alle … i Historik' med openFocus, ellers fol
   assert.match(linked, /Se alle 8 begivenheder i Historik/);
   assert.match(linked, /Se alle 5 nyheder i Historik/);
   const inPlace = render(spec, ds, {});
-  assert.match(inPlace, /Se alle 8 begivenheder /);
-  // Paper: nyhedslistens foldeknap hedder "Vis flere" (uden openFocus peger den ikke videre).
-  assert.match(inPlace, /Vis flere/);
+  assert.match(inPlace, /Vis alle 8\b/);
+  // Regel 12 (Jakob 30.09): nyhedslisten folder ud med "Vis alle N ›" som de andre lister.
+  assert.match(inPlace, /Vis alle 5\b/);
   assert.doesNotMatch(inPlace, /i Historik/);
   // Fanen Historik ejer elementerne: dér folder "Se alle" ud på stedet, også med openFocus.
   const history = render(composeCompany(CO, ds, { focus: "historik", followUps: false }), ds, { openFocus: true });
-  assert.match(history, /Se alle 8 begivenheder /);
+  assert.match(history, /Vis alle 8\b/);
   assert.doesNotMatch(history, /i Historik/);
 });
 

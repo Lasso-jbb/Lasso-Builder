@@ -435,12 +435,20 @@ test("personkortet følger fokus: kun det, siden viser, i sidens rækkefølge og
   assert.match(overview, /AKTIVE ROLLER/);
   assert.match(overview, /Adm\. direktør, siden 2012/);
   assert.doesNotMatch(overview, /NYHEDER/);
-  // Stamoplysningerne gentager ikke hovedets tal; netværket viser 3 som siden, resten som "og 2 flere".
-  assert.match(overview, /Bopæl\s+2100 København/);
-  assert.doesNotMatch(overview, /Første reg\.|Ejer af/);
-  assert.match(overview, /Person 2 Eksempel/);
-  assert.doesNotMatch(overview, /Person 3 Eksempel/);
-  assert.match(overview, /og 2 flere/);
+  // Stamoplysningerne og risikosektionen er udgået (byen står i hovedet, konkurserne i persontallene);
+  // netværket viser 3 som siden, resten som "og 2 flere".
+  assert.match(overview, /Person, København/);
+  assert.doesNotMatch(overview, /STAMOPLYSNINGER|Bopæl|Enhedsnummer|RISIKO/);
+  assert.match(overview, /NETVÆRKSTAL/);
+  assert.match(overview, /Konkurser\s+1/);
+  // Kortet følger sidens antal (uden risikosektionen parres overblikkets halve anderledes i højdebudgettet,
+  // så netværket her står kompakt med 2).
+  const net = composePerson(id, ds).components.find((c) => c.type === "LassoPersonNetwork");
+  const shown = net?.type === "LassoPersonNetwork" ? (net.limit ?? 3) : 0;
+  assert.equal(shown, 2);
+  assert.match(overview, new RegExp(`Person ${shown - 1} Eksempel`));
+  assert.doesNotMatch(overview, new RegExp(`Person ${shown} Eksempel`));
+  assert.match(overview, new RegExp(`og ${5 - shown} flere`));
 
   const risk = card("risiko");
   same(risk);
@@ -449,7 +457,7 @@ test("personkortet følger fokus: kun det, siden viser, i sidens rækkefølge og
   // De øvrige ophørte roller hører til fanen Roller (tidsbåndene), ikke risiko.
   assert.doesNotMatch(risk, /ØVRIGE OPHØRTE ROLLER|Andet Eksempel ApS/);
   assert.doesNotMatch(risk, /Indtrådt som adm\. direktør i Data Eksempel/, "forløbet har kun konkursselskabet");
-  assert.doesNotMatch(risk, /STAMOPLYSNINGER|NYHEDER|SIDDER SAMMEN MED/);
+  assert.doesNotMatch(risk, /STAMOPLYSNINGER|RISIKO|NYHEDER|SIDDER SAMMEN MED/);
   assert.match(card("roller"), /Andet Eksempel ApS/);
 
   const owner = card("ejerskab");

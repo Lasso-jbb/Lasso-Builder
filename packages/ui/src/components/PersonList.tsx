@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ExpandLink } from "./ExpandLink.js";
 import { formatDate, isPersonId, PERSON_LIST_ROLE_TITLES, peopleWithRole, type PersonListRole, type PersonRowVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
@@ -118,9 +119,7 @@ export function PersonList({
         })}
       </ul>
       {foldable ? (
-        <button type="button" className="lasso-link lasso-more lasso-rowmore" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-          {expanded ? "Vis færre" : `Vis alle ${rows.length}`}
-        </button>
+        <ExpandLink expanded={expanded} total={rows.length} onToggle={() => setExpanded(!expanded)} />
       ) : null}
       {hasEnded && mode === "current" ? (
         <button type="button" className="lasso-link lasso-personlist__all" onClick={() => setMode("all")}>

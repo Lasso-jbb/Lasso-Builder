@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { moreText, isPersonId, type OwnershipVM, type PersonRowVM } from "@lasso/spec";
+import { ExpandLink } from "./ExpandLink.js";
+import { isPersonId, type OwnershipVM, type PersonRowVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { Icon } from "./Icon.js";
@@ -138,9 +139,7 @@ export function LassoRelations({
             </div>
           ))}
           {owners.length > MAX_OWNERS ? (
-            <button type="button" className="lasso-relations__more" aria-expanded={allOwners} onClick={() => setAllOwners(!allOwners)}>
-              {allOwners ? "Vis færre" : `og ${moreText(owners.length - MAX_OWNERS)}`}
-            </button>
+            <ExpandLink expanded={allOwners} total={owners.length} onToggle={() => setAllOwners(!allOwners)} />
           ) : null}
         </div>
       ) : null}

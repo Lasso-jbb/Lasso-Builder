@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ExpandLink } from "./ExpandLink.js";
 import { amountScale, currencyUnit, formatNumber, formatPercent, formatScaled, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, changePercent, type FinancialsVM, type Metric } from "@lasso/spec";
 import { DataState, Missing, Section, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
@@ -209,9 +210,7 @@ export function MultiYearTable({ financials, metrics, years, title, error, varia
         </div>
         {hidden.length ? <p className="lasso-myt-m__note">Rul vandret for {joinYears(hidden)}.</p> : null}
         {chosen.length > MOBILE_A_ROWS ? (
-          <button type="button" className="lasso-rowmore" aria-expanded={allRows} onClick={() => setAllRows(!allRows)}>
-            {allRows ? "Vis færre" : `Vis alle ${chosen.length} nøgletal`}
-          </button>
+          <ExpandLink expanded={allRows} total={chosen.length} onToggle={() => setAllRows(!allRows)} />
         ) : null}
       </Section>
     );

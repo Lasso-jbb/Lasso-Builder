@@ -1,9 +1,9 @@
 import { useState } from "react";
+import { ExpandLink, PromptLink } from "./ExpandLink.js";
 import { isPersonId, statusGroup, statusLabel, type PersonNetworkCompanyVM, type PersonNetworkRowVM, type PersonNetworkVM } from "@lasso/spec";
 import type { MoreInTab, ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { usePrintMode } from "../print.js";
-import { Icon } from "./Icon.js";
 
 const COLLAPSED = 3;
 /** Højst tre bånd (fælles selskaber) pr. person; resten står i undertitlen som antal. */
@@ -192,14 +192,9 @@ export function PersonNetwork({
   const more =
     network.people.length > limit ? (
       moreIn ? (
-        <button type="button" className="lasso-link lasso-personnet__more" onClick={moreIn.open}>
-          {`Se alle ${network.people.length} personer i ${moreIn.tab}`}
-        </button>
+        <PromptLink label={`Se alle ${network.people.length} personer i ${moreIn.tab}`} onClick={moreIn.open} />
       ) : (
-        <button type="button" className="lasso-link lasso-personnet__more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-          {expanded ? "Vis færre" : `Vis alle ${network.people.length}`}
-          <Icon name={expanded ? "chevron-up" : "chevron-right"} size={14} />
-        </button>
+        <ExpandLink expanded={expanded} total={network.people.length} onToggle={() => setExpanded(!expanded)} />
       )
     ) : null;
   return (

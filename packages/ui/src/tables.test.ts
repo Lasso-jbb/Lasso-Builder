@@ -209,7 +209,7 @@ test("Personliste (26c.4): 'Vis alle' som række efter de første 8", () => {
   const people = Array.from({ length: 12 }, (_, i) => ({ name: `Prøve ${i}`, role: "Bestyrelsesmedlem" }));
   const html = renderToStaticMarkup(createElement(PersonList, { people, show: "current" }));
   assert.match(html, /lasso-rows lasso-personlist/);
-  assert.match(html, /lasso-rowmore[^>]*>Vis alle 12</);
+  assert.match(html, /lasso-expand[^>]*>Vis alle 12</);
 });
 
 test("15.2 mobil: bundbjælke med antal, to handlinger med ikon + ord, Flere-ark med kontekst, Vælg alle og destruktiv i rødt", () => {

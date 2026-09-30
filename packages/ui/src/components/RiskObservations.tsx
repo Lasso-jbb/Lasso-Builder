@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ExpandLink } from "./ExpandLink.js";
 import { moreText, formatDate, type ObservationRowVM, type ObservationsVM, type Severity } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, SeverityIcon, severityWord, stateForError } from "../primitives.js";
@@ -301,9 +302,7 @@ export function RiskObservations({ data, error, title, compact = false, demo = f
           ))}
         </ul>
         {rows.length > limit ? (
-          <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-            {expanded ? "Vis færre" : `Se alle ${rows.length} observationer`}
-          </button>
+          <ExpandLink expanded={expanded} total={rows.length} onToggle={() => setExpanded(!expanded)} />
         ) : null}
       </div>
 
@@ -330,9 +329,7 @@ export function RiskObservations({ data, error, title, compact = false, demo = f
           ))}
         </ul>
         {filtered.length > limit ? (
-          <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-            {expanded ? "Vis færre" : `Se alle ${filtered.length} observationer`}
-          </button>
+          <ExpandLink expanded={expanded} total={filtered.length} onToggle={() => setExpanded(!expanded)} />
         ) : null}
       </div>
 

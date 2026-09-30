@@ -198,16 +198,14 @@ test("show_person (katalog 16) finder en person på navn og komponerer personsid
   assert.equal(sc.spec.kind, "person");
   assert.deepEqual(
     sc.spec.components.map((c) => `${c.type}${c.column ? `@${c.column}` : ""}${c.width ? `/${c.width}` : ""}`),
-    // Overblik (standard, Ø13/B10): Papers elementer, pakket efter bredderne: aktive roller ½ + stamoplysninger ½,
-    // netværket i eget fuldbånd, historik ⅓ | ejerskab ⅔ og risikoen alene.
+    // Overblik (standard, Ø13/B10): Papers elementer, pakket efter bredderne: aktive roller alene i fuld bredde,
+    // netværket i eget fuldbånd og historik ⅓ | ejerskab ⅔; stamoplysninger og risiko er udgået (Jakob 30.09).
     [
       "LassoPersonHead",
-      "LassoPersonRoles@1/half",
-      "LassoPersonFacts@2/half",
+      "LassoPersonRoles",
       "LassoPersonNetwork",
       "LassoTimeline@1/third",
       "LassoOwnershipDiagram@2/two-thirds",
-      "LassoPersonRisk",
       "LassoFollowUps",
     ],
   );
@@ -215,18 +213,17 @@ test("show_person (katalog 16) finder en person på navn og komponerer personsid
   assert.equal(roles?.type === "LassoPersonRoles" && roles.show, "current");
   assert.match(sc.summary, /Fundet ud fra navnet "Bo Eksempel"/);
   assert.match(sc.summary, /Aktive roller: Eksempel Holding ApS \[CVR-1-99000010\]: Direktør, ejer 100 %, siden 2005/);
-  assert.match(sc.summary, /1 konkurser og 0 tvangsopløsninger/);
-  assert.match(sc.summary, /Stamoplysninger: bopæl 8600 Silkeborg, Silkeborg Kommune; ejer 1 selskab; første registrering 2005/);
+  assert.doesNotMatch(sc.summary, /Stamoplysninger:/, "stamoplysningerne er udgået");
   assert.match(sc.summary, /Historik \(seneste 3 af \d+\): 02\.02\.2026 Eksempel Energi A\/S kom under konkurs/);
   assert.doesNotMatch(sc.summary, /Nyheder om personen/, "nyhederne står på fokus historik");
   assert.match(sc.summary, /Ejerskab: ejer direkte Eksempel Holding ApS 100 %/);
   // "År sammen" er den længste sammenhængende periode, ikke summen over selskaber.
   assert.match(sc.summary, /Vera Eksempel \(13 år, 1 fælles selskaber\)/);
   assert.match(sc.card, /SIDDER SAMMEN MED/);
-  for (const section of ["AKTIVE ROLLER", "STAMOPLYSNINGER", "HISTORIK", "EJERSKAB"]) assert.match(sc.card, new RegExp(section));
+  for (const section of ["AKTIVE ROLLER", "HISTORIK", "EJERSKAB"]) assert.match(sc.card, new RegExp(section));
   assert.doesNotMatch(sc.card, /NYHEDER/);
-  // Tekstkortets stamoplysninger gentager ikke hovedets tal (som siden).
-  assert.doesNotMatch(sc.card, /Første reg\./);
+  // Stamoplysningerne og risikosektionen er udgået (som på siden).
+  assert.doesNotMatch(sc.card, /STAMOPLYSNINGER|RISIKO|Første reg\./);
   // Op til seks forskellige spørgsmål (followUps.ts), ét pr. emne, med personens eget selskab.
   const labels = sc.spec.components.flatMap((c) => (c.type === "LassoFollowUps" ? c.prompts.map((p) => p.label) : []));
   assert.ok(labels.length >= 4 && labels.length <= 6, labels.join(" | "));
@@ -240,23 +237,22 @@ test("show_person (katalog 16) finder en person på navn og komponerer personsid
   assert.equal(forged.status, 403);
 });
 
-test("show_person med focus: risiko henter og viser kun risikoen og forløbet; linket åbner samme fokus", async () => {
+test("show_person med focus: risiko henter og viser kun forløbet i selskaberne (ingen risikosektion); linket åbner samme fokus", async () => {
   const res = await client.callTool({ name: "show_person", arguments: { person: "CVR-3-4000000002", focus: "risiko" } });
   assert.equal(res.isError, undefined);
   const sc = res.structuredContent as { spec: ViewSpec; card: string; link: string; summary: string };
   assert.equal(sc.spec.subtitle, "Risiko");
   assert.deepEqual(
     sc.spec.components.map((c) => c.type),
-    ["LassoPersonHead", "LassoPersonRisk", "LassoTimeline", "LassoFollowUps"],
+    ["LassoPersonHead", "LassoTimeline", "LassoFollowUps"],
   );
   const dataset = (res._meta as Record<string, { news: object; ownershipGraphs: object; personNetworks: object }>)[DATASET_META_KEY]!;
   assert.deepEqual(Object.keys(dataset.news), [], "ingen nyheder hentet på risiko");
   assert.deepEqual(Object.keys(dataset.ownershipGraphs), [], "intet ejerdiagram hentet på risiko");
   assert.deepEqual(Object.keys(dataset.personNetworks), [], "intet netværk hentet på risiko");
-  assert.match(sc.summary, /1 konkurser og 0 tvangsopløsninger/);
   assert.match(sc.summary, /Forløb i selskaberne med konkurs eller tvangsopløsning \(seneste 3 af 3\)/);
   assert.match(sc.card, /FORLØB I SELSKABERNE/);
-  for (const section of ["STAMOPLYSNINGER", "NYHEDER", "SIDDER SAMMEN MED", "EJERSTRUKTUR"]) assert.doesNotMatch(sc.card, new RegExp(section));
+  for (const section of ["STAMOPLYSNINGER", "RISIKO", "NYHEDER", "SIDDER SAMMEN MED", "EJERSTRUKTUR"]) assert.doesNotMatch(sc.card, new RegExp(section));
   assert.match(sc.link, /\/p\/CVR-3-4000000002\?e=\w+&f=risiko&s=[\w-]{22}$/);
   const page = await fetch(sc.link);
   assert.equal(page.status, 200);
@@ -264,6 +260,7 @@ test("show_person med focus: risiko henter og viser kun risikoen og forløbet; l
   const boot = /window\.__LASSO_BOOT__=(.*?);<\/script>/s.exec(await page.text())![1]!;
   assert.match(boot, /"filter":"risiko"/);
   assert.doesNotMatch(boot, /"LassoNews"/);
+  assert.doesNotMatch(boot, /"LassoPersonRisk"|"LassoPersonFacts"/);
   // Et andet fokus med samme signatur afvises.
   assert.equal((await fetch(sc.link.replace("f=risiko", "f=historik"))).status, 403);
 
@@ -470,8 +467,9 @@ test("show_person 'sidder X i bestyrelser': kun bestyrelsesposterne; linket /p/ 
   assert.ok(!res.isError, JSON.stringify(res.content));
   const sc = res.structuredContent as { spec: ViewSpec; link: string };
   const roles = sc.spec.components[1];
-  // Smal liste ved siden af stamoplysningerne: højst ½ (Ø13/B10).
-  assert.ok(roles?.type === "LassoPersonRoles" && roles.role === "bestyrelse" && roles.width === "half");
+  // Stamoplysningerne er udgået: bestyrelsesposterne står alene i eget fuldbånd.
+  assert.ok(roles?.type === "LassoPersonRoles" && roles.role === "bestyrelse" && !roles.column && !roles.width);
+  assert.ok(!sc.spec.components.some((c) => c.type === "LassoPersonFacts" || c.type === "LassoPersonRisk"));
   assert.equal(sc.spec.subtitle, "Bestyrelsesposter");
   assert.match(texts(res)[0]!, /Svar: Bestyrelsesposter: .*Eksempel/);
   assert.match(sc.link, /\/p\/CVR-3-\d+\?.*q=/);
