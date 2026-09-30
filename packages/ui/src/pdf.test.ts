@@ -180,3 +180,13 @@ test("sidehoved og sidefod: mærke, navn, datastempel i dansk tid (ingen kilder)
   // 794 px bred visning mellem 14 mm margener.
   assert.ok(Math.abs(pageScale() - 0.8667) < 0.001, String(pageScale()));
 });
+
+test("MCP-hovedet (minimalHead, Jakob 30.09): kun 'Vis i fuld skærm' og 'Gem som PDF', ingen Gem- og Eksportér-ikoner", () => {
+  const on = html(companySpec(), { pdf: true, savePage: true, export: true, fullscreen: true, minimalHead: true });
+  assert.doesNotMatch(on, /lasso-headbtn--save|lasso-headbtn--export|lasso-frame__save/);
+  assert.match(on, /lasso-fsbtn[^>]*>[^]*?Vis i fuld skærm<\/button>/);
+  assert.match(on, /lasso-frame__pdf/);
+  assert.doesNotMatch(html(companySpec(), { pdf: true, fullscreen: true, fullscreenActive: true, minimalHead: true }), /Vis i fuld skærm|>Fuld skærm</);
+  // Uden minimalHead (delte sider) står ikonerne som før.
+  assert.match(html(companySpec(), { pdf: true, savePage: true }), /lasso-headbtn--save/);
+});

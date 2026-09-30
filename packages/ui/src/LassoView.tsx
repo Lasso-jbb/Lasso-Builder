@@ -1194,9 +1194,10 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
         notify(res && !res.ok ? { text: res.error, tone: "error" } : { text: what === "phone" ? "Telefonnummer kopieret" : "E-mail kopieret", tone: "ok" }),
       );
     },
-    save: headActions && target && dataset ? { id: target.lassoId, ...save } : undefined,
+    // MCP-rammen (Jakob 30.09): ingen Gem- og Eksportér-ikoner i hovedet; kun "Vis i fuld skærm" og "Gem som PDF".
+    save: headActions && !host.minimalHead && target && dataset ? { id: target.lassoId, ...save } : undefined,
     monitor: headActions && monitorTarget && dataset ? { id: monitorTarget.lassoId, ...monitor } : undefined,
-    exportItems: headActions
+    exportItems: headActions && !host.minimalHead
       ? [
           ...(canReport ? [{ id: "pdf", label: "Virksomhedsrapport (PDF)", icon: <ShellIcon name="document" size={16} />, onSelect: () => setReportOpen(true) }] : []),
           // 27.4: standard personrapport (A4) på personsiden.
@@ -1242,9 +1243,9 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
             {spec.subtitle && spec.kind !== "company" && spec.kind !== "person" ? <div className="lasso-frame__meta">{spec.subtitle}</div> : null}
           </div>
           {fullscreenTop ? <div className="lasso-frame__center">{fullscreenTop}</div> : null}
-          {pdfButton || (target && dataset) ? (
+          {pdfButton || (target && dataset && !host.minimalHead) ? (
             <div className="lasso-frame__actions">
-              {target && dataset ? <SavePageButton save={save} /> : null}
+              {target && dataset && !host.minimalHead ? <SavePageButton save={save} /> : null}
               {pdfButton}
             </div>
           ) : null}
