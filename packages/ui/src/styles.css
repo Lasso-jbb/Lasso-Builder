@@ -1224,34 +1224,22 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 
 /* ---------- Kreditvurdering, Creditsafe (17): egen skala A–E, blandes aldrig med scoremåleren (10) ---------- */
 /* Bogstav i ink, tonen som ikon + ord (regel 7). Skalaen er fem tekstpositioner; den aktuelle har kun 1 px kant, intet fyld. */
-.lasso-credit__score { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px; margin: 0; padding-top: 8px; }
-.lasso-credit__letter { font-size: 40px; line-height: 44px; font-weight: 600; letter-spacing: -0.03em; color: var(--lasso-text); }
-.lasso-credit__word { display: inline-flex; align-items: center; gap: 6px; font-size: var(--lasso-fs); line-height: 18px; font-weight: 500; }
+/* Kreditvurdering i risikoscorens kort (18.1): A–E som fem lige felter, kun det aktuelle i tonens farve. */
+.lasso-credit__steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; }
+.lasso-credit__step { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11px; line-height: 14px; color: var(--lasso-muted); }
+.lasso-credit__bar { align-self: stretch; height: 6px; border-radius: 3px; background: var(--lasso-divider-subtle); }
+.lasso-credit__step.is-current { font-weight: 600; color: var(--lasso-text); }
+.lasso-credit__step--0 .lasso-credit__bar { background: var(--lasso-gauge-low); }
+.lasso-credit__step--1 .lasso-credit__bar { background: var(--lasso-gauge-mid); }
+.lasso-credit__step--2 .lasso-credit__bar { background: var(--lasso-gauge-high); }
+.lasso-credit .lasso-credit__refresh { align-self: flex-start; }
+.lasso-credit__word { display: inline-flex; align-items: center; gap: 6px; }
 .lasso-credit__icon { display: block; flex: none; }
-.lasso-credit__tone--ok { color: var(--lasso-positive); }
-.lasso-credit__tone--warning { color: var(--lasso-warning); }
-.lasso-credit__tone--danger { color: var(--lasso-danger); }
-.lasso-credit__sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.lasso-credit__scale { list-style: none; margin: var(--lasso-space-3) 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--lasso-space-1); }
-.lasso-credit__step { display: flex; align-items: center; justify-content: center; height: 28px; border: 1px solid transparent; border-radius: var(--lasso-radius-sm); font-size: var(--lasso-fs-sm); color: var(--lasso-muted); }
-.lasso-credit__step.is-current { border-color: var(--lasso-text); color: var(--lasso-text); font-weight: 600; }
-.lasso-credit__ends { display: flex; justify-content: space-between; gap: var(--lasso-space-2); margin-top: 4px; font-size: 11px; color: var(--lasso-muted); }
-.lasso-credit__facts { margin: var(--lasso-space-4) 0 0; border-top: 1px solid var(--lasso-border); }
-.lasso-credit__fact { display: flex; gap: var(--lasso-space-4); padding: 10px 0; border-bottom: 1px solid var(--lasso-divider-subtle); }
-.lasso-credit__fact:last-child { border-bottom: 0; }
-.lasso-credit__key { flex: none; width: 136px; margin: 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-3); }
-.lasso-credit__value { flex: 1; min-width: 0; margin: 0; font-size: var(--lasso-fs); line-height: 18px; color: var(--lasso-text); overflow-wrap: anywhere; }
 .lasso-credit__change { font-weight: 500; }
 .lasso-credit__change--better { color: var(--lasso-positive); }
 .lasso-credit__change--worse { color: var(--lasso-negative); }
 .lasso-credit__change--same { color: var(--lasso-muted); }
-/* Handlingslink (PDF, "Hent igen") i koral tekst som sektionshandlinger; skal slå `.lasso-root button { color: inherit }`. */
-.lasso-credit .lasso-credit__action { margin: var(--lasso-space-3) 0 0; }
-.lasso-credit__note { margin: var(--lasso-space-3) 0 0; font-size: 12px; line-height: 17px; color: var(--lasso-muted); }
-@container lasso (max-width: 560px) {
-  .lasso-credit__fact { flex-wrap: wrap; row-gap: 2px; min-height: var(--lasso-touch-h); }
-  .lasso-credit__key { width: 100%; }
-}
+.lasso-credit__note { margin: 0; font-size: 12px; line-height: 17px; color: var(--lasso-muted); }
 
 /* ---------- Revisoruafhængighed (22): sammenfatning og relationstabel ---------- */
 /* Vurderingskolonnen bruger alvorsskalaen fra 17 som ord alene, uden ikon (regel 7: ordet bærer betydningen). */
@@ -5423,7 +5411,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-riskscore__scale { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; line-height: 14px; color: var(--lasso-muted); }
 .lasso-riskscore__rows { display: flex; flex-direction: column; margin: 0; }
 .lasso-riskscore__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; border-top: 1px solid var(--lasso-divider-subtle); font-size: 13px; line-height: 16px; }
-.lasso-riskscore__row dt { color: var(--lasso-text-2); }
+.lasso-riskscore__row dt { color: var(--lasso-text-2); white-space: nowrap; }
 .lasso-riskscore__row dd { margin: 0; font-weight: 500; color: var(--lasso-text); text-align: right; }
 .lasso-riskscore__row--stack { flex-direction: column; align-items: flex-start; justify-content: center; gap: 4px; padding: 10px 0; }
 .lasso-riskscore__row--stack dd { font-weight: 400; line-height: 18px; text-align: left; }
