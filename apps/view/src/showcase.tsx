@@ -202,8 +202,25 @@ const CSS = `
 /* Nøgle-værdi: nøglekolonnen følger kolonnens bredde, og tallene står ved nøglen (ikke yderst til højre). */
 .sc-portal__page .lasso-column .lasso-kv-row__label{width:var(--pp-label);flex:none}
 .sc-portal__page .lasso-column .lasso-kv-list--financials .lasso-kv-row__value{text-align:left;flex:1}
-/* Overblik fordelt i 9 dele (Jakob 30.09): venstre 2, midt 3, højre 4. Kun på brede skærme; smallere folder siden som ellers. */
-@media (min-width:1100px){.sc-portal__page--overblik .lasso-columns{grid-template-columns:minmax(0,2fr) minmax(0,3fr) minmax(0,4fr)!important}}
+/* Overblik glider i tre trin (Jakob 30.09), i stedet for designets hop fra tre kolonner til én under 1200 px:
+   fra 1360 px 2:3:4 (9 dele; venstre kolonne mindst ca. 300 px); 700–1359 px venstre 2 + midt 3 side om side og højre i fuld bredde under; under 700 px én kolonne (mobil). */
+@media (min-width:700px){
+  .sc-portal__page--overblik .lasso-columns > .lasso-column + .lasso-column{border-left:1px solid var(--lasso-border);border-top:0}
+}
+@media (max-width:699px){
+  .sc-portal__page--overblik .lasso-columns{grid-template-columns:minmax(0,1fr)!important}
+  .sc-portal__page--overblik .lasso-columns > .lasso-column{grid-column:1 / -1!important}
+  .sc-portal__page--overblik .lasso-columns > .lasso-column + .lasso-column{border-left:0;border-top:1px solid var(--lasso-border)}
+}
+@media (min-width:1360px){
+  .sc-portal__page--overblik .lasso-columns{grid-template-columns:minmax(0,2fr) minmax(0,3fr) minmax(0,4fr)!important}
+  .sc-portal__page--overblik .lasso-columns > .lasso-column{grid-column:auto!important}
+}
+@media (min-width:700px) and (max-width:1359px){
+  .sc-portal__page--overblik .lasso-columns{grid-template-columns:minmax(0,2fr) minmax(0,3fr)!important}
+  .sc-portal__page--overblik .lasso-columns > .lasso-column{grid-column:auto!important}
+  .sc-portal__page--overblik .lasso-columns > .lasso-column:nth-child(3){grid-column:1 / -1!important;border-left:0;border-top:1px solid var(--lasso-border)}
+}
 /* Regnskabsoplysninger: tre gange så meget luft mellem nøgle og værdi (48 px mod 16), og nøglekolonnen rummer den længste etiket på én linje. */
 .sc-portal__page .lasso-column:last-child .lasso-kv-row{gap:calc(3 * var(--lasso-space-4))}
 .sc-portal__page .lasso-column:last-child .lasso-kv-row__label{width:clamp(200px,40%,320px)}
