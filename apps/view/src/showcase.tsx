@@ -202,6 +202,11 @@ const CSS = `
 /* Nøgle-værdi: nøglekolonnen følger kolonnens bredde, og tallene står ved nøglen (ikke yderst til højre). */
 .sc-portal__page .lasso-column .lasso-kv-row__label{width:var(--pp-label);flex:none}
 .sc-portal__page .lasso-column .lasso-kv-list--financials .lasso-kv-row__value{text-align:left;flex:1}
+/* Overblik fordelt i 9 dele (Jakob 30.09): venstre 2, midt 3, højre 4. Kun på brede skærme; smallere folder siden som ellers. */
+@media (min-width:1100px){.sc-portal__page--overblik .lasso-columns{grid-template-columns:minmax(0,2fr) minmax(0,3fr) minmax(0,4fr)!important}}
+/* Regnskabsoplysninger: tre gange så meget luft mellem nøgle og værdi (48 px mod 16), og nøglekolonnen rummer den længste etiket på én linje. */
+.sc-portal__page .lasso-column:last-child .lasso-kv-row{gap:calc(3 * var(--lasso-space-4))}
+.sc-portal__page .lasso-column:last-child .lasso-kv-row__label{width:clamp(200px,40%,320px)}
 /* Samme vægt på navnene i Relationer som på al anden brødtekst på siden (06.1-reglen gav 500). */
 .sc-portal__page .lasso-content--columns .lasso-relations__name{font-weight:400}
 .sc-wait{color:var(--mute);font-size:14px;padding:16px}
