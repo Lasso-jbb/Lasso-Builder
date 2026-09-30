@@ -1,6 +1,6 @@
 // Gruppe E: guide (23), eksempelsider (24, 25), responsiv (26–26h), A4-rapport (27),
 // øvrige datatyper (28), fanebjælker (29) og layout (30).
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import {
   formatAmount,
   FOCUSES,
@@ -1109,7 +1109,6 @@ const datatypes: GalleryEntry[] = [
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, alignItems: "start" }}>
         <div>
         <LassoBeneficialOwners
-          source="CVR, Fokus Eksempel A/S, eksempeldata"
           ownership={{
             lassoId: "CVR-1-1",
             special: { kind: "management", fallback: "management", reason: "Ingen reelle ejere er registreret. Ledelsen er indsat som reelle ejere, fordi ingen ejer over 25 % af kapital eller stemmer." },
@@ -1122,7 +1121,6 @@ const datatypes: GalleryEntry[] = [
         </div>
         <div>
         <LassoBeneficialOwners
-          source="CVR, Fritaget Eksempel A/S, eksempeldata"
           ownership={{
             lassoId: "CVR-1-2",
             owners: [],
@@ -1136,7 +1134,6 @@ const datatypes: GalleryEntry[] = [
         </div>
         <div>
         <LassoBeneficialOwners
-          source="CVR, Ukendt Eksempel ApS, eksempeldata"
           ownership={{ lassoId: "CVR-1-3", owners: [], special: { kind: "unidentified", reason: "Selskabet har oplyst, at det ikke kan identificere sine reelle ejere, og at ledelsen derfor er registreret." } }}
         />
         </div>

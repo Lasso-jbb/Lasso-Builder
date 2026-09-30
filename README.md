@@ -48,6 +48,8 @@ Modellen skriver aldrig HTML. Den sender en JSON-spec, og Lassos kode henter dat
 | `/api/debug/lasso/<sti>` | Rå svar fra Lassos API til tilpasning af adapters. Kræver `ADMIN_API_KEY`. `?shape=true` viser kun struktur. |
 | `/k/:cvr.pdf`, `/p/:id.pdf`, `/e/:lassoId.pdf`, `/v/:org/:slug.pdf` | "Gem som PDF": samme signerede link som siden, som rigtig PDF-fil (virksomhed = rapporten, alt andet = siden i print-tilstand). |
 | `/x/:token.pdf` | "Gem som PDF" i MCP-appen for `render_view`, `search_companies` og `list_saved_pages` (kortlivet link, 10 min). |
+| `/komponenter` | Alle katalogets komponenter med live-data på LASSO X og en person (udstillingen). `?frisk=1` henter igen. |
+| `/designguide` | Den dynamiske designguide: fundament (tokens), galleriets elementer, alle moduler i hver bredde og på portal, desktop, chat, tablet og mobil med rigtige data og automatisk overløbstjek, hele sider pr. fokus, alle tekster og reglerne i `docs/design`. Bygges fra koden ved hver build (se `docs/design/README.md`). |
 | `/health` | Status, datakilde, database, `pdf` (Chromium fundet). |
 | `/portal` | Portalen i browseren (login med bruger-id + adgangsnøgle, skinne, faner, søgning, virksomheds- og personsider, gemte sider). Roden `/` sender hertil. Se `docs/portal.md`. |
 | `/api/portal/*` | Portalens API bag session-cookie og CSRF-header; samme use-cases som MCP-tools. `/api/portal/pdf/*` giver "Gem som PDF". |

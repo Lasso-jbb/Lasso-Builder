@@ -48,6 +48,7 @@ import { injectBoot, loadViewHtml } from "./web/page.js";
 import { ASK_AGAIN, failPage, FROM_LIST, linkFailure, VIEW_MISSING, VIEW_OUTDATED } from "./web/linkErrors.js";
 import { portalApi, portalErrorHandler } from "./web/portalApi.js";
 import { DEPLOYED_VERSION, showcaseHandler } from "./web/showcase.js";
+import { designguideHandlers } from "./web/designguide.js";
 import { pdfAvailable, pdfRendererFor, type PdfRenderer } from "./pdf/renderer.js";
 import { pdfBoot, pdfRoutes, portalPdfRoutes } from "./pdf/routes.js";
 
@@ -262,6 +263,10 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
 
   // Komponentudstillingen: alle komponenter på LASSO X og Jakob Bech Benediktson (web/showcase.ts).
   app.get("/komponenter", showcaseHandler(config, provider));
+  // Designguiden: fundament, elementer, alle moduler i alle bredder med rigtige data, tekster og regler (web/designguide.ts).
+  const guide = designguideHandlers(provider);
+  app.get("/designguide", guide.page);
+  app.get("/designguide/side.json", guide.side);
 
   // --- Delt side: specen hentes, data hentes friskt, render-appen tegner -----
   app.get("/v/:org/:slug", async (req, res) => {

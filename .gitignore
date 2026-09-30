@@ -36,3 +36,6 @@ venv/
 
 # Eval (seneste kørsel; docs/eval-baseline.json er frosset og checkes ind)
 docs/eval-latest.json
+
+# Designguidens kildeudtræk (laves ved hver build)
+apps/view/src/designguide/generated/
