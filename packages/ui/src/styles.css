@@ -3613,16 +3613,37 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-donut__sub { font-size: 11px; line-height: 14px; color: var(--lasso-muted); }
 .lasso-sharebar__fill.lasso-chart-fill--s1, .lasso-sharebar__fill.lasso-chart-fill--s2, .lasso-sharebar__fill.lasso-chart-fill--s3, .lasso-sharebar__fill.lasso-chart-fill--s4, .lasso-sharebar__fill.lasso-chart-fill--s6 { border-radius: 4px; }
 .lasso-sharebar__label { overflow: hidden; text-overflow: ellipsis; }
-.lasso-dist .lasso-sharebar { grid-template-columns: 10px minmax(72px, auto) minmax(40px, 1fr) auto auto; }
+.lasso-root .lasso-dist .lasso-sharebar { grid-template-columns: 10px minmax(72px, auto) minmax(40px, 1fr) auto auto; grid-template-areas: none; }
+/* Sidens mobilregel for .lasso-sharebar (navngivne områder, skjult beløb) gælder ikke donutten; den svarer på sektionen. */
+.lasso-dist .lasso-sharebar > * { grid-area: auto; }
+.lasso-dist .lasso-sharebar__value { display: block; }
+.lasso-dist .lasso-sharebar__value:empty { display: none; }
 .lasso-sharebar__note { grid-column: 1 / -1; margin: 0; font-size: 12px; line-height: 17px; color: var(--lasso-muted); }
-/* 26b.6 mobil: donut 96 px; legenden med fuldt navn (ombrydes) og værdien 600 højrestillet, uden bjælke og fodnote. */
-@container lasso (max-width: 560px) {
-  .lasso-dist { column-gap: var(--lasso-space-4); }
+/* Donutten svarer på sektionens egen bredde, ikke sidens: i en halv kolonne på en mellembred skærm er der
+   ikke plads til donut 140 + navn + bjælke + beløb + procent, og beløb og procent løb ind i nabokolonnen. */
+.lasso-sharebars { container: lasso-dist / inline-size; }
+/* Smal sektion (og 26b.6 mobil): donut 96 px; legenden med fuldt navn (ombrydes), beløb og procent højrestillet,
+   uden bjælke og fodnote. */
+@container lasso-dist (max-width: 520px) {
+  .lasso-dist { grid-template-columns: 96px minmax(0, 1fr); column-gap: var(--lasso-space-4); }
   .lasso-dist .lasso-donut { --lasso-donut-size: 96px; }
-  .lasso-dist .lasso-donut__center { padding: 0 8px; }
-  .lasso-root .lasso-dist .lasso-sharebar { grid-template-columns: 10px minmax(0, 1fr) auto; grid-template-areas: "dot label pct"; }
-  .lasso-dist .lasso-sharebar__label { white-space: normal; overflow: visible; }
+  .lasso-dist .lasso-donut__value { font-size: var(--lasso-fs); line-height: 18px; }
+  .lasso-dist .lasso-donut__center { padding: 0 12px; }
+  .lasso-root .lasso-dist .lasso-sharebar { grid-template-columns: 10px minmax(0, 1fr) auto auto; row-gap: 0; min-height: 32px; }
+  .lasso-dist .lasso-sharebar__label { white-space: normal; overflow: visible; overflow-wrap: break-word; }
+  .lasso-dist .lasso-sharebar__value { font-weight: 400; color: var(--lasso-text-2); }
+  .lasso-dist .lasso-sharebar__pct { min-width: 0; }
   .lasso-dist .lasso-sharebar__track, .lasso-dist .lasso-sharebar__note { display: none; }
+}
+/* Telefonbredde: kun procent ved navnet, så navnet ikke brydes midt i ordet. */
+@container lasso-dist (max-width: 400px) {
+  .lasso-root .lasso-dist .lasso-sharebar { grid-template-columns: 10px minmax(0, 1fr) auto; }
+  .lasso-dist .lasso-sharebar__value { display: none; }
+}
+/* Meget smal: donutten over legenden. */
+@container lasso-dist (max-width: 300px) {
+  .lasso-dist { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+  .lasso-dist .lasso-sharebar-list { justify-self: stretch; }
 }
 
 /* ---------- 13.10 Nøgletalsmåler, interval med branchemærke (node AJY-0) ---------- */
@@ -3816,16 +3837,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-hwf__value.is-strong { color: var(--lasso-text); font-weight: 600; }
 
 @container lasso (max-width: 560px) {
-  /* 26b.6: donut 96 px med legenden ved siden af; intervaller som tekst */
-  .lasso-dist { grid-template-columns: 96px minmax(0, 1fr); column-gap: var(--lasso-space-4); }
-  .lasso-dist .lasso-donut { width: 96px !important; height: 96px !important; }
-  .lasso-dist .lasso-donut svg { width: 96px; height: 96px; }
-  .lasso-dist .lasso-donut__value { font-size: var(--lasso-fs); line-height: 18px; }
-  .lasso-dist .lasso-donut__center { padding: 0 18px; }
-  .lasso-dist .lasso-sharebar { grid-template-columns: 10px 1fr auto; grid-template-areas: none; row-gap: 0; min-height: 32px; }
-  .lasso-dist .lasso-sharebar__track, .lasso-dist .lasso-sharebar__value { display: none; }
-  .lasso-dist .lasso-sharebar > .lasso-chart__swatch, .lasso-dist .lasso-sharebar__label, .lasso-dist .lasso-sharebar__pct { grid-area: auto; }
-  .lasso-dist .lasso-sharebar__pct { min-width: 0; font-weight: 500; }
+  /* 26b.6: donutten (13.8) svarer på sektionens bredde, se lasso-dist ovenfor. */
   /* 26b.7: sparklines beholdes, 60×20 i 44 px rækker */
   .lasso-spark { display: block; width: 60px; height: 20px; }
   .lasso-table--fold td.lasso-cell--trend .lasso-trend { min-height: var(--lasso-touch-h); }
