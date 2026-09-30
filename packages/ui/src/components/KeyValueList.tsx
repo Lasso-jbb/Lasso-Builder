@@ -388,7 +388,7 @@ export function KeyValueList({
           options.length > 1 && !fields ? (
             // Årsvælger = niveau 3-faner (29). Over 3 år på mobil bliver den en dropdown (29, mobil).
             <div className="lasso-kv-years">
-              <Tabs level={3} className="lasso-seg-panel" ariaLabel="Vælg regnskabsår" items={options.map((y) => ({ id: String(y.year), label: String(y.year) }))} value={String(selected.year)} onChange={(id) => setYear(Number(id))} />
+              <Tabs level={3} className="lasso-seg-accent" ariaLabel="Vælg regnskabsår" items={options.map((y) => ({ id: String(y.year), label: String(y.year) }))} value={String(selected.year)} onChange={(id) => setYear(Number(id))} />
             </div>
           ) : undefined
         }
@@ -397,7 +397,7 @@ export function KeyValueList({
         {/* Portalens regnskabsoplysninger (fields): årsvælgeren står under overskriften i fuld bredde. */}
         {fields && options.length > 1 ? (
           <div className="lasso-kv-years lasso-kv-years--below">
-            <Tabs level={3} className="lasso-seg-panel" ariaLabel="Vælg regnskabsår" items={options.map((y) => ({ id: String(y.year), label: String(y.year) }))} value={String(selected.year)} onChange={(id) => setYear(Number(id))} />
+            <Tabs level={3} className="lasso-seg-accent" ariaLabel="Vælg regnskabsår" items={options.map((y) => ({ id: String(y.year), label: String(y.year) }))} value={String(selected.year)} onChange={(id) => setYear(Number(id))} />
           </div>
         ) : null}
         {/* 09.5 (Jakob 29.09): handlingen "Hent regnskabet" står øverst i elementet, ikke som række nederst. */}
