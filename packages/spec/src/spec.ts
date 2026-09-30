@@ -852,7 +852,7 @@ const widthShape = {
     .max(4)
     .optional()
     .describe(
-      "Kun layout 'columns': hvilken kolonne (stak) komponenten stables i, 1–4. Et bånd med bredder, der summerer til 12, er et bånd i gridmodellen (23.1). Udeladt = fuld bredde over eller under kolonnerne. Et lavere kolonnenummer end forrige komponents starter et nyt bånd af kolonner; står width på båndets komponenter, bestemmer den kolonnernes forhold (fx ¾ + ¼).",
+      "Layout 'columns' (1–4) og 'page' (1–3): hvilken kolonne (stak) komponenten stables i. Et bånd med bredder, der summerer til 12, er et bånd i gridmodellen (23.1). Udeladt = fuld bredde over eller under kolonnerne. Et lavere kolonnenummer end forrige komponents starter et nyt bånd af kolonner; står width på båndets komponenter, bestemmer den kolonnernes forhold (fx ¾ + ¼).",
     ),
   group: groupSchema
     .optional()
@@ -928,9 +928,10 @@ export type ComponentType = ViewComponent["type"];
 /**
  * 'dashboard' (standard): 4-kolonne-grid, hvor hver komponent står i sin bredde, så visningen
  * læses som ét overblik. 'stack': alt i fuld bredde under hinanden. 'grid-2' er det gamle navn
- * for dashboard og behandles ens.
+ * for dashboard og behandles ens. 'page' (Lasso-side, Jakob 30.09): portalens side med tre kolonner i
+ * forholdet 2:3:4 (column 1–3), flydende luft til kanterne og tre trin i det responsive (se docs/design/README.md).
  */
-export const LAYOUTS = ["dashboard", "stack", "grid-2", "columns"] as const;
+export const LAYOUTS = ["dashboard", "stack", "grid-2", "columns", "page"] as const;
 
 /** Svarets bundlinje (Paper 30.1–30.3 og 30.13): kildelinje til venstre, ét link videre til højre. */
 export const answerFootSchema = z.object({
@@ -951,7 +952,7 @@ export const viewSpecSchema = z.object({
   kind: z.enum(["company", "person", "list", "custom"]).default("custom"),
   title: z.string().min(1).max(120),
   subtitle: z.string().max(200).optional(),
-  layout: z.enum(LAYOUTS).default("dashboard").describe("'dashboard' (standard) = ét samlet overblik i 12-kolonne-gitteret: komponenterne pakkes i bånd og stakke efter gridmodellen (23.1) med hver komponents bredde. 'stack' = alt i fuld bredde under hinanden."),
+  layout: z.enum(LAYOUTS).default("dashboard").describe("'dashboard' (standard) = ét samlet overblik i 12-kolonne-gitteret: komponenterne pakkes i bånd og stakke efter gridmodellen (23.1) med hver komponents bredde. 'stack' = alt i fuld bredde under hinanden. 'page' = Lasso-siden: tre kolonner 2:3:4 (column 1 smal, 2 midt, 3 bred), luft, der vokser med bredden, og trin 3 → 2 + 1 → 1 kolonne; uden column står komponenten i fuld bredde."),
   criteria: z.array(criterionSchema).max(20).default([]).describe("Vises som chips i rammen under titlen."),
   columns: z.number().int().min(2).max(3).optional().describe("Kun layout 'columns': antal kolonner på desktop (2 eller 3). Serverens komponist sætter det."),
   answer: answerFootSchema

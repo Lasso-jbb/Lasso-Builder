@@ -221,8 +221,7 @@ export interface PortalPage {
   id: "overblik" | "stamoplysninger";
   label: string;
   components: ViewComponent[];
-  layout: "columns" | "stack";
-  columns?: number;
+  layout: "page";
 }
 
 /** Lassos egen virksomhedsside, så tæt på portalen som komponenterne kan. Kolonnerne følger portalens tre spalter. */
@@ -232,24 +231,23 @@ export function portalPages(company: string): PortalPage[] {
     {
       id: "overblik",
       label: "Overblik",
-      layout: "columns",
-      columns: 3,
+      layout: "page",
       components: [
-        p({ type: "LassoKeyValueList", company, variant: "company", look: "card", rows: ["adresse", "cvr", "stiftet", "ansatte", "web", "telefon", "email"], width: "third", column: 1 }),
-        p({ type: "LassoShortcuts", company, width: "third", column: 1 }),
-        p({ type: "LassoScoreGauge", company, title: "Risikovurdering", width: "third", column: 1 }),
-        p({ type: "LassoCreditRating", company, width: "third", column: 1 }),
-        p({ type: "LassoRelations", company, full: true, width: "third", column: 2 }),
-        p({ type: "LassoTextSections", company, variant: "cvr", title: "Virksomhedsprofil", width: "third", column: 2 }),
-        p({ type: "LassoKeyValueList", company, variant: "company", rows: ["revisor", "revisorskift", "regnskabsperiode", "boersnoteret"], width: "third", column: 3 }),
-        p({ type: "LassoKeyValueList", company, variant: "financials", title: "Regnskabsoplysninger", fields: ["udgivet", "periode", "erklaering", "fremhaevelser", "goingconcern", "bruttofortjeneste", "egenkapital", "resultatfoerskat", "resultat", "ebitda", "afkastningsgrad", "likviditetsgrad", "soliditetsgrad", "pdf"], width: "third", column: 3 }),
-        p({ type: "LassoTextSections", company, variant: "resume", title: "Erhvervsresume", width: "third", column: 3 }),
+        p({ type: "LassoKeyValueList", company, variant: "company", look: "card", rows: ["adresse", "cvr", "stiftet", "ansatte", "web", "telefon", "email"], column: 1 }),
+        p({ type: "LassoShortcuts", company, column: 1 }),
+        p({ type: "LassoScoreGauge", company, title: "Risikovurdering", column: 1 }),
+        p({ type: "LassoCreditRating", company, column: 1 }),
+        p({ type: "LassoRelations", company, full: true, column: 2 }),
+        p({ type: "LassoTextSections", company, variant: "cvr", title: "Virksomhedsprofil", column: 2 }),
+        p({ type: "LassoKeyValueList", company, variant: "company", rows: ["revisor", "revisorskift", "regnskabsperiode", "boersnoteret"], column: 3 }),
+        p({ type: "LassoKeyValueList", company, variant: "financials", title: "Regnskabsoplysninger", fields: ["udgivet", "periode", "erklaering", "fremhaevelser", "goingconcern", "bruttofortjeneste", "egenkapital", "resultatfoerskat", "resultat", "ebitda", "afkastningsgrad", "likviditetsgrad", "soliditetsgrad", "pdf"], column: 3 }),
+        p({ type: "LassoTextSections", company, variant: "resume", title: "Erhvervsresume", column: 3 }),
       ],
     },
     {
       id: "stamoplysninger",
       label: "Stamoplysninger",
-      layout: "stack",
+      layout: "page",
       components: [
         p({ type: "LassoKeyValueList", company, variant: "company", title: "Stamoplysninger", rows: [...STAMDATA_ROWS] }),
         p({ type: "LassoRelationsTable", company, show: "current", title: "Nuværende relationer" }),

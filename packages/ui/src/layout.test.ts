@@ -256,3 +256,26 @@ test("E0: etiketter ombrydes (ingen ellipsis) og skjult hjælpeboble har display
   assert.match(base, /display:\s*none/);
   assert.match(css, /\.lasso-tip\.is-open \.lasso-tip__bubble \{[^}]*display:\s*block/);
 });
+
+test("Lasso-side (layout 'page', 06.5): kolonne 1-3 i lasso-lpage--3, uden column i fuld bredde; CSS'en har 2:3:4, trinnene og sideluften", () => {
+  const spec = parseViewSpec({
+    kind: "company",
+    title: "X",
+    layout: "page",
+    components: [
+      { type: "LassoKeyValueList", company: "CVR-1-1" },
+      { type: "LassoShortcuts", company: "CVR-1-1", column: 1 },
+      { type: "LassoRelations", company: "CVR-1-1", column: 2 },
+      { type: "LassoKeyValueList", company: "CVR-1-1", variant: "financials", column: 3 },
+    ],
+  });
+  const html = renderToStaticMarkup(createElement(LassoView, { spec, dataset: emptyDataset("demo"), host: { prompt: true }, onAction: () => {}, frameless: true }));
+  assert.match(html, /class="lasso-content lasso-content--grid-4 lasso-content--page"/);
+  assert.equal((html.match(/class="lasso-lpage__full"/g) ?? []).length, 1);
+  assert.match(html, /class="lasso-lpage lasso-lpage--3"/);
+  assert.equal((html.match(/class="lasso-lpage__col"/g) ?? []).length, 3);
+  const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+  assert.match(css, /--lasso-page-x: clamp\(24px, 3\.2cqi, 88px\)/);
+  assert.match(css, /@container lasso \(min-width: 660px\) \{\s*\.lasso-lpage--2, \.lasso-lpage--3 \{ grid-template-columns: minmax\(0, 2fr\) minmax\(0, 3fr\); \}/);
+  assert.match(css, /@container lasso \(min-width: 1320px\) \{\s*\.lasso-lpage--3 \{ grid-template-columns: minmax\(0, 2fr\) minmax\(0, 3fr\) minmax\(0, 4fr\); \}/);
+});

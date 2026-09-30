@@ -4,6 +4,7 @@ import { businessResume } from "./textSections.js";
 import { companyFacts, STAMDATA_ROWS } from "./companyFacts.js";
 import { relationGroupsOf, relationsFromCurrent } from "./relations.js";
 import { portalPages } from "./showcase.js";
+import { parseViewSpec } from "./spec.js";
 import type { CompanyVM } from "./models.js";
 
 const co: CompanyVM = {
@@ -45,9 +46,12 @@ test("erhvervsresume: fortæller alder, første navn, branche, formål, ansatte 
   assert.doesNotMatch(t, /\.\./);
 });
 
-test("Lasso-siden: Overblik i tre lige brede kolonner (⅓ ⅓ ⅓) og Stamoplysninger som liste; alle specs er gyldige", () => {
+test("Lasso-siden: layout 'page' med Overblik i kolonne 1-3 (2:3:4 i CSS) og Stamoplysninger i fuld bredde; alle specs er gyldige", () => {
   const [ov, st] = portalPages("CVR-1-34580820");
-  assert.equal(ov!.layout, "columns");
-  assert.deepEqual([...new Set(ov!.components.map((c) => `${(c as { column?: number }).column}:${(c as { width?: string }).width}`))], ["1:third", "2:third", "3:third"]);
+  assert.equal(ov!.layout, "page");
+  assert.equal(st!.layout, "page");
+  assert.deepEqual([...new Set(ov!.components.map((c) => c.column))], [1, 2, 3]);
+  assert.ok(st!.components.every((c) => c.column === undefined), "Stamoplysninger: fuld bredde");
+  for (const pg of [ov!, st!]) parseViewSpec({ kind: "company", title: "X", layout: pg.layout, components: pg.components });
   assert.deepEqual(st!.components.map((c) => c.type), ["LassoKeyValueList", "LassoRelationsTable", "LassoRelationsTable", "LassoCompanyHistory", "LassoProductionUnits"]);
 });

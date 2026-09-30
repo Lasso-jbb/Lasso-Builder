@@ -1028,6 +1028,58 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
   .lasso-sharebar > .lasso-chart__swatch { grid-area: dot; }
 }
 
+/* ---------- Lasso-side (layout 'page', Jakob 30.09.2026; docs/design/README.md "Lasso-side") ----------
+   Portalens side genbrugt på nye sider og i MCP-visninger: tre kolonner i forholdet 2:3:4 (smal, midt, bred),
+   luft til kanterne, der vokser med containerens bredde (cqi), og tre trin i det responsive, så siden glider:
+   >= 1320 px 2:3:4, 660-1319 px 2:3 med tredje kolonne i fuld bredde under, < 660 px én kolonne.
+   Uden column står en komponent i fuld bredde med samme sideluft. */
+.lasso-content.lasso-content--page {
+  display: block;
+  --lasso-page-x: clamp(24px, 3.2cqi, 88px);
+  --lasso-page-y: clamp(24px, 2cqi, 56px);
+  --lasso-page-top: clamp(32px, 2.6cqi, 72px);
+  --lasso-page-row: clamp(38px, 2.5cqi, 52px);
+  --lasso-page-gap: clamp(14px, 1.1cqi, 24px);
+  --lasso-page-label: clamp(140px, 36%, 300px);
+}
+.lasso-frame.lasso-frame--bare:has(> .lasso-content--page) { padding: 0; }
+.lasso-frame:not(.lasso-frame--bare) > .lasso-content--page { margin-inline: calc(-1 * var(--lasso-space-4)); }
+.lasso-lpage { display: grid; grid-template-columns: minmax(0, 1fr); }
+.lasso-lpage + .lasso-lpage, .lasso-lpage + .lasso-lpage__full, .lasso-lpage__full + .lasso-lpage { border-top: 1px solid var(--lasso-border); }
+.lasso-lpage__full { padding: var(--lasso-page-y) var(--lasso-page-x); }
+.lasso-content--page > .lasso-lpage__full:first-child { padding-top: var(--lasso-page-top); }
+.lasso-lpage__full + .lasso-lpage__full { padding-top: 0; }
+.lasso-lpage__col { min-width: 0; display: flex; flex-direction: column; }
+.lasso-lpage__col + .lasso-lpage__col { border-top: 1px solid var(--lasso-border); }
+.lasso-lpage__item { min-width: 0; padding: var(--lasso-page-y) var(--lasso-page-x); }
+.lasso-lpage__col > .lasso-lpage__item:first-child { padding-top: var(--lasso-page-top); }
+.lasso-lpage__item:last-child { flex: 1 0 auto; }
+.lasso-lpage__item + .lasso-lpage__item { border-top: 1px solid var(--lasso-border); }
+.lasso-lpage__item > * { width: 100%; }
+@container lasso (min-width: 660px) {
+  .lasso-lpage--2, .lasso-lpage--3 { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
+  .lasso-lpage__col + .lasso-lpage__col { border-top: 0; border-left: 1px solid var(--lasso-border); }
+  .lasso-lpage--3 > .lasso-lpage__col:nth-child(3) { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--lasso-border); }
+}
+@container lasso (min-width: 1320px) {
+  .lasso-lpage--3 { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) minmax(0, 4fr); }
+  .lasso-lpage--3 > .lasso-lpage__col:nth-child(3) { grid-column: auto; border-top: 0; border-left: 1px solid var(--lasso-border); }
+}
+@container lasso (max-width: 560px) {
+  .lasso-frame:not(.lasso-frame--bare) > .lasso-content--page { margin-inline: calc(-1 * var(--lasso-space-3)); }
+}
+/* Nøgle-værdi på Lasso-siden: højere rækker og kortafstande på brede skærme, nøglekolonnen følger kolonnen,
+   tal står ved nøglen. Den brede kolonne (4 dele) har tre gange så meget luft mellem nøgle og værdi, når kolonnerne står
+   side om side (fra 660 px); i én kolonne gælder den almindelige afstand, så værdierne ikke klemmes. */
+.lasso-root .lasso-content--page .lasso-kv-row { min-height: var(--lasso-page-row); }
+.lasso-root .lasso-content--page .lasso-cpcompany__facts { gap: var(--lasso-page-gap); }
+.lasso-root .lasso-lpage__col .lasso-kv-row__label { width: var(--lasso-page-label); flex: none; }
+.lasso-root .lasso-lpage__col .lasso-kv-list--financials .lasso-kv-row__value { text-align: left; flex: 1; }
+@container lasso (min-width: 660px) {
+  .lasso-root .lasso-lpage--3 > .lasso-lpage__col:nth-child(3) .lasso-kv-row { gap: calc(3 * var(--lasso-space-4)); }
+  .lasso-root .lasso-lpage--3 > .lasso-lpage__col:nth-child(3) .lasso-kv-row__label { width: clamp(200px, 40%, 320px); }
+}
+
 /* ---------- Rolleliste, kompakt (11, node A3I-0): navne i tekstfarve, koral ved hover ---------- */
 .lasso-relations { display: flex; flex-direction: column; gap: var(--lasso-space-4); }
 .lasso-relations__group { display: flex; flex-direction: column; gap: 6px; }

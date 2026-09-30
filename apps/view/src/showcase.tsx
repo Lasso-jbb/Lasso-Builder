@@ -183,44 +183,9 @@ const CSS = `
 .sc-alt-why{font-size:13px;color:var(--mute);margin-top:4px}
 .sc-alt-label{margin:14px 16px 0;font-size:13px;font-weight:600;color:var(--accent)}
 .sc-alt-none{margin:14px 16px;padding:10px 12px;border-radius:8px;background:var(--bg);color:var(--mute);font-size:13px}
-.sc-portal{margin:16px auto;max-width:2400px;width:calc(100% - 32px);background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;
-  /* Lasso-siden er flydende (Jakob 30.09): luft og rækker vokser med skærmen, så ekstra plads fordeles overalt. */
-  --pp-x:clamp(24px,3.2vw,88px);--pp-y:clamp(24px,2vw,56px);--pp-top:clamp(32px,2.6vw,72px);--pp-row:clamp(38px,2.5vw,52px);--pp-gap:clamp(14px,1.1vw,24px);--pp-label:clamp(140px,36%,300px)}
-.sc-portal__bar .lasso-modulebar{padding-left:var(--pp-x)}
-.sc-portal__page{padding:0}
-/* Kolonnerne: luft fra tekst til kant i begge sider og mellem elementerne i stakken. */
-.sc-portal__page .lasso-columns > .lasso-column > .lasso-column__item{padding:var(--pp-y) var(--pp-x)}
-.sc-portal .sc-portal__page .lasso-frame--bare > .lasso-content--columns > .lasso-columns > .lasso-column > .lasso-column__item:first-child{padding-top:var(--pp-top)}
-/* Stamoplysninger (én kolonne): samme sideluft. */
-.sc-portal__page--stamoplysninger .lasso-content{padding:var(--pp-top) var(--pp-x)}
-/* Rækker og kort får mere højde og mellemrum på brede skærme. */
-.sc-portal__page .lasso-kv-row{min-height:var(--pp-row)}
-.sc-portal__page .lasso-cpcompany__facts{gap:var(--pp-gap)}
-/* Nøgle-værdi: nøglekolonnen følger kolonnens bredde, og tallene står ved nøglen (ikke yderst til højre). */
-.sc-portal__page .lasso-column .lasso-kv-row__label{width:var(--pp-label);flex:none}
-.sc-portal__page .lasso-column .lasso-kv-list--financials .lasso-kv-row__value{text-align:left;flex:1}
-/* Overblik glider i tre trin (Jakob 30.09), i stedet for designets hop fra tre kolonner til én under 1200 px:
-   fra 1360 px 2:3:4 (9 dele; venstre kolonne mindst ca. 300 px); 700–1359 px venstre 2 + midt 3 side om side og højre i fuld bredde under; under 700 px én kolonne (mobil). */
-@media (min-width:700px){
-  .sc-portal__page--overblik .lasso-columns > .lasso-column + .lasso-column{border-left:1px solid var(--lasso-border);border-top:0}
-}
-@media (max-width:699px){
-  .sc-portal__page--overblik .lasso-columns{grid-template-columns:minmax(0,1fr)!important}
-  .sc-portal__page--overblik .lasso-columns > .lasso-column{grid-column:1 / -1!important}
-  .sc-portal__page--overblik .lasso-columns > .lasso-column + .lasso-column{border-left:0;border-top:1px solid var(--lasso-border)}
-}
-@media (min-width:1360px){
-  .sc-portal__page--overblik .lasso-columns{grid-template-columns:minmax(0,2fr) minmax(0,3fr) minmax(0,4fr)!important}
-  .sc-portal__page--overblik .lasso-columns > .lasso-column{grid-column:auto!important}
-}
-@media (min-width:700px) and (max-width:1359px){
-  .sc-portal__page--overblik .lasso-columns{grid-template-columns:minmax(0,2fr) minmax(0,3fr)!important}
-  .sc-portal__page--overblik .lasso-columns > .lasso-column{grid-column:auto!important}
-  .sc-portal__page--overblik .lasso-columns > .lasso-column:nth-child(3){grid-column:1 / -1!important;border-left:0;border-top:1px solid var(--lasso-border)}
-}
-/* Regnskabsoplysninger: tre gange så meget luft mellem nøgle og værdi (48 px mod 16), og nøglekolonnen rummer den længste etiket på én linje. */
-.sc-portal__page .lasso-column:last-child .lasso-kv-row{gap:calc(3 * var(--lasso-space-4))}
-.sc-portal__page .lasso-column:last-child .lasso-kv-row__label{width:clamp(200px,40%,320px)}
+.sc-portal{margin:16px auto;max-width:2400px;width:calc(100% - 32px);background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+/* Modulbjælken står uden for visningen; samme sideluft som Lasso-sidens --lasso-page-x (styles.css, layout 'page'). */
+.sc-portal__bar .lasso-modulebar{padding-left:clamp(24px,3.2vw,88px)}
 .sc-wait{color:var(--mute);font-size:14px;padding:16px}
 .sc-index{display:flex;flex-wrap:wrap;gap:6px;padding:12px 16px 0}
 .sc-index a{font-size:12px;color:var(--mute);text-decoration:none;border:1px solid var(--line);border-radius:10px;padding:2px 8px}
@@ -250,7 +215,7 @@ function PortalView({ portal }: { portal: ShowcaseBoot["portal"] }) {
     else if ((a.kind === "prompt" && /produktionsenhed/i.test(a.prompt)) || (a.kind === "open-section" && /stam/i.test(a.section))) location.hash = "lasso-side/stamoplysninger";
     else if (a.kind === "open-section") show({ text: `${a.section[0]!.toUpperCase()}${a.section.slice(1)} er ikke genskabt på Lasso-siden endnu` });
   };
-  const spec = { version: 2, kind: "company", title: portal.name, layout: current.layout, ...(current.columns ? { columns: current.columns } : {}), criteria: [], components: current.components } as unknown as ViewSpec;
+  const spec = { version: 2, kind: "company", title: portal.name, layout: current.layout, criteria: [], components: current.components } as unknown as ViewSpec;
   return (
     <div className="sc-portal">
       {/* 06.1: modulbjælken er Tabs niveau 1 (ModuleBar); kun moduler, der er genskabt, vises (ingen deaktiverede faner). */}

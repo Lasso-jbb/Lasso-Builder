@@ -108,6 +108,29 @@ Brudpunktsregler (26, node `DH5-0`; guide 23 trin 7) og hvor de står i `styles.
 
 Midtens brud er lavere end skærmens, fordi containeren er midten: ved skærm 1200 er midten ~960 px.
 
+## Lasso-side (layout `page`, galleri 06.5)
+
+Portalens side som genbrugelig sideform til nye sider og til visninger i en chat via MCP (Jakob 30.09.2026). Sættes med `layout: "page"` på specen og `column: 1 | 2 | 3` på komponenterne; en komponent uden `column` står i fuld bredde med samme sideluft (fx Stamoplysninger). Bredderne (`width`) bruges ikke i denne form. CSS'en står i `styles.css` under "Lasso-side", renderingen i `LassoView` (`lasso-content--page`, `lasso-lpage`).
+
+**Kolonnernes plads, 9 dele:** kolonne 1 = 2 dele (smal: virksomhedskort, genveje, score, kreditvurdering), kolonne 2 = 3 dele (midt: relationer, virksomhedsprofil), kolonne 3 = 4 dele (bred: nøgle-værdi-lister, regnskabsoplysninger, erhvervsresume). Kolonnerne adskilles af 1 px linjer, elementerne i en kolonne af 1 px linjer.
+
+**Luft til kanterne vokser med bredden** (container-enheder, så det virker både på en hel side og i en chat):
+
+| Token | Værdi | Bruges til |
+|---|---|---|
+| `--lasso-page-x` | `clamp(24px, 3.2cqi, 88px)` | luft fra tekst til kant, begge sider |
+| `--lasso-page-y` | `clamp(24px, 2cqi, 56px)` | luft over og under hvert element |
+| `--lasso-page-top` | `clamp(32px, 2.6cqi, 72px)` | luft over det første element i en kolonne |
+| `--lasso-page-row` | `clamp(38px, 2.5cqi, 52px)` | højde på nøgle-værdi-rækker |
+| `--lasso-page-gap` | `clamp(14px, 1.1cqi, 24px)` | afstand mellem blokkene i virksomhedskortet |
+| `--lasso-page-label` | `clamp(140px, 36%, 300px)` | nøglekolonnens bredde i nøgle-værdi |
+
+**Responsivt i tre trin, så siden glider** (visningens bredde): fra 1320 px 2:3:4; 660–1319 px kolonne 1 og 2 side om side (2:3) og kolonne 3 i fuld bredde under; under 660 px én kolonne. Aldrig et hop direkte fra tre kolonner til én.
+
+**Nøgle-værdi i sideformen:** tallene står ved nøglen (venstrestillet), ikke yderst til højre. I den brede kolonne er der tre gange så meget luft mellem nøgle og værdi (`3 × --lasso-space-4`), og nøglekolonnen er `clamp(200px, 40%, 320px)`, så den længste etiket står på én linje.
+
+**I en ramme (MCP):** sideformen går ud til rammens kant, så luften kun kommer fra `--lasso-page-x`. Uden ramme (portalen, `/komponenter`) fylder den hele fladen.
+
 ## Faner, layout, navigation, dialoger, overvågning og eksport (06, 07, 21, 27, 29, 30)
 
 Bygget på `feat/faner`. Alt ligger i `packages/ui` og eksporteres fra `@lasso/ui`; kun overvågningsfeedet er en spec-komponent med data.

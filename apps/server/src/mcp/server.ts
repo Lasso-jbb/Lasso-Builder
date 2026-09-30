@@ -139,7 +139,7 @@ const KNOWN_TYPES = new Set<string>(COMPONENT_CATALOG.map((c) => c.type));
 const renderViewInputSchema = z.object({
   title: z.string().min(1).max(120),
   subtitle: z.string().max(200).optional(),
-  layout: z.enum(LAYOUTS).optional().describe("Udelad (dashboard)."),
+  layout: z.enum(LAYOUTS).optional().describe("Udelad (dashboard). 'page' = Lasso-siden: tre kolonner 2:3:4 via column 1-3 på komponenterne."),
   criteria: z.array(z.record(z.string(), z.unknown())).max(20).optional().describe("Vises som chips under titlen: { field, operator, value }."),
   answer: z.record(z.string(), z.unknown()).optional().describe("{ next: { label, prompt } }"),
   components: z

@@ -1257,7 +1257,32 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
           <Skeleton lines={4} height={240} />
         ) : (
           <main className={`lasso-content lasso-content--grid-4 lasso-content--${spec.layout}`}>
-            {spec.layout === "columns"
+            {spec.layout === "page"
+              ? // Lasso-siden (docs/design/README.md, "Lasso-side"): kolonnerne 2:3:4, fuld bredde uden column.
+                mergeFullGroups(columnBands(spec.components)).map((band, b) =>
+                  band.kind === "group" ? (
+                    <div key={`b${b}`} className="lasso-lpage__full">
+                      {renderGroup(band.group, band.items, dataset, props, act, frame)}
+                    </div>
+                  ) : band.kind === "full" ? (
+                    <div key={`b${b}`} className="lasso-lpage__full">
+                      {renderComponent(band.item.c, dataset, props, act, band.item.i, frame)}
+                    </div>
+                  ) : (
+                    <div key={`b${b}`} className={`lasso-lpage lasso-lpage--${Math.min(band.columns.length, 3)}`}>
+                      {band.columns.map((col, k) => (
+                        <div key={k} className="lasso-lpage__col">
+                          {groupRuns(col).map((run) => (
+                            <div key={run.kind === "one" ? run.item.i : run.items[0]!.i} className="lasso-lpage__item">
+                              {run.kind === "one" ? renderComponent(run.item.c, dataset, props, act, run.item.i, frame) : renderGroup(run.group, run.items, dataset, props, act, frame)}
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  ),
+                )
+              : spec.layout === "columns"
               ? mergeFullGroups(columnBands(spec.components)).map((band, b) =>
                   band.kind === "group" ? (
                     <div key={`b${b}`} className="lasso-cell lasso-cell--full">
