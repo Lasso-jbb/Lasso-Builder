@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { ExpandLink, PromptLink } from "./ExpandLink.js";
 import {
   PERSON_ROLE_FILTER_EMPTY,
   PERSON_ROLE_FILTER_TITLES,
@@ -163,9 +164,7 @@ function PersonRoleList({
       {moreIn ? (
         total > visible.length ? <MoreInButton count={total} moreIn={moreIn} /> : null
       ) : rows.length > limit ? (
-        <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-          {expanded ? "Vis færre" : `Se alle ${rows.length} selskaber`}
-        </button>
+        <ExpandLink expanded={expanded} total={rows.length} onToggle={() => setExpanded(!expanded)} />
       ) : null}
     </Section>
   );
@@ -328,9 +327,7 @@ export function PersonRoles({
         moreIn ? (
           <MoreInButton count={companies.length} moreIn={moreIn} />
         ) : (
-          <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-            {expanded ? "Vis færre" : `Se alle ${companies.length} selskaber`}
-          </button>
+          <ExpandLink expanded={expanded} total={companies.length} onToggle={() => setExpanded(!expanded)} />
         )
       ) : null}
       </div>
@@ -427,9 +424,7 @@ function MobileBands({ person, title, onOpen }: { person: PersonVM; title?: stri
         })}
       </ul>
       {rows.length > MOBILE_ROWS ? (
-        <button type="button" className="lasso-link lasso-more" aria-expanded={all} onClick={() => setAll(!all)}>
-          {all ? "Vis færre" : `Vis alle ${rows.length} roller`}
-        </button>
+        <ExpandLink expanded={all} total={rows.length} onToggle={() => setAll(!all)} />
       ) : null}
       <div className="lasso-mbands__legend" aria-hidden="true">
         {hasMgmt ? (
@@ -458,8 +453,6 @@ function MobileBands({ person, title, onOpen }: { person: PersonVM; title?: stri
 /** "Se alle N selskaber i Roller": åbner fanen, der viser alle personens selskaber (smagsprøve). */
 function MoreInButton({ count, moreIn }: { count: number; moreIn: MoreInTab }) {
   return (
-    <button type="button" className="lasso-link lasso-more" onClick={moreIn.open}>
-      {`Se alle ${count} selskaber i ${moreIn.tab}`}
-    </button>
+    <PromptLink label={`Se alle ${count} selskaber i ${moreIn.tab}`} onClick={moreIn.open} />
   );
 }

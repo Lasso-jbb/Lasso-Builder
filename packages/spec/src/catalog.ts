@@ -983,7 +983,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     type: "LassoPersonRisk",
     title: "Personrisiko",
     description:
-      "Brug til: konkurser og tvangsopløsninger blandt selskaber, personen har eller har haft roller i – 'har X været involveret i konkurser'. Brug ikke når: det gælder en virksomheds risiko (show_company focus risiko). Kræver: person; ingen roller giver tom tilstand. Dækkes af show_person (focus risiko). Eksempel: 'Har X været med i konkurser?' → show_person focus risiko.",
+      "UDGÅET (Jakob 30.09): vælg den aldrig; show_person viser den ikke længere. Konkurser står i LassoPersonStats og forløbet i LassoTimeline (filter 'risiko'). Tidligere: konkurser og tvangsopløsninger blandt selskaber, personen har eller har haft roller i. Brug ikke når: det gælder en virksomheds risiko (show_company focus risiko). Kræver: person; ingen roller giver tom tilstand. Dækkes af show_person (focus risiko). Eksempel: 'Har X været med i konkurser?' → show_person focus risiko.",
     props: "person, title?",
     register: {
       formaal: "Personens tilknytning til konkurser og tvangsopløsninger.",
@@ -1015,7 +1015,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     type: "LassoPersonFacts",
     title: "Stamoplysninger, person",
     description:
-      "Brug til: en persons stamoplysninger som nøgle-værdi i en smal kolonne (¼): bopæl (postnummer og by; aldrig gade), kommune, 'Adressebeskyttet', enhedsnummer, aktive og ophørte roller, antal selskaber personen ejer, første registrering og seneste ændring – 'hvor bor X', 'hvornår kom X ind i CVR'. Brug ikke når: det gælder en virksomheds stamdata (LassoKeyValueList) eller personens roller over tid (LassoPersonRoles). Kræver: person. Dækkes af show_person. Eksempel: 'Hvor bor X, og hvor længe har X været registreret?' → show_person.",
+      "UDGÅET (Jakob 30.09): vælg den aldrig; show_person viser den ikke længere (byen står i personhovedet). Tidligere: en persons stamoplysninger som nøgle-værdi i en smal kolonne (¼): bopæl (postnummer og by; aldrig gade), kommune, 'Adressebeskyttet', enhedsnummer, aktive og ophørte roller, antal selskaber personen ejer, første registrering og seneste ændring – 'hvor bor X', 'hvornår kom X ind i CVR'. Brug ikke når: det gælder en virksomheds stamdata (LassoKeyValueList) eller personens roller over tid (LassoPersonRoles). Kræver: person. Dækkes af show_person. Eksempel: 'Hvor bor X, og hvor længe har X været registreret?' → show_person.",
     props: "person, title?",
     register: {
       formaal: "Personens fakta som nøgle/værdi (fødselsår, bopæl, roller).",

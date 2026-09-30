@@ -1113,7 +1113,6 @@ function personFragment(type: PersonAskType, ask: Ask): Fragment {
         context: [
           item("LassoPersonNetwork", { limit: 5 }),
           timeline({ limit: 5 }),
-          item("LassoPersonRisk"),
           ...(role === "ejer" ? [item("LassoOwnershipDiagram", {}, { full: false })] : []),
           item("LassoNews", { limit: 3 }),
         ],
@@ -1121,13 +1120,14 @@ function personFragment(type: PersonAskType, ask: Ask): Fragment {
     }
     case "konkurs":
       return {
-        lead: [item("LassoPersonRisk")],
-        context: [timeline({ filter: "risiko", title: "Forløb i selskaberne" }), item("LassoPersonRoles", { show: "ended", except: "risiko" }), item("LassoPersonNetwork", { limit: 3 })],
+        // Risikosektionen (LassoPersonRisk) udgår (Jakob 30.09): forløbet i selskaberne er svaret.
+        lead: [timeline({ filter: "risiko", title: "Forløb i selskaberne" })],
+        context: [item("LassoPersonRoles", { show: "ended", except: "risiko" }), item("LassoPersonNetwork", { limit: 3 })],
       };
     case "netvaerk":
       return {
         lead: [item("LassoPersonNetwork", { limit: 8 })],
-        context: [item("LassoPersonRoles", { show: "current", limit: 5 }), timeline({ limit: 5 }), item("LassoPersonRisk")],
+        context: [item("LassoPersonRoles", { show: "current", limit: 5 }), timeline({ limit: 5 })],
       };
     case "nyheder": {
       const history = has("historik");
@@ -1135,23 +1135,24 @@ function personFragment(type: PersonAskType, ask: Ask): Fragment {
       const tl = timeline({ limit: 8 });
       return {
         lead: history ? [tl, ...(has("nyheder") ? [news] : [])] : [news],
-        context: [...(history ? (has("nyheder") ? [] : [news]) : [timeline({ limit: 5 })]), item("LassoPersonRoles", { show: "current", limit: 5 }), item("LassoPersonRisk")],
+        context: [...(history ? (has("nyheder") ? [] : [news]) : [timeline({ limit: 5 })]), item("LassoPersonRoles", { show: "current", limit: 5 })],
       };
     }
     case "bopael":
       return {
-        lead: [item("LassoPersonFacts", {}, { full: true })],
+        // Stamoplysningsblokken udgår (Jakob 30.09); byen står i personhovedet, rollerne svarer på resten.
+        lead: [item("LassoPersonRoles", { show: "current", limit: 5 })],
         context: [item("LassoPersonRoles", { show: "current", limit: 5 }), item("LassoPersonNetwork", { limit: 3 }), timeline({ limit: 5 })],
       };
     case "koncern":
       return {
         lead: [item("LassoOwnershipDiagram")],
-        context: [item("LassoPersonRoles", { show: "owner" }), item("LassoPersonNetwork", { limit: 3 }), item("LassoPersonRisk")],
+        context: [item("LassoPersonRoles", { show: "owner" }), item("LassoPersonNetwork", { limit: 3 })],
       };
     case "persontal":
       return {
         lead: [item("LassoPersonStats")],
-        context: [item("LassoPersonRoles", { show: "current", limit: 5 }), item("LassoPersonRisk"), timeline({ limit: 5 })],
+        context: [item("LassoPersonRoles", { show: "current", limit: 5 }), timeline({ limit: 5 })],
       };
   }
 }
@@ -1205,6 +1206,5 @@ const PERSON_FILL = (): AskItem[] => [
   item("LassoPersonRoles", { show: "current", limit: 5 }),
   item("LassoPersonNetwork", { limit: 3 }),
   timeline({ limit: 5 }),
-  item("LassoPersonRisk"),
   item("LassoNews", { limit: 3 }),
 ];

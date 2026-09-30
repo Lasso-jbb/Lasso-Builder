@@ -140,7 +140,12 @@ function assertNoDuplicates(components: readonly ViewComponent[]) {
   assert.equal(new Set(keys).size, keys.length, keys.join(" "));
 }
 
-test("composePerson overblik (Ø13/B10): aktive roller (liste) ½ + stamoplysninger ½; netværket i eget fuldbånd; historik, ejerskab og risiko efter bredderne; ingen nyheder", () => {
+/** De to udgåede personkomponenter (Jakob 30.09) står aldrig på en komponeret personside. */
+function assertNoRetired(components: readonly ViewComponent[], label = "") {
+  for (const type of ["LassoPersonRisk", "LassoPersonFacts"]) assert.ok(!components.some((c) => c.type === type), `${label} ${type} er udgået`.trim());
+}
+
+test("composePerson overblik (Ø13/B10): aktive roller (liste) alene i fuld bredde; netværket i eget fuldbånd; historik og ejerskab efter bredderne; ingen risiko, stamoplysninger eller nyheder", () => {
   const ds = fullDataset();
   const spec = composePerson(ID, ds);
   assert.equal(spec.layout, "columns");
@@ -149,23 +154,22 @@ test("composePerson overblik (Ø13/B10): aktive roller (liste) ½ + stamoplysnin
   assert.deepEqual(spec.components.map(shape), [
     "LassoPersonHead",
     "LassoPersonStats",
-    // Smal liste (max ½) ved siden af stamoplysningerne (max ½): ½ + ½, ikke ¾ + ¼.
-    "LassoPersonRoles@1/half[current,#5,>roller]",
-    "LassoPersonFacts@2/half",
+    // Stamoplysningerne er udgået: den aktive rolleliste står alene i fuld bredde.
+    "LassoPersonRoles[current,#5,>roller]",
     // Netværket (min 1/1) står i eget fuldbånd og deler aldrig bånd.
     "LassoPersonNetwork[#3,>netvaerk]",
     // Samme elementer som Papers side (budgettet regnes som før); resten pakkes i den rækkefølge, der giver
-    // den laveste side: historik ⅓ | ejerskab ⅔ (bred, min ⅔), risikoen alene.
+    // den laveste side: historik ⅓ | ejerskab ⅔ (bred, min ⅔). Risikosektionen er udgået.
     "LassoTimeline@1/third[#3,>historik]",
     "LassoOwnershipDiagram@2/two-thirds",
-    "LassoPersonRisk",
     "LassoFollowUps",
   ]);
   assertNoDuplicates(spec.components);
+  assertNoRetired(spec.components, "overblik");
   assert.ok(!spec.components.some((c) => c.type === "LassoNews"), "nyhederne står på historik");
   const diagram = spec.components.find((c) => c.type === "LassoOwnershipDiagram");
   assert.ok(diagram?.type === "LassoOwnershipDiagram" && ownershipGraphKey(diagram) === GRAPH_KEY && diagram.title === "Ejerskab");
-  // Stamoplysningerne gentager ikke hovedets tal på samme side.
+  // Gamle specs med stamoplysningerne: de gentager ikke hovedets tal på samme side.
   assert.deepEqual(personFactOptions(spec.components, ID), { hideCounts: true });
   assert.deepEqual(personFactOptions([{ type: "LassoPersonFacts", person: ID }], ID), { hideCounts: false });
 });
@@ -181,7 +185,10 @@ test("composePerson højdebudget (runde 6): kompakt før udeladelse, hoved og sv
   const tight = composePerson(ID, ds, { heightBudget: 700, followUps: false });
   const types = tight.components.map((c) => c.type);
   assert.equal(types[0], "LassoPersonHead");
-  assert.equal(shape(tight.components[1]!).replace(/@.*?\[/, "["), "LassoPersonRoles[current,#5,>roller]", "svar-elementet i fuld form");
+  const answer = tight.components.find((c) => c.type === "LassoPersonRoles");
+  assert.ok(answer, "svar-elementet er med");
+  assert.equal(shape(answer).replace(/@.*?\[/, "["), "LassoPersonRoles[current,#5,>roller]", "svar-elementet i fuld form");
+  assertNoRetired(tight.components, "stramt budget");
   assert.ok(tight.components.length < composePerson(ID, ds, { showAll: true, followUps: false }).components.length, "noget er udeladt");
   assert.ok(!types.includes("LassoTimeline") || types.includes("LassoPersonNetwork"), "historik udelades før netværk");
   // Kompakte former: roller 3, netværk 2, historik 3; ejerlisten (show owner) har ingen.
@@ -199,10 +206,9 @@ test("composePerson overblik: tomme sektioner udelades; en halv til overs står 
   assert.deepEqual(composePerson(ID, ds, { followUps: false }).components.map(shape), [
     "LassoPersonHead",
     "LassoPersonStats",
-    "LassoPersonRoles@1/half[current,#5,>roller]",
-    "LassoPersonFacts@2/half",
-    "LassoPersonRisk@1/half",
-    "LassoTimeline@2/half[#3,>historik]",
+    "LassoPersonRoles[current,#5,>roller]",
+    // Historikken er den eneste halve tilbage (risikoen er udgået): den står i fuld bredde.
+    "LassoTimeline[#3,>historik]",
   ]);
   // Et ophørt ejerskab alene giver intet diagram, og et ejet selskab, der ikke selv ejer noget,
   // heller ikke: diagrammet ville kun gentage "ejer 100 %" fra rollelisten 1:1.
@@ -215,35 +221,37 @@ test("composePerson overblik: tomme sektioner udelades; en halv til overs står 
   delete ds.ownershipGraphs[GRAPH_KEY];
   ds.errors[`graph:${GRAPH_KEY}`] = "Lasso API-fejl (500)";
   assert.ok(!composePerson(ID, ds).components.some((c) => c.type === "LassoOwnershipDiagram"));
-  // Tre: netværket (min 1/1) i eget fuldbånd, risiko | historik (3 + "Se alle") side om side.
+  // To: netværket (min 1/1) i eget fuldbånd, historikken (3 + "Se alle") alene i fuld bredde.
   ds.personNetworks[ID] = { lassoId: ID, people: Array.from({ length: 3 }, (_, i) => ({ name: `P${i}`, companies: [], overlapYears: 1, active: true })) };
   const three = composePerson(ID, ds, { followUps: false }).components.map(shape);
-  assert.deepEqual(three.slice(4), ["LassoPersonNetwork[#3,>netvaerk]", "LassoPersonRisk@1/half", "LassoTimeline@2/half[#3,>historik]"]);
+  assert.deepEqual(three.slice(3), ["LassoPersonNetwork[#3,>netvaerk]", "LassoTimeline[#3,>historik]"]);
   // Kun ophørte roller: listen over de ophørte står i stedet for de aktive.
   ds.persons[ID] = { ...person, roles: [person.roles[3]!] };
-  assert.equal(shape(composePerson(ID, ds).components.find((c) => c.type === "LassoPersonRoles")!), "LassoPersonRoles@1/half[ended,#5,>roller]");
-  // Ingen roller (og intet netværk): stamoplysningerne alene i fuld bredde, ingen risiko.
+  assert.equal(shape(composePerson(ID, ds).components.find((c) => c.type === "LassoPersonRoles")!), "LassoPersonRoles[ended,#5,>roller]");
+  // Ingen roller (og intet netværk eller historik): kun hovedet; stamoplysningerne og risikoen er udgået.
   ds.persons[ID] = { ...person, roles: [] };
   ds.personNetworks[ID] = { lassoId: ID, people: [] };
   ds.timeline[ID] = { lassoId: ID, events: [] };
-  assert.deepEqual(composePerson(ID, ds, { followUps: false }).components.map(shape), ["LassoPersonHead", "LassoPersonFacts"]);
+  assert.deepEqual(composePerson(ID, ds, { followUps: false }).components.map(shape), ["LassoPersonHead"]);
 });
 
-test("composePerson overblik: alvorlig risiko (personen var med) rykker op under hovedet", () => {
+test("composePerson overblik: alvorlig risiko (personen var med) giver ingen risikosektion; persontallene står under hovedet og rollerne derunder", () => {
   const ds = fullDataset();
   ds.persons[ID] = { ...person, roles: [...person.roles.slice(0, 3), { ...person.roles[3]!, to: undefined, active: true }] };
   ds.timeline[ID] = personTimeline(ds.persons[ID]!, "2026-09-27");
   const spec = composePerson(ID, ds, { followUps: false });
-  // B4: persontallene står øverst under hovedet, den alvorlige risiko lige under dem; derunder roller ½ + stamoplysninger ½.
-  assert.deepEqual(spec.components.map(shape).slice(0, 5), ["LassoPersonHead", "LassoPersonStats", "LassoPersonRisk", "LassoPersonRoles@1/half[current,#5,>roller]", "LassoPersonFacts@2/half"]);
-  assert.equal(spec.components.filter((c) => c.type === "LassoPersonRisk").length, 1);
+  // B4: persontallene (med konkurserne) står øverst under hovedet; risikosektionen er udgået, så rollerne
+  // følger lige under tallene i fuld bredde.
+  assert.deepEqual(spec.components.map(shape).slice(0, 3), ["LassoPersonHead", "LassoPersonStats", "LassoPersonRoles[current,#5,>roller]"]);
+  assertNoRetired(spec.components, "alvorlig risiko");
 });
 
-test("composePerson roller: alle roller som tidsbånd (8 + 'Se alle') ⅔ + stamoplysninger ⅓ (standardbredderne), ingen ophørt-liste ved siden af båndene", () => {
+test("composePerson roller: alle roller som tidsbånd (8 + 'Se alle') alene i fuld bredde, ingen stamoplysninger og ingen ophørt-liste ved siden af båndene", () => {
   const spec = composePerson(ID, fullDataset(), { focus: "roller" });
   assert.equal(spec.subtitle, "Roller");
-  assert.deepEqual(spec.components.map(shape), ["LassoPersonHead", "LassoPersonRoles@1/two-thirds[#8]", "LassoPersonFacts@2/third", "LassoFollowUps"]);
+  assert.deepEqual(spec.components.map(shape), ["LassoPersonHead", "LassoPersonRoles[#8]", "LassoFollowUps"]);
   assertNoDuplicates(spec.components);
+  assertNoRetired(spec.components, "roller");
 });
 
 test("composePerson netvaerk: hele netværket i fuld bredde (8 + 'Se alle'), også når det er tomt", () => {
@@ -273,20 +281,24 @@ test("composePerson ejerskab: de ejede selskaber som liste og ejerstrukturen i f
   assert.deepEqual(composePerson(ID, ds, { focus: "ejerskab", followUps: false }).components.map(shape), ["LassoPersonHead", "LassoPersonRoles[owner]"]);
 });
 
-test("composePerson risiko: alle sager og forløbet i selskaberne i fuld bredde, ingen ophørte roller (de står på roller); uden sager kun den positive tomme tilstand", () => {
+test("composePerson risiko: kun forløbet i selskaberne ('Forløb i selskaberne') i fuld bredde, ingen risikosektion og ingen ophørte roller (de står på roller); uden sager forløbets tomme tilstand", () => {
   const ds = fullDataset();
   // Mette har kun én ophørt rolle, i konkursselskabet: forløbet alene i fuld bredde.
-  assert.deepEqual(composePerson(ID, ds, { focus: "risiko", followUps: false }).components.map(shape), ["LassoPersonHead", "LassoPersonRisk", "LassoTimeline[~risiko]"]);
+  const first = composePerson(ID, ds, { focus: "risiko", followUps: false });
+  assert.deepEqual(first.components.map(shape), ["LassoPersonHead", "LassoTimeline[~risiko]"]);
+  const tl = first.components[1]!;
+  assert.ok(tl.type === "LassoTimeline" && tl.title === "Forløb i selskaberne");
   // En ophørt rolle i et andet selskab: den hører til fanen Roller (tidsbåndene), ikke risiko.
   const other = { companyId: "CVR-1-44444444", companyName: "Andet Eksempel ApS", kind: "direction" as const, role: "Direktør", from: "2010-01-01", to: "2013-01-01", active: false };
   ds.persons[ID] = { ...person, roles: [...person.roles, other] };
   const spec = composePerson(ID, ds, { focus: "risiko", followUps: false });
-  assert.deepEqual(spec.components.map(shape), ["LassoPersonHead", "LassoPersonRisk", "LassoTimeline[~risiko]"]);
+  assert.deepEqual(spec.components.map(shape), ["LassoPersonHead", "LassoTimeline[~risiko]"]);
   assert.ok(!spec.components.some((c) => c.type === "LassoPersonRoles"));
   assertNoDuplicates(spec.components);
-  // Ingen konkurser eller tvangsopløsninger: kun "Ingen" med flueben, intet andet end hovedet.
+  assertNoRetired(spec.components, "risiko");
+  // Ingen konkurser eller tvangsopløsninger: forløbet står stadig (dets tomme tilstand er svaret).
   ds.persons[ID] = { ...person, roles: person.roles.slice(0, 3) };
-  assert.deepEqual(composePerson(ID, ds, { focus: "risiko", followUps: false }).components.map(shape), ["LassoPersonHead", "LassoPersonRisk"]);
+  assert.deepEqual(composePerson(ID, ds, { focus: "risiko", followUps: false }).components.map(shape), ["LassoPersonHead", "LassoTimeline[~risiko]"]);
 });
 
 test("composePerson historik: historik (5 + 'Se alle') ¼ | nyheder (5) ¾ (bred, min ¾); uden nyheder historikken alene", () => {
@@ -494,15 +506,16 @@ test("personTimeline: indtrådt/udtrådt som X i et selskab, ejerskab og konkurs
 
 const personAsk = (q: string) => parseAsk(q, "person", { name: person.name });
 
-test("composePerson spørgsmål: 'sidder X i bestyrelser' giver kun bestyrelsesposterne (½) + stamoplysninger (½) og konteksten pakket efter bredderne", () => {
+test("composePerson spørgsmål: 'sidder X i bestyrelser' giver kun bestyrelsesposterne alene i fuld bredde og konteksten pakket efter bredderne", () => {
   const spec = composePerson(ID, fullDataset(), { ask: personAsk("Sidder Mette Holm Eksempel i bestyrelser?") });
   assert.equal(spec.subtitle, "Bestyrelsesposter");
-  assert.deepEqual(spec.components.slice(0, 3).map(shape), ["LassoPersonHead", "LassoPersonRoles@1/half[current,#8]", "LassoPersonFacts@2/half"]);
+  assert.deepEqual(spec.components.slice(0, 2).map(shape), ["LassoPersonHead", "LassoPersonRoles[current,#8]"]);
   const roles = spec.components[1]!;
   assert.ok(roles.type === "LassoPersonRoles" && roles.role === "bestyrelse");
-  // Konteksten: netværk, historik, risiko og nyheder (ingen komponent to gange); netværket i eget fuldbånd.
-  const rest = spec.components.slice(3).filter((c) => c.type !== "LassoFollowUps");
-  assert.deepEqual(rest.map((c) => c.type).sort(), ["LassoNews", "LassoPersonNetwork", "LassoPersonRisk", "LassoTimeline"]);
+  // Konteksten: netværk, historik og nyheder (ingen komponent to gange); netværket i eget fuldbånd.
+  const rest = spec.components.slice(2).filter((c) => c.type !== "LassoFollowUps");
+  assert.deepEqual(rest.map((c) => c.type).sort(), ["LassoNews", "LassoPersonNetwork", "LassoTimeline"]);
+  assertNoRetired(spec.components, "bestyrelser");
   assert.equal(rest.find((c) => c.type === "LassoPersonNetwork")?.column, undefined);
   assertNoDuplicates(spec.components);
   // Udsnittet: kun bestyrelsesroller (én aktiv, én ophørt).
@@ -521,11 +534,13 @@ test("composePerson spørgsmål: tidligere poster giver de ophørte, udviklingen
   assert.ok(owner.components.some((c) => c.type === "LassoOwnershipDiagram"));
 });
 
-test("composePerson spørgsmål: konkurser giver risikoen som svar og forløbet i selskaberne; de ophørte roller uden konkursselskaberne", () => {
+test("composePerson spørgsmål: konkurser giver forløbet i selskaberne som svar i fuld bredde; de ophørte roller uden konkursselskaberne", () => {
   const spec = composePerson(ID, fullDataset(), { ask: personAsk("har Mette været med i konkurser?") });
-  assert.deepEqual(spec.components.slice(0, 3).map(shape), ["LassoPersonHead", "LassoPersonRisk@1/half", "LassoPersonFacts@2/half"]);
-  const risk = spec.components.find((c) => c.type === "LassoTimeline");
-  assert.ok(risk?.type === "LassoTimeline" && risk.filter === "risiko");
+  assert.deepEqual(spec.components.slice(0, 2).map(shape), ["LassoPersonHead", "LassoTimeline[~risiko]"]);
+  const risk = spec.components[1]!;
+  assert.ok(risk.type === "LassoTimeline" && risk.title === "Forløb i selskaberne");
+  assert.equal(spec.components.filter((c) => c.type === "LassoTimeline").length, 1, "forløbet kun én gang");
+  assertNoRetired(spec.components, "konkurser");
   // Ingen andre ophørte roller end konkursselskabet: den liste udelades (tom kontekst), og siden fyldes
   // i stedet med de aktive roller fra den fælles hale.
   assert.ok(!spec.components.some((c) => c.type === "LassoPersonRoles" && c.show === "ended"));
@@ -546,11 +561,12 @@ test("composePerson spørgsmål: netværket som svar; tomme kontekstmoduler udel
   assert.equal(composePerson(ID, ds, { ask: personAsk("hvem sidder Mette sammen med") }).components[1]!.type, "LassoPersonNetwork");
 });
 
-test("composePerson spørgsmål: bopæl og ejerstruktur står i fuld bredde; stamoplysningerne kun én gang", () => {
+test("composePerson spørgsmål: bopæl giver de aktive roller (byen står i hovedet) og ejerstrukturen i fuld bredde; rollerne kun én gang", () => {
   const home = composePerson(ID, fullDataset(), { ask: personAsk("hvor bor Mette") });
   assert.equal(home.subtitle, "Bopæl");
-  assert.equal(shape(home.components[1]!), "LassoPersonFacts");
-  assert.equal(home.components.filter((c) => c.type === "LassoPersonFacts").length, 1);
+  assert.equal(shape(home.components[1]!), "LassoPersonRoles[current,#5]");
+  assert.equal(home.components.filter((c) => c.type === "LassoPersonRoles").length, 1, "svaret gentages ikke i konteksten");
+  assertNoRetired(home.components, "bopæl");
   const group = composePerson(ID, fullDataset(), { ask: personAsk("hvordan ser Mettes ejerstruktur ud") });
   const diagram = group.components[1]!;
   assert.ok(diagram.type === "LassoOwnershipDiagram" && !diagram.column && ownershipGraphKey(diagram) === GRAPH_KEY);
@@ -579,8 +595,8 @@ test("B4: persontallene (LassoPersonStats) står under hovedet i fuld bredde på
   const spec = composePerson(ID, ds, { followUps: false });
   assert.equal(spec.components[1]?.type, "LassoPersonStats");
   assert.equal(spec.components[1]?.column, undefined, "fuld bredde (eget fuldbånd)");
-  // Svaret er stadig rollelisten (persontallene er strukturelle, som nøgletalskortene).
-  assert.ok(spec.components.some((c) => shape(c) === "LassoPersonRoles@1/half[current,#5,>roller]"));
+  // Svaret er stadig rollelisten (persontallene er strukturelle, som nøgletalskortene), nu alene i fuld bredde.
+  assert.equal(shape(spec.components[2]!), "LassoPersonRoles[current,#5,>roller]");
   // Kun på overblikket.
   for (const focus of ["roller", "netvaerk", "ejerskab", "risiko", "historik"] as const) {
     assert.ok(!composePerson(ID, ds, { focus }).components.some((c) => c.type === "LassoPersonStats"), focus);
@@ -589,11 +605,13 @@ test("B4: persontallene (LassoPersonStats) står under hovedet i fuld bredde på
   const none = fullDataset();
   none.persons[ID] = { ...person, roles: [] };
   assert.ok(!composePerson(ID, none).components.some((c) => c.type === "LassoPersonStats"));
-  // Stramt budget: tallene koster aldrig en af overblikkets halve eller en kompakt form. Ved 700 px er der
-  // kun plads til svaret og en kompakt side, så tallene udelades, og siden er den samme som før B4.
-  const tight = composePerson(ID, ds, { heightBudget: 700, followUps: false });
+  // Stramt budget: tallene koster aldrig en af overblikkets halve eller en kompakt form. Ved 600 px er der
+  // kun plads til svaret og netværket (uden stamoplysningerne er siden lavere end før, så grænsen er rykket
+  // fra 700 px), så tallene udelades, og siden er den samme som før B4.
+  const tight = composePerson(ID, ds, { heightBudget: 600, followUps: false });
   assert.ok(!tight.components.some((c) => c.type === "LassoPersonStats"));
   assert.equal(shape(tight.components[1]!).replace(/@.*?\[/, "["), "LassoPersonRoles[current,#5,>roller]");
+  assert.ok(tight.components.some((c) => c.type === "LassoPersonNetwork"), "netværket står i stedet for tallene");
   // Budgettet vælger elementerne (som Papers side regner højden); et større budget viser aldrig færre.
   // B10: den ombrudte side (netværket i eget fuldbånd) kan være højere end budgettet.
   let before = 0;
@@ -668,26 +686,30 @@ test("Ø13/B10 (a): personens overblik med 3 fælles selskaber pr. person og 30-
   }
 });
 
-test("Ø13/B10 (b): aktive roller (liste) + stamoplysninger står ½ + ½, rollerne først, også når stamoplysningerne er højest", () => {
+test("Ø13/B10 (b): aktive roller (liste) står alene i fuld bredde uden stamoplysninger, også med én rolle og som svar på et spørgsmål", () => {
   const ds = fullDataset();
   const pair = (spec: { components: ViewComponent[] }) => spec.components.filter((c) => c.type === "LassoPersonRoles" || c.type === "LassoPersonFacts").map(shape);
-  assert.deepEqual(pair(composePerson(ID, ds)), ["LassoPersonRoles@1/half[current,#5,>roller]", "LassoPersonFacts@2/half"]);
-  // Én aktiv rolle (kort liste) ved siden af de højere stamoplysninger: stadig side om side, rollerne til venstre.
+  assert.deepEqual(pair(composePerson(ID, ds)), ["LassoPersonRoles[current,#5,>roller]"]);
+  // Én aktiv rolle (kort liste): stadig alene i eget fuldbånd.
   ds.persons[ID] = { ...person, roles: [person.roles[0]!] };
-  assert.deepEqual(pair(composePerson(ID, ds, { followUps: false })), ["LassoPersonRoles@1/half[current,#5,>roller]", "LassoPersonFacts@2/half"]);
+  assert.deepEqual(pair(composePerson(ID, ds, { followUps: false })), ["LassoPersonRoles[current,#5,>roller]"]);
   // Og som svar på et spørgsmål.
   const asked = composePerson(ID, fullDataset(), { ask: personAsk("Sidder Mette Holm Eksempel i bestyrelser?") });
-  assert.deepEqual(pair(asked).slice(0, 2), ["LassoPersonRoles@1/half[current,#8]", "LassoPersonFacts@2/half"]);
-  for (const spec of [composePerson(ID, ds), asked]) assertWidths(spec.components, ds, "roller + stamoplysninger");
+  assert.deepEqual(pair(asked).slice(0, 1), ["LassoPersonRoles[current,#8]"]);
+  for (const spec of [composePerson(ID, ds), asked]) {
+    assertWidths(spec.components, ds, "roller alene");
+    assertNoRetired(spec.components, "roller alene");
+  }
 });
 
-test("Ø13/B10 (c): 'hvem sidder X sammen med' giver netværket i fuld bredde først; stamoplysningerne står ved siden af konteksten, ikke alene", () => {
+test("Ø13/B10 (c): 'hvem sidder X sammen med' giver netværket i fuld bredde først; konteksten (roller | historik) deler bånd, ingen stamoplysninger", () => {
   const ds = wideNetwork(fullDataset());
   const spec = composePerson(ID, ds, { ask: personAsk("hvem sidder Mette sammen med") });
   assert.equal(spec.components[1]!.type, "LassoPersonNetwork");
   assert.equal(spec.components[1]!.column, undefined, "eget fuldbånd");
-  const facts = spec.components.find((c) => c.type === "LassoPersonFacts");
-  assert.ok(facts?.column, "stamoplysningerne deler bånd med konteksten");
+  assertNoRetired(spec.components, "netværk som svar");
+  const roles = spec.components.find((c) => c.type === "LassoPersonRoles");
+  assert.ok(roles?.column, "rollerne deler bånd med konteksten");
   assertWidths(spec.components, ds, "netværk som svar");
 });
 

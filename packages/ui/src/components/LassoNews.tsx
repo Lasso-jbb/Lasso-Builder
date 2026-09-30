@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { ExpandLink, PromptLink } from "./ExpandLink.js";
 import { formatDate, isPersonId, type NewsItemVM, type NewsVM, type TextSegment } from "@lasso/spec";
 import type { MoreInTab, ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
@@ -258,15 +259,10 @@ export function LassoNews({
       </div>
       {news.items.length > max ? (
         moreIn ? (
-          <button type="button" className="lasso-link lasso-more" onClick={moreIn.open}>
-            {`Se alle ${news.items.length} nyheder i ${moreIn.tab}`}
-          </button>
+          <PromptLink label={`Se alle ${news.items.length} nyheder i ${moreIn.tab}`} onClick={moreIn.open} />
         ) : (
           // 12.4 (runde 5, Paper LNE-0): "Vis flere" som tekstknap med chevron under en tynd linje.
-          <button type="button" className="lasso-link lasso-news__more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-            {expanded ? "Vis færre" : "Vis flere"}
-            <Icon name={expanded ? "chevron-up" : "chevron-down"} size={14} />
-          </button>
+          <ExpandLink expanded={expanded} total={news.items.length} onToggle={() => setExpanded(!expanded)} />
         )
       ) : null}
     </Section>

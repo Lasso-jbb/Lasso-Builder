@@ -143,7 +143,7 @@ test("print-tilstand: ingen handlingsbjælke eller knapper, 'Se alle' foldet ud"
   const host: HostCapabilities = { pdf: true, savePage: true, export: true, refresh: true, save: true, back: true };
   const screen = html(companySpec(), host);
   assert.match(screen, /class="lasso-actionbar"/);
-  assert.match(screen, /Se alle 8 begivenheder/);
+  assert.match(screen, /Vis alle 8/);
 
   const print = html(companySpec(), host, { print: true });
   assert.match(print, /^<div class="lasso-root lasso-root--print" data-theme="light">/);

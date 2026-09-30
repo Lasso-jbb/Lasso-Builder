@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { ExpandLink } from "./ExpandLink.js";
 import {
   companyFacts,
   currencyUnit,
@@ -388,9 +389,7 @@ export function KeyValueList({
   const cut = <T,>(rows: readonly T[]): readonly T[] => (maxRows && !allRows ? rows.slice(0, maxRows) : rows);
   const moreRows = (n: number) =>
     maxRows && n > maxRows ? (
-      <button type="button" className="lasso-link lasso-more" aria-expanded={allRows} onClick={() => setAllRows(!allRows)}>
-        {allRows ? "Vis færre" : `Se ${n} oplysninger`}
-      </button>
+      <ExpandLink expanded={allRows} total={n} onToggle={() => setAllRows(!allRows)} />
     ) : null;
 
   if (!ready) {

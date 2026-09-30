@@ -1,9 +1,9 @@
 import { useState } from "react";
+import { ExpandLink, PromptLink } from "./ExpandLink.js";
 import { isPersonId, statusGroup, statusLabel, type PersonNetworkCompanyVM, type PersonNetworkRowVM, type PersonNetworkVM } from "@lasso/spec";
 import type { MoreInTab, ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { usePrintMode } from "../print.js";
-import { Icon } from "./Icon.js";
 
 const COLLAPSED = 3;
 /** Højst tre bånd (fælles selskaber) pr. person; resten står i undertitlen som antal. */
@@ -13,6 +13,7 @@ const year = (d?: string) => (d ? d.slice(0, 4) : "");
 
 /** "2012–2026" for afsluttede, "siden 2016" for aktive (16.2's sprog). */
 function period(c: PersonNetworkCompanyVM): string {
+  if (!c.to && c.ended) return c.from ? `${year(c.from)}, ophørt` : "ophørt";
   if (!c.to) return c.from ? `siden ${year(c.from)}` : "";
   return [year(c.from), year(c.to)].filter(Boolean).join("–");
 }
@@ -73,7 +74,8 @@ function PersonName({ p, onOpen, className }: { p: PersonNetworkRowVM; onOpen?: 
  */
 function Band({ c, pos, start, now, top }: { c: PersonNetworkCompanyVM; pos: (d: string | undefined, f: number) => number; start: number; now: number; top: number }) {
   const left = pos(c.from, start);
-  const right = pos(c.to, now);
+  // Afsluttet uden kendt slutdato: et kort stiplet bånd fra startåret, aldrig til i dag.
+  const right = !c.to && c.ended ? left + 2 : pos(c.to, now);
   const width = Math.max(1, right - left);
   // Etiketter nær højre kant højrestilles, så de ikke løber ud af banen.
   const anchorRight = left > 55;
@@ -88,7 +90,7 @@ function Band({ c, pos, start, now, top }: { c: PersonNetworkCompanyVM; pos: (d:
         <span className="lasso-personnet__label--short">{short}</span>
         {status}
       </span>
-      <span className={`lasso-personnet__band${c.to ? " lasso-personnet__band--ended" : ""}${bankrupt ? " lasso-personnet__band--problem" : ""}`} style={{ left: `${left}%`, width: `${width}%` }} />
+      <span className={`lasso-personnet__band${c.to || c.ended ? " lasso-personnet__band--ended" : ""}${bankrupt ? " lasso-personnet__band--problem" : ""}`} style={{ left: `${left}%`, width: `${width}%` }} />
     </div>
   );
 }
@@ -158,7 +160,7 @@ export function PersonNetwork({
   for (let y = startYear; y <= thisYear - step / 2; y += step) ticks.push(y);
   // Mobil: fire årstal (første, to imellem og i dag).
   const mticks = [startYear, Math.round(startYear + (thisYear - startYear) / 3), Math.round(startYear + ((thisYear - startYear) * 2) / 3)];
-  const hasEnded = network.people.some((p) => p.companies.some((c) => c.to));
+  const hasEnded = network.people.some((p) => p.companies.some((c) => c.to || c.ended));
   const problems = network.people.flatMap((p) => p.companies.slice(0, MAX_BANDS).filter(isBankrupt));
   const problemNames = [...new Set(problems.map((c) => statusLabel(c.status) ?? "Under konkurs"))];
   // Legenden navngiver statussen (fx "Under konkurs"); flere forskellige problemstatusser står samlet.
@@ -190,14 +192,9 @@ export function PersonNetwork({
   const more =
     network.people.length > limit ? (
       moreIn ? (
-        <button type="button" className="lasso-link lasso-personnet__more" onClick={moreIn.open}>
-          {`Se alle ${network.people.length} personer i ${moreIn.tab}`}
-        </button>
+        <PromptLink label={`Se alle ${network.people.length} personer i ${moreIn.tab}`} onClick={moreIn.open} />
       ) : (
-        <button type="button" className="lasso-link lasso-personnet__more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-          {expanded ? "Vis færre" : `Vis alle ${network.people.length}`}
-          <Icon name={expanded ? "chevron-up" : "chevron-right"} size={14} />
-        </button>
+        <ExpandLink expanded={expanded} total={network.people.length} onToggle={() => setExpanded(!expanded)} />
       )
     ) : null;
   return (

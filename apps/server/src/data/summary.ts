@@ -225,9 +225,10 @@ export function summarizeView(spec: ViewSpec, ds: Dataset, opts: { ask?: Ask } =
       const n = Math.min(c.limit, items.length);
       if (items.length) lines.push(`Nyheder om personen (seneste ${n}): ${items.slice(0, n).map((x) => `${x.time ? `${formatDate(x.time)} ` : ""}${x.headline} (${x.source})`).join("; ")}.`);
     }
-    if (c.type === "LassoPersonRisk") {
-      const p = ds.persons[c.person];
-      if (p) {
+    // Risikosektionen udgår (Jakob 30.09); persontallene og risikoforløbet bærer tallene i resuméet.
+    if (c.type === "LassoPersonRisk" || c.type === "LassoPersonStats" || (c.type === "LassoTimeline" && c.person && c.filter === "risiko")) {
+      const p = ds.persons[c.person!];
+      if (p && !lines.some((l) => l.startsWith("Risiko: "))) {
         const r = personRisk(p);
         const cases = [...r.bankruptcies, ...r.dissolutions].map((x) => `${x.companyName} ${x.status.toLowerCase()}${x.personLeft ? `, personen fratrådt ${x.personLeft.slice(0, 4)}` : ", personen har stadig en rolle"}`);
         lines.push(`Risiko: ${r.bankruptcies.length} konkurser og ${r.dissolutions.length} tvangsopløsninger blandt personens selskaber${cases.length ? ` (${cases.join("; ")})` : ""}.`);

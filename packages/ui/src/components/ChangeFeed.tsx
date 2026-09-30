@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { ExpandLink } from "./ExpandLink.js";
 import { CHANGE_TYPES, CHANGE_TYPE_LABELS, formatDate, formatNumber, type ChangeEntryVM, type ChangeFeedVM, type ChangeType } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
@@ -197,9 +198,7 @@ export function ChangeFeed({ feed, title, types, error, now, onOpen }: { feed?: 
         </div>
       )}
       {foldable ? (
-        <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-          {expanded ? "Vis færre" : `Se alle ${formatNumber(matching.length)} ændringer`}
-        </button>
+        <ExpandLink expanded={expanded} total={matching.length} onToggle={() => setExpanded(!expanded)} />
       ) : null}
     </Section>
   );

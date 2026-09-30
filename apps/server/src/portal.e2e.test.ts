@@ -245,10 +245,12 @@ test("person: som show_person, med signeret link til personsiden; 404/400 ved fe
   const lassoId = /\/e\/(CVR-3-\d+)\?/.exec(body.link ?? "")?.[1];
   assert.ok(lassoId, body.link);
   assert.ok(body.dataset.persons[lassoId!]);
-  // Overblikket: stamoplysninger og historik nøglet på person-ID'et, og ejerdiagrammet med personen
-  // som rod (pille) og en kant til det ejede selskab. Nyhederne hentes kun på fokus historik.
+  // Overblikket: aktive roller og historik nøglet på person-ID'et, og ejerdiagrammet med personen
+  // som rod (pille) og en kant til det ejede selskab. Nyhederne hentes kun på fokus historik;
+  // stamoplysningerne og risikosektionen er udgået.
   const types = body.spec.components.map((c) => c.type);
-  for (const t of ["LassoPersonFacts", "LassoTimeline", "LassoOwnershipDiagram"]) assert.ok(types.includes(t as never), t);
+  for (const t of ["LassoPersonRoles", "LassoTimeline", "LassoOwnershipDiagram"]) assert.ok(types.includes(t as never), t);
+  for (const t of ["LassoPersonFacts", "LassoPersonRisk"]) assert.ok(!types.includes(t as never), `${t} er udgået`);
   assert.ok(!types.includes("LassoNews"));
   assert.deepEqual(body.dataset.news, {});
   assert.match(body.dataset.timeline[lassoId!]!.events[0]!.title, /kom under konkurs/);
@@ -270,7 +272,7 @@ test("person: som show_person, med signeret link til personsiden; 404/400 ved fe
 test("person ?focus=: hvert personfokus som show_person, link med samme fokus; 400 ved ukendt fokus", async () => {
   const risk = await json<ViewBody>(await api("/person/CVR-3-4000000002?focus=risiko"));
   assert.equal(risk.spec.subtitle, "Risiko");
-  assert.deepEqual(risk.spec.components.map((c) => c.type), ["LassoPersonHead", "LassoPersonRisk", "LassoTimeline", "LassoFollowUps"]);
+  assert.deepEqual(risk.spec.components.map((c) => c.type), ["LassoPersonHead", "LassoTimeline", "LassoFollowUps"]);
   const tl = risk.spec.components.find((c) => c.type === "LassoTimeline");
   assert.equal(tl?.type === "LassoTimeline" && tl.filter, "risiko");
   // Kun det, fokus viser, er hentet.

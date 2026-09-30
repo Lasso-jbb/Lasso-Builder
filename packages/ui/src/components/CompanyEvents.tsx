@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ExpandLink } from "./ExpandLink.js";
 import { formatAmount, formatDate, type CompanyEventsVM, type CompanyVM, type MergerPartyVM } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
 import type { ViewAction } from "../types.js";
@@ -170,9 +171,7 @@ export function Announcements({ events, company, demo, title, error }: { events?
         ))}
       </ul>
       {list.length > ANNOUNCEMENTS_SHOWN ? (
-        <button type="button" className="lasso-link lasso-more" aria-expanded={all} onClick={() => setAll(!all)}>
-          {all ? "Vis færre" : `Se alle ${list.length} bekendtgørelser`}
-        </button>
+        <ExpandLink expanded={all} total={list.length} onToggle={() => setAll(!all)} />
       ) : null}
     </Section>
   );
@@ -290,9 +289,7 @@ export function Publications({ events, title, error, limit = 5 }: { events?: Com
         })}
       </ul>
       {list.length > limit ? (
-        <button type="button" className="lasso-link lasso-more" aria-expanded={all} onClick={() => setAll(!all)}>
-          {all ? "Vis færre" : `Se alle ${list.length} regnskaber`}
-        </button>
+        <ExpandLink expanded={all} total={list.length} onToggle={() => setAll(!all)} />
       ) : null}
     </Section>
   );

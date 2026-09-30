@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { ExpandLink, PromptLink } from "./ExpandLink.js";
 import { formatDate, isPersonId, type TextSegment, type TimelineVM } from "@lasso/spec";
 import type { MoreInTab, ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
@@ -257,20 +258,9 @@ export function LassoTimeline({
           </div>
           {matching.length > limit ? (
             moreIn ? (
-              <button type="button" className="lasso-link lasso-more" onClick={moreIn.open}>
-                {`Se alle ${matching.length} begivenheder i ${moreIn.tab}`}
-              </button>
+              <PromptLink label={`Se alle ${matching.length} begivenheder i ${moreIn.tab}`} onClick={moreIn.open} />
             ) : (
-              <button
-                type="button"
-                className="lasso-link lasso-more"
-                aria-expanded={expanded}
-                onClick={() => setExpanded(!expanded)}
-              >
-                {expanded
-                  ? "Vis færre"
-                  : `Se alle ${matching.length} begivenheder`}
-              </button>
+              <ExpandLink expanded={expanded} total={matching.length} onToggle={() => setExpanded(!expanded)} />
             )
           ) : null}
         </>,

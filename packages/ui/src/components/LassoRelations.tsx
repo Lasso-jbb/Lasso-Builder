@@ -1,4 +1,6 @@
-import { moreText, isPersonId, type OwnershipVM, type PersonRowVM } from "@lasso/spec";
+import { useState } from "react";
+import { ExpandLink } from "./ExpandLink.js";
+import { isPersonId, type OwnershipVM, type PersonRowVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { Icon } from "./Icon.js";
@@ -65,6 +67,8 @@ export function LassoRelations({
   onProductionUnits?: () => void;
 }) {
   const heading = title ?? "Relationer";
+  // "og N flere" folder resten af ejerne ud på stedet (Jakob 30.09: skal kunne klikkes).
+  const [allOwners, setAllOwners] = useState(false);
   if (!people || !ownership) {
     const error = peopleError ?? ownershipError;
     return (
@@ -129,12 +133,14 @@ export function LassoRelations({
       {owners.length > 0 ? (
         <div className="lasso-relations__group">
           <div className="lasso-relations__label">Legale ejere</div>
-          {owners.slice(0, MAX_OWNERS).map((o, i) => (
+          {(allOwners ? owners : owners.slice(0, MAX_OWNERS)).map((o, i) => (
             <div key={`${o.name}-${i}`}>
               <Name name={o.name} lassoId={o.lassoId} onOpen={onOpen} />
             </div>
           ))}
-          {owners.length > MAX_OWNERS ? <div className="lasso-relations__more">og {moreText(owners.length - MAX_OWNERS)}</div> : null}
+          {owners.length > MAX_OWNERS ? (
+            <ExpandLink expanded={allOwners} total={owners.length} onToggle={() => setAllOwners(!allOwners)} />
+          ) : null}
         </div>
       ) : null}
       {beneficialLocked ? (

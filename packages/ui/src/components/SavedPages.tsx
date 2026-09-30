@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ExpandLink } from "./ExpandLink.js";
 import { FOCUS_LABELS, formatDate, formatNumber, PERSON_FOCUS_LABELS, type SavedPageKind, type SavedPageVM, type SavedPagesVM } from "@lasso/spec";
 import type { ActionResult, ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
@@ -151,9 +152,7 @@ export function SavedPages({ list, title, error, onAction, canDrillDown, canRemo
         })}
       </ul>
       {foldable ? (
-        <button type="button" className="lasso-link lasso-more" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-          {expanded ? "Vis færre" : `Se alle ${formatNumber(rows.length)}`}
-        </button>
+        <ExpandLink expanded={expanded} total={rows.length} onToggle={() => setExpanded(!expanded)} />
       ) : null}
     </Section>
   );

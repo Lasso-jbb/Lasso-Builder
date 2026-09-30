@@ -150,7 +150,15 @@ function foreignCountry(raw: string | undefined): string | undefined {
  * mindst ét selskab: alle overlap på tværs af selskaberne lægges sammen, hvor de overlapper eller
  * støder op til hinanden, og et hul bryder perioden (longestPeriodYears). Tidligere blev
  * overlappene summeret, så 13 fælles selskaber kunne give "105 år sammen".
+ *
+ * Stifter og revisor tæller ikke som at sidde sammen (Jakob 30.09): stifterrollen står i CVR uden
+ * slutdato (et uendeligt bånd "siden 2012"), og revisoren sidder ikke i selskabet. Et overlap, hvor den
+ * ene part kun har sådanne roller, udelades; et selskab uden andre overlap og en person uden andre
+ * selskaber udelades også.
  */
+const NOT_TOGETHER = /stift|revisor/i;
+const togetherRoles = (roles: unknown[]): string[] => roles.filter((r): r is string => typeof r === "string" && !NOT_TOGETHER.test(r));
+
 export function adaptPersonNetwork(lassoId: string, raw: Json, today = new Date().toISOString().slice(0, 10)): PersonNetworkVM {
   const list = Array.isArray(raw) ? raw : arr(raw, "network", "people", "persons", "results", "items");
   const people: PersonNetworkRowVM[] = [];
@@ -166,22 +174,33 @@ export function adaptPersonNetwork(lassoId: string, raw: Json, today = new Date(
     for (const c of arr(e, "companyRelation", "companyRelations", "companies", "relations")) {
       const companyName = str(c, "companyName", "name");
       if (!companyName) continue;
-      const overlaps = arr(c, "overlaps", "periods");
-      const currentRoles = arr(c, "currentRoles").filter((r): r is string => typeof r === "string");
+      const rawOverlaps = arr(c, "overlaps", "periods");
+      // Overlap, hvor en af parterne kun er stifter eller revisor, tæller ikke.
+      const overlaps = rawOverlaps.filter((o) => {
+        const theirs = arr(o, "theirRoles");
+        const own = arr(o, "ownRoles");
+        return (theirs.length === 0 || togetherRoles(theirs).length > 0) && (own.length === 0 || togetherRoles(own).length > 0);
+      });
+      if (rawOverlaps.length > 0 && overlaps.length === 0) continue;
+      const currentRoles = togetherRoles(arr(c, "currentRoles"));
       let from: string | undefined;
       let to: string | undefined;
-      let open = currentRoles.length > 0;
+      // "Sidder sammen nu" kræver et åbent overlap OG at den anden stadig har en rolle i selskabet
+      // (Jakob 30.09: ophørte bestyrelsesmedlemmer stod som "siden 2017"). Uden overlap afgør currentRoles.
+      const hasCurrentField = isObj(c) && "currentRoles" in (c as Record<string, unknown>);
+      let openOverlap = false;
       let role: string | undefined = currentRoles[0];
       for (const o of overlaps) {
         const f = dateStr(o, "from");
         const t = dateStr(o, "to");
         if (f && (!from || f < from)) from = f;
-        if (!t) open = true;
+        if (!t) openOverlap = true;
         else if (!to || t > to) to = t;
         if (f) periods.push({ from: f, to: t });
-        const theirs = arr(o, "theirRoles").find((r): r is string => typeof r === "string");
+        const theirs = togetherRoles(arr(o, "theirRoles"))[0];
         if (theirs) role = theirs;
       }
+      const open = overlaps.length > 0 ? openOverlap && (!hasCurrentField || currentRoles.length > 0) : currentRoles.length > 0;
       active ||= open;
       const cvr = str(c, "cvr");
       const status = companyStatusText(str(c, "status"));
@@ -191,6 +210,7 @@ export function adaptPersonNetwork(lassoId: string, raw: Json, today = new Date(
         role: role ? role.toLowerCase() : undefined,
         from,
         to: open ? undefined : to,
+        ...(!open && !to ? { ended: true } : {}),
         status,
         statusKind: statusKind(status),
       });
