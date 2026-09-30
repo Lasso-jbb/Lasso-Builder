@@ -145,3 +145,69 @@ export function showcaseTabs(i: ShowcaseInput): ShowcaseTab[] {
     { id: "person", label: i.personName, entity: i.person, items: items(person) },
   ];
 }
+
+/* --- Fanen "Ikke i brug": samme komponent med rigtige data fra en anden virksomhed ----------- */
+
+/**
+ * Typer, der ikke vises med en anden virksomhed: kreditkomponenterne (hvert opslag kan bruge
+ * Creditsafe-kreditter, og uden abonnement er svaret det samme), og typer uden virksomhed
+ * (gemte sider, overvågning, opfølgning, resumé, søgning) eller med flere virksomheder (sammenligning).
+ */
+export const NO_ALTERNATIVE: ReadonlySet<ComponentType> = new Set<ComponentType>([
+  "LassoCreditRating",
+  "LassoScoreGauge",
+  "LassoScoreHistory",
+  "LassoAuditorIndependence",
+  "LassoSavedPages",
+  "LassoHeatmap",
+  "LassoFollowUps",
+  "LassoSummary",
+  "LassoCompanyTable",
+  "LassoCompareTable",
+  "LassoRanking",
+]);
+
+/** Hvorfor en type ikke kan vises med en anden virksomhed (tekst i fanen). */
+export const NO_ALTERNATIVE_REASON: Partial<Record<ComponentType, string>> = {
+  LassoCreditRating: "Kræver Creditsafe-abonnement på Lasso-kontoen. Hentes ikke for andre virksomheder, da hvert opslag kan bruge kreditter.",
+  LassoScoreGauge: "Bygger på Creditsafe-ratingen og kræver abonnement. Hentes ikke for andre virksomheder, da hvert opslag kan bruge kreditter.",
+  LassoScoreHistory: "Bygger på Creditsafe-ratingen og kræver abonnement; historikken opbygges ved hvert opslag.",
+  LassoAuditorIndependence: "Bygger på Creditsafe-data og kræver abonnement.",
+  LassoSavedPages: "Kræver en logget ind bruger (portalen eller Claude med login). Siden her er offentlig.",
+  LassoHeatmap: "Kræver en overvågningsliste for en logget ind bruger.",
+  LassoLivestock: "CHR-husdyrdata er ikke koblet på Lasso endnu (ingen live-data).",
+};
+
+export interface ShowcaseAlternatives {
+  companies: { id: string; name: string }[];
+  /** Pr. type: komponenten for hver alternativ virksomhed i prioriteret rækkefølge. */
+  variants: Partial<Record<ComponentType, { id: string; component: ViewComponent }[]>>;
+  /** Sammenligning af rigtige virksomheder (CompareTable, Ranking, LineChart med benchmark). */
+  compare: ShowcaseItem[];
+}
+
+/** Komponenterne fra virksomhedsfanen med `company` byttet til hver alternativ virksomhed. */
+export function showcaseAlternatives(companyTab: ShowcaseTab, alternatives: { id: string; name: string }[], compareIds: string[]): ShowcaseAlternatives {
+  const variants: ShowcaseAlternatives["variants"] = {};
+  for (const item of companyTab.items) {
+    if (NO_ALTERNATIVE.has(item.type)) continue;
+    const c = item.component as Record<string, unknown>;
+    if (typeof c.company !== "string") continue;
+    variants[item.type] = alternatives.map((a) => {
+      const { benchmark: _b, risk: _r, ...rest } = c;
+      return { id: a.id, component: componentSchema.parse({ ...rest, company: a.id }) };
+    });
+  }
+  const [a, b] = compareIds;
+  const compare = [
+    { type: "LassoLineChart", company: a, metric: "omsaetning", years: 5, benchmark: b },
+    { type: "LassoCompareTable", companies: compareIds },
+    { type: "LassoRanking", companies: compareIds, metric: "omsaetning" },
+  ].map((c) => toItem(componentSchema.parse(c)));
+  return { companies: alternatives, variants, compare };
+}
+
+/** Alle komponenter i alternativerne, til én samlet datahentning. */
+export function alternativeComponents(alt: ShowcaseAlternatives): ViewComponent[] {
+  return [...Object.values(alt.variants).flatMap((v) => (v ?? []).map((x) => x.component)), ...alt.compare.map((x) => x.component)];
+}

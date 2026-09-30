@@ -5,7 +5,7 @@
  * opslag. Data caches i 10 minutter; ?frisk=1 henter igen.
  */
 import type { Request, Response } from "express";
-import { showcaseTabs, type Dataset, type ShowcaseTab, type ViewSpec } from "@lasso/spec";
+import { alternativeComponents, showcaseAlternatives, showcaseTabs, type Dataset, type ShowcaseAlternatives, type ShowcaseTab, type ViewSpec } from "@lasso/spec";
 import type { Config } from "../config.js";
 import type { DataProvider } from "../data/index.js";
 import { resolveSpec } from "../data/resolve.js";
@@ -15,12 +15,17 @@ export const SHOWCASE = {
   company: "CVR-1-34580820", // LASSO X A/S
   person: "CVR-3-4000455341", // Jakob Bech Benediktson
   peers: ["CVR-1-32828353", "CVR-1-31479282"] as [string, string], // Lix Studios ApS, BENEDIKTSON HOLDING ApS
+  /** Store virksomheder med mange data: fanen "Ikke i brug" viser tomme komponenter med den første, der har data. */
+  alternatives: ["CVR-1-24256790", "CVR-1-61056416", "CVR-1-22756214"], // Novo Nordisk, Carlsberg, A.P. Møller - Mærsk
+  /** Sammenligning: to store og LASSO X (Mærsk har ingen bruttofortjeneste/omsætning i Lasso). */
+  compare: ["CVR-1-24256790", "CVR-1-61056416", "CVR-1-34580820"],
 };
 
 export interface ShowcaseBoot {
   mode: "showcase";
   generatedAt: string;
   tabs: (ShowcaseTab & { dataset: Dataset })[];
+  alt: ShowcaseAlternatives & { dataset: Dataset };
 }
 
 const TTL_MS = 10 * 60 * 1000;
@@ -35,8 +40,11 @@ export async function buildShowcase(provider: DataProvider, ids: typeof SHOWCASE
     provider.person(ids.person).then((p) => p.name).catch(() => "Jakob Bech Benediktson"),
   ]);
   const tabs = showcaseTabs({ ...ids, companyName, personName });
-  const datasets = await Promise.all(tabs.map((t) => resolveSpec(specOf(t), provider)));
-  return { mode: "showcase", generatedAt: new Date().toISOString(), tabs: tabs.map((t, i) => ({ ...t, dataset: datasets[i]! })) };
+  const altCompanies = await Promise.all(ids.alternatives.map(async (id) => ({ id, name: await provider.company(id).then((c) => c.name).catch(() => id) })));
+  const alt = showcaseAlternatives(tabs[0]!, altCompanies, ids.compare);
+  const altSpec = { version: 2, kind: "custom", title: "Alternativer", layout: "stack", criteria: [], components: alternativeComponents(alt) } as unknown as ViewSpec;
+  const [datasets, altDataset] = await Promise.all([Promise.all(tabs.map((t) => resolveSpec(specOf(t), provider))), resolveSpec(altSpec, provider)]);
+  return { mode: "showcase", generatedAt: new Date().toISOString(), tabs: tabs.map((t, i) => ({ ...t, dataset: datasets[i]! })), alt: { ...alt, dataset: altDataset } };
 }
 
 export function showcaseHandler(_config: Config, provider: DataProvider) {
