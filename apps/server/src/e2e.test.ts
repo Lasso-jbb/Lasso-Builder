@@ -66,7 +66,7 @@ test("health svarer", async () => {
 test("tools og UI-ressource er registreret", async () => {
   const { tools } = await client.listTools();
   const names = tools.map((t) => t.name).sort();
-  assert.deepEqual(names, ["compare_companies", "list_saved_pages", "remove_saved_page", "render_view", "resolve_view", "save_page", "save_view", "search_companies", "search_persons", "show_company", "show_person"]);
+  assert.deepEqual(names, ["compare_companies", "describe_components", "list_saved_pages", "remove_saved_page", "render_view", "resolve_view", "save_page", "save_view", "search_companies", "search_persons", "show_company", "show_person"]);
   const show = tools.find((t) => t.name === "show_company")!;
   const uri = (show._meta as { ui?: { resourceUri?: string } }).ui?.resourceUri ?? "";
   // Adressen bærer app-versionen, så værten ikke genbruger en gemt, forældet render-app.
@@ -339,11 +339,11 @@ test("instruktionerne er korte og uden dubletter af katalog og søgefelter (revi
   assert.match(instr, /show_person med navn eller person-ID \(CVR-3-…\)\. Vælg focus/);
   const person = (await client.listTools()).tools.find((t) => t.name === "show_person")!;
   assert.deepEqual((person.inputSchema.properties as Record<string, { enum?: string[] }>).focus?.enum, ["overblik", "roller", "netvaerk", "ejerskab", "risiko", "historik"]);
-  assert.doesNotMatch(instr, /Komponentkatalog/);
+  assert.doesNotMatch(instr, /Komponentindeks/);
   const { tools } = await client.listTools();
   const summary = (await client.callTool({ name: "show_company", arguments: { company: "99000001" } })).content as { text: string }[];
   assert.doesNotMatch(summary[0]!.text, /ved en virksomhed altid/);
-  assert.ok(tools.find((t) => t.name === "render_view")!.description!.includes("Komponentkatalog"));
+  assert.ok(tools.find((t) => t.name === "render_view")!.description!.includes("Komponentindeks"));
 });
 
 test("save_view gemmer, opdaterer samme adresse og viser siden med friske data", async () => {

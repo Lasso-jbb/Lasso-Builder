@@ -201,3 +201,19 @@ Status: **alle faser leveret på `staging`.** Prod-deploy (E3) er ejerens: `stag
 
 ### Rollemodel i praksis
 Fable: plan, 9 kritiske delopgaver (A1, A5/A11, B1, B5/B6, C1/C2, D1/D3, D5, E2) og alle godkendelser. Opus: B2, B4, B8, B10, D4 (regelmotor, composere, grid). Sonnet: A2, A4, A7, A8, A9, A13, B3, B9, C3, C5, C6, D2, D4b, E0. Haiku: A3-format (inkl. i A2), A6, A12, C4. Beslutningslog: `.claude/startprojekt-log.json` (lokal, gitignoreret).
+
+## 8. Token-reduktion (30.09, ejerens godkendelse af punkt 1–3)
+
+Målt med `staticText.test.ts`, som nu tæller både beskrivelser og input-skemaer (tegn / 3,3):
+
+| | Før | Efter |
+|---|---|---|
+| Værktøjsbeskrivelser + instruktioner | ≈ 21.400 | ≈ 7.100 |
+| Input-skemaer (JSON Schema) | ≈ 48.400 (heraf render_view ≈ 45.400) | ≈ 3.600 |
+| **I alt pr. samtale** | **≈ 69.800** | **≈ 10.700** (loft 12.000 i test) |
+
+1. **Katalog efter behov:** render_view har et komponentindeks (type, titel, formål). Props, brug og eksempler hentes med det nye værktøj `describe_components`. render_view's input-skema er løst (typenavnene står i det), og serveren validerer specen præcist. En ugyldig spec får katalogposterne for sine typer i fejlsvaret, så modellen kan rette i ét forsøg.
+2. **Gitterregler ude af teksten:** uden `width` pakker Lasso selv bredderne efter GRID_RULES og indholdet (Ø13, `dashboardBands`). Modellens eget valg var ringere end pakkerens.
+3. **LAYOUT_RULES kortet ned:** svarniveauer, mønstre, regnskab, group/toolbar og højdebudget er bevaret. Pakke- og foldningsregler, som rendereren selv klarer, er fjernet.
+
+Kvalitet: show_company, show_person, compare_companies og search_* er uberørte. Eval er uændret (side 92,3 %, plan 96,7 %, layout 60/60), og der er 915 tests. Prisen er ét ekstra kald (describe_components) i de få svar, der bruger fri komposition.

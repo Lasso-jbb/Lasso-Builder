@@ -11,6 +11,8 @@ export interface StaticToolParts {
   instructions: string;
   /** Beskrivelsen pr. værktøj (navn → tekst). */
   tools: Record<string, string>;
+  /** Input-skemaet pr. værktøj som JSON-tekst (modellen ser det også i hver samtale). */
+  schemas: Record<string, string>;
 }
 
 export async function staticToolParts(): Promise<StaticToolParts> {
@@ -24,6 +26,7 @@ export async function staticToolParts(): Promise<StaticToolParts> {
     return {
       instructions: client.getInstructions() ?? "",
       tools: Object.fromEntries(tools.map((t) => [t.name, t.description ?? ""])),
+      schemas: Object.fromEntries(tools.map((t) => [t.name, JSON.stringify(t.inputSchema)])),
     };
   } finally {
     await client.close();

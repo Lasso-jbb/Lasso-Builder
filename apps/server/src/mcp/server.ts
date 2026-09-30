@@ -3,10 +3,13 @@ import { McpServer, type CallToolResult } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import {
   catalogAsText,
+  catalogIndexText,
+  COMPONENT_CATALOG,
   FOCUSES,
   COMPANY_SECTIONS,
   COMPOSITION_RULES,
   LAYOUT_RULES,
+  LAYOUTS,
   DATASET_META_KEY,
   fieldsAsText,
   METRICS,
@@ -15,8 +18,8 @@ import {
   PERSON_FOCUSES,
   searchQuerySchema,
   TABLE_COLUMNS,
-  viewSpecSchema,
   type Ask,
+  type ComponentType,
   type Dataset,
   type ViewSpec,
 } from "@lasso/spec";
@@ -55,8 +58,8 @@ export type McpContext = UseCaseCtx;
 
 /**
  * Serverinstruktionerne står i hver samtale, så de holdes korte: routing og regler. Komponent-
- * kataloget og kompositionsreglerne står KUN i render_view's beskrivelse og søgefelterne KUN i
- * search_companies' (review P1-6: før stod begge dele to gange, ~9k tokens ekstra pr. tur).
+ * kataloget hentes med describe_components (render_view har kun et indeks, plan Ø8), kompositions-
+ * reglerne står KUN i render_view's beskrivelse og søgefelterne KUN i search_companies' (review P1-6).
  */
 const INSTRUCTIONS = `Lasso giver adgang til data om danske virksomheder og personer (CVR): stamdata, regnskaber, nøgletal, ledelse, bestyrelse, ejere, revisor, risiko, historik og kontakt, samt søgning med kriterier (målgrupper).
 
@@ -68,7 +71,7 @@ Vælg værktøj:
 - Lister og målgrupper ("revisorer i Region Midt med mindst 10 ansatte"): search_companies med brugerens formulering som query.
 - Personer på navn ('find Mette Holm', flere med samme navn): search_persons, derefter show_person med Lasso-ID.
 - Flere navngivne virksomheder → compare_companies (sammenligning, rangering, "hvem er størst"). Navne må bruges i stedet for CVR-numre.
-- Elementer, ingen focus dækker: render_view med en spec fra kataloget i dens beskrivelse.
+- Elementer, ingen focus dækker: render_view; hent først props for typerne med describe_components.
 - "Gem virksomheden/personen", "husk", "bogmærk", "sæt på min liste": save_page. "Mine gemte", "hvad har jeg gemt", "min liste": list_saved_pages. "Fjern fra listen": remove_saved_page. save_view er kun til et delbart link til en visning.
 - "Giv mig en URL", "del": save_view.
 
@@ -124,6 +127,47 @@ function serverCsp(publicBaseUrl: string): { connectDomains: string[] } | undefi
 
 function toolError(message: string): CallToolResult {
   return { isError: true, content: [{ type: "text", text: message }] };
+}
+
+const KNOWN_TYPES = new Set<string>(COMPONENT_CATALOG.map((c) => c.type));
+
+/**
+ * render_view's input-skema holdes løst (plan Ø8): det fulde viewSpec-skema er ca. 45.000 tokens
+ * JSON Schema, som modellen ellers fik i hver samtale. Typenavnene står her; props hentes med
+ * describe_components, og renderView validerer specen præcist (fejlsvaret har katalogposterne).
+ */
+const renderViewInputSchema = z.object({
+  title: z.string().min(1).max(120),
+  subtitle: z.string().max(200).optional(),
+  layout: z.enum(LAYOUTS).optional().describe("Udelad (dashboard)."),
+  criteria: z.array(z.record(z.string(), z.unknown())).max(20).optional().describe("Vises som chips under titlen: { field, operator, value }."),
+  answer: z.record(z.string(), z.unknown()).optional().describe("{ next: { label, prompt } }"),
+  components: z
+    .array(z.object({ type: z.enum(COMPONENT_CATALOG.map((c) => c.type) as [ComponentType, ...ComponentType[]]) }).passthrough())
+    .min(1)
+    .max(12)
+    .describe("Komponenter med props fra describe_components."),
+});
+
+/** describe_components: katalogposter for de kendte typer; ukendte nævnes med en rettelse. */
+export function describeComponents(types: readonly string[]): string {
+  const known = [...new Set(types)].filter((t) => KNOWN_TYPES.has(t)) as ComponentType[];
+  const unknown = [...new Set(types)].filter((t) => !KNOWN_TYPES.has(t));
+  const parts: string[] = [];
+  if (known.length) parts.push(catalogAsText(known));
+  if (unknown.length) parts.push(`Ukendte typer: ${unknown.join(", ")}. Brug typenavnene fra komponentindekset i render_view's beskrivelse.`);
+  parts.push("Udelad width; Lasso lægger bredderne efter indholdet.");
+  return parts.join("\n\n");
+}
+
+/** render_view's fejlsvar: en ugyldig spec får katalogposterne for de typer, den bruger, så modellen kan rette i ét forsøg. */
+function withCatalogHelp(message: string, input: unknown): string {
+  const comps = (input as { components?: unknown }).components;
+  const types = Array.isArray(comps)
+    ? [...new Set(comps.map((c) => (c as { type?: unknown })?.type).filter((t): t is string => typeof t === "string" && KNOWN_TYPES.has(t)))]
+    : [];
+  if (!message.startsWith("Specen er ugyldig") || types.length === 0) return message;
+  return `${message}\n\nKatalog for typerne i specen:\n${catalogAsText(types as ComponentType[])}`;
 }
 
 export function createMcpServer(ctx: McpContext): McpServer {
@@ -256,22 +300,44 @@ export function createMcpServer(ctx: McpContext): McpServer {
     },
   );
 
+  // Plan Ø8 (token-reduktion): kataloget hentes efter behov i stedet for at stå i render_view's beskrivelse.
+  registerAppTool(
+    server,
+    "describe_components",
+    {
+      title: "Beskriv komponenter",
+      description:
+        "Giver props, brug, 'brug ikke når', krav og eksempel for de komponenttyper, du vil bruge i render_view (typerne står i render_view's komponentindeks). Kald det før render_view med alle typer, du overvejer, i ét kald. Viser intet for brugeren.",
+      inputSchema: z.object({
+        types: z.array(z.string().min(1).max(60)).min(1).max(20).describe("Komponenttyper, fx ['LassoOwnerList', 'LassoKeyValueList']."),
+      }),
+      annotations: { title: "Beskriv komponenter", ...readOnly },
+      _meta: { ui: { visibility: ["model"] } },
+    },
+    async ({ types }): Promise<CallToolResult> => {
+      const text = describeComponents(types);
+      return { content: [{ type: "text", text }] };
+    },
+  );
+
   registerAppTool(
     server,
     "render_view",
     {
       title: "Vis oversigt",
-      description: `Fri komposition til oversigter og analyser, der ikke passer i show_company, show_person, search_companies, search_persons eller compare_companies (sammenligninger bygges med compare_companies, ikke her). Send en JSON-spec; Lassos kode henter data og tegner i Lassos design. Virksomheder angives med CVR-nummer, Lasso-ID eller navn (navne slås op, og valget står i svaret). Skriv aldrig HTML/CSS. Brug 1–12 komponenter i ét dashboard. Kald render_view én gang pr. svar.\n\n${COMPOSITION_RULES}
+      description: `Fri komposition til oversigter og analyser, der ikke passer i show_company, show_person, search_companies, search_persons eller compare_companies (sammenligninger bygges med compare_companies, ikke her). Send en JSON-spec; Lassos kode henter data og tegner i Lassos design. Virksomheder angives med CVR-nummer, Lasso-ID eller navn (navne slås op, og valget står i svaret). Skriv aldrig HTML/CSS. Brug 1–12 komponenter i ét dashboard. Kald render_view én gang pr. svar.
 
-${LAYOUT_RULES}\n\nKomponentkatalog (hver linje: Brug til / Brug ikke når / Kræver / Eksempel):\n${catalogAsText()}\n\nEksempel (ét dashboard): {"title":"Byg vs. Transport","components":[{"type":"LassoCompareTable","companies":["12345678","87654321"]},{"type":"LassoLineChart","company":"12345678","metric":"omsaetning","years":5,"benchmark":"87654321"}]}`,
-      inputSchema: viewSpecSchema.omit({ version: true, kind: true }),
+Før render_view: vælg typerne i indekset nedenfor og kald describe_components med dem for at få deres props, brug og eksempler. Gæt ikke props.\n\n${COMPOSITION_RULES}
+
+${LAYOUT_RULES}\n\nKomponentindeks (type (titel): formål):\n${catalogIndexText()}\n\nEksempel (ét dashboard): {"title":"Byg A/S: ejere og revisor","components":[{"type":"LassoCompanyHead","company":"12345678"},{"type":"LassoOwnerList","company":"12345678"},{"type":"LassoKeyValueList","company":"12345678","rows":["revisor","revisorskift"]}]}`,
+      inputSchema: renderViewInputSchema,
       annotations: { title: "Vis oversigt", ...readOnly },
       _meta: ui,
     },
     async (input): Promise<CallToolResult> => {
       // Navne ("Risika") slås op som i show_company, så modellen ikke skal søge først (review P1-7).
       const r = await renderView(ctx, input);
-      if ("error" in r) return toolError(r.error);
+      if ("error" in r) return toolError(withCatalogHelp(r.error, input));
       return viewResult(r.spec, r.dataset, { note: r.note, pdfLink: mcpPdfLink(ctx.config, r) });
     },
   );
