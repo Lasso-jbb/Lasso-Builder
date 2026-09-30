@@ -47,7 +47,7 @@ import { entityLink, focusLinks, isEntityId, sendToLassoLink, verifyCompanyLink,
 import { injectBoot, loadViewHtml } from "./web/page.js";
 import { ASK_AGAIN, failPage, FROM_LIST, linkFailure, VIEW_MISSING, VIEW_OUTDATED } from "./web/linkErrors.js";
 import { portalApi, portalErrorHandler } from "./web/portalApi.js";
-import { showcaseHandler } from "./web/showcase.js";
+import { DEPLOYED_VERSION, showcaseHandler } from "./web/showcase.js";
 import { pdfAvailable, pdfRendererFor, type PdfRenderer } from "./pdf/renderer.js";
 import { pdfBoot, pdfRoutes, portalPdfRoutes } from "./pdf/routes.js";
 
@@ -136,6 +136,7 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
     res.json({
       name: "lasso-mcp",
       version: VERSION,
+      commit: DEPLOYED_VERSION,
       env: config.APP_ENV,
       mcp: `${config.publicBaseUrl}/mcp`,
       portal: `${config.publicBaseUrl}/portal`,
@@ -180,6 +181,7 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
     res.json({
       status: dbOk ? "ok" : "degraded",
       version: VERSION,
+      commit: DEPLOYED_VERSION,
       env: config.APP_ENV,
       dataSource: provider.kind,
       lassoCredentials: hasLassoCredentials(config),

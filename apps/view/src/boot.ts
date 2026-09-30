@@ -65,6 +65,8 @@ export interface PrintBoot {
 export interface ShowcaseBoot {
   mode: "showcase";
   generatedAt: string;
+  /** Kort commit-hash for den udrullede kode ("lokal" uden Railway). */
+  version?: string;
   tabs: (ShowcaseTab & { dataset: Dataset })[];
   alt: ShowcaseAlternatives & { dataset: Dataset };
   portal: { company: string; name: string; pages: (PortalPage & { dataset: Dataset })[] };

@@ -301,7 +301,7 @@ export function ShowcaseView({ boot }: { boot: ShowcaseBoot }) {
           <div className="sc-wrap">
             <h1 className="sc-h1">Lassos komponenter med live-data</h1>
             <div className="sc-sub">
-              {total} komponenter, nummereret efter kataloget. Data hentet {when}; <a href="?frisk=1">hent igen</a>.
+              {total} komponenter, nummereret efter kataloget. Data hentet {when}; <a href="?frisk=1">hent igen</a>. Version {boot.version ?? "ukendt"}.
             </div>
             <div className="sc-tabs" role="tablist">
               {boot.tabs.map((t) => (

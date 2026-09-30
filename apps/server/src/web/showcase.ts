@@ -21,9 +21,14 @@ export const SHOWCASE = {
   compare: ["CVR-1-24256790", "CVR-1-61056416", "CVR-1-34580820"],
 };
 
+/** Den udrullede commit (Railway sætter RAILWAY_GIT_COMMIT_SHA), så man kan se, om siden kører den nyeste kode. */
+export const DEPLOYED_VERSION = (process.env.RAILWAY_GIT_COMMIT_SHA ?? process.env.GIT_COMMIT_SHA ?? "").slice(0, 7) || "lokal";
+
 export interface ShowcaseBoot {
   mode: "showcase";
   generatedAt: string;
+  /** Kort commit-hash for den udrullede kode. */
+  version?: string;
   tabs: (ShowcaseTab & { dataset: Dataset })[];
   alt: ShowcaseAlternatives & { dataset: Dataset };
   /** Fanen "Lasso-side": portalens Overblik og Stamoplysninger for virksomheden, bygget af komponenterne. */
@@ -55,6 +60,7 @@ export async function buildShowcase(provider: DataProvider, ids: typeof SHOWCASE
   return {
     mode: "showcase",
     generatedAt: new Date().toISOString(),
+    version: DEPLOYED_VERSION,
     tabs: tabs.map((t, i) => ({ ...t, dataset: datasets[i]! })),
     alt: { ...alt, dataset: altDataset },
     portal: { company: ids.company, name: companyName, pages: pages.map((pg, i) => ({ ...pg, dataset: pageData[i]! })) },
