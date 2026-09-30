@@ -340,6 +340,12 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-kpis { display: grid; grid-template-columns: repeat(var(--lasso-kpi-count, 4), minmax(0, 1fr)); border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); }
 .lasso-kpi { padding: 22px 24px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .lasso-kpi + .lasso-kpi { border-left: 1px solid var(--lasso-border); }
+/* Jakob 30.09: kurven fjernes, når kortet er for smalt til både tal og kurve (ellers lægger den sig oven i tallet).
+   Hvert kort er sin egen container, så det gælder, uanset hvor mange kort der står på rækken. */
+.lasso-kpis > .lasso-kpi { container: lasso-kpicard / inline-size; }
+@container lasso-kpicard (max-width: 229px) {
+  .lasso-root .lasso-kpi .lasso-spark { display: none; }
+}
 .lasso-kpi__label { font-size: var(--lasso-fs); line-height: 18px; font-weight: 400; color: var(--lasso-text-2); }
 .lasso-kpi__row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 /* 09.1/26c.1: tallet 28 px på desktop, 24 px på tablet og 20 px på mobil. */
@@ -1089,7 +1095,8 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
    ".lasso-root" foran, så farven vinder over ".lasso-root button { color: inherit }". */
 .lasso-root .lasso-relations__name { font-size: var(--lasso-fs); line-height: 20px; font-weight: 400; color: var(--lasso-text); }
 .lasso-root button.lasso-relations__name:hover, .lasso-root button.lasso-relations__name:focus-visible { color: var(--lasso-accent-text); }
-.lasso-relations__more { font-size: var(--lasso-fs-sm); font-weight: 400; color: var(--lasso-muted); }
+.lasso-root .lasso-relations__more { align-self: flex-start; padding: 0; border: 0; background: none; font: inherit; font-size: var(--lasso-fs-sm); font-weight: 400; color: var(--lasso-muted); cursor: pointer; text-align: left; }
+.lasso-root .lasso-relations__more:hover, .lasso-root .lasso-relations__more:focus-visible { color: var(--lasso-accent-text); text-decoration: underline; }
 .lasso-root .lasso-relations__count { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 40px; padding: 8px 0 0; border: 0; border-top: 1px solid var(--lasso-border); background: none; font-size: var(--lasso-fs); color: var(--lasso-text); text-align: left; cursor: pointer; }
 div.lasso-relations__count { cursor: default; }
 .lasso-relations__count > span:first-child { flex: 1; }

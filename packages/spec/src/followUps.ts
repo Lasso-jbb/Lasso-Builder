@@ -145,7 +145,8 @@ export function personFollowUps(ds: Dataset, id: string, focus: PersonFollowUpFo
     roller: hasRoles ? { topic: "roller", label: `Hvor sidder ${first} i bestyrelser?`, prompt: n("Hvilke roller har {navn} i selskaber?") } : undefined,
     netvaerk: hasRoles && opts.network !== false ? { topic: "netvaerk", label: `Hvem sidder ${first} sammen med?`, prompt: n("Hvem sidder {navn} sammen med i selskaber?") } : undefined,
     ejerskab: owns ? { topic: "ejerskab", label: `Hvilke selskaber ejer ${first}?`, prompt: n("Hvilke selskaber ejer {navn}?") } : undefined,
-    risiko: hasRoles ? { topic: "risiko", label: "Er der konkurser i historikken?", prompt: n("Har {navn} været med i selskaber, der gik konkurs?") } : undefined,
+    // Personens risikosektion udgår (Jakob 30.09): intet spørgsmål peger derhen.
+    risiko: undefined,
     historik: { topic: "historik", label: "Hvad er der sket for nylig?", prompt: n("Hvad er der sket med {navn} for nylig, og er der nyheder?") },
   };
   const order: Record<PersonFollowUpFocus, PersonFollowUpFocus[]> = {

@@ -369,8 +369,6 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
 
   const list = personCompanies(person);
   const hasRoles = person.roles.length > 0;
-  const risk = personRisk(person);
-  const cases = [...risk.bankruptcies, ...risk.dissolutions];
   const events = ds.timeline[id]?.events ?? [];
   const news = ds.news[id]?.items ?? [];
   const ownsByRoles = person.roles.some((r) => r.active && r.kind === "owner" && !/reel/i.test(r.role));
@@ -395,15 +393,14 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
   };
   const facts: ViewComponent = { type: "LassoPersonFacts", person: id };
   const stats: ViewComponent = { type: "LassoPersonStats", person: id };
-  // Hovedelementet og stamoplysningerne pakkes sammen (én gruppe): bredderne følger reglerne (Ø13), fx
-  // aktive roller ½ + stamoplysninger ½; uden hovedelement står stamoplysningerne alene.
+  // Stamoplysningsblokken (LassoPersonFacts) udgår (Jakob 30.09): hovedelementet står alene i fuld bredde.
+  // (Pakningen nedenfor kender stadig parret, så gamle specs med blokken tegnes som før.)
   let withFactsMain: ViewComponent | null = null;
   const withFacts = (main: ViewComponent | null) => {
     if (main) {
       withFactsMain = main;
       components.push(main);
     }
-    components.push(facts);
   };
 
   switch (focus) {
@@ -424,11 +421,8 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
       break;
     }
     case "risiko": {
-      // Alle sager med detaljer; uden sager kun den positive tomme tilstand.
-      components.push({ type: "LassoPersonRisk", person: id });
-      if (cases.length === 0) break;
-      // Forløbet i de berørte selskaber (ind, ud og status), ikke kun statushændelserne, som sagerne
-      // allerede viser, i fuld bredde. De øvrige ophørte roller står på roller (tidsbåndene).
+      // Risikosektionen (LassoPersonRisk) udgår (Jakob 30.09): forløbet i de berørte selskaber (ind, ud og
+      // status) i fuld bredde; uden sager siger forløbets tomme tilstand det.
       components.push({ type: "LassoTimeline", person: id, filter: "risiko", title: "Forløb i selskaberne" });
       break;
     }
@@ -445,8 +439,7 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
       // Overblik. B4: persontallene (netværk, konkurser, tvangsopløsninger) lige under hovedet i fuld bredde,
       // når budgettet giver plads (se nedenfor). Alvorlig risiko (personen var med, da det skete) står derunder.
       if (hasRoles) components.push(stats);
-      const serious = hasRoles && cases.some((c) => c.involved);
-      if (serious) components.push({ type: "LassoPersonRisk", person: id });
+      // Risikosektionen (LassoPersonRisk) udgår (Jakob 30.09); konkurserne står stadig i persontallene.
       // De aktive roller som kort liste + stamoplysninger (½ + ½, smal højst ½); uden aktive roller de ophørte.
       const current = personRoleRows(person, "current").length > 0;
       const ended = personRoleRows(person, "ended").length > 0;
@@ -461,8 +454,6 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
       // Netværk (fuld bredde), risiko, historik og ejerskab pakket efter bredderne; ingen nyheder på overblikket (de står på historik).
       const halves: ViewComponent[] = [];
       if (network.length > 0) halves.push({ type: "LassoPersonNetwork", person: id, limit: OVERVIEW_NETWORK, more: "netvaerk" });
-      // Risiko står altid, når personen har roller: "ingen konkurser" er også et svar.
-      if (hasRoles && !serious) halves.push({ type: "LassoPersonRisk", person: id });
       if (events.length > 0) halves.push({ type: "LassoTimeline", person: id, limit: OVERVIEW_EVENTS, more: "historik" });
       const d = diagram({ title: "Ejerskab", showError: false });
       if (d) halves.push(d);
@@ -630,13 +621,9 @@ function composeAskPerson(lassoId: string, ds: Dataset, ask: Ask, options: Compo
   const leads = plan.lead.map((i) => adapt(i, true)).filter(take);
   const halves: ViewComponent[] = [];
   const [first, ...rest] = leads;
-  // Svaret og stamoplysningerne pakkes sammen (som på roller-fanen); bopæl og ejerstruktur står alene.
-  const answer: ViewComponent[] = [];
-  if (first && (first.type === "LassoPersonFacts" || first.type === "LassoOwnershipDiagram")) answer.push(first);
-  else if (first) {
-    seen.add("LassoPersonFacts");
-    answer.push(first, { type: "LassoPersonFacts", person: id });
-  }
+  // Svaret står alene; stamoplysningsblokken (LassoPersonFacts) udgår (Jakob 30.09).
+  seen.add("LassoPersonFacts");
+  const answer: ViewComponent[] = first ? [first] : [];
   halves.push(...rest);
   for (const i of plan.context) {
     if (components.length + answer.length + halves.length >= ASK_MAX_PERSON) break;

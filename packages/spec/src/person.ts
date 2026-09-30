@@ -68,6 +68,8 @@ export interface PersonNetworkCompanyVM {
   role?: string;
   from?: string;
   to?: string;
+  /** Den fælles periode er slut, men kilden har ingen slutdato (Jakob 30.09: vises som afsluttet, aldrig "siden"). */
+  ended?: boolean;
   status?: string;
   statusKind?: CompanyVM["statusKind"];
 }

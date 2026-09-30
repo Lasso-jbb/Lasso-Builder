@@ -125,3 +125,25 @@ test("adaptPersonSearch tager kun personer", () => {
   });
   assert.deepEqual(rows, [{ lassoId: "CVR-3-4000000001", name: "Mette Eksempel", city: "Aarhus" }]);
 });
+
+test("adaptPersonNetwork (Jakob 30.09): stifter og revisor tæller ikke; ophørt uden slutdato er afsluttet, ikke 'siden'", () => {
+  const raw = [
+    // Kun stifter sammen: udelades helt.
+    { name: "Kun Stifter", unitNo: 4000000030, companyRelation: [{ companyName: "Firma IVS", cvr: 30000030, status: "NORMAL", currentRoles: ["Stiftere"], overlaps: [{ from: "2014-01-03", to: null, theirRoles: ["Stiftere"], ownRoles: ["Stiftere"] }] }] },
+    // Revisor i ét selskab, bestyrelse i et andet: kun bestyrelsen tæller.
+    { name: "Revisor Og Bestyrelse", unitNo: 4000000031, companyRelation: [
+      { companyName: "Revideret A/S", cvr: 30000031, status: "NORMAL", currentRoles: ["Underskrivende revisor"], overlaps: [{ from: "2017-01-01", to: null, theirRoles: ["Underskrivende revisor"], ownRoles: ["Direktør"] }] },
+      { companyName: "Bestyrelse A/S", cvr: 30000032, status: "NORMAL", currentRoles: ["Bestyrelsesmedlem"], overlaps: [{ from: "2018-01-01", to: null, theirRoles: ["Bestyrelsesmedlem"], ownRoles: ["Direktør"] }] },
+    ] },
+    // Gået af bestyrelsen: åbent overlap, men ingen nuværende rolle -> afsluttet uden kendt slutdato.
+    { name: "Gået Af", unitNo: 4000000033, companyRelation: [{ companyName: "Lasso X A/S", cvr: 34580820, status: "NORMAL", currentRoles: [], overlaps: [{ from: "2017-05-01", to: null, theirRoles: ["Bestyrelsesmedlem"], ownRoles: ["Direktør"] }] }] },
+  ];
+  const n = adaptPersonNetwork("CVR-3-4000000001", raw, "2026-01-01");
+  assert.deepEqual(n.people.map((p) => p.name).sort(), ["Gået Af", "Revisor Og Bestyrelse"]);
+  const rb = n.people.find((p) => p.name === "Revisor Og Bestyrelse")!;
+  assert.deepEqual(rb.companies.map((c) => c.companyName), ["Bestyrelse A/S"]);
+  const gone = n.people.find((p) => p.name === "Gået Af")!;
+  assert.equal(gone.active, false);
+  assert.equal(gone.companies[0]!.ended, true);
+  assert.equal(gone.companies[0]!.to, undefined);
+});
