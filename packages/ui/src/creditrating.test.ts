@@ -37,7 +37,7 @@ test("fyldt: bogstav + ord, kreditmaksimum, lokal score, seneste ændring (ingen
   // 18.1 (Jakob 29.09): kun den aktuelle vurdering; ingen forrige, ingen pil/ændring.
   assert.doesNotMatch(html, /lasso-scorecmp|Forrige|mindre risiko/);
   assert.match(t, /Seneste ændring15\.04\.2026/);
-  assert.match(html, /<button type="button" class="lasso-link lasso-credit__action">Hent kreditrapport \(PDF\)<\/button>/);
+  assert.match(html, /<div class="lasso-kv-top lasso-credit__action"><button type="button" class="lasso-kv-link">.*<span>Hent kreditrapport \(PDF\)<\/span><\/button>/);
   assert.match(t, /Ny beregning hos Creditsafe koster en kredit og tager 5–45 sekunder; vurderingen gemmes 24 timer\./);
   assert.doesNotMatch(t, /Kilde:/, "G3: ingen kildevisning");
   // Egen skala: ingen 0–100-måler eller observationernes alvorsord.
@@ -99,7 +99,7 @@ test("låst, ikke beregnet, fejl, ingen vurdering og henter", () => {
 });
 
 test("PDF-linket går gennem værten (open-link), og uden vært er det et almindeligt link", () => {
-  assert.match(render({ rating: OK }), /<a class="lasso-link lasso-credit__action" href="https:\/\/example\.com\/eksempel-kreditrapport\.pdf" target="_blank" rel="noopener noreferrer">/);
+  assert.match(render({ rating: OK }), /<a class="lasso-kv-link" href="https:\/\/example\.com\/eksempel-kreditrapport\.pdf" target="_blank" rel="noopener noreferrer">/);
   assert.doesNotMatch(render({ rating: { ...OK, pdfUrl: undefined } }), /Hent kreditrapport/);
 });
 

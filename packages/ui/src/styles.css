@@ -1249,7 +1249,7 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-credit__change--worse { color: var(--lasso-negative); }
 .lasso-credit__change--same { color: var(--lasso-muted); }
 /* Handlingslink (PDF, "Hent igen") i koral tekst som sektionshandlinger; skal slå `.lasso-root button { color: inherit }`. */
-.lasso-credit .lasso-credit__action { display: inline-block; margin-top: var(--lasso-space-3); color: var(--lasso-accent-text); font-weight: 500; }
+.lasso-credit .lasso-credit__action { margin: var(--lasso-space-3) 0 0; }
 .lasso-credit__note { margin: var(--lasso-space-3) 0 0; font-size: 12px; line-height: 17px; color: var(--lasso-muted); }
 @container lasso (max-width: 560px) {
   .lasso-credit__fact { flex-wrap: wrap; row-gap: 2px; min-height: var(--lasso-touch-h); }
@@ -5567,14 +5567,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 }
 
 /* Virksomhedskortet (LassoKeyValueList look 'card', portalens venstre kolonne, Jakob 30.09). */
-.lasso-kvcard { display: flex; flex-direction: column; gap: 14px; font-size: 14px; color: var(--lasso-text); }
-.lasso-kvcard__p { margin: 0; }
-.lasso-kvcard__line { display: block; line-height: 1.45; }
-.lasso-kvcard__label { font-weight: 600; line-height: 1.45; }
 /* Stamoplysninger med flere værdier (binavne, brancher) står én pr. linje. */
 .lasso-kv-row__value--wrap .lasso-fold__text { white-space: pre-line; }
-.lasso-root .lasso-kv-link.lasso-kv-link--inline { padding: 0; display: inline; white-space: normal; text-align: left; width: auto; }
-.lasso-root .lasso-kv-link.lasso-kv-link--inline svg { vertical-align: -2px; margin-left: 6px; }
 
 /* Portalens relations- og historiktabeller (LassoRelationsTable, LassoCompanyHistory, Jakob 30.09). */
 .lasso-reltable-wrap { display: flex; flex-direction: column; }
@@ -5601,7 +5595,5 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-reltable__row { flex-direction: column; gap: 2px; }
   .lasso-reltable__period { grid-template-columns: auto auto auto; gap: 4px; text-align: left; }
 }
-.lasso-kv-years--below { margin: 0 0 12px; }
 /* Portalens relationer og historik: navne og "Vis alle" som koral links. */
 .lasso-reltable .lasso-link { color: var(--lasso-accent-text); }
-.lasso-nowrap { white-space: nowrap; }

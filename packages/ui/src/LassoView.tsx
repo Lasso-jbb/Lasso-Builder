@@ -408,7 +408,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           year={c.year}
           rows={c.rows}
           onOpen={props.host.drillDown ? act : undefined}
-          links={c.variant === "financials" && !c.maxRows && !c.fields ? statementsLink(c.company, empty, props, act) : undefined}
+          links={c.variant === "financials" && !c.maxRows ? statementsLink(c.company, empty, props, act) : undefined}
           years={c.years}
           maxRows={c.maxRows}
           look={c.look}

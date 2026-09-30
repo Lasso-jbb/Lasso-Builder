@@ -176,7 +176,8 @@ function fieldRows(year: FinancialsVM["years"][number], currency: string | undef
       case "afkastningsgrad":
         return { label: "Afkastningsgrad", value: roa !== undefined ? `${roa.toLocaleString("da-DK", { maximumFractionDigits: 2 })} %` : undefined, danger: roa !== undefined && roa < 0 };
       case "pdf":
-        return { label: "PDF regnskab", value: audit?.pdfUrl || statements?.pdfUrl ? `Hent ${year.year} regnskabet` : undefined, pdf: audit?.pdfUrl ?? statements?.pdfUrl };
+        // Ingen række: URL'en bliver til "Hent regnskabet ÅÅÅÅ" øverst i elementet (09.5).
+        return { label: "PDF", pdf: audit?.pdfUrl ?? statements?.pdfUrl };
       case "resultat":
         return { ...metricRow(year, f, cur, quality), label: "Resultat efter skat" };
       default:
@@ -222,44 +223,83 @@ const CARD_ROWS: readonly CompanyFactKey[] = ["adresse", "cvr", "stiftet", "ansa
  * ansatte og web som linjer uden nøgle; telefon og e-mail med overskrift, én pr. linje. Rækkerne
  * vælges og ordnes med `rows` som i listen.
  */
-function CompanyCard({ company, contact, rows = CARD_ROWS, title }: { company: CompanyVM; contact?: ContactVM; rows?: readonly CompanyFactKey[]; title?: string }) {
+/**
+ * Virksomhedskortet (look 'card'): samme opbygning og typografi som virksomhedskortet i "Se alle"-panelet
+ * (08.7, `lasso-cpcompany`): adresse, CVR og stiftet, ansatte i tekst-2, web som koralt link, telefonnumre
+ * (verificerede med skjold) og e-mailadresser under et gruppenavn i 600.
+ */
+function CompanyCard({ company, contact, rows = CARD_ROWS, title, onLink }: { company: CompanyVM; contact?: ContactVM; rows?: readonly CompanyFactKey[]; title?: string; onLink?: (url: string) => void }) {
   const a = company.address;
-  const phones = [...new Set([company.phone, contact?.phone, ...(contact?.verifiedNumbers ?? []).map((n) => n.phoneNumber)].filter((x): x is string => Boolean(x)).map((x) => formatPhone(x) ?? x))];
+  const digits = (v: string) => v.replace(/\D/g, "").replace(/^45(?=\d{8}$)/, "");
+  const verified = new Set((contact?.verifiedNumbers ?? []).filter((n) => !n.expired).map((n) => digits(n.phoneNumber)));
+  const rawPhones = [company.phone, contact?.phone, ...(contact?.verifiedNumbers ?? []).map((n) => n.phoneNumber)].filter((x): x is string => Boolean(x));
+  const phones = [...new Map(rawPhones.map((x) => [digits(x), formatPhone(x) ?? x])).entries()];
   const emails = [...new Set([company.email, contact?.email, ...(contact?.emails ?? [])].filter((x): x is string => Boolean(x)).map((x) => formatEmail(x) ?? x))];
-  const web = formatWeb(company.website ?? contact?.website);
+  const site = company.website ?? contact?.website;
+  const web = formatWeb(site);
+  const href = site ? (/^https?:\/\//i.test(site) ? site : `https://${site}`) : undefined;
   const blocks: ReactNode[] = [];
-  const line = (k: string, ...xs: (string | undefined)[]) => {
+  const lines = (k: string, ...xs: (string | undefined)[]) => {
     const v = xs.filter(Boolean);
-    if (v.length) blocks.push(<p key={k} className="lasso-kvcard__p">{v.map((x, i) => <span key={i} className="lasso-kvcard__line">{x}</span>)}</p>);
+    if (v.length) blocks.push(<div key={k} className="lasso-cpcompany__lines">{v.map((x, i) => <span key={i}>{x}</span>)}</div>);
   };
-  const labeled = (k: string, label: string, values: string[]) => {
-    if (values.length) blocks.push(<div key={k} className="lasso-kvcard__block"><div className="lasso-kvcard__label">{label}</div>{values.map((v) => <div key={v} className="lasso-kvcard__line">{v}</div>)}</div>);
-  };
-  // CVR og stiftet står i samme afsnit, som i portalen.
+  // CVR og stiftet står i samme afsnit (08.7).
   const idLines: (string | undefined)[] = [];
   const flushId = () => {
-    if (idLines.length) line(`id${blocks.length}`, ...idLines.splice(0));
+    if (idLines.length) lines(`id${blocks.length}`, ...idLines.splice(0));
   };
   for (const k of rows) {
     if (k === "cvr") idLines.push(company.cvr ? `CVR ${company.cvr}` : undefined);
     else if (k === "stiftet") idLines.push(company.founded ? `Stiftet ${company.founded.slice(0, 4)}` : undefined);
     else {
       flushId();
-      if (k === "adresse") line(k, a?.street, [a?.zip, a?.city].filter(Boolean).join(" ") || undefined);
-      else if (k === "ansatte") line(k, company.employees != null ? `${formatNumber(company.employees)} ansatte` : undefined);
-      else if (k === "web") line(k, web);
-      else if (k === "telefon") labeled(k, "Telefonnumre", phones);
-      else if (k === "email") labeled(k, "Emailadresser", emails);
-      else if (k === "firmanavn") line(k, company.name);
-      else if (k === "kommune") line(k, a?.municipality);
-      else if (k === "form") line(k, company.form);
-      else if (k === "branche" || k === "brancher") line(k, company.industryText);
+      if (k === "adresse") lines(k, a?.street, [a?.zip, a?.city].filter(Boolean).join(" ") || undefined);
+      else if (k === "ansatte") lines(k, company.employees != null ? `${formatNumber(company.employees)} ansatte` : undefined);
+      else if (k === "web" && web && href)
+        blocks.push(
+          onLink ? (
+            <button key={k} type="button" className="lasso-cpcompany__web" onClick={() => onLink(href)}>
+              {web}
+            </button>
+          ) : (
+            <a key={k} className="lasso-cpcompany__web" href={href} target="_blank" rel="noreferrer">
+              {web}
+            </a>
+          ),
+        );
+      else if (k === "telefon" && phones.length)
+        blocks.push(
+          <div key={k} className="lasso-cpcompany__group">
+            <div className="lasso-cpcompany__label">Telefonnumre</div>
+            {phones.map(([d, p]) => (
+              <div key={d} className="lasso-cpcompany__value">
+                <span>{p}</span>
+                {verified.has(d) ? <ShellIcon name="shield-check" size={14} className="lasso-cpcompany__shield" /> : null}
+              </div>
+            ))}
+          </div>,
+        );
+      else if (k === "email" && emails.length)
+        blocks.push(
+          <div key={k} className="lasso-cpcompany__group">
+            <div className="lasso-cpcompany__label">Emailadresser</div>
+            {emails.map((e) => (
+              <div key={e} className="lasso-cpcompany__value">
+                {e}
+              </div>
+            ))}
+          </div>,
+        );
+      else if (k === "firmanavn") lines(k, company.name);
+      else if (k === "kommune") lines(k, a?.municipality);
+      else if (k === "form") lines(k, company.form);
+      else if (k === "branche" || k === "brancher") lines(k, company.industryText);
     }
   }
   flushId();
   return (
     <Section title={title ?? company.name} span="half">
-      <div className="lasso-kvcard">{blocks}</div>
+      <div className="lasso-cpcompany__facts">{blocks}</div>
     </Section>
   );
 }
@@ -337,7 +377,7 @@ export function KeyValueList({
   fields?: readonly FinancialFieldKey[];
   /** Det fulde regnskab (resultat før skat, afkastningsgrad, revisionsoplysninger), når `fields` beder om dem. */
   statements?: FinancialStatementsVM;
-  /** Åbner et link (PDF-rækken). */
+  /** Åbner et link (regnskabets PDF, når `fields` beder om "pdf"). */
   onLink?: (url: string) => void;
 }) {
   const heading = title ?? (variant === "financials" ? "Regnskab" : "Virksomhedsoplysninger");
@@ -377,15 +417,19 @@ export function KeyValueList({
     const options = (asked && !recent.includes(asked) ? [asked, ...recent] : recent).reverse();
     const selected = years.find((y) => y.year === year) ?? asked ?? last;
     // Kvalitetsflaggene gælder seneste regnskab.
-    const rows: (Row & { pdf?: string })[] = fields
+    const all: (Row & { pdf?: string })[] = fields
       ? fieldRows(selected, financials!.currency, fields, statements, selected === last ? financials!.quality : undefined)
       : financialsRows(selected, financials!.currency, exclude, only, selected === last ? financials!.quality : undefined);
+    // 09.5: regnskabets PDF er handlingen "Hent regnskabet ÅÅÅÅ" øverst i elementet, aldrig en række i listen.
+    const pdfUrl = all.find((r) => r.pdf)?.pdf;
+    const rows = all.filter((r) => !("pdf" in r));
+    const pdf = onPdf ? () => onPdf(selected.year) : pdfUrl && onLink ? () => onLink(pdfUrl) : undefined;
     const missingYear = startYear !== undefined && !asked;
     return (
       <Section
         title={heading}
         action={
-          options.length > 1 && !fields ? (
+          options.length > 1 ? (
             // Årsvælger = niveau 3-faner (29). Over 3 år på mobil bliver den en dropdown (29, mobil).
             <div className="lasso-kv-years">
               <Tabs level={3} className="lasso-seg-accent" ariaLabel="Vælg regnskabsår" items={options.map((y) => ({ id: String(y.year), label: String(y.year) }))} value={String(selected.year)} onChange={(id) => setYear(Number(id))} />
@@ -394,16 +438,10 @@ export function KeyValueList({
         }
         span="half"
       >
-        {/* Portalens regnskabsoplysninger (fields): årsvælgeren står under overskriften i fuld bredde. */}
-        {fields && options.length > 1 ? (
-          <div className="lasso-kv-years lasso-kv-years--below">
-            <Tabs level={3} className="lasso-seg-accent" ariaLabel="Vælg regnskabsår" items={options.map((y) => ({ id: String(y.year), label: String(y.year) }))} value={String(selected.year)} onChange={(id) => setYear(Number(id))} />
-          </div>
-        ) : null}
         {/* 09.5 (Jakob 29.09): handlingen "Hent regnskabet" står øverst i elementet, ikke som række nederst. */}
-        {onPdf ? (
+        {pdf ? (
           <div className="lasso-kv-top">
-            <button type="button" className="lasso-kv-link" onClick={() => onPdf(selected.year)}>
+            <button type="button" className="lasso-kv-link" onClick={pdf}>
               <ShellIcon name="download" size={15} />
               <span>Hent regnskabet {selected.year}</span>
             </button>
@@ -416,18 +454,7 @@ export function KeyValueList({
               <div className={`lasso-kv-row__value ${r.danger ? "lasso-down" : ""}`}>
                 {/* 19.1 (Jakob): kvalitetsflaget står FORAN tallet */}
                 {r.flag && r.value ? <QualityFlag text={r.flag} /> : null}
-                {r.pdf && r.value && onLink ? (
-                  <button type="button" className="lasso-kv-link lasso-kv-link--inline" onClick={() => onLink(r.pdf!)}>
-                    {/* Sidste ord og ikonet holdes sammen, når linket brydes i en smal kolonne. */}
-                    {r.value.split(" ").slice(0, -1).join(" ")}{" "}
-                    <span className="lasso-nowrap">
-                      {r.value.split(" ").at(-1)}
-                      <ShellIcon name="download" size={15} />
-                    </span>
-                  </button>
-                ) : (
-                  r.value ?? <NotReported />
-                )}
+                {r.value ?? <NotReported />}
               </div>
             </div>
           ))}
@@ -439,7 +466,7 @@ export function KeyValueList({
     );
   }
 
-  if (look === "card") return <CompanyCard company={company!} contact={contact} rows={rowKeys} title={title} />;
+  if (look === "card") return <CompanyCard company={company!} contact={contact} rows={rowKeys} title={title} onLink={onLink} />;
   const ansatteFlag = financials?.quality?.ansatte;
   const rows = companyRows(company!, ownership, financials?.years.at(-1), { identity: hideIdentity, contact: hideContact, auditor: hideAuditor }, rowKeys).map((r): Row =>
     r.label === "Ansatte" && ansatteFlag ? { ...r, flag: ansatteFlag } : r,

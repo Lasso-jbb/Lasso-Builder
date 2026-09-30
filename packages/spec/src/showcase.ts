@@ -261,5 +261,3 @@ export function portalPages(company: string): PortalPage[] {
   ];
 }
 
-/** Portalens modulbjælke; kun Overblik og Stamoplysninger er genskabt, resten står dæmpet. */
-export const PORTAL_MODULES = ["Overblik", "Stamoplysninger", "Nøgletal", "Ejerdiagram", "Nyheder", "Historik", "Tvilling", "Firmaindsigt", "Tinglysning", "Revision", "Kontaktpersoner", "Ejendomme"] as const;

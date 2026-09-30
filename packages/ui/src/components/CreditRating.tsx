@@ -16,6 +16,7 @@ import { useState, type ReactNode } from "react";
 import { DataState, Missing, Section, stateForError } from "../primitives.js";
 import type { ViewAction } from "../types.js";
 import { CreditConfirmDialog } from "./CreditConfirmDialog.js";
+import { ShellIcon } from "./ShellIcons.js";
 
 /**
  * Kreditvurdering fra Creditsafe (katalog 17, datatyper del B afsnit 5). Creditsafes egen skala:
@@ -214,16 +215,21 @@ export function CreditRating({ rating, title, error, onAction }: CreditRatingPro
         />
       ) : null}
 
+      {/* Som "Hent regnskabet" (09.5): link med download-ikon foran teksten. */}
       {rating.pdfUrl ? (
-        onAction ? (
-          <button type="button" className="lasso-link lasso-credit__action" onClick={() => onAction({ kind: "open-link", url: rating.pdfUrl! })}>
-            Hent kreditrapport (PDF)
-          </button>
-        ) : (
-          <a className="lasso-link lasso-credit__action" href={rating.pdfUrl} target="_blank" rel="noopener noreferrer">
-            Hent kreditrapport (PDF)
-          </a>
-        )
+        <div className="lasso-kv-top lasso-credit__action">
+          {onAction ? (
+            <button type="button" className="lasso-kv-link" onClick={() => onAction({ kind: "open-link", url: rating.pdfUrl! })}>
+              <ShellIcon name="download" size={15} />
+              <span>Hent kreditrapport (PDF)</span>
+            </button>
+          ) : (
+            <a className="lasso-kv-link" href={rating.pdfUrl} target="_blank" rel="noopener noreferrer">
+              <ShellIcon name="download" size={15} />
+              <span>Hent kreditrapport (PDF)</span>
+            </a>
+          )}
+        </div>
       ) : null}
 
       <p className="lasso-credit__note">

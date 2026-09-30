@@ -1,6 +1,6 @@
 # Lassos designkatalog
 
-Facit er Paper-filen **"Lasso Portal - Designguide"** (id `01M1GZGSTYBM43XSSD4JHQ0ADG`), siden **Designkatalog**, 43 artboards (01–28, 29 Fanebjælke, 30 Layout). Er der modstrid mellem kataloget og koden, vinder kataloget. Alt tidligere design er udgået.
+Facit er koden: komponenterne i `packages/ui`, tokens i `packages/ui/src/styles.css` og galleriet i `tools/gallery` (hvert element tegnet fra koden og mærket med sit katalognummer, fx 09.5), sammen med reglerne i denne fil. Designet skal være komplet i koden; nye moduler og sider sættes op ud fra komponenterne og galleriet, ikke ud fra Paper (Jakob 30.09.2026). Paper-filen "Lasso Portal - Designguide" (id `01M1GZGSTYBM43XSSD4JHQ0ADG`) er kun historisk kilde; katalognumrene og node-id'erne i galleriet peger stadig derhen.
 
 Tokens står i `packages/ui/src/styles.css`. Komponenterne bruger kun CSS-variablerne derfra.
 
