@@ -117,7 +117,7 @@ export function HomePage({ ctx }: { ctx: Ctx }) {
             <dt>Virksomheder og personer</dt>
             <dd>{entities.join(", ")}</dd>
             <dt>Galleriet</dt>
-            <dd>Elementerne i galleriet er tegnet med faste demodata, så hver tilstand kan vises. Modulerne og hele sider bruger rigtige data.</dd>
+            <dd>Elementerne i galleriet er tegnet med faste demodata, så hver tilstand kan vises. Modulerne og hele sider bruger rigtige data. Har ingen rigtig virksomhed data til et modul (fx Statstidende, BBR, CHR eller gemte sider), vises det med fiktive data og mærkes tydeligt.</dd>
             <dt>Bygget</dt>
             <dd>
               {fmtDate(SOURCE.generatedAt)}

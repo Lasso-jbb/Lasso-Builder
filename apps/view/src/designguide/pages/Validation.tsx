@@ -3,7 +3,7 @@ import { GRID_RULES, WIDTHS, type ComponentType, type Width } from "@lasso/spec"
 import type { Ctx } from "../App.js";
 import { Frame } from "../Frame.js";
 import type { Report } from "../inspect.js";
-import { ModuleView, reportKey, useReports, type ModuleInfo } from "../modules.js";
+import { ModuleView, reportKey, showsData, useReports, type DataOption, type ModuleInfo } from "../modules.js";
 import { allowedWidths, moduleGroups, slugOf, VIEWPORTS, WIDTH_LABEL, type Viewport } from "../structure.js";
 import { Chip, PageHead, Seg } from "../ui.js";
 
@@ -12,6 +12,8 @@ interface Job {
   m: ModuleInfo;
   vp: Viewport;
   width: Width;
+  /** Datakilden (indeks i m.options): først de rigtige, til sidst de fiktive data. */
+  oi: number;
 }
 
 /** Kolonnerne i matrixen: hver bredde på desktop-gitteret og standardbredden på de andre skærme. */
@@ -33,10 +35,25 @@ function jobsFor(modules: ModuleInfo[], scope: "tilladte" | "alle"): Job[] {
       const vp = VIEWPORTS.find((v) => v.id === c.vp)!;
       const width = c.width ?? std;
       if (c.width && scope === "tilladte" && !allowedWidths(m.type).includes(c.width)) continue;
-      jobs.push({ key: reportKey(m.type, vp.id, width, option.id), m, vp, width });
+      jobs.push({ key: reportKey(m.type, vp.id, width, option.id), m, vp, width, oi: 0 });
     }
   }
   return jobs;
+}
+
+/**
+ * Resultatet for et modul i en ramme med den første datakilde, der viser modulet i brug; viser ingen
+ * af dem modulet, det sidst målte (fx tom tilstand).
+ */
+function effective(reports: Record<string, Report>, m: ModuleInfo, vp: string, width: Width): { r: Report; o: DataOption } | undefined {
+  let last: { r: Report; o: DataOption } | undefined;
+  for (const o of m.options) {
+    const r = reports[reportKey(m.type, vp, width, o.id)];
+    if (!r) continue;
+    if (showsData(r)) return { r, o };
+    last = { r, o };
+  }
+  return last;
 }
 
 const CONCURRENCY = 4;
@@ -67,6 +84,9 @@ export function ValidationPage({ ctx }: { ctx: Ctx }) {
     clearTimeout(timers.current[job.key]);
     delete timers.current[job.key];
     if (r) put(job.key, r);
+    // Viser datakilden ikke modulet i brug, prøves den næste (til sidst de fiktive data).
+    const next = job.m.options[job.oi + 1];
+    if (r && !showsData(r) && next) queue.current.unshift({ ...job, oi: job.oi + 1, key: reportKey(job.m.type, job.vp.id, job.width, next.id) });
     setActive((a) => a.filter((x) => x.key !== job.key));
   };
   // Fyld op til CONCURRENCY rammer ad gangen.
@@ -84,24 +104,26 @@ export function ValidationPage({ ctx }: { ctx: Ctx }) {
     const option = m.options[0];
     if (!option) return <td key={c.id} className="dg-vcell dg-vcell--na" />;
     const allowed = !c.width || allowedWidths(m.type).includes(c.width);
-    const r = reports[reportKey(m.type, c.vp, c.width ?? GRID_RULES[m.type]?.std ?? "full", option.id)];
+    const eff = effective(reports, m, c.vp, c.width ?? GRID_RULES[m.type]?.std ?? "full");
+    const r = eff?.r;
     const std = !c.width || c.width === GRID_RULES[m.type]?.std;
     if (!r) return <td key={c.id} className={`dg-vcell${allowed ? "" : " dg-vcell--outside"}`}>{allowed ? "·" : ""}</td>;
     const icon = r.verdict === "problem" ? "!" : r.verdict === "info" ? "i" : r.state !== "fyldt" ? "–" : "✓";
     return (
-      <td key={c.id} className={`dg-vcell dg-vcell--${r.verdict}${r.state !== "fyldt" ? " dg-vcell--state" : ""}${allowed ? "" : " dg-vcell--outside"}${std && c.width ? " dg-vcell--std" : ""}`} title={`${r.label}${r.findings.length ? `\n${r.findings.map((f) => f.text).join("\n")}` : ""}`}>
+      <td key={c.id} className={`dg-vcell dg-vcell--${r.verdict}${r.state !== "fyldt" ? " dg-vcell--state" : ""}${allowed ? "" : " dg-vcell--outside"}${std && c.width ? " dg-vcell--std" : ""}${eff?.o.fictive ? " dg-vcell--fictive" : ""}`} title={`${eff?.o.fictive ? "Fiktive data. " : ""}${r.label}${r.findings.length ? `\n${r.findings.map((f) => f.text).join("\n")}` : ""}`}>
         <a href={`#/moduler/${slugOf(m.type)}`}>{icon}</a>
       </td>
     );
   };
 
-  const rows = ordered.filter((m) => filter === "alle" || COLUMNS.some((c) => reports[reportKey(m.type, c.vp, c.width ?? GRID_RULES[m.type]?.std ?? "full", m.options[0]?.id ?? "")]?.verdict === "problem"));
-  const all = jobs.map((j) => reports[j.key]).filter((r): r is Report => Boolean(r));
+  const rows = ordered.filter((m) => filter === "alle" || COLUMNS.some((c) => effective(reports, m, c.vp, c.width ?? GRID_RULES[m.type]?.std ?? "full")?.r.verdict === "problem"));
+  const all = jobs.map((j) => effective(reports, j.m, j.vp.id, j.width)?.r).filter((r): r is Report => Boolean(r));
+  const fictiveCells = jobs.filter((j) => effective(reports, j.m, j.vp.id, j.width)?.o.fictive).length;
   const problems = all.filter((r) => r.verdict === "problem").length;
   const infos = all.filter((r) => r.verdict === "info").length;
   return (
     <div className="dg-page dg-page--wide">
-      <PageHead eyebrow="Kvalitet" title="Validering" lead="Hvert modul tegnes med rigtige data i hver bredde på gitteret og på portal, chat, tablet og mobil i en rigtig skærmbredde. Rammen tjekkes for elementer, der løber ud over cellen, vandret rulning og afkortet tekst." />
+      <PageHead eyebrow="Kvalitet" title="Validering" lead="Hvert modul tegnes med rigtige data i hver bredde på gitteret og på portal, chat, tablet og mobil i en rigtig skærmbredde. Viser ingen rigtig virksomhed modulet i brug, bruges fiktive data (mærket F). Rammen tjekkes for elementer, der løber ud over cellen, vandret rulning og afkortet tekst." />
       <div className="dg-controls">
         <button className="dg-btn dg-btn--primary" disabled={running} onClick={() => start(false)}>
           {running ? `Tjekker … ${done} af ${jobs.length}` : done ? "Kør igen" : `Kør validering (${jobs.length} rammer)`}
@@ -150,6 +172,7 @@ export function ValidationPage({ ctx }: { ctx: Ctx }) {
           <Chip tone="problem">! Overløb</Chip>
           <Chip tone="info">i Afkortet eller ruller</Chip>
           <Chip tone="muted">– Tom, henter eller fejl</Chip>
+          <Chip tone="accent">F Fiktive data ({fictiveCells})</Chip>
           <span className="dg-meta">Fed kant = standardbredde. Grå = uden for reglen.</span>
         </div>
       </div>
@@ -192,7 +215,7 @@ export function ValidationPage({ ctx }: { ctx: Ctx }) {
         {active.map((j) => (
           <div key={j.key} style={{ width: j.vp.vw }}>
             <Frame vw={j.vp.vw} crop=".lasso-cell" eager fit={false} onReport={(r) => finish(j, r)}>
-              <ModuleView component={j.m.options[0]!.component} dataset={j.m.options[0]!.dataset} title={j.m.title} width={j.width} theme={ctx.theme} />
+              <ModuleView component={j.m.options[j.oi]!.component} dataset={j.m.options[j.oi]!.dataset} title={j.m.title} width={j.width} theme={ctx.theme} />
             </Frame>
           </div>
         ))}

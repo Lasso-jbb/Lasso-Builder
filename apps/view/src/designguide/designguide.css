@@ -302,6 +302,7 @@ body { font-family: var(--lasso-font, "Poppins", system-ui, sans-serif); -webkit
 .dg-vcell--state a { color: var(--lasso-muted) !important; }
 .dg-vcell--outside { background: repeating-linear-gradient(-45deg, transparent 0 5px, var(--dg-fill) 5px 10px); }
 .dg-vcell--std { box-shadow: inset 0 0 0 2px var(--lasso-accent-border); }
+.dg-vcell--fictive a::after { content: "F"; font-size: 9px; font-weight: 700; color: var(--lasso-accent-text); margin-left: 2px; vertical-align: super; }
 .dg-vcell--na { background: var(--dg-fill); }
 .dg-offscreen { position: fixed; left: -20000px; top: 0; width: 1500px; visibility: visible; pointer-events: none; }
 
