@@ -222,6 +222,22 @@
   --lasso-map-road: #2c2f35;
   --lasso-overlay: #0b0c0e;
   --lasso-scrim: rgb(0 0 0 / 0.72);
+  /* Manglede mørk værdi (fundet af designguiden 30.09): flader, linjer, rød og grafserier stod lyse på mørk flade. */
+  --lasso-surface-muted: #23262b;
+  --lasso-chrome: #1e2125;
+  --lasso-chrome-border: #2c2f35;
+  --lasso-divider-subtle: #24272c;
+  --lasso-faint: #6b717a;
+  --lasso-danger: #f0645a;
+  --lasso-danger-soft: #3a1a17;
+  --lasso-bankrupt: #ff7b72;
+  --lasso-chart-2: #6b9bd1;
+  --lasso-chart-4: #9c5536;
+  --lasso-chart-6: #4a4f57;
+  --lasso-chart-grid: #2a2d33;
+  --lasso-chart-axis: #3a3e45;
+  --lasso-map-fill: #4a2a1c;
+  --lasso-shadow-pop: 0 14px 34px rgb(0 0 0 / 0.5);
 }
 
 .lasso-root {
@@ -5106,6 +5122,19 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 /* 30.10 Mønster 7, Fortælling: nøgletalskort i en smal celle (¼-kolonnen) stables lodret, ét tal pr. række.
    Containeren sidder på cellen/kolonne-elementet omkring kortene, så komponenten selv er uændret. */
 .lasso-column__item:has(> .lasso-kpis), .lasso-cell:has(> .lasso-kpis), .lasso-dstack__item:has(> .lasso-kpis) { container: lasso-kpicell / inline-size; }
+/* Smal celle (⅓ og ½ på desktop, 321–640 px): fire kort på én række gav 90–140 px pr. kort, så beløb og
+   enhed overlappede og "(regnskab)" løb ud af kortet (fundet af designguiden 30.09). To kort pr. række som
+   på mobil. Kun uden for mobilen, der har sine egne kort (container lasso ≤ 560). */
+@container lasso (min-width: 561px) {
+  @container lasso-kpicell (min-width: 321px) and (max-width: 640px) {
+    .lasso-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .lasso-kpis > .lasso-kpi { padding: 16px 20px; }
+    .lasso-kpis:not(.lasso-kpis--plain) > .lasso-kpi { border-left: 0; border-top: 0; }
+    .lasso-kpis:not(.lasso-kpis--plain) > .lasso-kpi:nth-of-type(even) { border-left: 1px solid var(--lasso-border); }
+    .lasso-kpis:not(.lasso-kpis--plain) > .lasso-kpi:nth-of-type(n + 3) { border-top: 1px solid var(--lasso-border); }
+    .lasso-kpis .lasso-kpi__value { font-size: var(--lasso-fs-xl); line-height: 32px; }
+  }
+}
 @container lasso-kpicell (max-width: 320px) {
   .lasso-kpis { grid-template-columns: minmax(0, 1fr); }
   .lasso-kpis > .lasso-kpi { padding: 16px 20px; border-left: 0; border-top: 0; }
