@@ -1,0 +1,49 @@
+/**
+ * /komponenter: alle Lassos komponenter i brug på LASSO X A/S og Jakob Bech Benediktson med
+ * live-data, to faner og katalognummeret over hver komponent (packages/spec/src/showcase.ts).
+ * Siden tager ingen parametre (kun de to faste entiteter), så den kan ikke bruges til vilkårlige
+ * opslag. Data caches i 10 minutter; ?frisk=1 henter igen.
+ */
+import type { Request, Response } from "express";
+import { showcaseTabs, type Dataset, type ShowcaseTab, type ViewSpec } from "@lasso/spec";
+import type { Config } from "../config.js";
+import type { DataProvider } from "../data/index.js";
+import { resolveSpec } from "../data/resolve.js";
+import { injectBoot, loadViewHtml } from "./page.js";
+
+export const SHOWCASE = {
+  company: "CVR-1-34580820", // LASSO X A/S
+  person: "CVR-3-4000455341", // Jakob Bech Benediktson
+  peers: ["CVR-1-32828353", "CVR-1-31479282"] as [string, string], // Lix Studios ApS, BENEDIKTSON HOLDING ApS
+};
+
+export interface ShowcaseBoot {
+  mode: "showcase";
+  generatedAt: string;
+  tabs: (ShowcaseTab & { dataset: Dataset })[];
+}
+
+const TTL_MS = 10 * 60 * 1000;
+let cache: { at: number; boot: ShowcaseBoot } | undefined;
+
+/** Alle komponenter på én fane i én spec, så data hentes samlet (højdebudget og 12-grænsen gælder ikke her). */
+const specOf = (t: ShowcaseTab): ViewSpec => ({ version: 2, kind: "custom", title: t.label, layout: "stack", criteria: [], components: t.items.map((x) => x.component) }) as ViewSpec;
+
+export async function buildShowcase(provider: DataProvider, ids: typeof SHOWCASE = SHOWCASE): Promise<ShowcaseBoot> {
+  const [companyName, personName] = await Promise.all([
+    provider.company(ids.company).then((c) => c.name).catch(() => "LASSO X A/S"),
+    provider.person(ids.person).then((p) => p.name).catch(() => "Jakob Bech Benediktson"),
+  ]);
+  const tabs = showcaseTabs({ ...ids, companyName, personName });
+  const datasets = await Promise.all(tabs.map((t) => resolveSpec(specOf(t), provider)));
+  return { mode: "showcase", generatedAt: new Date().toISOString(), tabs: tabs.map((t, i) => ({ ...t, dataset: datasets[i]! })) };
+}
+
+export function showcaseHandler(_config: Config, provider: DataProvider) {
+  return async (req: Request, res: Response) => {
+    const fresh = req.query.frisk === "1";
+    if (fresh || !cache || Date.now() - cache.at > TTL_MS) cache = { at: Date.now(), boot: await buildShowcase(provider) };
+    const html = await loadViewHtml();
+    res.type("html").set("Cache-Control", "no-store").set("X-Robots-Tag", "noindex").send(injectBoot(html, cache.boot, "Komponenter"));
+  };
+}

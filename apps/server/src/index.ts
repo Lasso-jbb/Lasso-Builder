@@ -47,6 +47,7 @@ import { entityLink, focusLinks, isEntityId, sendToLassoLink, verifyCompanyLink,
 import { injectBoot, loadViewHtml } from "./web/page.js";
 import { ASK_AGAIN, failPage, FROM_LIST, linkFailure, VIEW_MISSING, VIEW_OUTDATED } from "./web/linkErrors.js";
 import { portalApi, portalErrorHandler } from "./web/portalApi.js";
+import { showcaseHandler } from "./web/showcase.js";
 import { pdfAvailable, pdfRendererFor, type PdfRenderer } from "./pdf/renderer.js";
 import { pdfBoot, pdfRoutes, portalPdfRoutes } from "./pdf/routes.js";
 
@@ -256,6 +257,9 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
 
   // "Gem som PDF": /k/, /p/, /e/, /v/ med .pdf (før HTML-siderne), /x/<token>.pdf og print-siden.
   app.use(pdfRoutes({ config, provider, store, pdf }));
+
+  // Komponentudstillingen: alle komponenter på LASSO X og Jakob Bech Benediktson (web/showcase.ts).
+  app.get("/komponenter", showcaseHandler(config, provider));
 
   // --- Delt side: specen hentes, data hentes friskt, render-appen tegner -----
   app.get("/v/:org/:slug", async (req, res) => {
