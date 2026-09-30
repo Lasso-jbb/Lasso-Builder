@@ -70,6 +70,8 @@ export interface HostCapabilities {
    * åbner fanen. Uden den folder "Se alle" ud på stedet.
    */
   openFocus?: boolean;
+  /** MCP-appen (Jakob 30.09): hovedet har kun "Vis i fuld skærm" og "Gem som PDF"; ingen Gem- og Eksportér-ikoner. */
+  minimalHead?: boolean;
   /** Visningen står allerede i fuld skærm (MCP displayMode "fullscreen"): "Vis i fuld skærm" skjules. */
   fullscreenActive?: boolean;
   /** Katalog 08/16: værten kan starte overvågning og åbne overvågningsindstillinger ("Overvåg"/"Overvåger"). */

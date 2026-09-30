@@ -327,6 +327,7 @@ export function McpView() {
           pdf: Boolean(current.pdfLink),
           fullscreen: canFullscreen,
           fullscreenActive: ctx?.displayMode === "fullscreen",
+          minimalHead: true,
           openFocus: canMessage,
         }}
         onAction={onAction}
