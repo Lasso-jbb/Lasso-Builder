@@ -465,7 +465,7 @@ test("nye parametre: roles, only, year, rows, kinds og role valideres og filtrer
   for (const bad of [
     { type: "LassoPersonList", company: id, roles: "ejere" },
     { type: "LassoKeyValueList", company: id, only: ["omsaetning", "salg"] },
-    { type: "LassoKeyValueList", company: id, rows: ["cvr"] },
+    { type: "LassoKeyValueList", company: id, rows: ["momsnummer"] },
     { type: "LassoTimeline", company: id, kinds: ["nyheder"] },
     { type: "LassoPersonRoles", person: "CVR-3-4000000001", role: "revisor" },
   ]) {

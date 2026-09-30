@@ -30,6 +30,8 @@ En test fejler, hvis filen ikke er ajour.
 - [Fusioner og spaltninger (`LassoMergers`)](#LassoMergers)
 - [Regnskabsoplysninger og kapital (`LassoRegistration`)](#LassoRegistration)
 - [Statstidende (`LassoAnnouncements`)](#LassoAnnouncements)
+- [Relationer over tid (`LassoRelationsTable`)](#LassoRelationsTable)
+- [Stamdata historik (`LassoCompanyHistory`)](#LassoCompanyHistory)
 - [Regnskabspublicering (`LassoPublications`)](#LassoPublications)
 - [Ledelse og bestyrelse (`LassoPersonList`)](#LassoPersonList)
 - [Legale ejere (`LassoOwnerList`)](#LassoOwnerList)
@@ -118,7 +120,7 @@ En test fejler, hvis filen ikke er ajour.
 **Bredde pr. variant.**
 - `variant:financials`: profil smal; std ½, min ½, maks ½; drivere: ingen
 
-**Props.** `company, variant? (company | financials), title?, exclude? (kun financials), only? (kun financials: nøgletal), year? (kun financials: regnskabsår), rows? (kun company: revisor | revisorskift | regnskabsperiode | stiftet | form | branche | ansatte | adresse | branchekode | kommune | region | telefon | email | web), years? (2–5, kun financials), maxRows? (1–20)`
+**Props.** `company, variant? (company | financials), title?, exclude? (kun financials), only? (kun financials: nøgletal), year? (kun financials: regnskabsår), rows? (kun company: revisor | revisorskift | regnskabsperiode | stiftet | form | branche | ansatte | adresse | branchekode | kommune | region | telefon | email | web | firmanavn | cvr | binavne | status | reklamebeskyttet | vedtaegtsaendring | regnskabsaar | senesteregnskab | selskabskapital | boersnoteret | underskriverrevisor | formaal | tegningsregel | brancher), years? (2–5, kun financials), maxRows? (1–20)`
 
 <a id="LassoContact"></a>
 ## Kontaktblok (`LassoContact`)
@@ -682,6 +684,56 @@ En test fejler, hvis filen ikke er ajour.
 **Bredde.** profil bred; std 1/1, min 1/1, maks 1/1; drivere: 3 rækker pr. post, længste etiket 44 tegn
 
 **Props.** `company, title?`
+
+<a id="LassoRelationsTable"></a>
+## Relationer over tid (`LassoRelationsTable`)
+
+**Formål.** Relationer grupperet efter rolle (ledelse, bestyrelse, stiftere, ejere) med fra–til-datoer.
+
+**Bedst til**
+- tidligere direktører
+- tidligere ejere
+- hvem har siddet i bestyrelsen
+- hvornår trådte X ind
+
+**Undgå når**
+- kun nuværende ledelse (LassoPersonList)
+- kun ejerne (LassoOwnerList)
+
+**Veje ind.** render_view
+
+**Kræver data (Dataset).** `companyHistories`, `beneficialOwnership`
+
+**Live-tilgængelighed.** når data findes — Historikken (GET /{lassoId}/history) er ubekræftet for virksomheder; uden den vises de nuværende roller og ejere.
+
+**Bredde.** profil bred; std 1/1, min ⅔, maks 1/1; drivere: 2 rækker pr. post, længste etiket 40 tegn
+
+**Props.** `company, show? (current | former | all), groups?, title?`
+
+<a id="LassoCompanyHistory"></a>
+## Stamdata historik (`LassoCompanyHistory`)
+
+**Formål.** Stamdata over tid: navne, adresser, ansatte, branche, kapital og kontakt med fra–til.
+
+**Bedst til**
+- tidligere navne
+- tidligere adresser
+- ansatte over tid
+- hvad hed X før
+
+**Undgå når**
+- kun nuværende stamdata (LassoKeyValueList)
+- regnskabets tal (LassoMultiYearTable)
+
+**Veje ind.** render_view
+
+**Kræver data (Dataset).** `companyHistories`
+
+**Live-tilgængelighed.** når data findes — Historikken (GET /{lassoId}/history) er ubekræftet for virksomheder.
+
+**Bredde.** profil bred; std 1/1, min ⅔, maks 1/1; drivere: 3 rækker pr. post, længste etiket 60 tegn
+
+**Props.** `company, fields?, limit?, title?`
 
 <a id="LassoPublications"></a>
 ## Regnskabspublicering (`LassoPublications`)
@@ -1390,6 +1442,8 @@ En test fejler, hvis filen ikke er ajour.
 | `LassoMergers` | smal | ½ / ½ / ½ | når data findes | ask, focus, render_view |
 | `LassoRegistration` | bred | 1/1 / ⅔ / 1/1 | når data findes | ask, focus, render_view |
 | `LassoAnnouncements` | bred | 1/1 / 1/1 / 1/1 | når data findes | ask, focus, render_view |
+| `LassoRelationsTable` | bred | 1/1 / ⅔ / 1/1 | når data findes | render_view |
+| `LassoCompanyHistory` | bred | 1/1 / ⅔ / 1/1 | når data findes | render_view |
 | `LassoPublications` | fleksibel | ½ / ½ / 1/1 | når data findes | ask, focus, render_view |
 | `LassoPersonList` | smal | ⅓ / ¼ / ½ | når data findes | focus, ask, render_view |
 | `LassoOwnerList` | smal | ⅓ / ¼ / ½ | når data findes | focus, ask, render_view |

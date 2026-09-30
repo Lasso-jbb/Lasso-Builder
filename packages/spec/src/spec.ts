@@ -325,6 +325,7 @@ export const relationsSchema = z.object({
   type: z.literal("LassoRelations"),
   company: companyRef,
   title: z.string().max(80).optional(),
+  full: z.boolean().optional().describe("Som portalens Relationer: også reelle ejere (låst række uden tilkøbet) og antal produktionsenheder. Henter to opslag mere. Standard: fra."),
 });
 
 export const beneficialOwnersSchema = z.object({
@@ -432,6 +433,23 @@ export const comparisonSchema = z.object({
   title: z.string().max(80).optional(),
 });
 
+/**
+ * Rækkerne i regnskabsoplysningerne (LassoKeyValueList variant 'financials' med `fields`), så brugeren
+ * kan vælge felter og rækkefølge (Jakob 30.09, portalens "Regnskabsoplysninger").
+ */
+export const FINANCIAL_FIELD_KEYS = [
+  "udgivet",
+  "periode",
+  "erklaering",
+  "fremhaevelser",
+  "goingconcern",
+  ...METRICS,
+  "resultatfoerskat",
+  "afkastningsgrad",
+  "pdf",
+] as const;
+export type FinancialFieldKey = (typeof FINANCIAL_FIELD_KEYS)[number];
+
 export const keyValueListSchema = z.object({
   type: z.literal("LassoKeyValueList"),
   company: companyRef,
@@ -458,6 +476,16 @@ export const keyValueListSchema = z.object({
     .max(2100)
     .optional()
     .describe("Kun variant 'financials': det regnskabsår, årsvælgeren starter på. Findes året ikke, vises seneste år med en note i kildelinjen."),
+  fields: z
+    .array(z.enum(FINANCIAL_FIELD_KEYS))
+    .min(1)
+    .max(FINANCIAL_FIELD_KEYS.length)
+    .optional()
+    .describe("Kun variant 'financials': rækkerne i denne rækkefølge, fx ['udgivet','periode','erklaering','bruttofortjeneste','egenkapital','resultatfoerskat','resultat','ebitda','soliditetsgrad','pdf']. Går forud for only og exclude."),
+  look: z
+    .enum(["list", "card"])
+    .optional()
+    .describe("Kun variant 'company': 'list' (standard) = nøgle og værdi i to kolonner. 'card' = portalens virksomhedskort: navnet som overskrift, adresse, CVR, stiftet, ansatte og web som linjer uden nøgle, telefon og e-mail med overskrift."),
   rows: z
     .array(z.enum(COMPANY_FACT_KEYS))
     .min(1)
@@ -656,6 +684,28 @@ export const livestockSchema = z.object({
 });
 
 /* Personsiden (katalog 16); personRef står øverst, fordi tidslinje, nyheder og ejerdiagram også bruger den. */
+/** Portalens Stamoplysninger: relationer grupperet efter rolle med fra–til (Jakob 30.09). */
+export const relationsTableSchema = z.object({
+  type: z.literal("LassoRelationsTable"),
+  company: companyRef,
+  show: z.enum(["current", "former", "all"]).default("current").describe("'current' (standard) = nuværende relationer; 'former' = historiske (fratrådte og tidligere ejere); 'all' = begge som to foldbare afsnit."),
+  groups: z
+    .array(z.enum(["adm", "direktion", "bestyrelse", "stiftere", "legale-ejere", "reelle-ejere", "oevrige"]))
+    .min(1)
+    .optional()
+    .describe("Kun disse grupper i denne rækkefølge. Udeladt: Adm. direktører, Direktion, Bestyrelse, Stiftere, Legale ejere, Reelle ejere, Øvrige."),
+  title: z.string().max(80).optional(),
+});
+
+/** Portalens "Stamdata historik": navn, adresse, ansatte, branche, kapital og kontakt over tid. */
+export const companyHistorySchema = z.object({
+  type: z.literal("LassoCompanyHistory"),
+  company: companyRef,
+  fields: z.array(z.string().min(1).max(40)).min(1).max(20).optional().describe("Kun disse oplysninger (nøgler som navn, adresse, ansatte-maaned, branche, kapital, telefon, email). Udeladt: alle."),
+  limit: z.number().int().min(1).max(20).optional().describe("Værdier pr. oplysning før 'Vis alle'. Standard 3."),
+  title: z.string().max(80).optional(),
+});
+
 export const personHeadSchema = z.object({
   type: z.literal("LassoPersonHead"),
   person: personRef,
@@ -851,6 +901,8 @@ export const componentSchema = z.discriminatedUnion("type", [
   w(livestockSchema),
   w(actionsSchema),
   w(relationsSchema),
+  w(relationsTableSchema),
+  w(companyHistorySchema),
   w(beneficialOwnersSchema),
   w(textSectionsSchema),
   w(summarySchema),
@@ -973,6 +1025,8 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoMergers: "half",
   LassoRegistration: "full",
   LassoAnnouncements: "full",
+  LassoRelationsTable: "full",
+  LassoCompanyHistory: "full",
   LassoPublications: "half",
   LassoChangeFeed: "half",
   LassoSavedPages: "full",

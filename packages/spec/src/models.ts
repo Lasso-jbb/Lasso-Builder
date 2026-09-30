@@ -54,6 +54,12 @@ export interface CompanyVM {
   advertisingProtected?: boolean;
   /** Katalog 28.7: børsnoteret. Ubekræftet. */
   listed?: boolean;
+  /** Formål fra vedtægterne (CVR). Ubekræftet feltnavn; samme kilde som tekstsektionen "Formål". */
+  purpose?: string;
+  /** Tegningsregel (CVR). Ubekræftet feltnavn. */
+  signingRule?: string;
+  /** Underskrivende revisor på seneste regnskab, fx "Niels Borum Madsen (mne32274)". Ubekræftet. */
+  signingAuditor?: string;
 }
 
 /**
@@ -265,8 +271,23 @@ export interface CashFlowYear {
   cashEnding?: number | null;
 }
 
+/** Revisionsoplysninger for ét regnskabsår (portalens "Regnskabsoplysninger"). Ubekræftede feltnavne i live. */
+export interface FinancialAuditVM {
+  year: number;
+  /** Erklæring fra revisor, fx "Revision", "Review", "Udvidet gennemgang", "Assistance" eller "Ingen". */
+  type?: string;
+  /** Revisor har fremhævet forhold i påtegningen. */
+  emphasis?: boolean;
+  /** Revisor har oplyst væsentlig usikkerhed om going concern. */
+  goingConcern?: boolean;
+  /** Årsrapporten som PDF (kun http/https). */
+  pdfUrl?: string;
+}
+
 export interface FinancialStatementsVM {
   lassoId: string;
+  /** Revisionsoplysninger pr. år (erklæring, fremhævelser, going concern, PDF). */
+  audits?: FinancialAuditVM[];
   currency: string;
   /** Sorteret stigende efter år, samme år som `FinancialsVM.years`. */
   incomeStatement: IncomeStatementYear[];
@@ -1150,6 +1171,44 @@ export interface CompanyEventsVM {
 }
 
 /** Alt det data, én visning skal bruge, slået op på nøgle. */
+/** Portalens relationsgrupper (Stamoplysninger: nuværende og historiske relationer). */
+export type RelationGroup = "adm" | "direktion" | "bestyrelse" | "stiftere" | "legale-ejere" | "reelle-ejere" | "oevrige";
+
+/** Én relation (person eller selskab) i én gruppe med periode. */
+export interface RelationEntryVM {
+  group: RelationGroup;
+  name: string;
+  lassoId?: string;
+  /** Underrolle i parentes efter navnet, fx "Formand", "Suppleant", "Adm. dir". */
+  role?: string;
+  /** Legale ejere: ejerandel og stemmeret som interval, fx "15–19,99 %". */
+  share?: string;
+  votes?: string;
+  from?: string;
+  to?: string;
+  current: boolean;
+}
+
+/** Én stamdataoplysning over tid (portalens "Stamdata historik"), nyeste først. */
+export interface HistoryFieldVM {
+  key: string;
+  label: string;
+  entries: { value: string; from?: string; to?: string }[];
+}
+
+/**
+ * Virksomhedens historik (GET /{lassoId}/history, samme form som personhistorikken: grupper med
+ * { value, from, to, current }). UBEKRÆFTET for virksomheder; fejler kaldet, bygges relationerne af
+ * de nuværende roller og ejere (source "current"), og stamdatahistorikken er tom med en note.
+ */
+export interface CompanyHistoryVM {
+  lassoId: string;
+  relations: RelationEntryVM[];
+  fields: HistoryFieldVM[];
+  source: "history" | "current";
+  note?: string;
+}
+
 export interface Dataset {
   source: DataSourceKind;
   generatedAt: string;
@@ -1195,6 +1254,8 @@ export interface Dataset {
   changeFeeds: Record<string, ChangeFeedVM>;
   /** Katalog 28.2/28.6/28.8: fusioner, Statstidende og regnskabspublicering pr. Lasso-ID. */
   companyEvents: Record<string, CompanyEventsVM>;
+  /** Relationer og stamdata over tid (LassoRelationsTable, LassoCompanyHistory). */
+  companyHistories: Record<string, CompanyHistoryVM>;
   /** Gem-laget: gemte sider pr. savedPagesKey (LassoSavedPages). Fejlnøgle "savedPages:<key>". */
   savedPages: Record<string, SavedPagesVM>;
   /** Gem-laget: hvilke Lasso-ID'er i visningen brugeren allerede har gemt (til Gem/Gemt-knappen). */
@@ -1237,6 +1298,7 @@ export function emptyDataset(source: DataSourceKind): Dataset {
     personNetworks: {},
     personSearches: {},
     companyEvents: {},
+    companyHistories: {},
     changeFeeds: {},
     savedPages: {},
     errors: {},

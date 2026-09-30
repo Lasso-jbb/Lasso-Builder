@@ -5,7 +5,7 @@
  * opslag. Data caches i 10 minutter; ?frisk=1 henter igen.
  */
 import type { Request, Response } from "express";
-import { alternativeComponents, showcaseAlternatives, showcaseTabs, type Dataset, type ShowcaseAlternatives, type ShowcaseTab, type ViewSpec } from "@lasso/spec";
+import { alternativeComponents, portalPages, showcaseAlternatives, showcaseTabs, type PortalPage, type Dataset, type ShowcaseAlternatives, type ShowcaseTab, type ViewSpec } from "@lasso/spec";
 import type { Config } from "../config.js";
 import type { DataProvider } from "../data/index.js";
 import { resolveSpec } from "../data/resolve.js";
@@ -26,6 +26,8 @@ export interface ShowcaseBoot {
   generatedAt: string;
   tabs: (ShowcaseTab & { dataset: Dataset })[];
   alt: ShowcaseAlternatives & { dataset: Dataset };
+  /** Fanen "Lasso-side": portalens Overblik og Stamoplysninger for virksomheden, bygget af komponenterne. */
+  portal: { company: string; name: string; pages: (PortalPage & { dataset: Dataset })[] };
 }
 
 const TTL_MS = 10 * 60 * 1000;
@@ -43,8 +45,20 @@ export async function buildShowcase(provider: DataProvider, ids: typeof SHOWCASE
   const altCompanies = await Promise.all(ids.alternatives.map(async (id) => ({ id, name: await provider.company(id).then((c) => c.name).catch(() => id) })));
   const alt = showcaseAlternatives(tabs[0]!, altCompanies, ids.compare);
   const altSpec = { version: 2, kind: "custom", title: "Alternativer", layout: "stack", criteria: [], components: alternativeComponents(alt) } as unknown as ViewSpec;
-  const [datasets, altDataset] = await Promise.all([Promise.all(tabs.map((t) => resolveSpec(specOf(t), provider))), resolveSpec(altSpec, provider)]);
-  return { mode: "showcase", generatedAt: new Date().toISOString(), tabs: tabs.map((t, i) => ({ ...t, dataset: datasets[i]! })), alt: { ...alt, dataset: altDataset } };
+  const pages = portalPages(ids.company);
+  const pageSpec = (pg: PortalPage) => ({ version: 2, kind: "company", title: companyName, layout: pg.layout, ...(pg.columns ? { columns: pg.columns } : {}), criteria: [], components: pg.components }) as unknown as ViewSpec;
+  const [datasets, altDataset, pageData] = await Promise.all([
+    Promise.all(tabs.map((t) => resolveSpec(specOf(t), provider))),
+    resolveSpec(altSpec, provider),
+    Promise.all(pages.map((pg) => resolveSpec(pageSpec(pg), provider))),
+  ]);
+  return {
+    mode: "showcase",
+    generatedAt: new Date().toISOString(),
+    tabs: tabs.map((t, i) => ({ ...t, dataset: datasets[i]! })),
+    alt: { ...alt, dataset: altDataset },
+    portal: { company: ids.company, name: companyName, pages: pages.map((pg, i) => ({ ...pg, dataset: pageData[i]! })) },
+  };
 }
 
 export function showcaseHandler(_config: Config, provider: DataProvider) {

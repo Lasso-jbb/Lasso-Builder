@@ -217,3 +217,14 @@ Målt med `staticText.test.ts`, som nu tæller både beskrivelser og input-skema
 3. **LAYOUT_RULES kortet ned:** svarniveauer, mønstre, regnskab, group/toolbar og højdebudget er bevaret. Pakke- og foldningsregler, som rendereren selv klarer, er fjernet.
 
 Kvalitet: show_company, show_person, compare_companies og search_* er uberørte. Eval er uændret (side 92,3 %, plan 96,7 %, layout 60/60), og der er 915 tests. Prisen er ét ekstra kald (describe_components) i de få svar, der bruger fri komposition.
+
+## 9. Lasso-siden genskabt af komponenterne (30.09, Jakob)
+
+Fanen "Lasso-side" på /komponenter genskaber portalens virksomhedsside (Overblik og Stamoplysninger) for LASSO X A/S. Det, der manglede, er løst i komponenterne, så felterne kan vælges af brugeren:
+
+- **Stamoplysninger som valgfrie felter:** `LassoKeyValueList` `rows` har nu portalens felter (firmanavn, CVR, binavne, status, reklamebeskyttet, vedtægtsændring, regnskabsår, seneste regnskab, selskabskapital, børsnoteret, underskrivende revisor, formål, tegningsregler, brancher). `STAMDATA_ROWS` er portalens rækkefølge. `look: "card"` er portalens virksomhedskort.
+- **Regnskabsoplysninger som valgfrie felter:** variant `financials` har `fields` (udgivet, periode, erklæring fra revisor, fremhævelser, going concern, alle nøgletal, resultat før skat, afkastningsgrad, PDF).
+- **Nye komponenter:** `LassoRelationsTable` (nuværende og historiske relationer grupperet som i portalen) og `LassoCompanyHistory` (stamdata historik). Begge bygger på `GET /{lassoId}/history`, som er **ubekræftet for virksomheder**. Uden den vises de nuværende roller og ejere.
+- **Tekst:** `LassoTextSections` har `variant: "cvr"` (portalens virksomhedsprofil) og `variant: "resume"` (erhvervsresumé). `LassoRelations` har `full` (reelle ejere og produktionsenheder).
+
+Ubekræftede feltnavne i live (læst defensivt): formål, tegningsregel, reklamebeskyttet, børsnoteret, vedtægtsændring, underskrivende revisor, revisorerklæring, fremhævelser og going concern. Højderne for de to nye komponenter er estimater.

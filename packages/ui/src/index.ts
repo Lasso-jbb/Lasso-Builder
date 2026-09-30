@@ -51,6 +51,7 @@ export type { FinancialStatementsProps, StatementKind } from "./components/Finan
 export { CreditRating } from "./components/CreditRating.js";
 export { PersonStats } from "./components/PersonStats.js";
 export { Announcements, Mergers, Publications } from "./components/CompanyEvents.js";
+export { CompanyHistory, RelationsTable } from "./components/CompanyHistory.js";
 export { Registration } from "./components/Registration.js";
 export type { RegistrationProps, RegistrationVariant } from "./components/Registration.js";
 export { EntityUpdates } from "./components/EntityUpdates.js";

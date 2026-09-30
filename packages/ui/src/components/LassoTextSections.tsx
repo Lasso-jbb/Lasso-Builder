@@ -101,15 +101,15 @@ function Item({
  * Variant "profil" (12.1): lange afsnit foldes hver for sig, men ét "Vis mere" (koral) til sidst folder
  * hele sektionen ud på én gang, i stedet for et link efter hvert afsnit.
  */
-function Profile({ items, onOpen, limit }: { items: TextSectionItem[]; onOpen?: (a: ViewAction) => void; limit?: number }) {
+function Profile({ items, onOpen, limit, full = false }: { items: TextSectionItem[]; onOpen?: (a: ViewAction) => void; limit?: number; /** Erhvervsresumeet (variant "resume") står helt, som i portalen. */ full?: boolean }) {
   const [open, setOpen] = useState(false);
   // Kompakt profil (højdebudgettet, 23.3): kun de første `limit` afsnit, til "Vis mere" folder resten ud.
   const clipped = limit !== undefined && items.length > limit;
-  const long = clipped || items.some((it) => (it.segments?.length ? it.segments.reduce((n, s) => n + s.text.length, 0) : it.body.length) > TRUNCATE_AT);
+  const long = !full && (clipped || items.some((it) => (it.segments?.length ? it.segments.reduce((n, s) => n + s.text.length, 0) : it.body.length) > TRUNCATE_AT));
   return (
     <>
       {(clipped && !open ? items.slice(0, limit) : items).map((s, i) => (
-        <Item key={i} item={s} limit={open ? Number.POSITIVE_INFINITY : TRUNCATE_AT} toggle={false} onOpen={onOpen} />
+        <Item key={i} item={s} limit={open || full ? Number.POSITIVE_INFINITY : TRUNCATE_AT} toggle={false} onOpen={onOpen} />
       ))}
       {long ? (
         <button type="button" className="lasso-link lasso-more" aria-expanded={open} onClick={() => setOpen(!open)}>
@@ -354,7 +354,7 @@ export function LassoTextSections({
   return (
     <Section title={heading} span={span} className="lasso-textsections">
       {/* 12.1: ingen kildevisning (G3). */}
-      <Profile items={shown} onOpen={onOpen} limit={limit} />
+      <Profile items={shown} onOpen={onOpen} limit={limit} full={variant === "resume"} />
     </Section>
   );
 }

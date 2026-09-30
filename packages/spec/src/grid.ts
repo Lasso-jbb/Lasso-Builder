@@ -85,6 +85,8 @@ export const MEASURED_HEIGHTS: Readonly<Record<string, readonly [number, number,
   LassoRegistration: [1153, 1031, 797, 530, 476, 420],
   LassoMergers: [356, 314, 473, 341, 341, 341],
   LassoAnnouncements: [44, 44, 64, 64, 64, 64],
+  LassoRelationsTable: [1200, 1100, 900, 800, 760, 720], // estimat (ikke målt endnu; kun ⅔/fuld i brug)
+  LassoCompanyHistory: [1400, 1300, 1100, 1000, 950, 900], // estimat (ikke målt endnu; kun ⅔/fuld i brug)
   LassoPublications: [612, 594, 443, 405, 405, 405],
   LassoLivestock: [605, 554, 477, 337, 286, 286],
   LassoCompareTable: [489, 489, 427, 407, 407, 327],

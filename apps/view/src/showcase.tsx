@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { NO_ALTERNATIVE_REASON, type ComponentType, type Dataset, type ShowcaseItem, type ViewComponent, type ViewSpec } from "@lasso/spec";
+import { NO_ALTERNATIVE_REASON, PORTAL_MODULES, type ComponentType, type Dataset, type ShowcaseItem, type ViewComponent, type ViewSpec } from "@lasso/spec";
 import { LassoView, ToastProvider, Toasts, type HostCapabilities } from "@lasso/ui";
 import type { ShowcaseBoot } from "./boot.js";
 import { usePrefersDark } from "./web.js";
@@ -145,7 +145,7 @@ function AltRender({ type, title, variants, names, dataset }: { type: ComponentT
 }
 
 const CSS = `
-.sc{font-family:"Poppins",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--bg:#f6f7f9;--card:#fff;--ink:#16181d;--mute:#5b6270;--line:#e2e5ea;--accent:#e8604c;background:var(--bg);color:var(--ink);min-height:100vh;font-family:inherit}
+.sc{font-family:"Poppins",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--bg:#f6f7f9;--card:#fff;--ink:#16181d;--mute:#5b6270;--line:#e2e5ea;--accent:#e8604c;background:var(--bg);color:var(--ink);min-height:100vh}
 .sc[data-theme=dark]{--bg:#101215;--card:#181b20;--ink:#eceef2;--mute:#9aa1ad;--line:#2a2f37}
 .sc-top{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:16px 16px 0}
 .sc-wrap{max-width:1232px;margin:0 auto}
@@ -183,13 +183,53 @@ const CSS = `
 .sc-alt-why{font-size:13px;color:var(--mute);margin-top:4px}
 .sc-alt-label{margin:14px 16px 0;font-size:13px;font-weight:600;color:var(--accent)}
 .sc-alt-none{margin:14px 16px;padding:10px 12px;border-radius:8px;background:var(--bg);color:var(--mute);font-size:13px}
+.sc-portal{margin:16px;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.sc-portal__bar{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);padding:0 8px}
+.sc-portal__mod{border:0;background:none;font:inherit;font-size:14px;font-weight:600;color:var(--ink);padding:16px 12px;border-bottom:2px solid transparent;white-space:nowrap;cursor:pointer}
+.sc-portal__mod[aria-current=page]{color:var(--accent);border-bottom-color:var(--accent)}
+.sc-portal__mod:disabled{color:var(--mute);opacity:.55;cursor:default}
+.sc-portal__page{padding:8px 0}
 .sc-wait{color:var(--mute);font-size:14px;padding:16px}
 .sc-index{display:flex;flex-wrap:wrap;gap:6px;padding:12px 16px 0}
 .sc-index a{font-size:12px;color:var(--mute);text-decoration:none;border:1px solid var(--line);border-radius:10px;padding:2px 8px}
 `;
 
-type TabId = "virksomhed" | "person" | "ikke-i-brug";
-const TAB_IDS: TabId[] = ["virksomhed", "person", "ikke-i-brug"];
+type TabId = "virksomhed" | "person" | "ikke-i-brug" | "lasso-side";
+const TAB_IDS: TabId[] = ["virksomhed", "person", "ikke-i-brug", "lasso-side"];
+
+/**
+ * Fanen "Lasso-side": Lassos virksomhedsside (portalen) genskabt af komponenterne. Modulbjælken som
+ * i portalen; Overblik og Stamoplysninger er genskabt, de øvrige moduler står dæmpet.
+ */
+function PortalView({ portal }: { portal: ShowcaseBoot["portal"] }) {
+  const pick = () => (location.hash.includes("stamoplysninger") ? "stamoplysninger" : "overblik");
+  const [page, setPage] = useState<string>(pick);
+  useEffect(() => {
+    const on = () => setPage(pick());
+    window.addEventListener("hashchange", on);
+    return () => window.removeEventListener("hashchange", on);
+  }, []);
+  const current = portal.pages.find((p) => p.id === page) ?? portal.pages[0]!;
+  const spec = { version: 2, kind: "company", title: portal.name, layout: current.layout, ...(current.columns ? { columns: current.columns } : {}), criteria: [], components: current.components } as unknown as ViewSpec;
+  return (
+    <div className="sc-portal">
+      <nav className="sc-portal__bar" aria-label="Moduler">
+        {PORTAL_MODULES.map((m) => {
+          const id = m.toLowerCase();
+          const live = portal.pages.some((p) => p.id === id);
+          return (
+            <button key={m} className="sc-portal__mod" aria-current={id === current.id ? "page" : undefined} disabled={!live} title={live ? undefined : "Ikke genskabt endnu"} onClick={() => (location.hash = `lasso-side/${id}`)}>
+              {m}
+            </button>
+          );
+        })}
+      </nav>
+      <div className={`sc-portal__page sc-portal__page--${current.id}`} key={current.id}>
+        <LassoView spec={spec} dataset={current.dataset} host={HOST} onAction={() => undefined} frameless />
+      </div>
+    </div>
+  );
+}
 
 /** /komponenter: to faner (virksomhed og person) og en tredje med de komponenter, der ikke er i brug; fanen huskes i adressen. */
 export function ShowcaseView({ boot }: { boot: ShowcaseBoot }) {
@@ -252,6 +292,9 @@ export function ShowcaseView({ boot }: { boot: ShowcaseBoot }) {
               <button role="tab" className="sc-tab" aria-selected={tab === "ikke-i-brug"} onClick={() => (location.hash = "ikke-i-brug")}>
                 Ikke i brug ({measured < allItems ? "…" : unusedCount})
               </button>
+              <button role="tab" className="sc-tab" aria-selected={tab === "lasso-side"} onClick={() => (location.hash = "lasso-side")}>
+                Lasso-side
+              </button>
             </div>
           </div>
         </div>
@@ -273,6 +316,7 @@ export function ShowcaseView({ boot }: { boot: ShowcaseBoot }) {
               ))}
             </main>
           ))}
+          {tab === "lasso-side" ? <PortalView portal={boot.portal} /> : null}
           {tab === "ikke-i-brug" ? (
             <div className="sc-unused">
               {measured < allItems ? <div className="sc-wait">Tjekker komponenterne …</div> : null}

@@ -53,6 +53,7 @@ const FETCHERS: Record<string, (ds: Dataset, p: DataProvider, id: string) => Pro
   person: async (ds, p, id) => void (ds.persons[id] = await p.person(id)),
   personNetwork: async (ds, p, id) => void (ds.personNetworks[id] = await p.personNetwork(id)),
   companyEvents: async (ds, p, id) => void (ds.companyEvents[id] = await p.companyEvents(id)),
+  companyHistory: async (ds, p, id) => void (ds.companyHistories[id] = await p.companyHistory(id)),
 };
 
 /**
@@ -220,13 +221,15 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
         want(c.company, "ownership");
         break;
       case "LassoRelations":
-        want(c.company, "people", "ownership");
+        want(c.company, "people", "ownership", ...(c.full ? (["beneficialOwnership", "productionUnits"] as const) : []));
         break;
       case "LassoBeneficialOwners":
         want(c.company, "beneficialOwnership");
         break;
       case "LassoTextSections":
-        want(c.company, "textSections");
+        // "resume" skrives ud fra stamdata, historik (første navn), ledelse og regnskab.
+        if (c.variant === "resume") want(c.company, "company", "financials", "companyHistory", "people");
+        else want(c.company, "textSections");
         break;
       case "LassoTimeline":
         // Virksomhed eller person; nøglen i ds.timeline og fejlnøglen er entitetens ID.
@@ -269,8 +272,14 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
         personSearches.push(c);
         break;
       case "LassoKeyValueList":
-        if (c.variant === "financials") want(c.company, "financials");
-        else want(c.company, "company", "ownership", "financials");
+        if (c.variant === "financials") want(c.company, "financials", ...(c.fields ? (["financialStatements"] as const) : []));
+        else want(c.company, "company", "ownership", "financials", ...(c.look === "card" ? (["contact"] as const) : []));
+        break;
+      case "LassoRelationsTable":
+        want(c.company, "companyHistory", "beneficialOwnership");
+        break;
+      case "LassoCompanyHistory":
+        want(c.company, "companyHistory");
         break;
       case "LassoContact":
         want(c.company, "contact");

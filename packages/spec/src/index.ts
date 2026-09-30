@@ -6,6 +6,7 @@ export * from "./spec.js";
 export * from "./models.js";
 export * from "./catalog.js";
 export * from "./showcase.js";
+export * from "./relations.js";
 export * from "./templates.js";
 export * from "./series.js";
 export * from "./compose.js";

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import {
   activityHeatmapKey,
+  businessResume,
+  type TextSectionsVM,
   changeFeedKey,
   companyFactOptions,
   emptyDataset,
@@ -64,6 +66,7 @@ import { LassoBalanceSheet } from "./components/BalanceSheet.js";
 import { LassoCashFlow } from "./components/CashFlow.js";
 import { FinancialStatements } from "./components/FinancialStatements.js";
 import { Announcements, Mergers, Publications } from "./components/CompanyEvents.js";
+import { CompanyHistory, RelationsTable } from "./components/CompanyHistory.js";
 import { Registration } from "./components/Registration.js";
 import { OwnerList } from "./components/OwnerList.js";
 import { OwnershipDiagram } from "./components/OwnershipDiagram.js";
@@ -169,6 +172,28 @@ function contactPanelShortcuts(props: LassoViewProps, act: (a: ViewAction) => vo
 }
 
 /** 09.2/09.5: "Se alle" (hele regnskabet) som link med ikon under regnskabslisten, når værten kan åbne det. */
+/** Portalens "Erhvervsresume" (TextSections variant "resume"): én tekst ud fra stamdata, historik, ledelse og regnskab. */
+function resumeSections(company: string, ds: Dataset): TextSectionsVM | undefined {
+  const co = ds.companies[company];
+  if (!co) return undefined;
+  const names = ds.companyHistories?.[company]?.fields.find((f) => f.key === "navn")?.entries ?? [];
+  const firstName = names.length > 1 ? [...names].sort((a, b) => (a.from ?? "").localeCompare(b.from ?? ""))[0]?.value : undefined;
+  const ceo = (ds.people[company] ?? []).find((p) => !p.to && /adm|direkt/i.test(p.role))?.name;
+  const last = ds.financials[company]?.years.at(-1);
+  const body = businessResume({
+    name: co.name,
+    founded: co.founded,
+    city: co.address?.city,
+    industryText: co.industryText,
+    purpose: co.purpose,
+    employees: co.employees,
+    firstName,
+    ceo,
+    lastYear: last ? { year: last.year, grossProfit: last.grossProfit, revenue: last.revenue, profit: last.profit } : undefined,
+  });
+  return { lassoId: company, sections: body ? [{ heading: "", body }] : [] };
+}
+
 function statementsLink(company: string, ds: Dataset, props: LassoViewProps, act: (a: ViewAction) => void) {
   if (props.spec.components.some((x) => x.type === "LassoIncomeStatement")) return undefined;
   const run = sectionAction(props, act, { lassoId: company, pageKind: "company", section: "regnskab", name: ds.companies[company]?.name ?? company, label: "Regnskab" });
@@ -383,10 +408,15 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           year={c.year}
           rows={c.rows}
           onOpen={props.host.drillDown ? act : undefined}
-          links={c.variant === "financials" && !c.maxRows ? statementsLink(c.company, empty, props, act) : undefined}
+          links={c.variant === "financials" && !c.maxRows && !c.fields ? statementsLink(c.company, empty, props, act) : undefined}
           years={c.years}
           maxRows={c.maxRows}
-          onPdf={c.variant === "financials" && empty.financialStatements[c.company]?.pdfUrl ? () => act({ kind: "open-link", url: empty.financialStatements[c.company]!.pdfUrl! }) : undefined}
+          look={c.look}
+          contact={empty.contact[c.company]}
+          fields={c.fields}
+          statements={empty.financialStatements[c.company]}
+          onLink={(url) => act({ kind: "open-link", url })}
+          onPdf={c.variant === "financials" && !c.fields?.includes("pdf") && empty.financialStatements[c.company]?.pdfUrl ? () => act({ kind: "open-link", url: empty.financialStatements[c.company]!.pdfUrl! }) : undefined}
         />
       );
     }
@@ -455,6 +485,10 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           error={err(`company:${c.company}`)}
         />
       );
+    case "LassoRelationsTable":
+      return <RelationsTable key={key} history={empty.companyHistories?.[c.company]} beneficial={empty.beneficialOwnership[c.company]} show={c.show} groups={c.groups} title={c.title} error={err(`companyHistory:${c.company}`)} onOpen={props.host.drillDown ? act : undefined} />;
+    case "LassoCompanyHistory":
+      return <CompanyHistory key={key} history={empty.companyHistories?.[c.company]} fields={c.fields} limit={c.limit} title={c.title} error={err(`companyHistory:${c.company}`)} />;
     case "LassoAnnouncements":
       return <Announcements key={key} events={empty.companyEvents?.[c.company]} company={empty.companies[c.company]} demo={empty.source === "demo"} title={c.title} error={err(`companyEvents:${c.company}`)} />;
     case "LassoPublications":
@@ -524,7 +558,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return (
         <LassoTextSections
           key={key}
-          sections={empty.textSections[c.company]}
+          sections={c.variant === "resume" ? resumeSections(c.company, empty) : empty.textSections[c.company]}
           title={c.title}
           variant={c.variant}
           folded={c.folded}

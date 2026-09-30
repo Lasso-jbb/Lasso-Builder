@@ -3,6 +3,7 @@ import type {
   BeneficialOwnershipVM,
   ChangeFeedVM,
   CompanyEventsVM,
+  CompanyHistoryVM,
   ChangeType,
   AuditorIndependenceVM,
   CompanyRowVM,
@@ -87,6 +88,8 @@ export interface DataProvider {
   personSearch(query: string, limit: number): Promise<PersonSearchResultVM>;
   /** Katalog 28.2/28.6/28.8: fusioner/spaltninger, Statstidende-bekendtgørelser og regnskabspublicering. Live ubekræftet. */
   companyEvents(lassoId: string): Promise<CompanyEventsVM>;
+  /** Relationer og stamdata over tid (portalens Stamoplysninger). Live ubekræftet; falder tilbage til de nuværende roller og ejere. */
+  companyHistory(lassoId: string): Promise<CompanyHistoryVM>;
   /** Katalog 21: ændringer i de overvågede virksomheder (eller i `companies`) de seneste `days` dage. Live-endpoint ubekræftet. */
   changeFeed(opts: ChangeFeedOptions): Promise<ChangeFeedVM>;
   /** Katalog 18.2: scorehistorik (én hentning = ét punkt). Ingen live datakilde endnu; tom med årsag. */

@@ -29,6 +29,8 @@ import {
   CREDIT_PENDING_REASON,
   CREDIT_SOURCE,
   isPersonId,
+  relationsFromCurrent,
+  type CompanyHistoryVM,
 } from "@lasso/spec";
 import type { Config } from "../config.js";
 import {
@@ -63,6 +65,7 @@ import { describeShape, LassoApiError, type LassoClient } from "../lasso/client.
 import { adaptOwnershipLegal, withFallbackPeople } from "../lasso/ownershipAdapters.js";
 import { adaptLassoNews, mergeNews } from "../lasso/riskNewsAdapters.js";
 import { adaptCompanyEvents } from "../lasso/eventAdapters.js";
+import { adaptCompanyHistory } from "../lasso/historyAdapters.js";
 import { adaptPerson, adaptPersonNetwork, adaptPersonSearch, graphFromPersonRoles } from "../lasso/personAdapters.js";
 import { adaptIndustryBenchmark, adaptMapPoints } from "../lasso/chartAdapters.js";
 import { adaptChrLivestock, adaptLiveNumber, adaptReportAnalysisSections, buildProductionUnits } from "../lasso/unitAdapters.js";
@@ -71,6 +74,7 @@ import { historyFromCredit, pointsFromCredit, scoreFromCredit } from "../lasso/s
 import type { ScoreStore } from "../scores/store.js";
 import { criteriaToFilters, DEFAULT_ACTIVE_STATUS_FILTER, filtersToCriteria, SERVER_SORT, type LassoFilter } from "../lasso/searchFilters.js";
 import { applyCriteria, needsFinancials, sortRows } from "./criteria-eval.js";
+import { errorMessage } from "./resolve.js";
 import { searchPersonsTable, mapLimit, type ActivityHeatmapOptions, type ChangeFeedOptions, type DataProvider, type OwnershipGraphOptions } from "./provider.js";
 
 /** Så længe venter kontaktblokken på hjemmesidens telefon/e-mail, før den vises uden. */
@@ -414,6 +418,29 @@ export class LiveProvider implements DataProvider {
   async companyEvents(lassoId: string) {
     const [raw, financials] = await Promise.all([this.client.company(lassoId), this.financials(lassoId)]);
     return adaptCompanyEvents(lassoId, raw, financials.years);
+  }
+
+  /**
+   * Portalens Stamoplysninger: GET /{lassoId}/history (ubekræftet for virksomheder). Fejler kaldet, eller
+   * giver det ingen relationer, bygges relationerne af de nuværende roller og legale ejere, og
+   * stamdatahistorikken står tom med en note.
+   */
+  async companyHistory(lassoId: string): Promise<CompanyHistoryVM> {
+    const fallback = async (note: string): Promise<CompanyHistoryVM> => {
+      const [people, ownership] = await Promise.all([this.people(lassoId), this.ownership(lassoId).catch(() => undefined)]);
+      return { lassoId, relations: relationsFromCurrent(people, ownership), fields: [], source: "current", note };
+    };
+    let history: CompanyHistoryVM;
+    try {
+      history = adaptCompanyHistory(lassoId, await this.client.companyHistory(lassoId));
+    } catch (err) {
+      return fallback(`Historikken kunne ikke hentes fra Lasso (${errorMessage(err)}); relationerne er de nuværende.`);
+    }
+    if (history.relations.length === 0) {
+      const cur = await fallback(history.fields.length ? "" : "Lasso gav ingen historik for virksomheden.");
+      return { ...cur, fields: history.fields, ...(cur.note ? { note: cur.note } : {}) };
+    }
+    return history;
   }
 
   async timeline(lassoId: string) {

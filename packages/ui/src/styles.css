@@ -5556,3 +5556,42 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-personfacts .lasso-kv-list--twocol .lasso-kv-row { break-inside: avoid; }
   .lasso-personfacts .lasso-kv-list--twocol .lasso-kv-row:last-child { border-bottom: 1px solid var(--lasso-divider-subtle); }
 }
+
+/* Virksomhedskortet (LassoKeyValueList look 'card', portalens venstre kolonne, Jakob 30.09). */
+.lasso-kvcard { display: flex; flex-direction: column; gap: 14px; font-size: 14px; color: var(--lasso-text); }
+.lasso-kvcard__p { margin: 0; }
+.lasso-kvcard__line { display: block; line-height: 1.45; }
+.lasso-kvcard__label { font-weight: 600; line-height: 1.45; }
+/* Stamoplysninger med flere værdier (binavne, brancher) står én pr. linje. */
+.lasso-kv-row__value--wrap .lasso-fold__text { white-space: pre-line; }
+.lasso-kv-link--inline { padding: 0; display: inline-flex; align-items: center; gap: 6px; }
+
+/* Portalens relations- og historiktabeller (LassoRelationsTable, LassoCompanyHistory, Jakob 30.09). */
+.lasso-reltable-wrap { display: flex; flex-direction: column; }
+.lasso-reltable { border-top: 1px solid var(--lasso-divider, #e6e8ec); font-size: 14px; color: var(--lasso-text); }
+.lasso-reltable__head { display: flex; width: 100%; justify-content: space-between; align-items: center; background: var(--lasso-surface-muted, #f5f6f8); border: 0; border-bottom: 1px solid var(--lasso-divider, #e6e8ec); padding: 12px 16px; font: inherit; font-size: 13px; font-weight: 600; color: var(--lasso-text); cursor: pointer; text-align: left; }
+.lasso-reltable__chev { font-size: 12px; color: var(--lasso-text-muted, #6b7280); }
+.lasso-reltable__group { display: grid; grid-template-columns: 180px minmax(0, 1fr); border-bottom: 1px solid var(--lasso-divider, #e6e8ec); }
+.lasso-reltable__label { padding: 12px 16px; font-size: 13px; font-weight: 600; }
+.lasso-reltable__sublabel { font-size: 11px; font-weight: 400; color: var(--lasso-text-muted, #6b7280); }
+.lasso-reltable__rows { padding: 6px 16px 6px 0; display: flex; flex-direction: column; }
+.lasso-reltable__row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 6px 0; }
+.lasso-reltable__row .lasso-link { font-size: 14px; }
+.lasso-reltable__role { color: var(--lasso-text-muted, #6b7280); }
+.lasso-reltable__share { font-size: 13px; color: var(--lasso-text-secondary, #3f4450); margin-top: 2px; }
+.lasso-reltable__period { display: inline-grid; grid-template-columns: 84px 20px 84px; text-align: right; font-variant-numeric: tabular-nums; color: var(--lasso-text-secondary, #3f4450); white-space: nowrap; flex: none; }
+.lasso-reltable__dash { text-align: center; }
+.lasso-reltable__hidden { filter: blur(3px); color: var(--lasso-text-muted, #6b7280); user-select: none; }
+.lasso-reltable__more { align-self: flex-start; margin: 4px 0 6px; font-size: 14px; }
+.lasso-reltable__empty { padding: 12px 16px; }
+.lasso-reltable__note { padding: 8px 16px; }
+@media (max-width: 640px) {
+  .lasso-reltable__group { grid-template-columns: minmax(0, 1fr); }
+  .lasso-reltable__label { padding-bottom: 0; }
+  .lasso-reltable__rows { padding-left: 16px; }
+  .lasso-reltable__row { flex-direction: column; gap: 2px; }
+  .lasso-reltable__period { grid-template-columns: auto auto auto; gap: 4px; text-align: left; }
+}
+.lasso-kv-years--below { margin: 0 0 12px; }
+/* Portalens relationer og historik: navne og "Vis alle" som koral links. */
+.lasso-reltable .lasso-link { color: var(--lasso-accent-text); }

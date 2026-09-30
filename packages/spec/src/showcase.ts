@@ -5,6 +5,7 @@
  * bruger data. Ren funktion; serveren henter data og view-appen tegner (boot.mode "showcase").
  */
 import { COMPONENT_CATALOG } from "./catalog.js";
+import { STAMDATA_ROWS } from "./companyFacts.js";
 import type { DatasetKey } from "./register.js";
 import { componentSchema, type ComponentType, type ViewComponent } from "./spec.js";
 
@@ -80,6 +81,8 @@ export function showcaseComponents(i: ShowcaseInput): { company: C[]; person: C[
     { type: "LassoBeneficialOwners", company: co },
     { type: "LassoOwnershipDiagram", company: co },
     { type: "LassoRelations", company: co },
+    { type: "LassoRelationsTable", company: co, show: "all" },
+    { type: "LassoCompanyHistory", company: co },
     { type: "LassoCompareTable", companies: all3 },
     { type: "LassoRanking", companies: all3, metric: "bruttofortjeneste" },
     { type: "LassoCompanyTable", source: "search", search: { query: i.companyName, limit: 5 } },
@@ -211,3 +214,52 @@ export function showcaseAlternatives(companyTab: ShowcaseTab, alternatives: { id
 export function alternativeComponents(alt: ShowcaseAlternatives): ViewComponent[] {
   return [...Object.values(alt.variants).flatMap((v) => (v ?? []).map((x) => x.component)), ...alt.compare.map((x) => x.component)];
 }
+
+/* --- Fanen "Lasso-side": Lassos virksomhedsside (Overblik og Stamoplysninger) genskabt af komponenterne --- */
+
+export interface PortalPage {
+  id: "overblik" | "stamoplysninger";
+  label: string;
+  components: ViewComponent[];
+  layout: "columns" | "stack";
+  columns?: number;
+}
+
+/** Lassos egen virksomhedsside, så tæt på portalen som komponenterne kan. Kolonnerne følger portalens tre spalter. */
+export function portalPages(company: string): PortalPage[] {
+  const p = (c: Record<string, unknown>): ViewComponent => componentSchema.parse(c);
+  return [
+    {
+      id: "overblik",
+      label: "Overblik",
+      layout: "columns",
+      columns: 3,
+      components: [
+        p({ type: "LassoKeyValueList", company, variant: "company", look: "card", rows: ["adresse", "cvr", "stiftet", "ansatte", "web", "telefon", "email"], width: "quarter", column: 1 }),
+        p({ type: "LassoShortcuts", company, width: "quarter", column: 1 }),
+        p({ type: "LassoScoreGauge", company, title: "Risikovurdering", width: "quarter", column: 1 }),
+        p({ type: "LassoCreditRating", company, width: "quarter", column: 1 }),
+        p({ type: "LassoRelations", company, full: true, width: "quarter", column: 2 }),
+        p({ type: "LassoTextSections", company, variant: "cvr", title: "Virksomhedsprofil", width: "quarter", column: 2 }),
+        p({ type: "LassoKeyValueList", company, variant: "company", rows: ["revisor", "revisorskift", "regnskabsperiode", "boersnoteret"], width: "half", column: 3 }),
+        p({ type: "LassoKeyValueList", company, variant: "financials", title: "Regnskabsoplysninger", fields: ["udgivet", "periode", "erklaering", "fremhaevelser", "goingconcern", "bruttofortjeneste", "egenkapital", "resultatfoerskat", "resultat", "ebitda", "afkastningsgrad", "likviditetsgrad", "soliditetsgrad", "pdf"], width: "half", column: 3 }),
+        p({ type: "LassoTextSections", company, variant: "resume", title: "Erhvervsresume", width: "half", column: 3 }),
+      ],
+    },
+    {
+      id: "stamoplysninger",
+      label: "Stamoplysninger",
+      layout: "stack",
+      components: [
+        p({ type: "LassoKeyValueList", company, variant: "company", title: "Stamoplysninger", rows: [...STAMDATA_ROWS] }),
+        p({ type: "LassoRelationsTable", company, show: "current", title: "Nuværende relationer" }),
+        p({ type: "LassoRelationsTable", company, show: "former", title: "Historiske relationer" }),
+        p({ type: "LassoCompanyHistory", company, title: "Stamdata historik" }),
+        p({ type: "LassoProductionUnits", company }),
+      ],
+    },
+  ];
+}
+
+/** Portalens modulbjælke; kun Overblik og Stamoplysninger er genskabt, resten står dæmpet. */
+export const PORTAL_MODULES = ["Overblik", "Stamoplysninger", "Nøgletal", "Ejerdiagram", "Nyheder", "Historik", "Tvilling", "Firmaindsigt", "Tinglysning", "Revision", "Kontaktpersoner", "Ejendomme"] as const;
