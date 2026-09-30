@@ -353,10 +353,13 @@ export function LockedValue({ count, noun, linkLabel, onUpgrade, href, blur = fa
         <a className="lasso-locked__link" href={href}>
           {label}
         </a>
-      ) : (
+      ) : onUpgrade ? (
         <button type="button" className="lasso-locked__link" onClick={onUpgrade}>
           {label}
         </button>
+      ) : (
+        // G1: uden handling ingen knap; teksten står stadig i linkfarven, som i kataloget.
+        <span className="lasso-locked__link">{label}</span>
       )}
     </span>
   );

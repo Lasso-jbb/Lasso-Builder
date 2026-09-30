@@ -1037,9 +1037,6 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-root .lasso-relations__name { font-size: var(--lasso-fs); line-height: 20px; font-weight: 400; color: var(--lasso-text); }
 .lasso-root button.lasso-relations__name:hover, .lasso-root button.lasso-relations__name:focus-visible { color: var(--lasso-accent-text); }
 .lasso-relations__more { font-size: var(--lasso-fs-sm); font-weight: 400; color: var(--lasso-muted); }
-.lasso-relations__locked { display: flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 10px; border-radius: var(--lasso-radius); background: var(--lasso-surface-muted); font-size: var(--lasso-fs-sm); color: var(--lasso-text-2); }
-.lasso-relations__locked .lasso-icon { color: var(--lasso-muted); flex: none; }
-.lasso-root .lasso-relations__lockmore { margin-left: auto; padding: 0; border: 0; background: none; font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-accent-text); cursor: pointer; }
 .lasso-root .lasso-relations__count { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 40px; padding: 8px 0 0; border: 0; border-top: 1px solid var(--lasso-border); background: none; font-size: var(--lasso-fs); color: var(--lasso-text); text-align: left; cursor: pointer; }
 div.lasso-relations__count { cursor: default; }
 .lasso-relations__count > span:first-child { flex: 1; }
@@ -3375,11 +3372,11 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-kpi__value .lasso-qflag-tip { vertical-align: middle; letter-spacing: 0; font-size: var(--lasso-fs-sm); font-weight: 400; }
 
 /* ---------- 09.2 Nøgle-værdi-liste: info-ikon, kvalitetsflag og handlingslinks (node 9VU-0, 9WR-0) ---------- */
-.lasso-kv-row__label { display: flex; align-items: center; gap: 4px; overflow: visible; }
+.lasso-kv-row__label { display: flex; align-items: center; gap: 6px; overflow: visible; } /* 02b.5: info-ikonet 6 px efter teksten */
 .lasso-kv-row__labeltext { min-width: 0; overflow: visible; text-overflow: clip; white-space: normal; overflow-wrap: break-word; } /* E0: etiketten ombrydes i stedet for at afkortes */
 .lasso-kv-row__value:has(.lasso-qflag) { overflow: visible; }
-.lasso-root .lasso-infohint { flex: none; display: inline-flex; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--lasso-icon); cursor: help; }
-.lasso-root .lasso-infohint:hover { color: var(--lasso-text-3); }
+/* 09.2 bruger designguidens info-ikon (02b.5, .lasso-infotip__btn: 18 × 18 px, ikon 14 px); kun flex: none her. */
+.lasso-root .lasso-infohint { flex: none; }
 .lasso-kv-links { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: var(--lasso-space-3); }
 .lasso-kv-top { display: flex; margin-bottom: var(--lasso-space-3); }
 .lasso-root .lasso-kv-link { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; font: inherit; font-size: var(--lasso-fs-sm); line-height: 18px; font-weight: 500; color: var(--lasso-accent-text); cursor: pointer; }
@@ -5594,7 +5591,6 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-reltable__share { font-size: 13px; color: var(--lasso-text-secondary, #3f4450); margin-top: 2px; }
 .lasso-reltable__period { display: inline-grid; grid-template-columns: 84px 20px 84px; text-align: right; font-variant-numeric: tabular-nums; color: var(--lasso-text-secondary, #3f4450); white-space: nowrap; flex: none; }
 .lasso-reltable__dash { text-align: center; }
-.lasso-reltable__hidden { filter: blur(3px); color: var(--lasso-text-muted, #6b7280); user-select: none; }
 .lasso-reltable__more { align-self: flex-start; margin: 4px 0 6px; font-size: 14px; }
 .lasso-reltable__empty { padding: 12px 16px; }
 .lasso-reltable__note { padding: 8px 16px; }

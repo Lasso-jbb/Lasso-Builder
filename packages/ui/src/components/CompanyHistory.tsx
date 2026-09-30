@@ -11,6 +11,7 @@ import {
 } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
+import { LockedValue } from "./Values.js";
 
 /** "2014-06-01" -> "01.06.2014"; tom = "". */
 const d = (v?: string) => (v ? formatDate(v) : "");
@@ -66,10 +67,8 @@ function RelationsBlock({ title, entries, groups, beneficial, current, onOpen }:
                     {beneficial?.owners.length ? (
                       <span>{beneficial.owners.map((o) => o.name).join(", ")}</span>
                     ) : (
-                      // Som portalen: reelle ejere er skjult uden tilkøbet (401); forklaringen står i tooltip.
-                      <span className="lasso-reltable__hidden" title="Information om reelle ejere er skjult for jeres organisation. Kontakt Lasso for at høre nærmere.">
-                        Reelle ejere skjult
-                      </span>
+                      // 02c.18 Låst værdi (Paper GWO-0): uden tilkøbet låseikon + "Kræver Lasso Pro", ingen sløring af tekst.
+                      <LockedValue />
                     )}
                   </div>
                 ) : (

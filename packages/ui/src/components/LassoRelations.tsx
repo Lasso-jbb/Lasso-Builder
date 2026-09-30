@@ -2,6 +2,7 @@ import { moreText, isPersonId, type OwnershipVM, type PersonRowVM } from "@lasso
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { Icon } from "./Icon.js";
+import { LockedValue } from "./Values.js";
 
 const MAX_OWNERS = 3;
 
@@ -54,7 +55,7 @@ export function LassoRelations({
   peopleError?: string;
   ownershipError?: string;
   onOpen?: (a: ViewAction) => void;
-  /** 11.1: reelle ejere kræver adgang; vises som låst række ("Kræver adgang", "Læs mere"). */
+  /** 11.1: reelle ejere kræver adgang; vises som låst værdi (02c.18: låseikon + "Kræver Lasso Pro"). */
   beneficialLocked?: boolean;
   /** "Læs mere" i den låste række. */
   onBeneficialInfo?: () => void;
@@ -139,14 +140,9 @@ export function LassoRelations({
       {beneficialLocked ? (
         <div className="lasso-relations__group">
           <div className="lasso-relations__label">Reelle ejere</div>
-          <div className="lasso-relations__locked">
-            <Icon name="lock" size={14} />
-            <span>Kræver adgang</span>
-            {onBeneficialInfo ? (
-              <button type="button" className="lasso-relations__lockmore" onClick={onBeneficialInfo}>
-                Læs mere
-              </button>
-            ) : null}
+          {/* 02c.18 Låst værdi (Paper GWO-0): låseikon i muted og et kort link, ingen boks. */}
+          <div>
+            <LockedValue onUpgrade={onBeneficialInfo} />
           </div>
         </div>
       ) : null}

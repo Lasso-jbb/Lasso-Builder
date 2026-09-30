@@ -23,12 +23,15 @@ export function QualityFlag({ text, reason, defaultOpen = false, placement = "ri
   );
 }
 
-/** Info-ikon ved en nøgle (katalog 09.2): forklarer begrebet i tooltip. */
+/**
+ * Info-ikon ved en nøgle (katalog 09.2): forklarer begrebet i tooltip. Samme ikon som designguidens
+ * 02b.5 (Paper 4KF-0): katalogets "Info"-ikon i 14 px i en ikonknap på 18 × 18 px, 6 px efter teksten.
+ */
 export function InfoHint({ text, label }: { text: string; label: string }) {
   return (
     <Tooltip text={text} className="lasso-infohint-tip">
-      <button type="button" className="lasso-infohint" aria-label={`Hvad er ${label.toLowerCase()}?`}>
-        <ShellIcon name="info" size={13} />
+      <button type="button" className="lasso-infotip__btn lasso-infohint" aria-label={`Hvad er ${label.toLowerCase()}?`}>
+        <ShellIcon name="info" size={14} />
       </button>
     </Tooltip>
   );
