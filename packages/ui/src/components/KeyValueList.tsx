@@ -418,8 +418,12 @@ export function KeyValueList({
                 {r.flag && r.value ? <QualityFlag text={r.flag} /> : null}
                 {r.pdf && r.value && onLink ? (
                   <button type="button" className="lasso-kv-link lasso-kv-link--inline" onClick={() => onLink(r.pdf!)}>
-                    <span>{r.value}</span>
-                    <ShellIcon name="download" size={15} />
+                    {/* Sidste ord og ikonet holdes sammen, når linket brydes i en smal kolonne. */}
+                    {r.value.split(" ").slice(0, -1).join(" ")}{" "}
+                    <span className="lasso-nowrap">
+                      {r.value.split(" ").at(-1)}
+                      <ShellIcon name="download" size={15} />
+                    </span>
                   </button>
                 ) : (
                   r.value ?? <NotReported />

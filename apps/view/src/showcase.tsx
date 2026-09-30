@@ -183,18 +183,25 @@ const CSS = `
 .sc-alt-why{font-size:13px;color:var(--mute);margin-top:4px}
 .sc-alt-label{margin:14px 16px 0;font-size:13px;font-weight:600;color:var(--accent)}
 .sc-alt-none{margin:14px 16px;padding:10px 12px;border-radius:8px;background:var(--bg);color:var(--mute);font-size:13px}
-.sc-portal{margin:16px auto;max-width:1760px;width:calc(100% - 32px);background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.sc-portal__bar{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);padding:0 8px}
+.sc-portal{margin:16px auto;max-width:2400px;width:calc(100% - 32px);background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;
+  /* Lasso-siden er flydende (Jakob 30.09): luft og rækker vokser med skærmen, så ekstra plads fordeles overalt. */
+  --pp-x:clamp(24px,3.2vw,88px);--pp-y:clamp(24px,2vw,56px);--pp-top:clamp(32px,2.6vw,72px);--pp-row:clamp(38px,2.5vw,52px);--pp-gap:clamp(14px,1.1vw,24px);--pp-label:clamp(140px,36%,300px)}
+.sc-portal__bar{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);padding:0 calc(var(--pp-x) - 12px)}
 .sc-portal__mod{border:0;background:none;font:inherit;font-size:14px;font-weight:600;color:var(--ink);padding:16px 12px;border-bottom:2px solid transparent;white-space:nowrap;cursor:pointer}
 .sc-portal__mod[aria-current=page]{color:var(--accent);border-bottom-color:var(--accent)}
 .sc-portal__mod:disabled{color:var(--mute);opacity:.55;cursor:default}
-.sc-portal__page{padding:8px 0}
-/* Lasso-siden (Jakob 30.09): luft fra tekst til kolonnernes kanter i begge sider som i portalen (56 px). */
-.sc-portal__page .lasso-columns > .lasso-column > .lasso-column__item{padding-left:56px;padding-right:56px}
-.sc-portal__page{padding-left:0;padding-right:0}
-/* Højre kolonne: værdien står tæt på nøglen (fast nøglekolonne, venstrestillet tal) i stedet for yderst til højre. */
-.sc-portal__page .lasso-column:last-child .lasso-kv-row__label{width:200px;flex:none}
-.sc-portal__page .lasso-column:last-child .lasso-kv-list--financials .lasso-kv-row__value{text-align:left;flex:1}
+.sc-portal__page{padding:0}
+/* Kolonnerne: luft fra tekst til kant i begge sider og mellem elementerne i stakken. */
+.sc-portal__page .lasso-columns > .lasso-column > .lasso-column__item{padding:var(--pp-y) var(--pp-x)}
+.sc-portal .sc-portal__page .lasso-frame--bare > .lasso-content--columns > .lasso-columns > .lasso-column > .lasso-column__item:first-child{padding-top:var(--pp-top)}
+/* Stamoplysninger (én kolonne): samme sideluft. */
+.sc-portal__page--stamoplysninger .lasso-content{padding:var(--pp-top) var(--pp-x)}
+/* Rækker og kort får mere højde og mellemrum på brede skærme. */
+.sc-portal__page .lasso-kv-row{min-height:var(--pp-row)}
+.sc-portal__page .lasso-kvcard{gap:var(--pp-gap)}
+/* Nøgle-værdi: nøglekolonnen følger kolonnens bredde, og tallene står ved nøglen (ikke yderst til højre). */
+.sc-portal__page .lasso-column .lasso-kv-row__label{width:var(--pp-label);flex:none}
+.sc-portal__page .lasso-column .lasso-kv-list--financials .lasso-kv-row__value{text-align:left;flex:1}
 /* Samme vægt på navnene i Relationer som på al anden brødtekst på siden (06.1-reglen gav 500). */
 .sc-portal__page .lasso-content--columns .lasso-relations__name{font-weight:400}
 .sc-wait{color:var(--mute);font-size:14px;padding:16px}

@@ -5564,7 +5564,8 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-kvcard__label { font-weight: 600; line-height: 1.45; }
 /* Stamoplysninger med flere værdier (binavne, brancher) står én pr. linje. */
 .lasso-kv-row__value--wrap .lasso-fold__text { white-space: pre-line; }
-.lasso-kv-link--inline { padding: 0; display: inline-flex; align-items: center; gap: 6px; }
+.lasso-root .lasso-kv-link.lasso-kv-link--inline { padding: 0; display: inline; white-space: normal; text-align: left; width: auto; }
+.lasso-root .lasso-kv-link.lasso-kv-link--inline svg { vertical-align: -2px; margin-left: 6px; }
 
 /* Portalens relations- og historiktabeller (LassoRelationsTable, LassoCompanyHistory, Jakob 30.09). */
 .lasso-reltable-wrap { display: flex; flex-direction: column; }
@@ -5595,3 +5596,4 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-kv-years--below { margin: 0 0 12px; }
 /* Portalens relationer og historik: navne og "Vis alle" som koral links. */
 .lasso-reltable .lasso-link { color: var(--lasso-accent-text); }
+.lasso-nowrap { white-space: nowrap; }
