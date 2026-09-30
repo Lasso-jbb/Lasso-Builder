@@ -802,7 +802,7 @@ export interface ScoreVM {
   progress?: number;
   /** Nøgle-værdi-linjer under måleren, fx Kreditmaksimum og International score. */
   facts?: { label: string; value: string }[];
-  /** Katalog 18.1 (LWV-0): "Grundlag" under "Beregnet", fx "Regnskab 2025, status". Udelades, når ukendt. */
+  /** Hvad scoren bygger på, fx "Regnskab 2025, status". Vises ikke i scorekortet (Jakob 30.09); kun data. */
   basis?: string;
   /**
    * Katalog 18.1 (LXL-0): "Hvad trækker scoren", op til 4 forklarende faktorer med tone (ok = trækker ned mod lav

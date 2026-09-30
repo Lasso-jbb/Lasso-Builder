@@ -285,7 +285,7 @@ function computed(score: ScoreVM): string | undefined {
 /**
  * Aktuel risikoscore (katalog 18.1, Paper LWU-0). ¼-kortet (LWV-0): titel 18/600, tal 32/700 + "af 100" +
  * vurderingen som farvet ord, måler med tre zoner (60/20/20, 3 px mellemrum) og 2 px ink-markør, akselabels
- * "0, lav risiko" og "Høj risiko, 100", 36 px rækker "Beregnet" og "Grundlag", og "Se observationer" (G1: kun
+ * "0, lav risiko" og "Høj risiko, 100", 36 px række "Beregnet" (grundlaget vises ikke, Jakob 30.09), og "Se observationer" (G1: kun
  * med en handling). ½-kortet (LXL-0) bruges, når elementet står bredt (>= 480 px) OG scoremodellen leverer
  * forklarende faktorer: tal, måler og "Beregnet" i en 260 px kolonne til venstre og "Hvad trækker scoren" (op
  * til 4 faktorer med prik i success/warning/danger) til højre. Uden faktorer vises ¼-formen i alle bredder.
@@ -319,7 +319,6 @@ function RiskScoreCard({ heading, value, score, onObservations, onReport }: { he
   );
   const rows = [
     ...(date ? [{ label: "Beregnet", value: date }] : []),
-    ...(!wide && score.basis ? [{ label: "Grundlag", value: score.basis }] : []),
     ...(score.facts ?? []),
   ];
   const facts = rows.length ? (
