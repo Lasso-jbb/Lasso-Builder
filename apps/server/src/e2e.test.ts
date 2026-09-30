@@ -227,10 +227,10 @@ test("show_person (katalog 16) finder en person på navn og komponerer personsid
   assert.doesNotMatch(sc.card, /NYHEDER/);
   // Tekstkortets stamoplysninger gentager ikke hovedets tal (som siden).
   assert.doesNotMatch(sc.card, /Første reg\./);
-  assert.deepEqual(
-    sc.spec.components.flatMap((c) => (c.type === "LassoFollowUps" ? c.prompts.map((p) => p.label) : [])),
-    ["Roller", "Netværk", "Risiko"],
-  );
+  // Op til seks forskellige spørgsmål (followUps.ts), ét pr. emne, med personens eget selskab.
+  const labels = sc.spec.components.flatMap((c) => (c.type === "LassoFollowUps" ? c.prompts.map((p) => p.label) : []));
+  assert.ok(labels.length >= 4 && labels.length <= 6, labels.join(" | "));
+  assert.equal(new Set(labels).size, labels.length);
   assert.doesNotMatch(sc.card, /Prøvevej/, "aldrig gade og husnummer for en person");
   assert.match(sc.link, /\/p\/CVR-3-\d+\?e=\w+&s=[\w-]{22}$/);
   const page = await fetch(sc.link);

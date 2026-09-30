@@ -286,6 +286,6 @@ export function summarizeView(spec: ViewSpec, ds: Dataset, opts: { ask?: Ask } =
   const errors = Object.entries(ds.errors);
   if (errors.length) lines.push(`Fejl: ${errors.slice(0, 3).map(([k, v]) => `${k.split(":")[0]}: ${v}`).join("; ")}.`);
   // Hvornår tekstkortet vises, står ét sted: serverinstruktionerne (review P1-6).
-  lines.push("Tekstkortet er kun til værter uden Lasso-visning (se instruktionerne). Svar kort og gentag ikke tallene som tabel.");
+  lines.push("Visningen er svaret: skriv ingen tekst i chatten (se instruktionerne). Tekstkortet er kun til værter uden Lasso-visning.");
   return lines.join("\n");
 }

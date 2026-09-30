@@ -1,3 +1,4 @@
+import { companyFollowUps } from "./followUps.js";
 import { changeFeedKey, entityRefOf, ownershipGraphKey } from "./models.js";
 import { changePercent, formatDate, formatNumber, formatPercent, percentChange } from "./format.js";
 import { askFocus, askLabel, askPlan, SUMMARY_PENDING_TEXT, withRelated, type Ask, type AskItem } from "./ask.js";
@@ -167,63 +168,6 @@ export function composeProbe(lassoId: string, focus?: Focus, ask?: Ask): ViewSpe
  * Hvad komponisten ved om virksomheden til opfølgningerne. `undefined` = ikke hentet på dette fokus
  * (composeProbe henter kun det, fokus viser); så vises opfølgningen, og fanen, den peger på, svarer selv.
  */
-interface FollowUpData {
-  fin?: number;
-  owners?: number;
-  people?: number;
-  /** Har virksomheden et offentliggjort regnskab (kun kendt på regnskab). */
-  statements?: boolean;
-}
-
-interface FollowUpRule {
-  label: string;
-  prompt: string;
-  needs?: (d: FollowUpData) => boolean;
-}
-
-/** Hentet og tom = nej; ikke hentet = ja (fanen, opfølgningen peger på, viser selv en tom tilstand). */
-const some = (n: number | undefined) => n === undefined || n > 0;
-
-/** Næste naturlige spørgsmål pr. focus: peger videre til de andre fokusvisninger. */
-const FOLLOW_UPS: Record<Focus, FollowUpRule[]> = {
-  overblik: [
-    { label: "Økonomien", prompt: "Hvordan går det økonomisk for {navn}?", needs: (d) => some(d.fin) },
-    { label: "Ejere", prompt: "Hvem ejer {navn}?", needs: (d) => some(d.owners) },
-    { label: "Risiko", prompt: "Er der røde flag ved {navn}?" },
-  ],
-  oekonomi: [
-    { label: "Fuldt regnskab", prompt: "Vis resultatopgørelse og balance for {navn}." },
-    { label: "Risiko", prompt: "Er der røde flag ved {navn}?" },
-    { label: "Ejere", prompt: "Hvem ejer {navn}?", needs: (d) => some(d.owners) },
-  ],
-  regnskab: [
-    { label: "Udvikling over år", prompt: "Hvordan har økonomien i {navn} udviklet sig over årene?", needs: (d) => d.statements !== false && some(d.fin) },
-    { label: "Risiko", prompt: "Er der røde flag ved {navn}?" },
-    { label: "Kreditvurdering", prompt: "Hvad er kreditvurderingen for {navn}?" },
-    { label: "Ledelse", prompt: "Hvem sidder i ledelsen af {navn}?", needs: (d) => some(d.people) },
-  ],
-  ejerskab: [
-    { label: "Ledelse", prompt: "Hvem sidder i ledelsen af {navn}?", needs: (d) => some(d.people) },
-    { label: "Økonomien", prompt: "Hvordan går det økonomisk for {navn}?", needs: (d) => some(d.fin) },
-  ],
-  ledelse: [
-    { label: "Ejere", prompt: "Hvem ejer {navn}?", needs: (d) => some(d.owners) },
-    { label: "Historik", prompt: "Hvad er der sket i {navn} for nylig?" },
-  ],
-  risiko: [
-    { label: "Økonomien", prompt: "Hvordan går det økonomisk for {navn}?", needs: (d) => some(d.fin) },
-    { label: "Ejere", prompt: "Hvem ejer {navn}?", needs: (d) => some(d.owners) },
-  ],
-  historik: [
-    { label: "Overblik", prompt: "Giv mig et overblik over {navn}." },
-    { label: "Ledelse", prompt: "Hvem sidder i ledelsen af {navn}?", needs: (d) => some(d.people) },
-  ],
-  kontakt: [
-    { label: "Overblik", prompt: "Giv mig et overblik over {navn}." },
-    { label: "Ledelse", prompt: "Hvem sidder i ledelsen af {navn}?", needs: (d) => some(d.people) },
-  ],
-};
-
 /** År med et tal for nøgletallet, ældste først. */
 function yearsWith(years: readonly FinancialYear[], m: Metric): FinancialYear[] {
   return years.filter((y) => typeof y[METRIC_FIELD[m]] === "number");
@@ -819,16 +763,10 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
   }
   if (focus === "ejerskab") push(shortcuts);
 
-  const known: FollowUpData = {
-    fin: ds.financials[id] ? fin.length : undefined,
-    owners: ds.ownership[id] ? owners.length : undefined,
-    people: ds.people[id] ? people.length : undefined,
-    statements: statements ? !hasNoStatements(statements) : undefined,
-  };
-  const followUps = FOLLOW_UPS[focus]
-    .filter((f) => f.needs === undefined || f.needs(known))
-    .slice(0, 3)
-    .map((f) => ({ label: f.label, prompt: f.prompt.replace("{navn}", shortCompanyName(options.name ?? ds.companies[id]?.name ?? lassoId)) }));
+  // Jakob 30.09: op til seks forskellige spørgsmål ud fra fokus og sidens data (followUps.ts).
+  const followUps = companyFollowUps(ds, id, focus, shortCompanyName(options.name ?? ds.companies[id]?.name ?? lassoId), shortCompanyName, {
+    hasStatements: statements ? !hasNoStatements(statements) : undefined,
+  });
   if (options.followUps !== false && followUps.length > 0) bottom.push({ type: "LassoFollowUps", prompts: followUps });
 
   // Højdebudget (23.3): hoved, nøgletalskort, opfølgning og regnskabstabellerne (fokus regnskab) er
@@ -1186,20 +1124,8 @@ function composeAskCompany(lassoId: string, ds: Dataset, ask: Ask, options: Comp
 
   const focus = askFocus(ask) ?? "overblik";
   const name = shortCompanyName(options.name ?? co?.name ?? lassoId);
-  const known: FollowUpData = {
-    fin: ds.financials[id] ? fin.length : undefined,
-    owners: ds.ownership[id] ? (owners?.length ?? 0) : undefined,
-    people: people ? people.length : undefined,
-    statements: statements ? !hasNoStatements(statements) : undefined,
-  };
-  // Altid en vej til hele siden (niveau C), dernæst fokusets naturlige næste spørgsmål.
-  const whole: FollowUpRule =
-    focus === "oekonomi" ? { label: "Hele økonomien", prompt: "Hvordan går det økonomisk for {navn}?" } : { label: "Hele overblikket", prompt: "Giv mig et overblik over {navn}." };
-  const prompts = [whole, ...FOLLOW_UPS[focus]]
-    .filter((f, i, all) => all.findIndex((x) => x.prompt === f.prompt) === i)
-    .filter((f) => f.needs === undefined || f.needs(known))
-    .slice(0, 3)
-    .map((f) => ({ label: f.label, prompt: f.prompt.replace("{navn}", name) }));
+  // Altid en vej til hele siden (niveau C) først, dernæst op til fem forskellige spørgsmål (followUps.ts).
+  const prompts = companyFollowUps(ds, id, focus, name, shortCompanyName, { whole: true, hasStatements: statements ? !hasNoStatements(statements) : undefined });
   const tail: ViewComponent[] = options.followUps !== false && prompts.length ? [{ type: "LassoFollowUps", prompts }] : [];
 
   return viewSpecSchema.parse({

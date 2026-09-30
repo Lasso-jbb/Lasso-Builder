@@ -1848,6 +1848,24 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 /* "Gem som PDF" og Gem/Gemt står sammen øverst til højre i hovedet (katalog 01, regel 21). */
 .lasso-frame__actions { flex: none; margin-left: auto; display: flex; align-items: center; gap: var(--lasso-space-2); }
 .lasso-frame__actions .lasso-iconbtn { margin-left: 0; }
+/* MCP-rammen (Jakob 30.09): navnet øverst til venstre, "Vis i fuld skærm" i midten med koral fyld (væk i fuld skærm),
+   "Gem som PDF" helt til højre. Samme tre spalter i rammens hoved og i virksomheds-/personhovedet. */
+.lasso-frame__header--bar { align-items: center; }
+.lasso-frame__header--center { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); column-gap: var(--lasso-space-4); }
+.lasso-frame__header--center:has(> .lasso-frame__back) { grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr); }
+.lasso-frame__header--center > .lasso-frame__actions { justify-self: end; }
+.lasso-frame__header--bar .lasso-frame__title { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 22px; line-height: 28px; }
+.lasso-frame__center { display: flex; justify-content: center; }
+.lasso-root .lasso-fsbtn { display: inline-flex; align-items: center; gap: 6px; height: var(--lasso-btn-h-sm); padding: 0 14px; white-space: nowrap; }
+.lasso-company.lasso-company--center { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+.lasso-company.lasso-company--center > .lasso-company__center { grid-column: 2; grid-row: 1; }
+.lasso-company.lasso-company--center > .lasso-company__actions { grid-column: 3; grid-row: 1; justify-self: end; }
+.lasso-root .lasso-actionbar__fullscreen { display: inline-flex; align-items: center; gap: 6px; }
+@container lasso (max-width: 560px) {
+  .lasso-frame__header--center { grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--lasso-space-2); }
+  .lasso-frame__header--center > .lasso-frame__center { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; }
+  .lasso-company > .lasso-company__center { align-self: flex-start; }
+}
 .lasso-root .lasso-iconbtn:disabled { cursor: progress; opacity: 1; color: var(--lasso-muted); }
 @container lasso (max-width: 640px) {
   /* Kun ikonet; aria-label bærer "Gem som PDF". */

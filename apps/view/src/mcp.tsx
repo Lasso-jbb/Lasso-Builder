@@ -250,7 +250,10 @@ export function McpView() {
         }
         case "fullscreen": {
           const next = ctx?.displayMode === "fullscreen" ? "inline" : "fullscreen";
-          await app.requestDisplayMode({ mode: next });
+          const res = await app.requestDisplayMode({ mode: next });
+          // Værten svarer med den tilstand, den faktisk valgte; så forsvinder "Vis i fuld skærm" med det samme.
+          const mode = (res as { mode?: McpUiHostContext["displayMode"] } | undefined)?.mode ?? next;
+          setCtx((prev) => ({ ...prev, displayMode: mode }));
           return { ok: true };
         }
       }
@@ -323,6 +326,7 @@ export function McpView() {
           export: true,
           pdf: Boolean(current.pdfLink),
           fullscreen: canFullscreen,
+          fullscreenActive: ctx?.displayMode === "fullscreen",
           openFocus: canMessage,
         }}
         onAction={onAction}

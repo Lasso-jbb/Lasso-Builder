@@ -79,9 +79,12 @@ Regler:
 - Én visning pr. svar: kald højst ét af show_company, show_person, search_companies, search_persons, compare_companies og render_view pr. brugerbesked, og kun én gang. Aldrig show_company og render_view efter hinanden.
 - Tegn altid med det samme. Spørg aldrig "vil du se det grafisk?".
 - Kan din app vise den interaktive Lasso-visning: vis kun den, og skriv aldrig tekstkortet. Kan den ikke (fx Claude Code eller en terminal): vis tekstkortet fra værktøjssvaret uændret i en kodeblok med linket til den interaktive visning som klikbart link lige under, fx [Åbn LASSO X A/S i Lasso](url).
-- Brugeren ser visningen. Svar kort (1–3 sætninger) med det vigtigste, og gentag ikke tallene som tabel. Skriv aldrig HTML/CSS.
+- Visningen er hele svaret (Jakob 30.09): skriv INGEN tekst i chatten før eller efter den; ingen opsummering, ingen kommentar, ingen gentagelse af tal og ingen forslag til næste spørgsmål (de står i visningen). Skriv kun tekst, når værktøjet fejlede, når du skal spørge, hvem brugeren mente, eller når appen ikke kan vise visningen (tekstkortet ovenfor). Skriv aldrig HTML/CSS.
 - Nævner svaret andre match ved navneopslag, og er det uklart hvem brugeren mente, så spørg.
 - Beløb angives i hele kroner (10 mio. = 10000000).`;
+
+/** Første linje i hvert visningssvar (Jakob 30.09): visningen er svaret, så modellen skriver intet i chatten. */
+const SILENT = "Visningen vises for brugeren nu og er hele svaret: skriv intet i chatten (kun hvis appen ikke kan vise visningen, se tekstkortet).";
 
 /**
  * Resuméet står både som tekst og i structuredContent: nogle værter (fx Claude Code)
@@ -89,7 +92,7 @@ Regler:
  */
 function viewResult(spec: ViewSpec, ds: Dataset, extra: { note?: string; link?: string; ask?: Ask; pdfLink?: string } = {}): CallToolResult {
   // Med et spørgsmål svarer resuméet og tekstkortet på det først ("Svar: …").
-  const summary = [extra.note, summarizeView(spec, ds, { ask: extra.ask }), extra.link && `Interaktiv Lasso-visning (link til brugeren): ${extra.link}`]
+  const summary = [SILENT, extra.note, summarizeView(spec, ds, { ask: extra.ask }), extra.link && `Interaktiv Lasso-visning (link til brugeren): ${extra.link}`]
     .filter(Boolean)
     .join("\n");
   const card = textCard(spec, ds, { ask: extra.ask });

@@ -70,6 +70,8 @@ export interface HostCapabilities {
    * åbner fanen. Uden den folder "Se alle" ud på stedet.
    */
   openFocus?: boolean;
+  /** Visningen står allerede i fuld skærm (MCP displayMode "fullscreen"): "Vis i fuld skærm" skjules. */
+  fullscreenActive?: boolean;
   /** Katalog 08/16: værten kan starte overvågning og åbne overvågningsindstillinger ("Overvåg"/"Overvåger"). */
   monitor?: boolean;
   /** Katalog 08/24: værten kan skifte til en sektion/et fokus ("Se risiko", "Se historik", genveje). */

@@ -116,7 +116,8 @@ test("opfølgninger bruger kortnavnet, ikke det juridiske navn i versaler", () =
   const spec = composeCompany(id, ds, { name: "NOVO NORDISK A/S" });
   const f = spec.components.find((c) => c.type === "LassoFollowUps");
   assert.ok(f && f.type === "LassoFollowUps");
-  assert.match(f.prompts[0]!.prompt, /for Novo Nordisk\?/);
+  assert.ok(f.prompts.some((p) => /for Novo Nordisk\?/.test(p.prompt)));
+  assert.ok(f.prompts.every((p) => !/NOVO NORDISK A\/S/.test(p.prompt)));
 });
 
 test("personsiden har opfølgninger (review P2-5)", () => {
@@ -440,17 +441,34 @@ test("opfølgninger: data, fokus ikke har hentet, tæller som 'måske' (vises); 
     const f = composeCompany(id, d, { focus }).components.find((c) => c.type === "LassoFollowUps");
     return f?.type === "LassoFollowUps" ? f.prompts.map((p) => p.label) : [];
   };
-  // Ledelse henter ikke ejerne: "Ejere" står, og fanen Ejerskab svarer selv (også med en tom tilstand).
-  assert.deepEqual(labels("ledelse"), ["Ejere", "Historik"]);
+  // Ledelse henter ikke ejerne: ejerspørgsmålet står, og siden svarer selv (også med en tom tilstand).
+  assert.ok(labels("ledelse").includes("Hvem er de reelle ejere?"));
   ds.ownership[id] = { lassoId: id, owners: [] };
-  assert.deepEqual(labels("ledelse"), ["Historik"]);
-  // Risiko: økonomien og ejerne ukendte, altså med.
-  assert.deepEqual(labels("risiko"), ["Økonomien"]);
-  // Regnskab uden offentliggjort regnskab: ingen "Udvikling over år".
+  assert.ok(!labels("ledelse").includes("Hvem er de reelle ejere?"));
+  // Regnskab uden offentliggjort regnskab: intet spørgsmål om udviklingen over år.
   ds.financialStatements[id] = { lassoId: id, currency: "DKK", incomeStatement: [], balanceSheet: [], cashFlow: [] };
-  assert.deepEqual(labels("regnskab"), ["Risiko", "Kreditvurdering", "Ledelse"]);
+  assert.ok(!labels("regnskab").includes("Hvordan har økonomien udviklet sig over årene?"));
   ds.financialStatements[id] = { lassoId: id, currency: "DKK", incomeStatement: [{ year: 2025, revenue: 1 }], balanceSheet: [], cashFlow: [] };
-  assert.deepEqual(labels("regnskab"), ["Udvikling over år", "Risiko", "Kreditvurdering"]);
+  assert.equal(labels("regnskab")[0], "Hvordan har økonomien udviklet sig over årene?");
+});
+
+test("opfølgninger (Jakob 30.09): op til seks, ét pr. emne, aldrig sidens eget emne, med sidens direktør og ejerselskab", () => {
+  const ds = emptyDataset("demo");
+  ds.companies[id] = { lassoId: id, name: "TEST ApS", status: "Normal" };
+  ds.people[id] = [{ name: "Anne Marie Eksempel", role: "Direktør", from: "2015-01-01" }];
+  ds.ownership[id] = { lassoId: id, owners: [{ name: "EKSEMPEL HOLDING ApS", kind: "company", share: "100 %" }] };
+  for (const focus of FOCUSES) {
+    const f = composeCompany(id, ds, { focus }).components.find((c) => c.type === "LassoFollowUps");
+    assert.ok(f?.type === "LassoFollowUps", focus);
+    assert.ok(f.prompts.length >= 4 && f.prompts.length <= 6, `${focus}: ${f.prompts.length}`);
+    assert.equal(new Set(f.prompts.map((p) => p.prompt)).size, f.prompts.length, `${focus}: ingen dubletter`);
+    for (const p of f.prompts) assert.ok(p.label.length <= 60 && p.label.endsWith("?") || /^Giv mig|^Vis /.test(p.label), p.label);
+  }
+  const overblik = composeCompany(id, ds, { focus: "overblik" }).components.find((c) => c.type === "LassoFollowUps");
+  assert.ok(overblik?.type === "LassoFollowUps");
+  assert.deepEqual(overblik.prompts.slice(0, 2).map((p) => p.label), ["Hvad laver Anne Eksempel ellers?", "Hvem står bag Eksempel Holding?"]);
+  assert.equal(overblik.prompts[0]!.prompt, "Hvilke andre selskaber er Anne Marie Eksempel involveret i?");
+  assert.ok(!overblik.prompts.some((p) => p.label === "Giv mig det samlede overblik"), "overblikket peger ikke på sig selv");
 });
 
 test("composeProbe henter tekstsektionerne til overblik og oekonomi", () => {
@@ -702,9 +720,9 @@ test("spørgsmål: proben henter alt i planen, hver datakilde én gang", () => {
 
 test("spørgsmål: opfølgningen peger altid tilbage til hele siden (niveau C)", () => {
   const eco = find(composeCompany(id, rich(), { ask: ask("hvad er soliditetsgraden") }), "LassoFollowUps")!;
-  assert.equal(eco.prompts[0]!.label, "Hele økonomien");
+  assert.equal(eco.prompts[0]!.label, "Vis hele økonomien");
   const owners = find(composeCompany(id, rich(), { ask: ask("hvem ejer") }), "LassoFollowUps")!;
-  assert.equal(owners.prompts[0]!.label, "Hele overblikket");
+  assert.equal(owners.prompts[0]!.label, "Vis hele overblikket");
   assert.ok(!find(composeCompany(id, rich(), { ask: ask("hvem ejer"), followUps: false }), "LassoFollowUps"));
 });
 

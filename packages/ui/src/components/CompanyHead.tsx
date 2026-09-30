@@ -92,7 +92,7 @@ export function CompanyHead({ company, error, variant = "full", actions, onHisto
   const ceased = isCeased(company);
   // Ophørt (08.8): kun handlingen "Se historik", ingen Overvåg og ingen ikonknapper.
   const acts: HeadActionsProps | undefined = ceased
-    ? { context: actions?.context, history: onHistory ?? actions?.history }
+    ? { context: actions?.context, history: onHistory ?? actions?.history, center: actions?.center, end: actions?.end }
     : actions;
   // Jakob runde 6: navnet alene ved Aktiv/Normal; ellers status efter navnet i farvegruppen.
   const status = headStatusText(company);
@@ -125,11 +125,12 @@ export function CompanyHead({ company, error, variant = "full", actions, onHisto
 
   const showActions = hasHeadActions(acts);
   return (
-    <header className={`lasso-company lasso-span-full lasso-company--${kind}${showActions ? " lasso-company--actions" : ""}`}>
+    <header className={`lasso-company lasso-span-full lasso-company--${kind}${showActions ? " lasso-company--actions" : ""}${acts?.center ? " lasso-company--center" : ""}`}>
       <div className="lasso-company__title">
         <h2 className="lasso-company__name">{company.name}</h2>
         {status ? <span className={`lasso-company__status lasso-company__status--${tone}`}>{status}</span> : null}
       </div>
+      {acts?.center ? <div className="lasso-company__center">{acts.center}</div> : null}
       {showActions ? <HeadActions {...acts!} className="lasso-company__actions" /> : null}
       {/* G9 (kontrol r5, 30.3): ingen observationslinje under navnet; risiko står i risikosektionen (17). */}
       {below}

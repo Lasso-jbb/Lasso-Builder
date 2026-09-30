@@ -1,7 +1,8 @@
+import { personFollowUps } from "./followUps.js";
 import { entityRefOf, ownershipGraphKey, type Dataset } from "./models.js";
 import { askLabel, askPersonFocus, askPlan, type Ask, type AskItem } from "./ask.js";
 import { personCompanies, personFactOptions, personRisk, personRoleRows, personWithRole, riskTimeline, type PersonVM } from "./person.js";
-import { askComponent, askProbe, componentWeight, contentMinWidthFn, FOCUSES, gridHeight, ITEM_PADDING, type Focus } from "./compose.js";
+import { askComponent, askProbe, componentWeight, contentMinWidthFn, FOCUSES, gridHeight, ITEM_PADDING, shortCompanyName, type Focus } from "./compose.js";
 import { bandsToComponents, compactOf, measuredHeight, originOf, packBandsPaired, pageHeight, PAGE_HEIGHT_BUDGET, type PackedBand } from "./grid.js";
 import { widthProfileOf } from "./catalog.js";
 import { viewSpecSchema, type ViewComponent, type ViewSpec, type Width } from "./spec.js";
@@ -111,27 +112,6 @@ export interface ComposePersonOptions {
   /** Højdebudget i px ved 1200 (standard PAGE_HEIGHT_BUDGET, som virksomhedssiden). Ignoreres med showAll. */
   heightBudget?: number;
 }
-
-interface FollowUpRule {
-  label: string;
-  prompt: string;
-  needs?: (d: { roles: boolean; network: boolean; owns: boolean }) => boolean;
-}
-
-/** Næste naturlige spørgsmål pr. fokus: peger videre til de andre personfokus (show_person). */
-const ROLLER: FollowUpRule = { label: "Roller", prompt: "Hvilke roller har {navn} i selskaber?", needs: (d) => d.roles };
-const NETVAERK: FollowUpRule = { label: "Netværk", prompt: "Hvem sidder {navn} sammen med i selskaber?", needs: (d) => d.network };
-const EJERSKAB: FollowUpRule = { label: "Ejerskab", prompt: "Hvilke selskaber ejer {navn}?", needs: (d) => d.owns };
-const RISIKO: FollowUpRule = { label: "Risiko", prompt: "Har {navn} været med i selskaber, der gik konkurs?", needs: (d) => d.roles };
-const HISTORIK: FollowUpRule = { label: "Historik", prompt: "Hvad er der sket med {navn} for nylig, og er der nyheder?" };
-const FOLLOW_UPS: Record<PersonFocus, FollowUpRule[]> = {
-  overblik: [ROLLER, NETVAERK, RISIKO, EJERSKAB],
-  roller: [NETVAERK, EJERSKAB, RISIKO],
-  netvaerk: [ROLLER, RISIKO, HISTORIK],
-  ejerskab: [ROLLER, NETVAERK, RISIKO],
-  risiko: [ROLLER, HISTORIK, NETVAERK],
-  historik: [ROLLER, RISIKO, NETVAERK],
-};
 
 /** Antal rækker i stamoplysningerne (PersonFacts), med eller uden hovedets tal. */
 function factRows(p: PersonVM, hideCounts: boolean): number {
@@ -566,11 +546,8 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
   components.push(...result.chosen);
 
   const name = options.name ?? person.name;
-  const data = { roles: hasRoles, network: network.length > 0, owns: person.roles.some((r) => r.active && r.kind === "owner") };
-  const prompts = FOLLOW_UPS[focus]
-    .filter((f) => f.needs === undefined || f.needs(data))
-    .slice(0, 3)
-    .map((f) => ({ label: f.label, prompt: f.prompt.replace("{navn}", name) }));
+  // Jakob 30.09: op til seks forskellige spørgsmål ud fra fokus og personens selskaber (followUps.ts).
+  const prompts = personFollowUps(ds, id, focus, name, shortCompanyName, { network: network.length > 0 });
   if (options.followUps !== false && prompts.length > 0) components.push({ type: "LassoFollowUps", prompts });
 
   const companies = list.length;
@@ -672,13 +649,8 @@ function composeAskPerson(lassoId: string, ds: Dataset, ask: Ask, options: Compo
 
   const focus = askPersonFocus(ask) ?? "overblik";
   const name = options.name ?? person.name;
-  const data = { roles: hasRoles, network: network.length > 0, owns: person.roles.some((r) => r.active && r.kind === "owner") };
-  // Altid en vej til hele personsiden (niveau C), dernæst fokusets naturlige næste spørgsmål.
-  const whole: FollowUpRule = { label: "Hele overblikket", prompt: "Hvem er {navn}?" };
-  const prompts = [whole, ...FOLLOW_UPS[focus]]
-    .filter((f) => f.needs === undefined || f.needs(data))
-    .slice(0, 3)
-    .map((f) => ({ label: f.label, prompt: f.prompt.replace("{navn}", name) }));
+  // Altid en vej til hele personsiden (niveau C) først, dernæst op til fem forskellige spørgsmål (followUps.ts).
+  const prompts = personFollowUps(ds, id, focus, name, shortCompanyName, { whole: true, network: network.length > 0 });
   if (options.followUps !== false && prompts.length > 0) components.push({ type: "LassoFollowUps", prompts });
 
   return viewSpecSchema.parse({ kind: "person", title: name, subtitle, layout: "columns", columns: 2, components });
