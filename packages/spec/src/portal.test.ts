@@ -45,9 +45,9 @@ test("erhvervsresume: fortæller alder, første navn, branche, formål, ansatte 
   assert.doesNotMatch(t, /\.\./);
 });
 
-test("Lasso-siden: Overblik i tre kolonner (¼ ¼ ½) og Stamoplysninger som liste; alle specs er gyldige", () => {
+test("Lasso-siden: Overblik i tre lige brede kolonner (⅓ ⅓ ⅓) og Stamoplysninger som liste; alle specs er gyldige", () => {
   const [ov, st] = portalPages("CVR-1-34580820");
   assert.equal(ov!.layout, "columns");
-  assert.deepEqual([...new Set(ov!.components.map((c) => `${(c as { column?: number }).column}:${(c as { width?: string }).width}`))], ["1:quarter", "2:quarter", "3:half"]);
+  assert.deepEqual([...new Set(ov!.components.map((c) => `${(c as { column?: number }).column}:${(c as { width?: string }).width}`))], ["1:third", "2:third", "3:third"]);
   assert.deepEqual(st!.components.map((c) => c.type), ["LassoKeyValueList", "LassoRelationsTable", "LassoRelationsTable", "LassoCompanyHistory", "LassoProductionUnits"]);
 });

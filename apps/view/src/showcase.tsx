@@ -189,8 +189,8 @@ const CSS = `
 .sc-portal__mod[aria-current=page]{color:var(--accent);border-bottom-color:var(--accent)}
 .sc-portal__mod:disabled{color:var(--mute);opacity:.55;cursor:default}
 .sc-portal__page{padding:8px 0}
-/* Lasso-siden (Jakob 30.09): mere luft fra tekst til kolonnernes kanter i begge sider (40 px i stedet for 24/0). */
-.sc-portal__page .lasso-columns > .lasso-column > .lasso-column__item{padding-left:40px;padding-right:40px}
+/* Lasso-siden (Jakob 30.09): luft fra tekst til kolonnernes kanter i begge sider som i portalen (56 px). */
+.sc-portal__page .lasso-columns > .lasso-column > .lasso-column__item{padding-left:56px;padding-right:56px}
 .sc-portal__page{padding-left:0;padding-right:0}
 /* Højre kolonne: værdien står tæt på nøglen (fast nøglekolonne, venstrestillet tal) i stedet for yderst til højre. */
 .sc-portal__page .lasso-column:last-child .lasso-kv-row__label{width:200px;flex:none}
