@@ -671,10 +671,9 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
         for (const b of blocks.filter(Boolean).slice(0, 2)) push(b);
         break;
       }
-      // Fuldt regnskab: tabellerne står i fuld bredde (19.2), stablet i regnskabets rækkefølge.
-      bottom.push({ type: "LassoIncomeStatement", company: id, years: 3, width: "full" });
-      bottom.push({ type: "LassoBalanceSheet", company: id, years: 3, width: "full" });
-      if (statements?.cashFlow?.length) bottom.push({ type: "LassoCashFlow", company: id, years: 3, width: "full" });
+      // Jakob 01.10: hele regnskabet i den detaljerede visning med værktøjslinje (talformat, "Vis alt", print og
+      // PDF): resultatopgørelse, balance, pengestrøm og nøgletal, struktureret som et regnskab.
+      bottom.push({ type: "LassoFinancialStatements", company: id, years: 3, width: "full" });
       break;
     }
     case "kontakt": {

@@ -251,8 +251,8 @@ test("Ø13: en bred komponent lægges aldrig under sin indholdsstyrede mindstebr
   const axisWidth = withAxis.flatMap((b) => b.stacks).find((s) => s.items[0]!.type === "LassoOwnershipDiagram")!.width;
   assert.ok(axisWidth === "three-quarters" || axisWidth === "full", axisWidth);
   assert.equal(packBands(d, measuredHeight)[0]!.stacks[0]!.width, "two-thirds");
-  // Hæver indholdet over typens max, er max grænsen (flerårstabellen findes kun i ⅔).
-  assert.equal(elementMinWidth(c("LassoMultiYearTable"), { timeAxis: true, series: 10 }), "two-thirds");
+  // Hæver indholdet over typens max, er max grænsen (personens stamoplysninger findes kun i ⅓).
+  assert.equal(elementMinWidth(c("LassoPersonFacts"), { timeAxis: true, series: 10, longestLabel: 45 }), "third");
   assert.equal(contentMinWidth("bred", "two-thirds", { timeAxis: true }), "two-thirds");
   assert.equal(contentMinWidth("bred", "two-thirds", { timeAxis: true, longestLabel: 45 }), "three-quarters");
   // Smal: indholdet hæver ikke mindstebredden.

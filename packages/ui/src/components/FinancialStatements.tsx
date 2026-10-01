@@ -16,7 +16,7 @@ import type { ViewAction } from "../types.js";
 import { ShellIcon } from "./ShellIcons.js";
 import { Tabs } from "./Tabs.js";
 import { QualityFlag, StatementTable, type StatementRow, type StatementSection } from "./statementTable.js";
-import { balanceRowsCompact, balanceSections, cashFlowRows, incomeRows, incomeRowsCompact } from "./statementRows.js";
+import { balanceRowsCompact, balanceSectionsDetailed, cashFlowRowsDetailed, incomeRows, incomeRowsCompact, incomeRowsDetailed, keyFigureRows } from "./statementRows.js";
 
 export type StatementKind = "income" | "balance" | "cashflow";
 type Scope = "Koncern" | "Selskab";
@@ -38,6 +38,10 @@ export interface FinancialStatementsProps {
   error?: string;
   /** PDF-linket åbnes via værten, når den findes; ellers et almindeligt link. */
   onAction?: (a: ViewAction) => void;
+  /** Værten kan printe siden ("Print regnskab", Jakob 01.10). */
+  canPrint?: boolean;
+  /** "Vis alt" står tændt fra start (alle underposter foldet ud). */
+  defaultExpanded?: boolean;
 }
 
 /** Værdierne i ét scope (selskab eller koncern); det andet scope ligger i `alternate`. */
@@ -171,13 +175,15 @@ function MobileCashFlow({ s, year, scale }: { s: FinancialStatementsVM; year: nu
  * "Resultat | Balance | Pengestrøm" i fuld bredde, valgt år + Δ, balancen som to kort og pengestrømmen
  * med retningsbjælker. Formen skifter med container queries, ingen separat mobilkomponent.
  */
-export function FinancialStatements({ statements, company, statement = "income", years = 2, year: startYear, title, error, onAction }: FinancialStatementsProps) {
+export function FinancialStatements({ statements, company, statement = "income", years = 2, year: startYear, title, error, onAction, canPrint = false, defaultExpanded = false }: FinancialStatementsProps) {
   const heading = title ?? "Regnskab";
   const [tab, setTab] = useState<StatementKind>(statement);
   const [pairSel, setPair] = useState<"balance" | "cashflow">(statement === "cashflow" ? "cashflow" : "balance");
   const [scopeSel, setScope] = useState<Scope | null>(null);
   const [unit, setUnit] = useState<Unit>("t");
   const [yearSel, setYear] = useState<number | null>(startYear ?? null);
+  // Jakob 01.10: "Vis alt" folder alle underposter ud (standard: summerne fremme, underposter foldet ind).
+  const [expandAll, setExpandAll] = useState(defaultExpanded);
 
   if (!statements) {
     return (
@@ -217,23 +223,26 @@ export function FinancialStatements({ statements, company, statement = "income",
   /** Én opgørelse som tabel. `tablet`: nyeste år først, korte etiketter, uden ændringskolonne (26f.3). */
   const tableFor = (kind: StatementKind, n: number, key: string, tablet = false) => {
     const keep = upTo(n);
-    const common = { bare: true, unit: scale.label, scale, newestFirst: tablet, short: tablet } as const;
+    const common = { bare: true, unit: scale.label, scale, newestFirst: tablet, short: tablet, expandAll } as const;
     if (kind === "income") {
       const shown = s.incomeStatement.filter((y) => keep.has(y.year));
       if (!shown.length) return <StatementTable key={key} bare unit={scale.label} years={[]} sections={[]} prefix="lasso-income" emptyReason={noStatementsReason(company)} />;
-      return <StatementTable key={key} {...common} headLabel={tablet ? HEADING.income : undefined} showDelta={!tablet} years={shown.map((y) => y.year)} sections={[{ rows: tablet ? incomeRowsCompact(shown) : incomeRows(shown) }]} prefix="lasso-income" />;
+      return <StatementTable key={key} {...common} headLabel={tablet ? HEADING.income : undefined} showDelta={!tablet} years={shown.map((y) => y.year)} sections={[{ rows: tablet ? incomeRowsCompact(shown) : incomeRowsDetailed(shown) }]} prefix="lasso-income" />;
     }
     if (kind === "balance") {
       const shown = s.balanceSheet.filter((y) => keep.has(y.year));
       if (!shown.length) return <StatementTable key={key} bare unit={scale.label} years={[]} sections={[]} prefix="lasso-balance" emptyReason={noStatementsReason(company)} />;
-      const sections: StatementSection[] = tablet ? [{ rows: balanceRowsCompact(shown) }] : balanceSections(shown);
+      const sections: StatementSection[] = tablet ? [{ rows: balanceRowsCompact(shown) }] : balanceSectionsDetailed(shown);
       return <StatementTable key={key} {...common} headLabel={tablet ? "Balance 31.12" : undefined} unitSuffix=", 31.12" showDelta={false} years={shown.map((y) => y.year)} sections={sections} prefix="lasso-balance" />;
     }
     const shown = s.cashFlow.filter((y) => keep.has(y.year));
     if (!shown.length) return <StatementTable key={key} bare unit={scale.label} years={[]} sections={[]} prefix="lasso-cashflow" emptyReason="Pengestrømsopgørelse er ikke indberettet." />;
-    return <StatementTable key={key} {...common} headLabel={tablet ? HEADING.cashflow : undefined} showDelta={false} years={shown.map((y) => y.year)} sections={[{ rows: cashFlowRows(shown, s) }]} prefix="lasso-cashflow" />;
+    return <StatementTable key={key} {...common} headLabel={tablet ? HEADING.cashflow : undefined} showDelta={false} years={shown.map((y) => y.year)} sections={[{ rows: cashFlowRowsDetailed(shown, s) }]} prefix="lasso-cashflow" />;
   };
   const mobileIncome = s.incomeStatement.filter((y) => y.year === prevYear || y.year === year);
+  // Jakob 01.10: alle nøgletal, der kan regnes ud af regnskabet, for de viste år.
+  const keyYears = [...upTo(Math.max(2, Math.min(5, years)))].sort((a, b) => a - b);
+  const keyRows = keyFigureRows(s.incomeStatement, s.balanceSheet, keyYears);
   const span = Math.max(2, Math.min(5, years));
 
   const pdf = s.pdfUrl;
@@ -333,11 +342,21 @@ export function FinancialStatements({ statements, company, statement = "income",
             <option value="auto">Automatisk</option>
           </select>
         </label>
+        <button type="button" className={`lasso-btn lasso-btn--sm lasso-fs__expand${expandAll ? " is-on" : ""}`} aria-pressed={expandAll} onClick={() => setExpandAll(!expandAll)}>
+          {expandAll ? "Fold sammen" : "Vis alt"}
+        </button>
         <span className="lasso-fs__spacer" />
-        {s.auditorOpinion ? <span className="lasso-fs__opinion" title={s.auditorOpinion}>{s.auditorOpinion}</span> : null}
+        {canPrint && onAction ? (
+          <button type="button" className="lasso-btn lasso-fs__print" onClick={() => onAction({ kind: "pdf" })}>
+            <ShellIcon name="document" size={15} />
+            Print regnskab
+          </button>
+        ) : null}
         {pdfButton}
       </div>
 
+      {/* Jakob 01.10 (Portal 1440): påtegningen står på sin egen linje under værktøjslinjen, så den aldrig afkortes. */}
+      {s.auditorOpinion ? <p className="lasso-fs__opinion">{s.auditorOpinion}</p> : null}
       {/* Desktop (19): resultatopgørelsen (2 år + ændring), balance og pengestrøm side om side under. */}
       <div className="lasso-fs__wide">
         <div className="lasso-fs__block">{tableFor("income", span, "w-income")}</div>
@@ -353,6 +372,12 @@ export function FinancialStatements({ statements, company, statement = "income",
             </div>
           ) : null}
         </div>
+        {keyRows.length ? (
+          <div className="lasso-fs__block lasso-fs__keyfigures">
+            <h4 className="lasso-fs__colhead">Nøgletal</h4>
+            <StatementTable bare unit="%" years={keyYears} sections={[{ rows: keyRows }]} prefix="lasso-keyfig" showDelta={false} />
+          </div>
+        ) : null}
       </div>
 
       {/* Tablet (26f.3): to opgørelser side om side med 3 år, nyeste først; pengestrøm skiftes ind med segmentet. */}

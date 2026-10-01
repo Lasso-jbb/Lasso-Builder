@@ -63,7 +63,7 @@ test("regnskab uden offentliggjort regnskab og uden oplysninger ud over hovedet:
   assert.equal(spec.components.find((c) => c.type === "LassoOwnerList")?.column, 2);
 });
 
-test("regnskab med regnskab: tabellerne står stadig i fuld bredde", () => {
+test("regnskab med regnskab: det detaljerede regnskab i fuld bredde (Jakob 01.10)", () => {
   const ds = enk();
   ds.financialStatements[id] = {
     lassoId: id,
@@ -75,9 +75,9 @@ test("regnskab med regnskab: tabellerne står stadig i fuld bredde", () => {
   const spec = composeCompany(id, enk(), { focus: "regnskab" });
   assert.ok(!spec.components.some((c) => c.type === "LassoBalanceSheet"));
   const full = composeCompany(id, ds, { focus: "regnskab" });
-  const stmts = full.components.filter((c) => c.type === "LassoIncomeStatement" || c.type === "LassoBalanceSheet");
-  assert.equal(stmts.length, 2);
-  assert.ok(stmts.every((c) => c.column === undefined && c.title === undefined));
+  const stmts = full.components.filter((c) => c.type === "LassoFinancialStatements");
+  assert.equal(stmts.length, 1);
+  assert.ok(stmts.every((c) => c.column === undefined && c.title === undefined && c.width === "full"));
   assert.ok(!full.components.some((c) => c.type === "LassoKeyValueList"));
 });
 
@@ -107,7 +107,7 @@ test("hasReportingDuty: personligt ejede virksomheder har ingen regnskabspligt",
   assert.equal(hasReportingDuty(undefined), true);
 });
 
-test("B4: fokus regnskab beholder de tre opgørelser (også over budgettet); LassoFinancialStatements erstatter dem ikke", () => {
+test("fokus regnskab (Jakob 01.10): det detaljerede regnskab (resultat, balance, pengestrøm og nøgletal) med værktøjslinje", () => {
   const ds = enk();
   const years = [2023, 2024, 2025];
   ds.financialStatements[id] = {
@@ -117,11 +117,8 @@ test("B4: fokus regnskab beholder de tre opgørelser (også over budgettet); Las
     balanceSheet: years.map((year) => ({ year, assetsTotal: 500_000, liabilitiesAndEquityTotal: 500_000 })),
     cashFlow: years.map((year) => ({ year, operating: 10_000 })),
   };
-  // Resultat, balance og pengestrøm (ca. 1.900 px) er over de 1.300 px, men står alle, i regnskabets rækkefølge:
-  // eval-sættet (c-regnskab-01/02) forventer resultatopgørelsen som svar, og tekstkortet viser alle tre.
   const types = composeCompany(id, ds, { focus: "regnskab" }).components.map((c) => c.type);
-  assert.deepEqual(types.filter((t) => t !== "LassoCompanyHead" && t !== "LassoFollowUps"), ["LassoIncomeStatement", "LassoBalanceSheet", "LassoCashFlow"]);
-  assert.ok(!types.includes("LassoFinancialStatements"));
+  assert.deepEqual(types.filter((t) => t !== "LassoCompanyHead" && t !== "LassoFollowUps"), ["LassoFinancialStatements"]);
   assert.deepEqual(composeCompany(id, ds, { focus: "regnskab", showAll: true }).components.map((c) => c.type), types);
 });
 

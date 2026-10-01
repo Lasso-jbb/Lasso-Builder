@@ -39,7 +39,7 @@ import { answerText } from "./answer.js";
  * vælte økonomien.
  */
 /** Elementer, der viser seneste regnskabsårs nøgletal; det første på siden giver resuméets regnskabslinje. */
-const SUMMARY_FIGURES: ReadonlySet<ViewSpec["components"][number]["type"]> = new Set(["LassoKeyFigureCards", "LassoIncomeStatement", "LassoBalanceSheet", "LassoMultiYearTable"]);
+const SUMMARY_FIGURES: ReadonlySet<ViewSpec["components"][number]["type"]> = new Set(["LassoKeyFigureCards", "LassoIncomeStatement", "LassoBalanceSheet", "LassoMultiYearTable", "LassoFinancialStatements"]);
 
 export function summarizeView(spec: ViewSpec, ds: Dataset, opts: { ask?: Ask } = {}): string {
   const lines: string[] = [];

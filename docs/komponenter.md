@@ -510,7 +510,7 @@ En test fejler, hvis filen ikke er ajour.
 
 **Live-tilgængelighed.** når data findes
 
-**Bredde.** profil bred; std ⅔, min ⅔, maks ⅔; drivere: tidsakse, 10 serier side om side
+**Bredde.** profil bred; std ⅔, min ⅔, maks 1/1; drivere: tidsakse, 10 serier side om side
 
 **Props.** `company, metrics? (1–6 af omsaetning | bruttofortjeneste | resultat | egenkapital | ansatte | ebitda | balancesum | gaeld | soliditetsgrad | overskudsgrad | likviditetsgrad), years (2–10, standard 5), title?, variant? (A | B)`
 
@@ -1385,7 +1385,7 @@ En test fejler, hvis filen ikke er ajour.
 | `LassoShareBars` | smal | ½ / ½ / ½ | når data findes | focus, ask, render_view |
 | `LassoWaterfallChart` | fleksibel | ½ / ⅓ / 1/1 | når data findes | focus, ask, render_view |
 | `LassoKeyFigureGauge` | smal | ⅓ / ⅓ / ½ | ikke koblet på endnu | render_view |
-| `LassoMultiYearTable` | bred | ⅔ / ⅔ / ⅔ | når data findes | focus, ask, render_view |
+| `LassoMultiYearTable` | bred | ⅔ / ⅔ / 1/1 | når data findes | focus, ask, render_view |
 | `LassoIncomeStatement` | smal | ½ / ½ / ½ | når data findes | focus, ask, render_view |
 | `LassoBalanceSheet` | smal | ⅓ / ⅓ / ½ | når data findes | focus, ask, render_view |
 | `LassoCashFlow` | smal | ½ / ½ / ½ | når data findes | focus, ask, render_view |

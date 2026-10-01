@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { amountScale, currencyUnit, formatPercent, formatScaled, changePercent, type AmountScale } from "@lasso/spec";
 import { QualityFlag } from "./QualityFlag.js";
 export { QualityFlag };
@@ -26,6 +26,18 @@ export interface StatementRow {
   flag?: string;
   /** Kort etiket til smalle tabeller (tablet 26f.3), fx "Personaleomk.". */
   short?: string;
+  /**
+   * Underposterne bag en sum (Jakob 01.10, detaljeret regnskab): rækken kan foldes ud, men kun når mindst to
+   * underposter har tal (ellers giver det ingen mening, og rækken står uden fold).
+   */
+  children?: StatementRow[];
+  /** Værdierne er procenter (nøgletal), ikke beløb. */
+  percent?: boolean;
+}
+
+/** En række kan foldes ud, når mindst to underposter har tal. */
+export function expandable(row: StatementRow): boolean {
+  return (row.children ?? []).filter((c) => c.values.some((v) => typeof v === "number")).length >= 2;
 }
 
 export interface StatementSection {
@@ -69,6 +81,7 @@ export function StatementTable({
   unitSuffix = "",
   newestFirst = false,
   short = false,
+  expandAll = false,
 }: {
   title?: string;
   unit: string;
@@ -97,7 +110,10 @@ export function StatementTable({
   newestFirst?: boolean;
   /** Brug rækkernes korte etiketter (`short`). */
   short?: boolean;
+  /** "Vis alt" (Jakob 01.10): alle foldbare rækker står foldet ud. */
+  expandAll?: boolean;
 }) {
+  const [openKeys, setOpenKeys] = useState<ReadonlySet<string>>(new Set());
   const wrap = (children: ReactNode) => (bare ? <div className="lasso-stmt-bare">{children}</div> : <Section title={title} span="full">{children}</Section>);
   if (loading) return wrap(<DataState state="loading" lines={8} height={420} />);
   if (error) return wrap(<DataState state={stateForError(error) === "noaccess" ? "empty" : "error"} reason={error} />);
@@ -126,34 +142,50 @@ export function StatementTable({
           {sections.map((section, si) => (
             <div className="lasso-stmt__section" key={section.heading ?? si}>
               {section.heading ? <div className="lasso-stmt__group">{section.heading}</div> : null}
-              {section.rows.map((row) => {
-                const change = changeText(row.values.at(-2), row.values.at(-1), row.kind, Boolean(row.flag));
-                return (
-                  <div
-                    className={`lasso-stmt__row lasso-stmt__row--${row.kind ?? "line"}`}
-                    key={row.key}
-                  >
-                    <div className="lasso-stmt__label" title={short && row.short ? row.label : undefined}>{short && row.short ? row.short : row.label}</div>
-                    {order.map((i) => {
-                      const v = row.values[i];
-                      return (
-                      <div
-                        key={years[i]}
-                        className={`lasso-stmt__year ${i === row.values.length - 1 ? "lasso-stmt__year--last" : ""} ${typeof v === "number" && v < 0 ? "lasso-down" : ""}`}
-                      >
-                        {/* 19.1 (Jakob): kvalitetsflaget står foran tallet. */}
-                        {row.flag && i === row.values.length - 1 ? <QualityFlag reason={row.flag} /> : null}
-                        {fmt(v) ?? <span className="lasso-notreported">-</span>}
+              {section.rows.flatMap((row) => {
+                const canOpen = expandable(row);
+                const open = canOpen && (expandAll || openKeys.has(row.key));
+                const toggle = () =>
+                  setOpenKeys((cur) => {
+                    const n = new Set(cur);
+                    if (n.has(row.key)) n.delete(row.key);
+                    else n.add(row.key);
+                    return n;
+                  });
+                const line = (r: StatementRow, child: boolean) => {
+                  const change = changeText(r.values.at(-2), r.values.at(-1), r.kind, Boolean(r.flag));
+                  const text = short && r.short ? r.short : r.label;
+                  return (
+                    <div className={`lasso-stmt__row lasso-stmt__row--${r.kind ?? "line"}${child ? " lasso-stmt__row--child" : ""}`} key={child ? `${row.key}:${r.key}` : r.key}>
+                      <div className="lasso-stmt__label" title={short && r.short ? r.label : undefined}>
+                        {!child && canOpen ? (
+                          <button type="button" className="lasso-stmt__toggle" aria-expanded={open} onClick={toggle}>
+                            <span className="lasso-stmt__chev" aria-hidden="true">{open ? "▾" : "▸"}</span>
+                            {text}
+                          </button>
+                        ) : (
+                          text
+                        )}
                       </div>
-                      );
-                    })}
-                    {showDelta ? (
-                      <div className={`lasso-stmt__delta ${change.tone === "down" ? "lasso-down" : change.tone === "up" ? "lasso-up" : "lasso-stmt__delta--plain"}`}>
-                        {change.text || <span className="lasso-notreported">-</span>}
-                      </div>
-                    ) : null}
-                  </div>
-                );
+                      {order.map((i) => {
+                        const v = r.values[i];
+                        return (
+                          <div key={years[i]} className={`lasso-stmt__year ${i === r.values.length - 1 ? "lasso-stmt__year--last" : ""} ${typeof v === "number" && v < 0 ? "lasso-down" : ""}`}>
+                            {/* 19.1 (Jakob): kvalitetsflaget står foran tallet. */}
+                            {r.flag && i === r.values.length - 1 ? <QualityFlag reason={r.flag} /> : null}
+                            {(r.percent ? (v == null ? null : formatPercent(v, false)) : fmt(v)) ?? <span className="lasso-notreported">-</span>}
+                          </div>
+                        );
+                      })}
+                      {showDelta ? (
+                        <div className={`lasso-stmt__delta ${change.tone === "down" ? "lasso-down" : change.tone === "up" ? "lasso-up" : "lasso-stmt__delta--plain"}`}>
+                          {(r.percent ? "" : change.text) || <span className="lasso-notreported">-</span>}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                };
+                return [line(row, false), ...(open ? (row.children ?? []).map((c) => line(c, true)) : [])];
               })}
             </div>
           ))}

@@ -383,7 +383,7 @@
       "entity": "CVR-1-99000001",
       "question": "Vis regnskab for Eksempel Byg A/S",
       "expected": {
-        "lead": "LassoIncomeStatement",
+        "lead": "LassoFinancialStatements",
         "focus": "regnskab"
       },
       "covers": [
@@ -399,7 +399,7 @@
       "entity": "CVR-1-99000005",
       "question": "Vis regnskabet for Eksempel Software ApS",
       "expected": {
-        "lead": "LassoIncomeStatement",
+        "lead": "LassoFinancialStatements",
         "focus": "regnskab"
       },
       "covers": [

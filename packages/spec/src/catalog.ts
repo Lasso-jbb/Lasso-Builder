@@ -93,7 +93,7 @@ export const GRID_RULES: Record<ComponentType, GridRule> = {
   LassoWaterfallChart: g("half", "third", "full", "medium", "fixed", "plot"), // Jakob 01.10: ¼ er for lille
   LassoShareBars: g("half", "half", "half", "medium", "fixed"),
   LassoKeyFigureGauge: g("third", "third", "half", "medium", "fixed"), // Jakob 01.10: ¼ er for lille
-  LassoMultiYearTable: g("two-thirds", "two-thirds", "two-thirds", "medium", "growing"),
+  LassoMultiYearTable: g("two-thirds", "two-thirds", "full", "medium", "growing"), // Jakob 01.10: også en stor (fuld) med flere nøgletal
   LassoIncomeStatement: g("half", "half", "half", "high", "growing"),
   LassoBalanceSheet: g("third", "third", "half", "very-high", "growing"),
   LassoCashFlow: g("half", "half", "half", "high", "growing"), // Jakob 01.10: ⅓ er for lille
