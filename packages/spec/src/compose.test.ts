@@ -288,12 +288,13 @@ test("virksomhedsoplysninger gentager ikke hovedet, kontaktblokken eller ejerlis
   const last = ds.financials[id]!.years.at(-1);
   const labels = (o: Parameters<typeof companyFacts>[3]) => companyFacts(co, ds.ownership[id], last, o).map((r) => r.label);
   // 08.1: ansatte står ikke i hovedet, så listen har dem også under hovedet.
-  assert.deepEqual(labels({ hideIdentity: true, hideContact: true }), ["Revisor", "Seneste revisorskift", "Regnskabsperiode", "Branchekode", "Ansatte", "Kommune", "Region"]);
-  assert.deepEqual(labels({ hideIdentity: true }), ["Revisor", "Seneste revisorskift", "Regnskabsperiode", "Branchekode", "Ansatte", "Kommune", "Region", "Telefon"]);
-  assert.deepEqual(labels({ hideIdentity: true, hideContact: true, hideAuditor: true }), ["Regnskabsperiode", "Branchekode", "Ansatte", "Kommune", "Region"]);
+  // Jakob 01.10 (09.2): fast rækkefølge, Branche først og Antal ansatte sidst.
+  assert.deepEqual(labels({ hideIdentity: true, hideContact: true }), ["Branchekode", "Kommune", "Regnskabsår", "Revisor", "Antal ansatte"]);
+  assert.deepEqual(labels({ hideIdentity: true }), ["Branchekode", "Kommune", "Telefon", "Regnskabsår", "Revisor", "Antal ansatte"]);
+  assert.deepEqual(labels({ hideIdentity: true, hideContact: true, hideAuditor: true }), ["Branchekode", "Kommune", "Regnskabsår", "Antal ansatte"]);
   // Uden hoved på siden (fx en render_view-spec) står identiteten i listen som før.
   // G9 (Jakob 29.09): hovedet viser kun navnet, så identiteten står i listen, også med hovedet på siden.
-  assert.deepEqual(labels({}).slice(3, 9), ["CVR-nummer", "Stiftet", "Virksomhedsform", "Branche", "Ansatte", "Adresse"]);
+  assert.deepEqual(labels({}), ["Branche", "Kommune", "Telefon", "CVR", "Status", "Stiftelsesdato", "Virksomhedsform", "Regnskabsår", "Revisor", "Antal ansatte"]);
   assert.equal(companyFacts(co, ds.ownership[id], last, { hideIdentity: true }).find((r) => r.label === "Revisor")?.lassoId, "CVR-1-99000002");
 
   // Kun én ny oplysning (branchekoden): listen udelades på alle fokus.
@@ -827,7 +828,9 @@ test("B4: de nye elementer fortrænger aldrig fokusets egne elementer (Papers si
     const base = withCredit(holding());
     const rich = withB4Data(withCredit(holding()));
     rich.financials[id] = base.financials[id]!;
-    const own = (spec: ViewSpec) => spec.components.filter((c) => !B4_TYPES.has(c.type)).map((c) => `${c.type}:${"maxRows" in c ? (c.maxRows ?? "") : ""}:${"limit" in c ? (c.limit ?? "") : ""}`);
+    // Tidslinjens længde følger pakningen: med B4-elementerne kan den stå fuldt i en stak, hvor siden uden
+    // dem må forkorte den til 3 (kompakt form). Elementerne og deres rækkefølge er de samme.
+    const own = (spec: ViewSpec) => spec.components.filter((c) => !B4_TYPES.has(c.type)).map((c) => `${c.type}:${"maxRows" in c ? (c.maxRows ?? "") : ""}:${"limit" in c && c.type !== "LassoTimeline" ? (c.limit ?? "") : ""}`);
     assert.deepEqual(own(composeCompany(id, rich, { focus })), own(composeCompany(id, base, { focus })), focus);
     // Og med et stramt budget: udelades noget, er det de nye elementer, ikke fokusets egne.
     assert.deepEqual(own(composeCompany(id, rich, { focus, heightBudget: 900 })), own(composeCompany(id, base, { focus, heightBudget: 900 })), `${focus} (900 px)`);

@@ -85,7 +85,11 @@ function dayMonth(value: string | undefined): string | undefined {
   return m ? `${m[2]}.${m[1]}` : undefined;
 }
 
+/** Kort visning (09.2/09.5): så mange rækker står fremme, resten bag "Se alle N oplysninger". */
+const SHORT_ROWS = 8;
+
 interface Row {
+  key?: string;
   label: string;
   value?: string;
   danger?: boolean;
@@ -205,8 +209,6 @@ function Value({ value, lassoId, onOpen }: { value: string; lassoId?: string; on
   }
   return <>{value}</>;
 }
-
-const SHORT_PAIR = ["Stiftet", "Virksomhedsform"] as const;
 
 /** Handling for en klikbar række (02c.13): åbner virksomheden eller personen, når værten kan. */
 function rowOpener(r: Row, onOpen?: (a: ViewAction) => void): (() => void) | undefined {
@@ -331,7 +333,8 @@ export function KeyValueList({
   links,
   onPdf,
   years: yearCount = 5,
-  maxRows,
+  maxRows: maxRowsProp,
+  view = "full",
   look = "list",
   contact,
   fields,
@@ -370,6 +373,8 @@ export function KeyValueList({
   years?: number;
   /** Kun de første N rækker; resten bag "Se N oplysninger" (30.13). */
   maxRows?: number;
+  /** Jakob 01.10 (09.2/09.5): 'short' = de første 8 rækker (eller maxRows), resten foldes ud på stedet; 'full' = alle. */
+  view?: "short" | "full";
   /** Variant "company": 'card' = portalens virksomhedskort (CompanyCard). */
   look?: "list" | "card";
   /** Kontaktdata (flere telefonnumre og e-mails) til virksomhedskortet. */
@@ -382,6 +387,7 @@ export function KeyValueList({
   onLink?: (url: string) => void;
 }) {
   const heading = title ?? (variant === "financials" ? "Regnskab" : "Virksomhedsoplysninger");
+  const maxRows = maxRowsProp ?? (view === "short" ? SHORT_ROWS : undefined);
   const ready = variant === "financials" ? Boolean(financials) : Boolean(company);
   const [year, setYear] = useState<number | null>(null);
   const [allRows, setAllRows] = useState(false);
@@ -480,17 +486,14 @@ export function KeyValueList({
       </Section>
     );
   }
-  // 26c.2: to korte felter (Stiftet, Virksomhedsform) deler én række på mobil, når de står efter hinanden.
-  const pairAt = rows.findIndex((r, i) => SHORT_PAIR[0] === r.label && rows[i + 1]?.label === SHORT_PAIR[1] && r.value && rows[i + 1]?.value);
   return (
     <Section title={heading} span="half">
       <div className="lasso-kv-list">
-        {cut(rows).map((r, i) => {
+        {cut(rows).map((r) => {
           const open = rowOpener(r, onOpen);
-          const half = pairAt >= 0 && (i === pairAt || i === pairAt + 1) ? (i === pairAt ? " lasso-kv-row--half" : " lasso-kv-row--half lasso-kv-row--half-end") : "";
           return (
             // 02c.13: har værdien et Lasso-ID, er hele rækken klikbar (navnet er stadig knappen for tastatur).
-            <div className={`lasso-kv-row ${open ? "lasso-kv-row--link" : ""}${half}`} key={r.label} onClick={open}>
+            <div className={`lasso-kv-row ${open ? "lasso-kv-row--link" : ""}`} key={r.key ?? r.label} onClick={open}>
               <Label text={r.label} info={info} />
               <div className={`lasso-kv-row__value lasso-kv-row__value--wrap${r.tone === "warning" ? " lasso-kv-row__value--warning" : ""}`}>
                 {r.code ? (

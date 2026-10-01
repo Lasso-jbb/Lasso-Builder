@@ -13,6 +13,7 @@ import {
   ScoreHistory,
   LassoContact,
   LassoContactPersons,
+  LassoRelations,
   ScoreGauge,
   Section,
   Sparkline,
@@ -175,6 +176,9 @@ function CompanyHeads() {
       <Labelled label="Variant: status er ikke Aktiv/Normal: status efter navnet i sin farvegruppe">
         <CompanyHead company={{ ...BYG, status: "Under konkurs", statusKind: "warning", statusDate: undefined }} actions={headActions(false)} />
       </Labelled>
+      <Labelled label="Variant: langt navn (mobil: højst 2 linjer og …, knapperne bliver i toppen)">
+        <CompanyHead company={{ ...BYG, name: "Eksempel Byg og Anlægsentreprise Midtjylland Holding A/S" }} actions={headActions(false)} />
+      </Labelled>
     </Stack>
   );
 }
@@ -210,6 +214,13 @@ function LiveNumberStates() {
     </div>
   );
 }
+
+/** 11.1: Eksempel Byg A/S' produktionsenheder (fiktive). */
+const UNITS = [
+  { pNumber: "1000000020", name: "Eksempel Byg A/S", isMain: true, address: { street: "Prøvevej 1", zip: "8600", city: "Silkeborg" } },
+  { pNumber: "1000000021", name: "Eksempel Byg, Aarhus", address: { street: "Eksempelgade 12", zip: "8000", city: "Aarhus C" } },
+  { pNumber: "1000000022", name: "Eksempel Byg, materialegård", address: { street: "Industrivej 4", zip: "7430", city: "Ikast" } },
+];
 
 const Y = (year: number, revenue: number | null, grossProfit: number, profit: number, equity: number, employees: number) => ({ year, revenue, grossProfit, profit, equity, employees });
 const FIN_FULL: FinancialsVM = {
@@ -374,7 +385,7 @@ function Sparklines() {
 
 export const entries: GalleryEntry[] = [
   // 08 Virksomhed
-  { nr: "08.1", title: "Virksomhedshoved", node: "I4C-0", render: () => <CompanyHeads />, note: "Runde 6: navnet står alene ved Aktiv/Normal; ved alle andre statusser står statussen efter navnet (14/500, 12 px) i sin farvegruppe (05.7). Navn, status og ikonknapper på én linje, lodret centreret; ingen ekstra luft under hovedet (sektionsmellemrummet følger)." },
+  { nr: "08.1", title: "Virksomhedshoved", node: "I4C-0", render: () => <CompanyHeads />, note: "Runde 6: navnet står alene ved Aktiv/Normal; ved alle andre statusser står statussen efter navnet (14/500, 12 px) i sin farvegruppe (05.7). Navn, status og ikonknapper på én linje, lodret centreret; ingen ekstra luft under hovedet (sektionsmellemrummet følger). Mobil (Jakob 01.10): knapperne højrestillet i toppen, navnet højst 2 linjer med …" },
   { nr: "08.2", title: "Sektionsfaner", node: "9S7-0", render: () => <SectionTabs />, note: "Fanerne leveres af værten (LassoView.headTabs); her tegnet med CompanyHead + Tabs niveau 1 med 8 faner." },
   { nr: "08.3", title: "Kontaktblok", node: "9SV-0", spec: co("Eksempel Byg A/S", [{ type: "LassoContact", company: B }]) },
   { nr: "08.4", title: "Genveje", node: "9TL-0", spec: co("Eksempel Byg A/S", [{ type: "LassoShortcuts", company: B }]) },
@@ -415,7 +426,14 @@ export const entries: GalleryEntry[] = [
 
   // 09 Nøgletal
   { nr: "09.1", title: "Nøgletalskort", node: "9UM-0", spec: co("Eksempel Byg A/S", [{ type: "LassoKeyFigureCards", company: B }]) },
-  { nr: "09.2", title: "Nøgle-værdi-liste", node: "9VU-0", spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "company" }]) },
+  {
+    nr: "09.2",
+    title: "Nøgle-værdi-liste",
+    node: "9VU-0",
+    note: "Jakob 01.10: fast rækkefølge (Branche, Formål, Kommune, Reklamebeskyttet, Telefon, E-mail, Website, CVR, Binavne, Status, Stiftelsesdato, Virksomhedsform, Seneste vedtægtsændring, Regnskabsår, Seneste regnskab udgivet, Selskabskapital, Børsnoteret, Revisor, Underskrivende revisor, Tegningsregler, Antal ansatte); branchekoden i parentes efter navnet. Kort visning (view 'short': 8 rækker, resten foldes ud på stedet) og fuld visning (view 'full'). På mobil står hver oplysning på sin egen række.",
+    spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "company", view: "short" }]),
+  },
+  { nr: "09.2f", sortAs: "09.2", title: "Nøgle-værdi-liste, fuld visning", node: "9VU-0", note: "view 'full': alle oplysninger i den faste rækkefølge (Jakob 01.10).", spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "company", view: "full" }]) },
   { nr: "09.3", title: "Talformat", node: "9XW-0", render: () => <NumberFormats />, note: "Tegnet med formatAmount/formatPercent/formatNumber/formatDate fra @lasso/spec." },
   {
     nr: "09.4",
@@ -440,8 +458,19 @@ export const entries: GalleryEntry[] = [
     nr: "09.5",
     title: "Nøgle-værdi-liste med årsvælger",
     node: "9WR-0",
-    spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "financials" }]),
-    note: "Med årsrapportens PDF-link i datasættet: 'Hent regnskabet' øverst i elementet og 'Se alle' under listen (Jakob 29.09).",
+    spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "financials", view: "short" }]),
+    note: "Kort visning (Jakob 01.10): 8 rækker og 'Vis alle N' på stedet. Med årsrapportens PDF-link i datasættet: 'Hent regnskabet' øverst i elementet (Jakob 29.09).",
+    mutate: (ds) => {
+      ds.financialStatements[B] = { lassoId: B, currency: "DKK", incomeStatement: [], balanceSheet: [], cashFlow: [], pdfUrl: "https://example.com/aarsrapport.pdf" };
+    },
+  },
+  {
+    nr: "09.5f",
+    sortAs: "09.5",
+    title: "Nøgle-værdi-liste med årsvælger, fuld visning",
+    node: "9WR-0",
+    spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "financials", view: "full" }]),
+    note: "view 'full': alle rækker for året og 'Se alle' (hele regnskabet) under listen (Jakob 01.10).",
     mutate: (ds) => {
       ds.financialStatements[B] = { lassoId: B, currency: "DKK", incomeStatement: [], balanceSheet: [], cashFlow: [], pdfUrl: "https://example.com/aarsrapport.pdf" };
     },
@@ -497,8 +526,26 @@ export const entries: GalleryEntry[] = [
         own.owners = [...own.owners, ...["Prøve Invest ApS", "Carla Prøve", "Dan Prøve", "Eva Prøve"].map((name) => ({ ...base, name, lassoId: undefined }))];
       }
       ds.errors[`beneficialOwnership:${B}`] = "Reelle ejere kræver adgang (403).";
-      ds.productionUnits[B] = { lassoId: B, units: [], total: 1 };
+      ds.productionUnits[B] = { lassoId: B, units: UNITS };
     },
+  },
+  {
+    nr: "11.1p",
+    sortAs: "11.1",
+    title: "Rolleliste, kompakt: produktionsenheder foldet ud",
+    node: "A3I-0",
+    note: "Jakob 01.10: 'Produktionsenheder N' kan åbnes; enhederne står i en liste lige under (hovedenheden først, markeret), med adresse. Har virksomheden flere enheder end de hentede, åbner 'Se alle N' produktionsenhederne (20.1).",
+    gridWidth: 270,
+    render: () => (
+      <LassoRelations
+        people={[{ name: "Anne Eksempel", role: "Adm. direktør", lassoId: "CVR-3-4000001" }, { name: "Bo Eksempel", role: "Bestyrelsesformand" }, { name: "Carla Prøve", role: "Bestyrelsesmedlem" }]}
+        ownership={{ lassoId: B, owners: [{ name: "Eksempel Holding ApS", kind: "company", share: "100 %" }] }}
+        productionUnits={UNITS.length}
+        units={UNITS}
+        defaultUnitsOpen
+        onOpen={noop}
+      />
+    ),
   },
   { nr: "11.2", title: "Personliste, udfoldet", node: "A4F-0", gridWidth: 564, spec: co("Eksempel Byg A/S", [{ type: "LassoPersonList", company: B, show: "all" }]) },
   { nr: "11.3", title: "Ejerliste", node: "A5X-0", spec: co("Eksempel Byg A/S", [{ type: "LassoOwnerList", company: B }]) },

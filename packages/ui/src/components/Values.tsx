@@ -184,15 +184,15 @@ export function ValueList({ values, onShowAll, max = 2, mobileMax = 1 }: { value
 }
 
 /**
- * 02c.10 Branche med kode: koden først i muted, derefter teksten, som må ombrydes til 2 linjer
- * (aldrig "…" i detaljevisning). På mobil står koden under teksten.
+ * 02c.10 Branche med kode: teksten først, koden i parentes efter i muted (Jakob 01.10). Teksten må
+ * ombrydes (aldrig "…" i detaljevisning).
  */
 export function IndustryValue({ code, text }: { code?: string | null; text?: string | null }) {
   if (!text && !code) return <NotReported />;
   return (
     <span className="lasso-industry">
-      {code ? <span className="lasso-industry__code">{code}</span> : null}
       {text ? <span className="lasso-industry__text">{text}</span> : null}
+      {code ? <span className="lasso-industry__code">{text ? `(${code})` : code}</span> : null}
     </span>
   );
 }

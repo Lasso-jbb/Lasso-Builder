@@ -27,16 +27,12 @@ test("26h.7: live-nummer med verificeret-linje, kopiér- og ring-knap", () => {
   assert.match(html, /href="tel:71747812"[^>]*aria-label="Ring op"/);
 });
 
-test("28.7/26h.9: bibrancher med kode først, fravalgt revision som warning og kapital med valutakode", () => {
-  const rows = companyFacts(
-    { lassoId: "x", name: "Eksempel A/S", altIndustries: [{ code: "620200", text: "It-rådgivning" }], auditExempt: true, registeredCapital: { amount: 400000, currency: "DKK" } },
-    undefined,
-    undefined,
-  );
-  assert.deepEqual(rows.find((r) => r.label === "Bibrancher"), { label: "Bibrancher", value: "620200 It-rådgivning" });
-  assert.deepEqual(rows.find((r) => r.label === "Revision"), { label: "Revision", value: "Fravalgt", tone: "warning" });
-  assert.equal(rows.find((r) => r.label === "Kapital")?.value, "400.000 DKK");
-  const none = companyFacts({ lassoId: "x", name: "E", altIndustries: [] }, undefined, undefined);
-  assert.equal(none.find((r) => r.label === "Bibrancher")?.value, "Ingen registreret");
-  assert.equal(companyFacts({ lassoId: "x", name: "E" }, undefined, undefined).find((r) => r.label === "Bibrancher"), undefined);
+test("28.7/26h.9: fravalgt revision som warning i Revisor, kapital med valutakode; bibrancher kun via rows (brancher)", () => {
+  const co = { lassoId: "x", name: "Eksempel A/S", industryCode: "631000", industryText: "IT", altIndustries: [{ code: "620200", text: "It-rådgivning" }], auditExempt: true, registeredCapital: { amount: 400000, currency: "DKK" } };
+  const rows = companyFacts(co, undefined, undefined);
+  // Jakob 01.10 (09.2): standardlisten følger hans rækkefølge; bibrancher står i den fulde brancheliste (rows: brancher).
+  assert.equal(rows.find((r) => r.label === "Bibrancher"), undefined);
+  assert.deepEqual(rows.find((r) => r.key === "revisor"), { key: "revisor", label: "Revisor", value: "Fravalgt", tone: "warning" });
+  assert.equal(rows.find((r) => r.key === "selskabskapital")?.value, "400.000 DKK");
+  assert.equal(companyFacts(co, undefined, undefined, { rows: ["brancher"] })[0]?.value, "631000: IT\n620200: It-rådgivning");
 });

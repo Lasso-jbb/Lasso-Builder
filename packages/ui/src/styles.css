@@ -266,6 +266,9 @@
 /* 06.1/24/25: visningen i portalens ramme (LassoView frameless). Ingen egen header/fod; kroppen går direkte
    under modulbjælken med 24 px sideluft, og kolonnerne starter 40 px under bjælken uden ekstra linje. */
 .lasso-frame.lasso-frame--bare { gap: 0; padding: var(--lasso-space-5) var(--lasso-space-5) var(--lasso-space-10); }
+/* Modul 1/47 (Jakob 01.10): et hoved, der står alene i rammen, har lige meget luft over og under navnet. */
+.lasso-frame.lasso-frame--bare:has(> .lasso-content > .lasso-cell:only-child > :is(.lasso-company, .lasso-personhead, .lasso-headcompact, .lasso-headline):only-child) { padding-bottom: var(--lasso-space-5); }
+.lasso-frame--bare > .lasso-content > .lasso-cell:only-child:has(> :is(.lasso-company, .lasso-personhead, .lasso-headcompact, .lasso-headline):only-child) { margin-bottom: 0; }
 .lasso-frame--bare > .lasso-content--columns:has(> .lasso-columns:first-child) { margin-top: calc(-1 * var(--lasso-space-5)); }
 .lasso-frame--bare > .lasso-content--columns > .lasso-columns:first-child { border-top: 0; }
 .lasso-frame--bare > .lasso-content--columns > .lasso-columns:first-child > .lasso-column > .lasso-column__item:first-child { padding-top: var(--lasso-space-10); }
@@ -539,6 +542,7 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 @container lasso (max-width: 560px) {
   .lasso-frame { padding: var(--lasso-space-3); }
   .lasso-frame.lasso-frame--bare { padding: var(--lasso-space-4) var(--lasso-space-4) var(--lasso-space-7); }
+  .lasso-frame.lasso-frame--bare:has(> .lasso-content > .lasso-cell:only-child > :is(.lasso-company, .lasso-personhead, .lasso-headcompact, .lasso-headline):only-child) { padding-bottom: var(--lasso-space-4); }
   .lasso-frame--bare > .lasso-content--columns:has(> .lasso-columns:first-child) { margin-top: 0; }
   .lasso-frame--bare > .lasso-content--columns > .lasso-columns:first-child > .lasso-column > .lasso-column__item:first-child { padding-top: var(--lasso-space-5); }
   .lasso-content--grid-2 { grid-template-columns: minmax(0, 1fr); }
@@ -782,7 +786,7 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
   .lasso-tabs--l3 .lasso-tab { flex: 1; justify-content: center; height: 42px; font-size: var(--lasso-fs); line-height: 18px; }
   /* Over 3 segmenter: 44 px dropdown i fuld bredde i stedet for segmentkontrollen */
   .lasso-tabs-wrap--many .lasso-tabs--l3 { display: none; }
-  .lasso-seg-accent .lasso-tabs-wrap--many .lasso-tabs__select, .lasso-seg-accent.lasso-tabs-wrap--many .lasso-tabs__select { border-color: var(--lasso-accent-border); background-color: var(--lasso-accent-soft); color: var(--lasso-accent-text); font-weight: 600; }
+  /* 09.5 mobil (Jakob 01.10): årsvælgerens dropdown har ingen baggrundsfarve, også i accent-segmentet. */
   .lasso-tabs-wrap--many .lasso-tabs__select { display: block; width: 100%; height: 44px; padding: 0 12px; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius); background: var(--lasso-surface); color: var(--lasso-text); font: inherit; font-weight: 500; }
   /* Segmentkontrollen flytter ned under elementets overskrift i fuld bredde */
   .lasso-section__head:has(.lasso-tabs--l3) { flex-wrap: wrap; }
@@ -850,11 +854,6 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
   .lasso-kv-row__label { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
   .lasso-root .lasso-kv-row__label .lasso-infohint, .lasso-root .lasso-kv-row__label .lasso-infohint-tip { display: none; }
   .lasso-kv-row__value { line-height: 20px; }
-  .lasso-kv-list:has(> .lasso-kv-row--half) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .lasso-kv-list:has(> .lasso-kv-row--half) > .lasso-kv-row { grid-column: 1 / -1; }
-  .lasso-kv-list > .lasso-kv-row.lasso-kv-row--half { grid-column: auto; }
-  .lasso-kv-row--half-end { justify-content: flex-end; text-align: right; }
-  .lasso-kv-row--half-end .lasso-kv-row__label { justify-content: flex-end; }
 }
 /* 09.2: værdien er 14/400 i alle rækker, også når den er et link (revisoren). */
 .lasso-root .lasso-kv-row--link .lasso-link, .lasso-root .lasso-kv-row .lasso-entity__name { font-weight: 400; }
@@ -1093,6 +1092,13 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
   .lasso-lpage--3 { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) minmax(0, 4fr); }
   .lasso-lpage--3 > .lasso-lpage__col:nth-child(3) { grid-column: auto; border-top: 0; border-left: 1px solid var(--lasso-border); }
 }
+/* 06.5 ved 660–1319 px (Jakob 01.10): den tredje kolonne står i fuld bredde under de to andre; dens
+   elementer (virksomheds- og regnskabsoplysninger) står ved siden af hinanden i stedet for i ét bredt felt. */
+@container lasso (min-width: 660px) and (max-width: 1319px) {
+  .lasso-lpage--3 > .lasso-lpage__col:nth-child(3):has(> .lasso-lpage__item + .lasso-lpage__item) { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); }
+  .lasso-lpage--3 > .lasso-lpage__col:nth-child(3) > .lasso-lpage__item + .lasso-lpage__item { border-top: 0; border-left: 1px solid var(--lasso-border); }
+  .lasso-lpage--3 > .lasso-lpage__col:nth-child(3) > .lasso-lpage__item { padding-top: var(--lasso-page-y); }
+}
 @container lasso (max-width: 560px) {
   .lasso-frame:not(.lasso-frame--bare) > .lasso-content--page { margin-inline: calc(-1 * var(--lasso-space-3)); }
 }
@@ -1103,7 +1109,7 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-root .lasso-content--page .lasso-cpcompany__facts { gap: var(--lasso-page-gap); }
 .lasso-root .lasso-lpage__col .lasso-kv-row__label { width: var(--lasso-page-label); flex: none; }
 .lasso-root .lasso-lpage__col .lasso-kv-list--financials .lasso-kv-row__value { text-align: left; flex: 1; }
-@container lasso (min-width: 660px) {
+@container lasso (min-width: 1320px) {
   .lasso-root .lasso-lpage--3 > .lasso-lpage__col:nth-child(3) .lasso-kv-row { gap: calc(3 * var(--lasso-space-4)); }
   .lasso-root .lasso-lpage--3 > .lasso-lpage__col:nth-child(3) .lasso-kv-row__label { width: clamp(200px, 40%, 320px); }
 }
@@ -1124,6 +1130,12 @@ div.lasso-relations__count { cursor: default; }
 .lasso-relations__count > span:first-child { flex: 1; }
 .lasso-relations__countn { font-weight: 500; color: var(--lasso-accent-text); }
 .lasso-relations__count .lasso-icon { color: var(--lasso-icon); }
+/* 06.5/11.1 (Jakob 01.10): produktionsenhederne foldet ud under tællerrækken: navn (hovedenheden markeret) og adresse. */
+.lasso-relations__unitlist { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.lasso-relations__unit { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lasso-relations__unitname { font-size: var(--lasso-fs); line-height: 20px; color: var(--lasso-text); overflow-wrap: anywhere; }
+.lasso-relations__unitmain { margin-left: 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--lasso-accent-text); }
+.lasso-relations__unitaddr { font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-muted); }
 button.lasso-relations__name:hover { text-decoration: underline; }
 
 /* ---------- Reelle ejere (11, node B33-0) ---------- */
@@ -3120,9 +3132,9 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-vlist__mob { display: none; }
 .lasso-root .lasso-link.lasso-link--more { color: var(--lasso-accent-text); font-weight: 500; }
 /* 02c.10 Branche med kode */
-.lasso-industry { display: inline-flex; align-items: baseline; gap: 8px; min-width: 0; }
-.lasso-industry__code { flex: none; font-size: var(--lasso-fs-sm); color: var(--lasso-muted); font-variant-numeric: tabular-nums; }
-.lasso-industry__text { min-width: 0; overflow-wrap: break-word; } /* 02c.10: ombrydes, aldrig "…" i detaljevisning */
+.lasso-industry { display: inline; min-width: 0; }
+.lasso-industry__code { margin-left: 6px; white-space: nowrap; font-size: var(--lasso-fs-sm); color: var(--lasso-muted); font-variant-numeric: tabular-nums; }
+.lasso-industry__text { overflow-wrap: break-word; } /* 02c.10: ombrydes, aldrig "…" i detaljevisning */
 /* 02c.11 Adresse: to linjer, diskret kortlink */
 .lasso-address { display: inline-flex; flex-direction: column; }
 .lasso-root .lasso-address__map { width: fit-content; margin-top: 2px; font-size: var(--lasso-fs-sm); color: var(--lasso-accent-text); text-decoration: none; }
@@ -3162,7 +3174,6 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 @container lasso (max-width: 560px) {
   .lasso-vlist__desk { display: none; }
   .lasso-vlist__mob { display: inline; }
-  .lasso-industry { flex-direction: column-reverse; align-items: flex-start; gap: 0; }
   /* Kontrol r5 (02c.13): personens "Siden <dato>" vises også på mobil (J5) */
   .lasso-sharevalue__bar { display: none; }
   .lasso-sharevalue { display: inline-flex; }
@@ -3226,15 +3237,15 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-headline .lasso-company__status, .lasso-headline .lasso-personhead__kind { flex: none; font-size: var(--lasso-fs-sm); }
 .lasso-headline__facts { min-width: 0; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @container lasso (max-width: 560px) {
-  /* 26a (HOVED-KNAPPER, Jakob runde 6): navn 20/600 (+ afvigende status) øverst, de 40 px ikonknapper
-     venstrestillet på linjen under med kompakt luft (8 px). Intet kort om hovedet. */
-  .lasso-company, .lasso-personhead.lasso-company { display: flex; flex-direction: column; gap: 6px; }
-  .lasso-company__name, .lasso-personhead.lasso-company .lasso-company__name { font-size: 20px; line-height: 26px; }
+  /* 08.1 mobil (Jakob 01.10): ikonknapperne højrestillet og holdt i toppen; navnet 20/600 står til
+     venstre i højst 2 linjer og slutter med "…", hvis det er længere. Intet kort om hovedet. */
+  .lasso-company, .lasso-personhead.lasso-company { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 6px; align-items: start; }
+  .lasso-company__name, .lasso-personhead.lasso-company .lasso-company__name { font-size: 20px; line-height: 26px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: break-word; }
   .lasso-company__status { font-size: var(--lasso-fs-sm); }
   .lasso-company__facts { order: 1; font-size: var(--lasso-fs-sm); line-height: 18px; }
-  .lasso-company > .lasso-company__actions { order: 2; align-self: flex-start; margin-top: 2px; }
-  .lasso-company > .lasso-company__title { align-self: stretch; }
-  .lasso-company > .lasso-company__actions.lasso-headactions { justify-content: flex-start; gap: 8px; }
+  .lasso-company > .lasso-company__actions { grid-column: 2; grid-row: 1; align-self: start; margin-top: -7px; }
+  .lasso-company > .lasso-company__title { grid-column: 1; align-self: center; min-height: 26px; }
+  .lasso-company > .lasso-company__actions.lasso-headactions { justify-content: flex-end; gap: 4px; }
   /* 26a.4/26g.1: mobilhovedet har kun navn, fakta og ikonknapper; observationslinjen står kun på desktop (24.4). */
   .lasso-company > .lasso-headrisk { display: none; }
   .lasso-company > .lasso-headtabs { order: 4; }

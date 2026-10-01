@@ -155,7 +155,7 @@ const bo: PersonVM = {
 
 test("16.1: kun navnet og handlingerne; intet 'Person', ingen faktalinje, tællerlinje eller observationslinje", () => {
   const out = html(h(PersonHead, { person: bo, actions: { monitor: { monitoring: false, onClick: noop }, save: { saved: false, onClick: noop } }, onSeeRisk: noop, riskLine: true }));
-  assert.match(out, /lasso-company__name">Bo Eksempel</);
+  assert.match(out, /lasso-company__name"[^>]*>Bo Eksempel</);
   assert.match(out, /lasso-headbtn--monitor/);
   assert.doesNotMatch(out, /lasso-personhead__kind|lasso-personhead__obs|lasso-personhead__facts|lasso-personhead__counts|lasso-personhead__mobsub|Silkeborg/);
   assert.doesNotMatch(out, /lasso-headrisk/);

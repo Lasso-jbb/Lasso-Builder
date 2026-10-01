@@ -19,7 +19,7 @@ test("02c Felter med data", () => {
   assert.match(list, /Anna Eksempel, Bo Prøve og <button[^>]*>1 mere<\/button>/);
   assert.match(list, /Anna Eksempel og <button[^>]*>2 flere<\/button>/);
   assert.match(render(h(ValueList, { values: [] })), /Ingen/);
-  assert.match(render(h(IndustryValue, { code: "692000", text: "Revisorvirksomhed" })), /lasso-industry__code">692000<\/span><span class="lasso-industry__text">Revisorvirksomhed/);
+  assert.match(render(h(IndustryValue, { code: "692000", text: "Revisorvirksomhed" })), /lasso-industry__text">Revisorvirksomhed<\/span><span class="lasso-industry__code">\(692000\)/);
   const share = render(h(ShareValue, { range: [25, 33.32] }));
   assert.match(share, /25–33,32 %/);
   assert.match(share, /left:25%;width:8\.32/);

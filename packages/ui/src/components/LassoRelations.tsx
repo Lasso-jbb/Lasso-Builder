@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ExpandLink } from "./ExpandLink.js";
-import { isPersonId, type OwnershipVM, type PersonRowVM } from "@lasso/spec";
+import { isPersonId, type OwnershipVM, type PersonRowVM, type ProductionUnitVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { Icon } from "./Icon.js";
@@ -50,6 +50,8 @@ export function LassoRelations({
   onBeneficialInfo,
   productionUnits,
   onProductionUnits,
+  units,
+  defaultUnitsOpen = false,
 }: {
   people?: PersonRowVM[];
   ownership?: OwnershipVM;
@@ -63,12 +65,17 @@ export function LassoRelations({
   onBeneficialInfo?: () => void;
   /** 11.1: antal produktionsenheder som tællerrække under en 1 px linje ("Produktionsenheder  1 ›"). */
   productionUnits?: number;
-  /** Åbner produktionsenhederne (sektionen). */
+  /** Åbner produktionsenhederne (sektionen). Bruges kun, når enhederne ikke er med (`units`). */
   onProductionUnits?: () => void;
+  /** Jakob 01.10 (06.5/11.1): enhederne selv; tællerrækken folder dem så ud i en liste under. */
+  units?: readonly ProductionUnitVM[];
+  /** Enhedslisten står foldet ud fra start (galleriet). */
+  defaultUnitsOpen?: boolean;
 }) {
   const heading = title ?? "Relationer";
   // "og N flere" folder resten af ejerne ud på stedet (Jakob 30.09: skal kunne klikkes).
   const [allOwners, setAllOwners] = useState(false);
+  const [unitsOpen, setUnitsOpen] = useState(defaultUnitsOpen);
   if (!people || !ownership) {
     const error = peopleError ?? ownershipError;
     return (
@@ -153,7 +160,39 @@ export function LassoRelations({
         </div>
       ) : null}
       {typeof productionUnits === "number" && productionUnits > 0 ? (
-        onProductionUnits ? (
+        units?.length ? (
+          // Jakob 01.10: tallet kan åbnes, og enhederne står i en liste lige under (hovedenheden først).
+          <div className="lasso-relations__units">
+            <button type="button" className="lasso-relations__count" aria-expanded={unitsOpen} onClick={() => setUnitsOpen(!unitsOpen)}>
+              <span>Produktionsenheder</span>
+              <span className="lasso-relations__countn">{productionUnits}</span>
+              <Icon name={unitsOpen ? "chevron-up" : "chevron-down"} size={14} />
+            </button>
+            {unitsOpen ? (
+              <ul className="lasso-relations__unitlist">
+                {[...units].sort((a, b) => Number(Boolean(b.isMain)) - Number(Boolean(a.isMain))).map((u, i) => {
+                  const addr = [u.address?.street, [u.address?.zip, u.address?.city].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+                  return (
+                    <li key={u.pNumber ?? i} className="lasso-relations__unit">
+                      <span className="lasso-relations__unitname">
+                        {u.name ?? "Uden navn"}
+                        {u.isMain ? <span className="lasso-relations__unitmain">Hovedenhed</span> : null}
+                      </span>
+                      {addr ? <span className="lasso-relations__unitaddr">{addr}</span> : null}
+                    </li>
+                  );
+                })}
+                {productionUnits > units.length && onProductionUnits ? (
+                  <li>
+                    <button type="button" className="lasso-link" onClick={onProductionUnits}>
+                      Se alle {productionUnits}
+                    </button>
+                  </li>
+                ) : null}
+              </ul>
+            ) : null}
+          </div>
+        ) : onProductionUnits ? (
           <button type="button" className="lasso-relations__count" onClick={onProductionUnits}>
             <span>Produktionsenheder</span>
             <span className="lasso-relations__countn">{productionUnits}</span>

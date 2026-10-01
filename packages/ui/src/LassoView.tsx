@@ -408,9 +408,10 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           year={c.year}
           rows={c.rows}
           onOpen={props.host.drillDown ? act : undefined}
-          links={c.variant === "financials" && !c.maxRows ? statementsLink(c.company, empty, props, act) : undefined}
+          links={c.variant === "financials" && !c.maxRows && c.view !== "short" ? statementsLink(c.company, empty, props, act) : undefined}
           years={c.years}
           maxRows={c.maxRows}
+          view={c.view}
           look={c.look}
           contact={empty.contact[c.company]}
           fields={c.fields}
@@ -538,6 +539,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           onBeneficialInfo={props.host.prompt ? () => act({ kind: "prompt", prompt: "Hvad kræver det at se reelle ejere i Lasso?" }) : undefined}
           productionUnits={empty.productionUnits[c.company] ? (empty.productionUnits[c.company]!.total ?? empty.productionUnits[c.company]!.units.length) : undefined}
           onProductionUnits={props.host.prompt ? () => act({ kind: "prompt", prompt: `Vis produktionsenhederne for ${empty.companies[c.company]?.name ?? c.company}` }) : undefined}
+          units={empty.productionUnits[c.company]?.units}
         />
       );
     case "LassoBeneficialOwners":

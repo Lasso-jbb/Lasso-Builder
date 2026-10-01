@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { businessResume } from "./textSections.js";
-import { companyFacts, STAMDATA_ROWS } from "./companyFacts.js";
+import { COMPANY_FACT_ORDER, companyFacts, STAMDATA_ROWS } from "./companyFacts.js";
 import { relationGroupsOf, relationsFromCurrent } from "./relations.js";
 import { portalPages } from "./showcase.js";
 import { parseViewSpec } from "./spec.js";
@@ -15,7 +15,7 @@ const co: CompanyVM = {
   altIndustries: [{ code: "622000", text: "Computerkonsulentbistand" }],
 };
 
-test("stamoplysninger: rows giver portalens felter i portalens rækkefølge; uden rows er listen uændret", () => {
+test("stamoplysninger: rows giver portalens felter i portalens rækkefølge; uden rows Jakobs standardrækkefølge (01.10)", () => {
   const rows = companyFacts(co, undefined, { year: 2025, periodStart: "2025-01-01", periodEnd: "2025-12-31", published: "2026-04-15" }, { rows: STAMDATA_ROWS });
   const labels = rows.map((r) => r.label);
   assert.deepEqual(labels.slice(0, 4), ["Firmanavn", "Adresse", "Kommune", "Reklamebeskyttet"]);
@@ -23,7 +23,10 @@ test("stamoplysninger: rows giver portalens felter i portalens rækkefølge; ude
   assert.equal(rows.find((r) => r.key === "brancher")?.value, "631000: IT-infrastruktur\n622000: Computerkonsulentbistand");
   assert.equal(rows.find((r) => r.key === "boersnoteret")?.value, "Nej");
   assert.equal(rows.find((r) => r.key === "senesteregnskab")?.value, "15.04.2026");
-  assert.ok(!companyFacts(co, undefined, undefined).some((r) => r.key === "firmanavn" || r.key === "binavne"), "nye rækker kun med rows");
+  assert.ok(!companyFacts(co, undefined, undefined).some((r) => r.key === "firmanavn" || r.key === "adresse"), "firmanavn og adresse kun med rows");
+  const std = companyFacts(co, undefined, { year: 2025, periodStart: "2025-01-01", periodEnd: "2025-12-31", published: "2026-04-15" }).map((r) => r.key);
+  assert.deepEqual(std, COMPANY_FACT_ORDER.filter((k) => std.includes(k)), "standardrækkefølgen");
+  assert.equal(std[0], "branche");
 });
 
 test("relationsgrupper: adm. direktør står under Adm. direktører og Direktion; formand og suppleant er underroller", () => {

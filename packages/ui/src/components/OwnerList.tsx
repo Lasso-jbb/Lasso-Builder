@@ -14,7 +14,7 @@ export function parseShare(share: string | undefined): [number, number] | null {
 /**
  * Ejerliste med interval-bjælke (katalog 11). CVR oplyser ejerandel i intervaller:
  * fuld koral = sikker minimumsandel, lys koral = intervallets spænd.
- * Navnet står alene uden ikonkasse eller initialer; personer har "Person" under navnet. Bjælken er
+ * Navnet står alene uden ikonkasse eller initialer (Jakob 01.10: intet "Person" under navnet). Bjælken er
  * 120 × 6 i en fast kolonne (mobil: fuld bredde under navnet). Revisoren står i nøgle-værdi-listen.
  */
 /** Mobil (26c.5): højst fire ejere før "Vis alle N ejere". */
@@ -63,9 +63,7 @@ export function OwnerList({ ownership, error, onOpen }: { ownership?: OwnershipV
                   <div className="lasso-row__name lasso-row__name--regular">
                     {click ? <button type="button" className="lasso-link" onClick={click}>{o.name}</button> : o.name}
                   </div>
-                  {o.kind === "person" || o.votes ? (
-                    <div className="lasso-row__sub">{o.kind === "person" ? (o.votes ? `Person, stemmer ${o.votes}` : "Person") : `Stemmer ${o.votes}`}</div>
-                  ) : null}
+                  {o.votes ? <div className="lasso-row__sub">Stemmer {o.votes}</div> : null}
                 </div>
                 <div className="lasso-share" aria-hidden="true">
                   {range ? (

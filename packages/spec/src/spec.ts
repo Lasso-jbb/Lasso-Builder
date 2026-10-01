@@ -494,6 +494,10 @@ export const keyValueListSchema = z.object({
     .describe("Kun variant 'company': vis kun disse rækker (fx ['revisor','revisorskift','regnskabsperiode']). Det, hovedet, kontaktblokken og ejerlisten viser på siden, gentages stadig ikke."),
   years: z.number().int().min(2).max(5).optional().describe("Kun variant 'financials': antal år i årsvælgeren (standard 5). 2 giver segmentet '2025 | 2024' i fuld bredde på mobil (30.13)."),
   maxRows: z.number().int().min(1).max(20).optional().describe("Vis kun de første N rækker; resten bag 'Se N oplysninger' (30.13, svarniveau B). Udeladt: alle rækker."),
+  view: z
+    .enum(["short", "full"])
+    .optional()
+    .describe("'short' = kort visning: de første 8 rækker (eller maxRows), resten foldes ud på stedet med 'Se alle N oplysninger'. 'full' (standard) = alle rækker."),
 });
 
 export const contactSchema = z.object({
