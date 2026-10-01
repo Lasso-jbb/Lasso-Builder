@@ -1,4 +1,4 @@
-import { formatDate, personFacts, type PersonVM } from "@lasso/spec";
+import { personFacts, type PersonVM } from "@lasso/spec";
 import { DataState, Missing, Section, stateForError } from "../primitives.js";
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -6,11 +6,6 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 interface Row {
   label: string;
   value?: string;
-}
-
-/** Enhedsnummeret fra Lasso, ellers fra ID'et ("CVR-3-4000000001" -> "4000000001"). */
-function unitNumberOf(p: PersonVM): string | undefined {
-  return p.unitNumber ?? /^CVR-3-(\d+)$/i.exec(p.lassoId)?.[1];
 }
 
 /** Bopælen som postnummer og by (og land uden for Danmark); aldrig gade og husnummer. */
@@ -21,27 +16,14 @@ function residence(p: PersonVM): string | undefined {
 }
 
 /**
- * Rækkerne i stamoplysningerne. `hideCounts`: personhovedet står på samme side og viser allerede
- * antallet af aktive og ophørte roller, ejerskaber og første registrering; de gentages ikke 1:1
- * (personFactOptions). Bopæl (med postnummer), kommune, enhedsnummer og seneste ændring står altid.
+ * Rækkerne i stamoplysningerne (16.6, Jakob 01.10): kun Bopæl, Kommune og Aktive roller. Ved beskyttet adresse
+ * udelades kommunen også ("Adressebeskyttet" siger hvorfor). `hideCounts` er udgået (hovedet viser ikke tal).
  */
-export function personFactRows(p: PersonVM, { hideCounts = false }: { hideCounts?: boolean } = {}): Row[] {
+export function personFactRows(p: PersonVM, _options: { hideCounts?: boolean } = {}): Row[] {
   const f = personFacts(p);
   const rows: Row[] = [{ label: "Bopæl", value: residence(p) }];
-  // Beskyttet adresse: kommunen udelades også; "Adressebeskyttet" siger hvorfor. Kommunen står
-  // heller ikke, når den blot gentager byen ("8600 Silkeborg", Silkeborg Kommune).
-  const sameAsCity = Boolean(p.municipality && p.city?.toLowerCase().startsWith(p.municipality.toLowerCase()));
-  if (!p.addressProtected && !sameAsCity) rows.push({ label: "Kommune", value: p.municipality });
-  rows.push({ label: "Enhedsnummer", value: unitNumberOf(p) });
-  if (!hideCounts) {
-    rows.push(
-      { label: "Aktive roller", value: f.activeRoles ? `${f.activeRoles} i ${plural(f.activeCompanies, "selskab", "selskaber")}` : "Ingen" },
-      { label: "Ophørte roller", value: f.endedRoles ? String(f.endedRoles) : "Ingen" },
-      { label: "Ejer af", value: f.ownedCompanies ? plural(f.ownedCompanies, "selskab", "selskaber") : "Ingen" },
-      { label: "Første registrering", value: f.firstRegistered?.slice(0, 4) },
-    );
-  }
-  rows.push({ label: "Seneste ændring", value: f.latestChange ? formatDate(f.latestChange) : undefined });
+  if (!p.addressProtected) rows.push({ label: "Kommune", value: p.municipality });
+  rows.push({ label: "Aktive roller", value: f.activeRoles ? `${f.activeRoles} i ${plural(f.activeCompanies, "selskab", "selskaber")}` : "Ingen" });
   return rows;
 }
 

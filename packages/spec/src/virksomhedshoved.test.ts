@@ -16,8 +16,8 @@ test("08.1/30: LassoCompanyHead og LassoPersonHead tager variant og risk som val
   assert.throws(() => parseViewSpec({ title: "X", components: [{ type: "LassoCompanyHead", company: "CVR-1-99000001", variant: "stor" }] }));
 });
 
-test("08.4: LassoShortcuts har katalogtekst og standardværktøjerne fra Paper", () => {
-  assert.deepEqual([...DEFAULT_SHORTCUT_TOOLS], ["ejerdiagram", "regnskabsanalyse", "noegletal", "ejendomme", "tinglysning", "firmaindsigt"]);
+test("08.4/modul 5 (Jakob 01.10): LassoShortcuts har katalogtekst og standardværktøjerne i portalens rækkefølge", () => {
+  assert.deepEqual([...DEFAULT_SHORTCUT_TOOLS], ["overblik", "stamoplysninger", "noegletal", "ejerdiagram", "historik", "nyheder", "ejendomme", "tinglysning", "firmaindsigt"]);
   const entry = COMPONENT_CATALOG.find((e) => e.type === "LassoShortcuts");
   assert.ok(entry && /Brug til:.*Brug ikke når:.*Kræver:.*Eksempel:/s.test(entry.description));
   const spec = parseViewSpec({ title: "X", components: [{ type: "LassoShortcuts", company: "CVR-1-99000001", tools: ["ejerdiagram", "risiko"] }] });

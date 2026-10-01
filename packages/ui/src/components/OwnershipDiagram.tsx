@@ -270,7 +270,7 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
               <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
                 <path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4" fill="none" stroke="currentColor" strokeWidth="1.5" />
               </svg>
-              Åbn diagram i fuld skærm
+              Fuld skærm
             </button>
           ) : null}
           {graph.note ? <p className="lasso-odiagram__note">{graph.note}</p> : null}
@@ -624,28 +624,10 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
             <>
               <p className="lasso-odiagram__empty-title">{personRoot ? "Ingen registrerede ejerskaber" : "Ingen registrerede ejere eller datterselskaber"}</p>
               <p className="lasso-odiagram__empty-text">
-                {personRoot ? `${rootName} ejer ingen selskaber i CVR (legale ejerandele over 5 %).` : `${rootName} har ingen legale ejere over 5 % i CVR og ejer ikke andre selskaber.`} Sidst tjekket{" "}
+                {emptyOwnershipText(rootName, personRoot)} Sidst tjekket{" "}
                 {formatDate(graph.fetchedAt ?? new Date().toISOString())}.
               </p>
-              {personRoot ? null : (
-                <div className="lasso-odiagram__empty-actions">
-                  <button
-                    type="button"
-                    className="lasso-btn lasso-btn--sm"
-                    onClick={() => {
-                      setOwners("beneficial");
-                      setSelected(null);
-                    }}
-                  >
-                    Vis reelle ejere
-                  </button>
-                  {onAction ? (
-                    <button type="button" className="lasso-link lasso-odiagram__empty-link" onClick={() => onAction({ kind: "open-section", lassoId: graph.rootId, pageKind: "company", section: "historik", name: rootName })}>
-                      Se historik
-                    </button>
-                  ) : null}
-                </div>
-              )}
+              {/* 14b.1 (Jakob 01.10): ingen knapper (Vis reelle ejere, Se historik) i den tomme tilstand. */}
             </>
           ) : (
             <>
@@ -970,11 +952,19 @@ function Legend(_: { personRoot?: boolean }) {
         <span><i className="lg-line lg-line--dashed" />Historisk</span>
         <span><i className="lg-line lg-line--cycle" />Cirkulært ejerskab</span>
       </div>
-      <div className="lasso-odiagram__legend-row">
-        <span><b className="lg-votes">Stemmer</b> vises kun når de afviger fra ejerandelen</span>
-      </div>
+      {/* 14.1 (Jakob 01.10): ingen linje om stemmer i signaturforklaringen. */}
     </div>
   );
+}
+
+/**
+ * 14b.1 (Jakob 01.10): den tomme tilstand siger det begge veje med grænsen på 5 %, og at det er CVR, der intet
+ * har registreret (ikke at der ingen ejere er).
+ */
+export function emptyOwnershipText(name: string, personRoot = false): string {
+  return personRoot
+    ? `Der er ikke registreret ejerandele over 5 % i CVR, som ${name} ejer.`
+    : `Der er ikke registreret ejere med over 5 % af ${name} i CVR, og ${name} ejer ikke over 5 % af andre selskaber.`;
 }
 
 /* ---------- Detaljepanel ---------- */
@@ -1230,7 +1220,7 @@ function OwnershipList({
       {emptyAll ? (
         <DataState
           state="empty"
-          reason={personRoot ? `${root?.name ?? "Personen"} ejer ingen selskaber i CVR (legale ejerandele over 5 %).` : `${root?.name ?? "Selskabet"} har ingen legale ejere over 5 % i CVR og ejer ikke andre selskaber.`}
+          reason={emptyOwnershipText(root?.name ?? (personRoot ? "Personen" : "Selskabet"), personRoot)}
         />
       ) : null}
     </>

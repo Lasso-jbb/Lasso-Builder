@@ -456,7 +456,9 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       );
     case "LassoShortcuts": {
       const name = empty.companies[c.company]?.name ?? c.company;
-      const items = (c.tools ?? DEFAULT_SHORTCUT_TOOLS).flatMap((tool) => {
+      // Modul 5 (Jakob 01.10): kun de moduler, brugeren har adgang til (host.modules), når værten kender dem.
+      const access = props.host.modules;
+      const items = (c.tools ?? DEFAULT_SHORTCUT_TOOLS).filter((tool) => !access || access.includes(tool)).flatMap((tool) => {
         const meta = SHORTCUT_LABELS[tool];
         const run = sectionAction(props, act, { lassoId: c.company, pageKind: "company", section: tool, name, label: meta.label });
         return run ? [{ id: tool, label: meta.label, icon: meta.icon, onSelect: run }] : [];

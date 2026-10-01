@@ -507,16 +507,17 @@ export const contactSchema = z.object({
 }).describe("Kontaktblok: telefon, e-mail, web og adresse, klikbare.");
 
 /** Katalog 08.4: Lasso-værktøjer, en genvej kan åbne på virksomheden (i den rækkefølge, de vises). */
-export const SHORTCUT_TOOLS = ["ejerdiagram", "regnskabsanalyse", "noegletal", "ejendomme", "tinglysning", "firmaindsigt", "ledelse", "kontakt", "historik", "risiko"] as const;
+export const SHORTCUT_TOOLS = ["ejerdiagram", "regnskabsanalyse", "noegletal", "ejendomme", "tinglysning", "firmaindsigt", "ledelse", "kontakt", "historik", "risiko", "overblik", "stamoplysninger", "nyheder"] as const;
 export type ShortcutTool = (typeof SHORTCUT_TOOLS)[number];
 /** Standardgenvejene (Paper 08.4): de seks Lasso-værktøjer i katalogets rækkefølge. */
-export const DEFAULT_SHORTCUT_TOOLS: readonly ShortcutTool[] = ["ejerdiagram", "regnskabsanalyse", "noegletal", "ejendomme", "tinglysning", "firmaindsigt"];
+/** Standardgenvejene (Jakob 01.10, modul 5): portalens moduler i denne rækkefølge; kun dem, brugeren har adgang til, vises. */
+export const DEFAULT_SHORTCUT_TOOLS: readonly ShortcutTool[] = ["overblik", "stamoplysninger", "noegletal", "ejerdiagram", "historik", "nyheder", "ejendomme", "tinglysning", "firmaindsigt"];
 
 export const shortcutsSchema = z
   .object({
     type: z.literal("LassoShortcuts"),
     company: companyRef,
-    tools: z.array(z.enum(SHORTCUT_TOOLS)).min(1).max(10).optional().describe("Standard: ejerdiagram, regnskabsanalyse, noegletal, ejendomme, tinglysning, firmaindsigt. Over 6 samles resten under 'Flere'."),
+    tools: z.array(z.enum(SHORTCUT_TOOLS)).min(1).max(13).optional().describe("Standard: overblik, stamoplysninger, noegletal, ejerdiagram, historik, nyheder, ejendomme, tinglysning, firmaindsigt (kun de moduler, brugeren har adgang til). Over 6 samles resten under 'Flere'."),
     title: z.string().max(80).optional(),
   })
   .describe("Genveje: sekundære knapper med koral ikon, der åbner et Lasso-værktøj på virksomheden.");
@@ -1017,7 +1018,7 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoRelations: "quarter",
   LassoBeneficialOwners: "third",
   LassoTextSections: "half",
-  LassoSummary: "three-quarters",
+  LassoSummary: "half",
   LassoTimeline: "third",
   LassoNews: "three-quarters",
   LassoPersonHead: "full",

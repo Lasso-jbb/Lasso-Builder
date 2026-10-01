@@ -83,7 +83,7 @@ export const GRID_RULES: Record<ComponentType, GridRule> = {
   LassoContactPersons: g("third", "quarter", "half", "medium", "growing", "rows"),
   LassoShortcuts: g("half", "quarter", "half", "low", "fixed"),
   LassoTextSections: g("half", "half", "full", "high", "growing", "lines"),
-  LassoSummary: g("three-quarters", "quarter", "three-quarters", "high", "growing", "lines"),
+  LassoSummary: g("half", "quarter", "half", "high", "growing", "lines"), // Jakob 01.10 (modul 7): ¾ bliver for bred; højst ½
   LassoTimeline: g("third", "quarter", "half", "high", "growing", "rows"),
   LassoNews: g("three-quarters", "three-quarters", "full", "medium", "growing", "rows"),
   LassoBarChart: g("half", "third", "full", "medium", "fixed", "plot"),

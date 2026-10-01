@@ -64,13 +64,15 @@ test("20.1/26e.1: produktionsenheder med kontakt pr. P-enhed (kun ved data, G2),
   // Desktop (M1G-0): kolonnerne og kontaktlinjen med ikoner.
   assert.match(html, />Enhed, adresse og kontakt</);
   assert.match(html, />Oprettet og status</);
-  assert.match(html, /lasso-units20__name">Eksempel A\/S<[^]*Prøvevej 1, 1253 København K[^]*71 74 78 12[^]*kontakt@lasso\.dk/);
+  assert.match(html, /lasso-units20__name">Eksempel A\/S<span class="lasso-units__main">Hovedenhed<[^]*Prøvevej 1, 1253 København K[^]*71 74 78 12[^]*kontakt@lasso\.dk/);
+  // 20.1 (Jakob 01.10): intet P-nummer.
+  assert.doesNotMatch(html, /P-nr|1000000020/);
   assert.match(html, /lasso-units20__industry-text">IT-infrastruktur og hosting<\/span><span class="lasso-units20__code">631000</);
   assert.match(html, /14\.05\.2012<\/span><span class="lasso-units20__status[^"]*">Aktiv</);
   assert.match(html, /is-ended[^]*Ophørt 2024/);
   // Kontaktlinjen kun ved data (G2): lagret har hverken telefon eller e-mail.
   assert.equal((html.match(/lasso-units20__contact"/g) ?? []).length, 2, "én i tabellen og én i mobillisten for hovedenheden");
-  // Mobil (M3A-0): meta-linjen med P-nr., branche, ansatte og oprettet.
-  assert.match(html, /lasso-units20-m__meta">P-nr\. 1000000020, IT-infrastruktur og hosting, 17 ansatte, oprettet 14\.05\.2012</);
+  // Mobil (M3A-0): meta-linjen med branche, ansatte og oprettet (intet P-nr.).
+  assert.match(html, /lasso-units20-m__meta">IT-infrastruktur og hosting, 17 ansatte, oprettet 14\.05\.2012</);
 });
 

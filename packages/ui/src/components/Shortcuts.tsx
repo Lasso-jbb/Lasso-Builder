@@ -15,6 +15,9 @@ export const SHORTCUT_LABELS: Record<ShortcutTool, { label: string; icon: ShellI
   kontakt: { label: "Kontakt", icon: "phone" },
   historik: { label: "Historik", icon: "clock" },
   risiko: { label: "Risiko", icon: "alert" },
+  overblik: { label: "Overblik", icon: "overview" },
+  stamoplysninger: { label: "Stamoplysninger", icon: "company" },
+  nyheder: { label: "Nyheder", icon: "rss" },
 };
 
 /** Højst seks synlige genveje; resten under "Flere". */

@@ -240,7 +240,7 @@ En test fejler, hvis filen ikke er ajour.
 
 **Live-tilgængelighed.** altid
 
-**Bredde.** profil fleksibel; std ¾, min ¼, maks ¾; drivere: ingen
+**Bredde.** profil fleksibel; std ½, min ¼, maks ½; drivere: ingen
 
 **Props.** `text, title?, source?, updated?`
 
@@ -1423,7 +1423,7 @@ En test fejler, hvis filen ikke er ajour.
 | `LassoContactPersons` | smal | ⅓ / ¼ / ½ | når data findes | focus, ask, render_view |
 | `LassoShortcuts` | smal | ½ / ¼ / ½ | altid | focus, render_view |
 | `LassoTextSections` | fleksibel | ½ / ½ / 1/1 | når data findes | focus, ask, render_view |
-| `LassoSummary` | fleksibel | ¾ / ¼ / ¾ | altid | render_view |
+| `LassoSummary` | fleksibel | ½ / ¼ / ½ | altid | render_view |
 | `LassoTimeline` | smal | ⅓ / ¼ / ½ | når data findes | focus, person, ask, render_view |
 | `LassoNews` | bred | ¾ / ¾ / 1/1 | når data findes | focus, person, ask, render_view |
 | `LassoKeyFigureCards` | fleksibel | 1/1 / ⅓ / 1/1 | når data findes | focus, ask, render_view |

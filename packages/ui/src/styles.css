@@ -735,10 +735,12 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-tabs--l1 .lasso-tab, .lasso-tabs--l2 .lasso-tab { margin-bottom: 0; }
 .lasso-tabs--l2 .lasso-tab.is-on { border-bottom-color: var(--lasso-text); }
 /* Niveau 3, i et element: segmentkontrol 32 px, 13, 1 px kant radius 8; valgt = 1 px ink-kant + 600, hvid flade */
-.lasso-tabs--l3 { display: inline-flex; align-items: stretch; height: 32px; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius); overflow: hidden; }
-.lasso-tabs--l3 .lasso-tab { height: 30px; padding: 0 12px; margin: 0; font-size: var(--lasso-fs-sm); line-height: 16px; border: 1px solid transparent; border-radius: var(--lasso-radius); }
-.lasso-tabs--l3 .lasso-tab:hover:not(:disabled), .lasso-tabs--l3 .lasso-tab.is-hover { background: var(--lasso-surface-muted); }
-.lasso-tabs--l3 .lasso-tab.is-on { border-color: var(--lasso-text); background: var(--lasso-surface); }
+/* 29.3 (Jakob 01.10): segmentkontrollen som et blødt spor (muted flade) med den valgte som hvid flade med let
+   skygge og 600, i stedet for en mørk ramme om det valgte segment. */
+.lasso-tabs--l3 { display: inline-flex; align-items: stretch; height: 32px; padding: 2px; gap: 2px; box-sizing: border-box; border: 0; border-radius: var(--lasso-radius); background: var(--lasso-surface-muted); overflow: hidden; }
+.lasso-tabs--l3 .lasso-tab { height: 28px; padding: 0 12px; margin: 0; font-size: var(--lasso-fs-sm); line-height: 16px; color: var(--lasso-text-3); border: 1px solid transparent; border-radius: calc(var(--lasso-radius) - 2px); }
+.lasso-tabs--l3 .lasso-tab:hover:not(:disabled), .lasso-tabs--l3 .lasso-tab.is-hover { color: var(--lasso-text); }
+.lasso-tabs--l3 .lasso-tab.is-on { background: var(--lasso-surface); box-shadow: var(--lasso-shadow-seg); color: var(--lasso-text); font-weight: 600; }
 .lasso-tabs--l3 .lasso-tab:focus-visible::after, .lasso-tabs--l3 .lasso-tab.is-focus::after { display: none; }
 .lasso-tabs--l3 .lasso-tab:focus-visible, .lasso-tabs--l3 .lasso-tab.is-focus { border-color: var(--lasso-focus-border); }
 
@@ -788,7 +790,7 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
   .lasso-tabs--l1 { gap: 20px; }
   .lasso-tabs-wrap--l3 { display: flex; width: 100%; }
   .lasso-tabs--l3 { display: flex; width: 100%; height: 44px; }
-  .lasso-tabs--l3 .lasso-tab { flex: 1; justify-content: center; height: 42px; font-size: var(--lasso-fs); line-height: 18px; }
+  .lasso-tabs--l3 .lasso-tab { flex: 1; justify-content: center; height: 40px; font-size: var(--lasso-fs); line-height: 18px; }
   /* Over 3 segmenter: 44 px dropdown i fuld bredde i stedet for segmentkontrollen */
   .lasso-tabs-wrap--many .lasso-tabs--l3 { display: none; }
   /* 09.5 mobil (Jakob 01.10): årsvælgerens dropdown har ingen baggrundsfarve, også i accent-segmentet. */
@@ -804,7 +806,7 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
   .lasso-section__head:has(.lasso-tabs-wrap--compact) { flex-wrap: nowrap; align-items: center; }
   .lasso-section__action:has(.lasso-tabs-wrap--compact) { flex-basis: auto; }
   .lasso-tabs-wrap--compact, .lasso-tabs-wrap--compact .lasso-tabs--l3 { display: inline-flex; width: auto; height: 32px; }
-  .lasso-tabs-wrap--compact .lasso-tabs--l3 .lasso-tab { flex: none; height: 30px; font-size: 12px; line-height: 16px; }
+  .lasso-tabs-wrap--compact .lasso-tabs--l3 .lasso-tab { flex: none; height: 28px; font-size: 12px; line-height: 16px; }
 }
 /* Ældre alias for niveau 3 (segmentkontrol), så eksisterende markup ser ens ud */
 .lasso-segment { display: inline-flex; align-items: stretch; height: 32px; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius); overflow: hidden; }
@@ -1562,8 +1564,10 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-odiagram__chain-row b { font-size: 12px; font-weight: 600; }
 .lasso-odiagram__chain-sub { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding-left: 8px; font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
 .lasso-odiagram__chain-sub svg { flex: none; fill: none; stroke: var(--lasso-faint); stroke-width: 2; stroke-linecap: round; }
-.lasso-odiagram__hist { display: flex; flex-direction: column; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text); }
-.lasso-odiagram__hist span + span { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+/* 14.1 (Jakob 01.10): "Registreret som ejer" og datoen på én linje (som rækkerne over), med luft til linjen under. */
+.lasso-odiagram__hist { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text); }
+.lasso-odiagram__hist span + span { flex: none; font-size: var(--lasso-fs-sm); color: var(--lasso-text-2); font-variant-numeric: tabular-nums; }
+.lasso-odiagram__panel-sec:has(> .lasso-odiagram__hist) { padding-bottom: 20px; }
 .lasso-odiagram__panel-spacer { flex: 1 1 0; }
 .lasso-odiagram__panel-actions { display: flex; gap: 8px; padding: 14px 18px 18px; border-top: 1px solid var(--lasso-border); }
 .lasso-odiagram__panel-actions .lasso-btn { flex: 1 1 0; height: 40px; }
@@ -5463,7 +5467,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-odiagram__body.has-overlay { position: relative; }
 .lasso-root .lasso-odiagram__body.has-overlay > .lasso-odiagram__panel { position: absolute; top: 16px; right: 16px; z-index: 3; width: 300px; max-height: max(260px, calc(100% - 188px)); overflow-y: auto; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); box-shadow: var(--lasso-shadow-pop); }
 .lasso-odiagram__body.has-overlay > .lasso-odiagram__panel .lasso-odiagram__panel-spacer { display: none; }
-.lasso-root .lasso-odiagram__body.has-overlay .lasso-odiagram__panel-actions { position: sticky; bottom: 0; z-index: 1; background: var(--lasso-surface); padding: 14px 16px 16px; }
+.lasso-root .lasso-odiagram__body.has-overlay .lasso-odiagram__panel-actions { position: sticky; bottom: 0; z-index: 1; background: var(--lasso-surface); padding: 14px 16px 16px; box-shadow: 0 -10px 14px -12px rgba(16, 24, 40, 0.18); }
 .lasso-root .lasso-odiagram__body.has-overlay .lasso-odiagram__panel-actions .lasso-btn { min-width: 0; height: 40px; padding: 0 10px; font-size: 13px; }
 .lasso-root .lasso-odiagram__body.has-overlay .lasso-odiagram__panel-head, .lasso-root .lasso-odiagram__body.has-overlay .lasso-odiagram__panel-sec { padding-left: 16px; padding-right: 16px; }
 
@@ -5675,7 +5679,12 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-units20 .lasso-units__main { font-size: 11px; line-height: 14px; letter-spacing: 0; }
 .lasso-units20__row--head .lasso-units20__state { white-space: nowrap; }
 .lasso-units20__unit { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding-right: 16px; }
-.lasso-units20__name { font-size: 14px; line-height: 18px; color: var(--lasso-text); }
+.lasso-units20__name { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; font-size: 15px; line-height: 20px; font-weight: 500; color: var(--lasso-text); }
+/* 20.1 (Jakob 01.10): uden P-nr.-kolonnen får enheden pladsen; rækkerne er luftigere og adressen lidt større. */
+.lasso-units20 .lasso-units20__row:not(.lasso-units20__row--head) { padding-top: 14px; padding-bottom: 14px; }
+.lasso-units20 .lasso-units20__unit { gap: 4px; }
+.lasso-units20 .lasso-units20__address { font-size: 13px; line-height: 18px; }
+.lasso-units20 .lasso-units20__industry { width: 260px; }
 .lasso-units20__address { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
 .lasso-units20__contact { display: flex; flex-wrap: wrap; align-items: center; column-gap: 14px; row-gap: 2px; font-size: 12px; line-height: 16px; color: var(--lasso-text-2); }
 .lasso-units20__contact-item { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }

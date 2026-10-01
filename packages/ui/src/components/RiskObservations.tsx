@@ -246,7 +246,8 @@ export function RiskObservations({ data, error, title, compact = false, demo = f
 
   if (findings.length === 0 && !(data.related ?? []).some((p) => p.rows.some((r) => r.severity >= 25))) {
     // Positiv tom tilstand (17.3): "Ingen observationer" og hvornår der blev tjekket.
-    const neutral = rows.filter((r) => !r.notAvailable);
+    // 17.2 (Jakob 01.10): neutrale fakta uden udslag vises ikke; kun det, der ikke kunne tjekkes.
+    const neutral: typeof rows = [];
     const na = rows.filter((r) => r.notAvailable);
     return (
       <Section title={heading} span="full" className="lasso-obs">
@@ -268,7 +269,9 @@ export function RiskObservations({ data, error, title, compact = false, demo = f
 
   const limit = compact ? COMPACT_SHOWN : SHOWN;
   const latest = rows.map((r) => r.date).filter((d): d is string => Boolean(d)).sort().at(-1);
-  const deskVisible = expanded ? rows : rows.slice(0, limit);
+  // 17.2 (Jakob 01.10): kun observationer med udslag (≥ 25) og "ikke tilgængelig"; neutrale fakta ("-") vises ikke.
+  const deskRows = rows.filter((r) => r.notAvailable || r.severity >= 25);
+  const deskVisible = expanded ? deskRows : deskRows.slice(0, limit);
 
   // Mobil: kun fund (≥ 25) og "ikke tilgængelig"; neutrale fakta står kun på desktop.
   const mobRows = rows.filter((r) => r.notAvailable || r.severity >= 25);
@@ -301,8 +304,8 @@ export function RiskObservations({ data, error, title, compact = false, demo = f
             <ObservationRow key={o.id} o={o} lassoId={data.lassoId} onAction={onAction} />
           ))}
         </ul>
-        {rows.length > limit ? (
-          <ExpandLink expanded={expanded} total={rows.length} onToggle={() => setExpanded(!expanded)} />
+        {deskRows.length > limit ? (
+          <ExpandLink expanded={expanded} total={deskRows.length} onToggle={() => setExpanded(!expanded)} />
         ) : null}
       </div>
 

@@ -1,4 +1,4 @@
-import { formatDate, personCompanies, personRisk, type PersonRiskCaseVM, type PersonVM } from "@lasso/spec";
+import { personCompanies, personRisk, type PersonRiskCaseVM, type PersonVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import type React from "react";
 import { DataState, Section, SeverityIcon, stateForError } from "../primitives.js";
@@ -9,12 +9,6 @@ import { ShellIcon } from "./ShellIcons.js";
 const year = (d?: string) => (d ? d.slice(0, 4) : "");
 
 type Tone = "none" | "25" | "50" | "100" | "neutral" | "unknown" | "locked";
-
-/** Ingen sager: "Nej"; kun sager, personen havde forladt: "Neutral"; ellers "Mulig". */
-function level(cases: PersonRiskCaseVM[]): { word: string; tone: Tone } {
-  if (cases.length === 0) return { word: "Nej", tone: "none" };
-  return cases.some((c) => c.involved) ? { word: "Mulig", tone: "50" } : { word: "Neutral", tone: "neutral" };
-}
 
 function CheckIcon() {
   return <Icon name="check" size={18} className="lasso-personrisk__check" />;
@@ -69,89 +63,64 @@ function Tile({
   );
 }
 
-function PepTile({ person }: { person: PersonVM }) {
-  const pep = person.pep;
-  const label = "PEP, politisk eksponeret";
-  if (!pep) return <Tile label={label} desc="PEP-opslaget er ikke foretaget for personen." word="Ikke tjekket" tone="unknown" />;
-  if (pep.match) return <Tile label={label} desc={pep.detail ?? `Match i Finanstilsynets PEP-liste${pep.checkedAt ? `, tjekket ${formatDate(pep.checkedAt)}` : ""}.`} word="Ja" tone="50" />;
-  return <Tile label={label} desc={`Ingen match i Finanstilsynets PEP-liste${pep.checkedAt ? `, tjekket ${formatDate(pep.checkedAt)}` : ""}.`} word="Nej" tone="none" />;
-}
-
-function StrawmanTile({ person }: { person: PersonVM }) {
-  const s = person.strawman;
-  if (!s) return <Tile label="Stråmandsindikator" desc="Indikatoren er ikke beregnet for personen." word="Ikke beregnet" tone="unknown" />;
-  if (s.level === "possible") return <Tile label="Stråmandsindikator" desc={s.detail ?? "Rollerne ligner et mønster, der ses ved stråmænd."} word="Mulig" tone="50" />;
-  return <Tile label="Stråmandsindikator" desc={s.detail ?? "Rollerne viser ikke mønstre, der ses ved stråmænd."} word="Nej" tone="none" />;
-}
-
-function NetworkTile({ cases, companies, onOpen }: { cases: PersonRiskCaseVM[]; companies: number; onOpen?: (a: ViewAction) => void }) {
-  const { word, tone } = level(cases);
-  const desc = cases.length
-    ? `${cases.length} af personens ${companies} ${companies === 1 ? "selskab" : "selskaber"} er gået konkurs eller tvangsopløst.`
-    : companies === 1
-      ? "Personens selskab er hverken gået konkurs eller tvangsopløst."
-      : `Ingen af personens ${companies} selskaber er gået konkurs eller tvangsopløst.`;
+/** Selskaberne i en sag som liste med links (når værten kan åbne dem). */
+function CaseList({ cases, onOpen }: { cases: PersonRiskCaseVM[]; onOpen?: (a: ViewAction) => void }) {
+  if (!cases.length) return null;
   return (
-    <Tile label="Konkurser i netværket" count={cases.length || undefined} desc={desc} word={word} tone={tone}>
-      {cases.length ? (
-        <ul className="lasso-personrisk__cases">
-          {cases.map((c, i) => (
-            <li key={i}>
-              {onOpen && c.companyId?.startsWith("CVR-1-") ? (
-                <button type="button" className="lasso-link lasso-personrisk__company" onClick={() => onOpen({ kind: "open-company", lassoId: c.companyId!, name: c.companyName })}>
-                  {c.companyName}
-                </button>
-              ) : (
-                <span className="lasso-personrisk__company">{c.companyName}</span>
-              )}
-              , {caseText(c)}
-            </li>
-          ))}
-        </ul>
-      ) : null}
+    <ul className="lasso-personrisk__cases">
+      {cases.map((c, i) => (
+        <li key={i}>
+          {onOpen && c.companyId?.startsWith("CVR-1-") ? (
+            <button type="button" className="lasso-link lasso-personrisk__company" onClick={() => onOpen({ kind: "open-company", lassoId: c.companyId!, name: c.companyName })}>
+              {c.companyName}
+            </button>
+          ) : (
+            <span className="lasso-personrisk__company">{c.companyName}</span>
+          )}
+          , {caseText(c)}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * 16.4 (Jakob 01.10) "Egne konkurser": selskaber, hvor personen havde en rolle, da de gik konkurs eller blev
+ * tvangsopløst (eller højst et år før).
+ */
+function OwnTile({ cases, onOpen }: { cases: PersonRiskCaseVM[]; onOpen?: (a: ViewAction) => void }) {
+  const desc = cases.length
+    ? `Personen havde en rolle i ${cases.length === 1 ? "selskabet" : `${cases.length} selskaber`}, da ${cases.length === 1 ? "det" : "de"} gik konkurs eller blev tvangsopløst.`
+    : "Personen har ikke haft en rolle i et selskab, da det gik konkurs eller blev tvangsopløst.";
+  return (
+    <Tile label="Egne konkurser" count={cases.length || undefined} desc={desc} word={cases.length ? "Ja" : "Nej"} tone={cases.length ? "50" : "none"}>
+      <CaseList cases={cases} onOpen={onOpen} />
     </Tile>
   );
 }
 
-function SanctionsTile({ person, onUpgrade }: { person: PersonVM; onUpgrade?: () => void }) {
-  const s = person.sanctions;
-  if (!s || !s.available) {
-    return (
-      <Tile
-        label="Sanktionslister"
-        desc={
-          <>
-            {s ? "Ikke tilgængelig i din pakke." : "Tjek mod sanktionslister er ikke tilgængeligt endnu."}
-            {onUpgrade ? (
-              <>
-                {" "}
-                <button type="button" className="lasso-link lasso-personrisk__upgrade" onClick={onUpgrade}>
-                  Opgrader
-                </button>
-              </>
-            ) : null}
-          </>
-        }
-        tone="locked"
-      />
-    );
-  }
-  if (s.match) return <Tile label="Sanktionslister" desc={`Match på en sanktionsliste${s.checkedAt ? `, tjekket ${formatDate(s.checkedAt)}` : ""}.`} word="Match" tone="100" />;
-  return <Tile label="Sanktionslister" desc={`Ingen match${s.checkedAt ? `, tjekket ${formatDate(s.checkedAt)}` : ""}.`} word="Nej" tone="none" />;
+/** 16.4 "Konkurser i netværket": selskaber, personen har været i, som gik konkurs efter personen var fratrådt. */
+function NetworkTile({ cases, onOpen }: { cases: PersonRiskCaseVM[]; onOpen?: (a: ViewAction) => void }) {
+  const desc = cases.length
+    ? `${cases.length === 1 ? "Ét selskab" : `${cases.length} selskaber`}, personen har været i, er gået konkurs eller tvangsopløst efter personens fratræden.`
+    : "Ingen selskaber, personen har været i, er gået konkurs eller tvangsopløst efter personens fratræden.";
+  return (
+    <Tile label="Konkurser i netværket" count={cases.length || undefined} desc={desc} word={cases.length ? "Neutral" : "Nej"} tone={cases.length ? "neutral" : "none"}>
+      <CaseList cases={cases} onOpen={onOpen} />
+    </Tile>
+  );
 }
 
 /**
- * Personrisiko (katalog 16.4): fire fliser som lodret liste i fuld bredde: PEP, stråmandsindikator,
- * konkurser i netværket (konkurser og tvangsopløsninger blandt personens selskaber, med tal) og
- * sanktionslister (stiplet ramme og "Opgrader" uden adgang). Mangler et opslag, står flisen som
- * "Ikke tjekket"/"Ikke beregnet", aldrig som "Nej". Vurderingen står som ord i farve med ikon.
+ * Personrisiko (katalog 16.4, Jakob 01.10): kun konkurser, i to fliser: "Egne konkurser" (personen havde en
+ * rolle, da selskabet gik konkurs eller blev tvangsopløst) og "Konkurser i netværket" (selskaber, personen har
+ * været i, efter fratræden). Vurderingen står som ord i farve med ikon.
  */
 export function PersonRisk({
   person,
   title,
   error,
   onOpen,
-  onUpgrade,
   lines = false,
 }: {
   person?: PersonVM;
@@ -163,7 +132,7 @@ export function PersonRisk({
   title?: string;
   error?: string;
   onOpen?: (a: ViewAction) => void;
-  /** "Opgrader" ved låste sanktionslister. */
+  /** Udgået (sanktionslisterne står ikke længere i elementet, Jakob 01.10). Beholdt for bagudkompatibilitet. */
   onUpgrade?: () => void;
 }) {
   const heading = title ?? "Risiko";
@@ -183,19 +152,17 @@ export function PersonRisk({
     );
   }
   const risk = personRisk(person);
-  const checked = person.pep?.checkedAt ?? person.sanctions?.checkedAt;
+  const cases = [...risk.bankruptcies, ...risk.dissolutions];
   return (
     <Section
       title={heading}
       span="half"
       className={`lasso-personrisk${lines ? " lasso-personrisk--lines" : ""}`}
-      action={lines && checked ? <span className="lasso-personrisk__checked">{`Tjekket ${formatDate(checked)}`}</span> : undefined}
     >
       <ul className="lasso-personrisk__items">
-        <PepTile person={person} />
-        <StrawmanTile person={person} />
-        <NetworkTile cases={[...risk.bankruptcies, ...risk.dissolutions]} companies={companies} onOpen={onOpen} />
-        <SanctionsTile person={person} onUpgrade={onUpgrade} />
+        {/* 16.4 (Jakob 01.10): kun konkurser, i to kasser; PEP, stråmand og sanktionslister står ikke her. */}
+        <OwnTile cases={cases.filter((c) => c.involved)} onOpen={onOpen} />
+        <NetworkTile cases={cases.filter((c) => !c.involved)} onOpen={onOpen} />
       </ul>
     </Section>
   );

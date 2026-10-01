@@ -162,17 +162,11 @@ test("16.1: kun navnet og handlingerne; intet 'Person', ingen faktalinje, tælle
   assert.doesNotMatch(out, /initial|avatar/);
 });
 
-test("16.4: personrisiko som fire fliser: PEP, stråmand, konkurser i netværket, sanktionslister", () => {
+test("16.4 (Jakob 01.10): personrisiko kun med konkurser i to kasser: Egne konkurser og Konkurser i netværket", () => {
   const out = html(h(PersonRisk, { person: bo, onUpgrade: noop }));
   const titles = [...out.matchAll(/lasso-personrisk__title">([^<]+)</g)].map((m) => m[1]);
-  assert.deepEqual(titles, ["PEP, politisk eksponeret", "Stråmandsindikator", "Konkurser i netværket", "Sanktionslister"]);
-  assert.match(out, /tjekket 25\.09\.2026/);
-  assert.match(out, /lasso-personrisk__item--locked[^]*>Opgrader</);
-  assert.match(out, /lasso-personrisk__word--50">Mulig</);
-  // Uden opslag: "Ikke tjekket", aldrig "Nej".
-  const unknown = html(h(PersonRisk, { person: { ...bo, pep: undefined, strawman: undefined } }));
-  assert.match(unknown, /Ikke tjekket/);
-  assert.match(unknown, /Ikke beregnet/);
+  assert.deepEqual(titles, ["Egne konkurser", "Konkurser i netværket"]);
+  assert.doesNotMatch(out, /PEP|Stråmand|Sanktionslister|Opgrader/);
 });
 
 /* ---------- 08.4 Genveje ---------- */

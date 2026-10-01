@@ -71,18 +71,14 @@ const noop = () => undefined;
 const render = (spec: ViewSpec, ds: Dataset, host: HostCapabilities = {}) => renderToStaticMarkup(createElement(LassoView, { spec, dataset: ds, host, onAction: noop }));
 const facts = (person?: PersonVM, error?: string) => renderToStaticMarkup(createElement(PersonFacts, { person, error }));
 
-test("PersonFacts: bopæl som postnummer og by, kommune, enhedsnummer og tal afledt af rollerne", () => {
+test("PersonFacts (16.6, Jakob 01.10): kun Bopæl (postnummer og by), Kommune og Aktive roller", () => {
   const html = facts(bo);
   assert.match(html, /Stamoplysninger/);
   assert.match(html, /8600 Silkeborg/);
-  // Kommunen gentager byen og udelades; en anden kommune end byen vises.
-  assert.doesNotMatch(html, /Kommune/);
+  assert.deepEqual([...html.matchAll(/lasso-kv-row__label">([^<]+)</g)].map((m) => m[1]), ["Bopæl", "Kommune", "Aktive roller"]);
   assert.match(facts({ ...bo, city: "Vinderup", zip: "7830", municipality: "Holstebro" }), /Kommune.*Holstebro/);
-  assert.match(html, /Enhedsnummer.*4000000002/);
   assert.match(html, /3 i 2 selskaber/);
-  assert.match(html, /Ejer af.*1 selskab</);
-  assert.match(html, /Første registrering.*2005/);
-  assert.match(html, /Seneste ændring.*30\.06\.2018/);
+  assert.doesNotMatch(html, /Enhedsnummer|Ejer af|Første registrering|Seneste ændring|Ophørte roller/);
   assert.doesNotMatch(html, /Kilde:/, "G3: ingen kildevisning");
   assert.doesNotMatch(html, />0</, "aldrig et nul, kun 'Ingen'");
 });
