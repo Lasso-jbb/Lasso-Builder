@@ -533,6 +533,11 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-compare__name { max-width: 170px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
 .lasso-compare__sub { font-size: 12px; line-height: 16px; font-weight: 400; color: var(--lasso-muted); }
 .lasso-compare__corner { vertical-align: bottom; }
+/* 22.1 (Jakob 01.10): række med "+ Tilføj nøgletal" og × ved de tilvalgte nøgletal. */
+.lasso-root .lasso-compare tr.lasso-compare__addrow th { padding-top: 10px; padding-bottom: 10px; border-bottom: 0; }
+.lasso-compare__addmetric .lasso-select { width: auto; min-width: 200px; color: var(--lasso-accent-text); font-weight: 500; }
+.lasso-root .lasso-compare__unpick { margin-left: 6px; padding: 0 4px; border: 0; background: none; font-size: 15px; line-height: 1; color: var(--lasso-muted); cursor: pointer; }
+.lasso-root .lasso-compare__unpick:hover { color: var(--lasso-text); }
 .lasso-compare td { border-left: 1px solid var(--lasso-border); }
 .lasso-compare tbody th { text-align: left; font-size: var(--lasso-fs-sm); letter-spacing: 0; text-transform: none; font-weight: 400; color: var(--lasso-text-2); border-bottom: 1px solid var(--lasso-border); }
 .lasso-best { color: var(--lasso-text); font-weight: 600; }
@@ -3896,6 +3901,10 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-chart__legend--right { justify-content: flex-start; }
   .lasso-section__head:has(> .lasso-section__action > .lasso-chart__legend--right), .lasso-section__head:has(.lasso-chart__picker) { flex-wrap: wrap; row-gap: var(--lasso-space-2); }
   .lasso-section__action:has(> .lasso-chart__legend--right) { flex-basis: 100%; }
+  /* 13.2 mobil (Jakob 01.10): nøgletalsvælgeren i fuld bredde under titlen, 44 px høj. */
+  .lasso-section__action:has(> .lasso-chart__picker) { flex-basis: 100%; }
+  .lasso-chart__picker, .lasso-root .lasso-chart__select { width: 100%; }
+  .lasso-root .lasso-chart__select { height: 44px; font-size: var(--lasso-fs); }
 }
 .lasso-chart__label--small { font-size: 12px; }
 .lasso-credit .lasso-scorecmp { margin: var(--lasso-space-4) 0 0; }
@@ -4976,6 +4985,15 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-tstate__box .lasso-tstate__title { font-size: 16px; line-height: 22px; }
 .lasso-tstate__box .lasso-tstate__retry { margin-top: 4px; }
 .lasso-tstate__errid { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+/* 15.4 (Jakob 01.10): ikonet i en 44 px blød cirkel (neutral ved tom, rød ved fejl); fejl-id'et for sig nederst. */
+.lasso-tstate__badge { display: grid; place-items: center; width: 44px; height: 44px; margin-bottom: 4px; border-radius: 50%; background: var(--lasso-surface-muted); }
+.lasso-tstate__badge--error { background: var(--lasso-danger-soft); }
+.lasso-tstate__box--error { gap: 6px; padding: 48px 16px 40px; }
+.lasso-tstate__box--error .lasso-tstate__title { font-size: 16px; line-height: 22px; }
+.lasso-tstate__box--error .lasso-tstate__text { color: var(--lasso-text-2); }
+.lasso-tstate__box--error .lasso-tstate__actions { margin-top: 10px; }
+.lasso-root .lasso-tstate__box--error .lasso-tstate__retry { display: inline-flex; align-items: center; gap: 6px; }
+.lasso-tstate__box--error .lasso-tstate__errid { margin-top: 6px; }
 .lasso-root .lasso-tstate__copy { font-size: 12px; color: var(--lasso-accent-text); }
 .lasso-tstate__loading { display: flex; align-items: center; justify-content: center; gap: var(--lasso-space-2); padding: var(--lasso-space-4); font-size: var(--lasso-fs-sm); color: var(--lasso-muted); }
 .lasso-ccards-state { display: none; }

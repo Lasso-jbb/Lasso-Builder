@@ -885,7 +885,7 @@ En test fejler, hvis filen ikke er ajour.
 <a id="LassoCompareTable"></a>
 ## Sammenligning, navngivne virksomheder (`LassoCompareTable`)
 
-**Formål.** 2–6 navngivne virksomheder side om side på 1–5 nøgletal.
+**Formål.** 2–3 navngivne virksomheder side om side på 1–5 nøgletal.
 
 **Bedst til**
 - sammenlign A og B
@@ -903,7 +903,7 @@ En test fejler, hvis filen ikke er ajour.
 
 **Bredde.** profil bred; std 1/1, min ⅔, maks 1/1; drivere: længste etiket 45 tegn, 6 serier side om side
 
-**Props.** `companies[] (2–6), metrics? (1–5 af omsaetning | bruttofortjeneste | resultat | egenkapital | ansatte | ebitda | balancesum | gaeld | soliditetsgrad | overskudsgrad | likviditetsgrad), title?`
+**Props.** `companies[] (2–3), metrics? (1–5 af omsaetning | bruttofortjeneste | resultat | egenkapital | ansatte | ebitda | balancesum | gaeld | soliditetsgrad | overskudsgrad | likviditetsgrad), title?`
 
 <a id="LassoRanking"></a>
 ## Rangliste, ét nøgletal (`LassoRanking`)
@@ -940,7 +940,7 @@ En test fejler, hvis filen ikke er ajour.
 - find virksomheder der ...
 
 **Undgå når**
-- 2–6 navngivne virksomheder (LassoCompareTable)
+- 2–3 navngivne virksomheder (LassoCompareTable)
 - én virksomhed (show_company)
 
 **Veje ind.** search_companies, render_view

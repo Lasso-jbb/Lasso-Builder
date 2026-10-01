@@ -58,8 +58,8 @@ export function BarChart({
     );
   }
   const shown = series.metric;
-  // 26b.1: på mobil ingen nøgletalsvælger i hovedet, kun enheden som muted tekst til højre.
-  const options = picker && !compact ? pickableMetrics(financials, years) : [];
+  // 13.2 mobil (Jakob 01.10): nøgletalsvælgeren står også på mobil (i fuld bredde under titlen).
+  const options = picker ? pickableMetrics(financials, years) : [];
   const action =
     options.length >= 2 ? (
       <label className="lasso-chart__picker">
@@ -119,10 +119,10 @@ export function BarChart({
   return (
     <Section
       title={METRIC_LABELS[shown]}
-      subtitle={compact ? undefined : subtitle}
+      subtitle={compact ? (action && scale ? scale.label : undefined) : subtitle}
       span="half"
       className="lasso-chart"
-      action={compact ? (scale ? <span className="lasso-chart__unit">{scale.label}</span> : undefined) : action}
+      action={compact ? (action ?? (scale ? <span className="lasso-chart__unit">{scale.label}</span> : undefined)) : action}
     >
       <div ref={ref} className="lasso-chart__plot" {...pick.frame} aria-label={`${METRIC_LABELS[shown]} pr. år. Brug piletasterne for at se hvert år.`}>
         {W > 0 ? (

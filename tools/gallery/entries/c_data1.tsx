@@ -478,7 +478,7 @@ export const entries: GalleryEntry[] = [
 
   // 10 Score og tabeller
   { nr: "10.1", title: "Scoremåler", node: "9ZT-0", spec: co("Eksempel Byg A/S", [{ type: "LassoScoreGauge", company: B, width: "half" }]), note: "Måleren i en ½-kolonne som i Paper (ca. 540 px)." },
-  { nr: "10.2", title: "Flerårstabel", node: "A0Q-0", spec: co("Eksempel Byg A/S", [{ type: "LassoMultiYearTable", company: B, metrics: ["omsaetning", "bruttofortjeneste", "resultat", "egenkapital"], years: 5 }]) },
+  { nr: "10.2", title: "Flerårstabel", node: "A0Q-0", note: "Jakob 01.10: standard er de 4 vigtigste nøgletal: bruttofortjeneste, årets resultat, egenkapital og ansatte (ingen omsætning).", spec: co("Eksempel Byg A/S", [{ type: "LassoMultiYearTable", company: B, years: 5 }]) },
   {
     nr: "10.3",
     title: "Datatilstande (fælles tilstandssprog, 10b)",

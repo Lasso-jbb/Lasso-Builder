@@ -26,7 +26,7 @@ export interface CatalogEntry {
 export const COMPOSITION_RULES = `Komposition (guide 23):
 - Én virksomhed: brug show_company med brugerens spørgsmål ordret i question. Serveren henter data og bygger selv siden omkring svaret (svar-elementet først, data afgrænset til spørgsmålet, kontekst rundt om). Byg IKKE selv en virksomhedsside med render_view. Sæt kun focus ved et generelt spørgsmål; routing: bredt ("fortæl om X") → overblik; økonomi, omsætning, resultat, nøgletal, soliditetsgrad, "hvordan går det" → oekonomi; fuldt regnskab, resultatopgørelse, balance, pengestrøm, "alle posterne" → regnskab; ejere, reelle ejere, koncern → ejerskab; direktion, bestyrelse, udskiftning → ledelse; røde flag, "kan vi handle med dem", kreditvurdering, Creditsafe, revisors uafhængighed → risiko; "hvad er der sket", nyheder → historik; kontaktoplysninger, telefon, e-mail, web, kontaktpersoner → kontakt. Snævre stamdataspørgsmål ("hvem er revisor", "hvornår stiftet", "hvor mange ansatte") → overblik.
 - Én person → show_person med spørgsmålet i question (og focus kun ved et generelt spørgsmål): "hvem er X" → overblik; "hvor sidder X i bestyrelser", roller over tid → roller; "hvem sidder X sammen med" → netvaerk; "hvilke selskaber ejer X" → ejerskab; "har X været i konkurser" → risiko; "hvad er der sket", nyheder om X → historik. Byg ikke personsider med render_view.
-- Flere navngivne virksomheder → compare_companies (tabel 2–6 på flere nøgletal, rangering 2–10 på ét nøgletal, udvikling for de to første); mange fundet med kriterier → search_companies; personer på navn → search_persons. Aldrig én enkeltvisning pr. virksomhed, og byg ikke sammenligninger selv med render_view.
+- Flere navngivne virksomheder → compare_companies (tabel 2–3 på flere nøgletal, rangering 2–10 på ét nøgletal, udvikling for de to første); mange fundet med kriterier → search_companies; personer på navn → search_persons. Aldrig én enkeltvisning pr. virksomhed, og byg ikke sammenligninger selv med render_view.
 - Emnet i et spørgsmål, der ikke står med sit eget ord, sendes som topic (fx roede-flag, fusion, meddelelser, dokumenter, branchesammenligning, placering, heleregnskab, registrering, opsummering, aendringer, score, persontal); "vis alt" → show_all: true.
 - render_view til én virksomhed kun, når brugeren beder om elementer, ingen focus dækker (fx LassoStackedBarChart, LassoProductionUnits, LassoProperties, en egen vurdering i LassoSummary), eller om en kombination på tværs af focus (fx ejere + revisor, resultatopgørelse + ejere). Læg da ALT i én spec: LassoCompanyHead først, dernæst det bestilte, og LassoSummary som sidste sektion.
 - ÉN visning pr. svar: kald højst ét af show_company, show_person, search_companies og render_view pr. brugerbesked, og kun én gang. Aldrig show_company og render_view efter hinanden.
@@ -712,10 +712,10 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     type: "LassoCompareTable",
     title: "Sammenligning, navngivne virksomheder",
     description:
-      "Brug til: 2–6 NAVNGIVNE virksomheder side om side på 1–5 nøgletal fra seneste år – 'sammenlign A og B', 'A vs. B på omsætning og ansatte'. Brug ikke når: ét nøgletal og rækkefølgen er pointen (LassoRanking), udvikling over år for to virksomheder (LassoLineChart), eller virksomhederne først skal findes med kriterier (search_companies/LassoCompanyTable). Kræver: companies[] (2–6), metrics? (standard 4). Nås via compare_companies / render_view. Eksempel: 'Sammenlign Lasso X, Risika og Bisnode på omsætning, resultat og ansatte.'",
-    props: `companies[] (2–6), metrics? (1–5 af ${METRICS.join(" | ")}), title?`,
+      "Brug til: 2–3 NAVNGIVNE virksomheder side om side på 1–5 nøgletal fra seneste år – 'sammenlign A og B', 'A vs. B på omsætning og ansatte'. Brug ikke når: ét nøgletal og rækkefølgen er pointen (LassoRanking), udvikling over år for to virksomheder (LassoLineChart), eller virksomhederne først skal findes med kriterier (search_companies/LassoCompanyTable). Kræver: companies[] (2–3), metrics? (standard 4). Nås via compare_companies / render_view. Eksempel: 'Sammenlign Lasso X, Risika og Bisnode på omsætning, resultat og ansatte.'",
+    props: `companies[] (2–3), metrics? (1–5 af ${METRICS.join(" | ")}), title?`,
     register: {
-      formaal: "2–6 navngivne virksomheder side om side på 1–5 nøgletal.",
+      formaal: "2–3 navngivne virksomheder side om side på 1–5 nøgletal.",
       bedstTil: ["sammenlign A og B", "A vs. B på omsætning og ansatte"],
       undgaaNaar: ["ét nøgletal og rækkefølge (LassoRanking)", "mange fundet med kriterier (LassoCompanyTable)"],
       kraeverData: ["companies", "financials"],
@@ -744,12 +744,12 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     type: "LassoCompanyTable",
     title: "Virksomhedstabel, søgning",
     description:
-      "Brug til: mange virksomheder fundet med kriterier – målgrupper, 'alle X i Y', 'top N efter Z' (sort) – som del af en render_view-spec med andet; står søgningen alene, så brug search_companies. Brugeren kan sortere, fjerne kriterier og klikke ind på en virksomhed. Brug ikke når: du kender 2–6 navngivne virksomheder til sammenligning (LassoCompareTable) eller 2–10 navngivne på ét nøgletal (LassoRanking). Kræver: source 'search', search { query, criteria[], sort?, limit? }, columns? ('score' er Lassos 0–100-score og findes kun i demodata; live står den som -, så vælg den ikke til kunder); ingen match giver tom tilstand med kriterierne synlige. Eksempel: 'Vis de 20 største revisionsfirmaer i Aarhus efter ansatte.' → search_companies.",
+      "Brug til: mange virksomheder fundet med kriterier – målgrupper, 'alle X i Y', 'top N efter Z' (sort) – som del af en render_view-spec med andet; står søgningen alene, så brug search_companies. Brugeren kan sortere, fjerne kriterier og klikke ind på en virksomhed. Brug ikke når: du kender 2–3 navngivne virksomheder til sammenligning (LassoCompareTable) eller 2–10 navngivne på ét nøgletal (LassoRanking). Kræver: source 'search', search { query, criteria[], sort?, limit? }, columns? ('score' er Lassos 0–100-score og findes kun i demodata; live står den som -, så vælg den ikke til kunder); ingen match giver tom tilstand med kriterierne synlige. Eksempel: 'Vis de 20 største revisionsfirmaer i Aarhus efter ansatte.' → search_companies.",
     props: `source='search', search { query, criteria[], sort?, limit? }, columns? (${TABLE_COLUMNS.join(" | ")}), title?`,
     register: {
       formaal: "Tabel over virksomheder fundet med kriterier, med detaljer ved klik.",
       bedstTil: ["målgrupper", "revisorer i Region Midt med mindst 10 ansatte", "find virksomheder der ..."],
-      undgaaNaar: ["2–6 navngivne virksomheder (LassoCompareTable)", "én virksomhed (show_company)"],
+      undgaaNaar: ["2–3 navngivne virksomheder (LassoCompareTable)", "én virksomhed (show_company)"],
       kraeverData: ["searches"],
       live: "naar-data",
       veje: ["search_companies", "render_view"],

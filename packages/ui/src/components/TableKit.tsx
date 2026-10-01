@@ -410,34 +410,49 @@ function WarnIcon() {
   );
 }
 
+function RetryIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M20 12a8 8 0 11-2.34-5.66M20 4v4.5h-4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 /** Tom og fejl som blok (bruges i tabelrammen og i mobilens kortliste). */
 export function TableStateBox({ state }: { state: Exclude<TableState, { kind: "loading" }> }) {
   if (state.kind === "empty") {
     return (
       <div className="lasso-tstate__box">
-        {state.title ? <SearchMinusIcon /> : null}
+        {state.title ? (
+          <span className="lasso-tstate__badge">
+            <SearchMinusIcon />
+          </span>
+        ) : null}
         {state.title ? <div className="lasso-tstate__title">{state.title}</div> : null}
         <div className="lasso-tstate__text">{state.reason}</div>
         {state.action ? <div className="lasso-tstate__action">{state.action}</div> : null}
       </div>
     );
   }
+  // 15.4 (Jakob 01.10): fejlen som en rolig blok: ikon i en blød rød cirkel, titel, forklaring, "Prøv igen"
+  // (sekundær med ikon) og fejl-id'et for sig nederst, så handlingen og det tekniske ikke blandes.
   return (
-    <div className="lasso-tstate__box" role="alert">
-      <WarnIcon />
+    <div className="lasso-tstate__box lasso-tstate__box--error" role="alert">
+      <span className="lasso-tstate__badge lasso-tstate__badge--error">
+        <WarnIcon />
+      </span>
       <div className="lasso-tstate__title">{state.title ?? "Data kunne ikke hentes"}</div>
       {state.reason ? <div className="lasso-tstate__text">{state.reason}</div> : null}
-      {state.onRetry || state.errorId ? (
+      {state.onRetry ? (
         <div className="lasso-tstate__actions">
-          {state.onRetry ? (
-            <button type="button" className="lasso-btn lasso-btn--primary lasso-tstate__retry" onClick={state.onRetry}>
-              Prøv igen
-            </button>
-          ) : null}
-          {/* 10b regel 5: fejl-id som tekst ved siden af "Prøv igen" (ingen kopiér-link). */}
-          {state.errorId ? <span className="lasso-tstate__errid">{`Fejl-id ${state.errorId}`}</span> : null}
+          <button type="button" className="lasso-btn lasso-tstate__retry" onClick={state.onRetry}>
+            <RetryIcon />
+            Prøv igen
+          </button>
         </div>
       ) : null}
+      {/* 10b regel 5: fejl-id som tekst (ingen kopiér-link). */}
+      {state.errorId ? <span className="lasso-tstate__errid">{`Fejl-id ${state.errorId}`}</span> : null}
     </div>
   );
 }

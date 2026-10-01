@@ -232,7 +232,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     {
       title: "Sammenlign virksomheder",
       description:
-        "Sammenlign 2–10 navngivne virksomheder på nøgletal: tabel (2–6, flere nøgletal), rangering (ét nøgletal, 'hvem er størst') og udvikling over tid for de to første. Send virksomhederne som navne eller CVR-numre og brugerens spørgsmål i question. Brug ikke til én virksomhed (show_company) eller til at finde virksomheder efter kriterier (search_companies).",
+        "Sammenlign 2–10 navngivne virksomheder på nøgletal: tabel (2–3, flere nøgletal), rangering (ét nøgletal, 'hvem er størst') og udvikling over tid for de to første. Send virksomhederne som navne eller CVR-numre og brugerens spørgsmål i question. Brug ikke til én virksomhed (show_company) eller til at finde virksomheder efter kriterier (search_companies).",
       inputSchema: z.object({
         companies: z.array(z.string().min(1).max(120)).min(2).max(10).describe("2–10 virksomheder: navne, CVR-numre eller Lasso-ID'er."),
         metrics: z.array(z.enum(METRICS)).min(1).max(5).optional().describe("Nøgletal i tabellen. Standard: omsætning, bruttofortjeneste, resultat, ansatte."),

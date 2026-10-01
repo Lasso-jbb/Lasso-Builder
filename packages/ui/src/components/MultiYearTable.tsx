@@ -18,6 +18,7 @@ export function yearsThatFit(width: number): number {
   return Math.max(2, Math.floor((width - label - extras) / year));
 }
 
+/** 10.2 (Jakob 01.10): de 4 vigtigste i læserækkefølge: indtjening, bundlinje, polstring, størrelse. Ingen omsætning (mange oplyser den ikke). */
 const DEFAULT_METRICS: Metric[] = ["bruttofortjeneste", "resultat", "egenkapital", "ansatte"];
 
 /**
@@ -124,7 +125,7 @@ export function MultiYearTable({ financials, metrics, years, title, error, varia
       </Section>
     );
   }
-  const chosen: Metric[] = (metrics?.length ? [...metrics] : all.at(-1)?.revenue != null ? ["omsaetning", ...DEFAULT_METRICS] : DEFAULT_METRICS).slice(0, 6) as Metric[];
+  const chosen: Metric[] = (metrics?.length ? [...metrics] : DEFAULT_METRICS).slice(0, 6) as Metric[];
   const mode = multiYearVariant(W, chosen.length, variant);
   const mobile = W <= 560;
   // Mobil (26c.3) ruller vandret til de ældre år, så alle ønskede år tegnes; desktop viser dem, bredden kan bære.

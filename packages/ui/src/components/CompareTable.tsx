@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { amountScale, currencyUnit, formatAmount, formatNumber, formatPercent, formatScaled, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, changePercent, type Dataset, type Metric } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section } from "../primitives.js";
@@ -8,12 +8,37 @@ const BEST_IS_HIGHEST: ReadonlySet<Metric> = new Set(["omsaetning", "bruttofortj
 
 const SHORT: Partial<Record<Metric, string>> = { bruttofortjeneste: "Bruttofortj.", resultat: "Resultat", soliditetsgrad: "Soliditet" };
 
+/** 22.1 (Jakob 01.10): man kan højst sammenligne 3 virksomheder. */
+export const COMPARE_MAX_COLUMNS = 3;
+/** 22.1: de mest anvendte nøgletal, man selv kan føje til sammenligningen (i denne rækkefølge). */
+export const COMPARE_EXTRA_METRICS: readonly Metric[] = ["omsaetning", "bruttofortjeneste", "resultat", "egenkapital", "ansatte", "soliditetsgrad", "overskudsgrad", "likviditetsgrad", "ebitda", "balancesum", "gaeld"];
+/** Brugerens tilvalgte nøgletal huskes i browseren (pr. bruger, ikke pr. visning). */
+export const COMPARE_METRICS_KEY = "lasso:compare:metrics";
+
+function readExtra(): Metric[] {
+  try {
+    const raw = JSON.parse(globalThis.localStorage?.getItem(COMPARE_METRICS_KEY) ?? "[]") as unknown;
+    return Array.isArray(raw) ? raw.filter((m): m is Metric => COMPARE_EXTRA_METRICS.includes(m as Metric)) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeExtra(list: readonly Metric[]): void {
+  try {
+    globalThis.localStorage?.setItem(COMPARE_METRICS_KEY, JSON.stringify(list));
+  } catch {
+    /* Privat vindue eller blokeret lager: valget gælder kun, mens visningen er åben. */
+  }
+}
+
 /**
- * Sammenligning, 2–6 virksomheder i kolonner, nøgletal i rækker (katalog 22).
+ * Sammenligning, 2–3 virksomheder i kolonner (Jakob 01.10), nøgletal i rækker (katalog 22). Under rækkerne
+ * kan man tilføje de mest anvendte nøgletal fra en dropdown; valget huskes i browseren (localStorage).
  * Udgangsvirksomheden (første) har 3 px koral topkant. Enheden står i rækkenavnet.
  * Bedste værdi pr. række fremhæves kun med vægt 600. Manglende data: "Ikke hentet" (tallene
  * kunne ikke hentes for virksomheden) eller "Ikke oplyst" (regnskabet har ikke tallet).
- * Tom kolonne med stiplet kant er "tilføj"-slot, "+ Tilføj (op til 6)" i koral (forsvinder ved 6).
+ * Tom kolonne med stiplet kant er "tilføj"-slot, "+ Tilføj (op til 3)" i koral (forsvinder ved 3).
  * Hovedrækken står på panel-flade; negative tal i rødt.
  * Tablet (26f.5): titel + "Tilføj"/"Nøgletal" i hovedet, fast nøgletalskolonne "Nøgletal, t. kr." og
  * emnevirksomheden i koral-soft hoved med "Emne"; alle tal i t. kr.; 4+ virksomheder ruller.
@@ -21,8 +46,8 @@ const SHORT: Partial<Record<Metric, string>> = { bruttofortjeneste: "Bruttofortj
  * næste par; "+ Tilføj virksomhed" og "Vælg nøgletal" under tabellen.
  */
 export function CompareTable({
-  companies,
-  metrics,
+  companies: allCompanies,
+  metrics: specMetrics,
   title,
   dataset,
   onAction,
@@ -40,6 +65,16 @@ export function CompareTable({
 }) {
   const [pair, setPair] = useState(0);
   const swipe = useRef<number | null>(null);
+  // 22.1: højst 3 virksomheder; tilvalgte nøgletal (dropdown under rækkerne) huskes i browseren.
+  const companies = allCompanies.slice(0, COMPARE_MAX_COLUMNS);
+  const [extra, setExtra] = useState<Metric[]>([]);
+  useEffect(() => setExtra(readExtra()), []);
+  const setExtraAndSave = (list: Metric[]) => {
+    setExtra(list);
+    writeExtra(list);
+  };
+  const metrics: Metric[] = [...specMetrics, ...extra.filter((m) => !specMetrics.includes(m))];
+  const addable = COMPARE_EXTRA_METRICS.filter((m) => !metrics.includes(m));
   const cols = companies.map((id) => {
     const co = dataset.companies[id];
     const years = dataset.financials[id]?.years ?? [];
@@ -71,7 +106,7 @@ export function CompareTable({
   const pairs = Math.max(1, cols.length - 1);
   const shownPair = Math.min(pair, pairs - 1);
   const off = (i: number) => (cols.length > 2 && i !== 0 && i !== shownPair + 1 ? "is-offpair" : "");
-  const slot = canAdd && cols.length < 6;
+  const slot = canAdd && cols.length < COMPARE_MAX_COLUMNS;
   const missing = (i: number) => <span className="lasso-notreported">{cols[i]!.fetched ? "Ikke oplyst" : "Ikke hentet"}</span>;
   const firstAmount = metrics.find((m) => METRIC_KIND[m] === "amount");
   // 22.1: højeste vækst er entydigt bedst og står i vægt 600 som de andre rækker.
@@ -154,7 +189,7 @@ export function CompareTable({
                 {slot ? (
                   <th scope="col" className="lasso-compare__slot">
                     <button type="button" className="lasso-compare__add" onClick={addPrompt}>
-                      + Tilføj (op til 6)
+                      + Tilføj (op til {COMPARE_MAX_COLUMNS})
                     </button>
                   </th>
                 ) : null}
@@ -176,6 +211,11 @@ export function CompareTable({
                       <span className="lasso-compare__v-d">
                         {METRIC_LABELS[m]}
                         {scale ? `, ${scale.label}` : ""}
+                        {extra.includes(m) && !specMetrics.includes(m) ? (
+                          <button type="button" className="lasso-compare__unpick" aria-label={`Fjern ${METRIC_LABELS[m]} fra sammenligningen`} title="Fjern" onClick={() => setExtraAndSave(extra.filter((x) => x !== m))}>
+                            ×
+                          </button>
+                        ) : null}
                       </span>
                       <span className="lasso-compare__v-c">{SHORT[m] && kind !== "count" ? <><span className="lasso-compare__v-t">{METRIC_LABELS[m]}</span><span className="lasso-compare__v-m">{SHORT[m]}</span></> : METRIC_LABELS[m]}</span>
                     </th>
@@ -216,6 +256,31 @@ export function CompareTable({
                     );
                   })}
                   {slot ? <td className="lasso-compare__slot" aria-hidden="true" /> : null}
+                </tr>
+              ) : null}
+              {addable.length ? (
+                // 22.1 (Jakob 01.10): tilføj et af de mest anvendte nøgletal som række; valget huskes i browseren.
+                <tr className="lasso-compare__addrow">
+                  <th scope="row" colSpan={cols.length + 1 + (slot ? 1 : 0)}>
+                    <label className="lasso-compare__addmetric">
+                      <span className="lasso-sr">Tilføj nøgletal</span>
+                      <select
+                        className="lasso-select lasso-select--sm"
+                        value=""
+                        onChange={(e) => {
+                          const m = e.target.value as Metric;
+                          if (m) setExtraAndSave([...extra.filter((x) => x !== m), m]);
+                        }}
+                      >
+                        <option value="">+ Tilføj nøgletal</option>
+                        {addable.map((m) => (
+                          <option key={m} value={m}>
+                            {METRIC_LABELS[m]}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </th>
                 </tr>
               ) : null}
             </tbody>

@@ -5,23 +5,23 @@ import { METRIC_LABELS, viewSpecSchema, type Metric, type ViewSpec, type ViewSpe
  * compare_companies (docs/plan-d-vaerktoejer.md, D3): 2–10 navngivne virksomheder som én visning.
  * Komponenterne vælges efter spørgsmål og antal:
  *
- * - 2–6 virksomheder, flere nøgletal (standard): LassoCompareTable (≤ 5 nøgletal) + LassoLineChart for
+ * - 2–3 virksomheder, flere nøgletal (standard): LassoCompareTable (≤ 5 nøgletal) + LassoLineChart for
  *   de to første på det første nøgletal (benchmark) + LassoFollowUps.
  * - `metric` angivet, eller spørgsmål med "hvem er størst/bedst/højest/lavest/flest/mindst":
  *   LassoRanking (alle, første fremhæves) + LassoCompareTable med ≤ 3 nøgletal.
- * - > 6 virksomheder uden `metric`: LassoRanking på omsætning (fallback bruttofortjeneste) +
- *   LassoCompareTable med de 6 største (se `COMPARE_TABLE_NOTE`).
+ * - > 3 virksomheder uden `metric`: LassoRanking på omsætning (fallback bruttofortjeneste) +
+ *   LassoCompareTable med de 3 største (se `COMPARE_TABLE_NOTE`).
  *
  * Ren funktion: data (navne og seneste tal) kommer ind som `options`, så den kan testes uden server.
  */
 
-/** Højst så mange virksomheder i sammenligningstabellen (comparisonSchema). */
-export const COMPARE_TABLE_MAX = 6;
+/** Højst så mange virksomheder i sammenligningstabellen (Jakob 01.10, 15.1/22.1: man kan højst sammenligne 3). */
+export const COMPARE_TABLE_MAX = 3;
 /** Højst så mange virksomheder i alt (rankingSchema). */
 export const COMPARE_MAX = 10;
 /** Standardnøgletal i tabellen (samme som comparisonSchema's standard). */
 export const COMPARE_DEFAULT_METRICS: readonly Metric[] = ["omsaetning", "bruttofortjeneste", "resultat", "ansatte"];
-/** Noten, når flere end 6 virksomheder sammenlignes. */
+/** Noten, når flere end 3 virksomheder sammenlignes. */
 export const COMPARE_TABLE_NOTE = `Sammenligningstabellen viser højst ${COMPARE_TABLE_MAX}; de ${COMPARE_TABLE_MAX} største er valgt.`;
 
 /** Rangeringsord fra spørgsmålet (foldet tekst): størst, bedst, højest, lavest, flest, mindst. */

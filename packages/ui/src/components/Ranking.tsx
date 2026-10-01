@@ -14,6 +14,9 @@ export interface RankingRow {
  * listen er den, der fremhæves (order "asc" sorterer laveste først); resten tegnes i neutral (chart-5). Navn i fast kolonne 170 px,
  * bjælke 18 px med radius 3, tallet lige til højre for bjælken, plads-nummer som overlinje til venstre.
  */
+/** 13.3: så mange står i ranglisten. */
+const TOP = 5;
+
 export function Ranking({ rows, metric, title, order = "desc" }: { rows: RankingRow[]; metric: Metric; title?: string; order?: "desc" | "asc" }) {
   const heading = title ?? `${METRIC_LABELS[metric]} blandt lignende`;
   const originId = rows[0]?.lassoId;
@@ -51,17 +54,20 @@ export function Ranking({ rows, metric, title, order = "desc" }: { rows: Ranking
   const scale = kind === "amount" && !mixed ? amountScale(values, [...units][0] ?? "kr.") : null;
   const label = (v: number, unit?: string) => (kind === "percent" ? formatPercent(v, false) : scale ? formatScaled(v, scale) : mixed ? formatAmount(v, unit ?? "") : formatNumber(v));
   const maxAbs = Math.max(...values.map((v) => Math.abs(v)), 1);
-  const subtitle = `${scale ? `${scale.label}, ` : ""}${mixed ? "forskellige valutaer, ikke direkte sammenlignelige, " : ""}top ${entries.length}`;
+  // 13.3 (Jakob 01.10): top 5. Står virksomheden selv længere nede, vises den under top 5 med sin plads.
+  const originAt = entries.findIndex((e) => e.lassoId === originId);
+  const shown = entries.map((e, i) => ({ ...e, rank: i + 1 })).filter((_, i) => i < TOP || (order !== "asc" && i === originAt));
+  const subtitle = `${scale ? `${scale.label}, ` : ""}${mixed ? "forskellige valutaer, ikke direkte sammenlignelige, " : ""}top ${Math.min(TOP, entries.length)}`;
 
   return (
     <Section title={heading} subtitle={subtitle} span="half" className="lasso-ranking">
       <ol className="lasso-ranking-list">
-        {entries.map((e, i) => {
+        {shown.map((e) => {
           const isOrigin = e.lassoId === (order === "asc" ? entries[0]?.lassoId : originId);
           const pct = (Math.abs(e.value) / maxAbs) * 100;
           return (
             <li className={`lasso-ranking__row ${isOrigin ? "lasso-ranking__row--origin" : ""}`} key={e.lassoId}>
-              <span className="lasso-ranking__rank">{i + 1}</span>
+              <span className="lasso-ranking__rank">{e.rank}</span>
               <span className="lasso-ranking__name">{e.name}</span>
               {/* 13.3: tallet står altid lige til højre for bjælken, aldrig inde i den eller i egen kolonne. */}
               <span className="lasso-ranking__track" style={{ ["--lasso-rank-p" as string]: pct / 100 }}>

@@ -31,6 +31,8 @@ const SORTABLE: ReadonlySet<TableColumn> = new Set(["navn", "by", "region", "bra
 /** Rækker pr. side (15.1). */
 export const PAGE_SIZE = 25;
 const MAX_COLUMNS = 8;
+/** 15.1 (Jakob 01.10): højst så mange virksomheder kan sammenlignes. */
+export const MAX_COMPARE = 3;
 
 function sortValue(r: CompanyRowVM, c: TableColumn): string | number | null | undefined {
   switch (c) {
@@ -117,15 +119,6 @@ function SortChevron({ dir }: { dir: 1 | -1 }) {
   );
 }
 
-function DotsIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <circle cx="5.5" cy="12" r="1.6" />
-      <circle cx="12" cy="12" r="1.6" />
-      <circle cx="18.5" cy="12" r="1.6" />
-    </svg>
-  );
-}
 
 const SHORT_LABEL: Partial<Record<TableColumn, string>> = { bruttofortjeneste: "Bruttofortj.", omsaetning: "Omsætning" };
 
@@ -151,7 +144,7 @@ export interface CompanyTableProps {
   onApplyCriteria?: (c: Criterion[]) => void;
   /** Værten kan hente filer (host.export): "Eksportér" og massehandlingen af samme navn. */
   canExport?: boolean;
-  /** Værten kan stille spørgsmål (host.prompt): massehandlingen "Sammenlign" (2–6 markeret). */
+  /** Værten kan stille spørgsmål (host.prompt): massehandlingen "Sammenlign" (2–3 markeret). */
   canPrompt?: boolean;
   /** Værten kan gemme sider (host.savePage): massehandlingen "Gem". */
   canSavePage?: boolean;
@@ -166,6 +159,8 @@ export interface CompanyTableProps {
   loadingTotal?: number;
   /** 15.4 fejl: "Fejl-id 4F2A" som tekst ved "Prøv igen". */
   errorId?: string;
+  /** Rækkerne står i en gemt liste, de kan fjernes fra: massehandlingen "Fjern fra liste". Uden: ingen Fjern. */
+  onRemove?: (lassoIds: string[]) => void;
   /** Statisk forhåndsvisning og tests (15.2): markerede rækker fra start og mobilens "Flere"-ark åbent. */
   preview?: { selected?: readonly string[]; moreOpen?: boolean };
 }
@@ -196,6 +191,7 @@ export function CompanyTable({
   loadingTotal,
   errorId,
   preview,
+  onRemove,
 }: CompanyTableProps) {
   const initialCols = columns?.length ? columns : DEFAULT_TABLE_COLUMNS;
   const [cols, setCols] = useState<readonly TableColumn[]>(initialCols);
@@ -268,20 +264,23 @@ export function CompanyTable({
   const exportRows = (list: readonly CompanyRowVM[]) =>
     onAction({ kind: "export", filename: slugFile(title ?? "virksomheder", "csv"), csv: rowsToCsv(list, cols) });
 
-  const showCvrUnderName = !cols.includes("cvr");
+  // 15.1 (Jakob 01.10): intet CVR-nummer i listen (kun som valgfri kolonne).
+  const showCvrUnderName = false;
   // 15.1: uden statuskolonne står en status, der ikke er "Aktiv", som ren tekst i navnets anden linje.
   const statusUnderName = !cols.includes("status");
-  const colSpan = cols.length + (selectable ? 1 : 0) + 1;
+  // 15.1 (Jakob 01.10): ingen "…"-kolonne; handlinger gælder de markerede rækker (massehandlinger).
+  const colSpan = cols.length + (selectable ? 1 : 0);
 
   const bulkActions: BulkAction[] = [];
   if (canPrompt) {
-    const ok = !allSelected && selCount >= 2 && selCount <= 6;
+    // 15.1 (Jakob 01.10): man kan højst sammenligne 3; markeres flere, er "Sammenlign" deaktiveret.
+    const ok = !allSelected && selCount >= 2 && selCount <= MAX_COMPARE;
     bulkActions.push({
       id: "compare",
       label: "Sammenlign",
       sheetIcon: <Icon name="chart" size={16} />,
       disabled: !ok,
-      reason: "Markér 2–6 virksomheder for at sammenligne",
+      reason: selCount > MAX_COMPARE ? `Du kan højst sammenligne ${MAX_COMPARE} virksomheder` : `Markér 2–${MAX_COMPARE} virksomheder for at sammenligne`,
       onSelect: () => onAction({ kind: "prompt", prompt: `Sammenlign ${selectedRows.map((r) => `${r.name} (${r.lassoId})`).join(", ")} på nøgletal.` }),
     });
   }
@@ -297,15 +296,19 @@ export function CompanyTable({
     });
   }
   if (canExport) bulkActions.push({ id: "export", label: "Eksportér", icon: <DownloadIcon />, onSelect: () => exportRows(selectedRows) });
-  bulkActions.push({
-    id: "remove",
-    label: "Fjern fra liste",
-    destructive: true,
-    onSelect: () => {
-      setHidden(new Set([...hidden, ...selectedRows.map((r) => r.lassoId)]));
-      clearSelection();
-    },
-  });
+  // 15.1 (Jakob 01.10): "Fjern fra liste" kun, når rækkerne reelt kan fjernes (en gemt liste, onRemove).
+  if (onRemove) {
+    bulkActions.push({
+      id: "remove",
+      label: "Fjern fra liste",
+      destructive: true,
+      onSelect: () => {
+        onRemove(selectedRows.map((r) => r.lassoId));
+        setHidden(new Set([...hidden, ...selectedRows.map((r) => r.lassoId)]));
+        clearSelection();
+      },
+    });
+  }
 
   const state: TableState | null = !result
     ? error
@@ -502,9 +505,6 @@ export function CompanyTable({
                     )}
                   </th>
                 ))}
-                <th scope="col" className="lasso-cell--menu">
-                  <span className="lasso-sr">Handlinger</span>
-                </th>
               </tr>
             </thead>
             <tbody>
@@ -569,20 +569,6 @@ export function CompanyTable({
                           )}
                         </td>
                       ))}
-                      <td className="lasso-cell--menu" onClick={(e) => e.stopPropagation()}>
-                        <Menu
-                          trigger={<DotsIcon />}
-                          triggerClassName="lasso-iconbtn lasso-rowmenu"
-                          triggerLabel={`Handlinger for ${r.name}`}
-                          align="end"
-                          label={r.name}
-                          items={[
-                            ...(canDrillDown ? [{ id: "open", label: "Åbn virksomhed", onSelect: () => onAction({ kind: "open-company", lassoId: r.lassoId, name: r.name }) }] : []),
-                            ...(canSavePage ? [{ id: "save", label: "Føj til liste", onSelect: () => onAction({ kind: "save-page", lassoId: r.lassoId, pageKind: "company", name: r.name }) }] : []),
-                            { id: "remove", label: "Fjern fra liste", destructive: true, onSelect: () => setHidden(new Set([...hidden, r.lassoId])) },
-                          ]}
-                        />
-                      </td>
                     </tr>
                   );
                 })
@@ -680,7 +666,7 @@ function CompanyCard({ r, figures, selected, onOpen, onToggle }: { r: CompanyRow
         ) : null}
         <div className="lasso-ccard__id">
           <span className="lasso-ccard__name">{r.name}</span>
-          <span className="lasso-ccard__sub">{[r.cvr ? `CVR ${r.cvr}` : null, r.city].filter(Boolean).join(", ") || "Ikke oplyst"}</span>
+          <span className="lasso-ccard__sub">{r.city || "Ikke oplyst"}</span>
         </div>
         {r.status ? <span className={`lasso-status lasso-status--${statusTone(r.status!, r.statusKind ?? "active")} lasso-ccard__status`}>{r.status}</span> : null}
       </div>

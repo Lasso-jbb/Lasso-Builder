@@ -37,7 +37,9 @@ test("Virksomhedstabel (15.1): værktøjslinje, afkrydsning, 25 rækker og pagin
   // 15.1: aktive kriterier som koral-soft chips med ×, "+ Kriterie" som link
   assert.match(html, /lasso-cchip">Region: Region Midtjylland<button[^>]*aria-label="Fjern Region/);
   assert.match(html, /lasso-ctable__addcrit[^>]*>\+ Kriterie</);
-  assert.match(html, /lasso-rowmenu/);
+  // 15.1 (Jakob 01.10): ingen "…"-handlinger pr. række, intet CVR-nummer under navnet.
+  assert.doesNotMatch(html, /lasso-rowmenu/);
+  assert.doesNotMatch(html, /<span>CVR \d/);
   assert.match(html, /Kolonner/);
   assert.match(html, /Eksportér/);
   assert.equal((html.match(/<tr[^>]*data-clickable/g) ?? []).length, 25);
@@ -49,8 +51,8 @@ test("Virksomhedstabel (15.1): værktøjslinje, afkrydsning, 25 rækker og pagin
   assert.match(html, /lasso-status--inactive">Ophørt/);
   assert.match(html, /Ikke oplyst/);
   assert.match(html, /type="checkbox"[^>]*aria-label="Markér alle på siden"/);
-  // Mobilkort: navn, CVR og by, tre nøgletal og score
-  assert.match(html, /lasso-ccard__sub">CVR 10000000, Aarhus C/);
+  // Mobilkort: navn og by (intet CVR, Jakob 01.10), tre nøgletal og score
+  assert.match(html, /lasso-ccard__sub">Aarhus C</);
   assert.match(html, /<dt>Score<\/dt><dd>42<\/dd>/);
   // Sortering fra spec'en: aktiv kolonne med chevron
   const sorted = renderToStaticMarkup(createElement(CompanyTable, { result, columns: ["navn", "bruttofortjeneste"], initialSort: { field: "bruttofortjeneste", direction: "desc" }, onAction: noop, canDrillDown: false, onSaveList: noop }));
@@ -67,7 +69,7 @@ test("Tilstande står inde i tabelrammen, og hovedet bliver stående", () => {
     assert.doesNotMatch(html, /lasso-pager/);
   }
   const err = renderToStaticMarkup(createElement(CompanyTable, { error: "Lasso svarer ikke", onAction: noop, canDrillDown: false, onRetry: noop }));
-  assert.match(err, /Listen kunne ikke hentes[^]*lasso-btn--primary[^>]*>Prøv igen/);
+  assert.match(err, /Listen kunne ikke hentes[^]*lasso-tstate__retry[^>]*>[^]*Prøv igen/);
   assert.match(err, /Prøv igen/);
   const empty = renderToStaticMarkup(createElement(CompanyTable, { result: { key: "k", rows: [] }, onAction: noop, canDrillDown: false }));
   assert.match(empty, /lasso-tstate__title">Ingen virksomheder matcher</);
@@ -139,32 +141,39 @@ test("Persontabel (15.3): navn alene, 2 rolleord + +n, selskaber, konkurser kun 
   assert.match(loading, /aria-busy="true"/);
 });
 
-test("Sammenligning (22.1): tilføj-slot til og med 5, 'Ikke hentet' mod 'Ikke oplyst', par på mobil", () => {
+test("Sammenligning (22.1): højst 3 (Jakob 01.10), tilføj-slot under 3, 'Ikke hentet' mod 'Ikke oplyst', par på mobil, '+ Tilføj nøgletal'", () => {
   const ds = emptyDataset("demo");
-  const ids = ["CVR-1-1", "CVR-1-2", "CVR-1-3"];
+  const ids = ["CVR-1-1", "CVR-1-2"];
   ds.companies["CVR-1-1"] = { lassoId: "CVR-1-1", name: "Eksempel A ApS" };
   ds.companies["CVR-1-2"] = { lassoId: "CVR-1-2", name: "Eksempel B ApS" };
   ds.companies["CVR-1-3"] = { lassoId: "CVR-1-3", name: "Eksempel C ApS" };
+  ds.financials["CVR-1-3"] = { lassoId: "CVR-1-3", currency: "DKK", years: [] };
   ds.financials["CVR-1-1"] = { lassoId: "CVR-1-1", currency: "DKK", years: [{ year: 2025, grossProfit: 5_000_000, profit: null } as never] };
   ds.financials["CVR-1-2"] = { lassoId: "CVR-1-2", currency: "DKK", years: [{ year: 2025, grossProfit: 4_000_000, profit: 1 } as never] };
   const html = renderToStaticMarkup(createElement(CompareTable, { companies: ids, metrics: ["bruttofortjeneste", "resultat"], dataset: ds, onAction: noop, canDrillDown: false, canAdd: true }));
   assert.match(html, /Tilføj virksomhed/);
-  assert.match(html, /Ikke hentet/);
   assert.match(html, /Ikke oplyst/);
-  assert.match(html, /swipe for næste par/);
-  assert.match(html, /is-offpair/);
+  assert.match(html, /\+ Tilføj nøgletal<\/option>/);
+  assert.doesNotMatch(html, /<option value="bruttofortjeneste">/, "nøgletal i tabellen står ikke i dropdownen");
+  const three = renderToStaticMarkup(createElement(CompareTable, { companies: ["CVR-1-1", "CVR-1-2", "CVR-1-4"], metrics: ["bruttofortjeneste", "resultat"], dataset: ds, onAction: noop, canDrillDown: false, canAdd: true }));
+  assert.match(three, /Ikke hentet/);
+  assert.match(three, /swipe for næste par/);
+  assert.match(three, /is-offpair/);
+  assert.doesNotMatch(three, /Tilføj virksomhed/, "ved 3 er der ikke plads til flere");
   const six = Array.from({ length: 6 }, (_, i) => `CVR-1-${i + 1}`);
   const full = renderToStaticMarkup(createElement(CompareTable, { companies: six, metrics: ["bruttofortjeneste"], dataset: ds, onAction: noop, canDrillDown: false, canAdd: true }));
   assert.doesNotMatch(full, /Tilføj virksomhed/);
+  assert.equal((full.match(/lasso-compare__company /g) ?? []).length, 3, "højst 3 kolonner");
 });
 
-test("Sammenligning (Ø13/B8): 6 virksomheder med 45-tegns navne ombrydes på 2 linjer med fuldt navn i title (ingen vandret rulning i fuld bredde)", () => {
+test("Sammenligning (Ø13/B8): lange navne ombrydes på 2 linjer med fuldt navn i title; højst 3 kolonner", () => {
   const ds = emptyDataset("demo");
   const names = ["Nordjysk Entreprenør- og Ejendomsselskab ApS", "Vestjysk Maskin- og Anlægsservice Holding ApS", "Midtjysk Tømrer- og Snedkerforretning A/S", "Sydsjællands Transport- og Logistikcenter ApS", "Fynsk Rådgivende Ingeniør- og Planlægning A/S", "Københavnske Ejendoms- og Byudviklingsselskab"];
   const six = names.map((_, i) => `CVR-1-${i + 1}`);
   six.forEach((id, i) => (ds.companies[id] = { lassoId: id, name: names[i]! }));
   const html = renderToStaticMarkup(createElement(CompareTable, { companies: six, metrics: ["bruttofortjeneste"], dataset: ds, onAction: noop, canDrillDown: true }));
-  for (const n of names) assert.ok(html.includes(`class="lasso-compare__name" title="${n}"`), n);
+  for (const n of names.slice(0, 3)) assert.ok(html.includes(`class="lasso-compare__name" title="${n}"`), n);
+  assert.ok(!html.includes(names[3]!), "fjerde virksomhed vises ikke (22.1, højst 3)");
   // Stilarket: navnet ombrydes (højst 2 linjer, derefter afkortning) og kolonnen er smal nok til 6 i fuld bredde.
   const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
   const rule = /\.lasso-compare__name \{([^}]*)\}/g;
