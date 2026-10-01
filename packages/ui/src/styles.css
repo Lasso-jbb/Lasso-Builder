@@ -5708,3 +5708,58 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 }
 /* Portalens relationer og historik: navne og "Vis alle" som koral links. */
 .lasso-reltable .lasso-link { color: var(--lasso-accent-text); }
+
+/* ---------- "Se flere"-panelet (08.3/08.7, Jakob 01.10): de højre 2/3 af visningen ----------
+   Glider ind fra højre over sidens anden og tredje kolonne; første kolonne står synlig, ingen mørk overlay.
+   Grupperet liste i midten (valgt i koral), detaljen til højre (værdi, kopiér, kilder). Luk fader ud.
+   Placering (top, højre, bund, bredde) sættes af SidePanel ud fra visningens rektangel. */
+.lasso-sidepanel-wrap--flere { pointer-events: none; }
+.lasso-sidepanel--flere { position: fixed; pointer-events: auto; border-radius: 0; border-left: 1px solid var(--lasso-border); box-shadow: -24px 0 48px rgb(16 18 24 / 0.08); animation: lasso-flere-in 280ms cubic-bezier(0.2, 0.7, 0.2, 1); }
+@keyframes lasso-flere-in { from { transform: translateX(100%); } to { transform: none; } }
+@keyframes lasso-fade-out { to { opacity: 0; } }
+.lasso-sidepanel.is-closing, .lasso-sidepanel-wrap.is-closing .lasso-sidepanel__scrim { animation: lasso-fade-out 180ms ease-in forwards; }
+@media (prefers-reduced-motion: reduce) { .lasso-sidepanel--flere, .lasso-sidepanel.is-closing { animation: none; } }
+.lasso-sidepanel--flere .lasso-sidepanel__head { border-bottom: 0; min-height: 0; padding: 36px 32px 8px 40px; align-items: flex-start; }
+.lasso-sidepanel--flere .lasso-sidepanel__title { font-size: var(--lasso-fs-xl); line-height: 32px; }
+.lasso-sidepanel--flere .lasso-sidepanel__body { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.lasso-sidepanel--flere .lasso-sidepanel__list { padding: 16px 40px 40px; border-right: 1px solid var(--lasso-border); }
+.lasso-sidepanel--flere .lasso-sidepanel__detail { padding: 16px 40px 40px; }
+.lasso-sidepanel--flere .lasso-panellist { display: flex; flex-direction: column; gap: 28px; }
+.lasso-sidepanel--flere .lasso-panellist__group { display: flex; flex-direction: column; gap: 6px; }
+.lasso-sidepanel--flere .lasso-panellist__label { padding: 0; font-size: var(--lasso-fs); line-height: 20px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--lasso-text); border: 0; }
+.lasso-sidepanel--flere .lasso-panellist__items { display: flex; flex-direction: column; gap: 4px; }
+.lasso-root .lasso-sidepanel--flere .lasso-panellist__row { min-height: 24px; padding: 0; gap: 12px; border: 0; border-radius: var(--lasso-radius-xs); background: none; }
+.lasso-root .lasso-sidepanel--flere .lasso-panellist__row:hover { background: none; }
+.lasso-root .lasso-sidepanel--flere .lasso-panellist__row:hover .lasso-panellist__name { color: var(--lasso-accent-text); }
+.lasso-root .lasso-sidepanel--flere .lasso-panellist__row.is-selected { background: none; border: 0; }
+.lasso-sidepanel--flere .lasso-panellist__name { font-size: 15px; line-height: 22px; font-weight: 400; color: var(--lasso-text-2); }
+.lasso-sidepanel--flere .is-selected .lasso-panellist__name { font-weight: 500; color: var(--lasso-accent-text); }
+.lasso-sidepanel--flere .lasso-panellist__chevron { display: none; }
+.lasso-sidepanel--flere .lasso-sidepanel__list .lasso-panellist__trailing { display: inline-flex; }
+.lasso-sidepanel--flere .is-selected .lasso-panellist__trailing .lasso-contactpersons__icon { color: var(--lasso-accent-text); }
+.lasso-sidepanel--flere .lasso-cpdetail { display: flex; flex-direction: column; gap: 24px; }
+/* Detaljen for et telefonnummer eller en e-mail: værdien stort, kopiér som omridsknap, kilderne under. */
+.lasso-chdetail { display: flex; flex-direction: column; gap: 24px; }
+.lasso-chdetail__head { display: flex; flex-direction: column; gap: 6px; }
+.lasso-chdetail__value { margin: 0; font-size: var(--lasso-fs-xl); line-height: 32px; font-weight: 600; color: var(--lasso-text); overflow-wrap: anywhere; }
+.lasso-chdetail__sources { display: flex; flex-direction: column; gap: 6px; padding-top: 16px; }
+.lasso-chdetail__overline { font-size: var(--lasso-fs); line-height: 20px; font-weight: 600; color: var(--lasso-text); }
+.lasso-chdetail__sources p { margin: 0; font-size: var(--lasso-fs); line-height: 22px; color: var(--lasso-text-3); }
+.lasso-root .lasso-chdetail__link { display: inline; padding: 0; border: 0; background: none; font: inherit; color: var(--lasso-accent-text); text-decoration: none; cursor: pointer; }
+.lasso-root .lasso-chdetail__link:hover { text-decoration: underline; }
+.lasso-chdetail .lasso-cpdetail__copy { align-self: flex-start; }
+/* Panelet står i laget (hele skærmen), så smal skærm er en media query, ikke visningens container. */
+@media (max-width: 960px) {
+  .lasso-sidepanel--flere .lasso-sidepanel__head { padding: 24px 20px 4px 24px; }
+  .lasso-sidepanel--flere .lasso-sidepanel__list, .lasso-sidepanel--flere .lasso-sidepanel__detail { padding: 12px 24px 32px; }
+}
+@container lasso (max-width: 560px) {
+  .lasso-sidepanel--flere { border-left: 0; box-shadow: none; animation-name: lasso-sheet-in; }
+  .lasso-sidepanel--flere .lasso-sidepanel__head { padding: 10px 12px 10px 16px; min-height: 56px; align-items: center; border-bottom: 1px solid var(--lasso-border); }
+  .lasso-sidepanel--flere .lasso-sidepanel__title { font-size: var(--lasso-fs-lg); line-height: 24px; }
+  .lasso-sidepanel--flere .lasso-sidepanel__body { grid-template-columns: minmax(0, 1fr); }
+  .lasso-sidepanel--flere .lasso-sidepanel__list { border-right: 0; padding: 16px; }
+  .lasso-sidepanel--flere .lasso-sidepanel__detail { padding: 20px 16px 24px; }
+  .lasso-sidepanel--flere .lasso-panellist__chevron { display: inline-flex; }
+  .lasso-root .lasso-sidepanel--flere .lasso-panellist__row { min-height: 44px; }
+}

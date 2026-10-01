@@ -12,6 +12,7 @@ import type {
   CompanyVM,
   ContactPersonVM,
   ContactPersonsVM,
+  ContactChannelVM,
   ContactVM,
   FinancialYear,
   FinancialsVM,
@@ -295,6 +296,8 @@ export function adaptContact(lassoId: string, companyRaw: Json, websitesRaw: Jso
   const filled = fillContactInfo(co, websitesRaw, contactsRaw);
   const hasAny = Boolean(filled.phone || filled.email || filled.website);
   const source = !hasAny ? undefined : co.phone || co.email ? "CVR" : "Virksomhedens hjemmeside";
+  const channels = contactChannels(co, contactsRaw, filled.website);
+  const extraEmails = [...new Set(channels.filter((c) => c.kind === "email").map((c) => c.value))].filter((e) => e !== filled.email);
   return {
     lassoId,
     phone: filled.phone,
@@ -303,7 +306,36 @@ export function adaptContact(lassoId: string, companyRaw: Json, websitesRaw: Jso
     address: filled.address,
     source,
     updated: hasAny ? new Date().toISOString().slice(0, 10) : undefined,
+    ...(channels.length ? { channels } : {}),
+    ...(extraEmails.length ? { emails: extraEmails } : {}),
   };
+}
+
+/**
+ * Alle telefonnumre og e-mails med kilde til "Se flere"-panelet (08.3/08.7): CVR-svarets egne værdier
+ * som "cvr" og alle fra kontaktendpointet som "hjemmeside" (samme værdi må stå begge steder).
+ */
+export function contactChannels(co: Pick<CompanyVM, "phone" | "email">, contactsRaw: Json | undefined, website?: string): ContactChannelVM[] {
+  const out: ContactChannelVM[] = [];
+  const seen = new Set<string>();
+  const add = (c: ContactChannelVM) => {
+    const key = `${c.kind}|${c.source}|${c.kind === "phone" ? c.value.replace(/\D/g, "").replace(/^45(\d{8})$/, "$1") : c.value.toLowerCase()}`;
+    if (!c.value || seen.has(key)) return;
+    seen.add(key);
+    out.push(c);
+  };
+  if (co.phone) add({ kind: "phone", value: co.phone, source: "cvr" });
+  if (co.email) add({ kind: "email", value: co.email, source: "cvr" });
+  const page = (entry: Json) => (typeof entry === "string" ? undefined : str(entry, "url", "source", "page", "foundOn"));
+  for (const p of arr(contactsRaw, "phonenumbers", "phoneNumbers", "phones")) {
+    const v = contactValue(p, "number", "value", "phone", "phoneNumber");
+    if (v) add({ kind: "phone", value: v, source: "hjemmeside", ...((page(p) ?? website) ? { url: page(p) ?? website } : {}) });
+  }
+  for (const e of arr(contactsRaw, "emails")) {
+    const v = contactValue(e, "email", "value", "address");
+    if (v) add({ kind: "email", value: v, source: "hjemmeside", ...((page(e) ?? website) ? { url: page(e) ?? website } : {}) });
+  }
+  return out;
 }
 
 /**

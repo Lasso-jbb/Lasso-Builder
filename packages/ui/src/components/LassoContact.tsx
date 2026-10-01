@@ -1,7 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { formatDate, formatPhone, type ContactVM } from "@lasso/spec";
+import { formatDate, formatPhone, type ContactVM, type VerifiedPhoneNumberVM } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { Icon } from "./Icon.js";
+import { ShellIcon } from "./ShellIcons.js";
+import { SidePanel, SidePanelList } from "./SidePanel.js";
 
 /** Omridsikoner fra ikonsættet (01): kun form, ingen farve. */
 const PinIcon = () => <Icon name="pin" size={16} className="lasso-contact__icon" />;
@@ -153,6 +155,146 @@ function ActionLink({ label, href, onClick }: { label: string; href?: string; on
   );
 }
 
+/* ---------- "Se flere": telefonnumre og e-mailadresser i panelet (08.3/08.7, Jakob 01.10) ---------- */
+
+type ChannelSource = "cvr" | "hjemmeside" | "verificeret";
+interface ChannelItem {
+  id: string;
+  kind: "phone" | "email";
+  value: string;
+  source: ChannelSource;
+  url?: string;
+  verified?: VerifiedPhoneNumberVM;
+}
+
+const GROUP_LABEL: Record<ChannelSource, string> = { cvr: "Fra CVR", hjemmeside: "Fra hjemmeside", verificeret: "Verificeret af Lasso" };
+const GROUP_ORDER: ChannelSource[] = ["cvr", "hjemmeside", "verificeret"];
+const norm = (kind: "phone" | "email", v: string) => (kind === "phone" ? digits(v) : v.trim().toLowerCase());
+
+/** Alle telefonnumre eller e-mails med kilde: `channels`, ellers bygget af phone/email/emails og de verificerede numre. */
+export function contactChannelItems(contact: ContactVM, kind: "phone" | "email"): ChannelItem[] {
+  const out: ChannelItem[] = [];
+  const seen = new Set<string>();
+  const add = (x: Omit<ChannelItem, "id">) => {
+    const key = `${x.source}|${norm(kind, x.value)}`;
+    if (!x.value || seen.has(key)) return;
+    seen.add(key);
+    out.push({ ...x, id: `${x.source}-${out.length}` });
+  };
+  const base: ChannelSource = contact.source && contact.source !== "CVR" ? "hjemmeside" : "cvr";
+  const channels = (contact.channels ?? []).filter((c) => c.kind === kind);
+  if (channels.length) for (const c of channels) add({ kind, value: c.value, source: c.source, ...(c.url ? { url: c.url } : {}) });
+  else if (kind === "phone" && contact.phone) add({ kind, value: contact.phone, source: base });
+  else if (kind === "email") {
+    if (contact.email) add({ kind, value: contact.email, source: base });
+    for (const e of contact.emails ?? []) add({ kind, value: e, source: "hjemmeside", ...(contact.website ? { url: contact.website } : {}) });
+  }
+  if (kind === "phone") for (const n of contact.verifiedNumbers ?? []) add({ kind, value: n.phoneNumber, source: "verificeret", verified: n });
+  return out.sort((a, b) => GROUP_ORDER.indexOf(a.source) - GROUP_ORDER.indexOf(b.source));
+}
+
+/** Antal forskellige værdier (samme nummer fra CVR og hjemmesiden tæller én gang). */
+const distinct = (items: readonly ChannelItem[]) => new Set(items.map((i) => norm(i.kind, i.value))).size;
+
+const cvrNumber = (lassoId: string) => /^CVR-1-(\d+)$/.exec(lassoId)?.[1];
+
+/** Panelets detalje: værdien, live-tilstanden for verificerede numre, kopiér og kilderne. */
+function ChannelDetail({ item, contact, now, onCopy, onOpenLink }: { item: ChannelItem; contact: ContactVM; now: number; onCopy?: LassoContactProps["onCopy"]; onOpenLink?: (url: string) => void }) {
+  const [copied, setCopied] = useState(false);
+  useEffect(() => setCopied(false), [item.id]);
+  const shown = item.kind === "phone" ? prettyPhone(item.value) : item.value;
+  const canClipboard = typeof navigator !== "undefined" && Boolean(navigator.clipboard);
+  const copy = onCopy
+    ? () => onCopy(item.value, item.kind)
+    : canClipboard
+      ? () => void navigator.clipboard.writeText(item.value).then(() => setCopied(true))
+      : undefined;
+  const state = item.verified ? liveState(contact.verifiedAt, item.verified.expired, now) : null;
+  const cvr = cvrNumber(contact.lassoId);
+  const link = (url: string, label: string) =>
+    onOpenLink ? (
+      <button type="button" className="lasso-chdetail__link" onClick={() => onOpenLink(url)}>
+        {label}
+      </button>
+    ) : (
+      <a className="lasso-chdetail__link" href={url} target="_blank" rel="noreferrer">
+        {label}
+      </a>
+    );
+  const what = item.kind === "phone" ? "telefonnummer" : "emailadresse";
+  const page = item.url ?? contact.website;
+  return (
+    <div className="lasso-chdetail">
+      <div className="lasso-chdetail__head">
+        <h3 className={`lasso-chdetail__value${state?.kind === "expired" ? " lasso-contact__value--struck" : ""}`}>{shown}</h3>
+        {state ? <LiveMark state={state} /> : null}
+      </div>
+      {copy ? (
+        <button type="button" className="lasso-cpdetail__copy" onClick={copy}>
+          <ShellIcon name="copy" size={16} className="lasso-cpdetail__copyicon" />
+          <span className="lasso-cpdetail__copytext">
+            <span className="lasso-cpdetail__copylabel">{copied ? "Kopieret" : `Kopiér ${what}`}</span>
+          </span>
+        </button>
+      ) : null}
+      <div className="lasso-chdetail__sources">
+        <div className="lasso-chdetail__overline">Kilder</div>
+        {item.source === "cvr" ? (
+          <p>
+            {item.kind === "phone" ? "Dette telefonnummer" : "Denne emailadresse"} er registreret i CVR-registret.{" "}
+            {cvr ? link(`https://datacvr.virk.dk/enhed/virksomhed/${cvr}`, "Gå til virksomheden på virk.dk") : null}
+          </p>
+        ) : item.source === "hjemmeside" ? (
+          <p>
+            Fundet på virksomhedens hjemmeside.{" "}
+            {page ? link(page, page.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")) : null}
+          </p>
+        ) : (
+          <p>
+            Verificeret af Lasso{contact.verifiedAt ? ` ${formatDate(contact.verifiedAt.slice(0, 10))}` : ""}
+            {item.verified?.sources.length ? `, fundet i ${item.verified.sources.map((x) => (x === "Website" ? "hjemmesiden" : x)).join(" og ")}` : ""}.
+            {item.verified?.explanation ? ` ${item.verified.explanation}` : ""}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** "Se flere"-panelet for telefonnumre eller e-mailadresser: grupperet liste i midten, detalje til højre. */
+function ChannelPanel({ kind, contact, open, onClose, now, onCopy, onOpenLink }: { kind: "phone" | "email"; contact: ContactVM; open: boolean; onClose: () => void; now: number; onCopy?: LassoContactProps["onCopy"]; onOpenLink?: (url: string) => void }) {
+  const items = contactChannelItems(contact, kind);
+  const [selected, setSelected] = useState(items[0]?.id ?? "");
+  const [view, setView] = useState<"list" | "detail">("detail");
+  const current = items.find((i) => i.id === selected) ?? items[0];
+  if (!current) return null;
+  const title = kind === "phone" ? "Telefonnumre" : "Emailadresser";
+  return (
+    <SidePanel
+      open={open}
+      variant="flere"
+      title={title}
+      onClose={onClose}
+      view={view}
+      onBack={() => setView("list")}
+      detailTitle={title}
+      list={
+        <SidePanelList
+          ariaLabel={title}
+          limit={Infinity}
+          selected={current.id}
+          onSelect={(id) => {
+            setSelected(id);
+            setView("detail");
+          }}
+          groups={GROUP_ORDER.map((src) => ({ label: GROUP_LABEL[src], items: items.filter((i) => i.source === src).map((i) => ({ id: i.id, title: kind === "phone" ? prettyPhone(i.value) : i.value })) })).filter((g) => g.items.length)}
+        />
+      }
+      detail={<ChannelDetail item={current} contact={contact} now={now} onCopy={onCopy} onOpenLink={onOpenLink} />}
+    />
+  );
+}
+
 export interface LassoContactProps {
   contact?: ContactVM;
   title?: string;
@@ -193,7 +335,7 @@ export interface LassoContactProps {
 export function LassoContact({ contact, title, error, omitAddress = false, onCopy, onOpenLink, onVerify, now, foldExtra = true }: LassoContactProps) {
   const heading = title ?? "Kontakt";
   const [checking, setChecking] = useState(false);
-  const [showAll, setShowAll] = useState(false);
+  const [panel, setPanel] = useState<"phone" | "email" | null>(null);
   const lassoId = contact?.lassoId;
   useEffect(() => {
     if (!onVerify || !lassoId) return;
@@ -245,9 +387,14 @@ export function LassoContact({ contact, title, error, omitAddress = false, onCop
   const stateOf = (n?: { expired?: string }): LiveState | null => (checking ? { kind: "checking" } : n ? liveState(contact.verifiedAt, n.expired, at) : null);
   const mapUrl = hasAddress ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([addressLine1, addressLine2].filter(Boolean).join(", "))}` : undefined;
   const phoneState = stateOf(phoneMatch);
-  // 08.3: ét nummer ad gangen; resten (også udgåede) bag "Se N telefonnumre" i muted til højre.
-  const folded = foldExtra && !showAll && otherVerified.length > 0;
-  const extraLabel = `Se ${otherVerified.length} ${otherVerified.length === 1 ? "telefonnummer" : "telefonnumre"}`;
+  // 08.3: ét nummer og én e-mail ad gangen; har virksomheden flere (CVR, hjemmesiden, verificerede), åbner
+  // "Se N telefonnumre"/"Se N emailadresser" panelet fra højre med alle, grupperet efter kilde (Jakob 01.10).
+  const phoneItems = contactChannelItems(contact, "phone");
+  const emailItems = contactChannelItems(contact, "email");
+  const phoneCount = distinct(phoneItems);
+  const emailCount = distinct(emailItems);
+  const folded = foldExtra && (otherVerified.length > 0 || phoneCount > 1);
+  const extraLabel = `Se ${phoneCount} telefonnumre`;
   const tel = contact.phone ? `tel:${contact.phone.replace(/\s+/g, "")}` : undefined;
   // Handlingerne (Kort, Ring, Kopiér) står kun på mobil (26a.6); desktop viser værdierne alene (08.3).
   const act = (node: ReactNode) => <span className="lasso-contact__act">{node}</span>;
@@ -276,7 +423,7 @@ export function LassoContact({ contact, title, error, omitAddress = false, onCop
             struck={phoneState?.kind === "expired"}
             aside={
               <>
-                {folded ? more(extraLabel, () => setShowAll(true)) : phoneState ? <LiveMark state={phoneState} /> : null}
+                {folded && phoneCount > 1 ? more(extraLabel, () => setPanel("phone")) : phoneState ? <LiveMark state={phoneState} /> : null}
                 {phoneState?.kind === "expired" ? null : act(
                   <a className="lasso-contact__call" href={tel} aria-label="Ring" title="Ring">
                     <Icon name="phone" size={16} />
@@ -292,7 +439,16 @@ export function LassoContact({ contact, title, error, omitAddress = false, onCop
           <Row
             icon={<MailIcon />}
             href={`mailto:${contact.email}`}
-            aside={checking ? <LiveMark state={{ kind: "checking" }} /> : onCopy ? act(<ActionLink label="Kopiér" onClick={() => onCopy(contact.email!, "email")} />) : undefined}
+            aside={
+              checking ? (
+                <LiveMark state={{ kind: "checking" }} />
+              ) : (foldExtra && emailCount > 1) || onCopy ? (
+                <>
+                  {foldExtra && emailCount > 1 ? more(`Se ${emailCount} emailadresser`, () => setPanel("email")) : null}
+                  {onCopy ? act(<ActionLink label="Kopiér" onClick={() => onCopy(contact.email!, "email")} />) : null}
+                </>
+              ) : undefined
+            }
           >
             {contact.email}
           </Row>
@@ -313,6 +469,8 @@ export function LassoContact({ contact, title, error, omitAddress = false, onCop
         })}
       </div>
       {/* 08.3 (Jakob 29.09): ingen Robinson-linje og ingen kildevisning (G3) under kontaktrækkerne. */}
+      {phoneCount > 1 ? <ChannelPanel kind="phone" contact={contact} open={panel === "phone"} onClose={() => setPanel(null)} now={at} onCopy={onCopy} onOpenLink={onOpenLink} /> : null}
+      {emailCount > 1 ? <ChannelPanel kind="email" contact={contact} open={panel === "email"} onClose={() => setPanel(null)} now={at} onCopy={onCopy} onOpenLink={onOpenLink} /> : null}
     </Section>
   );
 }

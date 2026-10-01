@@ -106,6 +106,22 @@ export interface ContactVM {
   verifiedAt?: string;
   /** Katalog 08.7: flere e-mailadresser end `email` (fx kontakt@ og contact@), vist under "Emailadresser". */
   emails?: string[];
+  /**
+   * "Se flere"-panelet (08.3/08.7): alle telefonnumre og e-mailadresser med deres kilde, så panelet kan
+   * gruppere dem ("Fra CVR", "Fra hjemmeside") og vise kilden i detaljen. Samme værdi kan stå under
+   * begge kilder. Uden: panelet bygges af `phone`, `email`, `emails` og `verifiedNumbers`.
+   */
+  channels?: ContactChannelVM[];
+}
+
+/** Én telefon eller e-mail med kilden, den kommer fra (08.3/08.7). */
+export interface ContactChannelVM {
+  kind: "phone" | "email";
+  value: string;
+  /** cvr = registreret i CVR; hjemmeside = fundet på virksomhedens hjemmeside. */
+  source: "cvr" | "hjemmeside";
+  /** Siden, værdien blev fundet på (hjemmeside), når den kendes. */
+  url?: string;
 }
 
 /** Katalog 08, én kontaktperson (rolle/afdeling, telefon og/eller e-mail). */

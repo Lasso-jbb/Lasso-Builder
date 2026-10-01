@@ -1058,3 +1058,19 @@ test("adaptPeople læser antal andre selskaber defensivt (11.2) og udelader det 
   assert.equal(rows.find((r) => r.name === "Anne Eksempel")?.otherCompanies, 3);
   assert.equal(rows.find((r) => r.name === "Bo Eksempel")?.otherCompanies, undefined);
 });
+
+test("adaptContact: alle telefonnumre og e-mails med kilde til Se flere-panelet (CVR og hjemmesiden)", () => {
+  const c = adaptContact(
+    "CVR-1-34580820",
+    { name: "LASSO X A/S", phone: "71747812", email: "kontakt@lasso.dk" },
+    { urls: [{ url: "https://lassox.com" }] },
+    { phonenumbers: [{ number: "+45 71 74 78 12" }, "33 12 34 56"], emails: ["kontakt@lasso.dk", { email: "contact@lassox.com", url: "https://lassox.com/om-os" }] },
+  );
+  assert.deepEqual(
+    c.channels?.map((x) => `${x.kind}:${x.source}:${x.value}`),
+    ["phone:cvr:71747812", "email:cvr:kontakt@lasso.dk", "phone:hjemmeside:+45 71 74 78 12", "phone:hjemmeside:33 12 34 56", "email:hjemmeside:kontakt@lasso.dk", "email:hjemmeside:contact@lassox.com"],
+  );
+  assert.equal(c.channels?.find((x) => x.value === "contact@lassox.com")?.url, "https://lassox.com/om-os");
+  assert.equal(c.channels?.find((x) => x.value === "33 12 34 56")?.url, "https://lassox.com");
+  assert.deepEqual(c.emails, ["contact@lassox.com"]);
+});

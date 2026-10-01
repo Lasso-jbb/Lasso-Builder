@@ -388,7 +388,7 @@ export const entries: GalleryEntry[] = [
     node: "L75-0",
     render: () => <SeeAllPanel />,
     only: "desktop",
-    note: "Paper L75-0: tre kolonner i portalens ramme (virksomheden | stillinger pr. afdeling | valgt person). Tvillinger/Nyheder og 'Se detaljer' vises kun, når værten kan åbne dem (G1).",
+    note: "Se flere (Jakob 01.10): panelet glider ind fra højre og dækker de højre 2/3 af visningen; sidens første kolonne står synlig. Stillinger pr. afdeling i midten, den valgte person med kopiér og kilder til højre. Luk fader ud.",
   },
   {
     nr: "08.8",

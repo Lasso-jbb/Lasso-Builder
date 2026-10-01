@@ -15,6 +15,7 @@ import {
   type CompanyRowVM,
   type CompanyVM,
   type ContactPersonVM,
+  type ContactChannelVM,
   type ContactPersonsVM,
   type ContactVM,
   type CreditAssessment,
@@ -818,10 +819,32 @@ const VERIFIED_NUMBERS: Record<string, { verifiedNumbers: NonNullable<ContactVM[
   },
 };
 
+/**
+ * "Se flere" (08.3/08.7): CVR-værdierne og det, der står på hjemmesiden (eksempeldata): samme nummer og
+ * e-mail plus en info@-adresse på domænet, så panelet har både "Fra CVR" og "Fra hjemmeside".
+ */
+function demoChannels(c: DemoCompany): ContactChannelVM[] {
+  const out: ContactChannelVM[] = [];
+  if (c.phone) out.push({ kind: "phone", value: c.phone, source: "cvr" });
+  if (c.email) out.push({ kind: "email", value: c.email, source: "cvr" });
+  if (c.website) {
+    const domain = c.website.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "");
+    const page = `${c.website.replace(/\/$/, "")}/kontakt`;
+    if (c.phone) out.push({ kind: "phone", value: c.phone, source: "hjemmeside", url: page });
+    if (c.email) out.push({ kind: "email", value: c.email, source: "hjemmeside", url: page });
+    out.push({ kind: "email", value: `info@${domain}`, source: "hjemmeside", url: page });
+  }
+  return out;
+}
+
 function contactFor(c: DemoCompany): ContactVM {
   const hasAny = Boolean(c.phone || c.email || c.website);
   const verified = VERIFIED_NUMBERS[c.lassoId];
+  const channels = demoChannels(c);
+  const extraEmails = [...new Set(channels.filter((x) => x.kind === "email").map((x) => x.value))].filter((e) => e !== c.email);
   return {
+    ...(channels.length ? { channels } : {}),
+    ...(extraEmails.length ? { emails: extraEmails } : {}),
     lassoId: c.lassoId,
     phone: c.phone,
     email: c.email,

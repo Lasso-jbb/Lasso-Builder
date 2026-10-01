@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { contactPersonGroup, formatNumber, formatPhone, groupContactPersons, type CompanyVM, type ContactPersonVM, type ContactPersonsVM, type ContactVM } from "@lasso/spec";
+import { contactPersonGroup, formatDate, formatNumber, formatPhone, groupContactPersons, type CompanyVM, type ContactPersonVM, type ContactPersonsVM, type ContactVM } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { ShellIcon } from "./ShellIcons.js";
 import { SidePanel, SidePanelList } from "./SidePanel.js";
@@ -33,6 +33,11 @@ export interface LassoContactPersonsProps {
   data?: ContactPersonsVM;
   title?: string;
   error?: string;
+  /*
+   * company, companyName, contact, shortcuts og onLiveDetails fyldte panelets første kolonne (08.7 "seeall").
+   * Panelet dækker nu de højre 2/3 af visningen, så sidens egen første kolonne står synlig (Jakob 01.10);
+   * felterne bliver, så eksisterende kald stadig typer, men bruges ikke længere af panelet.
+   */
   /** Virksomhedens navn (fallback for panelets første kolonne, når `company` mangler). */
   companyName?: string;
   /** 08.7: virksomheden i panelets første kolonne (navn, adresse, CVR, stiftet, ansatte). */
@@ -107,9 +112,11 @@ function Channels({ person }: { person: ContactPersonVM }) {
   );
 }
 
-/** 08.7, kolonne 3 (Paper LCJ-0): navn 20/600, stilling, kopiér-handlinger med værdien (ingen kilder, Jakob runde 6). */
-function Detail({ person, onCopy }: { person: ContactPersonVM; onCopy?: LassoContactPersonsProps["onCopy"] }) {
-  // Ingen kildevisning. Ingen Ring/Skriv/LinkedIn (Paper).
+/**
+ * 08.7, detaljen (Paper LCJ-0): navn 20/600, stilling, kopiér-handlinger med værdien og kilderne
+ * (Jakob 01.10: "Se flere"-panelet viser, hvor oplysningen kommer fra). Ingen Ring/Skriv/LinkedIn (Paper).
+ */
+function Detail({ person, onCopy, onOpenLink }: { person: ContactPersonVM; onCopy?: LassoContactPersonsProps["onCopy"]; onOpenLink?: (url: string) => void }) {
   const copy = (value: string, shown: string, what: "phone" | "email", label: string) =>
     onCopy ? (
       <button type="button" className="lasso-cpdetail__copy" onClick={() => onCopy(value, what)}>
@@ -139,6 +146,18 @@ function Detail({ person, onCopy }: { person: ContactPersonVM; onCopy?: LassoCon
       ) : (
         <p className="lasso-cpdetail__none">Der er ikke fundet telefon eller e-mail for personen.</p>
       )}
+      {person.sources?.length ? (
+        <div className="lasso-chdetail__sources">
+          <div className="lasso-chdetail__overline">Kilder</div>
+          {person.sources.map((src, i) => (
+            <p key={i}>
+              {src.url ? <ExtLink url={src.url} label={src.url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")} className="lasso-chdetail__link" onOpenLink={onOpenLink} /> : <span>{src.label}</span>}
+              {src.text ? `, ${src.text}` : ""}
+              {src.date ? ` (${formatDate(src.date)})` : ""}
+            </p>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -232,7 +251,7 @@ export function CompanyColumn({ company, contact, name, shortcuts, onLiveDetails
  * kanalen findes (G2). Klik på række, ikon eller "Se N kontaktpersoner" åbner "Se alle"-panelet fra
  * højre (08.7) med personen valgt. Ingen initial-cirkler (regel 5).
  */
-export function LassoContactPersons({ data, title, error, companyName, company, contact, shortcuts, onLiveDetails, onCopy, onOpenLink, defaultOpen, defaultView }: LassoContactPersonsProps) {
+export function LassoContactPersons({ data, title, error, onCopy, onOpenLink, defaultOpen, defaultView }: LassoContactPersonsProps) {
   const heading = title ?? "Kontaktpersoner";
   const [open, setOpen] = useState(defaultOpen !== undefined);
   const [selected, setSelected] = useState<number>(defaultOpen ?? 0);
@@ -289,14 +308,13 @@ export function LassoContactPersons({ data, title, error, companyName, company, 
       {/* 08.6: ingen kildevisning under blokken; kilderne står pr. person i panelet ("KILDER"). */}
       <SidePanel
         open={open}
-        variant="seeall"
+        variant="flere"
         title={heading}
         subtitle={`${sorted.length} ${sorted.length === 1 ? "person" : "personer"}`}
         onClose={() => setOpen(false)}
         view={view}
         onBack={() => setView("list")}
         detailTitle={heading}
-        aside={wide ? <CompanyColumn company={company} contact={contact} name={companyName} shortcuts={shortcuts} onLiveDetails={onLiveDetails} onOpenLink={onOpenLink} /> : undefined}
         list={
           <SidePanelList
             ariaLabel={heading}
@@ -314,7 +332,7 @@ export function LassoContactPersons({ data, title, error, companyName, company, 
             }))}
           />
         }
-        detail={<Detail person={current} onCopy={onCopy} />}
+        detail={<Detail person={current} onCopy={onCopy} onOpenLink={onOpenLink} />}
       />
     </Section>
   );
