@@ -4,7 +4,7 @@
  *    kildefiler pr. modul, reglerne i docs/design og galleriets demodata.
  *  - `boot`: de rigtige data fra serveren (/designguide), samme live-data som /komponenter.
  */
-import type { Dataset, ShowcaseAlternatives, ShowcaseTab, PortalPage, ViewSpec } from "@lasso/spec";
+import type { ComponentType, Dataset, ShowcaseAlternatives, ShowcaseTab, PortalPage, ViewComponent, ViewSpec } from "@lasso/spec";
 import raw from "./generated/source.json";
 
 export interface Token {
@@ -54,6 +54,10 @@ export interface DesignguideBoot {
   source: string;
   showcase: ShowcaseData;
   focuses: { company: readonly string[]; person: readonly string[] };
+  /** Fiktive data til alle moduler (demodata), til moduler uden rigtige data. */
+  fictive?: { items: { type: ComponentType; label: string; component: ViewComponent }[]; dataset: Dataset };
+  /** Om det kræver en nøgle at skrive kommentarer. */
+  comments?: { keyRequired: boolean };
 }
 
 export interface LivePage {

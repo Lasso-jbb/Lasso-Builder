@@ -1,14 +1,15 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { GRID_RULES, WIDTHS, type Width } from "@lasso/spec";
 import type { Ctx } from "../App.js";
 import { Frame } from "../Frame.js";
 import { ENTRIES } from "../gallery.js";
 import type { Report } from "../inspect.js";
-import { ModuleView, reportKey, STATE_LABEL, stateDataset, useReports, type DataOption, type ModuleInfo, type StateMode } from "../modules.js";
+import { ModuleView, reportKey, showsData, STATE_LABEL, stateDataset, useReports, type DataOption, type ModuleInfo, type StateMode } from "../modules.js";
 import { dataSlice } from "../../showcase.js";
 import { SOURCE } from "../source.js";
 import { allowedWidths, slugOf, VIEWPORTS, WIDTH_LABEL, WIDTH_NAME, WIDTH_PX, type Viewport } from "../structure.js";
 import { Chip, PageHead, ReportChip, Seg, SourceRef, Tabs, Toggle } from "../ui.js";
+import { CommentButton, type CommentTarget } from "../comments.js";
 import { LIVE_LABEL, PROFILE_LABEL } from "./Modules.js";
 
 type TabId = "bredder" | "tilstande" | "tekster" | "brug" | "data";
@@ -44,6 +45,12 @@ function ModuleFrame({
   const key = reportKey(m.type, vp.id, width ?? GRID_RULES[m.type]?.std ?? "full", option.id, mode);
   const dataset = useMemo(() => stateDataset(option.dataset, option.component, m.item, mode), [option, m.item, mode]);
   const report = reports[key];
+  const w = width ?? GRID_RULES[m.type]?.std ?? "full";
+  const comment: CommentTarget = {
+    target: `modul:${m.type}:${vp.id}:${w}:${mode}`,
+    label: `${m.n} ${m.title}, ${vp.label} ${vp.vw}, ${WIDTH_LABEL[w]} (${report?.cellWidth ?? WIDTH_PX[w]} px), ${STATE_LABEL[mode].toLowerCase()}`,
+    context: { kind: "modul", ref: m.type, viewport: vp.id, vw: vp.vw, width: w, mode, data: option.label },
+  };
   return (
     <figure className={`dg-mframe${report?.verdict === "problem" ? " is-problem" : ""}`}>
       <figcaption className="dg-mframe__cap">
@@ -52,8 +59,9 @@ function ModuleFrame({
         <span className="dg-mframe__grow" />
         {report ? <span className="dg-meta">{report.cellWidth} px</span> : null}
         <ReportChip report={report} />
+        <CommentButton target={comment} small />
       </figcaption>
-      <Frame vw={vp.vw} crop=".lasso-cell" mark={mark} fit={fit} onReport={(r: Report) => put(key, r)} label={`${m.title}, ${vp.label} ${vp.vw}${width ? `, ${WIDTH_NAME[width]}` : ""}`}>
+      <Frame vw={vp.vw} crop=".lasso-cell" mark={mark} fit={fit} comment={comment} onReport={(r: Report) => put(key, r)} label={`${m.title}, ${vp.label} ${vp.vw}${width ? `, ${WIDTH_NAME[width]}` : ""}`}>
         <ModuleView component={option.component} dataset={dataset} title={m.title} width={width} theme={theme} />
       </Frame>
       {report && report.findings.some((f) => f.kind !== "state") ? (
@@ -199,6 +207,7 @@ export function TextList({ texts }: { texts: typeof SOURCE.texts }) {
                 <span className="dg-text__meta">
                   {t.a ? <code>{t.a}</code> : <span>{KIND_LABEL[t.k]}</span>}
                   <span>linje {t.l}</span>
+                  <CommentButton small target={{ target: `tekst:${t.f}:${t.l}:${t.t.slice(0, 80)}`, label: `Tekst "${t.t.slice(0, 80)}" (${t.f.split("/").pop()}:${t.l})`, context: { kind: "tekst", ref: `${t.f}:${t.l}` } }} />
                 </span>
               </li>
             ))}
@@ -349,7 +358,32 @@ function DataTab({ m, option }: { m: ModuleInfo; option: DataOption }) {
 }
 
 export function ModulePage({ ctx, module: m, tab }: { ctx: Ctx; module: ModuleInfo; tab: string }) {
-  const [optionId, setOptionId] = useState(m.options[0]?.id ?? "");
+  const [optionId, setOptionIdState] = useState(m.options[0]?.id ?? "");
+  // Automatisk valg: viser en datakilde ikke modulet i brug (tom, fejl, intet), prøves den næste, til sidst
+  // de fiktive data. Stopper, så snart brugeren selv vælger.
+  const [auto, setAuto] = useState(true);
+  const setOptionId = (id: string) => {
+    setAuto(false);
+    setOptionIdState(id);
+  };
+  const { reports, put } = useReports();
+  const std = GRID_RULES[m.type]?.std ?? "full";
+  const keyOf = (o: DataOption) => reportKey(m.type, "desktop", std, o.id);
+  // Alle datakilder prøves samtidig i baggrunden (desktop, standardbredde); den første i rækkefølgen, der
+  // viser modulet i brug, vælges. Ingen af dem → den første (modulets tomme tilstand).
+  useEffect(() => {
+    if (!auto) return;
+    for (const o of m.options) {
+      const r = reports[keyOf(o)];
+      if (!r) return;
+      if (showsData(r)) {
+        setOptionIdState(o.id);
+        setAuto(false);
+        return;
+      }
+    }
+    setAuto(false);
+  }, [auto, reports]);
   const [mark, setMark] = useState(true);
   const [fit, setFit] = useState(true);
   const [outside, setOutside] = useState(false);
@@ -403,6 +437,12 @@ export function ModulePage({ ctx, module: m, tab }: { ctx: Ctx; module: ModuleIn
                   ))}
                 </select>
               </label>
+              {option.fictive ? (
+                <Chip tone="accent" title="Ingen af de rigtige virksomheder har data til modulet lige nu, så det vises med fiktive demodata.">
+                  Fiktive data
+                </Chip>
+              ) : null}
+              {auto && m.options.length > 1 ? <span className="dg-meta">Finder data, der viser modulet …</span> : null}
               {current !== "data" ? (
                 <>
                   <Toggle checked={mark} onChange={setMark}>
@@ -426,13 +466,26 @@ export function ModulePage({ ctx, module: m, tab }: { ctx: Ctx; module: ModuleIn
               ) : null}
             </div>
           ) : null}
-          {current === "bredder" ? <WidthsTab m={m} option={option} theme={ctx.theme} mark={mark} fit={fit} outside={outside} /> : null}
-          {current === "tilstande" ? <StatesTab m={m} option={option} theme={ctx.theme} mark={mark} fit={fit} /> : null}
+          {(current === "bredder" || current === "tilstande") && auto && m.options.length > 1 ? <div className="dg-loading">Finder de data, der viser modulet i brug …</div> : null}
+          {current === "bredder" && !(auto && m.options.length > 1) ? <WidthsTab m={m} option={option} theme={ctx.theme} mark={mark} fit={fit} outside={outside} /> : null}
+          {current === "tilstande" && !(auto && m.options.length > 1) ? <StatesTab m={m} option={option} theme={ctx.theme} mark={mark} fit={fit} /> : null}
           {current === "data" ? <DataTab m={m} option={option} /> : null}
         </>
       )}
       {current === "tekster" ? <TextsTab m={m} /> : null}
       {current === "brug" ? <UsageTab m={m} /> : null}
+      {auto && m.options.length > 1 ? (
+        // Prøverne: hver datakilde tegnet uden for skærmen i desktop-standardbredden.
+        <div className="dg-offscreen" aria-hidden="true">
+          {m.options.map((o) => (
+            <div key={o.id} style={{ width: 1200 }}>
+              <Frame vw={1200} crop=".lasso-cell" eager fit={false} onReport={(r: Report) => put(keyOf(o), r)}>
+                <ModuleView component={o.component} dataset={o.dataset} title={m.title} width={std} theme={ctx.theme} />
+              </Frame>
+            </div>
+          ))}
+        </div>
+      ) : null}
       <nav className="dg-pager">
         {prev ? (
           <a href={`#/moduler/${slugOf(prev.type)}${current !== "bredder" ? `?fane=${current}` : ""}`}>

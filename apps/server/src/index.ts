@@ -49,6 +49,7 @@ import { ASK_AGAIN, failPage, FROM_LIST, linkFailure, VIEW_MISSING, VIEW_OUTDATE
 import { portalApi, portalErrorHandler } from "./web/portalApi.js";
 import { DEPLOYED_VERSION, showcaseHandler } from "./web/showcase.js";
 import { designguideHandlers } from "./web/designguide.js";
+import { createCommentStore, type CommentStore } from "./comments/store.js";
 import { pdfAvailable, pdfRendererFor, type PdfRenderer } from "./pdf/renderer.js";
 import { pdfBoot, pdfRoutes, portalPdfRoutes } from "./pdf/routes.js";
 
@@ -63,6 +64,8 @@ export interface AppDeps {
   pages: SavedPageStore;
   /** "Gem som PDF" (pdf/renderer.ts). Udeladt: en renderer ud fra PDF_CHROMIUM_PATH. */
   pdf?: PdfRenderer;
+  /** Kommentarer i designguiden (comments/store.ts). Udeladt: i hukommelsen. */
+  comments?: CommentStore;
 }
 
 function safeEqual(a: string, b: string): boolean {
@@ -127,7 +130,7 @@ function requireMcpKey(config: Config) {
   };
 }
 
-export function createApp({ config, client, provider, store, pages, pdf = pdfRendererFor(config) }: AppDeps) {
+export function createApp({ config, client, provider, store, pages, pdf = pdfRendererFor(config), comments = createCommentStore("") }: AppDeps) {
   const app = createMcpExpressApp({ host: "0.0.0.0", jsonLimit: "1mb" });
   app.disable("x-powered-by");
 
@@ -264,9 +267,17 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
   // Komponentudstillingen: alle komponenter på LASSO X og Jakob Bech Benediktson (web/showcase.ts).
   app.get("/komponenter", showcaseHandler(config, provider));
   // Designguiden: fundament, elementer, alle moduler i alle bredder med rigtige data, tekster og regler (web/designguide.ts).
-  const guide = designguideHandlers(provider);
+  // Alle må skrive kommentarer; DESIGNGUIDE_KEY lukker for skrivning, hvis den sættes.
+  const guideKey = config.DESIGNGUIDE_KEY;
+  const guide = designguideHandlers(provider, comments, { keyRequired: isSet(guideKey), baseUrl: config.publicBaseUrl });
   app.get("/designguide", guide.page);
   app.get("/designguide/side.json", guide.side);
+  // Kommentarer: alle kan læse (også som markdown-arbejdsliste) og skrive; kun med DESIGNGUIDE_KEY sat kræver skrivning nøglen.
+  app.get("/designguide/api/kommentarer", guide.listComments);
+  app.get("/designguide/kommentarer.md", guide.commentsMarkdown);
+  app.post("/designguide/api/kommentarer", requireKey(guideKey), guide.addComment);
+  app.patch("/designguide/api/kommentarer/:id", requireKey(guideKey), guide.updateComment);
+  app.delete("/designguide/api/kommentarer/:id", requireKey(guideKey), guide.removeComment);
 
   // --- Delt side: specen hentes, data hentes friskt, render-appen tegner -----
   app.get("/v/:org/:slug", async (req, res) => {
@@ -676,6 +687,7 @@ async function main() {
   const provider = createProvider(config, client, scores);
   const store = createViewStore(pool ?? "");
   const pages = createSavedPageStore(pool ?? "");
+  const comments = createCommentStore(pool ?? "");
 
   // Databasen kan starte efter appen på Railway: prøv i baggrunden med backoff.
   // Lykkes det ikke, prøver hvert kald til databasen igen.
@@ -685,6 +697,7 @@ async function main() {
         await store.migrate();
         await pages.migrate();
         await scores.migrate();
+        await comments.migrate();
         if (attempt > 1) console.log(`[db] migreret (forsøg ${attempt})`);
         return;
       } catch (err) {
@@ -695,7 +708,7 @@ async function main() {
   })();
 
   const pdf = pdfRendererFor(config);
-  const app = createApp({ config, client, provider, store, pages, pdf });
+  const app = createApp({ config, client, provider, store, pages, pdf, comments });
   const server = app.listen(config.PORT, "0.0.0.0", () => {
     console.log(
       `[lasso-mcp] v${VERSION} ${config.APP_ENV} på port ${config.PORT} | data: ${provider.kind} | lasso-credentials: ${hasLassoCredentials(config) ? "ja" : "nej"} | søgning: ${client.hasSearchCredentials ? config.LASSO_SEARCH_API_BASE_URL : "ingen nøgle"} | db: ${store.kind} | mcp-nøgle: ${mcpKeyRequired(config) ? "ja" : "nej"} | pdf: ${pdfAvailable(config) ? "ja" : "nej"} | portal: ${portalLoginRequired(config) ? "login" : "åben"} | ${config.publicBaseUrl}/mcp`,
@@ -706,7 +719,7 @@ async function main() {
   const shutdown = () => {
     console.log("[lasso-mcp] lukker ned");
     server.close(() => {
-      void Promise.all([store.close(), pages.close(), scores.close(), pdf.close()])
+      void Promise.all([store.close(), pages.close(), scores.close(), comments.close(), pdf.close()])
         .then(() => pool?.end())
         .finally(() => process.exit(0));
     });

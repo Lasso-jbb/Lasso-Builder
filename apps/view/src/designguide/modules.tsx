@@ -14,7 +14,14 @@ export interface DataOption {
   label: string;
   component: ViewComponent;
   dataset: Dataset;
+  /** Fiktive demodata, ikke en rigtig virksomhed. */
+  fictive?: boolean;
 }
+
+export const FICTIVE_ID = "fiktiv";
+
+/** Viser rammen modulet i brug? Ellers (tom, henter, fejl, intet) bruges de fiktive data i stedet. */
+export const showsData = (r: { state: string } | undefined) => r?.state === "fyldt";
 
 export interface ModuleInfo {
   type: ComponentType;
@@ -51,6 +58,9 @@ export function buildModules(boot: DesignguideBoot): Map<ComponentType, ModuleIn
     // Personmoduler, udstillingen ikke har med (fx personrisiko): samme person og datasæt som personfanen.
     const personTab = sc.tabs.find((t) => t.id === "person");
     if (!options.length && personTab && entry.type.startsWith("LassoPerson")) options.push({ id: `${personTab.id}:${personTab.entity}`, label: personTab.label, component: { type: entry.type, person: personTab.entity } as unknown as ViewComponent, dataset: personTab.dataset });
+    // Fiktive data sidst: bruges, når ingen af de rigtige datakilder viser modulet (FICTIVE_ID).
+    const fic = boot.fictive?.items.find((x) => x.type === entry.type);
+    if (fic && boot.fictive) options.push({ id: FICTIVE_ID, label: `Fiktive data (${fic.label})`, component: fic.component, dataset: boot.fictive.dataset, fictive: true });
     out.set(entry.type, {
       type: entry.type,
       n: CATALOG_NUMBER.get(entry.type) ?? 0,

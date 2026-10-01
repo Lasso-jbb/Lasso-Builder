@@ -5,6 +5,7 @@ import type { Ctx } from "../App.js";
 import { Frame } from "../Frame.js";
 import type { Report } from "../inspect.js";
 import { HOST } from "../modules.js";
+import { CommentButton, type CommentTarget } from "../comments.js";
 import { fetchPage, type LivePage } from "../source.js";
 import { VIEWPORTS } from "../structure.js";
 import { PageHead, ReportChip, Seg, Toggle } from "../ui.js";
@@ -31,6 +32,11 @@ export function LivePagesPage({ ctx, kind, focus }: { ctx: Ctx; kind: "company" 
   useEffect(() => setReport(undefined), [vp]);
   const viewport = VIEWPORTS.find((v) => v.id === vp)!;
   const name = kind === "company" ? ctx.boot.showcase.tabs.find((t) => t.id === "virksomhed")?.label : ctx.boot.showcase.tabs.find((t) => t.id === "person")?.label;
+  const pageTarget: CommentTarget = {
+    target: `side:${kind}:${current}:${vp}`,
+    label: `Hel side: ${name}, ${labels[current] ?? current}, ${viewport.label} ${viewport.vw}`,
+    context: { kind: "side", ref: `${kind === "company" ? "show_company" : "show_person"} focus ${current}`, viewport: vp, vw: viewport.vw, data: name },
+  };
   const set = (k: string, f: string) => (location.hash = `#/sider?type=${k === "company" ? "virksomhed" : "person"}&fokus=${f}`);
   return (
     <div className="dg-page dg-page--wide">
@@ -67,11 +73,12 @@ export function LivePagesPage({ ctx, kind, focus }: { ctx: Ctx; kind: "company" 
           </span>
           <span className="dg-mframe__grow" />
           {page ? <ReportChip report={report} /> : null}
+          <CommentButton small target={pageTarget} />
         </div>
         {error ? <p className="dg-note dg-note--warn">Siden kunne ikke hentes: {error}</p> : null}
         {!page && !error ? <div className="dg-loading">Henter siden med live-data …</div> : null}
         {page ? (
-          <Frame key={`${kind}${current}${vp}`} vw={viewport.vw} mark={mark} eager onReport={setReport} minHeight={400} label={`${name}, ${labels[current]}, ${viewport.label}`}>
+          <Frame key={`${kind}${current}${vp}`} comment={pageTarget} vw={viewport.vw} mark={mark} eager onReport={setReport} minHeight={400} label={`${name}, ${labels[current]}, ${viewport.label}`}>
             <LassoView spec={page.spec} dataset={page.dataset} host={HOST} onAction={() => undefined} theme={ctx.theme} />
           </Frame>
         ) : null}
