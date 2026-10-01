@@ -47,20 +47,24 @@ export function NotReported({ kind = "reported" }: { kind?: "reported" | "regist
 
 /**
  * 02c.1 Fritekst: korte tekster i én linje, lange foldes efter 4 linjer med "Vis mere" (uden "…").
+ * Jakob 01.10: der foldes kun, når "Vis mere" reelt viser mindst 50 % mere; ellers står hele teksten.
  * Ingen anførselstegn, ingen kursiv. Folden måles i browseren; uden DOM skønnes den på længden.
  */
 export function FoldText({ text, lines = 4, moreLabel = "Vis mere" }: { text: string; lines?: number; /** Fx "Vis hele formålet" (28.7). */ moreLabel?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
   const [open, setOpen] = useState(false);
-  const [overflow, setOverflow] = useState(text.length > 60 * lines);
+  const [overflow, setOverflow] = useState(text.length > 60 * lines * 1.5);
   useIsoLayoutEffect(() => {
     const el = ref.current;
     if (!el || open) return;
-    setOverflow(el.scrollHeight > el.clientHeight + 1);
-  }, [text, open]);
+    // Hele tekstens højde mod de foldede linjer (målt uanset om folden er sat).
+    const lh = parseFloat(getComputedStyle(el).lineHeight) || 20;
+    setOverflow(el.scrollHeight >= lh * lines * 1.5);
+  }, [text, open, lines]);
+  const clamp = !open && overflow;
   return (
     <span className="lasso-fold">
-      <span ref={ref} className={`lasso-fold__text ${open ? "is-open" : ""}`} style={open ? undefined : { maxHeight: `${lines}lh` }}>
+      <span ref={ref} className={`lasso-fold__text ${open ? "is-open" : ""}`} style={clamp ? { maxHeight: `${lines}lh` } : undefined}>
         {text}
       </span>
       {overflow || open ? (

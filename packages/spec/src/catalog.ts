@@ -85,51 +85,49 @@ export const GRID_RULES: Record<ComponentType, GridRule> = {
   LassoTextSections: g("half", "half", "full", "high", "growing", "lines"),
   LassoSummary: g("half", "quarter", "half", "high", "growing", "lines"), // Jakob 01.10 (modul 7): ¾ bliver for bred; højst ½
   LassoTimeline: g("third", "quarter", "half", "high", "growing", "rows"),
-  LassoNews: g("three-quarters", "three-quarters", "full", "medium", "growing", "rows"),
+  LassoNews: g("half", "half", "half", "medium", "growing", "rows"), // Jakob 01.10: ½ som standard; ¾ og fuld er for brede
   LassoBarChart: g("half", "third", "full", "medium", "fixed", "plot"),
-  LassoGroupedBarChart: g("half", "quarter", "full", "medium", "fixed", "plot"),
-  LassoLineChart: g("half", "quarter", "full", "medium", "fixed", "plot"),
-  LassoStackedBarChart: g("half", "quarter", "full", "medium", "fixed", "plot"),
-  LassoWaterfallChart: g("half", "quarter", "full", "medium", "fixed", "plot"),
+  LassoGroupedBarChart: g("half", "quarter", "half", "medium", "fixed", "plot"), // Jakob 01.10: ⅔ og bredere er for bredt
+  LassoLineChart: g("half", "half", "full", "medium", "fixed", "plot"), // Jakob 01.10: ¼ og ⅓ er for små
+  LassoStackedBarChart: g("half", "quarter", "three-quarters", "medium", "fixed", "plot"), // Jakob 01.10: fuld er for bred
+  LassoWaterfallChart: g("half", "third", "full", "medium", "fixed", "plot"), // Jakob 01.10: ¼ er for lille
   LassoShareBars: g("half", "half", "half", "medium", "fixed"),
-  LassoKeyFigureGauge: g("third", "quarter", "half", "medium", "fixed"),
+  LassoKeyFigureGauge: g("third", "third", "half", "medium", "fixed"), // Jakob 01.10: ¼ er for lille
   LassoMultiYearTable: g("two-thirds", "two-thirds", "two-thirds", "medium", "growing"),
   LassoIncomeStatement: g("half", "half", "half", "high", "growing"),
   LassoBalanceSheet: g("third", "third", "half", "very-high", "growing"),
-  LassoCashFlow: g("third", "third", "half", "high", "growing"),
-  LassoFinancialStatements: g("full", "full", "full", "very-high", "growing"),
+  LassoCashFlow: g("half", "half", "half", "high", "growing"), // Jakob 01.10: ⅓ er for lille
+  LassoFinancialStatements: g("three-quarters", "two-thirds", "three-quarters", "very-high", "growing"), // Jakob 01.10: fuld er for bred
   LassoPersonList: g("third", "quarter", "half", "medium", "growing", "rows"),
   LassoOwnerList: g("third", "quarter", "half", "low", "growing", "rows"),
   LassoBeneficialOwners: g("third", "quarter", "half", "low", "growing", "rows"),
   LassoOwnershipDiagram: g("two-thirds", "two-thirds", "full", "high", "growing", "plot"),
-  LassoRelations: g("quarter", "quarter", "half", "medium", "growing"),
+  LassoRelations: g("quarter", "quarter", "third", "medium", "growing"), // Jakob 01.10: ½ er for bred
   LassoRiskObservations: g("third", "third", "half", "high", "growing", "rows"),
   LassoScoreGauge: g("quarter", "quarter", "half", "medium", "fixed"),
-  LassoScoreHistory: g("half", "third", "full", "medium", "fixed", "plot"),
-  LassoCreditRating: g("third", "quarter", "half", "high", "fixed"),
-  LassoAuditorIndependence: g("full", "half", "full", "high", "growing"),
+  LassoCreditRating: g("third", "quarter", "third", "high", "fixed"), // Jakob 01.10: ½ er for bred
   LassoProductionUnits: g("full", "three-quarters", "full", "high", "growing"),
   LassoProperties: g("half", "half", "full", "low", "growing"),
   LassoMap: g("half", "third", "full", "high", "fixed", "plot"),
-  LassoRegistration: g("full", "two-thirds", "full", "high", "growing"),
+  LassoRegistration: g("half", "half", "half", "high", "growing"), // Jakob 01.10: ⅔, ¾ og fuld bruges ikke
   LassoMergers: g("half", "half", "half", "high", "growing"),
-  LassoAnnouncements: g("full", "full", "full", "low", "growing", "rows"),
-  LassoRelationsTable: g("full", "two-thirds", "full", "very-high", "growing", "rows"),
+  LassoAnnouncements: g("half", "half", "half", "low", "growing", "rows"), // Jakob 01.10: som en nyhed i ½
+  LassoRelationsTable: g("two-thirds", "two-thirds", "two-thirds", "very-high", "growing", "rows"), // Jakob 01.10: fuld er for bred
   LassoCompanyHistory: g("full", "two-thirds", "full", "very-high", "growing", "rows"),
-  LassoPublications: g("half", "half", "full", "high", "growing", "rows"),
+  LassoPublications: g("half", "half", "half", "high", "growing", "rows"), // Jakob 01.10: fuld er for bred
   LassoLivestock: g("half", "third", "half", "high", "growing"),
   LassoCompareTable: g("full", "two-thirds", "full", "high", "growing"),
-  LassoRanking: g("half", "quarter", "full", "medium", "growing", "rows"),
+  LassoRanking: g("half", "quarter", "two-thirds", "medium", "growing", "rows"), // Jakob 01.10: ¾ og fuld er for brede
   LassoCompanyTable: g("full", "full", "full", "high", "growing", "rows"),
   LassoPersonTable: g("full", "full", "full", "high", "growing", "rows"),
   LassoPersonHead: g("full", "full", "full", "low", "fixed"),
-  LassoPersonStats: g("full", "third", "full", "low", "fixed"),
+  LassoPersonStats: g("half", "third", "half", "low", "fixed"), // Jakob 01.10: ⅔ og bredere er for brede
   LassoPersonRoles: g("two-thirds", "half", "full", "medium", "growing", "plot"),
   LassoPersonNetwork: g("full", "full", "full", "medium", "growing", "plot"),
   LassoPersonRisk: g("third", "third", "half", "high", "growing", "rows"),
-  LassoPersonFacts: g("third", "quarter", "half", "high", "growing", "rows"),
+  LassoPersonFacts: g("third", "third", "third", "high", "growing", "rows"), // Jakob 01.10: ¼ for smal, ½ for bred
   LassoChangeFeed: g("half", "half", "half", "very-high", "growing", "rows"),
-  LassoHeatmap: g("half", "quarter", "three-quarters", "medium", "fixed"),
+  LassoHeatmap: g("half", "third", "three-quarters", "medium", "fixed"), // Jakob 01.10: i ¼ er der ikke plads til månederne
   LassoFollowUps: g("full", "full", "full", "low", "fixed"),
   LassoSavedPages: g("full", "full", "full", "high", "growing"),
 };
@@ -823,38 +821,6 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     },
   },
 
-  {
-    type: "LassoAuditorIndependence",
-    title: "Revisoruafhængighed",
-    description: `Brug til: tjek af, om revisionshuset har relationer til kundens ledelse eller ejere – 'er revisor uafhængig', 'har revisor tilknytning til ledelsen'. Brug ikke når: kun revisorens navn ønskes (LassoKeyValueList variant 'company') eller det gælder kreditrisiko (LassoCreditRating). Kræver: company; kun direkte navnesammenfald mellem ledelse/ejere og revisionshusets ansatte er tjekket, og mangler virksomheden en revisor i CVR, er tilstanden tom med årsag. ${F("risiko")} Eksempel: 'Er revisor uafhængig hos Lasso X?' → show_company focus risiko.`,
-    props: "company, title?",
-    register: {
-      formaal: "Tjek af revisors uafhængighed: relationer mellem revisionshuset og kundens ledelse/ejere.",
-      bedstTil: ["revisor", "revisors uafhængighed", "er revisor uafhængig"],
-      undgaaNaar: ["kun navnet på revisor (LassoKeyValueList variant 'company')", "kreditrisiko (LassoCreditRating)"],
-      kraeverData: ["auditorIndependence", "companies"],
-      live: "naar-data",
-      liveNote: "Virksomheden har ikke en registreret revisor i CVR.",
-      veje: ["focus", "ask", "render_view"],
-      bredde: { profil: "fleksibel", drivere: { longestLabel: 44, series: 4 } },
-    },
-  },
-  {
-    type: "LassoScoreHistory",
-    title: "Scorehistorik, Creditsafe",
-    description: `Brug til: kreditscoren over tid som graf (forrige mod nu) – 'hvordan har scoren udviklet sig', 'kreditscore over tid'. Brug ikke når: det gælder den aktuelle kreditvurdering (LassoCreditRating), Lassos aktuelle 0–100-score (LassoScoreGauge) eller udviklingen i regnskabstal (LassoBarChart). Kræver: company; kræver Creditsafe-abonnement, og uden en score er der ingen historik at vise (tom tilstand med årsag). Nås fra show_company: focus risiko (fra 2 målinger, når der er plads) og svar-element på spørgsmål om scoren over tid. Eksempel: 'Hvordan har kreditscoren for Lasso X udviklet sig?' → show_company med spørgsmålet.`,
-    props: "company, title?, compare?",
-    register: {
-      formaal: "Kreditscoren over tid som graf (kun med Creditsafe).",
-      bedstTil: ["score over tid", "kreditscore udvikling"],
-      undgaaNaar: ["den aktuelle vurdering (LassoCreditRating)", "den aktuelle score (LassoScoreGauge)"],
-      kraeverData: ["scoreHistories"],
-      live: "abonnement",
-      liveNote: "Kræver Creditsafe-abonnement. Score og kreditvurdering vises, når Creditsafe er tilføjet Lasso-abonnementet.",
-      veje: ["ask", "focus", "render_view"],
-      bredde: { profil: "fleksibel", drivere: { timeAxis: true } },
-    },
-  },
   // (f) Fysiske enheder --------------------------------------------------------
   {
     type: "LassoProductionUnits",

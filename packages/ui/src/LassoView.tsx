@@ -72,7 +72,6 @@ import { OwnerList } from "./components/OwnerList.js";
 import { OwnershipDiagram } from "./components/OwnershipDiagram.js";
 import { PersonList } from "./components/PersonList.js";
 import { ScoreGauge } from "./components/ScoreGauge.js";
-import { ScoreHistory } from "./components/ScoreHistory.js";
 import { KeyFigureGauge } from "./components/KeyFigureGauge.js";
 import { Heatmap } from "./components/Heatmap.js";
 import { CompanyMap } from "./components/CompanyMap.js";
@@ -90,7 +89,6 @@ import { PersonFacts } from "./components/PersonFacts.js";
 import { PersonStats } from "./components/PersonStats.js";
 import { CreditRating } from "./components/CreditRating.js";
 import { RiskObservations } from "./components/RiskObservations.js";
-import { AuditorIndependence } from "./components/AuditorIndependence.js";
 import { ChangeFeed } from "./components/ChangeFeed.js";
 import { SavedPages } from "./components/SavedPages.js";
 import { ShellIcon } from "./components/ShellIcons.js";
@@ -319,8 +317,6 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     }
     case "LassoMap":
       return <CompanyMap key={key} map={empty.maps?.[c.company]} title={c.title} error={err(`mapPoints:${c.company}`)} onAction={props.host.drillDown ? act : undefined} />;
-    case "LassoScoreHistory":
-      return <ScoreHistory key={key} history={empty.scoreHistories?.[c.company]} title={c.title} compare={c.compare} error={err(`scoreHistory:${c.company}`)} />;
     case "LassoRanking":
       return (
         <Ranking
@@ -516,8 +512,6 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return <RiskObservations key={key} data={empty.observations[c.company]} error={err(`observations:${c.company}`)} title={c.title} compact={c.compact} demo={empty.source === "demo"} onAction={act} />;
     case "LassoCreditRating":
       return <CreditRating key={key} rating={empty.creditRatings?.[c.company]} title={c.title} error={err(`creditRating:${c.company}`)} onAction={act} />;
-    case "LassoAuditorIndependence":
-      return <AuditorIndependence key={key} data={empty.auditorIndependence[c.company]} companyName={empty.companies[c.company]?.name} error={err(`auditorIndependence:${c.company}`)} title={c.title} onAction={act} canExport={Boolean(props.host.export)} />;
     case "LassoProductionUnits":
       return <ProductionUnits key={key} units={empty.productionUnits[c.company]} error={err(`productionUnits:${c.company}`)} />;
     case "LassoProperties":
@@ -712,7 +706,6 @@ const MOBILE_ORDER: Partial<Record<ViewComponent["type"], number>> = {
   LassoKeyValueList: 20,
   LassoShareBars: 22,
   LassoKeyFigureGauge: 11,
-  LassoScoreHistory: 9,
   LassoMap: 36,
   LassoTextSections: 25,
   LassoPersonList: 30,
@@ -804,7 +797,6 @@ const ITEM_LABELS: Partial<Record<ViewComponent["type"], string>> = {
   LassoNews: "Nyheder",
   LassoCreditRating: "Kreditvurdering",
   LassoScoreGauge: "Score",
-  LassoAuditorIndependence: "Revisoruafhængighed",
   LassoProductionUnits: "Produktionsenheder",
   LassoProperties: "Ejendomme",
   LassoLivestock: "Husdyr",
@@ -919,7 +911,9 @@ function bandStackClass(spans: readonly number[], k: number): string {
     used += spans[i]!;
   }
   const end = used === 12 || k === spans.length - 1;
-  return ["lasso-stack", start ? "lasso-stack--start-t" : "", end ? "lasso-stack--end-t" : "", row > 0 ? "lasso-stack--wrap-t" : ""].filter(Boolean).join(" ");
+  // Jakob 01.10: en stak, der på tablet står alene i fuld bredde, lægger sine elementer ved siden af hinanden.
+  const full = spans[k] === 12 && spans.length > 1;
+  return ["lasso-stack", start ? "lasso-stack--start-t" : "", end ? "lasso-stack--end-t" : "", row > 0 ? "lasso-stack--wrap-t" : "", full ? "lasso-stack--full-t" : ""].filter(Boolean).join(" ");
 }
 
 /**

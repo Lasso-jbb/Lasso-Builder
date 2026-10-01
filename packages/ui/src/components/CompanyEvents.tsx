@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ExpandLink } from "./ExpandLink.js";
+import { ExpandLink, foldedCount } from "./ExpandLink.js";
 import { formatAmount, formatDate, type CompanyEventsVM, type CompanyVM, type MergerPartyVM } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
 import type { ViewAction } from "../types.js";
@@ -225,7 +225,7 @@ export function Publications({ events, title, error, limit = 5 }: { events?: Com
     );
   }
   const figureLabel = list.find((p) => p.figure)?.figure?.label ?? "Hovedtal";
-  const shown = all ? list : list.slice(0, limit);
+  const shown = all ? list : list.slice(0, foldedCount(list.length, limit));
   return (
     <Section title={heading} span="full" card className="lasso-publications">
       <div className="lasso-table-wrap">
@@ -288,7 +288,7 @@ export function Publications({ events, title, error, limit = 5 }: { events?: Com
           );
         })}
       </ul>
-      {list.length > limit ? (
+      {foldedCount(list.length, limit) < list.length ? (
         <ExpandLink expanded={all} total={list.length} onToggle={() => setAll(!all)} />
       ) : null}
     </Section>

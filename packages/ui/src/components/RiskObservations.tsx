@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ExpandLink } from "./ExpandLink.js";
+import { ExpandLink, foldedCount, LIST_FOLD } from "./ExpandLink.js";
 import { moreText, formatDate, type ObservationRowVM, type ObservationsVM, type Severity } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, SeverityIcon, severityWord, stateForError } from "../primitives.js";
@@ -20,7 +20,7 @@ const FILTERS: { severity: Severity; word: "vigtig" | "mulig" | "info" }[] = [
 ];
 
 /** Højst så mange observationer før "Se alle N" (regel 9). */
-const SHOWN = 6;
+const SHOWN = LIST_FOLD; // Global regel (Jakob 01.10): over 6 → 5 + "Vis alle N"
 /** Kompakt (uden for fokus risiko): højst tre. */
 const COMPACT_SHOWN = 3;
 
@@ -271,13 +271,13 @@ export function RiskObservations({ data, error, title, compact = false, demo = f
   const latest = rows.map((r) => r.date).filter((d): d is string => Boolean(d)).sort().at(-1);
   // 17.2 (Jakob 01.10): kun observationer med udslag (≥ 25) og "ikke tilgængelig"; neutrale fakta ("-") vises ikke.
   const deskRows = rows.filter((r) => r.notAvailable || r.severity >= 25);
-  const deskVisible = expanded ? deskRows : deskRows.slice(0, limit);
+  const deskVisible = expanded ? deskRows : deskRows.slice(0, foldedCount(deskRows.length, limit));
 
   // Mobil: kun fund (≥ 25) og "ikke tilgængelig"; neutrale fakta står kun på desktop.
   const mobRows = rows.filter((r) => r.notAvailable || r.severity >= 25);
   const counts = FILTERS.map((f) => ({ ...f, n: mobRows.filter((r) => !r.notAvailable && r.severity === f.severity).length })).filter((f) => f.n > 0);
   const filtered = filter === null ? mobRows : mobRows.filter((r) => !r.notAvailable && r.severity === filter);
-  const mobVisible = expanded ? filtered : filtered.slice(0, limit);
+  const mobVisible = expanded ? filtered : filtered.slice(0, foldedCount(filtered.length, limit));
   const related = compact ? [] : (data.related ?? []).map((p) => ({ ...p, rows: sortObservations(p.rows.filter((r) => !r.notAvailable && r.severity >= 25)) })).filter((p) => p.rows.length > 0);
 
   return (
@@ -304,7 +304,7 @@ export function RiskObservations({ data, error, title, compact = false, demo = f
             <ObservationRow key={o.id} o={o} lassoId={data.lassoId} onAction={onAction} />
           ))}
         </ul>
-        {deskRows.length > limit ? (
+        {foldedCount(deskRows.length, limit) < deskRows.length ? (
           <ExpandLink expanded={expanded} total={deskRows.length} onToggle={() => setExpanded(!expanded)} />
         ) : null}
       </div>
@@ -331,7 +331,7 @@ export function RiskObservations({ data, error, title, compact = false, demo = f
             <ObservationCard key={o.id} o={o} />
           ))}
         </ul>
-        {filtered.length > limit ? (
+        {foldedCount(filtered.length, limit) < filtered.length ? (
           <ExpandLink expanded={expanded} total={filtered.length} onToggle={() => setExpanded(!expanded)} />
         ) : null}
       </div>

@@ -138,7 +138,6 @@ test("personens overblik: roller, netværk og historik peger på deres faner", (
   // To aktive roller står her; fanen Roller viser alle tre selskaber (også det ophørte).
   assert.match(linked, /Se alle 3 selskaber i Roller/);
   assert.match(linked, /Se alle 5 personer i Netværk/);
-  assert.match(linked, /begivenheder i Historik/);
   // Uden openFocus: netværket folder ud på stedet (Paper: "Vis alle N"), og de to aktive roller har ingen knap.
   const inPlace = render(spec, ds, {});
   assert.match(inPlace, /Vis alle 5 /);

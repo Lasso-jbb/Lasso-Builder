@@ -23,7 +23,7 @@ export const VIEWPORTS: Viewport[] = [
   { id: "portal", label: "Portal", vw: 1440, note: "Lasso-portalen på en bred skærm" },
   { id: "desktop", label: "Desktop", vw: 1200, note: "Referencegitteret (12 kolonner à 74 px, gutter 24)" },
   { id: "chat", label: "Chat", vw: 760, note: "MCP-visningen i Claude og ChatGPT (640–900 px)" },
-  { id: "tablet", label: "Tablet", vw: 834, note: "Under 1200: ⅓ og ½ bliver ½, ¼ ⅔ ¾ bliver fuld" },
+  { id: "tablet", label: "Tablet", vw: 834, note: "Under 1200: ¼, ⅓ og ½ bliver ½, ⅔ og ¾ bliver fuld" },
   { id: "mobil", label: "Mobil", vw: 390, note: "Én kolonne, 16 px sideluft" },
 ];
 
@@ -61,7 +61,8 @@ export const MODULE_GROUPS: { id: string; label: string; intro: string; types: C
     id: "risiko",
     label: "Risiko og kredit",
     intro: "Score, kreditvurdering og revisors uafhængighed. Farve bærer aldrig betydningen alene.",
-    types: ["LassoScoreGauge", "LassoScoreHistory", "LassoCreditRating", "LassoRiskObservations", "LassoAuditorIndependence"],
+    // Jakob 01.10: scorehistorik og revisoruafhængighed er slettet.
+    types: ["LassoScoreGauge", "LassoCreditRating", "LassoRiskObservations"],
   },
   {
     id: "historik",

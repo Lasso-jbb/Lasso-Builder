@@ -23,18 +23,18 @@ const render = (props: Partial<Parameters<typeof SavedPages>[0]>) =>
 
 const rowCount = (html: string) => (html.match(/<li class="lasso-row/g) ?? []).length;
 
-test("Gemte sider: over 8 rækker vises 8 + 'Se alle 10' (regel 9), undertitel med antal og kildevisning", () => {
+test("Gemte sider: over 6 rækker vises 5 + 'Vis alle 10' (global regel, Jakob 01.10), undertitel med antal og kildevisning", () => {
   const html = render({ list: list(Array.from({ length: 10 }, (_, i) => page(i))) });
-  assert.equal(rowCount(html), 8);
+  assert.equal(rowCount(html), 5);
   assert.match(html, /aria-expanded="false"[^>]*>Vis alle 10</);
   assert.match(html, /class="lasso-section__title">Gemte sider</);
   assert.match(html, /class="lasso-section__subtitle">10 gemte sider</);
   assert.doesNotMatch(html, /Kilde:/, "G3: ingen kildevisning");
   // Ingen piller, badges eller initial-cirkler
   assert.doesNotMatch(html, /lasso-badge|avatar|initial/);
-  // 8 rækker eller færre foldes ikke
-  const eight = render({ list: list(Array.from({ length: 8 }, (_, i) => page(i))) });
-  assert.equal(rowCount(eight), 8);
+  // 6 rækker eller færre foldes ikke
+  const eight = render({ list: list(Array.from({ length: 6 }, (_, i) => page(i))) });
+  assert.equal(rowCount(eight), 6);
   assert.doesNotMatch(eight, /Se alle/);
 });
 

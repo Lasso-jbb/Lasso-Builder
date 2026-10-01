@@ -891,11 +891,11 @@ function companyFragment(type: CompanyAskType, ask: Ask): Fragment {
     }
     case "revisor": {
       const rows = rowsList(["revisor", "revisorskift", "regnskabsperiode"], "Revisor");
-      const independence = item("LassoAuditorIndependence");
+      // Jakob 01.10: revisoruafhængigheden er slettet.
       return {
         cards: "standard",
-        lead: has("revisorskift") ? [rows, independence] : [rows],
-        context: [...(has("revisorskift") ? [] : [independence]), MAIN_GRAPH(), ANALYSIS(), timeline({ kinds: ["regnskab"], limit: 5 }), item("LassoOwnerList")],
+        lead: [rows],
+        context: [MAIN_GRAPH(), ANALYSIS(), timeline({ kinds: ["regnskab"], limit: 5 }), item("LassoOwnerList")],
       };
     }
     case "stamdata": {
@@ -944,18 +944,17 @@ function companyFragment(type: CompanyAskType, ask: Ask): Fragment {
         cards: RISK_CARD_METRICS,
         // Statusbegivenhederne; uden dem hele historikken (hovedet viser status), ikke en tom tilstand.
         lead: [timeline({ kinds: ["status"], limit: 8, title: "Status og historik" }, { allKindsFallback: true })],
-        context: [financialsList({ only: ["gaeld", "balancesum"] }), item("LassoShareBars"), ANALYSIS(), RELATIONS(), item("LassoAuditorIndependence")],
+        context: [financialsList({ only: ["gaeld", "balancesum"] }), item("LassoShareBars"), ANALYSIS(), RELATIONS()],
       };
     case "kredit":
       return {
         cards: RISK_CARD_METRICS,
         lead: [item("LassoCreditRating")],
-        context: [item("LassoAuditorIndependence"), timeline({ kinds: ["status"], limit: 5 }), item("LassoShareBars"), ANALYSIS(), RELATIONS()],
+        context: [timeline({ kinds: ["status"], limit: 5 }), item("LassoShareBars"), ANALYSIS(), RELATIONS()],
       };
     case "score": {
-      // "Hvordan har scoren udviklet sig", "gik den op eller ned": historikken først, så måleren.
-      const history = ask.trend || ask.past || SCORE_TREND.test(foldText(ask.question));
-      const lead = history ? [item("LassoScoreHistory"), item("LassoScoreGauge")] : [item("LassoScoreGauge")];
+      // Jakob 01.10: scorehistorikken er slettet (historikken kan ikke ses); måleren svarer, også på "over tid".
+      const lead = [item("LassoScoreGauge")];
       return { cards: "standard", lead, context: [MAIN_GRAPH(), financialsList(), ANALYSIS(), RELATIONS()] };
     }
     case "regnskab": {
@@ -1007,7 +1006,6 @@ function companyFragment(type: CompanyAskType, ask: Ask): Fragment {
         context: [
           ...(credit ? [] : [item("LassoCreditRating")]),
           timeline({ kinds: ["status"], limit: 5 }),
-          item("LassoAuditorIndependence"),
           item("LassoShareBars"),
           ANALYSIS(),
           RELATIONS(),
@@ -1079,9 +1077,6 @@ function companyFragment(type: CompanyAskType, ask: Ask): Fragment {
 
 /** Pladsholder for resumeets tekst i planen; komponisten (B4) erstatter den med det skrevne resumé. */
 export const SUMMARY_PENDING_TEXT = "Resumeet skrives ud fra virksomhedens seneste tal og fakta.";
-
-/** Ord for scorens udvikling (ud over `trend` og `past`). */
-const SCORE_TREND = new RegExp(String.raw`udvikl\w*|op eller ned|\bsteget\b|\bfaldet\b|over tid`);
 /** Registreringens 'full'-ord: kapital, vedtægter, tegningsregel, regnskabsklasse (skemaets 'full'-kort). */
 const REGISTRATION_FULL = new RegExp(String.raw`kapital\w*|vedtaegt\w*|tegningsre\w*|\btegne[rs]?\b|regnskabsklasse\w*|registreret med`);
 

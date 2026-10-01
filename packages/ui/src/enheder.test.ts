@@ -4,7 +4,6 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { PushBanner, pushText } from "./components/PushBanner.js";
 import { NotificationPanel } from "./components/NotificationPanel.js";
-import { AuditorHistory } from "./components/AuditorIndependence.js";
 import { Properties } from "./components/Properties.js";
 import { ProductionUnits } from "./components/ProductionUnits.js";
 
@@ -23,14 +22,6 @@ test("26e.5: notifikationspanelet har filterchips Alle/Ulæste/Vigtige og rød p
   const html = renderToStaticMarkup(createElement(NotificationPanel, { items, now: new Date("2026-09-29T12:00:00") }));
   assert.match(html, /aria-label="Filtrér notifikationer"[^]*aria-pressed="true"[^>]*>Alle<[^]*>Ulæste<[^]*>Vigtige</, "Alle er valgt fra start på mobil");
   assert.match(html, /lasso-notif__dot lasso-notif__dot--important" role="img" aria-label="Ulæst, vigtig"/);
-});
-
-test("26e.8: revisorhistorik som proportional bjælke med nuværende revisor fremhævet", () => {
-  const html = renderToStaticMarkup(createElement(AuditorHistory, { history: [{ name: "Eks. Revision", from: "2012-01-01", to: "2016-12-31" }, { name: "AAEN & CO.", from: "2017-01-01" }], now: new Date("2026-09-29") }));
-  assert.match(html, /flex-grow:5"[^>]*title="Eks\. Revision 2012–16"[^>]*><span class="lasso-audhist__label">2012–16</);
-  assert.match(html, /lasso-audhist__seg is-current" style="flex-grow:10"[^>]*><span class="lasso-audhist__label">2017–</);
-  // Navnene står i legenden under bjælken, så de ikke klippes.
-  assert.match(html, /lasso-audhist__name">AAEN &amp; CO\.<\/span>, 2017–i dag/);
 });
 
 test("20.2: ejendomskortet tegner matrikelpolygon og valgt bygning fra geometri; uden geometri tom tilstand", () => {

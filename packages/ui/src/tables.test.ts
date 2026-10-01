@@ -5,7 +5,6 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { emptyDataset, type CompanyRowVM, type PersonSearchResultVM, type SearchResultVM } from "@lasso/spec";
 import { CompareTable } from "./components/CompareTable.js";
-import { AuditorIndependence, auditorCsv } from "./components/AuditorIndependence.js";
 import { CompanyTable, cardFigures } from "./components/CompanyTable.js";
 import { statusTone } from "./primitives.js";
 import { PersonTable, personSub, rolesText } from "./components/PersonTable.js";
@@ -183,28 +182,6 @@ test("Sammenligning (Ø13/B8): lange navne ombrydes på 2 linjer med fuldt navn 
   assert.match(css, /\.lasso-table th\.lasso-compare__company \{ white-space: normal; \}/);
   // 6 × (170 px navn + 32 px luft) + nøgletalskolonnen (ca. 194 px) < 1400; kolonnerne kan krympe til ombrudte navne (overflow-wrap).
   assert.match(decl, /overflow-wrap: anywhere/);
-});
-
-test("Revisoruafhængighed (22.2): titel med revisor og dato, Eksportér PDF og Excel i hovedet, ord uden ikon, CSV til arbejdspapirer", () => {
-  const data = {
-    lassoId: "CVR-1-1",
-    auditorName: "Eksempel Revision ApS",
-    checkedAt: "2026-09-25",
-    relations: [
-      { id: "a", assessment: 0 as const, name: "Prøve Person", relation: "Tidligere direktør", to: "2020-01-01" },
-      { id: "b", assessment: 50 as const, name: "Eksempel Partner", relation: "Bestyrelsesmedlem", via: "Eksempel Invest ApS", from: "2022-01-01" },
-    ],
-  };
-  const html = renderToStaticMarkup(createElement(AuditorIndependence, { data, companyName: "LASSO X A/S", onAction: noop, canExport: true }));
-  assert.match(html, /lasso-section__title">Uafhængighedstjek, LASSO X A\/S</);
-  assert.match(html, /Revisor: Eksempel Revision ApS, tjekket 25\.09\.2026/);
-  assert.match(html, /lasso-section__action"><span class="lasso-audit__export">[^]*Eksportér PDF[^]*>Excel</);
-  assert.match(html, /lasso-audit__warn[^]*1 relation kræver vurdering/);
-  assert.match(html, /lasso-assessment lasso-assessment--50">Vurdér</);
-  const lines = auditorCsv(data).split("\r\n");
-  assert.equal(lines.length, 3);
-  assert.match(lines[1]!, /^Vurdér;Eksempel Partner;/);
-  assert.match(lines[2]!, /Neutral;Prøve Person;.*01\.01\.2020/);
 });
 
 test("Flerårstabel (26c.3): variant B ved få nøgletal på mobil, ellers A", () => {

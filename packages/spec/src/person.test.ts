@@ -301,14 +301,14 @@ test("composePerson risiko: kun forløbet i selskaberne ('Forløb i selskaberne'
   assert.deepEqual(composePerson(ID, ds, { focus: "risiko", followUps: false }).components.map(shape), ["LassoPersonHead", "LassoTimeline[~risiko]"]);
 });
 
-test("composePerson historik: historik (5 + 'Se alle') ¼ | nyheder (5) ¾ (bred, min ¾); uden nyheder historikken alene", () => {
+test("composePerson historik: historik (5 + 'Se alle') ½ | nyheder (5) ½ (Jakob 01.10); uden nyheder historikken alene", () => {
   const ds = fullDataset();
-  assert.deepEqual(composePerson(ID, ds, { focus: "historik", followUps: false }).components.map(shape), ["LassoPersonHead", "LassoTimeline@1/quarter", "LassoNews@2/three-quarters[#5]"]);
+  assert.deepEqual(composePerson(ID, ds, { focus: "historik", followUps: false }).components.map(shape), ["LassoPersonHead", "LassoTimeline@1/half", "LassoNews@2/half[#5]"]);
   ds.news[ID] = { lassoId: ID, items: [] };
   assert.deepEqual(composePerson(ID, ds, { focus: "historik", followUps: false }).components.map(shape), ["LassoPersonHead", "LassoTimeline"]);
   // Kunne nyhederne ikke hentes, står nyhedernes fejltilstand ved siden af.
   ds.errors[`news:${ID}`] = "Lasso API-fejl (500)";
-  assert.deepEqual(composePerson(ID, ds, { focus: "historik", followUps: false }).components.map(shape), ["LassoPersonHead", "LassoTimeline@1/quarter", "LassoNews@2/three-quarters[#5]"]);
+  assert.deepEqual(composePerson(ID, ds, { focus: "historik", followUps: false }).components.map(shape), ["LassoPersonHead", "LassoTimeline@1/half", "LassoNews@2/half[#5]"]);
   // Hverken rolleskift eller nyheder: historikkens tomme tilstand.
   ds.timeline[ID] = { lassoId: ID, events: [] };
   delete ds.errors[`news:${ID}`];
@@ -733,8 +733,8 @@ test("Ø13/B10 (d): composeAskCompany med et bredt svar-element (nyheder, Statst
     // Svaret står først, og i et delt bånd aldrig under sin indholdsstyrede mindstebredde (nyheder ¾, Statstidende 1/1).
     if (first.column) assert.ok(widthIdx(first.width!) >= widthIdx(contentWidthOf(first, ds)), `${text}: ${first.width}`);
     assertWidths(spec.components, ds, text);
-    // Nyhederne (bred, min ¾) stod før i en af tre kolonner (⅓); nu ¾ med historikken ¼ ved siden af.
+    // Jakob 01.10: nyhederne står i ½.
     const news = spec.components.find((c) => c.type === "LassoNews");
-    if (news?.column) assert.equal(news.width, "three-quarters", text);
+    if (news?.column) assert.equal(news.width, "half", text);
   }
 });

@@ -557,25 +557,13 @@ test("tekstkort for regnskab uden regnskab: forklaringen én gang og ingen ledel
   for (const l of lead.split("\n")) assert.equal([...l].length, 38, `linjen "${l}" har forkert bredde`);
 });
 
-test("resuméet på risiko har kreditvurderingen og revisoruafhængigheden, ikke ledelse, ejere eller historik", async () => {
+test("resuméet på risiko har kreditvurderingen (revisoruafhængigheden er slettet, Jakob 01.10)", async () => {
   const { summarizeView } = await import("./summary.js");
   const ds = dataset();
   ds.creditRatings[ID] = { lassoId: ID, state: "ok", source: "Creditsafe via Lasso", current: { internationalScore: "B", creditMax: 250_000, creditCurrency: "DKK", localScore: 62 } };
-  ds.auditorIndependence[ID] = {
-    lassoId: ID,
-    auditorName: "Revisor ApS",
-    relations: [
-      { id: "r1", assessment: 50, name: "Bo Eksempel", relation: "Tidligere ansat hos revisor" },
-      { id: "r2", assessment: 100, name: "Anne Eksempel", relation: "Bestyrelsesmedlem hos revisor" },
-    ],
-  };
-  // showAll: uden højdebudgettet (23.3) står revisoruafhængigheden med på risikosiden (den er ellers lav prioritet).
   const summary = summarizeView(composeCompany(ID, ds, { focus: "risiko", showAll: true }), ds);
   assert.match(summary, /Kreditvurdering \(Creditsafe\): /);
-  assert.match(summary, /Revisoruafhængighed \(revisor Revisor ApS\): 2 relationer; konflikt: Anne Eksempel, Bestyrelsesmedlem hos revisor; vurdér: Bo Eksempel/);
-  // Uden kendte relationer siger resuméet det (og hvorfor, når kilden mangler).
-  ds.auditorIndependence[ID] = { lassoId: ID, relations: [], unavailableReason: "Kilden er ikke bekræftet endnu." };
-  assert.match(summarizeView(composeCompany(ID, ds, { focus: "risiko", showAll: true }), ds), /Revisoruafhængighed: Kilden er ikke bekræftet endnu\.$/m);
+  assert.doesNotMatch(summary, /Revisoruafhængighed/);
 });
 
 test("resuméet til modellen har regnskabslinjen én gang, også på regnskab, hvor nøgletalskortene ikke står", async () => {

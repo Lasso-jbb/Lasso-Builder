@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ExpandLink } from "./ExpandLink.js";
+import { ExpandLink, foldedCount, LIST_FOLD } from "./ExpandLink.js";
 import { FOCUS_LABELS, formatDate, formatNumber, PERSON_FOCUS_LABELS, type SavedPageKind, type SavedPageVM, type SavedPagesVM } from "@lasso/spec";
 import type { ActionResult, ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
@@ -8,7 +8,7 @@ import { useToast } from "./Toast.js";
 import { usePrintMode } from "../print.js";
 
 /** Regel 9: over 8 gemte sider vises de 8 nyeste + "Se alle N". */
-const COLLAPSED_ROWS = 8;
+const COLLAPSED_ROWS = LIST_FOLD;
 
 export const SAVED_PAGES_EMPTY =
   "Du har ingen gemte sider endnu. Gem en virksomhed eller person med Gem-knappen øverst på siden, eller sig 'gem den' til Claude.";
@@ -108,7 +108,7 @@ export function SavedPages({ list, title, error, onAction, canDrillDown, canRemo
     />
   ) : null;
   const subtitle = list.pages.length < list.total ? `${count(list.total)}, de ${formatNumber(list.pages.length)} nyeste vises` : count(list.total);
-  const foldable = rows.length > COLLAPSED_ROWS;
+  const foldable = foldedCount(rows.length, COLLAPSED_ROWS) < rows.length;
   const visible = foldable && !expanded ? rows.slice(0, COLLAPSED_ROWS) : rows;
 
   return (

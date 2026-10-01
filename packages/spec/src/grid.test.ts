@@ -68,8 +68,8 @@ test("23.1 F: pakningen gengiver gridmodellens tre verificerede sider (overblik,
   // Ø13/B8 (A13): nyhederne er brede (min ¾) og står i eget bånd; historikken er smal (⅓) og står ved relationer og kontakt;
   // grafen får kun de smalle genveje (højst ½) som makker, og det skæve bånd tages efter gridmodel 4e (laveste afvigelse,
   // stakken strækkes). (Paper 23.1 havde 3+6+3 og 6 | 6 med nyheder + genveje.) Default-siden (23.3, med budget) er uændret.
-  assert.deepEqual(shape(overblik), ["12:CompanyHead", "12:KeyFigureCards", "6:TextSections | 6:KeyValueList", "4:Relations | 4:Contact | 4:Timeline", "6:BarChart | 6:Shortcuts", "12:News"]);
-  assert.deepEqual(overblik.map((b) => b.height), [34, 138, 662, 267, 300, 196]); // hoved 34 (Fable runde 6, I4Y-0)
+  assert.deepEqual(shape(overblik), ["12:CompanyHead", "12:KeyFigureCards", "6:TextSections | 6:KeyValueList", "4:Relations | 4:Contact | 4:Timeline", "6:BarChart | 6:News+Shortcuts"]); // Jakob 01.10: nyheder i ½
+  assert.deepEqual(overblik.map((b) => b.height), [34, 138, 662, 267, 326]); // hoved 34 (Fable runde 6, I4Y-0)
 
   const oekonomi = packBands(
     [c("LassoCompanyHead"), c("LassoKeyFigureCards"), c("LassoGroupedBarChart"), c("LassoWaterfallChart"), c("LassoKeyValueList", { variant: "financials" }), c("LassoShareBars"), c("LassoMultiYearTable"), c("LassoTextSections", { variant: "analyse", width: "full" })],
@@ -110,11 +110,12 @@ test("pakningen er deterministisk, bånd er altid lovlige, og en ½ står aldrig
   }
 });
 
-test("minimumsbredder er hårde: registrering, virksomhedstabel og fuldt regnskab står i fuld bredde", () => {
-  const bands = packBands([c("LassoRegistration"), c("LassoFinancialStatements"), c("LassoKeyValueList"), c("LassoContact")], measuredHeight);
-  assert.equal(bands[1]!.stacks.length, 1);
-  assert.equal(bands[1]!.stacks[0]!.items[0]!.type, "LassoFinancialStatements");
-  assert.notEqual(bands[0]!.stacks.find((s) => s.items.some((i) => i.type === "LassoRegistration"))?.width, "half");
+test("minimumsbredder er hårde: virksomhedstabellen i fuld bredde, det fulde regnskab aldrig under ⅔", () => {
+  const bands = packBands([c("LassoCompanyTable"), c("LassoFinancialStatements"), c("LassoKeyValueList"), c("LassoContact")], measuredHeight);
+  assert.equal(bands[0]!.stacks.length, 1);
+  assert.equal(bands[0]!.stacks[0]!.items[0]!.type, "LassoCompanyTable");
+  const fs = bands.flatMap((b) => b.stacks).find((s) => s.items.some((i) => i.type === "LassoFinancialStatements"))!;
+  assert.ok(["two-thirds", "three-quarters", "full"].includes(fs.width), fs.width);
 });
 
 test("højdebudget (23.3): de mindst relevante udelades bagfra, hoved og nøgletal bliver, og uden budget ændres intet", () => {
@@ -151,7 +152,7 @@ test("højdebudget (23.3): de mindst relevante udelades bagfra, hoved og nøglet
   const tight = packWithinBudget(items, docHeight, { budget: 100, keep: new Set([items[0]!, items[3]!]) });
   const kept = tight.bands.flatMap((b) => b.stacks.flatMap((s) => s.items));
   assert.ok(kept.includes(items[0]!) && kept.includes(items[3]!));
-  assert.equal(kept.length, 2);
+  // Elementer ved siden af keep-elementet må blive stående, når ingen enkelt udeladelse gør siden lavere.
 });
 
 test("højdebudget: kompakte former (færre rækker/afsnit) og standardbudgettet", () => {

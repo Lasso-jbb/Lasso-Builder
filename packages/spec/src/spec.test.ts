@@ -204,15 +204,16 @@ test("parseViewSpec accepterer de nye Paper-komponenter", () => {
   assert.equal(summary && summary.type === "LassoSummary" ? summary.source : undefined, "Lasso");
 });
 
-test("parseViewSpec accepterer LassoRiskObservations og LassoAuditorIndependence", () => {
+test("parseViewSpec: slettede typer (revisoruafhængighed, scorehistorik) springes over i gemte visninger", () => {
   const spec = parseViewSpec({
     title: "Test",
     components: [
       { type: "LassoRiskObservations", company: "CVR-1-12345678" },
       { type: "LassoAuditorIndependence", company: "CVR-1-12345678", title: "Uafhængighed" },
+      { type: "LassoScoreHistory", company: "CVR-1-12345678" },
     ],
   });
-  assert.deepEqual(spec.components.map((c) => c.type), ["LassoRiskObservations", "LassoAuditorIndependence"]);
+  assert.deepEqual(spec.components.map((c) => c.type), ["LassoRiskObservations"]);
 });
 
 test("amountScale giver én enhed for en række beløb", () => {
@@ -263,7 +264,7 @@ test("parseViewSpec accepterer katalog 19 (LassoIncomeStatement, LassoBalanceShe
   assert.deepEqual(income, { type: "LassoIncomeStatement", company: "CVR-1-12345678", years: 2 });
   assert.deepEqual(balance, { type: "LassoBalanceSheet", company: "CVR-1-12345678", years: 3 });
   assert.deepEqual(cashFlow, { type: "LassoCashFlow", company: "CVR-1-12345678", years: 2, title: "Pengestrøm" });
-  assert.deepEqual(spec.components.map((c) => widthOf(c, spec.layout)), ["half", "third", "third"]); // 19.2: kompakt i ⅓–½ (Ø13/B8, A13: smal); fuld bredde = LassoFinancialStatements
+  assert.deepEqual(spec.components.map((c) => widthOf(c, spec.layout)), ["half", "third", "half"]); // Jakob 01.10: pengestrøm mindst ½. 19.2: kompakt i ⅓–½ (Ø13/B8, A13: smal); fuld bredde = LassoFinancialStatements
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoIncomeStatement", company: "CVR-1-1", years: 4 }] }));
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoBalanceSheet", company: "CVR-1-1", years: 1 }] }));
 });

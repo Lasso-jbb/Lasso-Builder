@@ -1,6 +1,15 @@
 import { Icon } from "./Icon.js";
 
 /**
+ * Global regel for "Vis alle" (Jakob 01.10): en liste foldes først, når der er over 6; så står 5 og "Vis alle N".
+ * Med 6 eller færre står alle. Generelt: der foldes kun, når mindst to er skjult (aldrig "Vis alle" for én mere).
+ */
+export const LIST_FOLD = 5;
+export function foldedCount(total: number, limit: number = LIST_FOLD): number {
+  return total > limit + 1 ? limit : total;
+}
+
+/**
  * Designregel 12 (Jakob 30.09): to former for "mere".
  * - En liste eller folder, der folder sig ud på stedet: ExpandLink, koralt link "Vis alle N ›" og "Vis færre ˄".
  * - En ny prompt eller en anden visning (fane, fokus, spørgsmål til Claude): PromptLink, knap med kant og "→"

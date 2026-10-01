@@ -157,7 +157,8 @@ test("personsiden, historik: historik (5) og nyheder om personen side om side", 
   const spec = composePerson(ID, dataset(), { focus: "historik", followUps: false });
   const html = render(spec, dataset(), { drillDown: true });
   assert.match(html, /Udtrådt som bestyrelsesmedlem i /);
-  assert.match(html, /Vis alle 6/);
+  // Global regel (Jakob 01.10): 6 begivenheder står alle (der foldes først over 6).
+  assert.doesNotMatch(html, /Vis alle 6/);
   assert.match(html, /Skrevet i medierne/);
   assert.match(html, /Carla Prøve indtræder i bestyrelsen/);
   assert.doesNotMatch(html, /Stamoplysninger|Aktive roller|Fokusperson/);
@@ -223,8 +224,9 @@ test("PersonRoles show 'current': de aktive roller pr. selskab, limit + 'Se alle
   assert.doesNotMatch(html, /Kilde:/, "G3: ingen kildevisning");
   // limit 1: én række + "Se alle 2 selskaber".
   const one = roles({ show: "current", limit: 1 });
-  assert.equal((one.match(/<li class="lasso-row"/g) ?? []).length, 1);
-  assert.match(one, /aria-expanded="false"[^>]*>Vis alle 2</);
+  // Global regel (Jakob 01.10): der foldes kun, når mindst to er skjult; 1 + 1 står begge.
+  assert.equal((one.match(/<li class="lasso-row"/g) ?? []).length, 2);
+  assert.doesNotMatch(one, /Vis alle 2/);
   // Ingen tidsbånd i listeformen.
   assert.doesNotMatch(html, /lasso-personroles__band/);
 });
@@ -250,8 +252,9 @@ test("PersonRoles show 'all' (tidsbånd): limit bestemmer, hvor mange selskaber 
   assert.equal((roles({}).match(/<li class="lasso-personroles__row/g) ?? []).length, 3);
   assert.doesNotMatch(roles({}), /Se alle/);
   const two = roles({ limit: 2 });
-  assert.equal((two.match(/<li class="lasso-personroles__row/g) ?? []).length, 2);
-  assert.match(two, /aria-expanded="false"[^>]*>Vis alle 3</);
+  // Global regel (Jakob 01.10): 2 + 1 står alle tre.
+  assert.equal((two.match(/<li class="lasso-personroles__row/g) ?? []).length, 3);
+  assert.doesNotMatch(two, /Vis alle 3/);
 });
 
 test("PersonNetwork (16.3): tidsbånd pr. fælles selskab, limit 3 som standard + 'Vis alle N', ingen 'Vis som graf'", () => {

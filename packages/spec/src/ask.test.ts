@@ -443,10 +443,10 @@ test("B1 ændringer: træf, ikke-træf, forrang for historikken og perioden", ()
   assert.equal(changeDays("hvad er nyt"), 30);
 });
 
-test("B1 score: kreditscoren er scoren; udviklingen giver historikken først", () => {
+test("B1 score: kreditscoren er scoren; måleren svarer (scorehistorikken er slettet, Jakob 01.10)", () => {
   assert.deepEqual(company("hvordan har kreditscoren udviklet sig over tid").topics, ["score"]);
-  assert.deepEqual(leads(company("hvordan har kreditscoren udviklet sig over tid")), ["LassoScoreHistory", "LassoScoreGauge"]);
-  assert.deepEqual(leads(company("gik scoren op eller ned det seneste år")), ["LassoScoreHistory", "LassoScoreGauge"]);
+  assert.deepEqual(leads(company("hvordan har kreditscoren udviklet sig over tid")), ["LassoScoreGauge"]);
+  assert.deepEqual(leads(company("gik scoren op eller ned det seneste år")), ["LassoScoreGauge"]);
   // Ikke-træf: uden udvikling som i dag.
   assert.deepEqual(leads(company("hvad er deres score")), ["LassoScoreGauge"]);
   // Forrang: kreditvurdering og score er stadig to emner.

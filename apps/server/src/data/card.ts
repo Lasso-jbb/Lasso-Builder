@@ -513,20 +513,6 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string, answer: strin
     for (const f of score.facts ?? []) card.row(f.label, f.value);
   }
 
-  // 18.2: scorehistorik, forrige og nu (18.1) og de seneste hentninger.
-  const hist = types.has("LassoScoreHistory") ? ds.scoreHistories?.[lassoId] : undefined;
-  if (hist) {
-    card.section("Score over tid");
-    if (hist.points.length === 0) card.text(hist.reason ?? "Ingen historik");
-    const last = hist.points.at(-1);
-    const prev = hist.points.at(-2);
-    if (last && prev) {
-      const d = Math.round(last.score - prev.score);
-      card.text(`Forrige ${Math.round(prev.score)}, nu ${Math.round(last.score)}: ${d === 0 ? "uændret" : `${d > 0 ? "▲" : "▼"} ${Math.abs(d)} point, ${d > 0 ? "mere" : "mindre"} risiko`}`);
-    }
-    for (const p of hist.points.slice(-4).reverse()) card.row(formatDate(p.date), `${Math.round(p.score)}, ${(p.label ?? scoreWord(p.score)).toLowerCase()}`);
-  }
-
   // 13.10: nøgletalsmåler mod branchen.
   const gauge = spec.components.find((c) => c.type === "LassoKeyFigureGauge" && c.company === lassoId);
   const industry = ds.industryBenchmarks?.[lassoId];
@@ -693,20 +679,6 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string, answer: strin
     const line = creditRatingText(credit);
     card.text(line.charAt(0).toUpperCase() + line.slice(1));
   }
-
-  const auditorIndependence = types.has("LassoAuditorIndependence") ? ds.auditorIndependence[lassoId] : undefined;
-  if (auditorIndependence) {
-    card.section("Revisoruafhængighed");
-    if (auditorIndependence.relations.length === 0) {
-      card.text(auditorIndependence.unavailableReason ?? "Ingen kendte relationer");
-    } else {
-      const sorted = [...auditorIndependence.relations].sort((a, b) => b.assessment - a.assessment);
-      const word = (s: number) => (s === 100 ? "Konflikt" : s === 50 ? "Vurdér" : "Neutral");
-      for (const r of sorted.slice(0, 3)) card.text(`${word(r.assessment)}: ${r.name}, ${r.relation}`);
-      if (sorted.length > 3) card.text(`Se ${moreText(sorted.length - 3)}`);
-    }
-  }
-
 
   const units = types.has("LassoProductionUnits") ? ds.productionUnits[lassoId] : undefined;
   if (units?.units.length) {

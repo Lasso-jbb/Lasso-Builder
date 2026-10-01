@@ -36,7 +36,6 @@ export function reportSpec(lassoId: string, opts: { credit?: boolean } = {}): Vi
     { type: "LassoBeneficialOwners", company: c },
     { type: "LassoScoreGauge", company: c },
     ...(opts.credit ? [{ type: "LassoCreditRating", company: c } as ViewComponent] : []),
-    { type: "LassoAuditorIndependence", company: c },
   ];
   return parseViewSpec({ kind: "company", title: "Virksomhedsrapport", components });
 }

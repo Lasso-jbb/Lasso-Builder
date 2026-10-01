@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { ExpandLink, PromptLink } from "./ExpandLink.js";
+import { ExpandLink, foldedCount, PromptLink } from "./ExpandLink.js";
 import { formatDate, isPersonId, type TextSegment, type TimelineVM } from "@lasso/spec";
 import type { MoreInTab, ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
@@ -121,7 +121,8 @@ export function LassoTimeline({
       ? timeline.events
       : timeline.events.filter((e) => e.category === filter);
   // Regel 9: de seneste `limit` (5, på overblikket 3); resten bag "Se alle N".
-  const events = expanded ? matching : matching.slice(0, limit);
+  // Global regel (Jakob 01.10): der foldes kun, når mindst to er skjult.
+  const events = expanded ? matching : matching.slice(0, foldedCount(matching.length, limit));
   const filterList =
     filterColumn && categories.length > 1 ? (
       <div
@@ -258,7 +259,7 @@ export function LassoTimeline({
               );
             })}
           </div>
-          {matching.length > limit ? (
+          {foldedCount(matching.length, limit) < matching.length ? (
             moreIn ? (
               <PromptLink label={`Se alle ${matching.length} begivenheder i ${moreIn.tab}`} onClick={moreIn.open} />
             ) : (

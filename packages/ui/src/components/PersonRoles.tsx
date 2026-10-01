@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ExpandLink, PromptLink } from "./ExpandLink.js";
+import { ExpandLink, foldedCount, PromptLink } from "./ExpandLink.js";
 import {
   PERSON_ROLE_FILTER_EMPTY,
   PERSON_ROLE_FILTER_TITLES,
@@ -128,7 +128,7 @@ function PersonRoleList({
       </Section>
     );
   }
-  const visible = expanded ? rows : rows.slice(0, limit);
+  const visible = expanded ? rows : rows.slice(0, foldedCount(rows.length, limit));
   // Som smagsprøve peger knappen på fanen Roller, der viser alle personens selskaber.
   const total = moreIn ? personCompanies(person).length : 0;
   return (
@@ -163,7 +163,7 @@ function PersonRoleList({
       </ul>
       {moreIn ? (
         total > visible.length ? <MoreInButton count={total} moreIn={moreIn} /> : null
-      ) : rows.length > limit ? (
+      ) : foldedCount(rows.length, limit) < rows.length ? (
         <ExpandLink expanded={expanded} total={rows.length} onToggle={() => setExpanded(!expanded)} />
       ) : null}
     </Section>
@@ -243,7 +243,7 @@ export function PersonRoles({
     ["other", "Anden rolle"],
   ];
   const hasEnded = person.roles.some((r) => !r.active);
-  const visible = expanded ? companies : companies.slice(0, collapsed);
+  const visible = expanded ? companies : companies.slice(0, foldedCount(companies.length, collapsed));
 
   const legendNode = (
     <div className="lasso-personroles__legend" aria-hidden="true">
@@ -300,7 +300,8 @@ export function PersonRoles({
                     <div key={i} className="lasso-personroles__lane" title={bandLabel(r)}>
                       <span
                         className="lasso-personroles__bandlabel"
-                        style={anchorRight ? { right: `${Math.max(0, 100 - right)}%`, textAlign: "right" } : { left: `${left}%` }}
+                        // Jakob 01.10: etiketten bliver altid inden for sporet (afkortes med "…"; fuld tekst i title).
+                        style={anchorRight ? { right: `${Math.max(0, 100 - right)}%`, textAlign: "right", maxWidth: `${Math.max(40, right)}%` } : { left: `${left}%`, maxWidth: `${100 - left}%` }}
                       >
                         {bandLabel(r)}
                       </span>
@@ -323,7 +324,7 @@ export function PersonRoles({
           );
         })}
       </ul>
-      {companies.length > collapsed ? (
+      {foldedCount(companies.length, collapsed) < companies.length ? (
         moreIn ? (
           <MoreInButton count={companies.length} moreIn={moreIn} />
         ) : (

@@ -9,9 +9,8 @@ import { resolveSpec } from "./resolve.js";
 const demo = new DemoProvider();
 const ID = "CVR-1-99000001";
 
-test("nye katalogtyper (13.10, 13.11, 13.12) har schema og katalogtekst uden midterprik; 18.2/22.2 er tilbage i kataloget (plan Ø2)", () => {
-  // 18.2 Scorehistorik og 22.2 Revisoruafhængighed var udgået 29.09, men er tilbage (docs/plan-mcp.md Ø2: alle komponenter skal kunne komme i spil).
-  for (const type of ["LassoScoreHistory", "LassoAuditorIndependence"]) assert.ok(COMPONENT_CATALOG.some((e) => e.type === type), type);
+test("nye katalogtyper (13.10, 13.11, 13.12) har schema og katalogtekst uden midterprik; 18.2/22.2 er slettet (Jakob 01.10)", () => {
+  for (const type of ["LassoScoreHistory", "LassoAuditorIndependence"]) assert.ok(!COMPONENT_CATALOG.some((e) => (e.type as string) === type), type);
   for (const type of ["LassoKeyFigureGauge", "LassoHeatmap", "LassoMap"] as const) {
     const entry = COMPONENT_CATALOG.find((e) => e.type === type);
     assert.ok(entry, type);
@@ -24,7 +23,6 @@ test("nye katalogtyper (13.10, 13.11, 13.12) har schema og katalogtekst uden mid
       { type: "LassoKeyFigureGauge", company: ID, metrics: ["soliditetsgrad"] },
       { type: "LassoHeatmap", list: "Kunder" },
       { type: "LassoMap", company: ID },
-      { type: "LassoScoreHistory", company: ID },
       { type: "LassoShareBars", company: ID, variant: "ejerkreds" },
       { type: "LassoLineChart", company: ID, industry: true },
     ],
@@ -41,7 +39,6 @@ test("resolveSpec henter branchetal, historik, kort, heatmap og det fulde regnsk
       { type: "LassoKeyFigureGauge", company: ID },
       { type: "LassoHeatmap", list: "Kunder", months: 6 },
       { type: "LassoMap", company: ID },
-      { type: "LassoScoreHistory", company: ID },
       { type: "LassoStackedBarChart", company: ID },
       { type: "LassoShareBars", company: ID, variant: "ejerkreds" },
     ],
@@ -55,10 +52,8 @@ test("resolveSpec henter branchetal, historik, kort, heatmap og det fulde regnsk
   assert.equal(h?.months.length, 6);
   assert.ok(h!.total > 0);
   assert.ok(ds.maps[ID]!.points.some((p) => p.kind === "focus"));
-  assert.ok(ds.scoreHistories[ID]!.points.length >= 2);
   const card = textCard(spec, ds)!;
   assert.match(card, /NØGLETAL MOD BRANCHEN/);
-  assert.match(card, /SCORE OVER TID/);
   assert.match(card, /ADRESSER PÅ KORT/);
   assert.match(card, /AKTIVITET I "KUNDER"/);
   assert.match(card, /EJERKREDS/);

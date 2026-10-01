@@ -111,7 +111,7 @@ test("Brudpunkter (26.1, 26f.1, 30): tablet (midte ≤ 960) holder ½ + ½ og fo
   const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
   // 12-kolonne-gitteret (gridmodellen 23.1): ½ = 6 kolonner holder på tablet, ⅓ bliver ½, ¼/⅔/¾ bliver fuld.
   assert.match(css, /\.lasso-content--dashboard, \.lasso-content--grid-2 \{ (--lasso-content-gap: [^;]+; )?grid-template-columns: repeat\(12, minmax\(0, 1fr\)\);/);
-  assert.match(css, /@container lasso \(max-width: 960px\) \{\n  \.lasso-content--dashboard, \.lasso-content--grid-2 \{ column-gap: var\(--lasso-space-4\); \}\n  \.lasso-cell--half, \.lasso-cell--third \{ grid-column: span 6; \}\n  \.lasso-cell--quarter, \.lasso-cell--two-thirds, \.lasso-cell--three-quarters \{ grid-column: 1 \/ -1; \}/);
+  assert.match(css, /@container lasso \(max-width: 960px\) \{\n  \.lasso-content--dashboard, \.lasso-content--grid-2 \{ column-gap: var\(--lasso-space-4\); \}\n  \.lasso-cell--half, \.lasso-cell--third, \.lasso-cell--quarter \{ grid-column: span 6; \}\n  \.lasso-cell--two-thirds, \.lasso-cell--three-quarters \{ grid-column: 1 \/ -1; \}/);
   assert.match(css, /@container lasso \(max-width: 1023px\) and \(min-width: 768px\) \{\n  \.lasso-shell \{ grid-template-columns: 64px minmax\(0, 1fr\);[^}]*\}\n  \.lasso-shell > \.lasso-rail, \.lasso-shell > \.lasso-strip \{ display: none; \}\n  \.lasso-shell > \.lasso-tabletbar \{ display: flex;/);
   assert.match(css, /@container lasso \(max-width: 767px\) \{\n  \.lasso-shell \{ display: flex;/);
   assert.match(css, /\.lasso-page__panel \{[^}]*width: var\(--lasso-panel-w\)/);
@@ -233,7 +233,7 @@ test("26f: tablet går op til skærm 1199: foldningen gælder også, når midten
   // Hver tabletregel ved midte ≤ 960 har en tvilling for skærm < 1200.
   assert.ok(container.length >= 10);
   assert.equal(media.length, container.length);
-  assert.match(css, /@media \(max-width: 1199px\) \{\n  \.lasso-content--dashboard, \.lasso-content--grid-2 \{ column-gap: var\(--lasso-space-4\); \}\n  \.lasso-cell--half, \.lasso-cell--third \{ grid-column: span 6; \}/);
+  assert.match(css, /@media \(max-width: 1199px\) \{\n  \.lasso-content--dashboard, \.lasso-content--grid-2 \{ column-gap: var\(--lasso-space-4\); \}\n  \.lasso-cell--half, \.lasso-cell--third, \.lasso-cell--quarter \{ grid-column: span 6; \}/);
 });
 
 test("Ø13/B8: tablet-foldningen (26.1) giver aldrig et element færre kolonner end på desktop, og en stak over ½ står alene i sin række", () => {

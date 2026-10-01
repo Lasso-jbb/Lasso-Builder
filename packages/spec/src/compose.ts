@@ -142,10 +142,8 @@ export function composeProbe(lassoId: string, focus?: Focus, ask?: Ask): ViewSpe
       // Observationerne (B4) tager 10–14 s i live; de hentes parallelt med Creditsafe, så siden venter ikke længere.
       add(
         { type: "LassoCreditRating", company: c },
-        { type: "LassoAuditorIndependence", company: c },
         { type: "LassoRiskObservations", company: c },
         { type: "LassoScoreGauge", company: c },
-        { type: "LassoScoreHistory", company: c },
       );
       break;
     case "historik":
@@ -236,7 +234,9 @@ export function componentWeight(c: ViewComponent, ds: Dataset, page: readonly Vi
     case "LassoKeyValueList": {
       // Regnskabslisten har 12 rækker (periode, udgivet, omsætning/bruttofortjeneste og 9 nøgletal);
       // only viser kun de valgte; maxRows viser kun de første N rækker og "Se N oplysninger" under (flex rækker, 23.1).
-      const shown = (n: number) => (c.maxRows && c.maxRows < n ? 1.6 * c.maxRows + 1.5 : 1.6 * n);
+      // view 'short' (Jakob 01.10): 8 rækker fremme, resten foldes ud på stedet.
+      const max = c.maxRows ?? (c.view === "short" ? 8 : undefined);
+      const shown = (n: number) => (max && max < n ? 1.6 * max + 1.5 : 1.6 * n);
       if (c.variant === "financials") {
         const base = c.only ? 2 + c.only.filter((m) => !c.exclude?.includes(m)).length : 12 - (c.exclude?.length ?? 0);
         return TITLE + shown(base);
@@ -273,10 +273,6 @@ export function componentWeight(c: ViewComponent, ds: Dataset, page: readonly Vi
     }
     case "LassoCreditRating":
       return 17;
-    case "LassoAuditorIndependence": {
-      const n = ds.auditorIndependence?.[c.company]?.relations.length ?? 0;
-      return TITLE + 2 + 2.5 * Math.min(n, 5) + 1.2;
-    }
     case "LassoScoreGauge":
       return 12;
     case "LassoChangeFeed": {
@@ -419,8 +415,6 @@ export function driversOf(c: ViewComponent, ds: Dataset): ContentWidthDrivers {
     }
     case "LassoProductionUnits":
       return { longestLabel: longest((ds.productionUnits[c.company]?.units ?? []).map((u) => u.name)) };
-    case "LassoAuditorIndependence":
-      return { longestLabel: longest((ds.auditorIndependence?.[c.company]?.relations ?? []).map((r) => r.name)) };
     default:
       return {};
   }
@@ -577,7 +571,6 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
   const hasContact = !!(contact && (contact.phone || contact.email || contact.website));
   const contactPeople = ds.contactPersons[id]?.people ?? [];
   const statements = ds.financialStatements[id];
-  const auditor = ds.auditorIndependence?.[id];
   // Creditsafe (katalog 17) står kun, hvor den er hentet (focus risiko i composeProbe), også låst eller fejlet.
   const hasCredit = Boolean(ds.creditRatings?.[id] || ds.errors?.[`creditRating:${id}`]);
 
@@ -621,7 +614,8 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
     const co = ds.companies[id];
     if (!co) return null;
     const rows = companyFacts(co, ds.ownership[id], fin.at(-1), { hideIdentity: true, hideContact: page.contact, hideAuditor: page.owners });
-    return rows.filter((r) => r.value).length >= 2 ? { type: "LassoKeyValueList", company: id, variant: "company", title: "Virksomhedsoplysninger" } : null;
+    // Jakob 01.10: på siderne står oplysningerne i kort visning (8 rækker + "Vis alle N"); hele listen står i fuld visning.
+    return rows.filter((r) => r.value).length >= 2 ? { type: "LassoKeyValueList", company: id, variant: "company", title: "Virksomhedsoplysninger", view: "short" } : null;
   };
   const push = (c: ViewComponent | null | undefined | false) => {
     if (c) items.push(c);
@@ -722,11 +716,10 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
       if (ds.observations[id]) extra({ type: "LassoRiskObservations", company: id });
       // Lassos 0–100-score og dens historik kun med indhold (ingen tom tilstand på fokus-siden).
       if (typeof ds.scores[id]?.score === "number") extra({ type: "LassoScoreGauge", company: id });
-      if ((ds.scoreHistories[id]?.points.length ?? 0) >= 2) extra({ type: "LassoScoreHistory", company: id });
+      // Jakob 01.10: scorehistorikken (Creditsafe) og revisoruafhængigheden er slettet; historikken kan ikke ses.
       if (people.length > 0) push({ type: "LassoPersonList", company: id, show: "all" });
       if (events.length >= 3) push({ type: "LassoTimeline", company: id });
       else if (ownerFallback) push(ownerList());
-      if (auditor) bottom.push({ type: "LassoAuditorIndependence", company: id, width: "full" });
       break;
     }
     case "historik": {
@@ -776,7 +769,7 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
   const answer = items.find((c) => !extras.has(c)) ?? items[0];
   const keep = new Set<ViewComponent>([
     ...top,
-    ...bottom.filter((c) => c.type !== "LassoAuditorIndependence"),
+    ...bottom,
     ...(focus !== "overblik" && answer ? [answer] : []),
   ]);
   const budget = options.showAll ? Number.POSITIVE_INFINITY : (options.heightBudget ?? PAGE_HEIGHT_BUDGET);
@@ -1043,8 +1036,6 @@ function composeAskCompany(lassoId: string, ds: Dataset, ask: Ask, options: Comp
       }
       case "LassoContactPersons":
         return lead || (ds.contactPersons[id]?.people.length ?? 0) > 0 ? c : null;
-      case "LassoAuditorIndependence":
-        return lead || (ds.auditorIndependence?.[id]?.relations.length ?? 0) > 0 ? c : null;
       case "LassoProductionUnits":
         return lead || (ds.productionUnits[id]?.units.length ?? 0) >= 2 ? c : null;
       case "LassoProperties":

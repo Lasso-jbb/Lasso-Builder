@@ -202,9 +202,6 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
       case "LassoKeyFigureGauge":
         want(c.company, "financials", "industryBenchmark");
         break;
-      case "LassoScoreHistory":
-        want(c.company, "scoreHistory");
-        break;
       case "LassoMap":
         want(c.company, "mapPoints");
         break;
@@ -248,10 +245,6 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
         break;
       case "LassoCreditRating":
         want(c.company, "creditRating");
-        break;
-      case "LassoAuditorIndependence":
-        want(c.company, "auditorIndependence");
-        want(c.company, "company"); // 22.2: "Uafhængighedstjek, <navn>"
         break;
       case "LassoProductionUnits":
         want(c.company, "productionUnits");

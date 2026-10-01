@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ExpandLink, PromptLink } from "./ExpandLink.js";
+import { ExpandLink, foldedCount, PromptLink } from "./ExpandLink.js";
 import { isPersonId, statusGroup, statusLabel, type PersonNetworkCompanyVM, type PersonNetworkRowVM, type PersonNetworkVM } from "@lasso/spec";
 import type { MoreInTab, ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
@@ -152,7 +152,7 @@ export function PersonNetwork({
       </Section>
     );
   }
-  const rows = expanded ? network.people : network.people.slice(0, limit);
+  const rows = expanded ? network.people : network.people.slice(0, foldedCount(network.people.length, limit));
   const now = Date.now();
   const { thisYear, startYear, start, pos } = axis(network.people, now);
   const step = Math.max(1, Math.ceil((thisYear - startYear) / 6));
@@ -190,7 +190,7 @@ export function PersonNetwork({
     return `${n} ${n === 1 ? "fælles selskab" : "fælles selskaber"}${p.active ? "" : ", afsluttet"}`;
   };
   const more =
-    network.people.length > limit ? (
+    foldedCount(network.people.length, limit) < network.people.length ? (
       moreIn ? (
         <PromptLink label={`Se alle ${network.people.length} personer i ${moreIn.tab}`} onClick={moreIn.open} />
       ) : (

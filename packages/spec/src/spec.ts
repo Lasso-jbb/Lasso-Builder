@@ -606,17 +606,6 @@ export const scoreGaugeSchema = z.object({
   detail: z.boolean().optional().describe("Udviklingen over 24 måneder og seneste ændringer under måleren (26d.7). Standard: fra."),
 });
 
-/**
- * 18.2 Scorehistorik: var udgået 29.09, men er tilbage i kataloget (plan Ø2); historikken bygges op i plan C2
- * (COMPONENT_CATALOG), så AI'en vælger den ikke. Skemaet står kun, så gemte specs stadig kan læses.
- */
-export const scoreHistorySchema = z.object({
-  type: z.literal("LassoScoreHistory"),
-  company: companyRef,
-  title: z.string().max(80).optional().describe("Standard: 'Kreditscore <første år>–<sidste år>'."),
-  compare: z.boolean().optional().describe("Forrige vs. nu (18.1) over grafen. Standard: til; fra viser grafen alene (18.2)."),
-});
-
 /** Katalog 13.10: nøgletalsmåler med branchemærke. Branchetal er ubekræftede i live (docs/lasso-endpoints.md). */
 export const GAUGE_METRICS = ["soliditetsgrad", "overskudsgrad", "likviditetsgrad"] as const;
 export const keyFigureGaugeSchema = z.object({
@@ -669,16 +658,6 @@ export const productionUnitsSchema = z.object({
 
 export const propertiesSchema = z.object({
   type: z.literal("LassoProperties"),
-  company: companyRef,
-  title: z.string().max(80).optional(),
-});
-
-/**
- * 22.2 Revisoruafhængighed: var udgået 29.09, men er tilbage i kataloget (plan Ø2); live delvist koblet på,
- * fordi compose.ts endnu bygger elementet på risikosiden (skal fjernes af compose-ejeren) og for gemte specs.
- */
-export const auditorIndependenceSchema = z.object({
-  type: z.literal("LassoAuditorIndependence"),
   company: companyRef,
   title: z.string().max(80).optional(),
 });
@@ -894,13 +873,11 @@ export const componentSchema = z.discriminatedUnion("type", [
   w(balanceSheetSchema),
   w(cashFlowSchema),
   w(scoreGaugeSchema),
-  w(scoreHistorySchema),
   w(keyFigureGaugeSchema),
   w(heatmapSchema),
   w(mapSchema),
   w(riskObservationsSchema),
   w(creditRatingSchema),
-  w(auditorIndependenceSchema),
   w(productionUnitsSchema),
   w(propertiesSchema),
   w(livestockSchema),
@@ -970,8 +947,22 @@ export const viewSpecSchema = z.object({
 export type ViewSpec = z.infer<typeof viewSpecSchema>;
 export type ViewSpecInput = z.input<typeof viewSpecSchema>;
 
+/**
+ * Slettede typer (Jakob 01.10: scorehistorik og revisoruafhængighed). Gemte visninger med dem kan stadig læses:
+ * komponenterne springes over, og resten af visningen står som før.
+ */
+export const REMOVED_TYPES: ReadonlySet<string> = new Set(["LassoScoreHistory", "LassoAuditorIndependence"]);
+
+/** Fjerner slettede komponenttyper fra en (gemt) spec, før den valideres. */
+export function dropRemovedComponents(input: unknown): unknown {
+  if (!input || typeof input !== "object" || !Array.isArray((input as { components?: unknown }).components)) return input;
+  const spec = input as { components: unknown[] };
+  const kept = spec.components.filter((c) => !(c && typeof c === "object" && REMOVED_TYPES.has(String((c as { type?: unknown }).type))));
+  return kept.length === spec.components.length ? input : { ...spec, components: kept };
+}
+
 export function parseViewSpec(input: unknown): ViewSpec {
-  return viewSpecSchema.parse(input);
+  return viewSpecSchema.parse(dropRemovedComponents(input));
 }
 
 /**
@@ -1002,15 +993,13 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoMultiYearTable: "two-thirds",
   LassoIncomeStatement: "half",
   LassoBalanceSheet: "third",
-  LassoCashFlow: "third",
+  LassoCashFlow: "half",
   LassoScoreGauge: "quarter",
-  LassoScoreHistory: "half",
   LassoKeyFigureGauge: "third",
   LassoHeatmap: "half",
   LassoMap: "half",
   LassoRiskObservations: "third",
   LassoCreditRating: "third",
-  LassoAuditorIndependence: "full",
   LassoProductionUnits: "full",
   LassoProperties: "half",
   LassoLivestock: "half",
@@ -1020,18 +1009,18 @@ export const DEFAULT_WIDTH: Record<ComponentType, Width> = {
   LassoTextSections: "half",
   LassoSummary: "half",
   LassoTimeline: "third",
-  LassoNews: "three-quarters",
+  LassoNews: "half",
   LassoPersonHead: "full",
   LassoPersonRoles: "two-thirds",
   LassoPersonNetwork: "full", // Ø13/B8 (A13-måling): lange selskabsnavne, 3 rækker pr. person og tidsakse er først rene i fuld bredde
   LassoPersonRisk: "third",
   LassoPersonFacts: "third",
-  LassoPersonStats: "full",
-  LassoFinancialStatements: "full",
+  LassoPersonStats: "half",
+  LassoFinancialStatements: "three-quarters",
   LassoMergers: "half",
-  LassoRegistration: "full",
-  LassoAnnouncements: "full",
-  LassoRelationsTable: "full",
+  LassoRegistration: "half",
+  LassoAnnouncements: "half",
+  LassoRelationsTable: "two-thirds",
   LassoCompanyHistory: "full",
   LassoPublications: "half",
   LassoChangeFeed: "half",

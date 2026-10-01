@@ -99,7 +99,7 @@ test("højdebudget 23.3: default-siden er ca. 1/2–2/3 af den fulde side og hol
   // rækker, B4 3+6+3 relationer | søjlegraf | kontakt. Genveje, nyheder og historik er udeladt (laveste
   // relevans først), kontakt er med.
   const shape = page.components.map((c) => `${c.type}${c.column ? `@${c.column}/${c.width}` : ""}${(c as { maxRows?: number }).maxRows ? `:${(c as { maxRows?: number }).maxRows}` : ""}${(c as { limit?: number }).limit ? `:${(c as { limit?: number }).limit}` : ""}`);
-  assert.deepEqual(shape, ["LassoCompanyHead", "LassoKeyFigureCards", "LassoTextSections@1/half:3", "LassoKeyValueList@2/half:6", "LassoRelations@1/quarter", "LassoBarChart@2/half", "LassoContact@3/quarter"]);
+  assert.deepEqual(shape, ["LassoCompanyHead", "LassoKeyFigureCards", "LassoTextSections@1/half:3", "LassoKeyValueList@2/half", "LassoRelations@1/quarter", "LassoBarChart@2/half", "LassoContact@3/quarter"]);
   for (const band of bandsOf(page)) assert.equal(band.reduce((s, st) => s + WIDTH_COLUMNS[st[0]!.width!], 0), 12);
   // Et større budget giver plads til mere.
   assert.ok(composeCompany(BYG, ds, { focus: "overblik", followUps: false, heightBudget: 5000 }).components.length === all.components.length);

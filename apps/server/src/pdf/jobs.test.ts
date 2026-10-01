@@ -28,7 +28,6 @@ test("rapportens data: alt til de fire sider; Creditsafe kun med credit (fokus r
     "LassoOwnerList",
     "LassoBeneficialOwners",
     "LassoScoreGauge",
-    "LassoAuditorIndependence",
   ]);
   assert.ok(types(true).includes("LassoCreditRating"));
   assert.equal(reportSpec("CVR-1-99000001").kind, "company");

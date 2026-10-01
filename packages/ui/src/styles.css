@@ -1605,17 +1605,18 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-cell--three-quarters { grid-column: span 9; }
 .lasso-cell--full { grid-column: 1 / -1; }
 .lasso-cell > * { grid-column: auto; }
-/* Foldning (30): tablet (midten ≤ 960, svarer til skærm < 1200); ½ + ½ holder (chatten 640–900 px), ⅓ bliver ½, ¼/⅔/¾ bliver fuld */
+/* Foldning (30): tablet (midten ≤ 960, svarer til skærm < 1200); ½ + ½ holder (chatten 640–900 px), ⅓ og ¼ bliver ½
+   (Jakob 01.10: ¼ i fuld bredde er for bredt, fx relationer og scoremåler), ⅔/¾ bliver fuld */
 @container lasso (max-width: 960px) {
   .lasso-content--dashboard, .lasso-content--grid-2 { column-gap: var(--lasso-space-4); }
-  .lasso-cell--half, .lasso-cell--third { grid-column: span 6; }
-  .lasso-cell--quarter, .lasso-cell--two-thirds, .lasso-cell--three-quarters { grid-column: 1 / -1; }
+  .lasso-cell--half, .lasso-cell--third, .lasso-cell--quarter { grid-column: span 6; }
+  .lasso-cell--two-thirds, .lasso-cell--three-quarters { grid-column: 1 / -1; }
 }
 /* Tablet går op til skærm 1199 (26f): samme regler, når skærmen er under 1200, også hvor midten er bredere end 960 (portalen 1024–1199 uden skinne). */
 @media (max-width: 1199px) {
   .lasso-content--dashboard, .lasso-content--grid-2 { column-gap: var(--lasso-space-4); }
-  .lasso-cell--half, .lasso-cell--third { grid-column: span 6; }
-  .lasso-cell--quarter, .lasso-cell--two-thirds, .lasso-cell--three-quarters { grid-column: 1 / -1; }
+  .lasso-cell--half, .lasso-cell--third, .lasso-cell--quarter { grid-column: span 6; }
+  .lasso-cell--two-thirds, .lasso-cell--three-quarters { grid-column: 1 / -1; }
 }
 @container lasso (max-width: 560px) {
   .lasso-content--dashboard, .lasso-content--grid-2 { --lasso-content-gap: var(--lasso-space-7); grid-template-columns: minmax(0, 1fr); column-gap: var(--lasso-space-3); row-gap: var(--lasso-content-gap); }
@@ -1703,6 +1704,14 @@ button.lasso-relations__name:hover { text-decoration: underline; }
   .lasso-columns--ratio.lasso-band .lasso-column__item { padding-left: var(--lasso-space-6); padding-right: var(--lasso-space-6); }
   .lasso-columns--ratio.lasso-band > .lasso-stack--start-t .lasso-column__item { padding-left: 0; }
   .lasso-columns--ratio.lasso-band > .lasso-stack--end-t .lasso-column__item { padding-right: 0; }
+  /* Jakob 01.10: en stak med flere elementer, der står alene i fuld bredde (fx historik + kontakt), lægger dem
+     ved siden af hinanden to og to i stedet for under hinanden. */
+  .lasso-band > .lasso-column.lasso-stack--full-t:has(> .lasso-column__item + .lasso-column__item) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: stretch; }
+  .lasso-band > .lasso-stack--full-t > .lasso-column__item + .lasso-column__item { border-top: 0; }
+  .lasso-band > .lasso-stack--full-t > .lasso-column__item:nth-child(2n) { border-left: 1px solid var(--lasso-border); padding-left: var(--lasso-space-6); padding-right: 0; }
+  .lasso-band > .lasso-stack--full-t > .lasso-column__item:nth-child(2n + 1) { padding-left: 0; padding-right: var(--lasso-space-6); }
+  .lasso-band > .lasso-stack--full-t > .lasso-column__item:nth-child(n + 3) { border-top: 1px solid var(--lasso-border); }
+  .lasso-band > .lasso-stack--full-t > .lasso-column__item:last-child:nth-child(2n + 1) { grid-column: 1 / -1; padding-right: 0; }
 }
 /* Tablet går op til skærm 1199 (26f): samme regler, når skærmen er under 1200, også hvor midten er bredere end 960 (portalen 1024–1199 uden skinne). */
 @media (max-width: 1199px) {
@@ -1714,6 +1723,14 @@ button.lasso-relations__name:hover { text-decoration: underline; }
   .lasso-columns--ratio.lasso-band .lasso-column__item { padding-left: var(--lasso-space-6); padding-right: var(--lasso-space-6); }
   .lasso-columns--ratio.lasso-band > .lasso-stack--start-t .lasso-column__item { padding-left: 0; }
   .lasso-columns--ratio.lasso-band > .lasso-stack--end-t .lasso-column__item { padding-right: 0; }
+  /* Jakob 01.10: en stak med flere elementer, der står alene i fuld bredde (fx historik + kontakt), lægger dem
+     ved siden af hinanden to og to i stedet for under hinanden. */
+  .lasso-band > .lasso-column.lasso-stack--full-t:has(> .lasso-column__item + .lasso-column__item) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: stretch; }
+  .lasso-band > .lasso-stack--full-t > .lasso-column__item + .lasso-column__item { border-top: 0; }
+  .lasso-band > .lasso-stack--full-t > .lasso-column__item:nth-child(2n) { border-left: 1px solid var(--lasso-border); padding-left: var(--lasso-space-6); padding-right: 0; }
+  .lasso-band > .lasso-stack--full-t > .lasso-column__item:nth-child(2n + 1) { padding-left: 0; padding-right: var(--lasso-space-6); }
+  .lasso-band > .lasso-stack--full-t > .lasso-column__item:nth-child(n + 3) { border-top: 1px solid var(--lasso-border); }
+  .lasso-band > .lasso-stack--full-t > .lasso-column__item:last-child:nth-child(2n + 1) { grid-column: 1 / -1; padding-right: 0; }
 }
 @container lasso (max-width: 560px) {
   .lasso-columns--ratio.lasso-band { display: flex; flex-direction: column; align-items: stretch; border-top: 0; }
@@ -1796,7 +1813,7 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-personroles__sub { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
 .lasso-personroles__track { position: relative; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .lasso-personroles__lane { position: relative; height: 22px; }
-.lasso-personroles__bandlabel { position: absolute; top: 0; font-size: 11px; line-height: 14px; font-weight: 500; color: var(--lasso-text-2); white-space: nowrap; }
+.lasso-personroles__bandlabel { position: absolute; top: 0; font-size: 11px; line-height: 14px; font-weight: 500; color: var(--lasso-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lasso-personroles__band { position: absolute; top: 15px; height: 6px; border-radius: 3px; box-sizing: border-box; }
 .lasso-personroles__marker { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--lasso-danger); }
 @container lasso (max-width: 560px) {
@@ -5747,8 +5764,11 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-reltable__row { flex-direction: column; gap: 2px; }
   .lasso-reltable__period { grid-template-columns: auto auto auto; gap: 4px; text-align: left; }
 }
-/* Portalens relationer og historik: navne og "Vis alle" som koral links. */
-.lasso-reltable .lasso-link { color: var(--lasso-accent-text); }
+/* Portalens relationer og historik: "Vis alle" som koralt link. */
+/* 26 (Jakob 01.10): navnene står i tekstfarve som i de andre personlister (regel 11); koral ved hover. */
+.lasso-root .lasso-reltable .lasso-link:not(.lasso-reltable__more) { color: var(--lasso-text); font-weight: 400; }
+.lasso-root .lasso-reltable .lasso-link:not(.lasso-reltable__more):hover { color: var(--lasso-accent-text); }
+.lasso-reltable .lasso-reltable__more { color: var(--lasso-accent-text); }
 
 /* ---------- "Se flere"-panelet (08.3/08.7, Jakob 01.10): de højre 2/3 af visningen ----------
    Glider ind fra højre over sidens anden og tredje kolonne; første kolonne står synlig, ingen mørk overlay.

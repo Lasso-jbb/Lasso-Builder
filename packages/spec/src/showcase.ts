@@ -89,8 +89,6 @@ export function showcaseComponents(i: ShowcaseInput): { company: C[]; person: C[
     { type: "LassoCreditRating", company: co },
     { type: "LassoRiskObservations", company: co },
     { type: "LassoScoreGauge", company: co, detail: true },
-    { type: "LassoAuditorIndependence", company: co },
-    { type: "LassoScoreHistory", company: co },
     { type: "LassoProductionUnits", company: co },
     { type: "LassoProperties", company: co },
     { type: "LassoMap", company: co },
@@ -157,8 +155,6 @@ export function showcaseTabs(i: ShowcaseInput): ShowcaseTab[] {
 export const NO_ALTERNATIVE: ReadonlySet<ComponentType> = new Set<ComponentType>([
   "LassoCreditRating",
   "LassoScoreGauge",
-  "LassoScoreHistory",
-  "LassoAuditorIndependence",
   "LassoSavedPages",
   "LassoHeatmap",
   "LassoFollowUps",
@@ -172,8 +168,6 @@ export const NO_ALTERNATIVE: ReadonlySet<ComponentType> = new Set<ComponentType>
 export const NO_ALTERNATIVE_REASON: Partial<Record<ComponentType, string>> = {
   LassoCreditRating: "Kræver Creditsafe-abonnement på Lasso-kontoen. Hentes ikke for andre virksomheder, da hvert opslag kan bruge kreditter.",
   LassoScoreGauge: "Bygger på Creditsafe-ratingen og kræver abonnement. Hentes ikke for andre virksomheder, da hvert opslag kan bruge kreditter.",
-  LassoScoreHistory: "Bygger på Creditsafe-ratingen og kræver abonnement; historikken opbygges ved hvert opslag.",
-  LassoAuditorIndependence: "Bygger på Creditsafe-data og kræver abonnement.",
   LassoSavedPages: "Kræver en logget ind bruger (portalen eller Claude med login). Siden her er offentlig.",
   LassoHeatmap: "Kræver en overvågningsliste for en logget ind bruger.",
   LassoLivestock: "CHR-husdyrdata er ikke koblet på Lasso endnu (ingen live-data).",
