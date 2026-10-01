@@ -158,7 +158,8 @@ test("composePerson overblik (Ø13/B10): aktive roller (liste) alene i fuld bred
     "LassoPersonRoles[current,#5,>roller]",
     // Netværket (min 1/1) står i eget fuldbånd og deler aldrig bånd.
     "LassoPersonNetwork[#3,>netvaerk]",
-    // Jakob 01.10: historik og ejerskab står på deres egne faner, ikke på overblikket.
+    // Jakob 01.10: historik og ejerskab står på deres egne faner; erhvervsresuméet (pladsholder) står under netværket.
+    "LassoSummary",
     "LassoFollowUps",
   ]);
   assertNoDuplicates(spec.components);
@@ -203,6 +204,7 @@ test("composePerson overblik: tomme sektioner udelades; en halv til overs står 
     "LassoPersonHead",
     "LassoPersonStats",
     "LassoPersonRoles[current,#5,>roller]",
+    "LassoSummary",
   ]);
   // Et ophørt ejerskab alene giver intet diagram, og et ejet selskab, der ikke selv ejer noget,
   // heller ikke: diagrammet ville kun gentage "ejer 100 %" fra rollelisten 1:1.
@@ -218,7 +220,7 @@ test("composePerson overblik: tomme sektioner udelades; en halv til overs står 
   // Netværket (min 1/1) i eget fuldbånd; ingen historik på overblikket (Jakob 01.10).
   ds.personNetworks[ID] = { lassoId: ID, people: Array.from({ length: 3 }, (_, i) => ({ name: `P${i}`, companies: [], overlapYears: 1, active: true })) };
   const three = composePerson(ID, ds, { followUps: false }).components.map(shape);
-  assert.deepEqual(three.slice(3), ["LassoPersonNetwork[#3,>netvaerk]"]);
+  assert.deepEqual(three.slice(3), ["LassoPersonNetwork[#3,>netvaerk]", "LassoSummary"]);
   // Kun ophørte roller: listen over de ophørte står i stedet for de aktive.
   ds.persons[ID] = { ...person, roles: [person.roles[3]!] };
   assert.equal(shape(composePerson(ID, ds).components.find((c) => c.type === "LassoPersonRoles")!), "LassoPersonRoles[ended,#5,>roller]");

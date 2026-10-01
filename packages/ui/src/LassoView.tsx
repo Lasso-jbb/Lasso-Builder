@@ -273,7 +273,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoCompanyHead":
       return <CompanyHeadBridge key={key} c={c} ds={empty} props={props} act={act} frame={frame} />;
     case "LassoKeyFigureCards":
-      return <KeyFigureCards key={key} financials={empty.financials[c.company]} metrics={c.metrics} plain={c.variant === "plain" || Boolean(props.page)} error={err(`financials:${c.company}`)} />;
+      return <KeyFigureCards key={key} financials={empty.financials[c.company]} metrics={c.metrics} plain={c.variant === "plain" || Boolean(props.page)} employeesNow={empty.companies[c.company]?.employees} error={err(`financials:${c.company}`)} />;
     case "LassoBarChart":
       return <BarChart key={key} financials={empty.financials[c.company]} metric={c.metric} years={c.years} error={err(`financials:${c.company}`)} />;
     case "LassoGroupedBarChart":

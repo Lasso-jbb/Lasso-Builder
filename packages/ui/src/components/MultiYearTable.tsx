@@ -101,7 +101,7 @@ export function MultiYearTable({ financials, metrics, years, title, error, varia
     );
   }
   const large = W >= LARGE_FROM;
-  const chosen: Metric[] = (metrics?.length ? [...metrics] : large ? LARGE_METRICS : DEFAULT_METRICS).slice(0, large ? 8 : 6) as Metric[];
+  const chosen: Metric[] = (metrics?.length ? [...metrics] : large ? LARGE_METRICS : DEFAULT_METRICS).slice(0, 8) as Metric[];
   const mode = multiYearVariant(W, chosen.length, variant);
   const mobile = W <= 560;
   // Mobil (26c.3) ruller vandret til de ældre år, så alle ønskede år tegnes; desktop viser dem, bredden kan bære.

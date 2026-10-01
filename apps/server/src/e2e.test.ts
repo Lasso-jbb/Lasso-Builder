@@ -205,6 +205,7 @@ test("show_person (katalog 16) finder en person på navn og komponerer personsid
       "LassoPersonStats",
       "LassoPersonRoles",
       "LassoPersonNetwork",
+      "LassoSummary",
       "LassoFollowUps",
     ],
   );

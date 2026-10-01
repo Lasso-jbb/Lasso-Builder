@@ -59,12 +59,12 @@ function subline(c: PersonCompanyVM): string {
 function CompanyName({ c, onOpen }: { c: PersonCompanyVM; onOpen?: (a: ViewAction) => void }) {
   if (onOpen && c.companyId?.startsWith("CVR-1-")) {
     return (
-      <button type="button" className="lasso-link lasso-personroles__company" onClick={() => onOpen({ kind: "open-company", lassoId: c.companyId!, name: c.companyName })}>
+      <button type="button" className="lasso-link lasso-personroles__company" title={c.companyName} onClick={() => onOpen({ kind: "open-company", lassoId: c.companyId!, name: c.companyName })}>
         {c.companyName}
       </button>
     );
   }
-  return <span className="lasso-personroles__company">{c.companyName}</span>;
+  return <span className="lasso-personroles__company" title={c.companyName}>{c.companyName}</span>;
 }
 
 function RowCompany({ row, onOpen }: { row: PersonRoleRowVM; onOpen?: (a: ViewAction) => void }) {

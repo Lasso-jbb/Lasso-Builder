@@ -158,8 +158,6 @@ export function PersonNetwork({
   const step = Math.max(1, Math.ceil((thisYear - startYear) / 6));
   const ticks: number[] = [];
   for (let y = startYear; y <= thisYear - step / 2; y += step) ticks.push(y);
-  // Mobil: fire årstal (første, to imellem og i dag).
-  const mticks = [startYear, Math.round(startYear + (thisYear - startYear) / 3), Math.round(startYear + ((thisYear - startYear) * 2) / 3)];
   const hasEnded = network.people.some((p) => p.companies.some((c) => c.to || c.ended));
   const problems = network.people.flatMap((p) => p.companies.slice(0, MAX_BANDS).filter(isBankrupt));
   const problemNames = [...new Set(problems.map((c) => statusLabel(c.status) ?? "Under konkurs"))];
@@ -232,14 +230,8 @@ export function PersonNetwork({
         </ul>
         {more}
       </div>
+      {/* Mobil (Jakob 01.10): uden grafik; navn og overlap, under det de fælles selskaber som tekst. */}
       <div className="lasso-personnet__mob">
-        <div className="lasso-personnet__maxis" aria-hidden="true">
-          {[...mticks, thisYear].map((y, i) => (
-            <span key={`${y}-${i}`} className={i === 3 ? "is-now" : undefined}>
-              {y}
-            </span>
-          ))}
-        </div>
         <ul className="lasso-personnet__mrows">
           {rows.map((p, i) => (
             <li key={`${p.name}-${i}`} className={`lasso-personnet__mrow ${p.active ? "" : "is-ended"}`}>
@@ -247,7 +239,14 @@ export function PersonNetwork({
                 <PersonName p={p} onOpen={onOpen} className="lasso-personnet__bname" />
                 <span className="lasso-personnet__mov">{p.active ? `${overlapText(p)} overlap` : `${overlapText(p)}, tidligere`}</span>
               </div>
-              <Track p={p} pos={pos} start={start} now={now} />
+              <ul className="lasso-personnet__mcos">
+                {p.companies.map((c, k) => (
+                  <li key={`${c.companyName}-${k}`} className={isBankrupt(c) ? "is-problem" : undefined}>
+                    {bandLabel(c)}
+                    {isBankrupt(c) ? `, ${problemText(c)}` : ""}
+                  </li>
+                ))}
+              </ul>
             </li>
           ))}
         </ul>

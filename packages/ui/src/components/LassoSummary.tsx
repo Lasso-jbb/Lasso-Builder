@@ -20,8 +20,9 @@ export function paragraphs(text: string): string[] {
  * `source`/`updated` modtages stadig fra ældre specs, men vises ikke.
  */
 export function LassoSummary({ text, title }: { text: string; title?: string; source?: string; updated?: string }) {
-  const [expanded, setExpanded] = useState(usePrintMode());
-  const foldable = text.length > FOLD_AT;
+  const print = usePrintMode();
+  const [expanded, setExpanded] = useState(print);
+  const foldable = text.length > FOLD_AT && !print;
   const paras = paragraphs(text);
   return (
     <Section title={title ?? "Resumé"} span="full">

@@ -380,7 +380,9 @@ export function gridHeight(c: ViewComponent, width: Width, ds: Dataset, page: re
   // ca. 11 tegn pr. kolonne i gitteret, plus titel og kildelinje.
   if (c.type === "LassoSummary") {
     const perLine = 11 * WIDTH_COLUMNS[width];
-    return TITLE_PX + 24 * Math.ceil(c.text.length / perLine) + 30;
+    // Over 340 tegn står resuméet foldet efter 5 linjer med "Vis mere" under (LassoSummary).
+    const lines = c.text.length > 340 ? 5 : Math.ceil(c.text.length / perLine);
+    return TITLE_PX + 24 * lines + (c.text.length > 340 ? 36 : 0) + 30;
   }
   const base = measuredHeight(c, width);
   const key = c.type === "LassoKeyValueList" && c.variant === "financials" ? "LassoKeyValueList (financials)" : c.type;
@@ -703,7 +705,12 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
       // B4: nøgletalsmåleren mod branchens median, kun når branchen har tal (ellers intet element, ingen tom tilstand).
       const bench = ds.industryBenchmarks[id];
       if (fin.length > 0 && bench?.state === "ok" && bench.years.length > 0) extra({ type: "LassoKeyFigureGauge", company: id });
-      if (nYears >= 4) push({ type: "LassoMultiYearTable", company: id, years: Math.min(years, 10) });
+      // Jakob 01.10: tabellen er dobbelt så lang på Økonomi: de mest relevante nøgletal i regnskabets rækkefølge
+      // (top, EBITDA, resultat, egenkapital, balance, soliditet, overskud, ansatte); kun dem med tal.
+      if (nYears >= 4) {
+        const rows = presentNow(fin, [metric, "ebitda", "resultat", "egenkapital", "balancesum", "soliditetsgrad", "overskudsgrad", "ansatte"]).slice(0, 8);
+        push({ type: "LassoMultiYearTable", company: id, years: Math.min(years, 10), ...(rows.length > 4 ? { metrics: rows } : {}) });
+      }
       // Hele regnskabsanalysen i fuld bredde under graferne; overblikket viser kun dens korte afsnit.
       // Den pakkes efter graferne og listerne: alene i fuld bredde, eller ved siden af et element, der ellers ville stå alene.
       if (textSectionsFor(texts, "analyse").length > 0) push({ type: "LassoTextSections", company: id, variant: "analyse", title: "Regnskabsanalyse" });

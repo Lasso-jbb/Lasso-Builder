@@ -101,7 +101,7 @@ test("columnBands: et lavere kolonnenummer starter et nyt bånd, og bredderne gi
     bands.map((b) => (b.kind === "full" ? b.item.c.type : b.columns.map((col) => col.map((x) => x.c.type).join("+")).join(" | "))),
     // Overblikket (Ø13/B10, gridmodellen): rollerne alene i eget fuldbånd (stamoplysningerne er udgået) og
     // netværket i eget fuldbånd; historik og ejerskab står på fanerne (Jakob 01.10); risikoen er udgået.
-    ["LassoPersonHead", "LassoPersonStats", "LassoPersonRoles", "LassoPersonNetwork"],
+    ["LassoPersonHead", "LassoPersonStats", "LassoPersonRoles", "LassoPersonNetwork", "LassoSummary"],
   );
   const [, , rolesBand, netBand] = bands; // B4: persontallene står i eget fuldbånd under hovedet
   assert.equal(rolesBand?.kind, "full");

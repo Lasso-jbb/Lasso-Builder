@@ -118,7 +118,7 @@ En test fejler, hvis filen ikke er ajour.
 **Bredde pr. variant.**
 - `variant:financials`: profil smal; std ½, min ½, maks ½; drivere: ingen
 
-**Props.** `company, variant? (company | financials), title?, exclude? (kun financials), only? (kun financials: nøgletal), year? (kun financials: regnskabsår), rows? (kun company: revisor | revisorskift | regnskabsperiode | stiftet | form | branche | ansatte | adresse | branchekode | kommune | region | telefon | email | web | firmanavn | cvr | binavne | status | reklamebeskyttet | vedtaegtsaendring | regnskabsaar | senesteregnskab | selskabskapital | boersnoteret | underskriverrevisor | formaal | tegningsregel | brancher), years? (2–5, kun financials), maxRows? (1–20)`
+**Props.** `company, variant? (company | financials), title?, exclude? (kun financials), only? (kun financials: nøgletal), year? (kun financials: regnskabsår), rows? (kun company: revisor | revisorskift | regnskabsperiode | stiftet | form | branche | ansatte | adresse | branchekode | kommune | region | telefon | email | web | firmanavn | cvr | binavne | status | reklamebeskyttet | vedtaegtsaendring | regnskabsaar | senesteregnskab | selskabskapital | boersnoteret | underskriverrevisor | formaal | tegningsregel | brancher | valuation), years? (2–5, kun financials), maxRows? (1–20)`
 
 <a id="LassoContact"></a>
 ## Kontaktblok (`LassoContact`)

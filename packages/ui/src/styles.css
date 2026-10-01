@@ -1827,14 +1827,15 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-personroles__swatch--owner, .lasso-personroles__band--owner { background: var(--lasso-chart-3); }
 .lasso-personroles__swatch--other, .lasso-personroles__band--other, .lasso-personroles__band--founder { background: var(--lasso-chart-5); }
 .lasso-personroles__swatch--ended, .lasso-personroles__band--ended { background: var(--lasso-surface-muted); border: 1px dashed var(--lasso-faint); }
-.lasso-personroles__axis { display: grid; grid-template-columns: 240px minmax(0, 1fr); column-gap: var(--lasso-space-4); height: 20px; }
+.lasso-personroles__axis { display: grid; grid-template-columns: 200px minmax(0, 1fr); column-gap: var(--lasso-space-3); height: 20px; }
 .lasso-personroles__ticks { position: relative; border-bottom: 1px solid var(--lasso-chart-axis); }
 .lasso-personroles__tick { position: absolute; top: 0; font-size: 11px; line-height: 14px; font-weight: 500; color: var(--lasso-muted); white-space: nowrap; }
 .lasso-personroles__tick--now { color: var(--lasso-text); }
 .lasso-personroles__rows { list-style: none; margin: 0; padding: 0; }
-.lasso-personroles__row { display: grid; grid-template-columns: 240px minmax(0, 1fr); column-gap: var(--lasso-space-4); align-items: center; min-height: 56px; padding: 8px 0; border-bottom: 1px solid var(--lasso-divider-subtle); }
+.lasso-personroles__row { display: grid; grid-template-columns: 200px minmax(0, 1fr); column-gap: var(--lasso-space-3); align-items: center; min-height: 56px; padding: 8px 0; border-bottom: 1px solid var(--lasso-divider-subtle); }
 .lasso-personroles__label { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
-.lasso-personroles__company { font-size: var(--lasso-fs); line-height: 18px; color: var(--lasso-text); overflow-wrap: anywhere; }
+/* Jakob 01.10: smallere navnekolonne; for lange navne afkortes med … (hele navnet i title). */
+.lasso-personroles__company { max-width: 100%; font-size: var(--lasso-fs); line-height: 18px; color: var(--lasso-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lasso-personroles__row.is-ended .lasso-personroles__company { color: var(--lasso-text-3); }
 .lasso-personroles__sub { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
 .lasso-personroles__track { position: relative; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -5579,7 +5580,7 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-personnet__label--short { display: inline; }
 }
 @container personnet (max-width: 720px) {
-  .lasso-personnet--bands .lasso-personroles__axis, .lasso-personnet--bands .lasso-personroles__row { grid-template-columns: 200px minmax(0, 1fr); }
+  .lasso-personnet--bands .lasso-personroles__axis, .lasso-personnet--bands .lasso-personroles__row { grid-template-columns: 168px minmax(0, 1fr); }
   .lasso-personnet--bands .lasso-personroles__tick.is-minor { display: none; }
 }
 
@@ -5924,3 +5925,12 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-root .lasso-fs--print .lasso-fs__tablet, .lasso-root .lasso-fs--print .lasso-fs__mobile, .lasso-root .lasso-fs--print .lasso-fs__sub-t { display: none; }
 .lasso-root .lasso-fs--print .lasso-fs__sub-m { display: inline; }
 .lasso-root .lasso-fs--print .lasso-fs__opinion { display: block; }
+/* Netværk på mobil (Jakob 01.10): uden grafik; de fælles selskaber som tekst under navnet. */
+.lasso-personnet__mcos { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-2); }
+.lasso-personnet__mcos .is-problem { color: var(--lasso-danger); }
+/* Jakob 01.10: navne i netværket afkortes med … i stedet for at skubbe kolonnen ud. */
+.lasso-personnet__who .lasso-personroles__label { overflow: hidden; }
+.lasso-root .lasso-personnet__who .lasso-personnet__bname { display: block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@container lasso (min-width: 561px) and (max-width: 1199px) {
+  .lasso-personroles__axis, .lasso-personroles__row { grid-template-columns: 176px minmax(0, 1fr); }
+}

@@ -43,7 +43,20 @@ function Unit({ unit }: { unit: string }) {
  * linjer uden ydre ramme; ingen sparkline, ingen branchelinje og "Ansatte 19 årsrapport 2025" i stedet for
  * "(regnskab)". På tablet (26f.1) bliver felterne selvstændige kort, på mobil 2×2 kort (26c.1).
  */
-export function KeyFigureCards({ financials, metrics, error, plain = false }: { financials?: FinancialsVM; metrics?: readonly Metric[]; error?: string; plain?: boolean }) {
+export function KeyFigureCards({
+  financials,
+  metrics,
+  error,
+  plain = false,
+  employeesNow,
+}: {
+  financials?: FinancialsVM;
+  metrics?: readonly Metric[];
+  error?: string;
+  plain?: boolean;
+  /** Jakob 01.10: ansatte fra firmaet (GET /{lassoId}, employees.count: CVR's månedstal fra e-indkomst). Går forud for regnskabets tal. */
+  employeesNow?: number;
+}) {
   if (!financials) {
     if (!error) {
       // 09.1/09.4: "Henter" er kortformede skeletter, 3 linjer pr. kort, i samme højde som et fyldt kort.
@@ -82,7 +95,8 @@ export function KeyFigureCards({ financials, metrics, error, plain = false }: { 
     return explicit && eff !== m && base.includes(eff) ? m : eff;
   });
   const unique = wanted.filter((m, i, a) => a.indexOf(m) === i);
-  const has = (m: Metric) => typeof last[METRIC_FIELD[m]] === "number";
+  const monthly = typeof employeesNow === "number";
+  const has = (m: Metric) => (m === "ansatte" && monthly) || typeof last[METRIC_FIELD[m]] === "number";
   const present = unique.filter(has);
   const ordered = explicit ? [...present, ...unique.filter((m) => !has(m))] : present;
   const chosen: Metric[] = (ordered.length > 0 ? ordered : unique.slice(0, 1)).slice(0, 5);
@@ -92,6 +106,18 @@ export function KeyFigureCards({ financials, metrics, error, plain = false }: { 
       {/* 26c.1: på mobil står titlen "Nøgletal ÅÅÅÅ" over de fire kort; på desktop er kortene selv overskriften. */}
       <h3 className="lasso-section__title lasso-kpis__title">Nøgletal {last.year}</h3>
       {chosen.map((m) => {
+        if (m === "ansatte" && monthly) {
+          // Firmaets månedstal (e-indkomst): ingen udvikling fra regnskabet, kilden står under tallet.
+          return (
+            <div className="lasso-kpi" key={m}>
+              <div className="lasso-kpi__label">Ansatte</div>
+              <div className="lasso-kpi__row">
+                <div className="lasso-kpi__value">{formatMetric("ansatte", employeesNow)}</div>
+              </div>
+              <div className="lasso-kpi__delta lasso-muted">Seneste måned, e-indkomst</div>
+            </div>
+          );
+        }
         const field = METRIC_FIELD[m];
         const value = last[field] as number | null | undefined;
         const before = prev?.[field] as number | null | undefined;

@@ -72,6 +72,18 @@ export const PERSON_PAGE_BUDGET = PAGE_HEIGHT_BUDGET;
 const OVERVIEW_ROLES = 5;
 const OVERVIEW_NETWORK = 3;
 const TAB_ROLES = 8;
+
+/**
+ * Erhvervsresumé om personen (Jakob 01.10): Lasso har et resumé, men endpointet er ikke fundet endnu, så
+ * overblikket viser denne pladsholdertekst (Jakobs eksempel), til det kobles på.
+ */
+export const PERSON_RESUME_PLACEHOLDER = `Jakob Bech Benediktson er registreret med sin første erhvervsrolle i et anpartsselskab i 2004, hvor han i december tiltrådte i direktionen for ALFAPEOPLE ApS, som er stiftet d. 13.12.2004. Jakob blev registreret som direktør sammen med Christian Weis Højfeldt, og han havde posten indtil d. 11.05.2010. Pr. dags dato beskæftiger firmaet 50 ansatte - med Mette Christina Heinrichson i spidsen som administrerende direktør. Inden da startede Jakob enkeltmandsvirksomheden Benediktson Group v/Jakob Bech Benediktson, der er stiftet i 2003, men er lukket i dag.
+
+Jakob er registreret som ejer af 4 virksomheder, hvoraf 1 af disse er ejet direkte. Han ejer 100 % af selskabet BENEDIKTSON HOLDING ApS, hvorigennem han er registreret som ejer af 3 andre firmaer. Et af firmaerne er Lix Studios ApS, som han ejer 100 % af. Firmaet præsenterede ved seneste regnskab (2025) et resultat på -7.420 DKK og har en egenkapital på -246.499 DKK
+
+Jakob har siddet i bestyrelse eller direktion for i alt 13 forskellige firmaer. Hans første bestyrelsespost var i ALFAPEOPLE GROUP NORDIC ApS, hvor han sad i næsten 2 år fra 2008. I dag har Jakob i alt 4 bestyrelses- eller direktionsposter - herunder i bestyrelsen for LASSO X A/S.
+
+Jakob har siden 2004 opbygget et netværk på 26 personer, som han har siddet i bestyrelse og direktion sammen med. Netværket er primært gennem hans direktionsposter - i alt 22 af hans relationer er via direktioner, han har siddet i. Jakob har flest relationer til Christian Weis Højfeldt - i alt har de sammen været involveret i 4 firmaer, men er på nuværende tidspunkt ikke aktive sammen i nogen firmaer. Et af hans og Christian Weis Højfeldts primære firmaer er ALFAPEOPLE NORDIC A/S, hvor han i perioden fra december 2004 til maj 2010 har siddet som direktør samtidig med, at Christian Weis Højfeldt var bestyrelsesmedlem og direktør. Herudover har Jakob haft den længste vedvarende relation til Jeppe Andreas Bech Madsen, bl.a. gennem deres første relation i LASSO X A/S, hvor de arbejdede sammen i lidt over 14 år fra 2012.`;
 const TAB_NETWORK = 8;
 const NEWS = 5;
 
@@ -458,6 +470,8 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
       // fanerne Historik og Ejerskab. Ingen nyheder på overblikket (de står på historik).
       const halves: ViewComponent[] = [];
       if (network.length > 0) halves.push({ type: "LassoPersonNetwork", person: id, limit: OVERVIEW_NETWORK, more: "netvaerk" });
+      // Erhvervsresuméet (pladsholder, til endpointet er fundet) efter netværket.
+      if (hasRoles) halves.push({ type: "LassoSummary", title: "Erhvervsresumé", text: PERSON_RESUME_PLACEHOLDER, source: "Lasso" });
       pair(halves);
       // Overblikket har intet svar-element ud over hovedet og hovedelementet: de halve kan udelades.
       droppable = true;

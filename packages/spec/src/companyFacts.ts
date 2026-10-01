@@ -45,6 +45,8 @@ export const COMPANY_FACT_KEYS = [
   "formaal",
   "tegningsregel",
   "brancher",
+  // Jakob 01.10: værdiansættelse. Lassos API har ingen kilde endnu (/modules/valuations svarer tomt), så rækken siger "Mangler".
+  "valuation",
 ] as const;
 export type CompanyFactKey = (typeof COMPANY_FACT_KEYS)[number];
 
@@ -165,6 +167,7 @@ export function companyFacts(company: CompanyVM, ownership: OwnershipVM | undefi
     firmanavn: { key: "firmanavn", label: "Firmanavn", value: company.name },
     // Portalens liste (Jakob 30.09): alle brancher, én pr. linje.
     brancher: { key: "brancher", label: "Branche", value: industries.length ? industries.join("\n") : undefined },
+    valuation: { key: "valuation", label: "Valuation", value: "Mangler" },
   };
   const hidden = new Set<CompanyFactKey>([...(options.hideIdentity ? IDENTITY : []), ...(options.hideContact ? CONTACT : []), ...(options.hideAuditor ? AUDITOR : [])]);
   let order = [...(options.rows ?? COMPANY_FACT_ORDER)];
