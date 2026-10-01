@@ -1148,6 +1148,7 @@ export function adaptTimeline(lassoId: string, companyRaw: Json, people: readonl
   const events: TimelineEventVM[] = [];
   const founded = dateStr(companyRaw, "lifeTime.from", "creationDate", "founded", "foundedDate");
   const name = str(companyRaw, "name", "companyName", "navn");
+  const cvr = str(companyRaw, "cvr", "cvrNumber", "vat", "vatNumber") ?? (/^CVR-1-(\d{8})$/.exec(lassoId)?.[1]);
   if (founded) events.push({ date: founded, title: "Virksomheden stiftet", detail: name, category: "Stamdata" });
   for (const p of people) {
     // 12.3 (Jakob 01.10): navnet kan åbnes, når personen har et Lasso-ID.
@@ -1162,7 +1163,9 @@ export function adaptTimeline(lassoId: string, companyRaw: Json, people: readonl
       y.grossProfit != null ? `Bruttofortjeneste ${formatAmountShort(y.grossProfit, y.currency)}` : null,
       y.profit != null ? `resultat ${formatAmountShort(y.profit, y.currency)}` : null,
     ].filter((x): x is string => Boolean(x));
-    events.push({ date, title: `Årsrapport ${y.year} offentliggjort`, detail: parts.join(", ") || undefined, category: "Regnskab", ...(y.pdfUrl ? { url: y.pdfUrl } : {}) });
+    // Jakob 01.10: årsrapporten kan altid åbnes; uden PDF-link fra Lasso åbner virksomhedens side på Virk (regnskaberne).
+    const url = y.pdfUrl ?? (cvr ? `https://datacvr.virk.dk/enhed/virksomhed/${cvr}` : undefined);
+    events.push({ date, title: `Årsrapport ${y.year} offentliggjort`, detail: parts.join(", ") || undefined, category: "Regnskab", ...(url ? { url } : {}) });
   }
   events.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   return { lassoId, events };

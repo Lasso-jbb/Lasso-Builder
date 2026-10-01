@@ -925,7 +925,7 @@ En test fejler, hvis filen ikke er ajour.
 
 **Bredde.** profil fleksibel; std ½, min ¼, maks ⅔; drivere: længste etiket 45 tegn, 6 serier side om side
 
-**Props.** `companies[] (2–10, første fremhæves), metric (omsaetning | bruttofortjeneste | resultat | egenkapital | ansatte | ebitda | balancesum | gaeld | soliditetsgrad | overskudsgrad | likviditetsgrad), order? (desc | asc; asc når spørgsmålet er lavest/mindst), title?`
+**Props.** `companies[] (2–10, første fremhæves), metric (omsaetning | bruttofortjeneste | resultat | egenkapital | ansatte | ebitda | balancesum | gaeld | soliditetsgrad | overskudsgrad | likviditetsgrad), order? (desc | asc; asc når spørgsmålet er lavest/mindst), top? (3–10, standard 5), title?`
 
 <a id="LassoCompanyTable"></a>
 ## Virksomhedstabel, søgning (`LassoCompanyTable`)

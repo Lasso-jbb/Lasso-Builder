@@ -108,25 +108,12 @@ function ObservationRow({ o, lassoId, onAction }: { o: ObservationRowVM; lassoId
   const word = o.notAvailable ? "Ikke tilgængelig" : o.severity === 0 ? "-" : severityWord(o.severity);
   const section = o.source ? SECTION_FOR_SOURCE[o.source.toLowerCase()] : undefined;
   const cls = `lasso-obsrow lasso-obsrow--${o.notAvailable ? "na" : o.severity}${compact ? " lasso-obsrow--compact" : ""}`;
-  if (compact) {
-    return (
-      <li className={cls}>
-        <span className="lasso-obsrow__icon">{o.notAvailable ? <span className="lasso-sev-dot" aria-hidden="true" /> : <SeverityIcon severity={o.severity} />}</span>
-        <span className="lasso-obsrow__word">
-          {o.severity === 0 && !o.notAvailable ? <span aria-hidden="true">-</span> : word}
-          {o.severity === 0 && !o.notAvailable ? <span className="lasso-sr">Neutral</span> : null}
-        </span>
-        <span className="lasso-obsrow__title">{o.title}</span>
-        <span className="lasso-obsrow__date">{[o.source, o.date ? formatDate(o.date) : null].filter(Boolean).join(", ")}</span>
-      </li>
-    );
-  }
+  // 39 (Jakob 01.10): info og "ikke tilgængelig" har samme opbygning som de andre (ikon, ord, titel, kilde og dato),
+  // bare mindre; ingen kolonner, der klemmes i en smal bredde.
   const meta = [o.source, o.date ? formatDate(o.date) : null].filter(Boolean).join(", ");
   return (
     <li className={cls}>
-      <span className="lasso-obsrow__icon">
-        <SeverityIcon severity={o.severity} />
-      </span>
+      <span className="lasso-obsrow__icon">{o.notAvailable ? <span className="lasso-sev-dot" aria-hidden="true" /> : <SeverityIcon severity={o.severity} />}</span>
       <span className="lasso-obsrow__body">
         <span className="lasso-obsrow__word">{word}</span>
         <span className="lasso-obsrow__title">{o.title}</span>
@@ -149,16 +136,6 @@ function ObservationRow({ o, lassoId, onAction }: { o: ObservationRowVM; lassoId
   );
 }
 
-/** Alvorsbjælken i sammenfatningen: ét segment pr. observation i alvorens farve. */
-function SeverityBar({ rows }: { rows: readonly ObservationRowVM[] }) {
-  return (
-    <span className="lasso-obs-summary__bar" aria-hidden="true">
-      {rows.map((r) => (
-        <span key={r.id} className={`lasso-obs-summary__seg lasso-obs-summary__seg--${r.severity}`} />
-      ))}
-    </span>
-  );
-}
 
 /** De tre årsager til, at der ikke er observationer at vise (17.3). */
 export type RiskUnavailableReason = "none" | "cannot" | "package";
@@ -288,16 +265,25 @@ export function RiskObservations({ data, error, title, compact = false, demo = f
       action={<span className="lasso-obs__count lasso-obs__mob">{`${findings.length}${demo ? ", eksempeldata" : ""}`}</span>}
     >
       <div className="lasso-obs__desk">
+        {/* 39 (Jakob 01.10): overblikket som tre tal med alvorens ikon og ord (vigtig, mulig vigtig, info) og
+            datoen for seneste observation under; ingen farvebjælke. Kun observationer med udslag tælles. */}
         <div className="lasso-obs-summary">
-          <div className="lasso-obs-summary__text">
-            <p className="lasso-obs-summary__head">{observationHeadline(rows)}</p>
-            <p className="lasso-obs-summary__sub">
-              {/* Jakob runde 6: ingen kildevisning, derfor ikke "baseret på CVR og regnskab". */}
-              {latest ? `Seneste observation ${formatDate(latest)}` : null}
-              {demo ? ", eksempeldata" : ""}
-            </p>
-          </div>
-          <SeverityBar rows={rows.filter((r) => !r.notAvailable)} />
+          <ul className="lasso-obs-summary__counts">
+            {FILTERS.map((f) => {
+              const n = deskRows.filter((r) => !r.notAvailable && r.severity === f.severity).length;
+              return (
+                <li key={f.severity} className={`lasso-obs-summary__count${n ? "" : " is-zero"}`}>
+                  <SeverityIcon severity={f.severity} />
+                  <span className="lasso-obs-summary__n">{n}</span>
+                  <span className="lasso-obs-summary__word">{severityWord(f.severity)}</span>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="lasso-obs-summary__sub">
+            {latest ? `Seneste observation ${formatDate(latest)}` : null}
+            {demo ? ", eksempeldata" : ""}
+          </p>
         </div>
         <ul className="lasso-obsrows">
           {deskVisible.map((o) => (

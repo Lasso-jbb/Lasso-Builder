@@ -1178,6 +1178,8 @@ export interface PublicationVM {
   corrected?: boolean;
   /** Hovedtallet (bruttofortjeneste/omsætning) og dets tidligere værdi ved korrektion. */
   figure?: { label: string; value: number | null; previous?: number | null };
+  /** Årsrapporten som PDF (kun http/https): "Årsrapport ÅÅÅÅ" er et download-link (Jakob 01.10). */
+  url?: string;
 }
 
 /** Katalog 28.2/28.6/28.8: begivenheder for én virksomhed ud over CVR-tidslinjen. */

@@ -89,15 +89,12 @@ export function cellText(r: CompanyRowVM, c: TableColumn): string {
 }
 
 
-/** De tre nøgletal på mobilkortet (26c): tabellens tal-kolonner i rækkefølge, fyldt op med standard. */
+/**
+ * Nøgletallene på mobilkortet (Jakob 01.10): de samme tal-kolonner som tabellen, i tabellens rækkefølge
+ * (højst fire), så kort og tabel viser det samme. Ingen udvikling/tendens og ingen score, medmindre tabellen har den.
+ */
 export function cardFigures(cols: readonly TableColumn[]): TableColumn[] {
-  const numeric = cols.filter((c) => NUMERIC.has(c) && c !== "udvikling" && c !== "score");
-  const fill: TableColumn[] = ["bruttofortjeneste", "resultat", "ansatte", "omsaetning"];
-  const out = [...numeric];
-  for (const f of fill) if (out.length < 3 && !out.includes(f)) out.push(f);
-  // 26c.7: fast rækkefølge Bruttofortj., Resultat, Ansatte (omsætning sidst), så kortene ligner hinanden.
-  const rank = (c: TableColumn) => (fill.indexOf(c) === -1 ? 99 : fill.indexOf(c));
-  return out.slice(0, 3).sort((a, b) => rank(a) - rank(b));
+  return cols.filter((c) => NUMERIC.has(c) && c !== "udvikling").slice(0, 4);
 }
 
 const OP_SYMBOL: Partial<Record<Criterion["operator"], string>> = { gte: "≥", lte: "≤", gt: ">", lt: "<" };
@@ -677,10 +674,6 @@ function CompanyCard({ r, figures, selected, onOpen, onToggle }: { r: CompanyRow
             <dd>{figureValue(r, c)}</dd>
           </div>
         ))}
-        <div>
-          <dt>Score</dt>
-          <dd>{typeof r.score === "number" ? formatNumber(r.score) : <span className="lasso-notreported">-</span>}</dd>
-        </div>
       </dl>
     </li>
   );

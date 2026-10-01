@@ -1058,7 +1058,7 @@ export class DemoProvider implements DataProvider {
   async companyEvents(lassoId: string): Promise<CompanyEventsVM> {
     const c = get(lassoId);
     const years = financialsFor(c).years;
-    const publications = publicationsFromYears(years.map((y) => ({ ...y, published: y.published ?? (y.periodEnd ? `${Number(y.periodEnd.slice(0, 4)) + 1}-05-28` : undefined) })));
+    const publications = publicationsFromYears(years.map((y) => ({ ...y, pdfUrl: `https://regnskaber.virk.dk/eksempel/${c.cvr}-${y.year}.pdf`, published: y.published ?? (y.periodEnd ? `${Number(y.periodEnd.slice(0, 4)) + 1}-05-28` : undefined) })));
     if (c.cvr === "99000001" && publications[1]?.figure) {
       // Eksempel på et korrigeret regnskab: den tidligere værdi står som "før …".
       publications[1] = { ...publications[1], corrected: true, published: publications[1].published?.replace(/-05-28$/, "-08-14"), figure: { ...publications[1].figure, previous: Math.round((publications[1].figure.value ?? 0) * 1.08) }, profit: publications[1].profit ? { ...publications[1].profit, previous: Math.round((publications[1].profit.value ?? 0) * 1.12) } : undefined };

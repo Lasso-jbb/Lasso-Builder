@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { formatDate, formatNumber, type PersonSearchResultVM, type PersonTableRowVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { Section, stateForError } from "../primitives.js";
-import { Menu } from "./Menu.js";
 import { BulkBar, Checkbox, Pagination, TableSearch, TableStateRows, TableToolbar, type TableState } from "./TableKit.js";
 
 const PAGE_SIZE = 25;
@@ -38,15 +37,6 @@ export function personSub(r: Pick<PersonTableRowVM, "birthYear" | "city">): stri
   return [r.birthYear ? `Født ${r.birthYear}` : null, r.city].filter(Boolean).join(", ");
 }
 
-function DotsIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <circle cx="5.5" cy="12" r="1.6" />
-      <circle cx="12" cy="12" r="1.6" />
-      <circle cx="18.5" cy="12" r="1.6" />
-    </svg>
-  );
-}
 
 /**
  * Persontabel (katalog 15.3): samme tabel som virksomhedstabellen med andre kolonner:
@@ -172,14 +162,11 @@ export function PersonTable({
                 <th scope="col" className="lasso-num">
                   Seneste ændring
                 </th>
-                <th scope="col" className="lasso-cell--menu">
-                  <span className="lasso-sr">Handlinger</span>
-                </th>
               </tr>
             </thead>
             <tbody>
               {state ? (
-                <TableStateRows state={state} colSpan={7} />
+                <TableStateRows state={state} colSpan={6} />
               ) : (
                 pageRows.map((r) => {
                   const on = selected.has(r.lassoId);
@@ -206,19 +193,6 @@ export function PersonTable({
                       <td className="lasso-num">{typeof r.companies === "number" ? formatNumber(r.companies) : <span className="lasso-notreported">-</span>}</td>
                       <td className="lasso-num">{r.bankruptcies > 0 ? <span className="lasso-ptable__bankrupt">{formatNumber(r.bankruptcies)}</span> : <span className="lasso-notreported">-</span>}</td>
                       <td className="lasso-num">{r.lastChange ? formatDate(r.lastChange) : <span className="lasso-notreported">-</span>}</td>
-                      <td className="lasso-cell--menu" onClick={(e) => e.stopPropagation()}>
-                        <Menu
-                          trigger={<DotsIcon />}
-                          triggerClassName="lasso-iconbtn lasso-rowmenu"
-                          triggerLabel={`Handlinger for ${r.name}`}
-                          align="end"
-                          label={r.name}
-                          items={[
-                            ...(canDrillDown ? [{ id: "open", label: "Åbn person", onSelect: () => onAction({ kind: "open-person", lassoId: r.lassoId, name: r.name }) }] : []),
-                            { id: "remove", label: "Fjern fra liste", destructive: true, onSelect: () => hide([r.lassoId]) },
-                          ]}
-                        />
-                      </td>
                     </tr>
                   );
                 })

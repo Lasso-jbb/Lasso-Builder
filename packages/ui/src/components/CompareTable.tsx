@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useWidth } from "../useWidth.js";
 import { amountScale, currencyUnit, formatAmount, formatNumber, formatPercent, formatScaled, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, changePercent, type Dataset, type Metric } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section } from "../primitives.js";
@@ -8,8 +9,11 @@ const BEST_IS_HIGHEST: ReadonlySet<Metric> = new Set(["omsaetning", "bruttofortj
 
 const SHORT: Partial<Record<Metric, string>> = { bruttofortjeneste: "Bruttofortj.", resultat: "Resultat", soliditetsgrad: "Soliditet" };
 
-/** 22.1 (Jakob 01.10): man kan højst sammenligne 3 virksomheder. */
+/** 22.1 (Jakob 01.10): man kan højst sammenligne 3 virksomheder; i den helt brede form (fuld bredde) 4. */
 export const COMPARE_MAX_COLUMNS = 3;
+export const COMPARE_MAX_WIDE = 4;
+/** Fra denne bredde er sammenligningen "helt bred" og rummer 4. */
+const WIDE_FROM = 1000;
 /** 22.1: de mest anvendte nøgletal, man selv kan føje til sammenligningen (i denne rækkefølge). */
 export const COMPARE_EXTRA_METRICS: readonly Metric[] = ["omsaetning", "bruttofortjeneste", "resultat", "egenkapital", "ansatte", "soliditetsgrad", "overskudsgrad", "likviditetsgrad", "ebitda", "balancesum", "gaeld"];
 /** Brugerens tilvalgte nøgletal huskes i browseren (pr. bruger, ikke pr. visning). */
@@ -40,10 +44,10 @@ function writeExtra(list: readonly Metric[]): void {
  * kunne ikke hentes for virksomheden) eller "Ikke oplyst" (regnskabet har ikke tallet).
  * Tom kolonne med stiplet kant er "tilføj"-slot, "+ Tilføj (op til 3)" i koral (forsvinder ved 3).
  * Hovedrækken står på panel-flade; negative tal i rødt.
- * Tablet (26f.5): titel + "Tilføj"/"Nøgletal" i hovedet, fast nøgletalskolonne "Nøgletal, t. kr." og
+ * Tablet (26f.5): titel + "Tilføj" i hovedet, fast nøgletalskolonne "Nøgletal, t. kr." og
  * emnevirksomheden i koral-soft hoved med "Emne"; alle tal i t. kr.; 4+ virksomheder ruller.
  * Mobil (26e.7, mønster 5): udgangsvirksomheden og én anden ad gangen; swipe eller prikkerne vælger
- * næste par; "+ Tilføj virksomhed" og "Vælg nøgletal" under tabellen.
+ * næste par; "+ Tilføj virksomhed" under tabellen (nøgletal vælges i dropdownen, Jakob 01.10).
  */
 export function CompareTable({
   companies: allCompanies,
@@ -65,8 +69,10 @@ export function CompareTable({
 }) {
   const [pair, setPair] = useState(0);
   const swipe = useRef<number | null>(null);
-  // 22.1: højst 3 virksomheder; tilvalgte nøgletal (dropdown under rækkerne) huskes i browseren.
-  const companies = allCompanies.slice(0, COMPARE_MAX_COLUMNS);
+  const [wref, W] = useWidth<HTMLDivElement>(900);
+  // 22.1/34: højst 3 virksomheder (4 i fuld bredde); tilvalgte nøgletal (dropdown under rækkerne) huskes i browseren.
+  const maxCols = W >= WIDE_FROM ? COMPARE_MAX_WIDE : COMPARE_MAX_COLUMNS;
+  const companies = allCompanies.slice(0, maxCols);
   const [extra, setExtra] = useState<Metric[]>([]);
   useEffect(() => setExtra(readExtra()), []);
   const setExtraAndSave = (list: Metric[]) => {
@@ -106,7 +112,9 @@ export function CompareTable({
   const pairs = Math.max(1, cols.length - 1);
   const shownPair = Math.min(pair, pairs - 1);
   const off = (i: number) => (cols.length > 2 && i !== 0 && i !== shownPair + 1 ? "is-offpair" : "");
-  const slot = canAdd && cols.length < COMPARE_MAX_COLUMNS;
+  // 34 (Jakob 01.10): de tomme pladser står som stiplede kolonner, så man ser, hvor man er, og kan tilføje.
+  const slots = canAdd ? Math.max(0, maxCols - cols.length) : 0;
+  const slot = slots > 0;
   const missing = (i: number) => <span className="lasso-notreported">{cols[i]!.fetched ? "Ikke oplyst" : "Ikke hentet"}</span>;
   const firstAmount = metrics.find((m) => METRIC_KIND[m] === "amount");
   // 22.1: højeste vækst er entydigt bedst og står i vægt 600 som de andre rækker.
@@ -114,7 +122,6 @@ export function CompareTable({
   const growthPresent = growth.filter((v): v is number => v !== null);
   const bestGrowth = growthPresent.length > 1 ? Math.max(...growthPresent) : null;
   const addPrompt = () => onAction({ kind: "prompt", prompt: `Tilføj en virksomhed til sammenligningen af ${cols.map((c) => c.name).join(", ")}.` });
-  const metricPrompt = () => onAction({ kind: "prompt", prompt: `Vælg andre nøgletal til sammenligningen af ${cols.map((c) => c.name).join(", ")}.` });
   const unitAll = cols.find((c) => c.last)?.unit ?? "kr.";
   const thousands = { divisor: 1_000, label: `t. ${unitAll}` };
   const subtitle = `${formatNumber(cols.length)} virksomheder${year ? `, ${year}` : ""}`;
@@ -128,14 +135,12 @@ export function CompareTable({
       action={
         canAdd ? (
           <span className="lasso-compare__tools">
+            {/* Jakob 01.10: nøgletal vælges i dropdownen under rækkerne; her kun "+ Tilføj". */}
             {slot ? (
               <button type="button" className="lasso-btn lasso-btn--sm" onClick={addPrompt}>
                 + Tilføj
               </button>
             ) : null}
-            <button type="button" className="lasso-btn lasso-btn--sm" onClick={metricPrompt}>
-              Nøgletal
-            </button>
           </span>
         ) : undefined
       }
@@ -149,7 +154,7 @@ export function CompareTable({
         </div>
       ) : null}
       {/* 26f.5: fra 4 virksomheder ruller kolonnerne vandret bag en 28 px fade; udgangsvirksomheden står fast. */}
-      <div className={`lasso-table-frame${cols.length >= 4 ? " lasso-compare-frame--many" : ""}`}>
+      <div ref={wref} className={`lasso-table-frame${cols.length >= 4 ? " lasso-compare-frame--many" : ""}`}>
         <div
           className="lasso-table-wrap"
           onTouchStart={(e) => (swipe.current = e.touches[0]?.clientX ?? null)}
@@ -186,13 +191,13 @@ export function CompareTable({
                     {i === 0 ? <div className="lasso-compare__sub lasso-compare__v-m">{thousands.label}</div> : null}
                   </th>
                 ))}
-                {slot ? (
-                  <th scope="col" className="lasso-compare__slot">
+                {Array.from({ length: slots }, (_, k) => (
+                  <th key={`slot-${k}`} scope="col" className="lasso-compare__slot">
                     <button type="button" className="lasso-compare__add" onClick={addPrompt}>
-                      + Tilføj (op til {COMPARE_MAX_COLUMNS})
+                      + Tilføj virksomhed
                     </button>
                   </th>
-                ) : null}
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -237,7 +242,7 @@ export function CompareTable({
                         )}
                       </td>
                     ))}
-                    {slot ? <td className="lasso-compare__slot" aria-hidden="true" /> : null}
+                    {Array.from({ length: slots }, (_, k) => <td key={`slot-${k}`} className="lasso-compare__slot" aria-hidden="true" />)}
                   </tr>
                 );
               })}
@@ -255,13 +260,13 @@ export function CompareTable({
                       </td>
                     );
                   })}
-                  {slot ? <td className="lasso-compare__slot" aria-hidden="true" /> : null}
+                  {Array.from({ length: slots }, (_, k) => <td key={`slot-${k}`} className="lasso-compare__slot" aria-hidden="true" />)}
                 </tr>
               ) : null}
               {addable.length ? (
                 // 22.1 (Jakob 01.10): tilføj et af de mest anvendte nøgletal som række; valget huskes i browseren.
                 <tr className="lasso-compare__addrow">
-                  <th scope="row" colSpan={cols.length + 1 + (slot ? 1 : 0)}>
+                  <th scope="row" colSpan={cols.length + 1 + slots}>
                     <label className="lasso-compare__addmetric">
                       <span className="lasso-sr">Tilføj nøgletal</span>
                       <select
@@ -287,15 +292,10 @@ export function CompareTable({
           </table>
         </div>
       </div>
-      {canAdd ? (
+      {canAdd && slot ? (
         <div className="lasso-compare__mactions">
-          {slot ? (
-            <button type="button" className="lasso-btn" onClick={addPrompt}>
-              + Tilføj virksomhed
-            </button>
-          ) : null}
-          <button type="button" className="lasso-btn" onClick={metricPrompt}>
-            Vælg nøgletal
+          <button type="button" className="lasso-btn" onClick={addPrompt}>
+            + Tilføj virksomhed
           </button>
         </div>
       ) : null}

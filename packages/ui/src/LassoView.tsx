@@ -324,6 +324,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           rows={c.companies.map((id) => ({ lassoId: id, company: empty.companies[id], financials: empty.financials[id], error: err(`financials:${id}`) }))}
           metric={c.metric}
           order={c.order}
+          top={c.top}
           title={c.title}
         />
       );
@@ -489,9 +490,9 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
     case "LassoCompanyHistory":
       return <CompanyHistory key={key} history={empty.companyHistories?.[c.company]} fields={c.fields} limit={c.limit} title={c.title} error={err(`companyHistory:${c.company}`)} />;
     case "LassoAnnouncements":
-      return <Announcements key={key} events={empty.companyEvents?.[c.company]} company={empty.companies[c.company]} demo={empty.source === "demo"} title={c.title} error={err(`companyEvents:${c.company}`)} />;
+      return <Announcements key={key} events={empty.companyEvents?.[c.company]} company={empty.companies[c.company]} demo={empty.source === "demo"} title={c.title} error={err(`companyEvents:${c.company}`)} onLink={(url) => act({ kind: "open-link", url })} />;
     case "LassoPublications":
-      return <Publications key={key} events={empty.companyEvents?.[c.company]} title={c.title} limit={c.limit} error={err(`companyEvents:${c.company}`)} />;
+      return <Publications key={key} events={empty.companyEvents?.[c.company]} title={c.title} limit={c.limit} error={err(`companyEvents:${c.company}`)} onLink={(url) => act({ kind: "open-link", url })} />;
     case "LassoFinancialStatements":
       return <FinancialStatements key={key} statements={empty.financialStatements[c.company]} company={empty.companies[c.company]} statement={c.statement} years={c.years} year={c.year} title={c.title} error={err(`financialStatements:${c.company}`)} onAction={act} canPrint={Boolean(props.host.pdf)} />;
     case "LassoScoreGauge":

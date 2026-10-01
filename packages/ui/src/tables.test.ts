@@ -50,9 +50,9 @@ test("Virksomhedstabel (15.1): værktøjslinje, afkrydsning, 25 rækker og pagin
   assert.match(html, /lasso-status--inactive">Ophørt/);
   assert.match(html, /Ikke oplyst/);
   assert.match(html, /type="checkbox"[^>]*aria-label="Markér alle på siden"/);
-  // Mobilkort: navn og by (intet CVR, Jakob 01.10), tre nøgletal og score
+  // Mobilkort: navn og by (intet CVR, Jakob 01.10) og de samme tal som tabellen (ingen score uden scorekolonne)
   assert.match(html, /lasso-ccard__sub">Aarhus C</);
-  assert.match(html, /<dt>Score<\/dt><dd>42<\/dd>/);
+  assert.doesNotMatch(html, /<dt>Score<\/dt>/);
   // Sortering fra spec'en: aktiv kolonne med chevron
   const sorted = renderToStaticMarkup(createElement(CompanyTable, { result, columns: ["navn", "bruttofortjeneste"], initialSort: { field: "bruttofortjeneste", direction: "desc" }, onAction: noop, canDrillDown: false, onSaveList: noop }));
   assert.match(sorted, /class="lasso-num is-sorted"[^>]*aria-sort="descending"[^]*lasso-sortchev/);
@@ -96,7 +96,8 @@ test("Paginering: første, sidste og siderne omkring den aktive", () => {
 test("Hjælpere: statustone, mobilkortets tal og CSV", () => {
   assert.equal(statusTone("Under likvidation", "warning"), "liquidation");
   assert.equal(statusTone("Aktiv", "active"), "active");
-  assert.deepEqual(cardFigures(["navn", "omsaetning", "udvikling"]), ["bruttofortjeneste", "resultat", "omsaetning"]);
+  // Jakob 01.10: kortet viser tabellens tal-kolonner (uden udvikling), intet fyld.
+  assert.deepEqual(cardFigures(["navn", "omsaetning", "udvikling", "ansatte"]), ["omsaetning", "ansatte"]);
   const csv = rowsToCsv(rows.slice(0, 1), ["navn", "cvr", "udvikling"]);
   assert.equal(csv.split("\r\n")[0], "﻿Lasso-ID;Navn;CVR");
 });
@@ -131,7 +132,8 @@ test("Persontabel (15.3): navn alene, 2 rolleord + +n, selskaber, konkurser kun 
   assert.match(html, /lasso-ptable__bankrupt">1</);
   assert.match(html, />Roller, aktive<[^]*>Selskaber<[^]*>Konkurser<[^]*>Seneste ændring</);
   assert.match(html, /Direktør, bestyrelsesmedlem<span class="lasso-ptable__more"> \+1</);
-  assert.match(html, /lasso-rowmenu/);
+  // Jakob 01.10: ingen "…"-menu pr. række (det var uklart, hvad den skulle bruges til); rækken åbner personen.
+  assert.doesNotMatch(html, /lasso-rowmenu/);
   assert.match(html, /Ingen aktive roller/);
   assert.match(html, /Viser 1–2 af 2 personer/);
   assert.doesNotMatch(html, /lasso-avatar|initial/);

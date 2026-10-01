@@ -82,6 +82,7 @@ export function publicationsFromYears(years: readonly FinancialYear[]): Publicat
         kind: "Årsrapport",
         figure: { label: revenue ? "Omsætning" : "Bruttofortjeneste", value: (revenue ? y.revenue : y.grossProfit) ?? null },
         ...(y.profit != null ? { profit: { value: y.profit } } : {}),
+        ...(y.pdfUrl ? { url: y.pdfUrl } : {}),
       };
     })
     .sort((a, b) => (b.published ?? b.periodEnd ?? "").localeCompare(a.published ?? a.periodEnd ?? ""));

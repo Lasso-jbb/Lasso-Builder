@@ -110,7 +110,8 @@ export const TABLE_COLUMN_LABELS: Record<TableColumn, string> = {
   score: "Score",
 };
 
-export const DEFAULT_TABLE_COLUMNS: readonly TableColumn[] = ["navn", "by", "branche", "ansatte", "bruttofortjeneste", "udvikling"];
+/** Jakob 01.10: ingen udvikling/tendens som standard (kan vælges som kolonne). */
+export const DEFAULT_TABLE_COLUMNS: readonly TableColumn[] = ["navn", "by", "branche", "ansatte", "bruttofortjeneste", "resultat"];
 
 export const SORT_FIELDS = ["relevans", "navn", "ansatte", "omsaetning", "bruttofortjeneste", "resultat"] as const;
 
@@ -302,6 +303,7 @@ export const rankingSchema = z.object({
   companies: z.array(companyRef).min(2).max(10).describe("Første virksomhed er den, der fremhæves i koral."),
   metric: metric.default("bruttofortjeneste"),
   order: z.enum(["desc", "asc"]).default("desc").describe("'desc' (standard): højeste værdi først. 'asc': laveste først, til 'hvem har lavest/mindst/færrest'. Den første i den viste rækkefølge fremhæves."),
+  top: z.number().int().min(3).max(10).optional().describe("Antal pladser i ranglisten (3–10, standard 5). Står den fremhævede virksomhed længere nede, vises den i midten med naboen over og under."),
   title: z.string().max(80).optional(),
 });
 

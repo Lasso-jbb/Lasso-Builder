@@ -17,7 +17,7 @@ export interface RankingRow {
 /** 13.3: så mange står i ranglisten. */
 const TOP = 5;
 
-export function Ranking({ rows, metric, title, order = "desc" }: { rows: RankingRow[]; metric: Metric; title?: string; order?: "desc" | "asc" }) {
+export function Ranking({ rows, metric, title, order = "desc", top = TOP }: { rows: RankingRow[]; metric: Metric; title?: string; order?: "desc" | "asc"; /** Antal pladser (3–10, standard 5). */ top?: number }) {
   const heading = title ?? `${METRIC_LABELS[metric]} blandt lignende`;
   const originId = rows[0]?.lassoId;
   const errors = rows.filter((r) => r.error && !r.financials);
@@ -54,15 +54,28 @@ export function Ranking({ rows, metric, title, order = "desc" }: { rows: Ranking
   const scale = kind === "amount" && !mixed ? amountScale(values, [...units][0] ?? "kr.") : null;
   const label = (v: number, unit?: string) => (kind === "percent" ? formatPercent(v, false) : scale ? formatScaled(v, scale) : mixed ? formatAmount(v, unit ?? "") : formatNumber(v));
   const maxAbs = Math.max(...values.map((v) => Math.abs(v)), 1);
-  // 13.3 (Jakob 01.10): top 5. Står virksomheden selv længere nede, vises den under top 5 med sin plads.
+  // 13.3/35 (Jakob 01.10): top N (standard 5, op til 10). Står virksomheden selv længere nede, vises den i
+  // midten med naboen over og under (fx 1, 2, …, 6, 7, 8), så man kan se, hvor den ligger.
   const originAt = entries.findIndex((e) => e.lassoId === originId);
-  const shown = entries.map((e, i) => ({ ...e, rank: i + 1 })).filter((_, i) => i < TOP || (order !== "asc" && i === originAt));
-  const subtitle = `${scale ? `${scale.label}, ` : ""}${mixed ? "forskellige valutaer, ikke direkte sammenlignelige, " : ""}top ${Math.min(TOP, entries.length)}`;
+  const ranked = entries.map((e, i) => ({ ...e, rank: i + 1 }));
+  const n = Math.min(top, entries.length);
+  const middle = order !== "asc" && originAt >= n;
+  const shown: ((typeof ranked)[number] | "gap")[] = middle
+    ? [...ranked.slice(0, Math.max(1, n - 3)), "gap", ...ranked.slice(originAt - 1, originAt + 2)]
+    : ranked.slice(0, n);
+  const subtitle = `${scale ? `${scale.label}, ` : ""}${mixed ? "forskellige valutaer, ikke direkte sammenlignelige, " : ""}${middle ? `plads ${originAt + 1} af ${entries.length}` : `top ${n}`}`;
 
   return (
     <Section title={heading} subtitle={subtitle} span="half" className="lasso-ranking">
       <ol className="lasso-ranking-list">
-        {shown.map((e) => {
+        {shown.map((e, k) => {
+          if (e === "gap") {
+            return (
+              <li className="lasso-ranking__gap" key={`gap-${k}`} aria-hidden="true">
+                …
+              </li>
+            );
+          }
           const isOrigin = e.lassoId === (order === "asc" ? entries[0]?.lassoId : originId);
           const pct = (Math.abs(e.value) / maxAbs) * 100;
           return (

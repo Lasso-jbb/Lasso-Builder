@@ -727,7 +727,7 @@ export const COMPONENT_CATALOG: readonly CatalogEntry[] = [
     title: "Rangliste, ét nøgletal",
     description:
       "Brug til: 2–10 navngivne virksomheder på ÉT nøgletal (seneste år) som vandrette søjler, den første fremhævet – 'hvor ligger X i forhold til …'; order 'asc' viser de laveste først ('hvem har lavest soliditet'). Brug ikke når: flere nøgletal pr. virksomhed (LassoCompareTable), udvikling over tid (LassoLineChart), eller listen skal findes med kriterier ('de største i branchen' → search_companies/LassoCompanyTable med sort). Kræver: companies[] (2–10, kendte på forhånd), metric. Nås via compare_companies / render_view. Eksempel: 'Hvor ligger Lasso X på ansatte i forhold til Bisnode, Experian og Risika?'",
-    props: `companies[] (2–10, første fremhæves), metric (${METRICS.join(" | ")}), order? (desc | asc; asc når spørgsmålet er lavest/mindst), title?`,
+    props: `companies[] (2–10, første fremhæves), metric (${METRICS.join(" | ")}), order? (desc | asc; asc når spørgsmålet er lavest/mindst), top? (3–10, standard 5), title?`,
     register: {
       formaal: "2–10 navngivne virksomheder rangeret på ét nøgletal.",
       bedstTil: ["hvem er størst", "rangér A, B og C på omsætning"],
