@@ -267,11 +267,12 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
   // Komponentudstillingen: alle komponenter på LASSO X og Jakob Bech Benediktson (web/showcase.ts).
   app.get("/komponenter", showcaseHandler(config, provider));
   // Designguiden: fundament, elementer, alle moduler i alle bredder med rigtige data, tekster og regler (web/designguide.ts).
-  const guideKey = isSet(config.DESIGNGUIDE_KEY) ? config.DESIGNGUIDE_KEY : config.ADMIN_API_KEY;
+  // Alle må skrive kommentarer; DESIGNGUIDE_KEY lukker for skrivning, hvis den sættes.
+  const guideKey = config.DESIGNGUIDE_KEY;
   const guide = designguideHandlers(provider, comments, { keyRequired: isSet(guideKey), baseUrl: config.publicBaseUrl });
   app.get("/designguide", guide.page);
   app.get("/designguide/side.json", guide.side);
-  // Kommentarer: alle kan læse (også som markdown-arbejdsliste); skrive og rette kræver DESIGNGUIDE_KEY (ellers ADMIN_API_KEY).
+  // Kommentarer: alle kan læse (også som markdown-arbejdsliste) og skrive; kun med DESIGNGUIDE_KEY sat kræver skrivning nøglen.
   app.get("/designguide/api/kommentarer", guide.listComments);
   app.get("/designguide/kommentarer.md", guide.commentsMarkdown);
   app.post("/designguide/api/kommentarer", requireKey(guideKey), guide.addComment);

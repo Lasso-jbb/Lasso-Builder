@@ -29,7 +29,7 @@ export interface DesignguideBoot {
    * data til det (fx Statstidende, BBR, CHR, gemte sider). Altid demodata, også når serveren kører live.
    */
   fictive: FictiveData;
-  /** Kommentarer: om skrivning kræver en nøgle (DESIGNGUIDE_KEY eller ADMIN_API_KEY). */
+  /** Kommentarer: om skrivning kræver en nøgle (kun når DESIGNGUIDE_KEY er sat). */
   comments: { keyRequired: boolean };
 }
 
