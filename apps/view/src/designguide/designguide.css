@@ -410,3 +410,9 @@ body { font-family: var(--lasso-font, "Poppins", system-ui, sans-serif); -webkit
   .dg-pagecomment { position: static; margin-bottom: 12px; }
   .dg-popover { width: min(340px, calc(100vw - 48px)); }
 }
+
+/* Den svævende boks ligger på siden (portal), ikke i rammen, så den aldrig klippes af kortet. */
+.dg-popover--floating { position: absolute; top: auto; right: auto; z-index: 60; width: min(340px, calc(100vw - 24px)); max-height: min(480px, calc(100vh - 24px)); }
+.dg-popover__element { overflow-wrap: anywhere; }
+.dg-pinroot { position: absolute; inset: 0; pointer-events: none; }
+.dg-pinroot > * { pointer-events: auto; }
