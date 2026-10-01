@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePrintMode } from "../print.js";
 import { ExpandLink, foldedCount } from "./ExpandLink.js";
 import { formatAmount, formatDate, type AnnouncementVM, type CompanyEventsVM, type CompanyVM, type MergerPartyVM, type PublicationVM } from "@lasso/spec";
 import { Icon } from "./Icon.js";
@@ -111,8 +112,9 @@ const ANNOUNCEMENTS_SHOWN = 3;
 
 /** Statstidendes tekst foldet til tre linjer; "Vis mere" kun, når der er mere at vise. */
 function AnnouncementText({ text }: { text: string }) {
-  const [open, setOpen] = useState(false);
-  const long = text.length > 260;
+  const print = usePrintMode();
+  const [open, setOpen] = useState(print);
+  const long = text.length > 260 && !print;
   return (
     <>
       <p className={`lasso-announce__excerpt${long && !open ? " is-folded" : ""}`}>{text}</p>
@@ -162,7 +164,7 @@ function Announcement({ a, onLink }: { a: AnnouncementVM; onLink?: (url: string)
  */
 export function Announcements({ events, company, demo, title, error, onLink }: { events?: CompanyEventsVM; company?: CompanyVM; demo?: boolean; title?: string; error?: string; onLink?: (url: string) => void }) {
   const heading = title ?? "Statstidende";
-  const [all, setAll] = useState(false);
+  const [all, setAll] = useState(usePrintMode());
   if (!events) return <Loading title={heading} error={error} />;
   const list = events.announcements;
   if (list.length === 0) return null;
@@ -236,7 +238,7 @@ function ReportName({ p, onLink, label }: { p: PublicationVM; onLink?: (url: str
  */
 export function Publications({ events, title, error, limit = 5, onLink }: { events?: CompanyEventsVM; title?: string; error?: string; limit?: number; /** Åbner årsrapportens PDF (Jakob 01.10: "Årsrapport ÅÅÅÅ" er et download-link). */ onLink?: (url: string) => void }) {
   const heading = title ?? "Regnskabspublicering";
-  const [all, setAll] = useState(false);
+  const [all, setAll] = useState(usePrintMode());
   if (!events) return <Loading title={heading} error={error} lines={5} />;
   const list = events.publications;
   if (list.length === 0) {

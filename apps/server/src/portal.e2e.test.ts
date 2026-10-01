@@ -249,14 +249,15 @@ test("person: som show_person, med signeret link til personsiden; 404/400 ved fe
   // som rod (pille) og en kant til det ejede selskab. Nyhederne hentes kun på fokus historik;
   // stamoplysningerne og risikosektionen er udgået.
   const types = body.spec.components.map((c) => c.type);
-  for (const t of ["LassoPersonRoles", "LassoTimeline", "LassoOwnershipDiagram"]) assert.ok(types.includes(t as never), t);
+  // Jakob 01.10: overblikket viser roller og netværk; historik og ejerskab står på fanerne.
+  for (const t of ["LassoPersonRoles", "LassoPersonNetwork"]) assert.ok(types.includes(t as never), t);
+  for (const t of ["LassoTimeline", "LassoOwnershipDiagram"]) assert.ok(!types.includes(t as never), t);
   for (const t of ["LassoPersonFacts", "LassoPersonRisk"]) assert.ok(!types.includes(t as never), `${t} er udgået`);
   assert.ok(!types.includes("LassoNews"));
   assert.deepEqual(body.dataset.news, {});
-  assert.match(body.dataset.timeline[lassoId!]!.events[0]!.title, /kom under konkurs/);
-  const graph = body.dataset.ownershipGraphs[`${lassoId}|0|2|`]!;
-  assert.equal(graph.nodes.find((n) => n.root)?.kind, "person");
-  assert.ok(graph.edges.some((e) => e.from === lassoId && e.to === "CVR-1-99000010"));
+  // Historik og ejerdiagram hentes ikke på overblikket (Jakob 01.10).
+  assert.equal(body.dataset.timeline[lassoId!], undefined);
+  assert.deepEqual(body.dataset.ownershipGraphs, {});
   assert.deepEqual(body.dataset.errors, {});
   assert.deepEqual(verifyEntityLink(config, lassoId!, query(body.link!)), { ok: true, lassoId });
   assert.equal((await fetch(local(body.link!))).status, 200);

@@ -185,7 +185,7 @@ test("sidehoved og sidefod: mærke, navn, datastempel i dansk tid (ingen kilder)
 test("MCP-hovedet (minimalHead, Jakob 30.09): kun 'Vis i fuld skærm' og 'Gem som PDF', ingen Gem- og Eksportér-ikoner", () => {
   const on = html(companySpec(), { pdf: true, savePage: true, export: true, fullscreen: true, minimalHead: true });
   assert.doesNotMatch(on, /lasso-headbtn--save|lasso-headbtn--export|lasso-frame__save/);
-  assert.match(on, /lasso-fsbtn[^>]*>[^]*?Vis i fuld skærm<\/button>/);
+  assert.match(on, /class="lasso-iconbtn lasso-fsbtn" aria-label="Vis i fuld skærm"/);
   assert.match(on, /lasso-frame__pdf/);
   assert.doesNotMatch(html(companySpec(), { pdf: true, fullscreen: true, fullscreenActive: true, minimalHead: true }), /Vis i fuld skærm|>Fuld skærm</);
   // Uden minimalHead (delte sider) står ikonerne som før.

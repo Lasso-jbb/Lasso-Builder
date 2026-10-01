@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePrintMode } from "../print.js";
 import { ExpandLink, foldedCount } from "./ExpandLink.js";
 import {
   formatDate,
@@ -45,6 +46,7 @@ function RelationsBlock({ title, entries, groups, beneficial, current, onOpen }:
   const [open, setOpen] = useState(true);
   // Global regel (Jakob 01.10): en gruppe med over 6 navne viser 5 og "Vis alle N".
   const [allGroups, setAllGroups] = useState<Set<RelationGroup>>(new Set());
+  const print = usePrintMode();
   const byGroup = groups
     .map((g) => ({ g, rows: entries.filter((e) => e.group === g).sort((a, b) => (b.from ?? "").localeCompare(a.from ?? "")) }))
     .filter((x) => x.rows.length || (x.g === "reelle-ejere" && current));
@@ -75,7 +77,7 @@ function RelationsBlock({ title, entries, groups, beneficial, current, onOpen }:
                     )}
                   </div>
                 ) : (
-                  (allGroups.has(g) ? rows : rows.slice(0, foldedCount(rows.length))).map((e, i) => (
+                  (print || allGroups.has(g) ? rows : rows.slice(0, foldedCount(rows.length))).map((e, i) => (
                     <div className="lasso-reltable__row" key={`${e.name}-${e.from ?? i}`}>
                       <div>
                         <Name e={e} onOpen={onOpen} />
@@ -169,6 +171,7 @@ export function RelationsTable({
 export function CompanyHistory({ history, fields, limit = 3, title = "Stamdata historik", error }: { history?: CompanyHistoryVM; fields?: readonly string[]; limit?: number; title?: string; error?: string }) {
   const [openKeys, setOpenKeys] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(true);
+  const print = usePrintMode();
   if (!history) {
     return (
       <Section title={title} span="full">
@@ -190,7 +193,7 @@ export function CompanyHistory({ history, fields, limit = 3, title = "Stamdata h
           </div>
         ) : (
           list.map((f) => {
-            const all = openKeys.has(f.key);
+            const all = print || openKeys.has(f.key);
             const shown = all ? f.entries : f.entries.slice(0, foldedCount(f.entries.length, limit));
             return (
               <div className="lasso-reltable__group" key={f.key}>

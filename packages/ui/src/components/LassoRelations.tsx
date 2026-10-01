@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePrintMode } from "../print.js";
 import { ExpandLink } from "./ExpandLink.js";
 import { isPersonId, type OwnershipVM, type PersonRowVM, type ProductionUnitVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
@@ -74,7 +75,7 @@ export function LassoRelations({
 }) {
   const heading = title ?? "Relationer";
   // "og N flere" folder resten af ejerne ud på stedet (Jakob 30.09: skal kunne klikkes).
-  const [allOwners, setAllOwners] = useState(false);
+  const [allOwners, setAllOwners] = useState(usePrintMode());
   const [unitsOpen, setUnitsOpen] = useState(defaultUnitsOpen);
   if (!people || !ownership) {
     const error = peopleError ?? ownershipError;

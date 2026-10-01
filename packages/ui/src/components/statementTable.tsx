@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { usePrintMode } from "../print.js";
 import { amountScale, currencyUnit, formatPercent, formatScaled, changePercent, type AmountScale } from "@lasso/spec";
 import { QualityFlag } from "./QualityFlag.js";
 export { QualityFlag };
@@ -114,6 +115,7 @@ export function StatementTable({
   expandAll?: boolean;
 }) {
   const [openKeys, setOpenKeys] = useState<ReadonlySet<string>>(new Set());
+  const print = usePrintMode();
   const wrap = (children: ReactNode) => (bare ? <div className="lasso-stmt-bare">{children}</div> : <Section title={title} span="full">{children}</Section>);
   if (loading) return wrap(<DataState state="loading" lines={8} height={420} />);
   if (error) return wrap(<DataState state={stateForError(error) === "noaccess" ? "empty" : "error"} reason={error} />);
@@ -144,7 +146,7 @@ export function StatementTable({
               {section.heading ? <div className="lasso-stmt__group">{section.heading}</div> : null}
               {section.rows.flatMap((row) => {
                 const canOpen = expandable(row);
-                const open = canOpen && (expandAll || openKeys.has(row.key));
+                const open = canOpen && (expandAll || print || openKeys.has(row.key));
                 const toggle = () =>
                   setOpenKeys((cur) => {
                     const n = new Set(cur);
@@ -158,7 +160,7 @@ export function StatementTable({
                   return (
                     <div className={`lasso-stmt__row lasso-stmt__row--${r.kind ?? "line"}${child ? " lasso-stmt__row--child" : ""}`} key={child ? `${row.key}:${r.key}` : r.key}>
                       <div className="lasso-stmt__label" title={short && r.short ? r.label : undefined}>
-                        {!child && canOpen ? (
+                        {!child && canOpen && !print ? (
                           <button type="button" className="lasso-stmt__toggle" aria-expanded={open} onClick={toggle}>
                             <span className="lasso-stmt__chev" aria-hidden="true">{open ? "▾" : "▸"}</span>
                             {text}

@@ -106,11 +106,13 @@ test("højdebudget 23.3: default-siden er ca. 1/2–2/3 af den fulde side og hol
 });
 
 test("gridmodel: personsidens elementer pakket med packPage (virksomhedssidens højder) holder 15 %", async () => {
+  // Jakob 01.10: overblikket har ingen delte bånd længere (historik og ejerskab står på fanerne): alle
+  // elementer står i eget fuldbånd, så der er intet bånd at holde inden for 15 %.
   const ds = await resolveSpec(composePersonProbe(BO, "overblik"), new DemoProvider());
   const spec = composePerson(BO, ds, { focus: "overblik" });
   const items = spec.components.map(({ column: _c, width: _w, ...c }) => c as ViewComponent);
   const packed = packPage(items, ds);
-  check({ ...spec, components: packed.components }, ds, "person overblik");
+  assert.equal(bandsOf({ ...spec, components: packed.components }).length, 0, "person overblik: kun fuldbånd");
 });
 
 /**

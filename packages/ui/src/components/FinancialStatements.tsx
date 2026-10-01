@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePrintMode } from "../print.js";
 import {
   amountScale,
   currencyUnit,
@@ -183,7 +184,9 @@ export function FinancialStatements({ statements, company, statement = "income",
   const [unit, setUnit] = useState<Unit>("t");
   const [yearSel, setYear] = useState<number | null>(startYear ?? null);
   // Jakob 01.10: "Vis alt" folder alle underposter ud (standard: summerne fremme, underposter foldet ind).
-  const [expandAll, setExpandAll] = useState(defaultExpanded);
+  // Print (Jakob 01.10): alt foldet ud, desktopformen og ingen værktøjslinje eller knapper.
+  const print = usePrintMode();
+  const [expandAll, setExpandAll] = useState(defaultExpanded || print);
 
   if (!statements) {
     return (
@@ -302,15 +305,18 @@ export function FinancialStatements({ statements, company, statement = "income",
       title={`${heading} ${year}`}
       subtitle={<span className="lasso-fs__sub"><span className="lasso-fs__sub-m">{sub}</span><span className="lasso-fs__sub-t">{`${scale.label}, ${tabletYears} år synlige`}</span></span>}
       span="full"
-      className="lasso-fs"
+      className={`lasso-fs${print ? " lasso-fs--print" : ""}`}
       action={
-        <>
-          {yearSelect}
-          {tabletSegment}
-        </>
+        print ? undefined : (
+          <>
+            {yearSelect}
+            {tabletSegment}
+          </>
+        )
       }
     >
       {/* Desktop (19.1): værktøjslinjen i en kortramme. */}
+      {print ? null : (
       <div className="lasso-fs__toolbar" role="toolbar" aria-label="Regnskabets værktøjslinje">
         <Tabs
           level={3}
@@ -354,6 +360,7 @@ export function FinancialStatements({ statements, company, statement = "income",
         ) : null}
         {pdfButton}
       </div>
+      )}
 
       {/* Jakob 01.10 (Portal 1440): påtegningen står på sin egen linje under værktøjslinjen, så den aldrig afkortes. */}
       {s.auditorOpinion ? <p className="lasso-fs__opinion">{s.auditorOpinion}</p> : null}

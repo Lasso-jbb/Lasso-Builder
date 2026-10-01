@@ -145,7 +145,7 @@ function assertNoRetired(components: readonly ViewComponent[], label = "") {
   for (const type of ["LassoPersonRisk", "LassoPersonFacts"]) assert.ok(!components.some((c) => c.type === type), `${label} ${type} er udgået`.trim());
 }
 
-test("composePerson overblik (Ø13/B10): aktive roller (liste) alene i fuld bredde; netværket i eget fuldbånd; historik og ejerskab efter bredderne; ingen risiko, stamoplysninger eller nyheder", () => {
+test("composePerson overblik (Ø13/B10): aktive roller (liste) alene i fuld bredde; netværket i eget fuldbånd; ingen historik og intet ejerskab (Jakob 01.10), ingen risiko, stamoplysninger eller nyheder", () => {
   const ds = fullDataset();
   const spec = composePerson(ID, ds);
   assert.equal(spec.layout, "columns");
@@ -158,17 +158,13 @@ test("composePerson overblik (Ø13/B10): aktive roller (liste) alene i fuld bred
     "LassoPersonRoles[current,#5,>roller]",
     // Netværket (min 1/1) står i eget fuldbånd og deler aldrig bånd.
     "LassoPersonNetwork[#3,>netvaerk]",
-    // Samme elementer som Papers side (budgettet regnes som før); resten pakkes i den rækkefølge, der giver
-    // den laveste side: historik ⅓ | ejerskab ⅔ (bred, min ⅔). Risikosektionen er udgået.
-    "LassoTimeline@1/third[#3,>historik]",
-    "LassoOwnershipDiagram@2/two-thirds",
+    // Jakob 01.10: historik og ejerskab står på deres egne faner, ikke på overblikket.
     "LassoFollowUps",
   ]);
   assertNoDuplicates(spec.components);
   assertNoRetired(spec.components, "overblik");
   assert.ok(!spec.components.some((c) => c.type === "LassoNews"), "nyhederne står på historik");
-  const diagram = spec.components.find((c) => c.type === "LassoOwnershipDiagram");
-  assert.ok(diagram?.type === "LassoOwnershipDiagram" && ownershipGraphKey(diagram) === GRAPH_KEY && diagram.title === "Ejerskab");
+  assert.ok(!spec.components.some((c) => c.type === "LassoOwnershipDiagram" || c.type === "LassoTimeline"), "historik og ejerskab står på fanerne");
   // Gamle specs med stamoplysningerne: de gentager ikke hovedets tal på samme side.
   assert.deepEqual(personFactOptions(spec.components, ID), { hideCounts: true });
   assert.deepEqual(personFactOptions([{ type: "LassoPersonFacts", person: ID }], ID), { hideCounts: false });
@@ -182,7 +178,7 @@ test("composePerson højdebudget (runde 6): kompakt før udeladelse, hoved og sv
   // elementerne som før; pakningen efter bredderne ombryder kun siden og kan gøre den højere.)
   assert.deepEqual(std.components.map(shape), all.components.map(shape));
   // Et stramt budget: først kompakte former, så udelades de mindst relevante halve bagfra.
-  const tight = composePerson(ID, ds, { heightBudget: 700, followUps: false });
+  const tight = composePerson(ID, ds, { heightBudget: 300, followUps: false });
   const types = tight.components.map((c) => c.type);
   assert.equal(types[0], "LassoPersonHead");
   const answer = tight.components.find((c) => c.type === "LassoPersonRoles");
@@ -207,8 +203,6 @@ test("composePerson overblik: tomme sektioner udelades; en halv til overs står 
     "LassoPersonHead",
     "LassoPersonStats",
     "LassoPersonRoles[current,#5,>roller]",
-    // Historikken er den eneste halve tilbage (risikoen er udgået): den står i fuld bredde.
-    "LassoTimeline[#3,>historik]",
   ]);
   // Et ophørt ejerskab alene giver intet diagram, og et ejet selskab, der ikke selv ejer noget,
   // heller ikke: diagrammet ville kun gentage "ejer 100 %" fra rollelisten 1:1.
@@ -221,10 +215,10 @@ test("composePerson overblik: tomme sektioner udelades; en halv til overs står 
   delete ds.ownershipGraphs[GRAPH_KEY];
   ds.errors[`graph:${GRAPH_KEY}`] = "Lasso API-fejl (500)";
   assert.ok(!composePerson(ID, ds).components.some((c) => c.type === "LassoOwnershipDiagram"));
-  // To: netværket (min 1/1) i eget fuldbånd, historikken (3 + "Se alle") alene i fuld bredde.
+  // Netværket (min 1/1) i eget fuldbånd; ingen historik på overblikket (Jakob 01.10).
   ds.personNetworks[ID] = { lassoId: ID, people: Array.from({ length: 3 }, (_, i) => ({ name: `P${i}`, companies: [], overlapYears: 1, active: true })) };
   const three = composePerson(ID, ds, { followUps: false }).components.map(shape);
-  assert.deepEqual(three.slice(3), ["LassoPersonNetwork[#3,>netvaerk]", "LassoTimeline[#3,>historik]"]);
+  assert.deepEqual(three.slice(3), ["LassoPersonNetwork[#3,>netvaerk]"]);
   // Kun ophørte roller: listen over de ophørte står i stedet for de aktive.
   ds.persons[ID] = { ...person, roles: [person.roles[3]!] };
   assert.equal(shape(composePerson(ID, ds).components.find((c) => c.type === "LassoPersonRoles")!), "LassoPersonRoles[ended,#5,>roller]");
@@ -301,16 +295,20 @@ test("composePerson risiko: kun forløbet i selskaberne ('Forløb i selskaberne'
   assert.deepEqual(composePerson(ID, ds, { focus: "risiko", followUps: false }).components.map(shape), ["LassoPersonHead", "LassoTimeline[~risiko]"]);
 });
 
-test("composePerson historik: historik (5 + 'Se alle') ½ | nyheder (5) ½ (Jakob 01.10); uden nyheder historikken alene", () => {
+test("composePerson historik: historik ½ | nyheder (5) ½; uden nyheder roller over tid ved siden af (Jakob 01.10)", () => {
   const ds = fullDataset();
   assert.deepEqual(composePerson(ID, ds, { focus: "historik", followUps: false }).components.map(shape), ["LassoPersonHead", "LassoTimeline@1/half", "LassoNews@2/half[#5]"]);
+  // Ofte har medierne intet skrevet: så står karrieren som roller over tid i stedet for en tom nyhedsliste.
   ds.news[ID] = { lassoId: ID, items: [] };
-  assert.deepEqual(composePerson(ID, ds, { focus: "historik", followUps: false }).components.map(shape), ["LassoPersonHead", "LassoTimeline"]);
+  const noNews = composePerson(ID, ds, { focus: "historik", followUps: false });
+  assert.deepEqual(noNews.components.map(shape), ["LassoPersonHead", "LassoTimeline@1/third", "LassoPersonRoles@2/two-thirds[#8]"]);
+  assert.ok(noNews.components.some((c) => c.type === "LassoPersonRoles" && c.title === "Roller over tid"));
   // Kunne nyhederne ikke hentes, står nyhedernes fejltilstand ved siden af.
   ds.errors[`news:${ID}`] = "Lasso API-fejl (500)";
   assert.deepEqual(composePerson(ID, ds, { focus: "historik", followUps: false }).components.map(shape), ["LassoPersonHead", "LassoTimeline@1/half", "LassoNews@2/half[#5]"]);
-  // Hverken rolleskift eller nyheder: historikkens tomme tilstand.
+  // Hverken rolleskift, nyheder eller roller: historikkens tomme tilstand.
   ds.timeline[ID] = { lassoId: ID, events: [] };
+  ds.persons[ID] = { ...person, roles: [] };
   delete ds.errors[`news:${ID}`];
   assert.deepEqual(composePerson(ID, ds, { focus: "historik", followUps: false }).components.map(shape), ["LassoPersonHead", "LassoTimeline"]);
 });
@@ -354,17 +352,17 @@ test("composePerson uden persondata viser kun hovedet (som viser fejlen), på al
 test("composePersonProbe: hvert fokus henter kun det, det viser", () => {
   const probe = (focus?: PersonFocus) =>
     composePersonProbe(ID, focus).components.map((c) => (c.type === "LassoOwnershipDiagram" ? `${c.type}${ownershipGraphKey(c).slice(ID.length)}` : c.type));
-  assert.deepEqual(probe(), ["LassoPersonHead", "LassoPersonNetwork", "LassoTimeline", "LassoOwnershipDiagram|0|2|"]);
+  assert.deepEqual(probe(), ["LassoPersonHead", "LassoPersonNetwork"]);
   assert.deepEqual(probe("overblik"), probe());
   assert.deepEqual(probe("roller"), ["LassoPersonHead"]);
   assert.deepEqual(probe("netvaerk"), ["LassoPersonHead", "LassoPersonNetwork"]);
   assert.deepEqual(probe("ejerskab"), ["LassoPersonHead", "LassoOwnershipDiagram|0|2|"]);
   assert.deepEqual(probe("risiko"), ["LassoPersonHead", "LassoTimeline"]);
   assert.deepEqual(probe("historik"), ["LassoPersonHead", "LassoTimeline", "LassoNews"]);
-  // Nyheder kun på historik, grafen kun på overblik og ejerskab.
+  // Nyheder kun på historik, grafen kun på ejerskab (Jakob 01.10: ikke på overblikket).
   for (const focus of PERSON_FOCUSES) {
     assert.equal(probe(focus).includes("LassoNews"), focus === "historik", focus);
-    assert.equal(probe(focus).some((t) => t.startsWith("LassoOwnershipDiagram")), focus === "overblik" || focus === "ejerskab", focus);
+    assert.equal(probe(focus).some((t) => t.startsWith("LassoOwnershipDiagram")), focus === "ejerskab", focus);
   }
 });
 

@@ -1,4 +1,5 @@
 import { Icon } from "./Icon.js";
+import { usePrintMode } from "../print.js";
 
 /**
  * Global regel for "Vis alle" (Jakob 01.10): en liste foldes først, når der er over 6; så står 5 og "Vis alle N".
@@ -16,6 +17,8 @@ export function foldedCount(total: number, limit: number = LIST_FOLD): number {
  *   som de opfølgende spørgsmål (LassoFollowUps).
  */
 export function ExpandLink({ expanded, total, onToggle, className = "" }: { expanded: boolean; total?: number; onToggle: () => void; className?: string }) {
+  // Print (Jakob 01.10): alt er foldet ud, og der er ingen knapper.
+  if (usePrintMode()) return null;
   return (
     <button type="button" className={`lasso-link lasso-expand ${className}`.trim()} aria-expanded={expanded} onClick={onToggle}>
       {expanded ? "Vis færre" : total !== undefined ? `Vis alle ${total}` : "Vis alle"}

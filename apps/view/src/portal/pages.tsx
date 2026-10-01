@@ -14,7 +14,7 @@ import {
   type TabItem,
   type ViewAction,
 } from "@lasso/ui";
-import { FOCUSES, FOCUS_LABELS, isPersonFocus, PERSON_FOCUSES, PERSON_FOCUS_LABELS, type Focus, type PersonFocus } from "@lasso/spec";
+import { FOCUS_LABELS, PAGE_TABS, isPersonFocus, PERSON_FOCUSES, PERSON_FOCUS_LABELS, type Focus, type PersonFocus } from "@lasso/spec";
 import type { ViewResult } from "./api.js";
 import { entityHost, SHELL_MOBILE_MAX, SHELL_TABLET_MAX } from "./data.js";
 import { dataKey, isFocus, type PortalRoute } from "./routes.js";
@@ -37,7 +37,7 @@ type OnAction = (a: ViewAction) => Promise<ActionResult | void>;
 type SearchRoute = Extract<PortalRoute, { kind: "search" }>;
 type EntityRoute = Extract<PortalRoute, { kind: "company" | "person" }>;
 
-export const FOCUS_MODULES: readonly TabItem[] = FOCUSES.map((f) => ({ id: f, label: FOCUS_LABELS[f] }));
+export const FOCUS_MODULES: readonly TabItem[] = PAGE_TABS.map((f) => ({ id: f, label: FOCUS_LABELS[f] }));
 /** Personsidens fokus (Overblik, Roller, Netværk, Ejerskab, Risiko, Historik), som virksomhedens. */
 export const PERSON_MODULES: readonly TabItem[] = PERSON_FOCUSES.map((f) => ({ id: f, label: PERSON_FOCUS_LABELS[f] }));
 

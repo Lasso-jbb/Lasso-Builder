@@ -113,9 +113,9 @@ test("virksomhedens overblik: 'Se alle … i Historik' med openFocus, ellers fol
   const inPlace = render(spec, ds, {});
   assert.match(inPlace, /Vis alle 8\b/);
   assert.doesNotMatch(inPlace, /i Historik/);
-  // Fanen Historik ejer elementerne: dér folder "Se alle" ud på stedet, også med openFocus.
+  // Fanen Historik ejer elementerne: tidslinjen viser 8 begivenheder (Jakob 01.10, ny historik) og peger ikke videre.
   const history = render(composeCompany(CO, ds, { focus: "historik", followUps: false }), ds, { openFocus: true });
-  assert.match(history, /Vis alle 8\b/);
+  assert.match(history, /Årsrapport 2018 offentliggjort/);
   assert.doesNotMatch(history, /i Historik/);
 });
 

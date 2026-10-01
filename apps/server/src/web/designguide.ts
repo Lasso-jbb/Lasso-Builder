@@ -7,7 +7,7 @@
  * vilkårlige opslag.
  */
 import type { Request, Response } from "express";
-import { composeCompany, composePerson, composePersonProbe, composeProbe, componentSchema, FOCUSES, mainMetric, PERSON_FOCUSES, showcaseTabs, type ComponentType, type Dataset, type Focus, type PersonFocus, type SavedPagesVM, type ViewComponent, type ViewSpec } from "@lasso/spec";
+import { composeCompany, composePerson, composePersonProbe, composeProbe, componentSchema, FOCUSES, PAGE_TABS, mainMetric, PERSON_FOCUSES, showcaseTabs, type ComponentType, type Dataset, type Focus, type PersonFocus, type SavedPagesVM, type ViewComponent, type ViewSpec } from "@lasso/spec";
 import { DemoProvider } from "../data/demo.js";
 import type { DataProvider } from "../data/index.js";
 import { errorMessage, resolveSpec } from "../data/resolve.js";
@@ -128,7 +128,7 @@ export function designguideHandlers(provider: DataProvider, comments: CommentSto
       version: DEPLOYED_VERSION,
       source: provider.kind,
       showcase: await getShowcase(provider, req.query.frisk === "1", idsFor(provider)),
-      focuses: { company: FOCUSES, person: PERSON_FOCUSES },
+      focuses: { company: PAGE_TABS, person: PERSON_FOCUSES },
       fictive: await fictiveData(),
       comments: { keyRequired: opts.keyRequired },
     };

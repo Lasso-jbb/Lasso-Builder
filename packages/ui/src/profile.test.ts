@@ -121,7 +121,7 @@ test("Regnskabsanalyse (19.3, LYO-0): foldbare afsnit med det første åbent, fo
   assert.match(html, /aria-expanded="true"[^>]*><span class="lasso-analysis19__title">Vækst i toplinjen</);
   assert.match(html, /aria-expanded="false"/);
   assert.match(html, /lasso-analysis19__disclaimer">Forbehold: /);
-  assert.match(html, /Var det brugbart\?/);
+  assert.doesNotMatch(html, /Var det brugbart\?/);
   assert.doesNotMatch(html, /Vis kild|Skjul kild/);
   // "Hent som PDF" kun med en handling (G1).
   assert.doesNotMatch(html, /Hent som PDF/);

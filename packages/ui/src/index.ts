@@ -4,7 +4,7 @@ export { ReportA4, StatementsReportA4, AnalysisReportA4, PersonReportA4 } from "
 export type { ReportA4Props, PersonReportA4Props } from "./components/ReportA4.js";
 // "Gem som PDF": knappen i hovedet og print-tilstanden, serverens Chromium tegner (docs/design/README.md, 27).
 export { PdfButton, runPdf, PDF_LABEL, PDF_BUSY_LABEL } from "./PdfButton.js";
-export { PrintMode, usePrintMode, pageTemplates, pageScale, printStamp, A4_WIDTH_PX, PAGE_MARGIN_MM } from "./print.js";
+export { PrintCover, PrintMode, usePrintMode, pageTemplates, pageScale, printStamp, A4_WIDTH_PX, PAGE_MARGIN_MM } from "./print.js";
 export type { PageTemplateInput } from "./print.js";
 export { CompanyHead } from "./components/CompanyHead.js";
 export { KeyFigureCards } from "./components/KeyFigureCards.js";

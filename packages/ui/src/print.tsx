@@ -1,5 +1,5 @@
 import { createContext, useContext, type ReactNode } from "react";
-import { LASSO_MARK_PATH } from "./LassoMark.js";
+import { LASSO_MARK_PATH, LASSO_WORDMARK_PATH, LassoMark, LassoWordmark } from "./LassoMark.js";
 
 /**
  * Print-tilstand ("Gem som PDF" for alle andre sider end virksomhedsrapporten): serverens Chromium
@@ -75,10 +75,13 @@ export function pageTemplates({ title, generatedAt, fontFaces = "" }: PageTempla
   const style = fontFaces ? `<style>${fontFaces}</style>` : "";
   const mark = (w: number, h: number) =>
     `<svg viewBox="0 0 117 97" width="${w}" height="${h}" style="flex:none;color:#16181d" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="${LASSO_MARK_PATH}"/></svg>`;
+  // Jakob 01.10: logo og navnelogo i alle print.
+  const wordmark = (w: number, h: number) =>
+    `<svg viewBox="0 0 453 132" width="${w}" height="${h}" style="flex:none;color:#16181d" fill="currentColor" aria-label="Lasso"><path fill-rule="evenodd" clip-rule="evenodd" d="${LASSO_WORDMARK_PATH}"/></svg>`;
   const headerTemplate =
     `${style}<div style="box-sizing:border-box;width:100%;padding:0 ${PAGE_MARGIN_MM}mm;${font}">` +
     `<div style="${row}padding-bottom:2mm;border-bottom:1px solid #e6e7eb;">` +
-    `<span style="display:flex;align-items:center;gap:6px;min-width:0;">${mark(14, 12)}<span style="font-weight:600;color:#16181d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(title)}</span></span>` +
+    `<span style="display:flex;align-items:center;gap:6px;min-width:0;">${mark(14, 12)}${wordmark(38, 11)}<span style="width:1px;height:10px;background:#e6e7eb;margin:0 2px;"></span><span style="font-weight:600;color:#16181d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(title)}</span></span>` +
     `<span style="white-space:nowrap;">Data hentet ${stamp.date}${stamp.time ? ` kl. ${stamp.time}` : ""}</span>` +
     `</div></div>`;
   const footerTemplate =
@@ -88,6 +91,29 @@ export function pageTemplates({ title, generatedAt, fontFaces = "" }: PageTempla
     `<span style="display:flex;align-items:center;gap:6px;white-space:nowrap;">${mark(12, 10)}<span>Udarbejdet i Lasso, lassox.com, side <span class="pageNumber"></span> af <span class="totalPages"></span></span></span>` +
     `</div></div>`;
   return { headerTemplate, footerTemplate };
+}
+
+/**
+ * Forsiden på alle side-PDF'er (Jakob 01.10, katalog 27.1): logo og navnelogo, navnet og området, man har
+ * printet (fx "Økonomi"), og hvornår data er hentet. Står alene på første ark; siden følger fra ark 2.
+ */
+export function PrintCover({ title, area, generatedAt }: { title: string; area?: string; generatedAt?: string }) {
+  const stamp = generatedAt ? printStamp(generatedAt) : undefined;
+  return (
+    <section className="lasso-printcover" aria-label="Forside">
+      <div className="lasso-printcover__brand">
+        <LassoMark className="lasso-printcover__mark" />
+        <LassoWordmark className="lasso-printcover__wordmark" />
+      </div>
+      <div className="lasso-printcover__main">
+        <p className="lasso-printcover__over">Udskrift fra Lasso</p>
+        <h1 className="lasso-printcover__title">{title}</h1>
+        {area ? <p className="lasso-printcover__area">{area}</p> : null}
+        {stamp ? <p className="lasso-printcover__stamp">Data hentet {stamp.date}{stamp.time ? ` kl. ${stamp.time}` : ""}</p> : null}
+      </div>
+      <p className="lasso-printcover__foot">Udarbejdet i Lasso, lassox.com. Alle sektioner er foldet helt ud.</p>
+    </section>
+  );
 }
 
 /**

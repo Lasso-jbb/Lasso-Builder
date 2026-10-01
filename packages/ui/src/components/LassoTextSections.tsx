@@ -186,13 +186,12 @@ function Chevron({ open }: { open: boolean }) {
 
 /**
  * Regnskabsanalysen (variant "analyse", 19.3 / mobil 26h.3). Desktop: overskrift 17/600, konklusionen
- * som brødtekst 15/25, den faste linje "Forbehold: …" og "Var det brugbart? Ja / Nej" (ingen kildevisning,
+ * som brødtekst 15/25, den faste linje "Forbehold: …" (Jakob 01.10: intet "Var det brugbart?"; ingen kildevisning,
  * Jakob runde 6). Mobil: kortet kan foldes med chevron, teksten er
  * foldet til 4 linjer, og nederst står "Læs hele analysen" til venstre og genereringslinjen til højre.
  */
 function Analysis({ v, items, onOpen, folded = false }: { v: TextSectionsVM; items: TextSectionItem[]; onOpen?: (a: ViewAction) => void; folded?: boolean }) {
   const [open, setOpen] = useState(usePrintMode());
-  const [vote, setVote] = useState<"ja" | "nej" | null>(null);
   const [first, ...rest] = items;
   const segments: readonly TextSegment[] = first!.segments?.length ? first!.segments : [{ text: first!.body }];
   return (
@@ -209,24 +208,6 @@ function Analysis({ v, items, onOpen, folded = false }: { v: TextSectionsVM; ite
         </div>
       ) : null}
       <p className="lasso-analysis__disclaimer">{ANALYSIS_DISCLAIMER}</p>
-      <div className="lasso-analysis__actions">
-        <span className="lasso-analysis__feedback">
-          {vote ? (
-            "Tak for svaret"
-          ) : (
-            <>
-              Var det brugbart?{" "}
-              <button type="button" className="lasso-analysis__vote" onClick={() => setVote("ja")}>
-                Ja
-              </button>
-              {" / "}
-              <button type="button" className="lasso-analysis__vote" onClick={() => setVote("nej")}>
-                Nej
-              </button>
-            </>
-          )}
-        </span>
-      </div>
       <div className="lasso-analysis__foot">
         <button type="button" className="lasso-link lasso-analysis__more" aria-expanded={open} onClick={() => setOpen(!open)}>
           {open ? "Vis mindre" : folded ? "Vis mere" : "Læs hele analysen"}
@@ -274,13 +255,12 @@ function DownloadGlyph() {
  * Regnskabsanalysen (katalog 19.3, Paper LYO-0): almindelig sektion på hvid flade med overskriften 18/600 og
  * "Hent som PDF" (sekundær 32 px-knap med download-ikon og ord, LYT-0) i hovedet, når værten kan eksportere
  * (G1). Afsnittene er foldbare rækker (44 px, overskrift 14/600, chevron), første afsnit åbent (brødtekst
- * 14/22); forbeholdet er en fast afsluttende linje, og "Var det brugbart? Ja / Nej" står alene under (ingen
+ * 14/22); forbeholdet er en fast afsluttende linje (Jakob 01.10: intet "Var det brugbart?" under; ingen
  * kildevisning). Ingen genereringsdato eller kildevisning (G3). "Hent som PDF" laver en A4 af HELE analysen med alle
  * afsnit foldet ud (19.6, AnalysisReportA4) med samme mekanisme som rapporten (27).
  */
 function AnalysisRows({ heading, v, items, onOpen, onPdf }: { heading: string; v: TextSectionsVM; items: TextSectionItem[]; onOpen?: (a: ViewAction) => void; onPdf?: () => void }) {
   const [open, setOpen] = useState<ReadonlySet<number>>(() => new Set([0]));
-  const [vote, setVote] = useState<"ja" | "nej" | null>(null);
   const toggle = (i: number) =>
     setOpen((prev) => {
       const next = new Set(prev);
@@ -325,24 +305,6 @@ function AnalysisRows({ heading, v, items, onOpen, onPdf }: { heading: string; v
         })}
       </div>
       <p className="lasso-analysis19__disclaimer">{ANALYSIS_DISCLAIMER}</p>
-      <div className="lasso-analysis19__actions">
-        <span className="lasso-analysis19__feedback">
-          {vote ? (
-            "Tak for svaret"
-          ) : (
-            <>
-              Var det brugbart?{" "}
-              <button type="button" className="lasso-analysis__vote" onClick={() => setVote("ja")}>
-                Ja
-              </button>
-              {" / "}
-              <button type="button" className="lasso-analysis__vote" onClick={() => setVote("nej")}>
-                Nej
-              </button>
-            </>
-          )}
-        </span>
-      </div>
     </Section>
   );
 }

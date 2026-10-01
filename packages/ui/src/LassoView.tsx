@@ -96,7 +96,7 @@ import { Icon } from "./components/Icon.js";
 import { AnalysisReportA4, PersonReportA4, ReportA4 } from "./components/ReportA4.js";
 import { personRolesCsv, specToCsv } from "./csv.js";
 import { PdfButton } from "./PdfButton.js";
-import { PrintMode } from "./print.js";
+import { PrintCover, PrintMode } from "./print.js";
 import { Badge, Skeleton, stateForError } from "./primitives.js";
 import { Accordion, CardGrid } from "./components/Layout.js";
 import { ModuleToolbar } from "./components/ModuleToolbar.js";
@@ -205,8 +205,13 @@ function headActionsFor(id: string, name: string, frame: FrameTools): HeadAction
     exportItems: frame.exportItems,
     more: frame.more,
     context: { title: name },
-    center: frame.fullscreenTop,
-    end: frame.pdfButton,
+    end:
+      frame.fullscreenTop || frame.pdfButton ? (
+        <>
+          {frame.fullscreenTop}
+          {frame.pdfButton}
+        </>
+      ) : undefined,
   };
 }
 
@@ -1183,9 +1188,9 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
   // MCP-rammen (Jakob 30.09): navnet øverst, "Vis i fuld skærm" i midten med farve (væk i fuld skærm), "Gem som PDF" til højre.
   const canFullscreen = Boolean(host.fullscreen) && !host.fullscreenActive && !print;
   const fullscreenTop = canFullscreen ? (
-    <button type="button" className="lasso-btn lasso-btn--primary lasso-fsbtn" onClick={() => act({ kind: "fullscreen" })}>
-      <ShellIcon name="expand" size={15} />
-      Vis i fuld skærm
+    // Jakob 01.10: samme ikonknap som Overvåg, Gem og PDF ved siden af (ikke en farvet knap midt i hovedet).
+    <button type="button" className="lasso-iconbtn lasso-fsbtn" aria-label="Vis i fuld skærm" title="Vis i fuld skærm" onClick={() => act({ kind: "fullscreen" })}>
+      <ShellIcon name="expand" size={16} />
     </button>
   ) : null;
   const pdfButton = pdf ? <PdfButton onAction={onAction} notify={notify} /> : null;
@@ -1262,6 +1267,8 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
         ) : null}
         {unsupported.length > 0 ? <div className="lasso-notice">Kunne ikke anvendes endnu: {unsupported.join(", ")}</div> : null}
 
+        {/* Jakob 01.10: forside med logo, navnelogo og området, man printer. */}
+        {print && dataset ? <PrintCover title={spec.title} area={spec.subtitle ?? (spec.kind === "company" || spec.kind === "person" ? "Overblik" : undefined)} generatedAt={dataset.generatedAt} /> : null}
         {loading && !dataset ? (
           <Skeleton lines={4} height={240} />
         ) : (

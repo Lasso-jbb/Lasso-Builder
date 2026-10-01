@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { usePrintMode } from "../print.js";
 import { ExpandLink } from "./ExpandLink.js";
 import {
   companyFacts,
@@ -390,7 +391,7 @@ export function KeyValueList({
   const maxRows = maxRowsProp ?? (view === "short" ? SHORT_ROWS : undefined);
   const ready = variant === "financials" ? Boolean(financials) : Boolean(company);
   const [year, setYear] = useState<number | null>(null);
-  const [allRows, setAllRows] = useState(false);
+  const [allRows, setAllRows] = useState(usePrintMode());
   /** 30.13: de første maxRows rækker og "Se N oplysninger" under listen. */
   const cut = <T,>(rows: readonly T[]): readonly T[] => (maxRows && !allRows ? rows.slice(0, maxRows) : rows);
   const moreRows = (n: number) =>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePrintMode } from "../print.js";
 import { ExpandLink, foldedCount, LIST_FOLD } from "./ExpandLink.js";
 import { moreText, formatDate, type ObservationRowVM, type ObservationsVM, type Severity } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
@@ -200,7 +201,7 @@ export interface RiskObservationsProps {
 export function RiskObservations({ data, error, title, compact = false, demo = false, onAction }: RiskObservationsProps) {
   const heading = title ?? "Risikoobservationer";
   const [filter, setFilter] = useState<Severity | null>(null);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(usePrintMode());
 
   if (!data) {
     return (

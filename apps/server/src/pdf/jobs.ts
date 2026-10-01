@@ -1,9 +1,13 @@
 import {
+  composeCompany,
+  composeProbe,
+  FOCUS_LABELS,
   composePerson,
   composePersonProbe,
   isPersonId,
   parseViewSpec,
   type Dataset,
+  type Focus,
   type PersonFocus,
   type ViewComponent,
   type ViewSpec,
@@ -13,9 +17,9 @@ import { resolveSpec } from "../data/resolve.js";
 import type { PrintJob } from "./printPages.js";
 
 /**
- * Hvad der står i PDF'en: virksomheder som rapport (ReportA4, katalog 27), alt andet som selve
- * visningen i print-tilstand. Data hentes friskt som til HTML-siderne; kun rapporten henter mere,
- * end fokus viser, fordi den altid har de samme fire sider.
+ * Hvad der står i PDF'en (Jakob 01.10): selve visningen i print-tilstand, også for virksomheder (det, man
+ * ser, er det, man får printet). Rapporten (ReportA4, katalog 27) findes stadig i Eksportér-menuen.
+ * Data hentes friskt som til HTML-siderne.
  */
 
 export type JobResult = { ok: true; job: PrintJob } | { ok: false; status: 404; error: string };
@@ -47,6 +51,19 @@ export async function companyReportJob(provider: DataProvider, lassoId: string, 
   const name = dataset.companies[lassoId]?.name;
   if (!name) return { ok: false, status: 404, error: `Virksomheden kunne ikke hentes: ${dataset.errors[`company:${lassoId}`] ?? "ukendt fejl"}` };
   return { ok: true, job: { kind: "report", spec, dataset, name, generatedAt: dataset.generatedAt } };
+}
+
+/**
+ * Virksomhedssiden med fokus i print-tilstand (Jakob 01.10, 27.1): det, man ser, er det, man får printet,
+ * med alt foldet ud, ingen knapper og en forside med området (fx "Økonomi"). Komponeret som /k/ uden
+ * opfølgninger. 404, når virksomheden ikke kan hentes.
+ */
+export async function companyPageJob(provider: DataProvider, lassoId: string, focus: Focus = "overblik"): Promise<JobResult> {
+  const dataset = await resolveSpec(composeProbe(lassoId, focus), provider);
+  const name = dataset.companies[lassoId]?.name;
+  if (!name) return { ok: false, status: 404, error: `Virksomheden kunne ikke hentes: ${dataset.errors[`company:${lassoId}`] ?? "ukendt fejl"}` };
+  const spec = composeCompany(lassoId, dataset, { focus, name, followUps: false });
+  return { ok: true, job: { kind: "page", spec, dataset, name: `${name}, ${FOCUS_LABELS[focus]}`, generatedAt: dataset.generatedAt } };
 }
 
 /** Personsiden med fokus, komponeret som /p/ (uden opfølgninger). 404, når personen ikke kan hentes. */

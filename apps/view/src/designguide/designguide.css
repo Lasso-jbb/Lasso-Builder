@@ -416,3 +416,6 @@ body { font-family: var(--lasso-font, "Poppins", system-ui, sans-serif); -webkit
 .dg-popover__element { overflow-wrap: anywhere; }
 .dg-pinroot { position: absolute; inset: 0; pointer-events: none; }
 .dg-pinroot > * { pointer-events: auto; }
+
+/* Print-eksemplet (27.1): et hvidt A4-ark; siden tegnes 794 px bred som i side-PDF'en (900 - 2 × 53). */
+.dg-printsheet { background: #fff; padding: 53px; }

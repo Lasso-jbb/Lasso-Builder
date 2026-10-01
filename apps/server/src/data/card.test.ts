@@ -441,11 +441,10 @@ test("personkortet følger fokus: kun det, siden viser, i sidens rækkefølge og
   assert.doesNotMatch(overview, /STAMOPLYSNINGER|Bopæl|Enhedsnummer|RISIKO/);
   assert.match(overview, /NETVÆRKSTAL/);
   assert.match(overview, /Konkurser\s+1/);
-  // Kortet følger sidens antal (uden risikosektionen parres overblikkets halve anderledes i højdebudgettet,
-  // så netværket her står kompakt med 2).
+  // Kortet følger sidens antal (Jakob 01.10: uden historik og ejerskab på overblikket står netværket med 3).
   const net = composePerson(id, ds).components.find((c) => c.type === "LassoPersonNetwork");
   const shown = net?.type === "LassoPersonNetwork" ? (net.limit ?? 3) : 0;
-  assert.equal(shown, 2);
+  assert.equal(shown, 3);
   assert.match(overview, new RegExp(`Person ${shown - 1} Eksempel`));
   assert.doesNotMatch(overview, new RegExp(`Person ${shown} Eksempel`));
   assert.match(overview, new RegExp(`og ${5 - shown} flere`));

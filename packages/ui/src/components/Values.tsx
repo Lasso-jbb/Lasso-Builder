@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { usePrintMode } from "../print.js";
 import {
   changeText,
   formatAmount,
@@ -52,7 +53,8 @@ export function NotReported({ kind = "reported" }: { kind?: "reported" | "regist
  */
 export function FoldText({ text, lines = 4, moreLabel = "Vis mere" }: { text: string; lines?: number; /** Fx "Vis hele formålet" (28.7). */ moreLabel?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
-  const [open, setOpen] = useState(false);
+  const print = usePrintMode();
+  const [open, setOpen] = useState(print);
   const [overflow, setOverflow] = useState(text.length > 60 * lines * 1.5);
   useIsoLayoutEffect(() => {
     const el = ref.current;
@@ -67,7 +69,7 @@ export function FoldText({ text, lines = 4, moreLabel = "Vis mere" }: { text: st
       <span ref={ref} className={`lasso-fold__text ${open ? "is-open" : ""}`} style={clamp ? { maxHeight: `${lines}lh` } : undefined}>
         {text}
       </span>
-      {overflow || open ? (
+      {(overflow || open) && !print ? (
         <button type="button" className="lasso-fold__more" aria-expanded={open} onClick={() => setOpen(!open)}>
           {open ? "Vis mindre" : moreLabel}
         </button>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { usePrintMode } from "../print.js";
 import { ExpandLink } from "./ExpandLink.js";
 import { amountScale, currencyUnit, formatNumber, formatPercent, formatScaled, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, changePercent, type FinancialsVM, type Metric } from "@lasso/spec";
 import { DataState, Missing, Section, stateForError } from "../primitives.js";
@@ -68,7 +69,7 @@ function joinYears(ys: readonly number[]): string {
 export function MultiYearTable({ financials, metrics, years, title, error, variant, chartMetrics, onChartToggle }: { financials?: FinancialsVM; metrics?: readonly Metric[]; years?: number; title?: string; error?: string; variant?: "A" | "B"; /** Nøgletal, der står i grafen (afkrydset). */ chartMetrics?: readonly Metric[]; /** Afkrydsning ændret: vis/skjul nøgletallet i grafen. */ onChartToggle?: (metric: Metric, on: boolean) => void }) {
   const heading = title ?? "Flerårstabel";
   const [ref, W] = useWidth<HTMLDivElement>(1048);
-  const [allRows, setAllRows] = useState(false);
+  const [allRows, setAllRows] = useState(usePrintMode());
   // Kontrol r5 (10.2 mobil): hjælpeteksten nævner kun de år, der faktisk ligger uden for billedet (målt).
   const mobileTable = useRef<HTMLTableElement>(null);
   const [fitYears, setFitYears] = useState<number | null>(null);
