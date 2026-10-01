@@ -198,14 +198,17 @@ function timelineFor(c: DemoCompany): TimelineVM {
   const events: TimelineVM["events"] = [];
   if (c.founded) events.push({ date: c.founded, title: "Virksomheden stiftet", detail: c.name, category: "Stamdata" });
   for (const p of c.people) {
-    if (p.from) events.push({ date: p.from, title: `${p.name} er indtrådt`, detail: p.role, category: "Ledelse" });
-    if (p.to) events.push({ date: p.to, title: `${p.name} er fratrådt`, detail: p.role, category: "Ledelse" });
+    // 12.3 (Jakob 01.10): navnet kan åbnes, når personen har et Lasso-ID.
+    const pid = p.lassoId ?? PERSON_IDS.get(p.name);
+    const seg = (verb: string) => (pid ? [{ text: p.name, lassoId: pid }, { text: ` ${verb}` }] : undefined);
+    if (p.from) events.push({ date: p.from, title: `${p.name} er indtrådt`, titleSegments: seg("er indtrådt"), detail: p.role, category: "Ledelse" });
+    if (p.to) events.push({ date: p.to, title: `${p.name} er fratrådt`, titleSegments: seg("er fratrådt"), detail: p.role, category: "Ledelse" });
   }
   for (const y of financialsFor(c).years) {
     const bits = [y.grossProfit != null ? `Bruttofortjeneste ${formatAmount(y.grossProfit)}` : null, y.profit != null ? `resultat ${formatAmount(y.profit)}` : null].filter(
       (x): x is string => Boolean(x),
     );
-    events.push({ date: `${y.year}-04-15`, title: `Årsrapport ${y.year} offentliggjort`, detail: bits.join(", ") || undefined, category: "Regnskab" });
+    events.push({ date: `${y.year}-04-15`, title: `Årsrapport ${y.year} offentliggjort`, detail: bits.join(", ") || undefined, category: "Regnskab", url: `https://regnskaber.virk.dk/eksempel/${c.cvr}-${y.year}.pdf` });
   }
   // Katalog 12.3: ændringer vises som "fra → til" (gammel adresse gennemstreget, kapital før og efter).
   const a = c.address;

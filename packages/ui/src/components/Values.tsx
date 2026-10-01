@@ -350,6 +350,9 @@ export function LockedValue({ count, noun, linkLabel, onUpgrade, href, blur = fa
       </svg>
       {hasCount ? (
         <span className="lasso-locked__count">{`${formatNumber(count)}${noun ? ` ${noun}` : ""}`}</span>
+      ) : noun ? (
+        // Uden kendt antal (fx "Flere nyheder", 12.4): kun teksten.
+        <span className="lasso-locked__count">{noun}</span>
       ) : blur ? (
         <span className="lasso-locked__blur" aria-label="Skjult værdi">
           00.000.000

@@ -6,7 +6,7 @@ import { composeCompany, emptyDataset, type CompanyVM, type ContactVM, type Data
 import { KeyValueList } from "./components/KeyValueList.js";
 import { LassoContact } from "./components/LassoContact.js";
 import { LassoRelations } from "./components/LassoRelations.js";
-import { LassoTextSections, segmentAction } from "./components/LassoTextSections.js";
+import { LassoTextSections, revealOf, segmentAction } from "./components/LassoTextSections.js";
 import { LassoView } from "./LassoView.js";
 
 const ID = "CVR-1-99000001";
@@ -96,10 +96,15 @@ const headings = (html: string) => [...html.matchAll(/lasso-textsection__heading
 
 test("Virksomhedsprofil (overblik): CVR-tekster uden branche plus konklusion, resultat og likviditet, ingen kildevisning (12.1)", () => {
   const html = renderToStaticMarkup(createElement(LassoTextSections, { sections: SECTIONS }));
-  assert.deepEqual(headings(html), ["Formål", "Tegningsregler", "Regnskabsanalyse: konklusion", "Resultat", "Likviditet"]);
+  // 12.1 (Jakob 01.10): afsnittene læses som én tekst; de første 440 tegn står, resten kommer med "Vis mere" (50 % ad gangen).
+  const all = ["Formål", "Tegningsregler", "Regnskabsanalyse: konklusion", "Resultat", "Likviditet"];
+  const first = headings(html);
+  assert.ok(first.length >= 1 && first.length < all.length, first.join());
+  assert.deepEqual(first, all.slice(0, first.length));
+  assert.equal(count(html, " …"), 1, "teksten klippes kun ét sted");
   assert.doesNotMatch(html, /Kilde:/);
   assert.doesNotMatch(html, /NACE 412000/);
-  // 12.1: lange afsnit foldes hver for sig, men der er ét "Vis mere" for hele sektionen.
+  // 12.1: ét "Vis mere" for hele sektionen.
   assert.equal(count(html, ">Vis mere<"), 1);
   assert.doesNotMatch(html, /Se hele regnskabsanalysen/);
   // Kun CVR-tekster: ingen analysekilde.
@@ -285,4 +290,11 @@ test("LassoView: personliste med roles, personroller med role og tidslinje med k
   assert.match(html, /Statusændringer .*Ingen statusændringer registreret\./);
   assert.match(html, /Bestyrelsesposter[\s\S]*?Eksempel Byg A\/S/);
   assert.doesNotMatch(html, /Eksempel Holding ApS/);
+});
+
+test("12.1 (Jakob 01.10): 'Vis mere' kun med mindst 50 % mere at vise; hvert klik viser 50 % mere", () => {
+  assert.equal(revealOf(500, 440), 500, "under 50 % tilbage: hele teksten");
+  assert.equal(revealOf(660, 440), 440, "præcis 50 % tilbage: Vis mere");
+  assert.equal(revealOf(2000, 660), 660);
+  assert.equal(revealOf(1200, 990), 1200);
 });

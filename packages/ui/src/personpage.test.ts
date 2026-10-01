@@ -162,7 +162,7 @@ test("personsiden, historik: historik (5) og nyheder om personen side om side", 
   const html = render(spec, dataset(), { drillDown: true });
   assert.match(html, /Udtrådt som bestyrelsesmedlem i /);
   assert.match(html, /Vis alle 6/);
-  assert.match(html, /Nyheder/);
+  assert.match(html, /Skrevet i medierne/);
   assert.match(html, /Carla Prøve indtræder i bestyrelsen/);
   assert.doesNotMatch(html, /Stamoplysninger|Aktive roller|Fokusperson/);
 });

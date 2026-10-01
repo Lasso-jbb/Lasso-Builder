@@ -162,6 +162,8 @@ export interface FinancialYear {
   published?: string;
   /** Hvornår regnskabet blev offentliggjort (bruges i tidslinjen). Ikke altid oplyst. */
   publicationTime?: string;
+  /** Årsrapporten som PDF (kun http/https), så tidslinjen kan hente den (12.3). Ikke altid oplyst. */
+  pdfUrl?: string;
   revenue?: number | null;
   grossProfit?: number | null;
   profit?: number | null;
@@ -456,6 +458,8 @@ export interface TimelineEventVM {
    * med Lasso-ID, så det kan åbnes i værter med drill-down). `title` er altid den rene tekst.
    */
   titleSegments?: TextSegment[];
+  /** Dokumentet bag begivenheden (årsrapportens PDF, kun http/https): titlen bliver et link, der henter det (12.3). */
+  url?: string;
 }
 
 export interface TimelineVM {

@@ -4,6 +4,7 @@ import { formatDate, isPersonId, type TextSegment, type TimelineVM } from "@lass
 import type { MoreInTab, ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { usePrintMode } from "../print.js";
+import { Icon } from "./Icon.js";
 
 const ALL = "Alle typer";
 
@@ -74,6 +75,7 @@ export function LassoTimeline({
   limit = 5,
   moreIn,
   filterColumn = false,
+  onLink,
 }: {
   timeline?: TimelineVM;
   title?: string;
@@ -90,6 +92,8 @@ export function LassoTimeline({
    * container (tablet, chat og mobil) bliver kolonnen til chips over strømmen. Standard: typevælger i hovedet.
    */
   filterColumn?: boolean;
+  /** Åbner et dokument (årsrapportens PDF, 12.3): titlen på en begivenhed med `url` bliver et link med hent-ikon. */
+  onLink?: (url: string) => void;
 }) {
   const heading = title ?? "Historik";
   const categories = useMemo(
@@ -212,7 +216,13 @@ export function LassoTimeline({
                     </div>
                     <div className="lasso-timeline__body">
                       <div className="lasso-timeline__title">
-                        {e.titleSegments ? (
+                        {e.url && onLink ? (
+                          // 12.3 (Jakob 01.10): årsrapporten kan hentes direkte fra tidslinjen.
+                          <button type="button" className="lasso-link lasso-timeline__doc" onClick={() => onLink(e.url!)}>
+                            <Icon name="download" size={14} />
+                            <span>{e.title}</span>
+                          </button>
+                        ) : e.titleSegments ? (
                           <TitleSegments
                             segments={e.titleSegments}
                             onOpen={onOpen}
@@ -240,16 +250,8 @@ export function LassoTimeline({
                       ) : e.detail ? (
                         <div className="lasso-row__sub">{e.detail}</div>
                       ) : null}
-                      <div className="lasso-timeline__meta">
-                        {isReport(e.category) ? (
-                          <span className="lasso-timeline__cat">{e.category}</span>
-                        ) : (
-                          <>
-                            {formatDate(e.date)}
-                            <span className="lasso-timeline__cat">, {e.category}</span>
-                          </>
-                        )}
-                      </div>
+                      {/* 12.3 (Jakob 01.10): typeordet (Regnskab, Ledelse …) vises ikke; kun datoen, og ikke igen for regnskab. */}
+                      {isReport(e.category) ? null : <div className="lasso-timeline__meta">{formatDate(e.date)}</div>}
                     </div>
                   </div>
                 </div>

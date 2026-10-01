@@ -97,23 +97,70 @@ function Item({
   );
 }
 
+/** 12.1 (Jakob 01.10): tegn, profilen viser fra start, før "Vis mere". */
+export const PROFILE_START = 440;
+
+const lengthOf = (it: TextSectionItem) => (it.segments?.length ? it.segments.reduce((n, s) => n + s.text.length, 0) : it.body.length);
+
 /**
- * Variant "profil" (12.1): lange afsnit foldes hver for sig, men ét "Vis mere" (koral) til sidst folder
- * hele sektionen ud på én gang, i stedet for et link efter hvert afsnit.
+ * Hvor meget af en tekst på `total` tegn der vises, når der er plads til `budget` (12.1, Jakob 01.10): "Vis mere"
+ * findes kun, når der reelt er mindst 50 % mere at vise; ellers står hele teksten. Hvert klik viser 50 % mere.
  */
-function Profile({ items, onOpen, limit, full = false }: { items: TextSectionItem[]; onOpen?: (a: ViewAction) => void; limit?: number; /** Erhvervsresumeet (variant "resume") står helt, som i portalen. */ full?: boolean }) {
-  const [open, setOpen] = useState(false);
-  // Kompakt profil (højdebudgettet, 23.3): kun de første `limit` afsnit, til "Vis mere" folder resten ud.
-  const clipped = limit !== undefined && items.length > limit;
-  const long = !full && (clipped || items.some((it) => (it.segments?.length ? it.segments.reduce((n, s) => n + s.text.length, 0) : it.body.length) > TRUNCATE_AT));
+export function revealOf(total: number, budget: number): number {
+  return total - budget >= budget * 0.5 ? budget : total;
+}
+
+/** Klip ved et ordskifte (ikke midt i et ord), når det ikke koster mere end 40 tegn. */
+function wordCut(segments: readonly TextSegment[], max: number): TextSegment[] {
+  const out = cut(segments, max);
+  const last = out.at(-1);
+  if (!last) return out;
+  const space = last.text.lastIndexOf(" ");
+  if (space > 0 && last.text.length - space < 40) out[out.length - 1] = { ...last, text: last.text.slice(0, space).replace(/[,;:.\s]+$/, "") };
+  return out;
+}
+
+/**
+ * Variant "profil" og "resume" (12.1, Jakob 01.10): afsnittene læses som én tekst. De første PROFILE_START tegn står
+ * fremme; teksten klippes kun ét sted (der hvor den slutter), og "Vis mere" fortsætter derfra med 50 % mere,
+ * til alt står. Er der under 50 % tilbage, står hele teksten uden "Vis mere". `limit` (kompakt profil, 23.3)
+ * viser højst de første `limit` afsnit fra start.
+ */
+function Profile({ items, onOpen, limit }: { items: TextSectionItem[]; onOpen?: (a: ViewAction) => void; limit?: number }) {
+  const print = usePrintMode();
+  const total = items.reduce((n, it) => n + lengthOf(it), 0);
+  const firstLimit = limit !== undefined && items.length > limit ? items.slice(0, limit).reduce((n, it) => n + lengthOf(it), 0) : Number.POSITIVE_INFINITY;
+  const start = revealOf(total, Math.min(PROFILE_START, firstLimit));
+  const [budget, setBudget] = useState(start);
+  const shown = print ? total : budget;
+  let left = shown;
+  const parts: { item: TextSectionItem; segments: TextSegment[]; cut: boolean }[] = [];
+  for (const it of items) {
+    if (left <= 0) break;
+    const segments: readonly TextSegment[] = it.segments?.length ? it.segments : [{ text: it.body }];
+    const n = lengthOf(it);
+    parts.push(n <= left ? { item: it, segments: [...segments], cut: false } : { item: it, segments: wordCut(segments, left), cut: true });
+    left -= n;
+  }
   return (
     <>
-      {(clipped && !open ? items.slice(0, limit) : items).map((s, i) => (
-        <Item key={i} item={s} limit={open || full ? Number.POSITIVE_INFINITY : TRUNCATE_AT} toggle={false} onOpen={onOpen} />
+      {parts.map(({ item, segments, cut: clipped }, i) => (
+        <div key={i} className="lasso-textsection">
+          {item.heading ? <div className="lasso-textsection__heading">{item.heading}</div> : null}
+          <p className="lasso-textsection__body">
+            <Runs segments={segments} onOpen={onOpen} />
+            {clipped ? " …" : null}
+          </p>
+          {item.note && !isAnalysisSection(item) && !clipped ? <div className="lasso-textsection__note">{item.note}</div> : null}
+        </div>
       ))}
-      {long ? (
-        <button type="button" className="lasso-link lasso-more" aria-expanded={open} onClick={() => setOpen(!open)}>
-          {open ? "Vis mindre" : "Vis mere"}
+      {shown < total ? (
+        <button type="button" className="lasso-link lasso-more" aria-expanded={false} onClick={() => setBudget(revealOf(total, Math.round(budget * 1.5)))}>
+          Vis mere
+        </button>
+      ) : start < total && !print ? (
+        <button type="button" className="lasso-link lasso-more" aria-expanded onClick={() => setBudget(start)}>
+          Vis mindre
         </button>
       ) : null}
     </>
@@ -354,7 +401,7 @@ export function LassoTextSections({
   return (
     <Section title={heading} span={span} className="lasso-textsections">
       {/* 12.1: ingen kildevisning (G3). */}
-      <Profile items={shown} onOpen={onOpen} limit={limit} full={variant === "resume"} />
+      <Profile items={shown} onOpen={onOpen} limit={limit} />
     </Section>
   );
 }

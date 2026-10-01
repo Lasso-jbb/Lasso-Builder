@@ -574,7 +574,7 @@ export const entries: GalleryEntry[] = [
     title: "Nyhedsliste",
     node: "LMF-0",
     spec: co("Eksempel Byg A/S", [{ type: "LassoNews", company: B, limit: 3 }]),
-    note: "Paper LMF-0 (runde 5): kildevisning 12/16 muted, overskrift 14/500/18 som historikkens begivenhed (12.3), uddrag 13/18 klippet efter 2 linjer, virksomheden i fed i uddraget, 'Vis flere' nederst. Papers eksempeltekster.",
+    note: "Jakob 01.10: titlen er 'Skrevet i medierne'; højst 3 nyheder, og er der flere, står 'Flere nyheder – Kræver Lasso Pro' (antallet kendes ikke). Overskriften og 'Åbn artikel' åbner artiklen via værten. Paper LMF-0: kildevisning 12/16 muted, overskrift 14/500/18, uddrag 13/18 klippet efter 2 linjer, virksomheden i fed i uddraget. Eksempellinks peger på mediernes forsider.",
     mutate: (ds) => {
       const ago = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString();
       ds.news[B] = {
@@ -582,7 +582,7 @@ export const entries: GalleryEntry[] = [
         items: [
           {
             source: "Børsen",
-            url: "https://borsen.dk/nyheder/eksempel",
+            url: "https://borsen.dk/",
             time: ago(3),
             headline: "Datavirksomhed lander aftale med finanssektoren",
             excerpt: "Aftalen giver bankerne adgang til opdaterede virksomhedsdata, oplyser Lasso X i en pressemeddelelse. Selskabet kalder aftalen en milepæl",
@@ -591,7 +591,7 @@ export const entries: GalleryEntry[] = [
           { source: "Lasso News", time: "2026-04-15", headline: "Ny årsrapport: bruttofortjenesten stiger 7,5 %", excerpt: "Skrevet ud fra regnskabet for 2025. Resultat efter skat -201 t. kr., egenkapital 3,2 mio. kr." },
           {
             source: "Tech.eu",
-            url: "https://tech.eu/eksempel",
+            url: "https://tech.eu/",
             time: "2026-01-12",
             language: "engelsk",
             headline: "Nordic data startups to watch in 2026",

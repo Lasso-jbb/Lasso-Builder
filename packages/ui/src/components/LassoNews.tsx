@@ -1,11 +1,11 @@
 import { useState, type ReactNode } from "react";
-import { ExpandLink, PromptLink } from "./ExpandLink.js";
 import { formatDate, isPersonId, type NewsItemVM, type NewsVM, type TextSegment } from "@lasso/spec";
 import type { MoreInTab, ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { usePrintMode } from "../print.js";
 import { Icon } from "./Icon.js";
 import { LassoMark } from "../LassoMark.js";
+import { LockedValue } from "./Values.js";
 
 /** "2026-04-15" -> "for 3 dage siden" under 7 dage gammel, ellers "15.04.2026". */
 function relativeOrDate(iso: string | undefined): string {
@@ -59,6 +59,30 @@ interface SegmentOpts {
   /** Siden, nyheden står på: dens eget navn står i fed i stedet for som link til sig selv (regel 17). */
   selfId?: string;
   onOpen?: (a: ViewAction) => void;
+  /** Værten åbner artiklen (open-link); uden: almindeligt link i ny fane. */
+  onLink?: (url: string) => void;
+}
+
+/** Et link til artiklen: via værten (onLink), så det også virker i MCP-værter, der blokerer target=_blank. */
+function ArticleLink({ url, onLink, className, children }: { url: string; onLink?: (url: string) => void; className?: string; children: ReactNode }) {
+  return (
+    <a
+      className={className}
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      onClick={
+        onLink
+          ? (e) => {
+              e.preventDefault();
+              onLink(url);
+            }
+          : undefined
+      }
+    >
+      {children}
+    </a>
+  );
 }
 
 /** Et segment, der kan åbnes her: har et Lasso-ID, er ikke siden selv, og værten har drill-down. */
@@ -109,9 +133,9 @@ function Headline({ item, ...opts }: { item: NewsItemVM } & SegmentOpts) {
   const flush = () => {
     if (!run.length) return;
     parts.push(
-      <a key={`a${parts.length}`} href={item.url} target="_blank" rel="noreferrer">
+      <ArticleLink key={`a${parts.length}`} url={item.url!} onLink={opts.onLink}>
         {run}
-      </a>,
+      </ArticleLink>,
     );
     run = [];
   };
@@ -189,14 +213,17 @@ function NewsRow({ item, mention, ...opts }: { item: NewsItemVM; mention?: strin
       <div className="lasso-news__foot">
         <span className="lasso-news__provider">{footText(item)}</span>
         {item.url ? (
-          <a className="lasso-news__open" href={item.url} target="_blank" rel="noreferrer">
+          <ArticleLink className="lasso-news__open" url={item.url} onLink={opts.onLink}>
             Åbn artikel
-          </a>
+          </ArticleLink>
         ) : null}
       </div>
     </article>
   );
 }
+
+/** 12.4 (Jakob 01.10): så mange nyheder vises uden Lasso Pro. */
+export const NEWS_FREE = 3;
 
 /**
  * Nyheder (katalog 12, "Nyheder"). To kilder, Lasso News og Paqle, flettet og sorteret efter tid
@@ -213,8 +240,10 @@ export function LassoNews({
   error,
   onOpen,
   emptyReason,
-  moreIn,
   layout,
+  onLink,
+  onUpgrade,
+  title: titleProp,
 }: {
   news?: NewsVM;
   /** "grid" (mønster 8, 30.11): artiklerne som kortgitter i to kolonner i fuld bredde. */
@@ -228,11 +257,16 @@ export function LassoNews({
   onOpen?: (a: ViewAction) => void;
   /** Tom tilstand for andre entiteter end virksomheder, fx "Ingen nyheder om personen." */
   emptyReason?: string;
-  /** Smagsprøve på overblikket: "Se alle N nyheder i Historik" åbner fanen i stedet for at folde ud. */
+  /** Udgået for nyheder (Jakob 01.10: højst 3 overalt); beholdt for bagudkompatibilitet. */
   moreIn?: MoreInTab;
+  /** Åbner artiklen via værten (open-link). */
+  onLink?: (url: string) => void;
+  /** "Kræver Lasso Pro" under de tre første nyheder, når der er flere. */
+  onUpgrade?: () => void;
+  title?: string;
 }) {
-  const title = "Nyheder";
-  const [expanded, setExpanded] = useState(usePrintMode());
+  // 12.4 (Jakob 01.10): "Skrevet i medierne".
+  const title = titleProp ?? "Skrevet i medierne";
   if (!news) {
     return (
       <Section title={title} span="half">
@@ -247,23 +281,21 @@ export function LassoNews({
       </Section>
     );
   }
-  // Specens limit gælder (overblik: 3); resten bag "Se alle N" (regel 9).
-  const max = limit ?? 5;
-  const items = expanded ? news.items : news.items.slice(0, max);
+  // 12.4 (Jakob 01.10): højst 3 nyheder. Flere står bag Lasso Pro; antallet kendes ikke, så det nævnes ikke.
+  const max = Math.min(limit ?? NEWS_FREE, NEWS_FREE);
+  const items = news.items.slice(0, max);
   return (
     <Section title={title} span={layout === "grid" ? "full" : "half"}>
       <div className={`lasso-news${layout === "grid" ? " lasso-news--grid" : ""}`}>
         {items.map((n, i) => (
-          <NewsRow key={i} item={n} mention={companyName} selfId={companyId} onOpen={onOpen} />
+          <NewsRow key={i} item={n} mention={companyName} selfId={companyId} onOpen={onOpen} onLink={onLink} />
         ))}
       </div>
+      {/* Også på fanen Historik står kun 3, så der er ingen "Se alle … i Historik" (moreIn) for nyhederne. */}
       {news.items.length > max ? (
-        moreIn ? (
-          <PromptLink label={`Se alle ${news.items.length} nyheder i ${moreIn.tab}`} onClick={moreIn.open} />
-        ) : (
-          // 12.4 (runde 5, Paper LNE-0): "Vis flere" som tekstknap med chevron under en tynd linje.
-          <ExpandLink expanded={expanded} total={news.items.length} onToggle={() => setExpanded(!expanded)} />
-        )
+        <div className="lasso-news__locked">
+          <LockedValue noun="Flere nyheder" onUpgrade={onUpgrade} />
+        </div>
       ) : null}
     </Section>
   );

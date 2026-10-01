@@ -590,6 +590,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           limit={c.limit}
           moreIn={moreIn(c.more)}
           filterColumn={c.filterColumn}
+          onLink={(url) => act({ kind: "open-link", url })}
           error={err(`timeline:${k}`) ?? (risk && c.person ? err(`person:${c.person}`) : undefined)}
           onOpen={props.host.drillDown ? act : undefined}
           emptyReason={
@@ -617,6 +618,8 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           companyId={k}
           error={err(`news:${k}`)}
           onOpen={props.host.drillDown ? act : undefined}
+          onLink={(url) => act({ kind: "open-link", url })}
+          onUpgrade={props.host.prompt ? () => act({ kind: "prompt", prompt: "Hvilke Lasso-pakker giver adgang til alle nyheder om virksomheden?" }) : undefined}
           emptyReason={c.person ? "Ingen nyheder om personen." : undefined}
         />
       );

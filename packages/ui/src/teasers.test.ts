@@ -107,11 +107,11 @@ test("virksomhedens overblik: 'Se alle … i Historik' med openFocus, ellers fol
   const spec = composeCompany(CO, ds, { focus: "overblik", followUps: false, showAll: true });
   const linked = render(spec, ds, { openFocus: true });
   assert.match(linked, /Se alle 8 begivenheder i Historik/);
-  assert.match(linked, /Se alle 5 nyheder i Historik/);
+  // 12.4 (Jakob 01.10): nyhederne viser højst 3 overalt; resten kræver Lasso Pro (ingen "i Historik").
+  assert.doesNotMatch(linked, /nyheder i Historik/);
+  assert.match(linked, /Flere nyheder\s*Kræver Lasso Pro/);
   const inPlace = render(spec, ds, {});
   assert.match(inPlace, /Vis alle 8\b/);
-  // Regel 12 (Jakob 30.09): nyhedslisten folder ud med "Vis alle N ›" som de andre lister.
-  assert.match(inPlace, /Vis alle 5\b/);
   assert.doesNotMatch(inPlace, /i Historik/);
   // Fanen Historik ejer elementerne: dér folder "Se alle" ud på stedet, også med openFocus.
   const history = render(composeCompany(CO, ds, { focus: "historik", followUps: false }), ds, { openFocus: true });
@@ -124,11 +124,8 @@ test("knapperne affyrer open-focus med fanen; den foldende knap har aria-expande
   const actions: ViewAction[] = [];
   const moreIn: MoreInTab = { tab: "Historik", open: () => void actions.push({ kind: "open-focus", focus: "historik" }) };
   click(createElement(LassoTimeline, { timeline: ds.timeline[CO], limit: 3, moreIn }), /Se alle 8 begivenheder i Historik/);
-  click(createElement(LassoNews, { news: ds.news[CO], limit: 3, moreIn }), /Se alle 5 nyheder i Historik/);
-  assert.deepEqual(actions, [
-    { kind: "open-focus", focus: "historik" },
-    { kind: "open-focus", focus: "historik" },
-  ]);
+  assert.deepEqual(actions, [{ kind: "open-focus", focus: "historik" }]);
+  assert.doesNotMatch(renderToStaticMarkup(createElement(LassoNews, { news: ds.news[CO], limit: 3, moreIn })), /i Historik/);
   const linked = renderToStaticMarkup(createElement(LassoTimeline, { timeline: ds.timeline[CO], limit: 3, moreIn }));
   assert.doesNotMatch(linked, /aria-expanded/);
   assert.match(renderToStaticMarkup(createElement(LassoTimeline, { timeline: ds.timeline[CO], limit: 3 })), /aria-expanded="false"/);

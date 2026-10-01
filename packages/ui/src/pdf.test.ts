@@ -150,9 +150,10 @@ test("print-tilstand: ingen handlingsbjælke eller knapper, 'Se alle' foldet ud"
   assert.doesNotMatch(print, /lasso-actionbar/);
   assert.doesNotMatch(print, /Gem som PDF|lasso-frame__save|Tilbage|Opdatér|Gem visning/);
   assert.doesNotMatch(print, /Se alle/);
-  // Alle 8 begivenheder, alle 6 nyheder og alle 6 personer står.
+  // Alle 8 begivenheder og alle 6 personer står; nyhederne højst 3 (Jakob 01.10, resten kræver Lasso Pro).
   for (let i = 0; i < 8; i++) assert.match(print, new RegExp(`Årsrapport ${2025 - i} offentliggjort`));
-  for (let n = 1; n <= 6; n++) assert.match(print, new RegExp(`Nyhed ${n} om byggeriet`));
+  for (let n = 1; n <= 3; n++) assert.match(print, new RegExp(`Nyhed ${n} om byggeriet`));
+  assert.doesNotMatch(print, /Nyhed 4 om byggeriet/);
   assert.match(print, /Finn Prøve/);
   // "Vis færre" står i markup'en, men print-CSS'en skjuler foldeknapperne (.lasso-more, .lasso-news__more m.fl.).
   assert.doesNotMatch(print.replace(/<button type="button" class="lasso-link[^"]*"[^>]*>Vis færre[^]*?<\/button>/g, ""), /<button/);

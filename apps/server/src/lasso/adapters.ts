@@ -722,6 +722,8 @@ export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
     const src = pick(r, "figures", "keyFigures", "values", "financials", "incomeStatement") ?? r;
     const f = (concepts: readonly string[], ...keys: string[]) => firstFact(facts, concepts) ?? num(src, ...keys) ?? num(r, ...keys) ?? null;
     const publicationTime = dateStr(r, "publicationTime", "publicationDate", "published");
+    const pdfRaw = str(r, "pdfUrl", "documentUrl", "pdf", "links.pdf", "reportUrl");
+    const pdfUrl = pdfRaw && /^https?:\/\//i.test(pdfRaw) ? pdfRaw : undefined;
     const revenue = f(CONCEPTS.revenue, "revenue", "netRevenue", "turnover", "netTurnover", "omsaetning");
     const grossProfit = f(CONCEPTS.grossProfit, "grossProfit", "grossResult", "grossProfitLoss", "bruttofortjeneste");
     const profit = f(CONCEPTS.profit, "profit", "netResult", "profitLoss", "netIncome", "aaretsResultat");
@@ -744,6 +746,7 @@ export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
       periodEnd,
       published,
       ...(publicationTime ? { publicationTime } : {}),
+      ...(pdfUrl ? { pdfUrl } : {}),
       ...(scope ? { scope } : {}),
       ...(currency ? { currency } : {}),
       revenue,
@@ -1147,8 +1150,10 @@ export function adaptTimeline(lassoId: string, companyRaw: Json, people: readonl
   const name = str(companyRaw, "name", "companyName", "navn");
   if (founded) events.push({ date: founded, title: "Virksomheden stiftet", detail: name, category: "Stamdata" });
   for (const p of people) {
-    if (p.from) events.push({ date: p.from, title: `${p.name} er indtrådt`, detail: p.role, category: "Ledelse" });
-    if (p.to) events.push({ date: p.to, title: `${p.name} er fratrådt`, detail: p.role, category: "Ledelse" });
+    // 12.3 (Jakob 01.10): navnet kan åbnes, når personen har et Lasso-ID.
+    const seg = (verb: string) => (p.lassoId ? [{ text: p.name, lassoId: p.lassoId }, { text: ` ${verb}` }] : undefined);
+    if (p.from) events.push({ date: p.from, title: `${p.name} er indtrådt`, titleSegments: seg("er indtrådt"), detail: p.role, category: "Ledelse" });
+    if (p.to) events.push({ date: p.to, title: `${p.name} er fratrådt`, titleSegments: seg("er fratrådt"), detail: p.role, category: "Ledelse" });
   }
   for (const y of years) {
     const date = y.publicationTime ?? y.periodEnd;
@@ -1157,7 +1162,7 @@ export function adaptTimeline(lassoId: string, companyRaw: Json, people: readonl
       y.grossProfit != null ? `Bruttofortjeneste ${formatAmountShort(y.grossProfit, y.currency)}` : null,
       y.profit != null ? `resultat ${formatAmountShort(y.profit, y.currency)}` : null,
     ].filter((x): x is string => Boolean(x));
-    events.push({ date, title: `Årsrapport ${y.year} offentliggjort`, detail: parts.join(", ") || undefined, category: "Regnskab" });
+    events.push({ date, title: `Årsrapport ${y.year} offentliggjort`, detail: parts.join(", ") || undefined, category: "Regnskab", ...(y.pdfUrl ? { url: y.pdfUrl } : {}) });
   }
   events.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   return { lassoId, events };

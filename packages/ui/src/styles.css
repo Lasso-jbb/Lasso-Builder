@@ -1217,6 +1217,8 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-timeline__from--struck { text-decoration: line-through; }
 .lasso-timeline__to { color: var(--lasso-text); font-weight: 500; }
 .lasso-timeline__meta { font-size: 12px; line-height: 16px; color: var(--lasso-muted); margin-top: 3px; }
+.lasso-root .lasso-timeline__doc { display: inline-flex; align-items: center; gap: 6px; font-weight: inherit; text-align: left; }
+.lasso-timeline__doc .lasso-icon { flex: none; }
 /* 26c.10: mobil som ren lodret liste: dato 12 muted øverst, titel 14/400, detalje 13 muted; ingen
    årsoverskrifter, typevælger eller kategori; seneste prik som koral ring. */
 @container lasso (max-width: 560px) {
@@ -1271,6 +1273,7 @@ button.lasso-relations__name:hover { text-decoration: underline; }
   .lasso-news__row--featured .lasso-news__foot { display: flex; justify-content: space-between; align-items: center; gap: var(--lasso-space-3); margin-top: 10px; }
   .lasso-news__provider { font-size: 12px; color: var(--lasso-muted); }
   .lasso-root .lasso-news__open { font-size: var(--lasso-fs-sm); font-weight: 500; color: var(--lasso-accent-text); text-decoration: none; }
+.lasso-news__locked { padding-top: var(--lasso-space-3); border-top: 1px solid var(--lasso-border); font-size: var(--lasso-fs); }
 }
 @container lasso (max-width: 560px) {
   .lasso-timeline__meta { overflow-wrap: anywhere; }
