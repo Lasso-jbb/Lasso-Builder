@@ -79,6 +79,13 @@ export const CREDIT_SOURCE = "Creditsafe via Lasso";
 export const CREDIT_LOCKED_REASON = "Kræver Creditsafe-tilføjelse til Lasso-abonnementet";
 /** Grunden, når Creditsafe ikke nåede at beregne inden for klientens timeout. UI'en tilbyder "Hent igen" ved den. */
 export const CREDIT_PENDING_REASON = "Creditsafe beregner stadig, prøv igen om lidt";
+/** Hvad man får for kreditten (købstrinnet, katalog 38). */
+export const CREDIT_PURCHASE_INCLUDES = [
+  "Kreditscore A–E",
+  "Anbefalet kreditmaksimum",
+  "Lokal score og risikovurdering",
+  "Fuld kreditrapport som PDF",
+] as const;
 export const CREDIT_COST_NOTE = "Ny beregning hos Creditsafe koster en kredit og tager 5–45 sekunder; vurderingen gemmes 24 timer.";
 
 const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
@@ -89,6 +96,7 @@ const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
  */
 export function creditRatingText(r: CreditRatingVM): string {
   if (r.state === "locked") return "låst: kræver Creditsafe-tilføjelse";
+  if (r.state === "purchase") return "ikke købt endnu (koster en kredit pr. opslag)";
   if (r.state === "unavailable") return `ikke beregnet endnu${r.reason ? ` (${lower(r.reason)})` : ""}`;
   if (r.state === "error") return `kunne ikke hentes${r.reason ? ` (${r.reason})` : ""}`;
   const c = r.current;

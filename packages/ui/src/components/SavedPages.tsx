@@ -6,6 +6,7 @@ import { DataState, Section, stateForError } from "../primitives.js";
 import { Tabs } from "./Tabs.js";
 import { useToast } from "./Toast.js";
 import { usePrintMode } from "../print.js";
+import { Icon } from "./Icon.js";
 
 /** Regel 9: over 8 gemte sider vises de 8 nyeste + "Se alle N". */
 const COLLAPSED_ROWS = LIST_FOLD;
@@ -17,14 +18,15 @@ type Filter = "all" | SavedPageKind;
 
 const count = (n: number) => `${formatNumber(n)} ${n === 1 ? "gemt side" : "gemte sider"}`;
 
-/** "Virksomhed, CVR 34580820, fokus: Økonomi, sendt til Lasso". Manuelt gemte sider nævner ikke oprindelsen. */
+/** "Virksomhed, CVR 34580820" eller "Person". Hvor siden kom fra, siger intet for brugeren (55) og vises ikke. */
 function describe(p: SavedPageVM): string {
-  const parts = [p.kind === "company" ? (p.cvr ? `Virksomhed, CVR ${p.cvr}` : "Virksomhed") : "Person"];
-  // Overblik er standardvisningen og siger intet; ukendte fokusnavne udelades.
+  return p.kind === "company" ? (p.cvr ? `Virksomhed, CVR ${p.cvr}` : "Virksomhed") : "Person";
+}
+
+/** Den gemte visning ("Økonomi"), når siden er gemt fra en anden visning end Overblik; ukendte fokusnavne udelades. */
+function viewLabel(p: SavedPageVM): string | undefined {
   const labels: Record<string, string> = p.kind === "person" ? PERSON_FOCUS_LABELS : FOCUS_LABELS;
-  if (p.focus && p.focus !== "overblik" && Object.prototype.hasOwnProperty.call(labels, p.focus)) parts.push(`fokus: ${labels[p.focus]}`);
-  if (p.origin === "send" || p.origin === "link") parts.push("sendt til Lasso");
-  return parts.join(", ");
+  return p.focus && p.focus !== "overblik" && Object.prototype.hasOwnProperty.call(labels, p.focus) ? labels[p.focus] : undefined;
 }
 
 export interface SavedPagesProps {
@@ -38,11 +40,11 @@ export interface SavedPagesProps {
 }
 
 /**
- * Gemte sider (gem-laget, docs/gem-lag.md). Samme rækkemønster som personlisten (11):
- * navn 14/500 alene, hvad siden er i en grå linje under, gemt-dato til højre. Filter
- * "Alle / Virksomheder / Personer" som niveau 3-faner, kun når listen har begge slags.
- * "Fjern" er en lille tekstknap; rækken vises straks som fjernet (dæmpet + ordet
- * "fjernet"), og værten opdaterer listen bagefter. Ingen ikoner, badges eller initialer.
+ * Gemte sider (gem-laget, docs/gem-lag.md; redesign 55, Jakob 01.10): en liste over de virksomheder
+ * og personer, brugeren har gemt. Hver række: ikon for virksomhed/person, navnet som link, hvad det er
+ * (Virksomhed, CVR …), den gemte visning som mærke ("Økonomi") og brugerens note med noteikon; til
+ * højre gemt-dato og "Fjern". Filter "Alle / Virksomheder / Personer" som niveau 3-faner, kun når
+ * listen har begge slags. "Fjern" viser rækken straks som fjernet, og værten opdaterer listen bagefter.
  */
 export function SavedPages({ list, title, error, onAction, canDrillDown, canRemove }: SavedPagesProps) {
   const heading = title ?? "Gemte sider";
@@ -107,7 +109,7 @@ export function SavedPages({ list, title, error, onAction, canDrillDown, canRemo
       onChange={(id) => setFilter(id as Filter)}
     />
   ) : null;
-  const subtitle = list.pages.length < list.total ? `${count(list.total)}, de ${formatNumber(list.pages.length)} nyeste vises` : count(list.total);
+  const subtitle = `${list.pages.length < list.total ? `${count(list.total)}, de ${formatNumber(list.pages.length)} nyeste vises` : count(list.total)}. Åbn en side for at se de nyeste data.`;
   const foldable = foldedCount(rows.length, COLLAPSED_ROWS) < rows.length;
   const visible = foldable && !expanded ? rows.slice(0, COLLAPSED_ROWS) : rows;
 
@@ -117,7 +119,10 @@ export function SavedPages({ list, title, error, onAction, canDrillDown, canRemo
         {visible.map((p) => {
           const isGone = gone.has(p.lassoId);
           return (
-            <li key={p.lassoId} className={`lasso-row ${isGone ? "lasso-row--ended" : ""}`}>
+            <li key={p.lassoId} className={`lasso-row lasso-savedpages__row ${isGone ? "lasso-row--ended" : ""}`}>
+              <span className={`lasso-savedpages__icon lasso-savedpages__icon--${p.kind}`} aria-hidden="true">
+                <Icon name={p.kind === "person" ? "user" : "company"} size={16} />
+              </span>
               <div className="lasso-row__main">
                 <div className="lasso-row__name">
                   {canDrillDown && onAction && !isGone ? (
@@ -131,12 +136,18 @@ export function SavedPages({ list, title, error, onAction, canDrillDown, canRemo
                   ) : (
                     p.name
                   )}
+                  {viewLabel(p) ? <span className="lasso-savedpages__view">{viewLabel(p)}</span> : null}
                 </div>
                 <div className="lasso-row__sub">{describe(p)}</div>
-                {p.note ? <div className="lasso-row__sub lasso-savedpages__note">{p.note}</div> : null}
+                {p.note ? (
+                  <div className="lasso-row__sub lasso-savedpages__note">
+                    <Icon name="edit" size={12} />
+                    <span>{p.note}</span>
+                  </div>
+                ) : null}
               </div>
               <div className="lasso-row__side lasso-savedpages__side">
-                <span>gemt {formatDate(p.savedAt)}</span>
+                <span>Gemt {formatDate(p.savedAt)}</span>
                 {isGone ? (
                   <span className="lasso-savedpages__removed" role="status">
                     fjernet

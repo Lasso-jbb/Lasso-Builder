@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { accountingPeriod, formatDate, formatNumber, type CompanyVM, type FinancialsVM, type OwnershipVM, type TextSectionsVM } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { FoldText, ValueRow } from "./Values.js";
@@ -51,11 +51,10 @@ function Rows({ rows }: { rows: [string, ReactNode | undefined][] }) {
  * registreret kapital, kapitalklasser én pr. linje, vedtægter senest ændret, tegningsregel og formål
  * foldet til to linjer ("Vis" / "Vis hele formålet"), reklamebeskyttet og børsnoteret. Mobil: etiket over værdi.
  * "profile" (26h.9): "Bibrancher og formål" med branchechips (hovedbranche først), formålet og
- * "Vis tegningsregel og vedtægter". Felter uden værdi udelades; alle felter ud over CVR-teksterne er
+ * tegningsregel og vedtægter (altid vist, Jakob 01.10). Felter uden værdi udelades; alle felter ud over CVR-teksterne er
  * ubekræftede i live-data.
  */
 export function Registration({ company, ownership, financials, texts, variant = "full", title, error }: RegistrationProps) {
-  const [more, setMore] = useState(false);
   const profile = variant === "profile";
   const heading = title ?? (profile ? "Bibrancher og formål" : "Regnskabsoplysninger");
   if (!company) {
@@ -92,12 +91,8 @@ export function Registration({ company, ownership, financials, texts, variant = 
             <p className="lasso-reg__purpose-text">{purpose}</p>
           </div>
         ) : null}
-        {more ? <Rows rows={[["Tegningsregel", signing], ["Vedtægter senest ændret", company.statutesChanged ? formatDate(company.statutesChanged) : undefined]]} /> : null}
-        {signing || company.statutesChanged ? (
-          <button type="button" className="lasso-link lasso-reg__more" aria-expanded={more} onClick={() => setMore(!more)}>
-            {more ? "Skjul tegningsregel og vedtægter" : "Vis tegningsregel og vedtægter"}
-          </button>
-        ) : null}
+        {/* 24 (Jakob 01.10): to korte rækker er for lidt at folde; de vises altid. */}
+        <Rows rows={[["Tegningsregel", signing], ["Vedtægter senest ændret", company.statutesChanged ? formatDate(company.statutesChanged) : undefined]]} />
       </Section>
     );
   }

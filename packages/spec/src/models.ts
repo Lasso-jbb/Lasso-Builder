@@ -982,8 +982,13 @@ export interface CreditAssessment {
 export interface CreditRatingVM {
   lassoId: string;
   cvr?: string;
-  /** Ingen adgang (tilkøb), ikke beregnet endnu, eller fejl. */
-  state: "ok" | "locked" | "unavailable" | "error";
+  /**
+   * Ingen adgang (tilkøb), ikke beregnet endnu, eller fejl. "purchase": adgang, men vurderingen er ikke
+   * købt for denne virksomhed endnu (betales pr. styk, `price` kreditter); kortet viser købstrinnet.
+   */
+  state: "ok" | "locked" | "unavailable" | "error" | "purchase";
+  /** Pris i kreditter for ét opslag (state "purchase"). Standard 1. */
+  price?: number;
   reason?: string;
   current?: CreditAssessment;
   previous?: CreditAssessment;

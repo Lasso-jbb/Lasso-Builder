@@ -1355,6 +1355,20 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-credit__change--worse { color: var(--lasso-negative); }
 .lasso-credit__change--same { color: var(--lasso-muted); }
 .lasso-credit__note { margin: 0; font-size: 12px; line-height: 17px; color: var(--lasso-muted); }
+/* Købstrinnet (38): dæmpet forhåndsvisning af kortet + hvad man får, pris og én primær knap. */
+.lasso-creditbuy__preview { display: flex; flex-direction: column; gap: 14px; opacity: 0.55; pointer-events: none; user-select: none; }
+.lasso-creditbuy__q { color: var(--lasso-muted); }
+.lasso-creditbuy__hint { font-size: 13px; line-height: 18px; color: var(--lasso-muted); }
+.lasso-creditbuy__blur { display: inline-block; width: 72px; height: 10px; border-radius: 5px; background: var(--lasso-divider-subtle); }
+.lasso-creditbuy__offer { display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius); background: var(--lasso-surface-2); }
+.lasso-creditbuy__lead { margin: 0; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--lasso-text); }
+.lasso-creditbuy__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.lasso-creditbuy__list li { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 18px; color: var(--lasso-text-2); }
+.lasso-creditbuy__list svg { flex: none; margin-top: 2px; color: var(--lasso-positive); }
+.lasso-creditbuy__price { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; padding-top: 4px; }
+.lasso-creditbuy__amount { font-size: 18px; line-height: 22px; font-weight: 600; color: var(--lasso-text); }
+.lasso-creditbuy__per { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+.lasso-root .lasso-creditbuy__btn { align-self: stretch; justify-content: center; }
 
 /* ---------- Revisoruafhængighed (22): sammenfatning og relationstabel ---------- */
 /* Vurderingskolonnen bruger alvorsskalaen fra 17 som ord alene, uden ikon (regel 7: ordet bærer betydningen). */
@@ -1960,7 +1974,13 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-savedpages__side { display: inline-flex; align-items: center; gap: var(--lasso-space-3); }
 .lasso-savedpages__remove { display: inline-flex; align-items: center; min-height: var(--lasso-btn-h-sm); }
 .lasso-savedpages__removed { font-weight: 500; }
-.lasso-savedpages__note { overflow-wrap: anywhere; }
+.lasso-savedpages__note { display: flex; align-items: flex-start; gap: 6px; overflow-wrap: anywhere; color: var(--lasso-text-2); }
+.lasso-savedpages__note svg { flex: none; margin-top: 3px; color: var(--lasso-muted); }
+.lasso-savedpages__row { display: flex; align-items: flex-start; gap: var(--lasso-space-3); }
+.lasso-savedpages__row .lasso-row__main { flex: 1 1 auto; min-width: 0; }
+.lasso-savedpages__icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: var(--lasso-accent-soft, var(--lasso-surface-2)); color: var(--lasso-accent-text); }
+.lasso-savedpages__icon--person { background: var(--lasso-surface-2); color: var(--lasso-text-2); border: 1px solid var(--lasso-border); }
+.lasso-savedpages__view { display: inline-flex; align-items: center; margin-left: 8px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--lasso-border); font-size: 11px; line-height: 16px; font-weight: 500; color: var(--lasso-text-2); vertical-align: 1px; white-space: nowrap; }
 
 /* ---------- 21 Overvågning og notifikationer (node CA3-0) ---------- */
 /* Ændringsfeed (CA9-0): overskrift 18/600 + periodevælger 32 px; filter-chips 30 px pille, 12 px; valgt = ink-kant + 600 (ingen mørkt fyld). */
@@ -3741,14 +3761,26 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-heat__labels { flex: none; display: flex; flex-direction: column; }
 .lasso-heat__corner { height: 20px; }
 .lasso-heat__rowlabel { height: 22px; display: flex; align-items: center; font-size: 12px; color: var(--lasso-text-2); white-space: nowrap; }
-.lasso-heat__scroll { min-width: 0; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: thin; }
-.lasso-heat__grid { border-collapse: separate; border-spacing: 4px 4px; margin: -4px; }
+.lasso-heat__scroll { flex: 1 1 auto; min-width: 0; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: thin; }
+/* 54 (Jakob 01.10): rammen fyldes; cellerne deler bredden og scroller først under 22 px pr. måned. */
+.lasso-heat__grid { border-collapse: separate; border-spacing: 4px 4px; margin: -4px -4px -4px -8px; table-layout: fixed; width: max(calc(100% + 12px), calc(var(--heat-n, 12) * 22px + 12px)); }
 .lasso-heat__grid td, .lasso-heat__grid th { padding: 0; }
-.lasso-heat__month { height: 16px; min-width: 34px; font-size: 11px; line-height: 12px; font-weight: 400; color: var(--lasso-muted); text-align: center; vertical-align: top; white-space: nowrap; scroll-snap-align: start; }
+.lasso-heat__col0 { width: 0; }
+.lasso-heat__month { height: 16px; font-size: 11px; line-height: 12px; font-weight: 400; color: var(--lasso-muted); text-align: center; vertical-align: top; white-space: nowrap; scroll-snap-align: start; }
 .lasso-heat__month.is-current { font-weight: 600; color: var(--lasso-text); }
 .lasso-heat__month > span { display: block; }
+.lasso-heat__month abbr { text-decoration: none; }
+.lasso-heat { container: lassoheat / inline-size; }
+.lasso-heat__m-short { display: none; }
+/* Smal ramme på en bred side (⅓, ½ i chat): 12 måneder deler bredden, kun forbogstavet. Mobil har 6 synlige og hele navne. */
+@container lasso (min-width: 561px) {
+  @container lassoheat (max-width: 460px) {
+    .lasso-heat__month > .lasso-heat__m-long { display: none; }
+    .lasso-heat__m-short { display: inline; }
+  }
+}
 .lasso-heat__year { color: var(--lasso-text-2); font-weight: 600; }
-.lasso-heat__cell { position: relative; display: block; width: 34px; height: 18px; border-radius: 3px; outline: none; cursor: pointer; }
+.lasso-heat__cell { position: relative; display: block; width: 100%; height: 18px; border-radius: 3px; outline: none; cursor: pointer; }
 .lasso-heat__cell--1 { background: var(--lasso-chart-seq-1); }
 .lasso-heat__cell--2 { background: var(--lasso-chart-seq-2); }
 .lasso-heat__cell--3 { background: var(--lasso-chart-seq-3); }
@@ -3915,9 +3947,9 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-kfg__meta { flex-wrap: wrap; row-gap: 2px; }
   /* 26b.10: heatmap med 6 måneder synlige, swipe for flere, 24 px celler */
   .lasso-heat__rowlabel { height: 28px; }
-  .lasso-heat__cell { width: 24px; height: 24px; }
-  .lasso-heat__month { min-width: 24px; }
-  .lasso-heat__scroll { max-width: calc(6 * 28px + 4px); }
+  .lasso-heat__cell { height: 24px; }
+  /* Seks måneder fylder rammen; resten swipes frem. */
+  .lasso-heat__grid { width: max(calc(100% + 12px), calc((100% + 4px) * var(--heat-n, 12) / 6 + 8px)); }
   /* 26b.11: kort 160 px med markørkort nederst, fuld skærm ved tryk */
   .lasso-map__frame--compact { cursor: zoom-in; }
   .lasso-map > .lasso-map__card { margin-top: var(--lasso-space-3); box-shadow: none; }
@@ -5862,4 +5894,10 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 @container lasso (max-width: 560px) {
   .lasso-merger__groups { grid-template-columns: minmax(0, 1fr); }
   .lasso-mergers .lasso-merger__arrow { display: none; }
+}
+/* Gemte sider på mobil (55): dato og Fjern under teksten, flugter med navnet (ikon 32 + 12). */
+@container lasso (max-width: 560px) {
+  .lasso-savedpages__row { flex-wrap: wrap; }
+  .lasso-savedpages__row .lasso-row__main { flex-basis: calc(100% - 44px); }
+  .lasso-savedpages__row .lasso-row__side { padding-left: 44px; }
 }

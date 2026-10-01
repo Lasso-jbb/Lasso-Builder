@@ -142,7 +142,8 @@ test("28.7/26h.9: regnskabsoplysninger og kapital som to kort; fravalgt revision
   const profile = renderToStaticMarkup(createElement(Registration, { company, texts, variant: "profile" }));
   assert.match(profile, /lasso-reg__chip">631000 Databehandling, hoved</);
   assert.match(profile, /Formål[^]*At drive it-virksomhed\./);
-  assert.match(profile, />Vis tegningsregel og vedtægter</);
+  assert.match(profile, /Tegningsregel/);
+  assert.doesNotMatch(profile, /Vis tegningsregel/);
 });
 
 test("28.4: bestillingsformular med de fire rapporttyper, PDF | Zip og 'Bestil N rapporter'; koral links", async () => {

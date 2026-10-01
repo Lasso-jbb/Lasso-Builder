@@ -28,7 +28,7 @@ test("Gemte sider: over 6 rækker vises 5 + 'Vis alle 10' (global regel, Jakob 0
   assert.equal(rowCount(html), 5);
   assert.match(html, /aria-expanded="false"[^>]*>Vis alle 10</);
   assert.match(html, /class="lasso-section__title">Gemte sider</);
-  assert.match(html, /class="lasso-section__subtitle">10 gemte sider</);
+  assert.match(html, /class="lasso-section__subtitle">10 gemte sider\./);
   assert.doesNotMatch(html, /Kilde:/, "G3: ingen kildevisning");
   // Ingen piller, badges eller initial-cirkler
   assert.doesNotMatch(html, /lasso-badge|avatar|initial/);
@@ -41,12 +41,12 @@ test("Gemte sider: over 6 rækker vises 5 + 'Vis alle 10' (global regel, Jakob 0
 test("Gemte sider: ental, egen titel, og flere gemt end vist", () => {
   const one = render({ list: list([page(1)]), title: "Mine virksomheder" });
   assert.match(one, /class="lasso-section__title">Mine virksomheder</);
-  assert.match(one, /class="lasso-section__subtitle">1 gemt side</);
+  assert.match(one, /class="lasso-section__subtitle">1 gemt side\. Åbn en side for at se de nyeste data\.</);
   const capped = render({ list: list([page(1), page(2)], 35) });
   assert.match(capped, /35 gemte sider, de 2 nyeste vises/);
 });
 
-test("Gemte sider: rækken viser navn alene, hvad siden er, fokus, oprindelse, note og gemt-dato", () => {
+test("Gemte sider: rækken viser ikon, navn, hvad siden er, gemt visning, note og gemt-dato", () => {
   const html = render({
     list: list([
       page(0, { focus: "oekonomi", note: "Tjek regnskab i januar" }),
@@ -58,16 +58,21 @@ test("Gemte sider: rækken viser navn alene, hvad siden er, fokus, oprindelse, n
     ]),
   });
   // Personfokus med personens navne; et personfokus på en virksomhed er ukendt og vises ikke.
-  assert.match(html, /class="lasso-row__sub">Person, fokus: Netværk</);
+  assert.match(html, /class="lasso-savedpages__view">Netværk</);
+  assert.match(html, /class="lasso-savedpages__view">Økonomi</);
+  assert.doesNotMatch(html, /class="lasso-savedpages__view">Roller</);
   assert.match(html, /class="lasso-row__sub">Virksomhed, CVR 34580823</);
-  assert.match(html, /class="lasso-row__sub">Virksomhed, CVR 34580820, fokus: Økonomi</);
-  assert.match(html, /class="lasso-row__sub lasso-savedpages__note">Tjek regnskab i januar</);
-  assert.match(html, /class="lasso-row__sub">Virksomhed, CVR 34580821, sendt til Lasso</);
-  assert.match(html, /class="lasso-row__sub">Person, sendt til Lasso</);
-  // Ukendt fokus og manuel oprindelse vises ikke
+  assert.match(html, /class="lasso-row__sub">Virksomhed, CVR 34580820</);
+  assert.match(html, /lasso-savedpages__note">.*<span>Tjek regnskab i januar<\/span>/);
+  // Oprindelsen ("sendt til Lasso") siger intet for brugeren og vises ikke (55).
+  assert.match(html, /class="lasso-row__sub">Virksomhed, CVR 34580821</);
+  assert.match(html, /class="lasso-row__sub">Person</);
+  assert.doesNotMatch(html, /sendt til Lasso/);
   assert.match(html, /class="lasso-row__sub">Virksomhed, CVR 34580822</);
-  assert.match(html, /<span>gemt 27\.09\.2026<\/span>/);
-  assert.match(html, /<span>gemt 20\.09\.2026<\/span>/);
+  assert.match(html, /<span>Gemt 27\.09\.2026<\/span>/);
+  assert.match(html, /<span>Gemt 20\.09\.2026<\/span>/);
+  assert.match(html, /lasso-savedpages__icon--person/);
+  assert.match(html, /lasso-savedpages__icon--company/);
   // Navnet er en knap til siden, når værten kan åbne den
   assert.match(html, /<button type="button" class="lasso-link lasso-row__open">Anne Eksempel<\/button>/);
   const plain = render({ list: list([page(0)]), canDrillDown: false });

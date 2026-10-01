@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
-import { COMPONENT_CATALOG, NO_ALTERNATIVE_REASON, type ComponentType, type Dataset, type ShowcaseItem, type ViewComponent, type ViewSpec, type Width } from "@lasso/spec";
+import { COMPONENT_CATALOG, CREDIT_SOURCE, NO_ALTERNATIVE_REASON, type ComponentType, type CreditRatingVM, type Dataset, type ShowcaseItem, type ViewComponent, type ViewSpec, type Width } from "@lasso/spec";
 import { LassoView, type HostCapabilities } from "@lasso/ui";
 import type { Report } from "./inspect.js";
 import { SOURCE, type DesignguideBoot } from "./source.js";
@@ -34,6 +34,15 @@ export interface ModuleInfo {
   noAlternative?: string;
 }
 
+/** Samme virksomhed som `base`, men kreditvurderingen er ikke købt endnu (state "purchase"). */
+function purchaseOption(base: DataOption): DataOption {
+  const id = (base.component as { company?: string }).company ?? "";
+  const ratings = (base.dataset as { creditRatings?: Record<string, CreditRatingVM> }).creditRatings ?? {};
+  const prev = ratings[id];
+  const rating: CreditRatingVM = { lassoId: id, cvr: prev?.cvr, source: prev?.source ?? CREDIT_SOURCE, state: "purchase", price: 1, creditBalance: 12 };
+  return { id: "kob", label: "Købstrin (ikke købt endnu)", component: base.component, dataset: { ...base.dataset, creditRatings: { ...ratings, [id]: rating } } as Dataset };
+}
+
 /** Alle katalogets moduler med de rigtige data, de kan vises med. */
 export function buildModules(boot: DesignguideBoot): Map<ComponentType, ModuleInfo> {
   const sc = boot.showcase;
@@ -58,6 +67,8 @@ export function buildModules(boot: DesignguideBoot): Map<ComponentType, ModuleIn
     // Personmoduler, udstillingen ikke har med (fx personrisiko): samme person og datasæt som personfanen.
     const personTab = sc.tabs.find((t) => t.id === "person");
     if (!options.length && personTab && entry.type.startsWith("LassoPerson")) options.push({ id: `${personTab.id}:${personTab.entity}`, label: personTab.label, component: { type: entry.type, person: personTab.entity } as unknown as ViewComponent, dataset: personTab.dataset });
+    // Kreditvurderingen betales pr. styk (38): købstrinnet vises som sin egen datakilde på samme virksomhed.
+    if (entry.type === "LassoCreditRating" && options[0]) options.push(purchaseOption(options[0]));
     // Fiktive data sidst: bruges, når ingen af de rigtige datakilder viser modulet (FICTIVE_ID).
     const fic = boot.fictive?.items.find((x) => x.type === entry.type);
     if (fic && boot.fictive) options.push({ id: FICTIVE_ID, label: `Fiktive data (${fic.label})`, component: fic.component, dataset: boot.fictive.dataset, fictive: true });
