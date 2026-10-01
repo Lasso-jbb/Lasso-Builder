@@ -187,7 +187,7 @@ test("08.4: højst seks genveje med koral ikon; resten under 'Flere'", () => {
 
 /* ---------- 08.5 Live-nummer ---------- */
 
-test("08.5: live-tilstande: nu (60 sek.), N dage siden, udgået; nummeret vises altid", () => {
+test("08.5: kun udgåede numre markeres (ingen verificeringsnoter); nummeret vises altid", () => {
   const now = Date.parse("2026-09-29T10:00:00Z");
   assert.deepEqual(liveState("2026-09-29T09:59:30Z", undefined, now), { kind: "now" });
   assert.deepEqual(liveState("2026-09-29T09:58:00Z", undefined, now), { kind: "stale", days: 0 });
@@ -204,14 +204,15 @@ test("08.5: live-tilstande: nu (60 sek.), N dage siden, udgået; nummeret vises 
     ],
   };
   const out = html(h(LassoContact, { contact, now, onCopy: noop, foldExtra: false }));
-  assert.match(out, /Verificeret nu/);
+  // Jakob 01.10: verificeringsnoterne ("Verificeret nu", "for N dage siden") vises ikke.
+  assert.doesNotMatch(out, /Verificeret/);
   assert.match(out, /lasso-contact__value--struck">33 12 34 56</);
   assert.match(out, /Udgået, 12\.08\.2026/);
   assert.match(out, />Kopiér</);
   const stale = html(h(LassoContact, { contact: { ...contact, verifiedAt: "2026-09-26" }, now, foldExtra: false }));
   // 08.3 (standard): flere numre åbner "Se flere"-panelet; N er alle forskellige numre (som "Se N kontaktpersoner").
-  assert.match(html(h(LassoContact, { contact, now })), />Se 2 telefonnumre</);
-  assert.match(stale, /Verificeret for 3 dage siden/);
+  assert.match(html(h(LassoContact, { contact, now })), />Se alle 2</);
+  assert.doesNotMatch(stale, /Verificeret/);
   // Uden verifikation: handlingen "Ring" i stedet for en tilstand.
   assert.match(html(h(LassoContact, { contact: { lassoId: byg.lassoId, phone: "71747812" }, now })), /aria-label="Ring"/);
 });
@@ -351,8 +352,8 @@ test("Se flere: telefonnumre og e-mails grupperes efter kilde (Fra CVR, Fra hjem
   assert.deepEqual(emails.map((e) => `${e.source}:${e.value}`), ["cvr:kontakt@lasso.dk", "hjemmeside:kontakt@lasso.dk", "hjemmeside:contact@lassox.com"]);
   // Samme nummer fra CVR og hjemmesiden tæller én gang: 2 numre og 2 adresser.
   const out = html(h(LassoContact, { contact }));
-  assert.match(out, />Se 2 telefonnumre</);
-  assert.match(out, />Se 2 emailadresser</);
+  assert.match(out, />Se alle 2</);
+  assert.equal(out.match(/>Se alle 2</g)?.length, 2);
   // Kun ét nummer og én adresse: intet link (regel 9).
   const one = html(h(LassoContact, { contact: { lassoId: "CVR-1-1", phone: "71747812", email: "a@b.dk" } }));
   assert.doesNotMatch(one, /lasso-contact__more/);

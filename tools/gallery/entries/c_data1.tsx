@@ -199,13 +199,11 @@ function LiveNumberStates() {
     // Blokken står i kontaktkolonnens bredde (ca. 380 px), som i Paper.
     <div style={{ maxWidth: 380 }}>
     <Stack>
-      <Labelled label="Verificeret nu + Udgået (gennemstreget)">
+      {/* Jakob 01.10: ingen verificeringsnoter; kun et udgået nummer markeres. */}
+      <Labelled label="Udgået nummer (gennemstreget)">
         <LassoContact contact={withNumbers} now={now} onCopy={noop} foldExtra={false} />
       </Labelled>
-      <Labelled label="Tjekker … (opslag i gang, højst 10 sek.)">
-        <LassoContact contact={stale} now={now} onVerify={() => new Promise(() => undefined)} onCopy={noop} foldExtra={false} />
-      </Labelled>
-      <Labelled label="Tidsstempel (verificeret for N dage siden)">
+      <Labelled label="Verificerede numre (ingen markering)">
         <LassoContact contact={stale} now={now} onCopy={noop} foldExtra={false} />
       </Labelled>
     </Stack>

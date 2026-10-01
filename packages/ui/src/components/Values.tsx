@@ -239,17 +239,22 @@ export function ContactValue({ kind, value, more = 0, onShowAll }: { kind: "phon
   const text = kind === "phone" ? formatPhone(value) : kind === "email" ? value.trim().toLowerCase() : formatWeb(value);
   const href = kind === "phone" ? `tel:+45${text.replace(/\s/g, "")}` : kind === "email" ? `mailto:${text}` : /^https?:\/\//i.test(value.trim()) ? value.trim() : `https://${value.trim()}`;
   const ext = kind === "web" ? { target: "_blank", rel: "noreferrer" } : {};
+  // Jakob 01.10: telefonnummeret er ren tekst; kun "Se alle N" kan klikkes. E-mail og web er stadig links.
   return (
     <span className="lasso-contactvalue">
-      <a className="lasso-link" href={href} {...ext}>
-        {text}
-      </a>
+      {kind === "phone" ? (
+        <span>{text}</span>
+      ) : (
+        <a className="lasso-link" href={href} {...ext}>
+          {text}
+        </a>
+      )}
       {more > 0 ? (
         <>
           <span className="lasso-muted-extra">, </span>
           {onShowAll ? (
             <button type="button" className="lasso-link lasso-link--more" onClick={onShowAll}>
-              {`Se ${moreText(more)}`}
+              {`Se alle ${formatNumber(more + 1)}`}
             </button>
           ) : (
             <span className="lasso-muted-extra">{moreText(more)}</span>
@@ -330,14 +335,15 @@ export { QualityFlag } from "./QualityFlag.js";
 /**
  * 02c.18 Låst værdi: feltet beholder plads og label. 14 px låseikon i muted og et kort link i
  * primary-text ("Kræver Lasso Pro"). Må antallet vises, står det før linket ("3 personer" +
- * "Se med Lasso Pro"). Ingen boks, badge eller pille. `blur` giver en sløret pladsholder i stedet.
+ * "Kræver Lasso Pro"). Ingen boks, badge eller pille. `blur` giver en sløret pladsholder i stedet.
  */
 export function LockedValue({ count, noun, linkLabel, onUpgrade, href, blur = false }: { count?: number; /** Navneord efter antallet, fx "personer". */ noun?: string; linkLabel?: string; onUpgrade?: () => void; href?: string; blur?: boolean }) {
   const hasCount = typeof count === "number";
-  const label = linkLabel ?? (hasCount ? "Se med Lasso Pro" : "Kræver Lasso Pro");
+  // Jakob 01.10: "Kræver Lasso Pro" begge steder (også efter et antal).
+  const label = linkLabel ?? "Kræver Lasso Pro";
   return (
     <span className="lasso-locked">
-      {/* 02c.18: låseikonet står foran begge former ("Kræver Lasso Pro" og "3 personer  Se med Lasso Pro"). */}
+      {/* 02c.18: låseikonet står foran begge former ("Kræver Lasso Pro" og "3 personer  Kræver Lasso Pro"). */}
       <svg className="lasso-locked__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.8" />
         <path d="M8 11V8a4 4 0 018 0v3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />

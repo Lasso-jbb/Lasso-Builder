@@ -30,7 +30,7 @@ test("02c Felter med data", () => {
   assert.match(locked, /lasso-locked__icon/);
   assert.match(locked, />Kræver Lasso Pro</);
   const lockedCount = render(h(LockedValue, { count: 3, noun: "personer", onUpgrade: noop }));
-  assert.match(lockedCount, /lasso-locked__icon[^]*>3 personer<\/span>.*>Se med Lasso Pro</);
+  assert.match(lockedCount, /lasso-locked__icon[^]*>3 personer<\/span>.*>Kræver Lasso Pro</);
   assert.match(render(h(AmountValue, { value: 18_834_000, previous: 17_520_000, since: "2024" })), /lasso-up[^>]*><span class="lasso-arrow">▲<\/span> 7,5 %<\/span>/);
   assert.match(render(h(AmountValue, { value: -201_000, previous: 318_000, since: "2024" })), /\u2212201 t\. kr\.[^]*lasso-down[^>]*><span class="lasso-arrow">▼<\/span> 163,2 %<\/span>/);
   assert.doesNotMatch(render(h(AmountValue, { value: 5, previous: 0 })), /▲|▼/);
@@ -51,8 +51,10 @@ test("02c.5 PercentValue, 02c.6 PeriodValue med én dato, 02c.12 ContactValue", 
   assert.equal(formatPhone("+45 71747812"), "71 74 78 12");
   assert.equal(formatWeb("https://www.eksempelbyg.dk/"), "eksempelbyg.dk");
   const tel = render(h(ContactValue, { kind: "phone", value: "71747812", more: 2, onShowAll: noop }));
-  assert.match(tel, /href="tel:\+4571747812">71 74 78 12<\/a>/);
-  assert.match(tel, /Se 2 flere/);
+  // Jakob 01.10: nummeret er ren tekst; kun "Se alle N" (alle numre) kan klikkes.
+  assert.match(tel, /<span>71 74 78 12<\/span>/);
+  assert.doesNotMatch(tel, /tel:/);
+  assert.match(tel, />Se alle 3</);
   assert.match(render(h(ContactValue, { kind: "email", value: "Info@Eksempel.DK" })), /mailto:info@eksempel\.dk">info@eksempel\.dk/);
   assert.match(render(h(ContactValue, { kind: "web", value: "https://www.eksempelbyg.dk" })), /href="https:\/\/www\.eksempelbyg\.dk" target="_blank"[^>]*>eksempelbyg\.dk/);
   assert.match(render(h(ContactValue, { kind: "phone", value: null })), /Ikke registreret/);

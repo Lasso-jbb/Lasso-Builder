@@ -209,7 +209,8 @@ function ChannelDetail({ item, contact, now, onCopy, onOpenLink }: { item: Chann
     : canClipboard
       ? () => void navigator.clipboard.writeText(item.value).then(() => setCopied(true))
       : undefined;
-  const state = item.verified ? liveState(contact.verifiedAt, item.verified.expired, now) : null;
+  const verifiedState = item.verified ? liveState(contact.verifiedAt, item.verified.expired, now) : null;
+  const state = verifiedState?.kind === "expired" ? verifiedState : null;
   const cvr = cvrNumber(contact.lassoId);
   const link = (url: string, label: string) =>
     onOpenLink ? (
@@ -326,35 +327,19 @@ export interface LassoContactProps {
  * Står hovedet med samme adresse på siden, udelades adressen (`omitAddress`).
  *
  * Live-nummer (08.5, kræver egen tilføjelse, udelades stille uden adgang): verificerede numre står
- * efter de almindelige rækker med en af fire tilstande til højre: "Verificeret nu" (grøn, kun mens
- * kilden svarede inden for 60 sek.), "Tjekker …" (spinner, højst 10 sek.), "Udgået, dato" (gul,
- * værdien gennemstreget men beholdt) og "Verificeret for N dage siden" (muted). Nummeret vises
+ * efter de almindelige rækker; kun "Udgået, dato" (gul, værdien gennemstreget men beholdt) markeres,
+ * ingen verificeringsnoter (Jakob 01.10, 08.5). Nummeret vises
  * altid; verifikationen er et tillæg, aldrig en forudsætning. Robinsonliste-linje i muted og én
  * kildevisning for begge kilder (regel 8).
  */
 export function LassoContact({ contact, title, error, omitAddress = false, onCopy, onOpenLink, onVerify, now, foldExtra = true }: LassoContactProps) {
   const heading = title ?? "Kontakt";
-  const [checking, setChecking] = useState(false);
   const [panel, setPanel] = useState<"phone" | "email" | null>(null);
   const lassoId = contact?.lassoId;
   useEffect(() => {
     if (!onVerify || !lassoId) return;
-    let done = false;
-    setChecking(true);
-    const timer = setTimeout(() => {
-      if (!done) setChecking(false);
-    }, VERIFY_TIMEOUT);
-    Promise.resolve(onVerify())
-      .catch(() => undefined)
-      .finally(() => {
-        done = true;
-        clearTimeout(timer);
-        setChecking(false);
-      });
-    return () => {
-      done = true;
-      clearTimeout(timer);
-    };
+    // Verifikationen kører stille i baggrunden (Jakob 01.10, 08.5); kun et udgået nummer markeres.
+    Promise.resolve(onVerify()).catch(() => undefined);
     // Én verifikation pr. virksomhed, mens blokken er åben.
   }, [lassoId]);
 
@@ -384,7 +369,12 @@ export function LassoContact({ contact, title, error, omitAddress = false, onCop
       </Section>
     );
   }
-  const stateOf = (n?: { expired?: string }): LiveState | null => (checking ? { kind: "checking" } : n ? liveState(contact.verifiedAt, n.expired, at) : null);
+  // Jakob 01.10 (08.5): ingen verificeringsnoter ("Verificeret nu", "for N dage siden", "Tjekker …");
+  // kun et udgået nummer markeres (gennemstreget med "Udgået, dato").
+  const stateOf = (n?: { expired?: string }): LiveState | null => {
+    const st = n ? liveState(contact.verifiedAt, n.expired, at) : null;
+    return st?.kind === "expired" ? st : null;
+  };
   const mapUrl = hasAddress ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([addressLine1, addressLine2].filter(Boolean).join(", "))}` : undefined;
   const phoneState = stateOf(phoneMatch);
   // 08.3: ét nummer og én e-mail ad gangen; har virksomheden flere (CVR, hjemmesiden, verificerede), åbner
@@ -394,7 +384,8 @@ export function LassoContact({ contact, title, error, omitAddress = false, onCop
   const phoneCount = distinct(phoneItems);
   const emailCount = distinct(emailItems);
   const folded = foldExtra && (otherVerified.length > 0 || phoneCount > 1);
-  const extraLabel = `Se ${phoneCount} telefonnumre`;
+  // Jakob 01.10: "Se alle N" (alle numre, ikke kun de ekstra).
+  const extraLabel = `Se alle ${phoneCount}`;
   const tel = contact.phone ? `tel:${contact.phone.replace(/\s+/g, "")}` : undefined;
   // Handlingerne (Kort, Ring, Kopiér) står kun på mobil (26a.6); desktop viser værdierne alene (08.3).
   const act = (node: ReactNode) => <span className="lasso-contact__act">{node}</span>;
@@ -440,11 +431,9 @@ export function LassoContact({ contact, title, error, omitAddress = false, onCop
             icon={<MailIcon />}
             href={`mailto:${contact.email}`}
             aside={
-              checking ? (
-                <LiveMark state={{ kind: "checking" }} />
-              ) : (foldExtra && emailCount > 1) || onCopy ? (
+              (foldExtra && emailCount > 1) || onCopy ? (
                 <>
-                  {foldExtra && emailCount > 1 ? more(`Se ${emailCount} emailadresser`, () => setPanel("email")) : null}
+                  {foldExtra && emailCount > 1 ? more(`Se alle ${emailCount}`, () => setPanel("email")) : null}
                   {onCopy ? act(<ActionLink label="Kopiér" onClick={() => onCopy(contact.email!, "email")} />) : null}
                 </>
               ) : undefined
