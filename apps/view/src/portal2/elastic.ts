@@ -18,10 +18,10 @@ export const MAX = 72;
 const GAIN = 1;
 /** Største rulning pr. hændelse, så et musehjul ikke slår et stort hak. */
 const STEP = 30;
-/** Tidskonstant (ms) for vejen tilbage: efter ca. 5 × den er den på plads. */
-const RETURN_MS = 90;
+/** Tidskonstant (ms) for vejen tilbage: efter ca. 5 × den er den på plads (ca. 0,3 s). */
+const RETURN_MS = 55;
 /** Tidskonstant (ms) for, hvor hurtigt elastikken bliver stiv under én bevægelse mod kanten. */
-const FADE_MS = 260;
+const FADE_MS = 150;
 /** Så lang en pause (ms) mellem hændelser starter en ny bevægelse. */
 const GESTURE_GAP_MS = 120;
 
