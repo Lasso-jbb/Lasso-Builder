@@ -386,3 +386,9 @@ body:has(.p3:not(.p3-specimen)[data-theme="dark"]) { background: #121316; }
 @media (hover: none) {
   .p3 .tt:hover, .p3 .otab:hover:not(.on) { background: none; }
 }
+
+/* Faner med ens bredde: navnet fylder, så krydset altid står yderst til højre i fanen. */
+.p3 .otab .nm { flex: 1 1 auto; }
+/* Modulrækken: ingen koral fokusramme (den blev klippet og stod bag "Overblik"); tastaturfokus er en svag baggrund. */
+.p3 .mods :is(.tab, .tabmark, .sel-btn, .ibtn):focus-visible { outline: none; background: color-mix(in srgb, var(--ink) 8%, transparent); border-radius: 6px; }
+.p3 .mods :is(.tab, .tabmark, .sel-btn, .ibtn):focus:not(:focus-visible) { outline: none; }

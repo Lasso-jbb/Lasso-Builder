@@ -127,6 +127,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const mlist = useRef<HTMLDivElement>(null);
   const top = useRef<HTMLElement>(null);
   const toptabs = useRef<HTMLDivElement>(null);
+  /** Fanernes bredde holdes efter et luk, til musen forlader fanebjælken (så næste kryds står samme sted). */
+  const frozenTabW = useRef<number | null>(null);
 
   const api = useMemo(() => createPortalApi(() => setNotice("Du er logget ud. Genindlæs siden.")), []);
   const item = open.find((o) => o.key === active);
@@ -591,8 +593,10 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   /* ---------- layout: fanernes og modulernes overløb, rulning, søgefeltets placering ---------- */
 
   const measure = useCallback(() => {
-    // Åbne faner (prototype 4): de inaktive smalles ind og skjules bag "Flere"; står kun den aktive tilbage,
-    // bliver den selv en dropdown med alle åbne.
+    // Åbne faner (Jakob 02.10): alle faner har samme bredde (højst 280 px, mindst 136 px), så næste fanes kryds
+    // står samme sted, når man lukker flere i træk. Er der ikke plads til alle, skjules de ældste inaktive bag
+    // "Flere"; står kun den aktive tilbage, bliver den selv en dropdown med alle åbne. Efter et luk holdes
+    // bredden (frozenTabW), til musen forlader fanebjælken.
     const box = otabs.current;
     const col = tabsCol.current;
     if (box && col) {
@@ -600,25 +604,38 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       const oa = col.querySelector<HTMLElement>("[data-openall]");
       els.forEach((t) => {
         t.style.display = "";
+        t.style.width = "";
         t.style.maxWidth = "";
       });
       if (oa) oa.style.display = "none";
       const cs = getComputedStyle(col);
       const avail = col.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 8;
-      const sum = () => els.filter((t) => t.style.display !== "none").reduce((s2, t) => s2 + t.offsetWidth, 0) + (oa && oa.style.display !== "none" ? oa.offsetWidth + 6 : 0);
-      if (sum() > avail) els.forEach((t) => !t.classList.contains("on") && (t.style.maxWidth = "136px"));
-      if (sum() > avail && oa) {
+      const n = els.length;
+      const MAX = 280;
+      const MIN = 136;
+      let w = Math.min(MAX, Math.floor(avail / Math.max(n, 1)));
+      const hide: string[] = [];
+      if (n > 1 && w < MIN && oa) {
         oa.style.display = "";
+        const room = avail - oa.offsetWidth - 6;
+        const fit = Math.max(1, Math.floor(room / MIN));
+        w = Math.min(MAX, Math.floor(room / fit));
+        let visible = n;
         for (const t of els) {
-          if (sum() <= avail) break;
+          if (visible <= fit) break;
           if (t.classList.contains("on")) continue;
           t.style.display = "none";
+          hide.push(t.dataset.key ?? "");
+          visible--;
         }
       }
-      const hide = els.filter((t) => t.style.display === "none").map((t) => t.dataset.key ?? "");
-      const visibleInactive = els.filter((t) => !t.classList.contains("on") && t.style.display !== "none").length;
-      const solo = els.length > 1 && visibleInactive === 0;
-      if (solo && oa) oa.style.display = "none";
+      if (frozenTabW.current) w = frozenTabW.current;
+      if (n > 1) els.forEach((t) => (t.style.width = `${w}px`));
+      const solo = n > 1 && hide.length === n - 1;
+      if (solo) {
+        if (oa) oa.style.display = "none";
+        els.forEach((t) => (t.style.width = ""));
+      }
       setHiddenTabs((h) => (h.join("|") === hide.join("|") ? h : hide));
       setSoloTab(solo);
     }
@@ -925,7 +942,14 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       </nav>
 
       <div className="main">
-        <div className="tabsbar">
+        <div
+          className="tabsbar"
+          onMouseLeave={() => {
+            if (!frozenTabW.current) return;
+            frozenTabW.current = null;
+            measure();
+          }}
+        >
           <div className="col" ref={tabsCol}>
             <div className="otabs" ref={otabs} role="tablist" aria-label="Åbne">
               {open.map((o) => (
@@ -938,7 +962,11 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
                   solo={soloTab && o.key === active}
                   busy={pendingKey === o.key}
                   onSelect={(e) => (soloTab && o.key === active ? showMenu("all", e.currentTarget) : activate(o.key))}
-                  onClose={() => closeTab(o.key)}
+                  onClose={() => {
+                    const el = otabs.current?.querySelector<HTMLElement>(".otab");
+                    if (el && !frozenTabW.current) frozenTabW.current = el.getBoundingClientRect().width;
+                    closeTab(o.key);
+                  }}
                 />
               ))}
             </div>

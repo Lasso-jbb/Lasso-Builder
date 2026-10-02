@@ -38,8 +38,11 @@ Moduler og Brugere står dæmpet, til de findes.
 ## Åbne faner
 
 - Hvert åbnet firma, person og resultat er en fane med navn og luk-kryds; tooltip med by og CVR.
-- Mangler der plads, smalles de inaktive til 136 px og skjules derefter bag "Flere ▾" (med luk pr. række og
+- Alle faner har samme bredde: pladsen delt ligeligt, højst 280 px og mindst 136 px. Krydset står yderst til
+  højre. Er der ikke plads til alle i 136 px, skjules de ældste inaktive bag "Flere ▾" (med luk pr. række og
   "Luk alle andre faner"). Står kun den aktive tilbage, bliver den selv en dropdown med alle åbne.
+- Lukker man en fane med krydset, holdes bredden, så længe musen er over fanebjælken: næste fanes kryds står
+  samme sted, så man kan lukke flere i træk uden at flytte musen. Når musen forlader bjælken, fordeles pladsen igen.
 - Midterklik lukker en fane. Lukkes den aktive, bliver naboen til venstre aktiv.
 - Henter Lasso til en fane, står Lasso-mærket i fanen og bevæger sig.
 
@@ -53,6 +56,7 @@ Moduler og Brugere står dæmpet, til de findes.
   vælger med det aktive modul.
 - Til højre Følg (kommer senere) og Gem (gemmer siden på brugerens liste).
 - Navnet står i fanen, ikke over modulrækken; modulernes eget hoved udelades i portalen.
+- Ingen koral fokusramme på faner og modulfaner; tastaturfokus vises som en svag baggrund.
 
 ## Spørgefeltet (chatten)
 
