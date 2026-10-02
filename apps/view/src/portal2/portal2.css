@@ -366,3 +366,11 @@ body:has(.p3:not(.p3-specimen)[data-theme="dark"]) { background: #121316; }
 /* Menuer (Jakob 02.10): den aktuelle række har almindelig tekstfarve; kun fluebenet er koral. */
 .p3 .statdd button.cur, .p3 .dd button.cur { color: var(--ink); }
 .p3 .statdd button.cur > .i:last-child, .p3 .dd button.cur > .i:last-child { color: var(--coral); }
+
+/* Faner i topbjælken og fanebjælken: ingen koral fokusramme (den blev klippet og hang ved efter et tryk);
+   tastaturfokus vises som en svag baggrund. På berøringsskærme ingen hover-baggrund, der bliver hængende. */
+.p3 .tt:focus-visible, .p3 .otab:focus-visible { outline: none; background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.p3 .tt:focus:not(:focus-visible), .p3 .otab:focus:not(:focus-visible) { outline: none; }
+@media (hover: none) {
+  .p3 .tt:hover, .p3 .otab:hover:not(.on) { background: none; }
+}
