@@ -41,8 +41,17 @@ Svar: `text/event-stream`, én `data: <json>` pr. hændelse:
 `GET /api/chat/status` → `{ enabled, user, model }`.
 
 **Adgang:** en portal-session (cookie + headeren `x-lasso-portal: 1`) eller en brugernøgle fra
-`MCP_USER_KEYS` som `Authorization: Bearer <nøgle>` (server-til-server fra Lassos produkt). Den åbne portal
-(`PORTAL_PUBLIC`) giver ikke adgang, fordi hvert svar koster. Kun lokalt uden nøgler er chatten åben.
+`MCP_USER_KEYS` som `Authorization: Bearer <nøgle>` (server-til-server fra Lassos produkt). Er portalen åben
+(`PORTAL_PUBLIC=true`), er chatten også åben fra portalens side som demobrugeren (headeren kræves), og bremsen
+tæller så pr. IP-adresse.
+
+## Portalen (/portal)
+
+`/portal` er den nye portal efter prototypen "lasso-portal - new.html": topbjælke med søgning, ikonskinne,
+virksomhedens hoved med fanerne Overblik, Økonomi, Regnskab, Ejerskab, Risiko, Historik og Kontakt, og
+spørgefeltet nederst. Søgefeltet åbner virksomheden på Overblik (uden AI). Spørgefeltet er chatten: det, Claude
+henter, vises under fanen med Lasso-mærket (mærket bevæger sig, mens der hentes), og man kan klikke videre i
+de faste faner og tilbage til Lasso-fanen. Den klassiske portal står på `/portal/klassisk`.
 
 Fejl før streamen er JSON `{ error }`: 400 (tom besked, ændret historik), 401, 429 (bremsen), 503
 (ingen `ANTHROPIC_API_KEY`).

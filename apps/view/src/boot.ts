@@ -83,4 +83,15 @@ export interface ChatBoot {
   pdf?: boolean;
 }
 
-export type Boot = WebBoot | PortalBoot | PrintBoot | ShowcaseBoot | ChatBoot;
+/** Den nye portal på /portal (prototypen "lasso-portal - new.html"): uden login, med chatten i spørgefeltet. */
+export interface Portal2Boot {
+  mode: "portal2";
+  /** Brugeren bag sessionen, eller demobrugeren, når portalen er åben (PORTAL_PUBLIC). null: login kræves. */
+  user: PortalUser | null;
+  baseUrl: string;
+  pdf?: boolean;
+  /** false: serveren har ingen ANTHROPIC_API_KEY, og spørgefeltet er slået fra. */
+  chat: boolean;
+}
+
+export type Boot = WebBoot | PortalBoot | PrintBoot | ShowcaseBoot | ChatBoot | Portal2Boot;

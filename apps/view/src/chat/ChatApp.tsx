@@ -77,7 +77,7 @@ function InlineText({ parts }: { parts: Inline[] }) {
   );
 }
 
-function Text({ text }: { text: string }) {
+export function Text({ text }: { text: string }) {
   return (
     <div className="lasso-chat__text">
       {parseBlocks(text).map((b, i) =>

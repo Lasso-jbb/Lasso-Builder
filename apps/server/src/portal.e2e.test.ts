@@ -104,7 +104,7 @@ test("roden sender videre til /portal", async () => {
 });
 
 test("/portal uden cookie: render-appen i portal-tilstand uden bruger", async () => {
-  const res = await fetch(`${base}/portal`);
+  const res = await fetch(`${base}/portal/klassisk`);
   assert.equal(res.status, 200);
   assert.equal(res.headers.get("cache-control"), "no-store");
   const { pdf, ...b } = boot(await res.text()) as Record<string, unknown>;
@@ -137,7 +137,7 @@ test("/api/portal/me: 401 uden cookie, brugeren med cookie", async () => {
 });
 
 test("/portal med cookie: brugeren står i boot", async () => {
-  const res = await fetch(`${base}/portal`, { headers: { cookie } });
+  const res = await fetch(`${base}/portal/klassisk`, { headers: { cookie } });
   const b = boot(await res.text());
   assert.equal(b.mode, "portal");
   assert.deepEqual(b.user, { id: PIA.id, name: PIA.name, org: PIA.org, isDemo: false });
@@ -430,7 +430,7 @@ test("logout sletter cookien, og derefter er man logget ud", async () => {
   cookie = "";
   assert.equal((await api("/me")).status, 401);
   assert.equal((await api("/pages")).status, 401);
-  const b = boot(await (await fetch(`${base}/portal`)).text());
+  const b = boot(await (await fetch(`${base}/portal/klassisk`)).text());
   assert.equal(b.user, null);
 });
 
@@ -454,7 +454,7 @@ test("uden nøgler (lokal udvikling) er portalen åben som demobrugeren, men CSR
     assert.equal((await json<Json>(saved)).created, true);
     const noCsrf = await fetch(`${url}/api/portal/pages`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ page: "99000003" }) });
     assert.equal(noCsrf.status, 403);
-    const b = boot(await (await fetch(`${url}/portal`)).text());
+    const b = boot(await (await fetch(`${url}/portal/klassisk`)).text());
     assert.equal(b.loginRequired, false);
     assert.equal((b.user as { isDemo: boolean }).isDemo, true);
   });
@@ -488,7 +488,7 @@ test("PORTAL_PUBLIC=true: /portal og /api/portal/* er åbne uden login som demob
   await new Promise((r) => srv.once("listening", r));
   const openBase = `http://127.0.0.1:${(srv.address() as AddressInfo).port}`;
   try {
-    const page = await fetch(`${openBase}/portal`);
+    const page = await fetch(`${openBase}/portal/klassisk`);
     const b = boot(await page.text()) as { loginRequired: boolean; user: { id: string; isDemo: boolean } | null };
     assert.equal(b.loginRequired, false);
     assert.equal(b.user?.isDemo, true);
@@ -503,4 +503,13 @@ test("PORTAL_PUBLIC=true: /portal og /api/portal/* er åbne uden login som demob
   } finally {
     await new Promise((r) => srv.close(r));
   }
+});
+
+test("/portal: den nye portal (portal2) med brugeren og chatten", async () => {
+  const res = await fetch(`${base}/portal`);
+  assert.equal(res.status, 200);
+  const b = boot(await res.text());
+  assert.equal(b.mode, "portal2");
+  assert.equal(b.chat, false, "uden ANTHROPIC_API_KEY");
+  assert.equal(b.baseUrl, PUBLIC);
 });

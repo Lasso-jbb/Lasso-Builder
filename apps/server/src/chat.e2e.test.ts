@@ -132,8 +132,11 @@ test("chat: næste spørgsmål bygger videre på den signerede historik; en ænd
   assert.equal(other.status, 400);
 });
 
-test("chat: adgang kræver nøgle eller session, også når portalen er åben", async () => {
-  assert.equal((await chat({ message: "Hej" }, {})).status, 401);
+test("chat: den åbne portal giver demobrugeren adgang, men kun med portalens header", async () => {
+  assert.equal((await chat({ message: "Hej" }, {})).status, 403);
+  const open = await chat({ message: "Hej" }, { "x-lasso-portal": "1" });
+  assert.equal(open.status, 200);
+  assert.equal(open.events.at(-1)?.type, "done");
   assert.equal((await chat({ message: "Hej" }, { authorization: "Bearer forkert" })).status, 401);
   assert.equal((await chat({ message: "" })).status, 400);
 });

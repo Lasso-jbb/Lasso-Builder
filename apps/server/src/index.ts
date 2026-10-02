@@ -175,7 +175,18 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
   });
 
   // Portalens side: render-appen med boot { mode: "portal" }. Uden session viser appen login.
+  // Den nye portal (prototypen "lasso-portal - new.html"): søgning, faner og chatten i spørgefeltet.
+  // Med PORTAL_PUBLIC er den åben uden login (demobrugeren); ellers logger man ind som i den klassiske.
   app.get("/portal", async (req, res) => {
+    const html = await loadViewHtml();
+    const user = portalUser(req, config);
+    res
+      .type("html")
+      .set("Cache-Control", "no-store")
+      .send(injectBoot(html, { mode: "portal2", user, baseUrl: config.publicBaseUrl, pdf: pdfAvailable(config), chat: chatEnabled(config) || Boolean(chatModel) }, "Lasso"));
+  });
+  // Den klassiske portal (AppShell med skinne og faner, docs/portal.md).
+  app.get("/portal/klassisk", async (req, res) => {
     const html = await loadViewHtml();
     const user = portalUser(req, config);
     res

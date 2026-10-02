@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { Router, type Request, type Response } from "express";
 import type { BetaMessageParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import { mcpKeyRequired, providedKey, userForKey, demoUser, type CurrentUser } from "../auth/user.js";
-import { CSRF_HEADER, parseCookies, SESSION_COOKIE, verifySession } from "../auth/session.js";
+import { CSRF_HEADER, parseCookies, portalLoginRequired, SESSION_COOKIE, verifySession } from "../auth/session.js";
 import { isSet, type Config } from "../config.js";
 import { linkSecret } from "../web/links.js";
 import type { UseCaseCtx } from "../usecases/index.js";
@@ -16,8 +16,8 @@ import { anthropicModelCall, runChat, type ChatEvent, type ModelCall } from "./a
  * værktøjssvar ind i samtalen.
  *
  * Adgang: en portal-session (cookie + CSRF-header, som /api/portal) eller en brugernøgle (Bearer,
- * x-api-key) til server-til-server-kald fra Lassos produkt. Den åbne portal (PORTAL_PUBLIC) giver IKKE
- * adgang til chatten, da hvert svar koster; kun lokalt uden nøgler er chatten åben som demobrugeren.
+ * x-api-key) til server-til-server-kald fra Lassos produkt. Er portalen åben (PORTAL_PUBLIC), er chatten
+ * også åben fra portalens side som demobrugeren, med bremsen pr. IP-adresse.
  */
 
 export interface ChatDeps extends Omit<UseCaseCtx, "user"> {
@@ -38,8 +38,18 @@ export function chatUser(req: Request, config: Config): CurrentUser | { status: 
     if (req.header(CSRF_HEADER) !== "1") return { status: 403, error: `Kald til chatten skal sende headeren ${CSRF_HEADER}: 1` };
     return session;
   }
-  if (!mcpKeyRequired(config)) return demoUser(config);
+  // Den åbne portal (PORTAL_PUBLIC) og lokalt uden nøgler: demobrugeren, men kun fra portalens egen side
+  // (CSRF-headeren). Bremsen gælder så pr. IP-adresse, så én besøgende ikke bruger alles kvote.
+  if (!portalLoginRequired(config)) {
+    if (mcpKeyRequired(config) && req.header(CSRF_HEADER) !== "1") return { status: 403, error: `Kald til chatten skal sende headeren ${CSRF_HEADER}: 1` };
+    return demoUser(config);
+  }
   return { status: 401, error: "Ikke logget ind" };
+}
+
+/** Nøglen, bremsen tæller på: brugeren, og for demobrugeren også IP-adressen. */
+function limitKey(req: Request, user: CurrentUser): string {
+  return user.isDemo ? `${user.id}@${req.ip ?? req.socket.remoteAddress ?? "?"}` : user.id;
 }
 
 const signHistory = (secret: string, userId: string, history: unknown) =>
@@ -103,7 +113,7 @@ export function chatRoutes({ model, ...deps }: ChatDeps): Router {
     if (history.length && !verifyHistory(config, user.id, history, body.sig)) {
       return void res.status(400).json({ error: "Samtalen kunne ikke genkendes. Start en ny samtale." });
     }
-    if (!allow(user.id)) return void res.status(429).json({ error: `Du har brugt chatten ${config.CHAT_MAX_PER_HOUR} gange den seneste time. Prøv igen senere.` });
+    if (!allow(limitKey(req, user))) return void res.status(429).json({ error: `Du har brugt chatten ${config.CHAT_MAX_PER_HOUR} gange den seneste time. Prøv igen senere.` });
 
     call ??= anthropicModelCall(config.ANTHROPIC_API_KEY);
     res.writeHead(200, { "content-type": "text/event-stream; charset=utf-8", "cache-control": "no-store", connection: "keep-alive", "x-accel-buffering": "no" });
