@@ -76,8 +76,10 @@ Moduler og Brugere står dæmpet, til de findes.
 - Topbjælkens bund flugter: bunden af logoet, tekstens grundlinje og ikonernes bund står på samme linje, og der er
   lige langt (20 px) fra logo til navn som fra pilen til det første ikon. Målt i browseren; justeres med
   `--text-dy`, `--icon-dy` og `--icon-dx` i `portal2.css`, hvis skrift eller ikoner skiftes.
-- Siden selv ruller ikke (ingen bounce bag portalen); kun indholdet ruller og bouncer naturligt, og topbjælke og
-  modulrække står fast. Rulning gentegner ikke portalen (skyggen under modulrækken sættes direkte på roden).
+- Siden selv ruller ikke (ingen bounce bag portalen); kun indholdet ruller og bouncer, og topbjælke og
+  modulrække står fast. Safari og alle browsere på iPhone bouncer selv; i Chrome og Edge laver portalen samme
+  bounce (`elastic.ts`): ud over toppen eller bunden trækkes indholdet med stigende modstand (højst 90 px) og fjedrer
+  tilbage, når man slipper (trackpad, hjul og finger). Rulning gentegner ikke portalen (skyggen under modulrækken sættes direkte på roden).
 - Modulrækken bliver en vælger, når modulerne ikke kan stå ved siden af hinanden.
 
 ## Tema

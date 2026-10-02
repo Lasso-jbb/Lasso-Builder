@@ -33,6 +33,7 @@ import {
   type StatusFilter,
 } from "./model.js";
 import { AskField, BottomBar, DropButton, IconButton, LassoTab, MenuItem, ModuleTab, OpenTab, SearchEmpty, SearchField, SearchResultRow, SearchTabs, StatusFilterMenu, Suggestions, TopTab } from "./parts.js";
+import { useElasticScroll } from "./elastic.js";
 import "./portal2.css";
 
 /**
@@ -126,8 +127,12 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const top = useRef<HTMLElement>(null);
   const toptabs = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   /** Fanernes bredde holdes efter et luk, til musen forlader fanebjælken (så næste kryds står samme sted). */
   const frozenTabW = useRef<number | null>(null);
+
+  // Bounce i rulleområdet som i Safari, også i Chrome og Edge (elastic.ts).
+  useElasticScroll(scroller, contentRef);
 
   const api = useMemo(() => createPortalApi(() => setNotice("Du er logget ud. Genindlæs siden.")), []);
   const item = open.find((o) => o.key === active);
@@ -1007,7 +1012,9 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
 
         <div className="scrollbox">
           <div className="scroll" ref={scroller} onScroll={onScroll}>
-            <div className="col content">{content}</div>
+            <div className="col content" ref={contentRef}>
+              {content}
+            </div>
           </div>
         </div>
 
