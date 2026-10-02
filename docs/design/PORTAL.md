@@ -80,9 +80,10 @@ Moduler og Brugere står dæmpet, til de findes.
   `--text-dy`, `--icon-dy` og `--icon-dx` i `portal2.css`, hvis skrift eller ikoner skiftes.
 - Siden selv ruller ikke (ingen bounce bag portalen); kun indholdet ruller og bouncer, og topbjælke og
   modulrække står fast. Safari og alle browsere på iPhone bouncer selv; i Chrome og Edge laver portalen samme
-  bounce (`elastic.ts`) med en lille fjedermodel som macOS: trækker man ud over toppen eller bunden, følger indholdet
-  med stigende modstand (højst ca. 55 px); rammer et svirp kanten, skyder indholdet over i forhold til farten (højst
-  64 px); en kritisk dæmpet fjeder bringer det tilbage på ca. 0,4 s uden at svinge. Rulning gentegner ikke portalen (skyggen under modulrækken sættes direkte på roden).
+  bounce (`elastic.ts`) med én elastik: hjul-hændelser ud over kanten strækker den med stigende modstand (højst
+  72 px), og hvert billede trækker den tilbage mod 0 (tidskonstant 90 ms). Den bliver stivere, jo længere en
+  bevægelse trykker på kanten, så trackpaddens efterløb ikke holder den ude. Ruller man den anden vej, mens den er
+  strakt, tager elastikken rulningen først. Rulning gentegner ikke portalen (skyggen under modulrækken sættes direkte på roden).
 - Modulrækken bliver en vælger, når modulerne ikke kan stå ved siden af hinanden.
 
 ## Tema
