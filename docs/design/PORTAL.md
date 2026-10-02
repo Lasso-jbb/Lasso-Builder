@@ -60,8 +60,10 @@ Moduler og Brugere står dæmpet, til de findes.
 
 ## Spørgefeltet (chatten)
 
-- Feltet sender til `/api/chat` (Claude med samme værktøjer som MCP, se `docs/chat.md`). Pladsholderen er
-  "Spørg om <navn>" på en side og "Spørg Lasso om en virksomhed, en person eller en målgruppe" ellers.
+- Feltet sender til `/api/chat` (Claude med samme værktøjer som MCP, se `docs/chat.md`). Pladsholderen er altid
+  "Spørg Lasso", og der er intet ikon i feltet.
+- De tre forslag under feltet følger siden: forsiden, et resultat, eller firmaets/personens modul (fx Ejerskab giver
+  spørgsmål om ejere og datterselskaber). De står i `suggestions()` i `model.ts`.
 - Svaret vises under Lasso-mærket på den fane, man spurgte fra, med spørgsmålet ("Du spurgte: …") og Claudes
   korte tekst over visningen. Henter Claude et andet firma, åbnes det som fane med svaret; spørger man fra
   forsiden eller et resultat, bliver svaret en ny fane.
@@ -78,8 +80,9 @@ Moduler og Brugere står dæmpet, til de findes.
   `--text-dy`, `--icon-dy` og `--icon-dx` i `portal2.css`, hvis skrift eller ikoner skiftes.
 - Siden selv ruller ikke (ingen bounce bag portalen); kun indholdet ruller og bouncer, og topbjælke og
   modulrække står fast. Safari og alle browsere på iPhone bouncer selv; i Chrome og Edge laver portalen samme
-  bounce (`elastic.ts`): ud over toppen eller bunden trækkes indholdet med stigende modstand (højst ca. 55 px) og fjedrer
-  tilbage på 0,3 s, når man slipper (trackpad, hjul og finger); trackpaddens efterløb trækker ikke videre. Rulning gentegner ikke portalen (skyggen under modulrækken sættes direkte på roden).
+  bounce (`elastic.ts`) med en lille fjedermodel som macOS: trækker man ud over toppen eller bunden, følger indholdet
+  med stigende modstand (højst ca. 55 px); rammer et svirp kanten, skyder indholdet over i forhold til farten (højst
+  64 px); en kritisk dæmpet fjeder bringer det tilbage på ca. 0,4 s uden at svinge. Rulning gentegner ikke portalen (skyggen under modulrækken sættes direkte på roden).
 - Modulrækken bliver en vælger, når modulerne ikke kan stå ved siden af hinanden.
 
 ## Tema

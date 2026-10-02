@@ -255,11 +255,11 @@ export function PortalParts({ theme }: { theme: "light" | "dark" }) {
           </div>
         </Spec>
 
-        <Spec label="Spørgefelt" note="Tomt med pladsholder · med tekst · Lasso svarer (Stop) · slået fra · forslag">
+        <Spec label="Spørgefelt" note="Tomt (altid &quot;Spørg Lasso&quot;) · med tekst · Lasso svarer (Stop) · slået fra · forslag efter siden">
           <div className="ask">
-            <AskField value="" placeholder="Spørg om Eksempel Byg A/S" />
+            <AskField value="" placeholder="Spørg Lasso" />
             <AskField value="Hvem ejer firmaet?" placeholder="" />
-            <AskField value="" placeholder="Spørg om Eksempel Byg A/S" pending />
+            <AskField value="" placeholder="Spørg Lasso" pending />
             <AskField value="" placeholder="Chatten er ikke slået til" disabled />
             <Suggestions items={["Hvordan går det økonomisk?", "Hvem ejer Eksempel Byg A/S?", "Er der røde flag?"]} />
           </div>

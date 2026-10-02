@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { hasNativeBounce, rubber } from "./elastic.js";
+import { hasNativeBounce, rubber, springStep } from "./elastic.js";
 
 test("rubber: stigende modstand, højst max, samme fortegn som trækket", () => {
   assert.equal(rubber(0), 0);
@@ -15,4 +15,16 @@ test("hasNativeBounce: WebKit (Safari, alle browsere på iPhone) bouncer selv; C
   assert.equal(hasNativeBounce({ vendor: "Google Inc." }), false);
   assert.equal(hasNativeBounce({ vendor: "" }), false);
   assert.equal(hasNativeBounce(undefined), false);
+});
+
+test("springStep: kritisk dæmpet fjeder vender tilbage til 0 uden at skyde forbi", () => {
+  let x = 40;
+  let v = 0;
+  let min = x;
+  for (let i = 0; i < 120; i++) {
+    [x, v] = springStep(x, v, 1 / 60);
+    min = Math.min(min, x);
+  }
+  assert.ok(Math.abs(x) < 0.5, `ender ved ${x}`);
+  assert.ok(min > -0.5, `skyder ikke forbi (min ${min})`);
 });

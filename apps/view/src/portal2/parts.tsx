@@ -356,7 +356,6 @@ export function AskField({
         onSubmit?.();
       }}
     >
-      <LassoMark className={`mark${pending ? " is-busy" : ""}`} />
       <input ref={inputRef} value={value} onChange={(e) => onChange?.(e.target.value)} placeholder={placeholder} aria-label="Spørg Lasso" disabled={disabled} />
       {pending ? (
         <button type="button" className="send" aria-label="Stop" onClick={onStop}>

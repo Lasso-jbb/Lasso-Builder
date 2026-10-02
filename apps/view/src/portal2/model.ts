@@ -85,15 +85,38 @@ export function messageFor(text: string, item: OpenItem | undefined, lastEntityI
   return `${text}\n\n(Kontekst: brugeren kigger på ${item.name}, ${item.key}.)`;
 }
 
-/** Forslagene under spørgefeltet. */
+/** Forslagene under spørgefeltet: de følger siden, man står på (firma eller person, og modulet). */
+const COMPANY_SUGGESTIONS: Record<string, (n: string) => string[]> = {
+  overblik: (n) => [`Hvordan går det økonomisk med ${n}?`, `Hvem ejer ${n}?`, "Er der røde flag?"],
+  oekonomi: () => ["Hvordan har overskuddet udviklet sig?", "Hvordan er soliditeten?", "Sammenlign med branchen"],
+  regnskab: () => ["Hvad er de vigtigste tal i seneste regnskab?", "Har revisor taget forbehold?", "Hvordan har egenkapitalen udviklet sig?"],
+  ejerskab: (n) => [`Hvem er de reelle ejere af ${n}?`, "Hvilke datterselskaber er der?", "Er der sket ejerskifte for nylig?"],
+  risiko: () => ["Er der røde flag?", "Har ledelsen været involveret i konkurser?", "Hvordan er betalingsevnen?"],
+  historik: () => ["Hvad er der sket det seneste år?", "Hvornår skiftede ledelsen sidst?", "Er der nyheder om firmaet?"],
+  kontakt: () => ["Hvem sidder i ledelsen?", "Hvem sidder i bestyrelsen?", "Hvem er revisor?"],
+  ledelse: () => ["Hvem sidder i ledelsen?", "Hvem sidder i bestyrelsen?", "Hvem er revisor?"],
+  [LASSO_TAB]: (n) => [`Hvem ejer ${n}?`, "Er der røde flag?", "Sammenlign med de største konkurrenter"],
+};
+const PERSON_SUGGESTIONS: Record<string, (n: string) => string[]> = {
+  overblik: (n) => [`Hvilke selskaber er ${n} involveret i?`, "Hvem sidder personen sammen med?", "Har der været konkurser?"],
+  roller: () => ["Hvilke roller er aktive nu?", "Hvilke roller er ophørt?", "Hvor længe har personen siddet i ledelser?"],
+  netvaerk: (n) => [`Hvem sidder ${n} oftest sammen med?`, "Hvilke bestyrelser deler de?", "Hvem i netværket er revisorer?"],
+  ejerskab: (n) => [`Hvilke selskaber ejer ${n}?`, "Hvor store er ejerandelene?", "Hvordan går det økonomisk i selskaberne?"],
+  risiko: () => ["Har der været konkurser?", "Har der været tvangsopløsninger?", "Er der røde flag i selskaberne?"],
+  historik: (n) => [`Hvad er der sket med ${n} det seneste år?`, "Er der nyheder om personen?", "Hvornår kom de nyeste roller til?"],
+  [LASSO_TAB]: (n) => [`Hvilke selskaber er ${n} involveret i?`, "Hvem sidder personen sammen med?", "Har der været konkurser?"],
+};
+
 export function suggestions(item: OpenItem | undefined): string[] {
-  if (item?.kind === "company") return ["Hvordan går det økonomisk?", `Hvem ejer ${item.name}?`, "Er der røde flag?"];
-  if (item?.kind === "person") return [`Hvilke selskaber er ${item.name} involveret i?`, "Hvem sidder personen sammen med?", "Har der været konkurser?"];
+  if (item?.kind === "company") return (COMPANY_SUGGESTIONS[item.tab] ?? COMPANY_SUGGESTIONS.overblik!)(item.name);
+  if (item?.kind === "person") return (PERSON_SUGGESTIONS[item.tab] ?? PERSON_SUGGESTIONS.overblik!)(item.name);
+  if (item?.kind === "result") return ["Vis kun de største", "Sorter efter omsætning", "Hvilke er vokset mest?"];
   return ["Hvordan går det økonomisk med Novo Nordisk?", "Revisorer i Aarhus med mindst 10 ansatte", "Sammenlign Carlsberg og Royal Unibrew"];
 }
 
-export function askPlaceholder(item: OpenItem | undefined): string {
-  return item && item.kind !== "result" ? `Spørg om ${item.name}` : "Spørg Lasso om en virksomhed, en person eller en målgruppe";
+/** Spørgefeltet hedder altid "Spørg Lasso", uanset siden. */
+export function askPlaceholder(_item?: OpenItem): string {
+  return "Spørg Lasso";
 }
 
 /* ---------- søgefeltet ---------- */

@@ -50,7 +50,9 @@ test("messageFor: Claude får at vide, hvilken side brugeren kigger på, når de
 });
 
 test("forslag og pladsholder følger fanen", () => {
-  assert.equal(askPlaceholder(novo), "Spørg om NOVO NORDISK A/S");
+  assert.equal(askPlaceholder(novo), "Spørg Lasso");
+  assert.equal(askPlaceholder(undefined), "Spørg Lasso");
+  assert.notDeepEqual(suggestions({ ...novo, tab: "ejerskab" }), suggestions({ ...novo, tab: "oekonomi" }));
   assert.ok(suggestions(novo).includes("Hvem ejer NOVO NORDISK A/S?"));
   assert.equal(suggestions(undefined).length, 3);
 });
