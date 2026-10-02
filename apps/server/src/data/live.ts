@@ -516,7 +516,7 @@ export class LiveProvider implements DataProvider {
     try {
       return adaptValuation(await this.client.valuations(lassoId), lassoId);
     } catch (err) {
-      if (err instanceof LassoApiError && [401, 403, 404].includes(err.status)) return { lassoId, state: "unavailable", reason: err.status === 404 ? "Lasso har ingen værdiansættelse af virksomheden." : "Ingen adgang til værdiansættelser." };
+      if (err instanceof LassoApiError && [401, 403, 404].includes(err.status)) return { lassoId, state: "unavailable", reason: `${err.status === 404 ? "Lasso har ingen værdiansættelse af virksomheden." : "Ingen adgang til værdiansættelser."} (HTTP ${err.status})` };
       throw err;
     }
   }
@@ -526,7 +526,7 @@ export class LiveProvider implements DataProvider {
     try {
       return adaptResume(await this.client.resume(lassoId), lassoId);
     } catch (err) {
-      if (err instanceof LassoApiError && [401, 403, 404].includes(err.status)) return { lassoId, state: "unavailable", reason: err.status === 404 ? "Lasso har intet erhvervsresumé endnu." : "Ingen adgang til erhvervsresuméer." };
+      if (err instanceof LassoApiError && [401, 403, 404].includes(err.status)) return { lassoId, state: "unavailable", reason: `${err.status === 404 ? "Lasso har intet erhvervsresumé endnu." : "Ingen adgang til erhvervsresuméer."} (HTTP ${err.status})` };
       throw err;
     }
   }

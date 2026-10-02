@@ -272,6 +272,12 @@ export function summarizeView(spec: ViewSpec, ds: Dataset, opts: { ask?: Ask } =
   answered();
   const errors = Object.entries(ds.errors);
   if (errors.length) lines.push(`Fejl: ${errors.slice(0, 3).map(([k, v]) => `${k.split(":")[0]}: ${v}`).join("; ")}.`);
+  // Erhvervsresumé og værdiansættelse uden data: hvorfor (HTTP-status eller svarets feltnavne), til fejlsøgning.
+  const missing = [
+    ...Object.values(ds.resumes ?? {}).filter((r) => r.state !== "ok").map((r) => `erhvervsresumé: ${r.reason ?? "intet"}`),
+    ...Object.values(ds.valuations ?? {}).filter((v) => v.state !== "ok").map((v) => `værdiansættelse: ${v.reason ?? "ingen"}`),
+  ];
+  if (missing.length) lines.push(`Ikke vist: ${missing.slice(0, 2).join("; ")}`);
   // Hvornår tekstkortet vises, står ét sted: serverinstruktionerne (review P1-6).
   lines.push("Visningen er svaret: skriv ingen tekst i chatten (se instruktionerne). Tekstkortet er kun til værter uden Lasso-visning.");
   return lines.join("\n");

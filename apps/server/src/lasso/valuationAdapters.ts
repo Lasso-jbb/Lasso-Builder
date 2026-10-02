@@ -8,12 +8,12 @@ import { at, dateStr, num, str, type Json } from "./adapters.js";
  */
 export function adaptValuation(raw: Json, lassoId: string): ValuationVM {
   const item = pickItem(raw, lassoId);
-  if (!item) return { lassoId, state: "unavailable", reason: "Lasso har ingen værdiansættelse af virksomheden." };
+  if (!item) return { lassoId, state: "unavailable", reason: `Lasso har ingen værdiansættelse af virksomheden (${shapeOf(raw)}).` };
   const value = num(item, "value", "valuation", "estimatedValue", "estimate", "amount", "equityValue", "enterpriseValue", "valuation.value", "result.value", "mid", "median");
   const low = num(item, "low", "min", "lower", "lowerBound", "range.from", "range.low", "interval.from", "valueLow", "valuation.low");
   const high = num(item, "high", "max", "upper", "upperBound", "range.to", "range.high", "interval.to", "valueHigh", "valuation.high");
   if (value === undefined && (low === undefined || high === undefined)) {
-    return { lassoId, state: "unavailable", reason: "Lasso har ingen værdiansættelse af virksomheden." };
+    return { lassoId, state: "unavailable", reason: `Ingen værdi i svaret (${shapeOf(item)}).` };
   }
   return {
     lassoId,
@@ -44,8 +44,16 @@ function pickItem(raw: Json, lassoId: string): Json | undefined {
 /** GET /modules/resume/{lassoId}: { content, lassoId, firstName?, lastName? }. Tom tekst = intet resumé. */
 export function adaptResume(raw: Json, lassoId: string): ResumeVM {
   const content = str(raw, "content", "text", "resume")?.trim();
-  if (!content) return { lassoId, state: "unavailable", reason: "Lasso har intet erhvervsresumé endnu." };
+  if (!content) return { lassoId, state: "unavailable", reason: `Lasso har intet erhvervsresumé endnu (${shapeOf(raw)}).` };
   const firstName = str(raw, "firstName");
   const lastName = str(raw, "lastName");
   return { lassoId, state: "ok", content, ...(firstName ? { firstName } : {}), ...(lastName ? { lastName } : {}) };
+}
+
+/** Svarets form uden værdier, til fejlsøgning: "tomt svar", "liste med 2" eller "felter: a, b, c". */
+export function shapeOf(raw: Json): string {
+  if (raw === null || raw === undefined || raw === "") return "tomt svar";
+  if (Array.isArray(raw)) return `liste med ${raw.length}${raw[0] && typeof raw[0] === "object" ? `, felter: ${Object.keys(raw[0] as object).slice(0, 12).join(", ")}` : ""}`;
+  if (typeof raw === "object") return `felter: ${Object.keys(raw as object).slice(0, 12).join(", ") || "ingen"}`;
+  return typeof raw;
 }
