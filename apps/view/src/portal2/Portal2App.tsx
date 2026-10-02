@@ -122,6 +122,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const [recent, setRecent] = useState<RecentItem[]>(() => loadRecent(storage()));
 
   const chat = useRef<ChatState>({ history: [] });
+  const persistTheme = useRef(true);
   const lastEntity = useRef<string | undefined>(undefined);
   const abort = useRef<AbortController | null>(null);
   const resultSeq = useRef(0);
@@ -150,6 +151,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     document.documentElement.style.colorScheme = theme;
+    if (!persistTheme.current) return;
     try {
       localStorage.setItem("lasso-theme", theme);
     } catch {
@@ -205,10 +207,10 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     });
 
   /** Åbner et firma eller en person som fane (eller skifter til den) på et modul. */
-  const openEntity = (kind: "company" | "person", id: string, name: string, tab = "overblik", sub?: string) => {
+  const openEntity = (kind: "company" | "person", id: string, name: string, tab = "overblik", sub?: string, recentToo = true) => {
     setOpen((l) => openItem(l, { key: id, kind, name, tab, ...(sub ? { sub } : {}) }));
     activate(id);
-    remember({ kind, id, name, meta: sub ?? "" });
+    if (recentToo) remember({ kind, id, name, meta: sub ?? "" });
     if (tab !== LASSO_TAB) void load(kind, id, tab);
   };
 
@@ -249,6 +251,29 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     setHistory((h) => h.filter((k) => k !== prev));
     setActive(prev);
   };
+
+  // Dybe links (og designguidens rammer): /portal?aaben=CVR-1-…,CVR-3-…&fane=oekonomi åbner fanerne; den sidste er aktiv.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ids = (params.get("aaben") ?? "")
+      .split(",")
+      .map((x) => x.trim())
+      .filter((x) => /^CVR-[134]-\d+$/i.test(x));
+    const tab = params.get("fane") ?? "overblik";
+    ids.forEach((id) => {
+      const kind = /^CVR-[34]-/i.test(id) ? "person" : "company";
+      const t = kind === "company" ? (isFocus(tab) ? tab : "overblik") : isPersonFocus(tab) ? tab : "overblik";
+      openEntity(kind, id, id, t, undefined, false);
+    });
+    const tema = params.get("tema");
+    if (tema === "dark" || tema === "light") {
+      // Et tema fra adressen (designguiden) gemmes ikke som brugerens valg.
+      persistTheme.current = false;
+      setTheme(tema);
+    }
+    // Kun ved start.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ---------- søgefeltet ---------- */
 

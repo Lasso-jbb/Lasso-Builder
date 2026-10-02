@@ -419,3 +419,12 @@ body { font-family: var(--lasso-font, "Poppins", system-ui, sans-serif); -webkit
 
 /* Print-eksemplet (27.1): et hvidt A4-ark; siden tegnes 794 px bred som i side-PDF'en (900 - 2 × 53). */
 .dg-printsheet { background: #fff; padding: 53px; }
+
+/* Portalens ramme (#/portal): den kørende portal i en skaleret iframe og portalens tokens */
+.dg-portalframe { position: relative; overflow: hidden; border: 1px solid var(--dg-line); border-radius: 12px; margin-bottom: 14px; background: var(--lasso-surface); }
+.dg-portalframe iframe { border: 0; display: block; }
+.dg-ptable { border-collapse: collapse; width: 100%; max-width: 760px; font-size: 13px; }
+.dg-ptable th { text-align: left; font-weight: 600; color: var(--lasso-text-3); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--dg-line); }
+.dg-ptable td { padding: 7px 12px 7px 0; border-bottom: 1px solid var(--dg-line); vertical-align: middle; }
+.dg-ptable .dg-swatch { display: inline-block; width: 16px; height: 16px; border-radius: 4px; vertical-align: middle; margin-right: 6px; }
+.dg-ptable__same { color: var(--lasso-text-3); }
