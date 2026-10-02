@@ -47,9 +47,11 @@ tæller så pr. IP-adresse.
 
 ## Portalen (/portal)
 
-`/portal` er den nye portal efter prototypen "lasso-portal - new.html": topbjælke med søgning, ikonskinne,
+`/portal` er den nye portal efter prototypen "lasso-portal3.html": topbjælke med søgning mens man skriver
+(firmaer og personer fra Lassos navnesøgning, `GET /api/portal/lookup`, med status, genveje og seneste), faner for
+åbne firmaer, personer og resultater, ikonskinne,
 virksomhedens hoved med fanerne Overblik, Økonomi, Regnskab, Ejerskab, Risiko, Historik og Kontakt, og
-spørgefeltet nederst. Søgefeltet åbner virksomheden på Overblik (uden AI). Spørgefeltet er chatten: det, Claude
+spørgefeltet nederst. Et valg i søgningen åbner firmaet eller personen på Overblik (uden AI). Spørgefeltet er chatten: det, Claude
 henter, vises under fanen med Lasso-mærket (mærket bevæger sig, mens der hentes), og man kan klikke videre i
 de faste faner og tilbage til Lasso-fanen. Den klassiske portal står på `/portal/klassisk`.
 

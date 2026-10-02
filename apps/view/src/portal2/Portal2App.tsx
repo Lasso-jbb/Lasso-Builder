@@ -1,29 +1,56 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { LassoMark, LassoView, LassoWordmark, type ActionResult, type ViewAction } from "@lasso/ui";
 import { FOCUS_LABELS, isPersonFocus, PAGE_TABS, PERSON_FOCUS_LABELS, PERSON_FOCUSES, type Focus, type PersonFocus } from "@lasso/spec";
 import type { Portal2Boot } from "../boot.js";
 import { Text } from "../chat/ChatApp.js";
 import { ChatHttpError, streamChat, type ChatState } from "../chat/stream.js";
 import { PDF_SAVED, saveBlob } from "../pdfDownload.js";
-import { createPortalApi, errorText, type ViewResult } from "../portal/api.js";
+import { createPortalApi, errorText, type LookupResult, type ViewResult } from "../portal/api.js";
 import { entityOf, withSaved } from "../portal/data.js";
 import { isFocus } from "../portal/routes.js";
 import { P2Icon, type P2IconName } from "./icons.js";
-import { askPlaceholder, headLines, LASSO_TAB, messageFor, suggestions, withoutHead, type Answer, type EntityKind, type Page, type Shown } from "./model.js";
+import {
+  addRecent,
+  askPlaceholder,
+  closeItem,
+  headLines,
+  highlight,
+  LASSO_TAB,
+  loadRecent,
+  messageFor,
+  openItem,
+  saveRecent,
+  searchCounts,
+  searchRows,
+  SHORTCUTS,
+  STATUS_FILTERS,
+  suggestions,
+  withoutHead,
+  type Answer,
+  type ItemKind,
+  type OpenItem,
+  type RecentItem,
+  type SearchRow,
+  type SearchType,
+  type Shown,
+  type StatusFilter,
+} from "./model.js";
 import "./portal2.css";
 
 /**
- * Den nye portal på /portal (prototypen "lasso-portal - new.html"): topbjælke med søgning, ikonskinne,
- * virksomhedens/personens hoved med modulfaner og spørgefeltet nederst. Spørgefeltet er chatten
- * (/api/chat, samme værktøjer som Claude): det, Claude henter, vises i grænsefladen under fanen
- * med Lasso-mærket, og mærket bevæger sig, mens der hentes. De andre faner er sidens faste fokus.
+ * Den nye portal på /portal (prototypen "lasso-portal3.html"): topbjælke med søgning mens man skriver,
+ * ikonskinne, faner for åbne firmaer/personer/resultater, modulrække (Lasso-mærket + fokus) og spørgefeltet.
+ * Spørgefeltet er chatten (/api/chat, samme værktøjer som Claude): det, Claude henter, vises under fanen
+ * med Lasso-mærket, og mærket bevæger sig, mens der hentes. Søgning og modulfaner bruger ikke AI.
  */
 
 type Theme = "light" | "dark";
+type Menu = { kind: "openall" | "more" | "sel"; left: number; top: number } | null;
 
 const COMPANY_TABS = PAGE_TABS.map((f) => ({ id: f as string, label: FOCUS_LABELS[f] }));
 const PERSON_TABS = PERSON_FOCUSES.map((f) => ({ id: f as string, label: PERSON_FOCUS_LABELS[f] }));
 const SECTION_FOCUS: Record<string, string> = { ejerdiagram: "ejerskab", regnskabsanalyse: "oekonomi", noegletal: "oekonomi" };
+const PHONE = "(max-width: 760px)";
 
 function initialTheme(): Theme {
   try {
@@ -35,47 +62,87 @@ function initialTheme(): Theme {
   return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+function storage(): Storage | undefined {
+  try {
+    return window.localStorage;
+  } catch {
+    return undefined;
+  }
+}
+
+const isPhone = () => window.matchMedia?.(PHONE).matches ?? false;
+const iconOf = (k: ItemKind): P2IconName => (k === "company" ? "build" : k === "person" ? "user" : "search");
+const tabsOf = (k: ItemKind) => (k === "company" ? COMPANY_TABS : k === "person" ? PERSON_TABS : []);
+
 function Inert({ icon, label }: { icon: P2IconName; label: string }) {
   return (
-    <button type="button" className="p2-ibtn" aria-disabled="true" aria-label={`${label} (kommer senere)`}>
+    <button type="button" className="ibtn" aria-disabled="true" aria-label={`${label} (kommer senere)`}>
       <P2Icon name={icon} />
-      <span className="p2-tip">{label}</span>
+      <span className="tip">{label}</span>
     </button>
   );
 }
 
 export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const [theme, setTheme] = useState<Theme>(initialTheme);
-  const [page, setPage] = useState<Page>({ kind: "home" });
-  const [back, setBack] = useState<Page[]>([]);
-  /** Sidernes data: "<id>:<fane>" for virksomheder/personer, "result" for søgning og lister. */
+  const [open, setOpen] = useState<OpenItem[]>([]);
+  const [active, setActive] = useState<string | null>(null);
+  const [history, setHistory] = useState<string[]>([]);
+  /** Data pr. fane: "<id>:<modul>" for firmaer og personer, "<key>" for resultater. */
   const [shown, setShown] = useState<Record<string, Shown>>({});
-  const [loading, setLoading] = useState<string | null>(null);
+  const [loading, setLoading] = useState<Set<string>>(new Set());
   const [failed, setFailed] = useState<Record<string, string>>({});
-  const [answer, setAnswer] = useState<Answer | null>(null);
-  /** Hvilken side svaret hører til: virksomhedens/personens Lasso-ID eller "result". */
-  const [answerFor, setAnswerFor] = useState<string | null>(null);
+  /** Chattens svar pr. fane (firmaets/personens Lasso-ID eller resultatets key). */
+  const [answers, setAnswers] = useState<Record<string, Answer>>({});
+  const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
-  const [query, setQuery] = useState("");
   const [askOpen, setAskOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [menu, setMenu] = useState<Menu>(null);
+  const [hiddenMods, setHiddenMods] = useState<string[]>([]);
+  const [hiddenTabs, setHiddenTabs] = useState<string[]>([]);
+  const [scrolled, setScrolled] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [sheet, setSheet] = useState(false);
+  // Søgefeltet
+  const [q, setQ] = useState("");
+  const [sType, setSType] = useState<SearchType>("f");
+  const [sStatus, setSStatus] = useState<StatusFilter>("Aktive");
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [sel, setSel] = useState(0);
+  const [dropOpen, setDropOpen] = useState(false);
+  const [mSearch, setMSearch] = useState(false);
+  const [lookup, setLookup] = useState<LookupResult | undefined>();
+  const [looking, setLooking] = useState(false);
+  const [recent, setRecent] = useState<RecentItem[]>(() => loadRecent(storage()));
+
   const chat = useRef<ChatState>({ history: [] });
   const lastEntity = useRef<string | undefined>(undefined);
   const abort = useRef<AbortController | null>(null);
-  const askInput = useRef<HTMLInputElement>(null);
+  const resultSeq = useRef(0);
+  const lookupSeq = useRef(0);
   const scroller = useRef<HTMLDivElement>(null);
-
-  // Hændelserne fra chatten kommer efter renderingen; de læser siden, som den er nu.
-  const pageRef = useRef(page);
-  pageRef.current = page;
-  const answerForRef = useRef(answerFor);
-  answerForRef.current = answerFor;
+  const dq = useRef<HTMLInputElement>(null);
+  const mq = useRef<HTMLInputElement>(null);
+  const askInput = useRef<HTMLInputElement>(null);
+  const searchwrap = useRef<HTMLDivElement>(null);
+  const tabsCol = useRef<HTMLDivElement>(null);
+  const otabs = useRef<HTMLDivElement>(null);
+  const modCol = useRef<HTMLDivElement>(null);
+  const mlist = useRef<HTMLDivElement>(null);
+  const top = useRef<HTMLElement>(null);
+  const nameRef = useRef<HTMLHeadingElement>(null);
 
   const api = useMemo(() => createPortalApi(() => setNotice("Du er logget ud. Genindlæs siden.")), []);
+  const item = open.find((o) => o.key === active);
+  const itemRef = useRef(item);
+  itemRef.current = item;
 
   useEffect(() => {
-    document.title = "Lasso";
+    document.title = item ? `${item.name}, Lasso` : "Lasso";
+  }, [item?.name]);
+
+  useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     document.documentElement.style.colorScheme = theme;
     try {
@@ -85,114 +152,235 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     }
   }, [theme]);
 
-  const keyOf = (p: Page): string | null => (p.kind === "entity" ? `${p.id}:${p.tab}` : p.kind === "result" ? "result" : null);
+  /* ---------- data ---------- */
 
-  const go = (next: Page, remember = true) => {
-    if (remember) setBack((b) => [...b.slice(-20), page]);
-    setPage(next);
-    setAskOpen(false);
-    setSearchOpen(false);
-    scroller.current?.scrollTo({ top: 0 });
-  };
-
+  const setBusy = (key: string, on: boolean) =>
+    setLoading((s) => {
+      const n = new Set(s);
+      if (on) n.add(key);
+      else n.delete(key);
+      return n;
+    });
   const put = (key: string, r: Shown) => setShown((s) => ({ ...s, [key]: r }));
 
-  /** Henter en fane (fokus) for en virksomhed eller person, hvis den ikke allerede er hentet. */
-  const load = async (kind: EntityKind, id: string, tab: string, force = false) => {
+  const load = async (kind: "company" | "person", id: string, tab: string, force = false) => {
     const key = `${id}:${tab}`;
-    if (!force && shown[key]) return;
-    setLoading(key);
+    if (!force && shownRef.current[key]) return;
+    setBusy(key, true);
     setFailed((f) => ({ ...f, [key]: "" }));
     try {
       const r: ViewResult = kind === "company" ? await api.company(id, tab as Focus) : await api.person(id, tab as PersonFocus);
       put(key, { spec: r.spec, dataset: r.dataset });
-      // Siden blev åbnet med CVR eller navn: brug det kanoniske ID og navnet fra data.
       const ent = entityOf(r.spec, r.dataset);
-      if (ent) setPage((p) => (p.kind === "entity" && p.id === id ? { ...p, name: ent.name } : p));
+      if (ent) setOpen((l) => l.map((o) => (o.key === id ? { ...o, name: ent.name } : o)));
     } catch (e) {
       setFailed((f) => ({ ...f, [key]: errorText(e) }));
     } finally {
-      setLoading((l) => (l === key ? null : l));
+      setBusy(key, false);
+    }
+  };
+  const shownRef = useRef(shown);
+  shownRef.current = shown;
+
+  const activate = (key: string | null) => {
+    setActive((prev) => {
+      if (prev && prev !== key) setHistory((h) => [...h.filter((k) => k !== prev).slice(-20), prev]);
+      return key;
+    });
+    setMenu(null);
+    setSheet(false);
+    setAskOpen(false);
+    scroller.current?.scrollTo({ top: 0 });
+  };
+
+  const remember = (r: RecentItem) =>
+    setRecent((l) => {
+      const next = addRecent(l, r);
+      saveRecent(storage(), next);
+      return next;
+    });
+
+  /** Åbner et firma eller en person som fane (eller skifter til den) på et modul. */
+  const openEntity = (kind: "company" | "person", id: string, name: string, tab = "overblik", sub?: string) => {
+    setOpen((l) => openItem(l, { key: id, kind, name, tab, ...(sub ? { sub } : {}) }));
+    activate(id);
+    remember({ kind, id, name, meta: sub ?? "" });
+    if (tab !== LASSO_TAB) void load(kind, id, tab);
+  };
+
+  /** Et resultat (søgning, liste) som fane. */
+  const openResult = async (title: string, fetcher: () => Promise<ViewResult>) => {
+    const key = `result:${++resultSeq.current}`;
+    setOpen((l) => [...l, { key, kind: "result", name: title, tab: LASSO_TAB }]);
+    activate(key);
+    setBusy(key, true);
+    try {
+      const r = await fetcher();
+      put(key, { spec: r.spec, dataset: r.dataset });
+    } catch (e) {
+      setFailed((f) => ({ ...f, [key]: errorText(e) }));
+    } finally {
+      setBusy(key, false);
     }
   };
 
-  const openEntity = (kind: EntityKind, id: string, name: string, tab = "overblik") => {
-    go({ kind: "entity", entity: kind, id, name, tab });
-    void load(kind, id, tab);
+  const closeTab = (key: string) => {
+    const r = closeItem(open, key, active);
+    setOpen(r.list);
+    setActive(r.active);
+    setHistory((h) => h.filter((k) => k !== key));
+    if (pendingKey === key) abort.current?.abort();
   };
 
   const switchTab = (tab: string) => {
-    if (page.kind !== "entity") return;
-    setPage({ ...page, tab });
-    if (tab !== LASSO_TAB) void load(page.entity, page.id, tab);
+    if (!item || item.kind === "result") return;
+    setOpen((l) => l.map((o) => (o.key === item.key ? { ...o, tab } : o)));
+    setMenu(null);
+    if (tab !== LASSO_TAB) void load(item.kind, item.key, tab);
   };
 
-  const showResult = async (title: string, fetcher: () => Promise<ViewResult>) => {
-    go({ kind: "result", title });
-    setAnswerFor(null);
-    setLoading("result");
-    setFailed((f) => ({ ...f, result: "" }));
-    try {
-      const r = await fetcher();
-      put("result", { spec: r.spec, dataset: r.dataset });
-    } catch (e) {
-      setFailed((f) => ({ ...f, result: errorText(e) }));
-    } finally {
-      setLoading((l) => (l === "result" ? null : l));
-    }
+  const goBack = () => {
+    const prev = [...history].reverse().find((k) => open.some((o) => o.key === k));
+    if (!prev) return;
+    setHistory((h) => h.filter((k) => k !== prev));
+    setActive(prev);
   };
 
-  /**
-   * Søgefeltet: et navn eller CVR-nummer åbner virksomhedens side på Overblik (serveren vælger det bedste
-   * match). Findes ingen virksomhed, eller er det en beskrivelse ("revisorer i Aarhus"), vises søgningen.
-   */
-  const search = async (q: string) => {
+  /* ---------- søgefeltet ---------- */
+
+  useEffect(() => {
     const text = q.trim();
-    if (!text) return;
-    setSearchOpen(false);
-    setLoading("search");
-    try {
-      const r = await api.company(text, "overblik");
-      const ent = entityOf(r.spec, r.dataset);
-      if (ent) {
-        put(`${ent.id}:overblik`, { spec: r.spec, dataset: r.dataset });
-        go({ kind: "entity", entity: "company", id: ent.id, name: ent.name, tab: "overblik" });
-        setQuery("");
-        return;
-      }
-    } catch {
-      // Intet navnematch: vis søgningen i stedet.
-    } finally {
-      setLoading((l) => (l === "search" ? null : l));
+    if (text.length < 2) {
+      setLookup(undefined);
+      setLooking(false);
+      return;
     }
-    void showResult(`Søgning: ${text}`, () => api.search(text));
+    const seq = ++lookupSeq.current;
+    setLooking(true);
+    const t = setTimeout(() => {
+      api
+        .lookup(text)
+        .then((r) => {
+          if (seq !== lookupSeq.current) return;
+          setLookup(r);
+          setSel(0);
+          // Ingen firmaer, men personer: vis personfanen.
+          if (!r.companies.length && r.persons.length) setSType("p");
+        })
+        .catch(() => seq === lookupSeq.current && setLookup({ q: text, companies: [], persons: [] }))
+        .finally(() => seq === lookupSeq.current && setLooking(false));
+    }, 220);
+    return () => clearTimeout(t);
+  }, [q, api]);
+
+  const counts = searchCounts(lookup, sStatus);
+  const rows: SearchRow[] = q.trim() ? searchRows(lookup, sType, sStatus) : recent.map((r) => ({ kind: r.kind, id: r.id, name: r.name, meta: r.meta }));
+
+  const closeSearch = () => {
+    setDropOpen(false);
+    setMSearch(false);
+    setStatusOpen(false);
+  };
+  const resetSearch = () => {
+    setQ("");
+    setLookup(undefined);
+    setSel(0);
   };
 
-  const openLists = () => void showResult("Gemte sider", () => api.pages());
+  const choose = (r: SearchRow, tab = "overblik") => {
+    resetSearch();
+    closeSearch();
+    dq.current?.blur();
+    openEntity(r.kind, r.id, r.name, tab, r.meta);
+  };
 
-  /** Spørgefeltet: chatten. Svaret vises under Lasso-fanen på den side, Claude henter. */
+  const seeAll = () => {
+    const text = q.trim();
+    resetSearch();
+    closeSearch();
+    void openResult(`Søgning: ${text}`, () => api.search(text));
+  };
+
+  const askFromSearch = () => {
+    const text = q.trim();
+    resetSearch();
+    closeSearch();
+    void ask(text);
+  };
+
+  const onSearchKey = (e: ReactKeyboardEvent<HTMLInputElement>) => {
+    const empty = q.trim().length >= 2 && !looking && !counts.f && !counts.p;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSel((s) => Math.min(s + 1, Math.max(rows.length - 1, 0)));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSel((s) => Math.max(s - 1, 0));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (empty) askFromSearch();
+      else if (rows[sel]) choose(rows[sel]!);
+    } else if (e.key === "Tab" && q.trim()) {
+      e.preventDefault();
+      setSType((t) => (t === "f" ? "p" : "f"));
+      setSel(0);
+    } else if (e.key === "Escape") {
+      e.currentTarget.blur();
+      closeSearch();
+    }
+  };
+
+  // "/" sætter fokus i søgefeltet (desktop).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (document.activeElement?.tagName ?? "").toLowerCase();
+      if (e.key === "/" && tag !== "input" && tag !== "textarea" && !isPhone()) {
+        e.preventDefault();
+        dq.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Klik uden for søgefeltet og menuerne lukker dem.
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (searchwrap.current && !searchwrap.current.contains(t)) setDropOpen(false);
+      if (!(t as HTMLElement).closest?.(".dd,[data-menu]")) setMenu(null);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, []);
+
+  /* ---------- chatten ---------- */
+
   const ask = async (raw: string) => {
     const text = raw.trim();
-    if (!text || answer?.pending) return;
+    if (!text || pendingKey) return;
     if (!boot.chat) {
       setNotice("Chatten er ikke slået til på serveren (ANTHROPIC_API_KEY).");
       return;
     }
     setDraft("");
     setAskOpen(false);
-    const message = messageFor(text, page, lastEntity.current);
-    setAnswer({ question: text, text: "", pending: true });
-    if (page.kind === "entity") {
-      setAnswerFor(page.id);
-      setPage({ ...page, tab: LASSO_TAB });
+    const here = itemRef.current;
+    const message = messageFor(text, here, lastEntity.current);
+    // Svaret hører til den fane, man står på; står man på forsiden eller et resultat, til en ny resultatfane.
+    let key: string;
+    if (here && here.kind !== "result") {
+      key = here.key;
+      setOpen((l) => l.map((o) => (o.key === key ? { ...o, tab: LASSO_TAB } : o)));
     } else {
-      setAnswerFor("result");
-      go({ kind: "result", title: text });
-      setShown((s) => {
-        const { result: _drop, ...rest } = s;
-        return rest;
-      });
+      key = `result:${++resultSeq.current}`;
+      setOpen((l) => [...l, { key, kind: "result", name: text, tab: LASSO_TAB }]);
+      activate(key);
     }
+    let current = key;
+    setPendingKey(key);
+    setAnswers((a) => ({ ...a, [key]: { question: text, text: "", pending: true } }));
+    const patch = (fn: (a: Answer) => Answer) => setAnswers((all) => (all[current] ? { ...all, [current]: fn(all[current]!) } : all));
     const ctrl = new AbortController();
     abort.current = ctrl;
     try {
@@ -201,37 +389,44 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
         (e) => {
           switch (e.type) {
             case "text":
-              setAnswer((a) => (a ? { ...a, text: a.text + e.text } : a));
+              patch((a) => ({ ...a, text: a.text + e.text }));
               break;
             case "tool":
-              setAnswer((a) => (a ? { ...a, status: `${e.title} …` } : a));
+              patch((a) => ({ ...a, status: `${e.title} …` }));
               break;
             case "tool_error":
-              setAnswer((a) => (a ? { ...a, status: undefined } : a));
+              patch((a) => ({ ...a, status: undefined }));
               break;
             case "view": {
               const view = { spec: e.spec, dataset: e.dataset };
               const ent = entityOf(e.spec, e.dataset);
-              setAnswer((a) => (a ? { ...a, view, status: undefined } : a));
-              if (ent) {
-                lastEntity.current = ent.id;
-                setAnswerFor(ent.id);
-                const p = pageRef.current;
-                if (p.kind === "entity" && p.id === ent.id) setPage({ ...p, name: ent.name, tab: LASSO_TAB });
-                else {
-                  // Spurgte man fra forsiden, er "tilbage" forsiden; ellers den side, man stod på.
-                  if (p.kind !== "result" || answerForRef.current !== "result") setBack((b) => [...b.slice(-20), p]);
-                  setPage({ kind: "entity", entity: ent.kind, id: ent.id, name: ent.name, tab: LASSO_TAB });
-                }
+              if (ent && ent.id !== current) {
+                // Claude hentede et andet firma/en anden person: svaret flytter til den fane (åbnes, hvis den ikke er åben).
+                const moved = { ...(answersRef.current[current] ?? { question: text, text: "", pending: true }), view, status: undefined };
+                const from = current;
+                current = ent.id;
+                setPendingKey(ent.id);
+                setAnswers((all) => {
+                  const { [from]: _drop, ...rest } = all;
+                  return { ...rest, [ent.id]: moved };
+                });
+                setOpen((l) => {
+                  const base = from.startsWith("result:") ? l.filter((o) => o.key !== from) : l.map((o) => (o.key === from && o.tab === LASSO_TAB ? { ...o, tab: "overblik" } : o));
+                  return openItem(base, { key: ent.id, kind: ent.kind, name: ent.name, tab: LASSO_TAB });
+                });
+                activate(ent.id);
+                // Den fane, man spurgte fra, går tilbage til Overblik (dens Lasso-svar er flyttet).
+                if (here && here.kind !== "result" && here.key === from) void load(here.kind, from, "overblik");
               } else {
-                setAnswerFor("result");
-                put("result", view);
-                setPage((p) => (p.kind === "result" ? { ...p, title: e.spec.title } : { kind: "result", title: e.spec.title }));
+                patch((a) => ({ ...a, view, status: undefined }));
+                if (ent) setOpen((l) => l.map((o) => (o.key === ent.id ? { ...o, name: ent.name } : o)));
+                else setOpen((l) => l.map((o) => (o.key === current ? { ...o, name: e.spec.title } : o)));
               }
+              if (ent) lastEntity.current = ent.id;
               break;
             }
             case "error":
-              setAnswer((a) => (a ? { ...a, error: e.message, status: undefined } : a));
+              patch((a) => ({ ...a, error: e.message, status: undefined }));
               break;
             case "done":
               chat.current = { history: e.history, sig: e.sig };
@@ -242,52 +437,61 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       );
     } catch (e) {
       const msg = e instanceof ChatHttpError && e.status === 401 ? "Chatten kræver login. Log ind i portalen og prøv igen." : errorText(e);
-      setAnswer((a) => (a ? { ...a, error: msg } : a));
+      patch((a) => ({ ...a, error: msg }));
     } finally {
-      setAnswer((a) => (a ? { ...a, pending: false, status: undefined } : a));
+      patch((a) => ({ ...a, pending: false, status: undefined }));
+      setPendingKey(null);
       abort.current = null;
     }
   };
+  const answersRef = useRef(answers);
+  answersRef.current = answers;
 
   const stop = () => abort.current?.abort();
 
-  const newConversation = () => {
-    stop();
-    chat.current = { history: [] };
-    lastEntity.current = undefined;
-    setAnswer(null);
-    setAnswerFor(null);
-    go({ kind: "home" });
-  };
-
   /* ---------- det, der vises nu ---------- */
 
-  const key = keyOf(page);
-  const onLassoTab = page.kind === "result" || (page.kind === "entity" && page.tab === LASSO_TAB);
-  const answerHere = answer && ((page.kind === "entity" && answerFor === page.id) || (page.kind === "result" && answerFor === "result")) ? answer : null;
-  const current: Shown | undefined = page.kind === "entity" && page.tab === LASSO_TAB ? answerHere?.view : key ? shown[key] : undefined;
-  const headData = page.kind === "entity" ? (shown[`${page.id}:overblik`]?.dataset ?? (answerFor === page.id ? answer?.view?.dataset : undefined) ?? current?.dataset) : undefined;
-  const saved = page.kind === "entity" && Boolean(headData?.savedIds?.includes(page.id) || current?.dataset.savedIds?.includes(page.id));
+  const onLasso = item ? item.kind === "result" || item.tab === LASSO_TAB : false;
+  const answer = item ? answers[item.key] : undefined;
+  const dataKey = item ? (item.kind === "result" ? item.key : `${item.key}:${item.tab}`) : null;
+  const current: Shown | undefined = item ? (item.kind !== "result" && item.tab === LASSO_TAB ? answer?.view : (dataKey ? shown[dataKey] : undefined) ?? (item.kind === "result" ? answer?.view : undefined)) : undefined;
+  const headData = item && item.kind !== "result" ? (shown[`${item.key}:overblik`]?.dataset ?? answer?.view?.dataset ?? current?.dataset) : undefined;
+  const lines = item ? headLines(item.kind, item.key, headData) : [];
+  const saved = Boolean(item && item.kind !== "result" && (headData?.savedIds?.includes(item.key) || current?.dataset.savedIds?.includes(item.key)));
+  const busy = dataKey ? loading.has(dataKey) : false;
+  const err = dataKey ? failed[dataKey] : "";
+  const pending = pendingKey !== null;
+  const tabs = item ? tabsOf(item.kind) : [];
+  const lassoAvailable = Boolean(item && (item.kind === "result" || answers[item.key]));
+  const curLabel = item ? (onLasso ? "Lassos svar" : (tabs.find((t) => t.id === item.tab)?.label ?? "")) : "";
+
+  // Sub-linjen i fanens tooltip og i mobilarket, når data kommer.
+  useEffect(() => {
+    if (!item || item.kind === "result" || item.sub || !lines.length) return;
+    const sub = lines.join(", ");
+    setOpen((l) => l.map((o) => (o.key === item.key ? { ...o, sub } : o)));
+  }, [item?.key, lines.join("|")]);
 
   const replaceCurrent = (r: Shown) => {
-    if (page.kind === "entity" && page.tab === LASSO_TAB) setAnswer((a) => (a ? { ...a, view: r } : a));
-    else if (key) put(key, r);
+    if (!item) return;
+    if (item.kind !== "result" && item.tab === LASSO_TAB) setAnswers((a) => (a[item.key] ? { ...a, [item.key]: { ...a[item.key]!, view: r } } : a));
+    else if (dataKey) put(dataKey, r);
   };
 
   const patchSaved = (lassoId: string, on: boolean) => {
     setShown((s) => Object.fromEntries(Object.entries(s).map(([k, v]) => [k, { ...v, dataset: withSaved(v.dataset, lassoId, on) }])));
-    setAnswer((a) => (a?.view ? { ...a, view: { ...a.view, dataset: withSaved(a.view.dataset, lassoId, on) } } : a));
+    setAnswers((all) => Object.fromEntries(Object.entries(all).map(([k, a]) => [k, a.view ? { ...a, view: { ...a.view, dataset: withSaved(a.view.dataset, lassoId, on) } } : a])));
   };
 
   const toggleSaved = async () => {
-    if (page.kind !== "entity") return;
+    if (!item || item.kind === "result") return;
     const want = !saved;
-    patchSaved(page.id, want);
+    patchSaved(item.key, want);
     try {
-      if (want) await api.savePage({ page: page.id, kind: page.entity });
-      else await api.removePage(page.id);
+      if (want) await api.savePage({ page: item.key, kind: item.kind });
+      else await api.removePage(item.key);
     } catch (e) {
-      patchSaved(page.id, !want);
+      patchSaved(item.key, !want);
       setNotice(errorText(e));
     }
   };
@@ -301,7 +505,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
         case "open-focus":
         case "open-section": {
           const focus = a.kind === "open-focus" ? a.focus : (SECTION_FOCUS[a.section] ?? a.section);
-          if (page.kind === "entity" && (page.entity === "company" ? isFocus(focus) : isPersonFocus(focus))) {
+          if (item && item.kind !== "result" && (item.kind === "company" ? isFocus(focus) : isPersonFocus(focus))) {
             switchTab(focus);
             return { ok: true };
           }
@@ -347,8 +551,11 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
           saveBlob(new Blob([a.csv], { type: "text/csv;charset=utf-8" }), a.filename);
           return { ok: true };
         case "pdf": {
-          if (!current) return;
-          const file = page.kind === "entity" && page.tab !== LASSO_TAB ? await (page.entity === "company" ? api.pdfCompany(page.id, page.tab as Focus) : api.pdfPerson(page.id, page.tab as PersonFocus)) : await api.pdfSpec(current.spec);
+          if (!current || !item) return;
+          const file =
+            item.kind !== "result" && item.tab !== LASSO_TAB
+              ? await (item.kind === "company" ? api.pdfCompany(item.key, item.tab as Focus) : api.pdfPerson(item.key, item.tab as PersonFocus))
+              : await api.pdfSpec(current.spec);
           saveBlob(file.blob, file.filename);
           return { ok: true, message: PDF_SAVED };
         }
@@ -363,122 +570,380 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     }
   };
 
-  const goBack = () => {
-    const prev = back.at(-1);
-    if (!prev) return;
-    setBack((b) => b.slice(0, -1));
-    setPage(prev);
+  /* ---------- layout: fanernes og modulernes overløb, rulning, søgefeltets placering ---------- */
+
+  const measure = useCallback(() => {
+    // Åbne faner: smalle ind til 136 px, og skjul derefter de ældste inaktive bag "N åbne".
+    const box = otabs.current;
+    const col = tabsCol.current;
+    if (box && col) {
+      const els = [...box.children] as HTMLElement[];
+      els.forEach((t) => {
+        t.style.display = "";
+        t.style.maxWidth = "";
+      });
+      const avail = col.clientWidth - 28 - 40 - 8 - 110;
+      let total = els.reduce((s, t) => s + t.offsetWidth, 0);
+      if (total > avail) {
+        els.forEach((t) => {
+          if (!t.classList.contains("on")) t.style.maxWidth = "136px";
+        });
+        total = els.reduce((s, t) => s + t.offsetWidth, 0);
+      }
+      const hide: string[] = [];
+      for (const t of els) {
+        if (total <= avail) break;
+        if (t.classList.contains("on")) continue;
+        total -= t.offsetWidth;
+        t.style.display = "none";
+        hide.push(t.dataset.key ?? "");
+      }
+      setHiddenTabs((h) => (h.join("|") === hide.join("|") ? h : hide));
+    }
+    // Moduler: skjul fra højre bag "Flere".
+    const ml = mlist.current;
+    const mc = modCol.current;
+    if (ml && mc) {
+      const btns = [...ml.querySelectorAll<HTMLElement>("[data-mod]")];
+      const more = ml.querySelector<HTMLElement>("[data-more]");
+      btns.forEach((b) => (b.style.display = ""));
+      if (more) more.style.display = "none";
+      const avail = mc.clientWidth - 80 - (40 + 36 + 28 + 24 + 108 + 8);
+      const width = () => btns.filter((b) => b.style.display !== "none").reduce((s, b) => s + b.offsetWidth + 22, 0) + (more && more.style.display !== "none" ? more.offsetWidth + 22 : 0);
+      if (width() > avail && more) {
+        more.style.display = "";
+        for (let i = btns.length - 1; i >= 0 && width() > avail; i--) btns[i]!.style.display = "none";
+      }
+      const hide = btns.filter((b) => b.style.display === "none").map((b) => b.dataset.mod ?? "");
+      setHiddenMods((h) => (h.join("|") === hide.join("|") ? h : hide));
+    }
+    // Søgefeltet flugter med indholdets kolonne.
+    if (top.current && mc && !isPhone()) {
+      const c = mc.getBoundingClientRect();
+      const t = top.current.getBoundingClientRect();
+      if (c.width) top.current.style.setProperty("--searchX", `${Math.max(140, c.left + 40 - t.left)}px`);
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    measure();
+  }, [measure, open, active, item?.tab, lassoAvailable]);
+
+  useEffect(() => {
+    const onResize = () => {
+      measure();
+      setMenu(null);
+    };
+    window.addEventListener("resize", onResize);
+    void document.fonts?.ready.then(measure);
+    return () => window.removeEventListener("resize", onResize);
+  }, [measure]);
+
+  const onScroll = () => {
+    const sc = scroller.current;
+    if (!sc) return;
+    if (isPhone()) {
+      const h = nameRef.current;
+      setCollapsed(h ? sc.scrollTop > h.offsetTop + h.offsetHeight - 20 : false);
+      setScrolled(false);
+    } else {
+      setCollapsed(false);
+      setScrolled(sc.scrollTop > 4);
+    }
   };
 
-  const submitAsk = (e: FormEvent) => {
-    e.preventDefault();
-    void ask(draft);
-  };
-  const submitSearch = (e: FormEvent) => {
-    e.preventDefault();
-    void search(query);
+  const showMenu = (kind: "openall" | "more" | "sel", anchor: HTMLElement, align: "left" | "right" = "left") => {
+    if (menu?.kind === kind) return setMenu(null);
+    const r = anchor.getBoundingClientRect();
+    const w = 260;
+    let left = align === "right" ? r.right - w : r.left;
+    left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+    setMenu({ kind, left, top: r.bottom + 6 });
   };
 
   /* ---------- tegning ---------- */
 
-  const pending = Boolean(answer?.pending);
-  const lassoTabAvailable = page.kind === "result" || (page.kind === "entity" && answerFor === page.id && answer !== null);
-  const tabs = page.kind === "entity" ? (page.entity === "company" ? COMPANY_TABS : PERSON_TABS) : [];
-  const title = page.kind === "entity" ? page.name : page.kind === "result" ? page.title : "";
-  const lines = page.kind === "entity" ? headLines(page.entity, page.id, headData) : [];
-  const busy = key !== null && loading === key;
-  const err = key ? failed[key] : "";
+  const resultsView = (phone: boolean): ReactNode => {
+    const text = q.trim();
+    if (!text) {
+      return (
+        <div className="sr-list">
+          <div className="sr-label">
+            Seneste
+            {recent.length ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setRecent([]);
+                  saveRecent(storage(), []);
+                }}
+              >
+                Ryd
+              </button>
+            ) : null}
+          </div>
+          {rows.length ? rows.map((r, i) => renderRow(r, i, "")) : <div className="sr-empty">Søg på et firmanavn, et CVR-nummer eller en person.</div>}
+        </div>
+      );
+    }
+    if (looking && !lookup) return <div className="sr-empty">Søger …</div>;
+    if (!counts.f && !counts.p && !looking) {
+      return (
+        <>
+          <div className="sr-empty">Ingen firmaer eller personer matcher "{text}". Prøv et CVR-nummer eller en del af navnet.</div>
+          <div className="sr-list">
+            <div className="sr-row sel" onClick={askFromSearch}>
+              <LassoMark className="mark" />
+              <div className="t">
+                <div className="n">Spørg Lasso om "{text}"</div>
+              </div>
+            </div>
+          </div>
+        </>
+      );
+    }
+    const names: Record<SearchType, string> = { f: "Firmaer", p: "Personer" };
+    const nouns: Record<SearchType, string> = { f: "firmaer", p: "personer" };
+    const tabsEl = (["f", "p"] as const).map((t) => (
+      <button
+        key={t}
+        type="button"
+        className={`sr-tab${t === sType ? " on" : ""}${counts[t] ? "" : " zero"}`}
+        onClick={() => {
+          setSType(t);
+          setSel(0);
+        }}
+      >
+        {names[t]} <small>{counts[t]}</small>
+      </button>
+    ));
+    const stat =
+      sType === "f" ? (
+        <div className="stat">
+          <span>Status:</span>
+          <button type="button" style={{ display: "flex", alignItems: "center", gap: 4 }} onClick={() => setStatusOpen((o) => !o)}>
+            <b>{sStatus}</b>
+            <P2Icon name="down" />
+          </button>
+          {statusOpen ? (
+            <div className="statdd">
+              {STATUS_FILTERS.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  className={s === sStatus ? "cur" : ""}
+                  onClick={() => {
+                    setSStatus(s);
+                    setStatusOpen(false);
+                    setSel(0);
+                  }}
+                >
+                  {s}
+                  {s === sStatus ? <P2Icon name="check" /> : null}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null;
+    const seeall =
+      sType === "f" && counts.f ? (
+        <button type="button" className="seeall" onClick={seeAll}>
+          Se alle {nouns[sType]} for "{text}"
+        </button>
+      ) : null;
+    return (
+      <>
+        {phone ? (
+          <>
+            <div className="sr-head">{tabsEl}</div>
+            <div className="sr-sub">
+              {seeall ?? <span />}
+              {stat}
+            </div>
+          </>
+        ) : (
+          <div className="sr-head">
+            {tabsEl}
+            {stat}
+          </div>
+        )}
+        <div className="sr-list">{rows.length ? rows.map((r, i) => renderRow(r, i, text)) : <div className="sr-empty">Ingen resultater med den status.</div>}</div>
+        {!phone && seeall ? <div className="sr-foot">{seeall}</div> : null}
+      </>
+    );
+  };
+
+  const renderRow = (r: SearchRow, i: number, text: string) => {
+    const h = highlight(r.name, text);
+    return (
+      <div key={r.id} className={`sr-row${i === sel ? " sel" : ""}`} onMouseMove={() => i !== sel && setSel(i)} onClick={() => choose(r)}>
+        <P2Icon name={r.kind === "company" ? "build" : "user"} />
+        <div className="t">
+          <div className="n">
+            {h.pre}
+            {h.hit ? <b>{h.hit}</b> : null}
+            {h.post}
+          </div>
+          <div className="m">{r.meta}</div>
+        </div>
+        {r.status && sStatus !== "Aktive" ? <span className="st">{r.status}</span> : null}
+        {r.kind === "company" ? (
+          <div className="short">
+            {SHORTCUTS.map((s) => (
+              <button
+                key={s.tab}
+                type="button"
+                aria-label={`Åbn i ${s.label}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  choose(r, s.tab);
+                }}
+              >
+                <P2Icon name={s.icon} />
+                <span className="tt">{s.label}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    );
+  };
 
   let content: ReactNode;
-  if (page.kind === "home") {
+  if (!item) {
     content = (
-      <div className="p2-home">
-        <LassoMark className={`p2-home__mark${pending ? " is-busy" : ""}`} />
+      <div className="home">
+        <LassoMark className={`home__mark${pending ? " is-busy" : ""}`} />
         <h1>Hvad vil du vide?</h1>
-        <p>Spørg om en virksomhed, en person eller en målgruppe. Lasso henter svaret og viser det her.</p>
+        <p>Søg efter et firma eller en person ovenfor, eller spørg Lasso nedenfor. Svaret vises her.</p>
       </div>
     );
   } else {
-    const view = current ? (page.kind === "entity" ? withoutHead(current.spec) : current.spec) : null;
+    const view = current ? (item.kind !== "result" ? withoutHead(current.spec) : current.spec) : null;
     content = (
       <>
-        {onLassoTab && answerHere ? (
-          <div className="p2-answer" aria-live="polite">
-            <div className="p2-answer__q">{answerHere.question}</div>
-            {answerHere.text ? <Text text={answerHere.text} /> : null}
-            {answerHere.pending && !answerHere.view ? <div className="p2-answer__status">{answerHere.status ?? "Tænker …"}</div> : null}
-            {answerHere.error ? (
-              <div className="p2-answer__error" role="alert">
-                {answerHere.error}
+        {lines.length ? <div className="ident">{lines.join(", ")}</div> : null}
+        {onLasso && answer ? (
+          <div className="answer" aria-live="polite">
+            <div className="answer__q">{answer.question}</div>
+            {answer.text ? <Text text={answer.text} /> : null}
+            {answer.pending && !answer.view ? <div className="answer__status">{answer.status ?? "Tænker …"}</div> : null}
+            {answer.error ? (
+              <div className="answer__error" role="alert">
+                {answer.error}
               </div>
             ) : null}
           </div>
         ) : null}
         {err ? (
-          <div className="p2-answer__error" role="alert">
+          <div className="answer__error" role="alert">
             {err}
           </div>
         ) : view && current ? (
-          <div className="p2-view">
+          <div className="view">
             <LassoView
-              key={`${key}:${view.title}:${view.components.length}`}
+              key={`${dataKey}:${view.title}:${view.components.length}`}
               spec={view}
               dataset={current.dataset}
               theme={theme}
               frameless
-              page={page.kind === "entity"}
-              host={{ prompt: true, save: true, refine: true, drillDown: true, refresh: true, export: true, pdf: boot.pdf !== false, openFocus: page.kind === "entity", openSection: page.kind === "entity" }}
+              page={item.kind !== "result"}
+              host={{ prompt: true, save: true, refine: true, drillDown: true, refresh: true, export: true, pdf: boot.pdf !== false, openFocus: item.kind !== "result", openSection: item.kind !== "result" }}
               onAction={onAction}
             />
           </div>
-        ) : busy || (onLassoTab && pending) ? (
-          <div className="p2-skeleton" aria-label="Henter">
+        ) : busy || (onLasso && answer?.pending) ? (
+          <div className="skeleton" aria-label="Henter">
             <div />
             <div />
             <div />
           </div>
         ) : null}
+        <div className="end" />
       </>
     );
   }
 
-  const sugg = suggestions(page);
+  const sugg = suggestions(item);
+  const nf = open.filter((o) => o.kind === "company").length;
+  const np = open.filter((o) => o.kind === "person").length;
+  const nr = open.length - nf - np;
 
   return (
-    <div className={`p2-app${pending ? " is-busy" : ""}`} data-theme={theme}>
-      <header className="p2-top">
-        <button type="button" className="p2-logo" onClick={newConversation} aria-label="Lasso, forside">
-          <LassoWordmark className="p2-wordmark" />
+    <div className={`p3${collapsed ? " collapsed" : ""}${scrolled ? " scrolled" : ""}`} data-theme={theme}>
+      <header className="top" ref={top}>
+        <button type="button" className="logo" onClick={() => activate(null)} aria-label="Lasso, forside">
+          <LassoWordmark className="wordmark" />
         </button>
-        <form className={`p2-search${searchOpen ? " is-open" : ""}`} role="search" onSubmit={submitSearch}>
-          <P2Icon name="search" className="p2-i p2-search__icon" />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Søg firma, person eller adresse" aria-label="Søg firma, person eller adresse" />
-          {loading === "search" ? <span className="p2-search__busy" aria-label="Søger" /> : null}
-        </form>
-        <div className="p2-top__right">
-          <button type="button" className="p2-ibtn p2-m-only" aria-label="Søg" onClick={() => setSearchOpen((o) => !o)}>
+        <div className="searchwrap" ref={searchwrap}>
+          <div className={`search${dropOpen ? " focus" : ""}`}>
+            <P2Icon name="search" className="s" />
+            <input
+              ref={dq}
+              type="text"
+              autoComplete="off"
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setSel(0);
+                setDropOpen(true);
+              }}
+              onFocus={() => setDropOpen(true)}
+              onKeyDown={onSearchKey}
+              placeholder="Søg firma, person eller CVR"
+              aria-label="Søg firma, person eller CVR"
+            />
+            {looking ? <span className="spin" aria-label="Søger" /> : null}
+            {q ? (
+              <button type="button" className="clear" aria-label="Ryd" onMouseDown={(e) => e.preventDefault()} onClick={() => (resetSearch(), dq.current?.focus())}>
+                <P2Icon name="x" />
+              </button>
+            ) : null}
+          </div>
+          {dropOpen && !mSearch ? (
+            <div className="sdrop" onMouseDown={(e) => e.preventDefault()}>
+              {resultsView(false)}
+            </div>
+          ) : null}
+        </div>
+        <div className="right">
+          <button
+            type="button"
+            className="ibtn m-only"
+            aria-label="Søg"
+            onClick={() => {
+              setMSearch(true);
+              setTimeout(() => mq.current?.focus(), 30);
+            }}
+          >
             <P2Icon name="search" />
           </button>
-          <button type="button" className="p2-ibtn" aria-label="Skift mellem lyst og mørkt tema" aria-pressed={theme === "dark"} onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}>
+          {open.length ? (
+            <button type="button" className="ibtn m-only" aria-label="Åbne firmaer og personer" onClick={() => setSheet(true)}>
+              <span className="count">{open.length}</span>
+            </button>
+          ) : null}
+          <button type="button" className="ibtn" aria-label="Skift mellem lyst og mørkt tema" aria-pressed={theme === "dark"} onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}>
             <P2Icon name="theme" />
           </button>
-          <button type="button" className="p2-ibtn" aria-disabled="true" aria-label="Notifikationer (kommer senere)">
+          <button type="button" className="ibtn" aria-disabled="true" aria-label="Notifikationer (kommer senere)">
             <P2Icon name="bell" />
           </button>
-          <button type="button" className="p2-ibtn" aria-label={`Profil: ${boot.user?.name ?? "Demobruger"}`} title={boot.user?.name ?? "Demobruger"}>
+          <button type="button" className="ibtn" aria-label={`Profil: ${boot.user?.name ?? "Demobruger"}`} title={boot.user?.name ?? "Demobruger"}>
             <P2Icon name="user" />
           </button>
         </div>
       </header>
 
-      <nav className="p2-rail" aria-label="Menu">
-        <button type="button" className={`p2-ibtn${page.kind === "home" ? " is-on" : ""}`} aria-label="Værktøjer" onClick={() => go({ kind: "home" })}>
+      <nav className="rail" aria-label="Menu">
+        <button type="button" className={`ibtn${!item ? " on" : ""}`} aria-label="Værktøjer" onClick={() => activate(null)}>
           <P2Icon name="grid" />
-          <span className="p2-tip">Værktøjer</span>
+          <span className="tip">Værktøjer</span>
         </button>
-        <button type="button" className={`p2-ibtn${page.kind === "result" && page.title === "Gemte sider" ? " is-on" : ""}`} aria-label="Lister" onClick={openLists}>
+        <button type="button" className="ibtn" aria-label="Lister" onClick={() => void openResult("Gemte sider", () => api.pages())}>
           <P2Icon name="folder" />
-          <span className="p2-tip">Lister</span>
+          <span className="tip">Lister</span>
         </button>
         <Inert icon="bolt" label="Handlinger" />
         <hr />
@@ -490,70 +955,155 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
         <Inert icon="users" label="Brugere" />
       </nav>
 
-      <div className="p2-main">
-        <div className="p2-scroll" ref={scroller}>
-          {page.kind !== "home" ? (
-            <>
-              <div className="p2-col p2-head">
-                <div className="p2-back">
-                  {back.length ? (
-                    <button type="button" className="p2-backbtn" aria-label="Tilbage" onClick={goBack}>
+      <div className="main">
+        <div className="tabsbar">
+          <div className="col" ref={tabsCol}>
+            <div className="otabs" ref={otabs} role="tablist" aria-label="Åbne">
+              {open.map((o) => (
+                <div
+                  key={o.key}
+                  data-key={o.key}
+                  className={`otab${o.key === active ? " on" : ""}`}
+                  role="tab"
+                  aria-selected={o.key === active}
+                  tabIndex={0}
+                  onClick={() => activate(o.key)}
+                  onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && activate(o.key)}
+                  onMouseDown={(e) => {
+                    if (e.button === 1) {
+                      e.preventDefault();
+                      closeTab(o.key);
+                    }
+                  }}
+                >
+                  {pendingKey === o.key ? <LassoMark className="mark is-busy" /> : <P2Icon name={iconOf(o.kind)} />}
+                  <span className="nm">{o.name}</span>
+                  <button
+                    type="button"
+                    className="x"
+                    aria-label={`Luk ${o.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeTab(o.key);
+                    }}
+                  >
+                    <P2Icon name="x" />
+                  </button>
+                  <span className="ttip">
+                    {o.name}
+                    {o.sub ? (
+                      <>
+                        <br />
+                        <span>{o.sub}</span>
+                      </>
+                    ) : null}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <button type="button" className="newtab" aria-label="Søg og åbn et nyt" onClick={() => (isPhone() ? setMSearch(true) : dq.current?.focus())}>
+              <P2Icon name="add" />
+            </button>
+            {hiddenTabs.length ? (
+              <button type="button" className="openall" data-menu onClick={(e) => showMenu("openall", e.currentTarget, "right")}>
+                <span>{open.length} åbne</span>
+                <P2Icon name="down" />
+              </button>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="scrollbox">
+          <div className="scroll" ref={scroller} onScroll={onScroll}>
+            {item ? (
+              <>
+                <div className="compact">
+                  <div className="col">
+                    <button type="button" className="back" aria-label="Tilbage" onClick={goBack}>
                       <P2Icon name="back" />
                     </button>
-                  ) : null}
-                </div>
-                <div className="p2-who">
-                  <h1>{title}</h1>
-                  {lines.map((l) => (
-                    <div key={l} className="p2-line">
-                      {l}
+                    <div className="who">
+                      <div className="cname">{item.name}</div>
+                      <div className="caddr">{lines[0] ?? ""}</div>
                     </div>
-                  ))}
-                </div>
-                {page.kind === "entity" ? (
-                  <div className="p2-acts">
-                    <button type="button" className="p2-ibtn" aria-disabled="true" aria-label="Følg (kommer senere)">
-                      <P2Icon name="rss" />
-                    </button>
-                    <button type="button" className={`p2-ibtn${saved ? " is-on" : ""}`} aria-pressed={saved} aria-label={saved ? "Gemt på din liste" : "Gem på din liste"} onClick={() => void toggleSaved()}>
-                      <P2Icon name="book" />
-                    </button>
                   </div>
-                ) : null}
-              </div>
-
-              <div className="p2-mods">
-                <div className="p2-col p2-mods__row">
-                  <div className="p2-tablist" role="tablist" aria-label="Moduler">
-                    <button
-                      type="button"
-                      role="tab"
-                      className={`p2-tabmark${onLassoTab ? " is-on" : ""}${pending ? " is-busy" : ""}`}
-                      aria-selected={onLassoTab}
-                      aria-label={pending ? "Lasso henter svaret" : "Lassos svar"}
-                      title={pending ? "Lasso henter svaret" : "Lassos svar"}
-                      disabled={!lassoTabAvailable}
-                      onClick={() => switchTab(LASSO_TAB)}
-                    >
-                      <LassoMark className="p2-mark" />
-                    </button>
-                    {tabs.map((t) => (
-                      <button key={t.id} type="button" role="tab" className="p2-tab" aria-selected={page.kind === "entity" && page.tab === t.id} onClick={() => switchTab(t.id)}>
-                        {t.label}
-                      </button>
+                </div>
+                <div className="col m-head">
+                  <button type="button" className="back" aria-label="Tilbage" onClick={goBack}>
+                    <P2Icon name="back" />
+                  </button>
+                  <div className="who">
+                    <h1 ref={nameRef}>{item.name}</h1>
+                    {lines.map((l) => (
+                      <div key={l} className="line">
+                        {l}
+                      </div>
                     ))}
                   </div>
                 </div>
-              </div>
-            </>
-          ) : null}
 
-          <div className="p2-col p2-content">{content}</div>
-          <div className="p2-end" />
+                <div className="mods">
+                  <div className="col" ref={modCol}>
+                    <button
+                      type="button"
+                      role="tab"
+                      className={`tabmark${onLasso ? " on" : ""}${pendingKey === item.key ? " is-busy" : ""}`}
+                      aria-selected={onLasso}
+                      aria-label={pendingKey === item.key ? "Lasso henter svaret" : "Lassos svar"}
+                      title={pendingKey === item.key ? "Lasso henter svaret" : "Lassos svar"}
+                      disabled={!lassoAvailable}
+                      onClick={() => switchTab(LASSO_TAB)}
+                    >
+                      <LassoMark className="mark" />
+                    </button>
+                    <div className="mlist" ref={mlist} role="tablist" aria-label="Moduler">
+                      {tabs.map((t) => (
+                        <button key={t.id} type="button" className="tab" role="tab" data-mod={t.id} aria-selected={item.tab === t.id} onClick={() => switchTab(t.id)}>
+                          {t.label}
+                        </button>
+                      ))}
+                      {tabs.length ? (
+                        <button
+                          type="button"
+                          className="tab more"
+                          data-more
+                          data-menu
+                          aria-expanded={menu?.kind === "more"}
+                          aria-selected={hiddenMods.includes(item.tab)}
+                          onClick={(e) => showMenu("more", e.currentTarget)}
+                        >
+                          <span>{hiddenMods.includes(item.tab) ? curLabel : "Flere"}</span>
+                          <P2Icon name="down" />
+                        </button>
+                      ) : null}
+                    </div>
+                    {tabs.length ? (
+                      <button type="button" className="sel-btn" data-menu aria-expanded={menu?.kind === "sel"} onClick={(e) => showMenu("sel", e.currentTarget)}>
+                        <span>{curLabel}</span>
+                        <P2Icon name="down" />
+                      </button>
+                    ) : null}
+                    {item.kind !== "result" ? (
+                      <div className="rgroup">
+                        <button type="button" className="ibtn" aria-disabled="true" aria-label="Følg (kommer senere)">
+                          <P2Icon name="rss" />
+                        </button>
+                        <button type="button" className={`ibtn${saved ? " on" : ""}`} aria-pressed={saved} aria-label={saved ? "Gemt på din liste" : "Gem på din liste"} onClick={() => void toggleSaved()}>
+                          <P2Icon name="book" />
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </>
+            ) : null}
+
+            <div className="col content">{content}</div>
+          </div>
         </div>
 
         {notice ? (
-          <div className="p2-notice" role="status">
+          <div className="notice" role="status">
             {notice}
             <button type="button" onClick={() => setNotice(null)} aria-label="Luk">
               ×
@@ -561,21 +1111,27 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
           </div>
         ) : null}
 
-        <div className={`p2-ask${askOpen ? " is-open" : ""}`}>
-          <form className="p2-ask__field" onSubmit={submitAsk}>
-            <LassoMark className={`p2-ask__mark${pending ? " is-busy" : ""}`} />
-            <input ref={askInput} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={askPlaceholder(page)} aria-label="Spørg Lasso" disabled={!boot.chat} />
+        <div className={`ask${askOpen ? " is-open" : ""}`}>
+          <form
+            className="field"
+            onSubmit={(e: FormEvent) => {
+              e.preventDefault();
+              void ask(draft);
+            }}
+          >
+            <LassoMark className={`mark${pending ? " is-busy" : ""}`} />
+            <input ref={askInput} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={askPlaceholder(item)} aria-label="Spørg Lasso" disabled={!boot.chat} />
             {pending ? (
-              <button type="button" className="p2-ask__send" aria-label="Stop" onClick={stop}>
+              <button type="button" className="send" aria-label="Stop" onClick={stop}>
                 <P2Icon name="stop" />
               </button>
             ) : (
-              <button type="submit" className="p2-ask__send" aria-label="Send" disabled={!draft.trim()}>
+              <button type="submit" className="send" aria-label="Send" disabled={!draft.trim()}>
                 <P2Icon name="enter" />
               </button>
             )}
           </form>
-          <div className="p2-ask__sugg">
+          <div className="sugg">
             {sugg.map((s) => (
               <button key={s} type="button" onClick={() => void ask(s)} disabled={pending || !boot.chat}>
                 {s}
@@ -584,31 +1140,173 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
           </div>
         </div>
 
-        <div className="p2-mbar">
+        <div className="mbar">
           <button
             type="button"
-            className={`p2-lbtn${pending ? " is-busy" : ""}`}
+            className={`lbtn${pending ? " is-busy" : ""}`}
             aria-label="Spørg Lasso"
             onClick={() => {
               setAskOpen((o) => !o);
               setTimeout(() => askInput.current?.focus(), 0);
             }}
           >
-            <LassoMark className="p2-mark" />
+            <LassoMark className="mark" />
           </button>
-          <div className="p2-capsule">
-            <button type="button" className={`p2-ibtn${searchOpen ? " is-on" : ""}`} aria-label="Søg" onClick={() => setSearchOpen((o) => !o)}>
+          <div className="capsule">
+            <button
+              type="button"
+              className={`ibtn${mSearch ? " on" : ""}`}
+              aria-label="Søg"
+              onClick={() => {
+                setMSearch(true);
+                setTimeout(() => mq.current?.focus(), 30);
+              }}
+            >
               <P2Icon name="search" />
             </button>
-            <button type="button" className={`p2-ibtn${page.kind === "home" ? " is-on" : ""}`} aria-label="Værktøjer" onClick={() => go({ kind: "home" })}>
+            <button type="button" className={`ibtn${!item ? " on" : ""}`} aria-label="Værktøjer" onClick={() => activate(null)}>
               <P2Icon name="grid" />
             </button>
-            <button type="button" className="p2-ibtn" aria-label="Lister" onClick={openLists}>
+            <button type="button" className="ibtn" aria-label="Lister" onClick={() => void openResult("Gemte sider", () => api.pages())}>
               <P2Icon name="folder" />
             </button>
           </div>
         </div>
       </div>
+
+      {menu ? (
+        <div className="dd" style={{ left: menu.left, top: menu.top, position: "fixed" }}>
+          {menu.kind === "openall" ? (
+            <>
+              {open.map((o) => (
+                <button key={o.key} type="button" className={o.key === active ? "cur" : ""} onClick={() => activate(o.key)}>
+                  <span className="ic">
+                    <P2Icon name={iconOf(o.kind)} />
+                    <span>{o.name}</span>
+                  </span>
+                  {o.key === active ? <P2Icon name="check" /> : null}
+                </button>
+              ))}
+              <hr />
+              <button
+                type="button"
+                className="muted"
+                onClick={() => {
+                  setOpen((l) => l.filter((o) => o.key === active));
+                  setMenu(null);
+                }}
+              >
+                Luk alle andre faner
+              </button>
+            </>
+          ) : item ? (
+            <>
+              {menu.kind === "sel" && lassoAvailable ? (
+                <button type="button" className={onLasso ? "cur" : ""} onClick={() => switchTab(LASSO_TAB)}>
+                  Lassos svar
+                  {onLasso ? <P2Icon name="check" /> : null}
+                </button>
+              ) : null}
+              {(menu.kind === "more" ? tabs.filter((t) => hiddenMods.includes(t.id)) : tabs).map((t) => (
+                <button key={t.id} type="button" className={t.id === item.tab ? "cur" : ""} onClick={() => switchTab(t.id)}>
+                  {t.label}
+                  {t.id === item.tab ? <P2Icon name="check" /> : null}
+                </button>
+              ))}
+            </>
+          ) : null}
+        </div>
+      ) : null}
+
+      {sheet ? (
+        <div className="sheet-scrim" onClick={(e) => e.target === e.currentTarget && setSheet(false)}>
+          <div className="sheet" role="dialog" aria-label="Åbne">
+            <div className="grab" />
+            <div className="sh">
+              <div>
+                <h3>Åbne</h3>
+                <div className="shs">
+                  {[nf ? `${nf} ${nf === 1 ? "firma" : "firmaer"}` : "", np ? `${np} ${np === 1 ? "person" : "personer"}` : "", nr ? `${nr} ${nr === 1 ? "resultat" : "resultater"}` : ""].filter(Boolean).join(" og ")}
+                </div>
+              </div>
+              <button type="button" className="ibtn" aria-label="Luk" onClick={() => setSheet(false)}>
+                <P2Icon name="x" />
+              </button>
+            </div>
+            {open.map((o) => (
+              <div key={o.key} className={`orow${o.key === active ? " cur" : ""}`} onClick={() => activate(o.key)}>
+                <P2Icon name={iconOf(o.kind)} />
+                <div className="t">
+                  <div className="n">{o.name}</div>
+                  {o.sub ? <div className="m">{o.sub}</div> : null}
+                </div>
+                <button
+                  type="button"
+                  className="ibtn"
+                  aria-label={`Luk ${o.name}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    closeTab(o.key);
+                  }}
+                >
+                  <P2Icon name="x" />
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              className="new"
+              onClick={() => {
+                setSheet(false);
+                setMSearch(true);
+                setTimeout(() => mq.current?.focus(), 30);
+              }}
+            >
+              <P2Icon name="add" />
+              Søg og åbn et nyt
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {mSearch ? (
+        <div className="msearch">
+          <div className="bar">
+            <div className="search focus">
+              <P2Icon name="search" className="s" />
+              <input
+                ref={mq}
+                type="text"
+                autoComplete="off"
+                value={q}
+                onChange={(e) => {
+                  setQ(e.target.value);
+                  setSel(0);
+                }}
+                onKeyDown={onSearchKey}
+                placeholder="Firma, person eller CVR"
+                aria-label="Søg"
+              />
+              {q ? (
+                <button type="button" className="clear" aria-label="Ryd" onClick={() => (resetSearch(), mq.current?.focus())}>
+                  <P2Icon name="x" />
+                </button>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              className="cancel"
+              onClick={() => {
+                resetSearch();
+                closeSearch();
+              }}
+            >
+              Annullér
+            </button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>{resultsView(true)}</div>
+        </div>
+      ) : null}
     </div>
   );
 }

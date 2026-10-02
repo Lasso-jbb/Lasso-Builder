@@ -1,5 +1,5 @@
 /**
- * Ikonerne fra portal-prototypen (lasso-portal - new.html): 24 × 24, streg 1,5, runde ender.
+ * Ikonerne fra portal-prototypen (lasso-portal3.html): 24 × 24, streg 1,5, runde ender.
  * Tegnes med currentColor, så knappens farve (grå, sort, koral) styrer dem.
  */
 const PATHS = {
@@ -67,6 +67,30 @@ const PATHS = {
   down: <path d="M6 9l6 6 6-6" />,
   enter: <path d="M19 6v6.5a2 2 0 0 1-2 2H6M9.5 11L6 14.5 9.5 18" />,
   stop: <rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" stroke="none" />,
+  x: <path d="M7 7l10 10M17 7L7 17" />,
+  add: <path d="M12 5.5v13M5.5 12h13" />,
+  check: <path d="M5.5 12.5l4 4 9-9" />,
+  chart: <path d="M5 19.5h14M7.5 16v-4M12 16V8M16.5 16v-6" />,
+  org: (
+    <>
+      <rect x="9.5" y="3.75" width="5" height="4.5" rx="1" />
+      <rect x="3.75" y="15.75" width="5" height="4.5" rx="1" />
+      <rect x="15.25" y="15.75" width="5" height="4.5" rx="1" />
+      <path d="M12 8.25v3.5M6.25 15.75v-2a2 2 0 0 1 2-2h7.5a2 2 0 0 1 2 2v2" />
+    </>
+  ),
+  news: (
+    <>
+      <rect x="4.5" y="4.75" width="15" height="14.5" rx="1.75" />
+      <path d="M8 9h8M8 12.5h8M8 16h5" />
+    </>
+  ),
+  loc: (
+    <>
+      <path d="M12 20.5s6.25-5.6 6.25-10.25a6.25 6.25 0 0 0-12.5 0C5.75 14.9 12 20.5 12 20.5z" />
+      <circle cx="12" cy="10.25" r="2.25" />
+    </>
+  ),
   theme: (
     <>
       <circle cx="12" cy="12" r="8.25" />
@@ -77,7 +101,7 @@ const PATHS = {
 
 export type P2IconName = keyof typeof PATHS;
 
-export function P2Icon({ name, className = "p2-i" }: { name: P2IconName; className?: string }) {
+export function P2Icon({ name, className = "i" }: { name: P2IconName; className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       {PATHS[name]}

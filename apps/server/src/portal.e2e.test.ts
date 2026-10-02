@@ -513,3 +513,11 @@ test("/portal: den nye portal (portal2) med brugeren og chatten", async () => {
   assert.equal(b.chat, false, "uden ANTHROPIC_API_KEY");
   assert.equal(b.baseUrl, PUBLIC);
 });
+
+test("/api/portal/lookup: firmaer og personer på navn, til søgefeltet", async () => {
+  const r = await json<{ companies: { lassoId: string; name: string }[]; persons: unknown[] }>(await api(`/lookup?q=${encodeURIComponent("Eksempel")}`, { cookie: (await login(PIA.id, PIA.key)).cookie }));
+  assert.ok(r.companies.some((c) => c.name === "Eksempel Byg A/S"));
+  assert.ok(Array.isArray(r.persons));
+  const short = await json<{ companies: unknown[] }>(await api(`/lookup?q=E`, { cookie: (await login(PIA.id, PIA.key)).cookie }));
+  assert.equal(short.companies.length, 0);
+});

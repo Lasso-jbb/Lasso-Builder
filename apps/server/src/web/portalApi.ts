@@ -87,6 +87,8 @@ const saveViewBody = z.object(
   { error: BODY_ERROR },
 );
 
+const lookupParams = z.object({ q: text("q", 120).default("") });
+
 const resolveBody = z.object({ spec: z.unknown().optional() }, { error: BODY_ERROR });
 
 /** Ét 400-svar med zod-fejlenes (danske) tekster. */
@@ -116,6 +118,24 @@ export function portalApi({ config, provider, store, pages }: PortalApiDeps): Ro
     const r = await searchCompanies(ctx(res), { ...searchQuerySchema.parse({ query: params.query, limit: params.limit }), title: params.title });
     if ("error" in r) return sendError(res, r);
     res.json({ spec: r.spec, dataset: r.dataset, ...(r.note ? { note: r.note } : {}) });
+  });
+
+  // Søgefeltet i den nye portal (søg mens man skriver): firmaer og personer på navn eller CVR-nummer,
+  // Lassos navnesøgning (data/cvr/search), ikke AI-søgningen. Fejler den ene del, er den tom.
+  router.get("/lookup", async (req, res) => {
+    const params = parseOr400(lookupParams, req.query, res);
+    if (!params) return;
+    const q = params.q.trim();
+    if (q.length < 2) return void res.json({ q, companies: [], persons: [] });
+    const [companies, persons] = await Promise.all([
+      provider.findCompanies(q, 20).catch(() => []),
+      /^\d+$/.test(q.replace(/\s/g, "")) ? Promise.resolve([]) : provider.findPersons(q, 20).catch(() => []),
+    ]);
+    res.json({
+      q,
+      companies: companies.map((c) => ({ lassoId: c.lassoId, name: c.name, ...(c.cvr ? { cvr: c.cvr } : {}), ...(c.city ? { city: c.city } : {}), ...(c.status ? { status: c.status } : {}), ...(c.statusKind ? { statusKind: c.statusKind } : {}) })),
+      persons: persons.map((p) => ({ lassoId: p.lassoId, name: p.name, ...(p.city ? { city: p.city } : {}) })),
+    });
   });
 
   // Som show_company. link = den signerede /e/-side med samme focus (samme side som gemte sider).
