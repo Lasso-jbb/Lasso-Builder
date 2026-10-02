@@ -23,7 +23,8 @@ står på `/portal/klassisk` og videreudvikles ikke.
 
 - Søgningen er Lassos navnesøgning (`GET /api/portal/lookup`), ikke AI. Den søger mens man skriver (fra 2 tegn).
 - Resultaterne har fanerne Firmaer og Personer med antal (Lasso giver højst 20 pr. type) og et statusfilter for
-  firmaer (Aktive, Inaktive, Alle). Det søgte står med fed i navnet; under navnet by og CVR.
+  firmaer (Aktive, Inaktive, Alle). Det søgte står med fed i navnet, et inaktivt firmas status står lige efter
+  navnet, og under navnet by og CVR.
 - Et firma har genveje, når rækken er valgt: åbn direkte i Økonomi, Ejerskab eller Historik.
 - Tastatur: pil op/ned vælger, Enter åbner, Tab skifter mellem Firmaer og Personer, Esc lukker, `/` sætter fokus.
 - Uden tekst viser feltet de seneste (gemt i browseren, højst 8, "Ryd"). Uden match står "Spørg Lasso om …",
@@ -73,7 +74,7 @@ Moduler og Brugere står dæmpet, til de findes.
 
 - Skinne, søgefelt og spørgefelt skjules; bundbjælken tager over.
 - Topbjælken står altid i den samlede form: det lille logo, de åbne faner (den aktive, med "Flere" eller som
-  dropdown, når der ikke er plads) og tema, notifikationer og profil som små ikoner tæt sammen. Der er ingen
+  dropdown, når der ikke er plads) og tema, notifikationer og profil som små ikoner tæt sammen, altid til højre (også uden åbne faner). Der er ingen
   fanebjælke under topbjælken, og den klapper ikke sammen ved rulning.
 - Topbjælkens bund flugter: bunden af logoet, tekstens grundlinje og ikonernes bund står på samme linje, og der er
   lige langt (20 px) fra logo til navn som fra pilen til det første ikon. Målt i browseren; justeres med

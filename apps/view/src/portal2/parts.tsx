@@ -160,14 +160,16 @@ export function SearchResultRow({
     <div className={`sr-row${selected ? " sel" : ""}`} onMouseMove={onHover} onClick={() => onChoose?.()}>
       <P2Icon name={row.kind === "company" ? "build" : "user"} />
       <div className="t">
-        <div className="n">
-          {h.pre}
-          {h.hit ? <b>{h.hit}</b> : null}
-          {h.post}
+        <div className="nl">
+          <div className="n">
+            {h.pre}
+            {h.hit ? <b>{h.hit}</b> : null}
+            {h.post}
+          </div>
+          {row.status && showStatus ? <span className="st">{row.status}</span> : null}
         </div>
         <div className="m">{row.meta}</div>
       </div>
-      {row.status && showStatus ? <span className="st">{row.status}</span> : null}
       {row.kind === "company" ? (
         <div className="short">
           {SHORTCUTS.map((s) => (
