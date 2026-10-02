@@ -7,6 +7,26 @@ import { at, dateStr, num, str, type Json } from "./adapters.js";
  * (første element for ID'et) eller { valuations | items | data: [...] }. Uden en værdi er tilstanden "unavailable".
  */
 export function adaptValuation(raw: Json, lassoId: string): ValuationVM {
+  // Bekræftet 02.10 (LASSO X A/S): en liste af kapitalhændelser (kapitalforhøjelser/investeringer) med
+  // { share, cvr, date, decisionDate, price, amount, investmentAmount, paymentType, valuation, startingCapital }.
+  // Værdiansættelsen er den seneste hændelses `valuation` (selskabets værdi ved den pris).
+  const events = capitalEvents(raw);
+  if (events) {
+    const latest = events
+      .map((e) => ({ e, value: num(e, "valuation"), date: dateStr(e, "decisionDate", "date") }))
+      .filter((x): x is { e: Json; value: number; date: string | undefined } => typeof x.value === "number" && x.value > 0)
+      .sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""))[0];
+    if (!latest) return { lassoId, state: "unavailable", reason: `Ingen værdiansættelse i kapitalhændelserne (${shapeOf(raw)}).` };
+    return {
+      lassoId,
+      state: "ok",
+      value: latest.value,
+      currency: str(latest.e, "currency") ?? "DKK",
+      ...(latest.date ? { date: latest.date } : {}),
+      method: "kapitalforhøjelse",
+      events: events.length,
+    };
+  }
   const item = pickItem(raw, lassoId);
   if (!item) return { lassoId, state: "unavailable", reason: `Lasso har ingen værdiansættelse af virksomheden (${shapeOf(raw)}).` };
   const value = num(item, "value", "valuation", "estimatedValue", "estimate", "amount", "equityValue", "enterpriseValue", "valuation.value", "result.value", "mid", "median");
@@ -25,6 +45,13 @@ export function adaptValuation(raw: Json, lassoId: string): ValuationVM {
     ...(dateOf(item) ? { date: dateOf(item) } : {}),
     ...(str(item, "method", "model", "type") ? { method: str(item, "method", "model", "type") } : {}),
   };
+}
+
+/** Listen af kapitalhændelser, når svaret har den form (elementer med `valuation` og `date`/`decisionDate`). */
+function capitalEvents(raw: Json): Json[] | undefined {
+  const list = Array.isArray(raw) ? raw : (["items", "data", "valuations"].map((k) => at(raw, k)).find(Array.isArray) as Json[] | undefined);
+  if (!list?.length) return undefined;
+  return list.some((e) => at(e, "valuation") !== undefined && (at(e, "date") !== undefined || at(e, "decisionDate") !== undefined)) ? list : undefined;
 }
 
 function dateOf(item: Json): string | undefined {

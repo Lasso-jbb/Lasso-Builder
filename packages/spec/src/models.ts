@@ -1020,8 +1020,10 @@ export interface ValuationVM {
   currency?: string;
   /** Hvornår værdien er beregnet (ÅÅÅÅ-MM-DD). */
   date?: string;
-  /** Metoden, hvis Lasso oplyser den (fx "EBITDA-multipel"). */
+  /** Grundlaget, fx "kapitalforhøjelse" (værdien ved den seneste kapitalhændelse). */
   method?: string;
+  /** Antal kapitalhændelser i svaret. */
+  events?: number;
   reason?: string;
 }
 

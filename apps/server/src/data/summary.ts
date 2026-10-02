@@ -1,4 +1,5 @@
-import { moreText,
+import {
+  valuationText, moreText,
   amountScale,
   currencyUnit,
   isForeignCurrency,
@@ -272,6 +273,11 @@ export function summarizeView(spec: ViewSpec, ds: Dataset, opts: { ask?: Ask } =
   answered();
   const errors = Object.entries(ds.errors);
   if (errors.length) lines.push(`Fejl: ${errors.slice(0, 3).map(([k, v]) => `${k.split(":")[0]}: ${v}`).join("; ")}.`);
+  // Værdiansættelsen (seneste kapitalhændelse) som én linje til Claude.
+  for (const v of Object.values(ds.valuations ?? {})) {
+    const t = valuationText(v);
+    if (t) lines.push(`Værdiansættelse (${ds.companies[v.lassoId]?.name ?? v.lassoId}): ${t}.`);
+  }
   // Erhvervsresumé og værdiansættelse uden data: hvorfor (HTTP-status eller svarets feltnavne), til fejlsøgning.
   const missing = [
     ...Object.values(ds.resumes ?? {}).filter((r) => r.state !== "ok").map((r) => `erhvervsresumé: ${r.reason ?? "intet"}`),

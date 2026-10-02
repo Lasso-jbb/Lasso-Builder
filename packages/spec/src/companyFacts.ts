@@ -94,7 +94,9 @@ export function valuationText(v: ValuationVM | undefined): string | undefined {
         ? `${formatAmount(v.low, unit)} – ${formatAmount(v.high, unit)}`
         : undefined;
   if (!main) return undefined;
-  return v.date ? `${main} (${formatDate(v.date)})` : main;
+  // "45,0 mio. kr. (kapitalforhøjelse 01.06.2024)": værdien ved den seneste kapitalhændelse.
+  const basis = [v.method, v.date ? formatDate(v.date) : undefined].filter(Boolean).join(" ");
+  return basis ? `${main} (${basis})` : main;
 }
 
 /** "2025-01-01" -> "01.01" (dag.måned, uden år, katalog 09: "01.01–31.12"). */
