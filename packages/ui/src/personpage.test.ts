@@ -267,15 +267,27 @@ test("PersonNetwork (16.3): tidsbånd pr. fælles selskab, limit 3 som standard 
   const ended = renderToStaticMarkup(createElement(PersonNetwork, { network: { lassoId: ID, people: [{ name: "Peter Eksempel", overlapYears: 4, active: false, companies: [{ companyName: "Eksempel Energi A/S", role: "direktør", from: "2014-01-01", to: "2018-01-01", status: "Under konkurs", statusKind: "warning" }] }] } }));
   assert.match(ended, /lasso-personnet__band lasso-personnet__band--ended lasso-personnet__band--problem/);
   assert.doesNotMatch(ended, /lasso-personnet__marker/);
-  assert.match(ended, /Eksempel Energi A\/S, direktør, 2014–2018<\/span><span class="lasso-personnet__label--short">Eksempel Energi A\/S, direktør<\/span><span class="lasso-personnet__bandstatus">, under konkurs<\/span>/);
+  assert.match(ended, /Eksempel Energi A\/S, direktør, 2014–2018<span class="lasso-personnet__bandstatus">, under konkurs<\/span>/);
   assert.match(ended, /lasso-personnet__swatch--bankrupt"><\/span>Under konkurs</);
   // Løbende rolle i et selskab under konkurs: fyldt rødt bånd (ikke stiplet).
   const running = renderToStaticMarkup(createElement(PersonNetwork, { network: { lassoId: ID, people: [{ name: "Peter Eksempel", overlapYears: 4, active: true, companies: [{ companyName: "Eksempel Energi A/S", role: "direktør", from: "2014-01-01", status: "Under konkurs", statusKind: "warning" }] }] } }));
   assert.match(running, /class="lasso-personnet__band lasso-personnet__band--problem"/);
   // Uden problemstatus: intet rødt og ingen "Under konkurs" i legenden.
   assert.doesNotMatch(net(), /band--problem|Under konkurs/);
-  assert.match(ended, /1 fælles selskab, afsluttet/);
-  assert.match(ended, />tidligere</);
+  // Jakob 02.10: overlappet står i underteksten, så navnet har hele første kolonne.
+  assert.match(ended, /1 fælles selskab, 4 år, tidligere/);
+  // Flere fælles selskaber: alle på én linje (samlet etiket), og fold-knappen åbner én linje pr. selskab.
+  const many = renderToStaticMarkup(createElement(PersonNetwork, { network: { lassoId: ID, people: [{ name: "Jakob Eksempel", overlapYears: 9, active: false, companies: [
+    { companyName: "A ApS", role: "direktør", from: "2004-01-01", to: "2010-01-01" },
+    { companyName: "B ApS", role: "bestyrelse", from: "2008-01-01", to: "2010-01-01" },
+    { companyName: "C ApS", role: "direktion", from: "2008-01-01", to: "2008-06-01" },
+    { companyName: "D ApS", role: "direktion", from: "2009-01-01", to: "2009-06-01" },
+  ] }] } }));
+  const manyDesk = many.split("lasso-personnet__mob")[0]!;
+  assert.equal((manyDesk.match(/class="lasso-personroles__lane"/g) ?? []).length, 1);
+  assert.equal((manyDesk.match(/lasso-personnet__band lasso-personnet__band--ended/g) ?? []).length, 4, "alle fire relationer");
+  assert.match(manyDesk, /title="A ApS, C ApS, B ApS, D ApS, 2004–2010"|title="A ApS, B ApS, C ApS, D ApS, 2004–2010"/);
+  assert.match(manyDesk, /class="lasso-lanes__toggle" aria-expanded="false" aria-label="Vis alle 4 fælles selskaber"/);
 });
 
 test("LassoView: tidslinjen med filter 'risiko' viser kun forløbet i selskaberne med konkurs", () => {

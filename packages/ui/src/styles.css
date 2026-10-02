@@ -1827,12 +1827,12 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-personroles__swatch--owner, .lasso-personroles__band--owner { background: var(--lasso-chart-3); }
 .lasso-personroles__swatch--other, .lasso-personroles__band--other, .lasso-personroles__band--founder { background: var(--lasso-chart-5); }
 .lasso-personroles__swatch--ended, .lasso-personroles__band--ended { background: var(--lasso-surface-muted); border: 1px dashed var(--lasso-faint); }
-.lasso-personroles__axis { display: grid; grid-template-columns: 200px minmax(0, 1fr); column-gap: var(--lasso-space-3); height: 20px; }
+.lasso-personroles__axis { display: grid; grid-template-columns: var(--lasso-rowlabel-w, 240px) minmax(0, 1fr); column-gap: var(--lasso-space-3); height: 20px; }
 .lasso-personroles__ticks { position: relative; border-bottom: 1px solid var(--lasso-chart-axis); }
 .lasso-personroles__tick { position: absolute; top: 0; font-size: 11px; line-height: 14px; font-weight: 500; color: var(--lasso-muted); white-space: nowrap; }
 .lasso-personroles__tick--now { color: var(--lasso-text); }
 .lasso-personroles__rows { list-style: none; margin: 0; padding: 0; }
-.lasso-personroles__row { display: grid; grid-template-columns: 200px minmax(0, 1fr); column-gap: var(--lasso-space-3); align-items: center; min-height: 56px; padding: 8px 0; border-bottom: 1px solid var(--lasso-divider-subtle); }
+.lasso-personroles__row { display: grid; grid-template-columns: var(--lasso-rowlabel-w, 240px) minmax(0, 1fr); column-gap: var(--lasso-space-3); align-items: center; min-height: 56px; padding: 8px 0; border-bottom: 1px solid var(--lasso-divider-subtle); }
 .lasso-personroles__label { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
 /* Jakob 01.10: smallere navnekolonne; for lange navne afkortes med … (hele navnet i title). */
 .lasso-personroles__company { max-width: 100%; font-size: var(--lasso-fs); line-height: 18px; color: var(--lasso-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -5580,7 +5580,6 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-personnet__label--short { display: inline; }
 }
 @container personnet (max-width: 720px) {
-  .lasso-personnet--bands .lasso-personroles__axis, .lasso-personnet--bands .lasso-personroles__row { grid-template-columns: 168px minmax(0, 1fr); }
   .lasso-personnet--bands .lasso-personroles__tick.is-minor { display: none; }
 }
 
@@ -5929,8 +5928,17 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-personnet__mcos { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-2); }
 .lasso-personnet__mcos .is-problem { color: var(--lasso-danger); }
 /* Jakob 01.10: navne i netværket afkortes med … i stedet for at skubbe kolonnen ud. */
-.lasso-personnet__who .lasso-personroles__label { overflow: hidden; }
-.lasso-root .lasso-personnet__who .lasso-personnet__bname { display: block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lasso-personnet__brow .lasso-personroles__label { overflow: hidden; }
+.lasso-root .lasso-personnet__brow .lasso-personnet__bname { display: block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Jakob 02.10: samme navnekolonne i roller og netværk (240 px, 200 px under 1200). */
 @container lasso (min-width: 561px) and (max-width: 1199px) {
-  .lasso-personroles__axis, .lasso-personroles__row { grid-template-columns: 176px minmax(0, 1fr); }
+  .lasso-personroles, .lasso-personnet { --lasso-rowlabel-w: 200px; }
 }
+/* Én linje pr. række med alle bånd; fold-knappen foran navnet åbner én linje pr. rolle/relation. */
+.lasso-lanes__name { display: flex; align-items: center; gap: 4px; min-width: 0; max-width: 100%; }
+.lasso-lanes__name > :last-child { min-width: 0; }
+.lasso-lanes__spacer { flex: none; width: 18px; }
+.lasso-root .lasso-lanes__toggle { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; padding: 0; border: 0; border-radius: var(--lasso-radius-sm); background: none; color: var(--lasso-muted); cursor: pointer; }
+.lasso-root .lasso-lanes__toggle:hover { color: var(--lasso-text); background: var(--lasso-surface-2); }
+.lasso-lanes__toggle:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: 1px; }
+.lasso-personroles__row .lasso-personroles__sub { padding-left: 22px; }

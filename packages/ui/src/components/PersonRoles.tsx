@@ -16,6 +16,7 @@ import {
 import type { MoreInTab, ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { usePrintMode } from "../print.js";
+import { BandLanes, LaneToggle } from "./BandLanes.js";
 
 /** Regel 9: tre selskaber i tidsbåndene og fem i listerne, resten under "Se alle N" (limit kan ændre det). */
 const COLLAPSED = 3;
@@ -32,11 +33,15 @@ function bandLabel(r: PersonRoleVM): string {
   return r.from ? `${what}, siden ${year(r.from)}` : what;
 }
 
-/** Højst to bånd pr. række: ledelse øverst, ejerskab nederst (eller en ledelsesrolle mere). */
+/** Alle roller i selskabet (Jakob 02.10): ledelse først, ejerskab sidst, ældste først inden for hver. */
 function bands(c: PersonCompanyVM): PersonRoleVM[] {
-  const mgmt = c.roles.filter((r) => r.kind !== "owner");
-  const owner = c.roles.filter((r) => r.kind === "owner");
-  return [mgmt[0], owner[0] ?? mgmt[1]].filter((r): r is PersonRoleVM => Boolean(r));
+  const byFrom = (a: PersonRoleVM, b: PersonRoleVM) => (a.from ?? "").localeCompare(b.from ?? "");
+  return [...c.roles.filter((r) => r.kind !== "owner").sort(byFrom), ...c.roles.filter((r) => r.kind === "owner").sort(byFrom)];
+}
+
+/** Den samlede etiket på den lukkede linje: "Direktør, siden 2003, ejer 100 %, siden 2008". */
+function summaryLabel(list: readonly PersonRoleVM[]): string {
+  return list.map((r, i) => (i === 0 ? bandLabel(r) : bandLabel(r).charAt(0).toLowerCase() + bandLabel(r).slice(1))).join(", ");
 }
 
 /** Undertekst: alle roller kort, fx "Direktør, ejer 100 %" eller "Under konkurs 2026, fratrådt 2018". */
@@ -201,7 +206,10 @@ export function PersonRoles({
   moreIn?: MoreInTab;
 }) {
   const heading = title ?? (role ? PERSON_ROLE_FILTER_TITLES[role] : show === "all" ? "Roller over tid" : LIST_TITLE[show]);
-  const [expanded, setExpanded] = useState(usePrintMode());
+  const print = usePrintMode();
+  const [expanded, setExpanded] = useState(print);
+  // Jakob 02.10: hver række står på én linje; åbnede rækker viser alle roller hver for sig (print: alle åbne).
+  const [openRows, setOpenRows] = useState<ReadonlySet<string>>(new Set());
   const person = whole ? personWithRole(whole, role) : undefined;
   if (!person) {
     return (
@@ -284,34 +292,29 @@ export function PersonRoles({
       <ul className="lasso-personroles__rows">
         {visible.map((c) => {
           const ended = c.companyStatusKind === "warning" || c.companyStatusKind === "inactive";
+          const list = bands(c);
+          const isOpen = print || openRows.has(c.key);
           return (
             <li key={c.key} className={`lasso-personroles__row ${c.active ? "" : "is-ended"}`}>
               <div className="lasso-personroles__label">
-                <CompanyName c={c} onOpen={onOpen} />
+                <div className="lasso-lanes__name">
+                  {list.length > 1 && !print ? (
+                    <LaneToggle open={isOpen} count={list.length} what="roller" onToggle={() => setOpenRows((prev) => { const n = new Set(prev); if (n.has(c.key)) n.delete(c.key); else n.add(c.key); return n; })} />
+                  ) : (
+                    <span className="lasso-lanes__spacer" />
+                  )}
+                  <CompanyName c={c} onOpen={onOpen} />
+                </div>
                 <div className="lasso-personroles__sub">{subline(c)}</div>
               </div>
-              <div className="lasso-personroles__track">
-                {bands(c).map((r, i) => {
+              <BandLanes
+                open={isOpen}
+                summary={summaryLabel(list)}
+                segs={list.map((r) => {
                   const left = pos(r.from, start);
-                  const right = pos(r.to, now);
-                  const width = Math.max(0.8, right - left);
-                  const anchorRight = left > 55;
-                  return (
-                    <div key={i} className="lasso-personroles__lane" title={bandLabel(r)}>
-                      <span
-                        className="lasso-personroles__bandlabel"
-                        // Jakob 01.10: etiketten bliver altid inden for sporet (afkortes med "…"; fuld tekst i title).
-                        style={anchorRight ? { right: `${Math.max(0, 100 - right)}%`, textAlign: "right", maxWidth: `${Math.max(40, right)}%` } : { left: `${left}%`, maxWidth: `${100 - left}%` }}
-                      >
-                        {bandLabel(r)}
-                      </span>
-                      <span
-                        className={`lasso-personroles__band lasso-personroles__band--${r.active ? r.kind : "ended"}`}
-                        style={{ left: `${left}%`, width: `${width}%` }}
-                      />
-                    </div>
-                  );
+                  return { left, width: Math.max(0.8, pos(r.to, now) - left), cls: `lasso-personroles__band lasso-personroles__band--${r.active ? r.kind : "ended"}`, label: bandLabel(r) };
                 })}
+              >
                 {ended ? (
                   <span
                     className="lasso-personroles__marker"
@@ -319,7 +322,7 @@ export function PersonRoles({
                     title={`${c.companyStatus ?? "Ophørt"}${c.companyEnded ? ` ${year(c.companyEnded)}` : ""}`}
                   />
                 ) : null}
-              </div>
+              </BandLanes>
             </li>
           );
         })}
