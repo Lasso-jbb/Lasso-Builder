@@ -400,3 +400,14 @@ body:has(.p3:not(.p3-specimen)[data-theme="dark"]) { background: #121316; }
 /* Skinnen (Jakob 02.10): det øverste ikon flugter med modulrækken (anden linje: fanebjælken 44 px + halvdelen af
    modulrækkens 52 px = midte 70 px under topbjælken; ikonknappen er 36 px). */
 .p3 .rail { padding-top: 52px; }
+
+/* Faner (Jakob 02.10): krydset fylder ikke plads på de inaktive faner, så navnet får hele bredden; ved hover lægger
+   det sig oven på navnets ende med en blød overgang. Den aktive fane har altid krydset og plads til det. */
+.p3 .otab { padding: 0 12px; }
+.p3 .otab .x { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); }
+.p3 .otab .x::before { content: ""; position: absolute; right: 100%; top: 0; bottom: 0; width: 16px; pointer-events: none; }
+.p3 .otab:not(.on) .x { background: color-mix(in srgb, var(--ink) 4%, var(--frame)); }
+.p3 .otab:not(.on) .x::before { background: linear-gradient(to right, transparent, color-mix(in srgb, var(--ink) 4%, var(--frame))); }
+.p3 .otab.on .nm { padding-right: 20px; }
+.p3 .otab.on .x { background: none; }
+.p3 .otab.solo .nm { padding-right: 0; }

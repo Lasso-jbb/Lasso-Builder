@@ -13,7 +13,7 @@ står på `/portal/klassisk` og videreudvikles ikke.
 | Topbjælke | 56 px, rammegrå (`--frame`), navnelogo 90 × 26, søgefeltet, tema, notifikationer, profil | Altid samlet: logo 59 × 17, de åbne faner, og tema, notifikationer og profil som små ikoner (18 px, 30 px brede knapper) |
 | Søgefelt | Pille 36 px, højst 720 px, flugter med indholdets venstre kant | Søgning i fuld skærm fra bundbjælken |
 | Skinne | 60 px, ikoner 20 px, tooltip til højre; det øverste ikon flugter med modulrækken | Skjult |
-| Åbne faner | 44 px bjælke, fane 36 px, radius 10 foroven | I topbjælken (ingen egen bjælke) |
+| Åbne faner | 44 px bjælke, fane 36 px, radius 10 foroven, ens bredde højst 170 px | I topbjælken (ingen egen bjælke) |
 | Modulrække | 52 px, står fast over indholdet (ruller og "bouncer" ikke med); Lasso-mærket, modulerne, "Flere", Følg og Gem | 48 px |
 | Indhold | Kolonne på højst 1200 px med 40 px sideluft | 28 px sideluft (`--gut`) |
 | Spørgefelt | Pille 52 px, højst 720 px, centreret nederst med tre forslag | Lasso-knappen (52 px) i bundbjælken åbner feltet |
@@ -38,8 +38,8 @@ Moduler og Brugere står dæmpet, til de findes.
 ## Åbne faner
 
 - Hvert åbnet firma, person og resultat er en fane med navn og luk-kryds; tooltip med by og CVR.
-- Alle faner har samme bredde: pladsen delt ligeligt, højst 280 px og mindst 136 px. Krydset står yderst til
-  højre. Er der ikke plads til alle i 136 px, skjules de ældste inaktive bag "Flere ▾" (med luk pr. række og
+- Alle faner har samme bredde: pladsen delt ligeligt, højst 170 px og mindst 120 px. Navnet bruger hele bredden;
+  krydset står yderst til højre (på inaktive faner lægger det sig over navnets ende ved hover). Er der ikke plads til alle i 120 px, skjules de ældste inaktive bag "Flere ▾" (med luk pr. række og
   "Luk alle andre faner"). Står kun den aktive tilbage, bliver den selv en dropdown med alle åbne.
 - Lukker man en fane med krydset, holdes bredden, så længe musen er over fanebjælken: næste fanes kryds står
   samme sted, så man kan lukke flere i træk uden at flytte musen. Når musen forlader bjælken, fordeles pladsen igen.

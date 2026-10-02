@@ -597,7 +597,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   /* ---------- layout: fanernes og modulernes overløb, rulning, søgefeltets placering ---------- */
 
   const measure = useCallback(() => {
-    // Åbne faner (Jakob 02.10): alle faner har samme bredde (højst 280 px, mindst 136 px), så næste fanes kryds
+    // Åbne faner (Jakob 02.10): alle faner har samme bredde (højst 170 px, mindst 120 px), så næste fanes kryds
     // står samme sted, når man lukker flere i træk. Er der ikke plads til alle, skjules de ældste inaktive bag
     // "Flere"; står kun den aktive tilbage, bliver den selv en dropdown med alle åbne. Efter et luk holdes
     // bredden (frozenTabW), til musen forlader fanebjælken.
@@ -615,8 +615,9 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       const cs = getComputedStyle(col);
       const avail = col.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 8;
       const n = els.length;
-      const MAX = 280;
-      const MIN = 136;
+      // Jakob 02.10: omtrent 170 px pr. fane, når der er flere åbne (ikke hele bjælken); mindst 120 før "Flere".
+      const MAX = 170;
+      const MIN = 120;
       let w = Math.min(MAX, Math.floor(avail / Math.max(n, 1)));
       const hide: string[] = [];
       if (n > 1 && w < MIN && oa) {
