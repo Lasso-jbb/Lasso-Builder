@@ -1,5 +1,5 @@
 /**
- * Ikonerne fra portal-prototypen (lasso-portal3.html): 24 × 24, streg 1,5, runde ender.
+ * Ikonerne fra portal-prototypen (lasso-portal4.html): 24 × 24, streg 1,5, runde ender.
  * Tegnes med currentColor, så knappens farve (grå, sort, koral) styrer dem.
  */
 const PATHS = {
@@ -89,6 +89,13 @@ const PATHS = {
     <>
       <path d="M12 20.5s6.25-5.6 6.25-10.25a6.25 6.25 0 0 0-12.5 0C5.75 14.9 12 20.5 12 20.5z" />
       <circle cx="12" cy="10.25" r="2.25" />
+    </>
+  ),
+  dots: (
+    <>
+      <circle cx="6" cy="12" r="1.35" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.35" fill="currentColor" stroke="none" />
+      <circle cx="18" cy="12" r="1.35" fill="currentColor" stroke="none" />
     </>
   ),
   theme: (

@@ -47,7 +47,7 @@ tæller så pr. IP-adresse.
 
 ## Portalen (/portal)
 
-`/portal` er den nye portal efter prototypen "lasso-portal3.html": topbjælke med søgning mens man skriver
+`/portal` er den nye portal efter prototypen "lasso-portal4.html": topbjælke med søgning mens man skriver
 (firmaer og personer fra Lassos navnesøgning, `GET /api/portal/lookup`, med status, genveje og seneste), faner for
 åbne firmaer, personer og resultater, ikonskinne,
 virksomhedens hoved med fanerne Overblik, Økonomi, Regnskab, Ejerskab, Risiko, Historik og Kontakt, og

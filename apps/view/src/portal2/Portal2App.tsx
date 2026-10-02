@@ -38,14 +38,16 @@ import {
 import "./portal2.css";
 
 /**
- * Den nye portal på /portal (prototypen "lasso-portal3.html"): topbjælke med søgning mens man skriver,
+ * Den nye portal på /portal (prototypen "lasso-portal4.html"): topbjælke med søgning mens man skriver,
  * ikonskinne, faner for åbne firmaer/personer/resultater, modulrække (Lasso-mærket + fokus) og spørgefeltet.
  * Spørgefeltet er chatten (/api/chat, samme værktøjer som Claude): det, Claude henter, vises under fanen
  * med Lasso-mærket, og mærket bevæger sig, mens der hentes. Søgning og modulfaner bruger ikke AI.
  */
 
 type Theme = "light" | "dark";
-type Menu = { kind: "openall" | "more" | "sel"; left: number; top: number } | null;
+/** Menuerne: skjulte faner ("Flere"), alle faner (den aktive som dropdown), moduler, mobilens "⋯" og topfaner. */
+type MenuKind = "hidden" | "all" | "more" | "sel" | "topmore" | "tophidden";
+type Menu = { kind: MenuKind; left: number; top: number } | null;
 
 const COMPANY_TABS = PAGE_TABS.map((f) => ({ id: f as string, label: FOCUS_LABELS[f] }));
 const PERSON_TABS = PERSON_FOCUSES.map((f) => ({ id: f as string, label: PERSON_FOCUS_LABELS[f] }));
@@ -101,9 +103,12 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const [menu, setMenu] = useState<Menu>(null);
   const [hiddenMods, setHiddenMods] = useState<string[]>([]);
   const [hiddenTabs, setHiddenTabs] = useState<string[]>([]);
+  const [soloTab, setSoloTab] = useState(false);
+  const [modSelect, setModSelect] = useState(false);
+  const [hiddenTop, setHiddenTop] = useState<string[]>([]);
+  const [soloTop, setSoloTop] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const [sheet, setSheet] = useState(false);
   // Søgefeltet
   const [q, setQ] = useState("");
   const [sType, setSType] = useState<SearchType>("f");
@@ -131,7 +136,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const modCol = useRef<HTMLDivElement>(null);
   const mlist = useRef<HTMLDivElement>(null);
   const top = useRef<HTMLElement>(null);
-  const nameRef = useRef<HTMLHeadingElement>(null);
+  const toptabs = useRef<HTMLDivElement>(null);
 
   const api = useMemo(() => createPortalApi(() => setNotice("Du er logget ud. Genindlæs siden.")), []);
   const item = open.find((o) => o.key === active);
@@ -188,7 +193,6 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       return key;
     });
     setMenu(null);
-    setSheet(false);
     setAskOpen(false);
     scroller.current?.scrollTo({ top: 0 });
   };
@@ -573,49 +577,86 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   /* ---------- layout: fanernes og modulernes overløb, rulning, søgefeltets placering ---------- */
 
   const measure = useCallback(() => {
-    // Åbne faner: smalle ind til 136 px, og skjul derefter de ældste inaktive bag "N åbne".
+    // Åbne faner (prototype 4): de inaktive smalles ind og skjules bag "Flere"; står kun den aktive tilbage,
+    // bliver den selv en dropdown med alle åbne.
     const box = otabs.current;
     const col = tabsCol.current;
     if (box && col) {
       const els = [...box.children] as HTMLElement[];
+      const oa = col.querySelector<HTMLElement>("[data-openall]");
       els.forEach((t) => {
         t.style.display = "";
         t.style.maxWidth = "";
       });
-      const avail = col.clientWidth - 28 - 40 - 8 - 110;
-      let total = els.reduce((s, t) => s + t.offsetWidth, 0);
-      if (total > avail) {
-        els.forEach((t) => {
-          if (!t.classList.contains("on")) t.style.maxWidth = "136px";
-        });
-        total = els.reduce((s, t) => s + t.offsetWidth, 0);
+      if (oa) oa.style.display = "none";
+      const cs = getComputedStyle(col);
+      const avail = col.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 8;
+      const sum = () => els.filter((t) => t.style.display !== "none").reduce((s2, t) => s2 + t.offsetWidth, 0) + (oa && oa.style.display !== "none" ? oa.offsetWidth + 6 : 0);
+      if (sum() > avail) els.forEach((t) => !t.classList.contains("on") && (t.style.maxWidth = "136px"));
+      if (sum() > avail && oa) {
+        oa.style.display = "";
+        for (const t of els) {
+          if (sum() <= avail) break;
+          if (t.classList.contains("on")) continue;
+          t.style.display = "none";
+        }
       }
-      const hide: string[] = [];
-      for (const t of els) {
-        if (total <= avail) break;
-        if (t.classList.contains("on")) continue;
-        total -= t.offsetWidth;
-        t.style.display = "none";
-        hide.push(t.dataset.key ?? "");
-      }
+      const hide = els.filter((t) => t.style.display === "none").map((t) => t.dataset.key ?? "");
+      const visibleInactive = els.filter((t) => !t.classList.contains("on") && t.style.display !== "none").length;
+      const solo = els.length > 1 && visibleInactive === 0;
+      if (solo && oa) oa.style.display = "none";
       setHiddenTabs((h) => (h.join("|") === hide.join("|") ? h : hide));
+      setSoloTab(solo);
     }
-    // Moduler: skjul fra højre bag "Flere".
+    // Moduler: skjul fra højre bag "Flere"; er der plads til færre end to, bliver rækken en vælger.
     const ml = mlist.current;
     const mc = modCol.current;
     if (ml && mc) {
       const btns = [...ml.querySelectorAll<HTMLElement>("[data-mod]")];
       const more = ml.querySelector<HTMLElement>("[data-more]");
+      ml.style.display = "";
       btns.forEach((b) => (b.style.display = ""));
       if (more) more.style.display = "none";
-      const avail = mc.clientWidth - 80 - (40 + 36 + 28 + 24 + 108 + 8);
-      const width = () => btns.filter((b) => b.style.display !== "none").reduce((s, b) => s + b.offsetWidth + 22, 0) + (more && more.style.display !== "none" ? more.offsetWidth + 22 : 0);
+      const cs = getComputedStyle(mc);
+      const fixed = [...mc.querySelectorAll<HTMLElement>(".tabmark, .rgroup")].reduce((s2, e) => s2 + e.offsetWidth, 0);
+      const avail = mc.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - fixed - 8;
+      const width = () => btns.filter((b) => b.style.display !== "none").reduce((s2, b) => s2 + b.offsetWidth + 22, 0) + (more && more.style.display !== "none" ? more.offsetWidth + 22 : 0);
       if (width() > avail && more) {
         more.style.display = "";
         for (let i = btns.length - 1; i >= 0 && width() > avail; i--) btns[i]!.style.display = "none";
       }
       const hide = btns.filter((b) => b.style.display === "none").map((b) => b.dataset.mod ?? "");
+      const select = btns.length > 0 && btns.length - hide.length < 2;
+      ml.style.display = select ? "none" : "";
       setHiddenMods((h) => (h.join("|") === hide.join("|") ? h : hide));
+      setModSelect(select);
+    }
+    // Mobil: de åbne faner i topbjælken, når den er klappet sammen (aktive først, ældste skjules).
+    const tt = toptabs.current;
+    if (tt && isPhone()) {
+      const items = [...tt.querySelectorAll<HTMLElement>("[data-tt]")];
+      const more = tt.querySelector<HTMLElement>("[data-ttmore]");
+      items.forEach((t) => {
+        t.style.display = "";
+        t.style.maxWidth = "";
+      });
+      if (more) more.style.display = "none";
+      const avail = tt.clientWidth;
+      const w = () => items.filter((t) => t.style.display !== "none").reduce((s2, t) => s2 + t.offsetWidth + 6, 0) + (more && more.style.display !== "none" ? more.offsetWidth + 6 : 0);
+      if (w() > avail) items.forEach((t) => !t.classList.contains("on") && (t.style.maxWidth = "110px"));
+      if (w() > avail && more) {
+        more.style.display = "";
+        for (const t of items) {
+          if (w() <= avail) break;
+          if (t.classList.contains("on")) continue;
+          t.style.display = "none";
+        }
+      }
+      const hide = items.filter((t) => t.style.display === "none").map((t) => t.dataset.tt ?? "");
+      const solo = items.length > 1 && items.filter((t) => !t.classList.contains("on") && t.style.display !== "none").length === 0;
+      if (solo && more) more.style.display = "none";
+      setHiddenTop((h) => (h.join("|") === hide.join("|") ? h : hide));
+      setSoloTop(solo);
     }
     // Søgefeltet flugter med indholdets kolonne.
     if (top.current && mc && !isPhone()) {
@@ -627,7 +668,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
 
   useLayoutEffect(() => {
     measure();
-  }, [measure, open, active, item?.tab, lassoAvailable]);
+  }, [measure, open, active, item?.tab, lassoAvailable, collapsed]);
 
   useEffect(() => {
     const onResize = () => {
@@ -643,8 +684,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     const sc = scroller.current;
     if (!sc) return;
     if (isPhone()) {
-      const h = nameRef.current;
-      setCollapsed(h ? sc.scrollTop > h.offsetTop + h.offsetHeight - 20 : false);
+      setCollapsed(sc.scrollTop > 48);
       setScrolled(false);
     } else {
       setCollapsed(false);
@@ -652,7 +692,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     }
   };
 
-  const showMenu = (kind: "openall" | "more" | "sel", anchor: HTMLElement, align: "left" | "right" = "left") => {
+  const showMenu = (kind: MenuKind, anchor: HTMLElement, align: "left" | "right" = "left") => {
     if (menu?.kind === kind) return setMenu(null);
     const r = anchor.getBoundingClientRect();
     const w = 260;
@@ -823,7 +863,6 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     const view = current ? (item.kind !== "result" ? withoutHead(current.spec) : current.spec) : null;
     content = (
       <>
-        {lines.length ? <div className="ident">{lines.join(", ")}</div> : null}
         {onLasso && answer ? (
           <div className="answer" aria-live="polite">
             <div className="answer__q">{answer.question}</div>
@@ -866,9 +905,6 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   }
 
   const sugg = suggestions(item);
-  const nf = open.filter((o) => o.kind === "company").length;
-  const np = open.filter((o) => o.kind === "person").length;
-  const nr = open.length - nf - np;
 
   return (
     <div className={`p3${collapsed ? " collapsed" : ""}${scrolled ? " scrolled" : ""}`} data-theme={theme}>
@@ -907,23 +943,28 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
             </div>
           ) : null}
         </div>
-        <div className="right">
-          <button
-            type="button"
-            className="ibtn m-only"
-            aria-label="Søg"
-            onClick={() => {
-              setMSearch(true);
-              setTimeout(() => mq.current?.focus(), 30);
-            }}
-          >
-            <P2Icon name="search" />
-          </button>
-          {open.length ? (
-            <button type="button" className="ibtn m-only" aria-label="Åbne firmaer og personer" onClick={() => setSheet(true)}>
-              <span className="count">{open.length}</span>
+        {open.length ? (
+          <div className="toptabs" ref={toptabs} role="tablist" aria-label="Åbne firmaer og personer">
+            {open.map((o) => (
+              <button
+                key={o.key}
+                type="button"
+                data-tt={o.key}
+                data-menu={soloTop && o.key === active ? "" : undefined}
+                className={`tt${o.key === active ? " on" : ""}${soloTop && o.key === active ? " solo" : ""}`}
+                onClick={(e) => (soloTop && o.key === active ? showMenu("all", e.currentTarget) : activate(o.key))}
+              >
+                <span>{o.name}</span>
+                {soloTop && o.key === active ? <P2Icon name="down" /> : null}
+              </button>
+            ))}
+            <button type="button" className="tt" data-ttmore data-menu onClick={(e) => showMenu("tophidden", e.currentTarget)}>
+              <span>Flere</span>
+              <P2Icon name="down" />
             </button>
-          ) : null}
+          </div>
+        ) : null}
+        <div className="right">
           <button type="button" className="ibtn" aria-label="Skift mellem lyst og mørkt tema" aria-pressed={theme === "dark"} onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}>
             <P2Icon name="theme" />
           </button>
@@ -932,6 +973,9 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
           </button>
           <button type="button" className="ibtn" aria-label={`Profil: ${boot.user?.name ?? "Demobruger"}`} title={boot.user?.name ?? "Demobruger"}>
             <P2Icon name="user" />
+          </button>
+          <button type="button" className="ibtn topmore" data-menu aria-label="Mere" onClick={(e) => showMenu("topmore", e.currentTarget, "right")}>
+            <P2Icon name="dots" />
           </button>
         </div>
       </header>
@@ -963,11 +1007,12 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
                 <div
                   key={o.key}
                   data-key={o.key}
-                  className={`otab${o.key === active ? " on" : ""}`}
+                  className={`otab${o.key === active ? " on" : ""}${soloTab && o.key === active ? " solo" : ""}`}
                   role="tab"
                   aria-selected={o.key === active}
                   tabIndex={0}
-                  onClick={() => activate(o.key)}
+                  data-menu={soloTab && o.key === active ? "" : undefined}
+                  onClick={(e) => (soloTab && o.key === active ? showMenu("all", e.currentTarget) : activate(o.key))}
                   onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && activate(o.key)}
                   onMouseDown={(e) => {
                     if (e.button === 1) {
@@ -976,8 +1021,9 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
                     }
                   }}
                 >
-                  {pendingKey === o.key ? <LassoMark className="mark is-busy" /> : <P2Icon name={iconOf(o.kind)} />}
+                  {pendingKey === o.key ? <LassoMark className="mark is-busy" /> : null}
                   <span className="nm">{o.name}</span>
+                  <P2Icon name="down" className="i chev" />
                   <button
                     type="button"
                     className="x"
@@ -1001,15 +1047,10 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
                 </div>
               ))}
             </div>
-            <button type="button" className="newtab" aria-label="Søg og åbn et nyt" onClick={() => (isPhone() ? setMSearch(true) : dq.current?.focus())}>
-              <P2Icon name="add" />
+            <button type="button" className="openall" data-openall data-menu onClick={(e) => showMenu("hidden", e.currentTarget)}>
+              <span>Flere</span>
+              <P2Icon name="down" />
             </button>
-            {hiddenTabs.length ? (
-              <button type="button" className="openall" data-menu onClick={(e) => showMenu("openall", e.currentTarget, "right")}>
-                <span>{open.length} åbne</span>
-                <P2Icon name="down" />
-              </button>
-            ) : null}
           </div>
         </div>
 
@@ -1017,31 +1058,6 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
           <div className="scroll" ref={scroller} onScroll={onScroll}>
             {item ? (
               <>
-                <div className="compact">
-                  <div className="col">
-                    <button type="button" className="back" aria-label="Tilbage" onClick={goBack}>
-                      <P2Icon name="back" />
-                    </button>
-                    <div className="who">
-                      <div className="cname">{item.name}</div>
-                      <div className="caddr">{lines[0] ?? ""}</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="col m-head">
-                  <button type="button" className="back" aria-label="Tilbage" onClick={goBack}>
-                    <P2Icon name="back" />
-                  </button>
-                  <div className="who">
-                    <h1 ref={nameRef}>{item.name}</h1>
-                    {lines.map((l) => (
-                      <div key={l} className="line">
-                        {l}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
                 <div className="mods">
                   <div className="col" ref={modCol}>
                     <button
@@ -1078,7 +1094,14 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
                       ) : null}
                     </div>
                     {tabs.length ? (
-                      <button type="button" className="sel-btn" data-menu aria-expanded={menu?.kind === "sel"} onClick={(e) => showMenu("sel", e.currentTarget)}>
+                      <button
+                        type="button"
+                        className="sel-btn"
+                        data-menu
+                        style={{ display: modSelect ? "inline-flex" : "none" }}
+                        aria-expanded={menu?.kind === "sel"}
+                        onClick={(e) => showMenu("sel", e.currentTarget)}
+                      >
                         <span>{curLabel}</span>
                         <P2Icon name="down" />
                       </button>
@@ -1176,27 +1199,73 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
 
       {menu ? (
         <div className="dd" style={{ left: menu.left, top: menu.top, position: "fixed" }}>
-          {menu.kind === "openall" ? (
+          {menu.kind === "hidden" || menu.kind === "all" || menu.kind === "tophidden" ? (
             <>
-              {open.map((o) => (
+              {(menu.kind === "hidden" ? open.filter((o) => hiddenTabs.includes(o.key)) : menu.kind === "tophidden" ? open.filter((o) => hiddenTop.includes(o.key)) : open).map((o) => (
                 <button key={o.key} type="button" className={o.key === active ? "cur" : ""} onClick={() => activate(o.key)}>
                   <span className="ic">
                     <P2Icon name={iconOf(o.kind)} />
                     <span>{o.name}</span>
                   </span>
-                  {o.key === active ? <P2Icon name="check" /> : null}
+                  {o.key === active ? (
+                    <P2Icon name="check" />
+                  ) : (
+                    <span
+                      className="ddx"
+                      role="button"
+                      aria-label={`Luk ${o.name}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMenu(null);
+                        closeTab(o.key);
+                      }}
+                    >
+                      <P2Icon name="x" />
+                    </span>
+                  )}
                 </button>
               ))}
-              <hr />
+              {open.length > 1 ? (
+                <>
+                  <hr />
+                  <button
+                    type="button"
+                    className="muted"
+                    onClick={() => {
+                      setOpen((l) => l.filter((o) => o.key === active));
+                      setMenu(null);
+                    }}
+                  >
+                    Luk alle andre faner
+                  </button>
+                </>
+              ) : null}
+            </>
+          ) : menu.kind === "topmore" ? (
+            <>
               <button
                 type="button"
-                className="muted"
                 onClick={() => {
-                  setOpen((l) => l.filter((o) => o.key === active));
+                  setTheme((t) => (t === "dark" ? "light" : "dark"));
                   setMenu(null);
                 }}
               >
-                Luk alle andre faner
+                <span className="ic">
+                  <P2Icon name="theme" />
+                  <span>{theme === "dark" ? "Lyst tema" : "Mørkt tema"}</span>
+                </span>
+              </button>
+              <button type="button" aria-disabled="true" onClick={() => setMenu(null)}>
+                <span className="ic">
+                  <P2Icon name="bell" />
+                  <span>Notifikationer (kommer senere)</span>
+                </span>
+              </button>
+              <button type="button" onClick={() => setMenu(null)}>
+                <span className="ic">
+                  <P2Icon name="user" />
+                  <span>{boot.user?.name ?? "Demobruger"}</span>
+                </span>
               </button>
             </>
           ) : item ? (
@@ -1215,57 +1284,6 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
               ))}
             </>
           ) : null}
-        </div>
-      ) : null}
-
-      {sheet ? (
-        <div className="sheet-scrim" onClick={(e) => e.target === e.currentTarget && setSheet(false)}>
-          <div className="sheet" role="dialog" aria-label="Åbne">
-            <div className="grab" />
-            <div className="sh">
-              <div>
-                <h3>Åbne</h3>
-                <div className="shs">
-                  {[nf ? `${nf} ${nf === 1 ? "firma" : "firmaer"}` : "", np ? `${np} ${np === 1 ? "person" : "personer"}` : "", nr ? `${nr} ${nr === 1 ? "resultat" : "resultater"}` : ""].filter(Boolean).join(" og ")}
-                </div>
-              </div>
-              <button type="button" className="ibtn" aria-label="Luk" onClick={() => setSheet(false)}>
-                <P2Icon name="x" />
-              </button>
-            </div>
-            {open.map((o) => (
-              <div key={o.key} className={`orow${o.key === active ? " cur" : ""}`} onClick={() => activate(o.key)}>
-                <P2Icon name={iconOf(o.kind)} />
-                <div className="t">
-                  <div className="n">{o.name}</div>
-                  {o.sub ? <div className="m">{o.sub}</div> : null}
-                </div>
-                <button
-                  type="button"
-                  className="ibtn"
-                  aria-label={`Luk ${o.name}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    closeTab(o.key);
-                  }}
-                >
-                  <P2Icon name="x" />
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              className="new"
-              onClick={() => {
-                setSheet(false);
-                setMSearch(true);
-                setTimeout(() => mq.current?.focus(), 30);
-              }}
-            >
-              <P2Icon name="add" />
-              Søg og åbn et nyt
-            </button>
-          </div>
         </div>
       ) : null}
 

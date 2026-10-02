@@ -2,7 +2,7 @@ import type { Dataset, ViewSpec } from "@lasso/spec";
 import type { LookupResult } from "../portal/api.js";
 
 /**
- * Den nye portal (prototypen "lasso-portal3.html"): rene hjælpefunktioner uden React, så de kan testes
+ * Den nye portal (prototypen "lasso-portal4.html"): rene hjælpefunktioner uden React, så de kan testes
  * i node. Portalen har faner for de åbne firmaer, personer og resultater (søgning, sammenligning, lister).
  * Et firma eller en person har modulfanerne (fokus) og fanen med Lasso-mærket: det, chatten hentede.
  */
