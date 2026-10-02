@@ -72,4 +72,15 @@ export interface ShowcaseBoot {
   portal: { company: string; name: string; pages: (PortalPage & { dataset: Dataset })[] };
 }
 
-export type Boot = WebBoot | PortalBoot | PrintBoot | ShowcaseBoot;
+/** Lassos egen chat på /chat (docs/chat.md): Claude med samme værktøjer som MCP, visningerne tegnes her. */
+export interface ChatBoot {
+  mode: "chat";
+  /** Kræver /mcp en nøgle, skal brugeren logge ind (også når portalen er åben: hvert svar koster). */
+  loginRequired: boolean;
+  /** false: serveren har ingen ANTHROPIC_API_KEY. */
+  enabled: boolean;
+  baseUrl: string;
+  pdf?: boolean;
+}
+
+export type Boot = WebBoot | PortalBoot | PrintBoot | ShowcaseBoot | ChatBoot;

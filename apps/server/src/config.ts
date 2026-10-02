@@ -89,6 +89,20 @@ const schema = z.object({
   PDF_CHROMIUM_PATH: z.string().default("/usr/bin/chromium"),
   /** Så længe må én PDF tage, fra siden åbnes, til filen er lavet. */
   PDF_TIMEOUT_MS: z.coerce.number().int().positive().default(25000),
+
+  /**
+   * Lassos egen chat (apps/server/src/chat/, docs/chat.md): Claude via Claude Platform med samme
+   * værktøjer som /mcp. Uden nøgle er chatten slået fra (/api/chat svarer 503, /health viser chat: false).
+   */
+  ANTHROPIC_API_KEY: z.string().default(""),
+  /** Standard: den nyeste Haiku (hurtig og billig); fx claude-sonnet-5-5 eller claude-opus-5-5 for mere omtanke. */
+  CHAT_MODEL: z.string().default("claude-haiku-4-5"),
+  /** Tænkning og tokenforbrug pr. svar (low | medium | high | xhigh | max). */
+  /** Højst så mange tokens pr. modelsvar (tænkning + tekst + værktøjskald, fx en render_view-spec). */
+  CHAT_MAX_TOKENS: z.coerce.number().int().min(1024).max(128000).default(16000),
+  CHAT_EFFORT: z.enum(["low", "medium", "high", "xhigh", "max"]).default("medium"),
+  /** Højst så mange beskeder pr. bruger pr. time (bremse på forbruget). */
+  CHAT_MAX_PER_HOUR: z.coerce.number().int().min(1).default(60),
 });
 
 export type Config = z.infer<typeof schema> & { publicBaseUrl: string };

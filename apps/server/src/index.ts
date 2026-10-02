@@ -40,6 +40,8 @@ import { summarizeView } from "./data/summary.js";
 import { adaptPeople, adaptSearch, at, participantFieldNames } from "./lasso/adapters.js";
 import { describeShape, LassoApiError, LassoClient, probeAuthVariants, type Query } from "./lasso/client.js";
 import { createMcpServer } from "./mcp/server.js";
+import { chatEnabled, chatRoutes } from "./chat/routes.js";
+import type { ModelCall } from "./chat/agent.js";
 import { companyNameHints } from "./usecases/index.js";
 import { createScoreStore } from "./scores/store.js";
 import { createViewStore, SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "./views/store.js";
@@ -66,6 +68,8 @@ export interface AppDeps {
   pdf?: PdfRenderer;
   /** Kommentarer i designguiden (comments/store.ts). Udeladt: i hukommelsen. */
   comments?: CommentStore;
+  /** Chatten (chat/agent.ts). Udeladt: Claude Platform med ANTHROPIC_API_KEY. Test giver en falsk model. */
+  chatModel?: ModelCall;
 }
 
 function safeEqual(a: string, b: string): boolean {
@@ -130,8 +134,9 @@ function requireMcpKey(config: Config) {
   };
 }
 
-export function createApp({ config, client, provider, store, pages, pdf = pdfRendererFor(config), comments = createCommentStore("") }: AppDeps) {
-  const app = createMcpExpressApp({ host: "0.0.0.0", jsonLimit: "1mb" });
+export function createApp({ config, client, provider, store, pages, pdf = pdfRendererFor(config), comments = createCommentStore(""), chatModel }: AppDeps) {
+  // 4 MB: chatten sender hele samtalen (værktøjssvarenes tekst) med i hvert spørgsmål.
+  const app = createMcpExpressApp({ host: "0.0.0.0", jsonLimit: "4mb" });
   app.disable("x-powered-by");
 
   // Roden er portalen (docs/portal.md); den gamle JSON-info ligger under /api/info.
@@ -193,6 +198,7 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
       databaseOk: dbOk,
       mcpKeyRequired: mcpKeyRequired(config),
       pdf: pdfAvailable(config),
+      chat: chatEnabled(config),
       uptimeSeconds: Math.round(process.uptime()),
     });
   });
@@ -225,6 +231,17 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
   app.use("/api/portal/pdf", requirePortal(config), portalPdfRoutes({ config, provider, store, pages, pdf }));
   app.use("/api/portal", requirePortal(config), portalApi({ config, provider, store, pages }));
   app.use("/api/portal", portalErrorHandler);
+
+  // --- Lassos egen chat (docs/chat.md): Claude Platform med samme værktøjer som /mcp ------------
+  app.use("/api/chat", chatRoutes({ config, provider, store, pages, model: chatModel }));
+  app.use("/api/chat", portalErrorHandler);
+  app.get("/chat", async (_req, res) => {
+    const html = await loadViewHtml();
+    res
+      .type("html")
+      .set("Cache-Control", "no-store")
+      .send(injectBoot(html, { mode: "chat", loginRequired: mcpKeyRequired(config), enabled: chatEnabled(config) || Boolean(chatModel), baseUrl: config.publicBaseUrl, pdf: pdfAvailable(config) }, "Chat"));
+  });
 
   // --- Gemte visninger -------------------------------------------------------
   app.get("/api/views/:org/:slug", async (req, res) => {

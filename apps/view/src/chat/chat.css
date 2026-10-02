@@ -1,0 +1,47 @@
+/*
+ * Lassos egen chat (/chat, docs/chat.md). Kun tokens fra @lasso/ui/styles.css; klasserne findes kun i
+ * chat-tilstand. Samtalen står i en kolonne, så visningerne har samme bredde som i portalen.
+ */
+.lasso-root.lasso-chat { display: flex; flex-direction: column; height: 100vh; height: 100dvh; background: var(--lasso-surface); color: var(--lasso-text); }
+
+.lasso-chat__header { flex: none; display: flex; align-items: center; gap: var(--lasso-space-3); padding: var(--lasso-space-3) var(--lasso-space-5); border-bottom: 1px solid var(--lasso-border); }
+.lasso-chat__mark { width: 28px; height: 28px; }
+.lasso-chat__brand { font-weight: var(--lasso-fw-semibold); font-size: var(--lasso-fs-lg); }
+.lasso-chat__spacer { flex: 1; }
+.lasso-chat__header a.lasso-btn { text-decoration: none; }
+
+.lasso-chat__log { flex: 1; overflow-y: auto; padding: var(--lasso-space-5) var(--lasso-space-5) var(--lasso-space-6); display: flex; flex-direction: column; gap: var(--lasso-space-5); }
+.lasso-chat__log > * { width: 100%; max-width: 1240px; margin-inline: auto; }
+
+.lasso-chat__empty { margin-top: 12vh; text-align: center; }
+.lasso-chat__empty h1 { font-size: var(--lasso-fs-xl); font-weight: var(--lasso-fw-semibold); margin: 0 0 var(--lasso-space-2); }
+.lasso-chat__empty p { color: var(--lasso-text-3); margin: 0 0 var(--lasso-space-5); }
+.lasso-chat__suggestions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--lasso-space-2); }
+.lasso-chat__suggestion { border: 1px solid var(--lasso-border-strong); background: var(--lasso-surface); color: var(--lasso-text-2); border-radius: var(--lasso-radius-pill); padding: 8px 14px; font: inherit; font-size: var(--lasso-fs-sm); cursor: pointer; }
+.lasso-chat__suggestion:hover { background: var(--lasso-surface-2); }
+
+.lasso-chat__user { display: flex; justify-content: flex-end; }
+.lasso-chat__bubble { max-width: min(640px, 85%); background: var(--lasso-surface-muted); border-radius: var(--lasso-radius-lg); padding: 10px 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.lasso-chat__assistant { display: flex; flex-direction: column; gap: var(--lasso-space-3); }
+.lasso-chat__text { max-width: 760px; line-height: 1.55; overflow-wrap: anywhere; }
+.lasso-chat__text p, .lasso-chat__text ul { margin: 0 0 var(--lasso-space-2); }
+.lasso-chat__text ul { padding-left: 1.2em; }
+.lasso-chat__text a { color: var(--lasso-accent-text); }
+
+.lasso-chat__tool { font-size: var(--lasso-fs-sm); color: var(--lasso-text-3); }
+.lasso-chat__tool.is-running { animation: lasso-chat-pulse 1.4s ease-in-out infinite; }
+.lasso-chat__tool--error, .lasso-chat__error { color: var(--lasso-danger); font-size: var(--lasso-fs-sm); }
+@keyframes lasso-chat-pulse { 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .lasso-chat__tool.is-running { animation: none; } }
+
+.lasso-chat__view { border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-card); overflow: hidden; }
+
+.lasso-chat__composer { flex: none; display: flex; gap: var(--lasso-space-2); align-items: flex-end; width: 100%; max-width: 1240px; margin: 0 auto; padding: var(--lasso-space-3) var(--lasso-space-5) var(--lasso-space-5); box-sizing: border-box; }
+.lasso-chat__input { flex: 1; min-width: 0; resize: none; field-sizing: content; max-height: 200px; min-height: var(--lasso-btn-h); box-sizing: border-box; padding: 8px 12px; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius); font: inherit; color: inherit; background: var(--lasso-surface); }
+.lasso-chat__input:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
+
+@media (max-width: 560px) {
+  .lasso-chat__header, .lasso-chat__log, .lasso-chat__composer { padding-left: var(--lasso-space-4); padding-right: var(--lasso-space-4); }
+  .lasso-chat__empty { margin-top: 6vh; }
+}
