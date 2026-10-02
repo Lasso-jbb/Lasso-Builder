@@ -412,7 +412,7 @@ test("regnskabsanalysen: overblikket viser konklusion, resultat og likviditet, o
 
 test("composeProbe: hvert fokus henter kun det, det viser (hovedet altid)", () => {
   const probe = (focus?: (typeof FOCUSES)[number]) => composeProbe(id, focus).components.map((c) => c.type);
-  assert.deepEqual(probe(), ["LassoCompanyHead", "LassoKeyFigureCards", "LassoPersonList", "LassoOwnerList", "LassoTimeline", "LassoNews", "LassoTextSections", "LassoContact", "LassoMap", "LassoRegistration"]);
+  assert.deepEqual(probe(), ["LassoCompanyHead", "LassoKeyFigureCards", "LassoPersonList", "LassoOwnerList", "LassoTimeline", "LassoNews", "LassoTextSections", "LassoContact", "LassoMap", "LassoRegistration", "LassoSummary"]);
   assert.deepEqual(probe("overblik"), probe());
   assert.deepEqual(probe("oekonomi"), ["LassoCompanyHead", "LassoKeyFigureCards", "LassoTextSections", "LassoKeyFigureGauge"]);
   assert.deepEqual(probe("regnskab"), ["LassoCompanyHead", "LassoIncomeStatement"]);
@@ -880,7 +880,7 @@ test("B4: spørgsmålets resume-pladsholder (SUMMARY_PENDING_TEXT) erstattes af 
   const spec = composeCompany(id, holding(), { ask: parseAsk("Giv mig en kort opsummering af TEST HOLDING ApS", "company", { name: ["TEST HOLDING ApS"] }) });
   const summary = spec.components.find((c) => c.type === "LassoSummary");
   if (!summary) return; // Planen for emnet opsummering (ask.ts, B2) er ikke til stede i denne version.
-  assert.ok(summary.type === "LassoSummary" && summary.text !== SUMMARY_PENDING_TEXT && summary.text.startsWith("Test Holding"));
+  assert.ok(summary.type === "LassoSummary" && summary.text !== SUMMARY_PENDING_TEXT && Boolean(summary.text?.startsWith("Test Holding")));
 });
 
 test("B4: packWithExtras tager kun et ekstra element, der ikke koster et af de faste", () => {

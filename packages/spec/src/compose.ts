@@ -1,3 +1,4 @@
+import { stripEntityLinks } from "./entityLinks.js";
 import { companyFollowUps } from "./followUps.js";
 import { changeFeedKey, entityRefOf, ownershipGraphKey } from "./models.js";
 import { changePercent, formatDate, formatNumber, formatPercent, percentChange } from "./format.js";
@@ -125,6 +126,8 @@ export function composeProbe(lassoId: string, focus?: Focus, ask?: Ask): ViewSpe
         // B4: kortet (hovedadressen, når der er koordinater) og registreringen, når budgettet giver plads.
         { type: "LassoMap", company: c },
         { type: "LassoRegistration", company: c, variant: "full" },
+        // Jakob 02.10: Lassos erhvervsresumé om virksomheden (GET /modules/resume).
+        { type: "LassoSummary", title: "Erhvervsresumé", resume: c, source: "Lasso" },
       );
       break;
     case "oekonomi":
@@ -264,7 +267,7 @@ export function componentWeight(c: ViewComponent, ds: Dataset, page: readonly Vi
         return TITLE + shown(base);
       }
       const co = ds.companies[c.company];
-      const rows = co ? companyFacts(co, ds.ownership[c.company], ds.financials[c.company]?.years.at(-1), { ...companyFactOptions(page, c.company), rows: c.rows }).length : 6;
+      const rows = co ? companyFacts(co, ds.ownership[c.company], ds.financials[c.company]?.years.at(-1), { ...companyFactOptions(page, c.company), rows: c.rows, valuation: ds.valuations?.[c.company] }).length : 6;
       return TITLE + shown(rows);
     }
     case "LassoBarChart":
@@ -379,10 +382,13 @@ export function gridHeight(c: ViewComponent, width: Width, ds: Dataset, page: re
   // Resumeet er ikke målt (grid.ts låner tekstsektionernes højde); skøn ud fra teksten: ca. 24 px pr. linje,
   // ca. 11 tegn pr. kolonne i gitteret, plus titel og kildelinje.
   if (c.type === "LassoSummary") {
+    // Lassos erhvervsresumé (resume) måles på den hentede tekst; uden tekst tegnes intet.
+    const text = c.resume ? stripEntityLinks(ds.resumes?.[c.resume]?.content ?? "") : (c.text ?? "");
+    if (!text) return 0;
     const perLine = 11 * WIDTH_COLUMNS[width];
     // Over 340 tegn står resuméet foldet efter 5 linjer med "Vis mere" under (LassoSummary).
-    const lines = c.text.length > 340 ? 5 : Math.ceil(c.text.length / perLine);
-    return TITLE_PX + 24 * lines + (c.text.length > 340 ? 36 : 0) + 30;
+    const lines = text.length > 340 ? 5 : Math.ceil(text.length / perLine);
+    return TITLE_PX + 24 * lines + (text.length > 340 ? 36 : 0) + 30;
   }
   const base = measuredHeight(c, width);
   const key = c.type === "LassoKeyValueList" && c.variant === "financials" ? "LassoKeyValueList (financials)" : c.type;
@@ -667,7 +673,7 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
   const companyList = (page: { contact: boolean; owners: boolean }): ViewComponent | null => {
     const co = ds.companies[id];
     if (!co) return null;
-    const rows = companyFacts(co, ds.ownership[id], fin.at(-1), { hideIdentity: true, hideContact: page.contact, hideAuditor: page.owners });
+    const rows = companyFacts(co, ds.ownership[id], fin.at(-1), { hideIdentity: true, hideContact: page.contact, hideAuditor: page.owners, valuation: ds.valuations?.[id] });
     // Jakob 01.10: på siderne står oplysningerne i kort visning (8 rækker + "Vis alle N"); hele listen står i fuld visning.
     return rows.filter((r) => r.value).length >= 2 ? { type: "LassoKeyValueList", company: id, variant: "company", title: "Virksomhedsoplysninger", view: "short" } : null;
   };
@@ -811,6 +817,9 @@ export function composeCompany(lassoId: string, ds: Dataset, options: ComposeOpt
       if (people.length > 0 || owners.length > 0) push({ type: "LassoRelations", company: id });
       push(finance());
       if (hasContact) push({ type: "LassoContact", company: id });
+      // Jakob 02.10: Lassos erhvervsresumé om virksomheden (GET /modules/resume) som B4-element: kun når der er
+      // plads, og uden at gøre andre elementer kompakte (standardsiden bevarer Papers form, 23.3).
+      if (ds.resumes?.[id]?.state === "ok") extra({ type: "LassoSummary", title: "Erhvervsresumé", resume: id, source: "Lasso" });
       extra(mapItem());
       // Historikken viser 3 begivenheder + "Se alle N" (regel 9); hele forløbet står på historik.
       if (events.length >= 3) push({ type: "LassoTimeline", company: id, limit: 3, more: "historik" });
@@ -1044,7 +1053,7 @@ function composeAskCompany(lassoId: string, ds: Dataset, ask: Ask, options: Comp
         if (!co) return lead ? c : null;
         if (lead) return c;
         // Kontekstlisten udelades under 2 rækker med værdi (det, siden ellers viser, gentages ikke).
-        const rows = companyFacts(co, ds.ownership[id], last, { ...companyFactOptions([...page(), c], id), rows: c.rows }).filter((r) => r.value);
+        const rows = companyFacts(co, ds.ownership[id], last, { ...companyFactOptions([...page(), c], id), rows: c.rows, valuation: ds.valuations?.[id] }).filter((r) => r.value);
         return rows.length >= 2 ? c : null;
       }
       case "LassoWaterfallChart":

@@ -356,7 +356,8 @@ export const textSectionsSchema = z.object({
 export const summarySchema = z.object({
   type: z.literal("LassoSummary"),
   title: z.string().max(80).optional(),
-  text: z.string().min(1).max(4000).describe("Resumeteksten, skrevet af modellen ud fra kendte tal og fakta. Ingen 'Skrevet af AI'-mærke vises."),
+  text: z.string().min(1).max(4000).optional().describe("Resumeteksten, skrevet af modellen ud fra kendte tal og fakta. Ingen 'Skrevet af AI'-mærke vises. Udelades med resume."),
+  resume: z.string().max(40).optional().describe("Lasso-ID (CVR-1-… eller CVR-3-…): vis Lassos erhvervsresumé om virksomheden eller personen (GET /modules/resume) i stedet for text."),
   source: z.string().max(80).default("Lasso").describe("Kildetekst i kildelinjen, fx 'Lasso' eller modellens navn."),
   updated: z.string().max(40).optional().describe("Dato for resumeet (ÅÅÅÅ-MM-DD). Standard: i dag."),
 });

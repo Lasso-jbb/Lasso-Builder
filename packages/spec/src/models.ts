@@ -1004,6 +1004,40 @@ export interface CreditRatingVM {
   creditBalance?: number;
 }
 
+/**
+ * Værdiansættelse af virksomheden (Jakob 02.10): GET /modules/valuations/{lassoId} eller POST
+ * /modules/valuations med en liste af Lasso-ID'er. Svarformen er ikke set endnu; adapteren læser defensivt.
+ * "unavailable" = Lasso har ingen værdiansættelse (tomt svar, 404) eller ingen adgang; rækken udelades så.
+ */
+export interface ValuationVM {
+  lassoId: string;
+  state: "ok" | "unavailable";
+  /** Den anslåede værdi (punktestimat). */
+  value?: number;
+  /** Interval, når Lasso giver et spænd. */
+  low?: number;
+  high?: number;
+  currency?: string;
+  /** Hvornår værdien er beregnet (ÅÅÅÅ-MM-DD). */
+  date?: string;
+  /** Metoden, hvis Lasso oplyser den (fx "EBITDA-multipel"). */
+  method?: string;
+  reason?: string;
+}
+
+/**
+ * Erhvervsresumé om en virksomhed eller person (Jakob 02.10): GET /modules/resume/{lassoId} svarer
+ * { content, lassoId, firstName?, lastName? }. "unavailable" = intet resumé (tomt svar, 404) eller ingen adgang.
+ */
+export interface ResumeVM {
+  lassoId: string;
+  state: "ok" | "unavailable";
+  content?: string;
+  firstName?: string;
+  lastName?: string;
+  reason?: string;
+}
+
 /* ---------- Katalog 21: overvågning og notifikationer ---------- */
 
 /** Ændringstyper i overvågningsfeedet, i den rækkefølge typefilteret og indstillingerne viser dem. */
@@ -1265,6 +1299,10 @@ export interface Dataset {
   observations: Record<string, ObservationsVM>;
   /** Katalog 17: kreditvurdering fra Creditsafe pr. Lasso-ID. */
   creditRatings: Record<string, CreditRatingVM>;
+  /** Værdiansættelser (Jakob 02.10), slået op pr. Lasso-ID. */
+  valuations: Record<string, ValuationVM>;
+  /** Erhvervsresuméer (virksomhed og person, Jakob 02.10), slået op pr. Lasso-ID. */
+  resumes: Record<string, ResumeVM>;
   auditorIndependence: Record<string, AuditorIndependenceVM>;
   /** Katalog 20: produktionsenheder, ejendomme/BBR og CHR, slået op pr. Lasso-ID. */
   productionUnits: Record<string, ProductionUnitsVM>;
@@ -1316,6 +1354,8 @@ export function emptyDataset(source: DataSourceKind): Dataset {
     maps: {},
     observations: {},
     creditRatings: {},
+    valuations: {},
+    resumes: {},
     auditorIndependence: {},
     productionUnits: {},
     properties: {},

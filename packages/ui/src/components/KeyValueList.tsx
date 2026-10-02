@@ -21,7 +21,7 @@ import {
   type FinancialStatementsVM,
   type FinancialsVM,
   type Metric,
-  type OwnershipVM,
+  type OwnershipVM, type ValuationVM,
 } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
@@ -115,8 +115,9 @@ function companyRows(
   lastYear: FinancialsVM["years"][number] | undefined,
   hide: { identity: boolean; contact: boolean; auditor: boolean },
   rows?: readonly CompanyFactKey[],
+  valuation?: ValuationVM,
 ): Row[] {
-  return companyFacts(company, ownership, lastYear, { hideIdentity: hide.identity, hideContact: hide.contact, hideAuditor: hide.auditor, rows });
+  return companyFacts(company, ownership, lastYear, { hideIdentity: hide.identity, hideContact: hide.contact, hideAuditor: hide.auditor, rows, valuation });
 }
 
 const FINANCIALS_ROW_METRICS: Metric[] = ["resultat", "egenkapital", "ansatte", "ebitda", "soliditetsgrad", "overskudsgrad", "likviditetsgrad", "balancesum", "gaeld"];
@@ -318,6 +319,7 @@ function CompanyCard({ company, contact, rows = CARD_ROWS, title, onLink }: { co
 export function KeyValueList({
   company,
   ownership,
+  valuation,
   financials,
   variant,
   title,
@@ -345,6 +347,8 @@ export function KeyValueList({
   company?: CompanyVM;
   ownership?: OwnershipVM;
   financials?: FinancialsVM;
+  /** Værdiansættelsen til rækken Valuation (Jakob 02.10). */
+  valuation?: ValuationVM;
   variant: "company" | "financials";
   title?: string;
   error?: string;
@@ -474,7 +478,7 @@ export function KeyValueList({
 
   if (look === "card") return <CompanyCard company={company!} contact={contact} rows={rowKeys} title={title} onLink={onLink} />;
   const ansatteFlag = financials?.quality?.ansatte;
-  const rows = companyRows(company!, ownership, financials?.years.at(-1), { identity: hideIdentity, contact: hideContact, auditor: hideAuditor }, rowKeys).map((r): Row =>
+  const rows = companyRows(company!, ownership, financials?.years.at(-1), { identity: hideIdentity, contact: hideContact, auditor: hideAuditor }, rowKeys, valuation).map((r): Row =>
     r.label === "Ansatte" && ansatteFlag ? { ...r, flag: ansatteFlag } : r,
   );
   if (rows.length === 0) {

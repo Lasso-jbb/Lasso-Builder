@@ -399,6 +399,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           company={empty.companies[c.company]}
           ownership={empty.ownership[c.company]}
           financials={empty.financials[c.company]}
+          valuation={empty.valuations?.[c.company]}
           variant={c.variant}
           title={c.title}
           error={c.variant === "financials" ? err(`financials:${c.company}`) : err(`company:${c.company}`)}
@@ -573,8 +574,16 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           onPdf={frame.analysisPdf ? () => frame.analysisPdf!(c.company) : undefined}
         />
       );
-    case "LassoSummary":
-      return <LassoSummary key={key} text={c.text} title={c.title} source={c.source} updated={c.updated} />;
+    case "LassoSummary": {
+      // Lassos erhvervsresumé (resume = Lasso-ID, Jakob 02.10) eller modellens egen tekst.
+      if (c.resume) {
+        const r = empty.resumes?.[c.resume];
+        if (!r) return err(`resume:${c.resume}`) ? null : <LassoSummary key={key} text="" title={c.title ?? "Erhvervsresumé"} loading />;
+        if (r.state !== "ok" || !r.content) return null;
+        return <LassoSummary key={key} text={r.content} title={c.title ?? "Erhvervsresumé"} onOpen={props.host.drillDown ? act : undefined} />;
+      }
+      return c.text ? <LassoSummary key={key} text={c.text} title={c.title} source={c.source} updated={c.updated} onOpen={props.host.drillDown ? act : undefined} /> : null;
+    }
     case "LassoTimeline": {
       // Virksomhed eller person (katalog 16: personens historik med selskabsnavne, der kan åbnes).
       // filter 'risiko' (personens fokus risiko): kun forløbet i selskaberne med konkurs/tvangsopløsning.

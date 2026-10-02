@@ -20,6 +20,8 @@ import {
   type ContactVM,
   type CreditAssessment,
   type CreditRatingVM,
+  type ResumeVM,
+  type ValuationVM,
   type FinancialsVM,
   type FinancialStatementsVM,
   type NewsVM,
@@ -1047,6 +1049,35 @@ export class DemoProvider implements DataProvider {
   async observations(lassoId: string): Promise<ObservationsVM> {
     const c = get(lassoId);
     return observationsFor(c, financialsFor(c));
+  }
+
+  /** Værdiansættelse (eksempeldata): ca. 0,6 × omsætningen for hovedvirksomheden og hver anden; resten uden. */
+  async valuation(lassoId: string): Promise<ValuationVM> {
+    const c = get(lassoId);
+    const seed = Number(c.cvr!.slice(-2));
+    if (seed % 2 === 0 && c.cvr !== "99000001") return { lassoId, state: "unavailable", reason: "Lasso har ingen værdiansættelse af virksomheden." };
+    const value = Math.round((c.base * 0.6) / 100_000) * 100_000;
+    return { lassoId, state: "ok", value, low: Math.round(value * 0.8), high: Math.round(value * 1.2), currency: "DKK", date: "2026-09-15" };
+  }
+
+  /** Erhvervsresumé (eksempeldata) med links i Lassos form: {Navn|Lasso-ID}. */
+  async resume(lassoId: string): Promise<ResumeVM> {
+    if (lassoId.startsWith("CVR-3-")) {
+      const p = await this.person(lassoId);
+      const first = p.roles[0];
+      const text = first
+        ? `${p.name} er registreret med sin første erhvervsrolle i ${first.companyId ? `{${first.companyName}|${first.companyId}}` : first.companyName}${first.from ? ` fra ${first.from.slice(0, 4)}` : ""}, hvor ${p.name.split(" ")[0]} er ${first.role.toLowerCase()}. I dag har ${p.name.split(" ")[0]} ${p.roles.filter((r) => r.active).length} aktive roller i CVR (eksempeltekst).`
+        : "";
+      return text ? { lassoId, state: "ok", content: text } : { lassoId, state: "unavailable", reason: "Lasso har intet erhvervsresumé endnu." };
+    }
+    const c = get(lassoId);
+    const people = await this.people(lassoId);
+    const lead = people.find((x) => !x.to);
+    return {
+      lassoId,
+      state: "ok",
+      content: `${c.name} blev stiftet i ${(c.founded ?? "2000").slice(0, 4)} og driver i dag virksomhed inden for ${(c.industryText ?? "sin branche").toLowerCase()} i ${c.address?.city ?? "Danmark"}.${lead ? ` Selskabet ledes af ${lead.lassoId ? `{${lead.name}|${lead.lassoId}}` : lead.name} som ${lead.role.toLowerCase()}.` : ""} (eksempeltekst)`,
+    };
   }
 
   /** Katalog 17: eksempler på alle tilstande (fuld, låst, ikke beregnet); se creditRatingFor. */

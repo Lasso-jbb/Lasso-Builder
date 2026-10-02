@@ -1,0 +1,51 @@
+import type { ResumeVM, ValuationVM } from "@lasso/spec";
+import { at, dateStr, num, str, type Json } from "./adapters.js";
+
+/**
+ * GET /modules/valuations/{lassoId} (og POST /modules/valuations med en liste af ID'er), Jakob 02.10.
+ * Svarformen er ikke set endnu (opstartsproben logger den); adapteren læser defensivt: et objekt, en liste
+ * (første element for ID'et) eller { valuations | items | data: [...] }. Uden en værdi er tilstanden "unavailable".
+ */
+export function adaptValuation(raw: Json, lassoId: string): ValuationVM {
+  const item = pickItem(raw, lassoId);
+  if (!item) return { lassoId, state: "unavailable", reason: "Lasso har ingen værdiansættelse af virksomheden." };
+  const value = num(item, "value", "valuation", "estimatedValue", "estimate", "amount", "equityValue", "enterpriseValue", "valuation.value", "result.value", "mid", "median");
+  const low = num(item, "low", "min", "lower", "lowerBound", "range.from", "range.low", "interval.from", "valueLow", "valuation.low");
+  const high = num(item, "high", "max", "upper", "upperBound", "range.to", "range.high", "interval.to", "valueHigh", "valuation.high");
+  if (value === undefined && (low === undefined || high === undefined)) {
+    return { lassoId, state: "unavailable", reason: "Lasso har ingen værdiansættelse af virksomheden." };
+  }
+  return {
+    lassoId,
+    state: "ok",
+    ...(value !== undefined ? { value } : {}),
+    ...(low !== undefined ? { low } : {}),
+    ...(high !== undefined ? { high } : {}),
+    currency: str(item, "currency", "unit", "valuation.currency") ?? "DKK",
+    ...(dateOf(item) ? { date: dateOf(item) } : {}),
+    ...(str(item, "method", "model", "type") ? { method: str(item, "method", "model", "type") } : {}),
+  };
+}
+
+function dateOf(item: Json): string | undefined {
+  return dateStr(item, "date", "valuationDate", "calculated", "calculatedAt", "created", "updated", "reportDate", "period.to");
+}
+
+function pickItem(raw: Json, lassoId: string): Json | undefined {
+  if (raw === null || raw === undefined || raw === "") return undefined;
+  const list = Array.isArray(raw) ? raw : (["valuations", "items", "data", "results"].map((k) => at(raw, k)).find(Array.isArray) as Json[] | undefined);
+  if (list) {
+    const same = list.find((x) => str(x, "lassoId", "id")?.toUpperCase() === lassoId.toUpperCase());
+    return same ?? (list.length === 1 ? list[0] : undefined);
+  }
+  return typeof raw === "object" ? raw : undefined;
+}
+
+/** GET /modules/resume/{lassoId}: { content, lassoId, firstName?, lastName? }. Tom tekst = intet resumé. */
+export function adaptResume(raw: Json, lassoId: string): ResumeVM {
+  const content = str(raw, "content", "text", "resume")?.trim();
+  if (!content) return { lassoId, state: "unavailable", reason: "Lasso har intet erhvervsresumé endnu." };
+  const firstName = str(raw, "firstName");
+  const lastName = str(raw, "lastName");
+  return { lassoId, state: "ok", content, ...(firstName ? { firstName } : {}), ...(lastName ? { lastName } : {}) };
+}

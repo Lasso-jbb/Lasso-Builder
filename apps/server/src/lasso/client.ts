@@ -281,8 +281,17 @@ export class LassoClient {
   websites(lassoId: string) {
     return this.get(`data/websites/${enc(lassoId)}`, {}, { timeoutMs: this.scrapeTimeoutMs });
   }
+  /** Værdiansættelse af én virksomhed (Jakob 02.10). */
   valuations(lassoId: string) {
     return this.get(`modules/valuations/${enc(lassoId)}`);
+  }
+  /** Erhvervsresumé om en virksomhed eller person: { content, lassoId, firstName?, lastName? } (Jakob 02.10). */
+  resume(lassoId: string) {
+    return this.get(`modules/resume/${enc(lassoId)}`);
+  }
+  /** Værdiansættelser af flere virksomheder i ét kald: body er en liste af Lasso-ID'er. */
+  valuationsMany(lassoIds: readonly string[]) {
+    return this.post("modules/valuations", lassoIds);
   }
   /**
    * Risikoobservationer (Firmaindsigt). Body og svarform bekræftet mod Lassos officielle

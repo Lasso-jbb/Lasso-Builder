@@ -1,5 +1,5 @@
-import { formatDate, formatEmail, formatNumber, formatPhone, formatWeb } from "./format.js";
-import type { Address, CompanyVM, FinancialYear, OwnershipVM } from "./models.js";
+import { formatAmount, formatDate, formatEmail, formatNumber, formatPhone, formatWeb } from "./format.js";
+import type { Address, CompanyVM, FinancialYear, OwnershipVM, ValuationVM } from "./models.js";
 import type { ViewComponent } from "./spec.js";
 
 /**
@@ -45,7 +45,7 @@ export const COMPANY_FACT_KEYS = [
   "formaal",
   "tegningsregel",
   "brancher",
-  // Jakob 01.10: værdiansættelse. Lassos API har ingen kilde endnu (/modules/valuations svarer tomt), så rækken siger "Mangler".
+  // Jakob 02.10: værdiansættelse fra GET /modules/valuations/{lassoId}; rækken udelades, når der ingen værdi er.
   "valuation",
 ] as const;
 export type CompanyFactKey = (typeof COMPANY_FACT_KEYS)[number];
@@ -79,6 +79,22 @@ export interface CompanyFactOptions {
   hideAuditor?: boolean;
   /** Kun disse rækker, i denne rækkefølge (efter reglerne ovenfor: hovedet ejer stadig identiteten). */
   rows?: readonly CompanyFactKey[];
+  /** Værdiansættelsen (GET /modules/valuations); uden den, eller uden værdi, udelades rækken Valuation. */
+  valuation?: ValuationVM;
+}
+
+/** "12,4 mio. kr." eller spændet "10–15 mio. kr.", med "(beregnet 01.09.2026)" når datoen er kendt. */
+export function valuationText(v: ValuationVM | undefined): string | undefined {
+  if (!v || v.state !== "ok") return undefined;
+  const unit = v.currency && v.currency !== "DKK" ? v.currency : "kr.";
+  const main =
+    typeof v.value === "number"
+      ? formatAmount(v.value, unit)
+      : typeof v.low === "number" && typeof v.high === "number"
+        ? `${formatAmount(v.low, unit)} – ${formatAmount(v.high, unit)}`
+        : undefined;
+  if (!main) return undefined;
+  return v.date ? `${main} (${formatDate(v.date)})` : main;
 }
 
 /** "2025-01-01" -> "01.01" (dag.måned, uden år, katalog 09: "01.01–31.12"). */
@@ -115,7 +131,7 @@ function employeesText(company: CompanyVM, lastYear: FinancialYear | undefined):
 export const COMPANY_FACT_ORDER: readonly CompanyFactKey[] = [
   "branche", "formaal", "kommune", "reklamebeskyttet", "telefon", "email", "web", "cvr", "binavne", "status", "stiftet", "form",
   "vedtaegtsaendring", "regnskabsaar", "senesteregnskab", "selskabskapital", "boersnoteret", "revisor", "underskriverrevisor",
-  "tegningsregel", "ansatte",
+  "tegningsregel", "ansatte", "valuation",
 ];
 
 const IDENTITY: readonly CompanyFactKey[] = ["cvr", "stiftet", "form", "branche", "adresse", "firmanavn", "status"];
@@ -167,7 +183,7 @@ export function companyFacts(company: CompanyVM, ownership: OwnershipVM | undefi
     firmanavn: { key: "firmanavn", label: "Firmanavn", value: company.name },
     // Portalens liste (Jakob 30.09): alle brancher, én pr. linje.
     brancher: { key: "brancher", label: "Branche", value: industries.length ? industries.join("\n") : undefined },
-    valuation: { key: "valuation", label: "Valuation", value: "Mangler" },
+    valuation: { key: "valuation", label: "Valuation", value: valuationText(options.valuation) },
   };
   const hidden = new Set<CompanyFactKey>([...(options.hideIdentity ? IDENTITY : []), ...(options.hideContact ? CONTACT : []), ...(options.hideAuditor ? AUDITOR : [])]);
   let order = [...(options.rows ?? COMPANY_FACT_ORDER)];

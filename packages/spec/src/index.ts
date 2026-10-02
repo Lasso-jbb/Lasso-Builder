@@ -24,3 +24,4 @@ export * from "./status.js";
 export * from "./grid.js";
 export * from "./register.js";
 export * from "./composeCompare.js";
+export * from "./entityLinks.js";

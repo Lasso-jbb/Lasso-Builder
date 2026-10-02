@@ -1,4 +1,5 @@
-import { moreText,
+import {
+  stripEntityLinks, moreText,
   companyRiskSummary,
   personRiskSummary,
   activityHeatmapKey,
@@ -606,7 +607,7 @@ function companyCard(spec: ViewSpec, ds: Dataset, lassoId: string, answer: strin
   for (const c of spec.components) {
     if (c.type !== "LassoKeyValueList" || c.company !== lassoId) continue;
     if (c.variant === "company" && c.rows?.length && co) {
-      const rows = companyFacts(co, ds.ownership[lassoId], f?.years.at(-1), { ...companyFactOptions(spec.components, lassoId), rows: c.rows });
+      const rows = companyFacts(co, ds.ownership[lassoId], f?.years.at(-1), { ...companyFactOptions(spec.components, lassoId), rows: c.rows, valuation: ds.valuations?.[lassoId] });
       card.section(c.title ?? "Virksomhedsoplysninger");
       if (rows.length === 0) card.text(c.rows.includes("revisor") ? "Ingen registreret revisor" : "Ikke oplyst");
       for (const r of rows) card.row(r.label, r.value ?? "—");
@@ -885,12 +886,15 @@ function personCard(spec: ViewSpec, ds: Dataset, lassoId: string, answer: string
   return card.empty ? null : card.toString();
 }
 
-function summaryCard(spec: ViewSpec): string | null {
+function summaryCard(spec: ViewSpec, ds?: Dataset): string | null {
   const s = spec.components.find((c) => c.type === "LassoSummary");
   if (!s || s.type !== "LassoSummary") return null;
+  // Lassos erhvervsresumé (resume) eller modellens tekst; links ({Navn|ID}) står som navnet alene.
+  const text = s.resume ? ds?.resumes?.[s.resume]?.content : s.text;
+  if (!text) return null;
   const card = new Card();
   card.section(s.title ?? "Resumé");
-  card.text(s.text);
+  card.text(stripEntityLinks(text));
   // G3 (Jakob 29.09): ingen kildevisning, heller ikke i tekstkortet.
   return card.toString();
 }
@@ -1113,7 +1117,7 @@ export function textCard(spec: ViewSpec, ds: Dataset, opts: { ask?: Ask } = {}):
     changeFeedCard(spec, ds),
     heatmapCard(spec, ds),
     savedPagesCard(spec, ds),
-    summaryCard(spec),
+    summaryCard(spec, ds),
   ].filter((c): c is string => Boolean(c));
   return cards.length ? cards.join("\n") : null;
 }

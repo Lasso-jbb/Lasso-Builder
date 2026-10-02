@@ -653,6 +653,10 @@ export async function probeEndpointShapes(client: LassoClient, lassoId: string, 
     ["relations/graph entity", () => client.post("modules/relations/graph", { ids: [lassoId], relationTypes: ["ownership"], enrichments: ["companyinfo", "personinfo"], ingoingDepth: 1, outgoingDepth: 1 }), ["entities"], 900],
     ["observations (CompanyInsight)", () => client.post(`modules/observations/${encodeURIComponent(lassoId)}`, { observationTags: ["CompanyInsight"] }), ["observations"], 700],
     ["modules/news", () => client.post("modules/news?limit=2&orderBy=publishtime", [lassoId]), [], 700],
+    // Jakob 02.10: værdiansættelse (GET og POST) og erhvervsresumé; svarformen logges, så adapterne kan rettes til.
+    ["modules/valuations (GET)", () => client.valuations(lassoId), [], 700],
+    ["modules/valuations (POST)", () => client.valuationsMany([lassoId]), [], 700],
+    ["modules/resume", () => client.resume(lassoId), [], 400],
     ["productionUnit (CVR-2)", async () => {
       const units = at((await client.company(lassoId)) as Parameters<typeof at>[0], "productionUnits");
       const first = Array.isArray(units) ? units[0] : undefined;

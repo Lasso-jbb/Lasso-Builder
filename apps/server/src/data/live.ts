@@ -6,6 +6,8 @@ import {
   type IndustryBenchmarkVM,
   type MapVM,
   type CreditRatingVM,
+  type ResumeVM,
+  type ValuationVM,
   type ScoreHistoryVM,
   type AuditorIndependenceVM,
   type ChangeFeedVM,
@@ -70,6 +72,7 @@ import { adaptPerson, adaptPersonNetwork, adaptPersonSearch, graphFromPersonRole
 import { adaptIndustryBenchmark, adaptMapPoints } from "../lasso/chartAdapters.js";
 import { adaptChrLivestock, adaptLiveNumber, adaptReportAnalysisSections, buildProductionUnits } from "../lasso/unitAdapters.js";
 import { loadCreditRating } from "../lasso/creditAdapters.js";
+import { adaptResume, adaptValuation } from "../lasso/valuationAdapters.js";
 import { historyFromCredit, pointsFromCredit, scoreFromCredit } from "../lasso/scoreAdapters.js";
 import type { ScoreStore } from "../scores/store.js";
 import { criteriaToFilters, DEFAULT_ACTIVE_STATUS_FILTER, filtersToCriteria, SERVER_SORT, type LassoFilter } from "../lasso/searchFilters.js";
@@ -503,6 +506,29 @@ export class LiveProvider implements DataProvider {
     });
     const byId = new Map(named.map((p) => [p.lassoId, p] as const));
     return { ...vm, related: vm.related.map((p) => byId.get(p.lassoId) ?? p) };
+  }
+
+  /**
+   * Værdiansættelse (Jakob 02.10): GET /modules/valuations/{lassoId}. Ingen adgang (401/403) og intet svar
+   * (404, tomt) giver "unavailable", så rækken Valuation blot udelades; andre fejl kastes som de andre opslag.
+   */
+  async valuation(lassoId: string): Promise<ValuationVM> {
+    try {
+      return adaptValuation(await this.client.valuations(lassoId), lassoId);
+    } catch (err) {
+      if (err instanceof LassoApiError && [401, 403, 404].includes(err.status)) return { lassoId, state: "unavailable", reason: err.status === 404 ? "Lasso har ingen værdiansættelse af virksomheden." : "Ingen adgang til værdiansættelser." };
+      throw err;
+    }
+  }
+
+  /** Erhvervsresumé (Jakob 02.10): GET /modules/resume/{lassoId}; 401/403/404 og tomt svar = intet resumé. */
+  async resume(lassoId: string): Promise<ResumeVM> {
+    try {
+      return adaptResume(await this.client.resume(lassoId), lassoId);
+    } catch (err) {
+      if (err instanceof LassoApiError && [401, 403, 404].includes(err.status)) return { lassoId, state: "unavailable", reason: err.status === 404 ? "Lasso har intet erhvervsresumé endnu." : "Ingen adgang til erhvervsresuméer." };
+      throw err;
+    }
   }
 
   /**

@@ -1,4 +1,6 @@
 import type {
+  ResumeVM,
+  ValuationVM,
   ActivityHeatmapVM,
   BeneficialOwnershipVM,
   ChangeFeedVM,
@@ -69,6 +71,10 @@ export interface DataProvider {
   observations(lassoId: string): Promise<ObservationsVM>;
   /** Katalog 17: kreditvurdering fra Creditsafe. Låst, ikke beregnet og fejl er tilstande i svaret, ikke undtagelser. */
   creditRating(lassoId: string): Promise<CreditRatingVM>;
+  /** Værdiansættelse (GET /modules/valuations/{lassoId}); "unavailable" uden værdi eller adgang. */
+  valuation(lassoId: string): Promise<ValuationVM>;
+  /** Erhvervsresumé om en virksomhed eller person (GET /modules/resume/{lassoId}). */
+  resume(lassoId: string): Promise<ResumeVM>;
   auditorIndependence(lassoId: string): Promise<AuditorIndependenceVM>;
   /** Katalog 20: produktionsenheder (P-numre). */
   productionUnits(lassoId: string): Promise<ProductionUnitsVM>;
