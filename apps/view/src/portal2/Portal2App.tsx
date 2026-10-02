@@ -96,8 +96,6 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const [modSelect, setModSelect] = useState(false);
   const [hiddenTop, setHiddenTop] = useState<string[]>([]);
   const [soloTop, setSoloTop] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
   // Søgefeltet
   const [q, setQ] = useState("");
   const [sType, setSType] = useState<SearchType>("f");
@@ -127,6 +125,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const mlist = useRef<HTMLDivElement>(null);
   const top = useRef<HTMLElement>(null);
   const toptabs = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   /** Fanernes bredde holdes efter et luk, til musen forlader fanebjælken (så næste kryds står samme sted). */
   const frozenTabW = useRef<number | null>(null);
 
@@ -699,7 +698,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
 
   useLayoutEffect(() => {
     measure();
-  }, [measure, open, active, item?.tab, lassoAvailable, collapsed]);
+  }, [measure, open, active, item?.tab, lassoAvailable]);
 
   useEffect(() => {
     const onResize = () => {
@@ -711,17 +710,16 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     return () => window.removeEventListener("resize", onResize);
   }, [measure]);
 
+  /**
+   * Rulning: kun skyggen under modulrækken på desktop (klassen "scrolled"), sat direkte på roden uden React-
+   * tilstand, så rulning og iPhones bounce ikke gentegner portalen (det fik siden til at hakke).
+   */
   const onScroll = () => {
     const sc = scroller.current;
-    if (!sc) return;
-    if (isPhone()) {
-      // Mobil (Jakob 02.10): topbjælken står altid i den samlede form (lille logo, fanerne, ikonerne), så den klapper ikke.
-      setCollapsed(false);
-      setScrolled(false);
-    } else {
-      setCollapsed(false);
-      setScrolled(sc.scrollTop > 4);
-    }
+    const root = rootRef.current;
+    if (!sc || !root) return;
+    const on = !isPhone() && sc.scrollTop > 4;
+    if (root.classList.contains("scrolled") !== on) root.classList.toggle("scrolled", on);
   };
 
   const showMenu = (kind: MenuKind, anchor: HTMLElement, align: "left" | "right" = "left") => {
@@ -879,7 +877,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const sugg = suggestions(item);
 
   return (
-    <div className={`p3${collapsed ? " collapsed" : ""}${scrolled ? " scrolled" : ""}`} data-theme={theme}>
+    <div ref={rootRef} className="p3" data-theme={theme}>
       <header className="top" ref={top}>
         <button type="button" className="logo" onClick={() => activate(null)} aria-label="Lasso, forside">
           <LassoWordmark className="wordmark" />
