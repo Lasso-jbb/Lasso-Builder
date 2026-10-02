@@ -428,3 +428,10 @@ body { font-family: var(--lasso-font, "Poppins", system-ui, sans-serif); -webkit
 .dg-ptable td { padding: 7px 12px 7px 0; border-bottom: 1px solid var(--dg-line); vertical-align: middle; }
 .dg-ptable .dg-swatch { display: inline-block; width: 16px; height: 16px; border-radius: 4px; vertical-align: middle; margin-right: 6px; }
 .dg-ptable__same { color: var(--lasso-text-3); }
+.dg-specgrid { display: grid; gap: 28px; }
+.dg-spec__label { font-size: 13px; font-weight: 600; color: var(--dg-ink); margin-bottom: 10px; display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+.dg-spec__note { font-weight: 400; color: var(--lasso-text-3); }
+.dg-specrow { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+.dg-specrow > .searchwrap, .dg-specrow > .sdrop { flex: 1 1 300px; min-width: 260px; }
+.dg-specrow > .dd { width: 260px; }
+.dg-specrow--stack { flex-direction: column; align-items: stretch; }

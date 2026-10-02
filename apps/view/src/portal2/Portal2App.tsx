@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { LassoMark, LassoView, LassoWordmark, type ActionResult, type ViewAction } from "@lasso/ui";
 import { FOCUS_LABELS, isPersonFocus, PAGE_TABS, PERSON_FOCUS_LABELS, PERSON_FOCUSES, type Focus, type PersonFocus } from "@lasso/spec";
 import type { Portal2Boot } from "../boot.js";
@@ -8,13 +8,12 @@ import { PDF_SAVED, saveBlob } from "../pdfDownload.js";
 import { createPortalApi, errorText, type LookupResult, type ViewResult } from "../portal/api.js";
 import { entityOf, withSaved } from "../portal/data.js";
 import { isFocus } from "../portal/routes.js";
-import { P2Icon, type P2IconName } from "./icons.js";
+import type { P2IconName } from "./icons.js";
 import {
   addRecent,
   askPlaceholder,
   closeItem,
   headLines,
-  highlight,
   LASSO_TAB,
   loadRecent,
   messageFor,
@@ -22,8 +21,6 @@ import {
   saveRecent,
   searchCounts,
   searchRows,
-  SHORTCUTS,
-  STATUS_FILTERS,
   suggestions,
   withoutHead,
   type Answer,
@@ -35,6 +32,7 @@ import {
   type Shown,
   type StatusFilter,
 } from "./model.js";
+import { AskField, BottomBar, DropButton, IconButton, LassoTab, MenuItem, ModuleTab, OpenTab, SearchEmpty, SearchField, SearchResultRow, SearchTabs, StatusFilterMenu, Suggestions, TopTab } from "./parts.js";
 import "./portal2.css";
 
 /**
@@ -75,15 +73,6 @@ function storage(): Storage | undefined {
 const isPhone = () => window.matchMedia?.(PHONE).matches ?? false;
 const iconOf = (k: ItemKind): P2IconName => (k === "company" ? "build" : k === "person" ? "user" : "search");
 const tabsOf = (k: ItemKind) => (k === "company" ? COMPANY_TABS : k === "person" ? PERSON_TABS : []);
-
-function Inert({ icon, label }: { icon: P2IconName; label: string }) {
-  return (
-    <button type="button" className="ibtn" aria-disabled="true" aria-label={`${label} (kommer senere)`}>
-      <P2Icon name={icon} />
-      <span className="tip">{label}</span>
-    </button>
-  );
-}
 
 export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const [theme, setTheme] = useState<Theme>(initialTheme);
@@ -756,61 +745,33 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     if (!counts.f && !counts.p && !looking) {
       return (
         <>
-          <div className="sr-empty">Ingen firmaer eller personer matcher "{text}". Prøv et CVR-nummer eller en del af navnet.</div>
-          <div className="sr-list">
-            <div className="sr-row sel" onClick={askFromSearch}>
-              <LassoMark className="mark" />
-              <div className="t">
-                <div className="n">Spørg Lasso om "{text}"</div>
-              </div>
-            </div>
-          </div>
+          <SearchEmpty query={text} onAsk={askFromSearch} />
         </>
       );
     }
-    const names: Record<SearchType, string> = { f: "Firmaer", p: "Personer" };
     const nouns: Record<SearchType, string> = { f: "firmaer", p: "personer" };
-    const tabsEl = (["f", "p"] as const).map((t) => (
-      <button
-        key={t}
-        type="button"
-        className={`sr-tab${t === sType ? " on" : ""}${counts[t] ? "" : " zero"}`}
-        onClick={() => {
+    const tabsEl = (
+      <SearchTabs
+        type={sType}
+        counts={counts}
+        onType={(t) => {
           setSType(t);
           setSel(0);
         }}
-      >
-        {names[t]} <small>{counts[t]}</small>
-      </button>
-    ));
+      />
+    );
     const stat =
       sType === "f" ? (
-        <div className="stat">
-          <span>Status:</span>
-          <button type="button" style={{ display: "flex", alignItems: "center", gap: 4 }} onClick={() => setStatusOpen((o) => !o)}>
-            <b>{sStatus}</b>
-            <P2Icon name="down" />
-          </button>
-          {statusOpen ? (
-            <div className="statdd">
-              {STATUS_FILTERS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  className={s === sStatus ? "cur" : ""}
-                  onClick={() => {
-                    setSStatus(s);
-                    setStatusOpen(false);
-                    setSel(0);
-                  }}
-                >
-                  {s}
-                  {s === sStatus ? <P2Icon name="check" /> : null}
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
+        <StatusFilterMenu
+          status={sStatus}
+          open={statusOpen}
+          onToggle={() => setStatusOpen((o) => !o)}
+          onPick={(st) => {
+            setSStatus(st);
+            setStatusOpen(false);
+            setSel(0);
+          }}
+        />
       ) : null;
     const seeall =
       sType === "f" && counts.f ? (
@@ -840,41 +801,9 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     );
   };
 
-  const renderRow = (r: SearchRow, i: number, text: string) => {
-    const h = highlight(r.name, text);
-    return (
-      <div key={r.id} className={`sr-row${i === sel ? " sel" : ""}`} onMouseMove={() => i !== sel && setSel(i)} onClick={() => choose(r)}>
-        <P2Icon name={r.kind === "company" ? "build" : "user"} />
-        <div className="t">
-          <div className="n">
-            {h.pre}
-            {h.hit ? <b>{h.hit}</b> : null}
-            {h.post}
-          </div>
-          <div className="m">{r.meta}</div>
-        </div>
-        {r.status && sStatus !== "Aktive" ? <span className="st">{r.status}</span> : null}
-        {r.kind === "company" ? (
-          <div className="short">
-            {SHORTCUTS.map((s) => (
-              <button
-                key={s.tab}
-                type="button"
-                aria-label={`Åbn i ${s.label}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  choose(r, s.tab);
-                }}
-              >
-                <P2Icon name={s.icon} />
-                <span className="tt">{s.label}</span>
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </div>
-    );
-  };
+  const renderRow = (r: SearchRow, i: number, text: string) => (
+    <SearchResultRow key={r.id} row={r} query={text} selected={i === sel} showStatus={sStatus !== "Aktive"} onHover={() => i !== sel && setSel(i)} onChoose={(tab) => choose(r, tab)} />
+  );
 
   let content: ReactNode;
   if (!item) {
@@ -939,30 +868,20 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
           <LassoWordmark className="wordmark" />
         </button>
         <div className="searchwrap" ref={searchwrap}>
-          <div className={`search${dropOpen ? " focus" : ""}`}>
-            <P2Icon name="search" className="s" />
-            <input
-              ref={dq}
-              type="text"
-              autoComplete="off"
-              value={q}
-              onChange={(e) => {
-                setQ(e.target.value);
-                setSel(0);
-                setDropOpen(true);
-              }}
-              onFocus={() => setDropOpen(true)}
-              onKeyDown={onSearchKey}
-              placeholder="Søg firma, person eller CVR"
-              aria-label="Søg firma, person eller CVR"
-            />
-            {looking ? <span className="spin" aria-label="Søger" /> : null}
-            {q ? (
-              <button type="button" className="clear" aria-label="Ryd" onMouseDown={(e) => e.preventDefault()} onClick={() => (resetSearch(), dq.current?.focus())}>
-                <P2Icon name="x" />
-              </button>
-            ) : null}
-          </div>
+          <SearchField
+            value={q}
+            focus={dropOpen}
+            busy={looking}
+            inputRef={dq}
+            onChange={(v) => {
+              setQ(v);
+              setSel(0);
+              setDropOpen(true);
+            }}
+            onFocus={() => setDropOpen(true)}
+            onKeyDown={onSearchKey}
+            onClear={() => (resetSearch(), dq.current?.focus())}
+          />
           {dropOpen && !mSearch ? (
             <div className="sdrop" onMouseDown={(e) => e.preventDefault()}>
               {resultsView(false)}
@@ -972,57 +891,37 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
         {open.length ? (
           <div className="toptabs" ref={toptabs} role="tablist" aria-label="Åbne firmaer og personer">
             {open.map((o) => (
-              <button
+              <TopTab
                 key={o.key}
-                type="button"
-                data-tt={o.key}
-                data-menu={soloTop && o.key === active ? "" : undefined}
-                className={`tt${o.key === active ? " on" : ""}${soloTop && o.key === active ? " solo" : ""}`}
+                dataKey={o.key}
+                name={o.name}
+                active={o.key === active}
+                solo={soloTop && o.key === active}
                 onClick={(e) => (soloTop && o.key === active ? showMenu("all", e.currentTarget) : activate(o.key))}
-              >
-                <span>{o.name}</span>
-                {soloTop && o.key === active ? <P2Icon name="down" /> : null}
-              </button>
+              />
             ))}
-            <button type="button" className="tt" data-ttmore data-menu onClick={(e) => showMenu("tophidden", e.currentTarget)}>
-              <span>Flere</span>
-              <P2Icon name="down" />
-            </button>
+            <DropButton label="Flere" className="tt" data={{ "data-ttmore": "" }} onClick={(e) => showMenu("tophidden", e.currentTarget)} />
           </div>
         ) : null}
         <div className="right">
-          <button type="button" className="ibtn" aria-label="Skift mellem lyst og mørkt tema" aria-pressed={theme === "dark"} onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}>
-            <P2Icon name="theme" />
-          </button>
-          <button type="button" className="ibtn" aria-disabled="true" aria-label="Notifikationer (kommer senere)">
-            <P2Icon name="bell" />
-          </button>
-          <button type="button" className="ibtn" aria-label={`Profil: ${boot.user?.name ?? "Demobruger"}`} title={boot.user?.name ?? "Demobruger"}>
-            <P2Icon name="user" />
-          </button>
-          <button type="button" className="ibtn topmore" data-menu aria-label="Mere" onClick={(e) => showMenu("topmore", e.currentTarget, "right")}>
-            <P2Icon name="dots" />
-          </button>
+          <IconButton icon="theme" label="Skift mellem lyst og mørkt tema" pressed={theme === "dark"} onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))} />
+          <IconButton icon="bell" label="Notifikationer" disabled />
+          <IconButton icon="user" label={`Profil: ${boot.user?.name ?? "Demobruger"}`} />
+          <IconButton icon="dots" label="Mere" className="topmore" menu onClick={(e) => showMenu("topmore", e.currentTarget, "right")} />
         </div>
       </header>
 
       <nav className="rail" aria-label="Menu">
-        <button type="button" className={`ibtn${!item ? " on" : ""}`} aria-label="Værktøjer" onClick={() => activate(null)}>
-          <P2Icon name="grid" />
-          <span className="tip">Værktøjer</span>
-        </button>
-        <button type="button" className="ibtn" aria-label="Lister" onClick={() => void openResult("Gemte sider", () => api.pages())}>
-          <P2Icon name="folder" />
-          <span className="tip">Lister</span>
-        </button>
-        <Inert icon="bolt" label="Handlinger" />
+        <IconButton icon="grid" label="Værktøjer" tip="Værktøjer" on={!item} onClick={() => activate(null)} />
+        <IconButton icon="folder" label="Lister" tip="Lister" onClick={() => void openResult("Gemte sider", () => api.pages())} />
+        <IconButton icon="bolt" label="Handlinger" tip="Handlinger" disabled />
         <hr />
-        <Inert icon="user" label="Profil" />
-        <Inert icon="card" label="Abonnement" />
-        <Inert icon="plug" label="Integrationer" />
-        <Inert icon="build" label="Firma" />
-        <Inert icon="layers" label="Moduler" />
-        <Inert icon="users" label="Brugere" />
+        <IconButton icon="user" label="Profil" tip="Profil" disabled />
+        <IconButton icon="card" label="Abonnement" tip="Abonnement" disabled />
+        <IconButton icon="plug" label="Integrationer" tip="Integrationer" disabled />
+        <IconButton icon="build" label="Firma" tip="Firma" disabled />
+        <IconButton icon="layers" label="Moduler" tip="Moduler" disabled />
+        <IconButton icon="users" label="Brugere" tip="Brugere" disabled />
       </nav>
 
       <div className="main">
@@ -1030,53 +929,20 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
           <div className="col" ref={tabsCol}>
             <div className="otabs" ref={otabs} role="tablist" aria-label="Åbne">
               {open.map((o) => (
-                <div
+                <OpenTab
                   key={o.key}
-                  data-key={o.key}
-                  className={`otab${o.key === active ? " on" : ""}${soloTab && o.key === active ? " solo" : ""}`}
-                  role="tab"
-                  aria-selected={o.key === active}
-                  tabIndex={0}
-                  data-menu={soloTab && o.key === active ? "" : undefined}
-                  onClick={(e) => (soloTab && o.key === active ? showMenu("all", e.currentTarget) : activate(o.key))}
-                  onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && activate(o.key)}
-                  onMouseDown={(e) => {
-                    if (e.button === 1) {
-                      e.preventDefault();
-                      closeTab(o.key);
-                    }
-                  }}
-                >
-                  {pendingKey === o.key ? <LassoMark className="mark is-busy" /> : null}
-                  <span className="nm">{o.name}</span>
-                  <P2Icon name="down" className="i chev" />
-                  <button
-                    type="button"
-                    className="x"
-                    aria-label={`Luk ${o.name}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      closeTab(o.key);
-                    }}
-                  >
-                    <P2Icon name="x" />
-                  </button>
-                  <span className="ttip">
-                    {o.name}
-                    {o.sub ? (
-                      <>
-                        <br />
-                        <span>{o.sub}</span>
-                      </>
-                    ) : null}
-                  </span>
-                </div>
+                  dataKey={o.key}
+                  name={o.name}
+                  sub={o.sub}
+                  active={o.key === active}
+                  solo={soloTab && o.key === active}
+                  busy={pendingKey === o.key}
+                  onSelect={(e) => (soloTab && o.key === active ? showMenu("all", e.currentTarget) : activate(o.key))}
+                  onClose={() => closeTab(o.key)}
+                />
               ))}
             </div>
-            <button type="button" className="openall" data-openall data-menu onClick={(e) => showMenu("hidden", e.currentTarget)}>
-              <span>Flere</span>
-              <P2Icon name="down" />
-            </button>
+            <DropButton label="Flere" className="openall" data={{ "data-openall": "" }} onClick={(e) => showMenu("hidden", e.currentTarget)} />
           </div>
         </div>
 
@@ -1086,60 +952,27 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
               <>
                 <div className="mods">
                   <div className="col" ref={modCol}>
-                    <button
-                      type="button"
-                      role="tab"
-                      className={`tabmark${onLasso ? " on" : ""}${pendingKey === item.key ? " is-busy" : ""}`}
-                      aria-selected={onLasso}
-                      aria-label={pendingKey === item.key ? "Lasso henter svaret" : "Lassos svar"}
-                      title={pendingKey === item.key ? "Lasso henter svaret" : "Lassos svar"}
-                      disabled={!lassoAvailable}
-                      onClick={() => switchTab(LASSO_TAB)}
-                    >
-                      <LassoMark className="mark" />
-                    </button>
+                    <LassoTab on={onLasso} busy={pendingKey === item.key} disabled={!lassoAvailable} onClick={() => switchTab(LASSO_TAB)} />
                     <div className="mlist" ref={mlist} role="tablist" aria-label="Moduler">
                       {tabs.map((t) => (
-                        <button key={t.id} type="button" className="tab" role="tab" data-mod={t.id} aria-selected={item.tab === t.id} onClick={() => switchTab(t.id)}>
-                          {t.label}
-                        </button>
+                        <ModuleTab key={t.id} id={t.id} label={t.label} selected={item.tab === t.id} onClick={() => switchTab(t.id)} />
                       ))}
                       {tabs.length ? (
-                        <button
-                          type="button"
+                        <DropButton
+                          label={hiddenMods.includes(item.tab) ? curLabel : "Flere"}
                           className="tab more"
-                          data-more
-                          data-menu
-                          aria-expanded={menu?.kind === "more"}
-                          aria-selected={hiddenMods.includes(item.tab)}
+                          data={{ "data-more": "" }}
+                          expanded={menu?.kind === "more"}
+                          selected={hiddenMods.includes(item.tab)}
                           onClick={(e) => showMenu("more", e.currentTarget)}
-                        >
-                          <span>{hiddenMods.includes(item.tab) ? curLabel : "Flere"}</span>
-                          <P2Icon name="down" />
-                        </button>
+                        />
                       ) : null}
                     </div>
-                    {tabs.length ? (
-                      <button
-                        type="button"
-                        className="sel-btn"
-                        data-menu
-                        style={{ display: modSelect ? "inline-flex" : "none" }}
-                        aria-expanded={menu?.kind === "sel"}
-                        onClick={(e) => showMenu("sel", e.currentTarget)}
-                      >
-                        <span>{curLabel}</span>
-                        <P2Icon name="down" />
-                      </button>
-                    ) : null}
+                    {tabs.length && modSelect ? <DropButton label={curLabel} className="sel-btn" expanded={menu?.kind === "sel"} onClick={(e) => showMenu("sel", e.currentTarget)} /> : null}
                     {item.kind !== "result" ? (
                       <div className="rgroup">
-                        <button type="button" className="ibtn" aria-disabled="true" aria-label="Følg (kommer senere)">
-                          <P2Icon name="rss" />
-                        </button>
-                        <button type="button" className={`ibtn${saved ? " on" : ""}`} aria-pressed={saved} aria-label={saved ? "Gemt på din liste" : "Gem på din liste"} onClick={() => void toggleSaved()}>
-                          <P2Icon name="book" />
-                        </button>
+                        <IconButton icon="rss" label="Følg" disabled />
+                        <IconButton icon="book" label={saved ? "Gemt på din liste" : "Gem på din liste"} on={saved} pressed={saved} onClick={() => void toggleSaved()} />
                       </div>
                     ) : null}
                   </div>
@@ -1161,66 +994,25 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
         ) : null}
 
         <div className={`ask${askOpen ? " is-open" : ""}`}>
-          <form
-            className="field"
-            onSubmit={(e: FormEvent) => {
-              e.preventDefault();
-              void ask(draft);
-            }}
-          >
-            <LassoMark className={`mark${pending ? " is-busy" : ""}`} />
-            <input ref={askInput} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={askPlaceholder(item)} aria-label="Spørg Lasso" disabled={!boot.chat} />
-            {pending ? (
-              <button type="button" className="send" aria-label="Stop" onClick={stop}>
-                <P2Icon name="stop" />
-              </button>
-            ) : (
-              <button type="submit" className="send" aria-label="Send" disabled={!draft.trim()}>
-                <P2Icon name="enter" />
-              </button>
-            )}
-          </form>
-          <div className="sugg">
-            {sugg.map((s) => (
-              <button key={s} type="button" onClick={() => void ask(s)} disabled={pending || !boot.chat}>
-                {s}
-              </button>
-            ))}
-          </div>
+          <AskField value={draft} placeholder={askPlaceholder(item)} pending={pending} disabled={!boot.chat} inputRef={askInput} onChange={setDraft} onSubmit={() => void ask(draft)} onStop={stop} />
+          <Suggestions items={sugg} disabled={pending || !boot.chat} onPick={(x) => void ask(x)} />
         </div>
 
-        <div className="mbar">
-          <button
-            type="button"
-            className={`lbtn${pending ? " is-busy" : ""}`}
-            aria-label="Spørg Lasso"
-            onClick={() => {
-              setAskOpen((o) => !o);
-              setTimeout(() => askInput.current?.focus(), 0);
-            }}
-          >
-            <LassoMark className="mark" />
-          </button>
-          <div className="capsule">
-            <button
-              type="button"
-              className={`ibtn${mSearch ? " on" : ""}`}
-              aria-label="Søg"
-              onClick={() => {
-                setMSearch(true);
-                setTimeout(() => mq.current?.focus(), 30);
-              }}
-            >
-              <P2Icon name="search" />
-            </button>
-            <button type="button" className={`ibtn${!item ? " on" : ""}`} aria-label="Værktøjer" onClick={() => activate(null)}>
-              <P2Icon name="grid" />
-            </button>
-            <button type="button" className="ibtn" aria-label="Lister" onClick={() => void openResult("Gemte sider", () => api.pages())}>
-              <P2Icon name="folder" />
-            </button>
-          </div>
-        </div>
+        <BottomBar
+          busy={pending}
+          searchOn={mSearch}
+          homeOn={!item}
+          onAsk={() => {
+            setAskOpen((o) => !o);
+            setTimeout(() => askInput.current?.focus(), 0);
+          }}
+          onSearch={() => {
+            setMSearch(true);
+            setTimeout(() => mq.current?.focus(), 30);
+          }}
+          onHome={() => activate(null)}
+          onLists={() => void openResult("Gemte sider", () => api.pages())}
+        />
       </div>
 
       {menu ? (
@@ -1228,85 +1020,50 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
           {menu.kind === "hidden" || menu.kind === "all" || menu.kind === "tophidden" ? (
             <>
               {(menu.kind === "hidden" ? open.filter((o) => hiddenTabs.includes(o.key)) : menu.kind === "tophidden" ? open.filter((o) => hiddenTop.includes(o.key)) : open).map((o) => (
-                <button key={o.key} type="button" className={o.key === active ? "cur" : ""} onClick={() => activate(o.key)}>
-                  <span className="ic">
-                    <P2Icon name={iconOf(o.kind)} />
-                    <span>{o.name}</span>
-                  </span>
-                  {o.key === active ? (
-                    <P2Icon name="check" />
-                  ) : (
-                    <span
-                      className="ddx"
-                      role="button"
-                      aria-label={`Luk ${o.name}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setMenu(null);
-                        closeTab(o.key);
-                      }}
-                    >
-                      <P2Icon name="x" />
-                    </span>
-                  )}
-                </button>
+                <MenuItem
+                  key={o.key}
+                  icon={iconOf(o.kind)}
+                  label={o.name}
+                  current={o.key === active}
+                  onClick={() => activate(o.key)}
+                  onClose={() => {
+                    setMenu(null);
+                    closeTab(o.key);
+                  }}
+                />
               ))}
               {open.length > 1 ? (
                 <>
                   <hr />
-                  <button
-                    type="button"
-                    className="muted"
+                  <MenuItem
+                    label="Luk alle andre faner"
+                    muted
                     onClick={() => {
                       setOpen((l) => l.filter((o) => o.key === active));
                       setMenu(null);
                     }}
-                  >
-                    Luk alle andre faner
-                  </button>
+                  />
                 </>
               ) : null}
             </>
           ) : menu.kind === "topmore" ? (
             <>
-              <button
-                type="button"
+              <MenuItem
+                icon="theme"
+                label={theme === "dark" ? "Lyst tema" : "Mørkt tema"}
                 onClick={() => {
                   setTheme((t) => (t === "dark" ? "light" : "dark"));
                   setMenu(null);
                 }}
-              >
-                <span className="ic">
-                  <P2Icon name="theme" />
-                  <span>{theme === "dark" ? "Lyst tema" : "Mørkt tema"}</span>
-                </span>
-              </button>
-              <button type="button" aria-disabled="true" onClick={() => setMenu(null)}>
-                <span className="ic">
-                  <P2Icon name="bell" />
-                  <span>Notifikationer (kommer senere)</span>
-                </span>
-              </button>
-              <button type="button" onClick={() => setMenu(null)}>
-                <span className="ic">
-                  <P2Icon name="user" />
-                  <span>{boot.user?.name ?? "Demobruger"}</span>
-                </span>
-              </button>
+              />
+              <MenuItem icon="bell" label="Notifikationer (kommer senere)" onClick={() => setMenu(null)} />
+              <MenuItem icon="user" label={boot.user?.name ?? "Demobruger"} onClick={() => setMenu(null)} />
             </>
           ) : item ? (
             <>
-              {menu.kind === "sel" && lassoAvailable ? (
-                <button type="button" className={onLasso ? "cur" : ""} onClick={() => switchTab(LASSO_TAB)}>
-                  Lassos svar
-                  {onLasso ? <P2Icon name="check" /> : null}
-                </button>
-              ) : null}
+              {menu.kind === "sel" && lassoAvailable ? <MenuItem label="Lassos svar" current={onLasso} onClick={() => switchTab(LASSO_TAB)} /> : null}
               {(menu.kind === "more" ? tabs.filter((t) => hiddenMods.includes(t.id)) : tabs).map((t) => (
-                <button key={t.id} type="button" className={t.id === item.tab ? "cur" : ""} onClick={() => switchTab(t.id)}>
-                  {t.label}
-                  {t.id === item.tab ? <P2Icon name="check" /> : null}
-                </button>
+                <MenuItem key={t.id} label={t.label} current={t.id === item.tab} onClick={() => switchTab(t.id)} />
               ))}
             </>
           ) : null}
@@ -1316,27 +1073,19 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       {mSearch ? (
         <div className="msearch">
           <div className="bar">
-            <div className="search focus">
-              <P2Icon name="search" className="s" />
-              <input
-                ref={mq}
-                type="text"
-                autoComplete="off"
-                value={q}
-                onChange={(e) => {
-                  setQ(e.target.value);
-                  setSel(0);
-                }}
-                onKeyDown={onSearchKey}
-                placeholder="Firma, person eller CVR"
-                aria-label="Søg"
-              />
-              {q ? (
-                <button type="button" className="clear" aria-label="Ryd" onClick={() => (resetSearch(), mq.current?.focus())}>
-                  <P2Icon name="x" />
-                </button>
-              ) : null}
-            </div>
+            <SearchField
+              value={q}
+              focus
+              placeholder="Firma, person eller CVR"
+              label="Søg"
+              inputRef={mq}
+              onChange={(v) => {
+                setQ(v);
+                setSel(0);
+              }}
+              onKeyDown={onSearchKey}
+              onClear={() => (resetSearch(), mq.current?.focus())}
+            />
             <button
               type="button"
               className="cancel"

@@ -2,7 +2,7 @@
 
 Rammen om modulerne på `/portal`: topbjælke, skinne, åbne faner, modulrække og spørgefelt. Modulerne i midten
 er beskrevet under Moduler; her står kun rammen. Designet kommer fra prototypen `lasso-portal4.html`, og koden er
-`apps/view/src/portal2/` (`Portal2App.tsx`, `portal2.css`). Designguidens side "Portalens ramme" viser den kørende
+`apps/view/src/portal2/` (`Portal2App.tsx`, elementerne i `parts.tsx`, stilen i `portal2.css`). Designguidens side "Portalens ramme" viser den kørende
 portal, så det, der står her, og det, man ser, er det samme. Den klassiske portal (tavle 06 og 26a, AppShell)
 står på `/portal/klassisk` og videreudvikles ikke.
 

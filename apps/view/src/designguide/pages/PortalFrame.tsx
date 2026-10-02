@@ -3,6 +3,7 @@ import type { Ctx } from "../App.js";
 import { Markdown } from "../Markdown.js";
 import { SOURCE } from "../source.js";
 import { PageHead, Seg, SourceRef } from "../ui.js";
+import { PortalParts } from "./PortalParts.js";
 import portalCss from "../../portal2/portal2.css?raw";
 
 /**
@@ -69,7 +70,7 @@ export function PortalFramePage({ ctx }: { ctx: Ctx }) {
         title="Portalens ramme"
         lead="Rammen om modulerne: topbjælke med søgning, skinne, åbne faner, modulrække og spørgefelt. Rammerne herunder er den kørende portal (/portal), ikke et billede; ret i koden, og guiden følger med."
       >
-        <SourceRef file="apps/view/src/portal2/Portal2App.tsx" /> <SourceRef file="apps/view/src/portal2/portal2.css" /> <SourceRef file={PORTAL_DOC} />
+        <SourceRef file="apps/view/src/portal2/Portal2App.tsx" /> <SourceRef file="apps/view/src/portal2/parts.tsx" /> <SourceRef file="apps/view/src/portal2/portal2.css" /> <SourceRef file={PORTAL_DOC} />
       </PageHead>
 
       <section className="dg-section">
@@ -83,6 +84,14 @@ export function PortalFramePage({ ctx }: { ctx: Ctx }) {
         <p className="dg-note">
           Rammen åbner {ids.length ? "guidens eksempler som faner" : "forsiden"}. Søgning, faner, moduler og spørgefelt virker; på mobil skal der rulles i rammen for at se topbjælken klappe sammen. Spørgefeltet bruger chatten (Claude) og koster derfor et kald.
         </p>
+      </section>
+
+      <section className="dg-section">
+        <h2 className="dg-h2">Elementer og knapper</h2>
+        <p className="dg-lead">
+          Portalens dele i alle tilstande. Det er de samme komponenter, portalen er bygget af (<code>apps/view/src/portal2/parts.tsx</code>); ret dem dér, så følger både portalen og guiden med.
+        </p>
+        <PortalParts theme={ctx.theme} />
       </section>
 
       <section className="dg-section">

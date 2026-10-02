@@ -108,6 +108,9 @@ const PATHS = {
 
 export type P2IconName = keyof typeof PATHS;
 
+/** Alle ikonerne (designguidens oversigt). */
+export const P2_ICON_NAMES = Object.keys(PATHS) as P2IconName[];
+
 export function P2Icon({ name, className = "i" }: { name: P2IconName; className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" aria-hidden="true" focusable="false">

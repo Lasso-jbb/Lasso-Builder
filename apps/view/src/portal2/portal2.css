@@ -24,8 +24,11 @@
   --tip: #f2f3f5; --tipfg: #16181d; --scrim: rgba(0, 0, 0, 0.55);
   color-scheme: dark;
 }
-html:has(.p3), body:has(.p3) { height: 100%; margin: 0; overflow: hidden; }
-body:has(.p3[data-theme="dark"]) { background: #121316; }
+html:has(.p3:not(.p3-specimen)), body:has(.p3:not(.p3-specimen)) { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; }
+/* iPhone: siden selv må ikke rulle eller "bounce" bag portalen (ellers bliver den stående forskudt med luft i
+   toppen); kun indholdet (.scroll) ruller. */
+body:has(.p3:not(.p3-specimen)) { position: fixed; inset: 0; width: 100%; }
+body:has(.p3:not(.p3-specimen)[data-theme="dark"]) { background: #121316; }
 .p3 *, .p3 *::before, .p3 *::after { box-sizing: border-box; }
 /* Kun portalens egne knapper og felter nulstilles (:where = ingen specificitet); visningernes beholder deres stil. */
 :where(.p3 .top, .p3 .rail, .p3 .tabsbar, .p3 .mods, .p3 .compact, .p3 .m-head, .p3 .ask, .p3 .mbar, .p3 .dd, .p3 .sheet, .p3 .msearch, .p3 .notice) :where(button, input) { font: inherit; color: inherit; background: none; border: 0; padding: 0; }
@@ -251,6 +254,8 @@ body:has(.p3[data-theme="dark"]) { background: #121316; }
 
 
 /* ---------- tilføjet til den rigtige portal ---------- */
+/* Modulvælgeren tegnes kun, når modulerne ikke kan stå ved siden af hinanden (Portal2App.measure). */
+.p3 .mods .sel-btn { display: inline-flex; }
 .p3 { height: 100vh; height: 100dvh; }
 .p3 .logo { display: flex; align-items: center; }
 .p3 .spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--coral); animation: p3-spin 0.8s linear infinite; flex: none; }
@@ -313,7 +318,11 @@ body:has(.p3[data-theme="dark"]) { background: #121316; }
   .p3 .top .right { gap: 0; margin-right: -6px; }
   .p3 .top .right > .ibtn { width: 30px; height: 36px; opacity: 1; pointer-events: auto; }
   .p3 .top .right > .ibtn svg.i { width: 18px; height: 18px; }
-  .p3 .toptabs { opacity: 1; transform: none; pointer-events: auto; right: calc(var(--gut) + 84px); }
+  .p3 .toptabs { opacity: 1; transform: none; pointer-events: auto; top: 8px; right: calc(var(--gut) + 70px); }
+  /* Den aktive fane må fylde ud til ikonerne, så pilen står tæt på det første ikon (Jakob 02.10). */
+  .p3 .tt.on { max-width: none; flex: 0 1 auto; min-width: 0; }
+  .p3 .tt.solo { gap: 4px; padding-right: 2px; }
+  .p3 .top .right { align-self: stretch; align-items: center; }
   .p3 .content.col { padding-inline: var(--gut) calc(var(--gut) - 10px); }
   .p3 .view { margin-inline: calc(-1 * var(--gut)) calc(10px - var(--gut)); }
   .p3 .ask.is-open { display: flex !important; bottom: 96px; padding: 24px 12px 12px; background: none; }
@@ -323,3 +332,33 @@ body:has(.p3[data-theme="dark"]) { background: #121316; }
 @media (prefers-reduced-motion: reduce) {
   .p3 *, .p3 *::before, .p3 *::after { transition: none !important; animation: none !important; }
 }
+
+/* ---------- designguidens prøver (#/portal, "Elementer og knapper"): delene uden portalens layout ---------- */
+.p3.p3-specimen { height: auto; display: block; overflow: visible; background: transparent; }
+/* Prøverne står uden for portalens rammer: alle deres knapper og felter nulstilles (guidens egne stile må ikke slå igennem). */
+.p3-specimen :where(button, input) { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; box-shadow: none; border-radius: 0; }
+.p3-specimen :where(button) { cursor: pointer; }
+.p3-specimen :where(input) { outline: none; }
+.p3-specimen .spec-top { position: relative; height: var(--topH); background: var(--frame); border: 1px solid var(--line); border-radius: 10px; display: flex; align-items: center; padding-inline: 20px 12px; gap: 16px; }
+.p3-specimen .searchwrap { position: static; width: 100%; max-width: 720px; }
+.p3-specimen .sdrop { position: static; max-width: 720px; }
+.p3-specimen .sdrop { overflow: visible; }
+.p3-specimen .dd { position: static; display: block; }
+.p3-specimen .ask { position: static; background: none; padding: 0; align-items: flex-start; }
+.p3-specimen .mbar { display: block; position: relative; height: 96px; background: none; }
+.p3-specimen .mbar .lbtn, .p3-specimen .mbar .capsule { pointer-events: auto; position: absolute; bottom: 20px; height: 52px; background: var(--raised); border: 1px solid var(--pill-line); box-shadow: var(--shadow); }
+.p3-specimen .mbar .lbtn { left: 0; width: 52px; border-radius: 26px; display: flex; align-items: center; justify-content: center; }
+.p3-specimen .mbar .lbtn .mark { width: 18px; height: 15px; }
+.p3-specimen .mbar .capsule { left: 76px; width: 158px; border-radius: 26px; display: flex; align-items: center; justify-content: space-around; padding-inline: 3px; }
+.p3-specimen .mbar .capsule .ibtn { width: 52px; height: 50px; }
+.p3-specimen .spec-tabs { background: var(--frame); border: 1px solid var(--line); border-radius: 10px; height: 44px; display: flex; align-items: flex-end; padding-left: 16px; overflow: visible; }
+.p3-specimen .spec-tabs .otabs { overflow: visible; }
+.p3-specimen .mods { position: static; border: 1px solid var(--line); border-radius: 10px; }
+.p3-specimen .mods .col { max-width: none; padding-inline: 16px; }
+.p3-specimen .sel-btn { display: inline-flex; }
+.p3-specimen .rail { display: flex; flex-direction: row; width: max-content; padding: 8px; border: 1px solid var(--line); border-radius: 10px; gap: 8px; }
+.p3-specimen .rail hr { width: 1px; height: 24px; border: 0; border-left: 1px solid var(--line); margin: 6px 4px; }
+.p3-specimen .show-tip .tip { opacity: 1; left: 50%; top: auto; bottom: -30px; transform: translateX(-50%); }
+.p3-specimen .spec-icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.p3-specimen .spec-icons div { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 4px; border: 1px solid var(--line); border-radius: 10px; font-size: 12px; color: var(--sec); }
+.p3-specimen .spec-icons .i { width: 20px; height: 20px; stroke-width: 1.5; color: var(--ink); }
