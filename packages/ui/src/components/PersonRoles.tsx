@@ -16,7 +16,7 @@ import {
 import type { MoreInTab, ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { usePrintMode } from "../print.js";
-import { BandLanes, LaneToggle } from "./BandLanes.js";
+import { BandLanes, LaneToggle, RoleLegend, roleBandClass, toneOfKind } from "./BandLanes.js";
 
 /** Regel 9: tre selskaber i tidsbåndene og fem i listerne, resten under "Se alle N" (limit kan ændre det). */
 const COLLAPSED = 3;
@@ -243,34 +243,8 @@ export function PersonRoles({
   const ticks: number[] = [];
   for (let y = startYear; y <= thisYear - step / 2; y += step) ticks.push(y);
 
-  const kinds = new Set<string>(person.roles.map((r) => (r.kind === "owner" ? "owner" : r.kind === "board" ? "board" : r.kind === "direction" ? "direction" : "other")));
-  const legend: [string, string][] = [
-    ["direction", "Direktion"],
-    ["board", "Bestyrelse"],
-    ["owner", "Ejer"],
-    ["other", "Anden rolle"],
-  ];
-  const hasEnded = person.roles.some((r) => !r.active);
   const visible = expanded ? companies : companies.slice(0, foldedCount(companies.length, collapsed));
-
-  const legendNode = (
-    <div className="lasso-personroles__legend" aria-hidden="true">
-      {legend
-        .filter(([k]) => kinds.has(k))
-        .map(([k, label]) => (
-          <span key={k} className="lasso-personroles__key">
-            <span className={`lasso-personroles__swatch lasso-personroles__swatch--${k}`} />
-            {label}
-          </span>
-        ))}
-      {hasEnded ? (
-        <span className="lasso-personroles__key">
-          <span className="lasso-personroles__swatch lasso-personroles__swatch--ended" />
-          Fratrådt
-        </span>
-      ) : null}
-    </div>
-  );
+  const legendNode = <RoleLegend tones={person.roles.map((r) => toneOfKind(r.kind))} />;
 
   return (
     <Section className="lasso-personroles">
@@ -312,7 +286,7 @@ export function PersonRoles({
                 summary={summaryLabel(list)}
                 segs={list.map((r) => {
                   const left = pos(r.from, start);
-                  return { left, width: Math.max(0.8, pos(r.to, now) - left), cls: `lasso-personroles__band lasso-personroles__band--${r.active ? r.kind : "ended"}`, label: bandLabel(r) };
+                  return { left, width: Math.max(0.8, pos(r.to, now) - left), cls: `lasso-personroles__band ${roleBandClass(toneOfKind(r.kind), !r.active)}`, label: bandLabel(r) };
                 })}
               >
                 {ended ? (
@@ -392,10 +366,7 @@ function MobileBands({ person, title, onOpen }: { person: PersonVM; title?: stri
   const rows = personCompanies(person);
   const shown = all ? rows : rows.slice(0, foldedCount(rows.length, MOBILE_ROWS));
   const roles = rows.flatMap((c) => c.roles);
-  const hasOwner = roles.some((r) => r.kind === "owner");
-  const hasMgmt = roles.some((r) => r.kind !== "owner");
-  const hasBankrupt = roles.some(bankrupt);
-  const toneOf = (r: PersonRoleVM) => (bankrupt(r) ? "bankrupt" : r.kind === "owner" ? "owner" : "mgmt");
+  const barClass = (r: PersonRoleVM) => `lasso-mbands__bar ${roleBandClass(toneOfKind(r.kind), !r.active)}`;
   /** Bjælken holdes inden for banen: et bånd, der starter i år, flyttes ind, så det ses og ikke løber ud. */
   const bar = (r: PersonRoleVM) => {
     const width = Math.max(1.5, pos(r.to ?? (bankrupt(r) ? r.companyEnded : undefined), now) - pos(r.from, start));
@@ -423,7 +394,7 @@ function MobileBands({ person, title, onOpen }: { person: PersonVM; title?: stri
         {shown.map((c) => {
           const list = bands(c);
           const isOpen = print || openRows.has(c.key);
-          const tone = list.every(bankrupt) ? "bankrupt" : list.every((r) => r.kind === "owner") ? "owner" : "mgmt";
+          const tone = list.every(bankrupt) ? "bankrupt" : "ok";
           const toggle = () => setOpenRows((prev) => { const n = new Set(prev); if (n.has(c.key)) n.delete(c.key); else n.add(c.key); return n; });
           return (
             <li key={c.key} className={`lasso-mbands__row lasso-mbands__row--${tone}`}>
@@ -448,7 +419,7 @@ function MobileBands({ person, title, onOpen }: { person: PersonVM; title?: stri
                       <span className="lasso-mbands__period">{periodOf([r])}</span>
                     </span>
                     <span className="lasso-mbands__track" aria-hidden="true">
-                      <span className={`lasso-mbands__bar lasso-mbands__bar--${toneOf(r)}`} style={{ left: `${bar(r).left}%`, width: `${bar(r).width}%` }} />
+                      <span className={barClass(r)} style={{ left: `${bar(r).left}%`, width: `${bar(r).width}%` }} />
                     </span>
                   </span>
                 ))
@@ -457,7 +428,7 @@ function MobileBands({ person, title, onOpen }: { person: PersonVM; title?: stri
                   <span className="lasso-mbands__roles">{list.map(roleText).join(", ")}</span>
                   <span className="lasso-mbands__track" aria-hidden="true">
                     {[...list].sort((x, y) => bar(y).width - bar(x).width).map((r, i) => (
-                      <span key={i} className={`lasso-mbands__bar lasso-mbands__bar--${toneOf(r)}`} style={{ left: `${bar(r).left}%`, width: `${bar(r).width}%` }} />
+                      <span key={i} className={barClass(r)} style={{ left: `${bar(r).left}%`, width: `${bar(r).width}%` }} />
                     ))}
                   </span>
                 </>
@@ -469,25 +440,8 @@ function MobileBands({ person, title, onOpen }: { person: PersonVM; title?: stri
       {foldedCount(rows.length, MOBILE_ROWS) < rows.length ? (
         <ExpandLink expanded={all} total={rows.length} onToggle={() => setAll(!all)} />
       ) : null}
-      <div className="lasso-mbands__legend" aria-hidden="true">
-        {hasMgmt ? (
-          <span className="lasso-personroles__key">
-            <span className="lasso-mbands__swatch lasso-mbands__bar--mgmt" />
-            Ledelse
-          </span>
-        ) : null}
-        {hasOwner ? (
-          <span className="lasso-personroles__key">
-            <span className="lasso-mbands__swatch lasso-mbands__bar--owner" />
-            Ejerskab
-          </span>
-        ) : null}
-        {hasBankrupt ? (
-          <span className="lasso-personroles__key">
-            <span className="lasso-mbands__swatch lasso-mbands__bar--bankrupt" />
-            Endt i konkurs
-          </span>
-        ) : null}
+      <div className="lasso-mbands__legend">
+        <RoleLegend tones={roles.map((r) => toneOfKind(r.kind))} />
       </div>
     </div>
   );

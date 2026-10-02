@@ -5945,3 +5945,10 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-root .lasso-lanes__toggle:hover { color: var(--lasso-text); background: var(--lasso-surface-2); }
 .lasso-lanes__toggle:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: 1px; }
 .lasso-personroles__row .lasso-personroles__sub { padding-left: 22px; }
+/* Rollernes farver i alle tidsbånd (Jakob 02.10): direktion, bestyrelse, ejer; alt andet stiplet; ophørt = dæmpet. */
+.lasso-root .lasso-role-band--direction { background: var(--lasso-chart-1); border: 0; }
+.lasso-root .lasso-role-band--board { background: var(--lasso-chart-2); border: 0; }
+.lasso-root .lasso-role-band--owner { background: var(--lasso-chart-3); border: 0; }
+.lasso-root .lasso-role-band--other { background: var(--lasso-surface-muted); border: 1px dashed var(--lasso-faint); }
+.lasso-root .lasso-role-band.is-ended:not(.lasso-role-band--other) { opacity: 0.4; }
+.lasso-role-swatch { display: inline-block; width: 16px; height: 6px; border-radius: 3px; flex: none; }

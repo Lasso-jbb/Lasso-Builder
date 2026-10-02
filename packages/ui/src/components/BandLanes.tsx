@@ -1,6 +1,49 @@
 import type { ReactNode } from "react";
 import { Icon } from "./Icon.js";
 
+/**
+ * Rollernes farver i alle tidsbånd (Jakob 02.10): direktion, bestyrelse og ejer har hver sin farve; alt andet
+ * (stifter, interessent, reel ejer …) er stiplet og har ingen etiket i legenden. Ophørte roller står i samme
+ * farve, men dæmpet.
+ */
+export type RoleTone = "direction" | "board" | "owner" | "other";
+export const ROLE_TONE_LABEL: Record<Exclude<RoleTone, "other">, string> = { direction: "Direktion", board: "Bestyrelse", owner: "Ejer" };
+
+export function toneOfKind(kind: string | undefined): RoleTone {
+  return kind === "direction" || kind === "board" || kind === "owner" ? kind : "other";
+}
+
+/** Tonen ud fra rolleteksten (netværket har kun teksten), fx "bestyrelsesformand" → bestyrelse. */
+export function toneOfRole(role: string | undefined): RoleTone {
+  const r = (role ?? "").toLowerCase();
+  if (/reel/.test(r)) return "other";
+  if (/ejer/.test(r)) return "owner";
+  if (/bestyrelse|formand|suppleant/.test(r)) return "board";
+  if (/direkt/.test(r)) return "direction";
+  return "other";
+}
+
+export function roleBandClass(tone: RoleTone, ended: boolean): string {
+  return `lasso-role-band lasso-role-band--${tone}${ended ? " is-ended" : ""}`;
+}
+
+/** Legenden: kun de tre farver, der forekommer; det stiplede navngives ikke. */
+export function RoleLegend({ tones }: { tones: Iterable<RoleTone> }) {
+  const present = new Set(tones);
+  const shown = (["direction", "board", "owner"] as const).filter((t) => present.has(t));
+  if (!shown.length) return null;
+  return (
+    <div className="lasso-personroles__legend" aria-hidden="true">
+      {shown.map((t) => (
+        <span key={t} className="lasso-personroles__key">
+          <span className={`lasso-role-swatch lasso-role-band--${t}`} />
+          {ROLE_TONE_LABEL[t]}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 /** Ét bånd på tidsaksen: venstre kant og bredde i procent, båndets klasse og etiketten over det. */
 export interface LaneSeg {
   left: number;
@@ -36,7 +79,8 @@ export function BandLanes({ segs, summary, open, children }: { segs: readonly La
               {lane.tail}
             </span>
             {lane.bands.map((b, k) => (
-              <span key={k} className={b.cls} style={{ left: `${b.left}%`, width: `${b.width}%` }} />
+              // Bjælken holdes inden for sporet (et bånd, der starter i år, flyttes ind, så det ikke løber ud).
+              <span key={k} className={b.cls} style={{ left: `${Math.min(b.left, 100 - b.width)}%`, width: `${b.width}%` }} />
             ))}
           </div>
         );

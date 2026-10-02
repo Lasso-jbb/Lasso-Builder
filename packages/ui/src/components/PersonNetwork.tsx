@@ -4,7 +4,7 @@ import { isPersonId, statusGroup, statusLabel, type PersonNetworkCompanyVM, type
 import type { MoreInTab, ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { usePrintMode } from "../print.js";
-import { BandLanes, LaneToggle, type LaneSeg } from "./BandLanes.js";
+import { BandLanes, LaneToggle, RoleLegend, roleBandClass, toneOfRole, type LaneSeg } from "./BandLanes.js";
 
 const COLLAPSED = 3;
 const DAY = 86_400_000;
@@ -74,7 +74,8 @@ function seg(c: PersonNetworkCompanyVM, pos: (d: string | undefined, f: number) 
   return {
     left,
     width: Math.max(1, right - left),
-    cls: `lasso-personnet__band${c.to || c.ended ? " lasso-personnet__band--ended" : ""}${bankrupt ? " lasso-personnet__band--problem" : ""}`,
+    // Jakob 02.10: samme farver som rollerne (direktion, bestyrelse, ejer; alt andet stiplet); konkurs står i etiketten.
+    cls: `lasso-personnet__band ${roleBandClass(toneOfRole(c.role), Boolean(c.to || c.ended))}`,
     label: bandLabel(c),
     tail: bankrupt ? <span className="lasso-personnet__bandstatus">{`, ${problemText(c)}`}</span> : undefined,
   };
@@ -143,31 +144,7 @@ export function PersonNetwork({
   const step = Math.max(1, Math.ceil((thisYear - startYear) / 6));
   const ticks: number[] = [];
   for (let y = startYear; y <= thisYear - step / 2; y += step) ticks.push(y);
-  const hasEnded = network.people.some((p) => p.companies.some((c) => c.to || c.ended));
-  const problems = network.people.flatMap((p) => p.companies.filter(isBankrupt));
-  const problemNames = [...new Set(problems.map((c) => statusLabel(c.status) ?? "Under konkurs"))];
-  // Legenden navngiver statussen (fx "Under konkurs"); flere forskellige problemstatusser står samlet.
-  const problemLegend = problemNames.length === 1 ? problemNames[0]! : "Konkurs o.l.";
-  const legend = (
-    <div className="lasso-personroles__legend" aria-hidden="true">
-      <span className="lasso-personroles__key">
-        <span className="lasso-personnet__swatch" />
-        Sidder sammen nu
-      </span>
-      {hasEnded ? (
-        <span className="lasso-personroles__key">
-          <span className="lasso-personnet__swatch lasso-personnet__swatch--ended" />
-          Afsluttet
-        </span>
-      ) : null}
-      {problems.length ? (
-        <span className="lasso-personroles__key">
-          <span className="lasso-personnet__swatch lasso-personnet__swatch--bankrupt" />
-          {problemLegend}
-        </span>
-      ) : null}
-    </div>
-  );
+  const legend = <RoleLegend tones={network.people.flatMap((p) => p.companies.map((c) => toneOfRole(c.role)))} />;
   // Overlappet står i underteksten (Jakob 02.10), så navnet har hele første kolonne.
   const sub = (p: PersonNetworkRowVM) => {
     const n = p.companies.length;
