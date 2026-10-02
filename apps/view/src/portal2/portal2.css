@@ -305,6 +305,15 @@ body:has(.p3[data-theme="dark"]) { background: #121316; }
 .p3 .sr-row .mark { width: 15px; height: 12.5px; }
 
 @media (max-width: 760px) {
+  /* Jakob 02.10: topbjælken er altid den samlede: lille logo, de åbne faner, og tema, notifikationer og profil
+     som små ikoner tæt sammen (ingen ⋯ og ingen fanebjælke under topbjælken). */
+  .p3 .tabsbar { display: none !important; }
+  .p3 .top .wordmark { height: 17px; width: 59px; }
+  .p3 .topmore { display: none !important; }
+  .p3 .top .right { gap: 0; margin-right: -6px; }
+  .p3 .top .right > .ibtn { width: 30px; height: 36px; opacity: 1; pointer-events: auto; }
+  .p3 .top .right > .ibtn svg.i { width: 18px; height: 18px; }
+  .p3 .toptabs { opacity: 1; transform: none; pointer-events: auto; right: calc(var(--gut) + 84px); }
   .p3 .content.col { padding-inline: var(--gut) calc(var(--gut) - 10px); }
   .p3 .view { margin-inline: calc(-1 * var(--gut)) calc(10px - var(--gut)); }
   .p3 .ask.is-open { display: flex !important; bottom: 96px; padding: 24px 12px 12px; background: none; }

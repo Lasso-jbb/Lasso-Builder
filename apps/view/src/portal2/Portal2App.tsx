@@ -709,7 +709,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     const sc = scroller.current;
     if (!sc) return;
     if (isPhone()) {
-      setCollapsed(sc.scrollTop > 48);
+      // Mobil (Jakob 02.10): topbjælken står altid i den samlede form (lille logo, fanerne, ikonerne), så den klapper ikke.
+      setCollapsed(false);
       setScrolled(false);
     } else {
       setCollapsed(false);

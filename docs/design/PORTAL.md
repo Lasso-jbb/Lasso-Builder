@@ -10,10 +10,10 @@ står på `/portal/klassisk` og videreudvikles ikke.
 
 | Del | Desktop (over 760 px) | Telefon (760 px og derunder) |
 |---|---|---|
-| Topbjælke | 56 px, rammegrå (`--frame`), navnelogo 90 × 26, søgefeltet, tema, notifikationer, profil | Logo 83 × 24; ved rulning 59 × 17 med de åbne faner og "⋯" |
+| Topbjælke | 56 px, rammegrå (`--frame`), navnelogo 90 × 26, søgefeltet, tema, notifikationer, profil | Altid samlet: logo 59 × 17, de åbne faner, og tema, notifikationer og profil som små ikoner (18 px, 30 px brede knapper) |
 | Søgefelt | Pille 36 px, højst 720 px, flugter med indholdets venstre kant | Søgning i fuld skærm fra bundbjælken |
 | Skinne | 60 px, ikoner 20 px, tooltip til højre | Skjult |
-| Åbne faner | 44 px bjælke, fane 36 px, radius 10 foroven | Samme bjælke; klapper sammen ved rulning (over 48 px) |
+| Åbne faner | 44 px bjælke, fane 36 px, radius 10 foroven | I topbjælken (ingen egen bjælke) |
 | Modulrække | 52 px, klæber øverst; Lasso-mærket, modulerne, "Flere", Følg og Gem | 48 px |
 | Indhold | Kolonne på højst 1200 px med 40 px sideluft | 28 px sideluft (`--gut`) |
 | Spørgefelt | Pille 52 px, højst 720 px, centreret nederst med tre forslag | Lasso-knappen (52 px) i bundbjælken åbner feltet |
@@ -66,9 +66,9 @@ Moduler og Brugere står dæmpet, til de findes.
 ## Telefon
 
 - Skinne, søgefelt og spørgefelt skjules; bundbjælken tager over.
-- Fanebjælken står under topbjælken. Ruller man over 48 px, klapper den sammen: logoet bliver mindre, de åbne
-  faner flytter op i topbjælken (med "Flere"/dropdown som på desktop), og tema, notifikationer og profil samles
-  under "⋯".
+- Topbjælken står altid i den samlede form: det lille logo, de åbne faner (den aktive, med "Flere" eller som
+  dropdown, når der ikke er plads) og tema, notifikationer og profil som små ikoner tæt sammen. Der er ingen
+  fanebjælke under topbjælken, og den klapper ikke sammen ved rulning.
 - Modulrækken bliver en vælger, når modulerne ikke kan stå ved siden af hinanden.
 
 ## Tema
