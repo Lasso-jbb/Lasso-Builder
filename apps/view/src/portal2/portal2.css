@@ -254,6 +254,10 @@ body:has(.p3:not(.p3-specimen)[data-theme="dark"]) { background: #121316; }
 
 
 /* ---------- tilføjet til den rigtige portal ---------- */
+/* Modulrækken står fast mellem fanebjælken og rulleområdet (Jakob 02.10: den må ikke bevæge sig ved træk/bounce). */
+.p3 .main { grid-template-rows: auto auto 1fr; }
+.p3 .mods { grid-row: 2; position: relative; top: auto; }
+.p3 .scrollbox { grid-row: 3; }
 /* Modulvælgeren tegnes kun, når modulerne ikke kan stå ved siden af hinanden (Portal2App.measure). */
 .p3 .mods .sel-btn { display: inline-flex; }
 .p3 { height: 100vh; height: 100dvh; }
@@ -311,18 +315,26 @@ body:has(.p3:not(.p3-specimen)[data-theme="dark"]) { background: #121316; }
 
 @media (max-width: 760px) {
   /* Jakob 02.10: topbjælken er altid den samlede: lille logo, de åbne faner, og tema, notifikationer og profil
-     som små ikoner tæt sammen (ingen ⋯ og ingen fanebjælke under topbjælken). */
+     som små ikoner tæt sammen (ingen ⋯ og ingen fanebjælke under topbjælken). Én række: logo, faner, ikoner.
+     Bunden af logo, tekst og ikoner flugter, og der er lige langt (--tgap) fra logo til navn som fra pil til ikon. */
   .p3 .tabsbar { display: none !important; }
-  .p3 .top .wordmark { height: 17px; width: 59px; }
   .p3 .topmore { display: none !important; }
-  .p3 .top .right { gap: 0; margin-right: -6px; }
+  .p3 { grid-template-columns: minmax(0, 1fr); }
+  .p3 .top { --tgap: 20px; --text-dy: 4px; --icon-dy: 2.3px; --icon-dx: 8px; gap: 0; min-width: 0; }
+  .p3 .top .logo { flex: none; }
+  .p3 .top .wordmark { height: 17px; width: 59px; display: block; transform: translateY(var(--logo-dy, 0px)); }
+  .p3 .toptabs { position: static; flex: 1 1 auto; min-width: 0; height: 36px; opacity: 1; transform: none; pointer-events: auto; margin-left: var(--tgap); gap: 6px; }
+  .p3 .toptabs::before { display: none; }
+  .p3 .tt:first-child { margin-left: 0; }
+  .p3 .tt { padding-left: 0; }
+  .p3 .tt span { transform: translateY(var(--text-dy, 0px)); }
+  .p3 .tt.on { max-width: none; flex: 0 1 auto; min-width: 0; }
+  .p3 .tt.solo { gap: 4px; padding-right: 0; }
+  .p3 .tt.solo svg { transform: translateY(var(--text-dy, 0px)); }
+  .p3 .top .right { margin-left: 0; gap: 0; margin-right: -6px; align-self: center; transform: translateY(var(--icon-dy, 0px)); }
   .p3 .top .right > .ibtn { width: 30px; height: 36px; opacity: 1; pointer-events: auto; }
   .p3 .top .right > .ibtn svg.i { width: 18px; height: 18px; }
-  .p3 .toptabs { opacity: 1; transform: none; pointer-events: auto; top: 8px; right: calc(var(--gut) + 70px); }
-  /* Den aktive fane må fylde ud til ikonerne, så pilen står tæt på det første ikon (Jakob 02.10). */
-  .p3 .tt.on { max-width: none; flex: 0 1 auto; min-width: 0; }
-  .p3 .tt.solo { gap: 4px; padding-right: 2px; }
-  .p3 .top .right { align-self: stretch; align-items: center; }
+  .p3 .top .right > .ibtn:first-child { margin-left: var(--icon-dx, 0px); }
   .p3 .content.col { padding-inline: var(--gut) calc(var(--gut) - 10px); }
   .p3 .view { margin-inline: calc(-1 * var(--gut)) calc(10px - var(--gut)); }
   .p3 .ask.is-open { display: flex !important; bottom: 96px; padding: 24px 12px 12px; background: none; }

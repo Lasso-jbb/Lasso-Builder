@@ -14,7 +14,7 @@ står på `/portal/klassisk` og videreudvikles ikke.
 | Søgefelt | Pille 36 px, højst 720 px, flugter med indholdets venstre kant | Søgning i fuld skærm fra bundbjælken |
 | Skinne | 60 px, ikoner 20 px, tooltip til højre | Skjult |
 | Åbne faner | 44 px bjælke, fane 36 px, radius 10 foroven | I topbjælken (ingen egen bjælke) |
-| Modulrække | 52 px, klæber øverst; Lasso-mærket, modulerne, "Flere", Følg og Gem | 48 px |
+| Modulrække | 52 px, står fast over indholdet (ruller og "bouncer" ikke med); Lasso-mærket, modulerne, "Flere", Følg og Gem | 48 px |
 | Indhold | Kolonne på højst 1200 px med 40 px sideluft | 28 px sideluft (`--gut`) |
 | Spørgefelt | Pille 52 px, højst 720 px, centreret nederst med tre forslag | Lasso-knappen (52 px) i bundbjælken åbner feltet |
 | Bundbjælke | – | Lasso-knap til venstre, kapsel 158 × 52 med Søg, Værktøjer, Lister |
@@ -69,6 +69,10 @@ Moduler og Brugere står dæmpet, til de findes.
 - Topbjælken står altid i den samlede form: det lille logo, de åbne faner (den aktive, med "Flere" eller som
   dropdown, når der ikke er plads) og tema, notifikationer og profil som små ikoner tæt sammen. Der er ingen
   fanebjælke under topbjælken, og den klapper ikke sammen ved rulning.
+- Topbjælkens bund flugter: bunden af logoet, tekstens grundlinje og ikonernes bund står på samme linje, og der er
+  lige langt (20 px) fra logo til navn som fra pilen til det første ikon. Målt i browseren; justeres med
+  `--text-dy`, `--icon-dy` og `--icon-dx` i `portal2.css`, hvis skrift eller ikoner skiftes.
+- Siden selv ruller ikke (ingen bounce bag portalen); kun indholdet ruller, og topbjælke og modulrække står fast.
 - Modulrækken bliver en vælger, når modulerne ikke kan stå ved siden af hinanden.
 
 ## Tema

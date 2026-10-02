@@ -946,40 +946,41 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
           </div>
         </div>
 
+        {/* Modulrækken står uden for rulleområdet, så den ikke flytter sig, når man ruller eller trækker (bounce). */}
+        {item ? (
+          <>
+            <div className="mods">
+              <div className="col" ref={modCol}>
+                <LassoTab on={onLasso} busy={pendingKey === item.key} disabled={!lassoAvailable} onClick={() => switchTab(LASSO_TAB)} />
+                <div className="mlist" ref={mlist} role="tablist" aria-label="Moduler">
+                  {tabs.map((t) => (
+                    <ModuleTab key={t.id} id={t.id} label={t.label} selected={item.tab === t.id} onClick={() => switchTab(t.id)} />
+                  ))}
+                  {tabs.length ? (
+                    <DropButton
+                      label={hiddenMods.includes(item.tab) ? curLabel : "Flere"}
+                      className="tab more"
+                      data={{ "data-more": "" }}
+                      expanded={menu?.kind === "more"}
+                      selected={hiddenMods.includes(item.tab)}
+                      onClick={(e) => showMenu("more", e.currentTarget)}
+                    />
+                  ) : null}
+                </div>
+                {tabs.length && modSelect ? <DropButton label={curLabel} className="sel-btn" expanded={menu?.kind === "sel"} onClick={(e) => showMenu("sel", e.currentTarget)} /> : null}
+                {item.kind !== "result" ? (
+                  <div className="rgroup">
+                    <IconButton icon="rss" label="Følg" disabled />
+                    <IconButton icon="book" label={saved ? "Gemt på din liste" : "Gem på din liste"} on={saved} pressed={saved} onClick={() => void toggleSaved()} />
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </>
+        ) : null}
+
         <div className="scrollbox">
           <div className="scroll" ref={scroller} onScroll={onScroll}>
-            {item ? (
-              <>
-                <div className="mods">
-                  <div className="col" ref={modCol}>
-                    <LassoTab on={onLasso} busy={pendingKey === item.key} disabled={!lassoAvailable} onClick={() => switchTab(LASSO_TAB)} />
-                    <div className="mlist" ref={mlist} role="tablist" aria-label="Moduler">
-                      {tabs.map((t) => (
-                        <ModuleTab key={t.id} id={t.id} label={t.label} selected={item.tab === t.id} onClick={() => switchTab(t.id)} />
-                      ))}
-                      {tabs.length ? (
-                        <DropButton
-                          label={hiddenMods.includes(item.tab) ? curLabel : "Flere"}
-                          className="tab more"
-                          data={{ "data-more": "" }}
-                          expanded={menu?.kind === "more"}
-                          selected={hiddenMods.includes(item.tab)}
-                          onClick={(e) => showMenu("more", e.currentTarget)}
-                        />
-                      ) : null}
-                    </div>
-                    {tabs.length && modSelect ? <DropButton label={curLabel} className="sel-btn" expanded={menu?.kind === "sel"} onClick={(e) => showMenu("sel", e.currentTarget)} /> : null}
-                    {item.kind !== "result" ? (
-                      <div className="rgroup">
-                        <IconButton icon="rss" label="Følg" disabled />
-                        <IconButton icon="book" label={saved ? "Gemt på din liste" : "Gem på din liste"} on={saved} pressed={saved} onClick={() => void toggleSaved()} />
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              </>
-            ) : null}
-
             <div className="col content">{content}</div>
           </div>
         </div>
