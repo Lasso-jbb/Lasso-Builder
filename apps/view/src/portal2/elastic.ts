@@ -8,7 +8,7 @@ import { useEffect, type RefObject } from "react";
  */
 
 /** Hvor langt indholdet flyttes ved `pull` px træk: stigende modstand, højst `max` px. */
-export function rubber(pull: number, max = 90, softness = 260): number {
+export function rubber(pull: number, max = 56, softness = 140): number {
   const sign = Math.sign(pull);
   return sign * max * (1 - Math.exp(-Math.abs(pull) / softness));
 }
@@ -18,9 +18,14 @@ export function hasNativeBounce(nav: Pick<Navigator, "vendor"> | undefined = typ
   return Boolean(nav?.vendor && /apple/i.test(nav.vendor));
 }
 
-const RELEASE = "transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1)";
+const RELEASE = "transform 300ms cubic-bezier(0.25, 0.8, 0.3, 1)";
 /** Så længe efter sidste hjul-/trackpadhændelse regnes trækket som sluppet. */
-const IDLE_MS = 110;
+const IDLE_MS = 70;
+/**
+ * Trackpaddens efterløb (momentum) sender hændelser i op til et sekund efter, man har sluppet. Efter et slip
+ * ignoreres hændelser, til der har været ro i så lang tid, så efterløbet ikke trækker indholdet ud igen.
+ */
+const QUIET_MS = 120;
 
 export function useElasticScroll(scroller: RefObject<HTMLElement | null>, content: RefObject<HTMLElement | null>, enabled = !hasNativeBounce()) {
   useEffect(() => {
@@ -29,7 +34,13 @@ export function useElasticScroll(scroller: RefObject<HTMLElement | null>, conten
     let pull = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let touchY: number | null = null;
+    /** Efter et slip: efterløbet ignoreres, til der har været ro i QUIET_MS. */
+    let settling = false;
+    let quiet: ReturnType<typeof setTimeout> | undefined;
     let touchPull = 0;
+    /** Aftagende hændelser i træk under et træk = fingeren er løftet (efterløb): så slippes der med det samme. */
+    let lastAbs = 0;
+    let fading = 0;
 
     const atTop = () => sc.scrollTop <= 0;
     const atBottom = () => sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 1;
@@ -40,17 +51,40 @@ export function useElasticScroll(scroller: RefObject<HTMLElement | null>, conten
       el.style.transform = px ? `translate3d(0, ${px}px, 0)` : "";
     };
     const release = () => {
+      const wasPulled = pull !== 0;
+      lastAbs = 0;
+      fading = 0;
       pull = 0;
       touchPull = 0;
       apply(0, true);
+      if (wasPulled) {
+        settling = true;
+        clearTimeout(quiet);
+        quiet = setTimeout(() => (settling = false), QUIET_MS);
+      }
     };
 
     const onWheel = (e: WheelEvent) => {
+      if (settling) {
+        clearTimeout(quiet);
+        quiet = setTimeout(() => (settling = false), QUIET_MS);
+        return;
+      }
       const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
       const overTop = atTop() && (dy < 0 || pull > 0);
       const overBottom = atBottom() && (dy > 0 || pull < 0);
       if (!overTop && !overBottom) {
         if (pull) release();
+        return;
+      }
+      const abs = Math.abs(dy);
+      fading = pull && abs < lastAbs * 0.92 ? fading + 1 : 0;
+      lastAbs = abs;
+      if (fading >= 3) {
+        clearTimeout(timer);
+        lastAbs = 0;
+        fading = 0;
+        release();
         return;
       }
       pull -= dy;
@@ -88,6 +122,7 @@ export function useElasticScroll(scroller: RefObject<HTMLElement | null>, conten
     sc.addEventListener("touchcancel", onTouchEnd, { passive: true });
     return () => {
       clearTimeout(timer);
+      clearTimeout(quiet);
       sc.removeEventListener("wheel", onWheel);
       sc.removeEventListener("touchstart", onTouchStart);
       sc.removeEventListener("touchmove", onTouchMove);

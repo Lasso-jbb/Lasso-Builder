@@ -12,7 +12,7 @@ står på `/portal/klassisk` og videreudvikles ikke.
 |---|---|---|
 | Topbjælke | 56 px, rammegrå (`--frame`), navnelogo 90 × 26, søgefeltet, tema, notifikationer, profil | Altid samlet: logo 59 × 17, de åbne faner, og tema, notifikationer og profil som små ikoner (18 px, 30 px brede knapper) |
 | Søgefelt | Pille 36 px, højst 720 px, flugter med indholdets venstre kant | Søgning i fuld skærm fra bundbjælken |
-| Skinne | 60 px, ikoner 20 px, tooltip til højre; det øverste ikon flugter med de åbne faner | Skjult |
+| Skinne | 60 px, ikoner 20 px, tooltip til højre; det øverste ikon flugter med modulrækken | Skjult |
 | Åbne faner | 44 px bjælke, fane 36 px, radius 10 foroven | I topbjælken (ingen egen bjælke) |
 | Modulrække | 52 px, står fast over indholdet (ruller og "bouncer" ikke med); Lasso-mærket, modulerne, "Flere", Følg og Gem | 48 px |
 | Indhold | Kolonne på højst 1200 px med 40 px sideluft | 28 px sideluft (`--gut`) |
@@ -78,8 +78,8 @@ Moduler og Brugere står dæmpet, til de findes.
   `--text-dy`, `--icon-dy` og `--icon-dx` i `portal2.css`, hvis skrift eller ikoner skiftes.
 - Siden selv ruller ikke (ingen bounce bag portalen); kun indholdet ruller og bouncer, og topbjælke og
   modulrække står fast. Safari og alle browsere på iPhone bouncer selv; i Chrome og Edge laver portalen samme
-  bounce (`elastic.ts`): ud over toppen eller bunden trækkes indholdet med stigende modstand (højst 90 px) og fjedrer
-  tilbage, når man slipper (trackpad, hjul og finger). Rulning gentegner ikke portalen (skyggen under modulrækken sættes direkte på roden).
+  bounce (`elastic.ts`): ud over toppen eller bunden trækkes indholdet med stigende modstand (højst ca. 55 px) og fjedrer
+  tilbage på 0,3 s, når man slipper (trackpad, hjul og finger); trackpaddens efterløb trækker ikke videre. Rulning gentegner ikke portalen (skyggen under modulrækken sættes direkte på roden).
 - Modulrækken bliver en vælger, når modulerne ikke kan stå ved siden af hinanden.
 
 ## Tema

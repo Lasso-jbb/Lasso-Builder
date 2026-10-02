@@ -6,7 +6,7 @@ test("rubber: stigende modstand, højst max, samme fortegn som trækket", () => 
   assert.equal(rubber(0), 0);
   assert.ok(rubber(50) > 0 && rubber(50) < 50);
   assert.ok(rubber(-50) < 0);
-  assert.ok(rubber(10000) <= 90 && rubber(10000) > 89);
+  assert.ok(rubber(10000) <= 56 && rubber(10000) > 55);
   assert.ok(rubber(200) - rubber(100) < rubber(100) - rubber(0), "hvert ekstra træk flytter mindre");
 });
 

@@ -397,5 +397,6 @@ body:has(.p3:not(.p3-specimen)[data-theme="dark"]) { background: #121316; }
    Siden selv er stadig låst (body fixed), så intet bliver stående forskudt. */
 .p3 .scroll { overscroll-behavior-y: auto; -webkit-overflow-scrolling: touch; }
 
-/* Skinnen (Jakob 02.10): det øverste ikon flugter med de åbne faner (fanens midte 26 px under topbjælken). */
-.p3 .rail { padding-top: 8px; }
+/* Skinnen (Jakob 02.10): det øverste ikon flugter med modulrækken (anden linje: fanebjælken 44 px + halvdelen af
+   modulrækkens 52 px = midte 70 px under topbjælken; ikonknappen er 36 px). */
+.p3 .rail { padding-top: 52px; }
