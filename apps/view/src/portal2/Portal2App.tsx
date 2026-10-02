@@ -260,6 +260,14 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       const t = kind === "company" ? (isFocus(tab) ? tab : "overblik") : isPersonFocus(tab) ? tab : "overblik";
       openEntity(kind, id, id, t, undefined, false);
     });
+    // ?soeg=… åbner søgningen med teksten (telefon: fuld skærm); ?spoerg=1 åbner spørgefeltet på telefon.
+    const soeg = params.get("soeg");
+    if (soeg) {
+      setQ(soeg);
+      if (isPhone()) setMSearch(true);
+      else setDropOpen(true);
+    }
+    if (params.get("spoerg") === "1") setAskOpen(true);
     const tema = params.get("tema");
     if (tema === "dark" || tema === "light") {
       // Et tema fra adressen (designguiden) gemmes ikke som brugerens valg.

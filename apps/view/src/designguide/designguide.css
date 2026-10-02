@@ -429,6 +429,12 @@ body { font-family: var(--lasso-font, "Poppins", system-ui, sans-serif); -webkit
 .dg-ptable .dg-swatch { display: inline-block; width: 16px; height: 16px; border-radius: 4px; vertical-align: middle; margin-right: 6px; }
 .dg-ptable__same { color: var(--lasso-text-3); }
 .dg-specgrid { display: grid; gap: 28px; }
+.dg-phoneparts { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(390px, 100%), 1fr)); gap: 24px; align-items: start; }
+.dg-phonepart { margin: 0; }
+.dg-phonepart--wide { margin-top: 28px; }
+.dg-phonepart figcaption { font-size: 13px; color: var(--lasso-text-3); margin-bottom: 8px; }
+.dg-phonepart figcaption b { color: var(--dg-ink); font-weight: 600; margin-right: 6px; }
+.dg-phonepart .dg-portalframe { overflow: hidden; }
 .dg-spec__label { font-size: 13px; font-weight: 600; color: var(--dg-ink); margin-bottom: 10px; display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline; }
 .dg-spec__note { font-weight: 400; color: var(--lasso-text-3); }
 .dg-specrow { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }

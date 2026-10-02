@@ -94,5 +94,24 @@ Valget huskes i browseren. `?tema=dark` i adressen sætter temaet uden at gemme 
 
 ## Adresser
 
-`/portal?aaben=CVR-1-…,CVR-3-…&fane=oekonomi` åbner fanerne (den sidste er aktiv) på et modul. Designguiden
-bruger det til sine rammer.
+- `/portal?aaben=CVR-1-…,CVR-3-…&fane=oekonomi` åbner fanerne (den sidste er aktiv) på et modul.
+- `?soeg=Eksempel` åbner søgningen med teksten (på telefon i fuld skærm).
+- `?spoerg=1` åbner spørgefeltet på telefon.
+- `?tema=dark|light` sætter temaet uden at gemme det.
+
+Designguiden bruger adresserne til sine rammer.
+
+## I designguiden
+
+Siden "Portalens ramme" har fire dele, og alle læser fra portalens egen kode:
+
+1. **Den kørende portal** i 1440, 1000 og 390 px.
+2. **Elementer og knapper** i alle tilstande (`parts.tsx`). Det dækker topbjælke, søgefelt, søgeresultater (med
+   status efter navnet), åbne faner (også mange med ens bredde), modulrække og modulvælger, menuer, ikonknapper og
+   skinne, spørgefelt, forslag pr. side (læst fra `suggestions()`), forside, Lassos svar (svar, henter, fejl),
+   besked, bundbjælke og alle ikoner.
+3. **Telefon og søgning, live:** udsnit af den kørende portal. Det er topbjælken med og uden faner,
+   modulrækken, bundbjælken, det åbne spørgefelt, søgningen i fuld skærm og søgningen på desktop.
+4. **Farver og mål** læst fra `portal2.css`.
+
+Et nyt element i portalen bygges i `parts.tsx` og tilføjes som eksempel i `designguide/pages/PortalParts.tsx`.

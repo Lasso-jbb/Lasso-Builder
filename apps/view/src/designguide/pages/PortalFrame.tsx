@@ -29,8 +29,11 @@ export function tokensOf(css: string, selector: string): [string, string][] {
   return [...body.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map((m) => [m[1]!, m[2]!.trim()]);
 }
 
-/** Den kørende portal i en iframe på skærmens bredde, skaleret ned til pladsen. */
-function LivePortal({ src, vw, vh, title }: { src: string; vw: number; vh: number; title: string }) {
+/**
+ * Den kørende portal i en iframe på skærmens bredde, skaleret ned til pladsen. Med `crop` vises kun et udsnit
+ * (fx telefonens topbjælke eller bundbjælke): `y` er udsnittets top i portalens px, negativ = fra bunden.
+ */
+function LivePortal({ src, vw, vh, title, crop }: { src: string; vw: number; vh: number; title: string; crop?: { y: number; h: number } }) {
   const host = useRef<HTMLDivElement>(null);
   const [avail, setAvail] = useState(0);
   useEffect(() => {
@@ -41,10 +44,46 @@ function LivePortal({ src, vw, vh, title }: { src: string; vw: number; vh: numbe
     return () => ro.disconnect();
   }, []);
   const scale = avail ? Math.min(1, avail / vw) : 1;
+  const y = crop ? (crop.y < 0 ? vh + crop.y : crop.y) : 0;
+  const h = crop ? crop.h : vh;
   return (
-    <div ref={host} className="dg-portalframe" style={{ height: vh * scale }}>
-      <iframe title={title} src={src} width={vw} height={vh} style={{ transform: `scale(${scale})`, transformOrigin: "0 0" }} loading="lazy" />
+    <div ref={host} className="dg-portalframe" style={{ height: h * scale, maxWidth: crop ? vw : undefined }}>
+      <iframe title={title} src={src} width={vw} height={vh} style={{ transform: `scale(${scale}) translateY(${-y}px)`, transformOrigin: "0 0" }} loading="lazy" />
     </div>
+  );
+}
+
+/** Telefonens dele og søgningen med rigtige data: udsnit af den kørende portal (adresserne i PORTAL.md). */
+function LiveParts({ base, ids }: { base: Record<string, string>; ids: string[] }) {
+  const url = (extra: Record<string, string>) => `/portal?${new URLSearchParams({ ...base, ...extra }).toString()}`;
+  const open: Record<string, string> = ids.length ? { aaben: ids.join(",") } : {};
+  const phone: { label: string; note: string; src: string; crop: { y: number; h: number } }[] = [
+    { label: "Topbjælke uden faner", note: "Logo til venstre, ikonerne til højre", src: url({}), crop: { y: 0, h: 64 } },
+    { label: "Topbjælke med faner", note: "Den aktive fane, Flere eller dropdown; bunden af logo, tekst og ikoner flugter", src: url(open), crop: { y: 0, h: 64 } },
+    { label: "Modulrække", note: "Står fast, mens indholdet ruller; vælger, når der ikke er plads", src: url(open), crop: { y: 0, h: 130 } },
+    { label: "Bundbjælke", note: "Lasso-knappen og kapslen med Søg, Værktøjer og Lister", src: url(open), crop: { y: -110, h: 110 } },
+    { label: "Spørgefelt åbent", note: "Lasso-knappen åbner feltet med forslag efter siden", src: url({ ...open, spoerg: "1" }), crop: { y: -260, h: 260 } },
+    { label: "Søgning i fuld skærm", note: "Søg i bundbjælken; Annullér lukker", src: url({ soeg: "Eksempel" }), crop: { y: 0, h: 560 } },
+  ];
+  return (
+    <>
+      <div className="dg-phoneparts">
+        {phone.map((p) => (
+          <figure key={p.label} className="dg-phonepart">
+            <figcaption>
+              <b>{p.label}</b> {p.note}
+            </figcaption>
+            <LivePortal src={p.src} vw={390} vh={844} crop={p.crop} title={`Portalen på telefon: ${p.label}`} />
+          </figure>
+        ))}
+      </div>
+      <figure className="dg-phonepart dg-phonepart--wide">
+        <figcaption>
+          <b>Søgning, desktop</b> Lassos navnesøgning med rigtige data (<code>?soeg=Eksempel</code>)
+        </figcaption>
+        <LivePortal src={url({ soeg: "Eksempel" })} vw={1440} vh={900} crop={{ y: 0, h: 620 }} title="Portalens søgning" />
+      </figure>
+    </>
   );
 }
 
@@ -92,6 +131,14 @@ export function PortalFramePage({ ctx }: { ctx: Ctx }) {
           Portalens dele i alle tilstande. Det er de samme komponenter, portalen er bygget af (<code>apps/view/src/portal2/parts.tsx</code>); ret dem dér, så følger både portalen og guiden med.
         </p>
         <PortalParts theme={ctx.theme} />
+      </section>
+
+      <section className="dg-section">
+        <h2 className="dg-h2">Telefon og søgning, live</h2>
+        <p className="dg-lead">
+          Telefonens dele afhænger af skærmbredden og vises derfor som udsnit af den kørende portal i 390 px. Adresserne <code>?soeg=</code> og <code>?spoerg=1</code> åbner søgningen og spørgefeltet.
+        </p>
+        <LiveParts base={{ tema: ctx.theme }} ids={ids} />
       </section>
 
       <section className="dg-section">

@@ -359,6 +359,13 @@ body:has(.p3:not(.p3-specimen)[data-theme="dark"]) { background: #121316; }
 .p3-specimen .sdrop { overflow: visible; }
 .p3-specimen .dd { position: static; display: block; }
 .p3-specimen .ask { position: static; background: none; padding: 0; align-items: flex-start; }
+.p3-specimen .spec-even { overflow: hidden; }
+.p3-specimen .spec-even .otab { width: 170px; }
+.p3-specimen .spec-page { background: var(--page); border: 1px solid var(--line); border-radius: 10px; padding: 8px 24px 24px; }
+.p3-specimen .spec-page .home { margin-top: 24px; }
+.p3-specimen .spec-notice { position: relative; height: 56px; background: var(--page); border: 1px solid var(--line); border-radius: 10px; }
+.p3-specimen .spec-notice .notice { top: 10px; }
+.p3-specimen .spec-sugg { margin: 0; }
 .p3-specimen .mbar { display: block; position: relative; height: 96px; background: none; }
 .p3-specimen .mbar .lbtn, .p3-specimen .mbar .capsule { pointer-events: auto; position: absolute; bottom: 20px; height: 52px; background: var(--raised); border: 1px solid var(--pill-line); box-shadow: var(--shadow); }
 .p3-specimen .mbar .lbtn { left: 0; width: 52px; border-radius: 26px; display: flex; align-items: center; justify-content: center; }

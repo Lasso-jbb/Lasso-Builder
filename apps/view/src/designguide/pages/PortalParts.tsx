@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { LassoWordmark } from "@lasso/ui";
+import { LassoMark, LassoWordmark } from "@lasso/ui";
+import { Text } from "../../chat/ChatApp.js";
 import { P2_ICON_NAMES, P2Icon } from "../../portal2/icons.js";
-import type { SearchRow } from "../../portal2/model.js";
+import { LASSO_TAB, suggestions, type OpenItem, type SearchRow } from "../../portal2/model.js";
 import {
   AskField,
   BottomBar,
@@ -33,6 +34,31 @@ const ROWS: SearchRow[] = [
 const INACTIVE: SearchRow = { kind: "company", id: "4", name: "Eksempel Tømrer ApS", meta: "Viborg, CVR 99000006", status: "Ophørt" };
 const PERSON: SearchRow = { kind: "person", id: "5", name: "Anne Eksempel", meta: "Silkeborg" };
 const MODULES = ["Overblik", "Økonomi", "Regnskab", "Ejerskab", "Risiko", "Historik", "Kontakt"];
+const LONG = ["Eksempel Byg A/S", "Eksempel Revision Midt ApS", "Eksempel Transport A/S", "Eksempel Maskinfabrik A/S", "Anne Eksempel"];
+
+/** Forslagene under spørgefeltet, side for side, læst fra model.ts (suggestions). */
+const SUGGESTION_PAGES: { label: string; item?: OpenItem }[] = [
+  { label: "Forsiden" },
+  ...[
+    ["overblik", "Overblik"],
+    ["oekonomi", "Økonomi"],
+    ["regnskab", "Regnskab"],
+    ["ejerskab", "Ejerskab"],
+    ["risiko", "Risiko"],
+    ["historik", "Historik"],
+    ["kontakt", "Kontakt"],
+    [LASSO_TAB, "Lassos svar"],
+  ].map(([tab, label]) => ({ label: `Firma · ${label}`, item: { key: "CVR-1-99000001", kind: "company" as const, name: "Eksempel Byg A/S", tab: tab! } })),
+  ...[
+    ["overblik", "Overblik"],
+    ["roller", "Roller"],
+    ["netvaerk", "Netværk"],
+    ["ejerskab", "Ejerskab"],
+    ["risiko", "Risiko"],
+    ["historik", "Historik"],
+  ].map(([tab, label]) => ({ label: `Person · ${label}`, item: { key: "CVR-3-1", kind: "person" as const, name: "Anne Eksempel", tab: tab! } })),
+  { label: "Resultat (søgning, liste, sammenligning)", item: { key: "result:1", kind: "result", name: "Søgning", tab: LASSO_TAB } },
+];
 
 function Spec({ label, note, children }: { label: string; note?: string; children: ReactNode }) {
   return (
@@ -97,7 +123,7 @@ export function PortalParts({ theme }: { theme: "light" | "dark" }) {
           </div>
         </Spec>
 
-        <Spec label="Søgeresultater, varianter" note="Statusfilter åbent og inaktivt firma · personer · seneste · ingen match">
+        <Spec label="Søgeresultater, varianter" note="Statusfilter åbent og inaktivt firma (status lige efter navnet) · personer · seneste · ingen match">
           <div className="dg-specrow">
             <div className="sdrop">
               <div className="sr-head">
@@ -270,6 +296,85 @@ export function PortalParts({ theme }: { theme: "light" | "dark" }) {
             <BottomBar homeOn />
             <BottomBar busy searchOn />
           </div>
+        </Spec>
+
+        <Spec label="Åbne faner, mange" note="Ens bredde (højst 170 px, mindst 120 px); navnet bruger hele bredden, krydset ligger over navnets ende ved hover">
+          <div className="spec-tabs spec-even">
+            <div className="otabs">
+              {LONG.map((n, i) => (
+                <OpenTab key={n} name={n} active={i === 1} />
+              ))}
+            </div>
+            <DropButton label="Flere" className="openall" />
+          </div>
+        </Spec>
+
+        <Spec label="Forsiden" note="Uden åbne faner; mærket bevæger sig, mens Lasso svarer">
+          <div className="spec-page">
+            <div className="home">
+              <LassoMark className="home__mark" />
+              <h1>Hvad vil du vide?</h1>
+              <p>Søg efter et firma eller en person ovenfor, eller spørg Lasso nedenfor. Svaret vises her.</p>
+            </div>
+          </div>
+        </Spec>
+
+        <Spec label="Lassos svar" note="Spørgsmålet, Claudes korte tekst og visningen under · mens der hentes · fejl">
+          <div className="dg-specrow dg-specrow--stack">
+            <div className="spec-page">
+              <div className="answer">
+                <div className="answer__q">Hvordan går det økonomisk?</div>
+                <Text text={"Det går **godt**: omsætningen steg 12 % og overskuddet 8 % i seneste regnskab. Soliditeten er 41 %."} />
+              </div>
+            </div>
+            <div className="spec-page">
+              <div className="answer">
+                <div className="answer__q">Hvem ejer firmaet?</div>
+                <div className="answer__status">Vis virksomhed …</div>
+              </div>
+              <div className="skeleton" aria-label="Henter">
+                <div />
+                <div />
+                <div />
+              </div>
+            </div>
+            <div className="spec-page">
+              <div className="answer">
+                <div className="answer__q">Sammenlign med branchen</div>
+                <div className="answer__error">Lasso kunne ikke svare lige nu. Prøv igen om lidt.</div>
+              </div>
+            </div>
+          </div>
+        </Spec>
+
+        <Spec label="Besked" note="Kort besked øverst i indholdet, fx når en side er gemt; lukkes med ×">
+          <div className="spec-notice">
+            <div className="notice" role="status">
+              Gemt på din liste
+              <button type="button" aria-label="Luk">
+                ×
+              </button>
+            </div>
+          </div>
+        </Spec>
+
+        <Spec label="Forslag under spørgefeltet" note="Følger siden: forsiden, et resultat eller firmaets/personens modul (model.ts, suggestions)">
+          <table className="dg-ptable spec-sugg">
+            <thead>
+              <tr>
+                <th>Side</th>
+                <th>Forslag</th>
+              </tr>
+            </thead>
+            <tbody>
+              {SUGGESTION_PAGES.map((p) => (
+                <tr key={p.label}>
+                  <td>{p.label}</td>
+                  <td>{suggestions(p.item).join(" · ")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </Spec>
 
         <Spec label="Ikoner" note="24 × 24, streg 1,5, runde ender; farven følger knappen">
