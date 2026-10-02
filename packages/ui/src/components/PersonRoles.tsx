@@ -362,16 +362,19 @@ function mobileRole(role: string): string {
   return r;
 }
 
-const MOBILE_ROWS = 6;
+const MOBILE_ROWS = 5; // global regel (Jakob 01.10): over 6 viser 5 + "Vis alle N"
 
 /**
- * Tidsbånd på mobil (26d.3, container ≤ 560): én række pr. rolle med etiketten "Selskab, rolle"
+ * Tidsbånd på mobil (26d.3, container ≤ 560; Jakob 02.10: én række pr. selskab, rollerne under og samlet i én bjælke,
+ * pilen folder én bjælke pr. rolle ud). Oprindeligt: én række pr. rolle med etiketten "Selskab, rolle"
  * 14 ink over en 10 px bjælke på en grå bane i fuld bredde og perioden ("2015–") muted til højre.
  * Aksen 2012/2016/…/nu over rækkerne, legenden nederst (Ledelse koral, Ejerskab mørkeblå, Endt i
  * konkurs hul). En rolle i et selskab, der endte i konkurs, er en hul koral-kantet bjælke med muted etiket.
  */
 function MobileBands({ person, title, onOpen }: { person: PersonVM; title?: string; onOpen?: (a: ViewAction) => void }) {
-  const [all, setAll] = useState(false);
+  const print = usePrintMode();
+  const [all, setAll] = useState(print);
+  const [openRows, setOpenRows] = useState<ReadonlySet<string>>(new Set());
   const now = Date.now();
   const thisYear = new Date(now).getFullYear();
   const froms = person.roles.map((r) => r.from).filter((d): d is string => Boolean(d)).map((d) => Number(d.slice(0, 4))).filter(Number.isFinite);
@@ -385,11 +388,26 @@ function MobileBands({ person, title, onOpen }: { person: PersonVM; title?: stri
   const ticks: number[] = [];
   for (let y = startYear; y <= thisYear - 3; y += 4) ticks.push(y);
   const bankrupt = (r: PersonRoleVM) => r.companyStatusKind === "warning" || /konkurs/i.test(r.companyStatus ?? "");
-  const rows = [...person.roles].sort((a, b) => Number(b.active) - Number(a.active) || (a.from ?? "").localeCompare(b.from ?? ""));
-  const shown = all ? rows : rows.slice(0, MOBILE_ROWS);
-  const hasOwner = rows.some((r) => r.kind === "owner");
-  const hasMgmt = rows.some((r) => r.kind !== "owner");
-  const hasBankrupt = rows.some(bankrupt);
+  // Jakob 02.10: én række pr. selskab med alle roller samlet (som på desktop); pilen folder rollerne ud.
+  const rows = personCompanies(person);
+  const shown = all ? rows : rows.slice(0, foldedCount(rows.length, MOBILE_ROWS));
+  const roles = rows.flatMap((c) => c.roles);
+  const hasOwner = roles.some((r) => r.kind === "owner");
+  const hasMgmt = roles.some((r) => r.kind !== "owner");
+  const hasBankrupt = roles.some(bankrupt);
+  const toneOf = (r: PersonRoleVM) => (bankrupt(r) ? "bankrupt" : r.kind === "owner" ? "owner" : "mgmt");
+  /** Bjælken holdes inden for banen: et bånd, der starter i år, flyttes ind, så det ses og ikke løber ud. */
+  const bar = (r: PersonRoleVM) => {
+    const width = Math.max(1.5, pos(r.to ?? (bankrupt(r) ? r.companyEnded : undefined), now) - pos(r.from, start));
+    return { left: Math.min(pos(r.from, start), 100 - width), width };
+  };
+  const periodOf = (list: readonly PersonRoleVM[]) => {
+    const froms = list.map((r) => year(r.from)).filter(Boolean).sort();
+    const open = list.some((r) => !r.to);
+    const tos = list.map((r) => year(r.to)).filter(Boolean).sort();
+    return `${froms[0] ?? ""}–${open ? "" : (tos.at(-1) ?? "")}`;
+  };
+  const roleText = (r: PersonRoleVM) => `${mobileRole(r.role)}${r.share ? ` ${r.share}` : ""}`;
   return (
     <div className="lasso-personroles__mob">
       <SectionHead title={title ?? "Tidsbånd"} action={<span className="lasso-personroles__range">{`${startYear}–${thisYear}`}</span>} />
@@ -402,32 +420,53 @@ function MobileBands({ person, title, onOpen }: { person: PersonVM; title?: stri
         <span className="lasso-mbands__tick lasso-mbands__tick--now">nu</span>
       </div>
       <ul className="lasso-mbands__rows">
-        {shown.map((r, i) => {
-          const left = pos(r.from, start);
-          const right = pos(r.to ?? (bankrupt(r) ? r.companyEnded : undefined), now);
-          const period = `${year(r.from)}–${r.to ? year(r.to) : ""}`;
-          const label = `${r.companyName}, ${mobileRole(r.role)}${r.share ? ` ${r.share}` : ""}`;
-          const tone = bankrupt(r) ? "bankrupt" : r.kind === "owner" ? "owner" : "mgmt";
+        {shown.map((c) => {
+          const list = bands(c);
+          const isOpen = print || openRows.has(c.key);
+          const tone = list.every(bankrupt) ? "bankrupt" : list.every((r) => r.kind === "owner") ? "owner" : "mgmt";
+          const toggle = () => setOpenRows((prev) => { const n = new Set(prev); if (n.has(c.key)) n.delete(c.key); else n.add(c.key); return n; });
           return (
-            <li key={`${r.companyName}-${r.role}-${i}`} className={`lasso-mbands__row lasso-mbands__row--${tone}`}>
+            <li key={c.key} className={`lasso-mbands__row lasso-mbands__row--${tone}`}>
               <span className="lasso-mbands__head">
-                {onOpen && r.companyId?.startsWith("CVR-1-") ? (
-                  <button type="button" className="lasso-link lasso-mbands__label" onClick={() => onOpen({ kind: "open-company", lassoId: r.companyId!, name: r.companyName })}>
-                    {label}
-                  </button>
-                ) : (
-                  <span className="lasso-mbands__label">{label}</span>
-                )}
-                <span className="lasso-mbands__period">{period}</span>
+                <span className="lasso-lanes__name">
+                  {list.length > 1 && !print ? <LaneToggle open={isOpen} count={list.length} what="roller" onToggle={toggle} /> : <span className="lasso-lanes__spacer" />}
+                  {onOpen && c.companyId?.startsWith("CVR-1-") ? (
+                    <button type="button" className="lasso-link lasso-mbands__label" onClick={() => onOpen({ kind: "open-company", lassoId: c.companyId!, name: c.companyName })}>
+                      {c.companyName}
+                    </button>
+                  ) : (
+                    <span className="lasso-mbands__label">{c.companyName}</span>
+                  )}
+                </span>
+                <span className="lasso-mbands__period">{periodOf(list)}</span>
               </span>
-              <span className="lasso-mbands__track" aria-hidden="true">
-                <span className={`lasso-mbands__bar lasso-mbands__bar--${tone}`} style={{ left: `${left}%`, width: `${Math.max(1.5, right - left)}%` }} />
-              </span>
+              {isOpen && list.length > 1 ? (
+                list.map((r, i) => (
+                  <span key={i} className="lasso-mbands__sub">
+                    <span className="lasso-mbands__subhead">
+                      <span>{roleText(r)}</span>
+                      <span className="lasso-mbands__period">{periodOf([r])}</span>
+                    </span>
+                    <span className="lasso-mbands__track" aria-hidden="true">
+                      <span className={`lasso-mbands__bar lasso-mbands__bar--${toneOf(r)}`} style={{ left: `${bar(r).left}%`, width: `${bar(r).width}%` }} />
+                    </span>
+                  </span>
+                ))
+              ) : (
+                <>
+                  <span className="lasso-mbands__roles">{list.map(roleText).join(", ")}</span>
+                  <span className="lasso-mbands__track" aria-hidden="true">
+                    {[...list].sort((x, y) => bar(y).width - bar(x).width).map((r, i) => (
+                      <span key={i} className={`lasso-mbands__bar lasso-mbands__bar--${toneOf(r)}`} style={{ left: `${bar(r).left}%`, width: `${bar(r).width}%` }} />
+                    ))}
+                  </span>
+                </>
+              )}
             </li>
           );
         })}
       </ul>
-      {rows.length > MOBILE_ROWS ? (
+      {foldedCount(rows.length, MOBILE_ROWS) < rows.length ? (
         <ExpandLink expanded={all} total={rows.length} onToggle={() => setAll(!all)} />
       ) : null}
       <div className="lasso-mbands__legend" aria-hidden="true">

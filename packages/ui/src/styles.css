@@ -1864,6 +1864,9 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-mbands__label { font-size: var(--lasso-fs); line-height: 20px; color: var(--lasso-text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lasso-mbands__row--bankrupt .lasso-mbands__label { color: var(--lasso-muted); }
 .lasso-mbands__period { flex: none; font-size: var(--lasso-fs-sm); color: var(--lasso-muted); }
+.lasso-mbands__roles { padding-left: 22px; font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lasso-mbands__sub { display: flex; flex-direction: column; gap: 4px; padding-left: 22px; }
+.lasso-mbands__subhead { display: flex; justify-content: space-between; gap: var(--lasso-space-3); font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-2); }
 .lasso-mbands__track { position: relative; display: block; height: 10px; border-radius: 5px; background: var(--lasso-surface-muted); }
 .lasso-mbands__bar { position: absolute; top: 0; height: 10px; border-radius: 5px; box-sizing: border-box; }
 .lasso-mbands__bar--mgmt { background: var(--lasso-chart-1); }
