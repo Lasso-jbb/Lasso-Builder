@@ -32,6 +32,7 @@ import {
   type Notice,
   type OpenItem,
   type Threads,
+  type TurnDone,
 } from "./thread.js";
 
 const novo: OpenItem = { key: "CVR-1-24256790", kind: "company", name: "NOVO NORDISK A/S", tab: "overblik" };
@@ -40,7 +41,7 @@ const mette: OpenItem = { key: "CVR-3-4000123", kind: "person", name: "Mette Hol
 const spec = { version: 2, kind: "company", title: "X", layout: "dashboard", criteria: [], components: [] } as unknown as ViewSpec;
 const ds = { companies: {}, persons: {} } as unknown as Dataset;
 const view = { kind: "view" as const, id: "v", form: "page" as const, spec, dataset: ds };
-const done = (history: unknown[] = [{ role: "user", content: "q" }], extra: Partial<Extract<ChatEvent, { type: "done" }>> = {}): Extract<ChatEvent, { type: "done" }> => ({ type: "done", history, sig: "sig", placement: { placement: "current" }, ...extra });
+const done = (history: unknown[] = [{ role: "user", content: "q" }], extra: Partial<TurnDone> = {}): TurnDone => ({ type: "done", history, sig: "sig", placement: { placement: "current" }, ...extra });
 
 test("applyEvent: tekst og visninger i rækkefølge, placering, menu og fejl; done hører til finishTurn", () => {
   const events: ChatEvent[] = [
@@ -182,6 +183,34 @@ test("undoMove: turen fjernes fra begge faner; en fane åbnet til turen lukkes (
   assert.deepEqual(kept.threads[novo.key]!.turns, []);
   // En tur uden flytnings-notits kan ikke fortrydes.
   assert.equal(undoMove(kept.threads, mette.key, "t0").threads, kept.threads);
+});
+
+test("undoMove efter done: en eksisterende målfane får sin samtale fra før tilbage; en oprettet lukkes", () => {
+  // Eksisterende fane med egen samtale.
+  let u = startTurn({}, mette.key, "Før", 1, "t0");
+  u = finishTurn(u, mette.key, done([{ role: "user", content: "mettes" }], { sent: "fp-mette" }));
+  u = startTurn(u, novo.key, "Vis alt om Mette", 2, "t1");
+  u = moveTurn(u, novo.key, mette.key, "t1", moved(mette.key, false));
+  u = finishTurn(u, mette.key, done([{ role: "user", content: "fresh" }], { fresh: true, sent: null }));
+  assert.deepEqual(u[mette.key]!.chat.history, [{ role: "user", content: "fresh" }], "flytningen nulstiller målfanens hukommelse");
+  const back = undoMove(u, novo.key, "t1");
+  assert.equal(back.closeKey, undefined);
+  assert.deepEqual(back.threads[mette.key]!.chat.history, [{ role: "user", content: "mettes" }]);
+  assert.equal(back.threads[mette.key]!.sent, "fp-mette");
+  assert.deepEqual(back.threads[mette.key]!.turns.map((x) => x.id), ["t0"]);
+  // Samtalen fra før gemmes ikke (Fortryd virker ikke efter en genindlæsning).
+  const saved = serializeCache("u", { open: [{ key: novo.key, kind: "company", name: "N", tab: "lasso" }], active: novo.key, threads: u }, 10);
+  const n = saved.tabs[novo.key]!.turns[0]!.notice;
+  assert.equal(n?.kind === "moved" && "prev" in n, false);
+
+  // Oprettet fane: færdig, så Fortryd: fanen lukkes, og dens tråd er væk.
+  let t = startTurn({}, novo.key, "Vis alt om Mette", 2, "t1");
+  t = moveTurn(t, novo.key, mette.key, "t1", moved(mette.key, true));
+  t = finishTurn(t, mette.key, done([{ role: "user", content: "fresh" }], { fresh: true }));
+  const created = undoMove(t, novo.key, "t1");
+  assert.equal(created.closeKey, mette.key);
+  assert.equal(created.threads[mette.key], undefined);
+  assert.deepEqual(created.threads[novo.key]!.turns, []);
 });
 
 test("replaceLastView: visningen i fanens aktuelle tur erstattes, ikke en flyttet turs stub", () => {

@@ -114,6 +114,12 @@ Blev fanen åbnet til turen, og brugeren fortryder (10 sekunder, `Fortryd`; kun 
 turen fjernes fra den eksisterende fane), og turen fjernes fra den gamle tråd; efter 10 sekunder forsvinder linket,
 og notitsen bliver stående.
 
+**Flytning ind i en fane, der allerede er åben.** Fandtes målfanen (fx et firma, der allerede er åbent), erstatter
+den friske historik fanens tidligere samtale: modellens hukommelse på den fane nulstilles til den flyttede tur, mens
+de tidligere ture stadig står synlige i tråden. Klienten husker fanens samtale fra før (historik, signatur og det
+sendte resumé) på flytningens notits (`prev`), så `Fortryd` lægger den tilbage, også når svaret allerede er færdigt.
+`prev` gemmes ikke i browseren; efter en genindlæsning kan flytningen ikke fortrydes.
+
 **Fanenavne.** En entitetsfane hedder det, entiteten hedder. En resultatfane hedder aldrig spørgsmålet, men et af de
 generiske navne `Firmaliste`, `Sammenligning`, `Markedsanalyse` eller `Kort`: fra `place_answer`/valgets `title`, og
 på forsiden uden valgt navn sætter serveren et ud fra den første visning (`done.placement.title`: søgninger og
