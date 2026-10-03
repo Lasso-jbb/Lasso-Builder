@@ -1,5 +1,7 @@
 import type { Dataset, ViewSpec } from "@lasso/spec";
-import type { LookupResult } from "../portal/api.js";
+import { FOCUS_LABELS, PAGE_TABS, PERSON_FOCUSES, PERSON_FOCUS_LABELS } from "@lasso/spec";
+import type { LookupResult, PageTemplate } from "../portal/api.js";
+export type { PageTemplate } from "../portal/api.js";
 import type { ChatContext, ChatEntityRef, ChoicePick } from "../chat/stream.js";
 import { LASSO_TAB, type ItemKind, type OpenItem, type PendingChoice, type Shown } from "./thread.js";
 
@@ -46,6 +48,33 @@ export type { Answer, AnswerPart, ChatCache, ChatCacheState, ItemKind, Notice, O
 
 /** Serveren tager højst så mange tegn resumé (apps/server/src/chat/context.ts). */
 export const VIEW_SUMMARY_MAX = 4000;
+
+/** Modulerne på en virksomheds- og personfane (uden Lasso-mærket): fokusserne i rækkefølge. */
+export const COMPANY_TABS: readonly ModuleTab[] = PAGE_TABS.map((f) => ({ id: f as string, label: FOCUS_LABELS[f] }));
+export const PERSON_TABS: readonly ModuleTab[] = PERSON_FOCUSES.map((f) => ({ id: f as string, label: PERSON_FOCUS_LABELS[f] }));
+
+export interface ModuleTab {
+  id: string;
+  label: string;
+  /** Sat for en egen side (sideskabelon): id er tpl:<skabelon-id>. */
+  template?: true;
+}
+
+/** Fanen (modulet) for en egen side: tpl:<id>. Højst 40 tegn, som serverens context.tab (UUID + "tpl:"). */
+export const TEMPLATE_PREFIX = "tpl:";
+export const templateTab = (id: string): string => `${TEMPLATE_PREFIX}${id}`;
+export const isTemplateTab = (tab: string): boolean => tab.startsWith(TEMPLATE_PREFIX);
+export const templateIdOf = (tab: string): string => tab.slice(TEMPLATE_PREFIX.length);
+
+/**
+ * Modulerne på en fane: de indbyggede (efter slagsen) og så ét pr. egen side af samme slags (key tpl:<id>, navn = sidens titel),
+ * efter de indbyggede i den rækkefølge, siderne blev tilføjet. Et resultat har ingen moduler.
+ */
+export function moduleTabs(kind: ItemKind, templates: readonly PageTemplate[]): ModuleTab[] {
+  if (kind === "result") return [];
+  const own = templates.filter((t) => t.kind === kind).map((t): ModuleTab => ({ id: templateTab(t.id), label: t.title, template: true }));
+  return [...(kind === "company" ? COMPANY_TABS : PERSON_TABS), ...own];
+}
 
 export function openItem(list: readonly OpenItem[], item: OpenItem): OpenItem[] {
   const i = list.findIndex((o) => o.key === item.key);

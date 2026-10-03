@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { LassoMark, LassoView, LassoWordmark, type ActionResult, type ViewAction } from "@lasso/ui";
-import { FOCUS_LABELS, isPersonFocus, PAGE_TABS, pageFocus, PERSON_FOCUS_LABELS, PERSON_FOCUSES, type Focus, type PersonFocus } from "@lasso/spec";
+import { isPersonFocus, pageFocus, type Focus, type PersonFocus } from "@lasso/spec";
 import type { Portal2Boot } from "../boot.js";
 import { Text } from "../chat/ChatApp.js";
 import { ChatHttpError, streamChat, type ChoicePick } from "../chat/stream.js";
@@ -21,6 +21,10 @@ import {
   freeTextPick,
   historyTrimmed,
   headLines,
+  isTemplateTab,
+  moduleTabs,
+  templateIdOf,
+  type PageTemplate,
   isUnrecognizedHistory,
   LASSO_TAB,
   lastViewIn,
@@ -71,8 +75,6 @@ type Theme = "light" | "dark";
 type MenuKind = "hidden" | "all" | "more" | "sel" | "tophidden";
 type Menu = { kind: MenuKind; left: number; top: number } | null;
 
-const COMPANY_TABS = PAGE_TABS.map((f) => ({ id: f as string, label: FOCUS_LABELS[f] }));
-const PERSON_TABS = PERSON_FOCUSES.map((f) => ({ id: f as string, label: PERSON_FOCUS_LABELS[f] }));
 const SECTION_FOCUS: Record<string, string> = { ejerdiagram: "ejerskab", regnskabsanalyse: "oekonomi", noegletal: "oekonomi" };
 const PHONE = "(max-width: 760px)";
 
@@ -96,7 +98,6 @@ function storage(): Storage | undefined {
 
 const isPhone = () => window.matchMedia?.(PHONE).matches ?? false;
 const iconOf = (k: ItemKind): P2IconName => (k === "company" ? "build" : k === "person" ? "user" : "search");
-const tabsOf = (k: ItemKind) => (k === "company" ? COMPANY_TABS : k === "person" ? PERSON_TABS : []);
 
 export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const [theme, setTheme] = useState<Theme>(initialTheme);
@@ -109,6 +110,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const [failed, setFailed] = useState<Record<string, string>>({});
   /** Chattens samtale pr. fane (firmaets/personens Lasso-ID eller resultatets key): ture med svar, historik og signatur. */
   const [threads, setThreads] = useState<Threads>({});
+  /** Egne sider (sideskabeloner) pr. slags: ekstra moduler efter de indbyggede på alle virksomheder/personer. */
+  const [templates, setTemplates] = useState<PageTemplate[]>([]);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [askOpen, setAskOpen] = useState(false);
@@ -138,6 +141,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   /** Sat, når sessionen er logget ud: så gemmes samtalen ikke igen for en bruger, der ikke er logget ind (et nyt login er en ny sideindlæsning). */
   const loggedOut = useRef(false);
   const turnSeq = useRef(0);
+  /** Egne sider er hentet (så en fane på en fjernet egen side kan sættes tilbage). */
+  const templatesLoaded = useRef(false);
   const abort = useRef<AbortController | null>(null);
   const resultSeq = useRef(0);
   const lookupSeq = useRef(0);
@@ -208,7 +213,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     setBusy(key, true);
     setFailed((f) => ({ ...f, [key]: "" }));
     try {
-      const r: ViewResult = kind === "company" ? await api.company(id, tab as Focus) : await api.person(id, tab as PersonFocus);
+      const r: ViewResult = isTemplateTab(tab) ? await api.templates.render(templateIdOf(tab), id) : kind === "company" ? await api.company(id, tab as Focus) : await api.person(id, tab as PersonFocus);
       put(key, { spec: r.spec, dataset: r.dataset, ...(r.summary ? { summary: r.summary } : {}) });
       const ent = entityOf(r.spec, r.dataset);
       if (ent) setOpen((l) => l.map((o) => (o.key === id ? { ...o, name: ent.name } : o)));
@@ -328,6 +333,23 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     if (!hydrated || pendingKey !== null || !boot.user || loggedOut.current) return;
     saveCache(storage(), serializeCache(boot.user.id, { open, active, threads }, Date.now()), recencyOrder(open, history, active));
   }, [hydrated, open, active, threads, pendingKey, boot.user, history]);
+
+  // Egne sider hentes, når man er logget ind; en fane på en egen side, der er fjernet, står på Overblik.
+  const reloadTemplates = useCallback(async () => {
+    if (!boot.user) return;
+    try {
+      const [c, p] = await Promise.all([api.templates.list("company"), api.templates.list("person")]);
+      templatesLoaded.current = true;
+      setTemplates([...c, ...p]);
+    } catch {
+      // Uden egne sider er modulrækken bare de indbyggede.
+    }
+  }, [api, boot.user]);
+  useEffect(() => void reloadTemplates(), [reloadTemplates]);
+  useEffect(() => {
+    if (!templatesLoaded.current) return;
+    setOpen((l) => (l.some((o) => isTemplateTab(o.tab) && !templates.some((t) => t.id === templateIdOf(o.tab))) ? l.map((o) => (isTemplateTab(o.tab) && !templates.some((t) => t.id === templateIdOf(o.tab)) ? { ...o, tab: "overblik" } : o)) : l));
+  }, [templates]);
 
   // En fane på et modul uden data (fx genskabt fra lageret) henter det, når den vises.
   useEffect(() => {
@@ -591,7 +613,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const busy = dataKey ? loading.has(dataKey) : false;
   const err = dataKey ? failed[dataKey] : "";
   const pending = pendingKey !== null;
-  const tabs = item ? tabsOf(item.kind) : [];
+  const tabs = item ? moduleTabs(item.kind, templates) : [];
   const lassoAvailable = Boolean(item && (item.kind === "result" || turn));
   const curLabel = item ? (onLasso ? "Lassos svar" : (tabs.find((t) => t.id === item.tab)?.label ?? "")) : "";
 

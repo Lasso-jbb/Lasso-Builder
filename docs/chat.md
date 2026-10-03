@@ -14,8 +14,8 @@ browser (/chat)  ──POST /api/chat (SSE)──▶  server: chat/agent.ts
 ```
 
 - **Samme værktøjer som MCP.** Chatten forbinder sig til `createMcpServer` i processen og giver Claude
-  præcis de værktøjer og beskrivelser, Claude.ai får fra `/mcp`, plus to af sine egne (`find_entity`,
-  `ask_choice`, se nedenfor). App-interne værktøjer (`resolve_view`) udelades. Ændres et værktøj, ændres
+  præcis de værktøjer og beskrivelser, Claude.ai får fra `/mcp`, plus tre af sine egne (`find_entity`,
+  `ask_choice`, `place_answer`, se nedenfor; `place_answer` står sidst i listen). App-interne værktøjer (`resolve_view`) udelades. Ændres et værktøj, ændres
   chatten med. Instruktionerne er delt i to: routingen (`ROUTING`, værktøjsvalget) er fælles, reglerne er
   hver sin (`MCP_RULES` til Claude.ai, uændret; `CHAT_RULES` i `chat/agent.ts` til chatten). MCP-serveren
   får `host: "chat"`, så visningssvaret siger "visningen vises under din tekst" i stedet for "skriv intet".
@@ -52,48 +52,91 @@ Modellen får tre lag af kontekst, alle i brugerens tur, aldrig i systemprompten
 Konteksten står som første tekstblok i brugerens tur, fx `[Kontekst] Aktiv fane: virksomheden LASSO X A/S
 (CVR-1-34580820), modul ejerskab. Brugeren ser: ejerskab — … Åbne faner: Jakob Benediktson (CVR-3-4000123).`
 (`apps/server/src/chat/context.ts`). Serveren svarer altid i den aktive kontekst og skifter aldrig kontekst
-selv: en anden fane åbnes kun ved et klik i en visning (uden AI) eller ved brugerens valg i en valgmenu.
+selv: en anden fane åbnes kun ved et klik i en visning (uden AI), ved brugerens valg i en valgmenu eller når
+brugeren udtrykkeligt beder om den ("vis alt om X", "åbn X"; se `place_answer` nedenfor).
 
-**Valgpanelet.** Menuen vises som et panel over spørgefeltet: overskrift med spørgsmålet og knapperne fold sammen
-og luk; punkter med titel (`label`), en linjes beskrivelse (`description`) og nummer (1…n, også tastaturgenvej),
-det anbefalede (`recommended`, højst ét) først og markeret; en sidste række "Andet" med et tekstfelt i panelet;
-"Spring over" og "Send" (Cmd/Ctrl+Enter). Enkeltvalg; Esc springer over. "Spring over" er kun klienten: menuen
-lukkes på fanen, intet sendes, og næste spørgsmål besvares her. Skriver brugeren i det almindelige spørgefelt,
-mens panelet står åbent, sendes det stadig som `choice.free` (hvis menuen tillader fritekst). Hvert punkt har
-`label` og `description` ("Kort svar her i chatten", "Åbner en ny fane med hele overblikket"); spørges der om en
-anden person eller virksomhed, er "Kort indsigt" anbefalet og står først, så "Fuld indsigt". Kun `action` er
-afgørende for placeringen og indgår i verificeringen; titel, beskrivelse og anbefaling stoles der ikke på.
-Grænserne (description højst 160 tegn, højst ét anbefalet punkt) tjekkes af zod på serveren og står kun i
-beskrivelserne i det skema, der sendes til API'et (strict tool use kender ikke min/max).
+**Valgpanelet.** Menuen vises som et panel over spørgefeltet (på telefon som et ark): overskrift med spørgsmålet
+og knapperne fold sammen og luk; punkter med titel (`label`) og en linjes beskrivelse (`description`), uden
+nummermærker (tallene 1…9 er skjulte tastaturgenveje); det anbefalede (`recommended`, højst ét) står først og
+er markeret "(Anbefalet)"; en sidste række "Andet" med feltet "Skriv dit eget svar her"; "Spring over" og "Vælg".
+Enkeltvalg (radiogruppe); Esc springer over. "Spring over" er kun klienten: menuen lukkes på fanen, intet sendes,
+og næste spørgsmål besvares her. Skriver brugeren i det almindelige spørgefelt, mens panelet står åbent, sendes
+det stadig som `choice.free` (hvis menuen tillader fritekst). Kun `action` er afgørende for placeringen og indgår
+i verificeringen; titel, beskrivelse og anbefaling stoles der ikke på. Grænserne (description højst 160 tegn,
+højst ét anbefalet punkt, mindst to punkter) tjekkes af zod på serveren (mindst to kun i `run()`, så gamle menuer
+med ét punkt stadig kan bekræftes) og står kun i beskrivelserne i det skema, der sendes til API'et (strict tool
+use kender ikke min/max).
 
-**Valgmenuen (`ask_choice`).** Lægger spørgsmålet op til en anden kontekst ("vis alt om Jakob" på LASSO X's
-side, "åbn X", en global liste fra en side), eller er et navn tvetydigt, kalder modellen `ask_choice` uden
-nogen visning. Serveren sender `choice` (spørgsmål, 1–8 punkter med hver sin handling, fritekst tilladt) og
-afslutter turen; andre værktøjskald i samme svar afvises ("vis intet, før brugeren har valgt"). Punktets
-handling (`action`) er placeringen: `current` (svaret skrives her), `entity` (på personens/virksomhedens egen
-fane, med `focus`) eller `global`. Brugerens valg kommer med næste spørgsmål som `context.choice`
-(`{ id, index, action }`, eller `{ id, free: true }` ved fritekst); serveren tjekker, at `id` er modellens eget
-`ask_choice`-kald i den signerede historik, og at `action` er præcis punktets (ellers 400 "Valget passer ikke
-til samtalen"). Så står valget først i konteksten ("Brugeren valgte 'Fuld indsigt i Jakob Benediktson':
-svaret skrives på personen …"), og modellen gør det i ét trin. Spørger brugeren om en anden person eller virksomhed ("vis detaljer om Jakob"), tilbyder modellen
-**kort eller fuld indsigt**: "Kort indsigt i Jakob Benediktson" (placement `current`: et kort svar her, brugeren
-bliver på fanen) og "Fuld indsigt i Jakob Benediktson" (placement `entity`: en ny fane med hele siden,
-`show_person`/`show_company` med `show_all`). Ved en global liste eller analyse fra en side er placementet
-`global`, og punktet har altid en `title` (højst 40 tegn, et kort dansk navneord: "Markedsundersøgelse",
-"Største revisorer i Aarhus"), som bliver navnet på den nye fane. `title` er en del af handlingen, så den indgår
-i verificeringen (en anden title end modellens giver 400). Fritekst skrives i spørgefeltet, ikke i menuen.
-Spørger brugeren om noget andet i stedet, svares der her. Kandidater med id'er finder modellen med `find_entity` (navneopslag uden visning; de åbne faner tæller
-som præcise match), aldrig `show_person` med et fornavn alene.
+**Valgmenuen (`ask_choice`) er kun til flere match.** Passer et navn på flere ("vis alt om Jakob"), finder
+modellen kandidaterne med `find_entity` (navneopslag uden visning; de åbne faner tæller som præcise match) og
+kalder `ask_choice` uden nogen visning: ét punkt pr. kandidat (placement `entity` med `entity` fra `find_entity`,
+`focus` overblik), titel = navnet, beskrivelse = rolle, alder, by og virksomheder, den mest sandsynlige først og
+anbefalet. Der tilbydes aldrig kort eller fuld indsigt, og menuen bruges aldrig til at vælge placering. Serveren
+sender `choice` (spørgsmål, 2–8 punkter, fritekst tilladt) og afslutter turen; andre værktøjskald i samme svar
+afvises ("vis intet, før brugeren har valgt"). Punktets handling (`action`) er placeringen: `current`, `entity`
+(med `focus`) eller `global` (med `title`, et af de fire generiske navne). Brugerens valg kommer med næste
+spørgsmål som `context.choice` (`{ id, index, action }`, eller `{ id, free: true }` ved fritekst); serveren tjekker,
+at `id` er modellens eget `ask_choice`-kald i den signerede historik, og at `action` er præcis punktets (ellers 400
+"Valget passer ikke til samtalen"). Så står valget først i konteksten ("Brugeren valgte 'Jakob Benediktson': svaret
+skrives på personen …"), valget er bindende (`place_answer` afvises), og modellen gør det i ét trin. Spørger
+brugeren om noget andet i stedet, svares der her.
 
-**Placeringen bæres, ikke bestemmes.** Første hændelse i hver tur er `placement` (fra valget, ellers
-`current`; på forsiden `global`), sendt før modellen kaldes, og den gentages i `done`. Portalen åbner eller
-aktiverer kun en anden fane på `placement`, aldrig på en visning. Åbner `entity` en ny fane, står fanen, man
-spurgte fra, præcis som før (hverken nulstillet til Overblik eller genindlæst); brugeren får blot den nye fane.
-`placement` bærer `title` ved `global`.
+**Placeringen vælges med `place_answer`, før noget vises.** Modellen kalder `place_answer` højst én gang pr. tur og
+som det første; placeringen er altså afgjort, før en visning tegnes (højst én fane pr. spørgsmål). Standard er at
+blive: `current` (på en person eller virksomhed er det "her"; nævner spørgsmålet en anden, men brugeren ikke har
+bedt om dens side, kalder modellen `current`). `entity` (en anden persons eller virksomheds egen fane) kræver, at
+brugerens besked udtrykkeligt beder om det (`EXPLICIT_OPEN` i `chat/place.ts`: "vis/se (mig) alt/det hele" eller
+"åbn"), at id'et ikke er den aktive fane, og at id'et enten står i de åbne faner eller er det eneste kandidat, når
+serveren selv slår navnet op (`resolveEntity`, grænse 2); navnet kommer fra kandidaten, ikke fra modellen. Passer
+navnet på flere, svarer serveren med en fejl ("Navnet passer på flere; kald ask_choice med kandidaterne."). `global`
+(en liste, sammenligning eller analyse) kræver en `title` fra de fire generiske navne `GLOBAL_TITLES`
+(Firmaliste, Sammenligning, Markedsanalyse, Kort), aldrig spørgsmålet; på en resultatfane med navn bliver man
+(`current`). Fejl er `is_error`-værktøjssvar (og `tool_error`-hændelser), så modellen kan rette; kommer `place_answer`
+i samme svar som en visning og afvises, vises intet i det svar. `place_answer` efter en visning, en anden gang i
+samme tur og efter et bindende valg i menuen afvises også. Serveren kontrollerer, at modellen ikke kan åbne faner,
+brugeren ikke bad om (reglen står i serveren, ikke kun i prompten).
 
-**Fanenavne.** En entitetsfane hedder det, entiteten hedder. En resultatfane (`global`, eller et spørgsmål fra
-forsiden) hedder `title` fra valget; uden menu hedder den først det afkortede spørgsmål (højst 40 tegn) og
-bliver til visningens `spec.title`, når den kommer.
+**Placeringen på hændelserne.** Første hændelse i hver tur er `placement` (fra valget, ellers `current`; på
+forsiden `global`), sendt før modellen kaldes. Lykkes `place_answer`, sendes endnu en `placement` med `decided: true`
+(og `here: true` ved `current` på en entitet, `title` ved `global`). Et skifte af fane sker, når placement er `entity`,
+eller `global` fra en fane, der ikke er global; højst én gang pr. tur, efter den første `placement`-hændelse.
+Portalen åbner eller aktiverer kun en anden fane på `placement`, aldrig på en visning. Åbner `entity` en ny fane,
+står fanen, man spurgte fra, præcis som før (hverken nulstillet til Overblik eller genindlæst); spørgsmålet og
+notitsen "Åbner X i en ny fane. Fortryd" står i den gamle tråd, svaret i den nye.
+
+**Frisk historik ved et skifte.** Flytter svaret (entity, eller global fra en fane), starter den nye fane en ny
+samtale: `done.history` er kun denne tur (beskederne efter den bevarede historik), `done.fresh` er `true`, og
+signaturen gælder den friske historik. Klienten gemmer den på den nye fane; den gamle fanes historik er uændret.
+Blev fanen åbnet til turen, og brugeren fortryder (10 sekunder, `Fortryd`), standses strømmen, fanen lukkes (eller
+turen fjernes fra den eksisterende fane), og turen fjernes fra den gamle tråd; efter 10 sekunder forsvinder linket,
+og notitsen bliver stående.
+
+**Fanenavne.** En entitetsfane hedder det, entiteten hedder. En resultatfane hedder aldrig spørgsmålet, men et af de
+generiske navne `Firmaliste`, `Sammenligning`, `Markedsanalyse` eller `Kort`: fra `place_answer`/valgets `title`, og
+på forsiden uden valgt navn sætter serveren et ud fra den første visning (`done.placement.title`: søgninger og
+gemte sider = Firmaliste, `compare_companies` = Sammenligning, en visning med `LassoMap` = Kort, ellers
+Markedsanalyse). Uden visning er der intet navn; en resultatfane med navn beholder sit.
+
+**Tilføj som fane (egne sider).** På en side, chatten har sat sammen om én virksomhed eller person (fx et
+KYC-overblik), gemmer "Tilføj som fane" siden som en **sideskabelon** bundet til entitetens slags: den dukker op som
+et ekstra modul (efter de indbyggede, med sidens titel) på hver virksomhed (eller person), brugeren åbner, og vises
+med den enheds data. Specen gemmes uden entiteten: `templateFromSpec` (`apps/server/src/pages/templateSpec.ts`)
+erstatter hver strengværdi, der er entitetens Lasso-ID (eller virksomhedens CVR-nummer), med `{{entity}}`, og
+afviser en side uden en forekomst ("Siden handler ikke om én virksomhed/person"); `instantiate` sætter det nye id
+ind igen. Andre virksomheder i specen (en benchmark, en sammenligning) røres ikke. Skabelonerne er pr. bruger og
+organisation (tabellen `page_templates`, eller hukommelsen uden database; højst 50 pr. bruger). Portal-API'et
+(session + CSRF som resten):
+
+| kald | |
+|---|---|
+| `POST /api/portal/templates` `{ kind, title, subtitle?, spec, entity: { kind, id } }` | gemmer; svar `{ id, kind, title, subtitle?, createdAt }` (uden spec); 400 ved ugyldig spec, en side uden entiteten, en slags der ikke passer til id'et |
+| `GET /api/portal/templates?kind=company\|person` | `{ templates: [{ id, kind, title, subtitle?, createdAt }] }`, ældste først, kun brugerens egne |
+| `DELETE /api/portal/templates/:id` | `{ id, removed: true }`; en andens eller ukendt id er 404 "Siden findes ikke."; listen afspejler det med det samme |
+| `GET /api/portal/templates/:id/render?entity=<Lasso-ID>` | `{ spec, dataset, summary }` for den enhed, gennem samme vej som `resolve_view` (brugerens dataadgang); titel og undertitel fra skabelonen; `summary` er "Brugeren ser"-resuméet; 400 hvis id'et ikke passer til slagsen, 404 ved en andens id |
+
+Klienten (`api.templates.list/save/remove/render`, `moduleTabs` i `portal2/model.ts`) viser skabelonerne som moduler
+med nøglen `tpl:<id>` (højst 40 tegn, som `context.tab`); fjernes en skabelon, står en fane på den på Overblik.
+Chattens `done`- og `view`-hændelser er uændrede: klienten sender den spec, den allerede har.
 
 ## API: `POST /api/chat`
 
@@ -116,14 +159,14 @@ Svar: `text/event-stream`, én `data: <json>` pr. hændelse:
 
 | type | felter | |
 |---|---|---|
-| `placement` | `placement`, `target?`, `focus?` | Første hændelse i hver tur: hvor svaret skrives (`current`, `entity` med `target` {kind, id, name}, eller `global`). |
+| `placement` | `placement`, `target?`, `focus?`, `title?`, `decided?`, `here?` | Første hændelse i hver tur: hvor svaret skrives (`current`, `entity` med `target` {kind, id, name}, eller `global` med `title`). Efter et vellykket `place_answer` kommer en ny med `decided: true` (`here: true` ved `current` på en entitet). |
 | `text` | `text` | Et stykke af Claudes tekst (streames). Tekst og visninger kommer i den rækkefølge, de laves. |
 | `tool` | `id`, `name`, `title` | Et værktøj er gået i gang ("Vis virksomhed"). |
 | `view` | `id`, `name`, `form`, `spec`, `dataset`, `pdfLink?` | Visningen fra værktøjet. `form` er `page` (show_*, søgninger, render_view med layout page) eller `module`. Tegnes med `LassoView`. |
 | `tool_error` | `id`, `name`, `message` | Værktøjet fejlede. Claude får fejlen og kan rette sig. |
-| `choice` | `id`, `question`, `options[{label, action}]`, `allowFreeText` | Valgmenuen (ask_choice). Turen slutter; valget sendes med næste spørgsmål i `context.choice`. |
+| `choice` | `id`, `question`, `options[{label, description, recommended?, action}]`, `allowFreeText` | Valgmenuen (ask_choice, kun til flere match). Turen slutter; valget sendes med næste spørgsmål i `context.choice`. |
 | `error` | `message` | Samtalen kunne ikke fortsætte (Claude-fejl, afvist svar, for mange trin). |
-| `done` | `history`, `sig`, `placement` | Sendes med næste spørgsmål. `history` er den trimmede historik (se nedenfor). |
+| `done` | `history`, `sig`, `placement`, `fresh?` | Sendes med næste spørgsmål. `history` er den trimmede historik (se nedenfor); ved `fresh: true` er svaret flyttet til en anden fane, og `history` er kun denne tur (hører til den nye fane). `placement.title` kan være sat af serveren (generisk navn). |
 
 Et svar kan være tekst, en eller flere visninger, eller begge dele ("Jakob har 4 firmaer …" og et ejerdiagram),
 eller en hel side. Portalen viser delene i rækkefølge under spørgsmålet.
@@ -151,17 +194,21 @@ passer til samtalen), 401, 429 (bremsen), 503 (ingen `ANTHROPIC_API_KEY`).
 ### Samtalen i browseren
 
 Serveren gemmer ingen samtaler, men portalen gemmer selv samtalen i browseren (`localStorage`, nøglen
-`lasso-chat`): historik og signatur, de åbne faner og det seneste svar pr. fane (også en åben valgmenu), bundet
-til brugerens id og med 24 timers udløb (`CHAT_CACHE_TTL_MS` i `apps/view/src/portal2/model.ts`). Så overlever
-samtalen en genindlæsning. Kun den trimmede historik fra `done` gemmes, og aldrig mens der hentes. Historikken
-afkortes aldrig i det gemte (signaturen er en HMAC over præcis den historik, serveren gav; en afkortet kopi ville
-give 400 ved hvert spørgsmål efter en genindlæsning). Er lageret fuldt, droppes først visningerne (datasættene)
-fra de mindst nyligt aktive faner ét ad gangen (teksten bliver; en firma- eller personfane står på Overblik og
-henter selv sit modul igen ved genskabelsen), så glemmes hele samtalen (tom historik, ingen signatur, åbne menuer
-lukkes; faner og svar bliver), og først til sidst springes gemningen over; der prøves igen efter hvert trin.
-Svarer serveren 400 "Samtalen kunne ikke genkendes", begynder portalen en ny samtale (tom historik), så brugeren
-ikke sidder fast. Efter et logud (eller et udløbet login) gemmes samtalen ikke igen. Både samtalen og fanernes svar med datasæt gemmes, når der er plads. Lageret ryddes ved udløb, for en
-anden bruger og når sessionen er logget ud. Modulernes egne data (de faste faner) gemmes ikke; de hentes igen.
+`lasso-chat`, **cache v2**): pr. fane `{ chat: { history, sig }, turns, sent }` (hver fane har sin egen historik, fordi et
+skifte giver en frisk), de åbne faner og den aktive, bundet til brugerens id og med 24 timers udløb
+(`CHAT_CACHE_TTL_MS` i `apps/view/src/portal2/thread.ts`, genudgivet fra `model.ts`). Så overlever samtalen en
+genindlæsning. Ventende ture gemmes ikke, og tidspunktet for Fortryd (`undoUntil`) gendannes ikke (linket er væk
+efter en genindlæsning). **Migrering:** en gemt v1 (ét svar pr. fane og én fælles samtale) læses som v2: hvert svar
+bliver fanens eneste tur, og den fælles historik følger den aktive fane, så den kan fortsættes. Historikken afkortes
+aldrig i det gemte (signaturen er en HMAC over præcis den historik, serveren gav; en afkortet kopi ville give 400
+ved hvert spørgsmål efter en genindlæsning). Er lageret fuldt, droppes først visningerne (datasættene) fra de mindst
+nyligt aktive faner ét ad gangen (teksten bliver; en firma- eller personfane står på Overblik og henter selv sit
+modul igen ved genskabelsen), så glemmes hele samtalen (tom historik og ingen signatur i hver fane, åbne menuer
+lukkes; faner og ture bliver), og først til sidst springes gemningen over; der prøves igen efter hvert trin.
+Svarer serveren 400 "Samtalen kunne ikke genkendes", begynder portalen en ny samtale på fanen (tom historik), så
+brugeren ikke sidder fast. Efter et logud (eller et udløbet login) gemmes samtalen ikke igen. Lageret ryddes ved
+udløb, for en anden bruger og når sessionen er logget ud. Modulernes egne data (de faste faner og egne sider)
+gemmes ikke; de hentes igen.
 
 ### Tokens: hvad chatværten udelader i forhold til /mcp
 
@@ -230,4 +277,5 @@ sendes intet) eller API-fejl (status og besked); 2: cachen læste ikke (tjek, at
 længde). Kør det efter ændringer i værktøjsskemaer, `CHAT_RULES` eller cache-indstillinger.
 
 Lokalt uden nøgle: `npx tsx apps/server/src/dev/chat-preview.ts` starter serveren med en falsk model
-på http://localhost:3999/chat og /portal; skriver man "alt om …", viser den valgmenuen først.
+på http://localhost:3999/chat og /portal; skriver man "alt om …", slår den virksomheden op (`find_entity`) og åbner
+dens fane (`place_answer` entity); ellers svarer den her (`place_answer` current).

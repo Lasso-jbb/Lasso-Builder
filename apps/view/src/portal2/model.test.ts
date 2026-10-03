@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Dataset, ViewSpec } from "@lasso/spec";
 import type { LookupResult } from "../portal/api.js";
-import { addRecent, historyTrimmed, summaryFingerprint, textHash, choiceKey, choiceSend, defaultChoiceSelection, isUnrecognizedHistory, shortName, askPlaceholder, choiceMessage, closeItem, contextFor, freeTextPick, headLines, highlight, loadRecent, openItem, searchCounts, searchRows, suggestions, withoutHead, type OpenItem, type PendingChoice } from "./model.js";
+import { COMPANY_TABS, isTemplateTab, moduleTabs, templateIdOf, templateTab, addRecent, historyTrimmed, summaryFingerprint, textHash, choiceKey, choiceSend, defaultChoiceSelection, isUnrecognizedHistory, shortName, askPlaceholder, choiceMessage, closeItem, contextFor, freeTextPick, headLines, highlight, loadRecent, openItem, searchCounts, searchRows, suggestions, withoutHead, type OpenItem, type PendingChoice } from "./model.js";
 
 const novo: OpenItem = { key: "CVR-1-24256790", kind: "company", name: "NOVO NORDISK A/S", tab: "overblik" };
 const lasso: OpenItem = { key: "CVR-1-34580820", kind: "company", name: "LASSO X A/S", tab: "overblik" };
@@ -212,4 +212,23 @@ test("valgpanel: taster (1–9, Andet efter punkterne, Cmd/Ctrl+Enter, Esc) og t
   assert.equal(choiceKey(key("Enter"), panel, true, "panel", false), null);
   assert.equal(choiceKey(key("Enter"), panel, false, "panel", false), null);
   assert.deepEqual(choiceKey(key("Enter", { metaKey: true }), panel, true, "panel", true), { kind: "send" });
+});
+
+test("moduleTabs: de indbyggede moduler og så én pr. egen side af slagsen (tpl:<id>); et resultat har ingen", () => {
+  const templates = [
+    { id: "a1", kind: "company" as const, title: "KYC-overblik" },
+    { id: "b2", kind: "person" as const, title: "Mine roller" },
+    { id: "c3", kind: "company" as const, title: "Ejere" },
+  ];
+  const company = moduleTabs("company", templates);
+  assert.deepEqual(company.map((t) => t.id), [...COMPANY_TABS.map((t) => t.id), "tpl:a1", "tpl:c3"]);
+  assert.deepEqual(company.slice(-2), [{ id: "tpl:a1", label: "KYC-overblik", template: true }, { id: "tpl:c3", label: "Ejere", template: true }]);
+  assert.deepEqual(moduleTabs("person", templates).slice(-1), [{ id: "tpl:b2", label: "Mine roller", template: true }]);
+  assert.deepEqual(moduleTabs("company", []).map((t) => t.id), COMPANY_TABS.map((t) => t.id));
+  assert.deepEqual(moduleTabs("result", templates), []);
+  assert.ok(isTemplateTab("tpl:a1") && !isTemplateTab("oekonomi"));
+  assert.equal(templateIdOf("tpl:a1"), "a1");
+  assert.equal(templateTab("a1"), "tpl:a1");
+  // serverens context.tab er højst 40 tegn: tpl: + et UUID passer lige.
+  assert.equal(templateTab("123e4567-e89b-12d3-a456-426614174000").length, 40);
 });

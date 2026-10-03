@@ -65,3 +65,22 @@ test("API: fejl kommer som serverens tekst", async () => {
   const bare = createPortalApi(() => {}, stub(500, undefined).fetcher);
   await assert.rejects(bare.pages(), /fejl 500/);
 });
+
+test("API: egne sider (templates) bruger de rigtige stier, metoder og CSRF", async () => {
+  const { calls, fetcher } = stub(200, { templates: [{ id: "t1", kind: "company", title: "KYC" }] });
+  const api = createPortalApi(() => {}, fetcher);
+  assert.deepEqual(await api.templates.list("company"), [{ id: "t1", kind: "company", title: "KYC" }]);
+  await api.templates.save({ kind: "company", title: "KYC", spec: {} as never, entity: { kind: "company", id: "CVR-1-99000001" } });
+  await api.templates.render("t1", "CVR-1-99000002");
+  await api.templates.remove("t1");
+  assert.equal(calls[0]!.url, "/api/portal/templates?kind=company");
+  assert.equal(headers(calls[0]!)["x-lasso-portal"], undefined);
+  assert.equal(calls[1]!.url, "/api/portal/templates");
+  assert.equal(calls[1]!.init.method, "POST");
+  assert.equal(headers(calls[1]!)["x-lasso-portal"], "1");
+  assert.equal(calls[2]!.url, "/api/portal/templates/t1/render?entity=CVR-1-99000002");
+  assert.equal(calls[2]!.init.method, "GET");
+  assert.equal(calls[3]!.url, "/api/portal/templates/t1");
+  assert.equal(calls[3]!.init.method, "DELETE");
+  assert.equal(headers(calls[3]!)["x-lasso-portal"], "1");
+});
