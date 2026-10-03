@@ -601,3 +601,22 @@ test("place_answer global: fra en fane en flytning (fresh) med modellens title; 
   const named = await chat({ message: "Og flere?", context: { active: { kind: "global", title: "Mine søgninger" }, open: [] } });
   assert.deepEqual((named.events.at(-1) as Event & { placement: unknown }).placement, { placement: "global" });
 });
+
+test("place_answer: et andet place_answer i samme svar afvises uden at køre; view-hændelsen bærer værktøjets navn", async () => {
+  const a = { type: "tool_use", id: "tu_p1", name: "place_answer", input: { placement: "current" } };
+  const b = { type: "tool_use", id: "tu_p2", name: "place_answer", input: { placement: "global", title: "Kort" } };
+  script.push(() => message([a, b], "tool_use"), useTool("show_company", { company: "99000001" }), sayText("Her."));
+  const { events } = await chat({ message: "Hej", context: onLasso });
+  assert.deepEqual(typesOf(events), ["placement", "tool", "tool", "placement", "tool_error", "tool", "view", "text", "done"]);
+  const err = events.find((e) => e.type === "tool_error") as Event & { id: string; message: string };
+  assert.equal(err.id, "tu_p2");
+  assert.match(err.message, /Højst ét kald pr\. svar/);
+  // Kun den første kørte: én decided-placement, og den er current (here); done er ikke et skifte.
+  const decided = events.filter((e) => e.type === "placement" && e.decided);
+  assert.equal(decided.length, 1);
+  assert.equal(decided[0]!.placement, "current");
+  assert.equal((events.at(-1) as Event & { fresh?: true }).fresh, undefined);
+  const view = events.find((e) => e.type === "view") as Event & { tool: string; name: string };
+  assert.equal(view.tool, "show_company");
+  assert.equal(view.name, "show_company");
+});

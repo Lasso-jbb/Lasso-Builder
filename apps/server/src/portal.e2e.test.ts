@@ -532,7 +532,7 @@ test("/api/portal/templates: Tilføj som fane gemmer en side som skabelon, der v
   const pia = (await login(PIA.id, PIA.key)).cookie;
   piaCookie = pia;
   const ole = (await login(OLE.id, OLE.key)).cookie;
-  const kyc = (id: string) => ({ version: 2, kind: "custom", title: "KYC-overblik", layout: "dashboard", criteria: [], components: [{ type: "LassoCompanyHead", company: "99000001" }, { type: "LassoKeyFigureCards", company: id }] });
+  const kyc = (id: string) => ({ version: 2, kind: "custom", title: "KYC-overblik", layout: "dashboard", criteria: [], components: [{ type: "LassoKeyValueList", company: "99000001" }, { type: "LassoKeyFigureCards", company: id }] });
   const body = { kind: "company", title: "KYC", subtitle: "Mit overblik", spec: kyc("CVR-1-99000001"), entity: { kind: "company", id: "CVR-1-99000001" } };
 
   // Adgang: login og CSRF som de andre portalruter.
@@ -564,7 +564,7 @@ test("/api/portal/templates: Tilføj som fane gemmer en side som skabelon, der v
 
   // Gem-fejl: siden handler ikke om entiteten, forkert slags, ugyldig spec, ugyldigt id.
   const other = { ...body, spec: kyc("CVR-1-99000004") };
-  assert.match((await json<{ error: string }>(await api("/templates", { method: "POST", body: { ...other, spec: { ...other.spec, components: [{ type: "LassoCompanyHead", company: "CVR-1-99000004" }] } }, cookie: pia }), 400)).error, /Siden handler ikke om én virksomhed/);
+  assert.match((await json<{ error: string }>(await api("/templates", { method: "POST", body: { ...other, spec: { ...other.spec, components: [{ type: "LassoKeyFigureCards", company: "CVR-1-99000004" }] } }, cookie: pia }), 400)).error, /Siden handler ikke om én virksomhed/);
   assert.equal((await api("/templates", { method: "POST", body: { ...body, entity: { kind: "person", id: "CVR-1-99000001" } }, cookie: pia })).status, 400);
   assert.equal((await api("/templates", { method: "POST", body: { ...body, entity: { kind: "company", id: "ikke-et-id" } }, cookie: pia })).status, 400);
   assert.equal((await api("/templates", { method: "POST", body: { ...body, spec: { title: "x" } }, cookie: pia })).status, 400);
@@ -586,11 +586,30 @@ test("/api/portal/templates: Tilføj som fane gemmer en side som skabelon, der v
 
 test("/api/portal/templates: en personside bliver en personskabelon", async () => {
   const pia = piaCookie;
-  const spec = { version: 2, kind: "custom", title: "Roller", layout: "dashboard", criteria: [], components: [{ type: "LassoPersonHead", person: "CVR-3-4000000007" }, { type: "LassoPersonRoles", person: "CVR-3-4000000007" }] };
+  const spec = { version: 2, kind: "custom", title: "Roller", layout: "dashboard", criteria: [], components: [{ type: "LassoPersonStats", person: "CVR-3-4000000007" }, { type: "LassoPersonRoles", person: "CVR-3-4000000007" }] };
   const made = await json<TemplateJson>(await api("/templates", { method: "POST", body: { kind: "person", title: "Mine roller", spec, entity: { kind: "person", id: "CVR-3-4000000007" } }, cookie: pia }));
   assert.equal(made.subtitle, undefined);
   const shown = await json<ViewBody>(await api(`/templates/${made.id}/render?entity=CVR-3-4000000002`, { cookie: pia }));
   assert.deepEqual(shown.spec.components.map((c) => (c as { person?: string }).person), ["CVR-3-4000000002", "CVR-3-4000000002"]);
   assert.equal((await api(`/templates/${made.id}/render?entity=CVR-1-99000001`, { cookie: pia })).status, 400);
   await json(await api(`/templates/${made.id}`, { method: "DELETE", cookie: pia }));
+});
+
+test("/api/portal/templates: entitetens navn fjernes fra titlerne, hoved og opfølgende spørgsmål udelades, og et navn i teksten afvises", async () => {
+  const pia = piaCookie;
+  const entity = { kind: "company", id: "CVR-1-99000001" };
+  const comps = [{ type: "LassoCompanyHead", company: "CVR-1-99000001" }, { type: "LassoKeyFigureCards", company: "CVR-1-99000001" }, { type: "LassoFollowUps", prompts: [{ label: "Ejere", prompt: "Hvem ejer Eksempel Byg A/S?" }] }];
+  const spec = (extra: object = {}, components: unknown[] = comps) => ({ version: 2, kind: "custom", title: "Overblik, Eksempel Byg A/S", layout: "dashboard", criteria: [], components, ...extra });
+  const made = await json<TemplateJson>(await api("/templates", { method: "POST", body: { kind: "company", title: "Eksempel Byg A/S", subtitle: "Kort – Eksempel Byg", spec: spec(), entity }, cookie: pia }));
+  // Titlen var kun navnet: "Side"; ' – Eksempel Byg' er klippet af undertitlen.
+  assert.equal(made.title, "Side");
+  assert.equal(made.subtitle, "Kort");
+  const shown = await json<ViewBody>(await api(`/templates/${made.id}/render?entity=CVR-1-99000002`, { cookie: pia }));
+  assert.deepEqual(shown.spec.components.map((c) => c.type), ["LassoKeyFigureCards"], "hoved og opfølgende spørgsmål er væk");
+  assert.equal(shown.spec.title, "Side");
+  await json(await api(`/templates/${made.id}`, { method: "DELETE", cookie: pia }));
+  // Navnet i en komponents tekst: 400 på dansk.
+  const leaky = spec({}, [{ type: "LassoRanking", companies: ["CVR-1-99000001", "CVR-1-99000004"], title: "Eksempel Byg A/S er størst" }]);
+  const bad = await json<{ error: string }>(await api("/templates", { method: "POST", body: { kind: "company", title: "X", spec: leaky, entity }, cookie: pia }), 400);
+  assert.equal(bad.error, "Siden indeholder stadig navnet; omdøb den først.");
 });

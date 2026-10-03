@@ -48,9 +48,9 @@ test("applyEvent: tekst og visninger i rækkefølge, placering, menu og fejl; do
     { type: "text", text: "Jakob " },
     { type: "text", text: "har 4 firmaer." },
     { type: "tool", id: "t1", name: "render_view", title: "Vis oversigt" },
-    { type: "view", id: "t1", name: "render_view", form: "module", spec, dataset: ds },
+    { type: "view", id: "t1", name: "render_view", tool: "render_view", form: "module", spec, dataset: ds },
     { type: "text", text: "Og her er siden." },
-    { type: "view", id: "t2", name: "show_person", form: "page", spec, dataset: ds },
+    { type: "view", id: "t2", name: "show_person", tool: "show_person", form: "page", spec, dataset: ds },
   ];
   let a = newAnswer();
   for (const e of events) a = applyEvent(a, e);
@@ -186,7 +186,7 @@ test("undoMove: turen fjernes fra begge faner; en fane åbnet til turen lukkes (
 
 test("replaceLastView: visningen i fanens aktuelle tur erstattes, ikke en flyttet turs stub", () => {
   let t = startTurn({}, novo.key, "q", 1, "t1");
-  t = applyTurnEvent(t, novo.key, "t1", { type: "view", id: "v", name: "show_company", form: "page", spec, dataset: ds });
+  t = applyTurnEvent(t, novo.key, "t1", { type: "view", id: "v", name: "show_company", tool: "show_company", form: "page", spec, dataset: ds });
   const spec2 = { ...spec, title: "Y" } as ViewSpec;
   assert.equal(currentTurn(replaceLastView(t, novo.key, { spec: spec2, dataset: ds }), novo.key)!.answer.parts.length, 1);
   assert.equal(lastView(currentTurn(replaceLastView(t, novo.key, { spec: spec2, dataset: ds }), novo.key)!.answer)!.spec.title, "Y");
@@ -314,7 +314,7 @@ test("quota: datasæt fra de mindst nyligt aktive faner droppes ét ad gangen, s
   for (const o of [a, b, r]) {
     t = startTurn(t, o.key, o.name, 1, `t-${o.key}`);
     t = applyTurnEvent(t, o.key, `t-${o.key}`, { type: "text", text: "t" });
-    t = applyTurnEvent(t, o.key, `t-${o.key}`, { type: "view", id: "v", name: "show_company", form: "page", spec, dataset: { ...ds, pad: big } as unknown as Dataset });
+    t = applyTurnEvent(t, o.key, `t-${o.key}`, { type: "view", id: "v", name: "show_company", tool: "show_company", form: "page", spec, dataset: { ...ds, pad: big } as unknown as Dataset });
     t = finishTurn(t, o.key, done([{ role: "user", content: "Q" }]));
   }
   const cache = serializeCache("pia", { open: [a, b, r], active: r.key, threads: t }, 1);
