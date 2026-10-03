@@ -834,10 +834,86 @@ test("/api/portal/visning/<id>: den gemte visning til Åben i Lasso, med dublet-
   assert.equal((await api("/visning/abcdefghjk", { cookie: pia })).status, 404);
   assert.equal((await api("/visning/x", { cookie: pia })).status, 404);
   const old = await store.saveShort({ org: PIA.org, owner: PIA.id, spec: { ...spec, title: "Gammel" } as never, entity: { kind: "company", id: "CVR-1-99000001" }, title: "Gammel", createdAt: new Date(Date.now() - 400 * 86_400_000).toISOString() }, 10_000);
-  assert.equal((await api(`/visning/${old.id}`, { cookie: pia })).status, 404);
+  assert.equal((await api(`/visning/${old.id}`, { cookie: pia })).status, 410, "udløbet");
   const many = await store.saveShort({ org: PIA.org, owner: PIA.id, spec: { ...spec, title: "Flere" } as never, title: "Flere" }, 30);
   assert.equal((await api(`/visning/${many.id}`, { cookie: pia })).status, 404);
-  // Anden organisation: 404 (visningen er ikke delt til dem).
+  // Anden organisation (fx MCP-forbindelsens bruger): 200. Det korte id er nøglen, og indholdet er åbent på /d/<id>. Dublet-tjekket bruger kalderens egne moduler.
   const foreign = await store.saveShort({ org: "andenorg", owner: "x", spec: spec as never, entity: { kind: "company", id: "CVR-1-99000001" }, title: "Fremmed" }, 30);
-  assert.equal((await api(`/visning/${foreign.id}`, { cookie: pia })).status, 404);
+  const fr = await json<{ entity: { id: string }; existingTemplateId?: string }>(await api(`/visning/${foreign.id}`, { cookie: pia }));
+  assert.equal(fr.entity.id, "CVR-1-99000001");
+  assert.ok(fr.existingTemplateId, "samme spec som Pias eget modul, også selv om visningen er fra en anden organisation");
+});
+
+test("POST /templates/prepare og /render: uden lager, for alle portalbrugere (også demobrugeren); stripning ved hvert kald", async () => {
+  const { sessionCookie, signSession } = await import("./auth/session.js");
+  const pia = sessionCookie(config, signSession(config, { ...PIA, isDemo: false })).split(";")[0]!;
+  const kyc = (id: string) => ({ version: 2, kind: "custom", title: "Eksempel Byg A/S: KYC", subtitle: "Risiko", layout: "dashboard", criteria: [], components: [{ type: "LassoKeyValueList", company: id }, { type: "LassoKeyFigureCards", company: id }] });
+  const body = { kind: "company", title: "KYC for Eksempel Byg A/S", spec: kyc("CVR-1-99000001"), entity: { kind: "company", id: "CVR-1-99000001" } };
+
+  // Adgang: login og CSRF som de andre portalruter.
+  assert.equal((await api("/templates/prepare", { method: "POST", body, cookie: "" })).status, 401);
+  assert.equal((await api("/templates/prepare", { method: "POST", body, cookie: pia, csrf: false })).status, 403);
+
+  // prepare: den strippede skabelon og den rensede titel, uden at noget gemmes.
+  const before = (await json<{ templates: unknown[] }>(await api("/templates", { cookie: pia }))).templates.length;
+  const prep = await json<{ title: string; subtitle?: string; spec: { title: string; subtitle?: string; components: { company?: string }[] } }>(await api("/templates/prepare", { method: "POST", body, cookie: pia }));
+  assert.ok(!/Eksempel Byg/i.test(prep.title), prep.title);
+  assert.ok(prep.title.length > 0);
+  assert.equal(prep.spec.subtitle, undefined);
+  assert.deepEqual(prep.spec.components.map((c) => c.company), ["{{entity}}", "{{entity}}"]);
+  assert.ok(!/99000001|Eksempel Byg/i.test(JSON.stringify(prep)));
+  assert.equal((await json<{ templates: unknown[] }>(await api("/templates", { cookie: pia }))).templates.length, before, "intet gemt");
+  // Samme titel- og stripperegler som ved gemning: uden title bruges sidens fallback; et navn, der bliver stående, afvises.
+  assert.ok((await json<{ title: string }>(await api("/templates/prepare", { method: "POST", body: { ...body, title: undefined }, cookie: pia }))).title.length > 0);
+  const leak = { ...body, spec: { ...kyc("CVR-1-99000001"), components: [{ type: "LassoKeyFigureCards", company: "CVR-1-99000001" }, { type: "LassoRichText", markdown: "Eksempel Byg A/S i Silkeborg" }] } };
+  assert.equal((await api("/templates/prepare", { method: "POST", body: leak, cookie: pia })).status, 400);
+  assert.equal((await api("/templates/prepare", { method: "POST", body: { ...body, kind: "person" }, cookie: pia })).status, 400);
+  assert.equal((await api("/templates/prepare", { method: "POST", body: { ...body, spec: { title: "x" } }, cookie: pia })).status, 400);
+
+  // render: samme resultat som den gemte vej, men om en anden virksomhed, og specen strippes her (klientens stripning stoles ikke på).
+  const shown = await json<{ spec: { components: { company?: string }[] }; dataset: { companies: Record<string, { name: string }> }; summary: string }>(await api("/templates/render", { method: "POST", body: { ...body, entity: { kind: "company", id: "CVR-1-99000002" }, spec: prep.spec }, cookie: pia }));
+  assert.equal(shown.spec.components.every((c) => c.company === "CVR-1-99000002" || c.company === undefined), true, JSON.stringify(shown.spec.components));
+  assert.ok(shown.dataset.companies["CVR-1-99000002"]?.name);
+  assert.equal(typeof shown.summary, "string");
+  // En rå spec om entiteten selv strippes her og vises om den samme.
+  const raw = await json<{ spec: { components: { company?: string }[] } }>(await api("/templates/render", { method: "POST", body, cookie: pia }));
+  assert.ok(raw.spec.components.every((c) => c.company === "CVR-1-99000001"));
+  // Ikke-strippet spec med navnet ude i en tekst: afvist (stripningen sker her).
+  assert.equal((await api("/templates/render", { method: "POST", body: { ...leak, entity: { kind: "company", id: "CVR-1-99000001" } }, cookie: pia })).status, 400);
+  assert.equal((await api("/templates/render", { method: "POST", body: { ...body, entity: { kind: "person", id: "CVR-3-4000000002" } }, cookie: pia })).status, 400);
+
+  // Demobrugeren (åben portal): må ikke gemme, men må prepare og render.
+  const cfg = loadConfig({ ...process.env, MCP_ACCESS_KEY: KEY, LINK_SECRET: "portal-test-hemmelighed", LASSO_DATA_SOURCE: "demo", DATABASE_URL: "", PUBLIC_BASE_URL: PUBLIC, PORTAL_PUBLIC: "true" });
+  const srv = createApp({ config: cfg, client: new LassoClient(cfg), provider: new DemoProvider(), store: createViewStore(""), pages: createSavedPageStore("") }).listen(0);
+  await new Promise((r) => srv.once("listening", r));
+  const open = `http://127.0.0.1:${(srv.address() as AddressInfo).port}/api/portal`;
+  const headers = { "content-type": "application/json", "x-lasso-portal": "1" };
+  try {
+    assert.equal((await fetch(`${open}/templates`, { method: "POST", headers, body: JSON.stringify(body) })).status, 403);
+    const p = await fetch(`${open}/templates/prepare`, { method: "POST", headers, body: JSON.stringify(body) });
+    assert.equal(p.status, 200);
+    assert.deepEqual(((await p.json()) as { spec: { components: { company?: string }[] } }).spec.components.map((c) => c.company), ["{{entity}}", "{{entity}}"]);
+    const r = await fetch(`${open}/templates/render`, { method: "POST", headers, body: JSON.stringify({ ...body, spec: prep.spec, entity: { kind: "company", id: "CVR-1-99000002" } }) });
+    assert.equal(r.status, 200);
+    assert.ok(((await r.json()) as { dataset: { companies: Record<string, unknown> } }).dataset.companies["CVR-1-99000002"]);
+    assert.equal((await fetch(`${open}/templates/render`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })).status, 403, "CSRF som andre POST");
+  } finally {
+    await new Promise((r) => srv.close(r));
+  }
+});
+
+test("prepare og render er bremset som chatten (429)", async () => {
+  const cfg = loadConfig({ ...process.env, MCP_ACCESS_KEY: KEY, LINK_SECRET: "portal-test-hemmelighed", LASSO_DATA_SOURCE: "demo", DATABASE_URL: "", PUBLIC_BASE_URL: PUBLIC, PORTAL_PUBLIC: "true", CHAT_MAX_PER_HOUR: "1" });
+  const srv = createApp({ config: cfg, client: new LassoClient(cfg), provider: new DemoProvider(), store: createViewStore(""), pages: createSavedPageStore("") }).listen(0);
+  await new Promise((r) => srv.once("listening", r));
+  const open = `http://127.0.0.1:${(srv.address() as AddressInfo).port}/api/portal`;
+  const headers = { "content-type": "application/json", "x-lasso-portal": "1" };
+  const bad = JSON.stringify({ kind: "company", spec: { title: "x" }, entity: { kind: "company", id: "CVR-1-99000001" } });
+  try {
+    let last = 0;
+    for (let i = 0; i < 12; i++) last = (await fetch(`${open}/templates/prepare`, { method: "POST", headers, body: bad })).status;
+    assert.equal(last, 429);
+  } finally {
+    await new Promise((r) => srv.close(r));
+  }
 });

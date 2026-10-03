@@ -1,13 +1,13 @@
 import { Router, type NextFunction, type Request, type Response } from "express";
 import { summarizeView } from "../data/summary.js";
 import { z } from "zod";
-import { toLassoId, FOCUSES, METRICS, PAGE_FOCUSES, PERSON_FOCUSES, searchQuerySchema } from "@lasso/spec";
+import { toLassoId, viewSpecSchema, type ViewSpec, FOCUSES, METRICS, PAGE_FOCUSES, PERSON_FOCUSES, searchQuerySchema } from "@lasso/spec";
 import type { CurrentUser } from "../auth/user.js";
 import type { Config } from "../config.js";
 import type { DataProvider } from "../data/provider.js";
 import { pageKindOf, type SavedPageStore } from "../pages/store.js";
-import { distinctTitle, instantiate, stripEntityName, templateFromSpec, titleFallback, type TemplateEntity, type TemplateKind } from "../pages/templateSpec.js";
-import { PageTemplateError, type PageTemplateRecord, type PageTemplateStore } from "../pages/templates.js";
+import { distinctTitle, hasPlaceholder, instantiate, stripEntityName, templateFromSpec, titleFallback, type TemplateEntity, type TemplateKind } from "../pages/templateSpec.js";
+import { MAX_SPEC_BYTES, PageTemplateError, type PageTemplateRecord, type PageTemplateStore } from "../pages/templates.js";
 import {
   listSavedPages,
   removeSavedPage,
@@ -24,6 +24,7 @@ import {
 } from "../usecases/index.js";
 import { SHORT_ID_PATTERN, shortExpired, specHash, VISIBILITIES, type ViewStore } from "../views/store.js";
 import { entityLink } from "./links.js";
+import { createChatLimiter, limitKey } from "../chat/routes.js";
 
 /**
  * Portal-API'et (docs/portal.md): samme use-cases som MCP-tools (usecases/), så resultatet i
@@ -106,6 +107,8 @@ const templateBody = z.object(
   },
   { error: BODY_ERROR },
 );
+/** Uden gemning (prepare/render): titlen er valgfri, og specen følger med hver gang. */
+const statelessTemplateBody = templateBody.partial({ title: true });
 const listTemplatesParams = z.object({ kind: z.enum(TEMPLATE_KINDS, { error: oneOf("kind", TEMPLATE_KINDS) }).optional() });
 const renderTemplateParams = z.object({ entity: text("entity", 40).trim().min(1, "Angiv entity: Lasso-ID for den virksomhed eller person, siden skal vises om.") });
 
@@ -242,31 +245,83 @@ export function portalApi({ config, provider, store, pages, templates }: PortalA
     return true;
   };
 
-  router.post("/templates", async (req, res) => {
-    if (demoRefused(res)) return;
-    const body = parseOr400(templateBody, req.body ?? {}, res);
-    if (!body) return;
+  /**
+   * Fælles for gem, prepare og render: valideringen, entitetens navn og metadata (fra Lasso, ikke fra klienten) fjernet fra specen og
+   * titlerne, og siden afvist, hvis de står andre steder. Sender selv fejlsvaret og giver undefined, når noget fejler.
+   */
+  async function prepareTemplate(res: Response, body: { kind: TemplateKind; title?: string; subtitle?: string; spec?: unknown; entity: { kind: TemplateKind; id: string } }) {
     if (body.entity.kind !== body.kind) return void res.status(400).json({ error: `entity.kind skal være ${body.kind}, ligesom kind.` });
     if (pageKindOf(body.entity.id) !== body.kind) return void res.status(400).json({ error: `"${body.entity.id}" er ikke et Lasso-ID for en ${body.kind === "company" ? "virksomhed (CVR-1-…)" : "person (CVR-3-…)"}.` });
-    // Entitetens navn og metadata (fra Lasso, ikke fra klienten) fjernes fra titlerne, og siden afvises, hvis de står andre steder.
     const entity = await entityFacts(ctx(res), body.kind, body.entity.id);
     if (!entity) return void res.status(503).json({ error: "Lasso svarede ikke; prøv igen." });
     const made = templateFromSpec(body.spec, entity);
     if ("error" in made) return void res.status(400).json({ error: made.error });
     // Tom efter fjernelsen: den fallback-titel, templateFromSpec fandt (undertitel, første komponent, "Side"). Samme navn som et indbygget modul får et tillæg.
-    const title = distinctTitle(stripEntityName(body.title, entity) || made.spec.title, body.kind);
+    const title = distinctTitle(stripEntityName(body.title ?? "", entity) || made.spec.title, body.kind);
     // Undertitlen er som standard væk; en, brugeren selv gav, gemmes kun hvis noget overlever fjernelsen.
     // En undertitel, der er sidens egen (spec.subtitle: entitetens metadata), gemmes aldrig.
     const specSub = (body.spec as { subtitle?: unknown } | null)?.subtitle;
     const subtitle = body.subtitle === undefined || body.subtitle === specSub ? undefined : stripEntityName(body.subtitle, entity) || undefined;
+    return { spec: made.spec, title, subtitle };
+  }
+
+  router.post("/templates", async (req, res) => {
+    if (demoRefused(res)) return;
+    const body = parseOr400(templateBody, req.body ?? {}, res);
+    if (!body) return;
+    const made = await prepareTemplate(res, body);
+    if (!made) return;
     const user = res.locals.user as CurrentUser;
     try {
-      const t = await templates.create({ org: user.org, userId: user.id, kind: body.kind, title, subtitle, spec: made.spec });
+      const t = await templates.create({ org: user.org, userId: user.id, kind: body.kind, title: made.title, subtitle: made.subtitle, spec: made.spec });
       res.json(templateJson(t));
     } catch (e) {
       if (e instanceof PageTemplateError) return void res.status(400).json({ error: e.message });
       throw e;
     }
+  });
+
+  // Uden lager (demobrugeren gemmer i browseren): samme stripning og titelrensning som ved gemning, for alle portalbrugere. Bremset som chatten.
+  const allowStateless = createChatLimiter(config.CHAT_MAX_PER_HOUR * 10);
+  const statelessGate = (req: Request, res: Response): boolean => {
+    if (allowStateless(limitKey(req, res.locals.user as CurrentUser))) return true;
+    res.status(429).json({ error: "For mange kald. Prøv igen senere." });
+    return false;
+  };
+
+  router.post("/templates/prepare", async (req, res) => {
+    if (!statelessGate(req, res)) return;
+    const body = parseOr400(statelessTemplateBody, req.body ?? {}, res);
+    if (!body) return;
+    const made = await prepareTemplate(res, body);
+    if (!made) return;
+    if (Buffer.byteLength(JSON.stringify(made.spec), "utf8") > MAX_SPEC_BYTES) return void res.status(400).json({ error: "Siden er for stor til at blive gemt." });
+    res.json({ title: made.title, ...(made.subtitle ? { subtitle: made.subtitle } : {}), spec: made.spec });
+  });
+
+  // Skabelonen vist om entiteten uden at være gemt: specen strippes her ved hvert kald (klientens stripning stoles ikke på).
+  router.post("/templates/render", async (req, res) => {
+    if (!statelessGate(req, res)) return;
+    const body = parseOr400(statelessTemplateBody, req.body ?? {}, res);
+    if (!body) return;
+    // En allerede strippet skabelon ({{entity}}, fra prepare; til en anden virksomhed/person end den, den blev lavet om) valideres og vises;
+    // en rå spec om entiteten selv strippes her først (samme regler som ved gemning), så intet fra klienten stoles på.
+    let made: { spec: ViewSpec; title: string; subtitle?: string } | undefined;
+    if (hasPlaceholder(body.spec)) {
+      if (body.entity.kind !== body.kind) return void res.status(400).json({ error: `entity.kind skal være ${body.kind}, ligesom kind.` });
+      if (pageKindOf(body.entity.id) !== body.kind) return void res.status(400).json({ error: `"${body.entity.id}" er ikke et Lasso-ID for en ${body.kind === "company" ? "virksomhed (CVR-1-…)" : "person (CVR-3-…)"}.` });
+      const parsed = viewSpecSchema.safeParse(body.spec);
+      if (!parsed.success) return void res.status(400).json({ error: "Specen er ugyldig." });
+      made = { spec: parsed.data, title: body.title?.trim() || parsed.data.title, subtitle: body.subtitle };
+    } else {
+      made = await prepareTemplate(res, body);
+    }
+    if (!made) return;
+    if (Buffer.byteLength(JSON.stringify(made.spec), "utf8") > MAX_SPEC_BYTES) return void res.status(400).json({ error: "Siden er for stor til at blive vist." });
+    const spec = { ...instantiate(made.spec, body.entity.id), title: titleFallback(made.title, made.spec), ...(made.subtitle ? { subtitle: made.subtitle } : {}) };
+    const r = await resolveTemplateView(ctx(res), spec, { kind: body.kind, id: body.entity.id });
+    if ("error" in r) return sendError(res, r);
+    res.json({ spec: r.spec, dataset: r.dataset, summary: summarizeView(r.spec, r.dataset, { host: "chat" }) });
   });
 
   router.get("/templates", async (req, res) => {
@@ -279,13 +334,15 @@ export function portalApi({ config, provider, store, pages, templates }: PortalA
   });
 
   // "Åben i Lasso" (links.open i MCP-svarene: /portal?aabn=<lassoId>&visning=<kort id>): den gemte visning, klienten gør til et modul med
-  // templates.save. Kun for brugere i samme organisation som den, der delte visningen. Har brugeren allerede et modul med samme spec
+  // templates.save. Det korte id er en ikke-gættelig nøgle, og indholdet er allerede åbent på /d/<id>, så ruten har ingen organisationsgrænse
+  // (MCP-forbindelsens bruger er ikke nødvendigvis portalens). Har brugeren allerede et modul med samme spec
   // (efter samme fjernelse af entiteten som ved gemning), kommer dets id med som existingTemplateId, så klik ikke stabler moduler.
   router.get("/visning/:id", async (req, res) => {
     const user = res.locals.user as CurrentUser;
     const id = String(req.params.id);
     const view = SHORT_ID_PATTERN.test(id) ? await store.getShort(id) : null;
-    if (!view || view.org !== user.org || shortExpired(view, config.LINK_TTL_DAYS)) return void res.status(404).json({ error: "Visningen findes ikke eller er udløbet. Bed om et nyt link." });
+    if (!view) return void res.status(404).json({ error: "Visningen findes ikke. Bed om et nyt link." });
+    if (shortExpired(view, config.LINK_TTL_DAYS)) return void res.status(410).json({ error: "Linket er udløbet. Bed om et nyt link til visningen." });
     if (!view.entity) return void res.status(404).json({ error: "Visningen handler ikke om én virksomhed eller person." });
     const spec = view.spec;
     let existingTemplateId: string | undefined;
