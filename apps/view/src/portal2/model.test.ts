@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Dataset, ViewSpec } from "@lasso/spec";
 import type { LookupResult } from "../portal/api.js";
-import { COMPANY_TABS, isTemplateTab, moduleTabs, templateIdOf, templateTab, addRecent, historyTrimmed, summaryFingerprint, textHash, choiceKey, choiceSend, defaultChoiceSelection, isUnrecognizedHistory, shortName, askPlaceholder, choiceMessage, closeItem, contextFor, freeTextPick, headLines, highlight, loadRecent, openItem, searchCounts, searchRows, suggestions, withoutHead, withoutFollowUps, forPortal, type OpenItem, type PendingChoice } from "./model.js";
+import { COMPANY_TABS, isTemplateTab, moduleTabs, templateIdOf, templateTab, addRecent, historyTrimmed, summaryFingerprint, textHash, choiceKey, choiceSend, defaultChoiceSelection, isUnrecognizedHistory, shortName, askPlaceholder, choiceMessage, closeItem, contextFor, freeTextPick, headLines, highlight, loadRecent, openItem, searchCounts, searchRows, suggestions, withoutHead, withoutFollowUps, withoutChatPrompts, forPortal, type OpenItem, type PendingChoice } from "./model.js";
 
 const novo: OpenItem = { key: "CVR-1-24256790", kind: "company", name: "NOVO NORDISK A/S", tab: "overblik" };
 const lasso: OpenItem = { key: "CVR-1-34580820", kind: "company", name: "LASSO X A/S", tab: "overblik" };
@@ -59,6 +59,35 @@ test("withoutFollowUps/forPortal: ingen opfølgende spørgsmål i portalen, rest
   // Uden opfølgende spørgsmål: samme objekt (intet at gentegne).
   const plain = { ...spec, components: spec.components.slice(0, 2) } as ViewSpec;
   assert.equal(withoutFollowUps(plain), plain);
+});
+
+test("withoutChatPrompts: ingen næste-knapper i portalen (answer.next, Se alle … i <fane>, værktøjslinjens spørgsmål); udfoldning bliver", () => {
+  const spec = {
+    version: 2,
+    kind: "person",
+    title: "Jeanette Hansen",
+    layout: "stack",
+    criteria: [],
+    answer: { next: { label: "Se hele økonomien", prompt: "Vis økonomien" }, logo: true },
+    components: [
+      { type: "LassoPersonRoles", person: "CVR-3-1", show: "current", more: "roller" },
+      { type: "LassoTimeline", company: "CVR-1-1", more: "expand" },
+      { type: "LassoPersonNetwork", person: "CVR-3-1", more: "netvaerk", group: { id: "g", pattern: "cards", title: "Netværk", toolbar: { primary: { label: "Sammenlign", prompt: "Sammenlign" } } } },
+      { type: "LassoFollowUps", company: "CVR-1-1" },
+    ],
+  } as unknown as ViewSpec;
+  const out = withoutChatPrompts(spec) as unknown as { answer?: unknown; components: { type: string; more?: string; group?: Record<string, unknown> }[] };
+  assert.equal(out.answer, undefined);
+  assert.deepEqual(out.components.map((c) => c.type), ["LassoPersonRoles", "LassoTimeline", "LassoPersonNetwork"]);
+  assert.equal(out.components[0]!.more, undefined, "Se alle N selskaber i Roller bliver til udfoldning på stedet");
+  assert.equal(out.components[1]!.more, "expand", "udfoldning på stedet bliver");
+  assert.deepEqual(out.components[2]!.group, { id: "g", pattern: "cards", title: "Netværk" });
+  assert.equal(forPortal(spec).components.length, 3);
+  // Intet at fjerne: samme objekt; originalen er urørt.
+  const plain = { ...spec, answer: undefined, components: [spec.components[1]!] } as unknown as ViewSpec;
+  const { answer: _a, ...plainNoAnswer } = plain as unknown as Record<string, unknown>;
+  assert.equal(withoutChatPrompts(plainNoAnswer as unknown as ViewSpec), plainNoAnswer);
+  assert.equal((spec.components[0] as unknown as { more: string }).more, "roller");
 });
 
 test("headLines: adresse og CVR-linje som i prototypen", () => {

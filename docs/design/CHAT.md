@@ -192,6 +192,11 @@ Truffet ved gennemgangen af eksporten (D1 til D10) og af ejeren; ejerens afgøre
 - **Ingen opfølgende spørgsmål i portalen (regel 8).** `LassoFollowUps` tegnes aldrig i portalen: ikke i modulerne,
   ikke i egne sider og ikke i kort eller fuld skærm i samtalen (`forPortal`/`withoutFollowUps` i `model.ts`); forslagene
   står kun under spørgefeltet. `/mcp` og `/chat` beholder dem.
+- **Ingen chatknapper i portalen (Jakob 03.10).** Heller ikke de andre knapper til et næste spørgsmål eller en anden
+  fane: svarets bundlink (`answer.next`, "Se hele økonomien"), "Se alle N … i <fane> →" (komponenternes `more` med et
+  fokus) og modulværktøjslinjens spørgsmål (`group.toolbar`) fjernes af `withoutChatPrompts` (via `forPortal`) i
+  modulerne, egne sider, kort og fuld skærm. Uden `more` folder "Se alle"/"Vis alle" ud på stedet; de almindelige
+  udfoldningslinks bliver.
 - **Tilføj som fane på hvert sidekort (regel 5).** Også `show_company`/`show_person`-sider om fanens entitet. En sådan
   side hedder entiteten selv; skabelonen får så modulets navn (sidens undertitel, fx "Ejerskab") i stedet for navnet
   (`templateTitle`).
