@@ -26,7 +26,7 @@ portal.lassox.com bruges i dag. Den bor på `/portal` (roden `/` sender videre),
 | `POST /api/portal/login` | `{ user, key }` | `200 { user: { id, name, org, isDemo } }`, ellers `401 { error }` |
 | `POST /api/portal/logout` | – | `200 { ok: true }` og cookien slettes |
 | `GET /api/portal/me` | – | `200 { user }` eller `401` |
-| `GET /portal` | – | Render-appen med `window.__LASSO_BOOT__ = { mode: "portal", user: {…} \| null, loginRequired, baseUrl, pdf }` (`pdf` = serveren har Chromium til "Gem som PDF") |
+| `GET /portal` | – | Uden session og med login krævet: `302 /portal/klassisk?next=<den ønskede sti og query>` (fx `/portal?aabn=<lassoId>&fokus=<fokus>&fastgoer=1` fra "Åben i Lasso"); efter login går portalen til `next`, kun hvis det er en sikker sti på egen oprindelse (`safeNext`). Ellers render-appen med `window.__LASSO_BOOT__ = { mode: "portal", user: {…} \| null, loginRequired, baseUrl, pdf }` (`pdf` = serveren har Chromium til "Gem som PDF") |
 
 ## Portal-API (kræver session; alle svar er JSON)
 
@@ -331,14 +331,13 @@ højst én gang; højst 12 elementer (viewSpecSchema). Opfølgningerne peger alt
 - "Sidder Bo Eksempel i bestyrelser?" → bestyrelsesposterne ¾ + stamoplysninger ¼, netværk, historik,
   risiko og nyheder to og to.
 
-**Links, resumé og tekstkort.** Det signerede `/k/`-link bærer spørgsmålet (`q=`, og modellens
+**Links og resumé.** Det signerede `/k/`-link bærer spørgsmålet (`q=`, og modellens
 nøgletal som `qm=`), `/p/`-linket ligeså (`q=`), begge i den signerede payload; uden `q` er payloaden
 som før, så ældre links stadig verificeres, og et `q` over 300 tegn afvises. `/k/` og `/p/` læser
 spørgsmålet igen (uden navnet) og viser samme side som i chatten. `/e/`-links (portalen) er uændrede.
 Resuméet til modellen har "Svar: …" lige efter hovedlinjen (fx "Svar: Soliditetsgrad 2025: 54,1 %
 (2024: 55,6 %).", "Svar: Direktion: Anne Eksempel (direktør)." eller ved konkurs "Svar: Status: Under
-konkurs siden 02.02.2026." med status fra hovedet og datoen for den seneste statusændring, når den findes), og tekstkortet har en SVAR-sektion
-lige under navnet; begge følger elementernes filtre.
+konkurs siden 02.02.2026." med status fra hovedet og datoen for den seneste statusændring, når den findes); det følger elementernes filtre.
 
 ## Ikke i denne runde
 

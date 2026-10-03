@@ -26,6 +26,7 @@ import {
   type Metric,
   type PageFocus,
   type PersonFocus,
+  safeNext,
 } from "@lasso/spec";
 import { getCurrentUser, isValidMcpKey, mcpKeyRequired, providedKey } from "./auth/user.js";
 import { createLoginLimiter, loginWithKey, portalLoginRequired, portalUser, requirePortal, sessionCookie, signSession } from "./auth/session.js";
@@ -183,8 +184,13 @@ export function createApp({ config, client, provider, store, pages, templates = 
   // Den nye portal (prototypen "lasso-portal4.html", docs/design/PORTAL.md): søgning, faner og chatten i spørgefeltet.
   // Med PORTAL_PUBLIC er den åben uden login (demobrugeren); ellers logger man ind som i den klassiske.
   app.get("/portal", async (req, res) => {
-    const html = await loadViewHtml();
     const user = portalUser(req, config);
+    // Uden session og med login krævet: til login-siden med det ønskede link som next, så /portal?aabn=… overlever login (samme URL efter login).
+    if (!user && portalLoginRequired(config)) {
+      const next = safeNext(req.originalUrl) ?? "/portal";
+      return void res.set("Cache-Control", "no-store").redirect(302, `/portal/klassisk?next=${encodeURIComponent(next)}`);
+    }
+    const html = await loadViewHtml();
     res
       .type("html")
       .set("Cache-Control", "no-store")

@@ -77,7 +77,7 @@ async function stop(r: Running | undefined): Promise<void> {
   await new Promise((done) => r.http.close(done));
 }
 
-type Structured = { pdfLink?: string; link?: string; spec?: unknown };
+type Structured = { pdfLink?: string; links?: { open?: string; share: string }; spec?: unknown };
 const structured = (res: { structuredContent?: unknown }) => (res.structuredContent ?? {}) as Structured;
 
 describe("PDF slået fra (ingen Chromium)", () => {
@@ -147,7 +147,8 @@ describe("PDF med Chromium", { skip: CAN_RENDER ? false : `kræver Chromium (${C
 
   test("show_company: pdfLink er /k/<cvr>.pdf, og PDF'en er rapporten (mindst 2 sider), med varighed i loggen", async () => {
     const res = await on.client.callTool({ name: "show_company", arguments: { company: "99000001" } });
-    const { pdfLink, link } = structured(res);
+    const { pdfLink, links } = structured(res);
+    const link = links?.share;
     assert.ok(link && pdfLink);
     assert.equal(pdfLink, pdfUrlOf(link));
     assert.match(pdfLink, /\/k\/99000001\.pdf\?/);

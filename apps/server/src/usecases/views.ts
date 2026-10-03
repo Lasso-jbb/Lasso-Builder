@@ -220,7 +220,7 @@ export interface CompanyView extends ViewData {
   lassoId: string;
   /** Signeret link til /k/ med samme focus, hovednøgletal og spørgsmål (MCP-tools). Portalen bruger /e/. */
   link?: string;
-  /** Spørgsmålsprofilen, når spørgsmålet har et emne (resuméets "Svar:" og tekstkortet svarer først). */
+  /** Spørgsmålsprofilen, når spørgsmålet har et emne (resuméets "Svar:" svarer først). */
   ask?: Ask;
 }
 
@@ -309,7 +309,7 @@ export interface PersonView extends ViewData {
   lassoId: string;
   /** Signeret link til personsiden /p/ med samme fokus og spørgsmål. */
   link: string;
-  /** Spørgsmålsprofilen, når spørgsmålet har et emne (resuméets "Svar:" og tekstkortet svarer først). */
+  /** Spørgsmålsprofilen, når spørgsmålet har et emne (resuméets "Svar:" svarer først). */
   ask?: Ask;
 }
 

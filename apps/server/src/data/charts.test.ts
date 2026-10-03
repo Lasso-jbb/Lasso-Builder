@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { activityHeatmapKey, buildActivityHeatmap, changeFeedKey, COMPONENT_CATALOG, composeCompany, composeProbe, parseViewSpec } from "@lasso/spec";
 import { adaptIndustryBenchmark, adaptMapPoints, coordinatesOf } from "../lasso/chartAdapters.js";
-import { textCard } from "./card.js";
 import { DemoProvider } from "./demo.js";
 import { resolveSpec } from "./resolve.js";
 
@@ -52,13 +51,6 @@ test("resolveSpec henter branchetal, historik, kort, heatmap og det fulde regnsk
   assert.equal(h?.months.length, 6);
   assert.ok(h!.total > 0);
   assert.ok(ds.maps[ID]!.points.some((p) => p.kind === "focus"));
-  const card = textCard(spec, ds)!;
-  assert.match(card, /NØGLETAL MOD BRANCHEN/);
-  assert.match(card, /ADRESSER PÅ KORT/);
-  assert.match(card, /AKTIVITET I "KUNDER"/);
-  assert.match(card, /EJERKREDS/);
-  assert.doesNotMatch(card, /·/);
-  for (const line of card.split("\n")) assert.equal([...line].length, 38, `samme bredde: ${line}`);
 });
 
 test("demo: scoremålerens hente-tilstande; Lassos risikoscore uden Creditsafe-fakta og historik (10.1)", async () => {

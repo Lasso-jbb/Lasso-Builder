@@ -23,7 +23,7 @@ browser (/chat)  ──POST /api/chat (SSE)──▶  server: chat/agent.ts
   hver sin (`MCP_RULES` til Claude.ai, uændret; `CHAT_RULES` i `chat/agent.ts` til chatten). MCP-serveren
   får `host: "chat"`, så visningssvaret siger "visningen vises under din tekst" i stedet for "skriv intet".
 - **Visningen til browseren, teksten til modellen.** Værktøjets spec og datasæt streames til browseren
-  som en `view`-hændelse og tegnes med `LassoView`. Modellen får kun resuméteksten, ikke tekstkortet.
+  som en `view`-hændelse og tegnes med `LassoView`. Modellen får kun resuméteksten.
 - **Klik i visningen** (åbn person/virksomhed, filtre, gem, PDF) går til portal-API'et uden en tur til
   modellen. Opfølgende spørgsmål ("Se hele økonomien", "Se alle … i Historik") sendes som nye beskeder; visningens
   `LassoFollowUps` tegnes ikke i portalen (forslagene står kun under spørgefeltet, designregel 8).
@@ -288,7 +288,7 @@ Alt nedenfor er slået til med `host: "chat"` i MCP-serveren; Claude.ai over `/m
 |---|---|---|
 | `render_view`'s beskrivelse | fuld: komposition, layoutguiden (Paper 30), komponentindeks med formål (~13.000 tegn) | kort (<1.500 tegn): formål, `describe_components` først, 1–12 komponenter, højst én graf, udelad width, layout "page", aldrig HTML, og typenavnene (uden dem kan modellen ikke kalde `describe_components`) |
 | gem-værktøjer (`save_view`, `save_page`, `remove_saved_page`, `list_saved_pages`) | ja | nej: portalen har knapper til at gemme; routingen i systemprompten (`CHAT_ROUTING`) nævner dem ikke |
-| værktøjssvar (tekst til modellen) | SILENT-linje, resumé, "Visningen er svaret: skriv ingen tekst …", link til visningen, tekstkort-blok | kun noten og resuméet (uden "Ikke vist: …"-fejlsøgningslinjen); demonoten er én kort linje; ekstralinjer til at svare uden at hente siden igen: direktion og bestyrelse (`LassoRelations`), revisor (`LassoKeyValueList`), de to seneste begivenheder og nyheder (højst ca. 160 tegn pr. linje); `structuredContent` har samme felter (tekstkortet står dér) |
+| værktøjssvar (tekst til modellen) | SILENT-linje, resumé, "Visningen er svaret: skriv ingen tekst …", "Link til visningen: <share>" (intet tekstkort; en vært uden visning får kun linket) | kun noten og resuméet (uden "Ikke vist: …"-fejlsøgningslinjen); demonoten er én kort linje; ekstralinjer til at svare uden at hente siden igen: direktion og bestyrelse (`LassoRelations`), revisor (`LassoKeyValueList`), de to seneste begivenheder og nyheder (højst ca. 160 tegn pr. linje); `structuredContent` har samme felter, også `links` (`share` altid, `open` kun for én virksomhed/person; chatten gemmer ikke en visning for `share`, den peger på `/portal`) |
 | tekst efter en visning | ingen (visningen er svaret) | højst én kort sætning (≤ 20 ord) før visningen, efter den kun linjen med modullinks (ellers ét nøglepunkt, ≤ 20 ord); tekstsvar højst 2–3 sætninger (≤ 60 ord) eller 4 punkter (`CHAT_RULES`) |
 | "Brugeren ser" i konteksten | (findes ikke) | fuldt resumé første gang, derefter `same: true`, til det ændrer sig |
 

@@ -17,7 +17,7 @@ Samlet fra hele forløbet 29.09.2026. Ændres kun af ejeren.
 | Ø1 | **Spørgsmålet styrer siden.** `question` + `ask.ts` er kernen. `focus` og `show_all` findes ved siden af ("behold begge"). | Intet arbejde må fjerne eller svække spørgsmålsstien. Nye komponenter skal først og fremmest kunne nås *fra et spørgsmål*. |
 | Ø2 | **Alle komponenter skal kunne komme i spil**, og det skal være klart, hvad hver bruges optimalt til. | Ingen komponenttype uden (a) katalogpost, (b) mindst én vej ind, (c) data-opslag. En test håndhæver det. |
 | Ø3 | **Dokumentation, så AI kan bruge komponenterne rigtigt.** | Ét register i koden → genereret `docs/komponenter.md` + værktøjstekster. Aldrig håndskrevet to steder. |
-| Ø4 | **Tekstkortet må ikke formindskes.** Det giver kunden værdi. | Svarets `card` er urørt. Token-besparelser findes andre steder. |
+| Ø4 | **Tekstkortet må ikke formindskes.** Det giver kunden værdi. | Svarets `card` er urørt. Token-besparelser findes andre steder. **Udgået 03.10.2026 (Jakob):** tekstkortet er slettet; apps uden visning får kun linket (`structuredContent.links.share`). |
 | Ø5 | **Ingen kildehenvisninger nogen steder** (Runde 6 + "1: fjern kildehenvisning"). | `SourceList` og alle "Kilder"/"Vis kilder"-spor fjernes. |
 | Ø6 | **Creditsafe kun med abonnement/credits.** Ellers skal det stå, at man skal have et abonnement. | Score-komponenter viser låst tilstand uden opslag, når abonnement mangler. Aldrig et Creditsafe-kald "for en sikkerheds skyld". |
 | Ø7 | **Ja til nye MCP-værktøjer** (`search_persons`, `compare_companies`). | Fase D. |

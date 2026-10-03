@@ -3,7 +3,6 @@ import { test } from "node:test";
 import { parseViewSpec } from "@lasso/spec";
 import type { CurrentUser } from "../auth/user.js";
 import { loadConfig } from "../config.js";
-import { textCard } from "../data/card.js";
 import { DemoProvider } from "../data/demo.js";
 import { entityIdsOf, resolveSpec } from "../data/resolve.js";
 import { summarizeView } from "../data/summary.js";
@@ -21,8 +20,6 @@ test("uden extras får LassoSavedPages en tom tilstand, og savedIds udelades", a
   assert.deepEqual(ds.savedPages, {});
   assert.equal(ds.errors["savedPages:all|20"], "Gemte sider kræver adgang som bruger og vises ikke på en delt side.");
   assert.equal("savedIds" in ds, false);
-  // Kortet ombryder teksten i sin faste bredde.
-  assert.match((textCard(listSpec, ds) ?? "").replace(/ *│\n│ /g, " "), /Gemte sider kræver adgang som bruger og vises ikke på en delt side\./);
 });
 
 test("entityIdsOf samler company, companies, benchmark og person", () => {
@@ -98,10 +95,6 @@ test("resuméet nævner højst 10 navne og tæller resten", async () => {
   assert.match(summary, /Gemte sider \(13 i alt, viser 12\): /);
   assert.equal((summary.match(/\(Virksomhed, CVR/g) ?? []).length, 10);
   assert.match(summary, / … og 3 til\./);
-  const card = textCard(spec, ds)!;
-  assert.match(card, /MINE GEMTE SIDER \(13\)/);
-  assert.match(card, /og 1 mere/);
-  assert.equal((card.match(/Åbn: https:\/\/lasso\.test\/e\//g) ?? []).length, 12);
 });
 
 test("entitySnapshot henter navn (og CVR) friskt og afviser andre ID'er", async () => {

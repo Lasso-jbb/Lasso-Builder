@@ -18,7 +18,7 @@ Designet er komplet i koden (Jakob 30.09.2026); Paper bruges ikke, når nye modu
 3. Hvid flade. Opdel med tynde linjer og luft, aldrig kort på grå baggrund. Brug `Section` fra `primitives.tsx`.
 4. Ingen farvede bannerbokse. AI-tekst er en almindelig sektion med kildelinje, uden "Skrevet af AI".
 5. Navne står alene: ingen initial-cirkler eller ikonkasser.
-6. **Ingen midterprik (·) nogen steder, heller ikke i tekstkortet.** Brug komma.
+6. **Ingen midterprik (·) nogen steder, heller ikke i resuméet.** Brug komma.
 7. Ikon eller ord ved enhver farvekodning, aldrig kun farve.
 8. UDGÅET (Jakob 29.09, G3): ingen kildelinje i elementerne (der findes ingen kildelinje-komponent).
 9. Flere værdier end formen kan vise: 3 + "Se N …".
@@ -35,7 +35,7 @@ Brug `DataState` fra `primitives.tsx`: henter (`loading`, samme højde som fyldt
 1. **Schema** i `packages/spec/src/spec.ts`: et zod-objekt med `type: z.literal("Lasso…")` og tilføj det til `componentSchema`. Navn: `Lasso` + engelsk navn efter katalogelementet.
 2. **Data**: en normaliseret model i `packages/spec/src/models.ts` og et felt i `Dataset` (+ `emptyDataset`). Metode i `DataProvider` (`apps/server/src/data/provider.ts`), implementeret i `LiveProvider` (`live.ts`, via adapter i `apps/server/src/lasso/adapters.ts` og klient i `client.ts`) OG i `DemoProvider` (`demo.ts`, med eksempeldata, hvor alle navne indeholder "Eksempel" eller "Prøve"). Registrér behovet i `resolveSpec` (`resolve.ts`). UI'en kalder aldrig API'er.
 3. **React-komponent** i `packages/ui/src/components/<Navn>.tsx`, registreret i `LassoView.tsx` (`renderComponent`) og eksporteret fra `packages/ui/src/index.ts`. CSS i `styles.css` under en overskrift med artboard-nummer. Grafer som ren SVG uden chartbibliotek. `useWidth` til bredde.
-4. **Tekstkort** i `apps/server/src/data/card.ts` (samme bredde på alle linjer, ingen midterprik) og **tests** (schema i `spec.test.ts`, adapter i `adapters.test.ts`, kort i `card.test.ts`).
+4. **Resumé** i `apps/server/src/data/summary.ts` (tekstkortet er udgået) og **tests** (schema i `spec.test.ts`, adapter i `adapters.test.ts`, resumé i `summary.test.ts`).
 
 Tilføj også en foreløbig katalogtekst i `packages/spec/src/catalog.ts` (én linje: hvornår modellen skal vælge komponenten). Den skrives om senere efter skabelonen i trin 3.
 

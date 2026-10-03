@@ -99,7 +99,7 @@ Fejl, der huskes i klientens negative cache (4xx undtagen 408/429 og timeout), g
 - Tre risikoskalaer blandes aldrig: Lassos score 0–100 (`LassoScoreGauge`), observationer 0/25/50/100
   (`LassoRiskObservations`) og Creditsafe A–E + lokal score (`LassoCreditRating`). Tonen for Creditsafe er A–B ok,
   C advarsel, D–E fare, altid som ikon + ord.
-- Tekstkortet og resuméet har én linje: `Kreditvurdering (Creditsafe): B, lav risiko, kreditmaksimum 250 t. kr.,
+- Resuméet har én linje: `Kreditvurdering (Creditsafe): B, lav risiko, kreditmaksimum 250 t. kr.,
   lokal score 62, forrige C, ændret 15.04.2026` eller `låst: kræver Creditsafe-tilføjelse`.
 
 ## Skal verificeres mod api.lassox.com

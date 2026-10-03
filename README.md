@@ -27,8 +27,9 @@ Modellen skriver aldrig HTML. Den sender en JSON-spec, og Lassos kode henter dat
 | `render_view` | Fri komposition til sammenligninger og oversigter. |
 | `save_view` | Gemmer specen og giver et link. Samme adresse opdateres, versioner bevares. |
 | `save_page` | Gemmer én virksomhed eller person (CVR, Lasso-ID eller navn) på brugerens egen liste, med valgfri note og focus. Gemmes den igen, flyttes den øverst. |
-| `list_saved_pages` | Viser brugerens gemte sider (nyeste først) som Lasso-visning med åbn og fjern; tekstkortet har et signeret link pr. side. |
+| `list_saved_pages` | Viser brugerens gemte sider (nyeste først) som Lasso-visning med åbn og fjern. |
 | `remove_saved_page` | Fjerner en side fra listen (Lasso-ID, CVR eller navnet på en gemt side). |
+| _alle visningsværktøjer_ | `structuredContent.links`: `share` (altid: det signerede link til netop denne visning, eller en gemt visning `/v/…` med visibility link) og `open` (kun når visningen handler om én virksomhed eller person: `/portal?aabn=<lassoId>&fokus=<fokus>&fastgoer=1`). Der er intet tekstkort: en app uden visning får resuméet og én linje, "Link til visningen: <share>". |
 | `resolve_view` | Kun for appen: henter data ved drill-down, filterændring og opdatering. |
 
 ### Ruter

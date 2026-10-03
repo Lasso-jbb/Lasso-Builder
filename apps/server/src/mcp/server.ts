@@ -24,7 +24,7 @@ import {
   type ViewSpec,
 } from "@lasso/spec";
 import { PERSON_SEARCH_ROLES } from "../usecases/views.js";
-import { textCard } from "../data/card.js";
+import { viewLinks, type ViewLinks } from "./viewLinks.js";
 import { mcpPdfLink } from "../pdf/routes.js";
 import { summarizeView } from "../data/summary.js";
 import { VISIBILITIES } from "../views/store.js";
@@ -102,40 +102,37 @@ export const ROUTING = `${CHAT_ROUTING}\n${ROUTING_SAVE}`;
 export const MCP_RULES = `Regler:
 - Én visning pr. svar: kald højst ét af show_company, show_person, search_companies, search_persons, compare_companies og render_view pr. brugerbesked, og kun én gang. Aldrig show_company og render_view efter hinanden.
 - Tegn altid med det samme. Spørg aldrig "vil du se det grafisk?".
-- Kan din app vise den interaktive Lasso-visning: vis kun den, og skriv aldrig tekstkortet. Kan den ikke (fx Claude Code eller en terminal): vis tekstkortet fra værktøjssvaret uændret i en kodeblok med linket til den interaktive visning som klikbart link lige under, fx [Åbn LASSO X A/S i Lasso](url).
-- Visningen er hele svaret (Jakob 30.09): skriv INGEN tekst i chatten før eller efter den; ingen opsummering, ingen kommentar, ingen gentagelse af tal og ingen forslag til næste spørgsmål (de står i visningen). Skriv kun tekst, når værktøjet fejlede, når du skal spørge, hvem brugeren mente, eller når appen ikke kan vise visningen (tekstkortet ovenfor). Skriv aldrig HTML/CSS.
+- Kan din app vise den interaktive Lasso-visning: vis kun den. Kan din app ikke vise den interaktive visning, så skriv kun linket til visningen; ingen tekstkort, ingen opsummering.
+- Visningen er hele svaret (Jakob 30.09): skriv INGEN tekst i chatten før eller efter den; ingen opsummering, ingen kommentar, ingen gentagelse af tal og ingen forslag til næste spørgsmål (de står i visningen). Skriv kun tekst, når værktøjet fejlede, når du skal spørge, hvem brugeren mente, eller når appen ikke kan vise visningen (kun linket). Skriv aldrig HTML/CSS.
 - Nævner svaret andre match ved navneopslag, og er det uklart hvem brugeren mente, så spørg.
 - Beløb angives i hele kroner (10 mio. = 10000000).`;
 
 const INSTRUCTIONS = `${ROUTING}\n\n${MCP_RULES}`;
 
 /** Første linje i hvert visningssvar (Jakob 30.09): visningen er svaret, så modellen skriver intet i chatten. */
-const SILENT = "Visningen vises for brugeren nu og er hele svaret: skriv intet i chatten (kun hvis appen ikke kan vise visningen, se tekstkortet).";
+const SILENT = "Visningen vises for brugeren nu og er hele svaret: skriv intet i chatten (kun hvis appen ikke kan vise visningen: skriv da kun linket nedenfor).";
 
 /**
  * Resuméet står både som tekst og i structuredContent: nogle værter (fx Claude Code)
  * giver kun modellen structuredContent, og så skal tallene at kommentere stå der.
- * host "chat" (docs/chat.md, tokens): kun noten og resuméet, uden SILENT, link og tekstkort-blok (portalen viser
- * visningen selv, og teksten styres af CHAT_RULES); structuredContent har samme felter som i /mcp.
+ * host "chat" (docs/chat.md, tokens): kun noten og resuméet, uden SILENT og linklinjen (portalen viser visningen selv, og
+ * teksten styres af CHAT_RULES); structuredContent har samme felter som i /mcp. Der er intet tekstkort: en vært uden visning får kun linket
+ * (links.share, også som én linje i teksten).
  */
-function viewResult(spec: ViewSpec, ds: Dataset, extra: { note?: string; link?: string; ask?: Ask; pdfLink?: string } = {}, host: McpContext["host"] = "mcp"): CallToolResult {
+function viewResult(spec: ViewSpec, ds: Dataset, extra: { note?: string; links: ViewLinks; ask?: Ask; pdfLink?: string }, host: McpContext["host"] = "mcp"): CallToolResult {
   const chat = host === "chat";
-  // Med et spørgsmål svarer resuméet og tekstkortet på det først ("Svar: …").
-  const summary = [chat ? undefined : SILENT, extra.note, summarizeView(spec, ds, { ask: extra.ask, host }), !chat && extra.link && `Interaktiv Lasso-visning (link til brugeren): ${extra.link}`]
+  // Med et spørgsmål svarer resuméet på det først ("Svar: …").
+  const summary = [chat ? undefined : SILENT, extra.note, summarizeView(spec, ds, { ask: extra.ask, host }), !chat && `Link til visningen: ${extra.links.share}`]
     .filter(Boolean)
     .join("\n");
-  const card = textCard(spec, ds, { ask: extra.ask });
   return {
-    content: [
-      { type: "text", text: summary },
-      ...(card && !chat ? [{ type: "text" as const, text: `Tekstkort:\n${card}` }] : []),
-    ],
+    content: [{ type: "text", text: summary }],
     structuredContent: {
       spec,
       source: ds.source,
       summary,
-      ...(card ? { card } : {}),
-      ...(extra.link ? { link: extra.link } : {}),
+      // open: portalens side for den ene virksomhed/person (kun da); share: delbart link til visningen (altid).
+      links: extra.links,
       // "Gem som PDF" i appen: det signerede .pdf-link til netop denne visning (pdf/routes.ts).
       ...(extra.pdfLink ? { pdfLink: extra.pdfLink } : {}),
     },
@@ -240,7 +237,10 @@ export function createMcpServer(ctx: McpContext): McpServer {
   );
 
   const ui = { ui: { resourceUri: VIEW_URI } };
-  const view = (spec: ViewSpec, ds: Dataset, extra?: { note?: string; link?: string; ask?: Ask; pdfLink?: string }) => viewResult(spec, ds, extra, ctx.host);
+  const view = async (spec: ViewSpec, ds: Dataset, extra: { note?: string; link?: string; ask?: Ask; pdfLink?: string } = {}) => {
+    const { link, ...rest } = extra;
+    return viewResult(spec, ds, { ...rest, links: await viewLinks(ctx, spec, link) }, ctx.host);
+  };
   const readOnly = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
 
   registerAppTool(

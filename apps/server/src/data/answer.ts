@@ -33,7 +33,7 @@ import {
 } from "@lasso/spec";
 
 /**
- * Svaret på brugerens spørgsmål i én linje, til resuméets "Svar:" og tekstkortets SVAR-sektion:
+ * Svaret på brugerens spørgsmål i én linje, til resuméets "Svar:":
  * de tal, personer eller oplysninger, spørgsmålet gælder, før resten af siden. Læses af de
  * spørgsmålstyper, spørgsmålet har (ask.ts) og af data, så svaret også står, når et svar-element er
  * tomt ("ingen registreret revisor"). null for et generelt spørgsmål.

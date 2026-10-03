@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LoginCard } from "@lasso/ui";
+import { nextAfterLogin } from "./next.js";
 import type { PortalBoot, PortalUser } from "../boot.js";
 import { createPortalApi, errorText, LOGGED_OUT } from "./api.js";
 import { PortalShell } from "./PortalShell.js";
@@ -49,6 +50,9 @@ export function PortalApp({ boot }: { boot: PortalBoot }) {
       try {
         const r = await api.login(id, key);
         setNotice(null);
+        // /portal?aabn=… sendte os hertil med next: efter login lander brugeren på samme URL (kun sikre stier på egen oprindelse).
+        const next = nextAfterLogin(window.location.search);
+        if (next) return void window.location.assign(next);
         setUser(r.user);
       } catch (e) {
         setError(errorText(e) || "Forkert bruger eller adgangsnøgle.");
