@@ -393,7 +393,7 @@ export async function runChat({ ctx, config, model, history, message, context, e
             emit({ type: "error", message: "Jeg kunne ikke afgøre, hvem du mener. Skriv et mere præcist navn." });
             break;
           }
-          messages.push({ role: "assistant", content: [{ type: "tool_use", id, name: ASK_CHOICE, input: input as Record<string, unknown> }] });
+          messages.push({ role: "assistant", content: [{ type: "tool_use", id, name: ASK_CHOICE, input: (built.input ?? input) as Record<string, unknown> }] });
           messages.push({ role: "user", content: [{ type: "tool_result", tool_use_id: id, content: built.text }] });
           emit({ type: "tool", id, name: ASK_CHOICE, title: titles.get(ASK_CHOICE) ?? ASK_CHOICE });
           choiceShown = true;
@@ -427,6 +427,11 @@ export async function runChat({ ctx, config, model, history, message, context, e
       const menu = ask ? await chatToolByName(ASK_CHOICE)!.run(ask.input ?? {}, toolCtx) : undefined;
       if (ask && menu?.choice) {
         choiceShown = true;
+        // Historikken gemmer det effektive input (handlingerne efter omskrivningen), så verifyChoice godtager det, klienten sender tilbage.
+        const stored = messages.at(-1);
+        if (stored?.role === "assistant" && Array.isArray(stored.content) && menu.input) {
+          messages[messages.length - 1] = { role: "assistant", content: stored.content.map((b) => (b.type === "tool_use" && b.id === ask.id ? { ...b, input: menu.input as Record<string, unknown> } : b)) };
+        }
         emit({ type: "choice", id: ask.id, ...menu.choice });
         const blocked = "Vis intet, før brugeren har valgt (ask_choice stod i samme svar).";
         for (const u of uses) if (u !== ask) emit({ type: "tool_error", id: u.id, name: u.name, message: blocked });

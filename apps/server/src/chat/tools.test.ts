@@ -81,3 +81,28 @@ test("place_answer: skemaet har enum for placement og title, entity kræver id o
   assert.deepEqual(turn.placement, ok.placement);
   assert.equal((await place.run({ placement: "global", title: "Kort" }, ctx)).isError, true, "anden gang");
 });
+
+test("ask_choice: uden en udtrykkelig bøn om at åbne bliver entity-punkter til current (svar her om den valgte); med en bøn står de", async () => {
+  const ask = CHAT_TOOLS.find((t) => t.tool.name === "ask_choice")!;
+  const gitte = { kind: "person" as const, id: "CVR-3-4000000007", name: "Gitte Prøve" };
+  const kim = { kind: "person" as const, id: "CVR-3-4000000008", name: "Kim Prøve" };
+  const onCompany = { kind: "company" as const, id: "CVR-1-99000001", name: "Eksempel Byg A/S" };
+  const turn = { placement: { placement: "current" as const }, placed: false, viewed: false };
+  const ctxFor = (message: string, active: object = { ...onCompany, tab: "overblik" }) => ({ mcp: {} as never, context: { active: active as never, open: [] }, message, turn });
+  const options = [gitte, kim].map((e) => ({ label: e.name, description: "Direktør", action: { placement: "entity", entity: e, focus: "overblik", prompt: `Vis alt om ${e.name}` } }));
+  const quiet = await ask.run({ question: "Hvem?", options }, ctxFor("Hvem er Prøve?"));
+  assert.ok(quiet.choice);
+  assert.deepEqual(quiet.choice!.options.map((o) => o.action), [
+    { placement: "current", entity: gitte, focus: "overblik", prompt: "Fortæl om Gitte Prøve (CVR-3-4000000007) her" },
+    { placement: "current", entity: kim, focus: "overblik", prompt: "Fortæl om Kim Prøve (CVR-3-4000000008) her" },
+  ]);
+  // Det effektive input (til historikken) har de samme handlinger.
+  assert.deepEqual((quiet.input as { options: { action: unknown }[] }).options.map((o) => o.action), quiet.choice!.options.map((o) => o.action));
+  const explicit = await ask.run({ question: "Hvem?", options }, ctxFor("Vis alt om Prøve"));
+  assert.deepEqual(explicit.choice!.options.map((o) => o.action.placement), ["entity", "entity"]);
+  // Global fra en entitet afvises uden en bøn; på forsiden og ved en bøn er den fin.
+  const globalOptions = [...options, { label: "Sammenlign", description: "d", action: { placement: "global", title: "Sammenligning" } }];
+  assert.equal((await ask.run({ question: "Hvem?", options: globalOptions }, ctxFor("Hvem er Prøve?"))).isError, true);
+  assert.ok((await ask.run({ question: "Hvem?", options: globalOptions }, ctxFor("Hvem er Prøve?", { kind: "global" }))).choice);
+  assert.ok((await ask.run({ question: "Hvem?", options: globalOptions }, ctxFor("åbn Prøve"))).choice);
+});

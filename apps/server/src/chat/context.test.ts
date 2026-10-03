@@ -142,3 +142,11 @@ test("placementOf: valget bestemmer; ellers current på en fane og global på fo
   assert.deepEqual(placementOf({ active: { ...lasso }, open: [], choice: { id: "toolu_1", index: 0, action: entityAction } }), { placement: "entity", target: jakob, focus: "overblik" });
   assert.deepEqual(placementOf({ active: { ...lasso }, open: [], choice: { id: "toolu_1", index: 2, action: globalAction } }), { placement: "global", title: "Sammenligning" });
 });
+
+test("current med en entity: svaret handler om den valgte og skrives her (ingen ny fane)", () => {
+  const action = { placement: "current" as const, entity: jakob, focus: "overblik", prompt: "Fortæl om Jakob Benediktson (CVR-3-4000123) her" };
+  const ctx: ChatContext = { active: { ...lasso, tab: "overblik" }, open: [], choice: { id: "toolu_1", index: 0, action, label: "Jakob Benediktson" } };
+  assert.match(contextText(ctx), /Brugeren valgte 'Jakob Benediktson': svaret handler om personen Jakob Benediktson \(CVR-3-4000123\) og skrives her, på den aktive fane \(ingen ny fane\)\./);
+  assert.deepEqual(placementOf(ctx), { placement: "current", focus: "overblik" });
+  assert.ok(parseContext({ active: { kind: "global" }, choice: { id: "toolu_1", index: 0, action } }));
+});

@@ -751,3 +751,27 @@ test("D2: en tom assistentbesked gemmes aldrig i historikken; en afvist samtale 
   });
   assert.equal(((await chat({ message: "Hej", context: globalTab }, zoe)).events.find((e) => e.type === "error") as Event & { code?: string }).code, undefined);
 });
+
+test("D3: et ikke-udtrykkeligt spørgsmål giver en menu, der kun vælger hvem; valget flytter ikke og kan bekræftes", async () => {
+  const two = [jakob, { kind: "person", id: "CVR-3-4000000008", name: "Kim Prøve" }];
+  const menu2 = { question: "Hvem mener du?", options: two.map((e) => ({ label: e.name, description: "Direktør", action: { placement: "entity", entity: e, focus: "overblik", prompt: `Vis alt om ${e.name}` } })) };
+  script.push(useTool("ask_choice", menu2));
+  const first = await chat({ message: "Hvem er Prøve?", context: onLasso }, zoe);
+  const choice = first.events.find((e) => e.type === "choice") as Event & { id: string; options: { action: { placement: string; entity?: unknown } }[] };
+  assert.deepEqual(choice.options.map((o) => o.action.placement), ["current", "current"]);
+  assert.deepEqual(choice.options[0]!.action.entity, jakob);
+  const done = first.events.at(-1) as Event & { history: unknown[]; sig: string };
+  // Valget bekræftes mod det gemte (omskrevne) input, og placeringen er current uden decided.
+  script.push(useTool("show_person", { person: jakob.id }), sayText("Gitte er direktør."));
+  const pick = { ...onLasso, choice: { id: choice.id, index: 0, action: choice.options[0]!.action } };
+  const next = await chat({ message: "Fortæl om Gitte Prøve (CVR-3-4000000007) her", context: pick, history: done.history, sig: done.sig }, zoe);
+  assert.equal(next.status, 200, JSON.stringify(next.json));
+  assert.deepEqual(next.events[0], { type: "placement", placement: "current", focus: "overblik" });
+  assert.equal((next.events.at(-1) as Event & { fresh?: true }).fresh, undefined);
+  assert.match(lastUserTexts(calls.at(-2)!)[0]!, /svaret handler om personen Gitte Prøve \(CVR-3-4000000007\) og skrives her/);
+  // En global liste i menuen fra en entitet afvises (is_error); modellen kan rette.
+  script.push(useTool("ask_choice", { ...menu2, options: [...menu2.options, { label: "Sammenlign", description: "d", action: { placement: "global", title: "Sammenligning" } }] }), sayText("Okay."));
+  const refused = await chat({ message: "Hvem er Prøve?", context: onLasso }, zoe);
+  assert.ok(refused.events.some((e) => e.type === "tool_error"));
+  assert.ok(!refused.events.some((e) => e.type === "choice"));
+});

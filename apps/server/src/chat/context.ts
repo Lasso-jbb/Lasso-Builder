@@ -166,6 +166,8 @@ export function contextText(ctx: ChatContext): string {
     lines.push(`Brugeren valgte ${quoted}: svaret skrives på ${entityText(picked.entity)}${picked.focus ? `, modul ${oneLine(picked.focus)}` : ""}. Den er den aktive kontekst i dette svar.`);
   } else if (picked?.placement === "global") {
     lines.push(`Brugeren valgte ${quoted}: svaret er globalt (liste/analyse), ikke på en fane.`);
+  } else if (picked?.entity) {
+    lines.push(`Brugeren valgte ${quoted}: svaret handler om ${entityText(picked.entity)} og skrives her, på den aktive fane (ingen ny fane).`);
   } else if (picked) {
     lines.push(`Brugeren valgte ${quoted}: svaret skrives her, på den aktive fane${picked.focus ? ` (modul ${oneLine(picked.focus)})` : ""}.`);
   } else if (choice) {
@@ -220,6 +222,7 @@ export function placementOf(ctx: ChatContext): Placement {
   const action = ctx.choice && !("free" in ctx.choice) ? ctx.choice.action : undefined;
   if (action?.placement === "entity" && action.entity) return { placement: "entity", target: action.entity, ...(action.focus ? { focus: action.focus } : {}) };
   if (action?.placement === "global") return { placement: "global", ...(action.title ? { title: action.title } : {}) };
+  // current med en entity: svaret handler om den valgte, men skrives her (ingen ny fane).
   if (ctx.active.kind === "global") return { placement: "global" };
   return { placement: "current", ...(action?.focus ? { focus: action.focus } : {}) };
 }

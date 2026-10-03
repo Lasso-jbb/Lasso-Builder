@@ -3,7 +3,7 @@ import { z } from "zod";
 import { candidatesAsText, resolveEntity, type EntityCandidate } from "../usecases/index.js";
 import type { McpContext } from "../mcp/server.js";
 import { ASK_CHOICE, askChoiceSchema, PLACE_ANSWER, placeAnswerSchema, type ChatContext, type ChoiceAction, type Placement } from "./context.js";
-import { verifyPlacement, type TurnState } from "./place.js";
+import { EXPLICIT_OPEN, verifyPlacement, type TurnState } from "./place.js";
 
 /** Et punkt i menuen: titel, én linjes beskrivelse, evt. anbefalet, og handlingen (kun den er afgørende for placeringen). */
 export interface ChoiceOption {
@@ -44,6 +44,8 @@ export interface ChatToolResult {
   choice?: Omit<ChoiceMenu, "id">;
   /** Kun place_answer: den kontrollerede placering (agent.ts sender den som "placement"-hændelse). */
   placement?: Placement;
+  /** Kun ask_choice: det effektive input (efter omskrivningen af handlingerne), som gemmes i historikken, så valget kan bekræftes. */
+  input?: unknown;
   /** Kun find_entity: kandidaterne (agent.ts kræver en valgmenu, når der er flere og modellen ikke afgør det). */
   candidates?: EntityCandidate[];
 }
@@ -104,15 +106,29 @@ const askChoice: ChatToolDef = {
     askChoiceSchema,
     { strict: true },
   ),
-  async run(raw) {
+  async run(raw, ctx) {
     const parsed = askChoiceSchema.safeParse(raw);
     if (!parsed.success) return { text: `Ugyldig valgmenu: ${parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`, isError: true };
     const { question, options, allowFreeText } = parsed.data;
     // Skemaet tillader ét punkt (gamle menuer i historikken skal stadig kunne bekræftes, context.ts); en ny menu har mindst to.
     if (options.length < 2) return { text: "Ugyldig valgmenu: options: mindst 2 punkter (en menu er kun til flere match; ved ét match gør du det bare).", isError: true };
+    // Brugeren bliver på fanen, medmindre vedkommende udtrykkeligt beder om at åbne: for et ikke-udtrykkeligt spørgsmål
+    // ("Hvem er Prøve?") er menuen kun til at vælge, hvem der menes, og svaret skrives her om den valgte.
+    let effective = options;
+    if (!EXPLICIT_OPEN.test(ctx.message)) {
+      if (ctx.context.active.kind !== "global" && options.some((o) => o.action.placement === "global")) {
+        return { text: "Ugyldig valgmenu: en menu vælger kun mellem flere match; en global liste eller analyse hører ikke hjemme i den. Svar her.", isError: true };
+      }
+      effective = options.map((o) =>
+        o.action.placement === "entity" && o.action.entity
+          ? { ...o, action: { placement: "current" as const, entity: o.action.entity, ...(o.action.focus ? { focus: o.action.focus } : {}), prompt: `Fortæl om ${o.action.entity.name} (${o.action.entity.id}) her`.slice(0, 4000) } }
+          : o,
+      );
+    }
     return {
       text: "Valget er vist for brugeren. Svaret kommer som næste besked med det valgte i konteksten; gør så det, brugeren valgte.",
-      choice: { question, options, allowFreeText: allowFreeText ?? true },
+      choice: { question, options: effective, allowFreeText: allowFreeText ?? true },
+      input: { ...parsed.data, options: effective },
     };
   },
 };
