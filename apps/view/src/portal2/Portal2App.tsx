@@ -68,6 +68,7 @@ import {
 } from "./thread.js";
 import { AskField, BottomBar, DropButton, IconButton, LassoTab, MenuItem, ModuleTab, OpenTab, RemoveTemplateDialog, SearchEmpty, SearchField, SearchResultRow, SearchTabs, StatusFilterMenu, Suggestions, TemplatePin, TopTab } from "./parts.js";
 import { useElasticScroll } from "./elastic.js";
+import { runViewLink } from "./viewLink.js";
 import { createIdleSave } from "./idleSave.js";
 import { ChoicePanel } from "./ChoicePanel.js";
 import type { ViewPart } from "./chat/AnswerCard.js";
@@ -145,6 +146,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const [templates, setTemplates] = useState<PageTemplate[]>([]);
   /** Egne sider er hentet (så en fane på en fjernet egen side kan sættes tilbage). */
   const templatesLoaded = useRef(false);
+  /** Egne sider, denne side selv har gemt (de bevares, hvis en ældre hentning af listen svarer bagefter). */
+  const addedTemplates = useRef(new Set<string>());
   const [adding, setAdding] = useState<string | null>(null);
   /** Fejlen efter en tur, når en side ikke kunne tilføjes som modul (med "Prøv igen" ved netværks- og serverfejl). */
   const [tplNotes, setTplNotes] = useState<Record<string, { ok: boolean; text: string; retry?: () => void }>>({});
@@ -375,6 +378,21 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       const known = cached?.open.find((o) => o.key === deep.id);
       openEntity(deep.kind, deep.id, known?.name ?? deep.id, deep.tab, undefined, false);
       if (deep.pin) setOpen((l) => setPinned(l, deep.id, true));
+      // visning=…: den gemte visning bliver en egen side (eller den, der findes), og fanen skifter til modulet.
+      if (deep.view && boot.user) {
+        const view = deep.view;
+        void runViewLink({ kind: deep.kind, id: deep.id, view }, { visning: (id) => api.visning.get(id), saveTemplate: (body) => api.templates.save(body) }).then((r) => {
+          if (r.template) {
+            addedTemplates.current.add(r.template.id);
+            setTemplates((t) => [...t.filter((x) => x.id !== r.template!.id), r.template!]);
+          }
+          if (r.notice) setNotice(r.notice);
+          if (r.tab !== deep.tab) {
+            setOpen((l) => l.map((o) => (o.key === deep.id ? { ...o, tab: r.tab } : o)));
+            void load(deep.kind, deep.id, r.tab, true);
+          }
+        });
+      }
       // Parametrene fjernes fra adressen, så en genindlæsning ikke åbner igen. Uden login bliver de stående, så linket
       // virker, når man har logget ind (en ny sideindlæsning).
       if (boot.user) {
@@ -442,7 +460,11 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     try {
       const [c, p] = await Promise.all([api.templates.list("company"), api.templates.list("person")]);
       templatesLoaded.current = true;
-      setTemplates([...c, ...p]);
+      // En egen side, der blev gemt, mens listen blev hentet (fx fra et "Åben i Lasso"-link), bliver stående.
+      setTemplates((prev) => {
+        const fetched = [...c, ...p];
+        return [...fetched, ...prev.filter((x) => addedTemplates.current.has(x.id) && !fetched.some((f) => f.id === x.id))];
+      });
     } catch {
       // Uden egne sider er modulrækken bare de indbyggede.
     }
@@ -789,6 +811,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     setConfirmRemove(null);
     try {
       await api.templates.remove(tpl.id);
+      addedTemplates.current.delete(tpl.id);
       // Faner på modulet går tilbage til Overblik (effekten ovenfor), som henter sig selv, når den vises.
       setTemplates((t) => t.filter((x) => x.id !== tpl.id));
     } catch (e) {

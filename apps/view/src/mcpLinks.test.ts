@@ -34,3 +34,13 @@ test("MCP-appen: 'Åben i Lasso' øverst kun med et open-link; 'Del visning' ned
   assert.match(share, />Kopiér link</);
   assert.equal(renderToStaticMarkup(createElement(ShareView, { onCopy: async () => true })), "");
 });
+
+test("Del visning viser og kopierer det korte /d/-link", async () => {
+  const SHORT = "https://lasso.example/d/Ab3x9";
+  assert.deepEqual(linksOf({ links: { share: SHORT, open: "https://lasso.example/portal?aabn=CVR-1-1&visning=Ab3x9" } })?.share, SHORT);
+  let copied = "";
+  const html = renderToStaticMarkup(createElement(ShareView, { href: SHORT, onCopy: async (u: string) => ((copied = u), true) }));
+  assert.match(html, /value="https:\/\/lasso\.example\/d\/Ab3x9"/);
+  assert.match(html, />Kopiér link</);
+  assert.equal(copied, "", "intet kopieres, før der klikkes");
+});
