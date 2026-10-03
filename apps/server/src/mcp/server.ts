@@ -53,15 +53,19 @@ export const VIEW_URI = `ui://lasso/view-${viewVersion()}.html`;
 /**
  * Serverens kontekst pr. MCP-request: samme som use-casenes (usecases/), som tool-handlerne kalder.
  * Handlerne validerer input (zod-skemaerne nedenfor) og pakker use-casens svar i CallToolResult.
+ * host: hvem der taler med modellen. "mcp" (standard) er Claude.ai m.fl. over /mcp; "chat" er Lassos
+ * egen chat (chat/agent.ts), som altid viser visningen under modellens tekst.
  */
-export type McpContext = UseCaseCtx;
+export type McpContext = UseCaseCtx & { host?: "mcp" | "chat" };
 
 /**
  * Serverinstruktionerne står i hver samtale, så de holdes korte: routing og regler. Komponent-
  * kataloget hentes med describe_components (render_view har kun et indeks, plan Ø8), kompositions-
  * reglerne står KUN i render_view's beskrivelse og søgefelterne KUN i search_companies' (review P1-6).
+ * Routingen (værktøjsvalget) deles med Lassos egen chat; reglerne er /mcp's egne, chatten har sine i
+ * chat/agent.ts (CHAT_RULES). Teksten til Claude.ai er uændret: ROUTING + MCP_RULES.
  */
-const INSTRUCTIONS = `Lasso giver adgang til data om danske virksomheder og personer (CVR): stamdata, regnskaber, nøgletal, ledelse, bestyrelse, ejere, revisor, risiko, historik og kontakt, samt søgning med kriterier (målgrupper).
+export const ROUTING = `Lasso giver adgang til data om danske virksomheder og personer (CVR): stamdata, regnskaber, nøgletal, ledelse, bestyrelse, ejere, revisor, risiko, historik og kontakt, samt søgning med kriterier (målgrupper).
 
 Vælg værktøj:
 - Én virksomhed: show_company med CVR-nummer, Lasso-ID eller navn (serveren slår navnet op; brug ikke search_companies først). Serveren bygger siden omkring svaret på spørgsmålet: svar-elementet først med de nævnte nøgletal, roller og år, og kontekst rundt om. Sæt kun focus, når spørgsmålet er generelt: 'overblik' (standard, "fortæl om X"), 'oekonomi' ("hvordan går det"), 'regnskab', 'ejerskab', 'risiko', 'historik', 'kontakt' (kontakt og ledelse; 'ledelse' åbner samme side).
@@ -73,9 +77,9 @@ Vælg værktøj:
 - Flere navngivne virksomheder → compare_companies (sammenligning, rangering, "hvem er størst"). Navne må bruges i stedet for CVR-numre.
 - Elementer, ingen focus dækker: render_view; hent først props for typerne med describe_components.
 - "Gem virksomheden/personen", "husk", "bogmærk", "sæt på min liste": save_page. "Mine gemte", "hvad har jeg gemt", "min liste": list_saved_pages. "Fjern fra listen": remove_saved_page. save_view er kun til et delbart link til en visning.
-- "Giv mig en URL", "del": save_view.
+- "Giv mig en URL", "del": save_view.`;
 
-Regler:
+export const MCP_RULES = `Regler:
 - Én visning pr. svar: kald højst ét af show_company, show_person, search_companies, search_persons, compare_companies og render_view pr. brugerbesked, og kun én gang. Aldrig show_company og render_view efter hinanden.
 - Tegn altid med det samme. Spørg aldrig "vil du se det grafisk?".
 - Kan din app vise den interaktive Lasso-visning: vis kun den, og skriv aldrig tekstkortet. Kan den ikke (fx Claude Code eller en terminal): vis tekstkortet fra værktøjssvaret uændret i en kodeblok med linket til den interaktive visning som klikbart link lige under, fx [Åbn LASSO X A/S i Lasso](url).
@@ -83,16 +87,20 @@ Regler:
 - Nævner svaret andre match ved navneopslag, og er det uklart hvem brugeren mente, så spørg.
 - Beløb angives i hele kroner (10 mio. = 10000000).`;
 
+const INSTRUCTIONS = `${ROUTING}\n\n${MCP_RULES}`;
+
 /** Første linje i hvert visningssvar (Jakob 30.09): visningen er svaret, så modellen skriver intet i chatten. */
 const SILENT = "Visningen vises for brugeren nu og er hele svaret: skriv intet i chatten (kun hvis appen ikke kan vise visningen, se tekstkortet).";
+/** Samme linje i Lassos egen chat, hvor visningen står under modellens tekst, og tekst er tilladt (CHAT_RULES). */
+const SHOWN_IN_CHAT = "Visningen vises for brugeren under din tekst.";
 
 /**
  * Resuméet står både som tekst og i structuredContent: nogle værter (fx Claude Code)
  * giver kun modellen structuredContent, og så skal tallene at kommentere stå der.
  */
-function viewResult(spec: ViewSpec, ds: Dataset, extra: { note?: string; link?: string; ask?: Ask; pdfLink?: string } = {}): CallToolResult {
+function viewResult(spec: ViewSpec, ds: Dataset, extra: { note?: string; link?: string; ask?: Ask; pdfLink?: string } = {}, host: McpContext["host"] = "mcp"): CallToolResult {
   // Med et spørgsmål svarer resuméet og tekstkortet på det først ("Svar: …").
-  const summary = [SILENT, extra.note, summarizeView(spec, ds, { ask: extra.ask }), extra.link && `Interaktiv Lasso-visning (link til brugeren): ${extra.link}`]
+  const summary = [host === "chat" ? SHOWN_IN_CHAT : SILENT, extra.note, summarizeView(spec, ds, { ask: extra.ask }), extra.link && `Interaktiv Lasso-visning (link til brugeren): ${extra.link}`]
     .filter(Boolean)
     .join("\n");
   const card = textCard(spec, ds, { ask: extra.ask });
@@ -180,6 +188,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
   );
 
   const ui = { ui: { resourceUri: VIEW_URI } };
+  const view = (spec: ViewSpec, ds: Dataset, extra?: { note?: string; link?: string; ask?: Ask; pdfLink?: string }) => viewResult(spec, ds, extra, ctx.host);
   const readOnly = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
 
   registerAppTool(
@@ -198,7 +207,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     async (input): Promise<CallToolResult> => {
       const r = await searchCompanies(ctx, input);
       if ("error" in r) return toolError(r.error);
-      return viewResult(r.spec, r.dataset, { note: r.note, pdfLink: mcpPdfLink(ctx.config, r) });
+      return view(r.spec, r.dataset, { note: r.note, pdfLink: mcpPdfLink(ctx.config, r) });
     },
   );
 
@@ -222,7 +231,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     async (input): Promise<CallToolResult> => {
       const r = await searchPersons(ctx, input);
       if ("error" in r) return toolError(r.error);
-      return viewResult(r.spec, r.dataset, { note: r.note, pdfLink: mcpPdfLink(ctx.config, r) });
+      return view(r.spec, r.dataset, { note: r.note, pdfLink: mcpPdfLink(ctx.config, r) });
     },
   );
 
@@ -247,7 +256,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     async (input): Promise<CallToolResult> => {
       const r = await compareCompanies(ctx, input);
       if ("error" in r) return toolError(r.error);
-      return viewResult(r.spec, r.dataset, { note: r.note, pdfLink: mcpPdfLink(ctx.config, r) });
+      return view(r.spec, r.dataset, { note: r.note, pdfLink: mcpPdfLink(ctx.config, r) });
     },
   );
 
@@ -275,7 +284,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     async (input): Promise<CallToolResult> => {
       const r = await showCompany(ctx, input);
       if ("error" in r) return toolError(r.error);
-      return viewResult(r.spec, r.dataset, { note: r.note, link: r.link, ask: r.ask, pdfLink: mcpPdfLink(ctx.config, r) });
+      return view(r.spec, r.dataset, { note: r.note, link: r.link, ask: r.ask, pdfLink: mcpPdfLink(ctx.config, r) });
     },
   );
 
@@ -299,7 +308,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     async (input): Promise<CallToolResult> => {
       const r = await showPerson(ctx, input);
       if ("error" in r) return toolError(r.error);
-      return viewResult(r.spec, r.dataset, { note: r.note, link: r.link, ask: r.ask, pdfLink: mcpPdfLink(ctx.config, r) });
+      return view(r.spec, r.dataset, { note: r.note, link: r.link, ask: r.ask, pdfLink: mcpPdfLink(ctx.config, r) });
     },
   );
 
@@ -341,7 +350,7 @@ ${LAYOUT_RULES}\n\nKomponentindeks (type (titel): formål):\n${catalogIndexText(
       // Navne ("Risika") slås op som i show_company, så modellen ikke skal søge først (review P1-7).
       const r = await renderView(ctx, input);
       if ("error" in r) return toolError(withCatalogHelp(r.error, input));
-      return viewResult(r.spec, r.dataset, { note: r.note, pdfLink: mcpPdfLink(ctx.config, r) });
+      return view(r.spec, r.dataset, { note: r.note, pdfLink: mcpPdfLink(ctx.config, r) });
     },
   );
 
@@ -450,7 +459,7 @@ ${LAYOUT_RULES}\n\nKomponentindeks (type (titel): formål):\n${catalogIndexText(
     },
     async (input): Promise<CallToolResult> => {
       const { spec, dataset } = await listSavedPages(ctx, input);
-      return viewResult(spec, dataset, { pdfLink: mcpPdfLink(ctx.config, { spec, dataset }) });
+      return view(spec, dataset, { pdfLink: mcpPdfLink(ctx.config, { spec, dataset }) });
     },
   );
 

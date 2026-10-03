@@ -113,10 +113,11 @@ test("chat: værktøjet kører gennem MCP; browseren får visningen, modellen ku
   assert.ok(view.spec.components.length > 0);
   assert.equal(view.dataset.companies["CVR-1-99000001"]?.name, "Eksempel Byg A/S");
 
-  // Modellen fik MCP-instruktionerne + chattens, og værktøjerne uden de app-interne.
+  // Modellen fik MCP-routingen + chattens egne regler (ikke /mcp's), og værktøjerne uden de app-interne.
   const first = calls.at(-2)!;
   assert.match(String(first.system), /show_company/);
   assert.match(String(first.system), /Lassos egen chat/);
+  assert.doesNotMatch(String(first.system), /Én visning pr\. svar/, "MCP_RULES er kun til Claude.ai");
   const names = first.tools!.map((t) => (t as { name: string }).name);
   assert.ok(names.includes("show_company") && names.includes("render_view"));
   assert.ok(!names.includes("resolve_view"), "resolve_view er kun for appen");
@@ -130,6 +131,8 @@ test("chat: værktøjet kører gennem MCP; browseren får visningen, modellen ku
   assert.equal(result.type, "tool_result");
   assert.match(result.content, /Eksempel Byg/);
   assert.doesNotMatch(result.content, /Tekstkort:/);
+  // Chatten viser visningen under teksten, så værktøjssvaret beder ikke modellen tie (SILENT er /mcp's).
+  assert.match(result.content, /^Visningen vises for brugeren under din tekst\./);
 
   const done = events.at(-1) as Event & { history: unknown[]; sig: string };
   assert.equal(done.history.length, 4);

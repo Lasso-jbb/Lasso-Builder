@@ -10,7 +10,7 @@ import type {
 import { Client, InMemoryTransport, type CallToolResult } from "@modelcontextprotocol/client";
 import { DATASET_META_KEY, type Dataset, type ViewSpec } from "@lasso/spec";
 import type { Config } from "../config.js";
-import { createMcpServer, type McpContext } from "../mcp/server.js";
+import { createMcpServer, ROUTING, type McpContext } from "../mcp/server.js";
 import { contextText, type ChatContext } from "./context.js";
 
 /**
@@ -41,11 +41,24 @@ export function anthropicModelCall(apiKey: string): ModelCall {
   };
 }
 
-/** Tilføjes MCP-instruktionerne: chatten viser altid visningen, så tekstkortet skrives aldrig. */
-export const CHAT_INSTRUCTIONS = `Du er Lassos assistent i Lassos egen chat. Svar på dansk.
-Appen viser altid den interaktive Lasso-visning direkte under din besked, så skriv aldrig tekstkortet og aldrig links til visningen.
-Når et værktøj har vist en visning, er den hele svaret: skriv højst én kort sætning, og kun hvis der er noget, brugeren skal vide (fx hvilket match der blev valgt ved et navneopslag). Skriv kun længere tekst, når brugeren beder om en forklaring eller vurdering, eller når et værktøj fejlede.
-Formatering: almindelig tekst; **fed**, punktlister og links er tilladt, ingen overskrifter og ingen tabeller.`;
+/**
+ * Chattens egne regler (docs/chat.md), efter MCP-routingen (mcp/server.ts ROUTING). Hvert spørgsmål
+ * besvares i den aktive kontekst ([Kontekst] først i brugerens tur); et skift til en anden fane sker
+ * kun gennem valgmenuen (ask_choice, chat/tools.ts), som brugeren selv vælger i.
+ */
+export const CHAT_RULES = `Du er Lassos assistent i Lassos egen chat (portalen). Svar på dansk.
+
+Kontekst:
+- Brugerens tur begynder med [Kontekst]: den fane, brugeren står på (en virksomhed, en person eller forsiden/et resultat = globalt), de åbne faner og evt. det, brugeren lige valgte i en menu. Svar altid i den aktive kontekst. Svar direkte, når spørgsmålet tydeligt bliver dér: "Hvad laver Jakob ellers?" på LASSO X A/S besvares med show_person/render_view om Jakob, vist her, i LASSO X's chat.
+- Kald ask_choice først, uden nogen visning, når spørgsmålet lægger op til en anden kontekst (en anden persons eller virksomheds side: "vis alt om Jakob", "åbn X"; eller en global liste, analyse eller sammenligning, mens brugeren står på en side), eller når et navn er tvetydigt. Naturlige punkter: a) "Alt om Jakob Benediktson" (placement entity, focus overblik, prompt "Vis alt om Jakob Benediktson (CVR-3-…)"), b) "Overordnet indblik her" (placement current, prompt "Giv et kort overblik over Jakob Benediktson her"); fritekst ("Andet") lægger appen selv til. Flere match: ét punkt pr. kandidat (entity) + fritekst. Hent id'erne med find_entity, før du kalder ask_choice; kald aldrig show_person med et fornavn alene.
+- På forsiden (global) besvares lister og analyser direkte, uden menu.
+- Efter et valg står det i [Kontekst]: gør det i ét trin (show_person/show_company med show_all for "Alt om", kort tekst og evt. ét modul for "Overordnet").
+- Spørger brugeren om noget andet i stedet for at vælge (intet valg i konteksten), så besvar det nye spørgsmål her.
+
+Svar:
+- Et svar kan være tekst, en eller flere visninger, eller begge dele ("Jakob har 4 firmaer …" og et ejerdiagram via render_view med én komponent), eller en hel side (show_*, eller render_view med layout "page"). Appen viser visningerne under din tekst i den rækkefølge, de kommer.
+- Teksten er kort og almindelig: **fed**, punktlister og links er tilladt, ingen overskrifter, ingen tabeller. Skriv aldrig tekstkortet, aldrig links til visningen og aldrig HTML/CSS. Gentag ikke tallene fra visningen.
+- Beløb angives i hele kroner (10 mio. = 10000000).`;
 
 /**
  * Det, der afhænger af modellen. Haiku 4.5 kender hverken effort eller fallbacks (400), så de sendes kun
@@ -140,11 +153,12 @@ function apiErrorText(e: unknown): string {
 export async function runChat({ ctx, config, model, history, message, context, emit, signal }: ChatRunOptions): Promise<void> {
   // Konteksten står først i brugerens tur (ikke i system: den skifter pr. spørgsmål og ville bryde cachen).
   const messages: BetaMessageParam[] = [...history, { role: "user", content: [{ type: "text", text: contextText(context) }, { type: "text", text: message }] }];
-  const { client, close } = await connect(ctx);
+  const { client, close } = await connect({ ...ctx, host: "chat" });
   try {
     const tools = await chatTools(client);
     const titles = new Map(tools.map((t) => [t.tool.name, t.title]));
-    const system = `${client.getInstructions() ?? ""}\n\n${CHAT_INSTRUCTIONS}`;
+    // Routingen deles med /mcp; reglerne er chattens egne (MCP_RULES gælder kun Claude.ai).
+    const system = `${ROUTING}\n\n${CHAT_RULES}`;
 
     for (let step = 0; step < MAX_STEPS; step++) {
       let response: BetaMessage;
