@@ -1,6 +1,6 @@
 /**
  * Lokal forhåndsvisning af /chat og /portal uden Claude-nøgle: en falsk model, der kalder show_company og
- * svarer kort. Skriver man "alt om …", slår den virksomheden op (find_entity) og åbner dens fane (place_answer entity).
+ * svarer kort. Skriver man "alt om …", afgør forhåndsopløsningen (chat/preresolve.ts) placeringen, og den viser så siden.
  * Kør: npx tsx src/dev/chat-preview.ts (port 3999), åbn http://localhost:3999/chat eller /portal.
  */
 import type { BetaMessage } from "@anthropic-ai/sdk/resources/beta/messages/messages";
@@ -25,17 +25,19 @@ const fake: ModelCall = async (params, onText) => {
   const texts = Array.isArray(turnStart.content) ? turnStart.content.filter((b): b is { type: "text"; text: string } => (b as { type: string }).type === "text").map((b) => b.text) : [String(turnStart.content)];
   const question = texts.at(-1) ?? "";
   const entityTurn = /alt om/i.test(question);
+  // Forhåndsopløsningen (chat/preresolve.ts) har allerede afgjort placeringen: modellen skal kun vise siden.
+  const decided = /placeringen er afgjort/.test(texts.join(" "));
   const results = toolResultText(last);
   if (results) {
     // "alt om …": find_entity → place_answer (entity) → show_company med show_all → tekst.
     if (entityTurn && /virksomhed for/.test(results)) return use("place_answer", { placement: "entity", entity: { kind: "company", id: "CVR-1-99000001", query: "Eksempel Byg" }, focus: "overblik" });
     if (entityTurn && /^Placeringen er valgt/.test(results)) return use("show_company", { company: "99000001", question, show_all: true });
-    if (/^Placeringen er valgt/.test(results)) return use("show_company", { company: "99000001", question, focus: "oekonomi" });
     for (const w of ["Her er ", "**Eksempel Byg A/S** ", "(CVR 99000001)."]) onText(w);
     return msg([{ type: "text", text: "Her er **Eksempel Byg A/S** (CVR 99000001)." }], "end_turn");
   }
+  if (decided) return use("show_company", { company: "99000001", question, show_all: true });
   if (entityTurn) return use("find_entity", { kind: "company", query: "Eksempel Byg" });
-  return use("place_answer", { placement: "current" });
+  return use("show_company", { company: "99000001", question, focus: "oekonomi" });
 };
 const config = loadConfig({ ...process.env, LASSO_DATA_SOURCE: "demo", DATABASE_URL: "", PORT: "3999" });
 const app = createApp({ config, client: new LassoClient(config), provider: new DemoProvider(), store: createViewStore(""), pages: createSavedPageStore(""), chatModel: fake });
