@@ -26,6 +26,7 @@ portal.lassox.com bruges i dag. Den bor på `/portal` (roden `/` sender videre),
 | `POST /api/portal/login` | `{ user, key }` | `200 { user: { id, name, org, isDemo } }`, ellers `401 { error }` |
 | `POST /api/portal/logout` | – | `200 { ok: true }` og cookien slettes |
 | `GET /api/portal/me` | – | `200 { user }` eller `401` |
+| `GET /api/portal/visning/:id` | – | Den gemte visning bag `links.open` (`visning=<id>`): `200 { entity: { kind, id }, spec, title, subtitle?, existingTemplateId? }`. Klienten åbner entiteten og gemmer visningen som modul med `POST /templates` ("Tilføj som fane", rød nål) og aktiverer det. `existingTemplateId` er id'et på brugerens eget modul med samme spec (efter samme fjernelse af entiteten som ved gemning), så gentagne klik ikke stabler moduler; i så fald aktiveres det. 404: ukendt, udløbet, anden organisation eller en visning, der ikke handler om én entitet. Ældre `fokus`/`fastgoer` i `/portal`-links læses stadig. |
 | `GET /portal` | – | Uden session og med login krævet: `302 /portal/klassisk?next=<den ønskede sti og query>` (fx `/portal?aabn=<lassoId>&fokus=<fokus>&fastgoer=1` fra "Åben i Lasso"); efter login går portalen til `next`, kun hvis det er en sikker sti på egen oprindelse (`safeNext`). Ellers render-appen med `window.__LASSO_BOOT__ = { mode: "portal", user: {…} \| null, loginRequired, baseUrl, pdf }` (`pdf` = serveren har Chromium til "Gem som PDF") |
 
 ## Portal-API (kræver session; alle svar er JSON)

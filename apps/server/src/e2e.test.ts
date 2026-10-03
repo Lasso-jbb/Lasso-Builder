@@ -16,16 +16,19 @@ const { loadConfig } = await import("./config.js");
 const { LassoClient } = await import("./lasso/client.js");
 const { DemoProvider } = await import("./data/demo.js");
 const { createViewStore } = await import("./views/store.js");
+const { companyLink, personLink } = await import("./web/links.js");
 const { createSavedPageStore } = await import("./pages/store.js");
 
 const KEY = "test-mcp-key";
 const ADMIN = "test-admin-key";
 let http: Server;
 let base = "";
+let config!: import("./config.js").Config;
+let store!: import("./views/store.js").ViewStore;
 let client: Client;
 
 before(async () => {
-  const config = loadConfig({
+  config = loadConfig({
     ...process.env,
     MCP_ACCESS_KEY: KEY,
     ADMIN_API_KEY: ADMIN,
@@ -33,7 +36,7 @@ before(async () => {
     DATABASE_URL: process.env.TEST_DATABASE_URL ?? "",
     PUBLIC_BASE_URL: "http://placeholder",
   });
-  const store = createViewStore(config.DATABASE_URL);
+  store = createViewStore(config.DATABASE_URL);
   await store.migrate();
   const pages = createSavedPageStore(config.DATABASE_URL);
   await pages.migrate();
@@ -174,10 +177,10 @@ test("show_company tager et navn og siger, hvad den valgte", async () => {
   assert.match(summary, /Omsætning \d{4}–\d{4} \(mio\. kr\.\): \d{4} [\d,]+/);
 });
 
-test("show_company giver et signeret link til en interaktiv side med friske data", async () => {
+test("show_company giver et kort link (/d/<id>) til en side med friske data; de signerede /k/-links virker stadig", async () => {
   const res = await client.callTool({ name: "show_company", arguments: { company: "99000001", chart_metric: "omsaetning", years: 10 } });
   const link = (res.structuredContent as { links: { share: string } }).links.share;
-  assert.match(link, /\/k\/99000001\?m=omsaetning&y=10&e=\w+&s=[\w-]{22}$/);
+  assert.match(link, /\/d\/[a-z0-9]{10}$/);
   assert.match((res.content as { text: string }[])[0]!.text, /Link til visningen: http/);
   const page = await fetch(link);
   assert.equal(page.status, 200);
@@ -186,8 +189,11 @@ test("show_company giver et signeret link til en interaktiv side med friske data
   const boot = /window\.__LASSO_BOOT__=(.*?);<\/script>/s.exec(html)![1]!;
   assert.match(boot, /"LassoBarChart"/);
   assert.doesNotMatch(boot, /"LassoFollowUps"/);
-  const forged = await fetch(link.replace("/k/99000001", "/k/99000002"));
-  assert.equal(forged.status, 403);
+  // Ældre signerede links (fra før de korte) virker uændret.
+  const old = companyLink(config, { cvr: "99000001", metric: "omsaetning", years: 10 });
+  assert.match(old, /\/k\/99000001\?m=omsaetning&y=10&e=\w+&s=[\w-]{22}$/);
+  assert.equal((await fetch(old)).status, 200);
+  assert.equal((await fetch(old.replace("/k/99000001", "/k/99000002"))).status, 403);
 });
 
 test("show_person (katalog 16) finder en person på navn og komponerer personsiden", async () => {
@@ -224,12 +230,15 @@ test("show_person (katalog 16) finder en person på navn og komponerer personsid
   const labels = sc.spec.components.flatMap((c) => (c.type === "LassoFollowUps" ? c.prompts.map((p) => p.label) : []));
   assert.ok(labels.length >= 4 && labels.length <= 6, labels.join(" | "));
   assert.equal(new Set(labels).size, labels.length);
-  assert.match(sc.links.share, /\/p\/CVR-3-\d+\?e=\w+&s=[\w-]{22}$/);
-  const page = await fetch(sc.links.share);
-  assert.equal(page.status, 200);
-  assert.match(await page.text(), /"LassoPersonRoles"/);
-  const forged = await fetch(sc.links.share.replace(/CVR-3-(\d+)/, (_, n: string) => `CVR-3-${Number(n) + 1}`));
-  assert.equal(forged.status, 403);
+  assert.match(sc.links.share, /\/d\/[a-z0-9]{10}$/);
+  const shortPage = await fetch(sc.links.share);
+  assert.equal(shortPage.status, 200);
+  assert.match(await shortPage.text(), /"LassoPersonRoles"/);
+  const pid = new URL(sc.links.open!).searchParams.get("aabn")!;
+  const signed = personLink(config, pid);
+  assert.match(signed, /\/p\/CVR-3-\d+\?e=\w+&s=[\w-]{22}$/);
+  assert.equal((await fetch(signed)).status, 200);
+  assert.equal((await fetch(signed.replace(/CVR-3-(\d+)/, (_, n: string) => `CVR-3-${Number(n) + 1}`))).status, 403);
 });
 
 test("show_person med focus: risiko henter og viser kun forløbet i selskaberne (ingen risikosektion); linket åbner samme fokus", async () => {
@@ -246,7 +255,7 @@ test("show_person med focus: risiko henter og viser kun forløbet i selskaberne 
   assert.deepEqual(Object.keys(dataset.ownershipGraphs), [], "intet ejerdiagram hentet på risiko");
   assert.deepEqual(Object.keys(dataset.personNetworks), [], "intet netværk hentet på risiko");
   assert.match(sc.summary, /Forløb i selskaberne med konkurs eller tvangsopløsning \(seneste 3 af 3\)/);
-  assert.match(sc.links.share, /\/p\/CVR-3-4000000002\?e=\w+&f=risiko&s=[\w-]{22}$/);
+  assert.match(sc.links.share, /\/d\/[a-z0-9]{10}$/);
   const page = await fetch(sc.links.share);
   assert.equal(page.status, 200);
   // Sidens boot-data (ikke render-appens kode, som nævner alle komponenter).
@@ -254,8 +263,11 @@ test("show_person med focus: risiko henter og viser kun forløbet i selskaberne 
   assert.match(boot, /"filter":"risiko"/);
   assert.doesNotMatch(boot, /"LassoNews"/);
   assert.doesNotMatch(boot, /"LassoPersonRisk"|"LassoPersonFacts"/);
-  // Et andet fokus med samme signatur afvises.
-  assert.equal((await fetch(sc.links.share.replace("f=risiko", "f=historik"))).status, 403);
+  // Det signerede /p/-link med samme fokus virker stadig, og et andet fokus med samme signatur afvises.
+  const signed = personLink(config, "CVR-3-4000000002", "risiko");
+  assert.match(signed, /\/p\/CVR-3-4000000002\?e=\w+&f=risiko&s=[\w-]{22}$/);
+  assert.equal((await fetch(signed)).status, 200);
+  assert.equal((await fetch(signed.replace("f=risiko", "f=historik"))).status, 403);
 
   const hist = await client.callTool({ name: "show_person", arguments: { person: "Bo Eksempel", focus: "historik" } });
   const h = hist.structuredContent as { spec: ViewSpec; summary: string };
@@ -310,7 +322,7 @@ test("render_view slår virksomhedsnavne op som show_company (review P1-7)", asy
 test("delelinket fra en økonomi-visning åbner økonomi-visningen (review P2-7)", async () => {
   const res = await client.callTool({ name: "show_company", arguments: { company: "99000001", focus: "oekonomi" } });
   const link = (res.structuredContent as { links: { share: string } }).links.share;
-  assert.match(link, /&f=oekonomi/);
+  assert.match(link, /\/d\/[a-z0-9]{10}$/);
   const html = await (await fetch(link)).text();
   const boot = /window\.__LASSO_BOOT__=(.*?);<\/script>/s.exec(html)![1]!;
   assert.match(boot, /"subtitle":"Økonomi"/);
@@ -411,7 +423,7 @@ test("show_company 'hvad er soliditetsgraden': kort med soliditetsgraden først,
   const head = lines.findIndex((l) => l.startsWith("Eksempel Byg A/S (CVR 99000001"));
   assert.match(lines[head + 1]!, /^Svar: Soliditetsgrad 2025: [\d,]+ % \(2024: [\d,]+ %\)\.$/);
   // Det delte link bærer spørgsmålet og åbner samme svar.
-  assert.match(sc.links.share, /[?&]q=/);
+  assert.match(sc.links.share, /\/d\/[a-z0-9]{10}$/);
   const boot = await bootOf(sc.links.share);
   assert.deepEqual(boot.spec.components.map((c) => c.type), sc.spec.components.filter((c) => c.type !== "LassoFollowUps").map((c) => c.type));
 });
@@ -462,7 +474,7 @@ test("show_person 'sidder X i bestyrelser': kun bestyrelsesposterne; linket /p/ 
   assert.ok(!sc.spec.components.some((c) => c.type === "LassoPersonFacts" || c.type === "LassoPersonRisk"));
   assert.equal(sc.spec.subtitle, "Bestyrelsesposter");
   assert.match(texts(res)[0]!, /Svar: Bestyrelsesposter: .*Eksempel/);
-  assert.match(sc.links.share, /\/p\/CVR-3-\d+\?.*q=/);
+  assert.match(sc.links.share, /\/d\/[a-z0-9]{10}$/);
   const boot = await bootOf(sc.links.share);
   assert.equal(boot.spec.subtitle, "Bestyrelsesposter");
 });
@@ -482,14 +494,18 @@ test("links: alle visningsværktøjer har share (delbart link), open kun for vis
     const res = await client.callTool(args);
     assert.ok(!res.isError, JSON.stringify(res.content));
     const l = linksOf(res);
-    assert.match(l.share, /^https?:\/\/[^/]+\/(k|p|v|e)\//, `${args.name}: share`);
-    assert.match(l.open ?? "", /\/portal\?aabn=[^&]+&fokus=[a-z]+&fastgoer=1$/, `${args.name}: open`);
+    assert.match(l.share, /^https?:\/\/[^/]+\/d\/[a-z0-9]{10}$/, `${args.name}: share`);
+    assert.match(l.open ?? "", /\/portal\?aabn=[^&]+&visning=[a-z0-9]{10}$/, `${args.name}: open`);
+    assert.equal(l.open!.split("visning=")[1], l.share.split("/d/")[1], `${args.name}: open og share er samme visning`);
     assert.deepEqual(Object.keys(l).sort(), ["open", "share"]);
   }
   const risk = linksOf(await client.callTool(single[0]!));
-  assert.match(risk.open!, /aabn=[^&]*99000001[^&]*&fokus=risiko&fastgoer=1$/);
+  assert.match(risk.open!, /aabn=CVR-1-99000001&visning=[a-z0-9]{10}$/);
+  assert.doesNotMatch(risk.open!, /fokus|fastgoer/, "de nye links har hverken fokus eller fastgoer");
+  // Samme visning igen giver samme korte id; en anden visning et andet.
+  assert.equal(linksOf(await client.callTool(single[0]!)).share, risk.share);
   const over = linksOf(await client.callTool({ name: "show_company", arguments: { company: "99000001" } }));
-  assert.match(over.open!, /&fokus=overblik&fastgoer=1$/);
+  assert.notEqual(over.share, risk.share);
 
   const many = [
     { name: "search_companies", arguments: { criteria: [{ field: "region", operator: "eq", value: "Midtjylland" }] } },
@@ -505,7 +521,7 @@ test("links: alle visningsværktøjer har share (delbart link), open kun for vis
   }
   // Det delte link til en gemt visning åbner netop visningen.
   const shared = linksOf(await client.callTool(many[1]!)).share;
-  assert.match(shared, /\/v\//);
+  assert.match(shared, /\/d\/[a-z0-9]{10}$/);
   const boot = await bootOf(shared);
   assert.ok(boot.spec.components.length > 0);
 });
@@ -519,4 +535,39 @@ test("links: intet tekstkort nogen steder, og værten uden visning får kun én 
   const instr = client.getInstructions() ?? "";
   assert.match(instr, /Kan din app ikke vise den interaktive visning, så skriv kun linket til visningen; ingen tekstkort, ingen opsummering\./);
   assert.doesNotMatch(instr, /Tekstkort:|tekstkortet/i);
+});
+
+test("/d/<id>: kort link viser kun visningen; ukendt id er 404, ugyldigt id 404, udløbet er 410", async () => {
+  const res = await client.callTool({ name: "show_company", arguments: { company: "99000001", focus: "oekonomi" } });
+  const share = linksOf(res).share;
+  const id = share.split("/d/")[1]!;
+  assert.match(id, /^[a-z0-9]{10}$/, "8–10 url-sikre tegn");
+  const page = await fetch(share);
+  assert.equal(page.status, 200);
+  assert.equal(page.headers.get("cache-control"), "no-store");
+  assert.equal(page.headers.get("x-robots-tag"), "noindex");
+  const html = await page.text();
+  const boot = JSON.parse(/window\.__LASSO_BOOT__=(.*?);<\/script>/s.exec(html)![1]!) as { mode: string; spec: ViewSpec; dataset: Dataset; pdf: boolean; minimal?: boolean };
+  // Kun visningen: websiden (ingen portal), uden opfølgningsknapper, med friske data.
+  assert.equal(boot.mode, "web");
+  assert.equal(boot.spec.subtitle, "Økonomi");
+  assert.ok(!boot.spec.components.some((c) => c.type === "LassoFollowUps"));
+  assert.equal(boot.dataset.companies["CVR-1-99000001"]?.name, "Eksempel Byg A/S");
+  assert.equal(boot.pdf, false);
+  assert.equal(boot.minimal, true, "kun visningen: ingen opdater, eksport eller PDF");
+  // Samme visning igen giver samme id, og id'et er gemt pr. organisation med oprettelsestid.
+  assert.equal(linksOf(await client.callTool({ name: "show_company", arguments: { company: "99000001", focus: "oekonomi" } })).share, share);
+  const stored = (await store.getShort(id))!;
+  assert.equal(stored.entity?.id, "CVR-1-99000001");
+  assert.ok(stored.org && Date.parse(stored.createdAt) > Date.now() - 60_000);
+
+  assert.equal((await fetch(`${base}/d/abcdefghjk`)).status, 404);
+  assert.match(await (await fetch(`${base}/d/abcdefghjk`)).text(), /Visningen findes ikke/);
+  for (const bad of ["x", "ABCDEFGHJK", "abcdefghjkm1234", "..%2f..%2fetc"]) assert.equal((await fetch(`${base}/d/${bad}`)).status, 404, bad);
+
+  // Udløb: ældre end LINK_TTL_DAYS.
+  const old = await store.saveShort({ org: stored.org, owner: "u", spec: stored.spec, title: "Gammel", createdAt: new Date(Date.now() - (config.LINK_TTL_DAYS + 1) * 86_400_000).toISOString() }, 10_000);
+  const expired = await fetch(`${base}/d/${old.id}`);
+  assert.equal(expired.status, 410);
+  assert.match(await expired.text(), /Linket er udløbet/);
 });
