@@ -99,7 +99,7 @@ export function PersonHead({ person, error, variant = "full", actions, below }: 
   return (
     <header className={`lasso-personhead lasso-company lasso-span-full${showActions ? " lasso-company--actions" : ""}${actions?.center ? " lasso-company--center" : ""}`}>
       <div className="lasso-company__title">
-        <h2 className="lasso-company__name">{person.name}</h2>
+        <h2 className="lasso-company__name" title={person.name}>{person.name}</h2>
       </div>
       {actions?.center ? <div className="lasso-company__center">{actions.center}</div> : null}
       {showActions ? <HeadActions {...actions!} className="lasso-company__actions" /> : null}

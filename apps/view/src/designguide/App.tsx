@@ -9,6 +9,7 @@ import { FoundationPage, TokensPage } from "./pages/Foundation.js";
 import { BoardPage } from "./pages/Board.js";
 import { ModulesPage } from "./pages/Modules.js";
 import { ModulePage } from "./pages/Module.js";
+import { PORTAL_DOC, PortalFramePage } from "./pages/PortalFrame.js";
 import { LivePagesPage } from "./pages/LivePages.js";
 import { TextsPage } from "./pages/Texts.js";
 import { ValidationPage } from "./pages/Validation.js";
@@ -70,7 +71,8 @@ function navTree(modules: Map<ComponentType, ModuleInfo>): { title: string; item
   const covered = GALLERY_SECTIONS.map((s) => s.boards);
   const otherBoards = b.filter((x) => x !== "01" && x !== "01b" && !covered.some((re) => re.test(x)));
   return [
-    { title: "Kom i gang", items: [{ path: "", label: "Oversigt" }, { path: "principper", label: "Principper og regler" }, ...SOURCE.docs.slice(1).map((d) => ({ path: `dokumenter/${slugOf(d.file.split("/").pop()!.replace(/\.md$/, ""))}`, label: d.title }))] },
+    { title: "Kom i gang", items: [{ path: "", label: "Oversigt" }, { path: "principper", label: "Principper og regler" }, ...SOURCE.docs.slice(1).filter((d) => d.file !== PORTAL_DOC).map((d) => ({ path: `dokumenter/${slugOf(d.file.split("/").pop()!.replace(/\.md$/, ""))}`, label: d.title }))] },
+    { title: "Portalen", items: [{ path: "portal", label: "Portalens ramme" }] },
     { title: "Fundament", items: [...FOUNDATION.map((f) => ({ path: `fundament/${f.id}`, label: f.label })), { path: "fundament/tokens", label: "Alle tokens", count: SOURCE.tokens.length }] },
     {
       title: "Moduler",
@@ -98,8 +100,11 @@ function searchIndex(modules: Map<ComponentType, ModuleInfo>): Hit[] {
   const hits: Hit[] = [];
   for (const m of modules.values()) hits.push({ kind: "Modul", label: `${m.n} ${m.title}`, sub: `${m.type}: ${m.catalog.register?.formaal ?? ""}`, path: `moduler/${slugOf(m.type)}` });
   for (const t of SOURCE.tokens) hits.push({ kind: "Token", label: t.name, sub: `${t.light}${t.comment ? `, ${t.comment}` : ""}`, path: `fundament/tokens?q=${encodeURIComponent(t.name)}` });
-  ENTRIES.forEach((e) => hits.push({ kind: "Element", label: `${e.nr} ${e.title}`, sub: BOARD_TITLES[e.nr.split(".")[0]!], path: `galleri/${(e.sortAs ?? e.nr).split(".")[0]}?e=${encodeURIComponent(e.nr)}` }));
-  for (const d of SOURCE.docs) for (const m of d.markdown.matchAll(/^#{2,3}\s+(.+)$/gm)) hits.push({ kind: "Regel", label: m[1]!, sub: d.title, path: d.file.endsWith("README.md") ? "principper" : `dokumenter/${slugOf(d.file.split("/").pop()!.replace(/\.md$/, ""))}` });
+  ENTRIES.forEach((e) => {
+    const board = (e.sortAs ?? e.nr).split(".")[0]!;
+    hits.push({ kind: "Element", label: `${e.nr} ${e.title}`, sub: BOARD_TITLES[board], path: `galleri/${board}?e=${encodeURIComponent(e.nr)}` });
+  });
+  for (const d of SOURCE.docs) for (const m of d.markdown.matchAll(/^#{2,3}\s+(.+)$/gm)) hits.push({ kind: "Regel", label: m[1]!, sub: d.title, path: d.file.endsWith("README.md") ? "principper" : d.file === PORTAL_DOC ? "portal" : `dokumenter/${slugOf(d.file.split("/").pop()!.replace(/\.md$/, ""))}` });
   return hits;
 }
 
@@ -256,6 +261,7 @@ export function App({ boot }: { boot: DesignguideBoot }) {
     const m = [...modules.values()].find((x) => slugOf(x.type) === rest);
     page = m ? <ModulePage key={m.type} ctx={ctx} module={m} tab={query.get("fane") ?? "bredder"} /> : <NotFound />;
   } else if (path === "sider") page = <LivePagesPage ctx={ctx} kind={query.get("type") === "person" ? "person" : "company"} focus={query.get("fokus") ?? "overblik"} />;
+  else if (path === "portal") page = <PortalFramePage ctx={ctx} />;
   else if (path === "tekster") page = <TextsPage ctx={ctx} query={query.get("q") ?? ""} file={query.get("fil") ?? ""} />;
   else if (path === "validering") page = <ValidationPage ctx={ctx} />;
   else if (path === "kommentarer") page = <CommentsPage ctx={ctx} />;

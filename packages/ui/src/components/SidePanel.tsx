@@ -1,5 +1,5 @@
 import { moreText } from "@lasso/spec";
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { CloseIcon, focusables, useLayer } from "./Layer.js";
 import { ShellIcon } from "./ShellIcons.js";
 
@@ -42,16 +42,64 @@ export interface SidePanelProps {
    * tre kolonner: `aside` (virksomheden, 320) | liste (flex) | detalje (360). Under 1200 px det
    * almindelige panel fra højre (08.9) og arket på mobil (08.10/08.11), uden `aside`.
    */
-  variant?: "default" | "seeall";
+  /**
+   * "flere" (Se flere, Jakob 01.10): panelet glider ind fra højre og dækker de højre 2/3 af visningen
+   * (siden bag panelet, typisk første kolonne, står synlig), uden mørk overlay; liste i midten og
+   * detalje til højre. Smallere visning end 560 px: hele bredden (arket på mobil).
+   */
+  variant?: "default" | "seeall" | "flere";
   /** Første kolonne i "seeall" på desktop (fx virksomhedens kontaktoplysninger og genveje). */
   aside?: ReactNode;
 }
+
+/** Lukke-animationens længde (fade ud); panelet afmonteres bagefter. */
+const CLOSE_MS = 180;
 
 export function SidePanel({ open, title, subtitle, onClose, list, detail, view = "list", onBack, detailTitle, closeLabel = "Luk", className = "", variant = "default", aside }: SidePanelProps) {
   const layer = useLayer();
   const panel = useRef<HTMLDivElement>(null);
   const id = useId();
   const titleId = `${id}-title`;
+  // Lukning fader ud, før panelet forsvinder: `shown` holder det tegnet, mens `closing` er sand.
+  const [shown, setShown] = useState(open);
+  const [closing, setClosing] = useState(false);
+  useEffect(() => {
+    if (open) {
+      setShown(true);
+      setClosing(false);
+      return;
+    }
+    if (!shown) return;
+    setClosing(true);
+    const t = setTimeout(() => {
+      setShown(false);
+      setClosing(false);
+    }, CLOSE_MS);
+    return () => clearTimeout(t);
+  }, [open]);
+
+  // "flere": panelets plads er de højre 2/3 af visningen, den blev åbnet fra (følger rulning og størrelse).
+  const [area, setArea] = useState<CSSProperties | undefined>(undefined);
+  useLayoutEffect(() => {
+    if (variant !== "flere" || !shown || !layer.ready) return;
+    const anchor = layer.anchor();
+    const root = anchor?.closest<HTMLElement>(".lasso-root:not(.lasso-layer)");
+    const win = anchor?.ownerDocument.defaultView;
+    if (!root || !win) return;
+    const place = () => {
+      const r = root.getBoundingClientRect();
+      const full = r.width <= 560;
+      const width = full ? r.width : Math.round((r.width * 2) / 3);
+      setArea({ top: Math.max(0, r.top), bottom: Math.max(0, win.innerHeight - r.bottom), right: Math.max(0, win.innerWidth - r.right), width });
+    };
+    place();
+    win.addEventListener("resize", place);
+    win.addEventListener("scroll", place, true);
+    return () => {
+      win.removeEventListener("resize", place);
+      win.removeEventListener("scroll", place, true);
+    };
+  }, [variant, shown, layer.ready]);
 
   useEffect(() => {
     if (!open || !layer.ready) return;
@@ -60,7 +108,7 @@ export function SidePanel({ open, title, subtitle, onClose, list, detail, view =
     return () => previous?.focus?.();
   }, [open, layer.ready]);
 
-  if (!open) return null;
+  if (!shown) return null;
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Escape") {
@@ -85,15 +133,16 @@ export function SidePanel({ open, title, subtitle, onClose, list, detail, view =
   };
 
   return layer.render(
-    <div className="lasso-sidepanel-wrap">
-      <div className="lasso-sidepanel__scrim" onClick={onClose} aria-hidden="true" />
+    <div className={`lasso-sidepanel-wrap${variant === "flere" ? " lasso-sidepanel-wrap--flere" : ""}${closing ? " is-closing" : ""}`}>
+      {variant === "flere" ? null : <div className="lasso-sidepanel__scrim" onClick={onClose} aria-hidden="true" />}
       <div
         ref={panel}
         role="dialog"
-        aria-modal="true"
+        aria-modal={variant === "flere" ? undefined : "true"}
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`lasso-sidepanel${detail ? "" : " lasso-sidepanel--list-only"}${variant === "seeall" ? " lasso-sidepanel--seeall" : ""}${aside ? " lasso-sidepanel--aside" : ""} ${className}`}
+        style={variant === "flere" ? area : undefined}
+        className={`lasso-sidepanel${detail ? "" : " lasso-sidepanel--list-only"}${variant === "seeall" ? " lasso-sidepanel--seeall" : ""}${variant === "flere" ? " lasso-sidepanel--flere" : ""}${aside ? " lasso-sidepanel--aside" : ""}${closing ? " is-closing" : ""} ${className}`}
         data-view={detail ? view : "list"}
         onKeyDown={onKeyDown}
       >

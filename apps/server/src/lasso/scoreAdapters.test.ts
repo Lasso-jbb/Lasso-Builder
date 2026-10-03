@@ -125,20 +125,16 @@ const PAGE = parseViewSpec({
   components: [
     { type: "LassoCreditRating", company: ID },
     { type: "LassoScoreGauge", company: ID },
-    { type: "LassoScoreHistory", company: ID },
   ],
 });
 
-test("ét opslag pr. side: kreditvurdering + score + historik giver ét Creditsafe-kald (ok)", async () => {
+test("ét opslag pr. side: kreditvurdering + score giver ét Creditsafe-kald (ok)", async () => {
   const f = fakeClient(async () => FIXTURE);
   const scores = new MemoryScoreStore();
   const ds = await resolveSpec(PAGE, new LiveProvider(f.client, loadConfig({}), scores));
   assert.equal(f.calls.length, 1);
   assert.equal(ds.creditRatings[ID]?.state, "ok");
   assert.equal(ds.scores[ID]?.score, 38);
-  assert.equal(ds.scoreHistories[ID]?.points.length, 1);
-  await new Promise((r) => setTimeout(r, 10));
-  assert.equal((await scores.history(ID)).length, 1, "punktet er skrevet efter svaret");
 });
 
 test("ét opslag pr. side og intet gemt, når kontoen er låst", async () => {
@@ -150,8 +146,6 @@ test("ét opslag pr. side og intet gemt, når kontoen er låst", async () => {
   assert.equal(f.calls.length, 1, "ingen ekstra Creditsafe-kald for scorens skyld");
   assert.equal(ds.scores[ID]?.state, "unavailable");
   assert.equal(ds.scores[ID]?.reason, SCORE_LOCKED_REASON);
-  assert.deepEqual(ds.scoreHistories[ID]?.points, []);
-  assert.equal(ds.scoreHistories[ID]?.reason, SCORE_LOCKED_REASON);
   assert.deepEqual(ds.errors, {});
   assert.deepEqual(await scores.history(ID), []);
 });

@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { usePrintMode } from "../print.js";
+import { ExpandLink, foldedCount } from "./ExpandLink.js";
 import {
   formatDate,
   isPersonId,
@@ -42,6 +44,9 @@ function Period({ from, to }: { from?: string; to?: string }) {
 /** Ét afsnit (nuværende eller historiske) med grupperne som rækker og en foldeknap i overskriften. */
 function RelationsBlock({ title, entries, groups, beneficial, current, onOpen }: { title: string; entries: RelationEntryVM[]; groups: readonly RelationGroup[]; beneficial?: BeneficialOwnershipVM; current: boolean; onOpen?: (a: ViewAction) => void }) {
   const [open, setOpen] = useState(true);
+  // Global regel (Jakob 01.10): en gruppe med over 6 navne viser 5 og "Vis alle N".
+  const [allGroups, setAllGroups] = useState<Set<RelationGroup>>(new Set());
+  const print = usePrintMode();
   const byGroup = groups
     .map((g) => ({ g, rows: entries.filter((e) => e.group === g).sort((a, b) => (b.from ?? "").localeCompare(a.from ?? "")) }))
     .filter((x) => x.rows.length || (x.g === "reelle-ejere" && current));
@@ -72,7 +77,7 @@ function RelationsBlock({ title, entries, groups, beneficial, current, onOpen }:
                     )}
                   </div>
                 ) : (
-                  rows.map((e, i) => (
+                  (print || allGroups.has(g) ? rows : rows.slice(0, foldedCount(rows.length))).map((e, i) => (
                     <div className="lasso-reltable__row" key={`${e.name}-${e.from ?? i}`}>
                       <div>
                         <Name e={e} onOpen={onOpen} />
@@ -89,6 +94,21 @@ function RelationsBlock({ title, entries, groups, beneficial, current, onOpen }:
                     </div>
                   ))
                 )}
+                {foldedCount(rows.length) < rows.length ? (
+                  <ExpandLink
+                    className="lasso-reltable__more"
+                    expanded={allGroups.has(g)}
+                    total={rows.length}
+                    onToggle={() =>
+                      setAllGroups((s) => {
+                        const n = new Set(s);
+                        if (n.has(g)) n.delete(g);
+                        else n.add(g);
+                        return n;
+                      })
+                    }
+                  />
+                ) : null}
               </div>
             </div>
           ))
@@ -151,6 +171,7 @@ export function RelationsTable({
 export function CompanyHistory({ history, fields, limit = 3, title = "Stamdata historik", error }: { history?: CompanyHistoryVM; fields?: readonly string[]; limit?: number; title?: string; error?: string }) {
   const [openKeys, setOpenKeys] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(true);
+  const print = usePrintMode();
   if (!history) {
     return (
       <Section title={title} span="full">
@@ -172,8 +193,8 @@ export function CompanyHistory({ history, fields, limit = 3, title = "Stamdata h
           </div>
         ) : (
           list.map((f) => {
-            const all = openKeys.has(f.key);
-            const shown = all ? f.entries : f.entries.slice(0, limit);
+            const all = print || openKeys.has(f.key);
+            const shown = all ? f.entries : f.entries.slice(0, foldedCount(f.entries.length, limit));
             return (
               <div className="lasso-reltable__group" key={f.key}>
                 <div className="lasso-reltable__label">{f.label}</div>
@@ -184,10 +205,8 @@ export function CompanyHistory({ history, fields, limit = 3, title = "Stamdata h
                       <Period from={e.from} to={e.to} />
                     </div>
                   ))}
-                  {f.entries.length > limit ? (
-                    <button type="button" className="lasso-link lasso-reltable__more" onClick={() => setOpenKeys((s) => { const n = new Set(s); if (n.has(f.key)) n.delete(f.key); else n.add(f.key); return n; })}>
-                      {all ? "Vis færre" : "Vis alle"}
-                    </button>
+                  {foldedCount(f.entries.length, limit) < f.entries.length ? (
+                    <ExpandLink className="lasso-reltable__more" expanded={all} total={f.entries.length} onToggle={() => setOpenKeys((s) => { const n = new Set(s); if (n.has(f.key)) n.delete(f.key); else n.add(f.key); return n; })} />
                   ) : null}
                 </div>
               </div>

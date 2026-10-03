@@ -6,7 +6,7 @@ import { composeCompany, emptyDataset, type CompanyVM, type ContactVM, type Data
 import { KeyValueList } from "./components/KeyValueList.js";
 import { LassoContact } from "./components/LassoContact.js";
 import { LassoRelations } from "./components/LassoRelations.js";
-import { LassoTextSections, segmentAction } from "./components/LassoTextSections.js";
+import { LassoTextSections, revealOf, segmentAction } from "./components/LassoTextSections.js";
 import { LassoView } from "./LassoView.js";
 
 const ID = "CVR-1-99000001";
@@ -39,20 +39,20 @@ const labels = (html: string) => [...html.matchAll(/lasso-kv-row__labeltext">([^
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").replace(/\s+/g, " ");
 const count = (haystack: string, needle: string) => haystack.split(needle).length - 1;
 
-test("Virksomhedsoplysninger under hovedet: ingen stiftet, form, branche, ansatte eller adresse, men branchekode, kommune og region", () => {
+test("Virksomhedsoplysninger: Jakobs rækkefølge (01.10); under hovedet branchekode i stedet for branche", () => {
   const html = renderToStaticMarkup(createElement(KeyValueList, { company: COMPANY, ownership: OWNERSHIP, financials: FINANCIALS, variant: "company", hideIdentity: true, hideContact: true }));
-  assert.deepEqual(labels(html), ["Revisor", "Seneste revisorskift", "Regnskabsperiode", "Branchekode", "Ansatte", "Kommune", "Region"]);
+  assert.deepEqual(labels(html), ["Branchekode", "Kommune", "Regnskabsår", "Seneste regnskab udgivet", "Revisor", "Antal ansatte"]);
   assert.match(html, /412000/);
   // Uden kontaktblok på siden står telefon, e-mail og web stadig her (adressen står i hovedet).
   const noContact = renderToStaticMarkup(createElement(KeyValueList, { company: COMPANY, ownership: OWNERSHIP, financials: FINANCIALS, variant: "company", hideIdentity: true }));
-  assert.deepEqual(labels(noContact).slice(-3), ["Telefon", "E-mail", "Web"]);
+  assert.deepEqual(labels(noContact).slice(2, 5), ["Telefon", "E-mail", "Website"]);
   assert.ok(!labels(noContact).includes("Adresse"));
   // Ejerlisten på siden viser revisoren: listen gentager den ikke.
   const withOwners = renderToStaticMarkup(createElement(KeyValueList, { company: COMPANY, ownership: OWNERSHIP, financials: FINANCIALS, variant: "company", hideIdentity: true, hideContact: true, hideAuditor: true }));
-  assert.deepEqual(labels(withOwners), ["Regnskabsperiode", "Branchekode", "Ansatte", "Kommune", "Region"]);
+  assert.deepEqual(labels(withOwners), ["Branchekode", "Kommune", "Regnskabsår", "Seneste regnskab udgivet", "Antal ansatte"]);
   // Uden hoved (fx en render_view-spec uden LassoCompanyHead) står identiteten i listen.
   const alone = renderToStaticMarkup(createElement(KeyValueList, { company: COMPANY, ownership: OWNERSHIP, financials: FINANCIALS, variant: "company" }));
-  for (const l of ["Stiftet", "Virksomhedsform", "Branche", "Ansatte", "Adresse"]) assert.ok(labels(alone).includes(l), l);
+  for (const l of ["Stiftelsesdato", "Virksomhedsform", "Branche", "Antal ansatte", "CVR"]) assert.ok(labels(alone).includes(l), l);
   // Intet at vise ud over hovedet: tom tilstand, der siger hvorfor, aldrig en tom ramme.
   const bare = renderToStaticMarkup(createElement(KeyValueList, { company: { lassoId: ID, name: "X" }, variant: "company", hideIdentity: true }));
   assert.match(bare, /lasso-state--empty|flere oplysninger/);
@@ -96,10 +96,15 @@ const headings = (html: string) => [...html.matchAll(/lasso-textsection__heading
 
 test("Virksomhedsprofil (overblik): CVR-tekster uden branche plus konklusion, resultat og likviditet, ingen kildevisning (12.1)", () => {
   const html = renderToStaticMarkup(createElement(LassoTextSections, { sections: SECTIONS }));
-  assert.deepEqual(headings(html), ["Formål", "Tegningsregler", "Regnskabsanalyse: konklusion", "Resultat", "Likviditet"]);
+  // 12.1 (Jakob 01.10): afsnittene læses som én tekst; de første 440 tegn står, resten kommer med "Vis mere" (50 % ad gangen).
+  const all = ["Formål", "Tegningsregler", "Regnskabsanalyse: konklusion", "Resultat", "Likviditet"];
+  const first = headings(html);
+  assert.ok(first.length >= 1 && first.length < all.length, first.join());
+  assert.deepEqual(first, all.slice(0, first.length));
+  assert.equal(count(html, " …"), 1, "teksten klippes kun ét sted");
   assert.doesNotMatch(html, /Kilde:/);
   assert.doesNotMatch(html, /NACE 412000/);
-  // 12.1: lange afsnit foldes hver for sig, men der er ét "Vis mere" for hele sektionen.
+  // 12.1: ét "Vis mere" for hele sektionen.
   assert.equal(count(html, ">Vis mere<"), 1);
   assert.doesNotMatch(html, /Se hele regnskabsanalysen/);
   // Kun CVR-tekster: ingen analysekilde.
@@ -116,7 +121,7 @@ test("Regnskabsanalyse (19.3, LYO-0): foldbare afsnit med det første åbent, fo
   assert.match(html, /aria-expanded="true"[^>]*><span class="lasso-analysis19__title">Vækst i toplinjen</);
   assert.match(html, /aria-expanded="false"/);
   assert.match(html, /lasso-analysis19__disclaimer">Forbehold: /);
-  assert.match(html, /Var det brugbart\?/);
+  assert.doesNotMatch(html, /Var det brugbart\?/);
   assert.doesNotMatch(html, /Vis kild|Skjul kild/);
   // "Hent som PDF" kun med en handling (G1).
   assert.doesNotMatch(html, /Hent som PDF/);
@@ -198,7 +203,8 @@ test("LassoView: hver oplysning om identiteten står én gang på overblik, kont
     const spec = composeCompany(ID, ds, { focus, followUps: false });
     const html = renderToStaticMarkup(createElement(LassoView, { spec, dataset: ds, host: { drillDown: true }, onAction: () => {} }));
     const t = text(html);
-    assert.equal(count(t, "Prøvevej 1"), 1, `${focus}: adressen`);
+    // Jakob 01.10: adressen er ikke i oplysningernes rækkefølge; den står kun i kontaktblokken.
+    assert.ok(count(t, "Prøvevej 1") <= 1, `${focus}: adressen`);
     assert.equal(count(t, "99000001"), 1, `${focus}: CVR-nummeret`);
     // Overblikket viser oplysninger kompakt (rows 6, Paper 23.3 B3); rækkerne efter de 6 står under "Se alle oplysninger".
     const once = (n: number, what: string) => (focus === "overblik" ? assert.ok(n <= 1, `${focus}: ${what} ${n} gange`) : assert.equal(n, 1, `${focus}: ${what}`));
@@ -216,7 +222,7 @@ test("LassoView: hver oplysning om identiteten står én gang på overblik, kont
   const framed = renderToStaticMarkup(createElement(LassoView, { spec, dataset: ds, host: { save: true }, onAction: () => {} }));
   // MCP-rammen (Jakob 30.09): virksomhedens navn i hovedet er øverst; rammens eget hoved (logo, område, datastempel) er væk.
   assert.doesNotMatch(framed, /lasso-frame__header|lasso-frame__eyebrow|Data hentet/);
-  assert.match(framed, /<h2 class="lasso-company__name">/);
+  assert.match(framed, /<h2 class="lasso-company__name"[^>]*>/);
   const embedded = renderToStaticMarkup(createElement(LassoView, { spec, dataset: ds, host: { save: true }, onAction: () => {}, embedded: true }));
   assert.doesNotMatch(embedded, /lasso-frame__header|lasso-frame__eyebrow|lasso-badge--demo/);
   assert.doesNotMatch(embedded, /lasso-actionbar|Gem visning/);
@@ -284,4 +290,11 @@ test("LassoView: personliste med roles, personroller med role og tidslinje med k
   assert.match(html, /Statusændringer .*Ingen statusændringer registreret\./);
   assert.match(html, /Bestyrelsesposter[\s\S]*?Eksempel Byg A\/S/);
   assert.doesNotMatch(html, /Eksempel Holding ApS/);
+});
+
+test("12.1 (Jakob 01.10): 'Vis mere' kun med mindst 50 % mere at vise; hvert klik viser 50 % mere", () => {
+  assert.equal(revealOf(500, 440), 500, "under 50 % tilbage: hele teksten");
+  assert.equal(revealOf(660, 440), 440, "præcis 50 % tilbage: Vis mere");
+  assert.equal(revealOf(2000, 660), 660);
+  assert.equal(revealOf(1200, 990), 1200);
 });

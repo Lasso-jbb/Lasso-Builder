@@ -1,4 +1,5 @@
-import { moreText,
+import {
+  valuationText, moreText,
   amountScale,
   currencyUnit,
   isForeignCurrency,
@@ -39,7 +40,7 @@ import { answerText } from "./answer.js";
  * vælte økonomien.
  */
 /** Elementer, der viser seneste regnskabsårs nøgletal; det første på siden giver resuméets regnskabslinje. */
-const SUMMARY_FIGURES: ReadonlySet<ViewSpec["components"][number]["type"]> = new Set(["LassoKeyFigureCards", "LassoIncomeStatement", "LassoBalanceSheet", "LassoMultiYearTable"]);
+const SUMMARY_FIGURES: ReadonlySet<ViewSpec["components"][number]["type"]> = new Set(["LassoKeyFigureCards", "LassoIncomeStatement", "LassoBalanceSheet", "LassoMultiYearTable", "LassoFinancialStatements"]);
 
 export function summarizeView(spec: ViewSpec, ds: Dataset, opts: { ask?: Ask } = {}): string {
   const lines: string[] = [];
@@ -114,20 +115,6 @@ export function summarizeView(spec: ViewSpec, ds: Dataset, opts: { ask?: Ask } =
       // Creditsafes skala A–E; nævnes aldrig sammen med Lassos 0–100-score.
       const r = ds.creditRatings?.[c.company];
       if (r) lines.push(`Kreditvurdering (Creditsafe): ${creditRatingText(r)}.`);
-    }
-    if (c.type === "LassoAuditorIndependence") {
-      // Risiko viser kun kreditvurderingen og revisoruafhængigheden: begge skal med i resuméet.
-      const a = ds.auditorIndependence[c.company];
-      if (a) {
-        const word = (s: number) => (s === 100 ? "konflikt" : s === 50 ? "vurdér" : "neutral");
-        const sorted = [...a.relations].sort((x, y) => y.assessment - x.assessment);
-        const who = a.auditorName ? ` (revisor ${a.auditorName})` : "";
-        lines.push(
-          sorted.length
-            ? `Revisoruafhængighed${who}: ${sorted.length} ${sorted.length === 1 ? "relation" : "relationer"}; ${sorted.slice(0, 3).map((r) => `${word(r.assessment)}: ${r.name}, ${r.relation}`).join("; ")}${sorted.length > 3 ? `; og ${sorted.length - 3} flere` : ""}.`
-            : `Revisoruafhængighed${who}: ${(a.unavailableReason ?? "ingen kendte relationer mellem revisor, kunden og personer").replace(/\.$/, "")}.`,
-        );
-      }
     }
     if (c.type === "LassoPersonList") {
       const people = peopleWithRole(ds.people[c.company] ?? [], c.roles);
@@ -286,6 +273,17 @@ export function summarizeView(spec: ViewSpec, ds: Dataset, opts: { ask?: Ask } =
   answered();
   const errors = Object.entries(ds.errors);
   if (errors.length) lines.push(`Fejl: ${errors.slice(0, 3).map(([k, v]) => `${k.split(":")[0]}: ${v}`).join("; ")}.`);
+  // Værdiansættelsen (seneste kapitalhændelse) som én linje til Claude.
+  for (const v of Object.values(ds.valuations ?? {})) {
+    const t = valuationText(v);
+    if (t) lines.push(`Værdiansættelse (${ds.companies[v.lassoId]?.name ?? v.lassoId}): ${t}.`);
+  }
+  // Erhvervsresumé og værdiansættelse uden data: hvorfor (HTTP-status eller svarets feltnavne), til fejlsøgning.
+  const missing = [
+    ...Object.values(ds.resumes ?? {}).filter((r) => r.state !== "ok").map((r) => `erhvervsresumé: ${r.reason ?? "intet"}`),
+    ...Object.values(ds.valuations ?? {}).filter((v) => v.state !== "ok").map((v) => `værdiansættelse: ${v.reason ?? "ingen"}`),
+  ];
+  if (missing.length) lines.push(`Ikke vist: ${missing.slice(0, 2).join("; ")}`);
   // Hvornår tekstkortet vises, står ét sted: serverinstruktionerne (review P1-6).
   lines.push("Visningen er svaret: skriv ingen tekst i chatten (se instruktionerne). Tekstkortet er kun til værter uden Lasso-visning.");
   return lines.join("\n");

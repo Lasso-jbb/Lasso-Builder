@@ -4,10 +4,11 @@ export { ReportA4, StatementsReportA4, AnalysisReportA4, PersonReportA4 } from "
 export type { ReportA4Props, PersonReportA4Props } from "./components/ReportA4.js";
 // "Gem som PDF": knappen i hovedet og print-tilstanden, serverens Chromium tegner (docs/design/README.md, 27).
 export { PdfButton, runPdf, PDF_LABEL, PDF_BUSY_LABEL } from "./PdfButton.js";
-export { PrintMode, usePrintMode, pageTemplates, pageScale, printStamp, A4_WIDTH_PX, PAGE_MARGIN_MM } from "./print.js";
+export { PrintCover, PrintMode, usePrintMode, pageTemplates, pageScale, printStamp, A4_WIDTH_PX, PAGE_MARGIN_MM } from "./print.js";
 export type { PageTemplateInput } from "./print.js";
 export { CompanyHead } from "./components/CompanyHead.js";
 export { KeyFigureCards } from "./components/KeyFigureCards.js";
+export { ApprovedFormatsProvider, useLayoutFormat } from "./formats.js";
 export { BarChart, pickableMetrics } from "./components/BarChart.js";
 export { GroupedBarChart } from "./components/GroupedBarChart.js";
 export { StackedBarChart, balanceYears } from "./components/StackedBarChart.js";
@@ -63,13 +64,11 @@ export type { PersonSearchResultVM } from "./components/PersonSearchResults.js";
 export { SnapshotPicker } from "./components/SnapshotPicker.js";
 export type { SnapshotPickerProps } from "./components/SnapshotPicker.js";
 export { LiveNumber } from "./components/LassoContact.js";
-export { AuditorHistory } from "./components/AuditorIndependence.js";
 export { PushBanner, pushText } from "./components/PushBanner.js";
 export type { PushBannerProps } from "./components/PushBanner.js";
 export { RiskObservations, RiskUnavailable, SeverityScale, observationHeadline, observationLevel, observationSummary, sortObservations } from "./components/RiskObservations.js";
 export type { RiskObservationsProps, RiskUnavailableProps, RiskUnavailableReason } from "./components/RiskObservations.js";
 export type { CreditRatingProps } from "./components/CreditRating.js";
-export { AuditorIndependence, auditorCsv } from "./components/AuditorIndependence.js";
 export { printElement } from "./print.js";
 export { ProductionUnits } from "./components/ProductionUnits.js";
 export { Properties } from "./components/Properties.js";

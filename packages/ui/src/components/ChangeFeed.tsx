@@ -1,14 +1,14 @@
 import { useMemo, useState } from "react";
-import { ExpandLink } from "./ExpandLink.js";
+import { ExpandLink, LIST_FOLD } from "./ExpandLink.js";
 import { CHANGE_TYPES, CHANGE_TYPE_LABELS, formatDate, formatNumber, type ChangeEntryVM, type ChangeFeedVM, type ChangeType } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { usePrintMode } from "../print.js";
 
 /** Rækker vist før "Se alle N ændringer" (regel 9). */
-const COLLAPSED_ROWS = 8;
+const COLLAPSED_ROWS = LIST_FOLD;
 /** Foldes først, når der er mere end to rækker at spare (som PersonList), så "Se alle 9" aldrig skjuler én række. */
-const FOLD_FROM = COLLAPSED_ROWS + 2;
+const FOLD_FROM = COLLAPSED_ROWS + 1;
 
 /**
  * 21.1 (Jakob 29.09): ændringstypen "Kredit" forudsætter scorehistorik, som ikke findes (18.2 udgår).

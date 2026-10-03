@@ -23,6 +23,13 @@ export interface ViewResult {
   link?: string;
 }
 
+/** GET /lookup: søgefeltets resultater (Lassos navnesøgning). */
+export interface LookupResult {
+  q: string;
+  companies: { lassoId: string; name: string; cvr?: string; city?: string; status?: string; statusKind?: "active" | "inactive" | "warning" }[];
+  persons: { lassoId: string; name: string; city?: string }[];
+}
+
 export interface SavePageResult {
   lassoId: string;
   kind: SavedPageKind;
@@ -133,6 +140,7 @@ export function createPortalApi(onUnauthorized: () => void, fetcher: typeof fetc
     logout: () => call<{ ok: true }>("POST", "/logout", undefined, { session: false }),
     me: () => call<{ user: PortalUser }>("GET", "/me", undefined, { session: false }),
     search: (q: string) => call<ViewResult>("GET", `/search${query({ query: q })}`),
+    lookup: (q: string) => call<LookupResult>("GET", `/lookup${query({ q })}`),
     company: (ref: string, focus: Focus) => call<ViewResult>("GET", `/company/${encodeURIComponent(ref)}${query({ focus })}`),
     person: (ref: string, focus: PersonFocus = "overblik") => call<ViewResult>("GET", `/person/${encodeURIComponent(ref)}${query({ focus: focus === "overblik" ? undefined : focus })}`),
     resolve: (spec: ViewSpec) => call<ViewResult>("POST", "/resolve", { spec }),

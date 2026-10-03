@@ -81,19 +81,19 @@ test("13.9: en næsten flad serie tegnes flad (lille udsving), ikke fra top til 
   assert.ok(Math.max(...ys) - Math.min(...ys) < 4, `udsving ${ys.join(", ")}`);
 });
 
-test("12.3: regnskab har 'Indberettet <dato>' som anden linje og kun kategorien i tredje; andre begivenheder dato + kategori", () => {
-  const out = html(
-    h(LassoTimeline, {
-      timeline: {
-        lassoId: "CVR-1-1",
-        events: [
-          { date: "2026-04-15", title: "Årsrapport 2025 offentliggjort", detail: "Bruttofortjeneste 38,0 mio. kr., resultat 4,2 mio. kr.", category: "Regnskab" },
-          { date: "2026-02-01", title: "Ny direktør", category: "Ledelse" },
-        ],
-      },
-    }),
-  );
-  assert.match(out, /Årsrapport 2025 offentliggjort<\/div><div class="lasso-row__sub">Indberettet 15\.04\.2026<\/div><div class="lasso-timeline__meta"><span class="lasso-timeline__cat">Regnskab<\/span>/);
-  assert.doesNotMatch(out, /Bruttofortjeneste/);
-  assert.match(out, /01\.02\.2026<span class="lasso-timeline__cat">, Ledelse<\/span>/);
+test("12.3: regnskab har 'Indberettet <dato>'; intet typeord; årsrapporten kan hentes, navne kan åbnes (Jakob 01.10)", () => {
+  const timeline = {
+    lassoId: "CVR-1-1",
+    events: [
+      { date: "2026-04-15", title: "Årsrapport 2025 offentliggjort", detail: "Bruttofortjeneste 38,0 mio. kr., resultat 4,2 mio. kr.", category: "Regnskab", url: "https://example.com/a.pdf" },
+      { date: "2026-02-01", title: "Anne Eksempel er indtrådt", titleSegments: [{ text: "Anne Eksempel", lassoId: "CVR-3-4000000001" }, { text: " er indtrådt" }], category: "Ledelse" },
+    ],
+  };
+  const out = html(h(LassoTimeline, { timeline }));
+  assert.match(out, /Årsrapport 2025 offentliggjort<\/div><div class="lasso-row__sub">Indberettet 15\.04\.2026<\/div><\/div>/);
+  assert.doesNotMatch(out, /Bruttofortjeneste|lasso-timeline__cat/);
+  assert.match(out, /lasso-timeline__meta">01\.02\.2026<\/div>/);
+  const linked = html(h(LassoTimeline, { timeline, onLink: () => {}, onOpen: () => {} }));
+  assert.match(linked, /lasso-timeline__doc[^]*Årsrapport 2025 offentliggjort/);
+  assert.match(linked, /<button[^>]*>Anne Eksempel<\/button>/);
 });

@@ -25,7 +25,7 @@ import type { ViewStore } from "../views/store.js";
 import { ASK_AGAIN, failPage, FROM_LIST, linkFailure, VIEW_MISSING, VIEW_OUTDATED } from "../web/linkErrors.js";
 import { companyLink, personLink, verifyCompanyLink, verifyEntityLink, verifyPersonLink } from "../web/links.js";
 import { loadViewHtml } from "../web/page.js";
-import { companyReportJob, contentDisposition, entityOfSpec, pdfFilename, personPageJob, viewPageJob, type JobResult } from "./jobs.js";
+import { companyPageJob, contentDisposition, entityOfSpec, pdfFilename, personPageJob, viewPageJob, type JobResult } from "./jobs.js";
 import { pdfSnapshots, printPageHandler, type PrintJob } from "./printPages.js";
 import { pdfAvailable, PDF_UNAVAILABLE, PdfUnavailableError, type PdfRenderer } from "./renderer.js";
 
@@ -131,7 +131,7 @@ export function pdfRoutes({ config, provider, store, pdf }: PdfDeps): Router {
     }
     if (!pdf.available) return unavailable(res);
     const lassoId = toLassoId(check.link.cvr, config.LASSO_COMPANY_ID_PREFIX);
-    await sendJob(res, pdf, loadViewHtml, await companyReportJob(provider, lassoId, { credit: check.link.focus === "risiko" }), `company ${lassoId}`);
+    await sendJob(res, pdf, loadViewHtml, await companyPageJob(provider, lassoId, check.link.focus ?? "overblik"), `company ${lassoId}`);
   });
 
   router.get("/p/:id.pdf", allowFetch, async (req, res) => {
@@ -152,7 +152,7 @@ export function pdfRoutes({ config, provider, store, pdf }: PdfDeps): Router {
     }
     if (!pdf.available) return unavailable(res);
     if (pageKindOf(check.lassoId) === "company") {
-      const result = await companyReportJob(provider, check.lassoId, { credit: check.focus === "risiko" });
+      const result = await companyPageJob(provider, check.lassoId, (FOCUSES as readonly string[]).includes(check.focus ?? "") ? (check.focus as Focus) : "overblik");
       return sendJob(res, pdf, loadViewHtml, result, `company ${check.lassoId}`);
     }
     const focus = isPersonFocus(check.focus) ? check.focus : "overblik";
@@ -216,7 +216,7 @@ export function portalPdfRoutes({ config, provider, store, pages, pdf }: PortalP
     if (!/^CVR-1-\d{8}$/.test(lassoId)) return void res.status(400).json({ error: "Angiv virksomhedens Lasso-ID (CVR-1-…) eller CVR-nummer." });
     if (!pdf.available) return unavailable(res);
     const focus: Focus = q.focus ?? "overblik";
-    await sendPortalJob(res, pdf, await companyReportJob(provider, lassoId, { credit: focus === "risiko" }), `company ${lassoId}`);
+    await sendPortalJob(res, pdf, await companyPageJob(provider, lassoId, focus), `company ${lassoId}`);
   });
 
   // Personfanen: siden med samme fokus i print-tilstand.

@@ -15,6 +15,9 @@ export const SHORTCUT_LABELS: Record<ShortcutTool, { label: string; icon: ShellI
   kontakt: { label: "Kontakt", icon: "phone" },
   historik: { label: "Historik", icon: "clock" },
   risiko: { label: "Risiko", icon: "alert" },
+  overblik: { label: "Overblik", icon: "overview" },
+  stamoplysninger: { label: "Stamoplysninger", icon: "company" },
+  nyheder: { label: "Nyheder", icon: "rss" },
 };
 
 /** Højst seks synlige genveje; resten under "Flere". */
@@ -30,7 +33,7 @@ export interface ShortcutItem {
 /**
  * Genveje (katalog 08.4, node 9TL-0): sekundære knapper (hvid, 1 px kant, 36 px) med koral ikon,
  * det eneste sted koral bruges på et ikon i hvile, fordi det signalerer "åbner et Lasso-værktøj".
- * Maks seks; resten under "Flere". Mobil (26a): én vandret række, der ruller.
+ * Maks seks; resten under "Flere". Mobil (Jakob 01.10): alle genveje i et gitter med to lige brede kolonner.
  */
 export function Shortcuts({ items, title, bare = false }: { items: readonly ShortcutItem[]; title?: string; /** Uden sektionsoverskrift (står i en anden sektion). */ bare?: boolean }) {
   if (items.length === 0) return null;
@@ -40,6 +43,13 @@ export function Shortcuts({ items, title, bare = false }: { items: readonly Shor
     <div className="lasso-shortcuts" role="group" aria-label={title ?? "Genveje"}>
       {shown.map((s) => (
         <button key={s.id} type="button" className="lasso-shortcut" onClick={s.onSelect}>
+          <ShellIcon name={s.icon} size={16} className="lasso-shortcut__icon" />
+          <span>{s.label}</span>
+        </button>
+      ))}
+      {/* Mobil (Jakob 01.10): alle genveje som et gitter i to kolonner, ingen "Flere"-menu. */}
+      {rest.map((s) => (
+        <button key={s.id} type="button" className="lasso-shortcut lasso-shortcut--extra" onClick={s.onSelect}>
           <ShellIcon name={s.icon} size={16} className="lasso-shortcut__icon" />
           <span>{s.label}</span>
         </button>

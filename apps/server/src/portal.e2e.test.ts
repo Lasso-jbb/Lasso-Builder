@@ -104,7 +104,7 @@ test("roden sender videre til /portal", async () => {
 });
 
 test("/portal uden cookie: render-appen i portal-tilstand uden bruger", async () => {
-  const res = await fetch(`${base}/portal`);
+  const res = await fetch(`${base}/portal/klassisk`);
   assert.equal(res.status, 200);
   assert.equal(res.headers.get("cache-control"), "no-store");
   const { pdf, ...b } = boot(await res.text()) as Record<string, unknown>;
@@ -137,7 +137,7 @@ test("/api/portal/me: 401 uden cookie, brugeren med cookie", async () => {
 });
 
 test("/portal med cookie: brugeren står i boot", async () => {
-  const res = await fetch(`${base}/portal`, { headers: { cookie } });
+  const res = await fetch(`${base}/portal/klassisk`, { headers: { cookie } });
   const b = boot(await res.text());
   assert.equal(b.mode, "portal");
   assert.deepEqual(b.user, { id: PIA.id, name: PIA.name, org: PIA.org, isDemo: false });
@@ -249,14 +249,15 @@ test("person: som show_person, med signeret link til personsiden; 404/400 ved fe
   // som rod (pille) og en kant til det ejede selskab. Nyhederne hentes kun på fokus historik;
   // stamoplysningerne og risikosektionen er udgået.
   const types = body.spec.components.map((c) => c.type);
-  for (const t of ["LassoPersonRoles", "LassoTimeline", "LassoOwnershipDiagram"]) assert.ok(types.includes(t as never), t);
+  // Jakob 01.10: overblikket viser roller og netværk; historik og ejerskab står på fanerne.
+  for (const t of ["LassoPersonRoles", "LassoPersonNetwork"]) assert.ok(types.includes(t as never), t);
+  for (const t of ["LassoTimeline", "LassoOwnershipDiagram"]) assert.ok(!types.includes(t as never), t);
   for (const t of ["LassoPersonFacts", "LassoPersonRisk"]) assert.ok(!types.includes(t as never), `${t} er udgået`);
   assert.ok(!types.includes("LassoNews"));
   assert.deepEqual(body.dataset.news, {});
-  assert.match(body.dataset.timeline[lassoId!]!.events[0]!.title, /kom under konkurs/);
-  const graph = body.dataset.ownershipGraphs[`${lassoId}|0|2|`]!;
-  assert.equal(graph.nodes.find((n) => n.root)?.kind, "person");
-  assert.ok(graph.edges.some((e) => e.from === lassoId && e.to === "CVR-1-99000010"));
+  // Historik og ejerdiagram hentes ikke på overblikket (Jakob 01.10).
+  assert.equal(body.dataset.timeline[lassoId!], undefined);
+  assert.deepEqual(body.dataset.ownershipGraphs, {});
   assert.deepEqual(body.dataset.errors, {});
   assert.deepEqual(verifyEntityLink(config, lassoId!, query(body.link!)), { ok: true, lassoId });
   assert.equal((await fetch(local(body.link!))).status, 200);
@@ -429,7 +430,7 @@ test("logout sletter cookien, og derefter er man logget ud", async () => {
   cookie = "";
   assert.equal((await api("/me")).status, 401);
   assert.equal((await api("/pages")).status, 401);
-  const b = boot(await (await fetch(`${base}/portal`)).text());
+  const b = boot(await (await fetch(`${base}/portal/klassisk`)).text());
   assert.equal(b.user, null);
 });
 
@@ -453,7 +454,7 @@ test("uden nøgler (lokal udvikling) er portalen åben som demobrugeren, men CSR
     assert.equal((await json<Json>(saved)).created, true);
     const noCsrf = await fetch(`${url}/api/portal/pages`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ page: "99000003" }) });
     assert.equal(noCsrf.status, 403);
-    const b = boot(await (await fetch(`${url}/portal`)).text());
+    const b = boot(await (await fetch(`${url}/portal/klassisk`)).text());
     assert.equal(b.loginRequired, false);
     assert.equal((b.user as { isDemo: boolean }).isDemo, true);
   });
@@ -487,7 +488,7 @@ test("PORTAL_PUBLIC=true: /portal og /api/portal/* er åbne uden login som demob
   await new Promise((r) => srv.once("listening", r));
   const openBase = `http://127.0.0.1:${(srv.address() as AddressInfo).port}`;
   try {
-    const page = await fetch(`${openBase}/portal`);
+    const page = await fetch(`${openBase}/portal/klassisk`);
     const b = boot(await page.text()) as { loginRequired: boolean; user: { id: string; isDemo: boolean } | null };
     assert.equal(b.loginRequired, false);
     assert.equal(b.user?.isDemo, true);
@@ -502,4 +503,21 @@ test("PORTAL_PUBLIC=true: /portal og /api/portal/* er åbne uden login som demob
   } finally {
     await new Promise((r) => srv.close(r));
   }
+});
+
+test("/portal: den nye portal (portal2) med brugeren og chatten", async () => {
+  const res = await fetch(`${base}/portal`);
+  assert.equal(res.status, 200);
+  const b = boot(await res.text());
+  assert.equal(b.mode, "portal2");
+  assert.equal(b.chat, false, "uden ANTHROPIC_API_KEY");
+  assert.equal(b.baseUrl, PUBLIC);
+});
+
+test("/api/portal/lookup: firmaer og personer på navn, til søgefeltet", async () => {
+  const r = await json<{ companies: { lassoId: string; name: string }[]; persons: unknown[] }>(await api(`/lookup?q=${encodeURIComponent("Eksempel")}`, { cookie: (await login(PIA.id, PIA.key)).cookie }));
+  assert.ok(r.companies.some((c) => c.name === "Eksempel Byg A/S"));
+  assert.ok(Array.isArray(r.persons));
+  const short = await json<{ companies: unknown[] }>(await api(`/lookup?q=E`, { cookie: (await login(PIA.id, PIA.key)).cookie }));
+  assert.equal(short.companies.length, 0);
 });

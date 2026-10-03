@@ -1,9 +1,10 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { ExpandLink, PromptLink } from "./ExpandLink.js";
+import { ExpandLink, foldedCount, PromptLink } from "./ExpandLink.js";
 import { formatDate, isPersonId, type TextSegment, type TimelineVM } from "@lasso/spec";
 import type { MoreInTab, ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { usePrintMode } from "../print.js";
+import { Icon } from "./Icon.js";
 
 const ALL = "Alle typer";
 
@@ -74,6 +75,7 @@ export function LassoTimeline({
   limit = 5,
   moreIn,
   filterColumn = false,
+  onLink,
 }: {
   timeline?: TimelineVM;
   title?: string;
@@ -90,6 +92,8 @@ export function LassoTimeline({
    * container (tablet, chat og mobil) bliver kolonnen til chips over strømmen. Standard: typevælger i hovedet.
    */
   filterColumn?: boolean;
+  /** Åbner et dokument (årsrapportens PDF, 12.3): titlen på en begivenhed med `url` bliver et link med hent-ikon. */
+  onLink?: (url: string) => void;
 }) {
   const heading = title ?? "Historik";
   const categories = useMemo(
@@ -117,7 +121,8 @@ export function LassoTimeline({
       ? timeline.events
       : timeline.events.filter((e) => e.category === filter);
   // Regel 9: de seneste `limit` (5, på overblikket 3); resten bag "Se alle N".
-  const events = expanded ? matching : matching.slice(0, limit);
+  // Global regel (Jakob 01.10): der foldes kun, når mindst to er skjult.
+  const events = expanded ? matching : matching.slice(0, foldedCount(matching.length, limit));
   const filterList =
     filterColumn && categories.length > 1 ? (
       <div
@@ -212,7 +217,13 @@ export function LassoTimeline({
                     </div>
                     <div className="lasso-timeline__body">
                       <div className="lasso-timeline__title">
-                        {e.titleSegments ? (
+                        {e.url && onLink ? (
+                          // 12.3 (Jakob 01.10): årsrapporten kan hentes direkte fra tidslinjen.
+                          <button type="button" className="lasso-link lasso-timeline__doc" onClick={() => onLink(e.url!)}>
+                            <Icon name="download" size={14} />
+                            <span>{e.title}</span>
+                          </button>
+                        ) : e.titleSegments ? (
                           <TitleSegments
                             segments={e.titleSegments}
                             onOpen={onOpen}
@@ -240,23 +251,15 @@ export function LassoTimeline({
                       ) : e.detail ? (
                         <div className="lasso-row__sub">{e.detail}</div>
                       ) : null}
-                      <div className="lasso-timeline__meta">
-                        {isReport(e.category) ? (
-                          <span className="lasso-timeline__cat">{e.category}</span>
-                        ) : (
-                          <>
-                            {formatDate(e.date)}
-                            <span className="lasso-timeline__cat">, {e.category}</span>
-                          </>
-                        )}
-                      </div>
+                      {/* 12.3 (Jakob 01.10): typeordet (Regnskab, Ledelse …) vises ikke; kun datoen, og ikke igen for regnskab. */}
+                      {isReport(e.category) ? null : <div className="lasso-timeline__meta">{formatDate(e.date)}</div>}
                     </div>
                   </div>
                 </div>
               );
             })}
           </div>
-          {matching.length > limit ? (
+          {foldedCount(matching.length, limit) < matching.length ? (
             moreIn ? (
               <PromptLink label={`Se alle ${matching.length} begivenheder i ${moreIn.tab}`} onClick={moreIn.open} />
             ) : (

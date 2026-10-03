@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 /**
  * Kommentarer i designguiden. Alt, der tegnes i en ramme (moduler, elementer, sider), og alle rækker med
@@ -295,29 +296,80 @@ export function Composer({ target, pin, onDone, autoFocus = true }: { target: Co
   );
 }
 
+/**
+ * Svævende boks lagt direkte på siden (portal i body), ikke i rammen: rammernes kort klipper indholdet
+ * (overflow: hidden for de runde hjørner), så en boks inde i dem blev skåret af. Placeres ved ankeret
+ * (sidens koordinater), holdes inden for skærmen og lukker ved klik udenfor og Escape.
+ */
+export function Floating({ anchor, onClose, children, label }: { anchor: { x: number; y: number }; onClose: () => void; children: ReactNode; label: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const w = el.offsetWidth;
+    const h = el.offsetHeight;
+    const vx = anchor.x - window.scrollX;
+    const vy = anchor.y - window.scrollY;
+    const left = Math.max(8, Math.min(vx + 12, window.innerWidth - w - 12));
+    const below = vy + 14;
+    const top = below + h > window.innerHeight - 8 && vy - h - 14 > 8 ? vy - h - 14 : Math.max(8, Math.min(below, window.innerHeight - h - 8));
+    setPos({ left: left + window.scrollX, top: top + window.scrollY });
+  }, [anchor.x, anchor.y]);
+  useEffect(() => {
+    const down = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (ref.current?.contains(t) || (t as Element).closest?.(".dg-pin, .dg-cbtn, .dg-pinlayer")) return;
+      closeRef.current();
+    };
+    const key = (e: KeyboardEvent) => e.key === "Escape" && closeRef.current();
+    document.addEventListener("mousedown", down);
+    document.addEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("mousedown", down);
+      document.removeEventListener("keydown", key);
+    };
+  }, []);
+  const root = document.querySelector(".dg") ?? document.body;
+  return createPortal(
+    <div ref={ref} className="dg-popover dg-popover--floating" role="dialog" aria-label={label} style={pos ?? { left: anchor.x, top: anchor.y, visibility: "hidden" }}>
+      {children}
+    </div>,
+    root,
+  );
+}
+
+/** Sidens koordinater for et punkt i et elements rektangel. */
+const pagePoint = (el: Element, dx = 0, dy = 0) => {
+  const r = el.getBoundingClientRect();
+  return { x: r.left + dx + window.scrollX, y: r.top + dy + window.scrollY };
+};
+
 /** Kommentarknap med antal åbne, der folder tråden og en ny kommentar ud (til rammer og rækker uden nål). */
 export function CommentButton({ target, small = false }: { target: CommentTarget; small?: boolean }) {
   const { forTarget, mode } = useComments();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState<{ x: number; y: number } | null>(null);
   const list = forTarget(target.target);
   const openCount = list.filter((c) => c.status === "aaben").length;
   if (!mode && !list.length) return null;
   return (
     <span className="dg-cbtn-wrap">
-      <button className={`dg-cbtn${openCount ? " has-open" : ""}${small ? " dg-cbtn--sm" : ""}`} onClick={() => setOpen((o) => !o)} aria-expanded={open} title={list.length ? `${list.length} kommentarer` : "Kommentér"}>
+      <button className={`dg-cbtn${openCount ? " has-open" : ""}${small ? " dg-cbtn--sm" : ""}`} onClick={(e) => setOpen((o) => (o ? null : pagePoint(e.currentTarget, e.currentTarget.getBoundingClientRect().width - 340, e.currentTarget.getBoundingClientRect().height)))} aria-expanded={Boolean(open)} title={list.length ? `${list.length} kommentarer` : "Kommentér"}>
         <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
           <path d="M5 5h14v10H10l-4 4v-4H5z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
         </svg>
         {list.length ? <span>{openCount || list.length}</span> : small ? null : <span>Kommentér</span>}
       </button>
       {open ? (
-        <div className="dg-popover" role="dialog" aria-label={`Kommentarer til ${target.label}`}>
+        <Floating anchor={open} onClose={() => setOpen(null)} label={`Kommentarer til ${target.label}`}>
           <div className="dg-popover__title">{target.label}</div>
           {list.map((c) => (
             <CommentItem key={c.id} c={c} compact />
           ))}
-          <Composer target={target} autoFocus={!list.length} onDone={list.length ? undefined : () => setOpen(false)} />
-        </div>
+          <Composer target={target} autoFocus={!list.length} onDone={list.length ? undefined : () => setOpen(null)} />
+        </Floating>
       ) : null}
     </span>
   );
@@ -344,8 +396,11 @@ export function PinLayer({ target, scale, left, getDoc }: { target: CommentTarge
   const pins = forTarget(target.target).filter((c) => c.pin);
   const numbered = useMemo(() => pins.map((c, i) => ({ c, n: i + 1 })), [pins]);
   const toScreen = (p: { x: number; y: number }) => ({ left: (p.x - left) * scale, top: p.y * scale });
+  const rootRef = useRef<HTMLDivElement>(null);
+  // Nålens punkt på siden (til den svævende boks).
+  const onPage = (p: { x: number; y: number }) => (rootRef.current ? pagePoint(rootRef.current, (p.x - left) * scale, p.y * scale) : { x: 0, y: 0 });
   return (
-    <>
+    <div ref={rootRef} className="dg-pinroot">
       {mode ? (
         <div
           className="dg-pinlayer"
@@ -369,9 +424,9 @@ export function PinLayer({ target, scale, left, getDoc }: { target: CommentTarge
           const hit = numbered.find((x) => x.c.id === openId);
           if (!hit) return null;
           return (
-            <div className="dg-popover dg-popover--pin" style={toScreen(hit.c.pin!)}>
+            <Floating anchor={onPage(hit.c.pin!)} onClose={() => setOpenId(null)} label={`Kommentar ${hit.n}`}>
               <CommentItem c={hit.c} compact n={hit.n} />
-            </div>
+            </Floating>
           );
         })()
       ) : null}
@@ -380,13 +435,13 @@ export function PinLayer({ target, scale, left, getDoc }: { target: CommentTarge
           <span className="dg-pin dg-pin--draft" style={toScreen(draft)}>
             +
           </span>
-          <div className="dg-popover dg-popover--pin" style={toScreen(draft)} onClick={(e) => e.stopPropagation()}>
+          <Floating anchor={onPage(draft)} onClose={() => setDraft(null)} label={`Ny kommentar til ${target.label}`}>
             <div className="dg-popover__title">{target.label}</div>
-            {draft.element ? <div className="dg-meta">På {draft.element}</div> : null}
+            {draft.element ? <div className="dg-meta dg-popover__element">På {draft.element}</div> : null}
             <Composer target={{ ...target, context: { ...target.context, ...(draft.element ? { element: draft.element } : {}) } }} pin={{ x: draft.x, y: draft.y }} onDone={() => setDraft(null)} />
-          </div>
+          </Floating>
         </>
       ) : null}
-    </>
+    </div>
   );
 }

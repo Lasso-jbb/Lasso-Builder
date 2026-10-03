@@ -80,6 +80,11 @@ export interface HostCapabilities {
   openSection?: boolean;
   /** Katalog 08.5: værten kan verificere kontaktoplysninger i realtid (live number). */
   verifyContact?: boolean;
+  /**
+   * Modul 5 (Jakob 01.10): de Lasso-moduler (genvejenes værktøjer), brugeren har adgang til. Genvejene viser kun
+   * dem. Udeladt: adgangen kendes ikke, og alle genveje, værten kan åbne, vises.
+   */
+  modules?: readonly string[];
 }
 
 export interface LassoViewProps {

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { readFileSync } from "node:fs";
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { emptyDataset, viewSpecSchema, type CompanyVM, type ContactPersonsVM, type ContactVM, type FinancialsVM, type ObservationsVM, type PersonVM } from "@lasso/spec";
@@ -9,7 +10,7 @@ import { HeadActions } from "./components/HeadActions.js";
 import { SidePanel, SidePanelList } from "./components/SidePanel.js";
 import { CompanyColumn } from "./components/LassoContactPersons.js";
 import { LassoContactPersons } from "./components/LassoContactPersons.js";
-import { LassoContact, liveState } from "./components/LassoContact.js";
+import { contactChannelItems, LassoContact, liveState } from "./components/LassoContact.js";
 import { Shortcuts } from "./components/Shortcuts.js";
 import { KeyFigureCards } from "./components/KeyFigureCards.js";
 import { KeyValueList } from "./components/KeyValueList.js";
@@ -154,24 +155,18 @@ const bo: PersonVM = {
 
 test("16.1: kun navnet og handlingerne; intet 'Person', ingen faktalinje, tællerlinje eller observationslinje", () => {
   const out = html(h(PersonHead, { person: bo, actions: { monitor: { monitoring: false, onClick: noop }, save: { saved: false, onClick: noop } }, onSeeRisk: noop, riskLine: true }));
-  assert.match(out, /lasso-company__name">Bo Eksempel</);
+  assert.match(out, /lasso-company__name"[^>]*>Bo Eksempel</);
   assert.match(out, /lasso-headbtn--monitor/);
   assert.doesNotMatch(out, /lasso-personhead__kind|lasso-personhead__obs|lasso-personhead__facts|lasso-personhead__counts|lasso-personhead__mobsub|Silkeborg/);
   assert.doesNotMatch(out, /lasso-headrisk/);
   assert.doesNotMatch(out, /initial|avatar/);
 });
 
-test("16.4: personrisiko som fire fliser: PEP, stråmand, konkurser i netværket, sanktionslister", () => {
+test("16.4 (Jakob 01.10): personrisiko kun med konkurser i to kasser: Egne konkurser og Konkurser i netværket", () => {
   const out = html(h(PersonRisk, { person: bo, onUpgrade: noop }));
   const titles = [...out.matchAll(/lasso-personrisk__title">([^<]+)</g)].map((m) => m[1]);
-  assert.deepEqual(titles, ["PEP, politisk eksponeret", "Stråmandsindikator", "Konkurser i netværket", "Sanktionslister"]);
-  assert.match(out, /tjekket 25\.09\.2026/);
-  assert.match(out, /lasso-personrisk__item--locked[^]*>Opgrader</);
-  assert.match(out, /lasso-personrisk__word--50">Mulig</);
-  // Uden opslag: "Ikke tjekket", aldrig "Nej".
-  const unknown = html(h(PersonRisk, { person: { ...bo, pep: undefined, strawman: undefined } }));
-  assert.match(unknown, /Ikke tjekket/);
-  assert.match(unknown, /Ikke beregnet/);
+  assert.deepEqual(titles, ["Egne konkurser", "Konkurser i netværket"]);
+  assert.doesNotMatch(out, /PEP|Stråmand|Sanktionslister|Opgrader/);
 });
 
 /* ---------- 08.4 Genveje ---------- */
@@ -186,7 +181,7 @@ test("08.4: højst seks genveje med koral ikon; resten under 'Flere'", () => {
 
 /* ---------- 08.5 Live-nummer ---------- */
 
-test("08.5: live-tilstande: nu (60 sek.), N dage siden, udgået; nummeret vises altid", () => {
+test("08.5: kun udgåede numre markeres (ingen verificeringsnoter); nummeret vises altid", () => {
   const now = Date.parse("2026-09-29T10:00:00Z");
   assert.deepEqual(liveState("2026-09-29T09:59:30Z", undefined, now), { kind: "now" });
   assert.deepEqual(liveState("2026-09-29T09:58:00Z", undefined, now), { kind: "stale", days: 0 });
@@ -203,14 +198,15 @@ test("08.5: live-tilstande: nu (60 sek.), N dage siden, udgået; nummeret vises 
     ],
   };
   const out = html(h(LassoContact, { contact, now, onCopy: noop, foldExtra: false }));
-  assert.match(out, /Verificeret nu/);
+  // Jakob 01.10: verificeringsnoterne ("Verificeret nu", "for N dage siden") vises ikke.
+  assert.doesNotMatch(out, /Verificeret/);
   assert.match(out, /lasso-contact__value--struck">33 12 34 56</);
   assert.match(out, /Udgået, 12\.08\.2026/);
   assert.match(out, />Kopiér</);
   const stale = html(h(LassoContact, { contact: { ...contact, verifiedAt: "2026-09-26" }, now, foldExtra: false }));
-  // 08.3 (standard): ekstra numre foldes bag "Se N telefonnumre".
-  assert.match(html(h(LassoContact, { contact, now })), />Se 1 telefonnummer</);
-  assert.match(stale, /Verificeret for 3 dage siden/);
+  // 08.3 (standard): flere numre åbner "Se flere"-panelet; N er alle forskellige numre (som "Se N kontaktpersoner").
+  assert.match(html(h(LassoContact, { contact, now })), />Se alle 2</);
+  assert.doesNotMatch(stale, /Verificeret/);
   // Uden verifikation: handlingen "Ring" i stedet for en tilstand.
   assert.match(html(h(LassoContact, { contact: { lassoId: byg.lassoId, phone: "71747812" }, now })), /aria-label="Ring"/);
 });
@@ -239,10 +235,11 @@ test("08.6: blokken viser 3 (Direktion først) + 'Se N kontaktpersoner', der åb
   assert.doesNotMatch(out, /lasso-contactpersons__icon--muted/, "G2: intet ikon, når kanalen mangler");
 });
 
-test("08.7: panelet grupperer stillinger pr. afdeling, markerer den valgte og viser kopiér-handlinger uden kilder (runde 6)", () => {
+test("08.7: panelet (Se flere, 2/3) grupperer stillinger pr. afdeling, markerer den valgte og viser kopiér og kilder", () => {
   const out = html(h(LassoContactPersons, { data: people, companyName: "Eksempel Byg A/S", onCopy: noop, defaultOpen: 0 }));
-  assert.match(out, /role="dialog" aria-modal="true"/);
-  assert.match(out, /lasso-sidepanel--seeall/);
+  assert.match(out, /role="dialog"/);
+  assert.match(out, /lasso-sidepanel--flere/);
+  assert.doesNotMatch(out, /lasso-sidepanel__scrim|lasso-sidepanel--aside/, "ingen mørk overlay og ingen kopi af virksomhedskolonnen: sidens første kolonne står synlig");
   assert.match(out, /lasso-sidepanel__subtitle">5 personer</);
   const groups = [...out.matchAll(/lasso-panellist__label">([^<]+)</g)].map((m) => m[1]);
   assert.deepEqual(groups, ["Direktion", "Ledelse", "Salg", "IT-udvikling"]);
@@ -252,9 +249,11 @@ test("08.7: panelet grupperer stillinger pr. afdeling, markerer den valgte og vi
   assert.match(out, /lasso-panellist__row is-selected" aria-current="true"/);
   assert.match(out, /Kopiér telefonnummer/);
   assert.match(out, /Kopiér e-mailadresse/);
-  // Ingen Ring/Skriv/LinkedIn og ingen kildevisning overhovedet (Jakob runde 6).
-  assert.doesNotMatch(out, />Kilder<|lasso-cpdetail__source/);
-  assert.doesNotMatch(out, /LinkedIn|>Ring<|>Skriv<|registreret direktør|lasso-cpdetail__updated|lasso-cpdetail__sourcetext/);
+  // Kilderne vises i panelet (Jakob 01.10); stadig ingen Ring/Skriv/LinkedIn.
+  assert.match(out, />Kilder</);
+  assert.match(out, /CVR<\/span>, registreret direktør \(14\.05\.2012\)/);
+  assert.match(out, /eksempel\.dk\/om/);
+  assert.doesNotMatch(out, /LinkedIn|>Ring<|>Skriv</);
   assert.match(out, /lasso-sidepanel__close" aria-label="Luk"/);
   // Uden kopiér-handling (G1): kun værdien, ingen knap.
   const plain = html(h(LassoContactPersons, { data: people, defaultOpen: 0 }));
@@ -321,4 +320,47 @@ test("16.1: personens roller som CSV til Eksportér i personhovedet (uden adress
   assert.match(csv, /Selskab;CVR;Rolle/);
   assert.match(csv, /Eksempel A\/S;1;Direktør;;2020-01-01;;Ja/);
   assert.doesNotMatch(csv, /Aarhus/);
+});
+
+
+/* ---------- "Se flere"-panelet for telefonnumre og e-mails (Jakob 01.10) ---------- */
+
+test("Se flere: telefonnumre og e-mails grupperes efter kilde (Fra CVR, Fra hjemmeside, Verificeret af Lasso)", () => {
+  const contact: ContactVM = {
+    lassoId: "CVR-1-34580820",
+    phone: "71747812",
+    email: "kontakt@lasso.dk",
+    website: "https://lassox.com",
+    channels: [
+      { kind: "phone", value: "71747812", source: "cvr" },
+      { kind: "email", value: "kontakt@lasso.dk", source: "cvr" },
+      { kind: "phone", value: "+45 71 74 78 12", source: "hjemmeside", url: "https://lassox.com/kontakt" },
+      { kind: "email", value: "kontakt@lasso.dk", source: "hjemmeside" },
+      { kind: "email", value: "contact@lassox.com", source: "hjemmeside" },
+    ],
+    verifiedNumbers: [{ phoneNumber: "33123456", callable: true, sources: ["Website"] }],
+  };
+  const phones = contactChannelItems(contact, "phone");
+  assert.deepEqual(phones.map((p) => `${p.source}:${p.value}`), ["cvr:71747812", "hjemmeside:+45 71 74 78 12", "verificeret:33123456"]);
+  const emails = contactChannelItems(contact, "email");
+  assert.deepEqual(emails.map((e) => `${e.source}:${e.value}`), ["cvr:kontakt@lasso.dk", "hjemmeside:kontakt@lasso.dk", "hjemmeside:contact@lassox.com"]);
+  // Samme nummer fra CVR og hjemmesiden tæller én gang: 2 numre og 2 adresser.
+  const out = html(h(LassoContact, { contact }));
+  assert.match(out, />Se alle 2</);
+  assert.equal(out.match(/>Se alle 2</g)?.length, 2);
+  // Kun ét nummer og én adresse: intet link (regel 9).
+  const one = html(h(LassoContact, { contact: { lassoId: "CVR-1-1", phone: "71747812", email: "a@b.dk" } }));
+  assert.doesNotMatch(one, /lasso-contact__more/);
+  // Uden channels bygges listen af phone/email/emails.
+  assert.deepEqual(contactChannelItems({ lassoId: "CVR-1-1", email: "a@b.dk", emails: ["c@b.dk"] }, "email").map((e) => e.source), ["cvr", "hjemmeside"]);
+});
+
+test("Se flere: SidePanel variant flere har ingen mørk overlay og fader ud ved luk", () => {
+  const out = html(h(SidePanel, { open: true, variant: "flere", title: "Telefonnumre", onClose: noop, list: "liste", detail: "detalje" }));
+  assert.match(out, /lasso-sidepanel-wrap lasso-sidepanel-wrap--flere/);
+  assert.match(out, /lasso-sidepanel lasso-sidepanel--flere/);
+  assert.doesNotMatch(out, /lasso-sidepanel__scrim|aria-modal/);
+  const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+  assert.match(css, /\.lasso-sidepanel\.is-closing[^{]*\{ animation: lasso-fade-out/);
+  assert.match(css, /@keyframes lasso-flere-in \{ from \{ transform: translateX\(100%\); \}/);
 });

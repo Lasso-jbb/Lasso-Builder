@@ -13,6 +13,7 @@
     "test": "node --import tsx --test 'src/**/*.test.ts'"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
     "@lasso/spec": "*",
     "@modelcontextprotocol/client": "^2.0.0",
     "@modelcontextprotocol/express": "^2.0.1",

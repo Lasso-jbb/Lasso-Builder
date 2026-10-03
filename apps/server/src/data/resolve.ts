@@ -46,6 +46,8 @@ const FETCHERS: Record<string, (ds: Dataset, p: DataProvider, id: string) => Pro
   timeline: async (ds, p, id) => void (ds.timeline[id] = isPersonId(id) ? personTimeline(await p.person(id)) : await p.timeline(id)),
   observations: async (ds, p, id) => void (ds.observations[id] = await p.observations(id)),
   creditRating: async (ds, p, id) => void (ds.creditRatings[id] = await p.creditRating(id)),
+  valuation: async (ds, p, id) => void (ds.valuations[id] = await p.valuation(id)),
+  resume: async (ds, p, id) => void (ds.resumes[id] = await p.resume(id)),
   auditorIndependence: async (ds, p, id) => void (ds.auditorIndependence[id] = await p.auditorIndependence(id)),
   productionUnits: async (ds, p, id) => void (ds.productionUnits[id] = await p.productionUnits(id)),
   properties: async (ds, p, id) => void (ds.properties[id] = await p.properties(id)),
@@ -171,9 +173,9 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
   for (const c of spec.components) {
     switch (c.type) {
       case "LassoCompanyHead":
-        want(c.company, "company");
-        // 08.1/24.4: "Se risiko"-linjen. Observationerne tager 10–14 s, så kun når specen beder om dem.
-        if (c.risk) want(c.company, "observations");
+        // Valuation (Jakob 02.10) hentes med siden, så rækken står i virksomhedsoplysningerne.
+        want(c.company, "company", "valuation");
+        // `risk` er udgået (G9): hovedet viser ingen observationslinje, så observationerne (10–14 s) hentes ikke.
         break;
       case "LassoShortcuts":
         // 08.4: genvejene har ingen egne data; navnet bruges i beskeden til værten.
@@ -201,9 +203,6 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
         break;
       case "LassoKeyFigureGauge":
         want(c.company, "financials", "industryBenchmark");
-        break;
-      case "LassoScoreHistory":
-        want(c.company, "scoreHistory");
         break;
       case "LassoMap":
         want(c.company, "mapPoints");
@@ -240,18 +239,12 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
         newsWanted.set(id, Math.max(newsWanted.get(id) ?? 0, c.limit));
         break;
       }
-      case "LassoSummary":
-        break;
       case "LassoRiskObservations":
         // Katalog 17.2: hentes kun, når en spec eksplicit beder om listen (compose tilføjer den ikke).
         want(c.company, "observations");
         break;
       case "LassoCreditRating":
         want(c.company, "creditRating");
-        break;
-      case "LassoAuditorIndependence":
-        want(c.company, "auditorIndependence");
-        want(c.company, "company"); // 22.2: "Uafhængighedstjek, <navn>"
         break;
       case "LassoProductionUnits":
         want(c.company, "productionUnits");
@@ -273,7 +266,20 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
         break;
       case "LassoKeyValueList":
         if (c.variant === "financials") want(c.company, "financials", ...(c.fields ? (["financialStatements"] as const) : []));
-        else want(c.company, "company", "ownership", "financials", ...(c.look === "card" ? (["contact"] as const) : []));
+        else
+          want(
+            c.company,
+            "company",
+            "ownership",
+            "financials",
+            ...(c.look === "card" ? (["contact"] as const) : []),
+            // Valuation (Jakob 02.10): i standardrækkefølgen og når rows beder om den.
+            ...(!c.rows || c.rows.includes("valuation") ? (["valuation"] as const) : []),
+          );
+        break;
+      case "LassoSummary":
+        // Lassos erhvervsresumé om virksomheden eller personen (Jakob 02.10).
+        if (c.resume) want(c.resume, "resume");
         break;
       case "LassoRelationsTable":
         want(c.company, "companyHistory", "beneficialOwnership");

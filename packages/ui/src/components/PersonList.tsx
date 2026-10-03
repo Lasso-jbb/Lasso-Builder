@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ExpandLink } from "./ExpandLink.js";
+import { ExpandLink, foldedCount, LIST_FOLD } from "./ExpandLink.js";
 import { formatDate, isPersonId, PERSON_LIST_ROLE_TITLES, peopleWithRole, type PersonListRole, type PersonRowVM } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
@@ -8,7 +8,7 @@ import { usePrintMode } from "../print.js";
 import { Icon } from "./Icon.js";
 
 /** Store bestyrelser (fx 18 personer) foldes sammen efter de første (regel 9). */
-const COLLAPSED_ROWS = 8;
+const COLLAPSED_ROWS = LIST_FOLD;
 
 /** "Bestyrelsesformand" -> rolle "Bestyrelse" + "(formand)" som tekst i parentes. */
 function splitChair(role: string): { role: string; chair: boolean } {
@@ -84,7 +84,8 @@ export function PersonList({
       </Section>
     );
   }
-  const foldable = rows.length > COLLAPSED_ROWS + 2;
+  // Global regel (Jakob 01.10): over 6 → 5 + "Vis alle N".
+  const foldable = foldedCount(rows.length, COLLAPSED_ROWS) < rows.length;
   const visible = foldable && !expanded ? rows.slice(0, COLLAPSED_ROWS) : rows;
   return (
     <Section title={heading} action={toggle} span="half">
@@ -107,8 +108,6 @@ export function PersonList({
                 </div>
                 <div className="lasso-row__sub">
                   {p.to ? `${role}, fratrådt` : role}
-                  {/* 11.2: "også i N andre selskaber" efter rollen, når kilden leverer tallet. */}
-                  {!p.to && p.otherCompanies ? `, også i ${p.otherCompanies} ${p.otherCompanies === 1 ? "andet selskab" : "andre selskaber"}` : null}
                 </div>
               </div>
               <div className="lasso-row__side">{period}</div>

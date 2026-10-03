@@ -127,7 +127,7 @@ export function CompanyHead({ company, error, variant = "full", actions, onHisto
   return (
     <header className={`lasso-company lasso-span-full lasso-company--${kind}${showActions ? " lasso-company--actions" : ""}${acts?.center ? " lasso-company--center" : ""}`}>
       <div className="lasso-company__title">
-        <h2 className="lasso-company__name">{company.name}</h2>
+        <h2 className="lasso-company__name" title={company.name}>{company.name}</h2>
         {status ? <span className={`lasso-company__status lasso-company__status--${tone}`}>{status}</span> : null}
       </div>
       {acts?.center ? <div className="lasso-company__center">{acts.center}</div> : null}

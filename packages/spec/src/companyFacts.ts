@@ -1,5 +1,5 @@
-import { formatDate, formatEmail, formatNumber, formatPhone, formatWeb } from "./format.js";
-import type { Address, CompanyVM, FinancialYear, OwnershipVM } from "./models.js";
+import { formatAmount, formatDate, formatEmail, formatNumber, formatPhone, formatWeb } from "./format.js";
+import type { Address, CompanyVM, FinancialYear, OwnershipVM, ValuationVM } from "./models.js";
 import type { ViewComponent } from "./spec.js";
 
 /**
@@ -45,6 +45,8 @@ export const COMPANY_FACT_KEYS = [
   "formaal",
   "tegningsregel",
   "brancher",
+  // Jakob 02.10: værdiansættelse fra GET /modules/valuations/{lassoId}; rækken udelades, når der ingen værdi er.
+  "valuation",
 ] as const;
 export type CompanyFactKey = (typeof COMPANY_FACT_KEYS)[number];
 
@@ -77,6 +79,24 @@ export interface CompanyFactOptions {
   hideAuditor?: boolean;
   /** Kun disse rækker, i denne rækkefølge (efter reglerne ovenfor: hovedet ejer stadig identiteten). */
   rows?: readonly CompanyFactKey[];
+  /** Værdiansættelsen (GET /modules/valuations); uden den, eller uden værdi, udelades rækken Valuation. */
+  valuation?: ValuationVM;
+}
+
+/** "12,4 mio. kr." eller spændet "10–15 mio. kr.", med "(beregnet 01.09.2026)" når datoen er kendt. */
+export function valuationText(v: ValuationVM | undefined): string | undefined {
+  if (!v || v.state !== "ok") return undefined;
+  const unit = v.currency && v.currency !== "DKK" ? v.currency : "kr.";
+  const main =
+    typeof v.value === "number"
+      ? formatAmount(v.value, unit)
+      : typeof v.low === "number" && typeof v.high === "number"
+        ? `${formatAmount(v.low, unit)} – ${formatAmount(v.high, unit)}`
+        : undefined;
+  if (!main) return undefined;
+  // "45,0 mio. kr. (kapitalforhøjelse 01.06.2024)": værdien ved den seneste kapitalhændelse.
+  const basis = [v.method, v.date ? formatDate(v.date) : undefined].filter(Boolean).join(" ");
+  return basis ? `${main} (${basis})` : main;
 }
 
 /** "2025-01-01" -> "01.01" (dag.måned, uden år, katalog 09: "01.01–31.12"). */
@@ -105,80 +125,79 @@ function employeesText(company: CompanyVM, lastYear: FinancialYear | undefined):
 }
 
 /**
- * Rækkerne med værdi, i fast rækkefølge. Revisor står også uden navn ("-"), når virksomheden har
- * regnskaber (så mangler den reelt); ellers udelades tomme rækker, så listen ikke fyldes af "-".
+ * Standardrækkefølgen i "Virksomhedsoplysninger" (Jakob 01.10, 09.2): Branche, Formål, Kommune,
+ * Reklamebeskyttet, Telefon, E-mail, Website, CVR, Binavne, Status, Stiftelsesdato, Virksomhedsform,
+ * Seneste vedtægtsændring, Regnskabsår, Seneste regnskab udgivet, Selskabskapital, Børsnoteret,
+ * Revisor, Underskrivende revisor, Tegningsregler, Antal ansatte.
+ */
+export const COMPANY_FACT_ORDER: readonly CompanyFactKey[] = [
+  "branche", "formaal", "kommune", "reklamebeskyttet", "telefon", "email", "web", "cvr", "binavne", "status", "stiftet", "form",
+  "vedtaegtsaendring", "regnskabsaar", "senesteregnskab", "selskabskapital", "boersnoteret", "revisor", "underskriverrevisor",
+  "tegningsregel", "ansatte", "valuation",
+];
+
+const IDENTITY: readonly CompanyFactKey[] = ["cvr", "stiftet", "form", "branche", "adresse", "firmanavn", "status"];
+const CONTACT: readonly CompanyFactKey[] = ["adresse", "telefon", "email", "web"];
+const AUDITOR: readonly CompanyFactKey[] = ["revisor", "revisorskift", "underskriverrevisor"];
+
+/**
+ * Rækkerne med værdi i standardrækkefølgen (COMPANY_FACT_ORDER) eller i den rækkefølge, `rows` beder om.
+ * Revisor står også uden navn ("Ikke registreret"), når virksomheden har regnskaber (så mangler den
+ * reelt); ellers udelades tomme rækker. Det, der står andetsteds på siden, gentages ikke (options).
  */
 export function companyFacts(company: CompanyVM, ownership: OwnershipVM | undefined, lastYear: FinancialYear | undefined, options: CompanyFactOptions = {}): CompanyFact[] {
   const a = company.address;
   const auditor = ownership?.auditor;
-  const rows: CompanyFact[] = [];
-  if (!options.hideAuditor) {
-    if (auditor?.name || lastYear) rows.push({ key: "revisor", label: "Revisor", value: auditor?.name, lassoId: auditor?.lassoId });
-    if (auditor?.from) rows.push({ key: "revisorskift", label: "Seneste revisorskift", value: formatDate(auditor.from) });
-  }
-  rows.push({ key: "regnskabsperiode", label: "Regnskabsperiode", value: accountingPeriod(lastYear) });
-  if (!options.hideIdentity) {
-    rows.push(
-      { key: "cvr", label: "CVR-nummer", value: company.cvr },
-      { key: "stiftet", label: "Stiftet", value: company.founded ? formatDate(company.founded) : undefined },
-      { key: "form", label: "Virksomhedsform", value: company.form },
-      { key: "branche", label: "Branche", value: company.industryText, code: company.industryText ? company.industryCode : undefined },
-      { key: "ansatte", label: "Ansatte", value: employeesText(company, lastYear) },
-    );
-    if (!options.hideContact) rows.push({ key: "adresse", label: "Adresse", value: [a?.street, [a?.zip, a?.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || undefined });
-  } else {
-    // Hovedet viser branchens tekst; koden er det eneste nye. Ansatte står ikke i hovedet (08.1).
-    rows.push({ key: "branchekode", label: "Branchekode", value: company.industryCode }, { key: "ansatte", label: "Ansatte", value: employeesText(company, lastYear) });
-  }
-  rows.push({ key: "kommune", label: "Kommune", value: a?.municipality }, { key: "region", label: "Region", value: a?.region });
-  // Katalog 28.7/26h.9: bibrancher med kode først (hovedbranchen står i hovedet/Branche), revision og kapital.
-  if (company.altIndustries) {
-    rows.push({
-      label: "Bibrancher",
-      value: company.altIndustries.length ? company.altIndustries.slice(0, 3).map((b) => [b.code, b.text].filter(Boolean).join(" ")).join(", ") : "Ingen registreret",
-    });
-  }
-  if (company.auditExempt) rows.push({ label: "Revision", value: "Fravalgt", tone: "warning" });
-  if (company.registeredCapital) {
-    const cap = company.registeredCapital;
-    rows.push({ label: "Kapital", value: [`${formatNumber(cap.amount)} ${cap.currency ?? "DKK"}`, ...(cap.classes ?? [])].join(", ") });
-  }
-  if (!options.hideContact) {
+  const cap = company.registeredCapital;
+  const industries = [company.industryText ? `${company.industryCode ? `${company.industryCode}: ` : ""}${company.industryText}` : undefined, ...(company.altIndustries ?? []).map((b) => [b.code, b.text].filter(Boolean).join(": "))].filter(Boolean);
+  const all: Record<CompanyFactKey, CompanyFact> = {
+    // 09.2 (Jakob 01.10): branchekoden står i parentes efter branchens navn.
+    branche: { key: "branche", label: "Branche", value: company.industryText, code: company.industryText ? company.industryCode : undefined },
+    formaal: { key: "formaal", label: "Formål", value: company.purpose },
+    kommune: { key: "kommune", label: "Kommune", value: a?.municipality },
+    region: { key: "region", label: "Region", value: a?.region },
+    reklamebeskyttet: { key: "reklamebeskyttet", label: "Reklamebeskyttet", value: yesNo(company.advertisingProtected) },
     // 02c.12: telefon i grupper af to, e-mail i små bogstaver, web uden https:// og www.
-    rows.push({ key: "telefon", label: "Telefon", value: formatPhone(company.phone) }, { key: "email", label: "E-mail", value: formatEmail(company.email) }, { key: "web", label: "Web", value: formatWeb(company.website) });
-  }
-  const shown = rows.filter((r) => r.value !== undefined || r.key === "revisor");
-  if (!options.rows) return shown;
-  shown.push(...stamdataRows(company, lastYear).filter((r) => r.value !== undefined && options.rows!.includes(r.key!)));
-  // Kun de rækker, elementet er bedt om, i den bedte rækkefølge.
-  return options.rows.flatMap((k) => shown.filter((r) => r.key === k));
+    telefon: { key: "telefon", label: "Telefon", value: formatPhone(company.phone) },
+    email: { key: "email", label: "E-mail", value: formatEmail(company.email) },
+    web: { key: "web", label: "Website", value: formatWeb(company.website) },
+    cvr: { key: "cvr", label: "CVR", value: company.cvr },
+    binavne: { key: "binavne", label: "Binavne", value: company.secondaryNames?.length ? company.secondaryNames.join("\n") : undefined },
+    status: { key: "status", label: "Status", value: company.status },
+    stiftet: { key: "stiftet", label: "Stiftelsesdato", value: company.founded ? formatDate(company.founded) : undefined },
+    form: { key: "form", label: "Virksomhedsform", value: company.form },
+    vedtaegtsaendring: { key: "vedtaegtsaendring", label: "Seneste vedtægtsændring", value: company.statutesChanged ? formatDate(company.statutesChanged) : undefined },
+    regnskabsaar: { key: "regnskabsaar", label: "Regnskabsår", value: accountingPeriod(lastYear) },
+    regnskabsperiode: { key: "regnskabsperiode", label: "Regnskabsperiode", value: accountingPeriod(lastYear) },
+    senesteregnskab: { key: "senesteregnskab", label: "Seneste regnskab udgivet", value: lastYear?.published ? formatDate(lastYear.published) : undefined },
+    selskabskapital: { key: "selskabskapital", label: "Selskabskapital", value: cap ? [`${formatNumber(cap.amount)} ${cap.currency ?? "DKK"}`, ...(cap.classes ?? [])].join(", ") : undefined },
+    boersnoteret: { key: "boersnoteret", label: "Børsnoteret", value: yesNo(company.listed) },
+    // Katalog 28.7: fravalgt revision er den eneste værdi, der farves (warning-tekst, med ordet).
+    revisor: auditor?.name || !company.auditExempt
+      ? { key: "revisor", label: "Revisor", value: auditor?.name, lassoId: auditor?.lassoId }
+      : { key: "revisor", label: "Revisor", value: "Fravalgt", tone: "warning" },
+    revisorskift: { key: "revisorskift", label: "Seneste revisorskift", value: auditor?.from ? formatDate(auditor.from) : undefined },
+    underskriverrevisor: { key: "underskriverrevisor", label: "Underskrivende revisor", value: company.signingAuditor },
+    tegningsregel: { key: "tegningsregel", label: "Tegningsregler", value: company.signingRule },
+    ansatte: { key: "ansatte", label: "Antal ansatte", value: employeesText(company, lastYear) },
+    adresse: { key: "adresse", label: "Adresse", value: [a?.street, [a?.zip, a?.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || undefined },
+    branchekode: { key: "branchekode", label: "Branchekode", value: company.industryCode },
+    firmanavn: { key: "firmanavn", label: "Firmanavn", value: company.name },
+    // Portalens liste (Jakob 30.09): alle brancher, én pr. linje.
+    brancher: { key: "brancher", label: "Branche", value: industries.length ? industries.join("\n") : undefined },
+    valuation: { key: "valuation", label: "Valuation", value: valuationText(options.valuation) },
+  };
+  const hidden = new Set<CompanyFactKey>([...(options.hideIdentity ? IDENTITY : []), ...(options.hideContact ? CONTACT : []), ...(options.hideAuditor ? AUDITOR : [])]);
+  let order = [...(options.rows ?? COMPANY_FACT_ORDER)];
+  // Hovedet viser branchens tekst; koden er det eneste nye.
+  if (options.hideIdentity) order = order.map((k) => (k === "branche" ? "branchekode" : k));
+  return order
+    .filter((k) => !hidden.has(k))
+    .map((k) => all[k])
+    .filter((r) => r.value !== undefined || (r.key === "revisor" && Boolean(lastYear)));
 }
 
 const yesNo = (v: boolean | undefined) => (v === undefined ? undefined : v ? "Ja" : "Nej");
-
-/**
- * Portalens stamoplysninger (Jakob 30.09): rækker, der kun vises, når `rows` beder om dem. Lister
- * (binavne, brancher) står én pr. linje.
- */
-function stamdataRows(company: CompanyVM, lastYear: FinancialYear | undefined): CompanyFact[] {
-  const cap = company.registeredCapital;
-  const industries = [company.industryText ? `${company.industryCode ? `${company.industryCode}: ` : ""}${company.industryText}` : undefined, ...(company.altIndustries ?? []).map((b) => [b.code, b.text].filter(Boolean).join(": "))].filter(Boolean);
-  return [
-    { key: "firmanavn", label: "Firmanavn", value: company.name },
-    { key: "binavne", label: "Binavne", value: company.secondaryNames?.length ? company.secondaryNames.join("\n") : undefined },
-    { key: "status", label: "Status", value: company.status },
-    { key: "reklamebeskyttet", label: "Reklamebeskyttet", value: yesNo(company.advertisingProtected) },
-    { key: "vedtaegtsaendring", label: "Seneste vedtægtsændring", value: company.statutesChanged ? formatDate(company.statutesChanged) : undefined },
-    { key: "regnskabsaar", label: "Regnskabsår", value: accountingPeriod(lastYear) },
-    { key: "senesteregnskab", label: "Seneste regnskab udgivet", value: lastYear?.published ? formatDate(lastYear.published) : undefined },
-    { key: "selskabskapital", label: "Selskabskapital", value: cap ? `${formatNumber(cap.amount)} ${cap.currency ?? "DKK"}` : undefined },
-    { key: "boersnoteret", label: "Børsnoteret", value: yesNo(company.listed) },
-    { key: "underskriverrevisor", label: "Underskrivende revisor", value: company.signingAuditor },
-    { key: "formaal", label: "Formål", value: company.purpose },
-    { key: "tegningsregel", label: "Tegningsregler", value: company.signingRule },
-    { key: "brancher", label: "Branche", value: industries.length ? industries.join("\n") : undefined },
-  ];
-}
 
 /** Hvad der ellers står på siden for virksomheden, afledt af specen (samme regel i komponisten og i LassoView). */
 export function companyFactOptions(page: readonly ViewComponent[], company: string): CompanyFactOptions {

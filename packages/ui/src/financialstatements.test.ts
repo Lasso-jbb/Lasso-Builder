@@ -83,7 +83,8 @@ test("19.1: fuldstændige opgørelser (poster uden tal udelades) og kvalitetsfla
   assert.deepEqual(inc.map((r) => r.label), ["Omsætning", "Vareforbrug og eksterne omkostninger", "Bruttofortjeneste", "Personaleomkostninger", "Andre driftsomkostninger", "EBITDA", "Af- og nedskrivninger", "Resultat af primær drift (EBIT)", "Finansielle indtægter", "Finansielle omkostninger", "Resultat før skat", "Skat af årets resultat", "Årets resultat"]);
   // Mangler en post i data, udelades rækken.
   const lean = incomeRows([{ year: 2025, grossProfit: 60, profit: 14 }]);
-  assert.deepEqual(lean.map((r) => r.label), ["Bruttofortjeneste", "Årets resultat"]);
+  // Jakob 01.10: en fuldendt resultatopgørelse; alle poster står, også uden tal (finansielle poster netto, når ikke opdelt).
+  assert.deepEqual(lean.map((r) => r.label), ["Omsætning", "Vareforbrug og eksterne omkostninger", "Bruttofortjeneste", "Personaleomkostninger", "Andre driftsomkostninger", "EBITDA", "Af- og nedskrivninger", "Resultat af primær drift (EBIT)", "Finansielle poster, netto", "Resultat før skat", "Skat af årets resultat", "Årets resultat"]);
   const bal = balanceSections([{ year: 2025, intangibleAssets: 1, tangibleAssets: 2, financialFixedAssets: 3, fixedAssetsTotal: 6, inventories: 1, cash: 2, currentAssetsTotal: 3, assetsTotal: 9, equityTotal: 4, provisions: 1, longTermLiabilities: 2, shortTermLiabilities: 2, liabilitiesAndEquityTotal: 9 }]);
   assert.deepEqual(bal[0]!.rows.map((r) => r.label), ["Immaterielle anlægsaktiver", "Materielle anlægsaktiver", "Finansielle anlægsaktiver", "Anlægsaktiver i alt", "Varebeholdninger", "Likvide beholdninger", "Omsætningsaktiver i alt", "Aktiver i alt"]);
   assert.deepEqual(bal[1]!.rows.map((r) => r.label), ["Egenkapital i alt", "Hensatte forpligtelser", "Langfristet gæld", "Kortfristet gæld", "Passiver i alt"]);

@@ -21,10 +21,12 @@ const data: ObservationsVM = {
 test("17.2 / 26d.6: sammenfatningskort på desktop, filterchips og kort på mobil", () => {
   const html = renderToStaticMarkup(createElement(RiskObservations, { data, demo: true, onAction: () => {} }));
   // Desktop (17.2): sammenfatning med skalaens ord og alvorsbjælke, observationer med overlinje
-  assert.match(html, /lasso-obs-summary__head">1 vigtig, 1 mulig, 2 til orientering</);
+  // 39 (Jakob 01.10): tre tal med ikon og ord i stedet for overskrift og farvebjælke.
+  assert.match(html, /lasso-obs-summary__n">1<\/span><span class="lasso-obs-summary__word">Vigtig</);
+  assert.match(html, /lasso-obs-summary__n">1<\/span><span class="lasso-obs-summary__word">Mulig vigtig</);
   assert.match(html, /Seneste observation 02\.06\.2026/);
   assert.doesNotMatch(html, /baseret på/, "runde 6: ingen kildevisning");
-  assert.equal((html.match(/lasso-obs-summary__seg /g) ?? []).length, 4);
+  assert.doesNotMatch(html, /lasso-obs-summary__seg/);
   assert.match(html, /lasso-obsrow--100[^]*lasso-obsrow__word">Vigtig<[^]*Regnskab, 02\.06\.2026\.[^]*>Se regnskab</);
   assert.match(html, /lasso-obsrow--50[^]*lasso-obsrow__word">Mulig vigtig</);
   assert.match(html, /lasso-obsrow--25 lasso-obsrow--compact/);

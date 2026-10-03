@@ -40,6 +40,8 @@ import { summarizeView } from "./data/summary.js";
 import { adaptPeople, adaptSearch, at, participantFieldNames } from "./lasso/adapters.js";
 import { describeShape, LassoApiError, LassoClient, probeAuthVariants, type Query } from "./lasso/client.js";
 import { createMcpServer } from "./mcp/server.js";
+import { chatEnabled, chatRoutes } from "./chat/routes.js";
+import type { ModelCall } from "./chat/agent.js";
 import { companyNameHints } from "./usecases/index.js";
 import { createScoreStore } from "./scores/store.js";
 import { createViewStore, SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "./views/store.js";
@@ -66,6 +68,8 @@ export interface AppDeps {
   pdf?: PdfRenderer;
   /** Kommentarer i designguiden (comments/store.ts). Udeladt: i hukommelsen. */
   comments?: CommentStore;
+  /** Chatten (chat/agent.ts). Udeladt: Claude Platform med ANTHROPIC_API_KEY. Test giver en falsk model. */
+  chatModel?: ModelCall;
 }
 
 function safeEqual(a: string, b: string): boolean {
@@ -130,8 +134,9 @@ function requireMcpKey(config: Config) {
   };
 }
 
-export function createApp({ config, client, provider, store, pages, pdf = pdfRendererFor(config), comments = createCommentStore("") }: AppDeps) {
-  const app = createMcpExpressApp({ host: "0.0.0.0", jsonLimit: "1mb" });
+export function createApp({ config, client, provider, store, pages, pdf = pdfRendererFor(config), comments = createCommentStore(""), chatModel }: AppDeps) {
+  // 4 MB: chatten sender hele samtalen (værktøjssvarenes tekst) med i hvert spørgsmål.
+  const app = createMcpExpressApp({ host: "0.0.0.0", jsonLimit: "4mb" });
   app.disable("x-powered-by");
 
   // Roden er portalen (docs/portal.md); den gamle JSON-info ligger under /api/info.
@@ -169,8 +174,19 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
     res.json({ user });
   });
 
-  // Portalens side: render-appen med boot { mode: "portal" }. Uden session viser appen login.
+  // Portalens side: render-appen med boot { mode: "portal2" }. Uden session viser appen login.
+  // Den nye portal (prototypen "lasso-portal4.html", docs/design/PORTAL.md): søgning, faner og chatten i spørgefeltet.
+  // Med PORTAL_PUBLIC er den åben uden login (demobrugeren); ellers logger man ind som i den klassiske.
   app.get("/portal", async (req, res) => {
+    const html = await loadViewHtml();
+    const user = portalUser(req, config);
+    res
+      .type("html")
+      .set("Cache-Control", "no-store")
+      .send(injectBoot(html, { mode: "portal2", user, baseUrl: config.publicBaseUrl, pdf: pdfAvailable(config), chat: chatEnabled(config) || Boolean(chatModel) }, "Lasso"));
+  });
+  // Den klassiske portal (AppShell med skinne og faner, docs/portal.md).
+  app.get("/portal/klassisk", async (req, res) => {
     const html = await loadViewHtml();
     const user = portalUser(req, config);
     res
@@ -193,6 +209,7 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
       databaseOk: dbOk,
       mcpKeyRequired: mcpKeyRequired(config),
       pdf: pdfAvailable(config),
+      chat: chatEnabled(config),
       uptimeSeconds: Math.round(process.uptime()),
     });
   });
@@ -225,6 +242,17 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
   app.use("/api/portal/pdf", requirePortal(config), portalPdfRoutes({ config, provider, store, pages, pdf }));
   app.use("/api/portal", requirePortal(config), portalApi({ config, provider, store, pages }));
   app.use("/api/portal", portalErrorHandler);
+
+  // --- Lassos egen chat (docs/chat.md): Claude Platform med samme værktøjer som /mcp ------------
+  app.use("/api/chat", chatRoutes({ config, provider, store, pages, model: chatModel }));
+  app.use("/api/chat", portalErrorHandler);
+  app.get("/chat", async (_req, res) => {
+    const html = await loadViewHtml();
+    res
+      .type("html")
+      .set("Cache-Control", "no-store")
+      .send(injectBoot(html, { mode: "chat", loginRequired: mcpKeyRequired(config), enabled: chatEnabled(config) || Boolean(chatModel), baseUrl: config.publicBaseUrl, pdf: pdfAvailable(config) }, "Chat"));
+  });
 
   // --- Gemte visninger -------------------------------------------------------
   app.get("/api/views/:org/:slug", async (req, res) => {
@@ -278,6 +306,9 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
   app.post("/designguide/api/kommentarer", requireKey(guideKey), guide.addComment);
   app.patch("/designguide/api/kommentarer/:id", requireKey(guideKey), guide.updateComment);
   app.delete("/designguide/api/kommentarer/:id", requireKey(guideKey), guide.removeComment);
+  // Godkendte former pr. modul (layoutFormats): læses af alle, skrives med nøglen som kommentarerne.
+  app.get("/designguide/api/formater", guide.listFormats);
+  app.put("/designguide/api/formater/:type", requireKey(guideKey), guide.setFormats);
 
   // --- Delt side: specen hentes, data hentes friskt, render-appen tegner -----
   app.get("/v/:org/:slug", async (req, res) => {
@@ -653,6 +684,10 @@ export async function probeEndpointShapes(client: LassoClient, lassoId: string, 
     ["relations/graph entity", () => client.post("modules/relations/graph", { ids: [lassoId], relationTypes: ["ownership"], enrichments: ["companyinfo", "personinfo"], ingoingDepth: 1, outgoingDepth: 1 }), ["entities"], 900],
     ["observations (CompanyInsight)", () => client.post(`modules/observations/${encodeURIComponent(lassoId)}`, { observationTags: ["CompanyInsight"] }), ["observations"], 700],
     ["modules/news", () => client.post("modules/news?limit=2&orderBy=publishtime", [lassoId]), [], 700],
+    // Jakob 02.10: værdiansættelse (GET og POST) og erhvervsresumé; svarformen logges, så adapterne kan rettes til.
+    ["modules/valuations (GET)", () => client.valuations(lassoId), [], 700],
+    ["modules/valuations (POST)", () => client.valuationsMany([lassoId]), [], 700],
+    ["modules/resume", () => client.resume(lassoId), [], 400],
     ["productionUnit (CVR-2)", async () => {
       const units = at((await client.company(lassoId)) as Parameters<typeof at>[0], "productionUnits");
       const first = Array.isArray(units) ? units[0] : undefined;

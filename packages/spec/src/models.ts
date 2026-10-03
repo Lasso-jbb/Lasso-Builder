@@ -106,6 +106,22 @@ export interface ContactVM {
   verifiedAt?: string;
   /** Katalog 08.7: flere e-mailadresser end `email` (fx kontakt@ og contact@), vist under "Emailadresser". */
   emails?: string[];
+  /**
+   * "Se flere"-panelet (08.3/08.7): alle telefonnumre og e-mailadresser med deres kilde, så panelet kan
+   * gruppere dem ("Fra CVR", "Fra hjemmeside") og vise kilden i detaljen. Samme værdi kan stå under
+   * begge kilder. Uden: panelet bygges af `phone`, `email`, `emails` og `verifiedNumbers`.
+   */
+  channels?: ContactChannelVM[];
+}
+
+/** Én telefon eller e-mail med kilden, den kommer fra (08.3/08.7). */
+export interface ContactChannelVM {
+  kind: "phone" | "email";
+  value: string;
+  /** cvr = registreret i CVR; hjemmeside = fundet på virksomhedens hjemmeside. */
+  source: "cvr" | "hjemmeside";
+  /** Siden, værdien blev fundet på (hjemmeside), når den kendes. */
+  url?: string;
 }
 
 /** Katalog 08, én kontaktperson (rolle/afdeling, telefon og/eller e-mail). */
@@ -146,6 +162,8 @@ export interface FinancialYear {
   published?: string;
   /** Hvornår regnskabet blev offentliggjort (bruges i tidslinjen). Ikke altid oplyst. */
   publicationTime?: string;
+  /** Årsrapporten som PDF (kun http/https), så tidslinjen kan hente den (12.3). Ikke altid oplyst. */
+  pdfUrl?: string;
   revenue?: number | null;
   grossProfit?: number | null;
   profit?: number | null;
@@ -440,6 +458,8 @@ export interface TimelineEventVM {
    * med Lasso-ID, så det kan åbnes i værter med drill-down). `title` er altid den rene tekst.
    */
   titleSegments?: TextSegment[];
+  /** Dokumentet bag begivenheden (årsrapportens PDF, kun http/https): titlen bliver et link, der henter det (12.3). */
+  url?: string;
 }
 
 export interface TimelineVM {
@@ -962,8 +982,13 @@ export interface CreditAssessment {
 export interface CreditRatingVM {
   lassoId: string;
   cvr?: string;
-  /** Ingen adgang (tilkøb), ikke beregnet endnu, eller fejl. */
-  state: "ok" | "locked" | "unavailable" | "error";
+  /**
+   * Ingen adgang (tilkøb), ikke beregnet endnu, eller fejl. "purchase": adgang, men vurderingen er ikke
+   * købt for denne virksomhed endnu (betales pr. styk, `price` kreditter); kortet viser købstrinnet.
+   */
+  state: "ok" | "locked" | "unavailable" | "error" | "purchase";
+  /** Pris i kreditter for ét opslag (state "purchase"). Standard 1. */
+  price?: number;
   reason?: string;
   current?: CreditAssessment;
   previous?: CreditAssessment;
@@ -977,6 +1002,42 @@ export interface CreditRatingVM {
   cachedUntil?: string;
   /** Kreditter tilbage på kontoen (18.3, bekræft hentning). Ubekræftet i Lassos API; udeladt = ingen "Hent ny vurdering". */
   creditBalance?: number;
+}
+
+/**
+ * Værdiansættelse af virksomheden (Jakob 02.10): GET /modules/valuations/{lassoId} eller POST
+ * /modules/valuations med en liste af Lasso-ID'er. Svarformen er ikke set endnu; adapteren læser defensivt.
+ * "unavailable" = Lasso har ingen værdiansættelse (tomt svar, 404) eller ingen adgang; rækken udelades så.
+ */
+export interface ValuationVM {
+  lassoId: string;
+  state: "ok" | "unavailable";
+  /** Den anslåede værdi (punktestimat). */
+  value?: number;
+  /** Interval, når Lasso giver et spænd. */
+  low?: number;
+  high?: number;
+  currency?: string;
+  /** Hvornår værdien er beregnet (ÅÅÅÅ-MM-DD). */
+  date?: string;
+  /** Grundlaget, fx "kapitalforhøjelse" (værdien ved den seneste kapitalhændelse). */
+  method?: string;
+  /** Antal kapitalhændelser i svaret. */
+  events?: number;
+  reason?: string;
+}
+
+/**
+ * Erhvervsresumé om en virksomhed eller person (Jakob 02.10): GET /modules/resume/{lassoId} svarer
+ * { content, lassoId, firstName?, lastName? }. "unavailable" = intet resumé (tomt svar, 404) eller ingen adgang.
+ */
+export interface ResumeVM {
+  lassoId: string;
+  state: "ok" | "unavailable";
+  content?: string;
+  firstName?: string;
+  lastName?: string;
+  reason?: string;
 }
 
 /* ---------- Katalog 21: overvågning og notifikationer ---------- */
@@ -1158,6 +1219,8 @@ export interface PublicationVM {
   corrected?: boolean;
   /** Hovedtallet (bruttofortjeneste/omsætning) og dets tidligere værdi ved korrektion. */
   figure?: { label: string; value: number | null; previous?: number | null };
+  /** Årsrapporten som PDF (kun http/https): "Årsrapport ÅÅÅÅ" er et download-link (Jakob 01.10). */
+  url?: string;
 }
 
 /** Katalog 28.2/28.6/28.8: begivenheder for én virksomhed ud over CVR-tidslinjen. */
@@ -1238,6 +1301,10 @@ export interface Dataset {
   observations: Record<string, ObservationsVM>;
   /** Katalog 17: kreditvurdering fra Creditsafe pr. Lasso-ID. */
   creditRatings: Record<string, CreditRatingVM>;
+  /** Værdiansættelser (Jakob 02.10), slået op pr. Lasso-ID. */
+  valuations: Record<string, ValuationVM>;
+  /** Erhvervsresuméer (virksomhed og person, Jakob 02.10), slået op pr. Lasso-ID. */
+  resumes: Record<string, ResumeVM>;
   auditorIndependence: Record<string, AuditorIndependenceVM>;
   /** Katalog 20: produktionsenheder, ejendomme/BBR og CHR, slået op pr. Lasso-ID. */
   productionUnits: Record<string, ProductionUnitsVM>;
@@ -1289,6 +1356,8 @@ export function emptyDataset(source: DataSourceKind): Dataset {
     maps: {},
     observations: {},
     creditRatings: {},
+    valuations: {},
+    resumes: {},
     auditorIndependence: {},
     productionUnits: {},
     properties: {},

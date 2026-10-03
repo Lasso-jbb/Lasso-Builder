@@ -29,12 +29,12 @@ test("composeCompare: linjegrafen falder tilbage til bruttofortjeneste uden oms�
   assert.equal(of(spec.components, "LassoLineChart").metric, "bruttofortjeneste");
 });
 
-test("composeCompare: 6 virksomheder med nøgletal fra spørgsmålet", () => {
-  const refs = ids(6);
+test("composeCompare: 3 virksomheder med nøgletal fra spørgsmålet", () => {
+  const refs = ids(3);
   const spec = composeCompare(refs, { question: "Sammenlign soliditeten de sidste 3 år" });
   assert.deepEqual(types(spec.components), ["LassoCompareTable", "LassoLineChart", "LassoFollowUps"]);
   const table = of(spec.components, "LassoCompareTable");
-  assert.equal(table.companies.length, 6);
+  assert.equal(table.companies.length, 3);
   assert.equal(table.metrics[0], "soliditetsgrad");
   assert.ok(table.metrics.length <= 5);
   const line = of(spec.components, "LassoLineChart");
@@ -43,7 +43,7 @@ test("composeCompare: 6 virksomheder med nøgletal fra spørgsmålet", () => {
   assert.equal(of(spec.components, "LassoFollowUps").prompts[2]!.label, "Sammenlign på overskudsgrad");
 });
 
-test("composeCompare: 8 virksomheder uden metric giver rangering på omsætning og de 6 største i tabellen", () => {
+test("composeCompare: 8 virksomheder uden metric giver rangering på omsætning og de 3 største i tabellen (Jakob 01.10)", () => {
   const refs = ids(8);
   const values = Object.fromEntries(refs.map((r, i) => [r, { omsaetning: i * 10 }]));
   const spec = composeCompare(refs, { values });
@@ -52,7 +52,7 @@ test("composeCompare: 8 virksomheder uden metric giver rangering på omsætning 
   assert.equal(ranking.companies.length, 8);
   assert.equal(ranking.metric, "omsaetning");
   const table = of(spec.components, "LassoCompareTable");
-  assert.deepEqual(table.companies, refs.slice(2));
+  assert.deepEqual(table.companies, refs.slice(5));
   assert.equal(spec.title, "Sammenligning af 8 virksomheder");
 });
 
@@ -86,10 +86,10 @@ test("composeCompare: 'hvem er størst' giver rangering først, med nøgletal fr
   assert.ok(!isRankingQuestion("Sammenlign X og Y"));
 });
 
-test("composeCompare: 10 virksomheder med rangering giver tabel med højst 6", () => {
+test("composeCompare: 10 virksomheder med rangering giver tabel med højst 3", () => {
   const spec = composeCompare(ids(10), { metric: "ansatte" });
   assert.equal(of(spec.components, "LassoRanking").companies.length, 10);
-  assert.equal(of(spec.components, "LassoCompareTable").companies.length, 6);
+  assert.equal(of(spec.components, "LassoCompareTable").companies.length, 3);
 });
 
 test("composeCompare: dubletter fjernes, og under 2 afvises", () => {

@@ -4,7 +4,9 @@ import "@lasso/ui/styles.css";
 import "./global.css";
 import type { Boot } from "./boot.js";
 import { loadFonts } from "./fonts.js";
+import { ChatApp } from "./chat/ChatApp.js";
 import { McpView } from "./mcp.js";
+import { Portal2App } from "./portal2/Portal2App.js";
 import { PortalApp } from "./portal/PortalApp.js";
 import { PrintView } from "./print.js";
 import { ShowcaseView } from "./showcase.js";
@@ -28,6 +30,8 @@ function Root() {
   if (boot.mode === "portal") return <PortalApp boot={boot} />;
   if (boot.mode === "print") return <PrintView boot={boot} />;
   if (boot.mode === "showcase") return <ShowcaseView boot={boot} />;
+  if (boot.mode === "chat") return <ChatApp boot={boot} />;
+  if (boot.mode === "portal2") return <Portal2App boot={boot} />;
   return <WebView boot={boot} />;
 }
 

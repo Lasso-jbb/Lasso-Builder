@@ -3,7 +3,7 @@
 1. `npm run build` (visningen skal være bygget).
 2. Skriv en spec for din komponent i en JSON-fil, fx `/tmp/min.json`:
    `{ "title": "Test", "components": [{ "type": "LassoKeyValueList", "company": "CVR-1-99000001" }] }`
-   Demovirksomheder: CVR-1-99000001 til CVR-1-99000012 (se `apps/server/src/data/demo.ts`).
+   Demovirksomheder: CVR-1-99000001 til CVR-1-99000014 (se `apps/server/src/data/demo.ts`).
 3. `npx tsx apps/server/src/dev/render-preview.ts <ud-mappe> /tmp/min.json`
 4. Tag skærmbilleder i 1200 og 390 px med Playwright. Chromium ligger i `/opt/pw-browsers`; kør ALDRIG `playwright install`.
    Er playwright ikke installeret, så `npm i --prefix <scratch-mappe> playwright@1.56` i din egen scratch-mappe.

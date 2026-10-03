@@ -8,13 +8,13 @@ import { TabStrip, type TabStripProps } from "./TabStrip.js";
 import type { TabItem } from "./Tabs.js";
 
 /**
- * Portalens ramme (katalog 06, node 9I4-0; mobil 26a). Alle sider har samme ramme: hele siden
+ * Den klassiske portals ramme (katalog 06, node 9I4-0; mobil 26a.1–26a.3). Alle sider har samme ramme: hele siden
  * på chrome-grå, skinnen 236 px til venstre (Rail), fanebjælken 56 px øverst (TabStrip) og
  * siden som hvid flade med radius 10 i øverste venstre hjørne. Siden indeholder modulbjælken
  * (ModuleBar), evt. modulværktøjslinjen (ModuleToolbar) og kroppen (Columns). Intet særskilt
  * sidehoved: navnet står i fanen og øverst i første kolonne.
  *
- * Mobil (< 560 px i .lasso-root): skinne og fanebjælke skjules; i stedet en topbjælke 52 px
+ * Mobil (< 768 px i .lasso-root): skinne og fanebjælke skjules; i stedet en topbjælke 52 px
  * (burger, der åbner "Sektioner"-arket med modulerne som 44 px rækker; titel + undertitel; maks
  * 2 ikoner + "…") og en bundnavigation 56 px med fire punkter (Søg, Lister, Overvågning, Konto;
  * ikon + navn, aktiv i koral, aldrig badges). Bundnavigationen står altid i markup og skjules på

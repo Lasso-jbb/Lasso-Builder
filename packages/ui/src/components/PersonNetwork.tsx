@@ -1,13 +1,12 @@
 import { useState } from "react";
-import { ExpandLink, PromptLink } from "./ExpandLink.js";
+import { ExpandLink, foldedCount, PromptLink } from "./ExpandLink.js";
 import { isPersonId, statusGroup, statusLabel, type PersonNetworkCompanyVM, type PersonNetworkRowVM, type PersonNetworkVM } from "@lasso/spec";
 import type { MoreInTab, ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { usePrintMode } from "../print.js";
+import { BandLanes, LaneToggle, RoleLegend, roleBandClass, toneOfRole, type LaneSeg } from "./BandLanes.js";
 
 const COLLAPSED = 3;
-/** Højst tre bånd (fælles selskaber) pr. person; resten står i undertitlen som antal. */
-const MAX_BANDS = 3;
 const DAY = 86_400_000;
 const year = (d?: string) => (d ? d.slice(0, 4) : "");
 
@@ -34,6 +33,8 @@ function bandLabel(c: PersonNetworkCompanyVM): string {
 function problemText(c: PersonNetworkCompanyVM): string {
   return (statusLabel(c.status) ?? "Under konkurs").toLowerCase();
 }
+
+const rowKey = (p: PersonNetworkRowVM, i: number) => p.lassoId ?? `${p.name}-${i}`;
 
 function overlapText(p: PersonNetworkRowVM): string {
   return p.overlapYears < 1 ? "<1 år" : `${p.overlapYears} år`;
@@ -64,55 +65,38 @@ function PersonName({ p, onOpen, className }: { p: PersonNetworkRowVM; onOpen?: 
   );
 }
 
-/**
- * Ét tidsbånd med etiket over (Paper LUE-0): aktivt = chart-2, afsluttet = stiplet omrids på
- * surface-muted. Er det fælles selskab i problemgruppen (05.7), tegnes båndet i bankrupt-tonen (fyldt,
- * når rollerne stadig løber; stiplet med danger-soft flade, når de er afsluttet), og statusnavnet står
- * sidst i etiketten (", under konkurs") i samme røde (Fable runde 6; ingen lodret markør). Etiketten
- * findes i to længder: "Selskab, rolle, periode" og den korte "Selskab, rolle", som bruges, når
- * elementet er smallere end ⅔ (½-bredden og mobil).
- */
-function Band({ c, pos, start, now, top }: { c: PersonNetworkCompanyVM; pos: (d: string | undefined, f: number) => number; start: number; now: number; top: number }) {
+/** Båndet for ét fælles selskab: aktivt = chart-2, afsluttet = stiplet, problemstatus = rødt (05.7). */
+function seg(c: PersonNetworkCompanyVM, pos: (d: string | undefined, f: number) => number, start: number, now: number): LaneSeg {
   const left = pos(c.from, start);
   // Afsluttet uden kendt slutdato: et kort stiplet bånd fra startåret, aldrig til i dag.
   const right = !c.to && c.ended ? left + 2 : pos(c.to, now);
-  const width = Math.max(1, right - left);
-  // Etiketter nær højre kant højrestilles, så de ikke løber ud af banen.
-  const anchorRight = left > 55;
   const bankrupt = isBankrupt(c);
-  const status = bankrupt ? <span className="lasso-personnet__bandstatus">{`, ${problemText(c)}`}</span> : null;
-  const long = bandLabel(c);
-  const short = [c.companyName, c.role].filter(Boolean).join(", ");
-  return (
-    <div className="lasso-personnet__lane" style={{ top }} title={bankrupt ? `${long}, ${problemText(c)}` : long}>
-      <span className="lasso-personnet__bandlabel" style={anchorRight ? { right: `${Math.max(0, 100 - right)}%`, textAlign: "right", maxWidth: `${Math.max(40, right)}%` } : { left: `${left}%`, maxWidth: `${100 - left}%` }}>
-        <span className="lasso-personnet__label--long">{long}</span>
-        <span className="lasso-personnet__label--short">{short}</span>
-        {status}
-      </span>
-      <span className={`lasso-personnet__band${c.to || c.ended ? " lasso-personnet__band--ended" : ""}${bankrupt ? " lasso-personnet__band--problem" : ""}`} style={{ left: `${left}%`, width: `${width}%` }} />
-    </div>
-  );
+  return {
+    left,
+    width: Math.max(1, right - left),
+    // Jakob 02.10: samme farver som rollerne (direktion, bestyrelse, ejer; alt andet stiplet); konkurs står i etiketten.
+    cls: `lasso-personnet__band ${roleBandClass(toneOfRole(c.role), Boolean(c.to || c.ended))}`,
+    label: bandLabel(c),
+    tail: bankrupt ? <span className="lasso-personnet__bandstatus">{`, ${problemText(c)}`}</span> : undefined,
+  };
 }
 
-/** Banerne for én person: 30 px pr. fælles selskab. Ingen konkursmarkør (runde 6: statussen bæres af båndet). */
-function Track({ p, pos, start, now }: { p: PersonNetworkRowVM; pos: (d: string | undefined, f: number) => number; start: number; now: number }) {
-  const list = p.companies.slice(0, MAX_BANDS);
-  return (
-    <div className="lasso-personnet__track" style={{ height: list.length * 30 }}>
-      {list.map((c, j) => (
-        <Band key={j} c={c} pos={pos} start={start} now={now} top={j * 30 + 4} />
-      ))}
-    </div>
-  );
+/** Den samlede etiket på den lukkede linje: selskaberne og hele perioden, fx "A ApS, B A/S, 2004–2010". */
+function summaryLabel(list: readonly PersonNetworkCompanyVM[]): string {
+  const froms = list.map((c) => year(c.from)).filter(Boolean).sort();
+  const open = list.some((c) => !c.to && !c.ended);
+  const tos = list.map((c) => year(c.to)).filter(Boolean).sort();
+  const span = open ? (froms[0] ? `siden ${froms[0]}` : "") : [froms[0], tos.at(-1)].filter(Boolean).join("–");
+  return [...list.map((c) => c.companyName), span].filter(Boolean).join(", ");
 }
 
 /**
  * Netværk (katalog 16.3, runde 5, Paper LTP-0 / mobil LVN-0): "Sidder sammen med" som tidsbånd i
  * 16.2's sprog. Pr. person ét bånd pr. fælles selskab for perioden, de sad sammen, med etiketten
- * "Selskab, rolle, periode" over båndet; sidder sammen nu = chart-2, afsluttet = stiplet omrids og
- * dæmpet; fælles selskab med problemstatus = båndet i rødt (fyldt/stiplet) og ", under konkurs" sidst i
- * etiketten (runde 6, ingen markør). Standardbredde ⅔; ½ kun med etiketten "Selskab, rolle". Samme akse og 240 px navnekolonne
+ * "Selskab, rolle, periode" over båndet; båndet har rollens farve (Jakob 02.10: direktion, bestyrelse, ejer;
+ * andre roller stiplede), afsluttede dæmpede, og RoleLegend viser de rollefarver, der forekommer; fælles selskab
+ * med problemstatus = ", under konkurs" i rødt sidst i etiketten (runde 6, ingen markør). Står altid i fuld
+ * bredde (GRID_RULES: kun fuld). Samme akse og 240 px navnekolonne
  * som 16.2; overlappet ("14 år") står under navnet. Sorteret efter overlap; tre + "Vis alle N".
  * Mobil: ét kort pr. person med navn og overlap øverst, båndene under og en akse med fire årstal.
  * Ingen kildevisning (G3) og ingen "Vis som graf".
@@ -137,7 +121,10 @@ export function PersonNetwork({
   onGraph?: () => void;
 }) {
   const heading = title ?? "Sidder sammen med";
-  const [expanded, setExpanded] = useState(usePrintMode());
+  const print = usePrintMode();
+  const [expanded, setExpanded] = useState(print);
+  // Jakob 02.10: én linje pr. person med alle relationer samlet; åbnede personer viser hver relation for sig.
+  const [openRows, setOpenRows] = useState<ReadonlySet<string>>(new Set());
   if (!network) {
     return (
       <Section title={heading} span="half">
@@ -152,45 +139,20 @@ export function PersonNetwork({
       </Section>
     );
   }
-  const rows = expanded ? network.people : network.people.slice(0, limit);
+  const rows = expanded ? network.people : network.people.slice(0, foldedCount(network.people.length, limit));
   const now = Date.now();
   const { thisYear, startYear, start, pos } = axis(network.people, now);
   const step = Math.max(1, Math.ceil((thisYear - startYear) / 6));
   const ticks: number[] = [];
   for (let y = startYear; y <= thisYear - step / 2; y += step) ticks.push(y);
-  // Mobil: fire årstal (første, to imellem og i dag).
-  const mticks = [startYear, Math.round(startYear + (thisYear - startYear) / 3), Math.round(startYear + ((thisYear - startYear) * 2) / 3)];
-  const hasEnded = network.people.some((p) => p.companies.some((c) => c.to || c.ended));
-  const problems = network.people.flatMap((p) => p.companies.slice(0, MAX_BANDS).filter(isBankrupt));
-  const problemNames = [...new Set(problems.map((c) => statusLabel(c.status) ?? "Under konkurs"))];
-  // Legenden navngiver statussen (fx "Under konkurs"); flere forskellige problemstatusser står samlet.
-  const problemLegend = problemNames.length === 1 ? problemNames[0]! : "Konkurs o.l.";
-  const legend = (
-    <div className="lasso-personroles__legend" aria-hidden="true">
-      <span className="lasso-personroles__key">
-        <span className="lasso-personnet__swatch" />
-        Sidder sammen nu
-      </span>
-      {hasEnded ? (
-        <span className="lasso-personroles__key">
-          <span className="lasso-personnet__swatch lasso-personnet__swatch--ended" />
-          Afsluttet
-        </span>
-      ) : null}
-      {problems.length ? (
-        <span className="lasso-personroles__key">
-          <span className="lasso-personnet__swatch lasso-personnet__swatch--bankrupt" />
-          {problemLegend}
-        </span>
-      ) : null}
-    </div>
-  );
+  const legend = <RoleLegend tones={network.people.flatMap((p) => p.companies.map((c) => toneOfRole(c.role)))} />;
+  // Overlappet står i underteksten (Jakob 02.10), så navnet har hele første kolonne.
   const sub = (p: PersonNetworkRowVM) => {
     const n = p.companies.length;
-    return `${n} ${n === 1 ? "fælles selskab" : "fælles selskaber"}${p.active ? "" : ", afsluttet"}`;
+    return `${n} ${n === 1 ? "fælles selskab" : "fælles selskaber"}, ${overlapText(p)}${p.active ? " sammen" : ", tidligere"}`;
   };
   const more =
-    network.people.length > limit ? (
+    foldedCount(network.people.length, limit) < network.people.length ? (
       moreIn ? (
         <PromptLink label={`Se alle ${network.people.length} personer i ${moreIn.tab}`} onClick={moreIn.open} />
       ) : (
@@ -216,30 +178,30 @@ export function PersonNetwork({
         <ul className="lasso-personroles__rows">
           {rows.map((p, i) => (
             <li key={`${p.name}-${i}`} className={`lasso-personroles__row lasso-personnet__brow ${p.active ? "" : "is-ended"}`}>
-              <div className="lasso-personnet__who">
-                <div className="lasso-personroles__label">
+              <div className="lasso-personroles__label">
+                <div className="lasso-lanes__name">
+                  {p.companies.length > 1 && !print ? (
+                    <LaneToggle
+                      open={openRows.has(rowKey(p, i))}
+                      count={p.companies.length}
+                      what="fælles selskaber"
+                      onToggle={() => setOpenRows((prev) => { const n = new Set(prev); const k = rowKey(p, i); if (n.has(k)) n.delete(k); else n.add(k); return n; })}
+                    />
+                  ) : (
+                    <span className="lasso-lanes__spacer" />
+                  )}
                   <PersonName p={p} onOpen={onOpen} className="lasso-personnet__bname" />
-                  <div className="lasso-personroles__sub">{sub(p)}</div>
                 </div>
-                <div className="lasso-personnet__ov">
-                  <span className="lasso-personnet__ovn">{overlapText(p)}</span>
-                  <span className="lasso-personnet__ovu">{p.active ? "overlap" : "tidligere"}</span>
-                </div>
+                <div className="lasso-personroles__sub">{sub(p)}</div>
               </div>
-              <Track p={p} pos={pos} start={start} now={now} />
+              <BandLanes open={print || openRows.has(rowKey(p, i))} summary={summaryLabel(p.companies)} segs={p.companies.map((c) => seg(c, pos, start, now))} />
             </li>
           ))}
         </ul>
         {more}
       </div>
+      {/* Mobil (Jakob 01.10): uden grafik; navn og overlap, under det de fælles selskaber som tekst. */}
       <div className="lasso-personnet__mob">
-        <div className="lasso-personnet__maxis" aria-hidden="true">
-          {[...mticks, thisYear].map((y, i) => (
-            <span key={`${y}-${i}`} className={i === 3 ? "is-now" : undefined}>
-              {y}
-            </span>
-          ))}
-        </div>
         <ul className="lasso-personnet__mrows">
           {rows.map((p, i) => (
             <li key={`${p.name}-${i}`} className={`lasso-personnet__mrow ${p.active ? "" : "is-ended"}`}>
@@ -247,7 +209,14 @@ export function PersonNetwork({
                 <PersonName p={p} onOpen={onOpen} className="lasso-personnet__bname" />
                 <span className="lasso-personnet__mov">{p.active ? `${overlapText(p)} overlap` : `${overlapText(p)}, tidligere`}</span>
               </div>
-              <Track p={p} pos={pos} start={start} now={now} />
+              <ul className="lasso-personnet__mcos">
+                {p.companies.map((c, k) => (
+                  <li key={`${c.companyName}-${k}`} className={isBankrupt(c) ? "is-problem" : undefined}>
+                    {bandLabel(c)}
+                    {isBankrupt(c) ? `, ${problemText(c)}` : ""}
+                  </li>
+                ))}
+              </ul>
             </li>
           ))}
         </ul>

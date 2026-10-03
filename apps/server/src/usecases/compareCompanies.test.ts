@@ -40,11 +40,11 @@ test("compare_companies: 'hvem er størst' giver rangering og et nummereret teks
   assert.match(card, /1\. +Eksempel Maskinfabrik A\/S:/);
 });
 
-test("compare_companies: over 6 virksomheder giver rangering og note om de 6 største", async () => {
+test("compare_companies: over 3 virksomheder giver rangering og note om de 3 største (Jakob 01.10)", async () => {
   const cvrs = ["99000001", "99000002", "99000003", "99000004", "99000005", "99000006", "99000007", "99000008"];
   const v = ok(await compareCompanies(ctx, { companies: cvrs }));
   assert.deepEqual(types(v), ["LassoRanking", "LassoCompareTable"]);
-  assert.equal((v.spec.components[1] as { companies: string[] }).companies.length, 6);
+  assert.equal((v.spec.components[1] as { companies: string[] }).companies.length, 3);
   assert.ok(v.note!.includes(COMPARE_TABLE_NOTE));
 });
 

@@ -19,7 +19,7 @@ export function Frame({
   cropContent = false,
   mark = false,
   onReport,
-  minHeight = 120,
+  minHeight = 48,
   maxScale = 1,
   eager = false,
   label,

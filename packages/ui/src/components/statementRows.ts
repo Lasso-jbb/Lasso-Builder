@@ -23,12 +23,13 @@ function present(rows: StatementRow[]): StatementRow[] {
  * Resultatopgørelsen (19.1/19.2), fuldstændig: omsætning, vareforbrug og eksterne omkostninger,
  * bruttofortjeneste, personaleomkostninger, andre driftsomkostninger, EBITDA, af- og nedskrivninger,
  * resultat af primær drift (EBIT), finansielle indtægter og omkostninger (netto, når de ikke er opdelt),
- * resultat før skat, skat og årets resultat. Poster uden tal udelades.
+ * resultat før skat, skat og årets resultat. Alle poster står (Jakob 01.10), også uden tal.
  */
 export function incomeRows(shown: readonly IncomeStatementYear[]): StatementRow[] {
-  const revenueTop = shown.some((y) => y.revenue != null);
+  const revenueTop = true;
   const split = shown.some((y) => y.financialIncome != null || y.financialExpenses != null);
-  return present([
+  // Jakob 01.10 (19): en fuldendt resultatopgørelse; alle poster står, også dem regnskabet ikke oplyser ("Ikke oplyst").
+  return ([
     ...(revenueTop
       ? [
           { key: "top", label: "Omsætning", values: shown.map((y) => y.revenue), kind: "subtotal" as const },
@@ -142,4 +143,127 @@ export function balanceRowsCompact(shown: readonly BalanceSheetYear[]): Statemen
     { key: "shortTerm", label: "Kortfristet gæld", values: shown.map((y) => y.shortTermLiabilities) },
     { key: "liabAndEquityTotal", label: "Passiver i alt", values: shown.map((y) => y.liabilitiesAndEquityTotal ?? y.assetsTotal), kind: "bottom" },
   ];
+}
+
+/* ---------- Detaljeret regnskab (Jakob 01.10, modul 22) ---------- */
+
+/** En sum med underposter; har en underpost et kvalitetsflag, står flaget også ved summen, så det ses foldet ind. */
+const sub = (key: string, label: string, values: StatementRow["values"], children: StatementRow[], kind: StatementRow["kind"] = "subtotal"): StatementRow => {
+  const kids = present(children);
+  const flagged = kids.find((c) => c.flag);
+  return { key, label, values, kind, children: kids, ...(flagged ? { flag: `${flagged.label}: ${flagged.flag}` } : {}) };
+};
+
+/**
+ * Resultatopgørelsen struktureret som i et regnskab: summerne står fremme, og underposterne foldes ud ved
+ * summen, hvor det giver mening (mindst to underposter med tal): bruttofortjeneste (omsætning, vareforbrug),
+ * driftsomkostninger (personale, andre), finansielle poster (indtægter, omkostninger).
+ */
+export function incomeRowsDetailed(shown: readonly IncomeStatementYear[]): StatementRow[] {
+  const v = (f: (y: IncomeStatementYear) => number | null | undefined) => shown.map(f);
+  const opex = (y: IncomeStatementYear) => (y.staffCosts == null && y.otherOperatingCosts == null ? null : (y.staffCosts ?? 0) + (y.otherOperatingCosts ?? 0));
+  const fin = (y: IncomeStatementYear) => y.financialItemsNet ?? (y.financialIncome == null && y.financialExpenses == null ? null : (y.financialIncome ?? 0) + (y.financialExpenses ?? 0));
+  return [
+    sub("gross", "Bruttofortjeneste", v((y) => y.grossProfit), [
+      { key: "revenue", label: "Omsætning", values: v((y) => y.revenue) },
+      { key: "external", label: "Vareforbrug og eksterne omkostninger", short: "Vareforbrug og ekst.", values: v((y) => y.externalCosts) },
+    ]),
+    sub("opex", "Driftsomkostninger", v(opex), [
+      { key: "staff", label: "Personaleomkostninger", short: "Personaleomk.", values: v((y) => y.staffCosts) },
+      { key: "other", label: "Andre driftsomkostninger", short: "Andre driftsomk.", values: v((y) => y.otherOperatingCosts), flag: bigJumpFlag(shown.at(-2)?.otherOperatingCosts, shown.at(-1)?.otherOperatingCosts) },
+    ], "line"),
+    { key: "ebitda", label: "EBITDA", values: v((y) => y.ebitda), kind: "subtotal" },
+    { key: "depreciation", label: "Af- og nedskrivninger", short: "Af- og nedskr.", values: v((y) => y.depreciation) },
+    { key: "ebit", label: "Resultat af primær drift (EBIT)", short: "EBIT", values: v((y) => y.ebit), kind: "subtotal" },
+    sub("financial", "Finansielle poster, netto", v(fin), [
+      { key: "finIncome", label: "Finansielle indtægter", short: "Fin. indtægter", values: v((y) => y.financialIncome) },
+      { key: "finExpenses", label: "Finansielle omkostninger", short: "Fin. omkostninger", values: v((y) => y.financialExpenses) },
+    ], "line"),
+    { key: "pretax", label: "Resultat før skat", values: v((y) => y.profitBeforeTax), kind: "subtotal" },
+    { key: "tax", label: "Skat af årets resultat", values: v((y) => y.tax) },
+    { key: "profit", label: "Årets resultat", values: v((y) => y.profit), kind: "bottom" },
+  ];
+}
+
+/** Balancen struktureret: anlægsaktiver, omsætningsaktiver, egenkapital og gæld med underposterne foldet ind. */
+export function balanceSectionsDetailed(shown: readonly BalanceSheetYear[]): StatementSection[] {
+  const flat = balanceSections(shown);
+  const v = (f: (y: BalanceSheetYear) => number | null | undefined) => shown.map(f);
+  const debt = (y: BalanceSheetYear) => y.liabilitiesTotal ?? (y.longTermLiabilities == null && y.shortTermLiabilities == null ? null : (y.longTermLiabilities ?? 0) + (y.shortTermLiabilities ?? 0));
+  const mismatchA = flat[0]!.rows.find((r) => r.key === "assetsTotal")?.flag;
+  const mismatchP = flat[1]!.rows.find((r) => r.key === "liabAndEquityTotal")?.flag;
+  return [
+    {
+      heading: "AKTIVER",
+      rows: [
+        sub("fixedTotal", "Anlægsaktiver i alt", v((y) => y.fixedAssetsTotal), [
+          { key: "intangible", label: "Immaterielle anlægsaktiver", values: v((y) => y.intangibleAssets) },
+          { key: "tangible", label: "Materielle anlægsaktiver", values: v((y) => y.tangibleAssets) },
+          { key: "financialFixed", label: "Finansielle anlægsaktiver", values: v((y) => y.financialFixedAssets) },
+        ]),
+        sub("currentTotal", "Omsætningsaktiver i alt", v((y) => y.currentAssetsTotal), [
+          { key: "inventories", label: "Varebeholdninger", values: v((y) => y.inventories) },
+          { key: "tradeReceivables", label: "Tilgodehavender fra salg", values: v((y) => y.tradeReceivables) },
+          { key: "otherReceivables", label: "Andre tilgodehavender og periodeafgrænsning", values: v((y) => y.otherReceivables) },
+          { key: "cash", label: "Likvide beholdninger", values: v((y) => y.cash) },
+        ]),
+        { key: "assetsTotal", label: "Aktiver i alt", values: v((y) => y.assetsTotal), kind: "bottom", flag: mismatchA },
+      ],
+    },
+    {
+      heading: "PASSIVER",
+      rows: [
+        sub("equityTotal", "Egenkapital i alt", v((y) => y.equityTotal), [
+          { key: "shareCapital", label: "Selskabskapital", values: v((y) => y.shareCapital) },
+          { key: "retainedEarnings", label: "Overført resultat", values: v((y) => y.retainedEarnings) },
+        ]),
+        ...present([{ key: "provisions", label: "Hensatte forpligtelser", values: v((y) => y.provisions), kind: "subtotal" }]),
+        sub("liabilitiesTotal", "Gæld i alt", v(debt), [
+          { key: "longTerm", label: "Langfristet gæld", values: v((y) => y.longTermLiabilities) },
+          { key: "shortTerm", label: "Kortfristet gæld", values: v((y) => y.shortTermLiabilities) },
+        ]),
+        { key: "liabAndEquityTotal", label: "Passiver i alt", values: v((y) => y.liabilitiesAndEquityTotal), kind: "bottom", flag: mismatchP },
+      ],
+    },
+  ];
+}
+
+/** Pengestrømmen struktureret: drift, investering og finansiering med underposterne foldet ind. */
+export function cashFlowRowsDetailed(shown: readonly CashFlowYear[], statements: Pick<FinancialStatementsVM, "balanceSheet">): StatementRow[] {
+  const flat = cashFlowRows(shown, statements);
+  const v = (f: (y: CashFlowYear) => number | null | undefined) => shown.map(f);
+  return [
+    sub("operating", "Pengestrøm fra drift", v((y) => y.operatingCashFlow), [
+      { key: "profit", label: "Årets resultat", values: v((y) => y.profit) },
+      { key: "depreciation", label: "Af- og nedskrivninger", values: v((y) => y.depreciation) },
+      { key: "workingCapital", label: "Ændring i driftskapital", values: v((y) => y.workingCapitalChange) },
+    ]),
+    sub("investing", "Pengestrøm fra investering", v((y) => y.investingCashFlow), [{ key: "intangibleInvestments", label: "Køb af immaterielle aktiver", values: v((y) => y.intangibleInvestments) }]),
+    sub("financing", "Pengestrøm fra finansiering", v((y) => y.financingCashFlow), [
+      { key: "capitalIncrease", label: "Kapitalforhøjelse", values: v((y) => y.capitalIncrease) },
+      { key: "loanChange", label: "Optagelse / afdrag på lån", values: v((y) => y.loanChange) },
+    ]),
+    ...flat.filter((r) => ["netCashFlow", "cashBeginning", "cashEnding"].includes(r.key)),
+  ];
+}
+
+const ratio = (a: number | null | undefined, b: number | null | undefined) => (typeof a === "number" && typeof b === "number" && b !== 0 ? (a / b) * 100 : null);
+
+/**
+ * Nøgletallene, der kan regnes ud af regnskabet (Jakob 01.10: "alle nøgletal der er tilgængelige"):
+ * bruttomargin, overskudsgrad, afkastningsgrad, egenkapitalens forrentning, soliditetsgrad og likviditetsgrad.
+ * Nøgletal uden tal i nogen af årene udelades.
+ */
+export function keyFigureRows(income: readonly IncomeStatementYear[], balance: readonly BalanceSheetYear[], years: readonly number[]): StatementRow[] {
+  const inc = (y: number) => income.find((r) => r.year === y);
+  const bal = (y: number) => balance.find((r) => r.year === y);
+  const row = (key: string, label: string, f: (y: number) => number | null): StatementRow => ({ key, label, values: years.map(f), percent: true });
+  return present([
+    row("grossMargin", "Bruttomargin", (y) => ratio(inc(y)?.grossProfit, inc(y)?.revenue)),
+    row("operatingMargin", "Overskudsgrad", (y) => ratio(inc(y)?.ebit, inc(y)?.revenue ?? inc(y)?.grossProfit)),
+    row("roa", "Afkastningsgrad", (y) => ratio(inc(y)?.ebit, bal(y)?.assetsTotal)),
+    row("roe", "Egenkapitalens forrentning", (y) => ratio(inc(y)?.profit, bal(y)?.equityTotal)),
+    row("solvency", "Soliditetsgrad", (y) => ratio(bal(y)?.equityTotal, bal(y)?.assetsTotal)),
+    row("liquidity", "Likviditetsgrad", (y) => ratio(bal(y)?.currentAssetsTotal, bal(y)?.shortTermLiabilities)),
+  ]);
 }

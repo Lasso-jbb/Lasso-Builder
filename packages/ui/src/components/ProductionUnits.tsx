@@ -76,7 +76,6 @@ export function ProductionUnits({ units, error }: { units?: ProductionUnitsVM; e
         {units.units.map((u, i) => {
           const off = ended(u);
           const meta = [
-            u.pNumber ? `P-nr. ${u.pNumber}` : null,
             u.industryText ?? null,
             u.employees != null ? `${formatNumber(u.employees)} ansatte` : null,
             u.created ? `oprettet ${formatDate(u.created)}` : null,
@@ -100,9 +99,7 @@ export function ProductionUnits({ units, error }: { units?: ProductionUnitsVM; e
       </ul>
       <div className="lasso-units20__frame lasso-units__table" role="table" aria-label={title}>
         <div className="lasso-units20__row lasso-units20__row--head" role="row">
-          <span className="lasso-units20__pnr" role="columnheader">
-            P-nr.
-          </span>
+          {/* 20.1 (Jakob 01.10): intet P-nummer; enheden får pladsen, hovedenheden markeres ved navnet. */}
           <span className="lasso-units20__unit" role="columnheader">
             Enhed, adresse og kontakt
           </span>
@@ -122,12 +119,11 @@ export function ProductionUnits({ units, error }: { units?: ProductionUnitsVM; e
           const address = addressText(u);
           return (
             <div key={u.pNumber ?? i} className={`lasso-units20__row${off ? " is-ended" : ""}`} role="row">
-              <span className="lasso-units20__pnr" role="cell">
-                <span className="lasso-units__pnr">{u.pNumber ?? "-"}</span>
-                {u.isMain ? <span className="lasso-units__main">Hovedenhed</span> : null}
-              </span>
               <span className="lasso-units20__unit" role="cell">
-                <span className="lasso-units20__name">{u.name ?? "Ikke oplyst"}</span>
+                <span className="lasso-units20__name">
+                  {u.name ?? "Ikke oplyst"}
+                  {u.isMain ? <span className="lasso-units__main">Hovedenhed</span> : null}
+                </span>
                 {address ? <span className="lasso-units20__address">{address}</span> : null}
                 <ContactLine u={u} />
               </span>

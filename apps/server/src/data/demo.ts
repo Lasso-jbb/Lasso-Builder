@@ -15,10 +15,13 @@ import {
   type CompanyRowVM,
   type CompanyVM,
   type ContactPersonVM,
+  type ContactChannelVM,
   type ContactPersonsVM,
   type ContactVM,
   type CreditAssessment,
   type CreditRatingVM,
+  type ResumeVM,
+  type ValuationVM,
   type FinancialsVM,
   type FinancialStatementsVM,
   type NewsVM,
@@ -197,14 +200,17 @@ function timelineFor(c: DemoCompany): TimelineVM {
   const events: TimelineVM["events"] = [];
   if (c.founded) events.push({ date: c.founded, title: "Virksomheden stiftet", detail: c.name, category: "Stamdata" });
   for (const p of c.people) {
-    if (p.from) events.push({ date: p.from, title: `${p.name} er indtrådt`, detail: p.role, category: "Ledelse" });
-    if (p.to) events.push({ date: p.to, title: `${p.name} er fratrådt`, detail: p.role, category: "Ledelse" });
+    // 12.3 (Jakob 01.10): navnet kan åbnes, når personen har et Lasso-ID.
+    const pid = p.lassoId ?? PERSON_IDS.get(p.name);
+    const seg = (verb: string) => (pid ? [{ text: p.name, lassoId: pid }, { text: ` ${verb}` }] : undefined);
+    if (p.from) events.push({ date: p.from, title: `${p.name} er indtrådt`, titleSegments: seg("er indtrådt"), detail: p.role, category: "Ledelse" });
+    if (p.to) events.push({ date: p.to, title: `${p.name} er fratrådt`, titleSegments: seg("er fratrådt"), detail: p.role, category: "Ledelse" });
   }
   for (const y of financialsFor(c).years) {
     const bits = [y.grossProfit != null ? `Bruttofortjeneste ${formatAmount(y.grossProfit)}` : null, y.profit != null ? `resultat ${formatAmount(y.profit)}` : null].filter(
       (x): x is string => Boolean(x),
     );
-    events.push({ date: `${y.year}-04-15`, title: `Årsrapport ${y.year} offentliggjort`, detail: bits.join(", ") || undefined, category: "Regnskab" });
+    events.push({ date: `${y.year}-04-15`, title: `Årsrapport ${y.year} offentliggjort`, detail: bits.join(", ") || undefined, category: "Regnskab", url: `https://regnskaber.virk.dk/eksempel/${c.cvr}-${y.year}.pdf` });
   }
   // Katalog 12.3: ændringer vises som "fra → til" (gammel adresse gennemstreget, kapital før og efter).
   const a = c.address;
@@ -818,10 +824,32 @@ const VERIFIED_NUMBERS: Record<string, { verifiedNumbers: NonNullable<ContactVM[
   },
 };
 
+/**
+ * "Se flere" (08.3/08.7): CVR-værdierne og det, der står på hjemmesiden (eksempeldata): samme nummer og
+ * e-mail plus en info@-adresse på domænet, så panelet har både "Fra CVR" og "Fra hjemmeside".
+ */
+function demoChannels(c: DemoCompany): ContactChannelVM[] {
+  const out: ContactChannelVM[] = [];
+  if (c.phone) out.push({ kind: "phone", value: c.phone, source: "cvr" });
+  if (c.email) out.push({ kind: "email", value: c.email, source: "cvr" });
+  if (c.website) {
+    const domain = c.website.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "");
+    const page = `${c.website.replace(/\/$/, "")}/kontakt`;
+    if (c.phone) out.push({ kind: "phone", value: c.phone, source: "hjemmeside", url: page });
+    if (c.email) out.push({ kind: "email", value: c.email, source: "hjemmeside", url: page });
+    out.push({ kind: "email", value: `info@${domain}`, source: "hjemmeside", url: page });
+  }
+  return out;
+}
+
 function contactFor(c: DemoCompany): ContactVM {
   const hasAny = Boolean(c.phone || c.email || c.website);
   const verified = VERIFIED_NUMBERS[c.lassoId];
+  const channels = demoChannels(c);
+  const extraEmails = [...new Set(channels.filter((x) => x.kind === "email").map((x) => x.value))].filter((e) => e !== c.email);
   return {
+    ...(channels.length ? { channels } : {}),
+    ...(extraEmails.length ? { emails: extraEmails } : {}),
     lassoId: c.lassoId,
     phone: c.phone,
     email: c.email,
@@ -1023,6 +1051,35 @@ export class DemoProvider implements DataProvider {
     return observationsFor(c, financialsFor(c));
   }
 
+  /** Værdiansættelse (eksempeldata): ca. 0,6 × omsætningen for hovedvirksomheden og hver anden; resten uden. */
+  async valuation(lassoId: string): Promise<ValuationVM> {
+    const c = get(lassoId);
+    const seed = Number(c.cvr!.slice(-2));
+    if (seed % 2 === 0 && c.cvr !== "99000001") return { lassoId, state: "unavailable", reason: "Lasso har ingen værdiansættelse af virksomheden." };
+    const value = Math.round((c.base * 0.6) / 100_000) * 100_000;
+    return { lassoId, state: "ok", value, low: Math.round(value * 0.8), high: Math.round(value * 1.2), currency: "DKK", date: "2026-09-15" };
+  }
+
+  /** Erhvervsresumé (eksempeldata) med links i Lassos form: {Navn|Lasso-ID}. */
+  async resume(lassoId: string): Promise<ResumeVM> {
+    if (lassoId.startsWith("CVR-3-")) {
+      const p = await this.person(lassoId);
+      const first = p.roles[0];
+      const text = first
+        ? `${p.name} er registreret med sin første erhvervsrolle i ${first.companyId ? `{${first.companyName}|${first.companyId}}` : first.companyName}${first.from ? ` fra ${first.from.slice(0, 4)}` : ""}, hvor ${p.name.split(" ")[0]} er ${first.role.toLowerCase()}. I dag har ${p.name.split(" ")[0]} ${p.roles.filter((r) => r.active).length} aktive roller i CVR (eksempeltekst).`
+        : "";
+      return text ? { lassoId, state: "ok", content: text } : { lassoId, state: "unavailable", reason: "Lasso har intet erhvervsresumé endnu." };
+    }
+    const c = get(lassoId);
+    const people = await this.people(lassoId);
+    const lead = people.find((x) => !x.to);
+    return {
+      lassoId,
+      state: "ok",
+      content: `${c.name} blev stiftet i ${(c.founded ?? "2000").slice(0, 4)} og driver i dag virksomhed inden for ${(c.industryText ?? "sin branche").toLowerCase()} i ${c.address?.city ?? "Danmark"}.${lead ? ` Selskabet ledes af ${lead.lassoId ? `{${lead.name}|${lead.lassoId}}` : lead.name} som ${lead.role.toLowerCase()}.` : ""} (eksempeltekst)`,
+    };
+  }
+
   /** Katalog 17: eksempler på alle tilstande (fuld, låst, ikke beregnet); se creditRatingFor. */
   async creditRating(lassoId: string): Promise<CreditRatingVM> {
     return creditRatingFor(get(lassoId));
@@ -1032,7 +1089,7 @@ export class DemoProvider implements DataProvider {
   async companyEvents(lassoId: string): Promise<CompanyEventsVM> {
     const c = get(lassoId);
     const years = financialsFor(c).years;
-    const publications = publicationsFromYears(years.map((y) => ({ ...y, published: y.published ?? (y.periodEnd ? `${Number(y.periodEnd.slice(0, 4)) + 1}-05-28` : undefined) })));
+    const publications = publicationsFromYears(years.map((y) => ({ ...y, pdfUrl: `https://regnskaber.virk.dk/eksempel/${c.cvr}-${y.year}.pdf`, published: y.published ?? (y.periodEnd ? `${Number(y.periodEnd.slice(0, 4)) + 1}-05-28` : undefined) })));
     if (c.cvr === "99000001" && publications[1]?.figure) {
       // Eksempel på et korrigeret regnskab: den tidligere værdi står som "før …".
       publications[1] = { ...publications[1], corrected: true, published: publications[1].published?.replace(/-05-28$/, "-08-14"), figure: { ...publications[1].figure, previous: Math.round((publications[1].figure.value ?? 0) * 1.08) }, profit: publications[1].profit ? { ...publications[1].profit, previous: Math.round((publications[1].profit.value ?? 0) * 1.12) } : undefined };

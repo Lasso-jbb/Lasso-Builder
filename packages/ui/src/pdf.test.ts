@@ -150,9 +150,10 @@ test("print-tilstand: ingen handlingsbjælke eller knapper, 'Se alle' foldet ud"
   assert.doesNotMatch(print, /lasso-actionbar/);
   assert.doesNotMatch(print, /Gem som PDF|lasso-frame__save|Tilbage|Opdatér|Gem visning/);
   assert.doesNotMatch(print, /Se alle/);
-  // Alle 8 begivenheder, alle 6 nyheder og alle 6 personer står.
+  // Alle 8 begivenheder og alle 6 personer står; nyhederne højst 3 (Jakob 01.10, resten kræver Lasso Pro).
   for (let i = 0; i < 8; i++) assert.match(print, new RegExp(`Årsrapport ${2025 - i} offentliggjort`));
-  for (let n = 1; n <= 6; n++) assert.match(print, new RegExp(`Nyhed ${n} om byggeriet`));
+  for (let n = 1; n <= 3; n++) assert.match(print, new RegExp(`Nyhed ${n} om byggeriet`));
+  assert.doesNotMatch(print, /Nyhed 4 om byggeriet/);
   assert.match(print, /Finn Prøve/);
   // "Vis færre" står i markup'en, men print-CSS'en skjuler foldeknapperne (.lasso-more, .lasso-news__more m.fl.).
   assert.doesNotMatch(print.replace(/<button type="button" class="lasso-link[^"]*"[^>]*>Vis færre[^]*?<\/button>/g, ""), /<button/);
@@ -184,7 +185,7 @@ test("sidehoved og sidefod: mærke, navn, datastempel i dansk tid (ingen kilder)
 test("MCP-hovedet (minimalHead, Jakob 30.09): kun 'Vis i fuld skærm' og 'Gem som PDF', ingen Gem- og Eksportér-ikoner", () => {
   const on = html(companySpec(), { pdf: true, savePage: true, export: true, fullscreen: true, minimalHead: true });
   assert.doesNotMatch(on, /lasso-headbtn--save|lasso-headbtn--export|lasso-frame__save/);
-  assert.match(on, /lasso-fsbtn[^>]*>[^]*?Vis i fuld skærm<\/button>/);
+  assert.match(on, /class="lasso-iconbtn lasso-fsbtn" aria-label="Vis i fuld skærm"/);
   assert.match(on, /lasso-frame__pdf/);
   assert.doesNotMatch(html(companySpec(), { pdf: true, fullscreen: true, fullscreenActive: true, minimalHead: true }), /Vis i fuld skærm|>Fuld skærm</);
   // Uden minimalHead (delte sider) står ikonerne som før.

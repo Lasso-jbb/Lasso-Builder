@@ -12,6 +12,7 @@ import type {
   CompanyVM,
   ContactPersonVM,
   ContactPersonsVM,
+  ContactChannelVM,
   ContactVM,
   FinancialYear,
   FinancialsVM,
@@ -295,6 +296,8 @@ export function adaptContact(lassoId: string, companyRaw: Json, websitesRaw: Jso
   const filled = fillContactInfo(co, websitesRaw, contactsRaw);
   const hasAny = Boolean(filled.phone || filled.email || filled.website);
   const source = !hasAny ? undefined : co.phone || co.email ? "CVR" : "Virksomhedens hjemmeside";
+  const channels = contactChannels(co, contactsRaw, filled.website);
+  const extraEmails = [...new Set(channels.filter((c) => c.kind === "email").map((c) => c.value))].filter((e) => e !== filled.email);
   return {
     lassoId,
     phone: filled.phone,
@@ -303,7 +306,36 @@ export function adaptContact(lassoId: string, companyRaw: Json, websitesRaw: Jso
     address: filled.address,
     source,
     updated: hasAny ? new Date().toISOString().slice(0, 10) : undefined,
+    ...(channels.length ? { channels } : {}),
+    ...(extraEmails.length ? { emails: extraEmails } : {}),
   };
+}
+
+/**
+ * Alle telefonnumre og e-mails med kilde til "Se flere"-panelet (08.3/08.7): CVR-svarets egne værdier
+ * som "cvr" og alle fra kontaktendpointet som "hjemmeside" (samme værdi må stå begge steder).
+ */
+export function contactChannels(co: Pick<CompanyVM, "phone" | "email">, contactsRaw: Json | undefined, website?: string): ContactChannelVM[] {
+  const out: ContactChannelVM[] = [];
+  const seen = new Set<string>();
+  const add = (c: ContactChannelVM) => {
+    const key = `${c.kind}|${c.source}|${c.kind === "phone" ? c.value.replace(/\D/g, "").replace(/^45(\d{8})$/, "$1") : c.value.toLowerCase()}`;
+    if (!c.value || seen.has(key)) return;
+    seen.add(key);
+    out.push(c);
+  };
+  if (co.phone) add({ kind: "phone", value: co.phone, source: "cvr" });
+  if (co.email) add({ kind: "email", value: co.email, source: "cvr" });
+  const page = (entry: Json) => (typeof entry === "string" ? undefined : str(entry, "url", "source", "page", "foundOn"));
+  for (const p of arr(contactsRaw, "phonenumbers", "phoneNumbers", "phones")) {
+    const v = contactValue(p, "number", "value", "phone", "phoneNumber");
+    if (v) add({ kind: "phone", value: v, source: "hjemmeside", ...((page(p) ?? website) ? { url: page(p) ?? website } : {}) });
+  }
+  for (const e of arr(contactsRaw, "emails")) {
+    const v = contactValue(e, "email", "value", "address");
+    if (v) add({ kind: "email", value: v, source: "hjemmeside", ...((page(e) ?? website) ? { url: page(e) ?? website } : {}) });
+  }
+  return out;
 }
 
 /**
@@ -690,6 +722,8 @@ export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
     const src = pick(r, "figures", "keyFigures", "values", "financials", "incomeStatement") ?? r;
     const f = (concepts: readonly string[], ...keys: string[]) => firstFact(facts, concepts) ?? num(src, ...keys) ?? num(r, ...keys) ?? null;
     const publicationTime = dateStr(r, "publicationTime", "publicationDate", "published");
+    const pdfRaw = str(r, "pdfUrl", "documentUrl", "pdf", "links.pdf", "reportUrl");
+    const pdfUrl = pdfRaw && /^https?:\/\//i.test(pdfRaw) ? pdfRaw : undefined;
     const revenue = f(CONCEPTS.revenue, "revenue", "netRevenue", "turnover", "netTurnover", "omsaetning");
     const grossProfit = f(CONCEPTS.grossProfit, "grossProfit", "grossResult", "grossProfitLoss", "bruttofortjeneste");
     const profit = f(CONCEPTS.profit, "profit", "netResult", "profitLoss", "netIncome", "aaretsResultat");
@@ -712,6 +746,7 @@ export function adaptFinancials(lassoId: string, raw: Json): FinancialsVM {
       periodEnd,
       published,
       ...(publicationTime ? { publicationTime } : {}),
+      ...(pdfUrl ? { pdfUrl } : {}),
       ...(scope ? { scope } : {}),
       ...(currency ? { currency } : {}),
       revenue,
@@ -1113,10 +1148,13 @@ export function adaptTimeline(lassoId: string, companyRaw: Json, people: readonl
   const events: TimelineEventVM[] = [];
   const founded = dateStr(companyRaw, "lifeTime.from", "creationDate", "founded", "foundedDate");
   const name = str(companyRaw, "name", "companyName", "navn");
+  const cvr = str(companyRaw, "cvr", "cvrNumber", "vat", "vatNumber") ?? (/^CVR-1-(\d{8})$/.exec(lassoId)?.[1]);
   if (founded) events.push({ date: founded, title: "Virksomheden stiftet", detail: name, category: "Stamdata" });
   for (const p of people) {
-    if (p.from) events.push({ date: p.from, title: `${p.name} er indtrådt`, detail: p.role, category: "Ledelse" });
-    if (p.to) events.push({ date: p.to, title: `${p.name} er fratrådt`, detail: p.role, category: "Ledelse" });
+    // 12.3 (Jakob 01.10): navnet kan åbnes, når personen har et Lasso-ID.
+    const seg = (verb: string) => (p.lassoId ? [{ text: p.name, lassoId: p.lassoId }, { text: ` ${verb}` }] : undefined);
+    if (p.from) events.push({ date: p.from, title: `${p.name} er indtrådt`, titleSegments: seg("er indtrådt"), detail: p.role, category: "Ledelse" });
+    if (p.to) events.push({ date: p.to, title: `${p.name} er fratrådt`, titleSegments: seg("er fratrådt"), detail: p.role, category: "Ledelse" });
   }
   for (const y of years) {
     const date = y.publicationTime ?? y.periodEnd;
@@ -1125,7 +1163,9 @@ export function adaptTimeline(lassoId: string, companyRaw: Json, people: readonl
       y.grossProfit != null ? `Bruttofortjeneste ${formatAmountShort(y.grossProfit, y.currency)}` : null,
       y.profit != null ? `resultat ${formatAmountShort(y.profit, y.currency)}` : null,
     ].filter((x): x is string => Boolean(x));
-    events.push({ date, title: `Årsrapport ${y.year} offentliggjort`, detail: parts.join(", ") || undefined, category: "Regnskab" });
+    // Jakob 01.10: årsrapporten kan altid åbnes; uden PDF-link fra Lasso åbner virksomhedens side på Virk (regnskaberne).
+    const url = y.pdfUrl ?? (cvr ? `https://datacvr.virk.dk/enhed/virksomhed/${cvr}` : undefined);
+    events.push({ date, title: `Årsrapport ${y.year} offentliggjort`, detail: parts.join(", ") || undefined, category: "Regnskab", ...(url ? { url } : {}) });
   }
   events.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   return { lassoId, events };

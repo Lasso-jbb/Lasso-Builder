@@ -10,6 +10,9 @@ import { fetchPage, type LivePage } from "../source.js";
 import { VIEWPORTS } from "../structure.js";
 import { PageHead, ReportChip, Seg, Toggle } from "../ui.js";
 
+/** Print-eksemplet: A4 ved 96 dpi, som serverens Chromium tegner side-PDF'en. */
+const PRINT_VP = { id: "print", label: "Print (A4)", vw: 900, note: "Side-PDF'en: forside, alt foldet ud, ingen knapper; sidehoved med logo og navnelogo på hvert ark" };
+
 /**
  * Hele sider, som show_company og show_person bygger dem for hvert fokus, med live-data og på hver
  * skærm. Viser, hvordan modulerne pakkes i gitteret og foldes, ikke kun hvordan de ser ud alene.
@@ -30,7 +33,9 @@ export function LivePagesPage({ ctx, kind, focus }: { ctx: Ctx; kind: "company" 
     fetchPage(kind, current).then(setPage, (e: Error) => setError(e.message));
   }, [kind, current]);
   useEffect(() => setReport(undefined), [vp]);
-  const viewport = VIEWPORTS.find((v) => v.id === vp)!;
+  // Jakob 01.10 (27.1): print-eksempler: siden, som den kommer ud i PDF'en (A4, 794 px), med forside og alt foldet ud.
+  const viewport = vp === PRINT_VP.id ? PRINT_VP : VIEWPORTS.find((v) => v.id === vp)!;
+  const print = vp === PRINT_VP.id;
   const name = kind === "company" ? ctx.boot.showcase.tabs.find((t) => t.id === "virksomhed")?.label : ctx.boot.showcase.tabs.find((t) => t.id === "person")?.label;
   const pageTarget: CommentTarget = {
     target: `side:${kind}:${current}:${vp}`,
@@ -51,7 +56,7 @@ export function LivePagesPage({ ctx, kind, focus }: { ctx: Ctx; kind: "company" 
             { id: "person", label: "Person" },
           ]}
         />
-        <Seg label="Skærm" value={vp} onChange={setVp} items={VIEWPORTS.map((v) => ({ id: v.id, label: `${v.label} ${v.vw}` }))} />
+        <Seg label="Skærm" value={vp} onChange={setVp} items={[...VIEWPORTS, PRINT_VP].map((v) => ({ id: v.id, label: v.id === PRINT_VP.id ? v.label : `${v.label} ${v.vw}` }))} />
         <Toggle checked={mark} onChange={setMark}>
           Markér problemer
         </Toggle>
@@ -79,7 +84,13 @@ export function LivePagesPage({ ctx, kind, focus }: { ctx: Ctx; kind: "company" 
         {!page && !error ? <div className="dg-loading">Henter siden med live-data …</div> : null}
         {page ? (
           <Frame key={`${kind}${current}${vp}`} comment={pageTarget} vw={viewport.vw} mark={mark} eager onReport={setReport} minHeight={400} label={`${name}, ${labels[current]}, ${viewport.label}`}>
-            <LassoView spec={page.spec} dataset={page.dataset} host={HOST} onAction={() => undefined} theme={ctx.theme} />
+            {print ? (
+              <div className="dg-printsheet">
+                <LassoView print spec={{ ...page.spec, components: page.spec.components.filter((c) => c.type !== "LassoFollowUps") }} dataset={page.dataset} host={{}} onAction={() => undefined} theme="light" />
+              </div>
+            ) : (
+              <LassoView spec={page.spec} dataset={page.dataset} host={HOST} onAction={() => undefined} theme={ctx.theme} />
+            )}
           </Frame>
         ) : null}
         {report && report.findings.some((f) => f.kind !== "state") ? (

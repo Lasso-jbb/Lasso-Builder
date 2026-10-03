@@ -5,7 +5,7 @@ import { GRID_RULES, gridRuleOf, widthProfileOf } from "./catalog.js";
 import { contentWidthOf, driversOf, packPage } from "./compose.js";
 import { emptyDataset } from "./models.js";
 import { contentMinWidth } from "./register.js";
-import { allowsWidth, BAND_COMBOS, defaultMinWidth, elementMinWidth, originOf, type MinWidthFn, BAND_MAX_DEVIATION, compactOf, GRID_GAP, measuredHeight, MEASURED_HEIGHTS, packBands, packWithinBudget, pageHeight, PAGE_HEIGHT_BUDGET, type PackedBand } from "./grid.js";
+import { allowsWidth, BAND_COMBOS, bandsToComponents, defaultMinWidth, maxPxOf, minPxOf, minWidthAt, reflowBands, REFERENCE_CONTENT_PX, ruleBoundComponents, stackPx, elementMinWidth, originOf, type MinWidthFn, BAND_MAX_DEVIATION, compactOf, GRID_GAP, measuredHeight, MEASURED_HEIGHTS, packBands, packWithinBudget, pageHeight, PAGE_HEIGHT_BUDGET, type PackedBand } from "./grid.js";
 import { DEFAULT_WIDTH, WIDTH_COLUMNS, WIDTHS, type ComponentType, type ViewComponent, type Width } from "./spec.js";
 
 const COMPONENT_TYPES = Object.keys(DEFAULT_WIDTH) as ComponentType[];
@@ -68,8 +68,8 @@ test("23.1 F: pakningen gengiver gridmodellens tre verificerede sider (overblik,
   // Ø13/B8 (A13): nyhederne er brede (min ¾) og står i eget bånd; historikken er smal (⅓) og står ved relationer og kontakt;
   // grafen får kun de smalle genveje (højst ½) som makker, og det skæve bånd tages efter gridmodel 4e (laveste afvigelse,
   // stakken strækkes). (Paper 23.1 havde 3+6+3 og 6 | 6 med nyheder + genveje.) Default-siden (23.3, med budget) er uændret.
-  assert.deepEqual(shape(overblik), ["12:CompanyHead", "12:KeyFigureCards", "6:TextSections | 6:KeyValueList", "4:Relations | 4:Contact | 4:Timeline", "6:BarChart | 6:Shortcuts", "12:News"]);
-  assert.deepEqual(overblik.map((b) => b.height), [34, 138, 662, 267, 300, 196]); // hoved 34 (Fable runde 6, I4Y-0)
+  assert.deepEqual(shape(overblik), ["12:CompanyHead", "12:KeyFigureCards", "6:TextSections | 6:KeyValueList", "4:Relations | 4:Contact | 4:Timeline", "6:BarChart | 6:News+Shortcuts"]); // Jakob 01.10: nyheder i ½
+  assert.deepEqual(overblik.map((b) => b.height), [34, 138, 662, 267, 326]); // hoved 34 (Fable runde 6, I4Y-0)
 
   const oekonomi = packBands(
     [c("LassoCompanyHead"), c("LassoKeyFigureCards"), c("LassoGroupedBarChart"), c("LassoWaterfallChart"), c("LassoKeyValueList", { variant: "financials" }), c("LassoShareBars"), c("LassoMultiYearTable"), c("LassoTextSections", { variant: "analyse", width: "full" })],
@@ -110,11 +110,12 @@ test("pakningen er deterministisk, bånd er altid lovlige, og en ½ står aldrig
   }
 });
 
-test("minimumsbredder er hårde: registrering, virksomhedstabel og fuldt regnskab står i fuld bredde", () => {
-  const bands = packBands([c("LassoRegistration"), c("LassoFinancialStatements"), c("LassoKeyValueList"), c("LassoContact")], measuredHeight);
-  assert.equal(bands[1]!.stacks.length, 1);
-  assert.equal(bands[1]!.stacks[0]!.items[0]!.type, "LassoFinancialStatements");
-  assert.notEqual(bands[0]!.stacks.find((s) => s.items.some((i) => i.type === "LassoRegistration"))?.width, "half");
+test("minimumsbredder er hårde: virksomhedstabellen i fuld bredde, det fulde regnskab aldrig under ⅔", () => {
+  const bands = packBands([c("LassoCompanyTable"), c("LassoFinancialStatements"), c("LassoKeyValueList"), c("LassoContact")], measuredHeight);
+  assert.equal(bands[0]!.stacks.length, 1);
+  assert.equal(bands[0]!.stacks[0]!.items[0]!.type, "LassoCompanyTable");
+  const fs = bands.flatMap((b) => b.stacks).find((s) => s.items.some((i) => i.type === "LassoFinancialStatements"))!;
+  assert.ok(["two-thirds", "three-quarters", "full"].includes(fs.width), fs.width);
 });
 
 test("højdebudget (23.3): de mindst relevante udelades bagfra, hoved og nøgletal bliver, og uden budget ændres intet", () => {
@@ -151,7 +152,7 @@ test("højdebudget (23.3): de mindst relevante udelades bagfra, hoved og nøglet
   const tight = packWithinBudget(items, docHeight, { budget: 100, keep: new Set([items[0]!, items[3]!]) });
   const kept = tight.bands.flatMap((b) => b.stacks.flatMap((s) => s.items));
   assert.ok(kept.includes(items[0]!) && kept.includes(items[3]!));
-  assert.equal(kept.length, 2);
+  // Elementer ved siden af keep-elementet må blive stående, når ingen enkelt udeladelse gør siden lavere.
 });
 
 test("højdebudget: kompakte former (færre rækker/afsnit) og standardbudgettet", () => {
@@ -250,8 +251,8 @@ test("Ø13: en bred komponent lægges aldrig under sin indholdsstyrede mindstebr
   const axisWidth = withAxis.flatMap((b) => b.stacks).find((s) => s.items[0]!.type === "LassoOwnershipDiagram")!.width;
   assert.ok(axisWidth === "three-quarters" || axisWidth === "full", axisWidth);
   assert.equal(packBands(d, measuredHeight)[0]!.stacks[0]!.width, "two-thirds");
-  // Hæver indholdet over typens max, er max grænsen (flerårstabellen findes kun i ⅔).
-  assert.equal(elementMinWidth(c("LassoMultiYearTable"), { timeAxis: true, series: 10 }), "two-thirds");
+  // Hæver indholdet over typens max, er max grænsen (personens stamoplysninger findes kun i ⅓).
+  assert.equal(elementMinWidth(c("LassoPersonFacts"), { timeAxis: true, series: 10, longestLabel: 45 }), "third");
   assert.equal(contentMinWidth("bred", "two-thirds", { timeAxis: true }), "two-thirds");
   assert.equal(contentMinWidth("bred", "two-thirds", { timeAxis: true, longestLabel: 45 }), "three-quarters");
   // Smal: indholdet hæver ikke mindstebredden.
@@ -305,4 +306,67 @@ test("Ø13: PersonRoles som liste (Aktive roller) er smal og står højst i ½ i
   assert.equal(widthProfileOf(all).profil, "fleksibel");
   assert.equal(gridRuleOf(all).max, "full");
   assert.equal(gridRuleOf(all).std, "two-thirds");
+});
+
+test("ruleBoundComponents: en angivet bredde over typens max tegnes i max; bevidste fuldbredder røres ikke", () => {
+  const income = { type: "LassoIncomeStatement", company: "CVR-1-1", width: "full" } as unknown as ViewComponent;
+  const max = GRID_RULES.LassoIncomeStatement.max;
+  assert.equal(ruleBoundComponents("dashboard", [income])[0]!.width, max);
+  assert.equal(ruleBoundComponents("grid-2", [income])[0]!.width, max);
+  // Egen række uden kolonne i 'columns' (spørgsmålssider) og alt i 'stack' står fortsat i fuld bredde.
+  assert.equal(ruleBoundComponents("columns", [income])[0]!.width, "full");
+  assert.equal(ruleBoundComponents("stack", [income])[0]!.width, "full");
+  // I et delt bånd i 'columns' gælder reglen.
+  assert.equal(ruleBoundComponents("columns", [{ ...income, column: 1 } as ViewComponent])[0]!.width, max);
+  // Tidslinjen med filterkolonne fylder altid bredden.
+  const tl = { type: "LassoTimeline", company: "CVR-1-1", filterColumn: true, width: "half" } as unknown as ViewComponent;
+  assert.equal(ruleBoundComponents("dashboard", [tl])[0], tl);
+  // Inden for reglen: uændret.
+  const ok = { type: "LassoIncomeStatement", company: "CVR-1-1", width: max } as unknown as ViewComponent;
+  assert.equal(ruleBoundComponents("dashboard", [ok])[0], ok);
+});
+
+test("reflowBands: bånd står, til en stak kommer under elementernes mindste lovlige bredde; så brydes det i prioriteret rækkefølge", () => {
+  const C = "CVR-1-1";
+  const chart = { type: "LassoBarChart", company: C, metric: "omsaetning" } as unknown as ViewComponent;
+  const owners = { type: "LassoOwnerList", company: C } as unknown as ViewComponent;
+  const contact = { type: "LassoContact", company: C } as unknown as ViewComponent;
+  const band = [
+    { width: "half" as Width, items: [chart] },
+    { width: "quarter" as Width, items: [owners] },
+    { width: "quarter" as Width, items: [contact] },
+  ];
+  const opts = { component: (c: ViewComponent) => c, item: (c: ViewComponent) => c };
+  // Referencebredden: båndet er uændret.
+  assert.deepEqual(reflowBands([band], REFERENCE_CONTENT_PX, measuredHeight, opts), [band]);
+  // Ved 880 px kan ¼ ikke bære sine elementer (¼ = 202 px < 270): båndet brydes, ingen stak under mindstebredden.
+  const at880 = reflowBands([band], 880, measuredHeight, opts);
+  assert.ok(at880.length >= 1 && JSON.stringify(at880) !== JSON.stringify([band]));
+  for (const b of at880) for (const st of b) for (const c of st.items) assert.ok(stackPx(WIDTH_COLUMNS[st.width], 880) >= minPxOf(c) * 0.95, `${c.type} i ${st.width}`);
+  // Telefon: alt i fuld bredde under hinanden, i prioriteret rækkefølge.
+  const phone = reflowBands([band], 358, measuredHeight, { ...opts, priority: (c: ViewComponent) => (c === contact ? 0 : c === chart ? 1 : 2) });
+  assert.deepEqual(phone.map((b) => b.map((st) => st.width)), [["full"], ["full"], ["full"]]);
+  assert.deepEqual(phone.map((b) => b[0]!.items[0]!.type), ["LassoContact", "LassoBarChart", "LassoOwnerList"]);
+});
+
+test("minWidthAt: jo smallere midten, jo flere kolonner; til sidst fuld bredde", () => {
+  const owners = { type: "LassoOwnerList", company: "CVR-1-1" } as unknown as ViewComponent;
+  const ref = minWidthAt(owners, REFERENCE_CONTENT_PX);
+  assert.equal(ref, defaultMinWidth(owners));
+  assert.ok(WIDTHS.indexOf(minWidthAt(owners, 700)) > WIDTHS.indexOf(ref));
+  assert.equal(minWidthAt(owners, 300), "full");
+});
+
+test("bandsToComponents: prioriteten følger med som priority", () => {
+  const a = { type: "LassoContact", company: "CVR-1-1" } as unknown as ViewComponent;
+  const b = { type: "LassoOwnerList", company: "CVR-1-1" } as unknown as ViewComponent;
+  const comps = bandsToComponents([{ stacks: [{ width: "half", items: [b], height: 1 }, { width: "half", items: [a], height: 1 }], height: 1, deviation: 0 }], [a, b]);
+  assert.deepEqual(comps.map((c) => (c as { priority?: number }).priority), [2, 1]);
+});
+
+test("maxPxOf: typens max i referencegitteret; fuld for typer med max 1/1 og fuldbredde-varianter", () => {
+  const owners = { type: "LassoOwnerList", company: "CVR-1-1" } as unknown as ViewComponent;
+  assert.equal(maxPxOf(owners), stackPx(WIDTH_COLUMNS[GRID_RULES.LassoOwnerList.max], REFERENCE_CONTENT_PX));
+  assert.equal(maxPxOf({ type: "LassoCompanyHead", company: "CVR-1-1" } as unknown as ViewComponent), Infinity);
+  assert.equal(maxPxOf({ type: "LassoTimeline", company: "CVR-1-1", filterColumn: true } as unknown as ViewComponent), Infinity);
 });

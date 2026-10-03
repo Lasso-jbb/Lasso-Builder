@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { usePrintMode } from "../print.js";
 import {
   changeText,
   formatAmount,
@@ -47,23 +48,28 @@ export function NotReported({ kind = "reported" }: { kind?: "reported" | "regist
 
 /**
  * 02c.1 Fritekst: korte tekster i én linje, lange foldes efter 4 linjer med "Vis mere" (uden "…").
+ * Jakob 01.10: der foldes kun, når "Vis mere" reelt viser mindst 50 % mere; ellers står hele teksten.
  * Ingen anførselstegn, ingen kursiv. Folden måles i browseren; uden DOM skønnes den på længden.
  */
 export function FoldText({ text, lines = 4, moreLabel = "Vis mere" }: { text: string; lines?: number; /** Fx "Vis hele formålet" (28.7). */ moreLabel?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
-  const [open, setOpen] = useState(false);
-  const [overflow, setOverflow] = useState(text.length > 60 * lines);
+  const print = usePrintMode();
+  const [open, setOpen] = useState(print);
+  const [overflow, setOverflow] = useState(text.length > 60 * lines * 1.5);
   useIsoLayoutEffect(() => {
     const el = ref.current;
     if (!el || open) return;
-    setOverflow(el.scrollHeight > el.clientHeight + 1);
-  }, [text, open]);
+    // Hele tekstens højde mod de foldede linjer (målt uanset om folden er sat).
+    const lh = parseFloat(getComputedStyle(el).lineHeight) || 20;
+    setOverflow(el.scrollHeight >= lh * lines * 1.5);
+  }, [text, open, lines]);
+  const clamp = !open && overflow;
   return (
     <span className="lasso-fold">
-      <span ref={ref} className={`lasso-fold__text ${open ? "is-open" : ""}`} style={open ? undefined : { maxHeight: `${lines}lh` }}>
+      <span ref={ref} className={`lasso-fold__text ${open ? "is-open" : ""}`} style={clamp ? { maxHeight: `${lines}lh` } : undefined}>
         {text}
       </span>
-      {overflow || open ? (
+      {(overflow || open) && !print ? (
         <button type="button" className="lasso-fold__more" aria-expanded={open} onClick={() => setOpen(!open)}>
           {open ? "Vis mindre" : moreLabel}
         </button>
@@ -184,15 +190,15 @@ export function ValueList({ values, onShowAll, max = 2, mobileMax = 1 }: { value
 }
 
 /**
- * 02c.10 Branche med kode: koden først i muted, derefter teksten, som må ombrydes til 2 linjer
- * (aldrig "…" i detaljevisning). På mobil står koden under teksten.
+ * 02c.10 Branche med kode: teksten først, koden i parentes efter i muted (Jakob 01.10). Teksten må
+ * ombrydes (aldrig "…" i detaljevisning).
  */
 export function IndustryValue({ code, text }: { code?: string | null; text?: string | null }) {
   if (!text && !code) return <NotReported />;
   return (
     <span className="lasso-industry">
-      {code ? <span className="lasso-industry__code">{code}</span> : null}
       {text ? <span className="lasso-industry__text">{text}</span> : null}
+      {code ? <span className="lasso-industry__code">{text ? `(${code})` : code}</span> : null}
     </span>
   );
 }
@@ -239,17 +245,22 @@ export function ContactValue({ kind, value, more = 0, onShowAll }: { kind: "phon
   const text = kind === "phone" ? formatPhone(value) : kind === "email" ? value.trim().toLowerCase() : formatWeb(value);
   const href = kind === "phone" ? `tel:+45${text.replace(/\s/g, "")}` : kind === "email" ? `mailto:${text}` : /^https?:\/\//i.test(value.trim()) ? value.trim() : `https://${value.trim()}`;
   const ext = kind === "web" ? { target: "_blank", rel: "noreferrer" } : {};
+  // Jakob 01.10: telefonnummeret er ren tekst; kun "Se alle N" kan klikkes. E-mail og web er stadig links.
   return (
     <span className="lasso-contactvalue">
-      <a className="lasso-link" href={href} {...ext}>
-        {text}
-      </a>
+      {kind === "phone" ? (
+        <span>{text}</span>
+      ) : (
+        <a className="lasso-link" href={href} {...ext}>
+          {text}
+        </a>
+      )}
       {more > 0 ? (
         <>
           <span className="lasso-muted-extra">, </span>
           {onShowAll ? (
             <button type="button" className="lasso-link lasso-link--more" onClick={onShowAll}>
-              {`Se ${moreText(more)}`}
+              {`Se alle ${formatNumber(more + 1)}`}
             </button>
           ) : (
             <span className="lasso-muted-extra">{moreText(more)}</span>
@@ -330,20 +341,24 @@ export { QualityFlag } from "./QualityFlag.js";
 /**
  * 02c.18 Låst værdi: feltet beholder plads og label. 14 px låseikon i muted og et kort link i
  * primary-text ("Kræver Lasso Pro"). Må antallet vises, står det før linket ("3 personer" +
- * "Se med Lasso Pro"). Ingen boks, badge eller pille. `blur` giver en sløret pladsholder i stedet.
+ * "Kræver Lasso Pro"). Ingen boks, badge eller pille. `blur` giver en sløret pladsholder i stedet.
  */
 export function LockedValue({ count, noun, linkLabel, onUpgrade, href, blur = false }: { count?: number; /** Navneord efter antallet, fx "personer". */ noun?: string; linkLabel?: string; onUpgrade?: () => void; href?: string; blur?: boolean }) {
   const hasCount = typeof count === "number";
-  const label = linkLabel ?? (hasCount ? "Se med Lasso Pro" : "Kræver Lasso Pro");
+  // Jakob 01.10: "Kræver Lasso Pro" begge steder (også efter et antal).
+  const label = linkLabel ?? "Kræver Lasso Pro";
   return (
     <span className="lasso-locked">
-      {/* 02c.18: låseikonet står foran begge former ("Kræver Lasso Pro" og "3 personer  Se med Lasso Pro"). */}
+      {/* 02c.18: låseikonet står foran begge former ("Kræver Lasso Pro" og "3 personer  Kræver Lasso Pro"). */}
       <svg className="lasso-locked__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.8" />
         <path d="M8 11V8a4 4 0 018 0v3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
       </svg>
       {hasCount ? (
         <span className="lasso-locked__count">{`${formatNumber(count)}${noun ? ` ${noun}` : ""}`}</span>
+      ) : noun ? (
+        // Uden kendt antal (fx "Flere nyheder", 12.4): kun teksten.
+        <span className="lasso-locked__count">{noun}</span>
       ) : blur ? (
         <span className="lasso-locked__blur" aria-label="Skjult værdi">
           00.000.000

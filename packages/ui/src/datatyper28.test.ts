@@ -20,28 +20,29 @@ const ev: CompanyEventsVM = {
   ],
 };
 
-test("28.6/26h.8: fusion som 'fra → til', fokus med koral kant, ophørt i muted, mini-tidslinjens sætning", () => {
+test("28.6 (Jakob 01.10): fusion med navngivne grupper (ophørte → fortsættende), fokus markeret, ophørt i muted", () => {
   const html = renderToStaticMarkup(createElement(Mergers, { events: ev, company: { lassoId: "CVR-1-1", name: "Eksempel A/S", founded: "2012-05-14" }, demo: true }));
-  assert.match(html, /01\.07\.2022[^]*Fusion/);
-  assert.match(html, /is-ceased[^]*Data Eksempel A\/S[^]*ophørt ved fusionen/);
-  assert.match(html, /is-focus[^]*Eksempel A\/S/);
-  assert.match(html, /Data Eksempel A\/S \(ophørende\) fusioneret ind i Eksempel A\/S/); // 28.6: navnene, ikke "denne virksomhed"
-  assert.match(html, /14\.05\.2012[^]*Stiftet/);
+  assert.match(html, /lasso-merger__type">Fusion<\/span><span class="lasso-merger__date">01\.07\.2022/);
+  assert.match(html, /Ophørte ved fusionen[^]*is-ceased[^]*Data Eksempel A\/S/);
+  assert.match(html, /Fortsættende selskab[^]*is-focus[^]*Eksempel A\/S[^]*denne virksomhed/);
+  assert.match(html, /Stiftet<\/span><span class="lasso-merger__date">14\.05\.2012/);
   const none = renderToStaticMarkup(createElement(Mergers, { events: { ...ev, mergers: [] } }));
   assert.match(none, /ingen registrerede fusioner eller spaltninger/);
 });
 
-test("28.8: Statstidende med alvorsfarvet type; udelades helt uden bekendtgørelser", () => {
+test("28.8: Statstidende som en nyhed (Jakob 01.10) med alvorsfarvet mærke; udelades helt uden bekendtgørelser", () => {
   const html = renderToStaticMarkup(createElement(Announcements, { events: ev }));
-  assert.match(html, /lasso-announce__type--bankrupt">Dekret om konkurs</);
+  assert.match(html, /lasso-announce__badge--bankrupt">Dekret om konkurs</);
+  assert.match(html, /lasso-announce__meta">Statstidende, /);
   assert.doesNotMatch(html, /lasso-sour/, "ingen kildevisning");
   assert.equal(renderToStaticMarkup(createElement(Announcements, { events: { ...ev, announcements: [] } })), "");
 });
 
 test("28.2: publicering med ny/korrigeret, udråbstegn og 'før …' under tallet", () => {
   const html = renderToStaticMarkup(createElement(Publications, { events: ev }));
-  assert.match(html, />Årsrapport, ny</);
-  assert.match(html, />Korrigeret<span class="lasso-stmt__flag"/, "flaget står efter ordet");
+  // Jakob 01.10: "Årsrapport ÅÅÅÅ" (download-link, når PDF'en findes) med perioden under.
+  assert.match(html, />Årsrapport \d{4}</);
+  assert.match(html, />Årsrapport \d{4}, korrigeret<span class="lasso-stmt__flag"/, "flaget står efter ordet");
   assert.match(html, /125,6 mio\. kr\.<\/span><span class="lasso-publications__before">før 135,7 mio\. kr\./);
   assert.doesNotMatch(html, /<s>|line-through/);
 });
@@ -141,7 +142,8 @@ test("28.7/26h.9: regnskabsoplysninger og kapital som to kort; fravalgt revision
   const profile = renderToStaticMarkup(createElement(Registration, { company, texts, variant: "profile" }));
   assert.match(profile, /lasso-reg__chip">631000 Databehandling, hoved</);
   assert.match(profile, /Formål[^]*At drive it-virksomhed\./);
-  assert.match(profile, />Vis tegningsregel og vedtægter</);
+  assert.match(profile, /Tegningsregel/);
+  assert.doesNotMatch(profile, /Vis tegningsregel/);
 });
 
 test("28.4: bestillingsformular med de fire rapporttyper, PDF | Zip og 'Bestil N rapporter'; koral links", async () => {

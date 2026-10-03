@@ -10,9 +10,9 @@ import {
   KeyFigureGauge,
   Livestock,
   PersonFacts,
-  ScoreHistory,
   LassoContact,
   LassoContactPersons,
+  LassoRelations,
   ScoreGauge,
   Section,
   Sparkline,
@@ -30,7 +30,7 @@ function Stack({ children, gap = 28 }: { children: ReactNode; gap?: number }) {
 function Labelled({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div style={{ display: "grid", gap: 8 }}>
-      <div className="lasso-small" style={{ color: "var(--lasso-text-muted)" }}>{label}</div>
+      <div className="lasso-small" style={{ color: "var(--lasso-muted)" }}>{label}</div>
       {children}
     </div>
   );
@@ -175,6 +175,9 @@ function CompanyHeads() {
       <Labelled label="Variant: status er ikke Aktiv/Normal: status efter navnet i sin farvegruppe">
         <CompanyHead company={{ ...BYG, status: "Under konkurs", statusKind: "warning", statusDate: undefined }} actions={headActions(false)} />
       </Labelled>
+      <Labelled label="Variant: langt navn (mobil: højst 2 linjer og …, knapperne bliver i toppen)">
+        <CompanyHead company={{ ...BYG, name: "Eksempel Byg og Anlægsentreprise Midtjylland Holding A/S" }} actions={headActions(false)} />
+      </Labelled>
     </Stack>
   );
 }
@@ -199,19 +202,24 @@ function LiveNumberStates() {
     // Blokken står i kontaktkolonnens bredde (ca. 380 px), som i Paper.
     <div style={{ maxWidth: 380 }}>
     <Stack>
-      <Labelled label="Verificeret nu + Udgået (gennemstreget)">
+      {/* Jakob 01.10: ingen verificeringsnoter; kun et udgået nummer markeres. */}
+      <Labelled label="Udgået nummer (gennemstreget)">
         <LassoContact contact={withNumbers} now={now} onCopy={noop} foldExtra={false} />
       </Labelled>
-      <Labelled label="Tjekker … (opslag i gang, højst 10 sek.)">
-        <LassoContact contact={stale} now={now} onVerify={() => new Promise(() => undefined)} onCopy={noop} foldExtra={false} />
-      </Labelled>
-      <Labelled label="Tidsstempel (verificeret for N dage siden)">
+      <Labelled label="Verificerede numre (ingen markering)">
         <LassoContact contact={stale} now={now} onCopy={noop} foldExtra={false} />
       </Labelled>
     </Stack>
     </div>
   );
 }
+
+/** 11.1: Eksempel Byg A/S' produktionsenheder (fiktive). */
+const UNITS = [
+  { pNumber: "1000000020", name: "Eksempel Byg A/S", isMain: true, address: { street: "Prøvevej 1", zip: "8600", city: "Silkeborg" } },
+  { pNumber: "1000000021", name: "Eksempel Byg, Aarhus", address: { street: "Eksempelgade 12", zip: "8000", city: "Aarhus C" } },
+  { pNumber: "1000000022", name: "Eksempel Byg, materialegård", address: { street: "Industrivej 4", zip: "7430", city: "Ikast" } },
+];
 
 const Y = (year: number, revenue: number | null, grossProfit: number, profit: number, equity: number, employees: number) => ({ year, revenue, grossProfit, profit, equity, employees });
 const FIN_FULL: FinancialsVM = {
@@ -256,13 +264,13 @@ function ScoreStates() {
 /** C6 (Ø6): låste tilstande (abonnement/modul) og ikke tilgængelige branchetal; tekster fra register.liveNote. */
 function LockedStates() {
   const wrap = (node: ReactNode) => <div className="lasso-framewrap" style={{ flex: 1 }}>{node}</div>;
+  // Samme tekst som serverens SCORE_LOCKED_REASON (apps/server/src/lasso/scoreAdapters.ts).
   const SUB = "Kræver Creditsafe-abonnement. Score og kreditvurdering vises, når Creditsafe er tilføjet Lasso-abonnementet.";
   const fin = { lassoId: B, years: [] } as unknown as FinancialsVM;
   return (
     <Stack>
       <StateRow height={200}>
         {wrap(<ScoreGauge score={{ lassoId: B, score: null, state: "unavailable", reason: SUB }} onFetch={noop} />)}
-        {wrap(<ScoreHistory history={{ lassoId: B, points: [], reason: SUB }} onFetch={noop} />)}
         {wrap(<KeyFigureGauge financials={fin} industry={{ lassoId: B, state: "unavailable", reason: "Lasso har ingen branchetal for virksomhedens branche endnu.", years: [] }} />)}
       </StateRow>
       {wrap(<Livestock livestock={{ lassoId: B, herds: [], events: [], unavailableReason: "Kræver Ejendomme-modulet i Lasso-abonnementet" }} />)}
@@ -286,11 +294,11 @@ function NumberFormats() {
     <dl style={{ display: "grid", gridTemplateColumns: "220px auto", gap: "10px 24px", margin: 0 }}>
       {rows.map(([k, v]) => (
         <div key={k} style={{ display: "contents" }}>
-          <dt className="lasso-small" style={{ color: "var(--lasso-text-muted)" }}>{k}</dt>
+          <dt className="lasso-small" style={{ color: "var(--lasso-muted)" }}>{k}</dt>
           <dd style={{ margin: 0, fontVariantNumeric: "tabular-nums", fontWeight: 500 }}>{v}</dd>
         </div>
       ))}
-      <dt className="lasso-small" style={{ color: "var(--lasso-text-muted)" }}>Udvikling (▲ grøn, ▼ rød)</dt>
+      <dt className="lasso-small" style={{ color: "var(--lasso-muted)" }}>Udvikling (▲ grøn, ▼ rød)</dt>
       <dd style={{ margin: 0, fontVariantNumeric: "tabular-nums", fontWeight: 500, display: "flex", gap: 16 }}>
         <Delta from={100} to={107.5} />
         <Delta from={100} to={96.6} />
@@ -335,7 +343,7 @@ function Palette() {
 }
 
 /**
- * 13.9 og 26b.7: sparkline-tilstandene som 44 px rækker med etiket, sparkline og værdi til højre.
+ * 13.9: sparkline-tilstandene som 44 px rækker med etiket, sparkline og værdi til højre.
  * Sparklinen er altid koral; krydser værdierne 0, står en stiplet nullinje; sparsøjler til
  * kvartalstal; under 3 datapunkter står "-" i stedet for en sparkline.
  */
@@ -376,7 +384,7 @@ function Sparklines() {
 
 export const entries: GalleryEntry[] = [
   // 08 Virksomhed
-  { nr: "08.1", title: "Virksomhedshoved", node: "I4C-0", render: () => <CompanyHeads />, note: "Runde 6: navnet står alene ved Aktiv/Normal; ved alle andre statusser står statussen efter navnet (14/500, 12 px) i sin farvegruppe (05.7). Navn, status og ikonknapper på én linje, lodret centreret; ingen ekstra luft under hovedet (sektionsmellemrummet følger)." },
+  { nr: "08.1", title: "Virksomhedshoved", node: "I4C-0", render: () => <CompanyHeads />, note: "Runde 6: navnet står alene ved Aktiv/Normal; ved alle andre statusser står statussen efter navnet (14/500, 12 px) i sin farvegruppe (05.7). Navn, status og ikonknapper på én linje, lodret centreret; ingen ekstra luft under hovedet (sektionsmellemrummet følger). Mobil (Jakob 01.10): knapperne højrestillet i toppen, navnet højst 2 linjer med …" },
   { nr: "08.2", title: "Sektionsfaner", node: "9S7-0", render: () => <SectionTabs />, note: "Fanerne leveres af værten (LassoView.headTabs); her tegnet med CompanyHead + Tabs niveau 1 med 8 faner." },
   { nr: "08.3", title: "Kontaktblok", node: "9SV-0", spec: co("Eksempel Byg A/S", [{ type: "LassoContact", company: B }]) },
   { nr: "08.4", title: "Genveje", node: "9TL-0", spec: co("Eksempel Byg A/S", [{ type: "LassoShortcuts", company: B }]) },
@@ -388,7 +396,7 @@ export const entries: GalleryEntry[] = [
     node: "L75-0",
     render: () => <SeeAllPanel />,
     only: "desktop",
-    note: "Paper L75-0: tre kolonner i portalens ramme (virksomheden | stillinger pr. afdeling | valgt person). Tvillinger/Nyheder og 'Se detaljer' vises kun, når værten kan åbne dem (G1).",
+    note: "Se flere (Jakob 01.10): panelet glider ind fra højre og dækker de højre 2/3 af visningen; sidens første kolonne står synlig. Stillinger pr. afdeling i midten, den valgte person med kopiér og kilder til højre. Luk fader ud.",
   },
   {
     nr: "08.8",
@@ -417,7 +425,14 @@ export const entries: GalleryEntry[] = [
 
   // 09 Nøgletal
   { nr: "09.1", title: "Nøgletalskort", node: "9UM-0", spec: co("Eksempel Byg A/S", [{ type: "LassoKeyFigureCards", company: B }]) },
-  { nr: "09.2", title: "Nøgle-værdi-liste", node: "9VU-0", spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "company" }]) },
+  {
+    nr: "09.2",
+    title: "Nøgle-værdi-liste",
+    node: "9VU-0",
+    note: "Jakob 01.10: fast rækkefølge (Branche, Formål, Kommune, Reklamebeskyttet, Telefon, E-mail, Website, CVR, Binavne, Status, Stiftelsesdato, Virksomhedsform, Seneste vedtægtsændring, Regnskabsår, Seneste regnskab udgivet, Selskabskapital, Børsnoteret, Revisor, Underskrivende revisor, Tegningsregler, Antal ansatte); branchekoden i parentes efter navnet. Kort visning (view 'short': 8 rækker, resten foldes ud på stedet) og fuld visning (view 'full'). På mobil står hver oplysning på sin egen række.",
+    spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "company", view: "short" }]),
+  },
+  { nr: "09.2f", sortAs: "09.2", title: "Nøgle-værdi-liste, fuld visning", node: "9VU-0", note: "view 'full': alle oplysninger i den faste rækkefølge (Jakob 01.10).", spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "company", view: "full" }]) },
   { nr: "09.3", title: "Talformat", node: "9XW-0", render: () => <NumberFormats />, note: "Tegnet med formatAmount/formatPercent/formatNumber/formatDate fra @lasso/spec." },
   {
     nr: "09.4",
@@ -442,8 +457,19 @@ export const entries: GalleryEntry[] = [
     nr: "09.5",
     title: "Nøgle-værdi-liste med årsvælger",
     node: "9WR-0",
-    spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "financials" }]),
-    note: "Med årsrapportens PDF-link i datasættet: 'Hent regnskabet' øverst i elementet og 'Se alle' under listen (Jakob 29.09).",
+    spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "financials", view: "short" }]),
+    note: "Kort visning (Jakob 01.10): 8 rækker og 'Vis alle N' på stedet. Med årsrapportens PDF-link i datasættet: 'Hent regnskabet' øverst i elementet (Jakob 29.09).",
+    mutate: (ds) => {
+      ds.financialStatements[B] = { lassoId: B, currency: "DKK", incomeStatement: [], balanceSheet: [], cashFlow: [], pdfUrl: "https://example.com/aarsrapport.pdf" };
+    },
+  },
+  {
+    nr: "09.5f",
+    sortAs: "09.5",
+    title: "Nøgle-værdi-liste med årsvælger, fuld visning",
+    node: "9WR-0",
+    spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "financials", view: "full" }]),
+    note: "view 'full': alle rækker for året og 'Se alle' (hele regnskabet) under listen (Jakob 01.10).",
     mutate: (ds) => {
       ds.financialStatements[B] = { lassoId: B, currency: "DKK", incomeStatement: [], balanceSheet: [], cashFlow: [], pdfUrl: "https://example.com/aarsrapport.pdf" };
     },
@@ -451,7 +477,7 @@ export const entries: GalleryEntry[] = [
 
   // 10 Score og tabeller
   { nr: "10.1", title: "Scoremåler", node: "9ZT-0", spec: co("Eksempel Byg A/S", [{ type: "LassoScoreGauge", company: B, width: "half" }]), note: "Måleren i en ½-kolonne som i Paper (ca. 540 px)." },
-  { nr: "10.2", title: "Flerårstabel", node: "A0Q-0", spec: co("Eksempel Byg A/S", [{ type: "LassoMultiYearTable", company: B, metrics: ["omsaetning", "bruttofortjeneste", "resultat", "egenkapital"], years: 5 }]) },
+  { nr: "10.2", title: "Flerårstabel", node: "A0Q-0", note: "Jakob 01.10: standard er de 4 vigtigste nøgletal: bruttofortjeneste, årets resultat, egenkapital og ansatte (ingen omsætning).", spec: co("Eksempel Byg A/S", [{ type: "LassoMultiYearTable", company: B, years: 5 }]) },
   {
     nr: "10.3",
     title: "Datatilstande (fælles tilstandssprog, 10b)",
@@ -472,7 +498,7 @@ export const entries: GalleryEntry[] = [
     ),
   },
   { nr: "10.4", title: "Scoremåler, tilstande (10b)", node: "LG2-0", note: "10b: ikke beregnet, henter (skelet af måleren med shimmer), ikke tilgængelig. Lassos risikoscore, ingen Creditsafe.", render: () => <ScoreStates /> },
-  { nr: "10.5", title: "Låst og ikke tilgængelig med årsag (C6)", note: "Ø6: score og scorehistorik låst uden Creditsafe-abonnement (ingen knap), CHR låst uden Ejendomme-modulet, branchetal ikke tilgængelige med årsag.", render: () => <LockedStates /> },
+  { nr: "10.5", title: "Låst og ikke tilgængelig med årsag (C6)", note: "Ø6: Lassos score (måleren; beregnes ud fra Creditsafe-ratingen) låst uden Creditsafe-abonnement (ingen knap), CHR låst uden Ejendomme-modulet, branchetal ikke tilgængelige med årsag.", render: () => <LockedStates /> },
   {
     nr: "16.6",
     title: "Stamoplysninger i ½ (to kolonner)",
@@ -499,8 +525,26 @@ export const entries: GalleryEntry[] = [
         own.owners = [...own.owners, ...["Prøve Invest ApS", "Carla Prøve", "Dan Prøve", "Eva Prøve"].map((name) => ({ ...base, name, lassoId: undefined }))];
       }
       ds.errors[`beneficialOwnership:${B}`] = "Reelle ejere kræver adgang (403).";
-      ds.productionUnits[B] = { lassoId: B, units: [], total: 1 };
+      ds.productionUnits[B] = { lassoId: B, units: UNITS };
     },
+  },
+  {
+    nr: "11.1p",
+    sortAs: "11.1",
+    title: "Rolleliste, kompakt: produktionsenheder foldet ud",
+    node: "A3I-0",
+    note: "Jakob 01.10: 'Produktionsenheder N' kan åbnes; enhederne står i en liste lige under (hovedenheden først, markeret), med adresse. Har virksomheden flere enheder end de hentede, åbner 'Se alle N' produktionsenhederne (20.1).",
+    gridWidth: 270,
+    render: () => (
+      <LassoRelations
+        people={[{ name: "Anne Eksempel", role: "Adm. direktør", lassoId: "CVR-3-4000001" }, { name: "Bo Eksempel", role: "Bestyrelsesformand" }, { name: "Carla Prøve", role: "Bestyrelsesmedlem" }]}
+        ownership={{ lassoId: B, owners: [{ name: "Eksempel Holding ApS", kind: "company", share: "100 %" }] }}
+        productionUnits={UNITS.length}
+        units={UNITS}
+        defaultUnitsOpen
+        onOpen={noop}
+      />
+    ),
   },
   { nr: "11.2", title: "Personliste, udfoldet", node: "A4F-0", gridWidth: 564, spec: co("Eksempel Byg A/S", [{ type: "LassoPersonList", company: B, show: "all" }]) },
   { nr: "11.3", title: "Ejerliste", node: "A5X-0", spec: co("Eksempel Byg A/S", [{ type: "LassoOwnerList", company: B }]) },
@@ -529,7 +573,7 @@ export const entries: GalleryEntry[] = [
     title: "Nyhedsliste",
     node: "LMF-0",
     spec: co("Eksempel Byg A/S", [{ type: "LassoNews", company: B, limit: 3 }]),
-    note: "Paper LMF-0 (runde 5): kildevisning 12/16 muted, overskrift 14/500/18 som historikkens begivenhed (12.3), uddrag 13/18 klippet efter 2 linjer, virksomheden i fed i uddraget, 'Vis flere' nederst. Papers eksempeltekster.",
+    note: "Jakob 01.10: titlen er 'Skrevet i medierne'; højst 3 nyheder, og er der flere, står 'Flere nyheder – Kræver Lasso Pro' (antallet kendes ikke). Overskriften og 'Åbn artikel' åbner artiklen via værten. Paper LMF-0: kildevisning 12/16 muted, overskrift 14/500/18, uddrag 13/18 klippet efter 2 linjer, virksomheden i fed i uddraget. Eksempellinks peger på mediernes forsider.",
     mutate: (ds) => {
       const ago = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString();
       ds.news[B] = {
@@ -537,7 +581,7 @@ export const entries: GalleryEntry[] = [
         items: [
           {
             source: "Børsen",
-            url: "https://borsen.dk/nyheder/eksempel",
+            url: "https://borsen.dk/",
             time: ago(3),
             headline: "Datavirksomhed lander aftale med finanssektoren",
             excerpt: "Aftalen giver bankerne adgang til opdaterede virksomhedsdata, oplyser Lasso X i en pressemeddelelse. Selskabet kalder aftalen en milepæl",
@@ -546,7 +590,7 @@ export const entries: GalleryEntry[] = [
           { source: "Lasso News", time: "2026-04-15", headline: "Ny årsrapport: bruttofortjenesten stiger 7,5 %", excerpt: "Skrevet ud fra regnskabet for 2025. Resultat efter skat -201 t. kr., egenkapital 3,2 mio. kr." },
           {
             source: "Tech.eu",
-            url: "https://tech.eu/eksempel",
+            url: "https://tech.eu/",
             time: "2026-01-12",
             language: "engelsk",
             headline: "Nordic data startups to watch in 2026",

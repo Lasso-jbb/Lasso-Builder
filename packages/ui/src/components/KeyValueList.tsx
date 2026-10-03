@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { usePrintMode } from "../print.js";
 import { ExpandLink } from "./ExpandLink.js";
 import {
   companyFacts,
@@ -20,7 +21,7 @@ import {
   type FinancialStatementsVM,
   type FinancialsVM,
   type Metric,
-  type OwnershipVM,
+  type OwnershipVM, type ValuationVM,
 } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, stateForError } from "../primitives.js";
@@ -85,7 +86,11 @@ function dayMonth(value: string | undefined): string | undefined {
   return m ? `${m[2]}.${m[1]}` : undefined;
 }
 
+/** Kort visning (09.2/09.5): så mange rækker står fremme, resten bag "Se alle N oplysninger". */
+const SHORT_ROWS = 8;
+
 interface Row {
+  key?: string;
   label: string;
   value?: string;
   danger?: boolean;
@@ -110,8 +115,9 @@ function companyRows(
   lastYear: FinancialsVM["years"][number] | undefined,
   hide: { identity: boolean; contact: boolean; auditor: boolean },
   rows?: readonly CompanyFactKey[],
+  valuation?: ValuationVM,
 ): Row[] {
-  return companyFacts(company, ownership, lastYear, { hideIdentity: hide.identity, hideContact: hide.contact, hideAuditor: hide.auditor, rows });
+  return companyFacts(company, ownership, lastYear, { hideIdentity: hide.identity, hideContact: hide.contact, hideAuditor: hide.auditor, rows, valuation });
 }
 
 const FINANCIALS_ROW_METRICS: Metric[] = ["resultat", "egenkapital", "ansatte", "ebitda", "soliditetsgrad", "overskudsgrad", "likviditetsgrad", "balancesum", "gaeld"];
@@ -205,8 +211,6 @@ function Value({ value, lassoId, onOpen }: { value: string; lassoId?: string; on
   }
   return <>{value}</>;
 }
-
-const SHORT_PAIR = ["Stiftet", "Virksomhedsform"] as const;
 
 /** Handling for en klikbar række (02c.13): åbner virksomheden eller personen, når værten kan. */
 function rowOpener(r: Row, onOpen?: (a: ViewAction) => void): (() => void) | undefined {
@@ -315,6 +319,7 @@ function CompanyCard({ company, contact, rows = CARD_ROWS, title, onLink }: { co
 export function KeyValueList({
   company,
   ownership,
+  valuation,
   financials,
   variant,
   title,
@@ -331,7 +336,8 @@ export function KeyValueList({
   links,
   onPdf,
   years: yearCount = 5,
-  maxRows,
+  maxRows: maxRowsProp,
+  view = "full",
   look = "list",
   contact,
   fields,
@@ -341,6 +347,8 @@ export function KeyValueList({
   company?: CompanyVM;
   ownership?: OwnershipVM;
   financials?: FinancialsVM;
+  /** Værdiansættelsen til rækken Valuation (Jakob 02.10). */
+  valuation?: ValuationVM;
   variant: "company" | "financials";
   title?: string;
   error?: string;
@@ -370,6 +378,8 @@ export function KeyValueList({
   years?: number;
   /** Kun de første N rækker; resten bag "Se N oplysninger" (30.13). */
   maxRows?: number;
+  /** Jakob 01.10 (09.2/09.5): 'short' = de første 8 rækker (eller maxRows), resten foldes ud på stedet; 'full' = alle. */
+  view?: "short" | "full";
   /** Variant "company": 'card' = portalens virksomhedskort (CompanyCard). */
   look?: "list" | "card";
   /** Kontaktdata (flere telefonnumre og e-mails) til virksomhedskortet. */
@@ -382,9 +392,10 @@ export function KeyValueList({
   onLink?: (url: string) => void;
 }) {
   const heading = title ?? (variant === "financials" ? "Regnskab" : "Virksomhedsoplysninger");
+  const maxRows = maxRowsProp ?? (view === "short" ? SHORT_ROWS : undefined);
   const ready = variant === "financials" ? Boolean(financials) : Boolean(company);
   const [year, setYear] = useState<number | null>(null);
-  const [allRows, setAllRows] = useState(false);
+  const [allRows, setAllRows] = useState(usePrintMode());
   /** 30.13: de første maxRows rækker og "Se N oplysninger" under listen. */
   const cut = <T,>(rows: readonly T[]): readonly T[] => (maxRows && !allRows ? rows.slice(0, maxRows) : rows);
   const moreRows = (n: number) =>
@@ -467,7 +478,7 @@ export function KeyValueList({
 
   if (look === "card") return <CompanyCard company={company!} contact={contact} rows={rowKeys} title={title} onLink={onLink} />;
   const ansatteFlag = financials?.quality?.ansatte;
-  const rows = companyRows(company!, ownership, financials?.years.at(-1), { identity: hideIdentity, contact: hideContact, auditor: hideAuditor }, rowKeys).map((r): Row =>
+  const rows = companyRows(company!, ownership, financials?.years.at(-1), { identity: hideIdentity, contact: hideContact, auditor: hideAuditor }, rowKeys, valuation).map((r): Row =>
     r.label === "Ansatte" && ansatteFlag ? { ...r, flag: ansatteFlag } : r,
   );
   if (rows.length === 0) {
@@ -480,17 +491,14 @@ export function KeyValueList({
       </Section>
     );
   }
-  // 26c.2: to korte felter (Stiftet, Virksomhedsform) deler én række på mobil, når de står efter hinanden.
-  const pairAt = rows.findIndex((r, i) => SHORT_PAIR[0] === r.label && rows[i + 1]?.label === SHORT_PAIR[1] && r.value && rows[i + 1]?.value);
   return (
     <Section title={heading} span="half">
       <div className="lasso-kv-list">
-        {cut(rows).map((r, i) => {
+        {cut(rows).map((r) => {
           const open = rowOpener(r, onOpen);
-          const half = pairAt >= 0 && (i === pairAt || i === pairAt + 1) ? (i === pairAt ? " lasso-kv-row--half" : " lasso-kv-row--half lasso-kv-row--half-end") : "";
           return (
             // 02c.13: har værdien et Lasso-ID, er hele rækken klikbar (navnet er stadig knappen for tastatur).
-            <div className={`lasso-kv-row ${open ? "lasso-kv-row--link" : ""}${half}`} key={r.label} onClick={open}>
+            <div className={`lasso-kv-row ${open ? "lasso-kv-row--link" : ""}`} key={r.key ?? r.label} onClick={open}>
               <Label text={r.label} info={info} />
               <div className={`lasso-kv-row__value lasso-kv-row__value--wrap${r.tone === "warning" ? " lasso-kv-row__value--warning" : ""}`}>
                 {r.code ? (

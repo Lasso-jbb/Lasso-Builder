@@ -71,8 +71,8 @@ export const PERSON_PAGE_BUDGET = PAGE_HEIGHT_BUDGET;
 /** Regel 9 pr. fokus: overblikket viser få og "Se alle N"; fanen for emnet viser flere. */
 const OVERVIEW_ROLES = 5;
 const OVERVIEW_NETWORK = 3;
-const OVERVIEW_EVENTS = 3;
 const TAB_ROLES = 8;
+
 const TAB_NETWORK = 8;
 const NEWS = 5;
 
@@ -91,9 +91,12 @@ export function composePersonProbe(lassoId: string, focus?: PersonFocus, ask?: A
   // Hovedet henter personen; roller, stamoplysninger, risiko og historik afledes af den (ingen ekstra opslag).
   const components: ViewComponent[] = [{ type: "LassoPersonHead", person }];
   if (focus === "overblik" || focus === "netvaerk") components.push({ type: "LassoPersonNetwork", person });
-  if (focus === "overblik" || focus === "risiko" || focus === "historik") components.push({ type: "LassoTimeline", person });
+  // Erhvervsresuméet (GET /modules/resume) på overblikket.
+  if (focus === "overblik") components.push({ type: "LassoSummary", title: "Erhvervsresumé", resume: person, source: "Lasso" });
+  // Jakob 01.10: overblikket viser ikke længere historik og ejerskab (de har egne faner).
+  if (focus === "risiko" || focus === "historik") components.push({ type: "LassoTimeline", person });
   if (focus === "historik") components.push({ type: "LassoNews", person, limit: NEWS });
-  if (focus === "overblik" || focus === "ejerskab") components.push({ type: "LassoOwnershipDiagram", person, ...PERSON_GRAPH_DEPTH });
+  if (focus === "ejerskab") components.push({ type: "LassoOwnershipDiagram", person, ...PERSON_GRAPH_DEPTH });
   return viewSpecSchema.parse({ kind: "person", title: lassoId, layout: "stack", components });
 }
 
@@ -328,7 +331,7 @@ export function packPersonPage(groups: readonly (readonly ViewComponent[])[], ds
     bands.push(...packed);
   });
   if (carry.length) bands.push(...pack(carry));
-  return { bands, components: bandsToComponents(bands), height: pageHeight(bands, 0) };
+  return { bands, components: bandsToComponents(bands, groups.flat()), height: pageHeight(bands, 0) };
 }
 
 /** Alle ombytninger af 0..n-1 i leksikografisk rækkefølge (identiteten først). */
@@ -430,6 +433,9 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
       const halves: ViewComponent[] = [];
       if (events.length > 0) halves.push({ type: "LassoTimeline", person: id });
       if (news.length > 0 || ds.errors[`news:${id}`]) halves.push({ type: "LassoNews", person: id, limit: NEWS });
+      // Jakob 01.10: ofte har medierne intet skrevet om personen. Så står karrieren som roller over tid
+      // (tidsbånd, de ophørte stiplede) i stedet for en tom nyhedsliste.
+      else if (hasRoles) halves.push({ type: "LassoPersonRoles", person: id, limit: TAB_ROLES, title: "Roller over tid" });
       // Hverken rolleskift eller nyheder: historikkens tomme tilstand siger det.
       if (halves.length === 0) halves.push({ type: "LassoTimeline", person: id });
       pair(halves);
@@ -451,12 +457,12 @@ export function composePerson(lassoId: string, ds: Dataset, options: ComposePers
             ? { type: "LassoPersonRoles", person: id, show: "ended", limit: OVERVIEW_ROLES, more: "roller" }
             : null,
       );
-      // Netværk (fuld bredde), risiko, historik og ejerskab pakket efter bredderne; ingen nyheder på overblikket (de står på historik).
+      // Netværket (fuld bredde). Jakob 01.10: ingen historik og intet ejerskab på overblikket; de står på
+      // fanerne Historik og Ejerskab. Ingen nyheder på overblikket (de står på historik).
       const halves: ViewComponent[] = [];
       if (network.length > 0) halves.push({ type: "LassoPersonNetwork", person: id, limit: OVERVIEW_NETWORK, more: "netvaerk" });
-      if (events.length > 0) halves.push({ type: "LassoTimeline", person: id, limit: OVERVIEW_EVENTS, more: "historik" });
-      const d = diagram({ title: "Ejerskab", showError: false });
-      if (d) halves.push(d);
+      // Erhvervsresuméet fra Lasso (GET /modules/resume, Jakob 02.10) efter netværket, når der er et.
+      if (ds.resumes?.[id]?.state === "ok") halves.push({ type: "LassoSummary", title: "Erhvervsresumé", resume: id, source: "Lasso" });
       pair(halves);
       // Overblikket har intet svar-element ud over hovedet og hovedelementet: de halve kan udelades.
       droppable = true;

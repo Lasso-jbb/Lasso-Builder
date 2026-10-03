@@ -31,11 +31,13 @@ Kildeudtrækket laves af `apps/view/scripts/designguide-source.ts` (tokens, teks
 5. Navne står alene: ingen initial-cirkler eller ikonkasser.
 6. Ingen midterprik nogen steder. Brug komma.
 7. Ikon + ord ved enhver farvekodning, aldrig kun farve.
-8. UDGÅET (Jakob 29.09, G3): ingen kildelinje ("Kilde: …, opdateret …") i nogen elementer. `SourceLine` tegner intet og bruges ikke. Heller ingen anden kildevisning (Jakob runde 6): ingen "Vis kilder (N)" (19.3, 30.2) og ingen "Kilder" + link (08.7, 08.9-08.11).
+8. UDGÅET (Jakob 29.09, G3): ingen kildelinje ("Kilde: …, opdateret …") i nogen elementer; der findes ingen kildelinje-komponent. Heller ingen anden kildevisning (Jakob runde 6): ingen "Vis kilder (N)" (19.3, 30.2) og ingen "Kilder" + link (08.7, 08.9-08.11).
 9. Flere værdier end formen kan vise: vis 3 + "Se N …".
 10. Risikoskala 0 (lav) til 100 (høj). Fire trin: 0 neutral, 25 info, 50 mulig vigtig, 100 vigtig.
 11. Grupperede navnelister (personer og virksomheder under et gruppenavn, fx Direktion, Bestyrelse, Legale ejere, Reelle ejere; 11.1): gruppenavnet i 13/600 tekstfarve, hvert navn på sin egen linje i 14/400 tekstfarve (aldrig 500 eller koral i hvile; koral og understregning kun ved hover og fokus, når navnet kan åbnes), note efter navnet ("(formand)") og "og N flere" i 13/400 muted. Gælder overalt, også i sideskabelonens tre kolonner (Jakob 30.09.2026).
 12. To former for "mere" (Jakob 30.09.2026): en liste eller folder, der folder sig ud på stedet, får linket "Vis alle N ›" (koralt, 14/500, pil til højre; "Vis færre" med pil op, når den er foldet ud; `ExpandLink`). Åbner handlingen en ny prompt eller en anden visning (fane, fokus, spørgsmål til Claude), er den en knap med kant og "→" som de opfølgende spørgsmål (`PromptLink`, `LassoFollowUps`). Ingen "og N flere", "Se N oplysninger" eller "Vis flere" som udfoldning.
+
+13. "Se flere" (Jakob 01.10.2026): flere telefonnumre, e-mailadresser eller kontaktpersoner, end blokken viser, åbner et panel, der glider ind fra højre og dækker de højre 2/3 af visningen; sidens første kolonne står synlig, og der er ingen mørk overlay. I midten en grupperet liste (fx "Fra CVR", "Fra hjemmeside", "Verificeret af Lasso" eller afdelingerne), den valgte i koral; til højre detaljen med værdien, "Kopiér …" og **Kilder** (undtagelse fra regel 8: panelet viser, hvor oplysningen kommer fra). Luk er det neutrale ×, og panelet fader ud. På mobil et ark med liste og detalje. `SidePanel variant="flere"`.
 
 ## Generelle regler fra Jakobs gennemgang (29.09.2026)
 
@@ -64,7 +66,7 @@ Alle elementer har **fyldt**, **henter** (skelet i samme højde), **tom** (siger
 - Reference til virksomhed (02c.13): kun navnet, ingen undertekst (CVR, rolle eller andel). Personreferencer må have "Siden <dato>" (`EntityRef kind`).
 - Dato `15.04.2026`. Datofelt "mellem" (02a.6, 02b.10): fra-dato og til-dato; til-datoen kan ikke vælges før fra-datoen (dagene før er deaktiverede i kalenderen), og en indtastet til-dato før fra-datoen afvises med fejlteksten "Til-datoen kan ikke være før fra-datoen." (`DATE_RANGE_ERROR`).
 
-Alt dette ligger i `packages/spec/src/format.ts`.
+Formateringen ligger i `packages/spec/src/format.ts`; `DATE_RANGE_ERROR` og datovalideringen (`validateCriteria`) ligger i `packages/spec/src/catalog.ts`.
 
 ## Status (02c.8, 05.7, 28.1)
 
@@ -85,7 +87,9 @@ Teknologier er grupperet i typer (fx CRM-system, Live chat, Digital marketing); 
 
 ## Grid og rækkefølge (06, guide 23)
 
-4-kolonne-grid i midten, kun bredderne ¼, ½, ¾ og fuld. Nøgletalskort deler fuld bredde (3–5), grafer er mindst ½, tabeller altid fuld bredde. Flere grafer på hver sin fane, aldrig stablet på et overblik.
+12-kolonne-gitter i midten med seks bredder: ¼ (3 kolonner), ⅓ (4), ½ (6), ⅔ (8), ¾ (9) og fuld (12) (`WIDTHS`/`WIDTH_COLUMNS` i `packages/spec/src/spec.ts`). På tablet bliver ¼ og ⅓ til ½, ⅔ og ¾ til fuld; på mobil står alt i én kolonne. Nøgletalskort deler fuld bredde (3–5), grafer er mindst ½, tabeller altid fuld bredde. Flere grafer på hver sin fane, aldrig stablet på et overblik.
+
+Hver types tilladte bredder står ét sted: `GRID_RULES` i `packages/spec/src/catalog.ts`. Max håndhæves, når siden tegnes (`ruleBoundComponents` i `grid.ts`): angiver en spec en bredere bredde (render_view, gemte sider), tegnes elementet i typens max, så en ændret regel slår igennem alle steder. Undtaget er layout `stack` og `page`, tidslinjen med filterkolonne og nyhedernes kortgitter. Et element alene i en række (også en række uden kolonne, fx resultatopgørelsen som egen række på spørgsmålssider) vises højst i sin største lovlige bredde (`maxPxOf`: typens max målt i referencegitteret), venstrestillet; resten af rækken står tom.
 
 Virksomhedsside: hoved, risiko (kun ved 50+), nøgletal, én graf ved siden af nøgle-værdi-listen, personer og ejere, historik og nyheder.
 
@@ -102,7 +106,7 @@ Virksomhedsside: hoved, risiko (kun ved 50+), nøgletal, én graf ved siden af n
 | Dele af en helhed | Stablede søjler, donut + andelsbjælker | 13, 20 |
 | Fra A til B | Vandfald | 13 |
 | Placering blandt lignende | Rangliste, sammenligning i kolonner | 13, 22 |
-| Score 0–100 | Scoremåler, score over tid | 10, 13, 18 |
+| Score 0–100 | Scoremåler | 10, 18 |
 | Risiko | Alvorsskala + observationsliste | 17 |
 | Kreditvurdering (Creditsafe A–E) | Kreditvurdering | 17 |
 | Personer og roller | Rolleliste, tidsbånd, netværk | 11, 16 |
@@ -111,18 +115,42 @@ Virksomhedsside: hoved, risiko (kun ved 50+), nøgletal, én graf ved siden af n
 | Begivenheder over tid | Tidslinje, ændringsfeed | 12, 21 |
 | Gemte sider | Liste med åbn og fjern (samme rækkemønster som personlisten) | 11 |
 
-## Responsivt (26–26h)
+## Responsivt (26 og 26f; mobilelementerne står ved deres desktop-tavle)
 
-1440 → 1200 (panel under midten) → 960 (skinnen skjules) → 768 (to kolonner, maks 6 tabelkolonner) → 390 (én kolonne). På mobil bliver tabeller til kortlister og ejerdiagrammet til en liste, rækker er mindst 44 px, grafer viser maks 5 punkter. Kun brudpunkter, ingen separate mobiludgaver.
+### Den responsive model for modulerne (`reflowBands`, `packages/spec/src/grid.ts`)
+
+Sidens moduler lægges ikke ud efter faste brudpunkter, men efter den bredde, midten faktisk har, og efter det, vi ved om hvert element:
+
+1. **Udgangspunktet** er siden, som den er pakket i referencegitteret (desktop 1200, midte 1152 px): bånd af stakke, der summerer til 12 kolonner, med elementerne i prioriteret rækkefølge.
+2. **Hvert element har en mindste lovlige bredde** i px: dets mindstebredde (`GRID_RULES` min, hævet efter breddeprofil og indhold, fx lange navne, tidsakse og rækker pr. post) målt i referencegitteret, fx ⅓ = 368 px. Elementet må komme 5 % under (`MIN_WIDTH_TOLERANCE`).
+3. **Et bånd står**, så længe hver stak stadig er mindst så bred som dens elementers mindste lovlige bredde. Elementerne bliver blot smallere, ned til deres mindste design.
+4. **Kommer en stak under, brydes båndet**: dets elementer pakkes igen i prioriteret rækkefølge med de samme regler som på desktop (højdebalance, smal højst ½, aldrig et halvt element alene), men med den bredde, hvert element mindst skal have i den aktuelle bredde (`minWidthAt`). Det, der stadig kan stå sammen, gør det; resten kommer på ny linje under.
+5. **Kan et element ikke stå smallere end fuld bredde** (eller ikke inden for typens max), står det alene. På en telefon ender alt derfor under hinanden i prioriteret rækkefølge.
+7. **Alene i en række** vises et element højst i sin største lovlige bredde (typens max målt i referencegitteret, fx ½ = 564 px), venstrestillet. Er midten smallere end det, fylder det midten.
+8. **Telefonen** er ikke mindstebredden: midten er ca. 358 px, smallere end de fleste elementers mindste lovlige bredde. Der står alt alene i fuld bredde, og elementerne skifter selv til deres mobilform (under 560 px midte: tabeller som kortlister, ejerdiagrammet som liste, nøgle over værdi).
+6. **Prioriteten** er komponisternes rækkefølge (det vigtigste først), som følger med i specen som `priority`; uden den gælder specens rækkefølge.
+
+LassoView måler midten (ResizeObserver) og lægger båndene ud for layout `dashboard` og `columns` (`lasso-dband--flow`, `lasso-columns--flow`). Modellen er ren og deterministisk og testet i `grid.test.ts`. De faste foldningsregler nedenfor (960/1199, `tabletSpans`, mobilrækkefølgen) gælder kun i det øjeblik, før midten er målt, og for layout `grid-2` og `page`.
+
+### Modulets former (`packages/spec/src/layoutFormats.ts`)
+
+Inde i et modul skifter formen ikke efter skærmen, men efter modulets egen målte bredde (`useLayoutFormat` i `packages/ui/src/formats.tsx`). Hvert modul med former har en liste fra den største til den mindste, og hver form har en mindste lovlig bredde. Modulet bruger altid den første **godkendte** form, der er plads til; under alle bruges den mindste godkendte. Derfor kan formen kun gå én vej, når modulet bliver smallere, uanset om det sker, fordi skærmen er smallere, portalens skinne kommer eller går, eller modulet står i en smallere celle.
+
+Nøgletalskort (fire tal): én række med skillelinjer (≥ 200 px pr. tal, 800 px) → én række kort (≥ 140 px pr. kort, 596 px) → to kort pr. række (280 px; telefoner op til 390 får den kompakte 26c.1-tekst) → ét tal pr. række. Klassen står på elementet (`lasso-kpis--linjer|kort|2x2|stablet`), og kun de regelsæt styrer formen i `styles.css`.
+
+Designguiden viser under Bredder, **Fra største til mindste**, alle formerne langs bredden, en tabel med skærmene (stor skærm, laptop, tablet vandret og lodret, mobiler ned til 320) og gittercellerne og modulet tegnet i hver bredde. Formerne godkendes med et flueben. Godkendelsen gemmes på serveren (`/designguide/api/formater`) og virker straks i guidens rammer; portalen og chatten bruger `APPROVED_FORMATS` i koden, som opdateres ud fra guiden.
+
+Tre brudpunkter (galleri 26.1): ≥ 1200 desktop, 768–1199 tablet, < 768 mobil. Den klassiske portals ramme (`AppShell`) har derudover et trin ved 1024: 1024–1199 beholder fanebjælken med en smal skinne, 768–1023 skifter til tabletrammen. Elementerne i midten folder efter midtens egen bredde (≤ 960 tablet, ≤ 560 mobil). På mobil bliver tabeller til kortlister og ejerdiagrammet til en liste, rækker er mindst 44 px, grafer viser maks 5 punkter. Kun brudpunkter, ingen separate mobiludgaver.
 
 Brudpunktsregler (26, node `DH5-0`; guide 23 trin 7) og hvor de står i `styles.css`:
 
 | Bredde | Sideskabelon (`AppShell`, container = hele portalen) | Midten (`LassoView`, container = selve visningen) |
 |---|---|---|
-| ≥ 1200 | Skinne 236 + midte + panel 336 (`panel`-prop) | Midten er > 960: 4-kolonne-grid, gap 24 |
-| 1024–1199 (`max-width: 1199px`) | Skinne 64 med ikoner; panelet falder ned under midten | - |
-| ≤ 960 (`max-width: 960px`) | Skinnen skjules; fanebjælke + midte, bundnavigation | Tablet: 2 kolonner, ½ + ½ holder, ¼ og ¾ bliver fuld, gap 16; kolonnebånd 3 → 2 + 1, ¾ + ¼ stables. Chatten (640–900 px) står her. |
-| < 768 (`max-width: 767px`) | Mobil: topbjælke 52 med "Sektioner", ingen fanebjælke, én kolonne, panelet nederst, padding 16 | - |
+| ≥ 1200 | Skinne 236 + fanebjælke 56 + midte + panel 336 (`panel`-prop) | Midten er > 960: 12-kolonne-gitter, gap 24 |
+| 1024–1199 (`max-width: 1199px`) | Skinnen bliver 64 px med ikoner, fanebjælken står; panelet falder ned under midten; modulbjælken viser maks 5 + Flere | Tablet-foldning (også via `@media (max-width: 1199px)`, så den gælder, selv om midten er bredere end 960) |
+| 768–1023 (`max-width: 1023px` og `min-width: 768px`) | Tablet (26f.1): topbjælke 56 (Lasso-ikon, søgefelt, klokke) og 64 px ikonskinne (Søg, Lister, Overvågning, Værktøjer); ingen fanebjælke og ingen bundnavigation | Tablet-foldning |
+| ≤ 960 (`max-width: 960px`, midtens bredde) | - | Tablet: ½ + ½ holder, ¼ og ⅓ bliver ½, ⅔ og ¾ bliver fuld, gap 16; kolonnebånd 3 → 2 + 1. Chatten (640–900 px) står her. |
+| < 768 (`max-width: 767px`) | Mobil: skinne og fanebjælke skjules; topbjælke 52 med burger ("Sektioner"), én kolonne, panelet nederst, padding 16, bundnavigation 56 | - |
 | ≤ 560 (`max-width: 560px`) | - | Mobil: én kolonne, gap 12, elementernes mobilformer (kortlister, 2 × 2 nøgletal, 44 px). Kun Claude på mobil (390) rammer den; chatten gør aldrig (30). |
 
 Midtens brud er lavere end skærmens, fordi containeren er midten: ved skærm 1200 er midten ~960 px.
@@ -159,7 +187,7 @@ Bygget på `feat/faner`. Alt ligger i `packages/ui` og eksporteres fra `@lasso/u
 Én komponent, `Tabs`, styret udefra, så indholdet kan hentes ved skift. Niveauerne skelnes på højde, skrift og vægt, aldrig på farve. Kun navnet på fanen: aldrig tal, badge eller prik. Valgt fane har aldrig mørkt fyld. Højst tre niveauer over hinanden, og to bjælker på samme niveau står aldrig direkte over hinanden.
 
 ```ts
-<Tabs level={1|2|3} items={[{ id, label, disabled?, disabledReason? }]} value={id} onChange={(id) => …} ariaLabel="…" id? maxVisible? />
+<Tabs level={1|2|3} items={[{ id, label }]} value={id} onChange={(id) => …} ariaLabel="…" id? maxVisible? />
 <TabPanel id={sammeId} tab={id} loading? loadingHeight? loadingLabel="Økonomi">…</TabPanel>
 ```
 
@@ -169,13 +197,13 @@ Bygget på `feat/faner`. Alt ligger i `packages/ui` og eksporteres fra `@lasso/u
 | 2, sektion | inde i en sektion, altid under sektionsoverskriften | 36 px, 13, gap 20, divider-subtle under | ink 600 + 1 px ink-streg | Regnskab → `Resultatopgørelse, Balance, Pengestrøm` (19); Notifikationer → `Ulæste, Alle, Overvågning` (21). Højst 6. |
 | 3, element | i elementets hoved (`Section action`), skifter kun elementets egen visning | segmentkontrol 32 px, 13, 1 px kant radius 8 | 1 px ink-kant + 600, hvid flade | Årsvælger i `KeyValueList` (09), `Nuværende/Alle` i `PersonList` (11), selskab/koncern (19). Højst 4; på mobil fuld bredde 44 px, over 3 segmenter en dropdown. |
 
-Tilstande: hvile, hover (tekst ink + divider-streg), valgt, fokus (1 px koral kant, kun tastatur), deaktiveret (45 % + `disabledReason` som tooltip). Tastatur: kun den valgte fane i tab-rækkefølgen, pil venstre/højre flytter og vælger, Home/End, deaktiverede springes over. Mobil: niveau 1 og 2 ruller vandret med fade i kanten, den valgte rulles ind i syne.
+Tilstande: hvile, hover (tekst ink + divider-streg), valgt, fokus (1 px koral kant, kun tastatur). Der er ingen deaktiveret tilstand: en fane med `disabled` (ingen data) tegnes slet ikke. Tastatur: kun den valgte fane i tab-rækkefølgen, pil venstre/højre flytter og vælger, Home/End. Mobil: niveau 1 og 2 ruller vandret med fade i kanten, den valgte rulles ind i syne.
 
 ### Layout, fra spørgsmål til skærm (30, node `J48-0`)
 
 `packages/spec/src/ask.ts` er serverens implementering af Paper 30 for `show_company` og `show_person` med `question`: spørgsmålet ordret → spørgsmålsprofil (`parseAsk`) → en hel side med svar-elementet først og kontekst fra hele kataloget (`askPlan`, se `docs/portal.md`, "Spørgsmålet styrer formen").
 
-`LAYOUT_RULES` i `packages/spec/src/catalog.ts` står i `render_view`-beskrivelsen efter `COMPOSITION_RULES` og er det, modellen slår op i: tre svarniveauer (A Element, B Sektion, C Side), ni mønstre (1 Overblik, 2 Fokus, 3 Ligeværdige, 4 Liste først, 5 Sammenligning, 6 Tidslinje, 7 Fortælling, 8 Kortgitter, 9 Harmonika) og foldreglerne på 1440/768/390. Mønster 1–7 tegnes med bredderne ¼/½/¾/fuld og `column` i `LassoView`; 8 og 9 har egne primitiver, som `LassoView` bruger, når sammenhængende komponenter i en spec har samme `group: { id, pattern: "cards" | "accordion", title? }` (i dashboard, i fuld bredde og inde i en kolonne; én komponent alene er ingen gruppe; harmonikaens rækkenavn er komponentens `title` eller typens navn, første række åben):
+`LAYOUT_RULES` i `packages/spec/src/catalog.ts` står i `render_view`-beskrivelsen efter `COMPOSITION_RULES` og er det, modellen slår op i: tre svarniveauer (A Element, B Sektion, C Side), ni mønstre (1 Overblik, 2 Fokus, 3 Ligeværdige, 4 Liste først, 5 Sammenligning, 6 Tidslinje, 7 Fortælling, 8 Kortgitter, 9 Harmonika) og foldreglerne på 1440/768/390. Mønster 1–7 tegnes med bredderne ¼/⅓/½/⅔/¾/fuld og `column` i `LassoView`; 8 og 9 har egne primitiver, som `LassoView` bruger, når sammenhængende komponenter i en spec har samme `group: { id, pattern: "cards" | "accordion", title? }` (i dashboard, i fuld bredde og inde i en kolonne; én komponent alene er ingen gruppe; harmonikaens rækkenavn er komponentens `title` eller typens navn, første række åben):
 
 ```ts
 <CardGrid>…artikler…</CardGrid>                       // to kolonner, én på mobil, luft og tynde linjer
@@ -184,7 +212,7 @@ Tilstande: hvile, hover (tekst ink + divider-streg), valgt, fokus (1 px koral ka
 
 Modulværktøjslinjen (56 px under modulbjælken, primær handling til venstre, visningsvalg til højre) er `ModuleToolbar` (06).
 
-### Navigation og sideskabelon (06, node `9I4-0`; mobil 26a)
+### Navigation og sideskabelon, klassisk portal (06, node `9I4-0`; mobil 26a.1–26a.3)
 
 ```ts
 <AppShell rail={RailProps} tabs={TabStripProps} panel?={ReactNode /* højre panel 336, sammendrag og handlinger */} panelLabel? mobile?={{ title, subtitle?, sections?, activeSection?, onSelectSection?, actions?, onMore?, unread?, onBell?, nav?, sheetOpen?, onToggleSheet? }}>
@@ -194,7 +222,7 @@ Modulværktøjslinjen (56 px under modulbjælken, primær handling til venstre, 
 </AppShell>
 ```
 
-`Rail({ groups: [{ id, label, collapsed?, items: [{ id, label, icon?: ReactNode | "letter", active?, onSelect }], footer? }], activeItem?, onToggleGroup? })` er skinnen (Værktøjer, Firmaer, Personer), `TabStrip({ tabs, onSelect, onClose, onAdd, unread?, onBell?, onFeedback?, onAccount? })` er fanebjælken med åbne virksomheder og klokken (`MonitorBell`). Modulbjælken bruger `Tabs level={1}`; hvert punkt er et modul, kunden vælger selv hvilke. Kroppen er tre lige brede kolonner adskilt af 1 px linjer. Mobil: topbjælke 52 px med burger (sektionsark), bundnavigation 56 px, én kolonne. Tablet: skinne 64 px med ikoner, 5 moduler + Flere.
+`Rail({ groups: [{ id, label, collapsed?, items: [{ id, label, icon?: ReactNode | "letter", active?, onSelect }], footer? }], activeItem?, onToggleGroup? })` er skinnen (Værktøjer, Firmaer, Personer), `TabStrip({ tabs, onSelect, onClose, onAdd, unread?, onBell?, onFeedback?, onAccount? })` er fanebjælken med åbne virksomheder og klokken (`MonitorBell`). Modulbjælken bruger `Tabs level={1}`; hvert punkt er et modul, kunden vælger selv hvilke. Kroppen er tre lige brede kolonner adskilt af 1 px linjer. Mobil (< 768): topbjælke 52 px med burger (sektionsark), bundnavigation 56 px, én kolonne. Tablet (768–1023): topbjælke 56 px og 64 px ikonskinne, ingen fanebjælke og ingen bundnavigation. 1024–1199: skinne 64 px med ikoner og fanebjælken; modulbjælken viser 5 moduler + Flere.
 
 ### Dialoger, menuer og beskeder (07, node `9L1-0`)
 
@@ -214,14 +242,14 @@ Spec-komponent `LassoChangeFeed { list?, days? (7), types?, title? }` → `Chang
 
 ### A4-eksport (27, node `DO8-0`)
 
-`ReportA4({ company, dataset, generatedAt? })` tegner op til fire A4-sider (forside, nøgletal + graf + ledelse/ejere, regnskab 5 år, kreditvurdering/risiko/reelle ejere/revisor) uden interaktion; i print er hver `.lasso-a4-page` præcis ét ark (210 × 297 mm, `break-after: page`, uden skygge og ramme). Preview: `npx tsx apps/server/src/dev/render-preview.ts <mappe> --report CVR-1-99000001`.
+`ReportA4({ company, dataset, generatedAt? })` tegner to A4-sider uden interaktion: forsiden (27.1: navnelogo, navn, CVR/form/status, adresse, branche, risikoscore, hovedtal, ansatte og indholdsfortegnelse) og overblikket (27.2: nøgletal for seneste år, grafen for hovedtallet over 5 år, ledelse og legale ejere, risiko med score og de to vigtigste observationer samt kontakt og oplysninger); blokke uden data udelades; i print er hver `.lasso-a4-page` præcis ét ark (210 × 297 mm, `break-after: page`, uden skygge og ramme). Preview: `npx tsx apps/server/src/dev/render-preview.ts <mappe> --report CVR-1-99000001`.
 
-**"Gem som PDF"** står øverst til højre i hovedet på alle sider i alle tre værter (MCP-appen, delte sider og portalen), ved siden af Gem/Gemt: samme lille ikonknap (regel 21) med download-ikonet og ordet, kun ikonet under 640 px (aria-label "Gem som PDF"). `LassoView` viser den med `host.pdf` og beder værten om `{ kind: "pdf" }`; mens værten arbejder, står der "Laver PDF …", og knappen er slået fra. Den gamle "Eksportér PDF" nederst og overlay'en med Print og Luk er fjernet; "Eksportér CSV" står, hvor den stod.
+**"Gem som PDF"** står øverst til højre i hovedet på alle sider i alle tre værter (MCP-appen, delte sider og portalen), ved siden af Gem/Gemt: samme lille ikonknap (regel 21) med download-ikonet og ordet, kun ikonet under 640 px (aria-label "Gem som PDF"). `LassoView` viser den med `host.pdf` og beder værten om `{ kind: "pdf" }`; mens værten arbejder, står der "Laver PDF …", og knappen er slået fra. Står sidens fulde hoved ikke på siden, viser handlingsbjælken nederst stadig "Eksportér CSV" og, på en virksomhedsvisning, når værten kan eksportere (`host.export`), "Eksportér PDF"; den åbner A4-rapporten i en overlay med "Print" (browserens print) og × (luk). Med fuldt hoved ligger de samme valg i hovedets Eksportér-menu ("Virksomhedsrapport (PDF)", "Personrapport (PDF)", "Tal som CSV").
 
 Klik giver en rigtig PDF-fil, lavet på serveren med headless Chromium (`apps/server/src/pdf/`):
 
 - **Virksomhed** (spec.kind "company"): rapporten ovenfor som A4-PDF, ét ark pr. side, vektorgrafer og sidetal "x af n". Data hentes friskt (stamdata, regnskab 5 år og fuldt regnskab, ledelse, ejere, reelle ejere, score og revisor); Creditsafe kun fra fokus risiko, fordi et opslag kan koste en kredit.
-- **Alle andre sider** (person, lister, `render_view`, gemte sider og visninger): selve visningen i print-tilstand (`LassoView print`): A4 stående, 794 px bred skaleret ind mellem margenerne (`@page { size: A4; margin: 14mm }`), uden handlingsbjælke, modulbjælke, knapper og kontroller, "Se alle" og "Vis hele" foldet ud, faner (`Tabs`) som overskrift med den viste fanes navn, `break-inside: avoid` på elementerne og rækkerne (tabeller løber videre på næste ark med kolonneoverskrifterne gentaget). Sidehoved med Lasso-mærket, sidens navn og datastempel og sidefod med kilder og "side x af n" på hvert ark (Chromiums sidehoved og sidefod, `pageTemplates` i `packages/ui/src/print.tsx`).
+- **Alle andre sider** (person, lister, `render_view`, gemte sider og visninger): selve visningen i print-tilstand (`LassoView print`): A4 stående, 794 px bred skaleret ind mellem margenerne (`@page { size: A4; margin: 14mm }`), uden handlingsbjælke, modulbjælke, knapper og kontroller, "Se alle" og "Vis hele" foldet ud, faner (`Tabs`) som overskrift med den viste fanes navn, `break-inside: avoid` på elementerne og rækkerne (tabeller løber videre på næste ark med kolonneoverskrifterne gentaget). Første ark er en forside (`PrintCover`: logo og navnelogo, "Udskrift fra Lasso", sidens navn, området og "Data hentet …"). Sidehoved med Lasso-mærket og navnelogoet, sidens navn og "Data hentet <dato> kl. …", og sidefod med "Data pr. <dato>" til venstre og "Udarbejdet i Lasso, lassox.com, side x af n" til højre på hvert ark (ingen kildevisning) (Chromiums sidehoved og sidefod, `pageTemplates` i `packages/ui/src/print.tsx`).
 - Filnavn: `Virksomhedsrapport <navn> <ÅÅÅÅ-MM-DD>.pdf` eller `<sidens titel> <ÅÅÅÅ-MM-DD>.pdf`; tegn uden for bogstaver, tal, mellemrum, bindestreg og punktum bliver "-".
 
 Serveren (én delt Chromium via playwright-core, startet ved første PDF og lukket efter 5 minutters stilhed, højst 2 PDF'er ad gangen, `PDF_TIMEOUT_MS` = 25 s pr. PDF; ved fejl lukkes browseren, og næste kald starter en ny) opretter et print-job i hukommelsen (engangstoken, 60 s), åbner `http://127.0.0.1:<PORT>/print/<token>` (svarer kun til loopback; render-appen med `boot.mode "print"`), venter på fontene og `document.documentElement.dataset.lassoReady === "1"` og gemmer siden med `page.pdf`. Siden må kun hente fra serveren selv; fontene er indlejret i render-appen, og nyhedernes kildeikoner udefra vises ikke i print. Hver PDF logges med varighed (`[pdf] company CVR-1-… 1.4 s`).
@@ -249,9 +277,9 @@ Værterne: MCP-appen får `pdfLink` i `structuredContent` (`show_company` → `/
 <SidePanel open title subtitle? onClose list={<SidePanelList groups selected onSelect />} detail? view?="list|detail" onBack? />   // 08.7
 ```
 
-Handlingerne (Overvåg/Overvåger, Gem/Gemt, Eksportér, "…") er 32 px ikonknapper øverst til højre i hovedet; `LassoView` fylder dem ud fra `HostCapabilities` (`monitor`, `savePage`, `export`, `refresh`, `fullscreen`) og flytter dem ud af rammens header og footer, når sidens hoved står på siden. "Se risiko" (`risk: true` i specen, kun ved 50+), "Se historik" (ophørt) og genveje sender `open-section` (værten skifter fokus) eller en `prompt`. `headTabs` på `LassoView` giver sektionsfanerne (08.2) under hovedet. Kontaktpersoner (08.6) viser 3 + "Se N kontaktpersoner" og åbner `SidePanel` (720/600 px, fuldskærmsark på mobil). Live-nummeret (08.5) har fire tilstande (`liveState`), og `verify-contact` beder værten verificere i realtid.
+Handlingerne (Overvåg/Overvåger, Gem/Gemt, Eksportér, "…") er 32 px ikonknapper øverst til højre i hovedet; `LassoView` fylder dem ud fra `HostCapabilities` (`monitor`, `savePage`, `export`, `refresh`, `fullscreen`) og flytter dem ud af rammens header og footer, når sidens hoved står på siden. "Se risiko" (`risk: true` i specen, kun ved 50+), "Se historik" (ophørt) og genveje sender `open-section` (værten skifter fokus) eller en `prompt`. `headTabs` på `LassoView` giver sektionsfanerne (08.2) under hovedet. Kontaktpersoner (08.6) viser 3 + "Se N kontaktpersoner" og åbner `SidePanel` (720/600 px, fuldskærmsark på mobil). Live-nummeret (08.5) verificeres stille via `verify-contact`; kun et udgået nummer markeres (gennemstreget, "Udgået, dato"), ingen verificeringsnoter.
 
-## Tabeller, massehandlinger og persontabel (15, mobil 26c)
+## Tabeller, massehandlinger og persontabel (15; mobilformerne står på samme tavle)
 
 `CompanyTable` har værktøjslinjen (søg i resultatet, `Filtre (n)` der åbner `FilterSheet`, kolonnevalg, eksport), afkrydsning med `BulkBar` (15.2: "N markeret, vælg alle", handlinger, luk; destruktiv som rød tekst), 25 rækker pr. side med `Pagination` (aktiv side ink 600 + 2 px streg) og tilstande inde i rammen (`TableStateRows`, hovedet står). Under 560 px bliver den en kortliste (navn + status, CVR og by, tynd linje, tre nøgletal + score) med fjernbare filterchips. `LassoPersonTable { query, limit? }` (15.3) er samme tabel med personer: navn alene, fødselsår og by, 2 roller + "og n flere", konkurser kun > 0. Delene ligger i `components/TableKit.tsx`.
 

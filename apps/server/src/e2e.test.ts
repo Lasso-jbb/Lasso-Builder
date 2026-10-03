@@ -198,14 +198,14 @@ test("show_person (katalog 16) finder en person på navn og komponerer personsid
   assert.equal(sc.spec.kind, "person");
   assert.deepEqual(
     sc.spec.components.map((c) => `${c.type}${c.column ? `@${c.column}` : ""}${c.width ? `/${c.width}` : ""}`),
-    // Overblik (standard, Ø13/B10): Papers elementer, pakket efter bredderne: aktive roller alene i fuld bredde,
-    // netværket i eget fuldbånd og historik ⅓ | ejerskab ⅔; stamoplysninger og risiko er udgået (Jakob 30.09).
+    // Overblik (standard, Ø13/B10): persontallene, de aktive roller alene i fuld bredde og netværket i eget
+    // fuldbånd; historik og ejerskab står på fanerne (Jakob 01.10); stamoplysninger og risiko er udgået (Jakob 30.09).
     [
       "LassoPersonHead",
+      "LassoPersonStats",
       "LassoPersonRoles",
       "LassoPersonNetwork",
-      "LassoTimeline@1/third",
-      "LassoOwnershipDiagram@2/two-thirds",
+      "LassoSummary",
       "LassoFollowUps",
     ],
   );
@@ -214,13 +214,15 @@ test("show_person (katalog 16) finder en person på navn og komponerer personsid
   assert.match(sc.summary, /Fundet ud fra navnet "Bo Eksempel"/);
   assert.match(sc.summary, /Aktive roller: Eksempel Holding ApS \[CVR-1-99000010\]: Direktør, ejer 100 %, siden 2005/);
   assert.doesNotMatch(sc.summary, /Stamoplysninger:/, "stamoplysningerne er udgået");
-  assert.match(sc.summary, /Historik \(seneste 3 af \d+\): 02\.02\.2026 Eksempel Energi A\/S kom under konkurs/);
+  // Jakob 01.10: historik og ejerskab står på fanerne, ikke på overblikket.
+  assert.doesNotMatch(sc.summary, /Historik \(seneste/);
   assert.doesNotMatch(sc.summary, /Nyheder om personen/, "nyhederne står på fokus historik");
-  assert.match(sc.summary, /Ejerskab: ejer direkte Eksempel Holding ApS 100 %/);
+  assert.doesNotMatch(sc.summary, /Ejerskab: ejer direkte/);
   // "År sammen" er den længste sammenhængende periode, ikke summen over selskaber.
   assert.match(sc.summary, /Vera Eksempel \(13 år, 1 fælles selskaber\)/);
   assert.match(sc.card, /SIDDER SAMMEN MED/);
-  for (const section of ["AKTIVE ROLLER", "HISTORIK", "EJERSKAB"]) assert.match(sc.card, new RegExp(section));
+  assert.match(sc.card, /AKTIVE ROLLER/);
+  for (const section of ["HISTORIK", "EJERSKAB"]) assert.doesNotMatch(sc.card, new RegExp(section));
   assert.doesNotMatch(sc.card, /NYHEDER/);
   // Stamoplysningerne og risikosektionen er udgået (som på siden).
   assert.doesNotMatch(sc.card, /STAMOPLYSNINGER|RISIKO|Første reg\./);

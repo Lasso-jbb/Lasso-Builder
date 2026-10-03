@@ -16,7 +16,6 @@ const html = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticM
 test("C6: årsagsteksterne er identiske med register.liveNote i kataloget", () => {
   const note = (t: string) => COMPONENT_CATALOG.find((c) => c.type === t)?.register?.liveNote;
   assert.equal(note("LassoScoreGauge"), SCORE_SUBSCRIPTION_REASON);
-  assert.equal(note("LassoScoreHistory"), SCORE_SUBSCRIPTION_REASON);
   assert.equal(note("LassoLivestock"), LIVESTOCK_MODULE_REASON);
   assert.equal(note("LassoKeyFigureGauge"), NO_BENCHMARK_REASON);
 });

@@ -2,6 +2,7 @@ import {
   CREDIT_COST_NOTE,
   CREDIT_LOCKED_REASON,
   CREDIT_PENDING_REASON,
+  CREDIT_PURCHASE_INCLUDES,
   CREDIT_SCORES,
   creditDescription,
   creditScoreWord,
@@ -77,6 +78,86 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+const credits = (n: number) => `${formatNumber(n)} ${n === 1 ? "kredit" : "kreditter"}`;
+
+/**
+ * Købstrinnet (katalog 38, Jakob 01.10): vurderingen betales pr. styk, så kortet viser, hvad man får,
+ * før man køber: en dæmpet forhåndsvisning af selve kortet (A–E-skalaen og rækkerne uden værdier),
+ * en liste over indholdet, prisen og saldoen, og én primær knap med prisen. Købet bekræftes i dialogen
+ * fra 18.3 og sendes som "refresh" (hent vurderingen).
+ */
+function CreditPurchase({ rating, heading, onAction }: { rating: CreditRatingVM; heading: string; onAction?: (a: ViewAction) => void }) {
+  const [confirm, setConfirm] = useState(false);
+  const price = rating.price ?? 1;
+  const balance = rating.creditBalance;
+  return (
+    <Section title={heading} span="half" className={`${CARD} lasso-creditbuy`}>
+      <div className="lasso-riskscore__body">
+        <div className="lasso-creditbuy__preview" aria-hidden="true">
+          <div className="lasso-riskscore__value">
+            <span className="lasso-riskscore__number lasso-creditbuy__q">?</span>
+            <span className="lasso-creditbuy__hint">Score A–E</span>
+          </div>
+          <ol className="lasso-credit__steps">
+            {CREDIT_SCORES.map((l) => (
+              <li key={l} className="lasso-credit__step">
+                <span className="lasso-credit__bar" />
+                <span>{l}</span>
+              </li>
+            ))}
+          </ol>
+          <dl className="lasso-riskscore__rows">
+            <Fact label="Kreditmaksimum">
+              <span className="lasso-creditbuy__blur" />
+            </Fact>
+            <Fact label="Lokal score">
+              <span className="lasso-creditbuy__blur" />
+            </Fact>
+          </dl>
+        </div>
+
+        <div className="lasso-creditbuy__offer">
+          <p className="lasso-creditbuy__lead">Køb kreditvurderingen fra {rating.source.replace(/ via Lasso$/, "")} og få:</p>
+          <ul className="lasso-creditbuy__list">
+            {CREDIT_PURCHASE_INCLUDES.map((t) => (
+              <li key={t}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                {t}
+              </li>
+            ))}
+          </ul>
+          <div className="lasso-creditbuy__price">
+            <span className="lasso-creditbuy__amount">{credits(price)}</span>
+            <span className="lasso-creditbuy__per">pr. virksomhed{typeof balance === "number" ? `, du har ${credits(balance)}` : ""}</span>
+          </div>
+          {onAction ? (
+            <button type="button" className="lasso-btn lasso-btn--primary lasso-creditbuy__btn" onClick={() => (typeof balance === "number" ? setConfirm(true) : onAction({ kind: "refresh" }))}>
+              Køb kreditvurdering
+            </button>
+          ) : null}
+          <p className="lasso-credit__note">Klar på 5–45 sekunder og gemt hos Lasso i 24 timer, så hele organisationen kan se den.</p>
+        </div>
+        {onAction && typeof balance === "number" ? (
+          <CreditConfirmDialog
+            open={confirm}
+            onClose={() => setConfirm(false)}
+            onConfirm={() => {
+              setConfirm(false);
+              onAction({ kind: "refresh" });
+            }}
+            balance={balance}
+            price={price}
+            title="Køb kreditvurdering?"
+            what={`kreditvurderingen hos ${rating.source}`}
+          />
+        ) : null}
+      </div>
+    </Section>
+  );
+}
+
 export function CreditRating({ rating, title, error, onAction }: CreditRatingProps) {
   const heading = title ?? "Kreditvurdering";
   const retry = onAction ? () => onAction({ kind: "refresh" }) : undefined;
@@ -107,6 +188,8 @@ export function CreditRating({ rating, title, error, onAction }: CreditRatingPro
       </Section>
     );
   }
+
+  if (rating.state === "purchase") return <CreditPurchase rating={rating} heading={heading} onAction={onAction} />;
 
   if (rating.state === "unavailable") {
     const pending = rating.reason === CREDIT_PENDING_REASON;

@@ -9,7 +9,8 @@ import { relationGroupsOf, type CompanyHistoryVM, type HistoryFieldVM, type Rela
 import { at, dateStr, isObj, num, participantLassoId, shareText, str, type Json } from "./adapters.js";
 
 const RELATION_KEYS = new Set(["management", "board", "founder", "founders", "owner", "owners", "trueowner", "trueowners", "stakeholder", "stakeholders", "otherroles", "roles", "participants", "relations"]);
-const SKIP_KEYS = new Set(["lassoid", "id", "cvr", "entitytype", "type"]);
+// Jakob 01.10: vedtægtstypen ("By laws") vises ikke.
+const SKIP_KEYS = new Set(["lassoid", "id", "cvr", "entitytype", "type", "bylaws", "bylaw", "bylawstype", "bylawtype", "articlesofassociation", "statutes"]);
 
 /** Kendte stamdatalister med portalens etiketter og rækkefølge. */
 const FIELD_LABELS: [RegExp, string, string][] = [
@@ -26,8 +27,23 @@ const FIELD_LABELS: [RegExp, string, string][] = [
   [/^(forms?|companyforms?)$/i, "form", "Virksomhedsform"],
   [/^(capital|contributedcapital|registeredcapital)$/i, "kapital", "Selskabskapital"],
   [/^(phones?|phonenumbers?|telephones?)$/i, "telefon", "Telefon"],
-  [/^(emails?|emailaddresses?)$/i, "email", "Email"],
+  [/^(emails?|emailaddresses?)$/i, "email", "E-mail"],
   [/^(websites?|homepages?)$/i, "web", "Website"],
+  // Jakob 01.10: alle felter med danske navne (Lassos engelske nøgler oversat).
+  [/^(purposes?|objects?|objectclauses?)$/i, "formaal", "Formål"],
+  [/^(signingrules?|signaturerules?|powertobind|bindingrules?)$/i, "tegningsregel", "Tegningsregler"],
+  [/^(municipalit(y|ies))$/i, "kommune", "Kommune"],
+  [/^(secondaryindustr(y|ies)|subindustr(y|ies)|otherindustr(y|ies))$/i, "bibrancher", "Bibrancher"],
+  [/^(fiscalyears?|accountingyears?|financialyears?|accountingperiods?)$/i, "regnskabsaar", "Regnskabsår"],
+  [/^(auditors?)$/i, "revisor", "Revisor"],
+  [/^(advertisingprotect(ion|ed)|adprotection)$/i, "reklamebeskyttelse", "Reklamebeskyttelse"],
+  [/^(faxe?s?|faxnumbers?)$/i, "fax", "Fax"],
+  [/^(capitalclasses|shareclasses)$/i, "kapitalklasser", "Kapitalklasser"],
+  [/^(postaladdress(es)?)$/i, "postadresse", "Postadresse"],
+  [/^(lifetime|lifetimes)$/i, "levetid", "Levetid"],
+  [/^(founded|foundation|creationdate)$/i, "stiftet", "Stiftelsesdato"],
+  [/^(listed|stockexchange)$/i, "boersnoteret", "Børsnoteret"],
+  [/^(ownershipstructure)$/i, "ejerstruktur", "Ejerstruktur"],
 ];
 const ORDER = FIELD_LABELS.map(([, k]) => k);
 
@@ -88,6 +104,24 @@ function relations(raw: Json): RelationEntryVM[] {
   return out;
 }
 
+/** Ukendte felter: de engelske ord oversat, så intet står på engelsk (Jakob 01.10). */
+const WORDS: Record<string, string> = {
+  date: "dato", dates: "datoer", name: "navn", names: "navne", number: "nummer", numbers: "numre", code: "kode", codes: "koder",
+  type: "type", types: "typer", status: "status", period: "periode", year: "år", years: "år", amount: "beløb", currency: "valuta",
+  company: "selskab", companies: "selskaber", person: "person", persons: "personer", role: "rolle", roles: "roller", address: "adresse",
+  registration: "registrering", registrations: "registreringer", registered: "registreret", change: "ændring", changes: "ændringer",
+  capital: "kapital", share: "andel", shares: "andele", rights: "rettigheder", vote: "stemme", votes: "stemmer", employees: "ansatte",
+  quarterly: "kvartalsvis", monthly: "månedlig", yearly: "årlig", annual: "årlig", interval: "interval", industry: "branche",
+  email: "e-mail", phone: "telefon", website: "website", report: "rapport", reports: "rapporter", reporting: "rapportering", other: "andre",
+  main: "hoved", secondary: "bi", legal: "juridisk", form: "form", purpose: "formål", activity: "aktivitet", activities: "aktiviteter",
+  production: "produktions", unit: "enhed", units: "enheder", deleted: "slettet", start: "start", end: "slut", value: "værdi",
+};
+function danishLabel(key: string): string {
+  const words = key.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[_-]+/g, " ").toLowerCase().split(/\s+/).filter(Boolean);
+  const text = words.map((w) => WORDS[w] ?? w).join(" ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 function fields(raw: Json): HistoryFieldVM[] {
   const out: HistoryFieldVM[] = [];
   for (const [key, v] of Object.entries(raw as Record<string, Json>)) {
@@ -99,7 +133,7 @@ function fields(raw: Json): HistoryFieldVM[] {
       .sort((a, b) => (b.from ?? "").localeCompare(a.from ?? ""));
     if (!entries.length) continue;
     const known = FIELD_LABELS.find(([re]) => re.test(key));
-    out.push({ key: known?.[1] ?? key, label: known?.[2] ?? key.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (c) => c.toUpperCase()), entries });
+    out.push({ key: known?.[1] ?? key, label: known?.[2] ?? danishLabel(key), entries });
   }
   return out.sort((a, b) => (ORDER.indexOf(a.key) === -1 ? 99 : ORDER.indexOf(a.key)) - (ORDER.indexOf(b.key) === -1 ? 99 : ORDER.indexOf(b.key)));
 }

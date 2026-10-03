@@ -116,6 +116,11 @@ Se `.env.example`. På Railway er `DATABASE_URL` en reference til Postgres-servi
 |---|---|---|
 | `PDF_CHROMIUM_PATH` | `/usr/bin/chromium` | Chromium til "Gem som PDF" (øverst på alle sider i MCP-appen, delte sider og portalen). Findes filen ikke, er PDF slået fra: knappen skjules, PDF-ruterne svarer 503, og `/health` viser `pdf: false`. Docker-billedet sætter den. |
 | `PDF_TIMEOUT_MS` | `25000` | Så længe må én PDF tage. |
+| `ANTHROPIC_API_KEY` | (tom) | Claude Platform-nøglen til Lassos egen chat (`/chat`, `/api/chat`, se `docs/chat.md`). Tom: chatten er slået fra (`/api/chat` svarer 503, `/health` viser `chat: false`). |
+| `CHAT_MODEL` | `claude-haiku-4-5` | Modellen i chatten: den nyeste Haiku som standard; `claude-sonnet-5-5` eller `claude-opus-5-5` giver mere omtanke til en højere pris. |
+| `CHAT_MAX_TOKENS` | `16000` | Højst så mange tokens pr. modelsvar (1024–128000). Under ca. 8000 kan en render_view-spec blive afbrudt. |
+| `CHAT_EFFORT` | `medium` | `low` … `max`: tænkning og tokenforbrug pr. svar (ikke med Haiku). |
+| `CHAT_MAX_PER_HOUR` | `60` | Højst så mange chatbeskeder pr. bruger pr. time. |
 
 ### Docker og "Gem som PDF"
 

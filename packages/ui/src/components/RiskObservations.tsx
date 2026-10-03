@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ExpandLink } from "./ExpandLink.js";
+import { usePrintMode } from "../print.js";
+import { ExpandLink, foldedCount, LIST_FOLD } from "./ExpandLink.js";
 import { moreText, formatDate, type ObservationRowVM, type ObservationsVM, type Severity } from "@lasso/spec";
 import type { ViewAction } from "../types.js";
 import { DataState, Section, SeverityIcon, severityWord, stateForError } from "../primitives.js";
@@ -20,7 +21,7 @@ const FILTERS: { severity: Severity; word: "vigtig" | "mulig" | "info" }[] = [
 ];
 
 /** Højst så mange observationer før "Se alle N" (regel 9). */
-const SHOWN = 6;
+const SHOWN = LIST_FOLD; // Global regel (Jakob 01.10): over 6 → 5 + "Vis alle N"
 /** Kompakt (uden for fokus risiko): højst tre. */
 const COMPACT_SHOWN = 3;
 
@@ -108,25 +109,12 @@ function ObservationRow({ o, lassoId, onAction }: { o: ObservationRowVM; lassoId
   const word = o.notAvailable ? "Ikke tilgængelig" : o.severity === 0 ? "-" : severityWord(o.severity);
   const section = o.source ? SECTION_FOR_SOURCE[o.source.toLowerCase()] : undefined;
   const cls = `lasso-obsrow lasso-obsrow--${o.notAvailable ? "na" : o.severity}${compact ? " lasso-obsrow--compact" : ""}`;
-  if (compact) {
-    return (
-      <li className={cls}>
-        <span className="lasso-obsrow__icon">{o.notAvailable ? <span className="lasso-sev-dot" aria-hidden="true" /> : <SeverityIcon severity={o.severity} />}</span>
-        <span className="lasso-obsrow__word">
-          {o.severity === 0 && !o.notAvailable ? <span aria-hidden="true">-</span> : word}
-          {o.severity === 0 && !o.notAvailable ? <span className="lasso-sr">Neutral</span> : null}
-        </span>
-        <span className="lasso-obsrow__title">{o.title}</span>
-        <span className="lasso-obsrow__date">{[o.source, o.date ? formatDate(o.date) : null].filter(Boolean).join(", ")}</span>
-      </li>
-    );
-  }
+  // 39 (Jakob 01.10): info og "ikke tilgængelig" har samme opbygning som de andre (ikon, ord, titel, kilde og dato),
+  // bare mindre; ingen kolonner, der klemmes i en smal bredde.
   const meta = [o.source, o.date ? formatDate(o.date) : null].filter(Boolean).join(", ");
   return (
     <li className={cls}>
-      <span className="lasso-obsrow__icon">
-        <SeverityIcon severity={o.severity} />
-      </span>
+      <span className="lasso-obsrow__icon">{o.notAvailable ? <span className="lasso-sev-dot" aria-hidden="true" /> : <SeverityIcon severity={o.severity} />}</span>
       <span className="lasso-obsrow__body">
         <span className="lasso-obsrow__word">{word}</span>
         <span className="lasso-obsrow__title">{o.title}</span>
@@ -149,16 +137,6 @@ function ObservationRow({ o, lassoId, onAction }: { o: ObservationRowVM; lassoId
   );
 }
 
-/** Alvorsbjælken i sammenfatningen: ét segment pr. observation i alvorens farve. */
-function SeverityBar({ rows }: { rows: readonly ObservationRowVM[] }) {
-  return (
-    <span className="lasso-obs-summary__bar" aria-hidden="true">
-      {rows.map((r) => (
-        <span key={r.id} className={`lasso-obs-summary__seg lasso-obs-summary__seg--${r.severity}`} />
-      ))}
-    </span>
-  );
-}
 
 /** De tre årsager til, at der ikke er observationer at vise (17.3). */
 export type RiskUnavailableReason = "none" | "cannot" | "package";
@@ -223,7 +201,7 @@ export interface RiskObservationsProps {
 export function RiskObservations({ data, error, title, compact = false, demo = false, onAction }: RiskObservationsProps) {
   const heading = title ?? "Risikoobservationer";
   const [filter, setFilter] = useState<Severity | null>(null);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(usePrintMode());
 
   if (!data) {
     return (
@@ -246,7 +224,8 @@ export function RiskObservations({ data, error, title, compact = false, demo = f
 
   if (findings.length === 0 && !(data.related ?? []).some((p) => p.rows.some((r) => r.severity >= 25))) {
     // Positiv tom tilstand (17.3): "Ingen observationer" og hvornår der blev tjekket.
-    const neutral = rows.filter((r) => !r.notAvailable);
+    // 17.2 (Jakob 01.10): neutrale fakta uden udslag vises ikke; kun det, der ikke kunne tjekkes.
+    const neutral: typeof rows = [];
     const na = rows.filter((r) => r.notAvailable);
     return (
       <Section title={heading} span="full" className="lasso-obs">
@@ -268,13 +247,15 @@ export function RiskObservations({ data, error, title, compact = false, demo = f
 
   const limit = compact ? COMPACT_SHOWN : SHOWN;
   const latest = rows.map((r) => r.date).filter((d): d is string => Boolean(d)).sort().at(-1);
-  const deskVisible = expanded ? rows : rows.slice(0, limit);
+  // 17.2 (Jakob 01.10): kun observationer med udslag (≥ 25) og "ikke tilgængelig"; neutrale fakta ("-") vises ikke.
+  const deskRows = rows.filter((r) => r.notAvailable || r.severity >= 25);
+  const deskVisible = expanded ? deskRows : deskRows.slice(0, foldedCount(deskRows.length, limit));
 
   // Mobil: kun fund (≥ 25) og "ikke tilgængelig"; neutrale fakta står kun på desktop.
   const mobRows = rows.filter((r) => r.notAvailable || r.severity >= 25);
   const counts = FILTERS.map((f) => ({ ...f, n: mobRows.filter((r) => !r.notAvailable && r.severity === f.severity).length })).filter((f) => f.n > 0);
   const filtered = filter === null ? mobRows : mobRows.filter((r) => !r.notAvailable && r.severity === filter);
-  const mobVisible = expanded ? filtered : filtered.slice(0, limit);
+  const mobVisible = expanded ? filtered : filtered.slice(0, foldedCount(filtered.length, limit));
   const related = compact ? [] : (data.related ?? []).map((p) => ({ ...p, rows: sortObservations(p.rows.filter((r) => !r.notAvailable && r.severity >= 25)) })).filter((p) => p.rows.length > 0);
 
   return (
@@ -285,24 +266,33 @@ export function RiskObservations({ data, error, title, compact = false, demo = f
       action={<span className="lasso-obs__count lasso-obs__mob">{`${findings.length}${demo ? ", eksempeldata" : ""}`}</span>}
     >
       <div className="lasso-obs__desk">
+        {/* 39 (Jakob 01.10): overblikket som tre tal med alvorens ikon og ord (vigtig, mulig vigtig, info) og
+            datoen for seneste observation under; ingen farvebjælke. Kun observationer med udslag tælles. */}
         <div className="lasso-obs-summary">
-          <div className="lasso-obs-summary__text">
-            <p className="lasso-obs-summary__head">{observationHeadline(rows)}</p>
-            <p className="lasso-obs-summary__sub">
-              {/* Jakob runde 6: ingen kildevisning, derfor ikke "baseret på CVR og regnskab". */}
-              {latest ? `Seneste observation ${formatDate(latest)}` : null}
-              {demo ? ", eksempeldata" : ""}
-            </p>
-          </div>
-          <SeverityBar rows={rows.filter((r) => !r.notAvailable)} />
+          <ul className="lasso-obs-summary__counts">
+            {FILTERS.map((f) => {
+              const n = deskRows.filter((r) => !r.notAvailable && r.severity === f.severity).length;
+              return (
+                <li key={f.severity} className={`lasso-obs-summary__count${n ? "" : " is-zero"}`}>
+                  <SeverityIcon severity={f.severity} />
+                  <span className="lasso-obs-summary__n">{n}</span>
+                  <span className="lasso-obs-summary__word">{severityWord(f.severity)}</span>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="lasso-obs-summary__sub">
+            {latest ? `Seneste observation ${formatDate(latest)}` : null}
+            {demo ? ", eksempeldata" : ""}
+          </p>
         </div>
         <ul className="lasso-obsrows">
           {deskVisible.map((o) => (
             <ObservationRow key={o.id} o={o} lassoId={data.lassoId} onAction={onAction} />
           ))}
         </ul>
-        {rows.length > limit ? (
-          <ExpandLink expanded={expanded} total={rows.length} onToggle={() => setExpanded(!expanded)} />
+        {foldedCount(deskRows.length, limit) < deskRows.length ? (
+          <ExpandLink expanded={expanded} total={deskRows.length} onToggle={() => setExpanded(!expanded)} />
         ) : null}
       </div>
 
@@ -328,7 +318,7 @@ export function RiskObservations({ data, error, title, compact = false, demo = f
             <ObservationCard key={o.id} o={o} />
           ))}
         </ul>
-        {filtered.length > limit ? (
+        {foldedCount(filtered.length, limit) < filtered.length ? (
           <ExpandLink expanded={expanded} total={filtered.length} onToggle={() => setExpanded(!expanded)} />
         ) : null}
       </div>

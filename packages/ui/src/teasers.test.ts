@@ -107,15 +107,15 @@ test("virksomhedens overblik: 'Se alle … i Historik' med openFocus, ellers fol
   const spec = composeCompany(CO, ds, { focus: "overblik", followUps: false, showAll: true });
   const linked = render(spec, ds, { openFocus: true });
   assert.match(linked, /Se alle 8 begivenheder i Historik/);
-  assert.match(linked, /Se alle 5 nyheder i Historik/);
+  // 12.4 (Jakob 01.10): nyhederne viser højst 3 overalt; resten kræver Lasso Pro (ingen "i Historik").
+  assert.doesNotMatch(linked, /nyheder i Historik/);
+  assert.match(linked, /Flere nyheder\s*Kræver Lasso Pro/);
   const inPlace = render(spec, ds, {});
   assert.match(inPlace, /Vis alle 8\b/);
-  // Regel 12 (Jakob 30.09): nyhedslisten folder ud med "Vis alle N ›" som de andre lister.
-  assert.match(inPlace, /Vis alle 5\b/);
   assert.doesNotMatch(inPlace, /i Historik/);
-  // Fanen Historik ejer elementerne: dér folder "Se alle" ud på stedet, også med openFocus.
+  // Fanen Historik ejer elementerne: tidslinjen viser 8 begivenheder (Jakob 01.10, ny historik) og peger ikke videre.
   const history = render(composeCompany(CO, ds, { focus: "historik", followUps: false }), ds, { openFocus: true });
-  assert.match(history, /Vis alle 8\b/);
+  assert.match(history, /Årsrapport 2018 offentliggjort/);
   assert.doesNotMatch(history, /i Historik/);
 });
 
@@ -124,11 +124,8 @@ test("knapperne affyrer open-focus med fanen; den foldende knap har aria-expande
   const actions: ViewAction[] = [];
   const moreIn: MoreInTab = { tab: "Historik", open: () => void actions.push({ kind: "open-focus", focus: "historik" }) };
   click(createElement(LassoTimeline, { timeline: ds.timeline[CO], limit: 3, moreIn }), /Se alle 8 begivenheder i Historik/);
-  click(createElement(LassoNews, { news: ds.news[CO], limit: 3, moreIn }), /Se alle 5 nyheder i Historik/);
-  assert.deepEqual(actions, [
-    { kind: "open-focus", focus: "historik" },
-    { kind: "open-focus", focus: "historik" },
-  ]);
+  assert.deepEqual(actions, [{ kind: "open-focus", focus: "historik" }]);
+  assert.doesNotMatch(renderToStaticMarkup(createElement(LassoNews, { news: ds.news[CO], limit: 3, moreIn })), /i Historik/);
   const linked = renderToStaticMarkup(createElement(LassoTimeline, { timeline: ds.timeline[CO], limit: 3, moreIn }));
   assert.doesNotMatch(linked, /aria-expanded/);
   assert.match(renderToStaticMarkup(createElement(LassoTimeline, { timeline: ds.timeline[CO], limit: 3 })), /aria-expanded="false"/);
@@ -141,7 +138,6 @@ test("personens overblik: roller, netværk og historik peger på deres faner", (
   // To aktive roller står her; fanen Roller viser alle tre selskaber (også det ophørte).
   assert.match(linked, /Se alle 3 selskaber i Roller/);
   assert.match(linked, /Se alle 5 personer i Netværk/);
-  assert.match(linked, /begivenheder i Historik/);
   // Uden openFocus: netværket folder ud på stedet (Paper: "Vis alle N"), og de to aktive roller har ingen knap.
   const inPlace = render(spec, ds, {});
   assert.match(inPlace, /Vis alle 5 /);

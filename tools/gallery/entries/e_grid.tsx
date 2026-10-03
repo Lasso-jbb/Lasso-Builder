@@ -493,7 +493,7 @@ export function ElementTable() {
       <Title
         nr="23.2"
         text="Trin 2, Elementtabel - bredde, højdeklasse og adfærd pr. element"
-        intro="Én række pr. komponenttype, læst direkte fra GRID_RULES (catalog.ts) og de målte højder (grid.ts MEASURED_HEIGHTS = measure/heights.json). Fed = standardbredde; tal i parentes er bredder, elementet ikke må stå i. Udgået: LassoScoreHistory, LassoAuditorIndependence, LassoCreditRating. Ikke målt: LassoSummary (som tekst), LassoPersonTable (som virksomhedstabel), LassoFollowUps (1/1, lav, fast, sidste bånd), LassoSavedPages (1/1)."
+        intro="Én række pr. komponenttype, læst direkte fra GRID_RULES (catalog.ts) og de målte højder (grid.ts MEASURED_HEIGHTS = measure/heights.json). Fed = standardbredde; tal i parentes er bredder, elementet ikke må stå i. Udgået: LassoScoreHistory, LassoAuditorIndependence. Ikke målt: LassoSummary (som tekst), LassoPersonTable (som virksomhedstabel), LassoFollowUps (1/1, lav, fast, sidste bånd), LassoSavedPages (1/1)."
       />
       <DocTable cols={cols} rows={rows} small />
       <p style={note}>Rækkehøjder til h(type, bredde, rækker): tidslinje 88 px pr. begivenhed; nyheder ca. 48 pr. artikel; person-, ejer- og kontaktlister ca. 40 pr. række; nøgle-værdi-liste ca. 38 pr. række; feed ca. 96 pr. ændring; tekst 17 pr. linje.</p>

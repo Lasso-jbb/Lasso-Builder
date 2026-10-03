@@ -7,7 +7,7 @@ import { CloseIcon, focusables, useLayer } from "./Layer.js";
  * undertekst i muted, luk-kryds 32 px øverst til højre. Knapper nederst til højre adskilt af en tynd
  * streg: primær koral, sekundær hvid med kant, destruktiv som rød tekst yderst til venstre ("Kassér").
  *
- * Mobil (26a, < 560 px): bundark med greb 36×4 øverst, radius 14, primær knap i fuld bredde 48 px og
+ * Mobil (26a.9, ≤ 560 px): bundark med greb 36×4 øverst, radius 14, primær knap i fuld bredde 48 px og
  * sekundær som tekstknap under. Destruktiv bekræftelse: primær i ink, "Slet" i rød tekst.
  *
  * Tilgængelighed: role=dialog, aria-modal, aria-labelledby/-describedby, fokusfælde (Tab cirkulerer),

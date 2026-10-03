@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { CHANGE_TYPE_LABELS, formatNumber, type ActivityHeatmapVM } from "@lasso/spec";
 import { DataState, Section, stateForError } from "../primitives.js";
 import { useWidth } from "../useWidth.js";
@@ -83,7 +83,7 @@ export function Heatmap({ heatmap: raw, title, error }: { heatmap?: ActivityHeat
   const selected = picked ?? fallback;
   return (
     <Section title={heading} subtitle={compact ? undefined : subtitle} span="full" className="lasso-heat">
-      <div className="lasso-heat__frame" ref={ref}>
+      <div className={`lasso-heat__frame${compact ? " is-compact" : ""}`} ref={ref}>
         <div className="lasso-heat__labels" aria-hidden="true">
           {heatmap.rows.map((r) => (
             <span className="lasso-heat__rowlabel" key={r.type}>
@@ -93,8 +93,12 @@ export function Heatmap({ heatmap: raw, title, error }: { heatmap?: ActivityHeat
           <span className="lasso-heat__corner" />
         </div>
         <div className="lasso-heat__scroll" ref={scroller}>
-          <table className="lasso-heat__grid">
+          <table className="lasso-heat__grid" style={{ "--heat-n": n } as CSSProperties}>
             <caption className="lasso-sr">{subtitle}</caption>
+            {/* Rækkeoverskrifterne er kun til skærmlæsere; deres kolonne må ikke tage bredde fra månederne. */}
+            <colgroup>
+              <col className="lasso-heat__col0" />
+            </colgroup>
             <tbody>
               {heatmap.rows.map((r) => (
                 <tr key={r.type}>
@@ -131,7 +135,11 @@ export function Heatmap({ heatmap: raw, title, error }: { heatmap?: ActivityHeat
                   const mm = Number(m.split("-")[1]);
                   return (
                     <th scope="col" key={m} className={`lasso-heat__month${i === n - 1 ? " is-current" : ""}`}>
-                      {AXIS[mm - 1] ?? m}
+                      {/* 54 (Jakob 01.10): i en smal ramme står kun forbogstavet (CSS vælger). */}
+                      <span className="lasso-heat__m-long">{AXIS[mm - 1] ?? m}</span>
+                      <abbr className="lasso-heat__m-short" title={AXIS[mm - 1]}>
+                        {(AXIS[mm - 1] ?? m).charAt(0)}
+                      </abbr>
                     </th>
                   );
                 })}

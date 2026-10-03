@@ -132,19 +132,20 @@ export function adaptObservations(lassoId: string, raw: Json): ObservationsVM {
  * ------------------------------------------------------------------------------------------ */
 
 /** Nyhedstype -> dansk etiket (docs/endpoints-risiko-nyheder.md). */
+/** Nyhedstyperne (Lassos tabel, Jakob 02.10): Account 26, Accountant 33, Ownership 27, Board 28, Management 29, Stakeholder 41, Information 30, NewCompany 31, StatusChange 32, Lifetime 40, Ritzau 34, Statstidende 400. */
 const NEWS_TYPE_LABELS: Record<string, string> = {
   Account: "Nyt regnskab",
   Accountant: "Revisorskift",
   Ownership: "Ejerskifte",
   Board: "Bestyrelsesændring",
-  Management: "Ledelsesændring",
+  Management: "Direktionsændring",
   Information: "Stamdataændring",
-  NewCompany: "Nystiftet",
+  NewCompany: "Nyt firma stiftet",
   StatusChange: "Statusændring",
   Lifetime: "Start/ophør",
   Ritzau: "Pressemeddelelse",
   Statstidende: "Statstidende",
-  Stakeholder: "Interessent",
+  Stakeholder: "Interessentændring",
 };
 
 export function newsTypeLabel(type: string | undefined): string | undefined {

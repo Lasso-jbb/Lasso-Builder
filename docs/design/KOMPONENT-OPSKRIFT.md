@@ -1,6 +1,6 @@
 # Opskrift: én ny komponent
 
-Gælder alle nye komponenter. Mønstret er sat af de otte første: `packages/ui/src/components/CompanyHead.tsx`, `KeyFigureCards.tsx`, `BarChart.tsx`, `PersonList.tsx`, `OwnerList.tsx`, `CompanyTable.tsx`, `CompareTable.tsx`. Læs mindst to af dem, før du begynder.
+Gælder alle nye komponenter. Mønstret er sat af de syv første: `packages/ui/src/components/CompanyHead.tsx`, `KeyFigureCards.tsx`, `BarChart.tsx`, `PersonList.tsx`, `OwnerList.tsx`, `CompanyTable.tsx`, `CompareTable.tsx`. Læs mindst to af dem, før du begynder.
 
 ## 0. Designet kommer fra koden
 
@@ -20,7 +20,7 @@ Designet er komplet i koden (Jakob 30.09.2026); Paper bruges ikke, når nye modu
 5. Navne står alene: ingen initial-cirkler eller ikonkasser.
 6. **Ingen midterprik (·) nogen steder, heller ikke i tekstkortet.** Brug komma.
 7. Ikon eller ord ved enhver farvekodning, aldrig kun farve.
-8. UDGÅET (Jakob 29.09, G3): ingen kildelinje i elementerne; `SourceLine` tegner intet.
+8. UDGÅET (Jakob 29.09, G3): ingen kildelinje i elementerne (der findes ingen kildelinje-komponent).
 9. Flere værdier end formen kan vise: 3 + "Se N …".
 10. Risikoskala 0 (lav) til 100 (høj).
 
@@ -41,7 +41,7 @@ Tilføj også en foreløbig katalogtekst i `packages/spec/src/catalog.ts` (én l
 
 ## 4. Responsivt
 
-Container queries på `.lasso-root` (`@container lasso (max-width: 560px)`). På mobil: tabeller bliver kortlister, rækker mindst 44 px, grafer maks 5 punkter. Ingen separat mobilkomponent. Se mobil-artboardet (26b–26e) for elementet.
+Container queries på `.lasso-root` (`@container lasso (max-width: 560px)`). På mobil: tabeller bliver kortlister, rækker mindst 44 px, grafer maks 5 punkter. Ingen separat mobilkomponent. Mobilformen står i galleriet ved elementets egen tavle (mobilbilledet 390 og de mobile indgange, fx 26c.3 ved 10 og 15.2b ved 15).
 
 ## 5. Endpoints, der ikke er bekræftet
 

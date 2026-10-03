@@ -410,3 +410,65 @@ body { font-family: var(--lasso-font, "Poppins", system-ui, sans-serif); -webkit
   .dg-pagecomment { position: static; margin-bottom: 12px; }
   .dg-popover { width: min(340px, calc(100vw - 48px)); }
 }
+
+/* Den svævende boks ligger på siden (portal), ikke i rammen, så den aldrig klippes af kortet. */
+.dg-popover--floating { position: absolute; top: auto; right: auto; z-index: 60; width: min(340px, calc(100vw - 24px)); max-height: min(480px, calc(100vh - 24px)); }
+.dg-popover__element { overflow-wrap: anywhere; }
+.dg-pinroot { position: absolute; inset: 0; pointer-events: none; }
+.dg-pinroot > * { pointer-events: auto; }
+
+/* Print-eksemplet (27.1): et hvidt A4-ark; siden tegnes 794 px bred som i side-PDF'en (900 - 2 × 53). */
+.dg-printsheet { background: #fff; padding: 53px; }
+
+/* Portalens ramme (#/portal): den kørende portal i en skaleret iframe og portalens tokens */
+.dg-portalframe { position: relative; overflow: hidden; border: 1px solid var(--dg-line); border-radius: 12px; margin-bottom: 14px; background: var(--lasso-surface); }
+.dg-portalframe iframe { border: 0; display: block; }
+.dg-ptable { border-collapse: collapse; width: 100%; max-width: 760px; font-size: 13px; }
+.dg-ptable th { text-align: left; font-weight: 600; color: var(--lasso-text-3); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--dg-line); }
+.dg-ptable td { padding: 7px 12px 7px 0; border-bottom: 1px solid var(--dg-line); vertical-align: middle; }
+.dg-ptable .dg-swatch { display: inline-block; width: 16px; height: 16px; border-radius: 4px; vertical-align: middle; margin-right: 6px; }
+.dg-ptable__same { color: var(--lasso-text-3); }
+.dg-specgrid { display: grid; gap: 28px; }
+.dg-phoneparts { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(390px, 100%), 1fr)); gap: 24px; align-items: start; }
+.dg-phonepart { margin: 0; }
+.dg-phonepart--wide { margin-top: 28px; }
+.dg-phonepart figcaption { font-size: 13px; color: var(--lasso-text-3); margin-bottom: 8px; }
+.dg-phonepart figcaption b { color: var(--dg-ink); font-weight: 600; margin-right: 6px; }
+.dg-phonepart .dg-portalframe { overflow: hidden; }
+.dg-spec__label { font-size: 13px; font-weight: 600; color: var(--dg-ink); margin-bottom: 10px; display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+.dg-spec__note { font-weight: 400; color: var(--lasso-text-3); }
+.dg-specrow { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+.dg-specrow > .searchwrap, .dg-specrow > .sdrop { flex: 1 1 300px; min-width: 260px; }
+.dg-specrow > .dd { width: 260px; }
+.dg-specrow--stack { flex-direction: column; align-items: stretch; }
+
+/* ---------- Fra største til mindste (pages/Formats.tsx): formerne langs modulets bredde ---------- */
+.dg-fmt--0 { --dg-fmt: #3d7be0; }
+.dg-fmt--1 { --dg-fmt: #20a37b; }
+.dg-fmt--2 { --dg-fmt: #d98a1c; }
+.dg-fmt--3 { --dg-fmt: #b05bd6; }
+.dg-fmt--4 { --dg-fmt: #d24b4b; }
+.dg-fruler { margin: 8px 0 20px; }
+.dg-fruler__track { position: relative; height: 40px; border-radius: 8px; background: var(--dg-fill); }
+.dg-fruler__seg { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; padding: 0 10px; box-sizing: border-box; overflow: hidden; background: color-mix(in srgb, var(--dg-fmt) 22%, var(--lasso-surface)); border-left: 2px solid var(--dg-fmt); font-size: 12px; font-weight: 600; color: var(--dg-ink); white-space: nowrap; }
+.dg-fruler__seg span { overflow: hidden; text-overflow: ellipsis; }
+.dg-fruler__seg:first-child { border-radius: 8px 0 0 8px; }
+.dg-fruler__below { position: absolute; top: 0; bottom: 0; right: 0; border-radius: 0 8px 8px 0; background: repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--lasso-text) 8%, transparent) 6px 8px); }
+.dg-fruler__ticks { position: relative; height: 10px; }
+.dg-fruler__tick { position: absolute; top: 0; height: 10px; border-left: 1px solid var(--lasso-text-3); }
+.dg-fruler__tick.is-edge { border-left-style: dashed; border-color: var(--lasso-muted); }
+.dg-fruler__ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--lasso-muted); margin-top: 2px; }
+.dg-ftable { width: 100%; max-width: 760px; border-collapse: collapse; font-size: 13px; margin: 0 0 32px; }
+.dg-ftable th { text-align: left; font-weight: 500; font-size: 12px; color: var(--lasso-muted); padding: 6px 12px 6px 0; border-bottom: 1px solid var(--dg-line); }
+.dg-ftable td { padding: 7px 12px 7px 0; border-bottom: 1px solid var(--dg-line); color: var(--lasso-text-2); vertical-align: top; }
+.dg-ftable__px { font-weight: 600; color: var(--dg-ink); font-variant-numeric: tabular-nums; white-space: nowrap; width: 110px; }
+.dg-ftable tr.is-edge td { background: var(--lasso-surface-2); }
+.dg-formats { display: grid; gap: 20px; margin-bottom: 28px; }
+.dg-format { display: grid; gap: 8px; }
+.dg-format.is-off .dg-mframe { opacity: 0.55; }
+.dg-format__head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.dg-format__check { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 15px; color: var(--dg-ink); }
+.dg-format__check input { width: 18px; height: 18px; accent-color: var(--lasso-accent); margin: 0; }
+.dg-format__dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: var(--dg-fmt); flex: none; }
+.dg-format__tag { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--lasso-text-2); }
+.dg-h2row--sub { margin-top: 8px; }

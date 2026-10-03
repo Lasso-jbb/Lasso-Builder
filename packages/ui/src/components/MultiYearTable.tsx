@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { usePrintMode } from "../print.js";
 import { ExpandLink } from "./ExpandLink.js";
 import { amountScale, currencyUnit, formatNumber, formatPercent, formatScaled, METRIC_FIELD, METRIC_KIND, METRIC_LABELS, changePercent, type FinancialsVM, type Metric } from "@lasso/spec";
 import { DataState, Missing, Section, stateForError } from "../primitives.js";
@@ -14,45 +15,20 @@ export function yearsThatFit(width: number): number {
   const mobile = width <= 560;
   const label = mobile ? 120 : 160;
   const year = mobile ? 72 : 96;
-  const extras = width > 768 ? 80 + 96 : 0;
+  // Jakob 01.10: ingen tendenskolonne; kun ændringen står efter årene.
+  const extras = width > 768 ? 80 : 0;
   return Math.max(2, Math.floor((width - label - extras) / year));
 }
 
+/** 10.2 (Jakob 01.10): de 4 vigtigste i læserækkefølge: indtjening, bundlinje, polstring, størrelse. Ingen omsætning (mange oplyser den ikke). */
 const DEFAULT_METRICS: Metric[] = ["bruttofortjeneste", "resultat", "egenkapital", "ansatte"];
+/** 18 (Jakob 01.10): den store flerårstabel (fuld bredde) viser flere nøgletal. */
+const LARGE_METRICS: Metric[] = ["bruttofortjeneste", "ebitda", "resultat", "egenkapital", "balancesum", "soliditetsgrad", "overskudsgrad", "ansatte"];
+/** Fra denne bredde er tabellen "stor" og viser LARGE_METRICS som standard. */
+const LARGE_FROM = 960;
+/** 18 mobil (Jakob 01.10): kun de seneste 3 år, så tabellen står uden vandret rulning. */
+const MOBILE_YEARS = 3;
 
-/**
- * Tendens-sparkline 72×22 (katalog 09/10): skaleret til seriens eget spænd, så kurven er tydelig,
- * prik på seneste værdi (inden for rammen) og stiplet nullinje, når værdierne krydser 0.
- */
-export function trendPoints(values: readonly number[], w = 72, h = 22, pad = 3): (readonly [number, number])[] {
-  const crossesZero = Math.min(...values) < 0 && Math.max(...values) > 0;
-  const min = crossesZero ? Math.min(...values, 0) : Math.min(...values);
-  const max = crossesZero ? Math.max(...values, 0) : Math.max(...values);
-  // En næsten flad serie må ikke blæses op fra top til bund: spændet er mindst 15 % af den største værdi.
-  const floor = 0.15 * Math.max(Math.abs(max), Math.abs(min));
-  const span = Math.max(max - min, floor);
-  const lo = min - (span - (max - min)) / 2;
-  const y = (v: number) => (span === 0 ? h / 2 : h - pad - ((v - lo) / span) * (h - 2 * pad));
-  return values.map((v, i) => [pad + (values.length > 1 ? i / (values.length - 1) : 0) * (w - 2 * pad), y(v)] as const);
-}
-function Trend({ values }: { values: readonly number[] }) {
-  const w = 72;
-  const h = 22;
-  const pts = trendPoints(values, w, h);
-  const d = pts.map(([x, py], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${py.toFixed(1)}`).join(" ");
-  const last = pts[pts.length - 1]!;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const crossesZero = min < 0 && max > 0;
-  const zeroY = crossesZero ? h - 3 - ((0 - min) / (max - min)) * (h - 6) : 0;
-  return (
-    <svg className="lasso-spark lasso-spark--accent lasso-myt__spark" width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden="true">
-      {crossesZero ? <line className="lasso-myt__zero" x1="0" y1={zeroY} x2={w} y2={zeroY} /> : null}
-      <path d={d} />
-      <circle cx={last[0]} cy={last[1]} r="2.5" />
-    </svg>
-  );
-}
 
 /** Pil + procent, også ved fortegnsskift; intet når forrige mangler eller er 0 (samme regel som Delta, 02c.4). */
 function changeText(prev: number | undefined, last: number | undefined): { text: string; tone: "up" | "down" | "" } {
@@ -93,7 +69,7 @@ function joinYears(ys: readonly number[]): string {
 export function MultiYearTable({ financials, metrics, years, title, error, variant, chartMetrics, onChartToggle }: { financials?: FinancialsVM; metrics?: readonly Metric[]; years?: number; title?: string; error?: string; variant?: "A" | "B"; /** Nøgletal, der står i grafen (afkrydset). */ chartMetrics?: readonly Metric[]; /** Afkrydsning ændret: vis/skjul nøgletallet i grafen. */ onChartToggle?: (metric: Metric, on: boolean) => void }) {
   const heading = title ?? "Flerårstabel";
   const [ref, W] = useWidth<HTMLDivElement>(1048);
-  const [allRows, setAllRows] = useState(false);
+  const [allRows, setAllRows] = useState(usePrintMode());
   // Kontrol r5 (10.2 mobil): hjælpeteksten nævner kun de år, der faktisk ligger uden for billedet (målt).
   const mobileTable = useRef<HTMLTableElement>(null);
   const [fitYears, setFitYears] = useState<number | null>(null);
@@ -124,11 +100,12 @@ export function MultiYearTable({ financials, metrics, years, title, error, varia
       </Section>
     );
   }
-  const chosen: Metric[] = (metrics?.length ? [...metrics] : all.at(-1)?.revenue != null ? ["omsaetning", ...DEFAULT_METRICS] : DEFAULT_METRICS).slice(0, 6) as Metric[];
+  const large = W >= LARGE_FROM;
+  const chosen: Metric[] = (metrics?.length ? [...metrics] : large ? LARGE_METRICS : DEFAULT_METRICS).slice(0, 8) as Metric[];
   const mode = multiYearVariant(W, chosen.length, variant);
   const mobile = W <= 560;
   // Mobil (26c.3) ruller vandret til de ældre år, så alle ønskede år tegnes; desktop viser dem, bredden kan bære.
-  const span = Math.max(2, Math.min(10, years ?? 5, mobile ? 10 : yearsThatFit(W)));
+  const span = Math.max(2, Math.min(10, years ?? 5, mobile ? MOBILE_YEARS : yearsThatFit(W)));
   const shown = all.slice(-span);
   const amountMetrics = chosen.filter((m) => METRIC_KIND[m] === "amount");
   const scale = amountMetrics.length ? amountScale(shown.flatMap((y) => amountMetrics.map((m) => (y[METRIC_FIELD[m]] as number | null) ?? 0)), currencyUnit(financials.currency)) : null;
@@ -230,11 +207,9 @@ export function MultiYearTable({ financials, metrics, years, title, error, varia
               </div>
             ))}
             <div className="lasso-myt__delta lasso-myt__colhead">Ændring</div>
-            <div className="lasso-myt__trend lasso-myt__colhead">Tendens</div>
           </div>
           {rowsShown.map((m) => {
             const values = shown.map((y) => y[METRIC_FIELD[m]] as number | null | undefined);
-            const series = values.filter((v): v is number => typeof v === "number");
             const change = changeText(values.at(-2) ?? undefined, values.at(-1) ?? undefined);
             return (
               <div className="lasso-myt__row" key={m}>
@@ -254,7 +229,6 @@ export function MultiYearTable({ financials, metrics, years, title, error, varia
                   </div>
                 ))}
                 <div className={`lasso-myt__delta ${change.tone === "down" ? "lasso-down" : change.tone === "up" ? "lasso-up" : ""}`}>{change.text}</div>
-                <div className="lasso-myt__trend">{series.length >= 2 ? <Trend values={series} /> : <Missing />}</div>
               </div>
             );
           })}

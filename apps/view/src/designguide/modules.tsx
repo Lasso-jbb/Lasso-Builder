@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
-import { COMPONENT_CATALOG, NO_ALTERNATIVE_REASON, type ComponentType, type Dataset, type ShowcaseItem, type ViewComponent, type ViewSpec, type Width } from "@lasso/spec";
+import { COMPONENT_CATALOG, CREDIT_SOURCE, NO_ALTERNATIVE_REASON, type ComponentType, type CreditRatingVM, type Dataset, type ShowcaseItem, type ViewComponent, type ViewSpec, type Width } from "@lasso/spec";
 import { LassoView, type HostCapabilities } from "@lasso/ui";
 import type { Report } from "./inspect.js";
 import { SOURCE, type DesignguideBoot } from "./source.js";
@@ -34,6 +34,15 @@ export interface ModuleInfo {
   noAlternative?: string;
 }
 
+/** Samme virksomhed som `base`, men kreditvurderingen er ikke købt endnu (state "purchase"). */
+function purchaseOption(base: DataOption): DataOption {
+  const id = (base.component as { company?: string }).company ?? "";
+  const ratings = (base.dataset as { creditRatings?: Record<string, CreditRatingVM> }).creditRatings ?? {};
+  const prev = ratings[id];
+  const rating: CreditRatingVM = { lassoId: id, cvr: prev?.cvr, source: prev?.source ?? CREDIT_SOURCE, state: "purchase", price: 1, creditBalance: 12 };
+  return { id: "kob", label: "Købstrin (ikke købt endnu)", component: base.component, dataset: { ...base.dataset, creditRatings: { ...ratings, [id]: rating } } as Dataset };
+}
+
 /** Alle katalogets moduler med de rigtige data, de kan vises med. */
 export function buildModules(boot: DesignguideBoot): Map<ComponentType, ModuleInfo> {
   const sc = boot.showcase;
@@ -58,6 +67,8 @@ export function buildModules(boot: DesignguideBoot): Map<ComponentType, ModuleIn
     // Personmoduler, udstillingen ikke har med (fx personrisiko): samme person og datasæt som personfanen.
     const personTab = sc.tabs.find((t) => t.id === "person");
     if (!options.length && personTab && entry.type.startsWith("LassoPerson")) options.push({ id: `${personTab.id}:${personTab.entity}`, label: personTab.label, component: { type: entry.type, person: personTab.entity } as unknown as ViewComponent, dataset: personTab.dataset });
+    // Kreditvurderingen betales pr. styk (38): købstrinnet vises som sin egen datakilde på samme virksomhed.
+    if (entry.type === "LassoCreditRating" && options[0]) options.push(purchaseOption(options[0]));
     // Fiktive data sidst: bruges, når ingen af de rigtige datakilder viser modulet (FICTIVE_ID).
     const fic = boot.fictive?.items.find((x) => x.type === entry.type);
     if (fic && boot.fictive) options.push({ id: FICTIVE_ID, label: `Fiktive data (${fic.label})`, component: fic.component, dataset: boot.fictive.dataset, fictive: true });
@@ -83,28 +94,36 @@ export function idsOf(c: ViewComponent): string[] {
   return [x.company, x.person, x.benchmark, ...(x.companies ?? [])].filter((v): v is string => typeof v === "string");
 }
 
+/** Hører datanøglen til et af id'erne? Nøglen er id'et selv eller sammensat, fx "CVR-1-1|2|1|" eller "company:CVR-1-1|90|". */
+const keyOf = (key: string, ids: string[]) => key.split(/[:|]/).some((part) => ids.includes(part));
+
 /**
  * Datasættet i en given tilstand: "henter" = modulets data fjernet (skelettet), "fejl" og "ingen-adgang"
- * = data fjernet og en fejl på hver af modulets fejlnøgler (LassoView.tsx `err(...)`).
+ * = data fjernet og en fejl på hver af modulets fejlnøgler (LassoView.tsx `err(...)` og `errors[...]`).
+ * Datanøglerne kan være sammensatte (ejerdiagram, ændringsfeed, søgninger); fejlen sættes på de samme nøgler.
+ * Moduler uden Lasso-ID (tabeller, heatmap, gemte sider) mister alle deres data.
  */
-export function stateDataset(ds: Dataset, c: ViewComponent, item: ShowcaseItem | undefined, mode: StateMode): Dataset {
+export function stateDataset(ds: Dataset, c: ViewComponent, kraeverData: readonly string[], mode: StateMode): Dataset {
   if (mode === "fyldt") return ds;
   const ids = idsOf(c);
   const errors: Record<string, string> = { ...(ds.errors ?? {}) };
   const copy: Record<string, unknown> = { ...ds, errors };
-  for (const key of item?.kraeverData ?? []) {
+  const keys = new Set<string>(ids);
+  for (const key of kraeverData) {
     const v = copy[key];
     if (v && typeof v === "object" && !Array.isArray(v)) {
       const next = { ...(v as Record<string, unknown>) };
-      for (const id of ids) delete next[id];
-      if (!ids.length) for (const k of Object.keys(next)) delete next[k];
+      for (const k of Object.keys(next)) {
+        if (ids.length && !keyOf(k, ids)) continue;
+        keys.add(k);
+        delete next[k];
+      }
       copy[key] = next;
     } else if (v !== undefined) delete copy[key];
   }
   if (mode !== "henter") {
     const message = mode === "fejl" ? "Lasso svarede ikke i tide (eksempel på en teknisk fejl)." : "Ingen adgang (403): kontoen har ikke adgang til data.";
-    const prefixes = SOURCE.errPrefixes[c.type] ?? [];
-    for (const p of prefixes) for (const id of ids.length ? ids : ["*"]) errors[`${p}:${id}`] = message;
+    for (const p of SOURCE.errPrefixes[c.type] ?? []) for (const k of keys.size ? keys : ["*"]) errors[`${p}:${k}`] = message;
   }
   return copy as unknown as Dataset;
 }

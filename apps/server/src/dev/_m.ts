@@ -1,0 +1,10 @@
+import { chromium } from "playwright-core";
+import { readFileSync } from "node:fs";
+const fn = readFileSync("/tmp/claude-0/-home-user-Lasso-Builder/0bc7a140-2135-5aaa-83b3-2f2f72f1c599/scratchpad/measure.js", "utf8");
+const b = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+const m = await b.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3 });
+await m.goto("http://localhost:3999/portal?aaben=CVR-1-99000004,CVR-1-99000005,CVR-1-99000003");
+await m.waitForSelector(".view .lasso-frame", { timeout: 15000 }); await m.waitForTimeout(1500);
+console.log(JSON.stringify(await m.evaluate(`(${fn})()`)));
+await m.screenshot({ path: "/tmp/claude-0/-home-user-Lasso-Builder/0bc7a140-2135-5aaa-83b3-2f2f72f1c599/scratchpad/mtop.png", clip: { x: 0, y: 0, width: 390, height: 60 } });
+await b.close();

@@ -13,15 +13,21 @@ import { Icon } from "./Icon.js";
  * `ready` er sand, når laget er monteret. Fokusstyring skal vente på det, fordi React flytter
  * DOM-noderne, når indholdet går fra "på stedet" til portalen.
  */
-export function useLayer(): { render: (node: ReactNode) => ReactNode; ready: boolean } {
+export function useLayer(): { render: (node: ReactNode) => ReactNode; ready: boolean; anchor: () => HTMLElement | null } {
   const anchor = useRef<HTMLSpanElement>(null);
   const [mount, setMount] = useState<{ el: HTMLElement; theme: string } | null>(null);
 
+  // Monteres, når ankeret står i dokumentet: komponentens eget dokument (fx en iframe i designguiden),
+  // ikke altid det globale. Et lag, der først tegnes senere (et lukket panel), monteres dér, når det åbnes.
   useEffect(() => {
     if (typeof document === "undefined") return;
-    const root = anchor.current?.closest<HTMLElement>(".lasso-root");
-    setMount({ el: document.body, theme: root?.getAttribute("data-theme") ?? "light" });
-  }, []);
+    const el = anchor.current;
+    if (!el) return;
+    const body = el.ownerDocument.body;
+    if (mount?.el === body) return;
+    const root = el.closest<HTMLElement>(".lasso-root");
+    setMount({ el: body, theme: root?.getAttribute("data-theme") ?? "light" });
+  });
 
   const render = (node: ReactNode) => (
     <>
@@ -38,7 +44,7 @@ export function useLayer(): { render: (node: ReactNode) => ReactNode; ready: boo
       )}
     </>
   );
-  return { render, ready: mount !== null };
+  return { render, ready: mount !== null, anchor: () => anchor.current };
 }
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
