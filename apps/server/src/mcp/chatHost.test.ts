@@ -13,7 +13,7 @@ import { DemoProvider } from "../data/demo.js";
 import { createSavedPageStore } from "../pages/store.js";
 import { demoUser } from "../auth/user.js";
 import { createViewStore } from "../views/store.js";
-import { CHAT_ROUTING, createMcpServer, MCP_RULES, ROUTING, type McpContext } from "./server.js";
+import { CHAT_HOST_ROUTING, CHAT_ROUTING, createMcpServer, MCP_RULES, ROUTING, type McpContext } from "./server.js";
 
 const config = loadConfig({ LASSO_DATA_SOURCE: "demo", DATABASE_URL: "", PUBLIC_BASE_URL: "https://lasso.test", LINK_SECRET: "x" });
 const sha = (s: string) => createHash("sha256").update(s).digest("hex").slice(0, 16);
@@ -91,4 +91,16 @@ test("/mcp er byte-identisk: instruktioner og render_view's beskrivelse (pinnet 
   assert.equal(sha(instr), "df28a00854e1b33b");
   const rv = (await client.listTools()).tools.find((t) => t.name === "render_view")!;
   assert.equal(sha(rv.description!), "315b3814a067317a");
+});
+
+test("CHAT_HOST_ROUTING: chattens egne linjer for navneopslag og side/element; /mcp's routing er uændret", () => {
+  assert.notEqual(CHAT_HOST_ROUTING, CHAT_ROUTING);
+  assert.match(CHAT_HOST_ROUTING, /find_entity for at finde, hvem der menes \(aldrig search_persons til det\)/);
+  assert.match(CHAT_HOST_ROUTING, /ask_choice/);
+  assert.match(CHAT_HOST_ROUTING, /render_view med én komponent .*medmindre brugeren beder om selve siden/);
+  assert.doesNotMatch(CHAT_HOST_ROUTING, /Personer på navn \('find Mette Holm', flere med samme navn\): search_persons, derefter/);
+  assert.doesNotMatch(CHAT_HOST_ROUTING, /save_page|save_view/);
+  // Resten er den fælles tekst: ingen linjer er faldet væk.
+  assert.equal(CHAT_HOST_ROUTING.split("\n").length, CHAT_ROUTING.split("\n").length);
+  assert.ok(ROUTING.startsWith(CHAT_ROUTING), "/mcp bygger stadig på den uændrede tekst");
 });

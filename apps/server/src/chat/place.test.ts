@@ -69,7 +69,7 @@ test("entity: id'et skal være det eneste kandidat for navnet; flere eller et an
 test("global: kræver title; forsiden og en fane giver global, et resultat med navn bliver", async () => {
   assert.match(error(await verifyPlacement({ placement: "global" }, ctx(home, "Største revisorer"))), /title kræves/);
   assert.deepEqual(await verifyPlacement({ placement: "global", title: "Firmaliste" }, ctx(home, "Største revisorer")), { placement: { placement: "global", title: "Firmaliste", decided: true } });
-  assert.deepEqual(await verifyPlacement({ placement: "global", title: "Sammenligning" }, ctx(onByg, "Sammenlign med branchen")), { placement: { placement: "global", title: "Sammenligning", decided: true } });
+  assert.deepEqual(await verifyPlacement({ placement: "global", title: "Sammenligning" }, ctx(onByg, "Sammenlign de største revisorer i Aarhus")), { placement: { placement: "global", title: "Sammenligning", decided: true } });
   assert.deepEqual(await verifyPlacement({ placement: "global", title: "Kort" }, ctx({ active: { kind: "global", title: "Firmaliste" }, open: [] }, "Vis dem på kort")), { placement: { placement: "current", decided: true } });
 });
 
@@ -128,4 +128,12 @@ test("EXPLICIT_OPEN: tilføj åbner en fane", () => {
   for (const ok of ["tilføj ole", "Tilføj Ole Olesen", "kan du tilføje Ole?", "tilføjer du Ole"]) assert.match(ok, EXPLICIT_OPEN, ok);
   assert.doesNotMatch("det er en tilføjelse", EXPLICIT_OPEN);
   assert.doesNotMatch("betilføj", EXPLICIT_OPEN);
+});
+
+test("D4: global fra en entitet afvises, når spørgsmålet handler om den aktive entitet; på forsiden er den fin", async () => {
+  for (const q of ["Sammenlign med branchen", "Hvem er deres konkurrenter?", "Sammenlign dem", "Hvad ejer den?", "Vis selskabet på kortet", "Vis virksomheden i en liste", "Sammenlign Eksempel Byg med de andre"]) {
+    assert.match(error(await verifyPlacement({ placement: "global", title: "Sammenligning" }, ctx(onByg, q))), /Spørgsmålet handler om Eksempel Byg A\/S; svar her\./, q);
+  }
+  assert.ok("placement" in (await verifyPlacement({ placement: "global", title: "Firmaliste" }, ctx(onByg, "Find revisorer i Aarhus med mindst 10 ansatte"))));
+  assert.ok("placement" in (await verifyPlacement({ placement: "global", title: "Sammenligning" }, ctx(home, "Sammenlign med branchen"))));
 });

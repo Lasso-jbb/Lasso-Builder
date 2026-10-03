@@ -25,7 +25,8 @@ browser (/chat)  ──POST /api/chat (SSE)──▶  server: chat/agent.ts
 - **Visningen til browseren, teksten til modellen.** Værktøjets spec og datasæt streames til browseren
   som en `view`-hændelse og tegnes med `LassoView`. Modellen får kun resuméteksten, ikke tekstkortet.
 - **Klik i visningen** (åbn person/virksomhed, filtre, gem, PDF) går til portal-API'et uden en tur til
-  modellen. Opfølgende spørgsmål ("Se hele økonomien", "Se alle … i Historik") sendes som nye beskeder.
+  modellen. Opfølgende spørgsmål ("Se hele økonomien", "Se alle … i Historik") sendes som nye beskeder; visningens
+  `LassoFollowUps` tegnes ikke i portalen (forslagene står kun under spørgefeltet, designregel 8).
 - **Svaret bygger på Lassos data.** Tal, navne, roller, status, datoer og vurderinger kommer fra et
   værktøjssvar i samtalen eller fra "Brugeren ser" i konteksten, aldrig fra modellens egen viden. Et
   faktaspørgsmål kalder først det rette værktøj (medmindre tallet allerede står i konteksten eller et
@@ -53,7 +54,8 @@ Modellen får tre lag af kontekst, alle i brugerens tur, aldrig i systemprompten
 3. **Det, brugeren skriver** (`message`).
 
 Konteksten står som første tekstblok i brugerens tur, fx `[Kontekst] Aktiv fane: virksomheden LASSO X A/S
-(CVR-1-34580820), modul ejerskab. Brugeren ser: ejerskab — … Åbne faner: Jakob Benediktson (CVR-3-4000123).`
+(CVR-1-34580820), modul ejerskab. Brugeren ser: ejerskab — …` De åbne faner står ikke i teksten til modellen: serveren bruger `context.open` deterministisk
+(`find_entity`, `place_answer`, forhåndsopløsningen).
 (`apps/server/src/chat/context.ts`). Serveren svarer altid i den aktive kontekst og skifter aldrig kontekst
 selv: en anden fane åbnes kun ved et klik i en visning (uden AI), ved brugerens valg i en valgmenu eller når
 brugeren udtrykkeligt beder om den ("vis alt om X", "åbn X"; se `place_answer` nedenfor).
@@ -91,31 +93,45 @@ kalder `ask_choice` uden nogen visning: ét punkt pr. kandidat (placement `entit
 anbefalet. Der tilbydes aldrig kort eller fuld indsigt, og menuen bruges aldrig til at vælge placering. Serveren
 sender `choice` (spørgsmål, 2–8 punkter, fritekst tilladt) og afslutter turen; andre værktøjskald i samme svar
 afvises ("vis intet, før brugeren har valgt"). Punktets handling (`action`) er placeringen: `current`, `entity`
-(med `focus`) eller `global` (med `title`, et af de fire generiske navne). Brugerens valg kommer med næste
+(med `focus`) eller `global` (med `title`, et af de fire generiske navne). **Uden en udtrykkelig bøn er menuen kun til at vælge hvem:** `ask_choice` omskriver alle `entity`-handlinger til
+`{ placement: "current", entity }` ("svaret handler om den valgte og skrives her", ingen ny fane; `contextText` siger det) og afviser
+`global` fra en entitetsfane; med en udtrykkelig bøn står `entity`-handlingerne. Det effektive input gemmes i historikken, så
+`verifyChoice` bekræfter det, klienten sender tilbage. Brugerens valg kommer med næste
 spørgsmål som `context.choice` (`{ id, index, action }`, eller `{ id, free: true }` ved fritekst); serveren tjekker,
 at `id` er modellens eget `ask_choice`-kald i den signerede historik, og at `action` er præcis punktets (ellers 400
 "Valget passer ikke til samtalen"). Så står valget først i konteksten ("Brugeren valgte 'Jakob Benediktson': svaret
 skrives på personen …"), valget er bindende (`place_answer` afvises), og modellen gør det i ét trin. Spørger
 brugeren om noget andet i stedet, svares der her.
 
-**Placeringen vælges med `place_answer`, før noget vises.** Modellen kalder `place_answer` højst én gang pr. tur og
-som det første; placeringen er altså afgjort, før en visning tegnes (højst én fane pr. spørgsmål). Standard er at
-blive: `current` (på en person eller virksomhed er det "her"; nævner spørgsmålet en anden, men brugeren ikke har
-bedt om dens side, kalder modellen `current`). `entity` (en anden persons eller virksomheds egen fane) kræver, at
-brugerens besked udtrykkeligt beder om det (`EXPLICIT_OPEN` i `chat/place.ts`: "vis/se (mig) alt/det hele" eller
-"åbn"), at id'et ikke er den aktive fane, og at id'et enten står i de åbne faner eller er det eneste kandidat, når
-serveren selv slår navnet op (`resolveEntity`, grænse 2); navnet kommer fra kandidaten, ikke fra modellen. Passer
-navnet på flere, svarer serveren med en fejl ("Navnet passer på flere; kald ask_choice med kandidaterne."). `global`
-(en liste, sammenligning eller analyse) kræver en `title` fra de fire generiske navne `GLOBAL_TITLES`
-(Firmaliste, Sammenligning, Markedsanalyse, Kort), aldrig spørgsmålet; på en resultatfane med navn bliver man
-(`current`). Fejl er `is_error`-værktøjssvar (og `tool_error`-hændelser), så modellen kan rette; kommer `place_answer`
-i samme svar som en visning og afvises, vises intet i det svar. `place_answer` efter en visning, en anden gang i
-samme tur og efter et bindende valg i menuen afvises også. Serveren kontrollerer, at modellen ikke kan åbne faner,
-brugeren ikke bad om (reglen står i serveren, ikke kun i prompten).
+**Udtrykkelige bønner afgøres på serveren, før modellen kaldes.** "Vis alt om X", "se alt om X", "åbn X" og "tilføj X"
+(`EXPLICIT_OPEN`) forhåndsopløses (`chat/preresolve.ts`, slås fra med `CHAT_PRE_RESOLVE=false`): navnet efter udløseren slås op
+(`resolveEntity`, grænse 3, personer og virksomheder), og kun kandidater, hvis navn indeholder alle de rigtige ord, tæller.
+Ét match (og ikke den aktive fane): første hændelse er `placement` med `decided: true` og `target`, brugerens tur får en linje om,
+at placeringen er afgjort, og modellen skal kun vise siden: to modelkald (visning, tekst) i stedet for fire. Flere match:
+valgmenuen bygges af serveren uden et modelkald (entity-handlinger, fordi brugeren bad om at åbne). Intet match: modellen
+tager over som nedenfor. Et valg i menuen (`context.choice`) forhåndsopløses aldrig.
 
-**Placeringen på hændelserne.** Første hændelse i hver tur er `placement` (fra valget, ellers `current`; på
-forsiden `global`), sendt før modellen kaldes. Lykkes `place_answer`, sendes endnu en `placement` med `decided: true`
-(og `here: true` ved `current` på en entitet, `title` ved `global`). Et skifte af fane sker, når placement er `entity`,
+**Placeringen vælges med `place_answer`, kun til en anden fane.** Standard er at blive, og for det kaldes intet:
+serveren sætter selv `here: true` på første `placement` på en entitetsfane (modellen kalder altså ikke `place_answer`
+for at blive; `current` accepteres stadig af hensyn til ældre samtaler). Modellen kalder `place_answer` kun for at åbne en
+anden fane eller en resultatfane, højst én gang pr. tur og som det første (højst én fane pr. spørgsmål; kommer flere i
+samme svar, afvises de følgende uden at køre). `entity` (en anden persons eller virksomheds egen fane) kræver, at brugerens
+besked udtrykkeligt beder om det (`EXPLICIT_OPEN`), at id'et ikke er den aktive fane, at id'et enten står i de åbne faner eller
+er det eneste kandidat, når serveren selv slår navnet op (`resolveEntity`, grænse 2), og at målets navn står i beskeden
+(hele ord, uden udløsere og selskabsformer; en åben fane kræver alle navneord). Passer navnet på flere, svarer serveren med en
+fejl ("Navnet passer på flere; kald ask_choice med kandidaterne."). `global` (en liste, sammenligning eller analyse) kræver en
+`title` fra de fire generiske navne `GLOBAL_TITLES` (Firmaliste, Sammenligning, Markedsanalyse, Kort), aldrig spørgsmålet; på
+en resultatfane med navn bliver man (`current`). **Global fra en entitetsfane afvises, når spørgsmålet handler om den aktive
+entitet** (navnet står i beskeden, eller den peger tilbage med "branchen", "konkurrent…", "dem", "den", "selskabet",
+"virksomheden"): "Spørgsmålet handler om <navn>; svar her."; regel 11 (spørgsmål uden en bestemt virksomhed eller person →
+global fane) gælder stadig. Fejl er `is_error`-værktøjssvar (og `tool_error`-hændelser), så modellen kan rette; kommer
+`place_answer` i samme svar som en visning og afvises, vises intet i det svar. `place_answer` efter en visning og efter et
+bindende valg i menuen afvises også (reglen står i serveren, ikke kun i prompten).
+
+**Placeringen på hændelserne.** Første hændelse i hver tur er `placement` (fra valget, ellers `current` med `here: true` på en
+entitetsfane; på forsiden `global`), sendt før modellen kaldes. Et valg i menuen, der flytter (entity, eller global fra en
+entitet), sendes allerede her med `decided: true` (og `target`/`title`), så klienten flytter; `done` er så `fresh`. Lykkes `place_answer`, sendes endnu en `placement` med `decided: true`
+(`title` ved `global`). Et skifte af fane sker, når placement er `entity`,
 eller `global` fra en fane, der ikke er global; højst én gang pr. tur, efter den første `placement`-hændelse.
 Portalen åbner eller aktiverer kun en anden fane på `placement`, aldrig på en visning. Åbner `entity` en ny fane,
 står fanen, man spurgte fra, præcis som før (hverken nulstillet til Overblik eller genindlæst); spørgsmålet og
@@ -147,8 +163,12 @@ rækken. Skriver modellen ingen (intet `lasso:` i turens assistenttekst), tilfø
 (`fallbackLinks` i `chat/agent.ts`): modulet i den første visning om en entitet (`show_company`/`show_person` med
 `focus`, ellers udledt af visningens undertitel; navnene er fokusernes etiketter: Økonomi, Regnskab, Ejerskab …,
 for personer Roller, Netværk …), ellers `[Overblik](lasso:modul/overblik)` når svaret hører til en person eller
-virksomhed, og ingenting på en global fane, efter en menu eller en fejl. Linjen sendes som en sidste `text`-hændelse
+virksomhed (modulet kun, når visningen handler om den aktive eller målets entitet), og ingenting på en resultatfane (global), efter en menu
+eller en fejl. Linjen sendes som en sidste `text`-hændelse
 (`"\n\n[…]"`, før `done`) og lægges på den sidste assistentbesked i historikken, så modellen ser konventionen næste tur.
+**Linkvalidering** (`chat/links.ts`): et `lasso:firma|person/<id>`-link, hvis id ikke har stået i turens værktøjssvar, visningernes
+datasæt eller konteksten, er opfundet og bliver til almindelig tekst; ens links vises kun én gang. Reglerne gælder både det streamede
+(et filter holder kun et muligt link tilbage, til det er helt) og det gemte (historikken rettes, så modellen ser, hvad brugeren så).
 
 **Fanenavne.** En entitetsfane hedder det, entiteten hedder. En resultatfane hedder aldrig spørgsmålet, men et af de
 generiske navne `Firmaliste`, `Sammenligning`, `Markedsanalyse` eller `Kort`: fra `place_answer`/valgets `title`, og
@@ -164,7 +184,7 @@ et ekstra modul (efter de indbyggede, med sidens titel) på hver virksomhed (ell
 med den enheds data. Specen gemmes uden entiteten, og uden hoved (`LassoCompanyHead`/`LassoPersonHead`) og opfølgende spørgsmål (`LassoFollowUps`), som bærer navnet; entitetens navn (slået op i Lasso) klippes af titel og undertitel (efterstillet ", Navn"/" – Navn", også uden A/S, ApS), en tom titel bliver første komponents titel eller "Side", og står navnet stadig i specen, afvises siden (400 "Siden indeholder stadig navnet; omdøb den først."). Teknisk: `templateFromSpec` (`apps/server/src/pages/templateSpec.ts`)
 erstatter hver strengværdi, der er entitetens Lasso-ID (eller virksomhedens CVR-nummer), med `{{entity}}`, og
 afviser en side uden en forekomst ("Siden handler ikke om én virksomhed/person"); `instantiate` sætter det nye id
-ind igen. Andre virksomheder i specen (en benchmark, en sammenligning) røres ikke. Skabelonerne er pr. bruger og
+ind igen. Andre virksomheder i specen (en benchmark, en sammenligning) røres ikke. Demobrugeren (den åbne portal, PORTAL_PUBLIC) kan ikke gemme eller slette egne sider (403 "Log ind for at gemme sider.") og ser ingen; svarer Lasso ikke på opslaget af entiteten (navn, by, gade, CVR), gemmes intet (503 "Lasso svarede ikke; prøv igen."). Skabelonerne er pr. bruger og
 organisation (tabellen `page_templates`, eller hukommelsen uden database; højst 50 pr. bruger). Portal-API'et
 (session + CSRF som resten):
 
@@ -212,7 +232,7 @@ Svar: `text/event-stream`, én `data: <json>` pr. hændelse:
 | `view` | `id`, `name`, `tool`, `form`, `spec`, `dataset`, `pdfLink?` | Visningen fra værktøjet. `form` er `page` (show_*, søgninger, render_view med layout page) eller `module`. `tool` er MCP-værktøjets navn (som `name`). "Tilføj som fane" afhænger af `form` (page), ikke af `tool`. Tegnes med `LassoView`. |
 | `tool_error` | `id`, `name`, `message` | Værktøjet fejlede. Claude får fejlen og kan rette sig. |
 | `choice` | `id`, `question`, `options[{label, description, recommended?, action}]`, `allowFreeText` | Valgmenuen (ask_choice, kun til flere match). Turen slutter; valget sendes med næste spørgsmål i `context.choice`. |
-| `error` | `message` | Samtalen kunne ikke fortsætte (Claude-fejl, afvist svar, for mange trin). |
+| `error` | `message`, `code?` | Samtalen kunne ikke fortsætte (Claude-fejl, afvist svar, for mange trin). `code: "history_invalid"` ved en 400 fra Claude (samtalen afvises): klienten nulstiller samtalen på fanen. En tom assistentbesked (eller tomme tekstblokke) gemmes aldrig i historikken, fordi API'et afviser den ved hver senere tur. |
 | `done` | `history`, `sig`, `placement`, `fresh?` | Sendes med næste spørgsmål. `history` er den trimmede historik (se nedenfor); ved `fresh: true` er svaret flyttet til en anden fane, og `history` er kun denne tur (hører til den nye fane). `placement.title` kan være sat af serveren (generisk navn). |
 
 Et svar kan være tekst, en eller flere visninger, eller begge dele ("Jakob har 4 firmaer …" og et ejerdiagram),
@@ -266,15 +286,16 @@ Alt nedenfor er slået til med `host: "chat"` i MCP-serveren; Claude.ai over `/m
 |---|---|---|
 | `render_view`'s beskrivelse | fuld: komposition, layoutguiden (Paper 30), komponentindeks med formål (~13.000 tegn) | kort (<1.500 tegn): formål, `describe_components` først, 1–12 komponenter, højst én graf, udelad width, layout "page", aldrig HTML, og typenavnene (uden dem kan modellen ikke kalde `describe_components`) |
 | gem-værktøjer (`save_view`, `save_page`, `remove_saved_page`, `list_saved_pages`) | ja | nej: portalen har knapper til at gemme; routingen i systemprompten (`CHAT_ROUTING`) nævner dem ikke |
-| værktøjssvar (tekst til modellen) | SILENT-linje, resumé, "Visningen er svaret: skriv ingen tekst …", link til visningen, tekstkort-blok | kun noten og resuméet; demonoten er én kort linje; `structuredContent` har samme felter (tekstkortet står dér) |
+| værktøjssvar (tekst til modellen) | SILENT-linje, resumé, "Visningen er svaret: skriv ingen tekst …", link til visningen, tekstkort-blok | kun noten og resuméet (uden "Ikke vist: …"-fejlsøgningslinjen); demonoten er én kort linje; ekstralinjer til at svare uden at hente siden igen: direktion og bestyrelse (`LassoRelations`), revisor (`LassoKeyValueList`), de to seneste begivenheder og nyheder (højst ca. 160 tegn pr. linje); `structuredContent` har samme felter (tekstkortet står dér) |
 | tekst efter en visning | ingen (visningen er svaret) | højst én kort sætning (≤ 20 ord) før visningen, efter den kun linjen med modullinks (ellers ét nøglepunkt, ≤ 20 ord); tekstsvar højst 2–3 sætninger (≤ 60 ord) eller 4 punkter (`CHAT_RULES`) |
 | "Brugeren ser" i konteksten | (findes ikke) | fuldt resumé første gang, derefter `same: true`, til det ændrer sig |
 
-Målt med demodata (`buildChatSetup` + `textForModel` på show_company 99000001, 03.10.2026): værktøjslisten 37,3k → 21,7k
-tegn (render_view 15,2k → 3,5k, heraf beskrivelsen 13,0k → 1,4k; de fire gem-værktøjer 3,8k væk), systemprompten 5,7k →
-5,6k, et visningssvar til modellen 1,0–1,1k → 0,6–0,8k tegn (overblik 1.035 → 724, økonomi 955 → 632, ejerskab 1.083 → 754,
-risiko 996 → 676), og "Brugeren ser" op til 4k tegn pr. spørgsmål → kun ved ændring. /mcp: uændret. Mål igen med samme fremgangsmåde,
-når værktøjsbeskrivelser eller resuméer ændres.
+Målt med demodata (`buildChatSetup` + `textForModel` på show_company 99000001, 03.10.2026, efter place_answer-, routing- og
+sections-ændringerne): chattens præfiks (det, der caches) er 30,6k tegn: systemprompten 7,4k (routing + `CHAT_RULES`) og værktøjslisten
+23,2k (MCP-værktøjerne 18,2k, heraf render_view 3,5k, plus chattens egne `find_entity`, `ask_choice` og `place_answer` 5,0k); /mcp
+har 3,1k instruktioner og 34,0k værktøjer (render_view 15,2k). Et visningssvar til modellen er 0,8k tegn mod 1,1k i /mcp
+(show_company overblik 761 mod 1.145). "Brugeren ser" op til 4k tegn pr. spørgsmål → kun ved ændring. /mcp: uændret. Mål igen
+med samme fremgangsmåde, når værktøjsbeskrivelser, regler eller resuméer ændres.
 
 ### Historik og prompt-cache
 
@@ -307,7 +328,9 @@ TODO (udskudt): en server-side kontrol af datareglen (fx markere svar med tal, m
 | `CHAT_EFFORT` | `medium` | `low` … `max`. Bruges ikke med Haiku. |
 | `CHAT_MAX_PER_HOUR` | `60` | Højst så mange beskeder pr. bruger pr. time. |
 | `CHAT_CACHE_TTL` | `1h` | Prompt-cachens levetid, `5m` eller `1h`; samme TTL på begge markører. |
-| `CHAT_HISTORY_MAX_CHARS` | `400000` | Så lang (tegn som JSON) må samtalen være, før de ældste ture kastes. |
+| `CHAT_PRE_RESOLVE` | `true` | En udtrykkelig bøn ("vis alt om X", "åbn X", "tilføj X") afgøres på serveren, før modellen kaldes (`chat/preresolve.ts`). `false` = altid modellen. |
+| `TRUST_PROXY` | `1` (`0` i development) | Antal proxyer foran serveren (Express "trust proxy"), så bremserne pr. IP (login, demochat) tæller hver besøgende for sig bag Railway i stedet for alle som én (`req.ip` fra `X-Forwarded-For`). |
+| `CHAT_HISTORY_MAX_CHARS` | `150000` | Så lang (tegn som JSON) må samtalen være, før de ældste ture kastes. |
 
 Med Haiku sendes hverken `effort` eller `fallbacks`, fordi Haiku 4.5 afviser dem. Med de større modeller
 sendes `fallbacks: "default"` (beta `server-side-fallback-2026-07-01`): afviser modellen et svar, prøver
@@ -324,5 +347,5 @@ sendes intet) eller API-fejl (status og besked); 2: cachen læste ikke (tjek, at
 længde). Kør det efter ændringer i værktøjsskemaer, `CHAT_RULES` eller cache-indstillinger.
 
 Lokalt uden nøgle: `npx tsx apps/server/src/dev/chat-preview.ts` starter serveren med en falsk model
-på http://localhost:3999/chat og /portal; skriver man "alt om …", slår den virksomheden op (`find_entity`) og åbner
-dens fane (`place_answer` entity); ellers svarer den her (`place_answer` current).
+på http://localhost:3999/chat og /portal; skriver man "alt om …", afgør serverens forhåndsopløsning placeringen, og den åbner
+dens fane (modellen viser kun siden); ellers viser den økonomisiden her.

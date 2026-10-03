@@ -155,6 +155,11 @@ export const oneLine = (t: string): string => t.replace(/[\u0000-\u001f\u007f-\u
 
 const entityText = (e: ChatEntity) => `${e.kind === "company" ? "virksomheden" : "personen"} ${oneLine(e.name)} (${oneLine(e.id)})`;
 
+/** Linjen til modellen, når serveren allerede har afgjort, at brugerens bøn åbner en anden fane (chat/preresolve.ts). */
+export function openedLine(e: ChatEntity): string {
+  return `Brugeren bad om at åbne ${entityText(e)}: placeringen er afgjort, og svaret skrives på den som den aktive kontekst i dette svar. Vis siden med show_person/show_company (show_all: true), uden place_answer.`;
+}
+
 /** Konteksten, som modellen får den: første tekstblok i brugerens tur. */
 export function contextText(ctx: ChatContext): string {
   const lines: string[] = [];
@@ -166,6 +171,8 @@ export function contextText(ctx: ChatContext): string {
     lines.push(`Brugeren valgte ${quoted}: svaret skrives på ${entityText(picked.entity)}${picked.focus ? `, modul ${oneLine(picked.focus)}` : ""}. Den er den aktive kontekst i dette svar.`);
   } else if (picked?.placement === "global") {
     lines.push(`Brugeren valgte ${quoted}: svaret er globalt (liste/analyse), ikke på en fane.`);
+  } else if (picked?.entity) {
+    lines.push(`Brugeren valgte ${quoted}: svaret handler om ${entityText(picked.entity)} og skrives her, på den aktive fane (ingen ny fane).`);
   } else if (picked) {
     lines.push(`Brugeren valgte ${quoted}: svaret skrives her, på den aktive fane${picked.focus ? ` (modul ${oneLine(picked.focus)})` : ""}.`);
   } else if (choice) {
@@ -178,7 +185,7 @@ export function contextText(ctx: ChatContext): string {
     if (a.view?.same) lines.push(`Brugeren ser: ${oneLine(a.view.module)} (uændret siden sidst).`);
     else if (a.view?.summary) lines.push(`Brugeren ser: ${oneLine(a.view.module)} — ${oneLine(a.view.summary)}`);
   }
-  if (ctx.open.length) lines.push(`Åbne faner: ${ctx.open.map((e) => `${oneLine(e.name)} (${oneLine(e.id)})`).join(", ")}.`);
+  // De åbne faner står ikke i teksten til modellen: serveren bruger context.open deterministisk (find_entity, place_answer).
   return `[Kontekst] ${lines.join(" ")}`;
 }
 
@@ -220,6 +227,7 @@ export function placementOf(ctx: ChatContext): Placement {
   const action = ctx.choice && !("free" in ctx.choice) ? ctx.choice.action : undefined;
   if (action?.placement === "entity" && action.entity) return { placement: "entity", target: action.entity, ...(action.focus ? { focus: action.focus } : {}) };
   if (action?.placement === "global") return { placement: "global", ...(action.title ? { title: action.title } : {}) };
+  // current med en entity: svaret handler om den valgte, men skrives her (ingen ny fane).
   if (ctx.active.kind === "global") return { placement: "global" };
   return { placement: "current", ...(action?.focus ? { focus: action.focus } : {}) };
 }

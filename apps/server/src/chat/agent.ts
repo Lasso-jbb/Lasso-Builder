@@ -11,12 +11,14 @@ import type {
 import { Client, InMemoryTransport, type CallToolResult } from "@modelcontextprotocol/client";
 import { DATASET_META_KEY, FOCUS_LABELS, FOCUSES, isPersonFocus, pageFocus, PERSON_FOCUS_LABELS, PERSON_FOCUSES, type Dataset, type Focus, type PersonFocus, type ViewSpec } from "@lasso/spec";
 import type { Config } from "../config.js";
-import { CHAT_ROUTING, createMcpServer, type McpContext } from "../mcp/server.js";
-import { ASK_CHOICE, contextText, placementOf, PLACE_ANSWER, withoutStaleSame, type ChatContext, type GlobalTitle, type Placement } from "./context.js";
+import { CHAT_HOST_ROUTING, createMcpServer, type McpContext } from "../mcp/server.js";
+import { ASK_CHOICE, contextText, openedLine, placementOf, PLACE_ANSWER, withoutStaleSame, type ChatContext, type GlobalTitle, type Placement } from "./context.js";
 import type { TurnState } from "./place.js";
 import { trimHistory } from "./history.js";
 import { CHAT_TOOLS, chatToolByName, type ChoiceMenu } from "./tools.js";
 import type { EntityCandidate } from "../usecases/index.js";
+import { createLinkFilter, idsIn, sanitizeLinks } from "./links.js";
+import { preResolve } from "./preresolve.js";
 
 /**
  * Lassos egen chat (docs/chat.md): Claude via Claude Platform med NØJAGTIG de samme værktøjer og
@@ -41,7 +43,8 @@ export type ChatEvent =
    * så history kun er denne tur (uden den gamle fanes samtale); ellers den fulde historik.
    */
   | { type: "done"; history: BetaMessageParam[]; placement: Placement; fresh?: true }
-  | { type: "error"; message: string };
+  /** code: history_invalid = Claude afviste samtalen (400); klienten nulstiller den. */
+  | { type: "error"; message: string; code?: "history_invalid" };
 
 export type ViewForm = "page" | "module";
 
@@ -63,19 +66,31 @@ export function fallbackTitle(name: string, spec: ViewSpec): GlobalTitle {
 }
 
 /** Modulets navn og id i linket, når en visning om en entitet blev vist med et kendt fokus (ellers undefined). */
-export function moduleLink(tool: string, input: unknown, spec: ViewSpec): { focus: string; label: string } | undefined {
+export function moduleLink(tool: string, input: unknown, spec: ViewSpec): { focus: string; label: string; entityId?: string } | undefined {
   const focus = (input as { focus?: unknown } | null)?.focus;
   if (tool === "show_company") {
     const f: Focus | undefined = (FOCUSES as readonly string[]).includes(String(focus)) ? (focus as Focus) : (FOCUSES.find((x) => FOCUS_LABELS[x] === spec.subtitle) ?? "overblik");
     const page = pageFocus(f);
-    return { focus: page, label: FOCUS_LABELS[page] };
+    return { focus: page, label: FOCUS_LABELS[page], entityId: specEntityId(spec) };
   }
   if (tool === "show_person") {
     const f: PersonFocus = isPersonFocus(focus) ? focus : (PERSON_FOCUSES.find((x) => PERSON_FOCUS_LABELS[x] === spec.subtitle) ?? "overblik");
-    return { focus: f, label: PERSON_FOCUS_LABELS[f] };
+    return { focus: f, label: PERSON_FOCUS_LABELS[f], entityId: specEntityId(spec) };
   }
   return undefined;
 }
+
+/** Det første Lasso-ID (company eller person) i en visnings komponenter: den entitet, visningen handler om. */
+function specEntityId(spec: ViewSpec): string | undefined {
+  for (const c of spec.components as { company?: unknown; person?: unknown }[]) {
+    const id = typeof c.company === "string" ? c.company : typeof c.person === "string" ? c.person : undefined;
+    if (id) return id;
+  }
+  return undefined;
+}
+
+/** Om to Lasso-ID'er (eller et CVR-nummer og et Lasso-ID) er samme virksomhed eller person. */
+const sameEntity = (a: string | undefined, b: string | undefined): boolean => Boolean(a && b && a.replace(/^CVR-1-/i, "").toLowerCase() === b.replace(/^CVR-1-/i, "").toLowerCase());
 
 /** Assistentens tekst i denne tur (fra og med beskeden efter den bevarede historik og brugerens tur). */
 function turnAssistantText(messages: readonly BetaMessageParam[], from: number): string {
@@ -90,10 +105,14 @@ function turnAssistantText(messages: readonly BetaMessageParam[], from: number):
  * Linjen med modullinks, når modellen ikke skrev nogen i turen: modulet i visningen (fx [Regnskab](lasso:modul/regnskab)),
  * ellers Overblik, når svaret hører til en person eller virksomhed (den aktive fane eller målet for et skifte); en global fane får ingen.
  */
-export function fallbackLinks(messages: readonly BetaMessageParam[], from: number, shown: { focus: string; label: string } | undefined, placement: Placement, context: ChatContext): string | undefined {
+export function fallbackLinks(messages: readonly BetaMessageParam[], from: number, shown: { focus: string; label: string; entityId?: string } | undefined, placement: Placement, context: ChatContext): string | undefined {
   if (turnAssistantText(messages, from).includes("lasso:")) return undefined;
-  if (shown) return `[${shown.label}](lasso:modul/${shown.focus})`;
-  if (placement.placement === "entity" || context.active.kind !== "global") return `[${FOCUS_LABELS.overblik}](lasso:modul/overblik)`;
+  // Svaret på en resultatfane (global) har ingen entitet, modulerne kan åbne.
+  if (placement.placement === "global") return undefined;
+  // Modulet kun, hvis visningen handler om den aktive (eller målet for et skifte) entitet; ellers ville linket åbne et andet modul på en anden entitet.
+  const entity = placement.placement === "entity" ? placement.target?.id : context.active.kind !== "global" ? context.active.id : undefined;
+  if (shown && sameEntity(shown.entityId, entity)) return `[${shown.label}](lasso:modul/${shown.focus})`;
+  if (entity) return `[${FOCUS_LABELS.overblik}](lasso:modul/overblik)`;
   return undefined;
 }
 
@@ -147,8 +166,8 @@ export function anthropicModelCall(apiKey: string): ModelCall {
 export const CHAT_RULES = `Du er Lassos assistent i Lassos egen chat (portalen). Svar på dansk, kort og i et almindeligt sprog.
 
 Placering (vælges først):
-- Brugerens tur begynder med [Kontekst]: den fane, brugeren står på (en virksomhed, en person eller forsiden/et resultat = globalt), de åbne faner og evt. det, brugeren lige valgte i en menu. Placeringen er afgjort, før noget vises: højst én fane pr. spørgsmål, og place_answer kaldes højst én gang og som det første.
-- Standard er at blive: svar i den aktive kontekst. "Hvad laver Jakob ellers?" på LASSO X A/S besvares med show_person/render_view om Jakob, vist her. Nævner spørgsmålet en anden person eller virksomhed, men beder brugeren ikke om dens side, så kald place_answer med current.
+- Brugerens tur begynder med [Kontekst]: den fane, brugeren står på (en virksomhed, en person eller forsiden/et resultat = globalt), de åbne faner og evt. det, brugeren lige valgte i en menu. Placeringen er afgjort, før noget vises: højst én fane pr. spørgsmål. Kald kun place_answer for at åbne en anden fane eller en resultatfane (højst én gang og som det første); for at blive kaldes intet.
+- Standard er at blive: svar i den aktive kontekst. "Hvad laver Jakob ellers?" på LASSO X A/S besvares med show_person/render_view om Jakob, vist her. Nævner spørgsmålet en anden person eller virksomhed, men beder brugeren ikke om dens side, så bliv her, uden place_answer.
 - Åbn kun en anden fane, når brugeren selv skriver "vis alt om X", "se alt om X", "tilføj X" eller "åbn X": find først id med find_entity. Ét kandidat: place_answer med entity (id og navn fra find_entity), og vis så siden (show_person/show_company med show_all for "vis alt"). Flere kandidater: ask_choice med ét punkt pr. kandidat (placement entity med entity fra find_entity, focus overblik), title på punktet er navnet, description er rollen, alderen, byen og virksomhederne; den mest sandsynlige først og anbefalet (recommended: true, højst ét). Fritekst lægger appen selv til.
 - Er du ikke sikker på, hvem der menes, så kald ask_choice med kandidaterne; skriv aldrig kandidater som en liste i teksten, og spørg aldrig efter by eller firma i tekst. "Tilføj X", "åbn X" og "vis alt om X" åbner X.
 - Tilbyd aldrig kort eller fuld indsigt, og brug aldrig ask_choice til at vælge placering. ask_choice er kun til flere match på et navn.
@@ -159,7 +178,7 @@ Svar:
 - Vis kun en visning, når dens indhold direkte svarer på spørgsmålet. Spørges der om noget uden for Lassos data (hobbyer, sport, privatliv, meninger, alt andet end CVR, regnskab, ejerskab, roller, risiko, historik og kontakt), så svar kun med tekst: én kort sætning om, at Lasso ikke har data om det, evt. én om det, Lasso ved, og linjen med modullinks. Kald aldrig et visningsværktøj "for at kigge", når spørgsmålet tydeligt ligger uden for de områder.
   Eksempel, person-fane (Anne Holm), "hvilken sport dyrker anne": "Lasso har ingen data om Annes sport. Lasso kender hendes roller og netværk i erhvervslivet." og så en tom linje og "[Roller](lasso:modul/roller) [Netværk](lasso:modul/netvaerk)"; intet værktøjskald.
 - Modullinks: afslut hvert svar med en sidste linje på 1–3 links til de moduler, der passer til svaret, skrevet præcis sådan: [Regnskab](lasso:modul/regnskab). Gyldige moduler: virksomhed overblik, oekonomi, regnskab, ejerskab, risiko, historik, kontakt; person overblik, roller, netvaerk, ejerskab, risiko, historik. Andre sider: [Navn](lasso:firma/CVR-1-…) og [Navn](lasso:person/CVR-3-…), kun med id fra et værktøjssvar (opfind aldrig et id).
-  Eksempel, data mangler: "LASSO X A/S har ikke indsendt regnskab for 2019; selskabet blev stiftet i 2020. Det ældste regnskab er 2020." og så en tom linje og "[Regnskab 2020](lasso:modul/regnskab) [Regnskab](lasso:modul/regnskab)".
+  Eksempel, data mangler: "LASSO X A/S har ikke indsendt regnskab for 2019; selskabet blev stiftet i 2020. Det ældste regnskab er 2020." og så en tom linje og "[Regnskab 2020](lasso:modul/regnskab) [Overblik](lasso:modul/overblik)".
   Eksempel, efter en visning: "Ejerne står øverst; Holm Holding ejer over to tredjedele." og så "[Ejerskab](lasso:modul/ejerskab)".
 - Kort tekst: før en visning højst én kort sætning (højst 20 ord), der siger, hvad den viser; efter den intet ud over linjen med modullinks, medmindre der er et nøglepunkt (så én sætning, højst 20 ord). Svar kun med tekst: højst 2–3 korte sætninger (højst 60 ord) eller højst 4 korte punkter. Ingen indledning ("Jeg søger efter …"), ingen gentagelse af spørgsmålet og ingen tal, der står i visningen. Appen viser visningerne under teksten i den rækkefølge, de kommer.
 - Et enkelt element (et diagram, en nøgletalsrække, en tabel) er render_view med én komponent og en title og subtitle, ikke en hel side. En hel side (show_*, søgninger, render_view med layout page) bruges kun, når brugeren beder om siden.
@@ -266,7 +285,7 @@ export interface ChatSetup {
 export async function buildChatSetup(client: Client, config: Pick<Config, "CHAT_CACHE_TTL">): Promise<ChatSetup> {
   const tools = [...(await chatTools(client)), ...CHAT_TOOLS.map((t) => ({ tool: t.tool, title: t.title }))];
   // Routingen uden gem-værktøjerne (dem har chatten ikke); reglerne er chattens egne (MCP_RULES gælder kun Claude.ai).
-  return { system: `${CHAT_ROUTING}\n\n${CHAT_RULES}`, tools, toolList: withCacheMarker(tools.map((t) => t.tool), config) };
+  return { system: `${CHAT_HOST_ROUTING}\n\n${CHAT_RULES}`, tools, toolList: withCacheMarker(tools.map((t) => t.tool), config) };
 }
 
 /** Brugerens tur: konteksten først (ikke i system: den skifter pr. spørgsmål og ville bryde cachen), så beskeden. */
@@ -288,7 +307,7 @@ export function chatRequest(config: Pick<Config, "CHAT_MODEL" | "CHAT_EFFORT" | 
 
 export interface ChatRunOptions {
   ctx: McpContext;
-  config: Pick<Config, "CHAT_MODEL" | "CHAT_EFFORT" | "CHAT_MAX_TOKENS" | "CHAT_CACHE_TTL" | "CHAT_HISTORY_MAX_CHARS">;
+  config: Pick<Config, "CHAT_MODEL" | "CHAT_EFFORT" | "CHAT_MAX_TOKENS" | "CHAT_CACHE_TTL" | "CHAT_HISTORY_MAX_CHARS" | "CHAT_PRE_RESOLVE">;
   model: ModelCall;
   /** Den hidtidige samtale (Claude-beskeder, uændret fra sidste "done"). */
   history: BetaMessageParam[];
@@ -328,16 +347,44 @@ export async function runChat({ ctx, config, model, history, message, context, e
   // Historikken trimmes sjældent og groft (chat/history.ts); den trimmede er den, "done" giver videre.
   // Et same (uændret resumé) gælder kun, hvis det fulde resumé stadig står i den trimmede historik; ellers ingen "Brugeren ser" i denne tur.
   const retained = trimHistory(history, config.CHAT_HISTORY_MAX_CHARS);
-  const messages: BetaMessageParam[] = [...retained, userTurn(withoutStaleSame(context, retained), message)];
+  // En udtrykkelig bøn om at åbne en fane afgøres på serveren, før modellen kaldes (chat/preresolve.ts).
+  const pre = config.CHAT_PRE_RESOLVE ? await preResolve(ctx, context, message) : null;
+  const userMessage = userTurn(withoutStaleSame(context, retained), message);
+  if (pre?.kind === "one" && Array.isArray(userMessage.content)) {
+    const [first, ...rest] = userMessage.content as { type: "text"; text: string }[];
+    userMessage.content = [{ type: "text", text: `${first!.text} ${openedLine(pre.entity)}` }, ...rest];
+  }
+  const messages: BetaMessageParam[] = [...retained, userMessage];
   // Placeringen er kendt, før modellen kaldes: brugeren valgte den i menuen (eller svaret skrives her).
-  const placement = placementOf(context);
+  // Et valg i menuen er brugerens egen handling og afgjort: et skifte (entity, eller global fra en entitet) sendes som decided, så klienten flytter.
+  const proposed = placementOf(context);
+  const picked = Boolean(context.choice && !("free" in context.choice));
+  const moves = picked && (proposed.placement === "entity" || (proposed.placement === "global" && context.active.kind !== "global"));
+  // På en entitetsfane uden skifte står svaret her: serveren sætter here selv (modellen kalder ikke place_answer for at blive).
+  let placement: Placement = moves ? { ...proposed, decided: true } : proposed.placement === "current" && context.active.kind !== "global" ? { ...proposed, here: true } : proposed;
+  // Ét match på en udtrykkelig bøn: placeringen er afgjort her (klienten flytter), og modellen skal kun vise siden.
+  if (pre?.kind === "one") placement = { placement: "entity", target: pre.entity, focus: "overblik", decided: true };
   emit({ type: "placement", ...placement });
   // Turens tilstand: place_answer kan ændre placeringen (én gang, før noget vises); viewed låser den.
-  const turn: TurnState = { placement, placed: false, viewed: false };
+  const turn: TurnState = { placement, placed: pre?.kind === "one", viewed: false };
+  if (pre?.kind === "many") {
+    // Flere match på en udtrykkelig bøn: valgmenuen bygges af serveren (intet modelkald); entity-handlingerne står, fordi brugeren bad om at åbne.
+    const input = syntheticMenuInput(pre.candidates);
+    const built = await chatToolByName(ASK_CHOICE)!.run(input, { mcp: ctx, context, message, turn });
+    if (built.choice) {
+      const id = `toolu_srv_${randomUUID().replace(/-/g, "")}`;
+      messages.push({ role: "assistant", content: [{ type: "tool_use", id, name: ASK_CHOICE, input: (built.input ?? input) as Record<string, unknown> }] });
+      messages.push({ role: "user", content: [{ type: "tool_result", tool_use_id: id, content: built.text }] });
+      emit({ type: "tool", id, name: ASK_CHOICE, title: CHAT_TOOLS.find((t) => t.tool.name === ASK_CHOICE)?.title ?? ASK_CHOICE });
+      emit({ type: "choice", id, ...built.choice });
+      emit({ type: "done", history: messages, placement });
+      return;
+    }
+  }
   /** Den første visning (navn og spec): giver en resultatfane et generisk navn, når modellen ikke valgte et. */
   let firstView: { name: string; spec: ViewSpec } | undefined;
   /** Modulet i den første visning om en entitet (til linjen med modullinks, hvis modellen ikke skrev nogen). */
-  let shownModule: { focus: string; label: string } | undefined;
+  let shownModule: { focus: string; label: string; entityId?: string } | undefined;
   /** Turen sluttede normalt med et tekstsvar (ikke en fejl, afbrydelse eller menu). */
   let endedNormally = false;
   let choiceShown = false;
@@ -345,6 +392,18 @@ export async function runChat({ ctx, config, model, history, message, context, e
   let candidates: EntityCandidate[] = [];
   /** 1 = den ekstra tur, hvor modellen bliver bedt om ask_choice. */
   let enforce = 0;
+  // Links i teksten (chat/links.ts): firma-/personlinks med et id, der ikke har stået i turens værktøjssvar eller konteksten, bliver tekst, og ens links vises kun én gang.
+  const allowedIds = new Set<string>(idsIn(JSON.stringify(context)));
+  const allow = (text: string) => idsIn(text).forEach((id) => allowedIds.add(id));
+  const linkFilter = createLinkFilter(() => allowedIds, new Set());
+  const say = (raw: string) => {
+    const t = linkFilter.push(raw);
+    if (t) emit({ type: "text", text: t });
+  };
+  const sayEnd = () => {
+    const t = linkFilter.flush();
+    if (t) emit({ type: "text", text: t });
+  };
   const undecided = () => candidates.length >= 2 && !turn.placed && !turn.viewed && !choiceShown;
   const { client, close } = await connect({ ...ctx, host: "chat" });
   try {
@@ -361,14 +420,15 @@ export async function runChat({ ctx, config, model, history, message, context, e
       // Kun Haiku 4.5 tager tvunget værktøjsvalg; de andre modeller beholder auto.
       if (enforce === 1 && config.CHAT_MODEL.startsWith("claude-haiku")) request.tool_choice = { type: "tool", name: ASK_CHOICE };
       try {
-        response = await model(request, (text) => (hold ? held.push(text) : emit({ type: "text", text })), signal);
+        response = await model(request, (text) => (hold ? held.push(text) : say(text)), signal);
       } catch (e) {
         if (signal?.aborted) return;
         console.error("[chat] Claude-fejl:", e instanceof Error ? e.message : e);
-        emit({ type: "error", message: apiErrorText(e) });
+        emit({ type: "error", message: apiErrorText(e), ...(e instanceof Anthropic.BadRequestError ? { code: "history_invalid" as const } : {}) });
         return;
       }
       logUsage(step, response);
+      if (!hold) sayEnd();
       if (hold && enforce === 0 && response.stop_reason === "end_turn") {
         // Modellen sluttede med tekst, selv om flere kan være ment: teksten kasseres, og den får én tur til at kalde ask_choice.
         enforce = 1;
@@ -389,7 +449,7 @@ export async function runChat({ ctx, config, model, history, message, context, e
             emit({ type: "error", message: "Jeg kunne ikke afgøre, hvem du mener. Skriv et mere præcist navn." });
             break;
           }
-          messages.push({ role: "assistant", content: [{ type: "tool_use", id, name: ASK_CHOICE, input: input as Record<string, unknown> }] });
+          messages.push({ role: "assistant", content: [{ type: "tool_use", id, name: ASK_CHOICE, input: (built.input ?? input) as Record<string, unknown> }] });
           messages.push({ role: "user", content: [{ type: "tool_result", tool_use_id: id, content: built.text }] });
           emit({ type: "tool", id, name: ASK_CHOICE, title: titles.get(ASK_CHOICE) ?? ASK_CHOICE });
           choiceShown = true;
@@ -398,8 +458,13 @@ export async function runChat({ ctx, config, model, history, message, context, e
         }
         held.length = 0;
       }
-      if (held.length) emit({ type: "text", text: held.join("") });
-      messages.push({ role: "assistant", content: response.content });
+      if (held.length) {
+        say(held.join(""));
+        sayEnd();
+      }
+      // En tom assistentbesked (eller tomme tekstblokke) afvises af API'et ved hver senere tur: den gemmes aldrig.
+      const content = response.content.filter((b) => !(b.type === "text" && !b.text.trim()));
+      if (content.length) messages.push({ role: "assistant", content });
 
       if (response.stop_reason === "refusal") {
         closeOpenToolUses(messages, response);
@@ -421,6 +486,11 @@ export async function runChat({ ctx, config, model, history, message, context, e
       const menu = ask ? await chatToolByName(ASK_CHOICE)!.run(ask.input ?? {}, toolCtx) : undefined;
       if (ask && menu?.choice) {
         choiceShown = true;
+        // Historikken gemmer det effektive input (handlingerne efter omskrivningen), så verifyChoice godtager det, klienten sender tilbage.
+        const stored = messages.at(-1);
+        if (stored?.role === "assistant" && Array.isArray(stored.content) && menu.input) {
+          messages[messages.length - 1] = { role: "assistant", content: stored.content.map((b) => (b.type === "tool_use" && b.id === ask.id ? { ...b, input: menu.input as Record<string, unknown> } : b)) };
+        }
         emit({ type: "choice", id: ask.id, ...menu.choice });
         const blocked = "Vis intet, før brugeren har valgt (ask_choice stod i samme svar).";
         for (const u of uses) if (u !== ask) emit({ type: "tool_error", id: u.id, name: u.name, message: blocked });
@@ -464,6 +534,7 @@ export async function runChat({ ctx, config, model, history, message, context, e
             const r = await own.run(u.input ?? {}, toolCtx).catch((e: unknown) => ({ text: e instanceof Error ? e.message : String(e), isError: true }));
             if (r.isError) emit({ type: "tool_error", id: u.id, name: u.name, message: r.text });
             if ("candidates" in r && r.candidates) candidates = r.candidates;
+            allow(r.text);
             return { type: "tool_result", tool_use_id: u.id, content: r.text, ...(r.isError ? { is_error: true } : {}) };
           }
           let result: CallToolResult;
@@ -475,6 +546,7 @@ export async function runChat({ ctx, config, model, history, message, context, e
             return { type: "tool_result", tool_use_id: u.id, content: text, is_error: true };
           }
           const text = textForModel(result);
+          allow(text);
           if (result.isError) {
             emit({ type: "tool_error", id: u.id, name: u.name, message: text });
             return { type: "tool_result", tool_use_id: u.id, content: text || "Værktøjet fejlede.", is_error: true };
@@ -484,6 +556,7 @@ export async function runChat({ ctx, config, model, history, message, context, e
           const dataset = (result._meta as Record<string, unknown> | undefined)?.[DATASET_META_KEY] as Dataset | undefined;
           if (sc?.spec && dataset) {
             turn.viewed = true;
+            allow([...Object.keys(dataset.companies), ...Object.keys(dataset.persons)].join(" "));
             firstView ??= { name: u.name, spec: sc.spec };
             shownModule ??= moduleLink(u.name, u.input, sc.spec);
             emit({ type: "view", id: u.id, name: u.name, tool: u.name, form: viewForm(u.name, sc.spec), spec: sc.spec, dataset, ...(sc.pdfLink ? { pdfLink: sc.pdfLink } : {}) });
@@ -493,6 +566,13 @@ export async function runChat({ ctx, config, model, history, message, context, e
       );
       messages.push({ role: "user", content: results });
       if (step === MAX_STEPS - 1) emit({ type: "error", message: "Spørgsmålet krævede for mange trin. Prøv at stille det mere præcist." });
+    }
+    // Samme linkregler på det gemte som på det viste (modellen ser, hvad brugeren så): opfundne id'er og gentagelser fjernes i turens assistenttekst.
+    const seenInHistory = new Set<string>();
+    for (let i = retained.length + 1; i < messages.length; i++) {
+      const m = messages[i]!;
+      if (m.role !== "assistant" || !Array.isArray(m.content)) continue;
+      messages[i] = { role: "assistant", content: m.content.map((b) => (b.type === "text" ? { ...b, text: sanitizeLinks(b.text, allowedIds, seenInHistory) } : b)) };
     }
     // Modullinks (docs/chat.md): skrev modellen ingen, tilføjer serveren en linje ud fra turen, så "Åbn i fane"-pillerne altid er der.
     const links = !endedNormally || choiceShown ? undefined : fallbackLinks(messages, retained.length, shownModule, turn.placement, context);
