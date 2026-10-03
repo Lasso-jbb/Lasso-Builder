@@ -48,6 +48,7 @@ import {
   globalTitleFallback,
   moveTurn,
   pendingChoice,
+  resetTabHistory,
   restoreCache,
   saveCache,
   serializeCache,
@@ -664,7 +665,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       }
       // Serveren kender ikke fanens samtale (ændret historik eller signatur): begynd en ny, så brugeren ikke sidder fast.
       if (e instanceof ChatHttpError && isUnrecognizedHistory(e.status, e.message)) {
-        setThreads((t) => (t[at] ? { ...t, [at]: { ...t[at]!, chat: { history: [] }, sent: null } } : t));
+        setThreads((t) => resetTabHistory(t, at));
       }
       if (e instanceof ChatHttpError && e.status === 401) {
         // Sessionen er udløbet: samtalen ryddes og gemmes ikke igen.

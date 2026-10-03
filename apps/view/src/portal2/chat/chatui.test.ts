@@ -83,6 +83,10 @@ test("Svar: tænker, længere opgave med Stop og skelet, fejl med Prøv igen, mo
   assert.match(long, /Læser regnskab 2024 og ejerregistret…/);
   assert.match(long, />Stop</);
   assert.match(long, /chat-card--sk/);
+  // C2: fejlen fra en ugyldig historik har "Prøv igen" (spørger igen i en ny samtale).
+  const invalid = html(createElement(AssistantMessage, { answer: { parts: [], pending: false, error: "Samtalen kunne ikke fortsættes. Prøv igen." }, onRetry: () => undefined }));
+  assert.match(invalid, /Samtalen kunne ikke fortsættes/);
+  assert.match(invalid, />Prøv igen<\/button>/);
   // C1: Stop giver en stille "Stoppet." uden "Prøv igen" (også når der er en onRetry).
   const stopped = html(createElement(AssistantMessage, { answer: { parts: [{ kind: "text", text: "Halvt svar" }], pending: false, stopped: true, at: 1 }, onRetry: () => undefined }));
   assert.match(stopped, /Halvt svar/);

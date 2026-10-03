@@ -189,10 +189,25 @@ export function startTurn(t: Threads, key: string, question: string, now: number
   return { ...closed, [key]: { ...tab, turns: [...tab.turns, { id, question, askedAt: now, answer: newAnswer() }] } };
 }
 
-/** En hændelse lagt på turens svar (turen findes i fanen key). */
+/**
+ * Serveren kunne ikke fortsætte fanens samtale (SSE-fejl med code "history_invalid"; ældre servere kun med teksten
+ * "Samtalen kunne ikke fortsættes"): historikken passer ikke længere og skal ikke sendes igen.
+ */
+export function isHistoryInvalid(e: ChatEvent): boolean {
+  return e.type === "error" && (e.code === "history_invalid" || /Samtalen kunne ikke fortsættes/i.test(e.message));
+}
+
+/** Fanen begynder en ny samtale: tom historik uden signatur, og det fulde resumé sendes igen. Turene (det synlige) bliver. */
+export function resetTabHistory(t: Threads, key: string): Threads {
+  const tab = t[key];
+  return tab ? { ...t, [key]: { ...tab, chat: { history: [] }, sent: null } } : t;
+}
+
+/** En hændelse lagt på turens svar (turen findes i fanen key). En ugyldig historik nulstiller fanens samtale (isHistoryInvalid). */
 export function applyTurnEvent(t: Threads, key: string, turnId: string, e: ChatEvent): Threads {
   if (e.type === "done") return t;
-  return mapTurns(t, key, (x) => (x.id === turnId ? { ...x, answer: applyEvent(x.answer, e) } : x));
+  const next = mapTurns(t, key, (x) => (x.id === turnId ? { ...x, answer: applyEvent(x.answer, e) } : x));
+  return isHistoryInvalid(e) ? resetTabHistory(next, key) : next;
 }
 
 /** Turen uden at vente længere: ingen status, ikke ventende (afbrudt, fejlet eller færdig). */

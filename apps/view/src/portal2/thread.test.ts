@@ -21,6 +21,8 @@ import {
   recencyOrder,
   replaceLastView,
   resetConversation,
+  isHistoryInvalid,
+  resetTabHistory,
   restoreCache,
   saveCache,
   serializeCache,
@@ -144,6 +146,38 @@ test("C1 stopTurn: Stop gør turen færdig med 'Stoppet.' og beholder teksten; e
   assert.equal(stopTurn(t, "ukendt", "t1", 900), t);
   const finished = finishTurn(startTurn({}, novo.key, "q", 1, "t2"), novo.key, done());
   assert.equal(stopTurn(finished, novo.key, "t2", 900), finished);
+});
+
+test("C2: SSE-fejl med code history_invalid nulstiller fanens historik og resumé; turene og fejlen står", () => {
+  let t = startTurn({}, novo.key, "Første", 1, "t1");
+  t = finishTurn(t, novo.key, { ...done([{ role: "user", content: "a" }]), sent: "fp" });
+  t = startTurn(t, lasso.key, "Anden fane", 2, "x1");
+  t = finishTurn(t, lasso.key, { ...done([{ role: "user", content: "b" }]), sent: "fp2" });
+  t = startTurn(t, novo.key, "Hvem ejer den?", 3, "t2");
+  t = applyTurnEvent(t, novo.key, "t2", { type: "text", text: "Et øjeblik." });
+  t = applyTurnEvent(t, novo.key, "t2", { type: "error", message: "Samtalen kunne ikke fortsættes. Prøv igen.", code: "history_invalid" });
+  const tab = t[novo.key]!;
+  assert.deepEqual(tab.chat, { history: [] }, "ingen historik og ingen signatur");
+  assert.equal(tab.sent, null, "fingeraftrykket ryddet: det fulde resumé sendes igen");
+  assert.deepEqual(tab.turns.map((x) => x.question), ["Første", "Hvem ejer den?"], "det synlige bliver");
+  assert.equal(tab.turns[1]!.answer.error, "Samtalen kunne ikke fortsættes. Prøv igen.");
+  assert.deepEqual(tab.turns[1]!.answer.parts, [{ kind: "text", text: "Et øjeblik." }]);
+  // Andre faner røres ikke.
+  assert.deepEqual(t[lasso.key]!.chat, { history: [{ role: "user", content: "b" }], sig: "sig" });
+  assert.equal(t[lasso.key]!.sent, "fp2");
+  // Fallback: en ældre server uden code, men med teksten.
+  let u = finishTurn(startTurn({}, novo.key, "q", 1, "t1"), novo.key, { ...done(), sent: "fp" });
+  u = applyTurnEvent(startTurn(u, novo.key, "q2", 2, "t2"), novo.key, "t2", { type: "error", message: "Samtalen kunne ikke fortsættes." });
+  assert.deepEqual(u[novo.key]!.chat, { history: [] });
+  assert.equal(u[novo.key]!.sent, null);
+  // En almindelig fejl beholder historikken.
+  let v = finishTurn(startTurn({}, novo.key, "q", 1, "t1"), novo.key, { ...done(), sent: "fp" });
+  v = applyTurnEvent(startTurn(v, novo.key, "q2", 2, "t2"), novo.key, "t2", { type: "error", message: "Lasso svarede ikke." });
+  assert.equal(v[novo.key]!.chat.history.length, 1);
+  assert.equal(v[novo.key]!.sent, "fp");
+  assert.equal(isHistoryInvalid({ type: "error", message: "x", code: "history_invalid" }), true);
+  assert.equal(isHistoryInvalid({ type: "text", text: "Samtalen kunne ikke fortsættes" }), false);
+  assert.equal(resetTabHistory(v, "ukendt"), v);
 });
 
 test("skipChoice og pendingChoice: menuen i den seneste tur lukkes uden at røre andet", () => {
