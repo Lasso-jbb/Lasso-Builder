@@ -1,4 +1,4 @@
-import { viewSpecSchema, type ViewSpec } from "@lasso/spec";
+import { FOCUS_LABELS, PERSON_FOCUS_LABELS, viewSpecSchema, type ViewSpec } from "@lasso/spec";
 
 /**
  * Sideskabeloner (docs/chat.md, "Tilføj som fane"): en side, chatten har sat sammen om én virksomhed eller person
@@ -102,10 +102,17 @@ export function stripEntityName(text: string, entity: string | undefined | Templ
 }
 
 /** Titlen, når den er tom efter fjernelsen af navnet: første komponents titel, ellers "Side". */
-export function titleFallback(title: string, spec: ViewSpec): string {
+export function titleFallback(title: string, spec: ViewSpec, subtitle?: string): string {
   if (title.trim()) return title;
+  if (subtitle?.trim()) return subtitle.trim();
   const first = (spec.components[0] as { title?: unknown } | undefined)?.title;
   return typeof first === "string" && first.trim() ? first.trim() : "Side";
+}
+
+/** Navnet på et modul, der allerede findes på alle sider af slagsen (Ejerskab …): en egen side med samme navn får et tillæg. */
+export function distinctTitle(title: string, kind: TemplateKind): string {
+  const labels = Object.values(kind === "company" ? FOCUS_LABELS : PERSON_FOCUS_LABELS).map((l) => l.toLowerCase());
+  return labels.includes(title.trim().toLowerCase()) ? `${title.trim()}, fra samtalen` : title;
 }
 
 /** De skrivemåder af entiteten, en spec kan bære: Lasso-ID'et, og for en virksomhed også CVR-nummeret (de 8 cifre). */
@@ -162,7 +169,10 @@ export function templateFromSpec(spec: unknown, entity: TemplateEntity): { spec:
   const replaced = mapStrings({ ...parsed.data, components: kept }, (s) => (forms.has(s.trim().toLowerCase()) ? ENTITY_PLACEHOLDER : undefined));
   if (replaced.changed === 0) return { error: `Siden handler ikke om én ${noun(entity.kind)}.` };
   const base = replaced.value as ViewSpec;
-  const title = titleFallback(stripEntityName(base.title, entity), base);
+  // Er titlen tom efter fjernelsen, bruges undertitlen (fokusetiketten, fx "Ejerskab"), hvis den ikke bærer metadata.
+  const leaks = leakRes(entity).map((r) => new RegExp(r.source, "iu"));
+  const cleanSub = base.subtitle && !leaks.some((r) => r.test(base.subtitle!)) && !/\d/.test(base.subtitle) ? base.subtitle : undefined;
+  const title = titleFallback(stripEntityName(base.title, entity), base, cleanSub);
   // Undertitlen er entitetens metadata ("CVR …, by"): den gemmes ikke i specen; skabelonen bærer en egen, hvis brugeren gav en.
   const { subtitle: _old, ...rest } = base;
   const value = { ...rest, title };

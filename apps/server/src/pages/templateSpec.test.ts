@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { viewSpecSchema, type ViewSpec } from "@lasso/spec";
-import { ENTITY_PLACEHOLDER, NAME_REMAINS, entityForms, hasPlaceholder, instantiate, stripEntityName, templateFromSpec, titleFallback } from "./templateSpec.js";
+import { ENTITY_PLACEHOLDER, NAME_REMAINS, distinctTitle, entityForms, hasPlaceholder, instantiate, stripEntityName, templateFromSpec, titleFallback } from "./templateSpec.js";
 import { MemoryPageTemplateStore, MAX_SPEC_BYTES, MAX_TEMPLATES, PageTemplateError } from "./templates.js";
 
 const company = { kind: "company" as const, id: "CVR-1-99000001" };
@@ -186,4 +186,18 @@ test("stripEntityName og templateFromSpec: postnummeret klippes og afvises; et a
   const ranking = (title: string) => ({ type: "LassoRanking", companies: [e.id, "CVR-1-99000004"], title });
   assert.deepEqual(templateFromSpec(withParts({}, [ranking("Postnr. 8600")]), e), { error: NAME_REMAINS });
   assert.ok("spec" in templateFromSpec(withParts({}, [ranking("Top 2024")]), e));
+});
+
+test("templateFromSpec: tom titel falder tilbage på undertitlen (fokusetiketten), men ikke på metadata; distinctTitle giver tillæg til modulnavne", () => {
+  const spec1 = (extra: Record<string, unknown>) => withParts({ title: "Eksempel Byg A/S", ...extra }, body);
+  assert.equal((templateFromSpec(spec1({ subtitle: "Ejerskab" }), silkeborg) as { spec: ViewSpec }).spec.title, "Ejerskab");
+  assert.equal((templateFromSpec(spec1({ subtitle: "genereret i dag kl. 09:52" }), silkeborg) as { spec: ViewSpec }).spec.title, "Side", "et tal i undertitlen = metadata");
+  assert.equal((templateFromSpec(spec1({ subtitle: "CVR 99000001, Silkeborg" }), silkeborg) as { spec: ViewSpec }).spec.title, "Side");
+  assert.equal((templateFromSpec(spec1({}), silkeborg) as { spec: ViewSpec }).spec.title, "Side");
+  assert.equal(titleFallback("", spec(body), "Ejerskab"), "Ejerskab");
+  assert.equal(distinctTitle("Ejerskab", "company"), "Ejerskab, fra samtalen");
+  assert.equal(distinctTitle(" regnskab ", "company"), "regnskab, fra samtalen");
+  assert.equal(distinctTitle("Netværk", "person"), "Netværk, fra samtalen");
+  assert.equal(distinctTitle("Netværk", "company"), "Netværk", "kun modulnavne for slagsen");
+  assert.equal(distinctTitle("KYC-overblik", "company"), "KYC-overblik");
 });

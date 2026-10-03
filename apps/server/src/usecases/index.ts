@@ -9,6 +9,7 @@ export {
   criteriaError,
   lookupCompanyNames,
   renderView,
+  resolveTemplateView,
   resolveView,
   saveView,
   searchCompanies,

@@ -6,11 +6,12 @@ import type { CurrentUser } from "../auth/user.js";
 import type { Config } from "../config.js";
 import type { DataProvider } from "../data/provider.js";
 import { pageKindOf, type SavedPageStore } from "../pages/store.js";
-import { instantiate, stripEntityName, templateFromSpec, titleFallback, type TemplateEntity, type TemplateKind } from "../pages/templateSpec.js";
+import { distinctTitle, instantiate, stripEntityName, templateFromSpec, titleFallback, type TemplateEntity, type TemplateKind } from "../pages/templateSpec.js";
 import { PageTemplateError, type PageTemplateRecord, type PageTemplateStore } from "../pages/templates.js";
 import {
   listSavedPages,
   removeSavedPage,
+  resolveTemplateView,
   resolveView,
   savePage,
   saveView,
@@ -236,7 +237,8 @@ export function portalApi({ config, provider, store, pages, templates }: PortalA
     const entity = await entityFacts(ctx(res), body.kind, body.entity.id);
     const made = templateFromSpec(body.spec, entity);
     if ("error" in made) return void res.status(400).json({ error: made.error });
-    const title = titleFallback(stripEntityName(body.title, entity), made.spec);
+    // Tom efter fjernelsen: den fallback-titel, templateFromSpec fandt (undertitel, første komponent, "Side"). Samme navn som et indbygget modul får et tillæg.
+    const title = distinctTitle(stripEntityName(body.title, entity) || made.spec.title, body.kind);
     // Undertitlen er som standard væk; en, brugeren selv gav, gemmes kun hvis noget overlever fjernelsen.
     // En undertitel, der er sidens egen (spec.subtitle: entitetens metadata), gemmes aldrig.
     const specSub = (body.spec as { subtitle?: unknown } | null)?.subtitle;
@@ -276,7 +278,8 @@ export function portalApi({ config, provider, store, pages, templates }: PortalA
     if (!t) return void res.status(404).json({ error: "Siden findes ikke." });
     if (pageKindOf(params.entity) !== t.kind) return void res.status(400).json({ error: `Siden er til en ${t.kind === "company" ? "virksomhed" : "person"}; "${params.entity}" er ikke et Lasso-ID for en.` });
     const spec = { ...instantiate(t.spec, params.entity), title: titleFallback(t.title, t.spec), ...(t.subtitle ? { subtitle: t.subtitle } : {}) };
-    const r = await resolveView(ctx(res), spec);
+    // Samme datagrundlag som et modul: entiteten selv (stamdata, vurdering) hentes med, så alle komponenter har det, de skal bruge.
+    const r = await resolveTemplateView(ctx(res), spec, { kind: t.kind, id: params.entity });
     if ("error" in r) return sendError(res, r);
     res.json({ spec: r.spec, dataset: r.dataset, summary: summarizeView(r.spec, r.dataset, { host: "chat" }) });
   });

@@ -442,6 +442,20 @@ export async function resolveView(ctx: UseCaseCtx, rawSpec: unknown): Promise<{ 
   return { spec, dataset };
 }
 
+/**
+ * En sideskabelon vist om en entitet (GET /api/portal/templates/:id/render): som resolveView, men datasættet hentes, som for
+ * en modulside: entitetens hoved (stamdata og vurdering) tages med, uden at hovedet står i den viste spec.
+ */
+export async function resolveTemplateView(ctx: UseCaseCtx, rawSpec: unknown, entity: { kind: "company" | "person"; id: string }): Promise<{ spec: ViewSpec; dataset: Dataset } | UseCaseError> {
+  const parsed = viewSpecSchema.safeParse(rawSpec);
+  if (!parsed.success) return fail(400, "Ugyldig spec.");
+  const spec = normalizeSpec(parsed.data, ctx.config.LASSO_COMPANY_ID_PREFIX);
+  const id = entity.kind === "company" ? toLassoId(entity.id, ctx.config.LASSO_COMPANY_ID_PREFIX) : entity.id;
+  const head = (entity.kind === "company" ? { type: "LassoCompanyHead", company: id } : { type: "LassoPersonHead", person: id }) as ViewSpec["components"][number];
+  const dataset = await resolveSpec({ ...spec, components: [head, ...spec.components] }, ctx.provider, extrasOf(ctx));
+  return { spec, dataset };
+}
+
 /* --- save_view / POST /api/portal/views --------------------------------------------------- */
 
 export interface SaveViewInput {
