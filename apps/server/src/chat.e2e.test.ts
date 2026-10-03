@@ -806,6 +806,12 @@ test("D5: bremsen pr. IP følger X-Forwarded-For med TRUST_PROXY=1, og ignorerer
   assert.equal(loadConfig({ APP_ENV: "development" }).trustProxy, 0);
   assert.equal(loadConfig({ APP_ENV: "production" }).trustProxy, 1);
   assert.equal(loadConfig({ APP_ENV: "production", TRUST_PROXY: "2" }).trustProxy, 2);
+  // R2-D: på Railway (APP_ENV kan stå på standarden development) er standarden 1; et udtrykkeligt TRUST_PROXY vinder altid.
+  assert.equal(loadConfig({ RAILWAY_ENVIRONMENT: "production" }).trustProxy, 1);
+  assert.equal(loadConfig({ RAILWAY_ENVIRONMENT_NAME: "staging" }).trustProxy, 1);
+  assert.equal(loadConfig({ RAILWAY_ENVIRONMENT: "production", TRUST_PROXY: "0" }).trustProxy, 0);
+  assert.equal(loadConfig({ RAILWAY_ENVIRONMENT: "" }).trustProxy, 0, "tom værdi er ikke sat");
+  assert.equal(loadConfig({}).trustProxy, 0);
 
   // Tomme nøgler: efter vinduet fjernes adresser uden forsøg, når kortet er stort.
   let t = 0;
