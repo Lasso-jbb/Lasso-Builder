@@ -1,5 +1,5 @@
 import type { FormEvent, KeyboardEvent, MouseEvent, ReactNode, Ref } from "react";
-import { LassoMark } from "@lasso/ui";
+import { Dialog, LassoMark } from "@lasso/ui";
 import { P2Icon, type P2IconName } from "./icons.js";
 import { highlight, SHORTCUTS, STATUS_FILTERS, type SearchRow, type SearchType, type StatusFilter } from "./model.js";
 
@@ -218,6 +218,7 @@ export function OpenTab({
   active,
   solo = false,
   busy = false,
+  kind,
   dataKey,
   onSelect,
   onClose,
@@ -226,8 +227,10 @@ export function OpenTab({
   sub?: string;
   active: boolean;
   solo?: boolean;
-  /** Lasso henter til fanen: mærket bevæger sig foran navnet. */
+  /** Lasso henter til fanen: mærket bevæger sig foran navnet (i stedet for ikonet). */
   busy?: boolean;
+  /** Fanens ikon: bygning (firma), person, eller Lasso-mærket (global fane). */
+  kind?: "company" | "person" | "result";
   dataKey?: string;
   onSelect?: (e: MouseEvent<HTMLDivElement>) => void;
   onClose?: () => void;
@@ -249,7 +252,13 @@ export function OpenTab({
         }
       }}
     >
-      {busy ? <LassoMark className="mark is-busy" /> : null}
+      {busy ? (
+        <LassoMark className="mark kind is-busy" />
+      ) : kind === "result" ? (
+        <LassoMark className="mark kind" />
+      ) : kind ? (
+        <P2Icon name={kind === "company" ? "build" : "user"} className="i kind" />
+      ) : null}
       <span className="nm">{name}</span>
       <P2Icon name="down" className="i chev" />
       <button
@@ -276,11 +285,14 @@ export function OpenTab({
   );
 }
 
-/** Fanen med Lasso-mærket: chattens svar. Slået fra uden svar; mærket bevæger sig, mens Lasso henter. */
-export function LassoTab({ on, busy = false, disabled = false, onClick }: { on: boolean; busy?: boolean; disabled?: boolean; onClick?: () => void }) {
-  const label = busy ? "Lasso henter svaret" : "Lassos svar";
+/**
+ * Lasso-modulet (chatten): altid første modul og altid slået til. Aktivt er mærket ink med koral streg; mærket
+ * bevæger sig (koral), mens Lasso henter. `disabled` bruges ikke længere (fanen har altid en samtale eller tom tilstand).
+ */
+export function LassoTab({ on, busy = false, onClick }: { on: boolean; busy?: boolean; /** @deprecated Lasso-modulet er altid slået til. */ disabled?: boolean; onClick?: () => void }) {
+  const label = busy ? "Lasso, henter svaret" : "Lasso";
   return (
-    <button type="button" role="tab" className={`tabmark${on ? " on" : ""}${busy ? " is-busy" : ""}`} aria-selected={on} aria-label={label} title={label} disabled={disabled} onClick={onClick}>
+    <button type="button" role="tab" className={`tabmark${on ? " on" : ""}${busy ? " is-busy" : ""}`} aria-selected={on} aria-label={label} title={label} onClick={onClick}>
       <LassoMark className="mark" />
     </button>
   );
@@ -329,6 +341,10 @@ export function MenuItem({ icon, label, current = false, muted = false, onClick,
 
 /* ---------- spørgefeltet og bundbjælken ---------- */
 
+/**
+ * Spørgefeltet (chatten): pille 720 × 52 med "Spørg Lasso" og enter-ikonet. Mens Lasso svarer, er feltet slået fra
+ * (Stop står i samtalen ved den længere opgave).
+ */
 export function AskField({
   value,
   placeholder,
@@ -337,17 +353,17 @@ export function AskField({
   inputRef,
   onChange,
   onSubmit,
-  onStop,
 }: {
   value: string;
   placeholder: string;
-  /** Lasso svarer: Send bliver Stop. */
+  /** Lasso svarer: feltet og enter er slået fra. */
   pending?: boolean;
   /** Chatten er slået fra (ingen ANTHROPIC_API_KEY). */
   disabled?: boolean;
   inputRef?: Ref<HTMLInputElement>;
   onChange?: (v: string) => void;
   onSubmit?: () => void;
+  /** @deprecated Stop står i samtalen (den længere opgave). */
   onStop?: () => void;
 }) {
   return (
@@ -355,23 +371,18 @@ export function AskField({
       className="field"
       onSubmit={(e: FormEvent) => {
         e.preventDefault();
-        onSubmit?.();
+        if (!pending) onSubmit?.();
       }}
     >
-      <input ref={inputRef} value={value} onChange={(e) => onChange?.(e.target.value)} placeholder={placeholder} aria-label="Spørg Lasso" disabled={disabled} />
-      {pending ? (
-        <button type="button" className="send" aria-label="Stop" onClick={onStop}>
-          <P2Icon name="stop" />
-        </button>
-      ) : (
-        <button type="submit" className="send" aria-label="Send" disabled={!value.trim()}>
-          <P2Icon name="enter" />
-        </button>
-      )}
+      <input ref={inputRef} value={value} onChange={(e) => onChange?.(e.target.value)} placeholder={placeholder} aria-label="Spørg Lasso" disabled={disabled || pending} />
+      <button type="submit" className="send" aria-label="Send" disabled={pending || disabled || !value.trim()}>
+        <P2Icon name="enter" />
+      </button>
     </form>
   );
 }
 
+/** De tre forslag under feltet som ren tekst (14/22, 28 imellem; stablet på telefonen). Skjules i tom tilstand. */
 export function Suggestions({ items, disabled = false, onPick }: { items: readonly string[]; disabled?: boolean; onPick?: (s: string) => void }) {
   return (
     <div className="sugg">
@@ -407,5 +418,29 @@ export function TopTab({ name, active, solo = false, dataKey, onClick }: { name:
       <span>{name}</span>
       {solo ? <P2Icon name="down" /> : null}
     </button>
+  );
+}
+
+/* ---------- sideskabeloner ---------- */
+
+const KIND_ALL: Record<"company" | "person", string> = { company: "alle virksomheder", person: "alle personer" };
+
+/** Nålen i modulrækken på et skabelonmodul: fyldt rød = tilføjet på alle firmaer/personer. Klik spørger, om modulet skal fjernes. */
+export function TemplatePin({ kind, title, onClick }: { kind: "company" | "person"; title: string; onClick?: () => void }) {
+  return <IconButton icon="pin" className="tplpin" label={`${title} er tilføjet på ${KIND_ALL[kind]}. Fjern modulet`} on onClick={onClick} />;
+}
+
+/** Bekræftelsen, før et skabelonmodul fjernes (07.2: Annuller og den destruktive "Fjern"). */
+export function RemoveTemplateDialog({ open, kind, title, onCancel, onConfirm }: { open: boolean; kind: "company" | "person"; title: string; onCancel: () => void; onConfirm: () => void }) {
+  return (
+    <Dialog
+      open={open}
+      size="sm"
+      title="Fjern modulet?"
+      description={`${title} fjernes fra ${KIND_ALL[kind]}. Det kan ikke fortrydes.`}
+      onClose={onCancel}
+      hideClose
+      actions={{ destructive: { label: "Fjern", onClick: onConfirm }, secondary: { label: "Annuller", onClick: onCancel } }}
+    />
   );
 }
