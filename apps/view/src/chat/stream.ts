@@ -6,6 +6,9 @@ import type { Dataset, ViewSpec } from "@lasso/spec";
  */
 export const CHAT_API = "/api/chat";
 
+/** De generiske navne på en global fane (apps/server/src/chat/context.ts): emnet står i samtalen, ikke i fanens navn. */
+export const GLOBAL_TITLES = ["Firmaliste", "Sammenligning", "Markedsanalyse", "Kort"] as const;
+
 /** Hvor svaret skrives (apps/server/src/chat/context.ts): brugerens valg i menuen, ellers her. */
 export interface Placement {
   placement: "current" | "entity" | "global";
@@ -13,6 +16,10 @@ export interface Placement {
   focus?: string;
   /** Kun global: navnet på den nye resultatfane. */
   title?: string;
+  /** Placeringen er afgjort (place_answer), ikke kun turens start. */
+  decided?: true;
+  /** Svaret bliver i fanen, selv om spørgsmålet nævner en anden: meddelelsesrækken "Svarer her i …". */
+  here?: true;
 }
 
 /** "page" er en hel side (show_*, søgninger, render_view med layout page), "module" et enkelt element. */
@@ -25,7 +32,7 @@ export type ChatEvent =
   | { type: "view"; id: string; name: string; form: ViewForm; spec: ViewSpec; dataset: Dataset; pdfLink?: string }
   | { type: "tool_error"; id: string; name: string; message: string }
   | { type: "choice"; id: string; question: string; options: ChoiceOption[]; allowFreeText: boolean }
-  | { type: "done"; history: unknown[]; sig: string; placement: Placement }
+  | { type: "done"; history: unknown[]; sig: string; placement: Placement; fresh?: true }
   | { type: "error"; message: string };
 
 /** Samtalen, serveren gav sidst ("done"): sendes uændret med næste spørgsmål. */

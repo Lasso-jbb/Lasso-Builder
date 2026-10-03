@@ -93,6 +93,9 @@ export function Text({ text }: { text: string }) {
               </li>
             ))}
           </ul>
+        ) : b.kind === "links" ? (
+          // /chat har ingen modulrække: modul-links står som almindelig tekst.
+          <p key={i}>{b.items.map((m) => m.text).join(", ")}</p>
         ) : (
           <p key={i}>
             {b.lines.map((line, k) => (

@@ -58,6 +58,17 @@ export interface SaveViewResult {
   visibility: Visibility;
 }
 
+/**
+ * En sideskabelon ("Tilføj som fane" på en side om ét firma eller én person): gemt pr. entitetstype og vist som et
+ * ekstra modul på alle firmaer eller alle personer. WP2-STUB af klientkontrakten; WP1 leverer API'et.
+ */
+export interface PageTemplate {
+  id: string;
+  kind: "company" | "person";
+  title: string;
+  subtitle?: string;
+}
+
 export class PortalApiError extends Error {
   readonly status: number;
   constructor(status: number, message: string) {
@@ -156,6 +167,13 @@ export function createPortalApi(onUnauthorized: () => void, fetcher: typeof fetc
     pdfPerson: (id: string, focus: PersonFocus = "overblik") => pdf(`/person/${encodeURIComponent(id)}${query({ focus: focus === "overblik" ? undefined : focus })}`),
     /** Søgning og gemte sider: den viste spec som PDF. */
     pdfSpec: (spec: ViewSpec) => pdf("/spec", { spec }),
+    /** Sideskabeloner. WP2-STUB: stierne fastlægges af WP1. */
+    templates: {
+      list: (kind: "company" | "person") => call<{ templates: PageTemplate[] }>("GET", `/templates${query({ kind })}`).then((r) => r.templates),
+      save: (body: { kind: "company" | "person"; title: string; subtitle?: string; spec: ViewSpec; entity: { kind: "company" | "person"; id: string } }) => call<PageTemplate>("POST", "/templates", body),
+      remove: (id: string) => call<{ removed: boolean }>("DELETE", `/templates/${encodeURIComponent(id)}`),
+      render: (id: string, entityId: string) => call<ViewResult>("GET", `/templates/${encodeURIComponent(id)}/render${query({ entity: entityId })}`),
+    },
   };
 }
 
