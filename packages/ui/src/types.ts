@@ -85,6 +85,12 @@ export interface HostCapabilities {
    * dem. Udeladt: adgangen kendes ikke, og alle genveje, værten kan åbne, vises.
    */
   modules?: readonly string[];
+  /**
+   * Værtens ramme om visningen i px (topbjælke, faner, spørgefelt …): ejerdiagrammets lærred tilpasses vinduets højde minus
+   * den, så hele grafen ses i ét (portalen: 400). Udeladt (/mcp i Claude.ai's iframe, /v): lærredet vokser i 100 % op til
+   * 1200 px og tilpasses kun bredden.
+   */
+  viewportChrome?: number;
 }
 
 export interface LassoViewProps {

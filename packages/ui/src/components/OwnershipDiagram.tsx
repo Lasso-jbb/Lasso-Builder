@@ -28,7 +28,8 @@ import {
   entitySubtitle,
   graphOnDate,
   minimapFrame,
-  fitOwnership,
+  OWNERSHIP_CANVAS,
+  ownershipCanvas,
   refocusGraph,
   indirectShare,
   labelHeight,
@@ -48,17 +49,10 @@ const LIST_BELOW = 560;
 /** Detaljepanelet står til højre, når der er plads; ellers under lærredet. */
 const PANEL_BESIDE_FROM = 900;
 const ZOOM_STEPS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.9, 1, 1.25, 1.5, 2];
-const CANVAS_MIN = 360;
-/** 14b: en dyb kæde tegnes i 100 %, så lærredet må blive højere end standardhøjden. */
-const CANVAS_TALL = 1200;
-/** 26f.4: tablet indlejrer diagrammet i 340 px højde og samler over 4 noder pr. lag i "+N". */
-const TABLET_CANVAS_H = 340;
+/** Lærredets grænser (360-1200 desktop, 340-560 tablet) står i ownershipLayout.ts (OWNERSHIP_CANVAS). */
+const CANVAS_MIN = OWNERSHIP_CANVAS.min;
+/** 26f.4: tablet samler over 4 noder pr. lag i "+N". */
 const TABLET_LAYER_CAP = 4;
-/** 26f.4: noderne tegnes aldrig under 150 px bredde på tablet (læsbar tekst); lærredet vokser i stedet højst til 560 px. */
-const TABLET_MIN_ZOOM = 150 / 196;
-const TABLET_CANVAS_MAX = 560;
-/** Det af vinduet, der ikke er lærred, når lærredet tilpasses vinduet: topbjælke, faner og modulrække (ca. 150), diagrammets værktøjslinje og evt. fuld skærms hoved (ca. 130) og spørgefeltet (ca. 120). */
-const VIEW_CHROME = 400;
 /** Luft i bunden af lærredet til legende og zoomknapper. */
 const CANVAS_FOOT = 88;
 /** Smalt lærred (fx med detaljepanelet ved siden af): legenden fylder tre linjer. */
@@ -80,6 +74,12 @@ export interface OwnershipDiagramProps {
   defaultOwners?: "legal" | "beneficial";
   /** Demodata: mobilens hoved siger "Underniveauer er eksempeldata" (26c.6). */
   demo?: boolean;
+  /**
+   * Værtens ramme i px (host.viewportChrome): lærredet tilpasses vinduets højde minus den (hele grafen i bredde og højde).
+   * Portalen giver sin topbjælke, faner, modulrække og spørgefelt. Udeladt (/mcp, /v, galleriet): lærredet vokser i
+   * 100 % op til 1200 px og tilpasses kun bredden, så diagrammet ikke krymper i en lav iframe.
+   */
+  viewportChrome?: number;
 }
 
 /* ---------- Tekstmåling til afkortning af navne i SVG ---------- */
@@ -141,7 +141,7 @@ const BUILDING_CEASED = "M3 21h18M5 21V5l8-2v18M13 9l6 2v10";
  * selskaber kasser med et lille linjeikon. Kanter med andel som tekst; cirkulært ejerskab
  * føres udenom i koral stiplet. Under 560 px bliver strukturen en indrykket liste.
  */
-export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, canDrillDown, canPrompt, canFullscreen, defaultSelected, defaultOwners, demo }: OwnershipDiagramProps) {
+export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, canDrillDown, canPrompt, canFullscreen, defaultSelected, defaultOwners, demo, viewportChrome }: OwnershipDiagramProps) {
   const [ref, W] = useWidth<HTMLDivElement>(1100);
   // 14.1: på desktop intet titelhoved over værktøjslinjen, medmindre specen giver en titel; mobilen (26c.6) har "Ejerstruktur".
   const heading = title ?? "Ejerstruktur";
@@ -167,14 +167,16 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
     };
   }, []);
   const [zoom, setZoom] = useState<number | null>(null);
-  // Vinduets højde: lærredet må højst fylde det synlige (resten af rammen trækkes fra), så grafen ses i ét.
+  // Vinduets højde, kun når værten beder om at tilpasse lærredet til vinduet (viewportChrome): så må det højst fylde det synlige.
+  const fitWindow = viewportChrome !== undefined;
   const [viewH, setViewH] = useState(() => (typeof window !== "undefined" ? window.innerHeight : 900));
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (!fitWindow || typeof window === "undefined") return;
     const on = () => setViewH(window.innerHeight);
+    on();
     window.addEventListener("resize", on);
     return () => window.removeEventListener("resize", on);
-  }, []);
+  }, [fitWindow]);
   const [pan, setPan] = useState<{ x: number; y: number } | null>(null);
   const drag = useRef<{ x: number; y: number; px: number; py: number; moved: boolean } | null>(null);
   // Layoutregel 3 (14.4): legale/reelle ejere, dobbeltklik = nyt fokus, pr. dato, mini-kort og eksport.
@@ -227,23 +229,13 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
   const panelOverlay = panelBeside && !tablet;
   const selectedNode = layout?.nodes.find((n) => n.id === selected && n.entity) ?? null;
   const canvasW = Math.max(200, selectedNode && panelBeside && !panelOverlay ? W - 336 - 16 : W);
-  // Tilpas: hele grafen skal kunne ses (fitOwnership nedenfor).
   // Der holdes 56 px fri i begge sider, så zoomknapperne i hjørnet ikke dækker noder eller baner.
   // 26f.4 tablet: kun hjælpechippen står under noderne (ingen legende), så foden er 44 px.
   const foot = tablet ? 44 : canvasW >= 720 && canvasW - LEGEND_RIGHT - 16 < 860 ? CANVAS_FOOT_NARROW : CANVAS_FOOT;
-  // Tilpas til vinduet (Jakob 03.10, fitOwnership): hele grafen ses i både bredde og højde, højst 100 %; lærredet er så
-  // højt som den tilpassede graf, højst vinduets synlige højde (desktop) eller 560 px (tablet, 26f.4), så en dyb struktur
-  // skaleres ned i stedet for at blive klippet. Tablet går aldrig under 150 px-noder (TABLET_MIN_ZOOM); derunder panoreres.
-  const fitted = layout
-    ? fitOwnership({
-        graph: layout,
-        canvasW,
-        minCanvasH: tablet ? TABLET_CANVAS_H : CANVAS_MIN,
-        maxCanvasH: tablet ? Math.max(TABLET_CANVAS_H, Math.min(TABLET_CANVAS_MAX, viewH - VIEW_CHROME)) : Math.max(CANVAS_MIN, Math.min(CANVAS_TALL, viewH - VIEW_CHROME)),
-        foot,
-        minZoom: tablet ? TABLET_MIN_ZOOM : 0.25,
-      })
-    : null;
+  // Første visning (ownershipCanvas): med viewportChrome (portalen, Jakob 03.10) tilpasses vinduet, så hele grafen ses i
+  // bredde og højde, og lærredet højst er vinduets synlige højde; uden (standard, fx /mcp i Claude.ai's iframe) tegner
+  // desktop 100 %, skalerer kun for bredden og lader lærredet vokse op til 1200 px. Tablet: 340-560 px, aldrig under 150 px-noder.
+  const fitted = layout ? ownershipCanvas({ graph: layout, canvasW, foot, tablet, ...(fitWindow ? { viewportH: viewH - viewportChrome } : {}) }) : null;
   const fitZoom = fitted?.zoom ?? 1;
   const z = zoom ?? fitZoom;
   const canvasH = fitted?.canvasH ?? CANVAS_MIN;

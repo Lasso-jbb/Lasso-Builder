@@ -44,6 +44,8 @@
 .p3 .chat-a, .p3 .chat-ilink { color: inherit; font: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); }
 .p3 .chat-a:hover, .p3 .chat-ilink:hover, .p3 .chat-a:focus-visible, .p3 .chat-ilink:focus-visible { text-decoration-color: currentColor; outline: none; }
 .p3 .chat-error { margin: 0; }
+/* Stop: stille linje (sekundær tekst), ingen "Prøv igen". */
+.p3 .chat-stopped { margin: 0; color: var(--lasso-text-3); }
 
 /* Tekstlink: 14/500 koral mørk */
 .p3 .chat-tlink { font: inherit; font-size: var(--lasso-fs); font-weight: 500; color: var(--lasso-accent-text); background: none; border: 0; padding: 0; cursor: pointer; }

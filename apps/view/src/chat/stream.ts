@@ -33,13 +33,13 @@ export type ChatEvent =
   | ({ type: "placement" } & Placement)
   | { type: "text"; text: string }
   | { type: "tool"; id: string; name: string; title: string }
-  /** tool: værktøjet, der lavede visningen (render_view, show_company …); kun render_view-sider kan blive skabeloner. */
+  /** tool: værktøjet, der lavede visningen (render_view, show_company, search_companies …). */
   | { type: "view"; id: string; name: string; tool: string; form: ViewForm; spec: ViewSpec; dataset: Dataset; pdfLink?: string }
   | { type: "tool_error"; id: string; name: string; message: string }
   | { type: "choice"; id: string; question: string; options: ChoiceOption[]; allowFreeText: boolean }
   /** fresh: svaret er flyttet til en anden fane; history er kun denne tur og hører til den nye fane. */
   | { type: "done"; history: unknown[]; sig: string; placement: Placement; fresh?: true }
-  /** code: history_invalid = serveren/Claude afviste samtalen; klienten nulstiller den. */
+  /** code "history_invalid": serveren kunne ikke fortsætte fanens samtale (historikken passer ikke); klienten begynder en ny. */
   | { type: "error"; message: string; code?: "history_invalid" };
 
 /** Samtalen, serveren gav sidst ("done"): sendes uændret med næste spørgsmål. */
@@ -59,6 +59,7 @@ export interface ChatEntityRef {
 /** Det, et punkt i valgmenuen gør: svaret skrives her, på en anden fane (entity) eller globalt. */
 export interface ChoiceAction {
   placement: "current" | "entity" | "global";
+  /** Ved entity: fanen, svaret skrives på. Ved current: evt. den person/virksomhed, punktet handler om (svaret skrives her). */
   entity?: ChatEntityRef;
   focus?: string;
   /** Beskeden, der sendes, når punktet vælges (ellers label). */
@@ -116,6 +117,9 @@ export function splitSse(buffer: string): { events: ChatEvent[]; rest: string } 
   return { events, rest };
 }
 
+/** Forbindelsen blev afbrudt, mens svaret kom (ikke Stop). Uden "Prøv igen" i teksten: linket under fejlen giver den. */
+export const STREAM_BROKEN = "Forbindelsen blev afbrudt.";
+
 export class ChatHttpError extends Error {
   constructor(
     readonly status: number,
@@ -151,9 +155,16 @@ export async function streamChat(
   const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
   let buffer = "";
   for (;;) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    const { events, rest } = splitSse(buffer + value);
+    let chunk: ReadableStreamReadResult<string>;
+    try {
+      chunk = await reader.read();
+    } catch {
+      // Stop (AbortController) eller en afbrudt forbindelse midt i svaret: aldrig browserens rå tekst ("BodyStreamBuffer was aborted").
+      if (signal?.aborted) return;
+      throw new ChatHttpError(0, STREAM_BROKEN);
+    }
+    if (chunk.done) break;
+    const { events, rest } = splitSse(buffer + chunk.value);
     buffer = rest;
     for (const e of events) onEvent(e);
   }

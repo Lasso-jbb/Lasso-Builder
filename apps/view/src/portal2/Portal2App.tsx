@@ -11,7 +11,6 @@ import type { P2IconName } from "./icons.js";
 import {
   addRecent,
   askPlaceholder,
-  clearCache,
   closeItem,
   contextFor,
   freeTextPick,
@@ -19,15 +18,12 @@ import {
   headLines,
   isTemplateTab,
   isUnrecognizedHistory,
-  LASSO_TAB,
   moduleTabs,
   templateIdOf,
   templateTab,
   loadRecent,
-  CHAT_CACHE_KEY,
   openItem,
   summaryFingerprint,
-  recencyOrder,
   saveRecent,
   shortName,
   searchCounts,
@@ -44,15 +40,23 @@ import {
 } from "./model.js";
 import {
   applyTurnEvent,
+  CHAT_CACHE_KEY,
+  clearCache,
   finishTurn,
   globalTitleFallback,
+  LASSO_TAB,
+  mapThreadViews,
   moveTurn,
+  recencyOrder,
   pendingChoice,
+  resetTabHistory,
   restoreCache,
   saveCache,
   serializeCache,
+  settleTurn,
   skipChoice,
   startTurn,
+  stopTurn,
   undoMove,
   type Notice,
   type Threads,
@@ -60,6 +64,7 @@ import {
 } from "./thread.js";
 import { AskField, BottomBar, DropButton, IconButton, LassoTab, MenuItem, ModuleTab, OpenTab, RemoveTemplateDialog, SearchEmpty, SearchField, SearchResultRow, SearchTabs, StatusFilterMenu, Suggestions, TemplatePin, TopTab } from "./parts.js";
 import { useElasticScroll } from "./elastic.js";
+import { createIdleSave } from "./idleSave.js";
 import { ChoicePanel } from "./ChoicePanel.js";
 import type { ViewPart } from "./chat/AnswerCard.js";
 import { EmptyState } from "./chat/EmptyState.js";
@@ -106,16 +111,8 @@ function storage(): Storage | undefined {
 const isPhone = () => window.matchMedia?.(PHONE).matches ?? false;
 /** Fortryd står i 10 sekunder efter en flytning. */
 const UNDO_MS = 10_000;
-/** Turens svar er ikke længere i gang (afbrudt, fejl eller færdig): status væk, tidspunktet sat (thread.ts settleTurn sætter ikke tidspunktet). */
-function settleWithTime(t: Threads, key: string, turnId: string): Threads {
-  const tab = t[key];
-  if (!tab?.turns.some((x) => x.id === turnId && x.answer.pending)) return t;
-  return { ...t, [key]: { ...tab, turns: tab.turns.map((x) => (x.id === turnId ? { ...x, answer: { ...x.answer, pending: false, status: undefined, at: x.answer.at ?? Date.now() } } : x)) } };
-}
-/** Én visning i trådene ændret (filterskift, Gem/Gemt): fn får visningen og giver den nye. */
-function mapThreadViews(t: Threads, fn: (p: ViewPart) => ViewPart): Threads {
-  return Object.fromEntries(Object.entries(t).map(([k, tab]) => [k, { ...tab, turns: tab.turns.map((x) => ({ ...x, answer: { ...x.answer, parts: x.answer.parts.map((p) => (p.kind === "view" ? fn(p) : p)) } })) }]));
-}
+/** Det af vinduet, der ikke er lærred for ejerdiagrammet: topbjælke, faner og modulrække (ca. 150), diagrammets værktøjslinje og evt. fuld skærms hoved (ca. 130) og spørgefeltet (ca. 120). */
+const PORTAL_CHROME = 400;
 const iconOf = (k: ItemKind): P2IconName => (k === "company" ? "build" : k === "person" ? "user" : "search");
 
 export function Portal2App({ boot }: { boot: Portal2Boot }) {
@@ -381,11 +378,38 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Samtalen gemmes i browseren, når der ikke hentes (ikke pr. tegn, mens svaret streames); kun den trimmede historik fra "done".
+  // Samtalen gemmes i browseren (kun den trimmede historik fra "done") i et stille øjeblik (idleSave.ts): ikke pr. tegn,
+  // mens svaret streames, og ikke ved hvert fanebyt. Skifter kun den aktive fane, huskes det til næste gemning eller til
+  // siden skjules/forlades (pagehide, visibilitychange), hvor det, der venter, gemmes med det samme.
+  const persisted = useRef({ open, active, threads, history });
+  persisted.current = { open, active, threads, history };
+  const saver = useMemo(
+    () =>
+      createIdleSave(() => {
+        if (!boot.user || loggedOut.current) return;
+        const s = persisted.current;
+        saveCache(storage(), serializeCache(boot.user.id, { threads: s.threads, open: s.open, active: s.active }, Date.now()), recencyOrder(s.open, s.history, s.active));
+      }),
+    [boot.user],
+  );
   useEffect(() => {
     if (!hydrated || pendingKey !== null || !boot.user || loggedOut.current) return;
-    saveCache(storage(), serializeCache(boot.user.id, { threads, open, active }, Date.now()), recencyOrder(open, history, active));
-  }, [hydrated, open, active, threads, pendingKey, boot.user, history]);
+    saver.request();
+  }, [hydrated, open, threads, pendingKey, boot.user, saver]);
+  useEffect(() => {
+    if (hydrated) saver.markDirty();
+  }, [hydrated, active, history, saver]);
+  useEffect(() => {
+    const onHide = () => saver.flush();
+    const onVisibility = () => document.visibilityState === "hidden" && saver.flush();
+    window.addEventListener("pagehide", onHide);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+      document.removeEventListener("visibilitychange", onVisibility);
+      saver.flush();
+    };
+  }, [saver]);
 
   // Egne sider hentes, når man er logget ind; en fane på en egen side, der er fjernet, står på Overblik.
   const reloadTemplates = useCallback(async () => {
@@ -612,7 +636,25 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     };
     const ctrl = new AbortController();
     abort.current = ctrl;
+    // Tekststykkerne samles pr. billede (requestAnimationFrame): én opdatering af samtalen pr. frame, ikke pr. stykke.
+    // Enhver anden hændelse (og slutningen) skriver først den samlede tekst, så rækkefølgen holder.
+    let textBuf = "";
+    let frame = 0;
+    const flushText = () => {
+      if (frame) cancelAnimationFrame(frame);
+      frame = 0;
+      if (!textBuf) return;
+      const text = textBuf;
+      textBuf = "";
+      setThreads((t) => applyTurnEvent(t, at, turnId, { type: "text", text }));
+    };
     const onEvent = (e: ChatEvent) => {
+      if (e.type === "text") {
+        textBuf += e.text;
+        if (!frame) frame = requestAnimationFrame(flushText);
+        return;
+      }
+      flushText();
       if (e.type === "placement" && e.decided) {
         if (e.placement === "entity" && e.target) moveTo({ key: e.target.id, kind: e.target.kind, name: e.target.name, tab: LASSO_TAB });
         else if (e.placement === "global") {
@@ -654,10 +696,18 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     };
     try {
       await streamChat({ message: text, context, history: tab?.chat.history ?? [], sig: tab?.chat.sig }, onEvent, { signal: ctrl.signal });
+      flushText();
+      // Stop (eller Fortryd/luk, hvor turen allerede er væk): streamChat vender stille tilbage; turen får "Stoppet.".
+      if (ctrl.signal.aborted) setThreads((t) => stopTurn(t, at, turnId, Date.now()));
     } catch (e) {
+      flushText();
+      if (ctrl.signal.aborted) {
+        setThreads((t) => stopTurn(t, at, turnId, Date.now()));
+        return;
+      }
       // Serveren kender ikke fanens samtale (ændret historik eller signatur): begynd en ny, så brugeren ikke sidder fast.
       if (e instanceof ChatHttpError && isUnrecognizedHistory(e.status, e.message)) {
-        setThreads((t) => (t[at] ? { ...t, [at]: { ...t[at]!, chat: { history: [] }, sent: null } } : t));
+        setThreads((t) => resetTabHistory(t, at));
       }
       if (e instanceof ChatHttpError && e.status === 401) {
         // Sessionen er udløbet: samtalen ryddes og gemmes ikke igen.
@@ -667,7 +717,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       const message = e instanceof ChatHttpError && e.status === 401 ? "Chatten kræver login. Log ind i portalen og prøv igen." : errorText(e);
       setThreads((t) => applyTurnEvent(t, at, turnId, { type: "error", message }));
     } finally {
-      setThreads((t) => settleWithTime(t, at, turnId));
+      setThreads((t) => settleTurn(t, at, turnId, Date.now()));
       setPendingKey(null);
       pendingTurn.current = null;
       abort.current = null;
@@ -1016,6 +1066,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const restoreTo = useRef<{ top: number; until: number } | null>(null);
   const turnCount = useRef(0);
   turnCount.current = item ? (threads[item.key]?.turns.length ?? 0) : 0;
+  const activeTurnCount = turnCount.current;
+  const activeLastTurn = item ? threads[item.key]?.turns.at(-1) : undefined;
   const syncJump = (sc: HTMLElement) => {
     const more = moreBelow(sc);
     setJump((j) => (j === more ? j : more));
@@ -1106,8 +1158,9 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
         setJump(false);
       }
     } else follow();
+    // Kun den aktive fanes sidste tur (og antallet af ture): et svar på en anden fane, eller ældre ture, der ændres, følges ikke.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [threads, active, item?.tab, onLasso, tplNotes]);
+  }, [activeLastTurn, activeTurnCount, active, item?.tab, onLasso, tplNotes]);
 
   // Visningerne i kortene vokser efter tegningen (målt layout, data): følg også med, når indholdet bliver højere.
   const followRef = useRef(follow);
@@ -1241,7 +1294,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   let content: ReactNode;
   /** Tom tilstand på Lasso: ingen ture og intet resultat. Forslagene står så som piller, ikke under feltet. */
   let empty = false;
-  const host = (page: boolean) => ({ prompt: true, save: true, refine: true, drillDown: true, refresh: true, export: true, pdf: boot.pdf !== false, openFocus: page, openSection: page });
+  // viewportChrome: portalens ramme (topbjælke, faner, modulrække, værktøjslinje og spørgefelt), så ejerdiagrammet tilpasses vinduet.
+  const host = (page: boolean) => ({ prompt: true, save: true, refine: true, drillDown: true, refresh: true, export: true, pdf: boot.pdf !== false, openFocus: page, openSection: page, viewportChrome: PORTAL_CHROME });
   if (!item) {
     content = (
       <div className="home">
@@ -1285,6 +1339,11 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
             onStop={stop}
             onRetry={(turn) => void ask(turn.question)}
             onUndo={(turn) => undo(item.key, turn)}
+            rowKey={(turn) => {
+              const note = tplNotes[turn.id];
+              const addingHere = adding && turn.answer.parts.some((p) => p.kind === "view" && p.id === adding) ? adding : "";
+              return `${theme}|${item.key}|${item.kind}|${addingHere}|${note ? `${note.ok}:${note.text}:${note.retry ? 1 : 0}` : ""}`;
+            }}
             cardProps={(part) => ({
               headless: item.kind !== "result",
               theme,

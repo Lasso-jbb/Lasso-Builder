@@ -1231,6 +1231,46 @@ export function fitOwnership({ graph, canvasW, minCanvasH, maxCanvasH, foot, mar
   return { zoom, canvasH, pan };
 }
 
+/** Lærredets grænser (14b, 26f.4): desktop mindst 360 og højst 1200 px; tablet 340 (indlejret), højst 560, aldrig under 150 px-noder. */
+export const OWNERSHIP_CANVAS = { min: 360, tall: 1200, tabletH: 340, tabletMax: 560, tabletMinZoom: 150 / 196, minZoom: 0.25 } as const;
+
+export interface OwnershipCanvasInput {
+  graph: { width: number; height: number };
+  canvasW: number;
+  foot: number;
+  tablet: boolean;
+  /**
+   * Den højde, lærredet højst må fylde (vinduets højde minus værtens ramme), når værten beder om det (host.viewportChrome,
+   * portalen). Udeladt (fx /mcp i Claude.ai's iframe): lærredet vokser i 100 % op til 1200 px og tilpasses kun bredden.
+   */
+  viewportH?: number;
+}
+
+/**
+ * Lærredets højde, zoom og panorering ved første visning. Med viewportH (portalen, Jakob 03.10): hele grafen i både bredde og
+ * højde (fitOwnership), højst vinduets synlige højde. Uden (standard, 14.4/14b): desktop tegner 100 % og skalerer kun en
+ * struktur, der ikke kan være i bredden; lærredet vokser med strukturen op til 1200 px (derover panoreres). Tablet (26f.4)
+ * har sit eget loft i begge tilfælde.
+ */
+export function ownershipCanvas({ graph, canvasW, foot, tablet, viewportH }: OwnershipCanvasInput): { zoom: number; canvasH: number; pan: { x: number; y: number } } {
+  const C = OWNERSHIP_CANVAS;
+  if (viewportH !== undefined) {
+    return fitOwnership({
+      graph,
+      canvasW,
+      foot,
+      minCanvasH: tablet ? C.tabletH : C.min,
+      maxCanvasH: tablet ? Math.max(C.tabletH, Math.min(C.tabletMax, viewportH)) : Math.max(C.min, Math.min(C.tall, viewportH)),
+      minZoom: tablet ? C.tabletMinZoom : C.minZoom,
+    });
+  }
+  const w = Math.max(1, graph.width);
+  const h = Math.max(1, graph.height);
+  const zoom = tablet ? Math.max(C.tabletMinZoom, Math.min(1, (canvasW - 32) / w, (C.tabletH - foot - 8) / h)) : Math.max(C.minZoom, Math.min(1, (canvasW - 32) / w));
+  const canvasH = tablet ? Math.round(Math.min(C.tabletMax, Math.max(C.tabletH, h * zoom + foot + 16))) : Math.round(Math.min(C.tall, Math.max(C.min, h * zoom + foot)));
+  return { zoom, canvasH, pan: { x: Math.round((canvasW - w * zoom) / 2), y: Math.round(Math.max(8, (canvasH - foot - h * zoom) / 2)) } };
+}
+
 /** Mini-kortets geometri: målestok, der får hele grafen ind i boksen, og viewport-rammen i kortets koordinater. */
 export function minimapFrame(
   layout: { width: number; height: number },

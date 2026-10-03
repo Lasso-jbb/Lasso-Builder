@@ -1,6 +1,7 @@
 /**
- * Den smule formatering, chatten tillader (agent.ts CHAT_INSTRUCTIONS): afsnit, punktlister, **fed**
- * og [tekst](https://…). Giver en træstruktur, ChatApp tegner med React; aldrig HTML fra modellen.
+ * Den smule formatering, chatten tillader (apps/server/src/chat/agent.ts CHAT_RULES): afsnit, punktlister, **fed**,
+ * [tekst](https://…) og lasso:-modullinks. Giver en træstruktur, som /chat (ChatApp) og portalens samtale
+ * (portal2/chat/Message.tsx) tegner med React; aldrig HTML fra modellen.
  */
 import { FOCUSES, PERSON_FOCUSES } from "@lasso/spec";
 

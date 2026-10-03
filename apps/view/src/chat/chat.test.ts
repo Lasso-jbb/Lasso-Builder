@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { parseBlocks, parseInline } from "./markdown.js";
-import { GLOBAL_TITLES, splitSse, streamChat, type ChatEvent } from "./stream.js";
+import { ChatHttpError, GLOBAL_TITLES, STREAM_BROKEN, splitSse, streamChat, type ChatEvent } from "./stream.js";
 
 test("splitSse: hele blokke ud, en halv blok bliver i bufferen", () => {
   const { events, rest } = splitSse('data: {"type":"text","text":"Hej"}\n\ndata: {"type":"tool","id":"1","name":"show_company","title":"Vis"}\n\ndata: {"type":"te');
@@ -39,6 +39,46 @@ test("streamChat: læser hændelserne, også når en blok er delt over to chunks
 test("streamChat: serverens fejltekst kastes med status", async () => {
   const fetcher = (async () => new Response(JSON.stringify({ error: "Ikke logget ind" }), { status: 401 })) as unknown as typeof fetch;
   await assert.rejects(streamChat({ message: "Hej" }, () => {}, { fetcher }), (e: Error & { status?: number }) => e.status === 401 && e.message === "Ikke logget ind");
+});
+
+/** Et svar, der sender én tekst og så hænger, til fail kaldes (Stop eller en afbrudt forbindelse). */
+function hangingBody(onPull: (fail: (e: unknown) => void) => void) {
+  let sent = false;
+  return new ReadableStream<Uint8Array>({
+    pull(c) {
+      if (!sent) {
+        sent = true;
+        c.enqueue(new TextEncoder().encode('data: {"type":"text","text":"Hej"}\n\n'));
+        return;
+      }
+      return new Promise<void>((_, reject) => onPull(reject));
+    },
+  });
+}
+
+test("C1: Stop midt i svaret: streamChat vender stille tilbage (ingen 'BodyStreamBuffer was aborted')", async () => {
+  const ctrl = new AbortController();
+  const body = hangingBody((fail) => ctrl.signal.addEventListener("abort", () => fail(new DOMException("BodyStreamBuffer was aborted", "AbortError"))));
+  const fetcher = (async () => new Response(body, { status: 200 })) as unknown as typeof fetch;
+  const events: ChatEvent[] = [];
+  await streamChat(
+    { message: "Hej" },
+    (e) => {
+      events.push(e);
+      ctrl.abort();
+    },
+    { fetcher, signal: ctrl.signal },
+  );
+  assert.deepEqual(events, [{ type: "text", text: "Hej" }]);
+});
+
+test("C1: forbindelsen afbrudt midt i svaret: dansk fejl med status 0, aldrig browserens tekst", async () => {
+  const body = hangingBody((fail) => setTimeout(() => fail(new TypeError("network error")), 5));
+  const fetcher = (async () => new Response(body, { status: 200 })) as unknown as typeof fetch;
+  const events: ChatEvent[] = [];
+  await assert.rejects(streamChat({ message: "Hej" }, (e) => events.push(e), { fetcher }), (e: unknown) => e instanceof ChatHttpError && e.status === 0 && e.message === STREAM_BROKEN);
+  assert.equal(STREAM_BROKEN, "Forbindelsen blev afbrudt.");
+  assert.equal(events.length, 1);
 });
 
 test("markdown: fed, links, punktlister; aldrig HTML", () => {

@@ -1,9 +1,11 @@
+import { useMemo } from "react";
 import { Button, IconButton, LassoView, type HostCapabilities, type LassoViewProps } from "@lasso/ui";
-import { forPortal, type AnswerPart } from "../model.js";
+import { forPortal } from "../model.js";
+import type { ViewAnswerPart } from "../thread.js";
 
 const noop = () => undefined;
 
-export type ViewPart = Extract<AnswerPart, { kind: "view" }>;
+export type ViewPart = ViewAnswerPart;
 
 export interface AnswerCardProps {
   part: ViewPart;
@@ -32,6 +34,7 @@ export interface AnswerCardProps {
 export function AnswerCard({ part, kind, mobile = false, theme, host, onAction, onDownload, onFullscreen, onAddTab, adding = false, headless = false }: AnswerCardProps) {
   const page = (kind ?? (part.form === "page" ? "page" : "element")) === "page";
   const { spec } = part;
+  const view = useMemo(() => forPortal(spec, { head: !headless }), [spec, headless]);
   return (
     <section className={`chat-card${mobile ? " chat-card--m" : ""}`} aria-label={spec.title}>
       <header className="chat-card__h">
@@ -51,7 +54,7 @@ export function AnswerCard({ part, kind, mobile = false, theme, host, onAction, 
         </div>
       </header>
       <div className="chat-card__b">
-        <LassoView spec={forPortal(spec, { head: !headless })} dataset={part.dataset} theme={theme} frameless page={page} host={host ?? {}} onAction={onAction ?? noop} />
+        <LassoView spec={view} dataset={part.dataset} theme={theme} frameless page={page} host={host ?? {}} onAction={onAction ?? noop} />
       </div>
     </section>
   );
