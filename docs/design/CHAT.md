@@ -110,11 +110,12 @@ Modul-links står på svarets sidste linje og skrives som `[Risiko](lasso:modul/
 
 ## Placering og de tre situationer
 
-Placeringen afgøres af serveren (`place_answer`, se `docs/chat.md`), før noget vises, og brugeren ser den som en
-meddelelsesrække i tråden:
+Placeringen afgøres af serveren (`place_answer`, se `docs/chat.md`), før noget vises. Flytter svaret, ser brugeren det
+som en meddelelsesrække i tråden; bliver det på fanen, står der ingen række (Jakob 03.10: ingen "Svarer her"-række):
 
 1. **Bliv i fanen** (standard). Spørgsmålet giver mening i fanens kontekst, også når det nævner en anden ("Hvad laver
-   Jakob ellers?"). Svaret står i fanen, og rækken siger "Svarer her i LASSO X A/S".
+   Jakob ellers?"). Svaret står i fanen uden en meddelelsesrække (Jakob 03.10: ingen "Svarer her"-række; Paper-eksportens
+   "Svarer her i LASSO X A/S" gælder ikke længere).
 2. **Ny fane for et firma eller en person.** Kun ved et udtrykkeligt "vis mig alt om …" eller "åbn …" og kun når
    navnet er entydigt. Den nye fane åbnes og aktiveres, spørgsmålet følger med som første besked, og i den gamle
    tråd står "Åbner Jakob Bech Benediktson i en ny fane. Fortryd" (efter de 10 sekunder: "Åbnede Jakob Bech Benediktson i en ny fane"; flyttes svaret til en fane, der allerede var åben: "Svarer i fanen `<navn>`"). Fortryd virker i 10 sekunder og er kun på

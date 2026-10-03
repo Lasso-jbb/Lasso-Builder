@@ -65,7 +65,10 @@ test("Tråden: role=log, skærmlæsertekster, boble og svar; ingen midterprik no
 });
 
 test("Meddelelsesrækken: her, ny fane med Fortryd i 10 sekunder, derefter uden link", () => {
-  assert.match(html(createElement(NoticeRow, { notice: { kind: "here", name: "LASSO X A/S" } })), /role="status".*Svarer her i LASSO X A\/S/);
+  // Jakob 03.10: ingen "Svarer her"-række; situation 1 (bliv i fanen) har ingen meddelelsesrække.
+  const stay = html(createElement(Thread, { turns: fx.STAY, now: fx.FIXTURE_AT }));
+  assert.doesNotMatch(stay, /chat-notice|Svarer her/);
+  assert.match(stay, /Ud over LASSO X A\/S/);
   const notice = fx.NEW_TAB_BEFORE[1]!.notice!;
   const live = html(createElement(NoticeRow, { notice, now: fx.FIXTURE_AT, onUndo: () => undefined }));
   assert.match(live, /Åbner Jakob Bech Benediktson i en ny fane\./);

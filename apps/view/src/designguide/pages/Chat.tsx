@@ -286,7 +286,7 @@ function scenes(): SceneDef[] {
     {
       id: "bliv",
       title: "Situation 1, bliv i fanen",
-      note: "Spørgsmålet giver mening i fanens kontekst, selv om det nævner en anden. Meddelelsesrækken siger, hvor svaret står.",
+      note: "Spørgsmålet giver mening i fanens kontekst, selv om det nævner en anden. Svaret står i fanen uden en meddelelsesrække (Jakob 03.10: ingen 'Svarer her'-række).",
       render: ({ theme, mobile, fill }) => (
         <Scene theme={theme} mobile={mobile} sugg={SUGG}>
           <Conversation turns={fill(SCENES.stay)} mobile={mobile} theme={theme} currentId={FIXTURE_COMPANY} />

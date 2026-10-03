@@ -45,13 +45,13 @@ export function TextLink({ children, onClick, className = "" }: { children: Reac
 }
 
 /**
- * Meddelelsesrækken i samtalen (centreret pille): "Svarer her i X", "Åbner X i en ny fane. Fortryd" (Fortryd i 10
- * sekunder; bagefter står rækken uden link), eller en fri tekst.
+ * Meddelelsesrækken i samtalen (centreret pille), kun når svaret flyttede: "Åbner X i en ny fane. Fortryd" (Fortryd i 10
+ * sekunder; bagefter "Åbnede X i en ny fane"), "Svarer i fanen X" (en fane, der var åben), eller en fri tekst. Et svar,
+ * der bliver på fanen, har ingen række (Jakob 03.10: ingen "Svarer her"-række).
  */
 export function NoticeRow({ notice, text, now = Date.now(), onUndo }: { notice?: Notice; text?: string; now?: number; onUndo?: () => void }) {
   let body: ReactNode = text ?? "";
-  if (notice?.kind === "here") body = `Svarer her i ${notice.name}`;
-  else if (notice?.kind === "moved") {
+  if (notice?.kind === "moved") {
     const live = now < notice.undoUntil && onUndo;
     const where = notice.createdTab ? `${live ? "Åbner" : "Åbnede"} ${notice.name} i en ny fane` : `Svarer i fanen ${notice.name}`;
     body = live ? (

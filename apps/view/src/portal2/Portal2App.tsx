@@ -664,15 +664,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
           else if (e.title) rename(at, e.title);
         }
       }
-      if (e.type === "placement" && e.here) {
-        // "Svarer her i …": fanens eget navn, når serveren ikke sender målet med.
-        const name = e.target?.name ?? openRef.current.find((o) => o.key === at)?.name ?? "";
-        setThreads((t) => {
-          const tabNow = t[at];
-          if (!tabNow) return t;
-          return { ...t, [at]: { ...tabNow, turns: tabNow.turns.map((x) => (x.id === turnId ? { ...x, notice: { kind: "here", name } } : x)) } };
-        });
-      }
+      // placement.here (svaret bliver på fanen) giver ingen meddelelsesrække (Jakob 03.10: ingen "Svarer her"-række).
       if (e.type === "view") {
         // Fanens navn følger det hentede: firmaets/personens navn, eller et generisk navn på en global fane.
         const ent = entityOf(e.spec, e.dataset);
