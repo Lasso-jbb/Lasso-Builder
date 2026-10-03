@@ -5,29 +5,27 @@ import type { TextSectionItem } from "./models.js";
  * regnskabsanalyse (ét afsnit pr. felt, se adaptReportAnalysisSections). Hvilke afsnit et
  * element viser, afgøres her, så komponenten, komponisten (vægt og placering) og tekstkortet
  * altid er enige:
- * - "profil" (overblik): formål og tegningsregler fra CVR plus analysens tre korte afsnit
- *   (konklusion, resultat, likviditet). Branchen står i LassoKeyValueList og gentages ikke.
+ * - "profil" (overblik): formål og tegningsregler fra CVR plus analysens korte afsnit
+ *   (konklusion, resultat). Branchen står i LassoKeyValueList og gentages ikke.
+ * Likviditet og Spørgsmål til overvejelse vises aldrig (Jakob 03.10): Likviditet bærer en uformateret tabel, og
+ * spørgsmålene er ikke analyse. De udelades i adapteren og her (DROPPED_ANALYSIS_HEADINGS), så alle elementer og
+ * tekstkort er enige, også for ældre data.
  * - "analyse" (oekonomi): hele regnskabsanalysen, alle afsnit, ingen CVR-tekster.
  */
 export const TEXT_SECTIONS_VARIANTS = ["profil", "analyse", "cvr", "resume"] as const;
 export type TextSectionsVariant = (typeof TEXT_SECTIONS_VARIANTS)[number];
 
 /** Analysens afsnit med de overskrifter, adapteren giver dem, i den bekræftede rækkefølge. */
-export const ANALYSIS_HEADINGS = [
-  "Regnskabsanalyse: konklusion",
-  "Resultat",
-  "Likviditet",
-  "Balance og kapitalforhold",
-  "Branchestatistik",
-  "Revisoroplysninger",
-  "Spørgsmål til overvejelse",
-] as const;
+export const ANALYSIS_HEADINGS = ["Regnskabsanalyse: konklusion", "Resultat", "Balance og kapitalforhold", "Branchestatistik", "Revisoroplysninger"] as const;
+
+/** Afsnit af analysen, der aldrig vises (Jakob 03.10): API-nøglerne likviditet og sprgsml. */
+export const DROPPED_ANALYSIS_HEADINGS: ReadonlySet<string> = new Set(["Likviditet", "Spørgsmål til overvejelse"]);
 
 /**
  * De afsnit af analysen, profilen på overblik viser. "Regnskabsanalyse" er hele analysen som
  * ét afsnit (svar uden `sections`); den er selv konklusionen og står derfor også i profilen.
  */
-const PROFILE_ANALYSIS: ReadonlySet<string> = new Set(["Regnskabsanalyse: konklusion", "Regnskabsanalyse", "Resultat", "Likviditet"]);
+const PROFILE_ANALYSIS: ReadonlySet<string> = new Set(["Regnskabsanalyse: konklusion", "Regnskabsanalyse", "Resultat"]);
 
 /** Kilden i analysens kildevisning, når afsnittet ikke selv har en. */
 export const ANALYSIS_SOURCE = "Lasso regnskabsanalyse";
@@ -43,7 +41,8 @@ function isIndustry(s: Pick<TextSectionItem, "heading">): boolean {
 }
 
 /** De afsnit, et element med den givne variant viser, i kildens rækkefølge. Uden variant: "profil". */
-export function textSectionsFor(sections: readonly TextSectionItem[], variant: TextSectionsVariant = "profil"): TextSectionItem[] {
+export function textSectionsFor(all: readonly TextSectionItem[], variant: TextSectionsVariant = "profil"): TextSectionItem[] {
+  const sections = all.filter((s) => !DROPPED_ANALYSIS_HEADINGS.has(s.heading.trim()));
   if (variant === "analyse") return sections.filter(isAnalysisSection);
   // Portalens "Virksomhedsprofil" (Jakob 30.09): kun CVR-teksterne, med branchen (NACE-kode som note).
   if (variant === "cvr") return sections.filter((s) => !isAnalysisSection(s));

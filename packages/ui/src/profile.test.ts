@@ -92,12 +92,14 @@ const SECTIONS: TextSectionsVM = {
     })),
   ],
 };
+/** Profilen længere end de første 440 tegn (uden Likviditet er den ellers kort nok til at stå helt). */
+const LONGER = { ...SECTIONS, sections: SECTIONS.sections.map((s) => (s.heading === "Resultat" ? { ...s, body: s.body + LONG.repeat(3) } : s)) };
 const headings = (html: string) => [...html.matchAll(/lasso-textsection__heading">([^<]*)</g)].map((m) => m[1]);
 
-test("Virksomhedsprofil (overblik): CVR-tekster uden branche plus konklusion, resultat og likviditet, ingen kildevisning (12.1)", () => {
-  const html = renderToStaticMarkup(createElement(LassoTextSections, { sections: SECTIONS }));
+test("Virksomhedsprofil (overblik): CVR-tekster uden branche plus konklusion og resultat (ingen likviditet, Jakob 03.10), ingen kildevisning (12.1)", () => {
+  const html = renderToStaticMarkup(createElement(LassoTextSections, { sections: LONGER }));
   // 12.1 (Jakob 01.10): afsnittene læses som én tekst; de første 440 tegn står, resten kommer med "Vis mere" (50 % ad gangen).
-  const all = ["Formål", "Tegningsregler", "Regnskabsanalyse: konklusion", "Resultat", "Likviditet"];
+  const all = ["Formål", "Tegningsregler", "Regnskabsanalyse: konklusion", "Resultat"];
   const first = headings(html);
   assert.ok(first.length >= 1 && first.length < all.length, first.join());
   assert.deepEqual(first, all.slice(0, first.length));
@@ -145,7 +147,7 @@ test("Navne med Lasso-ID i analysen er links med drill-down og ren tekst uden", 
   assert.deepEqual(segmentAction({ text: "Anne Eksempel", lassoId: "CVR-3-4000000001" }), { kind: "open-person", lassoId: "CVR-3-4000000001", name: "Anne Eksempel" });
   assert.equal(segmentAction({ text: "Nogen" }), null);
   // Foldet profil: segmenterne skæres ved 220 tegn med " …", navnene bevares som links.
-  const profile = renderToStaticMarkup(createElement(LassoTextSections, { sections: SECTIONS, onOpen: () => {} }));
+  const profile = renderToStaticMarkup(createElement(LassoTextSections, { sections: LONGER, onOpen: () => {} }));
   assert.match(profile, /lasso-textsection__entity">Anne Eksempel</);
   assert.match(profile, / …<\/p>/);
 });

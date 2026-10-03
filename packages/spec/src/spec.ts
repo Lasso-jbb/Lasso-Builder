@@ -341,7 +341,7 @@ export const textSectionsSchema = z.object({
   variant: z
     .enum(TEXT_SECTIONS_VARIANTS)
     .default("profil")
-    .describe("'profil' (standard): formål og tegningsregler fra CVR plus regnskabsanalysens konklusion, resultat og likviditet. 'analyse': hele regnskabsanalysen (alle afsnit), foldet efter konklusionen. 'cvr' (kun CVR-teksterne) og 'resume' (erhvervsresumé ud fra stamdata, ledelse og regnskab) bruges af portalens Lasso-side."),
+    .describe("'profil' (standard): formål og tegningsregler fra CVR plus regnskabsanalysens konklusion og resultat. 'analyse': hele regnskabsanalysen (alle afsnit), foldet efter konklusionen. 'cvr' (kun CVR-teksterne) og 'resume' (erhvervsresumé ud fra stamdata, ledelse og regnskab) bruges af portalens Lasso-side."),
   title: z.string().max(80).optional(),
   folded: z.boolean().optional().describe("Kun variant 'analyse': analysen foldet til 3 linjer med 'Vis mere' på alle bredder (30.13, svar i chatten). Udeladt: foldet kun på mobil."),
   limit: z
