@@ -33,6 +33,8 @@ export interface OpenItem {
 /** Ét stykke af svaret: tekst eller en visning, i den rækkefølge de kom. */
 /** tool: værktøjet bag visningen (fra "view"-hændelsen); udeladt i ældre svar og gemte samtaler. */
 export type AnswerPart = { kind: "text"; text: string } | ({ kind: "view"; id: string; form: ViewForm; tool?: string } & Shown);
+/** En visning i svaret (et kort i samtalen). */
+export type ViewAnswerPart = Extract<AnswerPart, { kind: "view" }>;
 
 /** Valgmenuen, serveren bad om ("choice"-hændelsen): vises over spørgefeltet, til brugeren vælger. */
 export interface PendingChoice {
@@ -99,24 +101,6 @@ const emptyTab = (): TabChat => ({ chat: { history: [] }, turns: [], sent: null 
 
 export const newAnswer = (): Answer => ({ parts: [], pending: true });
 
-/** Den seneste visning i svaret: den, handlinger (filtre, opdatér, PDF) virker på. */
-export function lastView(answer: Answer | undefined): Shown | undefined {
-  const v = answer?.parts.filter((p): p is AnswerPart & { kind: "view" } => p.kind === "view").at(-1);
-  return v ? { spec: v.spec, dataset: v.dataset } : undefined;
-}
-
-/** Erstatter den seneste visning (fx efter et filterskift). */
-export function withLastView(answer: Answer, shown: Shown): Answer {
-  const i = answer.parts.map((p) => p.kind).lastIndexOf("view");
-  if (i < 0) return answer;
-  return { ...answer, parts: answer.parts.map((p, k) => (k === i && p.kind === "view" ? { ...p, ...shown } : p)) };
-}
-
-/** Alle visninger i svaret ændret (fx Gem/Gemt i datasættet). */
-export function mapViews(answer: Answer, fn: (shown: Shown) => Shown): Answer {
-  return { ...answer, parts: answer.parts.map((p) => (p.kind === "view" ? { ...p, ...fn({ spec: p.spec, dataset: p.dataset }) } : p)) };
-}
-
 /**
  * Ren reducer: én hændelse fra /api/chat lagt på svaret. Tekst føjes til den sidste tekstdel; visninger kommer i
  * rækkefølge. "done" hører til finishTurn (den gemmer også historikken) og ændrer intet her.
@@ -173,11 +157,6 @@ export function globalTitleFallback(viewName: string, spec: ViewSpec): string {
 
 /* ---------- trådene ---------- */
 
-/** Turen i en fane, der er sidst og har et svar her (ikke en flyttet turs stub). */
-export function currentTurn(t: Threads, key: string): Turn | undefined {
-  return t[key]?.turns.findLast((x) => x.notice?.kind !== "moved");
-}
-
 const mapTurns = (t: Threads, key: string, fn: (turn: Turn) => Turn): Threads => (t[key] ? { ...t, [key]: { ...t[key]!, turns: t[key]!.turns.map(fn) } } : t);
 
 /** Et nyt spørgsmål i fanen: turen med et ventende svar. Åbne menuer i alle faner lukkes (deres valg passer ikke længere til samtalen). */
@@ -210,9 +189,13 @@ export function applyTurnEvent(t: Threads, key: string, turnId: string, e: ChatE
   return isHistoryInvalid(e) ? resetTabHistory(next, key) : next;
 }
 
-/** Turen uden at vente længere: ingen status, ikke ventende (afbrudt, fejlet eller færdig). */
-export function settleTurn(t: Threads, key: string, turnId: string): Threads {
-  return mapTurns(t, key, (x) => (x.id === turnId ? { ...x, answer: { ...x.answer, pending: false, status: undefined } } : x));
+/**
+ * Turen venter ikke længere (afbrudt, fejlet eller færdig uden "done"): ingen status, ikke ventende, og tidspunktet sat
+ * (at; et tidspunkt fra "done" bevares). En tur, der ikke venter, røres ikke.
+ */
+export function settleTurn(t: Threads, key: string, turnId: string, at: number): Threads {
+  if (!t[key]?.turns.some((x) => x.id === turnId && x.answer.pending)) return t;
+  return mapTurns(t, key, (x) => (x.id === turnId ? { ...x, answer: { ...x.answer, pending: false, status: undefined, at: x.answer.at ?? at } } : x));
 }
 
 /** Stop: turen er ikke længere ventende og får "Stoppet." (kun en tur, der stadig ventede; en færdig tur røres ikke). */
@@ -290,20 +273,22 @@ export function pendingChoice(t: Threads, key: string): PendingChoice | undefine
   return t[key]?.turns.findLast((x) => x.answer.choice)?.answer.choice;
 }
 
-/** Den seneste visning i fanens aktuelle tur (til handlinger som filtre og PDF). */
-export function lastViewIn(t: Threads, key: string): Shown | undefined {
-  return lastView(currentTurn(t, key)?.answer);
-}
-
-/** Erstatter den seneste visning i fanens aktuelle tur. */
-export function replaceLastView(t: Threads, key: string, shown: Shown): Threads {
-  const cur = currentTurn(t, key);
-  return cur ? mapTurns(t, key, (x) => (x === cur ? { ...x, answer: withLastView(x.answer, shown) } : x)) : t;
-}
-
-/** Alle visninger i alle faner ændret (fx Gem/Gemt i datasættene). */
-export function mapAllViews(t: Threads, fn: (shown: Shown) => Shown): Threads {
-  return Object.fromEntries(Object.entries(t).map(([k, tab]) => [k, { ...tab, turns: tab.turns.map((x) => ({ ...x, answer: mapViews(x.answer, fn) })) }]));
+/**
+ * Visningerne i alle faner ændret (et filterskift på ét kort, Gem/Gemt i datasættene): fn får hver visning og giver den nye.
+ * Ture uden en ændret visning beholder deres identitet (så samtalens rækker ikke tegnes igen).
+ */
+export function mapThreadViews(t: Threads, fn: (part: ViewAnswerPart) => ViewAnswerPart): Threads {
+  const mapTurn = (x: Turn): Turn => {
+    let changed = false;
+    const parts = x.answer.parts.map((p) => {
+      if (p.kind !== "view") return p;
+      const next = fn(p);
+      if (next !== p) changed = true;
+      return next;
+    });
+    return changed ? { ...x, answer: { ...x.answer, parts } } : x;
+  };
+  return Object.fromEntries(Object.entries(t).map(([k, tab]) => [k, { ...tab, turns: tab.turns.map(mapTurn) }]));
 }
 
 /* ---------- samtalen i browseren (docs/chat.md): overlever en genindlæsning ---------- */

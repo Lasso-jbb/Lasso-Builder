@@ -1,10 +1,11 @@
 import { useMemo } from "react";
 import { Button, IconButton, LassoView, type HostCapabilities, type LassoViewProps } from "@lasso/ui";
-import { forPortal, type AnswerPart } from "../model.js";
+import { forPortal } from "../model.js";
+import type { ViewAnswerPart } from "../thread.js";
 
 const noop = () => undefined;
 
-export type ViewPart = Extract<AnswerPart, { kind: "view" }>;
+export type ViewPart = ViewAnswerPart;
 
 export interface AnswerCardProps {
   part: ViewPart;

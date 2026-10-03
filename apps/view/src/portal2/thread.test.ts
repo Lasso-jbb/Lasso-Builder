@@ -8,20 +8,17 @@ import {
   applyEvent,
   applyTurnEvent,
   clearCache,
-  currentTurn,
   dropTabDatasets,
   finishTurn,
   globalTitleFallback,
   isPureText,
-  lastView,
-  mapViews,
   moveTurn,
   newAnswer,
   pendingChoice,
   recencyOrder,
-  replaceLastView,
   resetConversation,
   isHistoryInvalid,
+  mapThreadViews,
   resetTabHistory,
   restoreCache,
   saveCache,
@@ -31,7 +28,6 @@ import {
   startTurn,
   stopTurn,
   undoMove,
-  withLastView,
   type Notice,
   type OpenItem,
   type Threads,
@@ -44,6 +40,8 @@ const mette: OpenItem = { key: "CVR-3-4000123", kind: "person", name: "Mette Hol
 const spec = { version: 2, kind: "company", title: "X", layout: "dashboard", criteria: [], components: [] } as unknown as ViewSpec;
 const ds = { companies: {}, persons: {} } as unknown as Dataset;
 const view = { kind: "view" as const, id: "v", form: "page" as const, spec, dataset: ds };
+/** Fanens sidste tur med et svar her (ikke en flyttet turs stub). */
+const currentTurn = (t: Threads, key: string) => t[key]?.turns.findLast((x) => x.notice?.kind !== "moved");
 const done = (history: unknown[] = [{ role: "user", content: "q" }], extra: Partial<TurnDone> = {}): TurnDone => ({ type: "done", history, sig: "sig", placement: { placement: "current" }, ...extra });
 
 test("applyEvent: tekst og visninger i rækkefølge, placering, menu og fejl; done hører til finishTurn", () => {
@@ -65,7 +63,6 @@ test("applyEvent: tekst og visninger i rækkefølge, placering, menu og fejl; do
   assert.equal(a.placement?.placement, "entity");
   assert.equal(a.pending, true, "done afslutter");
   assert.equal(applyEvent(a, done()), a);
-  assert.equal(lastView(a)?.spec, spec);
 
   const busy = applyEvent(newAnswer(), { type: "tool", id: "t", name: "show_company", title: "Vis virksomhed" });
   assert.equal(busy.status, "Vis virksomhed …");
@@ -75,11 +72,6 @@ test("applyEvent: tekst og visninger i rækkefølge, placering, menu og fejl; do
   const withMenu = applyEvent(newAnswer(), { type: "choice", id: "toolu_1", question: "Hvilken?", options: [{ label: "Alt om Mette", description: "Kort", action: { placement: "current" } }], allowFreeText: false });
   assert.equal(withMenu.choice?.id, "toolu_1");
 
-  const spec2 = { ...spec, title: "Y" } as ViewSpec;
-  assert.equal(lastView(withLastView(a, { spec: spec2, dataset: ds }))?.spec.title, "Y");
-  assert.equal((withLastView(a, { spec: spec2, dataset: ds }).parts[1] as { spec: ViewSpec }).spec.title, "X", "kun den seneste");
-  assert.ok(mapViews(a, (s) => ({ ...s, dataset: { ...s.dataset, savedIds: ["a"] } })).parts.every((p) => p.kind !== "view" || p.dataset.savedIds?.[0] === "a"));
-  assert.equal(lastView(newAnswer()), undefined);
 });
 
 test("isPureText, answerText og globalTitleFallback", () => {
@@ -123,10 +115,13 @@ test("startTurn, applyTurnEvent, finishTurn: turen i fanen, historikken og finge
   assert.equal(pendingChoice(t, lasso.key)?.id, "c");
   t = startTurn(t, novo.key, "Nyt", 5000, "t4");
   assert.equal(pendingChoice(t, lasso.key), undefined);
-  // settleTurn: afbrudt eller fejlet tur er ikke længere ventende.
-  t = settleTurn(applyTurnEvent(t, novo.key, "t4", { type: "tool", id: "x", name: "y", title: "Vis" }), novo.key, "t4");
+  // settleTurn: afbrudt eller fejlet tur er ikke længere ventende og får tidspunktet; en færdig tur røres ikke.
+  t = settleTurn(applyTurnEvent(t, novo.key, "t4", { type: "tool", id: "x", name: "y", title: "Vis" }), novo.key, "t4", 6000);
   assert.equal(currentTurn(t, novo.key)!.answer.pending, false);
   assert.equal(currentTurn(t, novo.key)!.answer.status, undefined);
+  assert.equal(currentTurn(t, novo.key)!.answer.at, 6000);
+  assert.equal(settleTurn(t, novo.key, "t4", 7000), t);
+  assert.equal(settleTurn(t, novo.key, "t1", 7000), t, "færdig tur med tidspunkt fra done");
 });
 
 test("C1 stopTurn: Stop gør turen færdig med 'Stoppet.' og beholder teksten; en færdig tur røres ikke", () => {
@@ -288,13 +283,22 @@ test("undoMove efter done: en åben fane uden samtale (ingen tråd) står tom ti
   assert.deepEqual(restored.threads[mette.key]?.chat.history ?? [], []);
 });
 
-test("replaceLastView: visningen i fanens aktuelle tur erstattes, ikke en flyttet turs stub", () => {
+test("mapThreadViews: én visning (kortets id) erstattes i alle faner; ture uden ændring beholder identiteten", () => {
   let t = startTurn({}, novo.key, "q", 1, "t1");
-  t = applyTurnEvent(t, novo.key, "t1", { type: "view", id: "v", name: "show_company", tool: "show_company", form: "page", spec, dataset: ds });
+  t = applyTurnEvent(t, novo.key, "t1", { type: "view", id: "v1", name: "show_company", tool: "show_company", form: "page", spec, dataset: ds });
+  t = finishTurn(t, novo.key, done());
+  t = startTurn(t, novo.key, "q2", 2, "t2");
+  t = applyTurnEvent(t, novo.key, "t2", { type: "text", text: "Kun tekst." });
+  t = applyTurnEvent(startTurn(t, lasso.key, "q3", 3, "t3"), lasso.key, "t3", { type: "view", id: "v2", name: "show_company", tool: "show_company", form: "module", spec, dataset: ds });
   const spec2 = { ...spec, title: "Y" } as ViewSpec;
-  assert.equal(currentTurn(replaceLastView(t, novo.key, { spec: spec2, dataset: ds }), novo.key)!.answer.parts.length, 1);
-  assert.equal(lastView(currentTurn(replaceLastView(t, novo.key, { spec: spec2, dataset: ds }), novo.key)!.answer)!.spec.title, "Y");
-  assert.equal(replaceLastView(t, "ukendt", { spec: spec2, dataset: ds }), t);
+  const next = mapThreadViews(t, (p) => (p.id === "v1" ? { ...p, spec: spec2 } : p));
+  const v1 = next[novo.key]!.turns[0]!.answer.parts[0]!;
+  assert.equal(v1.kind === "view" && v1.spec.title, "Y");
+  assert.equal(next[novo.key]!.turns[1], t[novo.key]!.turns[1], "tekst-turen uændret");
+  assert.equal(next[lasso.key]!.turns[0], t[lasso.key]!.turns[0], "anden visning uændret");
+  // Gem/Gemt: alle visninger.
+  const saved = mapThreadViews(t, (p) => ({ ...p, dataset: { ...p.dataset, savedIds: ["a"] } }));
+  assert.ok(Object.values(saved).every((tab) => tab.turns.every((x) => x.answer.parts.every((p) => p.kind !== "view" || p.dataset.savedIds?.[0] === "a"))));
 });
 
 /* ---------- cache ---------- */

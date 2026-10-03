@@ -11,7 +11,6 @@ import type { P2IconName } from "./icons.js";
 import {
   addRecent,
   askPlaceholder,
-  clearCache,
   closeItem,
   contextFor,
   freeTextPick,
@@ -19,15 +18,12 @@ import {
   headLines,
   isTemplateTab,
   isUnrecognizedHistory,
-  LASSO_TAB,
   moduleTabs,
   templateIdOf,
   templateTab,
   loadRecent,
-  CHAT_CACHE_KEY,
   openItem,
   summaryFingerprint,
-  recencyOrder,
   saveRecent,
   shortName,
   searchCounts,
@@ -44,14 +40,20 @@ import {
 } from "./model.js";
 import {
   applyTurnEvent,
+  CHAT_CACHE_KEY,
+  clearCache,
   finishTurn,
   globalTitleFallback,
+  LASSO_TAB,
+  mapThreadViews,
   moveTurn,
+  recencyOrder,
   pendingChoice,
   resetTabHistory,
   restoreCache,
   saveCache,
   serializeCache,
+  settleTurn,
   skipChoice,
   startTurn,
   stopTurn,
@@ -109,16 +111,6 @@ function storage(): Storage | undefined {
 const isPhone = () => window.matchMedia?.(PHONE).matches ?? false;
 /** Fortryd står i 10 sekunder efter en flytning. */
 const UNDO_MS = 10_000;
-/** Turens svar er ikke længere i gang (afbrudt, fejl eller færdig): status væk, tidspunktet sat (thread.ts settleTurn sætter ikke tidspunktet). */
-function settleWithTime(t: Threads, key: string, turnId: string): Threads {
-  const tab = t[key];
-  if (!tab?.turns.some((x) => x.id === turnId && x.answer.pending)) return t;
-  return { ...t, [key]: { ...tab, turns: tab.turns.map((x) => (x.id === turnId ? { ...x, answer: { ...x.answer, pending: false, status: undefined, at: x.answer.at ?? Date.now() } } : x)) } };
-}
-/** Én visning i trådene ændret (filterskift, Gem/Gemt): fn får visningen og giver den nye. */
-function mapThreadViews(t: Threads, fn: (p: ViewPart) => ViewPart): Threads {
-  return Object.fromEntries(Object.entries(t).map(([k, tab]) => [k, { ...tab, turns: tab.turns.map((x) => ({ ...x, answer: { ...x.answer, parts: x.answer.parts.map((p) => (p.kind === "view" ? fn(p) : p)) } })) }]));
-}
 /** Det af vinduet, der ikke er lærred for ejerdiagrammet: topbjælke, faner og modulrække (ca. 150), diagrammets værktøjslinje og evt. fuld skærms hoved (ca. 130) og spørgefeltet (ca. 120). */
 const PORTAL_CHROME = 400;
 const iconOf = (k: ItemKind): P2IconName => (k === "company" ? "build" : k === "person" ? "user" : "search");
@@ -725,7 +717,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       const message = e instanceof ChatHttpError && e.status === 401 ? "Chatten kræver login. Log ind i portalen og prøv igen." : errorText(e);
       setThreads((t) => applyTurnEvent(t, at, turnId, { type: "error", message }));
     } finally {
-      setThreads((t) => settleWithTime(t, at, turnId));
+      setThreads((t) => settleTurn(t, at, turnId, Date.now()));
       setPendingKey(null);
       pendingTurn.current = null;
       abort.current = null;

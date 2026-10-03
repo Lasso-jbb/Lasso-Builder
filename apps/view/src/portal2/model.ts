@@ -5,40 +5,9 @@ export type { PageTemplate } from "../portal/api.js";
 import type { ChatContext, ChatEntityRef, ChoicePick } from "../chat/stream.js";
 import { LASSO_TAB, type ItemKind, type OpenItem, type PendingChoice, type Shown } from "./thread.js";
 
-/** Samtalens tråde, svar, turreducere og cache (thread.ts) bor i thread.ts; her genudgives det, portalen importerer herfra. */
-export {
-  CHAT_CACHE_KEY,
-  CHAT_CACHE_TTL_MS,
-  LASSO_TAB,
-  answerText,
-  applyEvent,
-  applyTurnEvent,
-  clearCache,
-  currentTurn,
-  dropTabDatasets,
-  finishTurn,
-  globalTitleFallback,
-  isPureText,
-  lastView,
-  lastViewIn,
-  mapAllViews,
-  mapViews,
-  moveTurn,
-  newAnswer,
-  pendingChoice,
-  recencyOrder,
-  replaceLastView,
-  resetConversation,
-  restoreCache,
-  saveCache,
-  serializeCache,
-  settleTurn,
-  skipChoice,
-  startTurn,
-  undoMove,
-  withLastView,
-} from "./thread.js";
-export type { Answer, AnswerPart, ChatCache, ChatCacheState, ItemKind, Notice, OpenItem, PendingChoice, Shown, TabChat, Threads, Turn, TurnDone } from "./thread.js";
+/** Samtalens tråde, svar, turreducere og cache bor i thread.ts (importeres derfra); her genudgives kun fanetyperne og LASSO_TAB, som faner og forslag bruger. */
+export { LASSO_TAB } from "./thread.js";
+export type { ItemKind, OpenItem, PendingChoice, Shown } from "./thread.js";
 
 /**
  * Den nye portal (prototypen "lasso-portal4.html"): rene hjælpefunktioner uden React, så de kan testes
