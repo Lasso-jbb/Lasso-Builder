@@ -120,6 +120,13 @@ de tidligere ture stadig står synlige i tråden. Klienten husker fanens samtale
 sendte resumé) på flytningens notits (`prev`), så `Fortryd` lægger den tilbage, også når svaret allerede er færdigt. En åben fane, der aldrig har haft en samtale, husker en tom samtale, så den flyttede turs historik heller ikke bliver stående dér.
 `prev` gemmes ikke i browseren; efter en genindlæsning kan flytningen ikke fortrydes.
 
+**Tekst eller visning.** En visning vises kun, når dens indhold direkte svarer på spørgsmålet. Uden for Lassos data
+(hobbyer, sport, privatliv, meninger, alt andet end CVR, regnskab, ejerskab, roller, risiko, historik og kontakt) svarer
+modellen kun med tekst: én kort sætning om, at Lasso ikke har data om det, evt. én om det Lasso ved, og linjen med
+modullinks, og den kalder ikke et visningsværktøj "for at kigge" (`CHAT_RULES` har eksemplet "hvilken sport dyrker anne").
+Svarteksten holdes kort af reglerne (ikke af `CHAT_MAX_TOKENS`): højst én sætning før en visning, ingen indledning, ingen
+gentagelse af spørgsmålet eller af tal, der står i visningen. Reglerne kan ikke håndhæves i løkken; testen tjekker kun, at de står i prompten.
+
 **Modullinks.** `CHAT_RULES` beder modellen slutte hvert svar med 1–3 links, fx `[Regnskab](lasso:modul/regnskab)`
 (med to eksempler: manglende data og efter en visning); klienten tegner et afsnit med kun sådanne links som pille-
 rækken. Skriver modellen ingen (intet `lasso:` i turens assistenttekst), tilføjer serveren selv en sidste linje
@@ -246,7 +253,7 @@ Alt nedenfor er slået til med `host: "chat"` i MCP-serveren; Claude.ai over `/m
 | `render_view`'s beskrivelse | fuld: komposition, layoutguiden (Paper 30), komponentindeks med formål (~13.000 tegn) | kort (<1.500 tegn): formål, `describe_components` først, 1–12 komponenter, højst én graf, udelad width, layout "page", aldrig HTML, og typenavnene (uden dem kan modellen ikke kalde `describe_components`) |
 | gem-værktøjer (`save_view`, `save_page`, `remove_saved_page`, `list_saved_pages`) | ja | nej: portalen har knapper til at gemme; routingen i systemprompten (`CHAT_ROUTING`) nævner dem ikke |
 | værktøjssvar (tekst til modellen) | SILENT-linje, resumé, "Visningen er svaret: skriv ingen tekst …", link til visningen, tekstkort-blok | kun noten og resuméet; demonoten er én kort linje; `structuredContent` har samme felter (tekstkortet står dér) |
-| tekst efter en visning | ingen (visningen er svaret) | en til tre korte sætninger, der sætter visningen i sammenhæng, uden at gentage tallene (`CHAT_RULES`) |
+| tekst efter en visning | ingen (visningen er svaret) | højst én kort sætning (≤ 20 ord) før visningen, efter den kun linjen med modullinks (ellers ét nøglepunkt, ≤ 20 ord); tekstsvar højst 2–3 sætninger (≤ 60 ord) eller 4 punkter (`CHAT_RULES`) |
 | "Brugeren ser" i konteksten | (findes ikke) | fuldt resumé første gang, derefter `same: true`, til det ændrer sig |
 
 Målt med demodata (`buildChatSetup` + `textForModel` på show_company 99000001, 03.10.2026): værktøjslisten 37,3k → 21,7k
