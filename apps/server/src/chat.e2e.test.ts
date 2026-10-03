@@ -1017,3 +1017,40 @@ test("R2-B: modulnavne efter udløseren er ikke et firmanavn (ingen forhåndsafg
   const found = await preResolve(mcp, home, "åbn Risiko ApS");
   assert.deepEqual(found, { kind: "one", entity: { kind: "company", id: "CVR-1-99000099", name: "Risiko ApS" } });
 });
+
+test("R: det fulde navn åbner direkte (forhåndsopløsning) og giver én kandidat til find_entity; et efternavn eller identiske navne giver menu", async () => {
+  const { preResolve } = await import("./chat/preresolve.js");
+  const { resolveEntity } = await import("./usecases/index.js");
+  const provider = Object.create(new DemoProvider()) as InstanceType<typeof DemoProvider>;
+  let rows = [
+    { lassoId: "CVR-3-5000001", name: "Jakob Bech", city: "Odense" },
+    { lassoId: "CVR-3-5000002", name: "Jakob Bech Benediktson", city: "Kgs. Lyngby" },
+    { lassoId: "CVR-3-5000003", name: "Jakob Bech Jensen", city: "Aarhus" },
+  ];
+  provider.findPersons = async () => rows as never;
+  provider.findCompanies = async () => [];
+  const mcp = { provider, config: loadConfig({ LASSO_DATA_SOURCE: "demo" }) } as never;
+  const home = { active: { kind: "global" }, open: [] } as never;
+  // Det fulde navn: ét match, ikke en menu med "Jakob Bech" og "Jakob Bech Jensen".
+  assert.deepEqual(await preResolve(mcp, home, "Vis alt om Jakob Bech Benediktson"), { kind: "one", entity: { kind: "person", id: "CVR-3-5000002", name: "Jakob Bech Benediktson" } });
+  // find_entity: kun den ene kandidat, så modellen aldrig behøver en menu.
+  assert.deepEqual((await resolveEntity(mcp, { kind: "person", query: "Jakob Bech Benediktson", limit: 5 })).map((c) => c.id), ["CVR-3-5000002"]);
+  // Et fornavn og efternavn uden et præcist match lister dem, der indeholder begge (de to længere), men aldrig dem, der mangler et ord.
+  assert.deepEqual((await resolveEntity(mcp, { kind: "person", query: "Jakob Bech", limit: 5 })).map((c) => c.id), ["CVR-3-5000001", "CVR-3-5000002", "CVR-3-5000003"], "to ord: præcis først, de længere efter");
+  const menu2 = await preResolve(mcp, home, "åbn Jakob Bech");
+  assert.equal(menu2?.kind, "many");
+  assert.deepEqual(menu2!.kind === "many" ? menu2.candidates.map((c) => c.name) : [], ["Jakob Bech", "Jakob Bech Benediktson", "Jakob Bech Jensen"], "menuen: den præcise først (anbefalet)");
+  rows = rows.slice(1);
+  const several = await preResolve(mcp, home, "åbn Jakob Bech");
+  assert.equal(several?.kind, "many");
+  assert.ok(several!.kind === "many" && several.candidates.every((c) => c.name !== "Jakob Bech"));
+  // Identiske fulde navne: stadig en menu.
+  rows = [
+    { lassoId: "CVR-3-5000004", name: "Mette Holm", city: "Odense" },
+    { lassoId: "CVR-3-5000005", name: "Mette Holm", city: "Aarhus" },
+    { lassoId: "CVR-3-5000006", name: "Mette Holm Jensen", city: "Vejle" },
+  ];
+  const twins = await preResolve(mcp, home, "tilføj Mette Holm");
+  assert.equal(twins?.kind, "many");
+  assert.deepEqual(twins!.kind === "many" ? twins.candidates.map((c) => c.id) : [], ["CVR-3-5000004", "CVR-3-5000005", "CVR-3-5000006"], "to ord: de identiske først");
+});

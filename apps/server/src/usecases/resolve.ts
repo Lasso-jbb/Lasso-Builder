@@ -1,4 +1,4 @@
-import { isPersonId, toLassoId, type PersonVM } from "@lasso/spec";
+import { isPersonId, networkRole, toLassoId, type PersonVM } from "@lasso/spec";
 import { findCompany, isCompanyRef, normalizeCompanyName } from "../data/lookup.js";
 import { normalizePersonName, pickPerson } from "../data/personLookup.js";
 import type { UseCaseCtx } from "./context.js";
@@ -48,6 +48,30 @@ function openMatches(open: readonly OpenEntity[], kind: ResolveEntityInput["kind
     .map((o) => ({ kind, id: o.id, name: o.name, subtitle: "åben fane" }));
 }
 
+/**
+ * Kandidaterne, der passer på det skrevne navn: har mindst én alle ordene (i et fuldt navn), udgår dem, der mangler et ord ("Jakob Bech" for
+ * "Jakob Bech Benediktson"); er et eller flere fulde navne præcis det skrevne (samme ord i samme rækkefølge, selskabsform set bort fra),
+ * er det kun dem, når navnet har mindst tre rigtige ord; med et eller to ord står de præcise først og de længere navne efter. Så giver ét præcist navn ét match (og ingen menu), og flere med samme fulde navn giver stadig en menu. Id'er og CVR-numre røres ikke.
+ */
+export function narrowToQuery(found: EntityCandidate[], kind: ResolveEntityInput["kind"], query: string): EntityCandidate[] {
+  if (isPersonId(query) || isCompanyRef(query)) return found;
+  const normalize = kind === "person" ? normalizePersonName : normalizeCompanyName;
+  const q = normalize(query);
+  if (!q) return found;
+  const words = q.split(" ");
+  const containing = found.filter((c) => {
+    const have = normalize(c.name).split(" ");
+    return words.every((w) => have.includes(w));
+  });
+  if (!containing.length) return found;
+  const exact = containing.filter((c) => normalize(c.name) === q);
+  if (!exact.length) return containing;
+  // Med mindst tre rigtige navneord er et præcist match entydigt (kun det/dem); med et eller to ("Jakob Bech") kan en længere navn være ment,
+  // så de står efter de præcise (menuen anbefaler den første).
+  const real = words.filter((w) => w.length >= 3).length;
+  return real >= 3 ? exact : [...exact, ...containing.filter((c) => !exact.includes(c))];
+}
+
 /** Kandidater til et navn (eller et id): de åbne faner først, så Lassos navnesøgning rangeret som i show_*. */
 export async function resolveEntity(ctx: Pick<UseCaseCtx, "provider" | "config">, input: ResolveEntityInput, open: readonly OpenEntity[] = []): Promise<EntityCandidate[]> {
   const limit = Math.min(MAX_LIMIT, Math.max(1, input.limit ?? 5));
@@ -88,7 +112,7 @@ export async function resolveEntity(ctx: Pick<UseCaseCtx, "provider" | "config">
     const rows = pick ? await ctx.provider.findCompanies(query, 20) : [];
     for (const r of pick ? [pick.pick, ...pick.alternatives, ...rows] : []) push({ kind: "company", id: r.lassoId, name: r.name, subtitle: [r.city, r.cvr && `CVR ${r.cvr}`, r.status].filter(Boolean).join(", ") });
   }
-  const top = found.slice(0, limit);
+  const top = narrowToQuery(found, input.kind, query).slice(0, limit);
   // Personer får en beskrivelse, der kan skille dem ad (rolle, alder, by, selskaber), så to med samme navn aldrig ligner hinanden.
   if (input.kind === "person") {
     await Promise.all(
@@ -108,7 +132,8 @@ export async function resolveEntity(ctx: Pick<UseCaseCtx, "provider" | "config">
 /** "Direktør og medejer, 47 år, Kgs. Lyngby. 4 selskaber, bl.a. Benediktson Holding ApS." ud fra personens roller; felter, der mangler, udelades. */
 export function personDescription(p: PersonVM, fallbackCity = "", year = new Date().getFullYear()): string {
   const active = p.roles.filter((r) => r.active);
-  const roles = [...new Set(active.map((r) => r.role.trim()).filter(Boolean))].slice(0, 2);
+  // Samme rolleudvalg som netværket: stifter og revisor er ikke roller, der skiller personer ad (networkRole giver null).
+  const roles = [...new Set(active.filter((r) => r.kind !== "founder" && networkRole(r.role) !== null).map((r) => r.role.trim()).filter(Boolean))].slice(0, 2);
   const head = [roles.length ? roles.map((r, i) => (i ? r.charAt(0).toLowerCase() + r.slice(1) : r)).join(" og ") : undefined, p.birthYear ? `${year - p.birthYear} år` : undefined, p.city ?? (fallbackCity || undefined)].filter(Boolean).join(", ");
   const companies = [...new Set(active.map((r) => r.companyName).filter(Boolean))];
   const tail = companies.length ? `${companies.length} ${companies.length === 1 ? "selskab" : "selskaber"}, bl.a. ${companies[0]}.` : "";
