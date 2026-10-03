@@ -66,7 +66,7 @@ function parseTokens(css: string): Token[] {
     }
     for (const m of raw.matchAll(decl)) {
       const name = m[1]!;
-      // Første forekomst vinder (en senere gentagelse i samme blok er en rettelse af samme token).
+      // Sidste forekomst vinder, ligesom i CSS (en senere gentagelse i samme blok overskriver den første).
       const token: Token = { name, light: m[2]!.trim(), group, line: lineOf(offset + (m.index ?? 0)) };
       if (m[3]) token.comment = m[3].replace(/\s+/g, " ");
       const d = darkValues.get(name);

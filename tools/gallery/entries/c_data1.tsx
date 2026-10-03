@@ -30,7 +30,7 @@ function Stack({ children, gap = 28 }: { children: ReactNode; gap?: number }) {
 function Labelled({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div style={{ display: "grid", gap: 8 }}>
-      <div className="lasso-small" style={{ color: "var(--lasso-text-muted)" }}>{label}</div>
+      <div className="lasso-small" style={{ color: "var(--lasso-muted)" }}>{label}</div>
       {children}
     </div>
   );
@@ -294,11 +294,11 @@ function NumberFormats() {
     <dl style={{ display: "grid", gridTemplateColumns: "220px auto", gap: "10px 24px", margin: 0 }}>
       {rows.map(([k, v]) => (
         <div key={k} style={{ display: "contents" }}>
-          <dt className="lasso-small" style={{ color: "var(--lasso-text-muted)" }}>{k}</dt>
+          <dt className="lasso-small" style={{ color: "var(--lasso-muted)" }}>{k}</dt>
           <dd style={{ margin: 0, fontVariantNumeric: "tabular-nums", fontWeight: 500 }}>{v}</dd>
         </div>
       ))}
-      <dt className="lasso-small" style={{ color: "var(--lasso-text-muted)" }}>Udvikling (▲ grøn, ▼ rød)</dt>
+      <dt className="lasso-small" style={{ color: "var(--lasso-muted)" }}>Udvikling (▲ grøn, ▼ rød)</dt>
       <dd style={{ margin: 0, fontVariantNumeric: "tabular-nums", fontWeight: 500, display: "flex", gap: 16 }}>
         <Delta from={100} to={107.5} />
         <Delta from={100} to={96.6} />
@@ -343,7 +343,7 @@ function Palette() {
 }
 
 /**
- * 13.9 og 26b.7: sparkline-tilstandene som 44 px rækker med etiket, sparkline og værdi til højre.
+ * 13.9: sparkline-tilstandene som 44 px rækker med etiket, sparkline og værdi til højre.
  * Sparklinen er altid koral; krydser værdierne 0, står en stiplet nullinje; sparsøjler til
  * kvartalstal; under 3 datapunkter står "-" i stedet for en sparkline.
  */

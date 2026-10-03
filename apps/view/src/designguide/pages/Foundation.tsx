@@ -148,8 +148,8 @@ export function FoundationPage({ ctx, id }: { ctx: Ctx; id: string }) {
       <PageHead eyebrow="Fundament" title={f.label} lead={f.intro} />
       {id === "ikoner" ? (
         <section className="dg-section">
-          <h2 className="dg-h2">Ikonsættet</h2>
-          <p className="dg-p">24-grid, streg 1,8, runde ender. Ikonet arver tekstfarven og står altid med et ord eller en aria-label.</p>
+          <h2 className="dg-h2">Katalogets {CATALOG_ICONS.length} ikoner</h2>
+          <p className="dg-p">24-grid, streg 1,8, runde ender. Ikonet arver tekstfarven og står altid med et ord eller en aria-label. Sættet har desuden 39 afledte ikoner i samme streg (kontakt, pile, værktøjer m.fl., se IconName i packages/ui/src/components/Icon.tsx); de vises ikke her.</p>
           <div className="dg-icons">
             {CATALOG_ICONS.map((name) => (
               <div key={name} className="dg-icon">
@@ -190,7 +190,7 @@ export function TokensPage({ ctx: _ctx, query }: { ctx: Ctx; query: string }) {
   const tokens = SOURCE.tokens.filter((t) => !needle || `${t.name} ${t.light} ${t.dark ?? ""} ${t.comment ?? ""} ${t.group}`.toLowerCase().includes(needle));
   return (
     <div className="dg-page">
-      <PageHead eyebrow="Fundament" title="Alle tokens" lead="Alle CSS-variabler, komponenterne bruger. Farver, radier, afstande og typografi står kun her; ingen komponent har sine egne værdier." />
+      <PageHead eyebrow="Fundament" title="Alle tokens" lead="Alle CSS-variabler, komponenterne bruger. Farver, radier, afstande og typografi defineres her, og komponenterne skal bruge dem; enkelte ældre regler har stadig faste px-værdier for hjørner og skriftstørrelser (og sideskinnens gruppeskygge), som endnu ikke er ført over til tokens." />
       <div className="dg-toolbar">
         <input className="dg-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filtrér tokens, fx accent eller radius" aria-label="Filtrér tokens" />
         <span className="dg-meta">

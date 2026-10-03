@@ -50,7 +50,7 @@ function paperScore(ds: Dataset) {
 }
 
 function Label({ children }: { children: ReactNode }) {
-  return <p className="lasso-small" style={{ margin: "0 0 8px", color: "var(--lasso-text-muted)" }}>{children}</p>;
+  return <p className="lasso-small" style={{ margin: "0 0 8px", color: "var(--lasso-muted)" }}>{children}</p>;
 }
 
 function Stack({ items }: { items: [string, ReactNode][] }) {

@@ -6,11 +6,10 @@
  */
 :root,
 .lasso-root {
-  /* Tilføjet af 01/05 (W2): linjehøjder til typografiskalaen, ikonstreg og kontrolmål fra Paper */
+  /* Tilføjet af 01/05 (W2): linjehøjder og vægte til typografiskalaen, ikonstreg og kontrolmål fra Paper */
   --lasso-lh-label: 14px;           /* overlinje 11/14 */
   --lasso-lh-sm: 18px;              /* lille 13/18 */
   --lasso-lh: 18px;                 /* brødtekst 14/18 */
-  --lasso-lh-body: 20px;            /* løbende tekst og kontaktrækker 14/20 */
   --lasso-lh-lg: 24px;              /* sidetitel 18/24 */
   --lasso-lh-xl: 32px;              /* titel 24/32 */
   --lasso-lh-display: 40px;         /* display 32/40 */
@@ -22,10 +21,6 @@
   --lasso-iconbtn-lg: 38px;         /* ikonknap (05.2) */
   --lasso-iconbtn-sm: 32px;
   --lasso-label-h: 28px;            /* etiket, kun visning (05.6) */
-  --lasso-status-new: var(--lasso-accent-text);  /* "Ny" som ren tekst (05.7) */
-  --lasso-status-liquidation: var(--lasso-warning); /* 02c.8/05.7: likvidation i warning-tekst, konkurs i mørk rød (#B42318) */
-
-  --lasso-status-liquidation: var(--lasso-warning); /* 28.1: midlertidig (fx frivillig likvidation) i warning-tekst; problem (konkurs, rekonstruktion) mørk rød */
 
   /* Koral: den eneste accentfarve */
   --lasso-accent: #ff6b35;          /* primary */
@@ -70,8 +65,10 @@
   /* Semantik: kun til status og risiko, altid med ikon eller ord */
   --lasso-danger: #d92d20;
   --lasso-danger-soft: #fdecea;
-  --lasso-bankrupt: #b42318;        /* konkurs/likvidation */
-  --lasso-neutral-soft: #f1f1f3;
+  --lasso-bankrupt: #b42318;        /* mørk rød: konkurs, rekonstruktion og vigtige hændelser (likvidation har sit eget token) */
+  --lasso-status-new: var(--lasso-accent-text);  /* 05.7: "Ny" som ren tekst */
+  --lasso-status-liquidation: var(--lasso-warning); /* 28.1/02c.8: midlertidig (fx frivillig likvidation) i warning-tekst; problem (konkurs, rekonstruktion) i --lasso-bankrupt */
+  --lasso-info-soft: #eaf1f8;       /* 17.1: flade bag info-ikonet */
   --lasso-positive: #1f8a4c;        /* success */
   --lasso-positive-soft: #e9f5ee;
   --lasso-negative: #d92d20;
@@ -86,7 +83,6 @@
   /* Grafserier: fast rækkefølge, serie 2 aldrig uden serie 1 */
   --lasso-chart-1: #ff6b35;
   --lasso-chart-2: #2f5d8a;
-  --lasso-info-soft: #eaf1f8;       /* 17.1: flade bag info-ikonet */
   --lasso-chart-3: #8fb8de;
   --lasso-chart-4: #ffc1a3;         /* tidligere år */
   --lasso-chart-5: #9aa0a8;         /* branche/benchmark */
@@ -108,12 +104,10 @@
   --lasso-chart-grid: #f1f1f3;
   --lasso-chart-axis: #d6d8dd;
   --lasso-map-fill: #ffe1d1;
-  --lasso-chart-bar: var(--lasso-chart-4);
-  --lasso-chart-bar-strong: var(--lasso-chart-1);
   --lasso-chart-bar-neg: #f4b7b0;
 
-  /* Hjørner: felter og knapper 8, menupunkter 9, faner og kort 10, dialoger 14 */
-  --lasso-radius-sm: var(--lasso-radius);  /* alias: Paper har kun 8/9/10/14 (+ pille til kontakten) */
+  /* Hjørner: skala 4/6/8/9/10/12/14 + pille. Felter og knapper 8, menupunkter 9, faner og kort 10, kortrammer og beskeder 12, dialoger 14 */
+  --lasso-radius-sm: var(--lasso-radius);  /* alias for 8 (ikke et eget trin) */
   --lasso-radius-letter: 4px;       /* 06.2: bogstav-ikonet for gemte lister (20×20) */
   --lasso-radius-xs: 6px;           /* 01.4: tags og etiketter (05.5/05.6) */
   --lasso-radius: 8px;
@@ -124,12 +118,11 @@
   --lasso-radius-pill: 999px;
   --lasso-radius-toast: 12px;       /* 07.5 besked */
 
-  /* Kun det, der svæver, har skygge. Fokus er 1 px koral kant, aldrig ring. */
+  /* Kun det, der svæver, har skygge (undtagelse: valgt segment). Fokus er 1 px koral kant, aldrig ring. */
   --lasso-shadow: none;
   --lasso-shadow-pop: 0 14px 34px rgb(16 18 24 / 0.14);
-  --lasso-shadow-seg: 0 1px 2px rgb(16 18 24 / 0.10);  /* 11.2: valgt segment i en grå pille */
-  --lasso-focus-ring: none;
-  --lasso-focus-border: var(--lasso-accent-border);
+  --lasso-shadow-seg: 0 1px 2px rgb(16 18 24 / 0.10);  /* 11.2: valgt segment i en grå pille (eneste skygge på noget, der ikke svæver) */
+  --lasso-focus-border: var(--lasso-accent-border); /* undtagelser: heatmap-celle (1 px ink-kant som hover/valgt), accent-segment (1 px fuld koral, da valgt allerede har koral kant) */
 
   /* Højder: knap 42 i dialoger/paneler, 36 i sidehoveder, 32 i kompakte rækker */
   --lasso-field-h: 44px;
@@ -195,15 +188,12 @@
   --lasso-skeleton-shine: #32373e;
   --lasso-skeleton-sheen: rgb(255 255 255 / 0.06);
   --lasso-tooltip: #f2f3f5;
-  --lasso-neutral-soft: #2a2d33;
   --lasso-positive: #5cc28c;
   --lasso-positive-soft: #16301f;
   --lasso-negative: #f28b82;
   --lasso-shadow-seg: 0 1px 2px rgb(0 0 0 / 0.45);
   --lasso-warning: #e6b45a;
   --lasso-warning-soft: #33280f;
-  --lasso-chart-bar: #7a3b1f;
-  --lasso-chart-bar-strong: #ff7a4a;
   --lasso-chart-bar-neg: #6b2c26;
   --lasso-info-soft: #1c2a38;
   --lasso-gauge-low: #2f5d43;
@@ -1483,7 +1473,7 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-odiagram__chip.is-on { background: var(--lasso-surface-muted); font-weight: 500; }
 .lasso-odiagram__chip:disabled, .lasso-odiagram__chip.is-dim { color: var(--lasso-muted); cursor: default; }
 .lasso-odiagram__chip--static { cursor: default; }
-.lasso-odiagram__chip svg { flex: none; fill: none; stroke: var(--lasso-icon); stroke-width: 1.8; stroke-linecap: round; }
+.lasso-odiagram__chip svg { flex: none; fill: none; stroke: var(--lasso-icon); stroke-width: var(--lasso-icon-stroke); stroke-linecap: round; }
 .lasso-odiagram__icon { width: var(--lasso-btn-h); padding: 0; justify-content: center; }
 .lasso-odiagram__icon svg { stroke: var(--lasso-text-2); }
 .lasso-odiagram__select select { appearance: none; border: 0; background: transparent; font: inherit; color: inherit; padding: 0 20px 0 0; margin-right: -20px; cursor: pointer; height: 100%; }
@@ -1510,7 +1500,7 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-odiagram__node--unknown .lasso-odiagram__box { fill: transparent; stroke: var(--lasso-faint); stroke-dasharray: 4 3; }
 .lasso-odiagram__node--group .lasso-odiagram__box { stroke: var(--lasso-faint); stroke-dasharray: 4 3; }
 .lasso-odiagram__node--chain .lasso-odiagram__box { stroke: var(--lasso-accent-text); stroke-opacity: 0.6; stroke-dasharray: 4 3; }
-.lasso-odiagram__glyph { fill: none; stroke: var(--lasso-text-2); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.lasso-odiagram__glyph { fill: none; stroke: var(--lasso-text-2); stroke-width: var(--lasso-icon-stroke); stroke-linecap: round; stroke-linejoin: round; }
 .lasso-odiagram__node.is-root .lasso-odiagram__glyph { stroke: var(--lasso-accent); }
 .lasso-odiagram__node.is-ceased .lasso-odiagram__glyph { stroke: var(--lasso-icon); }
 .lasso-odiagram__name { fill: var(--lasso-text); font-size: 13px; font-weight: 600; }
@@ -1560,7 +1550,7 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-odiagram__zoom button, .lasso-odiagram__zoomval { display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-top: 1px solid var(--lasso-border); background: var(--lasso-surface); color: var(--lasso-text); font-size: 16px; cursor: pointer; }
 .lasso-odiagram__zoom > :first-child { border-top: 0; }
 .lasso-odiagram__zoom button:disabled { color: var(--lasso-disabled); cursor: default; }
-.lasso-odiagram__zoom svg { fill: none; stroke: var(--lasso-text-2); stroke-width: 1.8; stroke-linecap: round; }
+.lasso-odiagram__zoom svg { fill: none; stroke: var(--lasso-text-2); stroke-width: var(--lasso-icon-stroke); stroke-linecap: round; }
 .lasso-odiagram__zoomval { font-size: 12px; font-weight: 600; cursor: default; }
 /* 26f.4 tablet: hjælpechip nederst til venstre, zoomknapper 36 px nederst til højre, Diagram | Liste + fuld skærm i hovedet. */
 .lasso-odiagram__hint { position: absolute; left: 12px; bottom: 12px; display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-pill); background: var(--lasso-surface); font-size: 11px; color: var(--lasso-text-3); pointer-events: none; }
@@ -5783,20 +5773,20 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 
 /* Portalens relations- og historiktabeller (LassoRelationsTable, LassoCompanyHistory, Jakob 30.09). */
 .lasso-reltable-wrap { display: flex; flex-direction: column; }
-.lasso-reltable { border-top: 1px solid var(--lasso-divider, #e6e8ec); font-size: 14px; color: var(--lasso-text); }
-.lasso-reltable__head { display: flex; width: 100%; justify-content: space-between; align-items: center; background: var(--lasso-surface-muted, #f5f6f8); border: 0; border-bottom: 1px solid var(--lasso-divider, #e6e8ec); padding: 12px 16px; font: inherit; font-size: 13px; font-weight: 600; color: var(--lasso-text); cursor: pointer; text-align: left; }
-.lasso-reltable__chev { font-size: 12px; color: var(--lasso-text-muted, #6b7280); }
-.lasso-reltable__group { display: grid; grid-template-columns: 180px minmax(0, 1fr); border-bottom: 1px solid var(--lasso-divider, #e6e8ec); }
-.lasso-reltable__label { padding: 12px 16px; font-size: 13px; font-weight: 600; }
-.lasso-reltable__sublabel { font-size: 11px; font-weight: 400; color: var(--lasso-text-muted, #6b7280); }
+.lasso-reltable { border-top: 1px solid var(--lasso-border); font-size: var(--lasso-fs); color: var(--lasso-text); }
+.lasso-reltable__head { display: flex; width: 100%; justify-content: space-between; align-items: center; background: var(--lasso-surface-muted); border: 0; border-bottom: 1px solid var(--lasso-border); padding: 12px 16px; font: inherit; font-size: var(--lasso-fs-sm); font-weight: 600; color: var(--lasso-text); cursor: pointer; text-align: left; }
+.lasso-reltable__chev { font-size: 12px; color: var(--lasso-muted); }
+.lasso-reltable__group { display: grid; grid-template-columns: 180px minmax(0, 1fr); border-bottom: 1px solid var(--lasso-border); }
+.lasso-reltable__label { padding: 12px 16px; font-size: var(--lasso-fs-sm); font-weight: 600; }
+.lasso-reltable__sublabel { font-size: var(--lasso-fs-label); font-weight: 400; color: var(--lasso-muted); }
 .lasso-reltable__rows { padding: 6px 16px 6px 0; display: flex; flex-direction: column; }
 .lasso-reltable__row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 6px 0; }
-.lasso-reltable__row .lasso-link { font-size: 14px; }
-.lasso-reltable__role { color: var(--lasso-text-muted, #6b7280); }
-.lasso-reltable__share { font-size: 13px; color: var(--lasso-text-secondary, #3f4450); margin-top: 2px; }
-.lasso-reltable__period { display: inline-grid; grid-template-columns: 84px 20px 84px; text-align: right; font-variant-numeric: tabular-nums; color: var(--lasso-text-secondary, #3f4450); white-space: nowrap; flex: none; }
+.lasso-reltable__row .lasso-link { font-size: var(--lasso-fs); }
+.lasso-reltable__role { color: var(--lasso-muted); }
+.lasso-reltable__share { font-size: var(--lasso-fs-sm); color: var(--lasso-text-2); margin-top: 2px; }
+.lasso-reltable__period { display: inline-grid; grid-template-columns: 84px 20px 84px; text-align: right; font-variant-numeric: tabular-nums; color: var(--lasso-text-2); white-space: nowrap; flex: none; }
 .lasso-reltable__dash { text-align: center; }
-.lasso-reltable__more { align-self: flex-start; margin: 4px 0 6px; font-size: 14px; }
+.lasso-reltable__more { align-self: flex-start; margin: 4px 0 6px; font-size: var(--lasso-fs); }
 .lasso-reltable__empty { padding: 12px 16px; }
 .lasso-reltable__note { padding: 8px 16px; }
 @media (max-width: 640px) {

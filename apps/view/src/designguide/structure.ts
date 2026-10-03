@@ -109,7 +109,7 @@ export const BOARD_TITLES: Record<string, string> = {
   "03": "Filterfelter",
   "04": "Sidehoved",
   "05": "Knapper og kontroller",
-  "06": "Navigation og sideskabelon (klassisk portal)",
+  "06": "Navigation og sideskabelon (klassisk portal og Lasso-siden)",
   "07": "Dialoger, menuer og beskeder",
   "08": "Virksomhedshoved og kontakt",
   "09": "Nøgletal og nøgle-værdi",
@@ -131,14 +131,7 @@ export const BOARD_TITLES: Record<string, string> = {
   "24": "Eksempel: virksomhedsoverblik",
   "25": "Eksempel: personside",
   "26": "Responsivt design",
-  "26a": "Mobil: ramme og navigation (klassisk portal)",
-  "26b": "Mobil: grafer og målere",
-  "26c": "Mobil: tabeller og diagrammer",
-  "26d": "Mobil: personer",
-  "26e": "Mobil: rapporter og beskeder",
   "26f": "Tablet",
-  "26g": "Mobil: felter",
-  "26h": "Mobil: historik",
   "27": "Rapporter og PDF",
   "28": "Datatyper",
   "29": "Faner",
@@ -149,7 +142,7 @@ export const BOARD_TITLES: Record<string, string> = {
 export const GALLERY_SECTIONS: { id: string; label: string; boards: RegExp }[] = [
   { id: "elementer", label: "Elementer", boards: /^(02a|02b|02c|03|04|05|06|07|29)$/ },
   { id: "datavisning", label: "Datavisning", boards: /^(08|09|10|11|12|13|14|14b|15|16|17|18|19|20|21|22|28)$/ },
-  { id: "moenstre", label: "Mønstre og sider", boards: /^(23|24|25|26|26[a-h]|27|30)$/ },
+  { id: "moenstre", label: "Mønstre og sider", boards: /^(23|24|25|26|26f|27|30)$/ },
 ];
 
 export const boardOf = (nr: string) => nr.split(".")[0]!;
@@ -158,11 +151,11 @@ export const boardOf = (nr: string) => nr.split(".")[0]!;
 
 /** Fundamentets sider: galleriets tavle 01/01b og de tokens, der hører til (valgt efter navn i styles.css). */
 export const FOUNDATION: { id: string; label: string; entries: RegExp; tokens: RegExp; intro: string }[] = [
-  { id: "farver", label: "Farver", entries: /^01\.1$/, tokens: /(accent|bg|surface|chrome|overlay|scrim|tag|border|divider|text|muted|faint|placeholder|disabled|positive|negative|warning|danger|info|success|chart|gauge|map|icon|focus|status|sev|hover|selected)/, intro: "Koral er den eneste accentfarve. Hvid flade overalt; semantiske farver bruges kun til status og risiko, altid med ikon eller ord." },
-  { id: "typografi", label: "Typografi", entries: /^01\.2$/, tokens: /(font|fs|lh|fw|ls)/, intro: "Poppins i fire vægte. Overskrifter 600, værdier og status 500, brødtekst 400." },
-  { id: "afstand", label: "Afstand og gitter", entries: /^01\.3$|^23\.1$/, tokens: /(space|gap|page|pad|gutter|col|touch|h$|-h-|height|width|size)/, intro: "Afstande i trin af 4 px. Gitteret har 12 kolonner; modulerne står i ¼, ⅓, ½, ⅔, ¾ eller fuld bredde." },
-  { id: "hjoerner", label: "Hjørner", entries: /^01\.4$/, tokens: /radius/, intro: "Felter og knapper 8, menupunkter 9, faner og kort 10, dialoger 14." },
-  { id: "skygger", label: "Skygger og fokus", entries: /^01\.5$/, tokens: /(shadow|focus|ring)/, intro: "Kun det, der svæver, har skygge. Fokus er 1 px koral kant, aldrig en ring." },
-  { id: "ikoner", label: "Ikoner", entries: /^01\.6$/, tokens: /icon/, intro: "Omridsikoner med streg 1,8. Ikon + ord ved enhver farvekodning." },
+  { id: "farver", label: "Farver", entries: /^01\.(1|7)$/, tokens: /^(accent|on-accent|bg$|surface|chrome|overlay|scrim|tag$|tag-hover|border|divider|text|muted|faint|placeholder|icon$|disabled|skeleton|tooltip|danger|bankrupt|status-|info-|positive|negative|warning|gauge-|chart-|map-)/, intro: "Koral er den eneste accentfarve. Hvid flade overalt; semantiske farver bruges kun til status og risiko, altid med ikon eller ord. Datavisningens faste regler (01.7) står her, fordi de fleste handler om farvebrug: status i tekstfarve, én grå til hjælpetekst, ingen ink- eller farvede flader." },
+  { id: "typografi", label: "Typografi", entries: /^01\.2$/, tokens: /^(font|fs|lh|fw|ls|tracking)(-|$)/, intro: "Poppins i fire vægte. Display 700, overskrifter og feltnavne 600, værdier, status og knaptekst 500, brødtekst 400." },
+  { id: "afstand", label: "Afstand og gitter", entries: /^01\.3$|^23\.1$/, tokens: /(^space-|-h$|-h-|^touch|-w$)/, intro: "Afstande i trin af 4 px, faste højder på felter, knapper og rækker, og sideskabelonens bredder. Gitteret har 12 kolonner; modulerne står i ¼, ⅓, ½, ⅔, ¾ eller fuld bredde." },
+  { id: "hjoerner", label: "Hjørner", entries: /^01\.4$/, tokens: /^radius/, intro: "Skalaen er 4, 6, 8, 9, 10, 12 og 14 plus pille. Felter og knapper 8, menupunkter 9, faner og almindelige kort (.lasso-card) 10, kortrammer om sektioner og beskeder 12, dialoger 14. Tags og etiketter 6, bogstav-ikoner 4." },
+  { id: "skygger", label: "Skygger og fokus", entries: /^01\.5$/, tokens: /^(shadow|focus)/, intro: "Kun det, der svæver (menuer, dialoger, beskeder), har skygge. Undtagelser: det valgte segment i en grå pille (shadow-seg) og sideskinnens grupper (svag fast skygge). Fokus er 1 px koral kant, aldrig en ring; heatmap-celler (1 px ink-kant som ved hover) og accent-segmenter (1 px fuld koral, fordi valgt allerede har koral kant) er bevidste undtagelser." },
+  { id: "ikoner", label: "Ikoner", entries: /^01\.6$/, tokens: /^icon(-|btn)/, intro: "Omridsikoner med streg 1,8; enkelte ikoner kan tegnes udfyldt (fx Gemt og aktiv klokke). Ikon + ord ved enhver farvekodning." },
   { id: "logo", label: "Logo", entries: /^01b\./, tokens: /^$/, intro: "Ikon og navnelogo med frizone og faste størrelser." },
 ];

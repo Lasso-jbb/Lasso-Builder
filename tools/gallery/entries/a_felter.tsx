@@ -70,28 +70,28 @@ function Tile({ v, name, hex, use, w, h }: { v: string; name: string; hex: strin
 // ---------- 01 Fundament ----------
 
 const CORAL: [string, string, string, string][] = [
-  ["--lasso-accent", "Koral", "primary, #FF6B35", "primær knap, aktiv"],
-  ["--lasso-accent-soft", "Koral lys", "primary-soft, #FFF2EB", "valgt flade, fremhævet nævnelse"],
-  ["--lasso-accent-border", "Koral kant", "primary-border, #FFCFB6", "fokuskant 1 px, valgte chips"],
-  ["--lasso-accent-text", "Koral mørk", "primary-text, #B2450F", "tekst, flueben"],
+  ["--lasso-accent", "Koral", "accent, #FF6B35", "primær knap, aktiv"],
+  ["--lasso-accent-soft", "Koral lys", "accent-soft, #FFF2EB", "valgt flade, fremhævet nævnelse"],
+  ["--lasso-accent-border", "Koral kant", "accent-border, #FFCFB6", "fokuskant 1 px, valgte chips"],
+  ["--lasso-accent-text", "Koral mørk", "accent-text, #B2450F", "tekst, flueben"],
 ];
 const TEXTS: [string, string, string, string][] = [
-  ["--lasso-text", "ink", "#16181D", "overskrift"],
-  ["--lasso-text-2", "text", "#3F444B", "brødtekst"],
-  ["--lasso-text-3", "text-secondary", "#5B6068", "hjælpetekst, metatekst, overlinjer"],
-  ["--lasso-placeholder", "text-muted", "#8A9099", "ikoner, dekoration"],
-  ["--lasso-icon", "icon", "#9AA0A8", "chevrons"],
-  ["--lasso-faint", "text-faint", "#B9BEC5", "deaktiveret"],
+  ["--lasso-text", "text", "#16181D", "overskrift (ink)"],
+  ["--lasso-text-2", "text-2", "#3F444B", "brødtekst"],
+  ["--lasso-text-3", "text-3", "#5B6068", "hjælpetekst, metatekst, overlinjer (= muted)"],
+  ["--lasso-placeholder", "placeholder", "#8A9099", "placeholders, dekoration"],
+  ["--lasso-icon", "icon", "#9AA0A8", "ikoner, chevrons"],
+  ["--lasso-faint", "faint", "#B9BEC5", "\"Ikke oplyst\", -"],
   ["--lasso-danger", "danger", "#D92D20", "fejl, slet"],
-  ["--lasso-positive", "success", "#1F8A4C", "kvittering"],
+  ["--lasso-positive", "positive", "#1F8A4C", "kvittering"],
 ];
 const SURFACES: [string, string, string, string][] = [
   ["--lasso-surface", "surface", "#FFFFFF", ""],
-  ["--lasso-surface-2", "surface-panel", "#FCFCFD", "højre panel"],
-  ["--lasso-surface-muted", "surface-muted", "#F4F4F5", "tags, hover"],
+  ["--lasso-surface-2", "surface-2", "#FCFCFD", "højre panel"],
+  ["--lasso-surface-muted", "surface-muted", "#F4F4F5", "hover, grå flader"],
   ["--lasso-chrome", "chrome", "#F1F2F4", "topbjælke"],
-  ["--lasso-border-strong", "border", "#E4E4E7", "felter"],
-  ["--lasso-border", "divider", "#E6E7EB", "områder"],
+  ["--lasso-border-strong", "border-strong", "#E4E4E7", "felter"],
+  ["--lasso-border", "border", "#E6E7EB", "områder"],
   ["--lasso-divider-subtle", "divider-subtle", "#F1F1F3", "rækker"],
   ["--lasso-overlay", "overlay", "#43464D", "bag dialog"],
 ];
@@ -153,12 +153,15 @@ function Spacing() {
   );
 }
 
-/** 01.4: 5 kvadrater 60×60 med 1,5 px ink-kant: 6, 8, 10, 14 og rund. */
+/** 01.4: hele skalaen som kvadrater 60×60 med 1,5 px ink-kant: 4, 6, 8, 9, 10, 12, 14 og rund. */
 function Radii() {
   const r: [string, string][] = [
+    ["--lasso-radius-letter", "4"],
     ["--lasso-radius-xs", "6"],
     ["--lasso-radius", "8"],
+    ["--lasso-radius-menu", "9"],
     ["--lasso-radius-lg", "10"],
+    ["--lasso-radius-card", "12"],
     ["--lasso-radius-xl", "14"],
     ["--lasso-radius-pill", "rund"],
   ];
@@ -227,9 +230,9 @@ const DATA_RULES: string[] = [
   "Faner viser kun navnet: ingen antal, badges eller prikker på sektionsfaner, segmentkontroller, sidepanelets sektioner eller bundnavigationen. Antal hører til i sektionens overskrift eller i teksten.",
   "Hvid flade overalt, også på tablet og mobil. Sektioner adskilles med 1 px linjer og luft, aldrig hvide kort på grå baggrund.",
   "Flere værdier end formen kan vise: vis de første 3 og \"Se N …\", som åbner et panel fra højre over siden (08 Kontaktpersoner). Gælder kontaktpersoner, telefonnumre, e-mails, P-enheder, bibrancher og ejere.",
-  "Én grå til al hjælpetekst: metatekst, feltforklaringer og overlinjer bruger samme token (--color-text-muted = --color-text-secondary, #5B6068). Den lysere grå (#8A9099) er kun til ikoner og dekoration, aldrig til tekst der skal læses - på desktop, tablet og mobil.",
+  "Én grå til al hjælpetekst: metatekst, feltforklaringer og overlinjer bruger samme token (--lasso-muted = --lasso-text-3, #5B6068). Den lysere grå (--lasso-placeholder, #8A9099) er kun til ikoner og dekoration, aldrig til tekst der skal læses - på desktop, tablet og mobil.",
   "Aktive elementer har aldrig mørkt fyld. Aktiv side i paginering = ink-tekst i vægt 600 med tynd understregning; aktive segmenter, chips og trin markeres med tekstvægt, tynd kant eller koral-soft, aldrig en sort kasse.",
-  "Logo: kun de to mastere i 01b (ikon og navnelogo) i ink, klonet, aldrig tegnet som tekst eller farvet kasse. Logoet er diskret og står aldrig i topbjælken ved siden af entitetens navn: navnelogo 14 px dæmpet (55 %) som bundlinje nederst i sideskinnen på desktop og nederst på mobilskærme (uden kildevisning), ikon 24 px i tabletskinnen, 16 px som Lasso News-kilde, 28/14/12 px på rapportforside og i sidehoved/-fod (27).",
+  "Logo: kun de to mastere i 01b (ikon og navnelogo) i ink eller dæmpet grå, klonet, aldrig tegnet som tekst eller farvet kasse. Logoet er diskret og står aldrig ved siden af virksomheds- eller personnavnet: navnelogo 18 px øverst i sideskinnen (desktop) og 15 px dæmpet som bundlinje nederst i den, i den nye portals topbjælke til venstre, ikon 24 px i tabletbjælken, 16 px som Lasso News-kilde, 28/14/12 px på rapportforside og i sidehoved/-fod (27).",
   "Nyheder: én kilde pr. nyhed (favicon 16 px, navn, tid), ingen billeder, ingen tone-mærker, ingen samlede historier eller favicon-stakke. Virksomhedsnavnet i uddraget står i fed (ink, 600), aldrig i koral eller på farvet baggrund.",
   "Korte ikon + værdi-lister (kontaktblok, genveje, maks 5 rækker) adskilles med luft, ikke skillelinjer. Linjer bruges kun i tabeller, nøgle-værdi-lister og lange lister.",
   "Risikoskalaen går fra 0 = lav risiko til 100 = høj risiko. Målere og skalaer har grøn til venstre/nederst (0–60), gul i midten (60–80) og rød til højre/øverst (80–100); en stigning i score er mere risiko og vises i warning- eller danger-tekst, aldrig grøn. Scoren er Lassos egen risikoscore; Creditsafe bruges ikke.",
@@ -270,7 +273,7 @@ function LogoMasters() {
           <div style={card}>
             <LassoMark className="gal-mark" />
           </div>
-          <p style={note}>Viewbox 117×97, forhold 1,2:1. Ikon alene i topbjælke, skinne, favicon og hvor pladsen er under 100 px.</p>
+          <p style={note}>Viewbox 117×97, forhold 1,2:1. Ikon alene hvor pladsen er under 100 px: tabletbjælken, favicon, Lasso News-kilde, chat og PDF-sidefod.</p>
         </div>
       </St>
       <St label="Master, navnelogo">
@@ -278,7 +281,7 @@ function LogoMasters() {
           <div style={card}>
             <LassoWordmark className="gal-word" />
           </div>
-          <p style={note}>Viewbox 453×132, forhold 3,4:1. Navnelogo i fanebjælke (desktop), rapportforside, login og tomme tilstande.</p>
+          <p style={note}>Viewbox 453×132, forhold 3,4:1. Navnelogo øverst i sideskinnen (desktop), i den nye portals topbjælke, på login, rapportforside og som dæmpet bundlinje.</p>
         </div>
       </St>
       <St label="Frizone">
@@ -299,11 +302,11 @@ function LogoMasters() {
 }
 
 const LOGO_USE =
-  "Diskret: navnelogo 14 px dæmpet (55 %) nederst i sideskinnen på desktop og nederst på mobilskærme, uden kildevisning. Aldrig i topbjælken ved siden af virksomheds- eller personnavnet. Ikon 24 px i tabletskinnen, 16 px som favicon og Lasso News-kilde. PDF: navnelogo 28 px på forsiden, 14 px i sidehovedet, ikon 12 px i sidefoden. Aldrig i koral, aldrig på farvet flade, aldrig strakt, aldrig med skygge eller ramme.";
+  "Diskret: navnelogo 18 px i ink øverst i sideskinnen på desktop (klik = forside) og 15 px dæmpet som bundlinje nederst i skinnen; i den nye portal står navnelogoet til venstre i topbjælken. Aldrig ved siden af virksomheds- eller personnavnet. Ikon 24 px i tabletbjælken, 16 px som favicon og Lasso News-kilde. PDF: navnelogo 28 px på forsiden, 14 px i sidehovedet, ikon 12 px i sidefoden. Aldrig i koral, aldrig på farvet flade, aldrig strakt, aldrig med skygge eller ramme.";
 
 function LogoSizes() {
-  const mark: [number, string][] = [[16, "favicon, kilde"], [20, "app-ikon"], [24, "skinne"], [32, "tom tilstand"]];
-  const word: [number, string][] = [[14, "bundlinje, PDF hoved"], [18, "login, tomme tilstande"], [28, "forside, login"]];
+  const mark: [number, string][] = [[16, "favicon, kilde"], [20, "app-ikon"], [24, "tabletbjælke"], [32, "tom tilstand"]];
+  const word: [number, string][] = [[14, "PDF-hoved, bundlinje"], [18, "sideskinne"], [28, "PDF-forside"]];
   return (
     <div style={{ display: "flex", gap: 40, alignItems: "flex-end", flexWrap: "wrap", color: "var(--lasso-text)", padding: "16px 0", borderTop: "1px solid var(--lasso-border)", borderBottom: "1px solid var(--lasso-border)" }}>
       <style>{mark.map(([h]) => `.gal-m${h}{height:${h}px;width:${(h * 117) / 97}px;display:block}`).join("") + word.map(([h]) => `.gal-w${h}{height:${h}px;width:${(h * 453) / 132}px;display:block}`).join("")}</style>
@@ -843,7 +846,7 @@ export const entries: GalleryEntry[] = [
   { nr: "02a.13", title: "Multivalg med loft", node: "4HR-0", render: () => <CapDemo /> },
 
   { nr: "02b.1", title: "Persona (sammensat kriterie)", node: "4IA-0", render: () => <PersonaDemo /> },
-  { nr: "02b.1", title: "Persona, redigér i dialog (separat tilstand)", node: "4IA-0", render: () => <PersonaModal />, note: "Separat tilstand: Redigér på kortet åbner dialogen (07.1) på overlay. Selve elementet (kortet + Tilføj persona) står i indgangen ovenfor." },
+  { nr: "02b.1b", title: "Persona, redigér i dialog (separat tilstand)", node: "4IA-0", render: () => <PersonaModal />, note: "Separat tilstand: Redigér på kortet åbner dialogen (07.1) på overlay. Selve elementet (kortet + Tilføj persona) står i indgangen ovenfor." },
   { nr: "02b.2", title: "Teknologi med / uden", node: "4IV-0", render: () => <TechOperatorDemo />, note: "Jakob 29.09.2026 (afstemt med 03.3/03.4): teknologier grupperet i typer; dropdown med \"Firmaer der benytter et <type>\" (kun typen), \"Inkluder kun følgende\" og \"Ekskluder følgende\". Kontakten slår kriteriet til og fra." },
   { nr: "02b.3", title: "Til / fra-kontakt", node: "4JT-0", render: () => <ToggleDemo /> },
   { nr: "02b.4", title: "Sektionens brødtekst", node: "4KA-0", render: () => <SectionIntroDemo /> },
