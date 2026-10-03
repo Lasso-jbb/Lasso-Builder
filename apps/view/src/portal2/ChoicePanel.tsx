@@ -14,8 +14,8 @@ export function ChoicePanel({ choice, disabled, onSend, onSkip }: { choice: Pend
   const [collapsed, setCollapsed] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const otherInput = useRef<HTMLInputElement>(null);
-  const state = useRef({ selection, other, disabled });
-  state.current = { selection, other, disabled };
+  const state = useRef({ selection, other, disabled, collapsed });
+  state.current = { selection, other, disabled, collapsed };
 
   // Ny menu: forvalg og tom Andet.
   useEffect(() => {
@@ -32,14 +32,15 @@ export function ChoicePanel({ choice, disabled, onSend, onSkip }: { choice: Pend
   };
 
   useEffect(() => {
-    // Genveje, når fokus står i panelet eller ingen steder (ikke i spørgefeltet, hvor tal og Esc er almindelig tekst).
+    // Genveje: i panelet alle taster; uden for felter på siden kun tal. Foldet sammen reagerer panelet ikke (intet skjult sendes).
     const onKey = (e: KeyboardEvent) => {
+      if (state.current.collapsed) return;
       const t = e.target as HTMLElement | null;
       const tag = (t?.tagName ?? "").toLowerCase();
       const inField = tag === "input" || tag === "textarea";
       const mine = root.current?.contains(t) ?? false;
       if (!mine && t && t !== document.body) return;
-      const k = choiceKey(e, choice, inField);
+      const k = choiceKey(e, choice, inField, mine ? "panel" : "body", mine && t === otherInput.current);
       if (!k) return;
       e.preventDefault();
       if (k.kind === "send") send();

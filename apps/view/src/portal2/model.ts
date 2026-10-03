@@ -205,11 +205,21 @@ export type ChoiceKey = { kind: "select"; selection: ChoiceSelection } | { kind:
 
 /**
  * Tastaturet i panelet: 1–9 vælger punktet (tallet efter punkterne er "Andet"), Cmd/Ctrl+Enter sender, Esc springer over.
- * Tal tastes kun som genvej, når fokus ikke står i et tekstfelt (inField).
+ * Tal tastes kun som genvej, når fokus ikke står i et tekstfelt (inField). scope: "panel" = fokus er i panelet (alle
+ * taster); "body" = fokus er på siden uden for felter (kun tal; Esc og Cmd/Ctrl+Enter hører til panelet, ellers kan en
+ * Esc, der lukker noget andet, springe menuen over). otherField: fokus er i "Andet"-feltet, hvor almindelig Enter sender.
  */
-export function choiceKey(e: { key: string; metaKey: boolean; ctrlKey: boolean }, choice: PendingChoice, inField: boolean): ChoiceKey | null {
-  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) return { kind: "send" };
-  if (e.key === "Escape") return { kind: "skip" };
+export function choiceKey(
+  e: { key: string; metaKey: boolean; ctrlKey: boolean },
+  choice: PendingChoice,
+  inField: boolean,
+  scope: "panel" | "body" = "panel",
+  otherField = false,
+): ChoiceKey | null {
+  if (scope === "panel") {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey || (otherField && inField))) return { kind: "send" };
+    if (e.key === "Escape") return { kind: "skip" };
+  }
   if (inField || e.metaKey || e.ctrlKey || !/^[1-9]$/.test(e.key)) return null;
   const n = Number(e.key) - 1;
   if (n < choice.options.length) return { kind: "select", selection: n };

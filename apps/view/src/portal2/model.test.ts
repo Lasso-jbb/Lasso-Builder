@@ -349,4 +349,14 @@ test("valgpanel: taster (1–9, Andet efter punkterne, Cmd/Ctrl+Enter, Esc) og t
   assert.deepEqual(choiceKey(key("Enter", { ctrlKey: true }), panel, false), { kind: "send" });
   assert.equal(choiceKey(key("Enter"), panel, false), null);
   assert.deepEqual(choiceKey(key("Escape"), panel, true), { kind: "skip" });
+  // Uden for panelet (fokus på siden): kun tal; Esc og Cmd/Ctrl+Enter gør intet (de kan høre til noget andet).
+  assert.equal(choiceKey(key("Escape"), panel, false, "body"), null);
+  assert.equal(choiceKey(key("Enter", { metaKey: true }), panel, false, "body"), null);
+  assert.equal(choiceKey(key("Enter", { ctrlKey: true }), panel, false, "body"), null);
+  assert.deepEqual(choiceKey(key("2"), panel, false, "body"), { kind: "select", selection: 1 });
+  // Almindelig Enter sender kun i "Andet"-feltet.
+  assert.deepEqual(choiceKey(key("Enter"), panel, true, "panel", true), { kind: "send" });
+  assert.equal(choiceKey(key("Enter"), panel, true, "panel", false), null);
+  assert.equal(choiceKey(key("Enter"), panel, false, "panel", false), null);
+  assert.deepEqual(choiceKey(key("Enter", { metaKey: true }), panel, true, "panel", true), { kind: "send" });
 });
