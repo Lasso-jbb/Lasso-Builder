@@ -126,8 +126,10 @@ på forsiden uden valgt navn sætter serveren et ud fra den første visning (`do
 gemte sider = Firmaliste, `compare_companies` = Sammenligning, en visning med `LassoMap` = Kort, ellers
 Markedsanalyse). Uden visning er der intet navn; en resultatfane med navn beholder sit.
 
-**Tilføj som fane (egne sider).** På en side, chatten har sat sammen om én virksomhed eller person (fx et
-KYC-overblik), gemmer "Tilføj som fane" siden som en **sideskabelon** bundet til entitetens slags: den dukker op som
+**Tilføj som fane (egne sider).** Knappen står på hvert sidekort (`form: "page"`: `show_company`, `show_person`,
+`render_view` som side og ældre svar uden `tool`) om fanens egen virksomhed eller person, kun på virksomheds- og
+personfaner; et enkelt element (`form: "module"`) og globale faner har den aldrig. På sådan en side (fx et
+KYC-overblik eller Ejerskab) gemmer "Tilføj som fane" siden som en **sideskabelon** bundet til entitetens slags: den dukker op som
 et ekstra modul (efter de indbyggede, med sidens titel) på hver virksomhed (eller person), brugeren åbner, og vises
 med den enheds data. Specen gemmes uden entiteten, og uden hoved (`LassoCompanyHead`/`LassoPersonHead`) og opfølgende spørgsmål (`LassoFollowUps`), som bærer navnet; entitetens navn (slået op i Lasso) klippes af titel og undertitel (efterstillet ", Navn"/" – Navn", også uden A/S, ApS), en tom titel bliver første komponents titel eller "Side", og står navnet stadig i specen, afvises siden (400 "Siden indeholder stadig navnet; omdøb den først."). Teknisk: `templateFromSpec` (`apps/server/src/pages/templateSpec.ts`)
 erstatter hver strengværdi, der er entitetens Lasso-ID (eller virksomhedens CVR-nummer), med `{{entity}}`, og
@@ -177,7 +179,7 @@ Svar: `text/event-stream`, én `data: <json>` pr. hændelse:
 | `placement` | `placement`, `target?`, `focus?`, `title?`, `decided?`, `here?` | Første hændelse i hver tur: hvor svaret skrives (`current`, `entity` med `target` {kind, id, name}, eller `global` med `title`). Efter et vellykket `place_answer` kommer en ny med `decided: true` (`here: true` ved `current` på en entitet). |
 | `text` | `text` | Et stykke af Claudes tekst (streames). Tekst og visninger kommer i den rækkefølge, de laves. |
 | `tool` | `id`, `name`, `title` | Et værktøj er gået i gang ("Vis virksomhed"). |
-| `view` | `id`, `name`, `tool`, `form`, `spec`, `dataset`, `pdfLink?` | Visningen fra værktøjet. `form` er `page` (show_*, søgninger, render_view med layout page) eller `module`. `tool` er MCP-værktøjets navn (som `name`): klienten viser "Tilføj som fane" kun for `render_view`. Tegnes med `LassoView`. |
+| `view` | `id`, `name`, `tool`, `form`, `spec`, `dataset`, `pdfLink?` | Visningen fra værktøjet. `form` er `page` (show_*, søgninger, render_view med layout page) eller `module`. `tool` er MCP-værktøjets navn (som `name`). "Tilføj som fane" afhænger af `form` (page), ikke af `tool`. Tegnes med `LassoView`. |
 | `tool_error` | `id`, `name`, `message` | Værktøjet fejlede. Claude får fejlen og kan rette sig. |
 | `choice` | `id`, `question`, `options[{label, description, recommended?, action}]`, `allowFreeText` | Valgmenuen (ask_choice, kun til flere match). Turen slutter; valget sendes med næste spørgsmål i `context.choice`. |
 | `error` | `message` | Samtalen kunne ikke fortsætte (Claude-fejl, afvist svar, for mange trin). |

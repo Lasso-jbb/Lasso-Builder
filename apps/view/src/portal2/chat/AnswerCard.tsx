@@ -1,5 +1,5 @@
 import { Button, IconButton, LassoView, type HostCapabilities, type LassoViewProps } from "@lasso/ui";
-import { withoutHead, type AnswerPart } from "../model.js";
+import { forPortal, type AnswerPart } from "../model.js";
 
 const noop = () => undefined;
 
@@ -51,7 +51,7 @@ export function AnswerCard({ part, kind, mobile = false, theme, host, onAction, 
         </div>
       </header>
       <div className="chat-card__b">
-        <LassoView spec={headless ? withoutHead(spec) : spec} dataset={part.dataset} theme={theme} frameless page={page} host={host ?? {}} onAction={onAction ?? noop} />
+        <LassoView spec={forPortal(spec, { head: !headless })} dataset={part.dataset} theme={theme} frameless page={page} host={host ?? {}} onAction={onAction ?? noop} />
       </div>
     </section>
   );
