@@ -164,7 +164,11 @@ test("chat: værktøjet kører gennem MCP; browseren får visningen, modellen ku
   // Chatten (docs/chat.md, tokens): resuméet uden boilerplate; teksten efter en visning styres af CHAT_RULES.
   assert.match(result.content, /^OBS: demodata \(opdigtet\)\.\nEksempel Byg A\/S/);
   for (const line of [/Visningen vises for brugeren/, /Visningen er svaret: skriv ingen tekst/, /Tekstkortet er kun til værter/, /Interaktiv Lasso-visning/]) assert.doesNotMatch(result.content, line);
-  assert.match(String(first.system), /Tekst først: skriv en til tre korte sætninger, før visningen kommer/);
+  // Tekstreglerne: kort tekst (højst 20 ord før en visning), tekst alene uden for Lassos data (med eksemplet "sport"), og modullinks.
+  assert.match(String(first.system), /Kort tekst: før en visning højst én kort sætning \(højst 20 ord\)/);
+  assert.match(String(first.system), /højst 2–3 korte sætninger \(højst 60 ord\) eller højst 4 korte punkter/);
+  assert.match(String(first.system), /Vis kun en visning, når dens indhold direkte svarer på spørgsmålet/);
+  assert.match(String(first.system), /hvilken sport dyrker anne.*intet værktøjskald/s);
 
   const done = events.at(-1) as Event & { history: unknown[]; sig: string };
   assert.equal(done.history.length, 4);
