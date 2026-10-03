@@ -485,3 +485,6 @@ body { font-family: var(--lasso-font, "Poppins", system-ui, sans-serif); -webkit
 .p3.p3-chat-specimen .chat { padding-bottom: 8px; }
 .p3.p3-chat-specimen .ask { padding: 12px 16px 16px; align-items: center; background: none; pointer-events: auto; display: flex; flex: none; --ask-top: 0px; }
 .p3.p3-chat-specimen .lasso-iconbtn.chat-jump { bottom: 16px; }
+
+/* ---------- Lasso v1 moduler (under hele sider) ---------- */
+.dg-v1 { margin-top: 56px; padding-top: 40px; border-top: 1px solid var(--dg-line); }

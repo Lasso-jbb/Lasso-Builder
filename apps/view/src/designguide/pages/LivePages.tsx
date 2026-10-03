@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { FOCUS_LABELS, PERSON_FOCUS_LABELS } from "@lasso/spec";
 import { LassoView } from "@lasso/ui";
+import type { ViewSpec } from "@lasso/spec";
 import type { Ctx } from "../App.js";
 import { Frame } from "../Frame.js";
 import type { Report } from "../inspect.js";
@@ -105,6 +106,70 @@ export function LivePagesPage({ ctx, kind, focus }: { ctx: Ctx; kind: "company" 
           </ul>
         ) : null}
       </div>
+      {kind === "company" ? <LassoV1Section ctx={ctx} viewport={viewport} vp={vp} mark={mark} /> : null}
     </div>
+  );
+}
+
+/**
+ * Jakob 03.10: "Lasso v1 moduler". Lassos nuværende virksomhedsside (portalen, Overblik og Stamoplysninger)
+ * genskabt med de nye komponenter, så den kan sammenlignes med siden ovenfor, som komponisten bygger.
+ * Komponenterne og data kommer fra showcasens Lasso-side (portalPages i @lasso/spec), så de to steder ikke glider fra hinanden.
+ */
+function LassoV1Section({ ctx, viewport, vp, mark }: { ctx: Ctx; viewport: { label: string; vw: number; note: string }; vp: string; mark: boolean }) {
+  const portal = ctx.boot.showcase.portal;
+  const [pageId, setPageId] = useState<string>("overblik");
+  const [report, setReport] = useState<Report | undefined>();
+  useEffect(() => setReport(undefined), [pageId, vp]);
+  if (!portal?.pages?.length) return null;
+  const current = portal.pages.find((p) => p.id === pageId) ?? portal.pages[0]!;
+  const spec = { version: 2, kind: "company", title: portal.name, layout: current.layout, criteria: [], components: current.components } as unknown as ViewSpec;
+  const target: CommentTarget = {
+    target: `side:lasso-v1:${current.id}:${vp}`,
+    label: `Lasso v1 moduler: ${portal.name}, ${current.label}, ${viewport.label} ${viewport.vw}`,
+    context: { kind: "side", ref: `portalPages ${current.id}`, viewport: vp, vw: viewport.vw, data: portal.name },
+  };
+  return (
+    <section className="dg-v1">
+      <PageHead
+        eyebrow="Lasso v1 moduler"
+        title="Lassos virksomhedsside genskabt med de nye komponenter"
+        lead="Portalens nuværende side (v1), bygget af de samme komponenter som chatten og de delte links: tre spalter med identitet, genveje og kreditvurdering til venstre, relationer og virksomhedsprofil i midten, og virksomhedsoplysninger, regnskabsoplysninger og erhvervsresume til højre. Brug den til at se, hvor de nye komponenter allerede rammer v1, og hvor de afviger."
+      />
+      <div className="dg-focusbar" role="tablist" aria-label="Lasso v1 modul">
+        {portal.pages.map((p) => (
+          <button key={p.id} role="tab" aria-selected={p.id === current.id} className={`dg-focus${p.id === current.id ? " is-on" : ""}`} onClick={() => setPageId(p.id)}>
+            {p.label}
+          </button>
+        ))}
+      </div>
+      <div className="dg-pageframe">
+        <div className="dg-pageframe__cap">
+          <strong>
+            {portal.name}, {current.label} (v1)
+          </strong>
+          <span className="dg-meta">
+            {viewport.label} {viewport.vw} px. Komponenterne fra portalPages, samme data som Lasso-siden i showcasen.
+          </span>
+          <span className="dg-mframe__grow" />
+          <ReportChip report={report} />
+          <CommentButton small target={target} />
+        </div>
+        <Frame key={`v1${current.id}${vp}`} comment={target} vw={viewport.vw} mark={mark} eager onReport={setReport} minHeight={400} label={`Lasso v1, ${current.label}, ${viewport.label}`}>
+          <LassoView spec={spec} dataset={current.dataset} host={HOST} onAction={() => undefined} theme={ctx.theme} frameless />
+        </Frame>
+        {report && report.findings.some((f) => f.kind !== "state") ? (
+          <ul className="dg-findings">
+            {report.findings
+              .filter((f) => f.kind !== "state")
+              .map((f, i) => (
+                <li key={i} className={`dg-finding dg-finding--${f.kind}`}>
+                  {f.text}
+                </li>
+              ))}
+          </ul>
+        ) : null}
+      </div>
+    </section>
   );
 }
