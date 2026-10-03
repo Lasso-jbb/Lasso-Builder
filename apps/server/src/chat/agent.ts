@@ -11,7 +11,7 @@ import type {
 import { Client, InMemoryTransport, type CallToolResult } from "@modelcontextprotocol/client";
 import { DATASET_META_KEY, FOCUS_LABELS, FOCUSES, isPersonFocus, pageFocus, PERSON_FOCUS_LABELS, PERSON_FOCUSES, type Dataset, type Focus, type PersonFocus, type ViewSpec } from "@lasso/spec";
 import type { Config } from "../config.js";
-import { CHAT_ROUTING, createMcpServer, type McpContext } from "../mcp/server.js";
+import { CHAT_HOST_ROUTING, createMcpServer, type McpContext } from "../mcp/server.js";
 import { ASK_CHOICE, contextText, placementOf, PLACE_ANSWER, withoutStaleSame, type ChatContext, type GlobalTitle, type Placement } from "./context.js";
 import type { TurnState } from "./place.js";
 import { trimHistory } from "./history.js";
@@ -283,7 +283,7 @@ export interface ChatSetup {
 export async function buildChatSetup(client: Client, config: Pick<Config, "CHAT_CACHE_TTL">): Promise<ChatSetup> {
   const tools = [...(await chatTools(client)), ...CHAT_TOOLS.map((t) => ({ tool: t.tool, title: t.title }))];
   // Routingen uden gem-værktøjerne (dem har chatten ikke); reglerne er chattens egne (MCP_RULES gælder kun Claude.ai).
-  return { system: `${CHAT_ROUTING}\n\n${CHAT_RULES}`, tools, toolList: withCacheMarker(tools.map((t) => t.tool), config) };
+  return { system: `${CHAT_HOST_ROUTING}\n\n${CHAT_RULES}`, tools, toolList: withCacheMarker(tools.map((t) => t.tool), config) };
 }
 
 /** Brugerens tur: konteksten først (ikke i system: den skifter pr. spørgsmål og ville bryde cachen), så beskeden. */

@@ -77,6 +77,21 @@ Vælg værktøj:
 - Flere navngivne virksomheder → compare_companies (sammenligning, rangering, "hvem er størst"). Navne må bruges i stedet for CVR-numre.
 - Elementer, ingen focus dækker: render_view; hent først props for typerne med describe_components.`;
 
+/**
+ * Routingen i Lassos egen chat: som CHAT_ROUTING (den fælles tekst, som /mcp også bygger på), men med chattens egne linjer
+ * for navneopslag (find_entity og ask_choice, aldrig search_persons til at afgøre, hvem der menes) og for side eller element
+ * (et element er render_view, medmindre brugeren beder om siden). /mcp's tekst (ROUTING, MCP_RULES) er uændret og pinnet i chatHost.test.ts.
+ */
+const PERSON_LOOKUP = "- Personer på navn ('find Mette Holm', flere med samme navn): search_persons, derefter show_person med Lasso-ID.";
+const ELEMENT_ROUTE = "- Elementer, ingen focus dækker: render_view; hent først props for typerne med describe_components.";
+export const CHAT_HOST_ROUTING = CHAT_ROUTING.replace(
+  PERSON_LOOKUP,
+  "- Personer på navn: find_entity for at finde, hvem der menes (aldrig search_persons til det); flere kandidater → ask_choice, én → show_person med Lasso-ID. search_persons kun til en liste af personer med kriterier.",
+).replace(
+  ELEMENT_ROUTE,
+  "- Et enkelt element (diagram, nøgletalsrække, tabel, liste), ingen focus dækker: render_view med én komponent (hent først props med describe_components), medmindre brugeren beder om selve siden: så show_company/show_person.",
+);
+
 /** Gem-værktøjerne i routingen: kun Claude.ai har dem (portalen har knapper til at gemme). */
 const ROUTING_SAVE = `- "Gem virksomheden/personen", "husk", "bogmærk", "sæt på min liste": save_page. "Mine gemte", "hvad har jeg gemt", "min liste": list_saved_pages. "Fjern fra listen": remove_saved_page. save_view er kun til et delbart link til en visning.
 - "Giv mig en URL", "del": save_view.`;
