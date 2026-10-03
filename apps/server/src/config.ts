@@ -40,6 +40,14 @@ const schema = z.object({
     .string()
     .default("false")
     .transform((v) => v === "true" || v === "1"),
+  /**
+   * true (standard) = en udtrykkelig bøn om at åbne en fane ("vis alt om X", "åbn X", "tilføj X") afgøres på serveren, før modellen
+   * kaldes (chat/preresolve.ts): ét match = afgjort placering, flere = valgmenuen bygget af serveren. false = altid modellen.
+   */
+  CHAT_PRE_RESOLVE: z
+    .string()
+    .default("true")
+    .transform((v) => v === "true" || v === "1"),
   /** true = portalen (/portal og /api/portal/*) er åben uden login: besøgende er demobrugeren. */
   PORTAL_PUBLIC: z
     .string()

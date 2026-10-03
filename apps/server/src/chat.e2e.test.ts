@@ -96,6 +96,8 @@ before(async () => {
     MCP_ACCESS_KEY: KEY,
     MCP_USER_KEYS: `${PIA.key}:${PIA.id}:${PIA.name}:${PIA.org};${BO.key}:${BO.id}:${BO.name}:${BO.org};${IDA.key}:${IDA.id}:${IDA.name}:${IDA.org};${KAI.key}:${KAI.id}:${KAI.name}:${KAI.org};${ZOE.key}:${ZOE.id}:${ZOE.name}:${ZOE.org}`,
     CHAT_HISTORY_MAX_CHARS: String(HISTORY_MAX),
+    // Modelstiene testes med scriptede svar; forhåndsopløsningen har sine egne tests nedenfor (egen server).
+    CHAT_PRE_RESOLVE: "false",
     LINK_SECRET: "chat-test-hemmelighed",
     LASSO_DATA_SOURCE: "demo",
     DATABASE_URL: "",
@@ -885,4 +887,73 @@ test("I: opfundne firma-/personlinks bliver tekst, og ens links vises én gang; 
   assert.ok(!stored.includes("9999999"));
   // Intet fallback-link tilføjes (modellen skrev et modullink).
   assert.ok(!all!.some((e) => e.type === "text" && String(e.text).startsWith("\n\n[")));
+});
+
+test("A: en udtrykkelig bøn forhåndsafgøres på serveren: ét match = afgjort placering og to modelkald, flere = menu uden modelkald, ingen = modellen", async () => {
+  const { extractName } = await import("./chat/preresolve.js");
+  assert.equal(extractName("vis alt om Jakob Kjær"), "Jakob Kjær");
+  assert.equal(extractName("Åbn Jakobs side"), "Jakobs");
+  assert.equal(extractName("tilføj ole"), "ole");
+  assert.equal(extractName("kan du åbne siden for Eksempel Byg, tak?"), "Eksempel Byg");
+  assert.equal(extractName("åbn den"), undefined);
+  assert.equal(extractName("Hvem er Prøve?"), undefined, "ingen udløser");
+
+  const config = loadConfig({ ...process.env, MCP_ACCESS_KEY: KEY, LINK_SECRET: "chat-test-hemmelighed", LASSO_DATA_SOURCE: "demo", DATABASE_URL: "", PUBLIC_BASE_URL: "https://lasso.test", PORTAL_PUBLIC: "true" });
+  assert.equal(config.CHAT_PRE_RESOLVE, true, "standard");
+  const server = createApp({ config, client: new LassoClient(config), provider: new DemoProvider(), store: createViewStore(""), pages: createSavedPageStore(""), chatModel: fakeModel }).listen(0);
+  await new Promise((r) => server.once("listening", r));
+  const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/chat`;
+  const ask = async (body: unknown) => {
+    const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json", "x-lasso-portal": "1" }, body: JSON.stringify(body) });
+    const text = await res.text();
+    if (!res.headers.get("content-type")?.startsWith("text/event-stream")) return { status: res.status, events: [] as Event[] };
+    return { status: res.status, events: text.split("\n\n").filter((b) => b.startsWith("data: ")).map((b) => JSON.parse(b.slice(6)) as Event) };
+  };
+  try {
+    // Ét match: placement{decided, entity} først, kun to modelkald (visning, tekst), ingen place_answer, fresh.
+    script.push(useTool("show_person", { person: jakob.id, show_all: true }), sayText("Her er Gitte."));
+    const before = calls.length;
+    const one = await ask({ message: "Vis alt om Gitte Prøve", context: onLasso });
+    assert.equal(calls.length - before, 2);
+    assert.deepEqual(one.events[0], { type: "placement", placement: "entity", target: jakob, focus: "overblik", decided: true });
+    assert.equal(one.events.filter((e) => e.type === "placement").length, 1);
+    assert.match(lastUserTexts(calls.at(-2)!)[0]!, /Brugeren bad om at åbne personen Gitte Prøve \(CVR-3-4000000007\): placeringen er afgjort/);
+    assert.equal((one.events.at(-1) as Event & { fresh?: true }).fresh, true);
+    assert.ok(one.events.some((e) => e.type === "view"));
+
+    // Flere: menuen bygges uden et modelkald; entity-handlinger; valget bekræftes næste tur.
+    const mark = calls.length;
+    const many = await ask({ message: "åbn Prøve", context: onLasso });
+    assert.equal(calls.length, mark, "ingen modelkald");
+    assert.deepEqual(many.events.map((e) => e.type), ["placement", "tool", "choice", "done"]);
+    const choice = many.events.find((e) => e.type === "choice") as Event & { id: string; options: { recommended?: boolean; description: string; action: { placement: string; entity?: { id: string } } }[] };
+    assert.match(choice.id, /^toolu_srv_/);
+    assert.ok(choice.options.length >= 2 && choice.options.length <= 5);
+    assert.ok(choice.options.every((o) => o.action.placement === "entity" && o.action.entity && o.description.length > 0));
+    assert.equal(new Set(choice.options.map((o) => o.action.entity!.id)).size, choice.options.length, "adskilte personer");
+    const done = many.events.at(-1) as Event & { history: unknown[]; sig: string };
+    script.push(useTool("show_person", { person: choice.options[0]!.action.entity!.id, show_all: true }), sayText("Her."));
+    const pick = { ...onLasso, choice: { id: choice.id, index: 0, action: choice.options[0]!.action } };
+    const next = await ask({ message: "Vis alt om den valgte", context: pick, history: done.history, sig: done.sig });
+    assert.equal(next.status, 200);
+    assert.equal((next.events[0] as Event & { decided?: true }).decided, true);
+    assert.equal((next.events[0] as Event & { placement: string }).placement, "entity");
+
+    // En virksomhed på navn; den aktive entitet åbnes ikke igen (modellen tager over); et ukendt navn også.
+    script.push(sayText("Det er den aktive."));
+    const mark2 = calls.length;
+    const same = await ask({ message: "åbn Eksempel Byg", context: onLasso });
+    assert.equal(calls.length - mark2, 1);
+    assert.ok(!same.events.some((e) => e.type === "placement" && e.decided));
+    script.push(useTool("show_company", { company: "99000001", show_all: true }), sayText("Her er Byg."));
+    const company = await ask({ message: "åbn Eksempel Byg", context: { active: { kind: "global" }, open: [] } });
+    assert.deepEqual(company.events[0], { type: "placement", placement: "entity", target: { kind: "company", id: "CVR-1-99000001", name: "Eksempel Byg A/S" }, focus: "overblik", decided: true });
+    script.push(sayText("Ukendt."));
+    const mark3 = calls.length;
+    const none = await ask({ message: "åbn Findes Ikke Overhovedet", context: onLasso });
+    assert.equal(calls.length - mark3, 1, "intet match: modellen tager over");
+    assert.ok(!none.events.some((e) => e.type === "placement" && e.decided));
+  } finally {
+    await new Promise((r) => server.close(r));
+  }
 });

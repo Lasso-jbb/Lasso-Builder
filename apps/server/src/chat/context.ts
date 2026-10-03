@@ -155,6 +155,11 @@ export const oneLine = (t: string): string => t.replace(/[\u0000-\u001f\u007f-\u
 
 const entityText = (e: ChatEntity) => `${e.kind === "company" ? "virksomheden" : "personen"} ${oneLine(e.name)} (${oneLine(e.id)})`;
 
+/** Linjen til modellen, når serveren allerede har afgjort, at brugerens bøn åbner en anden fane (chat/preresolve.ts). */
+export function openedLine(e: ChatEntity): string {
+  return `Brugeren bad om at åbne ${entityText(e)}: placeringen er afgjort, og svaret skrives på den som den aktive kontekst i dette svar. Vis siden med show_person/show_company (show_all: true), uden place_answer.`;
+}
+
 /** Konteksten, som modellen får den: første tekstblok i brugerens tur. */
 export function contextText(ctx: ChatContext): string {
   const lines: string[] = [];

@@ -12,12 +12,13 @@ import { Client, InMemoryTransport, type CallToolResult } from "@modelcontextpro
 import { DATASET_META_KEY, FOCUS_LABELS, FOCUSES, isPersonFocus, pageFocus, PERSON_FOCUS_LABELS, PERSON_FOCUSES, type Dataset, type Focus, type PersonFocus, type ViewSpec } from "@lasso/spec";
 import type { Config } from "../config.js";
 import { CHAT_HOST_ROUTING, createMcpServer, type McpContext } from "../mcp/server.js";
-import { ASK_CHOICE, contextText, placementOf, PLACE_ANSWER, withoutStaleSame, type ChatContext, type GlobalTitle, type Placement } from "./context.js";
+import { ASK_CHOICE, contextText, openedLine, placementOf, PLACE_ANSWER, withoutStaleSame, type ChatContext, type GlobalTitle, type Placement } from "./context.js";
 import type { TurnState } from "./place.js";
 import { trimHistory } from "./history.js";
 import { CHAT_TOOLS, chatToolByName, type ChoiceMenu } from "./tools.js";
 import type { EntityCandidate } from "../usecases/index.js";
 import { createLinkFilter, idsIn, sanitizeLinks } from "./links.js";
+import { preResolve } from "./preresolve.js";
 
 /**
  * Lassos egen chat (docs/chat.md): Claude via Claude Platform med NØJAGTIG de samme værktøjer og
@@ -306,7 +307,7 @@ export function chatRequest(config: Pick<Config, "CHAT_MODEL" | "CHAT_EFFORT" | 
 
 export interface ChatRunOptions {
   ctx: McpContext;
-  config: Pick<Config, "CHAT_MODEL" | "CHAT_EFFORT" | "CHAT_MAX_TOKENS" | "CHAT_CACHE_TTL" | "CHAT_HISTORY_MAX_CHARS">;
+  config: Pick<Config, "CHAT_MODEL" | "CHAT_EFFORT" | "CHAT_MAX_TOKENS" | "CHAT_CACHE_TTL" | "CHAT_HISTORY_MAX_CHARS" | "CHAT_PRE_RESOLVE">;
   model: ModelCall;
   /** Den hidtidige samtale (Claude-beskeder, uændret fra sidste "done"). */
   history: BetaMessageParam[];
@@ -346,17 +347,40 @@ export async function runChat({ ctx, config, model, history, message, context, e
   // Historikken trimmes sjældent og groft (chat/history.ts); den trimmede er den, "done" giver videre.
   // Et same (uændret resumé) gælder kun, hvis det fulde resumé stadig står i den trimmede historik; ellers ingen "Brugeren ser" i denne tur.
   const retained = trimHistory(history, config.CHAT_HISTORY_MAX_CHARS);
-  const messages: BetaMessageParam[] = [...retained, userTurn(withoutStaleSame(context, retained), message)];
+  // En udtrykkelig bøn om at åbne en fane afgøres på serveren, før modellen kaldes (chat/preresolve.ts).
+  const pre = config.CHAT_PRE_RESOLVE ? await preResolve(ctx, context, message) : null;
+  const userMessage = userTurn(withoutStaleSame(context, retained), message);
+  if (pre?.kind === "one" && Array.isArray(userMessage.content)) {
+    const [first, ...rest] = userMessage.content as { type: "text"; text: string }[];
+    userMessage.content = [{ type: "text", text: `${first!.text} ${openedLine(pre.entity)}` }, ...rest];
+  }
+  const messages: BetaMessageParam[] = [...retained, userMessage];
   // Placeringen er kendt, før modellen kaldes: brugeren valgte den i menuen (eller svaret skrives her).
   // Et valg i menuen er brugerens egen handling og afgjort: et skifte (entity, eller global fra en entitet) sendes som decided, så klienten flytter.
   const proposed = placementOf(context);
   const picked = Boolean(context.choice && !("free" in context.choice));
   const moves = picked && (proposed.placement === "entity" || (proposed.placement === "global" && context.active.kind !== "global"));
   // På en entitetsfane uden skifte står svaret her: serveren sætter here selv (modellen kalder ikke place_answer for at blive).
-  const placement: Placement = moves ? { ...proposed, decided: true } : proposed.placement === "current" && context.active.kind !== "global" ? { ...proposed, here: true } : proposed;
+  let placement: Placement = moves ? { ...proposed, decided: true } : proposed.placement === "current" && context.active.kind !== "global" ? { ...proposed, here: true } : proposed;
+  // Ét match på en udtrykkelig bøn: placeringen er afgjort her (klienten flytter), og modellen skal kun vise siden.
+  if (pre?.kind === "one") placement = { placement: "entity", target: pre.entity, focus: "overblik", decided: true };
   emit({ type: "placement", ...placement });
   // Turens tilstand: place_answer kan ændre placeringen (én gang, før noget vises); viewed låser den.
-  const turn: TurnState = { placement, placed: false, viewed: false };
+  const turn: TurnState = { placement, placed: pre?.kind === "one", viewed: false };
+  if (pre?.kind === "many") {
+    // Flere match på en udtrykkelig bøn: valgmenuen bygges af serveren (intet modelkald); entity-handlingerne står, fordi brugeren bad om at åbne.
+    const input = syntheticMenuInput(pre.candidates);
+    const built = await chatToolByName(ASK_CHOICE)!.run(input, { mcp: ctx, context, message, turn });
+    if (built.choice) {
+      const id = `toolu_srv_${randomUUID().replace(/-/g, "")}`;
+      messages.push({ role: "assistant", content: [{ type: "tool_use", id, name: ASK_CHOICE, input: (built.input ?? input) as Record<string, unknown> }] });
+      messages.push({ role: "user", content: [{ type: "tool_result", tool_use_id: id, content: built.text }] });
+      emit({ type: "tool", id, name: ASK_CHOICE, title: CHAT_TOOLS.find((t) => t.tool.name === ASK_CHOICE)?.title ?? ASK_CHOICE });
+      emit({ type: "choice", id, ...built.choice });
+      emit({ type: "done", history: messages, placement });
+      return;
+    }
+  }
   /** Den første visning (navn og spec): giver en resultatfane et generisk navn, når modellen ikke valgte et. */
   let firstView: { name: string; spec: ViewSpec } | undefined;
   /** Modulet i den første visning om en entitet (til linjen med modullinks, hvis modellen ikke skrev nogen). */
