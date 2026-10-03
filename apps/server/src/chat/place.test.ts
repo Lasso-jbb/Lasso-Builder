@@ -130,10 +130,13 @@ test("EXPLICIT_OPEN: tilføj åbner en fane", () => {
   assert.doesNotMatch("betilføj", EXPLICIT_OPEN);
 });
 
-test("D4: global fra en entitet afvises, når spørgsmålet handler om den aktive entitet; på forsiden er den fin", async () => {
-  for (const q of ["Sammenlign med branchen", "Hvem er deres konkurrenter?", "Sammenlign dem", "Hvad ejer den?", "Vis selskabet på kortet", "Vis virksomheden i en liste", "Sammenlign Eksempel Byg med de andre"]) {
-    assert.match(error(await verifyPlacement({ placement: "global", title: "Sammenligning" }, ctx(onByg, q))), /Spørgsmålet handler om Eksempel Byg A\/S; svar her\./, q);
+test("D4 (R2-C): global fra en entitet afvises kun, når beskeden nævner den aktive entitet, branchen eller konkurrenter; almindelige markedsspørgsmål er fine", async () => {
+  for (const q of ["Sammenlign med branchen", "Hvem er deres konkurrenter?", "Sammenlign konkurrenterne", "Sammenlign Eksempel Byg med de andre"]) {
+    assert.equal(error(await verifyPlacement({ placement: "global", title: "Sammenligning" }, ctx(onByg, q))), "Svar her på den aktive fane.", q);
   }
-  assert.ok("placement" in (await verifyPlacement({ placement: "global", title: "Firmaliste" }, ctx(onByg, "Find revisorer i Aarhus med mindst 10 ansatte"))));
+  // Regel 11: uden én bestemt virksomhed eller person er det en global fane, også fra en entitetsfane.
+  for (const q of ["Find den største vinduesproducent", "Vis dem på et kort", "Sammenlign dem", "Vis virksomheden med flest ansatte i Aarhus", "Find revisorer i Aarhus med mindst 10 ansatte"]) {
+    assert.ok("placement" in (await verifyPlacement({ placement: "global", title: "Firmaliste" }, ctx(onByg, q))), q);
+  }
   assert.ok("placement" in (await verifyPlacement({ placement: "global", title: "Sammenligning" }, ctx(home, "Sammenlign med branchen"))));
 });

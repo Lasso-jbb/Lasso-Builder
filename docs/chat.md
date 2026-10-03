@@ -121,10 +121,10 @@ er det eneste kandidat, når serveren selv slår navnet op (`resolveEntity`, gr�
 (hele ord, uden udløsere og selskabsformer; en åben fane kræver alle navneord). Passer navnet på flere, svarer serveren med en
 fejl ("Navnet passer på flere; kald ask_choice med kandidaterne."). `global` (en liste, sammenligning eller analyse) kræver en
 `title` fra de fire generiske navne `GLOBAL_TITLES` (Firmaliste, Sammenligning, Markedsanalyse, Kort), aldrig spørgsmålet; på
-en resultatfane med navn bliver man (`current`). **Global fra en entitetsfane afvises, når spørgsmålet handler om den aktive
-entitet** (navnet står i beskeden, eller den peger tilbage med "branchen", "konkurrent…", "dem", "den", "selskabet",
-"virksomheden"): "Spørgsmålet handler om <navn>; svar her."; regel 11 (spørgsmål uden en bestemt virksomhed eller person →
-global fane) gælder stadig. Fejl er `is_error`-værktøjssvar (og `tool_error`-hændelser), så modellen kan rette; kommer
+en resultatfane med navn bliver man (`current`). **Global fra en entitetsfane afvises kun, når spørgsmålet handler om den aktive entitet** (navnet står i beskeden, eller beskeden
+nævner "branchen" eller "konkurrent…"): "Svar her på den aktive fane."; almindelige ord som "den", "dem" og "selskabet" gør ikke, så
+"Find den største vinduesproducent" og "Vis dem på et kort" bliver en global fane (regel 11: spørgsmål uden en bestemt virksomhed eller person →
+global fane, også fra en entitetsfane). Fejl er `is_error`-værktøjssvar (og `tool_error`-hændelser), så modellen kan rette; kommer
 `place_answer` i samme svar som en visning og afvises, vises intet i det svar. `place_answer` efter en visning og efter et
 bindende valg i menuen afvises også (reglen står i serveren, ikke kun i prompten).
 
