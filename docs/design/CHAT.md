@@ -18,7 +18,7 @@ Fra eksporten, ordret, bortset fra de steder hvor en beslutning (se "Beslutninge
 4. Et svar kan være tekst, et element eller en hel side. Teksten står altid først og forklarer, hvad der vises.
 5. Et enkelt element har titel, undertitel og to ikoner i rammen: download og fuld skærm. Det kan ikke åbnes som fane. Kun en sammensætning af flere elementer (en side) har Tilføj som fane, som gemmer siden som en sideskabelon for virksomheder eller personer, så den står som et ekstra modul i modulrækken på hver virksomhed eller person og vises med den enheds data. Et katalog til at styre de gemte sider kommer senere. *(Ændret: eksporten siger "som åbner den som ny fane og gemmer den blandt brugerens egne sider"; se sideskabeloner under Beslutninger.)*
 6. Fuld skærm åbner elementet i hele fladen under Lasso-fanen med et kryds til at lukke. Inputfeltet bliver stående, så man kan spørge videre.
-7. Links til moduler er modul-links med orange ikon. Fører et link til et andet firma eller en anden person, står der ved siden af: Åbner \<navn\> i ny fane.
+7. Links til moduler er modul-links med orange ikon. Fører et link til et andet firma eller en anden person, står der ved siden af: Åbner `<navn>` i ny fane.
 8. Inputfeltet står fast i bunden, 720 px bredt, med enter-ikon, og hedder altid Spørg Lasso. Tre forslag står centreret under feltet som ren tekst, aldrig inde i svaret.
 9. Placeringen afgøres før svaret skrives: samme fane, ny fane for firma eller person, global fane, eller spørg først. Lasso åbner aldrig en fane, brugeren ikke har bedt om, og aldrig mere end én pr. spørgsmål.
 10. Et spørgsmål bliver i fanen, når det giver mening i fanens kontekst, også når det nævner andre. "Vis mig alt om …" åbner en ny fane, og spørgsmålet følger med som første besked. Når Lasso skifter fane, står der en meddelelsesrække i den gamle samtale med Fortryd i 10 sekunder.
@@ -64,7 +64,7 @@ eller som de eksisterende tokens i `styles.css`.
 | Mobil fuld skærm | mellem modulrække og input; titel 16/22; kun × |
 | Rul-ned-knap | 40 cirkel, 1 px kant, skygge 0 4 12 rgba(.1), pil ned 18, bund 170 |
 | Ældre beskeder | 12 faint, centreret, margin-bottom 24, "Indlæser ældre beskeder…" |
-| Tom tilstand | titel 24/32/600 "Spørg Lasso om \<fane\>"; hjælpetekst 14/22; 2 × 2 piller 720 brede, gap 12, hver 56 høj, radius fuld, padding 0 28, 16 ink, pil højre |
+| Tom tilstand | titel 24/32/600 "Spørg Lasso om `<fane>`"; hjælpetekst 14/22; 2 × 2 piller 720 brede, gap 12, hver 56 høj, radius fuld, padding 0 28, 16 ink, pil højre |
 | Modulrække | Lasso-mærket først, aktiv = ink med inset 0 -2px 0 primary; faner viser et slagsikon (bygning / person / mærke) |
 
 Ikoner i modul-links: Risiko = flag, Kreditorer = kort, Overblik = øje, Ejerskab = lag, Netværk = netværk, Regnskab =
@@ -91,7 +91,7 @@ Nye, i `.p3`-blokken i `portal2.css` (lys og mørk):
 | `--chat-avatar` | 24px |
 | `--chat-link-h` | 46px (mobil 40px) |
 | `--chat-input-h` | 52px (mobil 48px) |
-| `--chat-shadow-input`, `--chat-shadow-panel` | skyggerne i målene |
+| `--chat-shadow-input`, `--chat-shadow-panel`, `--chat-shadow-jump` | skyggerne i målene (inputpille, panel, rul-ned-knap) |
 | `--chat-fs-12`, `--chat-fs-16` | 12px og 16px |
 
 ## Tre svarformer
@@ -116,7 +116,7 @@ meddelelsesrække i tråden:
    Jakob ellers?"). Svaret står i fanen, og rækken siger "Svarer her i LASSO X A/S".
 2. **Ny fane for et firma eller en person.** Kun ved et udtrykkeligt "vis mig alt om …" eller "åbn …" og kun når
    navnet er entydigt. Den nye fane åbnes og aktiveres, spørgsmålet følger med som første besked, og i den gamle
-   tråd står "Åbner Jakob Bech Benediktson i en ny fane. Fortryd". Fortryd virker i 10 sekunder og er kun på
+   tråd står "Åbner Jakob Bech Benediktson i en ny fane. Fortryd" (efter de 10 sekunder: "Åbnede Jakob Bech Benediktson i en ny fane"; flyttes svaret til en fane, der allerede var åben: "Svarer i fanen `<navn>`"). Fortryd virker i 10 sekunder og er kun på
    klienten: strømmen standses, en fane, der blev åbnet til turen, lukkes, og turen fjernes fra den gamle tråd;
    derefter forsvinder linket, men rækken står. Den nye fane starter en frisk samtale.
 3. **Global fane.** Spørgsmål uden ét firma eller én person (lister, sammenligninger, analyser), stillet fra en
@@ -156,7 +156,7 @@ Efter fjernelsen står en åben fane på modulet på Overblik. De indbyggede mod
 
 | Tilstand | Udseende |
 |---|---|
-| Tom | Lasso-avatar 40 px, titel "Spørg Lasso om \<fane\>", hjælpetekst efter slags og fire piller (tre faste og en fjerde pr. slags: "Lav et fuldt KYC-overblik" på en virksomhed, "Vis netværket" på en person, "Sammenlign de største" globalt); forslagene under feltet skjules |
+| Tom | Lasso-avatar 40 px, titel "Spørg Lasso om `<fane>`", hjælpetekst efter slags og fire piller (tre faste og en fjerde pr. slags: "Lav et fuldt KYC-overblik" på en virksomhed, "Vis netværket" på en person, "Sammenlign de største" globalt); forslagene under feltet skjules |
 | Tænker | Tre orange prikker og "Tænker…" |
 | Længere opgave | Værktøjets titel i ord, skelet med shimmer og en Stop-knap |
 | Fejl | Almindelig tekst og linket "Prøv igen" |

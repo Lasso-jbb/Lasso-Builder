@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { LassoMark, LassoWordmark } from "@lasso/ui";
-import { Text } from "../../chat/ChatApp.js";
 import { P2_ICON_NAMES, P2Icon } from "../../portal2/icons.js";
 import { LASSO_TAB, suggestions, type OpenItem, type SearchRow } from "../../portal2/model.js";
 import {
@@ -18,8 +17,12 @@ import {
   SearchTabs,
   StatusFilterMenu,
   Suggestions,
+  TemplatePin,
 } from "../../portal2/parts.js";
+import { AssistantMessage, UserBubble } from "../../portal2/chat/Message.js";
+import { FIXTURE_AT } from "../../portal2/chat/fixtures.js";
 import "../../portal2/portal2.css";
+import "../../portal2/chat/chat.css";
 
 /**
  * Portalens elementer og knapper i alle tilstande (designguidens side "Portalens ramme"). Det er de samme
@@ -47,7 +50,7 @@ const SUGGESTION_PAGES: { label: string; item?: OpenItem }[] = [
     ["risiko", "Risiko"],
     ["historik", "Historik"],
     ["kontakt", "Kontakt"],
-    [LASSO_TAB, "Lassos svar"],
+    [LASSO_TAB, "Lasso"],
   ].map(([tab, label]) => ({ label: `Firma · ${label}`, item: { key: "CVR-1-99000001", kind: "company" as const, name: "Eksempel Byg A/S", tab: tab! } })),
   ...[
     ["overblik", "Overblik"],
@@ -175,10 +178,10 @@ export function PortalParts({ theme }: { theme: "light" | "dark" }) {
           </div>
         </Spec>
 
-        <Spec label="Modulrække" note="Lasso-fanen (slået fra uden svar), moduler, Flere, Følg (kommer senere) og Gem">
+        <Spec label="Modulrække" note="Lasso-modulet (altid slået til), moduler, Flere, Følg (kommer senere) og Gem">
           <div className="mods">
             <div className="col">
-              <LassoTab on={false} disabled />
+              <LassoTab on={false} />
               <div className="mlist">
                 {MODULES.slice(0, 5).map((m, i) => (
                   <ModuleTab key={m} id={m} label={m} selected={i === 0} />
@@ -193,7 +196,7 @@ export function PortalParts({ theme }: { theme: "light" | "dark" }) {
           </div>
         </Spec>
 
-        <Spec label="Modulrække, Lassos svar" note="Lasso-fanen valgt · mens Lasso henter · Gemt">
+        <Spec label="Modulrække, Lasso" note="Lasso-modulet valgt · med skabelonmodul og rød pin · mens Lasso henter · Gemt">
           <div className="dg-specrow dg-specrow--stack">
             <div className="mods">
               <div className="col">
@@ -207,6 +210,23 @@ export function PortalParts({ theme }: { theme: "light" | "dark" }) {
                 <div className="rgroup">
                   <IconButton icon="rss" label="Følg" disabled />
                   <IconButton icon="book" label="Gemt" on pressed />
+                </div>
+              </div>
+            </div>
+            <div className="mods">
+              <div className="col">
+                <LassoTab on />
+                <div className="mlist">
+                  {MODULES.slice(0, 5).map((m) => (
+                    <ModuleTab key={m} id={m} label={m} selected={false} />
+                  ))}
+                  <ModuleTab id="tpl:fx" label="KYC-overblik" selected={false} />
+                  <DropButton label="Flere" className="tab more" />
+                </div>
+                <div className="rgroup">
+                  <TemplatePin kind="company" title="KYC-overblik" />
+                  <IconButton icon="rss" label="Følg" disabled />
+                  <IconButton icon="book" label="Gem" />
                 </div>
               </div>
             </div>
@@ -241,7 +261,7 @@ export function PortalParts({ theme }: { theme: "light" | "dark" }) {
           </div>
         </Spec>
 
-        <Spec label="Menu" note="Åbne faner (flueben på den aktive, luk på de andre) og Luk alle andre · Flere (de skjulte moduler) · modulvælgeren (Lassos svar og alle moduler)">
+        <Spec label="Menu" note="Åbne faner (flueben på den aktive, luk på de andre) og Luk alle andre · Flere (de skjulte moduler) · modulvælgeren (Lasso og alle moduler)">
           <div className="dg-specrow">
             <div className="dd">
               <MenuItem icon="build" label="Eksempel Byg A/S" current />
@@ -256,7 +276,7 @@ export function PortalParts({ theme }: { theme: "light" | "dark" }) {
               ))}
             </div>
             <div className="dd">
-              <MenuItem label="Lassos svar" />
+              <MenuItem label="Lasso" />
               {MODULES.map((m, i) => (
                 <MenuItem key={m} label={m} current={i === 0} />
               ))}
@@ -324,29 +344,30 @@ export function PortalParts({ theme }: { theme: "light" | "dark" }) {
           </div>
         </Spec>
 
-        <Spec label="Lassos svar" note="Spørgsmålet, Claudes korte tekst og visningen under · mens der hentes · fejl">
+        <Spec label="Samtalen" note="Lassos svar, tænker og fejl, med de samme komponenter som chatten (hele samtalen står på siden Chatten)">
           <div className="dg-specrow dg-specrow--stack">
-            <div className="spec-page">
-              <div className="answer">
-                <div className="answer__q">Hvordan går det økonomisk?</div>
-                <Text text={"Det går **godt**: omsætningen steg 12 % og overskuddet 8 % i seneste regnskab. Soliditeten er 41 %."} />
+            <div className="spec-page chat-specimen">
+              <div className="chat-thread">
+                <div className="chat-turn">
+                  <UserBubble text="Hvordan går det økonomisk?" />
+                  <AssistantMessage answer={{ parts: [{ kind: "text", text: "Det går **godt**: omsætningen steg 12 % og overskuddet 8 % i seneste regnskab. Soliditeten er 41 %." }], pending: false, at: FIXTURE_AT }} />
+                </div>
               </div>
             </div>
-            <div className="spec-page">
-              <div className="answer">
-                <div className="answer__q">Hvem ejer firmaet?</div>
-                <div className="answer__status">Vis virksomhed …</div>
-              </div>
-              <div className="skeleton" aria-label="Henter">
-                <div />
-                <div />
-                <div />
+            <div className="spec-page chat-specimen">
+              <div className="chat-thread">
+                <div className="chat-turn">
+                  <UserBubble text="Er der røde flag?" />
+                  <AssistantMessage answer={{ parts: [], pending: true }} />
+                </div>
               </div>
             </div>
-            <div className="spec-page">
-              <div className="answer">
-                <div className="answer__q">Sammenlign med branchen</div>
-                <div className="answer__error">Claude har travlt lige nu. Prøv igen om lidt.</div>
+            <div className="spec-page chat-specimen">
+              <div className="chat-thread">
+                <div className="chat-turn">
+                  <UserBubble text="Sammenlign med branchen" />
+                  <AssistantMessage answer={{ parts: [], pending: false, error: "Claude har travlt lige nu.", at: FIXTURE_AT }} onRetry={() => undefined} />
+                </div>
               </div>
             </div>
           </div>
