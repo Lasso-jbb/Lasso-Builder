@@ -1218,7 +1218,8 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 /* ---------- Resumé (12, node A8H-0): klippet rent efter 5 linjer (ingen toning) ---------- */
 .lasso-summary { position: relative; }
 /* 12.2: brødtekst 15/25 i læsebredde (højst ca. 72 tegn pr. linje), afsnit med 12 px luft. */
-.lasso-summary__body { margin: 0; max-width: 72ch; font-size: 15px; line-height: 25px; color: var(--lasso-text-2); overflow-wrap: anywhere; }
+/* Jakob 03.10 (12.2): samme skrift som virksomhedsprofilens afsnit (.lasso-textsection__body): 14/21, 400, text-2; ingen egen målebredde (elementet er højst ⅔). */
+.lasso-summary__body { margin: 0; font-size: var(--lasso-fs); line-height: 21px; font-weight: 400; color: var(--lasso-text-2); overflow-wrap: anywhere; }
 .lasso-summary__body + .lasso-summary__body { margin-top: 12px; }
 .lasso-summary__body--clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; line-clamp: 5; overflow: hidden; }
 

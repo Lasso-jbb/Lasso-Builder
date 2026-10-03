@@ -97,6 +97,8 @@ Teknologier er grupperet i typer (fx CRM-system, Live chat, Digital marketing); 
 
 Hver types tilladte bredder står ét sted: `GRID_RULES` i `packages/spec/src/catalog.ts`. Max håndhæves, når siden tegnes (`ruleBoundComponents` i `grid.ts`): angiver en spec en bredere bredde (render_view, gemte sider), tegnes elementet i typens max, så en ændret regel slår igennem alle steder. Undtaget er layout `stack` og `page`, tidslinjen med filterkolonne og nyhedernes kortgitter. Et element alene i en række (også en række uden kolonne, fx resultatopgørelsen som egen række på spørgsmålssider) vises højst i sin største lovlige bredde (`maxPxOf`: typens max målt i referencegitteret), venstrestillet; resten af rækken står tom.
 
+Tekstsektioner (`LassoTextSections`, alle varianter), resumé (`LassoSummary`) og tidslinjen (`LassoTimeline`) er højst ⅔ brede (Jakob 03.10, galleri 12.1–12.3): max ⅔ i `GRID_RULES`, så det gælder dashboards, moduler, sidekort i chatten, egne sider og /mcp, og alene i en række står de i ⅔ (`maxPxOf`). Mindstebredden er uændret (½, ¼ og ¼; deler tidslinjen række, står den stadig i ⅓–½ efter sin smalle profil). Tidslinjen med filterkolonne (fuld bredde) og layout `page` (portalens Lasso v1-sektioner, egne kolonner) er bevidst undtaget som før. Resuméets brødtekst har samme skrift som profilens afsnit: 14/21, 400, text-2.
+
 Virksomhedsside: hoved, risiko (kun ved 50+), nøgletal, én graf ved siden af nøgle-værdi-listen, personer og ejere, historik og nyheder.
 
 ## Datatype → element (guide 23, trin 4)

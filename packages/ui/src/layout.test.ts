@@ -297,3 +297,14 @@ test("Fold ud/sammen (Jakob 03.10): ingen ring ved klik, kun tastaturfokus med d
   assert.doesNotMatch(visible.body, /accent|focus-border/);
   assert.match(click.body, /outline: none/);
 });
+
+test("12.2 (Jakob 03.10): resuméets brødtekst har samme skrift som virksomhedsprofilens afsnit", () => {
+  const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+  const rule = (sel: string) => css.match(new RegExp(`^\\${sel} \\{([^}]*)\\}`, "m"))?.[1] ?? "";
+  const decl = (body: string, prop: string) => body.match(new RegExp(`(?:^|;)\\s*${prop}:\\s*([^;]+)`))?.[1]?.trim();
+  const summary = rule(".lasso-summary__body");
+  const profile = rule(".lasso-textsection__body");
+  assert.ok(summary && profile);
+  for (const prop of ["font-size", "line-height", "color"]) assert.equal(decl(summary, prop), decl(profile, prop), prop);
+  assert.equal(decl(summary, "max-width"), undefined, "ingen egen målebredde");
+});
