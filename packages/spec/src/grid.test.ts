@@ -5,7 +5,7 @@ import { GRID_RULES, gridRuleOf, widthProfileOf } from "./catalog.js";
 import { contentWidthOf, driversOf, packPage } from "./compose.js";
 import { emptyDataset } from "./models.js";
 import { contentMinWidth } from "./register.js";
-import { allowsWidth, BAND_COMBOS, bandsToComponents, defaultMinWidth, minPxOf, minWidthAt, reflowBands, REFERENCE_CONTENT_PX, ruleBoundComponents, stackPx, elementMinWidth, originOf, type MinWidthFn, BAND_MAX_DEVIATION, compactOf, GRID_GAP, measuredHeight, MEASURED_HEIGHTS, packBands, packWithinBudget, pageHeight, PAGE_HEIGHT_BUDGET, type PackedBand } from "./grid.js";
+import { allowsWidth, BAND_COMBOS, bandsToComponents, defaultMinWidth, maxPxOf, minPxOf, minWidthAt, reflowBands, REFERENCE_CONTENT_PX, ruleBoundComponents, stackPx, elementMinWidth, originOf, type MinWidthFn, BAND_MAX_DEVIATION, compactOf, GRID_GAP, measuredHeight, MEASURED_HEIGHTS, packBands, packWithinBudget, pageHeight, PAGE_HEIGHT_BUDGET, type PackedBand } from "./grid.js";
 import { DEFAULT_WIDTH, WIDTH_COLUMNS, WIDTHS, type ComponentType, type ViewComponent, type Width } from "./spec.js";
 
 const COMPONENT_TYPES = Object.keys(DEFAULT_WIDTH) as ComponentType[];
@@ -362,4 +362,11 @@ test("bandsToComponents: prioriteten følger med som priority", () => {
   const b = { type: "LassoOwnerList", company: "CVR-1-1" } as unknown as ViewComponent;
   const comps = bandsToComponents([{ stacks: [{ width: "half", items: [b], height: 1 }, { width: "half", items: [a], height: 1 }], height: 1, deviation: 0 }], [a, b]);
   assert.deepEqual(comps.map((c) => (c as { priority?: number }).priority), [2, 1]);
+});
+
+test("maxPxOf: typens max i referencegitteret; fuld for typer med max 1/1 og fuldbredde-varianter", () => {
+  const owners = { type: "LassoOwnerList", company: "CVR-1-1" } as unknown as ViewComponent;
+  assert.equal(maxPxOf(owners), stackPx(WIDTH_COLUMNS[GRID_RULES.LassoOwnerList.max], REFERENCE_CONTENT_PX));
+  assert.equal(maxPxOf({ type: "LassoCompanyHead", company: "CVR-1-1" } as unknown as ViewComponent), Infinity);
+  assert.equal(maxPxOf({ type: "LassoTimeline", company: "CVR-1-1", filterColumn: true } as unknown as ViewComponent), Infinity);
 });

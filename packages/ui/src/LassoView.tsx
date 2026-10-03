@@ -24,6 +24,7 @@ import {
   measuredHeight,
   packBands,
   reflowBands,
+  maxPxOf,
   widthOfColumns,
   contentMinWidthFn,
   type FlowBand,
@@ -1234,6 +1235,11 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
   // Den responsive model (grid.ts reflowBands): båndene lægges om efter midtens målte bredde.
   const [contentRef, contentWidth] = useContentWidth();
   const flowDashboard = useMemo(() => (spec.layout === "dashboard" ? dashboardBands(laidOut, dataset ?? null, contentWidth) : []), [spec, dataset, contentWidth]);
+  // Et element alene i en række vises højst i sin største lovlige bredde (typens max), venstrestillet.
+  const alone = (cs: readonly ViewComponent[]) => {
+    const max = Math.max(...cs.map(maxPxOf));
+    return contentWidth && Number.isFinite(max) && max < contentWidth ? { maxWidth: `${Math.round(max)}px` } : undefined;
+  };
   const flowColumns = useMemo(
     () => (spec.layout === "columns" && contentWidth ? flowColumnBands(mergeFullGroups(columnBands(laidOut)), contentWidth, dataset ?? null, laidOut) : null),
     [spec, dataset, contentWidth],
@@ -1386,7 +1392,7 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
                       {renderGroup(band.group, band.items, dataset, props, act, frame)}
                     </div>
                   ) : band.kind === "full" ? (
-                    <div key={`b${b}`} className="lasso-cell lasso-cell--full">
+                    <div key={`b${b}`} className="lasso-cell lasso-cell--full" style={alone([band.item.c])}>
                       {renderComponent(band.item.c, dataset, props, act, band.item.i, frame)}
                     </div>
                   ) : (
@@ -1394,7 +1400,10 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
                     <div
                       key={`b${b}`}
                       className="lasso-cell lasso-cell--full lasso-columns lasso-columns--ratio lasso-columns--flow"
-                      style={{ ["--lasso-columns-template" as string]: band.stacks.map((st) => `minmax(0, ${WIDTH_COLUMNS[st.width]}fr)`).join(" ") }}
+                      style={{
+                        ["--lasso-columns-template" as string]: band.stacks.map((st) => `minmax(0, ${WIDTH_COLUMNS[st.width]}fr)`).join(" "),
+                        ...(band.stacks.length === 1 ? alone(band.stacks[0]!.items.map((it) => it.c)) : {}),
+                      }}
                     >
                       {band.stacks.map((st, k) => (
                         <div key={k} className="lasso-column">
@@ -1454,7 +1463,7 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
                       const run = b.run;
                       // Et element alene i sit bånd står i fuld bredde (23.1 4d: aldrig en ½ alene, ingen huller).
                       return run.kind === "one" ? (
-                        <div key={run.item.i} className="lasso-cell lasso-cell--full">
+                        <div key={run.item.i} className="lasso-cell lasso-cell--full" style={alone([run.item.c])}>
                           {renderComponent(run.item.c, dataset, props, act, run.item.i, frame)}
                         </div>
                       ) : (

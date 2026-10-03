@@ -174,7 +174,7 @@ export function withinRule(c: ViewComponent): ViewComponent {
  * Sidens komponenter med bredderne holdt inden for reglen, før siden lægges ud. Undtaget er det, der bevidst
  * står i fuld bredde: alt i 'stack' og 'page', rækker uden kolonne i 'columns' (fx resultatopgørelsen som egen
  * række på spørgsmålssider) og varianter, der altid fylder bredden (tidslinjen med filterkolonne, nyhedernes kortgitter).
- * Et element alene i sit bånd står stadig i fuld bredde (pakningens regel 4).
+ * Et element alene i sit bånd pakkes som en fuld række, men vises højst i sin største lovlige bredde (maxPxOf).
  */
 export function ruleBoundComponents(layout: ViewSpec["layout"], components: readonly ViewComponent[]): ViewComponent[] {
   if (layout === "stack" || layout === "page") return [...components];
@@ -640,6 +640,17 @@ export function stackPx(cols: number, content: number, gap = GRID_GAP): number {
  */
 export function minPxOf(c: ViewComponent, min: MinWidthFn = defaultMinWidth): number {
   return stackPx(WIDTH_COLUMNS[min(c)], REFERENCE_CONTENT_PX);
+}
+
+/**
+ * Elementets største lovlige bredde i px: typens max (GRID_RULES, eller variantens regel) målt i referencegitteret.
+ * Står elementet alene i en række, vises det højst så bredt (resten af rækken står tom); Infinity = må fylde bredden
+ * (typer med max 1/1 og varianter, der altid fylder bredden: tidslinjen med filterkolonne, nyhedernes kortgitter).
+ */
+export function maxPxOf(c: ViewComponent): number {
+  if ((c.type === "LassoTimeline" && c.filterColumn) || (c.type === "LassoNews" && c.layout === "grid")) return Infinity;
+  const max = gridRuleOf(c).max;
+  return max === "full" ? Infinity : stackPx(WIDTH_COLUMNS[max], REFERENCE_CONTENT_PX);
 }
 
 /**
