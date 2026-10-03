@@ -161,3 +161,17 @@ test("28.4: bestillingsformular med de fire rapporttyper, PDF | Zip og 'Bestil N
   assert.match(html, /142 virksomheder, Zip/);
   assert.match(html, /lasso-batches__action">Hent zip</);
 });
+
+test("09.2/28.7: nøgle-værdi følger listens egen bredde (container lasso-kv), nøglen højst halvdelen, to kort side om side først fra 360 px hver", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { Registration } = await import("./components/Registration.js");
+  const company = { lassoId: "CVR-1-1", name: "Prøve A/S", accountingClass: "B", registeredCapital: { amount: 500000, currency: "DKK" } };
+  const html = renderToStaticMarkup(createElement(Registration, { company }));
+  // Rækkerne står i en .lasso-reg__rows (containeren), med nøgle og værdi som søskende.
+  assert.match(html, /class="lasso-reg__rows"><div class="lasso-kv-row ?"><div class="lasso-kv-row__label">/);
+  const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+  assert.match(css, /\.lasso-kv-list, \.lasso-reg__rows \{ container-type: inline-size; container-name: lasso-kv; \}/);
+  assert.match(css, /\.lasso-root \.lasso-kv-row > \.lasso-kv-row__label \{ max-width: 50%; \}/);
+  assert.match(css, /@container lasso-kv \(max-width: 400px\)/);
+  assert.match(css, /\.lasso-reg \{ display: grid; grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 360px\), 1fr\)\);/);
+});
