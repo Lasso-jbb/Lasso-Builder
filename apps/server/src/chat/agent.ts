@@ -164,8 +164,8 @@ export function anthropicModelCall(apiKey: string): ModelCall {
 export const CHAT_RULES = `Du er Lassos assistent i Lassos egen chat (portalen). Svar på dansk, kort og i et almindeligt sprog.
 
 Placering (vælges først):
-- Brugerens tur begynder med [Kontekst]: den fane, brugeren står på (en virksomhed, en person eller forsiden/et resultat = globalt), de åbne faner og evt. det, brugeren lige valgte i en menu. Placeringen er afgjort, før noget vises: højst én fane pr. spørgsmål, og place_answer kaldes højst én gang og som det første.
-- Standard er at blive: svar i den aktive kontekst. "Hvad laver Jakob ellers?" på LASSO X A/S besvares med show_person/render_view om Jakob, vist her. Nævner spørgsmålet en anden person eller virksomhed, men beder brugeren ikke om dens side, så kald place_answer med current.
+- Brugerens tur begynder med [Kontekst]: den fane, brugeren står på (en virksomhed, en person eller forsiden/et resultat = globalt), de åbne faner og evt. det, brugeren lige valgte i en menu. Placeringen er afgjort, før noget vises: højst én fane pr. spørgsmål. Kald kun place_answer for at åbne en anden fane eller en resultatfane (højst én gang og som det første); for at blive kaldes intet.
+- Standard er at blive: svar i den aktive kontekst. "Hvad laver Jakob ellers?" på LASSO X A/S besvares med show_person/render_view om Jakob, vist her. Nævner spørgsmålet en anden person eller virksomhed, men beder brugeren ikke om dens side, så bliv her, uden place_answer.
 - Åbn kun en anden fane, når brugeren selv skriver "vis alt om X", "se alt om X", "tilføj X" eller "åbn X": find først id med find_entity. Ét kandidat: place_answer med entity (id og navn fra find_entity), og vis så siden (show_person/show_company med show_all for "vis alt"). Flere kandidater: ask_choice med ét punkt pr. kandidat (placement entity med entity fra find_entity, focus overblik), title på punktet er navnet, description er rollen, alderen, byen og virksomhederne; den mest sandsynlige først og anbefalet (recommended: true, højst ét). Fritekst lægger appen selv til.
 - Er du ikke sikker på, hvem der menes, så kald ask_choice med kandidaterne; skriv aldrig kandidater som en liste i teksten, og spørg aldrig efter by eller firma i tekst. "Tilføj X", "åbn X" og "vis alt om X" åbner X.
 - Tilbyd aldrig kort eller fuld indsigt, og brug aldrig ask_choice til at vælge placering. ask_choice er kun til flere match på et navn.
@@ -350,7 +350,9 @@ export async function runChat({ ctx, config, model, history, message, context, e
   // Et valg i menuen er brugerens egen handling og afgjort: et skifte (entity, eller global fra en entitet) sendes som decided, så klienten flytter.
   const proposed = placementOf(context);
   const picked = Boolean(context.choice && !("free" in context.choice));
-  const placement: Placement = picked && (proposed.placement === "entity" || (proposed.placement === "global" && context.active.kind !== "global")) ? { ...proposed, decided: true } : proposed;
+  const moves = picked && (proposed.placement === "entity" || (proposed.placement === "global" && context.active.kind !== "global"));
+  // På en entitetsfane uden skifte står svaret her: serveren sætter here selv (modellen kalder ikke place_answer for at blive).
+  const placement: Placement = moves ? { ...proposed, decided: true } : proposed.placement === "current" && context.active.kind !== "global" ? { ...proposed, here: true } : proposed;
   emit({ type: "placement", ...placement });
   // Turens tilstand: place_answer kan ændre placeringen (én gang, før noget vises); viewed låser den.
   const turn: TurnState = { placement, placed: false, viewed: false };

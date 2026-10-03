@@ -137,7 +137,7 @@ const placeAnswer: ChatToolDef = {
   title: "Vælg placering",
   tool: toolOf(
     PLACE_ANSWER,
-    "Vælger, hvor svaret skrives, før du viser noget; kaldes højst én gang pr. spørgsmål og som det første. current (standard) = her, på den aktive fane: kald det, når spørgsmålet nævner en anden person eller virksomhed, men brugeren ikke har bedt om dens side. entity = den anden persons eller virksomheds egen fane, kun når brugeren skriver 'vis alt om X' eller 'åbn X' (id og navn fra find_entity; passer navnet på flere, brug ask_choice). global = en liste, sammenligning eller analyse på en resultatfane, med title (Firmaliste, Sammenligning, Markedsanalyse eller Kort). Serveren kontrollerer valget og svarer med en fejl, hvis det ikke holder.",
+    "Kald kun place_answer for at åbne en anden fane eller en resultatfane, før du viser noget; højst én gang pr. spørgsmål og som det første. For at blive på den aktive fane (standard) kaldes det ikke. entity = den anden persons eller virksomheds egen fane, kun når brugeren skriver 'vis alt om X' eller 'åbn X' (id og navn fra find_entity; passer navnet på flere, brug ask_choice). global = en liste, sammenligning eller analyse på en resultatfane, med title (Firmaliste, Sammenligning, Markedsanalyse eller Kort). Serveren kontrollerer valget og svarer med en fejl, hvis det ikke holder.",
     placeAnswerSchema,
     { strict: true },
   ),
