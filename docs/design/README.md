@@ -10,11 +10,14 @@ Designguiden på `/designguide` er den samlede, levende udgave af alt det her. D
 
 - **Fundament**: alle tokens fra `styles.css` med lys og mørk værdi, kontrast mod fladen og linjen i filen, plus galleriets tavle 01 og 01b.
 - **Moduler**: hver komponent i kataloget med rigtige data, tegnet i hver bredde, gitteret tillader (min til maks i `GRID_RULES`), og i standardbredden på portal 1440, desktop 1200, chat 760, tablet 834 og mobil 390. Hver bredde tegnes i en rigtig skærmbredde (iframe), så container- og media-queries er dem, modulet får. Hver ramme tjekkes automatisk for overløb, vandret rulning og afkortet tekst. Faner for tilstande (henter, fejl, ingen adgang og de andre virksomheders data), tekster, brug og props.
+- **Portalen**: portalens ramme (`PORTAL.md`) og **Chatten** (`CHAT.md`): samtalen med de rigtige komponenter og rigtige data i 1440, 1200, 834 og 390 px, de femten regler, målene, `--chat-*`-tokens og Paper-eksporten `docs/design/chat/chat-designguide.html` (historisk kilde) i en ramme.
 - **Galleriet**: alle elementer fra `tools/gallery` med katalognummer, på desktop og mobil.
 - **Hele sider**: `show_company` og `show_person` for hvert fokus med live-data på hver skærm.
 - **Tekster**: al brugervendt tekst i `packages/ui` og de brugervendte filer i `packages/spec`, med fil og linje.
 - **Validering**: alle moduler i alle bredder på én gang, med resultatet i en matrix.
 - **Regler**: denne fil og de andre filer i `docs/design`.
+
+Filerne i `docs/design`: `README.md` (denne), `PORTAL.md` (portalens ramme), `CHAT.md` (chatten), `KATALOG-TEST.md`, `KOMPONENT-OPSKRIFT.md`, `VISUEL-TEST.md` og `chat/chat-designguide.html` (Paper-eksporten af chatten).
 
 ### Kommentarer
 
