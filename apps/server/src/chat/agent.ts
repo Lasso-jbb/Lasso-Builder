@@ -64,19 +64,31 @@ export function fallbackTitle(name: string, spec: ViewSpec): GlobalTitle {
 }
 
 /** Modulets navn og id i linket, når en visning om en entitet blev vist med et kendt fokus (ellers undefined). */
-export function moduleLink(tool: string, input: unknown, spec: ViewSpec): { focus: string; label: string } | undefined {
+export function moduleLink(tool: string, input: unknown, spec: ViewSpec): { focus: string; label: string; entityId?: string } | undefined {
   const focus = (input as { focus?: unknown } | null)?.focus;
   if (tool === "show_company") {
     const f: Focus | undefined = (FOCUSES as readonly string[]).includes(String(focus)) ? (focus as Focus) : (FOCUSES.find((x) => FOCUS_LABELS[x] === spec.subtitle) ?? "overblik");
     const page = pageFocus(f);
-    return { focus: page, label: FOCUS_LABELS[page] };
+    return { focus: page, label: FOCUS_LABELS[page], entityId: specEntityId(spec) };
   }
   if (tool === "show_person") {
     const f: PersonFocus = isPersonFocus(focus) ? focus : (PERSON_FOCUSES.find((x) => PERSON_FOCUS_LABELS[x] === spec.subtitle) ?? "overblik");
-    return { focus: f, label: PERSON_FOCUS_LABELS[f] };
+    return { focus: f, label: PERSON_FOCUS_LABELS[f], entityId: specEntityId(spec) };
   }
   return undefined;
 }
+
+/** Det første Lasso-ID (company eller person) i en visnings komponenter: den entitet, visningen handler om. */
+function specEntityId(spec: ViewSpec): string | undefined {
+  for (const c of spec.components as { company?: unknown; person?: unknown }[]) {
+    const id = typeof c.company === "string" ? c.company : typeof c.person === "string" ? c.person : undefined;
+    if (id) return id;
+  }
+  return undefined;
+}
+
+/** Om to Lasso-ID'er (eller et CVR-nummer og et Lasso-ID) er samme virksomhed eller person. */
+const sameEntity = (a: string | undefined, b: string | undefined): boolean => Boolean(a && b && a.replace(/^CVR-1-/i, "").toLowerCase() === b.replace(/^CVR-1-/i, "").toLowerCase());
 
 /** Assistentens tekst i denne tur (fra og med beskeden efter den bevarede historik og brugerens tur). */
 function turnAssistantText(messages: readonly BetaMessageParam[], from: number): string {
@@ -91,10 +103,14 @@ function turnAssistantText(messages: readonly BetaMessageParam[], from: number):
  * Linjen med modullinks, når modellen ikke skrev nogen i turen: modulet i visningen (fx [Regnskab](lasso:modul/regnskab)),
  * ellers Overblik, når svaret hører til en person eller virksomhed (den aktive fane eller målet for et skifte); en global fane får ingen.
  */
-export function fallbackLinks(messages: readonly BetaMessageParam[], from: number, shown: { focus: string; label: string } | undefined, placement: Placement, context: ChatContext): string | undefined {
+export function fallbackLinks(messages: readonly BetaMessageParam[], from: number, shown: { focus: string; label: string; entityId?: string } | undefined, placement: Placement, context: ChatContext): string | undefined {
   if (turnAssistantText(messages, from).includes("lasso:")) return undefined;
-  if (shown) return `[${shown.label}](lasso:modul/${shown.focus})`;
-  if (placement.placement === "entity" || context.active.kind !== "global") return `[${FOCUS_LABELS.overblik}](lasso:modul/overblik)`;
+  // Svaret på en resultatfane (global) har ingen entitet, modulerne kan åbne.
+  if (placement.placement === "global") return undefined;
+  // Modulet kun, hvis visningen handler om den aktive (eller målet for et skifte) entitet; ellers ville linket åbne et andet modul på en anden entitet.
+  const entity = placement.placement === "entity" ? placement.target?.id : context.active.kind !== "global" ? context.active.id : undefined;
+  if (shown && sameEntity(shown.entityId, entity)) return `[${shown.label}](lasso:modul/${shown.focus})`;
+  if (entity) return `[${FOCUS_LABELS.overblik}](lasso:modul/overblik)`;
   return undefined;
 }
 
@@ -341,7 +357,7 @@ export async function runChat({ ctx, config, model, history, message, context, e
   /** Den første visning (navn og spec): giver en resultatfane et generisk navn, når modellen ikke valgte et. */
   let firstView: { name: string; spec: ViewSpec } | undefined;
   /** Modulet i den første visning om en entitet (til linjen med modullinks, hvis modellen ikke skrev nogen). */
-  let shownModule: { focus: string; label: string } | undefined;
+  let shownModule: { focus: string; label: string; entityId?: string } | undefined;
   /** Turen sluttede normalt med et tekstsvar (ikke en fejl, afbrydelse eller menu). */
   let endedNormally = false;
   let choiceShown = false;

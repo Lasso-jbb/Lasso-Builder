@@ -640,9 +640,9 @@ test("modullinks: uden links i modellens tekst tilføjer serveren modulet fra vi
   const done = r.all!.at(-1) as Event & { history: { role: string; content: { type: string; text?: string }[] }[] };
   assert.match(done.history.at(-1)!.content.at(-1)!.text!, /Her er regnskabet\.\n\n\[Regnskab\]\(lasso:modul\/regnskab\)$/);
 
-  // Uden fokus i inputtet: navnet findes ud fra visningen; en person får personmodulerne.
+  // Uden fokus i inputtet: navnet findes ud fra visningen; en visning om en anden person end den aktive giver Overblik (D8).
   script.push(useTool("show_person", { person: "CVR-3-4000000007", focus: "netvaerk" }), sayText("Her er netværket."));
-  assert.deepEqual(linkText((await chat({ message: "Vis netværket", context: onLasso })).all), ["\n\n[Netværk](lasso:modul/netvaerk)"]);
+  assert.deepEqual(linkText((await chat({ message: "Vis netværket", context: onLasso })).all), ["\n\n[Overblik](lasso:modul/overblik)"]);
 
   // Modellen skrev selv et link: intet tilføjes.
   script.push(useTool("show_company", { company: "99000001", focus: "regnskab" }), sayText("Her.\n\n[Ejerskab](lasso:modul/ejerskab)"));
@@ -818,4 +818,19 @@ test("D5: bremsen pr. IP følger X-Forwarded-For med TRUST_PROXY=1, og ignorerer
   login.allow("ny");
   assert.equal(chat.size(), 1);
   assert.equal(login.size(), 1);
+});
+
+test("D8: ingen modullink på et skifte til en resultatfane; modulet kun for den aktive/målets entitet", async () => {
+  // Global fra en entitet (place_answer global): ingen links.
+  script.push(useTool("place_answer", { placement: "global", title: "Firmaliste" }), useTool("search_persons", { query: "Prøve" }), sayText("Her."));
+  assert.deepEqual(linkText((await chat({ message: "Find personer med efternavnet Prøve", context: onLasso }, zoe)).all), []);
+  // En visning om en anden person end den aktive (uden skifte): Overblik for den aktive, ikke personens Netværk.
+  script.push(useTool("show_person", { person: jakob.id, focus: "netvaerk" }), sayText("Her."));
+  assert.deepEqual(linkText((await chat({ message: "Hvem sidder Gitte sammen med?", context: onLasso }, zoe)).all), ["\n\n[Overblik](lasso:modul/overblik)"]);
+  // Skifte til en person (entity): modulet fra visningen, for målet.
+  script.push(useTool("find_entity", { kind: "person", query: "Gitte Prøve" }), useTool("place_answer", placeEntity({ focus: "netvaerk" })), useTool("show_person", { person: jakob.id, focus: "netvaerk" }), sayText("Her."));
+  assert.deepEqual(linkText((await chat({ message: "Vis alt om Gitte Prøve", context: onLasso }, zoe)).all), ["\n\n[Netværk](lasso:modul/netvaerk)"]);
+  // Den aktive entitet (kun id i visningen): modulet.
+  script.push(useTool("show_company", { company: "99000001", focus: "regnskab" }), sayText("Her."));
+  assert.deepEqual(linkText((await chat({ message: "Vis regnskabet", context: onLasso }, zoe)).all), ["\n\n[Regnskab](lasso:modul/regnskab)"]);
 });
