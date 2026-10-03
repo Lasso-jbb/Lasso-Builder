@@ -228,6 +228,10 @@ test("chat: konteksten står først i brugerens tur; uden context svares der glo
   assert.match(lastUserTexts(calls.at(-1)!)[0]!, /modul oekonomi\. Brugeren ser: oekonomi — Omsætning 2025: 38 mio\.$/);
   const tooLong = { active: { ...seen.active, view: { module: "oekonomi", summary: "x".repeat(4001) } } };
   assert.equal((await chat({ message: "Hvorfor?", context: tooLong })).status, 400);
+  // Uændret siden sidst: kun den korte linje (historikken har det fulde resumé).
+  script.push(sayText("Ja."));
+  await chat({ message: "Og så?", context: { active: { ...seen.active, view: { module: "oekonomi", same: true } }, open: [] } });
+  assert.match(lastUserTexts(calls.at(-1)!)[0]!, /Brugeren ser: oekonomi \(uændret siden sidst\)\.$/);
 });
 
 test("chat: ugyldig context og et valg uden ask_choice i historikken afvises med 400", async () => {

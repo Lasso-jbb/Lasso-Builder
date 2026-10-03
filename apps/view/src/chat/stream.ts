@@ -70,7 +70,9 @@ export type ChoicePick = { id: string; index: number; action: ChoiceAction } | {
 /** Det, brugeren ser på fanen: modulet og serverens resumé af dets data (højst VIEW_SUMMARY_MAX tegn). */
 export interface ChatViewContext {
   module: string;
-  summary: string;
+  /** Udeladt, når same er sat: resuméet er det samme, som blev sendt tidligere i samtalen. */
+  summary?: string;
+  same?: boolean;
 }
 
 export interface ChatContext {

@@ -17,6 +17,7 @@ import {
   closeItem,
   contextFor,
   freeTextPick,
+  historyTrimmed,
   headLines,
   isUnrecognizedHistory,
   LASSO_TAB,
@@ -28,6 +29,7 @@ import {
   openItem,
   restoreCache,
   skipChoice,
+  summaryFingerprint,
   recencyOrder,
   saveCache,
   saveRecent,
@@ -131,6 +133,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const persistTheme = useRef(true);
   /** Sat, når sessionen er logget ud: så gemmes samtalen ikke igen for en bruger, der ikke er logget ind (et nyt login er en ny sideindlæsning). */
   const loggedOut = useRef(false);
+  /** Fingeraftryk af det "Brugeren ser"-resumé, modellen sidst fik i denne samtale; null = send det fulde (ny samtale, trimmet historik). */
+  const sentSummary = useRef<string | null>(null);
   const abort = useRef<AbortController | null>(null);
   const resultSeq = useRef(0);
   const lookupSeq = useRef(0);
@@ -460,7 +464,10 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     // Fritekst går kun til menuen, når den tillader det; ellers besvares spørgsmålet her uden valg.
     const choice = pick ?? (menu ? freeTextPick(menu) : undefined);
     // Serveren svarer i den fane, man står på: den, det modul brugeren ser, de åbne faner og valget sendes som kontekst.
-    const context = contextFor(here, openRef.current, choice, here && here.kind !== "result" ? shownRef.current[`${here.key}:${here.tab}`] : undefined);
+    const shownNow = here && here.kind !== "result" ? shownRef.current[`${here.key}:${here.tab}`] : undefined;
+    const context = contextFor(here, openRef.current, choice, shownNow, sentSummary.current);
+    const fingerprint = summaryFingerprint(here, shownNow);
+    const sentHistory = chat.current.history;
     // Et nyt spørgsmål lukker alle åbne menuer (deres valg passer ikke længere til samtalen).
     setAnswers((all) => Object.fromEntries(Object.entries(all).map(([k, a]) => [k, a.choice ? { ...a, choice: undefined } : a])));
     // Svaret hører til den fane, man står på; står man på forsiden eller et resultat, til en ny resultatfane.
@@ -524,6 +531,9 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
             const at = current;
             setOpen((l) => l.map((o) => (o.key !== at ? o : ent && ent.id === at ? { ...o, name: ent.name } : o.kind === "result" && !named ? { ...o, name: shortName(e.spec.title) } : o)));
           } else if (e.type === "done") {
+            // Trimmede serveren historikken, kan det tidligere resumé være væk: næste gang sendes det fulde igen.
+            if (historyTrimmed(sentHistory, e.history)) sentSummary.current = null;
+            else if (fingerprint) sentSummary.current = fingerprint;
             chat.current = { history: e.history, sig: e.sig };
           }
           patch((a) => applyEvent(a, e));
@@ -532,7 +542,10 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       );
     } catch (e) {
       // Serveren kender ikke samtalen (ændret historik eller signatur): begynd en ny, så brugeren ikke sidder fast.
-      if (e instanceof ChatHttpError && isUnrecognizedHistory(e.status, e.message)) chat.current = { history: [] };
+      if (e instanceof ChatHttpError && isUnrecognizedHistory(e.status, e.message)) {
+        chat.current = { history: [] };
+        sentSummary.current = null;
+      }
       if (e instanceof ChatHttpError && e.status === 401) {
         // Sessionen er udløbet: samtalen ryddes og gemmes ikke igen.
         loggedOut.current = true;

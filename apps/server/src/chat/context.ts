@@ -24,7 +24,10 @@ export type ChatEntity = z.infer<typeof entitySchema>;
 
 /** Det, brugeren ser på fanen: modulet og serverens resumé af dets data (samme tekst som værktøjssvarene giver modellen). */
 export const VIEW_SUMMARY_MAX = 4000;
-const viewSchema = z.object({ module: z.string().min(1).max(40), summary: z.string().max(VIEW_SUMMARY_MAX) });
+/** summary udelades med same: true, når klienten sendte præcis samme resumé tidligere i samtalen (historikken har det). */
+const viewSchema = z
+  .object({ module: z.string().min(1).max(40), summary: z.string().max(VIEW_SUMMARY_MAX).optional(), same: z.boolean().optional() })
+  .refine((v) => v.summary !== undefined || v.same === true, { message: "summary eller same kræves" });
 
 const activeSchema = z.union([
   z.object({ kind: z.enum(["company", "person"]), ...entityBase, tab: z.string().max(40).optional(), view: viewSchema.optional() }).refine(idFits, { message: "id passer ikke til kind" }),
@@ -144,7 +147,8 @@ export function contextText(ctx: ChatContext): string {
   else {
     lines.push(`Aktiv fane: ${entityText(a)}${a.tab ? `, modul ${oneLine(a.tab)}` : ""}.`);
     // Det tredje lag i konteksten (docs/chat.md): hvad brugeren ser, så "hvorfor faldt den?" kan besvares ud fra tallene på skærmen.
-    if (a.view?.summary) lines.push(`Brugeren ser: ${oneLine(a.view.module)} — ${oneLine(a.view.summary)}`);
+    if (a.view?.same) lines.push(`Brugeren ser: ${oneLine(a.view.module)} (uændret siden sidst).`);
+    else if (a.view?.summary) lines.push(`Brugeren ser: ${oneLine(a.view.module)} — ${oneLine(a.view.summary)}`);
   }
   if (ctx.open.length) lines.push(`Åbne faner: ${ctx.open.map((e) => `${oneLine(e.name)} (${oneLine(e.id)})`).join(", ")}.`);
   return `[Kontekst] ${lines.join(" ")}`;

@@ -93,6 +93,14 @@ test("contextText: linjeskift og styretegn i navne og resumé bliver til mellemr
   assert.match(text, /Åbne faner: Jakob B \(CVR-3-4000123\)/);
 });
 
+test("view.same: resuméet udelades, når det er uændret; skemaet kræver summary eller same", () => {
+  const same = contextText({ active: { ...lasso, tab: "oekonomi", view: { module: "oekonomi", same: true } }, open: [] });
+  assert.match(same, /modul oekonomi\. Brugeren ser: oekonomi \(uændret siden sidst\)\.$/);
+  assert.ok(parseContext({ active: { ...lasso, view: { module: "oekonomi", same: true } } }));
+  assert.equal(parseContext({ active: { ...lasso, view: { module: "oekonomi" } } }), null, "hverken summary eller same");
+  assert.equal(parseContext({ active: { ...lasso, view: { module: "oekonomi", same: false } } }), null);
+});
+
 test("parseContext: resuméet af det, brugeren ser, er højst 4000 tegn", () => {
   const view = (n: number) => ({ active: { ...lasso, tab: "oekonomi", view: { module: "oekonomi", summary: "x".repeat(n) } } });
   assert.ok(parseContext(view(4000)));

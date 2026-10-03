@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { Dataset, ViewSpec } from "@lasso/spec";
 import type { LookupResult } from "../portal/api.js";
 import type { ChatEvent } from "../chat/stream.js";
-import { addRecent, applyEvent, choiceKey, choiceSend, defaultChoiceSelection, skipChoice, CHAT_CACHE_TTL_MS, clearCache, dropTabDatasets, isUnrecognizedHistory, resetConversation, recencyOrder, shortName, restoreCache, saveCache, serializeCache, askPlaceholder, choiceMessage, closeItem, contextFor, freeTextPick, headLines, highlight, lastView, loadRecent, mapViews, newAnswer, openItem, searchCounts, searchRows, suggestions, withLastView, withoutHead, type OpenItem, type PendingChoice } from "./model.js";
+import { addRecent, applyEvent, historyTrimmed, summaryFingerprint, textHash, choiceKey, choiceSend, defaultChoiceSelection, skipChoice, CHAT_CACHE_TTL_MS, clearCache, dropTabDatasets, isUnrecognizedHistory, resetConversation, recencyOrder, shortName, restoreCache, saveCache, serializeCache, askPlaceholder, choiceMessage, closeItem, contextFor, freeTextPick, headLines, highlight, lastView, loadRecent, mapViews, newAnswer, openItem, searchCounts, searchRows, suggestions, withLastView, withoutHead, type OpenItem, type PendingChoice } from "./model.js";
 
 const novo: OpenItem = { key: "CVR-1-24256790", kind: "company", name: "NOVO NORDISK A/S", tab: "overblik" };
 const lasso: OpenItem = { key: "CVR-1-34580820", kind: "company", name: "LASSO X A/S", tab: "overblik" };
@@ -238,6 +238,27 @@ test("isUnrecognizedHistory: kun serverens 400 om en samtale, der ikke kan genke
   assert.equal(isUnrecognizedHistory(400, "Samtalen kunne ikke genkendes. Start en ny samtale."), true);
   assert.equal(isUnrecognizedHistory(400, "context er ugyldig"), false);
   assert.equal(isUnrecognizedHistory(429, "Samtalen kunne ikke genkendes"), false);
+});
+
+test("contextFor: resuméet sendes kun, når det er nyt; ellers same; trimmet historik opdages", () => {
+  const shown = { spec: {} as ViewSpec, dataset: {} as Dataset, summary: "Omsætning 2025: 12 mio." };
+  const item = { ...novo, tab: "oekonomi" };
+  const fp = summaryFingerprint(item, shown)!;
+  assert.equal(fp, `${novo.key}:oekonomi:${textHash(shown.summary)}`);
+  assert.equal(summaryFingerprint({ ...novo, tab: "lasso" }, shown), null, "ikke på Lasso-fanen");
+  assert.equal(summaryFingerprint(item, undefined), null);
+  const view = (last?: string | null, s = shown) => (contextFor(item, [novo], undefined, s, last).active as { view?: unknown }).view;
+  assert.deepEqual(view(null), { module: "oekonomi", summary: shown.summary }, "ny samtale: fuldt");
+  assert.deepEqual(view(fp), { module: "oekonomi", same: true }, "uændret: kun same");
+  assert.deepEqual(view(fp, { ...shown, summary: "Omsætning 2025: 13 mio." }), { module: "oekonomi", summary: "Omsætning 2025: 13 mio." }, "ændret: fuldt");
+  assert.notEqual(summaryFingerprint({ ...item, tab: "ejerskab" }, shown), fp, "andet modul");
+  assert.notEqual(textHash("a"), textHash("b"));
+  // Trimning: historikken returneres kortere forfra, eller tom.
+  const sent = [{ role: "user", content: "1" }, { role: "assistant", content: "a" }, { role: "user", content: "2" }, { role: "assistant", content: "b" }];
+  assert.equal(historyTrimmed(sent, [...sent, { role: "user", content: "3" }]), false);
+  assert.equal(historyTrimmed(sent, [...sent.slice(2), { role: "user", content: "3" }, { role: "assistant", content: "c" }, { role: "user", content: "4" }]), true, "ældste tur væk, selv om listen blev længere");
+  assert.equal(historyTrimmed(sent, []), true);
+  assert.equal(historyTrimmed([], [{ role: "user", content: "1" }]), false, "første tur er aldrig trimmet");
 });
 
 test("contextFor: navne og titler afkortes til serverens grænse (200); freeTextPick kun når menuen tillader fritekst", () => {

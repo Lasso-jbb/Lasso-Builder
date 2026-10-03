@@ -163,10 +163,38 @@ const entityRef = (o: OpenItem): ChatEntityRef | null => (o.kind === "result" ? 
  * åbne firmaer og personer (højst 20), og det valg, brugeren lige traf i menuen. Serveren svarer altid i
  * den aktive kontekst, så "hvem ejer den?" virker uden at navnet gentages.
  */
-export function contextFor(item: OpenItem | undefined, open: readonly OpenItem[], pick?: ChoicePick, shown?: Shown): ChatContext {
-  // Det, brugeren ser: modulets resumé fra serveren (ikke på Lasso-fanen, som er chattens eget svar).
-  const summary = item && item.kind !== "result" && item.tab !== LASSO_TAB && shown?.summary ? shown.summary.slice(0, VIEW_SUMMARY_MAX) : "";
-  const view = summary && item ? { view: { module: item.tab, summary } } : {};
+/** Resuméet, der sendes som "Brugeren ser": kun på et modul (ikke på Lasso-fanen, som er chattens eget svar), afkortet til serverens grænse. */
+function viewSummary(item: OpenItem | undefined, shown: Shown | undefined): string {
+  return item && item.kind !== "result" && item.tab !== LASSO_TAB && shown?.summary ? shown.summary.slice(0, VIEW_SUMMARY_MAX) : "";
+}
+
+/** Lille, stabil hash (djb2) af en tekst, til fingeraftrykket. */
+export function textHash(text: string): string {
+  let h = 5381;
+  for (let i = 0; i < text.length; i++) h = (h * 33) ^ text.charCodeAt(i);
+  return (h >>> 0).toString(36);
+}
+
+/**
+ * Fingeraftryk af det, brugeren ser (fane, modul, resumé). Er det det samme, som sidst blev sendt i samtalen, sendes
+ * kun same: true (docs/chat.md, tokens): historikken har allerede det fulde resumé. null uden resumé.
+ */
+export function summaryFingerprint(item: OpenItem | undefined, shown: Shown | undefined): string | null {
+  const summary = viewSummary(item, shown);
+  return summary && item ? `${item.key}:${item.tab}:${textHash(summary)}` : null;
+}
+
+/** Om serveren trimmede historikken (de ældste ture kastes forfra): så har modellen måske ikke det tidligere resumé længere. */
+export function historyTrimmed(sent: readonly unknown[], returned: readonly unknown[]): boolean {
+  if (!sent.length) return false;
+  return !returned.length || JSON.stringify(returned[0]) !== JSON.stringify(sent[0]);
+}
+
+export function contextFor(item: OpenItem | undefined, open: readonly OpenItem[], pick?: ChoicePick, shown?: Shown, lastSent?: string | null): ChatContext {
+  // Det, brugeren ser: modulets resumé fra serveren, eller kun "uændret", når præcis det samme allerede er sendt i samtalen.
+  const summary = viewSummary(item, shown);
+  const fp = summaryFingerprint(item, shown);
+  const view = summary && item ? { view: fp && fp === lastSent ? { module: item.tab, same: true } : { module: item.tab, summary } } : {};
   const active: ChatContext["active"] = !item ? { kind: "global" } : item.kind === "result" ? { kind: "global", title: clip(item.name) } : { kind: item.kind, id: item.key, name: clip(item.name), tab: item.tab, ...view };
   const refs = open.map(entityRef).filter((e): e is ChatEntityRef => e !== null).slice(0, 20);
   return { active, open: refs, ...(pick ? { choice: pick } : {}) };
