@@ -5980,3 +5980,15 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   box-shadow: none;
 }
 .lasso-root .lasso-analysis__toggle:focus-visible { border-color: var(--lasso-border-strong); }
+
+/* MCP-appen (Claude.ai): "Åben i Lasso" øverst og "Del visning" nederst (apps/view/src/mcpLinks.tsx, Jakob 03.10). */
+.lasso-root .lasso-mcplinks { display: flex; align-items: center; gap: var(--lasso-space-2); padding: var(--lasso-space-3) var(--lasso-space-4); background: var(--lasso-surface); }
+.lasso-root .lasso-mcplinks--top { justify-content: flex-end; padding-bottom: 0; }
+.lasso-root .lasso-mcplinks--bottom { flex-wrap: wrap; border-top: 1px solid var(--lasso-divider-subtle); }
+.lasso-root .lasso-mcplinks__open > span { display: inline-flex; align-items: center; gap: var(--lasso-space-2); }
+.lasso-root .lasso-mcplinks__mark { width: 16px; height: 13px; color: var(--lasso-accent); }
+.lasso-root .lasso-mcplinks__label { font-size: var(--lasso-fs); font-weight: 500; color: var(--lasso-text); }
+.lasso-root .lasso-mcplinks__url { flex: 1 1 220px; min-width: 0; height: 32px; padding: 0 10px; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius); background: var(--lasso-surface); color: var(--lasso-text-2); font: inherit; font-size: var(--lasso-fs-sm); text-overflow: ellipsis; }
+.lasso-root .lasso-mcplinks__url:focus { outline: none; border-color: var(--lasso-focus-border); }
+.lasso-root .lasso-mcplinks__status { flex-basis: 100%; font-size: var(--lasso-fs-sm); color: var(--lasso-text-3); }
+.lasso-root .lasso-mcplinks__status:empty { display: none; }
