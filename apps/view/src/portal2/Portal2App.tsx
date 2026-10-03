@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { LassoMark, LassoView, LassoWordmark, type ActionResult, type ViewAction } from "@lasso/ui";
-import { FOCUS_LABELS, isPersonFocus, PAGE_TABS, pageFocus, PERSON_FOCUS_LABELS, PERSON_FOCUSES, type Focus, type PersonFocus, type ViewSpec } from "@lasso/spec";
+import { isPersonFocus, pageFocus, type Focus, type PersonFocus, type ViewSpec } from "@lasso/spec";
 import type { Portal2Boot } from "../boot.js";
 import { ChatHttpError, streamChat, type ChatEvent, type ChoicePick } from "../chat/stream.js";
 import { PDF_SAVED, saveBlob } from "../pdfDownload.js";
@@ -17,8 +17,12 @@ import {
   freeTextPick,
   historyTrimmed,
   headLines,
+  isTemplateTab,
   isUnrecognizedHistory,
   LASSO_TAB,
+  moduleTabs,
+  templateIdOf,
+  templateTab,
   loadRecent,
   CHAT_CACHE_KEY,
   openItem,
@@ -78,8 +82,6 @@ type Theme = "light" | "dark";
 type MenuKind = "hidden" | "all" | "more" | "sel" | "tophidden";
 type Menu = { kind: MenuKind; left: number; top: number } | null;
 
-const COMPANY_TABS = PAGE_TABS.map((f) => ({ id: f as string, label: FOCUS_LABELS[f] }));
-const PERSON_TABS = PERSON_FOCUSES.map((f) => ({ id: f as string, label: PERSON_FOCUS_LABELS[f] }));
 const SECTION_FOCUS: Record<string, string> = { ejerdiagram: "ejerskab", regnskabsanalyse: "oekonomi", noegletal: "oekonomi" };
 const PHONE = "(max-width: 760px)";
 
@@ -102,14 +104,11 @@ function storage(): Storage | undefined {
 }
 
 const isPhone = () => window.matchMedia?.(PHONE).matches ?? false;
-/** Et skabelonmodul i modulrækken: "tpl:<id>". */
-const TPL = "tpl:";
-const tplId = (tab: string): string | null => (tab.startsWith(TPL) ? tab.slice(TPL.length) : null);
 const KIND_ALL: Record<"company" | "person", string> = { company: "alle virksomheder", person: "alle personer" };
 /** Fortryd står i 10 sekunder efter en flytning. */
 const UNDO_MS = 10_000;
-/** Turens svar er ikke længere i gang (afbrudt, fejl eller færdig): status væk, tidspunktet sat. */
-function settleTurn(t: Threads, key: string, turnId: string): Threads {
+/** Turens svar er ikke længere i gang (afbrudt, fejl eller færdig): status væk, tidspunktet sat (thread.ts settleTurn sætter ikke tidspunktet). */
+function settleWithTime(t: Threads, key: string, turnId: string): Threads {
   const tab = t[key];
   if (!tab?.turns.some((x) => x.id === turnId && x.answer.pending)) return t;
   return { ...t, [key]: { ...tab, turns: tab.turns.map((x) => (x.id === turnId ? { ...x, answer: { ...x.answer, pending: false, status: undefined, at: x.answer.at ?? Date.now() } } : x)) } };
@@ -119,7 +118,6 @@ function mapThreadViews(t: Threads, fn: (p: ViewPart) => ViewPart): Threads {
   return Object.fromEntries(Object.entries(t).map(([k, tab]) => [k, { ...tab, turns: tab.turns.map((x) => ({ ...x, answer: { ...x.answer, parts: x.answer.parts.map((p) => (p.kind === "view" ? fn(p) : p)) } })) }]));
 }
 const iconOf = (k: ItemKind): P2IconName => (k === "company" ? "build" : k === "person" ? "user" : "search");
-const tabsOf = (k: ItemKind) => (k === "company" ? COMPANY_TABS : k === "person" ? PERSON_TABS : []);
 
 export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const [theme, setTheme] = useState<Theme>(initialTheme);
@@ -143,8 +141,10 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   /** Nu, mens et Fortryd-vindue er åbent (tikker hvert sekund). */
   const [now, setNow] = useState(() => Date.now());
   const [phone, setPhone] = useState(isPhone);
-  /** Sideskabelonerne pr. entitetstype (ekstra moduler på alle firmaer/personer). */
-  const [templates, setTemplates] = useState<Record<"company" | "person", PageTemplate[]>>({ company: [], person: [] });
+  /** Egne sider (sideskabeloner): ekstra moduler efter de indbyggede på alle virksomheder/personer af samme slags. */
+  const [templates, setTemplates] = useState<PageTemplate[]>([]);
+  /** Egne sider er hentet (så en fane på en fjernet egen side kan sættes tilbage). */
+  const templatesLoaded = useRef(false);
   const [adding, setAdding] = useState<string | null>(null);
   /** Rækken efter en tur, når en side er tilføjet som modul (eller fejlede). */
   const [tplNotes, setTplNotes] = useState<Record<string, { ok: boolean; text: string; retry?: () => void }>>({});
@@ -254,8 +254,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     setBusy(key, true);
     setFailed((f) => ({ ...f, [key]: "" }));
     try {
-      const tpl = tplId(tab);
-      const r: ViewResult = tpl ? await api.templates.render(tpl, id) : kind === "company" ? await api.company(id, tab as Focus) : await api.person(id, tab as PersonFocus);
+      const r: ViewResult = isTemplateTab(tab) ? await api.templates.render(templateIdOf(tab), id) : kind === "company" ? await api.company(id, tab as Focus) : await api.person(id, tab as PersonFocus);
       put(key, { spec: r.spec, dataset: r.dataset, ...(r.summary ? { summary: r.summary } : {}) });
       const ent = entityOf(r.spec, r.dataset);
       if (ent) setOpen((l) => l.map((o) => (o.key === id ? { ...o, name: ent.name } : o)));
@@ -351,13 +350,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       if (!params.get("aaben")) setActive(cached.active);
       toEnd.current = true;
     }
-    // Sideskabelonerne (ekstra moduler); uden API'et (eller ved fejl) er der ingen.
-    for (const kind of ["company", "person"] as const) {
-      api.templates
-        .list(kind)
-        .then((list) => setTemplates((t) => ({ ...t, [kind]: list })))
-        .catch(() => undefined);
-    }
+
     setHydrated(true);
     const ids = (params.get("aaben") ?? "")
       .split(",")
@@ -392,6 +385,23 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     if (!hydrated || pendingKey !== null || !boot.user || loggedOut.current) return;
     saveCache(storage(), serializeCache(boot.user.id, { threads, open, active }, Date.now()), recencyOrder(open, history, active));
   }, [hydrated, open, active, threads, pendingKey, boot.user, history]);
+
+  // Egne sider hentes, når man er logget ind; en fane på en egen side, der er fjernet, står på Overblik.
+  const reloadTemplates = useCallback(async () => {
+    if (!boot.user) return;
+    try {
+      const [c, p] = await Promise.all([api.templates.list("company"), api.templates.list("person")]);
+      templatesLoaded.current = true;
+      setTemplates([...c, ...p]);
+    } catch {
+      // Uden egne sider er modulrækken bare de indbyggede.
+    }
+  }, [api, boot.user]);
+  useEffect(() => void reloadTemplates(), [reloadTemplates]);
+  useEffect(() => {
+    if (!templatesLoaded.current) return;
+    setOpen((l) => (l.some((o) => isTemplateTab(o.tab) && !templates.some((t) => t.id === templateIdOf(o.tab))) ? l.map((o) => (isTemplateTab(o.tab) && !templates.some((t) => t.id === templateIdOf(o.tab)) ? { ...o, tab: "overblik" } : o)) : l));
+  }, [templates]);
 
   // Telefonen (760 px og derunder): kortene og afklaringen har deres mobilform.
   useEffect(() => {
@@ -607,7 +617,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
         else if (e.placement === "global") {
           if (e.title) named = true;
           const cur = openRef.current.find((o) => o.key === at);
-          if (cur && cur.kind !== "result") moveTo({ key: `result:${++resultSeq.current}`, kind: "result", name: e.title ?? "Lasso", tab: LASSO_TAB });
+          if (cur && cur.kind !== "result" && context.active.kind !== "global") moveTo({ key: `result:${++resultSeq.current}`, kind: "result", name: e.title ?? "Lasso", tab: LASSO_TAB });
           else if (e.title) rename(at, e.title);
         }
       }
@@ -632,13 +642,9 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       }
       if (e.type === "done") {
         if (e.placement.title && openRef.current.find((o) => o.key === at)?.kind === "result") rename(at, e.placement.title);
-        setThreads((t) => {
-          const next = finishTurn(t, at, e);
-          const tabNow = next[at]!;
-          // Ny samtale (flyttet) eller trimmet historik: næste gang sendes det fulde resumé.
-          const sent = e.fresh || moved || historyTrimmed(sentHistory, e.history) ? null : (fingerprint ?? tabNow.sent);
-          return { ...next, [at]: { ...tabNow, sent } };
-        });
+        // Ny samtale (flyttet) eller trimmet historik: næste gang sendes det fulde resumé.
+        const sent = e.fresh || moved || historyTrimmed(sentHistory, e.history) ? null : (fingerprint ?? undefined);
+        setThreads((t) => finishTurn(t, at, { ...e, sent, at: Date.now() }));
         return;
       }
       setThreads((t) => applyTurnEvent(t, at, turnId, e));
@@ -658,7 +664,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       const message = e instanceof ChatHttpError && e.status === 401 ? "Chatten kræver login. Log ind i portalen og prøv igen." : errorText(e);
       setThreads((t) => applyTurnEvent(t, at, turnId, { type: "error", message }));
     } finally {
-      setThreads((t) => settleTurn(t, at, turnId));
+      setThreads((t) => settleWithTime(t, at, turnId));
       setPendingKey(null);
       pendingTurn.current = null;
       abort.current = null;
@@ -703,11 +709,10 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     });
     try {
       const tpl = await api.templates.save({ kind: it.kind, title: part.spec.title, ...(part.spec.subtitle ? { subtitle: part.spec.subtitle } : {}), spec: part.spec, entity: { kind: it.kind, id: it.key } });
-      setTemplates((t) => ({ ...t, [tpl.kind]: [...t[tpl.kind].filter((x) => x.id !== tpl.id), tpl] }));
+      setTemplates((t) => [...t.filter((x) => x.id !== tpl.id), tpl]);
       setTplNotes((n) => ({ ...n, [turnId]: { ok: true, text: `Tilføjet som modul på ${KIND_ALL[tpl.kind]}` } }));
-      put(`${it.key}:${TPL}${tpl.id}`, { spec: part.spec, dataset: part.dataset });
-      setOpen((l) => l.map((o) => (o.key === it.key ? { ...o, tab: `${TPL}${tpl.id}` } : o)));
-      void load(it.kind, it.key, `${TPL}${tpl.id}`, true);
+      setOpen((l) => l.map((o) => (o.key === it.key ? { ...o, tab: templateTab(tpl.id) } : o)));
+      void load(it.kind, it.key, templateTab(tpl.id), true);
     } catch (e) {
       setTplNotes((n) => ({ ...n, [turnId]: { ok: false, text: errorText(e), retry: () => void addTemplate(part, turnId) } }));
     } finally {
@@ -720,11 +725,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     setConfirmRemove(null);
     try {
       await api.templates.remove(tpl.id);
-      setTemplates((t) => ({ ...t, [tpl.kind]: t[tpl.kind].filter((x) => x.id !== tpl.id) }));
-      const tab = `${TPL}${tpl.id}`;
-      const affected = openRef.current.filter((o) => o.kind === tpl.kind && o.tab === tab);
-      setOpen((l) => l.map((o) => (o.kind === tpl.kind && o.tab === tab ? { ...o, tab: "overblik" } : o)));
-      for (const o of affected) if (o.kind !== "result") void load(o.kind, o.key, "overblik");
+      // Faner på modulet går tilbage til Overblik (effekten ovenfor), som henter sig selv, når den vises.
+      setTemplates((t) => t.filter((x) => x.id !== tpl.id));
     } catch (e) {
       setNotice(errorText(e));
     }
@@ -755,9 +757,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const busy = dataKey ? loading.has(dataKey) : false;
   const err = dataKey ? failed[dataKey] : "";
   const pending = pendingKey !== null;
-  const itemTemplates = item && item.kind !== "result" ? templates[item.kind] : [];
-  const tabs = item ? [...tabsOf(item.kind), ...itemTemplates.map((t) => ({ id: `${TPL}${t.id}`, label: t.title }))] : [];
-  const activeTemplate = item && item.kind !== "result" ? itemTemplates.find((t) => `${TPL}${t.id}` === item.tab) : undefined;
+  const tabs = item ? moduleTabs(item.kind, templates) : [];
+  const activeTemplate = item && item.kind !== "result" && isTemplateTab(item.tab) ? templates.find((t) => t.kind === item.kind && t.id === templateIdOf(item.tab)) : undefined;
   const curLabel = item ? (onLasso ? "Lasso" : (tabs.find((t) => t.id === item.tab)?.label ?? "")) : "";
 
   // Sub-linjen i fanens tooltip og i mobilarket, når data kommer.
@@ -775,7 +776,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
           shown: current,
           replace: (r) => put(dataKey, r),
           pdf: () =>
-            item.kind !== "result" && !tplId(item.tab) ? (item.kind === "company" ? api.pdfCompany(item.key, item.tab as Focus) : api.pdfPerson(item.key, item.tab as PersonFocus)) : api.pdfSpec(current.spec),
+            item.kind !== "result" && !isTemplateTab(item.tab) ? (item.kind === "company" ? api.pdfCompany(item.key, item.tab as Focus) : api.pdfPerson(item.key, item.tab as PersonFocus)) : api.pdfSpec(current.spec),
         }
       : undefined;
   const partTarget = (part: ViewPart): ActionTarget => ({
@@ -984,7 +985,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
 
   useLayoutEffect(() => {
     measure();
-  }, [measure, open, active, item?.tab, itemTemplates.length]);
+  }, [measure, open, active, item?.tab, templates.length]);
 
   useEffect(() => {
     const onResize = () => {

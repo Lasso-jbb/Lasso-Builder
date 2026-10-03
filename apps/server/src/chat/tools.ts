@@ -2,7 +2,8 @@ import type { BetaTool } from "@anthropic-ai/sdk/resources/beta/messages/message
 import { z } from "zod";
 import { candidatesAsText, resolveEntity } from "../usecases/index.js";
 import type { McpContext } from "../mcp/server.js";
-import { ASK_CHOICE, askChoiceSchema, type ChatContext, type ChoiceAction } from "./context.js";
+import { ASK_CHOICE, askChoiceSchema, PLACE_ANSWER, placeAnswerSchema, type ChatContext, type ChoiceAction, type Placement } from "./context.js";
+import { verifyPlacement, type TurnState } from "./place.js";
 
 /** Et punkt i menuen: titel, én linjes beskrivelse, evt. anbefalet, og handlingen (kun den er afgørende for placeringen). */
 export interface ChoiceOption {
@@ -14,13 +15,18 @@ export interface ChoiceOption {
 
 /**
  * Chattens egne værktøjer (docs/chat.md): de findes kun i Lassos chat, ikke i /mcp, og giver ingen visning.
- * find_entity finder kandidater til et navn; ask_choice viser brugeren en valgmenu (trin 5). De lægges efter
- * MCP-værktøjerne i fast rækkefølge, så værktøjslisten (og dermed prompt-cachen) er den samme fra kald til kald.
+ * find_entity finder kandidater til et navn; ask_choice viser brugeren en valgmenu, når et navn er tvetydigt;
+ * place_answer vælger, hvor svaret skrives (serveren kontrollerer valget, chat/place.ts). De lægges efter
+ * MCP-værktøjerne i fast rækkefølge (place_answer sidst), så værktøjslisten (og dermed prompt-cachen) er den samme fra kald til kald.
  */
 
 export interface ChatToolCtx {
   mcp: McpContext;
   context: ChatContext;
+  /** Brugerens besked i turen (place_answer tjekker, om en anden fane er bedt om udtrykkeligt). */
+  message: string;
+  /** Turens tilstand: placeringen, om place_answer er kaldt, og om der er vist noget. */
+  turn: TurnState;
 }
 
 /** Valgmenuen, som "choice"-hændelsen sender til browseren. */
@@ -36,6 +42,8 @@ export interface ChatToolResult {
   isError?: boolean;
   /** Kun ask_choice: menuen, der skal vises (agent.ts afslutter turen med den). */
   choice?: Omit<ChoiceMenu, "id">;
+  /** Kun place_answer: den kontrollerede placering (agent.ts sender den som "placement"-hændelse). */
+  placement?: Placement;
 }
 
 export interface ChatToolDef {
@@ -90,7 +98,7 @@ const askChoice: ChatToolDef = {
   title: "Spørg brugeren",
   tool: toolOf(
     ASK_CHOICE,
-    "Viser brugeren en valgmenu og afslutter dit svar: brug det, når spørgsmålet lægger op til en anden kontekst end den aktive fane (en anden persons eller virksomheds side, eller en global liste/analyse fra en side), eller når et navn er tvetydigt (ét punkt pr. kandidat fra find_entity). Kald intet andet i samme svar: ingen visning, før brugeren har valgt. Brugerens valg kommer som næste besked med det valgte i [Kontekst]; gør så det, brugeren valgte, i ét trin.",
+    "Viser brugeren en valgmenu og afslutter dit svar. Brug det kun, når et navn passer på flere (ét punkt pr. kandidat fra find_entity, den mest sandsynlige først og anbefalet), aldrig til at vælge placering eller indsigtsniveau. Kald intet andet i samme svar: ingen visning, før brugeren har valgt. Brugerens valg kommer som næste besked med det valgte i [Kontekst]; gør så det, brugeren valgte, i ét trin.",
     askChoiceSchema,
     { strict: true },
   ),
@@ -98,6 +106,8 @@ const askChoice: ChatToolDef = {
     const parsed = askChoiceSchema.safeParse(raw);
     if (!parsed.success) return { text: `Ugyldig valgmenu: ${parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`, isError: true };
     const { question, options, allowFreeText } = parsed.data;
+    // Skemaet tillader ét punkt (gamle menuer i historikken skal stadig kunne bekræftes, context.ts); en ny menu har mindst to.
+    if (options.length < 2) return { text: "Ugyldig valgmenu: options: mindst 2 punkter (en menu er kun til flere match; ved ét match gør du det bare).", isError: true };
     return {
       text: "Valget er vist for brugeren. Svaret kommer som næste besked med det valgte i konteksten; gør så det, brugeren valgte.",
       choice: { question, options, allowFreeText: allowFreeText ?? true },
@@ -105,7 +115,26 @@ const askChoice: ChatToolDef = {
   },
 };
 
-/** Chattens værktøjer i fast rækkefølge (prompt-cachen). */
-export const CHAT_TOOLS: readonly ChatToolDef[] = [findEntity, askChoice];
+const placeAnswer: ChatToolDef = {
+  title: "Vælg placering",
+  tool: toolOf(
+    PLACE_ANSWER,
+    "Vælger, hvor svaret skrives, før du viser noget; kaldes højst én gang pr. spørgsmål og som det første. current (standard) = her, på den aktive fane: kald det, når spørgsmålet nævner en anden person eller virksomhed, men brugeren ikke har bedt om dens side. entity = den anden persons eller virksomheds egen fane, kun når brugeren skriver 'vis alt om X' eller 'åbn X' (id og navn fra find_entity; passer navnet på flere, brug ask_choice). global = en liste, sammenligning eller analyse på en resultatfane, med title (Firmaliste, Sammenligning, Markedsanalyse eller Kort). Serveren kontrollerer valget og svarer med en fejl, hvis det ikke holder.",
+    placeAnswerSchema,
+    { strict: true },
+  ),
+  async run(raw, ctx) {
+    const parsed = placeAnswerSchema.safeParse(raw);
+    if (!parsed.success) return { text: `Ugyldig placering: ${parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`, isError: true };
+    const r = await verifyPlacement(parsed.data, ctx);
+    if ("error" in r) return { text: r.error, isError: true };
+    ctx.turn.placed = true;
+    ctx.turn.placement = r.placement;
+    return { text: "Placeringen er valgt. Vis nu svaret.", placement: r.placement };
+  },
+};
+
+/** Chattens værktøjer i fast rækkefølge (prompt-cachen): place_answer sidst. */
+export const CHAT_TOOLS: readonly ChatToolDef[] = [findEntity, askChoice, placeAnswer];
 
 export const chatToolByName = (name: string): ChatToolDef | undefined => CHAT_TOOLS.find((t) => t.tool.name === name);

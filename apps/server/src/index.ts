@@ -31,6 +31,7 @@ import { getCurrentUser, isValidMcpKey, mcpKeyRequired, providedKey } from "./au
 import { createLoginLimiter, loginWithKey, portalLoginRequired, portalUser, requirePortal, sessionCookie, signSession } from "./auth/session.js";
 import { createPool } from "./db.js";
 import { entitySnapshot, savedPageVM } from "./pages/resolveExtras.js";
+import { createPageTemplateStore, type PageTemplateStore } from "./pages/templates.js";
 import { createSavedPageStore, pageKindOf, SavedPageError, validateSavedPage, type SavedPageStore } from "./pages/store.js";
 import { hasLassoCredentials, isSet, loadConfig, type Config } from "./config.js";
 import { createProvider, type DataProvider } from "./data/index.js";
@@ -64,6 +65,8 @@ export interface AppDeps {
   store: ViewStore;
   /** Gem-laget: brugerens gemte sider (docs/gem-lag.md). */
   pages: SavedPageStore;
+  /** Brugerens egne sider (sideskabeloner, pages/templates.ts). Udeladt: i hukommelsen. */
+  templates?: PageTemplateStore;
   /** "Gem som PDF" (pdf/renderer.ts). Udeladt: en renderer ud fra PDF_CHROMIUM_PATH. */
   pdf?: PdfRenderer;
   /** Kommentarer i designguiden (comments/store.ts). Udeladt: i hukommelsen. */
@@ -134,7 +137,7 @@ function requireMcpKey(config: Config) {
   };
 }
 
-export function createApp({ config, client, provider, store, pages, pdf = pdfRendererFor(config), comments = createCommentStore(""), chatModel }: AppDeps) {
+export function createApp({ config, client, provider, store, pages, templates = createPageTemplateStore(""), pdf = pdfRendererFor(config), comments = createCommentStore(""), chatModel }: AppDeps) {
   // 4 MB: chatten sender hele samtalen (værktøjssvarenes tekst) med i hvert spørgsmål.
   const app = createMcpExpressApp({ host: "0.0.0.0", jsonLimit: "4mb" });
   app.disable("x-powered-by");
@@ -197,7 +200,7 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
 
   app.get("/health", async (_req, res) => {
     // Altid 200, så en midlertidig databasefejl ikke stopper et deploy. Tilstanden står i svaret.
-    const dbOk = (await store.ping()) && (await pages.ping());
+    const dbOk = (await store.ping()) && (await pages.ping()) && (await templates.ping());
     res.json({
       status: dbOk ? "ok" : "degraded",
       version: VERSION,
@@ -240,7 +243,7 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
   // --- Portal-API (docs/portal.md): samme use-cases som MCP-tools, kræver session ----------
   // Login, logout og me står øverst og kræver ikke session; alt andet under /api/portal gør.
   app.use("/api/portal/pdf", requirePortal(config), portalPdfRoutes({ config, provider, store, pages, pdf }));
-  app.use("/api/portal", requirePortal(config), portalApi({ config, provider, store, pages }));
+  app.use("/api/portal", requirePortal(config), portalApi({ config, provider, store, pages, templates }));
   app.use("/api/portal", portalErrorHandler);
 
   // --- Lassos egen chat (docs/chat.md): Claude Platform med samme værktøjer som /mcp ------------
@@ -722,6 +725,7 @@ async function main() {
   const provider = createProvider(config, client, scores);
   const store = createViewStore(pool ?? "");
   const pages = createSavedPageStore(pool ?? "");
+  const templates = createPageTemplateStore(pool ?? "");
   const comments = createCommentStore(pool ?? "");
 
   // Databasen kan starte efter appen på Railway: prøv i baggrunden med backoff.
@@ -731,6 +735,7 @@ async function main() {
       try {
         await store.migrate();
         await pages.migrate();
+        await templates.migrate();
         await scores.migrate();
         await comments.migrate();
         if (attempt > 1) console.log(`[db] migreret (forsøg ${attempt})`);
@@ -743,7 +748,7 @@ async function main() {
   })();
 
   const pdf = pdfRendererFor(config);
-  const app = createApp({ config, client, provider, store, pages, pdf, comments });
+  const app = createApp({ config, client, provider, store, pages, templates, pdf, comments });
   const server = app.listen(config.PORT, "0.0.0.0", () => {
     console.log(
       `[lasso-mcp] v${VERSION} ${config.APP_ENV} på port ${config.PORT} | data: ${provider.kind} | lasso-credentials: ${hasLassoCredentials(config) ? "ja" : "nej"} | søgning: ${client.hasSearchCredentials ? config.LASSO_SEARCH_API_BASE_URL : "ingen nøgle"} | db: ${store.kind} | mcp-nøgle: ${mcpKeyRequired(config) ? "ja" : "nej"} | pdf: ${pdfAvailable(config) ? "ja" : "nej"} | portal: ${portalLoginRequired(config) ? "login" : "åben"} | ${config.publicBaseUrl}/mcp`,
@@ -754,7 +759,7 @@ async function main() {
   const shutdown = () => {
     console.log("[lasso-mcp] lukker ned");
     server.close(() => {
-      void Promise.all([store.close(), pages.close(), scores.close(), comments.close(), pdf.close()])
+      void Promise.all([store.close(), pages.close(), templates.close(), scores.close(), comments.close(), pdf.close()])
         .then(() => pool?.end())
         .finally(() => process.exit(0));
     });

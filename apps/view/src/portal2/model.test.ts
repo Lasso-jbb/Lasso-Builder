@@ -2,8 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Dataset, ViewSpec } from "@lasso/spec";
 import type { LookupResult } from "../portal/api.js";
-import type { ChatEvent } from "../chat/stream.js";
-import { addRecent, applyEvent, historyTrimmed, summaryFingerprint, textHash, choiceKey, choiceSend, defaultChoiceSelection, skipChoice, CHAT_CACHE_TTL_MS, clearCache, dropTabDatasets, isUnrecognizedHistory, resetConversation, recencyOrder, shortName, restoreCache, saveCache, serializeCache, askPlaceholder, choiceMessage, closeItem, contextFor, freeTextPick, headLines, highlight, lastView, loadRecent, mapViews, newAnswer, openItem, searchCounts, searchRows, suggestions, withLastView, withoutHead, type OpenItem, type PendingChoice } from "./model.js";
+import { COMPANY_TABS, isTemplateTab, moduleTabs, templateIdOf, templateTab, addRecent, historyTrimmed, summaryFingerprint, textHash, choiceKey, choiceSend, defaultChoiceSelection, isUnrecognizedHistory, shortName, askPlaceholder, choiceMessage, closeItem, contextFor, freeTextPick, headLines, highlight, loadRecent, openItem, searchCounts, searchRows, suggestions, withoutHead, type OpenItem, type PendingChoice } from "./model.js";
 
 const novo: OpenItem = { key: "CVR-1-24256790", kind: "company", name: "NOVO NORDISK A/S", tab: "overblik" };
 const lasso: OpenItem = { key: "CVR-1-34580820", kind: "company", name: "LASSO X A/S", tab: "overblik" };
@@ -121,119 +120,6 @@ test("seneste: nyeste først uden dubletter; ødelagt lager giver en tom liste",
   assert.deepEqual(loadRecent(undefined), []);
 });
 
-test("applyEvent: tekst og visninger i rækkefølge, placering først, menu og fejl", () => {
-  const spec = { version: 2, kind: "company", title: "X", layout: "dashboard", criteria: [], components: [] } as unknown as ViewSpec;
-  const ds = { companies: {}, persons: {} } as unknown as Dataset;
-  const events: ChatEvent[] = [
-    { type: "placement", placement: "entity", target: { kind: "person", id: mette.key, name: mette.name }, focus: "overblik" },
-    { type: "text", text: "Jakob " },
-    { type: "text", text: "har 4 firmaer." },
-    { type: "tool", id: "t1", name: "render_view", title: "Vis oversigt" },
-    { type: "view", id: "t1", name: "render_view", form: "module", spec, dataset: ds },
-    { type: "text", text: "Og her er siden." },
-    { type: "view", id: "t2", name: "show_person", form: "page", spec, dataset: ds },
-    { type: "done", history: [], sig: "s", placement: { placement: "entity", target: { kind: "person", id: mette.key, name: mette.name }, focus: "overblik" } },
-  ];
-  let a = newAnswer("Hvad laver Jakob?");
-  for (const e of events) a = applyEvent(a, e);
-  assert.deepEqual(
-    a.parts.map((p) => (p.kind === "text" ? `text:${p.text}` : `view:${p.form}`)),
-    ["text:Jakob har 4 firmaer.", "view:module", "text:Og her er siden.", "view:page"],
-  );
-  assert.deepEqual(a.placement, { placement: "entity", target: { kind: "person", id: mette.key, name: mette.name }, focus: "overblik" });
-  assert.equal(a.pending, false);
-  assert.equal(a.status, undefined);
-  assert.equal(lastView(a)?.spec, spec);
-
-  // Status mens værktøjet henter; fejl fjerner status.
-  const busy = applyEvent(newAnswer("q"), { type: "tool", id: "t", name: "show_company", title: "Vis virksomhed" });
-  assert.equal(busy.status, "Vis virksomhed …");
-  const failed = applyEvent(busy, { type: "error", message: "Nej." });
-  assert.equal(failed.status, undefined);
-  assert.equal(failed.error, "Nej.");
-
-  // Menuen gemmes på svaret.
-  const withMenu = applyEvent(newAnswer("vis alt om Mette"), { type: "choice", id: "toolu_1", question: "Hvad vil du se?", options: [{ label: "Alt om Mette", description: "Kort", action: { placement: "current" } }], allowFreeText: false });
-  assert.deepEqual(withMenu.choice, { id: "toolu_1", question: "Hvad vil du se?", options: [{ label: "Alt om Mette", description: "Kort", action: { placement: "current" } }], allowFreeText: false });
-
-  // Den seneste visning kan erstattes, og alle visninger kan ændres.
-  const spec2 = { ...spec, title: "Y" } as ViewSpec;
-  assert.equal(lastView(withLastView(a, { spec: spec2, dataset: ds }))?.spec.title, "Y");
-  assert.equal((withLastView(a, { spec: spec2, dataset: ds }).parts[1] as { spec: ViewSpec }).spec.title, "X", "kun den seneste");
-  assert.ok(mapViews(a, (s) => ({ ...s, dataset: { ...s.dataset, savedIds: ["a"] } })).parts.every((p) => p.kind !== "view" || p.dataset.savedIds?.[0] === "a"));
-  assert.equal(lastView(newAnswer("q")), undefined);
-});
-
-/* ---------- chatten i browseren ---------- */
-
-const tr = (content: unknown) => ({ role: "user", content });
-const history = [
-  tr("Spørgsmål 1"),
-  { role: "assistant", content: [{ type: "tool_use", id: "t1", name: "show_company", input: {} }] },
-  tr([{ type: "tool_result", tool_use_id: "t1", content: "ok" }]),
-  { role: "assistant", content: [{ type: "text", text: "Svar 1" }] },
-  tr([{ type: "text", text: "[Kontekst] …" }, { type: "text", text: "Spørgsmål 2" }]),
-  { role: "assistant", content: [{ type: "text", text: "Svar 2" }] },
-  tr("Spørgsmål 3"),
-  { role: "assistant", content: [{ type: "text", text: "Svar 3" }] },
-];
-
-test("chat-cache: gemmes og læses for samme bruger inden udløb; svar med pending og lukkede faner udelades", () => {
-  const answers = {
-    [novo.key]: { question: "q", parts: [{ kind: "text" as const, text: "a" }], pending: false, status: "Henter …", choice: { id: "toolu_1", question: "Hvad?", options: [], allowFreeText: true } },
-    [mette.key]: { question: "q2", parts: [], pending: true },
-    "result:9": { question: "lukket", parts: [], pending: false },
-  };
-  const state = { chat: { history, sig: "sig" }, open: [novo, mette], active: mette.key, answers };
-  const c = serializeCache("pia", state, 1000);
-  assert.deepEqual(Object.keys(c.answers), [novo.key]);
-  assert.equal(c.answers[novo.key]!.status, undefined);
-  assert.deepEqual(c.answers[novo.key]!.choice?.id, "toolu_1", "en åben menu gemmes");
-  const raw = JSON.stringify(c);
-  const back = restoreCache(raw, "pia", 1000 + CHAT_CACHE_TTL_MS - 1)!;
-  assert.deepEqual(back.open, [novo, mette]);
-  assert.equal(back.active, mette.key);
-  assert.deepEqual(back.chat, { history, sig: "sig" });
-  assert.equal(back.answers[novo.key]!.question, "q");
-  // Udløbet, anden bruger, ødelagt eller forkert version: intet.
-  assert.equal(restoreCache(raw, "pia", 1000 + CHAT_CACHE_TTL_MS + 1), null);
-  assert.equal(restoreCache(raw, "bo", 2000), null);
-  assert.equal(restoreCache("{ikke json", "pia", 2000), null);
-  assert.equal(restoreCache(JSON.stringify({ ...c, v: 2 }), "pia", 2000), null);
-  assert.equal(restoreCache(null, "pia", 2000), null);
-  // Den aktive fane skal findes blandt de åbne; ellers den sidste.
-  assert.equal(restoreCache(JSON.stringify({ ...c, active: "væk" }), "pia", 2000)!.active, mette.key);
-});
-
-test("chat-cache: fuldt lager afkorter aldrig historikken (signaturen) og springer ellers over; rydning fejler aldrig", () => {
-  const writes: string[] = [];
-  const full = (limit: number): Pick<Storage, "setItem"> => ({
-    setItem: (_k, v) => {
-      if (v.length > limit) throw new DOMException("fuld", "QuotaExceededError");
-      writes.push(v);
-    },
-  });
-  const withMenu = { question: "q", parts: [{ kind: "text" as const, text: "a" }], pending: false, choice: { id: "toolu_1", question: "Hvad?", options: [], allowFreeText: true } };
-  const cache = serializeCache("pia", { chat: { history, sig: "s" }, open: [novo], active: novo.key, answers: { [novo.key]: withMenu } }, 1);
-  assert.equal(saveCache(full(1_000_000), cache), "saved");
-  // Uden datasæt at droppe er næste trin at glemme hele samtalen: tom historik, ingen signatur, menuen lukket, fanerne bliver.
-  const resetSize = JSON.stringify(resetConversation(cache)).length;
-  assert.equal(saveCache(full(resetSize), cache), "reset");
-  const saved = JSON.parse(writes.at(-1)!) as { chat: { history: unknown[]; sig?: string }; open: unknown[]; answers: Record<string, { choice?: unknown }> };
-  assert.deepEqual(saved.chat, { history: [] });
-  assert.equal(saved.open.length, 1);
-  assert.equal(saved.answers[novo.key]!.choice, undefined);
-  // Aldrig en afkortet historik med den gamle signatur: hver gemning har enten hele historikken eller ingen.
-  for (const w of writes) {
-    const c = JSON.parse(w) as { chat: { history: unknown[]; sig?: string } };
-    assert.ok(c.chat.history.length === 0 ? c.chat.sig === undefined : c.chat.history.length === history.length && c.chat.sig === "s");
-  }
-  assert.equal(saveCache(full(10), cache), "skipped");
-  assert.equal(saveCache(undefined, cache), "skipped");
-  clearCache({ removeItem: () => { throw new Error("nej"); } });
-  clearCache(undefined);
-});
-
 test("isUnrecognizedHistory: kun serverens 400 om en samtale, der ikke kan genkendes", () => {
   assert.equal(isUnrecognizedHistory(400, "Samtalen kunne ikke genkendes. Start en ny samtale."), true);
   assert.equal(isUnrecognizedHistory(400, "context er ugyldig"), false);
@@ -282,55 +168,6 @@ test("shortName: spørgsmålet afkortet ved et ordskel til højst 40 tegn, uden 
   assert.equal(shortName("x".repeat(60)).length, 40);
 });
 
-const view = { kind: "view" as const, id: "v", form: "page" as const, spec: { title: "T", components: [] } as unknown as ViewSpec, dataset: { companies: {}, persons: {} } as unknown as Dataset };
-
-test("quota: datasæt fra de mindst nyligt aktive faner droppes ét ad gangen, så springes der over", () => {
-  const a: OpenItem = { ...novo, tab: "lasso" };
-  const b: OpenItem = { ...lasso, tab: "lasso" };
-  const r: OpenItem = { key: "result:1", kind: "result", name: "Søgning", tab: "lasso" };
-  const big = "x".repeat(2000);
-  const answers = Object.fromEntries([a, b, r].map((o) => [o.key, { question: o.name, parts: [{ kind: "text" as const, text: "t" }, { ...view, dataset: { ...view.dataset, pad: big } as unknown as Dataset }], pending: false }]));
-  const cache = serializeCache("pia", { chat: { history: [tr("Q")], sig: "s" }, open: [a, b, r], active: r.key, answers }, 1);
-  const size = (c: unknown) => JSON.stringify(c).length;
-  assert.deepEqual(recencyOrder([a, b, r], [b.key, a.key], r.key), [b.key, a.key, r.key]);
-
-  // dropTabDatasets: visningerne væk, teksten bliver; en entitetsfane på Lasso-svaret går til Overblik (og henter selv sit modul).
-  const dropped = dropTabDatasets(cache, a.key);
-  assert.deepEqual(dropped.answers[a.key]!.parts, [{ kind: "text", text: "t" }]);
-  assert.equal(dropped.open.find((o) => o.key === a.key)!.tab, "overblik");
-  assert.equal(dropped.open.find((o) => o.key === r.key)!.tab, "lasso", "en resultatfane bliver stående");
-  assert.equal(dropTabDatasets(dropped, a.key), dropped, "intet at droppe");
-
-  const writes: string[] = [];
-  const limited = (limit: number): Pick<Storage, "setItem"> => ({ setItem: (_k, v) => { if (v.length > limit) throw new DOMException("fuld", "QuotaExceededError"); writes.push(v); } });
-  const order = [a.key, b.key, r.key];
-  // Plads til to ud af tre faners datasæt: kun den ældste fane droppes.
-  const withTwo = size(dropTabDatasets(cache, a.key)) + 10;
-  assert.equal(saveCache(limited(withTwo), cache, order), "dropped");
-  const saved = JSON.parse(writes.at(-1)!) as ChatCacheLike;
-  assert.equal(saved.answers[a.key]!.parts.length, 1);
-  assert.equal(saved.answers[b.key]!.parts.length, 2);
-  assert.equal(saved.answers[r.key]!.parts.length, 2);
-  // Kun plads til en: to droppes. Ingen plads: sidste udvej er at springe over.
-  const withOne = size(dropTabDatasets(dropTabDatasets(cache, a.key), b.key)) + 10;
-  assert.equal(saveCache(limited(withOne), cache, order), "dropped");
-  assert.equal((JSON.parse(writes.at(-1)!) as ChatCacheLike).answers[r.key]!.parts.length, 2);
-  assert.equal(saveCache(limited(10), cache, order), "skipped");
-  // Er der kun plads uden samtalen, glemmes den (tom historik, ingen signatur) efter datasættene.
-  const noConversation = size(resetConversation(order.reduce((c, k) => dropTabDatasets(c, k), cache))) + 10;
-  assert.equal(saveCache(limited(noConversation), cache, order), "reset");
-  assert.deepEqual((JSON.parse(writes.at(-1)!) as { chat: unknown }).chat, { history: [] });
-});
-type ChatCacheLike = { answers: Record<string, { parts: unknown[] }> };
-
-test("recencyOrder: mindst nyligt aktive først, den aktive sidst, aldrig besøgte forrest", () => {
-  const x: OpenItem = { ...novo };
-  const y: OpenItem = { ...lasso };
-  const z: OpenItem = { ...mette };
-  assert.deepEqual(recencyOrder([x, y, z], [y.key, x.key], z.key), [y.key, x.key, z.key]);
-  assert.deepEqual(recencyOrder([x, y, z], [x.key], y.key), [z.key, x.key, y.key]);
-});
-
 /* ---------- valgpanelet ---------- */
 
 const panel: PendingChoice = {
@@ -350,11 +187,6 @@ test("valgpanel: forvalg, send, Andet og spring over", () => {
   assert.deepEqual(choiceSend(panel, "other", "  Sammenlign med branchen  "), { message: "Sammenlign med branchen", pick: { id: "toolu_p", free: true } });
   assert.equal(choiceSend(panel, "other", "   "), null, "tom Andet sender intet");
   assert.equal(choiceSend({ ...panel, allowFreeText: false }, "other", "tekst"), null, "Andet kun hvis tilladt");
-  const answer = applyEvent(newAnswer("q"), { type: "choice", id: panel.id, question: panel.question, options: panel.options, allowFreeText: true });
-  assert.equal(skipChoice(answer).choice, undefined);
-  assert.equal(skipChoice(answer).parts, answer.parts, "intet andet ændres, intet sendes");
-  const none = newAnswer("q");
-  assert.equal(skipChoice(none), none);
 });
 
 test("valgpanel: taster (1–9, Andet efter punkterne, Cmd/Ctrl+Enter, Esc) og tal i tekstfelter", () => {
@@ -380,4 +212,23 @@ test("valgpanel: taster (1–9, Andet efter punkterne, Cmd/Ctrl+Enter, Esc) og t
   assert.equal(choiceKey(key("Enter"), panel, true, "panel", false), null);
   assert.equal(choiceKey(key("Enter"), panel, false, "panel", false), null);
   assert.deepEqual(choiceKey(key("Enter", { metaKey: true }), panel, true, "panel", true), { kind: "send" });
+});
+
+test("moduleTabs: de indbyggede moduler og så én pr. egen side af slagsen (tpl:<id>); et resultat har ingen", () => {
+  const templates = [
+    { id: "a1", kind: "company" as const, title: "KYC-overblik" },
+    { id: "b2", kind: "person" as const, title: "Mine roller" },
+    { id: "c3", kind: "company" as const, title: "Ejere" },
+  ];
+  const company = moduleTabs("company", templates);
+  assert.deepEqual(company.map((t) => t.id), [...COMPANY_TABS.map((t) => t.id), "tpl:a1", "tpl:c3"]);
+  assert.deepEqual(company.slice(-2), [{ id: "tpl:a1", label: "KYC-overblik", template: true }, { id: "tpl:c3", label: "Ejere", template: true }]);
+  assert.deepEqual(moduleTabs("person", templates).slice(-1), [{ id: "tpl:b2", label: "Mine roller", template: true }]);
+  assert.deepEqual(moduleTabs("company", []).map((t) => t.id), COMPANY_TABS.map((t) => t.id));
+  assert.deepEqual(moduleTabs("result", templates), []);
+  assert.ok(isTemplateTab("tpl:a1") && !isTemplateTab("oekonomi"));
+  assert.equal(templateIdOf("tpl:a1"), "a1");
+  assert.equal(templateTab("a1"), "tpl:a1");
+  // serverens context.tab er højst 40 tegn: tpl: + et UUID passer lige.
+  assert.equal(templateTab("123e4567-e89b-12d3-a456-426614174000").length, 40);
 });

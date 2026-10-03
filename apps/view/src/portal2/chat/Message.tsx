@@ -237,6 +237,16 @@ export function AnswerText({ text, currentId, onOpen, after }: { text: string; c
   );
 }
 
+/** Kopiér står kun under rene tekstsvar: ingen visning, menu eller fejl, og heller ingen modul-links (eksporten, afsnit 02). */
+function copyable(a: Answer): boolean {
+  return isPureText(a) && a.parts.every((p) => p.kind !== "text" || !/\]\(lasso:/.test(p.text));
+}
+
+/** Teksten til udklipsholderen uden markdown: **fed** og links som deres tekst. */
+function plainText(text: string): string {
+  return text.replace(/\*\*(.+?)\*\*/g, "$1").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+}
+
 export interface AssistantMessageProps {
   answer: Answer;
   mobile?: boolean;
@@ -299,7 +309,7 @@ export function AssistantMessage({ answer, mobile = false, currentId, onModule, 
         </div>
       ) : null}
       {answer.pending && answer.status && !hasView ? <SkeletonCard /> : null}
-      {!answer.pending && !answer.choice && answer.at ? <Meta at={answer.at} copyText={isPureText(answer) ? answerText(answer) : undefined} /> : null}
+      {!answer.pending && !answer.choice && answer.at ? <Meta at={answer.at} copyText={copyable(answer) ? plainText(answerText(answer)) : undefined} /> : null}
     </>
   );
 }

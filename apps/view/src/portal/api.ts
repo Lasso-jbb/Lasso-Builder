@@ -59,14 +59,23 @@ export interface SaveViewResult {
 }
 
 /**
- * En sideskabelon ("Tilføj som fane" på en side om ét firma eller én person): gemt pr. entitetstype og vist som et
- * ekstra modul på alle firmaer eller alle personer. WP2-STUB af klientkontrakten; WP1 leverer API'et.
+ * En egen side (sideskabelon): en side, chatten satte sammen om én virksomhed/person, gemt uden entiteten og bundet til
+ * slagsen (docs/chat.md, "Tilføj som fane"). Den vises som et ekstra modul på alle virksomheder/personer af slagsen.
  */
 export interface PageTemplate {
   id: string;
   kind: "company" | "person";
   title: string;
   subtitle?: string;
+}
+
+/** POST /templates: den viste spec, titlen og den entitet, specen er lavet til (serveren erstatter den med en pladsholder). */
+export interface SaveTemplateBody {
+  kind: "company" | "person";
+  title: string;
+  subtitle?: string;
+  spec: ViewSpec;
+  entity: { kind: "company" | "person"; id: string };
 }
 
 export class PortalApiError extends Error {
@@ -160,6 +169,13 @@ export function createPortalApi(onUnauthorized: () => void, fetcher: typeof fetc
     pages: (kind: SavedPageKind | "all" = "all", limit = 100) => call<ViewResult>("GET", `/pages${query({ kind, limit })}`),
     savePage: (body: { page: string; kind?: SavedPageKind; focus?: string; note?: string }) => call<SavePageResult>("POST", "/pages", body),
     removePage: (lassoId: string) => call<RemovePageResult>("DELETE", `/pages/${encodeURIComponent(lassoId)}`),
+    /** Egne sider (sideskabeloner): hent, gem, fjern og vis om en bestemt virksomhed/person (spec, dataset og summary som et modul). */
+    templates: {
+      list: async (kind: "company" | "person"): Promise<PageTemplate[]> => (await call<{ templates: PageTemplate[] }>("GET", `/templates${query({ kind })}`)).templates,
+      save: (body: SaveTemplateBody) => call<PageTemplate & { createdAt: string }>("POST", "/templates", body),
+      remove: (id: string) => call<{ id: string; removed: true }>("DELETE", `/templates/${encodeURIComponent(id)}`),
+      render: (id: string, entityId: string) => call<ViewResult>("GET", `/templates/${encodeURIComponent(id)}/render${query({ entity: entityId })}`),
+    },
     saveView: (body: { spec: ViewSpec; name?: string; slug?: string; visibility?: Visibility }) => call<SaveViewResult>("POST", "/views", body),
     /** Virksomhedsrapporten (PDF) med fanens fokus (Creditsafe kun fra Risiko). */
     pdfCompany: (id: string, focus: Focus = "overblik") => pdf(`/company/${encodeURIComponent(id)}${query({ focus: focus === "overblik" ? undefined : focus })}`),
@@ -167,13 +183,6 @@ export function createPortalApi(onUnauthorized: () => void, fetcher: typeof fetc
     pdfPerson: (id: string, focus: PersonFocus = "overblik") => pdf(`/person/${encodeURIComponent(id)}${query({ focus: focus === "overblik" ? undefined : focus })}`),
     /** Søgning og gemte sider: den viste spec som PDF. */
     pdfSpec: (spec: ViewSpec) => pdf("/spec", { spec }),
-    /** Sideskabeloner. WP2-STUB: stierne fastlægges af WP1. */
-    templates: {
-      list: (kind: "company" | "person") => call<{ templates: PageTemplate[] }>("GET", `/templates${query({ kind })}`).then((r) => r.templates),
-      save: (body: { kind: "company" | "person"; title: string; subtitle?: string; spec: ViewSpec; entity: { kind: "company" | "person"; id: string } }) => call<PageTemplate>("POST", "/templates", body),
-      remove: (id: string) => call<{ removed: boolean }>("DELETE", `/templates/${encodeURIComponent(id)}`),
-      render: (id: string, entityId: string) => call<ViewResult>("GET", `/templates/${encodeURIComponent(id)}/render${query({ entity: entityId })}`),
-    },
   };
 }
 
