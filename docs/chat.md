@@ -193,5 +193,15 @@ Med Haiku sendes hverken `effort` eller `fallbacks`, fordi Haiku 4.5 afviser dem
 sendes `fallbacks: "default"` (beta `server-side-fallback-2026-07-01`): afviser modellen et svar, prøver
 Claude Platform selv en anden model.
 
+## Tjek mod det rigtige API
+
+`npm run chat:live-check -w @lasso/server` (lokalt med `ANTHROPIC_API_KEY` i `.env`, eller `railway run npm run chat:live-check -w @lasso/server`)
+sender den præcise anmodning, chatten sender (samme systemprompt, værktøjsliste med strict-skemaerne, cache-markører med
+`CHAT_CACHE_TTL` og `CHAT_MODEL`, bygget af chattens egne funktioner i `chat/agent.ts`), to gange med beskeden "Sig kun ordet
+ok." og `max_tokens` 64 (en brøkdel af en øre). Det skriver kun model, `stop_reason`, forbrug (input, cache skrevet, cache
+læst, output) og om kald 2 læste fra cachen, aldrig nøglen eller anmodningen. Udgangskode 0: alt virker; 1: ingen nøgle (der
+sendes intet) eller API-fejl (status og besked); 2: cachen læste ikke (tjek, at præfikset er over modellens mindste cachebare
+længde). Kør det efter ændringer i værktøjsskemaer, `CHAT_RULES` eller cache-indstillinger.
+
 Lokalt uden nøgle: `npx tsx apps/server/src/dev/chat-preview.ts` starter serveren med en falsk model
 på http://localhost:3999/chat og /portal; skriver man "alt om …", viser den valgmenuen først.

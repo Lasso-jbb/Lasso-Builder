@@ -102,7 +102,7 @@ interface ToolDef {
 }
 
 /** Forbinder en klient til en frisk MCP-server for brugeren (samme som én /mcp-request). */
-async function connect(ctx: McpContext): Promise<{ client: Client; close: () => Promise<void> }> {
+export async function connect(ctx: McpContext): Promise<{ client: Client; close: () => Promise<void> }> {
   const server = createMcpServer(ctx);
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: "lasso-chat", version: "0.1.0" });
@@ -159,6 +159,42 @@ export function textForModel(result: CallToolResult): string {
     .join("\n");
 }
 
+/** Det, der er ens fra kald til kald i en samtale: systemprompten og værktøjslisten (MCP-værktøjerne, så chattens egne, med cache-markøren). */
+export interface ChatSetup {
+  system: string;
+  /** Værktøjerne med titler (til tool-hændelserne). */
+  tools: ToolDef[];
+  /** Listen til API'et: uden titler, med cache-markøren på det sidste. */
+  toolList: BetaTool[];
+}
+
+/**
+ * Systemprompt og værktøjsliste, som runChat sender: MCP-værktøjerne først, så chattens egne (chat/tools.ts) i fast
+ * rækkefølge, så listen og dermed prompt-cachen er den samme fra kald til kald. Routingen deles med /mcp; reglerne er
+ * chattens egne (MCP_RULES gælder kun Claude.ai). Bruges også af chat-live-check, så tjekket sender det rigtige.
+ */
+export async function buildChatSetup(client: Client, config: Pick<Config, "CHAT_CACHE_TTL">): Promise<ChatSetup> {
+  const tools = [...(await chatTools(client)), ...CHAT_TOOLS.map((t) => ({ tool: t.tool, title: t.title }))];
+  return { system: `${ROUTING}\n\n${CHAT_RULES}`, tools, toolList: withCacheMarker(tools.map((t) => t.tool), config) };
+}
+
+/** Brugerens tur: konteksten først (ikke i system: den skifter pr. spørgsmål og ville bryde cachen), så beskeden. */
+export const userTurn = (context: ChatContext, message: string): BetaMessageParam => ({ role: "user", content: [{ type: "text", text: contextText(context) }, { type: "text", text: message }] });
+
+/** Parametrene til ét modelkald, præcis som runChat sender dem. */
+export function chatRequest(config: Pick<Config, "CHAT_MODEL" | "CHAT_EFFORT" | "CHAT_MAX_TOKENS" | "CHAT_CACHE_TTL">, setup: ChatSetup, messages: BetaMessageParam[]): MessageCreateParamsNonStreaming {
+  return {
+    model: config.CHAT_MODEL,
+    max_tokens: config.CHAT_MAX_TOKENS,
+    system: setup.system,
+    tools: setup.toolList,
+    messages,
+    // Automatisk markør på beskederne: samtalen caches, så næste spørgsmål kun betaler for det nye.
+    cache_control: cacheControl(config),
+    ...modelOptions(config),
+  };
+}
+
 export interface ChatRunOptions {
   ctx: McpContext;
   config: Pick<Config, "CHAT_MODEL" | "CHAT_EFFORT" | "CHAT_MAX_TOKENS" | "CHAT_CACHE_TTL" | "CHAT_HISTORY_MAX_CHARS">;
@@ -199,34 +235,21 @@ function apiErrorText(e: unknown): string {
 export async function runChat({ ctx, config, model, history, message, context, emit, signal }: ChatRunOptions): Promise<void> {
   // Konteksten står først i brugerens tur (ikke i system: den skifter pr. spørgsmål og ville bryde cachen).
   // Historikken trimmes sjældent og groft (chat/history.ts); den trimmede er den, "done" giver videre.
-  const messages: BetaMessageParam[] = [...trimHistory(history, config.CHAT_HISTORY_MAX_CHARS), { role: "user", content: [{ type: "text", text: contextText(context) }, { type: "text", text: message }] }];
+  const messages: BetaMessageParam[] = [...trimHistory(history, config.CHAT_HISTORY_MAX_CHARS), userTurn(context, message)];
   // Placeringen er kendt, før modellen kaldes: brugeren valgte den i menuen (eller svaret skrives her).
   const placement = placementOf(context);
   emit({ type: "placement", ...placement });
   const { client, close } = await connect({ ...ctx, host: "chat" });
   try {
-    // MCP-værktøjerne først, så chattens egne (chat/tools.ts) i fast rækkefølge: listen er ens fra kald til kald.
-    const tools = [...(await chatTools(client)), ...CHAT_TOOLS.map((t) => ({ tool: t.tool, title: t.title }))];
-    const titles = new Map(tools.map((t) => [t.tool.name, t.title]));
-    const toolList = withCacheMarker(tools.map((t) => t.tool), config);
+    const setup = await buildChatSetup(client, config);
+    const titles = new Map(setup.tools.map((t) => [t.tool.name, t.title]));
     const toolCtx = { mcp: ctx, context };
-    // Routingen deles med /mcp; reglerne er chattens egne (MCP_RULES gælder kun Claude.ai).
-    const system = `${ROUTING}\n\n${CHAT_RULES}`;
 
     for (let step = 0; step < MAX_STEPS; step++) {
       let response: BetaMessage;
       try {
         response = await model(
-          {
-            model: config.CHAT_MODEL,
-            max_tokens: config.CHAT_MAX_TOKENS,
-            system,
-            tools: toolList,
-            messages,
-            // Automatisk markør på beskederne: samtalen caches, så næste spørgsmål kun betaler for det nye.
-            cache_control: cacheControl(config),
-            ...modelOptions(config),
-          },
+          chatRequest(config, setup, messages),
           (text) => emit({ type: "text", text }),
           signal,
         );
