@@ -1,6 +1,6 @@
 import type { Dataset, ViewSpec } from "@lasso/spec";
 import type { LookupResult } from "../portal/api.js";
-import type { ChatContext, ChatEntityRef, ChatEvent, ChoiceOption, ChoicePick, Placement, ViewForm } from "../chat/stream.js";
+import type { ChatContext, ChatEntityRef, ChatEvent, ChatState, ChoiceOption, ChoicePick, Placement, ViewForm } from "../chat/stream.js";
 
 /**
  * Den nye portal (prototypen "lasso-portal4.html"): rene hjælpefunktioner uden React, så de kan testes
@@ -281,5 +281,100 @@ export function saveRecent(storage: Pick<Storage, "setItem"> | undefined, list: 
     storage?.setItem(RECENT_KEY, JSON.stringify(list));
   } catch {
     // Uden lager huskes de seneste bare ikke.
+  }
+}
+
+/* ---------- chatten i browseren (docs/chat.md): samtalen overlever en genindlæsning ---------- */
+
+/**
+ * Serveren gemmer ingen samtaler, så portalen gemmer selv samtalen (historik + signatur), de åbne faner og det
+ * seneste svar pr. fane i localStorage, bundet til brugeren og med en udløbstid. Modulernes data gemmes ikke
+ * (de hentes igen). Historikken er den trimmede, serveren gav i "done".
+ */
+export const CHAT_CACHE_KEY = "lasso-chat";
+export const CHAT_CACHE_TTL_MS = 24 * 60 * 60_000;
+
+export interface ChatCache {
+  v: 1;
+  /** Brugerens id (boot.user.id): en anden bruger i samme browser får ikke samtalen. */
+  user: string;
+  savedAt: number;
+  chat: ChatState;
+  open: OpenItem[];
+  active: string | null;
+  answers: Record<string, Answer>;
+}
+
+export type ChatCacheState = Pick<ChatCache, "chat" | "open" | "answers" | "active">;
+
+/** Det, der gemmes: svar uden status og uden en afbrudt hentning (pending), kun for faner, der stadig er åbne. */
+export function serializeCache(user: string, state: ChatCacheState, now: number): ChatCache {
+  const keys = new Set(state.open.map((o) => o.key));
+  const answers = Object.fromEntries(
+    Object.entries(state.answers)
+      .filter(([k, a]) => keys.has(k) && !a.pending)
+      .map(([k, a]) => [k, { ...a, status: undefined }]),
+  );
+  return { v: 1, user, savedAt: now, chat: state.chat, open: [...state.open], active: state.active, answers };
+}
+
+/** Samtalen fra lageret, hvis den er brugerens egen og ikke udløbet; ellers null. */
+export function restoreCache(raw: string | null | undefined, user: string, now: number, ttl = CHAT_CACHE_TTL_MS): ChatCacheState | null {
+  if (!raw) return null;
+  try {
+    const c = JSON.parse(raw) as Partial<ChatCache>;
+    if (c.v !== 1 || c.user !== user || typeof c.savedAt !== "number" || now - c.savedAt > ttl || now < c.savedAt) return null;
+    if (!Array.isArray(c.open) || !c.chat || !Array.isArray(c.chat.history)) return null;
+    const open = c.open.filter((o): o is OpenItem => Boolean(o && typeof o.key === "string" && typeof o.name === "string" && typeof o.tab === "string"));
+    const answers = Object.fromEntries(Object.entries(c.answers ?? {}).filter(([, a]) => a && Array.isArray(a.parts)).map(([k, a]) => [k, { ...a, pending: false }]));
+    const active = typeof c.active === "string" && open.some((o) => o.key === c.active) ? c.active : (open.at(-1)?.key ?? null);
+    return { chat: { history: c.chat.history, ...(typeof c.chat.sig === "string" ? { sig: c.chat.sig } : {}) }, open, answers, active };
+  } catch {
+    return null;
+  }
+}
+
+type HistoryMessage = { role?: string; content?: unknown };
+
+/** En brugerbesked, der er et spørgsmål (ikke værktøjssvar): dér begynder en tur. */
+const startsTurn = (m: HistoryMessage) => m.role === "user" && !(Array.isArray(m.content) && m.content.some((b) => (b as { type?: string })?.type === "tool_result"));
+
+/** Historikken uden de ældste `turns` hele ture (spørgsmål + svar + værktøjsskifte); tool_use og tool_result skilles aldrig. */
+export function dropOldestTurns(history: readonly unknown[], turns: number): unknown[] {
+  if (turns <= 0) return [...history];
+  const starts = history.map((m, i) => (startsTurn(m as HistoryMessage) ? i : -1)).filter((i) => i >= 0);
+  const keepFrom = starts[turns];
+  return keepFrom === undefined ? [] : history.slice(keepFrom);
+}
+
+export const countTurns = (history: readonly unknown[]): number => history.filter((m) => startsTurn(m as HistoryMessage)).length;
+
+/**
+ * Gemmer samtalen. Er lageret fuldt (QuotaExceeded), kastes de ældste halvdel af turene, og der prøves én gang til;
+ * ellers springes der over (samtalen virker stadig, den overlever bare ikke en genindlæsning).
+ */
+export function saveCache(storage: Pick<Storage, "setItem"> | undefined, cache: ChatCache): "saved" | "trimmed" | "skipped" {
+  if (!storage) return "skipped";
+  try {
+    storage.setItem(CHAT_CACHE_KEY, JSON.stringify(cache));
+    return "saved";
+  } catch {
+    const turns = countTurns(cache.chat.history);
+    if (turns < 2) return "skipped";
+    const trimmed = { ...cache, chat: { ...cache.chat, history: dropOldestTurns(cache.chat.history, Math.ceil(turns / 2)) } };
+    try {
+      storage.setItem(CHAT_CACHE_KEY, JSON.stringify(trimmed));
+      return "trimmed";
+    } catch {
+      return "skipped";
+    }
+  }
+}
+
+export function clearCache(storage: Pick<Storage, "removeItem"> | undefined): void {
+  try {
+    storage?.removeItem(CHAT_CACHE_KEY);
+  } catch {
+    // Uden lager er der intet at rydde.
   }
 }

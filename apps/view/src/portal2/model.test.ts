@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { Dataset, ViewSpec } from "@lasso/spec";
 import type { LookupResult } from "../portal/api.js";
 import type { ChatEvent } from "../chat/stream.js";
-import { addRecent, applyEvent, askPlaceholder, choiceMessage, closeItem, contextFor, freeTextPick, headLines, highlight, lastView, loadRecent, mapViews, newAnswer, openItem, searchCounts, searchRows, suggestions, withLastView, withoutHead, type OpenItem, type PendingChoice } from "./model.js";
+import { addRecent, applyEvent, CHAT_CACHE_TTL_MS, clearCache, countTurns, dropOldestTurns, restoreCache, saveCache, serializeCache, askPlaceholder, choiceMessage, closeItem, contextFor, freeTextPick, headLines, highlight, lastView, loadRecent, mapViews, newAnswer, openItem, searchCounts, searchRows, suggestions, withLastView, withoutHead, type OpenItem, type PendingChoice } from "./model.js";
 
 const novo: OpenItem = { key: "CVR-1-24256790", kind: "company", name: "NOVO NORDISK A/S", tab: "overblik" };
 const lasso: OpenItem = { key: "CVR-1-34580820", kind: "company", name: "LASSO X A/S", tab: "overblik" };
@@ -162,4 +162,78 @@ test("applyEvent: tekst og visninger i rækkefølge, placering først, menu og f
   assert.equal((withLastView(a, { spec: spec2, dataset: ds }).parts[1] as { spec: ViewSpec }).spec.title, "X", "kun den seneste");
   assert.ok(mapViews(a, (s) => ({ ...s, dataset: { ...s.dataset, savedIds: ["a"] } })).parts.every((p) => p.kind !== "view" || p.dataset.savedIds?.[0] === "a"));
   assert.equal(lastView(newAnswer("q")), undefined);
+});
+
+/* ---------- chatten i browseren ---------- */
+
+const tr = (content: unknown) => ({ role: "user", content });
+const history = [
+  tr("Spørgsmål 1"),
+  { role: "assistant", content: [{ type: "tool_use", id: "t1", name: "show_company", input: {} }] },
+  tr([{ type: "tool_result", tool_use_id: "t1", content: "ok" }]),
+  { role: "assistant", content: [{ type: "text", text: "Svar 1" }] },
+  tr([{ type: "text", text: "[Kontekst] …" }, { type: "text", text: "Spørgsmål 2" }]),
+  { role: "assistant", content: [{ type: "text", text: "Svar 2" }] },
+  tr("Spørgsmål 3"),
+  { role: "assistant", content: [{ type: "text", text: "Svar 3" }] },
+];
+
+test("dropOldestTurns: hele ture fjernes forfra; værktøjssvar skilles aldrig fra kaldet", () => {
+  assert.equal(countTurns(history), 3);
+  assert.deepEqual(dropOldestTurns(history, 1), history.slice(4));
+  assert.deepEqual(dropOldestTurns(history, 2), history.slice(6));
+  assert.deepEqual(dropOldestTurns(history, 3), []);
+  assert.deepEqual(dropOldestTurns(history, 0), history);
+  // Den første besked i resten er altid et spørgsmål, aldrig et værktøjssvar.
+  for (const n of [1, 2]) {
+    const first = dropOldestTurns(history, n)[0] as { content: unknown };
+    assert.ok(typeof first.content === "string" || !(first.content as { type: string }[]).some((b) => b.type === "tool_result"));
+  }
+});
+
+test("chat-cache: gemmes og læses for samme bruger inden udløb; svar med pending og lukkede faner udelades", () => {
+  const answers = {
+    [novo.key]: { question: "q", parts: [{ kind: "text" as const, text: "a" }], pending: false, status: "Henter …", choice: { id: "toolu_1", question: "Hvad?", options: [], allowFreeText: true } },
+    [mette.key]: { question: "q2", parts: [], pending: true },
+    "result:9": { question: "lukket", parts: [], pending: false },
+  };
+  const state = { chat: { history, sig: "sig" }, open: [novo, mette], active: mette.key, answers };
+  const c = serializeCache("pia", state, 1000);
+  assert.deepEqual(Object.keys(c.answers), [novo.key]);
+  assert.equal(c.answers[novo.key]!.status, undefined);
+  assert.deepEqual(c.answers[novo.key]!.choice?.id, "toolu_1", "en åben menu gemmes");
+  const raw = JSON.stringify(c);
+  const back = restoreCache(raw, "pia", 1000 + CHAT_CACHE_TTL_MS - 1)!;
+  assert.deepEqual(back.open, [novo, mette]);
+  assert.equal(back.active, mette.key);
+  assert.deepEqual(back.chat, { history, sig: "sig" });
+  assert.equal(back.answers[novo.key]!.question, "q");
+  // Udløbet, anden bruger, ødelagt eller forkert version: intet.
+  assert.equal(restoreCache(raw, "pia", 1000 + CHAT_CACHE_TTL_MS + 1), null);
+  assert.equal(restoreCache(raw, "bo", 2000), null);
+  assert.equal(restoreCache("{ikke json", "pia", 2000), null);
+  assert.equal(restoreCache(JSON.stringify({ ...c, v: 2 }), "pia", 2000), null);
+  assert.equal(restoreCache(null, "pia", 2000), null);
+  // Den aktive fane skal findes blandt de åbne; ellers den sidste.
+  assert.equal(restoreCache(JSON.stringify({ ...c, active: "væk" }), "pia", 2000)!.active, mette.key);
+});
+
+test("chat-cache: fuldt lager giver én trimmet gemning, ellers springes der over; rydning fejler aldrig", () => {
+  const writes: string[] = [];
+  const full = (limit: number): Pick<Storage, "setItem"> => ({
+    setItem: (_k, v) => {
+      if (v.length > limit) throw new DOMException("fuld", "QuotaExceededError");
+      writes.push(v);
+    },
+  });
+  const cache = serializeCache("pia", { chat: { history, sig: "s" }, open: [novo], active: novo.key, answers: {} }, 1);
+  assert.equal(saveCache(full(1_000_000), cache), "saved");
+  const trimmedAt = JSON.stringify(cache).length - 10;
+  assert.equal(saveCache(full(trimmedAt), cache), "trimmed");
+  const saved = JSON.parse(writes.at(-1)!) as { chat: { history: unknown[] } };
+  assert.equal(countTurns(saved.chat.history), 1, "den ældste halvdel (2 af 3 ture) er væk");
+  assert.equal(saveCache(full(10), cache), "skipped");
+  assert.equal(saveCache(undefined, cache), "skipped");
+  clearCache({ removeItem: () => { throw new Error("nej"); } });
+  clearCache(undefined);
 });

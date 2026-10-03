@@ -14,6 +14,7 @@ import {
   applyEvent,
   askPlaceholder,
   choiceMessage,
+  clearCache,
   closeItem,
   contextFor,
   freeTextPick,
@@ -21,11 +22,15 @@ import {
   LASSO_TAB,
   lastView,
   loadRecent,
+  CHAT_CACHE_KEY,
   mapViews,
   newAnswer,
   openItem,
+  restoreCache,
+  saveCache,
   saveRecent,
   searchCounts,
+  serializeCache,
   searchRows,
   suggestions,
   withLastView,
@@ -115,6 +120,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const [lookup, setLookup] = useState<LookupResult | undefined>();
   const [looking, setLooking] = useState(false);
   const [recent, setRecent] = useState<RecentItem[]>(() => loadRecent(storage()));
+  /** Først når samtalen fra lageret er lagt ind, må der gemmes igen (ellers overskrev første gemning den med tom tilstand). */
+  const [hydrated, setHydrated] = useState(false);
 
   const chat = useRef<ChatState>({ history: [] });
   const persistTheme = useRef(true);
@@ -140,7 +147,15 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   // Bounce i rulleområdet som i Safari, også i Chrome og Edge (elastic.ts).
   useElasticScroll(scroller, contentRef);
 
-  const api = useMemo(() => createPortalApi(() => setNotice("Du er logget ud. Genindlæs siden.")), []);
+  const api = useMemo(
+    () =>
+      createPortalApi(() => {
+        // Logget ud: samtalen i browseren hører til sessionen og ryddes.
+        clearCache(storage());
+        setNotice("Du er logget ud. Genindlæs siden.");
+      }),
+    [],
+  );
   const item = open.find((o) => o.key === active);
   const itemRef = useRef(item);
   itemRef.current = item;
@@ -258,6 +273,15 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   // Dybe links (og designguidens rammer): /portal?aaben=CVR-1-…,CVR-3-…&fane=oekonomi åbner fanerne; den sidste er aktiv.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    // Samtalen fra sidste besøg (docs/chat.md): faner, svar og historik, hvis den er brugerens egen og under 24 timer gammel.
+    const cached = restoreCache(storage()?.getItem(CHAT_CACHE_KEY), boot.user?.id ?? "", Date.now());
+    if (cached) {
+      setOpen(cached.open);
+      setAnswers(cached.answers);
+      chat.current = cached.chat;
+      if (!params.get("aaben")) setActive(cached.active);
+    }
+    setHydrated(true);
     const ids = (params.get("aaben") ?? "")
       .split(",")
       .map((x) => x.trim())
@@ -285,6 +309,20 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     // Kun ved start.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Samtalen gemmes i browseren, når der ikke hentes (ikke pr. tegn, mens svaret streames); kun den trimmede historik fra "done".
+  useEffect(() => {
+    if (!hydrated || pendingKey !== null || !boot.user) return;
+    saveCache(storage(), serializeCache(boot.user.id, { chat: chat.current, open, active, answers }, Date.now()));
+  }, [hydrated, open, active, answers, pendingKey, boot.user]);
+
+  // En fane på et modul uden data (fx genskabt fra lageret) henter det, når den vises.
+  useEffect(() => {
+    if (!item || item.kind === "result" || item.tab === LASSO_TAB) return;
+    const key = `${item.key}:${item.tab}`;
+    if (!shown[key] && !loading.has(key) && !failed[key]) void load(item.kind, item.key, item.tab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item?.key, item?.tab]);
 
   /* ---------- søgefeltet ---------- */
 
