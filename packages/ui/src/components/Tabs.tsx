@@ -74,10 +74,16 @@ export function Tabs({ level, items: allItems, value, onChange, ariaLabel, id, c
   const listRef = useRef<HTMLDivElement>(null);
   const print = usePrintMode();
 
-  // Mobil (29): den valgte fane rulles ind i syne ved skift.
+  // Mobil (29): den valgte fane rulles ind i syne ved skift. Kun fanelisten rulles (vandret): scrollIntoView ville også rulle sidens
+  // rulleområde, når fanerækken sidder i det (portalens modulrække over en høj side hoppede flere hundrede pixel ned ved åbning).
   useEffect(() => {
-    const el = listRef.current?.querySelector<HTMLElement>('[aria-selected="true"]');
-    el?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+    const list = listRef.current;
+    const el = list?.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (!list || !el) return;
+    const l = list.getBoundingClientRect();
+    const t = el.getBoundingClientRect();
+    if (t.left < l.left) list.scrollLeft += t.left - l.left;
+    else if (t.right > l.right) list.scrollLeft += t.right - l.right;
   }, [value]);
 
   // Mobil (26d.2): fade i højre kant kun, når fanerne faktisk ruller; passer de, står alle skarpt.

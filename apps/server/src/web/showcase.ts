@@ -9,6 +9,7 @@ import { alternativeComponents, portalPages, showcaseAlternatives, showcaseTabs,
 import type { Config } from "../config.js";
 import type { DataProvider } from "../data/index.js";
 import { resolveSpec } from "../data/resolve.js";
+import { portalPageSpec } from "../data/portalPage.js";
 import { injectBoot, loadViewHtml } from "./page.js";
 
 export const SHOWCASE = {
@@ -64,7 +65,8 @@ export async function buildShowcase(provider: DataProvider, ids: typeof SHOWCASE
   const alt = showcaseAlternatives(tabs[0]!, altCompanies, ids.compare);
   const altSpec = { version: 2, kind: "custom", title: "Alternativer", layout: "stack", criteria: [], components: alternativeComponents(alt) } as unknown as ViewSpec;
   const pages = portalPages(ids.company);
-  const pageSpec = (pg: PortalPage) => ({ version: 2, kind: "company", title: companyName, layout: pg.layout, criteria: [], components: pg.components }) as unknown as ViewSpec;
+  // Samme spec som portalens Overblik (data/portalPage.ts).
+  const pageSpec = (pg: PortalPage) => portalPageSpec(pg, companyName);
   const [datasets, altDataset, pageData] = await Promise.all([
     Promise.all(tabs.map((t) => resolveSpec(specOf(t), provider))),
     resolveSpec(altSpec, provider),

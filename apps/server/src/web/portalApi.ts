@@ -17,6 +17,7 @@ import {
   saveView,
   searchCompanies,
   showCompany,
+  showCompanyV1,
   showPerson,
   type UseCaseCtx,
   type UseCaseError,
@@ -180,6 +181,12 @@ export function portalApi({ config, provider, store, pages, templates }: PortalA
   router.get("/company/:ref", async (req, res) => {
     const params = parseOr400(companyParams, req.query, res);
     if (!params) return;
+    // Overblik: Lasso v1-siden (PORTAL_OVERVIEW=v1), tegnet direkte af data; andre fokus og composer-tilstanden som før.
+    if (config.portalOverview === "v1" && (params.focus ?? "overblik") === "overblik") {
+      const v1 = await showCompanyV1(ctx(res), String(req.params.ref));
+      if ("error" in v1) return sendError(res, v1);
+      return void res.json({ spec: v1.spec, dataset: v1.dataset, ...(v1.note ? { note: v1.note } : {}), link: entityLink(config, v1.lassoId, { focus: params.focus }), summary: summarizeView(v1.spec, v1.dataset, { host: "chat" }) });
+    }
     const r = await showCompany(ctx(res), { company: String(req.params.ref), focus: params.focus, years: params.years, chart_metric: params.metric });
     if ("error" in r) return sendError(res, r);
     // summary: samme resumé som værktøjssvarene giver modellen; portalen sender det som chattens kontekst (chat/context.ts).
