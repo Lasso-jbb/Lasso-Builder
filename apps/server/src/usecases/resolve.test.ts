@@ -2,14 +2,16 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { loadConfig } from "../config.js";
 import { DemoProvider } from "../data/demo.js";
-import { candidatesAsText, resolveEntity } from "./resolve.js";
+import { candidatesAsText, personDescription, resolveEntity } from "./resolve.js";
 
 const ctx = { provider: new DemoProvider(), config: loadConfig({ LASSO_DATA_SOURCE: "demo" }) };
 
 test("resolveEntity: ét match, flere match og intet match", async () => {
   const one = await resolveEntity(ctx, { kind: "person", query: "Gitte Prøve" });
   assert.equal(one.length, 1);
-  assert.deepEqual(one[0], { kind: "person", id: "CVR-3-4000000007", name: "Gitte Prøve", subtitle: "Aalborg" });
+  assert.deepEqual({ ...one[0], subtitle: "" }, { kind: "person", id: "CVR-3-4000000007", name: "Gitte Prøve", subtitle: "" });
+  // Beskrivelsen skiller personer ad: rolle, alder, by, antal selskaber og ét selskabsnavn.
+  assert.match(one[0]!.subtitle, /^Direktør og ejer, \d+ år, Aalborg\. 1 selskab, bl\.a\. Eksempel Revision Nord ApS\.$/);
 
   const many = await resolveEntity(ctx, { kind: "person", query: "Prøve" });
   assert.equal(many.length, 5, "standard højst 5");
@@ -42,4 +44,17 @@ test("resolveEntity: en åben fane med navnet står først som præcist match, u
   assert.deepEqual(lasso.map((c) => c.id), ["CVR-1-34580820"]);
   // Fanens type skal passe: en person-fane matcher ikke et virksomhedsopslag.
   assert.equal((await resolveEntity(ctx, { kind: "company", query: "Gitte Prøve" }, open)).length, 0);
+});
+
+test("personDescription: felter, der mangler, udelades; to personer med samme navn får hver sin beskrivelse", async () => {
+  const role = (companyName: string, r: string, active = true) => ({ companyName, kind: "director" as const, role: r, active });
+  const p = { lassoId: "CVR-3-1", name: "Jakob Benediktson", city: "Kgs. Lyngby", birthYear: 1979, roles: [role("Benediktson Holding ApS", "Direktør"), role("Anden ApS", "Medejer"), role("Gammel ApS", "Bestyrelsesmedlem", false)] };
+  assert.equal(personDescription(p as never, "", 2026), "Direktør og medejer, 47 år, Kgs. Lyngby. 2 selskaber, bl.a. Benediktson Holding ApS.");
+  assert.equal(personDescription({ lassoId: "CVR-3-2", name: "X", roles: [] } as never, "Aarhus"), "Aarhus.");
+  assert.equal(personDescription({ lassoId: "CVR-3-2", name: "X", city: "Odense", roles: [role("Y ApS", "Direktør")] } as never), "Direktør, Odense. 1 selskab, bl.a. Y ApS.");
+  // Flere personer med navnet Prøve: hver sin kandidat med eget id og egen beskrivelse, aldrig slået sammen.
+  const many = await resolveEntity(ctx, { kind: "person", query: "Prøve", limit: 5 });
+  assert.equal(new Set(many.map((c) => c.id)).size, many.length);
+  assert.ok(many.length >= 2);
+  assert.ok(many.every((c) => c.subtitle.length > 0 && !/flere personer/i.test(c.subtitle)));
 });

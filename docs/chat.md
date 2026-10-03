@@ -70,6 +70,20 @@ højst ét anbefalet punkt, mindst to punkter) tjekkes af zod på serveren (mind
 med ét punkt stadig kan bekræftes) og står kun i beskrivelserne i det skema, der sendes til API'et (strict tool
 use kender ikke min/max).
 
+**Valgmenuen skal komme, når AI'en er i tvivl.** Returnerer `find_entity` mindst to kandidater, og modellen slutter turen
+med tekst uden `ask_choice`, `place_answer` eller visning, leverer serveren ikke teksten (den holdes tilbage fra første
+modelkald efter kandidaterne og kasseres). I stedet får modellen én tur mere (`runChat`): en tekstblok efter
+værktøjssvarene, "Brugeren skal vælge: kald ask_choice med kandidaterne nu; skriv ingen liste i tekst." (ikke en
+systemændring, så cachen holder), og med Haiku (`CHAT_MODEL` begynder med `claude-haiku`, den eneste, der tager tvunget
+værktøjsvalg) `tool_choice: { type: "tool", name: "ask_choice" }`; andre modeller beholder auto. Giver turen heller ikke en
+gyldig menu, bygger serveren den selv: en assistentbesked med `ask_choice`-kaldet (de fem første kandidater, den første
+`recommended`, beskrivelser fra kandidaterne, `entity` med `focus: "overblik"`) og dets `tool_result`, samt `choice`-hændelsen,
+så `verifyChoice` bekræfter valget næste tur (id begynder med `toolu_srv_`). Kandidater er altid adskilte personer eller
+virksomheder med eget id (aldrig slået sammen), og personers beskrivelse bygges af søgerækkerne og personen
+(`personDescription` i `usecases/resolve.ts`): "Direktør og medejer, 47 år, Kgs. Lyngby. 4 selskaber, bl.a. Benediktson
+Holding ApS." (rolle, alder, by, antal selskaber og ét selskabsnavn; felter, der mangler, udelades). "Tilføj X", "åbn X" og
+"vis alt om X" åbner X (`EXPLICIT_OPEN`).
+
 **Valgmenuen (`ask_choice`) er kun til flere match.** Passer et navn på flere ("vis alt om Jakob"), finder
 modellen kandidaterne med `find_entity` (navneopslag uden visning; de åbne faner tæller som præcise match) og
 kalder `ask_choice` uden nogen visning: ét punkt pr. kandidat (placement `entity` med `entity` fra `find_entity`,

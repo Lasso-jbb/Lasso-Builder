@@ -1,4 +1,4 @@
-import { isPersonId, toLassoId } from "@lasso/spec";
+import { isPersonId, toLassoId, type PersonVM } from "@lasso/spec";
 import { findCompany, isCompanyRef, normalizeCompanyName } from "../data/lookup.js";
 import { normalizePersonName, pickPerson } from "../data/personLookup.js";
 import type { UseCaseCtx } from "./context.js";
@@ -88,7 +88,31 @@ export async function resolveEntity(ctx: Pick<UseCaseCtx, "provider" | "config">
     const rows = pick ? await ctx.provider.findCompanies(query, 20) : [];
     for (const r of pick ? [pick.pick, ...pick.alternatives, ...rows] : []) push({ kind: "company", id: r.lassoId, name: r.name, subtitle: [r.city, r.cvr && `CVR ${r.cvr}`, r.status].filter(Boolean).join(", ") });
   }
-  return found.slice(0, limit);
+  const top = found.slice(0, limit);
+  // Personer får en beskrivelse, der kan skille dem ad (rolle, alder, by, selskaber), så to med samme navn aldrig ligner hinanden.
+  if (input.kind === "person") {
+    await Promise.all(
+      top.map(async (c) => {
+        if (c.subtitle === "åben fane") return;
+        try {
+          c.subtitle = personDescription(await ctx.provider.person(c.id), c.subtitle);
+        } catch {
+          // Uden detaljer står byen alene.
+        }
+      }),
+    );
+  }
+  return top;
+}
+
+/** "Direktør og medejer, 47 år, Kgs. Lyngby. 4 selskaber, bl.a. Benediktson Holding ApS." ud fra personens roller; felter, der mangler, udelades. */
+export function personDescription(p: PersonVM, fallbackCity = "", year = new Date().getFullYear()): string {
+  const active = p.roles.filter((r) => r.active);
+  const roles = [...new Set(active.map((r) => r.role.trim()).filter(Boolean))].slice(0, 2);
+  const head = [roles.length ? roles.map((r, i) => (i ? r.charAt(0).toLowerCase() + r.slice(1) : r)).join(" og ") : undefined, p.birthYear ? `${year - p.birthYear} år` : undefined, p.city ?? (fallbackCity || undefined)].filter(Boolean).join(", ");
+  const companies = [...new Set(active.map((r) => r.companyName).filter(Boolean))];
+  const tail = companies.length ? `${companies.length} ${companies.length === 1 ? "selskab" : "selskaber"}, bl.a. ${companies[0]}.` : "";
+  return [head && `${head}.`, tail].filter(Boolean).join(" ") || fallbackCity;
 }
 
 /** Kandidaterne som tekst til modellen: "id | navn | undertitel" pr. linje. */

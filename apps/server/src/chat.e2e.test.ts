@@ -657,3 +657,60 @@ test("modullinks: uden links i modellens tekst tilføjer serveren modulet fra vi
   script.push(useTool("ask_choice", menu));
   assert.deepEqual(linkText((await chat({ message: "vis alt om Gitte", context: onLasso })).all), []);
 });
+
+test("flere kandidater: en liste i teksten leveres aldrig; modellen får én tur mere med tvunget ask_choice (Haiku)", async () => {
+  const list = "Der er flere personer med navnet Prøve: • Gitte Prøve • Kim Prøve. Kan du give mig mere information?";
+  const picked = { ...menu, options: menu.options.slice(0, 2) };
+  script.push(useTool("find_entity", { kind: "person", query: "Prøve" }), sayText(list), useTool("ask_choice", picked));
+  const { all, events } = await chat({ message: "tilføj prøve", context: onLasso });
+  assert.ok(!all!.some((e) => e.type === "text" && String(e.text).includes("•")), "listen kasseres");
+  assert.deepEqual(typesOf(events), ["placement", "tool", "tool", "choice", "done"]);
+  // Den ekstra tur: beskeden efter værktøjssvarene, og tool_choice tvinger ask_choice (standardmodellen er Haiku).
+  const forced = calls.at(-1)!;
+  const lastUser = forced.messages.at(-1)!.content as { type: string; text?: string }[];
+  assert.equal(lastUser.at(-1)!.text, "Brugeren skal vælge: kald ask_choice med kandidaterne nu; skriv ingen liste i tekst.");
+  assert.equal(lastUser[0]!.type, "tool_result");
+  assert.deepEqual(forced.tool_choice, { type: "tool", name: "ask_choice" });
+  assert.equal(calls.at(-2)!.tool_choice, undefined);
+  // Listen står ikke i den gemte historik.
+  const done = events.at(-1) as Event & { history: unknown[] };
+  assert.ok(!JSON.stringify(done.history).includes("•"));
+});
+
+test("flere kandidater: svigter den tvungne tur, bygger serveren menuen, og valget kan bekræftes næste tur", async () => {
+  const list = "Der er flere personer med navnet Prøve: • Gitte Prøve • Kim Prøve.";
+  script.push(useTool("find_entity", { kind: "person", query: "Prøve" }), sayText(list), sayText(list));
+  const first = await chat({ message: "åbn prøve", context: onLasso });
+  assert.ok(!first.all!.some((e) => e.type === "text" && String(e.text).includes("•")));
+  assert.deepEqual(typesOf(first.events), ["placement", "tool", "tool", "choice", "done"]);
+  const choice = first.events.find((e) => e.type === "choice") as Event & { id: string; options: { label: string; description: string; recommended?: boolean; action: unknown }[]; allowFreeText: boolean };
+  assert.match(choice.id, /^toolu_srv_/);
+  assert.ok(choice.options.length >= 2 && choice.options.length <= 5);
+  assert.equal(choice.options[0]!.recommended, true);
+  assert.ok(choice.options.slice(1).every((o) => !o.recommended));
+  assert.ok(choice.options.every((o) => o.description.length > 0 && o.description.length <= 160));
+  assert.equal(choice.allowFreeText, true);
+  const done = first.events.at(-1) as Event & { history: { role: string; content: { type: string; id?: string; tool_use_id?: string }[] }[]; sig: string };
+  assert.equal(done.history.at(-2)!.content[0]!.id, choice.id);
+  assert.equal(done.history.at(-1)!.content[0]!.tool_use_id, choice.id);
+  // verifyChoice: valget fra den byggede menu godtages, og placeringen er entity med kandidaten.
+  script.push(useTool("show_person", { person: jakob.id }), sayText("Her."));
+  const pick = { ...onLasso, choice: { id: choice.id, index: 0, action: choice.options[0]!.action } };
+  const next = await chat({ message: "Vis alt om den første", context: pick, history: done.history, sig: done.sig });
+  assert.equal(next.status, 200, JSON.stringify(next.json));
+  assert.equal((next.events[0] as Event & { placement: string }).placement, "entity");
+  // En forfalsket handling afvises stadig.
+  const forged = { ...onLasso, choice: { id: choice.id, index: 0, action: { ...(choice.options[0]!.action as object), focus: "ejerskab" } } };
+  assert.equal((await chat({ message: "x", context: forged, history: done.history, sig: done.sig })).status, 400);
+});
+
+test("én kandidat, eller afgjort placering: teksten leveres som før", async () => {
+  script.push(useTool("find_entity", { kind: "person", query: "Gitte Prøve" }), sayText("Det er Gitte Prøve, direktør."));
+  const one = await chat({ message: "Hvem er Gitte Prøve?", context: onLasso });
+  assert.ok(one.events.some((e) => e.type === "text" && String(e.text).includes("Gitte Prøve, direktør")));
+  // Flere kandidater, men modellen afgør det selv (place_answer med current) og svarer: teksten fra samme tur leveres.
+  script.push(useTool("find_entity", { kind: "person", query: "Prøve" }), useTool("place_answer", { placement: "current" }, "Jeg ved ikke hvilken, så her er et kort svar."), sayText("Færdig."));
+  const decided = await chat({ message: "Hvem sidder i ledelsen?", context: onLasso });
+  assert.ok(decided.events.some((e) => e.type === "text" && String(e.text).includes("Færdig.")));
+  assert.ok(!decided.events.some((e) => e.type === "choice"));
+});

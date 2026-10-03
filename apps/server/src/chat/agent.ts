@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import type {
   BetaMessage,
@@ -15,6 +16,7 @@ import { ASK_CHOICE, contextText, placementOf, PLACE_ANSWER, withoutStaleSame, t
 import type { TurnState } from "./place.js";
 import { trimHistory } from "./history.js";
 import { CHAT_TOOLS, chatToolByName, type ChoiceMenu } from "./tools.js";
+import type { EntityCandidate } from "../usecases/index.js";
 
 /**
  * Lassos egen chat (docs/chat.md): Claude via Claude Platform med NØJAGTIG de samme værktøjer og
@@ -106,6 +108,25 @@ function appendToLastAssistant(messages: BetaMessageParam[], extra: string): voi
   messages[messages.length - 1] = { role: "assistant", content: blocks };
 }
 
+/** Beskeden efter værktøjssvarene, når modellen skrev kandidater som tekst i stedet for at kalde ask_choice. */
+export const FORCE_CHOICE = "Brugeren skal vælge: kald ask_choice med kandidaterne nu; skriv ingen liste i tekst.";
+
+/** En valgmenu bygget af serveren ud fra find_entity's kandidater (de fem første; den første anbefalet): input til ask_choice. */
+export function syntheticMenuInput(candidates: readonly EntityCandidate[]): unknown {
+  const top = candidates.slice(0, 5);
+  const noun = top[0]?.kind === "company" ? "virksomhed" : "person";
+  return {
+    question: `Hvilken ${noun} mener du?`,
+    options: top.map((c, i) => ({
+      label: c.name.slice(0, 80),
+      description: (c.subtitle || "-").slice(0, 160),
+      ...(i === 0 ? { recommended: true } : {}),
+      action: { placement: "entity", entity: { kind: c.kind, id: c.id, name: c.name.slice(0, 200) }, focus: "overblik", prompt: `Vis alt om ${c.name} (${c.id})`.slice(0, 4000) },
+    })),
+    allowFreeText: true,
+  };
+}
+
 /** Ét kald til modellen; streamer teksten med onText og giver den færdige besked. Udskiftes i test. */
 export type ModelCall = (params: MessageCreateParamsNonStreaming, onText: (delta: string) => void, signal?: AbortSignal) => Promise<BetaMessage>;
 
@@ -128,7 +149,8 @@ export const CHAT_RULES = `Du er Lassos assistent i Lassos egen chat (portalen).
 Placering (vælges først):
 - Brugerens tur begynder med [Kontekst]: den fane, brugeren står på (en virksomhed, en person eller forsiden/et resultat = globalt), de åbne faner og evt. det, brugeren lige valgte i en menu. Placeringen er afgjort, før noget vises: højst én fane pr. spørgsmål, og place_answer kaldes højst én gang og som det første.
 - Standard er at blive: svar i den aktive kontekst. "Hvad laver Jakob ellers?" på LASSO X A/S besvares med show_person/render_view om Jakob, vist her. Nævner spørgsmålet en anden person eller virksomhed, men beder brugeren ikke om dens side, så kald place_answer med current.
-- Åbn kun en anden fane, når brugeren selv skriver "vis alt om X", "se alt om X" eller "åbn X": find først id med find_entity. Ét kandidat: place_answer med entity (id og navn fra find_entity), og vis så siden (show_person/show_company med show_all for "vis alt"). Flere kandidater: ask_choice med ét punkt pr. kandidat (placement entity med entity fra find_entity, focus overblik), title på punktet er navnet, description er rollen, alderen, byen og virksomhederne; den mest sandsynlige først og anbefalet (recommended: true, højst ét). Fritekst lægger appen selv til.
+- Åbn kun en anden fane, når brugeren selv skriver "vis alt om X", "se alt om X", "tilføj X" eller "åbn X": find først id med find_entity. Ét kandidat: place_answer med entity (id og navn fra find_entity), og vis så siden (show_person/show_company med show_all for "vis alt"). Flere kandidater: ask_choice med ét punkt pr. kandidat (placement entity med entity fra find_entity, focus overblik), title på punktet er navnet, description er rollen, alderen, byen og virksomhederne; den mest sandsynlige først og anbefalet (recommended: true, højst ét). Fritekst lægger appen selv til.
+- Er du ikke sikker på, hvem der menes, så kald ask_choice med kandidaterne; skriv aldrig kandidater som en liste i teksten, og spørg aldrig efter by eller firma i tekst. "Tilføj X", "åbn X" og "vis alt om X" åbner X.
 - Tilbyd aldrig kort eller fuld indsigt, og brug aldrig ask_choice til at vælge placering. ask_choice er kun til flere match på et navn.
 - Lister, sammenligninger og analyser på tværs af virksomheder eller personer: place_answer global med en title, et af de fire navne Firmaliste, Sammenligning, Markedsanalyse eller Kort (aldrig spørgsmålet). På forsiden og på et resultat behøves ingen menu.
 - Efter et valg i menuen står det i [Kontekst] og er bindende: gør det i ét trin uden place_answer. Skriver brugeren i stedet et nyt spørgsmål, besvar det her.
@@ -319,6 +341,11 @@ export async function runChat({ ctx, config, model, history, message, context, e
   /** Turen sluttede normalt med et tekstsvar (ikke en fejl, afbrydelse eller menu). */
   let endedNormally = false;
   let choiceShown = false;
+  /** Kandidaterne fra det seneste find_entity; er der flere og intet afgjort, skal turen ende i en valgmenu (ikke en liste i teksten). */
+  let candidates: EntityCandidate[] = [];
+  /** 1 = den ekstra tur, hvor modellen bliver bedt om ask_choice. */
+  let enforce = 0;
+  const undecided = () => candidates.length >= 2 && !turn.placed && !turn.viewed && !choiceShown;
   const { client, close } = await connect({ ...ctx, host: "chat" });
   try {
     const setup = await buildChatSetup(client, config);
@@ -327,12 +354,14 @@ export async function runChat({ ctx, config, model, history, message, context, e
 
     for (let step = 0; step < MAX_STEPS; step++) {
       let response: BetaMessage;
+      // Med flere kandidater og intet afgjort holdes teksten tilbage: en liste i tekst leveres aldrig som svaret.
+      const hold = undecided();
+      const held: string[] = [];
+      const request = chatRequest(config, setup, messages);
+      // Kun Haiku 4.5 tager tvunget værktøjsvalg; de andre modeller beholder auto.
+      if (enforce === 1 && config.CHAT_MODEL.startsWith("claude-haiku")) request.tool_choice = { type: "tool", name: ASK_CHOICE };
       try {
-        response = await model(
-          chatRequest(config, setup, messages),
-          (text) => emit({ type: "text", text }),
-          signal,
-        );
+        response = await model(request, (text) => (hold ? held.push(text) : emit({ type: "text", text })), signal);
       } catch (e) {
         if (signal?.aborted) return;
         console.error("[chat] Claude-fejl:", e instanceof Error ? e.message : e);
@@ -340,6 +369,36 @@ export async function runChat({ ctx, config, model, history, message, context, e
         return;
       }
       logUsage(step, response);
+      if (hold && enforce === 0 && response.stop_reason === "end_turn") {
+        // Modellen sluttede med tekst, selv om flere kan være ment: teksten kasseres, og den får én tur til at kalde ask_choice.
+        enforce = 1;
+        const last = messages.at(-1);
+        if (last?.role === "user" && Array.isArray(last.content)) messages[messages.length - 1] = { role: "user", content: [...last.content, { type: "text", text: FORCE_CHOICE }] };
+        else messages.push({ role: "user", content: FORCE_CHOICE });
+        continue;
+      }
+      if (hold && enforce === 1) {
+        const ask = response.content.find((b): b is BetaToolUseBlock => b.type === "tool_use" && b.name === ASK_CHOICE);
+        const ok = ask ? (await chatToolByName(ASK_CHOICE)!.run(ask.input ?? {}, toolCtx)).choice : undefined;
+        if (!ok) {
+          // Også den tvungne tur gav ingen menu: serveren bygger den selv, så brugerens valg kan bekræftes (verifyChoice) næste tur.
+          const id = `toolu_srv_${randomUUID().replace(/-/g, "")}`;
+          const input = syntheticMenuInput(candidates);
+          const built = await chatToolByName(ASK_CHOICE)!.run(input, toolCtx);
+          if (!built.choice) {
+            emit({ type: "error", message: "Jeg kunne ikke afgøre, hvem du mener. Skriv et mere præcist navn." });
+            break;
+          }
+          messages.push({ role: "assistant", content: [{ type: "tool_use", id, name: ASK_CHOICE, input: input as Record<string, unknown> }] });
+          messages.push({ role: "user", content: [{ type: "tool_result", tool_use_id: id, content: built.text }] });
+          emit({ type: "tool", id, name: ASK_CHOICE, title: titles.get(ASK_CHOICE) ?? ASK_CHOICE });
+          choiceShown = true;
+          emit({ type: "choice", id, ...built.choice });
+          break;
+        }
+        held.length = 0;
+      }
+      if (held.length) emit({ type: "text", text: held.join("") });
       messages.push({ role: "assistant", content: response.content });
 
       if (response.stop_reason === "refusal") {
@@ -404,6 +463,7 @@ export async function runChat({ ctx, config, model, history, message, context, e
           if (own) {
             const r = await own.run(u.input ?? {}, toolCtx).catch((e: unknown) => ({ text: e instanceof Error ? e.message : String(e), isError: true }));
             if (r.isError) emit({ type: "tool_error", id: u.id, name: u.name, message: r.text });
+            if ("candidates" in r && r.candidates) candidates = r.candidates;
             return { type: "tool_result", tool_use_id: u.id, content: r.text, ...(r.isError ? { is_error: true } : {}) };
           }
           let result: CallToolResult;
