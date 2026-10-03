@@ -135,6 +135,13 @@ test("Skabelonens navn: en show_company-side (titel = navnet) hedder modulet; el
   assert.equal(templateTitle({ title: "Eksempel Byg A/S" }, "Eksempel Byg A/S"), "Eksempel Byg A/S");
 });
 
+test("Links i teksten: tekstens farve og kun understregning (chat-ilink), pillerne uændrede", () => {
+  const out = html(createElement(AssistantMessage, { answer: { parts: [{ kind: "text", text: "Du kan tjekke [Anne](lasso:person/CVR-3-4000000001).\n\n[Risiko](lasso:modul/risiko)" }], pending: false, at: fx.FIXTURE_AT } }));
+  assert.match(out, /<button type="button" class="chat-ilink">Anne<\/button>/);
+  assert.doesNotMatch(out, /class="chat-tlink">Anne/);
+  assert.match(out, /class="chat-link"/);
+});
+
 test("Tom tilstand: titel med fanens navn, hjælpelinje og fire piller pr. fanetype", () => {
   assert.deepEqual(emptyPills("company", fx.EMPTY.suggestions), [...fx.EMPTY.suggestions, "Lav et fuldt KYC-overblik"]);
   assert.equal(emptyPills("person", ["a", "b", "c"])[3], "Vis netværket");

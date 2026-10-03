@@ -29,15 +29,20 @@
 .p3 .chat-avatar--big .chat-avatar__mark { width: 20px; height: 16.6px; }
 .p3 .chat-ai { min-width: 0; }
 .p3 .chat-after { margin-left: calc(var(--chat-avatar) + var(--lasso-space-3)); }
-.p3 .chat-body { max-width: var(--chat-body-max); font-size: var(--lasso-fs); line-height: var(--chat-lh); color: var(--lasso-text); overflow-wrap: anywhere; }
+/* Samme skrift som modulteksten (regnskabsanalysens afsnit, .lasso-analysis19__body; Jakob 03.10): --lasso-font 14/22,
+   --lasso-text-2 og tabeltal; fremhævning 600 i --lasso-text som modulernes fremhævede tekst. */
+.p3 .chat-body { max-width: var(--chat-body-max); font-family: var(--lasso-font); font-size: var(--lasso-fs); line-height: var(--chat-lh); color: var(--lasso-text-2); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .p3 .chat-body p { margin: 0; }
 .p3 .chat-body p + p, .p3 .chat-body .chat-brow + p { margin-top: var(--lasso-space-2); }
 .p3 .chat-body p + .chat-brow { margin-top: 6px; }
 .p3 .chat-body .chat-links + p { margin-top: 14px; }
-.p3 .chat-body b { font-weight: 500; }
+.p3 .chat-body b { font-weight: var(--lasso-fw-semibold); color: var(--lasso-text); }
 .p3 .chat-brow { display: flex; align-items: flex-start; gap: var(--lasso-space-3); padding: 4px 0 4px var(--lasso-space-4); position: relative; }
 .p3 .chat-brow::before { content: ""; position: absolute; left: 0; top: 12px; width: 6px; height: 6px; border-radius: 50%; background: var(--lasso-text); }
-.p3 .chat-a { color: var(--lasso-accent-text); }
+/* Links i teksten (lasso:-links og webadresser): ingen farve, kun en tynd, dæmpet understregning; fuld ved hover (Jakob 03.10).
+   Modul-links som række (pillerne) er uændrede. */
+.p3 .chat-a, .p3 .chat-ilink { color: inherit; font: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); }
+.p3 .chat-a:hover, .p3 .chat-ilink:hover, .p3 .chat-a:focus-visible, .p3 .chat-ilink:focus-visible { text-decoration-color: currentColor; outline: none; }
 .p3 .chat-error { margin: 0; }
 
 /* Tekstlink: 14/500 koral mørk */

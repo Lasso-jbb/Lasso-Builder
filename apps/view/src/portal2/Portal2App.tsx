@@ -104,7 +104,6 @@ function storage(): Storage | undefined {
 }
 
 const isPhone = () => window.matchMedia?.(PHONE).matches ?? false;
-const KIND_ALL: Record<"company" | "person", string> = { company: "alle virksomheder", person: "alle personer" };
 /** Fortryd står i 10 sekunder efter en flytning. */
 const UNDO_MS = 10_000;
 /** Turens svar er ikke længere i gang (afbrudt, fejl eller færdig): status væk, tidspunktet sat (thread.ts settleTurn sætter ikke tidspunktet). */
@@ -146,7 +145,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   /** Egne sider er hentet (så en fane på en fjernet egen side kan sættes tilbage). */
   const templatesLoaded = useRef(false);
   const [adding, setAdding] = useState<string | null>(null);
-  /** Rækken efter en tur, når en side er tilføjet som modul (eller fejlede). */
+  /** Fejlen efter en tur, når en side ikke kunne tilføjes som modul (med "Prøv igen" ved netværks- og serverfejl). */
   const [tplNotes, setTplNotes] = useState<Record<string, { ok: boolean; text: string; retry?: () => void }>>({});
   const [confirmRemove, setConfirmRemove] = useState<PageTemplate | null>(null);
   const [jump, setJump] = useState(false);
@@ -714,7 +713,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     try {
       const tpl = await api.templates.save({ kind: it.kind, title: templateTitle(part.spec, entityOf(part.spec, part.dataset)?.name ?? it.name), spec: part.spec, entity: { kind: it.kind, id: it.key } });
       setTemplates((t) => [...t.filter((x) => x.id !== tpl.id), tpl]);
-      setTplNotes((n) => ({ ...n, [turnId]: { ok: true, text: `Tilføjet som modul på ${KIND_ALL[tpl.kind]}` } }));
+      // Ingen meddelelsesrække: den røde pin på det nye modul er bekræftelsen (Jakob 03.10).
       setOpen((l) => l.map((o) => (o.key === it.key ? { ...o, tab: templateTab(tpl.id) } : o)));
       void load(it.kind, it.key, templateTab(tpl.id), true);
     } catch (e) {

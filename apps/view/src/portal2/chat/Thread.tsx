@@ -29,7 +29,7 @@ export interface ThreadProps extends Omit<AssistantMessageProps, "answer" | "onR
   now?: number;
   onUndo?: (turn: Turn) => void;
   onRetry?: (turn: Turn) => void;
-  /** Ekstra efter en tur (fx "Tilføjet som modul på alle virksomheder" eller en fejl med "Prøv igen"). */
+  /** Ekstra efter en tur (fx en fejl fra "Tilføj som fane" med "Prøv igen"). */
   afterTurn?: (turn: Turn) => ReactNode;
   /** Antal ture, der tegnes fra start (resten hentes ind ved rulning op). */
   pageSize?: number;

@@ -163,8 +163,8 @@ export const MOBILE_PAGE: Turn[] = [turn("Lav et fuldt KYC-overblik", done([text
 
 /* ---------- Sideskabelon (ejerens beslutning, erstatter D3) ---------- */
 export const TEMPLATE: PageTemplate = { id: "fx-kyc", kind: "company", title: "KYC-overblik", subtitle: "Ejere, PEP- og sanktionstjek, risiko og nøgletal" };
-/** "Tilføj som fane" lykkedes: tråden får rækken, og fanen står på skabelonmodulet (tab tpl:<id>) med den røde nål. */
-export const TEMPLATE_ADDED = { turns: FORM_PAGE, afterTurnId: FORM_PAGE[0]!.id, notice: "Tilføjet som modul på alle virksomheder", tab: `tpl:${TEMPLATE.id}`, templates: [TEMPLATE] };
+/** "Tilføj som fane" lykkedes: fanen står på skabelonmodulet (tab tpl:<id>) med den røde nål; ingen meddelelsesrække (Jakob 03.10). */
+export const TEMPLATE_ADDED = { turns: FORM_PAGE, tab: `tpl:${TEMPLATE.id}`, templates: [TEMPLATE] };
 /** Den røde nål klikket: bekræftelsen "Fjern modulet?". */
 export const TEMPLATE_CONFIRM = { ...TEMPLATE_ADDED, confirmOpen: true };
 

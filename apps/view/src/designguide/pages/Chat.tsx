@@ -11,7 +11,6 @@ import { ChoicePanel } from "../../portal2/ChoicePanel.js";
 import { AskField, DropButton, IconButton, LassoTab, ModuleTab, RemoveTemplateDialog, Suggestions, TemplatePin } from "../../portal2/parts.js";
 import { EmptyState, type EmptyKind } from "../../portal2/chat/EmptyState.js";
 import { Fullscreen } from "../../portal2/chat/Fullscreen.js";
-import { NoticeRow } from "../../portal2/chat/Message.js";
 import { ScrollDown, Thread } from "../../portal2/chat/Thread.js";
 import {
   CHOICE,
@@ -244,7 +243,6 @@ function scenes(): SceneDef[] {
             mobile={mobile}
             theme={theme}
             onAdd={false}
-            after={(t) => (t.id === TEMPLATE_ADDED.afterTurnId ? <NoticeRow text={TEMPLATE_ADDED.notice} /> : null)}
           />
         </Scene>
       ),
