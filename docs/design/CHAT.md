@@ -24,7 +24,7 @@ Fra eksporten, ordret, bortset fra de steder hvor en beslutning (se "Beslutninge
 10. Et spørgsmål bliver i fanen, når det giver mening i fanens kontekst, også når det nævner andre. "Vis mig alt om …" åbner en ny fane, og spørgsmålet følger med som første besked. Når Lasso skifter fane, står der en meddelelsesrække i den gamle samtale med Fortryd i 10 sekunder.
 11. Spørgsmål uden ét firma eller én person får en global fane med et generelt navn: Firmaliste, Sammenligning, Markedsanalyse eller Kort. Dens ikon er Lasso-mærket. Emnet står i samtalen, ikke i fanens navn. *(Modulerne Liste, Sammenligning, Kort og Noter i eksportens eksempel findes ikke endnu; en global fane viser kun Lasso-modulet; D4.)*
 12. Er der flere mulige match, lægger et valg sig over samtalen lige over inputfeltet med mulighederne, en Andet-række med frit felt og knapperne Spring over og Vælg. Rækkerne har kun titel og beskrivelse. *(Valget bruges kun til flere match, aldrig til at vælge placering.)*
-13. Tom tilstand viser en hilsen med fanens navn og forslag som piller med pil. Mens Lasso tænker, vises tre orange prikker og Tænker…; tager det længere, står der i ord hvad den gør, med et skelet og en Stop-knap. Fejl står som almindelig tekst med mindst én handling. Rullet op vises en rund knap med pil ned.
+13. Tom tilstand viser en hilsen med fanens navn og forslag som piller med pil. Mens Lasso tænker, vises kun tre prikker i tekstfarven (Jakob 03.10: ingen "Tænker…", ikke koral); tager det længere, står der i ord hvad den gør, med et skelet. Der er ingen Stop i samtalen eller i feltet (Jakob 03.10). Fejl står som almindelig tekst med mindst én handling. Rullet op vises en rund knap med pil ned.
 14. På mobilen fylder samtalen hele bredden med 16 px luft, brugerens bobler er højst 280 px, inputfeltet er 48 px og står lige over bundlinjen. Kort har kun fuld skærm i rammen; en hel side får desuden Tilføj som fane som en neutral ikonknap med koral ikon. Afklaringen er et ark fra bunden.
 15. Alle knapper kommer fra designguiden; ingen opfundne knapper. Mål: boble radius 18, tekst 14/22, avatar 24, kortramme radius 10, inputpille 52, modul-link 46 høj radius 12. *(Knapperne er `Button` og `IconButton` fra `packages/ui` i 14 px og mindst 32 px, ikke eksportens 13 px og 28 px; D6.)*
 
@@ -59,8 +59,8 @@ eller som de eksisterende tokens i `styles.css`.
 | Panelrækker | surface-panel, divider-subtle kant, radius 8, padding 14/16, 8 px mellemrum; titel 16/24 ink; "(Anbefalet)" 14 text-secondary; beskrivelse 14/22 text-secondary |
 | "Andet"-felt | 44 højt, radius 8, "Skriv dit eget svar her"; knapper højrestillet, margin-top 16, gap 8: "Spring over" (sekundær), "Vælg" (primær) |
 | Mobilark | venstre/højre 16, bund 132, padding 16, rækker 12/14, titel 15, beskrivelse 13/20 |
-| Tænker | prikker 6 px primary, gap 5, puls 1,2 s, opacitet 1/.6/.3; tekst 14 text-secondary "Tænker…", gap 10 |
-| Længere opgave | statustekst (værktøjets titel) + skelet (shimmer) + Stop-knap |
+| Tænker | prikker 6 px i tekstfarven (`--lasso-text`, Jakob 03.10: ikke koral), gap 5, puls 1,2 s, opacitet 1/.6/.3; ingen tekst ("Lasso tænker" kun for skærmlæsere, role=status) |
+| Længere opgave | statustekst (værktøjets titel) + skelet (shimmer); ingen Stop (Jakob 03.10) |
 | Fuld skærm | samme bredde og sideluft som modulerne (`.col` og `.view`, i alle brudpunkter; hovedet flugter med indholdet), Jakob 03.10 (eksporten har venstre/højre 42); padding 24 0; titel 18/26/500, undertitel 14/20; hoved margin-bottom 28; download + × 32; inputfeltet bliver |
 | Mobil fuld skærm | mellem modulrække og input; titel 16/22; kun × |
 | Rul-ned-knap | 40 cirkel, 1 px kant, skygge 0 4 12 rgba(.1), pil ned 18, bund 170 |
@@ -160,11 +160,11 @@ Efter fjernelsen står en åben fane på modulet på Overblik. De indbyggede mod
 | Tilstand | Udseende |
 |---|---|
 | Tom | Lasso-avatar 40 px, titel "Spørg Lasso om `<fane>`", hjælpetekst efter slags og fire piller (tre faste og en fjerde pr. slags: "Lav et fuldt KYC-overblik" på en virksomhed, "Vis netværket" på en person, "Sammenlign de største" globalt); forslagene under feltet skjules |
-| Tænker | Tre orange prikker og "Tænker…" |
-| Længere opgave | Værktøjets titel i ord, skelet med shimmer og en Stop-knap |
+| Tænker | Tre prikker i tekstfarven, ingen tekst (Jakob 03.10) |
+| Længere opgave | Værktøjets titel i ord og skelet med shimmer; ingen Stop (Jakob 03.10) |
 | Fejl | Almindelig tekst og linket "Prøv igen" |
 | Lang samtale | Ældre ture indlæses, mens man ruller op ("Indlæser ældre beskeder…"); rul-ned-knappen vises, når man er rullet op |
-| Ventende | Inputfeltet er slået fra, mens et svar hentes; Stop afbryder |
+| Ventende | Inputfeltet er slået fra, mens et svar hentes; ingen Stop (Jakob 03.10). Hentningen afbrydes kun, når fanen lukkes, eller flytningen fortrydes |
 
 ## Mobil
 

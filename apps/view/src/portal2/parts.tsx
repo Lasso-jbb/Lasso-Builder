@@ -343,7 +343,7 @@ export function MenuItem({ icon, label, current = false, muted = false, onClick,
 
 /**
  * Spørgefeltet (chatten): pille 720 × 52 med "Spørg Lasso" og enter-ikonet. Mens Lasso svarer, er feltet slået fra
- * (Stop står i samtalen ved den længere opgave).
+ * (der er ingen Stop, Jakob 03.10).
  */
 export function AskField({
   value,
@@ -363,8 +363,6 @@ export function AskField({
   inputRef?: Ref<HTMLInputElement>;
   onChange?: (v: string) => void;
   onSubmit?: () => void;
-  /** @deprecated Stop står i samtalen (den længere opgave). */
-  onStop?: () => void;
 }) {
   return (
     <form

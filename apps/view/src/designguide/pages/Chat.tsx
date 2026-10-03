@@ -347,7 +347,7 @@ function scenes(): SceneDef[] {
     {
       id: "taenker",
       title: "Tænker",
-      note: "Tre orange prikker og \"Tænker…\"; feltet er slået fra, mens Lasso svarer.",
+      note: "Kun tre prikker i tekstfarven (Jakob 03.10: ingen \"Tænker…\" og ikke koral; \"Lasso tænker\" for skærmlæsere); feltet er slået fra, mens Lasso svarer.",
       render: ({ theme, mobile, fill }) => (
         <Scene theme={theme} mobile={mobile} sugg={SUGG} pending>
           <Conversation turns={fill(SCENES.thinking)} mobile={mobile} theme={theme} />
@@ -357,7 +357,7 @@ function scenes(): SceneDef[] {
     {
       id: "laengere",
       title: "Længere opgave",
-      note: "Værktøjets titel i ord, et skelet med shimmer og Stop.",
+      note: "Værktøjets titel i ord og et skelet med shimmer. Ingen Stop (Jakob 03.10).",
       render: ({ theme, mobile, fill }) => (
         <Scene theme={theme} mobile={mobile} sugg={SUGG} pending>
           <Conversation turns={fill(SCENES.longTask)} mobile={mobile} theme={theme} />

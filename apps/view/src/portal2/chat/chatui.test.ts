@@ -79,25 +79,19 @@ test("Meddelelsesrækken: her, ny fane med Fortryd i 10 sekunder, derefter uden 
   assert.doesNotMatch(html(createElement(Thread, { turns: fx.NEW_TAB_BEFORE.slice(1), now: fx.FIXTURE_AT })), /chat-msg--ai/);
 });
 
-test("Svar: tænker, længere opgave med Stop og skelet, fejl med Prøv igen, modul-link til en anden fane med note", () => {
+test("Svar: tænker (kun prikker), længere opgave med skelet og uden Stop, fejl med Prøv igen, modul-link til en anden fane med note", () => {
   const thinking = html(createElement(AssistantMessage, { answer: fx.THINKING[0]!.answer }));
-  assert.match(thinking, /role="status"[^>]*><span class="chat-dots"[\s\S]*Tænker…/);
-  const long = html(createElement(AssistantMessage, { answer: fx.LONG_TASK[0]!.answer, onStop: () => undefined }));
+  // Jakob 03.10: kun de tre prikker; "Lasso tænker" kun for skærmlæsere.
+  assert.match(thinking, /role="status"[^>]*><span class="chat-dots"[^]*<span class="chat-sr">Lasso tænker<\/span>/);
+  assert.doesNotMatch(thinking, /Tænker…/);
+  const long = html(createElement(AssistantMessage, { answer: fx.LONG_TASK[0]!.answer }));
   assert.match(long, /Læser regnskab 2024 og ejerregistret…/);
-  assert.match(long, />Stop</);
+  assert.doesNotMatch(long, />Stop</);
   assert.match(long, /chat-card--sk/);
   // C2: fejlen fra en ugyldig historik har "Prøv igen" (spørger igen i en ny samtale).
   const invalid = html(createElement(AssistantMessage, { answer: { parts: [], pending: false, error: "Samtalen kunne ikke fortsættes. Prøv igen." }, onRetry: () => undefined }));
   assert.match(invalid, /Samtalen kunne ikke fortsættes/);
   assert.match(invalid, />Prøv igen<\/button>/);
-  // C1: Stop giver en stille "Stoppet." uden "Prøv igen" (også når der er en onRetry).
-  const stopped = html(createElement(AssistantMessage, { answer: { parts: [{ kind: "text", text: "Halvt svar" }], pending: false, stopped: true, at: 1 }, onRetry: () => undefined }));
-  assert.match(stopped, /Halvt svar/);
-  assert.match(stopped, /class="chat-stopped">Stoppet\.<\/p>/);
-  assert.doesNotMatch(stopped, /Prøv igen|chat-error/);
-  const stoppedEmpty = html(createElement(AssistantMessage, { answer: { parts: [], pending: false, stopped: true }, onRetry: () => undefined }));
-  assert.match(stoppedEmpty, /Stoppet\./);
-  assert.doesNotMatch(stoppedEmpty, /Prøv igen/);
   const err = html(createElement(AssistantMessage, { answer: fx.ERROR[1]!.answer, onRetry: () => undefined, currentId: fx.FIXTURE_COMPANY }));
   assert.match(err, /Jeg kunne ikke hente tallene for Novo Nordisk A\/S lige nu\. <button[^>]*class="chat-tlink"[^>]*>Prøv igen</);
   assert.match(err, /Åbner Novo Nordisk A\/S i ny fane/);

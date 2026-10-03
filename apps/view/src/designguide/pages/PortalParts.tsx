@@ -306,7 +306,7 @@ export function PortalParts({ theme }: { theme: "light" | "dark" }) {
           </div>
         </Spec>
 
-        <Spec label="Spørgefelt" note="Tomt (altid &quot;Spørg Lasso&quot;) · med tekst · Lasso svarer (Stop) · slået fra · forslag efter siden">
+        <Spec label="Spørgefelt" note="Tomt (altid &quot;Spørg Lasso&quot;) · med tekst · Lasso svarer (slået fra, ingen Stop) · slået fra · forslag efter siden">
           <div className="ask">
             <AskField value="" placeholder="Spørg Lasso" />
             <AskField value="Hvem ejer firmaet?" placeholder="" />

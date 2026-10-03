@@ -56,7 +56,6 @@ import {
   settleTurn,
   skipChoice,
   startTurn,
-  stopTurn,
   undoMove,
   type Notice,
   type Threads,
@@ -689,14 +688,10 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     try {
       await streamChat({ message: text, context, history: tab?.chat.history ?? [], sig: tab?.chat.sig }, onEvent, { signal: ctrl.signal });
       flushText();
-      // Stop (eller Fortryd/luk, hvor turen allerede er væk): streamChat vender stille tilbage; turen får "Stoppet.".
-      if (ctrl.signal.aborted) setThreads((t) => stopTurn(t, at, turnId, Date.now()));
+      // Afbrudt (Fortryd eller fanen lukket; turen er så allerede væk): streamChat vender stille tilbage, finally rydder op.
     } catch (e) {
       flushText();
-      if (ctrl.signal.aborted) {
-        setThreads((t) => stopTurn(t, at, turnId, Date.now()));
-        return;
-      }
+      if (ctrl.signal.aborted) return;
       // Serveren kender ikke fanens samtale (ændret historik eller signatur): begynd en ny, så brugeren ikke sidder fast.
       if (e instanceof ChatHttpError && isUnrecognizedHistory(e.status, e.message)) {
         setThreads((t) => resetTabHistory(t, at));
@@ -715,8 +710,6 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       abort.current = null;
     }
   };
-
-  const stop = () => abort.current?.abort();
 
   /** Fortryd i den gamle samtale: hentningen stoppes, den nye fane lukkes (eller mister turen), og man står tilbage. */
   const undo = (from: string, turn: Turn) => {
@@ -1328,7 +1321,6 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
             mobile={phone}
             currentId={item.kind !== "result" ? item.key : undefined}
             onModule={openModule}
-            onStop={stop}
             onRetry={(turn) => void ask(turn.question)}
             onUndo={(turn) => undo(item.key, turn)}
             rowKey={(turn) => {
