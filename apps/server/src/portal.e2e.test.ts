@@ -692,3 +692,27 @@ test("D6: i den åbne portal (demobrugeren) kan ingen gemme eller slette egne si
     await new Promise((r) => srv.close(r));
   }
 });
+
+test("D9: svarer Lasso ikke på opslaget af entiteten, gemmes ingen skabelon (503)", async () => {
+  const cfg = loadConfig({ ...process.env, MCP_ACCESS_KEY: KEY, MCP_USER_KEYS: `${PIA.key}:${PIA.id}:${PIA.name}:${PIA.org}`, LINK_SECRET: "portal-test-hemmelighed", LASSO_DATA_SOURCE: "demo", DATABASE_URL: "", PUBLIC_BASE_URL: PUBLIC });
+  const { createPageTemplateStore } = await import("./pages/templates.js");
+  const { sessionCookie, signSession } = await import("./auth/session.js");
+  const templates = createPageTemplateStore("");
+  const flaky = Object.create(new DemoProvider()) as InstanceType<typeof DemoProvider>;
+  flaky.company = async () => {
+    throw new Error("Lasso er nede");
+  };
+  const srv = createApp({ config: cfg, client: new LassoClient(cfg), provider: flaky, store: createViewStore(""), pages: createSavedPageStore(""), templates }).listen(0);
+  await new Promise((r) => srv.once("listening", r));
+  const open = `http://127.0.0.1:${(srv.address() as AddressInfo).port}/api/portal`;
+  const cookie = sessionCookie(cfg, signSession(cfg, { id: PIA.id, name: PIA.name, org: PIA.org, isDemo: false })).split(";")[0]!;
+  const spec = { version: 2, kind: "custom", title: "KYC, Eksempel Byg A/S", layout: "dashboard", criteria: [], components: [{ type: "LassoKeyFigureCards", company: "CVR-1-99000001" }] };
+  try {
+    const r = await fetch(`${open}/templates`, { method: "POST", headers: { "content-type": "application/json", "x-lasso-portal": "1", cookie }, body: JSON.stringify({ kind: "company", title: "KYC", spec, entity: { kind: "company", id: "CVR-1-99000001" } }) });
+    assert.equal(r.status, 503);
+    assert.deepEqual(await r.json(), { error: "Lasso svarede ikke; prøv igen." });
+    assert.deepEqual(await templates.list(PIA.org, PIA.id), []);
+  } finally {
+    await new Promise((r2) => srv.close(r2));
+  }
+});

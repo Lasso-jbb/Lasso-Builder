@@ -124,8 +124,8 @@ function parseOr400<T>(schema: z.ZodType<T>, input: unknown, res: Response): T |
   return undefined;
 }
 
-/** Entitetens navn, by, gade og CVR fra Lasso (til at holde dem ude af en skabelon); uden opslag kun id'et. */
-async function entityFacts(c: UseCaseCtx, kind: TemplateKind, id: string): Promise<TemplateEntity> {
+/** Entitetens navn, by, gade og CVR fra Lasso (til at holde dem ude af en skabelon); null, når opslaget fejler (så gemmes intet uden stripning). */
+async function entityFacts(c: UseCaseCtx, kind: TemplateKind, id: string): Promise<TemplateEntity | null> {
   try {
     if (kind === "company") {
       const co = await c.provider.company(toLassoId(id, c.config.LASSO_COMPANY_ID_PREFIX));
@@ -134,7 +134,7 @@ async function entityFacts(c: UseCaseCtx, kind: TemplateKind, id: string): Promi
     const p = await c.provider.person(id);
     return { kind, id, name: p.name, city: p.city };
   } catch {
-    return { kind, id };
+    return null;
   }
 }
 
@@ -243,6 +243,7 @@ export function portalApi({ config, provider, store, pages, templates }: PortalA
     if (pageKindOf(body.entity.id) !== body.kind) return void res.status(400).json({ error: `"${body.entity.id}" er ikke et Lasso-ID for en ${body.kind === "company" ? "virksomhed (CVR-1-…)" : "person (CVR-3-…)"}.` });
     // Entitetens navn og metadata (fra Lasso, ikke fra klienten) fjernes fra titlerne, og siden afvises, hvis de står andre steder.
     const entity = await entityFacts(ctx(res), body.kind, body.entity.id);
+    if (!entity) return void res.status(503).json({ error: "Lasso svarede ikke; prøv igen." });
     const made = templateFromSpec(body.spec, entity);
     if ("error" in made) return void res.status(400).json({ error: made.error });
     // Tom efter fjernelsen: den fallback-titel, templateFromSpec fandt (undertitel, første komponent, "Side"). Samme navn som et indbygget modul får et tillæg.
