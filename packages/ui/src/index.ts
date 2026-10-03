@@ -191,7 +191,7 @@ export { ShellIcon } from "./components/ShellIcons.js";
 export { Icon, CATALOG_ICONS, ICON_LABELS, ICON_STROKE } from "./components/Icon.js";
 export type { IconName, IconProps, CatalogIconName } from "./components/Icon.js";
 export { Button, IconButton, ActionRow, Label, buttonClass, iconButtonClass } from "./components/Button.js";
-export { CardActions } from "./components/CardActions.js";
+export { CardActions, TabButton } from "./components/CardActions.js";
 export type { CardActionsProps, CardPrimaryAction } from "./components/CardActions.js";
 export type { ButtonProps, ButtonVariant, ButtonSize, IconButtonProps, IconButtonSize, IconButtonVariant, ActionRowProps, ActionRowAction } from "./components/Button.js";
 export { PageHeader } from "./components/PageHeader.js";

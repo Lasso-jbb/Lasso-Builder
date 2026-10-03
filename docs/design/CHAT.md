@@ -231,3 +231,13 @@ Truffet ved gennemgangen af eksporten (D1 til D10) og af ejeren; ejerens afgøre
 - **D10** Den valgte række i afklaringspanelet har 1 px `--lasso-focus-border`.
 - Lasso-mærket er `LassoMark`-komponenten, ikke eksportens glyf.
 - Tom tilstand: fire piller; den fjerde afhænger af slagen (se Tilstande).
+
+## Faneknappen (Jakob 03.10, Paper "Lasso - Marketplace" BW7-0)
+
+Alle knapper, der åbner en fane, er faneknappen (`TabButton` i `@lasso/ui`): "Tilføj som fane" i portalens chat og "Åben i Lasso" i Claude.ai.
+
+- 40 px høj, 1 px kant (`border-strong`), radius 10, polstring 14 venstre og 16 højre, 8 px mellem ikon og tekst.
+- Ikonet er bogmærket med plus (`bookmark-plus`: `M6 3h12v18l-6-4.5L6 21z`, `M12 7.5v6`, `M9 10.5h6`), 18 px, streg 1,5, koral.
+- Teksten er 13/18, 600 i tekstfarven (ink).
+- I kortets handlinger (`CardActions`) står den efter download og fuld skærm, som er 40 × 40, radius 10, ikon 18 med streg 1,5.
+- På telefon er den en ikonknap med det koral ikon og navnet som aria-label.

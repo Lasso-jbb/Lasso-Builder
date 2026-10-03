@@ -167,7 +167,7 @@ const PATHS: Record<IconName, string> = {
   "shield-check": "M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6zM9 12l2 2 4-4",
   expand: "M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7", /* Vis i fuld skærm (MCP-rammen) */
   fullscreen: "M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5", /* chattens kort: vis i fuld skærm */
-  "bookmark-plus": "M6 4h12v17l-6-4-6 4zM12 8v6M9 11h6", /* chattens side: Tilføj som fane */
+  "bookmark-plus": "M6 3h12v18l-6-4.5L6 21zM12 7.5v6M9 10.5h6", /* faneknappen (Paper Marketplace BW7-0): knapper der åbner en fane */
   "arrow-down": "M12 5v14M6 13l6 6 6-6", /* chattens Rul til nyeste */
 };
 

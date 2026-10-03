@@ -42,19 +42,20 @@ test("Del visning viser og kopierer det korte /d/-link", async () => {
 
 test("Samme knapper i begge værter (CardActions): MCP-appens række har portalkortets klasser; Åben i Lasso kun med et open-link", () => {
   const noop = () => undefined;
-  const mcp = renderToStaticMarkup(createElement(CardActions, { onDownload: noop, downloadLabel: "Gem som PDF", onFullscreen: noop, primary: { label: "Åben i Lasso", icon: "mark", onClick: noop } }));
+  const mcp = renderToStaticMarkup(createElement(CardActions, { onDownload: noop, downloadLabel: "Gem som PDF", onFullscreen: noop, primary: { label: "Åben i Lasso", onClick: noop } }));
   const portal = renderToStaticMarkup(createElement(CardActions, { onDownload: noop, onFullscreen: noop, primary: { label: "Tilføj som fane", icon: "bookmark-plus", onClick: noop } }));
   const classes = (h: string) => [...h.matchAll(/class="([^"]*)"/g)].map((m) => m[1]).filter((c) => /lasso-(btn|iconbtn|cardact)\b/.test(c!) && !/__(icon|mark|markwrap)/.test(c!));
   assert.deepEqual(classes(mcp), classes(portal));
   assert.match(mcp, /aria-label="Gem som PDF"/);
   assert.match(mcp, /aria-label="Vis i fuld skærm"/);
-  assert.match(mcp, /lasso-cardact__markwrap" aria-hidden="true"/);
+  // Faneknappen (Paper BW7-0): samme koral bogmærke med plus begge steder.
+  assert.match(mcp, /<button type="button" class="lasso-tabbtn"><svg[^>]*lasso-cardact__icon[^>]*><path d="M6 3h12v18l-6-4.5L6 21zM12 7.5v6M9 10.5h6"/);
   assert.match(mcp, /<span>Åben i Lasso<\/span>/);
   // Uden open-link: ingen pille; uden pdf og fuld skærm: intet.
   assert.doesNotMatch(renderToStaticMarkup(createElement(CardActions, { onFullscreen: noop })), /Åben i Lasso/);
   assert.equal(renderToStaticMarkup(createElement(CardActions, {})), "");
-  // Telefon: ingen download, pillen som ikonknap med mærket.
-  const narrow = renderToStaticMarkup(createElement(CardActions, { compact: true, onDownload: noop, onFullscreen: noop, primary: { label: "Åben i Lasso", icon: "mark", onClick: noop } }));
+  // Telefon: ingen download, faneknappen som ikonknap med bogmærket.
+  const narrow = renderToStaticMarkup(createElement(CardActions, { compact: true, onDownload: noop, onFullscreen: noop, primary: { label: "Åben i Lasso", onClick: noop } }));
   assert.doesNotMatch(narrow, /Gem som PDF/);
   assert.match(narrow, /lasso-cardact__primarym" aria-label="Åben i Lasso"/);
 });

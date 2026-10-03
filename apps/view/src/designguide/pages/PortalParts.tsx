@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { LassoMark, LassoWordmark } from "@lasso/ui";
+import { CardActions, LassoMark, LassoWordmark, TabButton } from "@lasso/ui";
 import { P2_ICON_NAMES, P2Icon } from "../../portal2/icons.js";
 import { LASSO_TAB, suggestions, type OpenItem, type SearchRow } from "../../portal2/model.js";
 import {
@@ -312,6 +312,15 @@ export function PortalParts({ theme }: { theme: "light" | "dark" }) {
               <IconButton icon="layers" label="Moduler" tip="Moduler" disabled />
               <IconButton icon="users" label="Brugere" tip="Brugere" disabled />
             </nav>
+          </div>
+        </Spec>
+
+        <Spec label="Faneknap" note="Paper &quot;Lasso - Marketplace&quot; BW7-0: alle knapper, der åbner en fane, er denne knap (Tilføj som fane i chatten, Åben i Lasso i Claude.ai). 40 høj, radius 10, koral bogmærke med plus 18 px (streg 1,5), tekst 13/18, 600. I et kort står den yderst til højre efter download og fuld skærm (40 × 40); på telefon kun ikonet">
+          <div className="lasso-root dg-specrow">
+            <CardActions onDownload={() => undefined} onFullscreen={() => undefined} primary={{ label: "Tilføj som fane", onClick: () => undefined }} />
+            <TabButton label="Åben i Lasso" onClick={() => undefined} />
+            <TabButton label="Tilføjer…" onClick={() => undefined} busy />
+            <CardActions compact onFullscreen={() => undefined} primary={{ label: "Tilføj som fane", onClick: () => undefined }} />
           </div>
         </Spec>
 

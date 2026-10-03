@@ -359,7 +359,7 @@ export function McpView() {
   return (
     <div style={style}>
       {/* Samme handlinger som portalens chatkort (CardActions, Jakob 03.10): download (Gem som PDF), fuld skærm og
-          "Åben i Lasso" som pille med Lasso-mærket; erstatter rammens udvid-ikon og "Gem som PDF". */}
+          "Åben i Lasso" som faneknap (bogmærke med plus, som alle knapper der åbner en fane); erstatter rammens udvid-ikon og "Gem som PDF". */}
       {current.pdfLink || (canFullscreen && !isFullscreen) || current.links?.open ? (
         <div className="lasso-root lasso-mcpbar" data-theme={theme}>
           <CardActions
@@ -367,7 +367,7 @@ export function McpView() {
             onDownload={current.pdfLink ? () => void onAction({ kind: "pdf" }) : undefined}
             downloadLabel="Gem som PDF"
             onFullscreen={canFullscreen && !isFullscreen ? () => void onAction({ kind: "fullscreen" }) : undefined}
-            primary={current.links?.open ? { label: "Åben i Lasso", icon: "mark", onClick: () => void openInLasso(current.links!.open!) } : undefined}
+            primary={current.links?.open ? { label: "Åben i Lasso", onClick: () => void openInLasso(current.links!.open!) } : undefined}
           />
         </div>
       ) : null}

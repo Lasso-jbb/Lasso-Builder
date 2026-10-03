@@ -5991,16 +5991,19 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-root .lasso-mcplinks__status { flex-basis: 100%; font-size: var(--lasso-fs-sm); color: var(--lasso-text-3); }
 .lasso-root .lasso-mcplinks__status:empty { display: none; }
 
-/* Kortets handlinger (CardActions, Jakob 03.10): [download] [fuld skærm] [primær pille], ens i portalens chatkort og i
-   MCP-appen. Pillen er en sekundær .lasso-btn (36 px, 14/18, 500) med modul-linkets radius 12 og et koral ikon (18 px). */
+/* Kortets handlinger (CardActions) og faneknappen (TabButton), Paper "Lasso - Marketplace" BW7-0 (Jakob 03.10):
+   [download] [fuld skærm] [faneknap], ens i portalens chatkort og i MCP-appen. Ikonknapper 40 × 40, radius 10, ikon 18
+   med streg 1,5. Faneknappen er ALLE knapper, der åbner en fane: 40 høj, polstring 14/16, 8 px mellemrum, koral
+   bogmærke med plus og teksten 13/18, 600 i tekstfarven. */
 .lasso-root .lasso-cardact { display: flex; align-items: center; gap: var(--lasso-space-2); flex: none; }
-.lasso-root .lasso-cardact__primary { border-radius: var(--lasso-radius-card); color: var(--lasso-text); }
-.lasso-root .lasso-cardact__primary:hover { background: var(--lasso-surface-2); }
-.lasso-root .lasso-cardact__primary:disabled { cursor: progress; opacity: 0.6; }
+.lasso-root .lasso-cardact .lasso-iconbtn--sq { width: 40px; height: 40px; min-width: 40px; border-radius: var(--lasso-radius-lg); }
+.lasso-root .lasso-cardact .lasso-icon, .lasso-root .lasso-tabbtn .lasso-icon { stroke-width: 1.5; }
+.lasso-root .lasso-tabbtn { display: inline-flex; align-items: center; gap: 8px; flex: none; height: 40px; padding: 0 16px 0 14px; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); color: var(--lasso-text); font: inherit; font-size: var(--lasso-fs-sm); line-height: var(--lasso-lh); font-weight: var(--lasso-fw-semibold); white-space: nowrap; cursor: pointer; }
+.lasso-root .lasso-tabbtn:hover { background: var(--lasso-surface-2); }
+.lasso-root .lasso-tabbtn:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
+.lasso-root .lasso-tabbtn:disabled { cursor: progress; opacity: 0.6; }
 .lasso-root .lasso-cardact__icon { width: 18px; height: 18px; color: var(--lasso-accent); flex: none; }
-.lasso-root .lasso-cardact__primarym .lasso-cardact__icon { width: 16px; height: 16px; }
 .lasso-root .lasso-cardact__markwrap { display: inline-flex; color: var(--lasso-accent); flex: none; }
 .lasso-root .lasso-cardact__mark { width: 18px; height: 15px; }
-.lasso-root .lasso-cardact__primarym .lasso-cardact__mark { width: 16px; height: 13px; }
 /* MCP-appen: handlingerne øverst til højre over visningen. */
 .lasso-root.lasso-mcpbar { display: flex; justify-content: flex-end; padding: var(--lasso-space-3) var(--lasso-space-4) 0; background: var(--lasso-bg); }
