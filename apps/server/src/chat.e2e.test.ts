@@ -359,3 +359,17 @@ test("chat: tekst og visninger kommer i den rækkefølge, de laves, med form pag
   assert.equal((events[6] as Event & { form: string; name: string }).form, "module");
   assert.equal((events[6] as Event & { name: string }).name, "render_view");
 });
+
+test("chat: svaret bygger på Lassos data (reglen står i systemprompten); et rent tekstsvar uden værktøj leveres stadig", async () => {
+  // Reglen kan ikke håndhæves i løkken: et tekstsvar på et faktaspørgsmål uden værktøjskald når brugeren.
+  script.push(sayText("Lasso har ikke regnskab for 2025 endnu."));
+  const { status, events } = await chat({ message: "Hvad var resultatet i 2025?", context: onLasso });
+  assert.equal(status, 200);
+  assert.deepEqual(
+    events.map((e) => e.type),
+    ["placement", "text", "done"],
+  );
+  assert.equal((events[1] as Event & { text: string }).text, "Lasso har ikke regnskab for 2025 endnu.");
+  assert.match(String(calls.at(-1)!.system), /aldrig fra din egen viden om virksomheden eller personen/);
+  assert.match(String(calls.at(-1)!.system), /Har Lasso ikke data for det, så sig det ligeud/);
+});
