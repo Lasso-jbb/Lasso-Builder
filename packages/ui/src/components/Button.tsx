@@ -65,10 +65,11 @@ export function Button({ children, variant = "secondary", size = 36, icon, loadi
  * - active: koral lys flade, koral kant og koral ikon (Overvåg slået til, åben menu)
  * - subtle: let grå flade uden kant (Redigér i en række)
  * - bare: ingen flade, ingen kant (Luk-kryds)
+ * - primary: koral flade, hvidt ikon: den primære handling, når kun ikonet er plads (chattens "Tilføj som fane" på mobil)
  * Mobil (< 560 px): 32 → 40 og 36/38 → 44 px touch-mål. Navnet står altid som aria-label og tooltip.
  */
 export type IconButtonSize = 38 | 36 | 32;
-export type IconButtonVariant = "default" | "active" | "subtle" | "bare";
+export type IconButtonVariant = "default" | "active" | "subtle" | "bare" | "primary";
 
 export interface IconButtonProps {
   icon: IconName;

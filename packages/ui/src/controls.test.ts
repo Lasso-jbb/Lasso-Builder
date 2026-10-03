@@ -43,6 +43,10 @@ test("Ikonknapper (05.2): 38 og 32 px, aria-label, aktiv ved aria-pressed", () =
   assert.match(on, /lasso-iconbtn--active/);
   assert.match(on, /aria-pressed="true"/);
   assert.match(renderToStaticMarkup(createElement(IconButton, { icon: "edit", label: "Redigér", size: 32, variant: "subtle" })), /lasso-iconbtn--32 lasso-iconbtn--subtle/);
+  // Primær ikonknap (chattens "Tilføj som fane" på mobil): koral flade, ikonet alene, navnet som aria-label.
+  const primary = renderToStaticMarkup(createElement(IconButton, { icon: "bookmark-plus", label: "Tilføj som fane", size: 32, variant: "primary" }));
+  assert.match(primary, /class="lasso-iconbtn lasso-iconbtn--sq lasso-iconbtn--32 lasso-iconbtn--primary"/);
+  assert.match(primary, /aria-label="Tilføj som fane"/);
 });
 
 test("Handlingsrække (05.3): '…' først, sekundær, primær sidst", () => {

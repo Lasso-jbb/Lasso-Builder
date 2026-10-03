@@ -2796,6 +2796,9 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 .lasso-root .lasso-iconbtn--subtle:hover { background: var(--lasso-tag-hover); border-color: transparent; }
 .lasso-root .lasso-iconbtn--bare { background: transparent; border-color: transparent; color: var(--lasso-text-3); }
 .lasso-root .lasso-iconbtn--bare:hover { background: var(--lasso-surface-muted); border-color: transparent; color: var(--lasso-text); }
+/* Primær ikonknap: samme koral som den primære knap (05.1), når kun ikonet er plads (chattens "Tilføj som fane" på mobil). */
+.lasso-root .lasso-iconbtn--primary { background: var(--lasso-accent); border-color: var(--lasso-accent); color: var(--lasso-on-accent); }
+.lasso-root .lasso-iconbtn--primary:hover { background: var(--lasso-accent-hover); border-color: var(--lasso-accent-hover); color: var(--lasso-on-accent); }
 @container lasso (max-width: 560px) {
   .lasso-root .lasso-iconbtn--38, .lasso-root .lasso-iconbtn--36 { width: 44px; height: 44px; min-width: 44px; }
   .lasso-root .lasso-iconbtn--32 { width: 40px; height: 40px; min-width: 40px; }
