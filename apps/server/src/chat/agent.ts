@@ -11,8 +11,8 @@ import { Client, InMemoryTransport, type CallToolResult } from "@modelcontextpro
 import { DATASET_META_KEY, type Dataset, type ViewSpec } from "@lasso/spec";
 import type { Config } from "../config.js";
 import { createMcpServer, ROUTING, type McpContext } from "../mcp/server.js";
-import { contextText, type ChatContext } from "./context.js";
-import { CHAT_TOOLS, chatToolByName } from "./tools.js";
+import { ASK_CHOICE, contextText, placementOf, type ChatContext, type Placement } from "./context.js";
+import { CHAT_TOOLS, chatToolByName, type ChoiceMenu } from "./tools.js";
 
 /**
  * Lassos egen chat (docs/chat.md): Claude via Claude Platform med NØJAGTIG de samme værktøjer og
@@ -23,12 +23,26 @@ import { CHAT_TOOLS, chatToolByName } from "./tools.js";
 
 /** Hændelserne, /api/chat streamer til browseren (én JSON pr. SSE-besked). */
 export type ChatEvent =
+  /** Første hændelse i hver tur: hvor svaret skrives (brugerens valg i menuen, ellers her). */
+  | ({ type: "placement" } & Placement)
   | { type: "text"; text: string }
   | { type: "tool"; id: string; name: string; title: string }
-  | { type: "view"; id: string; name: string; spec: ViewSpec; dataset: Dataset; pdfLink?: string }
+  /** form: "page" er en hel side (show_*, søgninger, render_view med layout page), "module" et enkelt element. */
+  | { type: "view"; id: string; name: string; form: ViewForm; spec: ViewSpec; dataset: Dataset; pdfLink?: string }
   | { type: "tool_error"; id: string; name: string; message: string }
-  | { type: "done"; history: BetaMessageParam[] }
+  /** Valgmenuen (ask_choice): turen slutter; brugerens valg kommer med næste besked i context.choice. */
+  | ({ type: "choice" } & ChoiceMenu)
+  | { type: "done"; history: BetaMessageParam[]; placement: Placement }
   | { type: "error"; message: string };
+
+export type ViewForm = "page" | "module";
+
+/** Hele sider fra værktøjerne; render_view er en side med layout "page", ellers et modul. */
+const PAGE_TOOLS = new Set(["show_company", "show_person", "list_saved_pages", "search_companies", "search_persons"]);
+export function viewForm(name: string, spec: ViewSpec): ViewForm {
+  if (PAGE_TOOLS.has(name)) return "page";
+  return name === "render_view" && spec.layout === "page" ? "page" : "module";
+}
 
 /** Ét kald til modellen; streamer teksten med onText og giver den færdige besked. Udskiftes i test. */
 export type ModelCall = (params: MessageCreateParamsNonStreaming, onText: (delta: string) => void, signal?: AbortSignal) => Promise<BetaMessage>;
@@ -71,8 +85,8 @@ export function modelOptions(config: Pick<Config, "CHAT_MODEL" | "CHAT_EFFORT">)
   return { output_config: { effort: config.CHAT_EFFORT }, betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" };
 }
 
-/** Så mange modelkald må ét brugerspørgsmål bruge (værktøj → svar → evt. rettelse). */
-export const MAX_STEPS = 6;
+/** Så mange modelkald må ét brugerspørgsmål bruge (find_entity → værktøj → svar → evt. rettelse). */
+export const MAX_STEPS = 8;
 
 interface ToolDef {
   tool: BetaTool;
@@ -166,6 +180,9 @@ function apiErrorText(e: unknown): string {
 export async function runChat({ ctx, config, model, history, message, context, emit, signal }: ChatRunOptions): Promise<void> {
   // Konteksten står først i brugerens tur (ikke i system: den skifter pr. spørgsmål og ville bryde cachen).
   const messages: BetaMessageParam[] = [...history, { role: "user", content: [{ type: "text", text: contextText(context) }, { type: "text", text: message }] }];
+  // Placeringen er kendt, før modellen kaldes: brugeren valgte den i menuen (eller svaret skrives her).
+  const placement = placementOf(context);
+  emit({ type: "placement", ...placement });
   const { client, close } = await connect({ ...ctx, host: "chat" });
   try {
     // MCP-værktøjerne først, så chattens egne (chat/tools.ts) i fast rækkefølge: listen er ens fra kald til kald.
@@ -210,6 +227,18 @@ export async function runChat({ ctx, config, model, history, message, context, e
 
       const uses = response.content.filter((b): b is BetaToolUseBlock => b.type === "tool_use");
       for (const u of uses) emit({ type: "tool", id: u.id, name: u.name, title: titles.get(u.name) ?? u.name });
+
+      // ask_choice er eksklusivt: menuen vises, de andre kald i samme svar afvises, og turen slutter.
+      const ask = uses.find((u) => u.name === ASK_CHOICE);
+      const menu = ask ? await chatToolByName(ASK_CHOICE)!.run(ask.input ?? {}, toolCtx) : undefined;
+      if (ask && menu?.choice) {
+        emit({ type: "choice", id: ask.id, ...menu.choice });
+        const blocked = "Vis intet, før brugeren har valgt (ask_choice stod i samme svar).";
+        for (const u of uses) if (u !== ask) emit({ type: "tool_error", id: u.id, name: u.name, message: blocked });
+        messages.push({ role: "user", content: uses.map((u) => (u === ask ? { type: "tool_result", tool_use_id: u.id, content: menu.text } : { type: "tool_result", tool_use_id: u.id, content: blocked, is_error: true })) });
+        break;
+      }
+
       // Alle værktøjssvar i én brugerbesked (parallelle kald), fejl som is_error.
       const results: BetaToolResultBlockParam[] = await Promise.all(
         uses.map(async (u): Promise<BetaToolResultBlockParam> => {
@@ -236,14 +265,14 @@ export async function runChat({ ctx, config, model, history, message, context, e
           // Visninger til browseren; svar uden visning (save_view, describe_components …) kender kun modellen.
           const sc = result.structuredContent as { spec?: ViewSpec; pdfLink?: string } | undefined;
           const dataset = (result._meta as Record<string, unknown> | undefined)?.[DATASET_META_KEY] as Dataset | undefined;
-          if (sc?.spec && dataset) emit({ type: "view", id: u.id, name: u.name, spec: sc.spec, dataset, ...(sc.pdfLink ? { pdfLink: sc.pdfLink } : {}) });
+          if (sc?.spec && dataset) emit({ type: "view", id: u.id, name: u.name, form: viewForm(u.name, sc.spec), spec: sc.spec, dataset, ...(sc.pdfLink ? { pdfLink: sc.pdfLink } : {}) });
           return { type: "tool_result", tool_use_id: u.id, content: text || "OK" };
         }),
       );
       messages.push({ role: "user", content: results });
       if (step === MAX_STEPS - 1) emit({ type: "error", message: "Spørgsmålet krævede for mange trin. Prøv at stille det mere præcist." });
     }
-    emit({ type: "done", history: messages });
+    emit({ type: "done", history: messages, placement });
   } finally {
     await close();
   }

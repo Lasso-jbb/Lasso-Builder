@@ -124,3 +124,19 @@ export function contextText(ctx: ChatContext): string {
   if (ctx.open.length) lines.push(`Åbne faner: ${ctx.open.map((e) => `${e.name} (${e.id})`).join(", ")}.`);
   return `[Kontekst] ${lines.join(" ")}`;
 }
+
+/** Hvor svaret skrives (docs/chat.md): valgt af brugeren i menuen, ellers her. Serveren bærer det kun. */
+export interface Placement {
+  placement: "current" | "entity" | "global";
+  target?: ChatEntity;
+  focus?: string;
+}
+
+/** Placeringen for turen: valgets handling, ellers "current" (som på forsiden/et resultat er globalt). */
+export function placementOf(ctx: ChatContext): Placement {
+  const action = ctx.choice && !("free" in ctx.choice) ? ctx.choice.action : undefined;
+  if (action?.placement === "entity" && action.entity) return { placement: "entity", target: action.entity, ...(action.focus ? { focus: action.focus } : {}) };
+  if (action?.placement === "global") return { placement: "global" };
+  if (ctx.active.kind === "global") return { placement: "global" };
+  return { placement: "current", ...(action?.focus ? { focus: action.focus } : {}) };
+}

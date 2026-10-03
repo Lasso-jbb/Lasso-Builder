@@ -2,7 +2,12 @@ import type { BetaTool } from "@anthropic-ai/sdk/resources/beta/messages/message
 import { z } from "zod";
 import { candidatesAsText, resolveEntity } from "../usecases/index.js";
 import type { McpContext } from "../mcp/server.js";
-import type { ChatContext } from "./context.js";
+import { ASK_CHOICE, choiceActionSchema, type ChatContext, type ChoiceAction } from "./context.js";
+
+export interface ChoiceOption {
+  label: string;
+  action: ChoiceAction;
+}
 
 /**
  * Chattens egne værktøjer (docs/chat.md): de findes kun i Lassos chat, ikke i /mcp, og giver ingen visning.
@@ -15,9 +20,19 @@ export interface ChatToolCtx {
   context: ChatContext;
 }
 
+/** Valgmenuen, som "choice"-hændelsen sender til browseren. */
+export interface ChoiceMenu {
+  id: string;
+  question: string;
+  options: ChoiceOption[];
+  allowFreeText: boolean;
+}
+
 export interface ChatToolResult {
   text: string;
   isError?: boolean;
+  /** Kun ask_choice: menuen, der skal vises (agent.ts afslutter turen med den). */
+  choice?: Omit<ChoiceMenu, "id">;
 }
 
 export interface ChatToolDef {
@@ -56,7 +71,41 @@ const findEntity: ChatToolDef = {
   },
 };
 
+const askChoiceSchema = z.object({
+  question: z.string().min(1).max(200).describe("Spørgsmålet over punkterne, fx 'Hvilken Jakob mener du?' eller 'Hvad vil du se om Jakob Benediktson?'."),
+  options: z
+    .array(
+      z.object({
+        label: z.string().min(1).max(80).describe("Punktets tekst, fx 'Alt om Jakob Benediktson'."),
+        action: choiceActionSchema.describe("placement: 'current' = svaret skrives her, 'entity' = på personens/virksomhedens egen fane (entity kræves, med id fra find_entity), 'global' = en liste/analyse uden fane. focus: modulet, fx 'overblik' eller 'ejerskab'. prompt: beskeden, appen sender, når punktet vælges (standard: label)."),
+      }),
+    )
+    .min(1)
+    .max(8)
+    .describe("1–8 punkter."),
+  allowFreeText: z.boolean().optional().describe("Om brugeren også må skrive selv ('Andet'). Standard true."),
+});
+
+const askChoice: ChatToolDef = {
+  title: "Spørg brugeren",
+  tool: toolOf(
+    ASK_CHOICE,
+    "Viser brugeren en valgmenu og afslutter dit svar: brug det, når spørgsmålet lægger op til en anden kontekst end den aktive fane (en anden persons eller virksomheds side, eller en global liste/analyse fra en side), eller når et navn er tvetydigt (ét punkt pr. kandidat fra find_entity). Kald intet andet i samme svar: ingen visning, før brugeren har valgt. Brugerens valg kommer som næste besked med det valgte i [Kontekst]; gør så det, brugeren valgte, i ét trin.",
+    askChoiceSchema,
+    { strict: true },
+  ),
+  async run(raw) {
+    const parsed = askChoiceSchema.safeParse(raw);
+    if (!parsed.success) return { text: `Ugyldig valgmenu: ${parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`, isError: true };
+    const { question, options, allowFreeText } = parsed.data;
+    return {
+      text: "Valget er vist for brugeren. Svaret kommer som næste besked med det valgte i konteksten; gør så det, brugeren valgte.",
+      choice: { question, options, allowFreeText: allowFreeText ?? true },
+    };
+  },
+};
+
 /** Chattens værktøjer i fast rækkefølge (prompt-cachen). */
-export const CHAT_TOOLS: readonly ChatToolDef[] = [findEntity];
+export const CHAT_TOOLS: readonly ChatToolDef[] = [findEntity, askChoice];
 
 export const chatToolByName = (name: string): ChatToolDef | undefined => CHAT_TOOLS.find((t) => t.tool.name === name);

@@ -23,7 +23,7 @@ const KEY = "chat-test-key";
 const PIA = { key: "chat-pia-key-123", id: "pia", name: "Pia", org: "lasso" };
 /** Kun til bremsetesten, så Pias kvote rækker til de andre tests. */
 const BO = { key: "chat-bo-key-456", id: "bo", name: "Bo", org: "lasso" };
-const MAX_PER_HOUR = 12;
+const MAX_PER_HOUR = 30;
 
 let http: Server;
 let base = "";
@@ -109,12 +109,16 @@ test("chat: værktøjet kører gennem MCP; browseren får visningen, modellen ku
   assert.equal(status, 200);
   assert.deepEqual(
     events.map((e) => e.type),
-    ["tool", "view", "text", "text", "done"],
+    ["placement", "tool", "view", "text", "text", "done"],
   );
-  const tool = events[0]!;
+  // Placeringen er første hændelse (uden context: global) og gentages i done.
+  assert.deepEqual(events[0], { type: "placement", placement: "global" });
+  assert.deepEqual((events.at(-1) as Event & { placement: unknown }).placement, { placement: "global" });
+  const tool = events[1]!;
   assert.equal(tool.name, "show_company");
   assert.equal(tool.title, "Vis virksomhed");
-  const view = events[1] as Event & { spec: { components: unknown[] }; dataset: { companies: Record<string, { name: string }> } };
+  const view = events[2] as Event & { form: string; spec: { components: unknown[] }; dataset: { companies: Record<string, { name: string }> } };
+  assert.equal(view.form, "page");
   assert.ok(view.spec.components.length > 0);
   assert.equal(view.dataset.companies["CVR-1-99000001"]?.name, "Eksempel Byg A/S");
 
@@ -127,7 +131,7 @@ test("chat: værktøjet kører gennem MCP; browseren får visningen, modellen ku
   assert.ok(names.includes("show_company") && names.includes("render_view"));
   assert.ok(!names.includes("resolve_view"), "resolve_view er kun for appen");
   // Chattens egne værktøjer står sidst, i fast rækkefølge (prompt-cachen).
-  assert.equal(names.indexOf("find_entity"), names.length - 1);
+  assert.deepEqual(names.slice(-2), ["find_entity", "ask_choice"]);
   // Haiku (standard) får hverken effort eller fallbacks.
   assert.equal(first.model, "claude-haiku-4-5");
   assert.equal(first.output_config, undefined);
@@ -195,6 +199,7 @@ test("chat: konteksten står først i brugerens tur; uden context svares der glo
   const { status, events } = await chat({ message: "Hvem ejer den?", context: ctx });
   assert.equal(status, 200);
   assert.equal(events.at(-1)?.type, "done");
+  assert.deepEqual(events[0], { type: "placement", placement: "current" }, "på en fane skrives svaret her");
   const texts = lastUserTexts(calls.at(-1)!);
   assert.equal(texts.length, 2);
   assert.match(texts[0]!, /^\[Kontekst\] Aktiv fane: virksomheden Eksempel Byg A\/S \(CVR-1-99000001\), modul ejerskab\. Åbne faner: Jakob Benediktson \(CVR-3-4000123\)\./);
@@ -247,12 +252,110 @@ test("chat: find_entity giver modellen kandidater (åbne faner først) uden en v
   const { events } = await chat({ message: "vis alt om Gitte", context: ctx });
   assert.deepEqual(
     events.map((e) => e.type),
-    ["tool", "text", "done"],
+    ["placement", "tool", "text", "done"],
   );
   const result = (calls.at(-1)!.messages.at(-1)!.content as { type: string; content: string }[])[0]!;
   assert.match(result.content, /^1 person for "Gitte".*\nCVR-3-4000000007 \| Gitte Prøve \| åben fane$/s);
 
   script.push(useTool("find_entity", { kind: "person", query: "" }), sayText("Hov."));
   const bad = await chat({ message: "vis alt om" });
-  assert.equal(bad.events[1]?.type, "tool_error");
+  assert.equal(bad.events[2]?.type, "tool_error");
+});
+
+const jakob = { kind: "person", id: "CVR-3-4000000007", name: "Gitte Prøve" };
+const menu = {
+  question: "Hvad vil du se om Gitte Prøve?",
+  options: [
+    { label: "Alt om Gitte Prøve", action: { placement: "entity", entity: jakob, focus: "overblik", prompt: "Vis alt om Gitte Prøve (CVR-3-4000000007)" } },
+    { label: "Overordnet indblik her", action: { placement: "current", prompt: "Giv et kort overblik over Gitte Prøve her" } },
+  ],
+};
+const onLasso = { active: { kind: "company", id: "CVR-1-99000001", name: "Eksempel Byg A/S", tab: "overblik" }, open: [] };
+
+test("chat: ask_choice viser menuen og slutter turen; andre kald i samme svar afvises, ingen visning", async () => {
+  script.push((_p, onText) => {
+    onText("Et øjeblik.");
+    return message(
+      [
+        { type: "text", text: "Et øjeblik." },
+        { type: "tool_use", id: "toolu_menu", name: "ask_choice", input: menu },
+        { type: "tool_use", id: "toolu_show", name: "show_person", input: { person: "CVR-3-4000000007" } },
+      ],
+      "tool_use",
+    );
+  });
+  const { events } = await chat({ message: "vis alt om Gitte", context: onLasso });
+  assert.deepEqual(
+    events.map((e) => e.type),
+    ["placement", "text", "tool", "tool", "choice", "tool_error", "done"],
+  );
+  const choice = events[4] as Event & { id: string; question: string; options: unknown[]; allowFreeText: boolean };
+  assert.equal(choice.id, "toolu_menu");
+  assert.equal(choice.question, menu.question);
+  assert.equal(choice.options.length, 2);
+  assert.equal(choice.allowFreeText, true);
+  assert.equal((events[5] as Event & { id: string }).id, "toolu_show");
+  // Historikken slutter med ask_choice og værktøjssvarene: menuen OK, show_person afvist.
+  const done = events.at(-1) as Event & { history: { role: string; content: { type: string; tool_use_id?: string; is_error?: boolean; content?: string }[] }[]; sig: string };
+  const last = done.history.at(-1)!;
+  assert.equal(last.role, "user");
+  assert.deepEqual(
+    last.content.map((b) => [b.tool_use_id, b.is_error ?? false]),
+    [
+      ["toolu_menu", false],
+      ["toolu_show", true],
+    ],
+  );
+  assert.match(last.content[0]!.content!, /^Valget er vist for brugeren/);
+  assert.equal(calls.length - calls.findIndex((c) => c === calls.at(-1)), 1, "ét modelkald: turen sluttede ved menuen");
+
+  // Næste tur med valget: placering entity først, og modellen får valget i konteksten; en forfalsket handling afvises.
+  script.push(useTool("show_person", { person: "CVR-3-4000000007", show_all: true }), sayText("Her er alt om Gitte."));
+  const picked = { ...onLasso, choice: { id: "toolu_menu", index: 0, action: menu.options[0]!.action } };
+  const next = await chat({ message: menu.options[0]!.action.prompt, context: picked, history: done.history, sig: done.sig });
+  assert.equal(next.status, 200);
+  assert.deepEqual(next.events[0], { type: "placement", placement: "entity", target: jakob, focus: "overblik" });
+  assert.deepEqual(
+    next.events.map((e) => e.type),
+    ["placement", "tool", "view", "text", "done"],
+  );
+  assert.deepEqual((next.events.at(-1) as Event & { placement: unknown }).placement, { placement: "entity", target: jakob, focus: "overblik" });
+  assert.match(lastUserTexts(calls.at(-2)!)[0]!, /^\[Kontekst\] Brugeren valgte 'Alt om Gitte Prøve': svaret skrives på personen Gitte Prøve \(CVR-3-4000000007\), modul overblik\./);
+
+  const forged = { ...onLasso, choice: { id: "toolu_menu", index: 0, action: { ...menu.options[0]!.action, entity: { kind: "person", id: "CVR-3-4000000099", name: "En anden" } } } };
+  const bad = await chat({ message: "Vis alt", context: forged, history: done.history, sig: done.sig });
+  assert.equal(bad.status, 400);
+  assert.equal(bad.json?.error, "Valget passer ikke til samtalen");
+
+  // Fritekst i stedet for et punkt: placeringen er "her", og konteksten siger fritekst.
+  script.push(sayText("Okay."));
+  const free = await chat({ message: "Noget helt andet", context: { ...onLasso, choice: { id: "toolu_menu", free: true } }, history: done.history, sig: done.sig });
+  assert.deepEqual(free.events[0], { type: "placement", placement: "current" });
+  assert.match(lastUserTexts(calls.at(-1)!)[0]!, /fritekst/);
+});
+
+test("chat: en ugyldig valgmenu giver is_error, og de andre kald i svaret kører", async () => {
+  script.push(useTool("ask_choice", { question: "Hvad?", options: [] }), sayText("Beklager."));
+  const { events } = await chat({ message: "vis alt om Gitte", context: onLasso });
+  assert.deepEqual(
+    events.map((e) => e.type),
+    ["placement", "tool", "tool_error", "text", "done"],
+  );
+  assert.match((events[2] as Event & { message: string }).message, /Ugyldig valgmenu/);
+});
+
+test("chat: tekst og visninger kommer i den rækkefølge, de laves, med form page/module", async () => {
+  script.push(
+    useTool("show_company", { company: "99000001", question: "Hvem ejer den?" }, "Først siden."),
+    useTool("render_view", { title: "Nøgletal", components: [{ type: "LassoKeyFigureCards", company: "99000001" }] }, "Så et modul."),
+    sayText("Færdig."),
+  );
+  const { events } = await chat({ message: "Vis siden og nøgletallene", context: onLasso });
+  assert.deepEqual(
+    events.map((e) => e.type),
+    ["placement", "text", "tool", "view", "text", "tool", "view", "text", "done"],
+  );
+  assert.equal((events[3] as Event & { form: string }).form, "page");
+  assert.equal((events[6] as Event & { form: string; name: string }).form, "module");
+  assert.equal((events[6] as Event & { name: string }).name, "render_view");
 });
