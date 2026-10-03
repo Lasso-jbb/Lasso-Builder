@@ -19,7 +19,7 @@ packages/spec     zod-schema for visnings-spec, komponentkatalog (catalog.ts), f
 packages/ui       React 19-komponenter. Kender kun spec + data, kalder aldrig API'er. styles.css har alle tokens.
 apps/view         Vite-app, der renderer i MCP-appen (mcp.tsx) og som delt weblink (web.tsx)
 apps/server       MCP-server (mcp/server.ts), Lasso-klient (lasso/client.ts), adaptere (lasso/adapters.ts),
-                  tekstkort til terminaler (data/card.ts), gemte visninger (views/store.ts), tests
+                  resumé til modellen (data/summary.ts), gemte visninger (views/store.ts), tests
 docs/             design/README.md (GAMMELT design, skal erstattes), lasso-endpoints.md, screenshots/
 ```
 
@@ -28,7 +28,7 @@ docs/             design/README.md (GAMMELT design, skal erstattes), lasso-endpo
 **De 8 komponenter i dag** (`packages/ui/src/components/`): `LassoCompanyHeader`, `LassoKeyFigures`, `LassoFinancialChart`, `LassoPeopleList`, `LassoOwnership`, `LassoTable` (+ `FilterPanel`), `LassoComparison` og `LassoActions`. Tilsammen er de ca. 1.100 linjer.
 
 **Vigtige egenskaber, der skal bevares:**
-- Hver visning leverer også et **tekstkort** (`card.ts`) til apps, der ikke kan tegne, fx Claude Code og terminaler.
+- Hver visning leverer et resumé og `links` (`share`, evt. `open`); apps, der ikke kan tegne (fx Claude Code og terminaler), får kun linket til visningen. Tekstkortet er udgået.
 - Hver visning har et link til den interaktive Lasso-visning.
 - **Komponentkataloget står i tool-beskrivelserne**, fordi ChatGPT ikke læser MCP-resources. Beskrivelserne afgør, hvilken komponent modellen vælger.
 - Specen gemmes uden data, så et delt link altid viser friske tal.
@@ -147,7 +147,7 @@ Hver ny komponent kræver præcis disse fire ting:
 1. **Schema** i `packages/spec/src/spec.ts` (zod) og en katalogtekst i `catalog.ts`. Teksten skal sige, *hvornår* modellen skal vælge komponenten.
 2. **Data:** en adapter i `apps/server/src/lasso/adapters.ts` og et felt i `Dataset`. UI'et kalder aldrig API'er.
 3. **React-komponent** i `packages/ui/src/components/`. Den må kun bruge CSS-variabler fra `styles.css`, bruger `DataState` til de fem tilstande og tegner grafer som ren SVG uden chartbibliotek.
-4. **Tekstkort** i `apps/server/src/data/card.ts` og tests.
+4. **Resumé** i `apps/server/src/data/summary.ts` og tests.
 
 Eksisterende spec-format og komponentnavne ændres ikke uden en migrering, så gemte visninger og delte links bliver ved med at virke.
 

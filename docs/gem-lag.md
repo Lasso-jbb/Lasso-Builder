@@ -66,7 +66,7 @@ interface, når (a) identiteten mod Lasso er afklaret, og (b) endpoints er verif
 | Tool | Gør |
 |---|---|
 | `save_page` | Gemmer én virksomhed eller person (CVR, Lasso-ID eller navn) på brugerens liste, med valgfri note og focus. |
-| `list_saved_pages` | Viser listen (nyeste først) som Lasso-visning (`LassoSavedPages`) med åbn og fjern; tekstkort med signerede links til værter uden MCP Apps. |
+| `list_saved_pages` | Viser listen (nyeste først) som Lasso-visning (`LassoSavedPages`) med åbn og fjern. |
 | `remove_saved_page` | Fjerner en side fra listen. |
 
 Routing i serverinstruktionerne: "gem virksomheden/personen", "husk", "min liste", "bogmærk" →

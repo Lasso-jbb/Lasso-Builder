@@ -1,6 +1,6 @@
 # D1 + D3 — Nye MCP-værktøjer: `search_persons` og `compare_companies`
 
-Fables beslutning (plan D1/D3, docs/plan-mcp.md, Ø7). Begge værktøjer er *read-only*, returnerer en Lasso-visning som de øvrige (`viewResult` med tekstkort, link og PDF-link), og deres beskrivelser holdes korte (token-loft Ø8: ≤ 300 tokens pr. værktøj).
+Fables beslutning (plan D1/D3, docs/plan-mcp.md, Ø7). Begge værktøjer er *read-only*, returnerer en Lasso-visning som de øvrige (`viewResult` med resumé, `links` og PDF-link), og deres beskrivelser holdes korte (token-loft Ø8: ≤ 300 tokens pr. værktøj).
 
 ## D1 — `search_persons`
 
