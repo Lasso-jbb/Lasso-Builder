@@ -33,7 +33,8 @@ export type ChatEvent =
   | ({ type: "placement" } & Placement)
   | { type: "text"; text: string }
   | { type: "tool"; id: string; name: string; title: string }
-  | { type: "view"; id: string; name: string; form: ViewForm; spec: ViewSpec; dataset: Dataset; pdfLink?: string }
+  /** tool: værktøjet, der lavede visningen (render_view, show_company …); kun render_view-sider kan blive skabeloner. */
+  | { type: "view"; id: string; name: string; form: ViewForm; spec: ViewSpec; dataset: Dataset; pdfLink?: string; tool?: string }
   | { type: "tool_error"; id: string; name: string; message: string }
   | { type: "choice"; id: string; question: string; options: ChoiceOption[]; allowFreeText: boolean }
   /** fresh: svaret er flyttet til en anden fane; history er kun denne tur og hører til den nye fane. */

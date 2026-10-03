@@ -1,6 +1,7 @@
 import type { ViewSpec } from "@lasso/spec";
 import type { ModuleTarget } from "../../chat/markdown.js";
 import type { P2IconName } from "../icons.js";
+import type { AnswerPart, ItemKind } from "../thread.js";
 
 /** Tidspunktet under et svar og i fuld skærm: "09:41" (D9). */
 export function hhmm(ms: number): string {
@@ -27,6 +28,16 @@ const FOCUS_ICON: Record<string, P2IconName> = {
 export function moduleIcon(target: ModuleTarget): P2IconName {
   if (target.kind === "modul") return FOCUS_ICON[target.focus] ?? "doc";
   return target.kind === "firma" ? "build" : "user";
+}
+
+/**
+ * "Tilføj som fane" står kun på en sammensat side (render_view, form page) om fanens eget firma eller egen person.
+ * show_company/show_person (portalens egne moduler) og visninger med ukendt værktøj (ældre svar) får aldrig knappen.
+ */
+export function canAddAsTab(part: Extract<AnswerPart, { kind: "view" }>, tab: { kind: ItemKind; key: string }): boolean {
+  if (part.tool !== "render_view" || part.form !== "page" || tab.kind === "result") return false;
+  const one = singleEntity(part.spec);
+  return one?.kind === tab.kind && one.id === tab.key;
 }
 
 /**
