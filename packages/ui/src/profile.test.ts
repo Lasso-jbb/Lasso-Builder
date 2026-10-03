@@ -300,3 +300,21 @@ test("12.1 (Jakob 01.10): 'Vis mere' kun med mindst 50 % mere at vise; hvert kli
   assert.equal(revealOf(2000, 660), 660);
   assert.equal(revealOf(1200, 990), 1200);
 });
+
+test("19.3 (Jakob 03.10): med host.analysisPdfSolo står 'Hent som PDF' kun, når analysen er visningens eneste element; uden (/mcp) som før", () => {
+  const ds = dataset();
+  const analysis = { type: "LassoTextSections", company: ID, variant: "analyse" } as const;
+  type Props = Parameters<typeof LassoView>[0];
+  const spec = (components: unknown[]) => ({ version: 2, kind: "company", title: "Test", layout: "stack", criteria: [], components }) as unknown as Props["spec"];
+  const render = (components: unknown[], host: Props["host"]) => renderToStaticMarkup(createElement(LassoView, { spec: spec(components), dataset: ds, host, onAction: () => {} }));
+  const pdf = /lasso-analysis19__pdf/;
+  const page = [{ type: "LassoKeyValueList", company: ID }, analysis];
+  // Portalen: kun alene.
+  assert.match(render([analysis], { export: true, analysisPdfSolo: true }), pdf);
+  assert.doesNotMatch(render(page, { export: true, analysisPdfSolo: true }), pdf);
+  // Uden indstillingen (/mcp, /v): også i en sammensat side, som før.
+  assert.match(render(page, { export: true }), pdf);
+  assert.match(render([analysis], { export: true }), pdf);
+  // Uden eksport aldrig (G1).
+  assert.doesNotMatch(render([analysis], { analysisPdfSolo: true }), pdf);
+});

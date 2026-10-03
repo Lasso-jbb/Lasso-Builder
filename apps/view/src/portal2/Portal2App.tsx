@@ -1287,7 +1287,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   /** Tom tilstand på Lasso: ingen ture og intet resultat. Forslagene står så som piller, ikke under feltet. */
   let empty = false;
   // viewportChrome: portalens ramme (topbjælke, faner, modulrække, værktøjslinje og spørgefelt), så ejerdiagrammet tilpasses vinduet.
-  const host = (page: boolean) => ({ prompt: true, save: true, refine: true, drillDown: true, refresh: true, export: true, pdf: boot.pdf !== false, openFocus: page, openSection: page, viewportChrome: PORTAL_CHROME });
+  const host = (page: boolean) => ({ prompt: true, save: true, refine: true, drillDown: true, refresh: true, export: true, pdf: boot.pdf !== false, openFocus: page, openSection: page, viewportChrome: PORTAL_CHROME, analysisPdfSolo: true });
   if (!item) {
     content = (
       <div className="home">
