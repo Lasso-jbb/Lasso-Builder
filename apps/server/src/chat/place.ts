@@ -15,12 +15,31 @@ export const EXPLICIT_OPEN = /(?<![\p{L}])(vis|se)( mig)? (alt|det hele)(?![\p{L
 /** Tekst uden store bogstaver og diakritiske tegn (å → a, ø → o, æ → ae), så "Prøve" og "prove" er det samme. */
 const fold = (t: string): string => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/ø/g, "o").replace(/æ/g, "ae");
 
-/** Om brugerens besked nævner entiteten: et ord på mindst 3 bogstaver fra navnet står i beskeden (eller id/CVR-nummer står der). */
-export function mentions(message: string, name: string, id: string): boolean {
+/** Ord, der ikke tæller som en del af et navn: udløsere i beskeden og selskabsformer. */
+const STOP = new Set(["vis", "se", "mig", "alt", "det", "hele", "om", "abn", "abne", "abner", "og", "i", "for"]);
+const LEGAL = new Set(["aps", "ivs", "enk", "ens", "ams", "fmba", "amba"]);
+
+/** Navnets rigtige ord: mindst 3 bogstaver, uden udløsere og selskabsformer (A/S, ApS, I/S … foldet). */
+export function nameTokens(name: string): string[] {
+  return fold(name)
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length >= 3 && !STOP.has(w) && !LEGAL.has(w));
+}
+
+const hasWord = (folded: string, w: string): boolean => new RegExp(`(?<![a-z0-9])${w}s?(?![a-z0-9])`).test(folded);
+
+/**
+ * Om brugerens besked nævner entiteten: hele ord (ikke dele af ord), uden udløsere som "vis alt", "det hele" og "åbn".
+ * Et løst fundet mål (all = false) kræver mindst ét rigtigt ord fra navnet; en åben fane (all = true) kræver dem alle,
+ * så "Mette Holm" ikke åbner fanen "Mette Holmgaard". Id eller CVR-nummer i beskeden tæller også.
+ */
+export function mentions(message: string, name: string, id: string, all = false): boolean {
   const m = fold(message);
   const cvr = /^CVR-1-(\d{8})$/i.exec(id)?.[1];
   if (m.includes(fold(id)) || (cvr && m.includes(cvr))) return true;
-  return fold(name).split(/[^a-z0-9]+/).some((w) => w.replace(/[^a-z]/g, "").length >= 3 && m.includes(w));
+  const tokens = nameTokens(name);
+  if (!tokens.length) return false;
+  return all ? tokens.every((w) => hasWord(m, w)) : tokens.some((w) => hasWord(m, w));
 }
 
 /** Turens tilstand, agent.ts og værktøjerne deler: placeringen (først forslaget, så det, modellen valgte), og hvad der er sket. */
@@ -82,7 +101,7 @@ export async function verifyPlacement(input: PlaceAnswerInput, { mcp, context, m
     target = { kind: only.kind, id: only.id, name: only.name };
   }
   // Målet skal være det, brugeren nævnte: "vis det hele" på A åbner hverken A's direktør eller en anden åben fane.
-  if (!mentions(message, target.name, target.id)) return fail(`Brugeren bad ikke om at åbne ${target.name}; svar her.`);
+  if (!mentions(message, target.name, target.id, Boolean(open))) return fail(`Brugeren bad ikke om at åbne ${target.name}; svar her.`);
   const focus = focusFor(target.kind, input.focus);
   return { placement: { placement: "entity", target, ...(focus ? { focus } : {}), decided: true } };
 }

@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { loadConfig } from "../config.js";
 import { DemoProvider } from "../data/demo.js";
 import type { ChatContext, PlaceAnswerInput } from "./context.js";
-import { EXPLICIT_OPEN, mentions, verifyPlacement, type PlaceCtx, type TurnState } from "./place.js";
+import { EXPLICIT_OPEN, mentions, nameTokens, verifyPlacement, type PlaceCtx, type TurnState } from "./place.js";
 
 const mcp = { provider: new DemoProvider(), config: loadConfig({ LASSO_DATA_SOURCE: "demo" }) } as never;
 const gitte = { kind: "person" as const, id: "CVR-3-4000000007", name: "Gitte Prøve" };
@@ -50,7 +50,7 @@ test("entity: ikke den aktive fane; en åben fane kræver ingen søgning; et uke
   assert.match(error(await verifyPlacement(entity(byg, "Eksempel Byg"), ctx(onByg, "åbn Eksempel Byg"))), /aktive fane/);
   const withGitte: ChatContext = { active: onByg.active, open: [byg, gitte] };
   // Navnet i query er ligegyldigt, når id'et står i de åbne faner (navnet kommer fra fanen).
-  const open = await verifyPlacement(entity(gitte, "noget helt andet", { focus: "findes-ikke" }), ctx(withGitte, "åbn Gitte"));
+  const open = await verifyPlacement(entity(gitte, "noget helt andet", { focus: "findes-ikke" }), ctx(withGitte, "åbn Gitte Prøve"));
   assert.deepEqual(open, { placement: { placement: "entity", target: gitte, decided: true } });
 });
 
@@ -96,6 +96,30 @@ test("entity: målet skal være nævnt i beskeden, også en åben fane; 'vis det
   assert.match(error(await verifyPlacement(entity(gitte, "Eksempel Byg"), ctx(withGitte, "åbn Eksempel Byg"))), /Brugeren bad ikke om at åbne Gitte Prøve/);
   // Slået op via navnet: samme krav.
   assert.match(error(await verifyPlacement(entity(gitte, "Gitte Prøve"), ctx(onByg, "vis det hele"))), /bad ikke om at åbne/);
-  assert.ok("placement" in (await verifyPlacement(entity(gitte, "Gitte Prøve"), ctx(withGitte, "åbn Gitte"))));
+  assert.ok("placement" in (await verifyPlacement(entity(gitte, "Gitte Prøve"), ctx(withGitte, "åbn Gitte Prøve"))));
   assert.ok("placement" in (await verifyPlacement(entity(gitte, "Gitte Prøve"), ctx(onByg, "se alt om Gitte Prove"))));
+});
+
+test("mentions: hele ord; udløsere og selskabsformer tæller ikke som navn; en åben fane kræver alle ordene", () => {
+  // Udløsere og dele af ord.
+  assert.equal(mentions("vis det hele", "Det Gode Køkken ApS", "CVR-1-1"), false);
+  assert.equal(mentions("vis alt", "Alt Byg ApS", "CVR-1-2"), false);
+  assert.equal(mentions("åbn bygningen", "Byg Nord ApS", "CVR-1-3"), false);
+  assert.equal(mentions("vis alt om Mette Holm", "Mette Holmgaard", "CVR-3-4", true), false);
+  // Selskabsformen alene er ikke et navn.
+  assert.equal(mentions("åbn et ApS", "Nord ApS", "CVR-1-5"), false);
+  // Positive.
+  assert.equal(mentions("vis alt om Jakob Kjær", "Jakob Kjær", "CVR-3-6", true), true);
+  assert.equal(mentions("åbn Eksempel Byg", "Eksempel Byg A/S", "CVR-1-7", true), true);
+  assert.equal(mentions("åbn Eksempel Byg", "Eksempel Byg ApS", "CVR-1-7"), true);
+  assert.equal(mentions("åbn Jakobs side", "Jakob Kjær", "CVR-3-6"), true, "ét ord holder for en slået-op kandidat");
+  assert.equal(mentions("åbn Jakobs side", "Jakob Kjær", "CVR-3-6", true), false, "en åben fane kræver Kjær også");
+  assert.deepEqual(nameTokens("Det Gode Køkken ApS"), ["gode", "kokken"]);
+});
+
+test("entity: 'vis alt om Mette Holm' åbner ikke fanen Mette Holmgaard", async () => {
+  const holmgaard = { kind: "person" as const, id: "CVR-3-4000000099", name: "Mette Holmgaard" };
+  const open: ChatContext = { active: onByg.active, open: [byg, holmgaard] };
+  assert.match(error(await verifyPlacement(entity(holmgaard, "Mette Holm"), ctx(open, "vis alt om Mette Holm"))), /bad ikke om at åbne/);
+  assert.ok("placement" in (await verifyPlacement(entity(holmgaard, "Mette Holmgaard"), ctx(open, "vis alt om Mette Holmgaard"))));
 });
