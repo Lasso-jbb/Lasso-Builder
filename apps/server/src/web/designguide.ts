@@ -7,11 +7,11 @@
  * vilkårlige opslag.
  */
 import type { Request, Response } from "express";
-import { composeCompany, composePerson, composePersonProbe, composeProbe, componentSchema, FOCUSES, PAGE_TABS, mainMetric, PERSON_FOCUSES, showcaseTabs, type ComponentType, type Dataset, type Focus, type PersonFocus, type SavedPagesVM, type ViewComponent, type ViewSpec } from "@lasso/spec";
+import { composeCompany, composePerson, composePersonProbe, composeProbe, componentSchema, FOCUSES, LAYOUT_FORMATS, PAGE_TABS, mainMetric, PERSON_FOCUSES, showcaseTabs, type ComponentType, type Dataset, type Focus, type PersonFocus, type SavedPagesVM, type ViewComponent, type ViewSpec } from "@lasso/spec";
 import { DemoProvider } from "../data/demo.js";
 import type { DataProvider } from "../data/index.js";
 import { errorMessage, resolveSpec } from "../data/resolve.js";
-import { cleanCommentInput, cleanCommentPatch, commentsMarkdown, COMMENT_STATUSES, type CommentStatus, type CommentStore } from "../comments/store.js";
+import { cleanCommentInput, cleanCommentPatch, cleanFormatApproval, commentsMarkdown, COMMENT_STATUSES, type CommentStatus, type CommentStore } from "../comments/store.js";
 import { injectBoot, loadDesignguideHtml } from "./page.js";
 import { DEPLOYED_VERSION, getShowcase, SHOWCASE, SHOWCASE_DEMO, type ShowcaseBoot } from "./showcase.js";
 
@@ -189,5 +189,21 @@ export function designguideHandlers(provider: DataProvider, comments: CommentSto
       fail(res, err, 500);
     }
   };
-  return { page, side, listComments, commentsMarkdown: commentsMd, addComment, updateComment, removeComment };
+  const listFormats = async (_req: Request, res: Response) => {
+    try {
+      res.set("Cache-Control", "no-store").json(await comments.listFormats());
+    } catch (err) {
+      fail(res, err, 500);
+    }
+  };
+  const setFormats = async (req: Request, res: Response) => {
+    const type = String(req.params.type);
+    try {
+      const known = LAYOUT_FORMATS[type as ComponentType]?.map((f) => f.id);
+      res.json(await comments.setFormats(cleanFormatApproval(type, req.body, known)));
+    } catch (err) {
+      fail(res, err);
+    }
+  };
+  return { page, side, listFormats, setFormats, listComments, commentsMarkdown: commentsMd, addComment, updateComment, removeComment };
 }

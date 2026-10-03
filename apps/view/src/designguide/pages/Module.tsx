@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { GRID_RULES, TYPE_WIDTH_FULL, WIDTHS, type ComponentType, type Width } from "@lasso/spec";
+import { GRID_RULES, LAYOUT_FORMATS, TYPE_WIDTH_FULL, WIDTHS, type ComponentType, type Width } from "@lasso/spec";
 import type { Ctx } from "../App.js";
 import { Frame } from "../Frame.js";
 import { ENTRIES } from "../gallery.js";
@@ -11,6 +11,7 @@ import { allowedWidths, slugOf, VIEWPORTS, WIDTH_LABEL, WIDTH_NAME, WIDTH_PX, ty
 import { Chip, PageHead, ReportChip, Seg, SourceRef, Tabs, Toggle } from "../ui.js";
 import { CommentButton, type CommentTarget } from "../comments.js";
 import { LIVE_LABEL, PROFILE_LABEL } from "./Modules.js";
+import { FormatsSection } from "./Formats.js";
 
 type TabId = "bredder" | "tilstande" | "tekster" | "brug" | "data";
 
@@ -106,8 +107,11 @@ function WidthsTab({ m, option, theme, mark, fit, outside }: { m: ModuleInfo; op
   const exceptions = widthExceptions(m.type);
   const desktop = VIEWPORTS.find((v) => v.id === "desktop")!;
   const others = VIEWPORTS.filter((v) => v.id !== "desktop");
+  // Moduler med former (layoutFormats) vises fra største til mindste bredde i stedet for de faste skærme.
+  const formats = Boolean(LAYOUT_FORMATS[m.type]);
   return (
     <>
+      {formats ? <FormatsSection m={m} option={option} theme={theme} mark={mark} fit={fit} /> : null}
       <section className="dg-section">
         <div className="dg-h2row">
           <h2 className="dg-h2">Bredder på gitteret</h2>
@@ -142,7 +146,7 @@ function WidthsTab({ m, option, theme, mark, fit, outside }: { m: ModuleInfo; op
           ))}
         </div>
       </section>
-      <section className="dg-section">
+      {formats ? null : <section className="dg-section">
         <div className="dg-h2row">
           <h2 className="dg-h2">På andre skærme</h2>
           <span className="dg-meta">Standardbredden, som siden folder den på hver skærm.</span>
@@ -167,7 +171,7 @@ function WidthsTab({ m, option, theme, mark, fit, outside }: { m: ModuleInfo; op
             />
           ))}
         </div>
-      </section>
+      </section>}
     </>
   );
 }

@@ -8,6 +8,7 @@ export { PrintCover, PrintMode, usePrintMode, pageTemplates, pageScale, printSta
 export type { PageTemplateInput } from "./print.js";
 export { CompanyHead } from "./components/CompanyHead.js";
 export { KeyFigureCards } from "./components/KeyFigureCards.js";
+export { ApprovedFormatsProvider, useLayoutFormat } from "./formats.js";
 export { BarChart, pickableMetrics } from "./components/BarChart.js";
 export { GroupedBarChart } from "./components/GroupedBarChart.js";
 export { StackedBarChart, balanceYears } from "./components/StackedBarChart.js";

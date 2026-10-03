@@ -41,3 +41,16 @@ test("kommentar: tilføj, ret og markdown-arbejdsliste med kun de åbne", async 
   assert.match(commentsMarkdown(await store.list(), "", "alle"), /Svar: Tilføjet mørk værdi \(abc1234\)/);
   assert.equal(await store.remove(a.id), true);
 });
+
+test("godkendte former: valideres mod modulets former og gemmes pr. type", async () => {
+  const { cleanFormatApproval } = await import("./store.js");
+  const known = ["linjer", "kort", "2x2", "stablet"];
+  assert.deepEqual(cleanFormatApproval("LassoKeyFigureCards", { approved: ["2x2", "linjer"], author: "Jakob" }, known), { type: "LassoKeyFigureCards", approved: ["linjer", "2x2"], author: "Jakob" });
+  assert.throws(() => cleanFormatApproval("LassoKeyFigureCards", { approved: ["nyt"], author: "Jakob" }, known), /Ukendte former/);
+  assert.throws(() => cleanFormatApproval("LassoNews", { approved: [], author: "Jakob" }, undefined), /ingen former/);
+  const store = new MemoryCommentStore();
+  await store.setFormats({ type: "LassoKeyFigureCards", approved: ["linjer"], author: "Jakob" });
+  const list = await store.listFormats();
+  assert.equal(list.length, 1);
+  assert.deepEqual(list[0]!.approved, ["linjer"]);
+});

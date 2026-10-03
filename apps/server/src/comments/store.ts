@@ -64,7 +64,32 @@ export interface CommentStore {
   add(input: CommentInput): Promise<Comment>;
   update(id: string, patch: CommentPatch): Promise<Comment | null>;
   remove(id: string): Promise<boolean>;
+  /** Godkendte former pr. modul (designguidens "Fra største til mindste"). */
+  listFormats(): Promise<FormatApproval[]>;
+  setFormats(input: FormatApproval): Promise<FormatApproval>;
   close(): Promise<void>;
+}
+
+/** De former, et modul må bruge (packages/spec/src/layoutFormats.ts), som de er godkendt i designguiden. */
+export interface FormatApproval {
+  type: string;
+  approved: string[];
+  author: string;
+  updatedAt?: string;
+}
+
+/** Validerer en godkendelse mod modulets former; kaster en fejl med en læsbar besked. */
+export function cleanFormatApproval(type: string, body: unknown, known: readonly string[] | undefined): FormatApproval {
+  if (!known) throw new Error(`Modulet har ingen former: ${type}`);
+  const b = (body ?? {}) as Record<string, unknown>;
+  const approved = Array.isArray(b.approved) ? b.approved.filter((x): x is string => typeof x === "string") : null;
+  if (!approved) throw new Error("approved mangler");
+  const unknown = approved.filter((x) => !known.includes(x));
+  if (unknown.length) throw new Error(`Ukendte former: ${unknown.join(", ")}`);
+  const author = typeof b.author === "string" ? b.author.trim() : "";
+  if (!author) throw new Error("Navnet mangler");
+  if (author.length > COMMENT_LIMITS.author) throw new Error("Navnet er for langt");
+  return { type, approved: known.filter((x) => approved.includes(x)), author };
 }
 
 /** Grænser, så en kommentar ikke kan fylde databasen. */
@@ -131,6 +156,12 @@ CREATE TABLE IF NOT EXISTS designguide_comments (
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS designguide_comments_target_idx ON designguide_comments (target);
+CREATE TABLE IF NOT EXISTS designguide_formats (
+  type        TEXT PRIMARY KEY,
+  approved    JSONB NOT NULL,
+  author      TEXT NOT NULL,
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 `;
 
 interface Row {
@@ -220,6 +251,22 @@ export class PgCommentStore implements CommentStore {
     return (r.rowCount ?? 0) > 0;
   }
 
+  async listFormats() {
+    await this.migrate();
+    const r = await this.pool.query<{ type: string; approved: string[]; author: string; updated_at: Date }>("SELECT * FROM designguide_formats ORDER BY type");
+    return r.rows.map((x) => ({ type: x.type, approved: x.approved, author: x.author, updatedAt: x.updated_at.toISOString() }));
+  }
+
+  async setFormats(input: FormatApproval) {
+    await this.migrate();
+    const r = await this.pool.query<{ updated_at: Date }>(
+      `INSERT INTO designguide_formats (type, approved, author) VALUES ($1, $2, $3)
+       ON CONFLICT (type) DO UPDATE SET approved = EXCLUDED.approved, author = EXCLUDED.author, updated_at = now() RETURNING updated_at`,
+      [input.type, JSON.stringify(input.approved), input.author],
+    );
+    return { type: input.type, approved: input.approved, author: input.author, updatedAt: r.rows[0]!.updated_at.toISOString() };
+  }
+
   async close() {
     if (this.ownsPool) await this.pool.end();
   }
@@ -249,6 +296,15 @@ export class MemoryCommentStore implements CommentStore {
   }
   async remove(id: string) {
     return this.items.delete(id);
+  }
+  private readonly formats = new Map<string, FormatApproval>();
+  async listFormats() {
+    return [...this.formats.values()];
+  }
+  async setFormats(input: FormatApproval) {
+    const f = { ...input, updatedAt: new Date().toISOString() };
+    this.formats.set(input.type, f);
+    return f;
   }
 }
 

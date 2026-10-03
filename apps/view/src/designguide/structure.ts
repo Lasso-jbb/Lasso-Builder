@@ -27,6 +27,41 @@ export const VIEWPORTS: Viewport[] = [
   { id: "mobil", label: "Mobil", vw: 390, note: "Én kolonne, 16 px sideluft" },
 ];
 
+/**
+ * Skærmene i "Fra største til mindste": enhederne med deres skærmbredde og den bredde, et modul i fuld
+ * bredde får i portalen dér (portalModuleWidth). Formen følger modulets bredde, ikke skærmen.
+ */
+export interface Device {
+  id: string;
+  label: string;
+  vw: number;
+}
+export const DEVICES: Device[] = [
+  { id: "stor", label: "Stor skærm", vw: 1440 },
+  { id: "laptop", label: "Laptop", vw: 1280 },
+  { id: "tablet-h", label: "Tablet, vandret", vw: 1024 },
+  { id: "tablet-v", label: "Tablet, lodret", vw: 768 },
+  { id: "mobil-stor", label: "Mobil, stor", vw: 430 },
+  { id: "mobil", label: "Mobil", vw: 390 },
+  { id: "mobil-lille", label: "Mobil, lille", vw: 360 },
+  { id: "mobil-mindst", label: "Mindste mobil", vw: 320 },
+];
+
+/**
+ * Bredden af et modul i fuld bredde i portalen ved skærmbredden `vw` (målt 03.10, portal2.css og LassoView):
+ * over 760 px står skinnen og sidemargenen (108 px) ved siden af midten, der højst er 1152 px; derunder er
+ * midten hele skærmen. Modulet har 24 px sideluft i midten over 560 px og 16 px derunder.
+ */
+export function portalModuleWidth(vw: number): number {
+  const content = vw > 760 ? Math.min(1152, vw - 108) : vw;
+  return content - (content > 560 ? 48 : 32);
+}
+
+/** Skærmbredden, en designguide-ramme skal have, for at et modul i fuld bredde bliver `width` px (sideluft 24/16). */
+export function frameWidthFor(width: number): number {
+  return width + 48 > 560 ? width + 48 : width + 32;
+}
+
 /** Bredderne mellem typens min og maks (GRID_RULES), dvs. de bredder, modulet må stå i. */
 export function allowedWidths(type: ComponentType): Width[] {
   const r = GRID_RULES[type];

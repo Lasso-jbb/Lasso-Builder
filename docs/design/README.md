@@ -132,6 +132,14 @@ Sidens moduler lægges ikke ud efter faste brudpunkter, men efter den bredde, mi
 
 LassoView måler midten (ResizeObserver) og lægger båndene ud for layout `dashboard` og `columns` (`lasso-dband--flow`, `lasso-columns--flow`). Modellen er ren og deterministisk og testet i `grid.test.ts`. De faste foldningsregler nedenfor (960/1199, `tabletSpans`, mobilrækkefølgen) gælder kun i det øjeblik, før midten er målt, og for layout `grid-2` og `page`.
 
+### Modulets former (`packages/spec/src/layoutFormats.ts`)
+
+Inde i et modul skifter formen ikke efter skærmen, men efter modulets egen målte bredde (`useLayoutFormat` i `packages/ui/src/formats.tsx`). Hvert modul med former har en liste fra den største til den mindste, og hver form har en mindste lovlig bredde. Modulet bruger altid den første **godkendte** form, der er plads til; under alle bruges den mindste godkendte. Derfor kan formen kun gå én vej, når modulet bliver smallere, uanset om det sker, fordi skærmen er smallere, portalens skinne kommer eller går, eller modulet står i en smallere celle.
+
+Nøgletalskort (fire tal): én række med skillelinjer (≥ 200 px pr. tal, 800 px) → én række kort (≥ 140 px pr. kort, 596 px) → to kort pr. række (280 px; telefoner op til 390 får den kompakte 26c.1-tekst) → ét tal pr. række. Klassen står på elementet (`lasso-kpis--linjer|kort|2x2|stablet`), og kun de regelsæt styrer formen i `styles.css`.
+
+Designguiden viser under Bredder, **Fra største til mindste**, alle formerne langs bredden, en tabel med skærmene (stor skærm, laptop, tablet vandret og lodret, mobiler ned til 320) og gittercellerne og modulet tegnet i hver bredde. Formerne godkendes med et flueben. Godkendelsen gemmes på serveren (`/designguide/api/formater`) og virker straks i guidens rammer; portalen og chatten bruger `APPROVED_FORMATS` i koden, som opdateres ud fra guiden.
+
 Tre brudpunkter (galleri 26.1): ≥ 1200 desktop, 768–1199 tablet, < 768 mobil. Den klassiske portals ramme (`AppShell`) har derudover et trin ved 1024: 1024–1199 beholder fanebjælken med en smal skinne, 768–1023 skifter til tabletrammen. Elementerne i midten folder efter midtens egen bredde (≤ 960 tablet, ≤ 560 mobil). På mobil bliver tabeller til kortlister og ejerdiagrammet til en liste, rækker er mindst 44 px, grafer viser maks 5 punkter. Kun brudpunkter, ingen separate mobiludgaver.
 
 Brudpunktsregler (26, node `DH5-0`; guide 23 trin 7) og hvor de står i `styles.css`:

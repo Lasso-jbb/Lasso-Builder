@@ -348,10 +348,12 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-contactpersons__action:hover { color: var(--lasso-accent-text); }
 .lasso-contactpersons__icon--muted { color: var(--lasso-faint); }
 
-/* ---------- Nøgletalskort (09): én ramme, lodrette skillelinjer ---------- */
-.lasso-kpis { display: grid; grid-template-columns: repeat(var(--lasso-kpi-count, 4), minmax(0, 1fr)); border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); }
+/* ---------- Nøgletalskort (09) ----------
+   Formen vælges i komponenten ud fra modulets egen bredde (packages/spec/src/layoutFormats.ts, useLayoutFormat)
+   og står som klasse: --linjer (én række, skillelinjer), --kort (én række kort), --2x2 (to kort pr. række)
+   og --stablet (ét pr. række). Kun disse regelsæt styrer formen; skærmen og sidens bredde gør ikke. */
+.lasso-kpis { display: grid; grid-template-columns: repeat(var(--lasso-kpi-count, 4), minmax(0, 1fr)); }
 .lasso-kpi { padding: 22px 24px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
-.lasso-kpi + .lasso-kpi { border-left: 1px solid var(--lasso-border); }
 /* Jakob 30.09: kurven fjernes, når kortet er for smalt til både tal og kurve (ellers lægger den sig oven i tallet).
    Hvert kort er sin egen container, så det gælder, uanset hvor mange kort der står på rækken. */
 .lasso-kpis > .lasso-kpi { container: lasso-kpicard / inline-size; }
@@ -360,7 +362,7 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 }
 .lasso-kpi__label { font-size: var(--lasso-fs); line-height: 18px; font-weight: 400; color: var(--lasso-text-2); }
 .lasso-kpi__row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-/* 09.1/26c.1: tallet 28 px på desktop, 24 px på tablet og 20 px på mobil. */
+/* 09.1/26c.1: tallet 28 px i én række, 24 px som kort og 20 px i et smalt 2x2-kort (telefon). */
 .lasso-kpi__value { font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: var(--lasso-tracking-tight); color: var(--lasso-text); white-space: nowrap; }
 .lasso-kpi__unit { font-size: var(--lasso-fs); font-weight: 500; letter-spacing: 0; color: var(--lasso-text-2); margin-left: 6px; }
 /* 09.1 Henter: tre skeletlinjer pr. kort i samme højde som etiket, tal og udvikling. */
@@ -375,39 +377,53 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
 .lasso-kpi__delta.lasso-muted { font-weight: 400; color: var(--lasso-muted); }
 .lasso-kpi__missing { font-weight: 500; color: var(--lasso-muted); }
 .lasso-kpi__label .lasso-qflag { margin-left: 6px; }
-/* 26c.1 mobil: titel over 2×2 selvstændige kort (1 px kant, radius 10), etiket 12 muted, tal 20/600 med
-   enheden i samme størrelse ("18,8 mio."), én udviklingslinje 12 px, ingen sparkline eller branchelinje. */
+.lasso-kpis--plain .lasso-kpi__unit--note { font-weight: 400; }
+
+/* linjer: én ramme med lodrette skillelinjer. plain (24.5/30.13) har kun 1 px linje over og under, og første felt flugter med kolonnen. */
+.lasso-kpis--linjer { border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); }
+.lasso-kpis--linjer > .lasso-kpi + .lasso-kpi { border-left: 1px solid var(--lasso-border); }
+.lasso-root .lasso-kpis--linjer.lasso-kpis--plain { border: 0; border-top: 1px solid var(--lasso-border); border-bottom: 1px solid var(--lasso-border); border-radius: 0; background: transparent; }
+.lasso-kpis--linjer.lasso-kpis--plain > .lasso-kpi { padding: 22px 24px 20px; }
+.lasso-kpis--linjer.lasso-kpis--plain > .lasso-kpis__title + .lasso-kpi { padding-left: 0; }
+
+/* kort (26f.1): alle tal på én række som selvstændige kort (1 px kant, radius 12, 12 px mellemrum), etiket 13, tal 24. */
+.lasso-kpis--kort { gap: 12px; }
+.lasso-kpis--kort > .lasso-kpi, .lasso-kpis--2x2 > .lasso-kpi { border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-card); background: var(--lasso-surface); padding: 14px 14px 12px; gap: 4px; }
+.lasso-kpis--plain.lasso-kpis--kort > .lasso-kpi, .lasso-kpis--plain.lasso-kpis--2x2 > .lasso-kpi { background: transparent; }
+.lasso-kpis--kort .lasso-kpi__label, .lasso-kpis--2x2 .lasso-kpi__label { font-size: var(--lasso-fs-sm); }
+.lasso-kpis--kort .lasso-kpi__value, .lasso-kpis--2x2 .lasso-kpi__value { font-size: var(--lasso-fs-xl); line-height: 32px; }
+.lasso-kpis--kort .lasso-kpi__unit--note, .lasso-kpis--2x2 .lasso-kpi__unit--note, .lasso-kpis--stablet .lasso-kpi__unit--note { display: none; }
+
+/* 2x2 (26c.1): titlen "Nøgletal ÅÅÅÅ" over to kort pr. række (8 px mellemrum, radius 10); et ulige sidste kort fylder rækken. */
+.lasso-kpis--2x2 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.lasso-kpis--2x2 > .lasso-kpis__title { display: block; grid-column: 1 / -1; margin: 0 0 4px; }
+.lasso-kpis--2x2 > .lasso-kpi { padding: 12px; border-radius: 10px; }
+.lasso-kpis--2x2 > .lasso-kpi:last-child:nth-of-type(odd) { grid-column: 1 / -1; }
+
+/* stablet (30.10/30.11): ét tal pr. række med en linje imellem; plain flugter til venstre med kolonnen. */
+.lasso-kpis--stablet { grid-template-columns: minmax(0, 1fr); border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); }
+.lasso-kpis--stablet > .lasso-kpi { padding: 16px 20px; }
+.lasso-kpis--stablet > .lasso-kpi + .lasso-kpi { border-top: 1px solid var(--lasso-border); }
+.lasso-kpis--stablet .lasso-kpi__value { font-size: var(--lasso-fs-xl); line-height: 32px; }
+.lasso-root .lasso-kpis--stablet.lasso-kpis--plain { border: 0; border-top: 1px solid var(--lasso-border); border-bottom: 1px solid var(--lasso-border); border-radius: 0; background: transparent; }
+.lasso-root .lasso-kpis--stablet.lasso-kpis--plain > .lasso-kpi { padding: 16px 0; }
+
+/* Smalt kort i 2x2 (indholdet under 160 px, dvs. modulet under ca. 375 px: telefoner op til 390), 26c.1:
+   etiket 12 muted, tal 20 med enheden i samme størrelse ("18,8 mio."), én udviklingslinje 12 px, ingen
+   "(regnskab)", valuta eller branchelinje. Containerens bredde er kortets indhold (uden padding). */
+@container lasso-kpicard (max-width: 159px) {
+  .lasso-root .lasso-kpis--2x2 .lasso-kpi__label { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+  .lasso-root .lasso-kpis--2x2 .lasso-kpi__value { font-size: 20px; line-height: 28px; }
+  .lasso-root .lasso-kpis--2x2 .lasso-kpi__missing { line-height: 28px; }
+  .lasso-kpis--2x2 :is(.lasso-kpi__label-extra, .lasso-kpi__unit-cur, .lasso-kpi__bench, .lasso-kpi__year) { display: none; }
+  .lasso-kpis--2x2 .lasso-kpi__unit { font-size: inherit; font-weight: inherit; color: inherit; margin-left: 5px; letter-spacing: inherit; }
+  .lasso-kpis--2x2 .lasso-kpi__delta { font-size: 12px; line-height: 16px; }
+}
 @container lasso (max-width: 560px) {
-  .lasso-root .lasso-kpis { gap: 8px; border: 0; border-radius: 0; background: transparent; }
-  .lasso-root .lasso-kpis__title { display: block; grid-column: 1 / -1; margin: 0 0 4px; }
-  .lasso-root .lasso-kpi { border: 1px solid var(--lasso-border); border-radius: 10px; padding: 12px; gap: 4px; }
-  .lasso-root .lasso-kpi + .lasso-kpi, .lasso-root .lasso-kpi:nth-child(n + 3) { border: 1px solid var(--lasso-border); }
-  .lasso-kpi__label { font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
-  .lasso-kpi__label-extra, .lasso-kpi__unit-cur, .lasso-kpi__bench, .lasso-kpi__year, .lasso-root .lasso-kpi .lasso-spark { display: none; }
-  .lasso-kpi__unit { font-size: inherit; font-weight: inherit; color: inherit; margin-left: 5px; letter-spacing: inherit; }
-  .lasso-kpi__delta { font-size: 12px; line-height: 16px; }
   /* 26c.1/26c.2: ingen info-ikoner ved nøgletal og nøgle-værdi på mobil (Paper); flaget findes på desktop og i 26h.2-rækkerne. */
   .lasso-root .lasso-kpi__label .lasso-qflag, .lasso-root .lasso-kv-row .lasso-qflag { display: none; }
   /* 02c.16/26h.2: et åbnet kvalitetsflag ("17 ⓘ" + forklaringen som linje under) vises også i nøgle-værdi-rækker. */
   .lasso-root .lasso-kv-row .lasso-qflag.lasso-qflag--open { display: inline; }
-}
-/* 24.5/30.13 plain: 1 px linje over og under, lodrette skillelinjer, ingen ydre ramme; første felt flugter med kolonnen. */
-.lasso-root .lasso-kpis--plain { border: 0; border-top: 1px solid var(--lasso-border); border-bottom: 1px solid var(--lasso-border); border-radius: 0; background: transparent; }
-@container lasso (min-width: 801px) { .lasso-kpis--plain > .lasso-kpi { padding: 22px 24px 20px; } }
-@container lasso (min-width: 801px) { .lasso-kpis--plain > .lasso-kpis__title + .lasso-kpi { padding-left: 0; } }
-.lasso-kpis--plain .lasso-kpi__unit--note { font-weight: 400; }
-/* 26f.1 tablet (sidens midte under 800 px): fire selvstændige kort (1 px kant, radius 12, 12 px mellemrum), etiket 13, tal 24.
-   Chatbredden 880 (30.13) beholder den rolige form med lodrette linjer. */
-@container lasso (max-width: 800px) and (min-width: 561px) {
-  .lasso-root .lasso-kpis--plain { gap: 12px; border: 0; }
-  .lasso-root .lasso-kpis--plain > .lasso-kpi, .lasso-root .lasso-kpis--plain > .lasso-kpis__title + .lasso-kpi { border: 1px solid var(--lasso-border); border-radius: var(--lasso-radius-card); padding: 14px 14px 12px; gap: 4px; }
-  .lasso-kpis--plain .lasso-kpi__label { font-size: var(--lasso-fs-sm); }
-  .lasso-kpis--plain .lasso-kpi__value { font-size: var(--lasso-fs-xl); line-height: 32px; }
-  .lasso-kpis--plain .lasso-kpi__unit--note { display: none; }
-}
-@container lasso (max-width: 560px) {
-  .lasso-root .lasso-kpis--plain { border: 0; }
-  .lasso-kpis--plain .lasso-kpi__unit--note { display: none; }
 }
 /* Udvikling: grøn op, rød ned (brugerens ønske; afviger fra "rød kun til det, der ikke kan fortrydes"). */
 .lasso-up { color: var(--lasso-positive); }
@@ -544,12 +560,6 @@ a.lasso-contact__value--link:hover { color: var(--lasso-accent-text); text-decor
   .lasso-frame--bare > .lasso-content--columns:has(> .lasso-columns:first-child) { margin-top: 0; }
   .lasso-frame--bare > .lasso-content--columns > .lasso-columns:first-child > .lasso-column > .lasso-column__item:first-child { padding-top: var(--lasso-space-5); }
   .lasso-content--grid-2 { grid-template-columns: minmax(0, 1fr); }
-  .lasso-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .lasso-kpi:nth-child(odd) { border-left: 0; }
-  .lasso-kpi:nth-child(n + 3) { border-top: 1px solid var(--lasso-border); }
-  .lasso-kpi { padding: 16px; }
-  .lasso-kpi__value { font-size: 20px; line-height: 28px; }
-  .lasso-kpi__missing { line-height: 28px; }
   .lasso-company__name { font-size: var(--lasso-fs-xl); line-height: 26px; }
   .lasso-actionbar .lasso-btn__label--optional { display: none; }
 
@@ -4708,11 +4718,9 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-audhist__seg.is-current { background: var(--lasso-accent-soft); border-color: var(--lasso-accent-border); color: var(--lasso-accent-text); font-weight: 600; }
 
 /* ---------- 26f.1 Sideskabelon, tablet 768–1023 (node F6K-0) ---------- */
-/* Skinne 64 px (se 1199-reglen), sidemargen 24 px, hovedknapper 36 px, KPI-række beholder 4 kort à min. 140 px ellers 2×2. */
+/* Skinne 64 px (se 1199-reglen), sidemargen 24 px, hovedknapper 36 px, KPI-rækkens form styres af komponenten (layoutFormats). */
 @container lasso (max-width: 1023px) and (min-width: 561px) {
   .lasso-page-column { padding: 24px; gap: 24px; }
-  .lasso-kpis { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
-  .lasso-kpi__value { font-size: var(--lasso-fs-xl); line-height: 32px; }
   .lasso-modulebar { padding-left: 24px; }
   .lasso-personhead__actions .lasso-iconbtn, .lasso-company .lasso-iconbtn { height: 36px; min-width: 36px; }
 }
@@ -5216,30 +5224,6 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-reg .lasso-kv-row__value { flex-basis: 100%; white-space: normal; }
 }
 
-/* 30.10 Mønster 7, Fortælling: nøgletalskort i en smal celle (¼-kolonnen) stables lodret, ét tal pr. række.
-   Containeren sidder på cellen/kolonne-elementet omkring kortene, så komponenten selv er uændret. */
-.lasso-column__item:has(> .lasso-kpis), .lasso-cell:has(> .lasso-kpis), .lasso-dstack__item:has(> .lasso-kpis) { container: lasso-kpicell / inline-size; }
-/* Smal celle (⅓ og ½ på desktop, 321–640 px): fire kort på én række gav 90–140 px pr. kort, så beløb og
-   enhed overlappede og "(regnskab)" løb ud af kortet (fundet af designguiden 30.09). To kort pr. række som
-   på mobil. Kun uden for mobilen, der har sine egne kort (container lasso ≤ 560). */
-@container lasso (min-width: 561px) {
-  @container lasso-kpicell (min-width: 321px) and (max-width: 640px) {
-    .lasso-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .lasso-kpis > .lasso-kpi { padding: 16px 20px; }
-    .lasso-kpis:not(.lasso-kpis--plain) > .lasso-kpi { border-left: 0; border-top: 0; }
-    .lasso-kpis:not(.lasso-kpis--plain) > .lasso-kpi:nth-of-type(even) { border-left: 1px solid var(--lasso-border); }
-    .lasso-kpis:not(.lasso-kpis--plain) > .lasso-kpi:nth-of-type(n + 3) { border-top: 1px solid var(--lasso-border); }
-    .lasso-kpis .lasso-kpi__value { font-size: var(--lasso-fs-xl); line-height: 32px; }
-  }
-}
-@container lasso-kpicell (max-width: 320px) {
-  .lasso-kpis { grid-template-columns: minmax(0, 1fr); }
-  .lasso-kpis > .lasso-kpi { padding: 16px 20px; border-left: 0; border-top: 0; }
-  .lasso-kpis > .lasso-kpi + .lasso-kpi { border-left: 0; border-top: 1px solid var(--lasso-border); }
-  .lasso-kpis .lasso-kpi__value { font-size: var(--lasso-fs-xl); line-height: 32px; }
-  /* 30.11: den rolige form (plain) stablet i ¼-kolonnen flugter til venstre med kolonnen, ét tal pr. række. */
-  .lasso-root .lasso-kpis--plain > .lasso-kpi, .lasso-root .lasso-kpis--plain > .lasso-kpis__title + .lasso-kpi { padding: 16px 0; }
-}
 
 /* 30.1–30.3 og 30.13: svarets bundlinje. Kildevisning til venstre (12 muted), ét koral link videre til højre;
    på mobil står linket som 44 px knap med kant i fuld bredde under kilden. */

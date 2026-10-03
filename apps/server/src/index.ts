@@ -306,6 +306,9 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
   app.post("/designguide/api/kommentarer", requireKey(guideKey), guide.addComment);
   app.patch("/designguide/api/kommentarer/:id", requireKey(guideKey), guide.updateComment);
   app.delete("/designguide/api/kommentarer/:id", requireKey(guideKey), guide.removeComment);
+  // Godkendte former pr. modul (layoutFormats): læses af alle, skrives med nøglen som kommentarerne.
+  app.get("/designguide/api/formater", guide.listFormats);
+  app.put("/designguide/api/formater/:type", requireKey(guideKey), guide.setFormats);
 
   // --- Delt side: specen hentes, data hentes friskt, render-appen tegner -----
   app.get("/v/:org/:slug", async (req, res) => {
