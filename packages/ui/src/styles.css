@@ -233,6 +233,9 @@
 .lasso-root {
   container-type: inline-size;
   container-name: lasso;
+  /* Siden må aldrig kunne rykkes sidelæns ("flyde"): intet element kan gøre visningen bredere end sin ramme.
+     clip laver ikke en rulleboks, så sticky og vandret rullende striber/tabeller (deres egen overflow) virker stadig. */
+  overflow-x: clip;
   font-family: var(--lasso-font);
   font-size: var(--lasso-fs);
   line-height: 1.3;
