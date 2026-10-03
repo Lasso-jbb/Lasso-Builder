@@ -349,10 +349,10 @@ body:has(.p3:not(.p3-specimen)[data-theme="dark"]) { background: #121316; }
 
 /* ---------- designguidens prøver (#/portal, "Elementer og knapper"): delene uden portalens layout ---------- */
 .p3.p3-specimen { height: auto; display: block; overflow: visible; background: transparent; }
-/* Prøverne står uden for portalens rammer: alle deres knapper og felter nulstilles (guidens egne stile må ikke slå igennem). */
-.p3-specimen :where(button, input) { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; box-shadow: none; border-radius: 0; }
-.p3-specimen :where(button) { cursor: pointer; }
-.p3-specimen :where(input) { outline: none; }
+/* Prøverne står uden for portalens rammer: alle deres knapper og felter nulstilles (guidens egne stile må ikke slå igennem). Nul specificitet, så komponenternes egne klasser (fx .lasso-btn--primary) vinder. */
+:where(.p3-specimen) :where(button, input) { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; box-shadow: none; border-radius: 0; }
+:where(.p3-specimen) :where(button) { cursor: pointer; }
+:where(.p3-specimen) :where(input) { outline: none; }
 .p3-specimen .spec-top { position: relative; height: var(--topH); background: var(--frame); border: 1px solid var(--line); border-radius: 10px; display: flex; align-items: center; padding-inline: 20px 12px; gap: 16px; }
 .p3-specimen .searchwrap { position: static; width: 100%; max-width: 720px; }
 .p3-specimen .sdrop { position: static; max-width: 720px; }

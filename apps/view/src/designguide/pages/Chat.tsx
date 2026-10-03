@@ -68,6 +68,13 @@ function useFill(ctx: Ctx) {
             if (p.kind !== "view") return p;
             let json = JSON.stringify(p.spec);
             let dataset: Dataset = p.dataset;
+            // Ét element: samme vej som modulsiderne (modulets egen datakilde for virksomheden eller personen).
+            if (p.spec.components.length === 1) {
+              const type = (p.spec.components[0] as { type: string }).type;
+              const prefix = json.includes(FIXTURE_PERSON) ? "person:" : json.includes(FIXTURE_COMPANY) ? "virksomhed:" : "";
+              const opt = prefix ? ctx.modules.get(type as never)?.options.find((o) => o.id.startsWith(prefix)) : undefined;
+              if (opt) return { ...p, spec: { ...p.spec, components: [opt.component] as typeof p.spec.components }, dataset: opt.dataset };
+            }
             if (json.includes(FIXTURE_PERSON) && personTab) {
               json = json.split(FIXTURE_PERSON).join(personTab.entity);
               dataset = personTab.dataset;
@@ -118,7 +125,7 @@ function Scene({ theme, mobile, kind = "company", children, panel, sugg, pending
           <LassoTab on />
           {mods.length ? (
             mobile ? (
-              <DropButton label={template ? template.title : "Overblik"} className="sel-btn" />
+              <DropButton label="Overblik" className="sel-btn is-off" />
             ) : (
               <div className="mlist" role="tablist" aria-label="Moduler">
                 {mods.map((m) => (
@@ -255,7 +262,7 @@ function scenes(): SceneDef[] {
           template={TEMPLATE}
           dialog={<RemoveTemplateDialog open kind={TEMPLATE.kind} title={TEMPLATE.title} onCancel={noop} onConfirm={noop} />}
         >
-          <Conversation turns={fill(TEMPLATE_ADDED.turns)} mobile={mobile} theme={theme} onAdd={false} />
+          <Conversation turns={fill(SCENES.formText)} mobile={mobile} theme={theme} onAdd={false} />
         </Scene>
       ),
     },
