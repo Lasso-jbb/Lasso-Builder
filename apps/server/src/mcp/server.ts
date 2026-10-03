@@ -202,6 +202,19 @@ function withCatalogHelp(message: string, input: unknown): string {
   return `${message}\n\nKatalog for typerne i specen:\n${catalogAsText(types as ComponentType[])}`;
 }
 
+/** show_company's input (delt, så chatten kan skjule den forældede sections). */
+const SHOW_COMPANY_INPUT = z.object({
+        company: z.string().min(1).describe("8-cifret CVR-nummer, Lasso-ID (fx CVR-1-12345678) eller virksomhedens navn."),
+        question: z.string().max(300).optional().describe("Brugerens spørgsmål ordret. Serveren vælger niveau, elementer og data (nøgletal, roller, år) efter spørgsmålet."),
+        metrics: z.array(z.enum(METRICS)).max(5).optional().describe("Valgfrit: de nøgletal, spørgsmålet handler om, hvis de ikke står med deres navn (fx 'egenkapitalandel' = soliditetsgrad)."),
+        focus: z.enum(FOCUSES).optional().describe("Sæt kun focus, når spørgsmålet er generelt; ellers bestemmer spørgsmålet. Standard: overblik."),
+        topic: z.string().max(40).optional().describe("Emnet i spørgsmålet, hvis det ikke står med sit eget ord: fx roede-flag, fusion, meddelelser, dokumenter, branchesammenligning, placering, heleregnskab, registrering, opsummering, aendringer, score, persontal (person). Aliaser som 'risiko', 'kort', 'tldr' forstås også. Udelad, når spørgsmålet selv siger det."),
+        sections: z.array(z.enum(COMPANY_SECTIONS)).optional().describe("Forældet: fast skabelon. Brug focus i stedet."),
+        chart_metric: z.enum(METRICS).optional().describe("Nøgletal i grafen, kun hvis brugeren nævner et bestemt. Standard: omsætning, hvis den er oplyst, ellers bruttofortjeneste."),
+        years: z.number().int().min(2).max(10).optional().describe("Antal år i grafer og tabeller. Standard: 5, ved økonomi 10."),
+        show_all: z.boolean().optional().describe("Vis alt om virksomheden: sæt true, når brugeren beder om at se alt/det hele ('vis alt om X', 'hele siden', 'det hele'). Så vises alle elementer i fuld form, også ud over sidens højdebudget (ca. 1½ skærm). Standard: udeladt; siden holdes kort med de mest relevante elementer."),
+      });
+
 /**
  * render_view's fulde beskrivelse (Claude.ai over /mcp): komposition, layoutguiden (Paper 30) og komponentindekset
  * med formål. Uændret tekst; chatten (host "chat") får den korte variant nedenfor.
@@ -306,17 +319,8 @@ export function createMcpServer(ctx: McpContext): McpServer {
       title: "Vis virksomhed",
       description:
         "Vis én dansk virksomhed som ét skærmbillede, der tilpasser sig spørgsmålet og virksomhedens data. Send brugerens spørgsmål ordret i question: serveren afleder, hvad der spørges om, og bygger en hel side i Lassos portal-layout, hvor svar-elementet står først med data afgrænset til spørgsmålet (fx soliditetsgraden først på kortene og som linjegraf, kun direktionen i personlisten, regnskabet for det nævnte år, kun ledelsesændringerne i historikken), og resten af siden er kontekst fra hele komponentkataloget. Samme spørgsmål giver altid samme side. Kald det kun én gang pr. svar, og kald ikke render_view bagefter. Brug til alle spørgsmål om én bestemt virksomhed. focus bruges kun ved et generelt spørgsmål ('fortæl om X', 'hvordan går det'): 'overblik' (standard), 'oekonomi', 'ejerskab', 'risiko' (kreditvurdering fra Creditsafe), 'historik', 'regnskab', 'kontakt' (kontakt og ledelse; 'ledelse' åbner samme side). Tager CVR-nummer, Lasso-ID eller navn; ved navn vælger serveren det bedste match og nævner alternativerne. Flere navngivne virksomheder → compare_companies; personer → show_person/search_persons; render_view kun til elementer, ingen af de andre værktøjer dækker. Siden holdes inden for et højdebudget (de mest relevante elementer); beder brugeren om at se alt/det hele om virksomheden, så sæt show_all: true.",
-      inputSchema: z.object({
-        company: z.string().min(1).describe("8-cifret CVR-nummer, Lasso-ID (fx CVR-1-12345678) eller virksomhedens navn."),
-        question: z.string().max(300).optional().describe("Brugerens spørgsmål ordret. Serveren vælger niveau, elementer og data (nøgletal, roller, år) efter spørgsmålet."),
-        metrics: z.array(z.enum(METRICS)).max(5).optional().describe("Valgfrit: de nøgletal, spørgsmålet handler om, hvis de ikke står med deres navn (fx 'egenkapitalandel' = soliditetsgrad)."),
-        focus: z.enum(FOCUSES).optional().describe("Sæt kun focus, når spørgsmålet er generelt; ellers bestemmer spørgsmålet. Standard: overblik."),
-        topic: z.string().max(40).optional().describe("Emnet i spørgsmålet, hvis det ikke står med sit eget ord: fx roede-flag, fusion, meddelelser, dokumenter, branchesammenligning, placering, heleregnskab, registrering, opsummering, aendringer, score, persontal (person). Aliaser som 'risiko', 'kort', 'tldr' forstås også. Udelad, når spørgsmålet selv siger det."),
-        sections: z.array(z.enum(COMPANY_SECTIONS)).optional().describe("Forældet: fast skabelon. Brug focus i stedet."),
-        chart_metric: z.enum(METRICS).optional().describe("Nøgletal i grafen, kun hvis brugeren nævner et bestemt. Standard: omsætning, hvis den er oplyst, ellers bruttofortjeneste."),
-        years: z.number().int().min(2).max(10).optional().describe("Antal år i grafer og tabeller. Standard: 5, ved økonomi 10."),
-        show_all: z.boolean().optional().describe("Vis alt om virksomheden: sæt true, når brugeren beder om at se alt/det hele ('vis alt om X', 'hele siden', 'det hele'). Så vises alle elementer i fuld form, også ud over sidens højdebudget (ca. 1½ skærm). Standard: udeladt; siden holdes kort med de mest relevante elementer."),
-      }),
+      // Den forældede sections-parameter skjules for chatten (host chat); /mcp har den uændret.
+      inputSchema: ctx.host === "chat" ? SHOW_COMPANY_INPUT.omit({ sections: true }) : SHOW_COMPANY_INPUT,
       annotations: { title: "Vis virksomhed", ...readOnly },
       _meta: ui,
     },

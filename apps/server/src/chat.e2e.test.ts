@@ -8,6 +8,7 @@ import { after, before, test } from "node:test";
 import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
 import type { BetaMessage, MessageCreateParamsNonStreaming } from "@anthropic-ai/sdk/resources/beta/messages/messages";
+import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import type { ModelCall } from "./chat/agent.js";
 
 process.env.LASSO_NO_MAIN = "1";
@@ -847,4 +848,22 @@ test("O1: på en entitetsfane svares der uden place_answer: to modelkald (visnin
   assert.match(String(calls.at(-1)!.system), /Kald kun place_answer for at åbne en anden fane eller en resultatfane/);
   const desc = (calls.at(-1)!.tools!.find((t) => (t as { name: string }).name === "place_answer") as { description: string }).description;
   assert.match(desc, /^Kald kun place_answer for at åbne en anden fane eller en resultatfane/);
+});
+
+test("O5: den forældede sections på show_company er skjult for chatten, men uændret i /mcp; ingen døde dev-filer", async () => {
+  script.push(sayText("Hej."));
+  await chat({ message: "Hej" }, zoe);
+  const showCompany = calls.at(-1)!.tools!.find((t) => (t as { name: string }).name === "show_company") as { input_schema: { properties: Record<string, unknown> } };
+  assert.ok(!("sections" in showCompany.input_schema.properties));
+  assert.ok("focus" in showCompany.input_schema.properties && "show_all" in showCompany.input_schema.properties);
+  assert.match(String(calls.at(-1)!.system), /"\[Regnskab 2020\]\(lasso:modul\/regnskab\) \[Overblik\]\(lasso:modul\/overblik\)"/);
+  assert.doesNotMatch(String(calls.at(-1)!.system), /\[Regnskab 2020\]\(lasso:modul\/regnskab\) \[Regnskab\]/);
+  const { existsSync } = await import("node:fs");
+  assert.equal(existsSync(new URL("./dev/_m.ts", import.meta.url)), false);
+  // /mcp: sections står stadig.
+  const mcp = new Client({ name: "o5", version: "1" });
+  await mcp.connect(new StreamableHTTPClientTransport(new URL(`${base}/mcp?key=${KEY}`)));
+  const tool = (await mcp.listTools()).tools.find((t) => t.name === "show_company")!;
+  assert.ok("sections" in (tool.inputSchema as { properties: object }).properties);
+  await mcp.close();
 });
