@@ -29,6 +29,7 @@ const PATHS = {
     </>
   ),
   book: <path d="M7.25 4.5h9.5a1 1 0 0 1 1 1v14l-5.75-4-5.75 4v-14a1 1 0 0 1 1-1z" />,
+  /** Sideskabelonens nål i modulrækken: fyldt rød = modulet er tilføjet på alle firmaer/personer. */
   pin: <path d="M8.5 4h7M9.75 4v4.75L7.25 12.5h9.5l-2.5-3.75V4M12 12.5v7.5" />,
   plus: (
     <>
@@ -98,6 +99,34 @@ const PATHS = {
       <circle cx="18" cy="12" r="1.35" fill="currentColor" stroke="none" />
     </>
   ),
+  /* Chatten (docs/design/CHAT.md, Paper-eksporten chat-designguide.html): kortenes handlinger og modul-links. */
+  download: <path d="M12 4v11M7 10l5 5 5-5M4 19h16" />,
+  full: <path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" />,
+  copy: (
+    <>
+      <rect x="9" y="9" width="11" height="11" rx="2" />
+      <path d="M5 15V5a1 1 0 0 1 1-1h10" />
+    </>
+  ),
+  "bookmark-plus": <path d="M6 4h12v17l-6-4-6 4zM12 8v6M9 11h6" />,
+  "arrow-down": <path d="M12 5v14M6 13l6 6 6-6" />,
+  "arrow-right": <path d="M5 12h14M13 6l6 6-6 6" />,
+  flag: <path d="M5 21V4h12l-2 4 2 4H5" />,
+  eye: (
+    <>
+      <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z" />
+      <circle cx="12" cy="12" r="2.5" />
+    </>
+  ),
+  network: (
+    <>
+      <circle cx="12" cy="5" r="2.5" />
+      <circle cx="5" cy="19" r="2.5" />
+      <circle cx="19" cy="19" r="2.5" />
+      <path d="M12 7.5v4M12 11.5l-6 5M12 11.5l6 5" />
+    </>
+  ),
+  doc: <path d="M6 3h8l4 4v14H6zM14 3v4h4M9 12h6M9 16h6" />,
   theme: (
     <>
       <circle cx="12" cy="12" r="8.25" />

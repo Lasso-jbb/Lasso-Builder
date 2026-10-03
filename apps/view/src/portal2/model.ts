@@ -234,7 +234,7 @@ const COMPANY_SUGGESTIONS: Record<string, (n: string) => string[]> = {
   historik: () => ["Hvad er der sket det seneste år?", "Hvornår skiftede ledelsen sidst?", "Er der nyheder om firmaet?"],
   kontakt: () => ["Hvem sidder i ledelsen?", "Hvem sidder i bestyrelsen?", "Hvem er revisor?"],
   ledelse: () => ["Hvem sidder i ledelsen?", "Hvem sidder i bestyrelsen?", "Hvem er revisor?"],
-  [LASSO_TAB]: (n) => [`Hvem ejer ${n}?`, "Er der røde flag?", "Sammenlign med de største konkurrenter"],
+  [LASSO_TAB]: (n) => ["Hvordan går det økonomisk?", `Hvem ejer ${n}?`, "Er der røde flag?"],
 };
 const PERSON_SUGGESTIONS: Record<string, (n: string) => string[]> = {
   overblik: (n) => [`Hvilke selskaber er ${n} involveret i?`, "Hvem sidder personen sammen med?", "Har der været konkurser?"],

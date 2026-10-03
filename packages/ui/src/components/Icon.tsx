@@ -75,7 +75,10 @@ export type IconName =
   | "users"
   | "news"
   | "shield-check"
-  | "expand";
+  | "expand"
+  /* Chatten (docs/design/CHAT.md): kortets fuld skærm og "Tilføj som fane". */
+  | "fullscreen"
+  | "bookmark-plus";
 
 /** Danske navne på katalogets 20 ikoner, i katalogets rækkefølge (til aria-label og oversigter). */
 export const ICON_LABELS: Record<CatalogIconName, string> = {
@@ -162,6 +165,8 @@ const PATHS: Record<IconName, string> = {
   news: "M4 5h11a3 3 0 013 3v11H7a3 3 0 01-3-3zM18 8h2v9a2 2 0 01-2 2M8 9h6M8 12.5h6M8 16h4",
   "shield-check": "M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6zM9 12l2 2 4-4",
   expand: "M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7", /* Vis i fuld skærm (MCP-rammen) */
+  fullscreen: "M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5", /* chattens kort: vis i fuld skærm */
+  "bookmark-plus": "M6 4h12v17l-6-4-6 4zM12 8v6M9 11h6", /* chattens side: Tilføj som fane */
 };
 
 export interface IconProps {

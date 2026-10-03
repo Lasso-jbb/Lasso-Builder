@@ -772,6 +772,7 @@ export const entries: GalleryEntry[] = [
         <IconButton icon="more" label="Flere handlinger, aktiv" variant="active" />
         <IconButton icon="edit" label="Redigér" size={32} variant="subtle" />
         <IconButton icon="close" label="Luk" size={32} variant="bare" />
+        <IconButton icon="bookmark-plus" label="Tilføj som fane" size={32} variant="primary" />
       </Row>
     ),
   },

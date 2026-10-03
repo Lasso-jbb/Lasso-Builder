@@ -1,0 +1,205 @@
+/*
+ * Chatten i portalen (docs/design/CHAT.md; Paper-eksporten docs/design/chat/chat-designguide.html, CSS-linjerne 10-292).
+ * Alle mål kommer fra eksportens tabel: tokens fra packages/ui/src/styles.css (--lasso-*), --faint fra .p3 og de få
+ * chat-mål (--chat-*), som står i .p3-blokken i portal2.css med lys og mørk værdi. Afgrænset til .p3.
+ */
+
+.p3 .chat-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- tråden ---------- */
+.p3 .content.is-chat { min-height: 100%; display: flex; flex-direction: column; }
+.p3 .chat { width: min(var(--chat-w), 100%); margin: auto auto 0; padding-top: var(--lasso-space-5); padding-bottom: calc(var(--ask-top, 114px) + 54px); display: flex; flex-direction: column; }
+.p3 .chat > .view { margin: 0 0 var(--lasso-space-7); }
+.p3 .chat-thread { display: flex; flex-direction: column; }
+.p3 .chat-turn + .chat-turn { margin-top: var(--lasso-space-7); }
+.p3 .chat-turn > * + * { margin-top: var(--lasso-space-row); }
+.p3 .chat-turn > .chat-card { margin-top: 14px; }
+.p3 .chat-turn > .chat-meta { margin-top: var(--lasso-space-2); }
+.p3 .chat-older { text-align: center; font-size: var(--chat-fs-12); color: var(--faint); margin-bottom: var(--lasso-space-5); }
+
+/* Brugerens boble: grå, radius 18, padding 10/14, 14/22 ink, højst 480 */
+.p3 .chat-msg--user { display: flex; justify-content: flex-end; }
+.p3 .chat-bubble { background: var(--lasso-surface-muted); border-radius: var(--chat-bubble-r); padding: 10px 14px; font-size: var(--lasso-fs); line-height: var(--chat-lh); color: var(--lasso-text); max-width: var(--chat-bubble-max); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Lassos svar: avatar 24 + tekst, gap 12 */
+.p3 .chat-msg--ai { display: grid; grid-template-columns: var(--chat-avatar) minmax(0, 1fr); gap: var(--lasso-space-3); align-items: start; }
+.p3 .chat-avatar { width: var(--chat-avatar); height: var(--chat-avatar); border-radius: 50%; background: var(--lasso-accent-soft); display: grid; place-items: center; color: var(--lasso-accent); flex: none; }
+.p3 .chat-avatar__mark { width: 12px; height: 10px; fill: currentColor; }
+.p3 .chat-avatar--big { width: 40px; height: 40px; margin: 0 auto; }
+.p3 .chat-avatar--big .chat-avatar__mark { width: 20px; height: 16.6px; }
+.p3 .chat-ai { min-width: 0; }
+.p3 .chat-after { margin-left: calc(var(--chat-avatar) + var(--lasso-space-3)); }
+.p3 .chat-body { max-width: var(--chat-body-max); font-size: var(--lasso-fs); line-height: var(--chat-lh); color: var(--lasso-text); overflow-wrap: anywhere; }
+.p3 .chat-body p { margin: 0; }
+.p3 .chat-body p + p, .p3 .chat-body .chat-brow + p { margin-top: var(--lasso-space-2); }
+.p3 .chat-body p + .chat-brow { margin-top: 6px; }
+.p3 .chat-body .chat-links + p { margin-top: 14px; }
+.p3 .chat-body b { font-weight: 500; }
+.p3 .chat-brow { display: flex; align-items: flex-start; gap: var(--lasso-space-3); padding: 4px 0 4px var(--lasso-space-4); position: relative; }
+.p3 .chat-brow::before { content: ""; position: absolute; left: 0; top: 12px; width: 6px; height: 6px; border-radius: 50%; background: var(--lasso-text); }
+.p3 .chat-a { color: var(--lasso-accent-text); }
+.p3 .chat-error { margin: 0; }
+
+/* Tekstlink: 14/500 koral mørk */
+.p3 .chat-tlink { font: inherit; font-size: var(--lasso-fs); font-weight: 500; color: var(--lasso-accent-text); background: none; border: 0; padding: 0; cursor: pointer; }
+.p3 .chat-tlink:hover { text-decoration: underline; }
+.p3 .chat-tlink:focus-visible { outline: none; text-decoration: underline; box-shadow: 0 1px 0 var(--lasso-focus-border); }
+
+/* Tidspunkt: 11/16 faint, gap 10, kopiér 16 */
+.p3 .chat-meta { margin-left: calc(var(--chat-avatar) + var(--lasso-space-3)); font-size: var(--lasso-fs-label); line-height: 16px; color: var(--faint); display: flex; align-items: center; gap: 10px; }
+.p3 .chat-meta__copy { display: inline-flex; align-items: center; justify-content: center; color: var(--faint); background: none; border: 0; padding: 0; cursor: pointer; border-radius: 4px; }
+.p3 .chat-meta__copy:hover, .p3 .chat-meta__copy:focus-visible { color: var(--lasso-text); outline: none; }
+.p3 .chat-meta__copy svg.i { width: 16px; height: 16px; stroke-width: 1.6; }
+
+/* Modul-links: 46 høj, padding 0 18, radius 12, 1 px kant, 16/500 ink, 18 px koral ikon */
+.p3 .chat-links { display: flex; flex-wrap: wrap; gap: var(--lasso-space-3); margin-top: 14px; align-items: center; }
+.p3 .chat-links__wrap { display: inline-flex; align-items: center; gap: 10px; min-width: 0; max-width: 100%; }
+.p3 .chat-link { display: inline-flex; align-items: center; gap: 10px; height: var(--chat-link-h); padding: 0 18px; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius-card); background: var(--lasso-surface); font: inherit; font-size: var(--chat-fs-16); font-weight: 500; color: var(--lasso-text); white-space: nowrap; cursor: pointer; min-width: 0; }
+.p3 .chat-link:hover { background: var(--lasso-surface-2); }
+.p3 .chat-link:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
+.p3 .chat-link svg.i { width: 18px; height: 18px; color: var(--lasso-accent); stroke-width: 1.6; }
+.p3 .chat-links__note { font-size: var(--chat-fs-12); color: var(--faint); white-space: nowrap; }
+
+/* Meddelelsesrækken: centreret pille 28, 12 px tekst */
+.p3 .chat-notice { display: flex; justify-content: center; }
+.p3 .chat-notice__pill { display: inline-flex; align-items: center; gap: var(--lasso-space-2); min-height: 28px; padding: 0 var(--lasso-space-3); border-radius: var(--lasso-radius-pill); background: var(--lasso-surface-2); border: 1px solid var(--lasso-border); font-size: var(--chat-fs-12); line-height: 16px; color: var(--lasso-text-3); max-width: 100%; }
+.p3 .chat-notice__mark { width: 14px; height: 11.6px; fill: currentColor; flex: none; }
+.p3 .chat-notice .chat-tlink { font-size: var(--chat-fs-12); }
+
+/* Tænker: tre orange prikker 6 px, gap 5, puls 1,2 s */
+.p3 .chat-think { display: flex; align-items: center; gap: 10px; font-size: var(--lasso-fs); line-height: var(--chat-lh); color: var(--lasso-text-3); min-height: var(--chat-avatar); flex-wrap: wrap; }
+.p3 .chat-dots { display: inline-flex; gap: 5px; align-items: center; }
+.p3 .chat-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--lasso-accent); animation: chat-pulse 1.2s ease-in-out infinite; }
+.p3 .chat-dots i:nth-child(2) { opacity: 0.6; animation-delay: 0.2s; }
+.p3 .chat-dots i:nth-child(3) { opacity: 0.3; animation-delay: 0.4s; }
+@keyframes chat-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.55); } }
+.p3 .chat-think__stop { margin-left: 2px; }
+
+/* Kort: 1 px kant, radius 10, hoved 16/20, handlinger gap 8, krop 0 20 16 */
+.p3 .chat-card { border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); overflow: hidden; color: var(--lasso-text); }
+.p3 .chat-card__h { display: flex; align-items: center; padding: var(--lasso-space-4) var(--lasso-space-row); gap: var(--lasso-space-3); }
+.p3 .chat-card__ht { flex: 1; min-width: 0; }
+.p3 .chat-card__t { font-size: var(--lasso-fs); font-weight: 500; line-height: 20px; color: var(--lasso-text); }
+.p3 .chat-card__s { font-size: var(--lasso-fs-sm); line-height: 18px; color: var(--lasso-text-3); }
+.p3 .chat-card__a { margin-left: auto; display: flex; gap: var(--lasso-space-2); align-items: center; flex: none; }
+.p3 .chat-card__b { padding: 0 var(--lasso-space-row) var(--lasso-space-4); }
+.p3 .chat-card__b > .lasso-root, .p3 .chat-fs__b > .lasso-root { background: transparent; }
+.p3 .chat-card__b .lasso-frame--bare, .p3 .chat-fs__b .lasso-frame--bare { padding: 0; }
+.p3 .chat-card--sk .chat-card__h { padding-bottom: var(--lasso-space-3); }
+.p3 .chat-sk { display: block; height: 12px; border-radius: 6px; margin-bottom: var(--lasso-space-3); max-width: 100%; }
+.p3 .chat-card__h .chat-sk { margin-bottom: 0; }
+.p3 .chat-sk--sub { height: 10px; margin-top: var(--lasso-space-2); }
+.p3 .chat-card--sk .chat-card__b .chat-sk:last-child { margin-bottom: 4px; }
+
+/* Rul til nyeste: 40 cirkel, kant, skygge, pil ned 18 */
+.p3 .chat-jump { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--ask-top, 114px) + 56px); width: 40px; height: 40px; border-radius: 50%; background: var(--lasso-surface); border: 1px solid var(--lasso-border-strong); box-shadow: var(--chat-shadow-jump); display: grid; place-items: center; color: var(--lasso-text); z-index: 31; cursor: pointer; padding: 0; }
+.p3 .chat-jump:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
+.p3 .chat-jump svg.i { width: 18px; height: 18px; stroke-width: 1.6; }
+
+/* Tom tilstand: titel 24/32/600, hjælpelinje 14/22, 2 × 2 piller 720 bred, 56 høje */
+.p3 .chat-empty { margin: auto; width: min(var(--chat-w), 100%); text-align: center; padding: var(--lasso-space-5) 0 calc(var(--ask-top, 76px) + 40px); }
+.p3 .chat-empty__t { font-size: var(--lasso-fs-xl); line-height: var(--lasso-lh-xl); font-weight: 600; color: var(--lasso-text); margin: var(--lasso-space-4) 0 0; letter-spacing: 0; }
+.p3 .chat-empty__l { font-size: var(--lasso-fs); line-height: var(--chat-lh); color: var(--lasso-text-3); margin: 6px 0 0; }
+.p3 .chat-empty__pills { display: grid; grid-template-columns: 1fr 1fr; gap: var(--lasso-space-3); width: min(var(--chat-input-w), 100%); margin: var(--lasso-space-7) auto 0; }
+.p3 .chat-spill { height: 56px; padding: 0 var(--lasso-space-7); border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius-pill); display: flex; align-items: center; justify-content: space-between; gap: var(--lasso-space-3); font: inherit; font-size: var(--chat-fs-16); color: var(--lasso-text); background: var(--lasso-surface); cursor: pointer; text-align: left; min-width: 0; }
+.p3 .chat-spill span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.p3 .chat-spill:hover:not(:disabled) { background: var(--lasso-surface-2); }
+.p3 .chat-spill:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
+.p3 .chat-spill:disabled { opacity: 0.5; cursor: default; }
+.p3 .chat-spill svg.i { width: 18px; height: 18px; color: var(--lasso-text-3); stroke-width: 1.6; }
+
+/* Fuld skærm: fladen under modulrækken, 42 px til siderne, titel 18/26/500; inputfeltet bliver stående */
+.p3 .chat-fs { position: absolute; inset: 0; z-index: 20; background: var(--page); overflow-y: auto; overscroll-behavior: contain; padding: var(--lasso-space-5) 42px calc(var(--ask-top, 76px) + 40px); }
+.p3 .chat-fs__h { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--lasso-space-4); margin-bottom: var(--lasso-space-7); }
+.p3 .chat-fs__ht { min-width: 0; }
+.p3 .chat-fs__t { font-size: var(--lasso-fs-lg); line-height: 26px; font-weight: 500; color: var(--lasso-text); }
+.p3 .chat-fs__s { font-size: var(--lasso-fs); line-height: 20px; color: var(--lasso-text-3); }
+
+/* Afklaringen: 720 bred, radius 12, skygge 0 12 32, padding 24, lige over inputfeltet */
+.p3 .chat-choice { pointer-events: auto; width: min(var(--chat-input-w), 100%); margin-bottom: calc(var(--lasso-space-2) - var(--lasso-space-4)); background: var(--lasso-surface); border-radius: var(--lasso-radius-card); box-shadow: var(--chat-shadow-panel); padding: var(--lasso-space-5); border: 1px solid var(--lasso-divider-subtle); text-align: left; color: var(--lasso-text); max-height: calc(100% - 40px); overflow: auto; }
+.p3 .chat-choice__h { display: flex; align-items: center; justify-content: space-between; gap: var(--lasso-space-3); margin-bottom: var(--lasso-space-4); }
+.p3 .chat-choice__t { font-size: var(--chat-fs-16); font-weight: 500; line-height: 24px; color: var(--lasso-text); }
+.p3 .chat-choice__icons { display: flex; gap: var(--lasso-space-3); color: var(--lasso-text-3); flex: none; }
+.p3 .chat-choice__ib { display: inline-flex; color: inherit; border-radius: 4px; }
+.p3 .chat-choice__ib:hover, .p3 .chat-choice__ib:focus-visible { color: var(--lasso-text); outline: none; }
+.p3 .chat-choice__ib svg.i { width: 18px; height: 18px; stroke-width: 1.6; transition: transform 0.2s; }
+.p3 .chat-choice__ib.is-collapsed svg.i { transform: rotate(180deg); }
+.p3 .chat-crow { background: var(--lasso-surface-2); border: 1px solid var(--lasso-divider-subtle); border-radius: var(--lasso-radius); padding: 14px var(--lasso-space-4); cursor: pointer; }
+.p3 .chat-crow + .chat-crow { margin-top: var(--lasso-space-2); }
+.p3 .chat-crow[aria-checked="true"] { border-color: var(--lasso-focus-border); }
+.p3 .chat-crow:focus-visible { outline: none; border-color: var(--lasso-accent); }
+.p3 .chat-crow[aria-disabled="true"] { cursor: default; }
+.p3 .chat-crow__t { font-size: var(--chat-fs-16); line-height: 24px; color: var(--lasso-text); }
+.p3 .chat-crow__rec { color: var(--lasso-text-3); font-size: var(--lasso-fs); }
+.p3 .chat-crow__d { font-size: var(--lasso-fs); line-height: var(--chat-lh); color: var(--lasso-text-3); }
+.p3 .chat-crow__field { display: block; width: 100%; margin-top: 10px; height: var(--lasso-field-h); border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius); background: var(--lasso-surface); padding: 0 14px; font: inherit; font-size: var(--lasso-fs); color: var(--lasso-text); outline: none; caret-color: var(--lasso-accent); }
+.p3 .chat-crow__field::placeholder { color: var(--faint); }
+.p3 .chat-crow__field:focus { border-color: var(--lasso-focus-border); }
+.p3 .chat-choice__f { display: flex; justify-content: flex-end; gap: var(--lasso-space-2); margin-top: var(--lasso-space-4); }
+
+/* ---------- spørgefeltet: 720 × 52, pille, subtil kant og skygge, 16 px; forslag 14/22 med 28 imellem ---------- */
+.p3 .ask { padding: 40px 16px var(--lasso-space-5); background: linear-gradient(to bottom, transparent, var(--page) 32px); gap: var(--lasso-space-4); }
+.p3 .ask .field { width: min(var(--chat-input-w), 100%); height: var(--chat-input-h); border-radius: var(--lasso-radius-pill); background: var(--lasso-surface); border: 1px solid var(--lasso-divider-subtle); box-shadow: var(--chat-shadow-input); padding: 0 12px 0 22px; gap: 10px; }
+.p3 .ask .field input { font-size: var(--chat-fs-16); }
+.p3 .ask .field:focus-within { border-color: var(--lasso-border-strong); }
+.p3 .ask .send { width: 32px; height: 32px; border-radius: 16px; color: var(--faint); }
+.p3 .ask .send svg { width: 18px; height: 18px; stroke: currentColor; }
+.p3 .ask .send:not(:disabled):hover { color: var(--lasso-text); }
+.p3 .ask .field input:disabled { cursor: default; }
+.p3 .ask .sugg { display: flex; gap: 6px var(--lasso-space-7); font-size: var(--lasso-fs); line-height: var(--chat-lh); color: var(--lasso-text-3); flex-wrap: wrap; justify-content: center; white-space: nowrap; }
+.p3 .ask .sugg button:focus-visible { outline: none; color: var(--lasso-text); text-decoration: underline; }
+
+/* ---------- modulrækken: Lasso-mærket først, aktivt i ink med koral streg; fanerne viser deres ikon ---------- */
+.p3 .tabmark .mark { width: 16px; height: 13.3px; }
+.p3 .tabmark.on .mark { fill: var(--ink); color: var(--ink); }
+.p3 .tabmark.on::after { width: 16px; }
+.p3 .tabmark.is-busy .mark { fill: var(--coral); color: var(--coral); }
+.p3 .otab > svg.i.kind, .p3 .otab > .mark.kind { width: 16px; height: 16px; color: var(--sec); fill: none; }
+.p3 .otab > .mark.kind { height: 13.3px; fill: var(--sec); }
+.p3 .otab.on > svg.i.kind { color: var(--ink); }
+.p3 .otab.on > .mark.kind { fill: var(--ink); }
+/* Sideskabelonens nål: fyldt rød = modulet står på alle firmaer/personer. */
+.p3 .ibtn.tplpin { color: var(--lasso-negative); }
+.p3 .ibtn.tplpin svg.i { fill: currentColor; }
+
+/* ---------- telefon (760 px og derunder) ---------- */
+@media (max-width: 760px) {
+  .p3 { --chat-bubble-max: 280px; --chat-link-h: 40px; --chat-input-h: 48px; }
+  .p3 .content.col.is-chat { padding-inline: var(--lasso-space-4); }
+  .p3 .chat { padding-bottom: calc(var(--ask-top, 156px) + 12px); }
+  .p3 .chat-msg--ai { gap: 10px; }
+  .p3 .chat-after, .p3 .chat-meta { margin-left: calc(var(--chat-avatar) + 10px); }
+  .p3 .chat-link { font-size: var(--lasso-fs); padding: 0 14px; gap: 8px; }
+  .p3 .chat-link svg.i { width: 16px; height: 16px; }
+  .p3 .chat-links__wrap { flex-wrap: wrap; }
+  .p3 .chat-turn > .chat-card { margin-top: var(--lasso-space-3); }
+  .p3 .chat-card__h { padding: 14px var(--lasso-space-4); }
+  .p3 .chat-card__s { font-size: var(--chat-fs-12); }
+  .p3 .chat-card__b { padding: 0 var(--lasso-space-4) 14px; }
+  .p3 .chat-jump { bottom: calc(var(--ask-top, 156px) + 12px); }
+  .p3 .chat-empty__pills { grid-template-columns: 1fr; }
+  .p3 .chat-spill { padding: 0 var(--lasso-space-row); height: 48px; font-size: var(--lasso-fs); }
+  .p3 .chat-empty__t { font-size: var(--lasso-fs-lg); line-height: var(--lasso-lh-lg); }
+  .p3 .chat-fs { padding: var(--lasso-space-4) var(--lasso-space-4) calc(var(--ask-top, 92px) + 12px); }
+  .p3 .chat-fs__h { margin-bottom: var(--lasso-space-4); }
+  .p3 .chat-fs__t { font-size: var(--chat-fs-16); line-height: 22px; }
+  .p3 .chat-fs__s { font-size: var(--lasso-fs-sm); }
+  /* Spørgefeltet står fast over bundbjælken, når Lasso-modulet er aktivt; forslagene stablet 13/20. */
+  .p3 .ask.is-chat { display: flex !important; bottom: 80px; padding: var(--lasso-space-5) var(--lasso-space-4) 6px; gap: 6px; z-index: 32; }
+  .p3 .ask.is-chat.no-sugg { padding-bottom: var(--lasso-space-3); }
+  .p3 .ask .field { padding: 0 10px 0 18px; }
+  .p3 .ask.is-chat .sugg { flex-direction: column; align-items: center; gap: 2px; font-size: var(--lasso-fs-sm); line-height: 20px; white-space: normal; text-align: center; background: none; box-shadow: none; padding: 0; }
+  .p3 .chat-choice { padding: var(--lasso-space-4); margin-bottom: 2px; }
+  .p3 .chat-choice__h { margin-bottom: var(--lasso-space-3); }
+  .p3 .chat-crow { padding: var(--lasso-space-3) 14px; }
+  .p3 .chat-crow__t { font-size: 15px; }
+  .p3 .chat-crow__d { font-size: var(--lasso-fs-sm); line-height: 20px; }
+  .p3 .chat-choice__f { margin-top: var(--lasso-space-3); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .p3 .chat-dots i { animation: none; }
+}
+
+/* Modulvælgeren på telefonen, mens Lasso er aktivt: det første modul uden streg (Lasso-mærket bærer stregen). */
+.p3 .sel-btn.is-off { color: var(--sec); font-weight: 400; }
+.p3 .sel-btn.is-off::after { display: none; }
