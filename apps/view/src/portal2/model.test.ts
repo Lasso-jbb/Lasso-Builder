@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { Dataset, ViewSpec } from "@lasso/spec";
 import type { LookupResult } from "../portal/api.js";
 import type { ChatEvent } from "../chat/stream.js";
-import { addRecent, applyEvent, CHAT_CACHE_TTL_MS, clearCache, countTurns, dropOldestTurns, dropTabDatasets, recencyOrder, shortName, restoreCache, saveCache, serializeCache, askPlaceholder, choiceMessage, closeItem, contextFor, freeTextPick, headLines, highlight, lastView, loadRecent, mapViews, newAnswer, openItem, searchCounts, searchRows, suggestions, withLastView, withoutHead, type OpenItem, type PendingChoice } from "./model.js";
+import { addRecent, applyEvent, CHAT_CACHE_TTL_MS, clearCache, dropTabDatasets, isUnrecognizedHistory, resetConversation, recencyOrder, shortName, restoreCache, saveCache, serializeCache, askPlaceholder, choiceMessage, closeItem, contextFor, freeTextPick, headLines, highlight, lastView, loadRecent, mapViews, newAnswer, openItem, searchCounts, searchRows, suggestions, withLastView, withoutHead, type OpenItem, type PendingChoice } from "./model.js";
 
 const novo: OpenItem = { key: "CVR-1-24256790", kind: "company", name: "NOVO NORDISK A/S", tab: "overblik" };
 const lasso: OpenItem = { key: "CVR-1-34580820", kind: "company", name: "LASSO X A/S", tab: "overblik" };
@@ -178,19 +178,6 @@ const history = [
   { role: "assistant", content: [{ type: "text", text: "Svar 3" }] },
 ];
 
-test("dropOldestTurns: hele ture fjernes forfra; værktøjssvar skilles aldrig fra kaldet", () => {
-  assert.equal(countTurns(history), 3);
-  assert.deepEqual(dropOldestTurns(history, 1), history.slice(4));
-  assert.deepEqual(dropOldestTurns(history, 2), history.slice(6));
-  assert.deepEqual(dropOldestTurns(history, 3), []);
-  assert.deepEqual(dropOldestTurns(history, 0), history);
-  // Den første besked i resten er altid et spørgsmål, aldrig et værktøjssvar.
-  for (const n of [1, 2]) {
-    const first = dropOldestTurns(history, n)[0] as { content: unknown };
-    assert.ok(typeof first.content === "string" || !(first.content as { type: string }[]).some((b) => b.type === "tool_result"));
-  }
-});
-
 test("chat-cache: gemmes og læses for samme bruger inden udløb; svar med pending og lukkede faner udelades", () => {
   const answers = {
     [novo.key]: { question: "q", parts: [{ kind: "text" as const, text: "a" }], pending: false, status: "Henter …", choice: { id: "toolu_1", question: "Hvad?", options: [], allowFreeText: true } },
@@ -218,7 +205,7 @@ test("chat-cache: gemmes og læses for samme bruger inden udløb; svar med pendi
   assert.equal(restoreCache(JSON.stringify({ ...c, active: "væk" }), "pia", 2000)!.active, mette.key);
 });
 
-test("chat-cache: fuldt lager giver én trimmet gemning, ellers springes der over; rydning fejler aldrig", () => {
+test("chat-cache: fuldt lager afkorter aldrig historikken (signaturen) og springer ellers over; rydning fejler aldrig", () => {
   const writes: string[] = [];
   const full = (limit: number): Pick<Storage, "setItem"> => ({
     setItem: (_k, v) => {
@@ -226,16 +213,43 @@ test("chat-cache: fuldt lager giver én trimmet gemning, ellers springes der ove
       writes.push(v);
     },
   });
-  const cache = serializeCache("pia", { chat: { history, sig: "s" }, open: [novo], active: novo.key, answers: {} }, 1);
+  const withMenu = { question: "q", parts: [{ kind: "text" as const, text: "a" }], pending: false, choice: { id: "toolu_1", question: "Hvad?", options: [], allowFreeText: true } };
+  const cache = serializeCache("pia", { chat: { history, sig: "s" }, open: [novo], active: novo.key, answers: { [novo.key]: withMenu } }, 1);
   assert.equal(saveCache(full(1_000_000), cache), "saved");
-  const trimmedAt = JSON.stringify(cache).length - 10;
-  assert.equal(saveCache(full(trimmedAt), cache), "trimmed");
-  const saved = JSON.parse(writes.at(-1)!) as { chat: { history: unknown[] } };
-  assert.equal(countTurns(saved.chat.history), 1, "den ældste halvdel (2 af 3 ture) er væk");
+  // Uden datasæt at droppe er næste trin at glemme hele samtalen: tom historik, ingen signatur, menuen lukket, fanerne bliver.
+  const resetSize = JSON.stringify(resetConversation(cache)).length;
+  assert.equal(saveCache(full(resetSize), cache), "reset");
+  const saved = JSON.parse(writes.at(-1)!) as { chat: { history: unknown[]; sig?: string }; open: unknown[]; answers: Record<string, { choice?: unknown }> };
+  assert.deepEqual(saved.chat, { history: [] });
+  assert.equal(saved.open.length, 1);
+  assert.equal(saved.answers[novo.key]!.choice, undefined);
+  // Aldrig en afkortet historik med den gamle signatur: hver gemning har enten hele historikken eller ingen.
+  for (const w of writes) {
+    const c = JSON.parse(w) as { chat: { history: unknown[]; sig?: string } };
+    assert.ok(c.chat.history.length === 0 ? c.chat.sig === undefined : c.chat.history.length === history.length && c.chat.sig === "s");
+  }
   assert.equal(saveCache(full(10), cache), "skipped");
   assert.equal(saveCache(undefined, cache), "skipped");
   clearCache({ removeItem: () => { throw new Error("nej"); } });
   clearCache(undefined);
+});
+
+test("isUnrecognizedHistory: kun serverens 400 om en samtale, der ikke kan genkendes", () => {
+  assert.equal(isUnrecognizedHistory(400, "Samtalen kunne ikke genkendes. Start en ny samtale."), true);
+  assert.equal(isUnrecognizedHistory(400, "context er ugyldig"), false);
+  assert.equal(isUnrecognizedHistory(429, "Samtalen kunne ikke genkendes"), false);
+});
+
+test("contextFor: navne og titler afkortes til serverens grænse (200); freeTextPick kun når menuen tillader fritekst", () => {
+  const long = "x".repeat(500);
+  const result: OpenItem = { key: "result:1", kind: "result", name: long, tab: "lasso" };
+  const ctx = contextFor(result, [novo, { ...novo, key: "CVR-1-2", name: long }, result]);
+  assert.equal((ctx.active as { title: string }).title.length, 200);
+  assert.ok(ctx.open.every((e) => e.name.length <= 200));
+  assert.equal((contextFor({ ...novo, name: long }, []).active as { name: string }).name.length, 200);
+  const menu = { id: "toolu_1", question: "?", options: [], allowFreeText: false };
+  assert.equal(freeTextPick(menu), undefined);
+  assert.deepEqual(freeTextPick({ ...menu, allowFreeText: true }), { id: "toolu_1", free: true });
 });
 
 test("shortName: spørgsmålet afkortet ved et ordskel til højst 40 tegn, uden afsluttende tegn", () => {
@@ -281,6 +295,10 @@ test("quota: datasæt fra de mindst nyligt aktive faner droppes ét ad gangen, s
   assert.equal(saveCache(limited(withOne), cache, order), "dropped");
   assert.equal((JSON.parse(writes.at(-1)!) as ChatCacheLike).answers[r.key]!.parts.length, 2);
   assert.equal(saveCache(limited(10), cache, order), "skipped");
+  // Er der kun plads uden samtalen, glemmes den (tom historik, ingen signatur) efter datasættene.
+  const noConversation = size(resetConversation(order.reduce((c, k) => dropTabDatasets(c, k), cache))) + 10;
+  assert.equal(saveCache(limited(noConversation), cache, order), "reset");
+  assert.deepEqual((JSON.parse(writes.at(-1)!) as { chat: unknown }).chat, { history: [] });
 });
 type ChatCacheLike = { answers: Record<string, { parts: unknown[] }> };
 

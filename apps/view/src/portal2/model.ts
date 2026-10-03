@@ -152,7 +152,11 @@ export function shortName(text: string, max = 40): string {
   return `${(sp > max / 2 ? cut.slice(0, sp) : cut).trimEnd()}…`;
 }
 
-const entityRef = (o: OpenItem): ChatEntityRef | null => (o.kind === "result" ? null : { kind: o.kind, id: o.key, name: o.name });
+/** Serveren afviser navne og titler over 200 tegn (hele konteksten giver 400), så klienten afkorter. */
+export const CONTEXT_NAME_MAX = 200;
+const clip = (t: string): string => t.slice(0, CONTEXT_NAME_MAX);
+
+const entityRef = (o: OpenItem): ChatEntityRef | null => (o.kind === "result" ? null : { kind: o.kind, id: o.key, name: clip(o.name) });
 
 /**
  * Konteksten til chatten (docs/chat.md): den fane, brugeren står på (et resultat tæller som globalt), de
@@ -163,7 +167,7 @@ export function contextFor(item: OpenItem | undefined, open: readonly OpenItem[]
   // Det, brugeren ser: modulets resumé fra serveren (ikke på Lasso-fanen, som er chattens eget svar).
   const summary = item && item.kind !== "result" && item.tab !== LASSO_TAB && shown?.summary ? shown.summary.slice(0, VIEW_SUMMARY_MAX) : "";
   const view = summary && item ? { view: { module: item.tab, summary } } : {};
-  const active: ChatContext["active"] = !item ? { kind: "global" } : item.kind === "result" ? { kind: "global", title: item.name } : { kind: item.kind, id: item.key, name: item.name, tab: item.tab, ...view };
+  const active: ChatContext["active"] = !item ? { kind: "global" } : item.kind === "result" ? { kind: "global", title: clip(item.name) } : { kind: item.kind, id: item.key, name: clip(item.name), tab: item.tab, ...view };
   const refs = open.map(entityRef).filter((e): e is ChatEntityRef => e !== null).slice(0, 20);
   return { active, open: refs, ...(pick ? { choice: pick } : {}) };
 }
@@ -175,9 +179,9 @@ export function choiceMessage(choice: PendingChoice, index: number): { message: 
   return { message: option.action.prompt ?? option.label, pick: { id: choice.id, index, action: option.action } };
 }
 
-/** Fritekst i stedet for et punkt: beskeden er det, brugeren skrev. */
-export function freeTextPick(choice: PendingChoice): ChoicePick {
-  return { id: choice.id, free: true };
+/** Fritekst i stedet for et punkt: beskeden er det, brugeren skrev. Kun når menuen tillader det; ellers intet valg (spørgsmålet besvares her). */
+export function freeTextPick(choice: PendingChoice): ChoicePick | undefined {
+  return choice.allowFreeText === false ? undefined : { id: choice.id, free: true };
 }
 
 /** Forslagene under spørgefeltet: de følger siden, man står på (firma eller person, og modulet). */
@@ -343,21 +347,6 @@ export function restoreCache(raw: string | null | undefined, user: string, now: 
   }
 }
 
-type HistoryMessage = { role?: string; content?: unknown };
-
-/** En brugerbesked, der er et spørgsmål (ikke værktøjssvar): dér begynder en tur. */
-const startsTurn = (m: HistoryMessage) => m.role === "user" && !(Array.isArray(m.content) && m.content.some((b) => (b as { type?: string })?.type === "tool_result"));
-
-/** Historikken uden de ældste `turns` hele ture (spørgsmål + svar + værktøjsskifte); tool_use og tool_result skilles aldrig. */
-export function dropOldestTurns(history: readonly unknown[], turns: number): unknown[] {
-  if (turns <= 0) return [...history];
-  const starts = history.map((m, i) => (startsTurn(m as HistoryMessage) ? i : -1)).filter((i) => i >= 0);
-  const keepFrom = starts[turns];
-  return keepFrom === undefined ? [] : history.slice(keepFrom);
-}
-
-export const countTurns = (history: readonly unknown[]): number => history.filter((m) => startsTurn(m as HistoryMessage)).length;
-
 /** Fanerne fra den, der har været aktiv længst siden, til den aktive: rækkefølgen, datasæt droppes i ved fuldt lager. */
 export function recencyOrder(open: readonly OpenItem[], visited: readonly string[], active: string | null): string[] {
   const rank = new Map<string, number>();
@@ -380,12 +369,19 @@ export function dropTabDatasets(cache: ChatCache, key: string): ChatCache {
   };
 }
 
+/** Samtalen glemt i det gemte: tom historik og ingen signatur (en afkortet historik ville ikke passe til signaturen), og åbne menuer lukkes (deres valg kan ikke bekræftes). */
+export function resetConversation(cache: ChatCache): ChatCache {
+  return { ...cache, chat: { history: [] }, answers: Object.fromEntries(Object.entries(cache.answers).map(([k, a]) => [k, a.choice ? { ...a, choice: undefined } : a])) };
+}
+
 /**
- * Gemmer samtalen. Er lageret fuldt (QuotaExceeded): først kastes den ældste halvdel af turene (hele ture), så droppes
- * datasættene fra de mindst nyligt aktive faner ét ad gangen (order: ældste først; fanen henter sit modul igen ved
- * genskabelsen), og der prøves igen efter hvert trin. Først til sidst springes gemningen over.
+ * Gemmer samtalen. Historikken afkortes aldrig i det gemte: serverens signatur gælder præcis den historik, den gav
+ * (HMAC over JSON), så en afkortet kopi ville give 400 ved hvert spørgsmål efter en genindlæsning. Er lageret fuldt
+ * (QuotaExceeded): først droppes datasættene fra de mindst nyligt aktive faner ét ad gangen (order: ældste først;
+ * fanen henter sit modul igen ved genskabelsen), så glemmes hele samtalen (tom historik, ingen signatur; faner og svar
+ * bliver), og først til sidst springes gemningen over. Der prøves igen efter hvert trin.
  */
-export function saveCache(storage: Pick<Storage, "setItem"> | undefined, cache: ChatCache, order: readonly string[] = []): "saved" | "trimmed" | "dropped" | "skipped" {
+export function saveCache(storage: Pick<Storage, "setItem"> | undefined, cache: ChatCache, order: readonly string[] = []): "saved" | "dropped" | "reset" | "skipped" {
   if (!storage) return "skipped";
   const tryWrite = (c: ChatCache): boolean => {
     try {
@@ -397,19 +393,17 @@ export function saveCache(storage: Pick<Storage, "setItem"> | undefined, cache: 
   };
   if (tryWrite(cache)) return "saved";
   let next = cache;
-  const turns = countTurns(cache.chat.history);
-  if (turns >= 2) {
-    next = { ...cache, chat: { ...cache.chat, history: dropOldestTurns(cache.chat.history, Math.ceil(turns / 2)) } };
-    if (tryWrite(next)) return "trimmed";
-  }
   for (const key of order) {
     const smaller = dropTabDatasets(next, key);
     if (smaller === next) continue;
     next = smaller;
     if (tryWrite(next)) return "dropped";
   }
-  return "skipped";
+  return tryWrite(resetConversation(next)) ? "reset" : "skipped";
 }
+
+/** Serveren kender ikke historikken (ændret, anden bruger eller ny hemmelighed): klienten skal begynde en ny samtale. */
+export const isUnrecognizedHistory = (status: number, message: string): boolean => status === 400 && /kunne ikke genkendes/.test(message);
 
 export function clearCache(storage: Pick<Storage, "removeItem"> | undefined): void {
   try {

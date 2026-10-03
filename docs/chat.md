@@ -134,11 +134,14 @@ passer til samtalen), 401, 429 (bremsen), 503 (ingen `ANTHROPIC_API_KEY`).
 Serveren gemmer ingen samtaler, men portalen gemmer selv samtalen i browseren (`localStorage`, nøglen
 `lasso-chat`): historik og signatur, de åbne faner og det seneste svar pr. fane (også en åben valgmenu), bundet
 til brugerens id og med 24 timers udløb (`CHAT_CACHE_TTL_MS` i `apps/view/src/portal2/model.ts`). Så overlever
-samtalen en genindlæsning. Kun den trimmede historik fra `done` gemmes, og aldrig mens der hentes. Er lageret
-fuldt, kastes først den ældste halvdel af turene (hele ture), så droppes visningerne (datasættene) fra de
-mindst nyligt aktive faner ét ad gangen (teksten bliver; en firma- eller personfane står på Overblik og henter
-selv sit modul igen ved genskabelsen), og der prøves igen efter hvert trin; først til sidst springes gemningen
-over. Både samtalen og fanernes svar med datasæt gemmes, når der er plads. Lageret ryddes ved udløb, for en
+samtalen en genindlæsning. Kun den trimmede historik fra `done` gemmes, og aldrig mens der hentes. Historikken
+afkortes aldrig i det gemte (signaturen er en HMAC over præcis den historik, serveren gav; en afkortet kopi ville
+give 400 ved hvert spørgsmål efter en genindlæsning). Er lageret fuldt, droppes først visningerne (datasættene)
+fra de mindst nyligt aktive faner ét ad gangen (teksten bliver; en firma- eller personfane står på Overblik og
+henter selv sit modul igen ved genskabelsen), så glemmes hele samtalen (tom historik, ingen signatur, åbne menuer
+lukkes; faner og svar bliver), og først til sidst springes gemningen over; der prøves igen efter hvert trin.
+Svarer serveren 400 "Samtalen kunne ikke genkendes", begynder portalen en ny samtale (tom historik), så brugeren
+ikke sidder fast. Efter et logud (eller et udløbet login) gemmes samtalen ikke igen. Både samtalen og fanernes svar med datasæt gemmes, når der er plads. Lageret ryddes ved udløb, for en
 anden bruger og når sessionen er logget ud. Modulernes egne data (de faste faner) gemmes ikke; de hentes igen.
 
 ### Historik og prompt-cache

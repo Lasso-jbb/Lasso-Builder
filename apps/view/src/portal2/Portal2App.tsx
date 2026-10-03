@@ -19,6 +19,7 @@ import {
   contextFor,
   freeTextPick,
   headLines,
+  isUnrecognizedHistory,
   LASSO_TAB,
   lastView,
   loadRecent,
@@ -127,6 +128,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
 
   const chat = useRef<ChatState>({ history: [] });
   const persistTheme = useRef(true);
+  /** Sat, når sessionen er logget ud: så gemmes samtalen ikke igen for en bruger, der ikke er logget ind (et nyt login er en ny sideindlæsning). */
+  const loggedOut = useRef(false);
   const abort = useRef<AbortController | null>(null);
   const resultSeq = useRef(0);
   const lookupSeq = useRef(0);
@@ -153,6 +156,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     () =>
       createPortalApi(() => {
         // Logget ud: samtalen i browseren hører til sessionen og ryddes.
+        loggedOut.current = true;
         clearCache(storage());
         setNotice("Du er logget ud. Genindlæs siden.");
       }),
@@ -314,7 +318,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
 
   // Samtalen gemmes i browseren, når der ikke hentes (ikke pr. tegn, mens svaret streames); kun den trimmede historik fra "done".
   useEffect(() => {
-    if (!hydrated || pendingKey !== null || !boot.user) return;
+    if (!hydrated || pendingKey !== null || !boot.user || loggedOut.current) return;
     saveCache(storage(), serializeCache(boot.user.id, { chat: chat.current, open, active, answers }, Date.now()), recencyOrder(open, history, active));
   }, [hydrated, open, active, answers, pendingKey, boot.user, history]);
 
@@ -378,7 +382,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     const text = q.trim();
     resetSearch();
     closeSearch();
-    void openResult(`Søgning: ${text}`, () => api.search(text));
+    void openResult(shortName(`Søgning: ${text}`), () => api.search(text));
   };
 
   const askFromSearch = () => {
@@ -452,6 +456,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     const here = itemRef.current;
     // Skriver brugeren selv, mens menuen står på fanen, er det fritekst til menuen.
     const menu = here ? answersRef.current[here.key]?.choice : undefined;
+    // Fritekst går kun til menuen, når den tillader det; ellers besvares spørgsmålet her uden valg.
     const choice = pick ?? (menu ? freeTextPick(menu) : undefined);
     // Serveren svarer i den fane, man står på: den, det modul brugeren ser, de åbne faner og valget sendes som kontekst.
     const context = contextFor(here, openRef.current, choice, here && here.kind !== "result" ? shownRef.current[`${here.key}:${here.tab}`] : undefined);
@@ -516,7 +521,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
             // Fanens navn følger det hentede: firmaets/personens navn, eller visningens titel på en resultatfane.
             const ent = entityOf(e.spec, e.dataset);
             const at = current;
-            setOpen((l) => l.map((o) => (o.key !== at ? o : ent && ent.id === at ? { ...o, name: ent.name } : o.kind === "result" && !named ? { ...o, name: e.spec.title } : o)));
+            setOpen((l) => l.map((o) => (o.key !== at ? o : ent && ent.id === at ? { ...o, name: ent.name } : o.kind === "result" && !named ? { ...o, name: shortName(e.spec.title) } : o)));
           } else if (e.type === "done") {
             chat.current = { history: e.history, sig: e.sig };
           }
@@ -525,6 +530,13 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
         { signal: ctrl.signal },
       );
     } catch (e) {
+      // Serveren kender ikke samtalen (ændret historik eller signatur): begynd en ny, så brugeren ikke sidder fast.
+      if (e instanceof ChatHttpError && isUnrecognizedHistory(e.status, e.message)) chat.current = { history: [] };
+      if (e instanceof ChatHttpError && e.status === 401) {
+        // Sessionen er udløbet: samtalen ryddes og gemmes ikke igen.
+        loggedOut.current = true;
+        clearCache(storage());
+      }
       const msg = e instanceof ChatHttpError && e.status === 401 ? "Chatten kræver login. Log ind i portalen og prøv igen." : errorText(e);
       patch((a) => ({ ...a, error: msg }));
     } finally {

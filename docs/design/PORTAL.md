@@ -80,9 +80,9 @@ Moduler og Brugere står dæmpet, til de findes.
   (valgmenuens `title`, fx "Markedsundersøgelse", "Største revisorer i Aarhus"), uden menu visningens titel
   (først det afkortede spørgsmål, højst 40 tegn), aldrig spørgsmålet eller prompten ordret. Menuens udseende designes i Paper; indtil da er den almindelige knapper.
 - Samtalen gemmes kun i browseren (ikke på serveren): faner, svar og historik overlever en genindlæsning i
-  24 timer og ryddes ved udløb, for en anden bruger og ved logud. Er lageret fuldt, kastes først de ældste ture,
-  så visningerne fra de mindst nyligt aktive faner (de henter selv modulet igen), og først til sidst gemmes
-  intet (se `docs/chat.md`).
+  24 timer og ryddes ved udløb, for en anden bruger og ved logud. Er lageret fuldt, droppes først visningerne fra
+  de mindst nyligt aktive faner (de henter selv modulet igen), så glemmes selve samtalen (historikken afkortes
+  aldrig, for dens signatur gælder kun den hele), og først til sidst gemmes intet (se `docs/chat.md`).
 - Mens der hentes, bliver Send til Stop.
 
 ## Telefon
