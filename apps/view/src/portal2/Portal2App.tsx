@@ -119,6 +119,8 @@ function settleWithTime(t: Threads, key: string, turnId: string): Threads {
 function mapThreadViews(t: Threads, fn: (p: ViewPart) => ViewPart): Threads {
   return Object.fromEntries(Object.entries(t).map(([k, tab]) => [k, { ...tab, turns: tab.turns.map((x) => ({ ...x, answer: { ...x.answer, parts: x.answer.parts.map((p) => (p.kind === "view" ? fn(p) : p)) } })) }]));
 }
+/** Det af vinduet, der ikke er lærred for ejerdiagrammet: topbjælke, faner og modulrække (ca. 150), diagrammets værktøjslinje og evt. fuld skærms hoved (ca. 130) og spørgefeltet (ca. 120). */
+const PORTAL_CHROME = 400;
 const iconOf = (k: ItemKind): P2IconName => (k === "company" ? "build" : k === "person" ? "user" : "search");
 
 export function Portal2App({ boot }: { boot: Portal2Boot }) {
@@ -1300,7 +1302,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   let content: ReactNode;
   /** Tom tilstand på Lasso: ingen ture og intet resultat. Forslagene står så som piller, ikke under feltet. */
   let empty = false;
-  const host = (page: boolean) => ({ prompt: true, save: true, refine: true, drillDown: true, refresh: true, export: true, pdf: boot.pdf !== false, openFocus: page, openSection: page });
+  // viewportChrome: portalens ramme (topbjælke, faner, modulrække, værktøjslinje og spørgefelt), så ejerdiagrammet tilpasses vinduet.
+  const host = (page: boolean) => ({ prompt: true, save: true, refine: true, drillDown: true, refresh: true, export: true, pdf: boot.pdf !== false, openFocus: page, openSection: page, viewportChrome: PORTAL_CHROME });
   if (!item) {
     content = (
       <div className="home">

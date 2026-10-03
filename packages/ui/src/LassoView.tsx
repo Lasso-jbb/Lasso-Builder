@@ -345,7 +345,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return <OwnerList key={key} ownership={empty.ownership[c.company]} error={err(`ownership:${c.company}`)} onOpen={props.host.drillDown ? act : undefined} />;
     case "LassoOwnershipDiagram": {
       const k = ownershipGraphKey(c);
-      return <OwnershipDiagram key={key} graph={empty.ownershipGraphs?.[k]} error={err(`graph:${k}`)} title={c.title} onAction={act} canDrillDown={Boolean(props.host.drillDown)} canPrompt={Boolean(props.host.prompt)} canFullscreen={Boolean(props.host.fullscreen)} demo={empty.source === "demo"} />;
+      return <OwnershipDiagram key={key} graph={empty.ownershipGraphs?.[k]} error={err(`graph:${k}`)} title={c.title} onAction={act} canDrillDown={Boolean(props.host.drillDown)} canPrompt={Boolean(props.host.prompt)} canFullscreen={Boolean(props.host.fullscreen)} demo={empty.source === "demo"} viewportChrome={props.host.viewportChrome} />;
     }
     case "LassoCompanyTable": {
       const k = searchKey(c.search);

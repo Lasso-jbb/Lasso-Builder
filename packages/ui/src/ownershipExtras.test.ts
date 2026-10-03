@@ -3,7 +3,39 @@ import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { OwnershipGraphVM } from "@lasso/spec";
-import { beneficialGraph, fitOwnership, graphOnDate, layoutOwnership, minimapFrame, refocusGraph } from "./ownershipLayout.js";
+import { beneficialGraph, fitOwnership, graphOnDate, layoutOwnership, minimapFrame, OWNERSHIP_CANVAS, ownershipCanvas, refocusGraph } from "./ownershipLayout.js";
+
+test("C5 ownershipCanvas: uden værtens ramme (standard, /mcp) som før: 100 %, kun bredden, lærredet vokser op til 1200 px", () => {
+  // Dyb graf: tegnes i 100 %, lærredet vokser med (ikke begrænset af vinduet), højst 1200.
+  const deep = ownershipCanvas({ graph: { width: 800, height: 900 }, canvasW: 1000, foot: 88, tablet: false });
+  assert.equal(deep.zoom, 1);
+  assert.equal(deep.canvasH, 988);
+  const deeper = ownershipCanvas({ graph: { width: 800, height: 1600 }, canvasW: 1000, foot: 88, tablet: false });
+  assert.equal(deeper.zoom, 1, "skaleres ikke for højden");
+  assert.equal(deeper.canvasH, OWNERSHIP_CANVAS.tall);
+  // Bred graf: kun bredden skalerer.
+  const wide = ownershipCanvas({ graph: { width: 1600, height: 300 }, canvasW: 800, foot: 88, tablet: false });
+  assert.equal(wide.zoom, (800 - 32) / 1600);
+  assert.equal(wide.canvasH, OWNERSHIP_CANVAS.min);
+  // Tablet: som før (340-560, aldrig under 150 px-noder).
+  const tab = ownershipCanvas({ graph: { width: 800, height: 900 }, canvasW: 700, foot: 44, tablet: true });
+  assert.equal(tab.zoom, OWNERSHIP_CANVAS.tabletMinZoom);
+  assert.equal(tab.canvasH, OWNERSHIP_CANVAS.tabletMax);
+});
+
+test("C5 ownershipCanvas: med værtens ramme (portalen) tilpasses vinduet: hele grafen, lærredet højst den synlige højde", () => {
+  // Vindue 900 - ramme 400 = 500 px: den dybe graf skaleres ned, så den kan ses i ét.
+  const deep = ownershipCanvas({ graph: { width: 800, height: 900 }, canvasW: 1000, foot: 88, tablet: false, viewportH: 500 });
+  assert.ok(deep.zoom < 1);
+  assert.equal(deep.canvasH, 500);
+  assert.ok(900 * deep.zoom + deep.pan.y <= deep.canvasH - 88);
+  // Et lavt vindue giver aldrig under minimum (360).
+  assert.equal(ownershipCanvas({ graph: { width: 800, height: 900 }, canvasW: 1000, foot: 88, tablet: false, viewportH: 100 }).canvasH, OWNERSHIP_CANVAS.min);
+  // Et højt vindue giver aldrig over 1200.
+  assert.ok(ownershipCanvas({ graph: { width: 800, height: 3000 }, canvasW: 1000, foot: 88, tablet: false, viewportH: 2000 }).canvasH <= OWNERSHIP_CANVAS.tall);
+  // Samme som fitOwnership med portalens grænser.
+  assert.deepEqual(deep, fitOwnership({ graph: { width: 800, height: 900 }, canvasW: 1000, minCanvasH: 360, maxCanvasH: 500, foot: 88 }));
+});
 import { OwnershipDiagram } from "./components/OwnershipDiagram.js";
 
 // Prøve Anna ejer 80 % af Eksempel Holding, som ejer 50 % af roden; Prøve Bo ejer 20 % direkte.
