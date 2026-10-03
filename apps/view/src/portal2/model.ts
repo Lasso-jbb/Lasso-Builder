@@ -1,5 +1,5 @@
 import type { Dataset, ViewSpec } from "@lasso/spec";
-import { FOCUS_LABELS, PAGE_TABS, PERSON_FOCUSES, PERSON_FOCUS_LABELS } from "@lasso/spec";
+import { FOCUS_LABELS, FOCUSES, isPersonFocus, PAGE_TABS, pageFocus, PERSON_FOCUSES, PERSON_FOCUS_LABELS, type Focus } from "@lasso/spec";
 import type { LookupResult, PageTemplate } from "../portal/api.js";
 export type { PageTemplate } from "../portal/api.js";
 import type { ChatContext, ChatEntityRef, ChoicePick } from "../chat/stream.js";
@@ -47,14 +47,74 @@ export function moduleTabs(kind: ItemKind, templates: readonly PageTemplate[]): 
 
 export function openItem(list: readonly OpenItem[], item: OpenItem): OpenItem[] {
   const i = list.findIndex((o) => o.key === item.key);
-  if (i < 0) return [...list, item];
-  return list.map((o, k) => (k === i ? { ...o, ...item, sub: item.sub ?? o.sub } : o));
+  if (i < 0) return orderPinned([...list, item]);
+  // En åbning uden pinned (søgning, links) frigør aldrig en fastgjort fane.
+  return orderPinned(list.map((o, k) => (k === i ? { ...o, ...item, sub: item.sub ?? o.sub, ...(o.pinned || item.pinned ? { pinned: true as const } : {}) } : o)));
 }
 
-/** Lukker en fane; den aktive bliver naboen til venstre (eller den første). */
+/* ---------- fastgjorte faner (Jakob 03.10) ---------- */
+
+/** De fastgjorte faner først, i deres indbyrdes rækkefølge; resten bagefter (stabil). */
+export function orderPinned(list: readonly OpenItem[]): OpenItem[] {
+  if (!list.some((o) => o.pinned)) return [...list];
+  return [...list.filter((o) => o.pinned), ...list.filter((o) => !o.pinned)];
+}
+
+/** Fastgør eller frigør fanen key. En fane, der fastgøres, lægges efter de andre fastgjorte; en frigjort lige efter dem. */
+export function setPinned(list: readonly OpenItem[], key: string, pinned: boolean): OpenItem[] {
+  const item = list.find((o) => o.key === key);
+  if (!item || Boolean(item.pinned) === pinned) return [...list];
+  const rest = list.filter((o) => o.key !== key);
+  const { pinned: _p, ...plain } = item;
+  const next = pinned ? { ...item, pinned: true as const } : plain;
+  const pins = rest.filter((o) => o.pinned);
+  const others = rest.filter((o) => !o.pinned);
+  return [...pins, ...(pinned ? [next] : []), ...(pinned ? [] : [next]), ...others];
+}
+
+/** En fastgjort fane kan ikke lukkes (× er skjult; frigør den først). */
+export const canClose = (o: Pick<OpenItem, "pinned"> | undefined): boolean => !o?.pinned;
+
+/** "Luk alle andre faner": den aktive og de fastgjorte bliver. */
+export function closeOthers(list: readonly OpenItem[], keep: string | null): OpenItem[] {
+  return list.filter((o) => o.key === keep || o.pinned);
+}
+
+/** Dybt link (Åben i Lasso fra MCP-appen): ?aabn=<Lasso-ID>&fokus=<fokus>&fastgoer=1. */
+export const DEEP_LINK_PARAMS = ["aabn", "fokus", "fastgoer"] as const;
+
+export interface DeepLink {
+  kind: "company" | "person";
+  id: string;
+  /** Modulet (fokus) efter slagsen; ukendt eller udeladt giver Overblik. */
+  tab: string;
+  pin: boolean;
+}
+
+/** Læser det dybe link fra adressens søgedel; null uden et gyldigt Lasso-ID (CVR-1/3/4-…). */
+export function parseDeepLink(search: string): DeepLink | null {
+  const p = new URLSearchParams(search);
+  const id = (p.get("aabn") ?? "").trim();
+  if (!/^CVR-[134]-\d+$/i.test(id)) return null;
+  const kind = /^CVR-[34]-/i.test(id) ? "person" : "company";
+  const f = (p.get("fokus") ?? "").trim();
+  const tab = kind === "company" ? ((FOCUSES as readonly string[]).includes(f) ? pageFocus(f as Focus) : "overblik") : isPersonFocus(f) ? f : "overblik";
+  const pin = ["1", "true", "ja"].includes((p.get("fastgoer") ?? "").toLowerCase());
+  return { kind, id: id.toUpperCase(), tab, pin };
+}
+
+/** Adressen uden det dybe links parametre (til history.replaceState); resten af søgedelen og #-delen bliver. */
+export function withoutDeepLink(href: string): string {
+  const u = new URL(href, "http://x");
+  for (const k of DEEP_LINK_PARAMS) u.searchParams.delete(k);
+  const q = u.searchParams.toString();
+  return `${u.pathname}${q ? `?${q}` : ""}${u.hash}`;
+}
+
+/** Lukker en fane; den aktive bliver naboen til venstre (eller den første). En fastgjort fane lukkes ikke. */
 export function closeItem(list: readonly OpenItem[], key: string, active: string | null): { list: OpenItem[]; active: string | null } {
   const i = list.findIndex((o) => o.key === key);
-  if (i < 0) return { list: [...list], active };
+  if (i < 0 || !canClose(list[i])) return { list: [...list], active };
   const next = list.filter((o) => o.key !== key);
   if (active !== key) return { list: next, active };
   return { list: next, active: next[Math.max(0, i - 1)]?.key ?? null };

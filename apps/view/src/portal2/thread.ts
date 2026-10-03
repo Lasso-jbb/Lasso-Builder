@@ -28,6 +28,8 @@ export interface OpenItem {
   sub?: string;
   /** Det valgte modul (fokus) eller LASSO_TAB. Resultater står altid på LASSO_TAB. */
   tab: string;
+  /** Fastgjort (Jakob 03.10): står først i fanebjælken, kan ikke lukkes med ×, overlever genindlæsning (gemmes i cachen). */
+  pinned?: true;
 }
 
 /** Ét stykke af svaret: tekst eller en visning, i den rækkefølge de kom. */
@@ -351,7 +353,13 @@ export function restoreCache(raw: string | null | undefined, user: string, now: 
     const c = JSON.parse(raw) as { v?: number; user?: string; savedAt?: number; open?: unknown; active?: unknown; tabs?: Record<string, TabChat>; chat?: ChatState; answers?: Record<string, Answer & { question?: string }> };
     if ((c.v !== 1 && c.v !== 2) || c.user !== user || typeof c.savedAt !== "number" || now - c.savedAt > ttl || now < c.savedAt) return null;
     if (!Array.isArray(c.open)) return null;
-    const open = (c.open as OpenItem[]).filter((o) => Boolean(o && typeof o.key === "string" && typeof o.name === "string" && typeof o.tab === "string"));
+    const valid = (c.open as OpenItem[]).filter((o) => Boolean(o && typeof o.key === "string" && typeof o.name === "string" && typeof o.tab === "string"));
+    // Fastgjorte faner (pinned) står først; flaget gemmes kun som true.
+    const normalized = valid.map((o): OpenItem => {
+      const { pinned, ...rest } = o;
+      return pinned === true ? { ...rest, pinned: true as const } : rest;
+    });
+    const open = [...normalized.filter((o) => o.pinned), ...normalized.filter((o) => !o.pinned)];
     const active = typeof c.active === "string" && open.some((o) => o.key === c.active) ? c.active : (open.at(-1)?.key ?? null);
     let threads: Threads = {};
     if (c.v === 2) {
