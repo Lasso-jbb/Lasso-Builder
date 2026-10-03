@@ -71,7 +71,7 @@ Moduler og Brugere står dæmpet, til de findes.
 ## Spørgefeltet (chatten)
 
 - Feltet sender til `/api/chat` (Claude med samme værktøjer som MCP). Pladsholderen er altid "Spørg Lasso", og
-  feltet har enter-ikonet; mens et svar hentes, er det slået fra, og Stop afbryder.
+  feltet har enter-ikonet; mens et svar hentes, er det slået fra (ingen Stop, Jakob 03.10).
 - De tre forslag under feltet følger siden: forsiden, et resultat, eller firmaets/personens modul (fx Ejerskab giver
   spørgsmål om ejere og datterselskaber). De står i `suggestions()` i `model.ts`.
 - Samtalen (tråden, svarformerne, placeringen af svaret, afklaringspanelet, tilstandene og mobilen) er beskrevet i

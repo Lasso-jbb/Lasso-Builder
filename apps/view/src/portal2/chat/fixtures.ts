@@ -88,8 +88,8 @@ export const FULLSCREEN = { part: view("fx-owner", SPEC_OWNERSHIP), at: FIXTURE_
 export const STAY: Turn[] = [
   turn(
     "Hvad laver Jakob ellers?",
+    // Svaret bliver på fanen: ingen meddelelsesrække (Jakob 03.10).
     done([text("Ud over LASSO X A/S har Jakob Bech Benediktson roller i tre andre selskaber. Alle er aktive, og alle hænger sammen gennem hans holdingselskab."), view("fx-roles", SPEC_ROLES)]),
-    { notice: { kind: "here", name: "LASSO X A/S" } },
   ),
 ];
 

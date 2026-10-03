@@ -91,6 +91,12 @@ export interface HostCapabilities {
    * 1200 px og tilpasses kun bredden.
    */
   viewportChrome?: number;
+  /**
+   * Regnskabsanalysens "Hent som PDF" (19.3) kun, når analysen er visningens eneste element (Jakob 03.10, portalen): i et
+   * modul, en sammensat side, et sidekort eller en sides fulde skærm står den ikke. Udeladt (/mcp, /v): som før, knappen
+   * står, når værten kan eksportere, så Claude.ai's fulde sider er uændrede.
+   */
+  analysisPdfSolo?: boolean;
 }
 
 export interface LassoViewProps {

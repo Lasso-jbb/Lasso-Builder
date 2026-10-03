@@ -154,12 +154,16 @@ test("19.6: regnskabsanalysen som PDF har alle afsnit foldet ud, tallene og forb
     lassoId: ID,
     sections: [
       { heading: "Regnskabsanalyse: konklusion", body: "Konklusionstekst." },
+      { heading: "Resultat", body: "Resultattekst." },
+      // Jakob 03.10: Likviditet og Spørgsmål til overvejelse står aldrig i analysen.
       { heading: "Likviditet", body: "Likviditetstekst." },
+      { heading: "Spørgsmål til overvejelse", body: "Spørgsmålstekst." },
     ],
     analysisHeadline: "Vækst i toplinjen",
   };
   const html = renderToStaticMarkup(createElement(AnalysisReportA4, { company: ID, dataset: ds, disclaimer: "Forbehold: test." }));
-  assert.match(html, /Vækst i toplinjen[^]*Konklusionstekst[^]*Likviditet[^]*Likviditetstekst/);
+  assert.match(html, /Vækst i toplinjen[^]*Konklusionstekst[^]*Resultat[^]*Resultattekst/);
+  assert.doesNotMatch(html, /Likviditetstekst|Spørgsmålstekst|Spørgsmål til overvejelse/);
   assert.match(html, /Tal der indgår i analysen/);
   assert.match(html, /Forbehold: test\.[^]*lasso-a4__foot/);
   assert.match(html, /CVR 99000001, regnskabsår 2025/);

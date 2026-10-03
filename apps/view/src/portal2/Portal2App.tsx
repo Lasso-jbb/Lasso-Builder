@@ -56,7 +56,6 @@ import {
   settleTurn,
   skipChoice,
   startTurn,
-  stopTurn,
   undoMove,
   type Notice,
   type Threads,
@@ -664,15 +663,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
           else if (e.title) rename(at, e.title);
         }
       }
-      if (e.type === "placement" && e.here) {
-        // "Svarer her i …": fanens eget navn, når serveren ikke sender målet med.
-        const name = e.target?.name ?? openRef.current.find((o) => o.key === at)?.name ?? "";
-        setThreads((t) => {
-          const tabNow = t[at];
-          if (!tabNow) return t;
-          return { ...t, [at]: { ...tabNow, turns: tabNow.turns.map((x) => (x.id === turnId ? { ...x, notice: { kind: "here", name } } : x)) } };
-        });
-      }
+      // placement.here (svaret bliver på fanen) giver ingen meddelelsesrække (Jakob 03.10: ingen "Svarer her"-række).
       if (e.type === "view") {
         // Fanens navn følger det hentede: firmaets/personens navn, eller et generisk navn på en global fane.
         const ent = entityOf(e.spec, e.dataset);
@@ -697,14 +688,10 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     try {
       await streamChat({ message: text, context, history: tab?.chat.history ?? [], sig: tab?.chat.sig }, onEvent, { signal: ctrl.signal });
       flushText();
-      // Stop (eller Fortryd/luk, hvor turen allerede er væk): streamChat vender stille tilbage; turen får "Stoppet.".
-      if (ctrl.signal.aborted) setThreads((t) => stopTurn(t, at, turnId, Date.now()));
+      // Afbrudt (Fortryd eller fanen lukket; turen er så allerede væk): streamChat vender stille tilbage, finally rydder op.
     } catch (e) {
       flushText();
-      if (ctrl.signal.aborted) {
-        setThreads((t) => stopTurn(t, at, turnId, Date.now()));
-        return;
-      }
+      if (ctrl.signal.aborted) return;
       // Serveren kender ikke fanens samtale (ændret historik eller signatur): begynd en ny, så brugeren ikke sidder fast.
       if (e instanceof ChatHttpError && isUnrecognizedHistory(e.status, e.message)) {
         setThreads((t) => resetTabHistory(t, at));
@@ -723,8 +710,6 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       abort.current = null;
     }
   };
-
-  const stop = () => abort.current?.abort();
 
   /** Fortryd i den gamle samtale: hentningen stoppes, den nye fane lukkes (eller mister turen), og man står tilbage. */
   const undo = (from: string, turn: Turn) => {
@@ -1295,7 +1280,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   /** Tom tilstand på Lasso: ingen ture og intet resultat. Forslagene står så som piller, ikke under feltet. */
   let empty = false;
   // viewportChrome: portalens ramme (topbjælke, faner, modulrække, værktøjslinje og spørgefelt), så ejerdiagrammet tilpasses vinduet.
-  const host = (page: boolean) => ({ prompt: true, save: true, refine: true, drillDown: true, refresh: true, export: true, pdf: boot.pdf !== false, openFocus: page, openSection: page, viewportChrome: PORTAL_CHROME });
+  const host = (page: boolean) => ({ prompt: true, save: true, refine: true, drillDown: true, refresh: true, export: true, pdf: boot.pdf !== false, openFocus: page, openSection: page, viewportChrome: PORTAL_CHROME, analysisPdfSolo: true });
   if (!item) {
     content = (
       <div className="home">
@@ -1336,7 +1321,6 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
             mobile={phone}
             currentId={item.kind !== "result" ? item.key : undefined}
             onModule={openModule}
-            onStop={stop}
             onRetry={(turn) => void ask(turn.question)}
             onUndo={(turn) => undo(item.key, turn)}
             rowKey={(turn) => {

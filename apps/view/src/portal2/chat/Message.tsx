@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
-import { Button, IconButton, LassoMark } from "@lasso/ui";
+import { IconButton, LassoMark } from "@lasso/ui";
 import { parseBlocks, type Inline } from "../../chat/markdown.js";
 import { P2Icon } from "../icons.js";
 import { answerText, isPureText, type Answer, type Notice } from "../thread.js";
@@ -45,13 +45,13 @@ export function TextLink({ children, onClick, className = "" }: { children: Reac
 }
 
 /**
- * Meddelelsesrækken i samtalen (centreret pille): "Svarer her i X", "Åbner X i en ny fane. Fortryd" (Fortryd i 10
- * sekunder; bagefter står rækken uden link), eller en fri tekst.
+ * Meddelelsesrækken i samtalen (centreret pille), kun når svaret flyttede: "Åbner X i en ny fane. Fortryd" (Fortryd i 10
+ * sekunder; bagefter "Åbnede X i en ny fane"), "Svarer i fanen X" (en fane, der var åben), eller en fri tekst. Et svar,
+ * der bliver på fanen, har ingen række (Jakob 03.10: ingen "Svarer her"-række).
  */
 export function NoticeRow({ notice, text, now = Date.now(), onUndo }: { notice?: Notice; text?: string; now?: number; onUndo?: () => void }) {
   let body: ReactNode = text ?? "";
-  if (notice?.kind === "here") body = `Svarer her i ${notice.name}`;
-  else if (notice?.kind === "moved") {
+  if (notice?.kind === "moved") {
     const live = now < notice.undoUntil && onUndo;
     const where = notice.createdTab ? `${live ? "Åbner" : "Åbnede"} ${notice.name} i en ny fane` : `Svarer i fanen ${notice.name}`;
     body = live ? (
@@ -73,7 +73,7 @@ export function NoticeRow({ notice, text, now = Date.now(), onUndo }: { notice?:
   );
 }
 
-/** Tre orange prikker, der pulserer. */
+/** Tre prikker i tekstfarven, der pulserer (Jakob 03.10: ikke koral). */
 function Dots() {
   return (
     <span className="chat-dots" aria-hidden="true">
@@ -84,28 +84,23 @@ function Dots() {
   );
 }
 
-/** Lasso tænker (før der er tekst eller et værktøj i gang). */
+/** Lasso tænker (før der er tekst eller et værktøj i gang): kun de tre prikker (Jakob 03.10); skærmlæsere hører "Lasso tænker". */
 export function Thinking() {
   return (
     <div className="chat-think" role="status">
       <Dots />
-      Tænker…
+      <span className="chat-sr">Lasso tænker</span>
     </div>
   );
 }
 
-/** En længere opgave: hvad Lasso gør (værktøjets titel) og Stop. */
-export function LongTask({ status, onStop }: { status: string; onStop?: () => void }) {
+/** En længere opgave: hvad Lasso gør (værktøjets titel). Ingen Stop-knap (Jakob 03.10). */
+export function LongTask({ status }: { status: string }) {
   return (
     <div className="chat-think" role="status">
       <Dots />
       {/* Statussen står som "Læser regnskab…" (eksporten): én ellipse direkte efter teksten. */}
       <span>{`${status.replace(/[\s.…]+$/, "")}…`}</span>
-      {onStop ? (
-        <Button size={32} className="chat-think__stop" onClick={onStop}>
-          Stop
-        </Button>
-      ) : null}
     </div>
   );
 }
@@ -254,7 +249,6 @@ export interface AssistantMessageProps {
   currentId?: string;
   onModule?: (target: ModuleTarget, text: string) => void;
   onRetry?: () => void;
-  onStop?: () => void;
   /** Handlingerne på et kort (hent, fuld skærm, tilføj som fane, visningens egne handlinger). */
   cardProps?: (part: ViewPart, index: number) => Partial<AnswerCardProps>;
 }
@@ -263,15 +257,12 @@ export interface AssistantMessageProps {
  * Lassos svar: avatar og den første tekst (eller tænker/længere opgave), derefter kortene i fuld trådbredde og
  * evt. tekst efter dem, fejl med "Prøv igen", og til sidst tidspunktet (kopiér kun under rene tekstsvar).
  */
-export function AssistantMessage({ answer, mobile = false, currentId, onModule, onRetry, onStop, cardProps }: AssistantMessageProps) {
+export function AssistantMessage({ answer, mobile = false, currentId, onModule, onRetry, cardProps }: AssistantMessageProps) {
   const parts = answer.parts;
   const first = parts[0]?.kind === "text" ? parts[0].text : null;
   const rest = first !== null ? parts.slice(1) : parts;
   const hasView = parts.some((p) => p.kind === "view");
-  // Stop: en stille linje uden "Prøv igen" (brugeren valgte selv at stoppe).
-  const errorEl = answer.stopped && !answer.error ? (
-    <p className="chat-stopped">Stoppet.</p>
-  ) : answer.error ? (
+  const errorEl = answer.error ? (
     <p className="chat-error">
       {answer.error}
       {onRetry ? (
@@ -282,7 +273,7 @@ export function AssistantMessage({ answer, mobile = false, currentId, onModule, 
       ) : null}
     </p>
   ) : null;
-  const working = answer.pending ? answer.status ? <LongTask status={answer.status} onStop={onStop} /> : first === null ? <Thinking /> : null : null;
+  const working = answer.pending ? answer.status ? <LongTask status={answer.status} /> : first === null ? <Thinking /> : null : null;
   const textAt = (text: string, after?: ReactNode) => <AnswerText text={text} currentId={currentId} onOpen={onModule} after={after} />;
   // Fejl og arbejde står i avatar-rækken, når der ikke er kommet andet endnu; ellers efter det sidste.
   const tailInRow = rest.length === 0;

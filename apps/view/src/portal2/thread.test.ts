@@ -26,7 +26,6 @@ import {
   settleTurn,
   skipChoice,
   startTurn,
-  stopTurn,
   undoMove,
   type Notice,
   type OpenItem,
@@ -122,25 +121,6 @@ test("startTurn, applyTurnEvent, finishTurn: turen i fanen, historikken og finge
   assert.equal(currentTurn(t, novo.key)!.answer.at, 6000);
   assert.equal(settleTurn(t, novo.key, "t4", 7000), t);
   assert.equal(settleTurn(t, novo.key, "t1", 7000), t, "færdig tur med tidspunkt fra done");
-});
-
-test("C1 stopTurn: Stop gør turen færdig med 'Stoppet.' og beholder teksten; en færdig tur røres ikke", () => {
-  let t = startTurn({}, novo.key, "q", 1, "t1");
-  t = applyTurnEvent(t, novo.key, "t1", { type: "text", text: "Halvt svar" });
-  t = applyTurnEvent(t, novo.key, "t1", { type: "tool", id: "x", name: "show_company", title: "Vis" });
-  t = stopTurn(t, novo.key, "t1", 500);
-  const a = t[novo.key]!.turns[0]!.answer;
-  assert.equal(a.pending, false);
-  assert.equal(a.stopped, true);
-  assert.equal(a.status, undefined);
-  assert.equal(a.error, undefined);
-  assert.equal(a.at, 500);
-  assert.deepEqual(a.parts, [{ kind: "text", text: "Halvt svar" }]);
-  // Allerede færdig (eller ukendt fane/tur): uændret.
-  assert.equal(stopTurn(t, novo.key, "t1", 900), t);
-  assert.equal(stopTurn(t, "ukendt", "t1", 900), t);
-  const finished = finishTurn(startTurn({}, novo.key, "q", 1, "t2"), novo.key, done());
-  assert.equal(stopTurn(finished, novo.key, "t2", 900), finished);
 });
 
 test("C2: SSE-fejl med code history_invalid nulstiller fanens historik og resumé; turene og fejlen står", () => {

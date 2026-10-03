@@ -135,7 +135,8 @@ entitet), sendes allerede her med `decided: true` (og `target`/`title`), så kli
 eller `global` fra en fane, der ikke er global; højst én gang pr. tur, efter den første `placement`-hændelse.
 Portalen åbner eller aktiverer kun en anden fane på `placement`, aldrig på en visning. Åbner `entity` en ny fane,
 står fanen, man spurgte fra, præcis som før (hverken nulstillet til Overblik eller genindlæst); spørgsmålet og
-notitsen "Åbner X i en ny fane. Fortryd" står i den gamle tråd, svaret i den nye.
+notitsen "Åbner X i en ny fane. Fortryd" står i den gamle tråd, svaret i den nye. `here: true` (svaret bliver på fanen)
+giver ingen notits i portalen (Jakob 03.10: ingen "Svarer her"-række); feltet sendes stadig, men klienten bruger det ikke.
 
 **Frisk historik ved et skifte.** Flytter svaret (entity, eller global fra en fane), starter den nye fane en ny
 samtale: `done.history` er kun denne tur (beskederne efter den bevarede historik), `done.fresh` er `true`, og

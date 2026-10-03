@@ -44,8 +44,6 @@
 .p3 .chat-a, .p3 .chat-ilink { color: inherit; font: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); }
 .p3 .chat-a:hover, .p3 .chat-ilink:hover, .p3 .chat-a:focus-visible, .p3 .chat-ilink:focus-visible { text-decoration-color: currentColor; outline: none; }
 .p3 .chat-error { margin: 0; }
-/* Stop: stille linje (sekundær tekst), ingen "Prøv igen". */
-.p3 .chat-stopped { margin: 0; color: var(--lasso-text-3); }
 
 /* Tekstlink: 14/500 koral mørk */
 .p3 .chat-tlink { font: inherit; font-size: var(--lasso-fs); font-weight: 500; color: var(--lasso-accent-text); background: none; border: 0; padding: 0; cursor: pointer; }
@@ -65,6 +63,10 @@
 .p3 .chat-link:hover { background: var(--lasso-surface-2); }
 .p3 .chat-link:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
 .p3 .chat-link svg.i { width: 18px; height: 18px; color: var(--lasso-accent); stroke-width: 1.6; }
+/* Tilføj som fane (Jakob 03.10): modul-link-pillen i kortets hoved, 36 px høj som hovedets andre knapper. */
+.p3 .chat-card__add { height: 36px; padding: 0 14px; gap: 8px; }
+.p3 .chat-card__add:disabled { cursor: progress; opacity: 0.6; }
+.p3 .chat-card__addm svg { color: var(--lasso-accent); }
 .p3 .chat-links__note { font-size: var(--chat-fs-12); color: var(--faint); white-space: nowrap; }
 
 /* Meddelelsesrækken: centreret pille 28, 12 px tekst */
@@ -73,14 +75,13 @@
 .p3 .chat-notice__mark { width: 14px; height: 11.6px; fill: currentColor; flex: none; }
 .p3 .chat-notice .chat-tlink { font-size: var(--chat-fs-12); }
 
-/* Tænker: tre orange prikker 6 px, gap 5, puls 1,2 s */
+/* Tænker: tre prikker 6 px i tekstfarven (Jakob 03.10, ikke koral), gap 5, puls 1,2 s; ingen "Tænker…" og ingen Stop */
 .p3 .chat-think { display: flex; align-items: center; gap: 10px; font-size: var(--lasso-fs); line-height: var(--chat-lh); color: var(--lasso-text-3); min-height: var(--chat-avatar); flex-wrap: wrap; }
 .p3 .chat-dots { display: inline-flex; gap: 5px; align-items: center; }
-.p3 .chat-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--lasso-accent); animation: chat-pulse 1.2s ease-in-out infinite; }
+.p3 .chat-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--lasso-text); animation: chat-pulse 1.2s ease-in-out infinite; }
 .p3 .chat-dots i:nth-child(2) { opacity: 0.6; animation-delay: 0.2s; }
 .p3 .chat-dots i:nth-child(3) { opacity: 0.3; animation-delay: 0.4s; }
 @keyframes chat-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.55); } }
-.p3 .chat-think__stop { margin-left: 2px; }
 
 /* Kort: 1 px kant, radius 10, hoved 16/20, handlinger gap 8, krop 0 20 16 */
 .p3 .chat-card { border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); overflow: hidden; color: var(--lasso-text); }

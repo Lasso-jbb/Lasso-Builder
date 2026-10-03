@@ -209,6 +209,8 @@ test("B4: risikoobservationerne står kun på fokus risiko, efter kreditvurderin
 
 const LONG = "Selskabets aktiviteter er beskrevet udførligt her, så afsnittet fylder flere linjer end en kolonne kan vise uden at folde det sammen. ";
 const ANALYSIS = ["Regnskabsanalyse: konklusion", "Resultat", "Likviditet", "Balance og kapitalforhold", "Branchestatistik", "Revisoroplysninger", "Spørgsmål til overvejelse"];
+/** Det, der vises (Jakob 03.10): uden Likviditet og Spørgsmål til overvejelse. */
+const ANALYSIS_SHOWN = ["Regnskabsanalyse: konklusion", "Resultat", "Balance og kapitalforhold", "Branchestatistik", "Revisoroplysninger"];
 
 /**
  * Et holdingselskab som i brugerens eksempel: lang profil (formål og hele regnskabsanalysen),
@@ -374,14 +376,15 @@ test("componentWeight: vægten følger datas form", () => {
   assert.ok(profil > analyse);
 });
 
-test("regnskabsanalysen: overblikket viser konklusion, resultat og likviditet, oekonomi hele analysen i fuld bredde", () => {
+test("regnskabsanalysen: overblikket viser konklusion og resultat, oekonomi hele analysen i fuld bredde; likviditet og spørgsmål aldrig", () => {
   const ds = holding();
   const sections = ds.textSections[id]!.sections;
   assert.deepEqual(
     textSectionsFor(sections, "profil").map((s) => s.heading),
-    ["Formål", "Tegningsregler", "Regnskabsanalyse: konklusion", "Resultat", "Likviditet"],
+    ["Formål", "Tegningsregler", "Regnskabsanalyse: konklusion", "Resultat"],
   );
-  assert.deepEqual(textSectionsFor(sections, "analyse").map((s) => s.heading), ANALYSIS);
+  assert.deepEqual(textSectionsFor(sections, "analyse").map((s) => s.heading), ANALYSIS_SHOWN);
+  for (const v of ["profil", "analyse", "cvr", "resume"] as const) assert.ok(!textSectionsFor(sections, v).some((s) => s.heading === "Likviditet" || s.heading === "Spørgsmål til overvejelse"), v);
   // Ældre gemte specs uden variant opfører sig som profilen.
   assert.deepEqual(textSectionsFor(sections).map((s) => s.heading), textSectionsFor(sections, "profil").map((s) => s.heading));
 

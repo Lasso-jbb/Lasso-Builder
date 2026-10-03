@@ -133,7 +133,6 @@ function analysisSection(heading: string, ...parts: (string | [string, string | 
 
 function analysisFor(c: DemoCompany): TextSectionsVM["sections"] {
   const auditor = COMPANIES.find((x) => x.name === c.auditor);
-  const ceo = c.people.find((p) => /direktør/i.test(p.role) && !p.to);
   return [
     analysisSection(
       "Regnskabsanalyse: konklusion",
@@ -142,10 +141,6 @@ function analysisFor(c: DemoCompany): TextSectionsVM["sections"] {
     analysisSection(
       "Resultat",
       "Årets resultat er steget med godt 8 % i forhold til sidste år, drevet af flere store projekter og en bedre udnyttelse af de faste omkostninger. Overskudsgraden er forbedret for tredje år i træk, mens personaleomkostningerne er steget mindre end bruttofortjenesten (eksempeltekst).",
-    ),
-    analysisSection(
-      "Likviditet",
-      "Likviditeten er tilfredsstillende. Pengestrømmen fra driften dækker årets investeringer, og de likvide beholdninger er øget. Den kortfristede gæld er dækket af omsætningsaktiverne med god margin (eksempeltekst).",
     ),
     analysisSection(
       "Balance og kapitalforhold",
@@ -160,12 +155,6 @@ function analysisFor(c: DemoCompany): TextSectionsVM["sections"] {
       "Årsrapporten er revideret af ",
       auditor ? [auditor.name, auditor.lassoId] : c.auditor,
       " uden forbehold eller supplerende oplysninger. Revisor har været den samme i de seneste regnskabsår (eksempeltekst).",
-    ),
-    analysisSection(
-      "Spørgsmål til overvejelse",
-      "• Hvor afhængig er virksomheden af de største kunder?\n• Hvordan påvirker renteniveauet efterspørgslen i de kommende år?\n• Hvem overtager efter ",
-      ceo ? [ceo.name, PERSON_IDS.get(ceo.name)] : "den nuværende direktør",
-      ", hvis direktøren fratræder? (eksempeltekst)",
     ),
   ];
 }

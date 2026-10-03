@@ -45,20 +45,18 @@ export interface PendingChoice {
 }
 
 /**
- * Notitsen under spørgsmålet: here = svaret skrives her om en anden person/virksomhed (modellen valgte at blive),
- * moved = svaret flyttede til fanen tabKey (createdTab: fanen blev åbnet til dette spørgsmål); Fortryd virker til undoUntil.
+ * Notitsen under spørgsmålet: svaret flyttede til fanen tabKey (createdTab: fanen blev åbnet til dette spørgsmål); Fortryd
+ * virker til undoUntil. Et svar, der bliver på fanen, får ingen notits (Jakob 03.10: ingen "Svarer her"-række).
  */
-export type Notice =
-  | { kind: "here"; name: string }
-  | {
-      kind: "moved";
-      name: string;
-      tabKey: string;
-      undoUntil: number;
-      createdTab: boolean;
-      /** Flyttet ind i en fane, der fandtes: dens samtale (historik og resumé) før flytningen, så Fortryd kan lægge den tilbage. Gemmes ikke. */
-      prev?: { chat: ChatState; sent: string | null };
-    };
+export type Notice = {
+  kind: "moved";
+  name: string;
+  tabKey: string;
+  undoUntil: number;
+  createdTab: boolean;
+  /** Flyttet ind i en fane, der fandtes: dens samtale (historik og resumé) før flytningen, så Fortryd kan lægge den tilbage. Gemmes ikke. */
+  prev?: { chat: ChatState; sent: string | null };
+};
 
 /** Hvad chatten svarede på et spørgsmål: delene (tekst og visninger) i rækkefølge. */
 export interface Answer {
@@ -73,8 +71,6 @@ export interface Answer {
   choice?: PendingChoice;
   /** Hvornår svaret blev færdigt (ms), til klokkeslættet under svaret. */
   at?: number;
-  /** Brugeren trykkede Stop: svaret står, som det nåede at blive, med "Stoppet." (ingen "Prøv igen"). */
-  stopped?: true;
 }
 
 export interface Turn {
@@ -196,12 +192,6 @@ export function applyTurnEvent(t: Threads, key: string, turnId: string, e: ChatE
 export function settleTurn(t: Threads, key: string, turnId: string, at: number): Threads {
   if (!t[key]?.turns.some((x) => x.id === turnId && x.answer.pending)) return t;
   return mapTurns(t, key, (x) => (x.id === turnId ? { ...x, answer: { ...x.answer, pending: false, status: undefined, at: x.answer.at ?? at } } : x));
-}
-
-/** Stop: turen er ikke længere ventende og får "Stoppet." (kun en tur, der stadig ventede; en færdig tur røres ikke). */
-export function stopTurn(t: Threads, key: string, turnId: string, at: number): Threads {
-  if (!t[key]?.turns.some((x) => x.id === turnId && x.answer.pending)) return t;
-  return mapTurns(t, key, (x) => (x.id === turnId ? { ...x, answer: { ...x.answer, pending: false, status: undefined, stopped: true, at: x.answer.at ?? at } } : x));
 }
 
 /** "done" for fanens ventende tur: svaret er færdigt, og fanen får serverens historik og signatur (frisk, hvis fresh). */
@@ -339,13 +329,20 @@ const isTurn = (x: unknown): x is Turn => {
   return Boolean(t && typeof t.id === "string" && typeof t.question === "string" && t.answer && Array.isArray(t.answer.parts));
 };
 
-/** En gemt tur klar til brug: ikke ventende, og Fortryd er udløbet (undoUntil gemmes ikke). */
-const revive = (x: Turn): Turn => ({
-  ...x,
-  askedAt: typeof x.askedAt === "number" ? x.askedAt : 0,
-  answer: { ...x.answer, pending: false },
-  ...(x.notice?.kind === "moved" ? { notice: { ...dropPrev(x.notice), undoUntil: 0 } } : {}),
-});
+/**
+ * En gemt tur klar til brug: ikke ventende, og Fortryd er udløbet (undoUntil gemmes ikke). En ældre "Svarer her"-notits
+ * (kind "here", før Jakob 03.10) droppes.
+ */
+const revive = (x: Turn): Turn => {
+  const { notice, ...rest } = x;
+  const kind = (notice as { kind?: string } | undefined)?.kind;
+  return {
+    ...rest,
+    askedAt: typeof x.askedAt === "number" ? x.askedAt : 0,
+    answer: { ...x.answer, pending: false },
+    ...(notice && kind === "moved" ? { notice: { ...dropPrev(notice), undoUntil: 0 } } : {}),
+  };
+};
 
 /** Samtalen fra lageret, hvis den er brugerens egen og ikke udløbet; ellers null. Version 1 (én samtale for alle faner) migreres. */
 export function restoreCache(raw: string | null | undefined, user: string, now: number, ttl = CHAT_CACHE_TTL_MS): ChatCacheState | null {

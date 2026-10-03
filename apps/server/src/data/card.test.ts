@@ -589,7 +589,9 @@ test("tekstkortet viser samme tekstafsnit som visningen: profilen uden branche o
   const card = (variant: "profil" | "analyse") =>
     textCard(parseViewSpec({ version: 2, kind: "company", title: "Test", layout: "stack", criteria: [], components: [{ type: "LassoTextSections", company: ID, variant }] }), ds)!;
   const profil = card("profil");
-  for (const part of ["FORMÅL", "REGNSKABSANALYSE: KONKLUSION", "RESULTAT", "LIKVIDITET"]) assert.ok(profil.includes(part), `mangler "${part}":\n${profil}`);
+  for (const part of ["FORMÅL", "REGNSKABSANALYSE: KONKLUSION", "RESULTAT"]) assert.ok(profil.includes(part), `mangler "${part}":\n${profil}`);
+  // Jakob 03.10: Likviditet vises aldrig, heller ikke i tekstkortet.
+  assert.ok(!profil.includes("LIKVIDITET") && !card("analyse").includes("LIKVIDITET"), profil);
   for (const part of ["Fremstilling af farmaceutiske", "BALANCE OG KAPITALFORHOLD", "BRANCHESTATISTIK"]) assert.ok(!profil.includes(part), `"${part}" hører ikke til profilen:\n${profil}`);
   const analyse = card("analyse");
   assert.ok(analyse.includes("BRANCHESTATISTIK") && !analyse.includes("FORMÅL"), analyse);

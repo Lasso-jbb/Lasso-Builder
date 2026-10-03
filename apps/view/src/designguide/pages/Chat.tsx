@@ -225,7 +225,7 @@ function scenes(): SceneDef[] {
     {
       id: "side",
       title: "Svarform C, en hel side",
-      note: "En sammensætning af flere elementer har desuden Tilføj som fane (primær knap; et orange ikon på mobil).",
+      note: "En sammensætning af flere elementer har desuden Tilføj som fane som modul-link (neutral pille med koral ikon, 36 px; på mobil en neutral ikonknap med koral ikon).",
       render: ({ theme, mobile, fill }) => (
         <Scene theme={theme} mobile={mobile} sugg={SUGG}>
           <Conversation turns={fill(SCENES.formPage)} mobile={mobile} theme={theme} />
@@ -286,7 +286,7 @@ function scenes(): SceneDef[] {
     {
       id: "bliv",
       title: "Situation 1, bliv i fanen",
-      note: "Spørgsmålet giver mening i fanens kontekst, selv om det nævner en anden. Meddelelsesrækken siger, hvor svaret står.",
+      note: "Spørgsmålet giver mening i fanens kontekst, selv om det nævner en anden. Svaret står i fanen uden en meddelelsesrække (Jakob 03.10: ingen 'Svarer her'-række).",
       render: ({ theme, mobile, fill }) => (
         <Scene theme={theme} mobile={mobile} sugg={SUGG}>
           <Conversation turns={fill(SCENES.stay)} mobile={mobile} theme={theme} currentId={FIXTURE_COMPANY} />
@@ -347,7 +347,7 @@ function scenes(): SceneDef[] {
     {
       id: "taenker",
       title: "Tænker",
-      note: "Tre orange prikker og \"Tænker…\"; feltet er slået fra, mens Lasso svarer.",
+      note: "Kun tre prikker i tekstfarven (Jakob 03.10: ingen \"Tænker…\" og ikke koral; \"Lasso tænker\" for skærmlæsere); feltet er slået fra, mens Lasso svarer.",
       render: ({ theme, mobile, fill }) => (
         <Scene theme={theme} mobile={mobile} sugg={SUGG} pending>
           <Conversation turns={fill(SCENES.thinking)} mobile={mobile} theme={theme} />
@@ -357,7 +357,7 @@ function scenes(): SceneDef[] {
     {
       id: "laengere",
       title: "Længere opgave",
-      note: "Værktøjets titel i ord, et skelet med shimmer og Stop.",
+      note: "Værktøjets titel i ord og et skelet med shimmer. Ingen Stop (Jakob 03.10).",
       render: ({ theme, mobile, fill }) => (
         <Scene theme={theme} mobile={mobile} sugg={SUGG} pending>
           <Conversation turns={fill(SCENES.longTask)} mobile={mobile} theme={theme} />
@@ -403,7 +403,7 @@ function MobileScenes(): SceneDef[] {
   return [
     mobile("traad", "Mobil, samtale", "16 px luft, bobler højst 280 px, inputpille 48 høj lige over bundlinjen, forslagene stablet.", "mobileThread"),
     mobile("element", "Mobil, et element", "Kun fuld skærm i rammen.", "mobileElement"),
-    mobile("side", "Mobil, en side", "Tilføj som fane som et orange ikon ved siden af fuld skærm.", "mobilePage"),
+    mobile("side", "Mobil, en side", "Tilføj som fane som en neutral ikonknap med koral ikon ved siden af fuld skærm.", "mobilePage"),
     {
       id: "m-ark",
       title: "Mobil, afklaring",

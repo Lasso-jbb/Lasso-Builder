@@ -65,7 +65,10 @@ test("Tråden: role=log, skærmlæsertekster, boble og svar; ingen midterprik no
 });
 
 test("Meddelelsesrækken: her, ny fane med Fortryd i 10 sekunder, derefter uden link", () => {
-  assert.match(html(createElement(NoticeRow, { notice: { kind: "here", name: "LASSO X A/S" } })), /role="status".*Svarer her i LASSO X A\/S/);
+  // Jakob 03.10: ingen "Svarer her"-række; situation 1 (bliv i fanen) har ingen meddelelsesrække.
+  const stay = html(createElement(Thread, { turns: fx.STAY, now: fx.FIXTURE_AT }));
+  assert.doesNotMatch(stay, /chat-notice|Svarer her/);
+  assert.match(stay, /Ud over LASSO X A\/S/);
   const notice = fx.NEW_TAB_BEFORE[1]!.notice!;
   const live = html(createElement(NoticeRow, { notice, now: fx.FIXTURE_AT, onUndo: () => undefined }));
   assert.match(live, /Åbner Jakob Bech Benediktson i en ny fane\./);
@@ -76,31 +79,25 @@ test("Meddelelsesrækken: her, ny fane med Fortryd i 10 sekunder, derefter uden 
   assert.doesNotMatch(html(createElement(Thread, { turns: fx.NEW_TAB_BEFORE.slice(1), now: fx.FIXTURE_AT })), /chat-msg--ai/);
 });
 
-test("Svar: tænker, længere opgave med Stop og skelet, fejl med Prøv igen, modul-link til en anden fane med note", () => {
+test("Svar: tænker (kun prikker), længere opgave med skelet og uden Stop, fejl med Prøv igen, modul-link til en anden fane med note", () => {
   const thinking = html(createElement(AssistantMessage, { answer: fx.THINKING[0]!.answer }));
-  assert.match(thinking, /role="status"[^>]*><span class="chat-dots"[\s\S]*Tænker…/);
-  const long = html(createElement(AssistantMessage, { answer: fx.LONG_TASK[0]!.answer, onStop: () => undefined }));
+  // Jakob 03.10: kun de tre prikker; "Lasso tænker" kun for skærmlæsere.
+  assert.match(thinking, /role="status"[^>]*><span class="chat-dots"[^]*<span class="chat-sr">Lasso tænker<\/span>/);
+  assert.doesNotMatch(thinking, /Tænker…/);
+  const long = html(createElement(AssistantMessage, { answer: fx.LONG_TASK[0]!.answer }));
   assert.match(long, /Læser regnskab 2024 og ejerregistret…/);
-  assert.match(long, />Stop</);
+  assert.doesNotMatch(long, />Stop</);
   assert.match(long, /chat-card--sk/);
   // C2: fejlen fra en ugyldig historik har "Prøv igen" (spørger igen i en ny samtale).
   const invalid = html(createElement(AssistantMessage, { answer: { parts: [], pending: false, error: "Samtalen kunne ikke fortsættes. Prøv igen." }, onRetry: () => undefined }));
   assert.match(invalid, /Samtalen kunne ikke fortsættes/);
   assert.match(invalid, />Prøv igen<\/button>/);
-  // C1: Stop giver en stille "Stoppet." uden "Prøv igen" (også når der er en onRetry).
-  const stopped = html(createElement(AssistantMessage, { answer: { parts: [{ kind: "text", text: "Halvt svar" }], pending: false, stopped: true, at: 1 }, onRetry: () => undefined }));
-  assert.match(stopped, /Halvt svar/);
-  assert.match(stopped, /class="chat-stopped">Stoppet\.<\/p>/);
-  assert.doesNotMatch(stopped, /Prøv igen|chat-error/);
-  const stoppedEmpty = html(createElement(AssistantMessage, { answer: { parts: [], pending: false, stopped: true }, onRetry: () => undefined }));
-  assert.match(stoppedEmpty, /Stoppet\./);
-  assert.doesNotMatch(stoppedEmpty, /Prøv igen/);
   const err = html(createElement(AssistantMessage, { answer: fx.ERROR[1]!.answer, onRetry: () => undefined, currentId: fx.FIXTURE_COMPANY }));
   assert.match(err, /Jeg kunne ikke hente tallene for Novo Nordisk A\/S lige nu\. <button[^>]*class="chat-tlink"[^>]*>Prøv igen</);
   assert.match(err, /Åbner Novo Nordisk A\/S i ny fane/);
 });
 
-test("Kort: element med Hent som PDF og fuld skærm; side med Tilføj som fane (desktop knap, mobil orange ikon)", () => {
+test("Kort: element med Hent som PDF og fuld skærm; side med Tilføj som fane (modul-link-pillen; mobil neutral ikonknap)", () => {
   const props = { onDownload: () => undefined, onFullscreen: () => undefined, onAddTab: () => undefined };
   const el = html(createElement(AssistantMessage, { answer: fx.FORM_ELEMENT[0]!.answer, cardProps: () => props }));
   assert.match(el, /aria-label="Hent som PDF"/);
@@ -108,9 +105,12 @@ test("Kort: element med Hent som PDF og fuld skærm; side med Tilføj som fane (
   assert.doesNotMatch(el, /Tilføj som fane/);
   assert.match(el, /Jakob Bech Benediktson, 4 selskaber/);
   const page = html(createElement(AssistantMessage, { answer: fx.FORM_PAGE[0]!.answer, cardProps: () => props }));
-  assert.match(page, /lasso-btn lasso-btn--primary[^"]*"[^>]*>.*Tilføj som fane/);
+  // Jakob 03.10: som modul-linket ("Risiko"), ikke den fyldte primære knap.
+  assert.match(page, /<button type="button" class="chat-link chat-card__add"><svg[^>]*>.*?<\/svg>Tilføj som fane<\/button>/);
+  assert.doesNotMatch(page, /lasso-btn--primary|lasso-iconbtn--primary/);
   const mobile = html(createElement(AssistantMessage, { answer: fx.FORM_PAGE[0]!.answer, mobile: true, cardProps: () => props }));
-  assert.match(mobile, /lasso-iconbtn--primary" aria-label="Tilføj som fane"/);
+  assert.match(mobile, /class="lasso-iconbtn[^"]*chat-card__addm" aria-label="Tilføj som fane"/);
+  assert.doesNotMatch(mobile, /primary/);
   assert.doesNotMatch(mobile, /Hent som PDF/);
 });
 

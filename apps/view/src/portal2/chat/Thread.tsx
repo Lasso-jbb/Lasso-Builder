@@ -48,7 +48,6 @@ interface RowHandlers {
   onRetry?: (turn: Turn) => void;
   afterTurn?: (turn: Turn) => ReactNode;
   onModule?: AssistantMessageProps["onModule"];
-  onStop?: () => void;
   cardProps?: (part: ViewPart, index: number) => ReturnType<NonNullable<AssistantMessageProps["cardProps"]>>;
 }
 
@@ -60,7 +59,7 @@ interface TurnRowProps {
   currentId?: string;
   deps: string;
   handlers: Required<RowHandlers>;
-  has: { undo: boolean; retry: boolean; after: boolean; module: boolean; stop: boolean; card: boolean };
+  has: { undo: boolean; retry: boolean; after: boolean; module: boolean; card: boolean };
 }
 
 /** Én tur: brugerens boble, evt. meddelelsesrækken, Lassos svar og det, der står efter turen. */
@@ -75,7 +74,6 @@ const TurnRow = memo(function TurnRow({ turn, now, mobile, currentId, handlers, 
           mobile={mobile}
           currentId={currentId}
           onModule={has.module ? handlers.onModule : undefined}
-          onStop={has.stop ? handlers.onStop : undefined}
           onRetry={has.retry ? () => handlers.onRetry(turn) : undefined}
           cardProps={has.card ? handlers.cardProps : undefined}
         />
@@ -94,7 +92,7 @@ const nowFor = (turn: Turn, now: number | undefined): number | undefined =>
  * og Lassos svar; 20 px mellem beskeder og 28 px mellem ture. Lange samtaler tegnes fra enden; "Indlæser ældre
  * beskeder…" henter de forrige ind, når man ruller op, uden at det synlige flytter sig.
  */
-export function Thread({ turns, now, onUndo, onRetry, afterTurn, pageSize = TURN_PAGE, rowKey, mobile, currentId, onModule, onStop, cardProps }: ThreadProps) {
+export function Thread({ turns, now, onUndo, onRetry, afterTurn, pageSize = TURN_PAGE, rowKey, mobile, currentId, onModule, cardProps }: ThreadProps) {
   const [shown, setShown] = useState(pageSize);
   const root = useRef<HTMLDivElement>(null);
   const anchor = useRef<{ height: number; top: number } | null>(null);
@@ -116,14 +114,13 @@ export function Thread({ turns, now, onUndo, onRetry, afterTurn, pageSize = TURN
 
   // De nyeste handlere; rækkerne får stabile funktioner, der kalder dem.
   const latest = useRef<RowHandlers>({});
-  latest.current = { onUndo, onRetry, afterTurn, onModule, onStop, cardProps };
+  latest.current = { onUndo, onRetry, afterTurn, onModule, cardProps };
   const handlers = useMemo<Required<RowHandlers>>(
     () => ({
       onUndo: (turn) => latest.current.onUndo?.(turn),
       onRetry: (turn) => latest.current.onRetry?.(turn),
       afterTurn: (turn) => latest.current.afterTurn?.(turn) ?? null,
       onModule: (target, text) => latest.current.onModule?.(target, text),
-      onStop: () => latest.current.onStop?.(),
       cardProps: (part, index) => latest.current.cardProps?.(part, index) ?? {},
     }),
     [],
@@ -132,9 +129,8 @@ export function Thread({ turns, now, onUndo, onRetry, afterTurn, pageSize = TURN
   const hasRetry = Boolean(onRetry);
   const hasAfter = Boolean(afterTurn);
   const hasModule = Boolean(onModule);
-  const hasStop = Boolean(onStop);
   const hasCard = Boolean(cardProps);
-  const has = useMemo(() => ({ undo: hasUndo, retry: hasRetry, after: hasAfter, module: hasModule, stop: hasStop, card: hasCard }), [hasUndo, hasRetry, hasAfter, hasModule, hasStop, hasCard]);
+  const has = useMemo(() => ({ undo: hasUndo, retry: hasRetry, after: hasAfter, module: hasModule, card: hasCard }), [hasUndo, hasRetry, hasAfter, hasModule, hasCard]);
 
   const observer = useRef<IntersectionObserver | null>(null);
   // Stabil (useCallback): ellers bygges IntersectionObserver om ved hver tegning.
