@@ -158,8 +158,10 @@ test("chat: værktøjet kører gennem MCP; browseren får visningen, modellen ku
   assert.equal(result.type, "tool_result");
   assert.match(result.content, /Eksempel Byg/);
   assert.doesNotMatch(result.content, /Tekstkort:/);
-  // Chatten viser visningen under teksten, så værktøjssvaret beder ikke modellen tie (SILENT er /mcp's).
-  assert.match(result.content, /^Visningen vises for brugeren under din tekst\./);
+  // Chatten (docs/chat.md, tokens): resuméet uden boilerplate; teksten efter en visning styres af CHAT_RULES.
+  assert.match(result.content, /^OBS: demodata \(opdigtet\)\.\nEksempel Byg A\/S/);
+  for (const line of [/Visningen vises for brugeren/, /Visningen er svaret: skriv ingen tekst/, /Tekstkortet er kun til værter/, /Interaktiv Lasso-visning/]) assert.doesNotMatch(result.content, line);
+  assert.match(String(first.system), /Efter en visning skriver du altid en til tre korte sætninger/);
 
   const done = events.at(-1) as Event & { history: unknown[]; sig: string };
   assert.equal(done.history.length, 4);

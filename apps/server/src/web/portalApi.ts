@@ -146,7 +146,7 @@ export function portalApi({ config, provider, store, pages }: PortalApiDeps): Ro
     const r = await showCompany(ctx(res), { company: String(req.params.ref), focus: params.focus, years: params.years, chart_metric: params.metric });
     if ("error" in r) return sendError(res, r);
     // summary: samme resumé som værktøjssvarene giver modellen; portalen sender det som chattens kontekst (chat/context.ts).
-    res.json({ spec: r.spec, dataset: r.dataset, ...(r.note ? { note: r.note } : {}), link: entityLink(config, r.lassoId, { focus: params.focus }), summary: summarizeView(r.spec, r.dataset) });
+    res.json({ spec: r.spec, dataset: r.dataset, ...(r.note ? { note: r.note } : {}), link: entityLink(config, r.lassoId, { focus: params.focus }), summary: summarizeView(r.spec, r.dataset, { host: "chat" }) });
   });
 
   // Som show_person. link = den signerede /e/-side med samme focus, samme form som for virksomheder i portalen.
@@ -155,7 +155,7 @@ export function portalApi({ config, provider, store, pages }: PortalApiDeps): Ro
     if (!params) return;
     const r = await showPerson(ctx(res), { person: String(req.params.ref), focus: params.focus });
     if ("error" in r) return sendError(res, r);
-    res.json({ spec: r.spec, dataset: r.dataset, ...(r.note ? { note: r.note } : {}), link: entityLink(config, r.lassoId, { focus: params.focus }), summary: summarizeView(r.spec, r.dataset) });
+    res.json({ spec: r.spec, dataset: r.dataset, ...(r.note ? { note: r.note } : {}), link: entityLink(config, r.lassoId, { focus: params.focus }), summary: summarizeView(r.spec, r.dataset, { host: "chat" }) });
   });
 
   // Som resolve_view: drill-down, filterændring og opdatér.

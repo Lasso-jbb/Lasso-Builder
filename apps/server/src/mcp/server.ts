@@ -96,23 +96,24 @@ const INSTRUCTIONS = `${ROUTING}\n\n${MCP_RULES}`;
 
 /** Første linje i hvert visningssvar (Jakob 30.09): visningen er svaret, så modellen skriver intet i chatten. */
 const SILENT = "Visningen vises for brugeren nu og er hele svaret: skriv intet i chatten (kun hvis appen ikke kan vise visningen, se tekstkortet).";
-/** Samme linje i Lassos egen chat, hvor visningen står under modellens tekst, og tekst er tilladt (CHAT_RULES). */
-const SHOWN_IN_CHAT = "Visningen vises for brugeren under din tekst.";
 
 /**
  * Resuméet står både som tekst og i structuredContent: nogle værter (fx Claude Code)
  * giver kun modellen structuredContent, og så skal tallene at kommentere stå der.
+ * host "chat" (docs/chat.md, tokens): kun noten og resuméet, uden SILENT, link og tekstkort-blok (portalen viser
+ * visningen selv, og teksten styres af CHAT_RULES); structuredContent har samme felter som i /mcp.
  */
 function viewResult(spec: ViewSpec, ds: Dataset, extra: { note?: string; link?: string; ask?: Ask; pdfLink?: string } = {}, host: McpContext["host"] = "mcp"): CallToolResult {
+  const chat = host === "chat";
   // Med et spørgsmål svarer resuméet og tekstkortet på det først ("Svar: …").
-  const summary = [host === "chat" ? SHOWN_IN_CHAT : SILENT, extra.note, summarizeView(spec, ds, { ask: extra.ask }), extra.link && `Interaktiv Lasso-visning (link til brugeren): ${extra.link}`]
+  const summary = [chat ? undefined : SILENT, extra.note, summarizeView(spec, ds, { ask: extra.ask, host }), !chat && extra.link && `Interaktiv Lasso-visning (link til brugeren): ${extra.link}`]
     .filter(Boolean)
     .join("\n");
   const card = textCard(spec, ds, { ask: extra.ask });
   return {
     content: [
       { type: "text", text: summary },
-      ...(card ? [{ type: "text" as const, text: `Tekstkort:\n${card}` }] : []),
+      ...(card && !chat ? [{ type: "text" as const, text: `Tekstkort:\n${card}` }] : []),
     ],
     structuredContent: {
       spec,

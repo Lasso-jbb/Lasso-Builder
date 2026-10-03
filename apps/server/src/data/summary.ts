@@ -42,14 +42,18 @@ import { answerText } from "./answer.js";
 /** Elementer, der viser seneste regnskabsårs nøgletal; det første på siden giver resuméets regnskabslinje. */
 const SUMMARY_FIGURES: ReadonlySet<ViewSpec["components"][number]["type"]> = new Set(["LassoKeyFigureCards", "LassoIncomeStatement", "LassoBalanceSheet", "LassoMultiYearTable", "LassoFinancialStatements"]);
 
-export function summarizeView(spec: ViewSpec, ds: Dataset, opts: { ask?: Ask } = {}): string {
+/**
+ * host "chat" (Lassos egen chat, docs/chat.md "Tokens"): resuméet uden boilerplate til værter uden visning (den
+ * afsluttende linje om tekstkortet) og med en kort demonote; Claude.ai over /mcp får teksten uændret.
+ */
+export function summarizeView(spec: ViewSpec, ds: Dataset, opts: { ask?: Ask; host?: "mcp" | "chat" } = {}): string {
   const lines: string[] = [];
   // Et spørgsmål med et emne: svaret står først, lige efter hovedlinjen (identiteten).
   const answer = answerText(spec, ds, opts.ask);
   const answered = () => {
     if (answer && !lines.some((l) => l.startsWith("Svar: "))) lines.push(`Svar: ${answer}`);
   };
-  if (ds.source === "demo") lines.push("OBS: Demodata (opdigtede virksomheder), ikke rigtige Lasso-data.");
+  if (ds.source === "demo") lines.push(opts.host === "chat" ? "OBS: demodata (opdigtet)." : "OBS: Demodata (opdigtede virksomheder), ikke rigtige Lasso-data.");
   // Seneste regnskabsår én gang: fra nøgletalskortene, eller fra tabellerne på regnskab, hvor kortene ikke står.
   const figures = spec.components.find((x) => SUMMARY_FIGURES.has(x.type));
 
@@ -284,7 +288,7 @@ export function summarizeView(spec: ViewSpec, ds: Dataset, opts: { ask?: Ask } =
     ...Object.values(ds.valuations ?? {}).filter((v) => v.state !== "ok").map((v) => `værdiansættelse: ${v.reason ?? "ingen"}`),
   ];
   if (missing.length) lines.push(`Ikke vist: ${missing.slice(0, 2).join("; ")}`);
-  // Hvornår tekstkortet vises, står ét sted: serverinstruktionerne (review P1-6).
-  lines.push("Visningen er svaret: skriv ingen tekst i chatten (se instruktionerne). Tekstkortet er kun til værter uden Lasso-visning.");
+  // Hvornår tekstkortet vises, står ét sted: serverinstruktionerne (review P1-6). Chatten viser altid visningen og har sine egne regler for teksten.
+  if (opts.host !== "chat") lines.push("Visningen er svaret: skriv ingen tekst i chatten (se instruktionerne). Tekstkortet er kun til værter uden Lasso-visning.");
   return lines.join("\n");
 }

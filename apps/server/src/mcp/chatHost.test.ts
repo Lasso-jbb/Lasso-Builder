@@ -59,6 +59,30 @@ test("gem-værktøjerne findes kun i /mcp; chatten beholder describe_components 
   assert.ok(ROUTING.startsWith(CHAT_ROUTING));
 });
 
+const textOf = (r: unknown) => ((r as { content: { type: string; text: string }[] }).content ?? []).filter((c) => c.type === "text");
+
+test("visningssvar: chatten får resuméet uden boilerplate og uden tekstkort-blok; /mcp uændret; structuredContent ens", async () => {
+  const args = { name: "show_company", arguments: { company: "99000001", focus: "oekonomi" } };
+  const chat = await (await clientFor("chat")).callTool(args);
+  const mcp = await (await clientFor("mcp")).callTool(args);
+  const ct = textOf(chat);
+  const mt = textOf(mcp);
+  assert.equal(ct.length, 1, "chatten: kun resuméet");
+  assert.match(ct[0]!.text, /^OBS: demodata \(opdigtet\)\.\n/);
+  for (const line of [/Visningen vises for brugeren/, /Visningen er svaret/, /Tekstkortet er kun til værter/, /Interaktiv Lasso-visning/, /Tekstkort:/]) assert.doesNotMatch(ct[0]!.text, line);
+  assert.equal(mt.length, 2, "/mcp: resumé og tekstkort");
+  assert.match(mt[0]!.text, /^Visningen vises for brugeren nu og er hele svaret/);
+  assert.match(mt[0]!.text, /OBS: Demodata \(opdigtede virksomheder\)/);
+  assert.match(mt[0]!.text, /Visningen er svaret: skriv ingen tekst i chatten/);
+  assert.match(mt[0]!.text, /Interaktiv Lasso-visning \(link til brugeren\): https:\/\/lasso\.test\//);
+  assert.match(mt[1]!.text, /^Tekstkort:\n/);
+  // Tallene er de samme; chatten er kortere.
+  assert.ok(ct[0]!.text.length < mt[0]!.text.length - 250, `${ct[0]!.text.length} vs ${mt[0]!.text.length}`);
+  const sc = (r: unknown) => Object.keys((r as { structuredContent: object }).structuredContent).sort();
+  assert.deepEqual(sc(chat), sc(mcp));
+  assert.ok((chat as { structuredContent: { card?: string } }).structuredContent.card, "tekstkortet står stadig i structuredContent");
+});
+
 test("/mcp er byte-identisk: instruktioner og render_view's beskrivelse (pinnet hash)", async () => {
   const client = await clientFor("mcp");
   const instr = client.getInstructions() ?? "";
