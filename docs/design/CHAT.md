@@ -18,7 +18,7 @@ Fra eksporten, ordret, bortset fra de steder hvor en beslutning (se "Beslutninge
 4. Et svar kan være tekst, et element eller en hel side. Teksten står altid først og forklarer, hvad der vises.
 5. Et enkelt element har titel, undertitel og to ikoner i rammen: download og fuld skærm. Det kan ikke åbnes som fane. Kun en sammensætning af flere elementer (en side) har Tilføj som fane, som gemmer siden som en sideskabelon for virksomheder eller personer, så den står som et ekstra modul i modulrækken på hver virksomhed eller person og vises med den enheds data. Et katalog til at styre de gemte sider kommer senere. *(Ændret: eksporten siger "som åbner den som ny fane og gemmer den blandt brugerens egne sider"; se sideskabeloner under Beslutninger.)*
 6. Fuld skærm åbner elementet i hele fladen under Lasso-fanen med et kryds til at lukke. Inputfeltet bliver stående, så man kan spørge videre.
-7. Links til moduler er modul-links med orange ikon. Fører et link til et andet firma eller en anden person, står der ved siden af: Åbner `<navn>` i ny fane.
+7. Links til moduler er modul-links med orange ikon i faneknappens form (40 høj, radius 10, 13/18, 600). Fører et link til et andet firma eller en anden person, står der ved siden af: Åbner `<navn>` i ny fane.
 8. Inputfeltet står fast i bunden, 864 px bredt (Jakob 03.10; eksporten 720), med enter-ikon, og hedder altid Spørg Lasso. Tre forslag står centreret under feltet som ren tekst, aldrig inde i svaret.
 9. Placeringen afgøres før svaret skrives: samme fane, ny fane for firma eller person, global fane, eller spørg først. Lasso åbner aldrig en fane, brugeren ikke har bedt om, og aldrig mere end én pr. spørgsmål.
 10. Et spørgsmål bliver i fanen, når det giver mening i fanens kontekst, også når det nævner andre. "Vis mig alt om …" åbner en ny fane, og spørgsmålet følger med som første besked. Når Lasso skifter fane, står der en meddelelsesrække i den gamle samtale med Fortryd i 10 sekunder.
@@ -26,7 +26,7 @@ Fra eksporten, ordret, bortset fra de steder hvor en beslutning (se "Beslutninge
 12. Er der flere mulige match, lægger et valg sig over samtalen lige over inputfeltet med mulighederne, en Andet-række med frit felt og knapperne Spring over og Vælg. Rækkerne har kun titel og beskrivelse. *(Valget bruges kun til flere match, aldrig til at vælge placering.)*
 13. Tom tilstand viser en hilsen med fanens navn og forslag som piller med pil. Mens Lasso tænker, vises kun tre prikker i tekstfarven (Jakob 03.10: ingen "Tænker…", ikke koral); tager det længere, står der i ord hvad den gør, med et skelet. Der er ingen Stop i samtalen eller i feltet (Jakob 03.10). Fejl står som almindelig tekst med mindst én handling. Rullet op vises en rund knap med pil ned.
 14. På mobilen fylder samtalen hele bredden med 16 px luft, brugerens bobler er højst 280 px, inputfeltet er 48 px og står lige over bundlinjen. Kort har kun fuld skærm i rammen; en hel side får desuden Tilføj som fane som en neutral ikonknap med koral ikon. Afklaringen er et ark fra bunden.
-15. Alle knapper kommer fra designguiden; ingen opfundne knapper. Mål: boble radius 18, tekst 14/22, avatar 24, kortramme radius 10, inputpille 52, modul-link 46 høj radius 12. *(Knapperne er `Button` og `IconButton` fra `packages/ui` i 14 px og mindst 32 px, ikke eksportens 13 px og 28 px; D6.)*
+15. Alle knapper kommer fra designguiden; ingen opfundne knapper. Mål: boble radius 18, tekst 14/22, avatar 24, kortramme radius 10, inputpille 52, modul-link 40 høj radius 10, 13/18, 600 (faneknappens form, Jakob 03.10). *(Knapperne er `Button` og `IconButton` fra `packages/ui` i 14 px og mindst 32 px, ikke eksportens 13 px og 28 px; D6.)*
 
 ## Mål
 
@@ -90,7 +90,7 @@ Nye, i `.p3`-blokken i `portal2.css` (lys og mørk):
 | `--chat-bubble-r` | 18px |
 | `--chat-lh` | 22px |
 | `--chat-avatar` | 24px |
-| `--chat-link-h` | 46px (mobil 40px) |
+| `--chat-link-h` | 40px (faneknappen, Jakob 03.10) |
 | `--chat-input-h` | 52px (mobil 48px) |
 | `--chat-shadow-input`, `--chat-shadow-panel`, `--chat-shadow-jump` | skyggerne i målene (inputpille, panel, rul-ned-knap) |
 | `--chat-fs-12`, `--chat-fs-16` | 12px og 16px |

@@ -59,10 +59,11 @@
 /* Modul-links: 46 høj, padding 0 18, radius 12, 1 px kant, 16/500 ink, 18 px koral ikon */
 .p3 .chat-links { display: flex; flex-wrap: wrap; gap: var(--lasso-space-3); margin-top: 14px; align-items: center; }
 .p3 .chat-links__wrap { display: inline-flex; align-items: center; gap: 10px; min-width: 0; max-width: 100%; }
-.p3 .chat-link { display: inline-flex; align-items: center; gap: 10px; height: var(--chat-link-h); padding: 0 18px; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius-card); background: var(--lasso-surface); font: inherit; font-size: var(--chat-fs-16); font-weight: 500; color: var(--lasso-text); white-space: nowrap; cursor: pointer; min-width: 0; }
+/* Modul-links har faneknappens form (Paper Marketplace BW7-0, Jakob 03.10): 40 høj, radius 10, 14/16 polstring, 13/18, 600. */
+.p3 .chat-link { display: inline-flex; align-items: center; gap: 8px; height: var(--chat-link-h); padding: 0 16px 0 14px; border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius-lg); background: var(--lasso-surface); font: inherit; font-size: var(--lasso-fs-sm); line-height: var(--lasso-lh); font-weight: var(--lasso-fw-semibold); color: var(--lasso-text); white-space: nowrap; cursor: pointer; min-width: 0; }
 .p3 .chat-link:hover { background: var(--lasso-surface-2); }
 .p3 .chat-link:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
-.p3 .chat-link svg.i { width: 18px; height: 18px; color: var(--lasso-accent); stroke-width: 1.6; }
+.p3 .chat-link svg.i { width: 18px; height: 18px; color: var(--lasso-accent); stroke-width: 1.5; }
 .p3 .chat-links__note { font-size: var(--chat-fs-12); color: var(--faint); white-space: nowrap; }
 
 /* Meddelelsesrækken: centreret pille 28, 12 px tekst */
