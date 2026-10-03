@@ -712,7 +712,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       return rest;
     });
     try {
-      const tpl = await api.templates.save({ kind: it.kind, title: part.spec.title, ...(part.spec.subtitle ? { subtitle: part.spec.subtitle } : {}), spec: part.spec, entity: { kind: it.kind, id: it.key } });
+      const tpl = await api.templates.save({ kind: it.kind, title: part.spec.title, spec: part.spec, entity: { kind: it.kind, id: it.key } });
       setTemplates((t) => [...t.filter((x) => x.id !== tpl.id), tpl]);
       setTplNotes((n) => ({ ...n, [turnId]: { ok: true, text: `Tilføjet som modul på ${KIND_ALL[tpl.kind]}` } }));
       setOpen((l) => l.map((o) => (o.key === it.key ? { ...o, tab: templateTab(tpl.id) } : o)));

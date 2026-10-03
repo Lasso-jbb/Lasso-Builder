@@ -632,3 +632,15 @@ test("/api/portal/templates: CVR, by og gade fra Lasso klippes af titler og afvi
     assert.equal(bad.error, "Siden indeholder stadig navnet; omdøb den først.", text);
   }
 });
+
+test("/api/portal/templates: en undertitel, der er sidens egen, gemmes ikke; postnummeret klippes", async () => {
+  const pia = piaCookie;
+  const entity = { kind: "company", id: "CVR-1-99000001" };
+  const spec = { version: 2, kind: "custom", title: "Overblik 8600", subtitle: "genereret i dag kl. 09:52", layout: "dashboard", criteria: [], components: [{ type: "LassoKeyFigureCards", company: "CVR-1-99000001" }] };
+  const made = await json<TemplateJson>(await api("/templates", { method: "POST", body: { kind: "company", title: "Overblik 8600", subtitle: "genereret i dag kl. 09:52", spec, entity }, cookie: pia }));
+  assert.equal(made.subtitle, undefined);
+  assert.equal(made.title, "Overblik");
+  const shown = await json<ViewBody>(await api(`/templates/${made.id}/render?entity=CVR-1-99000002`, { cookie: pia }));
+  assert.equal(shown.spec.subtitle, undefined);
+  await json(await api(`/templates/${made.id}`, { method: "DELETE", cookie: pia }));
+});

@@ -20,6 +20,7 @@ export interface TemplateEntity {
   /** Entitetens metadata (by, vejnavn og husnummer, CVR-nummer): fjernes som tekst og må ikke stå andre steder. */
   city?: string;
   street?: string;
+  zip?: string;
   cvr?: string;
 }
 
@@ -74,6 +75,9 @@ function leakRes(entity: TemplateEntity): RegExp[] {
   // Lasso-id'et først, så "CVR-1-99000001" ikke efterlader "CVR-1" når nummeret klippes.
   if (entity.id.trim()) res.push(new RegExp(`(?<![\\p{L}\\d])${escapeRe(entity.id.trim())}(?![\\p{L}\\d])`, "giu"));
   if (cvr) res.push(cvrRe(cvr, "giu"));
+  // Postnummeret: kun præcis det (et andet firecifret tal røres ikke).
+  const zip = entity.zip?.trim();
+  if (zip && /^\d{4}$/.test(zip)) res.push(new RegExp(`(?<!\\d)${zip}(?!\\d)`, "g"));
   for (const f of [entity.street, entity.city]) {
     const t = f?.trim().replace(/\s+/g, " ");
     if (t && t.length >= 3) res.push(wordRe(t, "giu"));
