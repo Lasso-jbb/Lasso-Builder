@@ -330,7 +330,10 @@ export async function runChat({ ctx, config, model, history, message, context, e
   const retained = trimHistory(history, config.CHAT_HISTORY_MAX_CHARS);
   const messages: BetaMessageParam[] = [...retained, userTurn(withoutStaleSame(context, retained), message)];
   // Placeringen er kendt, før modellen kaldes: brugeren valgte den i menuen (eller svaret skrives her).
-  const placement = placementOf(context);
+  // Et valg i menuen er brugerens egen handling og afgjort: et skifte (entity, eller global fra en entitet) sendes som decided, så klienten flytter.
+  const proposed = placementOf(context);
+  const picked = Boolean(context.choice && !("free" in context.choice));
+  const placement: Placement = picked && (proposed.placement === "entity" || (proposed.placement === "global" && context.active.kind !== "global")) ? { ...proposed, decided: true } : proposed;
   emit({ type: "placement", ...placement });
   // Turens tilstand: place_answer kan ændre placeringen (én gang, før noget vises); viewed låser den.
   const turn: TurnState = { placement, placed: false, viewed: false };

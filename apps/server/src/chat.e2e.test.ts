@@ -344,12 +344,12 @@ test("chat: ask_choice viser menuen og slutter turen; andre kald i samme svar af
   const picked = { ...onLasso, choice: { id: "toolu_menu", index: 0, action: menu.options[0]!.action } };
   const next = await chat({ message: menu.options[0]!.action.prompt, context: picked, history: done.history, sig: done.sig });
   assert.equal(next.status, 200);
-  assert.deepEqual(next.events[0], { type: "placement", placement: "entity", target: jakob, focus: "overblik" });
+  assert.deepEqual(next.events[0], { type: "placement", placement: "entity", target: jakob, focus: "overblik", decided: true });
   assert.deepEqual(
     next.events.map((e) => e.type),
     ["placement", "tool", "view", "text", "done"],
   );
-  assert.deepEqual((next.events.at(-1) as Event & { placement: unknown }).placement, { placement: "entity", target: jakob, focus: "overblik" });
+  assert.deepEqual((next.events.at(-1) as Event & { placement: unknown }).placement, { placement: "entity", target: jakob, focus: "overblik", decided: true });
   // Et valgt skifte af fane er friskt: historikken er kun denne tur, og den kan bruges igen (næste spørgsmål på den nye fane).
   assert.equal((next.events.at(-1) as Event & { fresh?: true }).fresh, true);
   const nextDone = next.events.at(-1) as Event & { history: { role: string }[]; sig: string };
@@ -366,7 +366,7 @@ test("chat: ask_choice viser menuen og slutter turen; andre kald i samme svar af
   script.push(sayText("Her."));
   const globalPick = { ...onLasso, choice: { id: "toolu_menu", index: 2, action: menu.options[2]!.action } };
   const g = await chat({ message: menu.options[2]!.action.prompt, context: globalPick, history: done.history, sig: done.sig });
-  assert.deepEqual(g.events[0], { type: "placement", placement: "global", title: "Sammenligning" });
+  assert.deepEqual(g.events[0], { type: "placement", placement: "global", title: "Sammenligning", decided: true });
   const badTitle = { ...onLasso, choice: { id: "toolu_menu", index: 2, action: { ...menu.options[2]!.action, title: "Kort" } } };
   assert.equal((await chat({ message: "x", context: badTitle, history: done.history, sig: done.sig })).status, 400);
 
