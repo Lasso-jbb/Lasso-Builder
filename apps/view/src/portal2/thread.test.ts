@@ -213,6 +213,27 @@ test("undoMove efter done: en eksisterende målfane får sin samtale fra før ti
   assert.deepEqual(created.threads[novo.key]!.turns, []);
 });
 
+test("undoMove efter done: en åben fane uden samtale (ingen tråd) står tom tilbage, også i det gemte", () => {
+  // Fanen er åben, men der er aldrig spurgt på den: ingen tråd, og createdTab er false.
+  let t = startTurn({}, novo.key, "Vis alt om Mette", 2, "t1");
+  t = moveTurn(t, novo.key, mette.key, "t1", moved(mette.key, false));
+  t = finishTurn(t, mette.key, done([{ role: "user", content: "flyttet" }, { role: "assistant", content: "svar" }], { fresh: true, sent: null }));
+  const back = undoMove(t, novo.key, "t1");
+  assert.equal(back.closeKey, undefined);
+  assert.deepEqual(back.threads[mette.key]!.turns, []);
+  assert.deepEqual(back.threads[mette.key]!.chat, { history: [] });
+  assert.equal(back.threads[mette.key]!.sent, null);
+  // Det, portalen gemmer bagefter (begge faner åbne): fanens historik er tom, så næste spørgsmål sender ikke den fortrudte tur.
+  const open = [
+    { key: novo.key, kind: "company" as const, name: "N", tab: "lasso" },
+    { key: mette.key, kind: "person" as const, name: "M", tab: "lasso" },
+  ];
+  const saved = serializeCache("u", { open, active: novo.key, threads: back.threads }, 10);
+  assert.deepEqual(saved.tabs[mette.key]?.chat.history ?? [], []);
+  const restored = restoreCache(JSON.stringify(saved), "u", 11)!;
+  assert.deepEqual(restored.threads[mette.key]?.chat.history ?? [], []);
+});
+
 test("replaceLastView: visningen i fanens aktuelle tur erstattes, ikke en flyttet turs stub", () => {
   let t = startTurn({}, novo.key, "q", 1, "t1");
   t = applyTurnEvent(t, novo.key, "t1", { type: "view", id: "v", name: "show_company", tool: "show_company", form: "page", spec, dataset: ds });
