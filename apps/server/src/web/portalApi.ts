@@ -128,7 +128,7 @@ async function entityFacts(c: UseCaseCtx, kind: TemplateKind, id: string): Promi
   try {
     if (kind === "company") {
       const co = await c.provider.company(toLassoId(id, c.config.LASSO_COMPANY_ID_PREFIX));
-      return { kind, id, name: co.name, city: co.address?.city, street: co.address?.street, cvr: co.cvr };
+      return { kind, id, name: co.name, city: co.address?.city, street: co.address?.street, zip: co.address?.zip, cvr: co.cvr };
     }
     const p = await c.provider.person(id);
     return { kind, id, name: p.name, city: p.city };
@@ -238,7 +238,9 @@ export function portalApi({ config, provider, store, pages, templates }: PortalA
     if ("error" in made) return void res.status(400).json({ error: made.error });
     const title = titleFallback(stripEntityName(body.title, entity), made.spec);
     // Undertitlen er som standard væk; en, brugeren selv gav, gemmes kun hvis noget overlever fjernelsen.
-    const subtitle = body.subtitle === undefined ? undefined : stripEntityName(body.subtitle, entity) || undefined;
+    // En undertitel, der er sidens egen (spec.subtitle: entitetens metadata), gemmes aldrig.
+    const specSub = (body.spec as { subtitle?: unknown } | null)?.subtitle;
+    const subtitle = body.subtitle === undefined || body.subtitle === specSub ? undefined : stripEntityName(body.subtitle, entity) || undefined;
     const user = res.locals.user as CurrentUser;
     try {
       const t = await templates.create({ org: user.org, userId: user.id, kind: body.kind, title, subtitle, spec: made.spec });

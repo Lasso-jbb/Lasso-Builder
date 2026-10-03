@@ -177,3 +177,13 @@ test("templateFromSpec: designguidens KYC-mønster ('CVR …, genereret i dag kl
   // Et andet CVR-nummer og en anden by er fine.
   assert.ok("spec" in templateFromSpec(withParts({}, [ranking("Top for CVR 99000004 i Aalborg")]), kyc));
 });
+
+test("stripEntityName og templateFromSpec: postnummeret klippes og afvises; et andet firecifret tal røres ikke", () => {
+  const e = { ...silkeborg, zip: "8600" };
+  assert.equal(stripEntityName("Prøvevej 1, 8600 Silkeborg, CVR 99000001", e), "");
+  assert.equal(stripEntityName("Overblik 8600", e), "Overblik");
+  assert.equal(stripEntityName("Overblik 2024 og 86000", e), "Overblik 2024 og 86000");
+  const ranking = (title: string) => ({ type: "LassoRanking", companies: [e.id, "CVR-1-99000004"], title });
+  assert.deepEqual(templateFromSpec(withParts({}, [ranking("Postnr. 8600")]), e), { error: NAME_REMAINS });
+  assert.ok("spec" in templateFromSpec(withParts({}, [ranking("Top 2024")]), e));
+});
