@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import type { GalleryEntry } from "../types.js";
+import { GRID } from "../grid.js";
 import type { CompanyVM, ContactPersonVM, ContactVM, FinancialsVM, ScoreVM } from "@lasso/spec";
 import { formatAmount, formatDate, formatNumber, formatPercent } from "@lasso/spec";
 import {
@@ -551,11 +552,14 @@ export const entries: GalleryEntry[] = [
   { nr: "11.4", title: "Reelle ejere", node: "B33-0", spec: co("Eksempel Byg A/S", [{ type: "LassoBeneficialOwners", company: B }]) },
 
   // 12 Tekst og historik
-  { nr: "12.1", title: "Tekstsektioner", node: "A83-0", spec: co("Eksempel Byg A/S", [{ type: "LassoTextSections", company: B }]) },
+  // Jakob 03.10 (12.1-12.3): tekstsektioner, resumé og tidslinje er højst ca. ⅔ brede (GRID_RULES max ⅔); alene i en række står de i ⅔.
+  { nr: "12.1", title: "Tekstsektioner", node: "A83-0", gridWidth: GRID.twoThirds, note: "Jakob 03.10: højst ⅔ (GRID_RULES max), også i moduler, sidekort og /mcp; alene i en række står den i ⅔.", spec: co("Eksempel Byg A/S", [{ type: "LassoTextSections", company: B }]) },
   {
     nr: "12.2",
     title: "Resumé",
     node: "A8H-0",
+    gridWidth: GRID.twoThirds,
+    note: "Jakob 03.10: ⅔ bred (GRID_RULES max ⅔), og brødteksten har samme skrift som virksomhedsprofilen (12.1): 14/21, 400, text-2.",
     spec: co("Eksempel Byg A/S", [
       {
         type: "LassoSummary",
@@ -567,7 +571,7 @@ export const entries: GalleryEntry[] = [
       },
     ]),
   },
-  { nr: "12.3", title: "Tidslinje (CVR-ændringer)", node: "A8Z-0", spec: co("Eksempel Byg A/S", [{ type: "LassoTimeline", company: B }]) },
+  { nr: "12.3", title: "Tidslinje (CVR-ændringer)", node: "A8Z-0", gridWidth: GRID.twoThirds, note: "Jakob 03.10: ca. ⅔ bred (GRID_RULES max ⅔); deler den række, står den i ⅓-½ som før.", spec: co("Eksempel Byg A/S", [{ type: "LassoTimeline", company: B }]) },
   {
     nr: "12.4",
     title: "Nyhedsliste",

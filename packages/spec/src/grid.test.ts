@@ -370,3 +370,28 @@ test("maxPxOf: typens max i referencegitteret; fuld for typer med max 1/1 og ful
   assert.equal(maxPxOf({ type: "LassoCompanyHead", company: "CVR-1-1" } as unknown as ViewComponent), Infinity);
   assert.equal(maxPxOf({ type: "LassoTimeline", company: "CVR-1-1", filterColumn: true } as unknown as ViewComponent), Infinity);
 });
+
+test("Jakob 03.10 (galleri 12.1-12.3): tekstsektioner, resumé og tidslinje højst ⅔ alle steder; page og filterkolonne undtaget", () => {
+  const two = stackPx(WIDTH_COLUMNS["two-thirds"], REFERENCE_CONTENT_PX);
+  const comps = [
+    { type: "LassoTextSections", company: "CVR-1-1" },
+    { type: "LassoTextSections", company: "CVR-1-1", variant: "analyse" },
+    { type: "LassoSummary", text: "Tekst." },
+    { type: "LassoTimeline", company: "CVR-1-1" },
+  ] as unknown as ViewComponent[];
+  for (const c of comps) {
+    assert.equal(gridRuleOf(c).max, "two-thirds", c.type);
+    // Alene i en række: højst ⅔.
+    assert.equal(maxPxOf(c), two, c.type);
+    // En spec med fuld bredde (render_view, gemte sider) tegnes i ⅔ på et dashboard og i en kolonne.
+    const wide = { ...c, width: "full" } as ViewComponent;
+    assert.equal(ruleBoundComponents("dashboard", [wide])[0]!.width, "two-thirds", c.type);
+    assert.equal(ruleBoundComponents("columns", [{ ...wide, column: 1 } as unknown as ViewComponent])[0]!.width, "two-thirds", c.type);
+    // layout page (portalens Lasso v1-sektioner) er bevidst undtaget som før.
+    assert.equal(ruleBoundComponents("page", [wide])[0]!.width, "full", c.type);
+  }
+  // Mindstebredderne er uændrede.
+  assert.deepEqual([GRID_RULES.LassoTextSections.min, GRID_RULES.LassoSummary.min, GRID_RULES.LassoTimeline.min], ["half", "quarter", "quarter"]);
+  // Tidslinjen med filterkolonne fylder stadig bredden.
+  assert.equal(maxPxOf({ type: "LassoTimeline", company: "CVR-1-1", filterColumn: true } as unknown as ViewComponent), Infinity);
+});

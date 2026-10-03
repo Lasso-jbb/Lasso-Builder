@@ -13,7 +13,7 @@ const STD: Record<string, number> = {
   LassoContactPersons: GRID.third,
   LassoShortcuts: GRID.half,
   LassoTextSections: GRID.half,
-  LassoSummary: GRID.full,
+  LassoSummary: GRID.twoThirds, // Jakob 03.10: højst ⅔
   LassoTimeline: GRID.half,
   LassoNews: GRID.half,
   LassoBarChart: GRID.half,

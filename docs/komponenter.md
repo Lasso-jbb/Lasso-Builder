@@ -214,7 +214,7 @@ En test fejler, hvis filen ikke er ajour.
 
 **Live-tilgængelighed.** når data findes
 
-**Bredde.** profil fleksibel; std ½, min ½, maks 1/1; drivere: ingen
+**Bredde.** profil fleksibel; std ½, min ½, maks ⅔; drivere: ingen
 
 **Props.** `company, variant? (profil | analyse | cvr | resume; cvr og resume bruges af portalens Lasso-side), title?, folded? (kun analyse), limit? (kun profil)`
 
@@ -238,7 +238,7 @@ En test fejler, hvis filen ikke er ajour.
 
 **Live-tilgængelighed.** altid
 
-**Bredde.** profil fleksibel; std ½, min ¼, maks ½; drivere: ingen
+**Bredde.** profil fleksibel; std ½, min ¼, maks ⅔; drivere: ingen
 
 **Props.** `text | resume (Lasso-ID), title?, source? og updated? (vises ikke)`
 
@@ -264,7 +264,7 @@ En test fejler, hvis filen ikke er ajour.
 
 **Live-tilgængelighed.** når data findes
 
-**Bredde.** profil smal; std ⅓, min ¼, maks ½; drivere: 2 rækker pr. post
+**Bredde.** profil smal; std ⅓, min ¼, maks ⅔; drivere: 2 rækker pr. post
 
 **Props.** `company | person, title?, limit?, filter? ('risiko', kun person), kinds? (kun company: stamdata | ledelse | regnskab | status | ejerskab), filterColumn? (true = mønster 6: filtre ¼ + strøm ¾, fuld bredde)`
 
@@ -1375,9 +1375,9 @@ En test fejler, hvis filen ikke er ajour.
 | `LassoContact` | smal | ⅓ / ¼ / ½ | når data findes | focus, ask, render_view |
 | `LassoContactPersons` | smal | ⅓ / ¼ / ½ | når data findes | focus, ask, render_view |
 | `LassoShortcuts` | smal | ½ / ¼ / ½ | altid | focus, render_view |
-| `LassoTextSections` | fleksibel | ½ / ½ / 1/1 | når data findes | focus, ask, render_view |
-| `LassoSummary` | fleksibel | ½ / ¼ / ½ | altid | focus, person, ask, render_view |
-| `LassoTimeline` | smal | ⅓ / ¼ / ½ | når data findes | focus, person, ask, render_view |
+| `LassoTextSections` | fleksibel | ½ / ½ / ⅔ | når data findes | focus, ask, render_view |
+| `LassoSummary` | fleksibel | ½ / ¼ / ⅔ | altid | focus, person, ask, render_view |
+| `LassoTimeline` | smal | ⅓ / ¼ / ⅔ | når data findes | focus, person, ask, render_view |
 | `LassoNews` | smal | ½ / ½ / ½ | når data findes | focus, person, ask, render_view |
 | `LassoKeyFigureCards` | fleksibel | 1/1 / ⅓ / 1/1 | når data findes | focus, ask, render_view |
 | `LassoBarChart` | fleksibel | ½ / ⅓ / 1/1 | når data findes | focus, ask, render_view |
