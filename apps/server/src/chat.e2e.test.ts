@@ -23,6 +23,9 @@ const KEY = "chat-test-key";
 const PIA = { key: "chat-pia-key-123", id: "pia", name: "Pia", org: "lasso" };
 /** Kun til bremsetesten, så Pias kvote rækker til de andre tests. */
 const BO = { key: "chat-bo-key-456", id: "bo", name: "Bo", org: "lasso" };
+/** Kun til trimningstesten (mange korte ture). */
+const IDA = { key: "chat-ida-key-789", id: "ida", name: "Ida", org: "lasso" };
+const HISTORY_MAX = 10000;
 const MAX_PER_HOUR = 30;
 
 let http: Server;
@@ -84,7 +87,8 @@ before(async () => {
   const config = loadConfig({
     ...process.env,
     MCP_ACCESS_KEY: KEY,
-    MCP_USER_KEYS: `${PIA.key}:${PIA.id}:${PIA.name}:${PIA.org};${BO.key}:${BO.id}:${BO.name}:${BO.org}`,
+    MCP_USER_KEYS: `${PIA.key}:${PIA.id}:${PIA.name}:${PIA.org};${BO.key}:${BO.id}:${BO.name}:${BO.org};${IDA.key}:${IDA.id}:${IDA.name}:${IDA.org}`,
+    CHAT_HISTORY_MAX_CHARS: String(HISTORY_MAX),
     LINK_SECRET: "chat-test-hemmelighed",
     LASSO_DATA_SOURCE: "demo",
     DATABASE_URL: "",
@@ -372,4 +376,25 @@ test("chat: svaret bygger på Lassos data (reglen står i systemprompten); et re
   assert.equal((events[1] as Event & { text: string }).text, "Lasso har ikke regnskab for 2025 endnu.");
   assert.match(String(calls.at(-1)!.system), /aldrig fra din egen viden om virksomheden eller personen/);
   assert.match(String(calls.at(-1)!.system), /Har Lasso ikke data for det, så sig det ligeud/);
+});
+
+test("chat: over CHAT_HISTORY_MAX_CHARS kastes de ældste hele ture; done giver den trimmede, signerede historik", async () => {
+  const ida = { authorization: `Bearer ${IDA.key}` };
+  let state: { history: unknown[]; sig: string } = { history: [], sig: "" };
+  let longest = 0;
+  let trimmedAt = -1;
+  for (let i = 0; i < 12; i++) {
+    script.push(sayText(`Svar ${i}: ${"x".repeat(800)}`));
+    const r = await chat({ message: `Spørgsmål ${i}`, history: state.history, sig: state.sig, context: onLasso }, ida);
+    assert.equal(r.status, 200, `tur ${i}`);
+    const done = r.events.at(-1) as Event & { history: { role: string; content: unknown }[]; sig: string };
+    if (done.history.length < state.history.length + 2 && trimmedAt < 0) trimmedAt = i;
+    longest = Math.max(longest, JSON.stringify(done.history).length);
+    assert.equal(done.history[0]!.role, "user", "begynder med et spørgsmål");
+    state = done;
+  }
+  assert.ok(trimmedAt > 0, "der blev trimmet");
+  assert.ok(longest <= HISTORY_MAX + 3000, `historikken voksede til ${longest}`);
+  // Grov trimning: efter en trimning er der plads til flere ture, før der trimmes igen.
+  assert.ok(state.history.length >= 6, `${state.history.length} beskeder tilbage`);
 });

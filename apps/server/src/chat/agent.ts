@@ -12,6 +12,7 @@ import { DATASET_META_KEY, type Dataset, type ViewSpec } from "@lasso/spec";
 import type { Config } from "../config.js";
 import { createMcpServer, ROUTING, type McpContext } from "../mcp/server.js";
 import { ASK_CHOICE, contextText, placementOf, type ChatContext, type Placement } from "./context.js";
+import { trimHistory } from "./history.js";
 import { CHAT_TOOLS, chatToolByName, type ChoiceMenu } from "./tools.js";
 
 /**
@@ -159,7 +160,7 @@ export function textForModel(result: CallToolResult): string {
 
 export interface ChatRunOptions {
   ctx: McpContext;
-  config: Pick<Config, "CHAT_MODEL" | "CHAT_EFFORT" | "CHAT_MAX_TOKENS" | "CHAT_CACHE_TTL">;
+  config: Pick<Config, "CHAT_MODEL" | "CHAT_EFFORT" | "CHAT_MAX_TOKENS" | "CHAT_CACHE_TTL" | "CHAT_HISTORY_MAX_CHARS">;
   model: ModelCall;
   /** Den hidtidige samtale (Claude-beskeder, uændret fra sidste "done"). */
   history: BetaMessageParam[];
@@ -180,12 +181,13 @@ function apiErrorText(e: unknown): string {
 
 /**
  * Ét brugerspørgsmål: kald Claude, kør værktøjerne gennem MCP-serveren, giv svarene tilbage, og
- * gentag til Claude er færdig. Historikken udvides kun (beskederne ændres aldrig), så tænkeblokke
- * og cache holder mellem spørgsmålene.
+ * gentag til Claude er færdig. Historikken udvides kun (beskederne ændres aldrig, kun de ældste ture
+ * kastes over CHAT_HISTORY_MAX_CHARS), så tænkeblokke og cache holder mellem spørgsmålene.
  */
 export async function runChat({ ctx, config, model, history, message, context, emit, signal }: ChatRunOptions): Promise<void> {
   // Konteksten står først i brugerens tur (ikke i system: den skifter pr. spørgsmål og ville bryde cachen).
-  const messages: BetaMessageParam[] = [...history, { role: "user", content: [{ type: "text", text: contextText(context) }, { type: "text", text: message }] }];
+  // Historikken trimmes sjældent og groft (chat/history.ts); den trimmede er den, "done" giver videre.
+  const messages: BetaMessageParam[] = [...trimHistory(history, config.CHAT_HISTORY_MAX_CHARS), { role: "user", content: [{ type: "text", text: contextText(context) }, { type: "text", text: message }] }];
   // Placeringen er kendt, før modellen kaldes: brugeren valgte den i menuen (eller svaret skrives her).
   const placement = placementOf(context);
   emit({ type: "placement", ...placement });

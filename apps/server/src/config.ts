@@ -109,6 +109,11 @@ const schema = z.object({
    * at skrive, men går oftere tabt. Samme TTL sættes på begge markører (det er et krav fra API'et).
    */
   CHAT_CACHE_TTL: z.enum(["5m", "1h"]).default("1h"),
+  /**
+   * Så lang (i tegn, som JSON) må samtalen være, før serveren kaster de ældste hele ture (chat/history.ts).
+   * Trimningen går ned til ca. 60 % af grænsen i ét hug, så den sker sjældent (hver trimning nulstiller cachen).
+   */
+  CHAT_HISTORY_MAX_CHARS: z.coerce.number().int().min(10000).default(400000),
 });
 
 export type Config = z.infer<typeof schema> & { publicBaseUrl: string };
