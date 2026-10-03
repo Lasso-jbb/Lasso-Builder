@@ -614,7 +614,25 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     };
     const ctrl = new AbortController();
     abort.current = ctrl;
+    // Tekststykkerne samles pr. billede (requestAnimationFrame): én opdatering af samtalen pr. frame, ikke pr. stykke.
+    // Enhver anden hændelse (og slutningen) skriver først den samlede tekst, så rækkefølgen holder.
+    let textBuf = "";
+    let frame = 0;
+    const flushText = () => {
+      if (frame) cancelAnimationFrame(frame);
+      frame = 0;
+      if (!textBuf) return;
+      const text = textBuf;
+      textBuf = "";
+      setThreads((t) => applyTurnEvent(t, at, turnId, { type: "text", text }));
+    };
     const onEvent = (e: ChatEvent) => {
+      if (e.type === "text") {
+        textBuf += e.text;
+        if (!frame) frame = requestAnimationFrame(flushText);
+        return;
+      }
+      flushText();
       if (e.type === "placement" && e.decided) {
         if (e.placement === "entity" && e.target) moveTo({ key: e.target.id, kind: e.target.kind, name: e.target.name, tab: LASSO_TAB });
         else if (e.placement === "global") {
@@ -656,9 +674,11 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     };
     try {
       await streamChat({ message: text, context, history: tab?.chat.history ?? [], sig: tab?.chat.sig }, onEvent, { signal: ctrl.signal });
+      flushText();
       // Stop (eller Fortryd/luk, hvor turen allerede er væk): streamChat vender stille tilbage; turen får "Stoppet.".
       if (ctrl.signal.aborted) setThreads((t) => stopTurn(t, at, turnId, Date.now()));
     } catch (e) {
+      flushText();
       if (ctrl.signal.aborted) {
         setThreads((t) => stopTurn(t, at, turnId, Date.now()));
         return;
@@ -1024,6 +1044,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const restoreTo = useRef<{ top: number; until: number } | null>(null);
   const turnCount = useRef(0);
   turnCount.current = item ? (threads[item.key]?.turns.length ?? 0) : 0;
+  const activeTurnCount = turnCount.current;
+  const activeLastTurn = item ? threads[item.key]?.turns.at(-1) : undefined;
   const syncJump = (sc: HTMLElement) => {
     const more = moreBelow(sc);
     setJump((j) => (j === more ? j : more));
@@ -1114,8 +1136,9 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
         setJump(false);
       }
     } else follow();
+    // Kun den aktive fanes sidste tur (og antallet af ture): et svar på en anden fane, eller ældre ture, der ændres, følges ikke.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [threads, active, item?.tab, onLasso, tplNotes]);
+  }, [activeLastTurn, activeTurnCount, active, item?.tab, onLasso, tplNotes]);
 
   // Visningerne i kortene vokser efter tegningen (målt layout, data): følg også med, når indholdet bliver højere.
   const followRef = useRef(follow);
@@ -1293,6 +1316,11 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
             onStop={stop}
             onRetry={(turn) => void ask(turn.question)}
             onUndo={(turn) => undo(item.key, turn)}
+            rowKey={(turn) => {
+              const note = tplNotes[turn.id];
+              const addingHere = adding && turn.answer.parts.some((p) => p.kind === "view" && p.id === adding) ? adding : "";
+              return `${theme}|${item.key}|${item.kind}|${addingHere}|${note ? `${note.ok}:${note.text}:${note.retry ? 1 : 0}` : ""}`;
+            }}
             cardProps={(part) => ({
               headless: item.kind !== "result",
               theme,
