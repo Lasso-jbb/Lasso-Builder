@@ -984,3 +984,30 @@ test("R2-A: den aktive fane er ikke et match og står ikke i menuen; et valg af 
   assert.deepEqual(next.events[0], { type: "placement", placement: "current", focus: "overblik", here: true });
   assert.equal((next.events.at(-1) as Event & { fresh?: true }).fresh, undefined);
 });
+
+test("R2-B: modulnavne efter udløseren er ikke et firmanavn (ingen forhåndsafgørelse, intet opslag)", async () => {
+  const { extractName, preResolve, MODULE_WORDS } = await import("./chat/preresolve.js");
+  for (const m of ["Vis alt om risiko", "Tilføj risiko", "åbn regnskabet", "vis alt om økonomien", "åbn oekonomi", "tilføj ejerskabet", "se alt om historikken", "åbn kontakt", "vis det hele om netværket", "åbn rollerne", "åbn overblikket", "tilføj ledelsen"]) {
+    assert.equal(extractName(m), undefined, m);
+  }
+  assert.ok(MODULE_WORDS.has("risiko") && MODULE_WORDS.has("okonomien"));
+  assert.equal(extractName("åbn Risiko Nord"), "Risiko Nord", "et firmanavn med et modulord står stadig som navn");
+  // En virksomhed, der hedder "Risiko ApS": må ikke åbnes af "vis alt om risiko" (intet opslag), og "Risiko Nord" på en entitetsfane overlades til modellen.
+  let lookups = 0;
+  const provider = Object.create(new DemoProvider()) as InstanceType<typeof DemoProvider>;
+  const risiko = { lassoId: "CVR-1-99000099", name: "Risiko ApS", cvr: "99000099", city: "Odense", status: "Aktiv" };
+  provider.findCompanies = async () => {
+    lookups++;
+    return [risiko] as never;
+  };
+  const mcp = { provider, config: loadConfig({ LASSO_DATA_SOURCE: "demo" }) } as never;
+  const home = { active: { kind: "global" }, open: [] } as never;
+  const onCompany = { active: { kind: "company", id: "CVR-1-99000001", name: "Eksempel Byg A/S", tab: "overblik" }, open: [] } as never;
+  assert.equal(await preResolve(mcp, home, "Vis alt om risiko"), null);
+  assert.equal(await preResolve(mcp, onCompany, "Tilføj risiko"), null);
+  assert.equal(await preResolve(mcp, onCompany, "åbn Risiko Nord"), null);
+  assert.equal(lookups, 0, "ingen opslag");
+  // Uden modulord slår den op som før.
+  const found = await preResolve(mcp, home, "åbn Risiko ApS");
+  assert.deepEqual(found, { kind: "one", entity: { kind: "company", id: "CVR-1-99000099", name: "Risiko ApS" } });
+});

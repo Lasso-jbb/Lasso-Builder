@@ -13,7 +13,7 @@ import type { ChatContext, ChatEntity, PlaceAnswerInput, Placement } from "./con
 export const EXPLICIT_OPEN = /(?<![\p{L}])(vis|se)( mig)? (alt|det hele)(?![\p{L}])|(?<![\p{L}])(åbn|tilføj)(e|er)?(?![\p{L}])/iu;
 
 /** Tekst uden store bogstaver og diakritiske tegn (å → a, ø → o, æ → ae), så "Prøve" og "prove" er det samme. */
-const fold = (t: string): string => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/ø/g, "o").replace(/æ/g, "ae");
+export const fold = (t: string): string => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/ø/g, "o").replace(/æ/g, "ae");
 
 /** Ord, der ikke tæller som en del af et navn: udløsere i beskeden og selskabsformer. */
 const STOP = new Set(["vis", "se", "mig", "alt", "det", "hele", "om", "abn", "abne", "abner", "og", "i", "for"]);
