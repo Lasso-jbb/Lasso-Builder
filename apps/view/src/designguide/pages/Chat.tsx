@@ -316,7 +316,7 @@ function scenes(): SceneDef[] {
     {
       id: "afklaring",
       title: "Afklaring, flere mulige match",
-      note: "Et panel lige over inputfeltet, lige så bredt som det (864 px) (på telefon et ark): kun titel og beskrivelse, \"(Anbefalet)\", Andet-række, Spring over og Vælg.",
+      note: "Et panel lige over inputfeltet, lige så bredt som det (864 px) (på telefon et ark): kun titel og beskrivelse (det anbefalede står først og er forvalgt, uden mærke; Jakob 03.10: intet \"Anbefalet\"), Andet-række, Spring over og Vælg.",
       min: 520,
       render: ({ theme, mobile, fill }) => (
         <Scene theme={theme} mobile={mobile} panel={<ChoicePanel choice={CHOICE} disabled={false} variant={mobile ? "sheet" : "panel"} onSend={noop} onSkip={noop} />}>
