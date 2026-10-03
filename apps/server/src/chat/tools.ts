@@ -1,6 +1,6 @@
 import type { BetaTool } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import { z } from "zod";
-import { candidatesAsText, resolveEntity } from "../usecases/index.js";
+import { candidatesAsText, resolveEntity, type EntityCandidate } from "../usecases/index.js";
 import type { McpContext } from "../mcp/server.js";
 import { ASK_CHOICE, askChoiceSchema, PLACE_ANSWER, placeAnswerSchema, type ChatContext, type ChoiceAction, type Placement } from "./context.js";
 import { verifyPlacement, type TurnState } from "./place.js";
@@ -44,6 +44,8 @@ export interface ChatToolResult {
   choice?: Omit<ChoiceMenu, "id">;
   /** Kun place_answer: den kontrollerede placering (agent.ts sender den som "placement"-hændelse). */
   placement?: Placement;
+  /** Kun find_entity: kandidaterne (agent.ts kræver en valgmenu, når der er flere og modellen ikke afgør det). */
+  candidates?: EntityCandidate[];
 }
 
 export interface ChatToolDef {
@@ -90,7 +92,7 @@ const findEntity: ChatToolDef = {
     if (!parsed.success) return { text: `Ugyldigt input: ${parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`, isError: true };
     const input = parsed.data;
     const candidates = await resolveEntity(mcp, input, context.open);
-    return { text: candidatesAsText(input.kind, input.query, candidates) };
+    return { text: candidatesAsText(input.kind, input.query, candidates), candidates };
   },
 };
 

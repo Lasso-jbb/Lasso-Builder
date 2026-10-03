@@ -123,3 +123,9 @@ test("entity: 'vis alt om Mette Holm' åbner ikke fanen Mette Holmgaard", async 
   assert.match(error(await verifyPlacement(entity(holmgaard, "Mette Holm"), ctx(open, "vis alt om Mette Holm"))), /bad ikke om at åbne/);
   assert.ok("placement" in (await verifyPlacement(entity(holmgaard, "Mette Holmgaard"), ctx(open, "vis alt om Mette Holmgaard"))));
 });
+
+test("EXPLICIT_OPEN: tilføj åbner en fane", () => {
+  for (const ok of ["tilføj ole", "Tilføj Ole Olesen", "kan du tilføje Ole?", "tilføjer du Ole"]) assert.match(ok, EXPLICIT_OPEN, ok);
+  assert.doesNotMatch("det er en tilføjelse", EXPLICIT_OPEN);
+  assert.doesNotMatch("betilføj", EXPLICIT_OPEN);
+});

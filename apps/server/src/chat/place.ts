@@ -10,7 +10,7 @@ import type { ChatContext, ChatEntity, PlaceAnswerInput, Placement } from "./con
  */
 
 /** Hvad der tæller som en udtrykkelig bøn om en anden fane: "vis (mig) alt/det hele", "se (mig) alt/det hele" og "åbn". */
-export const EXPLICIT_OPEN = /(?<![\p{L}])(vis|se)( mig)? (alt|det hele)(?![\p{L}])|(?<![\p{L}])åbn(e|er)?(?![\p{L}])/iu;
+export const EXPLICIT_OPEN = /(?<![\p{L}])(vis|se)( mig)? (alt|det hele)(?![\p{L}])|(?<![\p{L}])(åbn|tilføj)(e|er)?(?![\p{L}])/iu;
 
 /** Tekst uden store bogstaver og diakritiske tegn (å → a, ø → o, æ → ae), så "Prøve" og "prove" er det samme. */
 const fold = (t: string): string => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/ø/g, "o").replace(/æ/g, "ae");
