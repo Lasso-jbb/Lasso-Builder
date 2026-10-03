@@ -51,7 +51,7 @@ import { injectBoot, loadViewHtml } from "./web/page.js";
 import { ASK_AGAIN, failPage, FROM_LIST, linkFailure, VIEW_MISSING, VIEW_OUTDATED } from "./web/linkErrors.js";
 import { portalApi, portalErrorHandler } from "./web/portalApi.js";
 import { DEPLOYED_VERSION, showcaseHandler } from "./web/showcase.js";
-import { designguideHandlers } from "./web/designguide.js";
+import { designguideHandlers, logComment } from "./web/designguide.js";
 import { createCommentStore, type CommentStore } from "./comments/store.js";
 import { pdfAvailable, pdfRendererFor, type PdfRenderer } from "./pdf/renderer.js";
 import { pdfBoot, pdfRoutes, portalPdfRoutes } from "./pdf/routes.js";
@@ -741,6 +741,10 @@ async function main() {
         await scores.migrate();
         await comments.migrate();
         if (attempt > 1) console.log(`[db] migreret (forsøg ${attempt})`);
+        // Designguidens åbne kommentarer i loggen ved opstart (web/designguide.ts, logComment).
+        const open = (await comments.list()).filter((c) => c.status === "aaben");
+        console.log(`[designguide-kommentar] ${open.length} åbne`);
+        open.forEach(logComment);
         return;
       } catch (err) {
         console.error(`[db] migrering fejlede (forsøg ${attempt}): ${errorMessage(err)}`);

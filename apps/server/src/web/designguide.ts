@@ -11,7 +11,7 @@ import { composeCompany, composePerson, composePersonProbe, composeProbe, compon
 import { DemoProvider } from "../data/demo.js";
 import type { DataProvider } from "../data/index.js";
 import { errorMessage, resolveSpec } from "../data/resolve.js";
-import { cleanCommentInput, cleanCommentPatch, cleanFormatApproval, commentsMarkdown, COMMENT_STATUSES, type CommentStatus, type CommentStore } from "../comments/store.js";
+import { cleanCommentInput, cleanCommentPatch, cleanFormatApproval, commentsMarkdown, COMMENT_STATUSES, type Comment, type CommentStatus, type CommentStore } from "../comments/store.js";
 import { injectBoot, loadDesignguideHtml } from "./page.js";
 import { DEPLOYED_VERSION, getShowcase, SHOWCASE, SHOWCASE_DEMO, type ShowcaseBoot } from "./showcase.js";
 
@@ -121,6 +121,15 @@ async function buildPage(provider: DataProvider, kind: "company" | "person", foc
   return { spec, dataset };
 }
 
+/**
+ * Kommentaren som én loglinje (JSON), så den kan læses i serverens log (fx Railway) uden adgang til siden
+ * eller databasen. Skrives ved oprettelse og ændring og for alle åbne kommentarer ved opstart.
+ */
+export function logComment(c: Comment): void {
+  const { id, status, target, label, context, text, reply, author, updatedAt } = c;
+  console.log(`[designguide-kommentar] ${JSON.stringify({ id, status, label, target, hash: context.hash, ref: context.ref, viewport: context.viewport, element: context.element, text, reply, author, updatedAt })}`);
+}
+
 export function designguideHandlers(provider: DataProvider, comments: CommentStore, opts: { keyRequired: boolean; baseUrl: string }) {
   const page = async (req: Request, res: Response) => {
     const boot: DesignguideBoot = {
@@ -168,7 +177,9 @@ export function designguideHandlers(provider: DataProvider, comments: CommentSto
   };
   const addComment = async (req: Request, res: Response) => {
     try {
-      res.status(201).json(await comments.add(cleanCommentInput(req.body)));
+      const c = await comments.add(cleanCommentInput(req.body));
+      logComment(c);
+      res.status(201).json(c);
     } catch (err) {
       fail(res, err);
     }
@@ -177,6 +188,7 @@ export function designguideHandlers(provider: DataProvider, comments: CommentSto
     try {
       const c = await comments.update(String(req.params.id), cleanCommentPatch(req.body));
       if (!c) return void res.status(404).json({ error: "Kommentaren findes ikke" });
+      logComment(c);
       res.json(c);
     } catch (err) {
       fail(res, err);
