@@ -258,27 +258,31 @@ test("PersonNetwork (16.3): tidsbånd pr. fælles selskab, limit 3 som standard 
   const net = (limit?: number) => renderToStaticMarkup(createElement(PersonNetwork, { network: { lassoId: ID, people }, limit, onGraph: () => {} }));
   const desk = (h: string) => (h.split("lasso-personnet__mob")[0]!.match(/<li class="lasso-personroles__row lasso-personnet__brow/g) ?? []).length;
   assert.equal(desk(net()), 3);
-  assert.match(net(), /Vis alle 10/);
+  assert.match(net(), /Vis alle 10 personer/);
   assert.equal(desk(net(8)), 8);
   // Jakob 02.10: rollens farve (bestyrelse) som i rollerne.
   assert.match(net(), /lasso-personnet__band lasso-role-band lasso-role-band--board"/);
-  assert.match(net(), /Eksempel Byg A\/S, bestyrelse, siden 2012/);
+  // Jakob 03.10: lukket ét selskab = kun selskabets navn på linjen (rolle og periode står ved åbning af flere).
+  assert.match(net(), /title="Eksempel Byg A\/S"/);
   assert.doesNotMatch(net(), /Vis som graf/);
   // Afsluttet = stiplet bånd; konkurs (runde 6) = rødt bånd og ", under konkurs" sidst i etiketten; ingen markør.
   const ended = renderToStaticMarkup(createElement(PersonNetwork, { network: { lassoId: ID, people: [{ name: "Peter Eksempel", overlapYears: 4, active: false, companies: [{ companyName: "Eksempel Energi A/S", role: "direktør", from: "2014-01-01", to: "2018-01-01", status: "Under konkurs", statusKind: "warning" }] }] } }));
   assert.match(ended, /lasso-personnet__band lasso-role-band lasso-role-band--direction is-ended/);
   assert.doesNotMatch(ended, /lasso-personnet__marker/);
-  assert.match(ended, /Eksempel Energi A\/S, direktør, 2014–2018<span class="lasso-personnet__bandstatus">, under konkurs<\/span>/);
-  // Legenden har kun direktion, bestyrelse og ejer; konkursen står i etiketten.
+  assert.match(ended, /Eksempel Energi A\/S<span class="lasso-personnet__bandstatus">, under konkurs<\/span>/);
+  // Mobil: selskab, rolle (en af de fire) og periode.
+  assert.match(ended, /Eksempel Energi A\/S, direktion, 2014–2018, under konkurs/);
+  // Legenden har de roller, der forekommer; konkursen står i etiketten.
   assert.match(ended, /lasso-role-swatch lasso-role-band--direction"><\/span>Direktion</);
   // Løbende rolle i et selskab under konkurs: fyldt rødt bånd (ikke stiplet).
   const running = renderToStaticMarkup(createElement(PersonNetwork, { network: { lassoId: ID, people: [{ name: "Peter Eksempel", overlapYears: 4, active: true, companies: [{ companyName: "Eksempel Energi A/S", role: "direktør", from: "2014-01-01", status: "Under konkurs", statusKind: "warning" }] }] } }));
   assert.match(running, /class="lasso-personnet__band lasso-role-band lasso-role-band--direction"/);
   // Uden problemstatus: intet rødt og ingen "Under konkurs" i legenden.
   assert.doesNotMatch(net(), /under konkurs/);
-  // Jakob 02.10: overlappet står i underteksten, så navnet har hele første kolonne.
-  assert.match(ended, /1 fælles selskab, 4 år, tidligere/);
-  // Flere fælles selskaber: alle på én linje (samlet etiket), og fold-knappen åbner én linje pr. selskab.
+  // Jakob 03.10: underteksten er kun tiden sammen (ingen "fælles selskaber" og ingen "tidligere").
+  assert.match(ended, /class="lasso-personroles__sub">4 år sammen</);
+  assert.doesNotMatch(ended, /fælles selskab|tidligere/);
+  // Flere fælles selskaber: ét samlet bånd med "N firmaer", og fold-knappen åbner én linje pr. selskab.
   const many = renderToStaticMarkup(createElement(PersonNetwork, { network: { lassoId: ID, people: [{ name: "Jakob Eksempel", overlapYears: 9, active: false, companies: [
     { companyName: "A ApS", role: "direktør", from: "2004-01-01", to: "2010-01-01" },
     { companyName: "B ApS", role: "bestyrelse", from: "2008-01-01", to: "2010-01-01" },
@@ -287,8 +291,10 @@ test("PersonNetwork (16.3): tidsbånd pr. fælles selskab, limit 3 som standard 
   ] }] } }));
   const manyDesk = many.split("lasso-personnet__mob")[0]!;
   assert.equal((manyDesk.match(/class="lasso-personroles__lane"/g) ?? []).length, 1);
-  assert.equal((manyDesk.match(/lasso-personnet__band lasso-role-band/g) ?? []).length, 4, "alle fire relationer");
-  assert.match(manyDesk, /title="A ApS, C ApS, B ApS, D ApS, 2004–2010"|title="A ApS, B ApS, C ApS, D ApS, 2004–2010"/);
+  assert.equal((manyDesk.match(/lasso-personnet__band lasso-role-band/g) ?? []).length, 1, "ét samlet bånd");
+  assert.match(manyDesk, /title="4 firmaer"/);
+  // Samlet tid: 2004-2010 lagt sammen = 6 år (ikke summen af de fire).
+  assert.match(manyDesk, /class="lasso-personroles__sub">6 år sammen</);
   assert.match(manyDesk, /class="lasso-lanes__toggle" aria-expanded="false" aria-label="Vis alle 4 fælles selskaber"/);
 });
 
@@ -305,4 +311,28 @@ test("LassoView: tidslinjen med filter 'risiko' viser kun forløbet i selskabern
   assert.match(render(spec, ds), /Ingen registrerede rolleskift i selskaberne med konkurs eller tvangsopløsning\./);
   // Spec'en afviser et ukendt filter.
   assert.throws(() => parseViewSpec({ title: "x", components: [{ type: "LassoTimeline", person: ID, filter: "alt" }] }));
+});
+
+test("PersonNetwork (16.3, Jakob 03.10): fire roller med farver, ingen stifter, måneder under et år, Vis alle N personer", () => {
+  const people = [
+    { name: "Anne Eksempel", overlapYears: 0, overlapMonths: 7, active: true, companies: [{ companyName: "A ApS", role: "interessent", from: "2026-01-01" }] },
+    { name: "Bo Eksempel", overlapYears: 1, overlapMonths: 12, active: true, companies: [{ companyName: "B ApS", role: "ejer", from: "2025-01-01" }] },
+    { name: "Carl Eksempel", overlapYears: 3, active: true, companies: [{ companyName: "C ApS", role: "stifter", from: "2012-01-01" }] },
+    { name: "Dan Eksempel", overlapYears: 2, active: true, companies: [{ companyName: "D ApS", role: "stifter", from: "2012-01-01" }, { companyName: "E ApS", role: "bestyrelsesformand", from: "2020-01-01" }] },
+  ];
+  const html = renderToStaticMarkup(createElement(PersonNetwork, { network: { lassoId: ID, people }, limit: 8 }));
+  // Stifter udelades helt: Carl står ikke, og Dan kun med E ApS.
+  assert.doesNotMatch(html, /Carl Eksempel|D ApS|stifter/i);
+  assert.match(html, /Dan Eksempel/);
+  assert.match(html, /class="lasso-personroles__sub">7 måneder sammen</);
+  assert.match(html, /class="lasso-personroles__sub">1 år sammen</);
+  // Legenden: Bestyrelse, Ejer og Andet (fast rækkefølge), med farve.
+  assert.match(html, /lasso-role-band--board"><\/span>Bestyrelse<\/span><span class="lasso-personroles__key"><span class="lasso-role-swatch lasso-role-band--owner"><\/span>Ejer<\/span><span class="lasso-personroles__key"><span class="lasso-role-swatch lasso-role-band--other"><\/span>Andet/);
+  // Mobil: rollen som en af de fire.
+  assert.match(html, /A ApS, andet, siden 2026/);
+  // Foldet liste: link "Vis alle N personer", aldrig en knap til fanen.
+  const many = Array.from({ length: 9 }, (_, i) => ({ name: `P${i}`, overlapYears: 1, active: true, companies: [{ companyName: "X ApS", role: "bestyrelse", from: "2020-01-01" }] }));
+  const folded = renderToStaticMarkup(createElement(PersonNetwork, { network: { lassoId: ID, people: many }, moreIn: { tab: "Netværk", open: () => undefined } }));
+  assert.match(folded, /class="lasso-link lasso-expand" aria-expanded="false">Vis alle 9 personer/);
+  assert.doesNotMatch(folded, /lasso-promptlink|i Netværk/);
 });

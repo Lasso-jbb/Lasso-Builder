@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createPortalApi, LOGGED_OUT, PortalApiError } from "./api.js";
+import { createPortalApi, LOGGED_OUT, PortalApiError, retryable } from "./api.js";
 
 type Call = { url: string; init: RequestInit };
 
@@ -64,4 +64,32 @@ test("API: fejl kommer som serverens tekst", async () => {
   await assert.rejects(api.person("CVR-3-1"), (e: unknown) => e instanceof PortalApiError && e.status === 404 && e.message === "Virksomheden findes ikke.");
   const bare = createPortalApi(() => {}, stub(500, undefined).fetcher);
   await assert.rejects(bare.pages(), /fejl 500/);
+});
+
+test("API: egne sider (templates) bruger de rigtige stier, metoder og CSRF", async () => {
+  const { calls, fetcher } = stub(200, { templates: [{ id: "t1", kind: "company", title: "KYC" }] });
+  const api = createPortalApi(() => {}, fetcher);
+  assert.deepEqual(await api.templates.list("company"), [{ id: "t1", kind: "company", title: "KYC" }]);
+  await api.templates.save({ kind: "company", title: "KYC", spec: {} as never, entity: { kind: "company", id: "CVR-1-99000001" } });
+  await api.templates.render("t1", "CVR-1-99000002");
+  await api.templates.remove("t1");
+  assert.equal(calls[0]!.url, "/api/portal/templates?kind=company");
+  assert.equal(headers(calls[0]!)["x-lasso-portal"], undefined);
+  assert.equal(calls[1]!.url, "/api/portal/templates");
+  assert.equal(calls[1]!.init.method, "POST");
+  assert.equal(headers(calls[1]!)["x-lasso-portal"], "1");
+  assert.equal(calls[2]!.url, "/api/portal/templates/t1/render?entity=CVR-1-99000002");
+  assert.equal(calls[2]!.init.method, "GET");
+  assert.equal(calls[3]!.url, "/api/portal/templates/t1");
+  assert.equal(calls[3]!.init.method, "DELETE");
+  assert.equal(headers(calls[3]!)["x-lasso-portal"], "1");
+});
+
+test("retryable: Prøv igen kun ved netværksfejl og serverfejl (5xx), ikke ved 4xx", () => {
+  assert.equal(retryable(new PortalApiError(0, "Serveren kunne ikke nås.")), true);
+  assert.equal(retryable(new PortalApiError(502, "Bad gateway")), true);
+  assert.equal(retryable(new TypeError("Failed to fetch")), true);
+  assert.equal(retryable(new PortalApiError(400, "Siden indeholder stadig navnet; omdøb den først.")), false);
+  assert.equal(retryable(new PortalApiError(404, "Siden findes ikke.")), false);
+  assert.equal(retryable(new PortalApiError(401, LOGGED_OUT)), false);
 });

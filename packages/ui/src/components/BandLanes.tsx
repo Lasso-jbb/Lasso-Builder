@@ -2,12 +2,12 @@ import type { ReactNode } from "react";
 import { Icon } from "./Icon.js";
 
 /**
- * Rollernes farver i alle tidsbånd (Jakob 02.10): direktion, bestyrelse og ejer har hver sin farve; alt andet
- * (stifter, interessent, reel ejer …) er stiplet og har ingen etiket i legenden. Ophørte roller står i samme
- * farve, men dæmpet.
+ * Rollernes farver i alle tidsbånd (Jakob 02.10, 03.10): direktion, bestyrelse, ejer og Andet (interessent, deltager,
+ * reel ejer …) har hver sin farve fra grafpaletten og står i legenden, når de forekommer. Ophørte roller står i samme
+ * farve, men dæmpet. Stifter vises aldrig i netværket (networkRole i @lasso/spec).
  */
 export type RoleTone = "direction" | "board" | "owner" | "other";
-export const ROLE_TONE_LABEL: Record<Exclude<RoleTone, "other">, string> = { direction: "Direktion", board: "Bestyrelse", owner: "Ejer" };
+export const ROLE_TONE_LABEL: Record<RoleTone, string> = { direction: "Direktion", board: "Bestyrelse", owner: "Ejer", other: "Andet" };
 
 export function toneOfKind(kind: string | undefined): RoleTone {
   return kind === "direction" || kind === "board" || kind === "owner" ? kind : "other";
@@ -27,10 +27,10 @@ export function roleBandClass(tone: RoleTone, ended: boolean): string {
   return `lasso-role-band lasso-role-band--${tone}${ended ? " is-ended" : ""}`;
 }
 
-/** Legenden: kun de tre farver, der forekommer; det stiplede navngives ikke. */
+/** Legenden: de rollefarver, der forekommer, i fast rækkefølge (Direktion, Bestyrelse, Ejer, Andet). */
 export function RoleLegend({ tones }: { tones: Iterable<RoleTone> }) {
   const present = new Set(tones);
-  const shown = (["direction", "board", "owner"] as const).filter((t) => present.has(t));
+  const shown = (["direction", "board", "owner", "other"] as const).filter((t) => present.has(t));
   if (!shown.length) return null;
   return (
     <div className="lasso-personroles__legend" aria-hidden="true">

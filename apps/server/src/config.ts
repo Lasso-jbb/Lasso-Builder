@@ -40,6 +40,14 @@ const schema = z.object({
     .string()
     .default("false")
     .transform((v) => v === "true" || v === "1"),
+  /**
+   * true (standard) = en udtrykkelig bøn om at åbne en fane ("vis alt om X", "åbn X", "tilføj X") afgøres på serveren, før modellen
+   * kaldes (chat/preresolve.ts): ét match = afgjort placering, flere = valgmenuen bygget af serveren. false = altid modellen.
+   */
+  CHAT_PRE_RESOLVE: z
+    .string()
+    .default("true")
+    .transform((v) => v === "true" || v === "1"),
   /** true = portalen (/portal og /api/portal/*) er åben uden login: besøgende er demobrugeren. */
   PORTAL_PUBLIC: z
     .string()
@@ -103,9 +111,26 @@ const schema = z.object({
   CHAT_EFFORT: z.enum(["low", "medium", "high", "xhigh", "max"]).default("medium"),
   /** Højst så mange beskeder pr. bruger pr. time (bremse på forbruget). */
   CHAT_MAX_PER_HOUR: z.coerce.number().int().min(1).default(60),
+  /**
+   * Antal proxyer foran serveren (Express "trust proxy"), så req.ip er den besøgendes adresse fra X-Forwarded-For og ikke
+   * Railways proxy; bremserne pr. IP (login, demochat) tæller ellers alle besøgende som én. Standard 1 på Railway (RAILWAY_ENVIRONMENT
+   * eller RAILWAY_ENVIRONMENT_NAME er sat) og uden for development, ellers 0 lokalt.
+   */
+  TRUST_PROXY: z.coerce.number().int().min(0).max(5).optional(),
+  /**
+   * Prompt-cachens levetid (docs/chat.md): systemprompt, værktøjer og samtalen caches hos Claude Platform,
+   * så næste spørgsmål kun betaler for det nye. "1h" holder cachen mellem brugerens spørgsmål; "5m" er billigere
+   * at skrive, men går oftere tabt. Samme TTL sættes på begge markører (det er et krav fra API'et).
+   */
+  CHAT_CACHE_TTL: z.enum(["5m", "1h"]).default("1h"),
+  /**
+   * Så lang (i tegn, som JSON) må samtalen være, før serveren kaster de ældste hele ture (chat/history.ts).
+   * Trimningen går ned til ca. 60 % af grænsen i ét hug, så den sker sjældent (hver trimning nulstiller cachen).
+   */
+  CHAT_HISTORY_MAX_CHARS: z.coerce.number().int().min(10000).default(150000),
 });
 
-export type Config = z.infer<typeof schema> & { publicBaseUrl: string };
+export type Config = z.infer<typeof schema> & { publicBaseUrl: string; trustProxy: number };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const parsed = schema.safeParse(env);
@@ -115,7 +140,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   }
   const c = parsed.data;
   const publicBaseUrl = (isSet(c.PUBLIC_BASE_URL) ? c.PUBLIC_BASE_URL : `http://localhost:${c.PORT}`).replace(/\/+$/, "");
-  return { ...c, publicBaseUrl };
+  return { ...c, publicBaseUrl, trustProxy: c.TRUST_PROXY ?? (isSet(env.RAILWAY_ENVIRONMENT) || isSet(env.RAILWAY_ENVIRONMENT_NAME) || c.APP_ENV !== "development" ? 1 : 0) };
 }
 
 /** Pladsholderen, variablerne blev oprettet med på Railway, tæller som "ikke sat". */

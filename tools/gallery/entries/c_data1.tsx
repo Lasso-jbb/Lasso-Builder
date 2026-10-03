@@ -429,7 +429,7 @@ export const entries: GalleryEntry[] = [
     nr: "09.2",
     title: "Nøgle-værdi-liste",
     node: "9VU-0",
-    note: "Jakob 01.10: fast rækkefølge (Branche, Formål, Kommune, Reklamebeskyttet, Telefon, E-mail, Website, CVR, Binavne, Status, Stiftelsesdato, Virksomhedsform, Seneste vedtægtsændring, Regnskabsår, Seneste regnskab udgivet, Selskabskapital, Børsnoteret, Revisor, Underskrivende revisor, Tegningsregler, Antal ansatte); branchekoden i parentes efter navnet. Kort visning (view 'short': 8 rækker, resten foldes ud på stedet) og fuld visning (view 'full'). På mobil står hver oplysning på sin egen række.",
+    note: "Jakob 01.10: fast rækkefølge (Branche, Formål, Kommune, Reklamebeskyttet, Telefon, E-mail, Website, CVR, Binavne, Status, Stiftelsesdato, Virksomhedsform, Seneste vedtægtsændring, Regnskabsår, Seneste regnskab udgivet, Selskabskapital, Børsnoteret, Revisor, Underskrivende revisor, Tegningsregler, Antal ansatte); branchekoden i parentes efter navnet. Kort visning (view 'short': 8 rækker, resten foldes ud på stedet) og fuld visning (view 'full'). På mobil står hver oplysning på sin egen række. Jakob 03.10: nøglen højst halvdelen af rækken, og under 400 px listebredde (smal kolonne, halvt kort, kort i chatten) står nøglen over værdien.",
     spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "company", view: "short" }]),
   },
   { nr: "09.2f", sortAs: "09.2", title: "Nøgle-værdi-liste, fuld visning", node: "9VU-0", note: "view 'full': alle oplysninger i den faste rækkefølge (Jakob 01.10).", spec: co("Eksempel Byg A/S", [{ type: "LassoKeyValueList", company: B, variant: "company", view: "full" }]) },

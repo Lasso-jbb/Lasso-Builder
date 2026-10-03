@@ -65,6 +65,7 @@ export function Button({ children, variant = "secondary", size = 36, icon, loadi
  * - active: koral lys flade, koral kant og koral ikon (Overvåg slået til, åben menu)
  * - subtle: let grå flade uden kant (Redigér i en række)
  * - bare: ingen flade, ingen kant (Luk-kryds)
+ * - primary: koral flade, hvidt ikon: den primære handling, når kun ikonet er plads (chattens "Tilføj som fane" på mobil)
  * Mobil (< 560 px): 32 → 40 og 36/38 → 44 px touch-mål. Navnet står altid som aria-label og tooltip.
  */
 export type IconButtonSize = 38 | 36 | 32;
@@ -81,6 +82,8 @@ export interface IconButtonProps {
   disabled?: boolean;
   /** Fyldt ikon (fx Gemt). */
   filled?: boolean;
+  /** Knappen folder noget ud eller sammen (aria-expanded), fx chattens afklaring. */
+  expanded?: boolean;
   className?: string;
   onClick?: () => void;
 }
@@ -89,10 +92,10 @@ export function iconButtonClass(size: IconButtonSize = 38, variant: IconButtonVa
   return ["lasso-iconbtn", "lasso-iconbtn--sq", `lasso-iconbtn--${size}`, variant === "default" ? "" : `lasso-iconbtn--${variant}`, extra].filter(Boolean).join(" ");
 }
 
-export function IconButton({ icon, label, size = 38, variant = "default", pressed, disabled, filled, className = "", onClick }: IconButtonProps) {
+export function IconButton({ icon, label, size = 38, variant = "default", pressed, disabled, filled, expanded, className = "", onClick }: IconButtonProps) {
   const v = pressed ? "active" : variant;
   return (
-    <button type="button" className={iconButtonClass(size, v, className)} aria-label={label} title={label} aria-pressed={pressed} disabled={disabled} onClick={onClick}>
+    <button type="button" className={iconButtonClass(size, v, className)} aria-label={label} title={label} aria-pressed={pressed} aria-expanded={expanded} disabled={disabled} onClick={onClick}>
       <Icon name={icon} size={size === 32 ? 16 : 18} filled={filled} />
     </button>
   );

@@ -56,6 +56,10 @@ function applyEvent(turn: Extract<Turn, { role: "assistant" }>, e: ChatEvent): E
       return { ...turn, error: e.message };
     case "done":
       return { ...turn, pending: false, parts: parts.map((p) => (p.kind === "tool" && p.state === "running" ? { ...p, state: "done" } : p)) };
+    case "placement":
+    case "choice":
+      // Placering og valgmenu hører til portalen (uden context svarer serveren globalt og uden menu).
+      return turn;
   }
 }
 
@@ -81,7 +85,9 @@ export function Text({ text }: { text: string }) {
   return (
     <div className="lasso-chat__text">
       {parseBlocks(text).map((b, i) =>
-        b.kind === "ul" ? (
+        b.kind === "links" ? (
+          <p key={i}>{b.items.map((l) => l.text).join(" ")}</p>
+        ) : b.kind === "ul" ? (
           <ul key={i}>
             {b.items.map((item, k) => (
               <li key={k}>

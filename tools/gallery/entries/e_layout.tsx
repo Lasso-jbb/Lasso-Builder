@@ -1079,7 +1079,7 @@ const datatypes: GalleryEntry[] = [
     nr: "28.7",
     title: "Regnskabsoplysninger, bibrancher, kapital, tegningsregel og formål",
     node: "HDZ-0",
-    note: "LassoRegistration: to kort (regnskabsoplysninger, kapital og vedtægter), tegningsregel og formål foldet til to linjer. Under: Papers eksempelrække for et B-selskab med fravalgt revision (samme ValueRow og warning-tekst som komponenten).",
+    note: "LassoRegistration: to kort (regnskabsoplysninger, kapital og vedtægter; side om side kun når hvert kan få mindst 360 px, Jakob 03.10), tegningsregel og formål foldet til to linjer. Under: Papers eksempelrække for et B-selskab med fravalgt revision (samme ValueRow og warning-tekst som komponenten).",
     probe: one("Oplysninger", { type: "LassoRegistration", company: C }),
     draw: (ds) => (
       <div className="lasso-root" data-theme="light" style={stack(16)}>

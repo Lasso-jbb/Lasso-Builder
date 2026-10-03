@@ -42,14 +42,21 @@ import { answerText } from "./answer.js";
 /** Elementer, der viser seneste regnskabsårs nøgletal; det første på siden giver resuméets regnskabslinje. */
 const SUMMARY_FIGURES: ReadonlySet<ViewSpec["components"][number]["type"]> = new Set(["LassoKeyFigureCards", "LassoIncomeStatement", "LassoBalanceSheet", "LassoMultiYearTable", "LassoFinancialStatements"]);
 
-export function summarizeView(spec: ViewSpec, ds: Dataset, opts: { ask?: Ask } = {}): string {
+/**
+ * host "chat" (Lassos egen chat, docs/chat.md "Tokens"): resuméet uden boilerplate til værter uden visning (den
+ * afsluttende linje om tekstkortet) og med en kort demonote; Claude.ai over /mcp får teksten uændret.
+ */
+export function summarizeView(spec: ViewSpec, ds: Dataset, opts: { ask?: Ask; host?: "mcp" | "chat" } = {}): string {
   const lines: string[] = [];
+  const chat = opts.host === "chat";
+  /** Korte ekstralinjer til chatten (højst ca. 160 tegn hver): nok til at svare uden at hente siden igen. /mcp får dem ikke. */
+  const clip = (t: string): string => (t.length > 160 ? `${t.slice(0, 159)}…` : t);
   // Et spørgsmål med et emne: svaret står først, lige efter hovedlinjen (identiteten).
   const answer = answerText(spec, ds, opts.ask);
   const answered = () => {
     if (answer && !lines.some((l) => l.startsWith("Svar: "))) lines.push(`Svar: ${answer}`);
   };
-  if (ds.source === "demo") lines.push("OBS: Demodata (opdigtede virksomheder), ikke rigtige Lasso-data.");
+  if (ds.source === "demo") lines.push(opts.host === "chat" ? "OBS: demodata (opdigtet)." : "OBS: Demodata (opdigtede virksomheder), ikke rigtige Lasso-data.");
   // Seneste regnskabsår én gang: fra nøgletalskortene, eller fra tabellerne på regnskab, hvor kortene ikke står.
   const figures = spec.components.find((x) => SUMMARY_FIGURES.has(x.type));
 
@@ -125,6 +132,25 @@ export function summarizeView(spec: ViewSpec, ds: Dataset, opts: { ask?: Ask } =
       const o = ds.ownership[c.company];
       if (o?.owners.length) lines.push(`Ejere: ${o.owners.slice(0, 4).map((x) => `${x.name}${x.share ? ` ${x.share}` : ""}${x.votes ? ` (stemmer ${x.votes})` : ""}`).join(", ")}.`);
       if (o?.auditor) lines.push(`Revisor: ${o.auditor.name}.`);
+    }
+    if (chat && c.type === "LassoRelations") {
+      // Direktion og bestyrelse ved navn (de nuværende relationer), så "hvem sidder i bestyrelsen" kan besvares.
+      const rel = ds.companyHistories?.[c.company]?.relations.filter((r) => r.current) ?? [];
+      const names = (g: "direktion" | "bestyrelse") => rel.filter((r) => r.group === g).slice(0, 4).map((r) => `${r.name}${r.role ? ` (${r.role})` : ""}`);
+      const parts = [names("direktion").length && `direktion ${names("direktion").join(", ")}`, names("bestyrelse").length && `bestyrelse ${names("bestyrelse").join(", ")}`].filter(Boolean);
+      if (parts.length) lines.push(clip(`Relationer: ${parts.join("; ")}.`));
+    }
+    if (chat && c.type === "LassoKeyValueList" && c.variant !== "financials") {
+      const auditor = ds.ownership[c.company]?.auditor;
+      if (auditor && !lines.some((l) => l.startsWith("Revisor: "))) lines.push(`Revisor: ${auditor.name}.`);
+    }
+    if (chat && c.type === "LassoTimeline" && c.company) {
+      const events = ds.timeline[c.company]?.events ?? [];
+      if (events.length) lines.push(clip(`Historik (seneste 2 af ${events.length}): ${events.slice(0, 2).map((e) => `${formatDate(e.date)} ${e.title}`).join("; ")}.`));
+    }
+    if (chat && c.type === "LassoNews" && c.company) {
+      const items = ds.news[c.company]?.items ?? [];
+      if (items.length) lines.push(clip(`Nyheder (seneste 2): ${items.slice(0, 2).map((x) => `${x.time ? `${formatDate(x.time)} ` : ""}${x.headline}`).join("; ")}.`));
     }
     if (c.type === "LassoOwnershipDiagram" && c.person) {
       // Katalog 16: personens ejerskaber (personen er roden).
@@ -283,8 +309,9 @@ export function summarizeView(spec: ViewSpec, ds: Dataset, opts: { ask?: Ask } =
     ...Object.values(ds.resumes ?? {}).filter((r) => r.state !== "ok").map((r) => `erhvervsresumé: ${r.reason ?? "intet"}`),
     ...Object.values(ds.valuations ?? {}).filter((v) => v.state !== "ok").map((v) => `værdiansættelse: ${v.reason ?? "ingen"}`),
   ];
-  if (missing.length) lines.push(`Ikke vist: ${missing.slice(0, 2).join("; ")}`);
-  // Hvornår tekstkortet vises, står ét sted: serverinstruktionerne (review P1-6).
-  lines.push("Visningen er svaret: skriv ingen tekst i chatten (se instruktionerne). Tekstkortet er kun til værter uden Lasso-visning.");
+  // Fejlsøgningslinjen er til værter uden en visning; chatten udelader den (brugeren ser siden, modellen skal ikke bruge tokens på den).
+  if (missing.length && !chat) lines.push(`Ikke vist: ${missing.slice(0, 2).join("; ")}`);
+  // Hvornår tekstkortet vises, står ét sted: serverinstruktionerne (review P1-6). Chatten viser altid visningen og har sine egne regler for teksten.
+  if (opts.host !== "chat") lines.push("Visningen er svaret: skriv ingen tekst i chatten (se instruktionerne). Tekstkortet er kun til værter uden Lasso-visning.");
   return lines.join("\n");
 }

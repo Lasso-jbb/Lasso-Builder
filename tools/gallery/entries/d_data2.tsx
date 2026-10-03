@@ -226,7 +226,7 @@ export const entries: GalleryEntry[] = [
     title: "Ejerdiagram, fuld visning",
     node: "AQF-0",
     render: () => <OwnershipDiagram graph={FULL_GRAPH} defaultSelected={HOLDING} canDrillDown canPrompt canFullscreen onAction={noop} />,
-    note: "Detaljepanelet (AY0-0) står åbent for Eksempel Holding ApS (defaultSelected); i brug åbnes det ved klik på en node.",
+    note: "Detaljepanelet (AY0-0) står åbent for Eksempel Holding ApS (defaultSelected); i brug åbnes det ved klik på en node. Jakob 03.10: i portalen (host.viewportChrome) tilpasses vinduet ved første visning (hele grafen i bredde og højde, højst 100 %, lærredet højst vinduets synlige højde); her og i /mcp uden værtens ramme: 100 %, kun bredden, lærredet op til 1200 px (ownershipCanvas).",
   },
   {
     nr: "14.2",
@@ -365,7 +365,7 @@ export const entries: GalleryEntry[] = [
     title: "Netværk som tidsbånd (personer med fælles selskaber)",
     node: "LTP-0",
     gridWidth: 760,
-    note: "Paper LTP-0 (desktop) og LVN-0 (mobil), Fable runde 6: standardbredde ⅔ (som 16.2); samme akse og navnekolonne som 16.2; bånd = perioden, de sad sammen. Fælles selskab under konkurs: båndet rødt (fyldt ved løbende rolle, stiplet ved afsluttet) og ', under konkurs' sidst i etiketten i rødt; ingen konkursmarkør. Legende Sidder sammen nu / Afsluttet / Under konkurs. Under ⅔ (½ og mobil) kun etiketten 'Selskab, rolle'.",
+    note: "Paper LTP-0 (desktop) og LVN-0 (mobil), Fable runde 6: standardbredde ⅔ (som 16.2); samme akse og navnekolonne som 16.2; bånd = perioden, de sad sammen. Fælles selskab under konkurs: båndet rødt (fyldt ved løbende rolle, stiplet ved afsluttet) og ', under konkurs' sidst i etiketten i rødt; ingen konkursmarkør. Legende Sidder sammen nu / Afsluttet / Under konkurs. Under ⅔ (½ og mobil) kun etiketten 'Selskab, rolle'. Jakob 03.10: roller kun Ejer, Direktion, Bestyrelse og Andet med farver (ingen stifter); underteksten kun tiden sammen ('12 år sammen', '7 måneder sammen'); lukket ét samlet bånd med selskabets navn eller 'N firmaer'; 'Vis alle N personer' folder ud på stedet.",
     spec: person("Bo Eksempel", [{ type: "LassoPersonNetwork", person: BO, limit: 3 }]),
     // Papers eksempel (LTP-0): to fælles selskaber, et nyere samarbejde og et afsluttet i et selskab under konkurs.
     mutate: (ds) => {
@@ -383,7 +383,8 @@ export const entries: GalleryEntry[] = [
               { companyName: "Nordisk Datacenter A/S", role: "bestyrelse", from: "2019-05-01", to: "2023-06-30" },
             ],
           },
-          { name: "Anna Nørgaard Eksempel", overlapYears: 5, active: true, since: "2021-02-01", companies: [{ companyName: "Data Eksempel A/S", role: "direktion", from: "2021-02-01" }] },
+          { name: "Anna Nørgaard Eksempel", overlapYears: 5, active: true, since: "2021-02-01", companies: [{ companyName: "Data Eksempel A/S", role: "direktion", from: "2021-02-01" }, { companyName: "Eksempel Holding ApS", role: "ejer", from: "2022-01-01" }] },
+          { name: "Mette Eksempel", overlapYears: 0, overlapMonths: 7, active: true, since: "2026-03-01", companies: [{ companyName: "Data Eksempel I/S", role: "interessent", from: "2026-03-01" }] },
           { name: "Peter Lund Eksempel", overlapYears: 4, active: false, until: "2018-06-30", companies: [{ companyName: "Cloud Eksempel A/S", role: "bestyrelse", from: "2014-04-01", to: "2018-06-30", status: "Under konkurs", statusKind: "warning" }] },
           ...extra,
         ],
@@ -451,7 +452,7 @@ export const entries: GalleryEntry[] = [
   /* ---------- 19 Regnskabsdetaljer ---------- */
   { nr: "19.1", title: "Regnskabsværktøjslinje", node: "C0Z-0", spec: company("Eksempel Byg A/S", [{ type: "LassoFinancialStatements", company: BYG, years: 5 }]), note: "Fuld bredde: værktøjslinje og 5 år. Kun årsregnskaber (ingen År/Halvår/Kvartal); alle poster, som regnskabet indeholder; kvalitetsflaget står foran tallet." },
   { nr: "19.2", title: "Resultatopgørelse", node: "C1X-0", spec: company("Eksempel Byg A/S", [{ type: "LassoIncomeStatement", company: BYG }]), note: "Kompakt (2 år + ændring): bruges, når elementet ikke står i fuld bredde; i fuld bredde bruges 19.1." },
-  { nr: "19.3", title: "Regnskabsanalyse med \"Hent som PDF\"", node: "LYO-0", spec: company("Eksempel Byg A/S", [{ type: "LassoTextSections", company: BYG, variant: "analyse", width: "full" }]), note: "Paper LYO-0: afsnit som foldbare rækker (44 px, chevron), første åbent; \"Hent som PDF\" (LYT-0, sekundær 32 px med ikon) kun når værten kan eksportere (G1) og åbner 19.6 i rapportoverlayet; ingen genereringsdato/kildevisning (G3)." },
+  { nr: "19.3", title: "Regnskabsanalyse med \"Hent som PDF\"", node: "LYO-0", spec: company("Eksempel Byg A/S", [{ type: "LassoTextSections", company: BYG, variant: "analyse", width: "full" }]), note: "Paper LYO-0: afsnit som foldbare rækker (44 px, chevron), første åbent; \"Hent som PDF\" (LYT-0, sekundær 32 px med ikon) kun når værten kan eksportere (G1) og åbner 19.6 i rapportoverlayet; ingen genereringsdato/kildevisning (G3). Jakob 03.10: afsnittene Likviditet (uformateret tabel) og Spørgsmål til overvejelse vises aldrig (udeladt i adapteren og textSectionsFor, også i /mcp og tekstkortet). I portalen (host.analysisPdfSolo) står \"Hent som PDF\" kun, når analysen er visningens eneste element (ikke i moduler, sammensatte sider eller sidekort); /mcp og /v som her." },
   { nr: "19.4", title: "Balance", node: "DA9-0", spec: company("Eksempel Byg A/S", [{ type: "LassoBalanceSheet", company: BYG }]) },
   { nr: "19.5", title: "Pengestrømsopgørelse", node: "DC9-0", spec: company("Eksempel Byg A/S", [{ type: "LassoCashFlow", company: BYG }]) },
 

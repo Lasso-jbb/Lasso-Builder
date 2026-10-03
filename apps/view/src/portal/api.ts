@@ -21,6 +21,8 @@ export interface ViewResult {
   note?: string;
   /** Signeret /e/-side (kun company og person). */
   link?: string;
+  /** Resumé af det viste som tekst (kun company og person): chattens kontekst for "det, brugeren ser". */
+  summary?: string;
 }
 
 /** GET /lookup: søgefeltets resultater (Lassos navnesøgning). */
@@ -56,6 +58,26 @@ export interface SaveViewResult {
   visibility: Visibility;
 }
 
+/**
+ * En egen side (sideskabelon): en side, chatten satte sammen om én virksomhed/person, gemt uden entiteten og bundet til
+ * slagsen (docs/chat.md, "Tilføj som fane"). Den vises som et ekstra modul på alle virksomheder/personer af slagsen.
+ */
+export interface PageTemplate {
+  id: string;
+  kind: "company" | "person";
+  title: string;
+  subtitle?: string;
+}
+
+/** POST /templates: den viste spec, titlen og den entitet, specen er lavet til (serveren erstatter den med en pladsholder). */
+export interface SaveTemplateBody {
+  kind: "company" | "person";
+  title: string;
+  subtitle?: string;
+  spec: ViewSpec;
+  entity: { kind: "company" | "person"; id: string };
+}
+
 export class PortalApiError extends Error {
   readonly status: number;
   constructor(status: number, message: string) {
@@ -67,6 +89,15 @@ export class PortalApiError extends Error {
 
 export function isUnauthorized(e: unknown): boolean {
   return e instanceof PortalApiError && e.status === 401;
+}
+
+/**
+ * Om "Prøv igen" giver mening: netværksfejl (status 0 eller en anden fejl end serverens) og serverfejl (5xx). En 4xx
+ * (fx 400 "Siden indeholder stadig navnet; omdøb den først.") fejler igen på samme måde, så den står uden "Prøv igen".
+ */
+export function retryable(e: unknown): boolean {
+  if (!(e instanceof PortalApiError)) return true;
+  return e.status === 0 || e.status >= 500;
 }
 
 export function errorText(e: unknown): string {
@@ -147,6 +178,13 @@ export function createPortalApi(onUnauthorized: () => void, fetcher: typeof fetc
     pages: (kind: SavedPageKind | "all" = "all", limit = 100) => call<ViewResult>("GET", `/pages${query({ kind, limit })}`),
     savePage: (body: { page: string; kind?: SavedPageKind; focus?: string; note?: string }) => call<SavePageResult>("POST", "/pages", body),
     removePage: (lassoId: string) => call<RemovePageResult>("DELETE", `/pages/${encodeURIComponent(lassoId)}`),
+    /** Egne sider (sideskabeloner): hent, gem, fjern og vis om en bestemt virksomhed/person (spec, dataset og summary som et modul). */
+    templates: {
+      list: async (kind: "company" | "person"): Promise<PageTemplate[]> => (await call<{ templates: PageTemplate[] }>("GET", `/templates${query({ kind })}`)).templates,
+      save: (body: SaveTemplateBody) => call<PageTemplate & { createdAt: string }>("POST", "/templates", body),
+      remove: (id: string) => call<{ id: string; removed: true }>("DELETE", `/templates/${encodeURIComponent(id)}`),
+      render: (id: string, entityId: string) => call<ViewResult>("GET", `/templates/${encodeURIComponent(id)}/render${query({ entity: entityId })}`),
+    },
     saveView: (body: { spec: ViewSpec; name?: string; slug?: string; visibility?: Visibility }) => call<SaveViewResult>("POST", "/views", body),
     /** Virksomhedsrapporten (PDF) med fanens fokus (Creditsafe kun fra Risiko). */
     pdfCompany: (id: string, focus: Focus = "overblik") => pdf(`/company/${encodeURIComponent(id)}${query({ focus: focus === "overblik" ? undefined : focus })}`),

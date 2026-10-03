@@ -9,6 +9,7 @@
     "dev": "tsx watch --env-file-if-exists=../../.env src/index.ts",
     "start": "node dist/index.js",
     "eval": "tsx src/eval/run.ts",
+    "chat:live-check": "tsx --env-file-if-exists=../../.env src/dev/chat-live-check.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "node --import tsx --test 'src/**/*.test.ts'"
   },

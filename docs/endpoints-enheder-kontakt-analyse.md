@@ -186,7 +186,8 @@ ved `possibleError`/`error` bør den linkede rapport tjekkes).
    udelades): `konklusion` → "Regnskabsanalyse: konklusion", `resultat` → "Resultat",
    `likviditet` → "Likviditet", `balanceogkapitalforhold` → "Balance og kapitalforhold",
    `branchestatistik` → "Branchestatistik", `revisoroplysninger` → "Revisoroplysninger",
-   `sprgsml` → "Spørgsmål til overvejelse" (sidst).
+   `sprgsml` → "Spørgsmål til overvejelse" (sidst). Jakob 03.10: `likviditet` og `sprgsml` bruges ikke (adapteren
+   udelader dem, og `textSectionsFor` filtrerer dem fra i ældre data).
 3. Er `sections` slet ikke til stede (eller giver ingen brugbare sektioner), falder den
    tilbage til `text` som ÉN sektion med overskriften "Regnskabsanalyse".
 4. Hver sektions HTML konverteres til ren tekst med `htmlToText` (ny fil,

@@ -158,12 +158,12 @@ test("adaptReportAnalysisSections bygger sektioner i den bekræftede rækkefølg
   const sections = adaptReportAnalysisSections(REPORT_ANALYSIS_RESPONSE);
   assert.deepEqual(
     sections.map((s) => s.heading),
-    ["Regnskabsanalyse: konklusion", "Resultat", "Likviditet", "Balance og kapitalforhold", "Branchestatistik", "Spørgsmål til overvejelse"],
+    // Jakob 03.10: likviditet (uformateret tabel) og sprgsml (spørgsmål til overvejelse) tages aldrig med.
+    ["Regnskabsanalyse: konklusion", "Resultat", "Balance og kapitalforhold", "Branchestatistik"],
   );
   for (const s of sections) assert.equal(s.note, "Kilde: Lasso regnskabsanalyse");
   assert.ok(sections[0]!.body.includes("Virksomheden har en sund og stabil udvikling."));
-  assert.ok(sections.at(-1)!.body.includes("- Bør investeringsplanen revideres?"));
-  assert.ok(sections.at(-1)!.body.includes("- Er likviditetsberedskabet tilstrækkeligt?"));
+  assert.ok(!sections.some((s) => /likviditetsgraden er forbedret|investeringsplanen/i.test(s.body)));
 });
 
 test("adaptReportAnalysisSections falder tilbage til svarets 'text' som én sektion, når 'sections' mangler", () => {
@@ -181,10 +181,9 @@ test("adaptReportAnalysisSections fjerner sektionens egen titel fra brødteksten
   assert.equal(body("Resultat"), "Resultatet er steget 8 % i forhold til året før.", "en sætning, der starter med samme ord, beholdes");
   assert.equal(body("Balance og kapitalforhold"), "Virksomhedens samlede aktiver er steget til 120 mio. kr.\n\nEgenkapitalen udgør 45 %.", "afsnit bevares");
   assert.ok(body("Revisoroplysninger")!.startsWith("En autoriseret revisor fra "));
-  // En fed indledning, der ikke er sektionens titel, er indhold og beholdes.
-  assert.equal(body("Spørgsmål til overvejelse"), "Strategilægning og budgetjustering\nOvervej følgende:\n- Bør investeringsplanen revideres?");
+  assert.equal(body("Spørgsmål til overvejelse"), undefined, "sprgsml tages ikke med (Jakob 03.10)");
   // Den ældre fixture (én titel pr. sektion) giver også brødtekst uden titel.
-  for (const s of adaptReportAnalysisSections(REPORT_ANALYSIS_RESPONSE).slice(0, 5)) {
+  for (const s of adaptReportAnalysisSections(REPORT_ANALYSIS_RESPONSE)) {
     assert.ok(!/^(Konklusion|Resultat|Likviditet|Balance og kapitalforhold|Branchestatistik)\b/.test(s.body), s.body);
   }
 });

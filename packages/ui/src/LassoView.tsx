@@ -345,7 +345,7 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
       return <OwnerList key={key} ownership={empty.ownership[c.company]} error={err(`ownership:${c.company}`)} onOpen={props.host.drillDown ? act : undefined} />;
     case "LassoOwnershipDiagram": {
       const k = ownershipGraphKey(c);
-      return <OwnershipDiagram key={key} graph={empty.ownershipGraphs?.[k]} error={err(`graph:${k}`)} title={c.title} onAction={act} canDrillDown={Boolean(props.host.drillDown)} canPrompt={Boolean(props.host.prompt)} canFullscreen={Boolean(props.host.fullscreen)} demo={empty.source === "demo"} />;
+      return <OwnershipDiagram key={key} graph={empty.ownershipGraphs?.[k]} error={err(`graph:${k}`)} title={c.title} onAction={act} canDrillDown={Boolean(props.host.drillDown)} canPrompt={Boolean(props.host.prompt)} canFullscreen={Boolean(props.host.fullscreen)} demo={empty.source === "demo"} viewportChrome={props.host.viewportChrome} />;
     }
     case "LassoCompanyTable": {
       const k = searchKey(c.search);
@@ -576,8 +576,9 @@ function renderComponent(c: ViewComponent, ds: Dataset | null, props: LassoViewP
           limit={c.limit}
           error={err(`textSections:${c.company}`)}
           onOpen={props.host.drillDown ? act : undefined}
-          // 19.3: "Hent som PDF" (19.6) kun, når værten kan eksportere (G1).
-          onPdf={frame.analysisPdf ? () => frame.analysisPdf!(c.company) : undefined}
+          // 19.3: "Hent som PDF" (19.6) kun, når værten kan eksportere (G1); med host.analysisPdfSolo (portalen, Jakob 03.10)
+          // desuden kun, når analysen er visningens eneste element.
+          onPdf={frame.analysisPdf && (!props.host.analysisPdfSolo || props.spec.components.length === 1) ? () => frame.analysisPdf!(c.company) : undefined}
         />
       );
     case "LassoSummary": {

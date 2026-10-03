@@ -35,7 +35,7 @@ let config: Config;
 let cookie = "";
 
 type Json = Record<string, unknown>;
-type ViewBody = { spec: ViewSpec; dataset: Dataset; note?: string; link?: string };
+type ViewBody = { spec: ViewSpec; dataset: Dataset; note?: string; link?: string; summary?: string };
 
 const boot = (html: string) => JSON.parse(/window\.__LASSO_BOOT__=(.*?);<\/script>/s.exec(html)![1]!) as Json;
 const query = (url: string) => Object.fromEntries(new URL(url).searchParams);
@@ -201,8 +201,10 @@ test("company: med CVR, Lasso-ID og navn; link er den signerede /e/-side", async
   const res = await api("/company/99000001");
   assert.equal(res.headers.get("cache-control"), "no-store");
   const body = await json<ViewBody>(res);
-  assert.deepEqual(Object.keys(body).sort(), ["dataset", "link", "spec"]);
+  assert.deepEqual(Object.keys(body).sort(), ["dataset", "link", "spec", "summary"]);
   assert.equal(body.spec.title, "Eksempel Byg A/S");
+  // Resuméet er det samme, modellen får fra show_company; portalen sender det som chattens kontekst (docs/chat.md).
+  assert.match(body.summary!, /Eksempel Byg A\/S/);
   assert.equal(body.spec.components[0]!.type, "LassoCompanyHead");
   assert.equal(body.dataset.companies["CVR-1-99000001"]?.name, "Eksempel Byg A/S");
   assert.ok(body.link!.startsWith(`${PUBLIC}/e/CVR-1-99000001?`), body.link);
@@ -520,4 +522,197 @@ test("/api/portal/lookup: firmaer og personer på navn, til søgefeltet", async 
   assert.ok(Array.isArray(r.persons));
   const short = await json<{ companies: unknown[] }>(await api(`/lookup?q=E`, { cookie: (await login(PIA.id, PIA.key)).cookie }));
   assert.equal(short.companies.length, 0);
+});
+
+type TemplateJson = { id: string; kind: string; title: string; subtitle?: string; createdAt: string };
+/** Pias session fra første skabelontest (loginbremsen tillader kun få logins pr. kørsel). */
+let piaCookie = "";
+
+test("/api/portal/templates: Tilføj som fane gemmer en side som skabelon, der vises om andre virksomheder; slet er kun brugerens egen", async () => {
+  const pia = (await login(PIA.id, PIA.key)).cookie;
+  piaCookie = pia;
+  const ole = (await login(OLE.id, OLE.key)).cookie;
+  const kyc = (id: string) => ({ version: 2, kind: "custom", title: "KYC-overblik", layout: "dashboard", criteria: [], components: [{ type: "LassoKeyValueList", company: "99000001" }, { type: "LassoKeyFigureCards", company: id }] });
+  const body = { kind: "company", title: "KYC", subtitle: "Mit overblik", spec: kyc("CVR-1-99000001"), entity: { kind: "company", id: "CVR-1-99000001" } };
+
+  // Adgang: login og CSRF som de andre portalruter.
+  assert.equal((await api("/templates", { cookie: "" })).status, 401);
+  assert.equal((await api("/templates", { method: "POST", body, cookie: pia, csrf: false })).status, 403);
+
+  // Gem: svaret er skabelonen uden spec.
+  const made = await json<TemplateJson>(await api("/templates", { method: "POST", body, cookie: pia }));
+  assert.deepEqual(Object.keys(made).sort(), ["createdAt", "id", "kind", "subtitle", "title"]);
+  assert.equal(made.title, "KYC");
+  assert.equal(made.kind, "company");
+  assert.deepEqual((await json<{ templates: TemplateJson[] }>(await api("/templates?kind=company", { cookie: pia }))).templates.map((t) => t.id), [made.id]);
+  assert.deepEqual((await json<{ templates: unknown[] }>(await api("/templates?kind=person", { cookie: pia }))).templates, []);
+  assert.equal((await api("/templates?kind=firma", { cookie: pia })).status, 400);
+
+  // Vis om en anden virksomhed: samme side med den virksomheds data, titel og undertitel fra skabelonen, og et resumé.
+  const shown = await json<ViewBody>(await api(`/templates/${made.id}/render?entity=CVR-1-99000002`, { cookie: pia }));
+  assert.equal(shown.spec.title, "KYC");
+  assert.equal(shown.spec.subtitle, "Mit overblik");
+  assert.deepEqual(shown.spec.components.map((c) => (c as { company?: string }).company), ["CVR-1-99000002", "CVR-1-99000002"]);
+  assert.equal(shown.dataset.companies["CVR-1-99000002"]?.name, "Eksempel Revision Midt ApS");
+  assert.equal(typeof shown.summary, "string");
+  // ...og om den oprindelige.
+  assert.equal((await json<ViewBody>(await api(`/templates/${made.id}/render?entity=CVR-1-99000001`, { cookie: pia }))).dataset.companies["CVR-1-99000001"]?.name, "Eksempel Byg A/S");
+  // Forkert slags, manglende eller ukendt id.
+  assert.equal((await api(`/templates/${made.id}/render?entity=CVR-3-4000000007`, { cookie: pia })).status, 400);
+  assert.equal((await api(`/templates/${made.id}/render`, { cookie: pia })).status, 400);
+  assert.equal((await api(`/templates/findes-ikke/render?entity=CVR-1-99000002`, { cookie: pia })).status, 404);
+
+  // Gem-fejl: siden handler ikke om entiteten, forkert slags, ugyldig spec, ugyldigt id.
+  const other = { ...body, spec: kyc("CVR-1-99000004") };
+  assert.match((await json<{ error: string }>(await api("/templates", { method: "POST", body: { ...other, spec: { ...other.spec, components: [{ type: "LassoKeyFigureCards", company: "CVR-1-99000004" }] } }, cookie: pia }), 400)).error, /Siden handler ikke om én virksomhed/);
+  assert.equal((await api("/templates", { method: "POST", body: { ...body, entity: { kind: "person", id: "CVR-1-99000001" } }, cookie: pia })).status, 400);
+  assert.equal((await api("/templates", { method: "POST", body: { ...body, entity: { kind: "company", id: "ikke-et-id" } }, cookie: pia })).status, 400);
+  assert.equal((await api("/templates", { method: "POST", body: { ...body, spec: { title: "x" } }, cookie: pia })).status, 400);
+  assert.equal((await api("/templates", { method: "POST", body: { ...body, title: " " }, cookie: pia })).status, 400);
+
+  // En anden bruger ser, henter og sletter ikke Pias skabelon: 404 som om den ikke fandtes.
+  assert.deepEqual((await json<{ templates: unknown[] }>(await api("/templates", { cookie: ole }))).templates, []);
+  assert.equal((await api(`/templates/${made.id}`, { method: "DELETE", cookie: ole })).status, 404);
+  assert.equal((await api(`/templates/${made.id}/render?entity=CVR-1-99000002`, { cookie: ole })).status, 404);
+  assert.equal((await json<{ templates: unknown[] }>(await api("/templates", { cookie: pia }))).templates.length, 1, "Pias skabelon står stadig");
+
+  // Slet: kræver CSRF; listen afspejler det med det samme; en gang til er 404.
+  assert.equal((await api(`/templates/${made.id}`, { method: "DELETE", cookie: pia, csrf: false })).status, 403);
+  assert.deepEqual(await json(await api(`/templates/${made.id}`, { method: "DELETE", cookie: pia })), { id: made.id, removed: true });
+  assert.deepEqual((await json<{ templates: unknown[] }>(await api("/templates?kind=company", { cookie: pia }))).templates, []);
+  assert.equal((await api(`/templates/${made.id}`, { method: "DELETE", cookie: pia })).status, 404);
+  assert.equal((await api(`/templates/${made.id}/render?entity=CVR-1-99000002`, { cookie: pia })).status, 404);
+});
+
+test("/api/portal/templates: en personside bliver en personskabelon", async () => {
+  const pia = piaCookie;
+  const spec = { version: 2, kind: "custom", title: "Roller", layout: "dashboard", criteria: [], components: [{ type: "LassoPersonStats", person: "CVR-3-4000000007" }, { type: "LassoPersonRoles", person: "CVR-3-4000000007" }] };
+  const made = await json<TemplateJson>(await api("/templates", { method: "POST", body: { kind: "person", title: "Mine roller", spec, entity: { kind: "person", id: "CVR-3-4000000007" } }, cookie: pia }));
+  assert.equal(made.subtitle, undefined);
+  const shown = await json<ViewBody>(await api(`/templates/${made.id}/render?entity=CVR-3-4000000002`, { cookie: pia }));
+  assert.deepEqual(shown.spec.components.map((c) => (c as { person?: string }).person), ["CVR-3-4000000002", "CVR-3-4000000002"]);
+  assert.equal((await api(`/templates/${made.id}/render?entity=CVR-1-99000001`, { cookie: pia })).status, 400);
+  await json(await api(`/templates/${made.id}`, { method: "DELETE", cookie: pia }));
+});
+
+test("/api/portal/templates: entitetens navn fjernes fra titlerne, hoved og opfølgende spørgsmål udelades, og et navn i teksten afvises", async () => {
+  const pia = piaCookie;
+  const entity = { kind: "company", id: "CVR-1-99000001" };
+  const comps = [{ type: "LassoCompanyHead", company: "CVR-1-99000001" }, { type: "LassoKeyFigureCards", company: "CVR-1-99000001" }, { type: "LassoFollowUps", prompts: [{ label: "Ejere", prompt: "Hvem ejer Eksempel Byg A/S?" }] }];
+  const spec = (extra: object = {}, components: unknown[] = comps) => ({ version: 2, kind: "custom", title: "Overblik, Eksempel Byg A/S", layout: "dashboard", criteria: [], components, ...extra });
+  const made = await json<TemplateJson>(await api("/templates", { method: "POST", body: { kind: "company", title: "Eksempel Byg A/S", subtitle: "Kort – Eksempel Byg", spec: spec(), entity }, cookie: pia }));
+  // Titlen var kun navnet: "Side"; ' – Eksempel Byg' er klippet af undertitlen.
+  // Titlen var kun navnet: sidens egen (strippede) titel "Overblik" bruges, og da den er et indbygget modulnavn, får den et tillæg.
+  assert.equal(made.title, "Overblik, fra samtalen");
+  assert.equal(made.subtitle, "Kort");
+  const shown = await json<ViewBody>(await api(`/templates/${made.id}/render?entity=CVR-1-99000002`, { cookie: pia }));
+  assert.deepEqual(shown.spec.components.map((c) => c.type), ["LassoKeyFigureCards"], "hoved og opfølgende spørgsmål er væk");
+  assert.equal(shown.spec.title, "Overblik, fra samtalen");
+  await json(await api(`/templates/${made.id}`, { method: "DELETE", cookie: pia }));
+  // Navnet i en komponents tekst: 400 på dansk.
+  const leaky = spec({}, [{ type: "LassoRanking", companies: ["CVR-1-99000001", "CVR-1-99000004"], title: "Eksempel Byg A/S er størst" }]);
+  const bad = await json<{ error: string }>(await api("/templates", { method: "POST", body: { kind: "company", title: "X", spec: leaky, entity }, cookie: pia }), 400);
+  assert.equal(bad.error, "Siden indeholder stadig navnet; omdøb den først.");
+});
+
+test("/api/portal/templates: CVR, by og gade fra Lasso klippes af titler og afvises i tekst; en undertitel med kun metadata gemmes ikke", async () => {
+  const pia = piaCookie;
+  const entity = { kind: "company", id: "CVR-1-99000001" };
+  const spec = (title: string, components: unknown[]) => ({ version: 2, kind: "custom", title, subtitle: "CVR 99000001, Silkeborg", layout: "dashboard", criteria: [], components });
+  const cards = [{ type: "LassoKeyFigureCards", company: "CVR-1-99000001" }];
+  const made = await json<TemplateJson>(await api("/templates", { method: "POST", body: { kind: "company", title: "KYC-overblik for Eksempel Byg A/S", subtitle: "CVR 99000001, Silkeborg", spec: spec("KYC-overblik for CVR 99000001", cards), entity }, cookie: pia }));
+  assert.equal(made.title, "KYC-overblik");
+  assert.equal(made.subtitle, undefined);
+  const shown = await json<ViewBody>(await api(`/templates/${made.id}/render?entity=CVR-1-99000002`, { cookie: pia }));
+  assert.equal(shown.spec.title, "KYC-overblik");
+  assert.equal(shown.spec.subtitle, undefined);
+  await json(await api(`/templates/${made.id}`, { method: "DELETE", cookie: pia }));
+  for (const text of ["Top for CVR 99000001", "Prøvevej 1", "Silkeborg er størst"]) {
+    const leaky = spec("Overblik", [{ type: "LassoRanking", companies: ["CVR-1-99000001", "CVR-1-99000004"], title: text }]);
+    const bad = await json<{ error: string }>(await api("/templates", { method: "POST", body: { kind: "company", title: "X", spec: leaky, entity }, cookie: pia }), 400);
+    assert.equal(bad.error, "Siden indeholder stadig navnet; omdøb den først.", text);
+  }
+});
+
+test("/api/portal/templates: en undertitel, der er sidens egen, gemmes ikke; postnummeret klippes", async () => {
+  const pia = piaCookie;
+  const entity = { kind: "company", id: "CVR-1-99000001" };
+  const spec = { version: 2, kind: "custom", title: "Nøgletal 8600", subtitle: "genereret i dag kl. 09:52", layout: "dashboard", criteria: [], components: [{ type: "LassoKeyFigureCards", company: "CVR-1-99000001" }] };
+  const made = await json<TemplateJson>(await api("/templates", { method: "POST", body: { kind: "company", title: "Nøgletal 8600", subtitle: "genereret i dag kl. 09:52", spec, entity }, cookie: pia }));
+  assert.equal(made.subtitle, undefined);
+  assert.equal(made.title, "Nøgletal");
+  const shown = await json<ViewBody>(await api(`/templates/${made.id}/render?entity=CVR-1-99000002`, { cookie: pia }));
+  assert.equal(shown.spec.subtitle, undefined);
+  await json(await api(`/templates/${made.id}`, { method: "DELETE", cookie: pia }));
+});
+
+test("/api/portal/templates: en side med et indbygget modulnavn får tillægget 'fra samtalen'; titlen falder tilbage på undertitlen; render henter entitetens data", async () => {
+  const pia = piaCookie;
+  const entity = { kind: "company", id: "CVR-1-99000001" };
+  const cards = [{ type: "LassoKeyFigureCards", company: "CVR-1-99000001" }];
+  const spec = (title: string, subtitle?: string) => ({ version: 2, kind: "company", title, ...(subtitle ? { subtitle } : {}), layout: "dashboard", criteria: [], components: cards });
+  // B: samme navn som det indbyggede modul (også uden forskel på store/små bogstaver).
+  const own = await json<TemplateJson>(await api("/templates", { method: "POST", body: { kind: "company", title: "ejerskab", spec: spec("Ejerskab"), entity }, cookie: pia }));
+  assert.equal(own.title, "ejerskab, fra samtalen");
+  // A: titlen er kun navnet; undertitlen (fokusetiketten) bruges, og et navn der ikke er et modulnavn får intet tillæg.
+  const fromSub = await json<TemplateJson>(await api("/templates", { method: "POST", body: { kind: "company", title: "Eksempel Byg A/S", spec: spec("Eksempel Byg A/S", "Ejerskab"), entity }, cookie: pia }));
+  assert.equal(fromSub.title, "Ejerskab, fra samtalen");
+  // C: render giver entitetens stamdata og vurdering som en modulside, også uden et hoved i skabelonen.
+  const shown = await json<ViewBody & { dataset: { valuations?: Record<string, unknown> } }>(await api(`/templates/${own.id}/render?entity=CVR-1-99000002`, { cookie: pia }));
+  assert.equal(shown.dataset.companies["CVR-1-99000002"]?.name, "Eksempel Revision Midt ApS");
+  assert.deepEqual(Object.keys(shown.dataset.companies), ["CVR-1-99000002"]);
+  assert.ok(shown.spec.components.every((c) => c.type !== "LassoCompanyHead"), "hovedet hentes med, men vises ikke");
+  const direct = await json<ViewBody & { dataset: { valuations?: Record<string, unknown> } }>(await api("/company/CVR-1-99000002?focus=ejerskab", { cookie: pia }));
+  assert.deepEqual(Object.keys(shown.dataset.valuations ?? {}), Object.keys(direct.dataset.valuations ?? {}), "samme vurderinger som modulsiden");
+  for (const t of [own, fromSub]) await json(await api(`/templates/${t.id}`, { method: "DELETE", cookie: pia }));
+});
+
+test("D6: i den åbne portal (demobrugeren) kan ingen gemme eller slette egne sider, og listen er tom", async () => {
+  const cfg = loadConfig({ ...process.env, MCP_ACCESS_KEY: KEY, LINK_SECRET: "portal-test-hemmelighed", LASSO_DATA_SOURCE: "demo", DATABASE_URL: "", PUBLIC_BASE_URL: PUBLIC, PORTAL_PUBLIC: "true" });
+  const { createPageTemplateStore } = await import("./pages/templates.js");
+  const templates = createPageTemplateStore("");
+  // En skabelon under demobrugerens eget navn (som en tidligere besøgende kunne have lavet den) vises aldrig.
+  const demo = (await import("./auth/user.js")).demoUser(cfg);
+  const spec = { version: 2, kind: "custom", title: "T", layout: "dashboard", criteria: [], components: [{ type: "LassoKeyFigureCards", company: "{{entity}}" }] };
+  const planted = await templates.create({ org: demo.org, userId: demo.id, kind: "company", title: "Planted", spec: spec as never });
+  const srv = createApp({ config: cfg, client: new LassoClient(cfg), provider: new DemoProvider(), store: createViewStore(""), pages: createSavedPageStore(""), templates }).listen(0);
+  await new Promise((r) => srv.once("listening", r));
+  const open = `http://127.0.0.1:${(srv.address() as AddressInfo).port}/api/portal`;
+  const headers = { "content-type": "application/json", "x-lasso-portal": "1" };
+  try {
+    const post = await fetch(`${open}/templates`, { method: "POST", headers, body: JSON.stringify({ kind: "company", title: "KYC", spec, entity: { kind: "company", id: "CVR-1-99000001" } }) });
+    assert.equal(post.status, 403);
+    assert.deepEqual(await post.json(), { error: "Log ind for at gemme sider." });
+    const del = await fetch(`${open}/templates/${planted.id}`, { method: "DELETE", headers });
+    assert.equal(del.status, 403);
+    assert.deepEqual(await (await fetch(`${open}/templates?kind=company`)).json(), { templates: [] });
+    assert.equal((await fetch(`${open}/templates/${planted.id}/render?entity=CVR-1-99000002`)).status, 404);
+    assert.ok(await templates.get(demo.org, demo.id, planted.id), "ikke slettet");
+  } finally {
+    await new Promise((r) => srv.close(r));
+  }
+});
+
+test("D9: svarer Lasso ikke på opslaget af entiteten, gemmes ingen skabelon (503)", async () => {
+  const cfg = loadConfig({ ...process.env, MCP_ACCESS_KEY: KEY, MCP_USER_KEYS: `${PIA.key}:${PIA.id}:${PIA.name}:${PIA.org}`, LINK_SECRET: "portal-test-hemmelighed", LASSO_DATA_SOURCE: "demo", DATABASE_URL: "", PUBLIC_BASE_URL: PUBLIC });
+  const { createPageTemplateStore } = await import("./pages/templates.js");
+  const { sessionCookie, signSession } = await import("./auth/session.js");
+  const templates = createPageTemplateStore("");
+  const flaky = Object.create(new DemoProvider()) as InstanceType<typeof DemoProvider>;
+  flaky.company = async () => {
+    throw new Error("Lasso er nede");
+  };
+  const srv = createApp({ config: cfg, client: new LassoClient(cfg), provider: flaky, store: createViewStore(""), pages: createSavedPageStore(""), templates }).listen(0);
+  await new Promise((r) => srv.once("listening", r));
+  const open = `http://127.0.0.1:${(srv.address() as AddressInfo).port}/api/portal`;
+  const cookie = sessionCookie(cfg, signSession(cfg, { id: PIA.id, name: PIA.name, org: PIA.org, isDemo: false })).split(";")[0]!;
+  const spec = { version: 2, kind: "custom", title: "KYC, Eksempel Byg A/S", layout: "dashboard", criteria: [], components: [{ type: "LassoKeyFigureCards", company: "CVR-1-99000001" }] };
+  try {
+    const r = await fetch(`${open}/templates`, { method: "POST", headers: { "content-type": "application/json", "x-lasso-portal": "1", cookie }, body: JSON.stringify({ kind: "company", title: "KYC", spec, entity: { kind: "company", id: "CVR-1-99000001" } }) });
+    assert.equal(r.status, 503);
+    assert.deepEqual(await r.json(), { error: "Lasso svarede ikke; prøv igen." });
+    assert.deepEqual(await templates.list(PIA.org, PIA.id), []);
+  } finally {
+    await new Promise((r2) => srv.close(r2));
+  }
 });

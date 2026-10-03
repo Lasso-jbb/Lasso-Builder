@@ -93,7 +93,7 @@ begivenheder, ingen kontaktoplysninger, ingen kreditvurdering).
 
 | Fokus | Fuld bredde øverst | Kolonner | Fuld bredde nederst | Henter (`composeProbe`) |
 |---|---|---|---|---|
-| overblik | Hoved, nøgletal (4 kort) | 1: Relationer. 2: Virksomhedsprofil (formål, tegningsregler, analysens konklusion, resultat og likviditet). 3: Kontakt, Virksomhedsoplysninger, graf (under 3 år: Regnskab-listen uden kortenes tal). Nyheder (3 + "Se alle N nyheder i Historik") og Historik (3 + "Se alle N begivenheder i Historik") i den kolonne, der vejer mindst | Opfølgning | stamdata, regnskabstal, ledelse, ejere, historik, nyheder (5), tekstsektioner, kontakt |
+| overblik | Hoved, nøgletal (4 kort) | 1: Relationer. 2: Virksomhedsprofil (formål, tegningsregler, analysens konklusion og resultat). 3: Kontakt, Virksomhedsoplysninger, graf (under 3 år: Regnskab-listen uden kortenes tal). Nyheder (3 + "Se alle N nyheder i Historik") og Historik (3 + "Se alle N begivenheder i Historik") i den kolonne, der vejer mindst | Opfølgning | stamdata, regnskabstal, ledelse, ejere, historik, nyheder (5), tekstsektioner, kontakt |
 | oekonomi | Hoved, nøgletal (5 kort) | 1: graf (hovednøgletal + resultat), vandfald. 2: Regnskab (årsvælger, uden kortenes nøgletal), fordeling af balancen | Regnskabsanalyse (hele, foldet efter konklusionen), flerårstabel (4+ år), opfølgning | stamdata, regnskabstal, tekstsektioner |
 | regnskab | Hoved | – | Resultatopgørelse, balance, pengestrømsopgørelse, opfølgning | stamdata, fulde regnskaber |
 | regnskab uden regnskab | Hoved, "Regnskab" (tom tilstand, der siger hvorfor) | – | Opfølgning | stamdata, fulde regnskaber |
@@ -141,7 +141,7 @@ Regler, der gælder på alle fokus:
 - **Nøgletalskortene** kun på overblik og oekonomi. Regnskab-listen på samme side udelader
   kortenes nøgletal (`exclude` på `LassoKeyValueList` variant financials).
 - **Tekstsektioner**: branche-afsnittet vises ikke (det står i hovedet). `variant: "profil"`
-  (overblik) viser formål og tegningsregler plus analysens konklusion, resultat og likviditet,
+  (overblik) viser formål og tegningsregler plus analysens konklusion og resultat (Likviditet og Spørgsmål til overvejelse vises aldrig, Jakob 03.10),
   hver foldet med "Vis hele". `variant: "analyse"` (oekonomi) viser hele regnskabsanalysen:
   konklusionen og "Se hele regnskabsanalysen (N afsnit)", der folder resten ud på stedet.
   Analysens kildelinje står én gang pr. element. Navne med Lasso-ID er links med drill-down.
@@ -181,11 +181,12 @@ Samme regel som på virksomhedssiden: **hvert modul ejer sit indhold**. Rollerne
 netværket på netvaerk, ejerskaberne på ejerskab, sagerne på risiko og historik og nyheder på
 historik. Overblikket viser smagsprøver, hvis "Se alle" åbner fanen: "Se alle N selskaber i
 Roller" (N = alle personens selskaber, som fanen viser; knappen står, når fanen har flere, end
-listen viser), "Se alle N personer i Netværk" og "Se alle N begivenheder i Historik".
+listen viser) og "Se alle N begivenheder i Historik". Netværket folder i stedet ud på stedet med
+"Vis alle N personer"/"Vis færre" (Jakob 03.10).
 
 | Fokus | Elementer (bredde) | Henter |
 |---|---|---|
-| overblik | Aktive roller som kort liste, 5 + "Se alle N selskaber i Roller" (¾) + Stamoplysninger (¼); uden aktive roller de ophørte. Derefter Netværk (3 + "Se alle N personer i Netværk"), Risiko, Historik (3 + "Se alle N begivenheder i Historik") og Ejerskab (ejerdiagrammet, kun når de selskaber, personen ejer, selv ejer selskaber) to og to (½ + ½) efter vægt; alvorlig risiko (personen var med, da det skete) i fuld bredde lige under hovedet. Ingen nyheder. Uden `openFocus` folder "Se alle" ud på stedet | person, netværk, ejerdiagram (0 op, 2 ned) |
+| overblik | Aktive roller som kort liste, 5 + "Se alle N selskaber i Roller" (¾) + Stamoplysninger (¼); uden aktive roller de ophørte. Derefter Netværk (3 + "Vis alle N personer", folder ud på stedet), Risiko, Historik (3 + "Se alle N begivenheder i Historik") og Ejerskab (ejerdiagrammet, kun når de selskaber, personen ejer, selv ejer selskaber) to og to (½ + ½) efter vægt; alvorlig risiko (personen var med, da det skete) i fuld bredde lige under hovedet. Ingen nyheder. Uden `openFocus` folder "Se alle" ud på stedet | person, netværk, ejerdiagram (0 op, 2 ned) |
 | roller | Alle roller som tidsbånd, 8 + "Se alle N selskaber" (¾) + Stamoplysninger (¼) | person |
 | netvaerk | Netværket, 8 + "Se alle N" (fuld), også som tom tilstand | person, netværk |
 | ejerskab | Ejerskaber: de ejede selskaber med andel og siden-dato (fuld; tom: "Personen ejer ikke selskaber i CVR."), Ejerstruktur (diagram, 0 op, 2 ned, fuld; når de ejede selskaber selv ejer selskaber, eller som fejltilstand, når grafen ikke kunne hentes) | person, ejerdiagram |

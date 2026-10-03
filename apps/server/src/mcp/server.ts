@@ -53,15 +53,19 @@ export const VIEW_URI = `ui://lasso/view-${viewVersion()}.html`;
 /**
  * Serverens kontekst pr. MCP-request: samme som use-casenes (usecases/), som tool-handlerne kalder.
  * Handlerne validerer input (zod-skemaerne nedenfor) og pakker use-casens svar i CallToolResult.
+ * host: hvem der taler med modellen. "mcp" (standard) er Claude.ai m.fl. over /mcp; "chat" er Lassos
+ * egen chat (chat/agent.ts), som altid viser visningen under modellens tekst.
  */
-export type McpContext = UseCaseCtx;
+export type McpContext = UseCaseCtx & { host?: "mcp" | "chat" };
 
 /**
  * Serverinstruktionerne står i hver samtale, så de holdes korte: routing og regler. Komponent-
  * kataloget hentes med describe_components (render_view har kun et indeks, plan Ø8), kompositions-
  * reglerne står KUN i render_view's beskrivelse og søgefelterne KUN i search_companies' (review P1-6).
+ * Routingen (værktøjsvalget) deles med Lassos egen chat; reglerne er /mcp's egne, chatten har sine i
+ * chat/agent.ts (CHAT_RULES). Teksten til Claude.ai er uændret: ROUTING + MCP_RULES.
  */
-const INSTRUCTIONS = `Lasso giver adgang til data om danske virksomheder og personer (CVR): stamdata, regnskaber, nøgletal, ledelse, bestyrelse, ejere, revisor, risiko, historik og kontakt, samt søgning med kriterier (målgrupper).
+export const CHAT_ROUTING = `Lasso giver adgang til data om danske virksomheder og personer (CVR): stamdata, regnskaber, nøgletal, ledelse, bestyrelse, ejere, revisor, risiko, historik og kontakt, samt søgning med kriterier (målgrupper).
 
 Vælg værktøj:
 - Én virksomhed: show_company med CVR-nummer, Lasso-ID eller navn (serveren slår navnet op; brug ikke search_companies først). Serveren bygger siden omkring svaret på spørgsmålet: svar-elementet først med de nævnte nøgletal, roller og år, og kontekst rundt om. Sæt kun focus, når spørgsmålet er generelt: 'overblik' (standard, "fortæl om X"), 'oekonomi' ("hvordan går det"), 'regnskab', 'ejerskab', 'risiko', 'historik', 'kontakt' (kontakt og ledelse; 'ledelse' åbner samme side).
@@ -71,11 +75,31 @@ Vælg værktøj:
 - Lister og målgrupper ("revisorer i Region Midt med mindst 10 ansatte"): search_companies med brugerens formulering som query.
 - Personer på navn ('find Mette Holm', flere med samme navn): search_persons, derefter show_person med Lasso-ID.
 - Flere navngivne virksomheder → compare_companies (sammenligning, rangering, "hvem er størst"). Navne må bruges i stedet for CVR-numre.
-- Elementer, ingen focus dækker: render_view; hent først props for typerne med describe_components.
-- "Gem virksomheden/personen", "husk", "bogmærk", "sæt på min liste": save_page. "Mine gemte", "hvad har jeg gemt", "min liste": list_saved_pages. "Fjern fra listen": remove_saved_page. save_view er kun til et delbart link til en visning.
-- "Giv mig en URL", "del": save_view.
+- Elementer, ingen focus dækker: render_view; hent først props for typerne med describe_components.`;
 
-Regler:
+/**
+ * Routingen i Lassos egen chat: som CHAT_ROUTING (den fælles tekst, som /mcp også bygger på), men med chattens egne linjer
+ * for navneopslag (find_entity og ask_choice, aldrig search_persons til at afgøre, hvem der menes) og for side eller element
+ * (et element er render_view, medmindre brugeren beder om siden). /mcp's tekst (ROUTING, MCP_RULES) er uændret og pinnet i chatHost.test.ts.
+ */
+const PERSON_LOOKUP = "- Personer på navn ('find Mette Holm', flere med samme navn): search_persons, derefter show_person med Lasso-ID.";
+const ELEMENT_ROUTE = "- Elementer, ingen focus dækker: render_view; hent først props for typerne med describe_components.";
+export const CHAT_HOST_ROUTING = CHAT_ROUTING.replace(
+  PERSON_LOOKUP,
+  "- Personer på navn: find_entity for at finde, hvem der menes (aldrig search_persons til det); flere kandidater → ask_choice, én → show_person med Lasso-ID. search_persons kun til en liste af personer med kriterier.",
+).replace(
+  ELEMENT_ROUTE,
+  "- Et enkelt element (diagram, nøgletalsrække, tabel, liste), ingen focus dækker: render_view med én komponent (hent først props med describe_components), medmindre brugeren beder om selve siden: så show_company/show_person.",
+);
+
+/** Gem-værktøjerne i routingen: kun Claude.ai har dem (portalen har knapper til at gemme). */
+const ROUTING_SAVE = `- "Gem virksomheden/personen", "husk", "bogmærk", "sæt på min liste": save_page. "Mine gemte", "hvad har jeg gemt", "min liste": list_saved_pages. "Fjern fra listen": remove_saved_page. save_view er kun til et delbart link til en visning.
+- "Giv mig en URL", "del": save_view.`;
+
+/** Routingen til Claude.ai: chattens routing plus gem-værktøjerne. Byte-identisk med teksten før opdelingen (chatHost.test.ts). */
+export const ROUTING = `${CHAT_ROUTING}\n${ROUTING_SAVE}`;
+
+export const MCP_RULES = `Regler:
 - Én visning pr. svar: kald højst ét af show_company, show_person, search_companies, search_persons, compare_companies og render_view pr. brugerbesked, og kun én gang. Aldrig show_company og render_view efter hinanden.
 - Tegn altid med det samme. Spørg aldrig "vil du se det grafisk?".
 - Kan din app vise den interaktive Lasso-visning: vis kun den, og skriv aldrig tekstkortet. Kan den ikke (fx Claude Code eller en terminal): vis tekstkortet fra værktøjssvaret uændret i en kodeblok med linket til den interaktive visning som klikbart link lige under, fx [Åbn LASSO X A/S i Lasso](url).
@@ -83,23 +107,28 @@ Regler:
 - Nævner svaret andre match ved navneopslag, og er det uklart hvem brugeren mente, så spørg.
 - Beløb angives i hele kroner (10 mio. = 10000000).`;
 
+const INSTRUCTIONS = `${ROUTING}\n\n${MCP_RULES}`;
+
 /** Første linje i hvert visningssvar (Jakob 30.09): visningen er svaret, så modellen skriver intet i chatten. */
 const SILENT = "Visningen vises for brugeren nu og er hele svaret: skriv intet i chatten (kun hvis appen ikke kan vise visningen, se tekstkortet).";
 
 /**
  * Resuméet står både som tekst og i structuredContent: nogle værter (fx Claude Code)
  * giver kun modellen structuredContent, og så skal tallene at kommentere stå der.
+ * host "chat" (docs/chat.md, tokens): kun noten og resuméet, uden SILENT, link og tekstkort-blok (portalen viser
+ * visningen selv, og teksten styres af CHAT_RULES); structuredContent har samme felter som i /mcp.
  */
-function viewResult(spec: ViewSpec, ds: Dataset, extra: { note?: string; link?: string; ask?: Ask; pdfLink?: string } = {}): CallToolResult {
+function viewResult(spec: ViewSpec, ds: Dataset, extra: { note?: string; link?: string; ask?: Ask; pdfLink?: string } = {}, host: McpContext["host"] = "mcp"): CallToolResult {
+  const chat = host === "chat";
   // Med et spørgsmål svarer resuméet og tekstkortet på det først ("Svar: …").
-  const summary = [SILENT, extra.note, summarizeView(spec, ds, { ask: extra.ask }), extra.link && `Interaktiv Lasso-visning (link til brugeren): ${extra.link}`]
+  const summary = [chat ? undefined : SILENT, extra.note, summarizeView(spec, ds, { ask: extra.ask, host }), !chat && extra.link && `Interaktiv Lasso-visning (link til brugeren): ${extra.link}`]
     .filter(Boolean)
     .join("\n");
   const card = textCard(spec, ds, { ask: extra.ask });
   return {
     content: [
       { type: "text", text: summary },
-      ...(card ? [{ type: "text" as const, text: `Tekstkort:\n${card}` }] : []),
+      ...(card && !chat ? [{ type: "text" as const, text: `Tekstkort:\n${card}` }] : []),
     ],
     structuredContent: {
       spec,
@@ -173,6 +202,37 @@ function withCatalogHelp(message: string, input: unknown): string {
   return `${message}\n\nKatalog for typerne i specen:\n${catalogAsText(types as ComponentType[])}`;
 }
 
+/** show_company's input (delt, så chatten kan skjule den forældede sections). */
+const SHOW_COMPANY_INPUT = z.object({
+        company: z.string().min(1).describe("8-cifret CVR-nummer, Lasso-ID (fx CVR-1-12345678) eller virksomhedens navn."),
+        question: z.string().max(300).optional().describe("Brugerens spørgsmål ordret. Serveren vælger niveau, elementer og data (nøgletal, roller, år) efter spørgsmålet."),
+        metrics: z.array(z.enum(METRICS)).max(5).optional().describe("Valgfrit: de nøgletal, spørgsmålet handler om, hvis de ikke står med deres navn (fx 'egenkapitalandel' = soliditetsgrad)."),
+        focus: z.enum(FOCUSES).optional().describe("Sæt kun focus, når spørgsmålet er generelt; ellers bestemmer spørgsmålet. Standard: overblik."),
+        topic: z.string().max(40).optional().describe("Emnet i spørgsmålet, hvis det ikke står med sit eget ord: fx roede-flag, fusion, meddelelser, dokumenter, branchesammenligning, placering, heleregnskab, registrering, opsummering, aendringer, score, persontal (person). Aliaser som 'risiko', 'kort', 'tldr' forstås også. Udelad, når spørgsmålet selv siger det."),
+        sections: z.array(z.enum(COMPANY_SECTIONS)).optional().describe("Forældet: fast skabelon. Brug focus i stedet."),
+        chart_metric: z.enum(METRICS).optional().describe("Nøgletal i grafen, kun hvis brugeren nævner et bestemt. Standard: omsætning, hvis den er oplyst, ellers bruttofortjeneste."),
+        years: z.number().int().min(2).max(10).optional().describe("Antal år i grafer og tabeller. Standard: 5, ved økonomi 10."),
+        show_all: z.boolean().optional().describe("Vis alt om virksomheden: sæt true, når brugeren beder om at se alt/det hele ('vis alt om X', 'hele siden', 'det hele'). Så vises alle elementer i fuld form, også ud over sidens højdebudget (ca. 1½ skærm). Standard: udeladt; siden holdes kort med de mest relevante elementer."),
+      });
+
+/**
+ * render_view's fulde beskrivelse (Claude.ai over /mcp): komposition, layoutguiden (Paper 30) og komponentindekset
+ * med formål. Uændret tekst; chatten (host "chat") får den korte variant nedenfor.
+ */
+const RENDER_VIEW_DESCRIPTION = `Fri komposition til oversigter og analyser, der ikke passer i show_company, show_person, search_companies, search_persons eller compare_companies (sammenligninger bygges med compare_companies, ikke her). Send en JSON-spec; Lassos kode henter data og tegner i Lassos design. Virksomheder angives med CVR-nummer, Lasso-ID eller navn (navne slås op, og valget står i svaret). Skriv aldrig HTML/CSS. Brug 1–12 komponenter i ét dashboard. Kald render_view én gang pr. svar.
+
+Før render_view: vælg typerne i indekset nedenfor og kald describe_components med dem for at få deres props, brug og eksempler. Gæt ikke props.\n\n${COMPOSITION_RULES}
+
+${LAYOUT_RULES}\n\nKomponentindeks (type (titel): formål):\n${catalogIndexText()}\n\nEksempel (ét dashboard): {"title":"Byg A/S: ejere og revisor","components":[{"type":"LassoCompanyHead","company":"12345678"},{"type":"LassoOwnerList","company":"12345678"},{"type":"LassoKeyValueList","company":"12345678","rows":["revisor","revisorskift"]}]}`;
+
+/**
+ * render_view i Lassos egen chat (docs/chat.md, tokens): kun det, routingen (ROUTING) og CHAT_RULES ikke allerede
+ * siger. Layoutguiden og indeksets formål er udeladt; typenavnene står her, fordi describe_components kræver dem
+ * (uden dem kan modellen ikke slå noget op). Holdes under 1.500 tegn; input-skemaet er det samme som i /mcp.
+ */
+export const RENDER_VIEW_CHAT_DESCRIPTION = `Fri komposition: ét eller flere elementer, ingen af de andre værktøjer dækker (fx ét ejerdiagram eller én graf under din tekst), eller en hel side med layout "page". Send en JSON-spec; Lasso henter data og tegner. Kald først describe_components med de typer, du overvejer (props gættes ikke). 1–12 komponenter i læserækkefølge, højst én graf, udelad width, aldrig HTML/CSS. Virksomheder med CVR-nummer, Lasso-ID eller navn.
+Typer: ${COMPONENT_CATALOG.map((c) => c.type).join(", ")}.`;
+
 export function createMcpServer(ctx: McpContext): McpServer {
   const server = new McpServer(
     { name: "lasso", title: "Lasso", version: "0.1.0" },
@@ -180,6 +240,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
   );
 
   const ui = { ui: { resourceUri: VIEW_URI } };
+  const view = (spec: ViewSpec, ds: Dataset, extra?: { note?: string; link?: string; ask?: Ask; pdfLink?: string }) => viewResult(spec, ds, extra, ctx.host);
   const readOnly = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
 
   registerAppTool(
@@ -198,7 +259,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     async (input): Promise<CallToolResult> => {
       const r = await searchCompanies(ctx, input);
       if ("error" in r) return toolError(r.error);
-      return viewResult(r.spec, r.dataset, { note: r.note, pdfLink: mcpPdfLink(ctx.config, r) });
+      return view(r.spec, r.dataset, { note: r.note, pdfLink: mcpPdfLink(ctx.config, r) });
     },
   );
 
@@ -222,7 +283,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     async (input): Promise<CallToolResult> => {
       const r = await searchPersons(ctx, input);
       if ("error" in r) return toolError(r.error);
-      return viewResult(r.spec, r.dataset, { note: r.note, pdfLink: mcpPdfLink(ctx.config, r) });
+      return view(r.spec, r.dataset, { note: r.note, pdfLink: mcpPdfLink(ctx.config, r) });
     },
   );
 
@@ -247,7 +308,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     async (input): Promise<CallToolResult> => {
       const r = await compareCompanies(ctx, input);
       if ("error" in r) return toolError(r.error);
-      return viewResult(r.spec, r.dataset, { note: r.note, pdfLink: mcpPdfLink(ctx.config, r) });
+      return view(r.spec, r.dataset, { note: r.note, pdfLink: mcpPdfLink(ctx.config, r) });
     },
   );
 
@@ -258,24 +319,15 @@ export function createMcpServer(ctx: McpContext): McpServer {
       title: "Vis virksomhed",
       description:
         "Vis én dansk virksomhed som ét skærmbillede, der tilpasser sig spørgsmålet og virksomhedens data. Send brugerens spørgsmål ordret i question: serveren afleder, hvad der spørges om, og bygger en hel side i Lassos portal-layout, hvor svar-elementet står først med data afgrænset til spørgsmålet (fx soliditetsgraden først på kortene og som linjegraf, kun direktionen i personlisten, regnskabet for det nævnte år, kun ledelsesændringerne i historikken), og resten af siden er kontekst fra hele komponentkataloget. Samme spørgsmål giver altid samme side. Kald det kun én gang pr. svar, og kald ikke render_view bagefter. Brug til alle spørgsmål om én bestemt virksomhed. focus bruges kun ved et generelt spørgsmål ('fortæl om X', 'hvordan går det'): 'overblik' (standard), 'oekonomi', 'ejerskab', 'risiko' (kreditvurdering fra Creditsafe), 'historik', 'regnskab', 'kontakt' (kontakt og ledelse; 'ledelse' åbner samme side). Tager CVR-nummer, Lasso-ID eller navn; ved navn vælger serveren det bedste match og nævner alternativerne. Flere navngivne virksomheder → compare_companies; personer → show_person/search_persons; render_view kun til elementer, ingen af de andre værktøjer dækker. Siden holdes inden for et højdebudget (de mest relevante elementer); beder brugeren om at se alt/det hele om virksomheden, så sæt show_all: true.",
-      inputSchema: z.object({
-        company: z.string().min(1).describe("8-cifret CVR-nummer, Lasso-ID (fx CVR-1-12345678) eller virksomhedens navn."),
-        question: z.string().max(300).optional().describe("Brugerens spørgsmål ordret. Serveren vælger niveau, elementer og data (nøgletal, roller, år) efter spørgsmålet."),
-        metrics: z.array(z.enum(METRICS)).max(5).optional().describe("Valgfrit: de nøgletal, spørgsmålet handler om, hvis de ikke står med deres navn (fx 'egenkapitalandel' = soliditetsgrad)."),
-        focus: z.enum(FOCUSES).optional().describe("Sæt kun focus, når spørgsmålet er generelt; ellers bestemmer spørgsmålet. Standard: overblik."),
-        topic: z.string().max(40).optional().describe("Emnet i spørgsmålet, hvis det ikke står med sit eget ord: fx roede-flag, fusion, meddelelser, dokumenter, branchesammenligning, placering, heleregnskab, registrering, opsummering, aendringer, score, persontal (person). Aliaser som 'risiko', 'kort', 'tldr' forstås også. Udelad, når spørgsmålet selv siger det."),
-        sections: z.array(z.enum(COMPANY_SECTIONS)).optional().describe("Forældet: fast skabelon. Brug focus i stedet."),
-        chart_metric: z.enum(METRICS).optional().describe("Nøgletal i grafen, kun hvis brugeren nævner et bestemt. Standard: omsætning, hvis den er oplyst, ellers bruttofortjeneste."),
-        years: z.number().int().min(2).max(10).optional().describe("Antal år i grafer og tabeller. Standard: 5, ved økonomi 10."),
-        show_all: z.boolean().optional().describe("Vis alt om virksomheden: sæt true, når brugeren beder om at se alt/det hele ('vis alt om X', 'hele siden', 'det hele'). Så vises alle elementer i fuld form, også ud over sidens højdebudget (ca. 1½ skærm). Standard: udeladt; siden holdes kort med de mest relevante elementer."),
-      }),
+      // Den forældede sections-parameter skjules for chatten (host chat); /mcp har den uændret.
+      inputSchema: ctx.host === "chat" ? SHOW_COMPANY_INPUT.omit({ sections: true }) : SHOW_COMPANY_INPUT,
       annotations: { title: "Vis virksomhed", ...readOnly },
       _meta: ui,
     },
     async (input): Promise<CallToolResult> => {
       const r = await showCompany(ctx, input);
       if ("error" in r) return toolError(r.error);
-      return viewResult(r.spec, r.dataset, { note: r.note, link: r.link, ask: r.ask, pdfLink: mcpPdfLink(ctx.config, r) });
+      return view(r.spec, r.dataset, { note: r.note, link: r.link, ask: r.ask, pdfLink: mcpPdfLink(ctx.config, r) });
     },
   );
 
@@ -299,7 +351,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     async (input): Promise<CallToolResult> => {
       const r = await showPerson(ctx, input);
       if ("error" in r) return toolError(r.error);
-      return viewResult(r.spec, r.dataset, { note: r.note, link: r.link, ask: r.ask, pdfLink: mcpPdfLink(ctx.config, r) });
+      return view(r.spec, r.dataset, { note: r.note, link: r.link, ask: r.ask, pdfLink: mcpPdfLink(ctx.config, r) });
     },
   );
 
@@ -328,11 +380,8 @@ export function createMcpServer(ctx: McpContext): McpServer {
     "render_view",
     {
       title: "Vis oversigt",
-      description: `Fri komposition til oversigter og analyser, der ikke passer i show_company, show_person, search_companies, search_persons eller compare_companies (sammenligninger bygges med compare_companies, ikke her). Send en JSON-spec; Lassos kode henter data og tegner i Lassos design. Virksomheder angives med CVR-nummer, Lasso-ID eller navn (navne slås op, og valget står i svaret). Skriv aldrig HTML/CSS. Brug 1–12 komponenter i ét dashboard. Kald render_view én gang pr. svar.
-
-Før render_view: vælg typerne i indekset nedenfor og kald describe_components med dem for at få deres props, brug og eksempler. Gæt ikke props.\n\n${COMPOSITION_RULES}
-
-${LAYOUT_RULES}\n\nKomponentindeks (type (titel): formål):\n${catalogIndexText()}\n\nEksempel (ét dashboard): {"title":"Byg A/S: ejere og revisor","components":[{"type":"LassoCompanyHead","company":"12345678"},{"type":"LassoOwnerList","company":"12345678"},{"type":"LassoKeyValueList","company":"12345678","rows":["revisor","revisorskift"]}]}`,
+      // Chatten får den korte beskrivelse (tokens); Claude.ai den fulde. Skemaet er det samme.
+      description: ctx.host === "chat" ? RENDER_VIEW_CHAT_DESCRIPTION : RENDER_VIEW_DESCRIPTION,
       inputSchema: renderViewInputSchema,
       annotations: { title: "Vis oversigt", ...readOnly },
       _meta: ui,
@@ -341,11 +390,12 @@ ${LAYOUT_RULES}\n\nKomponentindeks (type (titel): formål):\n${catalogIndexText(
       // Navne ("Risika") slås op som i show_company, så modellen ikke skal søge først (review P1-7).
       const r = await renderView(ctx, input);
       if ("error" in r) return toolError(withCatalogHelp(r.error, input));
-      return viewResult(r.spec, r.dataset, { note: r.note, pdfLink: mcpPdfLink(ctx.config, r) });
+      return view(r.spec, r.dataset, { note: r.note, pdfLink: mcpPdfLink(ctx.config, r) });
     },
   );
 
-  registerAppTool(
+  // Gem-værktøjerne kun til Claude.ai: portalen har knapper til at gemme (docs/chat.md, tokens).
+  if (ctx.host !== "chat") registerAppTool(
     server,
     "save_view",
     {
@@ -380,7 +430,7 @@ ${LAYOUT_RULES}\n\nKomponentindeks (type (titel): formål):\n${catalogIndexText(
   const writeAnnotations = { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false };
   const modelAndApp = { ui: { visibility: ["model", "app"] } };
 
-  registerAppTool(
+  if (ctx.host !== "chat") registerAppTool(
     server,
     "save_page",
     {
@@ -410,7 +460,7 @@ ${LAYOUT_RULES}\n\nKomponentindeks (type (titel): formål):\n${catalogIndexText(
     },
   );
 
-  registerAppTool(
+  if (ctx.host !== "chat") registerAppTool(
     server,
     "remove_saved_page",
     {
@@ -434,7 +484,7 @@ ${LAYOUT_RULES}\n\nKomponentindeks (type (titel): formål):\n${catalogIndexText(
     },
   );
 
-  registerAppTool(
+  if (ctx.host !== "chat") registerAppTool(
     server,
     "list_saved_pages",
     {
@@ -450,7 +500,7 @@ ${LAYOUT_RULES}\n\nKomponentindeks (type (titel): formål):\n${catalogIndexText(
     },
     async (input): Promise<CallToolResult> => {
       const { spec, dataset } = await listSavedPages(ctx, input);
-      return viewResult(spec, dataset, { pdfLink: mcpPdfLink(ctx.config, { spec, dataset }) });
+      return view(spec, dataset, { pdfLink: mcpPdfLink(ctx.config, { spec, dataset }) });
     },
   );
 

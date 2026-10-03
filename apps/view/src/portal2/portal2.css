@@ -12,6 +12,13 @@
   --tip: #2b2e34; --tipfg: #ffffff; --scrim: rgba(22, 24, 29, 0.35);
   --font: "Poppins", system-ui, -apple-system, "Segoe UI", sans-serif;
   --topH: 56px; --compactH: 58px; --gut: 28px;
+  /* Chatten (docs/design/CHAT.md, Paper-eksporten chat-designguide.html): mål, der ikke findes i styles.css. */
+  /* Bredderne er 20 % over Paper-eksporten (800/720/760/480; Jakob 03.10). */
+  /* Svarteksten er højst 60 % af tråden (Jakob 03.10): følger --chat-w; kort, sider og fuld skærm har hele bredden. */
+  --chat-w: 960px; --chat-input-w: 864px; --chat-body-max: calc(var(--chat-w) * 0.6); --chat-bubble-max: 576px; --chat-bubble-r: 18px;
+  --chat-lh: 22px; --chat-avatar: 24px; --chat-link-h: 46px; --chat-input-h: 52px; --chat-fs-12: 12px; --chat-fs-16: 16px;
+  --chat-shadow-input: 0 8px 24px rgba(22, 24, 29, 0.08); --chat-shadow-panel: 0 12px 32px rgba(22, 24, 29, 0.12);
+  --chat-shadow-jump: 0 4px 12px rgba(22, 24, 29, 0.1);
   height: 100vh; height: 100dvh;
   color: var(--ink); font-family: var(--font); -webkit-font-smoothing: antialiased; overflow: hidden;
   color-scheme: light;
@@ -22,6 +29,8 @@
   --coraltext: #ff8a5c; --bar: #6b4130; --pos: #4cc38a; --neg: #f97066; --warn: #e3a33b;
   --pill-line: #2c2f36; --pill-hover: #33363d; --pill-focus: #3a3d45; --shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   --tip: #f2f3f5; --tipfg: #16181d; --scrim: rgba(0, 0, 0, 0.55);
+  --chat-shadow-input: 0 8px 24px rgba(0, 0, 0, 0.45); --chat-shadow-panel: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --chat-shadow-jump: 0 4px 12px rgba(0, 0, 0, 0.5);
   color-scheme: dark;
 }
 html:has(.p3:not(.p3-specimen)), body:has(.p3:not(.p3-specimen)) { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; }
@@ -285,22 +294,16 @@ body:has(.p3:not(.p3-specimen)[data-theme="dark"]) { background: #121316; }
 .p3 .home h1 { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; margin: 18px 0 8px; }
 .p3 .home p { color: var(--sec); font-size: 14px; margin: 0; }
 
-.p3 .answer { margin-top: 18px; font-size: 14px; color: var(--text); }
-.p3 .answer__q { font-size: 13px; color: var(--sec); margin-bottom: 6px; }
-.p3 .answer__q::before { content: "Du spurgte: "; }
-.p3 .answer .lasso-chat__text { max-width: 760px; line-height: 1.55; }
-.p3 .answer .lasso-chat__text p, .p3 .answer .lasso-chat__text ul { margin: 0 0 8px; }
-.p3 .answer .lasso-chat__text a { color: var(--coraltext); }
-.p3 .answer__status { color: var(--sec); font-size: 13px; animation: p3-busy 1.4s ease-in-out infinite; }
-.p3 .answer__error { color: var(--neg); font-size: 13px; margin: 12px 0; }
+/* Et modul, der hentes (skelet med shimmer, 26c) eller fejlede. */
+.p3 .mod-error { color: var(--neg); font-size: 13px; margin: 12px 0; }
+.p3 .mod-skel { display: grid; gap: 14px; padding-top: 24px; }
+.p3 .mod-skel .lasso-skeleton { display: block; height: 18px; border-radius: 6px; }
+.p3 .mod-skel .lasso-skeleton:nth-child(1) { width: 60%; }
+.p3 .mod-skel .lasso-skeleton:nth-child(2) { width: 85%; }
+.p3 .mod-skel .lasso-skeleton:nth-child(3) { width: 40%; }
 
-.p3 .view { margin: 6px -16px 0; }
-.p3 .view .lasso-root, .p3 .view .lasso-frame { background: transparent; }
-.p3 .skeleton { display: grid; gap: 14px; padding-top: 24px; }
-.p3 .skeleton div { height: 18px; border-radius: 6px; background: color-mix(in srgb, var(--ink) 6%, transparent); }
-.p3 .skeleton div:nth-child(1) { width: 60%; }
-.p3 .skeleton div:nth-child(2) { width: 85%; }
-.p3 .skeleton div:nth-child(3) { width: 40%; }
+/* .p3 er også .lasso-root (så --lasso-*-tokens følger temaet i chatten); resten af .lasso-roots stil gælder ikke rammen. */
+.p3.lasso-root { container-type: normal; font-size: inherit; line-height: normal; font-variant-numeric: normal; font-family: var(--font); color: var(--ink); background: var(--page); overflow: hidden; }
 .p3 .notice { position: absolute; left: 50%; top: 56px; transform: translateX(-50%); z-index: 40; background: var(--tip); color: var(--tipfg); font-size: 13px; padding: 8px 12px; border-radius: 8px; display: flex; gap: 12px; align-items: center; }
 
 /* Spørgefeltet er et rigtigt felt (prototypen viser kun pladsholderen) */
@@ -348,10 +351,10 @@ body:has(.p3:not(.p3-specimen)[data-theme="dark"]) { background: #121316; }
 
 /* ---------- designguidens prøver (#/portal, "Elementer og knapper"): delene uden portalens layout ---------- */
 .p3.p3-specimen { height: auto; display: block; overflow: visible; background: transparent; }
-/* Prøverne står uden for portalens rammer: alle deres knapper og felter nulstilles (guidens egne stile må ikke slå igennem). */
-.p3-specimen :where(button, input) { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; box-shadow: none; border-radius: 0; }
-.p3-specimen :where(button) { cursor: pointer; }
-.p3-specimen :where(input) { outline: none; }
+/* Prøverne står uden for portalens rammer: alle deres knapper og felter nulstilles (guidens egne stile må ikke slå igennem). Nul specificitet, så komponenternes egne klasser (fx .lasso-btn--primary) vinder. */
+:where(.p3-specimen) :where(button, input) { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; box-shadow: none; border-radius: 0; }
+:where(.p3-specimen) :where(button) { cursor: pointer; }
+:where(.p3-specimen) :where(input) { outline: none; }
 .p3-specimen .spec-top { position: relative; height: var(--topH); background: var(--frame); border: 1px solid var(--line); border-radius: 10px; display: flex; align-items: center; padding-inline: 20px 12px; gap: 16px; }
 .p3-specimen .searchwrap { position: static; width: 100%; max-width: 720px; }
 .p3-specimen .sdrop { position: static; max-width: 720px; }

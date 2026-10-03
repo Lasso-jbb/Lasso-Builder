@@ -326,18 +326,17 @@ export function adaptLiveNumber(raw: Json): Pick<ContactVM, "verifiedNumbers" | 
 
 /**
  * Rækkefølge og danske overskrifter for `sections`-feltets nøgler, BEKRÆFTET MOD API 27.09.2026
- * (`POST /modules/reportanalysis/{lassoId}`). "sprgsml" (spørgsmål til overvejelse) står sidst.
+ * (`POST /modules/reportanalysis/{lassoId}`). "likviditet" (en uformateret tabel) og "sprgsml" (spørgsmål til
+ * overvejelse) bruges ikke (Jakob 03.10): de står ikke i listen og kommer derfor aldrig med.
  * `latestReport`/`previousReport` (standardnøgletal med `possibleError`-flag) bruges ikke endnu,
  * se docs/endpoints-enheder-kontakt-analyse.md.
  */
 const REPORT_ANALYSIS_SECTIONS: readonly [key: string, title: string][] = [
   ["konklusion", "Regnskabsanalyse: konklusion"],
   ["resultat", "Resultat"],
-  ["likviditet", "Likviditet"],
   ["balanceogkapitalforhold", "Balance og kapitalforhold"],
   ["branchestatistik", "Branchestatistik"],
   ["revisoroplysninger", "Revisoroplysninger"],
-  ["sprgsml", "Spørgsmål til overvejelse"],
 ];
 
 const REPORT_ANALYSIS_SOURCE = "Kilde: Lasso regnskabsanalyse";

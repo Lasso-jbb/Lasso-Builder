@@ -95,7 +95,11 @@ test("adaptPersonNetwork beregner overlap og sorterer efter år", () => {
   assert.equal(anna!.companies[0]!.companyId, "CVR-1-11111111");
   assert.equal(mogens!.active, false);
   assert.equal(mogens!.until, "2013-06-17");
-  assert.equal(mogens!.companies[0]!.role, "administrerende direktør");
+  // 16.3 (Jakob 03.10): kun ejer, direktion, bestyrelse og andet; tiden sammen i måneder (sammenlagt).
+  assert.equal(mogens!.companies[0]!.role, "direktion");
+  assert.equal(anna!.companies[0]!.role, "direktion");
+  assert.equal(anna!.overlapMonths, 120);
+  assert.equal(mogens!.overlapMonths, 7);
   assert.deepEqual(adaptPersonNetwork("x", { unexpected: true }).people, []);
 });
 

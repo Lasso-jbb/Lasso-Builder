@@ -44,8 +44,11 @@ export interface DialogProps {
   closeLabel?: string;
   /** Uden luk-kryds (07.2: bekræftelsesdialogen lukkes med Annuller, Esc eller klik udenfor). */
   hideClose?: boolean;
-  /** Hvor fokus lander ved åbning: "first" = første felt/knap (standard), "panel" = selve dialogen. */
-  initialFocus?: "first" | "panel";
+  /**
+   * Hvor fokus lander ved åbning: "first" = første felt/knap (standard), "panel" = selve dialogen, "secondary" = den
+   * sekundære knap (fx "Annuller" i en destruktiv bekræftelse, så Enter ikke sletter; 07.2).
+   */
+  initialFocus?: "first" | "panel" | "secondary";
   className?: string;
 }
 
@@ -60,7 +63,8 @@ export function Dialog({ open, title, description, onClose, children, actions, s
   useEffect(() => {
     if (!open || !layer.ready) return;
     const previous = typeof document !== "undefined" ? (document.activeElement as HTMLElement | null) : null;
-    const first = initialFocus === "panel" ? panel.current : (focusables(panel.current).find((el) => !el.classList.contains("lasso-dialog__close")) ?? panel.current);
+    const secondary = initialFocus === "secondary" ? panel.current?.querySelector<HTMLElement>(".lasso-dialog__secondary") : null;
+    const first = initialFocus === "panel" ? panel.current : (secondary ?? focusables(panel.current).find((el) => !el.classList.contains("lasso-dialog__close")) ?? panel.current);
     first?.focus();
     return () => previous?.focus?.();
   }, [open, layer.ready, initialFocus]);

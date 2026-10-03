@@ -122,7 +122,9 @@
   --lasso-shadow: none;
   --lasso-shadow-pop: 0 14px 34px rgb(16 18 24 / 0.14);
   --lasso-shadow-seg: 0 1px 2px rgb(16 18 24 / 0.10);  /* 11.2: valgt segment i en grå pille (eneste skygge på noget, der ikke svæver) */
-  --lasso-focus-border: var(--lasso-accent-border); /* undtagelser: heatmap-celle (1 px ink-kant som hover/valgt), accent-segment (1 px fuld koral, da valgt allerede har koral kant) */
+  --lasso-focus-border: var(--lasso-accent-border);
+  /* Fold ud/sammen (harmonika, "Vis alle", tidsbåndenes fold, Jakob 03.10): neutral fokusring, aldrig koral; følger mørkt tema via text-3. */
+  --lasso-focus-neutral: var(--lasso-text-3); /* undtagelser: heatmap-celle (1 px ink-kant som hover/valgt), accent-segment (1 px fuld koral, da valgt allerede har koral kant) */
 
   /* Højder: knap 42 i dialoger/paneler, 36 i sidehoveder, 32 i kompakte rækker */
   --lasso-field-h: 44px;
@@ -2796,6 +2798,7 @@ button.lasso-monitor__stop:hover { color: var(--lasso-text); }
 .lasso-root .lasso-iconbtn--subtle:hover { background: var(--lasso-tag-hover); border-color: transparent; }
 .lasso-root .lasso-iconbtn--bare { background: transparent; border-color: transparent; color: var(--lasso-text-3); }
 .lasso-root .lasso-iconbtn--bare:hover { background: var(--lasso-surface-muted); border-color: transparent; color: var(--lasso-text); }
+/* Primær ikonknap: samme koral som den primære knap (05.1), når kun ikonet er plads (chattens "Tilføj som fane" på mobil). */
 @container lasso (max-width: 560px) {
   .lasso-root .lasso-iconbtn--38, .lasso-root .lasso-iconbtn--36 { width: 44px; height: 44px; min-width: 44px; }
   .lasso-root .lasso-iconbtn--32 { width: 40px; height: 40px; min-width: 40px; }
@@ -5197,7 +5200,9 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-odiagram__depthlabel { margin-right: 2px; }
 
 /* ---------- 28.7 Regnskabsoplysninger og kapital (node HDZ-0); 26h.9 bibrancher og formål (GG7-0) ---------- */
-.lasso-reg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--lasso-space-4); align-items: start; }
+/* To kort side om side kun, når hvert kort er mindst 360 px (ellers under hinanden), målt på sektionens egen bredde
+   og ikke hele visningens: i en smal sidekolonne eller et kort i chatten står de under hinanden. */
+.lasso-reg { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: var(--lasso-space-4); align-items: start; }
 .lasso-reg > .lasso-section { grid-column: auto; min-width: 0; }
 .lasso-reg .lasso-kv-row__label { width: 200px; white-space: normal; }
 .lasso-reg .lasso-kv-row { align-items: flex-start; }
@@ -5926,14 +5931,52 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-lanes__name { display: flex; align-items: center; gap: 4px; min-width: 0; max-width: 100%; }
 .lasso-lanes__name > :last-child { min-width: 0; }
 .lasso-lanes__spacer { flex: none; width: 18px; }
-.lasso-root .lasso-lanes__toggle { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; padding: 0; border: 0; border-radius: var(--lasso-radius-sm); background: none; color: var(--lasso-muted); cursor: pointer; }
-.lasso-root .lasso-lanes__toggle:hover { color: var(--lasso-text); background: var(--lasso-surface-2); }
-.lasso-lanes__toggle:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: 1px; }
+/* Fold-knappen: neutral som en bar ikonknap (ingen ring eller koral i hvile, Jakob 03.10); kun tastaturfokus får en ring. */
+.lasso-root .lasso-lanes__toggle { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; padding: 0; border: 0; border-radius: var(--lasso-radius-sm); background: none; color: var(--lasso-muted); cursor: pointer; box-shadow: none; outline: none; }
+.lasso-root .lasso-lanes__toggle:hover { color: var(--lasso-text); background: var(--lasso-surface-muted); }
+.lasso-root .lasso-lanes__toggle:focus:not(:focus-visible) { outline: none; box-shadow: none; }
+.lasso-root .lasso-lanes__toggle:focus-visible { outline: 1px solid var(--lasso-text-3); outline-offset: 1px; }
 .lasso-personroles__row .lasso-personroles__sub { padding-left: 22px; }
 /* Rollernes farver i alle tidsbånd (Jakob 02.10): direktion, bestyrelse, ejer; alt andet stiplet; ophørt = dæmpet. */
 .lasso-root .lasso-role-band--direction { background: var(--lasso-chart-1); border: 0; }
 .lasso-root .lasso-role-band--board { background: var(--lasso-chart-2); border: 0; }
 .lasso-root .lasso-role-band--owner { background: var(--lasso-chart-3); border: 0; }
-.lasso-root .lasso-role-band--other { background: var(--lasso-surface-muted); border: 1px dashed var(--lasso-faint); }
-.lasso-root .lasso-role-band.is-ended:not(.lasso-role-band--other) { opacity: 0.4; }
+/* Andet (interessent, deltager, reel ejer …): grafpalettens neutrale serie (chart-5), fyldt som de andre roller (Jakob 03.10). */
+.lasso-root .lasso-role-band--other { background: var(--lasso-chart-5); border: 0; }
+/* Afsluttet: samme farve (rollen kan stadig kendes, også bestyrelse fra ejer), dæmpet og med skrå striber (Jakob 03.10). */
+.lasso-root .lasso-role-band.is-ended { opacity: 0.6; background-image: repeating-linear-gradient(135deg, transparent 0 3px, var(--lasso-surface) 3px 5px); }
 .lasso-role-swatch { display: inline-block; width: 16px; height: 6px; border-radius: 3px; flex: none; }
+
+
+/* ---------- 09.2/28.7 Nøgle-værdi efter listens egen bredde (Jakob 03.10) ----------
+   Rækkens mål følger listens bredde, ikke hele visningens (containeren "lasso" er hele LassoView): en liste i en smal
+   kolonne, et halvt kort eller et kort i chatten får ellers en fast 190–200 px nøglekolonne og en værdi på få tegn.
+   1) Nøglen er aldrig bredere end halvdelen af rækken; værdien får resten (min-width 0, almindelig ombrydning).
+   2) Under 400 px listebredde står nøglen over værdien (26c.2-formen, som på mobil). */
+.lasso-kv-list, .lasso-reg__rows { container-type: inline-size; container-name: lasso-kv; }
+.lasso-root .lasso-kv-row > .lasso-kv-row__label { max-width: 50%; }
+.lasso-root .lasso-kv-row > .lasso-kv-row__value { min-width: 0; }
+@container lasso-kv (max-width: 400px) {
+  .lasso-root .lasso-kv-row { flex-wrap: wrap; row-gap: 2px; gap: 2px var(--lasso-space-4); padding: 8px 0; min-height: 52px; align-items: flex-start; }
+  .lasso-root .lasso-kv-list .lasso-kv-row > .lasso-kv-row__label, .lasso-root .lasso-reg__rows .lasso-kv-row > .lasso-kv-row__label { width: 100%; max-width: none; font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
+  .lasso-root .lasso-kv-list .lasso-kv-row > .lasso-kv-row__value, .lasso-root .lasso-reg__rows .lasso-kv-row > .lasso-kv-row__value { flex-basis: 100%; white-space: normal; overflow-wrap: break-word; text-align: left; line-height: 20px; }
+}
+
+/*
+ * Alt, der folder ud eller sammen (Jakob 03.10, "for alt i formen"): harmonikaen (mønster 9), regnskabsanalysens rækker,
+ * "Vis alle"/"Vis mere"/"Vis færre", tabellernes og regnskabets fold, tidsbåndenes og netværkets fold. Ingen ring ved
+ * museklik eller tryk; kun tastaturfokus (:focus-visible) får en neutral 1 px ring (--lasso-focus-neutral), aldrig koral.
+ */
+.lasso-root :is(.lasso-accordion__button, .lasso-analysis19__head, .lasso-reltable__head, .lasso-stmt__toggle, .lasso-fold__more, .lasso-more, .lasso-expand, .lasso-feed__more, .lasso-analysis__more, .lasso-analysis__toggle, .lasso-relations__count, .lasso-odlist__more, .lasso-field__toggle, .lasso-lanes__toggle, .lasso-rail__head) {
+  -webkit-tap-highlight-color: transparent;
+}
+.lasso-root :is(.lasso-accordion__button, .lasso-analysis19__head, .lasso-reltable__head, .lasso-stmt__toggle, .lasso-fold__more, .lasso-more, .lasso-expand, .lasso-feed__more, .lasso-analysis__more, .lasso-analysis__toggle, .lasso-relations__count, .lasso-odlist__more, .lasso-field__toggle, .lasso-lanes__toggle, .lasso-rail__head):is(:focus, :active):not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+.lasso-root :is(.lasso-accordion__button, .lasso-analysis19__head, .lasso-reltable__head, .lasso-stmt__toggle, .lasso-fold__more, .lasso-more, .lasso-expand, .lasso-feed__more, .lasso-analysis__more, .lasso-analysis__toggle, .lasso-relations__count, .lasso-odlist__more, .lasso-field__toggle, .lasso-lanes__toggle, .lasso-rail__head):focus-visible {
+  outline: 1px solid var(--lasso-focus-neutral);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+.lasso-root .lasso-analysis__toggle:focus-visible { border-color: var(--lasso-border-strong); }

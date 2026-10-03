@@ -43,6 +43,12 @@ test("Ikonknapper (05.2): 38 og 32 px, aria-label, aktiv ved aria-pressed", () =
   assert.match(on, /lasso-iconbtn--active/);
   assert.match(on, /aria-pressed="true"/);
   assert.match(renderToStaticMarkup(createElement(IconButton, { icon: "edit", label: "Redigér", size: 32, variant: "subtle" })), /lasso-iconbtn--32 lasso-iconbtn--subtle/);
+  // Ikonknap med ekstra klasse (chattens "Tilføj som fane" på mobil: neutral, koralikonet sættes af værten); navnet som aria-label.
+  const add = renderToStaticMarkup(createElement(IconButton, { icon: "bookmark-plus", label: "Tilføj som fane", size: 32, className: "chat-card__addm" }));
+  assert.match(add, /class="lasso-iconbtn lasso-iconbtn--sq lasso-iconbtn--32 chat-card__addm"/);
+  assert.match(add, /aria-label="Tilføj som fane"/);
+  // Fold ud/sammen: aria-expanded på knappen.
+  assert.match(renderToStaticMarkup(createElement(IconButton, { icon: "chevron-down", label: "Fold sammen", size: 32, variant: "bare", expanded: true })), /aria-expanded="true"/);
 });
 
 test("Handlingsrække (05.3): '…' først, sekundær, primær sidst", () => {

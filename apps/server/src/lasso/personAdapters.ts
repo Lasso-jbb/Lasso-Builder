@@ -2,7 +2,9 @@ import { statusLabel } from "@lasso/spec";
 import {
   isPersonId,
   longestPeriodYears,
+  networkRole,
   roleKind,
+  totalPeriodMonths,
   type PeriodInput,
   type PersonNetworkCompanyVM,
   type PersonNetworkRowVM,
@@ -204,10 +206,12 @@ export function adaptPersonNetwork(lassoId: string, raw: Json, today = new Date(
       active ||= open;
       const cvr = str(c, "cvr");
       const status = companyStatusText(str(c, "status"));
+      // 16.3: kun Ejer, Direktion, Bestyrelse og Andet; en stifter- eller revisorrolle står aldrig som rolle.
+      const kind = role ? networkRole(role) : undefined;
       companies.push({
         companyId: str(c, "lassoId") ?? (cvr ? `CVR-1-${cvr}` : undefined),
         companyName,
-        role: role ? role.toLowerCase() : undefined,
+        role: kind ? kind.toLowerCase() : undefined,
         from,
         to: open ? undefined : to,
         ...(!open && !to ? { ended: true } : {}),
@@ -223,6 +227,7 @@ export function adaptPersonNetwork(lassoId: string, raw: Json, today = new Date(
       name,
       companies,
       overlapYears: longestPeriodYears(periods, today),
+      overlapMonths: totalPeriodMonths(periods, today),
       since: froms[0],
       until: active ? undefined : tos.at(-1),
       active,

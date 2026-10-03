@@ -92,12 +92,14 @@ const SECTIONS: TextSectionsVM = {
     })),
   ],
 };
+/** Profilen længere end de første 440 tegn (uden Likviditet er den ellers kort nok til at stå helt). */
+const LONGER = { ...SECTIONS, sections: SECTIONS.sections.map((s) => (s.heading === "Resultat" ? { ...s, body: s.body + LONG.repeat(3) } : s)) };
 const headings = (html: string) => [...html.matchAll(/lasso-textsection__heading">([^<]*)</g)].map((m) => m[1]);
 
-test("Virksomhedsprofil (overblik): CVR-tekster uden branche plus konklusion, resultat og likviditet, ingen kildevisning (12.1)", () => {
-  const html = renderToStaticMarkup(createElement(LassoTextSections, { sections: SECTIONS }));
+test("Virksomhedsprofil (overblik): CVR-tekster uden branche plus konklusion og resultat (ingen likviditet, Jakob 03.10), ingen kildevisning (12.1)", () => {
+  const html = renderToStaticMarkup(createElement(LassoTextSections, { sections: LONGER }));
   // 12.1 (Jakob 01.10): afsnittene læses som én tekst; de første 440 tegn står, resten kommer med "Vis mere" (50 % ad gangen).
-  const all = ["Formål", "Tegningsregler", "Regnskabsanalyse: konklusion", "Resultat", "Likviditet"];
+  const all = ["Formål", "Tegningsregler", "Regnskabsanalyse: konklusion", "Resultat"];
   const first = headings(html);
   assert.ok(first.length >= 1 && first.length < all.length, first.join());
   assert.deepEqual(first, all.slice(0, first.length));
@@ -145,7 +147,7 @@ test("Navne med Lasso-ID i analysen er links med drill-down og ren tekst uden", 
   assert.deepEqual(segmentAction({ text: "Anne Eksempel", lassoId: "CVR-3-4000000001" }), { kind: "open-person", lassoId: "CVR-3-4000000001", name: "Anne Eksempel" });
   assert.equal(segmentAction({ text: "Nogen" }), null);
   // Foldet profil: segmenterne skæres ved 220 tegn med " …", navnene bevares som links.
-  const profile = renderToStaticMarkup(createElement(LassoTextSections, { sections: SECTIONS, onOpen: () => {} }));
+  const profile = renderToStaticMarkup(createElement(LassoTextSections, { sections: LONGER, onOpen: () => {} }));
   assert.match(profile, /lasso-textsection__entity">Anne Eksempel</);
   assert.match(profile, / …<\/p>/);
 });
@@ -297,4 +299,22 @@ test("12.1 (Jakob 01.10): 'Vis mere' kun med mindst 50 % mere at vise; hvert kli
   assert.equal(revealOf(660, 440), 440, "præcis 50 % tilbage: Vis mere");
   assert.equal(revealOf(2000, 660), 660);
   assert.equal(revealOf(1200, 990), 1200);
+});
+
+test("19.3 (Jakob 03.10): med host.analysisPdfSolo står 'Hent som PDF' kun, når analysen er visningens eneste element; uden (/mcp) som før", () => {
+  const ds = dataset();
+  const analysis = { type: "LassoTextSections", company: ID, variant: "analyse" } as const;
+  type Props = Parameters<typeof LassoView>[0];
+  const spec = (components: unknown[]) => ({ version: 2, kind: "company", title: "Test", layout: "stack", criteria: [], components }) as unknown as Props["spec"];
+  const render = (components: unknown[], host: Props["host"]) => renderToStaticMarkup(createElement(LassoView, { spec: spec(components), dataset: ds, host, onAction: () => {} }));
+  const pdf = /lasso-analysis19__pdf/;
+  const page = [{ type: "LassoKeyValueList", company: ID }, analysis];
+  // Portalen: kun alene.
+  assert.match(render([analysis], { export: true, analysisPdfSolo: true }), pdf);
+  assert.doesNotMatch(render(page, { export: true, analysisPdfSolo: true }), pdf);
+  // Uden indstillingen (/mcp, /v): også i en sammensat side, som før.
+  assert.match(render(page, { export: true }), pdf);
+  assert.match(render([analysis], { export: true }), pdf);
+  // Uden eksport aldrig (G1).
+  assert.doesNotMatch(render([analysis], { analysisPdfSolo: true }), pdf);
 });

@@ -1,13 +1,17 @@
 import { Router, type NextFunction, type Request, type Response } from "express";
+import { summarizeView } from "../data/summary.js";
 import { z } from "zod";
-import { FOCUSES, METRICS, PAGE_FOCUSES, PERSON_FOCUSES, searchQuerySchema } from "@lasso/spec";
+import { toLassoId, FOCUSES, METRICS, PAGE_FOCUSES, PERSON_FOCUSES, searchQuerySchema } from "@lasso/spec";
 import type { CurrentUser } from "../auth/user.js";
 import type { Config } from "../config.js";
 import type { DataProvider } from "../data/provider.js";
-import type { SavedPageStore } from "../pages/store.js";
+import { pageKindOf, type SavedPageStore } from "../pages/store.js";
+import { distinctTitle, instantiate, stripEntityName, templateFromSpec, titleFallback, type TemplateEntity, type TemplateKind } from "../pages/templateSpec.js";
+import { PageTemplateError, type PageTemplateRecord, type PageTemplateStore } from "../pages/templates.js";
 import {
   listSavedPages,
   removeSavedPage,
+  resolveTemplateView,
   resolveView,
   savePage,
   saveView,
@@ -33,6 +37,8 @@ export interface PortalApiDeps {
   provider: DataProvider;
   store: ViewStore;
   pages: SavedPageStore;
+  /** Brugerens egne sider (sideskabeloner, "Tilføj som fane"). */
+  templates: PageTemplateStore;
 }
 
 const oneOf = (name: string, values: readonly string[]) => `${name} skal være en af: ${values.join(", ")}.`;
@@ -87,6 +93,24 @@ const saveViewBody = z.object(
   { error: BODY_ERROR },
 );
 
+const TEMPLATE_KINDS = ["company", "person"] as const;
+const templateBody = z.object(
+  {
+    kind: z.enum(TEMPLATE_KINDS, { error: oneOf("kind", TEMPLATE_KINDS) }),
+    title: text("title", 120).trim().min(1, "title må ikke være tom."),
+    subtitle: text("subtitle", 200).optional(),
+    // Specen valideres af templateFromSpec (samme tekst som resten af systemet).
+    spec: z.unknown(),
+    entity: z.object({ kind: z.enum(TEMPLATE_KINDS, { error: oneOf("entity.kind", TEMPLATE_KINDS) }), id: text("entity.id", 40).trim().min(1, "entity.id må ikke være tom.") }, { error: "Angiv entity: { kind, id } for den side, specen er lavet til." }),
+  },
+  { error: BODY_ERROR },
+);
+const listTemplatesParams = z.object({ kind: z.enum(TEMPLATE_KINDS, { error: oneOf("kind", TEMPLATE_KINDS) }).optional() });
+const renderTemplateParams = z.object({ entity: text("entity", 40).trim().min(1, "Angiv entity: Lasso-ID for den virksomhed eller person, siden skal vises om.") });
+
+/** Det, klienten ser af en skabelon (specen sendes ikke: den hentes via /render). */
+const templateJson = (t: PageTemplateRecord) => ({ id: t.id, kind: t.kind, title: t.title, ...(t.subtitle ? { subtitle: t.subtitle } : {}), createdAt: t.createdAt });
+
 const lookupParams = z.object({ q: text("q", 120).default("") });
 
 const resolveBody = z.object({ spec: z.unknown().optional() }, { error: BODY_ERROR });
@@ -100,9 +124,23 @@ function parseOr400<T>(schema: z.ZodType<T>, input: unknown, res: Response): T |
   return undefined;
 }
 
+/** Entitetens navn, by, gade og CVR fra Lasso (til at holde dem ude af en skabelon); null, når opslaget fejler (så gemmes intet uden stripning). */
+async function entityFacts(c: UseCaseCtx, kind: TemplateKind, id: string): Promise<TemplateEntity | null> {
+  try {
+    if (kind === "company") {
+      const co = await c.provider.company(toLassoId(id, c.config.LASSO_COMPANY_ID_PREFIX));
+      return { kind, id, name: co.name, city: co.address?.city, street: co.address?.street, zip: co.address?.zip, cvr: co.cvr };
+    }
+    const p = await c.provider.person(id);
+    return { kind, id, name: p.name, city: p.city };
+  } catch {
+    return null;
+  }
+}
+
 const sendError = (res: Response, err: UseCaseError) => void res.status(err.status).json({ error: err.error });
 
-export function portalApi({ config, provider, store, pages }: PortalApiDeps): Router {
+export function portalApi({ config, provider, store, pages, templates }: PortalApiDeps): Router {
   const router = Router();
   const ctx = (res: Response): UseCaseCtx => ({ config, provider, store, pages, user: res.locals.user as CurrentUser });
 
@@ -144,7 +182,8 @@ export function portalApi({ config, provider, store, pages }: PortalApiDeps): Ro
     if (!params) return;
     const r = await showCompany(ctx(res), { company: String(req.params.ref), focus: params.focus, years: params.years, chart_metric: params.metric });
     if ("error" in r) return sendError(res, r);
-    res.json({ spec: r.spec, dataset: r.dataset, ...(r.note ? { note: r.note } : {}), link: entityLink(config, r.lassoId, { focus: params.focus }) });
+    // summary: samme resumé som værktøjssvarene giver modellen; portalen sender det som chattens kontekst (chat/context.ts).
+    res.json({ spec: r.spec, dataset: r.dataset, ...(r.note ? { note: r.note } : {}), link: entityLink(config, r.lassoId, { focus: params.focus }), summary: summarizeView(r.spec, r.dataset, { host: "chat" }) });
   });
 
   // Som show_person. link = den signerede /e/-side med samme focus, samme form som for virksomheder i portalen.
@@ -153,7 +192,7 @@ export function portalApi({ config, provider, store, pages }: PortalApiDeps): Ro
     if (!params) return;
     const r = await showPerson(ctx(res), { person: String(req.params.ref), focus: params.focus });
     if ("error" in r) return sendError(res, r);
-    res.json({ spec: r.spec, dataset: r.dataset, ...(r.note ? { note: r.note } : {}), link: entityLink(config, r.lassoId, { focus: params.focus }) });
+    res.json({ spec: r.spec, dataset: r.dataset, ...(r.note ? { note: r.note } : {}), link: entityLink(config, r.lassoId, { focus: params.focus }), summary: summarizeView(r.spec, r.dataset, { host: "chat" }) });
   });
 
   // Som resolve_view: drill-down, filterændring og opdatér.
@@ -185,6 +224,75 @@ export function portalApi({ config, provider, store, pages }: PortalApiDeps): Ro
     const r = await removeSavedPage(ctx(res), { page: String(req.params.lassoId) });
     if ("error" in r) return sendError(res, r);
     res.json({ lassoId: r.lassoId, removed: r.removed, total: r.total });
+  });
+
+  // --- Egne sider (sideskabeloner): "Tilføj som fane" på en side, chatten har sat sammen om én virksomhed/person ---
+  // Specen gemmes uden entiteten ({{entity}}) og vises som et ekstra modul på alle virksomheder/personer af samme slags.
+  // Demobrugeren (åben portal) deles af alle besøgende: den gemmer ikke egne sider og ser ingen.
+  const demoRefused = (res: Response): boolean => {
+    if (!(res.locals.user as CurrentUser).isDemo) return false;
+    res.status(403).json({ error: "Log ind for at gemme sider." });
+    return true;
+  };
+
+  router.post("/templates", async (req, res) => {
+    if (demoRefused(res)) return;
+    const body = parseOr400(templateBody, req.body ?? {}, res);
+    if (!body) return;
+    if (body.entity.kind !== body.kind) return void res.status(400).json({ error: `entity.kind skal være ${body.kind}, ligesom kind.` });
+    if (pageKindOf(body.entity.id) !== body.kind) return void res.status(400).json({ error: `"${body.entity.id}" er ikke et Lasso-ID for en ${body.kind === "company" ? "virksomhed (CVR-1-…)" : "person (CVR-3-…)"}.` });
+    // Entitetens navn og metadata (fra Lasso, ikke fra klienten) fjernes fra titlerne, og siden afvises, hvis de står andre steder.
+    const entity = await entityFacts(ctx(res), body.kind, body.entity.id);
+    if (!entity) return void res.status(503).json({ error: "Lasso svarede ikke; prøv igen." });
+    const made = templateFromSpec(body.spec, entity);
+    if ("error" in made) return void res.status(400).json({ error: made.error });
+    // Tom efter fjernelsen: den fallback-titel, templateFromSpec fandt (undertitel, første komponent, "Side"). Samme navn som et indbygget modul får et tillæg.
+    const title = distinctTitle(stripEntityName(body.title, entity) || made.spec.title, body.kind);
+    // Undertitlen er som standard væk; en, brugeren selv gav, gemmes kun hvis noget overlever fjernelsen.
+    // En undertitel, der er sidens egen (spec.subtitle: entitetens metadata), gemmes aldrig.
+    const specSub = (body.spec as { subtitle?: unknown } | null)?.subtitle;
+    const subtitle = body.subtitle === undefined || body.subtitle === specSub ? undefined : stripEntityName(body.subtitle, entity) || undefined;
+    const user = res.locals.user as CurrentUser;
+    try {
+      const t = await templates.create({ org: user.org, userId: user.id, kind: body.kind, title, subtitle, spec: made.spec });
+      res.json(templateJson(t));
+    } catch (e) {
+      if (e instanceof PageTemplateError) return void res.status(400).json({ error: e.message });
+      throw e;
+    }
+  });
+
+  router.get("/templates", async (req, res) => {
+    const params = parseOr400(listTemplatesParams, req.query, res);
+    if (!params) return;
+    const user = res.locals.user as CurrentUser;
+    if (user.isDemo) return void res.json({ templates: [] });
+    const list = await templates.list(user.org, user.id, params.kind as TemplateKind | undefined);
+    res.json({ templates: list.map(templateJson) });
+  });
+
+  // Kun brugerens egen skabelon: en andres id er 404, som om den ikke fandtes.
+  router.delete("/templates/:id", async (req, res) => {
+    if (demoRefused(res)) return;
+    const user = res.locals.user as CurrentUser;
+    const removed = await templates.remove(user.org, user.id, String(req.params.id));
+    if (!removed) return void res.status(404).json({ error: "Siden findes ikke." });
+    res.json({ id: String(req.params.id), removed: true });
+  });
+
+  // Skabelonen om en bestemt virksomhed/person, hentet som et modul: samme vej som resolve_view (brugerens dataadgang).
+  router.get("/templates/:id/render", async (req, res) => {
+    const params = parseOr400(renderTemplateParams, req.query, res);
+    if (!params) return;
+    const user = res.locals.user as CurrentUser;
+    const t = user.isDemo ? null : await templates.get(user.org, user.id, String(req.params.id));
+    if (!t) return void res.status(404).json({ error: "Siden findes ikke." });
+    if (pageKindOf(params.entity) !== t.kind) return void res.status(400).json({ error: `Siden er til en ${t.kind === "company" ? "virksomhed" : "person"}; "${params.entity}" er ikke et Lasso-ID for en.` });
+    const spec = { ...instantiate(t.spec, params.entity), title: titleFallback(t.title, t.spec), ...(t.subtitle ? { subtitle: t.subtitle } : {}) };
+    // Samme datagrundlag som et modul: entiteten selv (stamdata, vurdering) hentes med, så alle komponenter har det, de skal bruge.
+    const r = await resolveTemplateView(ctx(res), spec, { kind: t.kind, id: params.entity });
+    if ("error" in r) return sendError(res, r);
+    res.json({ spec: r.spec, dataset: r.dataset, summary: summarizeView(r.spec, r.dataset, { host: "chat" }) });
   });
 
   // Som save_view: et delbart link til /v/<org>/<slug>.

@@ -279,3 +279,21 @@ test("Lasso-side (layout 'page', 06.5): kolonne 1-3 i lasso-lpage--3, uden colum
   assert.match(css, /@container lasso \(min-width: 660px\) \{\s*\.lasso-lpage--2, \.lasso-lpage--3 \{ grid-template-columns: minmax\(0, 2fr\) minmax\(0, 3fr\); \}/);
   assert.match(css, /@container lasso \(min-width: 1320px\) \{\s*\.lasso-lpage--3 \{ grid-template-columns: minmax\(0, 2fr\) minmax\(0, 3fr\) minmax\(0, 4fr\); \}/);
 });
+
+test("Fold ud/sammen (Jakob 03.10): ingen ring ved klik, kun tastaturfokus med den neutrale ring, aldrig koral", () => {
+  const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+  assert.match(css, /--lasso-focus-neutral: var\(--lasso-text-3\)/);
+  const block = (suffix: string) => {
+    const m = css.match(new RegExp(`\\.lasso-root :is\\(([^)]*)\\)${suffix.replace(/[()]/g, "\\$&")} \\{([^}]*)\\}`));
+    assert.ok(m, suffix);
+    return { list: m![1]!, body: m![2]! };
+  };
+  const visible = block(":focus-visible");
+  const click = block(":is(:focus, :active):not(:focus-visible)");
+  for (const cls of ["lasso-accordion__button", "lasso-analysis19__head", "lasso-more", "lasso-expand", "lasso-reltable__head", "lasso-stmt__toggle", "lasso-lanes__toggle"]) {
+    assert.ok(visible.list.includes(`.${cls}`) && click.list.includes(`.${cls}`), cls);
+  }
+  assert.match(visible.body, /outline: 1px solid var\(--lasso-focus-neutral\)/);
+  assert.doesNotMatch(visible.body, /accent|focus-border/);
+  assert.match(click.body, /outline: none/);
+});
