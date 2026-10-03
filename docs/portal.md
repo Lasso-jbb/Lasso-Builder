@@ -181,11 +181,12 @@ Samme regel som på virksomhedssiden: **hvert modul ejer sit indhold**. Rollerne
 netværket på netvaerk, ejerskaberne på ejerskab, sagerne på risiko og historik og nyheder på
 historik. Overblikket viser smagsprøver, hvis "Se alle" åbner fanen: "Se alle N selskaber i
 Roller" (N = alle personens selskaber, som fanen viser; knappen står, når fanen har flere, end
-listen viser), "Se alle N personer i Netværk" og "Se alle N begivenheder i Historik".
+listen viser) og "Se alle N begivenheder i Historik". Netværket folder i stedet ud på stedet med
+"Vis alle N personer"/"Vis færre" (Jakob 03.10).
 
 | Fokus | Elementer (bredde) | Henter |
 |---|---|---|
-| overblik | Aktive roller som kort liste, 5 + "Se alle N selskaber i Roller" (¾) + Stamoplysninger (¼); uden aktive roller de ophørte. Derefter Netværk (3 + "Se alle N personer i Netværk"), Risiko, Historik (3 + "Se alle N begivenheder i Historik") og Ejerskab (ejerdiagrammet, kun når de selskaber, personen ejer, selv ejer selskaber) to og to (½ + ½) efter vægt; alvorlig risiko (personen var med, da det skete) i fuld bredde lige under hovedet. Ingen nyheder. Uden `openFocus` folder "Se alle" ud på stedet | person, netværk, ejerdiagram (0 op, 2 ned) |
+| overblik | Aktive roller som kort liste, 5 + "Se alle N selskaber i Roller" (¾) + Stamoplysninger (¼); uden aktive roller de ophørte. Derefter Netværk (3 + "Vis alle N personer", folder ud på stedet), Risiko, Historik (3 + "Se alle N begivenheder i Historik") og Ejerskab (ejerdiagrammet, kun når de selskaber, personen ejer, selv ejer selskaber) to og to (½ + ½) efter vægt; alvorlig risiko (personen var med, da det skete) i fuld bredde lige under hovedet. Ingen nyheder. Uden `openFocus` folder "Se alle" ud på stedet | person, netværk, ejerdiagram (0 op, 2 ned) |
 | roller | Alle roller som tidsbånd, 8 + "Se alle N selskaber" (¾) + Stamoplysninger (¼) | person |
 | netvaerk | Netværket, 8 + "Se alle N" (fuld), også som tom tilstand | person, netværk |
 | ejerskab | Ejerskaber: de ejede selskaber med andel og siden-dato (fuld; tom: "Personen ejer ikke selskaber i CVR."), Ejerstruktur (diagram, 0 op, 2 ned, fuld; når de ejede selskaber selv ejer selskaber, eller som fejltilstand, når grafen ikke kunne hentes) | person, ejerdiagram |

@@ -16,12 +16,12 @@ export function foldedCount(total: number, limit: number = LIST_FOLD): number {
  * - En ny prompt eller en anden visning (fane, fokus, spørgsmål til Claude): PromptLink, knap med kant og "→"
  *   som de opfølgende spørgsmål (LassoFollowUps).
  */
-export function ExpandLink({ expanded, total, onToggle, className = "" }: { expanded: boolean; total?: number; onToggle: () => void; className?: string }) {
+export function ExpandLink({ expanded, total, noun, onToggle, className = "" }: { expanded: boolean; total?: number; /** Efter tallet, fx "personer": "Vis alle 27 personer". */ noun?: string; onToggle: () => void; className?: string }) {
   // Print (Jakob 01.10): alt er foldet ud, og der er ingen knapper.
   if (usePrintMode()) return null;
   return (
     <button type="button" className={`lasso-link lasso-expand ${className}`.trim()} aria-expanded={expanded} onClick={onToggle}>
-      {expanded ? "Vis færre" : total !== undefined ? `Vis alle ${total}` : "Vis alle"}
+      {expanded ? "Vis færre" : total !== undefined ? `Vis alle ${total}${noun ? ` ${noun}` : ""}` : "Vis alle"}
       <Icon name={expanded ? "chevron-up" : "chevron-right"} size={14} />
     </button>
   );

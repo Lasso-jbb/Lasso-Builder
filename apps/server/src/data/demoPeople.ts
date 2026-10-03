@@ -1,6 +1,8 @@
 import {
   longestPeriodYears,
+  networkRole,
   roleKind,
+  totalPeriodMonths,
   type CompanyVM,
   type NewsItemVM,
   type NewsVM,
@@ -120,8 +122,11 @@ export function demoPersonNetwork(companies: readonly DemoPersonSource[], id: st
         const from = later(own.from, other.from);
         const to = earlier(own.to, other.to);
         if (!from || (to && to <= from)) continue;
+        // 16.3: stifter (og revisor) er ikke at sidde sammen; resten er Ejer, Direktion, Bestyrelse eller Andet.
+        const kind = networkRole(other.role);
+        if (!kind || !networkRole(own.role)) continue;
         const entry = byPerson.get(other.name) ?? { companies: [], periods: [], active: false };
-        entry.companies.push({ companyId: c.lassoId, companyName: c.name, role: other.role.toLowerCase(), from, to, status: c.status, statusKind: c.statusKind });
+        entry.companies.push({ companyId: c.lassoId, companyName: c.name, role: kind.toLowerCase(), from, to, status: c.status, statusKind: c.statusKind });
         entry.periods.push({ from, to });
         entry.active ||= !to;
         byPerson.set(other.name, entry);
@@ -133,6 +138,7 @@ export function demoPersonNetwork(companies: readonly DemoPersonSource[], id: st
     name: n,
     companies: e.companies,
     overlapYears: longestPeriodYears(e.periods, TODAY),
+    overlapMonths: totalPeriodMonths(e.periods, TODAY),
     since: e.companies.map((c) => c.from).filter((f): f is string => Boolean(f)).sort()[0],
     until: e.active ? undefined : e.companies.map((c) => c.to).filter((t): t is string => Boolean(t)).sort().at(-1),
     active: e.active,

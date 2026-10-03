@@ -740,3 +740,26 @@ test("Ø13/B10 (d): composeAskCompany med et bredt svar-element (nyheder, Statst
     if (news?.column) assert.equal(news.width, "half", text);
   }
 });
+
+test("16.3 (Jakob 03.10): networkRole, totalPeriodMonths og togetherText", async () => {
+  const { networkRole, totalPeriodMonths, togetherText } = await import("./person.js");
+  assert.equal(networkRole("Stifter"), null);
+  assert.equal(networkRole("revisor"), null);
+  assert.equal(networkRole("Ejer"), "Ejer");
+  assert.equal(networkRole("Reel ejer"), "Andet");
+  assert.equal(networkRole("Bestyrelsesformand"), "Bestyrelse");
+  assert.equal(networkRole("Administrerende direktør"), "Direktion");
+  assert.equal(networkRole("interessent"), "Andet");
+  assert.equal(networkRole(undefined), "Andet");
+  // Samme tid i to selskaber tæller én gang; et hul lægges ikke til.
+  assert.equal(totalPeriodMonths([{ from: "2010-01-01", to: "2016-01-01" }, { from: "2012-01-01", to: "2014-01-01" }], "2026-01-01"), 72);
+  assert.equal(totalPeriodMonths([{ from: "2010-01-01", to: "2011-01-01" }, { from: "2020-01-01", to: "2021-01-01" }], "2026-01-01"), 24);
+  assert.equal(totalPeriodMonths([{ from: "2025-06-01" }], "2026-01-01"), 7);
+  assert.equal(togetherText(0), "under 1 måned sammen");
+  assert.equal(togetherText(1), "1 måned sammen");
+  assert.equal(togetherText(7), "7 måneder sammen");
+  assert.equal(togetherText(12), "1 år sammen");
+  assert.equal(togetherText(17), "1 år sammen");
+  assert.equal(togetherText(18), "2 år sammen");
+  assert.equal(togetherText(144), "12 år sammen");
+});
