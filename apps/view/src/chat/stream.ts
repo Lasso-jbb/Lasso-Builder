@@ -33,7 +33,7 @@ export type ChatEvent =
   | ({ type: "placement" } & Placement)
   | { type: "text"; text: string }
   | { type: "tool"; id: string; name: string; title: string }
-  | { type: "view"; id: string; name: string; form: ViewForm; spec: ViewSpec; dataset: Dataset; pdfLink?: string }
+  | { type: "view"; id: string; name: string; /** MCP-værktøjets navn (render_view, show_company …). */ tool: string; form: ViewForm; spec: ViewSpec; dataset: Dataset; pdfLink?: string }
   | { type: "tool_error"; id: string; name: string; message: string }
   | { type: "choice"; id: string; question: string; options: ChoiceOption[]; allowFreeText: boolean }
   /** fresh: svaret er flyttet til en anden fane; history er kun denne tur og hører til den nye fane. */

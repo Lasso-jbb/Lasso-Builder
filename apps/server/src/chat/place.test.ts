@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { loadConfig } from "../config.js";
 import { DemoProvider } from "../data/demo.js";
 import type { ChatContext, PlaceAnswerInput } from "./context.js";
-import { EXPLICIT_OPEN, verifyPlacement, type PlaceCtx, type TurnState } from "./place.js";
+import { EXPLICIT_OPEN, mentions, verifyPlacement, type PlaceCtx, type TurnState } from "./place.js";
 
 const mcp = { provider: new DemoProvider(), config: loadConfig({ LASSO_DATA_SOURCE: "demo" }) } as never;
 const gitte = { kind: "person" as const, id: "CVR-3-4000000007", name: "Gitte Prøve" };
@@ -71,4 +71,31 @@ test("global: kræver title; forsiden og en fane giver global, et resultat med n
   assert.deepEqual(await verifyPlacement({ placement: "global", title: "Firmaliste" }, ctx(home, "Største revisorer")), { placement: { placement: "global", title: "Firmaliste", decided: true } });
   assert.deepEqual(await verifyPlacement({ placement: "global", title: "Sammenligning" }, ctx(onByg, "Sammenlign med branchen")), { placement: { placement: "global", title: "Sammenligning", decided: true } });
   assert.deepEqual(await verifyPlacement({ placement: "global", title: "Kort" }, ctx({ active: { kind: "global", title: "Firmaliste" }, open: [] }, "Vis dem på kort")), { placement: { placement: "current", decided: true } });
+});
+
+test("EXPLICIT_OPEN: unicode-grænser og bøjninger af åbn", () => {
+  assert.doesNotMatch("Kan du læse alt om Gitte?", EXPLICIT_OPEN);
+  assert.doesNotMatch("Hvad er forskellen på åbner og lukker?".replace("åbner", "kåbner"), EXPLICIT_OPEN);
+  for (const ok of ["Kan du åbne Jakobs side?", "åbner du Gitte", "ÅBN Gitte", "vis mig det hele om Gitte."]) assert.match(ok, EXPLICIT_OPEN, ok);
+});
+
+test("mentions: et ord på mindst 3 bogstaver fra navnet, uden diakritiske tegn og store bogstaver; ellers id eller CVR", () => {
+  assert.equal(mentions("vis alt om gitte prove", "Gitte Prøve", gitte.id), true);
+  assert.equal(mentions("åbn PRØVE", "Gitte Prøve", gitte.id), true);
+  assert.equal(mentions("vis det hele", "Gitte Prøve", gitte.id), false);
+  assert.equal(mentions("vis alt om ed", "Ed Li", "CVR-3-1"), false, "ord under 3 bogstaver tæller ikke");
+  assert.equal(mentions("åbn 99000002", "Eksempel Revision Midt ApS", "CVR-1-99000002"), true);
+  assert.equal(mentions("åbn CVR-3-4000000007", "Gitte Prøve", gitte.id), true);
+});
+
+test("entity: målet skal være nævnt i beskeden, også en åben fane; 'vis det hele' åbner ikke direktøren", async () => {
+  const withGitte: ChatContext = { active: onByg.active, open: [byg, gitte] };
+  // En åben fane, der ikke er nævnt.
+  assert.match(error(await verifyPlacement(entity(gitte, "Gitte Prøve"), ctx(withGitte, "vis det hele"))), /Brugeren bad ikke om at åbne Gitte Prøve; svar her\./);
+  // Modellen giver et navn, der står i beskeden, men et id for en anden: navnet, serveren kender, afgør.
+  assert.match(error(await verifyPlacement(entity(gitte, "Eksempel Byg"), ctx(withGitte, "åbn Eksempel Byg"))), /Brugeren bad ikke om at åbne Gitte Prøve/);
+  // Slået op via navnet: samme krav.
+  assert.match(error(await verifyPlacement(entity(gitte, "Gitte Prøve"), ctx(onByg, "vis det hele"))), /bad ikke om at åbne/);
+  assert.ok("placement" in (await verifyPlacement(entity(gitte, "Gitte Prøve"), ctx(withGitte, "åbn Gitte"))));
+  assert.ok("placement" in (await verifyPlacement(entity(gitte, "Gitte Prøve"), ctx(onByg, "se alt om Gitte Prove"))));
 });

@@ -10,7 +10,18 @@ import type { ChatContext, ChatEntity, PlaceAnswerInput, Placement } from "./con
  */
 
 /** Hvad der tæller som en udtrykkelig bøn om en anden fane: "vis (mig) alt/det hele", "se (mig) alt/det hele" og "åbn". */
-export const EXPLICIT_OPEN = /\b(vis|se)( mig)? (alt|det hele)\b|(?<![\p{L}])åbn(?![\p{L}])/iu;
+export const EXPLICIT_OPEN = /(?<![\p{L}])(vis|se)( mig)? (alt|det hele)(?![\p{L}])|(?<![\p{L}])åbn(e|er)?(?![\p{L}])/iu;
+
+/** Tekst uden store bogstaver og diakritiske tegn (å → a, ø → o, æ → ae), så "Prøve" og "prove" er det samme. */
+const fold = (t: string): string => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/ø/g, "o").replace(/æ/g, "ae");
+
+/** Om brugerens besked nævner entiteten: et ord på mindst 3 bogstaver fra navnet står i beskeden (eller id/CVR-nummer står der). */
+export function mentions(message: string, name: string, id: string): boolean {
+  const m = fold(message);
+  const cvr = /^CVR-1-(\d{8})$/i.exec(id)?.[1];
+  if (m.includes(fold(id)) || (cvr && m.includes(cvr))) return true;
+  return fold(name).split(/[^a-z0-9]+/).some((w) => w.replace(/[^a-z]/g, "").length >= 3 && m.includes(w));
+}
 
 /** Turens tilstand, agent.ts og værktøjerne deler: placeringen (først forslaget, så det, modellen valgte), og hvad der er sket. */
 export interface TurnState {
@@ -70,6 +81,8 @@ export async function verifyPlacement(input: PlaceAnswerInput, { mcp, context, m
     if (!only || only.id !== e.id) return fail("Navnet passer på flere; kald ask_choice med kandidaterne.");
     target = { kind: only.kind, id: only.id, name: only.name };
   }
+  // Målet skal være det, brugeren nævnte: "vis det hele" på A åbner hverken A's direktør eller en anden åben fane.
+  if (!mentions(message, target.name, target.id)) return fail(`Brugeren bad ikke om at åbne ${target.name}; svar her.`);
   const focus = focusFor(target.kind, input.focus);
   return { placement: { placement: "entity", target, ...(focus ? { focus } : {}), decided: true } };
 }

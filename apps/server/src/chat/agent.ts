@@ -30,7 +30,7 @@ export type ChatEvent =
   | { type: "text"; text: string }
   | { type: "tool"; id: string; name: string; title: string }
   /** form: "page" er en hel side (show_*, søgninger, render_view med layout page), "module" et enkelt element. */
-  | { type: "view"; id: string; name: string; form: ViewForm; spec: ViewSpec; dataset: Dataset; pdfLink?: string }
+  | { type: "view"; id: string; name: string; /** MCP-værktøjets navn (render_view, show_company …): klienten viser kun "Tilføj som fane" for render_view. */ tool: string; form: ViewForm; spec: ViewSpec; dataset: Dataset; pdfLink?: string }
   | { type: "tool_error"; id: string; name: string; message: string }
   /** Valgmenuen (ask_choice): turen slutter; brugerens valg kommer med næste besked i context.choice. */
   | ({ type: "choice" } & ChoiceMenu)
@@ -315,6 +315,8 @@ export async function runChat({ ctx, config, model, history, message, context, e
 
       // place_answer kører først og for sig selv: placeringen skal være afgjort (og sendt), før en visning i samme svar tegnes.
       const place = uses.find((u) => u.name === PLACE_ANSWER);
+      // Højst ét place_answer pr. svar: de følgende afvises uden at køre (verifyPlacement ser dem aldrig).
+      const extraPlace = new Set(uses.filter((u) => u.name === PLACE_ANSWER && u !== place));
       let placed: BetaToolResultBlockParam | undefined;
       let placeFailed = false;
       if (place) {
@@ -330,6 +332,11 @@ export async function runChat({ ctx, config, model, history, message, context, e
       const results: BetaToolResultBlockParam[] = await Promise.all(
         uses.map(async (u): Promise<BetaToolResultBlockParam> => {
           if (u === place) return placed!;
+          if (extraPlace.has(u)) {
+            const once = "Højst ét kald pr. svar: place_answer kaldes kun én gang.";
+            emit({ type: "tool_error", id: u.id, name: u.name, message: once });
+            return { type: "tool_result", tool_use_id: u.id, content: once, is_error: true };
+          }
           // Afviste placeringen, vises intet i dette svar: modellen retter placeringen og viser så.
           if (placeFailed && !chatToolByName(u.name)) {
             const blocked = "Vælg placeringen, før noget vises: place_answer blev afvist, så intet er vist.";
@@ -362,7 +369,7 @@ export async function runChat({ ctx, config, model, history, message, context, e
           if (sc?.spec && dataset) {
             turn.viewed = true;
             firstView ??= { name: u.name, spec: sc.spec };
-            emit({ type: "view", id: u.id, name: u.name, form: viewForm(u.name, sc.spec), spec: sc.spec, dataset, ...(sc.pdfLink ? { pdfLink: sc.pdfLink } : {}) });
+            emit({ type: "view", id: u.id, name: u.name, tool: u.name, form: viewForm(u.name, sc.spec), spec: sc.spec, dataset, ...(sc.pdfLink ? { pdfLink: sc.pdfLink } : {}) });
           }
           return { type: "tool_result", tool_use_id: u.id, content: text || "OK" };
         }),

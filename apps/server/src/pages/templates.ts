@@ -61,7 +61,7 @@ export function validateTemplate(input: PageTemplateInput): PageTemplateInput {
   if (!title) throw new PageTemplateError("Siden mangler en titel.");
   const subtitle = input.subtitle?.trim().slice(0, MAX_SUBTITLE) || undefined;
   if (!hasPlaceholder(input.spec)) throw new PageTemplateError("Skabelonen er ikke bundet til en entitet.");
-  if (JSON.stringify(input.spec).length > MAX_SPEC_BYTES) throw new PageTemplateError("Siden er for stor til at blive gemt.");
+  if (Buffer.byteLength(JSON.stringify(input.spec), "utf8") > MAX_SPEC_BYTES) throw new PageTemplateError("Siden er for stor til at blive gemt.");
   return { org: input.org, userId: input.userId, kind: input.kind, title, subtitle, spec: input.spec };
 }
 
@@ -129,13 +129,27 @@ export class PgPageTemplateStore implements PageTemplateStore {
   async create(raw: PageTemplateInput) {
     const input = validateTemplate(raw);
     await this.migrate();
-    const count = await this.pool.query<{ n: string }>("SELECT count(*)::text AS n FROM page_templates WHERE org = $1 AND user_id = $2", [input.org, input.userId]);
-    if (Number(count.rows[0]?.n ?? 0) >= MAX_TEMPLATES) throw new PageTemplateError(`Du kan højst have ${MAX_TEMPLATES} egne sider.`);
-    const r = await this.pool.query<Row>(
-      "INSERT INTO page_templates (id, org, user_id, kind, title, subtitle, spec) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
-      [randomUUID(), input.org, input.userId, input.kind, input.title, input.subtitle ?? null, JSON.stringify(input.spec)],
-    );
-    return fromRow(r.rows[0]!);
+    // Tælling og indsættelse i én transaktion bag en advisory lock pr. bruger, så to samtidige kald ikke begge slipper under grænsen.
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`page_templates:${input.org}:${input.userId}`]);
+      const r = await client.query<Row>(
+        `INSERT INTO page_templates (id, org, user_id, kind, title, subtitle, spec)
+         SELECT $1, $2, $3, $4, $5, $6, $7
+         WHERE (SELECT count(*) FROM page_templates WHERE org = $2 AND user_id = $3) < ${MAX_TEMPLATES}
+         RETURNING *`,
+        [randomUUID(), input.org, input.userId, input.kind, input.title, input.subtitle ?? null, JSON.stringify(input.spec)],
+      );
+      await client.query("COMMIT");
+      if (!r.rows[0]) throw new PageTemplateError(`Du kan højst have ${MAX_TEMPLATES} egne sider.`);
+      return fromRow(r.rows[0]);
+    } catch (e) {
+      await client.query("ROLLBACK").catch(() => {});
+      throw e;
+    } finally {
+      client.release();
+    }
   }
 
   async list(org: string, userId: string, kind?: TemplateKind) {

@@ -6,11 +6,12 @@ import type { CurrentUser } from "../auth/user.js";
 import type { Config } from "../config.js";
 import type { DataProvider } from "../data/provider.js";
 import { pageKindOf, type SavedPageStore } from "../pages/store.js";
-import { instantiate, templateFromSpec, type TemplateKind } from "../pages/templateSpec.js";
+import { instantiate, stripEntityName, templateFromSpec, titleFallback, type TemplateKind } from "../pages/templateSpec.js";
 import { PageTemplateError, type PageTemplateRecord, type PageTemplateStore } from "../pages/templates.js";
 import {
   listSavedPages,
   removeSavedPage,
+  resolveEntity,
   resolveView,
   savePage,
   saveView,
@@ -218,11 +219,16 @@ export function portalApi({ config, provider, store, pages, templates }: PortalA
     if (!body) return;
     if (body.entity.kind !== body.kind) return void res.status(400).json({ error: `entity.kind skal være ${body.kind}, ligesom kind.` });
     if (pageKindOf(body.entity.id) !== body.kind) return void res.status(400).json({ error: `"${body.entity.id}" er ikke et Lasso-ID for en ${body.kind === "company" ? "virksomhed (CVR-1-…)" : "person (CVR-3-…)"}.` });
-    const made = templateFromSpec(body.spec, { kind: body.kind, id: body.entity.id });
+    // Entitetens navn (fra Lasso, ikke fra klienten) fjernes fra titlerne, og siden afvises, hvis det står andre steder.
+    const [candidate] = await resolveEntity(ctx(res), { kind: body.kind, query: body.entity.id, limit: 1 });
+    const made = templateFromSpec(body.spec, { kind: body.kind, id: body.entity.id, name: candidate?.id === body.entity.id ? candidate.name : undefined });
     if ("error" in made) return void res.status(400).json({ error: made.error });
+    const name = candidate?.id === body.entity.id ? candidate.name : undefined;
+    const title = titleFallback(stripEntityName(body.title, name), made.spec);
+    const subtitle = body.subtitle === undefined ? undefined : stripEntityName(body.subtitle, name) || undefined;
     const user = res.locals.user as CurrentUser;
     try {
-      const t = await templates.create({ org: user.org, userId: user.id, kind: body.kind, title: body.title, subtitle: body.subtitle, spec: made.spec });
+      const t = await templates.create({ org: user.org, userId: user.id, kind: body.kind, title, subtitle, spec: made.spec });
       res.json(templateJson(t));
     } catch (e) {
       if (e instanceof PageTemplateError) return void res.status(400).json({ error: e.message });
@@ -254,7 +260,7 @@ export function portalApi({ config, provider, store, pages, templates }: PortalA
     const t = await templates.get(user.org, user.id, String(req.params.id));
     if (!t) return void res.status(404).json({ error: "Siden findes ikke." });
     if (pageKindOf(params.entity) !== t.kind) return void res.status(400).json({ error: `Siden er til en ${t.kind === "company" ? "virksomhed" : "person"}; "${params.entity}" er ikke et Lasso-ID for en.` });
-    const spec = { ...instantiate(t.spec, params.entity), title: t.title, ...(t.subtitle ? { subtitle: t.subtitle } : {}) };
+    const spec = { ...instantiate(t.spec, params.entity), title: titleFallback(t.title, t.spec), ...(t.subtitle ? { subtitle: t.subtitle } : {}) };
     const r = await resolveView(ctx(res), spec);
     if ("error" in r) return sendError(res, r);
     res.json({ spec: r.spec, dataset: r.dataset, summary: summarizeView(r.spec, r.dataset, { host: "chat" }) });
