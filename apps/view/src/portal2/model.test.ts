@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Dataset, ViewSpec } from "@lasso/spec";
 import type { LookupResult } from "../portal/api.js";
-import { COMPANY_TABS, isTemplateTab, moduleTabs, templateIdOf, templateTab, addRecent, historyTrimmed, summaryFingerprint, textHash, choiceKey, choiceSend, defaultChoiceSelection, isUnrecognizedHistory, shortName, askPlaceholder, choiceMessage, closeItem, contextFor, freeTextPick, headLines, highlight, loadRecent, openItem, searchCounts, searchRows, suggestions, withoutHead, type OpenItem, type PendingChoice } from "./model.js";
+import { COMPANY_TABS, isTemplateTab, moduleTabs, templateIdOf, templateTab, addRecent, historyTrimmed, summaryFingerprint, textHash, choiceKey, choiceSend, defaultChoiceSelection, isUnrecognizedHistory, shortName, askPlaceholder, choiceMessage, closeItem, contextFor, freeTextPick, headLines, highlight, loadRecent, openItem, searchCounts, searchRows, suggestions, withoutHead, withoutFollowUps, forPortal, type OpenItem, type PendingChoice } from "./model.js";
 
 const novo: OpenItem = { key: "CVR-1-24256790", kind: "company", name: "NOVO NORDISK A/S", tab: "overblik" };
 const lasso: OpenItem = { key: "CVR-1-34580820", kind: "company", name: "LASSO X A/S", tab: "overblik" };
@@ -33,6 +33,32 @@ test("withoutHead: portalen tegner selv navn og identitetslinje", () => {
     withoutHead(spec).components.map((c) => c.type),
     ["LassoKeyFigureCards"],
   );
+});
+
+test("withoutFollowUps/forPortal: ingen opfølgende spørgsmål i portalen, resten står (også i grupper og kolonner)", () => {
+  const spec = {
+    version: 2,
+    kind: "company",
+    title: "Eksempel Byg A/S",
+    layout: "page",
+    criteria: [],
+    components: [
+      { type: "LassoCompanyHead", company: "CVR-1-1" },
+      { type: "LassoContact", company: "CVR-1-1", column: 1 },
+      { type: "LassoFollowUps", company: "CVR-1-1", column: 1, group: { id: "g", pattern: "accordion" } },
+      { type: "LassoPersonList", company: "CVR-1-1", column: 2, group: { id: "g", pattern: "accordion" } },
+      { type: "LassoFollowUps", company: "CVR-1-1" },
+    ],
+  } as unknown as ViewSpec;
+  const types = (s: ViewSpec) => s.components.map((c) => c.type);
+  assert.deepEqual(types(withoutFollowUps(spec)), ["LassoCompanyHead", "LassoContact", "LassoPersonList"]);
+  // Gruppens anden komponent og kolonnen står urørt; LassoView pakker resten uden hul.
+  assert.deepEqual(withoutFollowUps(spec).components[2], spec.components[3]);
+  assert.deepEqual(types(forPortal(spec, { head: false })), ["LassoContact", "LassoPersonList"]);
+  assert.deepEqual(types(forPortal(spec)), ["LassoCompanyHead", "LassoContact", "LassoPersonList"]);
+  // Uden opfølgende spørgsmål: samme objekt (intet at gentegne).
+  const plain = { ...spec, components: spec.components.slice(0, 2) } as ViewSpec;
+  assert.equal(withoutFollowUps(plain), plain);
 });
 
 test("headLines: adresse og CVR-linje som i prototypen", () => {

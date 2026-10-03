@@ -1,7 +1,12 @@
 import { useEffect, useRef } from "react";
-import { IconButton, LassoView, type HostCapabilities, type LassoViewProps } from "@lasso/ui";
+import {
+  IconButton,
+  LassoView,
+  type HostCapabilities,
+  type LassoViewProps,
+} from "@lasso/ui";
 import type { ViewPart } from "./AnswerCard.js";
-import { withoutHead } from "../model.js";
+import { forPortal } from "../model.js";
 import { hhmm } from "./util.js";
 
 const noop = () => undefined;
@@ -40,7 +45,11 @@ export function Fullscreen({
 
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
-    root.current?.querySelector<HTMLButtonElement>("[data-fs-close] button, button[data-fs-close]")?.focus();
+    root.current
+      ?.querySelector<HTMLButtonElement>(
+        "[data-fs-close] button, button[data-fs-close]",
+      )
+      ?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
@@ -55,25 +64,61 @@ export function Fullscreen({
   }, []);
 
   const { spec } = part;
-  const sub = [spec.subtitle, at && !mobile ? `fra samtalen kl. ${hhmm(at)}` : ""].filter(Boolean).join(", ");
+  const sub = [
+    spec.subtitle,
+    at && !mobile ? `fra samtalen kl. ${hhmm(at)}` : "",
+  ]
+    .filter(Boolean)
+    .join(", ");
   return (
-    <div className={`chat-fs${mobile ? " chat-fs--m" : ""}`} ref={root} role="dialog" aria-modal="false" aria-labelledby="chat-fs-title">
-      <div className="chat-fs__h">
-        <div className="chat-fs__ht">
-          <div className="chat-fs__t" id="chat-fs-title">
-            {spec.title}
+    <div
+      className={`chat-fs${mobile ? " chat-fs--m" : ""}`}
+      ref={root}
+      role="dialog"
+      aria-modal="false"
+      aria-labelledby="chat-fs-title"
+    >
+      {/* Samme kolonne (.col) og visningsramme (.view) som modulerne, så bredde og sideluft er de samme i alle brudpunkter (Jakob 03.10). */}
+      <div className="col">
+        <div className="view chat-fs__v">
+          <div className="chat-fs__h">
+            <div className="chat-fs__ht">
+              <div className="chat-fs__t" id="chat-fs-title">
+                {spec.title}
+              </div>
+              {sub ? <div className="chat-fs__s">{sub}</div> : null}
+            </div>
+            <div className="chat-card__a">
+              {!mobile && onDownload ? (
+                <IconButton
+                  icon="download"
+                  label="Hent som PDF"
+                  size={32}
+                  onClick={onDownload}
+                />
+              ) : null}
+              <span data-fs-close="" style={{ display: "contents" }}>
+                <IconButton
+                  icon="close"
+                  label="Luk fuld skærm"
+                  size={32}
+                  onClick={onClose}
+                />
+              </span>
+            </div>
           </div>
-          {sub ? <div className="chat-fs__s">{sub}</div> : null}
+          <div className="chat-fs__b">
+            <LassoView
+              spec={forPortal(spec, { head: !headless })}
+              dataset={part.dataset}
+              theme={theme}
+              frameless
+              page={part.form === "page"}
+              host={host ?? {}}
+              onAction={onAction ?? noop}
+            />
+          </div>
         </div>
-        <div className="chat-card__a">
-          {!mobile && onDownload ? <IconButton icon="download" label="Hent som PDF" size={32} onClick={onDownload} /> : null}
-          <span data-fs-close="" style={{ display: "contents" }}>
-            <IconButton icon="close" label="Luk fuld skærm" size={32} onClick={onClose} />
-          </span>
-        </div>
-      </div>
-      <div className="chat-fs__b">
-        <LassoView spec={headless ? withoutHead(spec) : spec} dataset={part.dataset} theme={theme} frameless page={part.form === "page"} host={host ?? {}} onAction={onAction ?? noop} />
       </div>
     </div>
   );

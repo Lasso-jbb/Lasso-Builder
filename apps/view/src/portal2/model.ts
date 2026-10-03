@@ -97,6 +97,22 @@ export function withoutHead(spec: ViewSpec): ViewSpec {
   return components.length === spec.components.length || components.length === 0 ? spec : { ...spec, components };
 }
 
+/**
+ * Uden de opfølgende spørgsmål (LassoFollowUps): i portalen står forslagene kun under spørgefeltet (designregel 8), aldrig i
+ * et modul, en egen side eller et kort i samtalen. /mcp og /chat beholder dem (de bruger ikke denne funktion). Resten af
+ * visningen pakkes igen af LassoView (gitter, kolonner og grupper), så der ikke står et hul.
+ */
+export function withoutFollowUps(spec: ViewSpec): ViewSpec {
+  const components = spec.components.filter((c) => c.type !== "LassoFollowUps");
+  return components.length === spec.components.length ? spec : { ...spec, components };
+}
+
+/** Visningen, som portalen tegner den: aldrig opfølgende spørgsmål, og uden eget hoved på en firma- eller personfane (head: false). */
+export function forPortal(spec: ViewSpec, { head = true }: { head?: boolean } = {}): ViewSpec {
+  const s = withoutFollowUps(spec);
+  return head ? s : withoutHead(s);
+}
+
 /** Identitetslinjerne: adresse, og CVR, telefon og web, som i prototypen. */
 export function headLines(kind: ItemKind, id: string, ds: Dataset | undefined): string[] {
   if (!ds || kind === "result") return [];

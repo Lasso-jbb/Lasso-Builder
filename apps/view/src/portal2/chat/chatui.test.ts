@@ -13,7 +13,7 @@ import { EmptyState, emptyPills } from "./EmptyState.js";
 import * as fx from "./fixtures.js";
 import { AssistantMessage, NoticeRow } from "./Message.js";
 import { Thread } from "./Thread.js";
-import { canAddAsTab, hhmm, moduleIcon, singleEntity } from "./util.js";
+import { anchorScrollTop, canAddAsTab, hhmm, moduleIcon, moreBelow, singleEntity, templateTitle } from "./util.js";
 
 const html = (el: ReturnType<typeof createElement>) => renderToStaticMarkup(el);
 
@@ -102,15 +102,37 @@ test("Kort: element med Hent som PDF og fuld skærm; side med Tilføj som fane (
   assert.doesNotMatch(mobile, /Hent som PDF/);
 });
 
-test("Tilføj som fane: kun en render_view-side om fanens egen entitet (ikke show_company, ikke ukendt værktøj)", () => {
+test("Tilføj som fane: hvert sidekort om fanens egen entitet; aldrig et enkelt element, en anden entitet eller en global fane", () => {
   const page = fx.FORM_PAGE[0]!.answer.parts[1] as Extract<(typeof fx.FORM_PAGE)[0]["answer"]["parts"][number], { kind: "view" }>;
   const tab = { kind: "company" as const, key: fx.FIXTURE_COMPANY };
   assert.equal(canAddAsTab({ ...page, tool: "render_view" }, tab), true);
-  assert.equal(canAddAsTab({ ...page, tool: "show_company" }, tab), false);
-  assert.equal(canAddAsTab({ ...page, tool: undefined }, tab), false);
+  // Alle sidekort om fanens entitet (regel 5): også show_company/show_person og ældre svar uden tool.
+  assert.equal(canAddAsTab({ ...page, tool: "show_company" }, tab), true);
+  assert.equal(canAddAsTab({ ...page, tool: undefined }, tab), true);
+  assert.equal(canAddAsTab({ ...page, tool: "show_company" }, { kind: "person", key: fx.FIXTURE_COMPANY }), false);
   assert.equal(canAddAsTab({ ...page, tool: "render_view" }, { kind: "company", key: "CVR-1-1" }), false);
   assert.equal(canAddAsTab({ ...page, tool: "render_view", form: "module" }, tab), false);
   assert.equal(canAddAsTab({ ...page, tool: "render_view" }, { kind: "result", key: "result:1" }), false);
+});
+
+test("Forankring: brugerens spørgsmål øverst med 16 px luft, aldrig ud over bunden eller under 0", () => {
+  // Spørgsmålet står 900 px nede i et rulleområde, der starter 150 px fra toppen; der er langt indhold under.
+  assert.equal(anchorScrollTop({ anchorTop: 1050, viewTop: 150, scrollTop: 0, scrollHeight: 4000, clientHeight: 700 }), 884);
+  // Allerede rullet 300: samme mål.
+  assert.equal(anchorScrollTop({ anchorTop: 750, viewTop: 150, scrollTop: 300, scrollHeight: 4000, clientHeight: 700 }), 884);
+  // Kort svar: bunden er grænsen (spørgsmålet kan ikke komme helt op).
+  assert.equal(anchorScrollTop({ anchorTop: 1050, viewTop: 150, scrollTop: 0, scrollHeight: 1200, clientHeight: 700 }), 500);
+  // Kort samtale: 0.
+  assert.equal(anchorScrollTop({ anchorTop: 160, viewTop: 150, scrollTop: 0, scrollHeight: 600, clientHeight: 700 }), 0);
+  assert.equal(moreBelow({ scrollTop: 884, scrollHeight: 4000, clientHeight: 700 }), true);
+  assert.equal(moreBelow({ scrollTop: 3300, scrollHeight: 4000, clientHeight: 700 }), false);
+});
+
+test("Skabelonens navn: en show_company-side (titel = navnet) hedder modulet; ellers sidens titel", () => {
+  assert.equal(templateTitle({ title: "FÆRCH OG DØTRE ApS", subtitle: "Ejere" }, "FÆRCH OG DØTRE ApS"), "Ejere");
+  assert.equal(templateTitle({ title: "Eksempel Byg A/S ", subtitle: "Ejerskab" }, "eksempel byg a/s"), "Ejerskab");
+  assert.equal(templateTitle({ title: "KYC-overblik", subtitle: "Ejere og risiko" }, "Eksempel Byg A/S"), "KYC-overblik");
+  assert.equal(templateTitle({ title: "Eksempel Byg A/S" }, "Eksempel Byg A/S"), "Eksempel Byg A/S");
 });
 
 test("Tom tilstand: titel med fanens navn, hjælpelinje og fire piller pr. fanetype", () => {

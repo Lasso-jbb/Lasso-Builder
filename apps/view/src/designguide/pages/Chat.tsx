@@ -196,7 +196,7 @@ function scenes(): SceneDef[] {
     {
       id: "anatomi",
       title: "Samtalen, anatomi",
-      note: "Tråden er 800 px og centreret over inputfeltet: brugeren til højre i en grå boble, Lasso til venstre uden boble med mærket som avatar. Tidspunkt og kopiér-ikon står småt under tekstsvar.",
+      note: "Tråden er 960 px (20 % over Paper-eksporten, Jakob 03.10) og centreret over inputfeltet: brugeren til højre i en grå boble, Lasso til venstre uden boble med mærket som avatar. Tidspunkt og kopiér-ikon står småt under tekstsvar.",
       render: ({ theme, mobile, fill }) => (
         <Scene theme={theme} mobile={mobile} sugg={SUGG}>
           <Conversation turns={fill(SCENES.anatomy)} mobile={mobile} theme={theme} currentId={FIXTURE_COMPANY} />
@@ -318,7 +318,7 @@ function scenes(): SceneDef[] {
     {
       id: "afklaring",
       title: "Afklaring, flere mulige match",
-      note: "Et panel lige over inputfeltet, 720 px bredt (på telefon et ark): kun titel og beskrivelse, \"(Anbefalet)\", Andet-række, Spring over og Vælg.",
+      note: "Et panel lige over inputfeltet, lige så bredt som det (864 px) (på telefon et ark): kun titel og beskrivelse, \"(Anbefalet)\", Andet-række, Spring over og Vælg.",
       min: 520,
       render: ({ theme, mobile, fill }) => (
         <Scene theme={theme} mobile={mobile} panel={<ChoicePanel choice={CHOICE} disabled={false} variant={mobile ? "sheet" : "panel"} onSend={noop} onSkip={noop} />}>

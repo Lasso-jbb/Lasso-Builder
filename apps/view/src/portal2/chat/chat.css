@@ -84,7 +84,7 @@
 .p3 .chat-card__a { margin-left: auto; display: flex; gap: var(--lasso-space-2); align-items: center; flex: none; }
 .p3 .chat-card__b { padding: 0 var(--lasso-space-row) var(--lasso-space-4); }
 .p3 .chat-card__b > .lasso-root, .p3 .chat-fs__b > .lasso-root { background: transparent; }
-.p3 .chat-card__b .lasso-frame--bare, .p3 .chat-fs__b .lasso-frame--bare { padding: 0; }
+.p3 .chat-card__b .lasso-frame--bare { padding: 0; }
 .p3 .chat-card--sk .chat-card__h { padding-bottom: var(--lasso-space-3); }
 .p3 .chat-sk { display: block; height: 12px; border-radius: 6px; margin-bottom: var(--lasso-space-3); max-width: 100%; }
 .p3 .chat-card__h .chat-sk { margin-bottom: 0; }
@@ -108,8 +108,11 @@
 .p3 .chat-spill svg.i { width: 18px; height: 18px; color: var(--lasso-text-3); stroke-width: 1.6; }
 
 /* Fuld skærm: fladen under modulrækken, 42 px til siderne, titel 18/26/500; inputfeltet bliver stående */
-.p3 .chat-fs { position: absolute; inset: 0; z-index: 20; background: var(--page); overflow-y: auto; overscroll-behavior: contain; padding: var(--lasso-space-5) 42px calc(var(--ask-top, 76px) + 40px); }
-.p3 .chat-fs__h { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--lasso-space-4); margin-bottom: var(--lasso-space-7); }
+/* Fuld skærm har modulernes bredde og sideluft (Jakob 03.10): .col og .view som modulerne; hovedet flugter med
+   visningens indhold (den rammeløse visnings luft, --lasso-space-5), og visningens egen top-luft bruges ikke. */
+.p3 .chat-fs { position: absolute; inset: 0; z-index: 20; background: var(--page); overflow-y: auto; overscroll-behavior: contain; padding: var(--lasso-space-5) 0 calc(var(--ask-top, 76px) + 40px); }
+.p3 .chat-fs__h { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--lasso-space-4); margin-bottom: var(--lasso-space-7); padding-inline: var(--lasso-space-5); }
+.p3 .chat-fs__b .lasso-frame--bare { padding-top: 0; }
 .p3 .chat-fs__ht { min-width: 0; }
 .p3 .chat-fs__t { font-size: var(--lasso-fs-lg); line-height: 26px; font-weight: 500; color: var(--lasso-text); }
 .p3 .chat-fs__s { font-size: var(--lasso-fs); line-height: 20px; color: var(--lasso-text-3); }
@@ -178,8 +181,8 @@
   .p3 .chat-empty__pills { grid-template-columns: 1fr; }
   .p3 .chat-spill { padding: 0 var(--lasso-space-row); height: 48px; font-size: var(--lasso-fs); }
   .p3 .chat-empty__t { font-size: var(--lasso-fs-lg); line-height: var(--lasso-lh-lg); }
-  .p3 .chat-fs { padding: var(--lasso-space-4) var(--lasso-space-4) calc(var(--ask-top, 92px) + 12px); }
-  .p3 .chat-fs__h { margin-bottom: var(--lasso-space-4); }
+  .p3 .chat-fs { padding: var(--lasso-space-4) 0 calc(var(--ask-top, 92px) + 12px); }
+  .p3 .chat-fs__h { margin-bottom: var(--lasso-space-4); padding-inline: var(--lasso-space-4); }
   .p3 .chat-fs__t { font-size: var(--chat-fs-16); line-height: 22px; }
   .p3 .chat-fs__s { font-size: var(--lasso-fs-sm); }
   /* Spørgefeltet står fast over bundbjælken, når Lasso-modulet er aktivt; forslagene stablet 13/20. */

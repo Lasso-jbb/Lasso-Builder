@@ -33,7 +33,7 @@ import {
   searchCounts,
   searchRows,
   suggestions,
-  withoutHead,
+  forPortal,
   type ItemKind,
   type OpenItem,
   type RecentItem,
@@ -66,7 +66,7 @@ import { EmptyState } from "./chat/EmptyState.js";
 import { Fullscreen } from "./chat/Fullscreen.js";
 import { NoticeRow, SkeletonCard, TextLink } from "./chat/Message.js";
 import { ScrollDown, Thread } from "./chat/Thread.js";
-import { canAddAsTab, type ModuleTarget } from "./chat/util.js";
+import { anchorScrollTop, canAddAsTab, moreBelow, templateTitle, type ModuleTarget } from "./chat/util.js";
 import "./portal2.css";
 import "./chat/chat.css";
 
@@ -712,7 +712,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       return rest;
     });
     try {
-      const tpl = await api.templates.save({ kind: it.kind, title: part.spec.title, spec: part.spec, entity: { kind: it.kind, id: it.key } });
+      const tpl = await api.templates.save({ kind: it.kind, title: templateTitle(part.spec, entityOf(part.spec, part.dataset)?.name ?? it.name), spec: part.spec, entity: { kind: it.kind, id: it.key } });
       setTemplates((t) => [...t.filter((x) => x.id !== tpl.id), tpl]);
       setTplNotes((n) => ({ ...n, [turnId]: { ok: true, text: `Tilføjet som modul på ${KIND_ALL[tpl.kind]}` } }));
       setOpen((l) => l.map((o) => (o.key === it.key ? { ...o, tab: templateTab(tpl.id) } : o)));
@@ -1001,12 +1001,25 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     return () => window.removeEventListener("resize", onResize);
   }, [measure]);
 
-  /** Det nyeste i samtalen: bunden, men højst så langt, at den nyeste turs spørgsmål står øverst (et langt svar læses fra toppen). */
+  /** Det nyeste i samtalen: brugerens seneste spørgsmål øverst i det synlige (anchorScrollTop); uden ture bunden. */
   const latestTop = (sc: HTMLElement): number => {
-    const all = sc.querySelectorAll<HTMLElement>(".chat-turn");
-    const last = all[all.length - 1];
-    const max = sc.scrollHeight - sc.clientHeight;
-    return last ? Math.min(max, last.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - 16) : max;
+    const turnsEl = sc.querySelectorAll<HTMLElement>(".chat-turn");
+    const last = turnsEl[turnsEl.length - 1];
+    const q = last?.querySelector<HTMLElement>(".chat-msg--user") ?? last;
+    const box = { viewTop: sc.getBoundingClientRect().top, scrollTop: sc.scrollTop, scrollHeight: sc.scrollHeight, clientHeight: sc.clientHeight };
+    return q ? anchorScrollTop({ ...box, anchorTop: q.getBoundingClientRect().top }) : Math.max(0, box.scrollHeight - box.clientHeight);
+  };
+  /** Rullepositionen pr. fane og modul (og antallet af ture dengang): en fane, man vender tilbage til, står, som man forlod den. */
+  const scrollPos = useRef(new Map<string, { top: number; turns: number }>());
+  const viewKey = useRef("");
+  viewKey.current = item ? `${item.key}:${item.tab}` : "";
+  /** En gemt position, der venter på, at indholdet (kortenes visninger) er højt nok igen; brugerens egen rulning afbryder. */
+  const restoreTo = useRef<{ top: number; until: number } | null>(null);
+  const turnCount = useRef(0);
+  turnCount.current = item ? (threads[item.key]?.turns.length ?? 0) : 0;
+  const syncJump = (sc: HTMLElement) => {
+    const more = moreBelow(sc);
+    setJump((j) => (j === more ? j : more));
   };
 
   /**
@@ -1021,9 +1034,22 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     if (root.classList.contains("scrolled") !== on) root.classList.toggle("scrolled", on);
     // Samtalen ruller selv med, så længe brugeren står ved det nyeste (nederst, eller i den nyeste tur); rullet op
     // vises "Rul til nyeste". Også når rulningen kommer fra portalen selv, så et hændelsesløb ikke slår følgningen fra.
-    const bottom = sc.scrollHeight - sc.scrollTop - sc.clientHeight < 48;
+    const bottom = !moreBelow(sc);
     // Kun brugerens egen rulning (hjul, træk, taster) ændrer følgningen; portalens rulning og indhold, der skifter, gør ikke.
-    if (Date.now() - userScroll.current < 800) atBottom.current = bottom || sc.scrollTop >= latestTop(sc) - 8;
+    const user = Date.now() - userScroll.current < 800;
+    if (user) {
+      atBottom.current = bottom || Math.abs(sc.scrollTop - latestTop(sc)) <= 8;
+      restoreTo.current = null;
+    } else if (restoreTo.current) {
+      // Lige efter et fanebyt flytter browseren (scroll anchoring, kort, der måler sig selv) positionen; den sættes igen.
+      if (Date.now() > restoreTo.current.until) restoreTo.current = null;
+      else if (Math.abs(sc.scrollTop - restoreTo.current.top) > 1) {
+        sc.scrollTop = restoreTo.current.top;
+        return;
+      }
+    }
+    // Mens en gemt position venter på indholdet, er rulningen portalens (klemt af en kortere side), ikke en ny position.
+    if (viewKey.current && restoreTo.current === null) scrollPos.current.set(viewKey.current, { top: sc.scrollTop, turns: turnCount.current });
     if (jump === bottom) setJump(!bottom);
   };
 
@@ -1039,14 +1065,20 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     setJump(false);
   };
 
-  /** Ruller med, til den nyeste turs spørgsmål står øverst: et langt svar læses fra toppen, ikke fra bunden. */
+  /**
+   * Forankring, mens svaret kommer og når det er færdigt: brugerens spørgsmål står øverst, svarets tekst og kortets top
+   * under det; et langt kort følges ikke ned. Har brugeren selv rullet, bliver positionen stående.
+   */
   function follow() {
     const sc = scroller.current;
-    if (!sc || !onLasso || !atBottom.current) return;
-    const target = latestTop(sc);
-    if (target > sc.scrollTop + 1) {
-      sc.scrollTop = target;
+    if (!sc || !onLasso) return;
+    if (restoreTo.current && Date.now() <= restoreTo.current.until) {
+      if (Math.abs(sc.scrollTop - restoreTo.current.top) > 1) sc.scrollTop = restoreTo.current.top;
+    } else if (atBottom.current) {
+      const target = latestTop(sc);
+      if (Math.abs(target - sc.scrollTop) > 1) sc.scrollTop = target;
     }
+    syncJump(sc);
   }
 
   // Ny fane eller nyt modul: Lasso viser det nyeste (nederst), et modul sin top. Nye beskeder ruller med, når man står nederst.
@@ -1056,9 +1088,20 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     if (toEnd.current) {
       toEnd.current = false;
       if (onLasso) {
-        sc.scrollTop = latestTop(sc);
-        atBottom.current = true;
-        setJump(false);
+        // Tilbage til en fane: samme sted som da man forlod den, med mindre der er kommet ture til siden.
+        const saved = scrollPos.current.get(viewKey.current);
+        const anchor = latestTop(sc);
+        restoreTo.current = null;
+        if (saved && saved.turns === turnCount.current) {
+          sc.scrollTop = saved.top;
+          // De første 800 ms holdes positionen, mens kortene måler sig selv og browseren justerer rulningen.
+          restoreTo.current = { top: saved.top, until: Date.now() + 800 };
+          atBottom.current = Math.abs(saved.top - anchor) <= 8;
+        } else {
+          sc.scrollTop = anchor;
+          atBottom.current = true;
+        }
+        syncJump(sc);
       } else {
         sc.scrollTo({ top: 0 });
         setJump(false);
@@ -1210,7 +1253,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     );
   } else {
     const lassoView = (key: string, shownNow: Shown, page: boolean) => {
-      const spec = item.kind !== "result" ? withoutHead(shownNow.spec) : shownNow.spec;
+      const spec = forPortal(shownNow.spec, { head: item.kind === "result" });
       return (
         <div className="view" key={key}>
           <LassoView key={`${key}:${spec.title}:${spec.components.length}`} spec={spec} dataset={shownNow.dataset} theme={theme} frameless page={page} host={host(item.kind !== "result")} onAction={(a) => onAction(a)} />
