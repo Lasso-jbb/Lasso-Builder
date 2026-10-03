@@ -121,6 +121,8 @@ Se `.env.example`. På Railway er `DATABASE_URL` en reference til Postgres-servi
 | `CHAT_MAX_TOKENS` | `16000` | Højst så mange tokens pr. modelsvar (1024–128000). Under ca. 8000 kan en render_view-spec blive afbrudt. |
 | `CHAT_EFFORT` | `medium` | `low` … `max`: tænkning og tokenforbrug pr. svar (ikke med Haiku). |
 | `CHAT_MAX_PER_HOUR` | `60` | Højst så mange chatbeskeder pr. bruger pr. time. |
+| `CHAT_CACHE_TTL` | `1h` | Prompt-cachens levetid i chatten (`5m` eller `1h`). |
+| `CHAT_HISTORY_MAX_CHARS` | `400000` | Så lang må en chatsamtale være (tegn som JSON), før de ældste ture kastes på serveren. |
 
 ### Docker og "Gem som PDF"
 

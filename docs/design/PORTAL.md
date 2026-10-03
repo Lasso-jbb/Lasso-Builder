@@ -66,9 +66,17 @@ Moduler og Brugere står dæmpet, til de findes.
   "Spørg Lasso", og der er intet ikon i feltet.
 - De tre forslag under feltet følger siden: forsiden, et resultat, eller firmaets/personens modul (fx Ejerskab giver
   spørgsmål om ejere og datterselskaber). De står i `suggestions()` i `model.ts`.
-- Svaret vises under Lasso-mærket på den fane, man spurgte fra, med spørgsmålet ("Du spurgte: …") og Claudes
-  korte tekst over visningen. Henter Claude et andet firma, åbnes det som fane med svaret; spørger man fra
-  forsiden eller et resultat, bliver svaret en ny fane.
+- Svaret vises under Lasso-mærket på den fane, man spurgte fra, med spørgsmålet ("Du spurgte: …") og delene
+  (Claudes korte tekst og visningerne) i den rækkefølge, de kom. Brugeren bliver i chatten: serveren svarer
+  altid på den fane, man står på (den, modulet man ser, og de åbne faner sendes med som kontekst), og flytter
+  aldrig svaret selv. Spørger man fra forsiden eller et resultat, bliver svaret en ny resultatfane.
+- Valgmenuen over feltet er den eneste vej til en anden kontekst, som chatten selv åbner: lægger spørgsmålet
+  op til en anden persons eller virksomheds side ("vis alt om Jakob"), eller er et navn tvetydigt, spørger
+  chatten først (fx "Alt om Jakob Benediktson" / "Overordnet indblik her" / fritekst) og viser intet, før man
+  har valgt. Vælger man en anden side, åbnes den som fane med svaret; den fane, man spurgte fra, går tilbage
+  til Overblik. Menuens udseende designes i Paper; indtil da er den almindelige knapper.
+- Samtalen gemmes kun i browseren (ikke på serveren): faner, svar og historik overlever en genindlæsning i
+  24 timer og ryddes ved udløb, for en anden bruger og ved logud (se `docs/chat.md`).
 - Mens der hentes, bliver Send til Stop.
 
 ## Telefon
