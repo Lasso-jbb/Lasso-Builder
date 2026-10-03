@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createPortalApi, LOGGED_OUT, PortalApiError } from "./api.js";
+import { createPortalApi, LOGGED_OUT, PortalApiError, retryable } from "./api.js";
 
 type Call = { url: string; init: RequestInit };
 
@@ -83,4 +83,13 @@ test("API: egne sider (templates) bruger de rigtige stier, metoder og CSRF", asy
   assert.equal(calls[3]!.url, "/api/portal/templates/t1");
   assert.equal(calls[3]!.init.method, "DELETE");
   assert.equal(headers(calls[3]!)["x-lasso-portal"], "1");
+});
+
+test("retryable: Prøv igen kun ved netværksfejl og serverfejl (5xx), ikke ved 4xx", () => {
+  assert.equal(retryable(new PortalApiError(0, "Serveren kunne ikke nås.")), true);
+  assert.equal(retryable(new PortalApiError(502, "Bad gateway")), true);
+  assert.equal(retryable(new TypeError("Failed to fetch")), true);
+  assert.equal(retryable(new PortalApiError(400, "Siden indeholder stadig navnet; omdøb den først.")), false);
+  assert.equal(retryable(new PortalApiError(404, "Siden findes ikke.")), false);
+  assert.equal(retryable(new PortalApiError(401, LOGGED_OUT)), false);
 });

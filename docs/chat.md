@@ -117,7 +117,7 @@ og notitsen bliver stående.
 **Flytning ind i en fane, der allerede er åben.** Fandtes målfanen (fx et firma, der allerede er åbent), erstatter
 den friske historik fanens tidligere samtale: modellens hukommelse på den fane nulstilles til den flyttede tur, mens
 de tidligere ture stadig står synlige i tråden. Klienten husker fanens samtale fra før (historik, signatur og det
-sendte resumé) på flytningens notits (`prev`), så `Fortryd` lægger den tilbage, også når svaret allerede er færdigt.
+sendte resumé) på flytningens notits (`prev`), så `Fortryd` lægger den tilbage, også når svaret allerede er færdigt. En åben fane, der aldrig har haft en samtale, husker en tom samtale, så den flyttede turs historik heller ikke bliver stående dér.
 `prev` gemmes ikke i browseren; efter en genindlæsning kan flytningen ikke fortrydes.
 
 **Fanenavne.** En entitetsfane hedder det, entiteten hedder. En resultatfane hedder aldrig spørgsmålet, men et af de

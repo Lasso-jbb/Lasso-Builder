@@ -225,7 +225,8 @@ export function moveTurn(t: Threads, from: string, to: string, turnId: string, n
   const dest = t[to] ?? emptyTab();
   // Målfanen fandtes: dens samtale huskes på notitsen, så Fortryd kan lægge den tilbage (svaret giver målfanen en frisk historik).
   const prior = t[to];
-  const kept: Notice = notice.kind === "moved" && prior && !notice.createdTab ? { ...notice, prev: { chat: prior.chat, sent: prior.sent } } : notice;
+  // En åben fane uden samtale endnu (ingen tråd) husker en tom samtale, så Fortryd også dér fjerner den flyttede turs historik.
+  const kept: Notice = notice.kind === "moved" && !notice.createdTab ? { ...notice, prev: prior ? { chat: prior.chat, sent: prior.sent } : { chat: { history: [] }, sent: null } } : notice;
   const stub: Turn = { ...turn, notice: kept, answer: { parts: [], pending: false } };
   return {
     ...t,

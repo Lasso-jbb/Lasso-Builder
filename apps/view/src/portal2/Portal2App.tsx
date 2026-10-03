@@ -4,7 +4,7 @@ import { isPersonFocus, pageFocus, type Focus, type PersonFocus, type ViewSpec }
 import type { Portal2Boot } from "../boot.js";
 import { ChatHttpError, streamChat, type ChatEvent, type ChoicePick } from "../chat/stream.js";
 import { PDF_SAVED, saveBlob } from "../pdfDownload.js";
-import { createPortalApi, errorText, type LookupResult, type PageTemplate, type ViewResult } from "../portal/api.js";
+import { createPortalApi, errorText, retryable, type LookupResult, type PageTemplate, type ViewResult } from "../portal/api.js";
 import { entityOf, withSaved } from "../portal/data.js";
 import { isFocus } from "../portal/routes.js";
 import type { P2IconName } from "./icons.js";
@@ -718,7 +718,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       setOpen((l) => l.map((o) => (o.key === it.key ? { ...o, tab: templateTab(tpl.id) } : o)));
       void load(it.kind, it.key, templateTab(tpl.id), true);
     } catch (e) {
-      setTplNotes((n) => ({ ...n, [turnId]: { ok: false, text: errorText(e), retry: () => void addTemplate(part, turnId) } }));
+      setTplNotes((n) => ({ ...n, [turnId]: { ok: false, text: errorText(e), ...(retryable(e) ? { retry: () => void addTemplate(part, turnId) } : {}) } }));
     } finally {
       setAdding(null);
     }

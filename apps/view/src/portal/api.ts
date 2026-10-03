@@ -91,6 +91,15 @@ export function isUnauthorized(e: unknown): boolean {
   return e instanceof PortalApiError && e.status === 401;
 }
 
+/**
+ * Om "Prøv igen" giver mening: netværksfejl (status 0 eller en anden fejl end serverens) og serverfejl (5xx). En 4xx
+ * (fx 400 "Siden indeholder stadig navnet; omdøb den først.") fejler igen på samme måde, så den står uden "Prøv igen".
+ */
+export function retryable(e: unknown): boolean {
+  if (!(e instanceof PortalApiError)) return true;
+  return e.status === 0 || e.status >= 500;
+}
+
 export function errorText(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
