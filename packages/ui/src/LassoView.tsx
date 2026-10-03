@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
 import {
   activityHeatmapKey,
   businessResume,
@@ -23,7 +23,11 @@ import {
   gridHeight,
   measuredHeight,
   packBands,
+  reflowBands,
+  widthOfColumns,
   contentMinWidthFn,
+  type FlowBand,
+  type MinWidthFn,
   originOf,
   type Dataset,
   type Focus,
@@ -944,6 +948,56 @@ export function tabletSpans(cols: readonly number[]): number[] {
   return spans;
 }
 
+/** Vandret afstand mellem stakke (px, --lasso-space-5), som reflowBands regner bredderne med. */
+const FLOW_GAP = 24;
+
+/** reflowBands for tegnede elementer (komponent + indeks); prioritet = komponentens priority, ellers rækkefølgen. */
+function reflowFlow(bands: FlowBand<Indexed>[], content: number, h: (c: ViewComponent, w: Width) => number, min?: MinWidthFn): FlowBand<Indexed>[] {
+  return reflowBands(bands, content, h, { component: (it) => it.c, item: (c, o) => ({ c, i: o.i }), priority: (it) => it.c.priority ?? 100 + it.i, gap: FLOW_GAP, ...(min ? { min } : {}) });
+}
+
+/**
+ * Layout 'columns' i den målte bredde: hvert kolonnebånd bliver til ét eller flere bånd (reflowBands). En
+ * kolonne uden width deler båndet ligeligt. Fuldbånd og grupper står som før.
+ */
+export type FlowColumnsBand = Exclude<ColumnsBand, { kind: "columns" }> | { kind: "flow"; stacks: FlowBand<Indexed> };
+export function flowColumnBands(bands: readonly ColumnsBand[], content: number, ds: Dataset | null, all: readonly ViewComponent[]): FlowColumnsBand[] {
+  const h = (c: ViewComponent, width: Width) => {
+    if (!ds) return measuredHeight(c, width);
+    try {
+      return gridHeight(c, width, ds, all);
+    } catch {
+      return measuredHeight(c, width);
+    }
+  };
+  const min = ds ? contentMinWidthFn(ds) : undefined;
+  return bands.flatMap((b): FlowColumnsBand[] => {
+    if (b.kind !== "columns") return [b];
+    const n = b.columns.length;
+    const stacks: FlowBand<Indexed> = b.columns.map((col) => ({ width: col[0]?.c.width ?? widthOfColumns(12 / n), items: col }));
+    return reflowFlow([stacks], content, h, min).map((st) => ({ kind: "flow", stacks: st }));
+  });
+}
+
+/** Midtens indre bredde (px), målt før der tegnes og igen, når den ændrer sig; afrundet til 4 px, så små ændringer ikke pakker om. */
+function useContentWidth(): [(el: HTMLElement | null) => void, number | null] {
+  const [el, setEl] = useState<HTMLElement | null>(null);
+  const [width, setWidth] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const read = () => {
+      const cs = getComputedStyle(el);
+      const w = Math.round((el.clientWidth - parseFloat(cs.paddingLeft || "0") - parseFloat(cs.paddingRight || "0")) / 4) * 4;
+      if (w > 0) setWidth((prev) => (prev === w ? prev : w));
+    };
+    read();
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [el]);
+  return [setEl, width];
+}
+
 /** Lodret afstand mellem elementer i en stak i layout 'dashboard' (px, --lasso-space-10). */
 const DASHBOARD_GAP = 40;
 
@@ -955,8 +1009,13 @@ const DASHBOARD_GAP = 40;
  */
 export type DashboardBand =
   | { kind: "run"; run: Run }
-  | { kind: "band"; stacks: { width: Width; items: Indexed[] }[] };
-export function dashboardBands(components: readonly ViewComponent[], ds: Dataset | null): DashboardBand[] {
+  | { kind: "band"; stacks: { width: Width; items: Indexed[] }[]; flow?: boolean };
+/**
+ * Med `content` (midtens målte bredde i px) lægges båndene om til den bredde (reflowBands i grid.ts): et bånd,
+ * hvis stakke stadig kan bære deres elementer, står; ellers brydes det efter elementernes mindste lovlige bredde
+ * og prioritet. Uden `content` (før midten er målt) bruges referencegitteret og CSS'ens foldning.
+ */
+export function dashboardBands(components: readonly ViewComponent[], ds: Dataset | null, content?: number | null): DashboardBand[] {
   const out: DashboardBand[] = [];
   let pending: Indexed[] = [];
   const flush = () => {
@@ -979,12 +1038,15 @@ export function dashboardBands(components: readonly ViewComponent[], ds: Dataset
     };
     // Ø13/B8: mindstebredden efter indholdet (lange navne, rækker pr. post, tidsakse), når data findes.
     const minWidth = ds ? contentMinWidthFn(ds) : undefined;
-    for (const b of packBands(items, h, { gap: DASHBOARD_GAP, minWidth })) {
-      if (b.stacks.length === 1 && b.stacks[0]!.items.length === 1) {
-        const c = b.stacks[0]!.items[0]!;
-        out.push({ kind: "run", run: { kind: "one", item: { c, i: index.get(originOf(c))! } } });
+    let bands: FlowBand<Indexed>[] = packBands(items, h, { gap: DASHBOARD_GAP, minWidth }).map((b) =>
+      b.stacks.map((st) => ({ width: st.width, items: st.items.map((c) => ({ c: { ...c, width: st.width } as ViewComponent, i: index.get(originOf(c))! })) })),
+    );
+    if (content) bands = reflowFlow(bands, content, h, minWidth);
+    for (const b of bands) {
+      if (b.length === 1 && b[0]!.items.length === 1) {
+        out.push({ kind: "run", run: { kind: "one", item: b[0]!.items[0]! } });
       } else {
-        out.push({ kind: "band", stacks: b.stacks.map((st) => ({ width: st.width, items: st.items.map((c) => ({ c: { ...c, width: st.width } as ViewComponent, i: index.get(originOf(c))! })) })) });
+        out.push({ kind: "band", flow: Boolean(content), stacks: b.map((st) => ({ width: st.width, items: st.items.map(({ c, i }) => ({ c: { ...c, width: st.width } as ViewComponent, i })) })) });
       }
     }
     pending = [];
@@ -1169,6 +1231,13 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
   const setReportOpen = (open: boolean) => setReport(open ? { kind: "company" } : null);
   // Bredderne holdes inden for gitterreglen (GRID_RULES max), også når specen selv angiver dem (grid.ts ruleBoundComponents).
   const laidOut = ruleBoundComponents(spec.layout, spec.components);
+  // Den responsive model (grid.ts reflowBands): båndene lægges om efter midtens målte bredde.
+  const [contentRef, contentWidth] = useContentWidth();
+  const flowDashboard = useMemo(() => (spec.layout === "dashboard" ? dashboardBands(laidOut, dataset ?? null, contentWidth) : []), [spec, dataset, contentWidth]);
+  const flowColumns = useMemo(
+    () => (spec.layout === "columns" && contentWidth ? flowColumnBands(mergeFullGroups(columnBands(laidOut)), contentWidth, dataset ?? null, laidOut) : null),
+    [spec, dataset, contentWidth],
+  );
   const reportCompany = spec.kind === "company" ? spec.components.map((c) => ("company" in c && typeof c.company === "string" ? c.company : undefined)).find(Boolean) : undefined;
   const canReport = Boolean(host.export && dataset && reportCompany && dataset.companies[reportCompany]);
 
@@ -1284,7 +1353,7 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
         {loading && !dataset ? (
           <Skeleton lines={4} height={240} />
         ) : (
-          <main className={`lasso-content lasso-content--grid-4 lasso-content--${spec.layout}`}>
+          <main ref={contentRef} className={`lasso-content lasso-content--grid-4 lasso-content--${spec.layout}`}>
             {spec.layout === "page"
               ? // Lasso-siden (docs/design/README.md, "Lasso-side"): kolonnerne 2:3:4, fuld bredde uden column.
                 mergeFullGroups(columnBands(spec.components)).map((band, b) =>
@@ -1305,6 +1374,41 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
                               {run.kind === "one" ? renderComponent(run.item.c, dataset, props, act, run.item.i, frame) : renderGroup(run.group, run.items, dataset, props, act, frame)}
                             </div>
                           ))}
+                        </div>
+                      ))}
+                    </div>
+                  ),
+                )
+              : spec.layout === "columns" && flowColumns
+              ? flowColumns.map((band, b) =>
+                  band.kind === "group" ? (
+                    <div key={`b${b}`} className="lasso-cell lasso-cell--full">
+                      {renderGroup(band.group, band.items, dataset, props, act, frame)}
+                    </div>
+                  ) : band.kind === "full" ? (
+                    <div key={`b${b}`} className="lasso-cell lasso-cell--full">
+                      {renderComponent(band.item.c, dataset, props, act, band.item.i, frame)}
+                    </div>
+                  ) : (
+                    // Et bånd i den målte bredde (reflowBands): stakkene i deres forhold; et brudt bånd er flere rækker.
+                    <div
+                      key={`b${b}`}
+                      className="lasso-cell lasso-cell--full lasso-columns lasso-columns--ratio lasso-columns--flow"
+                      style={{ ["--lasso-columns-template" as string]: band.stacks.map((st) => `minmax(0, ${WIDTH_COLUMNS[st.width]}fr)`).join(" ") }}
+                    >
+                      {band.stacks.map((st, k) => (
+                        <div key={k} className="lasso-column">
+                          {groupRuns(st.items).map((run) =>
+                            run.kind === "one" ? (
+                              <div key={run.item.i} className="lasso-column__item">
+                                {renderComponent(run.item.c, dataset, props, act, run.item.i, frame)}
+                              </div>
+                            ) : (
+                              <div key={run.items[0]!.i} className="lasso-column__item">
+                                {renderGroup(run.group, run.items, dataset, props, act, frame)}
+                              </div>
+                            ),
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1345,7 +1449,7 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
                   ),
                 )
               : spec.layout === "dashboard"
-                ? dashboardBands(laidOut, dataset).map((b) => {
+                ? flowDashboard.map((b) => {
                     if (b.kind === "run") {
                       const run = b.run;
                       // Et element alene i sit bånd står i fuld bredde (23.1 4d: aldrig en ½ alene, ingen huller).
@@ -1363,7 +1467,7 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
                     const cols = b.stacks.map((st) => WIDTH_COLUMNS[st.width]);
                     const spans = tabletSpans(cols);
                     return (
-                      <div key={`d${b.stacks[0]!.items[0]!.i}`} className="lasso-cell lasso-cell--full lasso-dband" style={{ ["--lasso-dband-template" as string]: cols.map((n) => `minmax(0, ${n}fr)`).join(" ") }}>
+                      <div key={`d${b.stacks[0]!.items[0]!.i}`} className={`lasso-cell lasso-cell--full lasso-dband${b.flow ? " lasso-dband--flow" : ""}`} style={{ ["--lasso-dband-template" as string]: cols.map((n) => `minmax(0, ${n}fr)`).join(" ") }}>
                         {b.stacks.map((st, k) => (
                           <div key={k} className={`lasso-dstack lasso-dstack--${st.width}`} style={{ ["--lasso-span-t" as string]: spans[k] }}>
                             {st.items.map(({ c, i }) => (

@@ -522,7 +522,7 @@ export function packPage(
   // Mindstebredden efter indholdet (Ø13): et bredt element med lange navne, mange rækker eller tidsakse
   // lægges aldrig smallere; hellere eget bånd eller udeladt af højdebudgettet.
   const r = packWithinBudget(items, (c, width) => gridHeight(c, width, ds, items) + ITEM_PADDING, { gap: 0, budget: options.budget, keep: options.keep, minWidth: contentMinWidthFn(ds) });
-  return { ...r, components: bandsToComponents(r.bands) };
+  return { ...r, components: bandsToComponents(r.bands, items) };
 }
 
 /**
@@ -1184,7 +1184,7 @@ function composeAskCompany(lassoId: string, ds: Dataset, ask: Ask, options: Comp
   const all = page();
   const bands = packBandsPaired(columnItems, (c, width) => gridHeight(c, width, ds, all) + ITEM_PADDING, { gap: 0, minWidth: contentMinWidthFn(ds) });
   if (columnItems[0]) leadFirst(bands, columnItems[0]);
-  const colComponents = bandsToComponents(bands);
+  const colComponents = bandsToComponents(bands, columnItems);
 
   const focus = askFocus(ask) ?? "overblik";
   const name = shortCompanyName(options.name ?? co?.name ?? lassoId);

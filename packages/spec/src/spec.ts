@@ -841,6 +841,7 @@ const widthShape = {
     .describe(
       "Layout 'columns' (1–4) og 'page' (1–3): hvilken kolonne (stak) komponenten stables i. Et bånd med bredder, der summerer til 12, er et bånd i gridmodellen (23.1). Udeladt = fuld bredde over eller under kolonnerne. Et lavere kolonnenummer end forrige komponents starter et nyt bånd af kolonner; står width på båndets komponenter, bestemmer den kolonnernes forhold (fx ¾ + ¼).",
     ),
+  priority: z.number().int().min(1).max(99).optional().describe("Prioritet, når siden bliver smallere og bånd brydes (1 = vigtigst). Sættes af komponisterne; udelad (så gælder rækkefølgen)."),
   group: groupSchema
     .optional()
     .describe(

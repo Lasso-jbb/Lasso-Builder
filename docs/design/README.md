@@ -117,6 +117,19 @@ Virksomhedsside: hoved, risiko (kun ved 50+), nøgletal, én graf ved siden af n
 
 ## Responsivt (26 og 26f; mobilelementerne står ved deres desktop-tavle)
 
+### Den responsive model for modulerne (`reflowBands`, `packages/spec/src/grid.ts`)
+
+Sidens moduler lægges ikke ud efter faste brudpunkter, men efter den bredde, midten faktisk har, og efter det, vi ved om hvert element:
+
+1. **Udgangspunktet** er siden, som den er pakket i referencegitteret (desktop 1200, midte 1152 px): bånd af stakke, der summerer til 12 kolonner, med elementerne i prioriteret rækkefølge.
+2. **Hvert element har en mindste lovlige bredde** i px: dets mindstebredde (`GRID_RULES` min, hævet efter breddeprofil og indhold, fx lange navne, tidsakse og rækker pr. post) målt i referencegitteret, fx ⅓ = 368 px. Elementet må komme 5 % under (`MIN_WIDTH_TOLERANCE`).
+3. **Et bånd står**, så længe hver stak stadig er mindst så bred som dens elementers mindste lovlige bredde. Elementerne bliver blot smallere, ned til deres mindste design.
+4. **Kommer en stak under, brydes båndet**: dets elementer pakkes igen i prioriteret rækkefølge med de samme regler som på desktop (højdebalance, smal højst ½, aldrig et halvt element alene), men med den bredde, hvert element mindst skal have i den aktuelle bredde (`minWidthAt`). Det, der stadig kan stå sammen, gør det; resten kommer på ny linje under.
+5. **Kan et element ikke stå smallere end fuld bredde** (eller ikke inden for typens max), står det alene. På en telefon ender alt derfor under hinanden i prioriteret rækkefølge.
+6. **Prioriteten** er komponisternes rækkefølge (det vigtigste først), som følger med i specen som `priority`; uden den gælder specens rækkefølge.
+
+LassoView måler midten (ResizeObserver) og lægger båndene ud for layout `dashboard` og `columns` (`lasso-dband--flow`, `lasso-columns--flow`). Modellen er ren og deterministisk og testet i `grid.test.ts`. De faste foldningsregler nedenfor (960/1199, `tabletSpans`, mobilrækkefølgen) gælder kun i det øjeblik, før midten er målt, og for layout `grid-2` og `page`.
+
 Tre brudpunkter (galleri 26.1): ≥ 1200 desktop, 768–1199 tablet, < 768 mobil. Den klassiske portals ramme (`AppShell`) har derudover et trin ved 1024: 1024–1199 beholder fanebjælken med en smal skinne, 768–1023 skifter til tabletrammen. Elementerne i midten folder efter midtens egen bredde (≤ 960 tablet, ≤ 560 mobil). På mobil bliver tabeller til kortlister og ejerdiagrammet til en liste, rækker er mindst 44 px, grafer viser maks 5 punkter. Kun brudpunkter, ingen separate mobiludgaver.
 
 Brudpunktsregler (26, node `DH5-0`; guide 23 trin 7) og hvor de står i `styles.css`:

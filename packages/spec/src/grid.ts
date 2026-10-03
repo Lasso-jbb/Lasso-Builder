@@ -607,16 +607,132 @@ export function packBandsPaired(items: readonly ViewComponent[], h: HeightFn, op
  * bånd giver hver stak sit kolonnenummer (1–4) og sin bredde, så LassoView kan tegne båndet
  * (columnBands starter et nyt bånd, når kolonnenummeret falder).
  */
-export function bandsToComponents(bands: readonly PackedBand[]): ViewComponent[] {
+export function bandsToComponents(bands: readonly PackedBand[], priority?: readonly ViewComponent[]): ViewComponent[] {
+  // Prioriteten (priority) følger med, så siden kan brydes i den rigtige rækkefølge, når den bliver smallere (reflowBands).
+  const order = (c: ViewComponent) => {
+    const i = priority ? priority.indexOf(originOf(c)) : -1;
+    return i >= 0 && i < 99 ? { priority: i + 1 } : {};
+  };
   return bands.flatMap((b) => {
     if (b.stacks.length === 1) {
       return b.stacks[0]!.items.map((c) => {
         const { column: _column, ...rest } = c as ViewComponent & { column?: number };
-        return rest as ViewComponent;
+        return { ...rest, ...order(c) } as ViewComponent;
       });
     }
-    return b.stacks.flatMap((s, i) => s.items.map((c) => ({ ...c, column: i + 1, width: s.width }) as ViewComponent));
+    return b.stacks.flatMap((s, i) => s.items.map((c) => ({ ...c, column: i + 1, width: s.width, ...order(c) }) as ViewComponent));
   });
+}
+
+/* ---------- Responsiv model: båndene i den bredde, siden faktisk har ---------- */
+
+/** Midtens bredde i referencegitteret (desktop 1200: 12 kolonner à 74 px, gutter 24), som højder og mindstebredder er målt i. */
+export const REFERENCE_CONTENT_PX = 1152;
+
+/** En staks bredde i px, når den spænder `cols` af 12 kolonner i en midte på `content` px med gutter `gap`. */
+export function stackPx(cols: number, content: number, gap = GRID_GAP): number {
+  return (cols * (content + gap)) / 12 - gap;
+}
+
+/**
+ * Elementets mindste lovlige bredde i px: dets mindstebredde (typens min hævet efter profil og indhold, MinWidthFn)
+ * målt i referencegitteret. Under den bredde er elementet ikke designet til at stå, uanset hvor bred siden er.
+ */
+export function minPxOf(c: ViewComponent, min: MinWidthFn = defaultMinWidth): number {
+  return stackPx(WIDTH_COLUMNS[min(c)], REFERENCE_CONTENT_PX);
+}
+
+/**
+ * Den smalleste bredde (andel af 12 kolonner), elementet kan stå i, når midten er `content` px, uden at komme
+ * under sin mindste lovlige bredde. Ved fuld referencebredde er det mindstebredden selv; jo smallere siden,
+ * jo flere kolonner skal elementet have, og til sidst står det i fuld bredde.
+ */
+export function minWidthAt(c: ViewComponent, content: number, min: MinWidthFn = defaultMinWidth, gap = GRID_GAP): Width {
+  const need = minPxOf(c, min) * (1 - MIN_WIDTH_TOLERANCE);
+  return WIDTHS.find((w) => stackPx(WIDTH_COLUMNS[w], content, gap) >= need) ?? "full";
+}
+
+/**
+ * Hvor meget et element må komme under sin mindste lovlige bredde, før det skal have flere kolonner (5 %). Mindstebredden
+ * er målt i referencegitterets trin (fx ⅓ = 368 px); uden tolerance ville ½ på en 744 px midte (360 px) tvinge et ⅓-element
+ * i fuld bredde for 8 px.
+ */
+export const MIN_WIDTH_TOLERANCE = 0.05;
+
+/** Et bånd, som det tegnes: stakke med bredde og elementer (elementerne kan være hvad som helst, fx med indeks). */
+export interface FlowStack<T> {
+  width: Width;
+  items: T[];
+}
+export type FlowBand<T> = FlowStack<T>[];
+
+export interface ReflowOptions<T> {
+  /** Komponenten bag et element. */
+  component: (item: T) => ViewComponent;
+  /** Et element for en (evt. afkortet) komponent fra pakningen; originalen findes med originOf. */
+  item: (c: ViewComponent, original: T) => T;
+  /** Prioritet (lavest = vigtigst); standard er rækkefølgen. */
+  priority?: (item: T) => number;
+  min?: MinWidthFn;
+  gap?: number;
+}
+
+/**
+ * Den responsive model. Udgangspunktet er siden, som den er pakket i referencegitteret (desktop 1200). I den
+ * bredde, midten faktisk har (`content` px):
+ *
+ *  1. Et bånd, hvor hver stak stadig er mindst så bred som dens elementers mindste lovlige bredde (minPxOf),
+ *     står som det er: elementerne bliver blot smallere (de er designet til det ned til deres mindstebredde).
+ *  2. Et bånd, hvor en stak kommer under det, brydes: dets elementer pakkes igen i prioriteret rækkefølge med
+ *     samme regler som på desktop (packBands: højdebalance, smal højst ½, aldrig et halvt element alene), men
+ *     med den mindstebredde, hvert element har i den aktuelle bredde (minWidthAt). Elementer, der ikke længere
+ *     kan dele række, kommer på ny linje, og det, der stadig kan stå sammen, gør det.
+ *  3. Et element, hvis mindste lovlige bredde er mere end typens max (fx en ½-type på en smal skærm), står i
+ *     fuld bredde. På en telefon ender alt derfor under hinanden i prioriteret rækkefølge.
+ *
+ * Deterministisk og ren: samme bånd, bredde og højder giver altid samme resultat.
+ */
+export function reflowBands<T>(bands: readonly FlowBand<T>[], content: number, h: HeightFn, options: ReflowOptions<T>): FlowBand<T>[] {
+  const gap = options.gap ?? GRID_GAP;
+  const min = options.min ?? defaultMinWidth;
+  const out: FlowBand<T>[] = [];
+  for (const band of bands) {
+    const fits = band.length === 1 || band.every((st) => st.items.every((it) => stackPx(WIDTH_COLUMNS[st.width], content, gap) >= minPxOf(options.component(it), min) * (1 - MIN_WIDTH_TOLERANCE)));
+    if (fits) {
+      out.push(band);
+      continue;
+    }
+    const items = band.flatMap((st) => st.items);
+    const rank = new Map(items.map((it, i) => [it, options.priority ? options.priority(it) : i]));
+    const ordered = [...items].sort((a, b) => rank.get(a)! - rank.get(b)! || items.indexOf(a) - items.indexOf(b));
+    const byCopy = new Map<ViewComponent, T>();
+    const prepared = ordered.map((it) => {
+      const c = options.component(it);
+      const { width: _w, column: _c, ...rest } = c as ViewComponent & { column?: number };
+      const at = minWidthAt(c, content, min, gap);
+      // Kan elementet ikke stå smallere end fuld bredde (eller ikke inden for typens max), står det i eget bånd.
+      const own = at === "full" || widthIndex(at) > widthIndex(gridRuleOf(c).max);
+      const x = (own ? { ...rest, width: "full" } : rest) as ViewComponent;
+      byCopy.set(x, it);
+      origins.set(x, c);
+      return x;
+    });
+    const minAt: MinWidthFn = (c) => minWidthAt(c, content, min, gap);
+    for (const b of packBands(prepared, h, { gap, minWidth: minAt })) {
+      out.push(
+        b.stacks.map((st) => ({
+          width: b.stacks.length === 1 ? "full" : st.width,
+          items: st.items.map((c) => {
+            let p = c;
+            while (!byCopy.has(p) && origins.get(p) && origins.get(p) !== p) p = origins.get(p)!;
+            const original = byCopy.get(p)!;
+            return c === p ? original : options.item(c, original);
+          }),
+        })),
+      );
+    }
+  }
+  return out;
 }
 
 /* ---------- Højdebudget (23.3, Jakob 29.09 "sidelængde") ---------- */

@@ -331,7 +331,7 @@ export function packPersonPage(groups: readonly (readonly ViewComponent[])[], ds
     bands.push(...packed);
   });
   if (carry.length) bands.push(...pack(carry));
-  return { bands, components: bandsToComponents(bands), height: pageHeight(bands, 0) };
+  return { bands, components: bandsToComponents(bands, groups.flat()), height: pageHeight(bands, 0) };
 }
 
 /** Alle ombytninger af 0..n-1 i leksikografisk rækkefølge (identiteten først). */

@@ -5,7 +5,7 @@ import { GRID_RULES, gridRuleOf, widthProfileOf } from "./catalog.js";
 import { contentWidthOf, driversOf, packPage } from "./compose.js";
 import { emptyDataset } from "./models.js";
 import { contentMinWidth } from "./register.js";
-import { allowsWidth, BAND_COMBOS, defaultMinWidth, ruleBoundComponents, elementMinWidth, originOf, type MinWidthFn, BAND_MAX_DEVIATION, compactOf, GRID_GAP, measuredHeight, MEASURED_HEIGHTS, packBands, packWithinBudget, pageHeight, PAGE_HEIGHT_BUDGET, type PackedBand } from "./grid.js";
+import { allowsWidth, BAND_COMBOS, bandsToComponents, defaultMinWidth, minPxOf, minWidthAt, reflowBands, REFERENCE_CONTENT_PX, ruleBoundComponents, stackPx, elementMinWidth, originOf, type MinWidthFn, BAND_MAX_DEVIATION, compactOf, GRID_GAP, measuredHeight, MEASURED_HEIGHTS, packBands, packWithinBudget, pageHeight, PAGE_HEIGHT_BUDGET, type PackedBand } from "./grid.js";
 import { DEFAULT_WIDTH, WIDTH_COLUMNS, WIDTHS, type ComponentType, type ViewComponent, type Width } from "./spec.js";
 
 const COMPONENT_TYPES = Object.keys(DEFAULT_WIDTH) as ComponentType[];
@@ -324,4 +324,42 @@ test("ruleBoundComponents: en angivet bredde over typens max tegnes i max; bevid
   // Inden for reglen: uændret.
   const ok = { type: "LassoIncomeStatement", company: "CVR-1-1", width: max } as unknown as ViewComponent;
   assert.equal(ruleBoundComponents("dashboard", [ok])[0], ok);
+});
+
+test("reflowBands: bånd står, til en stak kommer under elementernes mindste lovlige bredde; så brydes det i prioriteret rækkefølge", () => {
+  const C = "CVR-1-1";
+  const chart = { type: "LassoBarChart", company: C, metric: "omsaetning" } as unknown as ViewComponent;
+  const owners = { type: "LassoOwnerList", company: C } as unknown as ViewComponent;
+  const contact = { type: "LassoContact", company: C } as unknown as ViewComponent;
+  const band = [
+    { width: "half" as Width, items: [chart] },
+    { width: "quarter" as Width, items: [owners] },
+    { width: "quarter" as Width, items: [contact] },
+  ];
+  const opts = { component: (c: ViewComponent) => c, item: (c: ViewComponent) => c };
+  // Referencebredden: båndet er uændret.
+  assert.deepEqual(reflowBands([band], REFERENCE_CONTENT_PX, measuredHeight, opts), [band]);
+  // Ved 880 px kan ¼ ikke bære sine elementer (¼ = 202 px < 270): båndet brydes, ingen stak under mindstebredden.
+  const at880 = reflowBands([band], 880, measuredHeight, opts);
+  assert.ok(at880.length >= 1 && JSON.stringify(at880) !== JSON.stringify([band]));
+  for (const b of at880) for (const st of b) for (const c of st.items) assert.ok(stackPx(WIDTH_COLUMNS[st.width], 880) >= minPxOf(c) * 0.95, `${c.type} i ${st.width}`);
+  // Telefon: alt i fuld bredde under hinanden, i prioriteret rækkefølge.
+  const phone = reflowBands([band], 358, measuredHeight, { ...opts, priority: (c: ViewComponent) => (c === contact ? 0 : c === chart ? 1 : 2) });
+  assert.deepEqual(phone.map((b) => b.map((st) => st.width)), [["full"], ["full"], ["full"]]);
+  assert.deepEqual(phone.map((b) => b[0]!.items[0]!.type), ["LassoContact", "LassoBarChart", "LassoOwnerList"]);
+});
+
+test("minWidthAt: jo smallere midten, jo flere kolonner; til sidst fuld bredde", () => {
+  const owners = { type: "LassoOwnerList", company: "CVR-1-1" } as unknown as ViewComponent;
+  const ref = minWidthAt(owners, REFERENCE_CONTENT_PX);
+  assert.equal(ref, defaultMinWidth(owners));
+  assert.ok(WIDTHS.indexOf(minWidthAt(owners, 700)) > WIDTHS.indexOf(ref));
+  assert.equal(minWidthAt(owners, 300), "full");
+});
+
+test("bandsToComponents: prioriteten følger med som priority", () => {
+  const a = { type: "LassoContact", company: "CVR-1-1" } as unknown as ViewComponent;
+  const b = { type: "LassoOwnerList", company: "CVR-1-1" } as unknown as ViewComponent;
+  const comps = bandsToComponents([{ stacks: [{ width: "half", items: [b], height: 1 }, { width: "half", items: [a], height: 1 }], height: 1, deviation: 0 }], [a, b]);
+  assert.deepEqual(comps.map((c) => (c as { priority?: number }).priority), [2, 1]);
 });

@@ -1650,15 +1650,16 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-dstack__item:last-child > * { flex: 1 0 auto; }
 .lasso-dstack__item > * { grid-column: auto; width: 100%; }
 @container lasso (max-width: 960px) {
-  .lasso-dband { grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--lasso-space-5); } /* kontrol r5 (30.13 ved 880): 24 px, så enheden og naboens titel ikke rører hinanden */
-  .lasso-dband > .lasso-dstack { grid-column: span var(--lasso-span-t, 12); }
+  .lasso-dband:not(.lasso-dband--flow) { grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--lasso-space-5); } /* kontrol r5 (30.13 ved 880): 24 px, så enheden og naboens titel ikke rører hinanden */
+  .lasso-dband:not(.lasso-dband--flow) > .lasso-dstack { grid-column: span var(--lasso-span-t, 12); }
 }
 @media (max-width: 1199px) {
-  .lasso-dband { grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--lasso-space-5); } /* kontrol r5 (30.13 ved 880): 24 px, så enheden og naboens titel ikke rører hinanden */
-  .lasso-dband > .lasso-dstack { grid-column: span var(--lasso-span-t, 12); }
+  .lasso-dband:not(.lasso-dband--flow) { grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--lasso-space-5); } /* kontrol r5 (30.13 ved 880): 24 px, så enheden og naboens titel ikke rører hinanden */
+  .lasso-dband:not(.lasso-dband--flow) > .lasso-dstack { grid-column: span var(--lasso-span-t, 12); }
 }
 @container lasso (max-width: 560px) {
-  .lasso-dband { display: flex; flex-direction: column; row-gap: var(--lasso-space-7); }
+  .lasso-dband:not(.lasso-dband--flow) { display: flex; flex-direction: column; row-gap: var(--lasso-space-7); }
+  .lasso-dband--flow { row-gap: var(--lasso-space-7); }
   .lasso-dstack { gap: var(--lasso-space-7); }
 }
 
@@ -1693,19 +1694,26 @@ button.lasso-relations__name:hover { text-decoration: underline; }
 .lasso-column:last-child .lasso-column__item { padding-right: 0; }
 /* Komponenter i en kolonne fylder kolonnen; deres egne spans gælder ikke her */
 .lasso-column__item > * { grid-column: auto; width: 100%; }
+/* Den responsive model (grid.ts reflowBands, docs/design/README.md "Responsivt"): når midten er målt, lægger LassoView
+   båndene ud i den faktiske bredde (lasso-dband--flow, lasso-columns--flow). Et bånd står, så længe stakkene kan bære
+   elementernes mindste lovlige bredde, og brydes ellers i prioriteret rækkefølge. De faste foldningsregler nedenfor
+   (960/1199/tabletSpans/mobilrækkefølge) gælder kun, før midten er målt. */
+@container lasso (max-width: 560px) {
+  .lasso-columns--flow > .lasso-column:only-child > .lasso-column__item { padding: var(--lasso-space-5) 0; }
+}
 /* Bånd med bredder (personsiden: roller ¾ + stamoplysninger ¼): forholdet sættes af LassoView (bandTemplate).
    På tablet (midten ≤ 960, skærm < 1200) bliver ¼ + ¾ til fuld + fuld (30): kolonnerne står under hinanden, adskilt af en linje. */
 .lasso-columns--ratio { grid-template-columns: var(--lasso-columns-template); }
 @container lasso (max-width: 960px) {
-  .lasso-columns--ratio { grid-template-columns: minmax(0, 1fr); }
-  .lasso-columns--ratio > .lasso-column + .lasso-column { border-left: 0; border-top: 1px solid var(--lasso-border); }
-  .lasso-columns--ratio .lasso-column__item { padding-left: 0; padding-right: 0; }
+  .lasso-columns--ratio:not(.lasso-columns--flow) { grid-template-columns: minmax(0, 1fr); }
+  .lasso-columns--ratio:not(.lasso-columns--flow) > .lasso-column + .lasso-column { border-left: 0; border-top: 1px solid var(--lasso-border); }
+  .lasso-columns--ratio:not(.lasso-columns--flow) .lasso-column__item { padding-left: 0; padding-right: 0; }
 }
 /* Tablet går op til skærm 1199 (26f): samme regler, når skærmen er under 1200, også hvor midten er bredere end 960 (portalen 1024–1199 uden skinne). */
 @media (max-width: 1199px) {
-  .lasso-columns--ratio { grid-template-columns: minmax(0, 1fr); }
-  .lasso-columns--ratio > .lasso-column + .lasso-column { border-left: 0; border-top: 1px solid var(--lasso-border); }
-  .lasso-columns--ratio .lasso-column__item { padding-left: 0; padding-right: 0; }
+  .lasso-columns--ratio:not(.lasso-columns--flow) { grid-template-columns: minmax(0, 1fr); }
+  .lasso-columns--ratio:not(.lasso-columns--flow) > .lasso-column + .lasso-column { border-left: 0; border-top: 1px solid var(--lasso-border); }
+  .lasso-columns--ratio:not(.lasso-columns--flow) .lasso-column__item { padding-left: 0; padding-right: 0; }
 }
 /* Gridmodellen (23.1): et bånd spænder 12 kolonner (bredderne summerer til 12). Stakkene strækkes til
    båndets højde, og det sidste element i hver stak fylder resten, så kolonnelinjerne altid når båndets
