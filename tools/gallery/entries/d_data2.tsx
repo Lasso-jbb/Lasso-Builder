@@ -226,7 +226,7 @@ export const entries: GalleryEntry[] = [
     title: "Ejerdiagram, fuld visning",
     node: "AQF-0",
     render: () => <OwnershipDiagram graph={FULL_GRAPH} defaultSelected={HOLDING} canDrillDown canPrompt canFullscreen onAction={noop} />,
-    note: "Detaljepanelet (AY0-0) står åbent for Eksempel Holding ApS (defaultSelected); i brug åbnes det ved klik på en node.",
+    note: "Detaljepanelet (AY0-0) står åbent for Eksempel Holding ApS (defaultSelected); i brug åbnes det ved klik på en node. Jakob 03.10: tilpasses vinduet ved første visning (hele grafen i bredde og højde, højst 100 %, lærredet højst vinduets synlige højde; fitOwnership).",
   },
   {
     nr: "14.2",

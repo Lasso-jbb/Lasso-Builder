@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { OwnershipGraphVM } from "@lasso/spec";
-import { beneficialGraph, graphOnDate, layoutOwnership, minimapFrame, refocusGraph } from "./ownershipLayout.js";
+import { beneficialGraph, fitOwnership, graphOnDate, layoutOwnership, minimapFrame, refocusGraph } from "./ownershipLayout.js";
 import { OwnershipDiagram } from "./components/OwnershipDiagram.js";
 
 // Prøve Anna ejer 80 % af Eksempel Holding, som ejer 50 % af roden; Prøve Bo ejer 20 % direkte.
@@ -62,4 +62,24 @@ test("Værktøjslinjen har Legale/Reelle, datovælger og eksport", () => {
   assert.match(html, /Eksportér/);
   assert.match(html, /PNG-billede/);
   assert.match(html, /lasso-odiagram__minimap/);
+});
+
+test("fitOwnership: hele grafen i vinduet (bredde og højde), højst 100 %, lærredet så højt som den tilpassede graf", () => {
+  // Lav, bred graf: 100 % er loftet, og lærredet er mindst minCanvasH.
+  const small = fitOwnership({ graph: { width: 600, height: 200 }, canvasW: 1000, minCanvasH: 360, maxCanvasH: 700, foot: 88 });
+  assert.equal(small.zoom, 1);
+  assert.equal(small.canvasH, 360);
+  assert.equal(small.pan.x, 200);
+  // Dyb graf: højden bestemmer, så den skaleres ned i stedet for at blive klippet; lærredet bliver ikke højere end vinduet.
+  const deep = fitOwnership({ graph: { width: 800, height: 1400 }, canvasW: 1000, minCanvasH: 360, maxCanvasH: 700, foot: 88 });
+  assert.ok(deep.zoom < 1);
+  assert.equal(deep.canvasH, 700);
+  assert.ok(1400 * deep.zoom + deep.pan.y <= deep.canvasH - 88, "nederste række står over foden");
+  assert.ok(800 * deep.zoom + deep.pan.x <= 1000);
+  // Smal beholder (kort i samtalen): bredden bestemmer.
+  const narrow = fitOwnership({ graph: { width: 1600, height: 300 }, canvasW: 800, minCanvasH: 360, maxCanvasH: 700, foot: 88 });
+  assert.equal(narrow.zoom, (800 - 32) / 1600);
+  assert.ok(narrow.pan.x >= 0);
+  // Min-zoom respekteres (derunder panoreres).
+  assert.equal(fitOwnership({ graph: { width: 9000, height: 9000 }, canvasW: 800, minCanvasH: 360, maxCanvasH: 700, foot: 88, minZoom: 0.25 }).zoom, 0.25);
 });

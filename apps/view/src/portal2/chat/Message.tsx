@@ -46,7 +46,7 @@ export function TextLink({ children, onClick, className = "" }: { children: Reac
 
 /**
  * Meddelelsesrækken i samtalen (centreret pille): "Svarer her i X", "Åbner X i en ny fane. Fortryd" (Fortryd i 10
- * sekunder; bagefter står rækken uden link), eller en fri tekst (fx "Tilføjet som modul på alle virksomheder").
+ * sekunder; bagefter står rækken uden link), eller en fri tekst.
  */
 export function NoticeRow({ notice, text, now = Date.now(), onUndo }: { notice?: Notice; text?: string; now?: number; onUndo?: () => void }) {
   let body: ReactNode = text ?? "";
@@ -192,9 +192,10 @@ function InlineParts({ parts, onOpen }: { parts: Inline[]; onOpen?: (target: Mod
             {p.text}
           </a>
         ) : p.kind === "module" ? (
-          <TextLink key={i} onClick={() => onOpen?.(p.target, p.text)}>
+          // Et link i teksten har tekstens farve og kun en understregning (Jakob 03.10); pillerne står for sig.
+          <button key={i} type="button" className="chat-ilink" onClick={() => onOpen?.(p.target, p.text)}>
             {p.text}
-          </TextLink>
+          </button>
         ) : (
           <Fragment key={i}>{p.text}</Fragment>
         ),

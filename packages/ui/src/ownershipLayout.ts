@@ -1200,6 +1200,37 @@ export function beneficialGraph(graph: OwnershipGraphVM, onDate?: string): Owner
   return { ...graph, nodes: graph.nodes.filter((n) => keep.has(n.id)), edges, ingoingDepth: 1, outgoingDepth: 0 };
 }
 
+export interface OwnershipFitInput {
+  /** Grafens størrelse i 100 % (layoutOwnership). */
+  graph: { width: number; height: number };
+  /** Lærredets bredde. */
+  canvasW: number;
+  /** Lærredets højde: mindst og højst (højst = det synlige vindue, fx vinduets højde minus rammen). */
+  minCanvasH: number;
+  maxCanvasH: number;
+  /** Luft i bunden til legende og zoomknapper. */
+  foot: number;
+  /** Luft rundt om grafen. */
+  margin?: number;
+  minZoom?: number;
+  maxZoom?: number;
+}
+
+/**
+ * Tilpas til vinduet (Jakob 03.10): den zoom og panorering, der viser hele grafen i både bredde og højde med lidt luft,
+ * inden for min- og maks-zoom, og den lærredshøjde, der passer til den tilpassede graf (højst maxCanvasH). En dyb
+ * struktur skaleres altså ned i stedet for at blive klippet; kun under minZoom må den panoreres.
+ */
+export function fitOwnership({ graph, canvasW, minCanvasH, maxCanvasH, foot, margin = 16, minZoom = 0.25, maxZoom = 1 }: OwnershipFitInput): { zoom: number; canvasH: number; pan: { x: number; y: number } } {
+  const w = Math.max(1, graph.width);
+  const h = Math.max(1, graph.height);
+  const maxH = Math.max(minCanvasH, maxCanvasH);
+  const zoom = Math.max(minZoom, Math.min(maxZoom, (canvasW - 2 * margin) / w, (maxH - foot - 2 * margin) / h));
+  const canvasH = Math.round(Math.min(maxH, Math.max(minCanvasH, h * zoom + foot + 2 * margin)));
+  const pan = { x: Math.round((canvasW - w * zoom) / 2), y: Math.round(Math.max(margin, (canvasH - foot - h * zoom) / 2)) };
+  return { zoom, canvasH, pan };
+}
+
 /** Mini-kortets geometri: målestok, der får hele grafen ind i boksen, og viewport-rammen i kortets koordinater. */
 export function minimapFrame(
   layout: { width: number; height: number },

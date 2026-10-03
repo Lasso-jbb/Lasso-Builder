@@ -28,6 +28,7 @@ import {
   entitySubtitle,
   graphOnDate,
   minimapFrame,
+  fitOwnership,
   refocusGraph,
   indirectShare,
   labelHeight,
@@ -48,7 +49,6 @@ const LIST_BELOW = 560;
 const PANEL_BESIDE_FROM = 900;
 const ZOOM_STEPS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.9, 1, 1.25, 1.5, 2];
 const CANVAS_MIN = 360;
-const CANVAS_MAX = 720;
 /** 14b: en dyb kæde tegnes i 100 %, så lærredet må blive højere end standardhøjden. */
 const CANVAS_TALL = 1200;
 /** 26f.4: tablet indlejrer diagrammet i 340 px højde og samler over 4 noder pr. lag i "+N". */
@@ -57,6 +57,8 @@ const TABLET_LAYER_CAP = 4;
 /** 26f.4: noderne tegnes aldrig under 150 px bredde på tablet (læsbar tekst); lærredet vokser i stedet højst til 560 px. */
 const TABLET_MIN_ZOOM = 150 / 196;
 const TABLET_CANVAS_MAX = 560;
+/** Det af vinduet, der ikke er lærred, når lærredet tilpasses vinduet: topbjælke, faner og modulrække (ca. 150), diagrammets værktøjslinje og evt. fuld skærms hoved (ca. 130) og spørgefeltet (ca. 120). */
+const VIEW_CHROME = 400;
 /** Luft i bunden af lærredet til legende og zoomknapper. */
 const CANVAS_FOOT = 88;
 /** Smalt lærred (fx med detaljepanelet ved siden af): legenden fylder tre linjer. */
@@ -165,6 +167,14 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
     };
   }, []);
   const [zoom, setZoom] = useState<number | null>(null);
+  // Vinduets højde: lærredet må højst fylde det synlige (resten af rammen trækkes fra), så grafen ses i ét.
+  const [viewH, setViewH] = useState(() => (typeof window !== "undefined" ? window.innerHeight : 900));
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const on = () => setViewH(window.innerHeight);
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
   const [pan, setPan] = useState<{ x: number; y: number } | null>(null);
   const drag = useRef<{ x: number; y: number; px: number; py: number; moved: boolean } | null>(null);
   // Layoutregel 3 (14.4): legale/reelle ejere, dobbeltklik = nyt fokus, pr. dato, mini-kort og eksport.
@@ -217,22 +227,27 @@ export function OwnershipDiagram({ graph: sourceGraph, error, title, onAction, c
   const panelOverlay = panelBeside && !tablet;
   const selectedNode = layout?.nodes.find((n) => n.id === selected && n.entity) ?? null;
   const canvasW = Math.max(200, selectedNode && panelBeside && !panelOverlay ? W - 336 - 16 : W);
-  // Tilpas: hele bredden skal kunne ses; høje strukturer skaleres højst ned til 80 % og panoreres.
+  // Tilpas: hele grafen skal kunne ses (fitOwnership nedenfor).
   // Der holdes 56 px fri i begge sider, så zoomknapperne i hjørnet ikke dækker noder eller baner.
-  const canvasMax = tablet ? TABLET_CANVAS_H : CANVAS_MAX;
   // 26f.4 tablet: kun hjælpechippen står under noderne (ingen legende), så foden er 44 px.
   const foot = tablet ? 44 : canvasW >= 720 && canvasW - LEGEND_RIGHT - 16 < 860 ? CANVAS_FOOT_NARROW : CANVAS_FOOT;
-  // 14.4: desktop tegner 100 %, så noderne står i 196 × 64; kun en struktur, der ikke kan være i bredden, skaleres ned.
-  const fitZoom = layout
-    ? tablet
-      ? // 26f.4: højst 100 %, aldrig under 150 px-noder (TABLET_MIN_ZOOM); lærredet vokser i højden i stedet for at skalere teksten ulæselig.
-        Math.max(TABLET_MIN_ZOOM, Math.min(1, (canvasW - 32) / layout.width, (canvasMax - foot - 8) / layout.height))
-      : Math.max(0.25, Math.min(1, (canvasW - 32) / layout.width))
-    : 1;
+  // Tilpas til vinduet (Jakob 03.10, fitOwnership): hele grafen ses i både bredde og højde, højst 100 %; lærredet er så
+  // højt som den tilpassede graf, højst vinduets synlige højde (desktop) eller 560 px (tablet, 26f.4), så en dyb struktur
+  // skaleres ned i stedet for at blive klippet. Tablet går aldrig under 150 px-noder (TABLET_MIN_ZOOM); derunder panoreres.
+  const fitted = layout
+    ? fitOwnership({
+        graph: layout,
+        canvasW,
+        minCanvasH: tablet ? TABLET_CANVAS_H : CANVAS_MIN,
+        maxCanvasH: tablet ? Math.max(TABLET_CANVAS_H, Math.min(TABLET_CANVAS_MAX, viewH - VIEW_CHROME)) : Math.max(CANVAS_MIN, Math.min(CANVAS_TALL, viewH - VIEW_CHROME)),
+        foot,
+        minZoom: tablet ? TABLET_MIN_ZOOM : 0.25,
+      })
+    : null;
+  const fitZoom = fitted?.zoom ?? 1;
   const z = zoom ?? fitZoom;
-  // Desktop: lærredet vokser med strukturen (100 %), højst til CANVAS_TALL; derover panoreres.
-  const canvasH = layout ? (tablet ? Math.round(Math.min(TABLET_CANVAS_MAX, Math.max(TABLET_CANVAS_H, layout.height * fitZoom + foot + 16))) : Math.round(Math.min(CANVAS_TALL, Math.max(CANVAS_MIN, layout.height * fitZoom + foot)))) : CANVAS_MIN;
-  const defaultPan = layout ? { x: Math.round((canvasW - layout.width * z) / 2), y: Math.round(Math.max(8, (canvasH - foot - layout.height * z) / 2)) } : { x: 0, y: 0 };
+  const canvasH = fitted?.canvasH ?? CANVAS_MIN;
+  const defaultPan = layout ? (zoom === null && fitted ? fitted.pan : { x: Math.round((canvasW - layout.width * z) / 2), y: Math.round(Math.max(8, (canvasH - foot - layout.height * z) / 2)) }) : { x: 0, y: 0 };
   const p = pan ?? defaultPan;
 
   // Ny struktur (dybde, retning, foldning): tilpas igen.
