@@ -69,6 +69,15 @@ export interface PageTemplate {
   subtitle?: string;
 }
 
+/** GET /api/portal/visning/<id>: visningen bag et "Åben i Lasso"-link, til en egen side (portal2/viewLink.ts). */
+export interface StoredView {
+  entity: { kind: "company" | "person"; id: string };
+  spec: ViewSpec;
+  title: string;
+  subtitle?: string;
+  existingTemplateId?: string;
+}
+
 /** POST /templates: den viste spec, titlen og den entitet, specen er lavet til (serveren erstatter den med en pladsholder). */
 export interface SaveTemplateBody {
   kind: "company" | "person";
@@ -184,6 +193,10 @@ export function createPortalApi(onUnauthorized: () => void, fetcher: typeof fetc
       save: (body: SaveTemplateBody) => call<PageTemplate & { createdAt: string }>("POST", "/templates", body),
       remove: (id: string) => call<{ id: string; removed: true }>("DELETE", `/templates/${encodeURIComponent(id)}`),
       render: (id: string, entityId: string) => call<ViewResult>("GET", `/templates/${encodeURIComponent(id)}/render${query({ entity: entityId })}`),
+    },
+    /** En gemt visning fra MCP-appens "Åben i Lasso" (portal2/viewLink.ts). */
+    visning: {
+      get: (id: string) => call<StoredView>("GET", `/visning/${encodeURIComponent(id)}`),
     },
     saveView: (body: { spec: ViewSpec; name?: string; slug?: string; visibility?: Visibility }) => call<SaveViewResult>("POST", "/views", body),
     /** Virksomhedsrapporten (PDF) med fanens fokus (Creditsafe kun fra Risiko). */

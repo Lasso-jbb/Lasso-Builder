@@ -34,6 +34,16 @@ export function usePrefersDark(): boolean {
   return dark;
 }
 
+/**
+ * Værtens muligheder på en delt side. /d/<id> (minimal, "Del visning" fra MCP-appen) viser kun visningen: ingen Opdatér,
+ * Eksportér eller PDF; navne og "Se alle" virker stadig via serverens signerede links.
+ */
+export function sharedHost(boot: Pick<Boot, "minimal" | "pdf" | "pdfUrl" | "links" | "focusLinks">) {
+  const nav = { drillDown: hasLinks(boot.links), openFocus: hasLinks(boot.focusLinks) };
+  if (boot.minimal) return nav;
+  return { refresh: true, export: true, pdf: boot.pdf !== false && Boolean(boot.pdfUrl), ...nav };
+}
+
 /** Delt side: specen er gemt, data er hentet friskt af serveren ved sidevisning. */
 export function WebView({ boot }: { boot: Boot }) {
   const dark = usePrefersDark();
@@ -121,7 +131,7 @@ function SharedView({ boot, dark }: { boot: Boot & { spec: NonNullable<Boot["spe
         dataset={boot.dataset ?? null}
         url={boot.url}
         theme={dark ? "dark" : "light"}
-        host={{ refresh: true, export: true, pdf: boot.pdf !== false && Boolean(boot.pdfUrl), drillDown: hasLinks(boot.links), openFocus: hasLinks(boot.focusLinks) }}
+        host={sharedHost(boot)}
         onAction={onAction}
       />
     </div>

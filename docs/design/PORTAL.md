@@ -126,6 +126,13 @@ Valget huskes i browseren. `?tema=dark` i adressen sætter temaet uden at gemme 
   for virksomheden eller personen på modulet (ukendt fokus: Overblik) og fastgør den med `fastgoer=1`. Er fanen
   allerede åben (også fra cachen), bruges den; der kommer aldrig to. Bagefter fjernes parametrene fra adressen
   (`history.replaceState`), så en genindlæsning ikke åbner igen; uden login bliver de stående, til man er logget ind.
+- `?aabn=<Lasso-ID>&visning=<kort id>` (MCP-appens "Åben i Lasso" for en gemt visning, Jakob 03.10) åbner eller
+  aktiverer entitetens fane, henter visningen (`GET /api/portal/visning/<id>`) og viser den som et modul: findes den
+  allerede som egen side (`existingTemplateId`), skiftes der dertil; ellers gemmes den som egen side (sideskabelon), og
+  den røde nål viser, at modulet er tilføjet, til det fjernes med nålen. Fanen fastgøres ikke (fastgørelse er et
+  manuelt valg). Fejl (udløbet visning, navnetjek, demobruger) giver en kort besked, og man står på Overblik.
+  Parametrene ryddes bagefter; uden login venter linket, til man er logget ind (`portal2/viewLink.ts`).
+- `/d/<id>` ("Del visning" fra MCP-appen): kun visningen, uden handlingsbjælke (boot `minimal`); navne kan åbnes.
 
 Designguiden bruger adresserne til sine rammer.
 

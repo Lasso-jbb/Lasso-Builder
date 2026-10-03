@@ -80,8 +80,11 @@ export function closeOthers(list: readonly OpenItem[], keep: string | null): Ope
   return list.filter((o) => o.key === keep || o.pinned);
 }
 
-/** Dybt link (Åben i Lasso fra MCP-appen): ?aabn=<Lasso-ID>&fokus=<fokus>&fastgoer=1. */
-export const DEEP_LINK_PARAMS = ["aabn", "fokus", "fastgoer"] as const;
+/**
+ * Dybt link (Åben i Lasso fra MCP-appen): ?aabn=<Lasso-ID>&visning=<kort id> (visningen som modul, viewLink.ts) eller
+ * det ældre ?aabn=<Lasso-ID>&fokus=<fokus>&fastgoer=1 (modulet, evt. fastgjort).
+ */
+export const DEEP_LINK_PARAMS = ["aabn", "fokus", "fastgoer", "visning"] as const;
 
 export interface DeepLink {
   kind: "company" | "person";
@@ -89,6 +92,8 @@ export interface DeepLink {
   /** Modulet (fokus) efter slagsen; ukendt eller udeladt giver Overblik. */
   tab: string;
   pin: boolean;
+  /** Den gemte visnings korte id (visning=…): vises som modul; fanen fastgøres så ikke. */
+  view?: string;
 }
 
 /** Læser det dybe link fra adressens søgedel; null uden et gyldigt Lasso-ID (CVR-1/3/4-…). */
@@ -99,8 +104,11 @@ export function parseDeepLink(search: string): DeepLink | null {
   const kind = /^CVR-[34]-/i.test(id) ? "person" : "company";
   const f = (p.get("fokus") ?? "").trim();
   const tab = kind === "company" ? ((FOCUSES as readonly string[]).includes(f) ? pageFocus(f as Focus) : "overblik") : isPersonFocus(f) ? f : "overblik";
-  const pin = ["1", "true", "ja"].includes((p.get("fastgoer") ?? "").toLowerCase());
-  return { kind, id: id.toUpperCase(), tab, pin };
+  const view = (p.get("visning") ?? "").trim();
+  const validView = /^[A-Za-z0-9_-]{1,64}$/.test(view) ? view : undefined;
+  // Med en visning fastgøres fanen ikke (Jakob 03.10: modulet står, til det fjernes med nålen); fastgoer gælder kun det ældre link.
+  const pin = !validView && ["1", "true", "ja"].includes((p.get("fastgoer") ?? "").toLowerCase());
+  return { kind, id: id.toUpperCase(), tab: validView ? "overblik" : tab, pin, ...(validView ? { view: validView } : {}) };
 }
 
 /** Adressen uden det dybe links parametre (til history.replaceState); resten af søgedelen og #-delen bliver. */

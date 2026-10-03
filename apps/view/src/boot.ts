@@ -28,6 +28,11 @@ export interface WebBoot {
   pdf?: boolean;
   /** Det signerede .pdf-link til netop denne side (samme query som siden). */
   pdfUrl?: string;
+  /**
+   * /d/<id> ("Del visning" fra MCP-appen, Jakob 03.10): kun visningen. Ingen handlingsbjælke (Opdatér, Eksportér, PDF);
+   * navne kan stadig åbnes, når serveren har lagt links i boot'en.
+   */
+  minimal?: boolean;
 }
 
 /** Brugeren i portalen, samme form som serverens CurrentUser. */
