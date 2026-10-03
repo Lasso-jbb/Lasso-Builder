@@ -31,7 +31,8 @@ export interface OpenItem {
 }
 
 /** Ét stykke af svaret: tekst eller en visning, i den rækkefølge de kom. */
-export type AnswerPart = { kind: "text"; text: string } | ({ kind: "view"; id: string; form: ViewForm } & Shown);
+/** tool: værktøjet bag visningen (fra "view"-hændelsen); udeladt i ældre svar og gemte samtaler. */
+export type AnswerPart = { kind: "text"; text: string } | ({ kind: "view"; id: string; form: ViewForm; tool?: string } & Shown);
 
 /** Valgmenuen, serveren bad om ("choice"-hændelsen): vises over spørgefeltet, til brugeren vælger. */
 export interface PendingChoice {
@@ -45,7 +46,17 @@ export interface PendingChoice {
  * Notitsen under spørgsmålet: here = svaret skrives her om en anden person/virksomhed (modellen valgte at blive),
  * moved = svaret flyttede til fanen tabKey (createdTab: fanen blev åbnet til dette spørgsmål); Fortryd virker til undoUntil.
  */
-export type Notice = { kind: "here"; name: string } | { kind: "moved"; name: string; tabKey: string; undoUntil: number; createdTab: boolean };
+export type Notice =
+  | { kind: "here"; name: string }
+  | {
+      kind: "moved";
+      name: string;
+      tabKey: string;
+      undoUntil: number;
+      createdTab: boolean;
+      /** Flyttet ind i en fane, der fandtes: dens samtale (historik og resumé) før flytningen, så Fortryd kan lægge den tilbage. Gemmes ikke. */
+      prev?: { chat: ChatState; sent: string | null };
+    };
 
 /** Hvad chatten svarede på et spørgsmål: delene (tekst og visninger) i rækkefølge. */
 export interface Answer {
@@ -124,7 +135,7 @@ export function applyEvent(answer: Answer, e: ChatEvent): Answer {
     case "tool_error":
       return { ...answer, status: undefined };
     case "view":
-      return { ...answer, status: undefined, parts: [...answer.parts, { kind: "view", id: e.id, form: e.form, spec: e.spec, dataset: e.dataset }] };
+      return { ...answer, status: undefined, parts: [...answer.parts, { kind: "view", id: e.id, form: e.form, spec: e.spec, dataset: e.dataset, ...(e.tool ? { tool: e.tool } : {}) }] };
     case "choice":
       return { ...answer, status: undefined, choice: { id: e.id, question: e.question, options: e.options, allowFreeText: e.allowFreeText } };
     case "error":
@@ -212,7 +223,10 @@ export function moveTurn(t: Threads, from: string, to: string, turnId: string, n
   const turn = src?.turns.find((x) => x.id === turnId);
   if (!src || !turn || from === to) return t;
   const dest = t[to] ?? emptyTab();
-  const stub: Turn = { ...turn, notice, answer: { parts: [], pending: false } };
+  // Målfanen fandtes: dens samtale huskes på notitsen, så Fortryd kan lægge den tilbage (svaret giver målfanen en frisk historik).
+  const prior = t[to];
+  const kept: Notice = notice.kind === "moved" && prior && !notice.createdTab ? { ...notice, prev: { chat: prior.chat, sent: prior.sent } } : notice;
+  const stub: Turn = { ...turn, notice: kept, answer: { parts: [], pending: false } };
   return {
     ...t,
     [from]: { ...src, turns: src.turns.map((x) => (x.id === turnId ? stub : x)) },
@@ -234,7 +248,10 @@ export function undoMove(t: Threads, from: string, turnId: string): { threads: T
     delete next[tabKey];
     return { threads: next, closeKey: tabKey };
   }
-  if (next[tabKey]) next[tabKey] = without(next[tabKey]!);
+  if (next[tabKey]) {
+    const prev = stub.notice.prev;
+    next[tabKey] = { ...without(next[tabKey]!), ...(prev ? { chat: prev.chat, sent: prev.sent } : {}) };
+  }
   return { threads: next };
 }
 
@@ -291,13 +308,19 @@ export interface ChatCacheState {
   threads: Threads;
 }
 
+/** Fortryd virker ikke efter en genindlæsning: den gemte samtale fra før flytningen gemmes ikke. */
+function dropPrev(n: Extract<Notice, { kind: "moved" }>): Extract<Notice, { kind: "moved" }> {
+  const { prev: _prev, ...rest } = n;
+  return rest;
+}
+
 /** Det, der gemmes: kun faner, der stadig er åbne, uden status og uden en afbrudt hentning (pending). */
 export function serializeCache(user: string, state: ChatCacheState, now: number): ChatCache {
   const keys = new Set(state.open.map((o) => o.key));
   const tabs = Object.fromEntries(
     Object.entries(state.threads)
       .filter(([k]) => keys.has(k))
-      .map(([k, tab]) => [k, { ...tab, turns: tab.turns.filter((x) => !x.answer.pending).map((x) => ({ ...x, answer: { ...x.answer, status: undefined } })) }]),
+      .map(([k, tab]) => [k, { ...tab, turns: tab.turns.filter((x) => !x.answer.pending).map((x) => ({ ...x, answer: { ...x.answer, status: undefined }, ...(x.notice?.kind === "moved" && x.notice.prev ? { notice: dropPrev(x.notice) } : {}) })) }]),
   );
   return { v: 2, user, savedAt: now, open: [...state.open], active: state.active, tabs };
 }
@@ -312,7 +335,7 @@ const revive = (x: Turn): Turn => ({
   ...x,
   askedAt: typeof x.askedAt === "number" ? x.askedAt : 0,
   answer: { ...x.answer, pending: false },
-  ...(x.notice?.kind === "moved" ? { notice: { ...x.notice, undoUntil: 0 } } : {}),
+  ...(x.notice?.kind === "moved" ? { notice: { ...dropPrev(x.notice), undoUntil: 0 } } : {}),
 });
 
 /** Samtalen fra lageret, hvis den er brugerens egen og ikke udløbet; ellers null. Version 1 (én samtale for alle faner) migreres. */

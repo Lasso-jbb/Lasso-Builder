@@ -13,7 +13,7 @@ import { EmptyState, emptyPills } from "./EmptyState.js";
 import * as fx from "./fixtures.js";
 import { AssistantMessage, NoticeRow } from "./Message.js";
 import { Thread } from "./Thread.js";
-import { hhmm, moduleIcon, singleEntity } from "./util.js";
+import { canAddAsTab, hhmm, moduleIcon, singleEntity } from "./util.js";
 
 const html = (el: ReturnType<typeof createElement>) => renderToStaticMarkup(el);
 
@@ -102,6 +102,17 @@ test("Kort: element med Hent som PDF og fuld skærm; side med Tilføj som fane (
   assert.doesNotMatch(mobile, /Hent som PDF/);
 });
 
+test("Tilføj som fane: kun en render_view-side om fanens egen entitet (ikke show_company, ikke ukendt værktøj)", () => {
+  const page = fx.FORM_PAGE[0]!.answer.parts[1] as Extract<(typeof fx.FORM_PAGE)[0]["answer"]["parts"][number], { kind: "view" }>;
+  const tab = { kind: "company" as const, key: fx.FIXTURE_COMPANY };
+  assert.equal(canAddAsTab({ ...page, tool: "render_view" }, tab), true);
+  assert.equal(canAddAsTab({ ...page, tool: "show_company" }, tab), false);
+  assert.equal(canAddAsTab({ ...page, tool: undefined }, tab), false);
+  assert.equal(canAddAsTab({ ...page, tool: "render_view" }, { kind: "company", key: "CVR-1-1" }), false);
+  assert.equal(canAddAsTab({ ...page, tool: "render_view", form: "module" }, tab), false);
+  assert.equal(canAddAsTab({ ...page, tool: "render_view" }, { kind: "result", key: "result:1" }), false);
+});
+
 test("Tom tilstand: titel med fanens navn, hjælpelinje og fire piller pr. fanetype", () => {
   assert.deepEqual(emptyPills("company", fx.EMPTY.suggestions), [...fx.EMPTY.suggestions, "Lav et fuldt KYC-overblik"]);
   assert.equal(emptyPills("person", ["a", "b", "c"])[3], "Vis netværket");
@@ -119,7 +130,7 @@ test("Afklaringen: radiogruppe uden talmærker, (Anbefalet), Andet med eget svar
   assert.match(out, /placeholder="Skriv dit eget svar her"/);
   assert.match(out, />Spring over</);
   assert.match(out, />Vælg</);
-  assert.doesNotMatch(out, /\b1\.|<ol/);
+  assert.doesNotMatch(out, />\s*1\.|<ol/);
   assert.match(html(createElement(ChoicePanel, { choice: fx.CHOICE, disabled: false, variant: "sheet", onSend: () => undefined, onSkip: () => undefined })), /chat-choice--sheet/);
 });
 

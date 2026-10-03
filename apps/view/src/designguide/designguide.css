@@ -484,4 +484,4 @@ body { font-family: var(--lasso-font, "Poppins", system-ui, sans-serif); -webkit
 .p3-chat-specimen .col.content.is-chat { min-height: 0; padding-bottom: 24px; }
 .p3-chat-specimen .chat { padding-bottom: 8px; }
 .p3-chat-specimen .ask { padding: 12px 16px 16px; align-items: center; background: none; pointer-events: auto; display: flex; flex: none; --ask-top: 0px; }
-.p3-chat-specimen .chat-jump { bottom: 16px; }
+.p3-chat-specimen .lasso-iconbtn.chat-jump { bottom: 16px; }

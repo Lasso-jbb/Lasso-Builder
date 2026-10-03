@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
-import { Button, LassoMark } from "@lasso/ui";
+import { Button, IconButton, LassoMark } from "@lasso/ui";
 import { parseBlocks, type Inline } from "../../chat/markdown.js";
 import { P2Icon } from "../icons.js";
 import { answerText, isPureText, type Answer, type Notice } from "../thread.js";
@@ -150,9 +150,7 @@ export function Meta({ at, copyText }: { at: number; copyText?: string }) {
         <span>Lasso</span> <span>{hhmm(at)}</span>
       </span>
       {copyText !== undefined ? (
-        <button type="button" className="chat-meta__copy" aria-label={copied ? "Kopieret" : "Kopiér svaret"} title={copied ? "Kopieret" : "Kopiér svaret"} onClick={() => void copy()}>
-          <P2Icon name={copied ? "check" : "copy"} />
-        </button>
+        <IconButton icon={copied ? "check" : "copy"} label={copied ? "Kopieret" : "Kopiér svaret"} size={32} variant="bare" className="chat-meta__copy" onClick={() => void copy()} />
       ) : null}
     </div>
   );

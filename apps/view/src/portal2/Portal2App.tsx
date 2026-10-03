@@ -66,7 +66,7 @@ import { EmptyState } from "./chat/EmptyState.js";
 import { Fullscreen } from "./chat/Fullscreen.js";
 import { NoticeRow, SkeletonCard, TextLink } from "./chat/Message.js";
 import { ScrollDown, Thread } from "./chat/Thread.js";
-import { singleEntity, type ModuleTarget } from "./chat/util.js";
+import { canAddAsTab, type ModuleTarget } from "./chat/util.js";
 import "./portal2.css";
 import "./chat/chat.css";
 
@@ -1227,10 +1227,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     if (onLasso) {
       // Lasso-modulet: fanens samtale (en global fane fra søgningen eller Lister viser først sit resultat).
       empty = !turns.length && !current && !busy && !err;
-      const entityPage = (part: ViewPart) => {
-        const one = singleEntity(part.spec);
-        return item.kind !== "result" && part.form === "page" && one?.kind === item.kind && one.id === item.key;
-      };
+      const entityPage = (part: ViewPart) => canAddAsTab(part, item);
       const turnOf = (part: ViewPart) => turns.find((x) => x.answer.parts.includes(part));
       content = empty ? (
         <EmptyState name={item.name} kind={item.kind === "result" ? "global" : item.kind} suggestions={suggestions(item)} disabled={pending || !boot.chat} onPick={(x) => void ask(x)} />

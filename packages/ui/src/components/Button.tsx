@@ -82,6 +82,8 @@ export interface IconButtonProps {
   disabled?: boolean;
   /** Fyldt ikon (fx Gemt). */
   filled?: boolean;
+  /** Knappen folder noget ud eller sammen (aria-expanded), fx chattens afklaring. */
+  expanded?: boolean;
   className?: string;
   onClick?: () => void;
 }
@@ -90,10 +92,10 @@ export function iconButtonClass(size: IconButtonSize = 38, variant: IconButtonVa
   return ["lasso-iconbtn", "lasso-iconbtn--sq", `lasso-iconbtn--${size}`, variant === "default" ? "" : `lasso-iconbtn--${variant}`, extra].filter(Boolean).join(" ");
 }
 
-export function IconButton({ icon, label, size = 38, variant = "default", pressed, disabled, filled, className = "", onClick }: IconButtonProps) {
+export function IconButton({ icon, label, size = 38, variant = "default", pressed, disabled, filled, expanded, className = "", onClick }: IconButtonProps) {
   const v = pressed ? "active" : variant;
   return (
-    <button type="button" className={iconButtonClass(size, v, className)} aria-label={label} title={label} aria-pressed={pressed} disabled={disabled} onClick={onClick}>
+    <button type="button" className={iconButtonClass(size, v, className)} aria-label={label} title={label} aria-pressed={pressed} aria-expanded={expanded} disabled={disabled} onClick={onClick}>
       <Icon name={icon} size={size === 32 ? 16 : 18} filled={filled} />
     </button>
   );

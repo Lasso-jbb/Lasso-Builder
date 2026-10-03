@@ -47,9 +47,9 @@
 
 /* Tidspunkt: 11/16 faint, gap 10, kopiér 16 */
 .p3 .chat-meta { margin-left: calc(var(--chat-avatar) + var(--lasso-space-3)); font-size: var(--lasso-fs-label); line-height: 16px; color: var(--faint); display: flex; align-items: center; gap: 10px; }
-.p3 .chat-meta__copy { display: inline-flex; align-items: center; justify-content: center; color: var(--faint); background: none; border: 0; padding: 0; cursor: pointer; border-radius: 4px; }
-.p3 .chat-meta__copy:hover, .p3 .chat-meta__copy:focus-visible { color: var(--lasso-text); outline: none; }
-.p3 .chat-meta__copy svg.i { width: 16px; height: 16px; stroke-width: 1.6; }
+/* Kopiér: designguidens bare ikonknap (32, ikon 16) i faint; den negative margen holder tidslinjen 16 høj. */
+.p3 .lasso-iconbtn.chat-meta__copy { color: var(--faint); margin: -8px 0 -8px -8px; }
+.p3 .lasso-iconbtn.chat-meta__copy:hover, .p3 .lasso-iconbtn.chat-meta__copy:focus-visible { color: var(--lasso-text); }
 
 /* Modul-links: 46 høj, padding 0 18, radius 12, 1 px kant, 16/500 ink, 18 px koral ikon */
 .p3 .chat-links { display: flex; flex-wrap: wrap; gap: var(--lasso-space-3); margin-top: 14px; align-items: center; }
@@ -92,9 +92,8 @@
 .p3 .chat-card--sk .chat-card__b .chat-sk:last-child { margin-bottom: 4px; }
 
 /* Rul til nyeste: 40 cirkel, kant, skygge, pil ned 18 */
-.p3 .chat-jump { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--ask-top, 114px) + 56px); width: 40px; height: 40px; border-radius: 50%; background: var(--lasso-surface); border: 1px solid var(--lasso-border-strong); box-shadow: var(--chat-shadow-jump); display: grid; place-items: center; color: var(--lasso-text); z-index: 31; cursor: pointer; padding: 0; }
-.p3 .chat-jump:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
-.p3 .chat-jump svg.i { width: 18px; height: 18px; stroke-width: 1.6; }
+/* IconButton 36 som eksportens svævende cirkel: 40, rund, skygge, ink-ikon. */
+.p3 .lasso-iconbtn.chat-jump { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--ask-top, 114px) + 56px); width: 40px; height: 40px; min-width: 40px; border-radius: 50%; box-shadow: var(--chat-shadow-jump); color: var(--lasso-text); z-index: 31; }
 
 /* Tom tilstand: titel 24/32/600, hjælpelinje 14/22, 2 × 2 piller 720 bred, 56 høje */
 .p3 .chat-empty { margin: auto; width: min(var(--chat-w), 100%); text-align: center; padding: var(--lasso-space-5) 0 calc(var(--ask-top, 76px) + 40px); }
@@ -120,10 +119,10 @@
 .p3 .chat-choice__h { display: flex; align-items: center; justify-content: space-between; gap: var(--lasso-space-3); margin-bottom: var(--lasso-space-4); }
 .p3 .chat-choice__t { font-size: var(--chat-fs-16); font-weight: 500; line-height: 24px; color: var(--lasso-text); }
 .p3 .chat-choice__icons { display: flex; gap: var(--lasso-space-3); color: var(--lasso-text-3); flex: none; }
-.p3 .chat-choice__ib { display: inline-flex; color: inherit; border-radius: 4px; }
-.p3 .chat-choice__ib:hover, .p3 .chat-choice__ib:focus-visible { color: var(--lasso-text); outline: none; }
-.p3 .chat-choice__ib svg.i { width: 18px; height: 18px; stroke-width: 1.6; transition: transform 0.2s; }
-.p3 .chat-choice__ib.is-collapsed svg.i { transform: rotate(180deg); }
+/* Fold og ×: designguidens bare ikonknapper (32); den negative margen holder overskriften 24 høj. Udfoldet er hvile, ikke "åben menu". */
+.p3 .chat-choice__icons { gap: 0; margin: -4px -8px -4px 0; }
+.p3 .chat-choice__icons .lasso-iconbtn--bare[aria-expanded="true"] { background: transparent; border-color: transparent; color: var(--lasso-text-3); }
+.p3 .chat-choice__icons .lasso-iconbtn--bare[aria-expanded]:hover { background: var(--lasso-surface-muted); color: var(--lasso-text); }
 .p3 .chat-crow { background: var(--lasso-surface-2); border: 1px solid var(--lasso-divider-subtle); border-radius: var(--lasso-radius); padding: 14px var(--lasso-space-4); cursor: pointer; }
 .p3 .chat-crow + .chat-crow { margin-top: var(--lasso-space-2); }
 .p3 .chat-crow[aria-checked="true"] { border-color: var(--lasso-focus-border); }
@@ -172,11 +171,10 @@
   .p3 .chat-link { font-size: var(--lasso-fs); padding: 0 14px; gap: 8px; }
   .p3 .chat-link svg.i { width: 16px; height: 16px; }
   .p3 .chat-links__wrap { flex-wrap: wrap; }
-  .p3 .chat-turn > .chat-card { margin-top: var(--lasso-space-3); }
   .p3 .chat-card__h { padding: 14px var(--lasso-space-4); }
   .p3 .chat-card__s { font-size: var(--chat-fs-12); }
   .p3 .chat-card__b { padding: 0 var(--lasso-space-4) 14px; }
-  .p3 .chat-jump { bottom: calc(var(--ask-top, 156px) + 12px); }
+  .p3 .lasso-iconbtn.chat-jump { bottom: calc(var(--ask-top, 156px) + 12px); width: 40px; height: 40px; min-width: 40px; }
   .p3 .chat-empty__pills { grid-template-columns: 1fr; }
   .p3 .chat-spill { padding: 0 var(--lasso-space-row); height: 48px; font-size: var(--lasso-fs); }
   .p3 .chat-empty__t { font-size: var(--lasso-fs-lg); line-height: var(--lasso-lh-lg); }
