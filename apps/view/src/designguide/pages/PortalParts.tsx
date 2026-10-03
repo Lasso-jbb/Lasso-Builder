@@ -170,6 +170,15 @@ export function PortalParts({ theme }: { theme: "light" | "dark" }) {
           </div>
         </Spec>
 
+        <Spec label="Fastgjort fane" note="Jakob 03.10: fastgjorte faner står først med en neutral nål (ikke skabelonernes røde) og intet kryds; nålen ved hover og fokus fastgør en almindelig fane">
+          <div className="spec-tabs spec-even">
+            <div className="otabs">
+              <OpenTab name="Eksempel Byg A/S" sub="Silkeborg, CVR 99000001" kind="company" active pinned onPin={() => undefined} />
+              <OpenTab name="Eksempel Transport A/S" sub="Vejle, CVR 99000004" kind="company" active={false} onPin={() => undefined} />
+            </div>
+          </div>
+        </Spec>
+
         <Spec label="Åben fane, eneste synlige" note="Når kun den aktive er plads til, bliver den en dropdown med alle åbne">
           <div className="spec-tabs">
             <div className="otabs">

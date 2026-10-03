@@ -8,7 +8,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 (globalThis as { React?: typeof React }).React = React;
 import { parseBlocks, parseInline } from "../../chat/markdown.js";
 import { ChoicePanel } from "../ChoicePanel.js";
-import { AskField, RemoveTemplateDialog, TemplatePin } from "../parts.js";
+import { AskField, MenuItem, OpenTab, RemoveTemplateDialog, TemplatePin } from "../parts.js";
 import { EmptyState, emptyPills } from "./EmptyState.js";
 import * as fx from "./fixtures.js";
 import { AssistantMessage, NoticeRow } from "./Message.js";
@@ -191,4 +191,19 @@ test("Sideskabelon: rød nål med navnet på handlingen, og bekræftelsen 'Fjern
   assert.match(html(createElement(TemplatePin, { kind: "company", title: "KYC-overblik" })), /class="ibtn on tplpin" aria-label="KYC-overblik er tilføjet på alle virksomheder\. Fjern modulet"/);
   assert.equal(fx.TEMPLATE_CONFIRM.confirmOpen, true);
   assert.equal(typeof RemoveTemplateDialog, "function");
+});
+
+test("Fastgjort fane: neutral nål med aria-pressed, intet ×; en almindelig fane har × og en nåleknap til at fastgøre", () => {
+  const pinned = html(createElement(OpenTab, { name: "Eksempel Byg A/S", active: true, kind: "company", pinned: true, onPin: () => undefined, onClose: () => undefined }));
+  assert.match(pinned, /class="otab on is-pinned"/);
+  assert.match(pinned, /class="pinbtn" aria-pressed="true" aria-label="Frigør Eksempel Byg A\/S"/);
+  assert.doesNotMatch(pinned, /aria-label="Luk /);
+  assert.doesNotMatch(pinned, /tplpin/, "ikke skabelonernes røde nål");
+  const plain = html(createElement(OpenTab, { name: "Anden", active: false, kind: "company", onPin: () => undefined, onClose: () => undefined }));
+  assert.match(plain, /class="pinbtn" aria-pressed="false" aria-label="Fastgør Anden"/);
+  assert.match(plain, /aria-label="Luk Anden"/);
+  // Menuen (telefon og "Flere"): nålen fastgør/frigør, og en fastgjort fane har intet ×.
+  const item = html(createElement(MenuItem, { label: "Anden", pinned: true, onPin: () => undefined, onClose: () => undefined }));
+  assert.match(item, /class="ddpin on" role="button" tabindex="0" aria-pressed="true" aria-label="Frigør Anden"/);
+  assert.doesNotMatch(item, /aria-label="Luk Anden"/);
 });

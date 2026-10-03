@@ -220,6 +220,8 @@ export function OpenTab({
   busy = false,
   kind,
   dataKey,
+  pinned = false,
+  onPin,
   onSelect,
   onClose,
 }: {
@@ -227,6 +229,10 @@ export function OpenTab({
   sub?: string;
   active: boolean;
   solo?: boolean;
+  /** Fastgjort (Jakob 03.10): neutral nål foran navnet (ikke skabelonernes røde), og intet ×. */
+  pinned?: boolean;
+  /** Fastgør/frigør fanen (nåleknappen ved hover og fokus; altid synlig på en fastgjort fane). */
+  onPin?: () => void;
   /** Lasso henter til fanen: mærket bevæger sig foran navnet (i stedet for ikonet). */
   busy?: boolean;
   /** Fanens ikon: bygning (firma), person, eller Lasso-mærket (global fane). */
@@ -238,7 +244,7 @@ export function OpenTab({
   return (
     <div
       data-key={dataKey}
-      className={`otab${active ? " on" : ""}${solo ? " solo" : ""}`}
+      className={`otab${active ? " on" : ""}${solo ? " solo" : ""}${pinned ? " is-pinned" : ""}`}
       role="tab"
       aria-selected={active}
       tabIndex={0}
@@ -248,7 +254,7 @@ export function OpenTab({
       onMouseDown={(e) => {
         if (e.button === 1) {
           e.preventDefault();
-          onClose?.();
+          if (!pinned) onClose?.();
         }
       }}
     >
@@ -261,17 +267,36 @@ export function OpenTab({
       ) : null}
       <span className="nm">{name}</span>
       <P2Icon name="down" className="i chev" />
-      <button
-        type="button"
-        className="x"
-        aria-label={`Luk ${name}`}
-        onClick={(e) => {
-          e.stopPropagation();
-          onClose?.();
-        }}
-      >
-        <P2Icon name="x" />
-      </button>
+      {onPin ? (
+        <button
+          type="button"
+          className="pinbtn"
+          aria-pressed={pinned}
+          aria-label={pinned ? `Frigør ${name}` : `Fastgør ${name}`}
+          title={pinned ? "Frigør fanen" : "Fastgør fanen"}
+          onClick={(e) => {
+            e.stopPropagation();
+            onPin();
+          }}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          <P2Icon name="pin" />
+        </button>
+      ) : null}
+      {pinned ? null : (
+        <button
+          type="button"
+          className="x"
+          aria-label={`Luk ${name}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose?.();
+          }}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          <P2Icon name="x" />
+        </button>
+      )}
       <span className="ttip">
         {name}
         {sub ? (
@@ -309,7 +334,27 @@ export function ModuleTab({ id, label, selected, onClick }: { id: string; label:
 /* ---------- menuer ---------- */
 
 /** Række i en menu (.dd): ikon og tekst, flueben på den aktuelle, eller et luk-kryds. */
-export function MenuItem({ icon, label, current = false, muted = false, onClick, onClose }: { icon?: P2IconName; label: ReactNode; current?: boolean; muted?: boolean; onClick?: () => void; onClose?: () => void }) {
+export function MenuItem({
+  icon,
+  label,
+  current = false,
+  muted = false,
+  pinned,
+  onClick,
+  onClose,
+  onPin,
+}: {
+  icon?: P2IconName;
+  label: ReactNode;
+  current?: boolean;
+  muted?: boolean;
+  /** Fanens nål i menuen (telefonens og "Flere"-menuen): fastgør/frigør; en fastgjort fane har intet ×. */
+  pinned?: boolean;
+  onClick?: () => void;
+  onClose?: () => void;
+  onPin?: () => void;
+}) {
+  const name = typeof label === "string" ? label : "";
   return (
     <button type="button" className={`${current ? "cur" : ""}${muted ? " muted" : ""}`.trim() || undefined} onClick={onClick}>
       {icon ? (
@@ -320,9 +365,30 @@ export function MenuItem({ icon, label, current = false, muted = false, onClick,
       ) : (
         label
       )}
+      {onPin ? (
+        <span
+          className={`ddpin${pinned ? " on" : ""}`}
+          role="button"
+          tabIndex={0}
+          aria-pressed={Boolean(pinned)}
+          aria-label={`${pinned ? "Frigør" : "Fastgør"} ${name}`.trim()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onPin();
+          }}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter" && e.key !== " ") return;
+            e.preventDefault();
+            e.stopPropagation();
+            onPin();
+          }}
+        >
+          <P2Icon name="pin" />
+        </span>
+      ) : null}
       {current ? (
         <P2Icon name="check" />
-      ) : onClose ? (
+      ) : onClose && !pinned ? (
         <span
           className="ddx"
           role="button"
@@ -410,9 +476,10 @@ export function BottomBar({ busy = false, searchOn = false, homeOn = false, onAs
 }
 
 /** En åben fane i telefonens topbjælke: navnet; den aktive med pil, når den er eneste synlige (dropdown). */
-export function TopTab({ name, active, solo = false, dataKey, onClick }: { name: string; active: boolean; solo?: boolean; dataKey?: string; onClick?: (e: MouseEvent<HTMLButtonElement>) => void }) {
+export function TopTab({ name, active, solo = false, pinned = false, dataKey, onClick }: { name: string; active: boolean; solo?: boolean; pinned?: boolean; dataKey?: string; onClick?: (e: MouseEvent<HTMLButtonElement>) => void }) {
   return (
-    <button type="button" data-tt={dataKey} data-menu={solo ? "" : undefined} className={`tt${active ? " on" : ""}${solo ? " solo" : ""}`} onClick={onClick}>
+    <button type="button" data-tt={dataKey} data-menu={solo ? "" : undefined} className={`tt${active ? " on" : ""}${solo ? " solo" : ""}${pinned ? " is-pinned" : ""}`} onClick={onClick}>
+      {pinned ? <P2Icon name="pin" className="i ttpin" /> : null}
       <span>{name}</span>
       {solo ? <P2Icon name="down" /> : null}
     </button>

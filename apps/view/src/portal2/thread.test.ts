@@ -434,3 +434,15 @@ test("recencyOrder: mindst nyligt aktive først, den aktive sidst, aldrig besøg
   assert.deepEqual(recencyOrder([novo, lasso, mette], [lasso.key, novo.key], mette.key), [lasso.key, novo.key, mette.key]);
   assert.deepEqual(recencyOrder([novo, lasso, mette], [novo.key], lasso.key), [mette.key, novo.key, lasso.key]);
 });
+
+test("Cachen: fastgjorte faner overlever en genindlæsning og står først", () => {
+  const a: OpenItem = { key: "CVR-1-1", kind: "company", name: "A", tab: "overblik" };
+  const b: OpenItem = { key: "CVR-1-2", kind: "company", name: "B", tab: "oekonomi", pinned: true };
+  const saved = serializeCache("u", { open: [a, b], active: a.key, threads: {} }, 10);
+  const restored = restoreCache(JSON.stringify(saved), "u", 11)!;
+  assert.deepEqual(restored.open.map((o) => [o.key, Boolean(o.pinned)]), [[b.key, true], [a.key, false]]);
+  assert.equal(restored.active, a.key);
+  // Et ugyldigt flag (ikke true) gemmes ikke som fastgjort.
+  const odd = JSON.stringify({ ...saved, open: [{ ...a, pinned: "ja" }] });
+  assert.equal(restoreCache(odd, "u", 11)!.open[0]!.pinned, undefined);
+});

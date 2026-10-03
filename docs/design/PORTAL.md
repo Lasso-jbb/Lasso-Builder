@@ -48,6 +48,16 @@ Moduler og Brugere står dæmpet, til de findes.
 - Midterklik lukker en fane. Lukkes den aktive, bliver naboen til venstre aktiv.
 - Henter Lasso til en fane, står Lasso-mærket i fanen og bevæger sig.
 
+### Fastgjorte faner (Jakob 03.10)
+
+- En fane kan fastgøres og frigøres med nålen i fanen (står ved hover og tastaturfokus; `aria-pressed`) og med nålen ud
+  for fanen i menuerne ("Flere" og telefonens fanemenu). Nålen er neutral (sekundær tekstfarve), ikke skabelon-
+  modulernes røde nål, som er noget andet.
+- Fastgjorte faner står først i bjælken (i den rækkefølge, de blev fastgjort), viser altid nålen og har intet kryds
+  (heller ikke midterklik eller i menuen): man frigør først. "Luk alle andre faner" beholder dem. Mangler der plads,
+  skjules de sidst.
+- Fastgørelsen gemmes med fanerne i browseren (cachen v2, `OpenItem.pinned`) og overlever en genindlæsning.
+
 ## Modulrækken
 
 - Først Lasso-mærket: modulet med samtalen (`docs/design/CHAT.md`). Det er altid slået til, også før der er et svar,
@@ -112,6 +122,10 @@ Valget huskes i browseren. `?tema=dark` i adressen sætter temaet uden at gemme 
 - `?soeg=Eksempel` åbner søgningen med teksten (på telefon i fuld skærm).
 - `?spoerg=1` åbner spørgefeltet på telefon.
 - `?tema=dark|light` sætter temaet uden at gemme det.
+- `?aabn=<Lasso-ID>&fokus=<fokus>&fastgoer=1` (MCP-appens "Åben i Lasso", Jakob 03.10) åbner eller aktiverer fanen
+  for virksomheden eller personen på modulet (ukendt fokus: Overblik) og fastgør den med `fastgoer=1`. Er fanen
+  allerede åben (også fra cachen), bruges den; der kommer aldrig to. Bagefter fjernes parametrene fra adressen
+  (`history.replaceState`), så en genindlæsning ikke åbner igen; uden login bliver de stående, til man er logget ind.
 
 Designguiden bruger adresserne til sine rammer.
 

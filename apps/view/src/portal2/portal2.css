@@ -422,3 +422,26 @@ body:has(.p3:not(.p3-specimen)[data-theme="dark"]) { background: #121316; }
 .p3 .otab.on .nm { padding-right: 20px; }
 .p3 .otab.on .x { background: none; }
 .p3 .otab.solo .nm { padding-right: 0; }
+
+/* Fastgjorte faner (Jakob 03.10): neutral nål (ikke skabelonernes røde), først i bjælken, intet ×. Nåleknappen
+   står ved hover og fokus; på en fastgjort fane altid. Kun tastaturfokus giver ring. */
+.p3 .otab .pinbtn { width: 20px; height: 20px; border: 0; padding: 0; border-radius: 10px; background: none; display: none; align-items: center; justify-content: center; color: var(--faint); flex: none; cursor: pointer; }
+.p3 .otab .pinbtn svg { width: 13px; height: 13px; }
+.p3 .otab:hover .pinbtn, .p3 .otab:focus-within .pinbtn, .p3 .otab.is-pinned .pinbtn { display: flex; }
+.p3 .otab.is-pinned .pinbtn { color: var(--sec); order: -1; margin-left: -2px; }
+.p3 .otab .pinbtn:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); color: var(--ink); }
+.p3 .otab .pinbtn:focus:not(:focus-visible) { outline: none; }
+.p3 .otab .pinbtn:focus-visible { outline: 1px solid var(--lasso-text-3); outline-offset: 1px; }
+/* Almindelig fane: nålen står ved hover/fokus lige til venstre for krydset (begge lagt over navnets ende). */
+.p3 .otab:not(.is-pinned) .pinbtn { position: absolute; right: 30px; top: 50%; transform: translateY(-50%); background: color-mix(in srgb, var(--ink) 4%, var(--frame)); }
+.p3 .otab.on:not(.is-pinned) .pinbtn { background: var(--page); }
+.p3 .otab:not(.is-pinned):hover .nm, .p3 .otab:not(.is-pinned):focus-within .nm { padding-right: 44px; }
+.p3 .otab.is-pinned .nm { padding-right: 0; }
+.p3 .otab.solo .pinbtn { display: none; }
+.p3 .tt .ttpin { width: 12px; height: 12px; color: var(--sec); flex: none; }
+.p3 .dd .ddpin { width: 22px; height: 22px; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; color: var(--faint); flex: none; margin-left: auto; }
+.p3 .dd .ddpin.on { color: var(--sec); }
+.p3 .dd .ddpin svg { width: 13px; height: 13px; }
+.p3 .dd .ddpin:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); color: var(--ink); }
+.p3 .dd .ddpin:focus:not(:focus-visible) { outline: none; }
+.p3 .dd .ddpin:focus-visible { outline: 1px solid var(--lasso-text-3); }

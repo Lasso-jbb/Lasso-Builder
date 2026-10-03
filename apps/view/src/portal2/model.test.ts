@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Dataset, ViewSpec } from "@lasso/spec";
 import type { LookupResult } from "../portal/api.js";
-import { COMPANY_TABS, isTemplateTab, moduleTabs, templateIdOf, templateTab, addRecent, historyTrimmed, summaryFingerprint, textHash, choiceKey, choiceSend, defaultChoiceSelection, isUnrecognizedHistory, shortName, askPlaceholder, choiceMessage, closeItem, contextFor, freeTextPick, headLines, highlight, loadRecent, openItem, searchCounts, searchRows, suggestions, withoutHead, withoutFollowUps, withoutChatPrompts, forPortal, type OpenItem, type PendingChoice } from "./model.js";
+import { canClose, closeOthers, orderPinned, parseDeepLink, setPinned, withoutDeepLink, COMPANY_TABS, isTemplateTab, moduleTabs, templateIdOf, templateTab, addRecent, historyTrimmed, summaryFingerprint, textHash, choiceKey, choiceSend, defaultChoiceSelection, isUnrecognizedHistory, shortName, askPlaceholder, choiceMessage, closeItem, contextFor, freeTextPick, headLines, highlight, loadRecent, openItem, searchCounts, searchRows, suggestions, withoutHead, withoutFollowUps, withoutChatPrompts, forPortal, type OpenItem, type PendingChoice } from "./model.js";
 
 const novo: OpenItem = { key: "CVR-1-24256790", kind: "company", name: "NOVO NORDISK A/S", tab: "overblik" };
 const lasso: OpenItem = { key: "CVR-1-34580820", kind: "company", name: "LASSO X A/S", tab: "overblik" };
@@ -286,4 +286,45 @@ test("moduleTabs: de indbyggede moduler og så én pr. egen side af slagsen (tpl
   assert.equal(templateTab("a1"), "tpl:a1");
   // serverens context.tab er højst 40 tegn: tpl: + et UUID passer lige.
   assert.equal(templateTab("123e4567-e89b-12d3-a456-426614174000").length, 40);
+});
+
+test("Dybt link (Åben i Lasso): ?aabn=…&fokus=…&fastgoer=1 læses og fjernes fra adressen", () => {
+  assert.deepEqual(parseDeepLink("?aabn=CVR-1-99000001&fokus=oekonomi&fastgoer=1"), { kind: "company", id: "CVR-1-99000001", tab: "oekonomi", pin: true });
+  assert.deepEqual(parseDeepLink("?aabn=cvr-3-4000000001&fokus=netvaerk"), { kind: "person", id: "CVR-3-4000000001", tab: "netvaerk", pin: false });
+  // Ukendt fokus giver Overblik; "ledelse" er Kontakt på en virksomhed; personfokus på en virksomhed gælder ikke.
+  assert.equal(parseDeepLink("?aabn=CVR-1-1&fokus=noget")!.tab, "overblik");
+  assert.equal(parseDeepLink("?aabn=CVR-1-1&fokus=ledelse")!.tab, "kontakt");
+  assert.equal(parseDeepLink("?aabn=CVR-1-1&fokus=netvaerk")!.tab, "overblik");
+  assert.equal(parseDeepLink("?aabn=CVR-1-1")!.tab, "overblik");
+  assert.equal(parseDeepLink("?aabn=12345678"), null);
+  assert.equal(parseDeepLink("?aaben=CVR-1-1"), null);
+  // Kun linkets parametre fjernes; andre parametre og #-delen bliver.
+  assert.equal(withoutDeepLink("https://x.dk/portal?aabn=CVR-1-1&fokus=oekonomi&fastgoer=1"), "/portal");
+  assert.equal(withoutDeepLink("https://x.dk/portal?tema=dark&aabn=CVR-1-1&fastgoer=1#top"), "/portal?tema=dark#top");
+});
+
+test("Fastgjorte faner: først i bjælken, kan ikke lukkes, bliver ved 'Luk alle andre', og en ny åbning frigør dem ikke", () => {
+  const a: OpenItem = { key: "CVR-1-1", kind: "company", name: "A", tab: "overblik" };
+  const b: OpenItem = { key: "CVR-1-2", kind: "company", name: "B", tab: "overblik" };
+  const c: OpenItem = { key: "CVR-3-3", kind: "person", name: "C", tab: "overblik" };
+  let list = openItem(openItem(openItem([], a), b), c);
+  list = setPinned(list, c.key, true);
+  assert.deepEqual(list.map((o) => o.key), [c.key, a.key, b.key]);
+  list = setPinned(list, b.key, true);
+  assert.deepEqual(list.map((o) => o.key), [c.key, b.key, a.key], "en ny fastgjort lægges efter de andre fastgjorte");
+  assert.ok(list[0]!.pinned && list[1]!.pinned && !list[2]!.pinned);
+  // Lukning: en fastgjort fane lukkes ikke (× er skjult); en almindelig gør.
+  assert.equal(canClose(list[0]), false);
+  assert.deepEqual(closeItem(list, c.key, c.key), { list, active: c.key });
+  assert.deepEqual(closeItem(list, a.key, a.key).list.map((o) => o.key), [c.key, b.key]);
+  // Luk alle andre: den aktive og de fastgjorte bliver.
+  assert.deepEqual(closeOthers(list, a.key).map((o) => o.key), [c.key, b.key, a.key]);
+  assert.deepEqual(closeOthers(setPinned(list, b.key, false), c.key).map((o) => o.key), [c.key]);
+  // En åbning uden pinned (søgning, links) bevarer fastgørelsen; orden er altid fastgjorte først.
+  const again = openItem(list, { ...b, tab: "oekonomi" });
+  assert.equal(again.find((o) => o.key === b.key)!.pinned, true);
+  assert.equal(again.find((o) => o.key === b.key)!.tab, "oekonomi");
+  // Frigør: fanen står lige efter de fastgjorte.
+  assert.deepEqual(setPinned(list, c.key, false).map((o) => o.key), [b.key, c.key, a.key]);
+  assert.deepEqual(orderPinned([a, { ...c, pinned: true }, b]).map((o) => o.key), [c.key, a.key, b.key]);
 });

@@ -12,7 +12,7 @@ rigtige data i fire bredder, så det, der står her, og det, man ser, er det sam
 
 Fra eksporten, ordret, bortset fra de steder hvor en beslutning (se "Beslutninger") ændrer dem; det er markeret.
 
-1. Chatten er et modul som alle andre og er altid første modul i modullinjen, vist med Lasso-mærket. Aktivt er mærket sort med orange streg. Pin bruges ikke længere. *(Ændret: pinnen findes stadig, men kun på et skabelonmodul, hvor den er rød; se "Sideskabeloner og den røde pin".)*
+1. Chatten er et modul som alle andre og er altid første modul i modullinjen, vist med Lasso-mærket. Aktivt er mærket sort med orange streg. Pin bruges igen til at fastgøre faner; skabelonmodulernes røde pin er noget andet (Jakob 03.10, se `docs/design/PORTAL.md`, "Fastgjorte faner"). *(Ændret: den røde pin står kun på et skabelonmodul; se "Sideskabeloner og den røde pin".)*
 2. Hver fane har sin egen samtale. Samtalen slettes ikke; man ruller op for at se ældre spørgsmål. Nyeste besked står nederst, og siden ruller selv ned, medmindre brugeren er rullet op.
 3. Brugerens beskeder står til højre i en grå boble. Lassos svar står til venstre uden boble, med mærket som avatar. Ingen skillelinjer og ingen datoer i tråden; tidspunkt står småt under hvert svar, kopiér-ikonet kun under tekstsvar. *(Tidspunktet står som "Lasso 09:41", uden midterprik; D2.)*
 4. Et svar kan være tekst, et element eller en hel side. Teksten står altid først og forklarer, hvad der vises.

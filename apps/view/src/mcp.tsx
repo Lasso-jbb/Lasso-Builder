@@ -9,6 +9,7 @@ import { focusPrompt } from "./focusPrompt.js";
 /** Handlinger, der først skifter visningen til fuld skærm (se ensureFullscreen). */
 const FULLSCREEN_FIRST = new Set<ViewAction["kind"]>(["prompt", "open-focus", "open-section", "open-company", "open-person", "set-criteria"]);
 import { downloadPdfInHost } from "./pdfDownload.js";
+import { linksOf, OpenInLasso, ShareView, type ViewLinks } from "./mcpLinks.js";
 
 interface Screen {
   spec: ViewSpec;
@@ -16,6 +17,8 @@ interface Screen {
   url?: string;
   /** "Gem som PDF": serverens signerede .pdf-link til denne skærm (structuredContent.pdfLink). */
   pdfLink?: string;
+  /** "Åben i Lasso" og "Del visning" (structuredContent.links); kun skærmen fra værktøjsresultatet har dem. */
+  links?: ViewLinks;
 }
 
 function textOf(result: CallToolResult): string {
@@ -72,18 +75,20 @@ export function McpView() {
     const sc = result.structuredContent as { spec?: ViewSpec; pdfLink?: string } | undefined;
     if (!sc?.spec) return;
     const ds = (result._meta as Record<string, unknown> | undefined)?.[DATASET_META_KEY] as Dataset | undefined;
-    const pdfLink = sc.pdfLink ? { pdfLink: sc.pdfLink } : {};
+    const links = linksOf(sc);
+    /** Værktøjets eget pdfLink (med visningens fokus) og links følger skærmen. */
+    const extra = { ...(sc.pdfLink ? { pdfLink: sc.pdfLink } : {}), ...(links ? { links } : {}) };
     setError(null);
     if (ds) {
-      setStack([{ spec: sc.spec, dataset: ds, ...pdfLink }]);
+      setStack([{ spec: sc.spec, dataset: ds, ...extra }]);
       return;
     }
     // Værten sendte ikke _meta med: hent data via det app-interne tool.
-    setStack([{ spec: sc.spec, dataset: null, ...pdfLink }]);
+    setStack([{ spec: sc.spec, dataset: null, ...extra }]);
     if (!app) return;
     try {
-      // Værktøjets eget pdfLink (med visningens fokus) vinder over resolve_view's.
-      setStack([{ ...(await resolve(app, sc.spec)), ...pdfLink }]);
+      // Værktøjets eget pdfLink vinder over resolve_view's.
+      setStack([{ ...(await resolve(app, sc.spec)), ...extra }]);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -196,7 +201,8 @@ export function McpView() {
         case "refresh": {
           if (!current) return;
           setLoading(true);
-          replaceTop({ ...(await resolve(app, current.spec)), url: current.url });
+          // Opdatér: samme visning, så links (Åben i Lasso, Del visning) gælder stadig.
+          replaceTop({ ...(await resolve(app, current.spec)), url: current.url, ...(current.links ? { links: current.links } : {}) });
           return { ok: true };
         }
         case "save": {
@@ -281,6 +287,26 @@ export function McpView() {
     }
   };
 
+  /** "Åben i Lasso": værtens åbn-link (MCP Apps ui/open-link); afviser værten, åbnes et nyt vindue. */
+  const openInLasso = async (url: string) => {
+    try {
+      const r = await app?.openLink({ url });
+      if (r && !r.isError) return;
+    } catch {
+      // Falder igennem til window.open.
+    }
+    window.open(url, "_blank", "noopener");
+  };
+  /** "Kopiér link": udklipsholderen i iframen; uden adgang returneres false, og linket markeres i stedet. */
+  const copyLink = async (url: string): Promise<boolean> => {
+    try {
+      await navigator.clipboard.writeText(url);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const insets = ctx?.safeAreaInsets;
   const style = { paddingTop: insets?.top, paddingRight: insets?.right, paddingBottom: insets?.bottom, paddingLeft: insets?.left };
   const theme = ctx?.theme === "dark" ? "dark" : "light";
@@ -324,6 +350,11 @@ export function McpView() {
   const canMessage = Boolean(app?.getHostCapabilities()?.message);
   return (
     <div style={style}>
+      {current.links?.open ? (
+        <div className="lasso-root" data-theme={theme}>
+          <OpenInLasso href={current.links.open} onOpen={(u) => void openInLasso(u)} />
+        </div>
+      ) : null}
       <LassoView
         key={stack.length}
         spec={current.spec}
@@ -349,6 +380,11 @@ export function McpView() {
         }}
         onAction={onAction}
       />
+      {current.links?.share ? (
+        <div className="lasso-root" data-theme={theme}>
+          <ShareView href={current.links.share} onCopy={copyLink} />
+        </div>
+      ) : null}
     </div>
   );
 }

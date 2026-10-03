@@ -12,6 +12,7 @@ import {
   addRecent,
   askPlaceholder,
   closeItem,
+  closeOthers,
   contextFor,
   freeTextPick,
   historyTrimmed,
@@ -23,6 +24,10 @@ import {
   templateTab,
   loadRecent,
   openItem,
+  orderPinned,
+  parseDeepLink,
+  setPinned,
+  withoutDeepLink,
   summaryFingerprint,
   saveRecent,
   shortName,
@@ -307,7 +312,11 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     }
   };
 
+  /** Fastgør/frigør en fane (Jakob 03.10): fastgjorte står først og kan ikke lukkes. */
+  const togglePin = (key: string) => setOpen((l) => setPinned(l, key, !l.find((o) => o.key === key)?.pinned));
+
   const closeTab = (key: string) => {
+    if (open.find((o) => o.key === key)?.pinned) return;
     const r = closeItem(open, key, active);
     setOpen(r.list);
     setActive(r.active);
@@ -341,10 +350,12 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     const params = new URLSearchParams(window.location.search);
     // Samtalen fra sidste besøg (docs/chat.md): faner, svar og historik, hvis den er brugerens egen og under 24 timer gammel.
     const cached = restoreCache(storage()?.getItem(CHAT_CACHE_KEY), boot.user?.id ?? "", Date.now());
+    // Dybt link fra MCP-appens "Åben i Lasso": ?aabn=<Lasso-ID>&fokus=<fokus>&fastgoer=1 åbner (eller aktiverer) fanen på modulet og fastgør den.
+    const deep = parseDeepLink(window.location.search);
     if (cached) {
-      setOpen(cached.open);
+      setOpen(orderPinned(cached.open));
       setThreads(() => cached.threads);
-      if (!params.get("aaben")) setActive(cached.active);
+      if (!params.get("aaben") && !deep) setActive(cached.active);
       toEnd.current = true;
     }
 
@@ -359,6 +370,21 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       const t = kind === "company" ? (isFocus(tab) ? pageFocus(tab) : "overblik") : isPersonFocus(tab) ? tab : "overblik";
       openEntity(kind, id, id, t, undefined, false);
     });
+    if (deep) {
+      // openItem slår fanen sammen med en åben (også fra cachen), så der aldrig står to.
+      const known = cached?.open.find((o) => o.key === deep.id);
+      openEntity(deep.kind, deep.id, known?.name ?? deep.id, deep.tab, undefined, false);
+      if (deep.pin) setOpen((l) => setPinned(l, deep.id, true));
+      // Parametrene fjernes fra adressen, så en genindlæsning ikke åbner igen. Uden login bliver de stående, så linket
+      // virker, når man har logget ind (en ny sideindlæsning).
+      if (boot.user) {
+        try {
+          window.history.replaceState(window.history.state, "", withoutDeepLink(window.location.href));
+        } catch {
+          // Uden history-API står adressen bare uændret.
+        }
+      }
+    }
     // ?soeg=… åbner søgningen med teksten (telefon: fuld skærm); ?spoerg=1 åbner spørgefeltet på telefon.
     const soeg = params.get("soeg");
     if (soeg) {
@@ -945,7 +971,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
         const fit = Math.max(1, Math.floor(room / MIN));
         w = Math.min(MAX, Math.floor(room / fit));
         let visible = n;
-        for (const t of els) {
+        // De fastgjorte faner skjules sidst (først de ældste ikke-fastgjorte).
+        for (const t of [...els.filter((x) => !x.classList.contains("is-pinned")), ...els.filter((x) => x.classList.contains("is-pinned"))]) {
           if (visible <= fit) break;
           if (t.classList.contains("on")) continue;
           t.style.display = "none";
@@ -1001,7 +1028,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       if (w() > avail) items.forEach((t) => !t.classList.contains("on") && (t.style.maxWidth = "110px"));
       if (w() > avail && more) {
         more.style.display = "";
-        for (const t of items) {
+        for (const t of [...items.filter((x) => !x.classList.contains("is-pinned")), ...items.filter((x) => x.classList.contains("is-pinned"))]) {
           if (w() <= avail) break;
           if (t.classList.contains("on")) continue;
           t.style.display = "none";
@@ -1415,6 +1442,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
                 key={o.key}
                 dataKey={o.key}
                 name={o.name}
+                pinned={Boolean(o.pinned)}
                 active={o.key === active}
                 solo={soloTop && o.key === active}
                 onClick={(e) => (soloTop && o.key === active ? showMenu("all", e.currentTarget) : activate(o.key))}
@@ -1464,6 +1492,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
                   solo={soloTab && o.key === active}
                   busy={pendingKey === o.key}
                   kind={o.kind}
+                  pinned={Boolean(o.pinned)}
+                  onPin={() => togglePin(o.key)}
                   onSelect={(e) => (soloTab && o.key === active ? showMenu("all", e.currentTarget) : activate(o.key))}
                   onClose={() => {
                     const el = otabs.current?.querySelector<HTMLElement>(".otab");
@@ -1592,6 +1622,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
                   icon={iconOf(o.kind)}
                   label={o.name}
                   current={o.key === active}
+                  pinned={Boolean(o.pinned)}
+                  onPin={() => togglePin(o.key)}
                   onClick={() => activate(o.key)}
                   onClose={() => {
                     setMenu(null);
@@ -1606,7 +1638,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
                     label="Luk alle andre faner"
                     muted
                     onClick={() => {
-                      setOpen((l) => l.filter((o) => o.key === active));
+                      // De fastgjorte faner bliver.
+                      setOpen((l) => closeOthers(l, active));
                       setMenu(null);
                     }}
                   />
