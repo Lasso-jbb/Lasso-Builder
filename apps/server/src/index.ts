@@ -141,6 +141,8 @@ export function createApp({ config, client, provider, store, pages, templates = 
   // 4 MB: chatten sender hele samtalen (værktøjssvarenes tekst) med i hvert spørgsmål.
   const app = createMcpExpressApp({ host: "0.0.0.0", jsonLimit: "4mb" });
   app.disable("x-powered-by");
+  // Railway-proxyen: req.ip er den besøgendes adresse (X-Forwarded-For), så bremserne pr. IP tæller hver for sig.
+  app.set("trust proxy", config.trustProxy);
 
   // Roden er portalen (docs/portal.md); den gamle JSON-info ligger under /api/info.
   app.get("/", (_req, res) => void res.redirect(302, "/portal"));

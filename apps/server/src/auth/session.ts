@@ -121,9 +121,12 @@ export function createLoginLimiter(max = 10, windowMs = 15 * 60_000, now = () =>
       }
       list.push(t);
       hits.set(ip, list);
-      if (hits.size > 10_000) for (const [k, v] of hits) if (v.every((x) => t - x >= windowMs)) hits.delete(k);
+      // Nøgler uden forsøg i vinduet fjernes, så kortet ikke vokser med hver ny adresse.
+      if (hits.size > 1000) for (const [k, v] of hits) if (v.every((x) => t - x >= windowMs)) hits.delete(k);
       return true;
     },
+    /** Antal adresser, der huskes (til test). */
+    size: () => hits.size,
   };
 }
 

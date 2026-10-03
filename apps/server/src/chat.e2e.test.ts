@@ -775,3 +775,47 @@ test("D3: et ikke-udtrykkeligt spørgsmål giver en menu, der kun vælger hvem; 
   assert.ok(refused.events.some((e) => e.type === "tool_error"));
   assert.ok(!refused.events.some((e) => e.type === "choice"));
 });
+
+test("D5: bremsen pr. IP følger X-Forwarded-For med TRUST_PROXY=1, og ignorerer den med 0; tomme nøgler fjernes", async () => {
+  const { createChatLimiter } = await import("./chat/routes.js");
+  const { createLoginLimiter } = await import("./auth/session.js");
+  async function serve(trust: string) {
+    const config = loadConfig({ ...process.env, MCP_ACCESS_KEY: KEY, LINK_SECRET: "chat-test-hemmelighed", LASSO_DATA_SOURCE: "demo", DATABASE_URL: "", PUBLIC_BASE_URL: "https://lasso.test", PORTAL_PUBLIC: "true", CHAT_MAX_PER_HOUR: "2", TRUST_PROXY: trust });
+    const app = createApp({ config, client: new LassoClient(config), provider: new DemoProvider(), store: createViewStore(""), pages: createSavedPageStore(""), chatModel: async (_p, onText) => (onText("Hej."), message([{ type: "text", text: "Hej." }], "end_turn")) });
+    const server = app.listen(0);
+    await new Promise((r) => server.once("listening", r));
+    const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/chat`;
+    const post = async (ip: string) => (await fetch(url, { method: "POST", headers: { "content-type": "application/json", "x-lasso-portal": "1", "x-forwarded-for": ip }, body: JSON.stringify({ message: "Hej" }) })).status;
+    return { post, close: () => new Promise((r) => server.close(r)), config };
+  }
+  const behind = await serve("1");
+  assert.equal(behind.config.trustProxy, 1);
+  // To besøgende bag proxyen tæller hver for sig: 2 beskeder hver er fint, den tredje fra samme adresse er 429.
+  assert.deepEqual([await behind.post("10.0.0.1"), await behind.post("10.0.0.2"), await behind.post("10.0.0.1"), await behind.post("10.0.0.2")], [200, 200, 200, 200]);
+  assert.equal(await behind.post("10.0.0.1"), 429);
+  assert.equal(await behind.post("10.0.0.3"), 200, "en tredje adresse har sin egen kvote");
+  await behind.close();
+  // Uden tillid til proxyen er alle den samme (socket-adressen): headeren ignoreres.
+  const direct = await serve("0");
+  assert.deepEqual([await direct.post("10.0.0.1"), await direct.post("10.0.0.2"), await direct.post("10.0.0.3")], [200, 200, 429]);
+  await direct.close();
+  // Standard: 0 i development, 1 ellers.
+  assert.equal(loadConfig({ APP_ENV: "development" }).trustProxy, 0);
+  assert.equal(loadConfig({ APP_ENV: "production" }).trustProxy, 1);
+  assert.equal(loadConfig({ APP_ENV: "production", TRUST_PROXY: "2" }).trustProxy, 2);
+
+  // Tomme nøgler: efter vinduet fjernes adresser uden forsøg, når kortet er stort.
+  let t = 0;
+  const chat = createChatLimiter(5, 1000, () => t);
+  const login = createLoginLimiter(5, 1000, () => t);
+  for (let i = 0; i < 1100; i++) {
+    chat(`u${i}`);
+    login.allow(`ip${i}`);
+  }
+  assert.ok(chat.size() > 1000 && login.size() > 1000);
+  t = 5000;
+  chat("ny");
+  login.allow("ny");
+  assert.equal(chat.size(), 1);
+  assert.equal(login.size(), 1);
+});

@@ -104,6 +104,11 @@ const schema = z.object({
   /** Højst så mange beskeder pr. bruger pr. time (bremse på forbruget). */
   CHAT_MAX_PER_HOUR: z.coerce.number().int().min(1).default(60),
   /**
+   * Antal proxyer foran serveren (Express "trust proxy"), så req.ip er den besøgendes adresse fra X-Forwarded-For og ikke
+   * Railways proxy; bremserne pr. IP (login, demochat) tæller ellers alle besøgende som én. Standard 1 uden for development, 0 lokalt.
+   */
+  TRUST_PROXY: z.coerce.number().int().min(0).max(5).optional(),
+  /**
    * Prompt-cachens levetid (docs/chat.md): systemprompt, værktøjer og samtalen caches hos Claude Platform,
    * så næste spørgsmål kun betaler for det nye. "1h" holder cachen mellem brugerens spørgsmål; "5m" er billigere
    * at skrive, men går oftere tabt. Samme TTL sættes på begge markører (det er et krav fra API'et).
@@ -116,7 +121,7 @@ const schema = z.object({
   CHAT_HISTORY_MAX_CHARS: z.coerce.number().int().min(10000).default(400000),
 });
 
-export type Config = z.infer<typeof schema> & { publicBaseUrl: string };
+export type Config = z.infer<typeof schema> & { publicBaseUrl: string; trustProxy: number };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const parsed = schema.safeParse(env);
@@ -126,7 +131,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   }
   const c = parsed.data;
   const publicBaseUrl = (isSet(c.PUBLIC_BASE_URL) ? c.PUBLIC_BASE_URL : `http://localhost:${c.PORT}`).replace(/\/+$/, "");
-  return { ...c, publicBaseUrl };
+  return { ...c, publicBaseUrl, trustProxy: c.TRUST_PROXY ?? (c.APP_ENV === "development" ? 0 : 1) };
 }
 
 /** Pladsholderen, variablerne blev oprettet med på Railway, tæller som "ikke sat". */

@@ -74,7 +74,7 @@ export function verifyHistory(config: Config, userId: string, history: unknown, 
 /** Højst `max` beskeder pr. bruger pr. time. Nulstilles ved genstart. */
 export function createChatLimiter(max: number, windowMs = 60 * 60_000, now = () => Date.now()) {
   const hits = new Map<string, number[]>();
-  return (userId: string): boolean => {
+  const allow = (userId: string): boolean => {
     const t = now();
     const list = (hits.get(userId) ?? []).filter((x) => t - x < windowMs);
     if (list.length >= max) {
@@ -83,8 +83,12 @@ export function createChatLimiter(max: number, windowMs = 60 * 60_000, now = () 
     }
     list.push(t);
     hits.set(userId, list);
+    // Nøgler uden beskeder i vinduet fjernes, så kortet ikke vokser med hver ny bruger eller adresse.
+    if (hits.size > 1000) for (const [k, v] of hits) if (v.every((x) => t - x >= windowMs)) hits.delete(k);
     return true;
   };
+  // Antal nøgler, der huskes (til test).
+  return Object.assign(allow, { size: () => hits.size });
 }
 
 const MAX_MESSAGE = 4000;
