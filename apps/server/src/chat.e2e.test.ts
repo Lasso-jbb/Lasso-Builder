@@ -224,14 +224,19 @@ test("chat: konteksten står først i brugerens tur; uden context svares der glo
   // Det, brugeren ser (modulets resumé fra /api/portal), står efter fanelinjen; over 4000 tegn afvises.
   script.push(sayText("Ja."));
   const seen = { active: { ...ctx.active, tab: "oekonomi", view: { module: "oekonomi", summary: "Omsætning 2025: 38 mio." } }, open: [] };
-  await chat({ message: "Hvorfor?", context: seen });
+  const full = await chat({ message: "Hvorfor?", context: seen });
   assert.match(lastUserTexts(calls.at(-1)!)[0]!, /modul oekonomi\. Brugeren ser: oekonomi — Omsætning 2025: 38 mio\.$/);
+  const fullDone = full.events.at(-1) as Event & { history: unknown[]; sig: string };
   const tooLong = { active: { ...seen.active, view: { module: "oekonomi", summary: "x".repeat(4001) } } };
   assert.equal((await chat({ message: "Hvorfor?", context: tooLong })).status, 400);
-  // Uændret siden sidst: kun den korte linje (historikken har det fulde resumé).
+  // Uændret siden sidst: kun den korte linje, når historikken har det fulde resumé; uden historik ingen linje (withoutStaleSame).
+  const sameCtx = { active: { ...seen.active, view: { module: "oekonomi", same: true } }, open: [] };
   script.push(sayText("Ja."));
-  await chat({ message: "Og så?", context: { active: { ...seen.active, view: { module: "oekonomi", same: true } }, open: [] } });
+  await chat({ message: "Og så?", context: sameCtx, history: fullDone.history, sig: fullDone.sig });
   assert.match(lastUserTexts(calls.at(-1)!)[0]!, /Brugeren ser: oekonomi \(uændret siden sidst\)\.$/);
+  script.push(sayText("Ja."));
+  await chat({ message: "Og så?", context: sameCtx });
+  assert.doesNotMatch(lastUserTexts(calls.at(-1)!)[0]!, /Brugeren ser/);
 });
 
 test("chat: ugyldig context og et valg uden ask_choice i historikken afvises med 400", async () => {
