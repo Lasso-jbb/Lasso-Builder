@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { P2Icon } from "../icons.js";
+import { IconButton } from "@lasso/ui";
 import type { Turn } from "../thread.js";
 import { AssistantMessage, NoticeRow, UserBubble, type AssistantMessageProps } from "./Message.js";
 
@@ -15,13 +15,12 @@ export function OlderLoader({ loaderRef }: { loaderRef?: (el: HTMLDivElement | n
   );
 }
 
-/** Rullet op: rund knap med pil ned (uden tal), der ruller til det nyeste. */
+/**
+ * Rullet op: rund knap med pil ned (uden tal), der ruller til det nyeste. Designguidens IconButton (36) med klassen
+ * chat-jump, som gør den til eksportens svævende cirkel: 40 px, rund, skygge (chat.css).
+ */
 export function ScrollDown({ onClick }: { onClick?: () => void }) {
-  return (
-    <button type="button" className="chat-jump" aria-label="Rul til nyeste" title="Rul til nyeste" onClick={onClick}>
-      <P2Icon name="arrow-down" />
-    </button>
-  );
+  return <IconButton icon="arrow-down" label="Rul til nyeste" size={36} className="chat-jump" onClick={onClick} />;
 }
 
 export interface ThreadProps extends Omit<AssistantMessageProps, "answer" | "onRetry"> {

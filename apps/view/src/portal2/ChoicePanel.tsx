@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
-import { Button } from "@lasso/ui";
+import { Button, IconButton } from "@lasso/ui";
 import type { PendingChoice } from "./model.js";
 import { choiceKey, choiceSend, defaultChoiceSelection, type ChoiceSelection } from "./model.js";
-import { P2Icon } from "./icons.js";
 import type { ChoicePick } from "../chat/stream.js";
 
 /**
@@ -92,12 +91,8 @@ export function ChoicePanel({
           {choice.question}
         </span>
         <span className="chat-choice__icons">
-          <button type="button" className={`chat-choice__ib${collapsed ? " is-collapsed" : ""}`} onClick={() => setCollapsed((c) => !c)} aria-expanded={!collapsed} aria-label={collapsed ? "Fold ud" : "Fold sammen"}>
-            <P2Icon name="down" />
-          </button>
-          <button type="button" className="chat-choice__ib" onClick={onSkip} aria-label="Luk (spring over)">
-            <P2Icon name="x" />
-          </button>
+          <IconButton icon={collapsed ? "chevron-up" : "chevron-down"} label={collapsed ? "Fold ud" : "Fold sammen"} size={32} variant="bare" expanded={!collapsed} onClick={() => setCollapsed((c) => !c)} />
+          <IconButton icon="close" label="Luk (spring over)" size={32} variant="bare" onClick={onSkip} />
         </span>
       </div>
       {collapsed ? null : (

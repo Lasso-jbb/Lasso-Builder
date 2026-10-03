@@ -47,6 +47,8 @@ test("Ikonknapper (05.2): 38 og 32 px, aria-label, aktiv ved aria-pressed", () =
   const primary = renderToStaticMarkup(createElement(IconButton, { icon: "bookmark-plus", label: "Tilføj som fane", size: 32, variant: "primary" }));
   assert.match(primary, /class="lasso-iconbtn lasso-iconbtn--sq lasso-iconbtn--32 lasso-iconbtn--primary"/);
   assert.match(primary, /aria-label="Tilføj som fane"/);
+  // Fold ud/sammen: aria-expanded på knappen.
+  assert.match(renderToStaticMarkup(createElement(IconButton, { icon: "chevron-down", label: "Fold sammen", size: 32, variant: "bare", expanded: true })), /aria-expanded="true"/);
 });
 
 test("Handlingsrække (05.3): '…' først, sekundær, primær sidst", () => {

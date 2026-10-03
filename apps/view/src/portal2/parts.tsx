@@ -430,7 +430,10 @@ export function TemplatePin({ kind, title, onClick }: { kind: "company" | "perso
   return <IconButton icon="pin" className="tplpin" label={`${title} er tilføjet på ${KIND_ALL[kind]}. Fjern modulet`} on onClick={onClick} />;
 }
 
-/** Bekræftelsen, før et skabelonmodul fjernes (07.2: Annuller og den destruktive "Fjern"). */
+/**
+ * Bekræftelsen, før et skabelonmodul fjernes (07.2: den destruktive "Fjern" som rød tekst yderst til venstre, Annuller
+ * til højre). Fokus lander på Annuller, så Enter aldrig fjerner modulet ved et uheld.
+ */
 export function RemoveTemplateDialog({ open, kind, title, onCancel, onConfirm }: { open: boolean; kind: "company" | "person"; title: string; onCancel: () => void; onConfirm: () => void }) {
   return (
     <Dialog
@@ -440,6 +443,7 @@ export function RemoveTemplateDialog({ open, kind, title, onCancel, onConfirm }:
       description={`${title} fjernes fra ${KIND_ALL[kind]}. Det kan ikke fortrydes.`}
       onClose={onCancel}
       hideClose
+      initialFocus="secondary"
       actions={{ destructive: { label: "Fjern", onClick: onConfirm }, secondary: { label: "Annuller", onClick: onCancel } }}
     />
   );
