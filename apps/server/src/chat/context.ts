@@ -180,7 +180,7 @@ export function contextText(ctx: ChatContext): string {
     if (a.view?.same) lines.push(`Brugeren ser: ${oneLine(a.view.module)} (uændret siden sidst).`);
     else if (a.view?.summary) lines.push(`Brugeren ser: ${oneLine(a.view.module)} — ${oneLine(a.view.summary)}`);
   }
-  if (ctx.open.length) lines.push(`Åbne faner: ${ctx.open.map((e) => `${oneLine(e.name)} (${oneLine(e.id)})`).join(", ")}.`);
+  // De åbne faner står ikke i teksten til modellen: serveren bruger context.open deterministisk (find_entity, place_answer).
   return `[Kontekst] ${lines.join(" ")}`;
 }
 

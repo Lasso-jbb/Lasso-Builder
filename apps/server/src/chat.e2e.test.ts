@@ -223,7 +223,7 @@ test("chat: konteksten står først i brugerens tur; uden context svares der glo
   assert.deepEqual(events[0], { type: "placement", placement: "current", here: true }, "på en fane skrives svaret her (O1: serveren sætter here)");
   const texts = lastUserTexts(calls.at(-1)!);
   assert.equal(texts.length, 2);
-  assert.match(texts[0]!, /^\[Kontekst\] Aktiv fane: virksomheden Eksempel Byg A\/S \(CVR-1-99000001\), modul ejerskab\. Åbne faner: Jakob Benediktson \(CVR-3-4000123\)\./);
+  assert.match(texts[0]!, /^\[Kontekst\] Aktiv fane: virksomheden Eksempel Byg A\/S \(CVR-1-99000001\), modul ejerskab\.$/);
   assert.equal(texts[1], "Hvem ejer den?");
 
   script.push(sayText("Hej."));
