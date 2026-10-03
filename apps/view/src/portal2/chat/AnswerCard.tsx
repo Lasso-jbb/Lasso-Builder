@@ -1,5 +1,5 @@
 import { Button, IconButton, LassoView, type HostCapabilities, type LassoViewProps } from "@lasso/ui";
-import type { AnswerPart } from "../model.js";
+import { withoutHead, type AnswerPart } from "../model.js";
 
 const noop = () => undefined;
 
@@ -20,6 +20,8 @@ export interface AnswerCardProps {
   onAddTab?: () => void;
   /** Mens skabelonen gemmes. */
   adding?: boolean;
+  /** På en firma- eller personfane: visningens eget hoved udelades (navnet står i fanen), som i modulerne. */
+  headless?: boolean;
 }
 
 /**
@@ -27,7 +29,7 @@ export interface AnswerCardProps {
  * fuld skærm og på en side den primære "Tilføj som fane"), og visningen uden ramme nedenunder. På mobil kun fuld
  * skærm, og "Tilføj som fane" som et orange ikon. Modul-links og handlinger står i teksten, aldrig i kortets ramme.
  */
-export function AnswerCard({ part, kind, mobile = false, theme, host, onAction, onDownload, onFullscreen, onAddTab, adding = false }: AnswerCardProps) {
+export function AnswerCard({ part, kind, mobile = false, theme, host, onAction, onDownload, onFullscreen, onAddTab, adding = false, headless = false }: AnswerCardProps) {
   const page = (kind ?? (part.form === "page" ? "page" : "element")) === "page";
   const { spec } = part;
   return (
@@ -49,7 +51,7 @@ export function AnswerCard({ part, kind, mobile = false, theme, host, onAction, 
         </div>
       </header>
       <div className="chat-card__b">
-        <LassoView spec={spec} dataset={part.dataset} theme={theme} frameless page={page} host={host ?? {}} onAction={onAction ?? noop} />
+        <LassoView spec={headless ? withoutHead(spec) : spec} dataset={part.dataset} theme={theme} frameless page={page} host={host ?? {}} onAction={onAction ?? noop} />
       </div>
     </section>
   );

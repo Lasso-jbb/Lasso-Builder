@@ -99,7 +99,8 @@ export function LongTask({ status, onStop }: { status: string; onStop?: () => vo
   return (
     <div className="chat-think" role="status">
       <Dots />
-      <span>{status}</span>
+      {/* Statussen står som "Læser regnskab…" (eksporten): én ellipse direkte efter teksten. */}
+      <span>{`${status.replace(/[\s.…]+$/, "")}…`}</span>
       {onStop ? (
         <Button size={32} className="chat-think__stop" onClick={onStop}>
           Stop
@@ -283,16 +284,22 @@ export function AssistantMessage({ answer, mobile = false, currentId, onModule, 
   const textAt = (text: string, after?: ReactNode) => <AnswerText text={text} currentId={currentId} onOpen={onModule} after={after} />;
   // Fejl og arbejde står i avatar-rækken, når der ikke er kommet andet endnu; ellers efter det sidste.
   const tailInRow = rest.length === 0;
+  // Uden tekst først (en visning kom før teksten) står kortet uden en tom avatar-række.
+  const rowEmpty = first === null && !(tailInRow && (errorEl || working));
   return (
     <>
-      <div className="chat-msg chat-msg--ai">
-        <Avatar />
-        <div className="chat-ai">
-          <span className="chat-sr">Lasso: </span>
-          {first !== null ? textAt(first, tailInRow ? errorEl : null) : tailInRow && errorEl ? <div className="chat-body">{errorEl}</div> : null}
-          {tailInRow ? working : null}
+      {rowEmpty ? (
+        <span className="chat-sr">Lasso: </span>
+      ) : (
+        <div className="chat-msg chat-msg--ai">
+          <Avatar />
+          <div className="chat-ai">
+            <span className="chat-sr">Lasso: </span>
+            {first !== null ? textAt(first, tailInRow ? errorEl : null) : tailInRow && errorEl ? <div className="chat-body">{errorEl}</div> : null}
+            {tailInRow ? working : null}
+          </div>
         </div>
-      </div>
+      )}
       {rest.map((p, i) =>
         p.kind === "view" ? (
           <AnswerCard key={`v${i}`} part={p} mobile={mobile} {...cardProps?.(p, i)} />
@@ -309,7 +316,7 @@ export function AssistantMessage({ answer, mobile = false, currentId, onModule, 
         </div>
       ) : null}
       {answer.pending && answer.status && !hasView ? <SkeletonCard /> : null}
-      {!answer.pending && !answer.choice && answer.at ? <Meta at={answer.at} copyText={copyable(answer) ? plainText(answerText(answer)) : undefined} /> : null}
+      {!answer.pending && !answer.choice && answer.at && (parts.length || answer.error) ? <Meta at={answer.at} copyText={copyable(answer) ? plainText(answerText(answer)) : undefined} /> : null}
     </>
   );
 }

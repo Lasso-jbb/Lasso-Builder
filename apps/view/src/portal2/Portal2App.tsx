@@ -181,6 +181,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const pendingTurn = useRef<{ key: string; turnId: string } | null>(null);
   /** Brugeren står nederst i samtalen: nye beskeder ruller med. */
   const atBottom = useRef(true);
+  /** Hvornår brugeren sidst rullede selv (hjul, berøring, taster, rullebjælken). */
+  const userScroll = useRef(0);
   const toEnd = useRef(false);
   const askRef = useRef<HTMLDivElement>(null);
   const scrollboxRef = useRef<HTMLDivElement>(null);
@@ -640,6 +642,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
           rename(at, globalTitleFallback(e.name, e.spec));
         }
       }
+      // Placeringen er et internt skridt: Lasso "tænker" stadig (ingen statuslinje for place_answer).
+      if (e.type === "tool" && e.name === "place_answer") return;
       if (e.type === "done") {
         if (e.placement.title && openRef.current.find((o) => o.key === at)?.kind === "result") rename(at, e.placement.title);
         // Ny samtale (flyttet) eller trimmet historik: næste gang sendes det fulde resumé.
@@ -997,6 +1001,14 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     return () => window.removeEventListener("resize", onResize);
   }, [measure]);
 
+  /** Det nyeste i samtalen: bunden, men højst så langt, at den nyeste turs spørgsmål står øverst (et langt svar læses fra toppen). */
+  const latestTop = (sc: HTMLElement): number => {
+    const all = sc.querySelectorAll<HTMLElement>(".chat-turn");
+    const last = all[all.length - 1];
+    const max = sc.scrollHeight - sc.clientHeight;
+    return last ? Math.min(max, last.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - 16) : max;
+  };
+
   /**
    * Rulning: kun skyggen under modulrækken på desktop (klassen "scrolled"), sat direkte på roden uden React-
    * tilstand, så rulning og iPhones bounce ikke gentegner portalen (det fik siden til at hakke).
@@ -1007,10 +1019,16 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     if (!sc || !root) return;
     const on = !isPhone() && sc.scrollTop > 4;
     if (root.classList.contains("scrolled") !== on) root.classList.toggle("scrolled", on);
-    // Samtalen ruller selv med, så længe brugeren står nederst; rullet op vises "Rul til nyeste".
+    // Samtalen ruller selv med, så længe brugeren står ved det nyeste (nederst, eller i den nyeste tur); rullet op
+    // vises "Rul til nyeste". Også når rulningen kommer fra portalen selv, så et hændelsesløb ikke slår følgningen fra.
     const bottom = sc.scrollHeight - sc.scrollTop - sc.clientHeight < 48;
-    atBottom.current = bottom;
+    // Kun brugerens egen rulning (hjul, træk, taster) ændrer følgningen; portalens rulning og indhold, der skifter, gør ikke.
+    if (Date.now() - userScroll.current < 800) atBottom.current = bottom || sc.scrollTop >= latestTop(sc) - 8;
     if (jump === bottom) setJump(!bottom);
+  };
+
+  const markUserScroll = () => {
+    userScroll.current = Date.now();
   };
 
   const scrollToEnd = (smooth = false) => {
@@ -1021,20 +1039,44 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     setJump(false);
   };
 
+  /** Ruller med, til den nyeste turs spørgsmål står øverst: et langt svar læses fra toppen, ikke fra bunden. */
+  function follow() {
+    const sc = scroller.current;
+    if (!sc || !onLasso || !atBottom.current) return;
+    const target = latestTop(sc);
+    if (target > sc.scrollTop + 1) {
+      sc.scrollTop = target;
+    }
+  }
+
   // Ny fane eller nyt modul: Lasso viser det nyeste (nederst), et modul sin top. Nye beskeder ruller med, når man står nederst.
   useLayoutEffect(() => {
     const sc = scroller.current;
     if (!sc) return;
     if (toEnd.current) {
       toEnd.current = false;
-      if (onLasso) scrollToEnd();
-      else {
+      if (onLasso) {
+        sc.scrollTop = latestTop(sc);
+        atBottom.current = true;
+        setJump(false);
+      } else {
         sc.scrollTo({ top: 0 });
         setJump(false);
       }
-    } else if (onLasso && atBottom.current) sc.scrollTop = sc.scrollHeight;
+    } else follow();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threads, active, item?.tab, onLasso, tplNotes]);
+
+  // Visningerne i kortene vokser efter tegningen (målt layout, data): følg også med, når indholdet bliver højere.
+  const followRef = useRef(follow);
+  followRef.current = follow;
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => followRef.current());
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Spørgefeltets top (eller afklaringens) målt fra bunden: trådens luft forneden og "Rul til nyeste" står over det.
   useLayoutEffect(() => {
@@ -1205,6 +1247,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
             onRetry={(turn) => void ask(turn.question)}
             onUndo={(turn) => undo(item.key, turn)}
             cardProps={(part) => ({
+              headless: item.kind !== "result",
               theme,
               host: host(false),
               onAction: (a) => onAction(a, partTarget(part)),
@@ -1373,7 +1416,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
                     />
                   ) : null}
                 </div>
-                {tabs.length && modSelect ? <DropButton label={curLabel} className="sel-btn" expanded={menu?.kind === "sel"} onClick={(e) => showMenu("sel", e.currentTarget)} /> : null}
+                {tabs.length && modSelect ? <DropButton label={onLasso ? (tabs[0]?.label ?? "") : curLabel} className={`sel-btn${onLasso ? " is-off" : ""}`} expanded={menu?.kind === "sel"} onClick={(e) => showMenu("sel", e.currentTarget)} /> : null}
                 {item.kind !== "result" ? (
                   <div className="rgroup">
                     {activeTemplate ? <TemplatePin kind={activeTemplate.kind} title={activeTemplate.title} onClick={() => setConfirmRemove(activeTemplate)} /> : null}
@@ -1387,7 +1430,15 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
         ) : null}
 
         <div className="scrollbox" ref={scrollboxRef}>
-          <div className="scroll" ref={scroller} onScroll={onScroll}>
+          <div
+            className="scroll"
+            ref={scroller}
+            onScroll={onScroll}
+            onWheel={markUserScroll}
+            onTouchMove={markUserScroll}
+            onPointerDown={markUserScroll}
+            onKeyDown={markUserScroll}
+          >
             <div className={`col content${chatOn ? " is-chat" : ""}`} ref={contentRef}>
               {content}
             </div>
@@ -1397,6 +1448,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
             <Fullscreen
               part={fullscreen.part}
               at={fullscreen.at}
+              headless={item?.kind !== "result"}
               mobile={phone}
               theme={theme}
               host={host(false)}

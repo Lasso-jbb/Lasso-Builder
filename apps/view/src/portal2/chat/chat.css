@@ -33,6 +33,7 @@
 .p3 .chat-body p { margin: 0; }
 .p3 .chat-body p + p, .p3 .chat-body .chat-brow + p { margin-top: var(--lasso-space-2); }
 .p3 .chat-body p + .chat-brow { margin-top: 6px; }
+.p3 .chat-body .chat-links + p { margin-top: 14px; }
 .p3 .chat-body b { font-weight: 500; }
 .p3 .chat-brow { display: flex; align-items: flex-start; gap: var(--lasso-space-3); padding: 4px 0 4px var(--lasso-space-4); position: relative; }
 .p3 .chat-brow::before { content: ""; position: absolute; left: 0; top: 12px; width: 6px; height: 6px; border-radius: 50%; background: var(--lasso-text); }
@@ -198,3 +199,7 @@
 @media (prefers-reduced-motion: reduce) {
   .p3 .chat-dots i { animation: none; }
 }
+
+/* Modulvælgeren på telefonen, mens Lasso er aktivt: det første modul uden streg (Lasso-mærket bærer stregen). */
+.p3 .sel-btn.is-off { color: var(--sec); font-weight: 400; }
+.p3 .sel-btn.is-off::after { display: none; }

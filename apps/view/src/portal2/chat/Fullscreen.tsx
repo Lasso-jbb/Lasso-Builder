@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { IconButton, LassoView, type HostCapabilities, type LassoViewProps } from "@lasso/ui";
 import type { ViewPart } from "./AnswerCard.js";
+import { withoutHead } from "../model.js";
 import { hhmm } from "./util.js";
 
 const noop = () => undefined;
@@ -19,6 +20,7 @@ export function Fullscreen({
   onAction,
   onDownload,
   onClose,
+  headless = false,
 }: {
   part: ViewPart;
   /** Hvornår svaret kom (undertitlens "fra samtalen kl. …"). */
@@ -29,6 +31,8 @@ export function Fullscreen({
   onAction?: LassoViewProps["onAction"];
   onDownload?: () => void;
   onClose: () => void;
+  /** På en firma- eller personfane: visningens eget hoved udelades. */
+  headless?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
@@ -69,7 +73,7 @@ export function Fullscreen({
         </div>
       </div>
       <div className="chat-fs__b">
-        <LassoView spec={spec} dataset={part.dataset} theme={theme} frameless page={part.form === "page"} host={host ?? {}} onAction={onAction ?? noop} />
+        <LassoView spec={headless ? withoutHead(spec) : spec} dataset={part.dataset} theme={theme} frameless page={part.form === "page"} host={host ?? {}} onAction={onAction ?? noop} />
       </div>
     </div>
   );
