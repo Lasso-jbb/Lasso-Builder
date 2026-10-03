@@ -270,8 +270,9 @@ const jakob = { kind: "person", id: "CVR-3-4000000007", name: "Gitte Prøve" };
 const menu = {
   question: "Hvad vil du se om Gitte Prøve?",
   options: [
-    { label: "Alt om Gitte Prøve", action: { placement: "entity", entity: jakob, focus: "overblik", prompt: "Vis alt om Gitte Prøve (CVR-3-4000000007)" } },
-    { label: "Overordnet indblik her", action: { placement: "current", prompt: "Giv et kort overblik over Gitte Prøve her" } },
+    { label: "Fuld indsigt i Gitte Prøve", action: { placement: "entity", entity: jakob, focus: "overblik", prompt: "Vis alt om Gitte Prøve (CVR-3-4000000007)" } },
+    { label: "Kort indsigt i Gitte Prøve", action: { placement: "current", prompt: "Giv en kort indsigt i Gitte Prøve her" } },
+    { label: "Personer med samme navn", action: { placement: "global", title: "Navnesammenligning", prompt: "Find personer med samme navn" } },
   ],
 };
 const onLasso = { active: { kind: "company", id: "CVR-1-99000001", name: "Eksempel Byg A/S", tab: "overblik" }, open: [] };
@@ -296,7 +297,7 @@ test("chat: ask_choice viser menuen og slutter turen; andre kald i samme svar af
   const choice = events[4] as Event & { id: string; question: string; options: unknown[]; allowFreeText: boolean };
   assert.equal(choice.id, "toolu_menu");
   assert.equal(choice.question, menu.question);
-  assert.equal(choice.options.length, 2);
+  assert.equal(choice.options.length, 3);
   assert.equal(choice.allowFreeText, true);
   assert.equal((events[5] as Event & { id: string }).id, "toolu_show");
   // Historikken slutter med ask_choice og værktøjssvarene: menuen OK, show_person afvist.
@@ -324,12 +325,20 @@ test("chat: ask_choice viser menuen og slutter turen; andre kald i samme svar af
     ["placement", "tool", "view", "text", "done"],
   );
   assert.deepEqual((next.events.at(-1) as Event & { placement: unknown }).placement, { placement: "entity", target: jakob, focus: "overblik" });
-  assert.match(lastUserTexts(calls.at(-2)!)[0]!, /^\[Kontekst\] Brugeren valgte 'Alt om Gitte Prøve': svaret skrives på personen Gitte Prøve \(CVR-3-4000000007\), modul overblik\./);
+  assert.match(lastUserTexts(calls.at(-2)!)[0]!, /^\[Kontekst\] Brugeren valgte 'Fuld indsigt i Gitte Prøve': svaret skrives på personen Gitte Prøve \(CVR-3-4000000007\), modul overblik\./);
 
   const forged = { ...onLasso, choice: { id: "toolu_menu", index: 0, action: { ...menu.options[0]!.action, entity: { kind: "person", id: "CVR-3-4000000099", name: "En anden" } } } };
   const bad = await chat({ message: "Vis alt", context: forged, history: done.history, sig: done.sig });
   assert.equal(bad.status, 400);
   assert.equal(bad.json?.error, "Valget passer ikke til samtalen");
+
+  // Global placering bærer fanens navn (title) fra valget, og title er en del af den verificerede handling.
+  script.push(sayText("Her."));
+  const globalPick = { ...onLasso, choice: { id: "toolu_menu", index: 2, action: menu.options[2]!.action } };
+  const g = await chat({ message: menu.options[2]!.action.prompt, context: globalPick, history: done.history, sig: done.sig });
+  assert.deepEqual(g.events[0], { type: "placement", placement: "global", title: "Navnesammenligning" });
+  const badTitle = { ...onLasso, choice: { id: "toolu_menu", index: 2, action: { ...menu.options[2]!.action, title: "Andet navn" } } };
+  assert.equal((await chat({ message: "x", context: badTitle, history: done.history, sig: done.sig })).status, 400);
 
   // Fritekst i stedet for et punkt: placeringen er "her", og konteksten siger fritekst.
   script.push(sayText("Okay."));

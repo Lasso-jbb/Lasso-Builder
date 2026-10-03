@@ -6,7 +6,8 @@ import { contextText, parseContext, verifyChoice, type ChatContext } from "./con
 const jakob = { kind: "person" as const, id: "CVR-3-4000123", name: "Jakob Benediktson" };
 const lasso = { kind: "company" as const, id: "CVR-1-34580820", name: "LASSO X A/S" };
 const entityAction = { placement: "entity" as const, entity: jakob, focus: "overblik", prompt: "Vis alt om Jakob Benediktson (CVR-3-4000123)" };
-const hereAction = { placement: "current" as const, prompt: "Giv et kort overblik over Jakob Benediktson her" };
+const hereAction = { placement: "current" as const, prompt: "Giv en kort indsigt i Jakob Benediktson her" };
+const globalAction = { placement: "global" as const, title: "Branchesammenligning", prompt: "Sammenlign branchen" };
 
 /** Historik, der ender med et ask_choice-kald og dets værktøjssvar (som efter en "choice"-hændelse). */
 const history: BetaMessageParam[] = [
@@ -15,7 +16,7 @@ const history: BetaMessageParam[] = [
     role: "assistant",
     content: [
       { type: "text", text: "Et øjeblik." },
-      { type: "tool_use", id: "toolu_1", name: "ask_choice", input: { question: "Hvad vil du se?", options: [{ label: "Alt om Jakob Benediktson", action: entityAction }, { label: "Overordnet indblik her", action: hereAction }] } },
+      { type: "tool_use", id: "toolu_1", name: "ask_choice", input: { question: "Hvad vil du se?", options: [{ label: "Fuld indsigt i Jakob Benediktson", action: entityAction }, { label: "Kort indsigt i Jakob Benediktson", action: hereAction }, { label: "Branchesammenligning", action: globalAction }] } },
     ],
   },
   { role: "user", content: [{ type: "tool_result", tool_use_id: "toolu_1", content: "Valget er vist." }] },
@@ -30,16 +31,23 @@ test("parseContext: uden context global; id'er valideres; højst 20 åbne faner"
   assert.equal(ok.active.kind, "company");
   assert.equal(ok.open.length, 1);
   assert.equal(parseContext({ active: { kind: "global" }, choice: { id: "toolu_1", index: 0, action: { placement: "entity" } } }), null, "entity kræver entity");
+  const withTitle = (title: string) => parseContext({ active: { kind: "global" }, choice: { id: "toolu_1", index: 0, action: { placement: "global", title } } });
+  assert.ok(withTitle("x".repeat(40)));
+  assert.equal(withTitle("x".repeat(41)), null, "title højst 40 tegn");
 });
 
 test("verifyChoice: valget skal pege på modellens ask_choice med præcis dets handling", () => {
-  assert.deepEqual(verifyChoice(history, { id: "toolu_1", index: 0, action: entityAction }), { label: "Alt om Jakob Benediktson" });
-  assert.deepEqual(verifyChoice(history, { id: "toolu_1", index: 1, action: hereAction }), { label: "Overordnet indblik her" });
+  assert.deepEqual(verifyChoice(history, { id: "toolu_1", index: 0, action: entityAction }), { label: "Fuld indsigt i Jakob Benediktson" });
+  assert.deepEqual(verifyChoice(history, { id: "toolu_1", index: 1, action: hereAction }), { label: "Kort indsigt i Jakob Benediktson" });
   assert.deepEqual(verifyChoice(history, { id: "toolu_1", free: true }), {});
   // Forfalsket: andet id, andet indeks, ændret handling, eller intet ask_choice i den seneste assistentbesked.
   assert.ok("error" in verifyChoice(history, { id: "toolu_2", index: 0, action: entityAction }));
   assert.ok("error" in verifyChoice(history, { id: "toolu_1", index: 2, action: entityAction }));
   assert.ok("error" in verifyChoice(history, { id: "toolu_1", index: 0, action: { ...entityAction, entity: lasso } }));
+  // Titlen er en del af handlingen: et valg med en anden title end modellens afvises.
+  assert.deepEqual(verifyChoice(history, { id: "toolu_1", index: 2, action: globalAction }), { label: "Branchesammenligning" });
+  assert.ok("error" in verifyChoice(history, { id: "toolu_1", index: 2, action: { ...globalAction, title: "Noget andet" } }));
+  assert.ok("error" in verifyChoice(history, { id: "toolu_1", index: 2, action: { placement: "global", prompt: globalAction.prompt } }));
   assert.ok("error" in verifyChoice([...history, { role: "assistant", content: "Noget andet." }], { id: "toolu_1", index: 0, action: entityAction }));
   assert.ok("error" in verifyChoice([], { id: "toolu_1", free: true }));
 });
@@ -49,9 +57,9 @@ test("contextText: aktiv fane, åbne faner og valget", () => {
   assert.equal(contextText(ctx), "[Kontekst] Aktiv fane: virksomheden LASSO X A/S (CVR-1-34580820), modul ejerskab. Åbne faner: LASSO X A/S (CVR-1-34580820), Jakob Benediktson (CVR-3-4000123).");
   assert.equal(contextText({ active: { kind: "global" }, open: [] }), "[Kontekst] Aktiv fane: forsiden (global, ingen virksomhed eller person er åben).");
   assert.match(contextText({ active: { kind: "global", title: "Søgning: lasso" }, open: [] }), /resultatet 'Søgning: lasso' \(globalt/);
-  const picked = contextText({ ...ctx, choice: { id: "toolu_1", index: 0, action: entityAction, label: "Alt om Jakob Benediktson" } });
-  assert.match(picked, /^\[Kontekst\] Brugeren valgte 'Alt om Jakob Benediktson': svaret skrives på personen Jakob Benediktson \(CVR-3-4000123\), modul overblik\./);
-  assert.match(contextText({ ...ctx, choice: { id: "toolu_1", index: 1, action: hereAction, label: "Overordnet indblik her" } }), /svaret skrives her, på den aktive fane/);
+  const picked = contextText({ ...ctx, choice: { id: "toolu_1", index: 0, action: entityAction, label: "Fuld indsigt i Jakob Benediktson" } });
+  assert.match(picked, /^\[Kontekst\] Brugeren valgte 'Fuld indsigt i Jakob Benediktson': svaret skrives på personen Jakob Benediktson \(CVR-3-4000123\), modul overblik\./);
+  assert.match(contextText({ ...ctx, choice: { id: "toolu_1", index: 1, action: hereAction, label: "Kort indsigt i Jakob Benediktson" } }), /svaret skrives her, på den aktive fane/);
   assert.match(contextText({ ...ctx, choice: { id: "toolu_1", index: 0, action: { placement: "global" as const } } }), /svaret er globalt/);
   assert.match(contextText({ ...ctx, choice: { id: "toolu_1", free: true } }), /fritekst/);
   // Det, brugeren ser: modulets resumé efter fanelinjen.

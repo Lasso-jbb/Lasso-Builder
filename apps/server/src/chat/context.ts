@@ -38,6 +38,8 @@ export const choiceActionSchema = z
     entity: entitySchema.optional(),
     focus: z.string().max(40).optional(),
     prompt: z.string().max(4000).optional(),
+    /** Fanens navn ved placement global: et kort dansk navneord ("Største revisorer i Aarhus"). */
+    title: z.string().min(1).max(40).optional(),
   })
   .refine((a) => a.placement !== "entity" || a.entity !== undefined, { message: "entity kræves ved placement entity" });
 
@@ -130,13 +132,15 @@ export interface Placement {
   placement: "current" | "entity" | "global";
   target?: ChatEntity;
   focus?: string;
+  /** Kun global: navnet på den nye resultatfane (fra valget). */
+  title?: string;
 }
 
 /** Placeringen for turen: valgets handling, ellers "current" (som på forsiden/et resultat er globalt). */
 export function placementOf(ctx: ChatContext): Placement {
   const action = ctx.choice && !("free" in ctx.choice) ? ctx.choice.action : undefined;
   if (action?.placement === "entity" && action.entity) return { placement: "entity", target: action.entity, ...(action.focus ? { focus: action.focus } : {}) };
-  if (action?.placement === "global") return { placement: "global" };
+  if (action?.placement === "global") return { placement: "global", ...(action.title ? { title: action.title } : {}) };
   if (ctx.active.kind === "global") return { placement: "global" };
   return { placement: "current", ...(action?.focus ? { focus: action.focus } : {}) };
 }
