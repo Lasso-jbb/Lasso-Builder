@@ -103,7 +103,7 @@ test("Svar: tænker, længere opgave med Stop og skelet, fejl med Prøv igen, mo
   assert.match(err, /Åbner Novo Nordisk A\/S i ny fane/);
 });
 
-test("Kort: element med Hent som PDF og fuld skærm; side med Tilføj som fane (desktop knap, mobil orange ikon)", () => {
+test("Kort: element med Hent som PDF og fuld skærm; side med Tilføj som fane (modul-link-pillen; mobil neutral ikonknap)", () => {
   const props = { onDownload: () => undefined, onFullscreen: () => undefined, onAddTab: () => undefined };
   const el = html(createElement(AssistantMessage, { answer: fx.FORM_ELEMENT[0]!.answer, cardProps: () => props }));
   assert.match(el, /aria-label="Hent som PDF"/);
@@ -111,9 +111,12 @@ test("Kort: element med Hent som PDF og fuld skærm; side med Tilføj som fane (
   assert.doesNotMatch(el, /Tilføj som fane/);
   assert.match(el, /Jakob Bech Benediktson, 4 selskaber/);
   const page = html(createElement(AssistantMessage, { answer: fx.FORM_PAGE[0]!.answer, cardProps: () => props }));
-  assert.match(page, /lasso-btn lasso-btn--primary[^"]*"[^>]*>.*Tilføj som fane/);
+  // Jakob 03.10: som modul-linket ("Risiko"), ikke den fyldte primære knap.
+  assert.match(page, /<button type="button" class="chat-link chat-card__add"><svg[^>]*>.*?<\/svg>Tilføj som fane<\/button>/);
+  assert.doesNotMatch(page, /lasso-btn--primary|lasso-iconbtn--primary/);
   const mobile = html(createElement(AssistantMessage, { answer: fx.FORM_PAGE[0]!.answer, mobile: true, cardProps: () => props }));
-  assert.match(mobile, /lasso-iconbtn--primary" aria-label="Tilføj som fane"/);
+  assert.match(mobile, /class="lasso-iconbtn[^"]*chat-card__addm" aria-label="Tilføj som fane"/);
+  assert.doesNotMatch(mobile, /primary/);
   assert.doesNotMatch(mobile, /Hent som PDF/);
 });
 

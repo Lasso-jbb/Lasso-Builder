@@ -25,7 +25,7 @@ Fra eksporten, ordret, bortset fra de steder hvor en beslutning (se "Beslutninge
 11. Spørgsmål uden ét firma eller én person får en global fane med et generelt navn: Firmaliste, Sammenligning, Markedsanalyse eller Kort. Dens ikon er Lasso-mærket. Emnet står i samtalen, ikke i fanens navn. *(Modulerne Liste, Sammenligning, Kort og Noter i eksportens eksempel findes ikke endnu; en global fane viser kun Lasso-modulet; D4.)*
 12. Er der flere mulige match, lægger et valg sig over samtalen lige over inputfeltet med mulighederne, en Andet-række med frit felt og knapperne Spring over og Vælg. Rækkerne har kun titel og beskrivelse. *(Valget bruges kun til flere match, aldrig til at vælge placering.)*
 13. Tom tilstand viser en hilsen med fanens navn og forslag som piller med pil. Mens Lasso tænker, vises tre orange prikker og Tænker…; tager det længere, står der i ord hvad den gør, med et skelet og en Stop-knap. Fejl står som almindelig tekst med mindst én handling. Rullet op vises en rund knap med pil ned.
-14. På mobilen fylder samtalen hele bredden med 16 px luft, brugerens bobler er højst 280 px, inputfeltet er 48 px og står lige over bundlinjen. Kort har kun fuld skærm i rammen; en hel side får desuden Tilføj som fane som et orange ikon. Afklaringen er et ark fra bunden.
+14. På mobilen fylder samtalen hele bredden med 16 px luft, brugerens bobler er højst 280 px, inputfeltet er 48 px og står lige over bundlinjen. Kort har kun fuld skærm i rammen; en hel side får desuden Tilføj som fane som en neutral ikonknap med koral ikon. Afklaringen er et ark fra bunden.
 15. Alle knapper kommer fra designguiden; ingen opfundne knapper. Mål: boble radius 18, tekst 14/22, avatar 24, kortramme radius 10, inputpille 52, modul-link 46 høj radius 12. *(Knapperne er `Button` og `IconButton` fra `packages/ui` i 14 px og mindst 32 px, ikke eksportens 13 px og 28 px; D6.)*
 
 ## Mål
@@ -101,7 +101,7 @@ Nye, i `.p3`-blokken i `portal2.css` (lys og mørk):
 |---|---|---|---|
 | Tekst | Afsnit og punktlister, 14/22 | ingen | tid og kopiér-ikon |
 | Element | En enkelt komponent (`render_view` med én komponent) med titel og undertitel i kortets hoved | Download (PDF) og fuld skærm; kan ikke blive en fane | ingen |
-| Side | En sammensætning af flere elementer | Download, fuld skærm og Tilføj som fane (primær knap; orange ikon på mobil) | ingen |
+| Side | En sammensætning af flere elementer | Download, fuld skærm og Tilføj som fane (Jakob 03.10: Tilføj som fane som modul-link: neutral pille med koral ikon, 36 px i kortets hoved; på mobil en neutral ikonknap med koral ikon) | ingen |
 
 Teksten står altid først (en til tre korte sætninger, der siger, hvad visningen viser, uden at gentage tallene).
 Modul-links står på svarets sidste linje og skrives som `[Risiko](lasso:modul/risiko)`,
@@ -214,7 +214,7 @@ Truffet ved gennemgangen af eksporten (D1 til D10) og af ejeren; ejerens afgøre
 - **D4** Globale faner viser kun Lasso-modulet, til Liste, Sammenligning, Kort og Noter findes.
 - **D5** Skelettet er en shimmer, som README beskriver.
 - **D6** Knapper er `Button` og `IconButton` (14 px, mindst 32 px). **Afvigelse fra eksporten** (13 px og 28 px).
-  `IconButton` har fået varianten `primary` til Tilføj som fane.
+  Tilføj som fane er modul-link-pillen (`chat-link chat-card__add`, Jakob 03.10); `IconButton`'s `primary`-variant er fjernet igen.
 - **D7** Chatcachens levetid er stadig 24 timer.
 - **D8** Mobilens ramme uden for chatten (tæller, bundbjælke) er ikke med.
 - **D9** Tidspunkter vises som "09:41" (`hhmm()`).

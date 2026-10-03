@@ -225,7 +225,7 @@ function scenes(): SceneDef[] {
     {
       id: "side",
       title: "Svarform C, en hel side",
-      note: "En sammensætning af flere elementer har desuden Tilføj som fane (primær knap; et orange ikon på mobil).",
+      note: "En sammensætning af flere elementer har desuden Tilføj som fane som modul-link (neutral pille med koral ikon, 36 px; på mobil en neutral ikonknap med koral ikon).",
       render: ({ theme, mobile, fill }) => (
         <Scene theme={theme} mobile={mobile} sugg={SUGG}>
           <Conversation turns={fill(SCENES.formPage)} mobile={mobile} theme={theme} />
@@ -403,7 +403,7 @@ function MobileScenes(): SceneDef[] {
   return [
     mobile("traad", "Mobil, samtale", "16 px luft, bobler højst 280 px, inputpille 48 høj lige over bundlinjen, forslagene stablet.", "mobileThread"),
     mobile("element", "Mobil, et element", "Kun fuld skærm i rammen.", "mobileElement"),
-    mobile("side", "Mobil, en side", "Tilføj som fane som et orange ikon ved siden af fuld skærm.", "mobilePage"),
+    mobile("side", "Mobil, en side", "Tilføj som fane som en neutral ikonknap med koral ikon ved siden af fuld skærm.", "mobilePage"),
     {
       id: "m-ark",
       title: "Mobil, afklaring",

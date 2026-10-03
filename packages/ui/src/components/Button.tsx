@@ -69,7 +69,7 @@ export function Button({ children, variant = "secondary", size = 36, icon, loadi
  * Mobil (< 560 px): 32 → 40 og 36/38 → 44 px touch-mål. Navnet står altid som aria-label og tooltip.
  */
 export type IconButtonSize = 38 | 36 | 32;
-export type IconButtonVariant = "default" | "active" | "subtle" | "bare" | "primary";
+export type IconButtonVariant = "default" | "active" | "subtle" | "bare";
 
 export interface IconButtonProps {
   icon: IconName;
