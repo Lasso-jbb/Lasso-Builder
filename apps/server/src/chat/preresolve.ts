@@ -46,13 +46,13 @@ export async function preResolve(mcp: McpContext, context: ChatContext, message:
       resolveEntity(mcp, { kind: "person", query: name, limit: 3 }, context.open),
       resolveEntity(mcp, { kind: "company", query: name, limit: 3 }, context.open),
     ]);
-    const seen = new Set<string>();
-    const found = [...persons, ...companies].filter((c) => fits(c, tokens) && !seen.has(c.id) && seen.add(c.id));
     const active = context.active.kind !== "global" ? context.active.id : undefined;
+    const seen = new Set<string>();
+    // Den aktive fane tæller ikke med (den åbnes ikke igen, og den står ikke i menuen): kun de andre afgør, om der er ét eller flere match.
+    const found = [...persons, ...companies].filter((c) => c.id !== active && fits(c, tokens) && !seen.has(c.id) && seen.add(c.id));
     if (found.length === 1) {
       const c = found[0]!;
-      // Den aktive fane skal ikke åbnes igen: modellen svarer her.
-      return c.id === active ? null : { kind: "one", entity: { kind: c.kind, id: c.id, name: c.name } };
+      return { kind: "one", entity: { kind: c.kind, id: c.id, name: c.name } };
     }
     return found.length >= 2 ? { kind: "many", candidates: found } : null;
   } catch {

@@ -957,3 +957,30 @@ test("A: en udtrykkelig bøn forhåndsafgøres på serveren: ét match = afgjort
     await new Promise((r) => server.close(r));
   }
 });
+
+test("R2-A: den aktive fane er ikke et match og står ikke i menuen; et valg af den aktive fane selv er ikke et skifte", async () => {
+  const { preResolve } = await import("./chat/preresolve.js");
+  const { placementOf } = await import("./chat/context.js");
+  const provider = new DemoProvider();
+  const mcp = { provider, config: loadConfig({ LASSO_DATA_SOURCE: "demo" }) } as never;
+  const onGitte = { active: { ...jakob, tab: "overblik" }, open: [jakob] } as never;
+  // "åbn Prøve" på Gittes fane: flere andre Prøve'er, men ikke Gitte selv.
+  const many = await preResolve(mcp, onGitte, "åbn Prøve");
+  assert.equal(many?.kind, "many");
+  assert.ok(many!.kind === "many" && many.candidates.length >= 2 && many.candidates.every((c) => c.id !== jakob.id));
+  // Er den aktive fane det eneste match, tager modellen over (ingen forhåndsafgørelse).
+  assert.equal(await preResolve(mcp, onGitte, "åbn Gitte Prøve"), null);
+  // Et valg af den aktive fane giver current (ingen decided, ingen fresh).
+  const pick = { id: "t", index: 0, action: { placement: "entity" as const, entity: jakob as never, focus: "overblik" } };
+  assert.deepEqual(placementOf({ active: { ...jakob, tab: "overblik" }, open: [], choice: pick } as never), { placement: "current", focus: "overblik" });
+  assert.equal(placementOf({ active: { kind: "company", id: "CVR-1-99000001", name: "Eksempel Byg A/S" }, open: [], choice: pick } as never).placement, "entity");
+  script.push(useTool("ask_choice", { question: "Hvem?", options: [jakob, { kind: "person", id: "CVR-3-4000000008", name: "Kim Prøve" }].map((e) => ({ label: e.name, description: "Direktør", action: { placement: "entity", entity: e, focus: "overblik", prompt: `Vis alt om ${e.name}` } })) }));
+  const first = await chat({ message: "åbn Prøve", context: { active: { ...jakob, tab: "overblik" }, open: [] } }, zoe);
+  const choice = first.events.find((e) => e.type === "choice") as Event & { id: string; options: { action: unknown }[] };
+  const done = first.events.at(-1) as Event & { history: unknown[]; sig: string };
+  script.push(sayText("Her."));
+  const next = await chat({ message: "Vis alt om Gitte Prøve", context: { active: { ...jakob, tab: "overblik" }, open: [], choice: { id: choice.id, index: 0, action: choice.options[0]!.action } }, history: done.history, sig: done.sig }, zoe);
+  assert.equal(next.status, 200);
+  assert.deepEqual(next.events[0], { type: "placement", placement: "current", focus: "overblik", here: true });
+  assert.equal((next.events.at(-1) as Event & { fresh?: true }).fresh, undefined);
+});
