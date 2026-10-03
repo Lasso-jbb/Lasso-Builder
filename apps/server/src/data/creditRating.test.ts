@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { composeCompany, composeProbe, parseViewSpec } from "@lasso/spec";
-import { textCard } from "./card.js";
 import { DemoProvider } from "./demo.js";
 import { resolveSpec } from "./resolve.js";
 import { summarizeView } from "./summary.js";
@@ -26,20 +25,15 @@ test("DemoProvider har en fuld A med forrige B, en D, en låst og en ikke beregn
   await assert.rejects(p.creditRating("CVR-1-12345678"));
 });
 
-test("tekstkortet og resuméet har én Creditsafe-linje: bogstav, ord, kreditmaksimum og forrige", async () => {
+test("resuméet har én Creditsafe-linje: bogstav, ord, kreditmaksimum og forrige", async () => {
   const p = new DemoProvider();
   const spec = parseViewSpec({ title: "x", components: [{ type: "LassoCompanyHead", company: TRANSPORT }, { type: "LassoCreditRating", company: TRANSPORT }] });
   const ds = await resolveSpec(spec, p);
-  const card = textCard(spec, ds)!;
-  assert.match(card, /KREDITVURDERING \(CREDITSAFE\)/);
-  assert.match(card.replace(/[│\s]+/g, " "), /D, høj risiko, kreditmaksimum 150 t\. kr\., lokal score 21, forrige C/);
-  assert.doesNotMatch(card, /af 100/, "Creditsafe blandes aldrig med Lassos 0–100-score");
   const summary = summarizeView(spec, ds);
   assert.match(summary, /^Kreditvurdering \(Creditsafe\): D, høj risiko, kreditmaksimum 150 t\. kr\., lokal score 21, forrige C, ændret 02\.08\.2026\.$/m);
 
   const lockedSpec = parseViewSpec({ title: "x", components: [{ type: "LassoCreditRating", company: SOFTWARE }] });
   const lockedDs = await resolveSpec(lockedSpec, p);
-  assert.match(textCard(lockedSpec, lockedDs)!, /Låst: kræver Creditsafe-/);
   assert.match(summarizeView(lockedSpec, lockedDs), /Kreditvurdering \(Creditsafe\): låst: kræver Creditsafe-tilføjelse\./);
 });
 

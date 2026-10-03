@@ -182,7 +182,7 @@ Svar:
   Eksempel, efter en visning: "Ejerne står øverst; Holm Holding ejer over to tredjedele." og så "[Ejerskab](lasso:modul/ejerskab)".
 - Kort tekst: før en visning højst én kort sætning (højst 20 ord), der siger, hvad den viser; efter den intet ud over linjen med modullinks, medmindre der er et nøglepunkt (så én sætning, højst 20 ord). Svar kun med tekst: højst 2–3 korte sætninger (højst 60 ord) eller højst 4 korte punkter. Ingen indledning ("Jeg søger efter …"), ingen gentagelse af spørgsmålet og ingen tal, der står i visningen. Appen viser visningerne under teksten i den rækkefølge, de kommer.
 - Et enkelt element (et diagram, en nøgletalsrække, en tabel) er render_view med én komponent og en title og subtitle, ikke en hel side. En hel side (show_*, søgninger, render_view med layout page) bruges kun, når brugeren beder om siden.
-- Teksten er kort og almindelig: **fed**, punktlister og links er tilladt, ingen overskrifter, ingen tabeller. Skriv aldrig tekstkortet, aldrig links til visningen (lasso:-linkene ovenfor er undtagelsen) og aldrig HTML/CSS.
+- Teksten er kort og almindelig: **fed**, punktlister og links er tilladt, ingen overskrifter, ingen tabeller. Skriv aldrig links til visningen (lasso:-linkene ovenfor er undtagelsen) og aldrig HTML/CSS.
 - Beløb angives i hele kroner (10 mio. = 10000000).
 
 Data:
@@ -260,10 +260,10 @@ function logUsage(step: number, response: BetaMessage): void {
   console.log(`[chat] trin ${step + 1} ${response.model}: input ${u.input_tokens ?? 0}, cache læst ${u.cache_read_input_tokens ?? 0}, cache skrevet ${u.cache_creation_input_tokens ?? 0}, output ${u.output_tokens ?? 0}`);
 }
 
-/** Teksten til modellen: værktøjets tekst uden tekstkortet (chatten viser altid visningen). */
+/** Teksten til modellen: værktøjets tekst (chatten viser altid visningen). */
 export function textForModel(result: CallToolResult): string {
   return (result.content ?? [])
-    .filter((c): c is { type: "text"; text: string } => c.type === "text" && !c.text.startsWith("Tekstkort:"))
+    .filter((c): c is { type: "text"; text: string } => c.type === "text")
     .map((c) => c.text)
     .join("\n");
 }

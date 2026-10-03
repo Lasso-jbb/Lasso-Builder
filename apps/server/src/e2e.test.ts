@@ -172,14 +172,13 @@ test("show_company tager et navn og siger, hvad den valgte", async () => {
   assert.match(summary, /Regnskab \d{4}:/);
   assert.match(summary, /Stamoplysninger: form A\/S; adresse Prøvevej 1, 8600 Silkeborg; kommune Silkeborg/);
   assert.match(summary, /Omsætning \d{4}–\d{4} \(mio\. kr\.\): \d{4} [\d,]+/);
-  assert.match((res.structuredContent as { card: string }).card, /STAMOPLYSNINGER/);
 });
 
 test("show_company giver et signeret link til en interaktiv side med friske data", async () => {
   const res = await client.callTool({ name: "show_company", arguments: { company: "99000001", chart_metric: "omsaetning", years: 10 } });
-  const link = (res.structuredContent as { link: string }).link;
+  const link = (res.structuredContent as { links: { share: string } }).links.share;
   assert.match(link, /\/k\/99000001\?m=omsaetning&y=10&e=\w+&s=[\w-]{22}$/);
-  assert.match((res.content as { text: string }[])[0]!.text, /Interaktiv Lasso-visning \(link til brugeren\): http/);
+  assert.match((res.content as { text: string }[])[0]!.text, /Link til visningen: http/);
   const page = await fetch(link);
   assert.equal(page.status, 200);
   const html = await page.text();
@@ -194,7 +193,7 @@ test("show_company giver et signeret link til en interaktiv side med friske data
 test("show_person (katalog 16) finder en person på navn og komponerer personsiden", async () => {
   const res = await client.callTool({ name: "show_person", arguments: { person: "Bo Eksempel" } });
   assert.equal(res.isError, undefined);
-  const sc = res.structuredContent as { spec: ViewSpec; card: string; link: string; summary: string };
+  const sc = res.structuredContent as { spec: ViewSpec; links: { open?: string; share: string }; summary: string };
   assert.equal(sc.spec.kind, "person");
   assert.deepEqual(
     sc.spec.components.map((c) => `${c.type}${c.column ? `@${c.column}` : ""}${c.width ? `/${c.width}` : ""}`),
@@ -220,29 +219,23 @@ test("show_person (katalog 16) finder en person på navn og komponerer personsid
   assert.doesNotMatch(sc.summary, /Ejerskab: ejer direkte/);
   // "År sammen" er den længste sammenhængende periode, ikke summen over selskaber.
   assert.match(sc.summary, /Vera Eksempel \(13 år, 1 fælles selskaber\)/);
-  assert.match(sc.card, /SIDDER SAMMEN MED/);
-  assert.match(sc.card, /AKTIVE ROLLER/);
-  for (const section of ["HISTORIK", "EJERSKAB"]) assert.doesNotMatch(sc.card, new RegExp(section));
-  assert.doesNotMatch(sc.card, /NYHEDER/);
   // Stamoplysningerne og risikosektionen er udgået (som på siden).
-  assert.doesNotMatch(sc.card, /STAMOPLYSNINGER|RISIKO|Første reg\./);
   // Op til seks forskellige spørgsmål (followUps.ts), ét pr. emne, med personens eget selskab.
   const labels = sc.spec.components.flatMap((c) => (c.type === "LassoFollowUps" ? c.prompts.map((p) => p.label) : []));
   assert.ok(labels.length >= 4 && labels.length <= 6, labels.join(" | "));
   assert.equal(new Set(labels).size, labels.length);
-  assert.doesNotMatch(sc.card, /Prøvevej/, "aldrig gade og husnummer for en person");
-  assert.match(sc.link, /\/p\/CVR-3-\d+\?e=\w+&s=[\w-]{22}$/);
-  const page = await fetch(sc.link);
+  assert.match(sc.links.share, /\/p\/CVR-3-\d+\?e=\w+&s=[\w-]{22}$/);
+  const page = await fetch(sc.links.share);
   assert.equal(page.status, 200);
   assert.match(await page.text(), /"LassoPersonRoles"/);
-  const forged = await fetch(sc.link.replace(/CVR-3-(\d+)/, (_, n: string) => `CVR-3-${Number(n) + 1}`));
+  const forged = await fetch(sc.links.share.replace(/CVR-3-(\d+)/, (_, n: string) => `CVR-3-${Number(n) + 1}`));
   assert.equal(forged.status, 403);
 });
 
 test("show_person med focus: risiko henter og viser kun forløbet i selskaberne (ingen risikosektion); linket åbner samme fokus", async () => {
   const res = await client.callTool({ name: "show_person", arguments: { person: "CVR-3-4000000002", focus: "risiko" } });
   assert.equal(res.isError, undefined);
-  const sc = res.structuredContent as { spec: ViewSpec; card: string; link: string; summary: string };
+  const sc = res.structuredContent as { spec: ViewSpec; links: { open?: string; share: string }; summary: string };
   assert.equal(sc.spec.subtitle, "Risiko");
   assert.deepEqual(
     sc.spec.components.map((c) => c.type),
@@ -253,10 +246,8 @@ test("show_person med focus: risiko henter og viser kun forløbet i selskaberne 
   assert.deepEqual(Object.keys(dataset.ownershipGraphs), [], "intet ejerdiagram hentet på risiko");
   assert.deepEqual(Object.keys(dataset.personNetworks), [], "intet netværk hentet på risiko");
   assert.match(sc.summary, /Forløb i selskaberne med konkurs eller tvangsopløsning \(seneste 3 af 3\)/);
-  assert.match(sc.card, /FORLØB I SELSKABERNE/);
-  for (const section of ["STAMOPLYSNINGER", "RISIKO", "NYHEDER", "SIDDER SAMMEN MED", "EJERSTRUKTUR"]) assert.doesNotMatch(sc.card, new RegExp(section));
-  assert.match(sc.link, /\/p\/CVR-3-4000000002\?e=\w+&f=risiko&s=[\w-]{22}$/);
-  const page = await fetch(sc.link);
+  assert.match(sc.links.share, /\/p\/CVR-3-4000000002\?e=\w+&f=risiko&s=[\w-]{22}$/);
+  const page = await fetch(sc.links.share);
   assert.equal(page.status, 200);
   // Sidens boot-data (ikke render-appens kode, som nævner alle komponenter).
   const boot = /window\.__LASSO_BOOT__=(.*?);<\/script>/s.exec(await page.text())![1]!;
@@ -264,18 +255,16 @@ test("show_person med focus: risiko henter og viser kun forløbet i selskaberne 
   assert.doesNotMatch(boot, /"LassoNews"/);
   assert.doesNotMatch(boot, /"LassoPersonRisk"|"LassoPersonFacts"/);
   // Et andet fokus med samme signatur afvises.
-  assert.equal((await fetch(sc.link.replace("f=risiko", "f=historik"))).status, 403);
+  assert.equal((await fetch(sc.links.share.replace("f=risiko", "f=historik"))).status, 403);
 
   const hist = await client.callTool({ name: "show_person", arguments: { person: "Bo Eksempel", focus: "historik" } });
-  const h = hist.structuredContent as { spec: ViewSpec; card: string; summary: string };
+  const h = hist.structuredContent as { spec: ViewSpec; summary: string };
   assert.deepEqual(h.spec.components.map((c) => `${c.type}${c.column ? `@${c.column}` : ""}`), ["LassoPersonHead", "LassoTimeline@1", "LassoNews@2", "LassoFollowUps"]);
   assert.match(h.summary, /Nyheder om personen/);
-  assert.match(h.card, /NYHEDER/);
 
   const net = await client.callTool({ name: "show_person", arguments: { person: "Bo Eksempel", focus: "netvaerk" } });
-  const n = net.structuredContent as { spec: ViewSpec; card: string };
+  const n = net.structuredContent as { spec: ViewSpec };
   assert.deepEqual(n.spec.components.map((c) => c.type), ["LassoPersonHead", "LassoPersonNetwork", "LassoFollowUps"]);
-  assert.match(n.card, /SIDDER SAMMEN MED/);
 
   const bad = await client.callTool({ name: "show_person", arguments: { person: "Bo Eksempel", focus: "oekonomi" } });
   assert.equal(bad.isError, true);
@@ -320,7 +309,7 @@ test("render_view slår virksomhedsnavne op som show_company (review P1-7)", asy
 
 test("delelinket fra en økonomi-visning åbner økonomi-visningen (review P2-7)", async () => {
   const res = await client.callTool({ name: "show_company", arguments: { company: "99000001", focus: "oekonomi" } });
-  const link = (res.structuredContent as { link: string }).link;
+  const link = (res.structuredContent as { links: { share: string } }).links.share;
   assert.match(link, /&f=oekonomi/);
   const html = await (await fetch(link)).text();
   const boot = /window\.__LASSO_BOOT__=(.*?);<\/script>/s.exec(html)![1]!;
@@ -410,21 +399,20 @@ test("show_company og show_person tager question (og metrics); instruktionerne b
 test("show_company 'hvad er soliditetsgraden': kort med soliditetsgraden først, linjegraf, en hel side; resuméet svarer først", async () => {
   const res = await client.callTool({ name: "show_company", arguments: { company: "Eksempel Byg", question: "Hvad er soliditetsgraden i Eksempel Byg?" } });
   assert.ok(!res.isError, JSON.stringify(res.content));
-  const sc = res.structuredContent as { spec: ViewSpec; link: string; summary: string; card?: string };
+  const sc = res.structuredContent as { spec: ViewSpec; links: { open?: string; share: string }; summary: string };
   const cards = sc.spec.components.find((c) => c.type === "LassoKeyFigureCards");
   assert.ok(cards?.type === "LassoKeyFigureCards" && cards.metrics![0] === "soliditetsgrad");
   const chart = sc.spec.components.find((c) => c.type === "LassoLineChart");
   assert.ok(chart?.type === "LassoLineChart" && chart.metric === "soliditetsgrad" && chart.column === 1);
   assert.equal(sc.spec.subtitle, "Soliditetsgrad");
   assert.ok(sc.spec.components.length >= 8, sc.spec.components.map((c) => c.type).join(", "));
-  // Resuméet: "Svar:" lige efter hovedlinjen; tekstkortet svarer også først.
+  // Resuméet: "Svar:" lige efter hovedlinjen.
   const lines = texts(res)[0]!.split("\n");
   const head = lines.findIndex((l) => l.startsWith("Eksempel Byg A/S (CVR 99000001"));
   assert.match(lines[head + 1]!, /^Svar: Soliditetsgrad 2025: [\d,]+ % \(2024: [\d,]+ %\)\.$/);
-  assert.match(sc.card ?? "", /SVAR[\s\S]*Soliditetsgrad 2025/);
   // Det delte link bærer spørgsmålet og åbner samme svar.
-  assert.match(sc.link, /[?&]q=/);
-  const boot = await bootOf(sc.link);
+  assert.match(sc.links.share, /[?&]q=/);
+  const boot = await bootOf(sc.links.share);
   assert.deepEqual(boot.spec.components.map((c) => c.type), sc.spec.components.filter((c) => c.type !== "LassoFollowUps").map((c) => c.type));
 });
 
@@ -467,14 +455,68 @@ test("show_company 'er de gået konkurs': status og historik som svar; resuméet
 test("show_person 'sidder X i bestyrelser': kun bestyrelsesposterne; linket /p/ bærer spørgsmålet", async () => {
   const res = await client.callTool({ name: "show_person", arguments: { person: "Bo Eksempel", question: "Sidder Bo Eksempel i bestyrelser?" } });
   assert.ok(!res.isError, JSON.stringify(res.content));
-  const sc = res.structuredContent as { spec: ViewSpec; link: string };
+  const sc = res.structuredContent as { spec: ViewSpec; links: { open?: string; share: string } };
   const roles = sc.spec.components[1];
   // Stamoplysningerne er udgået: bestyrelsesposterne står alene i eget fuldbånd.
   assert.ok(roles?.type === "LassoPersonRoles" && roles.role === "bestyrelse" && !roles.column && !roles.width);
   assert.ok(!sc.spec.components.some((c) => c.type === "LassoPersonFacts" || c.type === "LassoPersonRisk"));
   assert.equal(sc.spec.subtitle, "Bestyrelsesposter");
   assert.match(texts(res)[0]!, /Svar: Bestyrelsesposter: .*Eksempel/);
-  assert.match(sc.link, /\/p\/CVR-3-\d+\?.*q=/);
-  const boot = await bootOf(sc.link);
+  assert.match(sc.links.share, /\/p\/CVR-3-\d+\?.*q=/);
+  const boot = await bootOf(sc.links.share);
   assert.equal(boot.spec.subtitle, "Bestyrelsesposter");
+});
+
+/* ---------- links i hvert visningssvar (structuredContent.links): share altid, open kun for én virksomhed/person ---------- */
+
+type Links = { open?: string; share: string };
+const linksOf = (res: Awaited<ReturnType<Client["callTool"]>>) => (res.structuredContent as { links: Links }).links;
+
+test("links: alle visningsværktøjer har share (delbart link), open kun for visninger om én virksomhed eller person", async () => {
+  const single = [
+    { name: "show_company", arguments: { company: "99000001", focus: "risiko" } },
+    { name: "show_person", arguments: { person: "CVR-3-4000000002" } },
+    { name: "render_view", arguments: { title: "Én virksomhed", components: [{ type: "LassoCompanyHead", company: "99000001" }] } },
+  ];
+  for (const args of single) {
+    const res = await client.callTool(args);
+    assert.ok(!res.isError, JSON.stringify(res.content));
+    const l = linksOf(res);
+    assert.match(l.share, /^https?:\/\/[^/]+\/(k|p|v|e)\//, `${args.name}: share`);
+    assert.match(l.open ?? "", /\/portal\?aabn=[^&]+&fokus=[a-z]+&fastgoer=1$/, `${args.name}: open`);
+    assert.deepEqual(Object.keys(l).sort(), ["open", "share"]);
+  }
+  const risk = linksOf(await client.callTool(single[0]!));
+  assert.match(risk.open!, /aabn=[^&]*99000001[^&]*&fokus=risiko&fastgoer=1$/);
+  const over = linksOf(await client.callTool({ name: "show_company", arguments: { company: "99000001" } }));
+  assert.match(over.open!, /&fokus=overblik&fastgoer=1$/);
+
+  const many = [
+    { name: "search_companies", arguments: { criteria: [{ field: "region", operator: "eq", value: "Midtjylland" }] } },
+    { name: "compare_companies", arguments: { companies: ["99000001", "99000002"] } },
+    { name: "list_saved_pages", arguments: {} },
+  ];
+  for (const args of many) {
+    const res = await client.callTool(args);
+    assert.ok(!res.isError, `${args.name}: ${JSON.stringify(res.content)}`);
+    const l = linksOf(res);
+    assert.match(l.share, /^https?:\/\//, `${args.name}: share`);
+    assert.equal(l.open, undefined, `${args.name}: ingen open`);
+  }
+  // Det delte link til en gemt visning åbner netop visningen.
+  const shared = linksOf(await client.callTool(many[1]!)).share;
+  assert.match(shared, /\/v\//);
+  const boot = await bootOf(shared);
+  assert.ok(boot.spec.components.length > 0);
+});
+
+test("links: intet tekstkort nogen steder, og værten uden visning får kun én linje med linket", async () => {
+  const res = await client.callTool({ name: "show_company", arguments: { company: "99000001" } });
+  assert.doesNotMatch(JSON.stringify(res), /Tekstkort/i);
+  assert.equal((res.content as unknown[]).length, 1);
+  const linkLines = texts(res)[0]!.split("\n").filter((l) => /^Link til visningen/.test(l));
+  assert.deepEqual(linkLines, [`Link til visningen: ${linksOf(res).share}`]);
+  const instr = client.getInstructions() ?? "";
+  assert.match(instr, /Kan din app ikke vise den interaktive visning, så skriv kun linket til visningen; ingen tekstkort, ingen opsummering\./);
+  assert.doesNotMatch(instr, /Tekstkort:|tekstkortet/i);
 });

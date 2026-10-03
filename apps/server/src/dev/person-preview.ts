@@ -3,7 +3,6 @@
 // Brug: npx tsx apps/server/src/dev/person-preview.ts <ud-mappe> [navn eller CVR-3-id ...]
 import { writeFileSync } from "node:fs";
 import { composePerson, composePersonProbe, isPersonFocus, isPersonId, PERSON_FOCUSES } from "@lasso/spec";
-import { textCard } from "../data/card.js";
 import { DemoProvider } from "../data/demo.js";
 import { findPerson } from "../data/personLookup.js";
 import { resolveSpec } from "../data/resolve.js";
@@ -22,6 +21,5 @@ for (const ref of refs.length ? refs : ["Bo Eksempel"]) {
     const file = `${out}/person-${id}-${focus}.html`;
     writeFileSync(file, injectBoot(html, { mode: "web", spec, dataset }, spec.title));
     console.log(file, spec.components.map((c) => `${c.type.replace("Lasso", "")}${c.column ? `@${c.column}` : ""}`).join(" "));
-    console.log(textCard(spec, dataset));
   }
 }

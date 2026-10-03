@@ -44,7 +44,7 @@ const SUMMARY_FIGURES: ReadonlySet<ViewSpec["components"][number]["type"]> = new
 
 /**
  * host "chat" (Lassos egen chat, docs/chat.md "Tokens"): resuméet uden boilerplate til værter uden visning (den
- * afsluttende linje om tekstkortet) og med en kort demonote; Claude.ai over /mcp får teksten uændret.
+ * afsluttende linje om visningen) og med en kort demonote; Claude.ai over /mcp får teksten uændret.
  */
 export function summarizeView(spec: ViewSpec, ds: Dataset, opts: { ask?: Ask; host?: "mcp" | "chat" } = {}): string {
   const lines: string[] = [];
@@ -311,7 +311,7 @@ export function summarizeView(spec: ViewSpec, ds: Dataset, opts: { ask?: Ask; ho
   ];
   // Fejlsøgningslinjen er til værter uden en visning; chatten udelader den (brugeren ser siden, modellen skal ikke bruge tokens på den).
   if (missing.length && !chat) lines.push(`Ikke vist: ${missing.slice(0, 2).join("; ")}`);
-  // Hvornår tekstkortet vises, står ét sted: serverinstruktionerne (review P1-6). Chatten viser altid visningen og har sine egne regler for teksten.
-  if (opts.host !== "chat") lines.push("Visningen er svaret: skriv ingen tekst i chatten (se instruktionerne). Tekstkortet er kun til værter uden Lasso-visning.");
+  // Hvornår kun linket vises, står ét sted: serverinstruktionerne (review P1-6). Chatten viser altid visningen og har sine egne regler for teksten.
+  if (opts.host !== "chat") lines.push("Visningen er svaret: skriv ingen tekst i chatten (se instruktionerne).");
   return lines.join("\n");
 }

@@ -184,15 +184,6 @@ test("list_saved_pages viser listen som LassoSavedPages med link pr. side", asyn
 
   const summary = (res.structuredContent as { summary: string }).summary;
   assert.match(summary, /Gemte sider \(3 i alt, viser 3\): Bo Eksempel \(Person, CVR-3-\d+, gemt \d\d\.\d\d\.\d{4}\), Eksempel Transport A\/S \(Virksomhed, CVR 99000004, gemt/);
-  const card = (res.structuredContent as { card: string }).card;
-  assert.match(card, /MINE GEMTE SIDER \(3\)/);
-  assert.match(card, /│ 1\. +Bo Eksempel +│/);
-  assert.match(card, /Virksomhed, gemt \d\d\.\d\d\.\d{4}/);
-  assert.match(card, /\n1\. Åbn: http:\/\/127\.0\.0\.1:\d+\/e\/CVR-3-/);
-  assert.match(card, /\n3\. Åbn: http:\/\/127\.0\.0\.1:\d+\/e\/CVR-1-99000001\?/);
-  // Selve kortet (boksen) holder kortets bredde; linkene står under det.
-  const box = card.split("\n").filter((l) => /^[│┌└├]/.test(l));
-  assert.ok(box.every((l) => [...l].length === 38), box.join("\n"));
 
   const persons = await a.callTool({ name: "list_saved_pages", arguments: { kind: "person", limit: 5 } });
   const pspec = (persons.structuredContent as { spec: ViewSpec }).spec;
@@ -208,7 +199,6 @@ test("gemte sider er personlige: en anden brugernøgle ser sin egen (tomme) list
   const res = await b.callTool({ name: "list_saved_pages", arguments: {} });
   const ds = (res._meta as Record<string, Dataset>)[DATASET_META_KEY]!;
   assert.equal(ds.savedPages["all|20"]!.total, 0);
-  assert.match((res.structuredContent as { card: string }).card, /Ingen gemte sider endnu\./);
   assert.match((res.structuredContent as { summary: string }).summary, /Gemte sider: ingen endnu\./);
 });
 

@@ -3,7 +3,6 @@ import { test } from "node:test";
 import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { COMPARE_TABLE_NOTE } from "@lasso/spec";
 import { DemoProvider } from "../data/demo.js";
-import { textCard } from "../data/card.js";
 import { createMcpServer, type McpContext } from "../mcp/server.js";
 import { compareCompanies, type UseCaseCtx, type ViewData } from "./index.js";
 
@@ -21,10 +20,6 @@ test("compare_companies: to navne slås op og giver tabel, linjegraf og opfølgn
   assert.deepEqual(table.companies, ["CVR-1-99000001", "CVR-1-99000004"]);
   assert.match(v.note!, /"Eksempel Byg" = Eksempel Byg A\/S \(99000001\)/);
   assert.equal(v.dataset.companies["CVR-1-99000004"]?.name, "Eksempel Transport A/S");
-  const card = textCard(v.spec, v.dataset)!;
-  assert.match(card, /Eksempel Byg A\/S/);
-  assert.match(card, /Eksempel Transport A\/S/);
-  assert.doesNotMatch(card, /STAMOPLYSNINGER/);
 });
 
 test("compare_companies: tvetydigt navn giver note med alternativer, ikke fejl", async () => {
@@ -33,11 +28,9 @@ test("compare_companies: tvetydigt navn giver note med alternativer, ikke fejl",
   assert.match(v.note!, /compare_companies igen med CVR-numrene/);
 });
 
-test("compare_companies: 'hvem er størst' giver rangering og et nummereret tekstkort", async () => {
+test("compare_companies: 'hvem er størst' giver rangering og tabel", async () => {
   const v = ok(await compareCompanies(ctx, { companies: ["99000001", "99000004", "99000008"], question: "Hvem er størst?" }));
   assert.deepEqual(types(v), ["LassoRanking", "LassoCompareTable"]);
-  const card = textCard(v.spec, v.dataset)!;
-  assert.match(card, /1\. +Eksempel Maskinfabrik A\/S:/);
 });
 
 test("compare_companies: over 3 virksomheder giver rangering og note om de 3 største (Jakob 01.10)", async () => {

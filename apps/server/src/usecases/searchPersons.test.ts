@@ -3,7 +3,6 @@ import { test } from "node:test";
 import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { personSearchKey } from "@lasso/spec";
 import { DemoProvider } from "../data/demo.js";
-import { textCard } from "../data/card.js";
 import { createMcpServer, type McpContext } from "../mcp/server.js";
 import { searchPersons, type UseCaseCtx, type ViewData } from "./index.js";
 
@@ -20,7 +19,6 @@ test("search_persons: flere træf giver en LassoPersonTable og en valgnote", asy
   const rows = rowsOf(v);
   assert.ok(rows.length > 1);
   assert.match(v.note!, /show_person/);
-  assert.ok(textCard(v.spec, v.dataset)!.includes(rows[0]!.name));
 });
 
 test("search_persons: role-filter beholder kun personer med den type aktiv rolle", async () => {
@@ -45,7 +43,6 @@ test("search_persons: 0 træf giver en note og ingen fejl", async () => {
   const v = ok(await searchPersons(ctx, { query: "Zzzzqx" }));
   assert.equal(rowsOf(v).length, 0);
   assert.match(v.note!, /Ingen personer fundet på "Zzzzqx"\. Prøv et kortere navn\./);
-  assert.match(textCard(v.spec, v.dataset)!, /Ingen personer matcher/);
 });
 
 test("search_persons: ét præcist træf nævner show_person med Lasso-ID", async () => {

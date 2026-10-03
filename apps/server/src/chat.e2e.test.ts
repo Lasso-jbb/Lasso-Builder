@@ -160,15 +160,15 @@ test("chat: værktøjet kører gennem MCP; browseren får visningen, modellen ku
   assert.deepEqual((marked[0] as { cache_control: unknown }).cache_control, { type: "ephemeral", ttl: "1h" });
   assert.equal((first.tools!.at(-1) as { cache_control?: unknown }).cache_control !== undefined, true, "markøren sidder på det sidste værktøj");
 
-  // Værktøjssvaret til modellen: resuméet uden tekstkort og uden datasæt.
+  // Værktøjssvaret til modellen: resuméet uden datasæt.
   const second = calls.at(-1)!;
   const result = (second.messages.at(-1)!.content as { type: string; content: string }[])[0]!;
   assert.equal(result.type, "tool_result");
   assert.match(result.content, /Eksempel Byg/);
-  assert.doesNotMatch(result.content, /Tekstkort:/);
+  assert.doesNotMatch(result.content, /Tekstkort/);
   // Chatten (docs/chat.md, tokens): resuméet uden boilerplate; teksten efter en visning styres af CHAT_RULES.
   assert.match(result.content, /^OBS: demodata \(opdigtet\)\.\nEksempel Byg A\/S/);
-  for (const line of [/Visningen vises for brugeren/, /Visningen er svaret: skriv ingen tekst/, /Tekstkortet er kun til værter/, /Interaktiv Lasso-visning/]) assert.doesNotMatch(result.content, line);
+  for (const line of [/Visningen vises for brugeren/, /Visningen er svaret: skriv ingen tekst/, /Link til visningen/]) assert.doesNotMatch(result.content, line);
   // Tekstreglerne: kort tekst (højst 20 ord før en visning), tekst alene uden for Lassos data (med eksemplet "sport"), og modullinks.
   assert.match(String(first.system), /Kort tekst: før en visning højst én kort sætning \(højst 20 ord\)/);
   assert.match(String(first.system), /højst 2–3 korte sætninger \(højst 60 ord\) eller højst 4 korte punkter/);

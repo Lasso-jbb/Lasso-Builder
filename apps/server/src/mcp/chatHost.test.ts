@@ -61,7 +61,7 @@ test("gem-værktøjerne findes kun i /mcp; chatten beholder describe_components 
 
 const textOf = (r: unknown) => ((r as { content: { type: string; text: string }[] }).content ?? []).filter((c) => c.type === "text");
 
-test("visningssvar: chatten får resuméet uden boilerplate og uden tekstkort-blok; /mcp uændret; structuredContent ens", async () => {
+test("visningssvar: chatten får resuméet uden boilerplate og ; /mcp får desuden linket; ét tekstblok begge steder; structuredContent ens", async () => {
   const args = { name: "show_company", arguments: { company: "99000001", focus: "oekonomi" } };
   const chat = await (await clientFor("chat")).callTool(args);
   const mcp = await (await clientFor("mcp")).callTool(args);
@@ -69,26 +69,29 @@ test("visningssvar: chatten får resuméet uden boilerplate og uden tekstkort-bl
   const mt = textOf(mcp);
   assert.equal(ct.length, 1, "chatten: kun resuméet");
   assert.match(ct[0]!.text, /^OBS: demodata \(opdigtet\)\.\n/);
-  for (const line of [/Visningen vises for brugeren/, /Visningen er svaret/, /Tekstkortet er kun til værter/, /Interaktiv Lasso-visning/, /Tekstkort:/]) assert.doesNotMatch(ct[0]!.text, line);
-  assert.equal(mt.length, 2, "/mcp: resumé og tekstkort");
+  for (const line of [/Visningen vises for brugeren/, /Visningen er svaret/, /Link til visningen/, /Tekstkort/]) assert.doesNotMatch(ct[0]!.text, line);
+  assert.equal(mt.length, 1, "/mcp: kun resuméet (intet tekstkort)");
   assert.match(mt[0]!.text, /^Visningen vises for brugeren nu og er hele svaret/);
   assert.match(mt[0]!.text, /OBS: Demodata \(opdigtede virksomheder\)/);
   assert.match(mt[0]!.text, /Visningen er svaret: skriv ingen tekst i chatten/);
-  assert.match(mt[0]!.text, /Interaktiv Lasso-visning \(link til brugeren\): https:\/\/lasso\.test\//);
-  assert.match(mt[1]!.text, /^Tekstkort:\n/);
+  assert.match(mt[0]!.text, /\nLink til visningen: https:\/\/lasso\.test\//);
+  assert.doesNotMatch(mt[0]!.text, /Tekstkort/);
   // Tallene er de samme; chatten er kortere.
   assert.ok(ct[0]!.text.length < mt[0]!.text.length - 250, `${ct[0]!.text.length} vs ${mt[0]!.text.length}`);
   const sc = (r: unknown) => Object.keys((r as { structuredContent: object }).structuredContent).sort();
   assert.deepEqual(sc(chat), sc(mcp));
-  assert.ok((chat as { structuredContent: { card?: string } }).structuredContent.card, "tekstkortet står stadig i structuredContent");
+  const { links, card } = (chat as { structuredContent: { links: { open?: string; share: string }; card?: string } }).structuredContent;
+  assert.equal(card, undefined, "intet tekstkort i structuredContent");
+  assert.match(links.share, /^https:\/\/lasso\.test\//);
+  assert.match(links.open!, /^https:\/\/lasso\.test\/portal\?aabn=[^&]+&fokus=oekonomi&fastgoer=1$/);
 });
 
 test("/mcp er byte-identisk: instruktioner og render_view's beskrivelse (pinnet hash)", async () => {
   const client = await clientFor("mcp");
   const instr = client.getInstructions() ?? "";
   assert.equal(instr, `${ROUTING}\n\n${MCP_RULES}`);
-  // Opdater hashen her, når teksten til Claude.ai ændres med vilje.
-  assert.equal(sha(instr), "df28a00854e1b33b");
+  // Opdater hashen her, når teksten til Claude.ai ændres med vilje (senest: tekstkortet udgik, kun linket til hosts uden visning).
+  assert.equal(sha(instr), "3f5069507105db40");
   const rv = (await client.listTools()).tools.find((t) => t.name === "render_view")!;
   assert.equal(sha(rv.description!), "315b3814a067317a");
 });
