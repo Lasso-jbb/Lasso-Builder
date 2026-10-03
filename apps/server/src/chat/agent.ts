@@ -12,6 +12,7 @@ import { DATASET_META_KEY, type Dataset, type ViewSpec } from "@lasso/spec";
 import type { Config } from "../config.js";
 import { createMcpServer, ROUTING, type McpContext } from "../mcp/server.js";
 import { contextText, type ChatContext } from "./context.js";
+import { CHAT_TOOLS, chatToolByName } from "./tools.js";
 
 /**
  * Lassos egen chat (docs/chat.md): Claude via Claude Platform med NØJAGTIG de samme værktøjer og
@@ -167,9 +168,11 @@ export async function runChat({ ctx, config, model, history, message, context, e
   const messages: BetaMessageParam[] = [...history, { role: "user", content: [{ type: "text", text: contextText(context) }, { type: "text", text: message }] }];
   const { client, close } = await connect({ ...ctx, host: "chat" });
   try {
-    const tools = await chatTools(client);
+    // MCP-værktøjerne først, så chattens egne (chat/tools.ts) i fast rækkefølge: listen er ens fra kald til kald.
+    const tools = [...(await chatTools(client)), ...CHAT_TOOLS.map((t) => ({ tool: t.tool, title: t.title }))];
     const titles = new Map(tools.map((t) => [t.tool.name, t.title]));
     const toolList = withCacheMarker(tools.map((t) => t.tool), config);
+    const toolCtx = { mcp: ctx, context };
     // Routingen deles med /mcp; reglerne er chattens egne (MCP_RULES gælder kun Claude.ai).
     const system = `${ROUTING}\n\n${CHAT_RULES}`;
 
@@ -210,6 +213,13 @@ export async function runChat({ ctx, config, model, history, message, context, e
       // Alle værktøjssvar i én brugerbesked (parallelle kald), fejl som is_error.
       const results: BetaToolResultBlockParam[] = await Promise.all(
         uses.map(async (u): Promise<BetaToolResultBlockParam> => {
+          // Chattens egne værktøjer (find_entity …) giver kun tekst til modellen, aldrig en visning.
+          const own = chatToolByName(u.name);
+          if (own) {
+            const r = await own.run(u.input ?? {}, toolCtx).catch((e: unknown) => ({ text: e instanceof Error ? e.message : String(e), isError: true }));
+            if (r.isError) emit({ type: "tool_error", id: u.id, name: u.name, message: r.text });
+            return { type: "tool_result", tool_use_id: u.id, content: r.text, ...(r.isError ? { is_error: true } : {}) };
+          }
           let result: CallToolResult;
           try {
             result = (await client.callTool({ name: u.name, arguments: (u.input ?? {}) as Record<string, unknown> })) as CallToolResult;

@@ -56,6 +56,11 @@ const fakeModel: ModelCall = async (params, onText) => {
   return message([{ type: "tool_use", id: `tu_${calls.length}`, name: "show_company", input: { company: "99000001", question: "Hvordan går det?" } }], "tool_use");
 };
 
+const useTool = (name: string, input: Record<string, unknown>, text?: string): Step => (_p, onText) => {
+  if (text) onText(text);
+  return message([...(text ? [{ type: "text", text }] : []), { type: "tool_use", id: `tu_${calls.length}`, name, input }], "tool_use");
+};
+
 /** Tekstblokkene i den seneste brugerbesked, modellen fik. */
 const lastUserTexts = (params: MessageCreateParamsNonStreaming): string[] => {
   const user = [...params.messages].reverse().find((m) => m.role === "user")!;
@@ -121,6 +126,8 @@ test("chat: værktøjet kører gennem MCP; browseren får visningen, modellen ku
   const names = first.tools!.map((t) => (t as { name: string }).name);
   assert.ok(names.includes("show_company") && names.includes("render_view"));
   assert.ok(!names.includes("resolve_view"), "resolve_view er kun for appen");
+  // Chattens egne værktøjer står sidst, i fast rækkefølge (prompt-cachen).
+  assert.equal(names.indexOf("find_entity"), names.length - 1);
   // Haiku (standard) får hverken effort eller fallbacks.
   assert.equal(first.model, "claude-haiku-4-5");
   assert.equal(first.output_config, undefined);
@@ -224,4 +231,20 @@ test("modelOptions: effort og fallbacks kun til de større modeller", () => {
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default",
   });
+});
+
+test("chat: find_entity giver modellen kandidater (åbne faner først) uden en visning", async () => {
+  script.push(useTool("find_entity", { kind: "person", query: "Gitte" }), sayText("Fandt hende."));
+  const ctx = { active: { kind: "global" }, open: [{ kind: "person", id: "CVR-3-4000000007", name: "Gitte Prøve" }] };
+  const { events } = await chat({ message: "vis alt om Gitte", context: ctx });
+  assert.deepEqual(
+    events.map((e) => e.type),
+    ["tool", "text", "done"],
+  );
+  const result = (calls.at(-1)!.messages.at(-1)!.content as { type: string; content: string }[])[0]!;
+  assert.match(result.content, /^1 person for "Gitte".*\nCVR-3-4000000007 \| Gitte Prøve \| åben fane$/s);
+
+  script.push(useTool("find_entity", { kind: "person", query: "" }), sayText("Hov."));
+  const bad = await chat({ message: "vis alt om" });
+  assert.equal(bad.events[1]?.type, "tool_error");
 });

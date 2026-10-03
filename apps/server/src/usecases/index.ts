@@ -34,3 +34,4 @@ export {
   type SavePageInput,
   type SavePageOutcome,
 } from "./pages.js";
+export { candidatesAsText, resolveEntity, type EntityCandidate, type OpenEntity, type ResolveEntityInput } from "./resolve.js";
