@@ -85,7 +85,9 @@ export function Text({ text }: { text: string }) {
   return (
     <div className="lasso-chat__text">
       {parseBlocks(text).map((b, i) =>
-        b.kind === "ul" ? (
+        b.kind === "links" ? (
+          <p key={i}>{b.items.map((l) => l.text).join(" ")}</p>
+        ) : b.kind === "ul" ? (
           <ul key={i}>
             {b.items.map((item, k) => (
               <li key={k}>

@@ -1,6 +1,42 @@
 import type { Dataset, ViewSpec } from "@lasso/spec";
 import type { LookupResult } from "../portal/api.js";
-import type { ChatContext, ChatEntityRef, ChatEvent, ChatState, ChoiceOption, ChoicePick, Placement, ViewForm } from "../chat/stream.js";
+import type { ChatContext, ChatEntityRef, ChoicePick } from "../chat/stream.js";
+import { LASSO_TAB, type ItemKind, type OpenItem, type PendingChoice, type Shown } from "./thread.js";
+
+/** Samtalens tråde, svar, turreducere og cache (thread.ts) bor i thread.ts; her genudgives det, portalen importerer herfra. */
+export {
+  CHAT_CACHE_KEY,
+  CHAT_CACHE_TTL_MS,
+  LASSO_TAB,
+  answerText,
+  applyEvent,
+  applyTurnEvent,
+  clearCache,
+  currentTurn,
+  dropTabDatasets,
+  finishTurn,
+  globalTitleFallback,
+  isPureText,
+  lastView,
+  lastViewIn,
+  mapAllViews,
+  mapViews,
+  moveTurn,
+  newAnswer,
+  pendingChoice,
+  recencyOrder,
+  replaceLastView,
+  resetConversation,
+  restoreCache,
+  saveCache,
+  serializeCache,
+  settleTurn,
+  skipChoice,
+  startTurn,
+  undoMove,
+  withLastView,
+} from "./thread.js";
+export type { Answer, AnswerPart, ChatCache, ChatCacheState, ItemKind, Notice, OpenItem, PendingChoice, Shown, TabChat, Threads, Turn, TurnDone } from "./thread.js";
 
 /**
  * Den nye portal (prototypen "lasso-portal4.html"): rene hjælpefunktioner uden React, så de kan testes
@@ -8,95 +44,8 @@ import type { ChatContext, ChatEntityRef, ChatEvent, ChatState, ChoiceOption, Ch
  * Et firma eller en person har modulfanerne (fokus) og fanen med Lasso-mærket: det, chatten hentede.
  */
 
-export type ItemKind = "company" | "person" | "result";
-
-/** "lasso" = fanen med Lasso-mærket: det, chatten senest hentede om siden. */
-export const LASSO_TAB = "lasso";
-
-export interface Shown {
-  spec: ViewSpec;
-  dataset: Dataset;
-  /** Serverens resumé af det viste (kun moduler); sendes til chatten som "det, brugeren ser". */
-  summary?: string;
-}
-
 /** Serveren tager højst så mange tegn resumé (apps/server/src/chat/context.ts). */
 export const VIEW_SUMMARY_MAX = 4000;
-
-/** En åben fane: et firma, en person eller et resultat. key = Lasso-ID, eller "result:<n>". */
-export interface OpenItem {
-  key: string;
-  kind: ItemKind;
-  name: string;
-  /** Linjen under navnet i fanens tooltip og i mobilarket, fx "Bagsværd, CVR 24256790". */
-  sub?: string;
-  /** Det valgte modul (fokus) eller LASSO_TAB. Resultater står altid på LASSO_TAB. */
-  tab: string;
-}
-
-/** Ét stykke af svaret: tekst eller en visning, i den rækkefølge de kom. */
-export type AnswerPart = { kind: "text"; text: string } | ({ kind: "view"; id: string; form: ViewForm } & Shown);
-
-/** Hvad chatten svarede på en fane: spørgsmålet og delene (tekst og visninger) i rækkefølge. */
-export interface Answer {
-  question: string;
-  parts: AnswerPart[];
-  /** "Vis virksomhed …", mens værktøjet henter. */
-  status?: string;
-  error?: string;
-  pending: boolean;
-  /** Hvor serveren skriver svaret (første hændelse i turen). */
-  placement?: Placement;
-  /** Valgmenuen, serveren bad om; står, til brugeren vælger eller spørger om noget andet. */
-  choice?: PendingChoice;
-}
-
-export const newAnswer = (question: string): Answer => ({ question, parts: [], pending: true });
-
-/** Den seneste visning i svaret: den, handlinger (filtre, opdatér, PDF) virker på. */
-export function lastView(answer: Answer | undefined): Shown | undefined {
-  const v = answer?.parts.filter((p): p is AnswerPart & { kind: "view" } => p.kind === "view").at(-1);
-  return v ? { spec: v.spec, dataset: v.dataset } : undefined;
-}
-
-/** Erstatter den seneste visning (fx efter et filterskift). */
-export function withLastView(answer: Answer, shown: Shown): Answer {
-  const i = answer.parts.map((p) => p.kind).lastIndexOf("view");
-  if (i < 0) return answer;
-  return { ...answer, parts: answer.parts.map((p, k) => (k === i && p.kind === "view" ? { ...p, ...shown } : p)) };
-}
-
-/** Alle visninger i svaret ændret (fx Gem/Gemt i datasættet). */
-export function mapViews(answer: Answer, fn: (shown: Shown) => Shown): Answer {
-  return { ...answer, parts: answer.parts.map((p) => (p.kind === "view" ? { ...p, ...fn({ spec: p.spec, dataset: p.dataset }) } : p)) };
-}
-
-/** Ren reducer: én hændelse fra /api/chat lagt på svaret. Tekst føjes til den sidste tekstdel; visninger kommer i rækkefølge. */
-export function applyEvent(answer: Answer, e: ChatEvent): Answer {
-  switch (e.type) {
-    case "placement": {
-      const { type: _t, ...placement } = e;
-      return { ...answer, placement };
-    }
-    case "text": {
-      const last = answer.parts.at(-1);
-      if (last?.kind === "text") return { ...answer, parts: [...answer.parts.slice(0, -1), { kind: "text", text: last.text + e.text }] };
-      return { ...answer, parts: [...answer.parts, { kind: "text", text: e.text }] };
-    }
-    case "tool":
-      return { ...answer, status: `${e.title} …` };
-    case "tool_error":
-      return { ...answer, status: undefined };
-    case "view":
-      return { ...answer, status: undefined, parts: [...answer.parts, { kind: "view", id: e.id, form: e.form, spec: e.spec, dataset: e.dataset }] };
-    case "choice":
-      return { ...answer, status: undefined, choice: { id: e.id, question: e.question, options: e.options, allowFreeText: e.allowFreeText } };
-    case "error":
-      return { ...answer, status: undefined, error: e.message };
-    case "done":
-      return { ...answer, status: undefined, pending: false, placement: e.placement };
-  }
-}
 
 export function openItem(list: readonly OpenItem[], item: OpenItem): OpenItem[] {
   const i = list.findIndex((o) => o.key === item.key);
@@ -133,14 +82,6 @@ export function headLines(kind: ItemKind, id: string, ds: Dataset | undefined): 
   const address = a ? [a.street, [a.zip, a.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") : "";
   const contact = [c.cvr ? `CVR: ${c.cvr}` : "", c.phone ? `Telefon: ${c.phone}` : "", c.website ? c.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "") : ""].filter(Boolean).join(", ");
   return [address, contact].filter(Boolean);
-}
-
-/** Valgmenuen, serveren bad om ("choice"-hændelsen): vises over spørgefeltet, til brugeren vælger. */
-export interface PendingChoice {
-  id: string;
-  question: string;
-  options: ChoiceOption[];
-  allowFreeText: boolean;
 }
 
 /** Navnet på en resultatfane uden bedre navn: spørgsmålet afkortet til højst 40 tegn ved et ordskel. */
@@ -222,11 +163,6 @@ export function choiceSend(choice: PendingChoice, selection: ChoiceSelection, ot
   const text = otherText.trim();
   const pick = freeTextPick(choice);
   return text && pick ? { message: text, pick } : null;
-}
-
-/** "Spring over": menuen lukkes på svaret, og intet sendes (ingen tur til modellen). */
-export function skipChoice(answer: Answer): Answer {
-  return answer.choice ? { ...answer, choice: undefined } : answer;
 }
 
 export type ChoiceKey = { kind: "select"; selection: ChoiceSelection } | { kind: "send" } | { kind: "skip" };
@@ -372,118 +308,5 @@ export function saveRecent(storage: Pick<Storage, "setItem"> | undefined, list: 
   }
 }
 
-/* ---------- chatten i browseren (docs/chat.md): samtalen overlever en genindlæsning ---------- */
-
-/**
- * Serveren gemmer ingen samtaler, så portalen gemmer selv samtalen (historik + signatur), de åbne faner og det
- * seneste svar pr. fane i localStorage, bundet til brugeren og med en udløbstid. Modulernes data gemmes ikke
- * (de hentes igen). Historikken er den trimmede, serveren gav i "done".
- */
-export const CHAT_CACHE_KEY = "lasso-chat";
-export const CHAT_CACHE_TTL_MS = 24 * 60 * 60_000;
-
-export interface ChatCache {
-  v: 1;
-  /** Brugerens id (boot.user.id): en anden bruger i samme browser får ikke samtalen. */
-  user: string;
-  savedAt: number;
-  chat: ChatState;
-  open: OpenItem[];
-  active: string | null;
-  answers: Record<string, Answer>;
-}
-
-export type ChatCacheState = Pick<ChatCache, "chat" | "open" | "answers" | "active">;
-
-/** Det, der gemmes: svar uden status og uden en afbrudt hentning (pending), kun for faner, der stadig er åbne. */
-export function serializeCache(user: string, state: ChatCacheState, now: number): ChatCache {
-  const keys = new Set(state.open.map((o) => o.key));
-  const answers = Object.fromEntries(
-    Object.entries(state.answers)
-      .filter(([k, a]) => keys.has(k) && !a.pending)
-      .map(([k, a]) => [k, { ...a, status: undefined }]),
-  );
-  return { v: 1, user, savedAt: now, chat: state.chat, open: [...state.open], active: state.active, answers };
-}
-
-/** Samtalen fra lageret, hvis den er brugerens egen og ikke udløbet; ellers null. */
-export function restoreCache(raw: string | null | undefined, user: string, now: number, ttl = CHAT_CACHE_TTL_MS): ChatCacheState | null {
-  if (!raw) return null;
-  try {
-    const c = JSON.parse(raw) as Partial<ChatCache>;
-    if (c.v !== 1 || c.user !== user || typeof c.savedAt !== "number" || now - c.savedAt > ttl || now < c.savedAt) return null;
-    if (!Array.isArray(c.open) || !c.chat || !Array.isArray(c.chat.history)) return null;
-    const open = c.open.filter((o): o is OpenItem => Boolean(o && typeof o.key === "string" && typeof o.name === "string" && typeof o.tab === "string"));
-    const answers = Object.fromEntries(Object.entries(c.answers ?? {}).filter(([, a]) => a && Array.isArray(a.parts)).map(([k, a]) => [k, { ...a, pending: false }]));
-    const active = typeof c.active === "string" && open.some((o) => o.key === c.active) ? c.active : (open.at(-1)?.key ?? null);
-    return { chat: { history: c.chat.history, ...(typeof c.chat.sig === "string" ? { sig: c.chat.sig } : {}) }, open, answers, active };
-  } catch {
-    return null;
-  }
-}
-
-/** Fanerne fra den, der har været aktiv længst siden, til den aktive: rækkefølgen, datasæt droppes i ved fuldt lager. */
-export function recencyOrder(open: readonly OpenItem[], visited: readonly string[], active: string | null): string[] {
-  const rank = new Map<string, number>();
-  [...visited, ...(active ? [active] : [])].forEach((k, i) => rank.set(k, i));
-  return open.map((o) => o.key).sort((a, b) => (rank.get(a) ?? -1) - (rank.get(b) ?? -1));
-}
-
-/**
- * Fanens datasæt ude af det gemte: visningerne i dens svar droppes (teksten og spørgsmålet bliver). En firma- eller
- * personfane, der stod på Lasso-svaret, står på Overblik ved genskabelsen, og den henter selv sit modul igen.
- */
-export function dropTabDatasets(cache: ChatCache, key: string): ChatCache {
-  const answer = cache.answers[key];
-  if (!answer || !answer.parts.some((p) => p.kind === "view")) return cache;
-  const stripped: Answer = { ...answer, parts: answer.parts.filter((p) => p.kind !== "view") };
-  return {
-    ...cache,
-    answers: { ...cache.answers, [key]: stripped },
-    open: cache.open.map((o) => (o.key === key && o.kind !== "result" && o.tab === LASSO_TAB ? { ...o, tab: "overblik" } : o)),
-  };
-}
-
-/** Samtalen glemt i det gemte: tom historik og ingen signatur (en afkortet historik ville ikke passe til signaturen), og åbne menuer lukkes (deres valg kan ikke bekræftes). */
-export function resetConversation(cache: ChatCache): ChatCache {
-  return { ...cache, chat: { history: [] }, answers: Object.fromEntries(Object.entries(cache.answers).map(([k, a]) => [k, a.choice ? { ...a, choice: undefined } : a])) };
-}
-
-/**
- * Gemmer samtalen. Historikken afkortes aldrig i det gemte: serverens signatur gælder præcis den historik, den gav
- * (HMAC over JSON), så en afkortet kopi ville give 400 ved hvert spørgsmål efter en genindlæsning. Er lageret fuldt
- * (QuotaExceeded): først droppes datasættene fra de mindst nyligt aktive faner ét ad gangen (order: ældste først;
- * fanen henter sit modul igen ved genskabelsen), så glemmes hele samtalen (tom historik, ingen signatur; faner og svar
- * bliver), og først til sidst springes gemningen over. Der prøves igen efter hvert trin.
- */
-export function saveCache(storage: Pick<Storage, "setItem"> | undefined, cache: ChatCache, order: readonly string[] = []): "saved" | "dropped" | "reset" | "skipped" {
-  if (!storage) return "skipped";
-  const tryWrite = (c: ChatCache): boolean => {
-    try {
-      storage.setItem(CHAT_CACHE_KEY, JSON.stringify(c));
-      return true;
-    } catch {
-      return false;
-    }
-  };
-  if (tryWrite(cache)) return "saved";
-  let next = cache;
-  for (const key of order) {
-    const smaller = dropTabDatasets(next, key);
-    if (smaller === next) continue;
-    next = smaller;
-    if (tryWrite(next)) return "dropped";
-  }
-  return tryWrite(resetConversation(next)) ? "reset" : "skipped";
-}
-
 /** Serveren kender ikke historikken (ændret, anden bruger eller ny hemmelighed): klienten skal begynde en ny samtale. */
 export const isUnrecognizedHistory = (status: number, message: string): boolean => status === 400 && /kunne ikke genkendes/.test(message);
-
-export function clearCache(storage: Pick<Storage, "removeItem"> | undefined): void {
-  try {
-    storage?.removeItem(CHAT_CACHE_KEY);
-  } catch {
-    // Uden lager er der intet at rydde.
-  }
-}
