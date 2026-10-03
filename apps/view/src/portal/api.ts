@@ -193,6 +193,11 @@ export function createPortalApi(onUnauthorized: () => void, fetcher: typeof fetc
       save: (body: SaveTemplateBody) => call<PageTemplate & { createdAt: string }>("POST", "/templates", body),
       remove: (id: string) => call<{ id: string; removed: true }>("DELETE", `/templates/${encodeURIComponent(id)}`),
       render: (id: string, entityId: string) => call<ViewResult>("GET", `/templates/${encodeURIComponent(id)}/render${query({ entity: entityId })}`),
+      /** Demobrugerens egne sider i browseren (portal2/localTemplates.ts): serveren forbereder specen (entiteten fjernet, titel) ... */
+      prepare: (body: { kind: "company" | "person"; spec: ViewSpec; entity: { kind: "company" | "person"; id: string } }) =>
+        call<{ title: string; subtitle?: string; spec: ViewSpec }>("POST", "/templates/prepare", body),
+      /** ... og tegner den med den aktive entitet (spec, dataset og summary som et modul). */
+      renderSpec: (body: { kind: "company" | "person"; spec: ViewSpec; entity: { kind: "company" | "person"; id: string } }) => call<ViewResult>("POST", "/templates/render", body),
     },
     /** En gemt visning fra MCP-appens "Åben i Lasso" (portal2/viewLink.ts). */
     visning: {

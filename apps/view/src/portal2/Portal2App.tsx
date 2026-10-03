@@ -69,6 +69,7 @@ import {
 import { AskField, BottomBar, DropButton, IconButton, LassoTab, MenuItem, ModuleTab, OpenTab, RemoveTemplateDialog, SearchEmpty, SearchField, SearchResultRow, SearchTabs, StatusFilterMenu, Suggestions, TemplatePin, TopTab } from "./parts.js";
 import { useElasticScroll } from "./elastic.js";
 import { runViewLink } from "./viewLink.js";
+import { localTemplates, serverTemplates } from "./localTemplates.js";
 import { createIdleSave } from "./idleSave.js";
 import { ChoicePanel } from "./ChoicePanel.js";
 import type { ViewPart } from "./chat/AnswerCard.js";
@@ -221,6 +222,12 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       }),
     [],
   );
+  // Egne sider: hos serveren for en logget ind bruger; i browseren for demobrugeren (serveren gemmer ikke for den, Jakob 03.10).
+  const tplApi = useMemo(() => ({ ...api.templates }), [api]);
+  const templatesBackend = useMemo(
+    () => (boot.user?.isDemo ? localTemplates(tplApi, storage(), boot.user.id) : serverTemplates(tplApi)),
+    [tplApi, boot.user?.isDemo, boot.user?.id],
+  );
   const item = open.find((o) => o.key === active);
   const itemRef = useRef(item);
   itemRef.current = item;
@@ -259,7 +266,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     setBusy(key, true);
     setFailed((f) => ({ ...f, [key]: "" }));
     try {
-      const r: ViewResult = isTemplateTab(tab) ? await api.templates.render(templateIdOf(tab), id) : kind === "company" ? await api.company(id, tab as Focus) : await api.person(id, tab as PersonFocus);
+      const r: ViewResult = isTemplateTab(tab) ? await templatesBackend.render(templateIdOf(tab), id) : kind === "company" ? await api.company(id, tab as Focus) : await api.person(id, tab as PersonFocus);
       put(key, { spec: r.spec, dataset: r.dataset, ...(r.summary ? { summary: r.summary } : {}) });
       const ent = entityOf(r.spec, r.dataset);
       if (ent) setOpen((l) => l.map((o) => (o.key === id ? { ...o, name: ent.name } : o)));
@@ -381,7 +388,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       // visning=…: den gemte visning bliver en egen side (eller den, der findes), og fanen skifter til modulet.
       if (deep.view && boot.user) {
         const view = deep.view;
-        void runViewLink({ kind: deep.kind, id: deep.id, view }, { visning: (id) => api.visning.get(id), saveTemplate: (body) => api.templates.save(body) }).then((r) => {
+        void runViewLink({ kind: deep.kind, id: deep.id, view }, { visning: (id) => api.visning.get(id), saveTemplate: (body) => templatesBackend.save(body) }).then((r) => {
           if (r.template) {
             addedTemplates.current.add(r.template.id);
             setTemplates((t) => [...t.filter((x) => x.id !== r.template!.id), r.template!]);
@@ -458,7 +465,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const reloadTemplates = useCallback(async () => {
     if (!boot.user) return;
     try {
-      const [c, p] = await Promise.all([api.templates.list("company"), api.templates.list("person")]);
+      const [c, p] = await Promise.all([templatesBackend.list("company"), templatesBackend.list("person")]);
       templatesLoaded.current = true;
       // En egen side, der blev gemt, mens listen blev hentet (fx fra et "Åben i Lasso"-link), bliver stående.
       setTemplates((prev) => {
@@ -468,7 +475,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     } catch {
       // Uden egne sider er modulrækken bare de indbyggede.
     }
-  }, [api, boot.user]);
+  }, [templatesBackend, boot.user]);
   useEffect(() => void reloadTemplates(), [reloadTemplates]);
   useEffect(() => {
     if (!templatesLoaded.current) return;
@@ -794,7 +801,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       return rest;
     });
     try {
-      const tpl = await api.templates.save({ kind: it.kind, title: templateTitle(part.spec, entityOf(part.spec, part.dataset)?.name ?? it.name), spec: part.spec, entity: { kind: it.kind, id: it.key } });
+      const tpl = await templatesBackend.save({ kind: it.kind, title: templateTitle(part.spec, entityOf(part.spec, part.dataset)?.name ?? it.name), spec: part.spec, entity: { kind: it.kind, id: it.key } });
       setTemplates((t) => [...t.filter((x) => x.id !== tpl.id), tpl]);
       // Ingen meddelelsesrække: den røde pin på det nye modul er bekræftelsen (Jakob 03.10).
       setOpen((l) => l.map((o) => (o.key === it.key ? { ...o, tab: templateTab(tpl.id) } : o)));
@@ -810,7 +817,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const removeTemplate = async (tpl: PageTemplate) => {
     setConfirmRemove(null);
     try {
-      await api.templates.remove(tpl.id);
+      await templatesBackend.remove(tpl.id);
       addedTemplates.current.delete(tpl.id);
       // Faner på modulet går tilbage til Overblik (effekten ovenfor), som henter sig selv, når den vises.
       setTemplates((t) => t.filter((x) => x.id !== tpl.id));

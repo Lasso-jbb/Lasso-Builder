@@ -39,14 +39,14 @@ test("Visningen findes allerede som egen side: intet gemmes, fanen skifter til d
   assert.deepEqual(r, { tab: "tpl:tpl-9" });
 });
 
-test("Fejl: udløbet visning, navnetjek (400), demobruger (403) og en anden entitet giver en kort dansk besked og Overblik", async () => {
+test("Fejl: udløbet visning, navnetjek (400), en afvisning (403) og en anden entitet giver en kort dansk besked og Overblik", async () => {
   const fail = (e: unknown) => ({ visning: async () => Promise.reject(e), saveTemplate: async () => ({ id: "x", kind: "company", title: "x" }) as PageTemplate });
   const link = { kind: "company" as const, id: ID, view: "abc" };
   assert.deepEqual(await runViewLink(link, fail(new PortalApiError(404, "Not found"))), { tab: "overblik", notice: "Visningen findes ikke længere. Bed om et nyt link." });
   assert.deepEqual(await runViewLink(link, fail(new PortalApiError(410, "Gone"))), { tab: "overblik", notice: "Visningen findes ikke længere. Bed om et nyt link." });
   const save = (e: unknown) => ({ visning: async () => stored(), saveTemplate: async () => Promise.reject(e) });
   assert.deepEqual(await runViewLink(link, save(new PortalApiError(400, "Navnet findes allerede."))), { tab: "overblik", notice: "Navnet findes allerede." });
-  assert.deepEqual(await runViewLink(link, save(new PortalApiError(403, "Forbidden"))), { tab: "overblik", notice: "Demobrugeren kan ikke tilføje moduler. Log ind med din egen bruger." });
+  assert.deepEqual(await runViewLink(link, save(new PortalApiError(403, "Forbidden"))), { tab: "overblik", notice: "Visningen kunne ikke tilføjes som modul." });
   assert.deepEqual(await runViewLink(link, save(new Error("netværk"))), { tab: "overblik", notice: "Visningen kunne ikke åbnes. Prøv linket igen." });
   const other = await runViewLink(link, { visning: async () => stored({ entity: { kind: "company", id: "CVR-1-99000002" } }), saveTemplate: async () => ({ id: "x", kind: "company", title: "x" }) });
   assert.equal(other.tab, "overblik");
