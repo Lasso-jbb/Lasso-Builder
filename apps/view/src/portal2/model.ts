@@ -1,5 +1,6 @@
 import type { Dataset, ViewSpec } from "@lasso/spec";
 import type { LookupResult } from "../portal/api.js";
+import type { ChatContext, ChatEntityRef, ChoiceOption, ChoicePick } from "../chat/stream.js";
 
 /**
  * Den nye portal (prototypen "lasso-portal4.html"): rene hjælpefunktioner uden React, så de kan testes
@@ -76,13 +77,37 @@ export function headLines(kind: ItemKind, id: string, ds: Dataset | undefined): 
   return [address, contact].filter(Boolean);
 }
 
+/** Valgmenuen, serveren bad om ("choice"-hændelsen): vises over spørgefeltet, til brugeren vælger. */
+export interface PendingChoice {
+  id: string;
+  question: string;
+  options: ChoiceOption[];
+  allowFreeText: boolean;
+}
+
+const entityRef = (o: OpenItem): ChatEntityRef | null => (o.kind === "result" ? null : { kind: o.kind, id: o.key, name: o.name });
+
 /**
- * Beskeden til chatten. Kigger brugeren på et andet firma eller en anden person end den, samtalen sidst
- * handlede om (fx efter et klik i søgningen), får Claude det at vide, så "hvem ejer den?" virker.
+ * Konteksten til chatten (docs/chat.md): den fane, brugeren står på (et resultat tæller som globalt), de
+ * åbne firmaer og personer (højst 20), og det valg, brugeren lige traf i menuen. Serveren svarer altid i
+ * den aktive kontekst, så "hvem ejer den?" virker uden at navnet gentages.
  */
-export function messageFor(text: string, item: OpenItem | undefined, lastEntityId: string | undefined): string {
-  if (!item || item.kind === "result" || item.key === lastEntityId) return text;
-  return `${text}\n\n(Kontekst: brugeren kigger på ${item.name}, ${item.key}.)`;
+export function contextFor(item: OpenItem | undefined, open: readonly OpenItem[], pick?: ChoicePick): ChatContext {
+  const active: ChatContext["active"] = !item ? { kind: "global" } : item.kind === "result" ? { kind: "global", title: item.name } : { kind: item.kind, id: item.key, name: item.name, tab: item.tab };
+  const refs = open.map(entityRef).filter((e): e is ChatEntityRef => e !== null).slice(0, 20);
+  return { active, open: refs, ...(pick ? { choice: pick } : {}) };
+}
+
+/** Et punkt i menuen: beskeden, der sendes (punktets prompt, ellers teksten), og valget til konteksten. */
+export function choiceMessage(choice: PendingChoice, index: number): { message: string; pick: ChoicePick } | null {
+  const option = choice.options[index];
+  if (!option) return null;
+  return { message: option.action.prompt ?? option.label, pick: { id: choice.id, index, action: option.action } };
+}
+
+/** Fritekst i stedet for et punkt: beskeden er det, brugeren skrev. */
+export function freeTextPick(choice: PendingChoice): ChoicePick {
+  return { id: choice.id, free: true };
 }
 
 /** Forslagene under spørgefeltet: de følger siden, man står på (firma eller person, og modulet). */

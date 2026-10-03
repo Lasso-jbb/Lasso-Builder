@@ -15,8 +15,8 @@ import {
   closeItem,
   headLines,
   LASSO_TAB,
+  contextFor,
   loadRecent,
-  messageFor,
   openItem,
   saveRecent,
   searchCounts,
@@ -111,7 +111,6 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
 
   const chat = useRef<ChatState>({ history: [] });
   const persistTheme = useRef(true);
-  const lastEntity = useRef<string | undefined>(undefined);
   const abort = useRef<AbortController | null>(null);
   const resultSeq = useRef(0);
   const lookupSeq = useRef(0);
@@ -138,6 +137,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const item = open.find((o) => o.key === active);
   const itemRef = useRef(item);
   itemRef.current = item;
+  const openRef = useRef(open);
+  openRef.current = open;
 
   useEffect(() => {
     document.title = item ? `${item.name}, Lasso` : "Lasso";
@@ -398,7 +399,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     setDraft("");
     setAskOpen(false);
     const here = itemRef.current;
-    const message = messageFor(text, here, lastEntity.current);
+    // Serveren svarer i den fane, man står på (docs/chat.md): den og de åbne faner sendes som kontekst.
+    const context = contextFor(here, openRef.current);
     // Svaret hører til den fane, man står på; står man på forsiden eller et resultat, til en ny resultatfane.
     let key: string;
     if (here && here.kind !== "result") {
@@ -417,7 +419,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     abort.current = ctrl;
     try {
       await streamChat(
-        { message, history: chat.current.history, sig: chat.current.sig },
+        { message: text, context, history: chat.current.history, sig: chat.current.sig },
         (e) => {
           switch (e.type) {
             case "text":
@@ -454,7 +456,6 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
                 if (ent) setOpen((l) => l.map((o) => (o.key === ent.id ? { ...o, name: ent.name } : o)));
                 else setOpen((l) => l.map((o) => (o.key === current ? { ...o, name: e.spec.title } : o)));
               }
-              if (ent) lastEntity.current = ent.id;
               break;
             }
             case "error":

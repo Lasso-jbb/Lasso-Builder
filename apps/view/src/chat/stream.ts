@@ -20,6 +20,38 @@ export interface ChatState {
   sig?: string;
 }
 
+/* ---------- kontekst (apps/server/src/chat/context.ts) ---------- */
+
+export interface ChatEntityRef {
+  kind: "company" | "person";
+  id: string;
+  name: string;
+}
+
+/** Det, et punkt i valgmenuen gør: svaret skrives her, på en anden fane (entity) eller globalt. */
+export interface ChoiceAction {
+  placement: "current" | "entity" | "global";
+  entity?: ChatEntityRef;
+  focus?: string;
+  /** Beskeden, der sendes, når punktet vælges (ellers label). */
+  prompt?: string;
+}
+
+export interface ChoiceOption {
+  label: string;
+  action: ChoiceAction;
+}
+
+/** Brugerens valg i menuen, sendt med næste spørgsmål: et punkt (index + dets action) eller fritekst. */
+export type ChoicePick = { id: string; index: number; action: ChoiceAction } | { id: string; free: true };
+
+/** Den fane, brugeren står på, de åbne faner og et evt. valg. Serveren svarer altid i den aktive kontekst. */
+export interface ChatContext {
+  active: (ChatEntityRef & { tab?: string }) | { kind: "global"; title?: string };
+  open: ChatEntityRef[];
+  choice?: ChoicePick;
+}
+
 /** Deler en tekstbuffer i hele SSE-blokke; resten (en halv blok) gives tilbage til næste chunk. */
 export function splitSse(buffer: string): { events: ChatEvent[]; rest: string } {
   const blocks = buffer.split("\n\n");
@@ -52,7 +84,7 @@ export class ChatHttpError extends Error {
 
 /** Sender ét spørgsmål og kalder onEvent for hver hændelse, til svaret er færdigt. */
 export async function streamChat(
-  body: { message: string } & Partial<ChatState>,
+  body: { message: string; context?: ChatContext } & Partial<ChatState>,
   onEvent: (e: ChatEvent) => void,
   { signal, fetcher = (...a) => fetch(...a) }: { signal?: AbortSignal; fetcher?: typeof fetch } = {},
 ): Promise<void> {

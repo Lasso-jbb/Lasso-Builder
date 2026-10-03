@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Dataset, ViewSpec } from "@lasso/spec";
 import type { LookupResult } from "../portal/api.js";
-import { addRecent, askPlaceholder, closeItem, headLines, highlight, loadRecent, messageFor, openItem, searchCounts, searchRows, suggestions, withoutHead, type OpenItem } from "./model.js";
+import { addRecent, askPlaceholder, choiceMessage, closeItem, contextFor, freeTextPick, headLines, highlight, loadRecent, openItem, searchCounts, searchRows, suggestions, withoutHead, type OpenItem, type PendingChoice } from "./model.js";
 
 const novo: OpenItem = { key: "CVR-1-24256790", kind: "company", name: "NOVO NORDISK A/S", tab: "overblik" };
 const lasso: OpenItem = { key: "CVR-1-34580820", kind: "company", name: "LASSO X A/S", tab: "overblik" };
@@ -42,11 +42,37 @@ test("headLines: adresse og CVR-linje som i prototypen", () => {
   assert.deepEqual(headLines("result", "result:1", ds), []);
 });
 
-test("messageFor: Claude får at vide, hvilken side brugeren kigger på, når den har skiftet", () => {
-  assert.equal(messageFor("Hvem ejer den?", novo, novo.key), "Hvem ejer den?");
-  assert.match(messageFor("Hvem ejer den?", novo, undefined), /Kontekst: brugeren kigger på NOVO NORDISK A\/S, CVR-1-24256790/);
-  assert.equal(messageFor("Hej", undefined, undefined), "Hej");
-  assert.equal(messageFor("Hej", { key: "result:1", kind: "result", name: "Søgning", tab: "lasso" }, undefined), "Hej");
+test("contextFor: den aktive fane, de åbne firmaer og personer, og valget", () => {
+  const result: OpenItem = { key: "result:1", kind: "result", name: "Søgning: lasso", tab: "lasso" };
+  const open = [novo, mette, result];
+  assert.deepEqual(contextFor({ ...novo, tab: "ejerskab" }, open), {
+    active: { kind: "company", id: novo.key, name: novo.name, tab: "ejerskab" },
+    open: [
+      { kind: "company", id: novo.key, name: novo.name },
+      { kind: "person", id: mette.key, name: mette.name },
+    ],
+  });
+  assert.deepEqual(contextFor(undefined, []), { active: { kind: "global" }, open: [] });
+  assert.deepEqual(contextFor(result, open).active, { kind: "global", title: "Søgning: lasso" });
+  assert.equal(contextFor(undefined, Array.from({ length: 30 }, (_, i) => ({ ...novo, key: `CVR-1-${i}` }))).open.length, 20);
+  const pick = { id: "toolu_1", free: true as const };
+  assert.deepEqual(contextFor(novo, [novo], pick).choice, pick);
+});
+
+test("choiceMessage: punktets prompt (ellers teksten) og valget med punktets action", () => {
+  const choice: PendingChoice = {
+    id: "toolu_1",
+    question: "Hvad vil du se?",
+    options: [
+      { label: "Alt om Mette Holm", action: { placement: "entity", entity: { kind: "person", id: mette.key, name: mette.name }, focus: "overblik", prompt: "Vis alt om Mette Holm (CVR-3-4000123)" } },
+      { label: "Overordnet indblik her", action: { placement: "current" } },
+    ],
+    allowFreeText: true,
+  };
+  assert.deepEqual(choiceMessage(choice, 0), { message: "Vis alt om Mette Holm (CVR-3-4000123)", pick: { id: "toolu_1", index: 0, action: choice.options[0]!.action } });
+  assert.equal(choiceMessage(choice, 1)!.message, "Overordnet indblik her");
+  assert.equal(choiceMessage(choice, 2), null);
+  assert.deepEqual(freeTextPick(choice), { id: "toolu_1", free: true });
 });
 
 test("forslag og pladsholder følger fanen", () => {
