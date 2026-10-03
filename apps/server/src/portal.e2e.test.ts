@@ -602,11 +602,12 @@ test("/api/portal/templates: entitetens navn fjernes fra titlerne, hoved og opf�
   const spec = (extra: object = {}, components: unknown[] = comps) => ({ version: 2, kind: "custom", title: "Overblik, Eksempel Byg A/S", layout: "dashboard", criteria: [], components, ...extra });
   const made = await json<TemplateJson>(await api("/templates", { method: "POST", body: { kind: "company", title: "Eksempel Byg A/S", subtitle: "Kort – Eksempel Byg", spec: spec(), entity }, cookie: pia }));
   // Titlen var kun navnet: "Side"; ' – Eksempel Byg' er klippet af undertitlen.
-  assert.equal(made.title, "Side");
+  // Titlen var kun navnet: sidens egen (strippede) titel "Overblik" bruges, og da den er et indbygget modulnavn, får den et tillæg.
+  assert.equal(made.title, "Overblik, fra samtalen");
   assert.equal(made.subtitle, "Kort");
   const shown = await json<ViewBody>(await api(`/templates/${made.id}/render?entity=CVR-1-99000002`, { cookie: pia }));
   assert.deepEqual(shown.spec.components.map((c) => c.type), ["LassoKeyFigureCards"], "hoved og opfølgende spørgsmål er væk");
-  assert.equal(shown.spec.title, "Side");
+  assert.equal(shown.spec.title, "Overblik, fra samtalen");
   await json(await api(`/templates/${made.id}`, { method: "DELETE", cookie: pia }));
   // Navnet i en komponents tekst: 400 på dansk.
   const leaky = spec({}, [{ type: "LassoRanking", companies: ["CVR-1-99000001", "CVR-1-99000004"], title: "Eksempel Byg A/S er størst" }]);
@@ -636,11 +637,32 @@ test("/api/portal/templates: CVR, by og gade fra Lasso klippes af titler og afvi
 test("/api/portal/templates: en undertitel, der er sidens egen, gemmes ikke; postnummeret klippes", async () => {
   const pia = piaCookie;
   const entity = { kind: "company", id: "CVR-1-99000001" };
-  const spec = { version: 2, kind: "custom", title: "Overblik 8600", subtitle: "genereret i dag kl. 09:52", layout: "dashboard", criteria: [], components: [{ type: "LassoKeyFigureCards", company: "CVR-1-99000001" }] };
-  const made = await json<TemplateJson>(await api("/templates", { method: "POST", body: { kind: "company", title: "Overblik 8600", subtitle: "genereret i dag kl. 09:52", spec, entity }, cookie: pia }));
+  const spec = { version: 2, kind: "custom", title: "Nøgletal 8600", subtitle: "genereret i dag kl. 09:52", layout: "dashboard", criteria: [], components: [{ type: "LassoKeyFigureCards", company: "CVR-1-99000001" }] };
+  const made = await json<TemplateJson>(await api("/templates", { method: "POST", body: { kind: "company", title: "Nøgletal 8600", subtitle: "genereret i dag kl. 09:52", spec, entity }, cookie: pia }));
   assert.equal(made.subtitle, undefined);
-  assert.equal(made.title, "Overblik");
+  assert.equal(made.title, "Nøgletal");
   const shown = await json<ViewBody>(await api(`/templates/${made.id}/render?entity=CVR-1-99000002`, { cookie: pia }));
   assert.equal(shown.spec.subtitle, undefined);
   await json(await api(`/templates/${made.id}`, { method: "DELETE", cookie: pia }));
+});
+
+test("/api/portal/templates: en side med et indbygget modulnavn får tillægget 'fra samtalen'; titlen falder tilbage på undertitlen; render henter entitetens data", async () => {
+  const pia = piaCookie;
+  const entity = { kind: "company", id: "CVR-1-99000001" };
+  const cards = [{ type: "LassoKeyFigureCards", company: "CVR-1-99000001" }];
+  const spec = (title: string, subtitle?: string) => ({ version: 2, kind: "company", title, ...(subtitle ? { subtitle } : {}), layout: "dashboard", criteria: [], components: cards });
+  // B: samme navn som det indbyggede modul (også uden forskel på store/små bogstaver).
+  const own = await json<TemplateJson>(await api("/templates", { method: "POST", body: { kind: "company", title: "ejerskab", spec: spec("Ejerskab"), entity }, cookie: pia }));
+  assert.equal(own.title, "ejerskab, fra samtalen");
+  // A: titlen er kun navnet; undertitlen (fokusetiketten) bruges, og et navn der ikke er et modulnavn får intet tillæg.
+  const fromSub = await json<TemplateJson>(await api("/templates", { method: "POST", body: { kind: "company", title: "Eksempel Byg A/S", spec: spec("Eksempel Byg A/S", "Ejerskab"), entity }, cookie: pia }));
+  assert.equal(fromSub.title, "Ejerskab, fra samtalen");
+  // C: render giver entitetens stamdata og vurdering som en modulside, også uden et hoved i skabelonen.
+  const shown = await json<ViewBody & { dataset: { valuations?: Record<string, unknown> } }>(await api(`/templates/${own.id}/render?entity=CVR-1-99000002`, { cookie: pia }));
+  assert.equal(shown.dataset.companies["CVR-1-99000002"]?.name, "Eksempel Revision Midt ApS");
+  assert.deepEqual(Object.keys(shown.dataset.companies), ["CVR-1-99000002"]);
+  assert.ok(shown.spec.components.every((c) => c.type !== "LassoCompanyHead"), "hovedet hentes med, men vises ikke");
+  const direct = await json<ViewBody & { dataset: { valuations?: Record<string, unknown> } }>(await api("/company/CVR-1-99000002?focus=ejerskab", { cookie: pia }));
+  assert.deepEqual(Object.keys(shown.dataset.valuations ?? {}), Object.keys(direct.dataset.valuations ?? {}), "samme vurderinger som modulsiden");
+  for (const t of [own, fromSub]) await json(await api(`/templates/${t.id}`, { method: "DELETE", cookie: pia }));
 });
