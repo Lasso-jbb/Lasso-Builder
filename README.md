@@ -29,7 +29,7 @@ Modellen skriver aldrig HTML. Den sender en JSON-spec, og Lassos kode henter dat
 | `save_page` | Gemmer én virksomhed eller person (CVR, Lasso-ID eller navn) på brugerens egen liste, med valgfri note og focus. Gemmes den igen, flyttes den øverst. |
 | `list_saved_pages` | Viser brugerens gemte sider (nyeste først) som Lasso-visning med åbn og fjern. |
 | `remove_saved_page` | Fjerner en side fra listen (Lasso-ID, CVR eller navnet på en gemt side). |
-| _alle visningsværktøjer_ | `structuredContent.links`: `share` (altid: det signerede link til netop denne visning, eller en gemt visning `/v/…` med visibility link) og `open` (kun når visningen handler om én virksomhed eller person: `/portal?aabn=<lassoId>&fokus=<fokus>&fastgoer=1`). Der er intet tekstkort: en app uden visning får resuméet og én linje, "Link til visningen: <share>". |
+| _alle visningsværktøjer_ | `structuredContent.links`: `share` (altid: det korte link `${PUBLIC_BASE_URL}/d/<id>`, 10 tilfældige tegn, der kun viser netop denne visning i en browser; udløber efter `LINK_TTL_DAYS`) og `open` (kun når visningen handler om én virksomhed eller person: `/portal?aabn=<lassoId>&visning=<id>`, samme id; portalen åbner entiteten og tilføjer visningen som modul). Der er intet tekstkort: en app uden visning får resuméet og én linje, "Link til visningen: <share>". |
 | `resolve_view` | Kun for appen: henter data ved drill-down, filterændring og opdatering. |
 
 ### Ruter
@@ -38,6 +38,7 @@ Modellen skriver aldrig HTML. Den sender en JSON-spec, og Lassos kode henter dat
 |---|---|
 | `/mcp` | MCP-endpoint. Kræver `MCP_ACCESS_KEY` (eller en brugernøgle fra `MCP_USER_KEYS`) som `?key=`, `/mcp/<key>`, `x-api-key` eller Bearer. |
 | `/v/:org/:slug` | Delt side med friske data. |
+| `/d/:id` | Kort link til en visning (fra `links.share`): kun visningen, ingen portal, friske data. Gemt som spec pr. organisation (`short_views`); ukendt id 404, udløbet (ældre end `LINK_TTL_DAYS`) 410. `/k/`, `/p/`, `/e/` og `/v/` virker uændret for ældre links. |
 | `/k/:cvr` | Interaktiv virksomhedsvisning fra et signeret link, som `show_company` giver, med samme fokus (`f=`) og spørgsmål (`q=`, og modellens nøgletal som `qm=`). Friske data ved hver visning; udløber efter `LINK_TTL_DAYS` (30). Signeres med `LINK_SECRET`; links uden `q` fra før er stadig gyldige. |
 | `/p/:id` | Personside fra et signeret link, som `show_person` giver, med samme personfokus (`f=`, udeladt for overblik) og spørgsmål (`q=`). Samme nøgle og udløb som `/k/`. |
 | `/e/:lassoId` | Hostet side for én virksomhed (`CVR-1-…`) eller person (`CVR-3-…`) fra et signeret link, som gemte sider og send-til-Lasso giver, med virksomheds- eller personfokus (`f=`). Komponeret som i chatten, friske data; samme nøgle og udløb som `/k/`. Med `ENTITY_PAGES_PUBLIC=true` virker den også uden signatur. |

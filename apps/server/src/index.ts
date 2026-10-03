@@ -46,7 +46,7 @@ import { chatEnabled, chatRoutes } from "./chat/routes.js";
 import type { ModelCall } from "./chat/agent.js";
 import { companyNameHints } from "./usecases/index.js";
 import { createScoreStore } from "./scores/store.js";
-import { createViewStore, SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "./views/store.js";
+import { createViewStore, SHORT_ID_PATTERN, shortExpired, SLUG_PATTERN, slugify, ViewConflictError, VISIBILITIES, type ViewStore } from "./views/store.js";
 import { entityLink, focusLinks, isEntityId, sendToLassoLink, verifyCompanyLink, verifyEntityLink, verifyPersonLink, verifySendToLassoLink } from "./web/links.js";
 import { injectBoot, loadViewHtml } from "./web/page.js";
 import { ASK_AGAIN, failPage, FROM_LIST, linkFailure, VIEW_MISSING, VIEW_OUTDATED } from "./web/linkErrors.js";
@@ -347,6 +347,23 @@ export function createApp({ config, client, provider, store, pages, templates = 
           view.name ?? view.spec.title,
         ),
       );
+  });
+
+  // --- Kort link: /d/<id> viser kun visningen (ingen portal), med friske data. Id'et kommer fra links.share i MCP-svarene. ----
+  app.get("/d/:id", async (req, res) => {
+    const html = await loadViewHtml();
+    const id = String(req.params.id);
+    const view = SHORT_ID_PATTERN.test(id) ? await store.getShort(id) : null;
+    if (!view) return void res.status(404).type("html").set("X-Robots-Tag", "noindex").send(injectBoot(html, { mode: "web", error: VIEW_MISSING }, "Ikke fundet"));
+    if (shortExpired(view, config.LINK_TTL_DAYS)) return failPage(res, html, 410, "Linket er udløbet. Bed om et nyt link til visningen.");
+    const parsed = viewSpecSchema.safeParse(view.spec);
+    if (!parsed.success) return failPage(res, html, 410, VIEW_OUTDATED);
+    const dataset = await resolveSpec(parsed.data, provider);
+    res
+      .type("html")
+      .set("Cache-Control", "no-store")
+      .set("X-Robots-Tag", "noindex")
+      .send(injectBoot(html, { mode: "web", spec: parsed.data, dataset, url: `${config.publicBaseUrl}/d/${id}`, name: view.title, links: pageLinks(dataset), focusLinks: focusLinks(config, parsed.data), pdf: false, minimal: true }, view.title));
   });
 
   // --- Hostede sider for én virksomhed eller person (signerede links, se web/links.ts) ----

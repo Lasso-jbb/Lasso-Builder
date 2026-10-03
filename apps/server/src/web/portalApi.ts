@@ -22,7 +22,7 @@ import {
   type UseCaseCtx,
   type UseCaseError,
 } from "../usecases/index.js";
-import { VISIBILITIES, type ViewStore } from "../views/store.js";
+import { SHORT_ID_PATTERN, shortExpired, specHash, VISIBILITIES, type ViewStore } from "../views/store.js";
 import { entityLink } from "./links.js";
 
 /**
@@ -276,6 +276,28 @@ export function portalApi({ config, provider, store, pages, templates }: PortalA
     if (user.isDemo) return void res.json({ templates: [] });
     const list = await templates.list(user.org, user.id, params.kind as TemplateKind | undefined);
     res.json({ templates: list.map(templateJson) });
+  });
+
+  // "Åben i Lasso" (links.open i MCP-svarene: /portal?aabn=<lassoId>&visning=<kort id>): den gemte visning, klienten gør til et modul med
+  // templates.save. Kun for brugere i samme organisation som den, der delte visningen. Har brugeren allerede et modul med samme spec
+  // (efter samme fjernelse af entiteten som ved gemning), kommer dets id med som existingTemplateId, så klik ikke stabler moduler.
+  router.get("/visning/:id", async (req, res) => {
+    const user = res.locals.user as CurrentUser;
+    const id = String(req.params.id);
+    const view = SHORT_ID_PATTERN.test(id) ? await store.getShort(id) : null;
+    if (!view || view.org !== user.org || shortExpired(view, config.LINK_TTL_DAYS)) return void res.status(404).json({ error: "Visningen findes ikke eller er udløbet. Bed om et nyt link." });
+    if (!view.entity) return void res.status(404).json({ error: "Visningen handler ikke om én virksomhed eller person." });
+    const spec = view.spec;
+    let existingTemplateId: string | undefined;
+    if (!user.isDemo) {
+      const facts = await entityFacts(ctx(res), view.entity.kind, view.entity.id);
+      const made = facts ? templateFromSpec(spec, facts) : null;
+      if (made && "spec" in made) {
+        const want = specHash(made.spec);
+        existingTemplateId = (await templates.list(user.org, user.id, view.entity.kind)).find((t) => specHash(t.spec) === want)?.id;
+      }
+    }
+    res.json({ entity: view.entity, spec, title: view.title, ...(spec.subtitle ? { subtitle: spec.subtitle } : {}), ...(existingTemplateId ? { existingTemplateId } : {}) });
   });
 
   // Kun brugerens egen skabelon: en andres id er 404, som om den ikke fandtes.

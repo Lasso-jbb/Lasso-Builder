@@ -31,6 +31,7 @@ const OLE = { key: `portal-ole-${run}-xyz`, id: `ole-${run}`, name: "Ole", org: 
 let http: Server;
 let base = "";
 let config: Config;
+let store!: ReturnType<typeof createViewStore>;
 /** "lasso_session=…" som en browser ville sende den; tom = ingen cookie. */
 let cookie = "";
 
@@ -85,7 +86,7 @@ before(async () => {
     // Portal-testene her gælder den komponerede Overblik-side; v1-siden har sine egne tests nedenfor.
     PORTAL_OVERVIEW: "composer",
   });
-  const store = createViewStore(config.DATABASE_URL);
+  store = createViewStore(config.DATABASE_URL);
   await store.migrate();
   const pages = createSavedPageStore(config.DATABASE_URL);
   await pages.migrate();
@@ -800,4 +801,43 @@ test("/portal?aabn=… uden login sendes til login med next, og efter login er s
   // Et ondsindet next kan ikke opstå: kun stien på egen oprindelse videregives (en anden vært kan ikke være i en sti).
   const evil = await fetch(`${base}/portal?x=//evil.example`, { redirect: "manual" });
   assert.equal(new URL(evil.headers.get("location")!, "http://x").searchParams.get("next"), "/portal?x=//evil.example");
+});
+
+test("/api/portal/visning/<id>: den gemte visning til Åben i Lasso, med dublet-tjek mod brugerens egne moduler", async () => {
+  // Session-cookies direkte (login har en bremse pr. IP, som de øvrige tests i filen bruger op).
+  const { sessionCookie, signSession } = await import("./auth/session.js");
+  const sess = (u: { id: string; name: string; org: string }) => sessionCookie(config, signSession(config, { ...u, isDemo: false })).split(";")[0]!;
+  const pia = sess(PIA);
+  const spec = { version: 2, kind: "custom", title: "KYC-overblik", layout: "dashboard", subtitle: "Risiko", criteria: [], components: [{ type: "LassoKeyValueList", company: "99000001" }, { type: "LassoKeyFigureCards", company: "CVR-1-99000001" }] };
+  const short = await store.saveShort({ org: PIA.org, owner: PIA.id, spec: spec as never, entity: { kind: "company", id: "CVR-1-99000001" }, title: "KYC-overblik", subtitle: "Risiko" }, 30);
+  assert.match(short.id, /^[a-z0-9]{10}$/);
+
+  // Adgang som de andre portalruter.
+  assert.equal((await api(`/visning/${short.id}`, { cookie: "" })).status, 401);
+  const got = await json<{ entity: { kind: string; id: string }; spec: { title: string }; title: string; subtitle?: string; existingTemplateId?: string }>(await api(`/visning/${short.id}`, { cookie: pia }));
+  assert.deepEqual(got.entity, { kind: "company", id: "CVR-1-99000001" });
+  assert.equal(got.title, "KYC-overblik");
+  assert.equal(got.subtitle, "Risiko");
+  assert.equal(got.spec.title, "KYC-overblik");
+  assert.equal(got.existingTemplateId, undefined, "ingen modul endnu");
+
+  // Klienten gemmer med templates.save (POST /templates); derefter kender serveren modulet igen, så et nyt klik ikke stabler.
+  const made = await json<{ id: string }>(await api("/templates", { method: "POST", body: { kind: "company", title: got.title, spec: got.spec, entity: got.entity }, cookie: pia }));
+  const again = await json<{ existingTemplateId?: string }>(await api(`/visning/${short.id}`, { cookie: pia }));
+  assert.equal(again.existingTemplateId, made.id);
+  assert.equal((await json<{ templates: unknown[] }>(await api("/templates?kind=company", { cookie: pia }))).templates.length >= 1, true);
+  // En anden bruger (samme organisation) har ikke modulet: intet existingTemplateId.
+  const ole = sess(OLE);
+  assert.equal((await json<{ existingTemplateId?: string }>(await api(`/visning/${short.id}`, { cookie: ole }))).existingTemplateId, undefined);
+
+  // Ukendt, ugyldigt, udløbet og en visning uden én entitet: 404.
+  assert.equal((await api("/visning/abcdefghjk", { cookie: pia })).status, 404);
+  assert.equal((await api("/visning/x", { cookie: pia })).status, 404);
+  const old = await store.saveShort({ org: PIA.org, owner: PIA.id, spec: { ...spec, title: "Gammel" } as never, entity: { kind: "company", id: "CVR-1-99000001" }, title: "Gammel", createdAt: new Date(Date.now() - 400 * 86_400_000).toISOString() }, 10_000);
+  assert.equal((await api(`/visning/${old.id}`, { cookie: pia })).status, 404);
+  const many = await store.saveShort({ org: PIA.org, owner: PIA.id, spec: { ...spec, title: "Flere" } as never, title: "Flere" }, 30);
+  assert.equal((await api(`/visning/${many.id}`, { cookie: pia })).status, 404);
+  // Anden organisation: 404 (visningen er ikke delt til dem).
+  const foreign = await store.saveShort({ org: "andenorg", owner: "x", spec: spec as never, entity: { kind: "company", id: "CVR-1-99000001" }, title: "Fremmed" }, 30);
+  assert.equal((await api(`/visning/${foreign.id}`, { cookie: pia })).status, 404);
 });

@@ -1,7 +1,5 @@
-import { createHash } from "node:crypto";
-import { FOCUS_LABELS, PERSON_FOCUS_LABELS, PERSON_FOCUSES, FOCUSES, isPersonId, pageFocus, toLassoId, type Focus, type PersonFocus, type ViewSpec } from "@lasso/spec";
+import { isPersonId, toLassoId, type ViewSpec } from "@lasso/spec";
 import { isCompanyRef } from "../data/lookup.js";
-import { saveView } from "../usecases/views.js";
 import type { McpContext } from "./server.js";
 
 /**
@@ -9,9 +7,9 @@ import type { McpContext } from "./server.js";
  * virksomhed eller person, visningen handler om (kun da). Klienterne bygger knapperne ud fra præcis disse felter.
  */
 export interface ViewLinks {
-  /** Portalen på den ene virksomhed eller person, fokuseret på visningens modul og fastgjort som fane: /portal?aabn=<lassoId>&fokus=<fokus>&fastgoer=1. */
+  /** Portalen på den ene virksomhed eller person med visningen tilføjet som modul: /portal?aabn=<lassoId>&visning=<kort id>. */
   open?: string;
-  /** Delbart link til visningen: den signerede entitetsside (show_company/show_person), ellers en gemt visning (/v/<org>/<adresse>, visibility link). */
+  /** Det enkleste link, der kun viser visningen i en browser: ${publicBaseUrl}/d/<kort id> (8–10 tegn, udløber efter LINK_TTL_DAYS). */
   share: string;
 }
 
@@ -29,29 +27,28 @@ export function singleEntity(spec: ViewSpec, prefix: string): string | undefined
   return only && !only.startsWith("?") ? only : undefined;
 }
 
-/** Visningens modul (fokus), når undertitlen er et modulnavn (show_company/show_person med et fokus); ellers overblik. */
-function focusOf(spec: ViewSpec, lassoId: string): Focus | PersonFocus {
-  if (isPersonId(lassoId)) return PERSON_FOCUSES.find((f) => PERSON_FOCUS_LABELS[f] === spec.subtitle) ?? "overblik";
-  const f = FOCUSES.find((x) => FOCUS_LABELS[x] === spec.subtitle);
-  return f ? pageFocus(f) : "overblik";
+export function portalOpenLink(publicBaseUrl: string, lassoId: string, shortId: string): string {
+  return `${publicBaseUrl}/portal?aabn=${encodeURIComponent(lassoId)}&visning=${encodeURIComponent(shortId)}`;
 }
 
-export function portalOpenLink(publicBaseUrl: string, lassoId: string, focus: string): string {
-  return `${publicBaseUrl}/portal?aabn=${encodeURIComponent(lassoId)}&fokus=${encodeURIComponent(focus)}&fastgoer=1`;
+/** Visningen uden opfølgningsknapper (websiden har ingen chat): det, der gemmes under det korte id. */
+export function sharedSpec(spec: ViewSpec): ViewSpec {
+  return { ...spec, components: spec.components.filter((c) => c.type !== "LassoFollowUps") };
 }
 
 /**
- * Linkene til et visningssvar. share er `link` (den signerede entitetsside), når værktøjet har en; ellers gemmes visningen (samme mekanisme
- * som save_view: en adresse ud fra specens indhold, så samme visning giver samme link). Chatten (host chat) gemmer intet: den viser selv visningen.
+ * Linkene til et visningssvar. Visningen gemmes under et kort tilfældigt id (views/store.ts, saveShort; samme visning fra samme bruger
+ * giver samme id): share er /d/<id>, og open (kun for én virksomhed/person) peger portalen på entiteten med visningen som ekstra modul
+ * (visning=<id>). Kan visningen ikke gemmes, falder share tilbage til forsiden og open udelades, i stedet for at vælte svaret.
  */
-export async function viewLinks(ctx: McpContext, spec: ViewSpec, link?: string): Promise<ViewLinks> {
+export async function viewLinks(ctx: McpContext, spec: ViewSpec): Promise<ViewLinks> {
   const base = ctx.config.publicBaseUrl;
-  const entity = singleEntity(spec, ctx.config.LASSO_COMPANY_ID_PREFIX);
-  const open = entity ? portalOpenLink(base, entity, focusOf(spec, entity)) : undefined;
-  if (link) return { ...(open ? { open } : {}), share: link };
-  if (ctx.host === "chat") return { ...(open ? { open } : {}), share: `${base}/portal` };
-  const slug = `v-${createHash("sha1").update(JSON.stringify(spec)).digest("hex").slice(0, 12)}`;
-  // Kan visningen ikke gemmes, falder share tilbage til forsiden i stedet for at vælte hele svaret.
-  const saved = await saveView(ctx, { spec, slug, name: spec.title, visibility: "link" }).catch(() => ({ error: "gem fejlede" }));
-  return { ...(open ? { open } : {}), share: "error" in saved ? base : saved.url };
+  const id = singleEntity(spec, ctx.config.LASSO_COMPANY_ID_PREFIX);
+  const entity = id ? { kind: isPersonId(id) ? ("person" as const) : ("company" as const), id } : undefined;
+  try {
+    const saved = await ctx.store.saveShort({ org: ctx.user.org, owner: ctx.user.id, spec: sharedSpec(spec), entity, title: spec.title, subtitle: spec.subtitle }, ctx.config.LINK_TTL_DAYS);
+    return { ...(entity ? { open: portalOpenLink(base, entity.id, saved.id) } : {}), share: `${base}/d/${saved.id}` };
+  } catch {
+    return { share: base };
+  }
 }

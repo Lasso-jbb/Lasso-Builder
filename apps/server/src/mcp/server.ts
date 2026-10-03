@@ -237,10 +237,8 @@ export function createMcpServer(ctx: McpContext): McpServer {
   );
 
   const ui = { ui: { resourceUri: VIEW_URI } };
-  const view = async (spec: ViewSpec, ds: Dataset, extra: { note?: string; link?: string; ask?: Ask; pdfLink?: string } = {}) => {
-    const { link, ...rest } = extra;
-    return viewResult(spec, ds, { ...rest, links: await viewLinks(ctx, spec, link) }, ctx.host);
-  };
+  const view = async (spec: ViewSpec, ds: Dataset, extra: { note?: string; ask?: Ask; pdfLink?: string } = {}) =>
+    viewResult(spec, ds, { ...extra, links: await viewLinks(ctx, spec) }, ctx.host);
   const readOnly = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
 
   registerAppTool(
@@ -327,7 +325,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     async (input): Promise<CallToolResult> => {
       const r = await showCompany(ctx, input);
       if ("error" in r) return toolError(r.error);
-      return view(r.spec, r.dataset, { note: r.note, link: r.link, ask: r.ask, pdfLink: mcpPdfLink(ctx.config, r) });
+      return view(r.spec, r.dataset, { note: r.note, ask: r.ask, pdfLink: mcpPdfLink(ctx.config, r) });
     },
   );
 
@@ -351,7 +349,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     async (input): Promise<CallToolResult> => {
       const r = await showPerson(ctx, input);
       if ("error" in r) return toolError(r.error);
-      return view(r.spec, r.dataset, { note: r.note, link: r.link, ask: r.ask, pdfLink: mcpPdfLink(ctx.config, r) });
+      return view(r.spec, r.dataset, { note: r.note, ask: r.ask, pdfLink: mcpPdfLink(ctx.config, r) });
     },
   );
 

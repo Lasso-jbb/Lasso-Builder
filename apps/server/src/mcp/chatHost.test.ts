@@ -61,7 +61,7 @@ test("gem-værktøjerne findes kun i /mcp; chatten beholder describe_components 
 
 const textOf = (r: unknown) => ((r as { content: { type: string; text: string }[] }).content ?? []).filter((c) => c.type === "text");
 
-test("visningssvar: chatten får resuméet uden boilerplate og ; /mcp får desuden linket; ét tekstblok begge steder; structuredContent ens", async () => {
+test("visningssvar: chatten får resuméet uden boilerplate; /mcp får desuden linket; ét tekstblok begge steder; structuredContent ens", async () => {
   const args = { name: "show_company", arguments: { company: "99000001", focus: "oekonomi" } };
   const chat = await (await clientFor("chat")).callTool(args);
   const mcp = await (await clientFor("mcp")).callTool(args);
@@ -82,8 +82,9 @@ test("visningssvar: chatten får resuméet uden boilerplate og ; /mcp får desud
   assert.deepEqual(sc(chat), sc(mcp));
   const { links, card } = (chat as { structuredContent: { links: { open?: string; share: string }; card?: string } }).structuredContent;
   assert.equal(card, undefined, "intet tekstkort i structuredContent");
-  assert.match(links.share, /^https:\/\/lasso\.test\//);
-  assert.match(links.open!, /^https:\/\/lasso\.test\/portal\?aabn=[^&]+&fokus=oekonomi&fastgoer=1$/);
+  assert.match(links.share, /^https:\/\/lasso\.test\/d\/[a-z0-9]{10}$/);
+  assert.match(links.open!, /^https:\/\/lasso\.test\/portal\?aabn=CVR-1-99000001&visning=[a-z0-9]{10}$/);
+  assert.equal(links.open!.split("visning=")[1], links.share.split("/d/")[1], "open og share er samme gemte visning");
 });
 
 test("/mcp er byte-identisk: instruktioner og render_view's beskrivelse (pinnet hash)", async () => {

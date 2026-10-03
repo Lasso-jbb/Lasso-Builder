@@ -148,9 +148,8 @@ describe("PDF med Chromium", { skip: CAN_RENDER ? false : `kræver Chromium (${C
   test("show_company: pdfLink er /k/<cvr>.pdf, og PDF'en er rapporten (mindst 2 sider), med varighed i loggen", async () => {
     const res = await on.client.callTool({ name: "show_company", arguments: { company: "99000001" } });
     const { pdfLink, links } = structured(res);
-    const link = links?.share;
-    assert.ok(link && pdfLink);
-    assert.equal(pdfLink, pdfUrlOf(link));
+    assert.ok(links?.share && pdfLink);
+    assert.match(links.share, /\/d\/[a-z0-9]{10}$/, "share er det korte link; pdfLink er stadig det signerede /k/-link med .pdf");
     assert.match(pdfLink, /\/k\/99000001\.pdf\?/);
     const pdf = await fetch(pdfLink);
     assert.equal(pdf.status, 200);
