@@ -132,6 +132,7 @@ Valget huskes i browseren. `?tema=dark` i adressen sætter temaet uden at gemme 
   den røde nål viser, at modulet er tilføjet, til det fjernes med nålen. Fanen fastgøres ikke (fastgørelse er et
   manuelt valg). Fejl (udløbet visning, navnetjek, demobruger) giver en kort besked, og man står på Overblik.
   Parametrene ryddes bagefter; uden login venter linket, til man er logget ind (`portal2/viewLink.ts`).
+  Demobrugeren (åben portal) får modulet i browseren (lokale egne sider, se CHAT.md "Sideskabeloner og den røde pin").
 - `/d/<id>` ("Del visning" fra MCP-appen): kun visningen, uden handlingsbjælke (boot `minimal`); navne kan åbnes.
 
 Designguiden bruger adresserne til sine rammer.

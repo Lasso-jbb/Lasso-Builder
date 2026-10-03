@@ -28,7 +28,8 @@ const statusOf = (e: unknown): number | undefined => (typeof (e as { status?: un
 export function viewLinkError(e: unknown): string {
   const status = statusOf(e);
   if (status === 404 || status === 410) return "Visningen findes ikke længere. Bed om et nyt link.";
-  if (status === 403) return "Demobrugeren kan ikke tilføje moduler. Log ind med din egen bruger.";
+  // Demobrugeren gemmer egne sider i browseren (localTemplates.ts), så 403 er kun en sjælden afvisning fra serveren.
+  if (status === 403) return "Visningen kunne ikke tilføjes som modul.";
   if (status === 401) return "Log ind for at åbne visningen.";
   if (status === 400) return (e as Error).message || "Visningen kunne ikke tilføjes som modul.";
   return "Visningen kunne ikke åbnes. Prøv linket igen.";

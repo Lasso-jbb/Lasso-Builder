@@ -145,6 +145,13 @@ som en **sideskabelon** bundet til entitetens slags (virksomhed eller person) vi
 `docs/chat.md`). Skabelonen bliver et ekstra modul efter de indbyggede i modulrækken på hver enhed af den slags og
 vises med den enheds data; modulets navn er sidens titel.
 
+Demobrugeren (åben portal uden login, Jakob 03.10) kan ikke gemme skabeloner hos serveren, så de ligger i browseren
+(`portal2/localTemplates.ts`, localStorage pr. bruger, højst 20, id `local:<12 tegn>`): serveren forbereder siden
+(`POST /api/portal/templates/prepare`, entiteten fjernet, titel) og tegner den med den aktive entitet
+(`POST /api/portal/templates/render`). Samme side to gange giver samme modul (hash af den forberedte spec), den røde pin
+fjerner den i browseren, og modulet står efter en genindlæsning. Der står ingen "Demobrugeren kan ikke …"-besked. En
+logget ind bruger bruger serverens skabeloner som før.
+
 Pinnen (`pin` i `icons.tsx`) vises kun på et skabelonmodul, og den er rød og betyder "tilføjet på alle virksomheder"
 (eller "alle personer"). Et klik åbner en bekræftelse og fjerner skabelonen alle steder:
 
