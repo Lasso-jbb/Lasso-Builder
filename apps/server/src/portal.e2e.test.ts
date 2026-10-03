@@ -666,3 +666,29 @@ test("/api/portal/templates: en side med et indbygget modulnavn får tillægget 
   assert.deepEqual(Object.keys(shown.dataset.valuations ?? {}), Object.keys(direct.dataset.valuations ?? {}), "samme vurderinger som modulsiden");
   for (const t of [own, fromSub]) await json(await api(`/templates/${t.id}`, { method: "DELETE", cookie: pia }));
 });
+
+test("D6: i den åbne portal (demobrugeren) kan ingen gemme eller slette egne sider, og listen er tom", async () => {
+  const cfg = loadConfig({ ...process.env, MCP_ACCESS_KEY: KEY, LINK_SECRET: "portal-test-hemmelighed", LASSO_DATA_SOURCE: "demo", DATABASE_URL: "", PUBLIC_BASE_URL: PUBLIC, PORTAL_PUBLIC: "true" });
+  const { createPageTemplateStore } = await import("./pages/templates.js");
+  const templates = createPageTemplateStore("");
+  // En skabelon under demobrugerens eget navn (som en tidligere besøgende kunne have lavet den) vises aldrig.
+  const demo = (await import("./auth/user.js")).demoUser(cfg);
+  const spec = { version: 2, kind: "custom", title: "T", layout: "dashboard", criteria: [], components: [{ type: "LassoKeyFigureCards", company: "{{entity}}" }] };
+  const planted = await templates.create({ org: demo.org, userId: demo.id, kind: "company", title: "Planted", spec: spec as never });
+  const srv = createApp({ config: cfg, client: new LassoClient(cfg), provider: new DemoProvider(), store: createViewStore(""), pages: createSavedPageStore(""), templates }).listen(0);
+  await new Promise((r) => srv.once("listening", r));
+  const open = `http://127.0.0.1:${(srv.address() as AddressInfo).port}/api/portal`;
+  const headers = { "content-type": "application/json", "x-lasso-portal": "1" };
+  try {
+    const post = await fetch(`${open}/templates`, { method: "POST", headers, body: JSON.stringify({ kind: "company", title: "KYC", spec, entity: { kind: "company", id: "CVR-1-99000001" } }) });
+    assert.equal(post.status, 403);
+    assert.deepEqual(await post.json(), { error: "Log ind for at gemme sider." });
+    const del = await fetch(`${open}/templates/${planted.id}`, { method: "DELETE", headers });
+    assert.equal(del.status, 403);
+    assert.deepEqual(await (await fetch(`${open}/templates?kind=company`)).json(), { templates: [] });
+    assert.equal((await fetch(`${open}/templates/${planted.id}/render?entity=CVR-1-99000002`)).status, 404);
+    assert.ok(await templates.get(demo.org, demo.id, planted.id), "ikke slettet");
+  } finally {
+    await new Promise((r) => srv.close(r));
+  }
+});
