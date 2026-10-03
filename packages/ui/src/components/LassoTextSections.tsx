@@ -312,7 +312,7 @@ function AnalysisRows({ heading, v, items, onOpen, onPdf }: { heading: string; v
 /**
  * Tekstsektioner (katalog 12, "Tekstsektioner"). Variant "profil" (overblik): formål og
  * tegningsregler fra CVR plus regnskabsanalysens konklusion, resultat og likviditet, hvert
- * afsnit foldet med "Vis mere". Branche står i hovedet og gentages ikke. Variant "analyse"
+ * afsnit foldet med "Vis mere". Branchen står i nøgle-værdi-listen (LassoKeyValueList variant "company") og gentages ikke. Variant "analyse"
  * (oekonomi): hele regnskabsanalysen, foldet efter konklusionen. Ingen kildevisning (G3). Navne med Lasso-ID kan åbnes, når værten har drill-down (`onOpen`).
  */
 export function LassoTextSections({

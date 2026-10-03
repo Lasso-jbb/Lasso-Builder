@@ -6,7 +6,7 @@ import type { TextSectionItem } from "./models.js";
  * element viser, afgøres her, så komponenten, komponisten (vægt og placering) og tekstkortet
  * altid er enige:
  * - "profil" (overblik): formål og tegningsregler fra CVR plus analysens tre korte afsnit
- *   (konklusion, resultat, likviditet). Branche står i hovedet og gentages ikke.
+ *   (konklusion, resultat, likviditet). Branchen står i LassoKeyValueList og gentages ikke.
  * - "analyse" (oekonomi): hele regnskabsanalysen, alle afsnit, ingen CVR-tekster.
  */
 export const TEXT_SECTIONS_VARIANTS = ["profil", "analyse", "cvr", "resume"] as const;
@@ -37,7 +37,7 @@ export function isAnalysisSection(s: Pick<TextSectionItem, "heading" | "note">):
   return /^Regnskabsanalyse/i.test(s.heading) || (ANALYSIS_HEADINGS as readonly string[]).includes(s.heading) || /Lasso regnskabsanalyse/i.test(s.note ?? "");
 }
 
-/** Branche står i hovedets CVR-linje og vises ikke som eget afsnit. */
+/** Branchen står i LassoKeyValueList (variant company) og vises ikke som eget afsnit. */
 function isIndustry(s: Pick<TextSectionItem, "heading">): boolean {
   return /^branche$/i.test(s.heading.trim());
 }

@@ -42,7 +42,7 @@ export const MODULE_GROUPS: { id: string; label: string; intro: string; types: C
   {
     id: "identitet",
     label: "Identitet og overblik",
-    intro: "Hvem er det, og hvordan kommer man i kontakt. Står øverst på hver side.",
+    intro: "Hvem er det, hvad laver de, og hvordan kommer man i kontakt. Hovedet står øverst på hver side, opfølgningsknapperne nederst.",
     types: ["LassoCompanyHead", "LassoPersonHead", "LassoKeyValueList", "LassoContact", "LassoContactPersons", "LassoShortcuts", "LassoTextSections", "LassoSummary", "LassoFollowUps"],
   },
   {
@@ -60,14 +60,14 @@ export const MODULE_GROUPS: { id: string; label: string; intro: string; types: C
   {
     id: "risiko",
     label: "Risiko og kredit",
-    intro: "Score, kreditvurdering og revisors uafhængighed. Farve bærer aldrig betydningen alene.",
+    intro: "Score, kreditvurdering og risikoobservationer. Farve bærer aldrig betydningen alene.",
     // Jakob 01.10: scorehistorik og revisoruafhængighed er slettet.
     types: ["LassoScoreGauge", "LassoCreditRating", "LassoRiskObservations"],
   },
   {
     id: "historik",
     label: "Historik og nyheder",
-    intro: "Hvad er der sket: CVR-ændringer, nyheder, meddelelser og fusioner.",
+    intro: "Hvad er der sket og registreret: CVR-ændringer, stamdata over tid, registrering, nyheder, Statstidende og fusioner.",
     types: ["LassoTimeline", "LassoNews", "LassoCompanyHistory", "LassoRegistration", "LassoAnnouncements", "LassoPublications", "LassoMergers", "LassoChangeFeed"],
   },
   {

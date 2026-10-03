@@ -44,11 +44,11 @@ En test fejler, hvis filen ikke er ajour.
 - [Persontabel, navnesøgning (`LassoPersonTable`)](#LassoPersonTable)
 - [Kreditvurdering, Creditsafe (`LassoCreditRating`)](#LassoCreditRating)
 - [Risikoobservationer (`LassoRiskObservations`)](#LassoRiskObservations)
-- [Scoremåler (kun demo) (`LassoScoreGauge`)](#LassoScoreGauge)
+- [Risikoscore (`LassoScoreGauge`)](#LassoScoreGauge)
 - [Produktionsenheder, P-numre (`LassoProductionUnits`)](#LassoProductionUnits)
 - [Ejendomme, BBR (`LassoProperties`)](#LassoProperties)
 - [Kort, adresser og P-enheder (`LassoMap`)](#LassoMap)
-- [CHR, husdyr (ingen live data) (`LassoLivestock`)](#LassoLivestock)
+- [CHR, husdyr (`LassoLivestock`)](#LassoLivestock)
 - [Personhoved (`LassoPersonHead`)](#LassoPersonHead)
 - [Roller over tid (`LassoPersonRoles`)](#LassoPersonRoles)
 - [Personnetværk (`LassoPersonNetwork`)](#LassoPersonNetwork)
@@ -74,15 +74,15 @@ En test fejler, hvis filen ikke er ajour.
 - kun ét stamdatafelt skal vises (LassoKeyValueList variant 'company')
 - flere virksomheder (LassoCompareTable/LassoCompanyTable)
 
-**Veje ind.** render_view
+**Veje ind.** focus, ask (spørgsmål), render_view
 
-**Kræver data (Dataset).** `companies`, `observations`
+**Kræver data (Dataset).** `companies`
 
 **Live-tilgængelighed.** altid
 
 **Bredde.** profil fleksibel; std 1/1, min 1/1, maks 1/1; drivere: længste etiket 44 tegn
 
-**Props.** `company, variant?, risk?`
+**Props.** `company, variant? (full | compact | line), risk? (udgået, vises ikke)`
 
 <a id="LassoKeyValueList"></a>
 ## Nøgle-værdi-liste (`LassoKeyValueList`)
@@ -118,7 +118,7 @@ En test fejler, hvis filen ikke er ajour.
 **Bredde pr. variant.**
 - `variant:financials`: profil smal; std ½, min ½, maks ½; drivere: ingen
 
-**Props.** `company, variant? (company | financials), title?, exclude? (kun financials), only? (kun financials: nøgletal), year? (kun financials: regnskabsår), rows? (kun company: revisor | revisorskift | regnskabsperiode | stiftet | form | branche | ansatte | adresse | branchekode | kommune | region | telefon | email | web | firmanavn | cvr | binavne | status | reklamebeskyttet | vedtaegtsaendring | regnskabsaar | senesteregnskab | selskabskapital | boersnoteret | underskriverrevisor | formaal | tegningsregel | brancher | valuation), years? (2–5, kun financials), maxRows? (1–20)`
+**Props.** `company, variant? (company | financials), title?, exclude? (kun financials), only? (kun financials: nøgletal), year? (kun financials: regnskabsår), fields? (kun financials: udgivet | periode | erklaering | fremhaevelser | goingconcern | nøgletal | resultatfoerskat | afkastningsgrad | pdf), rows? (kun company: revisor | revisorskift | regnskabsperiode | stiftet | form | branche | ansatte | adresse | branchekode | kommune | region | telefon | email | web | firmanavn | cvr | binavne | status | reklamebeskyttet | vedtaegtsaendring | regnskabsaar | senesteregnskab | selskabskapital | boersnoteret | underskriverrevisor | formaal | tegningsregel | brancher | valuation), look? (kun company: list | card), years? (2–5, kun financials), maxRows? (1–20), view? (short | full)`
 
 <a id="LassoContact"></a>
 ## Kontaktblok (`LassoContact`)
@@ -173,11 +173,11 @@ En test fejler, hvis filen ikke er ajour.
 <a id="LassoShortcuts"></a>
 ## Genveje (`LassoShortcuts`)
 
-**Formål.** Knapper, der åbner et Lasso-værktøj på virksomheden.
+**Formål.** Knapper, der åbner et Lasso-modul på virksomheden.
 
 **Bedst til**
 - hvad kan jeg ellers se om X
-- genveje til ejerdiagram, regnskabsanalyse og ejendomme
+- genveje til ejerdiagram, nøgletal og ejendomme
 
 **Undgå når**
 - svaret er selve dataene (vis elementet direkte, fx LassoOwnershipDiagram)
@@ -191,7 +191,7 @@ En test fejler, hvis filen ikke er ajour.
 
 **Bredde.** profil smal; std ½, min ¼, maks ½; drivere: længste etiket 44 tegn
 
-**Props.** `company, tools?, title?`
+**Props.** `company, tools? (ejerdiagram | regnskabsanalyse | noegletal | ejendomme | tinglysning | firmaindsigt | ledelse | kontakt | historik | risiko | overblik | stamoplysninger | nyheder), title?`
 
 <a id="LassoTextSections"></a>
 ## Tekstsektioner (`LassoTextSections`)
@@ -216,12 +216,12 @@ En test fejler, hvis filen ikke er ajour.
 
 **Bredde.** profil fleksibel; std ½, min ½, maks 1/1; drivere: ingen
 
-**Props.** `company, variant? (profil | analyse), title?, folded? (kun analyse), limit? (kun profil)`
+**Props.** `company, variant? (profil | analyse | cvr | resume; cvr og resume bruges af portalens Lasso-side), title?, folded? (kun analyse), limit? (kun profil)`
 
 <a id="LassoSummary"></a>
 ## Resumé (`LassoSummary`)
 
-**Formål.** Kort skrevet vurdering eller opsummering, som modellen selv formulerer.
+**Formål.** Kort skrevet vurdering eller opsummering: modellens egen tekst eller Lassos erhvervsresumé.
 
 **Bedst til**
 - egen vurdering
@@ -232,15 +232,15 @@ En test fejler, hvis filen ikke er ajour.
 - tallene selv skal vises (LassoKeyFigureCards, LassoMultiYearTable)
 - der findes en færdig komponent til emnet
 
-**Veje ind.** render_view
+**Veje ind.** focus, show_person, ask (spørgsmål), render_view
 
-**Kræver data (Dataset).** ingen
+**Kræver data (Dataset).** `resumes`
 
 **Live-tilgængelighed.** altid
 
 **Bredde.** profil fleksibel; std ½, min ¼, maks ½; drivere: ingen
 
-**Props.** `text, title?, source?, updated?`
+**Props.** `text | resume (Lasso-ID), title?, source? og updated? (vises ikke)`
 
 <a id="LassoTimeline"></a>
 ## Tidslinje (`LassoTimeline`)
@@ -287,14 +287,14 @@ En test fejler, hvis filen ikke er ajour.
 
 **Live-tilgængelighed.** når data findes
 
-**Bredde.** profil bred; std ½, min ½, maks ½; drivere: 3 rækker pr. post
+**Bredde.** profil smal; std ½, min ½, maks ½; drivere: 3 rækker pr. post
 
-**Props.** `company | person, limit? (1–10, standard 5), layout? ('grid')`
+**Props.** `company | person, limit? (1–10, standard 5; højst 3 vises), layout? ('grid'), more? (udgået for nyheder)`
 
 <a id="LassoKeyFigureCards"></a>
 ## Nøgletalskort (`LassoKeyFigureCards`)
 
-**Formål.** 1–6 nøgletal fra seneste regnskab hver med ændring mod året før.
+**Formål.** 1–5 nøgletal fra seneste regnskab hver med ændring mod året før.
 
 **Bedst til**
 - nøgletal
@@ -317,7 +317,7 @@ En test fejler, hvis filen ikke er ajour.
 
 **Bredde.** profil fleksibel; std 1/1, min ⅓, maks 1/1; drivere: ingen
 
-**Props.** `company, metrics? (1–6 af omsaetning | bruttofortjeneste | resultat | egenkapital | ansatte | ebitda | balancesum | gaeld | soliditetsgrad | overskudsgrad | likviditetsgrad), variant? ('plain')`
+**Props.** `company, metrics? (1–5 af omsaetning | bruttofortjeneste | resultat | egenkapital | ansatte | ebitda | balancesum | gaeld | soliditetsgrad | overskudsgrad | likviditetsgrad), variant? ('plain')`
 
 <a id="LassoBarChart"></a>
 ## Søjlegraf, ét nøgletal (`LassoBarChart`)
@@ -478,7 +478,7 @@ En test fejler, hvis filen ikke er ajour.
 - nøgletal uden sammenligning (LassoKeyFigureCards)
 - andre navngivne virksomheder (LassoRanking/LassoCompareTable)
 
-**Veje ind.** render_view
+**Veje ind.** focus, ask (spørgsmål), render_view
 
 **Kræver data (Dataset).** `financials`, `industryBenchmarks`
 
@@ -512,7 +512,7 @@ En test fejler, hvis filen ikke er ajour.
 
 **Bredde.** profil bred; std ⅔, min ⅔, maks 1/1; drivere: tidsakse, 10 serier side om side
 
-**Props.** `company, metrics? (1–6 af omsaetning | bruttofortjeneste | resultat | egenkapital | ansatte | ebitda | balancesum | gaeld | soliditetsgrad | overskudsgrad | likviditetsgrad), years (2–10, standard 5), title?, variant? (A | B)`
+**Props.** `company, metrics? (1–8 af omsaetning | bruttofortjeneste | resultat | egenkapital | ansatte | ebitda | balancesum | gaeld | soliditetsgrad | overskudsgrad | likviditetsgrad), years (2–10, standard 5), title?, variant? (A | B)`
 
 <a id="LassoIncomeStatement"></a>
 ## Resultatopgørelse, fuld (`LassoIncomeStatement`)
@@ -590,7 +590,7 @@ En test fejler, hvis filen ikke er ajour.
 <a id="LassoFinancialStatements"></a>
 ## Regnskabsdetaljer med værktøjslinje (`LassoFinancialStatements`)
 
-**Formål.** Det fulde regnskab som ét element i fuld bredde med værktøjslinje.
+**Formål.** Det fulde regnskab som ét bredt element med værktøjslinje.
 
 **Bedst til**
 - vis hele regnskabet
@@ -598,10 +598,10 @@ En test fejler, hvis filen ikke er ajour.
 - hent årsrapport
 
 **Undgå når**
-- ½ eller ¾ bredde (LassoIncomeStatement/LassoBalanceSheet/LassoCashFlow)
+- ½ ved siden af andet (LassoIncomeStatement/LassoBalanceSheet/LassoCashFlow)
 - kun én opgørelse eller nøgletal over år (LassoMultiYearTable)
 
-**Veje ind.** ask (spørgsmål), render_view
+**Veje ind.** focus, ask (spørgsmål), render_view
 
 **Kræver data (Dataset).** `financials`, `financialStatements`
 
@@ -609,7 +609,7 @@ En test fejler, hvis filen ikke er ajour.
 
 **Bredde.** profil bred; std ¾, min ⅔, maks ¾; drivere: tidsakse, 5 serier side om side
 
-**Props.** `company, statement? (income | balance | cashflow), years? (2–5, standard 2), title?`
+**Props.** `company, statement? (income | balance | cashflow), years? (2–5, standard 2), year?, title?`
 
 <a id="LassoMergers"></a>
 ## Fusioner og spaltninger (`LassoMergers`)
@@ -656,7 +656,7 @@ En test fejler, hvis filen ikke er ajour.
 
 **Live-tilgængelighed.** når data findes
 
-**Bredde.** profil bred; std ½, min ½, maks ½; drivere: længste etiket 45 tegn, 4 serier side om side
+**Bredde.** profil smal; std ½, min ½, maks ½; drivere: længste etiket 45 tegn, 4 serier side om side
 
 **Props.** `company, variant? (full | profile), title?`
 
@@ -679,7 +679,7 @@ En test fejler, hvis filen ikke er ajour.
 
 **Live-tilgængelighed.** når data findes
 
-**Bredde.** profil bred; std ½, min ½, maks ½; drivere: 3 rækker pr. post, længste etiket 44 tegn
+**Bredde.** profil smal; std ½, min ½, maks ½; drivere: 3 rækker pr. post, længste etiket 44 tegn
 
 **Props.** `company, title?`
 
@@ -698,7 +698,7 @@ En test fejler, hvis filen ikke er ajour.
 - kun nuværende ledelse (LassoPersonList)
 - kun ejerne (LassoOwnerList)
 
-**Veje ind.** render_view
+**Veje ind.** focus, render_view
 
 **Kræver data (Dataset).** `companyHistories`, `beneficialOwnership`
 
@@ -723,7 +723,7 @@ En test fejler, hvis filen ikke er ajour.
 - kun nuværende stamdata (LassoKeyValueList)
 - regnskabets tal (LassoMultiYearTable)
 
-**Veje ind.** render_view
+**Veje ind.** focus, render_view
 
 **Kræver data (Dataset).** `companyHistories`
 
@@ -872,13 +872,13 @@ En test fejler, hvis filen ikke er ajour.
 
 **Veje ind.** focus, ask (spørgsmål), render_view
 
-**Kræver data (Dataset).** `people`, `ownership`
+**Kræver data (Dataset).** `people`, `ownership`, `beneficialOwnership`, `productionUnits`
 
 **Live-tilgængelighed.** når data findes
 
 **Bredde.** profil smal; std ¼, min ¼, maks ⅓; drivere: 2 rækker pr. post, længste etiket 45 tegn
 
-**Props.** `company, title?`
+**Props.** `company, title?, full? (også reelle ejere og antal produktionsenheder)`
 
 <a id="LassoCompareTable"></a>
 ## Sammenligning, navngivne virksomheder (`LassoCompareTable`)
@@ -901,7 +901,7 @@ En test fejler, hvis filen ikke er ajour.
 
 **Bredde.** profil bred; std 1/1, min ⅔, maks 1/1; drivere: længste etiket 45 tegn, 6 serier side om side
 
-**Props.** `companies[] (2–3), metrics? (1–5 af omsaetning | bruttofortjeneste | resultat | egenkapital | ansatte | ebitda | balancesum | gaeld | soliditetsgrad | overskudsgrad | likviditetsgrad), title?`
+**Props.** `companies[] (2–3; højst 3 vises, 4 i fuld bredde), metrics? (1–5 af omsaetning | bruttofortjeneste | resultat | egenkapital | ansatte | ebitda | balancesum | gaeld | soliditetsgrad | overskudsgrad | likviditetsgrad), title?`
 
 <a id="LassoRanking"></a>
 ## Rangliste, ét nøgletal (`LassoRanking`)
@@ -1023,19 +1023,19 @@ En test fejler, hvis filen ikke er ajour.
 **Props.** `company, title?, compact?`
 
 <a id="LassoScoreGauge"></a>
-## Scoremåler (kun demo) (`LassoScoreGauge`)
+## Risikoscore (`LassoScoreGauge`)
 
-**Formål.** Lassos risikoscore 0–100 som måler (kun demo indtil videre).
+**Formål.** Lassos risikoscore 0–100 som måler, regnet ud fra Creditsafe-ratingen.
 
 **Bedst til**
 - score
 - risikoscore
 
 **Undgå når**
-- kundespørgsmål om risiko eller kredit (show_company focus risiko)
-- Creditsafe (LassoCreditRating)
+- bredt risikospørgsmål (show_company focus risiko)
+- Creditsafes egne tal og rapport (LassoCreditRating)
 
-**Veje ind.** ask (spørgsmål), render_view
+**Veje ind.** focus, ask (spørgsmål), render_view
 
 **Kræver data (Dataset).** `scores`
 
@@ -1116,7 +1116,7 @@ En test fejler, hvis filen ikke er ajour.
 **Props.** `company, title?`
 
 <a id="LassoLivestock"></a>
-## CHR, husdyr (ingen live data) (`LassoLivestock`)
+## CHR, husdyr (`LassoLivestock`)
 
 **Formål.** Dyrehold (CHR) med besætninger og hændelser.
 
@@ -1170,7 +1170,7 @@ En test fejler, hvis filen ikke er ajour.
 
 **Undgå når**
 - hvem X sidder sammen med (LassoPersonNetwork)
-- konkurser (LassoPersonRisk)
+- konkurser og tvangsopløsninger (LassoPersonStats, LassoTimeline med filter 'risiko')
 
 **Veje ind.** show_person, ask (spørgsmål), render_view
 
@@ -1185,7 +1185,7 @@ En test fejler, hvis filen ikke er ajour.
 - `show:ended`: profil smal; std ½, min ⅓, maks ½; drivere: 2 rækker pr. post, længste etiket 45 tegn
 - `show:owner`: profil smal; std ½, min ⅓, maks ½; drivere: 2 rækker pr. post, længste etiket 45 tegn
 
-**Props.** `person, show? ('all' | 'current' | 'ended' | 'owner'), role? ('bestyrelse' | 'direktion' | 'ejer'), limit?, title?`
+**Props.** `person, show? ('all' | 'current' | 'ended' | 'owner'), role? ('bestyrelse' | 'direktion' | 'ejer'), except? ('risiko', kun show 'ended': uden selskaber med konkurs eller tvangsopløsning), limit?, more? ('expand' | 'roller'), title?`
 
 <a id="LassoPersonNetwork"></a>
 ## Personnetværk (`LassoPersonNetwork`)
@@ -1207,7 +1207,7 @@ En test fejler, hvis filen ikke er ajour.
 
 **Bredde.** profil bred; std 1/1, min 1/1, maks 1/1; drivere: 3 rækker pr. post, længste etiket 45 tegn, tidsakse
 
-**Props.** `person, limit? (standard 3), title?`
+**Props.** `person, limit? (standard 3), more? ('expand' | 'netvaerk'), title?`
 
 <a id="LassoPersonRisk"></a>
 ## Personrisiko (`LassoPersonRisk`)
@@ -1234,16 +1234,18 @@ En test fejler, hvis filen ikke er ajour.
 <a id="LassoPersonStats"></a>
 ## Netværkstal, person (`LassoPersonStats`)
 
-**Formål.** Personens nøgletal (antal roller, selskaber, netværk) som kort.
+**Formål.** Tre tal-kort om personen: Netværk (personer i 1. led), Konkurser og Tvangsopløsninger blandt personens selskaber.
 
 **Bedst til**
-- overblik over person
-- hvor mange roller har X
+- hvor stort er X's netværk
+- har X været i konkurser
+- persontal
 
 **Undgå når**
-- enkelte fakta (LassoPersonFacts)
+- hvem i netværket (LassoPersonNetwork)
+- hvilke selskaber og forløbet (LassoTimeline med filter 'risiko')
 
-**Veje ind.** render_view
+**Veje ind.** show_person, ask (spørgsmål), render_view
 
 **Kræver data (Dataset).** `persons`, `personNetworks`
 
@@ -1256,7 +1258,7 @@ En test fejler, hvis filen ikke er ajour.
 <a id="LassoPersonFacts"></a>
 ## Stamoplysninger, person (`LassoPersonFacts`)
 
-**Formål.** Personens fakta som nøgle/værdi (fødselsår, bopæl, roller).
+**Formål.** Personens stamoplysninger som nøgle/værdi (bopæl, kommune, roller, ejerskaber). Udgået.
 
 **Bedst til**
 - bopael
@@ -1286,7 +1288,7 @@ En test fejler, hvis filen ikke er ajour.
 - ændringer i overvågningslisten
 
 **Undgå når**
-- ændringer for én virksomhed (LassoTimeline)
+- hele historikken over år for én virksomhed (LassoTimeline)
 - overblik pr. måned (LassoHeatmap)
 
 **Veje ind.** focus, ask (spørgsmål), render_view
@@ -1297,7 +1299,7 @@ En test fejler, hvis filen ikke er ajour.
 
 **Bredde.** profil smal; std ½, min ½, maks ½; drivere: 2 rækker pr. post, længste etiket 45 tegn
 
-**Props.** `list? ELLER company?, days? (1–90, standard 7 for en liste og 30 for én virksomhed), types? (delmængde af regnskab | ledelse | ejerskab | status | stamdata | kredit), title?`
+**Props.** `list? ELLER company?, days? (1–90, standard 7 for en liste og 30 for én virksomhed), types? (delmængde af regnskab | ledelse | ejerskab | status | stamdata), title?`
 
 <a id="LassoHeatmap"></a>
 ## Heatmap, aktivitet pr. måned (`LassoHeatmap`)
@@ -1319,7 +1321,7 @@ En test fejler, hvis filen ikke er ajour.
 
 **Bredde.** profil fleksibel; std ½, min ⅓, maks ¾; drivere: tidsakse, 12 serier side om side
 
-**Props.** `list?, months? (3–24, standard 12), types? (delmængde af regnskab | ledelse | ejerskab | status | stamdata | kredit), title?`
+**Props.** `list?, months? (3–24, standard 12), types? (delmængde af regnskab | ledelse | ejerskab | status | stamdata), title?`
 
 <a id="LassoSavedPages"></a>
 ## Gemte sider (`LassoSavedPages`)
@@ -1354,7 +1356,7 @@ En test fejler, hvis filen ikke er ajour.
 **Undgå når**
 - selve svaret skal vises (brug elementet med dataene)
 
-**Veje ind.** show_person, render_view
+**Veje ind.** focus, ask (spørgsmål), show_person, compare_companies, render_view
 
 **Kræver data (Dataset).** ingen
 
@@ -1362,21 +1364,21 @@ En test fejler, hvis filen ikke er ajour.
 
 **Bredde.** profil fleksibel; std 1/1, min 1/1, maks 1/1; drivere: ingen
 
-**Props.** `prompts[] { label, prompt }`
+**Props.** `prompts[] (1–6) { label, prompt }`
 
 ## Oversigt
 
 | Type | Profil | std/min/max | Live | Veje |
 |---|---|---|---|---|
-| `LassoCompanyHead` | fleksibel | 1/1 / 1/1 / 1/1 | altid | render_view |
+| `LassoCompanyHead` | fleksibel | 1/1 / 1/1 / 1/1 | altid | focus, ask, render_view |
 | `LassoKeyValueList` | smal (variant:financials: smal) | ½ / ½ / ½ | altid | focus, ask, render_view |
 | `LassoContact` | smal | ⅓ / ¼ / ½ | når data findes | focus, ask, render_view |
 | `LassoContactPersons` | smal | ⅓ / ¼ / ½ | når data findes | focus, ask, render_view |
 | `LassoShortcuts` | smal | ½ / ¼ / ½ | altid | focus, render_view |
 | `LassoTextSections` | fleksibel | ½ / ½ / 1/1 | når data findes | focus, ask, render_view |
-| `LassoSummary` | fleksibel | ½ / ¼ / ½ | altid | render_view |
+| `LassoSummary` | fleksibel | ½ / ¼ / ½ | altid | focus, person, ask, render_view |
 | `LassoTimeline` | smal | ⅓ / ¼ / ½ | når data findes | focus, person, ask, render_view |
-| `LassoNews` | bred | ½ / ½ / ½ | når data findes | focus, person, ask, render_view |
+| `LassoNews` | smal | ½ / ½ / ½ | når data findes | focus, person, ask, render_view |
 | `LassoKeyFigureCards` | fleksibel | 1/1 / ⅓ / 1/1 | når data findes | focus, ask, render_view |
 | `LassoBarChart` | fleksibel | ½ / ⅓ / 1/1 | når data findes | focus, ask, render_view |
 | `LassoGroupedBarChart` | fleksibel | ½ / ¼ / ½ | når data findes | focus, ask, render_view |
@@ -1384,17 +1386,17 @@ En test fejler, hvis filen ikke er ajour.
 | `LassoStackedBarChart` | fleksibel | ½ / ¼ / ¾ | når data findes | ask, render_view |
 | `LassoShareBars` | smal | ½ / ½ / ½ | når data findes | focus, ask, render_view |
 | `LassoWaterfallChart` | fleksibel | ½ / ⅓ / 1/1 | når data findes | focus, ask, render_view |
-| `LassoKeyFigureGauge` | smal | ⅓ / ⅓ / ½ | ikke koblet på endnu | render_view |
+| `LassoKeyFigureGauge` | smal | ⅓ / ⅓ / ½ | ikke koblet på endnu | focus, ask, render_view |
 | `LassoMultiYearTable` | bred | ⅔ / ⅔ / 1/1 | når data findes | focus, ask, render_view |
 | `LassoIncomeStatement` | smal | ½ / ½ / ½ | når data findes | focus, ask, render_view |
 | `LassoBalanceSheet` | smal | ⅓ / ⅓ / ½ | når data findes | focus, ask, render_view |
 | `LassoCashFlow` | smal | ½ / ½ / ½ | når data findes | focus, ask, render_view |
-| `LassoFinancialStatements` | bred | ¾ / ⅔ / ¾ | når data findes | ask, render_view |
+| `LassoFinancialStatements` | bred | ¾ / ⅔ / ¾ | når data findes | focus, ask, render_view |
 | `LassoMergers` | smal | ½ / ½ / ½ | når data findes | ask, focus, render_view |
-| `LassoRegistration` | bred | ½ / ½ / ½ | når data findes | ask, focus, render_view |
-| `LassoAnnouncements` | bred | ½ / ½ / ½ | når data findes | ask, focus, render_view |
-| `LassoRelationsTable` | bred | ⅔ / ⅔ / ⅔ | når data findes | render_view |
-| `LassoCompanyHistory` | bred | 1/1 / ⅔ / 1/1 | når data findes | render_view |
+| `LassoRegistration` | smal | ½ / ½ / ½ | når data findes | ask, focus, render_view |
+| `LassoAnnouncements` | smal | ½ / ½ / ½ | når data findes | ask, focus, render_view |
+| `LassoRelationsTable` | bred | ⅔ / ⅔ / ⅔ | når data findes | focus, render_view |
+| `LassoCompanyHistory` | bred | 1/1 / ⅔ / 1/1 | når data findes | focus, render_view |
 | `LassoPublications` | fleksibel | ½ / ½ / ½ | når data findes | ask, focus, render_view |
 | `LassoPersonList` | smal | ⅓ / ¼ / ½ | når data findes | focus, ask, render_view |
 | `LassoOwnerList` | smal | ⅓ / ¼ / ½ | når data findes | focus, ask, render_view |
@@ -1407,7 +1409,7 @@ En test fejler, hvis filen ikke er ajour.
 | `LassoPersonTable` | bred | 1/1 / 1/1 / 1/1 | når data findes | search_persons, render_view |
 | `LassoCreditRating` | smal | ⅓ / ¼ / ⅓ | kræver abonnement | focus, ask, render_view |
 | `LassoRiskObservations` | smal | ⅓ / ⅓ / ½ | når data findes | ask, focus, render_view |
-| `LassoScoreGauge` | smal | ¼ / ¼ / ½ | kræver abonnement | ask, render_view |
+| `LassoScoreGauge` | smal | ¼ / ¼ / ½ | kræver abonnement | focus, ask, render_view |
 | `LassoProductionUnits` | bred | 1/1 / ¾ / 1/1 | når data findes | ask, render_view |
 | `LassoProperties` | fleksibel | ½ / ½ / 1/1 | når data findes | ask, render_view |
 | `LassoMap` | fleksibel | ½ / ⅓ / 1/1 | når data findes | ask, focus, render_view |
@@ -1416,9 +1418,9 @@ En test fejler, hvis filen ikke er ajour.
 | `LassoPersonRoles` | fleksibel (show:current: smal, show:ended: smal, show:owner: smal) | ⅔ / ½ / 1/1 | når data findes | person, ask, render_view |
 | `LassoPersonNetwork` | bred | 1/1 / 1/1 / 1/1 | når data findes | person, ask, render_view |
 | `LassoPersonRisk` | smal | ⅓ / ⅓ / ½ | når data findes | person, ask, render_view |
-| `LassoPersonStats` | fleksibel | ½ / ⅓ / ½ | når data findes | render_view |
+| `LassoPersonStats` | fleksibel | ½ / ⅓ / ½ | når data findes | person, ask, render_view |
 | `LassoPersonFacts` | smal | ⅓ / ⅓ / ⅓ | når data findes | person, ask, render_view |
 | `LassoChangeFeed` | smal | ½ / ½ / ½ | når data findes | focus, ask, render_view |
 | `LassoHeatmap` | fleksibel | ½ / ⅓ / ¾ | når data findes | render_view |
 | `LassoSavedPages` | fleksibel | 1/1 / 1/1 / 1/1 | når data findes | saved, render_view |
-| `LassoFollowUps` | fleksibel | 1/1 / 1/1 / 1/1 | altid | person, render_view |
+| `LassoFollowUps` | fleksibel | 1/1 / 1/1 / 1/1 | altid | focus, ask, person, compare_companies, render_view |

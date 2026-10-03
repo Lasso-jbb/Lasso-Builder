@@ -175,8 +175,7 @@ export async function resolveSpec(spec: ViewSpec, provider: DataProvider, extras
       case "LassoCompanyHead":
         // Valuation (Jakob 02.10) hentes med siden, så rækken står i virksomhedsoplysningerne.
         want(c.company, "company", "valuation");
-        // 08.1/24.4: "Se risiko"-linjen. Observationerne tager 10–14 s, så kun når specen beder om dem.
-        if (c.risk) want(c.company, "observations");
+        // `risk` er udgået (G9): hovedet viser ingen observationslinje, så observationerne (10–14 s) hentes ikke.
         break;
       case "LassoShortcuts":
         // 08.4: genvejene har ingen egne data; navnet bruges i beskeden til værten.

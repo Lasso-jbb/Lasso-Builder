@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { GRID_RULES, WIDTHS, type Width } from "@lasso/spec";
+import { GRID_RULES, TYPE_WIDTH_FULL, WIDTHS, type ComponentType, type Width } from "@lasso/spec";
 import type { Ctx } from "../App.js";
 import { Frame } from "../Frame.js";
 import { ENTRIES } from "../gallery.js";
@@ -16,6 +16,26 @@ type TabId = "bredder" | "tilstande" | "tekster" | "brug" | "data";
 
 const HEIGHT_LABEL: Record<string, string> = { low: "Lav (≤ 176 px)", medium: "Mellem (177–320 px)", high: "Høj (321–640 px)", "very-high": "Meget høj (> 640 px)" };
 const ROUTE_LABEL: Record<string, string> = { ask: "Spørgsmål (topic)", focus: "Fokus i show_company", person: "show_person", render_view: "render_view", search_companies: "search_companies", search_persons: "search_persons", compare_companies: "compare_companies", saved: "Gemte sider" };
+
+/** Variantundtagelser fra gitterreglen: widthOf i packages/spec/src/spec.ts og komponisten (compose.ts). */
+const VARIANT_WIDTH_NOTES: Partial<Record<ComponentType, string>> = {
+  LassoTimeline: "Med filterColumn: true står tidslinjen altid i fuld bredde (filtre ¼ + strøm ¾).",
+  LassoNews: "Med layout 'grid' står nyhederne i fuld bredde som kortgitter i to kolonner (når width ikke er sat).",
+  LassoFinancialStatements: "show_company focus regnskab lægger regnskabet i fuld bredde som egen række.",
+};
+
+/** Hvor modulet står uden for gitterreglen (GRID_RULES): fuld bredde på spørgsmålssider og i bestemte varianter. */
+function widthExceptions(type: ComponentType): string[] {
+  const rule = GRID_RULES[type];
+  const out: string[] = [];
+  if (TYPE_WIDTH_FULL.has(type)) {
+    const beyond = rule && rule.max !== "full" ? `, selv om gitterreglen ellers giver højst ${WIDTH_LABEL[rule.max]}` : "";
+    out.push(`Står i fuld bredde som egen række på spørgsmålssider (show_company og show_person med et spørgsmål)${beyond}.`);
+  }
+  const variant = VARIANT_WIDTH_NOTES[type];
+  if (variant) out.push(variant);
+  return out;
+}
 
 /** Én ramme med modulet, dets mål og valideringens resultat. */
 function ModuleFrame({
@@ -83,6 +103,7 @@ function WidthsTab({ m, option, theme, mark, fit, outside }: { m: ModuleInfo; op
   const rule = GRID_RULES[m.type];
   const allowed = allowedWidths(m.type);
   const widths = outside ? [...WIDTHS] : allowed;
+  const exceptions = widthExceptions(m.type);
   const desktop = VIEWPORTS.find((v) => v.id === "desktop")!;
   const others = VIEWPORTS.filter((v) => v.id !== "desktop");
   return (
@@ -94,6 +115,7 @@ function WidthsTab({ m, option, theme, mark, fit, outside }: { m: ModuleInfo; op
             Desktop {desktop.vw} px. {desktop.note}. Modulet må stå fra {WIDTH_LABEL[rule?.min ?? "full"]} til {WIDTH_LABEL[rule?.max ?? "full"]}; standard er {WIDTH_LABEL[rule?.std ?? "full"]}.
           </span>
         </div>
+        {exceptions.length ? <p className="dg-note">Undtagelser fra reglen: {exceptions.join(" ")}</p> : null}
         <div className="dg-mframes">
           {widths.map((w) => (
             <ModuleFrame
@@ -288,6 +310,12 @@ function UsageTab({ m }: { m: ModuleInfo }) {
           <dd>{rule ? `${WIDTH_LABEL[rule.std]} (${WIDTH_PX[rule.std]} px på 1200)` : "Fuld"}</dd>
           <dt>Min og maks</dt>
           <dd>{rule ? `${WIDTH_LABEL[rule.min]} til ${WIDTH_LABEL[rule.max]}` : "-"}</dd>
+          {widthExceptions(m.type).length ? (
+            <>
+              <dt>Undtagelser</dt>
+              <dd>{widthExceptions(m.type).join(" ")}</dd>
+            </>
+          ) : null}
           <dt>Højde</dt>
           <dd>
             {rule ? HEIGHT_LABEL[rule.height] : "-"}, {rule?.behavior === "growing" ? "vokser med data" : "fast"}
@@ -408,6 +436,11 @@ export function ModulePage({ ctx, module: m, tab }: { ctx: Ctx; module: ModuleIn
       <PageHead eyebrow={<>Modul {m.n}</>} title={m.title} lead={reg?.formaal}>
         <div className="dg-headmeta">
           <code className="dg-typecode">{m.type}</code>
+          {m.catalog.udgaaet ? (
+            <Chip tone="muted" title="Udgået: modellen vælger den ikke, og show_company/show_person bruger den ikke længere. Typen findes stadig, så gemte visninger kan læses.">
+              Udgået
+            </Chip>
+          ) : null}
           {rule ? <Chip>Standard {WIDTH_LABEL[rule.std]}</Chip> : null}
           {rule ? <Chip>
             {WIDTH_LABEL[rule.min]} til {WIDTH_LABEL[rule.max]}

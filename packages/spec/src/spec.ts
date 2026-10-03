@@ -234,17 +234,17 @@ export const companyHeaderSchema = z.object({
   variant: z
     .enum(HEAD_VARIANTS)
     .optional()
-    .describe("'full' (standard): navn 28, status, faktalinje og handlinger. 'compact': 56 px med navn og én faktalinje (sidepanel, sammenligning). 'line': én linje på 40 px over et enkelt element (svarniveau A/B)."),
+    .describe("'full' (standard): navn 28, status ved afvigelse og handlinger. 'compact': 56 px med navn og status (sidepanel, sammenligning). 'line': én linje på 40 px over et enkelt element (svarniveau A/B). Ingen faktalinje i nogen variant (G9)."),
   risk: z
     .boolean()
     .optional()
-    .describe("Hent risikoobservationer og vis 'Se risiko'-linjen under faktalinjen ved mindst én observation på 50+. Tager 10–14 s; brug kun, når spørgsmålet handler om risiko."),
+    .describe("Udgået (G9): hovedet viser ingen observationslinje. Accepteres bagudkompatibelt; udelad den (observationerne står i LassoRiskObservations)."),
 });
 
 export const keyFiguresSchema = z.object({
   type: z.literal("LassoKeyFigureCards"),
   company: companyRef,
-  metrics: z.array(metric).min(1).max(6).optional().describe("Standard: omsætning/bruttofortjeneste, resultat, egenkapital, ansatte."),
+  metrics: z.array(metric).min(1).max(5).optional().describe("1–5 nøgletal (komponenten viser højst 5). Standard: omsætning/bruttofortjeneste, resultat, egenkapital, ansatte; uden tal i seneste regnskab udelades de. Valgte nøgletal uden tal står som 'Ikke oplyst'."),
   variant: z
     .enum(["plain"])
     .optional()
@@ -341,7 +341,7 @@ export const textSectionsSchema = z.object({
   variant: z
     .enum(TEXT_SECTIONS_VARIANTS)
     .default("profil")
-    .describe("'profil' (standard): formål og tegningsregler fra CVR plus regnskabsanalysens konklusion, resultat og likviditet. 'analyse': hele regnskabsanalysen (alle afsnit), foldet efter konklusionen."),
+    .describe("'profil' (standard): formål og tegningsregler fra CVR plus regnskabsanalysens konklusion, resultat og likviditet. 'analyse': hele regnskabsanalysen (alle afsnit), foldet efter konklusionen. 'cvr' (kun CVR-teksterne) og 'resume' (erhvervsresumé ud fra stamdata, ledelse og regnskab) bruges af portalens Lasso-side."),
   title: z.string().max(80).optional(),
   folded: z.boolean().optional().describe("Kun variant 'analyse': analysen foldet til 3 linjer med 'Vis mere' på alle bredder (30.13, svar i chatten). Udeladt: foldet kun på mobil."),
   limit: z
@@ -358,8 +358,8 @@ export const summarySchema = z.object({
   title: z.string().max(80).optional(),
   text: z.string().min(1).max(4000).optional().describe("Resumeteksten, skrevet af modellen ud fra kendte tal og fakta. Ingen 'Skrevet af AI'-mærke vises. Udelades med resume."),
   resume: z.string().max(40).optional().describe("Lasso-ID (CVR-1-… eller CVR-3-…): vis Lassos erhvervsresumé om virksomheden eller personen (GET /modules/resume) i stedet for text."),
-  source: z.string().max(80).default("Lasso").describe("Kildetekst i kildelinjen, fx 'Lasso' eller modellens navn."),
-  updated: z.string().max(40).optional().describe("Dato for resumeet (ÅÅÅÅ-MM-DD). Standard: i dag."),
+  source: z.string().max(80).default("Lasso").describe("Vises ikke (ingen kildelinje, G3); accepteres bagudkompatibelt."),
+  updated: z.string().max(40).optional().describe("Vises ikke; accepteres bagudkompatibelt."),
 });
 
 export const timelineSchema = z
@@ -391,8 +391,8 @@ export const newsSchema = z
   .object({
     type: z.literal("LassoNews"),
     ...companyOrPerson,
-    limit: z.number().int().min(1).max(10).default(5),
-    more: z.enum(MORE_HISTORIK).optional().describe(moreDescription("historik")),
+    limit: z.number().int().min(1).max(10).default(5).describe("Antal nyheder, der hentes (standard 5). Der vises højst 3; flere står låst bag Lasso Pro."),
+    more: z.enum(MORE_HISTORIK).optional().describe("Udgået for nyheder: der vises højst 3 overalt, så der er ingen 'Se alle'. Accepteres bagudkompatibelt."),
     layout: z
       .enum(["grid"])
       .optional()
@@ -431,7 +431,7 @@ export const personTableSchema = z.object({
 
 export const comparisonSchema = z.object({
   type: z.literal("LassoCompareTable"),
-  companies: z.array(companyRef).min(2).max(6),
+  companies: z.array(companyRef).min(2).max(6).describe("2–3 virksomheder. Tabellen viser højst 3 (4 i fuld bredde); resten skæres fra."),
   metrics: z.array(metric).min(1).max(5).default(["omsaetning", "bruttofortjeneste", "resultat", "ansatte"]),
   title: z.string().max(80).optional(),
 });
@@ -582,7 +582,7 @@ export const mergersSchema = z.object({
 export const registrationSchema = z.object({
   type: z.literal("LassoRegistration"),
   company: companyRef,
-  variant: z.enum(["full", "profile"]).default("full").describe("'full' (standard) = to kort: regnskabsoplysninger og kapital og vedtægter. 'profile' = bibrancher og formål."),
+  variant: z.enum(["full", "profile"]).default("full").describe("'full' (standard) = to kort: regnskabsoplysninger og kapital og vedtægter. 'profile' = bibrancher og formål plus tegningsregel og 'Vedtægter senest ændret'."),
   title: z.string().max(80).optional(),
 }).describe("Regnskabsoplysninger (revision, regnskabsår og -perioder, regnskabsklasse, bibrancher) og kapital og vedtægter (kapital, kapitalklasser, vedtægter, tegningsregel, formål, reklamebeskyttet, børsnoteret).");
 
@@ -601,12 +601,12 @@ export const publicationsSchema = z.object({
   title: z.string().max(80).optional(),
 }).describe("Regnskabspublicering: offentliggjort, type (Årsrapport/Halvår/Kvartal, ny/korrigeret), periode og hovedtal.");
 
-/** Ingen live datakilde endnu (se resolve.ts og LiveProvider.score); demodata i DemoProvider, "ikke oplyst" i live. */
+/** Lassos score, beregnet ud fra Creditsafe-ratingen (LiveProvider.score, kræver abonnement); demodata i DemoProvider. */
 export const scoreGaugeSchema = z.object({
   type: z.literal("LassoScoreGauge"),
   company: companyRef,
-  title: z.string().max(80).optional().describe("Standard: 'Kreditvurdering'."),
-  detail: z.boolean().optional().describe("Udviklingen over 24 måneder og seneste ændringer under måleren (26d.7). Standard: fra."),
+  title: z.string().max(80).optional().describe("Standard: 'Risikoscore'."),
+  detail: z.boolean().optional().describe("Den fulde form (26d.7): vurderingsordet ved tallet og zonebjælke med 60/80-mærker. Ingen historik. Standard: fra."),
 });
 
 /** Katalog 13.10: nøgletalsmåler med branchemærke. Branchetal er ubekræftede i live (docs/lasso-endpoints.md). */
@@ -623,7 +623,7 @@ export const heatmapSchema = z.object({
   type: z.literal("LassoHeatmap"),
   list: z.string().max(80).optional().describe("Overvågningslistens navn, fx 'Kunder'. Udeladt = alle overvågede virksomheder."),
   months: z.number().int().min(3).max(24).default(12).describe("Antal måneder tilbage, standard 12 (3–24)."),
-  types: z.array(z.enum(CHANGE_TYPES)).min(1).optional().describe("Delmængde af ændringstyper (rækkerne); udeladt = alle."),
+  types: z.array(z.enum(CHANGE_TYPES)).min(1).optional().describe("Delmængde af ændringstyper (rækkerne); udeladt = alle. 'kredit' udgår og vises ikke."),
   title: z.string().max(80).optional(),
 });
 
@@ -635,7 +635,7 @@ export const mapSchema = z.object({
 });
 
 /**
- * Katalog 17.2: observationsliste med sammenfatning (filterchips høj/middel/info) og kort sorteret
+ * Katalog 17.2: observationsliste med sammenfatning (filterchips vigtig/mulig/info) og kort sorteret
  * efter alvor. Observationskaldet tager 10–14 s. Komponisten lægger den på focus risiko (efter
  * kreditvurderingen, når budgettet giver plads) og som svar-element på spørgsmål om røde flag (ask.ts).
  */
@@ -749,7 +749,7 @@ export const personFactsSchema = z
     person: personRef,
     title: z.string().max(80).optional().describe("Standard: 'Stamoplysninger'."),
   })
-  .describe("Stamoplysninger om personen som nøgle-værdi (¼): bopæl (postnummer og by, aldrig gade), kommune, enhedsnummer, roller, ejerskaber, første registrering og seneste ændring.");
+  .describe("Udgået. Stamoplysninger om personen som nøgle-værdi (⅓): bopæl (postnummer og by, aldrig gade), kommune, enhedsnummer, roller, ejerskaber, første registrering og seneste ændring.");
 
 /**
  * Katalog 21: ændringsfeed på tværs af de overvågede virksomheder, eller for ÉN virksomhed (company; fokus
@@ -762,7 +762,7 @@ export const changeFeedSchema = z
     list: z.string().max(80).optional().describe("Navnet på overvågningslisten, fx 'Kunder'. Udeladt = alle overvågede virksomheder."),
     company: companyRef.optional().describe("Kun ændringerne i denne ene virksomhed (Lasso-ID eller CVR-nummer); list udelades da."),
     days: z.number().int().min(1).max(90).optional().describe("Antal dage tilbage (1–90). Standard 7 for en overvågningsliste og 30 for én virksomhed (company)."),
-    types: z.array(z.enum(CHANGE_TYPES)).min(1).optional().describe("Delmængde af ændringstyper; udeladt = alle."),
+    types: z.array(z.enum(CHANGE_TYPES)).min(1).optional().describe("Delmængde af ændringstyper; udeladt = alle. 'kredit' udgår og vises ikke."),
     title: z.string().max(80).optional(),
   })
   .describe("Ændringer i de overvågede virksomheder, grupperet pr. dag, med filter på ændringstype.");

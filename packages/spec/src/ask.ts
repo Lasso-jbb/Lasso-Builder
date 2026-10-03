@@ -778,7 +778,8 @@ function graphFor(metrics: readonly Metric[], years: number): AskItem {
   return { type: "LassoBarChart", props: { metric: m, years } };
 }
 
-const TYPE_WIDTH_FULL: ReadonlySet<ComponentType> = new Set([
+/** Typerne, der står i fuld bredde som egen række på spørgsmålssider (samme sæt som FULL_WIDTH_TYPES i compose.ts); designguiden viser dem som undtagelse fra gitterreglen. */
+export const TYPE_WIDTH_FULL: ReadonlySet<ComponentType> = new Set([
   "LassoKeyFigureCards",
   "LassoMultiYearTable",
   "LassoIncomeStatement",

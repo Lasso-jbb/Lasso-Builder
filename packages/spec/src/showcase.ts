@@ -170,7 +170,7 @@ export const NO_ALTERNATIVE_REASON: Partial<Record<ComponentType, string>> = {
   LassoScoreGauge: "Bygger på Creditsafe-ratingen og kræver abonnement. Hentes ikke for andre virksomheder, da hvert opslag kan bruge kreditter.",
   LassoSavedPages: "Kræver en logget ind bruger (portalen eller Claude med login). Siden her er offentlig.",
   LassoHeatmap: "Kræver en overvågningsliste for en logget ind bruger.",
-  LassoLivestock: "CHR-husdyrdata er ikke koblet på Lasso endnu (ingen live-data).",
+  LassoLivestock: "CHR-husdyr hentes live, men findes kun for landbrug med CHR-nummer og kræver Ejendomme-modulet i Lasso-abonnementet; uden det viser modulet en tom tilstand med årsagen.",
 };
 
 export interface ShowcaseAlternatives {

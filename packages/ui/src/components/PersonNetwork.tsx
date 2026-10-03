@@ -93,9 +93,10 @@ function summaryLabel(list: readonly PersonNetworkCompanyVM[]): string {
 /**
  * Netværk (katalog 16.3, runde 5, Paper LTP-0 / mobil LVN-0): "Sidder sammen med" som tidsbånd i
  * 16.2's sprog. Pr. person ét bånd pr. fælles selskab for perioden, de sad sammen, med etiketten
- * "Selskab, rolle, periode" over båndet; sidder sammen nu = chart-2, afsluttet = stiplet omrids og
- * dæmpet; fælles selskab med problemstatus = båndet i rødt (fyldt/stiplet) og ", under konkurs" sidst i
- * etiketten (runde 6, ingen markør). Standardbredde ⅔; ½ kun med etiketten "Selskab, rolle". Samme akse og 240 px navnekolonne
+ * "Selskab, rolle, periode" over båndet; båndet har rollens farve (Jakob 02.10: direktion, bestyrelse, ejer;
+ * andre roller stiplede), afsluttede dæmpede, og RoleLegend viser de rollefarver, der forekommer; fælles selskab
+ * med problemstatus = ", under konkurs" i rødt sidst i etiketten (runde 6, ingen markør). Står altid i fuld
+ * bredde (GRID_RULES: kun fuld). Samme akse og 240 px navnekolonne
  * som 16.2; overlappet ("14 år") står under navnet. Sorteret efter overlap; tre + "Vis alle N".
  * Mobil: ét kort pr. person med navn og overlap øverst, båndene under og en akse med fire årstal.
  * Ingen kildevisning (G3) og ingen "Vis som graf".

@@ -28,6 +28,11 @@ export function ModuleCard({ m, reports }: { m: ModuleInfo; reports: Record<stri
     <a className="dg-mcard" href={`#/moduler/${slugOf(m.type)}`}>
       <span className="dg-mcard__top">
         <span className="dg-nr">{m.n}</span>
+        {m.catalog.udgaaet ? (
+          <Chip tone="muted" title="Udgået: modellen vælger den ikke, og show_company/show_person bruger den ikke længere.">
+            Udgået
+          </Chip>
+        ) : null}
         {w.count ? (
           <Chip tone={w.problems ? "problem" : "ok"} title={`${w.count} rammer målt`}>
             <span aria-hidden="true" className="dg-chip__icon">
