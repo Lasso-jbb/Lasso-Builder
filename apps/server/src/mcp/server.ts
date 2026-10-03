@@ -181,6 +181,24 @@ function withCatalogHelp(message: string, input: unknown): string {
   return `${message}\n\nKatalog for typerne i specen:\n${catalogAsText(types as ComponentType[])}`;
 }
 
+/**
+ * render_view's fulde beskrivelse (Claude.ai over /mcp): komposition, layoutguiden (Paper 30) og komponentindekset
+ * med formål. Uændret tekst; chatten (host "chat") får den korte variant nedenfor.
+ */
+const RENDER_VIEW_DESCRIPTION = `Fri komposition til oversigter og analyser, der ikke passer i show_company, show_person, search_companies, search_persons eller compare_companies (sammenligninger bygges med compare_companies, ikke her). Send en JSON-spec; Lassos kode henter data og tegner i Lassos design. Virksomheder angives med CVR-nummer, Lasso-ID eller navn (navne slås op, og valget står i svaret). Skriv aldrig HTML/CSS. Brug 1–12 komponenter i ét dashboard. Kald render_view én gang pr. svar.
+
+Før render_view: vælg typerne i indekset nedenfor og kald describe_components med dem for at få deres props, brug og eksempler. Gæt ikke props.\n\n${COMPOSITION_RULES}
+
+${LAYOUT_RULES}\n\nKomponentindeks (type (titel): formål):\n${catalogIndexText()}\n\nEksempel (ét dashboard): {"title":"Byg A/S: ejere og revisor","components":[{"type":"LassoCompanyHead","company":"12345678"},{"type":"LassoOwnerList","company":"12345678"},{"type":"LassoKeyValueList","company":"12345678","rows":["revisor","revisorskift"]}]}`;
+
+/**
+ * render_view i Lassos egen chat (docs/chat.md, tokens): kun det, routingen (ROUTING) og CHAT_RULES ikke allerede
+ * siger. Layoutguiden og indeksets formål er udeladt; typenavnene står her, fordi describe_components kræver dem
+ * (uden dem kan modellen ikke slå noget op). Holdes under 1.500 tegn; input-skemaet er det samme som i /mcp.
+ */
+export const RENDER_VIEW_CHAT_DESCRIPTION = `Fri komposition: ét eller flere elementer, ingen af de andre værktøjer dækker (fx ét ejerdiagram eller én graf under din tekst), eller en hel side med layout "page". Send en JSON-spec; Lasso henter data og tegner. Kald først describe_components med de typer, du overvejer (props gættes ikke). 1–12 komponenter i læserækkefølge, højst én graf, udelad width, aldrig HTML/CSS. Virksomheder med CVR-nummer, Lasso-ID eller navn.
+Typer: ${COMPONENT_CATALOG.map((c) => c.type).join(", ")}.`;
+
 export function createMcpServer(ctx: McpContext): McpServer {
   const server = new McpServer(
     { name: "lasso", title: "Lasso", version: "0.1.0" },
@@ -337,11 +355,8 @@ export function createMcpServer(ctx: McpContext): McpServer {
     "render_view",
     {
       title: "Vis oversigt",
-      description: `Fri komposition til oversigter og analyser, der ikke passer i show_company, show_person, search_companies, search_persons eller compare_companies (sammenligninger bygges med compare_companies, ikke her). Send en JSON-spec; Lassos kode henter data og tegner i Lassos design. Virksomheder angives med CVR-nummer, Lasso-ID eller navn (navne slås op, og valget står i svaret). Skriv aldrig HTML/CSS. Brug 1–12 komponenter i ét dashboard. Kald render_view én gang pr. svar.
-
-Før render_view: vælg typerne i indekset nedenfor og kald describe_components med dem for at få deres props, brug og eksempler. Gæt ikke props.\n\n${COMPOSITION_RULES}
-
-${LAYOUT_RULES}\n\nKomponentindeks (type (titel): formål):\n${catalogIndexText()}\n\nEksempel (ét dashboard): {"title":"Byg A/S: ejere og revisor","components":[{"type":"LassoCompanyHead","company":"12345678"},{"type":"LassoOwnerList","company":"12345678"},{"type":"LassoKeyValueList","company":"12345678","rows":["revisor","revisorskift"]}]}`,
+      // Chatten får den korte beskrivelse (tokens); Claude.ai den fulde. Skemaet er det samme.
+      description: ctx.host === "chat" ? RENDER_VIEW_CHAT_DESCRIPTION : RENDER_VIEW_DESCRIPTION,
       inputSchema: renderViewInputSchema,
       annotations: { title: "Vis oversigt", ...readOnly },
       _meta: ui,
