@@ -71,6 +71,8 @@ export interface Answer {
   choice?: PendingChoice;
   /** Hvornår svaret blev færdigt (ms), til klokkeslættet under svaret. */
   at?: number;
+  /** Brugeren trykkede Stop: svaret står, som det nåede at blive, med "Stoppet." (ingen "Prøv igen"). */
+  stopped?: true;
 }
 
 export interface Turn {
@@ -196,6 +198,12 @@ export function applyTurnEvent(t: Threads, key: string, turnId: string, e: ChatE
 /** Turen uden at vente længere: ingen status, ikke ventende (afbrudt, fejlet eller færdig). */
 export function settleTurn(t: Threads, key: string, turnId: string): Threads {
   return mapTurns(t, key, (x) => (x.id === turnId ? { ...x, answer: { ...x.answer, pending: false, status: undefined } } : x));
+}
+
+/** Stop: turen er ikke længere ventende og får "Stoppet." (kun en tur, der stadig ventede; en færdig tur røres ikke). */
+export function stopTurn(t: Threads, key: string, turnId: string, at: number): Threads {
+  if (!t[key]?.turns.some((x) => x.id === turnId && x.answer.pending)) return t;
+  return mapTurns(t, key, (x) => (x.id === turnId ? { ...x, answer: { ...x.answer, pending: false, status: undefined, stopped: true, at: x.answer.at ?? at } } : x));
 }
 
 /** "done" for fanens ventende tur: svaret er færdigt, og fanen får serverens historik og signatur (frisk, hvis fresh). */

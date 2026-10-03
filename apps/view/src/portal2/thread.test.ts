@@ -27,6 +27,7 @@ import {
   settleTurn,
   skipChoice,
   startTurn,
+  stopTurn,
   undoMove,
   withLastView,
   type Notice,
@@ -124,6 +125,25 @@ test("startTurn, applyTurnEvent, finishTurn: turen i fanen, historikken og finge
   t = settleTurn(applyTurnEvent(t, novo.key, "t4", { type: "tool", id: "x", name: "y", title: "Vis" }), novo.key, "t4");
   assert.equal(currentTurn(t, novo.key)!.answer.pending, false);
   assert.equal(currentTurn(t, novo.key)!.answer.status, undefined);
+});
+
+test("C1 stopTurn: Stop gør turen færdig med 'Stoppet.' og beholder teksten; en færdig tur røres ikke", () => {
+  let t = startTurn({}, novo.key, "q", 1, "t1");
+  t = applyTurnEvent(t, novo.key, "t1", { type: "text", text: "Halvt svar" });
+  t = applyTurnEvent(t, novo.key, "t1", { type: "tool", id: "x", name: "show_company", title: "Vis" });
+  t = stopTurn(t, novo.key, "t1", 500);
+  const a = t[novo.key]!.turns[0]!.answer;
+  assert.equal(a.pending, false);
+  assert.equal(a.stopped, true);
+  assert.equal(a.status, undefined);
+  assert.equal(a.error, undefined);
+  assert.equal(a.at, 500);
+  assert.deepEqual(a.parts, [{ kind: "text", text: "Halvt svar" }]);
+  // Allerede færdig (eller ukendt fane/tur): uændret.
+  assert.equal(stopTurn(t, novo.key, "t1", 900), t);
+  assert.equal(stopTurn(t, "ukendt", "t1", 900), t);
+  const finished = finishTurn(startTurn({}, novo.key, "q", 1, "t2"), novo.key, done());
+  assert.equal(stopTurn(finished, novo.key, "t2", 900), finished);
 });
 
 test("skipChoice og pendingChoice: menuen i den seneste tur lukkes uden at røre andet", () => {

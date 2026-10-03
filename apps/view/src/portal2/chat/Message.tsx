@@ -268,7 +268,10 @@ export function AssistantMessage({ answer, mobile = false, currentId, onModule, 
   const first = parts[0]?.kind === "text" ? parts[0].text : null;
   const rest = first !== null ? parts.slice(1) : parts;
   const hasView = parts.some((p) => p.kind === "view");
-  const errorEl = answer.error ? (
+  // Stop: en stille linje uden "Prøv igen" (brugeren valgte selv at stoppe).
+  const errorEl = answer.stopped && !answer.error ? (
+    <p className="chat-stopped">Stoppet.</p>
+  ) : answer.error ? (
     <p className="chat-error">
       {answer.error}
       {onRetry ? (

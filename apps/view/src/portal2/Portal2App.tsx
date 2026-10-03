@@ -53,6 +53,7 @@ import {
   serializeCache,
   skipChoice,
   startTurn,
+  stopTurn,
   undoMove,
   type Notice,
   type Threads,
@@ -654,7 +655,13 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     };
     try {
       await streamChat({ message: text, context, history: tab?.chat.history ?? [], sig: tab?.chat.sig }, onEvent, { signal: ctrl.signal });
+      // Stop (eller Fortryd/luk, hvor turen allerede er væk): streamChat vender stille tilbage; turen får "Stoppet.".
+      if (ctrl.signal.aborted) setThreads((t) => stopTurn(t, at, turnId, Date.now()));
     } catch (e) {
+      if (ctrl.signal.aborted) {
+        setThreads((t) => stopTurn(t, at, turnId, Date.now()));
+        return;
+      }
       // Serveren kender ikke fanens samtale (ændret historik eller signatur): begynd en ny, så brugeren ikke sidder fast.
       if (e instanceof ChatHttpError && isUnrecognizedHistory(e.status, e.message)) {
         setThreads((t) => (t[at] ? { ...t, [at]: { ...t[at]!, chat: { history: [] }, sent: null } } : t));
