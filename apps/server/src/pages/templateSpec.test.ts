@@ -141,3 +141,39 @@ test("MemoryPageTemplateStore: grænsen holder ved samtidige kald, og specens st
   assert.ok(JSON.stringify(big).length < MAX_SPEC_BYTES && Buffer.byteLength(JSON.stringify(big)) > MAX_SPEC_BYTES);
   await assert.rejects(store.create({ ...input, userId: "bytes", spec: { ...big, components: [{ ...big.components[0]!, company: ENTITY_PLACEHOLDER }] } as unknown as ViewSpec }), /for stor/);
 });
+
+const silkeborg = { ...company, name: "Eksempel Byg A/S", city: "Silkeborg", street: "Prøvevej 1", cvr: "99000001" };
+const kyc = { kind: "company" as const, id: "CVR-1-34580820", name: "LASSO X A/S", city: "Aarhus C", street: "Hack Kampmanns Plads 2", cvr: "34580820" };
+
+test("stripEntityName: CVR (også formateret og med præfiks), Lasso-id, by og gade klippes; præposition og tegnsætning med", () => {
+  assert.equal(stripEntityName("CVR 99000001, Silkeborg", silkeborg), "");
+  assert.equal(stripEntityName("CVR-nr. 99000001", silkeborg), "");
+  assert.equal(stripEntityName("Top for CVR 99000001", silkeborg), "Top");
+  assert.equal(stripEntityName("Overblik 99 00 00 01", silkeborg), "Overblik");
+  assert.equal(stripEntityName("Overblik 99000001", silkeborg), "Overblik");
+  assert.equal(stripEntityName("Side om CVR-1-99000001", silkeborg), "Side");
+  assert.equal(stripEntityName("Prøvevej 1, Silkeborg", silkeborg), "");
+  // R4: præposition og tegn før det fjernede.
+  assert.equal(stripEntityName("KYC-overblik for Eksempel Byg A/S", silkeborg), "KYC-overblik");
+  assert.equal(stripEntityName("KYC-overblik over Eksempel Byg", silkeborg), "KYC-overblik");
+  assert.equal(stripEntityName("Ejere af Eksempel Byg A/S –", silkeborg), "Ejere");
+  assert.equal(stripEntityName("Status hos Eksempel Byg: ", silkeborg), "Status");
+  assert.equal(stripEntityName("Noget om ejerne", silkeborg), "Noget om ejerne", "uden fjernelse røres titlen ikke");
+  // Et andet 8-cifret tal og en anden by røres ikke.
+  assert.equal(stripEntityName("Top 12345678 i Aarhus", silkeborg), "Top 12345678 i Aarhus");
+});
+
+test("templateFromSpec: designguidens KYC-mønster ('CVR …, genereret i dag kl. 09:52'); undertitlen gemmes ikke; metadata i tekst afvises", () => {
+  const ranking = (title: string) => ({ type: "LassoRanking", companies: [kyc.id, "CVR-1-99000004"], title });
+  const page = withParts({ title: "KYC-overblik for LASSO X A/S", subtitle: "CVR 34580820, genereret i dag kl. 09:52" }, [ranking("Størst")]);
+  const ok = templateFromSpec(page, kyc) as { spec: ViewSpec };
+  assert.ok(ok.spec, JSON.stringify(ok));
+  assert.equal(ok.spec.title, "KYC-overblik");
+  assert.equal(ok.spec.subtitle, undefined);
+  // CVR, Lasso-id, by og gade i en anden tekst: afvist med den eksisterende fejl.
+  for (const text of ["Top for CVR 34580820", "Top 34 58 08 20", "Aarhus C er størst", "Hack Kampmanns Plads 2", "Se CVR-1-34580820", "LASSO X A/S"]) {
+    assert.deepEqual(templateFromSpec(withParts({}, [ranking(text)]), kyc), { error: NAME_REMAINS }, text);
+  }
+  // Et andet CVR-nummer og en anden by er fine.
+  assert.ok("spec" in templateFromSpec(withParts({}, [ranking("Top for CVR 99000004 i Aalborg")]), kyc));
+});

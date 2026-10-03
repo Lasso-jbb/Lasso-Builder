@@ -613,3 +613,22 @@ test("/api/portal/templates: entitetens navn fjernes fra titlerne, hoved og opf�
   const bad = await json<{ error: string }>(await api("/templates", { method: "POST", body: { kind: "company", title: "X", spec: leaky, entity }, cookie: pia }), 400);
   assert.equal(bad.error, "Siden indeholder stadig navnet; omdøb den først.");
 });
+
+test("/api/portal/templates: CVR, by og gade fra Lasso klippes af titler og afvises i tekst; en undertitel med kun metadata gemmes ikke", async () => {
+  const pia = piaCookie;
+  const entity = { kind: "company", id: "CVR-1-99000001" };
+  const spec = (title: string, components: unknown[]) => ({ version: 2, kind: "custom", title, subtitle: "CVR 99000001, Silkeborg", layout: "dashboard", criteria: [], components });
+  const cards = [{ type: "LassoKeyFigureCards", company: "CVR-1-99000001" }];
+  const made = await json<TemplateJson>(await api("/templates", { method: "POST", body: { kind: "company", title: "KYC-overblik for Eksempel Byg A/S", subtitle: "CVR 99000001, Silkeborg", spec: spec("KYC-overblik for CVR 99000001", cards), entity }, cookie: pia }));
+  assert.equal(made.title, "KYC-overblik");
+  assert.equal(made.subtitle, undefined);
+  const shown = await json<ViewBody>(await api(`/templates/${made.id}/render?entity=CVR-1-99000002`, { cookie: pia }));
+  assert.equal(shown.spec.title, "KYC-overblik");
+  assert.equal(shown.spec.subtitle, undefined);
+  await json(await api(`/templates/${made.id}`, { method: "DELETE", cookie: pia }));
+  for (const text of ["Top for CVR 99000001", "Prøvevej 1", "Silkeborg er størst"]) {
+    const leaky = spec("Overblik", [{ type: "LassoRanking", companies: ["CVR-1-99000001", "CVR-1-99000004"], title: text }]);
+    const bad = await json<{ error: string }>(await api("/templates", { method: "POST", body: { kind: "company", title: "X", spec: leaky, entity }, cookie: pia }), 400);
+    assert.equal(bad.error, "Siden indeholder stadig navnet; omdøb den først.", text);
+  }
+});

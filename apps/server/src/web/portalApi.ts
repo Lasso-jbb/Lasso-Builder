@@ -1,17 +1,16 @@
 import { Router, type NextFunction, type Request, type Response } from "express";
 import { summarizeView } from "../data/summary.js";
 import { z } from "zod";
-import { FOCUSES, METRICS, PAGE_FOCUSES, PERSON_FOCUSES, searchQuerySchema } from "@lasso/spec";
+import { toLassoId, FOCUSES, METRICS, PAGE_FOCUSES, PERSON_FOCUSES, searchQuerySchema } from "@lasso/spec";
 import type { CurrentUser } from "../auth/user.js";
 import type { Config } from "../config.js";
 import type { DataProvider } from "../data/provider.js";
 import { pageKindOf, type SavedPageStore } from "../pages/store.js";
-import { instantiate, stripEntityName, templateFromSpec, titleFallback, type TemplateKind } from "../pages/templateSpec.js";
+import { instantiate, stripEntityName, templateFromSpec, titleFallback, type TemplateEntity, type TemplateKind } from "../pages/templateSpec.js";
 import { PageTemplateError, type PageTemplateRecord, type PageTemplateStore } from "../pages/templates.js";
 import {
   listSavedPages,
   removeSavedPage,
-  resolveEntity,
   resolveView,
   savePage,
   saveView,
@@ -124,6 +123,20 @@ function parseOr400<T>(schema: z.ZodType<T>, input: unknown, res: Response): T |
   return undefined;
 }
 
+/** Entitetens navn, by, gade og CVR fra Lasso (til at holde dem ude af en skabelon); uden opslag kun id'et. */
+async function entityFacts(c: UseCaseCtx, kind: TemplateKind, id: string): Promise<TemplateEntity> {
+  try {
+    if (kind === "company") {
+      const co = await c.provider.company(toLassoId(id, c.config.LASSO_COMPANY_ID_PREFIX));
+      return { kind, id, name: co.name, city: co.address?.city, street: co.address?.street, cvr: co.cvr };
+    }
+    const p = await c.provider.person(id);
+    return { kind, id, name: p.name, city: p.city };
+  } catch {
+    return { kind, id };
+  }
+}
+
 const sendError = (res: Response, err: UseCaseError) => void res.status(err.status).json({ error: err.error });
 
 export function portalApi({ config, provider, store, pages, templates }: PortalApiDeps): Router {
@@ -219,13 +232,13 @@ export function portalApi({ config, provider, store, pages, templates }: PortalA
     if (!body) return;
     if (body.entity.kind !== body.kind) return void res.status(400).json({ error: `entity.kind skal være ${body.kind}, ligesom kind.` });
     if (pageKindOf(body.entity.id) !== body.kind) return void res.status(400).json({ error: `"${body.entity.id}" er ikke et Lasso-ID for en ${body.kind === "company" ? "virksomhed (CVR-1-…)" : "person (CVR-3-…)"}.` });
-    // Entitetens navn (fra Lasso, ikke fra klienten) fjernes fra titlerne, og siden afvises, hvis det står andre steder.
-    const [candidate] = await resolveEntity(ctx(res), { kind: body.kind, query: body.entity.id, limit: 1 });
-    const made = templateFromSpec(body.spec, { kind: body.kind, id: body.entity.id, name: candidate?.id === body.entity.id ? candidate.name : undefined });
+    // Entitetens navn og metadata (fra Lasso, ikke fra klienten) fjernes fra titlerne, og siden afvises, hvis de står andre steder.
+    const entity = await entityFacts(ctx(res), body.kind, body.entity.id);
+    const made = templateFromSpec(body.spec, entity);
     if ("error" in made) return void res.status(400).json({ error: made.error });
-    const name = candidate?.id === body.entity.id ? candidate.name : undefined;
-    const title = titleFallback(stripEntityName(body.title, name), made.spec);
-    const subtitle = body.subtitle === undefined ? undefined : stripEntityName(body.subtitle, name) || undefined;
+    const title = titleFallback(stripEntityName(body.title, entity), made.spec);
+    // Undertitlen er som standard væk; en, brugeren selv gav, gemmes kun hvis noget overlever fjernelsen.
+    const subtitle = body.subtitle === undefined ? undefined : stripEntityName(body.subtitle, entity) || undefined;
     const user = res.locals.user as CurrentUser;
     try {
       const t = await templates.create({ org: user.org, userId: user.id, kind: body.kind, title, subtitle, spec: made.spec });

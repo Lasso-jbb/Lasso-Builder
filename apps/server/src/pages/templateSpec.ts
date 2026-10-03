@@ -17,6 +17,10 @@ export interface TemplateEntity {
   id: string;
   /** Entitetens navn: det fjernes fra titel og undertitel, og siden afvises, hvis det står andre steder. */
   name?: string;
+  /** Entitetens metadata (by, vejnavn og husnummer, CVR-nummer): fjernes som tekst og må ikke stå andre steder. */
+  city?: string;
+  street?: string;
+  cvr?: string;
 }
 
 /** Komponenter, der er entitetens egne (navn, kontakt, opfølgende spørgsmål): de tages ikke med i en skabelon. */
@@ -37,14 +41,60 @@ export function nameForms(name: string | undefined): string[] {
 
 const wordRe = (form: string, flags: string) => new RegExp(`(?<![\\p{L}])${escapeRe(form)}s?(?![\\p{L}])`, flags);
 
-/** Teksten uden entitetens navn: et efterstillet ", Navn" / " – Navn", ellers selve navnet; tomt, hvis intet bliver tilbage. */
-export function stripEntityName(text: string, name: string | undefined): string {
-  let out = text;
-  for (const f of nameForms(name)) {
-    out = out.replace(new RegExp(`\\s*[,–—:-]\\s*${escapeRe(f)}s?(?![\\p{L}])\\s*$`, "iu"), "");
-    out = out.replace(wordRe(f, "giu"), "");
+const PREPOSITIONS = /\s+(for|over|om|af|i|til|hos|på)$/iu;
+const TRAILING = /[\s,;:–—-]+$/u;
+const LEADING = /^[\s,;:–—-]+/u;
+
+/** Oprydning efter en fjernelse: dobbelte mellemrum, tegnsætning og en præposition, der stod lige før det fjernede ("KYC-overblik for"). */
+function tidy(text: string): string {
+  let out = text.replace(/\s+/g, " ").replace(LEADING, "").replace(TRAILING, "");
+  for (let prev = ""; prev !== out; ) {
+    prev = out;
+    out = out.replace(PREPOSITIONS, "").replace(TRAILING, "");
   }
-  return out.replace(/\s+/g, " ").replace(/^[\s,–—:-]+|[\s,–—:-]+$/g, "");
+  return out;
+}
+
+/** CVR-nummeret som tekst: "CVR 99000001", "CVR-nr. 99000001", "99 00 00 01" (med eller uden præfiks). */
+function cvrRe(cvr: string, flags: string): RegExp {
+  const digits = cvr.split("").join("\\s?");
+  return new RegExp(`(?:(?<![\\p{L}])CVR(?:[-\\s]?(?:nr|nummer)\\.?)?[\\s:-]*)?(?<!\\d)${digits}(?!\\d)`, flags);
+}
+
+/** Entitetens CVR-nummer: fra entity.cvr eller Lasso-ID'et (CVR-1-…). */
+function cvrOf(entity: TemplateEntity): string | undefined {
+  const c = (entity.cvr ?? /^CVR-1-(\d{8})$/i.exec(entity.id.trim())?.[1] ?? "").replace(/\D/g, "");
+  return /^\d{8}$/.test(c) ? c : undefined;
+}
+
+/** Alt, der identificerer entiteten som tekst: CVR (også formateret), Lasso-ID, gade, by og navn. */
+function leakRes(entity: TemplateEntity): RegExp[] {
+  const res: RegExp[] = [];
+  const cvr = cvrOf(entity);
+  // Lasso-id'et først, så "CVR-1-99000001" ikke efterlader "CVR-1" når nummeret klippes.
+  if (entity.id.trim()) res.push(new RegExp(`(?<![\\p{L}\\d])${escapeRe(entity.id.trim())}(?![\\p{L}\\d])`, "giu"));
+  if (cvr) res.push(cvrRe(cvr, "giu"));
+  for (const f of [entity.street, entity.city]) {
+    const t = f?.trim().replace(/\s+/g, " ");
+    if (t && t.length >= 3) res.push(wordRe(t, "giu"));
+  }
+  for (const f of nameForms(entity.name)) res.push(wordRe(f, "giu"));
+  return res;
+}
+
+/** Teksten uden entitetens navn og metadata (CVR, Lasso-ID, by, gade) og uden den præposition eller tegnsætning, der blev tilbage. */
+export function stripEntityName(text: string, entity: string | undefined | TemplateEntity): string {
+  const e: TemplateEntity = typeof entity === "object" ? entity : { kind: "company", id: "", name: entity };
+  let out = text;
+  // Et efterstillet ", Navn" / " – Navn" først, så tegnsætningen går med.
+  for (const f of nameForms(e.name)) out = out.replace(new RegExp(`\\s*[,–—:-]\\s*${escapeRe(f)}s?(?![\\p{L}])\\s*$`, "iu"), "");
+  let changed = out !== text;
+  for (const r of leakRes(e)) {
+    const next = out.replace(r, "");
+    if (next !== out) changed = true;
+    out = next;
+  }
+  return changed ? tidy(out) : out.replace(/\s+/g, " ").trim();
 }
 
 /** Titlen, når den er tom efter fjernelsen af navnet: første komponents titel, ellers "Side". */
@@ -108,13 +158,13 @@ export function templateFromSpec(spec: unknown, entity: TemplateEntity): { spec:
   const replaced = mapStrings({ ...parsed.data, components: kept }, (s) => (forms.has(s.trim().toLowerCase()) ? ENTITY_PLACEHOLDER : undefined));
   if (replaced.changed === 0) return { error: `Siden handler ikke om én ${noun(entity.kind)}.` };
   const base = replaced.value as ViewSpec;
-  const title = titleFallback(stripEntityName(base.title, entity.name), base);
-  const subtitle = base.subtitle === undefined ? undefined : stripEntityName(base.subtitle, entity.name) || undefined;
+  const title = titleFallback(stripEntityName(base.title, entity), base);
+  // Undertitlen er entitetens metadata ("CVR …, by"): den gemmes ikke i specen; skabelonen bærer en egen, hvis brugeren gav en.
   const { subtitle: _old, ...rest } = base;
-  const value = { ...rest, title, ...(subtitle ? { subtitle } : {}) };
-  // Står navnet stadig et sted i specen (en tekst, en overskrift), er siden ikke entitetsuafhængig.
-  const test = nameForms(entity.name).map((f) => wordRe(f, "iu"));
-  if (test.length && mapStrings(value, (s) => (test.some((r) => r.test(s)) ? "" : undefined)).changed > 0) return { error: NAME_REMAINS };
+  const value = { ...rest, title };
+  // Står navnet, CVR-nummeret, Lasso-id'et, byen eller gaden stadig et sted i specen, er siden ikke entitetsuafhængig.
+  const test = leakRes(entity).map((r) => new RegExp(r.source, "iu"));
+  if (mapStrings(value, (s) => (s !== ENTITY_PLACEHOLDER && test.some((r) => r.test(s)) ? "" : undefined)).changed > 0) return { error: NAME_REMAINS };
   const out = viewSpecSchema.safeParse(value);
   if (!out.success) return { error: "Specen kunne ikke gøres til en skabelon." };
   return { spec: out.data };
