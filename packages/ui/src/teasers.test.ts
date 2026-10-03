@@ -5,7 +5,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { composeCompany, composePerson, emptyDataset, parseViewSpec, personTimeline, type Dataset, type PersonVM, type ViewSpec } from "@lasso/spec";
 import { LassoNews } from "./components/LassoNews.js";
 import { LassoTimeline } from "./components/LassoTimeline.js";
-import { PersonNetwork } from "./components/PersonNetwork.js";
 import { PersonRoles } from "./components/PersonRoles.js";
 import { LassoView, moreInTab } from "./LassoView.js";
 import type { HostCapabilities, MoreInTab, ViewAction } from "./types.js";
@@ -44,7 +43,7 @@ function person(): Dataset {
   ds.persons[PERSON] = bo;
   ds.personNetworks[PERSON] = {
     lassoId: PERSON,
-    people: Array.from({ length: 5 }, (_, i) => ({ name: `Person ${i + 1} Eksempel`, companies: [], overlapYears: 5 - i, active: true })),
+    people: Array.from({ length: 5 }, (_, i) => ({ name: `Person ${i + 1} Eksempel`, companies: [{ companyName: `Selskab ${i + 1} ApS`, role: "bestyrelse", from: "2020-01-01" }], overlapYears: 5 - i, active: true })),
   };
   ds.timeline[PERSON] = personTimeline(bo, "2026-09-27");
   return ds;
@@ -137,7 +136,9 @@ test("personens overblik: roller, netværk og historik peger på deres faner", (
   const linked = render(spec, ds, { openFocus: true });
   // To aktive roller står her; fanen Roller viser alle tre selskaber (også det ophørte).
   assert.match(linked, /Se alle 3 selskaber i Roller/);
-  assert.match(linked, /Se alle 5 personer i Netværk/);
+  // Netværket (16.3, Jakob 03.10) folder altid ud på stedet: "Vis alle 5 personer", aldrig en knap til fanen.
+  assert.match(linked, /Vis alle 5 personer/);
+  assert.doesNotMatch(linked, /personer i Netværk/);
   // Uden openFocus: netværket folder ud på stedet (Paper: "Vis alle N"), og de to aktive roller har ingen knap.
   const inPlace = render(spec, ds, {});
   assert.match(inPlace, /Vis alle 5 /);
@@ -147,11 +148,10 @@ test("personens overblik: roller, netværk og historik peger på deres faner", (
   const actions: ViewAction[] = [];
   const open = (focus: string): MoreInTab => ({ tab: focus, open: () => void actions.push({ kind: "open-focus", focus }) });
   click(createElement(PersonRoles, { person: bo, show: "current", limit: 5, moreIn: open("Roller") }), /Se alle 3 selskaber i Roller/);
-  click(createElement(PersonNetwork, { network: ds.personNetworks[PERSON], limit: 3, moreIn: open("Netværk") }), /Se alle 5 personer i Netværk/);
   click(createElement(PersonRoles, { person: bo, limit: 1, moreIn: open("Roller") }), /Se alle 3 selskaber i Roller/);
   assert.deepEqual(
     actions.map((a) => (a.kind === "open-focus" ? a.focus : a.kind)),
-    ["Roller", "Netværk", "Roller"],
+    ["Roller", "Roller"],
   );
   // Viser listen allerede alle selskaber, er der ingen knap.
   const all = renderToStaticMarkup(createElement(PersonRoles, { person: { ...bo, roles: bo.roles.slice(0, 2) }, show: "current", limit: 5, moreIn: open("Roller") }));

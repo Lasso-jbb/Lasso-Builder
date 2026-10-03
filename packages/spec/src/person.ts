@@ -84,6 +84,11 @@ export interface PersonNetworkRowVM {
    * hinanden, er én periode; et hul imellem bryder den. Aldrig summen på tværs af selskaber.
    */
   overlapYears: number;
+  /**
+   * Den samlede tid sammen i hele måneder: de fælles perioder på tværs af selskaberne lagt sammen (mergePeriods, så
+   * samme tid i to selskaber kun tæller én gang) og summeret (totalPeriodMonths). Underteksten "12 år sammen" (16.3).
+   */
+  overlapMonths?: number;
   since?: string;
   until?: string;
   /** Sidder de stadig sammen i mindst ét selskab. */
@@ -438,6 +443,39 @@ export function longestPeriod(periods: readonly PeriodInput[], today?: string): 
   let best: MergedPeriod | undefined;
   for (const m of mergePeriods(periods, today)) if (!best || m.days > best.days) best = m;
   return best;
+}
+
+/** Den samlede tid i perioderne i hele måneder: sammenlagt (mergePeriods), så samme tid kun tæller én gang. */
+export function totalPeriodMonths(periods: readonly PeriodInput[], today?: string): number {
+  const days = mergePeriods(periods, today).reduce((sum, m) => sum + m.days, 0);
+  return Math.round((days * DAY_MS) / (YEAR_MS / 12));
+}
+
+/**
+ * 16.3 underteksten: kun tiden sammen. Under et år i måneder ("7 måneder sammen", "1 måned sammen"), ellers i hele år
+ * afrundet ("1 år sammen", "12 år sammen"). Under en halv måned: "under 1 måned sammen".
+ */
+export function togetherText(months: number): string {
+  if (months < 1) return "under 1 måned sammen";
+  if (months < 12) return `${months} ${months === 1 ? "måned" : "måneder"} sammen`;
+  return `${Math.max(1, Math.round(months / 12))} år sammen`;
+}
+
+/** Netværkets fire roller (16.3, Jakob 03.10). */
+export type NetworkRole = "Ejer" | "Direktion" | "Bestyrelse" | "Andet";
+
+/**
+ * Rolleteksten som en af netværkets fire roller: ejer, direktion, bestyrelse, ellers Andet (interessent, deltager, reel
+ * ejer …). Stifter og revisor er ikke at sidde sammen og giver null: den relation udelades helt.
+ */
+export function networkRole(role: string | undefined): NetworkRole | null {
+  const r = (role ?? "").toLowerCase();
+  if (/stift|revisor/.test(r)) return null;
+  if (/reel/.test(r)) return "Andet";
+  if (/ejer/.test(r)) return "Ejer";
+  if (/bestyrelse|formand|suppleant/.test(r)) return "Bestyrelse";
+  if (/direkt/.test(r)) return "Direktion";
+  return "Andet";
 }
 
 /** "År sammen": den længste sammenhængende periode i hele år (afrundet); 0 uden perioder. */

@@ -5931,16 +5931,20 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
 .lasso-lanes__name { display: flex; align-items: center; gap: 4px; min-width: 0; max-width: 100%; }
 .lasso-lanes__name > :last-child { min-width: 0; }
 .lasso-lanes__spacer { flex: none; width: 18px; }
-.lasso-root .lasso-lanes__toggle { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; padding: 0; border: 0; border-radius: var(--lasso-radius-sm); background: none; color: var(--lasso-muted); cursor: pointer; }
-.lasso-root .lasso-lanes__toggle:hover { color: var(--lasso-text); background: var(--lasso-surface-2); }
-.lasso-lanes__toggle:focus-visible { outline: 1px solid var(--lasso-focus-border); outline-offset: 1px; }
+/* Fold-knappen: neutral som en bar ikonknap (ingen ring eller koral i hvile, Jakob 03.10); kun tastaturfokus får en ring. */
+.lasso-root .lasso-lanes__toggle { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; padding: 0; border: 0; border-radius: var(--lasso-radius-sm); background: none; color: var(--lasso-muted); cursor: pointer; box-shadow: none; outline: none; }
+.lasso-root .lasso-lanes__toggle:hover { color: var(--lasso-text); background: var(--lasso-surface-muted); }
+.lasso-root .lasso-lanes__toggle:focus:not(:focus-visible) { outline: none; box-shadow: none; }
+.lasso-root .lasso-lanes__toggle:focus-visible { outline: 1px solid var(--lasso-text-3); outline-offset: 1px; }
 .lasso-personroles__row .lasso-personroles__sub { padding-left: 22px; }
 /* Rollernes farver i alle tidsbånd (Jakob 02.10): direktion, bestyrelse, ejer; alt andet stiplet; ophørt = dæmpet. */
 .lasso-root .lasso-role-band--direction { background: var(--lasso-chart-1); border: 0; }
 .lasso-root .lasso-role-band--board { background: var(--lasso-chart-2); border: 0; }
 .lasso-root .lasso-role-band--owner { background: var(--lasso-chart-3); border: 0; }
-.lasso-root .lasso-role-band--other { background: var(--lasso-surface-muted); border: 1px dashed var(--lasso-faint); }
-.lasso-root .lasso-role-band.is-ended:not(.lasso-role-band--other) { opacity: 0.4; }
+/* Andet (interessent, deltager, reel ejer …): grafpalettens neutrale serie (chart-5), fyldt som de andre roller (Jakob 03.10). */
+.lasso-root .lasso-role-band--other { background: var(--lasso-chart-5); border: 0; }
+/* Afsluttet: samme farve (rollen kan stadig kendes, også bestyrelse fra ejer), dæmpet og med skrå striber (Jakob 03.10). */
+.lasso-root .lasso-role-band.is-ended { opacity: 0.6; background-image: repeating-linear-gradient(135deg, transparent 0 3px, var(--lasso-surface) 3px 5px); }
 .lasso-role-swatch { display: inline-block; width: 16px; height: 6px; border-radius: 3px; flex: none; }
 
 

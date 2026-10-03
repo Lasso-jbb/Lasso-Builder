@@ -365,7 +365,7 @@ export const entries: GalleryEntry[] = [
     title: "Netværk som tidsbånd (personer med fælles selskaber)",
     node: "LTP-0",
     gridWidth: 760,
-    note: "Paper LTP-0 (desktop) og LVN-0 (mobil), Fable runde 6: standardbredde ⅔ (som 16.2); samme akse og navnekolonne som 16.2; bånd = perioden, de sad sammen. Fælles selskab under konkurs: båndet rødt (fyldt ved løbende rolle, stiplet ved afsluttet) og ', under konkurs' sidst i etiketten i rødt; ingen konkursmarkør. Legende Sidder sammen nu / Afsluttet / Under konkurs. Under ⅔ (½ og mobil) kun etiketten 'Selskab, rolle'.",
+    note: "Paper LTP-0 (desktop) og LVN-0 (mobil), Fable runde 6: standardbredde ⅔ (som 16.2); samme akse og navnekolonne som 16.2; bånd = perioden, de sad sammen. Fælles selskab under konkurs: båndet rødt (fyldt ved løbende rolle, stiplet ved afsluttet) og ', under konkurs' sidst i etiketten i rødt; ingen konkursmarkør. Legende Sidder sammen nu / Afsluttet / Under konkurs. Under ⅔ (½ og mobil) kun etiketten 'Selskab, rolle'. Jakob 03.10: roller kun Ejer, Direktion, Bestyrelse og Andet med farver (ingen stifter); underteksten kun tiden sammen ('12 år sammen', '7 måneder sammen'); lukket ét samlet bånd med selskabets navn eller 'N firmaer'; 'Vis alle N personer' folder ud på stedet.",
     spec: person("Bo Eksempel", [{ type: "LassoPersonNetwork", person: BO, limit: 3 }]),
     // Papers eksempel (LTP-0): to fælles selskaber, et nyere samarbejde og et afsluttet i et selskab under konkurs.
     mutate: (ds) => {
@@ -383,7 +383,8 @@ export const entries: GalleryEntry[] = [
               { companyName: "Nordisk Datacenter A/S", role: "bestyrelse", from: "2019-05-01", to: "2023-06-30" },
             ],
           },
-          { name: "Anna Nørgaard Eksempel", overlapYears: 5, active: true, since: "2021-02-01", companies: [{ companyName: "Data Eksempel A/S", role: "direktion", from: "2021-02-01" }] },
+          { name: "Anna Nørgaard Eksempel", overlapYears: 5, active: true, since: "2021-02-01", companies: [{ companyName: "Data Eksempel A/S", role: "direktion", from: "2021-02-01" }, { companyName: "Eksempel Holding ApS", role: "ejer", from: "2022-01-01" }] },
+          { name: "Mette Eksempel", overlapYears: 0, overlapMonths: 7, active: true, since: "2026-03-01", companies: [{ companyName: "Data Eksempel I/S", role: "interessent", from: "2026-03-01" }] },
           { name: "Peter Lund Eksempel", overlapYears: 4, active: false, until: "2018-06-30", companies: [{ companyName: "Cloud Eksempel A/S", role: "bestyrelse", from: "2014-04-01", to: "2018-06-30", status: "Under konkurs", statusKind: "warning" }] },
           ...extra,
         ],
