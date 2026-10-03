@@ -122,7 +122,9 @@
   --lasso-shadow: none;
   --lasso-shadow-pop: 0 14px 34px rgb(16 18 24 / 0.14);
   --lasso-shadow-seg: 0 1px 2px rgb(16 18 24 / 0.10);  /* 11.2: valgt segment i en grå pille (eneste skygge på noget, der ikke svæver) */
-  --lasso-focus-border: var(--lasso-accent-border); /* undtagelser: heatmap-celle (1 px ink-kant som hover/valgt), accent-segment (1 px fuld koral, da valgt allerede har koral kant) */
+  --lasso-focus-border: var(--lasso-accent-border);
+  /* Fold ud/sammen (harmonika, "Vis alle", tidsbåndenes fold, Jakob 03.10): neutral fokusring, aldrig koral; følger mørkt tema via text-3. */
+  --lasso-focus-neutral: var(--lasso-text-3); /* undtagelser: heatmap-celle (1 px ink-kant som hover/valgt), accent-segment (1 px fuld koral, da valgt allerede har koral kant) */
 
   /* Højder: knap 42 i dialoger/paneler, 36 i sidehoveder, 32 i kompakte rækker */
   --lasso-field-h: 44px;
@@ -5959,3 +5961,22 @@ button.lasso-select { display: inline-flex; align-items: center; gap: 8px; text-
   .lasso-root .lasso-kv-list .lasso-kv-row > .lasso-kv-row__label, .lasso-root .lasso-reg__rows .lasso-kv-row > .lasso-kv-row__label { width: 100%; max-width: none; font-size: 12px; line-height: 16px; color: var(--lasso-muted); }
   .lasso-root .lasso-kv-list .lasso-kv-row > .lasso-kv-row__value, .lasso-root .lasso-reg__rows .lasso-kv-row > .lasso-kv-row__value { flex-basis: 100%; white-space: normal; overflow-wrap: break-word; text-align: left; line-height: 20px; }
 }
+
+/*
+ * Alt, der folder ud eller sammen (Jakob 03.10, "for alt i formen"): harmonikaen (mønster 9), regnskabsanalysens rækker,
+ * "Vis alle"/"Vis mere"/"Vis færre", tabellernes og regnskabets fold, tidsbåndenes og netværkets fold. Ingen ring ved
+ * museklik eller tryk; kun tastaturfokus (:focus-visible) får en neutral 1 px ring (--lasso-focus-neutral), aldrig koral.
+ */
+.lasso-root :is(.lasso-accordion__button, .lasso-analysis19__head, .lasso-reltable__head, .lasso-stmt__toggle, .lasso-fold__more, .lasso-more, .lasso-expand, .lasso-feed__more, .lasso-analysis__more, .lasso-analysis__toggle, .lasso-relations__count, .lasso-odlist__more, .lasso-field__toggle, .lasso-lanes__toggle, .lasso-rail__head) {
+  -webkit-tap-highlight-color: transparent;
+}
+.lasso-root :is(.lasso-accordion__button, .lasso-analysis19__head, .lasso-reltable__head, .lasso-stmt__toggle, .lasso-fold__more, .lasso-more, .lasso-expand, .lasso-feed__more, .lasso-analysis__more, .lasso-analysis__toggle, .lasso-relations__count, .lasso-odlist__more, .lasso-field__toggle, .lasso-lanes__toggle, .lasso-rail__head):is(:focus, :active):not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+.lasso-root :is(.lasso-accordion__button, .lasso-analysis19__head, .lasso-reltable__head, .lasso-stmt__toggle, .lasso-fold__more, .lasso-more, .lasso-expand, .lasso-feed__more, .lasso-analysis__more, .lasso-analysis__toggle, .lasso-relations__count, .lasso-odlist__more, .lasso-field__toggle, .lasso-lanes__toggle, .lasso-rail__head):focus-visible {
+  outline: 1px solid var(--lasso-focus-neutral);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+.lasso-root .lasso-analysis__toggle:focus-visible { border-color: var(--lasso-border-strong); }
