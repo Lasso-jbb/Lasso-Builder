@@ -11,6 +11,7 @@ import { Client, InMemoryTransport, type CallToolResult } from "@modelcontextpro
 import { DATASET_META_KEY, type Dataset, type ViewSpec } from "@lasso/spec";
 import type { Config } from "../config.js";
 import { createMcpServer, type McpContext } from "../mcp/server.js";
+import { contextText, type ChatContext } from "./context.js";
 
 /**
  * Lassos egen chat (docs/chat.md): Claude via Claude Platform med NØJAGTIG de samme værktøjer og
@@ -117,6 +118,8 @@ export interface ChatRunOptions {
   /** Den hidtidige samtale (Claude-beskeder, uændret fra sidste "done"). */
   history: BetaMessageParam[];
   message: string;
+  /** Den fane, brugeren står på, de åbne faner og et evt. valg fra menuen (chat/context.ts). */
+  context: ChatContext;
   emit: (e: ChatEvent) => void;
   signal?: AbortSignal;
 }
@@ -134,8 +137,9 @@ function apiErrorText(e: unknown): string {
  * gentag til Claude er færdig. Historikken udvides kun (beskederne ændres aldrig), så tænkeblokke
  * og cache holder mellem spørgsmålene.
  */
-export async function runChat({ ctx, config, model, history, message, emit, signal }: ChatRunOptions): Promise<void> {
-  const messages: BetaMessageParam[] = [...history, { role: "user", content: message }];
+export async function runChat({ ctx, config, model, history, message, context, emit, signal }: ChatRunOptions): Promise<void> {
+  // Konteksten står først i brugerens tur (ikke i system: den skifter pr. spørgsmål og ville bryde cachen).
+  const messages: BetaMessageParam[] = [...history, { role: "user", content: [{ type: "text", text: contextText(context) }, { type: "text", text: message }] }];
   const { client, close } = await connect(ctx);
   try {
     const tools = await chatTools(client);

@@ -21,6 +21,9 @@ const { modelOptions } = await import("./chat/agent.js");
 
 const KEY = "chat-test-key";
 const PIA = { key: "chat-pia-key-123", id: "pia", name: "Pia", org: "lasso" };
+/** Kun til bremsetesten, så Pias kvote rækker til de andre tests. */
+const BO = { key: "chat-bo-key-456", id: "bo", name: "Bo", org: "lasso" };
+const MAX_PER_HOUR = 12;
 
 let http: Server;
 let base = "";
@@ -30,9 +33,19 @@ const calls: MessageCreateParamsNonStreaming[] = [];
 const message = (content: unknown[], stop_reason: string): BetaMessage =>
   ({ id: "msg", type: "message", role: "assistant", model: "fake", content, stop_reason, stop_sequence: null, usage: {} }) as unknown as BetaMessage;
 
-/** Første kald: show_company. Når sidste besked er værktøjssvar: en kort tekst. */
+/** Modelsvar, en test har sat i kø: ét pr. kald, i rækkefølge. Tom kø = standardforløbet nedenfor. */
+type Step = (params: MessageCreateParamsNonStreaming, onText: (t: string) => void) => BetaMessage;
+const script: Step[] = [];
+const sayText = (text: string): Step => (_p, onText) => {
+  onText(text);
+  return message([{ type: "text", text }], "end_turn");
+};
+
+/** Standardforløb: første kald show_company. Når sidste besked er værktøjssvar: en kort tekst. */
 const fakeModel: ModelCall = async (params, onText) => {
   calls.push(structuredClone(params));
+  const next = script.shift();
+  if (next) return next(params, onText);
   const last = params.messages.at(-1)!;
   const afterTool = Array.isArray(last.content) && last.content.some((b) => (b as { type: string }).type === "tool_result");
   if (afterTool) {
@@ -41,6 +54,12 @@ const fakeModel: ModelCall = async (params, onText) => {
     return message([{ type: "text", text: "Her er virksomheden." }], "end_turn");
   }
   return message([{ type: "tool_use", id: `tu_${calls.length}`, name: "show_company", input: { company: "99000001", question: "Hvordan går det?" } }], "tool_use");
+};
+
+/** Tekstblokkene i den seneste brugerbesked, modellen fik. */
+const lastUserTexts = (params: MessageCreateParamsNonStreaming): string[] => {
+  const user = [...params.messages].reverse().find((m) => m.role === "user")!;
+  return Array.isArray(user.content) ? user.content.filter((b): b is { type: "text"; text: string } => b.type === "text").map((b) => b.text) : [String(user.content)];
 };
 
 type Event = Record<string, unknown> & { type: string };
@@ -60,13 +79,13 @@ before(async () => {
   const config = loadConfig({
     ...process.env,
     MCP_ACCESS_KEY: KEY,
-    MCP_USER_KEYS: `${PIA.key}:${PIA.id}:${PIA.name}:${PIA.org}`,
+    MCP_USER_KEYS: `${PIA.key}:${PIA.id}:${PIA.name}:${PIA.org};${BO.key}:${BO.id}:${BO.name}:${BO.org}`,
     LINK_SECRET: "chat-test-hemmelighed",
     LASSO_DATA_SOURCE: "demo",
     DATABASE_URL: "",
     PUBLIC_BASE_URL: "https://lasso.test",
     PORTAL_PUBLIC: "true",
-    CHAT_MAX_PER_HOUR: "4",
+    CHAT_MAX_PER_HOUR: String(MAX_PER_HOUR),
   });
   const store = createViewStore("");
   const pages = createSavedPageStore("");
@@ -142,10 +161,41 @@ test("chat: den åbne portal giver demobrugeren adgang, men kun med portalens he
 });
 
 test("chat: bremsen siger 429 efter CHAT_MAX_PER_HOUR beskeder", async () => {
-  // Pia har brugt 3 af 4 i testene ovenfor (de afviste kald tæller ikke).
-  assert.equal((await chat({ message: "Fjerde" })).status, 200);
-  const r = await chat({ message: "Femte" });
+  const bo = { authorization: `Bearer ${BO.key}` };
+  for (let i = 0; i < MAX_PER_HOUR; i++) {
+    script.push(sayText("Hej."));
+    assert.equal((await chat({ message: `Besked ${i + 1}` }, bo)).status, 200);
+  }
+  const r = await chat({ message: "Én for meget" }, bo);
   assert.equal(r.status, 429);
+});
+
+test("chat: konteksten står først i brugerens tur; uden context svares der globalt", async () => {
+  script.push(sayText("Ja."));
+  const ctx = {
+    active: { kind: "company", id: "CVR-1-99000001", name: "Eksempel Byg A/S", tab: "ejerskab" },
+    open: [{ kind: "person", id: "CVR-3-4000123", name: "Jakob Benediktson" }],
+  };
+  const { status, events } = await chat({ message: "Hvem ejer den?", context: ctx });
+  assert.equal(status, 200);
+  assert.equal(events.at(-1)?.type, "done");
+  const texts = lastUserTexts(calls.at(-1)!);
+  assert.equal(texts.length, 2);
+  assert.match(texts[0]!, /^\[Kontekst\] Aktiv fane: virksomheden Eksempel Byg A\/S \(CVR-1-99000001\), modul ejerskab\. Åbne faner: Jakob Benediktson \(CVR-3-4000123\)\./);
+  assert.equal(texts[1], "Hvem ejer den?");
+
+  script.push(sayText("Hej."));
+  await chat({ message: "Hej" });
+  assert.match(lastUserTexts(calls.at(-1)!)[0]!, /^\[Kontekst\] Aktiv fane: forsiden \(global/);
+});
+
+test("chat: ugyldig context og et valg uden ask_choice i historikken afvises med 400", async () => {
+  const bad = await chat({ message: "Hej", context: { active: { kind: "company", id: "ikke-et-id", name: "X" } } });
+  assert.equal(bad.status, 400);
+  assert.equal(bad.json?.error, "context er ugyldig");
+  const choice = await chat({ message: "Hej", context: { active: { kind: "global" }, choice: { id: "toolu_1", free: true } } });
+  assert.equal(choice.status, 400);
+  assert.equal(choice.json?.error, "Valget passer ikke til samtalen");
 });
 
 test("/chat-siden og /health", async () => {

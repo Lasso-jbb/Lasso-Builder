@@ -7,13 +7,15 @@ import { isSet, type Config } from "../config.js";
 import { linkSecret } from "../web/links.js";
 import type { UseCaseCtx } from "../usecases/index.js";
 import { anthropicModelCall, runChat, type ChatEvent, type ModelCall } from "./agent.js";
+import { parseContext, verifyChoice } from "./context.js";
 
 /**
  * /api/chat (docs/chat.md): ét brugerspørgsmål ind, hændelser ud som Server-Sent Events.
  *
- * Body: { message, history?, sig? }. history og sig er præcis det, sidste "done"-hændelse gav; serveren
+ * Body: { message, context?, history?, sig? }. history og sig er præcis det, sidste "done"-hændelse gav; serveren
  * gemmer ingen samtaler. sig er en HMAC over brugeren og historikken, så en klient ikke kan lægge falske
- * værktøjssvar ind i samtalen.
+ * værktøjssvar ind i samtalen. context (chat/context.ts) er den fane, brugeren står på, de åbne faner og et
+ * evt. valg fra en valgmenu; uden context svares der globalt.
  *
  * Adgang: en portal-session (cookie + CSRF-header, som /api/portal) eller en brugernøgle (Bearer,
  * x-api-key) til server-til-server-kald fra Lassos produkt. Er portalen åben (PORTAL_PUBLIC), er chatten
@@ -104,7 +106,7 @@ export function chatRoutes({ model, ...deps }: ChatDeps): Router {
     const user = chatUser(req, config);
     if ("status" in user) return void res.status(user.status).json({ error: user.error });
 
-    const body = (req.body ?? {}) as { message?: unknown; history?: unknown; sig?: unknown };
+    const body = (req.body ?? {}) as { message?: unknown; history?: unknown; sig?: unknown; context?: unknown };
     const message = typeof body.message === "string" ? body.message.trim() : "";
     if (!message) return void res.status(400).json({ error: "Skriv en besked." });
     if (message.length > MAX_MESSAGE) return void res.status(400).json({ error: `Beskeden må højst være ${MAX_MESSAGE} tegn.` });
@@ -112,6 +114,14 @@ export function chatRoutes({ model, ...deps }: ChatDeps): Router {
     if (!Array.isArray(history)) return void res.status(400).json({ error: "history skal være en liste." });
     if (history.length && !verifyHistory(config, user.id, history, body.sig)) {
       return void res.status(400).json({ error: "Samtalen kunne ikke genkendes. Start en ny samtale." });
+    }
+    const context = parseContext(body.context);
+    if (!context) return void res.status(400).json({ error: "context er ugyldig" });
+    if (context.choice) {
+      // Et valg i menuen skal pege på det ask_choice-kald, modellen selv lavede, med præcis dets handling.
+      const v = verifyChoice(history as BetaMessageParam[], context.choice);
+      if ("error" in v) return void res.status(400).json({ error: v.error });
+      context.choice = { ...context.choice, ...v };
     }
     if (!allow(limitKey(req, user))) return void res.status(429).json({ error: `Du har brugt chatten ${config.CHAT_MAX_PER_HOUR} gange den seneste time. Prøv igen senere.` });
 
@@ -126,7 +136,7 @@ export function chatRoutes({ model, ...deps }: ChatDeps): Router {
       res.write(`data: ${JSON.stringify(payload)}\n\n`);
     };
     try {
-      await runChat({ ctx: { ...deps, user }, config, model: call, history: history as BetaMessageParam[], message, emit: send, signal: abort.signal });
+      await runChat({ ctx: { ...deps, user }, config, model: call, history: history as BetaMessageParam[], message, context, emit: send, signal: abort.signal });
     } catch (e) {
       console.error("[chat] fejl:", e);
       send({ type: "error", message: "Der skete en fejl. Prøv igen." });
