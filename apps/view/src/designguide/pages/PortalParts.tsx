@@ -157,14 +157,13 @@ export function PortalParts({ theme }: { theme: "light" | "dark" }) {
           </div>
         </Spec>
 
-        <Spec label="Åbne faner" note="Inaktiv · aktiv · Lasso henter (mærket bevæger sig) · Flere">
-          <div className="spec-tabs">
+        <Spec label="Åbne faner" note="Inaktiv · aktiv · Lasso henter (mærket bevæger sig); er der mere end én fane, har alle samme bredde">
+          <div className="spec-tabs spec-even">
             <div className="otabs">
               <OpenTab name="Eksempel Transport A/S" sub="Vejle, CVR 99000004" active={false} />
               <OpenTab name="Eksempel Byg A/S" sub="Silkeborg, CVR 99000001" active />
               <OpenTab name="Anne Eksempel" active={false} busy />
             </div>
-            <DropButton label="Flere" className="openall" />
           </div>
         </Spec>
 
@@ -200,9 +199,10 @@ export function PortalParts({ theme }: { theme: "light" | "dark" }) {
               <div className="col">
                 <LassoTab on />
                 <div className="mlist">
-                  {MODULES.slice(0, 4).map((m) => (
+                  {MODULES.slice(0, 5).map((m) => (
                     <ModuleTab key={m} id={m} label={m} selected={false} />
                   ))}
+                  <DropButton label="Flere" className="tab more" />
                 </div>
                 <div className="rgroup">
                   <IconButton icon="rss" label="Følg" disabled />
@@ -214,9 +214,14 @@ export function PortalParts({ theme }: { theme: "light" | "dark" }) {
               <div className="col">
                 <LassoTab on busy />
                 <div className="mlist">
-                  {MODULES.slice(0, 4).map((m) => (
+                  {MODULES.slice(0, 5).map((m) => (
                     <ModuleTab key={m} id={m} label={m} selected={false} />
                   ))}
+                  <DropButton label="Flere" className="tab more" />
+                </div>
+                <div className="rgroup">
+                  <IconButton icon="rss" label="Følg" disabled />
+                  <IconButton icon="book" label="Gem" />
                 </div>
               </div>
             </div>
@@ -236,7 +241,7 @@ export function PortalParts({ theme }: { theme: "light" | "dark" }) {
           </div>
         </Spec>
 
-        <Spec label="Menu" note="Åbne faner (flueben på den aktive, luk på de andre) og Luk alle andre · modulmenu · telefonens ⋯">
+        <Spec label="Menu" note="Åbne faner (flueben på den aktive, luk på de andre) og Luk alle andre · Flere (de skjulte moduler) · modulvælgeren (Lassos svar og alle moduler)">
           <div className="dg-specrow">
             <div className="dd">
               <MenuItem icon="build" label="Eksempel Byg A/S" current />
@@ -246,15 +251,15 @@ export function PortalParts({ theme }: { theme: "light" | "dark" }) {
               <MenuItem label="Luk alle andre faner" muted />
             </div>
             <div className="dd">
-              <MenuItem label="Lassos svar" />
-              {MODULES.slice(4).map((m, i) => (
+              {MODULES.slice(5).map((m, i) => (
                 <MenuItem key={m} label={m} current={i === 0} />
               ))}
             </div>
             <div className="dd">
-              <MenuItem icon="theme" label="Mørkt tema" />
-              <MenuItem icon="bell" label="Notifikationer (kommer senere)" />
-              <MenuItem icon="user" label="Jakob" />
+              <MenuItem label="Lassos svar" />
+              {MODULES.map((m, i) => (
+                <MenuItem key={m} label={m} current={i === 0} />
+              ))}
             </div>
           </div>
         </Spec>
@@ -286,15 +291,15 @@ export function PortalParts({ theme }: { theme: "light" | "dark" }) {
             <AskField value="" placeholder="Spørg Lasso" />
             <AskField value="Hvem ejer firmaet?" placeholder="" />
             <AskField value="" placeholder="Spørg Lasso" pending />
-            <AskField value="" placeholder="Chatten er ikke slået til" disabled />
-            <Suggestions items={["Hvordan går det økonomisk?", "Hvem ejer Eksempel Byg A/S?", "Er der røde flag?"]} />
+            <AskField value="" placeholder="Spørg Lasso" disabled />
+            <Suggestions items={suggestions({ key: "CVR-1-99000001", kind: "company", name: "Eksempel Byg A/S", tab: "overblik" })} />
           </div>
         </Spec>
 
-        <Spec label="Bundbjælke (telefon)" note="Lasso-knappen åbner spørgefeltet; kapslen har Søg, Værktøjer og Lister">
+        <Spec label="Bundbjælke (telefon)" note="Værktøjer valgt · Lasso svarer (mærket bevæger sig). Lasso-knappen åbner spørgefeltet; kapslen har Søg, Værktøjer og Lister">
           <div className="dg-specrow">
             <BottomBar homeOn />
-            <BottomBar busy searchOn />
+            <BottomBar busy />
           </div>
         </Spec>
 
@@ -309,7 +314,7 @@ export function PortalParts({ theme }: { theme: "light" | "dark" }) {
           </div>
         </Spec>
 
-        <Spec label="Forsiden" note="Uden åbne faner; mærket bevæger sig, mens Lasso svarer">
+        <Spec label="Forsiden" note="Når ingen fane er valgt (Værktøjer eller logoet; de åbne faner bliver stående); mærket bevæger sig, mens Lasso svarer">
           <div className="spec-page">
             <div className="home">
               <LassoMark className="home__mark" />
@@ -341,16 +346,16 @@ export function PortalParts({ theme }: { theme: "light" | "dark" }) {
             <div className="spec-page">
               <div className="answer">
                 <div className="answer__q">Sammenlign med branchen</div>
-                <div className="answer__error">Lasso kunne ikke svare lige nu. Prøv igen om lidt.</div>
+                <div className="answer__error">Claude har travlt lige nu. Prøv igen om lidt.</div>
               </div>
             </div>
           </div>
         </Spec>
 
-        <Spec label="Besked" note="Kort besked øverst i indholdet, fx når en side er gemt; lukkes med ×">
+        <Spec label="Besked" note="Kort besked øverst i indholdet ved fejl (fx når Gem fejler, chatten ikke er slået til, eller man er logget ud); lukkes med ×">
           <div className="spec-notice">
             <div className="notice" role="status">
-              Gemt på din liste
+              Du er logget ud. Genindlæs siden.
               <button type="button" aria-label="Luk">
                 ×
               </button>
@@ -377,7 +382,7 @@ export function PortalParts({ theme }: { theme: "light" | "dark" }) {
           </table>
         </Spec>
 
-        <Spec label="Ikoner" note="24 × 24, streg 1,5, runde ender; farven følger knappen">
+        <Spec label="Ikoner" note="24 × 24, streg 1,25 (1,5 i topbjælke, skinne og bundbjælke), runde ender; farven følger knappen">
           <div className="spec-icons">
             {P2_ICON_NAMES.map((n) => (
               <div key={n}>

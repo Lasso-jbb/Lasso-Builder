@@ -43,7 +43,7 @@ function ModuleFrame({
 }) {
   const { reports, put } = useReports();
   const key = reportKey(m.type, vp.id, width ?? GRID_RULES[m.type]?.std ?? "full", option.id, mode);
-  const dataset = useMemo(() => stateDataset(option.dataset, option.component, m.item, mode), [option, m.item, mode]);
+  const dataset = useMemo(() => stateDataset(option.dataset, option.component, m.catalog.register?.kraeverData ?? m.item?.kraeverData ?? [], mode), [option, m, mode]);
   const report = reports[key];
   const w = width ?? GRID_RULES[m.type]?.std ?? "full";
   const comment: CommentTarget = {
@@ -154,13 +154,19 @@ function StatesTab({ m, option, theme, mark, fit }: { m: ModuleInfo; option: Dat
   const rule = GRID_RULES[m.type];
   const desktop = VIEWPORTS.find((v) => v.id === "desktop")!;
   const mobil = VIEWPORTS.find((v) => v.id === "mobil")!;
-  const modes: StateMode[] = ["fyldt", "henter", "fejl", "ingen-adgang"];
+  // Moduler uden egne data (fx genveje og opfølgningsknapper) ser ens ud i alle tilstande; de vises kun fyldt.
+  const fetches = (SOURCE.errPrefixes[m.type]?.length ?? 0) > 0;
+  const modes: StateMode[] = fetches ? ["fyldt", "henter", "fejl", "ingen-adgang"] : ["fyldt"];
   return (
     <>
       <section className="dg-section">
         <div className="dg-h2row">
           <h2 className="dg-h2">Tilstande</h2>
-          <span className="dg-meta">Fem tilstande (10b): fyldt, henter, tom, ikke oplyst og fejl. Henter og fejl er lavet ved at fjerne modulets data; tomme tilstande ses med de andre virksomheder nedenfor.</span>
+          <span className="dg-meta">
+            {fetches
+              ? "Med data, henter, fejl og ingen adgang. Henter er lavet ved at fjerne modulets data, fejl og ingen adgang ved også at sætte en fejl på modulets datanøgler. Tomme udfald og \u201cIkke oplyst\u201d ses med de andre virksomheder nedenfor."
+              : "Modulet henter ingen data og ser ens ud i alle tilstande, så kun den fyldte vises."}
+          </span>
         </div>
         <div className="dg-mframes dg-mframes--states">
           {modes.map((mode) => (

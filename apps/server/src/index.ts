@@ -174,8 +174,8 @@ export function createApp({ config, client, provider, store, pages, pdf = pdfRen
     res.json({ user });
   });
 
-  // Portalens side: render-appen med boot { mode: "portal" }. Uden session viser appen login.
-  // Den nye portal (prototypen "lasso-portal - new.html"): søgning, faner og chatten i spørgefeltet.
+  // Portalens side: render-appen med boot { mode: "portal2" }. Uden session viser appen login.
+  // Den nye portal (prototypen "lasso-portal4.html", docs/design/PORTAL.md): søgning, faner og chatten i spørgefeltet.
   // Med PORTAL_PUBLIC er den åben uden login (demobrugeren); ellers logger man ind som i den klassiske.
   app.get("/portal", async (req, res) => {
     const html = await loadViewHtml();

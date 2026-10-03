@@ -72,8 +72,10 @@ function ContrastChip({ fg, bg }: { fg: string; bg: string }) {
 }
 
 export function TokenTable({ tokens, showContrast = false }: { tokens: Token[]; showContrast?: boolean }) {
-  const resolved = useResolved(tokens);
-  const surface = resolved["--lasso-surface"] ?? { light: "rgb(255, 255, 255)", dark: "rgb(24, 26, 31)" };
+  // Fladen slås altid op, også når den ikke er blandt de viste tokens (fx ved filtrering), så kontrasten er rigtig.
+  const withSurface = useMemo(() => (tokens.some((t) => t.name === "--lasso-surface") ? tokens : [...tokens, ...SOURCE.tokens.filter((t) => t.name === "--lasso-surface")]), [tokens]);
+  const resolved = useResolved(withSurface);
+  const surface = resolved["--lasso-surface"] ?? { light: "rgb(255, 255, 255)", dark: "rgb(27, 29, 33)" };
   const [copied, setCopied] = useState("");
   const groups = useMemo(() => {
     const m = new Map<string, Token[]>();

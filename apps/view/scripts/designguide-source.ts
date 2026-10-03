@@ -206,7 +206,12 @@ function componentSources(): { files: Record<string, string[]>; errPrefixes: Rec
   const errPrefixes: Record<string, string[]> = {};
   const cases = [...src.matchAll(/case "(Lasso\w+)":/g)];
   cases.forEach((m, i) => {
-    const body = src.slice(m.index!, cases[i + 1]?.index ?? m.index! + 4000);
+    let body = src.slice(m.index!, cases[i + 1]?.index ?? m.index! + 4000);
+    // Broer i LassoView (fx CompanyHeadBridge): deres krop tæller med, så komponenten og fejlnøglen findes.
+    for (const b of body.matchAll(/<(\w+Bridge)\b/g)) {
+      const at = src.indexOf(`function ${b[1]}(`);
+      if (at >= 0) body += src.slice(at, src.indexOf("\n}\n", at));
+    }
     const set = new Set<string>();
     for (const t of body.matchAll(/<([A-Z]\w+)/g)) {
       const f = imports.get(t[1]!);
@@ -230,7 +235,9 @@ function componentSources(): { files: Record<string, string[]>; errPrefixes: Rec
       }
     }
     files[m[1]!] = [...(files[m[1]!] ?? []), ...set].filter((v, k, a) => a.indexOf(v) === k);
-    errPrefixes[m[1]!] = [...new Set([...body.matchAll(/err\(`(\w+):/g)].map((x) => x[1]!))];
+    // Fejlnøgler: err(`x:…`) og errors[`x:…`] i LassoView, og errors[`x:…`] i komponentens egne filer (fx CompareTable).
+    const own = [...set].map((f) => readFileSync(join(ROOT, f), "utf8")).join("\n");
+    errPrefixes[m[1]!] = [...new Set([...body.matchAll(/(?:err\(|errors\[)`(\w+):/g), ...own.matchAll(/errors\[`(\w+):/g)].map((x) => x[1]!))];
   });
   return { files, errPrefixes };
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { LassoMark, LassoView, LassoWordmark, type ActionResult, type ViewAction } from "@lasso/ui";
-import { FOCUS_LABELS, isPersonFocus, PAGE_TABS, PERSON_FOCUS_LABELS, PERSON_FOCUSES, type Focus, type PersonFocus } from "@lasso/spec";
+import { FOCUS_LABELS, isPersonFocus, PAGE_TABS, pageFocus, PERSON_FOCUS_LABELS, PERSON_FOCUSES, type Focus, type PersonFocus } from "@lasso/spec";
 import type { Portal2Boot } from "../boot.js";
 import { Text } from "../chat/ChatApp.js";
 import { ChatHttpError, streamChat, type ChatState } from "../chat/stream.js";
@@ -44,8 +44,8 @@ import "./portal2.css";
  */
 
 type Theme = "light" | "dark";
-/** Menuerne: skjulte faner ("Flere"), alle faner (den aktive som dropdown), moduler, mobilens "⋯" og topfaner. */
-type MenuKind = "hidden" | "all" | "more" | "sel" | "topmore" | "tophidden";
+/** Menuerne: skjulte faner ("Flere"), alle faner (den aktive som dropdown), moduler og telefonens topfaner. */
+type MenuKind = "hidden" | "all" | "more" | "sel" | "tophidden";
 type Menu = { kind: MenuKind; left: number; top: number } | null;
 
 const COMPANY_TABS = PAGE_TABS.map((f) => ({ id: f as string, label: FOCUS_LABELS[f] }));
@@ -257,7 +257,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     const tab = params.get("fane") ?? "overblik";
     ids.forEach((id) => {
       const kind = /^CVR-[34]-/i.test(id) ? "person" : "company";
-      const t = kind === "company" ? (isFocus(tab) ? tab : "overblik") : isPersonFocus(tab) ? tab : "overblik";
+      const t = kind === "company" ? (isFocus(tab) ? pageFocus(tab) : "overblik") : isPersonFocus(tab) ? tab : "overblik";
       openEntity(kind, id, id, t, undefined, false);
     });
     // ?soeg=… åbner søgningen med teksten (telefon: fuld skærm); ?spoerg=1 åbner spørgefeltet på telefon.
@@ -675,7 +675,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       setHiddenMods((h) => (h.join("|") === hide.join("|") ? h : hide));
       setModSelect(select);
     }
-    // Mobil: de åbne faner i topbjælken, når den er klappet sammen (aktive først, ældste skjules).
+    // Telefon: de åbne faner i topbjælken (aktive først, ældste skjules).
     const tt = toptabs.current;
     if (tt && isPhone()) {
       const items = [...tt.querySelectorAll<HTMLElement>("[data-tt]")];
@@ -936,7 +936,6 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
           <IconButton icon="theme" label="Skift mellem lyst og mørkt tema" pressed={theme === "dark"} onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))} />
           <IconButton icon="bell" label="Notifikationer" disabled />
           <IconButton icon="user" label={`Profil: ${boot.user?.name ?? "Demobruger"}`} />
-          <IconButton icon="dots" label="Mere" className="topmore" menu onClick={(e) => showMenu("topmore", e.currentTarget, "right")} />
         </div>
       </header>
 
@@ -1088,19 +1087,6 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
                   />
                 </>
               ) : null}
-            </>
-          ) : menu.kind === "topmore" ? (
-            <>
-              <MenuItem
-                icon="theme"
-                label={theme === "dark" ? "Lyst tema" : "Mørkt tema"}
-                onClick={() => {
-                  setTheme((t) => (t === "dark" ? "light" : "dark"));
-                  setMenu(null);
-                }}
-              />
-              <MenuItem icon="bell" label="Notifikationer (kommer senere)" onClick={() => setMenu(null)} />
-              <MenuItem icon="user" label={boot.user?.name ?? "Demobruger"} onClick={() => setMenu(null)} />
             </>
           ) : item ? (
             <>

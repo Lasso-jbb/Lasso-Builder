@@ -54,7 +54,7 @@ export function closeItem(list: readonly OpenItem[], key: string, active: string
   return { list: next, active: next[Math.max(0, i - 1)]?.key ?? null };
 }
 
-/** Hovedet tegnes af portalen selv (navn i fanen, adresse og CVR i identitetslinjen), så visningens eget hoved udelades. */
+/** Hovedet tegnes af portalen selv (navnet står i fanen, adresse og CVR i fanens tooltip), så visningens eget hoved udelades. */
 export function withoutHead(spec: ViewSpec): ViewSpec {
   const components = spec.components.filter((c) => c.type !== "LassoCompanyHead" && c.type !== "LassoPersonHead");
   return components.length === spec.components.length || components.length === 0 ? spec : { ...spec, components };

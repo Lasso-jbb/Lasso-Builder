@@ -11,18 +11,18 @@ står på `/portal/klassisk` og videreudvikles ikke.
 | Del | Desktop (over 760 px) | Telefon (760 px og derunder) |
 |---|---|---|
 | Topbjælke | 56 px, rammegrå (`--frame`), navnelogo 90 × 26, søgefeltet, tema, notifikationer, profil | Altid samlet: logo 59 × 17, de åbne faner, og tema, notifikationer og profil som små ikoner (18 px, 30 px brede knapper) |
-| Søgefelt | Pille 36 px, højst 720 px, flugter med indholdets venstre kant | Søgning i fuld skærm fra bundbjælken |
+| Søgefelt | Pille 36 px, højst 720 px; flugter med indholdets venstre kant, når en fane er åben | Søgning i fuld skærm fra bundbjælken |
 | Skinne | 60 px, ikoner 20 px, tooltip til højre; det øverste ikon flugter med modulrækken | Skjult |
-| Åbne faner | 44 px bjælke, fane 36 px, radius 10 foroven, ens bredde højst 170 px | I topbjælken (ingen egen bjælke) |
+| Åbne faner | 44 px bjælke, fane 36 px, radius 10 foroven; flere faner har ens bredde, højst 170 px (en enkelt fane højst 280 px) | I topbjælken (ingen egen bjælke) |
 | Modulrække | 52 px, står fast over indholdet (ruller og "bouncer" ikke med); Lasso-mærket, modulerne, "Flere", Følg og Gem | 48 px |
-| Indhold | Kolonne på højst 1200 px med 40 px sideluft | 28 px sideluft (`--gut`) |
+| Indhold | Kolonne på højst 1200 px med 40 px sideluft | 28 px sideluft til venstre (`--gut`), 18 px til højre |
 | Spørgefelt | Pille 52 px, højst 720 px, centreret nederst med tre forslag | Lasso-knappen (52 px) i bundbjælken åbner feltet |
 | Bundbjælke | – | Lasso-knap til venstre, kapsel 158 × 52 med Søg, Værktøjer, Lister |
 
 ## Topbjælke og søgning
 
 - Søgningen er Lassos navnesøgning (`GET /api/portal/lookup`), ikke AI. Den søger mens man skriver (fra 2 tegn).
-- Resultaterne har fanerne Firmaer og Personer med antal (Lasso giver højst 20 pr. type) og et statusfilter for
+- Resultaterne har fanerne Firmaer og Personer med antal (portalen henter højst 20 pr. type; et CVR-nummer søger kun firmaer) og et statusfilter for
   firmaer (Aktive, Inaktive, Alle). Det søgte står med fed i navnet, et inaktivt firmas status står lige efter
   navnet, og under navnet by og CVR.
 - Et firma har genveje, når rækken er valgt: åbn direkte i Økonomi, Ejerskab eller Historik.
@@ -38,8 +38,9 @@ Moduler og Brugere står dæmpet, til de findes.
 
 ## Åbne faner
 
-- Hvert åbnet firma, person og resultat er en fane med navn og luk-kryds; tooltip med by og CVR.
-- Alle faner har samme bredde: pladsen delt ligeligt, højst 170 px og mindst 120 px. Navnet bruger hele bredden;
+- Hvert åbnet firma, person og resultat er en fane med navn og luk-kryds. Tooltippet viser by og CVR (åbnet fra
+  søgningen) eller adresse, CVR, telefon og web (fra siden); for en person byen; et resultat har intet tooltip.
+- Er der mere end én fane, har alle samme bredde: pladsen delt ligeligt, højst 170 px og mindst 120 px. Navnet bruger hele bredden;
   krydset står yderst til højre (på inaktive faner lægger det sig over navnets ende ved hover). Er der ikke plads til alle i 120 px, skjules de ældste inaktive bag "Flere ▾" (med luk pr. række og
   "Luk alle andre faner"). Står kun den aktive tilbage, bliver den selv en dropdown med alle åbne.
 - Lukker man en fane med krydset, holdes bredden, så længe musen er over fanebjælken: næste fanes kryds står
@@ -79,13 +80,19 @@ Moduler og Brugere står dæmpet, til de findes.
 - Topbjælkens bund flugter: bunden af logoet, tekstens grundlinje og ikonernes bund står på samme linje, og der er
   lige langt (20 px) fra logo til navn som fra pilen til det første ikon. Målt i browseren; justeres med
   `--text-dy`, `--icon-dy` og `--icon-dx` i `portal2.css`, hvis skrift eller ikoner skiftes.
-- Siden selv ruller ikke (ingen bounce bag portalen); kun indholdet ruller og bouncer, og topbjælke og
-  modulrække står fast. Safari og alle browsere på iPhone bouncer selv; i Chrome og Edge laver portalen samme
-  bounce (`elastic.ts`) med én elastik: hjul-hændelser ud over kanten strækker den med stigende modstand (højst
-  72 px), og hvert billede trækker den tilbage mod 0 (tidskonstant 55 ms, på plads på ca. 0,3 s). Den bliver stivere, jo længere en
-  bevægelse trykker på kanten, så trackpaddens efterløb ikke holder den ude. Ruller man den anden vej, mens den er
-  strakt, tager elastikken rulningen først. Rulning gentegner ikke portalen (skyggen under modulrækken sættes direkte på roden).
+- Siden selv ruller ikke (ingen bounce bag portalen); kun indholdet ruller, og topbjælke og modulrække står fast.
 - Modulrækken bliver en vælger, når modulerne ikke kan stå ved siden af hinanden.
+
+## Rulning og bounce (alle bredder)
+
+- Kun indholdet ruller; topbjælke, fanebjælke og modulrække står fast. På desktop får modulrækken en skygge, når
+  indholdet er rullet (sat direkte på roden, så rulning ikke gentegner portalen).
+- Safari og alle browsere på iPhone og iPad (WebKit) bouncer selv. I andre browsere på computer (Chrome, Edge,
+  Firefox) laver portalen bouncen (`elastic.ts`) ud fra hjul- og trackpad-hændelser, med én elastik: rulning ud
+  over toppen eller bunden strækker den med stigende modstand (højst 72 px), og hvert billede trækker den tilbage
+  mod 0 (tidskonstant 55 ms, på plads på ca. 0,3 s). Den bliver stivere, jo længere en bevægelse trykker på kanten,
+  så trackpaddens efterløb ikke holder den ude. Ruller man den anden vej, mens den er strakt, tager elastikken
+  rulningen først.
 
 ## Tema
 
@@ -106,7 +113,7 @@ Designguiden bruger adresserne til sine rammer.
 Siden "Portalens ramme" har fire dele, og alle læser fra portalens egen kode:
 
 1. **Den kørende portal** i 1440, 1000 og 390 px.
-2. **Elementer og knapper** i alle tilstande (`parts.tsx`). Det dækker topbjælke, søgefelt, søgeresultater (med
+2. **Elementer og knapper** i alle tilstande (`parts.tsx`; telefonens topfane `TopTab` vises i de live udsnit). Det dækker topbjælke, søgefelt, søgeresultater (med
    status efter navnet), åbne faner (også mange med ens bredde), modulrække og modulvælger, menuer, ikonknapper og
    skinne, spørgefelt, forslag pr. side (læst fra `suggestions()`), forside, Lassos svar (svar, henter, fejl),
    besked, bundbjælke og alle ikoner.

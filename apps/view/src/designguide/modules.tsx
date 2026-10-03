@@ -94,28 +94,36 @@ export function idsOf(c: ViewComponent): string[] {
   return [x.company, x.person, x.benchmark, ...(x.companies ?? [])].filter((v): v is string => typeof v === "string");
 }
 
+/** Hører datanøglen til et af id'erne? Nøglen er id'et selv eller sammensat, fx "CVR-1-1|2|1|" eller "company:CVR-1-1|90|". */
+const keyOf = (key: string, ids: string[]) => key.split(/[:|]/).some((part) => ids.includes(part));
+
 /**
  * Datasættet i en given tilstand: "henter" = modulets data fjernet (skelettet), "fejl" og "ingen-adgang"
- * = data fjernet og en fejl på hver af modulets fejlnøgler (LassoView.tsx `err(...)`).
+ * = data fjernet og en fejl på hver af modulets fejlnøgler (LassoView.tsx `err(...)` og `errors[...]`).
+ * Datanøglerne kan være sammensatte (ejerdiagram, ændringsfeed, søgninger); fejlen sættes på de samme nøgler.
+ * Moduler uden Lasso-ID (tabeller, heatmap, gemte sider) mister alle deres data.
  */
-export function stateDataset(ds: Dataset, c: ViewComponent, item: ShowcaseItem | undefined, mode: StateMode): Dataset {
+export function stateDataset(ds: Dataset, c: ViewComponent, kraeverData: readonly string[], mode: StateMode): Dataset {
   if (mode === "fyldt") return ds;
   const ids = idsOf(c);
   const errors: Record<string, string> = { ...(ds.errors ?? {}) };
   const copy: Record<string, unknown> = { ...ds, errors };
-  for (const key of item?.kraeverData ?? []) {
+  const keys = new Set<string>(ids);
+  for (const key of kraeverData) {
     const v = copy[key];
     if (v && typeof v === "object" && !Array.isArray(v)) {
       const next = { ...(v as Record<string, unknown>) };
-      for (const id of ids) delete next[id];
-      if (!ids.length) for (const k of Object.keys(next)) delete next[k];
+      for (const k of Object.keys(next)) {
+        if (ids.length && !keyOf(k, ids)) continue;
+        keys.add(k);
+        delete next[k];
+      }
       copy[key] = next;
     } else if (v !== undefined) delete copy[key];
   }
   if (mode !== "henter") {
     const message = mode === "fejl" ? "Lasso svarede ikke i tide (eksempel på en teknisk fejl)." : "Ingen adgang (403): kontoen har ikke adgang til data.";
-    const prefixes = SOURCE.errPrefixes[c.type] ?? [];
-    for (const p of prefixes) for (const id of ids.length ? ids : ["*"]) errors[`${p}:${id}`] = message;
+    for (const p of SOURCE.errPrefixes[c.type] ?? []) for (const k of keys.size ? keys : ["*"]) errors[`${p}:${k}`] = message;
   }
   return copy as unknown as Dataset;
 }

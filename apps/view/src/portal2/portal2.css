@@ -305,7 +305,6 @@ body:has(.p3:not(.p3-specimen)[data-theme="dark"]) { background: #121316; }
 
 /* Spørgefeltet er et rigtigt felt (prototypen viser kun pladsholderen) */
 .p3 .ask .field { padding-inline: 20px 8px; color: var(--ink); }
-.p3 .ask .field .mark { width: 15px; height: 12.5px; flex: none; }
 .p3 .ask .field input { flex: 1; min-width: 0; font-size: 14px; color: var(--ink); outline: none; caret-color: var(--coral); }
 .p3 .ask .field input::placeholder { color: var(--faint); }
 .p3 .ask .field:focus-within { border-color: var(--pill-focus); }
@@ -324,7 +323,7 @@ body:has(.p3:not(.p3-specimen)[data-theme="dark"]) { background: #121316; }
   .p3 { grid-template-columns: minmax(0, 1fr); }
   .p3 .top { --tgap: 20px; --text-dy: 4px; --icon-dy: 2.3px; --icon-dx: 8px; gap: 0; min-width: 0; }
   .p3 .top .logo { flex: none; }
-  .p3 .top .wordmark { height: 17px; width: 59px; display: block; transform: translateY(var(--logo-dy, 0px)); }
+  .p3 .top .wordmark { height: 17px; width: 59px; display: block; }
   .p3 .toptabs { position: static; flex: 1 1 auto; min-width: 0; height: 36px; opacity: 1; transform: none; pointer-events: auto; margin-left: var(--tgap); gap: 6px; }
   .p3 .toptabs::before { display: none; }
   .p3 .tt:first-child { margin-left: 0; }

@@ -101,6 +101,8 @@ export function PortalFramePage({ ctx }: { ctx: Ctx }) {
   const dark = new Map(tokensOf(portalCss, '.p3[data-theme="dark"]'));
   const colors = light.filter(([, v]) => /^#|^rgba?\(/.test(v));
   const sizes = light.filter(([, v]) => /px$/.test(v));
+  // Resten (skygge og skrift) har ingen farveprøve; mørk værdi vises, hvis den findes.
+  const others = light.filter(([, v]) => !/^#|^rgba?\(/.test(v) && !/px$/.test(v));
 
   return (
     <div className="dg-page dg-page--doc">
@@ -121,7 +123,7 @@ export function PortalFramePage({ ctx }: { ctx: Ctx }) {
         </div>
         <LivePortal key={`${screen}:${ctx.theme}`} src={src} vw={s.vw} vh={s.vh} title={`Portalen, ${s.label}`} />
         <p className="dg-note">
-          Rammen åbner {ids.length ? "guidens eksempler som faner" : "forsiden"}. Søgning, faner, moduler og spørgefelt virker; på mobil skal der rulles i rammen for at se topbjælken klappe sammen. Spørgefeltet bruger chatten (Claude) og koster derfor et kald.
+          Rammen åbner {ids.length ? "guidens eksempler som faner" : "forsiden"}. Søgning, faner, moduler og spørgefelt virker; på mobil står topbjælken altid samlet. Spørgefeltet bruger chatten (Claude) og koster derfor et kald.
         </p>
       </section>
 
@@ -170,6 +172,17 @@ export function PortalFramePage({ ctx }: { ctx: Ctx }) {
                     <span className="dg-ptable__same">samme</span>
                   )}
                 </td>
+              </tr>
+            ))}
+            {others.map(([name, value]) => (
+              <tr key={name}>
+                <td>
+                  <code>{name}</code>
+                </td>
+                <td>
+                  <code>{value}</code>
+                </td>
+                <td>{dark.get(name) ? <code>{dark.get(name)}</code> : <span className="dg-ptable__same">samme</span>}</td>
               </tr>
             ))}
             {sizes.map(([name, value]) => (

@@ -1,7 +1,7 @@
 import { useEffect, type RefObject } from "react";
 
 /**
- * Bounce i rulleområdet i Chrome og Edge på computer (Safari og alt på iPhone/iPad bouncer selv).
+ * Bounce i rulleområdet i Chrome, Edge og Firefox på computer (Safari og alt på iPhone/iPad bouncer selv).
  *
  * Én elastik, ingen tilstande: hjul-hændelser ud over kanten strækker den (med stigende modstand), og hvert
  * billede trækker den lidt tilbage mod 0. Et langsomt træk holder den ude, et svirp der rammer kanten skubber

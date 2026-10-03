@@ -341,7 +341,7 @@ export function AskField({
 }: {
   value: string;
   placeholder: string;
-  /** Lasso svarer: mærket bevæger sig, og Send bliver Stop. */
+  /** Lasso svarer: Send bliver Stop. */
   pending?: boolean;
   /** Chatten er slået fra (ingen ANTHROPIC_API_KEY). */
   disabled?: boolean;
