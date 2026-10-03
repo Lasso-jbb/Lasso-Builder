@@ -6,12 +6,24 @@ import type { Dataset, ViewSpec } from "@lasso/spec";
  */
 export const CHAT_API = "/api/chat";
 
+/** Hvor svaret skrives (apps/server/src/chat/context.ts): brugerens valg i menuen, ellers her. */
+export interface Placement {
+  placement: "current" | "entity" | "global";
+  target?: ChatEntityRef;
+  focus?: string;
+}
+
+/** "page" er en hel side (show_*, søgninger, render_view med layout page), "module" et enkelt element. */
+export type ViewForm = "page" | "module";
+
 export type ChatEvent =
+  | ({ type: "placement" } & Placement)
   | { type: "text"; text: string }
   | { type: "tool"; id: string; name: string; title: string }
-  | { type: "view"; id: string; name: string; spec: ViewSpec; dataset: Dataset; pdfLink?: string }
+  | { type: "view"; id: string; name: string; form: ViewForm; spec: ViewSpec; dataset: Dataset; pdfLink?: string }
   | { type: "tool_error"; id: string; name: string; message: string }
-  | { type: "done"; history: unknown[]; sig: string }
+  | { type: "choice"; id: string; question: string; options: ChoiceOption[]; allowFreeText: boolean }
+  | { type: "done"; history: unknown[]; sig: string; placement: Placement }
   | { type: "error"; message: string };
 
 /** Samtalen, serveren gav sidst ("done"): sendes uændret med næste spørgsmål. */

@@ -3,7 +3,7 @@ import { LassoMark, LassoView, LassoWordmark, type ActionResult, type ViewAction
 import { FOCUS_LABELS, isPersonFocus, PAGE_TABS, pageFocus, PERSON_FOCUS_LABELS, PERSON_FOCUSES, type Focus, type PersonFocus } from "@lasso/spec";
 import type { Portal2Boot } from "../boot.js";
 import { Text } from "../chat/ChatApp.js";
-import { ChatHttpError, streamChat, type ChatState } from "../chat/stream.js";
+import { ChatHttpError, streamChat, type ChatState, type ChoicePick } from "../chat/stream.js";
 import { PDF_SAVED, saveBlob } from "../pdfDownload.js";
 import { createPortalApi, errorText, type LookupResult, type ViewResult } from "../portal/api.js";
 import { entityOf, withSaved } from "../portal/data.js";
@@ -11,17 +11,24 @@ import { isFocus } from "../portal/routes.js";
 import type { P2IconName } from "./icons.js";
 import {
   addRecent,
+  applyEvent,
   askPlaceholder,
+  choiceMessage,
   closeItem,
+  contextFor,
+  freeTextPick,
   headLines,
   LASSO_TAB,
-  contextFor,
+  lastView,
   loadRecent,
+  mapViews,
+  newAnswer,
   openItem,
   saveRecent,
   searchCounts,
   searchRows,
   suggestions,
+  withLastView,
   withoutHead,
   type Answer,
   type ItemKind,
@@ -389,7 +396,11 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
 
   /* ---------- chatten ---------- */
 
-  const ask = async (raw: string) => {
+  /**
+   * Ét spørgsmål til chatten (docs/chat.md). Svaret hører til den fane, man står på; serveren flytter det aldrig
+   * selv: kun en "placement"-hændelse (brugerens valg i menuen) åbner en anden fane. pick er valget fra menuen.
+   */
+  const ask = async (raw: string, pick?: ChoicePick) => {
     const text = raw.trim();
     if (!text || pendingKey) return;
     if (!boot.chat) {
@@ -399,8 +410,13 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     setDraft("");
     setAskOpen(false);
     const here = itemRef.current;
-    // Serveren svarer i den fane, man står på (docs/chat.md): den, det modul brugeren ser, og de åbne faner sendes som kontekst.
-    const context = contextFor(here, openRef.current, undefined, here && here.kind !== "result" ? shownRef.current[`${here.key}:${here.tab}`] : undefined);
+    // Skriver brugeren selv, mens menuen står på fanen, er det fritekst til menuen.
+    const menu = here ? answersRef.current[here.key]?.choice : undefined;
+    const choice = pick ?? (menu ? freeTextPick(menu) : undefined);
+    // Serveren svarer i den fane, man står på: den, det modul brugeren ser, de åbne faner og valget sendes som kontekst.
+    const context = contextFor(here, openRef.current, choice, here && here.kind !== "result" ? shownRef.current[`${here.key}:${here.tab}`] : undefined);
+    // Et nyt spørgsmål lukker alle åbne menuer (deres valg passer ikke længere til samtalen).
+    setAnswers((all) => Object.fromEntries(Object.entries(all).map(([k, a]) => [k, a.choice ? { ...a, choice: undefined } : a])));
     // Svaret hører til den fane, man står på; står man på forsiden eller et resultat, til en ny resultatfane.
     let key: string;
     if (here && here.kind !== "result") {
@@ -413,58 +429,44 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     }
     let current = key;
     setPendingKey(key);
-    setAnswers((a) => ({ ...a, [key]: { question: text, text: "", pending: true } }));
+    setAnswers((a) => ({ ...a, [key]: newAnswer(text) }));
     const patch = (fn: (a: Answer) => Answer) => setAnswers((all) => (all[current] ? { ...all, [current]: fn(all[current]!) } : all));
+    /** Placering på en anden fane: den åbnes (eller aktiveres), og svaret flytter med. */
+    const moveTo = (target: OpenItem) => {
+      const from = current;
+      if (from === target.key) return;
+      current = target.key;
+      setPendingKey(target.key);
+      setAnswers((all) => {
+        const { [from]: moved, ...rest } = all;
+        return { ...rest, [target.key]: moved ?? newAnswer(text) };
+      });
+      setOpen((l) => {
+        // Resultatfanen, der blev åbnet til spørgsmålet, lukkes igen; en firma- eller personfane går tilbage til Overblik.
+        const base = from.startsWith("result:") ? l.filter((o) => o.key !== from) : l.map((o) => (o.key === from && o.tab === LASSO_TAB ? { ...o, tab: "overblik" } : o));
+        return openItem(base, target);
+      });
+      activate(target.key);
+      if (here && here.kind !== "result" && here.key === from) void load(here.kind, from, "overblik");
+    };
     const ctrl = new AbortController();
     abort.current = ctrl;
     try {
       await streamChat(
         { message: text, context, history: chat.current.history, sig: chat.current.sig },
         (e) => {
-          switch (e.type) {
-            case "text":
-              patch((a) => ({ ...a, text: a.text + e.text }));
-              break;
-            case "tool":
-              patch((a) => ({ ...a, status: `${e.title} …` }));
-              break;
-            case "tool_error":
-              patch((a) => ({ ...a, status: undefined }));
-              break;
-            case "view": {
-              const view = { spec: e.spec, dataset: e.dataset };
-              const ent = entityOf(e.spec, e.dataset);
-              if (ent && ent.id !== current) {
-                // Claude hentede et andet firma/en anden person: svaret flytter til den fane (åbnes, hvis den ikke er åben).
-                const moved = { ...(answersRef.current[current] ?? { question: text, text: "", pending: true }), view, status: undefined };
-                const from = current;
-                current = ent.id;
-                setPendingKey(ent.id);
-                setAnswers((all) => {
-                  const { [from]: _drop, ...rest } = all;
-                  return { ...rest, [ent.id]: moved };
-                });
-                setOpen((l) => {
-                  const base = from.startsWith("result:") ? l.filter((o) => o.key !== from) : l.map((o) => (o.key === from && o.tab === LASSO_TAB ? { ...o, tab: "overblik" } : o));
-                  return openItem(base, { key: ent.id, kind: ent.kind, name: ent.name, tab: LASSO_TAB });
-                });
-                activate(ent.id);
-                // Den fane, man spurgte fra, går tilbage til Overblik (dens Lasso-svar er flyttet).
-                if (here && here.kind !== "result" && here.key === from) void load(here.kind, from, "overblik");
-              } else {
-                patch((a) => ({ ...a, view, status: undefined }));
-                if (ent) setOpen((l) => l.map((o) => (o.key === ent.id ? { ...o, name: ent.name } : o)));
-                else setOpen((l) => l.map((o) => (o.key === current ? { ...o, name: e.spec.title } : o)));
-              }
-              break;
-            }
-            case "error":
-              patch((a) => ({ ...a, error: e.message, status: undefined }));
-              break;
-            case "done":
-              chat.current = { history: e.history, sig: e.sig };
-              break;
+          if (e.type === "placement") {
+            if (e.placement === "entity" && e.target) moveTo({ key: e.target.id, kind: e.target.kind, name: e.target.name, tab: LASSO_TAB });
+            else if (e.placement === "global" && !current.startsWith("result:")) moveTo({ key: `result:${++resultSeq.current}`, kind: "result", name: text, tab: LASSO_TAB });
+          } else if (e.type === "view") {
+            // Fanens navn følger det hentede: firmaets/personens navn, eller visningens titel på en resultatfane.
+            const ent = entityOf(e.spec, e.dataset);
+            const at = current;
+            setOpen((l) => l.map((o) => (o.key !== at ? o : ent && ent.id === at ? { ...o, name: ent.name } : o.kind === "result" ? { ...o, name: e.spec.title } : o)));
+          } else if (e.type === "done") {
+            chat.current = { history: e.history, sig: e.sig };
           }
+          patch((a) => applyEvent(a, e));
         },
         { signal: ctrl.signal },
       );
@@ -487,8 +489,9 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const onLasso = item ? item.kind === "result" || item.tab === LASSO_TAB : false;
   const answer = item ? answers[item.key] : undefined;
   const dataKey = item ? (item.kind === "result" ? item.key : `${item.key}:${item.tab}`) : null;
-  const current: Shown | undefined = item ? (item.kind !== "result" && item.tab === LASSO_TAB ? answer?.view : (dataKey ? shown[dataKey] : undefined) ?? (item.kind === "result" ? answer?.view : undefined)) : undefined;
-  const headData = item && item.kind !== "result" ? (shown[`${item.key}:overblik`]?.dataset ?? answer?.view?.dataset ?? current?.dataset) : undefined;
+  const answerView = lastView(answer);
+  const current: Shown | undefined = item ? (item.kind !== "result" && item.tab === LASSO_TAB ? answerView : (dataKey ? shown[dataKey] : undefined) ?? (item.kind === "result" ? answerView : undefined)) : undefined;
+  const headData = item && item.kind !== "result" ? (shown[`${item.key}:overblik`]?.dataset ?? answerView?.dataset ?? current?.dataset) : undefined;
   const lines = item ? headLines(item.kind, item.key, headData) : [];
   const saved = Boolean(item && item.kind !== "result" && (headData?.savedIds?.includes(item.key) || current?.dataset.savedIds?.includes(item.key)));
   const busy = dataKey ? loading.has(dataKey) : false;
@@ -507,13 +510,13 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
 
   const replaceCurrent = (r: Shown) => {
     if (!item) return;
-    if (item.kind !== "result" && item.tab === LASSO_TAB) setAnswers((a) => (a[item.key] ? { ...a, [item.key]: { ...a[item.key]!, view: r } } : a));
+    if (item.kind !== "result" && item.tab === LASSO_TAB) setAnswers((a) => (a[item.key] ? { ...a, [item.key]: withLastView(a[item.key]!, r) } : a));
     else if (dataKey) put(dataKey, r);
   };
 
   const patchSaved = (lassoId: string, on: boolean) => {
     setShown((s) => Object.fromEntries(Object.entries(s).map(([k, v]) => [k, { ...v, dataset: withSaved(v.dataset, lassoId, on) }])));
-    setAnswers((all) => Object.fromEntries(Object.entries(all).map(([k, a]) => [k, a.view ? { ...a, view: { ...a.view, dataset: withSaved(a.view.dataset, lassoId, on) } } : a])));
+    setAnswers((all) => Object.fromEntries(Object.entries(all).map(([k, a]) => [k, mapViews(a, (v) => ({ ...v, dataset: withSaved(v.dataset, lassoId, on) }))])));
   };
 
   const toggleSaved = async () => {
@@ -845,48 +848,76 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       </div>
     );
   } else {
-    const view = current ? (item.kind !== "result" ? withoutHead(current.spec) : current.spec) : null;
-    content = (
-      <>
-        {onLasso && answer ? (
+    const host = (page: boolean) => ({ prompt: true, save: true, refine: true, drillDown: true, refresh: true, export: true, pdf: boot.pdf !== false, openFocus: page, openSection: page });
+    const lassoView = (key: string, shownNow: Shown, page: boolean) => {
+      const spec = item.kind !== "result" ? withoutHead(shownNow.spec) : shownNow.spec;
+      return (
+        <div className="view" key={key}>
+          <LassoView key={`${key}:${spec.title}:${spec.components.length}`} spec={spec} dataset={shownNow.dataset} theme={theme} frameless page={page} host={host(item.kind !== "result")} onAction={onAction} />
+        </div>
+      );
+    };
+    const skeleton = (
+      <div className="skeleton" aria-label="Henter">
+        <div />
+        <div />
+        <div />
+      </div>
+    );
+    if (onLasso && answer) {
+      // Chattens svar: spørgsmålet, så delene (tekst og visninger) i den rækkefølge, de kom, og evt. valgmenuen.
+      const hasView = answer.parts.some((p) => p.kind === "view");
+      content = (
+        <>
           <div className="answer" aria-live="polite">
             <div className="answer__q">{answer.question}</div>
-            {answer.text ? <Text text={answer.text} /> : null}
-            {answer.pending && !answer.view ? <div className="answer__status">{answer.status ?? "Tænker …"}</div> : null}
+            {answer.parts.map((p, i) => (p.kind === "text" ? <Text key={i} text={p.text} /> : lassoView(`${item.key}:${i}`, p, item.kind !== "result" && p.form === "page")))}
+            {answer.choice ? (
+              // Valgmenuen designes i Paper; indtil da almindelige knapper, så et valg kan sendes.
+              <div className="answer__choice" role="group" aria-label={answer.choice.question}>
+                <div>{answer.choice.question}</div>
+                {answer.choice.options.map((o, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    disabled={pending}
+                    onClick={() => {
+                      const m = choiceMessage(answer.choice!, i);
+                      if (m) void ask(m.message, m.pick);
+                    }}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {answer.pending && !hasView ? <div className="answer__status">{answer.status ?? "Tænker …"}</div> : null}
             {answer.error ? (
               <div className="answer__error" role="alert">
                 {answer.error}
               </div>
             ) : null}
           </div>
-        ) : null}
-        {err ? (
-          <div className="answer__error" role="alert">
-            {err}
-          </div>
-        ) : view && current ? (
-          <div className="view">
-            <LassoView
-              key={`${dataKey}:${view.title}:${view.components.length}`}
-              spec={view}
-              dataset={current.dataset}
-              theme={theme}
-              frameless
-              page={item.kind !== "result"}
-              host={{ prompt: true, save: true, refine: true, drillDown: true, refresh: true, export: true, pdf: boot.pdf !== false, openFocus: item.kind !== "result", openSection: item.kind !== "result" }}
-              onAction={onAction}
-            />
-          </div>
-        ) : busy || (onLasso && answer?.pending) ? (
-          <div className="skeleton" aria-label="Henter">
-            <div />
-            <div />
-            <div />
-          </div>
-        ) : null}
-        <div className="end" />
-      </>
-    );
+          {answer.pending && !hasView ? skeleton : null}
+          <div className="end" />
+        </>
+      );
+    } else {
+      content = (
+        <>
+          {err ? (
+            <div className="answer__error" role="alert">
+              {err}
+            </div>
+          ) : current ? (
+            lassoView(dataKey ?? item.key, current, item.kind !== "result")
+          ) : busy ? (
+            skeleton
+          ) : null}
+          <div className="end" />
+        </>
+      );
+    }
   }
 
   const sugg = suggestions(item);

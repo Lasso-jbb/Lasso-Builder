@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Dataset, ViewSpec } from "@lasso/spec";
 import type { LookupResult } from "../portal/api.js";
-import { addRecent, askPlaceholder, choiceMessage, closeItem, contextFor, freeTextPick, headLines, highlight, loadRecent, openItem, searchCounts, searchRows, suggestions, withoutHead, type OpenItem, type PendingChoice } from "./model.js";
+import type { ChatEvent } from "../chat/stream.js";
+import { addRecent, applyEvent, askPlaceholder, choiceMessage, closeItem, contextFor, freeTextPick, headLines, highlight, lastView, loadRecent, mapViews, newAnswer, openItem, searchCounts, searchRows, suggestions, withLastView, withoutHead, type OpenItem, type PendingChoice } from "./model.js";
 
 const novo: OpenItem = { key: "CVR-1-24256790", kind: "company", name: "NOVO NORDISK A/S", tab: "overblik" };
 const lasso: OpenItem = { key: "CVR-1-34580820", kind: "company", name: "LASSO X A/S", tab: "overblik" };
@@ -118,4 +119,47 @@ test("seneste: nyeste først uden dubletter; ødelagt lager giver en tom liste",
   );
   assert.deepEqual(loadRecent({ getItem: () => "{ikke json" }), []);
   assert.deepEqual(loadRecent(undefined), []);
+});
+
+test("applyEvent: tekst og visninger i rækkefølge, placering først, menu og fejl", () => {
+  const spec = { version: 2, kind: "company", title: "X", layout: "dashboard", criteria: [], components: [] } as unknown as ViewSpec;
+  const ds = { companies: {}, persons: {} } as unknown as Dataset;
+  const events: ChatEvent[] = [
+    { type: "placement", placement: "entity", target: { kind: "person", id: mette.key, name: mette.name }, focus: "overblik" },
+    { type: "text", text: "Jakob " },
+    { type: "text", text: "har 4 firmaer." },
+    { type: "tool", id: "t1", name: "render_view", title: "Vis oversigt" },
+    { type: "view", id: "t1", name: "render_view", form: "module", spec, dataset: ds },
+    { type: "text", text: "Og her er siden." },
+    { type: "view", id: "t2", name: "show_person", form: "page", spec, dataset: ds },
+    { type: "done", history: [], sig: "s", placement: { placement: "entity", target: { kind: "person", id: mette.key, name: mette.name }, focus: "overblik" } },
+  ];
+  let a = newAnswer("Hvad laver Jakob?");
+  for (const e of events) a = applyEvent(a, e);
+  assert.deepEqual(
+    a.parts.map((p) => (p.kind === "text" ? `text:${p.text}` : `view:${p.form}`)),
+    ["text:Jakob har 4 firmaer.", "view:module", "text:Og her er siden.", "view:page"],
+  );
+  assert.deepEqual(a.placement, { placement: "entity", target: { kind: "person", id: mette.key, name: mette.name }, focus: "overblik" });
+  assert.equal(a.pending, false);
+  assert.equal(a.status, undefined);
+  assert.equal(lastView(a)?.spec, spec);
+
+  // Status mens værktøjet henter; fejl fjerner status.
+  const busy = applyEvent(newAnswer("q"), { type: "tool", id: "t", name: "show_company", title: "Vis virksomhed" });
+  assert.equal(busy.status, "Vis virksomhed …");
+  const failed = applyEvent(busy, { type: "error", message: "Nej." });
+  assert.equal(failed.status, undefined);
+  assert.equal(failed.error, "Nej.");
+
+  // Menuen gemmes på svaret.
+  const withMenu = applyEvent(newAnswer("vis alt om Mette"), { type: "choice", id: "toolu_1", question: "Hvad vil du se?", options: [{ label: "Alt om Mette", action: { placement: "current" } }], allowFreeText: false });
+  assert.deepEqual(withMenu.choice, { id: "toolu_1", question: "Hvad vil du se?", options: [{ label: "Alt om Mette", action: { placement: "current" } }], allowFreeText: false });
+
+  // Den seneste visning kan erstattes, og alle visninger kan ændres.
+  const spec2 = { ...spec, title: "Y" } as ViewSpec;
+  assert.equal(lastView(withLastView(a, { spec: spec2, dataset: ds }))?.spec.title, "Y");
+  assert.equal((withLastView(a, { spec: spec2, dataset: ds }).parts[1] as { spec: ViewSpec }).spec.title, "X", "kun den seneste");
+  assert.ok(mapViews(a, (s) => ({ ...s, dataset: { ...s.dataset, savedIds: ["a"] } })).parts.every((p) => p.kind !== "view" || p.dataset.savedIds?.[0] === "a"));
+  assert.equal(lastView(newAnswer("q")), undefined);
 });

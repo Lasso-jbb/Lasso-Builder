@@ -56,6 +56,10 @@ function applyEvent(turn: Extract<Turn, { role: "assistant" }>, e: ChatEvent): E
       return { ...turn, error: e.message };
     case "done":
       return { ...turn, pending: false, parts: parts.map((p) => (p.kind === "tool" && p.state === "running" ? { ...p, state: "done" } : p)) };
+    case "placement":
+    case "choice":
+      // Placering og valgmenu hører til portalen (uden context svarer serveren globalt og uden menu).
+      return turn;
   }
 }
 

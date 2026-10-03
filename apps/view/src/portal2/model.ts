@@ -1,6 +1,6 @@
 import type { Dataset, ViewSpec } from "@lasso/spec";
 import type { LookupResult } from "../portal/api.js";
-import type { ChatContext, ChatEntityRef, ChoiceOption, ChoicePick } from "../chat/stream.js";
+import type { ChatContext, ChatEntityRef, ChatEvent, ChoiceOption, ChoicePick, Placement, ViewForm } from "../chat/stream.js";
 
 /**
  * Den nye portal (prototypen "lasso-portal4.html"): rene hjælpefunktioner uden React, så de kan testes
@@ -34,15 +34,68 @@ export interface OpenItem {
   tab: string;
 }
 
-/** Hvad chatten svarede på en fane: spørgsmålet, Claudes tekst og visningen. */
+/** Ét stykke af svaret: tekst eller en visning, i den rækkefølge de kom. */
+export type AnswerPart = { kind: "text"; text: string } | ({ kind: "view"; id: string; form: ViewForm } & Shown);
+
+/** Hvad chatten svarede på en fane: spørgsmålet og delene (tekst og visninger) i rækkefølge. */
 export interface Answer {
   question: string;
-  text: string;
+  parts: AnswerPart[];
   /** "Vis virksomhed …", mens værktøjet henter. */
   status?: string;
   error?: string;
-  view?: Shown;
   pending: boolean;
+  /** Hvor serveren skriver svaret (første hændelse i turen). */
+  placement?: Placement;
+  /** Valgmenuen, serveren bad om; står, til brugeren vælger eller spørger om noget andet. */
+  choice?: PendingChoice;
+}
+
+export const newAnswer = (question: string): Answer => ({ question, parts: [], pending: true });
+
+/** Den seneste visning i svaret: den, handlinger (filtre, opdatér, PDF) virker på. */
+export function lastView(answer: Answer | undefined): Shown | undefined {
+  const v = answer?.parts.filter((p): p is AnswerPart & { kind: "view" } => p.kind === "view").at(-1);
+  return v ? { spec: v.spec, dataset: v.dataset } : undefined;
+}
+
+/** Erstatter den seneste visning (fx efter et filterskift). */
+export function withLastView(answer: Answer, shown: Shown): Answer {
+  const i = answer.parts.map((p) => p.kind).lastIndexOf("view");
+  if (i < 0) return answer;
+  return { ...answer, parts: answer.parts.map((p, k) => (k === i && p.kind === "view" ? { ...p, ...shown } : p)) };
+}
+
+/** Alle visninger i svaret ændret (fx Gem/Gemt i datasættet). */
+export function mapViews(answer: Answer, fn: (shown: Shown) => Shown): Answer {
+  return { ...answer, parts: answer.parts.map((p) => (p.kind === "view" ? { ...p, ...fn({ spec: p.spec, dataset: p.dataset }) } : p)) };
+}
+
+/** Ren reducer: én hændelse fra /api/chat lagt på svaret. Tekst føjes til den sidste tekstdel; visninger kommer i rækkefølge. */
+export function applyEvent(answer: Answer, e: ChatEvent): Answer {
+  switch (e.type) {
+    case "placement": {
+      const { type: _t, ...placement } = e;
+      return { ...answer, placement };
+    }
+    case "text": {
+      const last = answer.parts.at(-1);
+      if (last?.kind === "text") return { ...answer, parts: [...answer.parts.slice(0, -1), { kind: "text", text: last.text + e.text }] };
+      return { ...answer, parts: [...answer.parts, { kind: "text", text: e.text }] };
+    }
+    case "tool":
+      return { ...answer, status: `${e.title} …` };
+    case "tool_error":
+      return { ...answer, status: undefined };
+    case "view":
+      return { ...answer, status: undefined, parts: [...answer.parts, { kind: "view", id: e.id, form: e.form, spec: e.spec, dataset: e.dataset }] };
+    case "choice":
+      return { ...answer, status: undefined, choice: { id: e.id, question: e.question, options: e.options, allowFreeText: e.allowFreeText } };
+    case "error":
+      return { ...answer, status: undefined, error: e.message };
+    case "done":
+      return { ...answer, status: undefined, pending: false, placement: e.placement };
+  }
 }
 
 export function openItem(list: readonly OpenItem[], item: OpenItem): OpenItem[] {
