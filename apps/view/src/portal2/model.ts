@@ -107,9 +107,39 @@ export function withoutFollowUps(spec: ViewSpec): ViewSpec {
   return components.length === spec.components.length ? spec : { ...spec, components };
 }
 
-/** Visningen, som portalen tegner den: aldrig opfølgende spørgsmål, og uden eget hoved på en firma- eller personfane (head: false). */
-export function forPortal(spec: ViewSpec, { head = true }: { head?: boolean } = {}): ViewSpec {
+/**
+ * Uden chattens knapper til næste spørgsmål eller en anden fane (Jakob 03.10): i portalen står forslagene kun under
+ * spørgefeltet. Det fjerner
+ * - de opfølgende spørgsmål (LassoFollowUps),
+ * - svarets bundlink videre (`answer`, 30.1-30.3: "Se hele økonomien"),
+ * - "Se alle N … i <fane> →" (komponenternes `more` med et fokus; uden det folder "Se alle"/"Vis alle" ud på stedet),
+ * - modulværktøjslinjens opfølgende spørgsmål (`group.toolbar`, 30.11).
+ * Almindelige "Se alle"-links, der folder en liste ud, bliver. /mcp og /chat bruger ikke funktionen og beholder alt.
+ */
+export function withoutChatPrompts(spec: ViewSpec): ViewSpec {
   const s = withoutFollowUps(spec);
+  let changed = s !== spec;
+  const components = s.components.map((c) => {
+    const x = c as typeof c & { more?: string; group?: { toolbar?: unknown } };
+    const dropMore = typeof x.more === "string" && x.more !== "expand";
+    const dropToolbar = Boolean(x.group && "toolbar" in x.group);
+    if (!dropMore && !dropToolbar) return c;
+    changed = true;
+    const { more: _more, ...rest } = x;
+    const out = dropMore ? rest : x;
+    if (!dropToolbar) return out as typeof c;
+    const { toolbar: _toolbar, ...group } = x.group!;
+    return { ...out, group } as typeof c;
+  });
+  if ("answer" in s && s.answer !== undefined) changed = true;
+  if (!changed) return spec;
+  const { answer: _answer, ...base } = s;
+  return { ...base, components } as ViewSpec;
+}
+
+/** Visningen, som portalen tegner den: ingen chatknapper (withoutChatPrompts), og uden eget hoved på en firma- eller personfane (head: false). */
+export function forPortal(spec: ViewSpec, { head = true }: { head?: boolean } = {}): ViewSpec {
+  const s = withoutChatPrompts(spec);
   return head ? s : withoutHead(s);
 }
 
