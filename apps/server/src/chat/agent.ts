@@ -8,7 +8,7 @@ import type {
   MessageCreateParamsNonStreaming,
 } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import { Client, InMemoryTransport, type CallToolResult } from "@modelcontextprotocol/client";
-import { DATASET_META_KEY, type Dataset, type ViewSpec } from "@lasso/spec";
+import { DATASET_META_KEY, FOCUS_LABELS, FOCUSES, isPersonFocus, pageFocus, PERSON_FOCUS_LABELS, PERSON_FOCUSES, type Dataset, type Focus, type PersonFocus, type ViewSpec } from "@lasso/spec";
 import type { Config } from "../config.js";
 import { CHAT_ROUTING, createMcpServer, type McpContext } from "../mcp/server.js";
 import { ASK_CHOICE, contextText, placementOf, PLACE_ANSWER, withoutStaleSame, type ChatContext, type GlobalTitle, type Placement } from "./context.js";
@@ -60,6 +60,52 @@ export function fallbackTitle(name: string, spec: ViewSpec): GlobalTitle {
   return spec.components.some((c) => c.type === "LassoMap") ? "Kort" : "Markedsanalyse";
 }
 
+/** Modulets navn og id i linket, når en visning om en entitet blev vist med et kendt fokus (ellers undefined). */
+export function moduleLink(tool: string, input: unknown, spec: ViewSpec): { focus: string; label: string } | undefined {
+  const focus = (input as { focus?: unknown } | null)?.focus;
+  if (tool === "show_company") {
+    const f: Focus | undefined = (FOCUSES as readonly string[]).includes(String(focus)) ? (focus as Focus) : (FOCUSES.find((x) => FOCUS_LABELS[x] === spec.subtitle) ?? "overblik");
+    const page = pageFocus(f);
+    return { focus: page, label: FOCUS_LABELS[page] };
+  }
+  if (tool === "show_person") {
+    const f: PersonFocus = isPersonFocus(focus) ? focus : (PERSON_FOCUSES.find((x) => PERSON_FOCUS_LABELS[x] === spec.subtitle) ?? "overblik");
+    return { focus: f, label: PERSON_FOCUS_LABELS[f] };
+  }
+  return undefined;
+}
+
+/** Assistentens tekst i denne tur (fra og med beskeden efter den bevarede historik og brugerens tur). */
+function turnAssistantText(messages: readonly BetaMessageParam[], from: number): string {
+  return messages
+    .slice(from)
+    .filter((m) => m.role === "assistant" && Array.isArray(m.content))
+    .flatMap((m) => (m.content as { type: string; text?: string }[]).filter((b) => b.type === "text").map((b) => b.text ?? ""))
+    .join("\n");
+}
+
+/**
+ * Linjen med modullinks, når modellen ikke skrev nogen i turen: modulet i visningen (fx [Regnskab](lasso:modul/regnskab)),
+ * ellers Overblik, når svaret hører til en person eller virksomhed (den aktive fane eller målet for et skifte); en global fane får ingen.
+ */
+export function fallbackLinks(messages: readonly BetaMessageParam[], from: number, shown: { focus: string; label: string } | undefined, placement: Placement, context: ChatContext): string | undefined {
+  if (turnAssistantText(messages, from).includes("lasso:")) return undefined;
+  if (shown) return `[${shown.label}](lasso:modul/${shown.focus})`;
+  if (placement.placement === "entity" || context.active.kind !== "global") return `[${FOCUS_LABELS.overblik}](lasso:modul/overblik)`;
+  return undefined;
+}
+
+/** Tekst på sidste assistentbesked (historikken viser så konventionen for modellen næste tur). */
+function appendToLastAssistant(messages: BetaMessageParam[], extra: string): void {
+  const last = messages.at(-1);
+  if (!last || last.role !== "assistant" || !Array.isArray(last.content)) return;
+  const blocks = [...last.content];
+  const i = blocks.findLastIndex((b) => b.type === "text");
+  if (i >= 0) blocks[i] = { ...blocks[i], text: `${(blocks[i] as { text: string }).text}${extra}` } as (typeof blocks)[number];
+  else blocks.push({ type: "text", text: extra.trim() } as (typeof blocks)[number]);
+  messages[messages.length - 1] = { role: "assistant", content: blocks };
+}
+
 /** Ét kald til modellen; streamer teksten med onText og giver den færdige besked. Udskiftes i test. */
 export type ModelCall = (params: MessageCreateParamsNonStreaming, onText: (delta: string) => void, signal?: AbortSignal) => Promise<BetaMessage>;
 
@@ -88,11 +134,12 @@ Placering (vælges først):
 - Efter et valg i menuen står det i [Kontekst] og er bindende: gør det i ét trin uden place_answer. Skriver brugeren i stedet et nyt spørgsmål, besvar det her.
 
 Svar:
+- Modullinks: afslut hvert svar med en sidste linje på 1–3 links til de moduler, der passer til svaret, skrevet præcis sådan: [Regnskab](lasso:modul/regnskab). Gyldige moduler: virksomhed overblik, oekonomi, regnskab, ejerskab, risiko, historik, kontakt; person overblik, roller, netvaerk, ejerskab, risiko, historik. Andre sider: [Navn](lasso:firma/CVR-1-…) og [Navn](lasso:person/CVR-3-…), kun med id fra et værktøjssvar (opfind aldrig et id).
+  Eksempel, data mangler: "LASSO X A/S har ikke indsendt regnskab for 2019; selskabet blev stiftet i 2020. Det ældste regnskab er 2020." og så en tom linje og "[Regnskab 2020](lasso:modul/regnskab) [Regnskab](lasso:modul/regnskab)".
+  Eksempel, efter en visning: "Ejerne står øverst; Holm Holding ejer over to tredjedele." og så "[Ejerskab](lasso:modul/ejerskab)".
 - Tekst først: skriv en til tre korte sætninger, før visningen kommer, der siger, hvad den viser og det vigtigste at lægge mærke til; gentag ikke tallene fra visningen, og skriv aldrig "her er visningen" alene. Appen viser visningerne under teksten i den rækkefølge, de kommer.
 - Et enkelt element (et diagram, en nøgletalsrække, en tabel) er render_view med én komponent og en title og subtitle, ikke en hel side. En hel side (show_*, søgninger, render_view med layout page) bruges kun, når brugeren beder om siden.
-- Teksten er kort og almindelig: **fed**, punktlister og links er tilladt, ingen overskrifter, ingen tabeller. Skriv aldrig tekstkortet, aldrig links til visningen og aldrig HTML/CSS.
-- Modullinks: sidste linje i svaret må være links, hver for sig i formen [Risiko](lasso:modul/risiko) (modulerne på den aktive side: overblik, oekonomi, regnskab, ejerskab, ledelse, risiko, historik, kontakt; for personer roller, netvaerk, ejerskab, risiko, historik), [Navn](lasso:firma/CVR-1-…) og [Navn](lasso:person/CVR-3-…). Id'er skrives kun, når de står i et værktøjssvar i samtalen; opfind aldrig et id.
-- Mangler Lasso data ("Lasso har ikke regnskab for 2025 endnu"), så sig det og tilbyd mindst ét modullink, hvor brugeren kan kigge videre.
+- Teksten er kort og almindelig: **fed**, punktlister og links er tilladt, ingen overskrifter, ingen tabeller. Skriv aldrig tekstkortet, aldrig links til visningen (lasso:-linkene ovenfor er undtagelsen) og aldrig HTML/CSS.
 - Beløb angives i hele kroner (10 mio. = 10000000).
 
 Data:
@@ -265,6 +312,11 @@ export async function runChat({ ctx, config, model, history, message, context, e
   const turn: TurnState = { placement, placed: false, viewed: false };
   /** Den første visning (navn og spec): giver en resultatfane et generisk navn, når modellen ikke valgte et. */
   let firstView: { name: string; spec: ViewSpec } | undefined;
+  /** Modulet i den første visning om en entitet (til linjen med modullinks, hvis modellen ikke skrev nogen). */
+  let shownModule: { focus: string; label: string } | undefined;
+  /** Turen sluttede normalt med et tekstsvar (ikke en fejl, afbrydelse eller menu). */
+  let endedNormally = false;
+  let choiceShown = false;
   const { client, close } = await connect({ ...ctx, host: "chat" });
   try {
     const setup = await buildChatSetup(client, config);
@@ -293,6 +345,7 @@ export async function runChat({ ctx, config, model, history, message, context, e
         emit({ type: "error", message: "Claude kunne ikke svare på det spørgsmål." });
         break;
       }
+      if (response.stop_reason === "end_turn") endedNormally = true;
       if (response.stop_reason !== "tool_use") {
         // Afbrudt midt i et værktøjskald (max_tokens/pause_turn): hvert tool_use skal have et svar, ellers er den signerede historik ugyldig.
         if (closeOpenToolUses(messages, response)) emit({ type: "error", message: "Svaret blev afbrudt, før det blev færdigt. Prøv at stille spørgsmålet mere præcist." });
@@ -306,6 +359,7 @@ export async function runChat({ ctx, config, model, history, message, context, e
       const ask = uses.find((u) => u.name === ASK_CHOICE);
       const menu = ask ? await chatToolByName(ASK_CHOICE)!.run(ask.input ?? {}, toolCtx) : undefined;
       if (ask && menu?.choice) {
+        choiceShown = true;
         emit({ type: "choice", id: ask.id, ...menu.choice });
         const blocked = "Vis intet, før brugeren har valgt (ask_choice stod i samme svar).";
         for (const u of uses) if (u !== ask) emit({ type: "tool_error", id: u.id, name: u.name, message: blocked });
@@ -369,6 +423,7 @@ export async function runChat({ ctx, config, model, history, message, context, e
           if (sc?.spec && dataset) {
             turn.viewed = true;
             firstView ??= { name: u.name, spec: sc.spec };
+            shownModule ??= moduleLink(u.name, u.input, sc.spec);
             emit({ type: "view", id: u.id, name: u.name, tool: u.name, form: viewForm(u.name, sc.spec), spec: sc.spec, dataset, ...(sc.pdfLink ? { pdfLink: sc.pdfLink } : {}) });
           }
           return { type: "tool_result", tool_use_id: u.id, content: text || "OK" };
@@ -376,6 +431,12 @@ export async function runChat({ ctx, config, model, history, message, context, e
       );
       messages.push({ role: "user", content: results });
       if (step === MAX_STEPS - 1) emit({ type: "error", message: "Spørgsmålet krævede for mange trin. Prøv at stille det mere præcist." });
+    }
+    // Modullinks (docs/chat.md): skrev modellen ingen, tilføjer serveren en linje ud fra turen, så "Åbn i fane"-pillerne altid er der.
+    const links = !endedNormally || choiceShown ? undefined : fallbackLinks(messages, retained.length, shownModule, turn.placement, context);
+    if (links) {
+      emit({ type: "text", text: `\n\n${links}` });
+      appendToLastAssistant(messages, `\n\n${links}`);
     }
     // Flyttes svaret (til en person/virksomhed, eller til en resultatfane fra en side), starter fanen en ny samtale: kun denne tur.
     const final = turn.placement;

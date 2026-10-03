@@ -120,6 +120,15 @@ de tidligere ture stadig står synlige i tråden. Klienten husker fanens samtale
 sendte resumé) på flytningens notits (`prev`), så `Fortryd` lægger den tilbage, også når svaret allerede er færdigt. En åben fane, der aldrig har haft en samtale, husker en tom samtale, så den flyttede turs historik heller ikke bliver stående dér.
 `prev` gemmes ikke i browseren; efter en genindlæsning kan flytningen ikke fortrydes.
 
+**Modullinks.** `CHAT_RULES` beder modellen slutte hvert svar med 1–3 links, fx `[Regnskab](lasso:modul/regnskab)`
+(med to eksempler: manglende data og efter en visning); klienten tegner et afsnit med kun sådanne links som pille-
+rækken. Skriver modellen ingen (intet `lasso:` i turens assistenttekst), tilføjer serveren selv en sidste linje
+(`fallbackLinks` i `chat/agent.ts`): modulet i den første visning om en entitet (`show_company`/`show_person` med
+`focus`, ellers udledt af visningens undertitel; navnene er fokusernes etiketter: Økonomi, Regnskab, Ejerskab …,
+for personer Roller, Netværk …), ellers `[Overblik](lasso:modul/overblik)` når svaret hører til en person eller
+virksomhed, og ingenting på en global fane, efter en menu eller en fejl. Linjen sendes som en sidste `text`-hændelse
+(`"\n\n[…]"`, før `done`) og lægges på den sidste assistentbesked i historikken, så modellen ser konventionen næste tur.
+
 **Fanenavne.** En entitetsfane hedder det, entiteten hedder. En resultatfane hedder aldrig spørgsmålet, men et af de
 generiske navne `Firmaliste`, `Sammenligning`, `Markedsanalyse` eller `Kort`: fra `place_answer`/valgets `title`, og
 på forsiden uden valgt navn sætter serveren et ud fra den første visning (`done.placement.title`: søgninger og
