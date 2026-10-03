@@ -203,6 +203,14 @@ test("chat: konteksten står først i brugerens tur; uden context svares der glo
   script.push(sayText("Hej."));
   await chat({ message: "Hej" });
   assert.match(lastUserTexts(calls.at(-1)!)[0]!, /^\[Kontekst\] Aktiv fane: forsiden \(global/);
+
+  // Det, brugeren ser (modulets resumé fra /api/portal), står efter fanelinjen; over 4000 tegn afvises.
+  script.push(sayText("Ja."));
+  const seen = { active: { ...ctx.active, tab: "oekonomi", view: { module: "oekonomi", summary: "Omsætning 2025: 38 mio." } }, open: [] };
+  await chat({ message: "Hvorfor?", context: seen });
+  assert.match(lastUserTexts(calls.at(-1)!)[0]!, /modul oekonomi\. Brugeren ser: oekonomi — Omsætning 2025: 38 mio\.$/);
+  const tooLong = { active: { ...seen.active, view: { module: "oekonomi", summary: "x".repeat(4001) } } };
+  assert.equal((await chat({ message: "Hvorfor?", context: tooLong })).status, 400);
 });
 
 test("chat: ugyldig context og et valg uden ask_choice i historikken afvises med 400", async () => {

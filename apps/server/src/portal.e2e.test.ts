@@ -35,7 +35,7 @@ let config: Config;
 let cookie = "";
 
 type Json = Record<string, unknown>;
-type ViewBody = { spec: ViewSpec; dataset: Dataset; note?: string; link?: string };
+type ViewBody = { spec: ViewSpec; dataset: Dataset; note?: string; link?: string; summary?: string };
 
 const boot = (html: string) => JSON.parse(/window\.__LASSO_BOOT__=(.*?);<\/script>/s.exec(html)![1]!) as Json;
 const query = (url: string) => Object.fromEntries(new URL(url).searchParams);
@@ -201,8 +201,10 @@ test("company: med CVR, Lasso-ID og navn; link er den signerede /e/-side", async
   const res = await api("/company/99000001");
   assert.equal(res.headers.get("cache-control"), "no-store");
   const body = await json<ViewBody>(res);
-  assert.deepEqual(Object.keys(body).sort(), ["dataset", "link", "spec"]);
+  assert.deepEqual(Object.keys(body).sort(), ["dataset", "link", "spec", "summary"]);
   assert.equal(body.spec.title, "Eksempel Byg A/S");
+  // Resuméet er det samme, modellen får fra show_company; portalen sender det som chattens kontekst (docs/chat.md).
+  assert.match(body.summary!, /Eksempel Byg A\/S/);
   assert.equal(body.spec.components[0]!.type, "LassoCompanyHead");
   assert.equal(body.dataset.companies["CVR-1-99000001"]?.name, "Eksempel Byg A/S");
   assert.ok(body.link!.startsWith(`${PUBLIC}/e/CVR-1-99000001?`), body.link);

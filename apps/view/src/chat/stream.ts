@@ -46,8 +46,14 @@ export interface ChoiceOption {
 export type ChoicePick = { id: string; index: number; action: ChoiceAction } | { id: string; free: true };
 
 /** Den fane, brugeren står på, de åbne faner og et evt. valg. Serveren svarer altid i den aktive kontekst. */
+/** Det, brugeren ser på fanen: modulet og serverens resumé af dets data (højst VIEW_SUMMARY_MAX tegn). */
+export interface ChatViewContext {
+  module: string;
+  summary: string;
+}
+
 export interface ChatContext {
-  active: (ChatEntityRef & { tab?: string }) | { kind: "global"; title?: string };
+  active: (ChatEntityRef & { tab?: string; view?: ChatViewContext }) | { kind: "global"; title?: string };
   open: ChatEntityRef[];
   choice?: ChoicePick;
 }

@@ -16,7 +16,12 @@ export const LASSO_TAB = "lasso";
 export interface Shown {
   spec: ViewSpec;
   dataset: Dataset;
+  /** Serverens resumé af det viste (kun moduler); sendes til chatten som "det, brugeren ser". */
+  summary?: string;
 }
+
+/** Serveren tager højst så mange tegn resumé (apps/server/src/chat/context.ts). */
+export const VIEW_SUMMARY_MAX = 4000;
 
 /** En åben fane: et firma, en person eller et resultat. key = Lasso-ID, eller "result:<n>". */
 export interface OpenItem {
@@ -92,8 +97,11 @@ const entityRef = (o: OpenItem): ChatEntityRef | null => (o.kind === "result" ? 
  * åbne firmaer og personer (højst 20), og det valg, brugeren lige traf i menuen. Serveren svarer altid i
  * den aktive kontekst, så "hvem ejer den?" virker uden at navnet gentages.
  */
-export function contextFor(item: OpenItem | undefined, open: readonly OpenItem[], pick?: ChoicePick): ChatContext {
-  const active: ChatContext["active"] = !item ? { kind: "global" } : item.kind === "result" ? { kind: "global", title: item.name } : { kind: item.kind, id: item.key, name: item.name, tab: item.tab };
+export function contextFor(item: OpenItem | undefined, open: readonly OpenItem[], pick?: ChoicePick, shown?: Shown): ChatContext {
+  // Det, brugeren ser: modulets resumé fra serveren (ikke på Lasso-fanen, som er chattens eget svar).
+  const summary = item && item.kind !== "result" && item.tab !== LASSO_TAB && shown?.summary ? shown.summary.slice(0, VIEW_SUMMARY_MAX) : "";
+  const view = summary && item ? { view: { module: item.tab, summary } } : {};
+  const active: ChatContext["active"] = !item ? { kind: "global" } : item.kind === "result" ? { kind: "global", title: item.name } : { kind: item.kind, id: item.key, name: item.name, tab: item.tab, ...view };
   const refs = open.map(entityRef).filter((e): e is ChatEntityRef => e !== null).slice(0, 20);
   return { active, open: refs, ...(pick ? { choice: pick } : {}) };
 }

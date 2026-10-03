@@ -22,8 +22,12 @@ const entitySchema = z.object({ kind: z.enum(["company", "person"]), ...entityBa
 
 export type ChatEntity = z.infer<typeof entitySchema>;
 
+/** Det, brugeren ser på fanen: modulet og serverens resumé af dets data (samme tekst som værktøjssvarene giver modellen). */
+export const VIEW_SUMMARY_MAX = 4000;
+const viewSchema = z.object({ module: z.string().min(1).max(40), summary: z.string().max(VIEW_SUMMARY_MAX) });
+
 const activeSchema = z.union([
-  z.object({ kind: z.enum(["company", "person"]), ...entityBase, tab: z.string().max(40).optional() }).refine(idFits, { message: "id passer ikke til kind" }),
+  z.object({ kind: z.enum(["company", "person"]), ...entityBase, tab: z.string().max(40).optional(), view: viewSchema.optional() }).refine(idFits, { message: "id passer ikke til kind" }),
   z.object({ kind: z.literal("global"), title: z.string().max(200).optional() }),
 ]);
 
@@ -112,7 +116,11 @@ export function contextText(ctx: ChatContext): string {
     lines.push("Brugeren skrev selv et svar i valgmenuen (fritekst) i stedet for at vælge et punkt.");
   }
   if (a.kind === "global") lines.push(a.title ? `Aktiv fane: resultatet '${a.title}' (globalt, ingen virksomhed eller person).` : "Aktiv fane: forsiden (global, ingen virksomhed eller person er åben).");
-  else lines.push(`Aktiv fane: ${entityText(a)}${a.tab ? `, modul ${a.tab}` : ""}.`);
+  else {
+    lines.push(`Aktiv fane: ${entityText(a)}${a.tab ? `, modul ${a.tab}` : ""}.`);
+    // Det tredje lag i konteksten (docs/chat.md): hvad brugeren ser, så "hvorfor faldt den?" kan besvares ud fra tallene på skærmen.
+    if (a.view?.summary) lines.push(`Brugeren ser: ${a.view.module} — ${a.view.summary}`);
+  }
   if (ctx.open.length) lines.push(`Åbne faner: ${ctx.open.map((e) => `${e.name} (${e.id})`).join(", ")}.`);
   return `[Kontekst] ${lines.join(" ")}`;
 }

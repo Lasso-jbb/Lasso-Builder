@@ -54,4 +54,14 @@ test("contextText: aktiv fane, åbne faner og valget", () => {
   assert.match(contextText({ ...ctx, choice: { id: "toolu_1", index: 1, action: hereAction, label: "Overordnet indblik her" } }), /svaret skrives her, på den aktive fane/);
   assert.match(contextText({ ...ctx, choice: { id: "toolu_1", index: 0, action: { placement: "global" as const } } }), /svaret er globalt/);
   assert.match(contextText({ ...ctx, choice: { id: "toolu_1", free: true } }), /fritekst/);
+  // Det, brugeren ser: modulets resumé efter fanelinjen.
+  const seen = contextText({ active: { ...lasso, tab: "oekonomi", view: { module: "oekonomi", summary: "Omsætning 2025: 12 mio." } }, open: [] });
+  assert.match(seen, /modul oekonomi\. Brugeren ser: oekonomi — Omsætning 2025: 12 mio\.$/);
+});
+
+test("parseContext: resuméet af det, brugeren ser, er højst 4000 tegn", () => {
+  const view = (n: number) => ({ active: { ...lasso, tab: "oekonomi", view: { module: "oekonomi", summary: "x".repeat(n) } } });
+  assert.ok(parseContext(view(4000)));
+  assert.equal(parseContext(view(4001)), null);
+  assert.equal(parseContext({ active: { kind: "global", view: { module: "oekonomi", summary: "x" } } })!.active.kind, "global", "view ignoreres på forsiden (ukendte felter fjernes)");
 });

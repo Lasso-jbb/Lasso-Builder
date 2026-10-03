@@ -57,6 +57,11 @@ test("contextFor: den aktive fane, de åbne firmaer og personer, og valget", () 
   assert.equal(contextFor(undefined, Array.from({ length: 30 }, (_, i) => ({ ...novo, key: `CVR-1-${i}` }))).open.length, 20);
   const pick = { id: "toolu_1", free: true as const };
   assert.deepEqual(contextFor(novo, [novo], pick).choice, pick);
+  // Det, brugeren ser: modulets resumé, afkortet til serverens grænse; ikke på Lasso-fanen.
+  const shown = { spec: {} as ViewSpec, dataset: {} as Dataset, summary: "Omsætning 2025: 12 mio." };
+  assert.deepEqual((contextFor({ ...novo, tab: "oekonomi" }, [novo], undefined, shown).active as { view?: unknown }).view, { module: "oekonomi", summary: "Omsætning 2025: 12 mio." });
+  assert.equal((contextFor({ ...novo, tab: "lasso" }, [novo], undefined, shown).active as { view?: unknown }).view, undefined);
+  assert.equal((contextFor(novo, [novo], undefined, { ...shown, summary: "x".repeat(5000) }).active as { view: { summary: string } }).view.summary.length, 4000);
 });
 
 test("choiceMessage: punktets prompt (ellers teksten) og valget med punktets action", () => {

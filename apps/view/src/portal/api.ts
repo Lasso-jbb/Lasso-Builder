@@ -21,6 +21,8 @@ export interface ViewResult {
   note?: string;
   /** Signeret /e/-side (kun company og person). */
   link?: string;
+  /** Resumé af det viste som tekst (kun company og person): chattens kontekst for "det, brugeren ser". */
+  summary?: string;
 }
 
 /** GET /lookup: søgefeltets resultater (Lassos navnesøgning). */

@@ -173,7 +173,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     setFailed((f) => ({ ...f, [key]: "" }));
     try {
       const r: ViewResult = kind === "company" ? await api.company(id, tab as Focus) : await api.person(id, tab as PersonFocus);
-      put(key, { spec: r.spec, dataset: r.dataset });
+      put(key, { spec: r.spec, dataset: r.dataset, ...(r.summary ? { summary: r.summary } : {}) });
       const ent = entityOf(r.spec, r.dataset);
       if (ent) setOpen((l) => l.map((o) => (o.key === id ? { ...o, name: ent.name } : o)));
     } catch (e) {
@@ -399,8 +399,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     setDraft("");
     setAskOpen(false);
     const here = itemRef.current;
-    // Serveren svarer i den fane, man står på (docs/chat.md): den og de åbne faner sendes som kontekst.
-    const context = contextFor(here, openRef.current);
+    // Serveren svarer i den fane, man står på (docs/chat.md): den, det modul brugeren ser, og de åbne faner sendes som kontekst.
+    const context = contextFor(here, openRef.current, undefined, here && here.kind !== "result" ? shownRef.current[`${here.key}:${here.tab}`] : undefined);
     // Svaret hører til den fane, man står på; står man på forsiden eller et resultat, til en ny resultatfane.
     let key: string;
     if (here && here.kind !== "result") {
