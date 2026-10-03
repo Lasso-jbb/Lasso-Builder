@@ -62,6 +62,7 @@ import {
 } from "./thread.js";
 import { AskField, BottomBar, DropButton, IconButton, LassoTab, MenuItem, ModuleTab, OpenTab, RemoveTemplateDialog, SearchEmpty, SearchField, SearchResultRow, SearchTabs, StatusFilterMenu, Suggestions, TemplatePin, TopTab } from "./parts.js";
 import { useElasticScroll } from "./elastic.js";
+import { createIdleSave } from "./idleSave.js";
 import { ChoicePanel } from "./ChoicePanel.js";
 import type { ViewPart } from "./chat/AnswerCard.js";
 import { EmptyState } from "./chat/EmptyState.js";
@@ -383,11 +384,38 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Samtalen gemmes i browseren, når der ikke hentes (ikke pr. tegn, mens svaret streames); kun den trimmede historik fra "done".
+  // Samtalen gemmes i browseren (kun den trimmede historik fra "done") i et stille øjeblik (idleSave.ts): ikke pr. tegn,
+  // mens svaret streames, og ikke ved hvert fanebyt. Skifter kun den aktive fane, huskes det til næste gemning eller til
+  // siden skjules/forlades (pagehide, visibilitychange), hvor det, der venter, gemmes med det samme.
+  const persisted = useRef({ open, active, threads, history });
+  persisted.current = { open, active, threads, history };
+  const saver = useMemo(
+    () =>
+      createIdleSave(() => {
+        if (!boot.user || loggedOut.current) return;
+        const s = persisted.current;
+        saveCache(storage(), serializeCache(boot.user.id, { threads: s.threads, open: s.open, active: s.active }, Date.now()), recencyOrder(s.open, s.history, s.active));
+      }),
+    [boot.user],
+  );
   useEffect(() => {
     if (!hydrated || pendingKey !== null || !boot.user || loggedOut.current) return;
-    saveCache(storage(), serializeCache(boot.user.id, { threads, open, active }, Date.now()), recencyOrder(open, history, active));
-  }, [hydrated, open, active, threads, pendingKey, boot.user, history]);
+    saver.request();
+  }, [hydrated, open, threads, pendingKey, boot.user, saver]);
+  useEffect(() => {
+    if (hydrated) saver.markDirty();
+  }, [hydrated, active, history, saver]);
+  useEffect(() => {
+    const onHide = () => saver.flush();
+    const onVisibility = () => document.visibilityState === "hidden" && saver.flush();
+    window.addEventListener("pagehide", onHide);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+      document.removeEventListener("visibilitychange", onVisibility);
+      saver.flush();
+    };
+  }, [saver]);
 
   // Egne sider hentes, når man er logget ind; en fane på en egen side, der er fjernet, står på Overblik.
   const reloadTemplates = useCallback(async () => {
