@@ -17,6 +17,7 @@ import type { TurnState } from "./place.js";
 import { trimHistory } from "./history.js";
 import { CHAT_TOOLS, chatToolByName, type ChoiceMenu } from "./tools.js";
 import type { EntityCandidate } from "../usecases/index.js";
+import { createLinkFilter, idsIn, sanitizeLinks } from "./links.js";
 
 /**
  * Lassos egen chat (docs/chat.md): Claude via Claude Platform med NØJAGTIG de samme værktøjer og
@@ -367,6 +368,18 @@ export async function runChat({ ctx, config, model, history, message, context, e
   let candidates: EntityCandidate[] = [];
   /** 1 = den ekstra tur, hvor modellen bliver bedt om ask_choice. */
   let enforce = 0;
+  // Links i teksten (chat/links.ts): firma-/personlinks med et id, der ikke har stået i turens værktøjssvar eller konteksten, bliver tekst, og ens links vises kun én gang.
+  const allowedIds = new Set<string>(idsIn(JSON.stringify(context)));
+  const allow = (text: string) => idsIn(text).forEach((id) => allowedIds.add(id));
+  const linkFilter = createLinkFilter(() => allowedIds, new Set());
+  const say = (raw: string) => {
+    const t = linkFilter.push(raw);
+    if (t) emit({ type: "text", text: t });
+  };
+  const sayEnd = () => {
+    const t = linkFilter.flush();
+    if (t) emit({ type: "text", text: t });
+  };
   const undecided = () => candidates.length >= 2 && !turn.placed && !turn.viewed && !choiceShown;
   const { client, close } = await connect({ ...ctx, host: "chat" });
   try {
@@ -383,7 +396,7 @@ export async function runChat({ ctx, config, model, history, message, context, e
       // Kun Haiku 4.5 tager tvunget værktøjsvalg; de andre modeller beholder auto.
       if (enforce === 1 && config.CHAT_MODEL.startsWith("claude-haiku")) request.tool_choice = { type: "tool", name: ASK_CHOICE };
       try {
-        response = await model(request, (text) => (hold ? held.push(text) : emit({ type: "text", text })), signal);
+        response = await model(request, (text) => (hold ? held.push(text) : say(text)), signal);
       } catch (e) {
         if (signal?.aborted) return;
         console.error("[chat] Claude-fejl:", e instanceof Error ? e.message : e);
@@ -391,6 +404,7 @@ export async function runChat({ ctx, config, model, history, message, context, e
         return;
       }
       logUsage(step, response);
+      if (!hold) sayEnd();
       if (hold && enforce === 0 && response.stop_reason === "end_turn") {
         // Modellen sluttede med tekst, selv om flere kan være ment: teksten kasseres, og den får én tur til at kalde ask_choice.
         enforce = 1;
@@ -420,7 +434,10 @@ export async function runChat({ ctx, config, model, history, message, context, e
         }
         held.length = 0;
       }
-      if (held.length) emit({ type: "text", text: held.join("") });
+      if (held.length) {
+        say(held.join(""));
+        sayEnd();
+      }
       // En tom assistentbesked (eller tomme tekstblokke) afvises af API'et ved hver senere tur: den gemmes aldrig.
       const content = response.content.filter((b) => !(b.type === "text" && !b.text.trim()));
       if (content.length) messages.push({ role: "assistant", content });
@@ -493,6 +510,7 @@ export async function runChat({ ctx, config, model, history, message, context, e
             const r = await own.run(u.input ?? {}, toolCtx).catch((e: unknown) => ({ text: e instanceof Error ? e.message : String(e), isError: true }));
             if (r.isError) emit({ type: "tool_error", id: u.id, name: u.name, message: r.text });
             if ("candidates" in r && r.candidates) candidates = r.candidates;
+            allow(r.text);
             return { type: "tool_result", tool_use_id: u.id, content: r.text, ...(r.isError ? { is_error: true } : {}) };
           }
           let result: CallToolResult;
@@ -504,6 +522,7 @@ export async function runChat({ ctx, config, model, history, message, context, e
             return { type: "tool_result", tool_use_id: u.id, content: text, is_error: true };
           }
           const text = textForModel(result);
+          allow(text);
           if (result.isError) {
             emit({ type: "tool_error", id: u.id, name: u.name, message: text });
             return { type: "tool_result", tool_use_id: u.id, content: text || "Værktøjet fejlede.", is_error: true };
@@ -513,6 +532,7 @@ export async function runChat({ ctx, config, model, history, message, context, e
           const dataset = (result._meta as Record<string, unknown> | undefined)?.[DATASET_META_KEY] as Dataset | undefined;
           if (sc?.spec && dataset) {
             turn.viewed = true;
+            allow([...Object.keys(dataset.companies), ...Object.keys(dataset.persons)].join(" "));
             firstView ??= { name: u.name, spec: sc.spec };
             shownModule ??= moduleLink(u.name, u.input, sc.spec);
             emit({ type: "view", id: u.id, name: u.name, tool: u.name, form: viewForm(u.name, sc.spec), spec: sc.spec, dataset, ...(sc.pdfLink ? { pdfLink: sc.pdfLink } : {}) });
@@ -522,6 +542,13 @@ export async function runChat({ ctx, config, model, history, message, context, e
       );
       messages.push({ role: "user", content: results });
       if (step === MAX_STEPS - 1) emit({ type: "error", message: "Spørgsmålet krævede for mange trin. Prøv at stille det mere præcist." });
+    }
+    // Samme linkregler på det gemte som på det viste (modellen ser, hvad brugeren så): opfundne id'er og gentagelser fjernes i turens assistenttekst.
+    const seenInHistory = new Set<string>();
+    for (let i = retained.length + 1; i < messages.length; i++) {
+      const m = messages[i]!;
+      if (m.role !== "assistant" || !Array.isArray(m.content)) continue;
+      messages[i] = { role: "assistant", content: m.content.map((b) => (b.type === "text" ? { ...b, text: sanitizeLinks(b.text, allowedIds, seenInHistory) } : b)) };
     }
     // Modullinks (docs/chat.md): skrev modellen ingen, tilføjer serveren en linje ud fra turen, så "Åbn i fane"-pillerne altid er der.
     const links = !endedNormally || choiceShown ? undefined : fallbackLinks(messages, retained.length, shownModule, turn.placement, context);

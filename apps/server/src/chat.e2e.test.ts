@@ -867,3 +867,22 @@ test("O5: den forældede sections på show_company er skjult for chatten, men u�
   assert.ok("sections" in (tool.inputSchema as { properties: object }).properties);
   await mcp.close();
 });
+
+test("I: opfundne firma-/personlinks bliver tekst, og ens links vises én gang; både i det viste og i historikken", async () => {
+  const find = useTool("find_entity", { kind: "person", query: "Gitte Prøve" });
+  const text = "Se [Ole](lasso:person/CVR-3-9999999), [Gitte](lasso:person/CVR-3-4000000007) og [Gitte](lasso:person/CVR-3-4000000007).\n\n[Ejerskab](lasso:modul/ejerskab) [Ejerskab](lasso:modul/ejerskab)";
+  // Teksten kommer i små stykker, også midt i et link.
+  script.push(find, (_p, onText) => {
+    for (let i = 0; i < text.length; i += 7) onText(text.slice(i, i + 7));
+    return message([{ type: "text", text }], "end_turn");
+  });
+  const { all } = await chat({ message: "Hvem er Gitte Prøve?", context: onLasso }, zoe);
+  const shown = all!.filter((e) => e.type === "text").map((e) => String(e.text)).join("");
+  assert.equal(shown, "Se Ole, [Gitte](lasso:person/CVR-3-4000000007) og .\n\n[Ejerskab](lasso:modul/ejerskab) ");
+  const done = all!.at(-1) as Event & { history: { role: string; content: { type: string; text?: string }[] }[] };
+  const stored = done.history.at(-1)!.content.filter((b) => b.type === "text").map((b) => b.text).join("");
+  assert.equal(stored.replace(/[ \t]+(\n|$)/g, "$1"), shown.replace(/[ \t]+(\n|$)/g, "$1"));
+  assert.ok(!stored.includes("9999999"));
+  // Intet fallback-link tilføjes (modellen skrev et modullink).
+  assert.ok(!all!.some((e) => e.type === "text" && String(e.text).startsWith("\n\n[")));
+});
