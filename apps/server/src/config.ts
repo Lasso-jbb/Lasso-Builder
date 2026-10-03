@@ -113,7 +113,8 @@ const schema = z.object({
   CHAT_MAX_PER_HOUR: z.coerce.number().int().min(1).default(60),
   /**
    * Antal proxyer foran serveren (Express "trust proxy"), så req.ip er den besøgendes adresse fra X-Forwarded-For og ikke
-   * Railways proxy; bremserne pr. IP (login, demochat) tæller ellers alle besøgende som én. Standard 1 uden for development, 0 lokalt.
+   * Railways proxy; bremserne pr. IP (login, demochat) tæller ellers alle besøgende som én. Standard 1 på Railway (RAILWAY_ENVIRONMENT
+   * eller RAILWAY_ENVIRONMENT_NAME er sat) og uden for development, ellers 0 lokalt.
    */
   TRUST_PROXY: z.coerce.number().int().min(0).max(5).optional(),
   /**
@@ -139,7 +140,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   }
   const c = parsed.data;
   const publicBaseUrl = (isSet(c.PUBLIC_BASE_URL) ? c.PUBLIC_BASE_URL : `http://localhost:${c.PORT}`).replace(/\/+$/, "");
-  return { ...c, publicBaseUrl, trustProxy: c.TRUST_PROXY ?? (c.APP_ENV === "development" ? 0 : 1) };
+  return { ...c, publicBaseUrl, trustProxy: c.TRUST_PROXY ?? (isSet(env.RAILWAY_ENVIRONMENT) || isSet(env.RAILWAY_ENVIRONMENT_NAME) || c.APP_ENV !== "development" ? 1 : 0) };
 }
 
 /** Pladsholderen, variablerne blev oprettet med på Railway, tæller som "ikke sat". */

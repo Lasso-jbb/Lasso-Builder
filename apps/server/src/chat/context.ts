@@ -225,6 +225,8 @@ export interface Placement {
 /** Placeringen for turen: valgets handling, ellers "current" (som på forsiden/et resultat er globalt). */
 export function placementOf(ctx: ChatContext): Placement {
   const action = ctx.choice && !("free" in ctx.choice) ? ctx.choice.action : undefined;
+  // Et valg af den aktive fane selv er ikke et skifte (ingen ny fane, ingen frisk historik): svaret skrives her.
+  if (action?.placement === "entity" && action.entity && ctx.active.kind !== "global" && ctx.active.id === action.entity.id) return { placement: "current", ...(action.focus ? { focus: action.focus } : {}) };
   if (action?.placement === "entity" && action.entity) return { placement: "entity", target: action.entity, ...(action.focus ? { focus: action.focus } : {}) };
   if (action?.placement === "global") return { placement: "global", ...(action.title ? { title: action.title } : {}) };
   // current med en entity: svaret handler om den valgte, men skrives her (ingen ny fane).

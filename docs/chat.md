@@ -121,10 +121,10 @@ er det eneste kandidat, når serveren selv slår navnet op (`resolveEntity`, gr�
 (hele ord, uden udløsere og selskabsformer; en åben fane kræver alle navneord). Passer navnet på flere, svarer serveren med en
 fejl ("Navnet passer på flere; kald ask_choice med kandidaterne."). `global` (en liste, sammenligning eller analyse) kræver en
 `title` fra de fire generiske navne `GLOBAL_TITLES` (Firmaliste, Sammenligning, Markedsanalyse, Kort), aldrig spørgsmålet; på
-en resultatfane med navn bliver man (`current`). **Global fra en entitetsfane afvises, når spørgsmålet handler om den aktive
-entitet** (navnet står i beskeden, eller den peger tilbage med "branchen", "konkurrent…", "dem", "den", "selskabet",
-"virksomheden"): "Spørgsmålet handler om <navn>; svar her."; regel 11 (spørgsmål uden en bestemt virksomhed eller person →
-global fane) gælder stadig. Fejl er `is_error`-værktøjssvar (og `tool_error`-hændelser), så modellen kan rette; kommer
+en resultatfane med navn bliver man (`current`). **Global fra en entitetsfane afvises kun, når spørgsmålet handler om den aktive entitet** (navnet står i beskeden, eller beskeden
+nævner "branchen" eller "konkurrent…"): "Svar her på den aktive fane."; almindelige ord som "den", "dem" og "selskabet" gør ikke, så
+"Find den største vinduesproducent" og "Vis dem på et kort" bliver en global fane (regel 11: spørgsmål uden en bestemt virksomhed eller person →
+global fane, også fra en entitetsfane). Fejl er `is_error`-værktøjssvar (og `tool_error`-hændelser), så modellen kan rette; kommer
 `place_answer` i samme svar som en visning og afvises, vises intet i det svar. `place_answer` efter en visning og efter et
 bindende valg i menuen afvises også (reglen står i serveren, ikke kun i prompten).
 
@@ -329,7 +329,7 @@ TODO (udskudt): en server-side kontrol af datareglen (fx markere svar med tal, m
 | `CHAT_MAX_PER_HOUR` | `60` | Højst så mange beskeder pr. bruger pr. time. |
 | `CHAT_CACHE_TTL` | `1h` | Prompt-cachens levetid, `5m` eller `1h`; samme TTL på begge markører. |
 | `CHAT_PRE_RESOLVE` | `true` | En udtrykkelig bøn ("vis alt om X", "åbn X", "tilføj X") afgøres på serveren, før modellen kaldes (`chat/preresolve.ts`). `false` = altid modellen. |
-| `TRUST_PROXY` | `1` (`0` i development) | Antal proxyer foran serveren (Express "trust proxy"), så bremserne pr. IP (login, demochat) tæller hver besøgende for sig bag Railway i stedet for alle som én (`req.ip` fra `X-Forwarded-For`). |
+| `TRUST_PROXY` | `1` på Railway (`RAILWAY_ENVIRONMENT` eller `RAILWAY_ENVIRONMENT_NAME` er sat) og uden for development, ellers `0` | Antal proxyer foran serveren (Express "trust proxy"), så bremserne pr. IP (login, demochat) tæller hver besøgende for sig bag Railway i stedet for alle som én (`req.ip` fra `X-Forwarded-For`). |
 | `CHAT_HISTORY_MAX_CHARS` | `150000` | Så lang (tegn som JSON) må samtalen være, før de ældste ture kastes. |
 
 Med Haiku sendes hverken `effort` eller `fallbacks`, fordi Haiku 4.5 afviser dem. Med de større modeller

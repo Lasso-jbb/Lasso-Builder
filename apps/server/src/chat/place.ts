@@ -13,7 +13,7 @@ import type { ChatContext, ChatEntity, PlaceAnswerInput, Placement } from "./con
 export const EXPLICIT_OPEN = /(?<![\p{L}])(vis|se)( mig)? (alt|det hele)(?![\p{L}])|(?<![\p{L}])(åbn|tilføj)(e|er)?(?![\p{L}])/iu;
 
 /** Tekst uden store bogstaver og diakritiske tegn (å → a, ø → o, æ → ae), så "Prøve" og "prove" er det samme. */
-const fold = (t: string): string => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/ø/g, "o").replace(/æ/g, "ae");
+export const fold = (t: string): string => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/ø/g, "o").replace(/æ/g, "ae");
 
 /** Ord, der ikke tæller som en del af et navn: udløsere i beskeden og selskabsformer. */
 const STOP = new Set(["vis", "se", "mig", "alt", "det", "hele", "om", "abn", "abne", "abner", "og", "i", "for"]);
@@ -69,8 +69,8 @@ function focusFor(kind: "company" | "person", focus: string | undefined): string
   return kind === "person" ? (isPersonFocus(focus) ? focus : undefined) : (FOCUSES as readonly string[]).includes(focus) ? focus : undefined;
 }
 
-/** Ord, der peger tilbage på den aktive entitet ("sammenlign med branchen", "hvem er deres konkurrenter", "den", "selskabet"). */
-const REFERS_BACK = /(?<![\p{L}])(branchen|konkurrent\w*|dem|den|selskabet|virksomheden)(?![\p{L}])/iu;
+/** Ord, der peger tilbage på den aktive entitets branche eller konkurrenter ("sammenlign med branchen"); almindelige ord som "den" og "dem" gør ikke. */
+const REFERS_BACK = /(?<![\p{L}])(branchen|konkurrent\w*)(?![\p{L}])/iu;
 
 export async function verifyPlacement(input: PlaceAnswerInput, { mcp, context, message, turn }: PlaceCtx): Promise<PlaceResult> {
   if (turn.placed) return fail("Højst én fane pr. spørgsmål: place_answer er allerede kaldt i denne tur.");
@@ -88,7 +88,7 @@ export async function verifyPlacement(input: PlaceAnswerInput, { mcp, context, m
     if (!input.title) return fail("title kræves ved global: vælg Firmaliste, Sammenligning, Markedsanalyse eller Kort.");
     if (active.kind === "global" && active.title) return { placement: { placement: "current", decided: true } };
     // Et spørgsmål om den aktive entitet ("sammenlign med branchen") besvares her, ikke på en ny resultatfane.
-    if (active.kind !== "global" && (mentions(message, active.name, active.id) || REFERS_BACK.test(message))) return fail(`Spørgsmålet handler om ${active.name}; svar her.`);
+    if (active.kind !== "global" && (mentions(message, active.name, active.id) || REFERS_BACK.test(message))) return fail("Svar her på den aktive fane.");
     return { placement: { placement: "global", title: input.title, decided: true } };
   }
 
