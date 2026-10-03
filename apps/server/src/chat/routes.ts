@@ -50,7 +50,7 @@ export function chatUser(req: Request, config: Config): CurrentUser | { status: 
 }
 
 /** Nøglen, bremsen tæller på: brugeren, og for demobrugeren også IP-adressen. */
-function limitKey(req: Request, user: CurrentUser): string {
+export function limitKey(req: Request, user: CurrentUser): string {
   return user.isDemo ? `${user.id}@${req.ip ?? req.socket.remoteAddress ?? "?"}` : user.id;
 }
 
