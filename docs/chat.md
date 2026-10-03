@@ -3,6 +3,9 @@
 Chatten giver samme oplevelse som Lasso-connectoren i Claude.ai, men i Lassos eget produkt: brugeren
 stiller et spørgsmål, Claude vælger værktøj, og svaret vises som en interaktiv Lasso-visning.
 
+Designet af chatten (tråden, svarformerne, panelet, tilstandene, mobilen) står i `docs/design/CHAT.md`; denne fil
+beskriver, hvordan den virker.
+
 ## Sådan hænger det sammen
 
 ```
@@ -107,7 +110,7 @@ notitsen "Åbner X i en ny fane. Fortryd" står i den gamle tråd, svaret i den 
 **Frisk historik ved et skifte.** Flytter svaret (entity, eller global fra en fane), starter den nye fane en ny
 samtale: `done.history` er kun denne tur (beskederne efter den bevarede historik), `done.fresh` er `true`, og
 signaturen gælder den friske historik. Klienten gemmer den på den nye fane; den gamle fanes historik er uændret.
-Blev fanen åbnet til turen, og brugeren fortryder (10 sekunder, `Fortryd`), standses strømmen, fanen lukkes (eller
+Blev fanen åbnet til turen, og brugeren fortryder (10 sekunder, `Fortryd`; kun klienten, serveren ved intet om det), standses strømmen, fanen lukkes (eller
 turen fjernes fra den eksisterende fane), og turen fjernes fra den gamle tråd; efter 10 sekunder forsvinder linket,
 og notitsen bliver stående.
 
@@ -137,6 +140,12 @@ organisation (tabellen `page_templates`, eller hukommelsen uden database; højst
 Klienten (`api.templates.list/save/remove/render`, `moduleTabs` i `portal2/model.ts`) viser skabelonerne som moduler
 med nøglen `tpl:<id>` (højst 40 tegn, som `context.tab`); fjernes en skabelon, står en fane på den på Overblik.
 Chattens `done`- og `view`-hændelser er uændrede: klienten sender den spec, den allerede har.
+
+**Den røde pin.** På et skabelonmodul står pinnen rød ("tilføjet på alle virksomheder/personer"). Et klik åbner en
+bekræftelse ("Fjern modulet?", "<titel> fjernes fra alle virksomheder. Det kan ikke fortrydes.", Annuller / Fjern), og
+Fjern kalder `DELETE /api/portal/templates/:id` (`api.templates.remove`): skabelonen forsvinder fra alle enheder af
+slagen, og en åben fane på modulet står derefter på Overblik. De indbyggede moduler har ingen pin. Designet står i
+`docs/design/CHAT.md`.
 
 ## API: `POST /api/chat`
 

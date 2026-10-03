@@ -14,9 +14,9 @@ står på `/portal/klassisk` og videreudvikles ikke.
 | Søgefelt | Pille 36 px, højst 720 px; flugter med indholdets venstre kant, når en fane er åben | Søgning i fuld skærm fra bundbjælken |
 | Skinne | 60 px, ikoner 20 px, tooltip til højre; det øverste ikon flugter med modulrækken | Skjult |
 | Åbne faner | 44 px bjælke, fane 36 px, radius 10 foroven; flere faner har ens bredde, højst 170 px (en enkelt fane højst 280 px) | I topbjælken (ingen egen bjælke) |
-| Modulrække | 52 px, står fast over indholdet (ruller og "bouncer" ikke med); Lasso-mærket, modulerne, "Flere", Følg og Gem | 48 px |
+| Modulrække | 52 px, står fast over indholdet (ruller og "bouncer" ikke med); Lasso-mærket først (altid slået til, ink med koral streg, navnet "Lasso"), modulerne, egne sider som moduler, "Flere", Følg og Gem | 48 px |
 | Indhold | Kolonne på højst 1200 px med 40 px sideluft | 28 px sideluft til venstre (`--gut`), 18 px til højre |
-| Spørgefelt | Pille 52 px, højst 720 px, centreret nederst med tre forslag | Lasso-knappen (52 px) i bundbjælken åbner feltet |
+| Spørgefelt | Pille 52 px, højst 720 px, centreret nederst med tre forslag (se `CHAT.md`) | Lasso-knappen (52 px) i bundbjælken åbner feltet; 48 px lige over bundlinjen, når Lasso-modulet er aktivt |
 | Bundbjælke | – | Lasso-knap til venstre, kapsel 158 × 52 med Søg, Værktøjer, Lister |
 
 ## Topbjælke og søgning
@@ -50,10 +50,18 @@ Moduler og Brugere står dæmpet, til de findes.
 
 ## Modulrækken
 
-- Først Lasso-mærket: fanen med det, chatten senest hentede om siden. Den er slået fra, til der er et svar, og
-  mærket bevæger sig, mens der hentes. Klikker man over på et modul og tilbage, står svaret som man forlod det.
+- Først Lasso-mærket: modulet med samtalen (`docs/design/CHAT.md`). Det er altid slået til, også før der er et svar,
+  og aktivt står det i ink med en koral streg under ("inset 0 -2px 0 primary"). Navnet er "Lasso", og mærket
+  bevæger sig, mens der hentes. Klikker man over på et modul og tilbage, står samtalen som man forlod den.
 - Derefter modulerne (fokus) i fast rækkefølge: Overblik, Økonomi, Regnskab, Ejerskab, Risiko, Historik, Kontakt
-  for firmaer; Overblik, Roller, Netværk, Ejerskab, Risiko, Historik for personer. De hentes uden AI.
+  for firmaer; Overblik, Roller, Netværk, Ejerskab, Risiko, Historik for personer. De hentes uden AI. En global
+  fane (forside eller resultat) viser kun Lasso-modulet.
+- Til sidst brugerens sideskabeloner for slagen: "Tilføj som fane" på en side, chatten har sat sammen om én
+  virksomhed eller person, gemmer siden som et ekstra modul, der står på alle virksomheder (eller personer) og
+  vises med den enheds data (nøgle `tpl:<id>`, `moduleTabs` i `model.ts`). På et skabelonmodul står en rød pin
+  ("tilføjet på alle virksomheder/personer"); et klik giver bekræftelsen "Fjern modulet?" ("KYC-overblik fjernes fra
+  alle virksomheder. Det kan ikke fortrydes.", Annuller / Fjern) og fjerner skabelonen overalt. De indbyggede moduler
+  har ingen pin. Se `CHAT.md`, "Sideskabeloner og den røde pin".
 - Mangler der plads, skjules moduler fra højre bag "Flere ▾"; er der plads til færre end to, bliver rækken en
   vælger med det aktive modul.
 - Til højre Følg (kommer senere) og Gem (gemmer siden på brugerens liste).
@@ -62,32 +70,13 @@ Moduler og Brugere står dæmpet, til de findes.
 
 ## Spørgefeltet (chatten)
 
-- Feltet sender til `/api/chat` (Claude med samme værktøjer som MCP, se `docs/chat.md`). Pladsholderen er altid
-  "Spørg Lasso", og der er intet ikon i feltet.
+- Feltet sender til `/api/chat` (Claude med samme værktøjer som MCP). Pladsholderen er altid "Spørg Lasso", og
+  feltet har enter-ikonet; mens et svar hentes, er det slået fra, og Stop afbryder.
 - De tre forslag under feltet følger siden: forsiden, et resultat, eller firmaets/personens modul (fx Ejerskab giver
   spørgsmål om ejere og datterselskaber). De står i `suggestions()` i `model.ts`.
-- Svaret vises under Lasso-mærket på den fane, man spurgte fra, med spørgsmålet ("Du spurgte: …") og delene
-  (Claudes korte tekst og visningerne) i den rækkefølge, de kom. Brugeren bliver i chatten: serveren svarer
-  altid på den fane, man står på (den, modulet man ser, og de åbne faner sendes med som kontekst), og flytter
-  aldrig svaret selv. Spørger man fra forsiden eller et resultat, bliver svaret en ny resultatfane.
-- Valgmenuen over feltet er den eneste vej til en anden kontekst, som chatten selv åbner: lægger spørgsmålet
-  op til en anden persons eller virksomheds side ("vis alt om Jakob"), eller er et navn tvetydigt, spørger
-  chatten først og tilbyder kort eller fuld indsigt (fx "Kort indsigt i Jakob Benediktson": et kort svar her,
-  man bliver på fanen / "Fuld indsigt i Jakob Benediktson": hele siden i en ny fane) og viser intet, før man har
-  valgt; fritekst skrives i spørgefeltet. Vælger man fuld indsigt, åbnes og aktiveres den nye fane med svaret,
-  og fanen, man spurgte fra, står præcis som før (ikke nulstillet, ikke genindlæst).
-- Fanenavne: en person- eller virksomhedsfane hedder entitetens navn. En ny resultatfane får et kort, logisk navn
-  (valgmenuens `title`, fx "Markedsundersøgelse", "Største revisorer i Aarhus"), uden menu visningens titel
-  (først det afkortede spørgsmål, højst 40 tegn), aldrig spørgsmålet eller prompten ordret. Menuen er et panel over spørgefeltet (som "stil brugeren et spørgsmål"): overskrift med spørgsmålet og knapperne fold
-  sammen og luk; punkter med titel, en linjes beskrivelse og nummer (genvej 1–9), det anbefalede først og markeret;
-  sidste række "Andet" med et tekstfelt i panelet; "Spring over" (lukker uden at vælge, intet sendes) og "Send"
-  (Cmd/Ctrl+Enter); Esc springer over. Enkeltvalg. Skriver man i det almindelige felt, mens panelet er åbent, er det
-  fritekst til menuen. Komponenten `ChoicePanel.tsx` er foreløbig uden styling; designet laves i Paper.
-- Samtalen gemmes kun i browseren (ikke på serveren): faner, svar og historik overlever en genindlæsning i
-  24 timer og ryddes ved udløb, for en anden bruger og ved logud. Er lageret fuldt, droppes først visningerne fra
-  de mindst nyligt aktive faner (de henter selv modulet igen), så glemmes selve samtalen (historikken afkortes
-  aldrig, for dens signatur gælder kun den hele), og først til sidst gemmes intet (se `docs/chat.md`).
-- Mens der hentes, bliver Send til Stop.
+- Samtalen (tråden, svarformerne, placeringen af svaret, afklaringspanelet, tilstandene og mobilen) er beskrevet i
+  `docs/design/CHAT.md`; hvordan serveren og klientens tråde virker (`place_answer`, frisk historik, Fortryd,
+  cache) i `docs/chat.md`. Samtalen gemmes kun i browseren.
 
 ## Telefon
 
@@ -133,10 +122,13 @@ Siden "Portalens ramme" har fire dele, og alle læser fra portalens egen kode:
 1. **Den kørende portal** i 1440, 1000 og 390 px.
 2. **Elementer og knapper** i alle tilstande (`parts.tsx`; telefonens topfane `TopTab` vises i de live udsnit). Det dækker topbjælke, søgefelt, søgeresultater (med
    status efter navnet), åbne faner (også mange med ens bredde), modulrække og modulvælger, menuer, ikonknapper og
-   skinne, spørgefelt, forslag pr. side (læst fra `suggestions()`), forside, Lassos svar (svar, henter, fejl),
+   skinne, spørgefelt, forslag pr. side (læst fra `suggestions()`), forside, Lasso-fanen i modulrækken (også med skabelonmodul og rød pin),
    besked, bundbjælke og alle ikoner.
 3. **Telefon og søgning, live:** udsnit af den kørende portal. Det er topbjælken med og uden faner,
    modulrækken, bundbjælken, det åbne spørgefelt, søgningen i fuld skærm og søgningen på desktop.
 4. **Farver og mål** læst fra `portal2.css`.
+
+Chatten har sin egen side, "Chatten" (`pages/Chat.tsx`): de rigtige trådkomponenter med eksempeldata i fire bredder,
+de femten regler fra `CHAT.md`, `--chat-*`-tokens og Paper-eksporten i en ramme.
 
 Et nyt element i portalen bygges i `parts.tsx` og tilføjes som eksempel i `designguide/pages/PortalParts.tsx`.
