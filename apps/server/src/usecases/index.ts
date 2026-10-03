@@ -15,6 +15,7 @@ export {
   searchCompanies,
   searchPersons,
   showCompany,
+  showCompanyV1,
   showPerson,
   type CompanyView,
   type CompareCompaniesInput,

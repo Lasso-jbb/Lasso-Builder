@@ -41,6 +41,12 @@ const schema = z.object({
     .default("false")
     .transform((v) => v === "true" || v === "1"),
   /**
+   * Portalens virksomheds-Overblik (GET /api/portal/company/...?focus=overblik): "v1" = Lasso v1-siden (tre spalter, portalPages i
+   * @lasso/spec), tegnet direkte af data uden AI; "composer" = den komponerede side som før. Standard v1 (staging og lokalt), composer i production;
+   * kan skiftes uden en kodeudrulning. Andre fokus, chatten, /mcp, delte links og designguiden er upåvirkede.
+   */
+  PORTAL_OVERVIEW: z.enum(["v1", "composer"]).optional(),
+  /**
    * true (standard) = en udtrykkelig bøn om at åbne en fane ("vis alt om X", "åbn X", "tilføj X") afgøres på serveren, før modellen
    * kaldes (chat/preresolve.ts): ét match = afgjort placering, flere = valgmenuen bygget af serveren. false = altid modellen.
    */
@@ -130,7 +136,7 @@ const schema = z.object({
   CHAT_HISTORY_MAX_CHARS: z.coerce.number().int().min(10000).default(150000),
 });
 
-export type Config = z.infer<typeof schema> & { publicBaseUrl: string; trustProxy: number };
+export type Config = z.infer<typeof schema> & { publicBaseUrl: string; trustProxy: number; portalOverview: "v1" | "composer" };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const parsed = schema.safeParse(env);
@@ -140,7 +146,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   }
   const c = parsed.data;
   const publicBaseUrl = (isSet(c.PUBLIC_BASE_URL) ? c.PUBLIC_BASE_URL : `http://localhost:${c.PORT}`).replace(/\/+$/, "");
-  return { ...c, publicBaseUrl, trustProxy: c.TRUST_PROXY ?? (isSet(env.RAILWAY_ENVIRONMENT) || isSet(env.RAILWAY_ENVIRONMENT_NAME) || c.APP_ENV !== "development" ? 1 : 0) };
+  return { ...c, publicBaseUrl, portalOverview: c.PORTAL_OVERVIEW ?? (c.APP_ENV === "production" ? "composer" : "v1"), trustProxy: c.TRUST_PROXY ?? (isSet(env.RAILWAY_ENVIRONMENT) || isSet(env.RAILWAY_ENVIRONMENT_NAME) || c.APP_ENV !== "development" ? 1 : 0) };
 }
 
 /** Pladsholderen, variablerne blev oprettet med på Railway, tæller som "ikke sat". */

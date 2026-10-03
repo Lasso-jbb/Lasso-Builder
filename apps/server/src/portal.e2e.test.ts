@@ -82,6 +82,8 @@ before(async () => {
     DATABASE_URL: process.env.TEST_DATABASE_URL ?? "",
     PUBLIC_BASE_URL: PUBLIC,
     ENTITY_PAGES_PUBLIC: "false",
+    // Portal-testene her gælder den komponerede Overblik-side; v1-siden har sine egne tests nedenfor.
+    PORTAL_OVERVIEW: "composer",
   });
   const store = createViewStore(config.DATABASE_URL);
   await store.migrate();
@@ -714,5 +716,61 @@ test("D9: svarer Lasso ikke på opslaget af entiteten, gemmes ingen skabelon (50
     assert.deepEqual(await templates.list(PIA.org, PIA.id), []);
   } finally {
     await new Promise((r2) => srv.close(r2));
+  }
+});
+
+test("PORTAL_OVERVIEW: v1 giver Lasso v1-siden (portalPages) som Overblik, composer den komponerede; andre fokus er uændrede", async () => {
+  const { portalPages } = await import("@lasso/spec");
+  assert.equal(loadConfig({ APP_ENV: "production" }).portalOverview, "composer", "standard i production");
+  assert.equal(loadConfig({ APP_ENV: "staging" }).portalOverview, "v1");
+  assert.equal(loadConfig({}).portalOverview, "v1");
+  assert.equal(loadConfig({ APP_ENV: "production", PORTAL_OVERVIEW: "v1" }).portalOverview, "v1");
+  assert.equal(loadConfig({ PORTAL_OVERVIEW: "composer" }).portalOverview, "composer");
+  assert.throws(() => loadConfig({ PORTAL_OVERVIEW: "v2" }));
+
+  async function serve(flag: string | undefined) {
+    const cfg = loadConfig({ ...process.env, MCP_ACCESS_KEY: KEY, LINK_SECRET: "portal-test-hemmelighed", LASSO_DATA_SOURCE: "demo", DATABASE_URL: "", PUBLIC_BASE_URL: PUBLIC, PORTAL_PUBLIC: "true", ...(flag ? { PORTAL_OVERVIEW: flag } : {}) });
+    const srv = createApp({ config: cfg, client: new LassoClient(cfg), provider: new DemoProvider(), store: createViewStore(""), pages: createSavedPageStore("") }).listen(0);
+    await new Promise((r) => srv.once("listening", r));
+    const root = `http://127.0.0.1:${(srv.address() as AddressInfo).port}/api/portal`;
+    return { get: (path: string) => fetch(`${root}${path}`).then(async (r) => ({ status: r.status, body: (await r.json()) as ViewBody })), close: () => new Promise((r) => srv.close(r)) };
+  }
+
+  const v1 = await serve(undefined);
+  try {
+    const expected = portalPages("CVR-1-99000001").find((pg) => pg.id === "overblik")!.components.map((c) => c.type);
+    for (const path of ["/company/99000001", "/company/99000001?focus=overblik", `/company/${encodeURIComponent("Eksempel Byg")}`]) {
+      const { status, body } = await v1.get(path);
+      assert.equal(status, 200, path);
+      assert.equal(body.spec.layout, "page", path);
+      assert.equal(body.spec.kind, "company");
+      assert.equal(body.spec.title, "Eksempel Byg A/S");
+      assert.deepEqual(body.spec.components.map((c) => c.type), expected, path);
+      assert.deepEqual([...new Set(body.spec.components.map((c) => (c as { column?: number }).column))].sort(), [1, 2, 3], "tre spalter");
+      assert.ok(body.spec.components.every((c) => (c as { company?: string }).company === "CVR-1-99000001"), "id'et er det opslåede");
+      // Datasættet er hentet, så stamdata og navn står der (portalens fanenavn og identitetslinjer læser det).
+      assert.equal(body.dataset.companies["CVR-1-99000001"]?.name, "Eksempel Byg A/S");
+      assert.ok(Object.keys(body.dataset.ownership).length > 0 || Object.keys(body.dataset.companyHistories).length > 0 || Object.keys(body.dataset.financials).length > 0);
+      assert.match(body.summary!, /Revisor: Eksempel Revision Midt ApS|Relationer: /, "Brugeren ser-resuméet bygges af v1-siden (uden hoved: revisor og relationer)");
+      assert.ok(body.link!.startsWith(`${PUBLIC}/e/CVR-1-99000001?`));
+    }
+    assert.match((await v1.get(`/company/${encodeURIComponent("Eksempel Byg")}`)).body.note ?? "", /Fundet ud fra navnet/);
+    assert.equal((await v1.get("/company/findes-ikke-overhovedet")).status, 404);
+    // Andre fokus: den komponerede side som før.
+    const eco = (await v1.get("/company/99000001?focus=oekonomi")).body;
+    assert.equal(eco.spec.components[0]!.type, "LassoCompanyHead");
+    const risk = (await v1.get("/company/99000001?focus=risiko")).body;
+    assert.equal(risk.spec.components[0]!.type, "LassoCompanyHead");
+  } finally {
+    await v1.close();
+  }
+
+  const composer = await serve("composer");
+  try {
+    const { body } = await composer.get("/company/99000001");
+    assert.equal(body.spec.components[0]!.type, "LassoCompanyHead", "den gamle side");
+    assert.notEqual(body.spec.layout, undefined);
+  } finally {
+    await composer.close();
   }
 });

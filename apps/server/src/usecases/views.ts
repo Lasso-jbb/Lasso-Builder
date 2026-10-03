@@ -18,6 +18,7 @@ import {
   mainMetric,
   parseAsk,
   personSearchKey,
+  portalPages,
   roleKind,
   shortCompanyName,
   toLassoId,
@@ -37,6 +38,7 @@ import {
   type ViewSpec,
 } from "@lasso/spec";
 import { findCompany, isCompanyRef, type CompanyPick } from "../data/lookup.js";
+import { resolvePortalPage } from "../data/portalPage.js";
 import { findPerson } from "../data/personLookup.js";
 import type { DataProvider } from "../data/provider.js";
 import { errorMessage, normalizeSpec, resolveSpec } from "../data/resolve.js";
@@ -229,25 +231,43 @@ export const companyNameHints = (name: string | undefined) => (name ? [name, sho
  * Én virksomhed som ét skærmbillede, komponeret ud fra spørgsmålet (question: en hel side i
  * spørgsmålets kontekst), ellers hensigten (focus), og virksomhedens data.
  */
+/** Virksomhedens Lasso-ID ud fra et ID, et CVR-nummer eller et navn (navnet slås op; valget og alternativerne står i noten). */
+async function resolveCompanyRef(ctx: UseCaseCtx, company: string): Promise<{ lassoId: string; note?: string; official?: string } | UseCaseError> {
+  const { config, provider } = ctx;
+  if (isCompanyRef(company)) return { lassoId: toLassoId(company, config.LASSO_COMPANY_ID_PREFIX) };
+  let found: CompanyPick | null;
+  try {
+    found = await findCompany(provider, company);
+  } catch (err) {
+    return fail(404, `Kunne ikke slå "${company}" op: ${errorMessage(err)}.`);
+  }
+  if (!found) return fail(404, `Fandt ingen virksomhed, der hedder "${company}". Prøv et andet navn eller CVR-nummeret.`);
+  const alt = found.alternatives.map((r) => `${r.name} (${r.cvr ?? r.lassoId})`).join("; ");
+  const note = `Fundet ud fra navnet "${company}": ${found.pick.name} (${found.pick.cvr ?? found.pick.lassoId}).${alt ? ` Andre match: ${alt}. Mente brugeren en af dem, så kald show_company igen med dens CVR-nummer.` : ""}`;
+  return { lassoId: found.pick.lassoId, official: found.pick.name, note };
+}
+
+/**
+ * Portalens Overblik som Lasso v1-siden (PORTAL_OVERVIEW=v1): komponenterne fra portalPages (@lasso/spec showcase), tegnet direkte af data
+ * uden AI. Samme visning som designguidens "Lasso-side"; andre fokus og chatten (show_company) bruger composeCompany.
+ */
+export async function showCompanyV1(ctx: UseCaseCtx, company: string): Promise<(ViewData & { lassoId: string }) | UseCaseError> {
+  const ref = await resolveCompanyRef(ctx, company);
+  if ("error" in ref) return ref;
+  const page = portalPages(ref.lassoId).find((p) => p.id === "overblik")!;
+  const { spec, dataset } = await resolvePortalPage(ctx.provider, page, ref.official ?? ref.lassoId, extrasOf(ctx));
+  const name = dataset.companies[ref.lassoId]?.name;
+  if (!name) return fail(404, `Kunne ikke hente ${company}: ${dataset.errors[`company:${ref.lassoId}`] ?? "ukendt fejl"}. Tjek CVR-nummeret eller navnet.`);
+  return { spec: { ...spec, title: name }, dataset, ...(ref.note ? { note: ref.note } : {}), lassoId: ref.lassoId };
+}
+
 export async function showCompany(ctx: UseCaseCtx, input: ShowCompanyInput): Promise<CompanyView | UseCaseError> {
   const { config, provider } = ctx;
   const { company, sections, chart_metric, years, show_all } = input;
-  let lassoId = toLassoId(company, config.LASSO_COMPANY_ID_PREFIX);
-  let note: string | undefined;
-  let official: string | undefined;
-  if (!isCompanyRef(company)) {
-    let found: CompanyPick | null;
-    try {
-      found = await findCompany(provider, company);
-    } catch (err) {
-      return fail(404, `Kunne ikke slå "${company}" op: ${errorMessage(err)}.`);
-    }
-    if (!found) return fail(404, `Fandt ingen virksomhed, der hedder "${company}". Prøv et andet navn eller CVR-nummeret.`);
-    lassoId = found.pick.lassoId;
-    official = found.pick.name;
-    const alt = found.alternatives.map((r) => `${r.name} (${r.cvr ?? r.lassoId})`).join("; ");
-    note = `Fundet ud fra navnet "${company}": ${found.pick.name} (${found.pick.cvr ?? found.pick.lassoId}).${alt ? ` Andre match: ${alt}. Mente brugeren en af dem, så kald show_company igen med dens CVR-nummer.` : ""}`;
-  }
+  const ref = await resolveCompanyRef(ctx, company);
+  if ("error" in ref) return ref;
+  const { lassoId, note, official: pickedName } = ref;
+  let official = pickedName;
   // Spørgsmålet læses uden virksomhedens navn ("X Holding", "X Ejendomme" er ikke emner); ved et
   // CVR-nummer hentes navnet først (samme cachede opslag som hovedet), som på den delte side /k/.
   const question = sections?.length ? undefined : input.question?.trim() || undefined;

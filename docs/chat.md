@@ -330,6 +330,7 @@ TODO (udskudt): en server-side kontrol af datareglen (fx markere svar med tal, m
 | `CHAT_EFFORT` | `medium` | `low` … `max`. Bruges ikke med Haiku. |
 | `CHAT_MAX_PER_HOUR` | `60` | Højst så mange beskeder pr. bruger pr. time. |
 | `CHAT_CACHE_TTL` | `1h` | Prompt-cachens levetid, `5m` eller `1h`; samme TTL på begge markører. |
+| `PORTAL_OVERVIEW` | `v1` (`composer` i production) | Portalens virksomheds-Overblik: `v1` = Lasso v1-siden (`portalPages` i `@lasso/spec`, tre spalter, tegnet direkte af data uden AI, delt kode med udstillingen i `data/portalPage.ts`); `composer` = den komponerede side. Skiftes uden en kodeudrulning; andre fokus, chatten, /mcp og delte links er upåvirkede. |
 | `CHAT_PRE_RESOLVE` | `true` | En udtrykkelig bøn ("vis alt om X", "åbn X", "tilføj X") afgøres på serveren, før modellen kaldes (`chat/preresolve.ts`). `false` = altid modellen. |
 | `TRUST_PROXY` | `1` på Railway (`RAILWAY_ENVIRONMENT` eller `RAILWAY_ENVIRONMENT_NAME` er sat) og uden for development, ellers `0` | Antal proxyer foran serveren (Express "trust proxy"), så bremserne pr. IP (login, demochat) tæller hver besøgende for sig bag Railway i stedet for alle som én (`req.ip` fra `X-Forwarded-For`). |
 | `CHAT_HISTORY_MAX_CHARS` | `150000` | Så lang (tegn som JSON) må samtalen være, før de ældste ture kastes. |
