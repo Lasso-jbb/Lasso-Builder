@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { LassoMark, LassoView, LassoWordmark, type ActionResult, type ViewAction } from "@lasso/ui";
-import { FOCUS_LABELS, isPersonFocus, PAGE_TABS, pageFocus, PERSON_FOCUS_LABELS, PERSON_FOCUSES, type Focus, type PersonFocus } from "@lasso/spec";
+import { isPersonFocus, pageFocus, type Focus, type PersonFocus } from "@lasso/spec";
 import type { Portal2Boot } from "../boot.js";
 import { Text } from "../chat/ChatApp.js";
-import { ChatHttpError, streamChat, type ChatState, type ChoicePick } from "../chat/stream.js";
+import { ChatHttpError, streamChat, type ChoicePick } from "../chat/stream.js";
 import { PDF_SAVED, saveBlob } from "../pdfDownload.js";
 import { createPortalApi, errorText, type LookupResult, type ViewResult } from "../portal/api.js";
 import { entityOf, withSaved } from "../portal/data.js";
@@ -11,24 +11,34 @@ import { isFocus } from "../portal/routes.js";
 import type { P2IconName } from "./icons.js";
 import {
   addRecent,
-  applyEvent,
+  applyTurnEvent,
   askPlaceholder,
   clearCache,
   closeItem,
   contextFor,
+  currentTurn,
+  finishTurn,
   freeTextPick,
   historyTrimmed,
   headLines,
+  isTemplateTab,
+  moduleTabs,
+  templateIdOf,
+  type PageTemplate,
   isUnrecognizedHistory,
   LASSO_TAB,
-  lastView,
+  lastViewIn,
   loadRecent,
   CHAT_CACHE_KEY,
-  mapViews,
-  newAnswer,
+  mapAllViews,
+  moveTurn,
   openItem,
+  pendingChoice,
+  replaceLastView,
   restoreCache,
+  settleTurn,
   skipChoice,
+  startTurn,
   summaryFingerprint,
   recencyOrder,
   saveCache,
@@ -38,9 +48,7 @@ import {
   serializeCache,
   searchRows,
   suggestions,
-  withLastView,
   withoutHead,
-  type Answer,
   type ItemKind,
   type OpenItem,
   type RecentItem,
@@ -48,6 +56,7 @@ import {
   type SearchType,
   type Shown,
   type StatusFilter,
+  type Threads,
 } from "./model.js";
 import { AskField, BottomBar, DropButton, IconButton, LassoTab, MenuItem, ModuleTab, OpenTab, SearchEmpty, SearchField, SearchResultRow, SearchTabs, StatusFilterMenu, Suggestions, TopTab } from "./parts.js";
 import { useElasticScroll } from "./elastic.js";
@@ -66,8 +75,6 @@ type Theme = "light" | "dark";
 type MenuKind = "hidden" | "all" | "more" | "sel" | "tophidden";
 type Menu = { kind: MenuKind; left: number; top: number } | null;
 
-const COMPANY_TABS = PAGE_TABS.map((f) => ({ id: f as string, label: FOCUS_LABELS[f] }));
-const PERSON_TABS = PERSON_FOCUSES.map((f) => ({ id: f as string, label: PERSON_FOCUS_LABELS[f] }));
 const SECTION_FOCUS: Record<string, string> = { ejerdiagram: "ejerskab", regnskabsanalyse: "oekonomi", noegletal: "oekonomi" };
 const PHONE = "(max-width: 760px)";
 
@@ -91,7 +98,6 @@ function storage(): Storage | undefined {
 
 const isPhone = () => window.matchMedia?.(PHONE).matches ?? false;
 const iconOf = (k: ItemKind): P2IconName => (k === "company" ? "build" : k === "person" ? "user" : "search");
-const tabsOf = (k: ItemKind) => (k === "company" ? COMPANY_TABS : k === "person" ? PERSON_TABS : []);
 
 export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const [theme, setTheme] = useState<Theme>(initialTheme);
@@ -102,8 +108,10 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const [shown, setShown] = useState<Record<string, Shown>>({});
   const [loading, setLoading] = useState<Set<string>>(new Set());
   const [failed, setFailed] = useState<Record<string, string>>({});
-  /** Chattens svar pr. fane (firmaets/personens Lasso-ID eller resultatets key). */
-  const [answers, setAnswers] = useState<Record<string, Answer>>({});
+  /** Chattens samtale pr. fane (firmaets/personens Lasso-ID eller resultatets key): ture med svar, historik og signatur. */
+  const [threads, setThreads] = useState<Threads>({});
+  /** Egne sider (sideskabeloner) pr. slags: ekstra moduler efter de indbyggede på alle virksomheder/personer. */
+  const [templates, setTemplates] = useState<PageTemplate[]>([]);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [askOpen, setAskOpen] = useState(false);
@@ -129,12 +137,12 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   /** Først når samtalen fra lageret er lagt ind, må der gemmes igen (ellers overskrev første gemning den med tom tilstand). */
   const [hydrated, setHydrated] = useState(false);
 
-  const chat = useRef<ChatState>({ history: [] });
   const persistTheme = useRef(true);
   /** Sat, når sessionen er logget ud: så gemmes samtalen ikke igen for en bruger, der ikke er logget ind (et nyt login er en ny sideindlæsning). */
   const loggedOut = useRef(false);
-  /** Fingeraftryk af det "Brugeren ser"-resumé, modellen sidst fik i denne samtale; null = send det fulde (ny samtale, trimmet historik). */
-  const sentSummary = useRef<string | null>(null);
+  const turnSeq = useRef(0);
+  /** Egne sider er hentet (så en fane på en fjernet egen side kan sættes tilbage). */
+  const templatesLoaded = useRef(false);
   const abort = useRef<AbortController | null>(null);
   const resultSeq = useRef(0);
   const lookupSeq = useRef(0);
@@ -205,7 +213,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     setBusy(key, true);
     setFailed((f) => ({ ...f, [key]: "" }));
     try {
-      const r: ViewResult = kind === "company" ? await api.company(id, tab as Focus) : await api.person(id, tab as PersonFocus);
+      const r: ViewResult = isTemplateTab(tab) ? await api.templates.render(templateIdOf(tab), id) : kind === "company" ? await api.company(id, tab as Focus) : await api.person(id, tab as PersonFocus);
       put(key, { spec: r.spec, dataset: r.dataset, ...(r.summary ? { summary: r.summary } : {}) });
       const ent = entityOf(r.spec, r.dataset);
       if (ent) setOpen((l) => l.map((o) => (o.key === id ? { ...o, name: ent.name } : o)));
@@ -288,8 +296,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     const cached = restoreCache(storage()?.getItem(CHAT_CACHE_KEY), boot.user?.id ?? "", Date.now());
     if (cached) {
       setOpen(cached.open);
-      setAnswers(cached.answers);
-      chat.current = cached.chat;
+      setThreads(cached.threads);
       if (!params.get("aaben")) setActive(cached.active);
     }
     setHydrated(true);
@@ -324,8 +331,25 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   // Samtalen gemmes i browseren, når der ikke hentes (ikke pr. tegn, mens svaret streames); kun den trimmede historik fra "done".
   useEffect(() => {
     if (!hydrated || pendingKey !== null || !boot.user || loggedOut.current) return;
-    saveCache(storage(), serializeCache(boot.user.id, { chat: chat.current, open, active, answers }, Date.now()), recencyOrder(open, history, active));
-  }, [hydrated, open, active, answers, pendingKey, boot.user, history]);
+    saveCache(storage(), serializeCache(boot.user.id, { open, active, threads }, Date.now()), recencyOrder(open, history, active));
+  }, [hydrated, open, active, threads, pendingKey, boot.user, history]);
+
+  // Egne sider hentes, når man er logget ind; en fane på en egen side, der er fjernet, står på Overblik.
+  const reloadTemplates = useCallback(async () => {
+    if (!boot.user) return;
+    try {
+      const [c, p] = await Promise.all([api.templates.list("company"), api.templates.list("person")]);
+      templatesLoaded.current = true;
+      setTemplates([...c, ...p]);
+    } catch {
+      // Uden egne sider er modulrækken bare de indbyggede.
+    }
+  }, [api, boot.user]);
+  useEffect(() => void reloadTemplates(), [reloadTemplates]);
+  useEffect(() => {
+    if (!templatesLoaded.current) return;
+    setOpen((l) => (l.some((o) => isTemplateTab(o.tab) && !templates.some((t) => t.id === templateIdOf(o.tab))) ? l.map((o) => (isTemplateTab(o.tab) && !templates.some((t) => t.id === templateIdOf(o.tab)) ? { ...o, tab: "overblik" } : o)) : l));
+  }, [templates]);
 
   // En fane på et modul uden data (fx genskabt fra lageret) henter det, når den vises.
   useEffect(() => {
@@ -460,21 +484,19 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     setAskOpen(false);
     const here = itemRef.current;
     // Skriver brugeren selv, mens menuen står på fanen, er det fritekst til menuen.
-    const menu = here ? answersRef.current[here.key]?.choice : undefined;
+    const menu = here ? pendingChoice(threadsRef.current, here.key) : undefined;
     // Fritekst går kun til menuen, når den tillader det; ellers besvares spørgsmålet her uden valg.
     const choice = pick ?? (menu ? freeTextPick(menu) : undefined);
     // Serveren svarer i den fane, man står på: den, det modul brugeren ser, de åbne faner og valget sendes som kontekst.
     const shownNow = here && here.kind !== "result" ? shownRef.current[`${here.key}:${here.tab}`] : undefined;
-    const context = contextFor(here, openRef.current, choice, shownNow, sentSummary.current);
+    const source = here ? threadsRef.current[here.key] : undefined;
+    const context = contextFor(here, openRef.current, choice, shownNow, source?.sent ?? null);
     const fingerprint = summaryFingerprint(here, shownNow);
-    const sentHistory = chat.current.history;
-    // Et nyt spørgsmål lukker alle åbne menuer (deres valg passer ikke længere til samtalen).
-    setAnswers((all) => Object.fromEntries(Object.entries(all).map(([k, a]) => [k, a.choice ? { ...a, choice: undefined } : a])));
+    const sentChat = source?.chat ?? { history: [] };
     // Svaret hører til den fane, man står på; står man på forsiden eller et resultat, til en ny resultatfane.
     let key: string;
     // Fanens tilstand før spørgsmålet: flytter svaret til en anden fane, står denne præcis som før (ingen nulstilling, ingen genindlæsning).
     const prevTab = here?.tab;
-    const prevAnswer = here ? answersRef.current[here.key] : undefined;
     let createdHere = false;
     if (here && here.kind !== "result") {
       key = here.key;
@@ -485,23 +507,32 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       setOpen((l) => [...l, { key, kind: "result", name: shortName(text), tab: LASSO_TAB }]);
       activate(key);
     }
-    /** Er fanens navn valgt (title fra menuen), følger det ikke visningens titel. */
+    /** Er fanens navn valgt (title fra serveren), følger det ikke visningens titel. */
     let named = false;
     let current = key;
+    const turnId = `t${Date.now()}-${++turnSeq.current}`;
     setPendingKey(key);
-    setAnswers((a) => ({ ...a, [key]: newAnswer(text) }));
-    const patch = (fn: (a: Answer) => Answer) => setAnswers((all) => (all[current] ? { ...all, [current]: fn(all[current]!) } : all));
+    // Den nye fane (resultat) starter med samtalen fra fanen, man spurgte fra, så den kan fortsættes.
+    setThreads((t) => {
+      const next = startTurn(t, key, text, Date.now(), turnId);
+      return createdHere && sentChat.history.length ? { ...next, [key]: { ...next[key]!, chat: sentChat } } : next;
+    });
+    const patch = (e: Parameters<typeof applyTurnEvent>[3]) => setThreads((t) => applyTurnEvent(t, current, turnId, e));
     /** Placering på en anden fane: den åbnes (eller aktiveres), og svaret flytter med. */
     const moveTo = (target: OpenItem) => {
       const from = current;
       if (from === target.key) return;
       current = target.key;
       setPendingKey(target.key);
-      setAnswers((all) => {
-        const { [from]: moved, ...rest } = all;
-        // Fanen, man spurgte fra, får sit tidligere svar tilbage (uden menu); svaret hører til den nye fane.
-        const restored = from === key && prevAnswer ? { [from]: { ...prevAnswer, choice: undefined } } : {};
-        return { ...rest, ...restored, [target.key]: moved ?? newAnswer(text) };
+      const createdTab = !openRef.current.some((o) => o.key === target.key);
+      setThreads((t) => {
+        const moved = moveTurn(t, from, target.key, turnId, { kind: "moved", name: target.name, tabKey: target.key, undoUntil: Date.now() + 10_000, createdTab });
+        // En resultatfane, der blev åbnet til dette spørgsmål, lukkes igen: dens tråd følger med.
+        if (createdHere && from === key) {
+          const { [from]: _gone, ...rest } = moved;
+          return rest;
+        }
+        return moved;
       });
       setOpen((l) => {
         // En resultatfane, der blev åbnet til dette spørgsmål, lukkes igen; ellers står fanen, man spurgte fra, som den stod.
@@ -514,15 +545,15 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     abort.current = ctrl;
     try {
       await streamChat(
-        { message: text, context, history: chat.current.history, sig: chat.current.sig },
+        { message: text, context, history: sentChat.history, sig: sentChat.sig },
         (e) => {
           if (e.type === "placement") {
             if (e.placement === "entity" && e.target) moveTo({ key: e.target.id, kind: e.target.kind, name: e.target.name, tab: LASSO_TAB });
             else if (e.placement === "global") {
-              // Navnet fra valget (title), ellers det afkortede spørgsmål; ligger svaret allerede på en resultatfane, får den navnet.
+              // Navnet fra serveren (title), ellers det afkortede spørgsmål; ligger svaret allerede på en resultatfane, får den navnet.
               const name = e.title ?? shortName(text);
               if (e.title) named = true;
-              if (!current.startsWith("result:")) moveTo({ key: `result:${++resultSeq.current}`, kind: "result", name, tab: LASSO_TAB });
+              if (!current.startsWith("result:") && context.active.kind !== "global") moveTo({ key: `result:${++resultSeq.current}`, kind: "result", name, tab: LASSO_TAB });
               else if (e.title) setOpen((l) => l.map((o) => (o.key === current ? { ...o, name } : o)));
             }
           } else if (e.type === "view") {
@@ -531,20 +562,23 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
             const at = current;
             setOpen((l) => l.map((o) => (o.key !== at ? o : ent && ent.id === at ? { ...o, name: ent.name } : o.kind === "result" && !named ? { ...o, name: shortName(e.spec.title) } : o)));
           } else if (e.type === "done") {
-            // Trimmede serveren historikken, kan det tidligere resumé være væk: næste gang sendes det fulde igen.
-            if (historyTrimmed(sentHistory, e.history)) sentSummary.current = null;
-            else if (fingerprint) sentSummary.current = fingerprint;
-            chat.current = { history: e.history, sig: e.sig };
+            // Trimmede serveren historikken, kan det tidligere resumé være væk: næste gang sendes det fulde igen. Et skifte giver en frisk fane.
+            const sent = e.fresh || historyTrimmed(sentChat.history, e.history) ? null : (fingerprint ?? undefined);
+            if (e.placement.title && !named) {
+              const at = current;
+              setOpen((l) => l.map((o) => (o.key === at && o.kind === "result" ? { ...o, name: e.placement.title! } : o)));
+            }
+            setThreads((t) => finishTurn(t, current, { ...e, sent, at: Date.now() }));
+            return;
           }
-          patch((a) => applyEvent(a, e));
+          patch(e);
         },
         { signal: ctrl.signal },
       );
     } catch (e) {
       // Serveren kender ikke samtalen (ændret historik eller signatur): begynd en ny, så brugeren ikke sidder fast.
       if (e instanceof ChatHttpError && isUnrecognizedHistory(e.status, e.message)) {
-        chat.current = { history: [] };
-        sentSummary.current = null;
+        setThreads((t) => (t[current] ? { ...t, [current]: { ...t[current]!, chat: { history: [] }, sent: null } } : t));
       }
       if (e instanceof ChatHttpError && e.status === 401) {
         // Sessionen er udløbet: samtalen ryddes og gemmes ikke igen.
@@ -552,24 +586,26 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
         clearCache(storage());
       }
       const msg = e instanceof ChatHttpError && e.status === 401 ? "Chatten kræver login. Log ind i portalen og prøv igen." : errorText(e);
-      patch((a) => ({ ...a, error: msg }));
+      patch({ type: "error", message: msg });
     } finally {
-      patch((a) => ({ ...a, pending: false, status: undefined }));
+      setThreads((t) => settleTurn(t, current, turnId));
       setPendingKey(null);
       abort.current = null;
     }
   };
-  const answersRef = useRef(answers);
-  answersRef.current = answers;
+  const threadsRef = useRef(threads);
+  threadsRef.current = threads;
 
   const stop = () => abort.current?.abort();
 
   /* ---------- det, der vises nu ---------- */
 
   const onLasso = item ? item.kind === "result" || item.tab === LASSO_TAB : false;
-  const answer = item ? answers[item.key] : undefined;
+  // Minimal adapter (WP2 tegner hele tråden): fanens seneste tur vises som før.
+  const turn = item ? currentTurn(threads, item.key) : undefined;
+  const answer = turn?.answer;
   const dataKey = item ? (item.kind === "result" ? item.key : `${item.key}:${item.tab}`) : null;
-  const answerView = lastView(answer);
+  const answerView = item ? lastViewIn(threads, item.key) : undefined;
   const current: Shown | undefined = item ? (item.kind !== "result" && item.tab === LASSO_TAB ? answerView : (dataKey ? shown[dataKey] : undefined) ?? (item.kind === "result" ? answerView : undefined)) : undefined;
   const headData = item && item.kind !== "result" ? (shown[`${item.key}:overblik`]?.dataset ?? answerView?.dataset ?? current?.dataset) : undefined;
   const lines = item ? headLines(item.kind, item.key, headData) : [];
@@ -577,8 +613,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   const busy = dataKey ? loading.has(dataKey) : false;
   const err = dataKey ? failed[dataKey] : "";
   const pending = pendingKey !== null;
-  const tabs = item ? tabsOf(item.kind) : [];
-  const lassoAvailable = Boolean(item && (item.kind === "result" || answers[item.key]));
+  const tabs = item ? moduleTabs(item.kind, templates) : [];
+  const lassoAvailable = Boolean(item && (item.kind === "result" || turn));
   const curLabel = item ? (onLasso ? "Lassos svar" : (tabs.find((t) => t.id === item.tab)?.label ?? "")) : "";
 
   // Sub-linjen i fanens tooltip og i mobilarket, når data kommer.
@@ -590,13 +626,13 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
 
   const replaceCurrent = (r: Shown) => {
     if (!item) return;
-    if (item.kind !== "result" && item.tab === LASSO_TAB) setAnswers((a) => (a[item.key] ? { ...a, [item.key]: withLastView(a[item.key]!, r) } : a));
+    if (item.kind !== "result" && item.tab === LASSO_TAB) setThreads((t) => replaceLastView(t, item.key, r));
     else if (dataKey) put(dataKey, r);
   };
 
   const patchSaved = (lassoId: string, on: boolean) => {
     setShown((s) => Object.fromEntries(Object.entries(s).map(([k, v]) => [k, { ...v, dataset: withSaved(v.dataset, lassoId, on) }])));
-    setAnswers((all) => Object.fromEntries(Object.entries(all).map(([k, a]) => [k, mapViews(a, (v) => ({ ...v, dataset: withSaved(v.dataset, lassoId, on) }))])));
+    setThreads((t) => mapAllViews(t, (v) => ({ ...v, dataset: withSaved(v.dataset, lassoId, on) })));
   };
 
   const toggleSaved = async () => {
@@ -950,7 +986,7 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       content = (
         <>
           <div className="answer" aria-live="polite">
-            <div className="answer__q">{answer.question}</div>
+            <div className="answer__q">{turn?.question}</div>
             {answer.parts.map((p, i) => (p.kind === "text" ? <Text key={i} text={p.text} /> : lassoView(`${item.key}:${i}`, p, item.kind !== "result" && p.form === "page")))}
             {answer.pending && !hasView ? <div className="answer__status">{answer.status ?? "Tænker …"}</div> : null}
             {answer.error ? (
@@ -1129,13 +1165,13 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
         ) : null}
 
         <div className={`ask${askOpen ? " is-open" : ""}`}>
-          {answer?.choice && item ? (
+          {item && pendingChoice(threads, item.key) ? (
             // Valgpanelet over feltet (docs/chat.md); "Spring over" lukker det uden at sende noget.
             <ChoicePanel
-              choice={answer.choice}
+              choice={pendingChoice(threads, item.key)!}
               disabled={pending}
               onSend={(message, pick) => void ask(message, pick)}
-              onSkip={() => setAnswers((all) => (all[item.key] ? { ...all, [item.key]: skipChoice(all[item.key]!) } : all))}
+              onSkip={() => setThreads((t) => skipChoice(t, item.key))}
             />
           ) : null}
           <AskField value={draft} placeholder={askPlaceholder(item)} pending={pending} disabled={!boot.chat} inputRef={askInput} onChange={setDraft} onSubmit={() => void ask(draft)} onStop={stop} />

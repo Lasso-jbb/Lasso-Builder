@@ -13,6 +13,15 @@ import { isCompanyRef } from "../data/lookup.js";
 
 /** Navnet på chattens valgmenu-værktøj (chat/tools.ts); verifyChoice leder efter det i historikken. */
 export const ASK_CHOICE = "ask_choice";
+/** Navnet på chattens placeringsværktøj (chat/tools.ts, chat/place.ts): modellen vælger fane, før noget vises. */
+export const PLACE_ANSWER = "place_answer";
+
+/**
+ * De generiske navne på en ny resultatfane (docs/chat.md): faner hedder aldrig spørgsmålet. Samme liste står i
+ * apps/view/src/chat/stream.ts (GLOBAL_TITLES); chat.e2e.test.ts tjekker, at de to er ens.
+ */
+export const GLOBAL_TITLES = ["Firmaliste", "Sammenligning", "Markedsanalyse", "Kort"] as const;
+export type GlobalTitle = (typeof GLOBAL_TITLES)[number];
 
 const entityBase = { id: z.string().min(1).max(40), name: z.string().min(1).max(200) };
 /** Virksomheds-ID'er (CVR-1-…/CVR-nummer) og person-ID'er (CVR-3-…) valideres som i opslagene. */
@@ -41,26 +50,45 @@ export const choiceActionSchema = z
     entity: entitySchema.optional(),
     focus: z.string().max(40).optional(),
     prompt: z.string().max(4000).optional(),
-    /** Fanens navn ved placement global: et kort dansk navneord ("Største revisorer i Aarhus"). */
-    title: z.string().min(1).max(40).optional(),
+    /** Fanens navn ved placement global: et af de generiske navne (GLOBAL_TITLES), aldrig spørgsmålet. */
+    title: z.enum(GLOBAL_TITLES).optional(),
   })
   .refine((a) => a.placement !== "entity" || a.entity !== undefined, { message: "entity kræves ved placement entity" });
 
 export type ChoiceAction = z.infer<typeof choiceActionSchema>;
+
+/** place_answer's input (chat/tools.ts, chat/place.ts): hvor svaret skrives, valgt af modellen før noget vises. */
+export const placeAnswerSchema = z
+  .object({
+    placement: z.enum(["current", "entity", "global"]).describe("current = svaret skrives her, på den aktive fane (standard). entity = på en anden persons eller virksomheds egen fane (kun når brugeren selv beder om det: 'vis alt om X', 'åbn X'). global = en liste, sammenligning eller analyse på en resultatfane."),
+    entity: z
+      .object({
+        kind: z.enum(["company", "person"]).describe("Virksomhed eller person."),
+        id: z.string().min(1).max(40).describe("Lasso-ID fra find_entity (højst 40 tegn)."),
+        query: z.string().min(1).max(120).describe("Navnet, du søgte på med find_entity (højst 120 tegn)."),
+      })
+      .optional()
+      .describe("Kun ved entity: den, fanen åbnes for."),
+    focus: z.string().max(40).optional().describe("Kun ved entity: modulet, fx 'overblik' eller 'ejerskab'. Standard overblik."),
+    title: z.enum(GLOBAL_TITLES).optional().describe("Kun ved global (kræves): fanens navn, et af de fire generiske navne, aldrig spørgsmålet."),
+  })
+  .refine((a) => a.placement !== "entity" || a.entity !== undefined, { message: "entity kræves ved placement entity" });
+
+export type PlaceAnswerInput = z.infer<typeof placeAnswerSchema>;
 
 /**
  * ask_choice's input (chat/tools.ts bruger det til validering; til API'et fjernes grænserne, se toolOf). Her,
  * fordi verifyChoice læser det gemte tool_use-input gennem samme skema (ukendte nøgler fra modellen fjernes).
  */
 export const askChoiceSchema = z.object({
-  question: z.string().min(1).max(200).describe("Spørgsmålet over punkterne, fx 'Hvilken Jakob mener du?' eller 'Hvad vil du se om Jakob Benediktson?' (højst 200 tegn)."),
+  question: z.string().min(1).max(200).describe("Spørgsmålet over punkterne, fx 'Hvilken Jakob mener du?' (højst 200 tegn)."),
   options: z
     .array(
       z.object({
-        label: z.string().min(1).max(80).describe("Punktets korte titel, fx 'Kort indsigt i Jakob Benediktson' (højst 80 tegn)."),
-        description: z.string().min(1).max(160).describe("Én linje under titlen om, hvad brugeren får, fx 'Kort svar her i chatten' eller 'Åbner en ny fane med hele overblikket' (højst 160 tegn)."),
+        label: z.string().min(1).max(80).describe("Punktets korte titel: ved flere match navnet, fx 'Jakob Benediktson' (højst 80 tegn)."),
+        description: z.string().min(1).max(160).describe("Én linje under titlen: ved flere match personens rolle, alder, by og virksomheder (højst 160 tegn)."),
         recommended: z.boolean().optional().describe("Det anbefalede punkt (højst ét; stil det først i listen)."),
-        action: choiceActionSchema.describe("placement: 'current' = svaret skrives her, 'entity' = på personens/virksomhedens egen fane (entity kræves, med id fra find_entity), 'global' = en liste/analyse uden fane. focus: modulet, fx 'overblik' eller 'ejerskab'. prompt: beskeden, appen sender, når punktet vælges (standard: label). title: ved 'global' altid et kort navn til den nye fane (højst 40 tegn, et dansk navneord, fx 'Markedsundersøgelse', 'Største revisorer i Aarhus'), aldrig spørgsmålet."),
+        action: choiceActionSchema.describe("placement: 'current' = svaret skrives her, 'entity' = på personens/virksomhedens egen fane (entity kræves, med id fra find_entity), 'global' = en liste/analyse uden fane. focus: modulet, fx 'overblik' eller 'ejerskab'. prompt: beskeden, appen sender, når punktet vælges (standard: label). title: ved 'global' altid et af de fire generiske navne (Firmaliste, Sammenligning, Markedsanalyse, Kort), aldrig spørgsmålet."),
       }),
     )
     .min(1)
@@ -179,8 +207,12 @@ export interface Placement {
   placement: "current" | "entity" | "global";
   target?: ChatEntity;
   focus?: string;
-  /** Kun global: navnet på den nye resultatfane (fra valget). */
+  /** Kun global: navnet på den nye resultatfane (fra valget eller place_answer; ellers sætter agent.ts et fra visningen). */
   title?: string;
+  /** Modellen har valgt placeringen med place_answer (første hændelse er kun serverens forslag). */
+  decided?: true;
+  /** Kun current: modellen valgte at blive på fanen (klienten kan vise "svarer her"). */
+  here?: true;
 }
 
 /** Placeringen for turen: valgets handling, ellers "current" (som på forsiden/et resultat er globalt). */

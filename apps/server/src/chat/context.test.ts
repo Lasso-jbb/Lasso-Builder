@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { BetaMessageParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
-import { contextText, parseContext, summaryRetained, verifyChoice, withoutStaleSame, type ChatContext } from "./context.js";
+import { contextText, GLOBAL_TITLES, parseContext, placeAnswerSchema, placementOf, summaryRetained, verifyChoice, withoutStaleSame, type ChatContext } from "./context.js";
 
 const jakob = { kind: "person" as const, id: "CVR-3-4000123", name: "Jakob Benediktson" };
 const lasso = { kind: "company" as const, id: "CVR-1-34580820", name: "LASSO X A/S" };
 const entityAction = { placement: "entity" as const, entity: jakob, focus: "overblik", prompt: "Vis alt om Jakob Benediktson (CVR-3-4000123)" };
 const hereAction = { placement: "current" as const, prompt: "Giv en kort indsigt i Jakob Benediktson her" };
-const globalAction = { placement: "global" as const, title: "Branchesammenligning", prompt: "Sammenlign branchen" };
+const globalAction = { placement: "global" as const, title: "Sammenligning" as const, prompt: "Sammenlign branchen" };
 
 /** Historik, der ender med et ask_choice-kald og dets værktøjssvar (som efter en "choice"-hændelse). */
 const history: BetaMessageParam[] = [
@@ -16,7 +16,7 @@ const history: BetaMessageParam[] = [
     role: "assistant",
     content: [
       { type: "text", text: "Et øjeblik." },
-      { type: "tool_use", id: "toolu_1", name: "ask_choice", input: { question: "Hvad vil du se?", options: [{ label: "Fuld indsigt i Jakob Benediktson", description: "Kort beskrivelse", action: entityAction }, { label: "Kort indsigt i Jakob Benediktson", description: "Kort beskrivelse", action: hereAction }, { label: "Branchesammenligning", description: "Kort beskrivelse", action: globalAction }] } },
+      { type: "tool_use", id: "toolu_1", name: "ask_choice", input: { question: "Hvad vil du se?", options: [{ label: "Fuld indsigt i Jakob Benediktson", description: "Kort beskrivelse", action: entityAction }, { label: "Kort indsigt i Jakob Benediktson", description: "Kort beskrivelse", action: hereAction }, { label: "Sammenlign branchen", description: "Kort beskrivelse", action: globalAction }] } },
     ],
   },
   { role: "user", content: [{ type: "tool_result", tool_use_id: "toolu_1", content: "Valget er vist." }] },
@@ -32,8 +32,8 @@ test("parseContext: uden context global; id'er valideres; højst 20 åbne faner"
   assert.equal(ok.open.length, 1);
   assert.equal(parseContext({ active: { kind: "global" }, choice: { id: "toolu_1", index: 0, action: { placement: "entity" } } }), null, "entity kræver entity");
   const withTitle = (title: string) => parseContext({ active: { kind: "global" }, choice: { id: "toolu_1", index: 0, action: { placement: "global", title } } });
-  assert.ok(withTitle("x".repeat(40)));
-  assert.equal(withTitle("x".repeat(41)), null, "title højst 40 tegn");
+  for (const t of GLOBAL_TITLES) assert.ok(withTitle(t), t);
+  assert.equal(withTitle("Største revisorer i Aarhus"), null, "title er et af de fire generiske navne");
 });
 
 test("verifyChoice: valget skal pege på modellens ask_choice med præcis dets handling", () => {
@@ -45,8 +45,8 @@ test("verifyChoice: valget skal pege på modellens ask_choice med præcis dets h
   assert.ok("error" in verifyChoice(history, { id: "toolu_1", index: 2, action: entityAction }));
   assert.ok("error" in verifyChoice(history, { id: "toolu_1", index: 0, action: { ...entityAction, entity: lasso } }));
   // Titlen er en del af handlingen: et valg med en anden title end modellens afvises.
-  assert.deepEqual(verifyChoice(history, { id: "toolu_1", index: 2, action: globalAction }), { label: "Branchesammenligning" });
-  assert.ok("error" in verifyChoice(history, { id: "toolu_1", index: 2, action: { ...globalAction, title: "Noget andet" } }));
+  assert.deepEqual(verifyChoice(history, { id: "toolu_1", index: 2, action: globalAction }), { label: "Sammenlign branchen" });
+  assert.ok("error" in verifyChoice(history, { id: "toolu_1", index: 2, action: { ...globalAction, title: "Kort" } }));
   assert.ok("error" in verifyChoice(history, { id: "toolu_1", index: 2, action: { placement: "global", prompt: globalAction.prompt } }));
   assert.ok("error" in verifyChoice([...history, { role: "assistant", content: "Noget andet." }], { id: "toolu_1", index: 0, action: entityAction }));
   assert.ok("error" in verifyChoice([], { id: "toolu_1", free: true }));
@@ -124,4 +124,21 @@ test("parseContext: resuméet af det, brugeren ser, er højst 4000 tegn", () => 
   assert.ok(parseContext(view(4000)));
   assert.equal(parseContext(view(4001)), null);
   assert.equal(parseContext({ active: { kind: "global", view: { module: "oekonomi", summary: "x" } } })!.active.kind, "global", "view ignoreres på forsiden (ukendte felter fjernes)");
+});
+
+test("placeAnswerSchema: placement og title er enum; entity kræver entity med id og query", () => {
+  assert.ok(placeAnswerSchema.safeParse({ placement: "current" }).success);
+  assert.ok(placeAnswerSchema.safeParse({ placement: "global", title: "Markedsanalyse" }).success);
+  assert.ok(placeAnswerSchema.safeParse({ placement: "entity", entity: { kind: "person", id: jakob.id, query: "Jakob" }, focus: "ejerskab" }).success);
+  assert.ok(!placeAnswerSchema.safeParse({ placement: "entity" }).success);
+  assert.ok(!placeAnswerSchema.safeParse({ placement: "entity", entity: { kind: "person", id: jakob.id } }).success, "query kræves");
+  assert.ok(!placeAnswerSchema.safeParse({ placement: "global", title: "Største revisorer" }).success);
+  assert.ok(!placeAnswerSchema.safeParse({ placement: "nede" }).success);
+});
+
+test("placementOf: valget bestemmer; ellers current på en fane og global på forsiden (uden decided/here)", () => {
+  assert.deepEqual(placementOf({ active: { ...lasso }, open: [] }), { placement: "current" });
+  assert.deepEqual(placementOf({ active: { kind: "global" }, open: [] }), { placement: "global" });
+  assert.deepEqual(placementOf({ active: { ...lasso }, open: [], choice: { id: "toolu_1", index: 0, action: entityAction } }), { placement: "entity", target: jakob, focus: "overblik" });
+  assert.deepEqual(placementOf({ active: { ...lasso }, open: [], choice: { id: "toolu_1", index: 2, action: globalAction } }), { placement: "global", title: "Sammenligning" });
 });

@@ -523,3 +523,74 @@ test("/api/portal/lookup: firmaer og personer på navn, til søgefeltet", async 
   const short = await json<{ companies: unknown[] }>(await api(`/lookup?q=E`, { cookie: (await login(PIA.id, PIA.key)).cookie }));
   assert.equal(short.companies.length, 0);
 });
+
+type TemplateJson = { id: string; kind: string; title: string; subtitle?: string; createdAt: string };
+/** Pias session fra første skabelontest (loginbremsen tillader kun få logins pr. kørsel). */
+let piaCookie = "";
+
+test("/api/portal/templates: Tilføj som fane gemmer en side som skabelon, der vises om andre virksomheder; slet er kun brugerens egen", async () => {
+  const pia = (await login(PIA.id, PIA.key)).cookie;
+  piaCookie = pia;
+  const ole = (await login(OLE.id, OLE.key)).cookie;
+  const kyc = (id: string) => ({ version: 2, kind: "custom", title: "KYC-overblik", layout: "dashboard", criteria: [], components: [{ type: "LassoCompanyHead", company: "99000001" }, { type: "LassoKeyFigureCards", company: id }] });
+  const body = { kind: "company", title: "KYC", subtitle: "Mit overblik", spec: kyc("CVR-1-99000001"), entity: { kind: "company", id: "CVR-1-99000001" } };
+
+  // Adgang: login og CSRF som de andre portalruter.
+  assert.equal((await api("/templates", { cookie: "" })).status, 401);
+  assert.equal((await api("/templates", { method: "POST", body, cookie: pia, csrf: false })).status, 403);
+
+  // Gem: svaret er skabelonen uden spec.
+  const made = await json<TemplateJson>(await api("/templates", { method: "POST", body, cookie: pia }));
+  assert.deepEqual(Object.keys(made).sort(), ["createdAt", "id", "kind", "subtitle", "title"]);
+  assert.equal(made.title, "KYC");
+  assert.equal(made.kind, "company");
+  assert.deepEqual((await json<{ templates: TemplateJson[] }>(await api("/templates?kind=company", { cookie: pia }))).templates.map((t) => t.id), [made.id]);
+  assert.deepEqual((await json<{ templates: unknown[] }>(await api("/templates?kind=person", { cookie: pia }))).templates, []);
+  assert.equal((await api("/templates?kind=firma", { cookie: pia })).status, 400);
+
+  // Vis om en anden virksomhed: samme side med den virksomheds data, titel og undertitel fra skabelonen, og et resumé.
+  const shown = await json<ViewBody>(await api(`/templates/${made.id}/render?entity=CVR-1-99000002`, { cookie: pia }));
+  assert.equal(shown.spec.title, "KYC");
+  assert.equal(shown.spec.subtitle, "Mit overblik");
+  assert.deepEqual(shown.spec.components.map((c) => (c as { company?: string }).company), ["CVR-1-99000002", "CVR-1-99000002"]);
+  assert.equal(shown.dataset.companies["CVR-1-99000002"]?.name, "Eksempel Revision Midt ApS");
+  assert.equal(typeof shown.summary, "string");
+  // ...og om den oprindelige.
+  assert.equal((await json<ViewBody>(await api(`/templates/${made.id}/render?entity=CVR-1-99000001`, { cookie: pia }))).dataset.companies["CVR-1-99000001"]?.name, "Eksempel Byg A/S");
+  // Forkert slags, manglende eller ukendt id.
+  assert.equal((await api(`/templates/${made.id}/render?entity=CVR-3-4000000007`, { cookie: pia })).status, 400);
+  assert.equal((await api(`/templates/${made.id}/render`, { cookie: pia })).status, 400);
+  assert.equal((await api(`/templates/findes-ikke/render?entity=CVR-1-99000002`, { cookie: pia })).status, 404);
+
+  // Gem-fejl: siden handler ikke om entiteten, forkert slags, ugyldig spec, ugyldigt id.
+  const other = { ...body, spec: kyc("CVR-1-99000004") };
+  assert.match((await json<{ error: string }>(await api("/templates", { method: "POST", body: { ...other, spec: { ...other.spec, components: [{ type: "LassoCompanyHead", company: "CVR-1-99000004" }] } }, cookie: pia }), 400)).error, /Siden handler ikke om én virksomhed/);
+  assert.equal((await api("/templates", { method: "POST", body: { ...body, entity: { kind: "person", id: "CVR-1-99000001" } }, cookie: pia })).status, 400);
+  assert.equal((await api("/templates", { method: "POST", body: { ...body, entity: { kind: "company", id: "ikke-et-id" } }, cookie: pia })).status, 400);
+  assert.equal((await api("/templates", { method: "POST", body: { ...body, spec: { title: "x" } }, cookie: pia })).status, 400);
+  assert.equal((await api("/templates", { method: "POST", body: { ...body, title: " " }, cookie: pia })).status, 400);
+
+  // En anden bruger ser, henter og sletter ikke Pias skabelon: 404 som om den ikke fandtes.
+  assert.deepEqual((await json<{ templates: unknown[] }>(await api("/templates", { cookie: ole }))).templates, []);
+  assert.equal((await api(`/templates/${made.id}`, { method: "DELETE", cookie: ole })).status, 404);
+  assert.equal((await api(`/templates/${made.id}/render?entity=CVR-1-99000002`, { cookie: ole })).status, 404);
+  assert.equal((await json<{ templates: unknown[] }>(await api("/templates", { cookie: pia }))).templates.length, 1, "Pias skabelon står stadig");
+
+  // Slet: kræver CSRF; listen afspejler det med det samme; en gang til er 404.
+  assert.equal((await api(`/templates/${made.id}`, { method: "DELETE", cookie: pia, csrf: false })).status, 403);
+  assert.deepEqual(await json(await api(`/templates/${made.id}`, { method: "DELETE", cookie: pia })), { id: made.id, removed: true });
+  assert.deepEqual((await json<{ templates: unknown[] }>(await api("/templates?kind=company", { cookie: pia }))).templates, []);
+  assert.equal((await api(`/templates/${made.id}`, { method: "DELETE", cookie: pia })).status, 404);
+  assert.equal((await api(`/templates/${made.id}/render?entity=CVR-1-99000002`, { cookie: pia })).status, 404);
+});
+
+test("/api/portal/templates: en personside bliver en personskabelon", async () => {
+  const pia = piaCookie;
+  const spec = { version: 2, kind: "custom", title: "Roller", layout: "dashboard", criteria: [], components: [{ type: "LassoPersonHead", person: "CVR-3-4000000007" }, { type: "LassoPersonRoles", person: "CVR-3-4000000007" }] };
+  const made = await json<TemplateJson>(await api("/templates", { method: "POST", body: { kind: "person", title: "Mine roller", spec, entity: { kind: "person", id: "CVR-3-4000000007" } }, cookie: pia }));
+  assert.equal(made.subtitle, undefined);
+  const shown = await json<ViewBody>(await api(`/templates/${made.id}/render?entity=CVR-3-4000000002`, { cookie: pia }));
+  assert.deepEqual(shown.spec.components.map((c) => (c as { person?: string }).person), ["CVR-3-4000000002", "CVR-3-4000000002"]);
+  assert.equal((await api(`/templates/${made.id}/render?entity=CVR-1-99000001`, { cookie: pia })).status, 400);
+  await json(await api(`/templates/${made.id}`, { method: "DELETE", cookie: pia }));
+});

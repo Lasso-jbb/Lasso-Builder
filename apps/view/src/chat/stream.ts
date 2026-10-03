@@ -6,13 +6,24 @@ import type { Dataset, ViewSpec } from "@lasso/spec";
  */
 export const CHAT_API = "/api/chat";
 
-/** Hvor svaret skrives (apps/server/src/chat/context.ts): brugerens valg i menuen, ellers her. */
+/** De generiske navne på en resultatfane (apps/server/src/chat/context.ts GLOBAL_TITLES): faner hedder aldrig spørgsmålet. */
+export const GLOBAL_TITLES = ["Firmaliste", "Sammenligning", "Markedsanalyse", "Kort"] as const;
+
+/**
+ * Hvor svaret skrives (apps/server/src/chat/context.ts): først serverens forslag (brugerens valg i menuen, ellers her),
+ * så evt. modellens valg med place_answer (decided). Et skifte af fane sker, når placement er entity, eller global fra en
+ * fane, der ikke er global; højst én gang pr. tur, efter den første placement-hændelse.
+ */
 export interface Placement {
   placement: "current" | "entity" | "global";
   target?: ChatEntityRef;
   focus?: string;
-  /** Kun global: navnet på den nye resultatfane. */
+  /** Kun global: navnet på resultatfanen (et af GLOBAL_TITLES; i done også et navn, serveren satte ud fra visningen). */
   title?: string;
+  /** Modellen har valgt placeringen (place_answer). */
+  decided?: true;
+  /** Modellen valgte at blive på fanen (kun current). */
+  here?: true;
 }
 
 /** "page" er en hel side (show_*, søgninger, render_view med layout page), "module" et enkelt element. */
@@ -25,7 +36,8 @@ export type ChatEvent =
   | { type: "view"; id: string; name: string; form: ViewForm; spec: ViewSpec; dataset: Dataset; pdfLink?: string }
   | { type: "tool_error"; id: string; name: string; message: string }
   | { type: "choice"; id: string; question: string; options: ChoiceOption[]; allowFreeText: boolean }
-  | { type: "done"; history: unknown[]; sig: string; placement: Placement }
+  /** fresh: svaret er flyttet til en anden fane; history er kun denne tur og hører til den nye fane. */
+  | { type: "done"; history: unknown[]; sig: string; placement: Placement; fresh?: true }
   | { type: "error"; message: string };
 
 /** Samtalen, serveren gav sidst ("done"): sendes uændret med næste spørgsmål. */
