@@ -105,7 +105,8 @@ brugeren om noget andet i stedet, svares der her.
 
 **Udtrykkelige bønner afgøres på serveren, før modellen kaldes.** "Vis alt om X", "se alt om X", "åbn X" og "tilføj X"
 (`EXPLICIT_OPEN`) forhåndsopløses (`chat/preresolve.ts`, slås fra med `CHAT_PRE_RESOLVE=false`): navnet efter udløseren slås op
-(`resolveEntity`, grænse 3, personer og virksomheder), og kun kandidater, hvis navn indeholder alle de rigtige ord, tæller.
+(`resolveEntity`, grænse 3, personer og virksomheder), og kun kandidater, hvis navn indeholder alle de rigtige ord, tæller (et navn, der mangler et ord, listes aldrig, når en anden har dem alle). Er et navn præcis det skrevne, og står der mindst tre
+rigtige navneord ("Jakob Bech Benediktson"), er det kun det: ét match, ingen menu; med et eller to ("Jakob Bech") står det præcise først (anbefalet), og de længere navne efter.
 Ét match (og ikke den aktive fane): første hændelse er `placement` med `decided: true` og `target`, brugerens tur får en linje om,
 at placeringen er afgjort, og modellen skal kun vise siden: to modelkald (visning, tekst) i stedet for fire. Flere match:
 valgmenuen bygges af serveren uden et modelkald (entity-handlinger, fordi brugeren bad om at åbne). Intet match: modellen

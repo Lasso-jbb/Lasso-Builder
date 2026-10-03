@@ -63,19 +63,28 @@ test("R: et præcist fulde navn giver ét match; kandidater, der mangler et ord,
   const cand = (id: string, name: string) => ({ kind: "person" as const, id, name, subtitle: "" });
   const rows = [cand("CVR-3-1", "Jakob Bech"), cand("CVR-3-2", "Jakob Bech Benediktson"), cand("CVR-3-3", "Jakob Bech Jensen")];
   assert.deepEqual(narrowToQuery(rows, "person", "Jakob Bech Benediktson").map((c) => c.id), ["CVR-3-2"]);
+  // Med to navneord kan et længere navn være ment: det præcise står først, de længere efter (dem uden et ord udgår stadig).
+  assert.deepEqual(narrowToQuery(rows, "person", "Jakob Bech").map((c) => c.id), ["CVR-3-1", "CVR-3-2", "CVR-3-3"]);
+  assert.deepEqual(narrowToQuery([rows[1]!, rows[0]!, rows[2]!], "person", "Jakob Bech").map((c) => c.id), ["CVR-3-1", "CVR-3-2", "CVR-3-3"], "den præcise først, uanset rækkefølge");
+  assert.deepEqual(narrowToQuery([rows[0]!, cand("CVR-3-8", "Jakob Berg")], "person", "Jakob Bech").map((c) => c.id), ["CVR-3-1"], "uden et ord udgår");
+  assert.deepEqual(narrowToQuery([cand("CVR-3-9", "Ole"), cand("CVR-3-10", "Ole Berg")], "person", "Ole").map((c) => c.id), ["CVR-3-9", "CVR-3-10"], "ét ord: præcis først");
   // Mangler et ord, og én indeholder dem alle: de andre udgår (også uden et præcist match).
   const more = [...rows, cand("CVR-3-4", "Jakob Bech Benediktson Holm")];
   assert.deepEqual(narrowToQuery(more, "person", "Jakob Bech Benediktson").map((c) => c.id), ["CVR-3-2"], "præcist match vinder over længere navne");
   assert.deepEqual(narrowToQuery([rows[0]!, rows[1]!, cand("CVR-3-4", "Jakob Bech Benediktson Holm")], "person", "Bech Benediktson").map((c) => c.id), ["CVR-3-2", "CVR-3-4"], "ingen præcis: alle der indeholder ordene");
   // Flere med samme fulde navn: alle præcise bliver (menu), de andre udgår.
   const twins = [cand("CVR-3-5", "Mette Holm"), cand("CVR-3-6", "Mette Holm"), cand("CVR-3-7", "Mette Holm Jensen")];
-  assert.deepEqual(narrowToQuery(twins, "person", "Mette Holm").map((c) => c.id), ["CVR-3-5", "CVR-3-6"]);
+  assert.deepEqual(narrowToQuery(twins, "person", "Mette Holm").map((c) => c.id), ["CVR-3-5", "CVR-3-6", "CVR-3-7"]);
+  assert.deepEqual(narrowToQuery(twins, "person", "Mette Holm Jensen").map((c) => c.id), ["CVR-3-7"]);
+  const triples = [cand("CVR-3-11", "Mette Holm Jensen"), cand("CVR-3-12", "Mette Holm Jensen"), cand("CVR-3-13", "Mette Holm Jensen Berg")];
+  assert.deepEqual(narrowToQuery(triples, "person", "Mette Holm Jensen").map((c) => c.id), ["CVR-3-11", "CVR-3-12"], "tre ord: kun de identiske, så menu"); 
   // Ingen indeholder alle ordene: uændret (modellen/menuen vælger). Id'er røres ikke.
   assert.equal(narrowToQuery(rows, "person", "Anne Kjær").length, 3);
   assert.equal(narrowToQuery(rows, "person", "CVR-3-1").length, 3);
   // Virksomheder: selskabsformen ses der bort fra.
   const co = (id: string, name: string) => ({ kind: "company" as const, id, name, subtitle: "" });
-  assert.deepEqual(narrowToQuery([co("CVR-1-1", "Eksempel Byg A/S"), co("CVR-1-2", "Eksempel Byg Syd ApS")], "company", "Eksempel Byg ApS").map((c) => c.id), ["CVR-1-1"]);
+  assert.deepEqual(narrowToQuery([co("CVR-1-1", "Eksempel Byg A/S"), co("CVR-1-2", "Eksempel Byg Syd ApS")], "company", "Eksempel Byg ApS").map((c) => c.id), ["CVR-1-1", "CVR-1-2"], "to ord: præcis først, længere efter");
+  assert.deepEqual(narrowToQuery([co("CVR-1-1", "Eksempel Byg Nord A/S"), co("CVR-1-2", "Eksempel Byg Nord Syd ApS")], "company", "Eksempel Byg Nord ApS").map((c) => c.id), ["CVR-1-1"]);
 });
 
 test("R: resolveEntity giver ét præcist match for et fuldt navn (demo: Gitte Prøve), og find_entity-teksten har én kandidat", async () => {

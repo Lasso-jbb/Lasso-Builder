@@ -51,7 +51,7 @@ function openMatches(open: readonly OpenEntity[], kind: ResolveEntityInput["kind
 /**
  * Kandidaterne, der passer på det skrevne navn: har mindst én alle ordene (i et fuldt navn), udgår dem, der mangler et ord ("Jakob Bech" for
  * "Jakob Bech Benediktson"); er et eller flere fulde navne præcis det skrevne (samme ord i samme rækkefølge, selskabsform set bort fra),
- * er det kun dem. Så giver ét præcist navn ét match (og ingen menu), og flere med samme fulde navn giver stadig en menu. Id'er og CVR-numre røres ikke.
+ * er det kun dem, når navnet har mindst tre rigtige ord; med et eller to ord står de præcise først og de længere navne efter. Så giver ét præcist navn ét match (og ingen menu), og flere med samme fulde navn giver stadig en menu. Id'er og CVR-numre røres ikke.
  */
 export function narrowToQuery(found: EntityCandidate[], kind: ResolveEntityInput["kind"], query: string): EntityCandidate[] {
   if (isPersonId(query) || isCompanyRef(query)) return found;
@@ -65,7 +65,11 @@ export function narrowToQuery(found: EntityCandidate[], kind: ResolveEntityInput
   });
   if (!containing.length) return found;
   const exact = containing.filter((c) => normalize(c.name) === q);
-  return exact.length ? exact : containing;
+  if (!exact.length) return containing;
+  // Med mindst tre rigtige navneord er et præcist match entydigt (kun det/dem); med et eller to ("Jakob Bech") kan en længere navn være ment,
+  // så de står efter de præcise (menuen anbefaler den første).
+  const real = words.filter((w) => w.length >= 3).length;
+  return real >= 3 ? exact : [...exact, ...containing.filter((c) => !exact.includes(c))];
 }
 
 /** Kandidater til et navn (eller et id): de åbne faner først, så Lassos navnesøgning rangeret som i show_*. */

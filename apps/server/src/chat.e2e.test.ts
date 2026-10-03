@@ -1036,7 +1036,10 @@ test("R: det fulde navn åbner direkte (forhåndsopløsning) og giver én kandid
   // find_entity: kun den ene kandidat, så modellen aldrig behøver en menu.
   assert.deepEqual((await resolveEntity(mcp, { kind: "person", query: "Jakob Bech Benediktson", limit: 5 })).map((c) => c.id), ["CVR-3-5000002"]);
   // Et fornavn og efternavn uden et præcist match lister dem, der indeholder begge (de to længere), men aldrig dem, der mangler et ord.
-  assert.deepEqual((await resolveEntity(mcp, { kind: "person", query: "Jakob Bech", limit: 5 })).map((c) => c.id), ["CVR-3-5000001"], "præcist 'Jakob Bech' vinder");
+  assert.deepEqual((await resolveEntity(mcp, { kind: "person", query: "Jakob Bech", limit: 5 })).map((c) => c.id), ["CVR-3-5000001", "CVR-3-5000002", "CVR-3-5000003"], "to ord: præcis først, de længere efter");
+  const menu2 = await preResolve(mcp, home, "åbn Jakob Bech");
+  assert.equal(menu2?.kind, "many");
+  assert.deepEqual(menu2!.kind === "many" ? menu2.candidates.map((c) => c.name) : [], ["Jakob Bech", "Jakob Bech Benediktson", "Jakob Bech Jensen"], "menuen: den præcise først (anbefalet)");
   rows = rows.slice(1);
   const several = await preResolve(mcp, home, "åbn Jakob Bech");
   assert.equal(several?.kind, "many");
@@ -1049,5 +1052,5 @@ test("R: det fulde navn åbner direkte (forhåndsopløsning) og giver én kandid
   ];
   const twins = await preResolve(mcp, home, "tilføj Mette Holm");
   assert.equal(twins?.kind, "many");
-  assert.deepEqual(twins!.kind === "many" ? twins.candidates.map((c) => c.id) : [], ["CVR-3-5000004", "CVR-3-5000005"]);
+  assert.deepEqual(twins!.kind === "many" ? twins.candidates.map((c) => c.id) : [], ["CVR-3-5000004", "CVR-3-5000005", "CVR-3-5000006"], "to ord: de identiske først");
 });
