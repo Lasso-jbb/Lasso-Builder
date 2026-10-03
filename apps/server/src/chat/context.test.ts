@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { BetaMessageParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
-import { contextText, parseContext, verifyChoice, type ChatContext } from "./context.js";
+import { contextText, parseContext, summaryRetained, verifyChoice, withoutStaleSame, type ChatContext } from "./context.js";
 
 const jakob = { kind: "person" as const, id: "CVR-3-4000123", name: "Jakob Benediktson" };
 const lasso = { kind: "company" as const, id: "CVR-1-34580820", name: "LASSO X A/S" };
@@ -99,6 +99,24 @@ test("view.same: resuméet udelades, når det er uændret; skemaet kræver summa
   assert.ok(parseContext({ active: { ...lasso, view: { module: "oekonomi", same: true } } }));
   assert.equal(parseContext({ active: { ...lasso, view: { module: "oekonomi" } } }), null, "hverken summary eller same");
   assert.equal(parseContext({ active: { ...lasso, view: { module: "oekonomi", same: false } } }), null);
+});
+
+test("withoutStaleSame: same gælder kun, når det fulde resumé stadig står i historikken", () => {
+  const full: ChatContext = { active: { ...lasso, tab: "oekonomi", view: { module: "oekonomi", summary: "Omsætning 2025: 12 mio." } }, open: [] };
+  const same: ChatContext = { active: { ...lasso, tab: "oekonomi", view: { module: "oekonomi", same: true } }, open: [] };
+  const turn = (ctx: ChatContext): BetaMessageParam => ({ role: "user", content: [{ type: "text", text: contextText(ctx) }, { type: "text", text: "Hvorfor?" }] });
+  const kept: BetaMessageParam[] = [turn(full), { role: "assistant", content: "Fordi." }];
+  assert.equal(summaryRetained(kept, same), true);
+  assert.equal(withoutStaleSame(same, kept), same);
+  // Trimmet væk (eller aldrig sendt): ingen "Brugeren ser"-linje i denne tur.
+  assert.equal(summaryRetained([], same), false);
+  const stripped = withoutStaleSame(same, []);
+  assert.equal((stripped.active as { view?: unknown }).view, undefined);
+  assert.doesNotMatch(contextText(stripped), /Brugeren ser/);
+  // Andet modul eller anden fane tæller ikke; et fuldt resumé i turen selv røres ikke.
+  assert.equal(summaryRetained(kept, { ...same, active: { ...same.active, view: { module: "ejerskab", same: true } } } as ChatContext), false);
+  assert.equal(summaryRetained(kept, { ...same, active: { ...jakob, tab: "oekonomi", view: { module: "oekonomi", same: true } } }), false);
+  assert.equal(withoutStaleSame(full, []), full);
 });
 
 test("parseContext: resuméet af det, brugeren ser, er højst 4000 tegn", () => {

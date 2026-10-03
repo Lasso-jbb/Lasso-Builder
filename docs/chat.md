@@ -44,7 +44,9 @@ Modellen får tre lag af kontekst, alle i brugerens tur, aldrig i systemprompten
    `view: { module, same: true }`, som serveren skriver som "Brugeren ser: <modul> (uændret siden sidst)." (det
    fulde resumé står allerede i historikken). Det fulde sendes igen i en ny samtale, efter 400 "Samtalen kunne
    ikke genkendes" og når serveren har trimmet historikken (første besked i `done.history` er ikke længere den,
-   der blev sendt).
+   der blev sendt). Trimmer serveren i selve den tur, et `same` sendes, tjekker den, om det fulde resumé for fanen og
+   modulet stadig står i en bevaret brugerbesked; gør det ikke, skrives ingen "Brugeren ser"-linje i den tur, og
+   modellen svarer som på et spørgsmål uden resumé (`withoutStaleSame` i `chat/context.ts`).
 3. **Det, brugeren skriver** (`message`).
 
 Konteksten står som første tekstblok i brugerens tur, fx `[Kontekst] Aktiv fane: virksomheden LASSO X A/S

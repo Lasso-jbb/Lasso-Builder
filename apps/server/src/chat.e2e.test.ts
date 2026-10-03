@@ -407,7 +407,9 @@ test("chat: over CHAT_HISTORY_MAX_CHARS kastes de ældste hele ture; done giver 
   let trimmedAt = -1;
   for (let i = 0; i < 12; i++) {
     script.push(sayText(`Svar ${i}: ${"x".repeat(800)}`));
-    const r = await chat({ message: `Spørgsmål ${i}`, history: state.history, sig: state.sig, context: onLasso }, ida);
+    // Første tur bærer det fulde resumé (som bliver trimmet væk nedenfor).
+    const ctxI = i === 0 ? { active: { ...onLasso.active, tab: "oekonomi", view: { module: "oekonomi", summary: "Omsætning 2025: 38 mio." } }, open: [] } : onLasso;
+    const r = await chat({ message: `Spørgsmål ${i}`, history: state.history, sig: state.sig, context: ctxI }, ida);
     assert.equal(r.status, 200, `tur ${i}`);
     const done = r.events.at(-1) as Event & { history: { role: string; content: unknown }[]; sig: string };
     if (done.history.length < state.history.length + 2 && trimmedAt < 0) trimmedAt = i;
@@ -416,6 +418,11 @@ test("chat: over CHAT_HISTORY_MAX_CHARS kastes de ældste hele ture; done giver 
     state = done;
   }
   assert.ok(trimmedAt > 0, "der blev trimmet");
+  // Det fulde "Brugeren ser" stod i første tur, som nu er trimmet væk: et same giver ingen "Brugeren ser"-linje.
+  const seen = { active: { ...onLasso.active, tab: "oekonomi", view: { module: "oekonomi", same: true } }, open: [] };
+  script.push(sayText("Ok."));
+  await chat({ message: "Og nu?", history: state.history, sig: state.sig, context: seen }, ida);
+  assert.doesNotMatch(lastUserTexts(calls.at(-1)!)[0]!, /Brugeren ser/);
   assert.ok(longest <= HISTORY_MAX + 3000, `historikken voksede til ${longest}`);
   // Grov trimning: efter en trimning er der plads til flere ture, før der trimmes igen.
   assert.ok(state.history.length >= 6, `${state.history.length} beskeder tilbage`);

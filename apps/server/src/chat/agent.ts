@@ -11,7 +11,7 @@ import { Client, InMemoryTransport, type CallToolResult } from "@modelcontextpro
 import { DATASET_META_KEY, type Dataset, type ViewSpec } from "@lasso/spec";
 import type { Config } from "../config.js";
 import { CHAT_ROUTING, createMcpServer, type McpContext } from "../mcp/server.js";
-import { ASK_CHOICE, contextText, placementOf, type ChatContext, type Placement } from "./context.js";
+import { ASK_CHOICE, contextText, placementOf, withoutStaleSame, type ChatContext, type Placement } from "./context.js";
 import { trimHistory } from "./history.js";
 import { CHAT_TOOLS, chatToolByName, type ChoiceMenu } from "./tools.js";
 
@@ -237,7 +237,9 @@ function apiErrorText(e: unknown): string {
 export async function runChat({ ctx, config, model, history, message, context, emit, signal }: ChatRunOptions): Promise<void> {
   // Konteksten står først i brugerens tur (ikke i system: den skifter pr. spørgsmål og ville bryde cachen).
   // Historikken trimmes sjældent og groft (chat/history.ts); den trimmede er den, "done" giver videre.
-  const messages: BetaMessageParam[] = [...trimHistory(history, config.CHAT_HISTORY_MAX_CHARS), userTurn(context, message)];
+  // Et same (uændret resumé) gælder kun, hvis det fulde resumé stadig står i den trimmede historik; ellers ingen "Brugeren ser" i denne tur.
+  const retained = trimHistory(history, config.CHAT_HISTORY_MAX_CHARS);
+  const messages: BetaMessageParam[] = [...retained, userTurn(withoutStaleSame(context, retained), message)];
   // Placeringen er kendt, før modellen kaldes: brugeren valgte den i menuen (eller svaret skrives her).
   const placement = placementOf(context);
   emit({ type: "placement", ...placement });

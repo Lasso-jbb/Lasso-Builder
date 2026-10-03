@@ -154,6 +154,26 @@ export function contextText(ctx: ChatContext): string {
   return `[Kontekst] ${lines.join(" ")}`;
 }
 
+/**
+ * Om det fulde "Brugeren ser"-resumé for den aktive fane og modulet stadig står i en bevaret brugerbesked (som
+ * contextText skriver det: "… (<id>), modul <m>. Brugeren ser: <m> — …"). Efter en trimning kan det være væk.
+ */
+export function summaryRetained(messages: readonly BetaMessageParam[], ctx: ChatContext): boolean {
+  const a = ctx.active;
+  if (a.kind === "global" || !a.view) return false;
+  const id = `(${oneLine(a.id)})`;
+  const line = `Brugeren ser: ${oneLine(a.view.module)} — `;
+  return messages.some((m) => m.role === "user" && Array.isArray(m.content) && m.content.some((b) => b.type === "text" && b.text.startsWith("[Kontekst]") && b.text.includes(id) && b.text.includes(line)));
+}
+
+/** Konteksten uden et same, hvis resuméet ikke længere står i historikken: så skrives ingen "Brugeren ser"-linje i denne tur. */
+export function withoutStaleSame(ctx: ChatContext, messages: readonly BetaMessageParam[]): ChatContext {
+  const a = ctx.active;
+  if (a.kind === "global" || !a.view?.same || summaryRetained(messages, ctx)) return ctx;
+  const { view: _drop, ...active } = a;
+  return { ...ctx, active };
+}
+
 /** Hvor svaret skrives (docs/chat.md): valgt af brugeren i menuen, ellers her. Serveren bærer det kun. */
 export interface Placement {
   placement: "current" | "entity" | "global";
