@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { loadConfig } from "../config.js";
 import { DemoProvider } from "../data/demo.js";
-import { candidatesAsText, personDescription, resolveEntity } from "./resolve.js";
+import { candidatesAsText, narrowToQuery, personDescription, resolveEntity } from "./resolve.js";
 
 const ctx = { provider: new DemoProvider(), config: loadConfig({ LASSO_DATA_SOURCE: "demo" }) };
 
@@ -57,4 +57,40 @@ test("personDescription: felter, der mangler, udelades; to personer med samme na
   assert.equal(new Set(many.map((c) => c.id)).size, many.length);
   assert.ok(many.length >= 2);
   assert.ok(many.every((c) => c.subtitle.length > 0 && !/flere personer/i.test(c.subtitle)));
+});
+
+test("R: et præcist fulde navn giver ét match; kandidater, der mangler et ord, listes ikke; flere med samme fulde navn giver stadig en menu", () => {
+  const cand = (id: string, name: string) => ({ kind: "person" as const, id, name, subtitle: "" });
+  const rows = [cand("CVR-3-1", "Jakob Bech"), cand("CVR-3-2", "Jakob Bech Benediktson"), cand("CVR-3-3", "Jakob Bech Jensen")];
+  assert.deepEqual(narrowToQuery(rows, "person", "Jakob Bech Benediktson").map((c) => c.id), ["CVR-3-2"]);
+  // Mangler et ord, og én indeholder dem alle: de andre udgår (også uden et præcist match).
+  const more = [...rows, cand("CVR-3-4", "Jakob Bech Benediktson Holm")];
+  assert.deepEqual(narrowToQuery(more, "person", "Jakob Bech Benediktson").map((c) => c.id), ["CVR-3-2"], "præcist match vinder over længere navne");
+  assert.deepEqual(narrowToQuery([rows[0]!, rows[1]!, cand("CVR-3-4", "Jakob Bech Benediktson Holm")], "person", "Bech Benediktson").map((c) => c.id), ["CVR-3-2", "CVR-3-4"], "ingen præcis: alle der indeholder ordene");
+  // Flere med samme fulde navn: alle præcise bliver (menu), de andre udgår.
+  const twins = [cand("CVR-3-5", "Mette Holm"), cand("CVR-3-6", "Mette Holm"), cand("CVR-3-7", "Mette Holm Jensen")];
+  assert.deepEqual(narrowToQuery(twins, "person", "Mette Holm").map((c) => c.id), ["CVR-3-5", "CVR-3-6"]);
+  // Ingen indeholder alle ordene: uændret (modellen/menuen vælger). Id'er røres ikke.
+  assert.equal(narrowToQuery(rows, "person", "Anne Kjær").length, 3);
+  assert.equal(narrowToQuery(rows, "person", "CVR-3-1").length, 3);
+  // Virksomheder: selskabsformen ses der bort fra.
+  const co = (id: string, name: string) => ({ kind: "company" as const, id, name, subtitle: "" });
+  assert.deepEqual(narrowToQuery([co("CVR-1-1", "Eksempel Byg A/S"), co("CVR-1-2", "Eksempel Byg Syd ApS")], "company", "Eksempel Byg ApS").map((c) => c.id), ["CVR-1-1"]);
+});
+
+test("R: resolveEntity giver ét præcist match for et fuldt navn (demo: Gitte Prøve), og find_entity-teksten har én kandidat", async () => {
+  const one = await resolveEntity(ctx, { kind: "person", query: "Gitte Prøve", limit: 5 });
+  assert.equal(one.length, 1);
+  assert.match(candidatesAsText("person", "Gitte Prøve", one), /^1 person for "Gitte Prøve"/);
+  // Et efternavn alene har flere.
+  assert.ok((await resolveEntity(ctx, { kind: "person", query: "Prøve", limit: 5 })).length >= 2);
+});
+
+test("personDescription: stifter og revisor er ikke roller i beskrivelsen (samme udvalg som netværket); andre roller står som egne ord", () => {
+  const role = (companyName: string, r: string, kind: "founder" | "direction" | "owner" | "board" | "other" = "other", active = true) => ({ companyName, kind, role: r, active });
+  const p = { lassoId: "CVR-3-1", name: "X", city: "Odense", birthYear: 1980, roles: [role("A ApS", "Stifter", "founder"), role("B ApS", "Revisor"), role("C ApS", "Adm. direktør", "direction"), role("D ApS", "Interessent")] };
+  assert.equal(personDescription(p as never, "", 2026), "Adm. direktør og interessent, 46 år, Odense. 4 selskaber, bl.a. A ApS.");
+  assert.doesNotMatch(personDescription(p as never, "", 2026), /[Ss]tifter|[Rr]evisor/);
+  const onlyFounder = { ...p, roles: [role("A ApS", "Stifter", "founder")] };
+  assert.equal(personDescription(onlyFounder as never, "", 2026), "46 år, Odense. 1 selskab, bl.a. A ApS.");
 });
