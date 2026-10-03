@@ -39,7 +39,12 @@ Modellen får tre lag af kontekst, alle i brugerens tur, aldrig i systemprompten
 2. **Det, brugeren ser** (`context`): den aktive fane (virksomhed, person eller forsiden/et resultat =
    globalt), modulet og serverens resumé af modulets data (`active.view`, højst 4000 tegn, samme tekst som
    værktøjssvarene giver modellen; portalen henter det med siden fra `/api/portal/company` og `/person`),
-   de åbne faner (højst 20) og et evt. valg fra valgmenuen.
+   de åbne faner (højst 20) og et evt. valg fra valgmenuen. Resuméet sendes kun, når det er nyt i samtalen:
+   portalen husker et fingeraftryk (fane, modul, hash) af det, modellen sidst fik, og sender ellers
+   `view: { module, same: true }`, som serveren skriver som "Brugeren ser: <modul> (uændret siden sidst)." (det
+   fulde resumé står allerede i historikken). Det fulde sendes igen i en ny samtale, efter 400 "Samtalen kunne
+   ikke genkendes" og når serveren har trimmet historikken (første besked i `done.history` er ikke længere den,
+   der blev sendt).
 3. **Det, brugeren skriver** (`message`).
 
 Konteksten står som første tekstblok i brugerens tur, fx `[Kontekst] Aktiv fane: virksomheden LASSO X A/S
@@ -156,6 +161,25 @@ Svarer serveren 400 "Samtalen kunne ikke genkendes", begynder portalen en ny sam
 ikke sidder fast. Efter et logud (eller et udløbet login) gemmes samtalen ikke igen. Både samtalen og fanernes svar med datasæt gemmes, når der er plads. Lageret ryddes ved udløb, for en
 anden bruger og når sessionen er logget ud. Modulernes egne data (de faste faner) gemmes ikke; de hentes igen.
 
+### Tokens: hvad chatværten udelader i forhold til /mcp
+
+Alt nedenfor er slået til med `host: "chat"` i MCP-serveren; Claude.ai over `/mcp` får teksten uændret
+(`chatHost.test.ts` pinner instruktionerne og `render_view`'s beskrivelse som hash).
+
+| | /mcp (Claude.ai) | chatten |
+|---|---|---|
+| `render_view`'s beskrivelse | fuld: komposition, layoutguiden (Paper 30), komponentindeks med formål (~13.000 tegn) | kort (<1.500 tegn): formål, `describe_components` først, 1–12 komponenter, højst én graf, udelad width, layout "page", aldrig HTML, og typenavnene (uden dem kan modellen ikke kalde `describe_components`) |
+| gem-værktøjer (`save_view`, `save_page`, `remove_saved_page`, `list_saved_pages`) | ja | nej: portalen har knapper til at gemme; routingen i systemprompten (`CHAT_ROUTING`) nævner dem ikke |
+| værktøjssvar (tekst til modellen) | SILENT-linje, resumé, "Visningen er svaret: skriv ingen tekst …", link til visningen, tekstkort-blok | kun noten og resuméet; demonoten er én kort linje; `structuredContent` har samme felter (tekstkortet står dér) |
+| tekst efter en visning | ingen (visningen er svaret) | en til tre korte sætninger, der sætter visningen i sammenhæng, uden at gentage tallene (`CHAT_RULES`) |
+| "Brugeren ser" i konteksten | (findes ikke) | fuldt resumé første gang, derefter `same: true`, til det ændrer sig |
+
+Målt med demodata (`buildChatSetup` + `textForModel` på show_company 99000001, 03.10.2026): værktøjslisten 37,3k → 21,7k
+tegn (render_view 15,2k → 3,5k, heraf beskrivelsen 13,0k → 1,4k; de fire gem-værktøjer 3,8k væk), systemprompten 5,7k →
+5,6k, et visningssvar til modellen 1,0–1,1k → 0,6–0,8k tegn (overblik 1.035 → 724, økonomi 955 → 632, ejerskab 1.083 → 754,
+risiko 996 → 676), og "Brugeren ser" op til 4k tegn pr. spørgsmål → kun ved ændring. /mcp: uændret. Mål igen med samme fremgangsmåde,
+når værktøjsbeskrivelser eller resuméer ændres.
+
 ### Historik og prompt-cache
 
 Systemprompt, værktøjer og samtalen caches hos Claude Platform (`CHAT_CACHE_TTL`, standard 1 time, samme TTL
@@ -172,8 +196,8 @@ giver og signerer.
 Chatten bruger én model i hele samtalen (`CHAT_MODEL`); et modelskift undervejs ville være en garanteret
 cache-miss (cachen er pr. model), så der er intet skift til en større model til `render_view`.
 
-TODO (ikke lavet endnu): værktøjssvarenes resuméer til modellen er den største omkostning i samtalen; hold dem
-korte.
+TODO (delvist): værktøjssvarenes resuméer til modellen er stadig den største løbende omkostning i samtalen
+(boilerplaten er væk for chatten; selve resuméets linjer kan kortes yderligere); hold dem korte.
 
 TODO (udskudt): en server-side kontrol af datareglen (fx markere svar med tal, men uden værktøjssvar i turen).
 
