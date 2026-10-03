@@ -30,3 +30,9 @@ test("trimHistory: under grænsen uændret; over grænsen kastes hele ture forfr
   assert.deepEqual(trimHistory(history, 10), turn(5));
   assert.deepEqual(trimHistory([], 10), []);
 });
+
+test("O4: standardgrænsen for historikken er 150000 tegn", async () => {
+  const { loadConfig } = await import("../config.js");
+  assert.equal(loadConfig({}).CHAT_HISTORY_MAX_CHARS, 150000);
+  assert.equal(loadConfig({ CHAT_HISTORY_MAX_CHARS: "20000" }).CHAT_HISTORY_MAX_CHARS, 20000);
+});

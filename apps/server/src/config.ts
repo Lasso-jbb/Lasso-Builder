@@ -118,7 +118,7 @@ const schema = z.object({
    * Så lang (i tegn, som JSON) må samtalen være, før serveren kaster de ældste hele ture (chat/history.ts).
    * Trimningen går ned til ca. 60 % af grænsen i ét hug, så den sker sjældent (hver trimning nulstiller cachen).
    */
-  CHAT_HISTORY_MAX_CHARS: z.coerce.number().int().min(10000).default(400000),
+  CHAT_HISTORY_MAX_CHARS: z.coerce.number().int().min(10000).default(150000),
 });
 
 export type Config = z.infer<typeof schema> & { publicBaseUrl: string; trustProxy: number };

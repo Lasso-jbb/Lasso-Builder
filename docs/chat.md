@@ -307,7 +307,7 @@ TODO (udskudt): en server-side kontrol af datareglen (fx markere svar med tal, m
 | `CHAT_EFFORT` | `medium` | `low` … `max`. Bruges ikke med Haiku. |
 | `CHAT_MAX_PER_HOUR` | `60` | Højst så mange beskeder pr. bruger pr. time. |
 | `CHAT_CACHE_TTL` | `1h` | Prompt-cachens levetid, `5m` eller `1h`; samme TTL på begge markører. |
-| `CHAT_HISTORY_MAX_CHARS` | `400000` | Så lang (tegn som JSON) må samtalen være, før de ældste ture kastes. |
+| `CHAT_HISTORY_MAX_CHARS` | `150000` | Så lang (tegn som JSON) må samtalen være, før de ældste ture kastes. |
 
 Med Haiku sendes hverken `effort` eller `fallbacks`, fordi Haiku 4.5 afviser dem. Med de større modeller
 sendes `fallbacks: "default"` (beta `server-side-fallback-2026-07-01`): afviser modellen et svar, prøver
