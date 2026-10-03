@@ -255,7 +255,8 @@ export const entries: GalleryEntry[] = [
     render: () => <OwnershipLayoutRules />,
   },
   {
-    nr: "14.4",
+    nr: "14.4b",
+    sortAs: "14.4",
     title: "Layoutregler, eksempler (standardlayout med foldning og Pr. dato)",
     node: "B2Y-0",
     // Kontrol r5: eksemplerne tegnes som diagram i fuld bredde (i ½ faldt de tilbage til listeformen).
@@ -425,7 +426,8 @@ export const entries: GalleryEntry[] = [
     note: "Paper LWU-0/LWV-0: kun den aktuelle score (ingen forrige, pil, kreditter, Hent-knap eller Creditsafe). Lassos risikoscore 0-100, hvor 100 = høj risiko; zoner 0-59/60-79/80-100. 'Se observationer' vises kun, når værten kan åbne risikosektionen (G1). Eksempeltal som i Paper (52, 12.09.2026).",
   },
   {
-    nr: "18.1",
+    nr: "18.1b",
+    sortAs: "18.1",
     title: "Aktuel risikoscore, ½-kort med \"Hvad trækker scoren\"",
     node: "LXL-0",
     spec: company("Eksempel Byg A/S", [{ type: "LassoScoreGauge", company: BYG, width: "half" }]),

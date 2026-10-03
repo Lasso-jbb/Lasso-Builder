@@ -118,7 +118,7 @@ const placeholder = (label: string, height = 120): ReactNode => (
   </div>
 );
 
-/* ---------- Portalens ramme (AppShell) med en komponeret side ---------- */
+/* ---------- Den klassiske portals ramme (AppShell) med en komponeret side ---------- */
 
 // Samme regler som apps/view/src/portal/portal.css (kun tokens); galleriet indlæser kun styles.css.
 const PORTAL_CSS = `.e-portal{display:flex;flex-direction:column;background:var(--lasso-chrome);margin:-24px}
@@ -446,7 +446,7 @@ const PAPER_PERSON_NOTE =
 const personProbe = () => composePersonProbe(P, "overblik");
 
 const COMPANY_PAGE_NOTE =
-  "Portalens ramme (AppShell: skinne, fanebjælke, modulbjælke) med show_company-kompositionen (composeCompany, focus overblik, followUps fra) for Eksempel Byg A/S i stedet for LASSO X A/S.";
+  "Den klassiske portals ramme (AppShell: skinne, fanebjælke, modulbjælke) med show_company-kompositionen (composeCompany, focus overblik, followUps fra) for Eksempel Byg A/S i stedet for LASSO X A/S.";
 
 /* ---------- 23 Guide ---------- */
 
@@ -491,7 +491,7 @@ const guide: GalleryEntry[] = [
 const pages: GalleryEntry[] = [
   dataEntry({
     nr: "24.1–24.11",
-    title: "Eksempel · Virksomhedsoverblik (skinne, faner, modulbjælke, hoved, nøgletal, graf, oplysninger, ledelse, kontakt, ejere, nyheder)",
+    title: "Eksempel: Virksomhedsoverblik (skinne, faner, modulbjælke, hoved, nøgletal, graf, oplysninger, ledelse, kontakt, ejere, nyheder)",
     node: "JT5-0",
     only: "desktop",
     desktopWidth: 1440,
@@ -501,7 +501,7 @@ const pages: GalleryEntry[] = [
   }),
   dataEntry({
     nr: "25.1–25.6",
-    title: "Eksempel · Personside (fanebjælke, skinne, personhoved, roller, netværk, personrisiko)",
+    title: "Eksempel: Personside (fanebjælke, skinne, personhoved, roller, netværk, personrisiko)",
     node: "D3A-0",
     only: "desktop",
     desktopWidth: 1440,
@@ -650,7 +650,7 @@ function OpenMenu() {
 }
 
 const mobileNav: GalleryEntry[] = [
-  { nr: "26a.1", sortAs: "06.4", title: "Topbjælke og bundnavigation (mobil, 26a.1 + 26a.3)", node: "DTS-0", only: "mobile", note: "Kun mobil (intet desktop-modstykke), derfor ved 06. AppShell under 560 px: topbjælke med burger, titel + undertitel, klokke og '…' øverst; bundnavigationen (26a.3, DUY-0) nederst i samme ramme.", render: () => <MobileFrame /> },
+  { nr: "26a.1", sortAs: "06.4", title: "Topbjælke og bundnavigation (mobil, 26a.1 + 26a.3)", node: "DTS-0", only: "mobile", note: "Kun mobil (intet desktop-modstykke), derfor ved 06. AppShell under 768 px (klassisk portal): topbjælke med burger, titel + undertitel, klokke og '…' øverst; bundnavigationen (26a.3, DUY-0) nederst i samme ramme.", render: () => <MobileFrame /> },
   { nr: "26a.2", sortAs: "06.4", title: "Sektionsark (mobil)", node: "DUB-0", only: "mobile", note: "Kun mobil, derfor ved 06. AppShell med sheetOpen: sektionsarket fra burgeren, aktiv i koral-soft.", render: () => <MobileFrame sheetOpen /> },
   {
     nr: "26a.8",
@@ -667,7 +667,7 @@ const mobileNav: GalleryEntry[] = [
     title: "Bundark (dialog på mobil)",
     node: "DZI-0",
     only: "mobile",
-    note: "CreditConfirmDialog åben; under 600 px bliver dialogen bundark.",
+    note: "CreditConfirmDialog åben; ved 560 px og derunder bliver dialogen bundark.",
     render: () => (
       <div style={{ minHeight: 800 }}>
         <CreditConfirmDialog open balance={38} onClose={noop} onConfirm={noop} description="LASSO X A/S, seneste vurdering er 13 dage gammel." title="Hent ny kreditvurdering?" />
@@ -675,7 +675,7 @@ const mobileNav: GalleryEntry[] = [
     ),
   },
   {
-    nr: "15.2",
+    nr: "15.2b",
     sortAs: "15.2",
     title: "Massehandlinger, mobil: bundbjælke over bundnavigationen",
     node: "LOD-0",
@@ -684,7 +684,7 @@ const mobileNav: GalleryEntry[] = [
     render: () => <BulkMobile />,
   },
   {
-    nr: "15.2",
+    nr: "15.2c",
     sortAs: "15.2",
     title: "Massehandlinger, mobil: Flere-ark",
     node: "LQP-0",

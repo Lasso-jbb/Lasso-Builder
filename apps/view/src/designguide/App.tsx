@@ -100,7 +100,10 @@ function searchIndex(modules: Map<ComponentType, ModuleInfo>): Hit[] {
   const hits: Hit[] = [];
   for (const m of modules.values()) hits.push({ kind: "Modul", label: `${m.n} ${m.title}`, sub: `${m.type}: ${m.catalog.register?.formaal ?? ""}`, path: `moduler/${slugOf(m.type)}` });
   for (const t of SOURCE.tokens) hits.push({ kind: "Token", label: t.name, sub: `${t.light}${t.comment ? `, ${t.comment}` : ""}`, path: `fundament/tokens?q=${encodeURIComponent(t.name)}` });
-  ENTRIES.forEach((e) => hits.push({ kind: "Element", label: `${e.nr} ${e.title}`, sub: BOARD_TITLES[e.nr.split(".")[0]!], path: `galleri/${(e.sortAs ?? e.nr).split(".")[0]}?e=${encodeURIComponent(e.nr)}` }));
+  ENTRIES.forEach((e) => {
+    const board = (e.sortAs ?? e.nr).split(".")[0]!;
+    hits.push({ kind: "Element", label: `${e.nr} ${e.title}`, sub: BOARD_TITLES[board], path: `galleri/${board}?e=${encodeURIComponent(e.nr)}` });
+  });
   for (const d of SOURCE.docs) for (const m of d.markdown.matchAll(/^#{2,3}\s+(.+)$/gm)) hits.push({ kind: "Regel", label: m[1]!, sub: d.title, path: d.file.endsWith("README.md") ? "principper" : d.file === PORTAL_DOC ? "portal" : `dokumenter/${slugOf(d.file.split("/").pop()!.replace(/\.md$/, ""))}` });
   return hits;
 }

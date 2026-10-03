@@ -10,7 +10,6 @@ import {
   KeyFigureGauge,
   Livestock,
   PersonFacts,
-  ScoreHistory,
   LassoContact,
   LassoContactPersons,
   LassoRelations,
@@ -265,13 +264,13 @@ function ScoreStates() {
 /** C6 (Ø6): låste tilstande (abonnement/modul) og ikke tilgængelige branchetal; tekster fra register.liveNote. */
 function LockedStates() {
   const wrap = (node: ReactNode) => <div className="lasso-framewrap" style={{ flex: 1 }}>{node}</div>;
+  // Samme tekst som serverens SCORE_LOCKED_REASON (apps/server/src/lasso/scoreAdapters.ts).
   const SUB = "Kræver Creditsafe-abonnement. Score og kreditvurdering vises, når Creditsafe er tilføjet Lasso-abonnementet.";
   const fin = { lassoId: B, years: [] } as unknown as FinancialsVM;
   return (
     <Stack>
       <StateRow height={200}>
         {wrap(<ScoreGauge score={{ lassoId: B, score: null, state: "unavailable", reason: SUB }} onFetch={noop} />)}
-        {wrap(<ScoreHistory history={{ lassoId: B, points: [], reason: SUB }} onFetch={noop} />)}
         {wrap(<KeyFigureGauge financials={fin} industry={{ lassoId: B, state: "unavailable", reason: "Lasso har ingen branchetal for virksomhedens branche endnu.", years: [] }} />)}
       </StateRow>
       {wrap(<Livestock livestock={{ lassoId: B, herds: [], events: [], unavailableReason: "Kræver Ejendomme-modulet i Lasso-abonnementet" }} />)}
@@ -499,7 +498,7 @@ export const entries: GalleryEntry[] = [
     ),
   },
   { nr: "10.4", title: "Scoremåler, tilstande (10b)", node: "LG2-0", note: "10b: ikke beregnet, henter (skelet af måleren med shimmer), ikke tilgængelig. Lassos risikoscore, ingen Creditsafe.", render: () => <ScoreStates /> },
-  { nr: "10.5", title: "Låst og ikke tilgængelig med årsag (C6)", note: "Ø6: score og scorehistorik låst uden Creditsafe-abonnement (ingen knap), CHR låst uden Ejendomme-modulet, branchetal ikke tilgængelige med årsag.", render: () => <LockedStates /> },
+  { nr: "10.5", title: "Låst og ikke tilgængelig med årsag (C6)", note: "Ø6: Lassos score (måleren; beregnes ud fra Creditsafe-ratingen) låst uden Creditsafe-abonnement (ingen knap), CHR låst uden Ejendomme-modulet, branchetal ikke tilgængelige med årsag.", render: () => <LockedStates /> },
   {
     nr: "16.6",
     title: "Stamoplysninger i ½ (to kolonner)",
