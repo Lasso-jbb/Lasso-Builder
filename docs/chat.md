@@ -63,7 +63,7 @@ brugeren udtrykkeligt beder om den ("vis alt om X", "åbn X"; se `place_answer` 
 **Valgpanelet.** Menuen vises som et panel over spørgefeltet (på telefon som et ark): overskrift med spørgsmålet
 og knapperne fold sammen og luk; punkter med titel (`label`) og en linjes beskrivelse (`description`), uden
 nummermærker (tallene 1…9 er skjulte tastaturgenveje); det anbefalede (`recommended`, højst ét) står først og
-er markeret "(Anbefalet)"; en sidste række "Andet" med feltet "Skriv dit eget svar her"; "Spring over" og "Vælg".
+er forvalgt, uden mærke (Jakob 03.10: intet "Anbefalet"); en sidste række "Andet" med feltet "Skriv dit eget svar her"; "Spring over" og "Vælg".
 Enkeltvalg (radiogruppe); Esc springer over. "Spring over" er kun klienten: menuen lukkes på fanen, intet sendes,
 og næste spørgsmål besvares her. Skriver brugeren i det almindelige spørgefelt, mens panelet står åbent, sendes
 det stadig som `choice.free` (hvis menuen tillader fritekst). Kun `action` er afgørende for placeringen og indgår

@@ -140,7 +140,6 @@
 .p3 .chat-crow:focus-visible { outline: none; border-color: var(--lasso-accent); }
 .p3 .chat-crow[aria-disabled="true"] { cursor: default; }
 .p3 .chat-crow__t { font-size: var(--chat-fs-16); line-height: 24px; color: var(--lasso-text); }
-.p3 .chat-crow__rec { color: var(--lasso-text-3); font-size: var(--lasso-fs); }
 .p3 .chat-crow__d { font-size: var(--lasso-fs); line-height: var(--chat-lh); color: var(--lasso-text-3); }
 .p3 .chat-crow__field { display: block; width: 100%; margin-top: 10px; height: var(--lasso-field-h); border: 1px solid var(--lasso-border-strong); border-radius: var(--lasso-radius); background: var(--lasso-surface); padding: 0 14px; font: inherit; font-size: var(--lasso-fs); color: var(--lasso-text); outline: none; caret-color: var(--lasso-accent); }
 .p3 .chat-crow__field::placeholder { color: var(--faint); }

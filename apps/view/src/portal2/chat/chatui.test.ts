@@ -163,11 +163,16 @@ test("Tom tilstand: titel med fanens navn, hjælpelinje og fire piller pr. fanet
   assert.equal((out.match(/class="chat-spill"/g) ?? []).length, 4);
 });
 
-test("Afklaringen: radiogruppe uden talmærker, (Anbefalet), Andet med eget svar, Spring over og Vælg", () => {
+test("Afklaringen: radiogruppe uden talmærker, det anbefalede forvalgt uden mærke, Andet med eget svar, Spring over og Vælg", () => {
   const out = html(createElement(ChoicePanel, { choice: fx.CHOICE, disabled: false, onSend: () => undefined, onSkip: () => undefined }));
   assert.match(out, /role="radiogroup"/);
   assert.equal((out.match(/role="radio"/g) ?? []).length, 3);
-  assert.match(out, /aria-checked="true"[^>]*>.*Jakob Bech Benediktson<span class="chat-crow__rec"> \(Anbefalet\)/);
+  // Jakob 03.10: intet "Anbefalet"; det anbefalede punkt er stadig forvalgt, så Vælg virker med det samme. Også i arket på telefonen.
+  assert.match(out, /aria-checked="true"[^>]*><div class="chat-crow__t">Jakob Bech Benediktson<\/div>/);
+  assert.doesNotMatch(out, /Anbefalet|chat-crow__rec/);
+  const sheet = html(createElement(ChoicePanel, { choice: fx.CHOICE, disabled: false, variant: "sheet", onSend: () => undefined, onSkip: () => undefined }));
+  assert.match(sheet, /aria-checked="true"[^>]*><div class="chat-crow__t">Jakob Bech Benediktson<\/div>/);
+  assert.doesNotMatch(sheet, /Anbefalet/);
   assert.match(out, /placeholder="Skriv dit eget svar her"/);
   assert.match(out, />Spring over</);
   assert.match(out, />Vælg</);

@@ -56,7 +56,7 @@ eller som de eksisterende tokens i `styles.css`.
 | Primær knap | 36, radius 8, bookmark-plus-ikon; mobil: orange ikonknap |
 | Afklaringspanel | 864 bredt (inputfeltets bredde), bund 122, radius 12, skygge 0 12 32 rgba(.12), padding 24, 1 px divider-subtle |
 | Panelhoved | titel 16/500/24; chevron og × 18, gap 12, margin-bottom 16 |
-| Panelrækker | surface-panel, divider-subtle kant, radius 8, padding 14/16, 8 px mellemrum; titel 16/24 ink; "(Anbefalet)" 14 text-secondary; beskrivelse 14/22 text-secondary |
+| Panelrækker | surface-panel, divider-subtle kant, radius 8, padding 14/16, 8 px mellemrum; titel 16/24 ink (Jakob 03.10: intet "Anbefalet"; det anbefalede er kun forvalgt); beskrivelse 14/22 text-secondary |
 | "Andet"-felt | 44 højt, radius 8, "Skriv dit eget svar her"; knapper højrestillet, margin-top 16, gap 8: "Spring over" (sekundær), "Vælg" (primær) |
 | Mobilark | venstre/højre 16, bund 132, padding 16, rækker 12/14, titel 15, beskrivelse 13/20 |
 | Tænker | prikker 6 px i tekstfarven (`--lasso-text`, Jakob 03.10: ikke koral), gap 5, puls 1,2 s, opacitet 1/.6/.3; ingen tekst ("Lasso tænker" kun for skærmlæsere, role=status) |
@@ -130,8 +130,8 @@ Mere end én fane pr. spørgsmål findes ikke, og Lasso åbner aldrig en fane, b
 ## Afklaringspanelet
 
 Er der flere mulige match, vises et panel lige over inputfeltet, lige så bredt som det (864 px) (på telefon et ark fra bunden med 16
-px sideluft). Hoved: spørgsmålet og to knapper, fold sammen og luk. Rækker: titel, "(Anbefalet)" på den mest
-sandsynlige (den står først), og en linjes beskrivelse (rolle, alder, by, virksomheder); ingen talmærker (tallene
+px sideluft). Hoved: spørgsmålet og to knapper, fold sammen og luk. Rækker: titel og en linjes beskrivelse; den mest
+sandsynlige står først og er forvalgt, så Vælg virker med det samme, men har intet mærke (Jakob 03.10: intet "Anbefalet") (rolle, alder, by, virksomheder); ingen talmærker (tallene
 1 til 9 er skjulte tastaturgenveje). Sidste række er "Andet" med feltet "Skriv dit eget svar her". Knapperne er
 "Spring over" (sekundær) og "Vælg" (primær). Enkeltvalg som radiogruppe; Esc springer over; den valgte række har 1 px
 `--lasso-focus-border` (D10). Panelet kommer kun ved flere match, aldrig for at vælge placering eller for at tilbyde

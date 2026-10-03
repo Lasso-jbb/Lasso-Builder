@@ -6,7 +6,7 @@ import type { ChoicePick } from "../chat/stream.js";
 
 /**
  * Afklaringen over spørgefeltet (docs/chat.md, Paper-eksporten afsnit 08): spørgsmålet med fold sammen og ×, rækker
- * med kun titel og beskrivelse (det anbefalede først med "(Anbefalet)"), "Andet" med "Skriv dit eget svar her", og
+ * med kun titel og beskrivelse (det anbefalede står først og er forvalgt, men uden mærke; Jakob 03.10: intet "Anbefalet"), "Andet" med "Skriv dit eget svar her", og
  * "Spring over" og "Vælg" nederst til højre. Enkeltvalg som radiogruppe: pil op/ned flytter, 1–9 er skjulte genveje,
  * Cmd/Ctrl+Enter vælger, Esc springer over. variant "sheet" er arket fra bunden på telefonen.
  */
@@ -110,10 +110,7 @@ export function ChoicePanel({
                 onClick={() => !disabled && pick(i)}
                 onKeyDown={(e) => onRowKey(e, i)}
               >
-                <div className="chat-crow__t">
-                  {o.label}
-                  {o.recommended ? <span className="chat-crow__rec"> (Anbefalet)</span> : null}
-                </div>
+                <div className="chat-crow__t">{o.label}</div>
                 {o.description ? <div className="chat-crow__d">{o.description}</div> : null}
               </div>
             ))}
