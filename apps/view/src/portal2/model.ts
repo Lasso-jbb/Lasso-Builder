@@ -179,6 +179,43 @@ export function choiceMessage(choice: PendingChoice, index: number): { message: 
   return { message: option.action.prompt ?? option.label, pick: { id: choice.id, index, action: option.action } };
 }
 
+/** Valget i panelet: et punkt (index) eller "Andet" (fritekst i panelet). */
+export type ChoiceSelection = number | "other";
+
+/** Forvalgt punkt: det anbefalede, ellers det første. */
+export function defaultChoiceSelection(choice: PendingChoice): number {
+  const i = choice.options.findIndex((o) => o.recommended);
+  return i >= 0 ? i : 0;
+}
+
+/** Det, "Send" sender: punktets prompt og valg, eller "Andet"-teksten som fritekst. null, når der intet er at sende. */
+export function choiceSend(choice: PendingChoice, selection: ChoiceSelection, otherText: string): { message: string; pick: ChoicePick } | null {
+  if (selection !== "other") return choiceMessage(choice, selection);
+  const text = otherText.trim();
+  const pick = freeTextPick(choice);
+  return text && pick ? { message: text, pick } : null;
+}
+
+/** "Spring over": menuen lukkes på svaret, og intet sendes (ingen tur til modellen). */
+export function skipChoice(answer: Answer): Answer {
+  return answer.choice ? { ...answer, choice: undefined } : answer;
+}
+
+export type ChoiceKey = { kind: "select"; selection: ChoiceSelection } | { kind: "send" } | { kind: "skip" };
+
+/**
+ * Tastaturet i panelet: 1–9 vælger punktet (tallet efter punkterne er "Andet"), Cmd/Ctrl+Enter sender, Esc springer over.
+ * Tal tastes kun som genvej, når fokus ikke står i et tekstfelt (inField).
+ */
+export function choiceKey(e: { key: string; metaKey: boolean; ctrlKey: boolean }, choice: PendingChoice, inField: boolean): ChoiceKey | null {
+  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) return { kind: "send" };
+  if (e.key === "Escape") return { kind: "skip" };
+  if (inField || e.metaKey || e.ctrlKey || !/^[1-9]$/.test(e.key)) return null;
+  const n = Number(e.key) - 1;
+  if (n < choice.options.length) return { kind: "select", selection: n };
+  return n === choice.options.length && choice.allowFreeText !== false ? { kind: "select", selection: "other" } : null;
+}
+
 /** Fritekst i stedet for et punkt: beskeden er det, brugeren skrev. Kun når menuen tillader det; ellers intet valg (spørgsmålet besvares her). */
 export function freeTextPick(choice: PendingChoice): ChoicePick | undefined {
   return choice.allowFreeText === false ? undefined : { id: choice.id, free: true };

@@ -4,8 +4,11 @@ import { candidatesAsText, resolveEntity } from "../usecases/index.js";
 import type { McpContext } from "../mcp/server.js";
 import { ASK_CHOICE, askChoiceSchema, type ChatContext, type ChoiceAction } from "./context.js";
 
+/** Et punkt i menuen: titel, én linjes beskrivelse, evt. anbefalet, og handlingen (kun den er afgørende for placeringen). */
 export interface ChoiceOption {
   label: string;
+  description: string;
+  recommended?: boolean;
   action: ChoiceAction;
 }
 

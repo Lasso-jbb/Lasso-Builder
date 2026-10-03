@@ -13,7 +13,6 @@ import {
   addRecent,
   applyEvent,
   askPlaceholder,
-  choiceMessage,
   clearCache,
   closeItem,
   contextFor,
@@ -28,6 +27,7 @@ import {
   newAnswer,
   openItem,
   restoreCache,
+  skipChoice,
   recencyOrder,
   saveCache,
   saveRecent,
@@ -49,6 +49,7 @@ import {
 } from "./model.js";
 import { AskField, BottomBar, DropButton, IconButton, LassoTab, MenuItem, ModuleTab, OpenTab, SearchEmpty, SearchField, SearchResultRow, SearchTabs, StatusFilterMenu, Suggestions, TopTab } from "./parts.js";
 import { useElasticScroll } from "./elastic.js";
+import { ChoicePanel } from "./ChoicePanel.js";
 import "./portal2.css";
 
 /**
@@ -938,25 +939,6 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
           <div className="answer" aria-live="polite">
             <div className="answer__q">{answer.question}</div>
             {answer.parts.map((p, i) => (p.kind === "text" ? <Text key={i} text={p.text} /> : lassoView(`${item.key}:${i}`, p, item.kind !== "result" && p.form === "page")))}
-            {answer.choice ? (
-              // Valgmenuen designes i Paper; indtil da almindelige knapper, så et valg kan sendes.
-              <div className="answer__choice" role="group" aria-label={answer.choice.question}>
-                <div>{answer.choice.question}</div>
-                {answer.choice.options.map((o, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    disabled={pending}
-                    onClick={() => {
-                      const m = choiceMessage(answer.choice!, i);
-                      if (m) void ask(m.message, m.pick);
-                    }}
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
             {answer.pending && !hasView ? <div className="answer__status">{answer.status ?? "Tænker …"}</div> : null}
             {answer.error ? (
               <div className="answer__error" role="alert">
@@ -1134,6 +1116,15 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
         ) : null}
 
         <div className={`ask${askOpen ? " is-open" : ""}`}>
+          {answer?.choice && item ? (
+            // Valgpanelet over feltet (docs/chat.md); "Spring over" lukker det uden at sende noget.
+            <ChoicePanel
+              choice={answer.choice}
+              disabled={pending}
+              onSend={(message, pick) => void ask(message, pick)}
+              onSkip={() => setAnswers((all) => (all[item.key] ? { ...all, [item.key]: skipChoice(all[item.key]!) } : all))}
+            />
+          ) : null}
           <AskField value={draft} placeholder={askPlaceholder(item)} pending={pending} disabled={!boot.chat} inputRef={askInput} onChange={setDraft} onSubmit={() => void ask(draft)} onStop={stop} />
           <Suggestions items={sugg} disabled={pending || !boot.chat} onPick={(x) => void ask(x)} />
         </div>

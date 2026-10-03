@@ -16,7 +16,7 @@ const history: BetaMessageParam[] = [
     role: "assistant",
     content: [
       { type: "text", text: "Et øjeblik." },
-      { type: "tool_use", id: "toolu_1", name: "ask_choice", input: { question: "Hvad vil du se?", options: [{ label: "Fuld indsigt i Jakob Benediktson", action: entityAction }, { label: "Kort indsigt i Jakob Benediktson", action: hereAction }, { label: "Branchesammenligning", action: globalAction }] } },
+      { type: "tool_use", id: "toolu_1", name: "ask_choice", input: { question: "Hvad vil du se?", options: [{ label: "Fuld indsigt i Jakob Benediktson", description: "Kort beskrivelse", action: entityAction }, { label: "Kort indsigt i Jakob Benediktson", description: "Kort beskrivelse", action: hereAction }, { label: "Branchesammenligning", description: "Kort beskrivelse", action: globalAction }] } },
     ],
   },
   { role: "user", content: [{ type: "tool_result", tool_use_id: "toolu_1", content: "Valget er vist." }] },
@@ -72,11 +72,13 @@ test("verifyChoice: ukendte nøgler, modellen har lagt til i menuen, giver ikke 
     { role: "user", content: "vis alt om Jakob" },
     {
       role: "assistant",
-      content: [{ type: "tool_use", id: "toolu_9", name: "ask_choice", input: { question: "Hvad?", extra: 1, options: [{ label: "Fuld", extra: true, action: { ...entityAction, ekstra: "x" } }] } }],
+      content: [{ type: "tool_use", id: "toolu_9", name: "ask_choice", input: { question: "Hvad?", extra: 1, options: [{ label: "Fuld", description: "d", extra: true, action: { ...entityAction, ekstra: "x" } }] } }],
     },
   ];
   assert.deepEqual(verifyChoice(noisy, { id: "toolu_9", index: 0, action: entityAction }), { label: "Fuld" });
   assert.ok("error" in verifyChoice(noisy, { id: "toolu_9", index: 0, action: { ...entityAction, focus: "ejerskab" } }));
+  // Kun action er afgørende: titel, beskrivelse og anbefaling bruges ikke til placeringen (klienten sender dem ikke engang).
+  assert.deepEqual(verifyChoice(noisy, { id: "toolu_9", index: 0, action: entityAction }), { label: "Fuld" });
   // Et ugyldigt menu-input (fx ingen punkter) kan ikke bekræftes.
   const empty: BetaMessageParam[] = [{ role: "assistant", content: [{ type: "tool_use", id: "toolu_8", name: "ask_choice", input: { question: "Hvad?", options: [] } }] }];
   assert.ok("error" in verifyChoice(empty, { id: "toolu_8", free: true }));

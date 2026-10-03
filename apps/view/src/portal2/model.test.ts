@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { Dataset, ViewSpec } from "@lasso/spec";
 import type { LookupResult } from "../portal/api.js";
 import type { ChatEvent } from "../chat/stream.js";
-import { addRecent, applyEvent, CHAT_CACHE_TTL_MS, clearCache, dropTabDatasets, isUnrecognizedHistory, resetConversation, recencyOrder, shortName, restoreCache, saveCache, serializeCache, askPlaceholder, choiceMessage, closeItem, contextFor, freeTextPick, headLines, highlight, lastView, loadRecent, mapViews, newAnswer, openItem, searchCounts, searchRows, suggestions, withLastView, withoutHead, type OpenItem, type PendingChoice } from "./model.js";
+import { addRecent, applyEvent, choiceKey, choiceSend, defaultChoiceSelection, skipChoice, CHAT_CACHE_TTL_MS, clearCache, dropTabDatasets, isUnrecognizedHistory, resetConversation, recencyOrder, shortName, restoreCache, saveCache, serializeCache, askPlaceholder, choiceMessage, closeItem, contextFor, freeTextPick, headLines, highlight, lastView, loadRecent, mapViews, newAnswer, openItem, searchCounts, searchRows, suggestions, withLastView, withoutHead, type OpenItem, type PendingChoice } from "./model.js";
 
 const novo: OpenItem = { key: "CVR-1-24256790", kind: "company", name: "NOVO NORDISK A/S", tab: "overblik" };
 const lasso: OpenItem = { key: "CVR-1-34580820", kind: "company", name: "LASSO X A/S", tab: "overblik" };
@@ -70,8 +70,8 @@ test("choiceMessage: punktets prompt (ellers teksten) og valget med punktets act
     id: "toolu_1",
     question: "Hvad vil du se?",
     options: [
-      { label: "Alt om Mette Holm", action: { placement: "entity", entity: { kind: "person", id: mette.key, name: mette.name }, focus: "overblik", prompt: "Vis alt om Mette Holm (CVR-3-4000123)" } },
-      { label: "Overordnet indblik her", action: { placement: "current" } },
+      { label: "Alt om Mette Holm", description: "Hele siden i en ny fane", action: { placement: "entity", entity: { kind: "person", id: mette.key, name: mette.name }, focus: "overblik", prompt: "Vis alt om Mette Holm (CVR-3-4000123)" } },
+      { label: "Overordnet indblik her", description: "Kort svar her", recommended: true, action: { placement: "current" } },
     ],
     allowFreeText: true,
   };
@@ -153,8 +153,8 @@ test("applyEvent: tekst og visninger i rækkefølge, placering først, menu og f
   assert.equal(failed.error, "Nej.");
 
   // Menuen gemmes på svaret.
-  const withMenu = applyEvent(newAnswer("vis alt om Mette"), { type: "choice", id: "toolu_1", question: "Hvad vil du se?", options: [{ label: "Alt om Mette", action: { placement: "current" } }], allowFreeText: false });
-  assert.deepEqual(withMenu.choice, { id: "toolu_1", question: "Hvad vil du se?", options: [{ label: "Alt om Mette", action: { placement: "current" } }], allowFreeText: false });
+  const withMenu = applyEvent(newAnswer("vis alt om Mette"), { type: "choice", id: "toolu_1", question: "Hvad vil du se?", options: [{ label: "Alt om Mette", description: "Kort", action: { placement: "current" } }], allowFreeText: false });
+  assert.deepEqual(withMenu.choice, { id: "toolu_1", question: "Hvad vil du se?", options: [{ label: "Alt om Mette", description: "Kort", action: { placement: "current" } }], allowFreeText: false });
 
   // Den seneste visning kan erstattes, og alle visninger kan ændres.
   const spec2 = { ...spec, title: "Y" } as ViewSpec;
@@ -308,4 +308,45 @@ test("recencyOrder: mindst nyligt aktive først, den aktive sidst, aldrig besøg
   const z: OpenItem = { ...mette };
   assert.deepEqual(recencyOrder([x, y, z], [y.key, x.key], z.key), [y.key, x.key, z.key]);
   assert.deepEqual(recencyOrder([x, y, z], [x.key], y.key), [z.key, x.key, y.key]);
+});
+
+/* ---------- valgpanelet ---------- */
+
+const panel: PendingChoice = {
+  id: "toolu_p",
+  question: "Hvad vil du se om Mette Holm?",
+  options: [
+    { label: "Fuld indsigt", description: "Hele siden i en ny fane", action: { placement: "entity", entity: { kind: "person", id: mette.key, name: mette.name }, prompt: "Vis alt om Mette Holm" } },
+    { label: "Kort indsigt", description: "Kort svar her", recommended: true, action: { placement: "current", prompt: "Kort om Mette Holm" } },
+  ],
+  allowFreeText: true,
+};
+
+test("valgpanel: forvalg, send, Andet og spring over", () => {
+  assert.equal(defaultChoiceSelection(panel), 1, "det anbefalede");
+  assert.equal(defaultChoiceSelection({ ...panel, options: panel.options.map((o) => ({ ...o, recommended: false })) }), 0);
+  assert.deepEqual(choiceSend(panel, 1, ""), { message: "Kort om Mette Holm", pick: { id: "toolu_p", index: 1, action: panel.options[1]!.action } });
+  assert.deepEqual(choiceSend(panel, "other", "  Sammenlign med branchen  "), { message: "Sammenlign med branchen", pick: { id: "toolu_p", free: true } });
+  assert.equal(choiceSend(panel, "other", "   "), null, "tom Andet sender intet");
+  assert.equal(choiceSend({ ...panel, allowFreeText: false }, "other", "tekst"), null, "Andet kun hvis tilladt");
+  const answer = applyEvent(newAnswer("q"), { type: "choice", id: panel.id, question: panel.question, options: panel.options, allowFreeText: true });
+  assert.equal(skipChoice(answer).choice, undefined);
+  assert.equal(skipChoice(answer).parts, answer.parts, "intet andet ændres, intet sendes");
+  const none = newAnswer("q");
+  assert.equal(skipChoice(none), none);
+});
+
+test("valgpanel: taster (1–9, Andet efter punkterne, Cmd/Ctrl+Enter, Esc) og tal i tekstfelter", () => {
+  const key = (k: string, mods: { metaKey?: boolean; ctrlKey?: boolean } = {}) => ({ key: k, metaKey: false, ctrlKey: false, ...mods });
+  assert.deepEqual(choiceKey(key("1"), panel, false), { kind: "select", selection: 0 });
+  assert.deepEqual(choiceKey(key("2"), panel, false), { kind: "select", selection: 1 });
+  assert.deepEqual(choiceKey(key("3"), panel, false), { kind: "select", selection: "other" });
+  assert.equal(choiceKey(key("4"), panel, false), null);
+  assert.equal(choiceKey(key("3"), { ...panel, allowFreeText: false }, false), null);
+  assert.equal(choiceKey(key("1"), panel, true), null, "tal i et tekstfelt er tekst");
+  assert.equal(choiceKey(key("0"), panel, false), null);
+  assert.deepEqual(choiceKey(key("Enter", { metaKey: true }), panel, true), { kind: "send" });
+  assert.deepEqual(choiceKey(key("Enter", { ctrlKey: true }), panel, false), { kind: "send" });
+  assert.equal(choiceKey(key("Enter"), panel, false), null);
+  assert.deepEqual(choiceKey(key("Escape"), panel, true), { kind: "skip" });
 });

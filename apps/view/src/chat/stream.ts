@@ -54,7 +54,12 @@ export interface ChoiceAction {
 }
 
 export interface ChoiceOption {
+  /** Punktets korte titel. */
   label: string;
+  /** Én linje om, hvad man får. */
+  description: string;
+  /** Det anbefalede punkt (står først). */
+  recommended?: boolean;
   action: ChoiceAction;
 }
 

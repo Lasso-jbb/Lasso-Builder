@@ -47,6 +47,18 @@ Konteksten står som første tekstblok i brugerens tur, fx `[Kontekst] Aktiv fan
 (`apps/server/src/chat/context.ts`). Serveren svarer altid i den aktive kontekst og skifter aldrig kontekst
 selv: en anden fane åbnes kun ved et klik i en visning (uden AI) eller ved brugerens valg i en valgmenu.
 
+**Valgpanelet.** Menuen vises som et panel over spørgefeltet: overskrift med spørgsmålet og knapperne fold sammen
+og luk; punkter med titel (`label`), en linjes beskrivelse (`description`) og nummer (1…n, også tastaturgenvej),
+det anbefalede (`recommended`, højst ét) først og markeret; en sidste række "Andet" med et tekstfelt i panelet;
+"Spring over" og "Send" (Cmd/Ctrl+Enter). Enkeltvalg; Esc springer over. "Spring over" er kun klienten: menuen
+lukkes på fanen, intet sendes, og næste spørgsmål besvares her. Skriver brugeren i det almindelige spørgefelt,
+mens panelet står åbent, sendes det stadig som `choice.free` (hvis menuen tillader fritekst). Hvert punkt har
+`label` og `description` ("Kort svar her i chatten", "Åbner en ny fane med hele overblikket"); spørges der om en
+anden person eller virksomhed, er "Kort indsigt" anbefalet og står først, så "Fuld indsigt". Kun `action` er
+afgørende for placeringen og indgår i verificeringen; titel, beskrivelse og anbefaling stoles der ikke på.
+Grænserne (description højst 160 tegn, højst ét anbefalet punkt) tjekkes af zod på serveren og står kun i
+beskrivelserne i det skema, der sendes til API'et (strict tool use kender ikke min/max).
+
 **Valgmenuen (`ask_choice`).** Lægger spørgsmålet op til en anden kontekst ("vis alt om Jakob" på LASSO X's
 side, "åbn X", en global liste fra en side), eller er et navn tvetydigt, kalder modellen `ask_choice` uden
 nogen visning. Serveren sender `choice` (spørgsmål, 1–8 punkter med hver sin handling, fritekst tilladt) og

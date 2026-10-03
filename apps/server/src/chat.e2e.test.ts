@@ -272,9 +272,9 @@ const jakob = { kind: "person", id: "CVR-3-4000000007", name: "Gitte Prøve" };
 const menu = {
   question: "Hvad vil du se om Gitte Prøve?",
   options: [
-    { label: "Fuld indsigt i Gitte Prøve", action: { placement: "entity", entity: jakob, focus: "overblik", prompt: "Vis alt om Gitte Prøve (CVR-3-4000000007)" } },
-    { label: "Kort indsigt i Gitte Prøve", action: { placement: "current", prompt: "Giv en kort indsigt i Gitte Prøve her" } },
-    { label: "Personer med samme navn", action: { placement: "global", title: "Navnesammenligning", prompt: "Find personer med samme navn" } },
+    { label: "Fuld indsigt i Gitte Prøve", description: "Kort beskrivelse", action: { placement: "entity", entity: jakob, focus: "overblik", prompt: "Vis alt om Gitte Prøve (CVR-3-4000000007)" } },
+    { label: "Kort indsigt i Gitte Prøve", description: "Kort beskrivelse", action: { placement: "current", prompt: "Giv en kort indsigt i Gitte Prøve her" } },
+    { label: "Personer med samme navn", description: "Kort beskrivelse", action: { placement: "global", title: "Navnesammenligning", prompt: "Find personer med samme navn" } },
   ],
 };
 const onLasso = { active: { kind: "company", id: "CVR-1-99000001", name: "Eksempel Byg A/S", tab: "overblik" }, open: [] };
@@ -300,6 +300,7 @@ test("chat: ask_choice viser menuen og slutter turen; andre kald i samme svar af
   assert.equal(choice.id, "toolu_menu");
   assert.equal(choice.question, menu.question);
   assert.equal(choice.options.length, 3);
+  assert.deepEqual((choice.options as { label: string; description: string }[]).map((o) => o.description), ["Kort beskrivelse", "Kort beskrivelse", "Kort beskrivelse"], "description følger med til browseren");
   assert.equal(choice.allowFreeText, true);
   assert.equal((events[5] as Event & { id: string }).id, "toolu_show");
   // Historikken slutter med ask_choice og værktøjssvarene: menuen OK, show_person afvist.

@@ -54,13 +54,16 @@ export const askChoiceSchema = z.object({
   options: z
     .array(
       z.object({
-        label: z.string().min(1).max(80).describe("Punktets tekst, fx 'Kort indsigt i Jakob Benediktson' (højst 80 tegn)."),
+        label: z.string().min(1).max(80).describe("Punktets korte titel, fx 'Kort indsigt i Jakob Benediktson' (højst 80 tegn)."),
+        description: z.string().min(1).max(160).describe("Én linje under titlen om, hvad brugeren får, fx 'Kort svar her i chatten' eller 'Åbner en ny fane med hele overblikket' (højst 160 tegn)."),
+        recommended: z.boolean().optional().describe("Det anbefalede punkt (højst ét; stil det først i listen)."),
         action: choiceActionSchema.describe("placement: 'current' = svaret skrives her, 'entity' = på personens/virksomhedens egen fane (entity kræves, med id fra find_entity), 'global' = en liste/analyse uden fane. focus: modulet, fx 'overblik' eller 'ejerskab'. prompt: beskeden, appen sender, når punktet vælges (standard: label). title: ved 'global' altid et kort navn til den nye fane (højst 40 tegn, et dansk navneord, fx 'Markedsundersøgelse', 'Største revisorer i Aarhus'), aldrig spørgsmålet."),
       }),
     )
     .min(1)
     .max(8)
-    .describe("1–8 punkter."),
+    .refine((o) => o.filter((x) => x.recommended).length <= 1, { message: "højst ét punkt må være anbefalet" })
+    .describe("1–8 punkter; det anbefalede først."),
   allowFreeText: z.boolean().optional().describe("Om brugeren også må skrive selv ('Andet'). Standard true."),
 });
 

@@ -27,9 +27,9 @@ const fake: ModelCall = async (params, onText) => {
   if (/alt om/i.test(question) && !/Brugeren valgte|fritekst/.test(context)) {
     const entity = { kind: "company", id: "CVR-1-99000001", name: "Eksempel Byg A/S" };
     const options = [
-      { label: "Kort indsigt i Eksempel Byg A/S", action: { placement: "current", prompt: "Giv en kort indsigt i Eksempel Byg A/S her" } },
-      { label: "Fuld indsigt i Eksempel Byg A/S", action: { placement: "entity", entity, focus: "overblik", prompt: "Vis alt om Eksempel Byg A/S (CVR-1-99000001)" } },
-      { label: "Branchesammenligning", action: { placement: "global", title: "Branchesammenligning", prompt: "Sammenlign Eksempel Byg A/S med branchen" } },
+      { label: "Kort indsigt i Eksempel Byg A/S", description: "Kort svar her i chatten", recommended: true, action: { placement: "current", prompt: "Giv en kort indsigt i Eksempel Byg A/S her" } },
+      { label: "Fuld indsigt i Eksempel Byg A/S", description: "Åbner en ny fane med hele overblikket", action: { placement: "entity", entity, focus: "overblik", prompt: "Vis alt om Eksempel Byg A/S (CVR-1-99000001)" } },
+      { label: "Branchesammenligning", description: "Åbner en ny fane med sammenligningen", action: { placement: "global", title: "Branchesammenligning", prompt: "Sammenlign Eksempel Byg A/S med branchen" } },
     ];
     return msg([{ type: "tool_use", id: `toolu_${Date.now()}`, name: "ask_choice", input: { question: "Hvad vil du se om Eksempel Byg A/S?", options } }], "tool_use");
   }

@@ -78,7 +78,11 @@ Moduler og Brugere står dæmpet, til de findes.
   og fanen, man spurgte fra, står præcis som før (ikke nulstillet, ikke genindlæst).
 - Fanenavne: en person- eller virksomhedsfane hedder entitetens navn. En ny resultatfane får et kort, logisk navn
   (valgmenuens `title`, fx "Markedsundersøgelse", "Største revisorer i Aarhus"), uden menu visningens titel
-  (først det afkortede spørgsmål, højst 40 tegn), aldrig spørgsmålet eller prompten ordret. Menuens udseende designes i Paper; indtil da er den almindelige knapper.
+  (først det afkortede spørgsmål, højst 40 tegn), aldrig spørgsmålet eller prompten ordret. Menuen er et panel over spørgefeltet (som "stil brugeren et spørgsmål"): overskrift med spørgsmålet og knapperne fold
+  sammen og luk; punkter med titel, en linjes beskrivelse og nummer (genvej 1–9), det anbefalede først og markeret;
+  sidste række "Andet" med et tekstfelt i panelet; "Spring over" (lukker uden at vælge, intet sendes) og "Send"
+  (Cmd/Ctrl+Enter); Esc springer over. Enkeltvalg. Skriver man i det almindelige felt, mens panelet er åbent, er det
+  fritekst til menuen. Komponenten `ChoicePanel.tsx` er foreløbig uden styling; designet laves i Paper.
 - Samtalen gemmes kun i browseren (ikke på serveren): faner, svar og historik overlever en genindlæsning i
   24 timer og ryddes ved udløb, for en anden bruger og ved logud. Er lageret fuldt, droppes først visningerne fra
   de mindst nyligt aktive faner (de henter selv modulet igen), så glemmes selve samtalen (historikken afkortes
