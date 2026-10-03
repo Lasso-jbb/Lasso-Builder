@@ -28,6 +28,8 @@ const IDA = { key: "chat-ida-key-789", id: "ida", name: "Ida", org: "lasso" };
 const HISTORY_MAX = 10000;
 /** Kun til testen af, at afviste kald også tælles. */
 const KAI = { key: "chat-kai-key-321", id: "kai", name: "Kai", org: "lasso" };
+/** Til de sene tests, så Pias kvote ikke løber tør. */
+const ZOE = { key: "chat-zoe-key-654", id: "zoe", name: "Zoe", org: "lasso" };
 const MAX_PER_HOUR = 60;
 
 let http: Server;
@@ -91,7 +93,7 @@ before(async () => {
   const config = loadConfig({
     ...process.env,
     MCP_ACCESS_KEY: KEY,
-    MCP_USER_KEYS: `${PIA.key}:${PIA.id}:${PIA.name}:${PIA.org};${BO.key}:${BO.id}:${BO.name}:${BO.org};${IDA.key}:${IDA.id}:${IDA.name}:${IDA.org};${KAI.key}:${KAI.id}:${KAI.name}:${KAI.org}`,
+    MCP_USER_KEYS: `${PIA.key}:${PIA.id}:${PIA.name}:${PIA.org};${BO.key}:${BO.id}:${BO.name}:${BO.org};${IDA.key}:${IDA.id}:${IDA.name}:${IDA.org};${KAI.key}:${KAI.id}:${KAI.name}:${KAI.org};${ZOE.key}:${ZOE.id}:${ZOE.name}:${ZOE.org}`,
     CHAT_HISTORY_MAX_CHARS: String(HISTORY_MAX),
     LINK_SECRET: "chat-test-hemmelighed",
     LASSO_DATA_SOURCE: "demo",
@@ -713,4 +715,39 @@ test("én kandidat, eller afgjort placering: teksten leveres som før", async ()
   const decided = await chat({ message: "Hvem sidder i ledelsen?", context: onLasso });
   assert.ok(decided.events.some((e) => e.type === "text" && String(e.text).includes("Færdig.")));
   assert.ok(!decided.events.some((e) => e.type === "choice"));
+});
+
+const zoe = { authorization: `Bearer ${ZOE.key}` };
+test("D2: en tom assistentbesked gemmes aldrig i historikken; en afvist samtale (400) giver fejlkoden history_invalid", async () => {
+  const globalTab = { active: { kind: "global", title: "Firmaliste" }, open: [] };
+  script.push(useTool("search_persons", { query: "Prøve" }), () => message([], "end_turn"));
+  const first = await chat({ message: "Find personer", context: globalTab }, zoe);
+  const done = first.events.at(-1) as Event & { history: { role: string; content: unknown }[]; sig: string };
+  assert.equal(done.type, "done");
+  assert.ok(done.history.every((m) => typeof m.content === "string" || (Array.isArray(m.content) && m.content.length > 0)), "ingen tom besked");
+  assert.equal(done.history.at(-1)!.role, "user", "slutter med værktøjssvaret");
+  // Historikken kan bruges igen: ingen tomme beskeder sendes til modellen.
+  script.push(sayText("Ja."));
+  const next = await chat({ message: "Og så?", context: globalTab, history: done.history, sig: done.sig }, zoe);
+  assert.equal(next.status, 200);
+  assert.ok((calls.at(-1)!.messages as { content: unknown }[]).every((m) => typeof m.content === "string" || (Array.isArray(m.content) && m.content.length > 0)));
+  // En tom tekstblok fjernes også.
+  script.push(() => message([{ type: "text", text: "  " }], "end_turn"));
+  const blank = await chat({ message: "Hej", context: globalTab }, zoe);
+  assert.ok((blank.events.at(-1) as Event & { history: { content: unknown }[] }).history.every((m) => typeof m.content === "string" || (Array.isArray(m.content) && m.content.length > 0)));
+
+  // 400 fra Claude: error-hændelsen bærer code.
+  const { default: Anthropic } = await import("@anthropic-ai/sdk");
+  script.push(() => {
+    throw new Anthropic.BadRequestError(400, { type: "error" }, "ugyldig", new Headers());
+  });
+  const bad = await chat({ message: "Hej", context: globalTab }, zoe);
+  const err = bad.events.find((e) => e.type === "error") as Event & { code?: string; message: string };
+  assert.equal(err.code, "history_invalid");
+  assert.match(err.message, /Start en ny samtale/);
+  // Andre fejl har ingen kode.
+  script.push(() => {
+    throw new Error("andet");
+  });
+  assert.equal(((await chat({ message: "Hej", context: globalTab }, zoe)).events.find((e) => e.type === "error") as Event & { code?: string }).code, undefined);
 });

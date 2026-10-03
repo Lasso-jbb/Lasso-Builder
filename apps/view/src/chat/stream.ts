@@ -39,7 +39,8 @@ export type ChatEvent =
   | { type: "choice"; id: string; question: string; options: ChoiceOption[]; allowFreeText: boolean }
   /** fresh: svaret er flyttet til en anden fane; history er kun denne tur og hører til den nye fane. */
   | { type: "done"; history: unknown[]; sig: string; placement: Placement; fresh?: true }
-  | { type: "error"; message: string };
+  /** code: history_invalid = serveren/Claude afviste samtalen; klienten nulstiller den. */
+  | { type: "error"; message: string; code?: "history_invalid" };
 
 /** Samtalen, serveren gav sidst ("done"): sendes uændret med næste spørgsmål. */
 export interface ChatState {

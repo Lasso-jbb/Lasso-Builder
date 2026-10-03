@@ -41,7 +41,8 @@ export type ChatEvent =
    * så history kun er denne tur (uden den gamle fanes samtale); ellers den fulde historik.
    */
   | { type: "done"; history: BetaMessageParam[]; placement: Placement; fresh?: true }
-  | { type: "error"; message: string };
+  /** code: history_invalid = Claude afviste samtalen (400); klienten nulstiller den. */
+  | { type: "error"; message: string; code?: "history_invalid" };
 
 export type ViewForm = "page" | "module";
 
@@ -368,7 +369,7 @@ export async function runChat({ ctx, config, model, history, message, context, e
       } catch (e) {
         if (signal?.aborted) return;
         console.error("[chat] Claude-fejl:", e instanceof Error ? e.message : e);
-        emit({ type: "error", message: apiErrorText(e) });
+        emit({ type: "error", message: apiErrorText(e), ...(e instanceof Anthropic.BadRequestError ? { code: "history_invalid" as const } : {}) });
         return;
       }
       logUsage(step, response);
@@ -402,7 +403,9 @@ export async function runChat({ ctx, config, model, history, message, context, e
         held.length = 0;
       }
       if (held.length) emit({ type: "text", text: held.join("") });
-      messages.push({ role: "assistant", content: response.content });
+      // En tom assistentbesked (eller tomme tekstblokke) afvises af API'et ved hver senere tur: den gemmes aldrig.
+      const content = response.content.filter((b) => !(b.type === "text" && !b.text.trim()));
+      if (content.length) messages.push({ role: "assistant", content });
 
       if (response.stop_reason === "refusal") {
         closeOpenToolUses(messages, response);
