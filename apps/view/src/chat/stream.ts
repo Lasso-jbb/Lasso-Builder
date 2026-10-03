@@ -117,8 +117,8 @@ export function splitSse(buffer: string): { events: ChatEvent[]; rest: string } 
   return { events, rest };
 }
 
-/** Forbindelsen blev afbrudt, mens svaret kom (ikke Stop). */
-export const STREAM_BROKEN = "Forbindelsen blev afbrudt. Prøv igen.";
+/** Forbindelsen blev afbrudt, mens svaret kom (ikke Stop). Uden "Prøv igen" i teksten: linket under fejlen giver den. */
+export const STREAM_BROKEN = "Forbindelsen blev afbrudt.";
 
 export class ChatHttpError extends Error {
   constructor(

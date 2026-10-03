@@ -77,7 +77,7 @@ test("C1: forbindelsen afbrudt midt i svaret: dansk fejl med status 0, aldrig br
   const fetcher = (async () => new Response(body, { status: 200 })) as unknown as typeof fetch;
   const events: ChatEvent[] = [];
   await assert.rejects(streamChat({ message: "Hej" }, (e) => events.push(e), { fetcher }), (e: unknown) => e instanceof ChatHttpError && e.status === 0 && e.message === STREAM_BROKEN);
-  assert.equal(STREAM_BROKEN, "Forbindelsen blev afbrudt. Prøv igen.");
+  assert.equal(STREAM_BROKEN, "Forbindelsen blev afbrudt.");
   assert.equal(events.length, 1);
 });
 
