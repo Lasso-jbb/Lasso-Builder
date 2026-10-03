@@ -508,7 +508,9 @@ test("PORTAL_PUBLIC=true: /portal og /api/portal/* er åbne uden login som demob
 });
 
 test("/portal: den nye portal (portal2) med brugeren og chatten", async () => {
-  const res = await fetch(`${base}/portal`);
+  const { sessionCookie, signSession } = await import("./auth/session.js");
+  const cookie = sessionCookie(config, signSession(config, { id: PIA.id, name: PIA.name, org: PIA.org, isDemo: false })).split(";")[0]!;
+  const res = await fetch(`${base}/portal`, { headers: { cookie } });
   assert.equal(res.status, 200);
   const b = boot(await res.text());
   assert.equal(b.mode, "portal2");
@@ -715,4 +717,29 @@ test("D9: svarer Lasso ikke på opslaget af entiteten, gemmes ingen skabelon (50
   } finally {
     await new Promise((r2) => srv.close(r2));
   }
+});
+
+test("/portal?aabn=… uden login sendes til login med next, og efter login er samme URL åben (ikke omdirigeret igen)", async () => {
+  const want = "/portal?aabn=CVR-1-99000001&fokus=risiko&fastgoer=1";
+  const res = await fetch(`${base}${want}`, { redirect: "manual" });
+  assert.equal(res.status, 302);
+  assert.equal(res.headers.get("cache-control"), "no-store");
+  const loc = res.headers.get("location")!;
+  assert.match(loc, /^\/portal\/klassisk\?next=/);
+  assert.equal(new URL(loc, "http://x").searchParams.get("next"), want, "next er præcis det ønskede link");
+  // Login-siden er render-appen i portal-tilstand uden bruger; next står i dens URL.
+  const page = await fetch(`${base}${loc}`);
+  assert.equal(page.status, 200);
+  assert.equal((boot(await page.text()) as { user: unknown }).user, null);
+
+  // Efter login (session-cookie) ligger siden på samme URL.
+  const { sessionCookie, signSession } = await import("./auth/session.js");
+  const cookie = sessionCookie(config, signSession(config, { id: PIA.id, name: PIA.name, org: PIA.org, isDemo: false })).split(";")[0]!;
+  const after = await fetch(`${base}${want}`, { headers: { cookie }, redirect: "manual" });
+  assert.equal(after.status, 200);
+  assert.equal((boot(await after.text()) as { mode: string }).mode, "portal2");
+
+  // Et ondsindet next kan ikke opstå: kun stien på egen oprindelse videregives (en anden vært kan ikke være i en sti).
+  const evil = await fetch(`${base}/portal?x=//evil.example`, { redirect: "manual" });
+  assert.equal(new URL(evil.headers.get("location")!, "http://x").searchParams.get("next"), "/portal?x=//evil.example");
 });

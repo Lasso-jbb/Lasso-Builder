@@ -26,3 +26,4 @@ export * from "./register.js";
 export * from "./composeCompare.js";
 export * from "./entityLinks.js";
 export * from "./layoutFormats.js";
+export * from "./safeNext.js";
