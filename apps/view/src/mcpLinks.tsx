@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Button, LassoMark } from "@lasso/ui";
+import { Button } from "@lasso/ui";
 
 /**
  * Links på en visning i MCP-appen (Claude.ai's iframe), fra værktøjsresultatets structuredContent.links
@@ -17,19 +17,6 @@ export function linksOf(sc: unknown): ViewLinks | null {
   const l = (sc as { links?: { open?: unknown; share?: unknown } } | undefined)?.links;
   if (!l || typeof l.share !== "string" || !/^https?:\/\//.test(l.share)) return null;
   return { share: l.share, ...(typeof l.open === "string" && /^https?:\/\//.test(l.open) ? { open: l.open } : {}) };
-}
-
-/** Øverst: "Åben i Lasso" (sekundær knap med Lasso-mærket). Står kun, når der er et open-link. */
-export function OpenInLasso({ href, onOpen }: { href?: string; onOpen: (url: string) => void }) {
-  if (!href) return null;
-  return (
-    <div className="lasso-mcplinks lasso-mcplinks--top">
-      <Button variant="secondary" size={36} className="lasso-mcplinks__open" onClick={() => onOpen(href)}>
-        <LassoMark className="lasso-mcplinks__mark" />
-        Åben i Lasso
-      </Button>
-    </div>
-  );
 }
 
 /**

@@ -63,10 +63,6 @@
 .p3 .chat-link:hover { background: var(--lasso-surface-2); }
 .p3 .chat-link:focus-visible { outline: none; border-color: var(--lasso-focus-border); }
 .p3 .chat-link svg.i { width: 18px; height: 18px; color: var(--lasso-accent); stroke-width: 1.6; }
-/* Tilføj som fane (Jakob 03.10): modul-link-pillen i kortets hoved, 36 px høj som hovedets andre knapper. */
-.p3 .chat-card__add { height: 36px; padding: 0 14px; gap: 8px; }
-.p3 .chat-card__add:disabled { cursor: progress; opacity: 0.6; }
-.p3 .chat-card__addm svg { color: var(--lasso-accent); }
 .p3 .chat-links__note { font-size: var(--chat-fs-12); color: var(--faint); white-space: nowrap; }
 
 /* Meddelelsesrækken: centreret pille 28, 12 px tekst */

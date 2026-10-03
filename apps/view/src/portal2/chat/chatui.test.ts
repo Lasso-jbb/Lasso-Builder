@@ -97,7 +97,7 @@ test("Svar: tænker (kun prikker), længere opgave med skelet og uden Stop, fejl
   assert.match(err, /Åbner Novo Nordisk A\/S i ny fane/);
 });
 
-test("Kort: element med Hent som PDF og fuld skærm; side med Tilføj som fane (modul-link-pillen; mobil neutral ikonknap)", () => {
+test("Kort: element med Hent som PDF og fuld skærm; side med Tilføj som fane (CardActions: knappens skrift i pilleform; mobil neutral ikonknap)", () => {
   const props = { onDownload: () => undefined, onFullscreen: () => undefined, onAddTab: () => undefined };
   const el = html(createElement(AssistantMessage, { answer: fx.FORM_ELEMENT[0]!.answer, cardProps: () => props }));
   assert.match(el, /aria-label="Hent som PDF"/);
@@ -106,11 +106,13 @@ test("Kort: element med Hent som PDF og fuld skærm; side med Tilføj som fane (
   assert.match(el, /Jakob Bech Benediktson, 4 selskaber/);
   const page = html(createElement(AssistantMessage, { answer: fx.FORM_PAGE[0]!.answer, cardProps: () => props }));
   // Jakob 03.10: som modul-linket ("Risiko"), ikke den fyldte primære knap.
-  assert.match(page, /<button type="button" class="chat-link chat-card__add"><svg[^>]*>.*?<\/svg>Tilføj som fane<\/button>/);
+  // Jakob 03.10: samme komponent som MCP-appen (CardActions): en sekundær .lasso-btn (knappens skrift) med pillens form.
+  assert.match(page, /<button type="button" class="lasso-btn lasso-cardact__primary"><svg[^>]*lasso-cardact__icon[^>]*>.*?<\/svg><span>Tilføj som fane<\/span><\/button>/);
+  assert.doesNotMatch(page, /chat-link/);
   assert.doesNotMatch(page, /lasso-btn--primary|lasso-iconbtn--primary/);
   const mobile = html(createElement(AssistantMessage, { answer: fx.FORM_PAGE[0]!.answer, mobile: true, cardProps: () => props }));
-  assert.match(mobile, /class="lasso-iconbtn[^"]*chat-card__addm" aria-label="Tilføj som fane"/);
-  assert.doesNotMatch(mobile, /primary/);
+  assert.match(mobile, /class="lasso-iconbtn lasso-iconbtn--sq lasso-iconbtn--32 lasso-cardact__primarym" aria-label="Tilføj som fane"/);
+  assert.doesNotMatch(mobile, /lasso-btn--primary|lasso-iconbtn--primary/);
   assert.doesNotMatch(mobile, /Hent som PDF/);
 });
 

@@ -2,14 +2,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { App, McpUiHostContext } from "@modelcontextprotocol/ext-apps";
 import { useApp } from "@modelcontextprotocol/ext-apps/react";
 import type { CallToolResult } from "@modelcontextprotocol/client";
-import { LassoView, LassoMark, type ActionResult, type ViewAction } from "@lasso/ui";
+import { CardActions, LassoView, LassoMark, type ActionResult, type ViewAction } from "@lasso/ui";
 import { composeCompany, composePerson, composeProbe, composePersonProbe, DATASET_META_KEY, formatCriterion, type Dataset, type ViewSpec } from "@lasso/spec";
 import { focusPrompt } from "./focusPrompt.js";
 
 /** Handlinger, der først skifter visningen til fuld skærm (se ensureFullscreen). */
 const FULLSCREEN_FIRST = new Set<ViewAction["kind"]>(["prompt", "open-focus", "open-section", "open-company", "open-person", "set-criteria"]);
 import { downloadPdfInHost } from "./pdfDownload.js";
-import { linksOf, OpenInLasso, ShareView, type ViewLinks } from "./mcpLinks.js";
+import { linksOf, ShareView, type ViewLinks } from "./mcpLinks.js";
 
 interface Screen {
   spec: ViewSpec;
@@ -63,6 +63,13 @@ export function McpView() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ctx, setCtx] = useState<McpUiHostContext | undefined>();
+  /** Smal iframe (telefon): handlingerne som på portalens mobilkort (ingen download, pillen som ikonknap). */
+  const [narrow, setNarrow] = useState(() => typeof window !== "undefined" && window.innerWidth <= 560);
+  useEffect(() => {
+    const on = () => setNarrow(window.innerWidth <= 560);
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
   const appRef = useRef<App | null>(null);
 
   const showResult = useCallback(async (result: CallToolResult) => {
@@ -345,14 +352,23 @@ export function McpView() {
   }
 
   const canFullscreen = ctx?.availableDisplayModes?.includes("fullscreen") ?? false;
+  const isFullscreen = ctx?.displayMode === "fullscreen";
   // Smagsprøvernes "Se alle … i Historik" sender en besked til chatten; kan værten ikke modtage
   // beskeder (ui/message), folder "Se alle" ud på stedet som før.
   const canMessage = Boolean(app?.getHostCapabilities()?.message);
   return (
     <div style={style}>
-      {current.links?.open ? (
-        <div className="lasso-root" data-theme={theme}>
-          <OpenInLasso href={current.links.open} onOpen={(u) => void openInLasso(u)} />
+      {/* Samme handlinger som portalens chatkort (CardActions, Jakob 03.10): download (Gem som PDF), fuld skærm og
+          "Åben i Lasso" som pille med Lasso-mærket; erstatter rammens udvid-ikon og "Gem som PDF". */}
+      {current.pdfLink || (canFullscreen && !isFullscreen) || current.links?.open ? (
+        <div className="lasso-root lasso-mcpbar" data-theme={theme}>
+          <CardActions
+            compact={narrow}
+            onDownload={current.pdfLink ? () => void onAction({ kind: "pdf" }) : undefined}
+            downloadLabel="Gem som PDF"
+            onFullscreen={canFullscreen && !isFullscreen ? () => void onAction({ kind: "fullscreen" }) : undefined}
+            primary={current.links?.open ? { label: "Åben i Lasso", icon: "mark", onClick: () => void openInLasso(current.links!.open!) } : undefined}
+          />
         </div>
       ) : null}
       <LassoView
@@ -372,9 +388,10 @@ export function McpView() {
           back: stack.length > 1,
           refresh: true,
           export: true,
-          pdf: Boolean(current.pdfLink),
-          fullscreen: canFullscreen,
-          fullscreenActive: ctx?.displayMode === "fullscreen",
+          // PDF og fuld skærm står i CardActions øverst (ikke i visningens ramme).
+          pdf: false,
+          fullscreen: false,
+          fullscreenActive: isFullscreen,
           minimalHead: true,
           openFocus: canMessage,
         }}
