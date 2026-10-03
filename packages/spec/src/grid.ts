@@ -1,6 +1,6 @@
 import { gridRuleOf, widthProfileOf, type GridRule } from "./catalog.js";
 import { contentMinWidth, sharedMaxWidth } from "./register.js";
-import { WIDTH_COLUMNS, WIDTHS, type ViewComponent, type Width } from "./spec.js";
+import { WIDTH_COLUMNS, WIDTHS, widthOf, type ViewComponent, type ViewSpec, type Width } from "./spec.js";
 
 /**
  * Gridmodellen (Paper 23.1–23.3, scratchpad/gridmodel.md): siden består af bånd, der altid spænder
@@ -159,6 +159,32 @@ export type MinWidthFn = (c: ViewComponent) => Width;
 
 const widthIndex = (w: Width) => WIDTHS.indexOf(w);
 const clampWidth = (w: Width, lo: Width, hi: Width): Width => (widthIndex(w) < widthIndex(lo) ? lo : widthIndex(w) > widthIndex(hi) ? hi : w);
+
+/**
+ * Gitterreglens max gælder også en bredde, specen selv angiver (render_view, gemte sider fra før en regel blev
+ * ændret): et element bredere end typens max (GRID_RULES) tegnes i max. Så slår en ændret regel igennem alle steder.
+ */
+export function withinRule(c: ViewComponent): ViewComponent {
+  if (!c.width) return c;
+  const max = gridRuleOf(c).max;
+  return widthIndex(c.width) > widthIndex(max) ? ({ ...c, width: max } as ViewComponent) : c;
+}
+
+/**
+ * Sidens komponenter med bredderne holdt inden for reglen, før siden lægges ud. Undtaget er det, der bevidst
+ * står i fuld bredde: alt i 'stack' og 'page', rækker uden kolonne i 'columns' (fx resultatopgørelsen som egen
+ * række på spørgsmålssider) og varianter, der altid fylder bredden (tidslinjen med filterkolonne, nyhedernes kortgitter).
+ * Et element alene i sit bånd står stadig i fuld bredde (pakningens regel 4).
+ */
+export function ruleBoundComponents(layout: ViewSpec["layout"], components: readonly ViewComponent[]): ViewComponent[] {
+  if (layout === "stack" || layout === "page") return [...components];
+  return components.map((c) => {
+    if (layout === "columns" && !c.column) return c;
+    if (c.width && widthOf(c, "dashboard") !== c.width) return c;
+    if (c.type === "LassoNews" && c.layout === "grid") return c;
+    return withinRule(c);
+  });
+}
 
 /**
  * Mindstebredden med indholdsdriverne `drivers` (fx fra driversOf), altid inden for typens min–max:

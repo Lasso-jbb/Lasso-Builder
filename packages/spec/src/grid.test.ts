@@ -5,7 +5,7 @@ import { GRID_RULES, gridRuleOf, widthProfileOf } from "./catalog.js";
 import { contentWidthOf, driversOf, packPage } from "./compose.js";
 import { emptyDataset } from "./models.js";
 import { contentMinWidth } from "./register.js";
-import { allowsWidth, BAND_COMBOS, defaultMinWidth, elementMinWidth, originOf, type MinWidthFn, BAND_MAX_DEVIATION, compactOf, GRID_GAP, measuredHeight, MEASURED_HEIGHTS, packBands, packWithinBudget, pageHeight, PAGE_HEIGHT_BUDGET, type PackedBand } from "./grid.js";
+import { allowsWidth, BAND_COMBOS, defaultMinWidth, ruleBoundComponents, elementMinWidth, originOf, type MinWidthFn, BAND_MAX_DEVIATION, compactOf, GRID_GAP, measuredHeight, MEASURED_HEIGHTS, packBands, packWithinBudget, pageHeight, PAGE_HEIGHT_BUDGET, type PackedBand } from "./grid.js";
 import { DEFAULT_WIDTH, WIDTH_COLUMNS, WIDTHS, type ComponentType, type ViewComponent, type Width } from "./spec.js";
 
 const COMPONENT_TYPES = Object.keys(DEFAULT_WIDTH) as ComponentType[];
@@ -306,4 +306,22 @@ test("Ø13: PersonRoles som liste (Aktive roller) er smal og står højst i ½ i
   assert.equal(widthProfileOf(all).profil, "fleksibel");
   assert.equal(gridRuleOf(all).max, "full");
   assert.equal(gridRuleOf(all).std, "two-thirds");
+});
+
+test("ruleBoundComponents: en angivet bredde over typens max tegnes i max; bevidste fuldbredder røres ikke", () => {
+  const income = { type: "LassoIncomeStatement", company: "CVR-1-1", width: "full" } as unknown as ViewComponent;
+  const max = GRID_RULES.LassoIncomeStatement.max;
+  assert.equal(ruleBoundComponents("dashboard", [income])[0]!.width, max);
+  assert.equal(ruleBoundComponents("grid-2", [income])[0]!.width, max);
+  // Egen række uden kolonne i 'columns' (spørgsmålssider) og alt i 'stack' står fortsat i fuld bredde.
+  assert.equal(ruleBoundComponents("columns", [income])[0]!.width, "full");
+  assert.equal(ruleBoundComponents("stack", [income])[0]!.width, "full");
+  // I et delt bånd i 'columns' gælder reglen.
+  assert.equal(ruleBoundComponents("columns", [{ ...income, column: 1 } as ViewComponent])[0]!.width, max);
+  // Tidslinjen med filterkolonne fylder altid bredden.
+  const tl = { type: "LassoTimeline", company: "CVR-1-1", filterColumn: true, width: "half" } as unknown as ViewComponent;
+  assert.equal(ruleBoundComponents("dashboard", [tl])[0], tl);
+  // Inden for reglen: uændret.
+  const ok = { type: "LassoIncomeStatement", company: "CVR-1-1", width: max } as unknown as ViewComponent;
+  assert.equal(ruleBoundComponents("dashboard", [ok])[0], ok);
 });

@@ -18,6 +18,7 @@ import {
   timelineOfKinds,
   personSearchKey,
   widthOf,
+  ruleBoundComponents,
   WIDTH_COLUMNS,
   gridHeight,
   measuredHeight,
@@ -1166,6 +1167,8 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
   // 19.6/27.4: samme overlay viser også regnskabsanalysen ("Hent som PDF") og personrapporten.
   const [report, setReport] = useState<ReportRequest | null>(null);
   const setReportOpen = (open: boolean) => setReport(open ? { kind: "company" } : null);
+  // Bredderne holdes inden for gitterreglen (GRID_RULES max), også når specen selv angiver dem (grid.ts ruleBoundComponents).
+  const laidOut = ruleBoundComponents(spec.layout, spec.components);
   const reportCompany = spec.kind === "company" ? spec.components.map((c) => ("company" in c && typeof c.company === "string" ? c.company : undefined)).find(Boolean) : undefined;
   const canReport = Boolean(host.export && dataset && reportCompany && dataset.companies[reportCompany]);
 
@@ -1308,7 +1311,7 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
                   ),
                 )
               : spec.layout === "columns"
-              ? mergeFullGroups(columnBands(spec.components)).map((band, b) =>
+              ? mergeFullGroups(columnBands(laidOut)).map((band, b) =>
                   band.kind === "group" ? (
                     <div key={`b${b}`} className="lasso-cell lasso-cell--full">
                       {renderGroup(band.group, band.items, dataset, props, act, frame)}
@@ -1342,7 +1345,7 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
                   ),
                 )
               : spec.layout === "dashboard"
-                ? dashboardBands(spec.components, dataset).map((b) => {
+                ? dashboardBands(laidOut, dataset).map((b) => {
                     if (b.kind === "run") {
                       const run = b.run;
                       // Et element alene i sit bånd står i fuld bredde (23.1 4d: aldrig en ½ alene, ingen huller).
@@ -1373,7 +1376,7 @@ function LassoViewInner(props: LassoViewProps & { ownToasts?: boolean }) {
                       </div>
                     );
                   })
-                : groupRuns(spec.components.map((c, i) => ({ c, i }))).map((run) =>
+                : groupRuns(laidOut.map((c, i) => ({ c, i }))).map((run) =>
                     run.kind === "one" ? (
                       <div key={run.item.i} className={`lasso-cell lasso-cell--${widthOf(run.item.c, spec.layout)}`}>
                         {renderComponent(run.item.c, dataset, props, act, run.item.i, frame)}

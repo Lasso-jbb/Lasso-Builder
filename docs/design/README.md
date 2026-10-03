@@ -89,6 +89,8 @@ Teknologier er grupperet i typer (fx CRM-system, Live chat, Digital marketing); 
 
 12-kolonne-gitter i midten med seks bredder: ¼ (3 kolonner), ⅓ (4), ½ (6), ⅔ (8), ¾ (9) og fuld (12) (`WIDTHS`/`WIDTH_COLUMNS` i `packages/spec/src/spec.ts`). På tablet bliver ¼ og ⅓ til ½, ⅔ og ¾ til fuld; på mobil står alt i én kolonne. Nøgletalskort deler fuld bredde (3–5), grafer er mindst ½, tabeller altid fuld bredde. Flere grafer på hver sin fane, aldrig stablet på et overblik.
 
+Hver types tilladte bredder står ét sted: `GRID_RULES` i `packages/spec/src/catalog.ts`. Max håndhæves, når siden tegnes (`ruleBoundComponents` i `grid.ts`): angiver en spec en bredere bredde (render_view, gemte sider), tegnes elementet i typens max, så en ændret regel slår igennem alle steder. Undtaget er det, der bevidst står i fuld bredde: rækker uden kolonne (fx resultatopgørelsen som egen række på spørgsmålssider), layout `stack` og `page`, tidslinjen med filterkolonne og nyhedernes kortgitter. Et element alene i sit bånd står altid i fuld bredde.
+
 Virksomhedsside: hoved, risiko (kun ved 50+), nøgletal, én graf ved siden af nøgle-værdi-listen, personer og ejere, historik og nyheder.
 
 ## Datatype → element (guide 23, trin 4)
