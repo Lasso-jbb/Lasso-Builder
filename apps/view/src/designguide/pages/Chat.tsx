@@ -225,7 +225,7 @@ function scenes(): SceneDef[] {
     {
       id: "side",
       title: "Svarform C, en hel side",
-      note: "En sammensætning af flere elementer har desuden Tilføj som fane som modul-link (neutral pille med koral ikon, 36 px; på mobil en neutral ikonknap med koral ikon).",
+      note: "En sammensætning af flere elementer har desuden Tilføj som fane (CardActions: sekundær knap 36 px med knappens skrift 14/18, 500, radius 12 og koral ikon; på mobil en neutral ikonknap med koral ikon). MCP-appen har samme række med Åben i Lasso.",
       render: ({ theme, mobile, fill }) => (
         <Scene theme={theme} mobile={mobile} sugg={SUGG}>
           <Conversation turns={fill(SCENES.formPage)} mobile={mobile} theme={theme} />

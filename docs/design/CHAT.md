@@ -101,7 +101,7 @@ Nye, i `.p3`-blokken i `portal2.css` (lys og mørk):
 |---|---|---|---|
 | Tekst | Afsnit og punktlister, 14/22 | ingen | tid og kopiér-ikon |
 | Element | En enkelt komponent (`render_view` med én komponent) med titel og undertitel i kortets hoved | Download (PDF) og fuld skærm; kan ikke blive en fane | ingen |
-| Side | En sammensætning af flere elementer | Download, fuld skærm og Tilføj som fane (Jakob 03.10: Tilføj som fane som modul-link: neutral pille med koral ikon, 36 px i kortets hoved; på mobil en neutral ikonknap med koral ikon) | ingen |
+| Side | En sammensætning af flere elementer | Download, fuld skærm og Tilføj som fane (`CardActions` i `@lasso/ui`, Jakob 03.10: pillen er en sekundær knap 36 px med knappens skrift 14/18, 500, radius 12 og koral ikon 18 px; på mobil en neutral ikonknap med koral ikon). MCP-appen i Claude.ai har samme række med "Åben i Lasso" (Lasso-mærket i koral) i stedet for Tilføj som fane | ingen |
 
 Teksten står altid først (en til tre korte sætninger, der siger, hvad visningen viser, uden at gentage tallene).
 Modul-links står på svarets sidste linje og skrives som `[Risiko](lasso:modul/risiko)`,
@@ -221,7 +221,10 @@ Truffet ved gennemgangen af eksporten (D1 til D10) og af ejeren; ejerens afgøre
 - **D4** Globale faner viser kun Lasso-modulet, til Liste, Sammenligning, Kort og Noter findes.
 - **D5** Skelettet er en shimmer, som README beskriver.
 - **D6** Knapper er `Button` og `IconButton` (14 px, mindst 32 px). **Afvigelse fra eksporten** (13 px og 28 px).
-  Tilføj som fane er modul-link-pillen (`chat-link chat-card__add`, Jakob 03.10); `IconButton`'s `primary`-variant er fjernet igen.
+  Tilføj som fane er pillen i `CardActions` (`@lasso/ui`, Jakob 03.10): en sekundær `.lasso-btn` (knappens skrift 14/18, 500) med
+  radius 12 og koral ikon. Samme komponent giver MCP-appens række øverst til højre: Gem som PDF, fuld skærm (værtens
+  displaymode) og "Åben i Lasso" (kun med `links.open`); rammens udvid-ikon og "Gem som PDF" er væk dér, og "Del visning"
+  nederst er uændret. `IconButton`'s `primary`-variant er fjernet igen.
 - **D7** Chatcachens levetid er stadig 24 timer.
 - **D8** Mobilens ramme uden for chatten (tæller, bundbjælke) er ikke med.
 - **D9** Tidspunkter vises som "09:41" (`hhmm()`).
