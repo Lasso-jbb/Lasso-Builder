@@ -103,6 +103,12 @@ const schema = z.object({
   CHAT_EFFORT: z.enum(["low", "medium", "high", "xhigh", "max"]).default("medium"),
   /** Højst så mange beskeder pr. bruger pr. time (bremse på forbruget). */
   CHAT_MAX_PER_HOUR: z.coerce.number().int().min(1).default(60),
+  /**
+   * Prompt-cachens levetid (docs/chat.md): systemprompt, værktøjer og samtalen caches hos Claude Platform,
+   * så næste spørgsmål kun betaler for det nye. "1h" holder cachen mellem brugerens spørgsmål; "5m" er billigere
+   * at skrive, men går oftere tabt. Samme TTL sættes på begge markører (det er et krav fra API'et).
+   */
+  CHAT_CACHE_TTL: z.enum(["5m", "1h"]).default("1h"),
 });
 
 export type Config = z.infer<typeof schema> & { publicBaseUrl: string };

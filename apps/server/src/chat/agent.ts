@@ -94,6 +94,9 @@ async function connect(ctx: McpContext): Promise<{ client: Client; close: () => 
   };
 }
 
+/** Cache-markøren (docs/chat.md): samme TTL på det sidste værktøj og på beskederne (API'et kræver, at de er ens). */
+export const cacheControl = (config: Pick<Config, "CHAT_CACHE_TTL">) => ({ type: "ephemeral" as const, ttl: config.CHAT_CACHE_TTL });
+
 /** MCP-værktøjerne som Claude-værktøjer. App-interne værktøjer (visibility ["app"], fx resolve_view) udelades. */
 export async function chatTools(client: Client): Promise<ToolDef[]> {
   const { tools } = await client.listTools();
@@ -102,7 +105,7 @@ export async function chatTools(client: Client): Promise<ToolDef[]> {
       const visibility = (t._meta as { ui?: { visibility?: string[] } } | undefined)?.ui?.visibility;
       return !visibility || visibility.includes("model");
     })
-    .map((t, i, all) => ({
+    .map((t) => ({
       title: t.annotations?.title ?? t.title ?? t.name,
       tool: {
         name: t.name,
@@ -110,10 +113,19 @@ export async function chatTools(client: Client): Promise<ToolDef[]> {
         input_schema: t.inputSchema as BetaTool["input_schema"],
         // Store specs (render_view) streames, mens de skrives; MCP-serveren validerer dem bagefter.
         eager_input_streaming: true,
-        // Værktøjerne ændrer sig ikke mellem kald: cachen dækker dem og systemprompten.
-        ...(i === all.length - 1 ? { cache_control: { type: "ephemeral" as const } } : {}),
       },
     }));
+}
+
+/** Cache-markøren på det sidste værktøj: værktøjerne ændrer sig ikke mellem kald, så cachen dækker dem og systemprompten. */
+function withCacheMarker(tools: BetaTool[], config: Pick<Config, "CHAT_CACHE_TTL">): BetaTool[] {
+  return tools.map((t, i) => (i === tools.length - 1 ? { ...t, cache_control: cacheControl(config) } : t));
+}
+
+/** Én loglinje pr. modelkald (ingen beskedtekst): hvor meget cachen dækkede, og hvad der blev skrevet. */
+function logUsage(step: number, response: BetaMessage): void {
+  const u = response.usage;
+  console.log(`[chat] trin ${step + 1} ${response.model}: input ${u.input_tokens ?? 0}, cache læst ${u.cache_read_input_tokens ?? 0}, cache skrevet ${u.cache_creation_input_tokens ?? 0}, output ${u.output_tokens ?? 0}`);
 }
 
 /** Teksten til modellen: værktøjets tekst uden tekstkortet (chatten viser altid visningen). */
@@ -126,7 +138,7 @@ export function textForModel(result: CallToolResult): string {
 
 export interface ChatRunOptions {
   ctx: McpContext;
-  config: Pick<Config, "CHAT_MODEL" | "CHAT_EFFORT" | "CHAT_MAX_TOKENS">;
+  config: Pick<Config, "CHAT_MODEL" | "CHAT_EFFORT" | "CHAT_MAX_TOKENS" | "CHAT_CACHE_TTL">;
   model: ModelCall;
   /** Den hidtidige samtale (Claude-beskeder, uændret fra sidste "done"). */
   history: BetaMessageParam[];
@@ -157,6 +169,7 @@ export async function runChat({ ctx, config, model, history, message, context, e
   try {
     const tools = await chatTools(client);
     const titles = new Map(tools.map((t) => [t.tool.name, t.title]));
+    const toolList = withCacheMarker(tools.map((t) => t.tool), config);
     // Routingen deles med /mcp; reglerne er chattens egne (MCP_RULES gælder kun Claude.ai).
     const system = `${ROUTING}\n\n${CHAT_RULES}`;
 
@@ -168,9 +181,10 @@ export async function runChat({ ctx, config, model, history, message, context, e
             model: config.CHAT_MODEL,
             max_tokens: config.CHAT_MAX_TOKENS,
             system,
-            tools: tools.map((t) => t.tool),
+            tools: toolList,
             messages,
-            cache_control: { type: "ephemeral" },
+            // Automatisk markør på beskederne: samtalen caches, så næste spørgsmål kun betaler for det nye.
+            cache_control: cacheControl(config),
             ...modelOptions(config),
           },
           (text) => emit({ type: "text", text }),
@@ -182,6 +196,7 @@ export async function runChat({ ctx, config, model, history, message, context, e
         emit({ type: "error", message: apiErrorText(e) });
         return;
       }
+      logUsage(step, response);
       messages.push({ role: "assistant", content: response.content });
 
       if (response.stop_reason === "refusal") {

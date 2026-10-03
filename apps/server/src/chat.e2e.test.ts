@@ -124,6 +124,12 @@ test("chat: værktøjet kører gennem MCP; browseren får visningen, modellen ku
   // Haiku (standard) får hverken effort eller fallbacks.
   assert.equal(first.model, "claude-haiku-4-5");
   assert.equal(first.output_config, undefined);
+  // Prompt-cachen (docs/chat.md): 1 time (CHAT_CACHE_TTL) på både det sidste værktøj og beskederne, og kun dér.
+  assert.deepEqual(first.cache_control, { type: "ephemeral", ttl: "1h" });
+  const marked = first.tools!.filter((t) => "cache_control" in t && t.cache_control);
+  assert.equal(marked.length, 1);
+  assert.deepEqual((marked[0] as { cache_control: unknown }).cache_control, { type: "ephemeral", ttl: "1h" });
+  assert.equal((first.tools!.at(-1) as { cache_control?: unknown }).cache_control !== undefined, true, "markøren sidder på det sidste værktøj");
 
   // Værktøjssvaret til modellen: resuméet uden tekstkort og uden datasæt.
   const second = calls.at(-1)!;
