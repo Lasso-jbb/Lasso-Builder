@@ -136,6 +136,10 @@ test("chat: værktøjet kører gennem MCP; browseren får visningen, modellen ku
   const names = first.tools!.map((t) => (t as { name: string }).name);
   assert.ok(names.includes("show_company") && names.includes("render_view"));
   assert.ok(!names.includes("resolve_view"), "resolve_view er kun for appen");
+  // Gem-værktøjerne er kun til Claude.ai (portalen har knapper), og chattens routing nævner dem ikke.
+  assert.ok(!names.some((n) => /^(save_|remove_saved|list_saved)/.test(n)), names.join(","));
+  assert.doesNotMatch(String(first.system), /save_page|save_view/);
+  assert.equal(names.length, 9);
   // Chattens egne værktøjer står sidst, i fast rækkefølge (prompt-cachen).
   assert.deepEqual(names.slice(-2), ["find_entity", "ask_choice"]);
   // Haiku (standard) får hverken effort eller fallbacks.

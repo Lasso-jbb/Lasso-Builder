@@ -13,7 +13,7 @@ import { DemoProvider } from "../data/demo.js";
 import { createSavedPageStore } from "../pages/store.js";
 import { demoUser } from "../auth/user.js";
 import { createViewStore } from "../views/store.js";
-import { createMcpServer, MCP_RULES, ROUTING, type McpContext } from "./server.js";
+import { CHAT_ROUTING, createMcpServer, MCP_RULES, ROUTING, type McpContext } from "./server.js";
 
 const config = loadConfig({ LASSO_DATA_SOURCE: "demo", DATABASE_URL: "", PUBLIC_BASE_URL: "https://lasso.test", LINK_SECRET: "x" });
 const sha = (s: string) => createHash("sha256").update(s).digest("hex").slice(0, 16);
@@ -42,6 +42,21 @@ test("render_view: chatten får en kort beskrivelse med typenavnene; /mcp den fu
   assert.ok(mcp.description!.includes(catalogIndexText()) && mcp.description!.includes(LAYOUT_RULES), "/mcp har den fulde");
   // Samme skema begge steder.
   assert.deepEqual(chat.inputSchema, mcp.inputSchema);
+});
+
+const SAVE_TOOLS = ["save_view", "save_page", "remove_saved_page", "list_saved_pages"];
+
+test("gem-værktøjerne findes kun i /mcp; chatten beholder describe_components og chattens routing nævner dem ikke", async () => {
+  const chat = (await (await clientFor("chat")).listTools()).tools.map((t) => t.name);
+  const mcp = (await (await clientFor("mcp")).listTools()).tools.map((t) => t.name);
+  for (const n of SAVE_TOOLS) {
+    assert.ok(!chat.includes(n), `chatten har ${n}`);
+    assert.ok(mcp.includes(n), `/mcp mangler ${n}`);
+  }
+  assert.ok(chat.includes("describe_components") && chat.includes("render_view"));
+  assert.doesNotMatch(CHAT_ROUTING, /save_page|save_view|list_saved_pages|remove_saved_page/);
+  assert.match(ROUTING, /save_page/);
+  assert.ok(ROUTING.startsWith(CHAT_ROUTING));
 });
 
 test("/mcp er byte-identisk: instruktioner og render_view's beskrivelse (pinnet hash)", async () => {

@@ -65,7 +65,7 @@ export type McpContext = UseCaseCtx & { host?: "mcp" | "chat" };
  * Routingen (værktøjsvalget) deles med Lassos egen chat; reglerne er /mcp's egne, chatten har sine i
  * chat/agent.ts (CHAT_RULES). Teksten til Claude.ai er uændret: ROUTING + MCP_RULES.
  */
-export const ROUTING = `Lasso giver adgang til data om danske virksomheder og personer (CVR): stamdata, regnskaber, nøgletal, ledelse, bestyrelse, ejere, revisor, risiko, historik og kontakt, samt søgning med kriterier (målgrupper).
+export const CHAT_ROUTING = `Lasso giver adgang til data om danske virksomheder og personer (CVR): stamdata, regnskaber, nøgletal, ledelse, bestyrelse, ejere, revisor, risiko, historik og kontakt, samt søgning med kriterier (målgrupper).
 
 Vælg værktøj:
 - Én virksomhed: show_company med CVR-nummer, Lasso-ID eller navn (serveren slår navnet op; brug ikke search_companies først). Serveren bygger siden omkring svaret på spørgsmålet: svar-elementet først med de nævnte nøgletal, roller og år, og kontekst rundt om. Sæt kun focus, når spørgsmålet er generelt: 'overblik' (standard, "fortæl om X"), 'oekonomi' ("hvordan går det"), 'regnskab', 'ejerskab', 'risiko', 'historik', 'kontakt' (kontakt og ledelse; 'ledelse' åbner samme side).
@@ -75,9 +75,14 @@ Vælg værktøj:
 - Lister og målgrupper ("revisorer i Region Midt med mindst 10 ansatte"): search_companies med brugerens formulering som query.
 - Personer på navn ('find Mette Holm', flere med samme navn): search_persons, derefter show_person med Lasso-ID.
 - Flere navngivne virksomheder → compare_companies (sammenligning, rangering, "hvem er størst"). Navne må bruges i stedet for CVR-numre.
-- Elementer, ingen focus dækker: render_view; hent først props for typerne med describe_components.
-- "Gem virksomheden/personen", "husk", "bogmærk", "sæt på min liste": save_page. "Mine gemte", "hvad har jeg gemt", "min liste": list_saved_pages. "Fjern fra listen": remove_saved_page. save_view er kun til et delbart link til en visning.
+- Elementer, ingen focus dækker: render_view; hent først props for typerne med describe_components.`;
+
+/** Gem-værktøjerne i routingen: kun Claude.ai har dem (portalen har knapper til at gemme). */
+const ROUTING_SAVE = `- "Gem virksomheden/personen", "husk", "bogmærk", "sæt på min liste": save_page. "Mine gemte", "hvad har jeg gemt", "min liste": list_saved_pages. "Fjern fra listen": remove_saved_page. save_view er kun til et delbart link til en visning.
 - "Giv mig en URL", "del": save_view.`;
+
+/** Routingen til Claude.ai: chattens routing plus gem-værktøjerne. Byte-identisk med teksten før opdelingen (chatHost.test.ts). */
+export const ROUTING = `${CHAT_ROUTING}\n${ROUTING_SAVE}`;
 
 export const MCP_RULES = `Regler:
 - Én visning pr. svar: kald højst ét af show_company, show_person, search_companies, search_persons, compare_companies og render_view pr. brugerbesked, og kun én gang. Aldrig show_company og render_view efter hinanden.
@@ -369,7 +374,8 @@ export function createMcpServer(ctx: McpContext): McpServer {
     },
   );
 
-  registerAppTool(
+  // Gem-værktøjerne kun til Claude.ai: portalen har knapper til at gemme (docs/chat.md, tokens).
+  if (ctx.host !== "chat") registerAppTool(
     server,
     "save_view",
     {
@@ -404,7 +410,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
   const writeAnnotations = { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false };
   const modelAndApp = { ui: { visibility: ["model", "app"] } };
 
-  registerAppTool(
+  if (ctx.host !== "chat") registerAppTool(
     server,
     "save_page",
     {
@@ -434,7 +440,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     },
   );
 
-  registerAppTool(
+  if (ctx.host !== "chat") registerAppTool(
     server,
     "remove_saved_page",
     {
@@ -458,7 +464,7 @@ export function createMcpServer(ctx: McpContext): McpServer {
     },
   );
 
-  registerAppTool(
+  if (ctx.host !== "chat") registerAppTool(
     server,
     "list_saved_pages",
     {
