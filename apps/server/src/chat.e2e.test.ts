@@ -74,15 +74,17 @@ const lastUserTexts = (params: MessageCreateParamsNonStreaming): string[] => {
 
 type Event = Record<string, unknown> & { type: string };
 
-async function chat(body: unknown, headers: Record<string, string> = { authorization: `Bearer ${PIA.key}` }): Promise<{ status: number; events: Event[]; json?: Record<string, unknown> }> {
+async function chat(body: unknown, headers: Record<string, string> = { authorization: `Bearer ${PIA.key}` }): Promise<{ status: number; events: Event[]; all?: Event[]; json?: Record<string, unknown> }> {
   const res = await fetch(`${base}/api/chat`, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) });
   const text = await res.text();
   if (!res.headers.get("content-type")?.startsWith("text/event-stream")) return { status: res.status, events: [], json: JSON.parse(text) };
-  const events = text
+  const all = text
     .split("\n\n")
     .filter((b) => b.startsWith("data: "))
     .map((b) => JSON.parse(b.slice(6)) as Event);
-  return { status: res.status, events };
+  // Serverens linje med modullinks (agent.ts fallbackLinks) står kun i all; de øvrige tests ser hændelserne uden den.
+  const events = all.filter((e) => !(e.type === "text" && String(e.text).startsWith("\n\n[") && String(e.text).includes("](lasso:")));
+  return { status: res.status, events, all };
 }
 
 before(async () => {
@@ -619,4 +621,35 @@ test("place_answer: et andet place_answer i samme svar afvises uden at køre; vi
   const view = events.find((e) => e.type === "view") as Event & { tool: string; name: string };
   assert.equal(view.tool, "show_company");
   assert.equal(view.name, "show_company");
+});
+
+const linkText = (all: Event[] | undefined) => (all ?? []).filter((e) => e.type === "text" && String(e.text).startsWith("\n\n[") && String(e.text).includes("](lasso:")).map((e) => String(e.text));
+
+test("modullinks: uden links i modellens tekst tilføjer serveren modulet fra visningen; med et link, og på en global fane, tilføjes intet", async () => {
+  // Visning med fokus regnskab, tekst uden link: [Regnskab](lasso:modul/regnskab) efter teksten, og samme linje i historikken.
+  script.push(useTool("show_company", { company: "99000001", focus: "regnskab" }), sayText("Her er regnskabet."));
+  const r = await chat({ message: "Vis mig regnskabet for 2019", context: onLasso });
+  assert.deepEqual(linkText(r.all), ["\n\n[Regnskab](lasso:modul/regnskab)"]);
+  assert.equal(r.all!.at(-2)!.type, "text", "linjen står lige før done");
+  const done = r.all!.at(-1) as Event & { history: { role: string; content: { type: string; text?: string }[] }[] };
+  assert.match(done.history.at(-1)!.content.at(-1)!.text!, /Her er regnskabet\.\n\n\[Regnskab\]\(lasso:modul\/regnskab\)$/);
+
+  // Uden fokus i inputtet: navnet findes ud fra visningen; en person får personmodulerne.
+  script.push(useTool("show_person", { person: "CVR-3-4000000007", focus: "netvaerk" }), sayText("Her er netværket."));
+  assert.deepEqual(linkText((await chat({ message: "Vis netværket", context: onLasso })).all), ["\n\n[Netværk](lasso:modul/netvaerk)"]);
+
+  // Modellen skrev selv et link: intet tilføjes.
+  script.push(useTool("show_company", { company: "99000001", focus: "regnskab" }), sayText("Her.\n\n[Ejerskab](lasso:modul/ejerskab)"));
+  assert.deepEqual(linkText((await chat({ message: "Vis regnskabet", context: onLasso })).all), []);
+
+  // Intet at vise og på en person-/virksomhedsfane: Overblik; på forsiden og et resultat: ingenting.
+  script.push(sayText("Det ved jeg ikke."));
+  assert.deepEqual(linkText((await chat({ message: "Hvad mener du?", context: onLasso })).all), ["\n\n[Overblik](lasso:modul/overblik)"]);
+  script.push(sayText("Hej."));
+  assert.deepEqual(linkText((await chat({ message: "Hej" })).all), []);
+  script.push(useTool("search_persons", { query: "Prøve" }), sayText("Her."));
+  assert.deepEqual(linkText((await chat({ message: "Find personer", context: { active: { kind: "global", title: "Firmaliste" }, open: [] } })).all), []);
+  // En menu (ask_choice) og en fejl får ingen linje.
+  script.push(useTool("ask_choice", menu));
+  assert.deepEqual(linkText((await chat({ message: "vis alt om Gitte", context: onLasso })).all), []);
 });
