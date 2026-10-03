@@ -11,6 +11,8 @@ export interface Placement {
   placement: "current" | "entity" | "global";
   target?: ChatEntityRef;
   focus?: string;
+  /** Kun global: navnet på den nye resultatfane. */
+  title?: string;
 }
 
 /** "page" er en hel side (show_*, søgninger, render_view med layout page), "module" et enkelt element. */
@@ -47,6 +49,8 @@ export interface ChoiceAction {
   focus?: string;
   /** Beskeden, der sendes, når punktet vælges (ellers label). */
   prompt?: string;
+  /** Ved global: fanens navn (højst 40 tegn). */
+  title?: string;
 }
 
 export interface ChoiceOption {

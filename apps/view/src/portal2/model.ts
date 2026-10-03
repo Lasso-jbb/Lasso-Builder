@@ -143,6 +143,15 @@ export interface PendingChoice {
   allowFreeText: boolean;
 }
 
+/** Navnet på en resultatfane uden bedre navn: spørgsmålet afkortet til højst 40 tegn ved et ordskel. */
+export function shortName(text: string, max = 40): string {
+  const t = text.trim().replace(/\s+/g, " ").replace(/[?!.]+$/, "");
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max - 1);
+  const sp = cut.lastIndexOf(" ");
+  return `${(sp > max / 2 ? cut.slice(0, sp) : cut).trimEnd()}…`;
+}
+
 const entityRef = (o: OpenItem): ChatEntityRef | null => (o.kind === "result" ? null : { kind: o.kind, id: o.key, name: o.name });
 
 /**
@@ -349,26 +358,57 @@ export function dropOldestTurns(history: readonly unknown[], turns: number): unk
 
 export const countTurns = (history: readonly unknown[]): number => history.filter((m) => startsTurn(m as HistoryMessage)).length;
 
+/** Fanerne fra den, der har været aktiv længst siden, til den aktive: rækkefølgen, datasæt droppes i ved fuldt lager. */
+export function recencyOrder(open: readonly OpenItem[], visited: readonly string[], active: string | null): string[] {
+  const rank = new Map<string, number>();
+  [...visited, ...(active ? [active] : [])].forEach((k, i) => rank.set(k, i));
+  return open.map((o) => o.key).sort((a, b) => (rank.get(a) ?? -1) - (rank.get(b) ?? -1));
+}
+
 /**
- * Gemmer samtalen. Er lageret fuldt (QuotaExceeded), kastes de ældste halvdel af turene, og der prøves én gang til;
- * ellers springes der over (samtalen virker stadig, den overlever bare ikke en genindlæsning).
+ * Fanens datasæt ude af det gemte: visningerne i dens svar droppes (teksten og spørgsmålet bliver). En firma- eller
+ * personfane, der stod på Lasso-svaret, står på Overblik ved genskabelsen, og den henter selv sit modul igen.
  */
-export function saveCache(storage: Pick<Storage, "setItem"> | undefined, cache: ChatCache): "saved" | "trimmed" | "skipped" {
+export function dropTabDatasets(cache: ChatCache, key: string): ChatCache {
+  const answer = cache.answers[key];
+  if (!answer || !answer.parts.some((p) => p.kind === "view")) return cache;
+  const stripped: Answer = { ...answer, parts: answer.parts.filter((p) => p.kind !== "view") };
+  return {
+    ...cache,
+    answers: { ...cache.answers, [key]: stripped },
+    open: cache.open.map((o) => (o.key === key && o.kind !== "result" && o.tab === LASSO_TAB ? { ...o, tab: "overblik" } : o)),
+  };
+}
+
+/**
+ * Gemmer samtalen. Er lageret fuldt (QuotaExceeded): først kastes den ældste halvdel af turene (hele ture), så droppes
+ * datasættene fra de mindst nyligt aktive faner ét ad gangen (order: ældste først; fanen henter sit modul igen ved
+ * genskabelsen), og der prøves igen efter hvert trin. Først til sidst springes gemningen over.
+ */
+export function saveCache(storage: Pick<Storage, "setItem"> | undefined, cache: ChatCache, order: readonly string[] = []): "saved" | "trimmed" | "dropped" | "skipped" {
   if (!storage) return "skipped";
-  try {
-    storage.setItem(CHAT_CACHE_KEY, JSON.stringify(cache));
-    return "saved";
-  } catch {
-    const turns = countTurns(cache.chat.history);
-    if (turns < 2) return "skipped";
-    const trimmed = { ...cache, chat: { ...cache.chat, history: dropOldestTurns(cache.chat.history, Math.ceil(turns / 2)) } };
+  const tryWrite = (c: ChatCache): boolean => {
     try {
-      storage.setItem(CHAT_CACHE_KEY, JSON.stringify(trimmed));
-      return "trimmed";
+      storage.setItem(CHAT_CACHE_KEY, JSON.stringify(c));
+      return true;
     } catch {
-      return "skipped";
+      return false;
     }
+  };
+  if (tryWrite(cache)) return "saved";
+  let next = cache;
+  const turns = countTurns(cache.chat.history);
+  if (turns >= 2) {
+    next = { ...cache, chat: { ...cache.chat, history: dropOldestTurns(cache.chat.history, Math.ceil(turns / 2)) } };
+    if (tryWrite(next)) return "trimmed";
   }
+  for (const key of order) {
+    const smaller = dropTabDatasets(next, key);
+    if (smaller === next) continue;
+    next = smaller;
+    if (tryWrite(next)) return "dropped";
+  }
+  return "skipped";
 }
 
 export function clearCache(storage: Pick<Storage, "removeItem"> | undefined): void {

@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { Dataset, ViewSpec } from "@lasso/spec";
 import type { LookupResult } from "../portal/api.js";
 import type { ChatEvent } from "../chat/stream.js";
-import { addRecent, applyEvent, CHAT_CACHE_TTL_MS, clearCache, countTurns, dropOldestTurns, restoreCache, saveCache, serializeCache, askPlaceholder, choiceMessage, closeItem, contextFor, freeTextPick, headLines, highlight, lastView, loadRecent, mapViews, newAnswer, openItem, searchCounts, searchRows, suggestions, withLastView, withoutHead, type OpenItem, type PendingChoice } from "./model.js";
+import { addRecent, applyEvent, CHAT_CACHE_TTL_MS, clearCache, countTurns, dropOldestTurns, dropTabDatasets, recencyOrder, shortName, restoreCache, saveCache, serializeCache, askPlaceholder, choiceMessage, closeItem, contextFor, freeTextPick, headLines, highlight, lastView, loadRecent, mapViews, newAnswer, openItem, searchCounts, searchRows, suggestions, withLastView, withoutHead, type OpenItem, type PendingChoice } from "./model.js";
 
 const novo: OpenItem = { key: "CVR-1-24256790", kind: "company", name: "NOVO NORDISK A/S", tab: "overblik" };
 const lasso: OpenItem = { key: "CVR-1-34580820", kind: "company", name: "LASSO X A/S", tab: "overblik" };
@@ -236,4 +236,58 @@ test("chat-cache: fuldt lager giver én trimmet gemning, ellers springes der ove
   assert.equal(saveCache(undefined, cache), "skipped");
   clearCache({ removeItem: () => { throw new Error("nej"); } });
   clearCache(undefined);
+});
+
+test("shortName: spørgsmålet afkortet ved et ordskel til højst 40 tegn, uden afsluttende tegn", () => {
+  assert.equal(shortName("Største revisorer i Aarhus?"), "Største revisorer i Aarhus");
+  assert.equal(shortName("  Sammenlign   Carlsberg og Royal Unibrew  "), "Sammenlign Carlsberg og Royal Unibrew");
+  const long = shortName("Giv mig en samlet markedsundersøgelse af alle revisorer i Region Midtjylland");
+  assert.ok(long.length <= 40 && long.endsWith("…"), long);
+  assert.ok(!long.slice(0, -1).endsWith(" "));
+  assert.equal(shortName("x".repeat(60)).length, 40);
+});
+
+const view = { kind: "view" as const, id: "v", form: "page" as const, spec: { title: "T", components: [] } as unknown as ViewSpec, dataset: { companies: {}, persons: {} } as unknown as Dataset };
+
+test("quota: datasæt fra de mindst nyligt aktive faner droppes ét ad gangen, så springes der over", () => {
+  const a: OpenItem = { ...novo, tab: "lasso" };
+  const b: OpenItem = { ...lasso, tab: "lasso" };
+  const r: OpenItem = { key: "result:1", kind: "result", name: "Søgning", tab: "lasso" };
+  const big = "x".repeat(2000);
+  const answers = Object.fromEntries([a, b, r].map((o) => [o.key, { question: o.name, parts: [{ kind: "text" as const, text: "t" }, { ...view, dataset: { ...view.dataset, pad: big } as unknown as Dataset }], pending: false }]));
+  const cache = serializeCache("pia", { chat: { history: [tr("Q")], sig: "s" }, open: [a, b, r], active: r.key, answers }, 1);
+  const size = (c: unknown) => JSON.stringify(c).length;
+  assert.deepEqual(recencyOrder([a, b, r], [b.key, a.key], r.key), [b.key, a.key, r.key]);
+
+  // dropTabDatasets: visningerne væk, teksten bliver; en entitetsfane på Lasso-svaret går til Overblik (og henter selv sit modul).
+  const dropped = dropTabDatasets(cache, a.key);
+  assert.deepEqual(dropped.answers[a.key]!.parts, [{ kind: "text", text: "t" }]);
+  assert.equal(dropped.open.find((o) => o.key === a.key)!.tab, "overblik");
+  assert.equal(dropped.open.find((o) => o.key === r.key)!.tab, "lasso", "en resultatfane bliver stående");
+  assert.equal(dropTabDatasets(dropped, a.key), dropped, "intet at droppe");
+
+  const writes: string[] = [];
+  const limited = (limit: number): Pick<Storage, "setItem"> => ({ setItem: (_k, v) => { if (v.length > limit) throw new DOMException("fuld", "QuotaExceededError"); writes.push(v); } });
+  const order = [a.key, b.key, r.key];
+  // Plads til to ud af tre faners datasæt: kun den ældste fane droppes.
+  const withTwo = size(dropTabDatasets(cache, a.key)) + 10;
+  assert.equal(saveCache(limited(withTwo), cache, order), "dropped");
+  const saved = JSON.parse(writes.at(-1)!) as ChatCacheLike;
+  assert.equal(saved.answers[a.key]!.parts.length, 1);
+  assert.equal(saved.answers[b.key]!.parts.length, 2);
+  assert.equal(saved.answers[r.key]!.parts.length, 2);
+  // Kun plads til en: to droppes. Ingen plads: sidste udvej er at springe over.
+  const withOne = size(dropTabDatasets(dropTabDatasets(cache, a.key), b.key)) + 10;
+  assert.equal(saveCache(limited(withOne), cache, order), "dropped");
+  assert.equal((JSON.parse(writes.at(-1)!) as ChatCacheLike).answers[r.key]!.parts.length, 2);
+  assert.equal(saveCache(limited(10), cache, order), "skipped");
+});
+type ChatCacheLike = { answers: Record<string, { parts: unknown[] }> };
+
+test("recencyOrder: mindst nyligt aktive først, den aktive sidst, aldrig besøgte forrest", () => {
+  const x: OpenItem = { ...novo };
+  const y: OpenItem = { ...lasso };
+  const z: OpenItem = { ...mette };
+  assert.deepEqual(recencyOrder([x, y, z], [y.key, x.key], z.key), [y.key, x.key, z.key]);
+  assert.deepEqual(recencyOrder([x, y, z], [x.key], y.key), [z.key, x.key, y.key]);
 });

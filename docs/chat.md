@@ -55,14 +55,26 @@ handling (`action`) er placeringen: `current` (svaret skrives her), `entity` (p�
 fane, med `focus`) eller `global`. Brugerens valg kommer med næste spørgsmål som `context.choice`
 (`{ id, index, action }`, eller `{ id, free: true }` ved fritekst); serveren tjekker, at `id` er modellens eget
 `ask_choice`-kald i den signerede historik, og at `action` er præcis punktets (ellers 400 "Valget passer ikke
-til samtalen"). Så står valget først i konteksten ("Brugeren valgte 'Alt om Jakob Benediktson': svaret
-skrives på personen …"), og modellen gør det i ét trin. Spørger brugeren om noget andet i stedet, svares der
-her. Kandidater med id'er finder modellen med `find_entity` (navneopslag uden visning; de åbne faner tæller
+til samtalen"). Så står valget først i konteksten ("Brugeren valgte 'Fuld indsigt i Jakob Benediktson':
+svaret skrives på personen …"), og modellen gør det i ét trin. Spørger brugeren om en anden person eller virksomhed ("vis detaljer om Jakob"), tilbyder modellen
+**kort eller fuld indsigt**: "Kort indsigt i Jakob Benediktson" (placement `current`: et kort svar her, brugeren
+bliver på fanen) og "Fuld indsigt i Jakob Benediktson" (placement `entity`: en ny fane med hele siden,
+`show_person`/`show_company` med `show_all`). Ved en global liste eller analyse fra en side er placementet
+`global`, og punktet har altid en `title` (højst 40 tegn, et kort dansk navneord: "Markedsundersøgelse",
+"Største revisorer i Aarhus"), som bliver navnet på den nye fane. `title` er en del af handlingen, så den indgår
+i verificeringen (en anden title end modellens giver 400). Fritekst skrives i spørgefeltet, ikke i menuen.
+Spørger brugeren om noget andet i stedet, svares der her. Kandidater med id'er finder modellen med `find_entity` (navneopslag uden visning; de åbne faner tæller
 som præcise match), aldrig `show_person` med et fornavn alene.
 
 **Placeringen bæres, ikke bestemmes.** Første hændelse i hver tur er `placement` (fra valget, ellers
 `current`; på forsiden `global`), sendt før modellen kaldes, og den gentages i `done`. Portalen åbner eller
-aktiverer kun en anden fane på `placement`, aldrig på en visning.
+aktiverer kun en anden fane på `placement`, aldrig på en visning. Åbner `entity` en ny fane, står fanen, man
+spurgte fra, præcis som før (hverken nulstillet til Overblik eller genindlæst); brugeren får blot den nye fane.
+`placement` bærer `title` ved `global`.
+
+**Fanenavne.** En entitetsfane hedder det, entiteten hedder. En resultatfane (`global`, eller et spørgsmål fra
+forsiden) hedder `title` fra valget; uden menu hedder den først det afkortede spørgsmål (højst 40 tegn) og
+bliver til visningens `spec.title`, når den kommer.
 
 ## API: `POST /api/chat`
 
@@ -123,9 +135,11 @@ Serveren gemmer ingen samtaler, men portalen gemmer selv samtalen i browseren (`
 `lasso-chat`): historik og signatur, de åbne faner og det seneste svar pr. fane (også en åben valgmenu), bundet
 til brugerens id og med 24 timers udløb (`CHAT_CACHE_TTL_MS` i `apps/view/src/portal2/model.ts`). Så overlever
 samtalen en genindlæsning. Kun den trimmede historik fra `done` gemmes, og aldrig mens der hentes. Er lageret
-fuldt, kastes den ældste halvdel af turene (hele ture), og der prøves én gang til; ellers springes gemningen
-over. Lageret ryddes ved udløb, for en anden bruger og når sessionen er logget ud. Modulernes data gemmes
-ikke; de hentes igen.
+fuldt, kastes først den ældste halvdel af turene (hele ture), så droppes visningerne (datasættene) fra de
+mindst nyligt aktive faner ét ad gangen (teksten bliver; en firma- eller personfane står på Overblik og henter
+selv sit modul igen ved genskabelsen), og der prøves igen efter hvert trin; først til sidst springes gemningen
+over. Både samtalen og fanernes svar med datasæt gemmes, når der er plads. Lageret ryddes ved udløb, for en
+anden bruger og når sessionen er logget ud. Modulernes egne data (de faste faner) gemmes ikke; de hentes igen.
 
 ### Historik og prompt-cache
 
@@ -145,6 +159,8 @@ cache-miss (cachen er pr. model), så der er intet skift til en større model ti
 
 TODO (ikke lavet endnu): værktøjssvarenes resuméer til modellen er den største omkostning i samtalen; hold dem
 korte.
+
+TODO (udskudt): en server-side kontrol af datareglen (fx markere svar med tal, men uden værktøjssvar i turen).
 
 ## Opsætning
 

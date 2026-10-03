@@ -72,11 +72,17 @@ Moduler og Brugere står dæmpet, til de findes.
   aldrig svaret selv. Spørger man fra forsiden eller et resultat, bliver svaret en ny resultatfane.
 - Valgmenuen over feltet er den eneste vej til en anden kontekst, som chatten selv åbner: lægger spørgsmålet
   op til en anden persons eller virksomheds side ("vis alt om Jakob"), eller er et navn tvetydigt, spørger
-  chatten først (fx "Alt om Jakob Benediktson" / "Overordnet indblik her" / fritekst) og viser intet, før man
-  har valgt. Vælger man en anden side, åbnes den som fane med svaret; den fane, man spurgte fra, går tilbage
-  til Overblik. Menuens udseende designes i Paper; indtil da er den almindelige knapper.
+  chatten først og tilbyder kort eller fuld indsigt (fx "Kort indsigt i Jakob Benediktson": et kort svar her,
+  man bliver på fanen / "Fuld indsigt i Jakob Benediktson": hele siden i en ny fane) og viser intet, før man har
+  valgt; fritekst skrives i spørgefeltet. Vælger man fuld indsigt, åbnes og aktiveres den nye fane med svaret,
+  og fanen, man spurgte fra, står præcis som før (ikke nulstillet, ikke genindlæst).
+- Fanenavne: en person- eller virksomhedsfane hedder entitetens navn. En ny resultatfane får et kort, logisk navn
+  (valgmenuens `title`, fx "Markedsundersøgelse", "Største revisorer i Aarhus"), uden menu visningens titel
+  (først det afkortede spørgsmål, højst 40 tegn), aldrig spørgsmålet eller prompten ordret. Menuens udseende designes i Paper; indtil da er den almindelige knapper.
 - Samtalen gemmes kun i browseren (ikke på serveren): faner, svar og historik overlever en genindlæsning i
-  24 timer og ryddes ved udløb, for en anden bruger og ved logud (se `docs/chat.md`).
+  24 timer og ryddes ved udløb, for en anden bruger og ved logud. Er lageret fuldt, kastes først de ældste ture,
+  så visningerne fra de mindst nyligt aktive faner (de henter selv modulet igen), og først til sidst gemmes
+  intet (se `docs/chat.md`).
 - Mens der hentes, bliver Send til Stop.
 
 ## Telefon

@@ -27,8 +27,10 @@ import {
   newAnswer,
   openItem,
   restoreCache,
+  recencyOrder,
   saveCache,
   saveRecent,
+  shortName,
   searchCounts,
   serializeCache,
   searchRows,
@@ -313,8 +315,8 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
   // Samtalen gemmes i browseren, når der ikke hentes (ikke pr. tegn, mens svaret streames); kun den trimmede historik fra "done".
   useEffect(() => {
     if (!hydrated || pendingKey !== null || !boot.user) return;
-    saveCache(storage(), serializeCache(boot.user.id, { chat: chat.current, open, active, answers }, Date.now()));
-  }, [hydrated, open, active, answers, pendingKey, boot.user]);
+    saveCache(storage(), serializeCache(boot.user.id, { chat: chat.current, open, active, answers }, Date.now()), recencyOrder(open, history, active));
+  }, [hydrated, open, active, answers, pendingKey, boot.user, history]);
 
   // En fane på et modul uden data (fx genskabt fra lageret) henter det, når den vises.
   useEffect(() => {
@@ -457,14 +459,21 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
     setAnswers((all) => Object.fromEntries(Object.entries(all).map(([k, a]) => [k, a.choice ? { ...a, choice: undefined } : a])));
     // Svaret hører til den fane, man står på; står man på forsiden eller et resultat, til en ny resultatfane.
     let key: string;
+    // Fanens tilstand før spørgsmålet: flytter svaret til en anden fane, står denne præcis som før (ingen nulstilling, ingen genindlæsning).
+    const prevTab = here?.tab;
+    const prevAnswer = here ? answersRef.current[here.key] : undefined;
+    let createdHere = false;
     if (here && here.kind !== "result") {
       key = here.key;
       setOpen((l) => l.map((o) => (o.key === key ? { ...o, tab: LASSO_TAB } : o)));
     } else {
       key = `result:${++resultSeq.current}`;
-      setOpen((l) => [...l, { key, kind: "result", name: text, tab: LASSO_TAB }]);
+      createdHere = true;
+      setOpen((l) => [...l, { key, kind: "result", name: shortName(text), tab: LASSO_TAB }]);
       activate(key);
     }
+    /** Er fanens navn valgt (title fra menuen), følger det ikke visningens titel. */
+    let named = false;
     let current = key;
     setPendingKey(key);
     setAnswers((a) => ({ ...a, [key]: newAnswer(text) }));
@@ -477,15 +486,16 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
       setPendingKey(target.key);
       setAnswers((all) => {
         const { [from]: moved, ...rest } = all;
-        return { ...rest, [target.key]: moved ?? newAnswer(text) };
+        // Fanen, man spurgte fra, får sit tidligere svar tilbage (uden menu); svaret hører til den nye fane.
+        const restored = from === key && prevAnswer ? { [from]: { ...prevAnswer, choice: undefined } } : {};
+        return { ...rest, ...restored, [target.key]: moved ?? newAnswer(text) };
       });
       setOpen((l) => {
-        // Resultatfanen, der blev åbnet til spørgsmålet, lukkes igen; en firma- eller personfane går tilbage til Overblik.
-        const base = from.startsWith("result:") ? l.filter((o) => o.key !== from) : l.map((o) => (o.key === from && o.tab === LASSO_TAB ? { ...o, tab: "overblik" } : o));
+        // En resultatfane, der blev åbnet til dette spørgsmål, lukkes igen; ellers står fanen, man spurgte fra, som den stod.
+        const base = createdHere && from === key ? l.filter((o) => o.key !== from) : from === key && prevTab ? l.map((o) => (o.key === from ? { ...o, tab: prevTab } : o)) : l;
         return openItem(base, target);
       });
       activate(target.key);
-      if (here && here.kind !== "result" && here.key === from) void load(here.kind, from, "overblik");
     };
     const ctrl = new AbortController();
     abort.current = ctrl;
@@ -495,12 +505,18 @@ export function Portal2App({ boot }: { boot: Portal2Boot }) {
         (e) => {
           if (e.type === "placement") {
             if (e.placement === "entity" && e.target) moveTo({ key: e.target.id, kind: e.target.kind, name: e.target.name, tab: LASSO_TAB });
-            else if (e.placement === "global" && !current.startsWith("result:")) moveTo({ key: `result:${++resultSeq.current}`, kind: "result", name: text, tab: LASSO_TAB });
+            else if (e.placement === "global") {
+              // Navnet fra valget (title), ellers det afkortede spørgsmål; ligger svaret allerede på en resultatfane, får den navnet.
+              const name = e.title ?? shortName(text);
+              if (e.title) named = true;
+              if (!current.startsWith("result:")) moveTo({ key: `result:${++resultSeq.current}`, kind: "result", name, tab: LASSO_TAB });
+              else if (e.title) setOpen((l) => l.map((o) => (o.key === current ? { ...o, name } : o)));
+            }
           } else if (e.type === "view") {
             // Fanens navn følger det hentede: firmaets/personens navn, eller visningens titel på en resultatfane.
             const ent = entityOf(e.spec, e.dataset);
             const at = current;
-            setOpen((l) => l.map((o) => (o.key !== at ? o : ent && ent.id === at ? { ...o, name: ent.name } : o.kind === "result" ? { ...o, name: e.spec.title } : o)));
+            setOpen((l) => l.map((o) => (o.key !== at ? o : ent && ent.id === at ? { ...o, name: ent.name } : o.kind === "result" && !named ? { ...o, name: e.spec.title } : o)));
           } else if (e.type === "done") {
             chat.current = { history: e.history, sig: e.sig };
           }
