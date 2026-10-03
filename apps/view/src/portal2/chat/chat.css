@@ -171,7 +171,8 @@
 
 /* ---------- telefon (760 px og derunder) ---------- */
 @media (max-width: 760px) {
-  .p3 { --chat-bubble-max: 280px; --chat-link-h: 40px; --chat-input-h: 48px; }
+  /* Telefonen: svarteksten fylder hele bredden. */
+  .p3 { --chat-bubble-max: 280px; --chat-link-h: 40px; --chat-input-h: 48px; --chat-body-max: none; }
   .p3 .content.col.is-chat { padding-inline: var(--lasso-space-4); }
   .p3 .chat { padding-bottom: calc(var(--ask-top, 156px) + 12px); }
   .p3 .chat-msg--ai { gap: 10px; }

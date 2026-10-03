@@ -14,7 +14,8 @@
   --topH: 56px; --compactH: 58px; --gut: 28px;
   /* Chatten (docs/design/CHAT.md, Paper-eksporten chat-designguide.html): mål, der ikke findes i styles.css. */
   /* Bredderne er 20 % over Paper-eksporten (800/720/760/480; Jakob 03.10). */
-  --chat-w: 960px; --chat-input-w: 864px; --chat-body-max: 912px; --chat-bubble-max: 576px; --chat-bubble-r: 18px;
+  /* Svarteksten er højst 60 % af tråden (Jakob 03.10): følger --chat-w; kort, sider og fuld skærm har hele bredden. */
+  --chat-w: 960px; --chat-input-w: 864px; --chat-body-max: calc(var(--chat-w) * 0.6); --chat-bubble-max: 576px; --chat-bubble-r: 18px;
   --chat-lh: 22px; --chat-avatar: 24px; --chat-link-h: 46px; --chat-input-h: 52px; --chat-fs-12: 12px; --chat-fs-16: 16px;
   --chat-shadow-input: 0 8px 24px rgba(22, 24, 29, 0.08); --chat-shadow-panel: 0 12px 32px rgba(22, 24, 29, 0.12);
   --chat-shadow-jump: 0 4px 12px rgba(22, 24, 29, 0.1);

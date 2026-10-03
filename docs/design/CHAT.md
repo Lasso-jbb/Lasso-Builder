@@ -40,7 +40,7 @@ eller som de eksisterende tokens i `styles.css`.
 | Brugerboble | `--lasso-surface-muted` (#F4F4F5), radius 18, padding 10/14, 14/22 ink, højst 576 (mobil 280) *(Jakob 03.10: 20 % bredere end Paper-eksporten, som har 480)* |
 | Lasso-besked | gitter 24 px + 1fr, gap 12 (mobil 10) |
 | Avatar | 24 px cirkel, primary-soft baggrund, mærket 12 px i primary; tom tilstand 40 px med mærke 20 px |
-| Svartekst | højst 912, 14/22 i `--lasso-font`, `--lasso-text-2`, tabeltal; fremhævning 600 i `--lasso-text` (Jakob 03.10: samme skrift som modulteksten, regnskabsanalysens afsnit; eksporten har ink og 500); afsnitsafstand 8 *(Jakob 03.10: 20 % bredere end Paper-eksporten, som har 760)* |
+| Svartekst | højst 60 % af trådens bredde (576; Jakob 03.10: tekst 60 % af trådens bredde; mobil fuld bredde), 14/22 i `--lasso-font`, `--lasso-text-2`, tabeltal; fremhævning 600 i `--lasso-text` (Jakob 03.10: samme skrift som modulteksten, regnskabsanalysens afsnit; eksporten har ink og 500); afsnitsafstand 8 *(Jakob 03.10: 20 % bredere end Paper-eksporten, som har 760)* |
 | Punktlister | 6 px ink-prik, padding-left 16 |
 | Meta | margin 8 0 0 36 (mobil 34), 11/16 faint (#8A9099), gap 10, kopiér-ikon 16; kun under rene tekstsvar |
 | Modul-link (pille) | 46 høj, padding 0 18, radius 12, 1 px kant #E4E4E7, 16/500 ink, ikon 18 px i primary, gap 10; rækken margin-top 14, gap 12. Mobil: 40 høj, 14 px, padding 0 14, ikon 16 px |
@@ -85,7 +85,7 @@ Nye, i `.p3`-blokken i `portal2.css` (lys og mørk):
 |---|---|
 | `--chat-w` | 960px (tråden; Jakob 03.10: 20 % bredere end Paper-eksporten, som har 800) |
 | `--chat-input-w` | 864px (inputpille, panel, forslagsgitter; eksporten 720) |
-| `--chat-body-max` | 912px (svartekst; eksporten 760) |
+| `--chat-body-max` | `calc(var(--chat-w) * 0.6)` = 576px (svartekst, afsnit, punkter og modul-links; Jakob 03.10: tekst 60 % af trådens bredde; mobil `none`, fuld bredde; eksporten 760) |
 | `--chat-bubble-max` | 576px (mobil 280px; eksporten 480) |
 | `--chat-bubble-r` | 18px |
 | `--chat-lh` | 22px |
@@ -183,7 +183,7 @@ Truffet ved gennemgangen af eksporten (D1 til D10) og af ejeren; ejerens afgøre
 - **Ingen række efter Tilføj som fane (Jakob 03.10).** Fanen skifter til det nye modul, og den røde pin er bekræftelsen;
   der står ingen meddelelsesrække "Tilføjet som modul …" i samtalen. En fejl står stadig som tekst (med "Prøv igen"
   ved netværks- og serverfejl).
-- **20 % bredere (Jakob 03.10).** `--chat-w` 960, `--chat-input-w` 864, `--chat-body-max` 912, `--chat-bubble-max`
+- **20 % bredere (Jakob 03.10).** `--chat-w` 960, `--chat-input-w` 864, `--chat-body-max` 60 % af tråden (576; Jakob 03.10), `--chat-bubble-max`
   576; mobilværdierne er uændrede. Fuld skærm har modulernes bredde og sideluft (`.col` og `.view`).
 - **Spørgsmålet øverst (Jakob 03.10).** Når et svar kommer og er færdigt, står brugerens spørgsmål øverst i det synlige
   (16 px luft, `anchorScrollTop` i `chat/util.ts`) med svarets tekst og kortets top under; et langt kort følges ikke
