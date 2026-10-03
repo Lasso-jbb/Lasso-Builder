@@ -45,6 +45,25 @@ export const choiceActionSchema = z
 
 export type ChoiceAction = z.infer<typeof choiceActionSchema>;
 
+/**
+ * ask_choice's input (chat/tools.ts bruger det til validering; til API'et fjernes grænserne, se toolOf). Her,
+ * fordi verifyChoice læser det gemte tool_use-input gennem samme skema (ukendte nøgler fra modellen fjernes).
+ */
+export const askChoiceSchema = z.object({
+  question: z.string().min(1).max(200).describe("Spørgsmålet over punkterne, fx 'Hvilken Jakob mener du?' eller 'Hvad vil du se om Jakob Benediktson?' (højst 200 tegn)."),
+  options: z
+    .array(
+      z.object({
+        label: z.string().min(1).max(80).describe("Punktets tekst, fx 'Kort indsigt i Jakob Benediktson' (højst 80 tegn)."),
+        action: choiceActionSchema.describe("placement: 'current' = svaret skrives her, 'entity' = på personens/virksomhedens egen fane (entity kræves, med id fra find_entity), 'global' = en liste/analyse uden fane. focus: modulet, fx 'overblik' eller 'ejerskab'. prompt: beskeden, appen sender, når punktet vælges (standard: label). title: ved 'global' altid et kort navn til den nye fane (højst 40 tegn, et dansk navneord, fx 'Markedsundersøgelse', 'Største revisorer i Aarhus'), aldrig spørgsmålet."),
+      }),
+    )
+    .min(1)
+    .max(8)
+    .describe("1–8 punkter."),
+  allowFreeText: z.boolean().optional().describe("Om brugeren også må skrive selv ('Andet'). Standard true."),
+});
+
 const choiceSchema = z.union([
   z.object({ id: z.string().min(1).max(80), index: z.number().int().min(0).max(7), action: choiceActionSchema }),
   z.object({ id: z.string().min(1).max(80), free: z.literal(true) }),
@@ -72,8 +91,6 @@ export function parseContext(raw: unknown): ChatContext | null {
   return r.success ? r.data : null;
 }
 
-type ChoiceOption = { label?: string; action?: unknown };
-
 function askChoiceUse(history: readonly BetaMessageParam[], id: string): BetaToolUseBlock | null {
   const last = [...history].reverse().find((m) => m.role === "assistant");
   if (!last || !Array.isArray(last.content)) return null;
@@ -83,23 +100,26 @@ function askChoiceUse(history: readonly BetaMessageParam[], id: string): BetaToo
 
 /**
  * Om valget hører til samtalen: den seneste assistentbesked i den signerede historik skal have et
- * ask_choice-kald med det id, og handlingen skal være præcis den, modellen gav det valgte punkt.
- * Giver menupunktets tekst (label) til konteksten, eller en fejl.
+ * ask_choice-kald med det id, og handlingen skal være præcis den, modellen gav det valgte punkt. Det gemte input
+ * læses gennem askChoiceSchema (ukendte nøgler, modellen har lagt til, fjernes), så en sådan menu ikke giver 400 ved
+ * hvert valg. Giver menupunktets tekst (label) til konteksten, eller en fejl.
  */
 export function verifyChoice(history: readonly BetaMessageParam[], choice: NonNullable<ChatContext["choice"]>): { label?: string } | { error: string } {
+  const mismatch = { error: "Valget passer ikke til samtalen" };
   const use = askChoiceUse(history, choice.id);
-  if (!use) return { error: "Valget passer ikke til samtalen" };
-  const input = (use.input ?? {}) as { options?: ChoiceOption[]; allowFreeText?: boolean };
-  if ("free" in choice) {
-    if (input.allowFreeText === false) return { error: "Valget passer ikke til samtalen" };
-    return {};
-  }
-  const option = Array.isArray(input.options) ? input.options[choice.index] : undefined;
-  if (!option || !isDeepStrictEqual(option.action, choice.action)) return { error: "Valget passer ikke til samtalen" };
-  return typeof option.label === "string" ? { label: option.label } : {};
+  if (!use) return mismatch;
+  const input = askChoiceSchema.safeParse(use.input ?? {});
+  if (!input.success) return mismatch;
+  if ("free" in choice) return input.data.allowFreeText === false ? mismatch : {};
+  const option = input.data.options[choice.index];
+  if (!option || !isDeepStrictEqual(option.action, choice.action)) return mismatch;
+  return { label: option.label };
 }
 
-const entityText = (e: ChatEntity) => `${e.kind === "company" ? "virksomheden" : "personen"} ${e.name} (${e.id})`;
+/** Tekst fra klienten og fra Lasso til modellen: linjeskift og styretegn bliver til mellemrum, så den ikke kan lave nye linjer i konteksten. */
+export const oneLine = (t: string): string => t.replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]+/g, " ").replace(/\s+/g, " ").trim();
+
+const entityText = (e: ChatEntity) => `${e.kind === "company" ? "virksomheden" : "personen"} ${oneLine(e.name)} (${oneLine(e.id)})`;
 
 /** Konteksten, som modellen får den: første tekstblok i brugerens tur. */
 export function contextText(ctx: ChatContext): string {
@@ -107,23 +127,23 @@ export function contextText(ctx: ChatContext): string {
   const a = ctx.active;
   const choice = ctx.choice;
   const picked = choice && !("free" in choice) ? choice.action : undefined;
-  const quoted = choice?.label ? `'${choice.label}'` : "et punkt i menuen";
+  const quoted = choice?.label ? `'${oneLine(choice.label)}'` : "et punkt i menuen";
   if (picked?.placement === "entity" && picked.entity) {
-    lines.push(`Brugeren valgte ${quoted}: svaret skrives på ${entityText(picked.entity)}${picked.focus ? `, modul ${picked.focus}` : ""}. Den er den aktive kontekst i dette svar.`);
+    lines.push(`Brugeren valgte ${quoted}: svaret skrives på ${entityText(picked.entity)}${picked.focus ? `, modul ${oneLine(picked.focus)}` : ""}. Den er den aktive kontekst i dette svar.`);
   } else if (picked?.placement === "global") {
     lines.push(`Brugeren valgte ${quoted}: svaret er globalt (liste/analyse), ikke på en fane.`);
   } else if (picked) {
-    lines.push(`Brugeren valgte ${quoted}: svaret skrives her, på den aktive fane${picked.focus ? ` (modul ${picked.focus})` : ""}.`);
+    lines.push(`Brugeren valgte ${quoted}: svaret skrives her, på den aktive fane${picked.focus ? ` (modul ${oneLine(picked.focus)})` : ""}.`);
   } else if (choice) {
     lines.push("Brugeren skrev selv et svar i valgmenuen (fritekst) i stedet for at vælge et punkt.");
   }
-  if (a.kind === "global") lines.push(a.title ? `Aktiv fane: resultatet '${a.title}' (globalt, ingen virksomhed eller person).` : "Aktiv fane: forsiden (global, ingen virksomhed eller person er åben).");
+  if (a.kind === "global") lines.push(a.title ? `Aktiv fane: resultatet '${oneLine(a.title)}' (globalt, ingen virksomhed eller person).` : "Aktiv fane: forsiden (global, ingen virksomhed eller person er åben).");
   else {
-    lines.push(`Aktiv fane: ${entityText(a)}${a.tab ? `, modul ${a.tab}` : ""}.`);
+    lines.push(`Aktiv fane: ${entityText(a)}${a.tab ? `, modul ${oneLine(a.tab)}` : ""}.`);
     // Det tredje lag i konteksten (docs/chat.md): hvad brugeren ser, så "hvorfor faldt den?" kan besvares ud fra tallene på skærmen.
-    if (a.view?.summary) lines.push(`Brugeren ser: ${a.view.module} — ${a.view.summary}`);
+    if (a.view?.summary) lines.push(`Brugeren ser: ${oneLine(a.view.module)} — ${oneLine(a.view.summary)}`);
   }
-  if (ctx.open.length) lines.push(`Åbne faner: ${ctx.open.map((e) => `${e.name} (${e.id})`).join(", ")}.`);
+  if (ctx.open.length) lines.push(`Åbne faner: ${ctx.open.map((e) => `${oneLine(e.name)} (${oneLine(e.id)})`).join(", ")}.`);
   return `[Kontekst] ${lines.join(" ")}`;
 }
 

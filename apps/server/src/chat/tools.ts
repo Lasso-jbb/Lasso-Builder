@@ -2,7 +2,7 @@ import type { BetaTool } from "@anthropic-ai/sdk/resources/beta/messages/message
 import { z } from "zod";
 import { candidatesAsText, resolveEntity } from "../usecases/index.js";
 import type { McpContext } from "../mcp/server.js";
-import { ASK_CHOICE, choiceActionSchema, type ChatContext, type ChoiceAction } from "./context.js";
+import { ASK_CHOICE, askChoiceSchema, type ChatContext, type ChoiceAction } from "./context.js";
 
 export interface ChoiceOption {
   label: string;
@@ -41,16 +41,28 @@ export interface ChatToolDef {
   run: (input: unknown, ctx: ChatToolCtx) => Promise<ChatToolResult>;
 }
 
-/** Et BetaTool fra et zod-skema (JSON Schema 2020-12 uden $schema-feltet). */
+/** Nøgleord, Anthropics strict tool use ikke understøtter; de fjernes fra det skema, der sendes til API'et. */
+const UNSUPPORTED_SCHEMA_KEYS = new Set(["minLength", "maxLength", "minItems", "maxItems", "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "multipleOf", "pattern", "format"]);
+
+/** JSON Schema uden de nøgleord, strict tool use afviser (rekursivt). Grænserne står i beskrivelserne og tjekkes af zod i run(). */
+export function stripUnsupported<T>(schema: T): T {
+  if (Array.isArray(schema)) return schema.map(stripUnsupported) as T;
+  if (schema && typeof schema === "object") {
+    return Object.fromEntries(Object.entries(schema).filter(([k]) => !UNSUPPORTED_SCHEMA_KEYS.has(k)).map(([k, v]) => [k, stripUnsupported(v)])) as T;
+  }
+  return schema;
+}
+
+/** Et BetaTool fra et zod-skema (JSON Schema 2020-12 uden $schema-feltet og uden grænser, som strict tool use ikke kender). */
 function toolOf(name: string, description: string, schema: z.ZodObject, extra: Partial<BetaTool> = {}): BetaTool {
-  const { $schema: _drop, ...input_schema } = z.toJSONSchema(schema) as Record<string, unknown> & { $schema?: string };
+  const { $schema: _drop, ...input_schema } = stripUnsupported(z.toJSONSchema(schema)) as Record<string, unknown> & { $schema?: string };
   return { name, description, input_schema: input_schema as BetaTool["input_schema"], ...extra };
 }
 
 const findEntitySchema = z.object({
   kind: z.enum(["company", "person"]).describe("Virksomhed eller person."),
-  query: z.string().min(1).max(120).describe("Navnet (eller en del af det), et CVR-nummer eller et Lasso-ID."),
-  limit: z.number().int().min(1).max(10).optional().describe("Højst så mange kandidater. Standard 5."),
+  query: z.string().min(1).max(120).describe("Navnet (eller en del af det), et CVR-nummer eller et Lasso-ID (højst 120 tegn)."),
+  limit: z.number().int().min(1).max(10).optional().describe("Højst så mange kandidater, 1–10. Standard 5."),
 });
 
 export const FIND_ENTITY = "find_entity";
@@ -70,21 +82,6 @@ const findEntity: ChatToolDef = {
     return { text: candidatesAsText(input.kind, input.query, candidates) };
   },
 };
-
-const askChoiceSchema = z.object({
-  question: z.string().min(1).max(200).describe("Spørgsmålet over punkterne, fx 'Hvilken Jakob mener du?' eller 'Hvad vil du se om Jakob Benediktson?'."),
-  options: z
-    .array(
-      z.object({
-        label: z.string().min(1).max(80).describe("Punktets tekst, fx 'Alt om Jakob Benediktson'."),
-        action: choiceActionSchema.describe("placement: 'current' = svaret skrives her, 'entity' = på personens/virksomhedens egen fane (entity kræves, med id fra find_entity), 'global' = en liste/analyse uden fane. focus: modulet, fx 'overblik' eller 'ejerskab'. prompt: beskeden, appen sender, når punktet vælges (standard: label). title: ved 'global' altid et kort navn til den nye fane (højst 40 tegn, et dansk navneord, fx 'Markedsundersøgelse', 'Største revisorer i Aarhus'), aldrig spørgsmålet."),
-      }),
-    )
-    .min(1)
-    .max(8)
-    .describe("1–8 punkter."),
-  allowFreeText: z.boolean().optional().describe("Om brugeren også må skrive selv ('Andet'). Standard true."),
-});
 
 const askChoice: ChatToolDef = {
   title: "Spørg brugeren",

@@ -110,6 +110,8 @@ export function chatRoutes({ model, ...deps }: ChatDeps): Router {
     const message = typeof body.message === "string" ? body.message.trim() : "";
     if (!message) return void res.status(400).json({ error: "Skriv en besked." });
     if (message.length > MAX_MESSAGE) return void res.status(400).json({ error: `Beskeden må højst være ${MAX_MESSAGE} tegn.` });
+    // Bremsen før det dyre (HMAC over historikken, skemaer, valgtjek), så store kald tælles, selv om de afvises.
+    if (!allow(limitKey(req, user))) return void res.status(429).json({ error: `Du har brugt chatten ${config.CHAT_MAX_PER_HOUR} gange den seneste time. Prøv igen senere.` });
     const history = body.history === undefined ? [] : body.history;
     if (!Array.isArray(history)) return void res.status(400).json({ error: "history skal være en liste." });
     if (history.length && !verifyHistory(config, user.id, history, body.sig)) {
@@ -123,7 +125,6 @@ export function chatRoutes({ model, ...deps }: ChatDeps): Router {
       if ("error" in v) return void res.status(400).json({ error: v.error });
       context.choice = { ...context.choice, ...v };
     }
-    if (!allow(limitKey(req, user))) return void res.status(429).json({ error: `Du har brugt chatten ${config.CHAT_MAX_PER_HOUR} gange den seneste time. Prøv igen senere.` });
 
     call ??= anthropicModelCall(config.ANTHROPIC_API_KEY);
     res.writeHead(200, { "content-type": "text/event-stream; charset=utf-8", "cache-control": "no-store", connection: "keep-alive", "x-accel-buffering": "no" });
